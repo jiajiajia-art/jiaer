@@ -1,0 +1,102 @@
+.detailSection {
+  margin-top: 28px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #222;
+}
+
+/* MetricTitleTip 挂在区块标题上时保持原 h2 视觉层级 */
+.sectionTitle > span:first-child {
+  font-size: 20px;
+  font-weight: 700;
+  color: #222;
+}
+
+.ratingSummary {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-top: 12px;
+  color: #666;
+  font-size: 15px;
+}
+
+.ratingValue {
+  font-size: 32px;
+  font-weight: 700;
+  color: #fb4655;
+}
+
+.hourGrid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.hourCell {
+  padding: 10px 8px;
+  border-radius: 8px;
+  background: #f5f5f5;
+  text-align: center;
+  font-size: 12px;
+  border: 1px solid transparent;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hourCellTop {
+  background: linear-gradient(135deg, rgba(251, 70, 85, 0.16) 0%, rgba(255, 138, 149, 0.28) 100%);
+  border-color: rgba(251, 70, 85, 0.38);
+  box-shadow: 0 4px 14px rgba(251, 70, 85, 0.16);
+  color: #9b2f3a;
+}
+
+.hourCellTop strong {
+  color: #fb4655;
+  font-size: 14px;
+}
+
+.commentList {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.commentItem {
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: #f7f7f7;
+}
+
+.commentMeta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #888;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.commentRating {
+  color: #fb4655;
+  font-weight: 600;
+}
+
+.emptyState {
+  padding: 24px;
+  text-align: center;
+  color: #888;
+  background: #f7f7f7;
+  border-radius: 10px;
+  margin-top: 16px;
+}
+
+@media (max-width: 768px) {
+  .hourGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

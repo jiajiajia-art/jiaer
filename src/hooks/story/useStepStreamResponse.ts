@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { truncateStepsAfterChoice } from '../mapGalgame/common/interactionUtils';
 import { cleanHistoryMessage, sanitizeVisualOptionText, stripNonStoryControlMarkup } from '../../utils/textUtils';
+import { isGenerationBusyError } from '../../lib/galgame/choiceStepDisplayGate';
 
 interface UseStepStreamResponseOptions {
     setStepQueue: React.Dispatch<React.SetStateAction<any[]>>;
@@ -80,16 +81,18 @@ export const useStepStreamResponse = ({
             return '生成结果不完整，请重试。';
         }
 
-        if (
-            typeof message === 'string' &&
-            (
-                message.includes('Failed to acquire lock') ||
-                message.includes('Lock acquisition timeout') ||
-                message.includes('visual:locks:')
-            )
-        ) {
-            return '当前内容正在生成中，请稍后再试';
-        }
+                        if (
+                            typeof message === 'string' &&
+                            (
+                                message.includes('Failed to acquire lock') ||
+                                message.includes('Lock acquisition timeout') ||
+                                message.includes('visual:locks:') ||
+                                message.includes('Session is busy') ||
+                                message === 'LOCKED'
+                            )
+                        ) {
+                            return '当前内容正在生成中，请稍后再试';
+                        }
 
         return message;
     }, []);
@@ -400,16 +403,16 @@ export const useStepStreamResponse = ({
                             
                             // 显示错误弹窗给用户
                             console.error('❌ 流式响应错误:', errorMessage);
-                            const suppressError = SUPPRESS_ALERT_ERROR_CODES.has(errorCode);
+                            const suppressError = SUPPRESS_ALERT_ERROR_CODES.has(errorCode)
+                                || isGenerationBusyError(errorMessage);
                             if (!suppressError) {
                                 options?.onErrorAfterAlert?.(errorMessage);
                             }
                             setSelectedOptionIndex(null);
                             setStepQueue([]);
                             setIsWaitingForData(false);
-                            if (!suppressError) {
-                                options?.onError?.(errorMessage);
-                            }
+                            // busy 类错误仍回调 onError，便于上层静默重试
+                            options?.onError?.(errorMessage);
                             hasReceivedStep = true;
                             continue;
                         }
@@ -590,16 +593,15 @@ export const useStepStreamResponse = ({
                         
                         // 显示错误弹窗给用户
                         console.error('❌ 流式响应错误（缓冲区）:', errorMessage);
-                        const suppressError = SUPPRESS_ALERT_ERROR_CODES.has(errorCode);
+                        const suppressError = SUPPRESS_ALERT_ERROR_CODES.has(errorCode)
+                            || isGenerationBusyError(errorMessage);
                         if (!suppressError) {
                             options?.onErrorAfterAlert?.(errorMessage);
                         }
                         setSelectedOptionIndex(null);
                         setStepQueue([]);
                         setIsWaitingForData(false);
-                        if (!suppressError) {
-                            options?.onError?.(errorMessage);
-                        }
+                        options?.onError?.(errorMessage);
                         return;
                     }
 

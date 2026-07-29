@@ -1,10 +1,13 @@
 // src/api/auth.ts
 import type { ApiResponse } from "../api.types";
 import { api } from "../base";
+import type { Currency } from "../common/currency";
 import type {
   AuthResponse,
   BindAccountRequest,
   CheckInResponse,
+  ExchangeDiamondsRequest,
+  ExchangeDiamondsResponse,
   GetPointsActivitiesParams,
   LoginRequest,
   MembershipSignInStatus,
@@ -44,8 +47,10 @@ export const auth = {
   getSignInStatus: () =>
     api.get<ApiResponse<MembershipSignInStatus>>('/auth/user/signin-status'),
 
-  getPointsActivities: (params: GetPointsActivitiesParams) =>
-    api.get<ApiResponse<PointsActivitiesResponse>>('/auth/user/points/activities', { params }),
+  getPointsActivities: (params: GetPointsActivitiesParams) => {
+    const mergedParams = { ...params, currency: params.currency || 'points' };
+    return api.get<ApiResponse<PointsActivitiesResponse>>('/auth/user/points/activities', { params: mergedParams });
+  },
 
   useInviteCode: (data: { inviteCode: string }) =>
     api.post<ApiResponse<null>>('/auth/invite/use-code', data),
@@ -70,12 +75,15 @@ export const auth = {
   bindAccount: (data: BindAccountRequest) =>
     api.post<ApiResponse<User>>('/auth/bind/account', data),
 
-  settlePoints: () =>
-    api.post<ApiResponse<SettlePointsResponse>>('/auth/games/points/settle'),
+  settlePoints: (type?: Currency) =>
+    api.post<ApiResponse<SettlePointsResponse>>('/auth/games/points/settle', type ? { type } : {}),
 
   redeemSubscriptionKey: (data: { redeemKey: string }) =>
     api.post<ApiResponse<SubscriptionRedeemResult>>('/subscriptions/redeem', data),
 
   googleLogin: (data: { idToken: string }) =>
     api.post<ApiResponse<AuthResponse>>('/auth/google/login', data),
+
+  exchangeDiamonds: (data: ExchangeDiamondsRequest) =>
+    api.post<ApiResponse<ExchangeDiamondsResponse>>('/auth/currency/exchange', data),
 };

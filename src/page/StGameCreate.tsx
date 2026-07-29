@@ -12,7 +12,7 @@ import getGameDataApi from '../api/home/getGameData';
 import gameTagsApi from '../api/gameTags/gameTagsApi';
 import { flattenThemeTags, type FlatThemeTag } from '../utils/themeTags';
 import ConfirmModal from '../components/CommonModal/ConfirmModal';
-import PublishSettingsModal from '../components/CommonModal/PublishSettingsModal';
+import PublishSettingsModal, { type PublishSubmitPayload } from '../components/CommonModal/PublishSettingsModal';
 import GameAction from '../api/rpgGame/gameAction';
 import toast from 'react-hot-toast';
 
@@ -480,7 +480,7 @@ const StGameCreate: React.FC = () => {
     if (field === 'themeTags') {
       showThemeTagRequiredToast(message);
     } else {
-      window.alert(message);
+      toast.error(message);
     }
     navigateToStep(DEFAULT_STEP_KEY, { replace: true });
     setHighlightField(field);
@@ -682,7 +682,7 @@ const StGameCreate: React.FC = () => {
     setShowPublishModal(false);
   };
 
-  const handlePublishGame = async (description: string) => {
+  const handlePublishGame = async (payload: PublishSubmitPayload) => {
     if (publishing) return;
 
     const fileId = String(publishTargetGameId || appIdFromQuery || appId || '').trim();
@@ -696,7 +696,10 @@ const StGameCreate: React.FC = () => {
       const response = await GameAction.publishGame({
         fileId,
         priceAmount: 0,
-        description,
+        description: payload.description,
+        shareType: payload.shareType,
+        versionNotes: payload.versionNotes,
+        notifyFavoritedUsers: payload.notifyFavoritedUsers,
       });
 
       if (!response.data.success) {
@@ -1142,6 +1145,7 @@ const StGameCreate: React.FC = () => {
           onPublish={handlePublishGame}
           fileId={publishTargetGameId || undefined}
           publishing={publishing}
+          engine="ST"
         />
       </div>
       <FooterArea />

@@ -21,9 +21,6 @@ const MembershipSignInResultModal: React.FC<MembershipSignInResultModalProps> = 
     const streakDay = status?.streakDay ?? 0;
     const schedule = status?.displaySchedule ?? [];
     const signedInToday = status?.signedInToday ?? false;
-    const todaySchedulePoints = streakDay > 0
-        ? (schedule[streakDay - 1] ?? 0)
-        : (schedule[0] ?? 0);
 
     return createPortal(
         <div className={styles.overlay} onClick={onClose}>
@@ -31,50 +28,56 @@ const MembershipSignInResultModal: React.FC<MembershipSignInResultModalProps> = 
                 <button type="button" className={styles.closeButton} onClick={onClose}>
                     ×
                 </button>
-                <h3 className={styles.title}>{signedInToday ? '今日已签到' : '每日签到'}</h3>
+
+                <div className={styles.header}>
+                    <h3 className={styles.title}>{signedInToday ? '今日已签到' : '每日签到'}</h3>
+                    <p className={styles.subtitle}>
+                        {signedInToday
+                            ? '明天继续签到可获得更多积分'
+                            : `今日签到可获得 ${status?.totalPointsToday ?? 0} 积分`}
+                    </p>
+                </div>
 
                 {isLoading ? (
-                    <div className={styles.placeholder}>正在加载...</div>
+                    <div className={styles.placeholder}>
+                        <span className={styles.loadingSpinner} />
+                        正在加载...
+                    </div>
                 ) : !status || schedule.length === 0 ? (
                     <div className={styles.placeholder}>暂无签到数据</div>
                 ) : (
                     <div className={styles.scheduleContainer}>
-                        <p className={styles.subtitle}>
-                            {signedInToday
-                                ? '明天继续签到可获得更多积分'
-                                : `今日签到可获得 ${status.totalPointsToday} 积分`}
-                        </p>
-                        <div className={styles.scheduleList}>
-                            {schedule.map((points, index) => {
-                                const dayNum = index + 1;
-                                const isToday = dayNum === streakDay;
-                                const isCompleted = dayNum < streakDay || (dayNum === streakDay && signedInToday);
+                        <div className={styles.calendarWrapper}>
+                            <div className={styles.scheduleList}>
+                                {schedule.map((points, index) => {
+                                    const dayNum = index + 1;
+                                    const isToday = dayNum === streakDay && !signedInToday;
+                                    const isCompleted = dayNum < streakDay || (dayNum === streakDay && signedInToday);
+                                    const isFuture = dayNum > streakDay;
 
-                                return (
-                                    <div
-                                        key={`${dayNum}-${points}`}
-                                        className={`${styles.scheduleItem} ${isToday ? styles.scheduleItemToday : ''} ${isCompleted ? styles.scheduleItemCompleted : ''}`}
-                                    >
-                                        <div className={styles.dayBadge}>{isCompleted ? '✓' : dayNum}</div>
-                                        <div className={styles.scheduleDay}>第{dayNum}天</div>
-                                        <div className={styles.schedulePoints}>+{points}</div>
-                                    </div>
-                                );
-                            })}
+                                    return (
+                                        <div
+                                            key={`${dayNum}-${points}`}
+                                            className={`
+                                                ${styles.scheduleItem}
+                                                ${isToday ? styles.scheduleItemToday : ''}
+                                                ${isCompleted ? styles.scheduleItemCompleted : ''}
+                                                ${isFuture ? styles.scheduleItemFuture : ''}
+                                            `}
+                                        >
+                                            <span className={styles.dayBadge}>
+                                                {isCompleted && !isToday ? (
+                                                    <svg className={styles.checkIcon} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                                        <polyline points="20 6 9 17 4 12"/>
+                                                    </svg>
+                                                ) : dayNum}
+                                            </span>
+                                            <span className={styles.schedulePoints}>+{points}</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
-
-                        <div className={styles.progressBar}>
-                            <div
-                                className={styles.progressFill}
-                                style={{ width: `${(Math.max(streakDay, 0) / 7) * 100}%` }}
-                            />
-                        </div>
-
-                        <p className={styles.progressText}>
-                            {signedInToday
-                                ? `已连续签到 ${streakDay} 天`
-                                : `今日签到可获 +${todaySchedulePoints} 积分`}
-                        </p>
                     </div>
                 )}
             </div>

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import styles from './ShareReplayModal.module.css';
 import { useTranslation } from 'react-i18next';
+import styles from './ShareReplayModal.module.css';
+import { DEFAULT_CREATE_AS_NOVEL, resolveReplayModalTitle, stripReplayMarkerFromTitle } from '../../utils/novelGame';
 
 interface Props {
   isOpen: boolean;
@@ -9,6 +10,7 @@ interface Props {
     title: string;
     description?: string;
     visibility: 'public' | 'unlisted' | 'private';
+    createAsNovel: boolean;
   }) => Promise<void> | void;
   onClose: () => void;
 }
@@ -19,15 +21,24 @@ const clampTitle = (value: string) => value.slice(0, MAX_TITLE_LENGTH);
 
 const ShareReplayModal: React.FC<Props> = ({ isOpen, defaultTitle, onSubmit, onClose }) => {
   const { t } = useTranslation();
-  const [title, setTitle] = useState(clampTitle(defaultTitle || t('createGame.myReplay')));
+  const replayLabel = t('galgame.replay');
+  const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [visibility, setVisibility] = useState<'public' | 'unlisted' | 'private'>('public');
+  const [createAsNovel, setCreateAsNovel] = useState(DEFAULT_CREATE_AS_NOVEL);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
-    setTitle(clampTitle(defaultTitle || t('createGame.myReplay')));
-  }, [defaultTitle, isOpen, t]);
+    const initialTitle = defaultTitle || t('createGame.myReplay');
+    setTitle(clampTitle(resolveReplayModalTitle(initialTitle, DEFAULT_CREATE_AS_NOVEL, replayLabel)));
+    setCreateAsNovel(DEFAULT_CREATE_AS_NOVEL);
+  }, [defaultTitle, isOpen, replayLabel, t]);
+
+  const handleCreateAsNovelChange = (checked: boolean) => {
+    setCreateAsNovel(checked);
+    setTitle((current) => clampTitle(resolveReplayModalTitle(current, checked, replayLabel)));
+  };
 
   const canSubmit = useMemo(() => title.trim().length > 0 && !submitting, [title, submitting]);
 
@@ -38,9 +49,10 @@ const ShareReplayModal: React.FC<Props> = ({ isOpen, defaultTitle, onSubmit, onC
     try {
       setSubmitting(true);
       await onSubmit({
-        title: title.trim(),
+        title: createAsNovel ? stripReplayMarkerFromTitle(title.trim()) || title.trim() : title.trim(),
         description: description.trim() || undefined,
         visibility,
+        createAsNovel,
       });
       onClose();
     } finally {
@@ -120,6 +132,16 @@ const ShareReplayModal: React.FC<Props> = ({ isOpen, defaultTitle, onSubmit, onC
                 <span className={styles.radioText}>{t('createGame.privateVisibility')}</span>
               </label>
             </div>
+          </div>
+          <div className={`${styles.field} ${styles.checkboxField}`}>
+            <label className={styles.checkboxOption}>
+              <input
+                type="checkbox"
+                checked={createAsNovel}
+                onChange={(event) => handleCreateAsNovelChange(event.target.checked)}
+              />
+              <span className={styles.checkboxText}>{t('createGame.createAsNovel')}</span>
+            </label>
           </div>
         </div>
         <div className={styles.footer}>

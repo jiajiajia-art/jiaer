@@ -884,7 +884,7 @@ const GalgameMap = () => {
           onCancel={() => setIsDeleteConfirmOpen(false)}
           title="重新开始"
           message={"确认重新开始该游戏吗？重新开始后无法恢复。"}
-          confirmText="确认重新开始"
+          confirmText="确认"
           cancelText="取消"
         />
 

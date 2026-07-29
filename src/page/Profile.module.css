@@ -81,6 +81,13 @@
     z-index: 2;
 }
 
+.profileAvatarWrap {
+    --verified-overlay-size: 32px;
+    --verified-overlay-right: 4px;
+    --verified-overlay-bottom: 4px;
+    margin-top: 80px;
+}
+
 .userAvatar {
     width: 120px;
     height: 120px;
@@ -88,7 +95,6 @@
     object-fit: cover;
     border: 3px solid #fff;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    margin-top: 80px;
 }
 
 .userName {
@@ -347,6 +353,34 @@
     background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
     color: #fff;
     cursor: pointer;
+}
+
+.exchangeButton {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
+    color: #fff;
+    cursor: pointer;
+}
+
+.exchangeButton:hover {
+    background: linear-gradient(135deg, #e03545 0%, #e94a5a 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(251, 70, 85, 0.3);
+}
+
+.exchangeButton:active {
+    transform: translateY(0);
 }
 
 .functionButton:not(.functionButtonCheckIn):not(.functionButtonSignedIn):hover {
@@ -683,6 +717,12 @@
     color: #FB4655;
 }
 
+.dailyTaskDescription {
+    font-size: 12px;
+    line-height: 1.5;
+    color: #666;
+}
+
 .dailyTaskProgressRow {
     display: flex;
     align-items: center;
@@ -745,6 +785,23 @@
     font-weight: 600;
 }
 
+.dailyTaskGoPlayBtn {
+    border: none;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #FB4655 0%, #FF7D7D 100%);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 12px;
+    line-height: 1;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.dailyTaskGoPlayBtn:hover {
+    opacity: 0.9;
+}
+
 .dailyTaskClaimBtn {
     border: none;
     border-radius: 999px;
@@ -789,8 +846,14 @@
         height: 300px;
     }
 
-    .userAvatar {
+    .profileAvatarWrap {
         margin-top: 80px;
+        --verified-overlay-size: 26px;
+        --verified-overlay-right: 3px;
+        --verified-overlay-bottom: 3px;
+    }
+
+    .userAvatar {
         width: 80px;
         height: 80px;
         border-width: 2px;
@@ -833,8 +896,14 @@
         height: 250px;
     }
 
-    .userAvatar {
+    .profileAvatarWrap {
         margin-top: 80px;
+        --verified-overlay-size: 22px;
+        --verified-overlay-right: 2px;
+        --verified-overlay-bottom: 2px;
+    }
+
+    .userAvatar {
         width: 60px;
         height: 60px;
         border-width: 2px;

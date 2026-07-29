@@ -1,7 +1,7 @@
 import type { AnnouncementRecord } from '../announcement/announcement.type';
 import type { PromotionActivity, PromotionReviewStatus } from '../promotion/promotion.type';
 
-export type MessageType = 'announcement' | 'promotion' | 'promotion_submission_status';
+export type MessageType = 'announcement' | 'promotion' | 'promotion_submission_status' | 'favorite_game_updated';
 
 export interface MessageAnnouncement extends AnnouncementRecord {
     messageType: 'announcement';
@@ -30,11 +30,24 @@ export interface MessagePromotionSubmissionNotification {
     isRead: boolean;
 }
 
+export interface MessageFavoriteGameUpdateNotification {
+    id: number;
+    userId: string;
+    fileId: string;
+    gameTitle: string;
+    versionNotes: string;
+    createdAt: string | null;
+    messageType: 'favorite_game_updated';
+    sourceId: number;
+    isRead: boolean;
+}
+
 export interface MessageCenterData {
     unreadCount: number;
     announcements: MessageAnnouncement[];
     promotions: MessagePromotion[];
     promotionSubmissionNotifications: MessagePromotionSubmissionNotification[];
+    favoriteGameUpdateNotifications: MessageFavoriteGameUpdateNotification[];
 }
 
 export interface MessageUnreadCountData {

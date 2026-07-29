@@ -161,6 +161,20 @@ const useGalgameHistory = (options?: { disabled?: boolean }) => {
         }));
     }, [history, historyOffset, sessionId]);
 
+    /** 发送行动时先写入本地，保证历史面板立刻能看到用户自己的选择/输入 */
+    const appendLocalUserMessage = useCallback((content: string) => {
+        const text = String(content || '').trim();
+        if (!text) return;
+        setHistory((prev) => {
+            const last = prev[prev.length - 1];
+            if (last?.role === 'user' && String(last.content || '').trim() === text) {
+                return prev;
+            }
+            return [...prev, { role: 'user', content: text }];
+        });
+        setHistoryTotal((prev) => prev + 1);
+    }, []);
+
     return { 
         history: historyWithId, 
         loading, 
@@ -174,6 +188,7 @@ const useGalgameHistory = (options?: { disabled?: boolean }) => {
         editHistory,
         lastVisitedSceneId,
         contextMemory,
+        appendLocalUserMessage,
     };
 };
 

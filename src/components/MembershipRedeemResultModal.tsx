@@ -1,6 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import type { SubscriptionPlanId } from '../api/subscriptionKeys/subscriptionKeysApi.type';
+import { planLabelMap } from '../utils/planLabels';
 import styles from './MembershipRedeemResultModal.module.css';
 
 interface MembershipRedeemResultModalProps {
@@ -8,12 +9,6 @@ interface MembershipRedeemResultModalProps {
     onClose: () => void;
     planId: SubscriptionPlanId;
 }
-
-const planLabelMap: Record<SubscriptionPlanId, string> = {
-    month: '月卡',
-    season: '季卡',
-    year: '年卡',
-};
 
 const MembershipRedeemResultModal: React.FC<MembershipRedeemResultModalProps> = ({
     isOpen,

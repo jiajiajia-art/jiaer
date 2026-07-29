@@ -13,6 +13,24 @@
 .field { margin-bottom: 16px; }
 .visibilityField { margin-top: 4px; margin-bottom: 10px; }
 .label { font-size: 13px; color: #666; margin-bottom: 8px; display: block; font-weight: 600; }
+.labelRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.labelInline { font-size: 13px; color: #666; margin: 0; font-weight: 600; }
+.aiGenerateBtn {
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: #1a1a1a;
+  background: #fff;
+}
+.aiGenerateBtn:hover:not(:disabled) {
+  border-color: #E03D4B;
+  color: #E03D4B;
+}
+.aiGenerateBtn:disabled { opacity: 0.55; cursor: not-allowed; }
 .input { width: 100%; box-sizing: border-box; border: 1px solid rgba(251, 70, 85, 0.22); border-radius: 10px; padding: 10px 12px; font-size: 14px; outline: none; background: #fff9fa; }
 .textarea { width: 100%; box-sizing: border-box; min-height: 96px; border: 1px solid rgba(251, 70, 85, 0.22); border-radius: 10px; padding: 10px 12px; font-size: 14px; outline: none; resize: vertical; background: #fff9fa; }
 .helperText { margin-top: 6px; color: #999; font-size: 12px; text-align: right; }
@@ -25,6 +43,10 @@
 .btnSecondary { color: #FB4655; background-image: url('/data/assets/create/确认删除框.png'); background-size: 100% 100%; background-position: center; background-repeat: no-repeat; }
 .btnPrimary { color: #fff; background-image: url('/data/assets/create/我再想想框.png'); background-size: 100% 100%; background-position: center; background-repeat: no-repeat; }
 .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.checkboxField { margin-top: 4px; }
+.checkboxOption { display: flex; align-items: center; gap: 10px; cursor: pointer; color: #444; font-size: 14px; }
+.checkboxOption input { width: 16px; height: 16px; }
+.checkboxText { line-height: 1.45; }
 .endMask { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.45); z-index: 1500; }
 .endCard { width: 520px; max-width: 90vw; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
 .endHeader { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px; background: linear-gradient(135deg, #FB4655 0%, #e63946 100%); }

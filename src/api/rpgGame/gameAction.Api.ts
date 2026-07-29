@@ -1,9 +1,13 @@
 import type { UserGameData } from "../home/getGameData.type";
+import type { Currency } from "../common/currency";
 
 export interface PublishGameRequest {
     fileId: string;
     priceAmount: number;
     description: string;
+    shareType?: Currency;
+    versionNotes?: string;
+    notifyFavoritedUsers?: boolean;
 }
 
 export interface PublishGameResponse {
@@ -13,6 +17,7 @@ export interface PublishGameResponse {
     title: string;
     subtitle: string;
     description: string;
+    version_notes?: string | null;
     cover_url: string;
     doc_url: string;
     files: string;

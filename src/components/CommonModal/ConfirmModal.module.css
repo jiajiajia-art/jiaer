@@ -125,6 +125,15 @@
     justify-content: center;
 }
 
+.buttonGroupAlert {
+    max-width: 320px;
+}
+
+.alertModal {
+    width: min(720px, calc(100vw - 40px));
+    min-height: 320px;
+}
+
 .confirmButton,
 .cancelButton {
     width: 260px;

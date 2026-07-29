@@ -42,8 +42,8 @@ interface BgmItem {
     description: string;
 }
 
-const SINGLE_SCENE_ETA_SECONDS = 80;
-const BATCH_SCENE_BUFFER_SECONDS = 50;
+const SINGLE_SCENE_ETA_SECONDS = 100;
+const BATCH_SCENE_BUFFER_SECONDS = 60;
 
 /**
  * 暂存图片类型 - 用于图片选择/生成后、确认修改前的预览
@@ -153,6 +153,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
         scenes: {},
         subscenes: {},
     });
+    const sceneBatchGenerationCancelRef = useRef(false);
 
     const hasUnsavedChangesRef = useRef(hasUnsavedChanges);
     const isBlockingSwitchRef = useRef(isBlockingSwitch);
@@ -365,6 +366,9 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
 
     const { user, updateUser } = useAuthStore();
     const userPoints = user?.user?.points ?? 0;
+    // 计算会员折扣后的场景生成价格（暂时不打折）
+    const discountedSceneCost = SCENE_GENERATION_COST; // TODO: 恢复折扣时改为 `isMember ? Math.ceil(SCENE_GENERATION_COST * MEMBER_CREATION_DISCOUNT) : SCENE_GENERATION_COST`
+    // const showSceneDiscount = isMember && MEMBER_CREATION_DISCOUNT < 1; // TODO: 恢复折扣UI时取消注释
 
     const worldMapPreviewSrc = useMemo(() => {
         if (!worldMapImage) return DEFAULT_WORLD_MAP_IMAGE;
@@ -543,6 +547,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 onDataChange,
                 markBatchImageRefreshPending,
                 hasPendingBatchImageRefresh,
+                sceneBatchGenerationCancelRef,
             }),
         [
             fileId,
@@ -1335,7 +1340,18 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                             <span className={styles.buttonMainText}>
                                 {isGeneratingAllSceneImages ? t('createGame.generating') : t('createGame.generateAllScenePortraits')}
                             </span>
-                            <span className={styles.buttonSubText}>{SCENE_GENERATION_COST}{t('common.points')}/{t('eta.item')}</span>
+                            <span className={styles.buttonSubText}>
+                                {/* TODO: 恢复会员折扣UI时，取消下方注释
+                                {showSceneDiscount ? (
+                                    <>
+                                        <span className={styles.originalPrice}>{SCENE_GENERATION_COST}</span>
+                                        <span className={styles.discountPrice}>{discountedSceneCost}</span>
+                                        {t('common.points')}/{t('eta.item')}
+                                    </>
+                                ) : ( */}
+                                    <>{SCENE_GENERATION_COST}{t('common.points')}/{t('eta.item')}</>
+                                {/* )} */}
+                            </span>
                         </div>
                     </button>
                 </GenerationActionBar>
@@ -1555,7 +1571,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 onConfirm={handleConfirmSingleSceneGenerate}
                 onCancel={handleCancelSingleSceneGenerate}
                 title={t('common.pointsDeductionConfirm')}
-                message={t('common.singleSceneGenerationConfirm', { cost: SCENE_GENERATION_COST })}
+                message={t('common.singleSceneGenerationConfirm', { cost: discountedSceneCost })}
                 confirmButtonText={t('common.confirmGenerate')}
                 cancelButtonText={t('common.cancel')}
             />
@@ -1585,7 +1601,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 onConfirm={handleConfirmGenerateWorldMap}
                 onCancel={handleCancelGenerateWorldMap}
                 title={t('common.pointsDeductionConfirm')}
-                message={t('common.worldMapGenerationConfirm', { cost: SCENE_GENERATION_COST })}
+                message={t('common.worldMapGenerationConfirm', { cost: discountedSceneCost })}
                 confirmButtonText={t('common.confirmGenerate')}
                 cancelButtonText={t('common.cancel')}
             />
@@ -1608,6 +1624,13 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                             <div className={styles.plusLoadingHint}>{batchSceneProgressText}</div>
                         )}
                         <div className={styles.plusLoadingHint}>{t('createGame.generatingDoNotLeave')}</div>
+                        <button
+                            type="button"
+                            className={styles.plusLoadingCancelBtn}
+                            onClick={handlers.cancelGenerateAllSceneImages}
+                        >
+                            {t('common.cancel')}
+                        </button>
                     </div>
                 </div>
             )}

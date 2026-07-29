@@ -33,8 +33,8 @@ const CreateEmptyGameModal: React.FC<CreateEmptyGameModalProps> = ({
             await onSubmit(title.trim());
             setTitle('');
             onClose();
-        } catch (err: any) {
-            setError(err?.message || t('createGame.createFailedRetry'));
+        } catch (err: unknown) {
+            setError((err as { message?: string })?.message || t('createGame.createFailedRetry'));
         }
     };
 

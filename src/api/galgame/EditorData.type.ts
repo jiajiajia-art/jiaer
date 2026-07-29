@@ -123,6 +123,23 @@ order: number;
 enabled: boolean;
 }
 
+/** Visual 侧栏补充提示词（morePromptForms），写入 world.json；v2 title 作 keywords */
+export interface MorePromptForm {
+  id: string;
+  /** 触发型：逗号分隔关键词；常驻型：可选侧栏展示名 */
+  title: string;
+  description: string;
+  content: string;
+  /** true = 每轮注入 content，不扫描 title */
+  constant?: boolean;
+  order: number;
+  enabled?: boolean;
+  updatedAt?: string;
+}
+
+/** Visual Step6 数据库（dataPromptForms），字段结构与 MorePromptForm 一致 */
+export type DataPromptForm = MorePromptForm;
+
 // 世界设定类型（visual 模式）
 export interface WorldSetting {
   title: string;
@@ -138,6 +155,10 @@ export interface WorldSetting {
   };
   player: Player;
   dynamicEntries?: DynamicEntry[];
+  /** Visual 编辑器侧栏动态提示词，叙事 LLM 每轮注入 */
+  morePromptForms?: MorePromptForm[];
+  /** Visual Step6 数据库条目，叙事 LLM 选择性注入 */
+  dataPromptForms?: DataPromptForm[];
   llmConfig?: {
       targetOutputLength?: number;
       outputLengthMode?: "characters" | "words";

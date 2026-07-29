@@ -1,0 +1,205 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 760px;
+}
+
+.header h2 {
+  margin: 0 0 4px;
+  font-size: 1.6rem;
+  color: #1a1a1a;
+  font-weight: 700;
+}
+
+.subtitle {
+  margin: 0;
+  color: rgba(0, 0, 0, 0.55);
+  font-size: 0.9rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field > span {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.fieldLabelRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.required {
+  color: var(--primary);
+  margin-left: 4px;
+}
+
+.field input[type='text'] {
+  border-radius: 12px;
+  border: 1px solid rgba(224, 61, 75, 0.28);
+  padding: 12px 14px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.field input[type='text']:focus {
+  outline: none;
+  border-color: rgba(224, 61, 75, 0.55);
+  box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.08);
+}
+
+.fieldCheckbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.92rem;
+  color: #1a1a1a;
+}
+
+.constantRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.fieldCheckbox input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+}
+
+.tipWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.tipBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(0, 0, 0, 0.45);
+  cursor: help;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.tipBtn:hover:not(:disabled),
+.tipBtn:focus-visible {
+  color: var(--primary);
+  background: rgba(224, 61, 75, 0.08);
+  outline: none;
+}
+
+.tipBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tipBubble {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  width: max-content;
+  max-width: 280px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(26, 26, 26, 0.92);
+  color: #fff;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+
+.tipWrap:hover .tipBubble,
+.tipWrap:focus-within .tipBubble {
+  opacity: 1;
+  visibility: visible;
+}
+
+@media (max-width: 720px) {
+  .tipBubble {
+    left: auto;
+    right: 0;
+    top: calc(100% + 8px);
+    transform: none;
+  }
+}
+
+.descHint {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 0.8rem;
+}
+
+.descOver {
+  color: var(--primary);
+  font-size: 0.8rem;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.confirmBtn,
+.cancelBtn {
+  border-radius: 12px;
+  padding: 10px 22px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid rgba(224, 61, 75, 0.35);
+  background: #ffffff;
+  color: var(--primary);
+  transition: all 0.2s ease;
+}
+
+.confirmBtn {
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: #ffffff;
+  border-color: transparent;
+}
+
+.confirmBtn:hover:not(:disabled),
+.cancelBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(224, 61, 75, 0.12);
+}
+
+.confirmBtn:disabled,
+.cancelBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}

@@ -5,6 +5,7 @@ import { HOST_ADDRESS } from '../../config';
 import { useAuthStore } from '../../store/useAuthStore';
 import { auth } from '../../api/account/authApi';
 import type { ContextMemoryStatus } from '../../api/galgame/getGalgamePreset.type';
+import { isGenerationBusyError, shouldDeferChoiceUntilStreamReady, GENERATION_BUSY_MAX_RETRIES, getGenerationBusyRetryDelayMs } from '../../lib/galgame/choiceStepDisplayGate';
 
 export function createGalgameActionId(sessionId: string | null, _action: string): string {
     const randomPart = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
@@ -22,6 +23,8 @@ interface UseGalgameStepOptions {
     onStreamComplete?: () => void;
     // Called after error alert is shown
     onErrorAfterAlert?: (error: string) => void;
+    /** 用户行动发出时回调（用于历史面板即时展示用户选择/输入） */
+    onUserAction?: (action: string) => void;
     // Replay mode: avoid showing "AI generating" on queue exhausted
     isReplay?: boolean;
     isTextMode?: boolean;
@@ -38,6 +41,7 @@ export const useGalgameStep = ({
     onCompleteAllSteps,
     onStreamComplete,
     onErrorAfterAlert,
+    onUserAction,
     isReplay = false,
     isTextMode = false,
     onExhausted,
@@ -57,6 +61,7 @@ export const useGalgameStep = ({
     const currentRequestId = useRef(0);
     const currentStepRef = useRef<any>(null);
     const isProcessingStepRef = useRef(false);
+    const loadingRef = useRef(false);
     const { updateUser } = useAuthStore();
 
     // Track assistant round count from history
@@ -69,6 +74,10 @@ export const useGalgameStep = ({
     useEffect(() => {
         currentStepRef.current = currentStep;
     }, [currentStep]);
+
+    useEffect(() => {
+        loadingRef.current = loading;
+    }, [loading]);
 
     // Reset all state when session changes
     useEffect(() => {
@@ -126,13 +135,20 @@ export const useGalgameStep = ({
         setShowNextButton(step.type !== 'choice');
     }, []);
 
-    // Auto show next step when queue has data and no active step
+    // 对话步可边生成边播；choice 必须等本轮 stream loading 结束再上屏，避免抢锁报错
     useEffect(() => {
         if (stepQueue.length === 0) return;
         if (currentStep && !isWaitingForData) return;
         if (isProcessingStepRef.current) return;
 
         const nextStep = stepQueue[0];
+        if (shouldDeferChoiceUntilStreamReady({
+            stepType: nextStep?.type,
+            streamLoading: loading,
+        })) {
+            return;
+        }
+
         isProcessingStepRef.current = true;
         setStepQueue((prev) => prev.slice(1));
 
@@ -140,7 +156,7 @@ export const useGalgameStep = ({
             await showStep(nextStep);
             isProcessingStepRef.current = false;
         })();
-    }, [stepQueue, currentStep, isWaitingForData, showStep]);
+    }, [stepQueue, currentStep, isWaitingForData, loading, showStep]);
 
     // Handle stream request (galgame endpoint)
     const handleStreamAction = useCallback(
@@ -171,6 +187,9 @@ export const useGalgameStep = ({
                 setLoading(true);
 
                 onMessagesClear?.();
+                if (!isReplay) {
+                    onUserAction?.(action);
+                }
                 options?.onBeforeRequest?.();
 
                 const requestBody: any = {
@@ -207,8 +226,13 @@ export const useGalgameStep = ({
                                     console.error('Failed to run onStreamComplete:', e);
                                 }
                             }
-                            await getUserInfo();
+                            // KV 锁释放存在短暂可见性延迟：稍等再解锁，避免选项一点就抢锁失败
+                            await new Promise((resolve) => window.setTimeout(resolve, 700));
+                            if (currentRequestId.current !== requestId) {
+                                return;
+                            }
                             setLoading(false);
+                            await getUserInfo();
                         },
                         onError: (error) => {
                             setIsCompressingContext(false);
@@ -264,7 +288,7 @@ export const useGalgameStep = ({
                 options?.onError?.(errorMsg);
             }
         },
-        [sessionId, processStreamResponse, onMessagesClear, onStreamComplete, onErrorAfterAlert, getUserInfo, isTextMode, isReplay, onContextMemoryUpdate, onContextCompressionDone, onStreamActivity, resetStreamRetryDisplay]
+        [sessionId, processStreamResponse, onMessagesClear, onStreamComplete, onErrorAfterAlert, onUserAction, getUserInfo, isTextMode, isReplay, onContextMemoryUpdate, onContextCompressionDone, onStreamActivity, resetStreamRetryDisplay]
     );
 
     // Handle next step in queue
@@ -286,6 +310,17 @@ export const useGalgameStep = ({
             }
 
             const [nextStep, ...rest] = prev;
+            // 点「下一步」也不能提前露出 choice，否则会绕过 loading 门闩抢锁
+            if (shouldDeferChoiceUntilStreamReady({
+                stepType: nextStep?.type,
+                streamLoading: loadingRef.current,
+            })) {
+                setCurrentStep(null);
+                setIsWaitingForData(true);
+                setShowNextButton(false);
+                return prev;
+            }
+
             void (async () => {
                 isProcessingStepRef.current = true;
                 await showStep(nextStep);
@@ -303,19 +338,30 @@ export const useGalgameStep = ({
             setSelectedOptionIndex(optionIndex);
             setIsWaitingForData(true);
             setShowNextButton(false);
-            // Frontend points validation is temporarily disabled.
-            // Backend should decide whether points are sufficient.
 
-            await handleStreamAction(option.text, {
-                onError: (error) => {
-                    console.error('[Galgame] choice option error:', error);
-                    setIsWaitingForData(false);
-                    setSelectedOptionIndex(null);
-                },
-                actionId,
-            });
+            const run = async (attempt: number) => {
+                await handleStreamAction(option.text, {
+                    onError: (error) => {
+                        // 属性/任务落盘或 KV 可见性延迟时静默重试，避免弹出「正在生成中」
+                        if (isGenerationBusyError(error) && attempt < GENERATION_BUSY_MAX_RETRIES) {
+                            window.setTimeout(() => {
+                                void run(attempt + 1);
+                            }, getGenerationBusyRetryDelayMs(attempt));
+                            return;
+                        }
+                        console.error('[Galgame] choice option error:', error);
+                        setIsWaitingForData(false);
+                        setSelectedOptionIndex(null);
+                        if (isGenerationBusyError(error)) {
+                            onErrorAfterAlert?.(String(error));
+                        }
+                    },
+                    actionId,
+                });
+            };
+            await run(0);
         },
-        [handleStreamAction]
+        [handleStreamAction, onErrorAfterAlert]
     );
 
     // Handle custom input send
@@ -327,19 +373,29 @@ export const useGalgameStep = ({
 
             setIsWaitingForData(true);
             setShowNextButton(false);
-            // Frontend points validation is temporarily disabled.
-            // Backend should decide whether points are sufficient.
 
-            await handleStreamAction(inputText, {
-                onError: (error) => {
-                    console.error('[Galgame] custom input error:', error);
-                    setIsWaitingForData(false);
-                },
-                deduct: true,
-                actionId,
-            });
+            const run = async (attempt: number) => {
+                await handleStreamAction(inputText, {
+                    onError: (error) => {
+                        if (isGenerationBusyError(error) && attempt < GENERATION_BUSY_MAX_RETRIES) {
+                            window.setTimeout(() => {
+                                void run(attempt + 1);
+                            }, getGenerationBusyRetryDelayMs(attempt));
+                            return;
+                        }
+                        console.error('[Galgame] custom input error:', error);
+                        setIsWaitingForData(false);
+                        if (isGenerationBusyError(error)) {
+                            onErrorAfterAlert?.(String(error));
+                        }
+                    },
+                    deduct: true,
+                    actionId,
+                });
+            };
+            await run(0);
         },
-        [handleStreamAction]
+        [handleStreamAction, onErrorAfterAlert]
     );
 
     // Handle regenerate from a history index
@@ -391,8 +447,13 @@ export const useGalgameStep = ({
                                     console.error('Failed to run onStreamComplete:', e);
                                 }
                             }
-                            await getUserInfo();
+                            // KV 锁释放存在短暂可见性延迟：稍等再解锁，避免选项一点就抢锁失败
+                            await new Promise((resolve) => window.setTimeout(resolve, 700));
+                            if (currentRequestId.current !== requestId) {
+                                return;
+                            }
                             setLoading(false);
+                            await getUserInfo();
                         },
                         onError: (error) => {
                             setLoading(false);

@@ -12,11 +12,15 @@ export interface CreateReplayRequest {
   description?: string;
   visibility: 'public' | 'unlisted' | 'private';
   range?: { fromStepId?: string; toStepId?: string };
+  createAsNovel?: boolean;
+  /** 覆盖本人同名草稿/回放（二次确认后传入；不影响其他账号） */
+  overwrite?: boolean;
 }
 
 export interface CreateReplayResponse {
   success: boolean;
   replayId: string;
+  novelFileId?: string;
 }
 
 export interface ReplaySummary {
@@ -98,6 +102,25 @@ export const buildReplayShareUrl = (replayId: string) => {
 const replayApi = {
   createFromSession: (data: CreateReplayRequest) =>
     api.post<CreateReplayResponse>('/visual/replay/create-from-session', data),
+
+  /** 导出前：用标题 + 会话历史生成可编辑简介 */
+  generateNovelDescriptionFromSession: (data: {
+    sessionId: string;
+    fileId: string;
+    title: string;
+  }) =>
+    api.post<{
+      success: boolean;
+      message?: string;
+      code?: string;
+      data?: {
+        sessionId: string;
+        fileId: string;
+        title: string;
+        description: string;
+        maxLength: number;
+      };
+    }>('/visual/session/generate-novel-description', data),
 
   listByFileId: (params: {
     fileId: string;

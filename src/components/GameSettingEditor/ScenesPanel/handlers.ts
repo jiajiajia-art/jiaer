@@ -13,6 +13,10 @@ import type { User } from '../../../api/account/auth.type';
 import { auth } from '../../../api/account/authApi';
 import { getImageUrl } from '../../../utils/constants';
 import { withCacheBust, bumpCacheBust } from '../../../utils/imageCache';
+import {
+    BATCH_IMAGE_JOB_MAX_POLL_ATTEMPTS,
+    resolveBatchImageJobPollStep,
+} from '../../../utils/batchImageJobPoll';
 
 export interface LocalScene {
     id: string;
@@ -90,6 +94,8 @@ export interface HandlersContext {
     onDataChange?: () => void | Promise<void>;
     markBatchImageRefreshPending?: (payload: BatchImageReconciliationPayload) => void;
     hasPendingBatchImageRefresh?: () => boolean;
+    /** 用户点击取消时置为 true，轮询循环据此提前退出 */
+    sceneBatchGenerationCancelRef: React.MutableRefObject<boolean>;
 }
 
 /**
@@ -178,6 +184,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         onDataChange,
         markBatchImageRefreshPending,
         hasPendingBatchImageRefresh,
+        sceneBatchGenerationCancelRef,
     } = ctx;
 
     const BATCH_IMAGE_REFRESH_RETRY_COUNT = 3;
@@ -1422,6 +1429,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             return;
         }
         try {
+            sceneBatchGenerationCancelRef.current = false;
             setIsGeneratingAllSceneImages(true);
             setSceneBatchJobStatus(null);
             const startResponse: any = await api.startGenerateAllSceneImages(fileId);
@@ -1441,13 +1449,40 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                 failedCount: 0,
                 estimatedRemainingSeconds: null,
             });
-            for (let attempt = 0; attempt < 600; attempt += 1) {
+            for (let attempt = 0; attempt < BATCH_IMAGE_JOB_MAX_POLL_ATTEMPTS; attempt += 1) {
+                const pollStep = resolveBatchImageJobPollStep({
+                    cancelRequested: sceneBatchGenerationCancelRef.current,
+                    status: '',
+                    attempt,
+                });
+                if (pollStep === 'cancelled') {
+                    return;
+                }
+                if (pollStep === 'timeout') {
+                    break;
+                }
+
                 const statusResponse: any = await api.getSceneBatchJobStatus(jobId);
                 const statusPayload = statusResponse?.data || statusResponse;
                 lastJobStatus = statusPayload as BatchImageJobStatus;
                 setSceneBatchJobStatus(lastJobStatus);
                 if (!statusPayload?.success) {
                     throw new Error(statusPayload?.error || statusPayload?.message || 'Failed to fetch scene batch job status');
+                }
+
+                const statusStep = resolveBatchImageJobPollStep({
+                    cancelRequested: sceneBatchGenerationCancelRef.current,
+                    status: String(statusPayload.status || ''),
+                    attempt,
+                });
+                if (statusStep === 'cancelled') {
+                    return;
+                }
+                if (statusStep === 'failed') {
+                    throw new Error(statusPayload?.error || statusPayload?.message || 'Scene batch job failed');
+                }
+                if (statusStep === 'timeout') {
+                    break;
                 }
                 if (statusPayload.status === 'completed') {
                     const resultResponse: any = await api.getSceneBatchJobResult(jobId);
@@ -1459,119 +1494,33 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                     setSceneBatchJobStatus(null);
                     return;
                 }
-                if (statusPayload.status === 'failed' || statusPayload.status === 'unknown') {
-                    throw new Error(statusPayload?.error || statusPayload?.message || 'Scene batch job failed');
-                }
                 await new Promise((resolve) => window.setTimeout(resolve, 1500));
             }
-            /* legacy synchronous fallback removed in favor of batch job polling
-            if (Date.now() < 0) {
-            const response = await api.generateAllSceneImages(fileId);
-            if (response.data?.success) {
-                const respAny: any = response.data;
-                const payload = respAny.data || respAny;
-                const details = respAny.details || payload?.details || null;
-                const generatedSceneCount = applyGeneratedSceneImages(details?.scenes || []);
-                const generatedSubsceneCount = applyGeneratedSubsceneImages(details?.subscenes || []);
-
-                const rawSceneGenerated = Number(
-                    payload?.scenes?.effective ??
-                    payload?.results?.scenesSuccess ??
-                    payload?.results?.scenesGenerated ??
-                    payload?.results?.scenes ??
-                    payload?.summary?.totalEffective ??
-                    payload?.scenesGenerated ??
-                    generatedSceneCount
-                );
-                const sceneGenerated = Number.isFinite(rawSceneGenerated) ? Math.max(0, rawSceneGenerated) : generatedSceneCount;
-
-                const rawSceneTotal = Number(
-                    payload?.scenes?.total ??
-                    payload?.results?.scenesTotal ??
-                    payload?.results?.scenes ??
-                    payload?.summary?.totalRequested ??
-                    details?.scenes?.length ??
-                    generatedSceneCount
-                );
-                const sceneTotal = Number.isFinite(rawSceneTotal) ? Math.max(0, rawSceneTotal) : generatedSceneCount;
-
-                const rawSubsceneGenerated = Number(
-                    payload?.subscenes?.effective ??
-                    payload?.results?.subscenesSuccess ??
-                    payload?.results?.subscenesGenerated ??
-                    payload?.subscenesGenerated ??
-                    generatedSubsceneCount
-                );
-                const subsceneGenerated = Number.isFinite(rawSubsceneGenerated) ? Math.max(0, rawSubsceneGenerated) : generatedSubsceneCount;
-
-                const rawSubsceneTotal = Number(
-                    payload?.subscenes?.total ??
-                    payload?.results?.subscenes ??
-                    payload?.results?.subscenesTotal ??
-                    payload?.subscenesTotal ??
-                    details?.subscenes?.length ??
-                    generatedSubsceneCount
-                );
-                const subsceneTotal = Number.isFinite(rawSubsceneTotal) ? Math.max(0, rawSubsceneTotal) : generatedSubsceneCount;
-
-                const generatedCount = mode === 'worldInteraction'
-                    ? sceneGenerated + subsceneGenerated
-                    : sceneGenerated;
-                const totalCount = mode === 'worldInteraction'
-                    ? sceneTotal + subsceneTotal
-                    : sceneTotal;
-
-                const pointsDeductedRaw = Number(
-                    payload?.points?.deducted ??
-                    payload?.results?.pointsDeducted ??
-                    sceneCostPoints ??
-                    0
-                );
-                const pointsDeducted = Number.isFinite(pointsDeductedRaw) ? Math.max(0, pointsDeductedRaw) : 0;
-
-                const remainingPointsRaw =
-                    payload?.points?.remaining ??
-                    payload?.points?.remainingPoints ??
-                    payload?.results?.remainingPoints;
-                const remainingPointsValue = Number(remainingPointsRaw);
-                const remainingPoints = Number.isFinite(remainingPointsValue)
-                    ? Math.max(0, remainingPointsValue)
-                    : undefined;
-
-                // 弹出结果弹窗
-                setSceneGenerationResult({
-                    generatedCount,
-                    totalCount,
-                    pointsDeducted,
-                    remainingPoints,
-                });
-                if (mode !== 'worldInteraction') {
-                    bumpExistingSceneImageCache();
-                }
-                markBatchImageRefreshPending?.();
-                try {
-                    await onDataChange?.();
-                } catch (refreshError) {
-                    console.error('Failed to refresh scene data after batch generation:', refreshError);
-                }
-                await refreshUserPoints();
-                setSceneResultModalOpen(true);
-            } else {
-                toast.error(ctx.t?.('createGame.serverBusy') || '当前使用人数过多，请稍后再试');
-            }
+            throw new Error('Scene batch job polling timed out');
         } catch (error) {
+            if (sceneBatchGenerationCancelRef.current) {
+                return;
+            }
             console.error('生成所有场景立绘时出错:', error);
             toast.error(ctx.t?.('createGame.generateAllSceneImageFailed') || '生成所有场景立绘失败，请检查网络连接');
-            }
-            }
-            throw new Error('Scene batch job polling timed out');
-            */
-            throw new Error('Scene batch job polling timed out');
         } finally {
             setIsGeneratingAllSceneImages(false);
-            if (!lastJobStatus || ['queued', 'running', 'pending'].includes(String(lastJobStatus.status || ''))) {
+            if (sceneBatchGenerationCancelRef.current) {
+                setSceneBatchJobStatus(null);
+            } else if (!lastJobStatus || ['queued', 'running', 'pending'].includes(String(lastJobStatus.status || ''))) {
                 setSceneBatchJobStatus(null);
             }
+            sceneBatchGenerationCancelRef.current = false;
+        }
+    };
+
+    /** 停止前端轮询并关闭进度遮罩；服务端任务可能仍在后台执行 */
+    const cancelGenerateAllSceneImages = () => {
+        if (!sceneBatchGenerationCancelRef.current) {
+            sceneBatchGenerationCancelRef.current = true;
+            setIsGeneratingAllSceneImages(false);
+            setSceneBatchJobStatus(null);
+            toast(ctx.t?.('createGame.batchSceneGenerationCancelled') || '已取消场景立绘生成');
         }
     };
 
@@ -1643,5 +1592,6 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         // 批量 & 积分试算
         openSceneCostModal,
         confirmGenerateAllSceneImages,
+        cancelGenerateAllSceneImages,
     };
 };

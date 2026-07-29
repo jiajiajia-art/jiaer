@@ -16,6 +16,11 @@ interface GalgameHistoryModalProps {
     onLoadMoreBefore?: () => Promise<void> | void;
     onRegenerate?: (messageIndex: number) => void;
     onEditSave?: (historyIndex: number, content: string) => Promise<boolean>;
+    /** 历史面板底部「导出视觉小说」 */
+    onExportVisualNovel?: () => void;
+    /** 历史面板底部「返回」关闭历史 */
+    onClose?: () => void;
+    canExportVisualNovel?: boolean;
 }
 
 const GalgameHistoryModal = ({
@@ -27,6 +32,9 @@ const GalgameHistoryModal = ({
     hasMoreBefore = false,
     loadingMoreBefore = false,
     onLoadMoreBefore,
+    onExportVisualNovel,
+    onClose,
+    canExportVisualNovel = false,
 }: GalgameHistoryModalProps) => {
     const { t } = useTranslation();
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -277,6 +285,35 @@ const GalgameHistoryModal = ({
                         </div>
                     )}
                 </div>
+                {(onExportVisualNovel || onClose) && (
+                    <div className={styles.historyFooter}>
+                        {onExportVisualNovel && (
+                            <button
+                                type="button"
+                                className={styles.exportNovelButton}
+                                disabled={!canExportVisualNovel}
+                                onClick={() => {
+                                    logVisualButtonClick('export_visual_novel');
+                                    onExportVisualNovel();
+                                }}
+                            >
+                                {t('galgame.exportVisualNovel')}
+                            </button>
+                        )}
+                        {onClose && (
+                            <button
+                                type="button"
+                                className={styles.historyBackButton}
+                                onClick={() => {
+                                    logVisualButtonClick('history_back');
+                                    onClose();
+                                }}
+                            >
+                                {t('galgame.historyBack')}
+                            </button>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );

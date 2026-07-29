@@ -1,4 +1,4 @@
-export type SubscriptionPlanId = 'month' | 'season' | 'year';
+export type SubscriptionPlanId = import('../account/auth.type').MembershipPlanId;
 export type SubscriptionKeyStatus = 'unused' | 'used' | 'archived';
 export type SubscriptionKeySourceType = 'paid' | 'campaign';
 

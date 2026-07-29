@@ -12,6 +12,10 @@ import { parseResponse } from './apiHelpers';
 import type { User } from '../../../api/account/auth.type';
 import { auth } from '../../../api/account/authApi';
 import { isMiniProgramEnv } from '../../../utils/miniProgram';
+import {
+    BATCH_IMAGE_JOB_MAX_POLL_ATTEMPTS,
+    resolveBatchImageJobPollStep,
+} from '../../../utils/batchImageJobPoll';
 
 interface HandlersContext {
     fileId: string;
@@ -52,6 +56,8 @@ interface HandlersContext {
     // 暂存图片 blob URL refs
     pendingImageUrlsRef: React.MutableRefObject<{ [key: string]: string }>;
     onDataChange?: () => void | Promise<void>;
+    /** 用户点击取消时置为 true，轮询循环据此提前退出 */
+    npcBatchGenerationCancelRef: React.MutableRefObject<boolean>;
 }
 
 interface ConfirmEditResult {
@@ -89,6 +95,7 @@ export const createHandlers = (ctx: HandlersContext) => {
         newCharacterData,
         onDataChange,
         pendingImageUrlsRef,
+        npcBatchGenerationCancelRef,
         t,
     } = ctx;
 
@@ -946,6 +953,7 @@ export const createHandlers = (ctx: HandlersContext) => {
             return;
         }
         try {
+            npcBatchGenerationCancelRef.current = false;
             setIsGeneratingNpcImages(true);
             setNpcBatchJobStatus(null);
             const startResponse: any = await api.startGenerateAllNpcImages(fileId);
@@ -965,13 +973,40 @@ export const createHandlers = (ctx: HandlersContext) => {
                 failedCount: 0,
                 estimatedRemainingSeconds: null,
             });
-            for (let attempt = 0; attempt < 600; attempt += 1) {
+            for (let attempt = 0; attempt < BATCH_IMAGE_JOB_MAX_POLL_ATTEMPTS; attempt += 1) {
+                const pollStep = resolveBatchImageJobPollStep({
+                    cancelRequested: npcBatchGenerationCancelRef.current,
+                    status: '',
+                    attempt,
+                });
+                if (pollStep === 'cancelled') {
+                    return;
+                }
+                if (pollStep === 'timeout') {
+                    break;
+                }
+
                 const statusResponse: any = await api.getNpcBatchJobStatus(jobId);
                 const statusPayload = statusResponse?.data || statusResponse;
                 lastJobStatus = statusPayload as BatchImageJobStatus;
                 setNpcBatchJobStatus(lastJobStatus);
                 if (!statusPayload?.success) {
                     throw new Error(statusPayload?.error || statusPayload?.message || 'Failed to fetch NPC batch job status');
+                }
+
+                const statusStep = resolveBatchImageJobPollStep({
+                    cancelRequested: npcBatchGenerationCancelRef.current,
+                    status: String(statusPayload.status || ''),
+                    attempt,
+                });
+                if (statusStep === 'cancelled') {
+                    return;
+                }
+                if (statusStep === 'failed') {
+                    throw new Error(statusPayload?.error || statusPayload?.message || 'NPC batch job failed');
+                }
+                if (statusStep === 'timeout') {
+                    break;
                 }
                 if (statusPayload.status === 'completed') {
                     const resultResponse: any = await api.getNpcBatchJobResult(jobId);
@@ -983,17 +1018,33 @@ export const createHandlers = (ctx: HandlersContext) => {
                     setNpcBatchJobStatus(null);
                     return;
                 }
-                if (statusPayload.status === 'failed' || statusPayload.status === 'unknown') {
-                    throw new Error(statusPayload?.error || statusPayload?.message || 'NPC batch job failed');
-                }
                 await new Promise((resolve) => window.setTimeout(resolve, 1500));
             }
             throw new Error('NPC batch job polling timed out');
+        } catch (error) {
+            if (npcBatchGenerationCancelRef.current) {
+                return;
+            }
+            console.error('生成所有角色立绘时出错:', error);
+            toast.error(tToast('createGame.generateAllNpcImageFailed', '生成所有角色立绘失败，请检查网络连接'));
         } finally {
             setIsGeneratingNpcImages(false);
-            if (!lastJobStatus || ['queued', 'running', 'pending'].includes(String(lastJobStatus.status || ''))) {
+            if (npcBatchGenerationCancelRef.current) {
+                setNpcBatchJobStatus(null);
+            } else if (!lastJobStatus || ['queued', 'running', 'pending'].includes(String(lastJobStatus.status || ''))) {
                 setNpcBatchJobStatus(null);
             }
+            npcBatchGenerationCancelRef.current = false;
+        }
+    };
+
+    /** 停止前端轮询并关闭进度遮罩；服务端任务可能仍在后台执行 */
+    const cancelGenerateAllNpcImages = () => {
+        if (!npcBatchGenerationCancelRef.current) {
+            npcBatchGenerationCancelRef.current = true;
+            setIsGeneratingNpcImages(false);
+            setNpcBatchJobStatus(null);
+            toast(tToast('createGame.batchCharacterGenerationCancelled', '已取消角色立绘生成'));
         }
     };
 
@@ -1028,6 +1079,7 @@ export const createHandlers = (ctx: HandlersContext) => {
         regenerateVariationImage,
         deleteVariationImage,
         generateAllNpcImages,
+        cancelGenerateAllNpcImages,
         openNpcCostModal,
         updateCharacterFromResponse,
     };

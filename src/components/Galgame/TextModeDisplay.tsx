@@ -14,6 +14,8 @@ interface TextModalStep {
     options?: Array<{ id: number; text: string; isMain?: boolean }>;
     title?: string;
     description?: string;
+    /** 功能注释：阅读页全局 step 下标（窗口/虚拟列表时不等于本地 index） */
+    globalStepIndex?: number;
 }
 
 interface TextModeDisplayProps {
@@ -27,6 +29,10 @@ interface TextModeDisplayProps {
     onChoiceClick?: (option: { id: number; text: string }) => void;
     onCustomInputSubmit?: (value: string) => void;
     isFreeRound?: boolean;
+    /** 只读模式：隐藏自定义输入，选项不可点击（小说阅读等） */
+    readOnly?: boolean;
+    /** 浅色阅读页（小说阅读器白底） */
+    surface?: 'dark' | 'light';
 }
 
 import { OPTION_COST, INPUT_COST } from '../../utils/constants';
@@ -51,11 +57,14 @@ interface MessageItemProps {
     onChoiceClick?: (option: { id: number; text: string }) => void;
     onCustomInputSubmit?: (value: string) => void;
     isFreeRound?: boolean;
+    readOnly?: boolean;
+    surface?: 'dark' | 'light';
     t: (key: string) => string;
 }
 
 const MessageItem = memo<MessageItemProps>(({ 
-    step, 
+    step,
+    index,
     isCurrentStep, 
     currentDisplayText, 
     isTyping,
@@ -64,11 +73,22 @@ const MessageItem = memo<MessageItemProps>(({
     onChoiceClick, 
     onCustomInputSubmit,
     isFreeRound = false,
+    readOnly = false,
     t,
+    surface = 'dark',
 }) => {
     const [customInput, setCustomInput] = useState('');
 
     if (!step) return null;
+
+    // 功能注释：只读阅读页用全局下标做目录锚点，避免窗口局部 index 错位
+    const stepAnchorProps = readOnly
+        ? {
+            'data-novel-step-index': String(
+                typeof step.globalStepIndex === 'number' ? step.globalStepIndex : index,
+            ),
+          }
+        : {};
 
     const handleCustomSubmit = () => {
         if (customInput.trim() && onCustomInputSubmit && !isTyping && !isCompressingContext) {
@@ -100,9 +120,11 @@ const MessageItem = memo<MessageItemProps>(({
         const displayText = getDisplayText();
         
         return (
-            <div className={styles.messageWrapper}>
+            <div className={styles.messageWrapper} {...stepAnchorProps}>
                 <div className={styles.narrationBubble}>
-                    <div className={styles.narrationLabel}>{t('createGame.narration')}</div>
+                    {surface !== 'light' ? (
+                        <div className={styles.narrationLabel}>{t('createGame.narration')}</div>
+                    ) : null}
                     <div className={styles.narrationContent}>
                         <ColoredMarkdownText text={displayText} showCursor={isCurrentStep && isTyping} />
                     </div>
@@ -117,7 +139,7 @@ const MessageItem = memo<MessageItemProps>(({
         const isPlayer = step.isPlayer || false;
  
         return (
-            <div className={styles.messageWrapper}>
+            <div className={styles.messageWrapper} {...stepAnchorProps}>
                 <div className={`${styles.dialogueBubble} ${isPlayer ? styles.playerDialogueBubble : styles.npcDialogueBubble}`}>
                     <div className={styles.speakerName}>{speaker}</div>
                     <div className={styles.dialogueContent}>
@@ -138,7 +160,7 @@ const MessageItem = memo<MessageItemProps>(({
         const hasOptions = !!step.options && step.options.length > 0;
 
         return (
-            <div className={styles.messageWrapper}>
+            <div className={styles.messageWrapper} {...stepAnchorProps}>
                 <div className={styles.choiceBubble}>
                     {step.title && (
                         <div className={styles.choiceTitle}>{step.title}</div>
@@ -155,18 +177,18 @@ const MessageItem = memo<MessageItemProps>(({
                                     key={opt.id} 
                                     className={`${styles.optionItem} ${opt.isMain ? styles.optionItemMain : ''}`}
                                     onClick={() => {
-                                        if (onChoiceClick && !isTyping && !isCompressingContext) {
+                                        if (!readOnly && onChoiceClick && !isTyping && !isCompressingContext) {
                                             onChoiceClick(opt);
                                         }
                                     }}
                                     style={{ 
-                                        cursor: onChoiceClick && !isTyping && !isCompressingContext ? 'pointer' : 'default' 
+                                        cursor: !readOnly && onChoiceClick && !isTyping && !isCompressingContext ? 'pointer' : 'default' 
                                     }}
                                 >
                                     <span className={`${styles.optionText} ${opt.isMain ? styles.optionTextMain : ''}`}>
                                         {extractPlainText(opt.text)}
                                     </span>
-                                    {!isFreeRound && (
+                                    {!readOnly && !isFreeRound && (
                                         <span className={styles.pointsCost}>-{POINTS_CONFIG.option}{t('createGame.pointsUnit')}</span>
                                     )}
                                 </div>
@@ -174,7 +196,7 @@ const MessageItem = memo<MessageItemProps>(({
                         </div>
                     )}
 
-                    {/* 自定义输入区域：即使没有 options 也允许自定义输入 */}
+                    {!readOnly && (
                     <div className={styles.customInputSection}>
                         <div className={styles.customInputHeader}>
                             <span>{hasOptions ? t('createGame.orCustomInput') : t('createGame.customInput')}</span>
@@ -201,6 +223,7 @@ const MessageItem = memo<MessageItemProps>(({
                             </button>
                         </div>
                     </div>
+                    )}
                 </div>
             </div>
         );
@@ -225,6 +248,8 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
     onChoiceClick,
     onCustomInputSubmit,
     isFreeRound = false,
+    readOnly = false,
+    surface = 'dark',
 }) => {
     const { t } = useTranslation();
     const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -277,7 +302,7 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
     
     const showDotLoader = isWaitingForData && steps.length > 0 && !isTyping && !lastStepIsChoice;
     return (
-        <div className={styles.textModeContainer}>
+        <div className={`${styles.textModeContainer} ${surface === 'light' ? styles.textModeContainerLight : ''}`}>
             {steps.length === 0 && !isWaitingForData ? (
                 <div className={styles.emptyState}>{t('createGame.noContent')}</div>
             ) : (
@@ -305,6 +330,8 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
                                 onChoiceClick={onChoiceClick}
                                 onCustomInputSubmit={onCustomInputSubmit}
                                 isFreeRound={isFreeRound}
+                                readOnly={readOnly}
+                                surface={surface}
                                 t={t}
                             />
                         );

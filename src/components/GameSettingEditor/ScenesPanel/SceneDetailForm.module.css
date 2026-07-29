@@ -136,6 +136,31 @@
     line-height: 1;
 }
 
+/* 会员折扣价格样式（AI 生成按钮） */
+.discountPrice {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #ff4757;
+    font-size: 12px;
+}
+
+.discountPriceBlack {
+    color: rgba(0, 0, 0, 1);
+}
+
+.sceneImageActions:hover .discountPrice,
+.sceneImageActions:hover .discountPriceBlack {
+    color: #ff4757;
+}
+
+.originalPrice {
+    text-decoration: line-through;
+    color: rgba(0, 0, 0, 0.35);
+    font-size: 0.85em;
+    font-weight: 400;
+}
+
 /* 表单布局 */
 .formGrid {
     display: flex;

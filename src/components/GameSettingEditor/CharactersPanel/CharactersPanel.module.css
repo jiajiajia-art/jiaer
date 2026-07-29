@@ -695,6 +695,7 @@
     flex-wrap: wrap;
     gap: 6px;
     width: 100%;
+    color: rgba(51, 51, 51, 1);
 }
 
 .variationActions button {
@@ -1030,10 +1031,12 @@
 
 /* AI生成按钮样式优化 */
 .generateButton {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 5px;
+    white-space: nowrap;
+    flex-wrap: nowrap;
 }
 
 .priceIcon {
@@ -1060,6 +1063,46 @@
     color: rgba(0, 0, 0, 0.5);
     line-height: 1;
     font-weight: 400;
+}
+
+/* 会员折扣价格样式 */
+.discountPrice {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: rgba(0, 0, 0, 0.5);
+    font-weight: 600;
+    margin-left: 4px;
+    margin-right: 4px;
+    font-size: 12px;
+}
+
+.discountPriceBlack {
+    color: rgba(0, 0, 0, 1);
+}
+
+.portraitImageActions:hover .discountPrice,
+.portraitImageActions:hover .discountPriceBlack,
+.variationActions:hover .discountPrice,
+.variationActions:hover .discountPriceBlack {
+    color: var(--primary);
+}
+
+.originalPrice {
+    text-decoration: line-through;
+    color: rgba(0, 0, 0, 0.35);
+    font-size: 0.85em;
+    font-weight: 400;
+}
+
+.memberBadge {
+    background: linear-gradient(135deg, #ff6b7a 0%, #ff4757 100%);
+    color: #fff;
+    font-size: 0.65rem;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-weight: 600;
+    margin-left: 2px;
 }
 
 .plusLoadingOverlay{
@@ -1123,6 +1166,25 @@
     line-height: 1.6;
     color: rgba(0, 0, 0, 0.5);
     text-align: center;
+}
+
+.plusLoadingCancelBtn {
+    margin-top: 8px;
+    min-width: 120px;
+    border-radius: 12px;
+    padding: 10px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid rgba(224, 61, 75, 0.35);
+    background: #ffffff;
+    color: var(--primary);
+    transition: all 0.2s ease;
+}
+
+.plusLoadingCancelBtn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(224, 61, 75, 0.12);
 }
 
 /* 差分生成加载效果 */

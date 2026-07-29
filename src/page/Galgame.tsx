@@ -2,37 +2,36 @@ import { CiLocationOn } from "react-icons/ci";
 import styles from './Galgame.module.css';
 import { useAuthStore } from "../store/useAuthStore";
 import { useGameStore } from "../store/gameStore";
-import { BiHistory } from "react-icons/bi";
-import { LuFileText } from "react-icons/lu";
 import { RiLogoutCircleRLine } from "react-icons/ri";
-import { MdOutlineAutoStories } from "react-icons/md";
-import { MdContentCopy, MdMemory, MdPlayCircleOutline, MdSettings, MdOutlineAssessment, MdReplay, MdTimeline } from "react-icons/md";
+import { MdSettings, MdTimeline, MdPerson, MdOutlineAssessment, MdFlag, MdDns, MdContentCopy } from "react-icons/md";
 import StoryIntroModal from "../components/Galgame/StoryIntroModal";
 import NormalModeDisplay from "../components/Galgame/NormalModeDisplay";
 import { useCharacterAnimation } from "../hooks/galgame/useCharacterAnimation";
 import CharacterLayer from "../components/Galgame/CharacterLayer";
 import { useMusicPlayer } from "../hooks/mapGalgame/useMusicPlayer";
 import GalgameHistoryModal from "../components/Galgame/GalgameHistoryModal";
+import ExportVisualNovelModal from "../components/Galgame/ExportVisualNovelModal";
 import TextModeDisplay from "../components/Galgame/TextModeDisplay";
 import SettingsModal from "../components/Galgame/SettingsModal";
 import ErrorModal from "../components/GalgameMap/Modal/WorldModal";
 import { useGalgameController } from "../hooks/galgame/useGalgameController";
 import toast from "react-hot-toast";
 import FullPageLoading from "../components/Skeleton/FullPageLoading";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback, type CSSProperties } from "react";
 import { useTranslation } from 'react-i18next';
 import GameBackgroundRenderer from "../components/Galgame/GameBackgroundRenderer";
 import { useLocation, useNavigate } from "react-router-dom";
 import GameAction from "../api/rpgGame/gameAction";
-import ShareReplayModal from "../components/Galgame/ShareReplayModal";
 import replayModalStyles from "../components/Galgame/ShareReplayModal.module.css";
-import replayApi, { buildReplayShareUrl } from "../api/galgame/replay";
-import ServerAttributesPanel from "../components/Galgame/ServerAttributesPanel";
+import replayApi from "../api/galgame/replay";
+import AttributesPanel from "../components/Galgame/panels/AttributesPanel";
+import SystemsPanel from "../components/Galgame/panels/SystemsPanel";
+import CharactersPanel from "../components/Galgame/panels/CharactersPanel";
+import QuestsPanel from "../components/Galgame/panels/QuestsPanel";
 import SaveModal from "../components/Galgame/SaveModal";
 import LoadSaveListModal from "../components/CreateGame/LoadSaveListModal";
 import SavePreviewModal from "../components/CreateGame/SavePreviewModal";
 import type { SaveSummaryItem } from "../api/galgame/saves";
-import betaWhitelistApi from "../api/galgame/betaWhitelist";
 import GameConfirmModal from "../components/Galgame/GameConfirmModal";
 import { useGameDurationTracking } from "../hooks/useGameDurationTracking";
 import { logVisualButtonClick } from "../api/statistics/scriptButtonEvent";
@@ -46,17 +45,50 @@ import {
     hasExceededHorizontalDragThreshold,
     type HorizontalDragState,
 } from "./galgameControlBarDrag";
+import {
+    togglePlayBottomPanel,
+    type PlayBottomPanelId,
+} from "../lib/galgame/playBottomPanel";
+import {
+    mergeEncounteredIds,
+    resolveEncounteredCharacterIds,
+    type NpcProfileLike,
+    type PlayerProfileLike,
+} from "../lib/galgame/encounteredCharacters";
+import {
+    getQuestTrackerLabel,
+    getTrackedQuest,
+    mergeQuests,
+    normalizeQuests,
+    type QuestItem,
+} from "../lib/galgame/quests";
+import { useQuestTrackerTypewriter } from "../hooks/galgame/useQuestTrackerTypewriter";
+import { buildLocationNameTypewriterVars } from "../lib/galgame/locationNameTypewriter";
+import { isAbortError, hasNonEmptyPanelText, normalizeAttributePanels } from "../lib/galgame/attributePanelValues";
+import { fetchPlayUiState } from "../api/galgame/playUi";
+import { streamQuests } from "../api/galgame/questsStream";
+import { streamAttributePanels } from "../api/galgame/attributePanelsStream";
 
 const Galgame = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
     const { user } = useAuthStore();
-    const { fileId, sessionId, galgameBetaAttributes, setGalgameBetaAttributes } = useGameStore();
+    const { fileId, sessionId } = useGameStore();
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const [isShareOpen, setIsShareOpen] = useState(false);
+    const [isExportNovelOpen, setIsExportNovelOpen] = useState(false);
     const [isReplayControlsOpen, setIsReplayControlsOpen] = useState(false);
-    const [isAttributesOpen, setIsAttributesOpen] = useState(false);
+    const [activePlayPanel, setActivePlayPanel] = useState<PlayBottomPanelId | null>(null);
+    const [encounteredIds, setEncounteredIds] = useState<string[]>([]);
+    const [quests, setQuests] = useState<QuestItem[]>([]);
+    const [questsLoading, setQuestsLoading] = useState(false);
+    const [questsError, setQuestsError] = useState<string | null>(null);
+    const [attributePanelsCache, setAttributePanelsCache] = useState<Record<string, string>>({});
+    const lastHistoryLenForRefreshRef = useRef(0);
+    const questsRef = useRef<QuestItem[]>([]);
+    questsRef.current = quests;
+    const questsAbortRef = useRef<AbortController | null>(null);
+    const attrsAbortRef = useRef<AbortController | null>(null);
     const [isSaveOpen, setIsSaveOpen] = useState(false);
     const [defaultSaveMode, setDefaultSaveMode] = useState<'create' | 'overwrite' | undefined>(() => {
         const saveEntry = (location.state as { saveEntry?: string } | null)?.saveEntry;
@@ -65,9 +97,9 @@ const Galgame = () => {
     const [isLoadSaveOpen, setIsLoadSaveOpen] = useState(false);
     const [previewItem, setPreviewItem] = useState<SaveSummaryItem | null>(null);
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-    const [createdReplayShare, setCreatedReplayShare] = useState<{
-        visibility: 'public' | 'unlisted';
-        shareUrl: string;
+    const [overwriteDraftConfirm, setOverwriteDraftConfirm] = useState<{
+        title: string;
+        description?: string;
     } | null>(null);
     const buttonContainerRef = useRef<HTMLDivElement | null>(null);
     const buttonBarDragStateRef = useRef<HorizontalDragState>(createInitialHorizontalDragState());
@@ -83,23 +115,6 @@ const Galgame = () => {
     useEffect(() => {
         setIsReplayControlsOpen(false);
     }, [controller.isReplay, location.key]);
-
-    // 刷新/直进页面时的兜底：如果未检测过白名单，则尝试拉取一次
-    useEffect(() => {
-        const run = async () => {
-            try {
-                if (controller.isReplay) return;
-                if (!fileId) return;
-                if (galgameBetaAttributes !== null) return;
-                const resp = await betaWhitelistApi.get(fileId);
-                const enabled = !!resp.data?.whitelisted;
-                setGalgameBetaAttributes(enabled);
-            } catch {
-                setGalgameBetaAttributes(false);
-            }
-        };
-        run();
-    }, [controller.isReplay, fileId, galgameBetaAttributes, setGalgameBetaAttributes]);
 
     // 根据进入来源初始化默认保存模式：
     // 读取存档进入 -> 让用户选择新建/覆盖；其余入口 -> 直接新建。
@@ -154,6 +169,190 @@ const Galgame = () => {
         const newTextMode = !controller.isTextMode;
         controller.setIsTextMode(newTextMode);
     };
+
+    const openPlayPanel = useCallback((id: PlayBottomPanelId) => {
+        setIsSettingsOpen(false);
+        setActivePlayPanel((prev) => togglePlayBottomPanel(prev, id));
+    }, []);
+
+    const npcsList = useMemo(
+        () => (controller.presetData?.npcs?.npcs || []) as NpcProfileLike[],
+        [controller.presetData]
+    );
+
+    const playerProfile = useMemo((): PlayerProfileLike | null => {
+        const raw = controller.presetData?.world?.player;
+        if (!raw || typeof raw !== 'object') return null;
+        const images =
+            typeof raw.images === 'string' && raw.images.trim()
+                ? { base: raw.images.trim() }
+                : (raw.images as unknown as PlayerProfileLike['images']);
+        return {
+            name: String(raw.name || '').trim(),
+            job: String((raw as { job?: string }).job || (raw as { race?: string }).race || '').trim(),
+            description: String(
+                (raw as { description?: string }).description
+                || raw.background
+                || raw.appearance
+                || ''
+            ).trim(),
+            personality: String(raw.personality || '').trim(),
+            images,
+        };
+    }, [controller.presetData]);
+
+    const morePromptForms = useMemo(
+        () => (controller.presetData?.world as { morePromptForms?: unknown } | undefined)?.morePromptForms,
+        [controller.presetData]
+    );
+
+    const trackedQuest = useMemo(() => getTrackedQuest(quests), [quests]);
+    const questTrackerText = useMemo(() => getQuestTrackerLabel(trackedQuest), [trackedQuest]);
+    const { displayed: questTrackerDisplayed, isTyping: isQuestTrackerTyping } =
+        useQuestTrackerTypewriter(questTrackerText);
+
+    // 地点切换时用 CSS steps 打字机重播；同名不 remount 则不会重动画
+    const locationName = String(controller.currentScene?.name || '').trim();
+    const locationTypewriterVars = useMemo(
+        () => buildLocationNameTypewriterVars(locationName),
+        [locationName]
+    );
+
+    // 读档/进局：拉取已持久化的出场与任务
+    useEffect(() => {
+        if (controller.isReplay || !sessionId || !controller.gameStarted) return;
+        let cancelled = false;
+        void (async () => {
+            try {
+                const data = await fetchPlayUiState(sessionId);
+                if (cancelled) return;
+                setEncounteredIds(mergeEncounteredIds(data.encounteredCharacterIds));
+                setQuests(normalizeQuests(data.quests));
+                if (data.attributePanels && Object.keys(data.attributePanels).length > 0) {
+                    setAttributePanelsCache(normalizeAttributePanels(data.attributePanels));
+                }
+            } catch {
+                /* 旧局无字段时忽略 */
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [controller.isReplay, sessionId, controller.gameStarted]);
+
+    // 本局 step 变化时本地累计出场（含主角 / 姓名回退；与后端 merge 互补）
+    useEffect(() => {
+        if (controller.isReplay || !controller.gameStarted) return;
+        const steps = Array.isArray(controller.allStepsForTextModal)
+            ? controller.allStepsForTextModal
+            : [];
+        const scenes = controller.presetData?.scenes?.scenes || [];
+        setEncounteredIds((prev) =>
+            resolveEncounteredCharacterIds(steps, scenes, npcsList, playerProfile, prev)
+        );
+    }, [
+        controller.isReplay,
+        controller.gameStarted,
+        controller.allStepsForTextModal,
+        controller.presetData,
+        npcsList,
+        playerProfile,
+    ]);
+
+    const refreshAttributePanels = useCallback(async () => {
+        if (!sessionId || controller.isReplay) return;
+        attrsAbortRef.current?.abort();
+        const controllerAbort = new AbortController();
+        attrsAbortRef.current = controllerAbort;
+        try {
+            const result = await streamAttributePanels<{ panels: Record<string, string> }>(
+                sessionId,
+                {},
+                controllerAbort.signal
+            );
+            if (controllerAbort.signal.aborted) return;
+            if (result?.panels && typeof result.panels === 'object') {
+                const normalizedPanels = normalizeAttributePanels(result.panels);
+                if (hasNonEmptyPanelText(normalizedPanels)) {
+                    setAttributePanelsCache(normalizedPanels);
+                }
+            }
+        } catch (e: unknown) {
+            if (isAbortError(e) || (e as Error)?.name === 'AbortError') return;
+            /* 自动刷新失败时保留缓存；打开面板可手动点刷新 */
+        }
+    }, [sessionId, controller.isReplay]);
+
+    const refreshQuests = useCallback(async () => {
+        if (!sessionId || controller.isReplay) return;
+        questsAbortRef.current?.abort();
+        const controllerAbort = new AbortController();
+        questsAbortRef.current = controllerAbort;
+        setQuestsLoading(true);
+        setQuestsError(null);
+        try {
+            const result = await streamQuests(
+                sessionId,
+                {
+                    onError: (msg) => {
+                        // 功能注释：INVALID_JSON 是流式落盘解析失败；已有任务列表时不当成致命错误贴红条。
+                        if (msg === 'INVALID_JSON') {
+                            if (questsRef.current.length > 0) {
+                                setQuestsError(null);
+                                return;
+                            }
+                            setQuestsError(t('galgame.panelQuestsInvalid'));
+                            return;
+                        }
+                        if (msg === 'Session is busy') {
+                            setQuestsError(t('galgame.panelAttrsBusy'));
+                            return;
+                        }
+                        setQuestsError(msg || t('galgame.requestError'));
+                    },
+                    onDone: (payload) => {
+                        if (payload?.quests) {
+                            setQuests((prev) => mergeQuests(prev, payload.quests));
+                            setQuestsError(null);
+                        }
+                    },
+                },
+                controllerAbort.signal
+            );
+            if (result?.quests) {
+                setQuests((prev) => mergeQuests(prev, result.quests));
+                setQuestsError(null);
+            }
+        } catch (e: unknown) {
+            if (isAbortError(e) || (e as Error)?.name === 'AbortError') return;
+            setQuestsError(e instanceof Error ? e.message : t('galgame.requestError'));
+        } finally {
+            setQuestsLoading(false);
+        }
+    }, [sessionId, controller.isReplay, t]);
+
+    // 每轮叙事结束后：先刷属性再刷任务，避免共用 session 锁互相 LOCKED
+    useEffect(() => {
+        if (controller.isReplay || !controller.gameStarted || !sessionId) return;
+        const len = controller.history.length;
+        if (len <= 0) return;
+        if (len <= lastHistoryLenForRefreshRef.current) return;
+        const last = controller.history[len - 1];
+        lastHistoryLenForRefreshRef.current = len;
+        if (last?.role !== 'assistant') return;
+        void (async () => {
+            await refreshAttributePanels();
+            await refreshQuests();
+        })();
+    }, [
+        controller.history,
+        controller.history.length,
+        controller.isReplay,
+        controller.gameStarted,
+        sessionId,
+        refreshAttributePanels,
+        refreshQuests,
+    ]);
 
     // 处理重新生成
     const handleRegenerate = (messageIndex: number) => {
@@ -454,25 +653,6 @@ const Galgame = () => {
         }
     };
 
-    const handleCopyCreatedReplayLink = async () => {
-        if (!createdReplayShare) {
-            return;
-        }
-
-        const copied = await copyTextToClipboard(createdReplayShare.shareUrl);
-        if (!copied) {
-            toast.error(t('galgame.copyReplayFailed'));
-            return;
-        }
-
-        if (createdReplayShare.visibility === 'unlisted') {
-            toast.success(t('galgame.replayLinkCopied'));
-            return;
-        }
-
-            toast.success(t('galgame.publicReplayCopied'));
-    };
-
     const handleCopyMemoryDebugText = async (text: string, successMessage: string) => {
         if (!text.trim()) {
             return;
@@ -487,35 +667,68 @@ const Galgame = () => {
         toast.success(successMessage);
     };
 
-    const handleShareReplay = async ({ title, description, visibility }: { title: string; description?: string; visibility: 'public' | 'unlisted' | 'private' }) => {
-        logVisualButtonClick('share_replay_create');
+    /** 从历史导出视觉小说草稿（底层仍走 session→private replay→novel，对用户只暴露草稿箱） */
+    const handleExportVisualNovel = async ({
+        title,
+        description,
+        overwrite = false,
+    }: {
+        title: string;
+        description?: string;
+        overwrite?: boolean;
+    }) => {
+        logVisualButtonClick(overwrite ? 'export_visual_novel_overwrite' : 'export_visual_novel_create');
         if (!sessionId || !fileId) {
             toast.error(t('galgame.sessionNotFound'));
             return;
         }
+
+        const runExport = async () =>
+            replayApi.createFromSession({
+                sessionId,
+                fileId,
+                title,
+                description,
+                visibility: 'private',
+                createAsNovel: true,
+                overwrite,
+            });
+
         try {
-            const resp = await replayApi.createFromSession({ sessionId, fileId, title, description, visibility });
-            const replayId = resp.data?.replayId;
-            if (resp.data?.success && replayId) {
-                const shareUrl = buildReplayShareUrl(replayId);
-                setIsShareOpen(false);
-
-                if (visibility === 'private') {
-                    setCreatedReplayShare(null);
-                    toast.success(t('galgame.replayCreatedPrivate'));
-                    return;
+            let resp;
+            try {
+                resp = await runExport();
+            } catch (firstError) {
+                const firstCode = (firstError as AxiosError<{ code?: string }>).response?.data?.code;
+                // 吐字刚结束时后端可能仍持锁/落库：自动重试一次
+                if (firstCode === 'GENERATION_IN_PROGRESS') {
+                    await new Promise((resolve) => setTimeout(resolve, 1600));
+                    resp = await runExport();
+                } else {
+                    throw firstError;
                 }
-
-                setCreatedReplayShare({ visibility, shareUrl });
-            } else {
-                toast.error(t('galgame.createReplayFailed'));
             }
+
+            if (resp.data?.success && resp.data?.novelFileId) {
+                setOverwriteDraftConfirm(null);
+                setIsExportNovelOpen(false);
+                controller.setShowGalgameHistory(false);
+                toast.success(t('galgame.exportVisualNovelCreated'));
+                return;
+            }
+            toast.error(t('galgame.exportVisualNovelFailed'));
         } catch (error) {
             const axiosError = error as AxiosError<{ code?: string; message?: string }>;
             const errorCode = axiosError.response?.data?.code;
 
-            if (errorCode === 'REPLAY_TITLE_CONFLICT') {
-                toast.error(t('galgame.duplicateReplayTitle'));
+            if (errorCode === 'REPLAY_TITLE_CONFLICT' && !overwrite) {
+                // 本人同名草稿：二次确认后再带 overwrite 重试（不影响其他账号）
+                setOverwriteDraftConfirm({ title, description });
+                return;
+            }
+
+            if (errorCode === 'NOVEL_PUBLISHED_CONFLICT') {
+                toast.error(t('galgame.novelPublishedConflict'));
                 return;
             }
 
@@ -524,7 +737,20 @@ const Galgame = () => {
                 return;
             }
 
-            toast.error('创建回放失败');
+            if (errorCode === 'NOVEL_SCHEMA_OUTDATED') {
+                toast.error(t('galgame.exportVisualNovelSchemaOutdated'));
+                return;
+            }
+
+            if (errorCode === 'NO_STEPS_AVAILABLE') {
+                toast.error(t('galgame.exportVisualNovelNoSteps', {
+                    defaultValue: '当前会话没有可导出的剧情步骤，请先多玩几轮再导出',
+                }));
+                return;
+            }
+
+            const serverMessage = String(axiosError.response?.data?.message || '').trim();
+            toast.error(serverMessage || t('galgame.exportVisualNovelFailed'));
         }
     };
 
@@ -605,8 +831,25 @@ const Galgame = () => {
                             </div>
                         )}
                         <div className={`${styles.topHeader} ${controller.isTextMode ? styles.topHeaderTextMode : ''}`}>
-                            <CiLocationOn />
-                            <span>{controller.currentScene?.name}</span>
+                            <span className={styles.topHeaderLocationIcon} aria-hidden="true">
+                                <CiLocationOn />
+                            </span>
+                            {locationName ? (
+                                <span
+                                    key={locationName}
+                                    className={styles.topHeaderLocationText}
+                                    style={
+                                        locationTypewriterVars
+                                            ? ({
+                                                '--location-type-steps': locationTypewriterVars.steps,
+                                                '--location-type-ms': `${locationTypewriterVars.durationMs}ms`,
+                                            } as CSSProperties)
+                                            : undefined
+                                    }
+                                >
+                                    {locationName}
+                                </span>
+                            ) : null}
                         </div>
                     </div>
                     {/* {!controller.isReplay && controller.gameStarted && (
@@ -686,22 +929,20 @@ const Galgame = () => {
                             />
                         )}
                     </div>
-                    {/* 顶部右侧：属性按钮（内测白名单） */}
-                    {!controller.isReplay && galgameBetaAttributes && controller.gameStarted ? (
-                        <div className={styles.topButtonsContainer}>
+                    {/* 顶栏任务追踪（与任务面板同源）；新任务文案变化时打字机出场 */}
+                    {!controller.isReplay && controller.gameStarted && questTrackerText ? (
+                        <div
+                            key={questTrackerText}
+                            className={`${styles.questTracker} ${styles.questTrackerEnter}`}
+                        >
+                            <div className={styles.questTrackerLabel}>{t('galgame.questTracker')}</div>
                             <div
-                                className={`${styles.buttonItem} ${isAttributesOpen ? styles.buttonItemActive : ''}`}
-                                onClick={() => setIsAttributesOpen((p) => !p)}
-                                style={{ cursor: 'pointer' }}
+                                className={`${styles.questTrackerBody}${isQuestTrackerTyping ? ` ${styles.questTrackerBodyTyping}` : ''}`}
                             >
-                                <div className={styles.buttonInner}>
-                                    <MdOutlineAssessment />
-                                    <span>{t('galgame.attributes')}</span>
-                                </div>
+                                {questTrackerDisplayed}
                             </div>
                         </div>
                     ) : null}
-
 
                     {controller.isReplay && isReplayControlsOpen && (
                         <div className={styles.replayControlBar}>
@@ -744,69 +985,94 @@ const Galgame = () => {
                         </div>
                     )}
 
-                    {/* 按钮栏移到 mainContent 内，与历史弹窗同级，确保显示在弹窗之上 */}
+                    {/* 按钮栏：历史打开时隐藏常规按钮，仅保留「导出视觉小说 / 返回」 */}
                     <div
                         ref={buttonContainerRef}
-                        className={`${styles.buttonContainer} ${isButtonBarDragging ? styles.buttonContainerDragging : ''}`}
-                        onPointerDown={handleButtonBarPointerDown}
-                        onPointerMove={handleButtonBarPointerMove}
-                        onPointerUp={handleButtonBarPointerUp}
-                        onPointerCancel={handleButtonBarPointerCancel}
-                        onLostPointerCapture={handleButtonBarLostPointerCapture}
-                        onClickCapture={handleButtonBarClickCapture}
-                        onDoubleClickCapture={handleButtonBarClickCapture}
-                        onWheel={handleButtonBarWheel}
-                        onDragStartCapture={handleButtonBarDragStartCapture}
+                        className={`${styles.buttonContainer} ${controller.showGalgameHistory ? styles.historyActionBar : ''} ${isButtonBarDragging ? styles.buttonContainerDragging : ''}`}
+                        onPointerDown={controller.showGalgameHistory ? undefined : handleButtonBarPointerDown}
+                        onPointerMove={controller.showGalgameHistory ? undefined : handleButtonBarPointerMove}
+                        onPointerUp={controller.showGalgameHistory ? undefined : handleButtonBarPointerUp}
+                        onPointerCancel={controller.showGalgameHistory ? undefined : handleButtonBarPointerCancel}
+                        onLostPointerCapture={controller.showGalgameHistory ? undefined : handleButtonBarLostPointerCapture}
+                        onClickCapture={controller.showGalgameHistory ? undefined : handleButtonBarClickCapture}
+                        onDoubleClickCapture={controller.showGalgameHistory ? undefined : handleButtonBarClickCapture}
+                        onWheel={controller.showGalgameHistory ? undefined : handleButtonBarWheel}
+                        onDragStartCapture={controller.showGalgameHistory ? undefined : handleButtonBarDragStartCapture}
                     >
-                        {!controller.isReplay && (
-                            <div className={styles.buttonItem}>
-                                <div className={styles.buttonInner}>
-                                    <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="积分" />
-                                    <span>{user?.user?.points}</span>
-                                </div>
-                            </div>
-                        )}
-                        {/* 存档按钮（仅非回放模式显示） */}
-                        {!controller.isReplay && (
-                            <div
-                                className={styles.buttonItem}
-                                onClick={() => {
-                                    // 保持当前来源对应的保存模式（来源由路由 state 决定）
-                                    setIsSaveOpen(true);
-                                }}
-                                style={{ cursor: 'pointer' }}
-                            >
-                                <div className={styles.buttonInner}>
-                                    <MdOutlineAssessment />
-                                    <span>{t('galgame.save')}</span>
-                                </div>
-                            </div>
-                        )}
-                        {!controller.isReplay && (
-                            <div
-                                className={`${styles.buttonItem} ${controller.showGalgameHistory ? styles.buttonItemActive : ''}`}
-                                onClick={handleHistoryClick}
-                            >
-                                <div className={styles.buttonInner}>
-                                    <BiHistory />
-                                    <span>{t('galgame.history')}</span>
-                                </div>
-                            </div>
-                        )}
+                        {controller.showGalgameHistory ? (
+                            <>
+                                <button
+                                    type="button"
+                                    className={styles.historyExportButton}
+                                    disabled={
+                                        controller.isReplay
+                                        || !sessionId
+                                        || !fileId
+                                        || controller.history.length === 0
+                                    }
+                                    onClick={() => {
+                                        logVisualButtonClick('export_visual_novel');
+                                        setIsExportNovelOpen(true);
+                                    }}
+                                >
+                                    {t('galgame.exportVisualNovel')}
+                                </button>
+                                <button
+                                    type="button"
+                                    className={styles.historyBackButton}
+                                    onClick={() => {
+                                        logVisualButtonClick('history_back');
+                                        controller.setShowGalgameHistory(false);
+                                    }}
+                                >
+                                    {t('galgame.historyBack')}
+                                </button>
+                            </>
+                        ) : (
+                            <>
                         {!controller.isReplay && controller.gameStarted && (
-                            <div
-                                className={`${styles.buttonItem} ${isShareOpen ? styles.buttonItemActive : ''}`}
-                                onClick={() => {
-                                    logVisualButtonClick('share_replay');
-                                    setIsShareOpen(true);
-                                }}
-                                style={{ cursor: 'pointer' }}
-                            >
-                                <div className={styles.buttonInner}>
-                                    <MdReplay />
-                                    <span>{t('galgame.replay')}</span>
+                            <>
+                                <div
+                                    className={`${styles.buttonItem} ${activePlayPanel === 'character' ? styles.buttonItemActive : ''}`}
+                                    onClick={() => openPlayPanel('character')}
+                                    style={{ cursor: 'pointer' }}
+                                >
+                                    <div className={styles.buttonInner}>
+                                        <MdPerson />
+                                        <span>{t('galgame.tabCharacter')}</span>
+                                    </div>
                                 </div>
-                            </div>
+                                <div
+                                    className={`${styles.buttonItem} ${activePlayPanel === 'attrs' ? styles.buttonItemActive : ''}`}
+                                    onClick={() => openPlayPanel('attrs')}
+                                    style={{ cursor: 'pointer' }}
+                                >
+                                    <div className={styles.buttonInner}>
+                                        <MdOutlineAssessment />
+                                        <span>{t('galgame.tabAttrs')}</span>
+                                    </div>
+                                </div>
+                                <div
+                                    className={`${styles.buttonItem} ${activePlayPanel === 'quests' ? styles.buttonItemActive : ''}`}
+                                    onClick={() => openPlayPanel('quests')}
+                                    style={{ cursor: 'pointer' }}
+                                >
+                                    <div className={styles.buttonInner}>
+                                        <MdFlag />
+                                        <span>{t('galgame.tabQuests')}</span>
+                                    </div>
+                                </div>
+                                <div
+                                    className={`${styles.buttonItem} ${activePlayPanel === 'systems' ? styles.buttonItemActive : ''}`}
+                                    onClick={() => openPlayPanel('systems')}
+                                    style={{ cursor: 'pointer' }}
+                                >
+                                    <div className={styles.buttonInner}>
+                                        <MdDns />
+                                        <span>{t('galgame.tabSystems')}</span>
+                                    </div>
+                                </div>
+                            </>
                         )}
                         {controller.isReplay && (
                             <div
@@ -823,67 +1089,9 @@ const Galgame = () => {
                             </div>
                         )}
                         <div
-                            className={`${styles.buttonItem} ${controller.isTextMode ? styles.buttonItemActive : ''}`}
-                            onClick={handleTextModeToggle}
-                            style={{ cursor: 'pointer' }}
-                        >
-                            <div className={styles.buttonInner}>
-                                <LuFileText />
-                                    <span>{t('galgame.text')}</span>
-                            </div>
-                        </div>
-                        <div
-                            className={`${styles.buttonItem} ${controller.isAutoPlay ? styles.buttonItemActive : ''} ${controller.isTextMode || controller.showGalgameHistory ? styles.buttonItemDisabled : ''}`}
-                            onClick={
-                                controller.isTextMode || controller.showGalgameHistory
-                                    ? undefined
-                                    : () => {
-                                        logVisualButtonClick("auto");
-                                        controller.handleAutoPlayToggle();
-                                    }
-                            }
-                            style={{ cursor: controller.isTextMode || controller.showGalgameHistory ? 'not-allowed' : 'pointer' }}
-                        >
-                            <div className={styles.buttonInner}>
-                                <MdOutlineAutoStories />
-                                    <span>{t('galgame.auto')}</span>
-                            </div>
-                        </div>
-                        {controller.contextMemoryDebugEnabled && !controller.isReplay && (
-                            <div
-                                className={`${styles.buttonItem} ${controller.memoryDebugOpen ? styles.buttonItemActive : ''}`}
-                                onClick={() => {
-                                    void controller.openContextMemoryDebug();
-                                }}
-                                style={{ cursor: 'pointer' }}
-                                title="记忆调试"
-                            >
-                                <div className={styles.buttonInner}>
-                                    <MdMemory />
-                                    <span>记忆</span>
-                                </div>
-                            </div>
-                        )}
-                        {controller.contextMemoryDebugEnabled && !controller.isReplay && (
-                            <div
-                                className={`${styles.buttonItem} ${controller.isAutoToCompression ? styles.buttonItemActive : ''} ${!controller.gameStarted || controller.showGalgameHistory ? styles.buttonItemDisabled : ''}`}
-                                onClick={
-                                    !controller.gameStarted || controller.showGalgameHistory
-                                        ? undefined
-                                        : controller.handleAutoToCompressionToggle
-                                }
-                                style={{ cursor: !controller.gameStarted || controller.showGalgameHistory ? 'not-allowed' : 'pointer' }}
-                                title="自动跑到压缩"
-                            >
-                                <div className={styles.buttonInner}>
-                                    <MdPlayCircleOutline />
-                                    <span>压测</span>
-                                </div>
-                            </div>
-                        )}
-                        <div
                             className={`${styles.buttonItem} ${isSettingsOpen ? styles.buttonItemActive : ''}`}
                             onClick={() => {
+                                setActivePlayPanel(null);
                                 setIsSettingsOpen(!isSettingsOpen);
                             }}
                             style={{ cursor: 'pointer' }}
@@ -905,6 +1113,8 @@ const Galgame = () => {
                                 </div>
                             </div>
                         )}
+                            </>
+                        )}
                     </div>
 
                     <StoryIntroModal
@@ -923,6 +1133,15 @@ const Galgame = () => {
                         onLoadMoreBefore={controller.loadMoreHistoryBefore}
                         onRegenerate={controller.isReplay ? undefined : handleRegenerate}
                         onEditSave={controller.isReplay ? undefined : controller.editHistory}
+                    />
+
+                    <ExportVisualNovelModal
+                        isOpen={isExportNovelOpen}
+                        onClose={() => setIsExportNovelOpen(false)}
+                        onSubmit={handleExportVisualNovel}
+                        defaultTitle={controller.presetData?.world?.title || t('galgame.exportVisualNovelDefaultTitle')}
+                        sessionId={sessionId}
+                        fileId={fileId}
                     />
 
                     {controller.contextMemoryDebugEnabled && controller.memoryDebugOpen && (
@@ -1043,20 +1262,82 @@ const Galgame = () => {
                         onDeleteSession={controller.isReplay ? undefined : handleDeleteSessionInGame}
                         hideExitButton={controller.isReplay}
                         isMusicPlaying={isMusicPlaying}
+                        musicDisabled={!hasMusic}
                         onToggleMusic={() => {
+                            if (!hasMusic) return;
                             logVisualButtonClick("settings_toggle_bgm");
-                            handleMusicToggle();
+                            void handleMusicToggle();
                         }}
                         volume={volume}
                         onVolumeChange={setVolume}
+                        points={controller.isReplay ? null : user?.user?.points}
+                        onOpenSave={
+                            controller.isReplay
+                                ? undefined
+                                : () => {
+                                      setIsSaveOpen(true);
+                                  }
+                        }
+                        onOpenHistory={
+                            controller.isReplay
+                                ? undefined
+                                : () => {
+                                      handleHistoryClick();
+                                  }
+                        }
+                        isTextMode={controller.isTextMode}
+                        onToggleTextMode={handleTextModeToggle}
+                        isAutoPlay={controller.isAutoPlay}
+                        autoPlayDisabled={controller.isTextMode || controller.showGalgameHistory}
+                        onToggleAutoPlay={() => {
+                            logVisualButtonClick('auto');
+                            controller.handleAutoPlayToggle();
+                        }}
+                        onOpenMemoryDebug={
+                            controller.contextMemoryDebugEnabled && !controller.isReplay
+                                ? () => {
+                                      void controller.openContextMemoryDebug();
+                                  }
+                                : undefined
+                        }
+                        onToggleAutoToCompression={
+                            controller.contextMemoryDebugEnabled && !controller.isReplay
+                                ? controller.handleAutoToCompressionToggle
+                                : undefined
+                        }
+                        isAutoToCompression={controller.isAutoToCompression}
+                        autoToCompressionDisabled={!controller.gameStarted || controller.showGalgameHistory}
                     />
 
-                    {/* 通用属性面板（服务端KV） */}
-                    {!controller.isReplay && galgameBetaAttributes && controller.gameStarted ? (
-                        <ServerAttributesPanel
-                            isOpen={isAttributesOpen}
-                            onClose={() => setIsAttributesOpen(false)}
-                        />
+                    {!controller.isReplay && controller.gameStarted ? (
+                        <>
+                            <CharactersPanel
+                                isOpen={activePlayPanel === 'character'}
+                                onClose={() => setActivePlayPanel(null)}
+                                encounteredIds={encounteredIds}
+                                npcs={npcsList}
+                                player={playerProfile}
+                            />
+                            <AttributesPanel
+                                isOpen={activePlayPanel === 'attrs'}
+                                onClose={() => setActivePlayPanel(null)}
+                                suppressAutoRefresh
+                                cachedPanels={attributePanelsCache}
+                                onPanelsUpdated={setAttributePanelsCache}
+                            />
+                            <QuestsPanel
+                                isOpen={activePlayPanel === 'quests'}
+                                onClose={() => setActivePlayPanel(null)}
+                                quests={quests}
+                                loading={questsLoading}
+                                error={questsError}
+                            />
+                            <SystemsPanel
+                                isOpen={activePlayPanel === 'systems'}
+                                onClose={() => setActivePlayPanel(null)}
+                                morePromptForms={morePromptForms}
+                            />
+                        </>
                     ) : null}
 
                     {/* 存档弹窗 */}
@@ -1145,99 +1426,6 @@ const Galgame = () => {
                         }
                     )}
 
-                    {/* 分享回放弹窗 */}
-                    <ShareReplayModal
-                        isOpen={isShareOpen}
-                        onClose={() => setIsShareOpen(false)}
-                        onSubmit={handleShareReplay}
-                        defaultTitle={controller.presetData?.world?.title ? `${controller.presetData.world.title} · ${t('galgame.replay')}` : t('galgame.myReplay')}
-                    />
-
-                    {createdReplayShare && (
-                        <div
-                            className={replayModalStyles.overlay}
-                            style={{ zIndex: 3400 }}
-                            onClick={() => setCreatedReplayShare(null)}
-                        >
-                            <div
-                                className={replayModalStyles.modal}
-                                role="dialog"
-                                aria-modal="true"
-                                aria-labelledby="replay-share-result-title"
-                                onClick={(event) => event.stopPropagation()}
-                            >
-                                <div className={replayModalStyles.header}>
-                                    <div className={replayModalStyles.headerContent}>
-                                        <div className={replayModalStyles.titleWrap}>
-                                            <div
-                                                id="replay-share-result-title"
-                                                className={replayModalStyles.title}
-                                            >
-                                                {t('galgame.replayCreated')}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className={replayModalStyles.body}>
-                                    <div
-                                        style={{
-                                            color: '#4b5563',
-                                            fontSize: '14px',
-                                            lineHeight: 1.6,
-                                            marginBottom: '12px',
-                                        }}
-                                    >
-                                        {t('galgame.shareReplayTip')}
-                                    </div>
-                                    {createdReplayShare.visibility === 'unlisted' && (
-                                        <div
-                                            style={{
-                                                color: '#a56200',
-                                                fontSize: '13px',
-                                                lineHeight: 1.5,
-                                                marginBottom: '12px',
-                                            }}
-                                        >
-                                            {t('galgame.linkOnlyTip')}
-                                        </div>
-                                    )}
-                                    <input
-                                        className={replayModalStyles.input}
-                                        value={createdReplayShare.shareUrl}
-                                        readOnly
-                                        onFocus={(event) => event.currentTarget.select()}
-                                    />
-                                </div>
-                                <div className={replayModalStyles.footer}>
-                                    <button
-                                        type="button"
-                                        className={replayModalStyles.btn}
-                                        style={{
-                                            width: 'min(13rem, calc(50% - 0.5625rem))',
-                                            background: '#E03D4B',
-                                            color: '#fff',
-                                        }}
-                                        onClick={handleCopyCreatedReplayLink}
-                                    >
-                                        {t('galgame.copyLink')}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className={replayModalStyles.btn}
-                                        style={{
-                                            width: 'min(13rem, calc(50% - 0.5625rem))',
-                                            background: '#f3f4f6',
-                                            color: '#111827',
-                                        }}
-                                        onClick={() => setCreatedReplayShare(null)}
-                                    >
-                                        {t('galgame.close')}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
                     {/* 回放结束提示（退出按钮） */}
                     {controller.isReplay && controller.replayFinished && (
                         <div className={replayModalStyles.endMask}>
@@ -1264,6 +1452,23 @@ const Galgame = () => {
                         title={t('galgame.restartGame')}
                         message={t('galgame.confirmRestart')}
                         confirmText={t('galgame.confirmRestartBtn')}
+                        cancelText={t('galgame.cancel')}
+                    />
+
+                    {/* 导出同名草稿覆盖确认（叠在导出弹窗之上） */}
+                    <GameConfirmModal
+                        isOpen={Boolean(overwriteDraftConfirm)}
+                        overlayZIndex={3500}
+                        onConfirm={() => {
+                            if (!overwriteDraftConfirm) return;
+                            const payload = overwriteDraftConfirm;
+                            setOverwriteDraftConfirm(null);
+                            void handleExportVisualNovel({ ...payload, overwrite: true });
+                        }}
+                        onCancel={() => setOverwriteDraftConfirm(null)}
+                        title={t('galgame.overwriteDraftTitle')}
+                        message={t('galgame.overwriteDraftMessage')}
+                        confirmText={t('galgame.overwriteDraftConfirm')}
                         cancelText={t('galgame.cancel')}
                     />
                 </div>

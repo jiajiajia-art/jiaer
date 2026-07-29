@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { IoEye, IoStatsChartSharp } from 'react-icons/io5';
+import { IoEye, IoStatsChartSharp, IoShareSocial, IoTime, IoChatbubbleEllipses } from 'react-icons/io5';
 import { TbHandClick } from 'react-icons/tb';
 import { HiOutlineLightBulb } from 'react-icons/hi';
 import { MdContentCopy } from 'react-icons/md';
@@ -16,12 +16,14 @@ import CreateGameModals from '../components/CreateGame/CreateGameModals';
 import ConfirmModal from '../components/CommonModal/ConfirmModal';
 import PDFTemplateModal from '../components/GameSettingEditor/PDFTemplateModal';
 import GameGridSkeleton from '../components/Skeleton/GameGridSkeleton';
+import WithdrawFlowModal from '../components/Create/WithdrawFlowModal';
 import { useAuthStore } from '../store/useAuthStore';
 import { useEditorStore } from '../store/editorStore';
 import { useGameStore } from '../store/gameStore';
 import getGameDataApi from '../api/home/getGameData';
 import type { UserGameData } from '../api/home/getGameData.type';
 import statisticsApi from '../api/statistics/statisticsApi';
+import creatorStatsApi, { type StatsOverview } from '../api/stats/creatorStatsApi';
 import payApi from '../api/pay/payApi';
 import type { PayOrderRequest } from '../api/pay/pay.type';
 import { auth } from '../api/account/authApi';
@@ -35,8 +37,24 @@ import {
     MINI_PROGRAM_CREATOR_PC_URL,
     type CreatorGameType,
 } from '../utils/miniProgram';
+import { partitionCreatorGames } from '../utils/novelGame';
+import {
+    DRAFT_BOX_FILTER_ORDER,
+    filterDraftGamesByType,
+    getDraftBoxFilterLabelKey,
+    type DraftBoxFilterKey,
+} from '../utils/draftBoxFilter';
+import { getApiErrorMessage } from '../utils/error';
 
 type CreatorStatsIncentiveType = 'none' | 'incentive' | 'game_incentive' | 'code_incentive' | 'all_incentive';
+
+const formatPlayDuration = (seconds: number) => {
+    const safe = Math.max(0, Number(seconds) || 0);
+    const hours = Math.floor(safe / 3600);
+    const minutes = Math.floor((safe % 3600) / 60);
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+};
 
 const Create: React.FC = () => {
     const { t } = useTranslation();
@@ -52,52 +70,55 @@ const Create: React.FC = () => {
         totalViews: 0,
         totalClicks: 0,
         totalAmount: 0,
+        totalDiamondsAmount: 0,
         totalIncentiveAmount: 0,
         pendingIncome: 0,
         inviteTotalAmount: 0,
         invitePendingIncome: 0,
         incentiveType: 'none' as CreatorStatsIncentiveType,
     });
+    const [creatorStats, setCreatorStats] = useState<StatsOverview | null>(null);
     const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
     const [isCreateTypeModalOpen, setIsCreateTypeModalOpen] = useState(false);
     const [isMobileTipModalOpen, setIsMobileTipModalOpen] = useState(false);
     const [mobileTipMessage, setMobileTipMessage] = useState('');
     const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
+    const [isSettleDiamondsModalOpen, setIsSettleDiamondsModalOpen] = useState(false);
     const [isSettling, setIsSettling] = useState(false);
     const [isPDFModalOpen, setIsPDFModalOpen] = useState(false);
+    const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
     const [isDraftManageMode, setIsDraftManageMode] = useState(false);
     const [selectedDraftIds, setSelectedDraftIds] = useState<string[]>([]);
     const [isBatchDeletingDrafts, setIsBatchDeletingDrafts] = useState(false);
     const [isBatchDeleteConfirmOpen, setIsBatchDeleteConfirmOpen] = useState(false);
+    const [draftFilterKey, setDraftFilterKey] = useState<DraftBoxFilterKey>('all');
 
     const userName = user?.user?.nickname || user?.user?.name || t('create.userNameDefault');
     const userCode = user?.user?.userCode;
     const debugToken = user?.user?.debugToken;
+    const truncatedDebugToken = debugToken ? `${debugToken.slice(0, 8)}...` : null;
     const isMiniProgram = isMiniProgramEnv();
     const isWorkIncentive = stats.incentiveType === 'incentive' || stats.incentiveType === 'game_incentive' || stats.incentiveType === 'all_incentive';
+
+    const handleWithdrawClick = () => {
+        setIsWithdrawModalOpen(true);
+    };
     const isCodeIncentive = stats.incentiveType === 'code_incentive' || stats.incentiveType === 'all_incentive';
 
-    const { publishedGames, draftGames } = useMemo(() => {
-        const published: UserGameData[] = [];
-        const drafts: UserGameData[] = [];
+    const { publishedGames, draftGames } = useMemo(
+        () => partitionCreatorGames(fileMetas),
+        [fileMetas],
+    );
 
-        fileMetas.forEach((game) => {
-            if (game.is_public === 1) {
-                published.push(game);
-            } else {
-                drafts.push(game);
-            }
-        });
-
-        return {
-            publishedGames: published,
-            draftGames: drafts,
-        };
-    }, [fileMetas]);
+    const filteredDraftGames = useMemo(
+        () => filterDraftGamesByType(draftGames, draftFilterKey),
+        [draftGames, draftFilterKey],
+    );
 
     const getGameManageId = (game: UserGameData) => String(game.file_id || game.id || '');
     const selectedDraftCount = selectedDraftIds.length;
-    const isAllDraftsSelected = draftGames.length > 0 && selectedDraftCount === draftGames.length;
+    const isAllDraftsSelected = filteredDraftGames.length > 0
+        && filteredDraftGames.every((game) => selectedDraftIds.includes(getGameManageId(game)));
 
     const loadMyGames = async () => {
         if (!user?.user?.id) {
@@ -129,10 +150,11 @@ const Create: React.FC = () => {
             const response = await statisticsApi.getALLGameStats();
             if (response.data.success && response.data.data) {
                 setStats({
-                    totalCreated: response.data.data.Count ?? 0,
+                    totalCreated: response.data.data.count ?? 0,
                     totalViews: response.data.data.pv ?? 0,
                     totalClicks: response.data.data.uv ?? 0,
-                    totalAmount: response.data.data.totalAmount ?? 0,
+                    totalAmount: response.data.data.totalPointsAmount ?? 0,
+                    totalDiamondsAmount: response.data.data.totalDiamondsAmount ?? 0,
                     totalIncentiveAmount: response.data.data.totalIncentiveAmount ?? 0,
                     pendingIncome: response.data.data.pendingIncome ?? 0,
                     inviteTotalAmount: response.data.data.inviteTotalAmount ?? 0,
@@ -142,6 +164,21 @@ const Create: React.FC = () => {
             }
         } catch (error) {
             console.error('获取我的游戏统计错误:', error);
+        }
+    };
+
+    const getCreatorOverviewStats = async () => {
+        if (!user?.user?.id) {
+            return;
+        }
+
+        try {
+            const response = await creatorStatsApi.getOverview();
+            if (response.data.success) {
+                setCreatorStats(response.data.data);
+            }
+        } catch (error) {
+            console.error('获取创作者统计错误:', error);
         }
     };
 
@@ -159,6 +196,7 @@ const Create: React.FC = () => {
     useEffect(() => {
         loadMyGames();
         getGameTotalStats();
+        getCreatorOverviewStats();
         getUserInfo();
     }, [user?.user?.id]);
 
@@ -245,7 +283,12 @@ const Create: React.FC = () => {
             return;
         }
 
-        setSelectedDraftIds(draftGames.map((game) => getGameManageId(game)).filter(Boolean));
+        setSelectedDraftIds(filteredDraftGames.map((game) => getGameManageId(game)).filter(Boolean));
+    };
+
+    const handleDraftFilterChange = (nextFilter: DraftBoxFilterKey) => {
+        setDraftFilterKey(nextFilter);
+        setSelectedDraftIds([]);
     };
 
     const handleDraftCardClick = (game: UserGameData) => {
@@ -306,19 +349,64 @@ const Create: React.FC = () => {
 
         setIsSettling(true);
         try {
-            const response = await auth.settlePoints();
+            const response = await auth.settlePoints('points');
             if (response.data.success && response.data.data) {
-                const settlementAmount = response.data.data.settlementAmount || 0;
-                toast.success(t('create.settleSuccess', { amount: settlementAmount }));
+                const data = response.data.data;
+                const pointsAmount = data.pointsSettled || 0;
+                const diamondsAmount = data.diamondsSettled || 0;
+
+                let successMsg = '';
+                if (pointsAmount > 0 && diamondsAmount > 0) {
+                    successMsg = t('create.settleSuccessDual', { points: pointsAmount, diamonds: diamondsAmount });
+                } else if (pointsAmount > 0) {
+                    successMsg = t('create.settleSuccess', { amount: pointsAmount });
+                } else if (diamondsAmount > 0) {
+                    successMsg = t('create.settleSuccessDiamonds', { amount: diamondsAmount });
+                } else {
+                    successMsg = t('create.settleSuccessZero');
+                }
+
+                toast.success(successMsg);
                 await getGameTotalStats();
+                await getCreatorOverviewStats();
                 await getUserInfo();
                 setIsSettleModalOpen(false);
             } else {
                 toast.error(response.data.message || t('create.settleFailed'));
             }
-        } catch (error: any) {
-                const errorMessage = error?.response?.data?.message || error?.message || t('create.settleFailed');
-            toast.error(errorMessage);
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, t('create.settleFailed')));
+        } finally {
+            setIsSettling(false);
+        }
+    };
+
+    const handleSettleDiamonds = async () => {
+        if (isSettling) return;
+
+        setIsSettling(true);
+        try {
+            const response = await auth.settlePoints('diamonds');
+            if (response.data.success && response.data.data) {
+                const data = response.data.data;
+                const diamondsAmount = data.diamondsSettled || 0;
+
+                let successMsg = '';
+                if (diamondsAmount > 0) {
+                    successMsg = t('create.settleSuccessDiamonds', { amount: diamondsAmount });
+                } else {
+                    successMsg = t('create.settleSuccessZero');
+                }
+
+                toast.success(successMsg);
+                await getGameTotalStats();
+                await getUserInfo();
+                setIsSettleDiamondsModalOpen(false);
+            } else {
+                toast.error(response.data.message || t('create.settleFailed'));
+            }
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, t('create.settleFailed')));
         } finally {
             setIsSettling(false);
         }
@@ -383,85 +471,103 @@ const Create: React.FC = () => {
                 <div className={styles.main}>
                     <div className={styles.creatorHeroSection}>
                         <div className={styles.creatorHeroCard}>
-                            <div className={styles.creatorHeroMain}>
-                                <div className={styles.creatorHeroMeta}>
-                                    <div className={styles.creatorHeroEyebrow}>{t('create.creatorStudio')}</div>
-                                    <div className={styles.creatorHeroName}>{userName}</div>
-                                    <div className={styles.creatorHeroInfoRow}>
-                                        <div className={styles.creatorIdentityStack}>
-                                            <div className={styles.userCode}>
-                                                <span className={styles.userCodeText}>{t('create.kuranIdPrefix')}{userCode || '--'}</span>
-                                                {userCode && (
-                                                    <button
-                                                        type="button"
-                                                        className={styles.userCodeCopyButton}
-                                                        onClick={handleCopyUserCode}
-                                                        title={t('profile.copyKuranId')}
-                                                    >
-                                                        <MdContentCopy />
-                                                    </button>
-                                                )}
-                                            </div>
-                                            <div className={styles.debugToken}>
-                                                <span className={styles.debugTokenText}>Token：{debugToken || '--'}</span>
-                                                {debugToken && (
-                                                    <button
-                                                        type="button"
-                                                        className={styles.userCodeCopyButton}
-                                                        onClick={handleCopyDebugToken}
-                                                        title={t('create.copyToken')}
-                                                    >
-                                                        <MdContentCopy />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className={styles.userCredit}>
+                            <div className={styles.creatorHeroLeft}>
+                                <div className={styles.creatorHeroEyebrow}>Creator Studio</div>
+                                <div className={styles.creatorHeroName}>{userName}</div>
+
+                                <div className={styles.creatorAccountCard}>
+                                    <div className={styles.creatorAccountHalf}>
+                                        <span className={styles.creatorAccountLabel}>{t('create.kuranIdPrefix')}</span>
+                                        <span className={styles.creatorAccountValue}>{userCode || '--'}</span>
+                                        {userCode && (
                                             <button
                                                 type="button"
-                                                className={styles.userPointsButton}
-                                                onClick={() => navigate('/points/details')}
+                                                className={styles.creatorAccountCopyButton}
+                                                onClick={handleCopyUserCode}
+                                                title={t('profile.copyKuranId')}
                                             >
-                                                <span className={styles.userPoints}>
-                                                <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" className={styles.priceIcon} />
-                                                {t('profile.myPoints')}：{user?.user?.points ?? 0}
-                                                </span>
+                                                <MdContentCopy />
                                             </button>
+                                        )}
+                                    </div>
+                                    <div className={styles.creatorAccountDivider} />
+                                    <div className={styles.creatorAccountHalf}>
+                                        <span className={styles.creatorAccountLabel}>Token:</span>
+                                        <span className={styles.creatorAccountValue}>{truncatedDebugToken || '--'}</span>
+                                        {debugToken && (
                                             <button
-                                                className={`${styles.payButton} ${styles.desktopPayButton}`}
-                                                onClick={() => setIsRechargeModalOpen(true)}
+                                                type="button"
+                                                className={styles.creatorAccountCopyButton}
+                                                onClick={handleCopyDebugToken}
+                                                title={t('create.copyToken')}
                                             >
-                                                <span>{t('create.recharge')}</span>
+                                                <MdContentCopy />
                                             </button>
-                                        </div>
+                                        )}
                                     </div>
                                 </div>
 
-                                <div className={styles.creatorHeroActions}>
-                                    {/* 适配移动端按钮并排布局 */}
-                                    <div className={styles.createGameButtonRow}>
-                                        <button
-                                            className={`${styles.payButton} ${styles.mobilePayButton}`}
-                                            onClick={() => setIsRechargeModalOpen(true)}
-                                        >
-                                            <span>{t('create.recharge')}</span>
-                                        </button>
-                                        <button
-                                            className={styles.createGameButtonItem}
-                                            onClick={() => setIsCreateTypeModalOpen(true)}
-                                        >
-                                            <HiOutlineLightBulb />
-                                            <span>{t('create.createGame')}</span>
-                                        </button>
-                                        <button
-                                            className={styles.helpButton}
-                                            onClick={() => setIsPDFModalOpen(true)}
-                                            title={t('create.pdfGuide')}
-                                        >
-                                            <span className={styles.helpIcon}>?</span>
-                                        </button>
+                                <div className={styles.creatorAssets}>
+                                    <div className={styles.creatorAssetCard}>
+                                        <div>
+                                            <div className={styles.creatorAssetHeader}>
+                                                <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" className={styles.creatorAssetIcon} />
+                                                <span className={styles.creatorAssetLabel}>{t('profile.myPoints')}</span>
+                                            </div>
+                                            <div className={styles.creatorAssetRow}>
+                                                <div className={styles.creatorAssetValue}>{user?.user?.points ?? 0}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className={styles.creatorAssetCard}>
+                                        <div>
+                                            <div className={styles.creatorAssetHeader}>
+                                                <svg className={styles.creatorAssetIconDiamond} viewBox="0 0 1024 1024">
+                                                    <path d="M296.42524445 392.80526222H50.38421333L216.76942222 148.46179555h246.03875556zM798.02823111 149.81233778H551.98833778l166.38520889 244.34232889h246.03989333zM403.65169778 392.80526222L511.19786667 226.41777778l106.40611555 166.38748444zM617.75075555 487.09859555L511.34350222 1000.40248889 407.21066667 487.09859555zM300.18901333 487.09859555l211.90883556 531.02364445-454.30670222-531.02364445zM719.77642667 487.09859555l-207.35658667 531.02364445 449.75559111-531.02364445z" fill="#FB4655"/>
+                                                </svg>
+                                                <span className={styles.creatorAssetLabel}>{t('profile.myDiamonds')}</span>
+                                            </div>
+                                            <div className={styles.creatorAssetRow}>
+                                                <div className={styles.creatorAssetValue}>{user?.user?.diamonds ?? 0}</div>
+                                            </div>
+                                        </div>
+                                        <div className={styles.creatorAssetActionsBox}>
+                                            {user?.user?.userSegment !== 'normal' && (
+                                                <button
+                                                    type="button"
+                                                    className={`${styles.creatorAssetActionButton} ${styles.creatorWithdrawButton}`}
+                                                    onClick={handleWithdrawClick}
+                                                >
+                                                    {t('create.withdraw')}
+                                                </button>
+                                            )}
+                                            <button
+                                                type="button"
+                                                className={`${styles.creatorAssetActionButton} ${styles.creatorRechargeButton}`}
+                                                onClick={() => setIsRechargeModalOpen(true)}
+                                            >
+                                                {t('create.recharge')}
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
+                            </div>
+
+                            <div className={styles.creatorHeroActions}>
+                                <button
+                                    className={styles.creatorPrimaryButton}
+                                    onClick={() => setIsCreateTypeModalOpen(true)}
+                                >
+                                    <HiOutlineLightBulb />
+                                    <span>{t('create.createGame')}</span>
+                                </button>
+                                <button
+                                    className={styles.creatorHelpButton}
+                                    onClick={() => setIsPDFModalOpen(true)}
+                                    title={t('create.pdfGuide')}
+                                >
+                                    <span className={styles.creatorHelpIcon}>?</span>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -511,6 +617,48 @@ const Create: React.FC = () => {
                                 </div>
                                 <div className={styles.statValue}>{stats.totalClicks}</div>
                             </div>
+                            <div className={styles.statBox}>
+                                <div className={styles.statLabel}>
+                                    <TbHandClick />
+                                    <span>{t('creatorStats.totalLikes')}</span>
+                                </div>
+                                <div className={styles.statValue}>{creatorStats?.likeCount ?? 0}</div>
+                            </div>
+                            <div className={styles.statBox}>
+                                <div className={styles.statLabel}>
+                                    <IoStatsChartSharp />
+                                    <span>{t('creatorStats.playCount')}</span>
+                                </div>
+                                <div className={styles.statValue}>{creatorStats?.playCount ?? 0}</div>
+                            </div>
+                            <div className={styles.statBox}>
+                                <div className={styles.statLabel}>
+                                    <IoTime />
+                                    <span>{t('creatorStats.playDuration')}</span>
+                                </div>
+                                <div className={styles.statValue}>{formatPlayDuration(creatorStats?.playDurationSeconds ?? 0)}</div>
+                            </div>
+                            <div className={styles.statBox}>
+                                <div className={styles.statLabel}>
+                                    <IoShareSocial />
+                                    <span>{t('creatorStats.shareCount')}</span>
+                                </div>
+                                <div className={styles.statValue}>{creatorStats?.shareCount ?? 0}</div>
+                            </div>
+                            <div className={styles.statBox}>
+                                <div className={styles.statLabel}>
+                                    <IoChatbubbleEllipses />
+                                    <span>{t('creatorStats.commentCount')}</span>
+                                </div>
+                                <div className={styles.statValue}>{creatorStats?.commentCount ?? 0}</div>
+                            </div>
+                            <div className={styles.statBox}>
+                                <div className={styles.statLabel}>
+                                    <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
+                                    <span>{t('creatorStats.spendPoints')}</span>
+                                </div>
+                                <div className={styles.statValue}>{creatorStats?.spendPoints ?? 0}</div>
+                            </div>
                             <div className={`${styles.statBox} ${stats.totalAmount > 0 ? styles.statBoxWithAction : ''}`}>
                                 <div className={styles.statLabel}>
                                     <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
@@ -529,6 +677,24 @@ const Create: React.FC = () => {
                                     )}
                                 </div>
                             </div>
+                            <div className={`${styles.statBox} ${stats.totalDiamondsAmount > 0 ? styles.statBoxWithAction : ''}`}>
+                                    <div className={styles.statLabel}>
+                                        <img src={`${import.meta.env.BASE_URL}data/assets/create/钻石.svg`} alt="" />
+                                        <span>{t('create.pendingRewardDiamonds')}</span>
+                                    </div>
+                                    <div className={styles.statActionRow}>
+                                        <div className={styles.statValue}>{stats.totalDiamondsAmount}</div>
+                                        {stats.totalDiamondsAmount > 0 && (
+                                            <button
+                                                type="button"
+                                                className={styles.settleButton}
+                                                onClick={() => setIsSettleDiamondsModalOpen(true)}
+                                            >
+                                                {t('create.settle')}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
                             {isWorkIncentive && (
                                 <div className={styles.statBox}>
                                     <div className={styles.statLabel} style={{ justifyContent: 'space-between', width: '100%' }}>
@@ -682,20 +848,38 @@ const Create: React.FC = () => {
                             </div>
                         ) : (
                             <div className={styles.draftSectionBody}>
+                                <div className={styles.draftFilterRow}>
+                                    {DRAFT_BOX_FILTER_ORDER.map((filterKey) => (
+                                        <button
+                                            key={filterKey}
+                                            type="button"
+                                            className={`${styles.draftFilterChip} ${draftFilterKey === filterKey ? styles.draftFilterChipActive : ''}`}
+                                            onClick={() => handleDraftFilterChange(filterKey)}
+                                        >
+                                            {t(getDraftBoxFilterLabelKey(filterKey))}
+                                        </button>
+                                    ))}
+                                </div>
                                 {isDraftManageMode && (
                                     <div className={styles.draftManageTip}>
                                         {/* 适配移动端操作栏 */}
                                         {t('create.draftsSelected', { count: selectedDraftCount })}
                                     </div>
                                 )}
-                                <GameGrid
-                                    games={draftGames}
-                                    onGameClick={handleDraftCardClick}
-                                    selectable={true}
-                                    selectedIds={selectedDraftIds}
-                                    onToggleSelect={handleToggleDraftSelect}
-                                    isSelectionMode={isDraftManageMode}
-                                />
+                                {filteredDraftGames.length === 0 ? (
+                                    <div className={styles.draftFilterEmpty}>
+                                        {t('create.noDraftsForFilter')}
+                                    </div>
+                                ) : (
+                                    <GameGrid
+                                        games={filteredDraftGames}
+                                        onGameClick={handleDraftCardClick}
+                                        selectable={true}
+                                        selectedIds={selectedDraftIds}
+                                        onToggleSelect={handleToggleDraftSelect}
+                                        isSelectionMode={isDraftManageMode}
+                                    />
+                                )}
                             </div>
                         )}
                     </div>
@@ -723,7 +907,11 @@ const Create: React.FC = () => {
                 isOpen={isRechargeModalOpen}
                 onClose={() => setIsRechargeModalOpen(false)}
                 onRecharge={handleRecharge}
-                isFirstCharge={user?.user?.firstCharge}
+                isFirstChargePlans={user?.user?.firstChargePlans}
+            />
+            <WithdrawFlowModal
+                open={isWithdrawModalOpen}
+                onClose={() => setIsWithdrawModalOpen(false)}
             />
 
             <ConfirmModal
@@ -732,6 +920,16 @@ const Create: React.FC = () => {
                 onCancel={() => setIsSettleModalOpen(false)}
                 title={t('create.confirmSettle')}
                 message={t('create.settleConfirmMessage', { amount: stats.totalAmount })}
+                confirmButtonText={isSettling ? t('create.settling') : t('create.confirmSettleBtn')}
+                cancelButtonText={t('create.cancel')}
+            />
+
+            <ConfirmModal
+                isOpen={isSettleDiamondsModalOpen}
+                onConfirm={handleSettleDiamonds}
+                onCancel={() => setIsSettleDiamondsModalOpen(false)}
+                title={t('create.confirmSettleDiamonds')}
+                message={t('create.settleConfirmDiamondsMessage', { amount: stats.totalDiamondsAmount })}
                 confirmButtonText={isSettling ? t('create.settling') : t('create.confirmSettleBtn')}
                 cancelButtonText={t('create.cancel')}
             />

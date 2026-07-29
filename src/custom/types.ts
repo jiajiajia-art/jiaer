@@ -1,4 +1,5 @@
 // PostMessage protocol types for Custom IF host <-> UI
+import type { Currency } from '../api/common/currency';
 
 export type CustomIFScope = 'user' | 'session';
 
@@ -55,8 +56,6 @@ export interface CustomIFKVResultPayload {
 export interface CustomIFPointsPayPayload {
   requestId: string;
   amount: number;
-  reason?: string;
-  metadata?: any;
   dryRun?: boolean;
 }
 
@@ -65,6 +64,7 @@ export interface CustomIFPointsResultPayload {
   success: boolean;
   consumed?: number;
   balance?: number;
+  currency?: Currency;
   code?: string;
   message?: string;
   txnId?: string;

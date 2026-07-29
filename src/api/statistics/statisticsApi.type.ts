@@ -25,8 +25,9 @@ export interface GameTotalStatsResponse {
     pv: number;
     uv: number;
     likeCount: number;
-    Count: number;
-    totalAmount: number;
+    count: number;
+    totalPointsAmount: number;
+    totalDiamondsAmount: number;
     pendingIncome?: number;
     totalIncentiveAmount?: number;
     inviteCount?: number;

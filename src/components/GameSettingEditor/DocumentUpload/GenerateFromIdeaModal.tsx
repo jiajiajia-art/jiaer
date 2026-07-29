@@ -42,8 +42,8 @@ const GenerateFromIdeaModal: React.FC<GenerateFromIdeaModalProps> = ({
                 setIdea('');
                 onClose();
             }
-        } catch (err: any) {
-            setError(err?.message || t('createGame.generateFailedRetry'));
+        } catch (err: unknown) {
+            setError((err as { message?: string })?.message || t('createGame.generateFailedRetry'));
         } finally {
             setIsSubmitting(false);
         }

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import promotionApi from '../api/promotion/promotionApi';
+import { getApiErrorMessage } from '../utils/error';
 import type {
   AdminPromotionSubmissionFilters,
   AdminPromotionSubmissionPagination,
@@ -121,15 +122,6 @@ const normalizeDateTimeLocal = (value: string) => {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 };
 
-const getErrorMessage = (error: unknown, fallback: string) => {
-  if (error && typeof error === 'object' && 'response' in error) {
-    const response = error as { response?: { data?: { message?: string; error?: string } } };
-    return response.response?.data?.message || response.response?.data?.error || fallback;
-  }
-  if (error instanceof Error && error.message) return error.message;
-  return fallback;
-};
-
 const isValidDetailLink = (value: string) => !value.trim() || value.startsWith('/') || value.startsWith('http://') || value.startsWith('https://');
 const isValidInternalLink = (value: string) => !value.trim() || value.startsWith('/');
 const buildOncePerActivityLimitSummary = () => '活动期内限制一次';
@@ -218,7 +210,7 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
         submissionConfig: normalizeSubmissionConfig(activity.submissionConfig),
       })));
     } catch (error) {
-      toast.error(getErrorMessage(error, '推广活动加载失败'));
+      toast.error(getApiErrorMessage(error, '推广活动加载失败'));
     } finally {
       setIsLoadingActivities(false);
     }
@@ -240,7 +232,7 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
         return nextState;
       });
     } catch (error) {
-      toast.error(getErrorMessage(error, '推广投稿加载失败'));
+      toast.error(getApiErrorMessage(error, '推广投稿加载失败'));
     } finally {
       setIsLoadingSubmissions(false);
     }
@@ -348,7 +340,7 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
       setForm((prev) => ({ ...prev, coverImageUrl: response.data.data?.imageUrl || '' }));
       toast.success('活动封面上传成功');
     } catch (error) {
-      toast.error(getErrorMessage(error, '活动封面上传失败'));
+      toast.error(getApiErrorMessage(error, '活动封面上传失败'));
     }
   };
 
@@ -388,7 +380,7 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
       await loadActivities();
       navigate('/admin/promotions/list');
     } catch (error) {
-      toast.error(getErrorMessage(error, '推广活动保存失败'));
+      toast.error(getApiErrorMessage(error, '推广活动保存失败'));
     } finally {
       setIsSaving(false);
     }
@@ -402,7 +394,7 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
       if (selectedActivityId === id) resetForm();
       await loadActivities();
     } catch (error) {
-      toast.error(getErrorMessage(error, '推广活动删除失败'));
+      toast.error(getApiErrorMessage(error, '推广活动删除失败'));
     }
   };
 
@@ -412,7 +404,7 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
       const response = await promotionApi.adminGetHomeTicker();
       setHomeTicker(response.data.data || createEmptyHomeTicker());
     } catch (error) {
-      toast.error(getErrorMessage(error, '首页滚动通知加载失败'));
+      toast.error(getApiErrorMessage(error, '首页滚动通知加载失败'));
     } finally {
       setIsLoadingHomeTicker(false);
     }
@@ -437,7 +429,7 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
       setHomeTicker(response.data.data || { ...homeTicker, text, linkUrl });
       toast.success('首页滚动通知保存成功');
     } catch (error) {
-      toast.error(getErrorMessage(error, '首页滚动通知保存失败'));
+      toast.error(getApiErrorMessage(error, '首页滚动通知保存失败'));
     } finally {
       setIsSavingHomeTicker(false);
     }
@@ -457,7 +449,7 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
         onRefreshCounts().catch(() => undefined),
       ]);
     } catch (error) {
-      toast.error(getErrorMessage(error, '投稿状态更新失败'));
+      toast.error(getApiErrorMessage(error, '投稿状态更新失败'));
     }
   };
 
@@ -510,7 +502,7 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
         ...prev,
         [submissionId]: previousDraft,
       }));
-      toast.error(getErrorMessage(error, '投稿状态更新失败'));
+      toast.error(getApiErrorMessage(error, '投稿状态更新失败'));
     } finally {
       setSavingReviewIds((prev) => {
         const nextState = { ...prev };
@@ -539,7 +531,7 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
         reviewRemark: nextSubmission.reviewRemark || '',
       });
     } catch (error) {
-      toast.error(getErrorMessage(error, '投稿详情加载失败'));
+      toast.error(getApiErrorMessage(error, '投稿详情加载失败'));
       setDetailSubmission(submission);
     } finally {
       setIsDetailLoading(false);

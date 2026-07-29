@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useUploadStore } from '../../../store/uploadStore';
 import styles from './UploadProgressModal.module.css';
 import { getUploadEtaText } from '../../../utils/etaText';
+import { formatIdeaJobStage } from '../../../utils/ideaJobStage';
 
 const UploadProgressModal: React.FC = () => {
     const { t } = useTranslation();
@@ -145,7 +146,7 @@ const UploadProgressModal: React.FC = () => {
                             
                             <div className={styles.jobDetails}>
                                 <span className={styles.stage} title={job.stage}>
-                                    {job.stage || t('createGame.statusProcessing')}
+                                    {formatIdeaJobStage(job.stage, t)}
                                 </span>
                                 <span className={styles.time}>
                                     {formatTime(job.startTime)}

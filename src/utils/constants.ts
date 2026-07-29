@@ -1,12 +1,18 @@
 import { HOST_ADDRESS } from "../config";
 
 // ==================== 积分相关常量 ====================
-export const SCENE_GENERATION_COST = 4;      // 场景生成费用
+export const SCENE_GENERATION_COST = 6;      // 场景生成费用
 export const CHARACTER_GENERATION_COST = 6;   // 角色/NPC/差分图生成费用
 export const OPTION_COST = 2;
 export const INPUT_COST = 3;
 export const HISTORY_MESSAGE_THRESHOLD = 5;
 export const CHECK_IN_REWARD_POINTS = 9;
+
+// ==================== 会员折扣 ====================
+// 会员在创作类操作（生成角色立绘/场景/差分等）上的折扣比例
+// 0.5 = 5 折（半价），1 = 不打折
+// 注意：这是硬编码的业务规则常量，如需后端下发请迁移到 usePricingStore
+export const MEMBER_CREATION_DISCOUNT = 0.5;
 
 // ==================== 默认图片 ====================
 export const DEFAULT_SCENE_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultScene.png`;

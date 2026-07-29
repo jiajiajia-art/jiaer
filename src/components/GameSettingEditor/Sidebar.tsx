@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import styles from './Sidebar.module.css';
+import { isWorldBookActive } from '../../utils/worldBookPanel';
+import { isGameDatabaseActive } from '../../utils/dataPromptPanel';
 
 interface SidebarProps {
     activePanel: string;
@@ -23,6 +25,8 @@ const modeConfigs: Record<string, NavItem[]> = {
         { id: 'world', i18nKey: 'world' },
         { id: 'characters', i18nKey: 'characters' },
         { id: 'scenes', i18nKey: 'scenes' },
+        { id: 'worldBook', i18nKey: 'worldBook' },
+        { id: 'gameDatabase', i18nKey: 'gameDatabase' },
     ],
     worldInteraction: [
         { id: 'documents', i18nKey: 'documents' },
@@ -35,7 +39,13 @@ const modeConfigs: Record<string, NavItem[]> = {
     ],
 };
 
-const Sidebar: React.FC<SidebarProps> = ({ activePanel, onPanelChange, isParsing, isParsed, mode = 'visual' }) => {
+const Sidebar: React.FC<SidebarProps> = ({
+    activePanel,
+    onPanelChange,
+    isParsing,
+    isParsed,
+    mode = 'visual',
+}) => {
     const { t } = useTranslation();
     const navItems = modeConfigs[mode] || modeConfigs.visual;
     const navRef = useRef<HTMLElement | null>(null);
@@ -54,6 +64,12 @@ const Sidebar: React.FC<SidebarProps> = ({ activePanel, onPanelChange, isParsing
             if (isParsed) return 'done';
             return '';
         }
+        if (itemId === 'worldBook' && isWorldBookActive(activePanel)) {
+            return 'active';
+        }
+        if (itemId === 'gameDatabase' && isGameDatabaseActive(activePanel)) {
+            return 'active';
+        }
         if (isParsed) {
             return activePanel === itemId ? 'active' : '';
         }
@@ -61,6 +77,14 @@ const Sidebar: React.FC<SidebarProps> = ({ activePanel, onPanelChange, isParsing
     };
 
     const currentIndex = useMemo(() => {
+        if (isGameDatabaseActive(activePanel)) {
+            const gameDatabaseIndex = navItems.findIndex((item) => item.id === 'gameDatabase');
+            return gameDatabaseIndex >= 0 ? gameDatabaseIndex : 0;
+        }
+        if (isWorldBookActive(activePanel)) {
+            const worldBookIndex = navItems.findIndex((item) => item.id === 'worldBook');
+            return worldBookIndex >= 0 ? worldBookIndex : 0;
+        }
         const matchedIndex = navItems.findIndex((item) => item.id === activePanel);
         return matchedIndex >= 0 ? matchedIndex : 0;
     }, [activePanel, navItems]);
@@ -112,32 +136,34 @@ const Sidebar: React.FC<SidebarProps> = ({ activePanel, onPanelChange, isParsing
                 <span className={styles.mobileProgressStatus}>{progressStateLabel}</span>
             </div>
 
-            <nav ref={navRef} className={styles.nav}>
-                {navItems.map((item, index) => {
-                    const status = getItemStatus(item.id);
-                    const disabled = isItemDisabled(item.id);
+            <div className={styles.navColumn}>
+                <nav ref={navRef} className={styles.nav}>
+                    {navItems.map((item, index) => {
+                        const status = getItemStatus(item.id);
+                        const disabled = isItemDisabled(item.id);
 
-                    return (
-                        <button
-                            key={item.id}
-                            ref={(node) => {
-                                navButtonRefs.current[item.id] = node;
-                            }}
-                            className={`${styles.navBtn} ${status === 'active' ? styles.active : ''} ${status === 'disabled' ? styles.disabled : ''} ${status === 'done' ? styles.done : ''}`}
-                            onClick={() => !disabled && onPanelChange(item.id)}
-                            disabled={disabled}
-                            aria-current={status === 'active' ? 'step' : undefined}
-                        >
-                            <span className={styles.navBadge}>{index + 1}</span>
-                            <span className={styles.navText}>
-                                <span className={styles.navTitleDesktop}>{index + 1} · {t(`createGame.sidebar.${item.i18nKey}` as const)}</span>
-                                <span className={styles.navTitleMobile}>{t(`createGame.sidebar.${item.i18nKey}Short` as const)}</span>
-                                <small>{t(`createGame.sidebar.${item.i18nKey}Subtitle` as const)}</small>
-                            </span>
-                        </button>
-                    );
-                })}
-            </nav>
+                        return (
+                            <button
+                                key={item.id}
+                                ref={(node) => {
+                                    navButtonRefs.current[item.id] = node;
+                                }}
+                                className={`${styles.navBtn} ${status === 'active' ? styles.active : ''} ${status === 'disabled' ? styles.disabled : ''} ${status === 'done' ? styles.done : ''}`}
+                                onClick={() => !disabled && onPanelChange(item.id)}
+                                disabled={disabled}
+                                aria-current={status === 'active' ? 'step' : undefined}
+                            >
+                                <span className={styles.navBadge}>{index + 1}</span>
+                                <span className={styles.navText}>
+                                    <span className={styles.navTitleDesktop}>{index + 1} · {t(`createGame.sidebar.${item.i18nKey}` as const)}</span>
+                                    <span className={styles.navTitleMobile}>{t(`createGame.sidebar.${item.i18nKey}Short` as const)}</span>
+                                    <small>{t(`createGame.sidebar.${item.i18nKey}Subtitle` as const)}</small>
+                                </span>
+                            </button>
+                        );
+                    })}
+                </nav>
+            </div>
         </aside>
     );
 };

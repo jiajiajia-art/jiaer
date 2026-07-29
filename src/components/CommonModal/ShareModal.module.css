@@ -1,0 +1,191 @@
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3200;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.modalWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal {
+    width: 340px;
+    background: #ffffff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.header {
+    background: linear-gradient(135deg, #FB4655 0%, #e63946 100%);
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #ffffff;
+    margin: 0;
+}
+
+.closeButton {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+.closeButton img {
+    width: 36px;
+    height: 36px;
+    filter: brightness(0) invert(1);
+}
+
+.closeButton:active {
+    transform: scale(0.95);
+}
+
+.body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.shareOption {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background: #f8f8f8;
+    border: 2px solid transparent;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: left;
+    width: 100%;
+}
+
+.shareOption:hover {
+    border-color: #FB4655;
+    background: #fff5f5;
+}
+
+.shareOption:active {
+    transform: scale(0.98);
+}
+
+.iconWrapper {
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #FB4655 0%, #e63946 100%);
+    border-radius: 12px;
+    color: #ffffff;
+    flex-shrink: 0;
+}
+
+.optionText {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.optionTitle {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333333;
+}
+
+.optionDesc {
+    font-size: 13px;
+    color: #888888;
+}
+
+/* 移动端适配 */
+@media (max-width: 480px) {
+    .modal {
+        width: 90vw;
+        max-width: 320px;
+    }
+
+    .header {
+        padding: 14px 16px;
+    }
+
+    .title {
+        font-size: 18px;
+    }
+
+    .body {
+        padding: 16px;
+    }
+
+    .shareOption {
+        padding: 14px;
+        gap: 12px;
+    }
+
+    .iconWrapper {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+    }
+
+    .iconWrapper svg {
+        width: 26px;
+        height: 26px;
+    }
+
+    .optionTitle {
+        font-size: 15px;
+    }
+
+    .optionDesc {
+        font-size: 12px;
+    }
+}

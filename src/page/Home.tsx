@@ -32,10 +32,12 @@ import type { SpecialThemeAutoSort, SpecialThemeTagRecord } from '../api/special
 import {
     DEFAULT_HOME_LIST_FILTERS,
     getHomeListFilterKey,
+    HOME_LIST_MODE_OPTIONS,
     type HomeListFilters,
     type HomeListMode,
     type HomeListSort,
 } from '../utils/gameBrowseFilters';
+import { resolveHomeFiltersForNovelThemeConflict } from '../utils/homeFilterNovelTheme';
 import { openConfiguredLink } from '../utils/promotionNavigation';
 import { useExternalLinkCopyModal } from '../hooks/useExternalLinkCopyModal';
 
@@ -252,6 +254,16 @@ const Home: React.FC = () => {
         () => getHomeListFilterKey(allGamesFilters),
         [allGamesFilters],
     );
+    const allGamesEmptyText = useMemo(() => {
+        if (allGamesFilters.mode !== 'all' && allGamesFilters.tagId != null) {
+            const modeOption = HOME_LIST_MODE_OPTIONS.find((option) => option.value === allGamesFilters.mode);
+            const modeLabel = modeOption?.labelKey ? t(modeOption.labelKey) : (modeOption?.label || allGamesFilters.mode);
+            const themeLabel = allThemeTags.find((tag) => Number(tag.id) === Number(allGamesFilters.tagId))?.name
+                || t('gameBrowse.theme');
+            return t('home.noMatchingWorksModeTheme', { mode: modeLabel, theme: themeLabel });
+        }
+        return t('home.noMatchingWorks');
+    }, [allGamesFilters.mode, allGamesFilters.tagId, allThemeTags, t]);
 
     useEffect(() => {
         carouselImageLoadedMapRef.current = carouselImageLoadedMap;
@@ -1863,17 +1875,11 @@ const Home: React.FC = () => {
     }, [updateAllGamesFilters]);
 
     const handleAllGamesModeChange = useCallback((mode: HomeListMode) => {
-        updateAllGamesFilters((prev) => ({
-            ...prev,
-            mode,
-        }));
+        updateAllGamesFilters((prev) => resolveHomeFiltersForNovelThemeConflict(prev, { mode }));
     }, [updateAllGamesFilters]);
 
     const handleAllGamesTagChange = useCallback((tagId: number | null) => {
-        updateAllGamesFilters((prev) => ({
-            ...prev,
-            tagId,
-        }));
+        updateAllGamesFilters((prev) => resolveHomeFiltersForNovelThemeConflict(prev, { tagId }));
     }, [updateAllGamesFilters]);
 
     useEffect(() => {
@@ -2297,7 +2303,7 @@ const Home: React.FC = () => {
                                     <GameGrid
                                         games={allGames}
                                         layoutVariant="homeWide"
-                                        emptyText={t('home.noMatchingWorks')}
+                                        emptyText={allGamesEmptyText}
                                     />
                                     {isLoadingMoreAll && (
                                         <div style={{ padding: '20px', textAlign: 'center' }}>
