@@ -576,9 +576,6 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                 <div className={styles.amountsGrid}>
                     {FIRST_CHARGE_PLANS.map((plan) => {
                         const hasBonus = !plan.noFirstChargeBonus;
-                        const isFirstYuan = plan.planId === 'dr_1';
-                        const isSixYuan = plan.planId === 'dr_6';
-                        const tagText = isFirstYuan ? t('rechargeModal.firstChargeBonus') : t('rechargeModal.firstChargeDouble');
                         const displayDiamonds = calculateDiamonds(plan.amount);
                         const planHasFirstCharged = hasFirstCharge(plan.planId);
                         return (
@@ -589,23 +586,16 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                                 onClick={() => handleFixedAmountClick(plan)}
                             >
                                 {hasBonus ? (
-                                    <div className={`${styles.firstChargeTag} ${planHasFirstCharged ? styles.firstChargeTagInactive : ''}`}>{tagText}</div>
+                                    <div className={`${styles.firstChargeTag} ${planHasFirstCharged ? styles.firstChargeTagInactive : ''}`} />
                                 ) : (
-                                    isSixYuan && <div className={styles.noBonusTag}>{t('rechargeModal.noFirstChargeBonus')}</div>
+                                    <div className={styles.noBonusTag} />
                                 )}
                                 <div className={styles.amountTopSection}>
                                     <div className={styles.amountMainPoints}>{displayDiamonds}{t('rechargeModal.diamonds')}</div>
                                     <div className={styles.amountPriceMeta}>
-                                        <span className={styles.amountPriceOriginal}>
-                                            {t('rechargeModal.currencySymbol')}{plan.amount.toFixed(1)}{t('rechargeModal.amountUnit')}
-                                        </span>
+                                        {t('rechargeModal.amount', { amount: plan.amount.toFixed(1) })}
                                     </div>
                                 </div>
-                                {hasBonus ? (
-                                    <div className={styles.amountFirstChargePoints}>{t('rechargeModal.firstChargeGive', { points: plan.firstChargeDiamonds })}</div>
-                                ) : (
-                                    isSixYuan && <div className={styles.amountNoBonus}>{t('rechargeModal.noBonus')}</div>
-                                )}
                             </button>
                         );
                     })}

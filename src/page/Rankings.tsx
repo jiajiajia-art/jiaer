@@ -319,17 +319,34 @@ const Rankings: React.FC = () => {
         [activeTab, allMergedList, apiTabCurrent]
     );
 
+    // Tab 显示逻辑：
+    // - 全部 Tab：仅当 allTabState 加载完成后才显示
+    // - 子 Tab：仅当对应 apiTabState 有数据且加载完成后才显示
     const filteredTabs = useMemo(() => {
-        if (!allTabState.loaded) return TAB_CONFIG;
-        return TAB_CONFIG.filter(tab => {
-            if (tab.key === 'all') return true;
-            const apiType = TAB_TO_API_TYPE[tab.key as Exclude<RankingTab, 'all'>];
-            return (allTabState.data[apiType] ?? []).length > 0;
+        if (activeTab === 'all') {
+            // 全部 Tab 需要等 allTabState 加载完成才显示
+            if (!allTabState.loaded && !allTabState.loading) return [];
+            return TAB_CONFIG.filter(tab => {
+                if (tab.key === 'all') return true;
+                const apiType = TAB_TO_API_TYPE[tab.key as Exclude<RankingTab, 'all'>];
+                return (allTabState.data[apiType] ?? []).length > 0;
+            });
+        }
+        // 子 Tab 需要等对应 apiTabState 加载完成才显示
+        const tab = activeTab as Exclude<RankingTab, 'all'>;
+        const tabState = apiTabState[tab];
+        if (!tabState?.loaded && !tabState?.loading) return [];
+        return TAB_CONFIG.filter(t => {
+            if (t.key === 'all') return allTabState.loaded && Object.keys(allTabState.data).length > 0;
+            const tState = apiTabState[t.key as Exclude<RankingTab, 'all'>];
+            return tState?.loaded && tState.data.length > 0;
         });
-    }, [allTabState.loaded, allTabState.data]);
+    }, [activeTab, allTabState.loaded, allTabState.data, allTabState.loading, apiTabState]);
 
+    // 当 filteredTabs 为空时自动切换到第一个有数据的 Tab
     useEffect(() => {
-        if (filteredTabs.length > 0 && !filteredTabs.find(t => t.key === activeTab)) {
+        if (filteredTabs.length === 0) return;
+        if (!filteredTabs.find(t => t.key === activeTab)) {
             setActiveTab(filteredTabs[0].key);
         }
     }, [filteredTabs, activeTab]);

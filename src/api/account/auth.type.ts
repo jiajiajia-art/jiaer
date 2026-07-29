@@ -1,5 +1,4 @@
-export type MembershipPlanId = 'creator_day' | 'creator_month' | 'creator_season' | 'creator_year';
-// 'month' | 'season' | 'year' // 旧版会员 planId，已废弃
+export type MembershipPlanId = 'creator_day' | 'creator_month' | 'creator_season' | 'creator_year' | 'month' | 'season' | 'year';
 
 export type Currency = import('../common/currency').Currency;
 export type CurrencyWithAll = import('../common/currency').CurrencyWithAll;

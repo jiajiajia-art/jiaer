@@ -14,6 +14,9 @@ const MEMBER_DISCOUNTS: Record<MembershipPlanId, number> = {
     creator_month: 0.8,
     creator_season: 0.7,
     creator_year: 0.6,
+    month: 1,
+    season: 1,
+    year: 1,
 };
 
 const getMemberDiscount = (memberPlan?: MembershipPlanId | null): number =>
