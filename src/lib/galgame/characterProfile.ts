@@ -24,6 +24,8 @@ export type PlayerEditableNpc = {
   survival?: NpcSurvival;
   favorability?: number;
   personalityTags?: string[];
+  /** 局内头像（AI 生成或预设立绘 URL） */
+  avatarUrl?: string;
   source: 'preset' | 'player_created';
   encountered: boolean;
 };
@@ -113,6 +115,8 @@ export function validateCharacterProfileInput(input: Partial<PlayerEditableNpc> 
     ? input!.personalityTags!.map((t) => trimStr(t)).filter(Boolean).slice(0, 20)
     : undefined;
 
+  const avatarUrl = trimStr(input?.avatarUrl) || undefined;
+
   return {
     ok: true,
     data: {
@@ -128,6 +132,7 @@ export function validateCharacterProfileInput(input: Partial<PlayerEditableNpc> 
       survival,
       favorability,
       personalityTags: tags?.length ? tags : undefined,
+      avatarUrl,
     },
   };
 }
@@ -184,6 +189,9 @@ export function npcLikeToEditableProfile(
     job?: string;
     description?: string;
     personality?: string;
+    images?: { base?: string } | string | null;
+    imagePath?: string;
+    avatarUrl?: string;
   },
   opts: { encountered?: boolean } = {},
 ): PlayerEditableNpc | null {
@@ -193,6 +201,12 @@ export function npcLikeToEditableProfile(
   const gender = (NPC_GENDERS.includes(genderRaw as NpcGender)
     ? genderRaw
     : 'unknown') as NpcGender;
+  let avatarUrl = trimStr(npc.avatarUrl);
+  if (!avatarUrl && typeof npc.images === 'string') avatarUrl = trimStr(npc.images);
+  if (!avatarUrl && npc.images && typeof npc.images === 'object') {
+    avatarUrl = trimStr(npc.images.base);
+  }
+  if (!avatarUrl) avatarUrl = trimStr(npc.imagePath);
   return {
     id,
     name: trimStr(npc.name) || id,
@@ -203,6 +217,7 @@ export function npcLikeToEditableProfile(
       trimStr(npc.personality) || '未知',
       CHARACTER_PROFILE_LIMITS.attitudeToPlayer.max,
     ),
+    ...(avatarUrl ? { avatarUrl } : {}),
     source: 'preset',
     encountered: opts.encountered !== false,
   };

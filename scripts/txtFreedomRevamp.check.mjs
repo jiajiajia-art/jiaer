@@ -20,8 +20,12 @@ import {
   validatePlayerCharacterCardInput,
 } from '../src/lib/galgame/playerCharacterCard.ts';
 import {
+  buildOpeningRoutesFromWorldKeyEvents,
+  buildSilentDefaultGameStartConfig,
   canSubmitGameStart,
+  GAME_START_UE_COPY,
   isStartAdventureEnabled,
+  normalizeGameStartGender,
   resolveOpeningRouteSelection,
   validateGameStartConfig,
 } from '../src/lib/galgame/gameStartConfig.ts';
@@ -276,6 +280,31 @@ test('canSubmitGameStart_未选故事线不可提交', () => {
     }),
     true,
   );
+});
+
+test('buildOpeningRoutes_空列表应给开场路线兜底', () => {
+  const routes = buildOpeningRoutesFromWorldKeyEvents([], { initialPlot: '序章' });
+  assert.equal(routes.length, 1);
+  assert.equal(routes[0].title, GAME_START_UE_COPY.fallbackRouteTitle);
+  assert.equal(routes[0].openingMonologue, '序章');
+});
+
+test('buildSilentDefaultGameStartConfig_应用创作台玩家与首条线', () => {
+  assert.equal(normalizeGameStartGender('女'), 'female');
+  assert.equal(normalizeGameStartGender('unknown'), 'other');
+  const built = buildSilentDefaultGameStartConfig({
+    playerName: '白茶',
+    gender: 'female',
+    routes: [
+      { id: 'a', title: '线A', openingMonologue: '开场A' },
+      { id: 'b', title: '线B', openingMonologue: '开场B' },
+    ],
+  });
+  assert.equal(built.ok, true);
+  assert.equal(built.data?.player.name, '白茶');
+  assert.equal(built.data?.player.gender, 'female');
+  assert.equal(built.data?.openingRouteId, 'a');
+  assert.deepEqual(built.data?.retainedStorylineIds, ['b']);
 });
 
 test('validateGameStartConfig_与方案C路线裁剪', () => {

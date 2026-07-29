@@ -42,14 +42,19 @@
   color: rgba(255, 255, 255, 0.7);
 }
 
-.field input,
-.field select {
-  border-radius: 0.4rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(0, 0, 0, 0.35);
-  color: #fff;
-  padding: 0.45rem 0.6rem;
+.field input {
+  border-radius: 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.38);
+  color: #e8eef8;
+  padding: 0.55rem 0.7rem;
   font: inherit;
+}
+
+.field input:focus {
+  outline: none;
+  border-color: rgba(224, 61, 75, 0.55);
+  box-shadow: 0 0 0 2px rgba(224, 61, 75, 0.16);
 }
 
 .section {

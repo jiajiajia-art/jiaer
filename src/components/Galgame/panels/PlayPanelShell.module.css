@@ -6,7 +6,8 @@
   display: flex;
   align-items: stretch;
   justify-content: center;
-  background: rgba(6, 8, 14, 0.92);
+  /* 近不透明，避免对白/选项透到档案表单上（UE 全屏面板） */
+  background: rgba(6, 8, 14, 0.97);
 }
 
 .panel {
@@ -22,6 +23,44 @@
 .header {
   flex-shrink: 0;
   margin-bottom: 1rem;
+}
+
+.headerRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+}
+
+.headerText {
+  flex: 1;
+  min-width: 0;
+}
+
+.headerBack {
+  flex-shrink: 0;
+  width: 2.2rem;
+  height: 2.2rem;
+  margin-top: 0.05rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 1.45rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.headerBack:hover {
+  border-color: rgba(255, 90, 103, 0.45);
+  color: #ffb3ba;
+}
+
+.headerRight {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding-top: 0.15rem;
 }
 
 .title {
@@ -50,27 +89,93 @@
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: 0.75rem;
-  padding-top: 0.75rem;
+  gap: 0.7rem;
+  padding-top: 0.85rem;
   padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   position: relative;
   z-index: 1;
 }
 
+.footerActions {
+  display: flex;
+  flex: 1;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
 .backButton {
-  min-width: 4.5rem;
-  padding: 0.45rem 0.85rem;
-  border-radius: 0.35rem;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
+  min-width: 5rem;
+  min-height: 2.45rem;
+  padding: 0.5rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(232, 238, 248, 0.95);
   font-size: 0.875rem;
+  font-weight: 650;
+  letter-spacing: 0.03em;
   cursor: pointer;
   pointer-events: auto;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition:
+    background 0.14s ease,
+    border-color 0.14s ease,
+    transform 0.14s ease;
 }
 
 .backButton:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.11);
+  border-color: rgba(255, 90, 103, 0.5);
+  color: #ffb3ba;
+}
+
+.backButton:focus-visible {
+  outline: 2px solid var(--primary-light);
+  outline-offset: 2px;
+}
+
+.backButton:active {
+  transform: translateY(1px);
+}
+
+/** 主操作（添加角色 / 保存等）——站点主题红 */
+.primaryButton {
+  min-width: 5rem;
+  min-height: 2.45rem;
+  padding: 0.5rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 90, 103, 0.7);
+  background: linear-gradient(165deg, var(--primary-light) 0%, var(--primary) 48%, var(--primary-dark) 100%);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 6px 16px rgba(224, 61, 75, 0.32);
+  transition:
+    background 0.14s ease,
+    border-color 0.14s ease,
+    transform 0.14s ease,
+    box-shadow 0.14s ease;
+}
+
+.primaryButton:hover {
+  background: linear-gradient(165deg, #ff6b76 0%, #e84a57 48%, #d03441 100%);
+  border-color: rgba(255, 90, 103, 0.85);
+  box-shadow: 0 8px 20px rgba(224, 61, 75, 0.4);
+}
+
+.primaryButton:focus-visible {
+  outline: 2px solid var(--primary-light);
+  outline-offset: 2px;
+}
+
+.primaryButton:active {
+  transform: translateY(1px);
 }
 
 .card {
@@ -116,6 +221,29 @@
   gap: 0.75rem;
 }
 
+.attrSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.attrSectionTitle {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+}
+
+.attrGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 420px) {
+  .attrGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 .attrCard {
   border-radius: 0.5rem;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -130,7 +258,7 @@
 .attrValue {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #7ee7bb;
+  color: #ffb3ba;
 }
 
 .tabRow {
@@ -174,10 +302,118 @@
   display: flex;
   flex-direction: row;
   gap: 0.75rem;
-  align-items: flex-start;
+  align-items: center;
+}
+
+.charAside {
+  flex-shrink: 0;
+  width: 3.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.45rem;
 }
 
 .charCardButton {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+}
+
+.charText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.charChevron {
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 1.1rem;
+  font-weight: 300;
+  padding-right: 0.15rem;
+}
+
+.charChevronBtn {
+  flex-shrink: 0;
+  align-self: center;
+  width: 2rem;
+  height: 2.4rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 1.35rem;
+  font-weight: 300;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.charChevronBtn:hover {
+  color: #ffb3ba;
+}
+
+.listHeaderActions {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.ghostButton {
+  min-height: 2.2rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(232, 238, 248, 0.92);
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ghostButton:hover {
+  border-color: rgba(255, 90, 103, 0.45);
+  color: #ffb3ba;
+}
+
+.importPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-height: 0;
+}
+
+.importSearch {
+  width: 100%;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.38);
+  color: #e8eef8;
+  padding: 0.55rem 0.7rem;
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.importCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
   width: 100%;
   text-align: left;
   cursor: pointer;
@@ -187,12 +423,32 @@
   -webkit-appearance: none;
 }
 
-.charText {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+.importCard:hover {
+  border-color: rgba(224, 61, 75, 0.45);
+}
+
+.chatBtn {
+  width: 100%;
+  min-height: 1.85rem;
+  padding: 0.28rem 0.2rem;
+  border-radius: 0.35rem;
+  border: 1px solid rgba(224, 61, 75, 0.75);
+  background: linear-gradient(165deg, var(--primary-light) 0%, var(--primary) 52%, var(--primary-dark) 100%);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(224, 61, 75, 0.28);
+}
+
+.chatBtn:hover {
+  filter: brightness(1.06);
+}
+
+.chatBtn:focus-visible {
+  outline: 2px solid var(--primary-light);
+  outline-offset: 2px;
 }
 
 .avatar {
@@ -207,6 +463,11 @@
   align-self: flex-start;
   margin: 0;
   display: block;
+}
+
+.charAside .avatar {
+  width: 100%;
+  align-self: stretch;
 }
 
 .detailIdentity {
@@ -226,4 +487,314 @@
   font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.55);
   margin-bottom: 0.35rem;
+}
+
+/* —— UE 屏② 角色详情 —— */
+.detailPage {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+}
+
+.detailHero {
+  display: flex;
+  gap: 0.85rem;
+  align-items: stretch;
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 0.85rem;
+  background: rgba(0, 0, 0, 0.35);
+  color: inherit;
+}
+
+.detailPortraitBtn {
+  position: relative;
+  flex-shrink: 0;
+  width: 6.75rem;
+  padding: 0;
+  border: none;
+  border-radius: 0.55rem;
+  overflow: hidden;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.detailPortrait {
+  display: block;
+  width: 6.75rem;
+  height: 8.5rem;
+  object-fit: cover;
+  object-position: top center;
+  border-radius: 0.55rem;
+}
+
+.detailPortraitEmpty {
+  width: 6.75rem;
+  height: 8.5rem;
+  border-radius: 0.55rem;
+  background:
+    linear-gradient(160deg, rgba(224, 61, 75, 0.18), rgba(20, 12, 16, 0.9));
+}
+
+.detailHeroInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0;
+}
+
+.detailName {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.detailMeta {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.45rem;
+  font-size: 0.78rem;
+  color: rgba(255, 220, 224, 0.78);
+}
+
+.detailGender {
+  color: rgba(255, 236, 238, 0.85);
+}
+
+.detailRoleTag {
+  display: inline-flex;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 90, 103, 0.4);
+  background: rgba(224, 61, 75, 0.14);
+  color: #ffc4c9;
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.detailRelationLine {
+  margin: 0.15rem 0 0;
+  font-size: 0.8rem;
+  color: rgba(232, 238, 248, 0.72);
+}
+
+.detailChatHint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0.35rem 0.2rem;
+  background: linear-gradient(180deg, transparent, rgba(8, 6, 8, 0.88));
+  font-size: 0.62rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  color: #ff9aa3;
+  text-align: center;
+}
+
+.detailSection {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.7rem;
+  padding: 0.75rem 0.85rem;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.detailSectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.45rem;
+}
+
+.detailSectionTitle {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  color: rgba(255, 240, 242, 0.9);
+}
+
+.detailSectionBody {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: rgba(232, 238, 248, 0.88);
+}
+
+.detailSectionMuted {
+  margin: 0;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.personaTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.45rem;
+}
+
+.personaTag {
+  padding: 0.22rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 90, 103, 0.35);
+  background: rgba(224, 61, 75, 0.12);
+  color: #ffc4c9;
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.favorBadge {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 750;
+  color: #ff9aa3;
+  letter-spacing: 0.02em;
+}
+
+.favorRow {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: 0.55rem;
+}
+
+.favorTrack {
+  flex: 1;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.favorFill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ff8fb8, var(--primary, #e03d4b));
+}
+
+.favorNum {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #ffb3ba;
+  min-width: 1.6rem;
+  text-align: right;
+}
+
+.editPersonaBtn {
+  flex-shrink: 0;
+  min-height: 1.85rem;
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 90, 103, 0.55);
+  background: rgba(224, 61, 75, 0.14);
+  color: #ffb3ba;
+  font-size: 0.75rem;
+  font-weight: 750;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.editPersonaBtn:hover:not(:disabled) {
+  background: rgba(224, 61, 75, 0.26);
+  color: #fff;
+}
+
+.editPersonaBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.editPersonaBtn:focus-visible {
+  outline: 2px solid var(--primary-light);
+  outline-offset: 2px;
+}
+
+.chatBtnWide {
+  min-width: 5.5rem;
+  min-height: 2.45rem;
+  padding: 0.5rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(224, 61, 75, 0.75);
+  background: linear-gradient(165deg, var(--primary-light) 0%, var(--primary) 52%, var(--primary-dark) 100%);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(224, 61, 75, 0.3);
+}
+
+.chatBtnWide:hover {
+  filter: brightness(1.06);
+}
+
+.chatBtnWide:focus-visible {
+  outline: 2px solid var(--primary-light);
+  outline-offset: 2px;
+}
+
+.detailCard {
+  background: rgba(18, 12, 14, 0.72);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+/* UE「目前选择路线」 */
+.routeList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+
+.routeChip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(232, 238, 248, 0.92);
+  cursor: pointer;
+}
+
+.routeChip:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.routeChip:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.routeChipActive {
+  border-color: rgba(232, 120, 140, 0.55);
+  background: rgba(224, 61, 75, 0.14);
+}
+
+.routeChipTitle {
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.routeChipSummary {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.35;
 }

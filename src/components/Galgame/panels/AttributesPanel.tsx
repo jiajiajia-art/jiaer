@@ -12,7 +12,7 @@ import {
   shouldSkipAttributeAutoRefresh,
 } from '../../../lib/galgame/attributePanelValues';
 import type { SessionPlayerProfile } from '../../../lib/galgame/playerCharacterCard';
-import PlayerArchiveSection from './PlayerArchiveSection';
+import PlayerArchiveSection, { type PlayerArchiveView } from './PlayerArchiveSection';
 
 interface AttributesPanelProps {
   isOpen: boolean;
@@ -44,6 +44,7 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
   const { t } = useTranslation();
   const { sessionId } = useGameStore();
   const [playerProfile, setPlayerProfile] = useState<SessionPlayerProfile | null>(sessionPlayerProfile);
+  const [archiveView, setArchiveView] = useState<PlayerArchiveView>('overview');
   const [panels, setPanels] = useState<Record<string, string>>({});
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -63,6 +64,10 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
   useEffect(() => {
     setPlayerProfile(sessionPlayerProfile);
   }, [sessionPlayerProfile]);
+
+  useEffect(() => {
+    if (!isOpen) setArchiveView('overview');
+  }, [isOpen]);
 
   useEffect(() => {
     if (cachedPanels && Object.keys(cachedPanels).length > 0) {
@@ -202,50 +207,96 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
   const showCards = cards.length > 0;
   const showTextFallback = false;
   const showEmpty = !loading && !error && !showCards && !showTextFallback;
+  const isOverview = archiveView === 'overview';
+
+  const shellTitle =
+    archiveView === 'import'
+      ? '导入已有角色卡'
+      : archiveView === 'preview'
+        ? '导入预览'
+        : t('galgame.panelAttrsTitle');
+
+  const shellSubtitle =
+    archiveView === 'import'
+      ? '从账号卡库选择一张覆盖本局档案'
+      : archiveView === 'preview'
+        ? undefined
+        : isOverview
+          ? t('galgame.panelAttrsSubtitle')
+          : undefined;
+
+  const handleArchiveBack = () => {
+    if (archiveView === 'preview') {
+      setArchiveView('import');
+      return;
+    }
+    if (archiveView === 'import') {
+      setArchiveView('overview');
+    }
+  };
+
+  const handleClose = () => {
+    setArchiveView('overview');
+    onClose();
+  };
 
   return (
     <PlayPanelShell
       isOpen={isOpen}
-      title={t('galgame.panelAttrsTitle')}
-      subtitle={t('galgame.panelAttrsSubtitle')}
-      onClose={onClose}
+      title={shellTitle}
+      subtitle={shellSubtitle}
+      onClose={handleClose}
+      hideHeader={archiveView === 'edit'}
+      showBack={isOverview}
+      onHeaderBack={
+        archiveView === 'import' || archiveView === 'preview'
+          ? handleArchiveBack
+          : undefined
+      }
       footer={
-        <button
-          type="button"
-          className={shell.backButton}
-          disabled={isStreaming || loading}
-          onClick={() => void reloadCachedPanels()}
-        >
-          {t('galgame.panelRefresh')}
-        </button>
+        isOverview ? (
+          <button
+            type="button"
+            className={shell.backButton}
+            disabled={isStreaming || loading}
+            onClick={() => void reloadCachedPanels()}
+          >
+            {t('galgame.panelRefresh')}
+          </button>
+        ) : null
       }
     >
-      {error ? <div className={shell.empty}>{error}</div> : null}
-      {loading ? <div className={shell.empty}>{t('galgame.panelLoading')}</div> : null}
+      {isOverview && error ? <div className={shell.empty}>{error}</div> : null}
+      {isOverview && loading ? <div className={shell.empty}>{t('galgame.panelLoading')}</div> : null}
 
       <PlayerArchiveSection
         profile={playerProfile}
+        view={archiveView}
+        onViewChange={setArchiveView}
         onProfileChange={(next) => {
           setPlayerProfile(next);
           onSessionPlayerProfileChange?.(next);
         }}
       />
 
-      {!loading && showCards ? (
-        <div className={shell.grid}>
-          {cards.map((card) => (
-            <div key={`${card.label}-${card.value}-${card.rawLine}`} className={shell.attrCard}>
-              <div>
-                <div className={shell.cardTitle}>{card.label}</div>
-                <div className={shell.cardMeta}>{t('galgame.panelAttrsCurrent')}</div>
+      {isOverview && !loading && showCards ? (
+        <section className={shell.attrSection} aria-label="属性数值">
+          <h3 className={shell.attrSectionTitle}>属性数值</h3>
+          <div className={`${shell.grid} ${shell.attrGrid}`}>
+            {cards.map((card) => (
+              <div key={`${card.label}-${card.value}-${card.rawLine}`} className={shell.attrCard}>
+                <div>
+                  <div className={shell.cardTitle}>{card.label}</div>
+                  <div className={shell.cardMeta}>{t('galgame.panelAttrsCurrent')}</div>
+                </div>
+                <div className={shell.attrValue}>{card.value}</div>
               </div>
-              <div className={shell.attrValue}>{card.value}</div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </section>
       ) : null}
 
-      {!loading && showTextFallback ? (
+      {isOverview && !loading && showTextFallback ? (
         <>
           {panelKeys.length > 1 ? (
             <div className={shell.tabRow}>
@@ -265,7 +316,7 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
         </>
       ) : null}
 
-      {showEmpty ? <div className={shell.empty}>{t('galgame.panelAttrsEmpty')}</div> : null}
+      {isOverview && showEmpty ? <div className={shell.empty}>{t('galgame.panelAttrsEmpty')}</div> : null}
     </PlayPanelShell>
   );
 };

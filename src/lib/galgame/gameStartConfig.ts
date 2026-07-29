@@ -60,10 +60,99 @@ export const GAME_START_LIMITS = Object.freeze({
   avoidWordsMax: 50,
 });
 
+/**
+ * 开局 / 路线相关文案（对齐《TXT模式自由度改版》§4.3 / §4.4 UE）。
+ * 新开局不再弹窗；路线改在系统面板「目前选择路线」调整。
+ */
+export const GAME_START_UE_COPY = Object.freeze({
+  /** §4.4 系统模块 */
+  currentRouteSection: '目前选择路线',
+  currentRouteHint: '展示当前开场路线；切换后将按新路线约束后续叙事',
+  changeRouteConfirmTitle: '更换路线',
+  changeRouteConfirmMessage: '确认切换到该开场路线？后续叙事将按新路线约束。',
+  changeRouteConfirmOk: '确认更换',
+  /** 无创作台 keyEvents 时的兜底路线名（勿用「默认开场」） */
+  fallbackRouteTitle: '开场路线',
+  storylinePickLabel: '故事线选择',
+  /** 静默开局姓名兜底（优先用创作台玩家名） */
+  fallbackPlayerName: '玩家',
+});
+
 const PACES = new Set<WritingPace>(['slow', 'medium', 'fast']);
 
 function trimStr(value: unknown): string {
   return String(value ?? '').trim();
+}
+
+/** 功能注释：把创作台玩家性别归一成开局包三态。 */
+export function normalizeGameStartGender(
+  raw: unknown,
+): GameStartConfig['player']['gender'] {
+  const g = String(raw || '').trim().toLowerCase();
+  if (g === 'male' || g === 'm' || g === '男') return 'male';
+  if (g === 'female' || g === 'f' || g === '女') return 'female';
+  return 'other';
+}
+
+type WorldKeyEventLike = { title?: string; description?: string };
+
+/**
+ * 功能注释：从世界 keyEvents 生成开场路线列表；空列表时给一条「开场路线」兜底。
+ */
+export function buildOpeningRoutesFromWorldKeyEvents(
+  keyEvents: WorldKeyEventLike[] | null | undefined,
+  options?: { initialPlot?: string },
+): OpeningRouteOption[] {
+  const list = Array.isArray(keyEvents) ? keyEvents : [];
+  const initialPlot = trimStr(options?.initialPlot);
+  if (list.length === 0) {
+    return [
+      {
+        id: 'opening-default',
+        title: GAME_START_UE_COPY.fallbackRouteTitle,
+        summary: '',
+        openingMonologue: initialPlot || undefined,
+      },
+    ];
+  }
+  return list.map((ev, idx) => {
+    const title = trimStr(ev?.title) || `故事线 ${idx + 1}`;
+    const description = trimStr(ev?.description);
+    return {
+      id: `route-${idx}-${title.slice(0, 12)}`,
+      title,
+      summary: description.slice(0, 120) || undefined,
+      openingMonologue: description || initialPlot || undefined,
+    };
+  });
+}
+
+/**
+ * 功能注释：新开局无弹窗时的静默开局包——用创作台玩家信息 + 首条故事线。
+ */
+export function buildSilentDefaultGameStartConfig(input: {
+  playerName?: string | null;
+  gender?: unknown;
+  routes: OpeningRouteOption[];
+}): { ok: true; data: GameStartConfig } | { ok: false; message: string } {
+  const routes =
+    Array.isArray(input.routes) && input.routes.length > 0
+      ? input.routes
+      : buildOpeningRoutesFromWorldKeyEvents([]);
+  const firstId = trimStr(routes[0]?.id);
+  const resolved = resolveOpeningRouteSelection(routes, firstId);
+  if (!resolved.ok || !resolved.openingRouteId) {
+    return { ok: false, message: resolved.message || '请选择故事线' };
+  }
+  return validateGameStartConfig({
+    player: {
+      name: trimStr(input.playerName) || GAME_START_UE_COPY.fallbackPlayerName,
+      gender: normalizeGameStartGender(input.gender),
+    },
+    openingRouteId: resolved.openingRouteId,
+    openingMonologue: resolved.openingMonologue,
+    retainedStorylineIds: resolved.retainedStorylineIds,
+  });
 }
 
 /** 功能注释：未选故事线不可提交；已选可提交。 */
@@ -92,7 +181,7 @@ export function validateGameStartConfig(input: Partial<GameStartConfig> | null |
     return { ok: false, message: '请选择性别' };
   }
   if (!openingRouteId) {
-    return { ok: false, message: '请选择故事线后再开始冒险' };
+    return { ok: false, message: '请先完成故事线选择' };
   }
   if (openingMonologue.length > GAME_START_LIMITS.openingMonologue.max) {
     return { ok: false, message: '开场白过长' };

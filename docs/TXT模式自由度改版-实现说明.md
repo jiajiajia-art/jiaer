@@ -2,7 +2,7 @@
 
 > **版本**：v0.1（2026-07-28）  
 > **对应计划**：[`TXT模式自由度改版-计划书.md`](./TXT模式自由度改版-计划书.md)  
-> **状态**：P0–P3 骨架已落地；P4 私聊 UI / P5 系统编辑 / Prompt 注入待续  
+> **状态**：P0–P4 私聊 MVP 已落地；P5 系统编辑 / Prompt 注入待续  
 > **默认拍板**：§3.1 方案 C；卡库需登录；自设属性与 LLM 动态属性分区
 
 ---
@@ -14,7 +14,7 @@
 | **P0** | 契约 / 校验 / 存储 / API | 纯逻辑类型与校验；D1 账号卡表；卡 CRUD；局内档案 / 开局 config 写入 session |
 | **P1** | 局内角色档案 CRUD | 列表 / 添加 / 编辑 / 好感条；只写本局 session，不回写创作者 preset |
 | **P2** | 我的档案 + 卡库导入 | 属性面板顶部自设档案；登录后从账号卡库导入并覆盖本局玩家 |
-| **P3** | 开局向导 gate | `GameStartWizard`：姓名/性别 + **故事线必选**；未选不可「开始冒险」 |
+| **P3** | 开局：直接进游戏 + 系统内选线 | **无弹窗**自动开始；静默写入默认 `gameStartConfig`；故事线在系统面板「目前选择路线」确认更换（UE §4.4） |
 
 ### 明确未做（后续）
 
@@ -50,7 +50,8 @@
 | `src/components/Galgame/panels/CharactersPanel.tsx` | 列表/详情/添加编辑；好感条 |
 | `src/components/Galgame/panels/PlayerArchiveSection.tsx` | 「我的档案」+ 导入卡库 |
 | `src/components/Galgame/panels/AttributesPanel.tsx` | 接入自设档案区（与动态属性分区） |
-| `src/components/Galgame/GameStartWizard.tsx` | 开局向导（替换原 StoryIntro 进局路径） |
+| `src/components/Galgame/GameStartWizard.tsx` | 完整开局向导骨架（**新开局已不挂载**；保留复用） |
+| `src/components/Galgame/panels/SystemsPanel.tsx` | 世界书只读 + UE「目前选择路线」确认更换 |
 | `src/page/Galgame.tsx` | 挂载向导；确认后写 `game-start-config` 再开局 |
 
 ### 2.4 单测入口
@@ -141,7 +142,7 @@ npx wrangler d1 execute interactive_fiction --local --config cf/wrangler.toml \
 | 项 | 说明 |
 |----|------|
 | 故事线路由源 | 向导暂用 `world.keyEvents[]` 映射为 `OpeningRouteOption`；无 keyEvents 时退化为单条 `default` |
-| 私聊 | 详情页仅占位文案；`privateChatGate` 供后续 UI/序列化复用 |
+| 私聊 | 详情页「私聊」→ `PrivateChatPanel`；独立 SSE；线程存 `session.privateChatThreads`，不写主线 steps |
 | Prompt 感知 | 改档已进 session，**尚未**改 `sendActionStream` 等组装逻辑，体感「下一轮对白变化」需接注入后再验 |
 | 系统面板 | 仍为只读 morePromptForms 展示 |
 

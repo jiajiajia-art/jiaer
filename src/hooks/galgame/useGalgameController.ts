@@ -105,6 +105,8 @@ export const useGalgameController = () => {
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [initialMessages, setInitialMessages] = useState<any[]>([]);
     const [showStoryIntro, setShowStoryIntro] = useState<boolean>(false);
+    /** 新开局无弹窗：历史为空时触发一次自动「开始游戏」 */
+    const [shouldAutoStartGame, setShouldAutoStartGame] = useState<boolean>(false);
     const [isStartingGame, setIsStartingGame] = useState<boolean>(false);
     const [gameStarted, setGameStarted] = useState<boolean>(false);
     const [isAutoPlay, setIsAutoPlay] = useState<boolean>(false);
@@ -1054,7 +1056,9 @@ export const useGalgameController = () => {
                 historyProcessedRef.current = true;
             }
         } else if (!historyProcessedRef.current) {
-            setShowStoryIntro(true);
+            // 产品：新开局直接进游戏，不展示开局弹窗；故事线改在系统面板调整
+            setShowStoryIntro(false);
+            setShouldAutoStartGame(true);
             historyProcessedRef.current = true;
         }
     }, [historyLoading, presetData, history.length, processHistoryRecord]);
@@ -1178,10 +1182,15 @@ export const useGalgameController = () => {
                 toast.error(error || '开始游戏失败，请重试');
                 setIsStartingGame(false);
                 setGameStarted(false);
-                setShowStoryIntro(true);
+                // 不再回退到开局弹窗；允许用户再次触发自动开局或手动重试
+                setShouldAutoStartGame(false);
             }
         });
     }, [playableSessionId, stepHandlers, resetDisplayedSteps, addConversion]);
+
+    const acknowledgeAutoStartGame = useCallback(() => {
+        setShouldAutoStartGame(false);
+    }, []);
 
     const handleNextMessage = useCallback(() => {
         if (gameStarted && stepHandlers.showNextButton) {
@@ -1466,6 +1475,8 @@ export const useGalgameController = () => {
         worldSetting,
         presetData,
         showStoryIntro,
+        shouldAutoStartGame,
+        acknowledgeAutoStartGame,
         isStartingGame,
         gameStarted,
         isAutoPlay,

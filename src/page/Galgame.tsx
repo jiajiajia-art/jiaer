@@ -4,8 +4,15 @@ import { useAuthStore } from "../store/useAuthStore";
 import { useGameStore } from "../store/gameStore";
 import { RiLogoutCircleRLine } from "react-icons/ri";
 import { MdSettings, MdTimeline, MdPerson, MdOutlineAssessment, MdFlag, MdDns, MdContentCopy } from "react-icons/md";
-import GameStartWizard from "../components/Galgame/GameStartWizard";
-import type { GameStartConfig } from "../lib/galgame/gameStartConfig";
+import {
+  buildOpeningRoutesFromWorldKeyEvents,
+  buildSilentDefaultGameStartConfig,
+  GAME_START_UE_COPY,
+  normalizeGameStartGender,
+  resolveOpeningRouteSelection,
+  validateGameStartConfig,
+  type GameStartConfig,
+} from "../lib/galgame/gameStartConfig";
 import { sessionPlayerProfileApi } from "../api/galgame/playerCharacterCards";
 import NormalModeDisplay from "../components/Galgame/NormalModeDisplay";
 import { useCharacterAnimation } from "../hooks/galgame/useCharacterAnimation";
@@ -103,6 +110,9 @@ const Galgame = () => {
         title: string;
         description?: string;
     } | null>(null);
+    /** 局内当前开场路线（系统面板可改；新开局静默写入首条） */
+    const [openingRouteId, setOpeningRouteId] = useState('');
+    const autoStartInFlightRef = useRef(false);
     const buttonContainerRef = useRef<HTMLDivElement | null>(null);
     const buttonBarDragStateRef = useRef<HorizontalDragState>(createInitialHorizontalDragState());
     const [isDesktopButtonBarInteraction, setIsDesktopButtonBarInteraction] = useState(false);
@@ -110,6 +120,94 @@ const Galgame = () => {
 
     // 使用统一的控制器 hook
     const controller = useGalgameController();
+
+    const openingRoutes = useMemo(
+        () =>
+            buildOpeningRoutesFromWorldKeyEvents(controller.presetData?.world?.keyEvents, {
+                initialPlot: controller.presetData?.world?.initialPlot,
+            }),
+        [controller.presetData?.world?.keyEvents, controller.presetData?.world?.initialPlot],
+    );
+
+    const persistGameStartConfig = useCallback(
+        async (config: GameStartConfig) => {
+            if (!sessionId || !user?.token) return;
+            await sessionPlayerProfileApi.putGameStartConfig(user.token, sessionId, config);
+        },
+        [sessionId, user?.token],
+    );
+
+    /** 新开局：无弹窗，静默写入默认开局包后直接开始游戏 */
+    useEffect(() => {
+        if (controller.isReplay) return;
+        if (!controller.shouldAutoStartGame) return;
+        if (autoStartInFlightRef.current) return;
+        if (!sessionId || !controller.presetData) return;
+
+        autoStartInFlightRef.current = true;
+        controller.acknowledgeAutoStartGame();
+
+        void (async () => {
+            try {
+                const built = buildSilentDefaultGameStartConfig({
+                    playerName: controller.presetData?.player?.name,
+                    gender: (controller.presetData?.player as { gender?: string } | undefined)?.gender,
+                    routes: openingRoutes,
+                });
+                if (built.ok && built.data) {
+                    setOpeningRouteId(built.data.openingRouteId);
+                    try {
+                        await persistGameStartConfig(built.data);
+                    } catch (err) {
+                        console.warn('[Galgame] silent putGameStartConfig failed', err);
+                    }
+                }
+                await controller.handleStartGame();
+            } finally {
+                autoStartInFlightRef.current = false;
+            }
+        })();
+    }, [
+        controller.isReplay,
+        controller.shouldAutoStartGame,
+        controller.presetData,
+        controller.acknowledgeAutoStartGame,
+        controller.handleStartGame,
+        sessionId,
+        openingRoutes,
+        persistGameStartConfig,
+    ]);
+
+    const handleConfirmOpeningRoute = useCallback(
+        async (routeId: string) => {
+            const resolved = resolveOpeningRouteSelection(openingRoutes, routeId);
+            if (!resolved.ok || !resolved.openingRouteId) {
+                toast.error(resolved.message || '故事线无效');
+                return;
+            }
+            const checked = validateGameStartConfig({
+                player: {
+                    name:
+                        String(controller.presetData?.player?.name || '').trim() ||
+                        GAME_START_UE_COPY.fallbackPlayerName,
+                    gender: normalizeGameStartGender(
+                        (controller.presetData?.player as { gender?: string } | undefined)?.gender,
+                    ),
+                },
+                openingRouteId: resolved.openingRouteId,
+                openingMonologue: resolved.openingMonologue,
+                retainedStorylineIds: resolved.retainedStorylineIds,
+            });
+            if (!checked.ok || !checked.data) {
+                toast.error(checked.message || '开局配置无效');
+                return;
+            }
+            await persistGameStartConfig(checked.data);
+            setOpeningRouteId(checked.data.openingRouteId);
+            toast.success(`已切换路线：${resolved.selected?.title || routeId}`);
+        },
+        [openingRoutes, controller.presetData?.player, persistGameStartConfig],
+    );
 
     // 自动追踪游戏时长（监听页面可见性变化和页面卸载）
     useGameDurationTracking(!controller.isReplay ? (fileId || undefined) : undefined);
@@ -1119,29 +1217,6 @@ const Galgame = () => {
                         )}
                     </div>
 
-                    <GameStartWizard
-                        isOpen={controller.isReplay ? false : controller.showStoryIntro}
-                        title={controller.presetData?.world?.title || t('common.storyIntro.defaultTitle')}
-                        routes={(controller.presetData?.world?.keyEvents || []).map((ev, idx) => ({
-                            id: `route-${idx}-${String(ev.title || '').slice(0, 12)}`,
-                            title: String(ev.title || `故事线 ${idx + 1}`),
-                            summary: String(ev.description || '').slice(0, 120),
-                            openingMonologue: String(ev.description || controller.presetData?.world?.initialPlot || ''),
-                        }))}
-                        defaultPlayerName={controller.presetData?.player?.name || ''}
-                        isLoading={controller.isStartingGame}
-                        onConfirm={async (config: GameStartConfig) => {
-                            try {
-                                if (sessionId && user?.token) {
-                                    await sessionPlayerProfileApi.putGameStartConfig(user.token, sessionId, config);
-                                }
-                            } catch (err) {
-                                console.warn('[GameStartWizard] putGameStartConfig failed', err);
-                            }
-                            await controller.handleStartGame();
-                        }}
-                    />
-
                     <GalgameHistoryModal
                         isOpen={controller.showGalgameHistory}
                         history={controller.history}
@@ -1335,6 +1410,9 @@ const Galgame = () => {
                                 encounteredIds={encounteredIds}
                                 npcs={npcsList}
                                 player={playerProfile}
+                                narrativeBusy={Boolean(
+                                    controller.finalIsTyping || controller.stepHandlers?.isWaitingForData,
+                                )}
                             />
                             <AttributesPanel
                                 isOpen={activePlayPanel === 'attrs'}
@@ -1354,6 +1432,10 @@ const Galgame = () => {
                                 isOpen={activePlayPanel === 'systems'}
                                 onClose={() => setActivePlayPanel(null)}
                                 morePromptForms={morePromptForms}
+                                openingRoutes={openingRoutes}
+                                currentOpeningRouteId={openingRouteId || openingRoutes[0]?.id || ''}
+                                onConfirmOpeningRoute={handleConfirmOpeningRoute}
+                                routeChangeDisabled={controller.isReplay || controller.isStartingGame}
                             />
                         </>
                     ) : null}

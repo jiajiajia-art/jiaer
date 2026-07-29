@@ -101,4 +101,30 @@ export const sessionPlayerProfileApi = {
     );
     return parseJson(res);
   },
+  /** AI 生成局内 NPC 头像并扣积分 */
+  generateNpcAvatar: async (
+    token: string,
+    sessionId: string,
+    body: Record<string, unknown>,
+  ) => {
+    const res = await fetch(
+      `${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/npc-avatar`,
+      {
+        method: 'POST',
+        headers: authHeaders(token),
+        body: JSON.stringify(body),
+      },
+    );
+    return parseJson(res) as Promise<{
+      success: boolean;
+      message?: string;
+      code?: string;
+      data?: {
+        avatarUrl: string;
+        npcId: string;
+        pointsDeducted: number;
+        remainingPoints: number;
+      };
+    }>;
+  },
 };

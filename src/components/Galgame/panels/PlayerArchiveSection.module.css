@@ -1,7 +1,7 @@
 .section {
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
+  gap: 0.75rem;
   margin-bottom: 0.85rem;
 }
 
@@ -15,7 +15,8 @@
 .title {
   margin: 0;
   font-size: 0.95rem;
-  font-weight: 700;
+  font-weight: 750;
+  letter-spacing: 0.02em;
 }
 
 .headActions {
@@ -25,54 +26,454 @@
   justify-content: flex-end;
 }
 
-.attrRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  margin-top: 0.5rem;
-}
-
-.attrChip {
-  font-size: 0.75rem;
-  padding: 0.2rem 0.45rem;
-  border-radius: 999px;
-  background: rgba(110, 200, 140, 0.2);
-  color: #b8f0c8;
-}
-
-.editBox {
+.profileCard {
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
+  padding: 0.85rem 0.9rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.profileRow {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.profileKey {
+  flex-shrink: 0;
+  min-width: 2.5rem;
+  font-size: 0.75rem;
+  font-weight: 650;
+  color: rgba(255, 220, 224, 0.55);
+}
+
+.profileVal {
+  font-size: 0.9rem;
+  font-weight: 650;
+  color: rgba(232, 238, 248, 0.95);
+}
+
+.profileBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.profilePersona {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: rgba(232, 238, 248, 0.88);
+  white-space: pre-wrap;
+}
+
+.dynHint {
+  margin: 0;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+/* —— 编辑档案弹层 —— */
+.modalForm {
+  --dossier-ink: #0c0a0d;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  flex: 1;
+  min-height: 0;
+  margin: 0 -0.15rem;
+  padding: 0.85rem 0.85rem 0;
+  border-radius: 1rem;
+  background: linear-gradient(180deg, rgba(28, 16, 20, 0.98) 0%, var(--dossier-ink) 55%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 180, 186, 0.06);
+}
+
+.modalTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.modalClose {
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.modalClose:hover:not(:disabled) {
+  border-color: rgba(255, 90, 103, 0.5);
+  color: #ffb3ba;
+}
+
+.modalClose:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.35rem;
   font-size: 0.8rem;
   color: rgba(255, 255, 255, 0.7);
 }
 
-.field input,
-.field select,
-.field textarea,
-.search {
-  border-radius: 0.4rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(0, 0, 0, 0.35);
-  color: #fff;
-  padding: 0.45rem 0.6rem;
-  font: inherit;
+.labelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-weight: 650;
+  color: rgba(255, 236, 238, 0.85);
 }
 
-.actions {
+.counter {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.field input,
+.field textarea,
+.search {
+  width: 100%;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.38);
+  color: #e8eef8;
+  padding: 0.55rem 0.7rem;
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.field textarea {
+  resize: vertical;
+  min-height: 6rem;
+  line-height: 1.45;
+}
+
+.field input:focus,
+.field textarea:focus,
+.search:focus {
+  outline: none;
+  border-color: rgba(224, 61, 75, 0.55);
+  box-shadow: 0 0 0 2px rgba(224, 61, 75, 0.16);
+}
+
+.chips {
   display: flex;
-  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.chip {
+  min-height: 2rem;
+  padding: 0.3rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(232, 238, 248, 0.88);
+  font-size: 0.8rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.chipActive {
+  border-color: rgba(224, 61, 75, 0.7);
+  background: rgba(224, 61, 75, 0.22);
+  color: #ffc4c9;
+}
+
+.modalActions {
+  display: flex;
+  gap: 0.55rem;
+  justify-content: stretch;
+  margin-top: auto;
+  padding-bottom: 0.35rem;
+}
+
+.secondaryBtn,
+.primaryBtn {
+  flex: 1;
+  min-height: 2.55rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.secondaryBtn {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(232, 238, 248, 0.92);
+}
+
+.secondaryBtn:hover:not(:disabled) {
+  border-color: rgba(255, 90, 103, 0.45);
+  color: #ffb3ba;
+}
+
+.primaryBtn {
+  border: 1px solid rgba(224, 61, 75, 0.75);
+  background: linear-gradient(165deg, var(--primary-light) 0%, var(--primary) 52%, var(--primary-dark) 100%);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(224, 61, 75, 0.3);
+}
+
+.primaryBtn:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.secondaryBtn:disabled,
+.primaryBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: none;
+  box-shadow: none;
+}
+
+/* —— 导入列表 —— */
+.importPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-height: 0;
+}
+
+.search {
+  margin-bottom: 0.15rem;
+}
+
+.importRow {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.7rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.importAvatar {
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.45rem;
+  display: grid;
+  place-items: center;
+  background: rgba(224, 61, 75, 0.18);
+  border: 1px solid rgba(255, 90, 103, 0.35);
+  color: #ffb3ba;
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.importBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.importName {
+  font-size: 0.9rem;
+  font-weight: 750;
+  color: #fff;
+}
+
+.importMeta {
+  font-weight: 550;
+  color: rgba(255, 220, 224, 0.55);
+  font-size: 0.78rem;
+}
+
+.importPersona {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: rgba(232, 238, 248, 0.7);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.selectBtn {
+  flex-shrink: 0;
+  min-height: 2rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(224, 61, 75, 0.65);
+  background: rgba(224, 61, 75, 0.16);
+  color: #ffb3ba;
+  font-size: 0.78rem;
+  font-weight: 750;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.selectBtn:hover {
+  background: rgba(224, 61, 75, 0.28);
+  color: #fff;
+}
+
+/* —— 导入预览 —— */
+.previewPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+}
+
+.previewCard {
+  padding: 0.85rem 0.9rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.previewSectionTitle {
+  margin: 0 0 0.55rem;
+  font-size: 0.8rem;
+  font-weight: 750;
+  letter-spacing: 0.03em;
+  color: rgba(255, 240, 242, 0.88);
+}
+
+.previewName {
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.previewMeta {
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  color: rgba(255, 220, 224, 0.7);
+}
+
+.previewPersona {
+  margin: 0.55rem 0 0;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: rgba(232, 238, 248, 0.88);
+  white-space: pre-wrap;
+}
+
+.previewMuted {
+  margin: 0;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.previewAttrGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.5rem;
 }
 
-.dynHint {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.45);
+.previewAttrCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.55rem 0.5rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.25);
+  text-align: center;
+}
+
+/* UE 示意绿 → 主题红高亮「将变化的导入值」 */
+.previewAttrChanged {
+  border-color: rgba(224, 61, 75, 0.65);
+  background: rgba(224, 61, 75, 0.14);
+  box-shadow: 0 0 0 1px rgba(224, 61, 75, 0.2);
+}
+
+.previewAttrLabel {
+  font-size: 0.72rem;
+  font-weight: 650;
+  color: rgba(255, 220, 224, 0.7);
+}
+
+.previewAttrValue {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.previewAttrChanged .previewAttrValue {
+  color: #ffb3ba;
+}
+
+.previewAttrHint {
+  font-size: 0.62rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.infoBanner {
+  display: flex;
+  gap: 0.55rem;
+  align-items: flex-start;
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(224, 61, 75, 0.35);
+  background: rgba(224, 61, 75, 0.1);
+}
+
+.infoBanner p {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: rgba(255, 220, 224, 0.88);
+}
+
+.infoIcon {
+  flex-shrink: 0;
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 0.7rem;
+  font-weight: 800;
+  font-style: italic;
+  background: rgba(224, 61, 75, 0.35);
+  color: #ffc4c9;
+}
+
+@media (max-width: 380px) {
+  .previewAttrGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .headActions {
+    justify-content: stretch;
+  }
+
+  .headActions > * {
+    flex: 1;
+  }
 }

@@ -1,6 +1,6 @@
 /**
- * 开局向导骨架：故事线必选 gate + 确认进局。
- * 人设/世界书/文风子页后续迭代；本期保证「未选线不可开始」。
+ * 开局向导骨架（已不再挂到新开局：产品要求直接进游戏、无弹窗）。
+ * 故事线改在系统面板「目前选择路线」调整；本文件保留供后续完整 UE 向导复用。
  */
 import React, { useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
@@ -12,6 +12,7 @@ import {
   type OpeningRouteOption,
 } from '../../lib/galgame/gameStartConfig';
 import styles from './GameStartWizard.module.css';
+import PanelSelect from './panels/PanelSelect';
 
 interface GameStartWizardProps {
   isOpen: boolean;
@@ -86,11 +87,16 @@ const GameStartWizard: React.FC<GameStartWizardProps> = ({
         </label>
         <label className={styles.field}>
           <span>性别 *</span>
-          <select value={gender} onChange={(e) => setGender(e.target.value as GameStartConfig['player']['gender'])}>
-            <option value="male">男</option>
-            <option value="female">女</option>
-            <option value="other">其他</option>
-          </select>
+          <PanelSelect
+            aria-label="性别"
+            value={gender}
+            onChange={(v) => setGender(v as GameStartConfig['player']['gender'])}
+            options={[
+              { value: 'male', label: '男' },
+              { value: 'female', label: '女' },
+              { value: 'other', label: '其他' },
+            ]}
+          />
         </label>
 
         <div className={styles.section}>故事线 *（必选）</div>
