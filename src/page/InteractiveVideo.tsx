@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { IoArrowBack, IoClose, IoGitBranchOutline, IoMoonOutline, IoPause, IoPlay, IoPlayCircleOutline, IoPlaySkipForward, IoRefresh, IoSpeedometerOutline, IoStatsChartOutline, IoSunnyOutline } from 'react-icons/io5';
+import { IoChevronBackSharp, IoClose, IoMapOutline, IoMoonOutline, IoPause, IoPlay, IoPlayCircleOutline, IoPlaySkipForward, IoRefresh, IoSpeedometerOutline, IoStatsChartOutline, IoSunnyOutline } from 'react-icons/io5';
 import {
     Background,
     BaseEdge,
@@ -2133,6 +2133,7 @@ const InteractiveVideo: React.FC = () => {
     });
     const monitorRef = useRef<HTMLDivElement | null>(null);
     const videoRef = useRef<HTMLVideoElement | null>(null);
+    const resumeVideoAfterPanelRef = useRef(false);
     const minigameIframeRef = useRef<HTMLIFrameElement | null>(null);
     const minigameCompletionTimerRef = useRef<number | null>(null);
 
@@ -3100,6 +3101,38 @@ const InteractiveVideo: React.FC = () => {
         setIsVideoHudVisible(true);
     };
 
+    const pauseVideoForPanel = () => {
+        if (isTreeOpen || isVariableBoardOpen) return;
+        const video = videoRef.current;
+        const shouldResume = Boolean(video && !video.paused && !video.ended);
+        resumeVideoAfterPanelRef.current = shouldResume;
+        if (!video || !shouldResume) return;
+
+        video.pause();
+        setIsVideoPaused(true);
+        setIsVideoHudVisible(true);
+    };
+
+    const resumeVideoAfterPanel = () => {
+        if (!resumeVideoAfterPanelRef.current) return;
+        resumeVideoAfterPanelRef.current = false;
+        const video = videoRef.current;
+        if (!video || video.ended) return;
+
+        video.playbackRate = playbackRate;
+        video.play()
+            .then(() => {
+                setShowManualPlay(false);
+                setIsVideoPaused(false);
+                revealVideoHud();
+            })
+            .catch(() => {
+                setShowManualPlay(true);
+                setIsVideoPaused(true);
+                setIsVideoHudVisible(true);
+            });
+    };
+
     const handleCyclePlaybackRate = () => {
         const nextRate = getNextPlaybackRate(playbackRate);
         setPlaybackRate(nextRate);
@@ -3350,6 +3383,7 @@ const InteractiveVideo: React.FC = () => {
     };
 
     const handleTreeRollback = (nodeId: string) => {
+        resumeVideoAfterPanelRef.current = false;
         setIsTreeOpen(false);
         setIsMobileToolsOpen(false);
         setIsVariableBoardOpen(false);
@@ -3357,16 +3391,29 @@ const InteractiveVideo: React.FC = () => {
     };
 
     const handleOpenTree = () => {
+        pauseVideoForPanel();
         setIsMobileToolsOpen(false);
         setIsVariableBoardOpen(false);
         setIsTreeOpen(true);
         revealVideoHud(true);
     };
 
+    const handleCloseTree = () => {
+        setIsTreeOpen(false);
+        if (!isVariableBoardOpen) resumeVideoAfterPanel();
+    };
+
     const handleOpenVariableBoard = () => {
+        pauseVideoForPanel();
         setIsMobileToolsOpen(false);
+        setIsTreeOpen(false);
         setIsVariableBoardOpen(true);
         revealVideoHud(true);
+    };
+
+    const handleCloseVariableBoard = () => {
+        setIsVariableBoardOpen(false);
+        if (!isTreeOpen) resumeVideoAfterPanel();
     };
 
     const handleOpenTreeFromEnding = () => {
@@ -3438,7 +3485,7 @@ const InteractiveVideo: React.FC = () => {
                     <h1>无法加载互动影游</h1>
                     <p>{loadError || '剧情不可用'}</p>
                     <button type="button" onClick={returnToGameDetail}>
-                        <IoArrowBack />
+                        <IoChevronBackSharp />
                         返回详情
                     </button>
                 </div>
@@ -3470,12 +3517,12 @@ const InteractiveVideo: React.FC = () => {
     const renderTreePanel = () => (
         <section className={styles.panelSection}>
             <div className={styles.sectionTitle}>
-                <IoGitBranchOutline />
+                <IoMapOutline />
                 {'\u5267\u60c5\u6811'}
             </div>
             <button type="button" className={styles.openTreeButton} onClick={handleOpenTree} aria-label="打开剧情树">
                 <span className={styles.openTreeButtonContent}>
-                    <IoGitBranchOutline />
+                    <IoMapOutline />
                     <span className={styles.openTreeButtonText}>
                         <strong>{'\u6253\u5f00\u5267\u60c5\u6811'}</strong>
                         <small>{compactRouteExploreProgressLabel}</small>
@@ -3550,6 +3597,7 @@ const InteractiveVideo: React.FC = () => {
         availableOptions.length === 2 ? styles.choiceDockTwo : '',
         availableOptions.length === 3 ? styles.choiceDockThree : '',
         availableOptions.length >= 4 ? styles.choiceDockFour : '',
+        availableOptions.length === 5 ? styles.choiceDockFive : '',
     ].filter(Boolean).join(' ');
     const shouldShowSkipControl = canShowSkipControl(playbackMode) && Boolean(currentVideoUrl) && videoGate;
     const playbackRateLabel = playbackRate === 1 ? '1.0x' : `${playbackRate}x`;
@@ -3651,7 +3699,7 @@ const InteractiveVideo: React.FC = () => {
 
     const variableBoardPortal = isVariableBoardOpen
         ? renderIvgPortal(
-            <div className={styles.variableBoardOverlay} onClick={() => setIsVariableBoardOpen(false)}>
+            <div className={styles.variableBoardOverlay} onClick={handleCloseVariableBoard}>
                 <section
                     className={styles.variableBoardModal}
                     onClick={(event) => event.stopPropagation()}
@@ -3667,7 +3715,7 @@ const InteractiveVideo: React.FC = () => {
                         <button
                             type="button"
                             className={styles.variableBoardClose}
-                            onClick={() => setIsVariableBoardOpen(false)}
+                            onClick={handleCloseVariableBoard}
                             aria-label={'\u5173\u95ed\u53d8\u91cf\u677f'}
                         >
                             <IoClose />
@@ -3681,7 +3729,7 @@ const InteractiveVideo: React.FC = () => {
 
     const treePortal = isTreeOpen
         ? renderIvgPortal(
-            <div className={styles.treeOverlay} onClick={() => setIsTreeOpen(false)}>
+            <div className={styles.treeOverlay} onClick={handleCloseTree}>
                 <section className={styles.treeDialog} onClick={(event) => event.stopPropagation()}>
                     <header className={styles.treeDialogHeader}>
                         <div className={styles.treeDialogTitle}>
@@ -3694,7 +3742,7 @@ const InteractiveVideo: React.FC = () => {
                             <button
                                 type="button"
                                 className={styles.treeCloseButton}
-                                onClick={() => setIsTreeOpen(false)}
+                                onClick={handleCloseTree}
                                 aria-label="关闭剧情树"
                             >
                                 <IoClose />
@@ -3765,7 +3813,7 @@ const InteractiveVideo: React.FC = () => {
                     <p>{getNodeBody(currentNode)}</p>
                     <div className={styles.endingActions}>
                         <button type="button" onClick={handleOpenTreeFromEnding}>
-                            <IoGitBranchOutline />
+                            <IoMapOutline />
                             {"\u6253\u5F00\u5267\u60C5\u6811"}
                         </button>
                     </div>
@@ -3780,7 +3828,7 @@ const InteractiveVideo: React.FC = () => {
             {!isMinigameNode && (
                 <header className={styles.header}>
                     <button type="button" className={styles.iconButton} onClick={returnToGameDetail} aria-label="返回">
-                        <IoArrowBack />
+                        <IoChevronBackSharp />
                     </button>
                 </header>
             )}
@@ -3884,7 +3932,7 @@ const InteractiveVideo: React.FC = () => {
                                 </div>
                                 <div className={styles.videoControlDock} aria-label="播放控制">
                                     <button type="button" className={styles.videoControlButton} onClick={handleOpenTree}>
-                                        <IoGitBranchOutline />
+                                        <IoMapOutline />
                                         <span>{'\u5267\u60c5\u6811'}</span>
                                     </button>
                                     <button type="button" className={styles.videoControlButton} onClick={handleOpenVariableBoard}>
@@ -3913,7 +3961,7 @@ const InteractiveVideo: React.FC = () => {
                             <div className={nonVideoToolsClassName} aria-label="播放工具">
                                 <div className={styles.videoControlDock}>
                                     <button type="button" className={styles.videoControlButton} onClick={handleOpenTree}>
-                                        <IoGitBranchOutline />
+                                        <IoMapOutline />
                                         <span>{'\u5267\u60c5\u6811'}</span>
                                     </button>
                                     <button type="button" className={styles.videoControlButton} onClick={handleOpenVariableBoard}>
@@ -4007,7 +4055,7 @@ const InteractiveVideo: React.FC = () => {
                     onClick={() => setIsMobileToolsOpen(true)}
                     aria-label="打开播放工具"
                 >
-                    <IoGitBranchOutline />
+                    <IoMapOutline />
                     <span>{routeExploreProgress.percent}%</span>
                 </button>
             )}
