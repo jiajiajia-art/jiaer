@@ -40,11 +40,37 @@ interface CharactersPanelProps {
 
 /**
  * UE 流程：
- * 列表 → 详情 →（编辑人设 / 点头像私聊）
+ * 列表 → 点头像预览（介绍 + 私聊）→ 私聊
+ * 列表 → 详情 →（编辑人设 / 底栏私聊）
  * 列表 → +添加 / 导入 → 表单 → 保存回列表
  * 配色沿用主题红，交互严格对齐流程图。
  */
 type ViewMode = 'list' | 'detail' | 'form' | 'chat' | 'import';
+
+/** 私聊按钮细线气泡图标（档案笺印章感） */
+const ChatSealIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg
+    className={className}
+    viewBox="0 0 16 16"
+    width="1em"
+    height="1em"
+    fill="none"
+    aria-hidden
+  >
+    <path
+      d="M3.2 2.6h9.6c.77 0 1.4.63 1.4 1.4v5.2c0 .77-.63 1.4-1.4 1.4H8.1L5.2 13.3V10.6H3.2c-.77 0-1.4-.63-1.4-1.4V4c0-.77.63-1.4 1.4-1.4Z"
+      stroke="currentColor"
+      strokeWidth="1.25"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M5 5.6h6M5 8h4.2"
+      stroke="currentColor"
+      strokeWidth="1.15"
+      strokeLinecap="round"
+    />
+  </svg>
+);
 
 const CharactersPanel: React.FC<CharactersPanelProps> = ({
   isOpen,
@@ -68,6 +94,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
   const [importCards, setImportCards] = useState<PlayerCharacterCard[]>([]);
   const [importQuery, setImportQuery] = useState('');
   const [importLoading, setImportLoading] = useState(false);
+  const [previewProfile, setPreviewProfile] = useState<PlayerEditableNpc | null>(null);
 
   React.useEffect(() => {
     if (editableProfiles == null) return;
@@ -111,12 +138,14 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
     setMode('list');
     setEditing(null);
     setImportQuery('');
+    setPreviewProfile(null);
     onClose();
   };
 
   const backToList = () => {
     setDetail(null);
     setEditing(null);
+    setPreviewProfile(null);
     setMode('list');
   };
 
@@ -163,8 +192,21 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
 
   const openDetailFromProfile = (profile: PlayerEditableNpc) => {
     setDetail(toDetailItem(profile));
+    setPreviewProfile(null);
     setMode('detail');
   };
+
+  const startPrivateChat = (profile: PlayerEditableNpc) => {
+    setPreviewProfile(null);
+    setDetail(toDetailItem(profile));
+    setMode('chat');
+  };
+
+  const openAvatarPreview = (profile: PlayerEditableNpc) => {
+    setPreviewProfile(profile);
+  };
+
+  const closeAvatarPreview = () => setPreviewProfile(null);
 
   const openImport = async () => {
     const token = authUser?.token;
@@ -255,6 +297,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
               返回列表
             </button>
             <button type="button" className={shell.chatBtnWide} onClick={() => setMode('chat')}>
+              <ChatSealIcon className={shell.chatBtnIcon} />
               私聊
             </button>
           </div>
@@ -268,6 +311,10 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
           npcAvatarUrl={detail.avatarUrl}
           narrativeBusy={narrativeBusy}
           onBack={() => setMode('detail')}
+          onProfilesChange={(profiles) => {
+            setLocalProfiles(profiles);
+            onProfilesChange?.(profiles);
+          }}
         />
       ) : mode === 'form' ? (
         <CharacterProfileForm
@@ -381,15 +428,15 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                 <button
                   type="button"
                   className={shell.detailPortraitBtn}
-                  onClick={() => setMode('chat')}
-                  aria-label={`与 ${detail.name} 私聊`}
+                  onClick={() => profile && openAvatarPreview(profile)}
+                  aria-label={`预览 ${detail.name}`}
                 >
                   {avatarUrl ? (
                     <img className={shell.detailPortrait} src={avatarUrl} alt={detail.name} />
                   ) : (
                     <div className={shell.detailPortraitEmpty} aria-hidden />
                   )}
-                  <span className={shell.detailChatHint}>点击头像私聊</span>
+                  <span className={shell.detailChatHint}>点击头像预览</span>
                 </button>
                 <div className={shell.detailHeroInfo}>
                   <h3 className={shell.detailName}>{detail.name}</h3>
@@ -477,19 +524,24 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
           return (
             <div key={profile.id} className={`${shell.card} ${shell.charRow}`}>
               <div className={shell.charAside}>
-                {avatarUrl ? (
-                  <img className={shell.avatar} src={avatarUrl} alt="" />
-                ) : (
-                  <div className={shell.avatar} aria-hidden />
-                )}
+                <button
+                  type="button"
+                  className={shell.avatarHit}
+                  onClick={() => openAvatarPreview(profile)}
+                  aria-label={`预览 ${profile.name}`}
+                >
+                  {avatarUrl ? (
+                    <img className={shell.avatar} src={avatarUrl} alt={profile.name} />
+                  ) : (
+                    <div className={shell.avatar} aria-hidden />
+                  )}
+                </button>
                 <button
                   type="button"
                   className={shell.chatBtn}
-                  onClick={() => {
-                    setDetail(toDetailItem(profile));
-                    setMode('chat');
-                  }}
+                  onClick={() => startPrivateChat(profile)}
                 >
+                  <ChatSealIcon className={shell.chatBtnIcon} />
                   私聊
                 </button>
               </div>
@@ -519,6 +571,86 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
           );
         })
       )}
+
+      {previewProfile ? (() => {
+        const p = previewProfile;
+        const preset = presetItems.find((i) => i.id === p.id);
+        const avatarUrl = getImageUrl(p.avatarUrl || preset?.avatarUrl || '');
+        const introSummary = String(p.summary || '').trim();
+        const introAttitude = String(p.attitudeToPlayer || '').trim();
+        const introRelation = String(p.relationship || '').trim();
+        const introBio = String(p.detailedBio || '').trim();
+        const hasIntro = Boolean(introSummary || introAttitude || introRelation || introBio);
+        return (
+          <div
+            className={shell.avatarPreviewOverlay}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${p.name} 人物介绍`}
+            onClick={closeAvatarPreview}
+          >
+            <div className={shell.avatarPreviewCard} onClick={(e) => e.stopPropagation()}>
+              <div className={shell.avatarPreviewChrome}>
+                <span className={shell.avatarPreviewChromeLabel}>人物笺</span>
+                <button
+                  type="button"
+                  className={shell.avatarPreviewClose}
+                  onClick={closeAvatarPreview}
+                  aria-label="关闭"
+                >
+                  ×
+                </button>
+              </div>
+              <div className={shell.avatarPreviewScroll}>
+                <div className={shell.avatarPreviewPortraitWrap}>
+                  {avatarUrl ? (
+                    <img className={shell.avatarPreviewPortrait} src={avatarUrl} alt={p.name} />
+                  ) : (
+                    <div className={shell.avatarPreviewPortraitEmpty} aria-hidden />
+                  )}
+                </div>
+                <header className={shell.avatarPreviewHead}>
+                  <h3 className={shell.avatarPreviewName}>{p.name}</h3>
+                  {introRelation ? (
+                    <p className={shell.avatarPreviewMeta}>关系：{introRelation}</p>
+                  ) : null}
+                </header>
+                <div className={shell.avatarPreviewIntro}>
+                  <h4 className={shell.avatarPreviewIntroTitle}>人物介绍</h4>
+                  {hasIntro ? (
+                    <>
+                      {introSummary ? (
+                        <p className={shell.avatarPreviewIntroBody}>{introSummary}</p>
+                      ) : null}
+                      {introAttitude ? (
+                        <p className={shell.avatarPreviewIntroBody}>
+                          <span className={shell.avatarPreviewIntroLabel}>对你的态度</span>
+                          {introAttitude}
+                        </p>
+                      ) : null}
+                      {introBio ? (
+                        <p className={shell.avatarPreviewIntroBody}>{introBio}</p>
+                      ) : null}
+                    </>
+                  ) : (
+                    <p className={shell.avatarPreviewIntroMuted}>暂无人物介绍</p>
+                  )}
+                </div>
+              </div>
+              <footer className={shell.avatarPreviewDock}>
+                <button
+                  type="button"
+                  className={shell.avatarPreviewChatBtn}
+                  onClick={() => startPrivateChat(p)}
+                >
+                  <ChatSealIcon className={shell.chatBtnIconLg} />
+                  私聊
+                </button>
+              </footer>
+            </div>
+          </div>
+        );
+      })() : null}
     </PlayPanelShell>
   );
 };

@@ -12,8 +12,18 @@ import {
   resolveOpeningRouteSelection,
   validateGameStartConfig,
   type GameStartConfig,
+  type GameStartPersonaBlocks,
+  type GameStartWorldBookEntry,
+  type GameStartWritingStyle,
 } from "../lib/galgame/gameStartConfig";
 import { sessionPlayerProfileApi } from "../api/galgame/playerCharacterCards";
+import type { SystemsConfigPatch } from "../components/Galgame/panels/SystemsPanel";
+import type { PlayerEditableNpc } from "../lib/galgame/characterProfile";
+import {
+  applyNameMapToSteps,
+  buildNpcNameReplacementMap,
+  rewriteTextByMap,
+} from "../lib/galgame/npcNameOverlay";
 import NormalModeDisplay from "../components/Galgame/NormalModeDisplay";
 import { useCharacterAnimation } from "../hooks/galgame/useCharacterAnimation";
 import CharacterLayer from "../components/Galgame/CharacterLayer";
@@ -112,6 +122,10 @@ const Galgame = () => {
     } | null>(null);
     /** 局内当前开场路线（系统面板可改；新开局静默写入首条） */
     const [openingRouteId, setOpeningRouteId] = useState('');
+    const [systemWorldBookEntries, setSystemWorldBookEntries] = useState<GameStartWorldBookEntry[] | null>(null);
+    const [systemWritingStyle, setSystemWritingStyle] = useState<GameStartWritingStyle | null>(null);
+    const [systemPersonaBlocks, setSystemPersonaBlocks] = useState<GameStartPersonaBlocks | null>(null);
+    const [sessionNpcEdits, setSessionNpcEdits] = useState<PlayerEditableNpc[]>([]);
     const autoStartInFlightRef = useRef(false);
     const buttonContainerRef = useRef<HTMLDivElement | null>(null);
     const buttonBarDragStateRef = useRef<HorizontalDragState>(createInitialHorizontalDragState());
@@ -178,12 +192,13 @@ const Galgame = () => {
         persistGameStartConfig,
     ]);
 
-    const handleConfirmOpeningRoute = useCallback(
-        async (routeId: string) => {
+    const handlePersistSystemConfig = useCallback(
+        async (patch: SystemsConfigPatch) => {
+            const routeId = patch.openingRouteId || openingRouteId || openingRoutes[0]?.id || '';
             const resolved = resolveOpeningRouteSelection(openingRoutes, routeId);
             if (!resolved.ok || !resolved.openingRouteId) {
                 toast.error(resolved.message || '故事线无效');
-                return;
+                throw new Error(resolved.message || '故事线无效');
             }
             const checked = validateGameStartConfig({
                 player: {
@@ -193,20 +208,30 @@ const Galgame = () => {
                     gender: normalizeGameStartGender(
                         (controller.presetData?.player as { gender?: string } | undefined)?.gender,
                     ),
+                    personaBlocks: patch.personaBlocks,
                 },
+                worldBookEntries: patch.worldBookEntries,
+                writingStyle: patch.writingStyle,
                 openingRouteId: resolved.openingRouteId,
-                openingMonologue: resolved.openingMonologue,
-                retainedStorylineIds: resolved.retainedStorylineIds,
+                openingMonologue: patch.openingMonologue ?? resolved.openingMonologue,
+                retainedStorylineIds: patch.retainedStorylineIds ?? resolved.retainedStorylineIds,
             });
             if (!checked.ok || !checked.data) {
-                toast.error(checked.message || '开局配置无效');
-                return;
+                toast.error(checked.message || '系统配置无效');
+                throw new Error(checked.message || '系统配置无效');
             }
             await persistGameStartConfig(checked.data);
             setOpeningRouteId(checked.data.openingRouteId);
-            toast.success(`已切换路线：${resolved.selected?.title || routeId}`);
+            setSystemWorldBookEntries(checked.data.worldBookEntries || []);
+            setSystemWritingStyle(checked.data.writingStyle || null);
+            setSystemPersonaBlocks(checked.data.player.personaBlocks || null);
         },
-        [openingRoutes, controller.presetData?.player, persistGameStartConfig],
+        [
+            openingRouteId,
+            openingRoutes,
+            controller.presetData?.player,
+            persistGameStartConfig,
+        ],
     );
 
     // 自动追踪游戏时长（监听页面可见性变化和页面卸载）
@@ -280,6 +305,50 @@ const Galgame = () => {
         [controller.presetData]
     );
 
+    const npcNameMap = useMemo(
+        () => buildNpcNameReplacementMap(sessionNpcEdits, npcsList),
+        [sessionNpcEdits, npcsList],
+    );
+
+    const textModeDisplaySteps = useMemo(
+        () => applyNameMapToSteps(
+            controller.convertStepsToTextModalFormat(controller.allStepsForTextModal),
+            npcNameMap,
+        ),
+        [
+            controller.convertStepsToTextModalFormat,
+            controller.allStepsForTextModal,
+            npcNameMap,
+        ],
+    );
+
+    const normalModeMessage = useMemo(() => {
+        const msg = controller.currentMessage;
+        if (!msg || !npcNameMap.length) return msg;
+        return {
+            ...msg,
+            characterName: typeof msg.characterName === 'string'
+                ? rewriteTextByMap(msg.characterName, npcNameMap)
+                : msg.characterName,
+            message: typeof msg.message === 'string'
+                ? rewriteTextByMap(msg.message, npcNameMap)
+                : msg.message,
+            options: Array.isArray(msg.options)
+                ? msg.options.map((opt: { text?: string; [k: string]: unknown }) => (
+                    typeof opt?.text === 'string'
+                        ? { ...opt, text: rewriteTextByMap(opt.text, npcNameMap) }
+                        : opt
+                ))
+                : msg.options,
+        };
+    }, [controller.currentMessage, npcNameMap]);
+
+    const normalModeDisplayText = useMemo(() => {
+        const text = controller.finalDisplayText;
+        if (!text || !npcNameMap.length) return text;
+        return rewriteTextByMap(String(text), npcNameMap);
+    }, [controller.finalDisplayText, npcNameMap]);
+
     const playerProfile = useMemo((): PlayerProfileLike | null => {
         const raw = controller.presetData?.world?.player;
         if (!raw || typeof raw !== 'object') return null;
@@ -331,6 +400,25 @@ const Galgame = () => {
                 if (data.attributePanels && Object.keys(data.attributePanels).length > 0) {
                     setAttributePanelsCache(normalizeAttributePanels(data.attributePanels));
                 }
+                if (Array.isArray(data.playerEditableNpcs)) {
+                    setSessionNpcEdits(data.playerEditableNpcs as PlayerEditableNpc[]);
+                }
+                const gsc = data.gameStartConfig;
+                if (gsc && typeof gsc === 'object') {
+                    if (typeof gsc.openingRouteId === 'string' && gsc.openingRouteId) {
+                        setOpeningRouteId(gsc.openingRouteId);
+                    }
+                    if (Array.isArray(gsc.worldBookEntries)) {
+                        setSystemWorldBookEntries(gsc.worldBookEntries as GameStartWorldBookEntry[]);
+                    }
+                    if (gsc.writingStyle && typeof gsc.writingStyle === 'object') {
+                        setSystemWritingStyle(gsc.writingStyle as GameStartWritingStyle);
+                    }
+                    const player = gsc.player as { personaBlocks?: GameStartPersonaBlocks } | undefined;
+                    if (player?.personaBlocks) {
+                        setSystemPersonaBlocks(player.personaBlocks);
+                    }
+                }
             } catch {
                 /* 旧局无字段时忽略 */
             }
@@ -365,7 +453,10 @@ const Galgame = () => {
         const controllerAbort = new AbortController();
         attrsAbortRef.current = controllerAbort;
         try {
-            const result = await streamAttributePanels<{ panels: Record<string, string> }>(
+            const result = await streamAttributePanels<{
+                panels: Record<string, string>;
+                playerEditableNpcs?: unknown[];
+            }>(
                 sessionId,
                 {},
                 controllerAbort.signal
@@ -376,6 +467,9 @@ const Galgame = () => {
                 if (hasNonEmptyPanelText(normalizedPanels)) {
                     setAttributePanelsCache(normalizedPanels);
                 }
+            }
+            if (Array.isArray(result?.playerEditableNpcs)) {
+                setSessionNpcEdits(result.playerEditableNpcs as PlayerEditableNpc[]);
             }
         } catch (e: unknown) {
             if (isAbortError(e) || (e as Error)?.name === 'AbortError') return;
@@ -989,8 +1083,8 @@ const Galgame = () => {
                         {!controller.showGalgameHistory && !controller.isTextMode && (
                             <>
                                 <NormalModeDisplay
-                                    currentMessage={controller.currentMessage}
-                                    finalDisplayText={controller.finalDisplayText}
+                                    currentMessage={normalModeMessage}
+                                    finalDisplayText={normalModeDisplayText}
                                     finalIsTyping={controller.finalIsTyping}
                                     canRegenerateCurrentMessage={currentAssistantHistoryIndex !== null}
                                     stepHandlers={{
@@ -1012,7 +1106,7 @@ const Galgame = () => {
                         )}
                         {!controller.showGalgameHistory && controller.isTextMode && (
                             <TextModeDisplay
-                                steps={controller.convertStepsToTextModalFormat(controller.allStepsForTextModal)}
+                                steps={textModeDisplaySteps}
                                 currentStepIndex={controller.currentStepIndex}
                                 currentDisplayText={controller.textModalDisplayText}
                                 isTyping={controller.finalIsTyping}
@@ -1410,6 +1504,8 @@ const Galgame = () => {
                                 encounteredIds={encounteredIds}
                                 npcs={npcsList}
                                 player={playerProfile}
+                                editableProfiles={sessionNpcEdits}
+                                onProfilesChange={setSessionNpcEdits}
                                 narrativeBusy={Boolean(
                                     controller.finalIsTyping || controller.stepHandlers?.isWaitingForData,
                                 )}
@@ -1420,6 +1516,9 @@ const Galgame = () => {
                                 suppressAutoRefresh
                                 cachedPanels={attributePanelsCache}
                                 onPanelsUpdated={setAttributePanelsCache}
+                                onPlayerEditableNpcsUpdated={(profiles) => {
+                                    setSessionNpcEdits(profiles as PlayerEditableNpc[]);
+                                }}
                             />
                             <QuestsPanel
                                 isOpen={activePlayPanel === 'quests'}
@@ -1434,7 +1533,10 @@ const Galgame = () => {
                                 morePromptForms={morePromptForms}
                                 openingRoutes={openingRoutes}
                                 currentOpeningRouteId={openingRouteId || openingRoutes[0]?.id || ''}
-                                onConfirmOpeningRoute={handleConfirmOpeningRoute}
+                                initialWorldBookEntries={systemWorldBookEntries}
+                                initialWritingStyle={systemWritingStyle}
+                                initialPersonaBlocks={systemPersonaBlocks}
+                                onPersistSystemConfig={handlePersistSystemConfig}
                                 routeChangeDisabled={controller.isReplay || controller.isStartingGame}
                             />
                         </>

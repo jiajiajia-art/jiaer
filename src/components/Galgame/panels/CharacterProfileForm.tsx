@@ -115,6 +115,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [supplementOpen, setSupplementOpen] = useState(() => Boolean(
     initial?.detailedBio || initial?.importance || initial?.survival,
   ));
@@ -129,6 +130,20 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
   };
 
   const avatarSrc = getImageUrl(values.avatarUrl);
+  const previewName = values.name.trim() || '未命名角色';
+  const introSummary = values.summary.trim();
+  const introAttitude = values.attitudeToPlayer.trim();
+  const introRelation = values.relationship.trim();
+  const introBio = values.detailedBio.trim();
+  const hasIntro = Boolean(introSummary || introAttitude || introRelation || introBio);
+
+  const openAvatarPreview = () => {
+    if (!avatarSrc) {
+      toast.error('请先生成角色头像');
+      return;
+    }
+    setPreviewOpen(true);
+  };
 
   const requestGenerate = () => {
     if (!values.name.trim()) {
@@ -200,6 +215,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
   return (
     <>
       <form className={styles.form} onSubmit={handleSubmit}>
+        <div className={styles.formScroll}>
         <div className={styles.formTop}>
           <h3 className={styles.formTitle}>{formTitle}</h3>
           <button type="button" className={styles.formClose} onClick={onCancel} aria-label="关闭" disabled={saving || generating}>
@@ -208,17 +224,22 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
         </div>
 
         <section className={styles.avatarBlock} aria-label="角色头像">
-          <div className={styles.avatarFrame}>
+          <button
+            type="button"
+            className={styles.avatarFrame}
+            onClick={openAvatarPreview}
+            aria-label={`查看 ${previewName} 头像与介绍`}
+          >
             {avatarSrc ? (
               <img className={styles.avatarImg} src={avatarSrc} alt="角色头像" />
             ) : (
               <div className={styles.avatarEmpty}>头像</div>
             )}
-          </div>
+          </button>
           <div className={styles.avatarActions}>
             {reqLabel('头像', true)}
             <p className={styles.avatarHint}>
-              点击 AI 生成头像，消耗 {CHARACTER_GENERATION_COST} 积分
+              点击头像可放大预览；AI 生成消耗 {CHARACTER_GENERATION_COST} 积分
               {typeof userPoints === 'number' ? `（当前 ${userPoints}）` : ''}
             </p>
             <button
@@ -357,6 +378,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
             </div>
           </section>
         ) : null}
+        </div>
 
         <div className={styles.actions}>
           <button type="button" className={styles.secondary} onClick={onCancel} disabled={saving || generating}>
@@ -378,6 +400,53 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
         onConfirm={() => { void runGenerate(); }}
         onCancel={() => setConfirmOpen(false)}
       />
+
+      {previewOpen && avatarSrc ? (
+        <div
+          className={styles.previewOverlay}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${previewName} 人物介绍`}
+          onClick={() => setPreviewOpen(false)}
+        >
+          <div className={styles.previewCard} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.previewChrome}>
+              <span className={styles.previewChromeLabel}>人物笺</span>
+              <button
+                type="button"
+                className={styles.previewClose}
+                onClick={() => setPreviewOpen(false)}
+                aria-label="关闭"
+              >
+                ×
+              </button>
+            </div>
+            <div className={styles.previewBody}>
+              <div className={styles.previewPortraitWrap}>
+                <img className={styles.previewPortrait} src={avatarSrc} alt={previewName} />
+              </div>
+              <h3 className={styles.previewName}>{previewName}</h3>
+              {introRelation ? (
+                <p className={styles.previewMeta}>关系：{introRelation}</p>
+              ) : null}
+              <div className={styles.previewIntro}>
+                <h4 className={styles.previewIntroTitle}>人物介绍</h4>
+                {hasIntro ? (
+                  <>
+                    {introSummary ? <p className={styles.previewIntroBody}>{introSummary}</p> : null}
+                    {introAttitude ? (
+                      <p className={styles.previewIntroBody}>对你的态度：{introAttitude}</p>
+                    ) : null}
+                    {introBio ? <p className={styles.previewIntroBody}>{introBio}</p> : null}
+                  </>
+                ) : (
+                  <p className={styles.previewIntroMuted}>暂无人物介绍</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 };

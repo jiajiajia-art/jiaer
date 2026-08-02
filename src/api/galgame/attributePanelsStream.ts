@@ -71,6 +71,7 @@ export async function streamAttributePanels<T = any>(
   let buffer = '';
   let fullText = '';
   let resultPanels: Record<string, string> | null = null;
+  let resultPlayerEditableNpcs: unknown[] | null = null;
 
   handlers.onStart?.();
 
@@ -93,6 +94,9 @@ export async function streamAttributePanels<T = any>(
         handlers.onChunk?.(evt.text);
       } else if (evt?.type === 'result' && evt.panels && typeof evt.panels === 'object') {
         resultPanels = evt.panels as Record<string, string>;
+        if (Array.isArray(evt.playerEditableNpcs)) {
+          resultPlayerEditableNpcs = evt.playerEditableNpcs as unknown[];
+        }
       } else if (evt?.type === 'error') {
         if (!signal?.aborted) {
           handlers.onError?.(String(evt.message || 'UNKNOWN_ERROR'));
@@ -128,7 +132,10 @@ export async function streamAttributePanels<T = any>(
   }
 
   if (resultPanels) {
-    const payload = { panels: resultPanels } as T;
+    const payload = {
+      panels: resultPanels,
+      ...(resultPlayerEditableNpcs ? { playerEditableNpcs: resultPlayerEditableNpcs } : {}),
+    } as T;
     handlers.onDone?.(payload);
     return payload;
   }

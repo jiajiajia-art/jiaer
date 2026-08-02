@@ -260,37 +260,121 @@
   
   .buttonContainer {
     display: flex;
-    gap: 0.75rem;
-    margin-top: 0.75rem;
-    width: auto;
-    margin: auto;
+    gap: 0.65rem;
+    width: 100%;
+    margin-top: 0.35rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid rgba(255, 180, 188, 0.16);
   }
-  
-  .dangerButton {
+
+  .btnIcon {
+    display: inline-flex;
+    width: 0.9rem;
+    height: 0.9rem;
+    flex-shrink: 0;
+    opacity: 0.92;
+  }
+
+  .btnIcon svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* 次要：重新开始 — 描边漆红，不抢主行动 */
+  .restartButton {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 0.625rem 1.5rem;
-    border-radius: 0.75rem;
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    background: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.95);
-    font-size: 0.875rem;
-    font-weight: 600;
+    gap: 0.35rem;
+    flex: 1;
+    min-width: 0;
+    min-height: 2.55rem;
+    padding: 0.55rem 0.85rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 160, 168, 0.42);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, transparent 55%),
+      rgba(12, 8, 10, 0.45);
+    color: #ffc4c9;
+    font-size: 0.84rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
     cursor: pointer;
-    transition: all 0.2s ease;
-    backdrop-filter: blur(0.5rem);
+    transition:
+      transform 0.14s ease,
+      border-color 0.14s ease,
+      background 0.14s ease,
+      color 0.14s ease,
+      box-shadow 0.14s ease;
   }
-  
-  .dangerButton:hover {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.35);
+
+  .restartButton:hover {
+    border-color: rgba(255, 90, 103, 0.7);
+    background: rgba(224, 61, 75, 0.16);
+    color: #fff;
     transform: translateY(-1px);
-    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.2);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
   }
-  
-  .dangerButton:active {
+
+  .restartButton:active {
     transform: translateY(0);
+  }
+
+  /* 主行动：保存并退出 — 主题红漆钮 */
+  .exitButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.38rem;
+    flex: 1.35;
+    min-width: 0;
+    min-height: 2.55rem;
+    padding: 0.55rem 1rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 180, 188, 0.32);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, transparent 42%),
+      linear-gradient(165deg, var(--primary-light, #ff5a67) 0%, var(--primary, #e03d4b) 52%, var(--primary-dark, #c42f3b) 100%);
+    color: #fff;
+    font-size: 0.84rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    box-shadow:
+      0 8px 20px rgba(224, 61, 75, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    transition:
+      transform 0.14s ease,
+      filter 0.14s ease,
+      box-shadow 0.14s ease;
+  }
+
+  .exitButton:hover {
+    filter: brightness(1.06);
+    transform: translateY(-1px);
+    box-shadow:
+      0 10px 24px rgba(224, 61, 75, 0.42),
+      inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  }
+
+  .exitButton:active {
+    transform: translateY(0);
+    filter: brightness(0.98);
+  }
+
+  .restartButton:focus-visible,
+  .exitButton:focus-visible {
+    outline: 2px solid var(--primary-light, #ff5a67);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .restartButton:hover,
+    .exitButton:hover,
+    .restartButton:active,
+    .exitButton:active {
+      transform: none;
+    }
   }
 
   .actionRow {

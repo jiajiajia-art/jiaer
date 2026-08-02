@@ -37,14 +37,22 @@ export type PrivateChatNpcDto = {
   relationship?: string;
   summary?: string;
   attitude?: string;
+  detailedBio?: string;
   playerName?: string;
 };
 
 export type PrivateChatSseEvent =
   | { type: 'thread'; thread: PrivateChatThreadDto; npc?: PrivateChatNpcDto }
   | { type: 'start' }
-  | { type: 'delta'; text: string }
-  | { type: 'done'; thread: PrivateChatThreadDto; text: string }
+  | { type: 'delta'; text: string; replace?: boolean }
+  | {
+      type: 'done';
+      thread: PrivateChatThreadDto;
+      text: string;
+      favorability?: number;
+      favorabilityDelta?: number;
+      playerEditableNpcs?: unknown[];
+    }
   | { type: 'error'; message: string; code?: string };
 
 async function consumeSse(
@@ -127,5 +135,39 @@ export const privateChatApi = {
       },
     );
     await consumeSse(res, onEvent);
+  },
+
+  /** 空线程时角色主动打招呼 */
+  greet: async (
+    token: string,
+    sessionId: string,
+    npcId: string,
+    onEvent: (ev: PrivateChatSseEvent) => void,
+  ) => {
+    const res = await fetch(
+      `${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/private-chat/${encodeURIComponent(npcId)}/greet`,
+      {
+        method: 'POST',
+        headers: authHeaders(token),
+        body: JSON.stringify({}),
+      },
+    );
+    await consumeSse(res, onEvent);
+  },
+
+  /** 清空该角色私聊历史（不碰主线） */
+  clearThread: async (token: string, sessionId: string, npcId: string) => {
+    const res = await fetch(
+      `${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/private-chat/${encodeURIComponent(npcId)}`,
+      {
+        method: 'DELETE',
+        headers: authHeaders(token, false),
+      },
+    );
+    return parseJson(res) as Promise<{
+      success: boolean;
+      message?: string;
+      data?: { thread: PrivateChatThreadDto; npc: PrivateChatNpcDto };
+    }>;
   },
 };

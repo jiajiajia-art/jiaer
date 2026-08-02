@@ -9,6 +9,8 @@ export interface PlayUiStateData {
   attributePanels: Record<string, string>;
   attributePanelsUpdatedAt?: string | null;
   questsUpdatedAt?: string | null;
+  gameStartConfig?: Record<string, unknown> | null;
+  playerEditableNpcs?: unknown[];
 }
 
 /** 功能注释：读取 session 上已持久化的出场/任务/属性缓存（无 LLM）。 */
@@ -35,5 +37,12 @@ export async function fetchPlayUiState(sessionId: string): Promise<PlayUiStateDa
         : {},
     attributePanelsUpdatedAt: json.data?.attributePanelsUpdatedAt || null,
     questsUpdatedAt: json.data?.questsUpdatedAt || null,
+    gameStartConfig:
+      json.data?.gameStartConfig && typeof json.data.gameStartConfig === 'object'
+        ? json.data.gameStartConfig
+        : null,
+    playerEditableNpcs: Array.isArray(json.data?.playerEditableNpcs)
+      ? json.data.playerEditableNpcs
+      : [],
   };
 }

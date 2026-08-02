@@ -227,12 +227,34 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
           <div className={styles.buttonContainer}>
             {onDeleteSession && (
-              <button className={styles.dangerButton} onClick={onDeleteSession}>
+              <button type="button" className={styles.restartButton} onClick={onDeleteSession}>
+                <span className={styles.btnIcon} aria-hidden>
+                  <svg viewBox="0 0 16 16" width="1em" height="1em" fill="none">
+                    <path
+                      d="M3.2 8a4.8 4.8 0 0 1 8.2-3.3M12.8 8a4.8 4.8 0 0 1-8.2 3.3"
+                      stroke="currentColor"
+                      strokeWidth="1.3"
+                      strokeLinecap="round"
+                    />
+                    <path d="M11.2 2.6v2.6H8.6M4.8 13.4v-2.6H7.4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
                 <span>{t('createGame.restart')}</span>
               </button>
             )}
             {!hideExitButton && (
-              <button className={styles.dangerButton} onClick={onExitGame}>
+              <button type="button" className={styles.exitButton} onClick={onExitGame}>
+                <span className={styles.btnIcon} aria-hidden>
+                  <svg viewBox="0 0 16 16" width="1em" height="1em" fill="none">
+                    <path
+                      d="M6.2 3.2H4.1A1.3 1.3 0 0 0 2.8 4.5v7a1.3 1.3 0 0 0 1.3 1.3h2.1M7.2 8h6M10.8 5.4 13.4 8l-2.6 2.6"
+                      stroke="currentColor"
+                      strokeWidth="1.3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
                 <span>{t('createGame.saveAndExit')}</span>
               </button>
             )}

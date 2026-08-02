@@ -23,6 +23,7 @@ interface AttributesPanelProps {
   suppressAutoRefresh?: boolean;
   cachedPanels?: Record<string, string>;
   onPanelsUpdated?: (panels: Record<string, string>) => void;
+  onPlayerEditableNpcsUpdated?: (profiles: unknown[]) => void;
   sessionPlayerProfile?: SessionPlayerProfile | null;
   onSessionPlayerProfileChange?: (profile: SessionPlayerProfile) => void;
 }
@@ -38,6 +39,7 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
   suppressAutoRefresh = false,
   cachedPanels,
   onPanelsUpdated,
+  onPlayerEditableNpcsUpdated,
   sessionPlayerProfile = null,
   onSessionPlayerProfileChange,
 }) => {
@@ -147,7 +149,10 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
       setIsStreaming(true);
 
       try {
-        const result = await streamAttributePanels<{ panels: Record<string, string> }>(
+        const result = await streamAttributePanels<{
+          panels: Record<string, string>;
+          playerEditableNpcs?: unknown[];
+        }>(
           sessionId,
           {
             onError: (msg) => {
@@ -170,6 +175,9 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
         if (result?.panels && typeof result.panels === 'object') {
           applyPanels(result.panels);
         }
+        if (Array.isArray(result?.playerEditableNpcs)) {
+          onPlayerEditableNpcsUpdated?.(result.playerEditableNpcs);
+        }
       } catch (e: unknown) {
         if (isAbortError(e) || controller.signal.aborted || seq !== requestSeqRef.current) {
           return;
@@ -183,7 +191,7 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
         }
       }
     },
-    [sessionId, t, applyPanels]
+    [sessionId, t, applyPanels, onPlayerEditableNpcsUpdated]
   );
 
   const regenerateFromLlmRef = useRef(regenerateFromLlm);
