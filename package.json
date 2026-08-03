@@ -35,6 +35,7 @@
     "test:withdrawRules": "node --experimental-strip-types --test checks/withdrawRules.check.mjs",
     "test:diamondTimelineLog": "node --experimental-strip-types --test checks/diamondTimelineLog.check.mjs",
     "test:funloomLottery": "node --experimental-strip-types --test scripts/funloomLottery.check.mjs",
+    "test:lotteryAdmin": "node --experimental-strip-types --test scripts/lotteryAdminConfig.check.mjs",
     "test": "node --experimental-strip-types --test scripts/*.check.mjs checks/*.check.mjs"
   },
   "dependencies": {

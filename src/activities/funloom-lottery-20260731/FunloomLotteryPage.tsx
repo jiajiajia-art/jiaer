@@ -106,11 +106,16 @@ const FunloomLotteryPage: React.FC = () => {
     }
     if (drawing || spinning) return;
 
+    // 功能注释：先转盘再等接口，掩盖 draw TTFB，避免「点了没反应」
     setDrawing(true);
+    setSpinning(true);
+    setTargetPrizeKey(null);
     try {
       const res = await lotteryApi.draw(LOTTERY_SLUG);
       const data = res.data?.data;
       if (!data?.prize || !data?.draw) {
+        setSpinning(false);
+        setTargetPrizeKey(null);
         toast.error('抽奖失败，请稍后重试');
         return;
       }
@@ -122,11 +127,12 @@ const FunloomLotteryPage: React.FC = () => {
         pointsAmount: data.prize.pointsAmount,
       });
       setTargetPrizeKey(data.prize.prizeKey);
-      setSpinning(true);
       setMyTodayDraw(data.draw);
       setMyDraw(data.draw);
       setCanDraw(false);
     } catch (error) {
+      setSpinning(false);
+      setTargetPrizeKey(null);
       toast.error(getErrorMessage(error, '抽奖失败'));
     } finally {
       setDrawing(false);
@@ -247,7 +253,7 @@ const FunloomLotteryPage: React.FC = () => {
             </ul>
           </section>
 
-          <RecentWinners items={recentWinners} />
+          <RecentWinners items={recentWinners} paused={spinning || drawing} />
         </>
       )}
 

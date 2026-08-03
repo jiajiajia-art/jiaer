@@ -60,12 +60,20 @@ const lotteryApi = {
   retryPoints: (drawId: number) =>
     api.post<ApiResponse<LotteryDraw>>(`/lottery/draws/${drawId}/retry-points`, {}),
 
-  adminListDraws: (params?: { slug?: string; prizeKey?: string }) =>
+  adminListDraws: (params?: {
+    slug?: string;
+    prizeKey?: string;
+    limit?: number;
+    offset?: number;
+  }) =>
     api.get<
       ApiResponse<{
         campaign: LotteryCampaign;
         prizes: Array<{ prizeKey: string; name: string; weight: number; remaining: number }>;
         items: unknown[];
+        total: number;
+        limit: number;
+        offset: number;
       }>
     >('/admin/lottery/draws', { params }),
 
@@ -83,8 +91,14 @@ const lotteryApi = {
       }>
     >('/admin/lottery/campaign', body),
 
-  adminExportShippingUrl: (slug: string = LOTTERY_SLUG) =>
-    `/api/admin/lottery/shipping-export?slug=${encodeURIComponent(slug)}`,
+  adminExportShippingUrl: (
+    slug: string = LOTTERY_SLUG,
+    opts?: { prizeKey?: string },
+  ) => {
+    const qs = new URLSearchParams({ slug });
+    if (opts?.prizeKey) qs.set('prizeKey', opts.prizeKey);
+    return `/api/admin/lottery/shipping-export?${qs.toString()}`;
+  },
 };
 
 export default lotteryApi;

@@ -16,8 +16,14 @@
   inset: 6% 10%;
   border-radius: 50%;
   background: radial-gradient(circle, var(--wheel-glow), transparent 70%);
-  filter: blur(16px);
+  /* 功能注释：静态轻模糊；旋转时关掉 filter，避免整盘合成卡顿 */
+  filter: blur(12px);
   pointer-events: none;
+}
+
+.stageSpinning .glow {
+  filter: none;
+  opacity: 0.85;
 }
 
 .wrap {
@@ -42,6 +48,10 @@
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
 }
 
+.stageSpinning .pointer {
+  filter: none;
+}
+
 .wheel {
   position: relative;
   width: 100%;
@@ -55,6 +65,23 @@
     0 14px 32px rgba(40, 20, 100, 0.45);
   overflow: hidden;
   background-color: var(--wheel-ink);
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* 功能注释：等 draw 接口时匀速转，接口一到再切减速落点 */
+.wheelAwaiting {
+  animation: wheelAwaitSpin 0.55s linear infinite;
+  will-change: transform;
+}
+
+@keyframes wheelAwaitSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spoke {

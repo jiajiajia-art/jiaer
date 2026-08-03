@@ -2,8 +2,12 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import lotteryApi from '../activities/funloom-lottery-20260731/api/lotteryApi';
 import {
+  ADMIN_DRAWS_PAGE_SIZE,
+  formatAdminExportSuccessMessage,
   formatFirstPrizeOddsHint,
   fromShanghaiDatetimeLocal,
+  resolveAdminDrawsOffset,
+  resolveAdminDrawsTotalPages,
   toShanghaiDatetimeLocal,
 } from '../activities/funloom-lottery-20260731/lib/lotteryAdminConfig';
 import {
@@ -52,10 +56,12 @@ function formatShanghaiTime(value: string): string {
   }).format(date);
 }
 
-/** 功能注释：运营配置活动档期、一等奖概率，并查看抽奖名单（含手机号）与 CSV 导出。 */
+/** 功能注释：运营配置活动档期、一等奖概率，并分页查看抽奖名单与全量 CSV 导出。 */
 const LotteryAdminManager: React.FC = () => {
   const token = useAuthStore((s) => s.user?.token);
   const [prizeKey, setPrizeKey] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [items, setItems] = useState<AdminDrawRow[]>([]);
   const [campaign, setCampaign] = useState<LotteryCampaign | null>(null);
   const [prizes, setPrizes] = useState<AdminPrizeRow[]>([]);
@@ -64,6 +70,12 @@ const LotteryAdminManager: React.FC = () => {
   const [firstPrizeWeightInput, setFirstPrizeWeightInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const totalPages = useMemo(
+    () => resolveAdminDrawsTotalPages(total, ADMIN_DRAWS_PAGE_SIZE),
+    [total],
+  );
 
   const oddsHint = useMemo(() => {
     const raw = firstPrizeWeightInput.trim();
@@ -77,13 +89,21 @@ const LotteryAdminManager: React.FC = () => {
       const res = await lotteryApi.adminListDraws({
         slug: LOTTERY_SLUG,
         prizeKey: prizeKey || undefined,
+        limit: ADMIN_DRAWS_PAGE_SIZE,
+        offset: resolveAdminDrawsOffset(page, ADMIN_DRAWS_PAGE_SIZE),
       });
       const data = res.data?.data;
       const nextCampaign = data?.campaign || null;
       const nextPrizes = (data?.prizes as AdminPrizeRow[]) || [];
+      const nextTotal = Number(data?.total || 0);
       setCampaign(nextCampaign);
       setPrizes(nextPrizes);
       setItems((data?.items as AdminDrawRow[]) || []);
+      setTotal(nextTotal);
+      const maxPage = resolveAdminDrawsTotalPages(nextTotal, ADMIN_DRAWS_PAGE_SIZE);
+      if (page > maxPage) {
+        setPage(maxPage);
+      }
       if (nextCampaign) {
         setStartsLocal(toShanghaiDatetimeLocal(nextCampaign.startsAt));
         setEndsLocal(toShanghaiDatetimeLocal(nextCampaign.endsAt));
@@ -102,11 +122,16 @@ const LotteryAdminManager: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [prizeKey]);
+  }, [prizeKey, page]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  const handlePrizeFilterChange = (value: string) => {
+    setPrizeKey(value);
+    setPage(1);
+  };
 
   const handleSaveConfig = async () => {
     const startsAt = fromShanghaiDatetimeLocal(startsLocal);
@@ -153,8 +178,11 @@ const LotteryAdminManager: React.FC = () => {
   };
 
   const handleExport = () => {
-    const url = `${HOST_ADDRESS}${lotteryApi.adminExportShippingUrl(LOTTERY_SLUG)}`;
+    const url = `${HOST_ADDRESS}${lotteryApi.adminExportShippingUrl(LOTTERY_SLUG, {
+      prizeKey: prizeKey || undefined,
+    })}`;
     void (async () => {
+      setExporting(true);
       try {
         const resp = await fetch(url, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -163,16 +191,32 @@ const LotteryAdminManager: React.FC = () => {
           toast.error('导出失败');
           return;
         }
-        const blob = await resp.blob();
+        const exportTotalHeader = resp.headers.get('X-Export-Total');
+        const exportRowsHeader = resp.headers.get('X-Export-Rows');
+        const text = await resp.text();
+        const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter((line) => line.length > 0);
+        const rowsFromCsv = Math.max(0, lines.length - 1);
+        const exportTotal =
+          exportTotalHeader != null && Number.isFinite(Number(exportTotalHeader))
+            ? Number(exportTotalHeader)
+            : undefined;
+        const exportRows =
+          exportRowsHeader != null && Number.isFinite(Number(exportRowsHeader))
+            ? Number(exportRowsHeader)
+            : rowsFromCsv;
+
+        const blob = new Blob([text], { type: 'text/csv;charset=utf-8' });
         const objectUrl = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = objectUrl;
         a.download = `lottery-draws-${LOTTERY_SLUG}.csv`;
         a.click();
         URL.revokeObjectURL(objectUrl);
-        toast.success('已开始下载');
+        toast.success(formatAdminExportSuccessMessage(exportRows ?? rowsFromCsv, exportTotal));
       } catch {
         toast.error('导出失败');
+      } finally {
+        setExporting(false);
       }
     })();
   };
@@ -235,7 +279,7 @@ const LotteryAdminManager: React.FC = () => {
         </div>
 
         <div className={styles.row}>
-          <select value={prizeKey} onChange={(e) => setPrizeKey(e.target.value)}>
+          <select value={prizeKey} onChange={(e) => handlePrizeFilterChange(e.target.value)}>
             <option value="">全部奖品</option>
             <option value="console">游戏机</option>
             <option value="mini_handheld">迷你掌机</option>
@@ -246,9 +290,31 @@ const LotteryAdminManager: React.FC = () => {
           <button type="button" onClick={() => void load()} disabled={loading}>
             刷新
           </button>
-          <button type="button" onClick={handleExport}>
-            导出全部记录 CSV
+          <button type="button" onClick={handleExport} disabled={exporting || loading}>
+            {exporting ? '导出中…' : '导出全部记录 CSV'}
           </button>
+        </div>
+        <div className={styles.pager}>
+          <span className={styles.pagerMeta}>
+            共 {total} 条 · 第 {page}/{totalPages} 页 · 每页 {ADMIN_DRAWS_PAGE_SIZE} 条
+            {loading ? ' · 加载中…' : ''}
+          </span>
+          <div className={styles.pagerBtns}>
+            <button
+              type="button"
+              disabled={loading || page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              上一页
+            </button>
+            <button
+              type="button"
+              disabled={loading || page >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            >
+              下一页
+            </button>
+          </div>
         </div>
       </div>
       <div className={styles.tableWrap}>
