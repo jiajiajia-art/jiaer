@@ -577,7 +577,6 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                     {FIRST_CHARGE_PLANS.map((plan) => {
                         const hasBonus = !plan.noFirstChargeBonus;
                         const displayDiamonds = calculateDiamonds(plan.amount);
-                        const planHasFirstCharged = hasFirstCharge(plan.planId);
                         return (
                             <button
                                 key={plan.planId}
@@ -586,7 +585,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                                 onClick={() => handleFixedAmountClick(plan)}
                             >
                                 {hasBonus ? (
-                                    <div className={`${styles.firstChargeTag} ${planHasFirstCharged ? styles.firstChargeTagInactive : ''}`} />
+                                    <div className={styles.firstChargeTag} />
                                 ) : (
                                     <div className={styles.noBonusTag} />
                                 )}

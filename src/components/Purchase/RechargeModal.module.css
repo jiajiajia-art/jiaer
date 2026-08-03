@@ -190,11 +190,6 @@
     min-height: 24px;
 }
 
-.firstChargeTagInactive {
-    background: #f4a4ad;
-    color: #fff;
-}
-
 .noBonusTag {
     display: flex;
     align-items: center;
