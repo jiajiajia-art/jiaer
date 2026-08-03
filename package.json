@@ -23,6 +23,7 @@
     "test:exportVisualNovel": "node --experimental-strip-types --test scripts/exportVisualNovel.check.mjs",
     "test:novelChapters": "node --experimental-strip-types --test scripts/novelChapters.check.mjs",
     "test:creatorContinuePlay": "node --experimental-strip-types --test scripts/creatorContinuePlay.check.mjs",
+    "test:normalizeSaveListItems": "node --experimental-strip-types --test scripts/normalizeSaveListItems.check.mjs",
     "test:galgamePlayPanels": "node --experimental-strip-types --test scripts/galgamePlayPanels.check.mjs",
     "test:choiceInteractionGate": "node --experimental-strip-types --test scripts/choiceInteractionGate.check.mjs",
     "test:attributePanelsStream": "node --experimental-strip-types --test scripts/attributePanelsStream.check.mjs",
@@ -32,7 +33,9 @@
     "test:userRoles": "node --experimental-strip-types --test checks/userRoles.check.mjs",
     "test:operatorReports": "node --experimental-strip-types --test checks/operatorReports.check.mjs",
     "test:withdrawRules": "node --experimental-strip-types --test checks/withdrawRules.check.mjs",
-    "test:diamondTimelineLog": "node --experimental-strip-types --test checks/diamondTimelineLog.check.mjs"
+    "test:diamondTimelineLog": "node --experimental-strip-types --test checks/diamondTimelineLog.check.mjs",
+    "test:funloomLottery": "node --experimental-strip-types --test scripts/funloomLottery.check.mjs",
+    "test": "node --experimental-strip-types --test scripts/*.check.mjs checks/*.check.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

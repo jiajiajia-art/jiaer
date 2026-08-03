@@ -299,6 +299,8 @@ export const useGalgameController = () => {
     const loadPresetData = useCallback(async () => {
         const targetFileId = isReplay ? String(replayMeta?.fileId || '') : String(fileId || '');
         if (!targetFileId) {
+            // 无 fileId 时不能一直转圈（常见于加载存档漏写 store.fileId）
+            setIsLoading(false);
             return;
         }
 
@@ -314,7 +316,7 @@ export const useGalgameController = () => {
             if (response.data.data) {
                 setPresetData(response.data.data);
                 setWorldSetting(response.data.data.world);
-                const scenes = response.data.data.scenes.scenes;
+                const scenes = response.data.data.scenes?.scenes;
                 
                 if (scenes && scenes.length > 0) {
                     let initialScene = scenes[0];

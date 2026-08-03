@@ -33,6 +33,7 @@ import AdminUsersManager from '../components/AdminUsersManager';
 import DailyTasksAdminManager from '../components/DailyTasksAdminManager';
 import CommentAdminManager from '../components/admin/CommentAdminManager';
 import WithdrawAdminManager from '../components/WithdrawAdminManager';
+import LotteryAdminManager from '../components/LotteryAdminManager';
 import announcementApi from '../api/announcement/announcementApi';
 import documentApi from '../api/document/documentApi';
 import gameTagsApi from '../api/gameTags/gameTagsApi';
@@ -55,7 +56,7 @@ import { useMessageStore } from '../store/useMessageStore';
 import { useAuthStore } from '../store/useAuthStore';
 
 type EditorMode = 'new' | 'draft' | 'published';
-type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points' | 'creatorIncentives' | 'subscriptions' | 'documents' | 'shareRatio' | 'dailyTasks' | 'users' | 'comments' | 'withdraw';
+type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points' | 'creatorIncentives' | 'subscriptions' | 'documents' | 'shareRatio' | 'dailyTasks' | 'users' | 'comments' | 'withdraw' | 'lottery';
 type SortModalMode = 'featured' | 'all' | null;
 
 interface SortDraftItem {
@@ -88,6 +89,7 @@ const resolveAdminTab = (pathname: string, search: string): AdminTab => {
     if (pathname.startsWith('/admin/daily-tasks')) return 'dailyTasks';
     if (pathname.startsWith('/admin/comments')) return 'comments';
     if (pathname.startsWith('/admin/withdraw')) return 'withdraw';
+    if (pathname.startsWith('/admin/lottery')) return 'lottery';
     const tabParam = new URLSearchParams(search).get('tab');
     if (tabParam === 'announcements' || tabParam === 'banners' || tabParam === 'themes' || tabParam === 'comments') return tabParam;
     return 'announcements';
@@ -1012,6 +1014,10 @@ const AdminPanel: React.FC = () => {
             navigate('/admin/withdraw');
             return;
         }
+        if (tab === 'lottery') {
+            navigate('/admin/lottery');
+            return;
+        }
 
         const nextSearch = tab === 'announcements' ? '' : `?tab=${tab}`;
         const nextUrl = `/admin${nextSearch}`;
@@ -1536,6 +1542,13 @@ const AdminPanel: React.FC = () => {
                             </button>
                             <button
                                 type="button"
+                                className={`${styles.navItem} ${activeTab === 'lottery' ? styles.navItemActive : ''}`}
+                                onClick={() => handleTabChange('lottery')}
+                            >
+                                <span className={styles.navTitle}>抽奖活动</span>
+                            </button>
+                            <button
+                                type="button"
                                 className={`${styles.navItem} ${activeTab === 'comments' ? styles.navItemActive : ''}`}
                                 onClick={() => handleTabChange('comments')}
                             >
@@ -1908,6 +1921,8 @@ const AdminPanel: React.FC = () => {
                         {activeTab === 'users' && <AdminUsersManager />}
 
                         {activeTab === 'withdraw' && <WithdrawAdminManager />}
+
+                        {activeTab === 'lottery' && <LotteryAdminManager />}
 
                         {activeTab === 'subscriptions' && <SubscriptionAdminManager />}
 

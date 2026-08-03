@@ -1,0 +1,147 @@
+/* Fantasy Tech Carnival 转盘：金边 + 霓虹外环，奖品锁在各自扇区外环 */
+
+.stage {
+  --wheel-ink: #1a0a40;
+  --wheel-gold: #ffd54f;
+  --wheel-gold-deep: #f9a825;
+  --wheel-glow: rgba(120, 180, 255, 0.45);
+  position: relative;
+  width: min(400px, 92vw);
+  margin: 0 auto;
+  padding: 12px 0 8px;
+}
+
+.glow {
+  position: absolute;
+  inset: 6% 10%;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--wheel-glow), transparent 70%);
+  filter: blur(16px);
+  pointer-events: none;
+}
+
+.wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  z-index: 1;
+}
+
+.pointer {
+  /* 功能注释：金色三角箭头立在圆心上方；层级低于中心圆，由圆压住箭头根部 */
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% - 10px);
+  z-index: 1;
+  width: 0;
+  height: 0;
+  border-left: 12px solid transparent;
+  border-right: 12px solid transparent;
+  border-bottom: 28px solid var(--wheel-gold);
+  transform: translateX(-50%);
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
+}
+
+.wheel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 7px solid var(--wheel-gold);
+  box-shadow:
+    0 0 0 4px rgba(126, 182, 255, 0.55),
+    0 0 0 7px var(--wheel-gold-deep),
+    inset 0 0 28px rgba(0, 0, 0, 0.4),
+    0 14px 32px rgba(40, 20, 100, 0.45);
+  overflow: hidden;
+  background-color: var(--wheel-ink);
+}
+
+.spoke {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  transform: rotate(var(--spoke-angle));
+  pointer-events: none;
+}
+
+.prizeSlot {
+  /* 功能注释：奖品块靠外环径向放置；尺寸略放大 10% */
+  position: absolute;
+  top: 4%;
+  left: 50%;
+  width: 32%;
+  max-width: 110px;
+  transform: translateX(-50%);
+  display: flex;
+  justify-content: center;
+}
+
+.prizeFace {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 100%;
+  transform: rotate(calc(-1 * var(--spoke-angle)));
+}
+
+.sectorImg {
+  width: 100%;
+  aspect-ratio: 1;
+  max-width: 80px;
+  object-fit: contain;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid rgba(126, 182, 255, 0.65);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+}
+
+.sectorName {
+  width: 100%;
+  padding: 0 2px;
+  color: #fff;
+  font-size: clamp(10px, 2.6vw, 13px);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-align: center;
+  line-height: 1.15;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.9),
+    0 0 8px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.axis {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 5;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.hub {
+  position: relative;
+  z-index: 3;
+  width: clamp(52px, 18vw, 72px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffe082, var(--wheel-gold) 55%, var(--wheel-gold-deep));
+  box-shadow:
+    inset 0 2px 4px rgba(255, 255, 255, 0.45),
+    0 4px 12px rgba(0, 0, 0, 0.35),
+    0 0 0 3px rgba(126, 182, 255, 0.45);
+  display: grid;
+  place-items: center;
+}
+
+.hubDot {
+  width: 28%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #3a2810;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+}
