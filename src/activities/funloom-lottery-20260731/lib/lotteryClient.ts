@@ -144,6 +144,50 @@ export function resolveWheelTargetDegrees(
   return spins * 360 + (360 - centerAngle) + pointerOffsetDeg;
 }
 
+/** 功能注释：从 CSS transform 矩阵/rotate 读出当前角度（等待 API 时转盘已在转）。 */
+export function readCssRotationDegrees(transform: string): number {
+  const value = String(transform || '').trim();
+  if (!value || value === 'none') return 0;
+  const rotateMatch = value.match(/rotate\((-?[\d.]+)deg\)/i);
+  if (rotateMatch) return Number(rotateMatch[1]) || 0;
+  const matrixMatch = value.match(/matrix\(([^)]+)\)/i);
+  if (matrixMatch) {
+    const parts = matrixMatch[1].split(',').map((p) => Number(p.trim()));
+    if (parts.length >= 2 && Number.isFinite(parts[0]) && Number.isFinite(parts[1])) {
+      return (Math.atan2(parts[1], parts[0]) * 180) / Math.PI;
+    }
+  }
+  const matrix3dMatch = value.match(/matrix3d\(([^)]+)\)/i);
+  if (matrix3dMatch) {
+    const parts = matrix3dMatch[1].split(',').map((p) => Number(p.trim()));
+    // matrix3d: a1=parts[0], b1=parts[1]
+    if (parts.length >= 2 && Number.isFinite(parts[0]) && Number.isFinite(parts[1])) {
+      return (Math.atan2(parts[1], parts[0]) * 180) / Math.PI;
+    }
+  }
+  return 0;
+}
+
+/**
+ * 功能注释：在「等待接口时的当前角」基础上，再转若干圈落到目标扇区（避免等 API 期间转盘停着）。
+ */
+export function resolveLandingRotationFromCurrent(
+  currentDeg: number,
+  prizeKey: string,
+  opts: { spins?: number } = {},
+): number {
+  const current = Number.isFinite(currentDeg) ? currentDeg : 0;
+  const spins = Number.isFinite(opts.spins) ? Math.max(0, Math.floor(Number(opts.spins))) : 4;
+  const landMod = ((resolveWheelTargetDegrees(prizeKey, { spins: 0 }) % 360) + 360) % 360;
+  const base = ((current % 360) + 360) % 360;
+  let delta = landMod - base;
+  if (delta <= 0) delta += 360;
+  // 至少再转满 spins 圈，保证有减速落点观感
+  return current + delta + spins * 360;
+}
+
+export const WHEEL_LANDING_MS = 3200;
+
 export function validateShippingForm(input: {
   recipientName: string;
   phone: string;

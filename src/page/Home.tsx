@@ -614,21 +614,21 @@ const Home: React.FC = () => {
     }, [updateUser, user?.user?.hasSignedIn]);
 
     // 首登弹窗：加入用户群（仅首次登录显示一次）
-    useEffect(() => {
-        const uid = user?.user?.id;
-        if (!uid) return;
+    // useEffect(() => {
+    //     const uid = user?.user?.id;
+    //     if (!uid) return;
 
-        const localKey = 'joinGroupModalShown_' + uid;
-        const sessionKey = 'joinGroupModalWillShow_' + uid;
+    //     const localKey = 'joinGroupModalShown_' + uid;
+    //     const sessionKey = 'joinGroupModalWillShow_' + uid;
 
-        const hasShown = localStorage.getItem(localKey) === 'true';
-        const alreadyPlanned = sessionStorage.getItem(sessionKey) === 'true';
+    //     const hasShown = localStorage.getItem(localKey) === 'true';
+    //     const alreadyPlanned = sessionStorage.getItem(sessionKey) === 'true';
 
-        if (!hasShown && !alreadyPlanned) {
-            sessionStorage.setItem(sessionKey, 'true'); // 通知其他 effect：本次先显示加群弹窗
-            setShowJoinGroupModal(true);
-        }
-    }, [user?.user?.id]);
+    //     if (!hasShown && !alreadyPlanned) {
+    //         sessionStorage.setItem(sessionKey, 'true'); // 通知其他 effect：本次先显示加群弹窗
+    //         setShowJoinGroupModal(true);
+    //     }
+    // }, [user?.user?.id]);
     // 用户登录时，检查是否显示签到弹窗
     useEffect(() => {
         if (!user?.user?.id || hasCheckedInSessionRef.current || user?.user?.hasSignedIn) {

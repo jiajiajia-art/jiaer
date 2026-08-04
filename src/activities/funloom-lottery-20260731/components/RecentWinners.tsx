@@ -14,6 +14,8 @@ export interface RecentWinnerItem {
 
 interface RecentWinnersProps {
   items: RecentWinnerItem[];
+  /** 抽奖旋转时暂停跑马灯，降低合成压力 */
+  paused?: boolean;
 }
 
 function formatTime(value: string): string {
@@ -32,12 +34,12 @@ function formatTime(value: string): string {
 export { resolveRecentWinnersMarqueeSeconds };
 
 /** 功能注释：活动页「刚刚中奖」固定高度 + 自动向上轮播，避免撑长整页。 */
-const RecentWinners: React.FC<RecentWinnersProps> = ({ items }) => {
+const RecentWinners: React.FC<RecentWinnersProps> = ({ items, paused = false }) => {
   const marqueeSeconds = useMemo(
     () => resolveRecentWinnersMarqueeSeconds(items.length),
     [items.length],
   );
-  const autoScroll = marqueeSeconds != null;
+  const autoScroll = marqueeSeconds != null && !paused;
   // 功能注释：复制一份列表做无缝循环（动画位移 50%）
   const renderItems = autoScroll ? [...items, ...items] : items;
 

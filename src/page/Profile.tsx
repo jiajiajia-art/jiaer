@@ -1281,6 +1281,11 @@ const Profile: React.FC = () => {
                                                         type="button"
                                                         className={styles.dailyTaskGoPlayBtn}
                                                         onClick={() => {
+                                                            // 综合任务（玩 N 款不同游戏）没有具体 fileId，跳转到首页
+                                                            if (task.code === 'play_3_unique' || task.code === 'play_three_games') {
+                                                                navigate('/');
+                                                                return;
+                                                            }
                                                             const targetGameFileId = task.gameFileId || task.key.replace(/^(play_specific_game_\d+_|config_\d+_)/, '');
                                                             navigate(`/game/${targetGameFileId}?source=history`);
                                                         }}

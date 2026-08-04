@@ -1,9 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   PRIZE_DISPLAY,
   PRIZE_KEYS,
   type PrizeKey,
-  resolveWheelTargetDegrees,
+  readCssRotationDegrees,
+  resolveLandingRotationFromCurrent,
+  WHEEL_LANDING_MS,
 } from '../lib/lotteryClient';
 import styles from './LotteryWheel.module.css';
 
@@ -22,22 +24,24 @@ const PRIZE_IMAGES: Record<PrizeKey, string> = {
 };
 
 interface LotteryWheelProps {
+  /** 是否处于抽奖流程（含等接口 / 减速落地） */
   spinning: boolean;
+  /** 有值后从当前角减速落到该奖；null 表示等接口时的匀速转 */
   targetPrizeKey: string | null;
   onSpinEnd?: () => void;
 }
 
 /**
  * 设计方向：Arcade Carnival（游园金边转盘）
- * DFII ≈ 4+5+5+5−1 = 18 → 执行
- * 布局：每奖品独占一条径向 spoke，落在扇区外环中线，正向居中且互不跨区。
+ * 体验：点击后立即匀速转（掩盖 API 等待），结果返回后再减速落点。
  */
 const LotteryWheel: React.FC<LotteryWheelProps> = ({ spinning, targetPrizeKey, onSpinEnd }) => {
+  const wheelRef = useRef<HTMLDivElement>(null);
   const [rotation, setRotation] = useState(0);
   const [transitionOn, setTransitionOn] = useState(false);
+  const [awaitingSpin, setAwaitingSpin] = useState(false);
 
   const conic = useMemo(() => {
-    // 功能注释：CSS conic 默认 0deg=正上方、顺时针；必须与 spoke / resolveWheelTargetDegrees 同一坐标系。
     const n = PRIZE_KEYS.length;
     const slice = 100 / n;
     const stops = PRIZE_KEYS.map((key, i) => {
@@ -48,29 +52,61 @@ const LotteryWheel: React.FC<LotteryWheelProps> = ({ spinning, targetPrizeKey, o
   }, []);
 
   useEffect(() => {
-    if (!spinning || !targetPrizeKey) return;
-    const target = resolveWheelTargetDegrees(targetPrizeKey, { spins: 5 });
-    setTransitionOn(true);
-    setRotation((prev) => {
-      const base = prev % 360;
-      return prev - base + target;
+    if (!spinning) {
+      setAwaitingSpin(false);
+      setTransitionOn(false);
+      return;
+    }
+
+    // 阶段1：接口未回，匀速转，消除「点了没反应」
+    if (!targetPrizeKey) {
+      setTransitionOn(false);
+      setAwaitingSpin(true);
+      return;
+    }
+
+    // 阶段2：结果已到，从当前可视角减速落地
+    setAwaitingSpin(false);
+    const el = wheelRef.current;
+    const computed = el ? getComputedStyle(el).transform : 'none';
+    const currentDeg = readCssRotationDegrees(computed);
+    const next = resolveLandingRotationFromCurrent(currentDeg, targetPrizeKey, { spins: 4 });
+
+    setTransitionOn(false);
+    setRotation(currentDeg);
+    let landTimer = 0;
+    let rafOuter = 0;
+    let rafInner = 0;
+    rafOuter = window.requestAnimationFrame(() => {
+      rafInner = window.requestAnimationFrame(() => {
+        setTransitionOn(true);
+        setRotation(next);
+        landTimer = window.setTimeout(() => onSpinEnd?.(), WHEEL_LANDING_MS);
+      });
     });
-    const timer = window.setTimeout(() => onSpinEnd?.(), 4200);
-    return () => window.clearTimeout(timer);
+
+    return () => {
+      window.cancelAnimationFrame(rafOuter);
+      window.cancelAnimationFrame(rafInner);
+      if (landTimer) window.clearTimeout(landTimer);
+    };
   }, [spinning, targetPrizeKey, onSpinEnd]);
 
   const sector = 360 / PRIZE_KEYS.length;
 
   return (
-    <div className={styles.stage}>
+    <div className={`${styles.stage} ${spinning ? styles.stageSpinning : ''}`}>
       <div className={styles.glow} aria-hidden />
       <div className={styles.wrap}>
         <div
-          className={styles.wheel}
+          ref={wheelRef}
+          className={`${styles.wheel} ${awaitingSpin ? styles.wheelAwaiting : ''}`}
           style={{
             background: conic,
-            transform: `rotate(${rotation}deg)`,
-            transition: transitionOn ? 'transform 4s cubic-bezier(0.12, 0.75, 0.18, 1)' : 'none',
+            transform: awaitingSpin ? undefined : `rotate(${rotation}deg)`,
+            transition: transitionOn
+              ? `transform ${WHEEL_LANDING_MS}ms cubic-bezier(0.12, 0.75, 0.18, 1)`
+              : 'none',
           }}
         >
           {PRIZE_KEYS.map((key, index) => {
@@ -87,6 +123,8 @@ const LotteryWheel: React.FC<LotteryWheelProps> = ({ spinning, targetPrizeKey, o
                       src={PRIZE_IMAGES[key]}
                       alt={PRIZE_DISPLAY[key].label}
                       className={styles.sectorImg}
+                      draggable={false}
+                      decoding="async"
                     />
                     <span className={styles.sectorName}>{PRIZE_DISPLAY[key].label}</span>
                   </div>
@@ -95,7 +133,6 @@ const LotteryWheel: React.FC<LotteryWheelProps> = ({ spinning, targetPrizeKey, o
             );
           })}
         </div>
-        {/* 功能注释：中心圆压住箭头根部；箭头仍指向 12 点中奖扇区 */}
         <div className={styles.axis} aria-hidden>
           <div className={styles.hub}>
             <span className={styles.hubDot} />
