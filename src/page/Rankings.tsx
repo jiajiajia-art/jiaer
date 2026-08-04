@@ -319,17 +319,22 @@ const Rankings: React.FC = () => {
         [activeTab, allMergedList, apiTabCurrent]
     );
 
+    // Tab 显示逻辑：
+    // - 全部 Tab：等 allTabState 加载完成即可显示
+    // - 子 Tab：在 allTab 中有数据时就显示（与 activeTab 无关）
     const filteredTabs = useMemo(() => {
-        if (!allTabState.loaded) return TAB_CONFIG;
+        if (!allTabState.loaded && !allTabState.loading) return [];
         return TAB_CONFIG.filter(tab => {
             if (tab.key === 'all') return true;
             const apiType = TAB_TO_API_TYPE[tab.key as Exclude<RankingTab, 'all'>];
             return (allTabState.data[apiType] ?? []).length > 0;
         });
-    }, [allTabState.loaded, allTabState.data]);
+    }, [allTabState.loaded, allTabState.data, allTabState.loading]);
 
+    // 当 filteredTabs 为空时自动切换到第一个有数据的 Tab
     useEffect(() => {
-        if (filteredTabs.length > 0 && !filteredTabs.find(t => t.key === activeTab)) {
+        if (filteredTabs.length === 0) return;
+        if (!filteredTabs.find(t => t.key === activeTab)) {
             setActiveTab(filteredTabs[0].key);
         }
     }, [filteredTabs, activeTab]);

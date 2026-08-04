@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import styles from './SaveModal.module.css';
 import { streamSaveSummary, savesApi } from '../../api/galgame/saves';
 import { normalizeSaveListItems } from '../../lib/galgame/normalizeSaveListItems';

@@ -50,6 +50,19 @@
   color: #2f241d;
 }
 
+.sectionToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.sectionToolbar .sectionTitle {
+  margin-bottom: 0;
+}
+
 .sectionHint {
   margin: 0 0 16px;
   color: #888;

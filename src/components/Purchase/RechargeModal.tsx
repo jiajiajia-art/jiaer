@@ -25,14 +25,6 @@ interface DiamondPlan {
     noFirstChargeBonus?: boolean;
 }
 
-// 会员钻石充值折扣（日卡9折、月卡8折、季卡7折、年卡6折）
-const MEMBER_DISCOUNTS: Record<string, number> = {
-    creator_day: 0.9,
-    creator_month: 0.8,
-    creator_season: 0.7,
-    creator_year: 0.6,
-};
-
 const FIRST_CHARGE_PLANS: DiamondPlan[] = [
     { planId: 'dr_1', amount: 1, firstChargeDiamonds: 19 },
     { planId: 'dr_6', amount: 6, firstChargeDiamonds: 60, noFirstChargeBonus: true },
@@ -75,9 +67,10 @@ const isMiniProgramEnv = (): boolean => {
 
 const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRecharge, isFirstChargePlans, fixedTab }) => {
     const { t } = useTranslation();
-    const { user, updateUser } = useAuthStore();
+    const { updateUser } = useAuthStore();
     const [isLoading, setIsLoading] = useState(false);
-    const [inputError, setInputError] = useState<string>('');
+    const [amountError, setAmountError] = useState('');
+    const [inputShake, setInputShake] = useState(false);
     const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
     const [orderId, setOrderId] = useState<string | null>(null);
     const [paymentStatus, setPaymentStatus] = useState<'idle' | 'polling' | 'success' | 'failed'>('idle');
@@ -149,7 +142,6 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
         if (!isOpen) {
             setAmountText('');
             setIsLoading(false);
-            setInputError('');
             setQrCodeUrl(null);
             setOrderId(null);
             setPaymentStatus('idle');
@@ -160,6 +152,8 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             setSelectedFirstChargePlanId(null);
             setSelectedFixedPlanAmount(null);
             setCustomOriginalAmount(null);
+            setAmountError('');
+            setInputShake(false);
         }
     }, [isOpen, fixedTab]);
 
@@ -170,13 +164,12 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     }, [isOpen, fixedTab, rechargeTab]);
 
     const handleFixedAmountClick = (plan: DiamondPlan) => {
-        const discount = getMemberDiscount();
-        const displayAmount = discount < 1 ? (plan.amount * discount).toFixed(1) : String(plan.amount);
-        setAmountText(displayAmount);
+        setAmountText(String(plan.amount));
         setSelectedFirstChargePlanId(plan.planId);
         setSelectedFixedPlanAmount(plan.amount);
         setCustomOriginalAmount(null);
-        setInputError('');
+        setAmountError('');
+        setInputShake(false);
     };
 
     const handleCustomAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -197,20 +190,27 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             }
         }
 
-            const numericValue = parseFloat(value || '0');
-            if (!isNaN(numericValue)) {
-                if (numericValue > 0 && numericValue < MIN_AMOUNT) {
-                    setInputError(t('rechargeModal.amountTooLow', { amount: MIN_AMOUNT }));
-                } else {
-                setInputError('');
+        const numericValue = Number.parseFloat(value || '0');
+        if (Number.isFinite(numericValue)) {
+            if (numericValue > 0 && numericValue < MIN_AMOUNT) {
+                setAmountError(t('rechargeModal.amountTooLow', { amount: MIN_AMOUNT }));
+                setInputShake(false);
+            } else if (numericValue >= MIN_AMOUNT && !Number.isInteger(numericValue)) {
+                setAmountError(t('rechargeModal.amountMustBeInteger'));
+                setInputShake(true);
+                window.setTimeout(() => setInputShake(false), 500);
+            } else {
+                setAmountError('');
+                setInputShake(false);
             }
             const matchedPlan = FIRST_CHARGE_PLANS.find((plan) => plan.amount === numericValue);
             setSelectedFirstChargePlanId(matchedPlan?.planId ?? null);
-            // 自定义金额也保存原始值
             setCustomOriginalAmount(numericValue >= MIN_AMOUNT ? numericValue : null);
         } else {
             setSelectedFirstChargePlanId(null);
             setCustomOriginalAmount(null);
+            setAmountError('');
+            setInputShake(false);
         }
 
         setSelectedFixedPlanAmount(null);
@@ -233,11 +233,6 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
 
     const calculateDiamonds = (amount: number): number => {
         return Math.floor(amount * POINTS_PER_YUAN);
-    };
-
-    const getMemberDiscount = (): number => {
-        const plan = user?.user?.memberPlan;
-        return plan ? (MEMBER_DISCOUNTS[plan] ?? 1) : 1;
     };
 
     const normalizeQrCodeUrl = (raw: string | null): string | null => {
@@ -343,13 +338,20 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
 
         if (!amount) {
             if (amountText) {
-                setInputError(t('rechargeModal.amountTooLow', { amount: MIN_AMOUNT }));
+                setAmountError(t('rechargeModal.amountTooLow', { amount: MIN_AMOUNT }));
             }
             return;
         }
 
         if (amount < MIN_AMOUNT) {
-            setInputError(t('rechargeModal.amountTooLow', { amount: MIN_AMOUNT }));
+            setAmountError(t('rechargeModal.amountTooLow', { amount: MIN_AMOUNT }));
+            return;
+        }
+
+        if (!Number.isInteger(amount)) {
+            setAmountError(t('rechargeModal.amountMustBeInteger'));
+            setInputShake(true);
+            window.setTimeout(() => setInputShake(false), 500);
             return;
         }
 
@@ -509,7 +511,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
         // { name: t('rechargeModal.noAdFreeRounds'), values: ['30', '100', '100', '100'] },
         // { name: t('rechargeModal.dailyCheckInBonus'), values: ['0%', '0%', '+100%', '+210%'] },
         //{ name: t('rechargeModal.creatorDiscount'), values: ['-', '50%', '50%', '50%'] },
-        { name: "钻石充值折扣", values: ['-', '9折', '8折', '7折', '6折'] },
+        { name: "钻石兑换积分折扣", values: ['-', '9折', '8折', '7折', '6折'] },
     ];
 
     // 会员特权对比数据（普通用户 + 日卡 + 月卡 + 季卡 + 年卡）
@@ -566,7 +568,6 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     const displayDiamonds = selectedFirstChargePlan?.noFirstChargeBonus
         ? currentDiamonds
         : (firstChargeAvailable ? (currentDiamonds + (selectedFirstChargePlan?.firstChargeDiamonds ?? 0)) : currentDiamonds);
-    const summaryDisplayAmount = currentAmount ? currentAmount * getMemberDiscount() : 0;
 
     const diamondsTabContent = (
         <>
@@ -575,14 +576,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                 <div className={styles.amountsGrid}>
                     {FIRST_CHARGE_PLANS.map((plan) => {
                         const hasBonus = !plan.noFirstChargeBonus;
-                        const isFirstYuan = plan.planId === 'dr_1';
-                        const isSixYuan = plan.planId === 'dr_6';
-                        const tagText = isFirstYuan ? t('rechargeModal.firstChargeBonus') : t('rechargeModal.firstChargeDouble');
-                        const discount = getMemberDiscount();
-                        const isDiscounted = discount < 1;
-                        const displayAmount = isDiscounted ? plan.amount * discount : plan.amount;
                         const displayDiamonds = calculateDiamonds(plan.amount);
-                        const planHasFirstCharged = hasFirstCharge(plan.planId);
                         return (
                             <button
                                 key={plan.planId}
@@ -591,32 +585,16 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                                 onClick={() => handleFixedAmountClick(plan)}
                             >
                                 {hasBonus ? (
-                                    <div className={`${styles.firstChargeTag} ${planHasFirstCharged ? styles.firstChargeTagInactive : ''}`}>{tagText}</div>
+                                    <div className={styles.firstChargeTag} />
                                 ) : (
-                                    isSixYuan && <div className={styles.noBonusTag}>{t('rechargeModal.noFirstChargeBonus')}</div>
+                                    <div className={styles.noBonusTag} />
                                 )}
                                 <div className={styles.amountTopSection}>
                                     <div className={styles.amountMainPoints}>{displayDiamonds}{t('rechargeModal.diamonds')}</div>
                                     <div className={styles.amountPriceMeta}>
-                                        {isDiscounted ? (
-                                            <>
-                                                <span className={styles.amountPriceOriginal}>
-                                                    {t('rechargeModal.currencySymbol')}{plan.amount.toFixed(1)}{t('rechargeModal.amountUnit')}
-                                                </span>
-                                                <span className={styles.amountPriceMetaDiscounted}>
-                                                    {' '}{t('rechargeModal.currencySymbol')}{displayAmount.toFixed(1)}{t('rechargeModal.amountUnit')}
-                                                </span>
-                                            </>
-                                        ) : (
-                                            <>{t('rechargeModal.amountLabel')}{t('rechargeModal.currencySymbol')}{displayAmount.toFixed(1)}{t('rechargeModal.amountUnit')}</>
-                                        )}
+                                        {t('rechargeModal.amount', { amount: plan.amount.toFixed(1) })}
                                     </div>
                                 </div>
-                                {hasBonus ? (
-                                    <div className={styles.amountFirstChargePoints}>{t('rechargeModal.firstChargeGive', { points: plan.firstChargeDiamonds })}</div>
-                                ) : (
-                                    isSixYuan && <div className={styles.amountNoBonus}>{t('rechargeModal.noBonus')}</div>
-                                )}
                             </button>
                         );
                     })}
@@ -629,7 +607,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                     <span className={styles.currencySymbol}>{t('rechargeModal.currencySymbol')}</span>
                     <input
                         type="text"
-                        className={`${styles.customInput} ${inputError ? styles.inputError : ''}`}
+                        className={`${styles.customInput} ${amountError ? styles.inputError : ''} ${inputShake ? styles.shake : ''}`}
                         placeholder={t('rechargeModal.enterAmount')}
                         value={amountText}
                         onChange={handleCustomAmountChange}
@@ -643,9 +621,9 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                         ref={amountInputRef}
                     />
                 </div>
-                {inputError && (
+                {amountError && (
                     <div className={styles.amountHint}>
-                        <span className={styles.errorText}>{inputError}</span>
+                        <span className={styles.errorText}>{amountError}</span>
                     </div>
                 )}
             </div>
@@ -654,7 +632,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                 <div className={styles.rechargeSummary}>
                     <div className={styles.summaryRow}>
                         <span className={styles.summaryLabel}>{t('rechargeModal.rechargeAmount')}</span>
-                        <span className={styles.summaryValue}>{t('rechargeModal.currencySymbol')}{summaryDisplayAmount.toFixed(2)}</span>
+                        <span className={styles.summaryValue}>{t('rechargeModal.currencySymbol')}{currentAmount.toFixed(2)}</span>
                     </div>
                     <div className={styles.summaryRow}>
                         <span className={styles.summaryLabel}>{t('rechargeModal.receiveDiamonds')}</span>
@@ -667,11 +645,11 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             <button
                 type="submit"
                 className={styles.submitBtn}
-                disabled={!currentAmount || currentAmount < MIN_AMOUNT || isLoading}
+                disabled={!currentAmount || currentAmount < MIN_AMOUNT || !Number.isInteger(currentAmount) || isLoading}
             >
                 {isLoading
                     ? t('rechargeModal.processing')
-                    : `${t('rechargeModal.confirmRecharge')} ${t('rechargeModal.currencySymbol')}${summaryDisplayAmount.toFixed(2)}`}
+                    : `${t('rechargeModal.confirmRecharge')} ${t('rechargeModal.currencySymbol')}${(currentAmount ?? 0).toFixed(2)}`}
             </button>
             {/* <button type="button" className={styles.submitBtn} disabled>
                 临时维护

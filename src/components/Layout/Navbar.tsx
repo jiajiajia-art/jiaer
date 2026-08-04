@@ -410,7 +410,7 @@ const Navbar: React.FC<NavbarProps> = ({
                                                 {t('nav.operatorPanel')}
                                             </button>
                                         )}
-                                        {isAdminRole(user?.user?.role) && isDesktopLayout && (
+                                        {isAdminRole(user?.user?.role) && (
                                             <button
                                                 className={styles.menuBtn}
                                                 onClick={() => {

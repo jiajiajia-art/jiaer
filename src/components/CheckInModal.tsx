@@ -52,6 +52,20 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
 
     const isStatusReady = Boolean(signInStatus);
 
+    // 根据会员等级获取额外奖励点数
+    const getMembershipBonusPoints = () => {
+        switch (signInStatus?.planId) {
+            case 'month':
+                return 300;
+            case 'season':
+                return 350;
+            case 'year':
+                return 400;
+            default:
+                return 0;
+        }
+    };
+
     // 当月天数
     const now = new Date();
     const todayDate = now.getDate(); // 今天是这个月的几号
@@ -215,9 +229,11 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                             </div>
                         )}
 
-                        <p className={styles.membershipHint}>
-                            {t('checkIn.membershipBonusHint', { points: 300 })}
-                        </p>
+                        {getMembershipBonusPoints() > 0 && (
+                            <p className={styles.membershipHint}>
+                                {t('checkIn.membershipBonusHint', { points: getMembershipBonusPoints() })}
+                            </p>
+                        )}
 
                         {!signedInToday && (
                             <div className={styles.buttonContainer}>

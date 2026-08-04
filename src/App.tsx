@@ -42,8 +42,10 @@ import Messages from './page/Messages';
 import AssetDetails from './page/AssetDetails';
 import PointsDetails from './page/PointsDetails';
 import Document from './page/Document';
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { useAuthStore } from './store/useAuthStore';
+
+const FunloomLotteryPage = lazy(() => import('./activities/funloom-lottery-20260731'));
 
 function App() {
   usePlatformDurationTracking();
@@ -111,6 +113,15 @@ function App() {
         <Route path="/novel/:fileId/read" element={<NovelReader />} />
         <Route path="/replay/:replayId" element={<Galgame />} />
         <Route path="/document" element={<Document />} />
+        {/* Funloom 限定抽奖：独立活动链接；懒加载避免拖大主包 */}
+        <Route
+          path="/activity/funloom-lottery-20260731"
+          element={(
+            <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#fff' }}>加载中…</div>}>
+              <FunloomLotteryPage />
+            </Suspense>
+          )}
+        />
         <Route element={<ProtectedRoute />}>
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/create" element={<Create />} />
@@ -145,6 +156,7 @@ function App() {
           <Route path="/admin/daily-tasks" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/users" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/withdraw" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/lottery" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/comments" element={<AdminRoute><CommentAdminPage /></AdminRoute>} />
           <Route path="/galgame" element={<Galgame />} />
           <Route path="/galgameMap" element={<GalgameMap />} />

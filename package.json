@@ -34,7 +34,10 @@
     "test:userRoles": "node --experimental-strip-types --test checks/userRoles.check.mjs",
     "test:operatorReports": "node --experimental-strip-types --test checks/operatorReports.check.mjs",
     "test:withdrawRules": "node --experimental-strip-types --test checks/withdrawRules.check.mjs",
-    "test:diamondTimelineLog": "node --experimental-strip-types --test checks/diamondTimelineLog.check.mjs"
+    "test:diamondTimelineLog": "node --experimental-strip-types --test checks/diamondTimelineLog.check.mjs",
+    "test:funloomLottery": "node --experimental-strip-types --test scripts/funloomLottery.check.mjs",
+    "test:lotteryAdmin": "node --experimental-strip-types --test scripts/lotteryAdminConfig.check.mjs",
+    "test": "node --experimental-strip-types --test scripts/*.check.mjs checks/*.check.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
