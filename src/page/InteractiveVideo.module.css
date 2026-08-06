@@ -606,7 +606,8 @@
 
 .textScene span,
 .endingModal span,
-.restartConfirmModal span {
+.restartConfirmModal span,
+.unlockModal span {
     color: var(--ivg-accent-strong);
     font-size: 12px;
     font-weight: 800;
@@ -615,7 +616,8 @@
 
 .textScene h1,
 .endingModal h1,
-.restartConfirmModal h1 {
+.restartConfirmModal h1,
+.unlockModal h1 {
     margin: 10px 0 12px;
     font-size: 32px;
     line-height: 1.2;
@@ -624,7 +626,8 @@
 
 .textScene p,
 .endingModal p,
-.restartConfirmModal p {
+.restartConfirmModal p,
+.unlockModal p {
     margin: 0;
     color: var(--ivg-text-soft);
     font-size: 16px;
@@ -1683,9 +1686,30 @@
     background: var(--ivg-scrim);
 }
 
+.unlockOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 47;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: var(--ivg-scrim);
+}
+
 .restartConfirmModal {
     position: relative;
     width: min(420px, 100%);
+    border: 1px solid var(--ivg-border);
+    border-radius: 8px;
+    background: var(--ivg-surface);
+    color: var(--ivg-text);
+    padding: 28px;
+    box-shadow: var(--ivg-shadow);
+}
+
+.unlockModal {
+    position: relative;
+    width: min(460px, 100%);
     border: 1px solid var(--ivg-border);
     border-radius: 8px;
     background: var(--ivg-surface);
@@ -1699,7 +1723,18 @@
     font-size: 24px;
 }
 
+.unlockModal h1 {
+    padding-right: 44px;
+    font-size: 24px;
+}
+
 .restartConfirmModal p {
+    color: var(--ivg-text-soft);
+    font-size: 14px;
+    line-height: 1.65;
+}
+
+.unlockModal p {
     color: var(--ivg-text-soft);
     font-size: 14px;
     line-height: 1.65;
@@ -1745,7 +1780,8 @@
 }
 
 .endingCloseButton,
-.restartConfirmClose {
+.restartConfirmClose,
+.unlockCloseButton {
     position: absolute;
     top: 14px;
     right: 14px;
@@ -1761,13 +1797,16 @@
     cursor: pointer;
 }
 
+.unlockActions,
 .restartConfirmActions {
     display: flex;
+    flex-wrap: wrap;
     justify-content: flex-end;
     gap: 10px;
     margin-top: 24px;
 }
 
+.unlockActions button,
 .restartConfirmActions button {
     min-height: 40px;
     border-radius: 8px;
@@ -1775,6 +1814,56 @@
     font-size: 14px;
     font-weight: 800;
     cursor: pointer;
+}
+
+.unlockActions button {
+    border: 1px solid var(--ivg-accent-strong);
+    background: var(--ivg-accent-strong);
+    color: var(--ivg-on-accent);
+}
+
+.unlockActions button:disabled,
+.unlockConfirmActions button:disabled {
+    cursor: not-allowed;
+    opacity: 0.62;
+}
+
+.unlockBuyout {
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid var(--ivg-border);
+}
+
+.unlockBuyout strong {
+    color: var(--ivg-text);
+    font-size: 14px;
+    font-weight: 900;
+}
+
+.unlockConfirmActions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 24px;
+}
+
+.unlockConfirmActions button {
+    min-height: 40px;
+    border-radius: 8px;
+    padding: 0 14px;
+    border: 1px solid var(--ivg-border);
+    background: var(--ivg-control-bg);
+    color: var(--ivg-control-text);
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.unlockConfirmActions button:last-child {
+    border-color: var(--ivg-accent-strong);
+    background: var(--ivg-accent-strong);
+    color: var(--ivg-on-accent);
 }
 
 .restartConfirmSecondary {
@@ -2316,7 +2405,8 @@
     }
 
     .endingOverlay,
-    .restartConfirmOverlay {
+    .restartConfirmOverlay,
+    .unlockOverlay {
         inset: 0;
         padding: 12px;
         border-radius: 0;
@@ -2324,6 +2414,7 @@
 
     .endingModal,
     .restartConfirmModal,
+    .unlockModal,
     .messagePanel,
     .loadingPanel {
         width: min(560px, calc(100vw - 24px));
@@ -2719,7 +2810,9 @@
 .portalRootMobilePortraitVideo .endingOverlay,
 .portalRootMobileLandscapeVideo .endingOverlay,
 .portalRootMobilePortraitVideo .restartConfirmOverlay,
-.portalRootMobileLandscapeVideo .restartConfirmOverlay {
+.portalRootMobileLandscapeVideo .restartConfirmOverlay,
+.portalRootMobilePortraitVideo .unlockOverlay,
+.portalRootMobileLandscapeVideo .unlockOverlay {
     position: absolute;
     inset: 0;
     width: 100%;

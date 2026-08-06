@@ -1067,6 +1067,13 @@
     font-size: 0.95rem;
 }
 
+.interactiveVideoBuyoutMessage {
+    margin: 0;
+    color: rgba(0, 0, 0, 0.62);
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
 .startOptionsButtons {
     display: flex;
     flex-direction: column;

@@ -12,9 +12,9 @@ export const HOST_ADDRESS = 'https://api-test.kurangames.com';
 // 海外正式生产
 // export const HOST_ADDRESS = 'https://api-overseas.kurangames.com';
 // 本地直连
-//export const HOST_ADDRESS = 'http://localhost:3000';
+// export const HOST_ADDRESS = 'http://localhost:3000';
 // cloudflare 代理测试
-//export const HOST_ADDRESS = 'https://api-global.kurangames.com';
+// export const HOST_ADDRESS = 'https://api-global.kurangames.com';
 
 export const RECORD_CONVERSION = import.meta.env.PROD
   ? true

@@ -23,9 +23,14 @@ import {
 import 'reactflow/dist/style.css';
 import {
     createInteractiveVideoSession,
-    fetchInteractiveVideoJson,
+    getInteractiveVideoSessionManifest,
+    getInteractiveVideoSessionStory,
     patchInteractiveVideoSessionState,
     toBackendAssetUrl,
+    unlockInteractiveVideoContent,
+    type InteractiveVideoAccess,
+    type InteractiveVideoDirectoryPrice,
+    type InteractiveVideoPricingConfig,
     type InteractiveVideoHistoryItem,
     type InteractiveVideoSessionResponse,
     type InteractiveVideoSessionState,
@@ -56,6 +61,7 @@ import {
     getInteractiveVideoTargetVideoSequence,
     type InteractiveVideoPlaybackTarget,
 } from '../utils/interactiveVideoPlayback';
+import { formatIvgUnlockCost } from '../utils/interactiveVideoPricing';
 import { isMiniProgramEnv } from '../utils/miniProgram';
 import styles from './InteractiveVideo.module.css';
 
@@ -265,6 +271,7 @@ type VideoPreloadStatus = ManagedVideoPreloadStatus;
 type InteractiveVideoTheme = 'light' | 'dark';
 type ViewportMode = 'desktop' | 'mobilePortrait' | 'mobileLandscape';
 type PortalPostureMode = 'desktop' | 'mobilePortraitVideo' | 'mobileLandscapeVideo';
+type InteractiveVideoTestMode = 'creator' | 'player' | null;
 type InteractiveVideoRouteState = {
     fromGameDetail?: boolean;
     restart?: boolean;
@@ -382,6 +389,137 @@ const MINI_PROGRAM_BRANCH_WAIT_MS = 1800;
 const MINI_PROGRAM_PLAYBACK_WATCHDOG_MS = 2600;
 const DEFAULT_BRANCH_WAIT_MS = 6500;
 const MINI_PROGRAM_DISABLED_PRELOAD_PRIORITIES = ['next-layer', 'replay'] as const;
+
+const parsePaidTargetId = (targetId?: string | null) => {
+    const normalized = String(targetId || '').trim();
+    if (normalized.startsWith('script:')) {
+        const scriptId = normalized.slice('script:'.length);
+        return scriptId ? { targetType: 'script', scriptId, nodeId: '' } : null;
+    }
+    if (normalized.startsWith('node:')) {
+        const rest = normalized.slice('node:'.length);
+        const [scriptId, ...nodeParts] = rest.split(':');
+        const nodeId = nodeParts.join(':');
+        return scriptId && nodeId ? { targetType: 'node', scriptId, nodeId } : null;
+    }
+    return null;
+};
+
+const getPaidTargetType = (item?: InteractiveVideoDirectoryPrice | null) =>
+    item?.targetType || parsePaidTargetId(item?.directoryId)?.targetType || 'script';
+
+const getPaidTargetScriptId = (item?: InteractiveVideoDirectoryPrice | null) =>
+    String(item?.scriptId || parsePaidTargetId(item?.directoryId)?.scriptId || item?.scriptIds?.[0] || '').trim();
+
+const getPaidTargetNodeId = (item?: InteractiveVideoDirectoryPrice | null) =>
+    String(item?.nodeId || parsePaidTargetId(item?.directoryId)?.nodeId || '').trim();
+
+const getPaidTargetKindText = (item?: InteractiveVideoDirectoryPrice | null) =>
+    getPaidTargetType(item) === 'node' ? '付费节点' : '付费脚本';
+
+const getPaidTargetTitle = (item?: InteractiveVideoDirectoryPrice | null) => {
+    if (!item) return '付费内容';
+    return getPaidTargetType(item) === 'node' && item.scriptName
+        ? `${item.scriptName} / ${item.name}`
+        : item.name || '付费内容';
+};
+
+const INTERACTIVE_VIDEO_UNLOCK_ERROR_MESSAGES: Record<string, string> = {
+    INSUFFICIENT_POINTS: '积分不足',
+    INSUFFICIENT_DIAMONDS: '钻石不足',
+    PAYMENT_METHOD_UNAVAILABLE: '当前支付方式不可用',
+    BUYOUT_NOT_FOR_SALE: '该互动影游暂不支持买断',
+    DIRECTORY_NOT_FOR_SALE: '该付费内容暂不可购买',
+    FREE_UNLOCK_UNAVAILABLE: '当前内容暂不支持免费解锁',
+    INVALID_CURRENCY: '支付方式无效',
+    INVALID_PURCHASE_TYPE: '购买类型无效',
+    INVALID_PARAM: '支付参数无效，请刷新后重试',
+    INVALID_PURCHASE_PARAM: '支付参数无效，请刷新后重试',
+    AUTH_REQUIRED: '请先登录后再解锁',
+};
+
+const getUnlockErrorMessage = (code?: string | null, message?: string | null) => {
+    const normalizedCode = String(code || '').trim();
+    const normalizedMessage = String(message || '').trim();
+    const mappedMessage = INTERACTIVE_VIDEO_UNLOCK_ERROR_MESSAGES[normalizedCode]
+        || INTERACTIVE_VIDEO_UNLOCK_ERROR_MESSAGES[normalizedMessage];
+    if (mappedMessage) return mappedMessage;
+    if (normalizedMessage && !/[A-Za-z]/.test(normalizedMessage)) return normalizedMessage;
+    return '解锁失败，请稍后重试';
+};
+
+const mergeLockedPayItems = (
+    pricedItems: InteractiveVideoDirectoryPrice[] = [],
+    metadataItems: InteractiveVideoDirectoryPrice[] = [],
+) => {
+    if (pricedItems.length === 0) return metadataItems;
+    const metadataById = new Map(metadataItems.map((item) => [item.directoryId, item]));
+    return pricedItems.map((item) => {
+        const metadata = metadataById.get(item.directoryId);
+        if (!metadata) return item;
+        return {
+            ...metadata,
+            ...item,
+            targetType: item.targetType || metadata.targetType,
+            scriptId: item.scriptId || metadata.scriptId,
+            nodeId: item.nodeId || metadata.nodeId,
+            scriptName: item.scriptName || metadata.scriptName,
+            groupId: item.groupId || metadata.groupId,
+            groupName: item.groupName || metadata.groupName,
+            scriptIds: item.scriptIds?.length ? item.scriptIds : metadata.scriptIds,
+        };
+    });
+};
+
+const INTERACTIVE_VIDEO_PAYMENT_CURRENCIES = ['points', 'diamonds'] as const;
+const IVG_PLAYER_TEST_CONFIRM_ACTION_PREFIX = '\u521b\u4f5c\u80050\u79ef\u5206\u89e3\u9501\u6d4b\u8bd5';
+const IVG_PLAYER_TEST_UNLOCK_SUCCESS_TEXT = '\u6d4b\u8bd5\u89e3\u9501\u6210\u529f';
+const IVG_PLAYER_TEST_UNLOCK_CONTINUE_TEXT = '\u6d4b\u8bd5\u89e3\u9501\u6210\u529f\uff0c\u6b63\u5728\u8fdb\u5165\u5267\u60c5';
+
+const resolveInteractiveVideoTestMode = (search: string): InteractiveVideoTestMode => {
+    const value = new URLSearchParams(search).get('testMode')?.trim().toLowerCase();
+    if (value === 'creator') return 'creator';
+    if (value === 'player') return 'player';
+    return null;
+};
+
+const shouldRestartInteractiveVideoFromSearch = (search: string) => {
+    const value = new URLSearchParams(search).get('restart')?.trim().toLowerCase();
+    return value === '1' || value === 'true';
+};
+
+const getEffectivePlayerTestPaidDirectories = (config?: InteractiveVideoPricingConfig | null) => {
+    const mode = String(config?.mode || 'free');
+    if (mode !== 'catalog' && mode !== 'catalog_buyout') return [];
+    const directories = config?.directories || [];
+    const scriptLevelPaidScriptIds = new Set(
+        directories
+            .filter((directory) => getPaidTargetType(directory) === 'script')
+            .map((directory) => getPaidTargetScriptId(directory))
+            .filter(Boolean),
+    );
+    return directories.filter((directory) => !(
+        getPaidTargetType(directory) === 'node'
+        && scriptLevelPaidScriptIds.has(getPaidTargetScriptId(directory))
+    ));
+};
+
+const buildPlayerTestAccess = (config?: InteractiveVideoPricingConfig | null): InteractiveVideoAccess | null => {
+    if (!config) return null;
+    const mode = String(config.mode || 'free');
+    const paidDirectories = getEffectivePlayerTestPaidDirectories(config);
+    const buyoutLocked = mode === 'buyout';
+    const lockedDirectories = buyoutLocked ? [] : paidDirectories;
+
+    return {
+        hasBuyout: false,
+        buyoutLocked,
+        unlockedDirectoryIds: [],
+        lockedDirectoryIds: lockedDirectories.map((directory) => directory.directoryId),
+        lockedDirectories,
+        paidDirectories,
+    };
+};
 
 const emptyState = (entryNodeId: string | null): InteractiveVideoSessionState => ({
     currentNodeId: entryNodeId,
@@ -731,6 +869,18 @@ type ChoiceTransitionResolution = {
 type ChoiceBridgePlayback = {
     option: StoryChoiceOption;
     transition: ChoiceTransitionResolution;
+};
+
+type ChoiceTransitionSource = {
+    sourceNode: StoryNode;
+    sourceScript: StoryScript;
+    sourceState: InteractiveVideoSessionState;
+};
+
+type PendingUnlockTransition = ChoiceTransitionSource & {
+    option: StoryChoiceOption;
+    edge: StoryEdge;
+    lockedDirectoryId: string;
 };
 
 const getProjectFlowRuntimeScript = (story: StoryProject): StoryScript | null => {
@@ -2080,6 +2230,17 @@ const InteractiveVideo: React.FC = () => {
     const location = useLocation();
     const [manifest, setManifest] = useState<StoryManifest | null>(null);
     const [story, setStory] = useState<StoryProject | null>(null);
+    const [ivgAccess, setIvgAccess] = useState<InteractiveVideoAccess | null>(null);
+    const [ivgPricingConfig, setIvgPricingConfig] = useState<InteractiveVideoPricingConfig | null>(null);
+    const [lockedDirectories, setLockedDirectories] = useState<InteractiveVideoDirectoryPrice[]>([]);
+    const [unlockTarget, setUnlockTarget] = useState<InteractiveVideoDirectoryPrice | null>(null);
+    const [unlockConfirm, setUnlockConfirm] = useState<{
+        purchaseType: 'directory' | 'buyout';
+        directory?: InteractiveVideoDirectoryPrice;
+        currency: 'points' | 'diamonds';
+        amount: number;
+    } | null>(null);
+    const [isUnlocking, setIsUnlocking] = useState(false);
     const [sessionId, setSessionId] = useState('');
     const [sessionState, setSessionState] = useState<InteractiveVideoSessionState | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -2111,6 +2272,7 @@ const InteractiveVideo: React.FC = () => {
     const [isMiniProgramRuntime, setIsMiniProgramRuntime] = useState(() => isMiniProgramEnv());
     const [currentSequenceVideoIndex, setCurrentSequenceVideoIndex] = useState(0);
     const [choiceBridgePlayback, setChoiceBridgePlayback] = useState<ChoiceBridgePlayback | null>(null);
+    const pendingUnlockTransitionRef = useRef<PendingUnlockTransition | null>(null);
     const isMiniProgramRuntimeRef = useRef(isMiniProgramRuntime);
     const preloadedVideoAspectRef = useRef<Record<string, VideoAspect>>({});
     const preloadManagerRef = useRef<VideoPreloadManager | null>(null);
@@ -2140,7 +2302,12 @@ const InteractiveVideo: React.FC = () => {
     const fileId = String(fileIdParam || '').trim();
     const routeState = location.state as InteractiveVideoRouteState;
     const launchedFromGameDetail = Boolean(routeState?.fromGameDetail);
-    const initialRestartRef = useRef(Boolean(routeState?.restart));
+    const ivgTestMode = useMemo(() => resolveInteractiveVideoTestMode(location.search), [location.search]);
+    const isPlayerTestMode = ivgTestMode === 'player';
+    const interactiveVideoSessionSource = ivgTestMode ? `ivg_${ivgTestMode}_test` : 'game_detail';
+    const initialRestartRef = useRef(
+        Boolean(routeState?.restart) || shouldRestartInteractiveVideoFromSearch(location.search) || Boolean(ivgTestMode),
+    );
     const initialPlaybackOrientationRef = useRef(normalizePlaybackOrientation(routeState?.playbackOrientation));
 
     const runtimeScripts = useMemo(() => story ? getRuntimeScripts(story) : [], [story]);
@@ -2300,13 +2467,18 @@ const InteractiveVideo: React.FC = () => {
     });
 
     const returnToGameDetail = useCallback(() => {
+        if (ivgTestMode) {
+            navigate(`/interactive-video/edit/${encodeURIComponent(fileId)}?step=test`, { replace: true });
+            return;
+        }
+
         if (launchedFromGameDetail && typeof window !== 'undefined' && window.history.length > 1) {
             navigate(-1);
             return;
         }
 
         navigate(`/game/${fileId}`, { replace: true });
-    }, [fileId, launchedFromGameDetail, navigate]);
+    }, [fileId, ivgTestMode, launchedFromGameDetail, navigate]);
 
     const syncState = useCallback(async (nextState: InteractiveVideoSessionState) => {
         setSessionState(nextState);
@@ -2321,6 +2493,32 @@ const InteractiveVideo: React.FC = () => {
             setIsSyncing(false);
         }
     }, [sessionId]);
+
+    const loadProtectedPayload = useCallback(async (targetSessionId: string) => {
+        const [manifestResponse, storyResponse] = await Promise.all([
+            getInteractiveVideoSessionManifest<StoryManifest>(targetSessionId),
+            getInteractiveVideoSessionStory<StoryProject>(targetSessionId),
+        ]);
+        const loadedManifest = manifestResponse.data.manifest;
+        const loadedStory = storyResponse.data.story;
+        const loadedAccess = storyResponse.data.access || manifestResponse.data.access || null;
+        const loadedConfig = storyResponse.data.config || manifestResponse.data.config || null;
+        const playerTestAccess = isPlayerTestMode ? buildPlayerTestAccess(loadedConfig) : null;
+        const effectiveAccess = playerTestAccess || loadedAccess;
+        setManifest(loadedManifest);
+        setStory(loadedStory);
+        setIvgAccess(effectiveAccess);
+        setIvgPricingConfig(loadedConfig);
+        const lockedMetadata = storyResponse.data.lockedDirectories || manifestResponse.data.lockedDirectories || [];
+        setLockedDirectories(
+            playerTestAccess?.lockedDirectories
+                ? playerTestAccess.lockedDirectories
+                : effectiveAccess?.lockedDirectories
+                ? mergeLockedPayItems(effectiveAccess.lockedDirectories, lockedMetadata)
+                : lockedMetadata,
+        );
+        return { loadedManifest, loadedStory };
+    }, [isPlayerTestMode]);
 
     const loadSession = useCallback(async (restart = false) => {
         if (!fileId) {
@@ -2345,6 +2543,11 @@ const InteractiveVideo: React.FC = () => {
         setIsVideoPaused(false);
         setIsVideoHudVisible(true);
         setChoiceBridgePlayback(null);
+        setUnlockTarget(null);
+        setUnlockConfirm(null);
+        setIvgAccess(null);
+        setIvgPricingConfig(null);
+        setLockedDirectories([]);
         setPlaybackRate(1);
         setPreloadedVideoStatus({});
         preloadedVideoAspectRef.current = {};
@@ -2363,8 +2566,8 @@ const InteractiveVideo: React.FC = () => {
         try {
             const response = await createInteractiveVideoSession({
                 fileId,
-                restart,
-                source: 'game_detail',
+                restart: restart || Boolean(ivgTestMode),
+                source: interactiveVideoSessionSource,
             });
             const data = response.data;
             if (!data.success || !data.state || !data.sessionId) {
@@ -2372,12 +2575,7 @@ const InteractiveVideo: React.FC = () => {
             }
 
             setSessionId(data.sessionId);
-            const manifestPath = data.manifestUrl || `/public/interactive-video/apps/${fileId}/manifest.json`;
-            const loadedManifest = await fetchInteractiveVideoJson<StoryManifest>(manifestPath);
-            const storyPath = data.storyUrl || loadedManifest.storyUrl;
-            const loadedStory = await fetchInteractiveVideoJson<StoryProject>(storyPath);
-            setManifest(loadedManifest);
-            setStory(loadedStory);
+            const { loadedManifest, loadedStory } = await loadProtectedPayload(data.sessionId);
 
             const initialState = hydrateSessionState(loadedStory, data.state || emptyState(loadedStory.entryNodeId));
             const loadedNodeMap = getRuntimeNodeMap(loadedStory);
@@ -2413,7 +2611,7 @@ const InteractiveVideo: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [fileId, publishPlaybackMetrics]);
+    }, [fileId, interactiveVideoSessionSource, ivgTestMode, loadProtectedPayload, publishPlaybackMetrics]);
 
     useEffect(() => {
         const shouldRestart = initialRestartRef.current;
@@ -2915,6 +3113,82 @@ const InteractiveVideo: React.FC = () => {
         }
     }, [isMiniProgramRuntime, preloadedVideoStatus, publishPlaybackMetrics]);
 
+    const findLockedDirectoryByScriptId = useCallback((scriptId: string | null | undefined) => {
+        const normalizedScriptId = String(scriptId || '').trim();
+        if (!normalizedScriptId) return null;
+        return lockedDirectories.find((directory) => {
+            if (getPaidTargetType(directory) === 'node') return false;
+            const scriptIds = directory.scriptIds?.length ? directory.scriptIds : [getPaidTargetScriptId(directory)];
+            return scriptIds.includes(normalizedScriptId);
+        }) || null;
+    }, [lockedDirectories]);
+
+    const findLockedDirectoryByNodeId = useCallback((
+        scriptId: string | null | undefined,
+        nodeId: string | null | undefined,
+    ) => {
+        const normalizedScriptId = String(scriptId || '').trim();
+        const normalizedNodeId = String(nodeId || '').trim();
+        if (!normalizedScriptId || !normalizedNodeId) return null;
+        return lockedDirectories.find((directory) =>
+            getPaidTargetType(directory) === 'node' &&
+            getPaidTargetScriptId(directory) === normalizedScriptId &&
+            getPaidTargetNodeId(directory) === normalizedNodeId,
+        ) || null;
+    }, [lockedDirectories]);
+
+    const pauseVideoForPanel = useCallback(() => {
+        if (isTreeOpen || isVariableBoardOpen) return;
+        const video = videoRef.current;
+        const shouldResume = Boolean(video && !video.paused && !video.ended);
+        resumeVideoAfterPanelRef.current = shouldResume;
+        if (!video || !shouldResume) return;
+
+        video.pause();
+        setIsVideoPaused(true);
+        setIsVideoHudVisible(true);
+    }, [isTreeOpen, isVariableBoardOpen]);
+
+    const findLockedDirectoryFromEdge = useCallback((edge: StoryEdge) => {
+        if (!story || !currentScript) return null;
+        let nextScriptId: string | null = currentScript.scriptId;
+        let nextNodeId: string | null = edge.target;
+        const visited = new Set<string>();
+
+        for (let index = 0; index < 16 && nextScriptId && nextNodeId; index += 1) {
+            const visitKey = `${nextScriptId}:${nextNodeId}`;
+            if (visited.has(visitKey)) break;
+            visited.add(visitKey);
+
+            const script = getRuntimeScript(story, nextScriptId);
+            const node = getScriptNode(script, nextNodeId);
+            const lockedNodeDirectory = findLockedDirectoryByNodeId(nextScriptId, nextNodeId);
+            if (lockedNodeDirectory) return lockedNodeDirectory;
+            if (!script || !node) break;
+
+            const kind = getNodeKind(node);
+            if (kind === 'runScript') {
+                const targetScriptId = getNodeScriptId(node);
+                const lockedDirectory = findLockedDirectoryByScriptId(targetScriptId);
+                if (lockedDirectory) return lockedDirectory;
+                const targetScript = getRuntimeScript(story, targetScriptId);
+                if (!targetScript?.entryNodeId) break;
+                nextScriptId = targetScript.scriptId;
+                nextNodeId = targetScript.entryNodeId;
+                continue;
+            }
+
+            if (kind === 'start') {
+                nextNodeId = getFirstOutgoingEdge(script, node.id)?.target || null;
+                continue;
+            }
+
+            break;
+        }
+
+        return null;
+    }, [currentScript, findLockedDirectoryByNodeId, findLockedDirectoryByScriptId, story]);
+
     const resolveChoiceTransition = useCallback((option: StoryChoiceOption): ChoiceTransitionResolution | null => {
         if (!story || !currentNode || !currentScript || !sessionState) return null;
 
@@ -2923,6 +3197,26 @@ const InteractiveVideo: React.FC = () => {
             toast.error('\u5206\u652f\u672a\u8fde\u63a5');
             return null;
         }
+
+        const blockLockedDirectory = (lockedDirectory: InteractiveVideoDirectoryPrice) => {
+            pendingUnlockTransitionRef.current = {
+                option,
+                edge,
+                lockedDirectoryId: lockedDirectory.directoryId,
+                sourceNode: currentNode,
+                sourceScript: currentScript,
+                sourceState: sessionState,
+            };
+            setUnlockTarget(lockedDirectory);
+            pauseVideoForPanel();
+            return null;
+        };
+
+        if (isPlayerTestMode) {
+            const lockedDirectory = findLockedDirectoryFromEdge(edge);
+            if (lockedDirectory) return blockLockedDirectory(lockedDirectory);
+        }
+
         const optionVariables = applyMutations(sessionState.variables, option.mutations || [], variableMap);
         const resolvedTarget = resolveRuntimeNode({
             story,
@@ -2934,9 +3228,15 @@ const InteractiveVideo: React.FC = () => {
         });
         const targetNode = resolvedTarget.node;
         if (!targetNode) {
+            const lockedDirectory = findLockedDirectoryFromEdge(edge);
+            if (lockedDirectory) {
+                return blockLockedDirectory(lockedDirectory);
+            }
+            pendingUnlockTransitionRef.current = null;
             toast.error('\u76ee\u6807\u8282\u70b9\u4e0d\u5b58\u5728');
             return null;
         }
+        pendingUnlockTransitionRef.current = null;
 
         const edgeRuntimeId = getEdgeRuntimeId(edge);
         const targetWasUnlocked = (sessionState.unlocked?.nodeIds || []).includes(targetNode.id);
@@ -2953,13 +3253,14 @@ const InteractiveVideo: React.FC = () => {
             targetVideoUrl: getNodeVideoUrls(targetNode, manifest)[0] || '',
             resolvedTarget,
         };
-    }, [currentNode, currentScript, manifest, sessionState, story, variableMap]);
+    }, [currentNode, currentScript, findLockedDirectoryFromEdge, isPlayerTestMode, manifest, pauseVideoForPanel, sessionState, story, variableMap]);
 
-    const applyChoiceTransition = useCallback(async (
+    const applyChoiceTransitionFromSource = useCallback(async (
         option: StoryChoiceOption,
         transition: ChoiceTransitionResolution,
+        source: ChoiceTransitionSource,
     ) => {
-        if (!currentNode || !currentScript || !sessionState) return;
+        const { sourceNode, sourceScript, sourceState } = source;
 
         const targetVideoUrl = transition.targetVideoUrl;
         await prepareTargetVideo(targetVideoUrl);
@@ -2974,17 +3275,17 @@ const InteractiveVideo: React.FC = () => {
         setIsVideoBuffering(false);
         setVideoGate(Boolean(targetVideoUrl));
         const sourceSnapshots = ensureSnapshot(
-            sessionState,
-            currentNode.id,
-            sessionState.variables,
-            sessionState.history || [],
-            sessionState.currentScriptId || currentScript.scriptId,
-            sessionState.callStack || [],
+            sourceState,
+            sourceNode.id,
+            sourceState.variables,
+            sourceState.history || [],
+            sourceState.currentScriptId || sourceScript.scriptId,
+            sourceState.callStack || [],
         );
         const variables = transition.resolvedTarget.variables;
         const now = new Date().toISOString();
         const history = [
-            ...(sessionState.history || []),
+            ...(sourceState.history || []),
             {
                 nodeId: transition.targetNode.id,
                 optionId: option.id,
@@ -2995,19 +3296,19 @@ const InteractiveVideo: React.FC = () => {
         ];
         const targetIsEnding = transition.targetNodeKind === 'ending';
         const nextState: InteractiveVideoSessionState = {
-            ...sessionState,
+            ...sourceState,
             currentNodeId: transition.targetNode.id,
             currentScriptId: transition.resolvedTarget.scriptId,
             callStack: cloneCallStack(transition.resolvedTarget.callStack),
             variables,
             history,
             unlocked: {
-                nodeIds: uniquePush(sessionState.unlocked?.nodeIds || [], transition.targetNode.id),
-                optionIds: uniquePush(sessionState.unlocked?.optionIds || [], option.id),
-                edgeIds: uniquePush(sessionState.unlocked?.edgeIds || [], transition.edgeRuntimeId),
+                nodeIds: uniquePush(sourceState.unlocked?.nodeIds || [], transition.targetNode.id),
+                optionIds: uniquePush(sourceState.unlocked?.optionIds || [], option.id),
+                edgeIds: uniquePush(sourceState.unlocked?.edgeIds || [], transition.edgeRuntimeId),
             },
             snapshots: ensureSnapshot(
-                { ...sessionState, snapshots: sourceSnapshots },
+                { ...sourceState, snapshots: sourceSnapshots },
                 transition.targetNode.id,
                 variables,
                 history,
@@ -3021,7 +3322,19 @@ const InteractiveVideo: React.FC = () => {
             updatedAt: now,
         };
         await syncState(nextState);
-    }, [currentNode, currentScript, getKnownVideoAspect, prepareTargetVideo, sessionState, syncState]);
+    }, [getKnownVideoAspect, prepareTargetVideo, syncState]);
+
+    const applyChoiceTransition = useCallback(async (
+        option: StoryChoiceOption,
+        transition: ChoiceTransitionResolution,
+    ) => {
+        if (!currentNode || !currentScript || !sessionState) return;
+        await applyChoiceTransitionFromSource(option, transition, {
+            sourceNode: currentNode,
+            sourceScript: currentScript,
+            sourceState: sessionState,
+        });
+    }, [applyChoiceTransitionFromSource, currentNode, currentScript, sessionState]);
 
     const completeChoiceBridgePlayback = useCallback(() => {
         if (!choiceBridgePlayback) return;
@@ -3101,18 +3414,6 @@ const InteractiveVideo: React.FC = () => {
         setIsVideoHudVisible(true);
     };
 
-    const pauseVideoForPanel = () => {
-        if (isTreeOpen || isVariableBoardOpen) return;
-        const video = videoRef.current;
-        const shouldResume = Boolean(video && !video.paused && !video.ended);
-        resumeVideoAfterPanelRef.current = shouldResume;
-        if (!video || !shouldResume) return;
-
-        video.pause();
-        setIsVideoPaused(true);
-        setIsVideoHudVisible(true);
-    };
-
     const resumeVideoAfterPanel = () => {
         if (!resumeVideoAfterPanelRef.current) return;
         resumeVideoAfterPanelRef.current = false;
@@ -3174,6 +3475,231 @@ const InteractiveVideo: React.FC = () => {
 
         await applyChoiceTransition(option, transition);
         return;
+    };
+
+    const getDirectoryPaymentOption = (
+        directory: InteractiveVideoDirectoryPrice,
+        currency: 'points' | 'diamonds',
+    ) => {
+        const nested = directory.prices?.[currency];
+        if (nested) return nested;
+        return currency === 'points'
+            ? { enabled: Boolean(directory.pointsEnabled), price: directory.pointsPrice ?? null }
+            : { enabled: Boolean(directory.diamondsEnabled), price: directory.diamondsPrice ?? null };
+    };
+
+    const getBuyoutPaymentOption = (currency: 'points' | 'diamonds') => {
+        const option = ivgPricingConfig?.buyout?.[currency];
+        return option || { enabled: false, price: null };
+    };
+
+    const formatUnlockCost = (amount: number, currency: 'points' | 'diamonds') =>
+        formatIvgUnlockCost(amount, currency);
+
+    const getPlayerTestUnlockActionText = (amount: number, currency: 'points' | 'diamonds') =>
+        `${IVG_PLAYER_TEST_CONFIRM_ACTION_PREFIX}\uff08\u5b9e\u9645${formatUnlockCost(amount, currency)}\uff09`;
+
+    const getDirectoryUnlockCurrencies = (directory: InteractiveVideoDirectoryPrice) => {
+        const enabledCurrencies = INTERACTIVE_VIDEO_PAYMENT_CURRENCIES.filter((currency) => {
+            const option = getDirectoryPaymentOption(directory, currency);
+            return Boolean(option.enabled && option.price != null);
+        });
+        return isPlayerTestMode ? enabledCurrencies.slice(0, 1) : enabledCurrencies;
+    };
+
+    const getBuyoutUnlockCurrencies = () => {
+        const enabledCurrencies = INTERACTIVE_VIDEO_PAYMENT_CURRENCIES.filter((currency) => {
+            const option = getBuyoutPaymentOption(currency);
+            return Boolean(option.enabled && option.price != null);
+        });
+        return isPlayerTestMode ? enabledCurrencies.slice(0, 1) : enabledCurrencies;
+    };
+
+    const refreshProtectedPayloadAfterUnlock = async () => {
+        if (!sessionId) return null;
+        const { loadedManifest, loadedStory } = await loadProtectedPayload(sessionId);
+        setSessionState((current) => current ? hydrateSessionState(loadedStory, current) : current);
+        return { loadedManifest, loadedStory };
+    };
+
+    const continuePendingUnlockTransition = async (
+        loadedStory: StoryProject,
+        loadedManifest: StoryManifest,
+    ) => {
+        const pending = pendingUnlockTransitionRef.current;
+        if (!pending) return false;
+
+        const loadedVariableMap = new Map((loadedStory.variables || []).map((variable) => [variable.id, variable]));
+        const optionVariables = applyMutations(pending.sourceState.variables, pending.option.mutations || [], loadedVariableMap);
+        const resolvedTarget = resolveRuntimeNode({
+            story: loadedStory,
+            scriptId: pending.sourceScript.scriptId,
+            nodeId: pending.edge.target,
+            callStack: cloneCallStack(pending.sourceState.callStack || []),
+            variables: optionVariables,
+            variableMap: loadedVariableMap,
+        });
+        const targetNode = resolvedTarget.node;
+        if (!targetNode) {
+            pendingUnlockTransitionRef.current = null;
+            toast.error('\u89e3\u9501\u6210\u529f\uff0c\u8bf7\u91cd\u65b0\u9009\u62e9\u5267\u60c5\u5206\u652f');
+            return false;
+        }
+
+        const edgeRuntimeId = getEdgeRuntimeId(pending.edge);
+        const targetWasUnlocked = (pending.sourceState.unlocked?.nodeIds || []).includes(targetNode.id);
+        const routeWasUnlocked =
+            targetWasUnlocked ||
+            (pending.sourceState.unlocked?.optionIds || []).includes(pending.option.id) ||
+            (pending.sourceState.unlocked?.edgeIds || []).includes(edgeRuntimeId);
+        pendingUnlockTransitionRef.current = null;
+        await applyChoiceTransitionFromSource(pending.option, {
+            edgeRuntimeId,
+            routeWasUnlocked,
+            targetNode,
+            targetNodeKind: getNodeKind(targetNode),
+            targetVideoUrl: getNodeVideoUrls(targetNode, loadedManifest)[0] || '',
+            resolvedTarget,
+        }, pending);
+        return true;
+    };
+
+    const performPlayerTestUnlock = async (
+        purchaseType: 'directory' | 'buyout',
+        directory?: InteractiveVideoDirectoryPrice,
+    ) => {
+        if (!story || !manifest) return;
+        const directoryId = directory?.directoryId || '';
+        if (purchaseType === 'directory' && !directoryId) return;
+
+        setIvgAccess((current) => {
+            const paidDirectories = current?.paidDirectories?.length
+                ? current.paidDirectories
+                : getEffectivePlayerTestPaidDirectories(ivgPricingConfig);
+            if (purchaseType === 'buyout') {
+                return {
+                    hasBuyout: true,
+                    buyoutLocked: false,
+                    unlockedDirectoryIds: paidDirectories.map((item) => item.directoryId),
+                    lockedDirectoryIds: [],
+                    lockedDirectories: [],
+                    paidDirectories,
+                };
+            }
+
+            const nextUnlockedDirectoryIds = Array.from(new Set([
+                ...(current?.unlockedDirectoryIds || []),
+                directoryId,
+            ].filter(Boolean)));
+            return {
+                hasBuyout: Boolean(current?.hasBuyout),
+                buyoutLocked: false,
+                unlockedDirectoryIds: nextUnlockedDirectoryIds,
+                lockedDirectoryIds: (current?.lockedDirectoryIds || []).filter((id) => id !== directoryId),
+                lockedDirectories: (current?.lockedDirectories || []).filter((item) => item.directoryId !== directoryId),
+                paidDirectories,
+            };
+        });
+        setLockedDirectories((current) => (
+            purchaseType === 'buyout'
+                ? []
+                : current.filter((item) => item.directoryId !== directoryId)
+        ));
+
+        const pending = pendingUnlockTransitionRef.current;
+        const canContinuePending = Boolean(pending && (
+            purchaseType === 'buyout' ||
+            (purchaseType === 'directory' && pending.lockedDirectoryId === directoryId)
+        ));
+        const continued = canContinuePending
+            ? await continuePendingUnlockTransition(story, manifest)
+            : false;
+        setUnlockTarget(null);
+        setUnlockConfirm(null);
+        toast.success(continued ? IVG_PLAYER_TEST_UNLOCK_CONTINUE_TEXT : IVG_PLAYER_TEST_UNLOCK_SUCCESS_TEXT);
+    };
+
+    const performUnlock = async (
+        purchaseType: 'directory' | 'buyout',
+        currency: 'points' | 'diamonds',
+        directory?: InteractiveVideoDirectoryPrice,
+    ) => {
+        if (!fileId || isUnlocking) return;
+        setIsUnlocking(true);
+        try {
+            if (isPlayerTestMode) {
+                await performPlayerTestUnlock(purchaseType, directory);
+                return;
+            }
+            const response = await unlockInteractiveVideoContent(fileId, {
+                purchaseType,
+                directoryId: purchaseType === 'directory' ? directory?.directoryId : undefined,
+                currency,
+            });
+            if (!response.data?.success) {
+                const responseData = response.data as { code?: string; message?: string };
+                toast.error(getUnlockErrorMessage(responseData?.code, responseData?.message));
+                return;
+            }
+            const refreshed = await refreshProtectedPayloadAfterUnlock();
+            const pending = pendingUnlockTransitionRef.current;
+            const canContinuePending = Boolean(refreshed && pending && (
+                purchaseType === 'buyout' ||
+                (purchaseType === 'directory' && pending.lockedDirectoryId === directory?.directoryId)
+            ));
+            const continued = canContinuePending && refreshed
+                ? await continuePendingUnlockTransition(refreshed.loadedStory, refreshed.loadedManifest)
+                : false;
+            setUnlockTarget(null);
+            setUnlockConfirm(null);
+            toast.success(response.data.data?.alreadyOwned
+                ? (continued ? '已解锁，正在进入剧情' : '已解锁，可继续游玩')
+                : (continued ? '解锁成功，正在进入剧情' : '解锁成功'));
+        } catch (error) {
+            const maybeError = error as { response?: { data?: { code?: string; message?: string } }; message?: string };
+            toast.error(getUnlockErrorMessage(maybeError.response?.data?.code, maybeError.response?.data?.message || maybeError.message));
+        } finally {
+            setIsUnlocking(false);
+        }
+    };
+
+    const requestDirectoryUnlock = (
+        directory: InteractiveVideoDirectoryPrice,
+        currency: 'points' | 'diamonds',
+    ) => {
+        const option = getDirectoryPaymentOption(directory, currency);
+        if (!option.enabled || option.price == null) {
+            toast.error('该支付方式不可用');
+            return;
+        }
+        const amount = Number(option.price || 0);
+        if (isPlayerTestMode) {
+            void performUnlock('directory', currency, directory);
+            return;
+        }
+        if (amount <= 0) {
+            void performUnlock('directory', currency, directory);
+            return;
+        }
+        setUnlockConfirm({ purchaseType: 'directory', directory, currency, amount });
+    };
+
+    const requestBuyoutUnlock = (currency: 'points' | 'diamonds') => {
+        const option = getBuyoutPaymentOption(currency);
+        if (!option.enabled || option.price == null) {
+            toast.error('该支付方式不可用');
+            return;
+        }
+        const amount = Number(option.price || 0);
+        if (isPlayerTestMode) {
+            void performUnlock('buyout', currency);
+            return;
+        }
+        if (amount <= 0) {
+            void performUnlock('buyout', currency);
+            return;
+        }
+        setUnlockConfirm({ purchaseType: 'buyout', currency, amount });
     };
 
     const handleMinigameComplete = useCallback((rawResult: unknown) => {
@@ -3439,6 +3965,10 @@ const InteractiveVideo: React.FC = () => {
         ? '\u7ebf\u6027\u5267\u60c5'
         : `${routeExploreProgress.exploredCount}/${routeExploreProgress.totalCount} | ${routeExploreProgress.percent}%`;
     const history = sessionState?.history || [];
+    const isBuyoutLocked = Boolean(ivgAccess?.buyoutLocked);
+    const buyoutPoints = getBuyoutPaymentOption('points');
+    const buyoutDiamonds = getBuyoutPaymentOption('diamonds');
+    const hasBuyoutPlan = Boolean(buyoutPoints.enabled || buyoutDiamonds.enabled);
     const loadingPageClassName = [
         styles.pageRoot,
         ivgTheme === 'dark' ? styles.pageRootDark : '',
@@ -3472,6 +4002,57 @@ const InteractiveVideo: React.FC = () => {
                     <button type="button" onClick={handleRestart}>
                         <IoRefresh />
                         重新开始
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    if (isBuyoutLocked) {
+        return (
+            <div className={loadingPageClassName}>
+                <div className={styles.messagePanel}>
+                    <h1>互动影游已锁定</h1>
+                    <p>买断解锁后可永久游玩该作品。</p>
+                    {hasBuyoutPlan ? (
+                        <div className={styles.unlockActions}>
+                            {getBuyoutUnlockCurrencies().map((currency) => {
+                                const option = getBuyoutPaymentOption(currency);
+                                if (!option.enabled || option.price == null) return null;
+                                return (
+                                    <button
+                                        type="button"
+                                        key={`buyout-lock-${currency}`}
+                                        onClick={() => requestBuyoutUnlock(currency)}
+                                        disabled={isUnlocking}
+                                    >
+                                        {isPlayerTestMode
+                                            ? getPlayerTestUnlockActionText(Number(option.price || 0), currency)
+                                            : `${formatUnlockCost(Number(option.price || 0), currency)}\u4e70\u65ad\u6e38\u73a9`}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <p>暂无可用支付方式。</p>
+                    )}
+                    {!isPlayerTestMode && unlockConfirm ? (
+                        <div className={styles.unlockConfirmActions}>
+                            <button type="button" onClick={() => setUnlockConfirm(null)} disabled={isUnlocking}>
+                                取消
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => void performUnlock(unlockConfirm.purchaseType, unlockConfirm.currency)}
+                                disabled={isUnlocking}
+                            >
+                                {isUnlocking ? '解锁中...' : getUnlockConfirmActionText()}
+                            </button>
+                        </div>
+                    ) : null}
+                    <button type="button" onClick={returnToGameDetail}>
+                        <IoChevronBackSharp />
+                        返回
                     </button>
                 </div>
             </div>
@@ -3822,6 +4403,126 @@ const InteractiveVideo: React.FC = () => {
         )
         : null;
 
+    const remainingLockedCount = ivgAccess?.lockedDirectoryIds?.length ?? lockedDirectories.length;
+    const unlockConfirmDescription = unlockConfirm
+        ? `\u5c06\u6d88\u8017${formatUnlockCost(unlockConfirm.amount, unlockConfirm.currency)}\uff0c\u89e3\u9501\u540e\u6c38\u4e45\u7ed1\u5b9a\u5f53\u524d\u8d26\u53f7\u3002`
+        : '';
+
+    function getUnlockConfirmActionText() {
+        return '\u786e\u8ba4\u89e3\u9501';
+    }
+
+    const unlockPortal = unlockTarget
+        ? renderIvgPortal(
+            <div className={styles.unlockOverlay} onClick={() => setUnlockTarget(null)}>
+                <section
+                    className={styles.unlockModal}
+                    onClick={(event) => event.stopPropagation()}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="ivgUnlockTitle"
+                >
+                    <button
+                        type="button"
+                        className={styles.unlockCloseButton}
+                        onClick={() => setUnlockTarget(null)}
+                        aria-label="关闭"
+                    >
+                        <IoClose />
+                    </button>
+                    <span>{getPaidTargetKindText(unlockTarget)}</span>
+                    <h1 id="ivgUnlockTitle">{getPaidTargetTitle(unlockTarget)}</h1>
+                    <p>{remainingLockedCount > 1 ? `还有 ${remainingLockedCount} 个付费内容尚未解锁。` : '该付费内容尚未解锁。'}</p>
+                    <div className={styles.unlockActions}>
+                        {getDirectoryUnlockCurrencies(unlockTarget).map((currency) => {
+                            const option = getDirectoryPaymentOption(unlockTarget, currency);
+                            if (!option.enabled || option.price == null) return null;
+                            return (
+                                <button
+                                    type="button"
+                                    key={`directory-${currency}`}
+                                    onClick={() => requestDirectoryUnlock(unlockTarget, currency)}
+                                    disabled={isUnlocking}
+                                >
+                                    {isPlayerTestMode
+                                        ? getPlayerTestUnlockActionText(Number(option.price || 0), currency)
+                                        : `\u4f7f\u7528${formatUnlockCost(Number(option.price || 0), currency)}\u89e3\u9501`}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    {hasBuyoutPlan ? (
+                        <div className={styles.unlockBuyout}>
+                            <strong>买断解锁</strong>
+                            <div className={styles.unlockActions}>
+                                {getBuyoutUnlockCurrencies().map((currency) => {
+                                    const option = getBuyoutPaymentOption(currency);
+                                    if (!option.enabled || option.price == null) return null;
+                                    return (
+                                        <button
+                                            type="button"
+                                            key={`buyout-${currency}`}
+                                            onClick={() => requestBuyoutUnlock(currency)}
+                                            disabled={isUnlocking}
+                                        >
+                                            {isPlayerTestMode
+                                                ? getPlayerTestUnlockActionText(Number(option.price || 0), currency)
+                                                : `\u4f7f\u7528${formatUnlockCost(Number(option.price || 0), currency)}\u4e70\u65ad`}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ) : null}
+                </section>
+            </div>,
+        )
+        : null;
+
+    const unlockConfirmPortal = !isPlayerTestMode && unlockConfirm
+        ? renderIvgPortal(
+            <div className={styles.unlockOverlay} onClick={() => setUnlockConfirm(null)}>
+                <section
+                    className={styles.unlockModal}
+                    onClick={(event) => event.stopPropagation()}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="ivgUnlockConfirmTitle"
+                >
+                    <button
+                        type="button"
+                        className={styles.unlockCloseButton}
+                        onClick={() => setUnlockConfirm(null)}
+                        aria-label="关闭"
+                    >
+                        <IoClose />
+                    </button>
+                    <span>确认购买</span>
+                    <h1 id="ivgUnlockConfirmTitle">
+                        {unlockConfirm.purchaseType === 'buyout' ? '买断解锁' : getPaidTargetTitle(unlockConfirm.directory)}
+                    </h1>
+                    <p>{unlockConfirmDescription}</p>
+                    <div className={styles.unlockConfirmActions}>
+                        <button type="button" onClick={() => setUnlockConfirm(null)} disabled={isUnlocking}>
+                            取消
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => void performUnlock(
+                                unlockConfirm.purchaseType,
+                                unlockConfirm.currency,
+                                unlockConfirm.directory,
+                            )}
+                            disabled={isUnlocking}
+                        >
+                            {isUnlocking ? '解锁中...' : getUnlockConfirmActionText()}
+                        </button>
+                    </div>
+                </section>
+            </div>,
+        )
+        : null;
+
     return (
         <>
         <div className={pageClassName}>
@@ -4066,6 +4767,8 @@ const InteractiveVideo: React.FC = () => {
         {treePortal}
         {restartConfirmPortal}
         {endingPortal}
+        {unlockPortal}
+        {unlockConfirmPortal}
         </>
     );
 };

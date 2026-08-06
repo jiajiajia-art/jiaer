@@ -20,6 +20,7 @@ import CustomIF from './page/CustomIF';
 import CustomIFCreate from './page/CustomIFCreate';
 import InteractiveVideo from './page/InteractiveVideo';
 import InteractiveVideoEdit from './page/InteractiveVideoEdit';
+import InteractiveVideoPurchased from './page/InteractiveVideoPurchased';
 import GameDetail from './page/GameDetail';
 import NovelReader from './page/NovelReader';
 import Favorites from './page/Favorites';
@@ -155,6 +156,7 @@ function App() {
           <Route path="/customif/create" element={<CustomIFCreate />} />
           <Route path="/customif/:appId" element={<CustomIF />} />
           <Route path="/interactive-video/edit/:fileId" element={<InteractiveVideoEdit />} />
+          <Route path="/interactive-video/purchased" element={<InteractiveVideoPurchased />} />
           <Route path="/interactive-video/:fileId" element={<InteractiveVideo />} />
           <Route path="/st/create" element={<StGameCreate />} />
           <Route path="/st/:appId" element={<StGame />} />
