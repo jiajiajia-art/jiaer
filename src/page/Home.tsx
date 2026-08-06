@@ -74,7 +74,6 @@ type HomeShowcaseTag = {
 
 const HOME_PAGE_DEFAULT_FILTERS: HomeListFilters = {
     ...DEFAULT_HOME_LIST_FILTERS,
-    sort: 'latest',
 };
 
 const clampValue = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
