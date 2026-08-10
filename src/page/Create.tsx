@@ -907,7 +907,6 @@ const Create: React.FC = () => {
                 isOpen={isRechargeModalOpen}
                 onClose={() => setIsRechargeModalOpen(false)}
                 onRecharge={handleRecharge}
-                isFirstChargePlans={user?.user?.firstChargePlans}
             />
             <WithdrawFlowModal
                 open={isWithdrawModalOpen}

@@ -1,5 +1,15 @@
 export type MembershipPlanId = 'creator_day' | 'creator_month' | 'creator_season' | 'creator_year' | 'month' | 'season' | 'year';
 
+export type StackedPlanStatus = 'active' | 'paused' | 'expired' | string;
+
+export interface StackedPlan {
+    planId: MembershipPlanId;
+    status: StackedPlanStatus;
+    stackOrder: number;
+    endAt?: string | null;
+    remainingDays?: number | null;
+}
+
 export type Currency = import('../common/currency').Currency;
 export type CurrencyWithAll = import('../common/currency').CurrencyWithAll;
 
@@ -55,6 +65,7 @@ export interface User {
   isMember?: boolean;
   memberPlan?: MembershipPlanId | null;
   memberEndAt?: string | null;
+  stackedPlans?: StackedPlan[];
 }
 
 // 注册请求

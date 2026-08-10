@@ -50,7 +50,6 @@ interface RechargeModalProps {
     isOpen: boolean;
     onClose: () => void;
     onRecharge: (order: PayOrderRequest) => Promise<{ qrDataUrl: string; outTradeNo: string } | null>;
-    isFirstChargePlans?: Record<string, boolean>;
     fixedTab?: RechargeTabType;
 }
 
@@ -65,7 +64,7 @@ const isMiniProgramEnv = (): boolean => {
     return String(win.__wxjs_environment || '').toLowerCase() === 'miniprogram';
 };
 
-const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRecharge, isFirstChargePlans, fixedTab }) => {
+const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRecharge, fixedTab }) => {
     const { t } = useTranslation();
     const { updateUser } = useAuthStore();
     const [isLoading, setIsLoading] = useState(false);
@@ -560,14 +559,9 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
 
     if (!isOpen) return null;
 
-    const hasFirstCharge = (planId: string) => isFirstChargePlans?.[planId] === true;
-    const firstChargeAvailable = !hasFirstCharge(selectedFirstChargePlanId || '');
     const currentAmount = getCurrentAmount();
     const currentDiamonds = currentAmount ? calculateDiamonds(currentAmount) : 0;
-    const selectedFirstChargePlan = FIRST_CHARGE_PLANS.find((plan) => plan.planId === selectedFirstChargePlanId) || null;
-    const displayDiamonds = selectedFirstChargePlan?.noFirstChargeBonus
-        ? currentDiamonds
-        : (firstChargeAvailable ? (currentDiamonds + (selectedFirstChargePlan?.firstChargeDiamonds ?? 0)) : currentDiamonds);
+    const displayDiamonds = currentDiamonds;
 
     const diamondsTabContent = (
         <>
