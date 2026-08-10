@@ -111,6 +111,12 @@ const GalgameHistoryModal = ({
             if (item.role === 'user') {
                 return item.content || '';
             }
+            if (
+                item.kind === 'protagonist_change'
+                || String(item.content || '').startsWith('【主角变更】')
+            ) {
+                return item.content || '';
+            }
 
             const start = performance.now();
             const processed = processGameTags(item.content || '', t);
@@ -124,7 +130,7 @@ const GalgameHistoryModal = ({
 
             return processed;
         });
-    }, [history, isOpen]);
+    }, [history, isOpen, t]);
 
     if (!isOpen) return null;
 
@@ -200,7 +206,23 @@ const GalgameHistoryModal = ({
                             )}
                             {history.map((item, index) => {
                                 const isUser = item.role === 'user';
+                                const isProtagonistChange =
+                                    item.kind === 'protagonist_change'
+                                    || String(item.content || '').startsWith('【主角变更】');
                                 const isEditing = editingIndex === item.absoluteIndex;
+
+                                if (isProtagonistChange) {
+                                    return (
+                                        <div key={item.id} className={styles.messageWrapper}>
+                                            <div
+                                                className={styles.protagonistChangeNotice}
+                                                role="status"
+                                            >
+                                                {item.content}
+                                            </div>
+                                        </div>
+                                    );
+                                }
 
                                 // 用户消息 - 右侧气泡
                                 if (isUser) {

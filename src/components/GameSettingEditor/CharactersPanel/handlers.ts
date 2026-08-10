@@ -16,6 +16,11 @@ import {
     BATCH_IMAGE_JOB_MAX_POLL_ATTEMPTS,
     resolveBatchImageJobPollStep,
 } from '../../../utils/batchImageJobPoll';
+import {
+    countBatchNpcBoardFailures,
+    isBatchNpcBoardSettled,
+} from '../../../utils/batchNpcBoardSettlement';
+import { resolveCharacterBatchSelection } from '../../../lib/galgame/characterBatchSelection';
 
 interface HandlersContext {
     fileId: string;
@@ -58,6 +63,10 @@ interface HandlersContext {
     onDataChange?: () => void | Promise<void>;
     /** 用户点击取消时置为 true，轮询循环据此提前退出 */
     npcBatchGenerationCancelRef: React.MutableRefObject<boolean>;
+    /** 批量任务世代号：新开/重试时递增，作废旧轮询 */
+    npcBatchGenerationSessionRef: React.MutableRefObject<number>;
+    /** 角色列表勾选；空 = 一键全量 */
+    selectedCharacterIdsRef: React.MutableRefObject<Set<string>>;
 }
 
 interface ConfirmEditResult {
@@ -96,6 +105,8 @@ export const createHandlers = (ctx: HandlersContext) => {
         onDataChange,
         pendingImageUrlsRef,
         npcBatchGenerationCancelRef,
+        npcBatchGenerationSessionRef,
+        selectedCharacterIdsRef,
         t,
     } = ctx;
 
@@ -115,6 +126,46 @@ export const createHandlers = (ctx: HandlersContext) => {
                 bumpCacheBust(character.portrait);
             }
         });
+    };
+
+    /** 功能注释：批量任务中已抠图落盘的角色，立刻写入本地立绘，不等整批结束。 */
+    const applyPartialSavedCharacterImages = (
+        statusPayload: BatchImageJobStatus | null | undefined,
+        appliedIds: Set<string>,
+    ) => {
+        const saved = Array.isArray(statusPayload?.savedResults) ? statusPayload.savedResults : [];
+        const fromItems = Array.isArray(statusPayload?.items)
+            ? statusPayload.items
+                .filter((item) => item?.stage === 'item_done' && typeof item.imagePath === 'string' && item.imagePath.trim())
+                .map((item) => ({
+                    id: String(item.id || ''),
+                    imagePath: String(item.imagePath || '').trim(),
+                    type: String(item.id) === 'player' ? 'player' : 'npc',
+                }))
+            : [];
+        const merged = [...saved, ...fromItems].filter((row) => row.id && row.imagePath);
+        if (merged.length === 0) return;
+
+        let changed = false;
+        const nextById = new Map<string, string>();
+        for (const row of merged) {
+            const key = String(row.id);
+            if (appliedIds.has(key)) continue;
+            nextById.set(key, row.imagePath);
+            appliedIds.add(key);
+            bumpCacheBust(row.imagePath);
+            changed = true;
+        }
+        if (!changed) return;
+
+        setCharacterData((prev) => prev.map((character) => {
+            const imagePath = nextById.get(character.id);
+            if (!imagePath) return character;
+            return {
+                ...character,
+                portrait: imagePath,
+            };
+        }));
     };
 
     const createPreviewUrl = async (
@@ -235,57 +286,94 @@ export const createHandlers = (ctx: HandlersContext) => {
         setHasUnsavedChanges(true);
     };
 
-    // 刷新用户积分，确保弹窗/扣除后与后端一致
-    const refreshUserPoints = async () => {
-        if (!updateUser) return;
+    // 刷新用户积分，确保弹窗/扣除后与后端一致；返回最新积分
+    const refreshUserPoints = async (): Promise<number | undefined> => {
+        if (!updateUser) return undefined;
         try {
             const resp = await auth.getUserInfo();
             const latestUser = resp.data?.data;
             if (latestUser && typeof latestUser.points === 'number') {
                 updateUser({ points: latestUser.points });
+                return latestUser.points;
             }
         } catch (error) {
             console.error('刷新用户积分失败:', error);
         }
+        return undefined;
     };
 
     // 从 API 响应中更新角色数据
-    const applyNpcBatchResult = async (payload: any, npcCostPointsValue: number | null) => {
+    // 功能注释：扣费/余额只信后端真实结算；禁止把 null 显示成 0；禁止用治愈假结果冒充已扣费。
+    const applyNpcBatchResult = async (payload: any, _npcCostPointsValue: number | null, jobStatus?: BatchImageJobStatus | null) => {
+        // 治愈假结果且仍有成功张数：不算正式结算，交给轮询等 Worker complete
+        if (payload?.healed && Number(payload?.points?.deducted ?? payload?.results?.pointsDeducted ?? 0) === 0) {
+            const healedSuccess = Number(
+                payload?.npcs?.effective
+                ?? payload?.results?.npcsGenerated
+                ?? 0
+            );
+            if (healedSuccess > 0) {
+                return false;
+            }
+        }
+
         const npcsTotalRaw = Number(
             payload?.npcs?.total
             ?? payload?.results?.npcsTotal
+            ?? jobStatus?.totalCount
             ?? 0
         );
         const npcsTotal = Number.isFinite(npcsTotalRaw) ? Math.max(0, npcsTotalRaw) : 0;
         const playerTotalRaw = Number(payload?.player?.total ?? 0);
         const playerTotal = Number.isFinite(playerTotalRaw) ? Math.max(0, playerTotalRaw) : 0;
-        const totalCount = npcsTotal + playerTotal;
+        let totalCount = npcsTotal + playerTotal;
+        if (totalCount <= 0 && Number(jobStatus?.totalCount) > 0) {
+            totalCount = Number(jobStatus?.totalCount);
+        }
 
         const npcsEffectiveRaw = Number(
             payload?.npcs?.effective
             ?? payload?.results?.npcsGenerated
             ?? payload?.results?.effectiveSuccessful
-            ?? 0
+            ?? NaN
         );
-        const npcsEffective = Number.isFinite(npcsEffectiveRaw) ? Math.max(0, npcsEffectiveRaw) : 0;
+        const npcsEffective = Number.isFinite(npcsEffectiveRaw) ? Math.max(0, npcsEffectiveRaw) : NaN;
         const playerEffectiveRaw = Number(payload?.player?.effective ?? 0);
         const playerEffective = Number.isFinite(playerEffectiveRaw) ? Math.max(0, playerEffectiveRaw) : 0;
-        const generatedRaw = payload?.npcs || payload?.player ? npcsEffective + playerEffective : npcsEffective;
-        const generatedCount = totalCount > 0 ? Math.min(generatedRaw, totalCount) : generatedRaw;
 
+        let generatedCount: number;
+        if (Number.isFinite(npcsEffective)) {
+            generatedCount = Math.max(0, npcsEffective + playerEffective);
+        } else {
+            const items = Array.isArray(jobStatus?.items) ? jobStatus.items : [];
+            generatedCount = items.filter((item) => String(item?.stage || '') === 'item_done').length;
+        }
+        if (totalCount > 0) {
+            generatedCount = Math.min(generatedCount, totalCount);
+        }
+
+        const hasDeductedField = payload?.points?.deducted != null
+            || payload?.results?.pointsDeducted != null;
         const pointsDeductedRaw = Number(
             payload?.points?.deducted
             ?? payload?.results?.pointsDeducted
-            ?? npcCostPointsValue
             ?? 0
         );
-        const pointsDeducted = Number.isFinite(pointsDeductedRaw) ? Math.max(0, pointsDeductedRaw) : 0;
+        const pointsDeducted = generatedCount > 0 && hasDeductedField && Number.isFinite(pointsDeductedRaw)
+            ? Math.max(0, pointsDeductedRaw)
+            : (generatedCount <= 0 ? 0 : Math.max(0, pointsDeductedRaw));
 
-        const remainingPointsRaw = payload?.points?.remaining ?? payload?.results?.remainingPoints;
-        const remainingPointsValue = Number(remainingPointsRaw);
-        const remainingPoints = Number.isFinite(remainingPointsValue)
-            ? Math.max(0, remainingPointsValue)
-            : undefined;
+        const remainingRaw = payload?.points?.remaining ?? payload?.results?.remainingPoints;
+        // null/undefined 不能 Number()→0；先刷账户再展示
+        const refreshed = await refreshUserPoints();
+        let remainingPoints: number | undefined;
+        if (remainingRaw != null && remainingRaw !== '' && Number.isFinite(Number(remainingRaw))) {
+            remainingPoints = Math.max(0, Number(remainingRaw));
+        } else if (typeof refreshed === 'number') {
+            remainingPoints = Math.max(0, refreshed);
+        } else {
+            remainingPoints = undefined;
+        }
 
         setNpcGenerationResult({
             generatedCount,
@@ -300,7 +388,7 @@ export const createHandlers = (ctx: HandlersContext) => {
             console.error('Failed to refresh character data after batch generation:', refreshError);
         }
         setNpcResultModalOpen(true);
-        await refreshUserPoints();
+        return true;
     };
 
     const updateCharacterFromResponse = (responseData: any, characterId: string) => {
@@ -945,94 +1033,257 @@ export const createHandlers = (ctx: HandlersContext) => {
         }
     };
 
-    // 批量生成所有NPC图片
-    const generateAllNpcImages = async (npcCostPoints: number | null) => {
+    /** 一键/重试共用：打开积分确认前可暂存限定角色选择 */
+    let pendingBatchSelection: ReturnType<typeof resolveCharacterBatchSelection> | null = null;
+
+    // 批量生成：仅生成勾选角色（进入页默认全选）；可传入 selection 只重跑失败项
+    const generateAllNpcImages = async (
+        npcCostPoints: number | null,
+        selectionOverride?: ReturnType<typeof resolveCharacterBatchSelection> | null,
+    ) => {
         let lastJobStatus: BatchImageJobStatus | null = null;
+        let activeJobId = '';
         if (!fileId) {
             toast.error(tToast('createGame.missingDataCannotGenerate', '缺少必要数据，无法生成'));
             return;
         }
+        const usedOverride = Boolean(selectionOverride || pendingBatchSelection);
+        const selection = selectionOverride
+            || pendingBatchSelection
+            || resolveCharacterBatchSelection(selectedCharacterIdsRef.current);
+        pendingBatchSelection = null;
+        if (!usedOverride
+            && (!selectedCharacterIdsRef.current || selectedCharacterIdsRef.current.size === 0)) {
+            toast.error(tToast('createGame.selectCharactersToGenerate', '请先勾选要生成的角色'));
+            return;
+        }
+        if (selection.hasSelection
+            && !selection.generatePlayer
+            && (!selection.npcIds || selection.npcIds.length === 0)) {
+            toast.error(tToast('createGame.selectCharactersToGenerate', '请先勾选要生成的角色'));
+            return;
+        }
+        const bootstrapTotal = Math.max(
+            0,
+            (selection.generatePlayer ? 1 : 0) + (selection.generateNPCs ? selection.npcIds.length : 0),
+        );
+        const sessionId = ++npcBatchGenerationSessionRef.current;
         try {
             npcBatchGenerationCancelRef.current = false;
+            // 先清空旧任务再打开遮罩，避免闪现上一轮进度/日志
+            setNpcBatchJobStatus({
+                success: true,
+                jobId: '',
+                fileId,
+                status: 'queued',
+                totalCount: bootstrapTotal,
+                completedCount: 0,
+                failedCount: 0,
+                estimatedRemainingSeconds: null,
+                items: [],
+                logs: [],
+                stageStats: {
+                    generateActive: 0,
+                    generateDone: 0,
+                    rembgActive: 0,
+                    rembgDone: 0,
+                    failed: 0,
+                    pending: bootstrapTotal,
+                    total: bootstrapTotal,
+                },
+            } as BatchImageJobStatus);
             setIsGeneratingNpcImages(true);
-            setNpcBatchJobStatus(null);
-            const startResponse: any = await api.startGenerateAllNpcImages(fileId);
+
+            const startResponse: any = await api.startGenerateAllNpcImages(fileId, selection);
             const startPayload: any = startResponse?.data || startResponse;
             const jobId = startPayload?.jobId;
             if (!startPayload?.success || !jobId) {
                 toast.error(startPayload?.error || startPayload?.message || '当前使用人数过多，请稍后再试');
                 return;
             }
+            activeJobId = String(jobId);
             setNpcBatchJobStatus({
                 success: true,
-                jobId,
+                jobId: activeJobId,
                 fileId: startPayload?.fileId ?? fileId,
                 status: startPayload?.status ?? 'queued',
-                totalCount: Number(startPayload?.totalCount ?? 0),
+                totalCount: Number(startPayload?.totalCount ?? bootstrapTotal) || bootstrapTotal,
                 completedCount: 0,
                 failedCount: 0,
                 estimatedRemainingSeconds: null,
-            });
+                items: [],
+                logs: [],
+                stageStats: {
+                    generateActive: 0,
+                    generateDone: 0,
+                    rembgActive: 0,
+                    rembgDone: 0,
+                    failed: 0,
+                    pending: Number(startPayload?.totalCount ?? bootstrapTotal) || bootstrapTotal,
+                    total: Number(startPayload?.totalCount ?? bootstrapTotal) || bootstrapTotal,
+                },
+            } as BatchImageJobStatus);
+            const appliedPartialIds = new Set<string>();
             for (let attempt = 0; attempt < BATCH_IMAGE_JOB_MAX_POLL_ATTEMPTS; attempt += 1) {
+                if (sessionId !== npcBatchGenerationSessionRef.current) {
+                    return;
+                }
                 const pollStep = resolveBatchImageJobPollStep({
                     cancelRequested: npcBatchGenerationCancelRef.current,
                     status: '',
                     attempt,
                 });
                 if (pollStep === 'cancelled') {
+                    applyPartialSavedCharacterImages(lastJobStatus, appliedPartialIds);
+                    if (appliedPartialIds.size > 0) {
+                        try { await onDataChange?.(); } catch { /* ignore */ }
+                    }
                     return;
                 }
                 if (pollStep === 'timeout') {
                     break;
                 }
 
-                const statusResponse: any = await api.getNpcBatchJobStatus(jobId);
+                const statusResponse: any = await api.getNpcBatchJobStatus(activeJobId);
+                if (sessionId !== npcBatchGenerationSessionRef.current) {
+                    return;
+                }
                 const statusPayload = statusResponse?.data || statusResponse;
+                // 旧轮询/错任务不得写回 UI
+                if (statusPayload?.jobId && String(statusPayload.jobId) !== activeJobId) {
+                    continue;
+                }
                 lastJobStatus = statusPayload as BatchImageJobStatus;
                 setNpcBatchJobStatus(lastJobStatus);
+                // 已完成抠图的角色立刻刷新本地立绘（不等整批结束）
+                applyPartialSavedCharacterImages(lastJobStatus, appliedPartialIds);
                 if (!statusPayload?.success) {
                     throw new Error(statusPayload?.error || statusPayload?.message || 'Failed to fetch NPC batch job status');
                 }
 
+                // 仅「全终态 + 有失败」才停轮询。卡住≥90s 仍要继续轮询，才能触发后端 130s 治愈。
+                // （此前误用 shouldShowRetry… 含卡住判定，90s 停轮询 → 153s 仍停在生图中）
+                const totalForSettle = Number(statusPayload?.totalCount) || 0;
+                const boardSettledWithFailures = isBatchNpcBoardSettled(
+                    statusPayload?.items,
+                    totalForSettle,
+                ) && countBatchNpcBoardFailures(statusPayload?.items) > 0;
                 const statusStep = resolveBatchImageJobPollStep({
                     cancelRequested: npcBatchGenerationCancelRef.current,
                     status: String(statusPayload.status || ''),
                     attempt,
+                    boardSettledWithFailures,
                 });
                 if (statusStep === 'cancelled') {
+                    applyPartialSavedCharacterImages(lastJobStatus, appliedPartialIds);
+                    if (appliedPartialIds.size > 0) {
+                        try { await onDataChange?.(); } catch { /* ignore */ }
+                    }
+                    return;
+                }
+                if (statusStep === 'board_settled_retry') {
+                    // 分项已全终态且有失败：提前结束轮询，保留看板给「重新生成未完成任务」
+                    applyPartialSavedCharacterImages(lastJobStatus, appliedPartialIds);
+                    if (appliedPartialIds.size > 0) {
+                        try { await onDataChange?.(); } catch { /* ignore */ }
+                        toast.success(tToast('createGame.partialCharacterImagesSaved', `已保存 ${appliedPartialIds.size} 张已完成抠图的立绘`));
+                    }
+                    setNpcBatchJobStatus((prev) => {
+                        if (!prev) return lastJobStatus;
+                        const status = String(prev.status || '');
+                        if (status === 'queued' || status === 'running' || status === 'pending') {
+                            return { ...prev, ...lastJobStatus, status: 'failed' };
+                        }
+                        return { ...prev, ...lastJobStatus };
+                    });
                     return;
                 }
                 if (statusStep === 'failed') {
+                    applyPartialSavedCharacterImages(lastJobStatus, appliedPartialIds);
+                    if (appliedPartialIds.size > 0) {
+                        try { await onDataChange?.(); } catch { /* ignore */ }
+                        toast.success(tToast('createGame.partialCharacterImagesSaved', `已保存 ${appliedPartialIds.size} 张已完成抠图的立绘`));
+                    }
+                    // 有失败可重试时不 toast 整批失败，留给看板 CTA
+                    if (
+                        boardSettledWithFailures
+                        || Number(statusPayload?.failedCount) > 0
+                    ) {
+                        return;
+                    }
                     throw new Error(statusPayload?.error || statusPayload?.message || 'NPC batch job failed');
                 }
                 if (statusStep === 'timeout') {
                     break;
                 }
-                if (statusPayload.status === 'completed') {
-                    const resultResponse: any = await api.getNpcBatchJobResult(jobId);
+                if (statusStep === 'completed' || statusPayload.status === 'completed') {
+                    applyPartialSavedCharacterImages(lastJobStatus, appliedPartialIds);
+                    const resultResponse: any = await api.getNpcBatchJobResult(activeJobId);
                     const resultPayload = resultResponse?.data || resultResponse;
                     if (!resultPayload?.success || !resultPayload?.result) {
                         throw new Error(resultPayload?.error || resultPayload?.message || 'Failed to fetch NPC batch job result');
                     }
-                    await applyNpcBatchResult(resultPayload.result, npcCostPoints);
-                    setNpcBatchJobStatus(null);
+                    const applied = await applyNpcBatchResult(resultPayload.result, npcCostPoints, lastJobStatus);
+                    if (!applied) {
+                        // 治愈假结算：继续等 Worker 写入真实扣费 result
+                        await new Promise((resolve) => window.setTimeout(resolve, 1500));
+                        continue;
+                    }
                     return;
                 }
                 await new Promise((resolve) => window.setTimeout(resolve, 1500));
             }
+            // 轮询超时：仍保留已抠完并落盘的角色图
+            applyPartialSavedCharacterImages(lastJobStatus, appliedPartialIds);
+            if (appliedPartialIds.size > 0) {
+                try { await onDataChange?.(); } catch { /* ignore */ }
+                toast.success(tToast('createGame.partialCharacterImagesSaved', `已保存 ${appliedPartialIds.size} 张已完成抠图的立绘`));
+            }
             throw new Error('NPC batch job polling timed out');
         } catch (error) {
+            if (sessionId !== npcBatchGenerationSessionRef.current) {
+                return;
+            }
             if (npcBatchGenerationCancelRef.current) {
                 return;
             }
             console.error('生成所有角色立绘时出错:', error);
             toast.error(tToast('createGame.generateAllNpcImageFailed', '生成所有角色立绘失败，请检查网络连接'));
         } finally {
+            if (sessionId !== npcBatchGenerationSessionRef.current) {
+                return;
+            }
             setIsGeneratingNpcImages(false);
             if (npcBatchGenerationCancelRef.current) {
                 setNpcBatchJobStatus(null);
-            } else if (!lastJobStatus || ['queued', 'running', 'pending'].includes(String(lastJobStatus.status || ''))) {
-                setNpcBatchJobStatus(null);
+            } else {
+                // 失败或未终态（含卡住的 generate_start）保留看板；仅全成功才清掉
+                setNpcBatchJobStatus((prev) => {
+                    if (!prev) return null;
+                    const items = Array.isArray(prev.items) ? prev.items : [];
+                    const total = Math.max(0, Number(prev.totalCount) || items.length || 0);
+                    const terminal = new Set(['item_done', 'rembg_done', 'generate_fail', 'rembg_fail']);
+                    const allSuccess = total > 0
+                        && items.length >= total
+                        && items.every((row) => {
+                            const stage = String(row?.stage || '');
+                            return stage === 'item_done' || stage === 'rembg_done';
+                        })
+                        && Number(prev.failedCount || 0) <= 0;
+                    if (allSuccess) return null;
+                    const hasIncomplete = items.some((row) => !terminal.has(String(row?.stage || '')))
+                        || Number(prev.failedCount) > 0
+                        || items.some((row) => {
+                            const stage = String(row?.stage || '');
+                            return stage === 'generate_fail' || stage === 'rembg_fail';
+                        });
+                    if (!hasIncomplete && items.length === 0) return null;
+                    const status = String(prev.status || '');
+                    if (status === 'queued' || status === 'running' || status === 'pending') {
+                        return { ...prev, status: 'failed' };
+                    }
+                    return prev;
+                });
             }
             npcBatchGenerationCancelRef.current = false;
         }
@@ -1044,30 +1295,76 @@ export const createHandlers = (ctx: HandlersContext) => {
             npcBatchGenerationCancelRef.current = true;
             setIsGeneratingNpcImages(false);
             setNpcBatchJobStatus(null);
+            pendingBatchSelection = null;
             toast(tToast('createGame.batchCharacterGenerationCancelled', '已取消角色立绘生成'));
+        } else {
+            setNpcBatchJobStatus(null);
+            pendingBatchSelection = null;
         }
     };
 
-    // 打开积分确认弹窗
-    const openNpcCostModal = async () => {
+    /** 关闭失败重试看板（不发取消 toast） */
+    const dismissBatchNpcProgress = () => {
+        pendingBatchSelection = null;
+        setIsGeneratingNpcImages(false);
+        setNpcBatchJobStatus(null);
+    };
+
+    // 打开积分确认弹窗（按勾选试算；可传入失败项 selection）
+    const openNpcCostModal = async (
+        selectionOverride?: ReturnType<typeof resolveCharacterBatchSelection> | null,
+    ) => {
         if (!fileId) {
             toast.error(tToast('createGame.missingDataCannotGenerate', '缺少必要数据，无法生成'));
             return;
         }
+        const selection = selectionOverride
+            || resolveCharacterBatchSelection(selectedCharacterIdsRef.current);
+        if (selection.hasSelection
+            && !selection.generatePlayer
+            && (!selection.npcIds || selection.npcIds.length === 0)) {
+            toast.error(tToast('createGame.selectCharactersToGenerate', '请先勾选要生成的角色'));
+            return;
+        }
+        if (!selection.hasSelection
+            && (!selectedCharacterIdsRef.current || selectedCharacterIdsRef.current.size === 0)
+            && !selectionOverride) {
+            toast.error(tToast('createGame.selectCharactersToGenerate', '请先勾选要生成的角色'));
+            return;
+        }
         try {
             setIsLoadingNpcCost(true);
-            const response = await api.calculateNpcPoints(fileId);
-            if(response.data){
+            pendingBatchSelection = selectionOverride || null;
+            const response = await api.calculateNpcPoints(fileId, selection);
+            if (response.data) {
                 const points = response.data.points;
                 setNpcCostPoints(points);
                 setNpcCostModalOpen(true);
             }
         } catch (error) {
+            pendingBatchSelection = null;
             console.error('获取角色生图积分消耗失败:', error);
             toast.error(tToast('createGame.fetchNpcImageCostFailedRetry', '获取积分消耗失败，请稍后重试'));
         } finally {
             setIsLoadingNpcCost(false);
         }
+    };
+
+    const clearPendingBatchSelection = () => {
+        pendingBatchSelection = null;
+    };
+
+    /**
+     * 功能注释：仅重跑失败角色（生图失败 / 抠图失败），先弹积分确认。
+     */
+    const continueFailedBatchNpcImages = async (characterIds: string[]) => {
+        const ids = [...new Set((characterIds || []).map((id) => String(id || '').trim()).filter(Boolean))];
+        if (ids.length === 0) {
+            toast.error(tToast('createGame.selectCharactersToGenerate', '请先勾选要生成的角色'));
+            return;
+        }
+        const selection = resolveCharacterBatchSelection(ids);
+        await openNpcCostModal(selection);
     };
 
     return {
@@ -1080,7 +1377,10 @@ export const createHandlers = (ctx: HandlersContext) => {
         deleteVariationImage,
         generateAllNpcImages,
         cancelGenerateAllNpcImages,
+        dismissBatchNpcProgress,
         openNpcCostModal,
+        clearPendingBatchSelection,
+        continueFailedBatchNpcImages,
         updateCharacterFromResponse,
     };
 };

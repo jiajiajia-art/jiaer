@@ -1,8 +1,11 @@
 import { HOST_ADDRESS } from "../config";
+export { toDisplayCoverUrl, resolveGameCoverUrl } from './displayCoverUrl';
 
 // ==================== 积分相关常量 ====================
 export const SCENE_GENERATION_COST = 6;      // 场景生成费用
 export const CHARACTER_GENERATION_COST = 6;   // 角色/NPC/差分图生成费用
+/** 局内角色档案字段 AI 生成（关系/简介/态度），对齐后端 txt_npc_profile_field */
+export const NPC_PROFILE_FIELD_GENERATION_COST = 1;
 export const OPTION_COST = 2;
 export const INPUT_COST = 3;
 export const HISTORY_MESSAGE_THRESHOLD = 5;

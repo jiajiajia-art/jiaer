@@ -36,6 +36,135 @@
   background: rgba(255, 255, 255, 0.04);
 }
 
+.avatarRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  margin-bottom: 0.15rem;
+}
+
+.avatarHit {
+  flex-shrink: 0;
+  width: 9rem;
+  height: 9rem;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 0.85rem;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}
+
+.avatarImg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.avatarEmpty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 0.72rem;
+  font-weight: 650;
+  color: rgba(255, 220, 224, 0.45);
+}
+
+.avatarMeta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.avatarHint {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: rgba(255, 220, 224, 0.55);
+}
+
+.avatarGenBtn {
+  align-self: flex-start;
+  padding: 0.35rem 0.65rem;
+  border-radius: 0.45rem;
+  border: 1px solid rgba(232, 72, 96, 0.55);
+  background: linear-gradient(135deg, rgba(180, 36, 56, 0.95), rgba(120, 18, 36, 0.95));
+  color: rgba(255, 240, 242, 0.96);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.avatarGenBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.avatarPreviewOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.avatarPreviewCard {
+  width: min(92vw, 22rem);
+  border-radius: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(18, 14, 18, 0.96);
+  overflow: hidden;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+}
+
+.avatarPreviewChrome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.8rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: rgba(255, 196, 208, 0.92);
+}
+
+.avatarPreviewClose {
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.avatarPreviewImg {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  object-position: center top;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.avatarPreviewName {
+  margin: 0;
+  padding: 0.7rem 0.85rem 0.95rem;
+  font-size: 1.05rem;
+  font-weight: 750;
+  color: rgba(255, 255, 255, 0.96);
+}
+
 .profileRow {
   display: flex;
   align-items: baseline;
@@ -70,6 +199,34 @@
   white-space: pre-wrap;
 }
 
+.profileAttrList {
+  list-style: none;
+  margin: 0.15rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem 0.55rem;
+}
+
+.profileAttrItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  padding: 0.35rem 0.45rem;
+  border-radius: 0.45rem;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.profileAttrItem strong {
+  font-size: 0.88rem;
+  font-weight: 750;
+  color: #ffc9cf;
+}
+
 .dynHint {
   margin: 0;
   font-size: 0.72rem;
@@ -99,6 +256,59 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
+}
+
+.editAvatarBlock {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 0.55rem 0.15rem 0.15rem;
+}
+
+.editAvatarHit {
+  flex-shrink: 0;
+  width: 9.5rem;
+  height: 9.5rem;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.85rem;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+}
+
+.editAvatarImg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.editAvatarEmpty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 0.72rem;
+  font-weight: 650;
+  color: rgba(255, 220, 224, 0.45);
+}
+
+.editAvatarMeta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.editAvatarHint {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: rgba(255, 220, 224, 0.55);
 }
 
 .modalTitle {
@@ -147,6 +357,39 @@
   color: rgba(255, 236, 238, 0.85);
 }
 
+.labelWithAiLeft {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.fieldAiBtn {
+  flex-shrink: 0;
+  min-height: 1.65rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 0.35rem;
+  border: 1px solid rgba(224, 61, 75, 0.75);
+  background: rgba(224, 61, 75, 0.12);
+  color: #ff8a94;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.fieldAiBtn:hover:not(:disabled) {
+  background: rgba(224, 61, 75, 0.22);
+  border-color: rgba(255, 90, 103, 0.95);
+  color: #ffb3ba;
+}
+
+.fieldAiBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .counter {
   font-size: 0.7rem;
   font-weight: 600;
@@ -170,6 +413,65 @@
   resize: vertical;
   min-height: 6rem;
   line-height: 1.45;
+  overflow-y: auto;
+}
+
+/** 档案「人设」：默认更高、可纵向拖拽、内容溢出出滚动条 */
+.personaGrowWrap {
+  position: relative;
+}
+
+.personaTextarea {
+  /* 在 7.8rem 基础上再 +50% → 11.7rem */
+  min-height: 11.7rem;
+  height: 11.7rem;
+  max-height: min(55vh, 26rem);
+  resize: vertical;
+  overflow-x: hidden;
+  overflow-y: auto;
+  line-height: 1.45;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 180, 186, 0.5) rgba(0, 0, 0, 0.28);
+}
+
+.personaTextarea::-webkit-scrollbar {
+  width: 0.45rem;
+}
+
+.personaTextarea::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: 999px;
+}
+
+.personaTextarea::-webkit-scrollbar-thumb {
+  background: rgba(224, 61, 75, 0.5);
+  border-radius: 999px;
+}
+
+.personaTextarea::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 90, 103, 0.7);
+}
+
+/* 右下角拖拽暗示（不拦截原生 resize 命中区） */
+.personaGrowWrap::after {
+  content: '';
+  position: absolute;
+  right: 0.4rem;
+  bottom: 0.35rem;
+  width: 0.72rem;
+  height: 0.72rem;
+  pointer-events: none;
+  opacity: 0.8;
+  background:
+    linear-gradient(
+      -45deg,
+      transparent 0 38%,
+      rgba(255, 180, 186, 0.75) 38% 46%,
+      transparent 46% 62%,
+      rgba(255, 180, 186, 0.55) 62% 70%,
+      transparent 70%
+    );
 }
 
 .field input:focus,

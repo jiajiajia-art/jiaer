@@ -14,7 +14,8 @@ import toast from 'react-hot-toast';
 import createGalgameSessionApi from '../api/galgame/createGalgameSession';
 import betaWhitelistApi from '../api/galgame/betaWhitelist';
 import createWorldSessionApi from '../api/worldInteraction/createWorldSession';
-import { getImageUrl } from '../utils/constants';
+import { getImageUrl, resolveGameCoverUrl } from '../utils/constants';
+import { readGameDetailPreview } from '../utils/gameDetailNavigation';
 import { FaRegShareFromSquare } from 'react-icons/fa6';
 import { MdContentCopy } from 'react-icons/md';
 import { IoChevronBack } from 'react-icons/io5';
@@ -24,7 +25,7 @@ import LoadSaveListModal from '../components/CreateGame/LoadSaveListModal';
 import SavePreviewModal from '../components/CreateGame/SavePreviewModal';
 import ShareModal from '../components/CommonModal/ShareModal';
 import QRCodeModal from '../components/CommonModal/QRCodeModal';
-import type { SaveSummaryItem } from '../api/galgame/saves';
+import { savesApi, type SaveSummaryItem } from '../api/galgame/saves';
 import novelApi, { type DerivedNovelSummary } from '../api/galgame/novel';
 import { useTrackingStore } from '../store/trackingStore';
 import { trackingApi } from '../api/statistics/trackingApi';
@@ -36,6 +37,7 @@ import { useTranslation } from 'react-i18next';
 import { getGameTypeLabelFromMeta, getGameTypeToneFromMeta } from '../utils/gameTypeLabel';
 import { resolveGameTypeToneStyle } from '../utils/gameTypeToneClass';
 import { buildNovelReadPath, buildSourceGameDetailPath } from '../utils/novelGame';
+import { prefetchGalgameDocument } from '../lib/galgame/galgameDocumentCache';
 
 // 检测是否在微信小程序环境
 const isWebViewEnv = (): boolean => {
@@ -134,16 +136,18 @@ const GameDetail: React.FC = () => {
     // Hooks
     const { user } = useAuthStore();
     const { isAuthModalOpen, setIsAuthModalOpen } = authModalStore();
-    const { setFileId, setIsPreset, setGameDetail: setGameDetailToStore } = useGameStore();
+    const { setGameDetail: setGameDetailToStore } = useGameStore();
     const { setStartedAt } = useTrackingStore();
     const syncDailyTaskPayload = useDailyTaskStore((state) => state.syncFromPayload);
 
-    // 状态
-    const [isLoading, setIsLoading] = useState(true);
-    const [game, setGame] = useState<UserGameData | null>(null);
-    const [isLiked, setIsLiked] = useState(false);
-    const [isFavorited, setIsFavorited] = useState(false);
-    const [likeCount, setLikeCount] = useState(0);
+    const initialPreview = readGameDetailPreview(location.state, fileIdParam);
+
+    // 状态：有列表预览时首帧直接出内容，避免整页转圈
+    const [isLoading, setIsLoading] = useState(() => !initialPreview);
+    const [game, setGame] = useState<UserGameData | null>(() => initialPreview);
+    const [isLiked, setIsLiked] = useState(() => checkIsLiked(initialPreview?.reaction));
+    const [isFavorited, setIsFavorited] = useState(() => Boolean(initialPreview?.isFavorited));
+    const [likeCount, setLikeCount] = useState(() => initialPreview?.like_count || 0);
     const [isLikeLoading, setIsLikeLoading] = useState(false);
     const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
     const [isUpdateWarningModalOpen, setIsUpdateWarningModalOpen] = useState(false);
@@ -290,7 +294,7 @@ const GameDetail: React.FC = () => {
         return true;
     };
 
-    // 加载游戏详情（StrictMode / 依赖变化时防重复 toast）
+    // 加载游戏详情：有首页/列表缓存则先出内容，再后台补点赞/收藏等
     useEffect(() => {
         if (!fileIdParam) {
             return;
@@ -303,8 +307,27 @@ const GameDetail: React.FC = () => {
             failed: 'game-detail-load-failed',
         } as const;
 
-        const load = async () => {
+        const preview = readGameDetailPreview(location.state, fileIdParam);
+        const applyGameData = (gameData: UserGameData) => {
+            setGame(gameData);
+            setIsLiked(checkIsLiked(gameData.reaction));
+            setIsFavorited(Boolean(gameData.isFavorited));
+            setLikeCount(gameData.like_count || 0);
+            setGameDetailToStore(gameData);
+        };
+
+        if (preview) {
+            applyGameData(preview);
+            setIsLoading(false);
+        } else {
+            setGame(null);
+            setIsLiked(false);
+            setIsFavorited(false);
+            setLikeCount(0);
             setIsLoading(true);
+        }
+
+        const load = async () => {
             try {
                 const response = await getGameDataApi.getGameDetail({
                     fileId: fileIdParam,
@@ -313,21 +336,20 @@ const GameDetail: React.FC = () => {
                 if (cancelled) return;
 
                 if (response.data?.data) {
-                    const gameData = response.data.data;
-                    setGame(gameData);
-                    setIsLiked(checkIsLiked(gameData.reaction));
-                    setIsFavorited(Boolean(gameData.isFavorited));
-                    setLikeCount(gameData.like_count || 0);
-                    setGameDetailToStore(gameData);
-                } else {
+                    applyGameData(response.data.data);
+                } else if (!preview) {
                     toast.error(t('gameDetail.gameNotExist'), { id: loadToastIds.missing });
                     navigate('/home');
+                } else {
+                    console.warn('[GameDetail] refresh failed while showing list preview');
                 }
             } catch (error) {
                 if (cancelled) return;
                 console.error('获取游戏详情失败:', error);
-                toast.error(t('gameDetail.loadGameDetailsFailed'), { id: loadToastIds.failed });
-                navigate('/home');
+                if (!preview) {
+                    toast.error(t('gameDetail.loadGameDetailsFailed'), { id: loadToastIds.failed });
+                    navigate('/home');
+                }
             } finally {
                 if (!cancelled) {
                     setIsLoading(false);
@@ -340,7 +362,7 @@ const GameDetail: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, [fileIdParam, navigate, setGameDetailToStore, t]);
+    }, [fileIdParam, location.key, location.state, navigate, setGameDetailToStore, t]);
 
     // 浏览统计：详情加载完成且已登录后只记一次
     useEffect(() => {
@@ -387,14 +409,12 @@ const GameDetail: React.FC = () => {
         };
     }, [fileId, isGalgame, isNovel]);
 
-    // 创建 Galgame 会话
-    const createGalgameSession = async (presetId: string, restart?: boolean): Promise<string | null> => {
+    // 创建 Galgame 会话（勿用 isLoading 整页挡住详情；「新的开始」会先 navigate 再后台建会话）
+    const createGalgameSession = useCallback(async (presetId: string, restart?: boolean): Promise<string | null> => {
         if (!presetId || !userId) {
             return null;
         }
 
-        setIsLoading(true);
-        
         try {
             const sessionResponse = await createGalgameSessionApi.createGalgamePlaySession({ 
                 fileId: presetId,
@@ -405,7 +425,7 @@ const GameDetail: React.FC = () => {
             if (sessionResponse.data.success) {
                 const startTime = new Date().toISOString();
                 setStartedAt(startTime);
-                const sessionId = sessionResponse.data.data.session.session_id;
+                const nextSessionId = sessionResponse.data.data.session.session_id;
                 trackingApi.reportGameEntry({
                     gameFileId: presetId,
                     source: 'game_detail',
@@ -414,7 +434,7 @@ const GameDetail: React.FC = () => {
                         syncDailyTaskPayload(resp.data.data);
                     })
                     .catch(() => {});
-                return sessionId;
+                return nextSessionId;
             } else {
                 toast.error(sessionResponse.data.message || t('gameDetail.createGameFailed'));
                 return null;
@@ -428,10 +448,56 @@ const GameDetail: React.FC = () => {
                 toast.error(t('gameDetail.createGameFailedRetry'));
             }
             return null;
-        } finally {
-            setIsLoading(false);
         }
-    };
+    }, [userId, enterSource, mapSourceForSession, setStartedAt, syncDailyTaskPayload, t]);
+
+    /** TXT：先进入 /galgame 展示壳层，再后台建 session，避免详情页「加载中…」白屏死等 */
+    const launchTxtGalgame = useCallback((opts: { restart?: boolean }) => {
+        if (!fileId) {
+            toast.error(t('gameDetail.gameIdInvalid'));
+            return;
+        }
+        if (!userId) {
+            toast.error(t('gameDetail.createGameFailedRetry'));
+            return;
+        }
+
+        useGameStore.getState().clearPlayRuntime();
+        useGameStore.getState().setFileId(fileId);
+        if (game) {
+            useGameStore.getState().setIsPreset(game.is_preset == 1);
+        }
+        prefetchGalgameDocument(fileId);
+        navigate('/galgame', {
+            state: {
+                bootPending: true,
+                ...(opts.restart ? { bootNewStart: true } : {}),
+            },
+        });
+
+        void (async () => {
+            try {
+                if (!opts.restart) {
+                    try {
+                        const resp = await betaWhitelistApi.get(fileId);
+                        useGameStore.getState().setGalgameBetaAttributes(!!resp.data?.whitelisted);
+                    } catch {
+                        useGameStore.getState().setGalgameBetaAttributes(false);
+                        console.warn('[Beta] whitelist check failed, default disabled');
+                    }
+                }
+
+                const nextSessionId = await createGalgameSession(fileId, opts.restart);
+                if (nextSessionId) {
+                    useGameStore.getState().setSessionId(nextSessionId);
+                    return;
+                }
+            } catch (error) {
+                console.error('[GameDetail] launchTxtGalgame failed:', error);
+            }
+            navigate(`/game/${encodeURIComponent(fileId)}`, { replace: true });
+        })();
+    }, [fileId, userId, game, navigate, t, createGalgameSession]);
 
     const createMapWorldSession = async (presetId: string): Promise<string | null> => {
         if (!presetId || !userId) {
@@ -520,34 +586,12 @@ const GameDetail: React.FC = () => {
         }
 
         if (normalized === 'TXT') {
-            // 进入游戏前清理旧状态
-            useGameStore.getState().clearAll();
-            setFileId(fileId);
-            setIsPreset(game.is_preset == 1);
-
-            // 内测白名单：在开始游戏前检查
-            try {
-                const resp = await betaWhitelistApi.get(fileId);
-                const enabled = !!resp.data?.whitelisted;
-                useGameStore.getState().setGalgameBetaAttributes(enabled);
-            } catch (e) {
-                // 网络或接口错误，不影响开始游戏，默认关闭
-                useGameStore.getState().setGalgameBetaAttributes(false);
-                console.warn('[Beta] whitelist check failed, default disabled');
-            }
-
-            const sessionId = await createGalgameSession(fileId);
-            if (sessionId) {
-                useGameStore.getState().setFileId(fileId);
-                useGameStore.getState().setSessionId(sessionId);
-                navigate('/galgame');
-            }
+            launchTxtGalgame({ restart: false });
             return;
         }
 
         if (normalized === 'AVG') {
-            // 进入游戏前清理旧状态
-            useGameStore.getState().clearAll();
+            useGameStore.getState().clearPlayRuntime();
             const sessionId = await createMapWorldSession(fileId);
             if (sessionId) {
                 useGameStore.getState().setFileId(fileId);
@@ -636,19 +680,14 @@ const GameDetail: React.FC = () => {
             toast.error(t('gameDetail.gameIdInvalid'));
             return;
         }
-        
-        // 进入游戏前清理旧状态
-        useGameStore.getState().clearAll();
 
         if (normalizedGameMode === 'TXT') {
-            const sessionId = await createGalgameSession(fileId, true);
-            if (sessionId) {
-                useGameStore.getState().setFileId(fileId);
-                useGameStore.getState().setSessionId(sessionId);
-                navigate('/galgame');
-            }
+            launchTxtGalgame({ restart: true });
             return;
         }
+
+        // 清运行时但保留 gameDetail，避免进 /galgame 再打 games/info+封面
+        useGameStore.getState().clearPlayRuntime();
 
         if (normalizedGameMode === 'st') {
             navigate(`/st/${fileId}?source=game_detail`);
@@ -779,13 +818,14 @@ const GameDetail: React.FC = () => {
     }, []);
 
     // 价格相关计算：统一处理原价 / 特价 / 免费
-    // 计算样式
+    // 计算样式：详情 hero 用 display-cover（webp），勿直接用原图 cover.png
     const heroStyle = useMemo(() => {
-        if (!game?.cover_url) return {};
+        const coverPath = resolveGameCoverUrl(game);
+        if (!coverPath) return {};
         return {
-            backgroundImage: `url(${getImageUrl(game.cover_url)})`,
+            backgroundImage: `url(${getImageUrl(coverPath)})`,
         };
-    }, [game?.cover_url]);
+    }, [game]);
 
     const normalizeNewlines = useCallback((text: string) => {
         return (text ?? '').replaceAll('\\n', '\n').replaceAll('/n', '\n');
@@ -886,7 +926,7 @@ const GameDetail: React.FC = () => {
         // 加载详情并展示在 TEXT 区域
         try {
             if (!fileId) return;
-            const resp = await (await import('../api/galgame/saves')).savesApi.getDetail(item.saveId, fileId);
+            const resp = await savesApi.getDetail(item.saveId, fileId);
             const detail = resp.data;
             setPreviewItem({ saveId: detail.saveId, summaryText: detail.summaryText, createdAt: detail.createdAt });
         } catch (e) {
@@ -901,8 +941,9 @@ const GameDetail: React.FC = () => {
         try {
             if (!fileId) return;
             setIsLoading(true);
-            // 进入游戏前清理旧状态
-            useGameStore.getState().clearAll();
+            // 进入游戏前清理运行时（保留详情，便于分享/RouteReporter）
+            useGameStore.getState().clearPlayRuntime();
+            prefetchGalgameDocument(fileId);
             // 复用可选 saveId 的 /visual/session/create
             const resp = await createGalgameSessionApi.createGalgameEditSession({ fileId, saveId });
             if (resp.data.success) {

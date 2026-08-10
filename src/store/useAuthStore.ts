@@ -4,6 +4,8 @@ import { jwtDecode } from 'jwt-decode';
 import axios from 'axios';
 import type { AuthResponse, User } from '../api/account/auth.type';
 import { HOST_ADDRESS } from '../config';
+import { useGameStore } from './gameStore';
+import { useMessageStore } from './useMessageStore';
 
 interface DecodedToken {
   exp: number;
@@ -189,14 +191,9 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         set({ user: null, isAuthenticated: false, email: '' });
-        // 登出时清除游戏数据，避免数据泄露
-        // 动态导入避免循环依赖
-        import('./gameStore').then(({ useGameStore }) => {
-          useGameStore.getState().clearAll();
-        });
-        import('./useMessageStore').then(({ useMessageStore }) => {
-          useMessageStore.getState().clearUnreadCount();
-        });
+        // 登出时清除游戏 / 消息状态，避免残留
+        useGameStore.getState().clearAll();
+        useMessageStore.getState().clearUnreadCount();
         sessionStorage.removeItem('checkInModalChecked');
       },
     }),

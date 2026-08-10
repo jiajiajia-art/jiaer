@@ -17,7 +17,8 @@ import CheckInModal from '../components/CheckInModal';
 import JoinGroupModal from '../components/JoinGroupModal';
 import FloatingJoinGroup from '../components/FloatingJoinGroup';
 import HomeGameFilterBar from '../components/HomeGameFilterBar';
-import { getImageUrl } from '../utils/constants';
+import { getImageUrl, resolveGameCoverUrl } from '../utils/constants';
+import { buildGameDetailNavigateState } from '../utils/gameDetailNavigation';
 import { auth } from '../api/account/authApi';
 import announcementApi from '../api/announcement/announcementApi';
 import type { AnnouncementRecord } from '../api/announcement/announcement.type';
@@ -455,7 +456,9 @@ const Home: React.FC = () => {
 
     const getCarouselImageStateKey = useCallback((item: CarouselItem) => {
         // 实现图片资源稳定标识
-        const imageUrl = isBannerCarouselItem(item) ? item.image_url || '' : item.cover_url || '';
+        const imageUrl = isBannerCarouselItem(item)
+            ? item.image_url || ''
+            : resolveGameCoverUrl(item);
         const stableItemId = isBannerCarouselItem(item)
             ? item.id || item.link_url || item.title || imageUrl
             : item.file_id || item.id || item.title || imageUrl;
@@ -1698,7 +1701,7 @@ const Home: React.FC = () => {
         if (!gameId) return;
 
         navigate(`/game/${gameId}`, {
-            state: { source: 'main_page' },
+            state: buildGameDetailNavigateState('main_page', item),
         });
     };
 
@@ -1765,7 +1768,7 @@ const Home: React.FC = () => {
     );
 
     const getCarouselItemImage = (item: CarouselItem) => (
-        isBannerCarouselItem(item) ? item.image_url : item.cover_url
+        isBannerCarouselItem(item) ? item.image_url : resolveGameCoverUrl(item)
     );
 
     const isCarouselItemClickable = (item: CarouselItem) => (
@@ -1833,17 +1836,26 @@ const Home: React.FC = () => {
 
     const handleThemeShowcaseClickCapture = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
         if (!themeShowcaseDragStateRef.current.moved) return;
-        // 闃绘鎷栨嫿鏃惰瑙﹂鏉愯烦杞?
+        // 防止拖拽时误触题材跳转
         event.preventDefault();
         event.stopPropagation();
     }, []);
 
-    const handleThemeShowcaseWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
-        if (!themeShowcaseRef.current || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+    // React onWheel 默认是 passive，无法 preventDefault；改用原生非 passive 监听
+    useEffect(() => {
+        const el = themeShowcaseRef.current;
+        if (!el) return;
 
-        // 实现标签条滚轮横向滚动
-        themeShowcaseRef.current.scrollLeft += event.deltaY;
-        event.preventDefault();
+        const onWheel = (event: WheelEvent) => {
+            if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+            el.scrollLeft += event.deltaY;
+            event.preventDefault();
+        };
+
+        el.addEventListener('wheel', onWheel, { passive: false });
+        return () => {
+            el.removeEventListener('wheel', onWheel);
+        };
     }, []);
 
     const handleShowcaseMoreClick = useCallback(() => {
@@ -2151,7 +2163,6 @@ const Home: React.FC = () => {
                                 onMouseUp={stopThemeShowcaseDragging}
                                 onMouseLeave={stopThemeShowcaseDragging}
                                 onClickCapture={handleThemeShowcaseClickCapture}
-                                onWheel={handleThemeShowcaseWheel}
                             >
                                 {homeShowcaseTags.map((tag) => (
                                     <button

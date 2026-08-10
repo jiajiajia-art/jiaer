@@ -24,6 +24,12 @@ export type SessionPlayerProfile = {
   /** 自设属性层 */
   customAttributes: Record<string, number>;
   importedCardId?: string | null;
+  /** 当前主角头像（原图） */
+  avatarUrl?: string;
+  /** 150×150 webp 头部小图（原图顶部约 30%），聊天/列表/档案优先 */
+  avatarThumbUrl?: string;
+  /** 实验组：换角后需重新 AI 生成头像 */
+  avatarNeedsRegen?: boolean;
 };
 
 export const PLAYER_CARD_LIMITS = Object.freeze({
@@ -38,30 +44,30 @@ function trimStr(value: unknown): string {
   return String(value ?? '').trim();
 }
 
-function normalizeAttributes(raw: unknown): Record<string, number> | { error: string } {
-  if (raw == null) return {};
+function normalizeAttributes(raw: unknown): { ok: true; value: Record<string, number> } | { ok: false; error: string } {
+  if (raw == null) return { ok: true, value: {} };
   if (typeof raw !== 'object' || Array.isArray(raw)) {
-    return { error: '属性格式无效' };
+    return { ok: false, error: '属性格式无效' };
   }
   const out: Record<string, number> = {};
   const entries = Object.entries(raw as Record<string, unknown>);
   if (entries.length > PLAYER_CARD_LIMITS.attributeCountMax) {
-    return { error: `属性项不能超过${PLAYER_CARD_LIMITS.attributeCountMax}个` };
+    return { ok: false, error: `属性项不能超过${PLAYER_CARD_LIMITS.attributeCountMax}个` };
   }
   for (const [k, v] of entries) {
     const key = trimStr(k);
-    if (!key) return { error: '属性名不能为空' };
+    if (!key) return { ok: false, error: '属性名不能为空' };
     if (key.length > PLAYER_CARD_LIMITS.attributeKeyMax) {
-      return { error: `属性名不能超过${PLAYER_CARD_LIMITS.attributeKeyMax}字` };
+      return { ok: false, error: `属性名不能超过${PLAYER_CARD_LIMITS.attributeKeyMax}字` };
     }
     const n = Number(v);
-    if (!Number.isFinite(n)) return { error: `属性「${key}」必须是数字` };
+    if (!Number.isFinite(n)) return { ok: false, error: `属性「${key}」必须是数字` };
     out[key] = Math.min(
       PLAYER_CARD_LIMITS.attributeValue.max,
       Math.max(PLAYER_CARD_LIMITS.attributeValue.min, Math.round(n)),
     );
   }
-  return out;
+  return { ok: true, value: out };
 }
 
 /** 功能注释：新建/更新卡字段校验。 */
@@ -85,9 +91,11 @@ export function validatePlayerCharacterCardInput(input: Partial<PlayerCharacterC
     return { ok: false, message: `人设不能超过${PLAYER_CARD_LIMITS.persona.max}字` };
   }
   const attrs = normalizeAttributes(input?.attributes);
-  if ('error' in attrs) return { ok: false, message: attrs.error };
+  if (!attrs.ok) {
+    return { ok: false, message: attrs.error };
+  }
 
-  return { ok: true, data: { name, gender, persona, attributes: attrs } };
+  return { ok: true, data: { name, gender, persona, attributes: attrs.value } };
 }
 
 /**

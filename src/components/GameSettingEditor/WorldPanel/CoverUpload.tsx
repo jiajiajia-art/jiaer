@@ -52,7 +52,8 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
             }
         } catch (error) {
             console.error('upload world cover failed:', error);
-            setCoverError(t('common.coverUpload.uploadFailed'));
+            const apiMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+            setCoverError(apiMessage || t('common.coverUpload.uploadFailed'));
         } finally {
             setCoverUploading(false);
         }

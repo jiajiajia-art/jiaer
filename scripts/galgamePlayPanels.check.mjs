@@ -302,6 +302,28 @@ test('parseAttributeValueCards_解析冒号数值行并跳过非法行', () => {
   assert.equal(cards[2].value, 89);
 });
 
+test('parseAttributeValueCards_兼容百分制与括注', () => {
+  const cards = parseAttributeValueCards(
+    '容貌：70/100（中上之姿，眉目温婉耐看）\n才艺：65/100\n圣宠：0/100（尚未面圣）\n子嗣：无',
+  );
+  assert.equal(cards.length, 3);
+  assert.equal(cards[0].label, '容貌');
+  assert.equal(cards[0].value, 70);
+  assert.equal(cards[1].value, 65);
+  assert.equal(cards[2].value, 0);
+});
+
+test('normalizeAttributePanels_保留百分制属性行', () => {
+  assert.deepEqual(
+    normalizeAttributePanels({
+      属性: '容貌：70/100（中上之姿）\n心机：80/100\n周念：↑↑↑',
+    }),
+    {
+      属性: '容貌：70/100（中上之姿）\n心机：80/100',
+    },
+  );
+});
+
 test('pickAttributeCardsFromPanels_优先属性tab', () => {
   const picked = pickAttributeCardsFromPanels({
     任务: '主线：去北廊',
@@ -318,7 +340,7 @@ test('normalizeAttributePanels_属性tab只保留数字行', () => {
       好感: '周念：↑↑↑↑↑',
     }),
     {
-      属性: '体力：72',
+      属性: '体力：72\n心情：+5',
       好感: '周念：↑↑↑↑↑',
     }
   );
@@ -347,8 +369,10 @@ test('shouldSkipAttributeAutoRefresh_流中或短间隔应跳过', () => {
   );
 });
 
-test('resolveAttributePanelLoadMode_手动刷新只读缓存_回合后才重算', () => {
+test('resolveAttributePanelLoadMode_有缓存手动只读_空缓存手动重算_回合后重算', () => {
   assert.equal(resolveAttributePanelLoadMode('manual-refresh'), 'cache');
+  assert.equal(resolveAttributePanelLoadMode('manual-refresh', { hasCachedPanels: true }), 'cache');
+  assert.equal(resolveAttributePanelLoadMode('manual-refresh', { hasCachedPanels: false }), 'regenerate');
   assert.equal(resolveAttributePanelLoadMode('open'), 'cache');
   assert.equal(resolveAttributePanelLoadMode('auto-turn'), 'regenerate');
 });

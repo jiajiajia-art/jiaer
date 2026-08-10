@@ -232,7 +232,8 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
             }
         } catch (error) {
             console.error('上传封面失败:', error);
-            setCoverError(t('common.publishSettings.uploadFailed'));
+            const apiMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+            setCoverError(apiMessage || t('common.publishSettings.uploadFailed'));
         } finally {
             setCoverUploading(false);
         }

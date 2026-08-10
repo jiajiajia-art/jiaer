@@ -4,7 +4,10 @@ const defaultTranslations: TranslateFn = (key: string) => {
     const translations: Record<string, string> = {
         'minutes': '分钟',
         'second': '秒',
+        'eta.minutes': '分钟',
+        'eta.second': '秒',
         'minutesAndSeconds': '{{minutes}} 分 {{seconds}} 秒',
+        'eta.minutesAndSeconds': '{{minutes}} 分 {{seconds}} 秒',
         'remaining': '预计还需',
         'takingLonger': '耗时较长，仍在处理中，请稍候',
         'generating': '正在生成第',
@@ -16,15 +19,29 @@ const defaultTranslations: TranslateFn = (key: string) => {
     return translations[key] || key;
 };
 
+/** i18n 可能是 eta.second，默认表也可能是 short key */
+const tx = (t: TranslateFn, shortKey: string): string => {
+    const nestedKey = `eta.${shortKey}`;
+    const nested = t(nestedKey);
+    if (nested && nested !== nestedKey) {
+        return nested;
+    }
+    const direct = t(shortKey);
+    if (direct && direct !== shortKey) {
+        return direct;
+    }
+    return defaultTranslations(shortKey);
+};
+
 export const formatEtaMinutes = (
     seconds?: number | null,
     t: TranslateFn = defaultTranslations,
 ): string => {
     const safeSeconds = Math.max(0, Math.ceil(Number(seconds || 0)));
     if (safeSeconds >= 60) {
-        return `${Math.ceil(safeSeconds / 60)} ${t('minutes')}`;
+        return `${Math.ceil(safeSeconds / 60)} ${tx(t, 'minutes')}`;
     }
-    return `${safeSeconds} ${t('second')}`;
+    return `${safeSeconds} ${tx(t, 'second')}`;
 };
 
 export const formatEtaPrecise = (
@@ -36,11 +53,12 @@ export const formatEtaPrecise = (
         const minutes = Math.floor(safeSeconds / 60);
         const remainSeconds = safeSeconds % 60;
         if (remainSeconds === 0) {
-            return `${minutes} ${t('minutes')}`;
+            return `${minutes} ${tx(t, 'minutes')}`;
         }
-        return t('eta.minutesAndSeconds').replace('{{minutes}}', String(minutes)).replace('{{seconds}}', String(remainSeconds));
+        const template = tx(t, 'minutesAndSeconds');
+        return template.replace('{{minutes}}', String(minutes)).replace('{{seconds}}', String(remainSeconds));
     }
-    return `${safeSeconds} ${t('second')}`;
+    return `${safeSeconds} ${tx(t, 'second')}`;
 };
 
 export const getUploadEtaText = (

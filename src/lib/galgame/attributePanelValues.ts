@@ -1,12 +1,21 @@
 /**
  * 从属性面板 SSE 的 panels 文本中解析数值卡（对齐图5 数值格展示）。
- * 兼容多行「标签：数字」、emoji 前缀、半角冒号。
+ * 兼容多行「标签：数字」、emoji 前缀、半角冒号、以及文档常见「70/100」「70/100（说明）」。
  */
 
 export interface AttributeValueCard {
   label: string;
   value: number;
   rawLine: string;
+}
+
+/**
+ * 功能注释：单行是否为可解析的属性数值行（与 parseAttributeValueCards 规则一致）。
+ * 允许：容貌：70｜容貌：70/100｜容貌：70/100（中上之姿）｜心情：+5
+ * 拒绝：周念：↑↑↑｜纯叙事句
+ */
+export function isParseableAttributeValueLine(line: string | null | undefined): boolean {
+  return parseAttributeValueCards(String(line || '')).length > 0;
 }
 
 /** 功能注释：尽量宽松匹配「…名…：数字」；去 emoji / 装饰后仍保留中文标签。 */
@@ -17,7 +26,10 @@ export function parseAttributeValueCards(panelText: string | null | undefined): 
   for (const line of text.split(/\r?\n/)) {
     const trimmed = line.trim();
     if (!trimmed) continue;
-    const match = trimmed.match(/^(.+?)[:：]\s*(-?\d+(?:\.\d+)?)\s*$/);
+    // 标签：数值，可选 /满分，可选全角/半角括注或尾随空格
+    const match = trimmed.match(
+      /^(.+?)[:：]\s*\+?(-?\d+(?:\.\d+)?)(?:\s*\/\s*\d+(?:\.\d+)?)?(?:\s*[（(][^）)]*[）)])?\s*$/,
+    );
     if (!match) continue;
     let label = String(match[1] || '')
       .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '')
@@ -47,7 +59,7 @@ export function normalizeAttributePanels(
       const numericLines = text
         .split(/\r?\n/)
         .map((line) => line.trim())
-        .filter((line) => parseAttributeValueCards(line).length > 0);
+        .filter((line) => isParseableAttributeValueLine(line));
       if (numericLines.length > 0) {
         next[panelKey] = numericLines.join('\n');
       }
@@ -141,12 +153,16 @@ export function shouldSkipAttributeAutoRefresh(input: {
 }
 
 /**
- * 功能注释：手动刷新/打开面板只读缓存；仅叙事回合后才允许 LLM 重算，避免体力等数值被反复推断改掉。
+ * 功能注释：有缓存时手动刷新/打开只读库，避免数值被反复推断改掉；
+ * 无缓存时手动刷新应走 LLM；回合结束后始终 regenerate。
  */
 export type AttributePanelLoadMode = 'cache' | 'regenerate';
 
 export function resolveAttributePanelLoadMode(
-  trigger: 'manual-refresh' | 'open' | 'auto-turn'
+  trigger: 'manual-refresh' | 'open' | 'auto-turn',
+  options?: { hasCachedPanels?: boolean }
 ): AttributePanelLoadMode {
-  return trigger === 'auto-turn' ? 'regenerate' : 'cache';
+  if (trigger === 'auto-turn') return 'regenerate';
+  if (trigger === 'manual-refresh' && options?.hasCachedPanels === false) return 'regenerate';
+  return 'cache';
 }

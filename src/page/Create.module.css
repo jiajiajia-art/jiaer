@@ -3,23 +3,20 @@
    ============================================ */
 
 /* --- CSS Variables --- */
-:local {
+.pageRoot {
     --creator-radius: 16px;
     --creator-gap: 18px;
     --creator-padding: 26px;
     --creator-label: #9ca3af;
     --creator-value: #111827;
     --creator-title: #fb4655;
-}
-
-/* --- Page Layout --- */
-.pageRoot {
     width: 100%;
     min-height: 100vh;
     max-width: 1920px;
     margin: 0 auto;
 }
 
+/* --- Page Layout --- */
 .mainContent {
     color: black;
     display: flex;

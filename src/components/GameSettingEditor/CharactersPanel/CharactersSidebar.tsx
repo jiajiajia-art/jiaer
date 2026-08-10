@@ -10,6 +10,8 @@ interface CharactersSidebarProps {
     characters: Character[];
     activeCharacterId: string;
     isAddingNew: boolean;
+    selectedCharacterIds: Set<string>;
+    onToggleCharacterSelected: (characterId: string) => void;
     onSelectCharacter: (characterId: string) => void;
     onDeleteCharacter: (characterId: string, e: React.MouseEvent) => void;
     onAddNew: () => void;
@@ -22,6 +24,8 @@ const CharactersSidebar: React.FC<CharactersSidebarProps> = ({
     characters,
     activeCharacterId,
     isAddingNew,
+    selectedCharacterIds,
+    onToggleCharacterSelected,
     onSelectCharacter,
     onDeleteCharacter,
     onAddNew,
@@ -106,19 +110,41 @@ const CharactersSidebar: React.FC<CharactersSidebarProps> = ({
                         const sidebarRole = character.id === 'player' ? (character.role || t('createGame.protagonist')) : t('createGame.npc');
                         const personalityTags = normalizePersonalityTags(character.personality);
                         const isActiveCharacter = !isAddingNew && character.id === activeCharacterId;
+                        const isChecked = selectedCharacterIds.has(character.id);
                         return (
                             <article
                                 key={character.id}
-                                className={`${sidebarStyles.characterRow} ${isActiveCharacter ? sidebarStyles.active : ''}`}
+                                className={`${sidebarStyles.characterRow} ${isActiveCharacter ? sidebarStyles.active : ''} ${isChecked ? sidebarStyles.rowChecked : ''}`}
                                 onClick={() => handleCharacterClick(character.id)}
                             >
+                                <label
+                                    className={sidebarStyles.selectCheck}
+                                    onClick={(e) => e.stopPropagation()}
+                                    onPointerDown={(e) => e.stopPropagation()}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={isChecked}
+                                        onChange={() => onToggleCharacterSelected(character.id)}
+                                        aria-label={`选择 ${character.name || character.id}`}
+                                    />
+                                </label>
                                 <div
                                     className={sidebarStyles.characterThumb}
-                                    style={{ backgroundImage: character.portrait
-                                ? (character.portrait.startsWith('blob:') || character.portrait.startsWith('data:')
-                                    ? `url('${character.portrait}')`
-                                    : `url('${withCacheBust(character.portrait)}')`)
-                                : 'none' }}
+                                    style={character.portrait ? {
+                                        backgroundImage: [
+                                            (character.portrait.startsWith('blob:') || character.portrait.startsWith('data:')
+                                                ? `url('${character.portrait}')`
+                                                : `url('${withCacheBust(character.portrait)}')`),
+                                            'linear-gradient(45deg, #ebebeb 25%, transparent 25%)',
+                                            'linear-gradient(-45deg, #ebebeb 25%, transparent 25%)',
+                                            'linear-gradient(45deg, transparent 75%, #ebebeb 75%)',
+                                            'linear-gradient(-45deg, transparent 75%, #ebebeb 75%)',
+                                        ].join(', '),
+                                        backgroundSize: 'contain, 12px 12px, 12px 12px, 12px 12px, 12px 12px',
+                                        backgroundPosition: 'center, 0 0, 0 6px, 6px -6px, -6px 0',
+                                        backgroundRepeat: 'no-repeat, repeat, repeat, repeat, repeat',
+                                    } : undefined}
                                 />
                                 <div className={sidebarStyles.characterMeta}>
                                     <div className={sidebarStyles.characterTitleRow}>

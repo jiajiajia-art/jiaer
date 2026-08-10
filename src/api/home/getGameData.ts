@@ -1,4 +1,5 @@
 import { api } from "../base";
+import { dedupeInflight } from "../../lib/dedupeInflight";
 import type {
     UserGameResponse,
     UserGameRequest,
@@ -10,6 +11,8 @@ import type {
     WareHouseResponse,
     GamePlayStatusResponse
 } from "./getGameData.type";
+
+const gameDetailInflight = new Map<string, Promise<unknown>>();
 
 const getGameDataApi = {
     getUserData: (request: UserGameRequest) => {
@@ -25,7 +28,11 @@ const getGameDataApi = {
         return api.get<PublicGameSearchResponse>(`/auth/games/search`, { params: data });
     },
     getGameDetail: (data: GameDetailRequest) => {
-        return api.get<GameDetailResponse>(`/auth/games/info`, { params: data });
+        const fileId = String(data.fileId || '').trim();
+        const key = `info:${fileId}`;
+        return dedupeInflight(gameDetailInflight, key, () =>
+            api.get<GameDetailResponse>(`/auth/games/info`, { params: data })
+        ) as ReturnType<typeof api.get<GameDetailResponse>>;
     },
     getPlayStatus: (fileId: string) => {
         return api.get<GamePlayStatusResponse>(`/auth/games/${fileId}/play-status`);

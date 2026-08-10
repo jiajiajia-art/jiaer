@@ -154,15 +154,16 @@
   display: flex;
   align-items: flex-end;
   gap: 0.45rem;
+  width: 100%;
   max-width: 100%;
+  box-sizing: border-box;
 }
 
 .rowAssistant {
-  align-self: flex-start;
+  justify-content: flex-start;
 }
 
 .rowUser {
-  align-self: flex-end;
   justify-content: flex-end;
 }
 
@@ -201,15 +202,32 @@
   outline-offset: 2px;
 }
 
+.avatarHit:disabled {
+  cursor: default;
+  opacity: 0.85;
+}
+
 .bubble {
+  /* 行宽固定 100% 后，百分比 max-width 才稳定；短句用 fit-content 贴合文字 */
   position: relative;
-  max-width: min(88%, 22rem);
+  width: fit-content;
+  max-width: min(78%, 20rem);
+  flex: 0 1 auto;
+  min-width: 0;
   border-radius: 0.85rem;
   padding: 0.65rem 0.8rem;
-  line-height: 1.45;
+  line-height: 1.5;
   font-size: 0.875rem;
   white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: break-word;
+  word-break: normal;
+  box-sizing: border-box;
+}
+
+.bubbleText {
+  margin: 0;
+  /* 避免短中文被压成「一字一行」 */
+  text-wrap: pretty;
 }
 
 .user {
@@ -230,43 +248,116 @@
   border-color: rgba(224, 61, 75, 0.35);
 }
 
-.bubbleText {
-  margin: 0;
-}
-
 .menu {
+  --menu-ink: #140a0e;
+  --menu-accent: #ffb3ba;
+  --menu-line: rgba(255, 180, 188, 0.28);
   position: absolute;
   left: 0;
-  bottom: calc(100% + 6px);
+  bottom: calc(100% + 0.5rem);
   z-index: 5;
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  min-width: 7.5rem;
-  padding: 0.35rem;
-  border-radius: 0.55rem;
-  border: 1px solid rgba(224, 61, 75, 0.35);
-  background: rgba(16, 10, 14, 0.96);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+  align-items: stretch;
+  gap: 0;
+  padding: 0.2rem;
+  border-radius: 999px;
+  border: 1px solid var(--menu-line);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, transparent 55%),
+    var(--menu-ink);
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.48),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  animation: menuRise 0.22s ease-out;
+}
+
+.menu::after {
+  content: '';
+  position: absolute;
+  left: 1.1rem;
+  bottom: -5px;
+  width: 9px;
+  height: 9px;
+  border-right: 1px solid var(--menu-line);
+  border-bottom: 1px solid var(--menu-line);
+  background: var(--menu-ink);
+  transform: rotate(45deg);
 }
 
 .menuBtn {
+  position: relative;
+  z-index: 1;
   border: none;
-  border-radius: 0.4rem;
-  padding: 0.45rem 0.6rem;
+  border-radius: 999px;
+  padding: 0.48rem 0.9rem;
   background: transparent;
-  color: #fff;
-  font-size: 0.8rem;
-  text-align: left;
+  color: var(--menu-accent);
+  font-size: 0.74rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
   cursor: pointer;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
 }
 
 .menuBtn:hover:not(:disabled) {
-  background: rgba(224, 61, 75, 0.2);
+  background: rgba(224, 61, 75, 0.22);
+  color: #fff;
+}
+
+.menuBtn:focus-visible {
+  outline: 2px solid var(--primary-light, #ff5a67);
+  outline-offset: 1px;
 }
 
 .menuBtn:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.menuBtnMuted {
+  color: rgba(255, 245, 242, 0.55);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.menuBtnMuted:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 245, 242, 0.92);
+}
+
+.menuDivider {
+  width: 1px;
+  align-self: stretch;
+  margin: 0.32rem 0.05rem;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    var(--menu-line) 18%,
+    var(--menu-line) 82%,
+    transparent 100%
+  );
+}
+
+@keyframes menuRise {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu {
+    animation: none;
+  }
 }
 
 /* 墨色坞：不透明底 + 主题红顶边，避免溶进场景底图 */

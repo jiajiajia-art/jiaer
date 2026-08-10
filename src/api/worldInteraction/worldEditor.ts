@@ -350,11 +350,12 @@ const worldEditor = {
       }
     );
   },
-  calculateNpcPoints: (fileId: string) => {
+  calculateNpcPoints: (fileId: string, body: Record<string, unknown> = {}) => {
     return api.post<CalculatePointsResponse>(
       `/world-interaction/npcs/calculate-points`,
       {
         fileId: fileId,
+        ...body,
       }
     );
   },

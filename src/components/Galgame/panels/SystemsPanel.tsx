@@ -772,13 +772,18 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
                   ))}
                 </div>
               )}
+              <p className={styles.infoHint}>
+                出现避雷词时会改用符合身份与语境的自然说法，不会用 ×× / 空格占位。
+              </p>
             </section>
           </div>
         ) : null}
 
         {view === 'avoidEdit' ? (
           <div className={styles.form}>
-            <p className={styles.infoHint}>* 长按拖拽排序将在后续版本提供</p>
+            <p className={styles.infoHint}>
+              叙事会用自然替代表述避开这些词；禁止用 ××、xx 或无意义空格代替。
+            </p>
             <div className={styles.field}>
               <span className={styles.labelRow}>添加避雷词</span>
               <div className={styles.paceRow}>

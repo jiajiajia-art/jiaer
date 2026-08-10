@@ -10,6 +10,7 @@ import { useMessageRealtime } from '../../hooks/useMessageRealtime';
 import getGameDataApi from '../../api/home/getGameData';
 import type { UserGameData } from '../../api/home/getGameData.type';
 import { getImageUrl } from '../../utils/constants';
+import { buildGameDetailNavigateState } from '../../utils/gameDetailNavigation';
 import { isAdminRole, isOperatorRole, isVerifiedCreatorRole } from '../../utils/userRoles';
 import UserAvatar from '../UserAvatar';
 
@@ -215,7 +216,9 @@ const Navbar: React.FC<NavbarProps> = ({
 
         runLeaveAction(() => {
             resetSearchState();
-            navigate(`/game/${gameId}`, { state: { source: 'search' } });
+            navigate(`/game/${gameId}`, {
+                state: buildGameDetailNavigateState('search', game),
+            });
         });
     };
 

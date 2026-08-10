@@ -1,6 +1,9 @@
 import React from "react";
 import styles from "./FooterArea.module.css";
 
+/** Vite BASE_URL 已带尾斜杠（如 /funloom/），路径不要再以 / 开头 */
+const asset = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`;
+
 const FooterArea: React.FC = () => {
     return (
         <div className={styles.footer}>
@@ -8,7 +11,7 @@ const FooterArea: React.FC = () => {
 
                 {/* 左侧 Logo + 关注我们区域 */}
                 <div className={styles.logoArea}>
-                    <img src={`${import.meta.env.BASE_URL}/data/assets/LOGO.png`} alt="funloom" className={styles.logo} />
+                    <img src={asset('data/assets/LOGO.png')} alt="funloom" className={styles.logo} />
                 </div>
 
 
@@ -17,19 +20,19 @@ const FooterArea: React.FC = () => {
                         <div className={styles.iconRow}>
                             <div className={styles.title}>分享到：</div>
                             <div className={styles.iconItem}>
-                                <img src={`${import.meta.env.BASE_URL}/data/assets/微信1.png`} alt="wechat" />
+                                <img src={asset('data/assets/微信1.png')} alt="wechat" />
                                 <span>微信</span>
                             </div>
                             <div className={styles.iconItem}>
-                                <img src={`${import.meta.env.BASE_URL}/data/assets/微博1.png`} alt="weibo" />
+                                <img src={asset('data/assets/微博1.png')} alt="weibo" />
                                 <span>微博</span>
                             </div>
                             <div className={styles.iconItem}>
-                                <img src={`${import.meta.env.BASE_URL}/data/assets/QQ1.png`} alt="xhs" />
+                                <img src={asset('data/assets/QQ1.png')} alt="xhs" />
                                 <span>QQ</span>
                             </div>
                             <div className={styles.iconItem}>
-                                <img src={`${import.meta.env.BASE_URL}/data/assets/抖音1.png`} alt="douyin" />
+                                <img src={asset('data/assets/抖音1.png')} alt="douyin" />
                                 <span>抖音</span>
                             </div>
                         </div>
@@ -40,15 +43,15 @@ const FooterArea: React.FC = () => {
                         <div className={styles.block}>
                             <div className={styles.title}>关注我们</div>
                             <div className={styles.item}>
-                                <img src={`${import.meta.env.BASE_URL}/data/assets/微信2.png`} alt="wechat" />
+                                <img src={asset('data/assets/微信2.png')} alt="wechat" />
                                 <span>微信</span>
                             </div>
                             <div className={styles.item}>
-                                <img src={`${import.meta.env.BASE_URL}/data/assets/小红书2.png`} alt="xiaohongshu" />
+                                <img src={asset('data/assets/小红书2.png')} alt="xiaohongshu" />
                                 <span>小红书</span>
                             </div>
                             <div className={styles.item}>
-                                <img src={`${import.meta.env.BASE_URL}/data/assets/微博2.png`} alt="weibo" />
+                                <img src={asset('data/assets/微博2.png')} alt="weibo" />
                                 <span>微博</span>
                             </div>
                         </div>

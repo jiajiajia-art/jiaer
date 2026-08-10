@@ -77,6 +77,8 @@ interface GameState {
   setGalgameBetaAttributes: (enabled: boolean | null) => void;
 
   clearAll: () => void;
+  /** 进入游玩前清运行时，保留 gameDetail */
+  clearPlayRuntime: () => void;
 }
 
 export const useGameStore = create<GameState>()(
@@ -154,6 +156,20 @@ export const useGameStore = create<GameState>()(
         player: null,
         items: {},
         gameDetail: null,
+        gameStarted: false,
+        isPlaying: false,
+        volume: 1,
+      }),
+
+      /** 进入游玩前清运行时，保留 gameDetail，避免 /galgame 再打 games/info + 封面 */
+      clearPlayRuntime: () => set({
+        fileId: null,
+        sessionId: null,
+        isPreset: null,
+        scenes: {},
+        currentSceneId: '',
+        player: null,
+        items: {},
         gameStarted: false,
         isPlaying: false,
         volume: 1,

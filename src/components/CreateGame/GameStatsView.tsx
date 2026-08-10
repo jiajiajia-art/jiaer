@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -26,6 +26,7 @@ import LoadSaveListModal from './LoadSaveListModal';
 import SavePreviewModal from './SavePreviewModal';
 import type { SaveSummaryItem } from '../../api/galgame/saves';
 import { isMiniProgramEnv } from '../../utils/miniProgram';
+import { prefetchGalgameDocument } from '../../lib/galgame/galgameDocumentCache';
 import {
     buildCreatorPlaySessionRequest,
     normalizeCreatorPlayMode,
@@ -191,9 +192,13 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
             return;
         }
 
-        useGameStore.getState().clearAll();
+        useGameStore.getState().clearPlayRuntime();
         setFileId(fileId);
         setIsPreset(gameDetail?.is_preset == 1);
+        if (gameDetail) {
+            useGameStore.getState().setGameDetail(gameDetail);
+        }
+        prefetchGalgameDocument(fileId);
 
         const { sessionId, redirectUrl } = await createSession(fileId, intent);
         if (redirectUrl) {
@@ -287,6 +292,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
             setIsLoading(true);
             // 进入游戏前清理旧状态；必须同时写回 fileId + sessionId，否则 Galgame 会卡在「正在获取数据」
             useGameStore.getState().clearAll();
+            prefetchGalgameDocument(fileId);
             const resp = await createGalgameSessionApi.createGalgameEditSession({ fileId, saveId });
             if (resp.data.success) {
                 const sessionId = resp.data.data.session;

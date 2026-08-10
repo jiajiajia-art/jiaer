@@ -21,11 +21,17 @@ import {
 import {
   filterPlayerCharacterCards,
   type PlayerCharacterCard,
+  type SessionPlayerProfile,
 } from '../../../lib/galgame/playerCharacterCard';
-import { getImageUrl } from '../../../utils/constants';
+import { getImageUrl, getPlayerImageUrl } from '../../../utils/constants';
+import {
+  pickDisplayAvatarFullUrl,
+  pickDisplayAvatarThumbUrl,
+} from '../../../lib/galgame/avatarThumbUrl';
 import { useGameStore } from '../../../store/gameStore';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { playerCharacterCardsApi, sessionPlayerProfileApi } from '../../../api/galgame/playerCharacterCards';
+import { fetchCharacterAvatarThumbs } from '../../../api/galgame/playUi';
 
 interface CharactersPanelProps {
   isOpen: boolean;
@@ -35,17 +41,28 @@ interface CharactersPanelProps {
   player?: PlayerProfileLike | null;
   editableProfiles?: PlayerEditableNpc[];
   onProfilesChange?: (profiles: PlayerEditableNpc[]) => void;
+  /** 局内「我的档案」——私聊用户头像跟它走，换档立刻刷新 */
+  sessionPlayerProfile?: SessionPlayerProfile | null;
+  onSessionPlayerProfileChange?: (profile: SessionPlayerProfile) => void;
   narrativeBusy?: boolean;
 }
 
 /**
  * UE 流程：
- * 列表 → 点头像预览（介绍 + 私聊）→ 私聊
- * 列表 → 详情 →（编辑人设 / 底栏私聊）
+ * 列表 → 点头像 / 查看详情 → 同一弹窗（大图 + 完整介绍 + 私聊）
  * 列表 → +添加 / 导入 → 表单 → 保存回列表
  * 配色沿用主题红，交互严格对齐流程图。
  */
 type ViewMode = 'list' | 'detail' | 'form' | 'chat' | 'import';
+
+/** 列表简介最多展示 200 字，超出用省略号；完整内容在预览弹窗。 */
+const LIST_INTRO_MAX_CHARS = 200;
+
+function truncateIntroText(text: string, max = LIST_INTRO_MAX_CHARS): string {
+  const normalized = String(text || '').trim();
+  if (normalized.length <= max) return normalized;
+  return `${normalized.slice(0, max)}…`;
+}
 
 /** 私聊按钮细线气泡图标（档案笺印章感） */
 const ChatSealIcon: React.FC<{ className?: string }> = ({ className }) => (
@@ -80,6 +97,8 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
   player = null,
   editableProfiles,
   onProfilesChange,
+  sessionPlayerProfile = null,
+  onSessionPlayerProfileChange,
   narrativeBusy = false,
 }) => {
   const { t } = useTranslation();
@@ -95,11 +114,75 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
   const [importQuery, setImportQuery] = useState('');
   const [importLoading, setImportLoading] = useState(false);
   const [previewProfile, setPreviewProfile] = useState<PlayerEditableNpc | null>(null);
+  const [npcAvatarThumbs, setNpcAvatarThumbs] = useState<Record<string, string>>({});
 
   React.useEffect(() => {
     if (editableProfiles == null) return;
     setLocalProfiles(editableProfiles);
   }, [editableProfiles]);
+
+  // 功能注释：打开角色档案时批量 ensure 150 头部小图（只合并头像字段，绝不整表覆盖介绍）
+  React.useEffect(() => {
+    if (!isOpen || !sessionId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const data = await fetchCharacterAvatarThumbs(sessionId);
+        if (cancelled) return;
+        setNpcAvatarThumbs(data.npcAvatarThumbs || {});
+        if (Array.isArray(data.playerEditableNpcs) && data.playerEditableNpcs.length > 0) {
+          const fromServer = data.playerEditableNpcs as PlayerEditableNpc[];
+          setLocalProfiles((prev) => {
+            const byId = new Map(prev.map((p) => [p.id, p]));
+            for (const s of fromServer) {
+              if (!s?.id) continue;
+              const old = byId.get(s.id);
+              if (!old) {
+                // 服务端新条目：仅当有实质介绍/关系时才纳入，避免空 stub 冲列表
+                const hasSubstance = Boolean(
+                  String(s.summary || '').trim()
+                  || String(s.relationship || '').trim()
+                  || String(s.detailedBio || '').trim()
+                  || s.source === 'player_created',
+                );
+                if (!hasSubstance && (s.avatarThumbUrl || s.avatarUrl)) {
+                  // 仅头像补丁：记入 thumbs 即可，不写入 localProfiles
+                  continue;
+                }
+                byId.set(s.id, s);
+                continue;
+              }
+              byId.set(s.id, {
+                ...old,
+                ...(s.avatarUrl ? { avatarUrl: s.avatarUrl } : {}),
+                ...(s.avatarThumbUrl ? { avatarThumbUrl: s.avatarThumbUrl } : {}),
+              });
+            }
+            return sortEditableNpcProfiles([...byId.values()]);
+          });
+        }
+        if (data.sessionPlayerProfile) {
+          onSessionPlayerProfileChange?.(data.sessionPlayerProfile);
+        }
+      } catch {
+        /* 小图失败不挡列表 */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, sessionId, onSessionPlayerProfileChange]);
+
+  const resolveListAvatarUrl = (profile: PlayerEditableNpc, preset?: CharacterPanelItem | null) => {
+    // 功能注释：角色档案只加载 *_150.webp，禁止 PNG 原图进 img.src
+    const thumbPath = pickDisplayAvatarThumbUrl([
+      npcAvatarThumbs[profile.id],
+      profile.avatarThumbUrl,
+      profile.avatarUrl,
+      preset?.avatarUrl,
+    ]);
+    return thumbPath ? getImageUrl(thumbPath) : '';
+  };
 
   const presetItems = useMemo(
     () => buildCharacterPanelItems(encounteredIds, npcs, getImageUrl, player),
@@ -115,10 +198,22 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
       if (p) byId.set(p.id, p);
     }
     for (const p of localProfiles) {
+      const base = byId.get(p.id);
+      // 功能注释：空 summary/relationship 不得覆盖文档简介（防头像 stub 冲掉介绍）
       byId.set(p.id, {
-        ...byId.get(p.id),
+        ...base,
         ...p,
-        encountered: p.encountered || encounteredIds.includes(p.id),
+        summary: String(p.summary || '').trim() || base?.summary || p.summary || '',
+        relationship: String(p.relationship || '').trim() || base?.relationship || p.relationship || '',
+        attitudeToPlayer:
+          String(p.attitudeToPlayer || '').trim()
+          || base?.attitudeToPlayer
+          || p.attitudeToPlayer
+          || '',
+        detailedBio: String(p.detailedBio || '').trim() || base?.detailedBio || p.detailedBio || '',
+        avatarUrl: p.avatarUrl || base?.avatarUrl,
+        avatarThumbUrl: p.avatarThumbUrl || base?.avatarThumbUrl,
+        encountered: p.encountered || encounteredIds.includes(p.id) || !!base?.encountered,
       });
     }
     return sortEditableNpcProfiles([...byId.values()]);
@@ -167,7 +262,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
 
   const toDetailItem = (profile: PlayerEditableNpc): CharacterPanelItem => {
     const preset = presetItems.find((i) => i.id === profile.id);
-    const avatarUrl = getImageUrl(profile.avatarUrl || preset?.avatarUrl || '');
+    const avatarUrl = resolveListAvatarUrl(profile, preset);
     if (preset) return { ...preset, avatarUrl: avatarUrl || preset.avatarUrl };
     return {
       id: profile.id,
@@ -296,7 +391,16 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
             <button type="button" className={shell.backButton} onClick={backToList}>
               返回列表
             </button>
-            <button type="button" className={shell.chatBtnWide} onClick={() => setMode('chat')}>
+            <button type="button" className={shell.chatBtnWide} onClick={() => {
+              if (!detail) return;
+              const profile = mergedProfiles.find((p) => p.id === detail.id)
+                || localProfiles.find((p) => p.id === detail.id);
+              if (profile) {
+                startPrivateChat(profile);
+                return;
+              }
+              setMode('chat');
+            }}>
               <ChatSealIcon className={shell.chatBtnIcon} />
               私聊
             </button>
@@ -308,7 +412,25 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
         <PrivateChatPanel
           npcId={detail.id}
           npcName={detail.name}
-          npcAvatarUrl={detail.avatarUrl}
+          npcAvatarUrl={
+            mergedProfiles.find((p) => p.id === detail.id)?.avatarUrl
+            || detail.avatarUrl
+          }
+          npcAvatarThumbUrl={
+            npcAvatarThumbs[detail.id]
+            || mergedProfiles.find((p) => p.id === detail.id)?.avatarThumbUrl
+          }
+          playerAvatarUrl={
+            sessionPlayerProfile?.avatarUrl
+            || getPlayerImageUrl(player)
+            || undefined
+          }
+          playerAvatarThumbUrl={sessionPlayerProfile?.avatarThumbUrl || undefined}
+          playerName={
+            sessionPlayerProfile?.name
+            || player?.name
+            || undefined
+          }
           narrativeBusy={narrativeBusy}
           onBack={() => setMode('detail')}
           onProfilesChange={(profiles) => {
@@ -420,7 +542,14 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
             profile?.importance === 'major' ? '重要' : profile?.importance === 'minor' ? '次要' : profile?.importance === 'extra' ? '路人' : '',
             profile?.survival === 'alive' ? '存活' : profile?.survival === 'dead' ? '死亡' : profile?.survival === 'unknown' ? '未知' : '',
           ].filter(Boolean);
-          const avatarUrl = getImageUrl(profile?.avatarUrl || detail.avatarUrl || '');
+          const avatarUrl = profile
+            ? resolveListAvatarUrl(profile, detail)
+            : getImageUrl(
+              pickDisplayAvatarThumbUrl([
+                detail.id ? npcAvatarThumbs[detail.id] : '',
+                detail.avatarUrl,
+              ]),
+            );
 
           return (
             <article className={shell.detailPage}>
@@ -439,7 +568,12 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                   <span className={shell.detailChatHint}>点击头像预览</span>
                 </button>
                 <div className={shell.detailHeroInfo}>
-                  <h3 className={shell.detailName}>{detail.name}</h3>
+                  <h3 className={shell.detailName}>
+                    <span>{detail.name}</span>
+                    {profile?.source === 'player_created' ? (
+                      <span className={shell.customBadge}>自建</span>
+                    ) : null}
+                  </h3>
                   <p className={shell.detailMeta}>
                     <span className={shell.detailGender}>{genderText}</span>
                     {roleTag ? <span className={shell.detailRoleTag}>{roleTag}</span> : null}
@@ -520,7 +654,9 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
       ) : (
         mergedProfiles.map((profile) => {
           const preset = presetItems.find((i) => i.id === profile.id);
-          const avatarUrl = getImageUrl(profile.avatarUrl || preset?.avatarUrl || '');
+          const avatarUrl = resolveListAvatarUrl(profile, preset);
+          const fullSummary = String(profile.summary || '').trim();
+          const listSummary = truncateIntroText(fullSummary);
           return (
             <div key={profile.id} className={`${shell.card} ${shell.charRow}`}>
               <div className={shell.charAside}>
@@ -528,7 +664,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                   type="button"
                   className={shell.avatarHit}
                   onClick={() => openAvatarPreview(profile)}
-                  aria-label={`预览 ${profile.name}`}
+                  aria-label={`查看 ${profile.name} 头像与介绍`}
                 >
                   {avatarUrl ? (
                     <img className={shell.avatar} src={avatarUrl} alt={profile.name} />
@@ -545,25 +681,28 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                   私聊
                 </button>
               </div>
-              <button
-                type="button"
-                className={`${shell.charText} ${shell.charCardButton}`}
-                onClick={() => openDetailFromProfile(profile)}
-              >
+              <div className={shell.charText}>
                 <h3 className={shell.cardTitle}>
-                  {profile.name}
-                  {!profile.encountered ? (
-                    <span className={shell.cardMeta}> · 未出场</span>
-                  ) : null}
+                  <span className={shell.cardTitleName}>{profile.name}</span>
+                  <span className={shell.cardTitleTrail}>
+                    {profile.source === 'player_created' ? (
+                      <span className={shell.customBadge}>自建</span>
+                    ) : null}
+                    {!profile.encountered ? (
+                      <span className={shell.cardTitleMeta}>未出场</span>
+                    ) : null}
+                  </span>
                 </h3>
                 {profile.relationship ? <p className={shell.cardMeta}>{profile.relationship}</p> : null}
-                {profile.summary ? <p className={shell.cardBody}>{profile.summary}</p> : null}
-              </button>
+                {listSummary ? (
+                  <p className={`${shell.cardBody} ${shell.cardBodyTruncate}`}>{listSummary}</p>
+                ) : null}
+              </div>
               <button
                 type="button"
                 className={shell.charChevronBtn}
                 aria-label={`查看 ${profile.name} 详情`}
-                onClick={() => openDetailFromProfile(profile)}
+                onClick={() => openAvatarPreview(profile)}
               >
                 ›
               </button>
@@ -575,7 +714,16 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
       {previewProfile ? (() => {
         const p = previewProfile;
         const preset = presetItems.find((i) => i.id === p.id);
-        const avatarUrl = getImageUrl(p.avatarUrl || preset?.avatarUrl || '');
+        // 功能注释：人物笺大图用原图，不用列表 150 小图
+        const avatarFullPath = pickDisplayAvatarFullUrl([
+          p.avatarUrl,
+          preset?.avatarUrl,
+          p.avatarThumbUrl,
+          p.id ? npcAvatarThumbs[p.id] : '',
+        ]);
+        const avatarUrl = avatarFullPath
+          ? getImageUrl(avatarFullPath)
+          : resolveListAvatarUrl(p, preset);
         const introSummary = String(p.summary || '').trim();
         const introAttitude = String(p.attitudeToPlayer || '').trim();
         const introRelation = String(p.relationship || '').trim();
@@ -638,6 +786,13 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                 </div>
               </div>
               <footer className={shell.avatarPreviewDock}>
+                <button
+                  type="button"
+                  className={shell.ghostButton}
+                  onClick={() => openDetailFromProfile(p)}
+                >
+                  完整档案
+                </button>
                 <button
                   type="button"
                   className={shell.avatarPreviewChatBtn}

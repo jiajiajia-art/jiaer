@@ -17,6 +17,11 @@ import {
     BATCH_IMAGE_JOB_MAX_POLL_ATTEMPTS,
     resolveBatchImageJobPollStep,
 } from '../../../utils/batchImageJobPoll';
+import {
+    countBatchNpcBoardFailures,
+    isBatchNpcBoardSettled,
+    isBatchSceneBoardAllSuccess,
+} from '../../../utils/batchNpcBoardSettlement';
 
 export interface LocalScene {
     id: string;
@@ -1322,7 +1327,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
     };
 
     // 批量生成场景立绘 + 积分试算
-    const applySceneBatchResult = async (payload: any, sceneCostPointsValue: number | null) => {
+    const applySceneBatchResult = async (payload: any, _sceneCostPointsValue: number | null) => {
         const details = payload?.details || null;
         const generatedSceneResult = applyGeneratedSceneImages(details?.scenes || []);
         const generatedSubsceneResult = applyGeneratedSubsceneImages(details?.subscenes || []);
@@ -1374,10 +1379,12 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             payload?.points?.deducted ??
             payload?.points?.pointsDeducted ??
             payload?.results?.pointsDeducted ??
-            sceneCostPointsValue ??
             0
         );
-        const pointsDeducted = Number.isFinite(pointsDeductedRaw) ? Math.max(0, pointsDeductedRaw) : 0;
+        // 一张都没成功：强制 0；禁止用确认弹窗预估冒充已扣费
+        const pointsDeducted = generatedCount > 0 && Number.isFinite(pointsDeductedRaw)
+            ? Math.max(0, pointsDeductedRaw)
+            : 0;
 
         const remainingPointsRaw =
             payload?.points?.remaining ??
@@ -1422,33 +1429,83 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         setSceneResultModalOpen(true);
     };
 
-    const generateAllSceneImages = async (sceneCostPoints: number | null) => {
+    const generateAllSceneImages = async (
+        sceneCostPoints: number | null,
+        sceneIds?: string[],
+    ) => {
         let lastJobStatus: BatchImageJobStatus | null = null;
         if (!fileId) {
             toast.error(ctx.t?.('createGame.missingDataCannotGenerate') || '缺少必要数据，无法生成');
             return;
         }
+        const bootstrapTotal = Array.isArray(sceneIds) && sceneIds.length > 0
+            ? sceneIds.length
+            : Math.max(0, Number(ctx.sceneData?.length || 0));
         try {
             sceneBatchGenerationCancelRef.current = false;
             setIsGeneratingAllSceneImages(true);
-            setSceneBatchJobStatus(null);
-            const startResponse: any = await api.startGenerateAllSceneImages(fileId);
-            const startPayload: any = startResponse?.data || startResponse;
-            const jobId = startPayload?.jobId;
-            if (!startPayload?.success || !jobId) {
-                toast.error(startPayload?.error || startPayload?.message || 'å½“å‰ä½¿ç”¨äººæ•°è¿‡å¤šï¼Œè¯·ç¨åŽå†è¯•');
-                return;
-            }
             setSceneBatchJobStatus({
                 success: true,
-                jobId,
-                fileId: startPayload?.fileId ?? fileId,
-                status: startPayload?.status ?? 'queued',
-                totalCount: Number(startPayload?.totalCount ?? 0),
+                jobId: '',
+                fileId,
+                status: 'queued',
+                totalCount: bootstrapTotal,
                 completedCount: 0,
                 failedCount: 0,
                 estimatedRemainingSeconds: null,
-            });
+                items: (Array.isArray(sceneIds) && sceneIds.length > 0
+                    ? sceneIds.map((id, index) => {
+                        const found = ctx.sceneData.find((s) => String(s.id) === String(id));
+                        return {
+                            index,
+                            id,
+                            name: found?.name || id,
+                            stage: 'pending',
+                            stageElapsedSeconds: 0,
+                        };
+                    })
+                    : ctx.sceneData.map((s, index) => ({
+                        index,
+                        id: s.id,
+                        name: s.name,
+                        stage: 'pending',
+                        stageElapsedSeconds: 0,
+                    }))) as any,
+                logs: [],
+                stageStats: {
+                    generateActive: 0,
+                    generateDone: 0,
+                    rembgActive: 0,
+                    rembgDone: 0,
+                    failed: 0,
+                    pending: bootstrapTotal,
+                    total: bootstrapTotal,
+                },
+            } as BatchImageJobStatus);
+
+            const startResponse: any = await api.startGenerateAllSceneImages(fileId, sceneIds);
+            const startPayload: any = startResponse?.data || startResponse;
+            const jobId = startPayload?.jobId;
+            if (!startPayload?.success || !jobId) {
+                toast.error(startPayload?.error || startPayload?.message || '当前使用人数过多，请稍后再试');
+                setSceneBatchJobStatus(null);
+                return;
+            }
+            if (startPayload?.slicedScenes !== true && ctx.mode === 'visual') {
+                console.warn('[SceneBatch] start missing slicedScenes=true', startPayload);
+            }
+            setSceneBatchJobStatus((prev) => ({
+                ...(prev || {}),
+                success: true,
+                jobId,
+                fileId: startPayload?.fileId ?? fileId,
+                status: startPayload?.status ?? 'running',
+                totalCount: Number(startPayload?.totalCount ?? bootstrapTotal) || bootstrapTotal,
+                completedCount: 0,
+                failedCount: 0,
+                estimatedRemainingSeconds: null,
+            } as BatchImageJobStatus));
+
             for (let attempt = 0; attempt < BATCH_IMAGE_JOB_MAX_POLL_ATTEMPTS; attempt += 1) {
                 const pollStep = resolveBatchImageJobPollStep({
                     cancelRequested: sceneBatchGenerationCancelRef.current,
@@ -1470,12 +1527,25 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                     throw new Error(statusPayload?.error || statusPayload?.message || 'Failed to fetch scene batch job status');
                 }
 
+                const totalForSettle = Number(statusPayload?.totalCount) || 0;
+                const boardSettledWithFailures = isBatchNpcBoardSettled(
+                    statusPayload?.items,
+                    totalForSettle,
+                ) && countBatchNpcBoardFailures(statusPayload?.items) > 0;
                 const statusStep = resolveBatchImageJobPollStep({
                     cancelRequested: sceneBatchGenerationCancelRef.current,
                     status: String(statusPayload.status || ''),
                     attempt,
+                    boardSettledWithFailures,
                 });
                 if (statusStep === 'cancelled') {
+                    return;
+                }
+                if (statusStep === 'board_settled_retry') {
+                    setSceneBatchJobStatus((prev) => {
+                        if (!prev) return lastJobStatus;
+                        return { ...prev, ...lastJobStatus, status: 'failed' };
+                    });
                     return;
                 }
                 if (statusStep === 'failed') {
@@ -1484,22 +1554,129 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                 if (statusStep === 'timeout') {
                     break;
                 }
-                if (statusPayload.status === 'completed') {
-                    const resultResponse: any = await api.getSceneBatchJobResult(jobId);
-                    const resultPayload = resultResponse?.data || resultResponse;
-                    if (!resultPayload?.success || !resultPayload?.result) {
-                        throw new Error(resultPayload?.error || resultPayload?.message || 'Failed to fetch scene batch job result');
+                const boardAllSuccess = isBatchSceneBoardAllSuccess(
+                    statusPayload?.items,
+                    totalForSettle,
+                );
+                // 分项已全成功：先软拉 result（running 时接口会 400，禁止当整批失败 toast）
+                if (statusPayload.status === 'completed' || boardAllSuccess) {
+                    let resultPayload: any = null;
+                    try {
+                        const resultResponse: any = await api.getSceneBatchJobResult(jobId);
+                        resultPayload = resultResponse?.data || resultResponse;
+                    } catch (resultError: any) {
+                        const httpStatus = Number(resultError?.response?.status) || 0;
+                        const body = resultError?.response?.data;
+                        // A/B：400 Job not completed yet → 继续轮询，绝不 toast「网络失败」
+                        if (httpStatus === 400 || body?.status === 'running' || /not completed/i.test(String(body?.error || ''))) {
+                            resultPayload = { success: false, status: body?.status || 'running', pending: true };
+                        } else if (statusPayload.status === 'completed') {
+                            throw resultError;
+                        } else {
+                            resultPayload = { success: false, pending: true };
+                        }
                     }
-                    await applySceneBatchResult(resultPayload.result, sceneCostPoints);
+                    if (resultPayload?.success && resultPayload?.result) {
+                        await applySceneBatchResult(resultPayload.result, sceneCostPoints);
+                        setSceneBatchJobStatus(null);
+                        return;
+                    }
+                    // result 未就绪：用 status.savedResults 先落地图片，再等 completed 补积分弹窗
+                    if (boardAllSuccess) {
+                        const saved = Array.isArray(statusPayload?.savedResults)
+                            ? statusPayload.savedResults
+                            : [];
+                        if (saved.length > 0) {
+                            const sceneDetails = saved
+                                .filter((row: any) => row?.imagePath)
+                                .map((row: any) => ({
+                                    id: row.id,
+                                    name: row.name,
+                                    imagePath: row.imagePath,
+                                    success: true,
+                                }));
+                            if (sceneDetails.length > 0) {
+                                applyGeneratedSceneImages(sceneDetails);
+                            }
+                        }
+                        if (statusPayload.status === 'completed') {
+                            throw new Error(resultPayload?.error || resultPayload?.message || 'Failed to fetch scene batch job result');
+                        }
+                        // 继续短轮询等 finalize 写入 result
+                    }
+                }
+                await new Promise((resolve) => window.setTimeout(resolve, 1500));
+            }
+            // 超时前若分项已全成功：用最后一次 status 收尾，禁止误报网络失败
+            if (lastJobStatus && isBatchSceneBoardAllSuccess(
+                lastJobStatus.items,
+                Number(lastJobStatus.totalCount) || 0,
+            )) {
+                const saved = Array.isArray(lastJobStatus.savedResults) ? lastJobStatus.savedResults : [];
+                const sceneDetails = saved
+                    .filter((row: any) => row?.imagePath)
+                    .map((row: any) => ({
+                        id: row.id,
+                        name: row.name,
+                        imagePath: row.imagePath,
+                        success: true,
+                    }));
+                if (sceneDetails.length > 0) {
+                    await applySceneBatchResult({
+                        success: true,
+                        message: 'Scene images ready (result pending finalize)',
+                        scenes: { total: sceneDetails.length, effective: sceneDetails.length },
+                        details: { scenes: sceneDetails },
+                        points: { deducted: 0, remaining: null },
+                        results: {
+                            scenes: sceneDetails.length,
+                            scenesTotal: sceneDetails.length,
+                            pointsDeducted: 0,
+                        },
+                    }, sceneCostPoints);
                     setSceneBatchJobStatus(null);
                     return;
                 }
-                await new Promise((resolve) => window.setTimeout(resolve, 1500));
             }
             throw new Error('Scene batch job polling timed out');
         } catch (error) {
             if (sceneBatchGenerationCancelRef.current) {
                 return;
+            }
+            // 分项已全成功时的 /result 400 不应再弹「请检查网络连接」
+            if (lastJobStatus && isBatchSceneBoardAllSuccess(
+                lastJobStatus.items,
+                Number(lastJobStatus.totalCount) || 0,
+            )) {
+                console.warn('[SceneBatch] board all success; suppress network-fail toast', error);
+                try {
+                    const saved = Array.isArray(lastJobStatus.savedResults) ? lastJobStatus.savedResults : [];
+                    const sceneDetails = saved
+                        .filter((row: any) => row?.imagePath)
+                        .map((row: any) => ({
+                            id: row.id,
+                            name: row.name,
+                            imagePath: row.imagePath,
+                            success: true,
+                        }));
+                    if (sceneDetails.length > 0) {
+                        await applySceneBatchResult({
+                            success: true,
+                            scenes: { total: sceneDetails.length, effective: sceneDetails.length },
+                            details: { scenes: sceneDetails },
+                            points: { deducted: 0, remaining: null },
+                            results: {
+                                scenes: sceneDetails.length,
+                                scenesTotal: sceneDetails.length,
+                                pointsDeducted: 0,
+                            },
+                        }, sceneCostPoints);
+                    }
+                    setSceneBatchJobStatus(null);
+                    return;
+                } catch {
+                    /* fall through */
+                }
             }
             console.error('生成所有场景立绘时出错:', error);
             toast.error(ctx.t?.('createGame.generateAllSceneImageFailed') || '生成所有场景立绘失败，请检查网络连接');
@@ -1507,8 +1684,27 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             setIsGeneratingAllSceneImages(false);
             if (sceneBatchGenerationCancelRef.current) {
                 setSceneBatchJobStatus(null);
-            } else if (!lastJobStatus || ['queued', 'running', 'pending'].includes(String(lastJobStatus.status || ''))) {
-                setSceneBatchJobStatus(null);
+            } else {
+                // 失败/未终态保留看板；全成功必须关弹窗。
+                // 注意：success 路径已 set null 时，禁止再用 lastJobStatus 写回去。
+                setSceneBatchJobStatus((prev) => {
+                    const snap = prev || lastJobStatus;
+                    if (!snap) return null;
+                    const items = Array.isArray(snap.items) ? snap.items : [];
+                    const total = Math.max(0, Number(snap.totalCount) || items.length || 0);
+                    if (isBatchSceneBoardAllSuccess(items, total)) {
+                        return null;
+                    }
+                    if (!prev) {
+                        // 已被显式清空且非全成功：保持关闭
+                        return null;
+                    }
+                    const status = String(prev.status || '');
+                    if (status === 'queued' || status === 'running' || status === 'pending') {
+                        return { ...prev, status: 'failed' };
+                    }
+                    return prev;
+                });
             }
             sceneBatchGenerationCancelRef.current = false;
         }
@@ -1521,7 +1717,24 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             setIsGeneratingAllSceneImages(false);
             setSceneBatchJobStatus(null);
             toast(ctx.t?.('createGame.batchSceneGenerationCancelled') || '已取消场景立绘生成');
+        } else {
+            setSceneBatchJobStatus(null);
         }
+    };
+
+    const dismissSceneBatchProgress = () => {
+        setIsGeneratingAllSceneImages(false);
+        setSceneBatchJobStatus(null);
+    };
+
+    const continueFailedBatchSceneImages = async (sceneIds: string[]) => {
+        const ids = [...new Set((sceneIds || []).map((id) => String(id || '').trim()).filter(Boolean))];
+        if (ids.length === 0) {
+            toast.error(ctx.t?.('createGame.selectScenesToGenerate') || '请先选择要重试的场景');
+            return;
+        }
+        await generateAllSceneImages(null, ids);
+        await refreshUserPoints();
     };
 
     const openSceneCostModal = async () => {
@@ -1593,5 +1806,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         openSceneCostModal,
         confirmGenerateAllSceneImages,
         cancelGenerateAllSceneImages,
+        dismissSceneBatchProgress,
+        continueFailedBatchSceneImages,
     };
 };

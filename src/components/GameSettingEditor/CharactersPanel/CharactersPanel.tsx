@@ -25,11 +25,19 @@ import { createApiHelpers } from './apiHelpers';
 import { createHandlers } from './handlers';
 import CharacterAttributesPanel, { type CharacterAttributesPanelRef } from './CharacterAttributesPanel';
 import CharactersSidebar from './CharactersSidebar';
+import PortraitLightbox from './PortraitLightbox';
 import { useWordLimit, useWordCount } from '../../../hooks/editor/useWordLimit';
 import { HOST_ADDRESS } from '../../../config';
+import { authFetch } from '../../../api/base';
 import { useGenerationEta } from '../../../hooks/editor/useGenerationEta';
 import GenerationActionBar from '../GenerationActionBar';
 import InlineFieldSave from '../InlineFieldSave';
+import {
+    listBatchNpcRetryTargetItems,
+    resolveRetryCharacterIdsFromBoard,
+    shouldShowBatchProgressOverlay,
+    shouldShowRetryIncompleteBatchTasks,
+} from '../../../utils/batchNpcBoardSettlement';
 
 // 字数限制配置
 const CHARACTER_WORD_LIMITS = {
@@ -154,9 +162,11 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
 
     // 未保存修改相关状态
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-    // 立绘预览模式状态
+    // 立绘预览模式状态（游戏内尺寸/偏移）
     const [isPreviewMode, setIsPreviewMode] = useState(false);
     const [previewScale, setPreviewScale] = useState(1);
+    /** 点击立绘放大预览 */
+    const [portraitLightbox, setPortraitLightbox] = useState<{ src: string; title: string } | null>(null);
     const [saveConfirmModalOpen, setSaveConfirmModalOpen] = useState(false);
     const [pendingAction, setPendingAction] = useState<{
         type: 'switchCharacter' | 'switchPanel' | 'createCharacter';
@@ -172,6 +182,47 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     // 暂存图片的 Object URL，需要手动清理
     const pendingImageUrlsRef = useRef<{ [key: string]: string }>({});
     const npcBatchGenerationCancelRef = useRef(false);
+    /** 功能注释：批量任务世代号，重试/新开任务时递增，使旧轮询 finally 失效 */
+    const npcBatchGenerationSessionRef = useRef(0);
+    const [selectedCharacterIds, setSelectedCharacterIds] = useState<Set<string>>(() => new Set());
+    const selectedCharacterIdsRef = useRef(selectedCharacterIds);
+    selectedCharacterIdsRef.current = selectedCharacterIds;
+    /** 功能注释：是否已按角色列表做过默认全选（避免用户清空勾选后又被刷回全选） */
+    const characterSelectionInitializedRef = useRef(false);
+    const knownSelectableCharacterIdsRef = useRef<Set<string>>(new Set());
+
+    // 进入页面默认全选；列表新增角色也默认勾选；已删除角色从勾选中剔除
+    useEffect(() => {
+        const allIds = characterData
+            .map((character) => String(character?.id || '').trim())
+            .filter(Boolean);
+        const allIdSet = new Set(allIds);
+        const knownIds = knownSelectableCharacterIdsRef.current;
+
+        setSelectedCharacterIds((prev) => {
+            if (allIds.length === 0) {
+                characterSelectionInitializedRef.current = false;
+                knownSelectableCharacterIdsRef.current = new Set();
+                return new Set();
+            }
+
+            if (!characterSelectionInitializedRef.current) {
+                characterSelectionInitializedRef.current = true;
+                knownSelectableCharacterIdsRef.current = allIdSet;
+                return new Set(allIds);
+            }
+
+            const next = new Set<string>();
+            for (const id of prev) {
+                if (allIdSet.has(id)) next.add(id);
+            }
+            for (const id of allIds) {
+                if (!knownIds.has(id)) next.add(id);
+            }
+            knownSelectableCharacterIdsRef.current = allIdSet;
+            return next;
+        });
+    }, [characterData]);
 
     // 清理暂存图片 Object URL
     const clearPendingImageUrl = (key: string) => {
@@ -638,6 +689,8 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             pendingImages,
             pendingImageUrlsRef,
             npcBatchGenerationCancelRef,
+            npcBatchGenerationSessionRef,
+            selectedCharacterIdsRef,
             onDataChange,
             t,
         });
@@ -706,27 +759,339 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         () => characterData.filter((character) => !character.id.startsWith('temp-')).length,
         [characterData],
     );
-    const isBatchNpcJobActive = isGeneratingNpcImages || (
-        npcBatchJobStatus != null
-        && ['queued', 'running', 'pending'].includes(String(npcBatchJobStatus.status || ''))
+    const effectiveBatchCharacterCount = Math.max(
+        0,
+        Number(npcBatchJobStatus?.totalCount ?? batchCharacterCount) || 0,
     );
+    const batchGenerationLogs = useMemo(() => {
+        const raw = npcBatchJobStatus?.logs;
+        if (!Array.isArray(raw) || raw.length === 0) return [];
+
+        const inferStage = (message: string, stage?: string) => {
+            const known = String(stage || '').trim();
+            if (known) return known;
+            if (/失败/.test(message)) return 'fail';
+            if (/全部完成/.test(message)) return 'item_done';
+            if (/抠图完成/.test(message)) return 'rembg_done';
+            if (/抠图/.test(message)) return 'rembg_start';
+            if (/完成了.*生图|生图完成/.test(message)) return 'generate_done';
+            if (/生图/.test(message)) return 'generate_start';
+            if (/开始/.test(message)) return 'batch_start';
+            return 'info';
+        };
+
+        return raw
+            .map((entry) => {
+                if (typeof entry === 'string') {
+                    const message = entry.trim();
+                    if (!message) return null;
+                    return { message, stage: inferStage(message) };
+                }
+                if (entry && typeof entry === 'object' && typeof entry.message === 'string') {
+                    const message = entry.message.trim();
+                    if (!message) return null;
+                    return {
+                        message,
+                        stage: inferStage(message, entry.stage),
+                        name: typeof entry.name === 'string' ? entry.name : undefined,
+                        id: typeof (entry as { id?: string }).id === 'string'
+                            ? String((entry as { id?: string }).id)
+                            : undefined,
+                        index: Number.isFinite(Number((entry as { index?: number }).index))
+                            ? Number((entry as { index?: number }).index)
+                            : undefined,
+                    };
+                }
+                return null;
+            })
+            .filter((item): item is {
+                message: string;
+                stage: string;
+                name?: string;
+                id?: string;
+                index?: number;
+            } => Boolean(item));
+    }, [npcBatchJobStatus?.logs]);
+
+    // 本阶段耗时本地每秒刷新（轮询间隔 1.5s，否则会长时间停在 0s）
+    const [batchBoardNowMs, setBatchBoardNowMs] = useState(() => Date.now());
+
+    const batchStageBoard = useMemo(() => {
+        const total = Math.max(0, Number(npcBatchJobStatus?.totalCount ?? effectiveBatchCharacterCount) || 0);
+        const backendItems = Array.isArray(npcBatchJobStatus?.items) ? npcBatchJobStatus.items : [];
+
+        type BoardItem = {
+            index: number;
+            id?: string;
+            name: string;
+            stage: string;
+            stageElapsedSeconds: number;
+        };
+
+        const stageLabel = (stage: string) => {
+            if (stage === 'generate_start') return '生图中';
+            if (stage === 'generate_done') return '待抠图';
+            if (stage === 'rembg_start') return '抠图中';
+            if (stage === 'rembg_done') return '抠图完成';
+            if (stage === 'item_done') return '已完成';
+            if (stage === 'generate_fail') return '生图失败';
+            if (stage === 'rembg_fail') return '抠图失败';
+            if (stage === 'pending') return '排队中';
+            return '等待中';
+        };
+
+        const stageRank = (stage: string) => {
+            switch (stage) {
+                case 'pending': return 0;
+                case 'generate_start': return 1;
+                case 'generate_done': return 2;
+                case 'rembg_start': return 3;
+                case 'rembg_done': return 4;
+                case 'item_done':
+                case 'generate_fail':
+                case 'rembg_fail':
+                    return 5;
+                default: return -1;
+            }
+        };
+        const advanceStage = (current: string, next: string) => {
+            if (!next || next === current) return current;
+            if (next === 'generate_fail' || next === 'rembg_fail') return next;
+            return stageRank(next) > stageRank(current) ? next : current;
+        };
+
+        let items: BoardItem[] = [];
+        const hasBackendBoard = backendItems.length > 0;
+        // 启动占位（jobId 为空）或尚无分项时，只展示排队槽，禁止用旧日志拼板
+        const isBootstrap = !npcBatchJobStatus?.jobId;
+        if (hasBackendBoard && !isBootstrap) {
+            items = backendItems.map((row) => {
+                const stageUpdatedAtMs = Date.parse(String(row.stageUpdatedAt || row.updatedAt || ''));
+                const localElapsed = Number.isFinite(stageUpdatedAtMs)
+                    ? Math.max(0, Math.floor((batchBoardNowMs - stageUpdatedAtMs) / 1000))
+                    : Math.max(0, Number(row.stageElapsedSeconds) || 0);
+                let stage = row.stage || 'pending';
+                // 后端硬超时 120s / 治愈 130s；若 KV 被僵尸写回盖住，前端 130s 强制按失败展示以便重试
+                if (stage === 'generate_start' && localElapsed >= 130) {
+                    stage = 'generate_fail';
+                } else if (stage === 'rembg_start' && localElapsed >= 180) {
+                    stage = 'rembg_fail';
+                }
+                return {
+                    index: Number(row.index) || 0,
+                    id: row.id ? String(row.id) : undefined,
+                    name: row.name || `第 ${(Number(row.index) || 0) + 1} 张`,
+                    stage,
+                    stageElapsedSeconds: localElapsed,
+                };
+            });
+        } else if (!isBootstrap && batchGenerationLogs.length > 0) {
+            const byIndex = new Map<number, BoardItem>();
+            for (const entry of batchGenerationLogs) {
+                const match = entry.message.match(/第\s*(\d+)\s*张/);
+                const index = Number.isFinite(Number(entry.index))
+                    ? Number(entry.index)
+                    : (match ? Number(match[1]) - 1 : -1);
+                if (index < 0) continue;
+                const nameMatch = entry.message.match(/（([^）]+)）/);
+                const rawStage = entry.stage === 'fail'
+                    ? (/生图/.test(entry.message) ? 'generate_fail' : 'rembg_fail')
+                    : entry.stage;
+                const prev = byIndex.get(index);
+                byIndex.set(index, {
+                    index,
+                    id: entry.id ? String(entry.id) : prev?.id,
+                    name: entry.name || nameMatch?.[1] || prev?.name || `第 ${index + 1} 张`,
+                    stage: prev ? advanceStage(prev.stage, rawStage) : rawStage,
+                    stageElapsedSeconds: 0,
+                });
+            }
+            items = Array.from(byIndex.values()).sort((a, b) => a.index - b.index);
+        }
+
+        // 日志往往比 items 更新更完整：用日志把分项阶段单调补齐，避免顶部生图数被打回
+        if (!isBootstrap && items.length > 0 && batchGenerationLogs.length > 0) {
+            const byIndex = new Map(items.map((item) => [item.index, item]));
+            for (const entry of batchGenerationLogs) {
+                const match = entry.message.match(/第\s*(\d+)\s*张/);
+                const index = Number.isFinite(Number(entry.index))
+                    ? Number(entry.index)
+                    : (match ? Number(match[1]) - 1 : -1);
+                if (index < 0) continue;
+                const rawStage = entry.stage === 'fail'
+                    ? (/生图/.test(entry.message) ? 'generate_fail' : 'rembg_fail')
+                    : entry.stage;
+                if (!rawStage || ['batch_start', 'info'].includes(rawStage)) continue;
+                const nameMatch = entry.message.match(/（([^）]+)）/);
+                const prev = byIndex.get(index);
+                if (!prev) {
+                    byIndex.set(index, {
+                        index,
+                        id: entry.id ? String(entry.id) : undefined,
+                        name: entry.name || nameMatch?.[1] || `第 ${index + 1} 张`,
+                        stage: rawStage,
+                        stageElapsedSeconds: 0,
+                    });
+                    continue;
+                }
+                prev.stage = advanceStage(prev.stage, rawStage);
+                if (entry.id) prev.id = String(entry.id);
+                if (entry.name || nameMatch?.[1]) {
+                    prev.name = entry.name || nameMatch?.[1] || prev.name;
+                }
+            }
+            items = Array.from(byIndex.values()).sort((a, b) => a.index - b.index);
+        }
+
+        if (total > 0) {
+            const known = new Set(items.map((item) => item.index));
+            for (let i = 0; i < total; i += 1) {
+                if (!known.has(i)) {
+                    items.push({
+                        index: i,
+                        name: `第 ${i + 1} 张`,
+                        stage: 'pending',
+                        stageElapsedSeconds: 0,
+                    });
+                }
+            }
+            items.sort((a, b) => a.index - b.index);
+        }
+
+        // 始终按分项重算；勿盲信后端 stageStats（旧逻辑会把 rembg_fail 踢出生图完成数）
+        const stats = {
+            generateActive: items.filter((i) => i.stage === 'generate_start').length,
+            generateDone: items.filter((i) => [
+                'generate_done', 'rembg_start', 'rembg_done', 'item_done', 'rembg_fail',
+            ].includes(i.stage)).length,
+            // rembg_done 仍在结账到 item_done，摘要「进行中」也要算上，避免日志已抠图而顶栏显示 0
+            rembgActive: items.filter((i) => i.stage === 'rembg_start' || i.stage === 'rembg_done').length,
+            rembgDone: items.filter((i) => ['rembg_done', 'item_done'].includes(i.stage)).length,
+            failed: items.filter((i) => i.stage === 'generate_fail' || i.stage === 'rembg_fail').length,
+            pending: items.filter((i) => i.stage === 'pending').length,
+            total,
+        };
+
+        // 生图硬超时 120s；前端 90s 起标卡住并允许重试 CTA
+        const stuckItems = items.filter((item) => {
+            if (item.stage === 'generate_start') return item.stageElapsedSeconds >= 90;
+            if (item.stage === 'rembg_start') return item.stageElapsedSeconds >= 90;
+            return false;
+        });
+
+        return {
+            total,
+            items: items.map((item) => ({
+                ...item,
+                label: stageLabel(item.stage),
+            })),
+            stats: {
+                generateActive: Number(stats.generateActive) || 0,
+                generateDone: Number(stats.generateDone) || 0,
+                rembgActive: Number(stats.rembgActive) || 0,
+                rembgDone: Number(stats.rembgDone) || 0,
+                failed: Number(stats.failed) || 0,
+                pending: Number(stats.pending) || 0,
+                total,
+            },
+            stuckItems,
+        };
+    }, [batchBoardNowMs, batchGenerationLogs, effectiveBatchCharacterCount, npcBatchJobStatus]);
+
+    const batchFailedItems = useMemo(
+        () => batchStageBoard.items.filter(
+            (item) => item.stage === 'generate_fail' || item.stage === 'rembg_fail',
+        ),
+        [batchStageBoard.items],
+    );
+    const batchRetryTargetItems = useMemo(
+        () => listBatchNpcRetryTargetItems(batchStageBoard.items),
+        [batchStageBoard.items],
+    );
+    // 全终态有失败，或有卡住项（≥90s）→ 立刻展示重试（不依赖 job.status）
+    const showContinueFailedTasks = useMemo(
+        () => shouldShowRetryIncompleteBatchTasks(
+            batchStageBoard.items,
+            batchStageBoard.total || effectiveBatchCharacterCount,
+        ),
+        [batchStageBoard.items, batchStageBoard.total, effectiveBatchCharacterCount],
+    );
+    const isBatchNpcJobRunning = (
+        isGeneratingNpcImages
+        || (
+            npcBatchJobStatus != null
+            && ['queued', 'running', 'pending'].includes(String(npcBatchJobStatus.status || ''))
+        )
+    ) && !showContinueFailedTasks;
+    const isBatchNpcJobActive = isBatchNpcJobRunning || showContinueFailedTasks;
+
+    useEffect(() => {
+        // 卡住重试态也要继续刷新本阶段耗时
+        if (!isBatchNpcJobActive) return;
+        setBatchBoardNowMs(Date.now());
+        const timer = window.setInterval(() => setBatchBoardNowMs(Date.now()), 1000);
+        return () => window.clearInterval(timer);
+    }, [isBatchNpcJobActive]);
+
+    const batchItemStageClass = (stage: string) => {
+        if (stage === 'generate_start' || stage === 'generate_done') return styles.plusLoadingItemGen;
+        if (stage === 'rembg_start' || stage === 'rembg_done') return styles.plusLoadingItemCut;
+        if (stage === 'item_done') return styles.plusLoadingItemDone;
+        if (stage === 'generate_fail' || stage === 'rembg_fail') return styles.plusLoadingItemFail;
+        return styles.plusLoadingItemPending;
+    };
+
+    const batchLogStageLabel = (stage: string) => {
+        if (stage === 'generate_start') return '生图';
+        if (stage === 'generate_done') return '生图✓';
+        if (stage === 'rembg_start') return '抠图';
+        if (stage === 'rembg_done') return '抠图✓';
+        if (stage === 'item_done') return '完成';
+        if (stage === 'generate_fail' || stage === 'rembg_fail' || stage === 'fail') return '失败';
+        if (stage === 'batch_start') return '启动';
+        return '进度';
+    };
+    const batchLogStageClass = (stage: string, isActive: boolean) => {
+        const base = isActive ? styles.plusLoadingLogRowActive : styles.plusLoadingLogRow;
+        if (stage === 'generate_start' || stage === 'generate_done') {
+            return `${base} ${styles.plusLoadingLogRowGen}`;
+        }
+        if (stage === 'rembg_start' || stage === 'rembg_done') {
+            return `${base} ${styles.plusLoadingLogRowCut}`;
+        }
+        if (stage === 'item_done') {
+            return `${base} ${styles.plusLoadingLogRowDone}`;
+        }
+        if (stage === 'generate_fail' || stage === 'rembg_fail' || stage === 'fail') {
+            return `${base} ${styles.plusLoadingLogRowFail}`;
+        }
+        return base;
+    };
+    const batchLogListRef = useRef<HTMLDivElement | null>(null);
+    useEffect(() => {
+        if (!isBatchNpcJobActive || !batchLogListRef.current) return;
+        batchLogListRef.current.scrollTop = batchLogListRef.current.scrollHeight;
+    }, [isBatchNpcJobActive, batchGenerationLogs.length]);
     const singleCharacterEtaText = useGenerationEta({
         active: isCurrentPortraitGenerating,
         totalSeconds: currentCharacter?.id === 'player' ? SINGLE_PLAYER_ETA_SECONDS : SINGLE_CHARACTER_ETA_SECONDS,
     });
     const batchCharacterEtaText = useGenerationEta({
-        active: isBatchNpcJobActive,
+        active: isBatchNpcJobRunning,
         totalSeconds: Math.max(
             SINGLE_CHARACTER_ETA_SECONDS,
-            batchCharacterCount * SINGLE_CHARACTER_ETA_SECONDS + BATCH_CHARACTER_BUFFER_SECONDS,
+            effectiveBatchCharacterCount * SINGLE_CHARACTER_ETA_SECONDS + BATCH_CHARACTER_BUFFER_SECONDS,
         ),
-        totalCount: npcBatchJobStatus?.totalCount ?? batchCharacterCount,
+        totalCount: effectiveBatchCharacterCount,
         completedCount: npcBatchJobStatus?.completedCount,
         status: npcBatchJobStatus?.status,
         estimatedRemainingSeconds: npcBatchJobStatus?.estimatedRemainingSeconds ?? null,
-        // 实现批量角色生图的数量提示
-        batchLabel: batchCharacterCount > 0 ? `${t('eta.total')} ${batchCharacterCount} ${t('eta.item')}` : undefined,
+        progressMode: 'pipeline',
+        batchLabel: undefined,
+        // 分项看板已有进度，隐藏「剩余 xx」倒计时
+        showRemaining: false,
     });
+
     const isPortraitActionBusy = isUploadingPortrait
         || isSavingCharacter
         || isCurrentPortraitGenerating
@@ -1231,19 +1596,48 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         setCharacterToDelete(null);
     };
 
-    // 触发文件选择
-    const handlePortraitClick = () => {
-        // 新增模式下禁止{t('common.upload')}
+    // 触发文件选择（仅「上传」按钮；有立绘时点击图片走放大预览）
+    const handlePortraitUploadClick = () => {
         if (isAddingNew || isPortraitActionBusy) {
             return;
         }
-        
-        // 正常模式 - 区分玩家和NPC
         if (currentCharacter?.id === 'player') {
             playerFileInputRef.current?.click();
         } else {
             npcFileInputRef.current?.click();
         }
+    };
+
+    const openPortraitLightbox = useCallback((src: string | null | undefined, title?: string) => {
+        if (!src || src === DEFAULT_NPC_PORTRAIT) return;
+        const resolved = (src.startsWith('blob:') || src.startsWith('data:'))
+            ? src
+            : withCacheBust(src);
+        setPortraitLightbox({
+            src: resolved,
+            title: String(title || '').trim(),
+        });
+    }, []);
+
+    /** 点击大图：有立绘 → 放大预览；无立绘 → 上传 */
+    const handlePortraitAreaClick = () => {
+        if (isAddingNew || isPortraitActionBusy) return;
+        if (currentPortraitImage) {
+            openPortraitLightbox(displayPortraitImage, currentCharacter?.name);
+            return;
+        }
+        handlePortraitUploadClick();
+    };
+
+    const triggerBlobDownload = (blob: Blob, fileName: string) => {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', fileName);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
     };
 
 
@@ -1455,9 +1849,31 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             return;
         }
         setNpcCostModalOpen(false);
+        // 关闭积分弹窗后立刻清进度，避免遮罩打开时闪上一轮数据
+        setNpcBatchJobStatus(null);
         await generateAllNpcImages();
         onDataChange?.();
     };
+
+    const handleContinueFailedBatchTasks = async () => {
+        if (!handlers) return;
+        const uniqueIds = resolveRetryCharacterIdsFromBoard(
+            batchRetryTargetItems,
+            (name) => characterData.find((char) => char.name === name && !char.id.startsWith('temp-'))?.id,
+        );
+        if (uniqueIds.length === 0) {
+            toast.error(t('createGame.selectCharactersToGenerate'));
+            return;
+        }
+        // 先打开积分确认；遮罩会因 npcCostModalOpen 自动让路（否则 ConfirmModal 被压在下面像「没反应」）
+        await handlers.continueFailedBatchNpcImages(uniqueIds);
+    };
+
+    const showBatchNpcProgressOverlay = shouldShowBatchProgressOverlay({
+        batchJobActive: isBatchNpcJobActive,
+        costModalOpen: npcCostModalOpen,
+        resultModalOpen: npcResultModalOpen,
+    });
 
     const regenerateSingleNpcImage = async (character: Character) => {
         if (!handlers) return;
@@ -1491,115 +1907,69 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         setPendingCharacterForGenerate(null);
     };
 
-    // 下载图片
-    const handleDownloadImage = async (type: 'npcs' | 'players' | 'scenes' | 'subscenes' | 'worldMap', id: string, variant?: string, imagePath?: string) => {
-        // blob URL 下载
-        if (imagePath?.startsWith('blob:')) {
-            try {
-                const response = await fetch(imagePath);
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                
-                // 从 blob URL 提取扩展名
-                const extension = '.' + (blob.type.split('/')[1] || 'png');
-                const fileName = variant ? `${id}_${variant}${extension}` : `${id}${extension}`;
-                link.setAttribute('download', fileName);
-                document.body.appendChild(link);
-                link.click();
-                link.remove();
-                window.URL.revokeObjectURL(url);
-                toast.success(t('createGame.imageDownloadSuccess'));
-            } catch (error) {
-                console.error('下载 blob 图片失败:', error);
-                toast.error(t('createGame.imageDownloadFailed'));
-            }
-            return;
-        }
-
-        // data URL 下载
-        if (imagePath?.startsWith('data:')) {
-            const link = document.createElement('a');
-            link.href = imagePath;
-            const extension = '.' + (imagePath.split(';')[0].split('/')[1] || 'png');
-            const fileName = variant ? `${id}_${variant}${extension}` : `${id}${extension}`;
-            link.setAttribute('download', fileName);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            toast.success(t('createGame.imageDownloadSuccess'));
-            return;
-        }
-
-        // 完整 URL (https/http) 下载
-        if (imagePath?.startsWith('https://') || imagePath?.startsWith('http://')) {
-            try {
-                const link = document.createElement('a');
-                link.href = imagePath;
-                const extension = extractImageExtension(imagePath);
-                const fileName = variant ? `${id}_${variant}${extension}` : `${id}${extension}`;
-                link.setAttribute('download', fileName);
-                link.setAttribute('target', '_self');
-                document.body.appendChild(link);
-                link.click();
-                link.remove();
-                toast.success(t('createGame.nativeImageDownloadSuccess'));
-                return;
-            } catch (error) {
-                console.error('下载图片失败:', error);
-                toast.error(t('createGame.imageDownloadFailedRetry'));
-                return;
-            }
-        }
-
-        // /api/ 路径：fetch + blob 方式下载
-        if (imagePath?.startsWith('/api/')) {
-            const fullUrl = `${HOST_ADDRESS}${imagePath}`;
-            try {
-                const response = await fetch(fullUrl);
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                const extension = extractImageExtension(imagePath);
-                const fileName = variant ? `${id}_${variant}${extension}` : `${id}${extension}`;
-                link.setAttribute('download', fileName);
-                document.body.appendChild(link);
-                link.click();
-                link.remove();
-                window.URL.revokeObjectURL(url);
-                toast.success(t('createGame.imageDownloadSuccess'));
-                return;
-            } catch (error) {
-                console.error('下载图片失败:', error);
-                toast.error(t('createGame.imageDownloadFailedRetry'));
-                return;
-            }
-        }
-
-        // 兜底：使用 api.downloadImage
-        if (!fileId || !api) {
-            toast.error(t('createGame.missingDataCannotDownload'));
-            return;
-        }
+    // 下载图片（跨域 http(s) 必须 fetch→blob，直接 <a download> 常被浏览器忽略）
+    const handleDownloadImage = async (
+        type: 'npcs' | 'players' | 'scenes' | 'subscenes' | 'worldMap',
+        id: string,
+        variant?: string,
+        imagePath?: string,
+    ) => {
+        const safeId = String(id || 'portrait').replace(/[\\/:*?"<>|]/g, '_') || 'portrait';
+        const buildName = (extension: string) => (
+            variant ? `${safeId}_${variant}${extension}` : `${safeId}${extension}`
+        );
 
         try {
+            if (imagePath?.startsWith('blob:')) {
+                const response = await fetch(imagePath);
+                const blob = await response.blob();
+                const extension = `.${(blob.type.split('/')[1] || 'png').replace('jpeg', 'jpg')}`;
+                triggerBlobDownload(blob, buildName(extension));
+                toast.success(t('createGame.imageDownloadSuccess'));
+                return;
+            }
+
+            if (imagePath?.startsWith('data:')) {
+                const extension = `.${(imagePath.split(';')[0].split('/')[1] || 'png').replace('jpeg', 'jpg')}`;
+                const link = document.createElement('a');
+                link.href = imagePath;
+                link.setAttribute('download', buildName(extension));
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                toast.success(t('createGame.imageDownloadSuccess'));
+                return;
+            }
+
+            let remoteUrl: string | null = null;
+            if (imagePath?.startsWith('https://') || imagePath?.startsWith('http://')) {
+                remoteUrl = imagePath;
+            } else if (
+                imagePath?.startsWith('/api/')
+                || imagePath?.startsWith('/visual/')
+                || imagePath?.startsWith('/world-interaction/')
+            ) {
+                remoteUrl = `${HOST_ADDRESS}${imagePath}`;
+            }
+
+            if (remoteUrl) {
+                const response = await authFetch(remoteUrl);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const blob = await response.blob();
+                const extension = extractImageExtension(imagePath) || `.${(blob.type.split('/')[1] || 'png').replace('jpeg', 'jpg')}`;
+                triggerBlobDownload(blob, buildName(extension.startsWith('.') ? extension : `.${extension}`));
+                toast.success(t('createGame.imageDownloadSuccess'));
+                return;
+            }
+
+            if (!fileId || !api) {
+                toast.error(t('createGame.missingDataCannotDownload'));
+                return;
+            }
+
             const response = await api.downloadImage(fileId, type, id, variant, imagePath);
-            // 创建下载链接
-            const url = window.URL.createObjectURL(new Blob([response.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            
-            let extension = extractImageExtension(imagePath);
-            
-            const fileName = variant ? `${id}_${variant}${extension}` : `${id}${extension}`;
-            link.setAttribute('download', fileName);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            window.URL.revokeObjectURL(url);
+            const extension = extractImageExtension(imagePath) || '.png';
+            triggerBlobDownload(new Blob([response.data]), buildName(extension));
             toast.success(t('createGame.imageDownloadSuccess'));
         } catch (error) {
             console.error('下载图片失败:', error);
@@ -1656,6 +2026,15 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                     characters={characterData}
                     activeCharacterId={activeCharacterId}
                     isAddingNew={isAddingNew}
+                    selectedCharacterIds={selectedCharacterIds}
+                    onToggleCharacterSelected={(characterId) => {
+                        setSelectedCharacterIds((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(characterId)) next.delete(characterId);
+                            else next.add(characterId);
+                            return next;
+                        });
+                    }}
                     onSelectCharacter={handleCharacterSelect}
                     onDeleteCharacter={handleDeleteClick}
                     onAddNew={openAddNewPanel}
@@ -1845,25 +2224,52 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                 // 正常模式：上传/生成
                                 <div
                                     className={styles.portraitLarge}
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-label={
+                                        currentPortraitImage
+                                            ? t('createGame.clickZoomPortraitPreview')
+                                            : t('createGame.clickReplacePortrait')
+                                    }
+                                    data-testid="portrait-main"
                                     style={{
-                                        backgroundImage: `url('${displayPortraitImage}')`,
-                                        backgroundSize: 'contain',
-                                        backgroundPosition: 'center',
-                                        backgroundRepeat: 'no-repeat',
+                                        backgroundImage: [
+                                            `url('${displayPortraitImage}')`,
+                                            'linear-gradient(45deg, #e8e8e8 25%, transparent 25%)',
+                                            'linear-gradient(-45deg, #e8e8e8 25%, transparent 25%)',
+                                            'linear-gradient(45deg, transparent 75%, #e8e8e8 75%)',
+                                            'linear-gradient(-45deg, transparent 75%, #e8e8e8 75%)',
+                                        ].join(', '),
+                                        backgroundSize: 'contain, 16px 16px, 16px 16px, 16px 16px, 16px 16px',
+                                        backgroundPosition: 'center, 0 0, 0 8px, 8px -8px, -8px 0',
+                                        backgroundRepeat: 'no-repeat, repeat, repeat, repeat, repeat',
                                         cursor: (isAddingNew || isPortraitActionBusy) ? 'not-allowed' : 'pointer',
                                     }}
-                                    onClick={handlePortraitClick}
+                                    onClick={handlePortraitAreaClick}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            handlePortraitAreaClick();
+                                        }
+                                    }}
                                 >
                                     {currentPortraitImage && (
                                         <button
+                                            type="button"
                                             className={styles.downloadButton}
+                                            data-testid="portrait-download"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                if (currentCharacter.id === 'player') {
-                                                    handleDownloadImage('players', '', 'base', currentPortraitImage);
-                                                } else {
-                                                    handleDownloadImage('npcs', currentCharacter.id, 'base', currentPortraitImage);
-                                                }
+                                                const downloadId = currentCharacter.id === 'player'
+                                                    ? (currentCharacter.name || 'player')
+                                                    : currentCharacter.id;
+                                                const downloadType = currentCharacter.id === 'player' ? 'players' : 'npcs';
+                                                void handleDownloadImage(
+                                                    downloadType,
+                                                    downloadId,
+                                                    'base',
+                                                    currentPortraitImage,
+                                                );
                                             }}
                                             title={t('createGame.downloadImage')}
                                             disabled={isPortraitActionBusy}
@@ -1872,7 +2278,11 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                         </button>
                                     )}
                                     <span className={styles.portraitHint}>
-                                        {isAddingNew ? t('createGame.confirmAddCharacterFirst') : t('createGame.clickReplacePortrait')}
+                                        {isAddingNew
+                                            ? t('createGame.confirmAddCharacterFirst')
+                                            : currentPortraitImage
+                                                ? t('createGame.clickZoomPortraitPreview')
+                                                : t('createGame.clickReplacePortrait')}
                                     </span>
                                     {isCurrentPortraitGenerating && (
                                         <div className={styles.loadingOverlay}>
@@ -1888,8 +2298,9 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
 
                             <div className={styles.portraitImageActions}>
                                 <button
+                                    type="button"
                                     className={styles.ghostSmall}
-                                    onClick={handlePortraitClick}
+                                    onClick={handlePortraitUploadClick}
                                     disabled={isAddingNew || isPortraitActionBusy}
                                 >
                                     {t('common.upload')}
@@ -2103,6 +2514,25 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                                             ? `url('${effectiveImage}')` 
                                                             : `url('${withCacheBust(effectiveImage)}')` 
                                                     } : {}}
+                                                    role={effectiveImage ? 'button' : undefined}
+                                                    tabIndex={effectiveImage ? 0 : undefined}
+                                                    onClick={() => {
+                                                        if (!effectiveImage) return;
+                                                        openPortraitLightbox(
+                                                            effectiveImage,
+                                                            `${currentCharacter.name || ''} · ${variation.label}`,
+                                                        );
+                                                    }}
+                                                    onKeyDown={(e) => {
+                                                        if (!effectiveImage) return;
+                                                        if (e.key === 'Enter' || e.key === ' ') {
+                                                            e.preventDefault();
+                                                            openPortraitLightbox(
+                                                                effectiveImage,
+                                                                `${currentCharacter.name || ''} · ${variation.label}`,
+                                                            );
+                                                        }
+                                                    }}
                                                 >
                                                     {/* 加载效果 */}
                                                     {isGeneratingVariation && generatingVariationId === variation.id && (
@@ -2339,7 +2769,10 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             <ConfirmModal
                 isOpen={npcCostModalOpen}
                 onConfirm={confirmGenerateAllNpcImages}
-                onCancel={() => setNpcCostModalOpen(false)}
+                onCancel={() => {
+                    handlers?.clearPendingBatchSelection?.();
+                    setNpcCostModalOpen(false);
+                }}
                 title={t('common.pointsDeductionConfirm')}
                 message={
                     npcCostPoints != null
@@ -2406,22 +2839,170 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 cancelButtonText={t('common.thinkLater')}
             />
 
-            {isBatchNpcJobActive && (
+            {showBatchNpcProgressOverlay && (
                 <div className={styles.plusLoadingOverlay}>
-                    <div className={styles.plusLoadingDialog}>
-                        <div className={styles.plusLoadingSpinner}></div>
-                        <div className={styles.plusLoadingText}>{t('createGame.generatingCharacterPortrait')}</div>
-                        {batchCharacterEtaText && (
-                            <div className={styles.plusLoadingHint}>{batchCharacterEtaText}</div>
+                    <div className={styles.plusLoadingDialog} role="dialog" aria-modal="true" aria-labelledby="batch-npc-gen-title">
+                        <div className={styles.plusLoadingHeroCopy} style={{ width: '100%' }}>
+                            <div id="batch-npc-gen-title" className={styles.plusLoadingText}>
+                                {showContinueFailedTasks
+                                    ? (batchStageBoard.stuckItems.length > 0
+                                        ? '部分角色立绘卡住'
+                                        : '角色立绘生成结束')
+                                    : t('createGame.generatingCharacterPortrait')}
+                            </div>
+                            {!showContinueFailedTasks && batchCharacterEtaText && (
+                                <div className={styles.plusLoadingHint}>{batchCharacterEtaText}</div>
+                            )}
+                            {showContinueFailedTasks && (
+                                <div className={styles.plusLoadingHint}>
+                                    {batchStageBoard.stuckItems.length > 0
+                                        ? `有 ${batchStageBoard.stuckItems.length} 项疑似卡住（≥90s）· 失败 ${batchFailedItems.length} 项`
+                                        : `生图/抠图均已结束 · 失败 ${batchFailedItems.length} 项`}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className={styles.plusLoadingSplitStats}>
+                            <div className={`${styles.plusLoadingStatCard} ${styles.plusLoadingStatGen}`}>
+                                <div className={styles.plusLoadingStatTitle}>生图</div>
+                                <div className={styles.plusLoadingStatValue}>
+                                    {batchStageBoard.stats.generateDone}/{batchStageBoard.stats.total}
+                                </div>
+                                <div className={styles.plusLoadingStatMeta}>
+                                    进行中 {batchStageBoard.stats.generateActive}
+                                    · 排队 {batchStageBoard.stats.pending}
+                                </div>
+                                <div className={styles.plusLoadingStatTrack}>
+                                    <div
+                                        className={styles.plusLoadingStatTrackFill}
+                                        style={{
+                                            width: `${batchStageBoard.stats.total > 0
+                                                ? Math.round((batchStageBoard.stats.generateDone / batchStageBoard.stats.total) * 100)
+                                                : 0}%`,
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                            <div className={`${styles.plusLoadingStatCard} ${styles.plusLoadingStatCut}`}>
+                                <div className={styles.plusLoadingStatTitle}>抠图</div>
+                                <div className={styles.plusLoadingStatValue}>
+                                    {batchStageBoard.stats.rembgDone}/{batchStageBoard.stats.total}
+                                </div>
+                                <div className={styles.plusLoadingStatMeta}>
+                                    进行中 {batchStageBoard.stats.rembgActive}
+                                    · 待抠图 {Math.max(0, batchStageBoard.stats.generateDone - batchStageBoard.stats.rembgDone - batchStageBoard.stats.rembgActive - batchStageBoard.stats.failed)}
+                                </div>
+                                <div className={styles.plusLoadingStatTrack}>
+                                    <div
+                                        className={styles.plusLoadingStatTrackFillCut}
+                                        style={{
+                                            width: `${batchStageBoard.stats.total > 0
+                                                ? Math.round((batchStageBoard.stats.rembgDone / batchStageBoard.stats.total) * 100)
+                                                : 0}%`,
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {batchStageBoard.stuckItems.length > 0 && (
+                            <div className={styles.plusLoadingStuck}>
+                                可能卡住：
+                                {batchStageBoard.stuckItems.map((item) => (
+                                    `${item.name || `第 ${item.index + 1} 张`}（${item.stage === 'generate_start' ? '生图' : '抠图'} ${item.stageElapsedSeconds}s）`
+                                )).join('；')}
+                            </div>
                         )}
-                        <div className={styles.plusLoadingHint}>{t('createGame.generatingDoNotLeave')}</div>
-                        <button
-                            type="button"
-                            className={styles.plusLoadingCancelBtn}
-                            onClick={() => handlers?.cancelGenerateAllNpcImages()}
-                        >
-                            {t('common.cancel')}
-                        </button>
+
+                        <div className={styles.plusLoadingBoardShell}>
+                            <div className={styles.plusLoadingLogHeader}>
+                                <span className={styles.plusLoadingLogEyebrow}>分项进度</span>
+                                <span className={styles.plusLoadingLogLive}>LIVE</span>
+                            </div>
+                            <div className={styles.plusLoadingBoard}>
+                                {batchStageBoard.items.map((item) => (
+                                    <div
+                                        key={`board-${item.index}-${item.name}`}
+                                        className={`${styles.plusLoadingBoardItem} ${batchItemStageClass(item.stage)}`}
+                                    >
+                                        <div className={styles.plusLoadingBoardTop}>
+                                            <span className={styles.plusLoadingBoardName}>
+                                                #{item.index + 1} {item.name}
+                                            </span>
+                                            <span className={styles.plusLoadingBoardStage}>{item.label}</span>
+                                        </div>
+                                        {(item.stage === 'generate_start' || item.stage === 'rembg_start') && (
+                                            <div className={styles.plusLoadingBoardElapsed}>
+                                                本阶段已 {item.stageElapsedSeconds}s
+                                                {(item.stage === 'generate_start'
+                                                    ? item.stageElapsedSeconds >= 90
+                                                    : item.stageElapsedSeconds >= 90)
+                                                    ? ' · 疑似卡住'
+                                                    : ''}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {batchGenerationLogs.length > 0 && (
+                            <div className={styles.plusLoadingLogShell}>
+                                <div className={styles.plusLoadingLogHeader}>
+                                    <span className={styles.plusLoadingLogEyebrow}>事件日志</span>
+                                </div>
+                                <div className={styles.plusLoadingLog} ref={batchLogListRef} aria-live="polite">
+                                    {batchGenerationLogs.map((entry, index) => {
+                                        const isActive = index === batchGenerationLogs.length - 1;
+                                        return (
+                                            <div
+                                                key={`${index}-${entry.message}`}
+                                                className={batchLogStageClass(entry.stage, isActive)}
+                                            >
+                                                <span className={styles.plusLoadingLogBadge}>
+                                                    {batchLogStageLabel(entry.stage)}
+                                                </span>
+                                                <span className={styles.plusLoadingLogMessage}>{entry.message}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className={styles.plusLoadingFoot}>
+                            <div className={styles.plusLoadingWarn}>
+                                {showContinueFailedTasks
+                                    ? `未完成 ${batchRetryTargetItems.length} 项，可点「重新生成未完成任务」`
+                                    : t('createGame.generatingDoNotLeave')}
+                            </div>
+                            <div className={styles.plusLoadingFootActions}>
+                                {showContinueFailedTasks ? (
+                                    <button
+                                        type="button"
+                                        className={styles.plusLoadingContinueBtn}
+                                        onClick={() => { void handleContinueFailedBatchTasks(); }}
+                                    >
+                                        重新生成未完成任务
+                                    </button>
+                                ) : (
+                                    <span className={styles.plusLoadingFootSpacer} aria-hidden="true" />
+                                )}
+                                <button
+                                    type="button"
+                                    className={styles.plusLoadingCancelBtn}
+                                    onClick={() => {
+                                        if (showContinueFailedTasks) {
+                                            handlers?.dismissBatchNpcProgress?.();
+                                            return;
+                                        }
+                                        handlers?.cancelGenerateAllNpcImages();
+                                    }}
+                                >
+                                    {showContinueFailedTasks ? '关闭' : t('common.cancel')}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
@@ -2497,6 +3078,13 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                     </div>
                 </div>
             )}
+
+            <PortraitLightbox
+                open={Boolean(portraitLightbox?.src)}
+                src={portraitLightbox?.src || null}
+                title={portraitLightbox?.title}
+                onClose={() => setPortraitLightbox(null)}
+            />
 
         </div>
     );

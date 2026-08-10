@@ -14,7 +14,11 @@ export interface HistoryWithId extends History {
 
 const HISTORY_PAGE_SIZE = 80;
 
-const useGalgameHistory = (options?: { disabled?: boolean }) => {
+const useGalgameHistory = (options?: {
+    disabled?: boolean;
+    /** 新开局：进页不拉 history，仅打开历史面板时再 refresh */
+    skipInitialFetch?: boolean;
+}) => {
     const { t } = useTranslation();
     const [history, setHistory] = useState<History[]>([]);
     const [historyOffset, setHistoryOffset] = useState<number>(0);
@@ -22,12 +26,16 @@ const useGalgameHistory = (options?: { disabled?: boolean }) => {
     const [hasMoreBefore, setHasMoreBefore] = useState<boolean>(false);
     const [loadingMoreBefore, setLoadingMoreBefore] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(true);
+    /** 当前 session 是否已完成至少一次 history 拉取（避免 session 刚到、loading 仍为 false 时误判新开局） */
+    const [historyBootstrapped, setHistoryBootstrapped] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [lastVisitedSceneId, setLastVisitedSceneId] = useState<string | null>(null);
     const [contextMemory, setContextMemory] = useState<ContextMemoryStatus | null>(null);
     const initializedRef = useRef<boolean>(false);
     const { sessionId } = useGameStore();
     const disabled = options?.disabled === true;
+    const skipInitialFetchRef = useRef(options?.skipInitialFetch === true);
+    skipInitialFetchRef.current = options?.skipInitialFetch === true;
 
     const fetchHistory = useCallback(async () => {
         if (disabled) {
@@ -38,11 +46,13 @@ const useGalgameHistory = (options?: { disabled?: boolean }) => {
             setLastVisitedSceneId(null);
             setContextMemory(null);
             setLoading(false);
+            setHistoryBootstrapped(true);
             return;
         }
 
         if (!sessionId) {
             setLoading(false);
+            setHistoryBootstrapped(false);
             return;
         }
 
@@ -73,6 +83,7 @@ const useGalgameHistory = (options?: { disabled?: boolean }) => {
             setError(error instanceof Error ? error.message : t('galgame.historyLoadFailed'));
         } finally {
             setLoading(false);
+            setHistoryBootstrapped(true);
         }
     }, [disabled, sessionId]);
 
@@ -137,9 +148,21 @@ const useGalgameHistory = (options?: { disabled?: boolean }) => {
     useEffect(() => {
         // 每次 sessionId 变化时，都重置 initializedRef
         initializedRef.current = false;
+        setHistoryBootstrapped(false);
         
         if (sessionId) {
-            // 新游戏或切换游戏时，获取历史记录
+            if (skipInitialFetchRef.current) {
+                // 新开局：不打 history 门闩；打开历史面板时再 refreshHistory
+                setHistory([]);
+                setHistoryOffset(0);
+                setHistoryTotal(0);
+                setHasMoreBefore(false);
+                setLastVisitedSceneId(null);
+                setContextMemory(null);
+                setLoading(false);
+                setHistoryBootstrapped(true);
+                return;
+            }
             fetchHistory();
         } else {
             initializedRef.current = false;
@@ -149,6 +172,7 @@ const useGalgameHistory = (options?: { disabled?: boolean }) => {
             setHasMoreBefore(false);
             setContextMemory(null);
             setLoading(false);
+            setHistoryBootstrapped(false);
         }
     }, [sessionId]);
 
@@ -178,6 +202,7 @@ const useGalgameHistory = (options?: { disabled?: boolean }) => {
     return { 
         history: historyWithId, 
         loading, 
+        historyBootstrapped,
         error, 
         refreshHistory: fetchHistory,
         loadMoreBefore,

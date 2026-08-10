@@ -31,6 +31,7 @@
 }
 
 .characterRow {
+    position: relative;
     display: grid;
     grid-template-columns: 72px 1fr;
     gap: 12px;
@@ -40,6 +41,36 @@
     cursor: pointer;
     background: rgba(0, 0, 0, 0.01);
     transition: 0.2s ease;
+}
+
+.characterRow.rowChecked {
+    border-color: rgba(37, 99, 235, 0.55);
+    background: rgba(37, 99, 235, 0.04);
+}
+
+.selectCheck {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1.5px solid rgba(37, 99, 235, 0.75);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    cursor: pointer;
+}
+
+.selectCheck input {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    accent-color: #2563eb;
+    cursor: pointer;
 }
 
 .characterRow:hover {
@@ -56,9 +87,16 @@
     width: 72px;
     height: 100%;
     border-radius: 12px;
-    background-size: contain;
-    background-position: center;
-    background-repeat: no-repeat;
+    /* 透明立绘可见：浅棋盘格，避免把图里残留米色误当成「容器底色」 */
+    background-color: #f5f5f5;
+    background-image:
+        linear-gradient(45deg, #ebebeb 25%, transparent 25%),
+        linear-gradient(-45deg, #ebebeb 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #ebebeb 75%),
+        linear-gradient(-45deg, transparent 75%, #ebebeb 75%);
+    background-size: 12px 12px;
+    background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+    background-repeat: repeat;
 }
 
 .characterMeta {

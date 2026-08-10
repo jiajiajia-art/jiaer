@@ -9,7 +9,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 3200;
+    /* 须高于 Characters/Scenes 批量进度遮罩（9999），否则「重新生成未完成」积分确认会被压住 */
+    z-index: 11000;
     animation: fadeIn 0.3s ease-out;
 }
 

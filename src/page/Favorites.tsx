@@ -12,6 +12,7 @@ import GameGridSkeleton from '../components/Skeleton/GameGridSkeleton';
 import favoriteApi from '../api/favorite/favoriteApi';
 import type { UserGameData } from '../api/home/getGameData.type';
 import { useAuthStore } from '../store/useAuthStore';
+import { buildGameDetailNavigateState } from '../utils/gameDetailNavigation';
 
 const PAGE_SIZE = 20;
 
@@ -126,7 +127,9 @@ const Favorites: React.FC = () => {
     }
     const gameId = game.file_id || game.id;
     if (!gameId) return;
-    navigate(`/game/${gameId}`, { state: { source: 'favorites' } });
+    navigate(`/game/${gameId}`, {
+      state: buildGameDetailNavigateState('favorites', game),
+    });
   }, [navigate, t]);
 
   return (

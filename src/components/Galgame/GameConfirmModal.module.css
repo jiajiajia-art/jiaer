@@ -70,6 +70,14 @@
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  overflow: auto;
+}
+
+.messageBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-width: 0;
 }
 
 .message {
@@ -112,6 +120,89 @@
 
 .btnSecondary:hover {
   background: #ffecef;
+}
+
+/* —— dossier：对齐局内设置 / 人物笺 —— */
+.modalDossier {
+  background: linear-gradient(180deg, #1a1014 0%, #0c090b 100%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 20px 48px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(224, 61, 75, 0.18);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.headerDossier {
+  padding: 0.7rem 1rem 0.65rem 1.1rem;
+  background: linear-gradient(180deg, rgba(28, 16, 20, 0.95) 0%, rgba(16, 10, 12, 0.88) 100%);
+  border-bottom: 1px solid rgba(255, 180, 188, 0.14);
+}
+
+.titleDossier {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #fff;
+}
+
+.titleDossier::before {
+  content: '';
+  width: 3px;
+  height: 0.85rem;
+  border-radius: 1px;
+  background: var(--primary, #e03d4b);
+}
+
+.closeButtonDossier {
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 1.15rem;
+}
+
+.closeButtonDossier:hover {
+  border-color: rgba(255, 90, 103, 0.45);
+  color: #ffb3ba;
+}
+
+.bodyDossier {
+  padding: 1.1rem 1.15rem 1.15rem;
+  gap: 1rem;
+}
+
+.messageDossier {
+  color: rgba(232, 228, 230, 0.88);
+  text-align: left;
+  font-size: 0.88rem;
+}
+
+.btnDossierPrimary {
+  border-color: transparent;
+  background: linear-gradient(165deg, var(--primary-light, #ff5a67), var(--primary, #e03d4b) 50%, var(--primary-dark, #c62834));
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(224, 61, 75, 0.28);
+}
+
+.btnDossierPrimary:hover {
+  filter: brightness(1.06);
+}
+
+.btnDossierSecondary {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.btnDossierSecondary:hover {
+  background: rgba(255, 90, 103, 0.12);
+  border-color: rgba(255, 90, 103, 0.4);
+  color: #ffb3ba;
 }
 
 

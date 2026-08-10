@@ -129,6 +129,26 @@
     width: 100%;
 }
 
+/* 主角变更：历史中间居中系统行 */
+.protagonistChangeNotice {
+    width: 100%;
+    margin: 0.15rem 0;
+    padding: 0.45rem 0.75rem;
+    text-align: center;
+    font-size: 0.78rem;
+    font-weight: 650;
+    letter-spacing: 0.04em;
+    color: rgba(255, 210, 216, 0.92);
+    border-radius: 999px;
+    border: 1px solid rgba(224, 61, 75, 0.35);
+    background: linear-gradient(
+        90deg,
+        rgba(224, 61, 75, 0.05) 0%,
+        rgba(224, 61, 75, 0.18) 50%,
+        rgba(224, 61, 75, 0.05) 100%
+    );
+}
+
 /* 用户消息气泡 - 右侧 */
 .userBubble {
     align-self: flex-end;

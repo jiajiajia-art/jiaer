@@ -25,10 +25,17 @@ export type PrivateChatMessageDto = {
   createdAt: string;
 };
 
+export type PrivateChatAbDto = {
+  skipSelfIntro: boolean;
+  idleProactive: boolean;
+  idleProactiveMs: number;
+};
+
 export type PrivateChatThreadDto = {
   sessionId: string;
   npcId: string;
   messages: PrivateChatMessageDto[];
+  lastProactiveAt?: string | null;
 };
 
 export type PrivateChatNpcDto = {
@@ -39,10 +46,18 @@ export type PrivateChatNpcDto = {
   attitude?: string;
   detailedBio?: string;
   playerName?: string;
+  avatarUrl?: string;
+  avatarThumbUrl?: string;
+};
+
+export type PrivateChatPlayerDto = {
+  name?: string;
+  avatarUrl?: string;
+  avatarThumbUrl?: string;
 };
 
 export type PrivateChatSseEvent =
-  | { type: 'thread'; thread: PrivateChatThreadDto; npc?: PrivateChatNpcDto }
+  | { type: 'thread'; thread: PrivateChatThreadDto; npc?: PrivateChatNpcDto; ab?: PrivateChatAbDto }
   | { type: 'start' }
   | { type: 'delta'; text: string; replace?: boolean }
   | {
@@ -61,7 +76,9 @@ async function consumeSse(
 ): Promise<void> {
   if (!res.ok || !res.body) {
     const err = await parseJson(res);
-    throw new Error(err?.message || `HTTP ${res.status}`);
+    const error = new Error(err?.message || `HTTP ${res.status}`) as Error & { code?: string };
+    if (err?.code) error.code = String(err.code);
+    throw error;
   }
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
@@ -98,7 +115,12 @@ export const privateChatApi = {
     return parseJson(res) as Promise<{
       success: boolean;
       message?: string;
-      data?: { thread: PrivateChatThreadDto; npc: PrivateChatNpcDto };
+      data?: {
+        thread: PrivateChatThreadDto;
+        npc: PrivateChatNpcDto;
+        player?: PrivateChatPlayerDto;
+        ab?: PrivateChatAbDto;
+      };
     }>;
   },
 
@@ -137,6 +159,24 @@ export const privateChatApi = {
     await consumeSse(res, onEvent);
   },
 
+  /** 再说一句：不删上一句，再生成一条助手消息 */
+  continueMessage: async (
+    token: string,
+    sessionId: string,
+    npcId: string,
+    onEvent: (ev: PrivateChatSseEvent) => void,
+  ) => {
+    const res = await fetch(
+      `${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/private-chat/${encodeURIComponent(npcId)}/continue`,
+      {
+        method: 'POST',
+        headers: authHeaders(token),
+        body: JSON.stringify({}),
+      },
+    );
+    await consumeSse(res, onEvent);
+  },
+
   /** 空线程时角色主动打招呼 */
   greet: async (
     token: string,
@@ -146,6 +186,24 @@ export const privateChatApi = {
   ) => {
     const res = await fetch(
       `${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/private-chat/${encodeURIComponent(npcId)}/greet`,
+      {
+        method: 'POST',
+        headers: authHeaders(token),
+        body: JSON.stringify({}),
+      },
+    );
+    await consumeSse(res, onEvent);
+  },
+
+  /** 用户静默超时：角色主动再开口（A/B 实验组） */
+  nudge: async (
+    token: string,
+    sessionId: string,
+    npcId: string,
+    onEvent: (ev: PrivateChatSseEvent) => void,
+  ) => {
+    const res = await fetch(
+      `${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/private-chat/${encodeURIComponent(npcId)}/nudge`,
       {
         method: 'POST',
         headers: authHeaders(token),

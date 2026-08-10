@@ -1,9 +1,10 @@
-# Serve static assets referenced with BASE_URL prefix
+# Serve static assets referenced with BASE_URL prefix (/funloom → dist root)
 /funloom/assets/*  /assets/:splat  200
 /funloom/data/*    /data/:splat    200
 /funloom/pdf/*     /pdf/:splat     200
 /funloom/font/*    /font/:splat    200
 /funloom/vite.svg  /vite.svg       200
+/funloom/funloom_icon.png  /funloom_icon.png  200
 
-# SPA fallback for all other app routes under /funloom
-/funloom/*         /index.html     200
+# 不要写 /funloom/* → /index.html：会与 CF html_handling 形成无限重定向（code 100324）。
+# SPA 深链接由 Worker（src/index.js）处理，见 wrangler.toml run_worker_first。

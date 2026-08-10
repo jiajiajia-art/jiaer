@@ -186,9 +186,10 @@ const EditorApi = {
         api.post<CalculatePointsResponse>(`/visual/scenes/calculate-points`, {
             fileId: fileId,
         }),
-    calculateNpcPoints: (fileId: string) =>
+    calculateNpcPoints: (fileId: string, body: Record<string, unknown> = {}) =>
         api.post<CalculatePointsResponse>(`/visual/npcs/calculate-points`, {
             fileId: fileId,
+            ...body,
         }),
     downloadImage: (pluginType:string, fileId:string, type:string, name: string, variant?: string, imagePath?: string) =>{
         // Player 类型：/players/base.png（不需要 name）

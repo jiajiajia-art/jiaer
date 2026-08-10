@@ -4,8 +4,9 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useGameStore } from '../store/gameStore';
 import { useDailyTaskStore } from '../store/dailyTaskStore';
 import { trackingApi } from '../api/statistics/trackingApi';
+import { acquireGameDurationTracking } from '../lib/durationTrackingGate';
 
-const REPORT_INTERVAL_SECONDS = 25;
+const REPORT_INTERVAL_SECONDS = 60;
 const MAX_TASK_SECONDS = 1800; // 30分钟
 
 const postGameDurationWithKeepalive = async (
@@ -40,6 +41,13 @@ export const useGameDurationTracking = (gameFileId?: string) => {
 
     useEffect(() => {
         gameFileIdRef.current = gameFileId;
+    }, [gameFileId]);
+
+    // 有有效 gameFileId 时占用门闩，让平台心跳暂停
+    useEffect(() => {
+        const gameId = String(gameFileId || useGameStore.getState().fileId || '').trim();
+        if (!gameId) return undefined;
+        return acquireGameDurationTracking();
     }, [gameFileId]);
 
     const resolveGameFileId = (): string | null => {

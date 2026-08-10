@@ -26,11 +26,18 @@ interface AttributesPanelProps {
   onPlayerEditableNpcsUpdated?: (profiles: unknown[]) => void;
   sessionPlayerProfile?: SessionPlayerProfile | null;
   onSessionPlayerProfileChange?: (profile: SessionPlayerProfile) => void;
+  /** 文档主角名，编辑档案默认用 */
+  documentPlayerName?: string | null;
+  documentPlayerGender?: string | null;
+  /** 文档主角立绘，档案无局内头像时回退展示 */
+  documentPlayerAvatarUrl?: string | null;
+  onHistoryMaybeChanged?: () => void | Promise<void>;
 }
 
 /**
- * 功能注释：属性面板优先数值卡；「刷新」只读 session 已存面板，不重跑 LLM（避免数值被重新推断改掉）。
- * LLM 重算仅由父组件在叙事回合结束后触发（auto）。
+ * 功能注释：属性面板优先数值卡。
+ * 「刷新」：已有数值只读缓存；仍为空则强制 LLM 生成。
+ * 回合结束后的 LLM 重算由父组件（suppressAutoRefresh）触发并经 cachedPanels 同步。
  */
 const AttributesPanel: React.FC<AttributesPanelProps> = ({
   isOpen,
@@ -42,11 +49,16 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
   onPlayerEditableNpcsUpdated,
   sessionPlayerProfile = null,
   onSessionPlayerProfileChange,
+  documentPlayerName = null,
+  documentPlayerGender = null,
+  documentPlayerAvatarUrl = null,
+  onHistoryMaybeChanged,
 }) => {
   const { t } = useTranslation();
   const { sessionId } = useGameStore();
   const [playerProfile, setPlayerProfile] = useState<SessionPlayerProfile | null>(sessionPlayerProfile);
   const [archiveView, setArchiveView] = useState<PlayerArchiveView>('overview');
+  const [playerAvatarAbOnChange, setPlayerAvatarAbOnChange] = useState(false);
   const [panels, setPanels] = useState<Record<string, string>>({});
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -110,6 +122,11 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
           ? data.attributePanels
           : {};
       applyPanels(next);
+      if (data.sessionPlayerProfile && typeof data.sessionPlayerProfile === 'object') {
+        setPlayerProfile(data.sessionPlayerProfile);
+        onSessionPlayerProfileChange?.(data.sessionPlayerProfile);
+      }
+      setPlayerAvatarAbOnChange(!!data.ab?.playerAvatarOnChange);
     } catch (e: unknown) {
       if (seq !== requestSeqRef.current) return;
       setError(e instanceof Error ? e.message : t('galgame.requestError'));
@@ -118,16 +135,17 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
         setLoading(false);
       }
     }
-  }, [sessionId, t, applyPanels]);
+  }, [sessionId, t, applyPanels, onSessionPlayerProfileChange]);
 
-  /** 功能注释：叙事回合后由父组件触发；允许 LLM 增量更新并写回 session。 */
+  /** 功能注释：LLM 生成/增量更新写回 session；manual 在空面板时绕过短间隔节流。 */
   const regenerateFromLlm = useCallback(
-    async (_reason: 'auto') => {
+    async (reason: 'auto' | 'manual') => {
       if (!sessionId) {
         setError(t('galgame.panelAttrsNoSession'));
         return;
       }
       if (
+        reason === 'auto' &&
         shouldSkipAttributeAutoRefresh({
           isStreaming: isStreamingRef.current,
           lastStartedAt: lastStartedAtRef.current,
@@ -212,6 +230,28 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
     void reloadCachedPanelsRef.current();
   }, [isOpen, sessionId]);
 
+  // 功能注释：属性缓存命中时上面会跳过 play-ui；换角头像 A/B 与档案仍须每次打开拉取
+  useEffect(() => {
+    if (!isOpen || !sessionId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const data = await fetchPlayUiState(sessionId);
+        if (cancelled) return;
+        setPlayerAvatarAbOnChange(!!data.ab?.playerAvatarOnChange);
+        if (data.sessionPlayerProfile && typeof data.sessionPlayerProfile === 'object') {
+          setPlayerProfile(data.sessionPlayerProfile);
+          onSessionPlayerProfileChange?.(data.sessionPlayerProfile);
+        }
+      } catch {
+        /* 档案/AB 拉取失败不挡属性面板 */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, sessionId, onSessionPlayerProfileChange]);
+
   const showCards = cards.length > 0;
   const showTextFallback = false;
   const showEmpty = !loading && !error && !showCards && !showTextFallback;
@@ -267,7 +307,17 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
             type="button"
             className={shell.backButton}
             disabled={isStreaming || loading}
-            onClick={() => void reloadCachedPanels()}
+            onClick={() => {
+              const hasCards = pickAttributeCardsFromPanels(panelsRef.current).cards.length > 0;
+              const hasText = Object.values(panelsRef.current || {}).some(
+                (v) => String(v || '').trim().length > 0
+              );
+              if (!hasCards && !hasText) {
+                void regenerateFromLlm('manual');
+                return;
+              }
+              void reloadCachedPanels();
+            }}
           >
             {t('galgame.panelRefresh')}
           </button>
@@ -281,6 +331,12 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
         profile={playerProfile}
         view={archiveView}
         onViewChange={setArchiveView}
+        documentPlayerName={documentPlayerName}
+        documentPlayerGender={documentPlayerGender}
+        documentPlayerAvatarUrl={documentPlayerAvatarUrl}
+        onHistoryMaybeChanged={onHistoryMaybeChanged}
+        playerAvatarAbOnChange={playerAvatarAbOnChange}
+        onPlayerAvatarAbChange={setPlayerAvatarAbOnChange}
         onProfileChange={(next) => {
           setPlayerProfile(next);
           onSessionPlayerProfileChange?.(next);

@@ -98,12 +98,42 @@ export function assertPrivateChatIsolatedFromNarrative(
   return leaked.length ? { ok: false, leaked } : { ok: true };
 }
 
-/** 功能注释：私聊锁与叙事锁冲突时的前端提示码。 */
+/** 功能注释：主线叙事「正在生成」时，私聊应等待（展示加载中），勿直接 toast 拦截。 */
+export function shouldWaitPrivateChatForNarrative(narrativeBusy?: boolean): boolean {
+  return Boolean(narrativeBusy);
+}
+
+/**
+ * 功能注释：是否真正占用会话锁的主线生成中。
+ * - streamLoading / isCompressingContext：后端会话锁，私聊须等。
+ * - 不要用 isTyping（前端打字机）：文案已出、只是逐字显示，不占锁；
+ *   误用会导致进私聊先空等很久，再叠一层 greet「对方正在输入」。
+ * - 不要用 isWaitingForData：「等玩家点选项」时也会为 true。
+ */
+export function isNarrativeGenerationBusy(flags: {
+  streamLoading?: boolean;
+  isCompressingContext?: boolean;
+}): boolean {
+  return Boolean(flags.streamLoading || flags.isCompressingContext);
+}
+
+/** 功能注释：识别后端/SSE 返回的主线锁冲突。 */
+export function isPrivateChatNarrativeBusyError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  const code = String((err as { code?: unknown }).code || '').trim();
+  if (code === 'narrative_busy') return true;
+  const message = String((err as { message?: unknown }).message || '');
+  return message.includes('主线正在生成');
+}
+
+/**
+ * 功能注释：私聊操作瞬时冲突提示。
+ * 主线忙碌改为「加载中等待」，不走本函数 toast。
+ */
 export function resolvePrivateChatBusyMessage(opts: {
   narrativeBusy?: boolean;
   privateChatBusy?: boolean;
 }): string | null {
-  if (opts.narrativeBusy) return '主线正在生成，请稍后再私聊';
   if (opts.privateChatBusy) return '私聊回复生成中，请稍候';
   return null;
 }

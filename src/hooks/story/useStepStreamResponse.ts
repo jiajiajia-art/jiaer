@@ -401,11 +401,13 @@ export const useStepStreamResponse = ({
                             errorMessage = normalizeUserFacingStreamError(errorMessage);
                             streamFailed = true;
                             
-                            // 显示错误弹窗给用户
-                            console.error('❌ 流式响应错误:', errorMessage);
                             const suppressError = SUPPRESS_ALERT_ERROR_CODES.has(errorCode)
                                 || isGenerationBusyError(errorMessage);
-                            if (!suppressError) {
+                            // busy/锁冲突是并发保护，不当作失败红错刷屏
+                            if (suppressError) {
+                                console.warn('[stream] busy/in-progress:', errorMessage, errorCode || '');
+                            } else {
+                                console.error('❌ 流式响应错误:', errorMessage);
                                 options?.onErrorAfterAlert?.(errorMessage);
                             }
                             setSelectedOptionIndex(null);

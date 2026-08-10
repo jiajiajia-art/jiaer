@@ -208,8 +208,15 @@
     min-height: 320px;
     flex-shrink: 0;
     border-radius: 20px;
-    background-size: cover;
-    background-position: center;
+    /* 棋盘格：透明立绘可辨；有米色块说明图里像素未抠干净 */
+    background-color: #f3f3f3;
+    background-image:
+        linear-gradient(45deg, #e8e8e8 25%, transparent 25%),
+        linear-gradient(-45deg, #e8e8e8 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #e8e8e8 75%),
+        linear-gradient(-45deg, transparent 75%, #e8e8e8 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
     border: 1px solid rgba(0, 0, 0, 0.08);
     position: relative;
     cursor: pointer;
@@ -460,6 +467,93 @@
 
 .downloadButton:active {
     transform: scale(0.95);
+}
+
+.downloadButton:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* 立绘点击放大预览 */
+.portraitLightboxOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 12000;
+    background: rgba(10, 12, 18, 0.72);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    backdrop-filter: blur(2px);
+}
+
+.portraitLightboxStage {
+    position: relative;
+    max-width: min(920px, 100%);
+    max-height: min(92vh, 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.portraitLightboxClose {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.portraitLightboxClose:hover {
+    background: rgba(0, 0, 0, 0.9);
+}
+
+.portraitLightboxFrame {
+    max-width: 100%;
+    max-height: min(78vh, 860px);
+    border-radius: 16px;
+    overflow: hidden;
+    background-color: #f3f3f3;
+    background-image:
+        linear-gradient(45deg, #e8e8e8 25%, transparent 25%),
+        linear-gradient(-45deg, #e8e8e8 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #e8e8e8 75%),
+        linear-gradient(-45deg, transparent 75%, #e8e8e8 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+}
+
+.portraitLightboxImg {
+    display: block;
+    max-width: min(860px, 88vw);
+    max-height: min(78vh, 860px);
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+.portraitLightboxTitle {
+    margin: 0;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.portraitLightboxHint {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.8rem;
 }
 
 /* 差分缩略图上的小图标按钮（下载 / 删除） */
@@ -1106,13 +1200,22 @@
 }
 
 .plusLoadingOverlay{
+    --atelier-ink: #1c1412;
+    --atelier-mute: rgba(28, 20, 18, 0.55);
+    --atelier-soft: rgba(28, 20, 18, 0.38);
+    --atelier-paper: #fff8f4;
+    --atelier-card: rgba(255, 252, 249, 0.94);
+    --atelier-line: rgba(224, 61, 75, 0.16);
+    --atelier-glow: rgba(224, 61, 75, 0.18);
     position: fixed;
     top: 0;
     left: 280px;
     right: 0;
     bottom: 0;
-    background: rgba(255, 255, 255, 0.92);
-    backdrop-filter: blur(4px);
+    background:
+        radial-gradient(ellipse 70% 50% at 50% 42%, rgba(255, 236, 232, 0.72), transparent 62%),
+        linear-gradient(165deg, rgba(255, 255, 255, 0.9), rgba(255, 246, 242, 0.88));
+    backdrop-filter: blur(8px);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1127,10 +1230,34 @@
 .plusLoadingDialog {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
     justify-content: center;
-    gap: 10px;
-    min-width: 240px;
+    gap: 14px;
+    width: min(100% - 48px, 460px);
+    max-height: min(88vh, 720px);
+    overflow: auto;
+    padding: 20px 20px 16px;
+    border-radius: 22px;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), var(--atelier-card)),
+        var(--atelier-paper);
+    border: 1px solid var(--atelier-line);
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.9) inset,
+        0 24px 60px rgba(80, 24, 28, 0.1),
+        0 0 0 1px rgba(255, 255, 255, 0.4);
+    animation: plusDialogIn 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes plusDialogIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.985);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 @keyframes plusSpin {
@@ -1142,6 +1269,513 @@
     }
 }
 
+@keyframes plusLivePulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+}
+
+@keyframes plusRowIn {
+    from {
+        opacity: 0;
+        transform: translateX(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.plusLoadingHero {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 16px;
+    align-items: center;
+}
+
+.plusLoadingRing {
+    --batch-progress: 0;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background:
+        conic-gradient(
+            from -90deg,
+            var(--primary) calc(var(--batch-progress) * 1turn),
+            rgba(224, 61, 75, 0.12) 0
+        );
+    display: grid;
+    place-items: center;
+    box-shadow: 0 0 0 4px rgba(224, 61, 75, 0.06), 0 10px 24px var(--atelier-glow);
+    position: relative;
+}
+
+.plusLoadingRing::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    border: 1px dashed rgba(224, 61, 75, 0.28);
+    animation: plusSpin 12s linear infinite;
+}
+
+.plusLoadingRingInner {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #fff;
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 1px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.plusLoadingRingValue {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--atelier-ink);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.plusLoadingRingUnit {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--atelier-soft);
+}
+
+.plusLoadingHeroCopy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.plusLoadingSplitStats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.plusLoadingStatCard {
+    border-radius: 14px;
+    padding: 12px 12px 10px;
+    border: 1px solid rgba(28, 20, 18, 0.08);
+    background: rgba(255, 255, 255, 0.88);
+}
+
+.plusLoadingStatGen {
+    box-shadow: inset 3px 0 0 #c62839;
+}
+
+.plusLoadingStatCut {
+    box-shadow: inset 3px 0 0 #2a6280;
+}
+
+.plusLoadingStatTitle {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--atelier-soft);
+}
+
+.plusLoadingStatValue {
+    margin-top: 4px;
+    font-size: 22px;
+    font-weight: 750;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+    color: var(--atelier-ink);
+    line-height: 1.1;
+}
+
+.plusLoadingStatMeta {
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--atelier-mute);
+    line-height: 1.4;
+}
+
+.plusLoadingStatTrack {
+    margin-top: 8px;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(28, 20, 18, 0.08);
+    overflow: hidden;
+}
+
+.plusLoadingStatTrackFill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #ff6b78, var(--primary));
+    transition: width 0.35s ease;
+}
+
+.plusLoadingStatTrackFillCut {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #5aa7c7, #2a6280);
+    transition: width 0.35s ease;
+}
+
+.plusLoadingStuck {
+    font-size: 11px;
+    line-height: 1.5;
+    color: #8f1f1f;
+    background: rgba(160, 40, 40, 0.08);
+    border: 1px solid rgba(160, 40, 40, 0.16);
+    border-radius: 10px;
+    padding: 8px 10px;
+}
+
+.plusLoadingBoardShell {
+    border-radius: 16px;
+    border: 1px solid rgba(28, 20, 18, 0.08);
+    background: #faf6f3;
+    overflow: hidden;
+}
+
+.plusLoadingBoard {
+    max-height: 168px;
+    overflow-y: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.plusLoadingBoardItem {
+    border-radius: 10px;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(28, 20, 18, 0.06);
+}
+
+.plusLoadingBoardTop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.plusLoadingBoardName {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--atelier-ink);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.plusLoadingBoardStage {
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: rgba(28, 20, 18, 0.06);
+    color: var(--atelier-mute);
+}
+
+.plusLoadingBoardElapsed {
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--atelier-mute);
+}
+
+.plusLoadingItemGen .plusLoadingBoardStage {
+    background: rgba(224, 61, 75, 0.12);
+    color: #c62839;
+}
+
+.plusLoadingItemCut .plusLoadingBoardStage {
+    background: rgba(46, 110, 140, 0.12);
+    color: #2a6280;
+}
+
+.plusLoadingItemDone .plusLoadingBoardStage {
+    background: rgba(46, 125, 90, 0.12);
+    color: #2d6b4f;
+}
+
+.plusLoadingItemFail .plusLoadingBoardStage {
+    background: rgba(160, 40, 40, 0.12);
+    color: #8f1f1f;
+}
+
+.plusLoadingItemPending .plusLoadingBoardStage {
+    background: rgba(28, 20, 18, 0.05);
+    color: var(--atelier-soft);
+}
+
+.plusLoadingItemGen.plusLoadingBoardItem {
+    border-color: rgba(224, 61, 75, 0.18);
+}
+
+.plusLoadingItemCut.plusLoadingBoardItem {
+    border-color: rgba(42, 98, 128, 0.2);
+}
+
+.plusLoadingText {
+    color: var(--atelier-ink);
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1.35;
+    white-space: normal;
+}
+
+.plusLoadingHint {
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--atelier-mute);
+    text-align: left;
+}
+
+.plusLoadingTrack {
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(224, 61, 75, 0.1);
+    overflow: hidden;
+}
+
+.plusLoadingTrackFill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #ff6b78, var(--primary));
+    transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow: 0 0 12px rgba(224, 61, 75, 0.35);
+}
+
+.plusLoadingLogShell {
+    border-radius: 16px;
+    border: 1px solid rgba(28, 20, 18, 0.08);
+    background:
+        linear-gradient(180deg, rgba(28, 20, 18, 0.03), rgba(28, 20, 18, 0.015)),
+        #faf6f3;
+    overflow: hidden;
+}
+
+.plusLoadingLogHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px 8px;
+    border-bottom: 1px solid rgba(28, 20, 18, 0.06);
+}
+
+.plusLoadingLogEyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--atelier-soft);
+}
+
+.plusLoadingLogLive {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--primary);
+    animation: plusLivePulse 1.6s ease-in-out infinite;
+}
+
+.plusLoadingLog {
+    max-height: 168px;
+    overflow-y: auto;
+    padding: 8px 10px 10px;
+    text-align: left;
+    box-sizing: border-box;
+    scrollbar-width: thin;
+}
+
+.plusLoadingLogRow,
+.plusLoadingLogRowActive {
+    display: grid;
+    grid-template-columns: 52px 1fr;
+    gap: 8px;
+    align-items: start;
+    padding: 7px 8px;
+    border-radius: 10px;
+    animation: plusRowIn 0.28s ease both;
+}
+
+.plusLoadingLogRow {
+    color: var(--atelier-mute);
+}
+
+.plusLoadingLogRowActive {
+    background: rgba(255, 255, 255, 0.85);
+    color: var(--atelier-ink);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset;
+}
+
+.plusLoadingLogBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 20px;
+    padding: 0 6px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    background: rgba(28, 20, 18, 0.06);
+    color: var(--atelier-mute);
+    white-space: nowrap;
+}
+
+.plusLoadingLogRowGen .plusLoadingLogBadge {
+    background: rgba(224, 61, 75, 0.12);
+    color: #c62839;
+}
+
+.plusLoadingLogRowCut .plusLoadingLogBadge {
+    background: rgba(46, 110, 140, 0.12);
+    color: #2a6280;
+}
+
+.plusLoadingLogRowDone .plusLoadingLogBadge {
+    background: rgba(46, 125, 90, 0.12);
+    color: #2d6b4f;
+}
+
+.plusLoadingLogRowFail .plusLoadingLogBadge {
+    background: rgba(160, 40, 40, 0.12);
+    color: #8f1f1f;
+}
+
+.plusLoadingLogMessage {
+    font-size: 12px;
+    line-height: 1.5;
+    min-width: 0;
+    word-break: break-word;
+}
+
+.plusLoadingLogRowActive .plusLoadingLogMessage {
+    font-weight: 600;
+}
+
+.plusLoadingFoot {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+}
+
+.plusLoadingWarn {
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--atelier-soft);
+    text-align: center;
+}
+
+.plusLoadingFootActions {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+}
+
+.plusLoadingFootSpacer {
+    display: block;
+    min-height: 1px;
+}
+
+.plusLoadingContinueBtn {
+    justify-self: start;
+    position: relative;
+    min-width: 0;
+    max-width: 100%;
+    border-radius: 14px;
+    padding: 10px 18px 10px 22px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    border: 1px solid rgba(42, 98, 128, 0.38);
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(232, 244, 249, 0.96) 55%, rgba(214, 236, 245, 0.95) 100%);
+    color: #1e4d66;
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.6),
+        0 1px 0 rgba(42, 98, 128, 0.06);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    animation: plusContinueIn 0.45s ease both;
+}
+
+.plusLoadingContinueBtn::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    width: 3px;
+    height: 58%;
+    transform: translateY(-50%);
+    border-radius: 99px;
+    background: linear-gradient(180deg, #3d8fb0, #1e4d66);
+    opacity: 0.85;
+}
+
+.plusLoadingContinueBtn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(42, 98, 128, 0.16);
+    background:
+        linear-gradient(135deg, #ffffff 0%, rgba(220, 238, 246, 0.98) 100%);
+}
+
+.plusLoadingContinueBtn:active {
+    transform: translateY(0);
+}
+
+@keyframes plusContinueIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.plusLoadingCancelBtn {
+    justify-self: end;
+    min-width: 132px;
+    border-radius: 14px;
+    padding: 10px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid rgba(224, 61, 75, 0.35);
+    background: #ffffff;
+    color: var(--primary);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.plusLoadingCancelBtn:hover {
+    transform: translateY(-1px);
+    background: #fff7f8;
+    box-shadow: 0 8px 20px rgba(224, 61, 75, 0.14);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .plusLoadingDialog,
+    .plusLoadingLogRow,
+    .plusLoadingLogRowActive,
+    .plusLoadingRing::after,
+    .plusLoadingLogLive,
+    .plusLoadingTrackFill,
+    .plusLoadingContinueBtn {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+/* 兼容旧 spinner 类名（其他面板可能复用） */
 .plusLoadingSpinner {
     width: 40px;
     height: 40px;
@@ -1153,38 +1787,16 @@
     flex-shrink: 0;
 }
 
-.plusLoadingText {
-    color: #1a1a1a;
-    font-size: 14px;
-    font-weight: 500;
-    flex-shrink: 0;
-    white-space: nowrap;
-}
-
-.plusLoadingHint {
+.plusLoadingLogItem,
+.plusLoadingLogItemActive {
     font-size: 12px;
-    line-height: 1.6;
-    color: rgba(0, 0, 0, 0.5);
-    text-align: center;
+    line-height: 1.55;
+    color: rgba(0, 0, 0, 0.45);
 }
 
-.plusLoadingCancelBtn {
-    margin-top: 8px;
-    min-width: 120px;
-    border-radius: 12px;
-    padding: 10px 22px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    border: 1px solid rgba(224, 61, 75, 0.35);
-    background: #ffffff;
-    color: var(--primary);
-    transition: all 0.2s ease;
-}
-
-.plusLoadingCancelBtn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(224, 61, 75, 0.12);
+.plusLoadingLogItemActive {
+    color: rgba(26, 26, 26, 0.88);
+    font-weight: 500;
 }
 
 /* 差分生成加载效果 */
@@ -1427,33 +2039,53 @@
     }
 
     .plusLoadingDialog {
-        width: min(100%, 340px);
-        min-height: min(52vh, 360px);
-        padding: 28px 24px;
-        border-radius: 28px;
-        background: rgba(255, 255, 255, 0.96);
-        border: 1px solid rgba(0, 0, 0, 0.06);
-        box-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+        width: min(100%, 360px);
+        min-height: auto;
+        padding: 20px 18px 16px;
+        border-radius: 24px;
         gap: 14px;
     }
 
-    .plusLoadingSpinner {
-        width: 42px;
-        height: 42px;
-        margin-bottom: 4px;
+    .plusLoadingHero {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        text-align: center;
+        gap: 12px;
     }
 
-    .plusLoadingText {
-        max-width: 240px;
-        white-space: normal;
-        text-align: center;
-        line-height: 1.5;
-        font-size: 16px;
+    .plusLoadingHeroCopy {
+        align-items: center;
+        width: 100%;
     }
 
     .plusLoadingHint {
-        max-width: 240px;
-        font-size: 13px;
+        text-align: center;
+        max-width: 100%;
+        font-size: 12px;
+    }
+
+    .plusLoadingText {
+        max-width: 100%;
+        text-align: center;
+        font-size: 15px;
+    }
+
+    .plusLoadingRing {
+        width: 68px;
+        height: 68px;
+    }
+
+    .plusLoadingRingInner {
+        width: 52px;
+        height: 52px;
+    }
+
+    .plusLoadingLog {
+        max-height: 148px;
+    }
+
+    .plusLoadingLogShell {
+        width: 100%;
     }
 
     .panelHeader {

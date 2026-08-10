@@ -30,6 +30,24 @@
     pointer-events: none;
 }
 
+.bootOverlay {
+    position: absolute;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.55);
+    pointer-events: none;
+}
+
+.bootOverlayText {
+    color: var(--primary, #c44);
+    font-size: 16px;
+}
+
 /* 顶部栏容器 - 包含位置信息和音乐按钮 */
 .topBar {
     position: absolute;
@@ -348,7 +366,8 @@
     object-position: bottom left;
     max-width: 100%; /* 确保不超过父容器 */
     max-height: 100%; /* 确保不超过父容器 */
-    margin-left: -15%;
+    /* 略靠边即可；过大负边距会把贴边立绘（局内自建抠图）裁掉肩膀 */
+    margin-left: -6%;
 }
 
 .characterSlideRight {
@@ -360,7 +379,7 @@
     object-position: bottom right;
     max-width: 100%; /* 确保不超过父容器 */
     max-height: 100%; /* 确保不超过父容器 */
-    margin-right: -15%;
+    margin-right: -6%;
 }
 
 @keyframes fadeSlideInFromLeft {
@@ -1337,8 +1356,12 @@
     white-space: nowrap;
 }
 
-/* 顶栏任务追踪 */
+/* 顶栏任务追踪 — Funloom 朱红点缀，贴合站内主色与戏内深色 HUD */
 .questTracker {
+    --quest-accent: #fb4655;
+    --quest-accent-soft: #ff9aa3;
+    --quest-accent-border: rgba(251, 70, 85, 0.48);
+    --quest-accent-glow: rgba(251, 70, 85, 0.2);
     position: absolute;
     top: 4.25rem;
     left: 50%;
@@ -1352,16 +1375,21 @@
     display: inline-block;
     font-size: 0.75rem;
     font-weight: 650;
-    color: #7ee7bb;
+    letter-spacing: 0.04em;
+    color: var(--quest-accent-soft);
     margin-bottom: 0.25rem;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
 }
 
 .questTrackerBody {
-    background: rgba(15, 18, 28, 0.72);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: linear-gradient(
+        165deg,
+        rgba(28, 16, 18, 0.78) 0%,
+        rgba(12, 10, 14, 0.72) 100%
+    );
     border-radius: 0.45rem;
     padding: 0.55rem 0.7rem;
-    color: rgba(255, 255, 255, 0.92);
+    color: rgba(255, 245, 242, 0.94);
     font-size: 0.8125rem;
     line-height: 1.4;
 }
@@ -1378,7 +1406,7 @@
     height: 0.95em;
     margin-left: 0.14em;
     vertical-align: -0.12em;
-    background: rgba(126, 231, 187, 0.95);
+    background: var(--quest-accent-soft);
     animation: questTrackerCaretBlink 0.85s steps(1, end) infinite;
 }
 

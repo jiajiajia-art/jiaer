@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useGameStore } from '../store/gameStore';
-import { getImageUrl } from '../utils/constants';
+import { getImageUrl, resolveGameCoverUrl } from '../utils/constants';
 import getGameDataApi from '../api/home/getGameData';
 import { cropImageUrlToAspectDataUrl } from '../utils/imageCrop';
 import { useAuthStore } from '../store/useAuthStore';
@@ -84,8 +84,9 @@ async function buildMessageDataAsync(
 
   if (isSharablePage && gameDetail) {
     if (gameDetail.title) messageData.title = gameDetail.title;
-    if (gameDetail.cover_url) {
-      const coverUrl = getImageUrl(gameDetail.cover_url);
+    const displayCoverPath = resolveGameCoverUrl(gameDetail);
+    if (displayCoverPath) {
+      const coverUrl = getImageUrl(displayCoverPath);
       try {
         messageData.coverImage = await cropImageUrlToAspectDataUrl(coverUrl, { w: 5, h: 4 }, { maxWidth: 640 });
       } catch {

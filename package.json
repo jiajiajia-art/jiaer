@@ -29,6 +29,8 @@
     "test:choiceInteractionGate": "node --experimental-strip-types --test scripts/choiceInteractionGate.check.mjs",
     "test:attributePanelsStream": "node --experimental-strip-types --test scripts/attributePanelsStream.check.mjs",
     "test:sanitizeVisualStepText": "node --experimental-strip-types --test scripts/sanitizeVisualStepText.check.mjs",
+    "test:sceneImagePreload": "node --experimental-strip-types --test scripts/sceneImagePreload.check.mjs",
+    "test:sessionStartGates": "node --experimental-strip-types --test scripts/sessionStartGates.check.mjs",
     "test:novelContentWindow": "node --experimental-strip-types --test scripts/novelContentWindow.check.mjs",
     "test:novelPlayback": "node --experimental-strip-types --test scripts/novelPlayback.check.mjs",
     "test:userRoles": "node --experimental-strip-types --test checks/userRoles.check.mjs",
@@ -37,6 +39,7 @@
     "test:diamondTimelineLog": "node --experimental-strip-types --test checks/diamondTimelineLog.check.mjs",
     "test:funloomLottery": "node --experimental-strip-types --test scripts/funloomLottery.check.mjs",
     "test:lotteryAdmin": "node --experimental-strip-types --test scripts/lotteryAdminConfig.check.mjs",
+    "test:displayCoverUrl": "node --experimental-strip-types --test scripts/displayCoverUrl.check.mjs",
     "test": "node --experimental-strip-types --test scripts/*.check.mjs checks/*.check.mjs"
   },
   "dependencies": {

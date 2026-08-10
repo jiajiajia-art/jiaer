@@ -35,6 +35,15 @@ import ConfirmModal from '../../CommonModal/ConfirmModal';
 import GenerateResultModal from '../../CommonModal/GenerateResultModal';
 import { useGenerationEta } from '../../../hooks/editor/useGenerationEta';
 import GenerationActionBar from '../GenerationActionBar';
+import PortraitLightbox from '../CharactersPanel/PortraitLightbox';
+import { authFetch } from '../../../api/base';
+import {
+    isBatchSceneBoardAllSuccess,
+    listBatchNpcRetryTargetItems,
+    resolveRetryCharacterIdsFromBoard,
+    shouldShowBatchProgressOverlay,
+    shouldShowRetryIncompleteBatchTasks,
+} from '../../../utils/batchNpcBoardSettlement';
 
 interface BgmItem {
     id: string;
@@ -392,47 +401,14 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
         }, 0);
         return sceneCount + subsceneCount;
     }, [mode, sceneData, subsceneDataBySceneId]);
-    const isBatchSceneJobActive = isGeneratingAllSceneImages || (
-        sceneBatchJobStatus != null
-        && ['queued', 'running', 'pending'].includes(String(sceneBatchJobStatus.status || ''))
-    );
+    // 与角色看板一致：失败重试态 / 全成功同步态也要挂着弹窗，直到 dismiss 或结果落地
+    const [sceneLightbox, setSceneLightbox] = useState<{ src: string; title: string } | null>(null);
+    const [batchSceneBoardNowMs, setBatchSceneBoardNowMs] = useState(() => Date.now());
+    const batchSceneLogListRef = useRef<HTMLDivElement | null>(null);
     const singleSceneEtaText = useGenerationEta({
         active: isGeneratingSingleSceneImage,
         totalSeconds: SINGLE_SCENE_ETA_SECONDS,
     });
-    const batchSceneEtaText = useGenerationEta({
-        active: isBatchSceneJobActive,
-        totalSeconds: Math.max(
-            SINGLE_SCENE_ETA_SECONDS,
-            batchSceneGenerationCount * SINGLE_SCENE_ETA_SECONDS + BATCH_SCENE_BUFFER_SECONDS,
-        ),
-        totalCount: sceneBatchJobStatus?.totalCount ?? batchSceneGenerationCount,
-        completedCount: sceneBatchJobStatus?.completedCount,
-        status: sceneBatchJobStatus?.status,
-        estimatedRemainingSeconds: sceneBatchJobStatus?.estimatedRemainingSeconds ?? null,
-        // 实现批量场景生图的数量提示
-        batchLabel: batchSceneGenerationCount > 0 ? `${t('eta.total')} ${batchSceneGenerationCount} ${t('eta.item')}` : undefined,
-    });
-
-    const batchSceneProgressText = useMemo(() => {
-        if (!sceneBatchJobStatus || !isBatchSceneJobActive) {
-            return '';
-        }
-
-        const totalCount = Math.max(0, Number(sceneBatchJobStatus.totalCount ?? 0));
-        const completedCount = Math.max(0, Number(sceneBatchJobStatus.completedCount ?? 0));
-        const failedCount = Math.max(0, Number(sceneBatchJobStatus.failedCount ?? 0));
-
-        if (totalCount <= 0) {
-            return '';
-        }
-
-        const settledCount = Math.min(totalCount, completedCount);
-        const successCount = Math.max(0, settledCount - failedCount);
-        const remainingCount = Math.max(0, totalCount - settledCount);
-
-        return `${t('eta.completed')} ${settledCount}/${totalCount}，${t('eta.success')} ${successCount}，${t('eta.failed')} ${failedCount}，${t('eta.remaining')} ${remainingCount}`;
-    }, [isBatchSceneJobActive, sceneBatchJobStatus]);
 
     const getEffectiveImage = (sceneId: string, subsceneId?: string): string | undefined => {
         const targetId = subsceneId || sceneId;
@@ -445,6 +421,156 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
         }
         return sceneData.find(s => s.id === sceneId)?.image;
     };
+
+    const batchSceneStageBoard = useMemo(() => {
+        const items = Array.isArray(sceneBatchJobStatus?.items) ? sceneBatchJobStatus!.items! : [];
+        const total = Math.max(0, Number(sceneBatchJobStatus?.totalCount) || items.length || 0);
+        const labelOf = (stage: string) => {
+            if (stage === 'generate_start') return '生图中';
+            if (stage === 'generate_done' || stage === 'item_done') return '已完成';
+            if (stage === 'generate_fail' || stage === 'rembg_fail') return '生图失败';
+            if (stage === 'pending') return '排队中';
+            return stage || '排队中';
+        };
+        const mapped = items.map((item, index) => {
+            const stageUpdatedAtMs = Date.parse(String(item?.stageUpdatedAt || item?.updatedAt || ''));
+            let localElapsed = Number.isFinite(stageUpdatedAtMs)
+                ? Math.max(0, Math.floor((batchSceneBoardNowMs - stageUpdatedAtMs) / 1000))
+                : Math.max(0, Number(item?.stageElapsedSeconds) || 0);
+            let stage = String(item?.stage || 'pending');
+            if (stage === 'generate_start' && localElapsed >= 190) {
+                stage = 'generate_fail';
+            }
+            return {
+                index: Number.isFinite(Number(item?.index)) ? Number(item.index) : index,
+                id: item?.id ? String(item.id) : undefined,
+                name: item?.name || `第 ${index + 1} 张`,
+                stage,
+                label: labelOf(stage),
+                stageElapsedSeconds: localElapsed,
+            };
+        });
+        const generateDone = mapped.filter((i) => (
+            ['generate_done', 'item_done', 'generate_fail', 'rembg_fail'].includes(i.stage)
+        )).length;
+        const generateActive = mapped.filter((i) => i.stage === 'generate_start').length;
+        const pending = mapped.filter((i) => i.stage === 'pending' || !i.stage).length;
+        const failed = mapped.filter((i) => i.stage.includes('fail')).length;
+        const stuckItems = mapped.filter((i) => i.stage === 'generate_start' && i.stageElapsedSeconds >= 150);
+        return {
+            items: mapped,
+            stuckItems,
+            stats: {
+                total,
+                generateDone: Math.min(total, generateDone),
+                generateActive,
+                pending,
+                failed,
+                settled: mapped.filter((i) => i.stage === 'item_done' || i.stage.includes('fail')).length,
+            },
+        };
+    }, [batchSceneBoardNowMs, sceneBatchJobStatus]);
+
+    const batchSceneRetryTargets = useMemo(
+        () => listBatchNpcRetryTargetItems(batchSceneStageBoard.items),
+        [batchSceneStageBoard.items],
+    );
+    const showSceneContinueFailed = useMemo(
+        () => shouldShowRetryIncompleteBatchTasks(
+            batchSceneStageBoard.items,
+            Number(sceneBatchJobStatus?.totalCount) || batchSceneStageBoard.stats.total || 0,
+        ),
+        [batchSceneStageBoard, sceneBatchJobStatus],
+    );
+    const sceneBoardAllSuccess = useMemo(
+        () => isBatchSceneBoardAllSuccess(
+            batchSceneStageBoard.items,
+            Number(sceneBatchJobStatus?.totalCount) || batchSceneStageBoard.stats.total || 0,
+        ),
+        [batchSceneStageBoard, sceneBatchJobStatus],
+    );
+    const isBatchSceneJobRunning = (
+        isGeneratingAllSceneImages
+        || (
+            sceneBatchJobStatus != null
+            && ['queued', 'running', 'pending'].includes(String(sceneBatchJobStatus.status || ''))
+        )
+    ) && !showSceneContinueFailed && !sceneBoardAllSuccess;
+    const isBatchSceneJobActive = isBatchSceneJobRunning || showSceneContinueFailed || (
+        sceneBatchJobStatus != null && sceneBoardAllSuccess
+    );
+
+    useEffect(() => {
+        if (!isBatchSceneJobActive) return undefined;
+        const timer = window.setInterval(() => setBatchSceneBoardNowMs(Date.now()), 1000);
+        return () => window.clearInterval(timer);
+    }, [isBatchSceneJobActive]);
+
+    const batchSceneEtaText = useGenerationEta({
+        active: isBatchSceneJobRunning,
+        totalSeconds: Math.max(
+            SINGLE_SCENE_ETA_SECONDS,
+            batchSceneGenerationCount * SINGLE_SCENE_ETA_SECONDS + BATCH_SCENE_BUFFER_SECONDS,
+        ),
+        totalCount: sceneBatchJobStatus?.totalCount ?? batchSceneGenerationCount,
+        completedCount: sceneBatchJobStatus?.completedCount,
+        status: sceneBatchJobStatus?.status,
+        estimatedRemainingSeconds: sceneBatchJobStatus?.estimatedRemainingSeconds ?? null,
+        batchLabel: batchSceneGenerationCount > 0 ? `${t('eta.total')} ${batchSceneGenerationCount} ${t('eta.item')}` : undefined,
+        // 场景批量看板已有分项进度，去掉「剩余 xx」倒计时
+        showRemaining: false,
+    });
+    const batchSceneLogs = useMemo(() => {
+        const logs = Array.isArray(sceneBatchJobStatus?.logs) ? sceneBatchJobStatus!.logs! : [];
+        return logs.slice(-40).map((entry: any) => ({
+            message: typeof entry === 'string' ? entry : String(entry?.message || ''),
+            stage: typeof entry === 'string' ? '' : String(entry?.stage || ''),
+        })).filter((e) => e.message);
+    }, [sceneBatchJobStatus]);
+
+    useEffect(() => {
+        const el = batchSceneLogListRef.current;
+        if (!el) return;
+        el.scrollTop = el.scrollHeight;
+    }, [batchSceneLogs.length]);
+
+    const batchSceneItemStageClass = (stage: string) => {
+        if (stage === 'generate_start' || stage === 'generate_done') return styles.plusLoadingItemGen;
+        if (stage === 'item_done') return styles.plusLoadingItemDone;
+        if (stage === 'generate_fail' || stage === 'rembg_fail') return styles.plusLoadingItemFail;
+        return styles.plusLoadingItemPending;
+    };
+    const batchSceneLogStageLabel = (stage: string) => {
+        if (stage === 'generate_start') return '生图';
+        if (stage === 'generate_done' || stage === 'item_done') return '完成';
+        if (stage === 'generate_fail' || stage === 'rembg_fail' || stage === 'fail') return '失败';
+        if (stage === 'batch_start') return '启动';
+        return '进度';
+    };
+    const batchSceneLogStageClass = (stage: string, isActive: boolean) => {
+        const base = isActive ? styles.plusLoadingLogRowActive : styles.plusLoadingLogRow;
+        if (stage === 'generate_start' || stage === 'generate_done') {
+            return `${base} ${styles.plusLoadingLogRowGen}`;
+        }
+        if (stage === 'item_done') {
+            return `${base} ${styles.plusLoadingLogRowDone}`;
+        }
+        if (stage === 'generate_fail' || stage === 'rembg_fail' || stage === 'fail') {
+            return `${base} ${styles.plusLoadingLogRowFail}`;
+        }
+        return base;
+    };
+
+    const openSceneLightbox = useCallback((src: string | null | undefined, title?: string) => {
+        if (!src) return;
+        const resolved = (src.startsWith('blob:') || src.startsWith('data:'))
+            ? src
+            : withCacheBust(getImageUrl(src) || src);
+        setSceneLightbox({
+            src: resolved,
+            title: String(title || '').trim(),
+        });
+    }, []);
 
     const currentSceneForDetail = activeSceneDraft || activeScene;
     const canClearActiveSceneImage = Boolean(
@@ -582,6 +708,72 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
     useEffect(() => {
         handlersRef.current = handlers;
     }, [handlers]);
+
+    // 全成功且轮询已结束：自动关闭进度弹窗（不再卡在「关闭」）
+    useEffect(() => {
+        if (!sceneBoardAllSuccess || showSceneContinueFailed) return undefined;
+        if (isGeneratingAllSceneImages) return undefined;
+        if (!sceneBatchJobStatus) return undefined;
+        const timer = window.setTimeout(() => {
+            handlersRef.current?.dismissSceneBatchProgress?.();
+        }, 450);
+        return () => window.clearTimeout(timer);
+    }, [
+        sceneBoardAllSuccess,
+        showSceneContinueFailed,
+        isGeneratingAllSceneImages,
+        sceneBatchJobStatus,
+    ]);
+
+    const handleSceneHeroClick = useCallback(() => {
+        if (isAddingNew) {
+            toast.error(t('createGame.confirmAddSceneFirst'));
+            return;
+        }
+        const scene = activeSceneDraft || activeScene;
+        if (!scene) return;
+        const image = getEffectiveImage(
+            mode === 'worldInteraction' && activeSubsceneId
+                ? (activeScene?.id || scene.id)
+                : scene.id,
+            mode === 'worldInteraction' && activeSubsceneId ? activeSubsceneId : undefined,
+        ) || scene.image;
+        if (image) {
+            openSceneLightbox(image, scene.name);
+            return;
+        }
+        handlersRef.current.handleSceneImageClick();
+    }, [
+        activeScene,
+        activeSceneDraft,
+        activeSubsceneId,
+        isAddingNew,
+        mode,
+        openSceneLightbox,
+        pendingImages,
+        sceneData,
+        subsceneDataBySceneId,
+        t,
+    ]);
+
+    const handleContinueFailedBatchSceneTasks = useCallback(async () => {
+        const uniqueIds = resolveRetryCharacterIdsFromBoard(
+            batchSceneRetryTargets,
+            (name) => sceneData.find((s) => s.name === name && !s.id.startsWith('temp-'))?.id,
+        );
+        if (uniqueIds.length === 0) {
+            toast.error(t('createGame.selectScenesToGenerate') || '请先选择要重试的场景');
+            return;
+        }
+        // 积分确认打开时隐藏进度遮罩，避免 ConfirmModal 被压住
+        await handlersRef.current.continueFailedBatchSceneImages(uniqueIds);
+    }, [batchSceneRetryTargets, sceneData, t]);
+
+    const showBatchSceneProgressOverlay = shouldShowBatchProgressOverlay({
+        batchJobActive: isBatchSceneJobActive,
+        costModalOpen: sceneCostModalOpen,
+        resultModalOpen: sceneResultModalOpen,
+    });
 
     const hasSceneDraftChanges = useCallback((
         draft: LocalScene | null | undefined,
@@ -1227,10 +1419,18 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
         try {
             let blob: Blob;
 
-            // /api/ 路径：fetch + blob 方式下载
-            if (finalImagePath.startsWith('/api/')) {
-                const fullUrl = `${HOST_ADDRESS}${finalImagePath}`;
-                const response = await fetch(fullUrl);
+            // 远程路径统一 authFetch→blob（跨域 <a download> 常失败）
+            if (
+                finalImagePath.startsWith('/api/')
+                || finalImagePath.startsWith('/visual/')
+                || finalImagePath.startsWith('/world-interaction/')
+                || finalImagePath.startsWith('http://')
+                || finalImagePath.startsWith('https://')
+            ) {
+                const fullUrl = finalImagePath.startsWith('http')
+                    ? finalImagePath
+                    : `${HOST_ADDRESS}${finalImagePath}`;
+                const response = await authFetch(fullUrl);
                 if (!response.ok) {
                     throw new Error('获取图片数据失败');
                 }
@@ -1450,7 +1650,8 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                                     generationEtaText={singleSceneEtaText}
                                     isAddingNewSubscene={isAddingNewSubscene}
                                     getEffectiveImage={getEffectiveImage}
-                                    onImageClick={handlers.handleSceneImageClick}
+                                    onImageClick={handleSceneHeroClick}
+                                    onUploadClick={handlers.handleSceneImageClick}
                                     onUploadChange={handlers.handleUploadSceneImage}
                                     onRequestRegenerate={handlers.handleRequestRegenerateSceneImage}
                                     onFieldChange={(field, value) => {
@@ -1474,7 +1675,8 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                                     isClearingImage={isClearingSceneImage}
                                     generationEtaText={singleSceneEtaText}
                                     getEffectiveImage={getEffectiveImage}
-                                    onImageClick={handlers.handleSceneImageClick}
+                                    onImageClick={handleSceneHeroClick}
+                                    onUploadClick={handlers.handleSceneImageClick}
                                     onUploadChange={handlers.handleUploadSceneImage}
                                     onRequestRegenerate={handlers.handleRequestRegenerateSceneImage}
                                     onRequestClearImage={handleRequestClearSceneImage}
@@ -1612,28 +1814,170 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 onConfirm={handleUploadMusic}
             />
 
-            {isBatchSceneJobActive && (
+            {showBatchSceneProgressOverlay && (
                 <div className={styles.plusLoadingOverlay}>
-                    <div className={styles.plusLoadingDialog}>
-                        <div className={styles.plusLoadingSpinner}></div>
-                        <div className={styles.plusLoadingText}>{t('createGame.generatingScenePortraits')}</div>
-{batchSceneEtaText && (
-                            <div className={styles.plusLoadingHint}>{batchSceneEtaText}</div>
+                    <div className={styles.plusLoadingDialog} role="dialog" aria-modal="true" aria-labelledby="batch-scene-gen-title">
+                        <div className={styles.plusLoadingHeroCopy} style={{ width: '100%' }}>
+                            <div id="batch-scene-gen-title" className={styles.plusLoadingText}>
+                                {showSceneContinueFailed
+                                    ? (batchSceneStageBoard.stuckItems.length > 0
+                                        ? '部分场景背景卡住'
+                                        : '场景背景生成结束')
+                                    : sceneBoardAllSuccess
+                                        ? '场景背景已全部生成'
+                                        : t('createGame.generatingScenePortraits')}
+                            </div>
+                            {isBatchSceneJobRunning && batchSceneEtaText && (
+                                <div className={styles.plusLoadingHint}>{batchSceneEtaText}</div>
+                            )}
+                            {showSceneContinueFailed && (
+                                <div className={styles.plusLoadingHint}>
+                                    {batchSceneStageBoard.stuckItems.length > 0
+                                        ? `有 ${batchSceneStageBoard.stuckItems.length} 项疑似卡住（≥150s）· 失败 ${batchSceneStageBoard.stats.failed} 项`
+                                        : `生图已结束 · 失败 ${batchSceneStageBoard.stats.failed} 项`}
+                                </div>
+                            )}
+                            {sceneBoardAllSuccess && !showSceneContinueFailed && (
+                                <div className={styles.plusLoadingHint}>
+                                    {isGeneratingAllSceneImages ? '正在同步结果与积分…' : '生成完成'}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className={`${styles.plusLoadingSplitStats} ${styles.plusLoadingSplitStatsSingle}`}>
+                            <div className={`${styles.plusLoadingStatCard} ${styles.plusLoadingStatGen}`}>
+                                <div className={styles.plusLoadingStatTitle}>生图（场景无需抠图）</div>
+                                <div className={styles.plusLoadingStatValue}>
+                                    {batchSceneStageBoard.stats.generateDone}/{batchSceneStageBoard.stats.total}
+                                </div>
+                                <div className={styles.plusLoadingStatMeta}>
+                                    进行中 {batchSceneStageBoard.stats.generateActive}
+                                    · 排队 {batchSceneStageBoard.stats.pending}
+                                    · 失败 {batchSceneStageBoard.stats.failed}
+                                </div>
+                                <div className={styles.plusLoadingStatTrack}>
+                                    <div
+                                        className={styles.plusLoadingStatTrackFill}
+                                        style={{
+                                            width: `${batchSceneStageBoard.stats.total > 0
+                                                ? Math.round((batchSceneStageBoard.stats.generateDone / batchSceneStageBoard.stats.total) * 100)
+                                                : 0}%`,
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {batchSceneStageBoard.stuckItems.length > 0 && (
+                            <div className={styles.plusLoadingStuck}>
+                                可能卡住：
+                                {batchSceneStageBoard.stuckItems.map((item) => (
+                                    `${item.name || `第 ${item.index + 1} 张`}（生图 ${item.stageElapsedSeconds}s）`
+                                )).join('；')}
+                            </div>
                         )}
-                        {batchSceneProgressText && (
-                            <div className={styles.plusLoadingHint}>{batchSceneProgressText}</div>
+
+                        <div className={styles.plusLoadingBoardShell}>
+                            <div className={styles.plusLoadingLogHeader}>
+                                <span className={styles.plusLoadingLogEyebrow}>分项进度</span>
+                                <span className={styles.plusLoadingLogLive}>LIVE</span>
+                            </div>
+                            <div className={styles.plusLoadingBoard}>
+                                {batchSceneStageBoard.items.map((item) => (
+                                    <div
+                                        key={`scene-board-${item.index}-${item.name}`}
+                                        className={`${styles.plusLoadingBoardItem} ${batchSceneItemStageClass(item.stage)}`}
+                                    >
+                                        <div className={styles.plusLoadingBoardTop}>
+                                            <span className={styles.plusLoadingBoardName}>
+                                                #{item.index + 1} {item.name}
+                                            </span>
+                                            <span className={styles.plusLoadingBoardStage}>{item.label}</span>
+                                        </div>
+                                        {item.stage === 'generate_start' && (
+                                            <div className={styles.plusLoadingBoardElapsed}>
+                                                本阶段已 {item.stageElapsedSeconds}s
+                                                {item.stageElapsedSeconds >= 150 ? ' · 疑似卡住' : ''}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {batchSceneLogs.length > 0 && (
+                            <div className={styles.plusLoadingLogShell}>
+                                <div className={styles.plusLoadingLogHeader}>
+                                    <span className={styles.plusLoadingLogEyebrow}>事件日志</span>
+                                </div>
+                                <div className={styles.plusLoadingLog} ref={batchSceneLogListRef} aria-live="polite">
+                                    {batchSceneLogs.map((entry, index) => {
+                                        const isActive = index === batchSceneLogs.length - 1;
+                                        return (
+                                            <div
+                                                key={`${index}-${entry.message}`}
+                                                className={batchSceneLogStageClass(entry.stage, isActive)}
+                                            >
+                                                <span className={styles.plusLoadingLogBadge}>
+                                                    {batchSceneLogStageLabel(entry.stage)}
+                                                </span>
+                                                <span className={styles.plusLoadingLogMessage}>{entry.message}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
                         )}
-                        <div className={styles.plusLoadingHint}>{t('createGame.generatingDoNotLeave')}</div>
-                        <button
-                            type="button"
-                            className={styles.plusLoadingCancelBtn}
-                            onClick={handlers.cancelGenerateAllSceneImages}
-                        >
-                            {t('common.cancel')}
-                        </button>
+
+                        <div className={styles.plusLoadingFoot}>
+                            {(showSceneContinueFailed || isBatchSceneJobRunning) && (
+                                <div className={styles.plusLoadingWarn}>
+                                    {showSceneContinueFailed
+                                        ? `未完成 ${batchSceneRetryTargets.length} 项，可点「重新生成未完成任务」`
+                                        : t('createGame.generatingDoNotLeave')}
+                                </div>
+                            )}
+                            <div
+                                className={`${styles.plusLoadingFootActions} ${
+                                    showSceneContinueFailed ? '' : styles.plusLoadingFootActionsEnd
+                                }`}
+                            >
+                                {showSceneContinueFailed && (
+                                    <button
+                                        type="button"
+                                        className={styles.plusLoadingContinueBtn}
+                                        onClick={() => { void handleContinueFailedBatchSceneTasks(); }}
+                                    >
+                                        重新生成未完成任务
+                                    </button>
+                                )}
+                                <button
+                                    type="button"
+                                    className={styles.plusLoadingCancelBtn}
+                                    onClick={() => {
+                                        if (showSceneContinueFailed || sceneBoardAllSuccess) {
+                                            handlers.dismissSceneBatchProgress();
+                                            return;
+                                        }
+                                        handlers.cancelGenerateAllSceneImages();
+                                    }}
+                                >
+                                    {(showSceneContinueFailed || sceneBoardAllSuccess)
+                                        ? '关闭'
+                                        : t('common.cancel')}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
+
+            <PortraitLightbox
+                open={Boolean(sceneLightbox)}
+                src={sceneLightbox?.src || null}
+                title={sceneLightbox?.title || ''}
+                onClose={() => setSceneLightbox(null)}
+            />
 
             <SaveConfirmModal
                 isOpen={saveConfirmModalOpen}

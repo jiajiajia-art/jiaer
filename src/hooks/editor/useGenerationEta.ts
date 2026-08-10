@@ -10,6 +10,10 @@ interface UseGenerationEtaOptions {
     completedCount?: number;
     status?: string;
     estimatedRemainingSeconds?: number | null;
+    /** 并行流水线：用「已完成」而非「正在生成第 N 项」，避免与日志对不上 */
+    progressMode?: 'sequential' | 'pipeline';
+    /** 为 false 时不展示「剩余 xx」倒计时（场景批量看板已有分项进度） */
+    showRemaining?: boolean;
 }
 
 export const useGenerationEta = ({
@@ -20,6 +24,8 @@ export const useGenerationEta = ({
     completedCount,
     status,
     estimatedRemainingSeconds,
+    progressMode = 'sequential',
+    showRemaining = true,
 }: UseGenerationEtaOptions): string => {
     const { t } = useTranslation();
     const [startedAt, setStartedAt] = useState<number | null>(null);
@@ -59,24 +65,49 @@ export const useGenerationEta = ({
             ? Math.max(0, Math.ceil(Number(estimatedRemainingSeconds)))
             : null;
         const effectiveRemainingSeconds = backendRemainingSeconds ?? remainingSeconds;
-        const hasRealBatchProgress = safeTotalCount > 1 && Number.isFinite(completedCount);
+        const hasRealBatchProgress = safeTotalCount > 0 && Number.isFinite(completedCount);
         const normalizedCompletedCount = hasRealBatchProgress
             ? Math.max(0, Math.min(safeTotalCount, Math.floor(Number(completedCount))))
             : 0;
         const isTerminalStatus = status === 'completed' || status === 'failed' || status === 'unknown';
         const labelPrefix = batchLabel ? `${batchLabel}，` : '';
+        const usePipelineCopy = progressMode === 'pipeline';
 
-        if (hasRealBatchProgress) {
+        if (hasRealBatchProgress && safeTotalCount >= 1) {
+            // 并行流水线：只展示剩余时间，分项进度由面板单独展示（避免「第 N 项」误导）
+            if (usePipelineCopy) {
+                if (!showRemaining) {
+                    return labelPrefix.replace(/，$/, '') || '';
+                }
+                if (!isTerminalStatus && effectiveRemainingSeconds <= 0) {
+                    return t('eta.generatingMoreTime');
+                }
+                return `${t('eta.remaining')} ${formatEtaPrecise(effectiveRemainingSeconds, t)}`;
+            }
+
             const currentIndex = normalizedCompletedCount >= safeTotalCount || isTerminalStatus
                 ? safeTotalCount
                 : Math.min(safeTotalCount, normalizedCompletedCount + 1);
+            const progressPhrase = `${t('eta.generating')} ${currentIndex}/${safeTotalCount} ${t('eta.item')}`;
 
-            // 首张未完成或前端预估已耗尽：不要显示「剩余 0 秒」
-            if (!isTerminalStatus && effectiveRemainingSeconds <= 0) {
-                return `${labelPrefix}${t('eta.generatingMoreTime')}，${t('eta.generating')} ${currentIndex}/${safeTotalCount} ${t('eta.item')}`;
+            if (!showRemaining) {
+                return `${labelPrefix}${progressPhrase}`;
             }
 
-            return `${labelPrefix}${t('eta.remaining')} ${formatEtaPrecise(effectiveRemainingSeconds, t)}，${t('eta.generating')} ${currentIndex}/${safeTotalCount} ${t('eta.item')}`;
+            if (!isTerminalStatus && effectiveRemainingSeconds <= 0) {
+                return `${labelPrefix}${t('eta.generatingMoreTime')}，${progressPhrase}`;
+            }
+
+            return `${labelPrefix}${t('eta.remaining')} ${formatEtaPrecise(effectiveRemainingSeconds, t)}，${progressPhrase}`;
+        }
+
+        if (!showRemaining) {
+            if (totalCount > 1) {
+                const perItemSeconds = Math.max(1, Math.ceil(safeTotalSeconds / Math.max(1, totalCount)));
+                const currentIndex = Math.min(totalCount, Math.max(1, Math.floor(elapsedSeconds / perItemSeconds) + 1));
+                return `${labelPrefix}${t('eta.generating')} ${currentIndex}/${totalCount} ${t('eta.item')}`;
+            }
+            return labelPrefix.replace(/，$/, '') || '';
         }
 
         if (elapsedSeconds >= safeTotalSeconds) {
@@ -84,11 +115,27 @@ export const useGenerationEta = ({
         }
 
         if (totalCount > 1) {
+            if (usePipelineCopy) {
+                return `${t('eta.remaining')} ${formatEtaPrecise(remainingSeconds, t)}`;
+            }
             const perItemSeconds = Math.max(1, Math.ceil(safeTotalSeconds / totalCount));
             const currentIndex = Math.min(totalCount, Math.max(1, Math.floor(elapsedSeconds / perItemSeconds) + 1));
             return `${labelPrefix}${t('eta.remaining')} ${formatEtaPrecise(remainingSeconds, t)}，${t('eta.generating')} ${currentIndex}/${totalCount} ${t('eta.item')}`;
         }
 
         return `${t('eta.remaining')} ${formatEtaPrecise(remainingSeconds, t)}`;
-    }, [active, batchLabel, completedCount, estimatedRemainingSeconds, now, startedAt, status, totalCount, totalSeconds, t]);
+    }, [
+        active,
+        batchLabel,
+        completedCount,
+        estimatedRemainingSeconds,
+        now,
+        progressMode,
+        showRemaining,
+        startedAt,
+        status,
+        totalCount,
+        totalSeconds,
+        t,
+    ]);
 };

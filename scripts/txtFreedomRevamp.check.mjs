@@ -32,8 +32,11 @@ import {
 import {
   appendPrivateChatUserMessage,
   assertPrivateChatIsolatedFromNarrative,
+  isNarrativeGenerationBusy,
+  isPrivateChatNarrativeBusyError,
   resolvePrivateChatBusyMessage,
   sanitizeNarrativeHistoryForPersist,
+  shouldWaitPrivateChatForNarrative,
   validatePrivateChatMessage,
 } from '../src/lib/galgame/privateChatGate.ts';
 
@@ -150,6 +153,40 @@ test('npcLikeToEditableProfile_与sort_出场优先', () => {
   a.encountered = true;
   const sorted = sortEditableNpcProfiles([b, a]);
   assert.equal(sorted[0].id, 'n1');
+});
+
+test('sortEditableNpcProfiles_自定义角色置顶且新建更靠前', () => {
+  const preset = npcLikeToEditableProfile({ id: 'n1', name: '甲', job: '同学', description: 'd' });
+  assert.ok(preset);
+  preset.encountered = true;
+  const older = createPlayerNpcProfile(
+    {
+      name: '旧角',
+      gender: 'unknown',
+      relationship: '友人',
+      summary: '简介一',
+      attitudeToPlayer: '友善',
+    },
+    { id: 'pc_lz0001_aaaa' },
+  );
+  const newer = createPlayerNpcProfile(
+    {
+      name: '新角',
+      gender: 'unknown',
+      relationship: '友人',
+      summary: '简介二',
+      attitudeToPlayer: '友善',
+    },
+    { id: 'pc_lz9999_bbbb' },
+  );
+  assert.equal(older.ok, true);
+  assert.equal(newer.ok, true);
+  if (!older.ok || !newer.ok) return;
+  const sorted = sortEditableNpcProfiles([preset, older.profile, newer.profile]);
+  assert.equal(sorted[0].id, newer.profile.id);
+  assert.equal(sorted[1].id, older.profile.id);
+  assert.equal(sorted[2].id, preset.id);
+  assert.equal(sorted[0].source, 'player_created');
 });
 
 // —— 玩家卡 ——
@@ -385,7 +422,24 @@ test('assertPrivateChatIsolatedFromNarrative_泄漏应失败', () => {
 });
 
 test('resolvePrivateChatBusyMessage_锁冲突文案', () => {
-  assert.equal(resolvePrivateChatBusyMessage({ narrativeBusy: true }), '主线正在生成，请稍后再私聊');
+  // 主线忙碌改为加载中等待，不再走 toast 文案
+  assert.equal(resolvePrivateChatBusyMessage({ narrativeBusy: true }), null);
   assert.equal(resolvePrivateChatBusyMessage({ privateChatBusy: true }), '私聊回复生成中，请稍候');
   assert.equal(resolvePrivateChatBusyMessage({}), null);
+});
+
+test('shouldWaitPrivateChatForNarrative_主线未完成需等待', () => {
+  assert.equal(shouldWaitPrivateChatForNarrative(true), true);
+  assert.equal(shouldWaitPrivateChatForNarrative(false), false);
+  assert.equal(isPrivateChatNarrativeBusyError({ code: 'narrative_busy', message: 'x' }), true);
+  assert.equal(isPrivateChatNarrativeBusyError({ message: '主线正在生成，请稍后再私聊' }), true);
+  assert.equal(isPrivateChatNarrativeBusyError({ message: '网络错误' }), false);
+});
+
+test('isNarrativeGenerationBusy_等玩家选线与打字机不算忙碌', () => {
+  // 等选项、前端打字机都不占后端会话锁，不应挡住私聊
+  assert.equal(isNarrativeGenerationBusy({}), false);
+  assert.equal(isNarrativeGenerationBusy({ streamLoading: true }), true);
+  assert.equal(isNarrativeGenerationBusy({ isCompressingContext: true }), true);
+  assert.equal(isNarrativeGenerationBusy({ streamLoading: false }), false);
 });

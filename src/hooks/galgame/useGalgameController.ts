@@ -16,6 +16,19 @@ import replayApi from "../../api/galgame/replay";
 import { withCacheBust } from "../../utils/imageCache";
 import { gameResourceManager } from "../../utils/gameResourceManager";
 import { canSubmitChoiceInteraction } from "../../lib/galgame/choiceInteractionGate";
+import { fetchGalgameDocument, peekGalgameDocument } from "../../lib/galgame/galgameDocumentCache";
+import {
+    buildScenePreloadPlan,
+    drainLeadingSceneChanges,
+    getSceneImagePathFromScene,
+    SceneImagePreloadScheduler,
+    uniquePreserveOrder,
+} from "../../lib/galgame/sceneImagePreload";
+import {
+    GENERATION_BUSY_MAX_RETRIES,
+    getGenerationBusyRetryDelayMs,
+    isGenerationBusyError,
+} from "../../lib/galgame/choiceStepDisplayGate";
 
 export type { Message } from "./useGalgameMessage";
 
@@ -37,6 +50,11 @@ const REPLAY_PAGE_SIZE = 200;
 const REPLAY_PREFETCH_REMAINING = 40;
 const REQUEST_TIMEOUT_MS = 60000;
 const COMPRESSION_REQUEST_TIMEOUT_MS = 180000;
+
+const sceneImagePreloader = new SceneImagePreloadScheduler({
+    loader: (url) => gameResourceManager.loadImage(url, { decode: true }),
+    isLoaded: (url) => gameResourceManager.isLoaded(url),
+});
 
 function pickMainOption(options?: Array<{ id: number; text: string; isMain?: boolean }>) {
     if (!Array.isArray(options) || options.length === 0) return null;
@@ -80,12 +98,13 @@ function buildCompletedStepsFromConversationHistory(
     return steps;
 }
 
-export const useGalgameController = () => {
+export const useGalgameController = (options?: { bootNewStart?: boolean }) => {
     const { user } = useAuthStore();
     const { fileId, sessionId } = useGameStore();
     const navigate = useNavigate();
     const { replayId: replayIdParam } = useParams<{ replayId?: string }>();
     const [searchParams] = useSearchParams();
+    const bootNewStart = options?.bootNewStart === true;
 
     // 回放模式检测
     const replayId = replayIdParam || searchParams.get('replayId');
@@ -138,7 +157,7 @@ export const useGalgameController = () => {
     const lastStreamActivityTickRef = useRef<number>(0);
     const previousStepRef = useRef<any>(null);
     const previousIsTypingRef = useRef<boolean>(false);
-    const presetDataLoadedRef = useRef<boolean>(false);
+    const presetDataLoadedRef = useRef<string>('');
     const lastRefreshRequestIdRef = useRef<number>(0);
     const refreshHistoryAfterTypingRef = useRef<(() => Promise<void>) | null>(null);
     const lastRequestActionRef = useRef<string | null>(null); // 保存最后一次请求的 action
@@ -158,11 +177,16 @@ export const useGalgameController = () => {
         hasMoreBefore,
         loadingMoreBefore,
         loading: historyLoading,
+        historyBootstrapped,
         editHistory,
         historyTotal,
         contextMemory: historyContextMemory,
+        lastVisitedSceneId,
         appendLocalUserMessage,
-    } = useGalgameHistory({ disabled: isReplay });
+    } = useGalgameHistory({
+        disabled: isReplay,
+        skipInitialFetch: bootNewStart,
+    });
 
     // 根据 assistant 消息数量计算当前是第几回合（用于前几回合免费 / UI 提示）
     const assistantRoundCount = useMemo(() => {
@@ -178,8 +202,7 @@ export const useGalgameController = () => {
     }, [worldSetting]);
 
     const getSceneImagePath = useCallback((scene?: GetGalgamePresetResponse['scenes']['scenes'][0] | null): string | undefined => {
-        const imagePath = (scene as any)?.image || (scene as any)?.images;
-        return typeof imagePath === 'string' && imagePath ? imagePath : undefined;
+        return getSceneImagePathFromScene(scene as any);
     }, []);
 
     const toSceneBackgroundUrl = useCallback((imagePath?: string | null): string => {
@@ -248,6 +271,8 @@ export const useGalgameController = () => {
         setInitialMessages([]);
         setGameStarted(false);
         setShowStoryIntro(false);
+        setShouldAutoStartGame(false);
+        setIsStartingGame(false);
         setReplaySteps([]);
         setReplayIndex(0);
         setReplayTotalSteps(0);
@@ -264,8 +289,8 @@ export const useGalgameController = () => {
         setIsAutoToCompression(false);
         autoToCompressionStartCountRef.current = null;
         autoToCompressionCompletedRef.current = false;
-        // 强制重置加载标记，确保数据重新加载
-        presetDataLoadedRef.current = false;
+        // 强制重置加载标记，确保换作品/回放时数据重新加载
+        presetDataLoadedRef.current = '';
     }, [fileId, sessionId, isReplay, replayId]);
 
     useEffect(() => {
@@ -306,86 +331,78 @@ export const useGalgameController = () => {
             return;
         }
 
-        if (presetDataLoadedRef.current) {
+        if (presetDataLoadedRef.current === targetFileId) {
+            return;
+        }
+
+        const applyDocumentData = (documentData: GetGalgamePresetResponse) => {
+            setPresetData(documentData);
+            setWorldSetting(documentData.world);
+            const scenes = documentData.scenes?.scenes;
+
+            if (scenes && scenes.length > 0) {
+                let initialScene = scenes[0];
+
+                // 优先使用当前场景自己的图片
+                let sceneImagePath = getSceneImagePath(initialScene);
+
+                // 如果当前场景没有配置图片，则回退到第一个有图片的场景
+                if (!sceneImagePath) {
+                    const sceneWithImage = scenes.find(
+                        (s: any) => !!getSceneImagePath(s)
+                    );
+                    if (sceneWithImage) {
+                        sceneImagePath = getSceneImagePath(sceneWithImage);
+                    }
+                }
+
+                let sceneImageUrl = toSceneBackgroundUrl(sceneImagePath);
+
+                // 最后兜底：如果还是拿不到有效图片，用内置默认场景图
+                if (!sceneImageUrl) {
+                    sceneImageUrl = DEFAULT_SCENE_IMAGE;
+                }
+
+                setCurrentScene(initialScene);
+                setBackgroundImage(sceneImageUrl);
+                // 续玩场景对齐改由 useGalgameHistory 的 lastVisitedSceneId 驱动，避免再打 history?limit=1
+            }
+        };
+
+        // 详情页预取已完成：同步灌入，立刻结束全屏「正在获取数据」
+        const peeked = peekGalgameDocument(targetFileId);
+        if (peeked) {
+            presetDataLoadedRef.current = targetFileId;
+            applyDocumentData(peeked);
+            setIsLoading(false);
             return;
         }
 
         try {
             setIsLoading(true);
-            presetDataLoadedRef.current = true;
-            const response = await getGalgamePresetApi.getGalgameFileId(targetFileId);
+            presetDataLoadedRef.current = targetFileId;
+            // 优先走详情页预取缓存，避免进 /galgame 再等一整轮 document
+            const response = await fetchGalgameDocument(targetFileId);
 
             if (response.data.data) {
-                setPresetData(response.data.data);
-                setWorldSetting(response.data.data.world);
-                const scenes = response.data.data.scenes?.scenes;
-                
-                if (scenes && scenes.length > 0) {
-                    let initialScene = scenes[0];
-                    // 直接从历史数据获取 visitedScenes 的最后一个值，而不是使用 hook
-                    if (!isReplay && playableSessionId) {
-                        try {
-                            const historyResponse = await getGalgamePresetApi.getGalgameHistory(playableSessionId);
-                            if (historyResponse.data?.success && historyResponse.data.visitedScenes) {
-                                const visitedScenes = historyResponse.data.visitedScenes;
-                                
-                                if (Array.isArray(visitedScenes) && visitedScenes.length > 0) {
-                                    const lastSceneId = visitedScenes[visitedScenes.length - 1];
-                                    if (lastSceneId && typeof lastSceneId === 'string') {
-                                        const matched = scenes.find(
-                                            (scene: GetGalgamePresetResponse['scenes']['scenes'][0]) => 
-                                                scene.id === lastSceneId
-                                        );
-                                        if (matched) {
-                                            initialScene = matched;
-                                        }
-                                    }
-                                }
-                            }
-                        } catch (historyError) {
-                            console.warn('[GalgameController] 获取历史数据失败，使用默认场景:', historyError);
-                        }
-                    }
-                    
-                    setCurrentScene(initialScene);
-
-                    // 优先使用当前场景自己的图片
-                    let sceneImagePath = getSceneImagePath(initialScene);
-
-                    // 如果当前场景没有配置图片，则回退到第一个有图片的场景
-                    if (!sceneImagePath) {
-                        const sceneWithImage = scenes.find(
-                            (s: any) => !!getSceneImagePath(s)
-                        );
-                        if (sceneWithImage) {
-                            sceneImagePath = getSceneImagePath(sceneWithImage);
-                        }
-                    }
-
-                    let sceneImageUrl = toSceneBackgroundUrl(sceneImagePath);
-
-                    // 最后兜底：如果还是拿不到有效图片，用内置默认场景图
-                    if (!sceneImageUrl) {
-                        sceneImageUrl = DEFAULT_SCENE_IMAGE;
-                    }
-
-                    setBackgroundImage(sceneImageUrl);
-                }
+                applyDocumentData(response.data.data);
             } else {
                 console.warn('[GalgameController] response.data.data 为空');
             }
         } catch (error) {
             console.error('[GalgameController] 获取游戏数据失败:', error);
-            presetDataLoadedRef.current = false;
+            presetDataLoadedRef.current = '';
         } finally {
             setIsLoading(false);
         }
-    }, [fileId, isReplay, playableSessionId, replayMeta?.fileId, getSceneImagePath, toSceneBackgroundUrl]);
+    }, [fileId, isReplay, replayMeta?.fileId, getSceneImagePath, toSceneBackgroundUrl]);
 
     useEffect(() => {
-        presetDataLoadedRef.current = false;
-        loadPresetData();
-    }, [loadPresetData]);
+        // 仅在作品切换时重置；session 变化不再重拉 document（避免二次全屏转圈）
+        presetDataLoadedRef.current = '';
+        void loadPresetData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- 故意不跟 playableSessionId，避免续玩二次 loading
+    }, [fileId, isReplay, replayMeta?.fileId]);
 
     // 根据场景 ID 更新场景和背景图
     const getLatestSceneById = useCallback((sceneId?: string | null) => {
@@ -421,6 +438,12 @@ export const useGalgameController = () => {
             console.warn('[Galgame] 未找到匹配的场景 ID:', sceneId);
         }
     }, [getLatestSceneById, getSceneImagePath, toSceneBackgroundUrl]);
+
+    // 历史返回后对齐当前场景（复用 limit=80 结果里的 visitedScenes，不再单独请求）
+    useEffect(() => {
+        if (isReplay || !lastVisitedSceneId || !presetData) return;
+        updateSceneFromId(lastVisitedSceneId);
+    }, [isReplay, lastVisitedSceneId, presetData, updateSceneFromId]);
 
     const syncReplaySceneForIndex = useCallback((steps: ReplayStep[], index: number) => {
         for (let i = Math.min(index, steps.length - 1); i >= 0; i--) {
@@ -875,36 +898,100 @@ export const useGalgameController = () => {
         refreshHistoryAfterTypingRef.current = refreshHistoryAfterTyping;
     }, [refreshHistoryAfterTyping]);
 
-    // 处理场景切换
+    const lastDrainedSceneStepRef = useRef<any>(null);
+
+    // 处理场景切换：连续 scene_change 只落最终背景，避免开场一口气拉很多图
     useEffect(() => {
         const currentStep = stepHandlers.currentStep;
-        
-        if (currentStep?.type === 'scene_change') {
-            if (currentStep.sceneId) {
-                updateSceneFromId(currentStep.sceneId);
-            }
-            
-            const latestSceneImagePath = getSceneImagePath(getLatestSceneById(currentStep.sceneId));
-            const sceneImagePath = latestSceneImagePath || currentStep.sceneImage;
-            if (sceneImagePath) {
-                const sceneImageUrl = toSceneBackgroundUrl(sceneImagePath);
-                if (sceneImageUrl) {
-                    setBackgroundImage(prev => {
-                        if (prev !== sceneImageUrl) {
-                            return sceneImageUrl;
-                        }
-                        return prev;
-                    });
-                }
-            }
+        if (!currentStep || currentStep.type !== 'scene_change') {
+            return;
+        }
+        // 同一 step 因 queue 裁切触发重跑时不再处理
+        if (lastDrainedSceneStepRef.current === currentStep) {
+            return;
+        }
+        lastDrainedSceneStepRef.current = currentStep;
 
-            // 场景切换步骤本身不需要在对话区域显示；无论是否重复发送，只要到达 scene_change，
-            // 在更新完场景/背景后，直接自动跳过该步骤，避免出现“空白对话框”和额外点击。
-            if (stepHandlers.handleNextStep) {
-                stepHandlers.handleNextStep();
+        const drained = drainLeadingSceneChanges(currentStep, stepHandlers.stepQueue || []);
+        if (!drained) return;
+
+        const { finalStep, skipQueueCount } = drained;
+        if (finalStep.sceneId) {
+            updateSceneFromId(finalStep.sceneId);
+        }
+
+        const latestSceneImagePath = getSceneImagePath(getLatestSceneById(finalStep.sceneId));
+        const sceneImagePath = latestSceneImagePath || finalStep.sceneImage;
+        if (sceneImagePath) {
+            const sceneImageUrl = toSceneBackgroundUrl(sceneImagePath);
+            if (sceneImageUrl) {
+                setBackgroundImage((prev) => (prev !== sceneImageUrl ? sceneImageUrl : prev));
             }
         }
-    }, [stepHandlers.currentStep, stepHandlers.handleNextStep, updateSceneFromId, getLatestSceneById, getSceneImagePath, toSceneBackgroundUrl]);
+
+        if (skipQueueCount > 0 && typeof stepHandlers.setStepQueue === 'function') {
+            stepHandlers.setStepQueue((prev: any[]) => prev.slice(skipQueueCount));
+        }
+
+        // 场景切换步骤本身不需要在对话区域显示；跳到下一条非 scene_change（或耗尽）
+        if (stepHandlers.handleNextStep) {
+            stepHandlers.handleNextStep();
+        }
+    }, [
+        stepHandlers.currentStep,
+        stepHandlers.stepQueue,
+        stepHandlers.handleNextStep,
+        stepHandlers.setStepQueue,
+        updateSceneFromId,
+        getLatestSceneById,
+        getSceneImagePath,
+        toSceneBackgroundUrl,
+    ]);
+
+    // 场景图预载：只拉当前 + 下一张（步骤队列优先），开场不扫全场景表
+    useEffect(() => {
+        const scenes = presetData?.scenes?.scenes;
+        if (!Array.isArray(scenes) || scenes.length === 0) return;
+
+        const sceneUrlsInOrder = uniquePreserveOrder(
+            scenes.map((scene: any) => toSceneBackgroundUrl(getSceneImagePath(scene))),
+        );
+        if (sceneUrlsInOrder.length === 0) return;
+
+        let nextFromQueue = '';
+        for (const step of stepHandlers.stepQueue || []) {
+            if (step?.type !== 'scene_change') continue;
+            const fromDoc = getSceneImagePath(getLatestSceneById(step.sceneId));
+            const path = fromDoc || step.sceneImage;
+            const url = toSceneBackgroundUrl(path);
+            if (url && url !== backgroundImage) {
+                nextFromQueue = url;
+                break;
+            }
+        }
+
+        const plan = buildScenePreloadPlan({
+            sceneUrlsInOrder,
+            currentUrl: backgroundImage || sceneUrlsInOrder[0],
+            nextUrl: nextFromQueue,
+            // 开场禁止把文档里其余场景全部塞进 rest
+            includeCatalogRest: false,
+        });
+        void sceneImagePreloader.applyPlan(plan);
+    }, [
+        presetData,
+        backgroundImage,
+        stepHandlers.stepQueue,
+        getSceneImagePath,
+        getLatestSceneById,
+        toSceneBackgroundUrl,
+    ]);
+
+    useEffect(() => {
+        return () => {
+            sceneImagePreloader.reset();
+        };
+    }, [fileId, sessionId]);
 
     useEffect(() => {
         if (isReplay) {
@@ -947,13 +1034,34 @@ export const useGalgameController = () => {
                 const prev = lastAutoResendRef.current;
                 const sameContent = prev && prev.content === lastMessage.content;
                 const withinWindow = prev && (now - prev.ts) < 5000; // 5s窗口
-                if (!stepHandlers.isWaitingForData && !(sameContent && withinWindow)) {
+                const content = String(lastMessage.content || '').trim();
+                // 开局「开始游戏」若正由自动开局链路处理，不要再自动重发抢锁
+                const isOpeningStartAction = content === '开始游戏';
+                const autoStartOwnsOpening =
+                    isOpeningStartAction && (isStartingGame || shouldAutoStartGame);
+                if (
+                    !stepHandlers.isWaitingForData
+                    && !isStartingGame
+                    && !autoStartOwnsOpening
+                    && !(sameContent && withinWindow)
+                ) {
                     lastAutoResendRef.current = { content: lastMessage.content, ts: now };
-                    stepHandlers.handleStreamAction(lastMessage.content, {
-                        onError: (error) => {
-                            console.error('自动重发用户消息失败:', error);
-                        }
-                    });
+                    const resendAction = async (attempt: number) => {
+                        await stepHandlers.handleStreamAction(lastMessage.content, {
+                            onError: (error) => {
+                                if (isGenerationBusyError(error) && attempt < GENERATION_BUSY_MAX_RETRIES) {
+                                    window.setTimeout(() => {
+                                        void resendAction(attempt + 1);
+                                    }, getGenerationBusyRetryDelayMs(attempt));
+                                    return;
+                                }
+                                if (!isGenerationBusyError(error)) {
+                                    console.error('自动重发用户消息失败:', error);
+                                }
+                            }
+                        });
+                    };
+                    void resendAction(0);
                 }
                 return;
             }
@@ -1030,10 +1138,12 @@ export const useGalgameController = () => {
                     for (let i = history.length - 2; i >= 0; i--) {
                         if (history[i].role === 'user' && history[i].content) {
                             const lastUserMessage = history[i].content;
-                            if (!stepHandlers.isWaitingForData) {
+                            if (!stepHandlers.isWaitingForData && !isStartingGame) {
                                 stepHandlers.handleStreamAction(lastUserMessage, {
                                     onError: (error) => {
-                                        console.error('自动重发倒数第一条用户消息失败:', error);
+                                        if (!isGenerationBusyError(error)) {
+                                            console.error('自动重发倒数第一条用户消息失败:', error);
+                                        }
                                     }
                                 });
                             }
@@ -1043,10 +1153,23 @@ export const useGalgameController = () => {
                 }
             }
         }
-    }, [isReplay, historyLoading, presetData, history, worldSetting, stepHandlers, allStepsStorageKey, resetDisplayedSteps, getPlayerImageUrlCallback, createChoiceMessage]);
+    }, [isReplay, historyLoading, presetData, history, worldSetting, stepHandlers, allStepsStorageKey, resetDisplayedSteps, getPlayerImageUrlCallback, createChoiceMessage, isStartingGame, shouldAutoStartGame]);
 
     useEffect(() => {
-        if (historyLoading || !presetData) return;
+        // 新开局：不依赖 history 空/非空门闩，session + document 就绪即自动「开始游戏」
+        if (!bootNewStart || isReplay) return;
+        if (!playableSessionId || !presetData) return;
+        if (historyProcessedRef.current) return;
+        setShowStoryIntro(false);
+        setShouldAutoStartGame(true);
+        historyProcessedRef.current = true;
+    }, [bootNewStart, isReplay, playableSessionId, presetData]);
+
+    useEffect(() => {
+        // 新开局已走独立自动开局，跳过 history 门闩（避免空 history 误判 / 与 stream 抢锁）
+        if (bootNewStart) return;
+        // 必须等当前 session 的 history 首拉完成，否则会在空数组上误触发「开始游戏」与后续自动重发抢锁
+        if (!historyBootstrapped || historyLoading || !presetData) return;
 
         if (history.length > 0) {
             if (!historyProcessedRef.current) {
@@ -1056,19 +1179,22 @@ export const useGalgameController = () => {
                 historyProcessedRef.current = true;
             }
         } else if (!historyProcessedRef.current) {
+            // 先 navigate 时 session 可能尚未就绪，等 session 再触发自动开局
+            if (!isReplay && !playableSessionId) return;
             // 产品：新开局直接进游戏，不展示开局弹窗；故事线改在系统面板调整
             setShowStoryIntro(false);
             setShouldAutoStartGame(true);
             historyProcessedRef.current = true;
         }
-    }, [historyLoading, presetData, history.length, processHistoryRecord]);
+    }, [bootNewStart, historyBootstrapped, historyLoading, presetData, history.length, processHistoryRecord, isReplay, playableSessionId]);
 
     useEffect(() => {
-        if (isTextMode && gameStarted && completedSteps.length === 0 && !historyLoading && history.length > 0 && presetData && !stepHandlers.isWaitingForData && !stepHandlers.currentStep) {
+        if (bootNewStart) return;
+        if (isTextMode && gameStarted && completedSteps.length === 0 && historyBootstrapped && !historyLoading && history.length > 0 && presetData && !stepHandlers.isWaitingForData && !stepHandlers.currentStep) {
             processHistoryRecord();
             historyProcessedRef.current = true;
         }
-    }, [isTextMode, gameStarted, completedSteps.length, historyLoading, history.length, presetData, processHistoryRecord, stepHandlers.isWaitingForData, stepHandlers.currentStep]);
+    }, [bootNewStart, isTextMode, gameStarted, completedSteps.length, historyBootstrapped, historyLoading, history.length, presetData, processHistoryRecord, stepHandlers.isWaitingForData, stepHandlers.currentStep]);
 
     useEffect(() => {
         const currentStep = stepHandlers.currentStep;
@@ -1168,16 +1294,28 @@ export const useGalgameController = () => {
         setGameStarted(true);
         setInitialMessages([]);
 
+        // 开局 actionId 固定：重复请求走 ACTION_IN_PROGRESS / 回放，而不是再抢会话锁刷「正在生成中」
+        const bootstrapActionId = `visual-${playableSessionId}-bootstrap-start`;
         await stepHandlers.handleStreamAction('开始游戏', {
+            actionId: bootstrapActionId,
             onBeforeRequest: () => {
                 setInitialMessages([]);
                 resetDisplayedSteps();
+            },
+            onFirstStep: () => {
+                // 首条 step 已上屏：结束「开局中」，避免上层再盖 loading
+                setIsStartingGame(false);
             },
             onSuccess: () => {
                 setIsStartingGame(false);
                 addConversion();
             },
             onError: (error) => {
+                if (isGenerationBusyError(error)) {
+                    // 另一路开局流已占用锁：保留 gameStarted，等成功那路出字
+                    console.warn('[Galgame] bootstrap start busy, keep waiting', error);
+                    return;
+                }
                 console.error('❌ 开始游戏失败:', error);
                 toast.error(error || '开始游戏失败，请重试');
                 setIsStartingGame(false);

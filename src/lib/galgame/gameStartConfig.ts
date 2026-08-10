@@ -3,6 +3,8 @@
  * §3.1 默认方案 C：选中项=开场；其余=后续阶段约束（由 openingRouteId + retainedStorylineIds 表达）。
  */
 
+import { resolvePlayerDisplayName } from './playerDisplayName';
+
 export type WritingPace = 'slow' | 'medium' | 'fast';
 
 export type GameStartPersonaBlocks = {
@@ -74,8 +76,8 @@ export const GAME_START_UE_COPY = Object.freeze({
   /** 无创作台 keyEvents 时的兜底路线名（勿用「默认开场」） */
   fallbackRouteTitle: '开场路线',
   storylinePickLabel: '故事线选择',
-  /** 静默开局姓名兜底（优先用创作台玩家名） */
-  fallbackPlayerName: '玩家',
+  /** 静默开局姓名兜底（优先用创作台玩家名；禁止用「玩家」） */
+  fallbackPlayerName: '旅人',
 });
 
 const PACES = new Set<WritingPace>(['slow', 'medium', 'fast']);
@@ -144,15 +146,21 @@ export function buildSilentDefaultGameStartConfig(input: {
   if (!resolved.ok || !resolved.openingRouteId) {
     return { ok: false, message: resolved.message || '请选择故事线' };
   }
-  return validateGameStartConfig({
+  const validated = validateGameStartConfig({
     player: {
-      name: trimStr(input.playerName) || GAME_START_UE_COPY.fallbackPlayerName,
+      name:
+        resolvePlayerDisplayName([input.playerName])
+        || GAME_START_UE_COPY.fallbackPlayerName,
       gender: normalizeGameStartGender(input.gender),
     },
     openingRouteId: resolved.openingRouteId,
     openingMonologue: resolved.openingMonologue,
     retainedStorylineIds: resolved.retainedStorylineIds,
   });
+  if (!validated.ok || !validated.data) {
+    return { ok: false, message: validated.message || '开局配置无效' };
+  }
+  return { ok: true, data: validated.data };
 }
 
 /** 功能注释：未选故事线不可提交；已选可提交。 */

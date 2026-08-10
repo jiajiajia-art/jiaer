@@ -2,12 +2,27 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   privateChatApi,
+  type PrivateChatAbDto,
   type PrivateChatMessageDto,
   type PrivateChatNpcDto,
+  type PrivateChatSseEvent,
 } from '../../../api/galgame/privateChat';
-import { resolvePrivateChatBusyMessage, validatePrivateChatMessage } from '../../../lib/galgame/privateChatGate';
+import {
+  isPrivateChatNarrativeBusyError,
+  resolvePrivateChatBusyMessage,
+  shouldWaitPrivateChatForNarrative,
+  validatePrivateChatMessage,
+} from '../../../lib/galgame/privateChatGate';
 import { stripPrivateChatFavorMarkers } from '../../../lib/galgame/privateChatFavor';
+import {
+  resolvePrivateChatIdleMs,
+  shouldArmPrivateChatIdleNudge,
+} from '../../../lib/galgame/privateChatIdleNudge';
 import type { PlayerEditableNpc } from '../../../lib/galgame/characterProfile';
+import {
+  pickDisplayAvatarFullUrl,
+  pickDisplayAvatarThumbUrl,
+} from '../../../lib/galgame/avatarThumbUrl';
 import { getImageUrl } from '../../../utils/constants';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { useGameStore } from '../../../store/gameStore';
@@ -18,16 +33,33 @@ interface PrivateChatPanelProps {
   npcId: string;
   npcName: string;
   npcAvatarUrl?: string;
+  npcAvatarThumbUrl?: string;
+  /** 当前「我的档案」主角头像（档案变更后立刻刷新） */
+  playerAvatarUrl?: string;
+  playerAvatarThumbUrl?: string;
+  playerName?: string;
   narrativeBusy?: boolean;
   onBack: () => void;
   onProfilesChange?: (profiles: PlayerEditableNpc[]) => void;
 }
 
-/** 功能注释：局内 NPC 私聊气泡面板（不推进主线）。 */
+type DeferredOp =
+  | { kind: 'boot' }
+  | { kind: 'send'; content: string }
+  | { kind: 'regen' }
+  | { kind: 'continue' }
+  | { kind: 'greet' }
+  | { kind: 'nudge' };
+
+/** 功能注释：局内 NPC 私聊气泡面板（不推进主线）。主线生成中进入时展示加载并等待。 */
 const PrivateChatPanel: React.FC<PrivateChatPanelProps> = ({
   npcId,
   npcName,
   npcAvatarUrl,
+  npcAvatarThumbUrl,
+  playerAvatarUrl,
+  playerAvatarThumbUrl,
+  playerName,
   narrativeBusy = false,
   onBack,
   onProfilesChange,
@@ -41,12 +73,25 @@ const PrivateChatPanel: React.FC<PrivateChatPanelProps> = ({
   const [busy, setBusy] = useState(false);
   const [streaming, setStreaming] = useState('');
   const [menuIndex, setMenuIndex] = useState<number | null>(null);
-  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewTarget, setPreviewTarget] = useState<'npc' | 'player' | null>(null);
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   /** 空线程即将自动打招呼：挡住空态文案，避免闪一下「说点什么吧」 */
   const [awaitingGreet, setAwaitingGreet] = useState(false);
+  /** 主线未完成：进入私聊后展示加载中，待主线结束后再 boot / 重试 */
+  const [waitingNarrative, setWaitingNarrative] = useState(() => shouldWaitPrivateChatForNarrative(narrativeBusy));
+  const [chatAb, setChatAb] = useState<PrivateChatAbDto | null>(null);
+  /** 服务端 ensure 后的主角小图（props 优先保证档案切换立刻变） */
+  const [serverPlayerAvatar, setServerPlayerAvatar] = useState<{
+    avatarUrl?: string;
+    avatarThumbUrl?: string;
+  } | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const deferredOpRef = useRef<DeferredOp | null>({ kind: 'boot' });
+  const bootKeyRef = useRef('');
+  const narrativeBusyRef = useRef(narrativeBusy);
+  narrativeBusyRef.current = narrativeBusy;
 
   const scrollToBottom = useCallback(() => {
     requestAnimationFrame(() => {
@@ -55,70 +100,127 @@ const PrivateChatPanel: React.FC<PrivateChatPanelProps> = ({
     });
   }, []);
 
-  const runStream = async (kind: 'send' | 'regen' | 'greet', content?: string) => {
+  /** 进入私聊 / 输入框可用时默认聚焦，方便直接打字 */
+  useEffect(() => {
+    if (!token || busy || waitingNarrative || loading || clearConfirmOpen || previewTarget) return;
+    const el = inputRef.current;
+    if (!el || el.disabled) return;
+    const timer = window.setTimeout(() => {
+      if (el.disabled) return;
+      el.focus({ preventScroll: true });
+    }, 40);
+    return () => window.clearTimeout(timer);
+  }, [token, busy, waitingNarrative, loading, clearConfirmOpen, previewTarget, npcId]);
+
+  const enterNarrativeWait = useCallback((op: DeferredOp) => {
+    deferredOpRef.current = op;
+    setWaitingNarrative(true);
+    // 已有会话内容时不要整页「加载中」挡住消息；仅 boot 拉线程前才全屏等待
+    if (op.kind === 'boot') {
+      setLoading(true);
+    }
+    setAwaitingGreet(op.kind === 'greet');
+    setBusy(false);
+    setStreaming('');
+  }, []);
+
+  const handleStreamEvent = useCallback((ev: PrivateChatSseEvent, onNarrativeBusy: () => void) => {
+    if (ev.type === 'thread') {
+      setMessages(ev.thread.messages || []);
+      if (ev.npc) setNpc(ev.npc);
+      if (ev.ab) setChatAb(ev.ab);
+    } else if (ev.type === 'delta') {
+      const raw = ev.text || '';
+      if (ev.replace) {
+        setStreaming(stripPrivateChatFavorMarkers(raw));
+      } else {
+        setStreaming((prev) => stripPrivateChatFavorMarkers(prev + raw));
+      }
+    } else if (ev.type === 'done') {
+      setMessages(ev.thread.messages || []);
+      setStreaming('');
+      setBusy(false);
+      setAwaitingGreet(false);
+      if (Array.isArray(ev.playerEditableNpcs)) {
+        onProfilesChange?.(ev.playerEditableNpcs as PlayerEditableNpc[]);
+      }
+    } else if (ev.type === 'error') {
+      if (isPrivateChatNarrativeBusyError(ev)) {
+        onNarrativeBusy();
+        return;
+      }
+      toast.error(ev.message || '私聊失败');
+      setStreaming('');
+      setBusy(false);
+      setAwaitingGreet(false);
+    }
+  }, [onProfilesChange]);
+
+  const runStream = useCallback(async (kind: 'send' | 'regen' | 'continue' | 'greet' | 'nudge', content?: string) => {
     if (!token || !sessionId) {
       toast.error('请先登录');
       return;
     }
-    const busyTip = resolvePrivateChatBusyMessage({
-      narrativeBusy,
-      privateChatBusy: busy,
-    });
-    if (busyTip) {
-      toast.error(busyTip);
+    const selfBusyTip = resolvePrivateChatBusyMessage({ privateChatBusy: busy });
+    if (selfBusyTip) {
+      toast.error(selfBusyTip);
       return;
     }
+    if (shouldWaitPrivateChatForNarrative(narrativeBusyRef.current)) {
+      enterNarrativeWait(
+        kind === 'send'
+          ? { kind: 'send', content: content || '' }
+          : { kind },
+      );
+      return;
+    }
+
     setBusy(true);
-    setAwaitingGreet(false);
+    setWaitingNarrative(false);
+    // greet 保持 awaitingGreet，空线程只显示「对方正在打招呼」，避免再叠一层「对方正在输入」
+    setAwaitingGreet(kind === 'greet');
     setStreaming('');
     setMenuIndex(null);
+    const deferOp: DeferredOp = kind === 'send'
+      ? { kind: 'send', content: content || '' }
+      : { kind };
+
     try {
-      const onEvent = (ev: Parameters<typeof privateChatApi.sendMessage>[4] extends (e: infer E) => void ? E : never) => {
-        if (ev.type === 'thread') {
-          setMessages(ev.thread.messages || []);
-          if (ev.npc) setNpc(ev.npc);
-        } else if (ev.type === 'delta') {
-          const raw = ev.text || '';
-          // replace=true：后端下发清洗后全文快照；否则兼容旧增量
-          if (ev.replace) {
-            setStreaming(stripPrivateChatFavorMarkers(raw));
-          } else {
-            setStreaming((prev) => stripPrivateChatFavorMarkers(prev + raw));
-          }
-        } else if (ev.type === 'done') {
-          // 同一批更新：先落消息并结束 busy，避免气泡下方再闪「正在输入」
-          setMessages(ev.thread.messages || []);
-          setStreaming('');
-          setBusy(false);
-          setAwaitingGreet(false);
-          if (Array.isArray(ev.playerEditableNpcs)) {
-            onProfilesChange?.(ev.playerEditableNpcs as PlayerEditableNpc[]);
-          }
-        } else if (ev.type === 'error') {
-          toast.error(ev.message || '私聊失败');
-          setStreaming('');
-          setBusy(false);
-          setAwaitingGreet(false);
-        }
+      const onEvent = (ev: PrivateChatSseEvent) => {
+        handleStreamEvent(ev, () => enterNarrativeWait(deferOp));
       };
       if (kind === 'send') {
         await privateChatApi.sendMessage(token, sessionId, npcId, content || '', onEvent);
       } else if (kind === 'greet') {
         await privateChatApi.greet(token, sessionId, npcId, onEvent);
+      } else if (kind === 'nudge') {
+        await privateChatApi.nudge(token, sessionId, npcId, onEvent);
+      } else if (kind === 'continue') {
+        await privateChatApi.continueMessage(token, sessionId, npcId, onEvent);
       } else {
         await privateChatApi.regenerate(token, sessionId, npcId, onEvent);
       }
     } catch (e) {
-      toast.error((e as Error)?.message || '私聊失败');
+      if (isPrivateChatNarrativeBusyError(e)) {
+        enterNarrativeWait(deferOp);
+        return;
+      }
+      // 静默主动开口失败不弹红错（实验组/竞态常见），避免打扰
+      if (kind !== 'nudge') {
+        toast.error((e as Error)?.message || '私聊失败');
+      }
       setStreaming('');
       setAwaitingGreet(false);
     } finally {
       setBusy(false);
     }
-  };
+  }, [token, sessionId, npcId, busy, enterNarrativeWait, handleStreamEvent]);
 
   const loadThread = useCallback(async () => {
     if (!token || !sessionId) return;
+
+    // 读历史不依赖主线是否生成中；仅空线程打招呼 / 发消息才需要等锁
+    setWaitingNarrative(false);
     setLoading(true);
     try {
       const res = await privateChatApi.getThread(token, sessionId, npcId);
@@ -127,35 +229,118 @@ const PrivateChatPanel: React.FC<PrivateChatPanelProps> = ({
         return;
       }
       setNpc(res.data.npc);
+      if (res.data.ab) setChatAb(res.data.ab);
+      if (res.data.player) {
+        setServerPlayerAvatar({
+          avatarUrl: res.data.player.avatarUrl,
+          avatarThumbUrl: res.data.player.avatarThumbUrl,
+        });
+      }
       const loadedMessages = res.data.thread.messages || [];
       setMessages(loadedMessages);
-      // 空线程：先进入 awaitingGreet，再关 loading，避免空态文案闪现
+      // 先结束「加载中」，再打招呼，避免空线程 greet 7s 一直挡整页
+      setLoading(false);
+      if (deferredOpRef.current?.kind === 'boot') {
+        deferredOpRef.current = null;
+      }
+      scrollToBottom();
       if (loadedMessages.length === 0) {
         setAwaitingGreet(true);
-        setLoading(false);
-        scrollToBottom();
+        if (shouldWaitPrivateChatForNarrative(narrativeBusyRef.current)) {
+          enterNarrativeWait({ kind: 'greet' });
+          return;
+        }
         await runStream('greet');
-      } else {
-        setLoading(false);
-        scrollToBottom();
       }
-      return;
     } catch (e) {
+      if (isPrivateChatNarrativeBusyError(e)) {
+        enterNarrativeWait({ kind: 'boot' });
+        return;
+      }
       toast.error((e as Error)?.message || '加载私聊失败');
       setAwaitingGreet(false);
     } finally {
       setLoading(false);
       scrollToBottom();
     }
-  }, [token, sessionId, npcId, scrollToBottom]);
+  }, [token, sessionId, npcId, scrollToBottom, runStream, enterNarrativeWait]);
 
+  const resumeDeferredOp = useCallback(async (op: DeferredOp) => {
+    if (op.kind === 'boot') {
+      await loadThread();
+      return;
+    }
+    if (op.kind === 'send') {
+      await runStream('send', op.content);
+      return;
+    }
+    await runStream(op.kind);
+  }, [loadThread, runStream]);
+
+  // 进入私聊：始终先拉线程；主线真正生成中时仅推迟 greet/send/regen
   useEffect(() => {
-    void loadThread();
-  }, [loadThread]);
+    if (!token || !sessionId) return;
+    const bootKey = `${sessionId}:${npcId}`;
+
+    if (bootKeyRef.current !== bootKey) {
+      bootKeyRef.current = bootKey;
+      deferredOpRef.current = { kind: 'boot' };
+      setChatAb(null);
+      void loadThread();
+      return;
+    }
+
+    if (shouldWaitPrivateChatForNarrative(narrativeBusy)) {
+      return;
+    }
+
+    setWaitingNarrative(false);
+    const pending = deferredOpRef.current;
+    if (!pending || pending.kind === 'boot') {
+      deferredOpRef.current = null;
+      return;
+    }
+    deferredOpRef.current = null;
+    void resumeDeferredOp(pending);
+  }, [token, sessionId, npcId, narrativeBusy, loadThread, resumeDeferredOp]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages, streaming, scrollToBottom]);
+
+  // A/B：实验组在对方已回复且用户未输入时，idleMs（默认 30s）后角色主动再开口
+  useEffect(() => {
+    if (
+      !shouldArmPrivateChatIdleNudge({
+        ab: chatAb,
+        busy,
+        waitingNarrative,
+        loading,
+        draft,
+        messages,
+      })
+    ) {
+      return undefined;
+    }
+    const ms = resolvePrivateChatIdleMs(chatAb);
+    const timer = window.setTimeout(() => {
+      void runStream('nudge');
+    }, ms);
+    return () => window.clearTimeout(timer);
+  }, [chatAb, busy, waitingNarrative, loading, draft, messages, runStream]);
+
+  useEffect(() => {
+    if (menuIndex == null) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Node | null;
+      if (!target) return;
+      const menuEl = document.querySelector(`.${styles.menu}`);
+      if (menuEl && menuEl.contains(target)) return;
+      setMenuIndex(null);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [menuIndex]);
 
   const handleSend = async () => {
     const checked = validatePrivateChatMessage(draft);
@@ -175,7 +360,7 @@ const PrivateChatPanel: React.FC<PrivateChatPanelProps> = ({
   };
 
   const startLongPress = (index: number, role: string) => {
-    if (role !== 'assistant' || busy) return;
+    if (role !== 'assistant' || busy || waitingNarrative) return;
     clearLongPress();
     longPressTimer.current = setTimeout(() => {
       setMenuIndex(index);
@@ -183,27 +368,84 @@ const PrivateChatPanel: React.FC<PrivateChatPanelProps> = ({
   };
 
   const title = npc?.name || npcName || '私聊';
-  const avatarSrc = getImageUrl(npcAvatarUrl || '');
+  // 功能注释：气泡头像走 *_150.webp；点击放大预览必须用原图
+  const npcAvatarSrcPath = pickDisplayAvatarThumbUrl([
+    npc?.avatarThumbUrl,
+    npcAvatarThumbUrl,
+    npc?.avatarUrl,
+    npcAvatarUrl,
+  ]);
+  const avatarSrc = npcAvatarSrcPath ? getImageUrl(npcAvatarSrcPath) : '';
+  const playerAvatarSrcPath = pickDisplayAvatarThumbUrl([
+    playerAvatarThumbUrl,
+    serverPlayerAvatar?.avatarThumbUrl,
+    playerAvatarUrl,
+    serverPlayerAvatar?.avatarUrl,
+  ]);
+  const playerAvatarSrc = playerAvatarSrcPath ? getImageUrl(playerAvatarSrcPath) : '';
+  const npcPreviewFullPath = pickDisplayAvatarFullUrl([
+    npc?.avatarUrl,
+    npcAvatarUrl,
+    npc?.avatarThumbUrl,
+    npcAvatarThumbUrl,
+  ]);
+  const playerPreviewFullPath = pickDisplayAvatarFullUrl([
+    playerAvatarUrl,
+    serverPlayerAvatar?.avatarUrl,
+    playerAvatarThumbUrl,
+    serverPlayerAvatar?.avatarThumbUrl,
+  ]);
+  const playerLabel = String(playerName || npc?.playerName || '我').trim() || '我';
   const introSummary = String(npc?.summary || '').trim();
   const introAttitude = String(npc?.attitude || '').trim();
   const introRelation = String(npc?.relationship || '').trim();
   const introBio = String(npc?.detailedBio || '').trim();
   const hasIntro = Boolean(introSummary || introAttitude || introRelation || introBio);
+  /** 仅拉线程时整页「加载中」；等主线 / 打招呼用文案区分，避免连续两段空白加载 */
+  const threadBooting = loading;
+  const emptyGreeting =
+    !threadBooting && messages.length === 0 && !streaming.trim() && (awaitingGreet || busy);
+  const showTypingHint =
+    !threadBooting && messages.length > 0 && (busy || awaitingGreet) && !streaming.trim();
 
-  const openPreview = () => setPreviewOpen(true);
-  const closePreview = () => setPreviewOpen(false);
+  const npcPreviewSrc = npcPreviewFullPath ? getImageUrl(npcPreviewFullPath) : avatarSrc;
+  const playerPreviewSrc = playerPreviewFullPath
+    ? getImageUrl(playerPreviewFullPath)
+    : playerAvatarSrc;
+  const openNpcPreview = () => setPreviewTarget('npc');
+  const openPlayerPreview = () => {
+    if (!playerPreviewSrc) return;
+    setPreviewTarget('player');
+  };
+  const closePreview = () => setPreviewTarget(null);
+
+  const renderPlayerAvatar = () => (
+    <button
+      type="button"
+      className={styles.avatarHit}
+      onClick={openPlayerPreview}
+      disabled={!playerPreviewSrc}
+      aria-label={playerPreviewSrc ? `查看 ${playerLabel} 头像` : `${playerLabel} 暂无头像`}
+    >
+      {playerAvatarSrc ? (
+        <img className={styles.bubbleAvatar} src={playerAvatarSrc} alt={playerLabel} />
+      ) : (
+        <div className={styles.bubbleAvatarEmpty} aria-hidden />
+      )}
+    </button>
+  );
 
   const handleClearHistory = async () => {
     if (!token || !sessionId) {
       toast.error('请先登录');
       return;
     }
-    const busyTip = resolvePrivateChatBusyMessage({
-      narrativeBusy,
-      privateChatBusy: busy,
-    });
-    if (busyTip) {
-      toast.error(busyTip);
+    const selfBusyTip = resolvePrivateChatBusyMessage({ privateChatBusy: busy });
+    if (selfBusyTip) {
+      toast.error(selfBusyTip);
+      return;
+    }
+    if (shouldWaitPrivateChatForNarrative(narrativeBusyRef.current)) {
       return;
     }
     setClearConfirmOpen(false);
@@ -221,34 +463,15 @@ const PrivateChatPanel: React.FC<PrivateChatPanelProps> = ({
       toast.success('已清空私聊记录');
       setAwaitingGreet(true);
 
-      const onEvent = (ev: Parameters<typeof privateChatApi.greet>[3] extends (e: infer E) => void ? E : never) => {
-        if (ev.type === 'thread') {
-          setMessages(ev.thread.messages || []);
-          if (ev.npc) setNpc(ev.npc);
-        } else if (ev.type === 'delta') {
-          const raw = ev.text || '';
-          if (ev.replace) {
-            setStreaming(stripPrivateChatFavorMarkers(raw));
-          } else {
-            setStreaming((prev) => stripPrivateChatFavorMarkers(prev + raw));
-          }
-        } else if (ev.type === 'done') {
-          setMessages(ev.thread.messages || []);
-          setStreaming('');
-          setBusy(false);
-          setAwaitingGreet(false);
-          if (Array.isArray(ev.playerEditableNpcs)) {
-            onProfilesChange?.(ev.playerEditableNpcs as PlayerEditableNpc[]);
-          }
-        } else if (ev.type === 'error') {
-          toast.error(ev.message || '打招呼失败');
-          setStreaming('');
-          setBusy(false);
-          setAwaitingGreet(false);
-        }
+      const onEvent = (ev: PrivateChatSseEvent) => {
+        handleStreamEvent(ev, () => enterNarrativeWait({ kind: 'greet' }));
       };
       await privateChatApi.greet(token, sessionId, npcId, onEvent);
     } catch (e) {
+      if (isPrivateChatNarrativeBusyError(e)) {
+        enterNarrativeWait({ kind: 'greet' });
+        return;
+      }
       toast.error((e as Error)?.message || '清空失败');
       setStreaming('');
       setAwaitingGreet(false);
@@ -262,7 +485,7 @@ const PrivateChatPanel: React.FC<PrivateChatPanelProps> = ({
     <button
       type="button"
       className={styles.avatarHit}
-      onClick={openPreview}
+      onClick={openNpcPreview}
       aria-label={`查看 ${title} 头像与介绍`}
     >
       {avatarSrc ? (
@@ -284,13 +507,13 @@ const PrivateChatPanel: React.FC<PrivateChatPanelProps> = ({
           <h3 className={styles.title}>{title}</h3>
           <p className={styles.sub}>
             <span className={styles.onlineDot} aria-hidden />
-            在线
+            {waitingNarrative ? '等待主线…' : '在线'}
           </p>
         </div>
         <button
           type="button"
           className={styles.clearBtn}
-          disabled={busy || loading || messages.length === 0}
+          disabled={busy || waitingNarrative || loading || messages.length === 0}
           onClick={() => setClearConfirmOpen(true)}
           aria-label="清空私聊记录"
           title="清空私聊记录"
@@ -309,12 +532,20 @@ const PrivateChatPanel: React.FC<PrivateChatPanelProps> = ({
       </header>
 
       <div className={styles.list} ref={listRef}>
-        {loading ? (
-          <p className={styles.empty}>加载中…</p>
+        {threadBooting ? (
+          <p className={styles.empty} role="status" aria-live="polite">加载中…</p>
+        ) : emptyGreeting ? (
+          <p className={styles.empty} role="status" aria-live="polite">
+            {waitingNarrative ? '主线生成结束后将自动打招呼…' : '对方正在打招呼…'}
+          </p>
         ) : messages.length === 0 && !streaming && !busy && !awaitingGreet ? (
           <p className={styles.empty}>和 {title} 说点什么吧</p>
         ) : (
-          messages.map((m, i) => (
+          messages.map((m, i) => {
+            const isLastAssistant =
+              m.role === 'assistant'
+              && !messages.slice(i + 1).some((x) => x.role === 'assistant');
+            return (
             <div
               key={`${m.createdAt}-${i}`}
               className={`${styles.row} ${m.role === 'user' ? styles.rowUser : styles.rowAssistant}`}
@@ -336,33 +567,49 @@ const PrivateChatPanel: React.FC<PrivateChatPanelProps> = ({
               >
                 <div className={styles.bubbleText}>{m.content}</div>
                 {menuIndex === i ? (
-                  <div className={styles.menu}>
+                  <div
+                    className={styles.menu}
+                    role="menu"
+                    aria-label="消息操作"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <button
                       type="button"
+                      role="menuitem"
                       className={styles.menuBtn}
-                      disabled={busy}
-                      onClick={() => void runStream('regen')}
+                      disabled={busy || waitingNarrative || !isLastAssistant}
+                      onClick={() => void runStream('continue')}
                     >
-                      重新生成
+                      再说一句
                     </button>
+                    <span className={styles.menuDivider} aria-hidden />
                     <button
                       type="button"
+                      role="menuitem"
                       className={styles.menuBtn}
-                      disabled={busy}
+                      disabled={busy || waitingNarrative || !isLastAssistant}
                       onClick={() => void runStream('regen')}
                     >
-                      再说一遍
+                      重新回复
                     </button>
-                    <button type="button" className={styles.menuBtn} onClick={() => setMenuIndex(null)}>
+                    <span className={styles.menuDivider} aria-hidden />
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className={`${styles.menuBtn} ${styles.menuBtnMuted}`}
+                      onClick={() => setMenuIndex(null)}
+                    >
                       取消
                     </button>
                   </div>
                 ) : null}
               </div>
+              {m.role === 'user' ? renderPlayerAvatar() : null}
             </div>
-          ))
+            );
+          })
         )}
-        {streaming.trim() ? (
+        {!threadBooting && streaming.trim() ? (
           <div className={`${styles.row} ${styles.rowAssistant}`}>
             {renderAvatarButton(styles.bubbleAvatar, styles.bubbleAvatarEmpty)}
             <div className={`${styles.bubble} ${styles.assistant} ${styles.streaming}`}>
@@ -370,7 +617,7 @@ const PrivateChatPanel: React.FC<PrivateChatPanelProps> = ({
             </div>
           </div>
         ) : null}
-        {(busy || awaitingGreet) && !streaming.trim() ? (
+        {showTypingHint ? (
           <p className={styles.typing}>对方正在输入…</p>
         ) : null}
       </div>
@@ -383,11 +630,18 @@ const PrivateChatPanel: React.FC<PrivateChatPanelProps> = ({
         }}
       >
         <textarea
+          ref={inputRef}
           className={styles.input}
           rows={2}
           value={draft}
-          disabled={busy || !token}
-          placeholder={token ? '请输入内容…' : '请先登录'}
+          disabled={busy || waitingNarrative || loading || !token}
+          placeholder={
+            !token
+              ? '请先登录'
+              : waitingNarrative
+                ? '主线生成完成后可私聊…'
+                : '请输入内容…'
+          }
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -396,12 +650,16 @@ const PrivateChatPanel: React.FC<PrivateChatPanelProps> = ({
             }
           }}
         />
-        <button type="submit" className={styles.send} disabled={busy || !draft.trim() || !token}>
+        <button
+          type="submit"
+          className={styles.send}
+          disabled={busy || waitingNarrative || loading || !draft.trim() || !token}
+        >
           发送
         </button>
       </form>
 
-      {previewOpen ? (
+      {previewTarget === 'npc' ? (
         <div
           className={styles.previewOverlay}
           role="dialog"
@@ -418,8 +676,8 @@ const PrivateChatPanel: React.FC<PrivateChatPanelProps> = ({
             </div>
             <div className={styles.previewBody}>
               <div className={styles.previewPortraitWrap}>
-                {avatarSrc ? (
-                  <img className={styles.previewPortrait} src={avatarSrc} alt={title} />
+                {npcPreviewSrc ? (
+                  <img className={styles.previewPortrait} src={npcPreviewSrc} alt={title} />
                 ) : (
                   <div className={styles.previewPortraitEmpty} aria-hidden />
                 )}
@@ -442,6 +700,32 @@ const PrivateChatPanel: React.FC<PrivateChatPanelProps> = ({
                   <p className={styles.previewIntroMuted}>暂无人物介绍</p>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {previewTarget === 'player' && playerPreviewSrc ? (
+        <div
+          className={styles.previewOverlay}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${playerLabel} 头像`}
+          onClick={closePreview}
+        >
+          <div className={styles.previewCard} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.previewChrome}>
+              <span className={styles.previewChromeLabel}>我的档案</span>
+              <button type="button" className={styles.previewClose} onClick={closePreview} aria-label="关闭">
+                ×
+              </button>
+            </div>
+            <div className={styles.previewBody}>
+              <div className={styles.previewPortraitWrap}>
+                <img className={styles.previewPortrait} src={playerPreviewSrc} alt={playerLabel} />
+              </div>
+              <h3 className={styles.previewName}>{playerLabel}</h3>
+              <p className={styles.previewMeta}>当前主角</p>
             </div>
           </div>
         </div>

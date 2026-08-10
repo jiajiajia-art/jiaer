@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   CHARACTER_PROFILE_LIMITS,
@@ -12,10 +12,12 @@ import {
   validateCharacterProfileInput,
 } from '../../../lib/galgame/characterProfile';
 import { sessionPlayerProfileApi } from '../../../api/galgame/playerCharacterCards';
-import { CHARACTER_GENERATION_COST, getImageUrl } from '../../../utils/constants';
+import { CHARACTER_GENERATION_COST, NPC_PROFILE_FIELD_GENERATION_COST, getImageUrl } from '../../../utils/constants';
+import { refreshAuthUserPoints } from '../../../lib/auth/refreshUserPoints';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { useGameStore } from '../../../store/gameStore';
 import GameConfirmModal from '../GameConfirmModal';
+import { buildSessionNpcAvatarPrompt } from '../../../lib/galgame/sessionNpcAvatarPrompt';
 import styles from './CharacterProfileForm.module.css';
 
 export type CharacterProfileFormValues = {
@@ -28,6 +30,18 @@ export type CharacterProfileFormValues = {
   importance: NpcImportance | '';
   survival: NpcSurvival | '';
   avatarUrl: string;
+  avatarThumbUrl: string;
+};
+
+type ProfileTextField = 'relationship' | 'summary' | 'attitudeToPlayer' | 'detailedBio';
+type ConfirmKind = 'avatar' | ProfileTextField;
+type AiBusyKey = ConfirmKind;
+
+const PROFILE_FIELD_LABEL: Record<ProfileTextField, string> = {
+  relationship: '关系',
+  summary: '简介',
+  attitudeToPlayer: '对你的态度',
+  detailedBio: '详细简介',
 };
 
 const emptyValues = (): CharacterProfileFormValues => ({
@@ -40,6 +54,7 @@ const emptyValues = (): CharacterProfileFormValues => ({
   importance: '',
   survival: '',
   avatarUrl: '',
+  avatarThumbUrl: '',
 });
 
 function profileToValues(p?: Partial<PlayerEditableNpc> | null): CharacterProfileFormValues {
@@ -54,6 +69,7 @@ function profileToValues(p?: Partial<PlayerEditableNpc> | null): CharacterProfil
     importance: (p.importance as NpcImportance) || '',
     survival: (p.survival as NpcSurvival) || '',
     avatarUrl: String(p.avatarUrl || ''),
+    avatarThumbUrl: String(p.avatarThumbUrl || ''),
   };
 }
 
@@ -98,6 +114,28 @@ function reqLabel(text: string, required = false) {
   );
 }
 
+function fieldLabelWithAi(opts: {
+  text: string;
+  required?: boolean;
+  busy: boolean;
+  disabled: boolean;
+  onAi: () => void;
+}) {
+  return (
+    <div className={styles.labelWithAi}>
+      {reqLabel(opts.text, opts.required)}
+      <button
+        type="button"
+        className={styles.fieldAiBtn}
+        disabled={opts.disabled || opts.busy}
+        onClick={opts.onAi}
+      >
+        {opts.busy ? '生成中…' : `AI生成 · ${NPC_PROFILE_FIELD_GENERATION_COST}`}
+      </button>
+    </div>
+  );
+}
+
 /** 功能注释：局内添加/编辑角色档案（UE：头像 + 必填 + 可折叠补充档案）。 */
 const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
   initial,
@@ -108,26 +146,59 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
 }) => {
   const token = useAuthStore((s) => s.user?.token);
   const updateUser = useAuthStore((s) => s.updateUser);
-  const userPoints = useAuthStore((s) => s.user?.user?.points);
   const { sessionId } = useGameStore();
   const draftId = useMemo(() => String(initial?.id || newDraftId()), [initial?.id]);
   const [values, setValues] = useState<CharacterProfileFormValues>(() => profileToValues(initial));
   const [saving, setSaving] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [confirmOpen, setConfirmOpen] = useState(false);
+  /** 各 AI 按钮独立忙碌：只锁当前按钮，互不阻塞 */
+  const [aiBusy, setAiBusy] = useState<Partial<Record<AiBusyKey, boolean>>>({});
+  const [confirmKind, setConfirmKind] = useState<ConfirmKind | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  /** 头像确认弹窗：提示词补充面板 */
+  const [avatarPromptOpen, setAvatarPromptOpen] = useState(false);
+  const [avatarPromptSupplement, setAvatarPromptSupplement] = useState('');
   const [supplementOpen, setSupplementOpen] = useState(() => Boolean(
     initial?.detailedBio || initial?.importance || initial?.survival,
   ));
+  const formScrollRef = useRef<HTMLDivElement>(null);
+  const supplementToggleRef = useRef<HTMLButtonElement>(null);
+  const pendingSupplementScrollRef = useRef(false);
 
   useEffect(() => {
     setValues(profileToValues(initial));
     setSupplementOpen(Boolean(initial?.detailedBio || initial?.importance || initial?.survival));
   }, [initial]);
 
+  /** 展开补充档案后，把标题滚到滚动区顶部，保证展开内容进可视区 */
+  useEffect(() => {
+    if (!supplementOpen || !pendingSupplementScrollRef.current) return;
+    pendingSupplementScrollRef.current = false;
+    const scrollEl = formScrollRef.current;
+    const anchor = supplementToggleRef.current;
+    if (!scrollEl || !anchor) return;
+
+    let timeoutId = 0;
+    const raf = window.requestAnimationFrame(() => {
+      // 等补充区块挂载 + 展开动画起势后再滚
+      timeoutId = window.setTimeout(() => {
+        const scrollRect = scrollEl.getBoundingClientRect();
+        const anchorRect = anchor.getBoundingClientRect();
+        const nextTop = scrollEl.scrollTop + (anchorRect.top - scrollRect.top) - 10;
+        scrollEl.scrollTo({ top: Math.max(0, nextTop), behavior: 'smooth' });
+      }, 40);
+    });
+    return () => {
+      window.cancelAnimationFrame(raf);
+      if (timeoutId) window.clearTimeout(timeoutId);
+    };
+  }, [supplementOpen]);
+
   const setField = <K extends keyof CharacterProfileFormValues>(key: K, value: CharacterProfileFormValues[K]) => {
     setValues((prev) => ({ ...prev, [key]: value }));
   };
+
+  const isAiBusy = (key: AiBusyKey) => Boolean(aiBusy[key]);
+  const anyAiBusy = Object.values(aiBusy).some(Boolean);
 
   const avatarSrc = getImageUrl(values.avatarUrl);
   const previewName = values.name.trim() || '未命名角色';
@@ -137,6 +208,8 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
   const introBio = values.detailedBio.trim();
   const hasIntro = Boolean(introSummary || introAttitude || introRelation || introBio);
 
+  const formLocked = saving;
+
   const openAvatarPreview = () => {
     if (!avatarSrc) {
       toast.error('请先生成角色头像');
@@ -145,22 +218,51 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
     setPreviewOpen(true);
   };
 
-  const requestGenerate = () => {
+  const ensureReadyForAi = () => {
     if (!values.name.trim()) {
-      toast.error('请先填写姓名再生成头像');
-      return;
+      toast.error('请先填写姓名再生成');
+      return false;
     }
     if (!token || !sessionId) {
       toast.error('请先登录并进入对局');
-      return;
+      return false;
     }
-    setConfirmOpen(true);
+    return true;
   };
 
-  const runGenerate = async () => {
-    setConfirmOpen(false);
+  /** 仅积分不足时提示当前余额；够用则不展示「当前积分」。先刷新服务端积分，避免后台改分后本地缓存误拦。 */
+  const ensureEnoughPointsForAi = async (cost: number) => {
+    const latestPoints = await refreshAuthUserPoints();
+    if (typeof latestPoints === 'number' && latestPoints < cost) {
+      toast.error(`积分不足（需要 ${cost}，当前 ${latestPoints}）`);
+      return false;
+    }
+    return true;
+  };
+
+  const requestGenerateAvatar = async () => {
+    if (!ensureReadyForAi()) return;
+    if (!(await ensureEnoughPointsForAi(CHARACTER_GENERATION_COST))) return;
+    if (isAiBusy('avatar')) return;
+    setAvatarPromptOpen(false);
+    setAvatarPromptSupplement('');
+    setConfirmKind('avatar');
+  };
+
+  const requestGenerateField = async (field: ProfileTextField) => {
+    if (!ensureReadyForAi()) return;
+    if (!(await ensureEnoughPointsForAi(NPC_PROFILE_FIELD_GENERATION_COST))) return;
+    if (isAiBusy(field)) return;
+    setConfirmKind(field);
+  };
+
+  const runGenerateAvatar = async () => {
+    const promptSupplement = avatarPromptSupplement.trim();
+    setConfirmKind(null);
+    setAvatarPromptOpen(false);
     if (!token || !sessionId) return;
-    setGenerating(true);
+    if (isAiBusy('avatar')) return;
+    setAiBusy((prev) => ({ ...prev, avatar: true }));
     try {
       const res = await sessionPlayerProfileApi.generateNpcAvatar(token, sessionId, {
         npcId: draftId,
@@ -170,21 +272,80 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
         summary: values.summary,
         attitudeToPlayer: values.attitudeToPlayer,
         detailedBio: values.detailedBio,
+        ...(promptSupplement ? { promptSupplement } : {}),
       });
       if (!res?.success || !res.data?.avatarUrl) {
         toast.error(res?.message || '头像生成失败');
         return;
       }
       setField('avatarUrl', res.data.avatarUrl);
+      if (res.data.avatarThumbUrl) {
+        setField('avatarThumbUrl', res.data.avatarThumbUrl);
+      } else {
+        setField('avatarThumbUrl', '');
+      }
       if (typeof res.data.remainingPoints === 'number') {
         updateUser({ points: res.data.remainingPoints });
       }
       toast.success(`头像已生成（-${res.data.pointsDeducted ?? CHARACTER_GENERATION_COST} 积分）`);
+      setAvatarPromptSupplement('');
     } catch (e) {
       toast.error((e as Error)?.message || '头像生成失败');
     } finally {
-      setGenerating(false);
+      setAiBusy((prev) => ({ ...prev, avatar: false }));
     }
+  };
+
+  const runGenerateField = async (field: ProfileTextField) => {
+    setConfirmKind(null);
+    if (!token || !sessionId) return;
+    if (isAiBusy(field)) return;
+    setAiBusy((prev) => ({ ...prev, [field]: true }));
+    try {
+      const res = await sessionPlayerProfileApi.generateNpcProfileField(token, sessionId, {
+        field,
+        name: values.name,
+        gender: values.gender,
+        relationship: values.relationship,
+        summary: values.summary,
+        attitudeToPlayer: values.attitudeToPlayer,
+        detailedBio: values.detailedBio,
+      });
+      if (!res?.success || !res.data?.text) {
+        toast.error(res?.message || `${PROFILE_FIELD_LABEL[field]}生成失败`);
+        return;
+      }
+      setField(field, res.data.text);
+      if (typeof res.data.remainingPoints === 'number') {
+        updateUser({ points: res.data.remainingPoints });
+      }
+      toast.success(
+        `${PROFILE_FIELD_LABEL[field]}已生成（-${res.data.pointsDeducted ?? NPC_PROFILE_FIELD_GENERATION_COST} 积分）`,
+      );
+    } catch (e) {
+      toast.error((e as Error)?.message || `${PROFILE_FIELD_LABEL[field]}生成失败`);
+    } finally {
+      setAiBusy((prev) => ({ ...prev, [field]: false }));
+    }
+  };
+
+  const avatarBasePrompt = useMemo(
+    () => buildSessionNpcAvatarPrompt(values),
+    [values],
+  );
+
+  const closeConfirmModal = () => {
+    setConfirmKind(null);
+    setAvatarPromptOpen(false);
+  };
+
+  const handleConfirmGenerate = () => {
+    if (!confirmKind) return;
+    if (confirmKind === 'avatar') {
+      void runGenerateAvatar();
+      return;
+    }
+    void runGenerateField(confirmKind);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -199,6 +360,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
       importance: values.importance || undefined,
       survival: values.survival || undefined,
       avatarUrl: values.avatarUrl,
+      avatarThumbUrl: values.avatarThumbUrl || undefined,
     });
     if (!checked.ok || !checked.data) {
       toast.error(checked.message || '表单无效');
@@ -215,10 +377,10 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
   return (
     <>
       <form className={styles.form} onSubmit={handleSubmit}>
-        <div className={styles.formScroll}>
+        <div className={styles.formScroll} ref={formScrollRef}>
         <div className={styles.formTop}>
           <h3 className={styles.formTitle}>{formTitle}</h3>
-          <button type="button" className={styles.formClose} onClick={onCancel} aria-label="关闭" disabled={saving || generating}>
+          <button type="button" className={styles.formClose} onClick={onCancel} aria-label="关闭" disabled={formLocked}>
             ×
           </button>
         </div>
@@ -240,15 +402,16 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
             {reqLabel('头像', true)}
             <p className={styles.avatarHint}>
               点击头像可放大预览；AI 生成消耗 {CHARACTER_GENERATION_COST} 积分
-              {typeof userPoints === 'number' ? `（当前 ${userPoints}）` : ''}
             </p>
             <button
               type="button"
               className={styles.avatarGenBtn}
-              disabled={generating || saving}
-              onClick={requestGenerate}
+              disabled={formLocked || isAiBusy('avatar')}
+              onClick={() => {
+                void requestGenerateAvatar();
+              }}
             >
-              {generating ? '生成中…' : `AI 生成头像 · ${CHARACTER_GENERATION_COST} 积分`}
+              {isAiBusy('avatar') ? '生成中…' : `AI 生成头像 · ${CHARACTER_GENERATION_COST} 积分`}
             </button>
           </div>
         </section>
@@ -285,44 +448,77 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
             </div>
           </div>
 
-          <label className={styles.field}>
-            {reqLabel(`关系（≤${CHARACTER_PROFILE_LIMITS.relationship.max}）`, true)}
+          <div className={styles.field}>
+            {fieldLabelWithAi({
+              text: `关系（≤${CHARACTER_PROFILE_LIMITS.relationship.max}）`,
+              required: true,
+              busy: isAiBusy('relationship'),
+              disabled: formLocked,
+              onAi: () => {
+                void requestGenerateField('relationship');
+              },
+            })}
             <input
               value={values.relationship}
               maxLength={CHARACTER_PROFILE_LIMITS.relationship.max}
               placeholder="与你的关系"
+              disabled={isAiBusy('relationship')}
               onChange={(e) => setField('relationship', e.target.value)}
             />
-          </label>
+          </div>
 
-          <label className={styles.field}>
-            {reqLabel(`简介（≤${CHARACTER_PROFILE_LIMITS.summary.max}）`, true)}
+          <div className={styles.field}>
+            {fieldLabelWithAi({
+              text: `简介（≤${CHARACTER_PROFILE_LIMITS.summary.max}）`,
+              required: true,
+              busy: isAiBusy('summary'),
+              disabled: formLocked,
+              onAi: () => {
+                void requestGenerateField('summary');
+              },
+            })}
             <textarea
               value={values.summary}
               maxLength={CHARACTER_PROFILE_LIMITS.summary.max}
               rows={3}
               placeholder="一句话人物简介"
+              disabled={isAiBusy('summary')}
               onChange={(e) => setField('summary', e.target.value)}
             />
-          </label>
+          </div>
 
-          <label className={styles.field}>
-            {reqLabel(`对你的态度（≤${CHARACTER_PROFILE_LIMITS.attitudeToPlayer.max}）`, true)}
+          <div className={styles.field}>
+            {fieldLabelWithAi({
+              text: `对你的态度（≤${CHARACTER_PROFILE_LIMITS.attitudeToPlayer.max}）`,
+              required: true,
+              busy: isAiBusy('attitudeToPlayer'),
+              disabled: formLocked,
+              onAi: () => {
+                void requestGenerateField('attitudeToPlayer');
+              },
+            })}
             <textarea
               value={values.attitudeToPlayer}
               maxLength={CHARACTER_PROFILE_LIMITS.attitudeToPlayer.max}
               rows={2}
               placeholder="TA 对你的态度"
+              disabled={isAiBusy('attitudeToPlayer')}
               onChange={(e) => setField('attitudeToPlayer', e.target.value)}
             />
-          </label>
+          </div>
         </section>
 
         <button
           type="button"
+          ref={supplementToggleRef}
           className={styles.supplementToggle}
           aria-expanded={supplementOpen}
-          onClick={() => setSupplementOpen((v) => !v)}
+          onClick={() => {
+            setSupplementOpen((open) => {
+              if (!open) pendingSupplementScrollRef.current = true;
+              return !open;
+            });
+          }}
         >
           <span>补充档案（选填）</span>
           <span className={`${styles.chevron} ${supplementOpen ? styles.chevronOpen : ''}`} aria-hidden>
@@ -332,18 +528,24 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
 
         {supplementOpen ? (
           <section className={styles.supplement} aria-label="补充档案">
-            <label className={styles.field}>
-              <span className={styles.labelRow}>
-                详细简介（≤{CHARACTER_PROFILE_LIMITS.detailedBio.max}）
-              </span>
+            <div className={styles.field}>
+              {fieldLabelWithAi({
+                text: `详细简介（≤${CHARACTER_PROFILE_LIMITS.detailedBio.max}）`,
+                busy: isAiBusy('detailedBio'),
+                disabled: formLocked,
+                onAi: () => {
+                  void requestGenerateField('detailedBio');
+                },
+              })}
               <textarea
                 value={values.detailedBio}
                 maxLength={CHARACTER_PROFILE_LIMITS.detailedBio.max}
                 rows={4}
                 placeholder="可写经历、习惯、秘密等补充人设…"
+                disabled={isAiBusy('detailedBio')}
                 onChange={(e) => setField('detailedBio', e.target.value)}
               />
-            </label>
+            </div>
 
             <div className={styles.field}>
               <span className={styles.labelRow}>重要程度</span>
@@ -381,25 +583,84 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
         </div>
 
         <div className={styles.actions}>
-          <button type="button" className={styles.secondary} onClick={onCancel} disabled={saving || generating}>
+          <button type="button" className={styles.secondary} onClick={onCancel} disabled={formLocked}>
             取消
           </button>
-          <button type="submit" className={styles.primary} disabled={saving || generating}>
+          <button type="submit" className={styles.primary} disabled={formLocked || anyAiBusy}>
             {saving ? '保存中…' : submitLabel}
           </button>
         </div>
       </form>
 
       <GameConfirmModal
-        isOpen={confirmOpen}
-        title="确认生成头像"
-        message={`将扣除 ${CHARACTER_GENERATION_COST} 积分生成 AI 头像${typeof userPoints === 'number' ? `（当前积分 ${userPoints}）` : ''}，是否继续？`}
+        isOpen={Boolean(confirmKind)}
+        variant="dossier"
+        title={confirmKind === 'avatar'
+          ? '确认生成头像'
+          : `确认生成${confirmKind ? PROFILE_FIELD_LABEL[confirmKind] : ''}`}
+        message={confirmKind === 'avatar' ? (
+          <div className={styles.confirmMsgStack}>
+            <p className={styles.confirmMsgText}>
+              {`将扣除 ${CHARACTER_GENERATION_COST} 积分生成 AI 头像，是否继续？`}
+            </p>
+            <button
+              type="button"
+              className={`${styles.promptCueBtn} ${avatarPromptOpen ? styles.promptCueBtnActive : ''}`}
+              onClick={() => setAvatarPromptOpen((open) => !open)}
+              aria-expanded={avatarPromptOpen}
+            >
+              <span>{avatarPromptOpen ? '收起提示词' : '提示词补充'}</span>
+              <span className={styles.promptCueChevron} aria-hidden>
+                {avatarPromptOpen ? '▴' : '▾'}
+              </span>
+            </button>
+          </div>
+        ) : (
+          `将扣除 ${NPC_PROFILE_FIELD_GENERATION_COST} 积分生成「${confirmKind ? PROFILE_FIELD_LABEL[confirmKind] : ''}」，是否继续？`
+        )}
         confirmText="确认生成"
         cancelText="取消"
         overlayZIndex={3600}
-        onConfirm={() => { void runGenerate(); }}
-        onCancel={() => setConfirmOpen(false)}
-      />
+        onConfirm={handleConfirmGenerate}
+        onCancel={closeConfirmModal}
+      >
+        {confirmKind === 'avatar' && avatarPromptOpen ? (
+          <div className={styles.promptCuePanel} role="region" aria-label="头像生成提示词">
+            <div className={styles.promptCueSection}>
+              <div className={styles.promptCueLabelRow}>
+                <label className={styles.promptCueLabel} htmlFor="npc-avatar-base-prompt">
+                  当前提示词
+                </label>
+                <span className={styles.promptCueHint}>只读</span>
+              </div>
+              <textarea
+                id="npc-avatar-base-prompt"
+                className={styles.promptCueReadonly}
+                value={avatarBasePrompt}
+                readOnly
+                rows={4}
+              />
+            </div>
+            <div className={styles.promptCueSection}>
+              <div className={styles.promptCueLabelRow}>
+                <label className={styles.promptCueLabel} htmlFor="npc-avatar-prompt-supplement">
+                  补充描述
+                </label>
+                <span className={styles.promptCueHint}>拼到末尾 · {avatarPromptSupplement.trim().length}/500</span>
+              </div>
+              <textarea
+                id="npc-avatar-prompt-supplement"
+                className={styles.promptCueInput}
+                value={avatarPromptSupplement}
+                onChange={(e) => setAvatarPromptSupplement(e.target.value.slice(0, 500))}
+                placeholder="短发、校服、冷白皮、侧分刘海…"
+                rows={3}
+                maxLength={500}
+              />
+            </div>
+          </div>
+        ) : null}
+      </GameConfirmModal>
 
       {previewOpen && avatarSrc ? (
         <div

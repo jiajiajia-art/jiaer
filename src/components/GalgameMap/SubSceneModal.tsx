@@ -238,7 +238,7 @@ const SubSceneModal: React.FC<SubSceneModalProps> = ({
                                     useCanvas={true}
                                 />
                             <img 
-                                src={`${import.meta.env.BASE_URL}/data/assets/任务.png`} 
+                                src={`${import.meta.env.BASE_URL}data/assets/任务.png`} 
                                 alt="任务" 
                                 className={styles.eventLocation} 
                             />

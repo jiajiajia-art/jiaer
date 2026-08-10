@@ -25,12 +25,15 @@ export const GameBackgroundRenderer: React.FC<GameBackgroundRendererProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [currentSrc, setCurrentSrc] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  /** Canvas 已解码成功；失败时才走 CSS url 兜底，避免加载中双下 */
+  const [cssFallbackSrc, setCssFallbackSrc] = useState<string | null>(null);
   const previousBitmapRef = useRef<ImageBitmap | null>(null);
   const currentBitmapRef = useRef<ImageBitmap | null>(null);
 
   useEffect(() => {
     if (!src || src === 'null' || src === 'undefined' || src.trim() === '') {
       setCurrentSrc(null);
+      setCssFallbackSrc(null);
       if (canvasRef.current) {
         const ctx = canvasRef.current.getContext('2d');
         if (ctx) {
@@ -48,6 +51,8 @@ export const GameBackgroundRenderer: React.FC<GameBackgroundRendererProps> = ({
 
     const loadAndRender = async () => {
       setIsTransitioning(true);
+      // 加载中绝不挂 CSS url，否则会与 fetch 双请求
+      setCssFallbackSrc(null);
 
       try {
         let bitmap: ImageBitmap | null = null;
@@ -69,6 +74,7 @@ export const GameBackgroundRenderer: React.FC<GameBackgroundRendererProps> = ({
           }
           currentBitmapRef.current = bitmap;
           setCurrentSrc(src);
+          setCssFallbackSrc(null);
           
           requestAnimationFrame(() => {
             if (!cancelled && canvasRef.current) {
@@ -105,15 +111,15 @@ export const GameBackgroundRenderer: React.FC<GameBackgroundRendererProps> = ({
             }
           });
         } else {
-          // bitmap 为 null，说明图片加载失败或 CORS 不允许 Canvas 渲染
-          // 设置 currentSrc，让 CSS background-image 兜底显示
+          // bitmap 为 null：仅此时 CSS url 兜底（单通道，不再与 canvas fetch 并行）
           setCurrentSrc(src);
+          setCssFallbackSrc(src);
           setIsTransitioning(false);
         }
       } catch (error) {
         console.error('[GameBackgroundRenderer] Failed to load background:', error);
-        // 即使出错，也设置 currentSrc，让 CSS background-image 兜底显示
         setCurrentSrc(src);
+        setCssFallbackSrc(src);
         setIsTransitioning(false);
       }
     };
@@ -283,9 +289,8 @@ export const GameBackgroundRenderer: React.FC<GameBackgroundRendererProps> = ({
       ref={containerRef}
       className={`${styles.container} ${className}`}
       style={{
-        // 即使 Canvas 渲染失败，仍然用 CSS 背景兜底显示图片
-        // 使用 currentSrc || src，确保即使 currentSrc 还没更新也能显示
-        backgroundImage: (currentSrc || src) ? `url(${currentSrc || src})` : 'none',
+        // 仅 Canvas 失败时挂 CSS；成功路径只走 gameResourceManager 单通道
+        backgroundImage: cssFallbackSrc ? `url(${cssFallbackSrc})` : 'none',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',

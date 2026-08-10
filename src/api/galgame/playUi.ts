@@ -1,6 +1,7 @@
 import { authFetch } from '../base';
 import { HOST_ADDRESS } from '../../config';
 import type { QuestItem } from '../../lib/galgame/quests';
+import type { SessionPlayerProfile } from '../../lib/galgame/playerCharacterCard';
 import { parsePlayUiJson } from '../../lib/galgame/playUiState';
 
 export interface PlayUiStateData {
@@ -11,6 +12,9 @@ export interface PlayUiStateData {
   questsUpdatedAt?: string | null;
   gameStartConfig?: Record<string, unknown> | null;
   playerEditableNpcs?: unknown[];
+  sessionPlayerProfile?: SessionPlayerProfile | null;
+  /** A/B：换角后 AI 生主角头像 */
+  ab?: { playerAvatarOnChange?: boolean } | null;
 }
 
 /** 功能注释：读取 session 上已持久化的出场/任务/属性缓存（无 LLM）。 */
@@ -44,5 +48,45 @@ export async function fetchPlayUiState(sessionId: string): Promise<PlayUiStateDa
     playerEditableNpcs: Array.isArray(json.data?.playerEditableNpcs)
       ? json.data.playerEditableNpcs
       : [],
+    sessionPlayerProfile:
+      json.data?.sessionPlayerProfile && typeof json.data.sessionPlayerProfile === 'object'
+        ? (json.data.sessionPlayerProfile as SessionPlayerProfile)
+        : null,
+    ab:
+      json.data?.ab && typeof json.data.ab === 'object'
+        ? { playerAvatarOnChange: !!(json.data.ab as { playerAvatarOnChange?: boolean }).playerAvatarOnChange }
+        : null,
+  };
+}
+
+/** 功能注释：角色档案打开时批量 ensure 150 头部小图。 */
+export async function fetchCharacterAvatarThumbs(sessionId: string): Promise<{
+  npcAvatarThumbs: Record<string, string>;
+  playerEditableNpcs: unknown[];
+  sessionPlayerProfile: SessionPlayerProfile | null;
+}> {
+  const url = `${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/character-avatar-thumbs`;
+  const res = await authFetch(url, { method: 'GET' });
+  const text = await res.text();
+  const json = parsePlayUiJson(text);
+  if (!json) {
+    throw new Error('角色头像接口返回了非 JSON 内容');
+  }
+  if (!res.ok || !json?.success) {
+    throw new Error(json?.message || `HTTP ${res.status}`);
+  }
+  const thumbs =
+    json.data?.npcAvatarThumbs && typeof json.data.npcAvatarThumbs === 'object'
+      ? (json.data.npcAvatarThumbs as Record<string, string>)
+      : {};
+  return {
+    npcAvatarThumbs: thumbs,
+    playerEditableNpcs: Array.isArray(json.data?.playerEditableNpcs)
+      ? json.data.playerEditableNpcs
+      : [],
+    sessionPlayerProfile:
+      json.data?.sessionPlayerProfile && typeof json.data.sessionPlayerProfile === 'object'
+        ? (json.data.sessionPlayerProfile as SessionPlayerProfile)
+        : null,
   };
 }

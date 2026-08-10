@@ -1,0 +1,11 @@
+name = "interactive-fiction-frontend-gogo"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+workers_dev = true
+preview_urls = true
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+# Worker 先处理 /funloom SPA 与资源路径改写，避免依赖会触发无限环的 _redirects SPA 规则
+run_worker_first = true

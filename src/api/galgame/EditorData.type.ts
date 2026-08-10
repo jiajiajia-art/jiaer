@@ -223,6 +223,10 @@ export interface GenerateAllImageRequest {
   generatePlayer: boolean;
   removeBg: boolean;
   pluginType: string;
+  /** 有值时只生成这些 NPC（配合 generatePlayer） */
+  npcIds?: string[];
+  /** 有值时只生成这些场景（场景批量 / 重试未完成） */
+  sceneIds?: string[];
 }
 
 export interface GenerateCategoryProgress {
@@ -298,6 +302,45 @@ export interface BatchImageJobStatus {
   elapsedSeconds?: number | null;
   estimatedRemainingSeconds?: number | null;
   estimatedTotalSeconds?: number | null;
+  /** @deprecated 仅兼容；请用 stageStats / items 分栏排查 */
+  pipelineProgress?: number | null;
+  generateDoneCount?: number | null;
+  rembgDoneCount?: number | null;
+  generateActiveCount?: number | null;
+  rembgActiveCount?: number | null;
+  stageStats?: {
+    generateActive?: number;
+    generateDone?: number;
+    rembgActive?: number;
+    rembgDone?: number;
+    failed?: number;
+    settled?: number;
+    pending?: number;
+    total?: number;
+  } | null;
+  /** 已抠图并落盘的分项（任务未结束也可增量刷新角色立绘） */
+  savedResults?: Array<{
+    id: string;
+    name?: string;
+    index?: number;
+    type?: string;
+    imagePath: string;
+    savedAt?: string;
+  }>;
+  /** 每张图当前阶段（排查卡点） */
+  items?: Array<{
+    index: number;
+    id?: string;
+    name?: string;
+    stage: string;
+    imagePath?: string;
+    updatedAt?: string;
+    stageUpdatedAt?: string;
+    stageElapsedSeconds?: number;
+    error?: string | null;
+  }>;
+  /** 批量生图阶段日志（生图/抠图流水线） */
+  logs?: Array<string | { message: string; at?: string; stage?: string; index?: number; name?: string }>;
   result?: BatchImageJobPayload | null;
   error?: string | null;
   message?: string;

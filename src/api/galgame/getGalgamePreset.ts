@@ -1,6 +1,9 @@
 import type { ApiResponse } from "../api.types";
 import { api } from "../base";
+import { dedupeInflight } from "../../lib/dedupeInflight";
 import type { GetGalgameHistoryResponse, GetGalgamePresetResponse } from "./getGalgamePreset.type";
+
+const historyInflight = new Map<string, Promise<unknown>>();
 
 const getGalgamePresetApi = {
     // getGalgamePreset: (presetId: string) =>
@@ -15,9 +18,12 @@ const getGalgamePresetApi = {
     getGalgameHistory: (
         sessionId: string,
         params?: { offset?: number; limit?: number; direction?: 'before' | 'after'; debugContextMemory?: 1 | '1' | boolean }
-    ) =>
-        api.get<GetGalgameHistoryResponse>(`/visual/session/${sessionId}/history`, { params }),
+    ) => {
+        const key = `${sessionId}|${JSON.stringify(params || {})}`;
+        return dedupeInflight(historyInflight, key, () =>
+            api.get<GetGalgameHistoryResponse>(`/visual/session/${sessionId}/history`, { params })
+        ) as ReturnType<typeof api.get<GetGalgameHistoryResponse>>;
+    },
 };
 
 export default getGalgamePresetApi;
-

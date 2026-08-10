@@ -8,6 +8,7 @@ import type { UserGameData } from '../api/home/getGameData.type';
 import { addImageTimestamp } from '../utils/imageCache';
 import { getGameTypeLabelFromMeta, getGameTypeToneFromMeta } from '../utils/gameTypeLabel';
 import { resolveGameTypeToneStyle } from '../utils/gameTypeToneClass';
+import { buildGameDetailNavigateState } from '../utils/gameDetailNavigation';
 
 interface HomeThemePreviewRailProps {
     games: UserGameData[];
@@ -149,7 +150,7 @@ const HomeThemePreviewRail: React.FC<HomeThemePreviewRailProps> = ({
         if (!gameId) return;
 
         navigate(`/game/${gameId}`, {
-            state: { source: 'home_theme_preview' },
+            state: buildGameDetailNavigateState('home_theme_preview', game),
         });
     };
 

@@ -9,6 +9,7 @@ import type { UserGameData } from '../api/home/getGameData.type';
 import { addImageTimestamp } from '../utils/imageCache';
 import { getGameTypeLabelFromMeta, getGameTypeToneFromMeta } from '../utils/gameTypeLabel';
 import { resolveGameTypeToneStyle } from '../utils/gameTypeToneClass';
+import { buildGameDetailNavigateState } from '../utils/gameDetailNavigation';
 
 type GameGridLayoutVariant = 'default' | 'homeWide';
 
@@ -149,7 +150,9 @@ const GameGrid: React.FC<GameGridProps> = ({
 
         const gameId = game.file_id || game.id;
         if (!gameId) return;
-        navigate(`/game/${gameId}`, { state: { source: 'main_page' } });
+        navigate(`/game/${gameId}`, {
+            state: buildGameDetailNavigateState('main_page', game),
+        });
     };
 
     if (games.length === 0) {

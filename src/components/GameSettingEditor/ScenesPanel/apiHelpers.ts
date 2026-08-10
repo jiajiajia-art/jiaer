@@ -78,7 +78,8 @@ export const createSceneApiHelpers = (mode: string) => {
                 }
 
                 const response = await EditorApi.generateSceneImage(scene.id, fileId, {
-                    removeBg: true,
+                    // 场景背景：不抠图、背景不透明
+                    removeBg: false,
                     pluginType: 'visual',
                 });
 
@@ -128,7 +129,7 @@ export const createSceneApiHelpers = (mode: string) => {
             return worldEditor.setWorldMapImage(fileId, file);
         },
 
-        generateAllSceneImages: async (fileId: string) => {
+        generateAllSceneImages: async (fileId: string, sceneIds?: string[]) => {
             if (isWorldInteraction) {
                 return worldEditor.generateAllSceneImages(fileId);
             }
@@ -137,11 +138,12 @@ export const createSceneApiHelpers = (mode: string) => {
                 generateScenes: true,
                 generateVariants: false,
                 generatePlayer: false,
-                removeBg: true,
+                removeBg: false,
                 pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
+                ...(Array.isArray(sceneIds) && sceneIds.length > 0 ? { sceneIds } : {}),
             });
         },
-        startGenerateAllSceneImages: async (fileId: string) => {
+        startGenerateAllSceneImages: async (fileId: string, sceneIds?: string[]) => {
             if (isWorldInteraction) {
                 return worldEditor.startGenerateAllSceneImages(fileId);
             }
@@ -150,8 +152,10 @@ export const createSceneApiHelpers = (mode: string) => {
                 generateScenes: true,
                 generateVariants: false,
                 generatePlayer: false,
-                removeBg: true,
+                // 场景背景：不抠图、不透明
+                removeBg: false,
                 pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
+                ...(Array.isArray(sceneIds) && sceneIds.length > 0 ? { sceneIds } : {}),
             });
         },
         getSceneBatchJobStatus: async (jobId: string) => {

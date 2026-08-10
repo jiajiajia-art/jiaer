@@ -26,6 +26,8 @@ export type PlayerEditableNpc = {
   personalityTags?: string[];
   /** 局内头像（AI 生成或预设立绘 URL） */
   avatarUrl?: string;
+  /** 150×150 webp 小图，气泡/列表优先 */
+  avatarThumbUrl?: string;
   source: 'preset' | 'player_created';
   encountered: boolean;
 };
@@ -116,6 +118,7 @@ export function validateCharacterProfileInput(input: Partial<PlayerEditableNpc> 
     : undefined;
 
   const avatarUrl = trimStr(input?.avatarUrl) || undefined;
+  const avatarThumbUrl = trimStr(input?.avatarThumbUrl) || undefined;
 
   return {
     ok: true,
@@ -133,6 +136,7 @@ export function validateCharacterProfileInput(input: Partial<PlayerEditableNpc> 
       favorability,
       personalityTags: tags?.length ? tags : undefined,
       avatarUrl,
+      avatarThumbUrl,
     },
   };
 }
@@ -223,9 +227,29 @@ export function npcLikeToEditableProfile(
   };
 }
 
-/** 功能注释：列表展示：出场优先，再按姓名。 */
+/** 功能注释：从局内自建 id（pc_<base36时间>_…）取创建时间，用于新建置顶。 */
+export function playerCreatedRecencyMs(id: unknown): number {
+  const m = String(id || '').match(/^pc_([a-z0-9]+)_/i);
+  if (!m) return 0;
+  const n = Number.parseInt(m[1], 36);
+  return Number.isFinite(n) ? n : 0;
+}
+
+/**
+ * 功能注释：列表展示排序。
+ * 自定义角色置顶（新建越新越靠前）→ 同组出场优先 → 姓名中文序。
+ */
 export function sortEditableNpcProfiles(list: PlayerEditableNpc[]): PlayerEditableNpc[] {
   return [...(list || [])].sort((a, b) => {
+    const aCustom = a.source === 'player_created' ? 1 : 0;
+    const bCustom = b.source === 'player_created' ? 1 : 0;
+    if (aCustom !== bCustom) return bCustom - aCustom;
+
+    if (aCustom) {
+      const byNew = playerCreatedRecencyMs(b.id) - playerCreatedRecencyMs(a.id);
+      if (byNew !== 0) return byNew;
+    }
+
     if (a.encountered !== b.encountered) return a.encountered ? -1 : 1;
     return String(a.name).localeCompare(String(b.name), 'zh');
   });

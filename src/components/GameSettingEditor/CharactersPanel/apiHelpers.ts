@@ -142,25 +142,35 @@ export const createApiHelpers = (mode: string) => {
             }
         },
 
-        // 批量操作
+        // 批量操作（跳过美图；本地 CF 抠图 + 去白底 → 透明 WebP）
         generateAllNpcImages: async (fileId: string) => {
             return EditorApi.generateAllImages(fileId, {
-                    generateNPCs: true,
-                    generateScenes: false,
-                    generateVariants: false,
-                    generatePlayer: true,
-                    removeBg: true,
-                    pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
-                });
-        },
-        startGenerateAllNpcImages: async (fileId: string) => {
-            return EditorApi.startGenerateAllImages(fileId, {
                 generateNPCs: true,
                 generateScenes: false,
                 generateVariants: false,
                 generatePlayer: true,
                 removeBg: true,
                 pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
+            });
+        },
+        startGenerateAllNpcImages: async (
+            fileId: string,
+            selection?: {
+                hasSelection?: boolean;
+                generatePlayer?: boolean;
+                generateNPCs?: boolean;
+                npcIds?: string[];
+            },
+        ) => {
+            const scoped = Boolean(selection?.hasSelection);
+            return EditorApi.startGenerateAllImages(fileId, {
+                generateNPCs: scoped ? selection?.generateNPCs !== false : true,
+                generateScenes: false,
+                generateVariants: false,
+                generatePlayer: scoped ? selection?.generatePlayer === true : true,
+                removeBg: true,
+                pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
+                ...(scoped ? { npcIds: selection?.npcIds || [] } : {}),
             });
         },
         getNpcBatchJobStatus: async (jobId: string) => {
@@ -170,10 +180,25 @@ export const createApiHelpers = (mode: string) => {
             return EditorApi.getGenerateAllImagesJobResult(jobId);
         },
 
-        calculateNpcPoints: async (fileId: string) => {
+        calculateNpcPoints: async (
+            fileId: string,
+            selection?: {
+                hasSelection?: boolean;
+                generatePlayer?: boolean;
+                generateNPCs?: boolean;
+                npcIds?: string[];
+            },
+        ) => {
+            const scoped = Boolean(selection?.hasSelection);
+            const body: Record<string, unknown> = { fileId };
+            if (scoped) {
+                body.generatePlayer = selection?.generatePlayer === true;
+                body.generateNPCs = selection?.generateNPCs !== false;
+                body.npcIds = selection?.npcIds || [];
+            }
             return isWorldInteraction
-                ? worldEditor.calculateNpcPoints(fileId)
-                : EditorApi.calculateNpcPoints(fileId);
+                ? worldEditor.calculateNpcPoints(fileId, body)
+                : EditorApi.calculateNpcPoints(fileId, body);
         },
 
         // 差分相关

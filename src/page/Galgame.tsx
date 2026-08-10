@@ -16,7 +16,9 @@ import {
   type GameStartWorldBookEntry,
   type GameStartWritingStyle,
 } from "../lib/galgame/gameStartConfig";
+import { isPlaceholderPlayerName, resolvePlayerDisplayName } from "../lib/galgame/playerDisplayName";
 import { sessionPlayerProfileApi } from "../api/galgame/playerCharacterCards";
+import type { SessionPlayerProfile } from "../lib/galgame/playerCharacterCard";
 import type { SystemsConfigPatch } from "../components/Galgame/panels/SystemsPanel";
 import type { PlayerEditableNpc } from "../lib/galgame/characterProfile";
 import {
@@ -34,6 +36,7 @@ import TextModeDisplay from "../components/Galgame/TextModeDisplay";
 import SettingsModal from "../components/Galgame/SettingsModal";
 import ErrorModal from "../components/GalgameMap/Modal/WorldModal";
 import { useGalgameController } from "../hooks/galgame/useGalgameController";
+import type { Message } from "../hooks/galgame/useGalgameMessage";
 import toast from "react-hot-toast";
 import FullPageLoading from "../components/Skeleton/FullPageLoading";
 import { useState, useEffect, useRef, useMemo, useCallback, type CSSProperties } from "react";
@@ -45,12 +48,13 @@ import replayModalStyles from "../components/Galgame/ShareReplayModal.module.css
 import replayApi from "../api/galgame/replay";
 import AttributesPanel from "../components/Galgame/panels/AttributesPanel";
 import SystemsPanel from "../components/Galgame/panels/SystemsPanel";
+import { getPlayerImageUrl } from "../utils/constants";
 import CharactersPanel from "../components/Galgame/panels/CharactersPanel";
 import QuestsPanel from "../components/Galgame/panels/QuestsPanel";
 import SaveModal from "../components/Galgame/SaveModal";
 import LoadSaveListModal from "../components/CreateGame/LoadSaveListModal";
 import SavePreviewModal from "../components/CreateGame/SavePreviewModal";
-import type { SaveSummaryItem } from "../api/galgame/saves";
+import { savesApi, type SaveSummaryItem } from "../api/galgame/saves";
 import GameConfirmModal from "../components/Galgame/GameConfirmModal";
 import { useGameDurationTracking } from "../hooks/useGameDurationTracking";
 import { logVisualButtonClick } from "../api/statistics/scriptButtonEvent";
@@ -83,10 +87,18 @@ import {
 } from "../lib/galgame/quests";
 import { useQuestTrackerTypewriter } from "../hooks/galgame/useQuestTrackerTypewriter";
 import { buildLocationNameTypewriterVars } from "../lib/galgame/locationNameTypewriter";
-import { isAbortError, hasNonEmptyPanelText, normalizeAttributePanels } from "../lib/galgame/attributePanelValues";
+import {
+    isAbortError,
+    hasNonEmptyPanelText,
+    normalizeAttributePanels,
+    shouldSkipAttributeAutoRefresh,
+} from "../lib/galgame/attributePanelValues";
+import { isNarrativeGenerationBusy } from "../lib/galgame/privateChatGate";
 import { fetchPlayUiState } from "../api/galgame/playUi";
 import { streamQuests } from "../api/galgame/questsStream";
 import { streamAttributePanels } from "../api/galgame/attributePanelsStream";
+import { runSessionAutoStartOnce } from "../lib/galgame/sessionStartInflight";
+import { ensurePlayUiHydratedOnce, resetPlayUiHydrationGate } from "../lib/galgame/playUiHydrationGate";
 
 const Galgame = () => {
     const { t } = useTranslation();
@@ -103,11 +115,12 @@ const Galgame = () => {
     const [questsLoading, setQuestsLoading] = useState(false);
     const [questsError, setQuestsError] = useState<string | null>(null);
     const [attributePanelsCache, setAttributePanelsCache] = useState<Record<string, string>>({});
-    const lastHistoryLenForRefreshRef = useRef(0);
     const questsRef = useRef<QuestItem[]>([]);
     questsRef.current = quests;
     const questsAbortRef = useRef<AbortController | null>(null);
     const attrsAbortRef = useRef<AbortController | null>(null);
+    const attrsStreamingRef = useRef(false);
+    const attrsLastStartedAtRef = useRef<number | null>(null);
     const [isSaveOpen, setIsSaveOpen] = useState(false);
     const [defaultSaveMode, setDefaultSaveMode] = useState<'create' | 'overwrite' | undefined>(() => {
         const saveEntry = (location.state as { saveEntry?: string } | null)?.saveEntry;
@@ -115,6 +128,13 @@ const Galgame = () => {
     });
     const [isLoadSaveOpen, setIsLoadSaveOpen] = useState(false);
     const [previewItem, setPreviewItem] = useState<SaveSummaryItem | null>(null);
+    const [bootPending, setBootPending] = useState(() => {
+        return (location.state as { bootPending?: boolean } | null)?.bootPending === true;
+    });
+    /** 新开局：进页不拉 history，直接自动开始游戏 */
+    const [bootNewStart] = useState(() => {
+        return (location.state as { bootNewStart?: boolean } | null)?.bootNewStart === true;
+    });
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
     const [overwriteDraftConfirm, setOverwriteDraftConfirm] = useState<{
         title: string;
@@ -126,14 +146,18 @@ const Galgame = () => {
     const [systemWritingStyle, setSystemWritingStyle] = useState<GameStartWritingStyle | null>(null);
     const [systemPersonaBlocks, setSystemPersonaBlocks] = useState<GameStartPersonaBlocks | null>(null);
     const [sessionNpcEdits, setSessionNpcEdits] = useState<PlayerEditableNpc[]>([]);
+    /** 局内「我的档案」：改档后必须进父状态 + play-ui 回传，下一轮推演才稳定读到 */
+    const [sessionPlayerProfile, setSessionPlayerProfile] = useState<SessionPlayerProfile | null>(null);
     const autoStartInFlightRef = useRef(false);
+    const playUiHydrateInFlightRef = useRef(false);
+    const panelLlmTriedRef = useRef<PlayBottomPanelId | null>(null);
     const buttonContainerRef = useRef<HTMLDivElement | null>(null);
     const buttonBarDragStateRef = useRef<HorizontalDragState>(createInitialHorizontalDragState());
     const [isDesktopButtonBarInteraction, setIsDesktopButtonBarInteraction] = useState(false);
     const [isButtonBarDragging, setIsButtonBarDragging] = useState(false);
 
     // 使用统一的控制器 hook
-    const controller = useGalgameController();
+    const controller = useGalgameController({ bootNewStart });
 
     const openingRoutes = useMemo(
         () =>
@@ -151,36 +175,55 @@ const Galgame = () => {
         [sessionId, user?.token],
     );
 
-    /** 新开局：无弹窗，静默写入默认开局包后直接开始游戏 */
+    /** 新开局：会话级 inflight，挡住 StrictMode 双发 game-start-config + stream */
     useEffect(() => {
         if (controller.isReplay) return;
         if (!controller.shouldAutoStartGame) return;
-        if (autoStartInFlightRef.current) return;
         if (!sessionId || !controller.presetData) return;
+        if (autoStartInFlightRef.current) return;
 
         autoStartInFlightRef.current = true;
         controller.acknowledgeAutoStartGame();
 
-        void (async () => {
-            try {
-                const built = buildSilentDefaultGameStartConfig({
-                    playerName: controller.presetData?.player?.name,
-                    gender: (controller.presetData?.player as { gender?: string } | undefined)?.gender,
-                    routes: openingRoutes,
-                });
-                if (built.ok && built.data) {
-                    setOpeningRouteId(built.data.openingRouteId);
-                    try {
-                        await persistGameStartConfig(built.data);
-                    } catch (err) {
-                        console.warn('[Galgame] silent putGameStartConfig failed', err);
+        void runSessionAutoStartOnce(sessionId, async () => {
+            const presetPlayer = controller.presetData?.world?.player as
+                | { name?: string; gender?: string }
+                | undefined;
+            const built = buildSilentDefaultGameStartConfig({
+                playerName: presetPlayer?.name,
+                gender: presetPlayer?.gender,
+                routes: openingRoutes,
+            });
+            if (built.ok && built.data) {
+                setOpeningRouteId(built.data.openingRouteId);
+                // 开局即种子本局档案姓名（文档主角），避免编辑表单落到占位名
+                setSessionPlayerProfile((prev) => {
+                    if (prev?.name && !isPlaceholderPlayerName(prev.name)) {
+                        return prev;
                     }
+                    const seededName = resolvePlayerDisplayName([
+                        built.data!.player.name,
+                        presetPlayer?.name,
+                    ]);
+                    if (!seededName) return prev;
+                    return {
+                        name: seededName,
+                        gender: built.data!.player.gender,
+                        persona: prev?.persona || '',
+                        customAttributes: prev?.customAttributes || {},
+                        importedCardId: prev?.importedCardId ?? null,
+                    };
+                });
+                try {
+                    await persistGameStartConfig(built.data);
+                } catch (err) {
+                    console.warn('[Galgame] silent putGameStartConfig failed', err);
                 }
-                await controller.handleStartGame();
-            } finally {
-                autoStartInFlightRef.current = false;
             }
-        })();
+            await controller.handleStartGame();
+        }).finally(() => {
+            autoStartInFlightRef.current = false;
+        });
     }, [
         controller.isReplay,
         controller.shouldAutoStartGame,
@@ -200,15 +243,20 @@ const Galgame = () => {
                 toast.error(resolved.message || '故事线无效');
                 throw new Error(resolved.message || '故事线无效');
             }
+            const presetPlayer = controller.presetData?.world?.player as
+                | { name?: string; gender?: string }
+                | undefined;
+            // 功能注释：系统配置保存优先保留局内「我的档案」姓名/性别，避免用文档主角覆盖
             const checked = validateGameStartConfig({
                 player: {
-                    name:
-                        String(controller.presetData?.player?.name || '').trim() ||
-                        GAME_START_UE_COPY.fallbackPlayerName,
+                    name: resolvePlayerDisplayName(
+                        [sessionPlayerProfile?.name, presetPlayer?.name],
+                    ) || GAME_START_UE_COPY.fallbackPlayerName,
                     gender: normalizeGameStartGender(
-                        (controller.presetData?.player as { gender?: string } | undefined)?.gender,
+                        sessionPlayerProfile?.gender || presetPlayer?.gender,
                     ),
                     personaBlocks: patch.personaBlocks,
+                    attributes: sessionPlayerProfile?.customAttributes,
                 },
                 worldBookEntries: patch.worldBookEntries,
                 writingStyle: patch.writingStyle,
@@ -229,7 +277,8 @@ const Galgame = () => {
         [
             openingRouteId,
             openingRoutes,
-            controller.presetData?.player,
+            controller.presetData?.world?.player,
+            sessionPlayerProfile,
             persistGameStartConfig,
         ],
     );
@@ -247,6 +296,51 @@ const Galgame = () => {
         const saveEntry = (location.state as { saveEntry?: string } | null)?.saveEntry;
         setDefaultSaveMode(saveEntry === 'load' ? undefined : 'create');
     }, [location.key, location.state]);
+
+    // 详情页先 navigate 再后台建 session：清掉 boot 标记，避免刷新重复开局
+    useEffect(() => {
+        const state = location.state as {
+            bootPending?: boolean;
+            bootNewStart?: boolean;
+            saveEntry?: string;
+        } | null;
+        if (state?.bootPending || state?.bootNewStart) {
+            navigate(location.pathname, {
+                replace: true,
+                state: state.saveEntry ? { saveEntry: state.saveEntry } : {},
+            });
+        }
+    }, [location.pathname, location.state, navigate]);
+
+    useEffect(() => {
+        if (!bootPending) return;
+        // session 就绪或剧情已开始请求/出字：立刻收起「正在进入」，避免与「剧情展开中」叠两层
+        if (
+            sessionId
+            || controller.isStartingGame
+            || controller.stepHandlers.isWaitingForData
+            || controller.stepHandlers.currentStep
+            || controller.currentMessage
+        ) {
+            setBootPending(false);
+        }
+    }, [
+        bootPending,
+        sessionId,
+        controller.isStartingGame,
+        controller.stepHandlers.isWaitingForData,
+        controller.stepHandlers.currentStep,
+        controller.currentMessage,
+    ]);
+
+    // 仅「还在等进页/建会话」时全屏提示；一旦开局 stream 或正文出现就不再盖遮罩
+    const showBootOverlay =
+        !controller.isReplay
+        && bootPending
+        && !controller.isStartingGame
+        && !controller.stepHandlers.isWaitingForData
+        && !controller.stepHandlers.currentStep
+        && !controller.currentMessage;
 
     useEffect(() => {
         if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
@@ -322,25 +416,36 @@ const Galgame = () => {
         ],
     );
 
-    const normalModeMessage = useMemo(() => {
+    const normalModeMessage = useMemo((): Message | null => {
         const msg = controller.currentMessage;
-        if (!msg || !npcNameMap.length) return msg;
-        return {
-            ...msg,
-            characterName: typeof msg.characterName === 'string'
-                ? rewriteTextByMap(msg.characterName, npcNameMap)
-                : msg.characterName,
+        if (!msg) return null;
+        if (!npcNameMap.length) return msg;
+        const options = Array.isArray(msg.options)
+            ? msg.options.map((opt) => ({
+                id: Number(opt.id),
+                text: typeof opt.text === 'string'
+                    ? rewriteTextByMap(opt.text, npcNameMap)
+                    : String(opt.text ?? ''),
+                ...(typeof opt.isMain === 'boolean' ? { isMain: opt.isMain } : {}),
+            }))
+            : undefined;
+        const next: Message = {
+            id: msg.id,
+            type: msg.type,
             message: typeof msg.message === 'string'
                 ? rewriteTextByMap(msg.message, npcNameMap)
                 : msg.message,
-            options: Array.isArray(msg.options)
-                ? msg.options.map((opt: { text?: string; [k: string]: unknown }) => (
-                    typeof opt?.text === 'string'
-                        ? { ...opt, text: rewriteTextByMap(opt.text, npcNameMap) }
-                        : opt
-                ))
-                : msg.options,
+            characterName: typeof msg.characterName === 'string'
+                ? rewriteTextByMap(msg.characterName, npcNameMap)
+                : msg.characterName,
+            characterImage: msg.characterImage,
+            characterPosition: msg.characterPosition,
+            portraitScale: msg.portraitScale,
+            portraitOffsetX: msg.portraitOffsetX,
+            portraitOffsetY: msg.portraitOffsetY,
+            options,
         };
+        return next;
     }, [controller.currentMessage, npcNameMap]);
 
     const normalModeDisplayText = useMemo(() => {
@@ -387,46 +492,96 @@ const Galgame = () => {
         [locationName]
     );
 
-    // 读档/进局：拉取已持久化的出场与任务
-    useEffect(() => {
-        if (controller.isReplay || !sessionId || !controller.gameStarted) return;
-        let cancelled = false;
-        void (async () => {
-            try {
-                const data = await fetchPlayUiState(sessionId);
-                if (cancelled) return;
-                setEncounteredIds(mergeEncounteredIds(data.encounteredCharacterIds));
-                setQuests(normalizeQuests(data.quests));
-                if (data.attributePanels && Object.keys(data.attributePanels).length > 0) {
-                    setAttributePanelsCache(normalizeAttributePanels(data.attributePanels));
-                }
-                if (Array.isArray(data.playerEditableNpcs)) {
-                    setSessionNpcEdits(data.playerEditableNpcs as PlayerEditableNpc[]);
-                }
-                const gsc = data.gameStartConfig;
-                if (gsc && typeof gsc === 'object') {
-                    if (typeof gsc.openingRouteId === 'string' && gsc.openingRouteId) {
-                        setOpeningRouteId(gsc.openingRouteId);
-                    }
-                    if (Array.isArray(gsc.worldBookEntries)) {
-                        setSystemWorldBookEntries(gsc.worldBookEntries as GameStartWorldBookEntry[]);
-                    }
-                    if (gsc.writingStyle && typeof gsc.writingStyle === 'object') {
-                        setSystemWritingStyle(gsc.writingStyle as GameStartWritingStyle);
-                    }
-                    const player = gsc.player as { personaBlocks?: GameStartPersonaBlocks } | undefined;
-                    if (player?.personaBlocks) {
-                        setSystemPersonaBlocks(player.personaBlocks);
-                    }
-                }
-            } catch {
-                /* 旧局无字段时忽略 */
+    const hydratePlayUiFromServer = useCallback(async () => {
+        if (!sessionId || controller.isReplay) return;
+        try {
+            const data = await fetchPlayUiState(sessionId);
+            setEncounteredIds(mergeEncounteredIds(data.encounteredCharacterIds));
+            setQuests(normalizeQuests(data.quests));
+            if (data.attributePanels && Object.keys(data.attributePanels).length > 0) {
+                setAttributePanelsCache(normalizeAttributePanels(data.attributePanels));
             }
-        })();
+            if (Array.isArray(data.playerEditableNpcs)) {
+                setSessionNpcEdits(data.playerEditableNpcs as PlayerEditableNpc[]);
+            }
+            if (data.sessionPlayerProfile && typeof data.sessionPlayerProfile === 'object') {
+                const incoming = data.sessionPlayerProfile;
+                const docName = resolvePlayerDisplayName([
+                    (controller.presetData?.world?.player as { name?: string } | undefined)?.name,
+                ]);
+                const fixed =
+                    isPlaceholderPlayerName(incoming.name) && docName
+                        ? { ...incoming, name: docName }
+                        : incoming;
+                // 功能注释：本地已有有效自设名时不覆盖；占位名（玩家/旅人）允许用文档主角纠正
+                setSessionPlayerProfile((prev) => {
+                    if (prev?.name && !isPlaceholderPlayerName(prev.name)) return prev;
+                    return fixed;
+                });
+            }
+            const gsc = data.gameStartConfig;
+            if (gsc && typeof gsc === 'object') {
+                if (typeof gsc.openingRouteId === 'string' && gsc.openingRouteId) {
+                    setOpeningRouteId(gsc.openingRouteId);
+                }
+                if (Array.isArray(gsc.worldBookEntries)) {
+                    setSystemWorldBookEntries(gsc.worldBookEntries as GameStartWorldBookEntry[]);
+                }
+                if (gsc.writingStyle && typeof gsc.writingStyle === 'object') {
+                    setSystemWritingStyle(gsc.writingStyle as GameStartWritingStyle);
+                }
+                const player = gsc.player as { personaBlocks?: GameStartPersonaBlocks } | undefined;
+                if (player?.personaBlocks) {
+                    setSystemPersonaBlocks(player.personaBlocks);
+                }
+            }
+        } catch {
+            /* 旧局无字段时忽略 */
+        }
+    }, [sessionId, controller.isReplay, controller.presetData?.world?.player]);
+
+    /** 文档主角名就绪后，纠正本地仍是占位名的档案 */
+    useEffect(() => {
+        const docPlayer = controller.presetData?.world?.player as
+            | { name?: string; gender?: string }
+            | undefined;
+        const docName = resolvePlayerDisplayName([docPlayer?.name]);
+        if (!docName) return;
+        setSessionPlayerProfile((prev) => {
+            if (!prev || !isPlaceholderPlayerName(prev.name)) return prev;
+            return {
+                ...prev,
+                name: docName,
+                gender: normalizeGameStartGender(prev.gender || docPlayer?.gender),
+            };
+        });
+    }, [controller.presetData?.world?.player]);
+
+    /** 单侧：仅首屏可交互时拉一次 play-ui（不与面板打开叠加） */
+    const firstScreenInteractive = Boolean(
+        controller.gameStarted
+        && !controller.isStartingGame
+        && !controller.isReplay
+        && !controller.showStoryIntro
+        && (controller.currentMessage || controller.stepHandlers?.currentStep),
+    );
+
+    useEffect(() => {
+        if (!sessionId || controller.isReplay) return;
+        if (!firstScreenInteractive) return;
+        if (playUiHydrateInFlightRef.current) return;
+        playUiHydrateInFlightRef.current = true;
+        void ensurePlayUiHydratedOnce(sessionId, hydratePlayUiFromServer).finally(() => {
+            playUiHydrateInFlightRef.current = false;
+        });
+    }, [sessionId, controller.isReplay, firstScreenInteractive, hydratePlayUiFromServer]);
+
+    useEffect(() => {
+        if (!sessionId) return;
         return () => {
-            cancelled = true;
+            resetPlayUiHydrationGate(sessionId);
         };
-    }, [controller.isReplay, sessionId, controller.gameStarted]);
+    }, [sessionId]);
 
     // 本局 step 变化时本地累计出场（含主角 / 姓名回退；与后端 merge 互补）
     useEffect(() => {
@@ -449,9 +604,20 @@ const Galgame = () => {
 
     const refreshAttributePanels = useCallback(async () => {
         if (!sessionId || controller.isReplay) return;
+        if (
+            shouldSkipAttributeAutoRefresh({
+                isStreaming: attrsStreamingRef.current,
+                lastStartedAt: attrsLastStartedAtRef.current,
+                now: Date.now(),
+            })
+        ) {
+            return;
+        }
         attrsAbortRef.current?.abort();
         const controllerAbort = new AbortController();
         attrsAbortRef.current = controllerAbort;
+        attrsStreamingRef.current = true;
+        attrsLastStartedAtRef.current = Date.now();
         try {
             const result = await streamAttributePanels<{
                 panels: Record<string, string>;
@@ -473,7 +639,10 @@ const Galgame = () => {
             }
         } catch (e: unknown) {
             if (isAbortError(e) || (e as Error)?.name === 'AbortError') return;
-            /* 自动刷新失败时保留缓存；打开面板可手动点刷新 */
+        } finally {
+            if (attrsAbortRef.current === controllerAbort) {
+                attrsStreamingRef.current = false;
+            }
         }
     }, [sessionId, controller.isReplay]);
 
@@ -489,7 +658,6 @@ const Galgame = () => {
                 sessionId,
                 {
                     onError: (msg) => {
-                        // 功能注释：INVALID_JSON 是流式落盘解析失败；已有任务列表时不当成致命错误贴红条。
                         if (msg === 'INVALID_JSON') {
                             if (questsRef.current.length > 0) {
                                 setQuestsError(null);
@@ -525,25 +693,54 @@ const Galgame = () => {
         }
     }, [sessionId, controller.isReplay, t]);
 
-    // 每轮叙事结束后：先刷属性再刷任务，避免共用 session 锁互相 LOCKED
+    // 属性：每轮剧情结束后自动 LLM 更新；打开空面板时补一次；失败可重试
+    const attrsLastAutoTurnRef = useRef(false);
     useEffect(() => {
-        if (controller.isReplay || !controller.gameStarted || !sessionId) return;
-        const len = controller.history.length;
-        if (len <= 0) return;
-        if (len <= lastHistoryLenForRefreshRef.current) return;
-        const last = controller.history[len - 1];
-        lastHistoryLenForRefreshRef.current = len;
-        if (last?.role !== 'assistant') return;
-        void (async () => {
-            await refreshAttributePanels();
-            await refreshQuests();
-        })();
+        if (controller.isReplay || !sessionId || !controller.gameStarted) return;
+        const waiting = Boolean(controller.stepHandlers?.isWaitingForData);
+        // 等待 → 结束：本轮叙事落盘完成，刷属性
+        if (attrsLastAutoTurnRef.current && !waiting) {
+            void refreshAttributePanels();
+        }
+        attrsLastAutoTurnRef.current = waiting;
     }, [
-        controller.history,
-        controller.history.length,
+        sessionId,
         controller.isReplay,
         controller.gameStarted,
+        controller.stepHandlers?.isWaitingForData,
+        refreshAttributePanels,
+    ]);
+
+    // 打开属性/任务面板：本地仍空时触发 LLM（空结果不锁死，可再次打开重试）
+    useEffect(() => {
+        if (!activePlayPanel) {
+            panelLlmTriedRef.current = null;
+            return;
+        }
+        if (controller.isReplay || !sessionId || !controller.gameStarted) return;
+
+        if (activePlayPanel === 'attrs') {
+            if (Object.keys(attributePanelsCache).length > 0) return;
+            if (panelLlmTriedRef.current === 'attrs') return;
+            panelLlmTriedRef.current = 'attrs';
+            void refreshAttributePanels().finally(() => {
+                // 空结果不锁死：关闭/再开或点「刷新」可再试
+                panelLlmTriedRef.current = null;
+            });
+            return;
+        }
+        if (activePlayPanel === 'quests') {
+            if (questsRef.current.length > 0) return;
+            if (panelLlmTriedRef.current === 'quests') return;
+            panelLlmTriedRef.current = 'quests';
+            void refreshQuests();
+        }
+    }, [
+        activePlayPanel,
         sessionId,
+        controller.isReplay,
+        controller.gameStarted,
+        attributePanelsCache,
         refreshAttributePanels,
         refreshQuests,
     ]);
@@ -998,6 +1195,14 @@ const Galgame = () => {
                             useCanvas={true}
                             transitionDuration={300}
                         />
+                    )}
+                    {showBootOverlay && (
+                        <div className={styles.bootOverlay} aria-busy="true">
+                            <div className="loadingSpinner" />
+                            <div className={styles.bootOverlayText}>
+                                {t('common.fullPageLoading.enteringGame')}
+                            </div>
+                        </div>
                     )}
                     {characterAnimation === 'injury' && (
                         <div className={styles.injuryBloodSplatter}></div>
@@ -1506,9 +1711,12 @@ const Galgame = () => {
                                 player={playerProfile}
                                 editableProfiles={sessionNpcEdits}
                                 onProfilesChange={setSessionNpcEdits}
-                                narrativeBusy={Boolean(
-                                    controller.finalIsTyping || controller.stepHandlers?.isWaitingForData,
-                                )}
+                                sessionPlayerProfile={sessionPlayerProfile}
+                                onSessionPlayerProfileChange={setSessionPlayerProfile}
+                                narrativeBusy={isNarrativeGenerationBusy({
+                                    streamLoading: controller.stepHandlers?.loading,
+                                    isCompressingContext: controller.stepHandlers?.isCompressingContext,
+                                })}
                             />
                             <AttributesPanel
                                 isOpen={activePlayPanel === 'attrs'}
@@ -1516,6 +1724,22 @@ const Galgame = () => {
                                 suppressAutoRefresh
                                 cachedPanels={attributePanelsCache}
                                 onPanelsUpdated={setAttributePanelsCache}
+                                sessionPlayerProfile={sessionPlayerProfile}
+                                onSessionPlayerProfileChange={setSessionPlayerProfile}
+                                documentPlayerName={
+                                    (controller.presetData?.world?.player as { name?: string } | undefined)
+                                        ?.name || null
+                                }
+                                documentPlayerGender={
+                                    (controller.presetData?.world?.player as { gender?: string } | undefined)
+                                        ?.gender || null
+                                }
+                                documentPlayerAvatarUrl={getPlayerImageUrl(
+                                    controller.presetData?.world?.player,
+                                ) || null}
+                                onHistoryMaybeChanged={() => {
+                                    void controller.refreshHistory();
+                                }}
                                 onPlayerEditableNpcsUpdated={(profiles) => {
                                     setSessionNpcEdits(profiles as PlayerEditableNpc[]);
                                 }}
@@ -1559,7 +1783,7 @@ const Galgame = () => {
                         onPreview={async (item) => {
                             try {
                                 if (!fileId) return setPreviewItem(item);
-                                const resp = await (await import('../api/galgame/saves')).savesApi.getDetail(item.saveId, fileId);
+                                const resp = await savesApi.getDetail(item.saveId, fileId);
                                 const detail = resp.data;
                                 setPreviewItem({ saveId: detail.saveId, summaryText: detail.summaryText, createdAt: detail.createdAt });
                             } catch {

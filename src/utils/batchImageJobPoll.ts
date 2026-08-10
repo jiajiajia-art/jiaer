@@ -6,7 +6,8 @@ export type BatchImageJobPollStep =
     | 'completed'
     | 'failed'
     | 'cancelled'
-    | 'timeout';
+    | 'timeout'
+    | 'board_settled_retry';
 
 /**
  * 根据取消标记、任务状态与轮询次数决定下一步动作，供前端批量生图轮询复用。
@@ -16,6 +17,8 @@ export function resolveBatchImageJobPollStep(input: {
     status: string;
     attempt: number;
     maxAttempts?: number;
+    /** 分项已全部终态且存在失败：可提前结束轮询，展示重试 */
+    boardSettledWithFailures?: boolean;
 }): BatchImageJobPollStep {
     const maxAttempts = input.maxAttempts ?? BATCH_IMAGE_JOB_MAX_POLL_ATTEMPTS;
 
@@ -30,6 +33,10 @@ export function resolveBatchImageJobPollStep(input: {
     }
     if (input.status === 'failed' || input.status === 'unknown') {
         return 'failed';
+    }
+    // job 仍 running，但分项已全终态且有失败 → 不必空等积分 result
+    if (input.boardSettledWithFailures) {
+        return 'board_settled_retry';
     }
     return 'continue';
 }

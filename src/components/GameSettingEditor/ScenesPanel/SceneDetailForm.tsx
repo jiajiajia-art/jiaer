@@ -30,7 +30,10 @@ interface SceneDetailFormProps {
     generationEtaText?: string;
     isAddingNewSubscene?: boolean;
     getEffectiveImage?: (sceneId: string, subsceneId?: string) => string | undefined;
+    /** 点击大图：有图时预览，无图时上传（由父组件决定） */
     onImageClick: () => void;
+    /** 上传/重新上传按钮；默认回退到 onImageClick */
+    onUploadClick?: () => void;
     onUploadChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
     onRequestRegenerate: (scene: LocalScene) => void;
     onRequestClearImage?: () => void;
@@ -55,6 +58,7 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
     isAddingNewSubscene = false,
     getEffectiveImage,
     onImageClick,
+    onUploadClick,
     onUploadChange,
     onRequestRegenerate,
     onRequestClearImage,
@@ -167,7 +171,7 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
                 {showDisabledMessage ? (
                     <span className={styles.heroHint}>{disabledMessage}</span>
                 ) : effectiveImage ? (
-                    <span className={styles.heroHint}>{t('createGame.clickReplaceBackground')}</span>
+                    <span className={styles.heroHint}>点击放大预览</span>
                 ) : (
                     <span>{t('createGame.clickUploadBackground')}</span>
                 )}
@@ -185,7 +189,7 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
             <div className={styles.sceneImageActions}>
                 <button
                     className={styles.ghostSmall}
-                    onClick={onImageClick}
+                    onClick={onUploadClick || onImageClick}
                     disabled={isImageActionDisabled}
                     style={{ opacity: isImageActionDisabled ? 0.5 : 1 }}
                 >

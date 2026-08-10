@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Navbar from '../components/Layout/Navbar';
@@ -8,9 +8,11 @@ import styles from './Rankings.module.css';
 import getRankingsApi from '../api/rankings/getRankings';
 import type { RankingsApiType, RankingsGameItem } from '../api/rankings/getRankings.type';
 import type { RankingsCategoryKey } from '../api/rankings/getRankingsAll.type';
-import { getImageUrl } from '../utils/constants';
+import { getImageUrl, resolveGameCoverUrl } from '../utils/constants';
+import { buildGameDetailNavigateState } from '../utils/gameDetailNavigation';
 import { getGameTypeLabel, getGameTypeTone, type GameTypeTone } from '../utils/gameTypeLabel';
 import { resolveGameTypeToneStyle } from '../utils/gameTypeToneClass';
+import type { UserGameData } from '../api/home/getGameData.type';
 
 type RankingTab = 'all' | 'hot' | 'new' | 'rising' | 'sales' | 'romance';
 
@@ -58,7 +60,8 @@ function apiGameToRanked(item: RankingsGameItem): RankedGame {
         : [];
     const tags = tagsFromTheme.length > 0 ? tagsFromTheme : tagsFromGame;
     const author = item.author_name && item.author_name.trim() ? item.author_name : '匿名作者';
-    const coverRaw = item.display_cover_url || item.cover_url || '';
+    // 列表展示与进详情预览统一走 display-cover，勿把原图 cover.png 绝对地址塞进 preview
+    const coverRaw = resolveGameCoverUrl(item) || item.cover_url || '';
     const cover = getImageUrl(coverRaw) || DEFAULT_RANKING_COVER;
     const category = tags[0] ?? item.engine ?? '综合';
     const updatedAt = item.updated_at ? new Date(item.updated_at) : null;
@@ -83,6 +86,37 @@ function apiGameToRanked(item: RankingsGameItem): RankedGame {
         gameTypeLabel,
         gameTypeTone,
         theme_tag_names: item.theme_tag_names ?? [],
+    };
+}
+
+function rankedGameToPreview(game: RankedGame): UserGameData {
+    return {
+        id: game.id,
+        file_id: game.id,
+        title: game.title,
+        subtitle: game.subtitle,
+        description: game.description,
+        cover_url: game.coverUrl,
+        display_cover_url: game.coverUrl,
+        author_name: game.authorName,
+        game_tags: game.gameTags.join(',') || game.tags.join(',') || '',
+        theme_tag_names: game.theme_tag_names ?? game.tags,
+        like_count: game.playCount || 0,
+        creator_user_id: '',
+        doc_url: '',
+        files: '',
+        price_amount: null,
+        special_price_amount: 0,
+        rating_avg: null,
+        rating_count: null,
+        created_at: '',
+        updated_at: '',
+        is_public: 1,
+        dislike_count: 0,
+        reaction: '',
+        avatarUrl: '',
+        is_preset: 0,
+        needDeleted: false,
     };
 }
 
@@ -381,7 +415,7 @@ const Rankings: React.FC = () => {
                         <div
                             key={game.id}
                             className={styles.horizontalCard}
-                            onClick={() => handleGameClick(game.id)}
+                            onClick={() => handleGameClick(game)}
                         >
                             <div className={styles.horizontalCardCoverWrap}>
                                 <img
@@ -424,8 +458,11 @@ const Rankings: React.FC = () => {
         );
     };
 
-    const handleGameClick = (gameId: string) => {
-        navigate(`/game/${gameId}`);
+    const handleGameClick = (game: RankedGame) => {
+        if (!game.id) return;
+        navigate(`/game/${game.id}`, {
+            state: buildGameDetailNavigateState('other', rankedGameToPreview(game)),
+        });
     };
 
     return (
@@ -505,7 +542,7 @@ const Rankings: React.FC = () => {
                                                 <div
                                                     key={game.id}
                                                     className={styles.categoryBoxItem}
-                                                    onClick={() => handleGameClick(game.id)}
+                                                    onClick={() => handleGameClick(game)}
                                                 >
                                                     <span className={styles.categoryBoxRank} data-rank={index + 1}>{index + 1}</span>
                                                     <div className={styles.categoryBoxCoverWrap}>

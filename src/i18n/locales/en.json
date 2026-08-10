@@ -145,7 +145,8 @@
       "startExperience": "Start Experience"
     },
     "fullPageLoading": {
-      "fetchingData": "Fetching data..."
+      "fetchingData": "Fetching data...",
+      "enteringGame": "Entering..."
     }
   },
   "eta": {
@@ -160,6 +161,7 @@
     "item": "items",
     "total": "Total to generate",
     "completed": "Completed",
+    "pipelineParallel": "Pipeline running in parallel",
     "success": "Success",
     "failed": "Failed"
   },
@@ -1089,7 +1091,7 @@
     "noMapPleaseUpload": "No world map yet, please upload or generate first",
     "aiGenerate": "AI Generate",
     "generatingMap": "Generating world map...",
-    "generateAllCharacterPortraits": "Generate All Character Portraits",
+    "generateAllCharacterPortraits": "Generate Selected Character Portraits",
     "generateAllScenePortraits": "Generate All Scene Portraits",
     "parsedCharacters": "Parsed Characters",
     "cannotGetAttributeDefinition": "Cannot get attribute definition",
@@ -1151,6 +1153,8 @@
     "addVariation": "Add Variation",
     "variationExists": "Variation \"{{label}}\" already exists, please use a different name",
     "clickReplacePortrait": "Click to replace character portrait",
+    "clickZoomPortraitPreview": "Click to zoom portrait preview",
+    "closePortraitPreview": "Close preview",
     "addScene": "Add Scene",
     "addCharacter": "Add Character",
     "protagonist": "Player",

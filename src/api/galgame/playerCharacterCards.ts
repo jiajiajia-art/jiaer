@@ -2,6 +2,7 @@
  * 账号玩家角色卡 / 局内档案 API
  */
 import { HOST_ADDRESS } from '../../config';
+import type { SessionPlayerProfile } from '../../lib/galgame/playerCharacterCard';
 
 async function parseJson(res: Response) {
   const text = await res.text();
@@ -88,7 +89,68 @@ export const sessionPlayerProfileApi = {
         body: JSON.stringify(body),
       },
     );
-    return parseJson(res);
+    return parseJson(res) as Promise<{
+      success: boolean;
+      message?: string;
+      data?: {
+        profile?: SessionPlayerProfile;
+        ab?: { generateOnChange?: boolean };
+        avatarNeedsRegen?: boolean;
+        protagonistChange?: { content?: string; fromName?: string; toName?: string };
+      };
+    }>;
+  },
+  /** 实验组：AI 生成主角头像并扣积分，写回 session */
+  generatePlayerAvatar: async (
+    token: string,
+    sessionId: string,
+    body: Record<string, unknown>,
+  ) => {
+    const res = await fetch(
+      `${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/player-avatar`,
+      {
+        method: 'POST',
+        headers: authHeaders(token),
+        body: JSON.stringify(body),
+      },
+    );
+    return parseJson(res) as Promise<{
+      success: boolean;
+      message?: string;
+      code?: string;
+      data?: {
+        avatarUrl: string;
+        avatarThumbUrl?: string;
+        profile?: SessionPlayerProfile;
+        pointsDeducted: number;
+        remainingPoints: number;
+      };
+    }>;
+  },
+  /** AI 生成局内玩家人设并扣积分（仅返回文案，不写 session） */
+  generatePlayerPersona: async (
+    token: string,
+    sessionId: string,
+    body: Record<string, unknown>,
+  ) => {
+    const res = await fetch(
+      `${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/player-persona`,
+      {
+        method: 'POST',
+        headers: authHeaders(token),
+        body: JSON.stringify(body),
+      },
+    );
+    return parseJson(res) as Promise<{
+      success: boolean;
+      message?: string;
+      code?: string;
+      data?: {
+        text: string;
+        pointsDeducted: number;
+        remainingPoints: number;
+      };
+    }>;
   },
   putGameStartConfig: async (token: string, sessionId: string, body: Record<string, unknown>) => {
     const res = await fetch(
@@ -121,7 +183,34 @@ export const sessionPlayerProfileApi = {
       code?: string;
       data?: {
         avatarUrl: string;
+        avatarThumbUrl?: string;
         npcId: string;
+        pointsDeducted: number;
+        remainingPoints: number;
+      };
+    }>;
+  },
+  /** AI 生成局内 NPC 档案字段（关系/简介/态度/详细简介）并扣积分 */
+  generateNpcProfileField: async (
+    token: string,
+    sessionId: string,
+    body: Record<string, unknown>,
+  ) => {
+    const res = await fetch(
+      `${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/npc-profile-field`,
+      {
+        method: 'POST',
+        headers: authHeaders(token),
+        body: JSON.stringify(body),
+      },
+    );
+    return parseJson(res) as Promise<{
+      success: boolean;
+      message?: string;
+      code?: string;
+      data?: {
+        field: 'relationship' | 'summary' | 'attitudeToPlayer' | 'detailedBio';
+        text: string;
         pointsDeducted: number;
         remainingPoints: number;
       };

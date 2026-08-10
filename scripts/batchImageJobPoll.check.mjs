@@ -71,3 +71,27 @@ test('resolveBatchImageJobPollStep returns continue while job is still running',
         'continue',
     );
 });
+
+test('resolveBatchImageJobPollStep returns board_settled_retry when items finished with failures', () => {
+    assert.equal(
+        resolveBatchImageJobPollStep({
+            cancelRequested: false,
+            status: 'running',
+            attempt: 4,
+            boardSettledWithFailures: true,
+        }),
+        'board_settled_retry',
+    );
+});
+
+test('completed status wins over boardSettledWithFailures', () => {
+    assert.equal(
+        resolveBatchImageJobPollStep({
+            cancelRequested: false,
+            status: 'completed',
+            attempt: 4,
+            boardSettledWithFailures: true,
+        }),
+        'completed',
+    );
+});

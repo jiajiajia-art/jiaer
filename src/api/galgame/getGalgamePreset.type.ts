@@ -196,4 +196,7 @@ export interface ContextMemoryDebug {
 export interface History {
   role: string;
   content: string;
+  /** 系统类历史行：如主角变更 */
+  kind?: string;
+  at?: string;
 }
