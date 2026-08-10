@@ -163,6 +163,11 @@ const parsePriceInput = (value: string) => {
 };
 
 const paymentLabel = (currency: PaymentCurrency) => (currency === 'points' ? '积分' : '钻石');
+const formatProjectCostText = (value?: number | null) => {
+    const points = Number(value);
+    if (!Number.isFinite(points) || points < 0) return '-';
+    return `${Math.round(points)} 积分`;
+};
 const paidItemTypeLabel = (item: { targetType?: string }) => (item.targetType === 'node' ? '节点' : '脚本');
 const paidItemTitle = (item: { targetType?: string; name?: string; scriptName?: string | null }) => (
     item.targetType === 'node' && item.scriptName ? `${item.scriptName} / ${item.name || '未命名节点'}` : item.name || '未命名脚本'
@@ -657,6 +662,7 @@ const InteractiveVideoEdit: React.FC = () => {
     const monetizationModeStatusText = PRICING_MODE_STATUS_TEXT[
         pricingDraft?.mode || monetization?.config.mode || 'free'
     ];
+    const projectCostText = formatProjectCostText(monetization?.stats?.creatorCostPoints);
     const monetizationSaveButtonText = isSavingMonetization
         ? '保存中...'
         : hasUnsavedMonetization
@@ -1403,6 +1409,10 @@ const InteractiveVideoEdit: React.FC = () => {
                                     <div>
                                         <span>内购状态</span>
                                         <strong>{editSteps.monetization.statusText}</strong>
+                                    </div>
+                                    <div className={styles.costMetaItem}>
+                                        <span>成本信息</span>
+                                        <strong className={styles.costMetaValue}>{projectCostText}</strong>
                                     </div>
                                 </div>
                             </div>

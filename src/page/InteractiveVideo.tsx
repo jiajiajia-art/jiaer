@@ -61,7 +61,15 @@ import {
     getInteractiveVideoTargetVideoSequence,
     type InteractiveVideoPlaybackTarget,
 } from '../utils/interactiveVideoPlayback';
-import { formatIvgUnlockCost } from '../utils/interactiveVideoPricing';
+import {
+    buildInteractiveVideoPlayerTestAccess,
+    findInteractiveVideoLockedDirectoryByNodeId,
+    findInteractiveVideoLockedDirectoryByScriptId,
+    findInteractiveVideoLockedDirectoryForRuntimeNode,
+    formatIvgUnlockCost,
+    getEffectiveInteractiveVideoPlayerTestPaidDirectories,
+    getInteractiveVideoPaidTargetType,
+} from '../utils/interactiveVideoPricing';
 import { isMiniProgramEnv } from '../utils/miniProgram';
 import styles from './InteractiveVideo.module.css';
 
@@ -390,29 +398,8 @@ const MINI_PROGRAM_PLAYBACK_WATCHDOG_MS = 2600;
 const DEFAULT_BRANCH_WAIT_MS = 6500;
 const MINI_PROGRAM_DISABLED_PRELOAD_PRIORITIES = ['next-layer', 'replay'] as const;
 
-const parsePaidTargetId = (targetId?: string | null) => {
-    const normalized = String(targetId || '').trim();
-    if (normalized.startsWith('script:')) {
-        const scriptId = normalized.slice('script:'.length);
-        return scriptId ? { targetType: 'script', scriptId, nodeId: '' } : null;
-    }
-    if (normalized.startsWith('node:')) {
-        const rest = normalized.slice('node:'.length);
-        const [scriptId, ...nodeParts] = rest.split(':');
-        const nodeId = nodeParts.join(':');
-        return scriptId && nodeId ? { targetType: 'node', scriptId, nodeId } : null;
-    }
-    return null;
-};
-
 const getPaidTargetType = (item?: InteractiveVideoDirectoryPrice | null) =>
-    item?.targetType || parsePaidTargetId(item?.directoryId)?.targetType || 'script';
-
-const getPaidTargetScriptId = (item?: InteractiveVideoDirectoryPrice | null) =>
-    String(item?.scriptId || parsePaidTargetId(item?.directoryId)?.scriptId || item?.scriptIds?.[0] || '').trim();
-
-const getPaidTargetNodeId = (item?: InteractiveVideoDirectoryPrice | null) =>
-    String(item?.nodeId || parsePaidTargetId(item?.directoryId)?.nodeId || '').trim();
+    getInteractiveVideoPaidTargetType(item);
 
 const getPaidTargetKindText = (item?: InteractiveVideoDirectoryPrice | null) =>
     getPaidTargetType(item) === 'node' ? '付费节点' : '付费脚本';
@@ -472,7 +459,7 @@ const mergeLockedPayItems = (
 };
 
 const INTERACTIVE_VIDEO_PAYMENT_CURRENCIES = ['points', 'diamonds'] as const;
-const IVG_PLAYER_TEST_CONFIRM_ACTION_PREFIX = '\u521b\u4f5c\u80050\u79ef\u5206\u89e3\u9501\u6d4b\u8bd5';
+const IVG_PLAYER_TEST_UNLOCK_ACTION_TEXT = '\u521b\u4f5c\u80050\u79ef\u5206\u89e3\u9501\u6d4b\u8bd5';
 const IVG_PLAYER_TEST_UNLOCK_SUCCESS_TEXT = '\u6d4b\u8bd5\u89e3\u9501\u6210\u529f';
 const IVG_PLAYER_TEST_UNLOCK_CONTINUE_TEXT = '\u6d4b\u8bd5\u89e3\u9501\u6210\u529f\uff0c\u6b63\u5728\u8fdb\u5165\u5267\u60c5';
 
@@ -486,39 +473,6 @@ const resolveInteractiveVideoTestMode = (search: string): InteractiveVideoTestMo
 const shouldRestartInteractiveVideoFromSearch = (search: string) => {
     const value = new URLSearchParams(search).get('restart')?.trim().toLowerCase();
     return value === '1' || value === 'true';
-};
-
-const getEffectivePlayerTestPaidDirectories = (config?: InteractiveVideoPricingConfig | null) => {
-    const mode = String(config?.mode || 'free');
-    if (mode !== 'catalog' && mode !== 'catalog_buyout') return [];
-    const directories = config?.directories || [];
-    const scriptLevelPaidScriptIds = new Set(
-        directories
-            .filter((directory) => getPaidTargetType(directory) === 'script')
-            .map((directory) => getPaidTargetScriptId(directory))
-            .filter(Boolean),
-    );
-    return directories.filter((directory) => !(
-        getPaidTargetType(directory) === 'node'
-        && scriptLevelPaidScriptIds.has(getPaidTargetScriptId(directory))
-    ));
-};
-
-const buildPlayerTestAccess = (config?: InteractiveVideoPricingConfig | null): InteractiveVideoAccess | null => {
-    if (!config) return null;
-    const mode = String(config.mode || 'free');
-    const paidDirectories = getEffectivePlayerTestPaidDirectories(config);
-    const buyoutLocked = mode === 'buyout';
-    const lockedDirectories = buyoutLocked ? [] : paidDirectories;
-
-    return {
-        hasBuyout: false,
-        buyoutLocked,
-        unlockedDirectoryIds: [],
-        lockedDirectoryIds: lockedDirectories.map((directory) => directory.directoryId),
-        lockedDirectories,
-        paidDirectories,
-    };
 };
 
 const emptyState = (entryNodeId: string | null): InteractiveVideoSessionState => ({
@@ -2250,6 +2204,9 @@ const InteractiveVideo: React.FC = () => {
     const [videoGate, setVideoGate] = useState(false);
     const [videoError, setVideoError] = useState('');
     const [isVideoPaused, setIsVideoPaused] = useState(false);
+    const [isAutoplayMuted, setIsAutoplayMuted] = useState(false);
+    const [isVideoFrameSuppressed, setIsVideoFrameSuppressed] = useState(false);
+    const [videoFrameSuppressionTargetUrl, setVideoFrameSuppressionTargetUrl] = useState<string | null>(null);
     const [isVideoHudVisible, setIsVideoHudVisible] = useState(true);
     const [isNonVideoToolsVisible, setIsNonVideoToolsVisible] = useState(true);
     const [playbackRate, setPlaybackRate] = useState<InteractiveVideoPlaybackRate>(1);
@@ -2295,6 +2252,7 @@ const InteractiveVideo: React.FC = () => {
     });
     const monitorRef = useRef<HTMLDivElement | null>(null);
     const videoRef = useRef<HTMLVideoElement | null>(null);
+    const videoFrameSuppressionTargetUrlRef = useRef<string | null>(null);
     const resumeVideoAfterPanelRef = useRef(false);
     const minigameIframeRef = useRef<HTMLIFrameElement | null>(null);
     const minigameCompletionTimerRef = useRef<number | null>(null);
@@ -2480,6 +2438,23 @@ const InteractiveVideo: React.FC = () => {
         navigate(`/game/${fileId}`, { replace: true });
     }, [fileId, ivgTestMode, launchedFromGameDetail, navigate]);
 
+    const updateVideoFrameSuppressionTarget = useCallback((targetUrl: string | null) => {
+        const normalizedUrl = targetUrl || null;
+        videoFrameSuppressionTargetUrlRef.current = normalizedUrl;
+        setVideoFrameSuppressionTargetUrl(normalizedUrl);
+    }, []);
+
+    const clearVideoFrameSuppression = useCallback(() => {
+        updateVideoFrameSuppressionTarget(null);
+        setIsVideoFrameSuppressed(false);
+    }, [updateVideoFrameSuppressionTarget]);
+
+    const revealSuppressedVideoFrame = useCallback((readyUrl: string) => {
+        const targetUrl = videoFrameSuppressionTargetUrlRef.current;
+        if (targetUrl && targetUrl !== readyUrl) return;
+        clearVideoFrameSuppression();
+    }, [clearVideoFrameSuppression]);
+
     const syncState = useCallback(async (nextState: InteractiveVideoSessionState) => {
         setSessionState(nextState);
         if (!sessionId) return;
@@ -2503,7 +2478,7 @@ const InteractiveVideo: React.FC = () => {
         const loadedStory = storyResponse.data.story;
         const loadedAccess = storyResponse.data.access || manifestResponse.data.access || null;
         const loadedConfig = storyResponse.data.config || manifestResponse.data.config || null;
-        const playerTestAccess = isPlayerTestMode ? buildPlayerTestAccess(loadedConfig) : null;
+        const playerTestAccess = isPlayerTestMode ? buildInteractiveVideoPlayerTestAccess(loadedConfig) : null;
         const effectiveAccess = playerTestAccess || loadedAccess;
         setManifest(loadedManifest);
         setStory(loadedStory);
@@ -2541,6 +2516,8 @@ const InteractiveVideo: React.FC = () => {
         setIsBranchTransitioning(false);
         setIsVideoBuffering(false);
         setIsVideoPaused(false);
+        setIsAutoplayMuted(false);
+        clearVideoFrameSuppression();
         setIsVideoHudVisible(true);
         setChoiceBridgePlayback(null);
         setUnlockTarget(null);
@@ -2611,7 +2588,7 @@ const InteractiveVideo: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [fileId, interactiveVideoSessionSource, ivgTestMode, loadProtectedPayload, publishPlaybackMetrics]);
+    }, [clearVideoFrameSuppression, fileId, interactiveVideoSessionSource, ivgTestMode, loadProtectedPayload, publishPlaybackMetrics]);
 
     useEffect(() => {
         const shouldRestart = initialRestartRef.current;
@@ -2633,6 +2610,12 @@ const InteractiveVideo: React.FC = () => {
         const preloadedAspect = currentVideoUrl ? preloadedVideoAspectRef.current[currentVideoUrl] : undefined;
         setVideoAspect(preloadedAspect || currentManifestVideoAspect);
     }, [activeVideoTargetKey, currentManifestVideoAspect, currentVideoUrl]);
+
+    useEffect(() => {
+        if (!currentVideoUrl) {
+            clearVideoFrameSuppression();
+        }
+    }, [activeVideoTargetKey, clearVideoFrameSuppression, currentVideoUrl]);
 
     useEffect(() => {
         setCurrentSequenceVideoIndex(0);
@@ -2729,24 +2712,50 @@ const InteractiveVideo: React.FC = () => {
         if (!video) return;
 
         setShowManualPlay(false);
+        video.playbackRate = playbackRate;
+        const markVideoStarted = () => {
+            if (cancelled) return;
+            revealSuppressedVideoFrame(currentVideoUrl);
+            setShowManualPlay(false);
+            setIsVideoPaused(false);
+            setIsBranchTransitioning(false);
+            setIsVideoBuffering(false);
+        };
+        const showBlockedPlayback = () => {
+            if (cancelled) return;
+            if (isMiniProgramRuntimeRef.current) {
+                setIsVideoBuffering(true);
+                return;
+            }
+            if (playbackMode === 'fresh') {
+                setShowManualPlay(true);
+            }
+        };
+        const retryMutedPlayback = () => {
+            if (cancelled || video.muted) {
+                showBlockedPlayback();
+                return;
+            }
+            video.muted = true;
+            setIsAutoplayMuted(true);
+            const mutedPlayPromise = video.play();
+            if (mutedPlayPromise && typeof mutedPlayPromise.then === 'function') {
+                mutedPlayPromise.then(markVideoStarted).catch(showBlockedPlayback);
+                return;
+            }
+            markVideoStarted();
+        };
         const playPromise = video.play();
         if (playPromise && typeof playPromise.catch === 'function') {
-            playPromise.catch(() => {
-                if (cancelled) return;
-                if (isMiniProgramRuntimeRef.current) {
-                    setIsVideoBuffering(true);
-                    return;
-                }
-                if (!cancelled && playbackMode === 'fresh') {
-                    setShowManualPlay(true);
-                }
-            });
+            playPromise.then(markVideoStarted).catch(retryMutedPlayback);
+        } else {
+            markVideoStarted();
         }
 
         return () => {
             cancelled = true;
         };
-    }, [activeVideoTargetKey, currentVideoUrl, playbackMode, videoGate]);
+    }, [activeVideoTargetKey, currentVideoUrl, playbackMode, playbackRate, revealSuppressedVideoFrame, videoGate]);
 
     const currentNodeOptions = useMemo(() => {
         if (!currentNode || !sessionState || isEndingNode || isMinigameNode) return [];
@@ -3029,12 +3038,14 @@ const InteractiveVideo: React.FC = () => {
         video.playbackRate = playbackRate;
         const playPromise = video.play();
         if (!playPromise || typeof playPromise.then !== 'function') {
+            revealSuppressedVideoFrame(currentVideoUrl);
             markPlaybackHealthy();
             return;
         }
 
         playPromise
             .then(() => {
+                revealSuppressedVideoFrame(currentVideoUrl);
                 setShowManualPlay(false);
                 setIsVideoPaused(false);
                 markPlaybackHealthy();
@@ -3043,7 +3054,7 @@ const InteractiveVideo: React.FC = () => {
                 setShowManualPlay(false);
                 setIsVideoBuffering(true);
             });
-    }, [currentVideoUrl, markPlaybackHealthy, playbackRate, videoGate]);
+    }, [currentVideoUrl, markPlaybackHealthy, playbackRate, revealSuppressedVideoFrame, videoGate]);
 
     useEffect(() => {
         if (!isMiniProgramRuntime || !currentVideoUrl || !videoGate || typeof window === 'undefined') return undefined;
@@ -3114,27 +3125,14 @@ const InteractiveVideo: React.FC = () => {
     }, [isMiniProgramRuntime, preloadedVideoStatus, publishPlaybackMetrics]);
 
     const findLockedDirectoryByScriptId = useCallback((scriptId: string | null | undefined) => {
-        const normalizedScriptId = String(scriptId || '').trim();
-        if (!normalizedScriptId) return null;
-        return lockedDirectories.find((directory) => {
-            if (getPaidTargetType(directory) === 'node') return false;
-            const scriptIds = directory.scriptIds?.length ? directory.scriptIds : [getPaidTargetScriptId(directory)];
-            return scriptIds.includes(normalizedScriptId);
-        }) || null;
+        return findInteractiveVideoLockedDirectoryByScriptId(lockedDirectories, scriptId);
     }, [lockedDirectories]);
 
     const findLockedDirectoryByNodeId = useCallback((
         scriptId: string | null | undefined,
         nodeId: string | null | undefined,
     ) => {
-        const normalizedScriptId = String(scriptId || '').trim();
-        const normalizedNodeId = String(nodeId || '').trim();
-        if (!normalizedScriptId || !normalizedNodeId) return null;
-        return lockedDirectories.find((directory) =>
-            getPaidTargetType(directory) === 'node' &&
-            getPaidTargetScriptId(directory) === normalizedScriptId &&
-            getPaidTargetNodeId(directory) === normalizedNodeId,
-        ) || null;
+        return findInteractiveVideoLockedDirectoryByNodeId(lockedDirectories, scriptId, nodeId);
     }, [lockedDirectories]);
 
     const pauseVideoForPanel = useCallback(() => {
@@ -3148,6 +3146,14 @@ const InteractiveVideo: React.FC = () => {
         setIsVideoPaused(true);
         setIsVideoHudVisible(true);
     }, [isTreeOpen, isVariableBoardOpen]);
+
+    const pauseActiveVideoForTransition = useCallback(() => {
+        const video = videoRef.current;
+        resumeVideoAfterPanelRef.current = false;
+        if (video && !video.paused) video.pause();
+        setShowManualPlay(false);
+        setIsVideoPaused(false);
+    }, []);
 
     const findLockedDirectoryFromEdge = useCallback((edge: StoryEdge) => {
         if (!story || !currentScript) return null;
@@ -3381,6 +3387,8 @@ const InteractiveVideo: React.FC = () => {
     const handleManualPlay = () => {
         const video = videoRef.current;
         if (!video) return;
+        video.muted = false;
+        setIsAutoplayMuted(false);
         video.playbackRate = playbackRate;
         video.play()
             .then(() => {
@@ -3396,6 +3404,8 @@ const InteractiveVideo: React.FC = () => {
         if (!video) return;
         revealVideoHud(true);
         if (video.paused) {
+            video.muted = false;
+            setIsAutoplayMuted(false);
             video.playbackRate = playbackRate;
             video.play()
                 .then(() => {
@@ -3455,6 +3465,7 @@ const InteractiveVideo: React.FC = () => {
     };
 
     const handleChooseOption = async (option: StoryChoiceOption) => {
+        if (isUnlocking || isBranchTransitioning) return;
         const transition = resolveChoiceTransition(option);
         if (!transition) return;
 
@@ -3496,8 +3507,8 @@ const InteractiveVideo: React.FC = () => {
     const formatUnlockCost = (amount: number, currency: 'points' | 'diamonds') =>
         formatIvgUnlockCost(amount, currency);
 
-    const getPlayerTestUnlockActionText = (amount: number, currency: 'points' | 'diamonds') =>
-        `${IVG_PLAYER_TEST_CONFIRM_ACTION_PREFIX}\uff08\u5b9e\u9645${formatUnlockCost(amount, currency)}\uff09`;
+    const getPlayerTestUnlockActionText = (_amount: number, _currency: 'points' | 'diamonds') =>
+        IVG_PLAYER_TEST_UNLOCK_ACTION_TEXT;
 
     const getDirectoryUnlockCurrencies = (directory: InteractiveVideoDirectoryPrice) => {
         const enabledCurrencies = INTERACTIVE_VIDEO_PAYMENT_CURRENCIES.filter((currency) => {
@@ -3513,6 +3524,50 @@ const InteractiveVideo: React.FC = () => {
             return Boolean(option.enabled && option.price != null);
         });
         return isPlayerTestMode ? enabledCurrencies.slice(0, 1) : enabledCurrencies;
+    };
+
+    const applyUnlockedAccessOptimistically = (
+        purchaseType: 'directory' | 'buyout',
+        directory?: InteractiveVideoDirectoryPrice,
+        accessSnapshot?: InteractiveVideoAccess | null,
+    ) => {
+        if (accessSnapshot) {
+            setIvgAccess(accessSnapshot);
+            setLockedDirectories(accessSnapshot.lockedDirectories || []);
+            return;
+        }
+
+        const directoryId = directory?.directoryId || '';
+        setIvgAccess((current) => {
+            if (!current) return current;
+            if (purchaseType === 'buyout') {
+                return {
+                    ...current,
+                    hasBuyout: true,
+                    buyoutLocked: false,
+                    lockedDirectoryIds: [],
+                    lockedDirectories: [],
+                };
+            }
+            if (!directoryId) return current;
+            const unlockedDirectoryIds = Array.from(new Set([
+                ...(current.unlockedDirectoryIds || []),
+                directoryId,
+            ]));
+            const lockedDirectories = (current.lockedDirectories || [])
+                .filter((item) => item.directoryId !== directoryId);
+            return {
+                ...current,
+                unlockedDirectoryIds,
+                lockedDirectoryIds: lockedDirectories.map((item) => item.directoryId),
+                lockedDirectories,
+            };
+        });
+        setLockedDirectories((current) => {
+            if (purchaseType === 'buyout') return [];
+            if (!directoryId) return current;
+            return current.filter((item) => item.directoryId !== directoryId);
+        });
     };
 
     const refreshProtectedPayloadAfterUnlock = async () => {
@@ -3553,12 +3608,14 @@ const InteractiveVideo: React.FC = () => {
             (pending.sourceState.unlocked?.optionIds || []).includes(pending.option.id) ||
             (pending.sourceState.unlocked?.edgeIds || []).includes(edgeRuntimeId);
         pendingUnlockTransitionRef.current = null;
+        const targetVideoUrl = getNodeVideoUrls(targetNode, loadedManifest)[0] || '';
+        updateVideoFrameSuppressionTarget(targetVideoUrl || null);
         await applyChoiceTransitionFromSource(pending.option, {
             edgeRuntimeId,
             routeWasUnlocked,
             targetNode,
             targetNodeKind: getNodeKind(targetNode),
-            targetVideoUrl: getNodeVideoUrls(targetNode, loadedManifest)[0] || '',
+            targetVideoUrl,
             resolvedTarget,
         }, pending);
         return true;
@@ -3572,50 +3629,56 @@ const InteractiveVideo: React.FC = () => {
         const directoryId = directory?.directoryId || '';
         if (purchaseType === 'directory' && !directoryId) return;
 
-        setIvgAccess((current) => {
-            const paidDirectories = current?.paidDirectories?.length
-                ? current.paidDirectories
-                : getEffectivePlayerTestPaidDirectories(ivgPricingConfig);
-            if (purchaseType === 'buyout') {
-                return {
-                    hasBuyout: true,
-                    buyoutLocked: false,
-                    unlockedDirectoryIds: paidDirectories.map((item) => item.directoryId),
-                    lockedDirectoryIds: [],
-                    lockedDirectories: [],
-                    paidDirectories,
-                };
-            }
-
-            const nextUnlockedDirectoryIds = Array.from(new Set([
-                ...(current?.unlockedDirectoryIds || []),
-                directoryId,
-            ].filter(Boolean)));
-            return {
-                hasBuyout: Boolean(current?.hasBuyout),
-                buyoutLocked: false,
-                unlockedDirectoryIds: nextUnlockedDirectoryIds,
-                lockedDirectoryIds: (current?.lockedDirectoryIds || []).filter((id) => id !== directoryId),
-                lockedDirectories: (current?.lockedDirectories || []).filter((item) => item.directoryId !== directoryId),
-                paidDirectories,
-            };
-        });
-        setLockedDirectories((current) => (
-            purchaseType === 'buyout'
+        const fallbackPaidDirectories = ivgAccess?.paidDirectories?.length
+            ? ivgAccess.paidDirectories
+            : getEffectiveInteractiveVideoPlayerTestPaidDirectories(ivgPricingConfig);
+        const nextUnlockedDirectoryIds = purchaseType === 'directory'
+            ? Array.from(new Set([...(ivgAccess?.unlockedDirectoryIds || []), directoryId].filter(Boolean)))
+            : (ivgAccess?.unlockedDirectoryIds || []);
+        const nextAccess = buildInteractiveVideoPlayerTestAccess(ivgPricingConfig, {
+            hasBuyout: purchaseType === 'buyout' || Boolean(ivgAccess?.hasBuyout),
+            unlockedDirectoryIds: nextUnlockedDirectoryIds,
+        }) || {
+            hasBuyout: purchaseType === 'buyout' || Boolean(ivgAccess?.hasBuyout),
+            buyoutLocked: false,
+            unlockedDirectoryIds: purchaseType === 'buyout'
+                ? fallbackPaidDirectories.map((item) => item.directoryId)
+                : nextUnlockedDirectoryIds,
+            lockedDirectoryIds: purchaseType === 'buyout'
                 ? []
-                : current.filter((item) => item.directoryId !== directoryId)
-        ));
+                : fallbackPaidDirectories
+                    .filter((item) => !nextUnlockedDirectoryIds.includes(item.directoryId))
+                    .map((item) => item.directoryId),
+            lockedDirectories: purchaseType === 'buyout'
+                ? []
+                : fallbackPaidDirectories.filter((item) => !nextUnlockedDirectoryIds.includes(item.directoryId)),
+            paidDirectories: fallbackPaidDirectories,
+        };
+        setIvgAccess(nextAccess);
+        setLockedDirectories(nextAccess.lockedDirectories);
 
         const pending = pendingUnlockTransitionRef.current;
         const canContinuePending = Boolean(pending && (
             purchaseType === 'buyout' ||
             (purchaseType === 'directory' && pending.lockedDirectoryId === directoryId)
         ));
+        setUnlockTarget(null);
+        setUnlockConfirm(null);
+        if (canContinuePending) {
+            pauseActiveVideoForTransition();
+            updateVideoFrameSuppressionTarget(null);
+            setIsVideoFrameSuppressed(true);
+            setIsBranchTransitioning(true);
+            setIsVideoBuffering(false);
+            setVideoGate(false);
+        }
         const continued = canContinuePending
             ? await continuePendingUnlockTransition(story, manifest)
             : false;
-        setUnlockTarget(null);
-        setUnlockConfirm(null);
+        if (canContinuePending && !continued) {
+            clearVideoFrameSuppression();
+            setIsBranchTransitioning(false);
+        }
         toast.success(continued ? IVG_PLAYER_TEST_UNLOCK_CONTINUE_TEXT : IVG_PLAYER_TEST_UNLOCK_SUCCESS_TEXT);
     };
 
@@ -3641,21 +3704,36 @@ const InteractiveVideo: React.FC = () => {
                 toast.error(getUnlockErrorMessage(responseData?.code, responseData?.message));
                 return;
             }
-            const refreshed = await refreshProtectedPayloadAfterUnlock();
             const pending = pendingUnlockTransitionRef.current;
-            const canContinuePending = Boolean(refreshed && pending && (
+            const canContinuePending = Boolean(pending && (
                 purchaseType === 'buyout' ||
                 (purchaseType === 'directory' && pending.lockedDirectoryId === directory?.directoryId)
             ));
+            setUnlockTarget(null);
+            setUnlockConfirm(null);
+            applyUnlockedAccessOptimistically(purchaseType, directory, response.data.data?.access);
+            if (canContinuePending) {
+                pauseActiveVideoForTransition();
+                updateVideoFrameSuppressionTarget(null);
+                setIsVideoFrameSuppressed(true);
+                setIsBranchTransitioning(true);
+                setIsVideoBuffering(false);
+                setVideoGate(false);
+            }
+            const refreshed = await refreshProtectedPayloadAfterUnlock();
             const continued = canContinuePending && refreshed
                 ? await continuePendingUnlockTransition(refreshed.loadedStory, refreshed.loadedManifest)
                 : false;
-            setUnlockTarget(null);
-            setUnlockConfirm(null);
+            if (canContinuePending && !continued) {
+                clearVideoFrameSuppression();
+                setIsBranchTransitioning(false);
+            }
             toast.success(response.data.data?.alreadyOwned
                 ? (continued ? '已解锁，正在进入剧情' : '已解锁，可继续游玩')
                 : (continued ? '解锁成功，正在进入剧情' : '解锁成功'));
         } catch (error) {
+            clearVideoFrameSuppression();
+            setIsBranchTransitioning(false);
             const maybeError = error as { response?: { data?: { code?: string; message?: string } }; message?: string };
             toast.error(getUnlockErrorMessage(maybeError.response?.data?.code, maybeError.response?.data?.message || maybeError.message));
         } finally {
@@ -3667,6 +3745,7 @@ const InteractiveVideo: React.FC = () => {
         directory: InteractiveVideoDirectoryPrice,
         currency: 'points' | 'diamonds',
     ) => {
+        if (isUnlocking) return;
         const option = getDirectoryPaymentOption(directory, currency);
         if (!option.enabled || option.price == null) {
             toast.error('该支付方式不可用');
@@ -3685,6 +3764,7 @@ const InteractiveVideo: React.FC = () => {
     };
 
     const requestBuyoutUnlock = (currency: 'points' | 'diamonds') => {
+        if (isUnlocking) return;
         const option = getBuyoutPaymentOption(currency);
         if (!option.enabled || option.price == null) {
             toast.error('该支付方式不可用');
@@ -3969,6 +4049,19 @@ const InteractiveVideo: React.FC = () => {
     const buyoutPoints = getBuyoutPaymentOption('points');
     const buyoutDiamonds = getBuyoutPaymentOption('diamonds');
     const hasBuyoutPlan = Boolean(buyoutPoints.enabled || buyoutDiamonds.enabled);
+    const currentLockedDirectory = sessionState?.currentNodeId
+        ? findInteractiveVideoLockedDirectoryForRuntimeNode(
+            lockedDirectories,
+            sessionState.currentScriptId || currentScript?.scriptId,
+            sessionState.currentNodeId,
+        )
+        : null;
+    const directUnlockPlanTitle = currentLockedDirectory
+        ? `解锁方案1：${getPaidTargetType(currentLockedDirectory) === 'node' ? '单节点解锁' : '单脚本解锁'}`
+        : '';
+    const buyoutUnlockPlanTitle = currentLockedDirectory
+        ? '解锁方案2：买断本互动影游解锁'
+        : '解锁方案：买断本互动影游解锁';
     const loadingPageClassName = [
         styles.pageRoot,
         ivgTheme === 'dark' ? styles.pageRootDark : '',
@@ -4008,34 +4101,88 @@ const InteractiveVideo: React.FC = () => {
         );
     }
 
-    if (isBuyoutLocked) {
+    if (isBuyoutLocked || currentLockedDirectory) {
         return (
             <div className={loadingPageClassName}>
                 <div className={styles.messagePanel}>
-                    <h1>互动影游已锁定</h1>
-                    <p>买断解锁后可永久游玩该作品。</p>
-                    {hasBuyoutPlan ? (
-                        <div className={styles.unlockActions}>
-                            {getBuyoutUnlockCurrencies().map((currency) => {
-                                const option = getBuyoutPaymentOption(currency);
-                                if (!option.enabled || option.price == null) return null;
-                                return (
-                                    <button
-                                        type="button"
-                                        key={`buyout-lock-${currency}`}
-                                        onClick={() => requestBuyoutUnlock(currency)}
-                                        disabled={isUnlocking}
-                                    >
-                                        {isPlayerTestMode
-                                            ? getPlayerTestUnlockActionText(Number(option.price || 0), currency)
-                                            : `${formatUnlockCost(Number(option.price || 0), currency)}\u4e70\u65ad\u6e38\u73a9`}
-                                    </button>
-                                );
-                            })}
+                    <h1>{currentLockedDirectory ? getPaidTargetTitle(currentLockedDirectory) : '互动影游已锁定'}</h1>
+                    <p>
+                        {currentLockedDirectory
+                            ? isPlayerTestMode
+                                ? '该付费内容尚未解锁。模拟玩家测试会以 0 积分完成测试解锁。'
+                                : '该付费内容尚未解锁。解锁后可继续游玩。'
+                            : '买断解锁后可永久游玩该作品。'}
+                    </p>
+                    {currentLockedDirectory ? (
+                        <div className={styles.unlockPlanSection}>
+                            <strong>{directUnlockPlanTitle}</strong>
+                            <div className={styles.unlockActions}>
+                                {getDirectoryUnlockCurrencies(currentLockedDirectory).map((currency) => {
+                                    const option = getDirectoryPaymentOption(currentLockedDirectory, currency);
+                                    if (!option.enabled || option.price == null) return null;
+                                    return (
+                                        <button
+                                            type="button"
+                                            key={`current-lock-${currency}`}
+                                            onClick={() => requestDirectoryUnlock(currentLockedDirectory, currency)}
+                                            disabled={isUnlocking}
+                                        >
+                                            {isPlayerTestMode
+                                                ? getPlayerTestUnlockActionText(Number(option.price || 0), currency)
+                                                : `\u4f7f\u7528${formatUnlockCost(Number(option.price || 0), currency)}\u89e3\u9501`}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ) : hasBuyoutPlan ? (
+                        <div className={styles.unlockPlanSection}>
+                            <strong>{buyoutUnlockPlanTitle}</strong>
+                            <div className={styles.unlockActions}>
+                                {getBuyoutUnlockCurrencies().map((currency) => {
+                                    const option = getBuyoutPaymentOption(currency);
+                                    if (!option.enabled || option.price == null) return null;
+                                    return (
+                                        <button
+                                            type="button"
+                                            key={`buyout-lock-${currency}`}
+                                            onClick={() => requestBuyoutUnlock(currency)}
+                                            disabled={isUnlocking}
+                                        >
+                                            {isPlayerTestMode
+                                                ? getPlayerTestUnlockActionText(Number(option.price || 0), currency)
+                                                : `${formatUnlockCost(Number(option.price || 0), currency)}\u4e70\u65ad\u6e38\u73a9`}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
                     ) : (
                         <p>暂无可用支付方式。</p>
                     )}
+                    {currentLockedDirectory && hasBuyoutPlan ? (
+                        <div className={`${styles.unlockPlanSection} ${styles.unlockBuyout}`}>
+                            <strong>{buyoutUnlockPlanTitle}</strong>
+                            <div className={styles.unlockActions}>
+                                {getBuyoutUnlockCurrencies().map((currency) => {
+                                    const option = getBuyoutPaymentOption(currency);
+                                    if (!option.enabled || option.price == null) return null;
+                                    return (
+                                        <button
+                                            type="button"
+                                            key={`current-buyout-lock-${currency}`}
+                                            onClick={() => requestBuyoutUnlock(currency)}
+                                            disabled={isUnlocking}
+                                        >
+                                            {isPlayerTestMode
+                                                ? getPlayerTestUnlockActionText(Number(option.price || 0), currency)
+                                                : `\u4f7f\u7528${formatUnlockCost(Number(option.price || 0), currency)}\u4e70\u65ad`}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ) : null}
                     {!isPlayerTestMode && unlockConfirm ? (
                         <div className={styles.unlockConfirmActions}>
                             <button type="button" onClick={() => setUnlockConfirm(null)} disabled={isUnlocking}>
@@ -4043,10 +4190,19 @@ const InteractiveVideo: React.FC = () => {
                             </button>
                             <button
                                 type="button"
-                                onClick={() => void performUnlock(unlockConfirm.purchaseType, unlockConfirm.currency)}
+                                onClick={() => void performUnlock(
+                                    unlockConfirm.purchaseType,
+                                    unlockConfirm.currency,
+                                    unlockConfirm.directory,
+                                )}
                                 disabled={isUnlocking}
                             >
-                                {isUnlocking ? '解锁中...' : getUnlockConfirmActionText()}
+                                {isUnlocking ? (
+                                    <>
+                                        <IoRefresh className={styles.unlockLoadingIcon} />
+                                        解锁中...
+                                    </>
+                                ) : getUnlockConfirmActionText()}
                             </button>
                         </div>
                     ) : null}
@@ -4407,6 +4563,27 @@ const InteractiveVideo: React.FC = () => {
     const unlockConfirmDescription = unlockConfirm
         ? `\u5c06\u6d88\u8017${formatUnlockCost(unlockConfirm.amount, unlockConfirm.currency)}\uff0c\u89e3\u9501\u540e\u6c38\u4e45\u7ed1\u5b9a\u5f53\u524d\u8d26\u53f7\u3002`
         : '';
+    const showTransitionOverlay = !showManualPlay && (
+        isBranchTransitioning ||
+        (Boolean(currentVideoUrl) && videoGate && isVideoBuffering) ||
+        (isUnlocking && !unlockConfirm)
+    );
+    const transitionOverlayText = isUnlocking && !unlockConfirm
+        ? '正在进入剧情...'
+        : isBranchTransitioning
+            ? '正在准备下一段剧情...'
+            : '正在准备剧情...';
+    const isSuppressedTargetVideo = Boolean(
+        isVideoFrameSuppressed &&
+        videoFrameSuppressionTargetUrl &&
+        currentVideoUrl === videoFrameSuppressionTargetUrl &&
+        videoGate,
+    );
+    const shouldMountVideoFrame = Boolean(currentVideoUrl) && (!isVideoFrameSuppressed || isSuppressedTargetVideo);
+    const videoFrameClassName = [
+        styles.video,
+        isSuppressedTargetVideo ? styles.videoFrameSuppressed : '',
+    ].filter(Boolean).join(' ');
 
     function getUnlockConfirmActionText() {
         return '\u786e\u8ba4\u89e3\u9501';
@@ -4414,7 +4591,7 @@ const InteractiveVideo: React.FC = () => {
 
     const unlockPortal = unlockTarget
         ? renderIvgPortal(
-            <div className={styles.unlockOverlay} onClick={() => setUnlockTarget(null)}>
+            <div className={styles.unlockOverlay} onClick={() => { if (!isUnlocking) setUnlockTarget(null); }}>
                 <section
                     className={styles.unlockModal}
                     onClick={(event) => event.stopPropagation()}
@@ -4425,7 +4602,8 @@ const InteractiveVideo: React.FC = () => {
                     <button
                         type="button"
                         className={styles.unlockCloseButton}
-                        onClick={() => setUnlockTarget(null)}
+                        onClick={() => { if (!isUnlocking) setUnlockTarget(null); }}
+                        disabled={isUnlocking}
                         aria-label="关闭"
                     >
                         <IoClose />
@@ -4433,27 +4611,30 @@ const InteractiveVideo: React.FC = () => {
                     <span>{getPaidTargetKindText(unlockTarget)}</span>
                     <h1 id="ivgUnlockTitle">{getPaidTargetTitle(unlockTarget)}</h1>
                     <p>{remainingLockedCount > 1 ? `还有 ${remainingLockedCount} 个付费内容尚未解锁。` : '该付费内容尚未解锁。'}</p>
-                    <div className={styles.unlockActions}>
-                        {getDirectoryUnlockCurrencies(unlockTarget).map((currency) => {
-                            const option = getDirectoryPaymentOption(unlockTarget, currency);
-                            if (!option.enabled || option.price == null) return null;
-                            return (
-                                <button
-                                    type="button"
-                                    key={`directory-${currency}`}
-                                    onClick={() => requestDirectoryUnlock(unlockTarget, currency)}
-                                    disabled={isUnlocking}
-                                >
-                                    {isPlayerTestMode
-                                        ? getPlayerTestUnlockActionText(Number(option.price || 0), currency)
-                                        : `\u4f7f\u7528${formatUnlockCost(Number(option.price || 0), currency)}\u89e3\u9501`}
-                                </button>
-                            );
-                        })}
+                    <div className={styles.unlockPlanSection}>
+                        <strong>{`解锁方案1：${getPaidTargetType(unlockTarget) === 'node' ? '单节点解锁' : '单脚本解锁'}`}</strong>
+                        <div className={styles.unlockActions}>
+                            {getDirectoryUnlockCurrencies(unlockTarget).map((currency) => {
+                                const option = getDirectoryPaymentOption(unlockTarget, currency);
+                                if (!option.enabled || option.price == null) return null;
+                                return (
+                                    <button
+                                        type="button"
+                                        key={`directory-${currency}`}
+                                        onClick={() => requestDirectoryUnlock(unlockTarget, currency)}
+                                        disabled={isUnlocking}
+                                    >
+                                        {isPlayerTestMode
+                                            ? getPlayerTestUnlockActionText(Number(option.price || 0), currency)
+                                            : `\u4f7f\u7528${formatUnlockCost(Number(option.price || 0), currency)}\u89e3\u9501`}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
                     {hasBuyoutPlan ? (
-                        <div className={styles.unlockBuyout}>
-                            <strong>买断解锁</strong>
+                        <div className={`${styles.unlockPlanSection} ${styles.unlockBuyout}`}>
+                            <strong>解锁方案2：买断本互动影游解锁</strong>
                             <div className={styles.unlockActions}>
                                 {getBuyoutUnlockCurrencies().map((currency) => {
                                     const option = getBuyoutPaymentOption(currency);
@@ -4481,7 +4662,7 @@ const InteractiveVideo: React.FC = () => {
 
     const unlockConfirmPortal = !isPlayerTestMode && unlockConfirm
         ? renderIvgPortal(
-            <div className={styles.unlockOverlay} onClick={() => setUnlockConfirm(null)}>
+            <div className={styles.unlockOverlay} onClick={() => { if (!isUnlocking) setUnlockConfirm(null); }}>
                 <section
                     className={styles.unlockModal}
                     onClick={(event) => event.stopPropagation()}
@@ -4492,7 +4673,8 @@ const InteractiveVideo: React.FC = () => {
                     <button
                         type="button"
                         className={styles.unlockCloseButton}
-                        onClick={() => setUnlockConfirm(null)}
+                        onClick={() => { if (!isUnlocking) setUnlockConfirm(null); }}
+                        disabled={isUnlocking}
                         aria-label="关闭"
                     >
                         <IoClose />
@@ -4515,7 +4697,12 @@ const InteractiveVideo: React.FC = () => {
                             )}
                             disabled={isUnlocking}
                         >
-                            {isUnlocking ? '解锁中...' : getUnlockConfirmActionText()}
+                            {isUnlocking ? (
+                                <>
+                                    <IoRefresh className={styles.unlockLoadingIcon} />
+                                    解锁中...
+                                </>
+                            ) : getUnlockConfirmActionText()}
                         </button>
                     </div>
                 </section>
@@ -4561,63 +4748,74 @@ const InteractiveVideo: React.FC = () => {
                                 </div>
                             )
                         ) : currentVideoUrl ? (
-                            <video
-                                ref={videoRef}
-                                className={styles.video}
-                                src={currentVideoUrl}
-                                controls={false}
-                                controlsList="nodownload nofullscreen noremoteplayback"
-                                disablePictureInPicture
-                                autoPlay
-                                preload="auto"
-                                playsInline
-                                {...miniProgramVideoAttributes}
-                                onLoadStart={scheduleBufferingNotice}
-                                onLoadedMetadata={handleVideoMetadata}
-                                onLoadedData={() => {
-                                    markPlaybackHealthy();
-                                    if (isMiniProgramRuntime) attemptMiniProgramPlayback();
-                                }}
-                                onCanPlay={() => {
-                                    markPlaybackHealthy();
-                                    if (isMiniProgramRuntime) attemptMiniProgramPlayback();
-                                }}
-                                onCanPlayThrough={() => {
-                                    markPlaybackHealthy();
-                                    if (isMiniProgramRuntime) attemptMiniProgramPlayback();
-                                }}
-                                onPlay={() => {
-                                    setShowManualPlay(false);
-                                    setIsVideoPaused(false);
-                                    markPlaybackHealthy();
-                                }}
-                                onPlaying={() => {
-                                    setIsVideoPaused(false);
-                                    markPlaybackHealthy();
-                                }}
-                                onPause={(event) => {
-                                    if (isMiniProgramRuntime && event.currentTarget.currentTime <= 0.05 && videoGate) {
-                                        setIsVideoPaused(false);
-                                        setIsVideoBuffering(true);
-                                        return;
-                                    }
-                                    setIsVideoPaused(true);
-                                }}
-                                onWaiting={scheduleBufferingNotice}
-                                onStalled={scheduleBufferingNotice}
-                                onEnded={handleVideoComplete}
-                                onError={() => {
-                                    markPlaybackHealthy();
-                                    if (isMiniProgramRuntime) {
+                            shouldMountVideoFrame ? (
+                                <video
+                                    key={`${activeVideoTargetKey}:${currentVideoUrl}`}
+                                    ref={videoRef}
+                                    className={videoFrameClassName}
+                                    src={currentVideoUrl}
+                                    controls={false}
+                                    controlsList="nodownload nofullscreen noremoteplayback"
+                                    disablePictureInPicture
+                                    autoPlay
+                                    muted={isAutoplayMuted}
+                                    preload="auto"
+                                    playsInline
+                                    {...miniProgramVideoAttributes}
+                                    onLoadStart={scheduleBufferingNotice}
+                                    onLoadedMetadata={handleVideoMetadata}
+                                    onLoadedData={() => {
+                                        revealSuppressedVideoFrame(currentVideoUrl);
+                                        markPlaybackHealthy();
+                                        if (isMiniProgramRuntime) attemptMiniProgramPlayback();
+                                    }}
+                                    onCanPlay={() => {
+                                        revealSuppressedVideoFrame(currentVideoUrl);
+                                        markPlaybackHealthy();
+                                        if (isMiniProgramRuntime) attemptMiniProgramPlayback();
+                                    }}
+                                    onCanPlayThrough={() => {
+                                        revealSuppressedVideoFrame(currentVideoUrl);
+                                        markPlaybackHealthy();
+                                        if (isMiniProgramRuntime) attemptMiniProgramPlayback();
+                                    }}
+                                    onPlay={() => {
+                                        revealSuppressedVideoFrame(currentVideoUrl);
                                         setShowManualPlay(false);
-                                        setIsVideoBuffering(false);
-                                        setIsBranchTransitioning(false);
-                                        return;
-                                    }
-                                    setVideoError('视频加载失败');
-                                    handleVideoComplete();
-                                }}
-                            />
+                                        setIsVideoPaused(false);
+                                        markPlaybackHealthy();
+                                    }}
+                                    onPlaying={() => {
+                                        revealSuppressedVideoFrame(currentVideoUrl);
+                                        setIsVideoPaused(false);
+                                        markPlaybackHealthy();
+                                    }}
+                                    onPause={(event) => {
+                                        if (isMiniProgramRuntime && event.currentTarget.currentTime <= 0.05 && videoGate) {
+                                            setIsVideoPaused(false);
+                                            setIsVideoBuffering(true);
+                                            return;
+                                        }
+                                        setIsVideoPaused(true);
+                                    }}
+                                    onWaiting={scheduleBufferingNotice}
+                                    onStalled={scheduleBufferingNotice}
+                                    onEnded={handleVideoComplete}
+                                    onError={() => {
+                                        markPlaybackHealthy();
+                                        if (isMiniProgramRuntime) {
+                                            setShowManualPlay(false);
+                                            setIsVideoBuffering(false);
+                                            setIsBranchTransitioning(false);
+                                            return;
+                                        }
+                                        setVideoError('视频加载失败');
+                                        handleVideoComplete();
+                                    }}
+                                />
+                            ) : (
+                                <div className={styles.videoBlankSurface} aria-hidden="true" />
+                            )
                         ) : (
                             <div className={styles.textScene}>
                                 <span>{isEndingNode ? '结局' : '剧情'}</span>
@@ -4684,13 +4882,13 @@ const InteractiveVideo: React.FC = () => {
                             </button>
                         )}
 
-                        {currentVideoUrl && !showManualPlay && (isBranchTransitioning || (videoGate && isVideoBuffering)) && (
+                        {showTransitionOverlay && (
                             <div className={styles.videoTransitionOverlay} aria-live="polite">
                                 <div className={styles.videoTransitionLoader} aria-hidden="true">
                                     <span />
                                     <span />
                                 </div>
-                                <strong>{isBranchTransitioning ? '正在准备下一段剧情...' : '正在准备剧情...'}</strong>
+                                <strong>{transitionOverlayText}</strong>
                             </div>
                         )}
 
@@ -4705,6 +4903,7 @@ const InteractiveVideo: React.FC = () => {
                                             key={option.id}
                                             className={styles.choiceButton}
                                             onClick={() => void handleChooseOption(option)}
+                                            disabled={isUnlocking || isBranchTransitioning}
                                         >
                                             <strong>{getOptionLabel(option)}</strong>
                                         </button>

@@ -168,6 +168,16 @@
     word-break: break-all;
 }
 
+.overviewMetaGrid .costMetaItem {
+    min-width: 240px;
+    max-width: 360px;
+}
+
+.overviewMetaGrid .costMetaValue {
+    word-break: normal;
+    overflow-wrap: anywhere;
+}
+
 .overviewMetaGrid strong.copyableMetaValue {
     display: inline-flex;
     align-items: center;

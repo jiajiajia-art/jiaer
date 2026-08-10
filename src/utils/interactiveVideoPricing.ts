@@ -11,12 +11,35 @@ export type IvgBuyoutPaymentOption = {
     label: string;
 };
 
-export type IvgPricingConfigLike = {
+export type IvgPaidDirectoryLike = {
+    directoryId: string;
+    targetType?: string;
+    scriptId?: string | null;
+    nodeId?: string | null;
+    scriptIds?: string[];
+};
+
+export type IvgPricingConfigLike<TDirectory extends IvgPaidDirectoryLike = IvgPaidDirectoryLike> = {
     mode?: 'free' | 'buyout' | 'catalog' | 'catalog_buyout' | string;
     buyout?: {
         points?: IvgPaymentOptionLike;
         diamonds?: IvgPaymentOptionLike;
     } | null;
+    directories?: TDirectory[];
+};
+
+export type IvgPlayerTestAccess<TDirectory extends IvgPaidDirectoryLike = IvgPaidDirectoryLike> = {
+    hasBuyout: boolean;
+    buyoutLocked: boolean;
+    unlockedDirectoryIds: string[];
+    lockedDirectoryIds: string[];
+    lockedDirectories: TDirectory[];
+    paidDirectories: TDirectory[];
+};
+
+export type IvgPlayerTestAccessOptions = {
+    hasBuyout?: boolean;
+    unlockedDirectoryIds?: string[];
 };
 
 export type IvgAccessLike = {
@@ -46,6 +69,132 @@ export const isInteractiveVideoOwnerUser = (
     const normalizedCreatorId = String(creatorUserId ?? '').trim();
     return Boolean(currentOwnerId && normalizedCreatorId && currentOwnerId === normalizedCreatorId);
 };
+
+const parseInteractiveVideoPaidTargetId = (targetId?: string | null) => {
+    const normalized = String(targetId || '').trim();
+    if (normalized.startsWith('script:')) {
+        const scriptId = normalized.slice('script:'.length);
+        return scriptId ? { targetType: 'script', scriptId, nodeId: '' } : null;
+    }
+    if (normalized.startsWith('node:')) {
+        const rest = normalized.slice('node:'.length);
+        const [scriptId, ...nodeParts] = rest.split(':');
+        const nodeId = nodeParts.join(':');
+        return scriptId && nodeId ? { targetType: 'node', scriptId, nodeId } : null;
+    }
+    return null;
+};
+
+export const getInteractiveVideoPaidTargetType = (item?: IvgPaidDirectoryLike | null) =>
+    item?.targetType || parseInteractiveVideoPaidTargetId(item?.directoryId)?.targetType || 'script';
+
+export const getInteractiveVideoPaidTargetScriptId = (item?: IvgPaidDirectoryLike | null) =>
+    String(
+        item?.scriptId
+        || parseInteractiveVideoPaidTargetId(item?.directoryId)?.scriptId
+        || item?.scriptIds?.[0]
+        || '',
+    ).trim();
+
+export const getInteractiveVideoPaidTargetNodeId = (item?: IvgPaidDirectoryLike | null) =>
+    String(item?.nodeId || parseInteractiveVideoPaidTargetId(item?.directoryId)?.nodeId || '').trim();
+
+export const getEffectiveInteractiveVideoPlayerTestPaidDirectories = <
+    TDirectory extends IvgPaidDirectoryLike,
+>(config?: IvgPricingConfigLike<TDirectory> | null) => {
+    const mode = String(config?.mode || 'free');
+    if (mode !== 'catalog' && mode !== 'catalog_buyout') return [];
+    const directories = config?.directories || [];
+    const nodeLevelPaidScriptIds = new Set(
+        directories
+            .filter((directory) => getInteractiveVideoPaidTargetType(directory) === 'node')
+            .map((directory) => getInteractiveVideoPaidTargetScriptId(directory))
+            .filter(Boolean),
+    );
+    return directories.filter((directory) => !(
+        getInteractiveVideoPaidTargetType(directory) === 'script'
+        && nodeLevelPaidScriptIds.has(getInteractiveVideoPaidTargetScriptId(directory))
+    ));
+};
+
+const getUnlockedInteractiveVideoPaidScriptIds = (directoryIds: string[]) => new Set(
+    directoryIds
+        .map((directoryId) => parseInteractiveVideoPaidTargetId(directoryId))
+        .filter((target) => target?.targetType === 'script')
+        .map((target) => target?.scriptId || '')
+        .filter(Boolean),
+);
+
+const isInteractiveVideoPaidDirectoryUnlocked = (
+    directory: IvgPaidDirectoryLike,
+    unlockedDirectoryIds: string[],
+) => {
+    const unlockedSet = new Set(unlockedDirectoryIds);
+    if (unlockedSet.has(directory.directoryId)) return true;
+    if (getInteractiveVideoPaidTargetType(directory) !== 'node') return false;
+    const scriptId = getInteractiveVideoPaidTargetScriptId(directory);
+    return Boolean(scriptId && getUnlockedInteractiveVideoPaidScriptIds(unlockedDirectoryIds).has(scriptId));
+};
+
+export const buildInteractiveVideoPlayerTestAccess = <
+    TDirectory extends IvgPaidDirectoryLike,
+>(
+    config?: IvgPricingConfigLike<TDirectory> | null,
+    options: IvgPlayerTestAccessOptions = {},
+): IvgPlayerTestAccess<TDirectory> | null => {
+    if (!config) return null;
+    const mode = String(config.mode || 'free');
+    const hasBuyout = Boolean(options.hasBuyout);
+    const unlockedSet = new Set((options.unlockedDirectoryIds || []).map((id) => String(id || '').trim()).filter(Boolean));
+    const paidDirectories = getEffectiveInteractiveVideoPlayerTestPaidDirectories(config);
+    const buyoutLocked = mode === 'buyout' && !hasBuyout;
+    const unlockedDirectoryIds = Array.from(unlockedSet);
+    const lockedDirectories = hasBuyout || buyoutLocked
+        ? []
+        : paidDirectories.filter((directory) => !isInteractiveVideoPaidDirectoryUnlocked(directory, unlockedDirectoryIds));
+
+    return {
+        hasBuyout,
+        buyoutLocked,
+        unlockedDirectoryIds,
+        lockedDirectoryIds: lockedDirectories.map((directory) => directory.directoryId),
+        lockedDirectories,
+        paidDirectories,
+    };
+};
+
+export const findInteractiveVideoLockedDirectoryByScriptId = <
+    TDirectory extends IvgPaidDirectoryLike,
+>(lockedDirectories: TDirectory[] = [], scriptId?: string | null) => {
+    const normalizedScriptId = String(scriptId || '').trim();
+    if (!normalizedScriptId) return null;
+    return lockedDirectories.find((directory) => {
+        if (getInteractiveVideoPaidTargetType(directory) === 'node') return false;
+        const scriptIds = directory.scriptIds?.length
+            ? directory.scriptIds
+            : [getInteractiveVideoPaidTargetScriptId(directory)];
+        return scriptIds.includes(normalizedScriptId);
+    }) || null;
+};
+
+export const findInteractiveVideoLockedDirectoryByNodeId = <
+    TDirectory extends IvgPaidDirectoryLike,
+>(lockedDirectories: TDirectory[] = [], scriptId?: string | null, nodeId?: string | null) => {
+    const normalizedScriptId = String(scriptId || '').trim();
+    const normalizedNodeId = String(nodeId || '').trim();
+    if (!normalizedScriptId || !normalizedNodeId) return null;
+    return lockedDirectories.find((directory) =>
+        getInteractiveVideoPaidTargetType(directory) === 'node'
+        && getInteractiveVideoPaidTargetScriptId(directory) === normalizedScriptId
+        && getInteractiveVideoPaidTargetNodeId(directory) === normalizedNodeId,
+    ) || null;
+};
+
+export const findInteractiveVideoLockedDirectoryForRuntimeNode = <
+    TDirectory extends IvgPaidDirectoryLike,
+>(lockedDirectories: TDirectory[] = [], scriptId?: string | null, nodeId?: string | null) =>
+    findInteractiveVideoLockedDirectoryByNodeId(lockedDirectories, scriptId, nodeId)
+    || findInteractiveVideoLockedDirectoryByScriptId(lockedDirectories, scriptId);
 
 export const formatIvgCurrencyName = (currency: IvgPaymentCurrency) =>
     currency === 'points' ? '积分' : '钻石';
