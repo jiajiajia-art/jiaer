@@ -5,6 +5,9 @@
 export const PLAYER_CARD_GENDERS = Object.freeze(['male', 'female', 'other'] as const);
 export type PlayerCardGender = (typeof PLAYER_CARD_GENDERS)[number];
 
+export const PLAYER_CARD_KINDS = Object.freeze(['player', 'npc'] as const);
+export type PlayerCardKind = (typeof PLAYER_CARD_KINDS)[number];
+
 export type PlayerCharacterCard = {
   id: string;
   userId: string;
@@ -12,6 +15,13 @@ export type PlayerCharacterCard = {
   gender: PlayerCardGender;
   persona: string;
   attributes: Record<string, number>;
+  cardKind?: PlayerCardKind;
+  isDefault?: boolean;
+  isPublic?: boolean;
+  tags?: string[];
+  avatarUrl?: string;
+  authorName?: string;
+  sourceCardId?: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -71,11 +81,12 @@ function normalizeAttributes(raw: unknown): { ok: true; value: Record<string, nu
 }
 
 /** 功能注释：新建/更新卡字段校验。 */
-export function validatePlayerCharacterCardInput(input: Partial<PlayerCharacterCard> | null | undefined): {
-  ok: boolean;
-  message?: string;
-  data?: { name: string; gender: PlayerCardGender; persona: string; attributes: Record<string, number> };
-} {
+export function validatePlayerCharacterCardInput(input: Partial<PlayerCharacterCard> | null | undefined):
+  | {
+    ok: true;
+    data: { name: string; gender: PlayerCardGender; persona: string; attributes: Record<string, number> };
+  }
+  | { ok: false; message: string } {
   const name = trimStr(input?.name);
   const persona = trimStr(input?.persona);
   const gender = String(input?.gender || '').trim() as PlayerCardGender;
@@ -92,7 +103,7 @@ export function validatePlayerCharacterCardInput(input: Partial<PlayerCharacterC
   }
   const attrs = normalizeAttributes(input?.attributes);
   if (!attrs.ok) {
-    return { ok: false, message: attrs.error };
+    return { ok: false, message: String(attrs.error) };
   }
 
   return { ok: true, data: { name, gender, persona, attributes: attrs.value } };
@@ -113,7 +124,7 @@ export function applyPlayerCardImport(
     return { ok: false, message: '无权导入该角色卡', code: 'forbidden' };
   }
   const checked = validatePlayerCharacterCardInput(card);
-  if (!checked.ok || !checked.data) {
+  if (!checked.ok) {
     return { ok: false, message: checked.message || '角色卡无效', code: 'invalid_card' };
   }
   return {

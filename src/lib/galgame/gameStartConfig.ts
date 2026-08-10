@@ -157,7 +157,7 @@ export function buildSilentDefaultGameStartConfig(input: {
     openingMonologue: resolved.openingMonologue,
     retainedStorylineIds: resolved.retainedStorylineIds,
   });
-  if (!validated.ok || !validated.data) {
+  if (!validated.ok) {
     return { ok: false, message: validated.message || '开局配置无效' };
   }
   return { ok: true, data: validated.data };
@@ -171,11 +171,9 @@ export function canSubmitGameStart(config: Partial<GameStartConfig> | null | und
 }
 
 /** 功能注释：完整校验开局包。 */
-export function validateGameStartConfig(input: Partial<GameStartConfig> | null | undefined): {
-  ok: boolean;
-  message?: string;
-  data?: GameStartConfig;
-} {
+export function validateGameStartConfig(input: Partial<GameStartConfig> | null | undefined):
+  | { ok: true; data: GameStartConfig }
+  | { ok: false; message: string } {
   const name = trimStr(input?.player?.name);
   const gender = String(input?.player?.gender || '').trim() as GameStartConfig['player']['gender'];
   const openingRouteId = trimStr(input?.openingRouteId);

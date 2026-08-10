@@ -161,7 +161,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
       persona: draft.persona,
       attributes: profile?.customAttributes || {},
     });
-    if (!checked.ok || !checked.data) {
+    if (!checked.ok) {
       toast.error(checked.message || '档案无效');
       return;
     }

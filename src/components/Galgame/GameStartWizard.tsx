@@ -68,7 +68,7 @@ const GameStartWizard: React.FC<GameStartWizardProps> = ({
       openingMonologue: resolved.openingMonologue,
       retainedStorylineIds: resolved.retainedStorylineIds,
     });
-    if (!checked.ok || !checked.data) {
+    if (!checked.ok) {
       toast.error(checked.message || '开局配置无效');
       return;
     }

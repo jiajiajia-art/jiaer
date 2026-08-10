@@ -264,7 +264,7 @@ const Galgame = () => {
                 openingMonologue: patch.openingMonologue ?? resolved.openingMonologue,
                 retainedStorylineIds: patch.retainedStorylineIds ?? resolved.retainedStorylineIds,
             });
-            if (!checked.ok || !checked.data) {
+            if (!checked.ok) {
                 toast.error(checked.message || '系统配置无效');
                 throw new Error(checked.message || '系统配置无效');
             }
@@ -420,16 +420,19 @@ const Galgame = () => {
         const msg = controller.currentMessage;
         if (!msg) return null;
         if (!npcNameMap.length) return msg;
-        const options = Array.isArray(msg.options)
-            ? msg.options.map((opt) => ({
-                id: Number(opt.id),
-                text: typeof opt.text === 'string'
-                    ? rewriteTextByMap(opt.text, npcNameMap)
-                    : String(opt.text ?? ''),
-                ...(typeof opt.isMain === 'boolean' ? { isMain: opt.isMain } : {}),
-            }))
+        const options: Message['options'] = Array.isArray(msg.options)
+            ? msg.options.map((opt) => {
+                const mapped: { id: number; text: string; isMain?: boolean } = {
+                    id: Number(opt.id),
+                    text: typeof opt.text === 'string'
+                        ? rewriteTextByMap(opt.text, npcNameMap)
+                        : String(opt.text ?? ''),
+                };
+                if (typeof opt.isMain === 'boolean') mapped.isMain = opt.isMain;
+                return mapped;
+            })
             : undefined;
-        const next: Message = {
+        return {
             id: msg.id,
             type: msg.type,
             message: typeof msg.message === 'string'
@@ -445,7 +448,6 @@ const Galgame = () => {
             portraitOffsetY: msg.portraitOffsetY,
             options,
         };
-        return next;
     }, [controller.currentMessage, npcNameMap]);
 
     const normalModeDisplayText = useMemo(() => {

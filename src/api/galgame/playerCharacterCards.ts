@@ -20,9 +20,27 @@ function authHeaders(token?: string | null): HeadersInit {
 }
 
 export const playerCharacterCardsApi = {
-  list: async (token: string, q = '') => {
-    const qs = q ? `?q=${encodeURIComponent(q)}` : '';
+  list: async (token: string, opts: { q?: string; kind?: string; tag?: string } | string = '') => {
+    const q = typeof opts === 'string' ? opts : (opts.q || '');
+    const kind = typeof opts === 'string' ? '' : (opts.kind || '');
+    const tag = typeof opts === 'string' ? '' : (opts.tag || '');
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (kind) params.set('kind', kind);
+    if (tag) params.set('tag', tag);
+    const qs = params.toString() ? `?${params}` : '';
     const res = await fetch(`${HOST_ADDRESS}/api/player-character-cards${qs}`, {
+      headers: authHeaders(token),
+    });
+    return parseJson(res);
+  },
+  listPublic: async (token: string, opts: { q?: string; kind?: string; tag?: string } = {}) => {
+    const params = new URLSearchParams();
+    if (opts.q) params.set('q', opts.q);
+    if (opts.kind) params.set('kind', opts.kind);
+    if (opts.tag) params.set('tag', opts.tag);
+    const qs = params.toString() ? `?${params}` : '';
+    const res = await fetch(`${HOST_ADDRESS}/api/player-character-cards/public${qs}`, {
       headers: authHeaders(token),
     });
     return parseJson(res);
@@ -47,6 +65,32 @@ export const playerCharacterCardsApi = {
     const res = await fetch(`${HOST_ADDRESS}/api/player-character-cards/${encodeURIComponent(id)}`, {
       method: 'DELETE',
       headers: authHeaders(token),
+    });
+    return parseJson(res);
+  },
+  setDefault: async (token: string, id: string) => {
+    const res = await fetch(
+      `${HOST_ADDRESS}/api/player-character-cards/${encodeURIComponent(id)}/default`,
+      { method: 'POST', headers: authHeaders(token), body: '{}' },
+    );
+    return parseJson(res);
+  },
+  publish: async (token: string, id: string, isPublic = true) => {
+    const res = await fetch(
+      `${HOST_ADDRESS}/api/player-character-cards/${encodeURIComponent(id)}/publish`,
+      {
+        method: 'POST',
+        headers: authHeaders(token),
+        body: JSON.stringify({ isPublic }),
+      },
+    );
+    return parseJson(res);
+  },
+  importFromPublic: async (token: string, cardId: string) => {
+    const res = await fetch(`${HOST_ADDRESS}/api/player-character-cards/import-public`, {
+      method: 'POST',
+      headers: authHeaders(token),
+      body: JSON.stringify({ cardId }),
     });
     return parseJson(res);
   },

@@ -6,6 +6,12 @@ import Home from './page/Home';
 import Create from './page/Create';
 import WithdrawRecords from './page/WithdrawRecords';
 import WareHouse from './page/WareHouse';
+import WarehouseHub from './page/warehouse/WarehouseHub';
+import WarehousePersonaCards from './page/warehouse/WarehousePersonaCards';
+import WarehouseCharacterCards from './page/warehouse/WarehouseCharacterCards';
+import WarehousePublicCards from './page/warehouse/WarehousePublicCards';
+import WarehousePlayHistory from './page/warehouse/WarehousePlayHistory';
+import WarehouseResourceLibrary from './page/warehouse/WarehouseResourceLibrary';
 import Profile from './page/Profile';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import CreateGame from './page/CreateGame';
@@ -139,7 +145,19 @@ function App() {
           <Route path="/operator/works/:fileId/stats" element={<OperatorRoute><OperatorWorkStats /></OperatorRoute>} />
           <Route path="/points/details" element={<PointsDetails />} />
           <Route path="/createGame" element={<CreateGame />} />
-          <Route path="/warehouse" element={<WareHouse />} />
+          <Route path="/warehouse" element={<WarehouseHub />}>
+            <Route index element={<Navigate to="persona" replace />} />
+            <Route path="persona" element={<WarehousePersonaCards />} />
+            <Route path="characters" element={<WarehouseCharacterCards />} />
+            <Route path="worldbooks" element={<WarehouseResourceLibrary resourceType="worldbook" mode="mine" />} />
+            <Route path="plugins" element={<WarehouseResourceLibrary resourceType="plugin" mode="mine" />} />
+            <Route path="public/cards" element={<WarehousePublicCards />} />
+            <Route path="public/worldbooks" element={<WarehouseResourceLibrary resourceType="worldbook" mode="public" />} />
+            <Route path="public/plugins" element={<WarehouseResourceLibrary resourceType="plugin" mode="public" />} />
+            <Route path="history" element={<WarehousePlayHistory />} />
+          </Route>
+          {/* 兼容旧链接：直进游玩历史 */}
+          <Route path="/warehouse-legacy" element={<WareHouse />} />
           <Route path="/favorites" element={<Favorites />} />
           <Route path="/gameSettingsEditor" element={<GameSettingsEditor />} />
           <Route path="/profile" element={<Profile />} />

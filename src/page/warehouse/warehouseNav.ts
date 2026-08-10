@@ -1,0 +1,38 @@
+/** 仓库侧栏导航配置（方案 B：含游玩历史） */
+
+export type WarehouseNavItem = {
+  id: string;
+  path: string;
+  label: string;
+  group: 'mine' | 'public' | 'extra';
+  soon?: boolean;
+};
+
+export const WAREHOUSE_NAV: WarehouseNavItem[] = [
+  { id: 'persona', path: '/warehouse/persona', label: '玩家人设卡', group: 'mine' },
+  { id: 'characters', path: '/warehouse/characters', label: '我的角色卡', group: 'mine' },
+  { id: 'worldbooks', path: '/warehouse/worldbooks', label: '我的世界书', group: 'mine' },
+  { id: 'plugins', path: '/warehouse/plugins', label: '我的插件', group: 'mine' },
+  { id: 'public-cards', path: '/warehouse/public/cards', label: '公共卡库', group: 'public' },
+  { id: 'public-worldbooks', path: '/warehouse/public/worldbooks', label: '公共世界书', group: 'public' },
+  { id: 'public-plugins', path: '/warehouse/public/plugins', label: '公共插件', group: 'public' },
+  { id: 'history', path: '/warehouse/history', label: '游玩历史', group: 'extra' },
+];
+
+export const PERSONA_TAGS = [
+  '全部',
+  '恋爱',
+  '奇幻',
+  '校园',
+  '日常',
+  '冒险',
+  '悬疑',
+  '治愈',
+];
+
+export function genderLabel(g: string): string {
+  if (g === 'male') return '男';
+  if (g === 'female') return '女';
+  if (g === 'other') return '其他';
+  return '未知';
+}

@@ -6,21 +6,7 @@ import { IoArrowDownCircleOutline } from 'react-icons/io5';
 import { MdAutorenew } from 'react-icons/md';
 import { OPTION_COST, INPUT_COST } from '../../utils/constants';
 import { useTranslation } from 'react-i18next';
-
-type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';
-
-interface Message {
-    id: number;
-    type: MessageType;
-    message: string;
-    characterName?: string;
-    characterImage?: string;
-    characterPosition?: 'left' | 'right';
-    portraitScale?: number;
-    portraitOffsetX?: number;
-    portraitOffsetY?: number;
-    options?: Array<{ id: number; text: string; isMain?: boolean }>;
-}
+import type { Message } from '../../hooks/galgame/useGalgameMessage';
 
 interface StepHandlers {
     isWaitingForData: boolean;

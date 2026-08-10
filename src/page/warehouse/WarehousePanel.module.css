@@ -1,0 +1,672 @@
+/* Studio Catalog — 卡面 + 双栏人设笺弹层 */
+
+.panelRoot {
+  --wh-ink: #17141a;
+  --wh-muted: #8c8490;
+  --wh-coral: #e03d4b;
+  --wh-line: #ece8eb;
+  --wh-soft: #fff0f2;
+  --wh-display: 'Noto Serif SC', 'Songti SC', serif;
+
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-height: 400px;
+  animation: whFade 0.35s ease both;
+}
+
+@keyframes whFade {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.header { display: flex; flex-direction: column; gap: 6px; }
+
+.title {
+  margin: 0;
+  font-family: var(--wh-display);
+  font-size: clamp(22px, 2.2vw, 28px);
+  font-weight: 700;
+  color: var(--wh-ink);
+}
+
+.sub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--wh-muted);
+  line-height: 1.55;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.search {
+  flex: 1 1 220px;
+  min-width: 150px;
+  border: 1px solid var(--wh-line);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  outline: none;
+  background: #faf9fa;
+}
+
+.search:focus {
+  background: #fff;
+  border-color: rgba(224, 61, 75, 0.45);
+  box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.1);
+}
+
+.primaryBtn,
+.ghostBtn,
+.dangerBtn {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.primaryBtn {
+  background: var(--wh-coral);
+  color: #fff;
+}
+
+.primaryBtn:hover { background: #c93441; }
+
+.ghostBtn {
+  background: #fff;
+  color: #4b4450;
+  border: 1px solid var(--wh-line);
+}
+
+.dangerBtn {
+  background: var(--wh-soft);
+  color: var(--wh-coral);
+}
+
+.tags { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.tag,
+.tagActive {
+  border: 1px solid var(--wh-line);
+  background: #fff;
+  border-radius: 999px;
+  padding: 6px 13px;
+  font-size: 12px;
+  cursor: pointer;
+  color: #625a66;
+}
+
+.tagActive {
+  border-color: var(--wh-coral);
+  background: var(--wh-coral);
+  color: #fff;
+  font-weight: 700;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 292px;
+  gap: 16px;
+  align-items: start;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+.card,
+.cardActive {
+  border: 1px solid var(--wh-line);
+  border-radius: 14px;
+  padding: 0;
+  background: #fff;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(23, 20, 26, 0.06);
+}
+
+.cardActive {
+  border-color: var(--wh-coral);
+  box-shadow: 0 0 0 1px var(--wh-coral), 0 12px 28px rgba(224, 61, 75, 0.12);
+}
+
+.portrait {
+  position: relative;
+  aspect-ratio: 1 / 1.12;
+  background: linear-gradient(160deg, #f3eef2, #e8e0e6);
+  overflow: hidden;
+}
+
+.portraitImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+}
+
+.portraitFallback {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  font-family: var(--wh-display);
+  font-size: 40px;
+  font-weight: 700;
+  color: rgba(224, 61, 75, 0.35);
+}
+
+.portraitBadge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--wh-coral);
+  color: #fff;
+  font-weight: 700;
+}
+
+.checkMark {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--wh-coral);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.cardBody {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.cardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.cardName {
+  margin: 0;
+  font-family: var(--wh-display);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.badge {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: var(--wh-soft);
+  color: var(--wh-coral);
+  font-weight: 700;
+}
+
+.cardMeta { margin: 0; font-size: 12px; color: var(--wh-muted); }
+
+.cardPersona {
+  margin: 0;
+  font-size: 12.5px;
+  color: #5a5360;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.9em;
+}
+
+.chipRow { display: flex; flex-wrap: wrap; gap: 4px; }
+
+.chip {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: #f4f1f4;
+  color: #746c78;
+}
+
+.cardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.cardActions button {
+  border: none;
+  border-radius: 8px;
+  padding: 7px 11px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  background: #f4f1f4;
+  color: #4b4450;
+}
+
+.cardActions .actionPrimary {
+  background: var(--wh-coral);
+  color: #fff;
+}
+
+.preview {
+  border: 1px solid var(--wh-line);
+  border-radius: 14px;
+  padding: 0;
+  background: #fff;
+  position: sticky;
+  top: 8px;
+  overflow: hidden;
+}
+
+.previewHero {
+  aspect-ratio: 1 / 1.05;
+  background: linear-gradient(160deg, #f3eef2, #e8e0e6);
+}
+
+.previewHeroImg,
+.previewHeroFallback {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.previewHeroImg {
+  object-fit: cover;
+  object-position: top center;
+}
+
+.previewHeroFallback {
+  display: grid;
+  place-items: center;
+  font-family: var(--wh-display);
+  font-size: 52px;
+  color: rgba(224, 61, 75, 0.3);
+  font-weight: 700;
+}
+
+.previewInner { padding: 14px; }
+
+.previewTitle {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--wh-muted);
+  letter-spacing: 0.06em;
+}
+
+.previewName {
+  margin: 0 0 10px;
+  font-family: var(--wh-display);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.previewRow {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #5a5360;
+  line-height: 1.55;
+}
+
+.previewRow strong {
+  display: inline-block;
+  min-width: 4em;
+  color: var(--wh-muted);
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.previewActions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.previewTip {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #faf7f8;
+  font-size: 12px;
+  color: #746c78;
+  line-height: 1.5;
+}
+
+.empty {
+  margin: 48px 0;
+  text-align: center;
+  color: var(--wh-muted);
+  font-size: 14px;
+}
+
+.emptyStage {
+  margin: 40px auto;
+  max-width: 340px;
+  text-align: center;
+  padding: 32px 20px;
+  border-radius: 16px;
+  background: #faf7f8;
+  border: 1px dashed #e4dde2;
+}
+
+.emptyOrb {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 14px;
+  border-radius: 14px;
+  background: var(--wh-coral);
+}
+
+.emptyStage h2 {
+  margin: 0 0 8px;
+  font-family: var(--wh-display);
+  font-size: 18px;
+}
+
+.emptyStage p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--wh-muted);
+  line-height: 1.55;
+}
+
+/* —— 人设笺弹层：portal 到 body，全屏轻雾遮罩 ——
+   变量必须在 overlay 上重声明：portal 脱离 .panelRoot，否则 seg/field 会丢边框与选中色 */
+.formOverlay {
+  --wh-ink: #17141a;
+  --wh-muted: #8c8490;
+  --wh-coral: #e03d4b;
+  --wh-line: #ece8eb;
+  --wh-soft: #fff0f2;
+  --wh-display: 'Noto Serif SC', 'Songti SC', serif;
+
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(28, 22, 26, 0.28);
+  backdrop-filter: blur(14px) saturate(1.05);
+  -webkit-backdrop-filter: blur(14px) saturate(1.05);
+  animation: whFade 0.2s ease both;
+}
+
+.formCard {
+  width: min(860px, 100%);
+  max-height: min(88vh, 720px);
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  background: #fff;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 30px 80px rgba(10, 6, 12, 0.35);
+}
+
+.formPreview {
+  background: #1a1418;
+  color: #fff;
+  padding: 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+  overflow: hidden;
+}
+
+.formPreview::before {
+  content: '';
+  position: absolute;
+  inset: auto -40px -60px auto;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(224, 61, 75, 0.35), transparent 70%);
+  pointer-events: none;
+}
+
+.formPreviewEyebrow {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 700;
+  position: relative;
+  z-index: 1;
+}
+
+.formPreviewPortrait {
+  aspect-ratio: 1 / 1.15;
+  border-radius: 14px;
+  background: linear-gradient(165deg, #3a2e36, #2a2228);
+  display: grid;
+  place-items: center;
+  font-family: var(--wh-display);
+  font-size: 64px;
+  font-weight: 700;
+  color: rgba(255, 180, 188, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.formPreviewName {
+  margin: 0;
+  font-family: var(--wh-display);
+  font-size: 22px;
+  font-weight: 700;
+  position: relative;
+  z-index: 1;
+}
+
+.formPreviewMeta {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.55;
+  position: relative;
+  z-index: 1;
+}
+
+.formPreviewChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  position: relative;
+  z-index: 1;
+}
+
+.formPreviewChip {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(224, 61, 75, 0.25);
+  color: #ffc9cf;
+}
+
+.formBody {
+  padding: 22px 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: auto;
+  background:
+    linear-gradient(180deg, #fff 0%, #fcfafb 100%);
+}
+
+.formBodyHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.formBodyHead h3 {
+  margin: 0;
+  font-family: var(--wh-display);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.formClose {
+  border: none;
+  background: transparent;
+  color: var(--wh-muted);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field label,
+.field > span {
+  font-size: 12px;
+  color: var(--wh-muted);
+  font-weight: 700;
+}
+
+.field input,
+.field textarea {
+  border: 1px solid var(--wh-line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--wh-ink);
+  background: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.field textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.field input:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: rgba(224, 61, 75, 0.45);
+  box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.1);
+}
+
+/* 分段轨：一体外壳 + 选中墨块，避免三颗散按钮或「无选中态」 */
+.segRow {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 12px;
+  background: #f4f1f3;
+  border: 1px solid var(--wh-line);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.seg,
+.segActive {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 1 1 0;
+  border: none;
+  background: transparent;
+  border-radius: 9px;
+  padding: 9px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  color: var(--wh-muted);
+  line-height: 1.2;
+  text-align: center;
+  transition: background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.seg:hover {
+  color: var(--wh-ink);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.seg:focus-visible,
+.segActive:focus-visible {
+  outline: 2px solid rgba(224, 61, 75, 0.55);
+  outline-offset: 1px;
+}
+
+.segActive {
+  background: #fff;
+  color: var(--wh-coral);
+  box-shadow:
+    0 1px 2px rgba(23, 20, 26, 0.06),
+    0 0 0 1px rgba(224, 61, 75, 0.18);
+}
+
+.checkRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #4b4450;
+  user-select: none;
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+@media (max-width: 980px) {
+  .layout { grid-template-columns: 1fr; }
+  .preview { position: static; }
+
+  .formCard {
+    grid-template-columns: 1fr;
+    max-height: 92vh;
+  }
+
+  .formPreview {
+    display: none;
+  }
+}

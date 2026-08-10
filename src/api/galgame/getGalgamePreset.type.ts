@@ -2,7 +2,6 @@ export interface GetGalgamePresetResponse {
   world: WorldSetting;
   npcs: NpcSetting;
   scenes: SceneSetting;
-  [key: string]: unknown;
 }
 
 export interface WorldSetting {
