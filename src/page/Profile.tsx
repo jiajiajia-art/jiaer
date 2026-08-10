@@ -728,6 +728,25 @@ const Profile: React.FC = () => {
                             </div>
                         )}
 
+                        <div className={styles.functionItem} onClick={() => navigate('/interactive-video/purchased')}>
+                            <div className={styles.functionIcon}>
+                                <MdPlayCircleOutline />
+                            </div>
+                            <div className={styles.functionText}>
+                                <div className={styles.functionTitle}>我购买的互动影游</div>
+                                <div className={styles.functionDesc}>查看已解锁和已买断的互动影游</div>
+                            </div>
+                            <button
+                                className={styles.functionButton}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate('/interactive-video/purchased');
+                                }}
+                            >
+                                查看
+                            </button>
+                        </div>
+
                         <div className={styles.functionItem}>
                             <div className={styles.functionIcon}>
                                 <RiCopperCoinLine />

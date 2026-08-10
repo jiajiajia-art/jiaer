@@ -146,12 +146,12 @@
 }
 
 .ivgToolModal {
-    max-width: 440px;
+    max-width: 560px;
 }
 
 .ivgToolActions {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
     margin-bottom: 18px;
 }
@@ -171,6 +171,9 @@
     text-decoration: none;
     cursor: pointer;
     transition: all 0.2s ease;
+    padding: 0 14px;
+    line-height: 1.25;
+    text-align: center;
 }
 
 .ivgToolAction:hover {
@@ -189,7 +192,7 @@
     height: 18px;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 640px) {
     .ivgToolActions {
         grid-template-columns: 1fr;
     }
