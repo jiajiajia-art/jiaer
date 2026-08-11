@@ -2885,19 +2885,11 @@ const InteractiveVideo: React.FC = () => {
         let cancelled = false;
         preloadManagerRef.current?.waitUntilReady(currentVideoUrl, 8000).then(() => {
             if (cancelled) return;
-            const startedAt = playbackMetricsRef.current.initialPrepareStartedAt;
-            if (startedAt != null) {
-                playbackMetricsRef.current.initialPrepareMs = Math.round(nowMs() - startedAt);
-                playbackMetricsRef.current.initialPrepareStartedAt = null;
-                publishPlaybackMetrics();
-            }
-            setIsInitialVideoPreparing(false);
-            setIsVideoBuffering(false);
         });
         return () => {
             cancelled = true;
         };
-    }, [currentVideoUrl, isInitialVideoPreparing, isMiniProgramRuntime, publishPlaybackMetrics]);
+    }, [currentVideoUrl, isInitialVideoPreparing, isMiniProgramRuntime]);
 
     const availableOptions = useMemo(() => {
         if (videoGate || isBranchTransitioning) return [];
@@ -4069,7 +4061,7 @@ const InteractiveVideo: React.FC = () => {
         projectPlaybackOrientation === 'portrait' ? styles.portraitVideoPage : styles.landscapeVideoPage,
     ].filter(Boolean).join(' ');
 
-    if (isLoading || isInitialVideoPreparing) {
+    if (isLoading) {
         return (
             <div className={loadingPageClassName}>
                 <div className={styles.loadingPanel}>
@@ -4565,7 +4557,7 @@ const InteractiveVideo: React.FC = () => {
         : '';
     const showTransitionOverlay = !showManualPlay && (
         isBranchTransitioning ||
-        (Boolean(currentVideoUrl) && videoGate && isVideoBuffering) ||
+        (Boolean(currentVideoUrl) && videoGate && (isInitialVideoPreparing || isVideoBuffering)) ||
         (isUnlocking && !unlockConfirm)
     );
     const transitionOverlayText = isUnlocking && !unlockConfirm
@@ -4788,6 +4780,15 @@ const InteractiveVideo: React.FC = () => {
                                     onPlaying={() => {
                                         revealSuppressedVideoFrame(currentVideoUrl);
                                         setIsVideoPaused(false);
+                                        if (isInitialVideoPreparing) {
+                                            const startedAt = playbackMetricsRef.current.initialPrepareStartedAt;
+                                            if (startedAt != null) {
+                                                playbackMetricsRef.current.initialPrepareMs = Math.round(nowMs() - startedAt);
+                                                playbackMetricsRef.current.initialPrepareStartedAt = null;
+                                                publishPlaybackMetrics();
+                                            }
+                                            setIsInitialVideoPreparing(false);
+                                        }
                                         markPlaybackHealthy();
                                     }}
                                     onPause={(event) => {

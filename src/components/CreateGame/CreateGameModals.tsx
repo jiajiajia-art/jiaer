@@ -1,18 +1,13 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FaApple, FaWindows } from 'react-icons/fa';
+import { FaDesktop } from 'react-icons/fa';
 import styles from './CreateGameModals.module.css';
 import MobileTipModal from './MobileTipModal';
 import type { CreatorGameType } from '../../utils/miniProgram';
 
-const IVG_TOOL_WINDOWS_DOWNLOAD_FILE_NAME = 'FunloomIvgTool-1.0.6-x64-setup.exe';
-const IVG_TOOL_MAC_DOWNLOAD_FILE_NAME = 'FunloomIvgTool-1.0.6-universal.dmg';
-const IVG_TOOL_WINDOWS_DOWNLOAD_PATH = `/pdf/${IVG_TOOL_WINDOWS_DOWNLOAD_FILE_NAME}`;
-const IVG_TOOL_MAC_DOWNLOAD_PATH = `/pdf/${IVG_TOOL_MAC_DOWNLOAD_FILE_NAME}`;
+const IVG_TOOL_DOWNLOAD_FILE_NAME = 'FunloomTool.zip';
+const IVG_TOOL_DOWNLOAD_URL = 'https://kurangames.com/download/FunloomTool.zip';
 const IVG_TUTORIAL_URL = 'https://avyx4ypb3lx.feishu.cn/docx/WTcZdQPipofJq1xb1A4caq6Tngd';
-
-const getPublicAssetUrl = (path: string) =>
-    `${import.meta.env.BASE_URL}${path.startsWith('/') ? path.slice(1) : path}`;
 
 interface CreateGameModalsProps {
     isCreateTypeModalOpen: boolean;
@@ -43,8 +38,6 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
 }) => {
     const { t } = useTranslation();
     const [isIvgToolModalOpen, setIsIvgToolModalOpen] = useState(false);
-    const ivgToolWindowsDownloadUrl = getPublicAssetUrl(IVG_TOOL_WINDOWS_DOWNLOAD_PATH);
-    const ivgToolMacDownloadUrl = getPublicAssetUrl(IVG_TOOL_MAC_DOWNLOAD_PATH);
 
     const handleAvgClick = () => {
         if (isMiniProgram) {
@@ -174,19 +167,11 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
                         <div className={styles.ivgToolActions}>
                             <a
                                 className={`${styles.ivgToolAction} ${styles.ivgToolDownloadAction}`}
-                                href={ivgToolWindowsDownloadUrl}
-                                download={IVG_TOOL_WINDOWS_DOWNLOAD_FILE_NAME}
+                                href={IVG_TOOL_DOWNLOAD_URL}
+                                download={IVG_TOOL_DOWNLOAD_FILE_NAME}
                             >
-                                <FaWindows className={styles.ivgToolActionIcon} aria-hidden="true" />
-                                <span>{t('createGame.downloadWindowsTool')}</span>
-                            </a>
-                            <a
-                                className={`${styles.ivgToolAction} ${styles.ivgToolDownloadAction}`}
-                                href={ivgToolMacDownloadUrl}
-                                download={IVG_TOOL_MAC_DOWNLOAD_FILE_NAME}
-                            >
-                                <FaApple className={styles.ivgToolActionIcon} aria-hidden="true" />
-                                <span>{t('createGame.downloadMacTool')}</span>
+                                <FaDesktop className={styles.ivgToolActionIcon} aria-hidden="true" />
+                                <span>{t('createGame.downloadTool')}</span>
                             </a>
                             <a
                                 className={styles.ivgToolAction}

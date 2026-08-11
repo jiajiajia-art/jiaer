@@ -1,10 +1,28 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { rm } from 'node:fs/promises'
+import { resolve } from 'node:path'
+
+const oversizedLocalDownloads = [
+  ['pdf', 'Funloom互动影游工具.zip'],
+  ['pdf', 'FunloomTool'],
+]
+
+const removeOversizedLocalDownloads = () => ({
+  name: 'remove-oversized-local-downloads',
+  closeBundle: async () => {
+    await Promise.all(
+      oversizedLocalDownloads.map((segments) =>
+        rm(resolve(process.cwd(), 'dist', ...segments), { recursive: true, force: true }),
+      ),
+    )
+  },
+})
 
 // https://vite.dev/config/
 export default defineConfig({
   base: '/funloom/',
-  plugins: [react()],
+  plugins: [react(), removeOversizedLocalDownloads()],
   server: {
     host: true,
     port: 5173,
