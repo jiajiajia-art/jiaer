@@ -1,12 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+//import { useTranslation } from 'react-i18next';
 import { Converter } from 'showdown';
-import { IoChevronBack, IoChevronDown, IoChevronForward, IoChevronUp, IoClose, IoMenuOutline } from 'react-icons/io5';
+import { IoChevronBack, IoChevronDown, IoChevronForward, IoChevronUp, IoClose, IoMenuOutline, IoCloudDownloadOutline } from 'react-icons/io5';
 import { MdCheck, MdContentCopy } from 'react-icons/md';
 import { LuClock3 } from 'react-icons/lu';
 import documentApi from '../api/document/documentApi';
 import type { DocumentItem, GuideGroup } from '../api/document/document.type';
 import styles from './Document.module.css';
+import PDFTemplateModal from '../components/GameSettingEditor/PDFTemplateModal';
 
 interface DocumentState {
     list: DocumentItem[];
@@ -167,8 +169,11 @@ const buildDocumentHtml = (markdownText: string): { html: string; headings: Head
         const hrefValue = anchorElement.getAttribute('href') || '';
         if (hrefValue.startsWith('#')) return;
 
-        anchorElement.target = '_blank';
-        anchorElement.rel = 'noopener noreferrer';
+        anchorElement.dataset.href = hrefValue;
+        anchorElement.removeAttribute('href');
+        anchorElement.classList.add('doc-internal-link');
+        anchorElement.setAttribute('role', 'link');
+        anchorElement.setAttribute('tabindex', '0');
     });
 
     let codeBlockIndex = 0;
@@ -218,6 +223,7 @@ const Document: React.FC = () => {
     const [initialPinchDistance, setInitialPinchDistance] = useState<number | null>(null);
     const [initialPinchScale, setInitialPinchScale] = useState(1);
     const [docState, setDocState] = useState<DocumentState>(DEFAULT_DOCUMENT_STATE);
+    const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
     const articleRef = useRef<HTMLElement | null>(null);
     const userTriggeredGuideChangeRef = useRef(false);
     const mobileGuideSelectRef = useRef<HTMLDivElement | null>(null);
@@ -517,9 +523,32 @@ const Document: React.FC = () => {
             }
         };
 
+        const handleInternalLinkClick = (event: Event) => {
+            const target = event.target as HTMLElement;
+            const link = target.closest('.doc-internal-link') as HTMLElement | null;
+            if (!link) return;
+
+            const href = link.dataset.href;
+            if (!href) return;
+
+            event.preventDefault();
+
+            // 提取 slug：支持 "/document?slug=xxx" 或纯 "xxx" 两种格式
+            let slug = href;
+            if (href.includes('/document?slug=')) {
+                slug = href.split('/document?slug=')[1] || href;
+            }
+
+            navigate(`/document?slug=${encodeURIComponent(slug)}`);
+        };
+
         document.addEventListener('click', handleImageClick);
-        return () => document.removeEventListener('click', handleImageClick);
-    }, [openImagePreview]);
+        document.addEventListener('click', handleInternalLinkClick);
+        return () => {
+            document.removeEventListener('click', handleImageClick);
+            document.removeEventListener('click', handleInternalLinkClick);
+        };
+    }, [openImagePreview, navigate]);
 
     useEffect(() => {
         const buttons = document.querySelectorAll<HTMLButtonElement>('.copy-code-button');
@@ -604,6 +633,13 @@ const Document: React.FC = () => {
                     >
                         <MenuIcon />
                     </button>
+                    <button
+                        type="button"
+                        className={styles.topNavBackButton}
+                        onClick={() => navigate('/home')}
+                    >
+                        <ArrowLeftIcon />
+                    </button>
                     <a href="/" className={styles.topNavLogo}>
                         <LogoIcon />
                         <span className={styles.topNavLogoText}>文档中心</span>
@@ -625,7 +661,17 @@ const Document: React.FC = () => {
                         </button>
                     ))}
                 </nav>
-                <div className={styles.topNavRight} />
+                <div className={styles.topNavRight}>
+                    <button
+                        type="button"
+                        className={styles.templateDownloadButton}
+                        onClick={() => setIsTemplateModalOpen(true)}
+                        title="模板下载"
+                    >
+                        <IoCloudDownloadOutline />
+                        <span>模板下载</span>
+                    </button>
+                </div>
             </div>
         </header>
     );
@@ -682,6 +728,16 @@ const Document: React.FC = () => {
                 />
                 <aside className={`${styles.mobileSidebar} ${mobileSidebarOpen ? styles.mobileSidebarOpen : ''}`}>
                     <div className={styles.mobileSidebarHeader}>
+                        <button
+                            type="button"
+                            className={styles.mobileSidebarBack}
+                            onClick={() => {
+                                setMobileSidebarOpen(false);
+                                navigate('/home');
+                            }}
+                        >
+                            <ArrowLeftIcon />
+                        </button>
                         <span className={styles.mobileSidebarTitle}>文档导航</span>
                         <button
                             type="button"
@@ -910,6 +966,11 @@ const Document: React.FC = () => {
                     />
                 </div>
             )}
+
+            <PDFTemplateModal
+                isOpen={isTemplateModalOpen}
+                onClose={() => setIsTemplateModalOpen(false)}
+            />
         </div>
     );
 };

@@ -3,6 +3,7 @@ import { IoEye, IoStatsChartSharp, IoShareSocial, IoTime, IoChatbubbleEllipses }
 import { TbHandClick } from 'react-icons/tb';
 import { HiOutlineLightBulb } from 'react-icons/hi';
 import { MdContentCopy } from 'react-icons/md';
+import { PiMoneyWavy } from "react-icons/pi";
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -14,7 +15,6 @@ import GameGrid from '../components/GameGrid';
 import RechargeModal from '../components/Purchase/RechargeModal';
 import CreateGameModals from '../components/CreateGame/CreateGameModals';
 import ConfirmModal from '../components/CommonModal/ConfirmModal';
-import PDFTemplateModal from '../components/GameSettingEditor/PDFTemplateModal';
 import GameGridSkeleton from '../components/Skeleton/GameGridSkeleton';
 import WithdrawFlowModal from '../components/Create/WithdrawFlowModal';
 import { useAuthStore } from '../store/useAuthStore';
@@ -85,7 +85,6 @@ const Create: React.FC = () => {
     const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
     const [isSettleDiamondsModalOpen, setIsSettleDiamondsModalOpen] = useState(false);
     const [isSettling, setIsSettling] = useState(false);
-    const [isPDFModalOpen, setIsPDFModalOpen] = useState(false);
     const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
     const [isDraftManageMode, setIsDraftManageMode] = useState(false);
     const [selectedDraftIds, setSelectedDraftIds] = useState<string[]>([]);
@@ -563,7 +562,7 @@ const Create: React.FC = () => {
                                 </button>
                                 <button
                                     className={styles.creatorHelpButton}
-                                    onClick={() => setIsPDFModalOpen(true)}
+                                    onClick={() => navigate('/document')}
                                     title={t('create.pdfGuide')}
                                 >
                                     <span className={styles.creatorHelpIcon}>?</span>
@@ -699,7 +698,7 @@ const Create: React.FC = () => {
                                 <div className={styles.statBox}>
                                     <div className={styles.statLabel} style={{ justifyContent: 'space-between', width: '100%' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
+                                            <PiMoneyWavy size={16} color="#FB4655" />
                                             <span>{t('create.totalIncentiveEarnings')}</span>
                                         </div>
                                     </div>
@@ -710,7 +709,7 @@ const Create: React.FC = () => {
                                 <div className={styles.statBox}>
                                     <div className={styles.statLabel} style={{ justifyContent: 'space-between', width: '100%' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
+                                            <PiMoneyWavy size={16} color="#FB4655" />
                                             <span>{t('create.pendingIncentiveEarnings')}</span>
                                         </div>
                                     </div>
@@ -944,11 +943,6 @@ const Create: React.FC = () => {
                 message={t('create.batchDeleteConfirmMessage', { count: selectedDraftCount })}
                 confirmButtonText={isBatchDeletingDrafts ? t('create.deletingDrafts') : t('create.confirmDelete')}
                 cancelButtonText={t('create.cancel')}
-            />
-
-            <PDFTemplateModal
-                isOpen={isPDFModalOpen}
-                onClose={() => setIsPDFModalOpen(false)}
             />
         </div>
     );

@@ -31,6 +31,15 @@ const TAB_TO_API_TYPE: Record<Exclude<RankingTab, 'all'>, RankingsApiType> = {
     romance: 'interaction',
 };
 
+/** RankingsCategoryKey -> RankingTab 的反向映射 */
+const API_TYPE_TO_TAB: Record<RankingsApiType, RankingTab> = {
+    overall: 'hot',
+    new: 'new',
+    hot: 'rising',
+    rating: 'sales',
+    interaction: 'romance',
+};
+
 const RANKING_PAGE_SIZE = 20;
 const DEFAULT_RANKING_COVER = `${import.meta.env.BASE_URL}data/assets/defaultScene.png`;
 
@@ -532,7 +541,7 @@ const Rankings: React.FC = () => {
                                         </div>
                                         <button
                                             className={styles.categoryBoxMore}
-                                            onClick={() => setActiveTab(section.key as RankingTab)}
+                                            onClick={() => setActiveTab(API_TYPE_TO_TAB[section.key as RankingsApiType])}
                                         >
                                             {isZh ? '更多' : 'More'} <img src={`${import.meta.env.BASE_URL}data/assets/向右箭头.svg`} alt="" className={styles.moreArrow} />
                                         </button>
