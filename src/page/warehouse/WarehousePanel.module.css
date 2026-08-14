@@ -484,6 +484,104 @@
   overflow: hidden;
 }
 
+.formPreviewPortraitImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+}
+
+.avatarField {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--wh-line);
+  background: #faf9fa;
+}
+
+.avatarFieldHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--wh-ink);
+}
+
+.avatarHint {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--wh-muted);
+}
+
+.avatarRow {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.avatarPreview {
+  width: 88px;
+  flex-shrink: 0;
+  aspect-ratio: 1 / 1.15;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(160deg, #f3eef2, #e8e0e6);
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--wh-line);
+}
+
+.avatarPreviewImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+}
+
+.avatarPreviewFallback {
+  font-family: var(--wh-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: rgba(224, 61, 75, 0.4);
+}
+
+.avatarActions {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: center;
+}
+
+.avatarTip {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--wh-muted);
+}
+
+@media (max-width: 980px) {
+  .avatarRow {
+    flex-direction: column;
+  }
+
+  .avatarPreview {
+    width: 112px;
+  }
+
+  .avatarActions .primaryBtn {
+    width: 100%;
+  }
+}
+
 .formPreviewName {
   margin: 0;
   font-family: var(--wh-display);
@@ -660,6 +758,68 @@
 @media (max-width: 980px) {
   .layout { grid-template-columns: 1fr; }
   .preview { position: static; }
+
+  .title {
+    /* 手机顶栏已展示当前分区标题，避免重复 */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .header {
+    gap: 0;
+  }
+
+  .sub {
+    font-size: 12px;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search {
+    flex: none;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .primaryBtn,
+  .ghostBtn,
+  .dangerBtn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .tags {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin: 0 -2px;
+    padding: 0 2px 2px;
+  }
+
+  .tags::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tag,
+  .tagActive {
+    flex: 0 0 auto;
+  }
+
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+    gap: 10px;
+  }
 
   .formCard {
     grid-template-columns: 1fr;

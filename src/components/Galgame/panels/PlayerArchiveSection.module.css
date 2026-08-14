@@ -390,6 +390,17 @@
   cursor: not-allowed;
 }
 
+.fieldAiBusyBadge {
+  flex-shrink: 0;
+  padding: 0.12rem 0.45rem;
+  border-radius: 0.3rem;
+  background: rgba(224, 61, 75, 0.2);
+  color: #ff8a94;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
 .counter {
   font-size: 0.7rem;
   font-weight: 600;

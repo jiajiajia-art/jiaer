@@ -22,14 +22,19 @@ import { isPlaceholderPlayerName, resolvePlayerDisplayName } from "../lib/galgam
 import { sessionPlayerProfileApi } from "../api/galgame/playerCharacterCards";
 import type { SessionPlayerProfile } from "../lib/galgame/playerCharacterCard";
 import { resolveSessionPlayerPortraitPath } from "../lib/galgame/playerCharacterCard";
+import {
+  mergePlayerAvatarIntoProfile,
+  subscribePlayerAvatarGenComplete,
+} from "../lib/galgame/playerAvatarBackgroundJob";
+import { CHARACTER_GENERATION_COST } from "../utils/constants";
 import { ensureMinPlayChoiceOptions } from "../lib/galgame/playChoiceOptions";
 import type { SystemsConfigPatch } from "../components/Galgame/panels/SystemsPanel";
 import type { PlayerEditableNpc } from "../lib/galgame/characterProfile";
 import {
   applyNameMapToSteps,
+  applyDisplayNameRewrites,
   buildNpcNameReplacementMap,
   buildPlayerNameReplacementMap,
-  rewriteTextByMap,
 } from "../lib/galgame/npcNameOverlay";
 import NormalModeDisplay from "../components/Galgame/NormalModeDisplay";
 import { useCharacterAnimation } from "../hooks/galgame/useCharacterAnimation";
@@ -89,6 +94,7 @@ import {
     getTrackedQuest,
     mergeQuests,
     normalizeQuests,
+    resolveQuestsPanelRefreshPlan,
     type QuestItem,
 } from "../lib/galgame/quests";
 import { useQuestTrackerTypewriter } from "../hooks/galgame/useQuestTrackerTypewriter";
@@ -101,7 +107,7 @@ import {
 } from "../lib/galgame/attributePanelValues";
 import { isNarrativeGenerationBusy } from "../lib/galgame/privateChatGate";
 import { fetchPlayUiState } from "../api/galgame/playUi";
-import { streamQuests } from "../api/galgame/questsStream";
+import { fetchCachedQuests, streamQuests } from "../api/galgame/questsStream";
 import { streamAttributePanels } from "../api/galgame/attributePanelsStream";
 import { runSessionAutoStartOnce } from "../lib/galgame/sessionStartInflight";
 import { ensurePlayUiHydratedOnce, resetPlayUiHydrationGate } from "../lib/galgame/playUiHydrationGate";
@@ -119,6 +125,7 @@ const Galgame = () => {
     const [encounteredIds, setEncounteredIds] = useState<string[]>([]);
     const [quests, setQuests] = useState<QuestItem[]>([]);
     const [questsLoading, setQuestsLoading] = useState(false);
+    const [questsRefreshing, setQuestsRefreshing] = useState(false);
     const [questsError, setQuestsError] = useState<string | null>(null);
     const [attributePanelsCache, setAttributePanelsCache] = useState<Record<string, string>>({});
     const questsRef = useRef<QuestItem[]>([]);
@@ -485,15 +492,26 @@ const Galgame = () => {
         [npcNameMap, playerNameMap],
     );
 
+    const displayNameCollapseList = useMemo(
+        () => [
+            sessionPlayerProfile?.name,
+            ...sessionNpcEdits.map((n) => n?.name),
+            ...npcsList.map((n) => (n as { name?: string })?.name),
+        ],
+        [sessionPlayerProfile?.name, sessionNpcEdits, npcsList],
+    );
+
     const textModeDisplaySteps = useMemo(
         () => applyNameMapToSteps(
             controller.convertStepsToTextModalFormat(controller.allStepsForTextModal),
             displayNameMap,
+            displayNameCollapseList,
         ),
         [
             controller.convertStepsToTextModalFormat,
             controller.allStepsForTextModal,
             displayNameMap,
+            displayNameCollapseList,
         ],
     );
 
@@ -502,12 +520,13 @@ const Galgame = () => {
         if (!msg) return null;
         const sessionName = String(sessionPlayerProfile?.name || '').trim();
         const map = displayNameMap;
+        const rewrite = (value: string) => applyDisplayNameRewrites(value, map, displayNameCollapseList);
         const options: Message['options'] = Array.isArray(msg.options)
             ? ensureMinPlayChoiceOptions(msg.options.map((opt) => {
                 const mapped: { id: number; text: string; isMain?: boolean } = {
                     id: Number(opt.id),
                     text: typeof opt.text === 'string'
-                        ? rewriteTextByMap(opt.text, map)
+                        ? rewrite(opt.text)
                         : String(opt.text ?? ''),
                 };
                 if (typeof opt.isMain === 'boolean') mapped.isMain = opt.isMain;
@@ -526,7 +545,7 @@ const Galgame = () => {
         // 主角台词人名牌：局内档案名优先（改名后立即生效）
         const isPlayerBubble = msg.characterPosition === 'right';
         const rewrittenCharName = typeof msg.characterName === 'string'
-            ? rewriteTextByMap(msg.characterName, map)
+            ? rewrite(msg.characterName)
             : msg.characterName;
         // 主角立绘：局内生成头像优先替换文档原图（与人名牌同步即时生效）
         const sessionPortraitPath = resolveSessionPlayerPortraitPath(
@@ -540,7 +559,7 @@ const Galgame = () => {
             id: msg.id,
             type: msg.type,
             message: typeof msg.message === 'string'
-                ? rewriteTextByMap(msg.message, map)
+                ? rewrite(msg.message)
                 : msg.message,
             characterName: isPlayerBubble && sessionName
                 ? sessionName
@@ -560,15 +579,15 @@ const Galgame = () => {
         controller.presetData?.npcs?.npcs,
         controller.presetData?.world?.player,
         displayNameMap,
+        displayNameCollapseList,
         sessionPlayerProfile,
     ]);
 
     const normalModeDisplayText = useMemo(() => {
         const text = controller.finalDisplayText;
         if (!text) return text;
-        if (!displayNameMap.length) return text;
-        return rewriteTextByMap(String(text), displayNameMap);
-    }, [controller.finalDisplayText, displayNameMap]);
+        return applyDisplayNameRewrites(String(text), displayNameMap, displayNameCollapseList);
+    }, [controller.finalDisplayText, displayNameMap, displayNameCollapseList]);
 
     const handleSessionPlayerProfileChange = useCallback((next: SessionPlayerProfile | null) => {
         setSessionPlayerProfile((prev) => {
@@ -582,6 +601,21 @@ const Galgame = () => {
             return next;
         });
     }, []);
+
+    // 功能注释：主角头像后台生成完成后写回本局档案（面板已关也能收到）
+    useEffect(() => {
+        if (!sessionId) return undefined;
+        return subscribePlayerAvatarGenComplete((sid, result) => {
+            if (sid !== sessionId) return;
+            setSessionPlayerProfile((prev) => mergePlayerAvatarIntoProfile(prev, result));
+            if (typeof result.remainingPoints === 'number') {
+                useAuthStore.getState().updateUser({ points: result.remainingPoints });
+            }
+            toast.success(
+                `头像已生成并保存（-${result.pointsDeducted ?? CHARACTER_GENERATION_COST} 积分）`,
+            );
+        });
+    }, [sessionId]);
 
     const playerProfile = useMemo((): PlayerProfileLike | null => {
         const raw = controller.presetData?.world?.player;
@@ -809,14 +843,35 @@ const Galgame = () => {
         }
     }, [sessionId, controller.isReplay, attributeNpcNames]);
 
-    const refreshQuests = useCallback(async () => {
+    const refreshQuests = useCallback(async (opts?: { background?: boolean }) => {
         if (!sessionId || controller.isReplay) return;
+        const plan = resolveQuestsPanelRefreshPlan(questsRef.current);
+        const background = opts?.background ?? plan.hasCache;
         questsAbortRef.current?.abort();
         const controllerAbort = new AbortController();
         questsAbortRef.current = controllerAbort;
-        setQuestsLoading(true);
+        if (background) {
+            setQuestsRefreshing(true);
+        } else {
+            setQuestsLoading(true);
+        }
         setQuestsError(null);
         try {
+            // 无本地缓存时先拉 mode=cache / play-ui 同源持久化，页面先有数
+            if (!plan.hasCache) {
+                try {
+                    const cached = await fetchCachedQuests(sessionId, controllerAbort.signal);
+                    if (controllerAbort.signal.aborted) return;
+                    if (cached?.quests?.length) {
+                        setQuests((prev) => mergeQuests(prev, cached.quests));
+                        setQuestsLoading(false);
+                        setQuestsRefreshing(true);
+                    }
+                } catch {
+                    /* 缓存失败仍走 LLM */
+                }
+            }
+
             const result = await streamQuests(
                 sessionId,
                 {
@@ -829,8 +884,22 @@ const Galgame = () => {
                             setQuestsError(t('galgame.panelQuestsInvalid'));
                             return;
                         }
-                        if (msg === 'Session is busy') {
+                        // 功能注释：会话写锁忙（含历史 Failed to acquire lock 文案）
+                        if (
+                            msg === 'Session is busy' ||
+                            msg === 'LOCKED' ||
+                            /Failed to acquire lock/i.test(msg || '') ||
+                            /Lock acquisition timeout/i.test(msg || '')
+                        ) {
                             setQuestsError(t('galgame.panelAttrsBusy'));
+                            return;
+                        }
+                        if (msg === 'PERSIST_FAILED') {
+                            if (questsRef.current.length > 0) {
+                                setQuestsError(null);
+                                return;
+                            }
+                            setQuestsError(t('galgame.panelQuestsInvalid'));
                             return;
                         }
                         setQuestsError(msg || t('galgame.requestError'));
@@ -850,9 +919,14 @@ const Galgame = () => {
             }
         } catch (e: unknown) {
             if (isAbortError(e) || (e as Error)?.name === 'AbortError') return;
-            setQuestsError(e instanceof Error ? e.message : t('galgame.requestError'));
+            if (questsRef.current.length === 0) {
+                setQuestsError(e instanceof Error ? e.message : t('galgame.requestError'));
+            }
         } finally {
-            setQuestsLoading(false);
+            if (questsAbortRef.current === controllerAbort) {
+                setQuestsLoading(false);
+                setQuestsRefreshing(false);
+            }
         }
     }, [sessionId, controller.isReplay, t]);
 
@@ -874,7 +948,7 @@ const Galgame = () => {
         refreshAttributePanels,
     ]);
 
-    // 打开属性/任务面板：本地仍空时触发 LLM（空结果不锁死，可再次打开重试）
+    // 打开属性/任务面板：缓存先展示；任务 LLM 异步 merge（不因有缓存而跳过）
     useEffect(() => {
         if (!activePlayPanel) {
             panelLlmTriedRef.current = null;
@@ -893,10 +967,12 @@ const Galgame = () => {
             return;
         }
         if (activePlayPanel === 'quests') {
-            if (questsRef.current.length > 0) return;
             if (panelLlmTriedRef.current === 'quests') return;
             panelLlmTriedRef.current = 'quests';
-            void refreshQuests();
+            const plan = resolveQuestsPanelRefreshPlan(questsRef.current);
+            void refreshQuests({ background: plan.hasCache }).finally(() => {
+                panelLlmTriedRef.current = null;
+            });
         }
     }, [
         activePlayPanel,
@@ -1929,6 +2005,7 @@ const Galgame = () => {
                                 onClose={() => setActivePlayPanel(null)}
                                 quests={quests}
                                 loading={questsLoading}
+                                refreshing={questsRefreshing}
                                 error={questsError}
                             />
                             <SystemsPanel

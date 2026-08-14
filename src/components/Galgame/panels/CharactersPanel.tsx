@@ -31,6 +31,8 @@ import {
 } from '../../../lib/galgame/playerCharacterCard';
 import { getImageUrl, getPlayerImageUrl } from '../../../utils/constants';
 import {
+  collectConfirmedAvatarThumbs,
+  hasConfirmedAvatarThumb,
   pickAvatarListDisplayUrl,
   pickDisplayAvatarFullUrl,
 } from '../../../lib/galgame/avatarThumbUrl';
@@ -172,16 +174,46 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
     setLocalProfiles(editableProfiles);
   }, [editableProfiles]);
 
-  // 功能注释：打开角色档案时批量 ensure 150 头部小图（只合并头像字段，绝不整表覆盖介绍）
+  // 功能注释：打开角色档案时批量 ensure 150；已有确认小图先播种立即显示，仅缺图项 pending
   React.useEffect(() => {
     if (!isOpen || !sessionId) return;
     let cancelled = false;
-    setAvatarThumbsPending(true);
+
+    const seeded = collectConfirmedAvatarThumbs([
+      ...localProfiles,
+      ...(editableProfiles || []),
+    ]);
+    const listIds = new Set<string>();
+    for (const p of localProfiles) {
+      if (p?.id) listIds.add(p.id);
+    }
+    for (const p of editableProfiles || []) {
+      if (p?.id) listIds.add(String(p.id));
+    }
+    for (const n of npcs || []) {
+      const id = String(n?.id || '').trim();
+      if (id) listIds.add(id);
+    }
+    setNpcAvatarThumbs((prev) => {
+      const next = { ...seeded, ...prev };
+      const anyMissing = listIds.size === 0
+        ? true
+        : [...listIds].some((id) => {
+          const fromMap = next[id];
+          const fromProfile = localProfiles.find((p) => p.id === id)?.avatarThumbUrl
+            || (editableProfiles || []).find((p) => String(p?.id) === id)?.avatarThumbUrl;
+          return !hasConfirmedAvatarThumb([fromMap, fromProfile]);
+        });
+      setAvatarThumbsPending(anyMissing);
+      return next;
+    });
+
     void (async () => {
       try {
         const data = await fetchCharacterAvatarThumbs(sessionId);
         if (cancelled) return;
-        setNpcAvatarThumbs(data.npcAvatarThumbs || {});
+        const fromServerThumbs = data.npcAvatarThumbs || {};
+        setNpcAvatarThumbs((prev) => ({ ...prev, ...fromServerThumbs }));
         if (Array.isArray(data.playerEditableNpcs) && data.playerEditableNpcs.length > 0) {
           const fromServer = data.playerEditableNpcs as PlayerEditableNpc[];
           setLocalProfiles((prev) => {
@@ -227,19 +259,29 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
     };
   }, [isOpen, sessionId, onSessionPlayerProfileChange]);
 
+  const resolveListAvatarCandidates = (
+    profile: PlayerEditableNpc,
+    preset?: CharacterPanelItem | null,
+  ) => ([
+    npcAvatarThumbs[profile.id],
+    profile.avatarThumbUrl,
+    profile.avatarUrl,
+    preset?.avatarUrl,
+  ]);
+
   const resolveListAvatarUrl = (profile: PlayerEditableNpc, preset?: CharacterPanelItem | null) => {
-    // 功能注释：有确认 150 立刻显示；pending 时不回落原图（防大图闪一下）
+    // 功能注释：有确认 150 立刻显示；仅缺小图且仍 pending 时不回落原图
+    const candidates = resolveListAvatarCandidates(profile, preset);
     const path = pickAvatarListDisplayUrl(
-      [
-        npcAvatarThumbs[profile.id],
-        profile.avatarThumbUrl,
-        profile.avatarUrl,
-        preset?.avatarUrl,
-      ],
-      { pendingThumbs: avatarThumbsPending },
+      candidates,
+      { pendingThumbs: avatarThumbsPending && !hasConfirmedAvatarThumb(candidates) },
     );
     return path ? getImageUrl(path) : '';
   };
+
+  const isAvatarSlotPending = (profile: PlayerEditableNpc, preset?: CharacterPanelItem | null) => (
+    avatarThumbsPending && !hasConfirmedAvatarThumb(resolveListAvatarCandidates(profile, preset))
+  );
 
   const presetItems = useMemo(
     () => buildCharacterPanelItems(encounteredIds, npcs, getImageUrl, player),
@@ -694,7 +736,12 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                   detail.id ? npcAvatarThumbs[detail.id] : '',
                   detail.avatarUrl,
                 ],
-                { pendingThumbs: avatarThumbsPending },
+                {
+                  pendingThumbs: avatarThumbsPending
+                    && !hasConfirmedAvatarThumb([
+                      detail.id ? npcAvatarThumbs[detail.id] : '',
+                    ]),
+                },
               ),
             );
 
@@ -710,7 +757,9 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                   <AvatarThumbSlot
                     src={avatarUrl || ''}
                     alt={displayName}
-                    pending={avatarThumbsPending}
+                    pending={profile
+                      ? isAvatarSlotPending(profile, detail)
+                      : (avatarThumbsPending && !avatarUrl)}
                     variant="detail"
                   />
                   <span className={shell.detailChatHint}>点击头像预览</span>
@@ -824,7 +873,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                   <AvatarThumbSlot
                     src={avatarUrl || ''}
                     alt={profile.name}
-                    pending={avatarThumbsPending}
+                    pending={isAvatarSlotPending(profile, preset)}
                     variant="list"
                   />
                 </button>

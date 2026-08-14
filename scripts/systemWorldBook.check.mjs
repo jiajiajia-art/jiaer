@@ -3,8 +3,16 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-import { morePromptFormsToWorldBookEntries } from '../src/lib/galgame/systemWorldBook.ts';
+import {
+  morePromptFormsToWorldBookEntries,
+  warehouseWorldBookToEntries,
+} from '../src/lib/galgame/systemWorldBook.ts';
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 test('morePromptFormsToWorldBookEntries_缺constant字段视为常驻', () => {
   const entries = morePromptFormsToWorldBookEntries([
@@ -36,4 +44,45 @@ test('morePromptFormsToWorldBookEntries_显式constant=false保持触发型', ()
   ]);
   assert.equal(entries[0].constant, false);
   assert.deepEqual(entries[0].keywords, ['史莱姆', '木系']);
+});
+
+test('warehouseWorldBookToEntries_从仓库payload导入并换新id', () => {
+  const parsed = warehouseWorldBookToEntries({
+    title: '现代与魔法世界',
+    payload: {
+      entries: [
+        {
+          id: 'keep_me',
+          title: '元素',
+          content: '木火风土',
+          keywords: ['魔法'],
+          constant: true,
+          enabled: true,
+        },
+      ],
+    },
+  });
+  assert.equal(parsed.ok, true);
+  assert.equal(parsed.entries.length, 1);
+  assert.equal(parsed.entries[0].title, '元素');
+  assert.match(parsed.entries[0].content, /木火风土/);
+  assert.notEqual(parsed.entries[0].id, 'keep_me');
+  assert.match(parsed.entries[0].id, /^wh_/);
+});
+
+test('warehouseWorldBookToEntries_空条目失败', () => {
+  const empty = warehouseWorldBookToEntries({ title: '空', payload: { entries: [] } });
+  assert.equal(empty.ok, false);
+  assert.equal(empty.entries.length, 0);
+});
+
+test('SystemsPanel_导入页含我的世界书入口', () => {
+  const src = readFileSync(
+    join(root, 'src/components/Galgame/panels/SystemsPanel.tsx'),
+    'utf8',
+  );
+  assert.match(src, /id: 'mine'/);
+  assert.match(src, /我的世界书/);
+  assert.match(src, /warehouseWorldBookToEntries/);
+  assert.match(src, /warehouseResourcesApi\.list/);
 });

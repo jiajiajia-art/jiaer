@@ -94,6 +94,39 @@ export const playerCharacterCardsApi = {
     });
     return parseJson(res);
   },
+  /** 仓库编辑卡：AI 生成立绘（WebP ≤200KB、宽 ≤800） */
+  generateAvatar: async (
+    token: string,
+    body: {
+      name: string;
+      gender?: string;
+      persona?: string;
+      cardId?: string;
+      cardKind?: string;
+      promptSupplement?: string;
+    },
+  ) => {
+    const res = await fetch(`${HOST_ADDRESS}/api/player-character-cards/avatar`, {
+      method: 'POST',
+      headers: authHeaders(token),
+      body: JSON.stringify(body),
+    });
+    return parseJson(res) as Promise<{
+      success: boolean;
+      message?: string;
+      code?: string;
+      data?: {
+        avatarUrl: string;
+        avatarThumbUrl?: string;
+        pointsDeducted: number;
+        remainingPoints: number;
+        bytes?: number;
+        width?: number;
+        format?: string;
+        card?: unknown;
+      };
+    }>;
+  },
   importToSession: async (token: string, sessionId: string, cardId: string) => {
     const res = await fetch(
       `${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/import-player-card`,
@@ -144,11 +177,12 @@ export const sessionPlayerProfileApi = {
       };
     }>;
   },
-  /** 实验组：AI 生成主角头像并扣积分，写回 session */
+  /** AI 生成主角头像并扣积分，写回 session */
   generatePlayerAvatar: async (
     token: string,
     sessionId: string,
     body: Record<string, unknown>,
+    opts?: { signal?: AbortSignal },
   ) => {
     const res = await fetch(
       `${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/player-avatar`,
@@ -156,6 +190,7 @@ export const sessionPlayerProfileApi = {
         method: 'POST',
         headers: authHeaders(token),
         body: JSON.stringify(body),
+        signal: opts?.signal,
       },
     );
     return parseJson(res) as Promise<{

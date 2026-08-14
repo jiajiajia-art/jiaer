@@ -9,9 +9,11 @@ import {
   type PlayerCharacterCard,
   validatePlayerCharacterCardInput,
 } from '../../lib/galgame/playerCharacterCard';
+import { refreshAuthUserPoints } from '../../lib/auth/refreshUserPoints';
 import ConfirmModal from '../../components/CommonModal/ConfirmModal';
-import { getImageUrl } from '../../utils/constants';
+import { CHARACTER_GENERATION_COST, getImageUrl } from '../../utils/constants';
 import { PERSONA_TAGS, genderLabel } from './warehouseNav';
+import WarehouseCardAvatarField from './WarehouseCardAvatarField';
 import panel from './WarehousePanel.module.css';
 
 type Draft = {
@@ -20,6 +22,7 @@ type Draft = {
   persona: string;
   tagsText: string;
   isDefault: boolean;
+  avatarUrl: string;
 };
 
 const emptyDraft = (): Draft => ({
@@ -28,6 +31,7 @@ const emptyDraft = (): Draft => ({
   persona: '',
   tagsText: '',
   isDefault: false,
+  avatarUrl: '',
 });
 
 const WarehousePersonaCards: React.FC = () => {
@@ -41,6 +45,8 @@ const WarehousePersonaCards: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [saving, setSaving] = useState(false);
+  const [generatingAvatar, setGeneratingAvatar] = useState(false);
+  const [avatarConfirmOpen, setAvatarConfirmOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -101,8 +107,54 @@ const WarehousePersonaCards: React.FC = () => {
       persona: card.persona || '',
       tagsText: (card.tags || []).join(','),
       isDefault: !!card.isDefault,
+      avatarUrl: card.avatarUrl || '',
     });
     setFormOpen(true);
+  };
+
+  const requestGenerateAvatar = async () => {
+    if (!draft.name.trim()) {
+      toast.error('请先填写姓名再生成图像');
+      return;
+    }
+    if (!token || generatingAvatar || saving) return;
+    const latestPoints = await refreshAuthUserPoints();
+    if (typeof latestPoints === 'number' && latestPoints < CHARACTER_GENERATION_COST) {
+      toast.error(`积分不足（需要 ${CHARACTER_GENERATION_COST}，当前 ${latestPoints}）`);
+      return;
+    }
+    setAvatarConfirmOpen(true);
+  };
+
+  const runGenerateAvatar = async () => {
+    setAvatarConfirmOpen(false);
+    if (!token || !draft.name.trim()) return;
+    setGeneratingAvatar(true);
+    try {
+      const res = await playerCharacterCardsApi.generateAvatar(token, {
+        name: draft.name.trim(),
+        gender: draft.gender,
+        persona: draft.persona.trim(),
+        cardId: editingId || undefined,
+        cardKind: 'player',
+      });
+      if (!res?.success || !res.data?.avatarUrl) {
+        toast.error(res?.message || '生成图像失败');
+        return;
+      }
+      setDraft((d) => ({ ...d, avatarUrl: String(res.data!.avatarUrl) }));
+      if (editingId && res.data.card) {
+        await load();
+      }
+      await refreshAuthUserPoints();
+      toast.success(
+        `图像已生成（-${res.data.pointsDeducted ?? CHARACTER_GENERATION_COST} 积分）`,
+      );
+    } catch (e) {
+      toast.error((e as Error)?.message || '生成图像失败');
+    } finally {
+      setGeneratingAvatar(false);
+    }
   };
 
   const saveForm = async () => {
@@ -129,6 +181,7 @@ const WarehousePersonaCards: React.FC = () => {
       cardKind: 'player',
       tags,
       isDefault: draft.isDefault,
+      avatarUrl: draft.avatarUrl || '',
     };
     setSaving(true);
     try {
@@ -405,7 +458,7 @@ const WarehousePersonaCards: React.FC = () => {
 
       {formOpen
         ? createPortal(
-          <div className={panel.formOverlay} onClick={() => !saving && setFormOpen(false)}>
+          <div className={panel.formOverlay} onClick={() => !saving && !generatingAvatar && setFormOpen(false)}>
             <div
               className={panel.formCard}
               role="dialog"
@@ -416,7 +469,15 @@ const WarehousePersonaCards: React.FC = () => {
               <aside className={panel.formPreview}>
                 <p className={panel.formPreviewEyebrow}>PERSONA SLIP</p>
                 <div className={panel.formPreviewPortrait}>
-                  {(draft.name || '我').slice(0, 1)}
+                  {draft.avatarUrl ? (
+                    <img
+                      className={panel.formPreviewPortraitImg}
+                      src={getImageUrl(draft.avatarUrl)}
+                      alt=""
+                    />
+                  ) : (
+                    (draft.name || '我').slice(0, 1)
+                  )}
                 </div>
                 <h4 className={panel.formPreviewName}>{draft.name.trim() || '未命名人设'}</h4>
                 <p className={panel.formPreviewMeta}>
@@ -445,12 +506,20 @@ const WarehousePersonaCards: React.FC = () => {
                     type="button"
                     className={panel.formClose}
                     aria-label="关闭"
-                    disabled={saving}
+                    disabled={saving || generatingAvatar}
                     onClick={() => setFormOpen(false)}
                   >
                     ×
                   </button>
                 </div>
+
+                <WarehouseCardAvatarField
+                  name={draft.name}
+                  avatarUrl={draft.avatarUrl}
+                  generating={generatingAvatar}
+                  disabled={saving}
+                  onGenerate={() => void requestGenerateAvatar()}
+                />
 
                 <div className={panel.field}>
                   <label htmlFor="wh-persona-name">姓名</label>
@@ -516,7 +585,7 @@ const WarehousePersonaCards: React.FC = () => {
                   <button
                     type="button"
                     className={panel.ghostBtn}
-                    disabled={saving}
+                    disabled={saving || generatingAvatar}
                     onClick={() => setFormOpen(false)}
                   >
                     取消
@@ -524,7 +593,7 @@ const WarehousePersonaCards: React.FC = () => {
                   <button
                     type="button"
                     className={panel.primaryBtn}
-                    disabled={saving}
+                    disabled={saving || generatingAvatar}
                     onClick={() => void saveForm()}
                   >
                     {saving ? '保存中…' : '保存人设'}
@@ -536,6 +605,16 @@ const WarehousePersonaCards: React.FC = () => {
           document.body,
         )
         : null}
+
+      <ConfirmModal
+        isOpen={avatarConfirmOpen}
+        onCancel={() => setAvatarConfirmOpen(false)}
+        onConfirm={() => void runGenerateAvatar()}
+        title="确认生成图像"
+        message={`将扣除 ${CHARACTER_GENERATION_COST} 积分生成人设立绘，是否继续？`}
+        confirmButtonText="生成"
+        cancelButtonText="取消"
+      />
 
       <ConfirmModal
         isOpen={Boolean(deleteId)}

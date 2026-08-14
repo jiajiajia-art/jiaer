@@ -19,6 +19,7 @@ import {
   morePromptFormsToWorldBookEntries,
   normalizeWorldBookEntry,
   parseWorldBookImportText,
+  warehouseWorldBookToEntries,
   WORLD_BOOK_IMPORT_TEMPLATES,
   worldBookEntriesToPanelItems,
 } from '../../../lib/galgame/systemWorldBook';
@@ -34,6 +35,10 @@ import { refreshAuthUserPoints } from '../../../lib/auth/refreshUserPoints';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { useGameStore } from '../../../store/gameStore';
 import { sessionPlayerProfileApi } from '../../../api/galgame/playerCharacterCards';
+import {
+  warehouseResourcesApi,
+  type WarehouseResource,
+} from '../../../api/galgame/warehouseResources';
 
 type SystemsView =
   | 'overview'
@@ -109,10 +114,13 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
     () => initialPersonaBlocks || {},
   );
   const [editingEntry, setEditingEntry] = useState<GameStartWorldBookEntry | null>(null);
-  const [importTab, setImportTab] = useState<'paste' | 'upload' | 'template'>('paste');
+  const [importTab, setImportTab] = useState<'paste' | 'upload' | 'template' | 'mine'>('paste');
   const [importText, setImportText] = useState('');
   const [importFileName, setImportFileName] = useState('');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [mineWorldBooks, setMineWorldBooks] = useState<WarehouseResource[]>([]);
+  const [mineWorldBooksLoading, setMineWorldBooksLoading] = useState(false);
+  const [selectedMineWorldBookId, setSelectedMineWorldBookId] = useState<string | null>(null);
   const [avoidDraft, setAvoidDraft] = useState('');
   const [positionDraft, setPositionDraft] = useState({ identity: '', stance: '', secret: '' });
   const [routeDraftId, setRouteDraftId] = useState(currentOpeningRouteId);
@@ -135,6 +143,44 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
     if (initialPersonaBlocks) setPersonaBlocks(initialPersonaBlocks);
     setRouteDraftId(currentOpeningRouteId);
   }, [isOpen, seededEntries, initialWritingStyle, initialPersonaBlocks, currentOpeningRouteId]);
+
+  useEffect(() => {
+    if (!isOpen || view !== 'worldBookImport' || importTab !== 'mine') return;
+    const token = authUser?.token;
+    if (!token) {
+      setMineWorldBooks([]);
+      return;
+    }
+    let cancelled = false;
+    setMineWorldBooksLoading(true);
+    void (async () => {
+      try {
+        const res = await warehouseResourcesApi.list(token, { type: 'worldbook' });
+        if (cancelled) return;
+        if (!res?.success) {
+          toast.error(res?.message || '加载我的世界书失败');
+          setMineWorldBooks([]);
+          return;
+        }
+        const list = Array.isArray(res.data) ? (res.data as WarehouseResource[]) : [];
+        setMineWorldBooks(list);
+        setSelectedMineWorldBookId((prev) => {
+          if (prev && list.some((x) => x.id === prev)) return prev;
+          return list[0]?.id || null;
+        });
+      } catch (e) {
+        if (!cancelled) {
+          toast.error((e as Error)?.message || '加载我的世界书失败');
+          setMineWorldBooks([]);
+        }
+      } finally {
+        if (!cancelled) setMineWorldBooksLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, view, importTab, authUser?.token]);
 
   const panelItems = useMemo(() => worldBookEntriesToPanelItems(entries), [entries]);
   const presetGroups = useMemo(() => groupWritingStylePresets(), []);
@@ -244,6 +290,18 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
         ...e,
         id: `${e.id}_${Date.now().toString(36)}`,
       }));
+    } else if (importTab === 'mine') {
+      const book = mineWorldBooks.find((x) => x.id === selectedMineWorldBookId);
+      if (!book) {
+        toast.error('请选择我的世界书');
+        return;
+      }
+      const parsed = warehouseWorldBookToEntries(book);
+      if (!parsed.ok) {
+        toast.error(parsed.message || '导入失败');
+        return;
+      }
+      incoming = parsed.entries;
     } else {
       const parsed = parseWorldBookImportText(importText);
       if (!parsed.ok) {
@@ -256,10 +314,11 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
     setEntries(next);
     const ok = await persist({ worldBookEntries: next });
     if (ok) {
-      toast.success(`已导入 ${incoming.length} 条`);
+      toast.success(`已导入 ${incoming.length} 条，可继续编辑`);
       setImportText('');
       setImportFileName('');
       setSelectedTemplateId(null);
+      setSelectedMineWorldBookId(null);
       setView('worldBook');
     }
   };
@@ -447,7 +506,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
   const shellSubtitle = (() => {
     if (view === 'overview') return t('galgame.panelSystemsSubtitle');
     if (view === 'worldBook') return '已装载条目与规则';
-    if (view === 'worldBookImport') return '支持粘贴、上传文件或模板';
+    if (view === 'worldBookImport') return '支持粘贴、上传、模板或从我的世界书导入';
     if (view === 'writingStyle') return '文风 / 节奏 / 视角 / 描写 / 剧情';
     if (view === 'avoidEdit') return '长按拖拽排序二期；可增删';
     if (view === 'position') return '当前身份、立场与秘密';
@@ -462,8 +521,9 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
           type="button"
           className={shell.ghostButton}
           onClick={() => {
-            setImportTab('paste');
+            setImportTab('mine');
             setImportText('');
+            setSelectedMineWorldBookId(null);
             setView('worldBookImport');
           }}
         >
@@ -665,6 +725,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
             <div className={styles.importTabs} role="tablist">
               {(
                 [
+                  { id: 'mine' as const, label: '我的世界书' },
                   { id: 'paste' as const, label: '粘贴内容' },
                   { id: 'upload' as const, label: '上传文件' },
                   { id: 'template' as const, label: '已有模板' },
@@ -682,6 +743,45 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
                 </button>
               ))}
             </div>
+
+            {importTab === 'mine' ? (
+              <div className={styles.mineList}>
+                {mineWorldBooksLoading ? (
+                  <div className={shell.empty}>加载我的世界书…</div>
+                ) : mineWorldBooks.length === 0 ? (
+                  <div className={shell.empty}>
+                    仓库里还没有世界书。可先去「我的资源 → 我的世界书」创建，或改用粘贴/模板导入。
+                  </div>
+                ) : (
+                  mineWorldBooks.map((book) => {
+                    const entryCount = Array.isArray(
+                      (book.payload as { entries?: unknown[] } | undefined)?.entries,
+                    )
+                      ? (book.payload as { entries: unknown[] }).entries.length
+                      : 0;
+                    const selected = selectedMineWorldBookId === book.id;
+                    return (
+                      <button
+                        key={book.id}
+                        type="button"
+                        className={`${styles.templateRow} ${selected ? styles.templateRowSelected : ''}`}
+                        onClick={() => setSelectedMineWorldBookId(book.id)}
+                      >
+                        <div className={styles.templateBody}>
+                          <p className={styles.templateName}>{book.title || '未命名世界书'}</p>
+                          <p className={styles.templateDesc}>
+                            {(book.description || '').trim() || `${entryCount} 条设定`}
+                            {book.enabled === false ? ' · 已停用' : ''}
+                            {entryCount > 0 ? ` · ${entryCount} 条` : ''}
+                          </p>
+                        </div>
+                        <span className={styles.badge}>{selected ? '已选' : '选择'}</span>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            ) : null}
 
             {importTab === 'paste' ? (
               <label className={styles.field}>

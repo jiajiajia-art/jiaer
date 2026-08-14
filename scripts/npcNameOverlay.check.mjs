@@ -11,7 +11,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const overlayPath = join(root, 'src/lib/galgame/npcNameOverlay.ts');
 
 test('rewriteTextByMap_短别名不叠已有目标名', async () => {
-  const { rewriteTextByMap, buildPlayerNameReplacementMap } = await import(
+  const { rewriteTextByMap, buildPlayerNameReplacementMap, collapseStackedDisplayNames } = await import(
     '../src/lib/galgame/npcNameOverlay.ts'
   );
   const map = buildPlayerNameReplacementMap({
@@ -34,13 +34,35 @@ test('rewriteTextByMap_短别名不叠已有目标名', async () => {
     rewriteTextByMap('玩家主动走到张导面前', map),
     '白白主动走到张导面前',
   );
+  // 别名不是「白」半字时，LLM 叠写仍应收成单次现用名
+  assert.equal(
+    rewriteTextByMap('白白白白先向大家做个自我介绍', [
+      { from: '玩家', to: '白白' },
+    ]),
+    '白白先向大家做个自我介绍',
+  );
+  assert.equal(
+    collapseStackedDisplayNames('白白白白先向大家做个自我介绍', ['白白']),
+    '白白先向大家做个自我介绍',
+  );
+  assert.equal(
+    collapseStackedDisplayNames('白白先向大家', ['白', '白白']),
+    '白白先向大家',
+  );
 });
 
-test('rewriteTextByMap_实现须先保护to再替换from', () => {
+test('rewriteTextByMap_实现须先保护to再替换from并收束叠名', () => {
   const src = readFileSync(overlayPath, 'utf8');
   assert.match(src, /先保护已是目标名/);
   assert.match(src, /split\(to\)\.join\(guard\)/);
+  assert.match(src, /collapseStackedDisplayNames/);
   assert.doesNotMatch(src, /out\.replace\(new RegExp\(escapeRegExp\(from\), 'g'\), to\);\n {2}return out;/);
+});
+
+test('Galgame_展示层空映射也要收束现用叠名', () => {
+  const galgame = readFileSync(join(root, 'src/page/Galgame.tsx'), 'utf8');
+  assert.match(galgame, /applyDisplayNameRewrites/);
+  assert.match(galgame, /displayNameCollapseList/);
 });
 
 test('Galgame_文本模式仍渲染场景背景', () => {

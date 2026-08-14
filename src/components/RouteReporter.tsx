@@ -223,18 +223,22 @@ export const RouteReporter: React.FC = () => {
     const isSharablePage = isGameDetailPage || isGamePlayPage || isCustomIfPlayPage;
 
     // 用户确认：CustomIF 的 appId 就是该游戏的 fileId，可复用同一套详情接口
+    // 单侧：游玩页优先 store.fileId；clearPlayRuntime 瞬间为空时回退 gameDetail.file_id，避免再打 games/info
     const effectiveFileId = isGameDetailPage
       ? location.pathname.match(/^\/game\/([^/]+)/)?.[1] || null
       : isGamePlayPage
-        ? storeFileId
+        ? storeFileId || (gameDetail?.file_id ? String(gameDetail.file_id) : null)
         : isCustomIfPlayPage
           ? customIfAppId
           : null;
 
+    const storeGameDetail = useGameStore.getState().gameDetail;
     const currentGameDetail = effectiveFileId
       ? (gameDetail && gameDetail.file_id === effectiveFileId
         ? gameDetail
-        : (localGameDetail && localGameDetail.file_id === effectiveFileId ? localGameDetail : null))
+        : (storeGameDetail && storeGameDetail.file_id === effectiveFileId
+          ? storeGameDetail
+          : (localGameDetail && localGameDetail.file_id === effectiveFileId ? localGameDetail : null)))
       : null;
 
     // 分享出去的 URL：游戏游玩页一律指向详情页（用户点击先进入详情页）
@@ -282,6 +286,16 @@ export const RouteReporter: React.FC = () => {
 
       if (currentGameDetail) {
         void sendIfChanged(currentGameDetail);
+        return () => {
+          cancelled = true;
+        };
+      }
+
+      // 单侧：发起前再读一次 store，挡住 effect 闭包与 persist 竞态下的重复 info
+      const latestDetail = useGameStore.getState().gameDetail;
+      if (latestDetail && latestDetail.file_id === effectiveFileId) {
+        setLocalGameDetail(latestDetail);
+        void sendIfChanged(latestDetail);
         return () => {
           cancelled = true;
         };

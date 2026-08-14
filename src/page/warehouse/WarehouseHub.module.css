@@ -1,4 +1,4 @@
-/* Studio Catalog — 对齐图3–6：干净工作室白底，珊瑚只作点睛 */
+/* Studio Catalog — 桌面侧栏；手机「书架索引」条 + 底栏目录 */
 
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&display=swap');
 
@@ -141,21 +141,287 @@
   min-height: 620px;
 }
 
+/* —— 手机书架索引（默认隐藏，≤980 显示） —— */
+.mobileChrome {
+  display: none;
+}
+
+.mobileTop {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 2px 2px 0;
+}
+
+.mobileCurrent {
+  min-width: 0;
+  flex: 1;
+}
+
+.mobileEyebrow {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--wh-muted);
+  margin-bottom: 4px;
+}
+
+.mobileTitle {
+  margin: 0;
+  font-family: var(--wh-display);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--wh-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobileCatalogBtn {
+  flex-shrink: 0;
+  border: 1px solid var(--wh-ink);
+  background: var(--wh-ink);
+  color: #fff;
+  border-radius: 999px;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.mobileRail {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 2px 0 4px;
+  margin: 0 -2px;
+  padding-left: 2px;
+  padding-right: 2px;
+}
+
+.mobileRail::-webkit-scrollbar {
+  display: none;
+}
+
+.railChip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  border: 1px solid var(--wh-line);
+  background: var(--wh-paper);
+  color: #5a5360;
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 13px;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.railChipActive {
+  border-color: transparent;
+  background: var(--wh-coral);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 6px 16px rgba(224, 61, 75, 0.28);
+}
+
+.mobileUploadStrip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  padding: 11px 14px;
+  background:
+    linear-gradient(105deg, rgba(224, 61, 75, 0.12) 0%, transparent 42%),
+    linear-gradient(160deg, #2a2228 0%, #1a1418 100%);
+  color: #fff;
+  cursor: pointer;
+  text-align: left;
+}
+
+.mobileUploadCopy {
+  font-size: 12px;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.78);
+  min-width: 0;
+}
+
+.mobileUploadCta {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--wh-coral);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+/* —— 底栏目录 sheet（仅手机挂载时出现） —— */
+.sheetRoot {
+  display: none;
+}
+
 @media (max-width: 980px) {
   .shell {
     flex-direction: column;
-    padding: 12px 12px 100px;
+    padding: 10px 12px 100px;
     width: 100%;
+    gap: 10px;
   }
 
   .sidebar {
-    width: 100%;
-    position: static;
-    max-height: none;
+    display: none;
+  }
+
+  .mobileChrome {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: sticky;
+    top: var(--app-desktop-navbar-height);
+    z-index: 20;
+    margin: 0 -2px;
+    padding: 8px 2px 10px;
+    background: linear-gradient(
+      180deg,
+      var(--wh-stage) 70%,
+      rgba(244, 242, 245, 0.92) 100%
+    );
+    backdrop-filter: blur(8px);
   }
 
   .content {
-    padding: 18px 16px;
+    padding: 16px 14px 20px;
     min-height: auto;
+    border-radius: 14px;
   }
+
+  .sheetRoot {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    background: rgba(23, 20, 26, 0.48);
+    animation: whSheetFade 0.2s ease both;
+  }
+
+  .sheetPanel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: min(78vh, 640px);
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    background: var(--wh-paper);
+    border-radius: 20px 20px 0 0;
+    padding: 10px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -18px 48px rgba(23, 20, 26, 0.18);
+    animation: whSheetUp 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .sheetHandle {
+    width: 36px;
+    height: 4px;
+    border-radius: 999px;
+    background: #ddd8de;
+    margin: 2px auto 12px;
+  }
+
+  .sheetHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .sheetTitle {
+    margin: 0;
+    font-family: var(--wh-display);
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  .sheetClose {
+    border: none;
+    background: #f3f1f4;
+    color: #5a5360;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .sheetGroup {
+    margin-top: 14px;
+  }
+
+  .sheetGroupTitle {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    color: var(--wh-muted);
+    margin-bottom: 8px;
+  }
+
+  .sheetLinks {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .sheetLink {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    text-decoration: none;
+    padding: 12px 14px;
+    border-radius: 12px;
+    color: #4b4450;
+    font-size: 15px;
+    background: #faf9fa;
+    border: 1px solid transparent;
+  }
+
+  .sheetLinkActive {
+    background: var(--wh-coral-soft);
+    border-color: rgba(224, 61, 75, 0.28);
+    color: var(--wh-coral);
+    font-weight: 700;
+  }
+
+  .sheetUpload {
+    margin-top: 18px;
+    width: 100%;
+    border: none;
+    border-radius: 12px;
+    padding: 13px 16px;
+    background: var(--wh-coral);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+}
+
+@keyframes whSheetFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes whSheetUp {
+  from { transform: translateY(18%); opacity: 0.85; }
+  to { transform: none; opacity: 1; }
 }

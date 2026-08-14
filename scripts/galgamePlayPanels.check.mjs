@@ -242,6 +242,47 @@ test('mergeQuests_同id覆盖且仅保留一个tracked', () => {
   assert.equal(merged.find((q) => q.tracked)?.id, 'q2');
 });
 
+test('resolveQuestsPanelRefreshPlan_有缓存不阻塞loader仍跑LLM', async () => {
+  const { resolveQuestsPanelRefreshPlan } = await import('../src/lib/galgame/quests.ts');
+  const withCache = resolveQuestsPanelRefreshPlan([
+    { id: 'q1', title: '主线', type: 'main', status: 'active', description: '', goalText: 'g', tracked: true },
+  ]);
+  assert.equal(withCache.hasCache, true);
+  assert.equal(withCache.blockingLoader, false);
+  assert.equal(withCache.runLlmAsync, true);
+  const empty = resolveQuestsPanelRefreshPlan([]);
+  assert.equal(empty.hasCache, false);
+  assert.equal(empty.blockingLoader, true);
+  assert.equal(empty.runLlmAsync, true);
+});
+
+test('QuestsPanel_有列表时loading不藏内容', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { dirname, join } = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+  const dir = dirname(fileURLToPath(import.meta.url));
+  const src = readFileSync(join(dir, '../src/components/Galgame/panels/QuestsPanel.tsx'), 'utf8');
+  assert.match(src, /showBlockingLoader/);
+  assert.match(src, /refreshing/);
+  assert.match(src, /!showBlockingLoader/);
+});
+
+test('Galgame_任务面板缓存优先异步LLM', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { dirname, join } = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+  const dir = dirname(fileURLToPath(import.meta.url));
+  const src = readFileSync(join(dir, '../src/page/Galgame.tsx'), 'utf8');
+  assert.match(src, /fetchCachedQuests/);
+  assert.match(src, /resolveQuestsPanelRefreshPlan/);
+  assert.match(src, /refreshQuests\(\{ background: plan\.hasCache \}\)/);
+  assert.doesNotMatch(
+    src,
+    /if \(questsRef\.current\.length > 0\) return;/,
+    '有缓存时仍应异步跑 LLM，禁止直接 return',
+  );
+});
+
 test('getTrackedQuest_优先tracked否则主线active', () => {
   assert.equal(getTrackedQuest([]), null);
   const tracked = getTrackedQuest([

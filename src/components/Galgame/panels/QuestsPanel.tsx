@@ -8,19 +8,25 @@ interface QuestsPanelProps {
   isOpen: boolean;
   onClose: () => void;
   quests: QuestItem[];
+  /** 无缓存时的阻塞 loading；有列表时不挡展示 */
   loading?: boolean;
+  /** 后台 LLM 刷新中（有缓存时软提示） */
+  refreshing?: boolean;
   error?: string | null;
 }
 
-/** 功能注释：任务日志列表，高亮 tracked。 */
+/** 功能注释：任务日志列表，高亮 tracked；有缓存时 loading 不藏列表。 */
 const QuestsPanel: React.FC<QuestsPanelProps> = ({
   isOpen,
   onClose,
   quests,
   loading,
+  refreshing,
   error,
 }) => {
   const { t } = useTranslation();
+  const hasList = quests.length > 0;
+  const showBlockingLoader = Boolean(loading && !hasList);
 
   const statusLabel = (q: QuestItem) => {
     if (q.status === 'active') return t('galgame.questStatusActive');
@@ -37,16 +43,21 @@ const QuestsPanel: React.FC<QuestsPanelProps> = ({
       subtitle={t('galgame.panelQuestsSubtitle')}
       onClose={onClose}
     >
-      {loading ? <div className={shell.empty}>{t('galgame.panelLoading')}</div> : null}
-      {error && quests.length === 0 ? (
+      {showBlockingLoader ? <div className={shell.empty}>{t('galgame.panelLoading')}</div> : null}
+      {refreshing && hasList ? (
+        <p className={shell.cardMeta} aria-live="polite">
+          {t('galgame.panelLoading')}
+        </p>
+      ) : null}
+      {error && !hasList ? (
         <div className={shell.empty}>
           {error === 'INVALID_JSON' ? t('galgame.panelQuestsInvalid') : error}
         </div>
       ) : null}
-      {!loading && !error && quests.length === 0 ? (
+      {!showBlockingLoader && !error && !hasList ? (
         <div className={shell.empty}>{t('galgame.panelQuestsEmpty')}</div>
       ) : null}
-      {!loading
+      {!showBlockingLoader
         ? quests.map((q) => (
             <article key={q.id} className={`${shell.card} ${q.tracked ? shell.cardActive : ''}`}>
               <h3 className={shell.cardTitle}>

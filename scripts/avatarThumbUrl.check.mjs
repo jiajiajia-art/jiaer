@@ -10,6 +10,8 @@ import {
   pickAvatarListDisplayUrl,
   pickDisplayAvatarFullUrl,
   pickDisplayAvatarThumbUrl,
+  collectConfirmedAvatarThumbs,
+  hasConfirmedAvatarThumb,
 } from '../src/lib/galgame/avatarThumbUrl.ts';
 
 test('deriveAvatarThumbUrl_png变_150webp', () => {
@@ -78,6 +80,7 @@ test('pickAvatarListDisplayUrl_pending时不回落原图', () => {
       { pendingThumbs: true },
     ),
     '/api/visual/images/x/npcs/a/base_150.webp',
+    '已有确认 150 时 pending 也立刻显示',
   );
   assert.equal(
     pickAvatarListDisplayUrl(
@@ -87,6 +90,23 @@ test('pickAvatarListDisplayUrl_pending时不回落原图', () => {
     '/api/visual/images/x/npcs/a/base.png',
     'ensure 结束后仍无小图才允许原图',
   );
+});
+
+test('collectConfirmedAvatarThumbs_只收集确认150', () => {
+  assert.deepEqual(
+    collectConfirmedAvatarThumbs([
+      { id: 'a', avatarThumbUrl: '/x/a_150.webp' },
+      { id: 'b', avatarThumbUrl: '/x/b.png' },
+      { id: 'c', avatarThumbUrl: '' },
+      { id: 'a', avatarThumbUrl: '/x/a_other_150.webp' },
+    ]),
+    { a: '/x/a_150.webp' },
+  );
+});
+
+test('hasConfirmedAvatarThumb_识别150', () => {
+  assert.equal(hasConfirmedAvatarThumb(['', '/x/a.png']), false);
+  assert.equal(hasConfirmedAvatarThumb(['/x/a_150.webp', '/x/a.png']), true);
 });
 
 test('pickDisplayAvatarFullUrl_跳过150用原图', () => {
@@ -133,9 +153,12 @@ test('CharactersPanel_列表pending不回落原图', async () => {
   const dir = dirname(fileURLToPath(import.meta.url));
   const src = readFileSync(join(dir, '../src/components/Galgame/panels/CharactersPanel.tsx'), 'utf8');
   assert.match(src, /pickAvatarListDisplayUrl/);
-  assert.match(src, /pendingThumbs:\s*avatarThumbsPending/);
+  assert.match(src, /collectConfirmedAvatarThumbs/);
+  assert.match(src, /hasConfirmedAvatarThumb/);
+  assert.match(src, /isAvatarSlotPending/);
   assert.match(src, /AvatarThumbSlot/);
   assert.match(src, /avatarLoading|detailPortraitLoading/);
+  assert.match(src, /已有确认小图先播种立即显示/);
 });
 
 test('PlayPanelShell_头像loading样式存在', async () => {

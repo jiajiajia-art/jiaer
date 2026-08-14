@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   applyPlayerCardImport,
@@ -21,6 +21,11 @@ import {
   pickAvatarDisplayUrl,
   pickDisplayAvatarFullUrl,
 } from '../../../lib/galgame/avatarThumbUrl';
+import {
+  isPlayerAvatarGenBusy,
+  startPlayerAvatarBackgroundGen,
+  subscribePlayerAvatarGenBusy,
+} from '../../../lib/galgame/playerAvatarBackgroundJob';
 import { refreshAuthUserPoints } from '../../../lib/auth/refreshUserPoints';
 import GameConfirmModal from '../GameConfirmModal';
 import shell from './PlayPanelShell.module.css';
@@ -84,13 +89,18 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
   const [saving, setSaving] = useState(false);
   const [personaAiBusy, setPersonaAiBusy] = useState(false);
   const [personaAiConfirmOpen, setPersonaAiConfirmOpen] = useState(false);
-  const [avatarAiBusy, setAvatarAiBusy] = useState(false);
+  const [avatarAiBusy, setAvatarAiBusy] = useState(() => isPlayerAvatarGenBusy(sessionId));
   const [avatarAiConfirmOpen, setAvatarAiConfirmOpen] = useState(false);
   const [avatarPreviewOpen, setAvatarPreviewOpen] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
   const [cards, setCards] = useState<PlayerCharacterCard[]>([]);
   const [query, setQuery] = useState('');
   const [previewCard, setPreviewCard] = useState<PlayerCharacterCard | null>(null);
+
+  // 功能注释：后台生头像跨页面；订阅 busy 展示「生成中」
+  useEffect(() => {
+    return subscribePlayerAvatarGenBusy(sessionId, setAvatarAiBusy);
+  }, [sessionId]);
 
   const resolveDraftName = (fromProfile?: string | null) =>
     resolvePlayerDisplayNameOrFallback([fromProfile, documentPlayerName]);
@@ -229,7 +239,6 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
   };
 
   const requestGenerateAvatar = async () => {
-    if (!playerAvatarAbOnChange) return;
     const payload = avatarGenPayload();
     if (!payload.name) {
       toast.error('请先填写姓名再生成头像');
@@ -239,7 +248,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
       toast.error('请先登录并进入对局');
       return;
     }
-    if (avatarAiBusy || saving || personaAiBusy) return;
+    if (avatarAiBusy || personaAiBusy) return;
     const latestPoints = await refreshAuthUserPoints();
     if (typeof latestPoints === 'number' && latestPoints < CHARACTER_GENERATION_COST) {
       toast.error(`积分不足（需要 ${CHARACTER_GENERATION_COST}，当前 ${latestPoints}）`);
@@ -251,41 +260,23 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
   const runGenerateAvatar = async () => {
     setAvatarAiConfirmOpen(false);
     const token = authUser?.token;
-    if (!token || !sessionId || avatarAiBusy) return;
+    if (!token || !sessionId || isPlayerAvatarGenBusy(sessionId)) return;
     const payload = avatarGenPayload();
     if (!payload.name) {
       toast.error('请先填写姓名再生成头像');
       return;
     }
-    setAvatarAiBusy(true);
+    // 功能注释：后台任务不绑组件生命周期；可保存/离开，完成后服务端已落盘，本地只合并头像
+    toast('头像生成中，可先保存或离开，完成后会自动写入');
     try {
-      const res = await sessionPlayerProfileApi.generatePlayerAvatar(token, sessionId, payload);
-      if (!res?.success || !res.data?.avatarUrl) {
-        toast.error(res?.message || '头像生成失败');
-        return;
-      }
-      const nextProfile = res.data.profile && typeof res.data.profile === 'object'
-        ? res.data.profile
-        : {
-            ...(profile || {
-              name: resolveDraftName(null),
-              gender: resolveDraftGender(null),
-              persona: '',
-              customAttributes: {},
-            }),
-            avatarUrl: res.data.avatarUrl,
-            avatarThumbUrl: res.data.avatarThumbUrl || '',
-            avatarNeedsRegen: false,
-          };
-      onProfileChange(nextProfile);
-      if (typeof res.data.remainingPoints === 'number') {
-        updateUser({ points: res.data.remainingPoints });
-      }
-      toast.success(`头像已生成（-${res.data.pointsDeducted ?? CHARACTER_GENERATION_COST} 积分）`);
+      await startPlayerAvatarBackgroundGen({
+        token,
+        sessionId,
+        payload,
+      });
+      // 成功由 Galgame 订阅写回档案并 toast，避免面板卸载后丢更新
     } catch (e) {
       toast.error((e as Error)?.message || '头像生成失败');
-    } finally {
-      setAvatarAiBusy(false);
     }
   };
 
@@ -474,57 +465,61 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
               type="button"
               className={styles.modalClose}
               onClick={closeToOverview}
-              disabled={saving || personaAiBusy || avatarAiBusy}
+              disabled={saving || personaAiBusy}
               aria-label="关闭"
             >
               ×
             </button>
           </div>
 
-          {playerAvatarAbOnChange ? (
-            <div className={styles.editAvatarBlock}>
-              <button
-                type="button"
-                className={styles.editAvatarHit}
-                onClick={() => {
-                  if (avatarSrc) setAvatarPreviewOpen(true);
-                }}
-                aria-label={avatarSrc ? '查看主角头像' : '暂无头像'}
-              >
-                {avatarSrc ? (
-                  <img className={styles.editAvatarImg} src={avatarSrc} alt={displayName} />
-                ) : (
-                  <div className={styles.editAvatarEmpty}>暂无头像</div>
-                )}
-              </button>
-              <div className={styles.editAvatarMeta}>
-                <div className={styles.labelRow}>
-                  <span className={styles.labelWithAiLeft}>
-                    头像
-                    <button
-                      type="button"
-                      className={styles.fieldAiBtn}
-                      disabled={saving || personaAiBusy || avatarAiBusy || !authUser?.token}
-                      onClick={() => {
-                        void requestGenerateAvatar();
-                      }}
-                    >
-                      {avatarAiBusy
-                        ? '生成中…'
-                        : `${needsAvatar ? 'AI生成' : '重新生成'} · ${CHARACTER_GENERATION_COST}`}
-                    </button>
-                  </span>
-                </div>
-                <p className={styles.editAvatarHint}>
-                  {needsAvatar
+          {/* 功能注释：头像展示与手动 AI 生成始终可用；换角强制清头像仍由 A/B 管 */}
+          <div className={styles.editAvatarBlock}>
+            <button
+              type="button"
+              className={styles.editAvatarHit}
+              onClick={() => {
+                if (avatarSrc) setAvatarPreviewOpen(true);
+              }}
+              aria-label={avatarSrc ? '查看主角头像' : '暂无头像'}
+            >
+              {avatarSrc ? (
+                <img className={styles.editAvatarImg} src={avatarSrc} alt={displayName} />
+              ) : (
+                <div className={styles.editAvatarEmpty}>暂无头像</div>
+              )}
+            </button>
+            <div className={styles.editAvatarMeta}>
+              <div className={styles.labelRow}>
+                <span className={styles.labelWithAiLeft}>
+                  头像
+                  {avatarAiBusy ? (
+                    <span className={styles.fieldAiBusyBadge} aria-live="polite">生成中…</span>
+                  ) : null}
+                  <button
+                    type="button"
+                    className={styles.fieldAiBtn}
+                    disabled={personaAiBusy || avatarAiBusy || !authUser?.token}
+                    onClick={() => {
+                      void requestGenerateAvatar();
+                    }}
+                  >
+                    {avatarAiBusy
+                      ? '后台生成中'
+                      : `${needsAvatar ? 'AI生成' : '重新生成'} · ${CHARACTER_GENERATION_COST}`}
+                  </button>
+                </span>
+              </div>
+              <p className={styles.editAvatarHint}>
+                {avatarAiBusy
+                  ? '生成中可先点保存或离开，完成后会自动写入档案'
+                  : (needsAvatar
                     ? (avatarSrc
                       ? '当前为主角立绘；可 AI 生成局内头像'
-                      : '换角后请生成新头像')
-                    : '点击头像可放大'}
-                </p>
-              </div>
+                      : '请生成头像')
+                    : '点击头像可放大')}
+              </p>
             </div>
-          ) : null}
+          </div>
 
           <label className={styles.field}>
             <span className={styles.labelRow}>
@@ -600,14 +595,14 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
               type="button"
               className={styles.secondaryBtn}
               onClick={closeToOverview}
-              disabled={saving || personaAiBusy || avatarAiBusy}
+              disabled={saving || personaAiBusy}
             >
               取消
             </button>
             <button
               type="submit"
               className={styles.primaryBtn}
-              disabled={saving || personaAiBusy || avatarAiBusy}
+              disabled={saving || personaAiBusy}
             >
               {saving ? '保存中…' : '保存'}
             </button>
@@ -802,43 +797,42 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
       </div>
 
       <div className={styles.profileCard}>
-        {playerAvatarAbOnChange ? (
-          <div className={styles.avatarRow}>
+        {/* 功能注释：头像与「生成头像」始终可见；A/B 只影响换角后是否强制清头像引导 */}
+        <div className={styles.avatarRow}>
+          <button
+            type="button"
+            className={styles.avatarHit}
+            onClick={() => {
+              if (avatarSrc) setAvatarPreviewOpen(true);
+            }}
+            aria-label={avatarSrc ? '查看主角头像' : '暂无头像'}
+          >
+            {avatarSrc ? (
+              <img className={styles.avatarImg} src={avatarSrc} alt={displayName} />
+            ) : (
+              <div className={styles.avatarEmpty}>头像</div>
+            )}
+          </button>
+          <div className={styles.avatarMeta}>
+            <p className={styles.avatarHint}>
+              {needsAvatar
+                ? (avatarSrc
+                  ? '当前为主角立绘；可 AI 生成局内头像'
+                  : '可生成头像')
+                : '点击头像可放大'}
+            </p>
             <button
               type="button"
-              className={styles.avatarHit}
-              onClick={() => {
-                if (avatarSrc) setAvatarPreviewOpen(true);
-              }}
-              aria-label={avatarSrc ? '查看主角头像' : '暂无头像'}
+              className={styles.avatarGenBtn}
+              disabled={avatarAiBusy || !authUser?.token}
+              onClick={() => void requestGenerateAvatar()}
             >
-              {avatarSrc ? (
-                <img className={styles.avatarImg} src={avatarSrc} alt={displayName} />
-              ) : (
-                <div className={styles.avatarEmpty}>头像</div>
-              )}
+              {avatarAiBusy
+                ? '后台生成中…'
+                : `${needsAvatar ? '生成头像' : '重新生成头像'} · ${CHARACTER_GENERATION_COST} 积分`}
             </button>
-            <div className={styles.avatarMeta}>
-              <p className={styles.avatarHint}>
-                {needsAvatar
-                  ? (avatarSrc
-                    ? '当前为主角立绘；换角后请 AI 生成局内头像'
-                    : '换角后请生成新头像')
-                  : '点击头像可放大'}
-              </p>
-              <button
-                type="button"
-                className={styles.avatarGenBtn}
-                disabled={avatarAiBusy || saving || !authUser?.token}
-                onClick={() => void requestGenerateAvatar()}
-              >
-                {avatarAiBusy
-                  ? '生成中…'
-                  : `${needsAvatar ? '生成头像' : '重新生成头像'} · ${CHARACTER_GENERATION_COST} 积分`}
-              </button>
-            </div>
           </div>
-        ) : null}
+        </div>
         <div className={styles.profileRow}>
           <span className={styles.profileKey}>姓名</span>
           <span className={styles.profileVal}>{displayName}</span>

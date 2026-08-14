@@ -210,6 +210,38 @@ export function parseWorldBookImportText(text: string): {
   return { ok: true, entries };
 }
 
+/**
+ * 功能注释：仓库「我的世界书」卡片 → 局内可编辑条目（新 id，避免与已装载冲突）。
+ */
+export function warehouseWorldBookToEntries(resource: {
+  title?: string;
+  payload?: { entries?: unknown[] } | null;
+} | null | undefined): {
+  ok: boolean;
+  message?: string;
+  entries: GameStartWorldBookEntry[];
+} {
+  if (!resource || typeof resource !== 'object') {
+    return { ok: false, message: '请选择世界书', entries: [] };
+  }
+  const rawEntries = Array.isArray(resource.payload?.entries) ? resource.payload!.entries! : [];
+  if (rawEntries.length === 0) {
+    return { ok: false, message: '该世界书没有可导入的条目', entries: [] };
+  }
+  const stamp = Date.now().toString(36);
+  const entries = rawEntries
+    .map((item, i) => coerceEntry(item, i))
+    .filter((e): e is GameStartWorldBookEntry => Boolean(e))
+    .map((e, i) => ({
+      ...e,
+      id: `wh_${stamp}_${i}_${Math.random().toString(36).slice(2, 7)}`,
+    }));
+  if (entries.length === 0) {
+    return { ok: false, message: '该世界书没有可导入的有效条目', entries: [] };
+  }
+  return { ok: true, entries };
+}
+
 /** 内置模板（「从已有模板导入」）。 */
 export const WORLD_BOOK_IMPORT_TEMPLATES: readonly {
   id: string;

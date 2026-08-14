@@ -77,6 +77,7 @@ export type PickAvatarListDisplayOptions = {
 
 /**
  * 列表/详情头像坞：优先确认 150；pending 时不回落原图，避免「先大图后小图」闪烁。
+ * 已有确认 150 时无论 pending 与否都立刻返回（不等 character-avatar-thumbs）。
  */
 export function pickAvatarListDisplayUrl(
   candidates: Array<string | null | undefined>,
@@ -91,6 +92,30 @@ export function pickAvatarListDisplayUrl(
     if (!isAvatarThumbUrl(u)) return u;
   }
   return '';
+}
+
+/** 候选里是否已有确认 *_150.webp（可立即展示，不必等批量 ensure）。 */
+export function hasConfirmedAvatarThumb(
+  candidates: Array<string | null | undefined>,
+): boolean {
+  return Boolean(pickDisplayAvatarThumbUrl(candidates));
+}
+
+/**
+ * 从档案列表抽出已确认小图，供打开面板时立刻播种，避免整表空白转圈。
+ */
+export function collectConfirmedAvatarThumbs(
+  entries: Array<{ id?: string | null; avatarThumbUrl?: string | null } | null | undefined>,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const entry of entries) {
+    if (!entry) continue;
+    const id = trimStr(entry.id);
+    if (!id || out[id]) continue;
+    const thumb = pickDisplayAvatarThumbUrl([entry.avatarThumbUrl]);
+    if (thumb) out[id] = thumb;
+  }
+  return out;
 }
 
 /**

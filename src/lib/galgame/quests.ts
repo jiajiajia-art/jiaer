@@ -97,3 +97,26 @@ export function getQuestTrackerLabel(quest: QuestItem | null): string {
   if (!quest) return '';
   return quest.goalText || quest.description || quest.title;
 }
+
+export type QuestsPanelRefreshPlan = {
+  /** 本地/play-ui 已有任务，可先渲染 */
+  hasCache: boolean;
+  /** 仅无缓存时用阻塞 loading；有缓存时 LLM 后台跑 */
+  blockingLoader: boolean;
+  /** 打开面板时仍异步跑 LLM，结果 merge 追加/更新 */
+  runLlmAsync: boolean;
+};
+
+/**
+ * 打开任务日志：有缓存先展示；LLM 一律异步，回来用 mergeQuests 追加/更新。
+ */
+export function resolveQuestsPanelRefreshPlan(
+  localQuests: QuestItem[] | null | undefined,
+): QuestsPanelRefreshPlan {
+  const hasCache = normalizeQuests(localQuests).length > 0;
+  return {
+    hasCache,
+    blockingLoader: !hasCache,
+    runLlmAsync: true,
+  };
+}

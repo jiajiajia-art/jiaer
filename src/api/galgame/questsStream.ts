@@ -1,8 +1,31 @@
 import { authFetch } from '../base';
 import { HOST_ADDRESS } from '../../config';
 import type { QuestItem } from '../../lib/galgame/quests';
+import { normalizeQuests } from '../../lib/galgame/quests';
 import { extractJsonFromStreamText, isAbortError } from '../../lib/galgame/attributePanelValues';
 import type { StreamHandlers } from './attributePanelsStream';
+
+/** 功能注释：只读已持久化任务（不跑 LLM），打开面板先有数。 */
+export async function fetchCachedQuests(
+  sessionId: string,
+  signal?: AbortSignal,
+): Promise<{ quests: QuestItem[]; source: 'cache' } | null> {
+  const url = `${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/quests?mode=cache`;
+  const res = await authFetch(url, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+    signal,
+  });
+  if (!res.ok) return null;
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) return null;
+  const json = (await res.json()) as {
+    success?: boolean;
+    quests?: unknown;
+  };
+  if (!json?.success) return null;
+  return { quests: normalizeQuests(json.quests), source: 'cache' };
+}
 
 /**
  * 功能注释：SSE 拉取最新任务列表；优先 type=result，否则从 raw 宽松提取 { quests }。
@@ -29,11 +52,22 @@ export async function streamQuests(
     throw new Error(`HTTP ${res.status}: ${msg}`);
   }
 
+  // mode=cache 或空历史可能直接 JSON
+  const contentType = res.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    const json = (await res.json()) as { quests?: QuestItem[]; success?: boolean };
+    const quests = normalizeQuests(json?.quests);
+    const payload = { quests };
+    handlers.onDone?.(payload);
+    return payload;
+  }
+
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
   let fullText = '';
   let resultQuests: QuestItem[] | null = null;
+  let streamError: string | null = null;
 
   handlers.onStart?.();
 
@@ -56,7 +90,10 @@ export async function streamQuests(
       } else if (evt?.type === 'result' && Array.isArray(evt.quests)) {
         resultQuests = evt.quests as QuestItem[];
       } else if (evt?.type === 'error') {
-        handlers.onError?.(String(evt.message || 'UNKNOWN_ERROR'));
+        const msg = String(evt.message || 'UNKNOWN_ERROR');
+        streamError = msg;
+        // 功能注释：有 result 时落盘忙仅软提示，勿盖掉已拿到的任务列表。
+        if (!resultQuests) handlers.onError?.(msg);
       }
     }
   };
@@ -89,8 +126,10 @@ export async function streamQuests(
     return payload;
   }
 
-  // 功能注释：解析失败用内部码；UI 应翻译或在已有列表时忽略，勿直接展示给玩家。
-  handlers.onError?.('INVALID_JSON');
+  // 功能注释：已有 SSE error 时不再二次标 INVALID_JSON（否则会盖掉锁/落盘错误）。
+  if (!streamError) {
+    handlers.onError?.('INVALID_JSON');
+  }
   handlers.onDone?.(null);
   return null;
 }

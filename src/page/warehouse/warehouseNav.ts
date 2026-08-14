@@ -19,6 +19,20 @@ export const WAREHOUSE_NAV: WarehouseNavItem[] = [
   { id: 'history', path: '/warehouse/history', label: '游玩历史', group: 'extra' },
 ];
 
+export const WAREHOUSE_GROUP_LABEL: Record<WarehouseNavItem['group'], string> = {
+  mine: '我的资源',
+  public: '公共资源',
+  extra: '其它',
+};
+
+/** 最长路径优先，避免 /warehouse/public 误匹配子路由前缀问题 */
+export function resolveWarehouseNavItem(pathname: string): WarehouseNavItem | undefined {
+  const path = String(pathname || '').split('?')[0] || '';
+  if (!path.startsWith('/warehouse')) return undefined;
+  const ranked = [...WAREHOUSE_NAV].sort((a, b) => b.path.length - a.path.length);
+  return ranked.find((item) => path === item.path || path.startsWith(`${item.path}/`));
+}
+
 export const PERSONA_TAGS = [
   '全部',
   '恋爱',

@@ -341,6 +341,15 @@
   flex-wrap: wrap;
 }
 
+.mineList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: min(48vh, 360px);
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .importTab {
   min-height: 2rem;
   padding: 0.3rem 0.75rem;

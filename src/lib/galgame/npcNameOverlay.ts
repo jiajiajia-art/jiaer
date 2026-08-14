@@ -22,7 +22,8 @@ function escapeRegExp(value: string): string {
 /**
  * 按从长到短替换人名。
  * 先保护已是目标名 `to` 的片段，避免短别名「白→白白」把已有「白白」扩成「白白白白」。
- * 若 to 恰为 from+from（叠字名），再把历史里已叠坏的 to+to 收成 to。
+ * 替换后对每个目标名（长度≥2）再压掉已叠坏的 to+to（如「白白白白」→「白白」），
+ * 不依赖 from 必须是 to 的一半（「玩家→白白」时 LLM 仍可能写出叠名）。
  */
 export function rewriteTextByMap(text: string, replacements: NameReplacement[]): string {
   let out = String(text ?? '');
@@ -30,6 +31,7 @@ export function rewriteTextByMap(text: string, replacements: NameReplacement[]):
   const sorted = [...replacements]
     .filter((r) => r && trimStr(r.from) && trimStr(r.to) && trimStr(r.from) !== trimStr(r.to))
     .sort((a, b) => trimStr(b.from).length - trimStr(a.from).length);
+  const collapseTargets = new Set<string>();
   for (let i = 0; i < sorted.length; i += 1) {
     const from = trimStr(sorted[i].from);
     const to = trimStr(sorted[i].to);
@@ -43,12 +45,30 @@ export function rewriteTextByMap(text: string, replacements: NameReplacement[]):
     if (out.includes(guard)) {
       out = out.split(guard).join(to);
     }
-    // 叠字名历史修复：白白白白 → 白白
-    if (to === `${from}${from}`) {
-      const doubled = `${to}${to}`;
-      while (out.includes(doubled)) {
-        out = out.split(doubled).join(to);
-      }
+    if (to.length >= 2) collapseTargets.add(to);
+  }
+  return collapseStackedDisplayNames(out, [...collapseTargets]);
+}
+
+/**
+ * 功能注释：把正文里连续重复的现用名压回单次（「白白白白」→「白白」）。
+ * 仅处理长度≥2 的名字，避免单字「白」把正确的「白白」拆坏。
+ */
+export function collapseStackedDisplayNames(
+  text: string,
+  names: Array<string | null | undefined>,
+): string {
+  let out = String(text ?? '');
+  if (!out) return out;
+  const unique = [...new Set(
+    (Array.isArray(names) ? names : [])
+      .map((n) => trimStr(n))
+      .filter((n) => n.length >= 2),
+  )].sort((a, b) => b.length - a.length);
+  for (const name of unique) {
+    const doubled = `${name}${name}`;
+    while (out.includes(doubled)) {
+      out = out.split(doubled).join(name);
     }
   }
   return out;
@@ -125,18 +145,32 @@ export function buildPlayerNameReplacementMap(input: {
   return map;
 }
 
+export function applyDisplayNameRewrites(
+  text: string,
+  nameMap: NameReplacement[],
+  collapseNames: Array<string | null | undefined> = [],
+): string {
+  let out = String(text ?? '');
+  if (!out) return out;
+  if (nameMap?.length) out = rewriteTextByMap(out, nameMap);
+  return collapseStackedDisplayNames(out, collapseNames);
+}
+
 export function applyNameMapToSteps<T extends Record<string, unknown>>(
   steps: T[],
   nameMap: NameReplacement[],
+  collapseNames: Array<string | null | undefined> = [],
 ): T[] {
-  if (!Array.isArray(steps) || !nameMap.length) return steps || [];
+  if (!Array.isArray(steps)) return steps || [];
+  if (!nameMap.length && !(collapseNames && collapseNames.length)) return steps;
+  const rewrite = (value: string) => applyDisplayNameRewrites(value, nameMap, collapseNames);
   return steps.map((step) => {
     if (!step || typeof step !== 'object') return step;
     const next: Record<string, unknown> = { ...step };
     let changed = false;
     for (const key of ['speakerName', 'content', 'text', 'message', 'title', 'description']) {
       if (typeof next[key] === 'string') {
-        const rewritten = rewriteTextByMap(String(next[key]), nameMap);
+        const rewritten = rewrite(String(next[key]));
         if (rewritten !== next[key]) {
           next[key] = rewritten;
           changed = true;
@@ -145,14 +179,14 @@ export function applyNameMapToSteps<T extends Record<string, unknown>>(
     }
     if (Array.isArray(next.options)) {
       next.options = next.options.map((opt) => {
-        if (typeof opt === 'string') return rewriteTextByMap(opt, nameMap);
+        if (typeof opt === 'string') return rewrite(opt);
         if (opt && typeof opt === 'object') {
           const o = opt as Record<string, unknown>;
           return {
             ...o,
-            content: typeof o.content === 'string' ? rewriteTextByMap(o.content, nameMap) : o.content,
-            text: typeof o.text === 'string' ? rewriteTextByMap(o.text, nameMap) : o.text,
-            message: typeof o.message === 'string' ? rewriteTextByMap(o.message, nameMap) : o.message,
+            content: typeof o.content === 'string' ? rewrite(o.content) : o.content,
+            text: typeof o.text === 'string' ? rewrite(o.text) : o.text,
+            message: typeof o.message === 'string' ? rewrite(o.message) : o.message,
           };
         }
         return opt;
