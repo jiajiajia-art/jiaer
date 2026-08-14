@@ -20,8 +20,8 @@ import {
 } from '../../../lib/galgame/privateChatIdleNudge';
 import type { PlayerEditableNpc } from '../../../lib/galgame/characterProfile';
 import {
+  pickAvatarDisplayUrl,
   pickDisplayAvatarFullUrl,
-  pickDisplayAvatarThumbUrl,
 } from '../../../lib/galgame/avatarThumbUrl';
 import { getImageUrl } from '../../../utils/constants';
 import { useAuthStore } from '../../../store/useAuthStore';
@@ -367,16 +367,18 @@ const PrivateChatPanel: React.FC<PrivateChatPanelProps> = ({
     }, 480);
   };
 
-  const title = npc?.name || npcName || '私聊';
-  // 功能注释：气泡头像走 *_150.webp；点击放大预览必须用原图
-  const npcAvatarSrcPath = pickDisplayAvatarThumbUrl([
+  // 功能注释：父组件传入的局内改名优先；勿在加载中回落到文档原名
+  const title = String(npcName || '').trim() || npc?.name || '私聊';
+  // 功能注释：气泡优先确认 150；无 150 时用原图（私聊不跑批量 ensure，不能一直空白）
+  // 有 thumb 后不再从大图切小图的路径：父组件应先带 thumb；若稍后才到 thumb 仍可能换一次——父侧尽量预取
+  const npcAvatarSrcPath = pickAvatarDisplayUrl([
     npc?.avatarThumbUrl,
     npcAvatarThumbUrl,
     npc?.avatarUrl,
     npcAvatarUrl,
   ]);
   const avatarSrc = npcAvatarSrcPath ? getImageUrl(npcAvatarSrcPath) : '';
-  const playerAvatarSrcPath = pickDisplayAvatarThumbUrl([
+  const playerAvatarSrcPath = pickAvatarDisplayUrl([
     playerAvatarThumbUrl,
     serverPlayerAvatar?.avatarThumbUrl,
     playerAvatarUrl,

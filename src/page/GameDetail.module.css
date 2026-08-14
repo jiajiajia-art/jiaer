@@ -22,9 +22,6 @@
     z-index: 1000; /* 提高 z-index，确保在移动端也能显示 */
     padding: 0.75rem 0;
     color: #fff;
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.05) 100%);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px); /* Safari 兼容 */
     max-width: 1920px;
     width: 100%;
     margin: 0 auto;
@@ -568,6 +565,54 @@
     max-height: 270px;
     overflow-y: auto;
     white-space: pre-line;
+}
+
+.descriptionHtml {
+    font-size: 1rem;
+    line-height: 1.75;
+    color: rgba(0, 0, 0, 0.7);
+    margin: 0;
+    /* 容纳右飘图片，避免高度塌陷 */
+    display: flow-root;
+}
+
+.descriptionHtml p {
+    margin: 0 0 0.55em;
+    max-height: none;
+    overflow: visible;
+    white-space: normal;
+}
+
+.descriptionHtml p:last-child {
+    margin-bottom: 0;
+}
+
+.descriptionHtml img {
+    float: left;
+    clear: none;
+    display: inline;
+    max-width: min(48%, 360px);
+    width: auto;
+    height: auto;
+    margin: 0.35em 0.75em 0.35em 0;
+    border-radius: 8px;
+    object-fit: contain;
+    vertical-align: top;
+}
+
+.descriptionHtml br,
+.descriptionHtml p br {
+    display: block;
+    clear: both;
+    margin: 0;
+    width: 100%;
+    content: '';
+}
+
+.descriptionHtml ul,
+.descriptionHtml ol {
+    margin: 0.4em 0;
+    padding-left: 1.4em;
 }
 
 .derivedNovelsSection {
@@ -1273,6 +1318,17 @@
 
     .descriptionSection {
         padding: 1rem;
+    }
+
+    /* 手机：简介配图一行一张 */
+    .descriptionHtml img {
+        float: none;
+        clear: both;
+        display: block;
+        max-width: 100%;
+        width: 100%;
+        height: auto;
+        margin: 0.5em 0;
     }
 
     .actionSection {

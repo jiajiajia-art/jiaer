@@ -38,6 +38,11 @@ import { getGameTypeLabelFromMeta, getGameTypeToneFromMeta } from '../utils/game
 import { resolveGameTypeToneStyle } from '../utils/gameTypeToneClass';
 import { buildNovelReadPath, buildSourceGameDetailPath } from '../utils/novelGame';
 import { prefetchGalgameDocument } from '../lib/galgame/galgameDocumentCache';
+import {
+    looksLikeHtml,
+    descriptionToPlainText,
+    hydrateDescriptionHtmlForDisplay,
+} from '../utils/gameDescriptionHtml';
 
 // 检测是否在微信小程序环境
 const isWebViewEnv = (): boolean => {
@@ -1139,7 +1144,20 @@ const GameDetail: React.FC = () => {
                         <>
                             {/* <h3 className={styles.detailSectionTitle}>{t('gameDetail.gameIntroduction')}</h3> */}
                             <div className={styles.descriptionSection}>
-                                <p>{normalizeNewlines(game.description || t('gameDetail.noDescription'))}</p>
+                                {(() => {
+                                    const raw = game.description || t('gameDetail.noDescription');
+                                    if (looksLikeHtml(raw)) {
+                                        return (
+                                            <div
+                                                className={styles.descriptionHtml}
+                                                dangerouslySetInnerHTML={{
+                                                    __html: hydrateDescriptionHtmlForDisplay(raw, getImageUrl),
+                                                }}
+                                            />
+                                        );
+                                    }
+                                    return <p>{normalizeNewlines(descriptionToPlainText(raw) || raw)}</p>;
+                                })()}
                             </div>
 
                             {game.version_notes?.trim() ? (

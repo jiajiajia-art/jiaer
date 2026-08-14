@@ -6,6 +6,8 @@ import { IoGameControllerOutline } from 'react-icons/io5';
 import styles from './HomeThemePreviewRail.module.css';
 import type { UserGameData } from '../api/home/getGameData.type';
 import { addImageTimestamp } from '../utils/imageCache';
+import { resolveGameCoverUrl } from '../utils/displayCoverUrl';
+import { getImageUrl } from '../utils/constants';
 import { getGameTypeLabelFromMeta, getGameTypeToneFromMeta } from '../utils/gameTypeLabel';
 import { resolveGameTypeToneStyle } from '../utils/gameTypeToneClass';
 import { buildGameDetailNavigateState } from '../utils/gameDetailNavigation';
@@ -277,7 +279,10 @@ const HomeThemePreviewRail: React.FC<HomeThemePreviewRailProps> = ({
                     const typeLabel = getTypeLabel(game);
                     const typeToneStyle = resolveGameTypeToneStyle(getGameTypeToneFromMeta(game));
                     const themeLabels = getThemeLabels(game);
-                    const coverUrl = game.display_cover_url || game.cover_url;
+                    const coverPath = resolveGameCoverUrl({
+                        display_cover_url: game.display_cover_url,
+                        cover_url: game.cover_url,
+                    });
 
                     return (
                         <button
@@ -290,8 +295,8 @@ const HomeThemePreviewRail: React.FC<HomeThemePreviewRailProps> = ({
                                 <article className={styles.card}>
                                     <div className={styles.coverWrap}>
                                         <img
-                                            src={coverUrl
-                                                ? addImageTimestamp(coverUrl)
+                                            src={coverPath
+                                                ? addImageTimestamp(getImageUrl(coverPath))
                                                 : `${import.meta.env.BASE_URL}data/events/welcome.png`}
                                             alt={game.title || `${t('game.script')} ${index + 1}`}
                                             className={styles.coverImage}

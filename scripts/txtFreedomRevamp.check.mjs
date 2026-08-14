@@ -239,6 +239,7 @@ test('applyPlayerCardImport_覆盖与无权限与空卡', () => {
     gender: 'female',
     persona: '安静的观察者',
     attributes: { 容貌: 88 },
+    avatarUrl: '/public/cards/baicha.webp',
     createdAt: '',
     updatedAt: '',
   }, { currentUserId: 'u-me' });
@@ -247,6 +248,8 @@ test('applyPlayerCardImport_覆盖与无权限与空卡', () => {
   assert.equal(ok.profile.name, '白茶');
   assert.equal(ok.profile.customAttributes['容貌'], 88);
   assert.equal(ok.profile.importedCardId, 'c1');
+  assert.equal(ok.profile.avatarUrl, '/public/cards/baicha.webp');
+  assert.equal(ok.profile.avatarNeedsRegen, false);
 });
 
 test('previewPlayerCardImportDiff_应标出变化字段', () => {

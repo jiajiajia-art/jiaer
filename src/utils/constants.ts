@@ -1,5 +1,7 @@
 import { HOST_ADDRESS } from "../config";
 export { toDisplayCoverUrl, resolveGameCoverUrl } from './displayCoverUrl';
+export { preferCharacterPortraitWebp } from './characterPortraitUrl';
+import { preferCharacterPortraitWebp } from './characterPortraitUrl';
 
 // ==================== 积分相关常量 ====================
 export const SCENE_GENERATION_COST = 6;      // 场景生成费用
@@ -28,22 +30,25 @@ export const getImageUrl = (imagePath: string | null | undefined): string => {
   const path = typeof imagePath === 'string' ? imagePath : String(imagePath || '');
   if (!path) return "";
 
-  if (path.startsWith("http://") || path.startsWith("https://")) {
-    return path;
+  // 功能注释：NPC/玩家立绘展示优先同名 webp（历史 png 由后端懒转）
+  const displayPath = preferCharacterPortraitWebp(path);
+
+  if (displayPath.startsWith("http://") || displayPath.startsWith("https://")) {
+    return displayPath;
   }
 
   const isDefaultImage =
-    path.includes("defaultNpc.png") ||
-    path.includes("defaultScene.png") ||
-    path.includes("defaultMap.png") ||
-    path.startsWith(import.meta.env.BASE_URL);
+    displayPath.includes("defaultNpc.png") ||
+    displayPath.includes("defaultScene.png") ||
+    displayPath.includes("defaultMap.png") ||
+    displayPath.startsWith(import.meta.env.BASE_URL);
   if (isDefaultImage) {
-    return path;
+    return displayPath;
   }
 
-  const normalizedPath = path.startsWith("/")
-    ? path
-    : `/${path}`;
+  const normalizedPath = displayPath.startsWith("/")
+    ? displayPath
+    : `/${displayPath}`;
   return `${HOST_ADDRESS}${normalizedPath}`;
 };
 

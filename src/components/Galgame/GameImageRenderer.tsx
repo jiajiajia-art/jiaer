@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { gameResourceManager } from '../../utils/gameResourceManager';
+import { fallbackCharacterPortraitPng } from '../../utils/characterPortraitUrl';
 import styles from './GameImageRenderer.module.css';
 
 export interface GameImageRendererProps {
@@ -35,18 +36,23 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
   const [hasError, setHasError] = useState(false);
   const [useFallback, setUseFallback] = useState(false);
   const [currentSrc, setCurrentSrc] = useState<string | null>(null);
+  const triedPngFallbackRef = useRef(false);
 
-  // 根据屏幕宽度决定是否使用 Canvas 渲染
-  // 在中等尺寸屏幕上（768px - 1080px），禁用 Canvas 改用 img fallback
+  useEffect(() => {
+    triedPngFallbackRef.current = false;
+  }, [src]);
+
+  // 中等屏宽默认改走 img；立绘（disableMobileGuard）必须继续用 Canvas，否则 imgRef 未挂载会渲染失败变透明
   const isMediumScreen = typeof window !== 'undefined' && window.innerWidth >= 768 && window.innerWidth <= 1080;
+  const preferImgFallback = !useCanvas || (isMediumScreen && !disableMobileGuard);
 
   const renderBitmap = useCallback((bitmap: ImageBitmap, targetSrc?: string): boolean => {
-    // 中等屏幕上使用 img fallback
-    if (!useCanvas || isMediumScreen) {
+    if (preferImgFallback) {
       if (imgRef.current) {
         imgRef.current.src = targetSrc || src || '';
         return true;
       }
+      // Canvas 模式下尚未挂载 img：交给调用方切 useFallback，禁止返回 false 后把 canvas 透明度打成 0
       return false;
     }
 
@@ -118,7 +124,7 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
       return false;
     }
     return false;
-  }, [useCanvas, src, isMediumScreen]);
+  }, [preferImgFallback, src]);
 
   useEffect(() => {
     const container = canvasRef.current?.parentElement;
@@ -162,30 +168,41 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
         bitmap = await gameResourceManager.loadImage(src, { decode: true });
       }
 
-      if (cancelled || !bitmap) return;
+      if (cancelled) return;
+
+      // fetch 成功但 decode 失败：必须切 <img>，禁止留下透明 canvas
+      if (!bitmap) {
+        setUseFallback(true);
+        setHasError(false);
+        setIsLoading(false);
+        onError?.(new Error('Image bitmap decode failed'));
+        return;
+      }
 
       const isValid = bitmap.width > 0 && bitmap.height > 0;
       if (!isValid) {
-        setHasError(true);
+        setUseFallback(true);
+        setHasError(false);
         setIsLoading(false);
         onError?.(new Error('Invalid bitmap dimensions'));
         return;
       }
 
       requestAnimationFrame(() => {
-        if (cancelled || !canvasRef.current) return;
+        if (cancelled) return;
         const renderSuccess = renderBitmap(bitmap!);
         if (renderSuccess) {
           setIsLoading(false);
           setHasError(false);
+          setUseFallback(false);
           onLoad?.();
-        } else {
-          setHasError(true);
-          setIsLoading(false);
-          if (imgRef.current && src) {
-            imgRef.current.src = src;
-          }
+          return;
         }
+        // canvas 未就绪 / 中等屏无 imgRef：改原生 img，避免 hasError 把画面隐掉
+        setUseFallback(true);
+        setHasError(false);
+        setIsLoading(false);
+        onLoad?.();
       });
     };
 
@@ -198,14 +215,19 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
         if (cancelled) return;
 
         requestAnimationFrame(() => {
-          if (!cancelled && canvasRef.current) {
-            const renderSuccess = renderBitmap(cachedBitmap);
-            if (renderSuccess) {
-              setIsLoading(false);
-              setHasError(false);
-              onLoad?.();
-            }
+          if (cancelled) return;
+          const renderSuccess = renderBitmap(cachedBitmap);
+          if (renderSuccess) {
+            setIsLoading(false);
+            setHasError(false);
+            setUseFallback(false);
+            onLoad?.();
+            return;
           }
+          setUseFallback(true);
+          setHasError(false);
+          setIsLoading(false);
+          onLoad?.();
         });
         return;
       }
@@ -213,15 +235,45 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
       // 缓存未命中，需要加载
       setIsLoading(true);
       setHasError(false);
-      setUseFallback(false);
+      setUseFallback(preferImgFallback);
       setCurrentSrc(src);
 
       try {
         await loadAndRenderImage();
       } catch (error) {
         if (!cancelled) {
+          const png = fallbackCharacterPortraitPng(src);
+          if (png && !triedPngFallbackRef.current) {
+            triedPngFallbackRef.current = true;
+            setHasError(false);
+            setIsLoading(true);
+            setUseFallback(true);
+            setCurrentSrc(png);
+            try {
+              const bitmap = await gameResourceManager.loadImage(png, { decode: true });
+              if (cancelled) return;
+              if (bitmap && bitmap.width > 0) {
+                requestAnimationFrame(() => {
+                  if (cancelled) return;
+                  if (renderBitmap(bitmap, png)) {
+                    setIsLoading(false);
+                    setHasError(false);
+                    setUseFallback(false);
+                    onLoad?.();
+                    return;
+                  }
+                  setUseFallback(true);
+                  setIsLoading(false);
+                  onLoad?.();
+                });
+                return;
+              }
+            } catch {
+              /* fall through to error */
+            }
+          }
           setUseFallback(true);
-          setHasError(true);
+          setHasError(false);
           setIsLoading(false);
           const err = error instanceof Error ? error : new Error('Unknown error');
           onError?.(err);
@@ -237,7 +289,10 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
         gameResourceManager.releaseBitmap(src);
       }
     };
-  }, [src, useCanvas, onLoad, onError, style, renderBitmap, isMediumScreen]);
+  }, [src, useCanvas, disableMobileGuard, preferImgFallback, onLoad, onError, style, renderBitmap]);
+
+  // 立绘：canvas 失败时也始终挂载 fallback img（opacity 切换），避免中等屏/解码失败完全空白
+  const showFallbackImg = useFallback || preferImgFallback || hasError;
 
   if (useCanvas) {
     return (
@@ -252,7 +307,7 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
           ref={canvasRef}
           className={styles.canvas}
           style={{
-            opacity: (isLoading && placeholder) || hasError || useFallback ? 0 : 1,
+            opacity: showFallbackImg || (isLoading && placeholder) ? 0 : 1,
             transition: 'opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
             width: '100%',
             height: '100%',
@@ -261,7 +316,7 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
             ...style,
           }}
         />
-        {useFallback && (currentSrc || src) && (
+        {showFallbackImg && (currentSrc || src) && (
           <img
             ref={imgRef}
             src={currentSrc || src || undefined}
@@ -270,14 +325,21 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
             style={{
               ...style,
               objectPosition: style?.objectPosition,
+              opacity: isLoading && placeholder ? 0 : 1,
             }}
             onLoad={() => {
               setIsLoading(false);
-              // 使用兜底时，不要清除 useFallback，保持 <img> 标签显示
-              // setHasError(false); // 不设置，保持 useFallback 为 true
               onLoad?.();
             }}
             onError={() => {
+              const png = fallbackCharacterPortraitPng(currentSrc || src);
+              if (png && !triedPngFallbackRef.current) {
+                triedPngFallbackRef.current = true;
+                setHasError(false);
+                setIsLoading(true);
+                setCurrentSrc(png);
+                return;
+              }
               setHasError(true);
               setIsLoading(false);
               onError?.(new Error('Image load failed'));
@@ -300,6 +362,14 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
         onLoad?.();
       }}
       onError={() => {
+        const png = fallbackCharacterPortraitPng(currentSrc || src);
+        if (png && !triedPngFallbackRef.current) {
+          triedPngFallbackRef.current = true;
+          setHasError(false);
+          setIsLoading(true);
+          setCurrentSrc(png);
+          return;
+        }
         setHasError(true);
         setIsLoading(false);
         onError?.(new Error('Image load failed'));

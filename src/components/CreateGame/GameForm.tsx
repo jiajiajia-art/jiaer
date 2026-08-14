@@ -3,8 +3,16 @@ import { FaFileAlt, FaImage } from 'react-icons/fa';
 import styles from './GameForm.module.css';
 import type { UserGameData } from '../../api/home/getGameData.type';
 import { getImageUrl } from '../../utils/constants';
+import { toDisplayCoverUrl } from '../../utils/displayCoverUrl';
 import { useImageCropper } from '../../hooks/useImageCropper';
 import ImageCropModal from '../CommonModal/ImageCropModal';
+import SimpleRichTextEditor from '../Common/SimpleRichTextEditor';
+import EditorApi from '../../api/galgame/EditorData';
+import {
+  NOVEL_DESCRIPTION_MAX_LENGTH,
+  normalizeDescriptionForSave,
+  toEditorHtml,
+} from '../../utils/gameDescriptionHtml';
 
 export interface GameFormData {
     gameName: string;
@@ -41,7 +49,7 @@ const GameForm: React.FC<GameFormProps> = ({
 }) => {
     const [gameName, setGameName] = useState(initialGameData?.title || '');
     const [gameSubtitle, setGameSubtitle] = useState(initialGameData?.subtitle || '');
-    const [gameDescription, setGameDescription] = useState(initialGameData?.description || '');
+    const [gameDescription, setGameDescription] = useState(toEditorHtml(initialGameData?.description || ''));
     const [noImageMode, setNoImageMode] = useState(false);
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
     const [coverFile, setCoverFile] = useState<File | null>(null);
@@ -77,8 +85,10 @@ const GameForm: React.FC<GameFormProps> = ({
         if (initialGameData) {
             setGameName(initialGameData.title || '');
             setGameSubtitle(initialGameData.subtitle || '');
-            setGameDescription(initialGameData.description || '');
-            setCoverImage(getImageUrl(initialGameData.cover_url) || null);
+            setGameDescription(toEditorHtml(initialGameData.description || ''));
+            // 功能注释：表单回显封面走 display-cover/cover.webp；blob 预览 URL 不命中规则，自然保持原样
+            const displayCoverPath = toDisplayCoverUrl(initialGameData.cover_url);
+            setCoverImage(displayCoverPath ? getImageUrl(displayCoverPath) : (getImageUrl(initialGameData.cover_url) || null));
         }
         if (initialFiles) {
             if (initialFiles.existingDocFile !== undefined) setExistingDocFile(initialFiles.existingDocFile);
@@ -100,7 +110,7 @@ const GameForm: React.FC<GameFormProps> = ({
             onFormDataChange({
                 gameName,
                 gameSubtitle,
-                gameDescription,
+                gameDescription: normalizeDescriptionForSave(gameDescription),
                 noImageMode,
                 uploadedFile,
                 coverFile,
@@ -315,16 +325,27 @@ const GameForm: React.FC<GameFormProps> = ({
 
             <div className={styles.formGroup}>
                 <label htmlFor="gameDescription">游戏简介</label>
-                <textarea
-                    id="gameDescription"
-                    value={gameDescription}
-                    onChange={(e) => setGameDescription(e.target.value)}
-                    rows={4}
-                    placeholder="简单介绍你的游戏世界..."
-                    required
-                    autoComplete="off"
-                    disabled={isCreating}
-                />
+                <div className={styles.descriptionEditor}>
+                    <SimpleRichTextEditor
+                        value={gameDescription}
+                        onChange={setGameDescription}
+                        maxPlainLength={NOVEL_DESCRIPTION_MAX_LENGTH}
+                        placeholder="简单介绍你的游戏世界..."
+                        disabled={isCreating}
+                        onUploadImage={
+                            initialGameData?.file_id
+                                ? async (file) => {
+                                    const resp = await EditorApi.uploadDescImage(String(initialGameData.file_id), file);
+                                    const url = resp.data?.data?.url;
+                                    if (!resp.data?.success || !url) {
+                                        throw new Error(resp.data?.message || '图片上传失败');
+                                    }
+                                    return url.startsWith('/') ? url : `/${url}`;
+                                }
+                                : undefined
+                        }
+                    />
+                </div>
             </div>
 
             <div className={`${styles.formGroup} ${styles.requiredField}`}>

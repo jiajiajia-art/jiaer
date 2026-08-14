@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&display=swap');
+
 .panelContent {
     display: flex;
     flex-direction: column;
@@ -548,10 +550,372 @@
     gap: 16px;
 }
 
+.coverHeaderRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
 .uploadCover h2 {
     margin: 0;
     font-size: 1.5rem;
     color: #1a1a1a;
+}
+
+.coverAiBtn {
+    flex-shrink: 0;
+    border: 1px solid rgba(224, 61, 75, 0.35);
+    background: rgba(224, 61, 75, 0.08);
+    color: var(--primary, #e03d4b);
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.coverAiBtn:hover:not(:disabled) {
+    background: rgba(224, 61, 75, 0.14);
+    border-color: rgba(224, 61, 75, 0.55);
+}
+
+.coverAiBtn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* —— AI 海报企划笺（独立于删除确认弹窗） —— */
+.coverBriefOverlay {
+    --brief-ink: #1a1416;
+    --brief-muted: #7a7174;
+    --brief-line: rgba(26, 20, 22, 0.1);
+    --brief-paper: #fbf7f4;
+    --brief-panel: #ffffff;
+    --brief-coral: #e03d4b;
+    --brief-coral-deep: #c4323f;
+    --brief-stage: #161114;
+    --brief-display: 'Noto Serif SC', 'Songti SC', 'PingFang SC', serif;
+
+    position: fixed;
+    inset: 0;
+    z-index: 11000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+    background:
+        radial-gradient(ellipse 80% 60% at 50% 40%, rgba(224, 61, 75, 0.18), transparent 55%),
+        rgba(12, 10, 11, 0.72);
+    backdrop-filter: blur(8px);
+    animation: coverBriefFade 0.22s ease both;
+}
+
+@keyframes coverBriefFade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.coverBriefSheet {
+    width: min(440px, calc(100vw - 40px));
+    background: var(--brief-paper);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.55) inset,
+        0 24px 64px rgba(0, 0, 0, 0.35);
+    animation: coverBriefRise 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+    position: relative;
+}
+
+@keyframes coverBriefRise {
+    from {
+        opacity: 0;
+        transform: translateY(16px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.coverBriefSheet::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--brief-coral), #f07a86 55%, transparent);
+    pointer-events: none;
+}
+
+.coverBriefTop {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 20px 0 22px;
+}
+
+.coverBriefEyebrow {
+    margin: 0;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--brief-coral);
+    font-weight: 700;
+}
+
+.coverBriefHeading {
+    margin: 4px 0 0;
+    font-family: var(--brief-display);
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--brief-ink);
+    letter-spacing: 0.02em;
+    line-height: 1.25;
+}
+
+.coverBriefClose {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(26, 20, 22, 0.06);
+    color: var(--brief-ink);
+    font-size: 1.15rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.12s ease;
+}
+
+.coverBriefClose:hover {
+    background: rgba(26, 20, 22, 0.12);
+}
+
+.coverBriefClose:active {
+    transform: scale(0.94);
+}
+
+.coverBriefBody {
+    padding: 14px 20px 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.coverBriefStage {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    border-radius: 12px;
+    overflow: hidden;
+    background:
+        radial-gradient(ellipse 70% 80% at 30% 40%, rgba(224, 61, 75, 0.35), transparent 55%),
+        radial-gradient(ellipse 50% 60% at 80% 70%, rgba(80, 120, 200, 0.22), transparent 50%),
+        linear-gradient(160deg, #1c1418 0%, #0e0c0f 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px 20px;
+    text-align: center;
+}
+
+.coverBriefStageGrain {
+    position: absolute;
+    inset: 0;
+    opacity: 0.22;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+    mix-blend-mode: overlay;
+}
+
+.coverBriefStageLabel {
+    position: relative;
+    z-index: 1;
+    margin: 0 0 8px;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.coverBriefStageTitle {
+    position: relative;
+    z-index: 1;
+    margin: 0;
+    font-family: var(--brief-display);
+    font-size: clamp(1rem, 3.6vw, 1.25rem);
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.35;
+    text-shadow: 0 2px 18px rgba(0, 0, 0, 0.45);
+    max-width: 92%;
+}
+
+.coverBriefMetaRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.coverBriefHint {
+    margin: 0;
+    flex: 1;
+    font-size: 0.8rem;
+    line-height: 1.45;
+    color: var(--brief-muted);
+}
+
+.coverBriefCost {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: rgba(224, 61, 75, 0.1);
+    color: var(--brief-coral);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.coverBriefField {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.coverBriefLabelRow {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.coverBriefLabel {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--brief-ink);
+}
+
+.coverBriefOptional {
+    font-size: 0.72rem;
+    color: var(--brief-muted);
+    font-weight: 500;
+}
+
+.coverBriefTextarea {
+    width: 100%;
+    box-sizing: border-box;
+    resize: vertical;
+    min-height: 88px;
+    max-height: 160px;
+    border: 1px solid var(--brief-line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 0.92rem;
+    line-height: 1.55;
+    font-family: inherit;
+    color: var(--brief-ink);
+    background: var(--brief-panel);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.coverBriefTextarea::placeholder {
+    color: #b0a8ab;
+}
+
+.coverBriefTextarea:focus {
+    outline: none;
+    border-color: rgba(224, 61, 75, 0.55);
+    box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.12);
+}
+
+.coverBriefCount {
+    align-self: flex-end;
+    font-size: 0.72rem;
+    color: var(--brief-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.coverBriefActions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 2px;
+}
+
+.coverBriefGhost {
+    flex: 0 0 auto;
+    min-width: 88px;
+    height: 44px;
+    padding: 0 16px;
+    border-radius: 999px;
+    border: 1px solid var(--brief-line);
+    background: transparent;
+    color: var(--brief-ink);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.coverBriefGhost:hover {
+    background: rgba(26, 20, 22, 0.04);
+    border-color: rgba(26, 20, 22, 0.18);
+}
+
+.coverBriefPrimary {
+    flex: 1;
+    height: 44px;
+    border: none;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--brief-coral) 0%, var(--brief-coral-deep) 100%);
+    color: #fff;
+    font-size: 0.92rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(224, 61, 75, 0.28);
+    transition: transform 0.12s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+
+.coverBriefPrimary:hover {
+    filter: brightness(1.04);
+    box-shadow: 0 10px 24px rgba(224, 61, 75, 0.34);
+}
+
+.coverBriefPrimary:active {
+    transform: scale(0.985);
+}
+
+@media (max-width: 480px) {
+    .coverBriefSheet {
+        width: calc(100vw - 28px);
+        border-radius: 14px;
+    }
+
+    .coverBriefTop,
+    .coverBriefBody {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .coverBriefActions {
+        flex-direction: column-reverse;
+    }
+
+    .coverBriefGhost,
+    .coverBriefPrimary {
+        width: 100%;
+    }
 }
 
 .coverUploadArea {
@@ -617,11 +981,94 @@
     justify-content: center;
 }
 
+/* 仅图区可点预览；「更换」绝对定位叠在上层，不在此 button 内 */
+.coverPreviewHit {
+    display: block;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: zoom-in;
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    font: inherit;
+    color: inherit;
+}
+
+.coverPreviewHit:disabled {
+    cursor: wait;
+}
+
+.coverPreviewHit:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
 .coverPreview {
     width: 100%;
     height: 100%;
     object-fit: cover; /* 与列表一致：居中裁切铺满 16:9 预览框 */
     border-radius: 8px;
+    pointer-events: none;
+}
+
+.coverUploadAreaPreview {
+    cursor: default;
+}
+
+.coverPreviewHint {
+    position: absolute;
+    left: 50%;
+    bottom: 10px;
+    transform: translateX(-50%);
+    margin: 0;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.55);
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 0.75rem;
+    font-weight: 500;
+    pointer-events: none;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.coverPreviewHit:hover .coverPreviewHint {
+    opacity: 1;
+}
+
+.coverGeneratingOverlay {
+    position: absolute;
+    inset: 0;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.48);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 500;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.coverGeneratingSpinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid rgba(255, 255, 255, 0.35);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: coverSpin 0.8s linear infinite;
+}
+
+@keyframes coverSpin {
+    to { transform: rotate(360deg); }
 }
 
 .coverActions {
@@ -629,6 +1076,7 @@
     top: 0;
     right: 0;
     padding: 8px;
+    z-index: 12;
 }
 
 .removeCoverBtn {
@@ -641,7 +1089,6 @@
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
-    z-index: 10;
     min-width: 60px;
 }
 

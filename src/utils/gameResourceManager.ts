@@ -3,6 +3,8 @@
  * 使用 createImageBitmap 提前解码图片，纹理缓存常驻内存
  */
 
+import { fallbackCharacterPortraitPng } from './characterPortraitUrl';
+
 export interface ResourceLoadOptions {
   decode?: boolean;
 }
@@ -83,6 +85,25 @@ class GameResourceManager {
       });
 
       if (!response.ok) {
+        // 角色立绘 webp 404/失败 → 自动改拉同名 png
+        const pngUrl = fallbackCharacterPortraitPng(url);
+        if (pngUrl && pngUrl !== url) {
+          console.warn(`[ResourceManager] portrait webp miss, fallback png: ${url}`);
+          const pngRes = await fetch(pngUrl, { mode: 'cors', credentials: 'omit' });
+          if (pngRes.ok) {
+            const blob = await pngRes.blob();
+            const bitmap = shouldDecode
+              ? await createImageBitmap(blob)
+              : await this._createImageBitmapFallback(blob);
+            resourceInfo.bitmap = bitmap;
+            resourceInfo.status = 'loaded';
+            resourceInfo.loadedAt = Date.now();
+            resourceInfo.refCount = (resourceInfo.refCount || 0) + 1;
+            resourceInfo.url = pngUrl;
+            this._cleanupCache();
+            return bitmap;
+          }
+        }
         throw new Error(`Failed to load image: ${response.statusText}`);
       }
 
@@ -100,6 +121,28 @@ class GameResourceManager {
 
       return bitmap;
     } catch (error) {
+      // fetch 抛错时再试一次 png 兜底
+      try {
+        const pngUrl = fallbackCharacterPortraitPng(url);
+        if (pngUrl && pngUrl !== url) {
+          const pngRes = await fetch(pngUrl, { mode: 'cors', credentials: 'omit' });
+          if (pngRes.ok) {
+            const blob = await pngRes.blob();
+            const bitmap = shouldDecode
+              ? await createImageBitmap(blob)
+              : await this._createImageBitmapFallback(blob);
+            resourceInfo.bitmap = bitmap;
+            resourceInfo.status = 'loaded';
+            resourceInfo.loadedAt = Date.now();
+            resourceInfo.refCount = (resourceInfo.refCount || 0) + 1;
+            resourceInfo.url = pngUrl;
+            this._cleanupCache();
+            return bitmap;
+          }
+        }
+      } catch {
+        /* ignore secondary */
+      }
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       resourceInfo.status = 'error';
       resourceInfo.error = errorMessage;

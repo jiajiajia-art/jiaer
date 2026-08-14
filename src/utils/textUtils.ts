@@ -251,6 +251,8 @@ export const sanitizeVisualOptionText = (text: string): string => {
     if (/[\u3400-\u9fff]/.test(value)) {
         value = value.replace(/\s+(?:revive|undefined|null|none)$/i, '').trim();
     }
+    // 禁止 1～3 字短选项（如「等」「立刻」）
+    if (Array.from(value).length < 4) return '';
     return value;
 };
 

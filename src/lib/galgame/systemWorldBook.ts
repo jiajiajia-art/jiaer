@@ -49,7 +49,7 @@ export function morePromptFormsToWorldBookEntries(forms: unknown): GameStartWorl
         title: description || keywordsTitle || `条目 ${index + 1}`,
         content,
         keywords: keysFromTitle(keywordsTitle),
-        constant: form.constant === true,
+        constant: form.constant !== false,
         enabled: form.enabled !== false,
       },
     });

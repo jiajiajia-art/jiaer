@@ -196,6 +196,32 @@ export const sessionPlayerProfileApi = {
       };
     }>;
   },
+  /** AI 生成局内玩家定位字段（立场/秘密）并扣积分 */
+  generatePlayerPositioningField: async (
+    token: string,
+    sessionId: string,
+    body: Record<string, unknown>,
+  ) => {
+    const res = await fetch(
+      `${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/player-positioning-field`,
+      {
+        method: 'POST',
+        headers: authHeaders(token),
+        body: JSON.stringify(body),
+      },
+    );
+    return parseJson(res) as Promise<{
+      success: boolean;
+      message?: string;
+      code?: string;
+      data?: {
+        field: 'traits' | 'secret';
+        text: string;
+        pointsDeducted: number;
+        remainingPoints: number;
+      };
+    }>;
+  },
   putGameStartConfig: async (token: string, sessionId: string, body: Record<string, unknown>) => {
     const res = await fetch(
       `${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/game-start-config`,

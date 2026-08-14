@@ -12,6 +12,8 @@ export type GameStartPersonaBlocks = {
   traits?: string;
   background?: string;
   goal?: string;
+  /** 玩家未公开的秘密动机；NPC 不可全知 */
+  secret?: string;
 };
 
 export type GameStartWorldBookEntry = {
@@ -53,6 +55,8 @@ export type OpeningRouteOption = {
   title: string;
   summary?: string;
   openingMonologue?: string;
+  /** 该路线对应的确定性人设（供档案写入） */
+  persona?: string;
 };
 
 export const GAME_START_LIMITS = Object.freeze({
@@ -86,6 +90,21 @@ function trimStr(value: unknown): string {
   return String(value ?? '').trim();
 }
 
+/** 文档人设若仍是「可三选一」类引导文，不当作局内确定人设。 */
+export function isMultiChoicePersonaText(text: unknown): boolean {
+  const t = trimStr(text);
+  if (!t) return false;
+  return /可在.{0,24}选择|三种职业|三选一|多种身份|可选身份|玩家可/.test(t);
+}
+
+/** 从开局路线取确定性人设文案。 */
+export function resolveRoutePersona(route?: OpeningRouteOption | null): string {
+  if (!route) return '';
+  const persona = trimStr(route.persona) || trimStr(route.summary) || trimStr(route.openingMonologue);
+  if (!persona || isMultiChoicePersonaText(persona)) return '';
+  return persona;
+}
+
 /** 功能注释：把创作台玩家性别归一成开局包三态。 */
 export function normalizeGameStartGender(
   raw: unknown,
@@ -100,6 +119,7 @@ type WorldKeyEventLike = { title?: string; description?: string };
 
 /**
  * 功能注释：从世界 keyEvents 生成开场路线列表；空列表时给一条「开场路线」兜底。
+ * 路线 description 同时作为确定性人设候选（选择性身份应体现在多条路线上）。
  */
 export function buildOpeningRoutesFromWorldKeyEvents(
   keyEvents: WorldKeyEventLike[] | null | undefined,
@@ -114,17 +134,20 @@ export function buildOpeningRoutesFromWorldKeyEvents(
         title: GAME_START_UE_COPY.fallbackRouteTitle,
         summary: '',
         openingMonologue: initialPlot || undefined,
+        persona: initialPlot && !isMultiChoicePersonaText(initialPlot) ? initialPlot : undefined,
       },
     ];
   }
   return list.map((ev, idx) => {
     const title = trimStr(ev?.title) || `故事线 ${idx + 1}`;
     const description = trimStr(ev?.description);
+    const persona = description && !isMultiChoicePersonaText(description) ? description : '';
     return {
       id: `route-${idx}-${title.slice(0, 12)}`,
       title,
       summary: description.slice(0, 120) || undefined,
       openingMonologue: description || initialPlot || undefined,
+      persona: persona || undefined,
     };
   });
 }
@@ -136,6 +159,8 @@ export function buildSilentDefaultGameStartConfig(input: {
   playerName?: string | null;
   gender?: unknown;
   routes: OpeningRouteOption[];
+  /** 文档人设；若是多选引导文则忽略，改用路线人设 */
+  documentPersona?: string | null;
 }): { ok: true; data: GameStartConfig } | { ok: false; message: string } {
   const routes =
     Array.isArray(input.routes) && input.routes.length > 0
@@ -146,12 +171,19 @@ export function buildSilentDefaultGameStartConfig(input: {
   if (!resolved.ok || !resolved.openingRouteId) {
     return { ok: false, message: resolved.message || '请选择故事线' };
   }
+  const selected = routes.find((r) => r.id === resolved.openingRouteId) || routes[0];
+  const routePersona = resolveRoutePersona(selected);
+  const docPersona = trimStr(input.documentPersona);
+  const persona =
+    routePersona
+    || (!isMultiChoicePersonaText(docPersona) ? docPersona : '');
   const validated = validateGameStartConfig({
     player: {
       name:
         resolvePlayerDisplayName([input.playerName])
         || GAME_START_UE_COPY.fallbackPlayerName,
       gender: normalizeGameStartGender(input.gender),
+      ...(persona ? { personaBlocks: { identity: persona } } : {}),
     },
     openingRouteId: resolved.openingRouteId,
     openingMonologue: resolved.openingMonologue,
@@ -215,6 +247,7 @@ export function validateGameStartConfig(input: Partial<GameStartConfig> | null |
         traits: trimStr(input.player.personaBlocks.traits) || undefined,
         background: trimStr(input.player.personaBlocks.background) || undefined,
         goal: trimStr(input.player.personaBlocks.goal) || undefined,
+        secret: trimStr(input.player.personaBlocks.secret) || undefined,
       }
     : undefined;
 

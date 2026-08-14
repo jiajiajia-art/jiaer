@@ -7,14 +7,20 @@ import CharacterProfileForm from './CharacterProfileForm';
 import PrivateChatPanel from './PrivateChatPanel';
 import {
   buildCharacterPanelItems,
+  pickNpcAvatarPath,
   type CharacterPanelItem,
   type NpcProfileLike,
   type PlayerProfileLike,
 } from '../../../lib/galgame/encounteredCharacters';
 import {
+  composeNpcPersonaSummary,
   createPlayerNpcProfile,
+  isBlankPersonaText,
   mergeCharacterProfilePatch,
   npcLikeToEditableProfile,
+  resolveEditableNpcGender,
+  resolveNpcFavorabilityForDisplay,
+  resolveDistinctDetailedBio,
   sortEditableNpcProfiles,
   type PlayerEditableNpc,
 } from '../../../lib/galgame/characterProfile';
@@ -25,8 +31,8 @@ import {
 } from '../../../lib/galgame/playerCharacterCard';
 import { getImageUrl, getPlayerImageUrl } from '../../../utils/constants';
 import {
+  pickAvatarListDisplayUrl,
   pickDisplayAvatarFullUrl,
-  pickDisplayAvatarThumbUrl,
 } from '../../../lib/galgame/avatarThumbUrl';
 import { useGameStore } from '../../../store/gameStore';
 import { useAuthStore } from '../../../store/useAuthStore';
@@ -45,6 +51,8 @@ interface CharactersPanelProps {
   sessionPlayerProfile?: SessionPlayerProfile | null;
   onSessionPlayerProfileChange?: (profile: SessionPlayerProfile) => void;
   narrativeBusy?: boolean;
+  /** A/B：未手改性别时展示/合并跟创作台预设（默认全开；仅显式 false 走旧覆盖） */
+  preferPresetGenderAb?: boolean;
 }
 
 /**
@@ -89,6 +97,46 @@ const ChatSealIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
+/** 功能注释：150 ensure 中墨室余烬 loading；有 URL 出图，结束仍无则空槽 */
+function AvatarThumbSlot({
+  src,
+  alt,
+  pending,
+  variant = 'list',
+}: {
+  src: string;
+  alt: string;
+  pending: boolean;
+  variant?: 'list' | 'detail';
+}) {
+  if (src) {
+    return (
+      <img
+        className={variant === 'detail' ? shell.detailPortrait : shell.avatar}
+        src={src}
+        alt={alt}
+      />
+    );
+  }
+  if (pending) {
+    return (
+      <div
+        className={variant === 'detail' ? shell.detailPortraitLoading : shell.avatarLoading}
+        role="status"
+        aria-label="头像加载中"
+      >
+        <span className={shell.avatarLoadingPulse} aria-hidden />
+      </div>
+    );
+  }
+  return (
+    <div
+      className={variant === 'detail' ? shell.detailPortraitEmpty : shell.avatar}
+      aria-hidden
+    />
+  );
+}
+
 const CharactersPanel: React.FC<CharactersPanelProps> = ({
   isOpen,
   onClose,
@@ -100,6 +148,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
   sessionPlayerProfile = null,
   onSessionPlayerProfileChange,
   narrativeBusy = false,
+  preferPresetGenderAb = true,
 }) => {
   const { t } = useTranslation();
   const { sessionId } = useGameStore();
@@ -115,6 +164,8 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
   const [importLoading, setImportLoading] = useState(false);
   const [previewProfile, setPreviewProfile] = useState<PlayerEditableNpc | null>(null);
   const [npcAvatarThumbs, setNpcAvatarThumbs] = useState<Record<string, string>>({});
+  /** 功能注释：150 ensure 未完成前列表不回落原图，避免先大图后小图闪烁 */
+  const [avatarThumbsPending, setAvatarThumbsPending] = useState(false);
 
   React.useEffect(() => {
     if (editableProfiles == null) return;
@@ -125,6 +176,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
   React.useEffect(() => {
     if (!isOpen || !sessionId) return;
     let cancelled = false;
+    setAvatarThumbsPending(true);
     void (async () => {
       try {
         const data = await fetchCharacterAvatarThumbs(sessionId);
@@ -140,7 +192,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
               if (!old) {
                 // 服务端新条目：仅当有实质介绍/关系时才纳入，避免空 stub 冲列表
                 const hasSubstance = Boolean(
-                  String(s.summary || '').trim()
+                  (!isBlankPersonaText(s.summary))
                   || String(s.relationship || '').trim()
                   || String(s.detailedBio || '').trim()
                   || s.source === 'player_created',
@@ -166,6 +218,8 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
         }
       } catch {
         /* 小图失败不挡列表 */
+      } finally {
+        if (!cancelled) setAvatarThumbsPending(false);
       }
     })();
     return () => {
@@ -174,14 +228,17 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
   }, [isOpen, sessionId, onSessionPlayerProfileChange]);
 
   const resolveListAvatarUrl = (profile: PlayerEditableNpc, preset?: CharacterPanelItem | null) => {
-    // 功能注释：角色档案只加载 *_150.webp，禁止 PNG 原图进 img.src
-    const thumbPath = pickDisplayAvatarThumbUrl([
-      npcAvatarThumbs[profile.id],
-      profile.avatarThumbUrl,
-      profile.avatarUrl,
-      preset?.avatarUrl,
-    ]);
-    return thumbPath ? getImageUrl(thumbPath) : '';
+    // 功能注释：有确认 150 立刻显示；pending 时不回落原图（防大图闪一下）
+    const path = pickAvatarListDisplayUrl(
+      [
+        npcAvatarThumbs[profile.id],
+        profile.avatarThumbUrl,
+        profile.avatarUrl,
+        preset?.avatarUrl,
+      ],
+      { pendingThumbs: avatarThumbsPending },
+    );
+    return path ? getImageUrl(path) : '';
   };
 
   const presetItems = useMemo(
@@ -199,17 +256,38 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
     }
     for (const p of localProfiles) {
       const base = byId.get(p.id);
-      // 功能注释：空 summary/relationship 不得覆盖文档简介（防头像 stub 冲掉介绍）
+      const presetNpc = (npcs || []).find((n) => String(n?.id) === String(p.id));
+      const composed = composeNpcPersonaSummary(presetNpc || {
+        description: base?.summary,
+        job: base?.relationship,
+        personality: base?.attitudeToPlayer,
+      });
+      // 功能注释：空/占位 summary 不得覆盖文档拼出的人设（防 stub「暂无简介」冲掉介绍）
+      const summary =
+        (!isBlankPersonaText(p.summary) ? String(p.summary).trim() : '')
+        || (!isBlankPersonaText(base?.summary) ? String(base?.summary || '').trim() : '')
+        || composed
+        || '';
+      const relationship =
+        (!isBlankPersonaText(p.relationship) ? String(p.relationship).trim() : '')
+        || (!isBlankPersonaText(base?.relationship) ? String(base?.relationship || '').trim() : '')
+        || '';
+      const attitudeToPlayer =
+        (!isBlankPersonaText(p.attitudeToPlayer) ? String(p.attitudeToPlayer).trim() : '')
+        || (!isBlankPersonaText(base?.attitudeToPlayer) ? String(base?.attitudeToPlayer || '').trim() : '')
+        || '';
       byId.set(p.id, {
         ...base,
         ...p,
-        summary: String(p.summary || '').trim() || base?.summary || p.summary || '',
-        relationship: String(p.relationship || '').trim() || base?.relationship || p.relationship || '',
-        attitudeToPlayer:
-          String(p.attitudeToPlayer || '').trim()
-          || base?.attitudeToPlayer
-          || p.attitudeToPlayer
-          || '',
+        gender: resolveEditableNpcGender({
+          preferPresetGender: preferPresetGenderAb,
+          presetGender: presetNpc?.gender ?? base?.gender,
+          localGender: p.gender,
+          genderManuallySet: p.genderManuallySet === true,
+        }),
+        summary,
+        relationship,
+        attitudeToPlayer,
         detailedBio: String(p.detailedBio || '').trim() || base?.detailedBio || p.detailedBio || '',
         avatarUrl: p.avatarUrl || base?.avatarUrl,
         avatarThumbUrl: p.avatarThumbUrl || base?.avatarThumbUrl,
@@ -217,11 +295,34 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
       });
     }
     return sortEditableNpcProfiles([...byId.values()]);
-  }, [npcs, localProfiles, encounteredIds]);
+  }, [npcs, localProfiles, encounteredIds, preferPresetGenderAb]);
 
-  const favorabilityOf = (id: string) =>
-    localProfiles.find((p) => p.id === id)?.favorability
-    ?? mergedProfiles.find((p) => p.id === id)?.favorability;
+  // 功能注释：详情/私聊态下局内档案改名后，立刻同步 detail.name，避免标题仍显示文档原名
+  React.useEffect(() => {
+    if (!detail?.id) return;
+    const live = mergedProfiles.find((p) => p.id === detail.id);
+    if (!live?.name) return;
+    const nextName = String(live.name).trim();
+    if (!nextName || nextName === detail.name) return;
+    setDetail((prev) => (prev && prev.id === live.id
+      ? {
+        ...prev,
+        name: nextName,
+        identity: String(live.relationship || '').trim() || prev.identity,
+        description: String(live.summary || '').trim() || prev.description,
+        personality: String(live.attitudeToPlayer || '').trim() || prev.personality,
+      }
+      : prev));
+  }, [mergedProfiles, detail?.id, detail?.name]);
+
+  const favorabilityOf = (profileOrId: PlayerEditableNpc | string) => {
+    if (typeof profileOrId === 'string') {
+      const profile = localProfiles.find((p) => p.id === profileOrId)
+        || mergedProfiles.find((p) => p.id === profileOrId);
+      return resolveNpcFavorabilityForDisplay(profile, profileOrId);
+    }
+    return resolveNpcFavorabilityForDisplay(profileOrId, profileOrId.id);
+  };
 
   const filteredImportCards = useMemo(
     () => filterPlayerCharacterCards(importCards, importQuery),
@@ -263,20 +364,39 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
   const toDetailItem = (profile: PlayerEditableNpc): CharacterPanelItem => {
     const preset = presetItems.find((i) => i.id === profile.id);
     const avatarUrl = resolveListAvatarUrl(profile, preset);
-    if (preset) return { ...preset, avatarUrl: avatarUrl || preset.avatarUrl };
+    // 功能注释：局内改名后必须用 profile.name；不可整表铺开 preset（文档原名会盖掉新名）
     return {
       id: profile.id,
-      name: profile.name,
-      identity: profile.relationship,
-      description: profile.summary,
-      personality: profile.attitudeToPlayer,
-      memories: [],
-      avatarUrl,
+      name: String(profile.name || '').trim() || preset?.name || profile.id,
+      identity: String(profile.relationship || '').trim() || preset?.identity || '',
+      description: String(profile.summary || '').trim() || preset?.description || '',
+      personality: String(profile.attitudeToPlayer || '').trim() || preset?.personality || '',
+      memories: preset?.memories || [],
+      avatarUrl: avatarUrl || preset?.avatarUrl || '',
     };
   };
 
   const openEdit = (profile: PlayerEditableNpc) => {
-    setEditing(profile);
+    // 再跟 merged 对齐一次性别，避免打开时仍是旧覆盖层的默认女
+    const live = mergedProfiles.find((p) => p.id === profile.id) || profile;
+    const presetNpc = (npcs || []).find((n) => String(n?.id) === String(live.id));
+    const thumb = npcAvatarThumbs[live.id] || live.avatarThumbUrl || '';
+    const fullAvatar =
+      String(live.avatarUrl || '').trim()
+      || pickNpcAvatarPath(presetNpc?.images)
+      || '';
+    setEditing({
+      ...live,
+      gender: resolveEditableNpcGender({
+        preferPresetGender: preferPresetGenderAb,
+        presetGender: presetNpc?.gender ?? live.gender,
+        localGender: live.gender,
+        genderManuallySet: live.genderManuallySet === true,
+      }),
+      // 编辑人设头像坞走 150；保留 avatarUrl 给放大预览/原图
+      ...(thumb ? { avatarThumbUrl: thumb } : {}),
+      ...(fullAvatar ? { avatarUrl: fullAvatar } : {}),
+    });
     setMode('form');
   };
 
@@ -312,7 +432,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
     setImportLoading(true);
     setMode('import');
     try {
-      const res = await playerCharacterCardsApi.list(token);
+      const res = await playerCharacterCardsApi.list(token, { kind: 'npc' });
       if (!res?.success) {
         toast.error(res?.message || '加载卡库失败');
         setMode('list');
@@ -328,6 +448,10 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
   };
 
   const importCardAsNpc = (card: PlayerCharacterCard) => {
+    if (card.cardKind === 'player') {
+      toast.error('请选择角色卡；人设卡请在玩家档案中导入');
+      return;
+    }
     const gender = (['male', 'female', 'other', 'unknown'].includes(String(card.gender))
       ? card.gender
       : 'unknown') as PlayerEditableNpc['gender'];
@@ -338,10 +462,13 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
       relationship: '导入角色',
       summary: String(card.persona || '').slice(0, 200) || '从角色卡导入',
       attitudeToPlayer: '待设定',
-      detailedBio: String(card.persona || '').slice(0, 500),
+      // 简介与详细简介必须分离：卡库 persona 只进简介，禁止原样复制进详细简介
+      detailedBio: '',
+      // 卡库立绘一并带入；无图也可直接保存
+      ...(card.avatarUrl ? { avatarUrl: String(card.avatarUrl) } : { avatarUrl: '' }),
     } as PlayerEditableNpc);
     setMode('form');
-    toast.success('已填入卡库资料，请生成头像后保存');
+    toast.success(card.avatarUrl ? '已填入卡库资料（含立绘），可直接保存' : '已填入卡库资料，可直接保存；头像可稍后生成');
   };
 
   const listHeaderRight = (
@@ -370,7 +497,11 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
   return (
     <PlayPanelShell
       isOpen={isOpen}
-      title={mode === 'detail' && detail ? detail.name : shellTitle}
+      title={
+        mode === 'detail' && detail
+          ? (mergedProfiles.find((p) => p.id === detail.id)?.name || detail.name)
+          : shellTitle
+      }
       subtitle={
         mode === 'detail' && detail
           ? undefined
@@ -441,6 +572,10 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
       ) : mode === 'form' ? (
         <CharacterProfileForm
           initial={editing}
+          sessionAvatarThumbUrl={
+            editing?.id ? (npcAvatarThumbs[editing.id] || editing.avatarThumbUrl || null) : null
+          }
+          avatarThumbsPending={avatarThumbsPending}
           submitLabel="保存"
           formTitle={
             editing?.id && mergedProfiles.some((p) => p.id === editing.id)
@@ -522,8 +657,9 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
               personality: detail.personality,
               job: detail.identity,
             });
-          const favRaw = favorabilityOf(detail.id);
-          const favNum = Math.min(100, Math.max(0, favRaw != null ? Number(favRaw) || 0 : 0));
+          // 功能注释：标题/名片以局内档案名为准（改名后不回落到文档原名）
+          const displayName = String(profile?.name || detail.name || '').trim() || detail.id;
+          const favNum = favorabilityOf(profile || detail.id);
           const genderText = profile?.gender === 'male'
             ? '男'
             : profile?.gender === 'female'
@@ -535,8 +671,16 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
           const roleTag = detail.identity && detail.identity !== relationship
             ? detail.identity
             : '';
-          const summary = profile?.summary || detail.description || '';
-          const attitude = profile?.attitudeToPlayer || detail.personality || '';
+          const summaryRaw = profile?.summary || detail.description || '';
+          const summary = isBlankPersonaText(summaryRaw)
+            ? composeNpcPersonaSummary({
+              description: detail.description,
+              personality: detail.personality,
+              job: detail.identity || profile?.relationship,
+            })
+            : summaryRaw;
+          const attitudeRaw = profile?.attitudeToPlayer || detail.personality || '';
+          const attitude = isBlankPersonaText(attitudeRaw) ? '' : attitudeRaw;
           const tags = [
             ...(profile?.personalityTags || []),
             profile?.importance === 'major' ? '重要' : profile?.importance === 'minor' ? '次要' : profile?.importance === 'extra' ? '路人' : '',
@@ -545,10 +689,13 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
           const avatarUrl = profile
             ? resolveListAvatarUrl(profile, detail)
             : getImageUrl(
-              pickDisplayAvatarThumbUrl([
-                detail.id ? npcAvatarThumbs[detail.id] : '',
-                detail.avatarUrl,
-              ]),
+              pickAvatarListDisplayUrl(
+                [
+                  detail.id ? npcAvatarThumbs[detail.id] : '',
+                  detail.avatarUrl,
+                ],
+                { pendingThumbs: avatarThumbsPending },
+              ),
             );
 
           return (
@@ -558,18 +705,19 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                   type="button"
                   className={shell.detailPortraitBtn}
                   onClick={() => profile && openAvatarPreview(profile)}
-                  aria-label={`预览 ${detail.name}`}
+                  aria-label={`预览 ${displayName}`}
                 >
-                  {avatarUrl ? (
-                    <img className={shell.detailPortrait} src={avatarUrl} alt={detail.name} />
-                  ) : (
-                    <div className={shell.detailPortraitEmpty} aria-hidden />
-                  )}
+                  <AvatarThumbSlot
+                    src={avatarUrl || ''}
+                    alt={displayName}
+                    pending={avatarThumbsPending}
+                    variant="detail"
+                  />
                   <span className={shell.detailChatHint}>点击头像预览</span>
                 </button>
                 <div className={shell.detailHeroInfo}>
                   <h3 className={shell.detailName}>
-                    <span>{detail.name}</span>
+                    <span>{displayName}</span>
                     {profile?.source === 'player_created' ? (
                       <span className={shell.customBadge}>自建</span>
                     ) : null}
@@ -612,11 +760,16 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                     ))}
                   </div>
                 ) : null}
-                {profile?.detailedBio ? (
-                  <p className={shell.detailSectionBody}>{profile.detailedBio}</p>
-                ) : !tags.length ? (
-                  <p className={shell.detailSectionMuted}>暂无人设补充，可点击编辑完善</p>
-                ) : null}
+                {(() => {
+                  const distinctBio = resolveDistinctDetailedBio(profile?.summary, profile?.detailedBio);
+                  if (distinctBio) {
+                    return <p className={shell.detailSectionBody}>{distinctBio}</p>;
+                  }
+                  if (!tags.length) {
+                    return <p className={shell.detailSectionMuted}>暂无人设补充，可点击编辑完善</p>;
+                  }
+                  return null;
+                })()}
               </section>
 
               <section className={shell.detailSection}>
@@ -655,7 +808,9 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
         mergedProfiles.map((profile) => {
           const preset = presetItems.find((i) => i.id === profile.id);
           const avatarUrl = resolveListAvatarUrl(profile, preset);
-          const fullSummary = String(profile.summary || '').trim();
+          const fullSummary = isBlankPersonaText(profile.summary)
+            ? ''
+            : String(profile.summary || '').trim();
           const listSummary = truncateIntroText(fullSummary);
           return (
             <div key={profile.id} className={`${shell.card} ${shell.charRow}`}>
@@ -666,11 +821,12 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                   onClick={() => openAvatarPreview(profile)}
                   aria-label={`查看 ${profile.name} 头像与介绍`}
                 >
-                  {avatarUrl ? (
-                    <img className={shell.avatar} src={avatarUrl} alt={profile.name} />
-                  ) : (
-                    <div className={shell.avatar} aria-hidden />
-                  )}
+                  <AvatarThumbSlot
+                    src={avatarUrl || ''}
+                    alt={profile.name}
+                    pending={avatarThumbsPending}
+                    variant="list"
+                  />
                 </button>
                 <button
                   type="button"
@@ -724,11 +880,27 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
         const avatarUrl = avatarFullPath
           ? getImageUrl(avatarFullPath)
           : resolveListAvatarUrl(p, preset);
-        const introSummary = String(p.summary || '').trim();
-        const introAttitude = String(p.attitudeToPlayer || '').trim();
-        const introRelation = String(p.relationship || '').trim();
-        const introBio = String(p.detailedBio || '').trim();
-        const hasIntro = Boolean(introSummary || introAttitude || introRelation || introBio);
+        const introSummary = isBlankPersonaText(p.summary) ? '' : String(p.summary || '').trim();
+        const introAttitude = isBlankPersonaText(p.attitudeToPlayer)
+          ? ''
+          : String(p.attitudeToPlayer || '').trim();
+        const introRelation = isBlankPersonaText(p.relationship)
+          ? ''
+          : String(p.relationship || '').trim();
+        const introBio = resolveDistinctDetailedBio(introSummary, p.detailedBio);
+        const presetNpc = (npcs || []).find((n) => String(n?.id) === String(p.id));
+        const composedFallback = !introSummary && !introBio
+          ? composeNpcPersonaSummary(
+            presetNpc || {
+              description: introSummary,
+              job: introRelation,
+              personality: introAttitude,
+              appearance: '',
+            },
+          )
+          : '';
+        const displaySummary = introSummary || composedFallback;
+        const hasIntro = Boolean(displaySummary || introAttitude || introRelation || introBio);
         return (
           <div
             className={shell.avatarPreviewOverlay}
@@ -767,8 +939,8 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                   <h4 className={shell.avatarPreviewIntroTitle}>人物介绍</h4>
                   {hasIntro ? (
                     <>
-                      {introSummary ? (
-                        <p className={shell.avatarPreviewIntroBody}>{introSummary}</p>
+                      {displaySummary ? (
+                        <p className={shell.avatarPreviewIntroBody}>{displaySummary}</p>
                       ) : null}
                       {introAttitude ? (
                         <p className={shell.avatarPreviewIntroBody}>

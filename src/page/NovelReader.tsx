@@ -12,6 +12,7 @@ import getGalgamePresetApi from '../api/galgame/getGalgamePreset';
 import { convertStepsToTextModalFormat } from '../hooks/mapGalgame/common/interactionUtils';
 import { useNovelNormalPlayback, type NovelPlaybackPreset } from '../hooks/galgame/useNovelNormalPlayback';
 import { getImageUrl } from '../utils/constants';
+import { toDisplayCoverUrl } from '../utils/displayCoverUrl';
 import { countVisibleNovelTextSteps } from '../utils/novelGame';
 import { getGameTypeLabelFromMeta } from '../utils/gameTypeLabel';
 import {
@@ -166,8 +167,10 @@ const NovelReader: React.FC = () => {
     const heroStyle = useMemo(() => {
         const coverUrl = meta?.coverUrl;
         if (!coverUrl) return {};
+        // 功能注释：小说阅读器 hero 背景走 display-cover/cover.webp，避免直接加载 cover.png 原图
+        const displayCoverPath = toDisplayCoverUrl(coverUrl);
         return {
-            backgroundImage: `url(${getImageUrl(coverUrl)})`,
+            backgroundImage: `url(${getImageUrl(displayCoverPath)})`,
         };
     }, [meta?.coverUrl]);
 

@@ -523,15 +523,11 @@
     max-height: min(78vh, 860px);
     border-radius: 16px;
     overflow: hidden;
-    background-color: #f3f3f3;
-    background-image:
-        linear-gradient(45deg, #e8e8e8 25%, transparent 25%),
-        linear-gradient(-45deg, #e8e8e8 25%, transparent 25%),
-        linear-gradient(45deg, transparent 75%, #e8e8e8 75%),
-        linear-gradient(-45deg, transparent 75%, #e8e8e8 75%);
-    background-size: 16px 16px;
-    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+    background: #0a0a0a;
     box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .portraitLightboxImg {
@@ -541,6 +537,7 @@
     width: auto;
     height: auto;
     object-fit: contain;
+    background: #0a0a0a;
 }
 
 .portraitLightboxTitle {
@@ -554,6 +551,81 @@
     margin: 0;
     color: rgba(255, 255, 255, 0.7);
     font-size: 0.8rem;
+}
+
+/* 游戏封面海报风预览：血边 + 暗角 + 期刊式标题 */
+.coverPosterLightboxFrame {
+    width: 100%;
+    max-width: min(960px, 92vw);
+    max-height: min(84vh, 960px);
+    aspect-ratio: 16 / 9;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    background: #000;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+}
+
+.coverPosterLightboxFrame::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 12px;
+    pointer-events: none;
+    z-index: 3;
+}
+
+.coverPosterLightboxFrame::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 40%, transparent 45%, rgba(0, 0, 0, 0.55) 100%);
+    pointer-events: none;
+    z-index: 2;
+}
+
+.coverPosterLightboxImg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.coverPosterLightboxTitleBlock {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 64px 36px 36px;
+    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.74) 72%, rgba(0, 0, 0, 0.86) 100%);
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.coverPosterLightboxTitle {
+    margin: 0;
+    color: #fff;
+    font-size: clamp(1.4rem, 3.2vw, 2.6rem);
+    font-weight: 800;
+    line-height: 1.18;
+    letter-spacing: 0.04em;
+    text-shadow: 0 2px 18px rgba(0, 0, 0, 0.6);
+}
+
+.coverPosterLightboxSubtitle {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: clamp(0.75rem, 1.6vw, 1rem);
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
 }
 
 /* 差分缩略图上的小图标按钮（下载 / 删除） */

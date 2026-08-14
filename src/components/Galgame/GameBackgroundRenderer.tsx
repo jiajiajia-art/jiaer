@@ -24,7 +24,6 @@ export const GameBackgroundRenderer: React.FC<GameBackgroundRendererProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [currentSrc, setCurrentSrc] = useState<string | null>(null);
-  const [isTransitioning, setIsTransitioning] = useState(false);
   /** Canvas 已解码成功；失败时才走 CSS url 兜底，避免加载中双下 */
   const [cssFallbackSrc, setCssFallbackSrc] = useState<string | null>(null);
   const previousBitmapRef = useRef<ImageBitmap | null>(null);
@@ -50,8 +49,7 @@ export const GameBackgroundRenderer: React.FC<GameBackgroundRendererProps> = ({
     let cancelled = false;
 
     const loadAndRender = async () => {
-      setIsTransitioning(true);
-      // 加载中绝不挂 CSS url，否则会与 fetch 双请求
+      // 加载中保留上一帧，禁止整层 opacity:0（否则首屏/慢网会长时间黑屏）
       setCssFallbackSrc(null);
 
       try {
@@ -83,30 +81,9 @@ export const GameBackgroundRenderer: React.FC<GameBackgroundRendererProps> = ({
                 const testHeight = bitmap.height;
                 if (testWidth > 0 && testHeight > 0) {
                   renderBackground(bitmap);
-                  
-                  if (transitionDuration > 0 && containerRef.current) {
-                    containerRef.current.style.opacity = '0';
-                    requestAnimationFrame(() => {
-                      if (containerRef.current && !cancelled) {
-                        containerRef.current.style.transition = `opacity ${transitionDuration}ms ease-in-out`;
-                        containerRef.current.style.opacity = '1';
-                      }
-                    });
-
-                    setTimeout(() => {
-                      if (!cancelled) {
-                        setIsTransitioning(false);
-                      }
-                    }, transitionDuration);
-                  } else {
-                    setIsTransitioning(false);
-                  }
-                } else {
-                  setIsTransitioning(false);
                 }
               } catch (error) {
                 console.error('[GameBackgroundRenderer] Bitmap check failed:', error);
-                setIsTransitioning(false);
               }
             }
           });
@@ -114,13 +91,11 @@ export const GameBackgroundRenderer: React.FC<GameBackgroundRendererProps> = ({
           // bitmap 为 null：仅此时 CSS url 兜底（单通道，不再与 canvas fetch 并行）
           setCurrentSrc(src);
           setCssFallbackSrc(src);
-          setIsTransitioning(false);
         }
       } catch (error) {
         console.error('[GameBackgroundRenderer] Failed to load background:', error);
         setCurrentSrc(src);
         setCssFallbackSrc(src);
-        setIsTransitioning(false);
       }
     };
 
@@ -295,7 +270,8 @@ export const GameBackgroundRenderer: React.FC<GameBackgroundRendererProps> = ({
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
         ...style,
-        opacity: isTransitioning ? 0 : 1,
+        // 始终可见：加载中保留上一帧，禁止黑屏占位
+        opacity: 1,
       }}
     >
       <canvas

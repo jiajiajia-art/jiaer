@@ -127,6 +127,8 @@ export function applyPlayerCardImport(
   if (!checked.ok) {
     return { ok: false, message: checked.message || '角色卡无效', code: 'invalid_card' };
   }
+  const avatarUrl = trimStr(card.avatarUrl);
+  const avatarThumbUrl = trimStr((card as { avatarThumbUrl?: string }).avatarThumbUrl);
   return {
     ok: true,
     profile: {
@@ -135,6 +137,8 @@ export function applyPlayerCardImport(
       persona: checked.data.persona,
       customAttributes: { ...checked.data.attributes },
       importedCardId: card.id ? String(card.id) : null,
+      ...(avatarUrl ? { avatarUrl, avatarNeedsRegen: false } : {}),
+      ...(avatarThumbUrl ? { avatarThumbUrl } : {}),
     },
   };
 }
@@ -179,3 +183,31 @@ export function previewPlayerCardImportDiff(
   }
   return { ok: true, changedKeys, next };
 }
+
+/**
+ * 主线立绘：局内档案生成的头像优先，否则文档主角立绘。
+ */
+export function resolveSessionPlayerPortraitPath(
+  sessionProfile: { avatarUrl?: string | null } | null | undefined,
+  documentPlayer?: unknown,
+): string {
+  const session = String(sessionProfile?.avatarUrl ?? '').trim();
+  if (session) return session;
+  // 延迟引用 getPlayerImageUrl 会循环依赖时，调用方自行回落文档图
+  if (documentPlayer && typeof documentPlayer === 'object') {
+    const p = documentPlayer as {
+      images?: string | { base?: string; default?: string } | null;
+      imagePath?: string;
+      image?: string;
+    };
+    if (typeof p.images === 'string' && p.images.trim()) return p.images.trim();
+    if (p.images && typeof p.images === 'object') {
+      const base = String(p.images.base || p.images.default || '').trim();
+      if (base) return base;
+    }
+    const path = String(p.imagePath || p.image || '').trim();
+    if (path) return path;
+  }
+  return '';
+}
+

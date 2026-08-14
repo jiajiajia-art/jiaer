@@ -20,9 +20,14 @@ export interface SceneLike {
 export interface NpcProfileLike {
   id?: string;
   name?: string;
+  gender?: string;
   job?: string;
   description?: string;
+  background?: string;
+  appearance?: string;
   personality?: string;
+  tone?: string;
+  relationship?: string;
   dialogue?: string[] | string;
   images?: { base?: string; [key: string]: string | undefined };
 }

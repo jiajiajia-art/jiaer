@@ -29,6 +29,11 @@ import {
   WRITING_STYLE_GROUP_LABELS,
   type WritingStylePresetGroupId,
 } from '../../../lib/galgame/writingStylePresets';
+import { NPC_PROFILE_FIELD_GENERATION_COST } from '../../../utils/constants';
+import { refreshAuthUserPoints } from '../../../lib/auth/refreshUserPoints';
+import { useAuthStore } from '../../../store/useAuthStore';
+import { useGameStore } from '../../../store/gameStore';
+import { sessionPlayerProfileApi } from '../../../api/galgame/playerCharacterCards';
 
 type SystemsView =
   | 'overview'
@@ -109,11 +114,16 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
   const [importFileName, setImportFileName] = useState('');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [avoidDraft, setAvoidDraft] = useState('');
-  const [positionDraft, setPositionDraft] = useState({ identity: '', stance: '' });
+  const [positionDraft, setPositionDraft] = useState({ identity: '', stance: '', secret: '' });
   const [routeDraftId, setRouteDraftId] = useState(currentOpeningRouteId);
   const [routeMemo, setRouteMemo] = useState('');
   const [pendingRouteId, setPendingRouteId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [positionAiBusy, setPositionAiBusy] = useState<'traits' | 'secret' | null>(null);
+  const [positionAiConfirm, setPositionAiConfirm] = useState<'traits' | 'secret' | null>(null);
+  const authUser = useAuthStore((s) => s.user);
+  const updateUser = useAuthStore((s) => s.updateUser);
+  const { sessionId } = useGameStore();
 
   useEffect(() => {
     if (!isOpen) {
@@ -322,12 +332,72 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
       ...personaBlocks,
       identity: positionDraft.identity.trim() || undefined,
       traits: positionDraft.stance.trim() || undefined,
+      secret: positionDraft.secret.trim() || undefined,
     };
     setPersonaBlocks(next);
     const ok = await persist({ personaBlocks: next });
     if (ok) {
       toast.success('定位已保存');
       setView('position');
+    }
+  };
+
+  const POSITION_AI_LABEL = { traits: '当前立场', secret: '秘密' } as const;
+
+  const requestPositionAi = async (field: 'traits' | 'secret') => {
+    if (!authUser?.token || !sessionId) {
+      toast.error('请先登录并进入对局');
+      return;
+    }
+    if (positionAiBusy || saving) return;
+    const latestPoints = await refreshAuthUserPoints();
+    if (
+      typeof latestPoints === 'number'
+      && latestPoints < NPC_PROFILE_FIELD_GENERATION_COST
+    ) {
+      toast.error(
+        `积分不足（需要 ${NPC_PROFILE_FIELD_GENERATION_COST}，当前 ${latestPoints}）`,
+      );
+      return;
+    }
+    setPositionAiConfirm(field);
+  };
+
+  const runPositionAi = async () => {
+    const field = positionAiConfirm;
+    setPositionAiConfirm(null);
+    const token = authUser?.token;
+    if (!field || !token || !sessionId || positionAiBusy) return;
+    setPositionAiBusy(field);
+    try {
+      const res = await sessionPlayerProfileApi.generatePlayerPositioningField(token, sessionId, {
+        field,
+        draft: {
+          identity: positionDraft.identity,
+          traits: positionDraft.stance,
+          secret: positionDraft.secret,
+        },
+      });
+      if (!res?.success || !res.data?.text) {
+        toast.error(res?.message || '生成失败');
+        return;
+      }
+      const text = String(res.data.text);
+      if (field === 'traits') {
+        setPositionDraft((d) => ({ ...d, stance: text.slice(0, 200) }));
+      } else {
+        setPositionDraft((d) => ({ ...d, secret: text.slice(0, 400) }));
+      }
+      if (typeof res.data.remainingPoints === 'number') {
+        updateUser({ points: res.data.remainingPoints });
+      }
+      toast.success(
+        `${POSITION_AI_LABEL[field]}已生成（-${res.data.pointsDeducted ?? NPC_PROFILE_FIELD_GENERATION_COST} 积分）`,
+      );
+    } catch (e) {
+      toast.error((e as Error)?.message || '生成失败');
+    } finally {
+      setPositionAiBusy(null);
     }
   };
 
@@ -380,7 +450,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
     if (view === 'worldBookImport') return '支持粘贴、上传文件或模板';
     if (view === 'writingStyle') return '文风 / 节奏 / 视角 / 描写 / 剧情';
     if (view === 'avoidEdit') return '长按拖拽排序二期；可增删';
-    if (view === 'position') return '当前身份与立场';
+    if (view === 'position') return '当前身份、立场与秘密';
     if (view === 'route') return GAME_START_UE_COPY.currentRouteHint;
     return undefined;
   })();
@@ -430,7 +500,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
             {[
               { id: 'worldBook' as const, icon: '书', title: '世界书', desc: '已装载条目与规则' },
               { id: 'writingStyle' as const, icon: '风', title: '文风设定', desc: '文风偏好与避雷词' },
-              { id: 'position' as const, icon: '位', title: '玩家目前定位', desc: '当前身份与立场' },
+              { id: 'position' as const, icon: '位', title: '玩家目前定位', desc: '当前身份、立场与秘密' },
               { id: 'route' as const, icon: '线', title: GAME_START_UE_COPY.currentRouteSection, desc: '剧情路线与进度' },
             ].map((item) => (
               <button
@@ -773,7 +843,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
                 </div>
               )}
               <p className={styles.infoHint}>
-                出现避雷词时会改用符合身份与语境的自然说法，不会用 ×× / 空格占位。
+                出现避雷词时会改用符合身份与语境的自然说法，不会用 ×× / 空格占位。角色改名后的旧名会自动按现用名称呼，不必再手动加入避雷词库。
               </p>
             </section>
           </div>
@@ -836,7 +906,14 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
                 <span className={styles.positionKey}>当前立场</span>
                 <div className={styles.positionVal}>{personaBlocks.traits || '未设置'}</div>
               </div>
+              <div className={styles.positionRow}>
+                <span className={styles.positionKey}>秘密</span>
+                <div className={styles.positionVal}>{personaBlocks.secret || '未设置'}</div>
+              </div>
             </div>
+            <p className={styles.infoHint}>
+              「秘密」玩家本人可读可知；扮演玩家的叙事必须遵守。NPC 默认不知情——请把不该被外人知道的动机写在这里，而不是「当前立场」。
+            </p>
             <button
               type="button"
               className={styles.primaryBtn}
@@ -844,6 +921,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
                 setPositionDraft({
                   identity: personaBlocks.identity || '',
                   stance: personaBlocks.traits || '',
+                  secret: personaBlocks.secret || '',
                 });
                 setView('positionEdit');
               }}
@@ -865,20 +943,60 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
               />
             </label>
             <label className={styles.field}>
-              <span className={styles.labelRow}>当前立场</span>
+              <div className={styles.labelWithAi}>
+                <span className={styles.labelRow}>当前立场</span>
+                <button
+                  type="button"
+                  className={styles.fieldAiBtn}
+                  disabled={saving || Boolean(positionAiBusy)}
+                  onClick={() => {
+                    void requestPositionAi('traits');
+                  }}
+                >
+                  {positionAiBusy === 'traits'
+                    ? '生成中…'
+                    : `AI生成 · ${NPC_PROFILE_FIELD_GENERATION_COST}`}
+                </button>
+              </div>
               <textarea
-                rows={4}
+                rows={3}
                 value={positionDraft.stance}
                 maxLength={200}
-                placeholder="你站在哪一边、对谁有利"
+                placeholder="对外可被察觉的立场，如：表面随和、站队某派"
+                disabled={positionAiBusy === 'traits'}
                 onChange={(e) => setPositionDraft((d) => ({ ...d, stance: e.target.value }))}
+              />
+            </label>
+            <label className={styles.field}>
+              <div className={styles.labelWithAi}>
+                <span className={styles.labelRow}>秘密</span>
+                <button
+                  type="button"
+                  className={styles.fieldAiBtn}
+                  disabled={saving || Boolean(positionAiBusy)}
+                  onClick={() => {
+                    void requestPositionAi('secret');
+                  }}
+                >
+                  {positionAiBusy === 'secret'
+                    ? '生成中…'
+                    : `AI生成 · ${NPC_PROFILE_FIELD_GENERATION_COST}`}
+                </button>
+              </div>
+              <textarea
+                rows={4}
+                value={positionDraft.secret}
+                maxLength={400}
+                placeholder="不被他人所知道的事，如：真正喜欢的是......"
+                disabled={positionAiBusy === 'secret'}
+                onChange={(e) => setPositionDraft((d) => ({ ...d, secret: e.target.value }))}
               />
             </label>
             <div className={styles.actions}>
               <button
                 type="button"
                 className={styles.secondaryBtn}
-                disabled={saving}
+                disabled={saving || Boolean(positionAiBusy)}
                 onClick={() => setView('position')}
               >
                 取消
@@ -886,7 +1004,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
               <button
                 type="button"
                 className={styles.primaryBtn}
-                disabled={saving}
+                disabled={saving || Boolean(positionAiBusy)}
                 onClick={() => void savePosition()}
               >
                 {saving ? '保存中…' : '保存'}
@@ -1003,6 +1121,18 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
         ) : null}
       </PlayPanelShell>
 
+      <GameConfirmModal
+        isOpen={Boolean(positionAiConfirm)}
+        variant="dossier"
+        title={`确认生成${positionAiConfirm ? POSITION_AI_LABEL[positionAiConfirm] : ''}`}
+        message={`将扣除 ${NPC_PROFILE_FIELD_GENERATION_COST} 积分生成「${positionAiConfirm ? POSITION_AI_LABEL[positionAiConfirm] : ''}」，是否继续？`}
+        confirmText="确认生成"
+        cancelText="取消"
+        onConfirm={() => {
+          void runPositionAi();
+        }}
+        onCancel={() => setPositionAiConfirm(null)}
+      />
       <GameConfirmModal
         isOpen={Boolean(pendingRouteId)}
         title={GAME_START_UE_COPY.changeRouteConfirmTitle}

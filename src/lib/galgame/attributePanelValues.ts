@@ -1,12 +1,55 @@
 /**
  * 从属性面板 SSE 的 panels 文本中解析数值卡（对齐图5 数值格展示）。
  * 兼容多行「标签：数字」、emoji 前缀、半角冒号、以及文档常见「70/100」「70/100（说明）」。
+ * 「属性数值」模块只展示玩家自身属性，禁止 NPC 好感行。
  */
 
 export interface AttributeValueCard {
   label: string;
   value: number;
   rawLine: string;
+}
+
+export type AttributePanelsPickOptions = {
+  /** NPC 名：用于从「属性」数值卡中剔除误写入的人名行 */
+  npcNames?: Array<string | null | undefined> | null;
+};
+
+/** 功能注释：是否为玩家「属性」面板键（排除好感/关系）。 */
+export function isPlayerAttributePanelKey(key: string | null | undefined): boolean {
+  const k = String(key || '').trim();
+  if (!k) return false;
+  if (!/属性|attribute/i.test(k)) return false;
+  if (/好感|affection|favor|关系|relation/i.test(k)) return false;
+  return true;
+}
+
+export function normalizeNpcAttributeLabelKey(name: string | null | undefined): string {
+  return String(name || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .replace(/（[^）]*）/g, '')
+    .replace(/\([^)]*\)/g, '')
+    .replace(/[·・•．.]/g, '');
+}
+
+export function collectNpcAttributeLabelKeys(
+  npcNames?: Array<string | null | undefined> | null,
+): Set<string> {
+  const keys = new Set<string>();
+  for (const raw of Array.isArray(npcNames) ? npcNames : []) {
+    const name = String(raw || '').trim();
+    if (!name) continue;
+    const primary = normalizeNpcAttributeLabelKey(name);
+    if (primary) keys.add(primary);
+    const paren = name.match(/[（(]([^）)]+)[）)]/);
+    if (paren?.[1]) {
+      const nick = normalizeNpcAttributeLabelKey(paren[1]);
+      if (nick) keys.add(nick);
+    }
+  }
+  return keys;
 }
 
 /**
@@ -43,9 +86,90 @@ export function parseAttributeValueCards(panelText: string | null | undefined): 
   return cards;
 }
 
+/**
+ * 功能注释：从玩家属性面板文本中去掉 NPC 人名行。
+ */
+export function filterPlayerAttributePanelText(
+  panelText: string | null | undefined,
+  npcNames?: Array<string | null | undefined> | null,
+): string {
+  const npcKeys = collectNpcAttributeLabelKeys(npcNames);
+  const lines = String(panelText || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (npcKeys.size === 0) {
+    return lines.filter((line) => isParseableAttributeValueLine(line)).join('\n');
+  }
+  const kept: string[] = [];
+  for (const line of lines) {
+    if (!isParseableAttributeValueLine(line)) continue;
+    const card = parseAttributeValueCards(line)[0];
+    if (!card) continue;
+    const labelKey = normalizeNpcAttributeLabelKey(card.label);
+    if (labelKey && npcKeys.has(labelKey)) continue;
+    kept.push(line);
+  }
+  return kept.join('\n');
+}
+
+/**
+ * 功能注释：把误写在「属性」里的 NPC 行挪到「好感」。
+ */
+export function relocateNpcLinesOutOfPlayerAttributePanels(
+  panels: Record<string, string> | null | undefined,
+  npcNames?: Array<string | null | undefined> | null,
+): Record<string, string> {
+  if (!panels || typeof panels !== 'object') return {};
+  const npcKeys = collectNpcAttributeLabelKeys(npcNames);
+  const next: Record<string, string> = { ...panels };
+  const favorLinesToAdd: string[] = [];
+
+  for (const [key, value] of Object.entries(panels)) {
+    if (!isPlayerAttributePanelKey(key)) continue;
+    const text = String(value || '').trim();
+    if (!text || npcKeys.size === 0) continue;
+    const keep: string[] = [];
+    for (const line of text.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      const card = parseAttributeValueCards(trimmed)[0];
+      if (!card) {
+        keep.push(trimmed);
+        continue;
+      }
+      const labelKey = normalizeNpcAttributeLabelKey(card.label);
+      if (labelKey && npcKeys.has(labelKey)) {
+        favorLinesToAdd.push(card.rawLine);
+        continue;
+      }
+      keep.push(trimmed);
+    }
+    if (keep.length > 0) next[key] = keep.join('\n');
+    else delete next[key];
+  }
+
+  if (favorLinesToAdd.length > 0) {
+    const favorKey = Object.keys(next).find((k) => /好感|affection|favor/i.test(k)) || '好感';
+    const existing = String(next[favorKey] || '').trim();
+    const merged: string[] = [];
+    const seen = new Set<string>();
+    for (const line of [...(existing ? existing.split(/\r?\n/) : []), ...favorLinesToAdd]) {
+      const t = line.trim();
+      if (!t || seen.has(t)) continue;
+      seen.add(t);
+      merged.push(t);
+    }
+    next[favorKey] = merged.join('\n');
+  }
+
+  return next;
+}
+
 /** 功能注释：属性面板只允许「标签：数字」行；防止好感箭头/叙事文本被当成核心属性展示。 */
 export function normalizeAttributePanels(
-  panels: Record<string, string> | null | undefined
+  panels: Record<string, string> | null | undefined,
+  options?: AttributePanelsPickOptions,
 ): Record<string, string> {
   if (!panels || typeof panels !== 'object') return {};
   const next: Record<string, string> = {};
@@ -55,7 +179,8 @@ export function normalizeAttributePanels(
     const text = String(value || '').trim();
     if (!text) continue;
 
-    if (/属性|attribute/i.test(panelKey)) {
+    if (isPlayerAttributePanelKey(panelKey) || /属性|attribute/i.test(panelKey)) {
+      // 先只保留数字行；NPC 人名行交给 relocate 挪到「好感」
       const numericLines = text
         .split(/\r?\n/)
         .map((line) => line.trim())
@@ -68,29 +193,34 @@ export function normalizeAttributePanels(
 
     next[panelKey] = text;
   }
-  return next;
+  return relocateNpcLinesOutOfPlayerAttributePanels(next, options?.npcNames);
 }
 
 /**
- * 功能注释：优先取名为「属性」的 tab；否则取首个能解析出数值的 tab。
+ * 功能注释：只取玩家「属性」tab 的数值卡；永不回落到「好感」等人名面板。
  */
 export function pickAttributeCardsFromPanels(
-  panels: Record<string, string> | null | undefined
+  panels: Record<string, string> | null | undefined,
+  options?: AttributePanelsPickOptions,
 ): { sourceKey: string | null; cards: AttributeValueCard[] } {
   if (!panels || typeof panels !== 'object') {
     return { sourceKey: null, cards: [] };
   }
-  const keys = Object.keys(panels);
-  const preferred = keys.find((k) => /属性|attribute/i.test(k));
-  if (preferred) {
-    const cards = parseAttributeValueCards(panels[preferred]);
-    if (cards.length > 0) return { sourceKey: preferred, cards };
-  }
-  for (const key of keys) {
-    const cards = parseAttributeValueCards(panels[key]);
+  const npcKeys = collectNpcAttributeLabelKeys(options?.npcNames);
+  const keys = Object.keys(panels).filter(isPlayerAttributePanelKey);
+  const preferred = keys.find((k) => /^属性$|^attribute$/i.test(k)) || keys[0] || null;
+  const ordered = preferred
+    ? [preferred, ...keys.filter((k) => k !== preferred)]
+    : keys;
+
+  for (const key of ordered) {
+    const cards = parseAttributeValueCards(panels[key]).filter((card) => {
+      const labelKey = normalizeNpcAttributeLabelKey(card.label);
+      return !(labelKey && npcKeys.has(labelKey));
+    });
     if (cards.length > 0) return { sourceKey: key, cards };
   }
-  return { sourceKey: preferred || keys[0] || null, cards: [] };
+  return { sourceKey: preferred, cards: [] };
 }
 
 /** 功能注释：面板是否有任意非空文本（用于数值卡失败时仍展示原文）。 */

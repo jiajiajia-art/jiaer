@@ -15,6 +15,7 @@ import FooterArea from '../components/Layout/FooterArea';
 import toast from 'react-hot-toast';
 import PriceAdjustmentModal from '../components/CreateGame/PriceAdjustmentModal';
 import { getImageUrl } from '../utils/constants';
+import { resolveGameCoverUrl } from '../utils/displayCoverUrl';
 import MobileTipModal from '../components/CreateGame/MobileTipModal';
 import {
     getMiniProgramCreatorBlockedMessage,
@@ -55,7 +56,12 @@ const CreateGame: React.FC = () => {
     const [miniProgramTipMessage, setMiniProgramTipMessage] = useState('');
 
     const defaultHeroCover = `${import.meta.env.BASE_URL}data/events/welcome.png`;
-    const heroBackground = gameDetail?.cover_url ? getImageUrl(gameDetail.cover_url) : defaultHeroCover;
+    // 功能注释：详情/创建页 hero 背景统一走 display-cover/cover.webp，禁止直接加载 cover.png 原图
+    const heroCoverPath = resolveGameCoverUrl({
+        display_cover_url: gameDetail?.display_cover_url,
+        cover_url: gameDetail?.cover_url,
+    });
+    const heroBackground = heroCoverPath ? getImageUrl(heroCoverPath) : defaultHeroCover;
     const isPublished = Number(gameDetail?.is_public) === 1;
 
     const { setFileId, setSessionId, setIsPreset } = useGameStore();

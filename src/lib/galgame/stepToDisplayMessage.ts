@@ -4,6 +4,7 @@
  */
 
 import { sanitizeVisualStepText } from '../../utils/textUtils.ts';
+import { ensureMinPlayChoiceOptions } from './playChoiceOptions.ts';
 
 export type DisplayMessage = {
   id: number;
@@ -47,6 +48,10 @@ export type StepToMessageOptions = {
   resolveImageUrl?: ResolveDisplayImageUrl;
   /** 玩家立绘路径（与 getPlayerImageUrl 结果一致） */
   playerImagePath?: string | null;
+  /** 不足 2 选项时用于语境补全 */
+  npcNames?: string[] | null;
+  /** 主角名：补选项时用「角色+动宾」 */
+  playerName?: string | null;
 };
 
 function resolveNpcImagePath(
@@ -118,7 +123,7 @@ export function stepToDisplayMessage(
   if (type === 'dialogue') {
     const isPlayer = Boolean(record.isPlayer);
     const characterName = isPlayer
-      ? player?.name || '玩家'
+      ? String(record.speakerName || player?.name || '玩家').trim() || '玩家'
       : String(record.speakerName || record.npcId || '未知角色');
     let characterImage: string | undefined;
     let portraitScale: number | undefined;
@@ -183,7 +188,11 @@ export function stepToDisplayMessage(
       ),
       isMain: false as const,
     }));
-    const optionsList = [...mainOptions, ...normalOptions];
+    const optionsList = ensureMinPlayChoiceOptions([...mainOptions, ...normalOptions], {
+      sceneName: typeof record.sceneName === 'string' ? record.sceneName : '',
+      npcNames: Array.isArray(options.npcNames) ? options.npcNames : [],
+      playerName: String(options.playerName || player?.name || '').trim() || '你',
+    });
     const title = typeof record.title === 'string' ? record.title : '';
     const description = typeof record.description === 'string' ? record.description : '';
     const message = title

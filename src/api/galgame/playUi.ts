@@ -13,8 +13,8 @@ export interface PlayUiStateData {
   gameStartConfig?: Record<string, unknown> | null;
   playerEditableNpcs?: unknown[];
   sessionPlayerProfile?: SessionPlayerProfile | null;
-  /** A/B：换角后 AI 生主角头像 */
-  ab?: { playerAvatarOnChange?: boolean } | null;
+  /** A/B：换角后 AI 生主角头像；未手改性别时跟创作台 */
+  ab?: { playerAvatarOnChange?: boolean; npcGenderPreferPreset?: boolean } | null;
 }
 
 /** 功能注释：读取 session 上已持久化的出场/任务/属性缓存（无 LLM）。 */
@@ -54,7 +54,19 @@ export async function fetchPlayUiState(sessionId: string): Promise<PlayUiStateDa
         : null,
     ab:
       json.data?.ab && typeof json.data.ab === 'object'
-        ? { playerAvatarOnChange: !!(json.data.ab as { playerAvatarOnChange?: boolean }).playerAvatarOnChange }
+        ? (() => {
+            const raw = json.data.ab as {
+              playerAvatarOnChange?: boolean;
+              npcGenderPreferPreset?: boolean;
+            };
+            // 缺字段勿用 !! 变成 false，否则会盖掉前端「默认跟创作台」
+            return {
+              playerAvatarOnChange: !!raw.playerAvatarOnChange,
+              ...(typeof raw.npcGenderPreferPreset === 'boolean'
+                ? { npcGenderPreferPreset: raw.npcGenderPreferPreset }
+                : {}),
+            };
+          })()
         : null,
   };
 }

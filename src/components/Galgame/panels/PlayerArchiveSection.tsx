@@ -18,8 +18,8 @@ import { useAuthStore } from '../../../store/useAuthStore';
 import { useGameStore } from '../../../store/gameStore';
 import { CHARACTER_GENERATION_COST, NPC_PROFILE_FIELD_GENERATION_COST, getImageUrl } from '../../../utils/constants';
 import {
+  pickAvatarDisplayUrl,
   pickDisplayAvatarFullUrl,
-  pickDisplayAvatarThumbUrl,
 } from '../../../lib/galgame/avatarThumbUrl';
 import { refreshAuthUserPoints } from '../../../lib/auth/refreshUserPoints';
 import GameConfirmModal from '../GameConfirmModal';
@@ -119,8 +119,8 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
   }, [previewCard, profile]);
 
   const displayName = resolvePlayerDisplayNameOrFallback([profile?.name, documentPlayerName]) || '未设置';
-  // 功能注释：列表/小头像走 *_150.webp；点击放大必须用原图，禁止大图吃 150
-  const avatarThumbPath = pickDisplayAvatarThumbUrl([
+  // 功能注释：有确认 150 用小图；未 ensure 前回落原图；放大用原图
+  const avatarThumbPath = pickAvatarDisplayUrl([
     profile?.avatarThumbUrl,
     profile?.avatarUrl,
     documentPlayerAvatarUrl,
@@ -354,7 +354,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
     onViewChange('import');
     setPreviewCard(null);
     try {
-      const res = await playerCharacterCardsApi.list(authUser.token, '');
+      const res = await playerCharacterCardsApi.list(authUser.token, { kind: 'player' });
       if (!res?.success) {
         toast.error(res?.message || '加载卡库失败');
         onViewChange('overview');
@@ -370,6 +370,10 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
   };
 
   const selectCard = (card: PlayerCharacterCard) => {
+    if (card.cardKind === 'npc') {
+      toast.error('请选择人设卡；角色卡请在角色档案中导入');
+      return;
+    }
     const preview = previewPlayerCardImportDiff(profile, card);
     if (!preview.ok || !preview.next) {
       toast.error(preview.message || '无法导入');
@@ -412,11 +416,26 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
               ...(applied.profile.customAttributes || {}),
               ...(serverProfile.customAttributes || {}),
             },
+            // 卡库立绘优先于旧局档案；服务端已带回则用服务端
+            ...(serverProfile.avatarUrl
+              ? {}
+              : (applied.profile.avatarUrl
+                ? { avatarUrl: applied.profile.avatarUrl, avatarNeedsRegen: false }
+                : (profile?.avatarUrl ? { avatarUrl: profile.avatarUrl } : {}))),
+            ...(serverProfile.avatarThumbUrl
+              ? {}
+              : (applied.profile.avatarThumbUrl
+                ? { avatarThumbUrl: applied.profile.avatarThumbUrl }
+                : (profile?.avatarThumbUrl ? { avatarThumbUrl: profile.avatarThumbUrl } : {}))),
           }
         : {
             ...applied.profile,
-            ...(profile?.avatarUrl ? { avatarUrl: profile.avatarUrl } : {}),
-            ...(profile?.avatarThumbUrl ? { avatarThumbUrl: profile.avatarThumbUrl } : {}),
+            ...(applied.profile.avatarUrl
+              ? {}
+              : (profile?.avatarUrl ? { avatarUrl: profile.avatarUrl } : {})),
+            ...(applied.profile.avatarThumbUrl
+              ? {}
+              : (profile?.avatarThumbUrl ? { avatarThumbUrl: profile.avatarThumbUrl } : {})),
           };
       onProfileChange(merged);
       closeToOverview();
@@ -499,9 +518,9 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
                 <p className={styles.editAvatarHint}>
                   {needsAvatar
                     ? (avatarSrc
-                      ? '当前为主角立绘；可 AI 生成局内头像（将扣除积分）'
-                      : '换角后请生成新头像（将扣除积分）')
-                    : '点击头像可放大；重新生成将扣除积分'}
+                      ? '当前为主角立绘；可 AI 生成局内头像'
+                      : '换角后请生成新头像')
+                    : '点击头像可放大'}
                 </p>
               </div>
             </div>
@@ -805,7 +824,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
                   ? (avatarSrc
                     ? '当前为主角立绘；换角后请 AI 生成局内头像'
                     : '换角后请生成新头像')
-                  : '点击头像可放大；AI 生成将扣除积分'}
+                  : '点击头像可放大'}
               </p>
               <button
                 type="button"

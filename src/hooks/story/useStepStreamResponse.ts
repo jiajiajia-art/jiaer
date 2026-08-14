@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { truncateStepsAfterChoice } from '../mapGalgame/common/interactionUtils';
 import { cleanHistoryMessage, sanitizeVisualOptionText, stripNonStoryControlMarkup } from '../../utils/textUtils';
 import { isGenerationBusyError } from '../../lib/galgame/choiceStepDisplayGate';
+import { choiceStepHasPlayableOptions } from '../../lib/galgame/playChoiceOptions';
 
 interface UseStepStreamResponseOptions {
     setStepQueue: React.Dispatch<React.SetStateAction<any[]>>;
@@ -171,8 +172,8 @@ export const useStepStreamResponse = ({
         const step = sanitizeStreamStep(rawStep);
         if (!step) return step;
 
-        // 已有有效选项则不处理
-        if (step.type === 'choice' && Array.isArray(step.options) && step.options.length > 0) {
+        // 已有有效选项（含仅 mainOptions）则不处理
+        if (choiceStepHasPlayableOptions(step)) {
             return step;
         }
 

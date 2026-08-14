@@ -1,6 +1,6 @@
 /**
  * 局内文风预设（玩家可见开关），对齐 UE「文风设定」与酒馆常见预设分类。
- * Phase 5：开关 id 写入 gameStartConfig.writingStyle.toggles；长提示词库二期再挂。
+ * 开关 id 写入 gameStartConfig.writingStyle.toggles；后端 writingStylePresetPrompts 展开为完整提示词注入 GM。
  */
 
 export type WritingStylePresetGroupId =

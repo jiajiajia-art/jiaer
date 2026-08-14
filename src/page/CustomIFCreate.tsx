@@ -11,10 +11,18 @@ import toast from 'react-hot-toast';
 import getGameDataApi from '../api/home/getGameData';
 import gameTagsApi from '../api/gameTags/gameTagsApi';
 import { flattenThemeTags, type FlatThemeTag } from '../utils/themeTags';
+import SimpleRichTextEditor from '../components/Common/SimpleRichTextEditor';
+import EditorApi from '../api/galgame/EditorData';
+import {
+  NOVEL_DESCRIPTION_MAX_LENGTH,
+  normalizeDescriptionForSave,
+  toEditorHtml,
+} from '../utils/gameDescriptionHtml';
 
 const CustomIFCreate: React.FC = () => {
   const { t } = useTranslation();
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   // 版本号已由服务端管理，无需前端填写
   const [manifestText, setManifestText] = useState('');
   const [creating, setCreating] = useState(false);
@@ -68,6 +76,9 @@ const CustomIFCreate: React.FC = () => {
         if (data && typeof data.title === 'string') {
           setTitle(data.title);
         }
+        if (data && typeof data.description === 'string') {
+          setDescription(toEditorHtml(data.description));
+        }
         const existingTagIds = Array.isArray(data?.theme_tag_ids)
           ? (data.theme_tag_ids || [])
             .map((id) => Number(id))
@@ -82,7 +93,7 @@ const CustomIFCreate: React.FC = () => {
     };
 
     void loadGameTitle();
-  }, [isEditMode, appIdFromQuery]);
+  }, [isEditMode, appIdFromQuery, t]);
 
 
   // 复用草稿 appId（创建模式下避免重复 create-empty）
@@ -204,6 +215,75 @@ const CustomIFCreate: React.FC = () => {
     if (candidates.length === 1) setEntryPath(candidates[0]);
   }
 
+  const ensureAppIdReady = async (): Promise<string> => {
+    let id = appIdFromQuery || appId;
+    if (id) return id;
+    const resp = await authFetch(`${HOST_ADDRESS}/api/custom/apps/create-empty`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: title || t('customIFCreate.defaultGameTitle') }),
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+    const meta = await resp.json();
+    id = meta?.appId || meta?.data?.appId || '';
+    if (!id) throw new Error(t('customIFCreate.createAppNoId'));
+    setAppId(id);
+    try {
+      localStorage.setItem(DRAFT_KEY, id);
+    } catch {}
+    return id;
+  };
+
+  const handleUploadDescImage = async (file: File): Promise<string> => {
+    const id = await ensureAppIdReady();
+    try {
+      const resp = await EditorApi.uploadDescImage(id, file);
+      const url = resp.data?.data?.url;
+      if (!resp.data?.success || !url) {
+        throw new Error(resp.data?.message || t('customIFCreate.descImageUploadFailed'));
+      }
+      return url.startsWith('/') ? url : `/${url}`;
+    } catch (err: unknown) {
+      const axiosMsg = (err as { response?: { data?: { message?: string }; status?: number } })?.response?.data?.message;
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (axiosMsg) throw new Error(axiosMsg);
+      if (status === 404) {
+        throw new Error(t('customIFCreate.descImageApiMissing', {
+          defaultValue: '简介图片上传接口不可用（404），请确认后端已部署 upload-desc-image',
+        }));
+      }
+      throw err instanceof Error ? err : new Error(String(err || t('customIFCreate.descImageUploadFailed')));
+    }
+  };
+
+  /** 配图写入编辑器后，同步落库 games.description（否则详情页仍是旧纯文本） */
+  const persistDescriptionAfterImage = async (html: string) => {
+    try {
+      const id = await ensureAppIdReady();
+      const descriptionToSave = normalizeDescriptionForSave(html, HOST_ADDRESS);
+      const metaResp = await authFetch(`${HOST_ADDRESS}/api/custom/apps/${id}/meta/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: title.trim() || t('customIFCreate.defaultGameTitle'),
+          description: descriptionToSave,
+        }),
+      });
+      if (!metaResp.ok) {
+        const text = await metaResp.text();
+        throw new Error(text || t('customIFCreate.descPersistFailed'));
+      }
+      setDescription(descriptionToSave);
+      toast.success(t('customIFCreate.descPersistSuccess'), { duration: 2500 });
+    } catch (err: unknown) {
+      console.error('persist description after image failed:', err);
+      toast.error(
+        (err instanceof Error ? err.message : '') || t('customIFCreate.descPersistFailed'),
+        { duration: 5000 },
+      );
+    }
+  };
+
   // 目录上传（通过拖拽 DataTransferItem 递归读取）
 
   // ZIP 上传：动态加载 fflate 并解压
@@ -261,9 +341,10 @@ const CustomIFCreate: React.FC = () => {
   };
 
   // 最终上传动作
-  const doUpload = async () => {
+  const doUpload = async (opts?: { metaOnly?: boolean }) => {
     setError('');
     if (creating) return;
+    const metaOnly = !!opts?.metaOnly;
     try {
       // 实现作品标签必填与数量限制
       if (selectedThemeTagIds.length < 1 || selectedThemeTagIds.length > 2) {
@@ -273,25 +354,27 @@ const CustomIFCreate: React.FC = () => {
       }
       setThemeTagError('');
 
-      if (sourceType === 'single') {
-        const file = singleFile || fileRef.current?.files?.[0];
-        if (!file) {
-          setError(t('customIFCreate.uploadIndexHtml'));
-          return;
-        }
-      } else {
-        if (multiFiles.length === 0) {
-          setError(t('customIFCreate.noFilesSelected'));
-          return;
-        }
-        const sel = multiFiles.filter((item) => item.selected);
-        if (sel.length === 0) {
-          setError(t('customIFCreate.selectAtLeastOneFile'));
-          return;
-        }
-        if (entryPath && !sel.some((item) => item.path === entryPath)) {
-          setError(t('customIFCreate.entryNotSelected', { path: entryPath }));
-          return;
+      if (!metaOnly) {
+        if (sourceType === 'single') {
+          const file = singleFile || fileRef.current?.files?.[0];
+          if (!file) {
+            setError(t('customIFCreate.uploadIndexHtml'));
+            return;
+          }
+        } else {
+          if (multiFiles.length === 0) {
+            setError(t('customIFCreate.noFilesSelected'));
+            return;
+          }
+          const sel = multiFiles.filter((item) => item.selected);
+          if (sel.length === 0) {
+            setError(t('customIFCreate.selectAtLeastOneFile'));
+            return;
+          }
+          if (entryPath && !sel.some((item) => item.path === entryPath)) {
+            setError(t('customIFCreate.entryNotSelected', { path: entryPath }));
+            return;
+          }
         }
       }
 
@@ -300,61 +383,59 @@ const CustomIFCreate: React.FC = () => {
       setLastUploadOk(false);
       startFakeProgress();
 
-      let id = appIdFromQuery || appId;
-      // 实现新建模式下自动创建 appId 后再执行上传
-      if (!isEditMode && !id) {
-        const resp = await authFetch(`${HOST_ADDRESS}/api/custom/apps/create-empty`, {
+      let id = await ensureAppIdReady();
+      const descriptionToSave = normalizeDescriptionForSave(description, HOST_ADDRESS);
+
+      if (metaOnly) {
+        const metaResp = await authFetch(`${HOST_ADDRESS}/api/custom/apps/${id}/meta/update`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: title || t('customIFCreate.defaultGameTitle') }),
+          body: JSON.stringify({
+            title: title.trim() || t('customIFCreate.defaultGameTitle'),
+            description: descriptionToSave,
+          }),
         });
-        if (!resp.ok) throw new Error(await resp.text());
-        const meta = await resp.json();
-        id = meta?.appId || meta?.data?.appId || '';
-        if (!id) throw new Error(t('customIFCreate.createAppNoId'));
-        setAppId(id);
-        try {
-          localStorage.setItem(DRAFT_KEY, id);
-        } catch {}
-      }
-
-      const fd = new FormData();
-      if (title.trim()) {
-        fd.append('title', title.trim());
-      }
-      if (manifestText.trim()) {
-        fd.append('manifest', manifestText);
-      }
-
-      if (sourceType === 'single') {
-        const file = (singleFile || fileRef.current?.files?.[0])!;
-        if ((file.size || 0) <= 0) {
-          throw new Error(t('customIFCreate.indexHtmlEmpty'));
-        }
-        fd.append('index', file, file.name || 'index.html');
+        if (!metaResp.ok) throw new Error(await metaResp.text());
       } else {
-        fd.append('mode', 'multi');
-        if (entryPath) {
-          fd.append('entryPath', entryPath);
+        const fd = new FormData();
+        if (title.trim()) {
+          fd.append('title', title.trim());
         }
-        for (const it of multiFiles.filter((item) => item.selected)) {
-          fd.append('files[]', it.file, it.path.split('/').pop() || 'file');
-          fd.append('paths[]', it.path);
+        fd.append('description', descriptionToSave);
+        if (manifestText.trim()) {
+          fd.append('manifest', manifestText);
         }
+
+        if (sourceType === 'single') {
+          const file = (singleFile || fileRef.current?.files?.[0])!;
+          if ((file.size || 0) <= 0) {
+            throw new Error(t('customIFCreate.indexHtmlEmpty'));
+          }
+          fd.append('index', file, file.name || 'index.html');
+        } else {
+          fd.append('mode', 'multi');
+          if (entryPath) {
+            fd.append('entryPath', entryPath);
+          }
+          for (const it of multiFiles.filter((item) => item.selected)) {
+            fd.append('files[]', it.file, it.path.split('/').pop() || 'file');
+            fd.append('paths[]', it.path);
+          }
+        }
+
+        abortRef.current = new AbortController();
+        const up = await authFetch(`${HOST_ADDRESS}/api/custom/apps/${id}/ui/upload`, {
+          method: 'POST',
+          body: fd,
+          signal: abortRef.current.signal,
+        });
+        if (!up.ok) throw new Error(await up.text());
+
+        const upJson = await up.json();
+        console.log('[CustomIF upload]', upJson);
+        const entry = upJson?.entry || upJson?.entryUrl || `/public/custom/apps/${id}/ui/index.html`;
+        setEntryUrl(entry);
       }
-
-      abortRef.current = new AbortController();
-      const up = await authFetch(`${HOST_ADDRESS}/api/custom/apps/${id}/ui/upload`, {
-        method: 'POST',
-        body: fd,
-        signal: abortRef.current.signal,
-      });
-      if (!up.ok) throw new Error(await up.text());
-
-      const upJson = await up.json();
-      console.log('[CustomIF upload]', upJson);
-      const entry = upJson?.entry || upJson?.entryUrl || `/public/custom/apps/${id}/ui/index.html`;
-      setEntryUrl(entry);
 
       await gameTagsApi.setGameTagsForGame({
         fileId: String(id),
@@ -366,7 +447,7 @@ const CustomIFCreate: React.FC = () => {
       setProgress(100);
       stopFakeProgress();
       setIsUploading(true);
-      toast.success(t('customIFCreate.uploadSuccess'));
+      toast.success(metaOnly ? t('customIFCreate.saveSuccess') : t('customIFCreate.uploadSuccess'));
       try {
         localStorage.removeItem(DRAFT_KEY);
       } catch {}
@@ -394,6 +475,14 @@ const handleCreate = () => {
       return;
     }
     setThemeTagError('');
+
+    const hasSingle = !!(singleFile || fileRef.current?.files?.[0]);
+    const hasMulti = multiFiles.length > 0;
+    if (isEditMode && !hasSingle && !hasMulti) {
+      void doUpload({ metaOnly: true });
+      return;
+    }
+
     if (sourceType === 'single') return void doUpload();
     if (multiFiles.length === 0) { setError(t('customIFCreate.selectZipOrDirFirst')); return; }
     setConfirmOpen(true);
@@ -434,6 +523,23 @@ const handleCreate = () => {
                   onChange={(e) => setTitle(e.target.value)}
                   autoComplete="off"
                 />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label>{t('customIFCreate.descriptionLabel')}</label>
+                <div className={styles.descriptionEditor}>
+                  <SimpleRichTextEditor
+                    value={description}
+                    onChange={setDescription}
+                    maxPlainLength={NOVEL_DESCRIPTION_MAX_LENGTH}
+                    placeholder={t('customIFCreate.descriptionPlaceholder', { max: NOVEL_DESCRIPTION_MAX_LENGTH })}
+                    onUploadImage={handleUploadDescImage}
+                    onAfterImageInsert={(html) => {
+                      void persistDescriptionAfterImage(html);
+                    }}
+                    disabled={creating || isUploading}
+                  />
+                </div>
               </div>
 
               <div className={styles.formGroup}>
@@ -691,11 +797,26 @@ const handleCreate = () => {
             <div className={styles.formGroup}>
               <label />
               <div className={styles.actions}>
-                <button onClick={handleCreate} disabled={creating} className={styles.primaryBtn}>
-                  {creating
-                    ? (isEditMode ? t('customIFCreate.uploadingEdit') : t('customIFCreate.creating'))
-                    : (isEditMode ? t('customIFCreate.uploadNewVersion') : t('customIFCreate.createAndUpload'))}
-                </button>
+                {(() => {
+                  const hasPendingFiles = !!(singleFile || fileRef.current?.files?.[0] || multiFiles.length > 0);
+                  const isMetaSave = isEditMode && !hasPendingFiles;
+                  return (
+                    <button
+                      type="button"
+                      onClick={handleCreate}
+                      disabled={creating}
+                      className={`${styles.primaryBtn}${isMetaSave ? ` ${styles.primaryBtnMeta}` : ''}`}
+                    >
+                      {creating
+                        ? (isEditMode ? t('customIFCreate.uploadingEdit') : t('customIFCreate.creating'))
+                        : (isEditMode
+                          ? (hasPendingFiles
+                            ? t('customIFCreate.uploadNewVersion')
+                            : t('customIFCreate.saveMeta'))
+                          : t('customIFCreate.createAndUpload'))}
+                    </button>
+                  );
+                })()}
                 {(appId || appIdFromQuery) && (
                   <div className={styles.infoRow}>
                     {lastUploadOk && (
@@ -749,7 +870,7 @@ const handleCreate = () => {
             </div>
             <div className={styles.confirmFooter}>
               <button className={styles.btnGhost} onClick={()=> setConfirmOpen(false)}>{t('common.cancel')}</button>
-              <button className={styles.btnPrimary} onClick={doUpload} disabled={creating || multiStats.selCount===0}>{t('customIFCreate.confirmUpload')}</button>
+              <button className={styles.btnPrimary} onClick={() => void doUpload()} disabled={creating || multiStats.selCount===0}>{t('customIFCreate.confirmUpload')}</button>
             </div>
           </div>
         </div>

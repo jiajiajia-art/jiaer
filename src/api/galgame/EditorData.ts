@@ -103,6 +103,31 @@ const EditorApi = {
             timeout: UPLOAD_TIMEOUT_MS,
         });
     },
+    /** 游戏简介配图（返回 /public/... URL，写入 description HTML） */
+    uploadDescImage: (fileId: string, file: File) => {
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('fileId', fileId);
+        return api.post<{ success: boolean; message?: string; data?: { url: string } }>(
+            `/optical/games/upload-desc-image`,
+            formData,
+            {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+                timeout: UPLOAD_TIMEOUT_MS,
+            },
+        );
+    },
+    /** AI 生成游戏封面（扣积分，规则同场景生图） */
+    generateGameCover: (fileId: string, data?: { prompt?: string; title?: string }) =>
+        api.post<UploadGameCoverResponse>(`/optical/games/generate-cover`, {
+            fileId,
+            ...(data?.prompt != null ? { prompt: data.prompt } : {}),
+            ...(data?.title != null ? { title: data.title } : {}),
+        }, {
+            timeout: UPLOAD_TIMEOUT_MS,
+        }),
     uploadPlayerImage: (fileId:string, data:{file:File, variant:string, variationDescription?: string}) => {
         const formData = new FormData();
         formData.append('image', data.file);

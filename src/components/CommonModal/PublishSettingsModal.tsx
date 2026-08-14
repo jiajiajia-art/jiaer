@@ -21,8 +21,14 @@ import {
     validateNovelPublish,
     mapNovelEditErrorToI18nKey,
 } from '../../utils/novelEdit';
+import {
+    descriptionToPlainText,
+    normalizeDescriptionForSave,
+    toEditorHtml,
+} from '../../utils/gameDescriptionHtml';
 import { stripReplayMarkerFromTitle } from '../../utils/novelGame';
 import ImageCropModal from './ImageCropModal';
+import SimpleRichTextEditor from '../Common/SimpleRichTextEditor';
 import { CURRENCY_OPTIONS, type Currency } from '../../api/common/currency';
 
 export type PublishModalMode = 'publish' | 'novel-edit';
@@ -177,7 +183,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                             ? (stripReplayMarkerFromTitle(rawTitle) || rawTitle)
                             : rawTitle,
                     );
-                    setDescription(detail.description || '');
+                    setDescription(toEditorHtml(detail.description || ''));
                     setVersionNotes(detail.version_notes || '');
                     setCoverPreview(detail.cover_url || null);
                     const tagIds = Array.isArray(detail.theme_tag_ids)
@@ -279,7 +285,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                 toast.error(response.data?.message || t('common.publishSettings.aiGenerateFailed'));
                 return;
             }
-            setDescription(nextDescription.slice(0, NOVEL_DESCRIPTION_MAX_LENGTH));
+            setDescription(toEditorHtml(nextDescription));
             toast.success(t('common.publishSettings.aiGenerateSuccess'));
         } catch (error: any) {
             console.error('AI 生成简介失败:', error);
@@ -326,12 +332,12 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
             return true;
         }
 
-        const trimmed = description.trim();
+        const trimmed = descriptionToPlainText(description);
         if (!trimmed) {
             toast.error(t('common.publishSettings.descriptionRequired'));
             return false;
         }
-        if (trimmed.length > NOVEL_DESCRIPTION_MAX_LENGTH) {
+        if (Array.from(trimmed).length > NOVEL_DESCRIPTION_MAX_LENGTH) {
             toast.error(t('common.publishSettings.descriptionTooLong', { max: NOVEL_DESCRIPTION_MAX_LENGTH }));
             return false;
         }
@@ -372,7 +378,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
 
         await novelMetaApi.patchNovelMeta(fileId, {
             title: title.trim(),
-            description: description.trim(),
+            description: normalizeDescriptionForSave(description),
         });
         await persistThemeTags();
     };
@@ -406,7 +412,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
             return;
         }
 
-        const trimmed = description.trim();
+        const trimmed = normalizeDescriptionForSave(description);
         try {
             setSaving(true);
             if (isNovel) {
@@ -569,19 +575,24 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                                     </button>
                                 ) : null}
                             </div>
-                            <textarea
-                                className={styles.descriptionInput}
-                                placeholder={t('common.publishSettings.descriptionPlaceholder', { max: NOVEL_DESCRIPTION_MAX_LENGTH })}
+                            <SimpleRichTextEditor
                                 value={description}
-                                maxLength={NOVEL_DESCRIPTION_MAX_LENGTH}
-                                onChange={(e) => setDescription(e.target.value)}
-                                disabled={generatingDescription}
+                                onChange={setDescription}
+                                maxPlainLength={NOVEL_DESCRIPTION_MAX_LENGTH}
+                                placeholder={t('common.publishSettings.descriptionPlaceholder', { max: NOVEL_DESCRIPTION_MAX_LENGTH })}
+                                disabled={generatingDescription || publishing || saving}
+                                onUploadImage={async (file) => {
+                                    if (!fileId) {
+                                        throw new Error(t('common.publishSettings.missingFileId'));
+                                    }
+                                    const resp = await EditorApi.uploadDescImage(fileId, file);
+                                    const url = resp.data?.data?.url;
+                                    if (!resp.data?.success || !url) {
+                                        throw new Error(resp.data?.message || t('common.richEditor.imageUploadFailed', { defaultValue: '图片上传失败' }));
+                                    }
+                                    return url.startsWith('/') ? url : `/${url}`;
+                                }}
                             />
-                            <div className={styles.descriptionMetaRow}>
-                                <span className={styles.descriptionCount}>
-                                    {description.length}/{NOVEL_DESCRIPTION_MAX_LENGTH}
-                                </span>
-                            </div>
                         </div>
 
                     {showThemeTags ? (

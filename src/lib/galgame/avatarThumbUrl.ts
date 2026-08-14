@@ -1,5 +1,7 @@
 /**
- * 角色头像：列表/气泡用 *_150.webp；放大预览用原图（禁止大图吃 150）。
+ * 角色头像：列表/气泡优先 *_150.webp（须真实存在）；无确认小图时回落原图。
+ * 禁止臆造未 ensure 的 *_150.webp（会导致裂图）。
+ * 列表等待 ensure 时禁止先画原图再换成 150（会闪大图）。
  */
 
 function trimStr(value: unknown): string {
@@ -13,7 +15,7 @@ export function isAvatarThumbUrl(url: string | null | undefined): boolean {
   return /_150\.webp(?:\?|#|$)/i.test(u) || /\.150\.webp(?:\?|#|$)/i.test(u);
 }
 
-/** 原图 /api/.../base_xxx.png → /api/.../base_xxx_150.webp */
+/** 原图 /api/.../base_xxx.png → /api/.../base_xxx_150.webp（仅推导路径，不代表文件已存在） */
 export function deriveAvatarThumbUrl(sourceUrl: string | null | undefined): string {
   const raw = trimStr(sourceUrl);
   if (!raw) return '';
@@ -35,7 +37,7 @@ export function deriveAvatarThumbUrl(sourceUrl: string | null | undefined): stri
 }
 
 /**
- * 列表/气泡：只返回 webp 小图路径，绝不直接吃 PNG 原图。
+ * 只返回已确认的 webp 小图路径；绝不从 PNG 臆造（避免 404 裂图）。
  */
 export function pickDisplayAvatarThumbUrl(
   candidates: Array<string | null | undefined>,
@@ -45,9 +47,48 @@ export function pickDisplayAvatarThumbUrl(
     if (!u) continue;
     if (isAvatarThumbUrl(u)) return u;
   }
+  return '';
+}
+
+/**
+ * 列表/编辑坞展示：确认 150 → 原图；禁止臆造未存在的 *_150.webp。
+ * （放大预览、兜底场景仍可用；列表头像请用 pickAvatarListDisplayUrl。）
+ */
+export function pickAvatarDisplayUrl(
+  candidates: Array<string | null | undefined>,
+): string {
+  const thumb = pickDisplayAvatarThumbUrl(candidates);
+  if (thumb) return thumb;
   for (const c of candidates) {
-    const derived = deriveAvatarThumbUrl(c);
-    if (derived) return derived;
+    const u = trimStr(c);
+    if (!u) continue;
+    if (!isAvatarThumbUrl(u)) return u;
+  }
+  return '';
+}
+
+export type PickAvatarListDisplayOptions = {
+  /**
+   * true：仍在拉取/ensure 150 → 无确认小图时返回空（占位），禁止先出原图再换小图。
+   * false：ensure 已结束仍无小图 → 允许回落原图（稳定一帧，不再切换）。
+   */
+  pendingThumbs?: boolean;
+};
+
+/**
+ * 列表/详情头像坞：优先确认 150；pending 时不回落原图，避免「先大图后小图」闪烁。
+ */
+export function pickAvatarListDisplayUrl(
+  candidates: Array<string | null | undefined>,
+  options?: PickAvatarListDisplayOptions | null,
+): string {
+  const thumb = pickDisplayAvatarThumbUrl(candidates);
+  if (thumb) return thumb;
+  if (options?.pendingThumbs) return '';
+  for (const c of candidates) {
+    const u = trimStr(c);
+    if (!u) continue;
+    if (!isAvatarThumbUrl(u)) return u;
   }
   return '';
 }

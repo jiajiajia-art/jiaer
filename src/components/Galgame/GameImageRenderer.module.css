@@ -48,12 +48,18 @@
 
 .fallbackImage {
   display: block;
-  width: 85%;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
   height: 100%;
   object-fit: contain;
-  /* 底部对齐，与 CharacterLayer 中的 img 一致 */
+  object-position: bottom;
+  /* 底部对齐，与 CharacterLayer / canvas 一致 */
   margin-left: auto;
   margin-right: 0;
+  z-index: 1;
 }
 
 /* 左侧角色立绘的 fallback 样式 */

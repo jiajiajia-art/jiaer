@@ -5,11 +5,13 @@ import {
   NPC_GENDERS,
   NPC_IMPORTANCE,
   NPC_SURVIVAL,
+  normalizeNpcGender,
   type NpcGender,
   type NpcImportance,
   type NpcSurvival,
   type PlayerEditableNpc,
   validateCharacterProfileInput,
+  resolveDistinctDetailedBio,
 } from '../../../lib/galgame/characterProfile';
 import { sessionPlayerProfileApi } from '../../../api/galgame/playerCharacterCards';
 import { CHARACTER_GENERATION_COST, NPC_PROFILE_FIELD_GENERATION_COST, getImageUrl } from '../../../utils/constants';
@@ -18,6 +20,10 @@ import { useAuthStore } from '../../../store/useAuthStore';
 import { useGameStore } from '../../../store/gameStore';
 import GameConfirmModal from '../GameConfirmModal';
 import { buildSessionNpcAvatarPrompt } from '../../../lib/galgame/sessionNpcAvatarPrompt';
+import {
+  pickDisplayAvatarFullUrl,
+  pickDisplayAvatarThumbUrl,
+} from '../../../lib/galgame/avatarThumbUrl';
 import styles from './CharacterProfileForm.module.css';
 
 export type CharacterProfileFormValues = {
@@ -46,7 +52,7 @@ const PROFILE_FIELD_LABEL: Record<ProfileTextField, string> = {
 
 const emptyValues = (): CharacterProfileFormValues => ({
   name: '',
-  gender: 'unknown',
+  gender: 'female',
   relationship: '',
   summary: '',
   attitudeToPlayer: '',
@@ -61,7 +67,7 @@ function profileToValues(p?: Partial<PlayerEditableNpc> | null): CharacterProfil
   if (!p) return emptyValues();
   return {
     name: String(p.name || ''),
-    gender: (p.gender as NpcGender) || 'unknown',
+    gender: normalizeNpcGender(p.gender, 'female'),
     relationship: String(p.relationship || ''),
     summary: String(p.summary || ''),
     attitudeToPlayer: String(p.attitudeToPlayer || ''),
@@ -82,6 +88,10 @@ interface CharacterProfileFormProps {
   submitLabel?: string;
   /** UE 表单顶栏标题：添加新角色 / 编辑人设 */
   formTitle?: string;
+  /** 会话侧已 ensure 的角色 *_150.webp（优先于 initial.avatarThumbUrl） */
+  sessionAvatarThumbUrl?: string | null;
+  /** 父级仍在批量 ensure 150：无小图时显示 loading */
+  avatarThumbsPending?: boolean;
   onCancel: () => void;
   onSubmit: (profile: Omit<PlayerEditableNpc, 'id' | 'source' | 'encountered'> & { id?: string }) => void | Promise<void>;
 }
@@ -141,6 +151,8 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
   initial,
   submitLabel = '保存',
   formTitle = '添加新角色',
+  sessionAvatarThumbUrl = null,
+  avatarThumbsPending = false,
   onCancel,
   onSubmit,
 }) => {
@@ -150,6 +162,8 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
   const draftId = useMemo(() => String(initial?.id || newDraftId()), [initial?.id]);
   const [values, setValues] = useState<CharacterProfileFormValues>(() => profileToValues(initial));
   const [saving, setSaving] = useState(false);
+  /** 用户点过性别芯片 → 保存时打 genderManuallySet，供 A/B「跟创作台」判断 */
+  const [genderTouched, setGenderTouched] = useState(false);
   /** 各 AI 按钮独立忙碌：只锁当前按钮，互不阻塞 */
   const [aiBusy, setAiBusy] = useState<Partial<Record<AiBusyKey, boolean>>>({});
   const [confirmKind, setConfirmKind] = useState<ConfirmKind | null>(null);
@@ -166,6 +180,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
 
   useEffect(() => {
     setValues(profileToValues(initial));
+    setGenderTouched(false);
     setSupplementOpen(Boolean(initial?.detailedBio || initial?.importance || initial?.survival));
   }, [initial]);
 
@@ -200,19 +215,30 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
   const isAiBusy = (key: AiBusyKey) => Boolean(aiBusy[key]);
   const anyAiBusy = Object.values(aiBusy).some(Boolean);
 
-  const avatarSrc = getImageUrl(values.avatarUrl);
+  // 功能注释：编辑坞只显示确认 150；不回落原图，避免大图闪一下（放大预览仍用原图）
+  const avatarThumbPath = pickDisplayAvatarThumbUrl([
+    sessionAvatarThumbUrl,
+    values.avatarThumbUrl,
+  ]);
+  const avatarThumbSrc = avatarThumbPath ? getImageUrl(avatarThumbPath) : '';
+  const avatarFullPath = pickDisplayAvatarFullUrl([
+    values.avatarUrl,
+    values.avatarThumbUrl,
+    sessionAvatarThumbUrl,
+  ]);
+  const avatarFullSrc = avatarFullPath ? getImageUrl(avatarFullPath) : avatarThumbSrc;
   const previewName = values.name.trim() || '未命名角色';
   const introSummary = values.summary.trim();
   const introAttitude = values.attitudeToPlayer.trim();
   const introRelation = values.relationship.trim();
-  const introBio = values.detailedBio.trim();
+  const introBio = resolveDistinctDetailedBio(values.summary, values.detailedBio);
   const hasIntro = Boolean(introSummary || introAttitude || introRelation || introBio);
 
   const formLocked = saving;
 
   const openAvatarPreview = () => {
-    if (!avatarSrc) {
-      toast.error('请先生成角色头像');
+    if (!avatarThumbSrc && !avatarFullSrc) {
+      toast.error('暂无头像可预览');
       return;
     }
     setPreviewOpen(true);
@@ -350,17 +376,14 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!values.avatarUrl.trim()) {
-      toast.error('请先生成角色头像');
-      return;
-    }
     const checked = validateCharacterProfileInput({
       ...values,
       favorability: initial?.favorability,
       importance: values.importance || undefined,
       survival: values.survival || undefined,
-      avatarUrl: values.avatarUrl,
+      avatarUrl: values.avatarUrl.trim() || undefined,
       avatarThumbUrl: values.avatarThumbUrl || undefined,
+      genderManuallySet: genderTouched || initial?.genderManuallySet === true,
     });
     if (!checked.ok || !checked.data) {
       toast.error(checked.message || '表单无效');
@@ -368,7 +391,15 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
     }
     setSaving(true);
     try {
-      await onSubmit({ ...checked.data, id: draftId });
+      await onSubmit({
+        ...checked.data,
+        id: draftId,
+        genderManuallySet: genderTouched || initial?.genderManuallySet === true,
+      });
+      // 无头像时提示可稍后生成；不阻塞保存
+      if (!values.avatarUrl.trim()) {
+        toast('角色已保存；头像可稍后在编辑中生成');
+      }
     } finally {
       setSaving(false);
     }
@@ -392,16 +423,20 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
             onClick={openAvatarPreview}
             aria-label={`查看 ${previewName} 头像与介绍`}
           >
-            {avatarSrc ? (
-              <img className={styles.avatarImg} src={avatarSrc} alt="角色头像" />
+            {avatarThumbSrc ? (
+              <img className={styles.avatarImg} src={avatarThumbSrc} alt="角色头像" />
+            ) : avatarThumbsPending ? (
+              <div className={styles.avatarLoading} role="status" aria-label="头像加载中">
+                <span className={styles.avatarLoadingPulse} aria-hidden />
+              </div>
             ) : (
               <div className={styles.avatarEmpty}>头像</div>
             )}
           </button>
           <div className={styles.avatarActions}>
-            {reqLabel('头像', true)}
+            {reqLabel('头像', false)}
             <p className={styles.avatarHint}>
-              点击头像可放大预览；AI 生成消耗 {CHARACTER_GENERATION_COST} 积分
+              点击头像可放大预览；可先保存再生成（AI 生成消耗 {CHARACTER_GENERATION_COST} 积分）
             </p>
             <button
               type="button"
@@ -430,9 +465,9 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
           <div className={styles.field}>
             {reqLabel('性别', true)}
             <div className={styles.chips} role="radiogroup" aria-label="性别">
-              {(values.gender === 'other'
+              {(values.gender === 'other' || values.gender === 'unknown'
                 ? NPC_GENDERS
-                : NPC_GENDERS.filter((g) => g !== 'other')
+                : NPC_GENDERS.filter((g) => g !== 'other' && g !== 'unknown')
               ).map((g) => (
                 <button
                   key={g}
@@ -440,7 +475,10 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
                   role="radio"
                   aria-checked={values.gender === g}
                   className={`${styles.chip} ${values.gender === g ? styles.chipActive : ''}`}
-                  onClick={() => setField('gender', g)}
+                  onClick={() => {
+                    setGenderTouched(true);
+                    setField('gender', g);
+                  }}
                 >
                   {GENDER_LABEL[g]}
                 </button>
@@ -662,7 +700,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
         ) : null}
       </GameConfirmModal>
 
-      {previewOpen && avatarSrc ? (
+      {previewOpen && (avatarFullSrc || avatarThumbSrc) ? (
         <div
           className={styles.previewOverlay}
           role="dialog"
@@ -684,7 +722,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
             </div>
             <div className={styles.previewBody}>
               <div className={styles.previewPortraitWrap}>
-                <img className={styles.previewPortrait} src={avatarSrc} alt={previewName} />
+                <img className={styles.previewPortrait} src={avatarFullSrc} alt={previewName} />
               </div>
               <h3 className={styles.previewName}>{previewName}</h3>
               {introRelation ? (

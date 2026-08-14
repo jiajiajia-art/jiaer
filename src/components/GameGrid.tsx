@@ -7,6 +7,8 @@ import { RiMoneyCnyCircleLine } from 'react-icons/ri';
 import styles from './GameGrid.module.css';
 import type { UserGameData } from '../api/home/getGameData.type';
 import { addImageTimestamp } from '../utils/imageCache';
+import { resolveGameCoverUrl } from '../utils/displayCoverUrl';
+import { getImageUrl } from '../utils/constants';
 import { getGameTypeLabelFromMeta, getGameTypeToneFromMeta } from '../utils/gameTypeLabel';
 import { resolveGameTypeToneStyle } from '../utils/gameTypeToneClass';
 import { buildGameDetailNavigateState } from '../utils/gameDetailNavigation';
@@ -187,9 +189,16 @@ const GameGrid: React.FC<GameGridProps> = ({
                     >
                         <div className={styles.goodsImg}>
                             <img
-                                src={meta.display_cover_url || meta.cover_url
-                                    ? addImageTimestamp(meta.display_cover_url || meta.cover_url)
-                                    : `${import.meta.env.BASE_URL}data/events/welcome.png`}
+                                src={(() => {
+                                    // 功能注释：列表封面统一走 display-cover/cover.webp，禁止直接请求原图 cover.png
+                                    const displayCoverPath = resolveGameCoverUrl({
+                                        display_cover_url: meta.display_cover_url,
+                                        cover_url: meta.cover_url,
+                                    });
+                                    return displayCoverPath
+                                        ? addImageTimestamp(getImageUrl(displayCoverPath))
+                                        : `${import.meta.env.BASE_URL}data/events/welcome.png`;
+                                })()}
                                 alt={meta.title || `剧情${idx + 1}`}
                             />
 

@@ -779,6 +779,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
             <CoverUpload
                 fileId={currentFileId}
                 coverUrl={gameData?.coverUrl || undefined}
+                workTitle={title}
                 onCoverUploaded={() => {
                     onDataChange?.();
                 }}

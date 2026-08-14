@@ -1,6 +1,7 @@
 /**
  * 与后端 services/visual/sessionNpcAvatar.js 的 buildSessionNpcAvatarPrompt 对齐。
  * 用于确认弹窗预览；真正生图仍以后端拼接为准。
+ * 禁止把「对你的态度 / 详细简介」写入立绘提示词。
  */
 
 export type SessionNpcAvatarPromptProfile = {
@@ -8,7 +9,9 @@ export type SessionNpcAvatarPromptProfile = {
   gender?: string | null;
   relationship?: string | null;
   summary?: string | null;
+  /** 仅档案字段；立绘提示词不得使用 */
   attitudeToPlayer?: string | null;
+  /** 仅档案字段；立绘提示词不得使用 */
   detailedBio?: string | null;
 };
 
@@ -24,7 +27,7 @@ function genderLabel(gender: unknown): string {
   return 'androgynous or unspecified gender';
 }
 
-/** 功能注释：拼局内 NPC 头像基础提示词（不含用户补充）。 */
+/** 功能注释：拼局内 NPC 头像基础提示词（不含用户补充；不含态度/详细简介）。 */
 export function buildSessionNpcAvatarPrompt(
   profile: SessionNpcAvatarPromptProfile | null | undefined,
   options?: { supplement?: string | null },
@@ -32,14 +35,10 @@ export function buildSessionNpcAvatarPrompt(
   const name = trimStr(profile?.name) || 'character';
   const relationship = trimStr(profile?.relationship);
   const summary = trimStr(profile?.summary);
-  const attitude = trimStr(profile?.attitudeToPlayer);
-  const bio = trimStr(profile?.detailedBio);
   const parts = [
     `Visual novel character portrait of ${name}, ${genderLabel(profile?.gender)}.`,
     relationship ? `Relationship to player: ${relationship}.` : '',
     summary ? `Appearance and role: ${summary}.` : '',
-    attitude ? `Attitude vibe: ${attitude}.` : '',
-    bio ? `Extra persona: ${bio.slice(0, 280)}.` : '',
     'Full-body vertical portrait, standing pose, character centered with ample empty margin on left and right sides, face clearly visible, soft lighting, clean white background for easy cutout, detailed character design, high quality anime visual novel style. DO NOT INCLUDE ANY TEXT IN THE IMAGE.',
   ];
   const supplement = trimStr(options?.supplement).slice(0, 500);

@@ -217,13 +217,14 @@ test('stepToDisplayMessage_narration与dialogue基础转换', () => {
 test('stepToDisplayMessage_scene_change返回null_choice带选项', () => {
   assert.equal(stepToDisplayMessage({ type: 'scene_change', sceneId: 'x' }, null), null);
   const choice = stepToDisplayMessage(
-    { type: 'choice', title: '请选', options: ['走', '留'], mainOptions: ['主线'] },
+    { type: 'choice', title: '请选', options: ['离开此地另寻出路', '留下来仔细观察四周'], mainOptions: ['推进主线寻找破绽'] },
     { player: { name: '林牧' } },
     { messageId: 3 },
   );
   assert.equal(choice?.type, 'choice');
   assert.equal(choice?.options?.length, 3);
   assert.equal(choice?.options?.[0].isMain, true);
+  assert.ok(choice?.options?.every((o) => String(o.text || '').startsWith('林牧')));
   assert.match(choice?.message || '', /请选/);
 });
 

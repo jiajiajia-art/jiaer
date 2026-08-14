@@ -38,6 +38,13 @@ test('validateNovelDraftSave requires title, description and cover', () => {
     validateNovelDraftSave({ ...baseInput, description: 'x'.repeat(NOVEL_DESCRIPTION_MAX_LENGTH + 1) }).error,
     'DESCRIPTION_TOO_LONG',
   );
+  assert.equal(
+    validateNovelDraftSave({
+      ...baseInput,
+      description: `<p><strong>${'字'.repeat(NOVEL_DESCRIPTION_MAX_LENGTH)}</strong></p>`,
+    }).valid,
+    true,
+  );
 });
 
 test('validateNovelPublish requires 1-2 theme tags', () => {

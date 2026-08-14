@@ -8,8 +8,10 @@ import {
   buildOpeningRoutesFromWorldKeyEvents,
   buildSilentDefaultGameStartConfig,
   GAME_START_UE_COPY,
+  isMultiChoicePersonaText,
   normalizeGameStartGender,
   resolveOpeningRouteSelection,
+  resolveRoutePersona,
   validateGameStartConfig,
   type GameStartConfig,
   type GameStartPersonaBlocks,
@@ -19,11 +21,14 @@ import {
 import { isPlaceholderPlayerName, resolvePlayerDisplayName } from "../lib/galgame/playerDisplayName";
 import { sessionPlayerProfileApi } from "../api/galgame/playerCharacterCards";
 import type { SessionPlayerProfile } from "../lib/galgame/playerCharacterCard";
+import { resolveSessionPlayerPortraitPath } from "../lib/galgame/playerCharacterCard";
+import { ensureMinPlayChoiceOptions } from "../lib/galgame/playChoiceOptions";
 import type { SystemsConfigPatch } from "../components/Galgame/panels/SystemsPanel";
 import type { PlayerEditableNpc } from "../lib/galgame/characterProfile";
 import {
   applyNameMapToSteps,
   buildNpcNameReplacementMap,
+  buildPlayerNameReplacementMap,
   rewriteTextByMap,
 } from "../lib/galgame/npcNameOverlay";
 import NormalModeDisplay from "../components/Galgame/NormalModeDisplay";
@@ -48,7 +53,8 @@ import replayModalStyles from "../components/Galgame/ShareReplayModal.module.css
 import replayApi from "../api/galgame/replay";
 import AttributesPanel from "../components/Galgame/panels/AttributesPanel";
 import SystemsPanel from "../components/Galgame/panels/SystemsPanel";
-import { getPlayerImageUrl } from "../utils/constants";
+import { getImageUrl, getPlayerImageUrl } from "../utils/constants";
+import { withCacheBust } from "../utils/imageCache";
 import CharactersPanel from "../components/Galgame/panels/CharactersPanel";
 import QuestsPanel from "../components/Galgame/panels/QuestsPanel";
 import SaveModal from "../components/Galgame/SaveModal";
@@ -146,8 +152,12 @@ const Galgame = () => {
     const [systemWritingStyle, setSystemWritingStyle] = useState<GameStartWritingStyle | null>(null);
     const [systemPersonaBlocks, setSystemPersonaBlocks] = useState<GameStartPersonaBlocks | null>(null);
     const [sessionNpcEdits, setSessionNpcEdits] = useState<PlayerEditableNpc[]>([]);
+    /** A/B：未手改性别时跟创作台预设（默认 true=全开验收；play-ui 显式 false 才关） */
+    const [npcGenderPreferPresetAb, setNpcGenderPreferPresetAb] = useState(true);
     /** 局内「我的档案」：改档后必须进父状态 + play-ui 回传，下一轮推演才稳定读到 */
     const [sessionPlayerProfile, setSessionPlayerProfile] = useState<SessionPlayerProfile | null>(null);
+    /** 主角曾用名（含文档原名），用于改名后文案/人名牌/文本模式统一替换 */
+    const [playerNameAliases, setPlayerNameAliases] = useState<string[]>([]);
     const autoStartInFlightRef = useRef(false);
     const playUiHydrateInFlightRef = useRef(false);
     const panelLlmTriedRef = useRef<PlayBottomPanelId | null>(null);
@@ -157,7 +167,11 @@ const Galgame = () => {
     const [isButtonBarDragging, setIsButtonBarDragging] = useState(false);
 
     // 使用统一的控制器 hook
-    const controller = useGalgameController({ bootNewStart });
+    const controller = useGalgameController({
+        bootNewStart,
+        sessionPlayerAvatarUrl: sessionPlayerProfile?.avatarUrl || null,
+        sessionPlayerName: sessionPlayerProfile?.name || null,
+    });
 
     const openingRoutes = useMemo(
         () =>
@@ -187,19 +201,37 @@ const Galgame = () => {
 
         void runSessionAutoStartOnce(sessionId, async () => {
             const presetPlayer = controller.presetData?.world?.player as
-                | { name?: string; gender?: string }
+                | { name?: string; gender?: string; persona?: string; background?: string; description?: string }
                 | undefined;
+            const docPersona = String(
+                presetPlayer?.persona
+                || presetPlayer?.background
+                || presetPlayer?.description
+                || '',
+            ).trim();
             const built = buildSilentDefaultGameStartConfig({
                 playerName: presetPlayer?.name,
                 gender: presetPlayer?.gender,
                 routes: openingRoutes,
+                documentPersona: docPersona,
             });
             if (built.ok && built.data) {
                 setOpeningRouteId(built.data.openingRouteId);
+                const routePersona = resolveRoutePersona(
+                    openingRoutes.find((r) => r.id === built.data!.openingRouteId),
+                );
+                const personaSeed =
+                    routePersona
+                    || (!isMultiChoicePersonaText(docPersona) ? docPersona : '');
                 // 开局即种子本局档案姓名（文档主角），避免编辑表单落到占位名
+                // 定位 personaBlocks 与人设独立，禁止把身份/立场/秘密拼进人设
                 setSessionPlayerProfile((prev) => {
                     if (prev?.name && !isPlaceholderPlayerName(prev.name)) {
-                        return prev;
+                        return {
+                            ...prev,
+                            persona: prev.persona || personaSeed || prev.persona,
+                            gender: prev.gender || built.data!.player.gender,
+                        };
                     }
                     const seededName = resolvePlayerDisplayName([
                         built.data!.player.name,
@@ -209,11 +241,17 @@ const Galgame = () => {
                     return {
                         name: seededName,
                         gender: built.data!.player.gender,
-                        persona: prev?.persona || '',
+                        persona: prev?.persona || personaSeed || '',
                         customAttributes: prev?.customAttributes || {},
                         importedCardId: prev?.importedCardId ?? null,
                     };
                 });
+                if (presetPlayer?.name) {
+                    setPlayerNameAliases((prev) => {
+                        const n = String(presetPlayer.name || '').trim();
+                        return n && !prev.includes(n) ? [...prev, n] : prev;
+                    });
+                }
                 try {
                     await persistGameStartConfig(built.data);
                 } catch (err) {
@@ -246,6 +284,8 @@ const Galgame = () => {
             const presetPlayer = controller.presetData?.world?.player as
                 | { name?: string; gender?: string }
                 | undefined;
+            const selectedRoute = openingRoutes.find((r) => r.id === resolved.openingRouteId);
+            const routePersona = resolveRoutePersona(selectedRoute);
             // 功能注释：系统配置保存优先保留局内「我的档案」姓名/性别，避免用文档主角覆盖
             const checked = validateGameStartConfig({
                 player: {
@@ -255,7 +295,9 @@ const Galgame = () => {
                     gender: normalizeGameStartGender(
                         sessionPlayerProfile?.gender || presetPlayer?.gender,
                     ),
-                    personaBlocks: patch.personaBlocks,
+                    personaBlocks: patch.personaBlocks
+                      ?? systemPersonaBlocks
+                      ?? undefined,
                     attributes: sessionPlayerProfile?.customAttributes,
                 },
                 worldBookEntries: patch.worldBookEntries,
@@ -273,6 +315,20 @@ const Galgame = () => {
             setSystemWorldBookEntries(checked.data.worldBookEntries || []);
             setSystemWritingStyle(checked.data.writingStyle || null);
             setSystemPersonaBlocks(checked.data.player.personaBlocks || null);
+            // 换路线后写入确定性人设
+            if (routePersona) {
+                setSessionPlayerProfile((prev) => {
+                    if (!prev) {
+                        return {
+                            name: checked.data.player.name,
+                            gender: checked.data.player.gender,
+                            persona: routePersona,
+                            customAttributes: {},
+                        };
+                    }
+                    return { ...prev, persona: routePersona };
+                });
+            }
         },
         [
             openingRouteId,
@@ -404,57 +460,128 @@ const Galgame = () => {
         [sessionNpcEdits, npcsList],
     );
 
+    const attributeNpcNames = useMemo(() => {
+        const names = [
+            ...sessionNpcEdits.map((n) => n?.name),
+            ...sessionNpcEdits.map((n) => (n as { originalName?: string })?.originalName),
+            ...npcsList.map((n) => (n as { name?: string })?.name),
+        ];
+        return [...new Set(names.map((n) => String(n || '').trim()).filter(Boolean))];
+    }, [sessionNpcEdits, npcsList]);
+
+    const playerNameMap = useMemo(() => {
+        const docName = String(
+            (controller.presetData?.world?.player as { name?: string } | undefined)?.name || '',
+        ).trim();
+        const current = String(sessionPlayerProfile?.name || '').trim();
+        return buildPlayerNameReplacementMap({
+            currentName: current,
+            aliases: [docName, ...playerNameAliases],
+        });
+    }, [controller.presetData?.world?.player, sessionPlayerProfile?.name, playerNameAliases]);
+
+    const displayNameMap = useMemo(
+        () => [...npcNameMap, ...playerNameMap],
+        [npcNameMap, playerNameMap],
+    );
+
     const textModeDisplaySteps = useMemo(
         () => applyNameMapToSteps(
             controller.convertStepsToTextModalFormat(controller.allStepsForTextModal),
-            npcNameMap,
+            displayNameMap,
         ),
         [
             controller.convertStepsToTextModalFormat,
             controller.allStepsForTextModal,
-            npcNameMap,
+            displayNameMap,
         ],
     );
 
     const normalModeMessage = useMemo((): Message | null => {
         const msg = controller.currentMessage;
         if (!msg) return null;
-        if (!npcNameMap.length) return msg;
+        const sessionName = String(sessionPlayerProfile?.name || '').trim();
+        const map = displayNameMap;
         const options: Message['options'] = Array.isArray(msg.options)
-            ? msg.options.map((opt) => {
+            ? ensureMinPlayChoiceOptions(msg.options.map((opt) => {
                 const mapped: { id: number; text: string; isMain?: boolean } = {
                     id: Number(opt.id),
                     text: typeof opt.text === 'string'
-                        ? rewriteTextByMap(opt.text, npcNameMap)
+                        ? rewriteTextByMap(opt.text, map)
                         : String(opt.text ?? ''),
                 };
                 if (typeof opt.isMain === 'boolean') mapped.isMain = opt.isMain;
                 return mapped;
+            }), {
+                sceneName: controller.currentScene?.name || '',
+                npcNames: (controller.presetData?.npcs?.npcs || [])
+                    .map((n) => n?.name)
+                    .filter(Boolean)
+                    .slice(0, 3),
+                playerName: sessionName
+                    || String(controller.presetData?.world?.player?.name || '').trim()
+                    || '你',
             })
+            : undefined;
+        // 主角台词人名牌：局内档案名优先（改名后立即生效）
+        const isPlayerBubble = msg.characterPosition === 'right';
+        const rewrittenCharName = typeof msg.characterName === 'string'
+            ? rewriteTextByMap(msg.characterName, map)
+            : msg.characterName;
+        // 主角立绘：局内生成头像优先替换文档原图（与人名牌同步即时生效）
+        const sessionPortraitPath = resolveSessionPlayerPortraitPath(
+            sessionPlayerProfile,
+            controller.presetData?.world?.player,
+        );
+        const sessionPortraitUrl = isPlayerBubble && sessionPortraitPath
+            ? (withCacheBust(getImageUrl(sessionPortraitPath)) || undefined)
             : undefined;
         return {
             id: msg.id,
             type: msg.type,
             message: typeof msg.message === 'string'
-                ? rewriteTextByMap(msg.message, npcNameMap)
+                ? rewriteTextByMap(msg.message, map)
                 : msg.message,
-            characterName: typeof msg.characterName === 'string'
-                ? rewriteTextByMap(msg.characterName, npcNameMap)
-                : msg.characterName,
-            characterImage: msg.characterImage,
+            characterName: isPlayerBubble && sessionName
+                ? sessionName
+                : rewrittenCharName,
+            characterImage: isPlayerBubble
+                ? (sessionPortraitUrl || msg.characterImage)
+                : msg.characterImage,
             characterPosition: msg.characterPosition,
             portraitScale: msg.portraitScale,
             portraitOffsetX: msg.portraitOffsetX,
             portraitOffsetY: msg.portraitOffsetY,
             options,
         };
-    }, [controller.currentMessage, npcNameMap]);
+    }, [
+        controller.currentMessage,
+        controller.currentScene?.name,
+        controller.presetData?.npcs?.npcs,
+        controller.presetData?.world?.player,
+        displayNameMap,
+        sessionPlayerProfile,
+    ]);
 
     const normalModeDisplayText = useMemo(() => {
         const text = controller.finalDisplayText;
-        if (!text || !npcNameMap.length) return text;
-        return rewriteTextByMap(String(text), npcNameMap);
-    }, [controller.finalDisplayText, npcNameMap]);
+        if (!text) return text;
+        if (!displayNameMap.length) return text;
+        return rewriteTextByMap(String(text), displayNameMap);
+    }, [controller.finalDisplayText, displayNameMap]);
+
+    const handleSessionPlayerProfileChange = useCallback((next: SessionPlayerProfile | null) => {
+        setSessionPlayerProfile((prev) => {
+            const oldName = String(prev?.name || '').trim();
+            const newName = String(next?.name || '').trim();
+            if (oldName && newName && oldName !== newName) {
+                setPlayerNameAliases((aliases) => (
+                    aliases.includes(oldName) ? aliases : [...aliases, oldName]
+                ));
+            }
+            return next;
+        });
+    }, []);
 
     const playerProfile = useMemo((): PlayerProfileLike | null => {
         const raw = controller.presetData?.world?.player;
@@ -501,13 +628,26 @@ const Galgame = () => {
             setEncounteredIds(mergeEncounteredIds(data.encounteredCharacterIds));
             setQuests(normalizeQuests(data.quests));
             if (data.attributePanels && Object.keys(data.attributePanels).length > 0) {
-                setAttributePanelsCache(normalizeAttributePanels(data.attributePanels));
+                setAttributePanelsCache(normalizeAttributePanels(data.attributePanels, {
+                    npcNames: [
+                        ...(Array.isArray(data.playerEditableNpcs)
+                            ? data.playerEditableNpcs.map((n) =>
+                                (n && typeof n === 'object' && 'name' in n
+                                  ? String((n as { name?: string }).name || '')
+                                  : ''))
+                            : []),
+                        ...npcsList.map((n) => String((n as { name?: string })?.name || '')),
+                    ],
+                }));
             }
             if (Array.isArray(data.playerEditableNpcs)) {
                 setSessionNpcEdits(data.playerEditableNpcs as PlayerEditableNpc[]);
             }
+            if (typeof data.ab?.npcGenderPreferPreset === 'boolean') {
+                setNpcGenderPreferPresetAb(!!data.ab.npcGenderPreferPreset);
+            }
             if (data.sessionPlayerProfile && typeof data.sessionPlayerProfile === 'object') {
-                const incoming = data.sessionPlayerProfile;
+                const incoming = data.sessionPlayerProfile as SessionPlayerProfile;
                 const docName = resolvePlayerDisplayName([
                     (controller.presetData?.world?.player as { name?: string } | undefined)?.name,
                 ]);
@@ -515,11 +655,30 @@ const Galgame = () => {
                     isPlaceholderPlayerName(incoming.name) && docName
                         ? { ...incoming, name: docName }
                         : incoming;
-                // 功能注释：本地已有有效自设名时不覆盖；占位名（玩家/旅人）允许用文档主角纠正
+                // 本地已有有效自设名时保留姓名，但补齐空人设/空性别；占位名允许整表替换
                 setSessionPlayerProfile((prev) => {
-                    if (prev?.name && !isPlaceholderPlayerName(prev.name)) return prev;
-                    return fixed;
+                    if (prev?.name && !isPlaceholderPlayerName(prev.name)) {
+                        const mergedPersona =
+                            String(prev.persona || '').trim()
+                            || (!isMultiChoicePersonaText(fixed.persona) ? String(fixed.persona || '').trim() : '')
+                            || prev.persona
+                            || '';
+                        return {
+                            ...prev,
+                            persona: mergedPersona,
+                            gender: prev.gender || fixed.gender || prev.gender,
+                            avatarUrl: prev.avatarUrl || fixed.avatarUrl,
+                            avatarThumbUrl: prev.avatarThumbUrl || fixed.avatarThumbUrl,
+                        };
+                    }
+                    const persona = !isMultiChoicePersonaText(fixed.persona)
+                        ? fixed.persona
+                        : '';
+                    return { ...fixed, persona: persona || fixed.persona || '' };
                 });
+                if (docName) {
+                    setPlayerNameAliases((prev) => (prev.includes(docName) ? prev : [...prev, docName]));
+                }
             }
             const gsc = data.gameStartConfig;
             if (gsc && typeof gsc === 'object') {
@@ -540,7 +699,7 @@ const Galgame = () => {
         } catch {
             /* 旧局无字段时忽略 */
         }
-    }, [sessionId, controller.isReplay, controller.presetData?.world?.player]);
+    }, [sessionId, controller.isReplay, controller.presetData?.world?.player, npcsList]);
 
     /** 文档主角名就绪后，纠正本地仍是占位名的档案 */
     useEffect(() => {
@@ -631,7 +790,9 @@ const Galgame = () => {
             );
             if (controllerAbort.signal.aborted) return;
             if (result?.panels && typeof result.panels === 'object') {
-                const normalizedPanels = normalizeAttributePanels(result.panels);
+                const normalizedPanels = normalizeAttributePanels(result.panels, {
+                    npcNames: attributeNpcNames,
+                });
                 if (hasNonEmptyPanelText(normalizedPanels)) {
                     setAttributePanelsCache(normalizedPanels);
                 }
@@ -646,7 +807,7 @@ const Galgame = () => {
                 attrsStreamingRef.current = false;
             }
         }
-    }, [sessionId, controller.isReplay]);
+    }, [sessionId, controller.isReplay, attributeNpcNames]);
 
     const refreshQuests = useCallback(async () => {
         if (!sessionId || controller.isReplay) return;
@@ -1186,18 +1347,19 @@ const Galgame = () => {
                 <div
                     className={`${styles.mainContent} ${characterAnimation === 'injury' ? styles.worldInjury : ''}`}
                     style={{
-                        backgroundColor: controller.isTextMode ? '#000' : 'transparent',
+                        backgroundColor: 'transparent',
                         position: 'relative',
                     }}
                 >
-                    {!controller.isTextMode && (
-                        <GameBackgroundRenderer
-                            src={controller.backgroundImage}
-                            className={styles.gameBackground}
-                            useCanvas={true}
-                            transitionDuration={300}
-                        />
-                    )}
+                    <GameBackgroundRenderer
+                        src={controller.backgroundImage}
+                        className={`${styles.gameBackground}${controller.isTextMode ? ` ${styles.gameBackgroundTextMode}` : ''}`}
+                        useCanvas={true}
+                        transitionDuration={300}
+                    />
+                    {controller.isTextMode ? (
+                        <div className={styles.textModeBgScrim} aria-hidden="true" />
+                    ) : null}
                     {showBootOverlay && (
                         <div className={styles.bootOverlay} aria-busy="true">
                             <div className="loadingSpinner" />
@@ -1276,13 +1438,13 @@ const Galgame = () => {
                             )}
                         </div>
                     )} */}
-                    {controller.currentMessage.characterImage && !controller.isTextMode && (
+                    {normalModeMessage?.characterImage && !controller.isTextMode && (
                         <CharacterLayer
-                            characterImage={controller.currentMessage.characterImage}
-                            characterPosition={controller.currentMessage.characterPosition}
-                            portraitScale={controller.currentMessage.portraitScale}
-                            portraitOffsetX={controller.currentMessage.portraitOffsetX}
-                            portraitOffsetY={controller.currentMessage.portraitOffsetY}
+                            characterImage={normalModeMessage.characterImage}
+                            characterPosition={normalModeMessage.characterPosition}
+                            portraitScale={normalModeMessage.portraitScale}
+                            portraitOffsetX={normalModeMessage.portraitOffsetX}
+                            portraitOffsetY={normalModeMessage.portraitOffsetY}
                             animation={characterAnimation}
                         />
                     )}
@@ -1433,84 +1595,98 @@ const Galgame = () => {
                             <>
                         {!controller.isReplay && controller.gameStarted && (
                             <>
-                                <div
-                                    className={`${styles.buttonItem} ${activePlayPanel === 'character' ? styles.buttonItemActive : ''}`}
-                                    onClick={() => openPlayPanel('character')}
-                                    style={{ cursor: 'pointer' }}
-                                >
-                                    <div className={styles.buttonInner}>
-                                        <MdPerson />
-                                        <span>{t('galgame.tabCharacter')}</span>
+                                <div className={styles.buttonSlot}>
+                                    <div
+                                        className={`${styles.buttonItem} ${activePlayPanel === 'character' ? styles.buttonItemActive : ''}`}
+                                        onClick={() => openPlayPanel('character')}
+                                        style={{ cursor: 'pointer' }}
+                                    >
+                                        <div className={styles.buttonInner}>
+                                            <MdPerson />
+                                            <span>{t('galgame.tabCharacter')}</span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div
-                                    className={`${styles.buttonItem} ${activePlayPanel === 'attrs' ? styles.buttonItemActive : ''}`}
-                                    onClick={() => openPlayPanel('attrs')}
-                                    style={{ cursor: 'pointer' }}
-                                >
-                                    <div className={styles.buttonInner}>
-                                        <MdOutlineAssessment />
-                                        <span>{t('galgame.tabAttrs')}</span>
+                                <div className={styles.buttonSlot}>
+                                    <div
+                                        className={`${styles.buttonItem} ${activePlayPanel === 'attrs' ? styles.buttonItemActive : ''}`}
+                                        onClick={() => openPlayPanel('attrs')}
+                                        style={{ cursor: 'pointer' }}
+                                    >
+                                        <div className={styles.buttonInner}>
+                                            <MdOutlineAssessment />
+                                            <span>{t('galgame.tabAttrs')}</span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div
-                                    className={`${styles.buttonItem} ${activePlayPanel === 'quests' ? styles.buttonItemActive : ''}`}
-                                    onClick={() => openPlayPanel('quests')}
-                                    style={{ cursor: 'pointer' }}
-                                >
-                                    <div className={styles.buttonInner}>
-                                        <MdFlag />
-                                        <span>{t('galgame.tabQuests')}</span>
+                                <div className={styles.buttonSlot}>
+                                    <div
+                                        className={`${styles.buttonItem} ${activePlayPanel === 'quests' ? styles.buttonItemActive : ''}`}
+                                        onClick={() => openPlayPanel('quests')}
+                                        style={{ cursor: 'pointer' }}
+                                    >
+                                        <div className={styles.buttonInner}>
+                                            <MdFlag />
+                                            <span>{t('galgame.tabQuests')}</span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div
-                                    className={`${styles.buttonItem} ${activePlayPanel === 'systems' ? styles.buttonItemActive : ''}`}
-                                    onClick={() => openPlayPanel('systems')}
-                                    style={{ cursor: 'pointer' }}
-                                >
-                                    <div className={styles.buttonInner}>
-                                        <MdDns />
-                                        <span>{t('galgame.tabSystems')}</span>
+                                <div className={styles.buttonSlot}>
+                                    <div
+                                        className={`${styles.buttonItem} ${activePlayPanel === 'systems' ? styles.buttonItemActive : ''}`}
+                                        onClick={() => openPlayPanel('systems')}
+                                        style={{ cursor: 'pointer' }}
+                                    >
+                                        <div className={styles.buttonInner}>
+                                            <MdDns />
+                                            <span>{t('galgame.tabSystems')}</span>
+                                        </div>
                                     </div>
                                 </div>
                             </>
                         )}
                         {controller.isReplay && (
+                            <div className={styles.buttonSlot}>
+                                <div
+                                    className={`${styles.buttonItem} ${isReplayControlsOpen ? styles.buttonItemActive : ''}`}
+                                    onClick={() => {
+                                        setIsReplayControlsOpen((prev) => !prev);
+                                    }}
+                                    style={{ cursor: 'pointer' }}
+                                >
+                                    <div className={styles.buttonInner}>
+                                        <MdTimeline />
+                                        <span>{t('galgame.progress')}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        <div className={styles.buttonSlot}>
                             <div
-                                className={`${styles.buttonItem} ${isReplayControlsOpen ? styles.buttonItemActive : ''}`}
+                                className={`${styles.buttonItem} ${isSettingsOpen ? styles.buttonItemActive : ''}`}
                                 onClick={() => {
-                                    setIsReplayControlsOpen((prev) => !prev);
+                                    setActivePlayPanel(null);
+                                    setIsSettingsOpen(!isSettingsOpen);
                                 }}
                                 style={{ cursor: 'pointer' }}
                             >
                                 <div className={styles.buttonInner}>
-                                    <MdTimeline />
-                                    <span>{t('galgame.progress')}</span>
-                                </div>
-                            </div>
-                        )}
-                        <div
-                            className={`${styles.buttonItem} ${isSettingsOpen ? styles.buttonItemActive : ''}`}
-                            onClick={() => {
-                                setActivePlayPanel(null);
-                                setIsSettingsOpen(!isSettingsOpen);
-                            }}
-                            style={{ cursor: 'pointer' }}
-                        >
-                            <div className={styles.buttonInner}>
-                                <MdSettings />
+                                    <MdSettings />
                                     <span>{t('galgame.settings')}</span>
+                                </div>
                             </div>
                         </div>
                         {controller.isReplay && (
-                            <div
-                                className={styles.buttonItem}
-                                onClick={controller.handleExitGame}
-                                style={{ cursor: 'pointer' }}
-                            >
-                                <div className={styles.buttonInner}>
-                                    <RiLogoutCircleRLine />
-                                    <span>{t('galgame.exit')}</span>
+                            <div className={styles.buttonSlot}>
+                                <div
+                                    className={styles.buttonItem}
+                                    onClick={controller.handleExitGame}
+                                    style={{ cursor: 'pointer' }}
+                                >
+                                    <div className={styles.buttonInner}>
+                                        <RiLogoutCircleRLine />
+                                        <span>{t('galgame.exit')}</span>
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -1714,7 +1890,8 @@ const Galgame = () => {
                                 editableProfiles={sessionNpcEdits}
                                 onProfilesChange={setSessionNpcEdits}
                                 sessionPlayerProfile={sessionPlayerProfile}
-                                onSessionPlayerProfileChange={setSessionPlayerProfile}
+                                onSessionPlayerProfileChange={handleSessionPlayerProfileChange}
+                                preferPresetGenderAb={npcGenderPreferPresetAb}
                                 narrativeBusy={isNarrativeGenerationBusy({
                                     streamLoading: controller.stepHandlers?.loading,
                                     isCompressingContext: controller.stepHandlers?.isCompressingContext,
@@ -1727,7 +1904,8 @@ const Galgame = () => {
                                 cachedPanels={attributePanelsCache}
                                 onPanelsUpdated={setAttributePanelsCache}
                                 sessionPlayerProfile={sessionPlayerProfile}
-                                onSessionPlayerProfileChange={setSessionPlayerProfile}
+                                onSessionPlayerProfileChange={handleSessionPlayerProfileChange}
+                                npcNames={attributeNpcNames}
                                 documentPlayerName={
                                     (controller.presetData?.world?.player as { name?: string } | undefined)
                                         ?.name || null

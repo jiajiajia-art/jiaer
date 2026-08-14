@@ -1,4 +1,10 @@
-export const NOVEL_DESCRIPTION_MAX_LENGTH = 300;
+import {
+  NOVEL_DESCRIPTION_MAX_LENGTH,
+  descriptionToPlainText,
+  validateDescriptionContent,
+} from './gameDescriptionHtml.ts';
+
+export { NOVEL_DESCRIPTION_MAX_LENGTH };
 export const THEME_TAG_MAX = 2;
 export const THEME_TAG_MIN_DRAFT = 0;
 export const THEME_TAG_MIN_PUBLISH = 1;
@@ -48,12 +54,16 @@ export function validateNovelDraftSave(input: NovelEditFormInput): {
     return { valid: false, error: 'TITLE_REQUIRED' };
   }
 
-  const description = String(input.description || '').trim();
-  if (!description) {
+  const descCheck = validateDescriptionContent(input.description || '', { required: true });
+  if (!descCheck.valid && descCheck.error === 'DESCRIPTION_REQUIRED') {
     return { valid: false, error: 'DESCRIPTION_REQUIRED' };
   }
-  if (description.length > NOVEL_DESCRIPTION_MAX_LENGTH) {
+  if (!descCheck.valid && (descCheck.error === 'DESCRIPTION_TOO_LONG' || descCheck.error === 'DESCRIPTION_HTML_TOO_LONG')) {
     return { valid: false, error: 'DESCRIPTION_TOO_LONG' };
+  }
+  // 保留纯文本抽取，避免空壳 HTML 绕过
+  if (!descriptionToPlainText(descCheck.html) && !/<img\b/i.test(descCheck.html)) {
+    return { valid: false, error: 'DESCRIPTION_REQUIRED' };
   }
 
   if (!input.hasCover) {

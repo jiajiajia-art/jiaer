@@ -55,6 +55,11 @@
     height: 30px;
 }
 
+.descriptionEditor {
+    flex: 1;
+    min-width: 0;
+}
+
 .formGroup textarea {
     width: 800px;
     height: 130px;

@@ -16,6 +16,7 @@ import replayApi from "../../api/galgame/replay";
 import { withCacheBust } from "../../utils/imageCache";
 import { gameResourceManager } from "../../utils/gameResourceManager";
 import { canSubmitChoiceInteraction } from "../../lib/galgame/choiceInteractionGate";
+import { choiceStepHasPlayableOptions } from "../../lib/galgame/playChoiceOptions";
 import { fetchGalgameDocument, peekGalgameDocument } from "../../lib/galgame/galgameDocumentCache";
 import {
     buildScenePreloadPlan,
@@ -98,13 +99,21 @@ function buildCompletedStepsFromConversationHistory(
     return steps;
 }
 
-export const useGalgameController = (options?: { bootNewStart?: boolean }) => {
+export const useGalgameController = (options?: {
+    bootNewStart?: boolean;
+    /** 局内档案头像；有则主线立绘优先用它替换文档原图 */
+    sessionPlayerAvatarUrl?: string | null;
+    /** 局内档案角色名；选项文案优先用此名 */
+    sessionPlayerName?: string | null;
+}) => {
     const { user } = useAuthStore();
     const { fileId, sessionId } = useGameStore();
     const navigate = useNavigate();
     const { replayId: replayIdParam } = useParams<{ replayId?: string }>();
     const [searchParams] = useSearchParams();
     const bootNewStart = options?.bootNewStart === true;
+    const sessionPlayerAvatarUrl = String(options?.sessionPlayerAvatarUrl || '').trim();
+    const sessionPlayerName = String(options?.sessionPlayerName || '').trim();
 
     // 回放模式检测
     const replayId = replayIdParam || searchParams.get('replayId');
@@ -197,9 +206,9 @@ export const useGalgameController = (options?: { bootNewStart?: boolean }) => {
     const isFreeRound = assistantRoundCount < FREE_ROUNDS;
 
     const getPlayerImageUrlCallback = useCallback((): string | undefined => {
-        const imageUrl = getPlayerImageUrl(worldSetting?.player);
+        const imageUrl = sessionPlayerAvatarUrl || getPlayerImageUrl(worldSetting?.player);
         return imageUrl ? withCacheBust(getImageUrl(imageUrl)) : undefined;
-    }, [worldSetting]);
+    }, [worldSetting, sessionPlayerAvatarUrl]);
 
     const getSceneImagePath = useCallback((scene?: GetGalgamePresetResponse['scenes']['scenes'][0] | null): string | undefined => {
         return getSceneImagePathFromScene(scene as any);
@@ -229,17 +238,15 @@ export const useGalgameController = (options?: { bootNewStart?: boolean }) => {
         };
     }, [getPlayerImageUrlCallback]);
 
-    // 兜底：如果一整串 steps 里没有任何 choice，就在末尾补一个空 choice，方便展示自定义输入
+    // 兜底：整串 steps 里没有任何「带可点选项」的 choice 时，才补空 choice（仅自定义输入）。
+    // 须认 mainOptions，禁止因 options=[] 而盖掉已有主线选项。
     const ensureChoiceStep = useCallback((steps: any[]): any[] => {
         if (!Array.isArray(steps) || steps.length === 0) return steps;
-        const hasChoiceWithOptions = steps.some(
-            (s: any) =>
-                s &&
-                s.type === 'choice' &&
-                Array.isArray(s.options) &&
-                s.options.length > 0
-        );
-        if (hasChoiceWithOptions) {
+        if (steps.some((s: any) => choiceStepHasPlayableOptions(s))) {
+            return steps;
+        }
+        // 已有 choice 步（即便暂无选项）也不再追加第二个空 choice，避免盖住真实选项步
+        if (steps.some((s: any) => s?.type === 'choice')) {
             return steps;
         }
         return [
@@ -646,7 +653,9 @@ export const useGalgameController = (options?: { bootNewStart?: boolean }) => {
         '',
         false,
         stepHandlers.isWaitingForData,
-        stepHandlers.currentStep
+        stepHandlers.currentStep,
+        sessionPlayerAvatarUrl || null,
+        sessionPlayerName || null,
     );
 
     const typingSpeed = isTextMode ? 20 : 30;
@@ -666,7 +675,9 @@ export const useGalgameController = (options?: { bootNewStart?: boolean }) => {
         displayedText,
         isTyping,
         stepHandlers.isWaitingForData,
-        stepHandlers.currentStep
+        stepHandlers.currentStep,
+        sessionPlayerAvatarUrl || null,
+        sessionPlayerName || null,
     );
 
     // 提取步骤中的角色图片 URL（用于预加载）
@@ -675,7 +686,7 @@ export const useGalgameController = (options?: { bootNewStart?: boolean }) => {
 
         if (step.type === 'dialogue') {
             if (step.isPlayer) {
-                const playerImagePath = getPlayerImageUrl(worldSetting?.player);
+                const playerImagePath = sessionPlayerAvatarUrl || getPlayerImageUrl(worldSetting?.player);
                 if (playerImagePath) {
                     const imageUrl = getImageUrl(playerImagePath);
                     return imageUrl ? withCacheBust(imageUrl) : null;
@@ -703,14 +714,14 @@ export const useGalgameController = (options?: { bootNewStart?: boolean }) => {
                 }
             }
         } else if (step.type === 'choice') {
-            const playerImagePath = getPlayerImageUrl(worldSetting?.player);
+            const playerImagePath = sessionPlayerAvatarUrl || getPlayerImageUrl(worldSetting?.player);
             if (playerImagePath) {
                 const imageUrl = getImageUrl(playerImagePath);
                 return imageUrl ? withCacheBust(imageUrl) : null;
             }
         }
         return null;
-    }, [worldSetting, presetData]);
+    }, [worldSetting, presetData, sessionPlayerAvatarUrl]);
 
     // 预加载下一个步骤的角色图片
     useEffect(() => {
@@ -1094,15 +1105,13 @@ export const useGalgameController = (options?: { bootNewStart?: boolean }) => {
 
                 const rawHistorySteps = parseHistoryToSteps(content);
                 const historySteps = ensureChoiceStep(rawHistorySteps);
-                const hasChoiceInHistory = rawHistorySteps.some(
-                    (s: any) => s && s.type === 'choice' && s.options && s.options.length > 0
-                );
+                const hasChoiceInHistory = rawHistorySteps.some((s: any) => choiceStepHasPlayableOptions(s));
 
                 if (historySteps.length > 0) {
                     setCompletedSteps([...priorSteps, ...historySteps]);
 
-                    const choiceStep = historySteps.find(s => s.type === 'choice' && s.options && s.options.length > 0);
-                    if (choiceStep && (choiceStep as any).options && (choiceStep as any).options.length > 0) {
+                    const choiceStep = historySteps.find((s) => choiceStepHasPlayableOptions(s));
+                    if (choiceStep) {
                         const choiceData = extractChoiceFromHistory(content);
                         const choiceMessage = createChoiceMessage(choiceData);
                         if (choiceMessage) {

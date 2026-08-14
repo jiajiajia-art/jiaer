@@ -333,6 +333,43 @@ test('pickAttributeCardsFromPanels_优先属性tab', () => {
   assert.equal(picked.cards.length, 2);
 });
 
+test('pickAttributeCardsFromPanels_禁止回落到好感NPC行', () => {
+  const picked = pickAttributeCardsFromPanels({
+    好感: '萧因：-30',
+    道具: '令牌',
+  });
+  assert.equal(picked.cards.length, 0);
+});
+
+test('pickAttributeCardsFromPanels_剔除属性面板中的NPC名', () => {
+  const picked = pickAttributeCardsFromPanels(
+    {
+      属性: '体力：72\n萧因：-30\n武力：55',
+    },
+    { npcNames: ['萧因'] },
+  );
+  assert.deepEqual(
+    picked.cards.map((c) => c.label),
+    ['体力', '武力'],
+  );
+});
+
+test('normalizeAttributePanels_NPC行从属性挪到好感', () => {
+  assert.deepEqual(
+    normalizeAttributePanels(
+      {
+        属性: '体力：72\n萧因：-30',
+        好感: '皇后：10',
+      },
+      { npcNames: ['萧因'] },
+    ),
+    {
+      属性: '体力：72',
+      好感: '皇后：10\n萧因：-30',
+    },
+  );
+});
+
 test('normalizeAttributePanels_属性tab只保留数字行', () => {
   assert.deepEqual(
     normalizeAttributePanels({

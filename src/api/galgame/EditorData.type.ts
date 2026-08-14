@@ -389,6 +389,13 @@ export interface UploadGameCoverResponse {
     coverUrl: string;
     filename: string;
     fileId: string;
+    pointsDeducted?: number;
+    pointsRemaining?: number;
+    posterTitle?: string;
+    abArm?: 'treatment' | 'control' | string;
+    titleMode?: 'overlay' | 'model' | string;
+    needsTitleOverlay?: boolean;
+    abPercent?: number;
   };
 }
 

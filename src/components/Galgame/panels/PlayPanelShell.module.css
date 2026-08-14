@@ -563,6 +563,77 @@
   display: block;
 }
 
+/* 头像 ensure 中：墨室余烬占位（非通用 spinner） */
+.avatarLoading {
+  --avatar-ember: rgba(224, 61, 75, 0.55);
+  position: relative;
+  width: 7.5rem;
+  height: 7.5rem;
+  border-radius: 0.35rem;
+  flex-shrink: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 18%, rgba(224, 61, 75, 0.22), transparent 62%),
+    linear-gradient(165deg, rgba(36, 24, 28, 0.95), rgba(12, 10, 14, 0.98));
+  border: 1px solid rgba(255, 179, 186, 0.14);
+  display: grid;
+  place-items: center;
+}
+
+.avatarLoading::before {
+  content: '';
+  position: absolute;
+  inset: -40%;
+  background: linear-gradient(
+    115deg,
+    transparent 35%,
+    rgba(255, 210, 214, 0.14) 48%,
+    transparent 62%
+  );
+  animation: avatarInkSweep 1.55s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.avatarLoadingPulse {
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 179, 186, 0.22);
+  border-top-color: var(--avatar-ember);
+  border-right-color: rgba(255, 179, 186, 0.55);
+  animation: avatarEmberSpin 0.85s linear infinite;
+  position: relative;
+  z-index: 1;
+}
+
+.charAside .avatarLoading {
+  width: 100%;
+  height: 7.5rem;
+  align-self: stretch;
+}
+
+@keyframes avatarInkSweep {
+  0% { transform: translateX(-35%) rotate(12deg); opacity: 0.35; }
+  50% { opacity: 0.9; }
+  100% { transform: translateX(35%) rotate(12deg); opacity: 0.35; }
+}
+
+@keyframes avatarEmberSpin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avatarLoading::before,
+  .avatarLoadingPulse {
+    animation: none;
+  }
+  .avatarLoadingPulse {
+    border-color: rgba(255, 179, 186, 0.45);
+    opacity: 0.85;
+  }
+}
+
 .charAside .avatar {
   width: 100%;
   height: 7.5rem;
@@ -657,6 +728,41 @@
   border-radius: 0.55rem;
   background:
     linear-gradient(160deg, rgba(224, 61, 75, 0.18), rgba(20, 12, 16, 0.9));
+}
+
+.detailPortraitLoading {
+  --avatar-ember: rgba(224, 61, 75, 0.55);
+  position: relative;
+  width: 6.75rem;
+  height: 8.5rem;
+  border-radius: 0.55rem;
+  overflow: hidden;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(ellipse 65% 45% at 50% 22%, rgba(224, 61, 75, 0.2), transparent 58%),
+    linear-gradient(165deg, rgba(36, 24, 28, 0.95), rgba(12, 10, 14, 0.98));
+  border: 1px solid rgba(255, 179, 186, 0.14);
+}
+
+.detailPortraitLoading::before {
+  content: '';
+  position: absolute;
+  inset: -45%;
+  background: linear-gradient(
+    115deg,
+    transparent 35%,
+    rgba(255, 210, 214, 0.12) 48%,
+    transparent 62%
+  );
+  animation: avatarInkSweep 1.55s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.detailPortraitLoading .avatarLoadingPulse {
+  width: 1.5rem;
+  height: 1.5rem;
 }
 
 .detailHeroInfo {

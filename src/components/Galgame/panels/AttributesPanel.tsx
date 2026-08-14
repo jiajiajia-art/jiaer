@@ -31,6 +31,8 @@ interface AttributesPanelProps {
   documentPlayerGender?: string | null;
   /** 文档主角立绘，档案无局内头像时回退展示 */
   documentPlayerAvatarUrl?: string | null;
+  /** 局内/文档 NPC 名：属性数值区剔除这些人名行 */
+  npcNames?: Array<string | null | undefined> | null;
   onHistoryMaybeChanged?: () => void | Promise<void>;
 }
 
@@ -52,6 +54,7 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
   documentPlayerName = null,
   documentPlayerGender = null,
   documentPlayerAvatarUrl = null,
+  npcNames = null,
   onHistoryMaybeChanged,
 }) => {
   const { t } = useTranslation();
@@ -72,7 +75,14 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
   panelsRef.current = panels;
 
   const panelKeys = useMemo(() => Object.keys(panels || {}), [panels]);
-  const { cards } = useMemo(() => pickAttributeCardsFromPanels(panels), [panels]);
+  const npcNameList = useMemo(
+    () => (Array.isArray(npcNames) ? npcNames.filter(Boolean) : []),
+    [npcNames],
+  );
+  const { cards } = useMemo(
+    () => pickAttributeCardsFromPanels(panels, { npcNames: npcNameList }),
+    [panels, npcNameList],
+  );
   const activeContent = activeKey ? panels[activeKey] || '' : '';
 
   useEffect(() => {
@@ -85,24 +95,24 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
 
   useEffect(() => {
     if (cachedPanels && Object.keys(cachedPanels).length > 0) {
-      const normalizedPanels = normalizeAttributePanels(cachedPanels);
+      const normalizedPanels = normalizeAttributePanels(cachedPanels, { npcNames: npcNameList });
       setPanels(normalizedPanels);
       const keys = Object.keys(normalizedPanels);
       setActiveKey((prev) => (prev && normalizedPanels[prev] != null ? prev : keys[0] || null));
       setError(null);
     }
-  }, [cachedPanels]);
+  }, [cachedPanels, npcNameList]);
 
   const applyPanels = useCallback(
     (next: Record<string, string>) => {
-      const normalizedPanels = normalizeAttributePanels(next);
+      const normalizedPanels = normalizeAttributePanels(next, { npcNames: npcNameList });
       setPanels(normalizedPanels);
       onPanelsUpdated?.(normalizedPanels);
       const keys = Object.keys(normalizedPanels);
       setActiveKey((prev) => (prev && normalizedPanels[prev] != null ? prev : keys[0] || null));
       setError(null);
     },
-    [onPanelsUpdated]
+    [onPanelsUpdated, npcNameList]
   );
 
   /** 功能注释：只读已持久化属性，不触发 LLM，保证刷新不会改数值。 */
@@ -308,7 +318,9 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
             className={shell.backButton}
             disabled={isStreaming || loading}
             onClick={() => {
-              const hasCards = pickAttributeCardsFromPanels(panelsRef.current).cards.length > 0;
+              const hasCards = pickAttributeCardsFromPanels(panelsRef.current, {
+                npcNames: npcNameList,
+              }).cards.length > 0;
               const hasText = Object.values(panelsRef.current || {}).some(
                 (v) => String(v || '').trim().length > 0
               );

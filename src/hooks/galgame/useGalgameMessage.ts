@@ -3,6 +3,7 @@ import type { GetGalgamePresetResponse } from "../../api/galgame/getGalgamePrese
 import { extractPlainText, sanitizeVisualStepText, truncateTextWithTags } from "../../utils/textUtils";
 import { getPlayerImageUrl, getImageUrl } from "../../utils/constants";
 import { withCacheBust } from "../../utils/imageCache";
+import { ensureMinPlayChoiceOptions } from "../../lib/galgame/playChoiceOptions";
 
 export interface Message {
     id: number;
@@ -29,7 +30,11 @@ export const useGalgameMessage = (
     displayedText: string,
     isTyping: boolean,
     isWaitingForData: boolean,
-    currentStepForTextModal: any
+    currentStepForTextModal: any,
+    /** 局内档案头像；优先于文档主角立绘 */
+    sessionPlayerAvatarUrl?: string | null,
+    /** 局内档案角色名；选项文案优先用此名 */
+    sessionPlayerName?: string | null,
 ) => {
     const latestNpcById = useMemo(() => {
         const map = new Map<string, GetGalgamePresetResponse['npcs']['npcs'][0]>();
@@ -86,14 +91,19 @@ export const useGalgameMessage = (
                 message: stepText,
             };
         } else if (step.type === 'dialogue') {
-            const characterName = step.isPlayer ? worldSetting?.player?.name : step.speakerName || step.npcId || '未知角色';
+            const characterName = step.isPlayer
+                ? (String(step.speakerName || '').trim()
+                    || worldSetting?.player?.name
+                    || '玩家')
+                : step.speakerName || step.npcId || '未知角色';
             let characterImage: string | undefined;
             let portraitScale: number | undefined;
             let portraitOffsetX: number | undefined;
             let portraitOffsetY: number | undefined;
 
             if (step.isPlayer) {
-                const playerImagePath = getPlayerImageUrl(worldSetting?.player);
+                const playerImagePath = String(sessionPlayerAvatarUrl || '').trim()
+                    || getPlayerImageUrl(worldSetting?.player);
                 if (playerImagePath) {
                     characterImage = toDisplayImageUrl(playerImagePath);
                 }
@@ -151,7 +161,14 @@ export const useGalgameMessage = (
                     isMain: false as const,
                 })) || [];
 
-            const options = [...mainOptions, ...normalOptions];
+            const options = ensureMinPlayChoiceOptions(
+                [...mainOptions, ...normalOptions],
+                {
+                    sceneName: typeof step.sceneName === 'string' ? step.sceneName : '',
+                    npcNames: (npcSetting?.npcs || []).map((n) => n?.name).filter(Boolean).slice(0, 20),
+                    playerName: String(sessionPlayerName || worldSetting?.player?.name || '').trim() || '你',
+                },
+            );
 
             const message = step.title
                 ? (step.description ? `${step.title}\n${step.description}` : step.title)
@@ -161,7 +178,8 @@ export const useGalgameMessage = (
             let portraitScale: number | undefined;
             let portraitOffsetX: number | undefined;
             let portraitOffsetY: number | undefined;
-            const playerImagePath = getPlayerImageUrl(worldSetting?.player);
+            const playerImagePath = String(sessionPlayerAvatarUrl || '').trim()
+                || getPlayerImageUrl(worldSetting?.player);
             if (playerImagePath) {
                 // 使用统一的 getImageUrl 处理 URL
                 characterImage = toDisplayImageUrl(playerImagePath);
@@ -205,7 +223,7 @@ export const useGalgameMessage = (
         }
 
         return null;
-    }, [worldSetting, resolveNpcImagePath, toDisplayImageUrl]);
+    }, [worldSetting, npcSetting, resolveNpcImagePath, toDisplayImageUrl, sessionPlayerAvatarUrl, sessionPlayerName, latestNpcById]);
 
     const currentMessage = useMemo(() => {
         if (gameStarted && currentStep && currentStep.type) {
@@ -253,10 +271,13 @@ export const useGalgameMessage = (
                 };
 
                 if (step.type === 'dialogue') {
+                    const speakerName = step.isPlayer
+                        ? (step.speakerName || step.characterName || '')
+                        : (step.speakerName || step.npcId);
                     return {
                         ...baseStep,
-                        speakerName: step.speakerName || step.npcId,
-                        characterName: step.speakerName || step.npcId || '未知角色',
+                        speakerName,
+                        characterName: speakerName || (step.isPlayer ? '玩家' : '未知角色'),
                         isPlayer: step.isPlayer || false,
                     };
                 }
@@ -283,7 +304,14 @@ export const useGalgameMessage = (
                     isMain: false as const,
                 })) || [];
 
-            const options = [...mainOptions, ...normalOptions];
+            const options = ensureMinPlayChoiceOptions(
+                [...mainOptions, ...normalOptions],
+                {
+                    sceneName: typeof step.sceneName === 'string' ? step.sceneName : '',
+                    npcNames: (npcSetting?.npcs || []).map((n) => n?.name).filter(Boolean).slice(0, 20),
+                    playerName: String(sessionPlayerName || worldSetting?.player?.name || '').trim() || '你',
+                },
+            );
 
             return {
                 ...baseStep,
@@ -295,7 +323,7 @@ export const useGalgameMessage = (
 
                 return baseStep;
             });
-    }, []);
+    }, [npcSetting]);
 
     const textModalDisplayText = useMemo(() => {
         if (currentStepForTextModal &&

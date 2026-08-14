@@ -172,26 +172,30 @@ const CharacterLayer: React.FC<CharacterLayerProps> = ({
     };
 
     const getWrapperStyle = (): React.CSSProperties => {
-        // 默认 scale 为 1.5，让立绘占容器高度的约 2/3
-        const DEFAULT_SCALE = 1.5;
-        const effectiveScale = portraitScale !== undefined ? portraitScale : DEFAULT_SCALE;
-        const hasTransform = (portraitScale && portraitScale !== DEFAULT_SCALE) || portraitOffsetX || portraitOffsetY;
-        // 正 portraitOffsetY = 向上（translate 负值 = 向上，即正值 translateY 为负）
-        const yTransform = -portraitOffsetY / 10;
+        // 未配置时默认 scale=1（铺满容器 object-fit:contain）；禁止默认 1.5，否则头顶会被裁切/超出
+        const hasExplicitScale = portraitScale !== undefined
+            && portraitScale !== null
+            && Number.isFinite(Number(portraitScale));
+        const effectiveScale = hasExplicitScale ? Number(portraitScale) : 1;
+        const offsetX = Number(portraitOffsetX) || 0;
+        const offsetY = Number(portraitOffsetY) || 0;
+        const needsTransform = (hasExplicitScale && effectiveScale !== 1) || offsetX !== 0 || offsetY !== 0;
+        // 正 portraitOffsetY = 向上（translate 负值 = 向上）
+        const yTransform = -offsetY / 10;
         const baseStyle: React.CSSProperties = {
             position: 'absolute' as const,
             bottom: 0,
             left: 0,
             right: 0,
             top: 0,
-            transform: hasTransform
-                ? `scale(${effectiveScale}) translate(${portraitOffsetX / 10}%, ${yTransform}%)`
+            transform: needsTransform
+                ? `scale(${effectiveScale}) translate(${offsetX / 10}%, ${yTransform}%)`
                 : undefined,
             transformOrigin: 'bottom center',
             display: 'flex' as const,
             alignItems: 'flex-end',
             justifyContent: characterPosition === 'left' ? 'flex-start' : 'flex-end',
-            overflow: 'visible',
+            overflow: 'hidden',
         };
 
         // 拖拽时添加 cursor 样式

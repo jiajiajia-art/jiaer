@@ -10,6 +10,7 @@ import promotionApi from '../api/promotion/promotionApi';
 import type { PromotionActivity, PromotionReviewStatus, PromotionSubmission } from '../api/promotion/promotion.type';
 import styles from './PromotionCenter.module.css';
 import { getImageUrl } from '../utils/constants';
+import { resolveGameCoverUrl } from '../utils/displayCoverUrl';
 import {
     findPromotionActivityByHash,
     getPromotionActivityAnchorId,
@@ -792,7 +793,11 @@ const PromotionCenter: React.FC = () => {
                                                     <div className={styles.importGameList}>
                                                         {publishedGames.map((game) => {
                                                             const gameId = getImportableGameId(game);
-                                                            const coverUrl = getImageUrl(game.display_cover_url || game.cover_url);
+                                                            const coverPath = resolveGameCoverUrl({
+                                                                display_cover_url: game.display_cover_url,
+                                                                cover_url: game.cover_url,
+                                                            });
+                                                            const coverUrl = coverPath ? getImageUrl(coverPath) : '';
 
                                                             return (
                                                                 <button
