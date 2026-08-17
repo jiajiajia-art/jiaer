@@ -4,6 +4,7 @@ import { extractPlainText, sanitizeVisualStepText, truncateTextWithTags } from "
 import { getPlayerImageUrl, getImageUrl } from "../../utils/constants";
 import { withCacheBust } from "../../utils/imageCache";
 import { ensureMinPlayChoiceOptions } from "../../lib/galgame/playChoiceOptions";
+import { resolvePlayPortraitScale, isImportedCardPortraitUrl } from "../../lib/galgame/playerCharacterCard";
 
 export interface Message {
     id: number;
@@ -107,9 +108,14 @@ export const useGalgameMessage = (
                 if (playerImagePath) {
                     characterImage = toDisplayImageUrl(playerImagePath);
                 }
-                portraitScale = worldSetting?.player?.portraitScale;
-                portraitOffsetX = worldSetting?.player?.portraitOffsetX;
-                portraitOffsetY = worldSetting?.player?.portraitOffsetY;
+                portraitScale = resolvePlayPortraitScale({
+                    sessionAvatarUrl: sessionPlayerAvatarUrl,
+                    documentPortraitScale: worldSetting?.player?.portraitScale,
+                });
+                if (!isImportedCardPortraitUrl(sessionPlayerAvatarUrl)) {
+                    portraitOffsetX = worldSetting?.player?.portraitOffsetX;
+                    portraitOffsetY = worldSetting?.player?.portraitOffsetY;
+                }
             } else {
                 const npcImagePath = resolveNpcImagePath(step);
                 if (npcImagePath) {
@@ -184,9 +190,14 @@ export const useGalgameMessage = (
                 // 使用统一的 getImageUrl 处理 URL
                 characterImage = toDisplayImageUrl(playerImagePath);
             }
-            portraitScale = worldSetting?.player?.portraitScale;
-            portraitOffsetX = worldSetting?.player?.portraitOffsetX;
-            portraitOffsetY = worldSetting?.player?.portraitOffsetY;
+            portraitScale = resolvePlayPortraitScale({
+                sessionAvatarUrl: sessionPlayerAvatarUrl,
+                documentPortraitScale: worldSetting?.player?.portraitScale,
+            });
+            if (!isImportedCardPortraitUrl(sessionPlayerAvatarUrl)) {
+                portraitOffsetX = worldSetting?.player?.portraitOffsetX;
+                portraitOffsetY = worldSetting?.player?.portraitOffsetY;
+            }
 
             return {
                 id: Date.now(),

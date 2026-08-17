@@ -109,7 +109,7 @@ test('validateCharacterProfileInput_非法性别应失败', () => {
 test('createPlayerNpcProfile_应为player_created且未出场', () => {
   const created = createPlayerNpcProfile({
     name: '路人甲',
-    gender: 'unknown',
+    gender: 'other',
     relationship: '路人',
     summary: '第一次见面',
     attitudeToPlayer: '冷淡',
@@ -162,7 +162,7 @@ test('sortEditableNpcProfiles_自定义角色置顶且新建更靠前', () => {
   const older = createPlayerNpcProfile(
     {
       name: '旧角',
-      gender: 'unknown',
+      gender: 'other',
       relationship: '友人',
       summary: '简介一',
       attitudeToPlayer: '友善',
@@ -172,7 +172,7 @@ test('sortEditableNpcProfiles_自定义角色置顶且新建更靠前', () => {
   const newer = createPlayerNpcProfile(
     {
       name: '新角',
-      gender: 'unknown',
+      gender: 'other',
       relationship: '友人',
       summary: '简介二',
       attitudeToPlayer: '友善',

@@ -232,20 +232,65 @@
 }
 
 .optionItem {
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 0.5rem; /* 8px */
-    padding: 0.75rem 1rem; /* 12px 16px */
+    position: relative;
+    isolation: isolate;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    padding: 0.55rem 2.25rem;
     display: flex;
     align-items: flex-start;
     gap: 0.75rem; /* 12px */
-    transition: all 0.2s ease;
-    border: 0.0625rem solid transparent; /* 1px */
+    font-weight: 900;
+    font-stretch: condensed;
+    text-shadow:
+        0 0 0.08rem rgba(255, 255, 255, 0.82),
+        0 0.125rem 0.625rem rgba(0, 0, 0, 0.88);
+    transform-origin: center left;
+    transform: skewX(-4deg);
+    transition:
+        color 180ms ease,
+        text-shadow 180ms ease,
+        transform 180ms ease;
+}
+
+.optionItem::before {
+    content: '';
+    position: absolute;
+    inset: 0.48rem -1.75rem;
+    z-index: 0;
+    display: block;
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(255, 255, 255, 0.09) 0,
+        rgba(255, 255, 255, 0.09) 0.0625rem,
+        transparent 0.0625rem,
+        transparent 0.25rem
+    );
+    mask-image: linear-gradient(90deg, transparent 0%, #000 20%, #000 80%, transparent 100%);
+    opacity: 0.24;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    transform: translate3d(-0.125rem, 0.05rem, 0);
+    transition:
+        opacity 180ms ease,
+        transform 180ms ease;
+    animation: optionHudScanDrift 5.8s ease-in-out infinite;
 }
 
 .optionItem:hover {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.3);
-    transform: translateX(0.25rem); /* 4px */
+    background: transparent;
+    filter: none;
+    text-shadow:
+        0 0 0.1rem rgba(255, 255, 255, 0.95),
+        0 0.1875rem 0.75rem rgba(0, 0, 0, 0.92);
+    transform: skewX(-4deg) scale(1.035);
+}
+
+.optionItem:hover::before {
+    opacity: 0.34;
+    transform: translate3d(0.125rem, 0, 0);
+    animation-play-state: paused;
 }
 
 .optionNumber {
@@ -256,11 +301,26 @@
 }
 
 .optionText {
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 0.9375rem; /* 15px */
-    line-height: 1.5;
+    position: relative;
+    z-index: 1;
+    color: rgba(255, 255, 255, 0.96);
+    font-size: 1.05rem;
+    font-weight: 900;
+    line-height: 1.28;
+    letter-spacing: 0;
     flex: 1;
     word-wrap: break-word;
+    transform: translate3d(0, 0, 0) scaleX(0.9);
+    transition:
+        letter-spacing 180ms ease,
+        transform 180ms ease;
+    animation: optionHudTextDrift 5s ease-in-out infinite;
+}
+
+.optionItem:hover .optionText {
+    animation: none;
+    letter-spacing: 0.045em;
+    transform: translate3d(0, 0, 0) scaleX(0.94);
 }
 
 /* 主选项（mainOption）样式：比普通选项更高亮 */
@@ -269,6 +329,8 @@
 }
 
 .pointsCost {
+    position: relative;
+    z-index: 1;
     color: rgba(255, 200, 100, 0.8);
     font-size: 0.75rem; /* 12px */
     flex-shrink: 0;
@@ -297,6 +359,32 @@
     font-size: 0.75rem; /* 12px */
     flex-shrink: 0;
     margin-left: auto;
+}
+
+@keyframes optionHudTextDrift {
+    0%,
+    100% {
+        transform: translate3d(-0.025rem, 0, 0) scaleX(0.9);
+    }
+
+    35% {
+        transform: translate3d(0.025rem, -0.03rem, 0) scaleX(0.9);
+    }
+
+    70% {
+        transform: translate3d(0.01rem, 0.025rem, 0) scaleX(0.9);
+    }
+}
+
+@keyframes optionHudScanDrift {
+    0%,
+    100% {
+        transform: translate3d(-0.125rem, 0.05rem, 0);
+    }
+
+    50% {
+        transform: translate3d(0.125rem, -0.05rem, 0);
+    }
 }
 
 /* 自定义输入区域 */
@@ -537,17 +625,29 @@
 }
 
 .textModeContainerLight .optionItem {
-    background: #fff;
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: transparent;
+    border: 0;
+    text-shadow: none;
+    transform: none;
+}
+
+.textModeContainerLight .optionItem::before {
+    background: none;
+    opacity: 0;
 }
 
 .textModeContainerLight .optionItem:hover {
-    background: #fafafa;
-    border-color: rgba(0, 0, 0, 0.16);
+    background: transparent;
+    filter: none;
 }
 
 .textModeContainerLight .optionText {
-    color: #333;
+    animation: none;
+    transform: none;
+}
+
+.textModeContainerLight .optionText {
+    color: #222;
 }
 
 .textModeContainerLight .optionTextMain {

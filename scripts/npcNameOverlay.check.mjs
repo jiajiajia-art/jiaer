@@ -51,6 +51,41 @@ test('rewriteTextByMap_短别名不叠已有目标名', async () => {
   );
 });
 
+test('rewriteDossierTextFields_档案简介随玩家现用名替换', async () => {
+  const { buildPlayerNameReplacementMap, rewriteDossierTextFields } = await import(
+    '../src/lib/galgame/npcNameOverlay.ts'
+  );
+  const map = buildPlayerNameReplacementMap({
+    currentName: '白白',
+    aliases: ['苏晚', '玩家'],
+  });
+  const rewritten = rewriteDossierTextFields({
+    id: 'npc-1',
+    name: '洛辰',
+    summary: '洛辰是苏晚的助理，对苏晚忠心耿耿。',
+    detailedBio: '私下里会叫苏晚「姐」。',
+    attitudeToPlayer: '对苏晚亲近',
+    relationship: '苏晚的助理',
+  }, map);
+  assert.equal(rewritten.name, '洛辰');
+  assert.equal(rewritten.summary, '洛辰是白白的助理，对白白忠心耿耿。');
+  assert.equal(rewritten.detailedBio, '私下里会叫白白「姐」。');
+  assert.equal(rewritten.attitudeToPlayer, '对白白亲近');
+  assert.equal(rewritten.relationship, '白白的助理');
+});
+
+test('CharactersPanel_角色档案展示须接玩家名替换', () => {
+  const panel = readFileSync(
+    join(root, 'src/components/Galgame/panels/CharactersPanel.tsx'),
+    'utf8',
+  );
+  const galgame = readFileSync(join(root, 'src/page/Galgame.tsx'), 'utf8');
+  assert.match(panel, /rewriteDossierText|applyDisplayNameRewrites/);
+  assert.match(panel, /displayNameMap/);
+  assert.match(galgame, /displayNameMap=\{displayNameMap\}/);
+  assert.match(galgame, /<CharactersPanel[\s\S]*displayNameMap=\{displayNameMap\}/);
+});
+
 test('rewriteTextByMap_实现须先保护to再替换from并收束叠名', () => {
   const src = readFileSync(overlayPath, 'utf8');
   assert.match(src, /先保护已是目标名/);

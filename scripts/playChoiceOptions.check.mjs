@@ -111,6 +111,21 @@ test('NormalModeDisplay_有选项即展示且禁止不足2门闸', () => {
   assert.match(src, /currentMessage\.options\.length\s*>\s*0/);
 });
 
+test('NormalModeDisplay_选项须全宽单列横条禁止两列夹角色', () => {
+  const dir = dirname(fileURLToPath(import.meta.url));
+  const css = readFileSync(join(dir, '../src/components/Galgame/NormalModeDisplay.module.css'), 'utf8');
+  const container = css.match(/\.choiceContainer\s*\{[^}]+\}/s)?.[0] || '';
+  const option = css.match(/\.choiceOption\s*\{[^}]+\}/s)?.[0] || '';
+  assert.match(container, /flex-direction:\s*column/);
+  assert.match(container, /align-items:\s*stretch/);
+  assert.doesNotMatch(container, /grid-template-columns:\s*repeat\(2/);
+  assert.doesNotMatch(css, /\.choiceContainer\s*>\s*\.choiceOption:last-child:nth-child\(odd\)/);
+  assert.match(option, /width:\s*100%/);
+  assert.match(option, /background:\s*rgba\(0,\s*0,\s*0,\s*0\.58\)/);
+  assert.doesNotMatch(option, /background:\s*transparent/);
+  assert.doesNotMatch(option, /skewX\(-6deg\)/);
+});
+
 test('useGalgameMessage_须ensureMin且传playerName', () => {
   const dir = dirname(fileURLToPath(import.meta.url));
   const src = readFileSync(join(dir, '../src/hooks/galgame/useGalgameMessage.ts'), 'utf8');

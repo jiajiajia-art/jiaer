@@ -5,13 +5,25 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { playerCharacterCardsApi } from '../../api/galgame/playerCharacterCards';
 import {
   PLAYER_CARD_GENDERS,
+  PLAYER_CARD_LIMITS,
   type PlayerCardGender,
   type PlayerCharacterCard,
   validatePlayerCharacterCardInput,
 } from '../../lib/galgame/playerCharacterCard';
 import { refreshAuthUserPoints } from '../../lib/auth/refreshUserPoints';
 import ConfirmModal from '../../components/CommonModal/ConfirmModal';
-import { CHARACTER_GENERATION_COST, getImageUrl } from '../../utils/constants';
+import TrimmedTransparentImg from '../../components/TrimmedTransparentImg';
+import {
+  CHARACTER_GENERATION_COST,
+  NPC_PROFILE_FIELD_GENERATION_COST,
+  getImageUrl,
+} from '../../utils/constants';
+import {
+  startWarehouseCardAvatarBackgroundGen,
+  subscribeWarehouseCardAvatarGenBusy,
+  subscribeWarehouseCardAvatarGenComplete,
+  warehouseCardAvatarJobKey,
+} from '../../lib/warehouse/warehouseCardAvatarBackgroundJob';
 import { PERSONA_TAGS, genderLabel } from './warehouseNav';
 import WarehouseCardAvatarField from './WarehouseCardAvatarField';
 import panel from './WarehousePanel.module.css';
@@ -37,6 +49,7 @@ const emptyDraft = (): Draft => ({
 /** 我的角色卡（NPC，cardKind=npc） */
 const WarehouseCharacterCards: React.FC = () => {
   const token = useAuthStore((s) => s.user?.token);
+  const updateUser = useAuthStore((s) => s.updateUser);
   const [cards, setCards] = useState<PlayerCharacterCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
@@ -48,8 +61,46 @@ const WarehouseCharacterCards: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [generatingAvatar, setGeneratingAvatar] = useState(false);
   const [avatarConfirmOpen, setAvatarConfirmOpen] = useState(false);
+  const [generatingPersona, setGeneratingPersona] = useState(false);
+  const [personaConfirmOpen, setPersonaConfirmOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const formOpenRef = useRef(formOpen);
+  const editingIdRef = useRef(editingId);
+  formOpenRef.current = formOpen;
+  editingIdRef.current = editingId;
+
+  const avatarJobKey = useMemo(
+    () => warehouseCardAvatarJobKey('npc', editingId),
+    [editingId],
+  );
+
+  useEffect(() => {
+    return subscribeWarehouseCardAvatarGenBusy(avatarJobKey, setGeneratingAvatar);
+  }, [avatarJobKey]);
+
+  useEffect(() => {
+    return subscribeWarehouseCardAvatarGenComplete((result) => {
+      if (result.cardKind !== 'npc') return;
+      if (typeof result.remainingPoints === 'number') {
+        updateUser({ points: result.remainingPoints });
+      } else {
+        void refreshAuthUserPoints();
+      }
+      toast.success(
+        `图像已生成（-${result.pointsDeducted ?? CHARACTER_GENERATION_COST} 积分）`,
+      );
+      if (result.cardId) {
+        void loadRef.current?.();
+      }
+      const openKey = warehouseCardAvatarJobKey('npc', editingIdRef.current);
+      if (formOpenRef.current && openKey === result.key) {
+        setDraft((d) => ({ ...d, avatarUrl: result.avatarUrl }));
+      }
+    });
+  }, [updateUser]);
+
+  const loadRef = useRef<(() => Promise<void>) | null>(null);
 
   useEffect(() => {
     if (!formOpen) return;
@@ -82,6 +133,8 @@ const WarehouseCharacterCards: React.FC = () => {
       setLoading(false);
     }
   }, [token, query]);
+
+  loadRef.current = load;
 
   useEffect(() => {
     void load();
@@ -118,7 +171,7 @@ const WarehouseCharacterCards: React.FC = () => {
       toast.error('请先填写姓名再生成图像');
       return;
     }
-    if (!token || generatingAvatar || saving) return;
+    if (!token || generatingAvatar) return;
     const latestPoints = await refreshAuthUserPoints();
     if (typeof latestPoints === 'number' && latestPoints < CHARACTER_GENERATION_COST) {
       toast.error(`积分不足（需要 ${CHARACTER_GENERATION_COST}，当前 ${latestPoints}）`);
@@ -129,32 +182,71 @@ const WarehouseCharacterCards: React.FC = () => {
 
   const runGenerateAvatar = async () => {
     setAvatarConfirmOpen(false);
-    if (!token || !draft.name.trim()) return;
-    setGeneratingAvatar(true);
+    if (!token || !draft.name.trim() || generatingAvatar) return;
+    toast('图像后台生成中，可继续编辑或保存');
     try {
-      const res = await playerCharacterCardsApi.generateAvatar(token, {
-        name: draft.name.trim(),
-        gender: draft.gender,
-        persona: draft.persona.trim(),
-        cardId: editingId || undefined,
-        cardKind: 'npc',
+      await startWarehouseCardAvatarBackgroundGen({
+        token,
+        payload: {
+          name: draft.name.trim(),
+          gender: draft.gender,
+          persona: draft.persona.trim(),
+          cardId: editingId || undefined,
+          cardKind: 'npc',
+        },
       });
-      if (!res?.success || !res.data?.avatarUrl) {
-        toast.error(res?.message || '生成图像失败');
-        return;
-      }
-      setDraft((d) => ({ ...d, avatarUrl: String(res.data!.avatarUrl) }));
-      if (editingId && res.data.card) {
-        await load();
-      }
-      await refreshAuthUserPoints();
-      toast.success(
-        `图像已生成（-${res.data.pointsDeducted ?? CHARACTER_GENERATION_COST} 积分）`,
-      );
     } catch (e) {
       toast.error((e as Error)?.message || '生成图像失败');
+    }
+  };
+
+  const requestGeneratePersona = async () => {
+    if (!draft.name.trim()) {
+      toast.error('请先填写姓名再生成');
+      return;
+    }
+    if (!token || generatingPersona || saving) return;
+    const latestPoints = await refreshAuthUserPoints();
+    if (
+      typeof latestPoints === 'number'
+      && latestPoints < NPC_PROFILE_FIELD_GENERATION_COST
+    ) {
+      toast.error(
+        `积分不足（需要 ${NPC_PROFILE_FIELD_GENERATION_COST}，当前 ${latestPoints}）`,
+      );
+      return;
+    }
+    setPersonaConfirmOpen(true);
+  };
+
+  const runGeneratePersona = async () => {
+    setPersonaConfirmOpen(false);
+    if (!token || !draft.name.trim() || generatingPersona) return;
+    setGeneratingPersona(true);
+    try {
+      const res = await playerCharacterCardsApi.generatePersona(token, {
+        name: draft.name.trim(),
+        gender: draft.gender,
+        existingPersona: draft.persona.trim(),
+        tags: draft.tagsText.trim(),
+        cardKind: 'npc',
+      });
+      if (!res?.success || !res.data?.text) {
+        toast.error(res?.message || '角色设定生成失败');
+        return;
+      }
+      setDraft((d) => ({
+        ...d,
+        persona: String(res.data!.text).slice(0, PLAYER_CARD_LIMITS.persona.max),
+      }));
+      await refreshAuthUserPoints();
+      toast.success(
+        `角色设定已生成（-${res.data.pointsDeducted ?? NPC_PROFILE_FIELD_GENERATION_COST} 积分）`,
+      );
+    } catch (e) {
+      toast.error((e as Error)?.message || '角色设定生成失败');
     } finally {
-      setGeneratingAvatar(false);
+      setGeneratingPersona(false);
     }
   };
 
@@ -344,7 +436,7 @@ const WarehouseCharacterCards: React.FC = () => {
                 >
                   <div className={panel.portrait}>
                     {avatar ? (
-                      <img className={panel.portraitImg} src={avatar} alt="" />
+                      <TrimmedTransparentImg className={panel.portraitImg} src={avatar} variant="bust" />
                     ) : (
                       <div className={panel.portraitFallback}>
                         {(card.name || '?').slice(0, 1)}
@@ -401,10 +493,10 @@ const WarehouseCharacterCards: React.FC = () => {
               <>
                 <div className={panel.previewHero}>
                   {selected.avatarUrl ? (
-                    <img
+                    <TrimmedTransparentImg
                       className={panel.previewHeroImg}
                       src={getImageUrl(selected.avatarUrl)}
-                      alt=""
+                      variant="full"
                     />
                   ) : (
                     <div className={panel.previewHeroFallback}>
@@ -466,7 +558,7 @@ const WarehouseCharacterCards: React.FC = () => {
 
       {formOpen
         ? createPortal(
-          <div className={panel.formOverlay} onClick={() => !saving && !generatingAvatar && setFormOpen(false)}>
+          <div className={panel.formOverlay} onClick={() => !saving && setFormOpen(false)}>
             <div
               className={panel.formCard}
               role="dialog"
@@ -478,13 +570,15 @@ const WarehouseCharacterCards: React.FC = () => {
                 <p className={panel.formPreviewEyebrow}>CHARACTER SLIP</p>
                 <div className={panel.formPreviewPortrait}>
                   {draft.avatarUrl ? (
-                    <img
+                    <TrimmedTransparentImg
                       className={panel.formPreviewPortraitImg}
                       src={getImageUrl(draft.avatarUrl)}
-                      alt=""
+                      variant="full"
                     />
                   ) : (
-                    (draft.name || '角').slice(0, 1)
+                    <div className={panel.formPreviewPortraitFallback} aria-hidden>
+                      {(draft.name || '角').slice(0, 1)}
+                    </div>
                   )}
                 </div>
                 <h4 className={panel.formPreviewName}>{draft.name.trim() || '未命名角色'}</h4>
@@ -514,7 +608,7 @@ const WarehouseCharacterCards: React.FC = () => {
                     type="button"
                     className={panel.formClose}
                     aria-label="关闭"
-                    disabled={saving || generatingAvatar}
+                    disabled={saving}
                     onClick={() => setFormOpen(false)}
                   >
                     ×
@@ -528,46 +622,59 @@ const WarehouseCharacterCards: React.FC = () => {
                   disabled={saving}
                   fallbackChar="角"
                   onGenerate={() => void requestGenerateAvatar()}
-                />
-
-                <div className={panel.field}>
-                  <label htmlFor="wh-npc-name">姓名</label>
-                  <input
-                    id="wh-npc-name"
-                    value={draft.name}
-                    onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
-                    maxLength={40}
-                    placeholder="角色名字"
-                    autoFocus
-                  />
-                </div>
-
-                <div className={panel.field}>
-                  <span id="wh-npc-gender-label">性别</span>
-                  <div className={panel.segRow} role="radiogroup" aria-labelledby="wh-npc-gender-label">
-                    {PLAYER_CARD_GENDERS.map((g) => (
-                      <button
-                        key={g}
-                        type="button"
-                        role="radio"
-                        aria-checked={draft.gender === g}
-                        className={draft.gender === g ? panel.segActive : panel.seg}
-                        onClick={() => setDraft((d) => ({ ...d, gender: g }))}
-                      >
-                        {genderLabel(g)}
-                      </button>
-                    ))}
+                >
+                  <div className={panel.field}>
+                    <label htmlFor="wh-npc-name">姓名</label>
+                    <input
+                      id="wh-npc-name"
+                      value={draft.name}
+                      onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+                      maxLength={40}
+                      placeholder="角色名字"
+                      autoFocus
+                    />
                   </div>
-                </div>
+
+                  <div className={panel.field}>
+                    <span id="wh-npc-gender-label">性别</span>
+                    <div className={panel.segRow} role="radiogroup" aria-labelledby="wh-npc-gender-label">
+                      {PLAYER_CARD_GENDERS.map((g) => (
+                        <button
+                          key={g}
+                          type="button"
+                          role="radio"
+                          aria-checked={draft.gender === g}
+                          className={draft.gender === g ? panel.segActive : panel.seg}
+                          onClick={() => setDraft((d) => ({ ...d, gender: g }))}
+                        >
+                          {genderLabel(g)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </WarehouseCardAvatarField>
 
                 <div className={panel.field}>
-                  <label htmlFor="wh-npc-text">角色设定</label>
+                  <div className={panel.labelWithAi}>
+                    <label htmlFor="wh-npc-text">角色设定</label>
+                    <button
+                      type="button"
+                      className={panel.fieldAiBtn}
+                      disabled={saving || generatingPersona}
+                      onClick={() => void requestGeneratePersona()}
+                    >
+                      {generatingPersona
+                        ? '生成中…'
+                        : `AI生成 · ${NPC_PROFILE_FIELD_GENERATION_COST}`}
+                    </button>
+                  </div>
                   <textarea
                     id="wh-npc-text"
                     value={draft.persona}
                     onChange={(e) => setDraft((d) => ({ ...d, persona: e.target.value }))}
-                    maxLength={2000}
+                    maxLength={PLAYER_CARD_LIMITS.persona.max}
                     placeholder="性格、口吻、与玩家的关系…越具体越好"
+                    disabled={generatingPersona}
                   />
                 </div>
 
@@ -594,7 +701,7 @@ const WarehouseCharacterCards: React.FC = () => {
                   <button
                     type="button"
                     className={panel.ghostBtn}
-                    disabled={saving || generatingAvatar}
+                    disabled={saving}
                     onClick={() => setFormOpen(false)}
                   >
                     取消
@@ -602,7 +709,7 @@ const WarehouseCharacterCards: React.FC = () => {
                   <button
                     type="button"
                     className={panel.primaryBtn}
-                    disabled={saving || generatingAvatar}
+                    disabled={saving}
                     onClick={() => void saveForm()}
                   >
                     {saving ? '保存中…' : '保存角色卡'}
@@ -621,6 +728,16 @@ const WarehouseCharacterCards: React.FC = () => {
         onConfirm={() => void runGenerateAvatar()}
         title="确认生成图像"
         message={`将扣除 ${CHARACTER_GENERATION_COST} 积分生成角色立绘，是否继续？`}
+        confirmButtonText="生成"
+        cancelButtonText="取消"
+      />
+
+      <ConfirmModal
+        isOpen={personaConfirmOpen}
+        onCancel={() => setPersonaConfirmOpen(false)}
+        onConfirm={() => void runGeneratePersona()}
+        title="确认生成角色设定"
+        message={`将扣除 ${NPC_PROFILE_FIELD_GENERATION_COST} 积分生成「角色设定」，是否继续？`}
         confirmButtonText="生成"
         cancelButtonText="取消"
       />

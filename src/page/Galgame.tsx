@@ -21,7 +21,7 @@ import {
 import { isPlaceholderPlayerName, resolvePlayerDisplayName } from "../lib/galgame/playerDisplayName";
 import { sessionPlayerProfileApi } from "../api/galgame/playerCharacterCards";
 import type { SessionPlayerProfile } from "../lib/galgame/playerCharacterCard";
-import { resolveSessionPlayerPortraitPath } from "../lib/galgame/playerCharacterCard";
+import { resolveSessionPlayerPortraitPath, resolvePlayPortraitScale, isImportedCardPortraitUrl } from "../lib/galgame/playerCharacterCard";
 import {
   mergePlayerAvatarIntoProfile,
   subscribePlayerAvatarGenComplete,
@@ -555,6 +555,15 @@ const Galgame = () => {
         const sessionPortraitUrl = isPlayerBubble && sessionPortraitPath
             ? (withCacheBust(getImageUrl(sessionPortraitPath)) || undefined)
             : undefined;
+        const importedCardPortrait = isPlayerBubble
+            && isImportedCardPortraitUrl(sessionPlayerProfile?.avatarUrl);
+        // 功能注释：必须用创作台文档缩放，禁止用 msg.portraitScale（可能已是导入 0.8 的解析结果）
+        const portraitScale = isPlayerBubble
+            ? resolvePlayPortraitScale({
+                sessionAvatarUrl: sessionPlayerProfile?.avatarUrl,
+                documentPortraitScale: controller.presetData?.world?.player?.portraitScale,
+            })
+            : msg.portraitScale;
         return {
             id: msg.id,
             type: msg.type,
@@ -568,9 +577,9 @@ const Galgame = () => {
                 ? (sessionPortraitUrl || msg.characterImage)
                 : msg.characterImage,
             characterPosition: msg.characterPosition,
-            portraitScale: msg.portraitScale,
-            portraitOffsetX: msg.portraitOffsetX,
-            portraitOffsetY: msg.portraitOffsetY,
+            portraitScale,
+            portraitOffsetX: importedCardPortrait ? undefined : msg.portraitOffsetX,
+            portraitOffsetY: importedCardPortrait ? undefined : msg.portraitOffsetY,
             options,
         };
     }, [
@@ -1968,6 +1977,8 @@ const Galgame = () => {
                                 sessionPlayerProfile={sessionPlayerProfile}
                                 onSessionPlayerProfileChange={handleSessionPlayerProfileChange}
                                 preferPresetGenderAb={npcGenderPreferPresetAb}
+                                displayNameMap={displayNameMap}
+                                displayNameCollapseList={displayNameCollapseList}
                                 narrativeBusy={isNarrativeGenerationBusy({
                                     streamLoading: controller.stepHandlers?.loading,
                                     isCompressingContext: controller.stepHandlers?.isCompressingContext,

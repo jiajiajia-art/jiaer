@@ -3,7 +3,7 @@
  * §3.1 默认方案 C：选中项=开场；其余=后续阶段约束（由 openingRouteId + retainedStorylineIds 表达）。
  */
 
-import { resolvePlayerDisplayName } from './playerDisplayName';
+import { resolvePlayerDisplayName } from './playerDisplayName.ts';
 
 export type WritingPace = 'slow' | 'medium' | 'fast';
 

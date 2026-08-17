@@ -1,6 +1,6 @@
 import React from 'react';
+import TrimmedTransparentImg from '../../components/TrimmedTransparentImg';
 import { CHARACTER_GENERATION_COST, getImageUrl } from '../../utils/constants';
-import { warehouseCardAvatarConstraintHint } from '../../lib/warehouse/warehouseCardAvatar';
 import panel from './WarehousePanel.module.css';
 
 type Props = {
@@ -10,9 +10,11 @@ type Props = {
   disabled?: boolean;
   onGenerate: () => void;
   fallbackChar?: string;
+  /** 头像右侧：姓名、性别等表单项 */
+  children?: React.ReactNode;
 };
 
-/** 编辑卡表单：预览 + AI 生图入口 */
+/** 左立绘画布占满；右侧生成按钮 + 姓名/性别等 */
 const WarehouseCardAvatarField: React.FC<Props> = ({
   name,
   avatarUrl,
@@ -20,41 +22,44 @@ const WarehouseCardAvatarField: React.FC<Props> = ({
   disabled,
   onGenerate,
   fallbackChar = '我',
+  children,
 }) => {
   const preview = avatarUrl ? getImageUrl(avatarUrl) : '';
+  const label = (name || fallbackChar).trim().slice(0, 1) || '角';
+  const busy = Boolean(generating);
+  // 功能注释：生图后台跑时只锁本按钮，姓名/性别/保存等不受影响
+  const locked = Boolean(disabled || generating);
+
   return (
-    <div className={panel.avatarField}>
-      <div className={panel.avatarFieldHead}>
-        <span>角色图像</span>
-        <span className={panel.avatarHint}>{warehouseCardAvatarConstraintHint()}</span>
-      </div>
-      <div className={panel.avatarRow}>
-        <div className={panel.avatarPreview}>
+    <section className={panel.avatarField} aria-label="角色图像">
+      <div className={panel.avatarIdentityRow}>
+        <div className={panel.avatarPreview} aria-busy={busy}>
           {preview ? (
-            <img src={preview} alt="" className={panel.avatarPreviewImg} />
+            <TrimmedTransparentImg src={preview} className={panel.avatarPreviewImg} variant="bust" />
           ) : (
-            <span className={panel.avatarPreviewFallback}>
-              {(name || fallbackChar).slice(0, 1)}
+            <span className={panel.avatarPreviewFallback} aria-hidden>
+              {label}
             </span>
           )}
         </div>
-        <div className={panel.avatarActions}>
+
+        <div className={panel.avatarAside}>
           <button
             type="button"
-            className={panel.primaryBtn}
-            disabled={disabled || generating}
+            className={`${panel.primaryBtn} ${panel.avatarGenBtn}`}
+            disabled={locked}
             onClick={onGenerate}
           >
-            {generating
-              ? '生成中…'
-              : `${avatarUrl ? '重新生成图像' : 'AI 生成图像'} · ${CHARACTER_GENERATION_COST} 积分`}
+            {busy
+              ? '后台生成中…'
+              : avatarUrl
+                ? `重新生成图像 · ${CHARACTER_GENERATION_COST} 积分`
+                : `AI 生成图像 · ${CHARACTER_GENERATION_COST} 积分`}
           </button>
-          <p className={panel.avatarTip}>
-            请先填写姓名与简介；生成后可继续改文案，保存时一并写入卡面。
-          </p>
+          {children}
         </div>
       </div>
-    </div>
+    </section>
   );
 };
 

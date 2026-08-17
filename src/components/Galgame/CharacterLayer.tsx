@@ -1,5 +1,9 @@
 import React, { useCallback, useRef, useState } from 'react';
 import type { CharacterAnimationType } from '../../hooks/galgame/useCharacterAnimation';
+import {
+    isImportedCardPortraitUrl,
+    isSessionGeneratedPortraitUrl,
+} from '../../lib/galgame/playerCharacterCard';
 import galgameStyles from '../../page/Galgame.module.css';
 import GameImageRenderer from './GameImageRenderer';
 import styles from './CharacterLayer.module.css';
@@ -173,6 +177,7 @@ const CharacterLayer: React.FC<CharacterLayerProps> = ({
 
     const getWrapperStyle = (): React.CSSProperties => {
         // 未配置时默认 scale=1（铺满容器 object-fit:contain）；禁止默认 1.5，否则头顶会被裁切/超出
+        // 导入/局内头像的缩小由上层 resolvePlayPortraitScale 显式传入，勿全局改默认
         const hasExplicitScale = portraitScale !== undefined
             && portraitScale !== null
             && Number.isFinite(Number(portraitScale));
@@ -207,6 +212,9 @@ const CharacterLayer: React.FC<CharacterLayerProps> = ({
     };
 
     const imageClassName = galgameStyles.characterImage;
+    // 功能注释：导入/重生成图常带大块透明边，不裁则 CSS scale=1 仍显小
+    const trimOpaquePadding = isImportedCardPortraitUrl(characterImage)
+        || isSessionGeneratedPortraitUrl(characterImage);
 
     return (
         <div
@@ -238,6 +246,7 @@ const CharacterLayer: React.FC<CharacterLayerProps> = ({
                         className={imageClassName}
                         useCanvas={true}
                         disableMobileGuard={true}
+                        trimOpaquePadding={trimOpaquePadding}
                     />
                 )}
             </div>

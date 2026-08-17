@@ -6,7 +6,48 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { gameResourceManager } from '../../utils/gameResourceManager';
 import { fallbackCharacterPortraitPng } from '../../utils/characterPortraitUrl';
+import { findOpaqueBounds } from '../../utils/trimTransparentImage';
+import {
+  computeContainBottomRect,
+  PLAY_PORTRAIT_HEADROOM_RATIO,
+  PLAY_TRIMMED_PORTRAIT_MAX_FILL,
+  resolveOpaqueSourceCrop,
+  type OpaqueBounds,
+} from '../../lib/galgame/portraitCanvasDraw';
 import styles from './GameImageRenderer.module.css';
+
+const opaqueBoundsCache = new Map<string, OpaqueBounds | null>();
+
+/** 量一次并缓存：局内/导入立绘常有大块透明边，不裁则 scale=1 仍显小 */
+function measureOpaqueBoundsFromBitmap(
+  bitmap: ImageBitmap,
+  cacheKey: string,
+  alphaThreshold = 8,
+): OpaqueBounds | null {
+  const key = String(cacheKey || '').trim();
+  if (key && opaqueBoundsCache.has(key)) {
+    return opaqueBoundsCache.get(key) ?? null;
+  }
+  const w = bitmap.width;
+  const h = bitmap.height;
+  if (w <= 0 || h <= 0) {
+    if (key) opaqueBoundsCache.set(key, null);
+    return null;
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) {
+    if (key) opaqueBoundsCache.set(key, null);
+    return null;
+  }
+  ctx.clearRect(0, 0, w, h);
+  ctx.drawImage(bitmap, 0, 0);
+  const bounds = findOpaqueBounds(ctx.getImageData(0, 0, w, h).data, w, h, alphaThreshold);
+  if (key) opaqueBoundsCache.set(key, bounds);
+  return bounds;
+}
 
 export interface GameImageRendererProps {
   src: string | null | undefined;
@@ -14,6 +55,8 @@ export interface GameImageRendererProps {
   style?: React.CSSProperties;
   useCanvas?: boolean;
   disableMobileGuard?: boolean;
+  /** 裁掉 PNG/WebP 四周透明边后再 contain 底对齐（局内导入/重生成立绘用） */
+  trimOpaquePadding?: boolean;
   placeholder?: React.ReactNode;
   errorPlaceholder?: React.ReactNode;
   onLoad?: () => void;
@@ -25,6 +68,7 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
   style,
   useCanvas = true,
   disableMobileGuard = false,
+  trimOpaquePadding = false,
   placeholder,
   errorPlaceholder,
   onLoad,
@@ -85,35 +129,40 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
           canvas.width = containerWidth;
           canvas.height = containerHeight;
 
-          // 实现 object-fit: contain + object-position: bottom 逻辑
-          // 图片底部对齐，同时保持比例
-          const imgAspect = imgWidth / imgHeight;
-          const containerAspect = containerWidth / containerHeight;
-
-          let drawWidth: number;
-          let drawHeight: number;
-
-          if (imgAspect > containerAspect) {
-            // 图片更宽，以宽度为准
-            drawWidth = containerWidth;
-            drawHeight = containerWidth / imgAspect;
-          } else {
-            // 图片更高，以高度为准
-            drawHeight = containerHeight;
-            drawWidth = containerHeight * imgAspect;
-          }
-
-          // 底部对齐：dy 为容器高度减去图片高度
-          const dx = (containerWidth - drawWidth) / 2;
-          const dy = containerHeight - drawHeight;
+          // object-fit: contain + object-position: bottom；可选先裁透明边
+          const cacheKey = String(targetSrc || src || '').trim();
+          const crop = trimOpaquePadding
+            ? resolveOpaqueSourceCrop(
+              imgWidth,
+              imgHeight,
+              measureOpaqueBoundsFromBitmap(bitmap, cacheKey),
+              { padding: 2, headroomRatio: PLAY_PORTRAIT_HEADROOM_RATIO },
+            )
+            : { sx: 0, sy: 0, sw: imgWidth, sh: imgHeight };
+          const { dx, dy, drawWidth, drawHeight } = computeContainBottomRect(
+            containerWidth,
+            containerHeight,
+            crop.sw,
+            crop.sh,
+            trimOpaquePadding ? PLAY_TRIMMED_PORTRAIT_MAX_FILL : undefined,
+          );
 
           // 填充透明背景（防止 Canvas 默认黑色背景）
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           ctx.fillStyle = 'rgba(0, 0, 0, 0)';
           ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-          // 绘制缩放后的图片
-          ctx.drawImage(bitmap, dx, dy, drawWidth, drawHeight);
+          ctx.drawImage(
+            bitmap,
+            crop.sx,
+            crop.sy,
+            crop.sw,
+            crop.sh,
+            dx,
+            dy,
+            drawWidth,
+            drawHeight,
+          );
 
           return true;
         } catch (error) {
@@ -124,7 +173,7 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
       return false;
     }
     return false;
-  }, [preferImgFallback, src]);
+  }, [preferImgFallback, src, trimOpaquePadding]);
 
   useEffect(() => {
     const container = canvasRef.current?.parentElement;

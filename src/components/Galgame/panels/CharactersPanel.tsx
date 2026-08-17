@@ -40,6 +40,11 @@ import { useGameStore } from '../../../store/gameStore';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { playerCharacterCardsApi, sessionPlayerProfileApi } from '../../../api/galgame/playerCharacterCards';
 import { fetchCharacterAvatarThumbs } from '../../../api/galgame/playUi';
+import {
+  applyDisplayNameRewrites,
+  rewriteDossierTextFields,
+  type NameReplacement,
+} from '../../../lib/galgame/npcNameOverlay';
 
 interface CharactersPanelProps {
   isOpen: boolean;
@@ -55,6 +60,9 @@ interface CharactersPanelProps {
   narrativeBusy?: boolean;
   /** A/B：未手改性别时展示/合并跟创作台预设（默认全开；仅显式 false 走旧覆盖） */
   preferPresetGenderAb?: boolean;
+  /** 文档主角名 / 曾用名 → 局内现用名（档案简介里的「苏晚」等随改名替换） */
+  displayNameMap?: NameReplacement[];
+  displayNameCollapseList?: Array<string | null | undefined>;
 }
 
 /**
@@ -151,6 +159,8 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
   onSessionPlayerProfileChange,
   narrativeBusy = false,
   preferPresetGenderAb = true,
+  displayNameMap = [],
+  displayNameCollapseList = [],
 }) => {
   const { t } = useTranslation();
   const { sessionId } = useGameStore();
@@ -168,6 +178,25 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
   const [npcAvatarThumbs, setNpcAvatarThumbs] = useState<Record<string, string>>({});
   /** 功能注释：150 ensure 未完成前列表不回落原图，避免先大图后小图闪烁 */
   const [avatarThumbsPending, setAvatarThumbsPending] = useState(false);
+
+  const rewriteDossierText = React.useCallback(
+    (text: string) => applyDisplayNameRewrites(
+      String(text || ''),
+      displayNameMap,
+      displayNameCollapseList,
+    ),
+    [displayNameMap, displayNameCollapseList],
+  );
+
+  /** 编辑表单初始值也换成现用名，避免仍显示文档主角旧称 */
+  const withRewrittenDossierFields = React.useCallback(
+    (profile: PlayerEditableNpc): PlayerEditableNpc => rewriteDossierTextFields(
+      profile as unknown as Record<string, unknown>,
+      displayNameMap,
+      displayNameCollapseList,
+    ) as unknown as PlayerEditableNpc,
+    [displayNameMap, displayNameCollapseList],
+  );
 
   React.useEffect(() => {
     if (editableProfiles == null) return;
@@ -427,7 +456,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
       String(live.avatarUrl || '').trim()
       || pickNpcAvatarPath(presetNpc?.images)
       || '';
-    setEditing({
+    setEditing(withRewrittenDossierFields({
       ...live,
       gender: resolveEditableNpcGender({
         preferPresetGender: preferPresetGenderAb,
@@ -438,7 +467,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
       // 编辑人设头像坞走 150；保留 avatarUrl 给放大预览/原图
       ...(thumb ? { avatarThumbUrl: thumb } : {}),
       ...(fullAvatar ? { avatarUrl: fullAvatar } : {}),
-    });
+    }));
     setMode('form');
   };
 
@@ -709,20 +738,24 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
               : profile?.gender === 'other'
                 ? '其他'
                 : '未知';
-          const relationship = profile?.relationship || '';
+          const relationship = rewriteDossierText(profile?.relationship || '');
           const roleTag = detail.identity && detail.identity !== relationship
             ? detail.identity
             : '';
           const summaryRaw = profile?.summary || detail.description || '';
-          const summary = isBlankPersonaText(summaryRaw)
-            ? composeNpcPersonaSummary({
-              description: detail.description,
-              personality: detail.personality,
-              job: detail.identity || profile?.relationship,
-            })
-            : summaryRaw;
+          const summary = rewriteDossierText(
+            isBlankPersonaText(summaryRaw)
+              ? composeNpcPersonaSummary({
+                description: detail.description,
+                personality: detail.personality,
+                job: detail.identity || profile?.relationship,
+              })
+              : summaryRaw,
+          );
           const attitudeRaw = profile?.attitudeToPlayer || detail.personality || '';
-          const attitude = isBlankPersonaText(attitudeRaw) ? '' : attitudeRaw;
+          const attitude = rewriteDossierText(
+            isBlankPersonaText(attitudeRaw) ? '' : attitudeRaw,
+          );
           const tags = [
             ...(profile?.personalityTags || []),
             profile?.importance === 'major' ? '重要' : profile?.importance === 'minor' ? '次要' : profile?.importance === 'extra' ? '路人' : '',
@@ -810,7 +843,9 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                   </div>
                 ) : null}
                 {(() => {
-                  const distinctBio = resolveDistinctDetailedBio(profile?.summary, profile?.detailedBio);
+                  const distinctBio = rewriteDossierText(
+                    resolveDistinctDetailedBio(profile?.summary, profile?.detailedBio) || '',
+                  );
                   if (distinctBio) {
                     return <p className={shell.detailSectionBody}>{distinctBio}</p>;
                   }
@@ -843,7 +878,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                   </div>
                   <ul className={shell.detailSectionBody}>
                     {detail.memories.map((m) => (
-                      <li key={m}>{m}</li>
+                      <li key={m}>{rewriteDossierText(m)}</li>
                     ))}
                   </ul>
                 </section>
@@ -859,7 +894,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
           const avatarUrl = resolveListAvatarUrl(profile, preset);
           const fullSummary = isBlankPersonaText(profile.summary)
             ? ''
-            : String(profile.summary || '').trim();
+            : rewriteDossierText(String(profile.summary || '').trim());
           const listSummary = truncateIntroText(fullSummary);
           return (
             <div key={profile.id} className={`${shell.card} ${shell.charRow}`}>
@@ -898,7 +933,9 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                     ) : null}
                   </span>
                 </h3>
-                {profile.relationship ? <p className={shell.cardMeta}>{profile.relationship}</p> : null}
+                {profile.relationship ? (
+                  <p className={shell.cardMeta}>{rewriteDossierText(profile.relationship)}</p>
+                ) : null}
                 {listSummary ? (
                   <p className={`${shell.cardBody} ${shell.cardBodyTruncate}`}>{listSummary}</p>
                 ) : null}
@@ -929,24 +966,28 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
         const avatarUrl = avatarFullPath
           ? getImageUrl(avatarFullPath)
           : resolveListAvatarUrl(p, preset);
-        const introSummary = isBlankPersonaText(p.summary) ? '' : String(p.summary || '').trim();
+        const introSummary = isBlankPersonaText(p.summary)
+          ? ''
+          : rewriteDossierText(String(p.summary || '').trim());
         const introAttitude = isBlankPersonaText(p.attitudeToPlayer)
           ? ''
-          : String(p.attitudeToPlayer || '').trim();
+          : rewriteDossierText(String(p.attitudeToPlayer || '').trim());
         const introRelation = isBlankPersonaText(p.relationship)
           ? ''
-          : String(p.relationship || '').trim();
-        const introBio = resolveDistinctDetailedBio(introSummary, p.detailedBio);
+          : rewriteDossierText(String(p.relationship || '').trim());
+        const introBio = rewriteDossierText(
+          resolveDistinctDetailedBio(p.summary, p.detailedBio) || '',
+        );
         const presetNpc = (npcs || []).find((n) => String(n?.id) === String(p.id));
         const composedFallback = !introSummary && !introBio
-          ? composeNpcPersonaSummary(
+          ? rewriteDossierText(composeNpcPersonaSummary(
             presetNpc || {
               description: introSummary,
               job: introRelation,
               personality: introAttitude,
               appearance: '',
             },
-          )
+          ))
           : '';
         const displaySummary = introSummary || composedFallback;
         const hasIntro = Boolean(displaySummary || introAttitude || introRelation || introBio);

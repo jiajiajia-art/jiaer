@@ -20,8 +20,13 @@ test('CharacterLayer_默认不得强制scale1_5', () => {
   const src = readFileSync(join(dir, '../src/components/Galgame/CharacterLayer.tsx'), 'utf8');
   assert.doesNotMatch(
     src,
-    /DEFAULT_SCALE\s*=\s*1\.5/,
+    /DEFAULT_(PORTRAIT_)?SCALE\s*=\s*1\.5/,
     '默认 1.5 会把立绘放大出框，头顶被裁',
+  );
+  assert.doesNotMatch(
+    src,
+    /DEFAULT_PORTRAIT_SCALE\s*=\s*0\.8/,
+    '全局默认 0.8 会误伤文档原有立绘；导入缩小须走 resolvePlayPortraitScale',
   );
   assert.match(src, /effectiveScale\s*=\s*hasExplicitScale\s*\?\s*Number\(portraitScale\)\s*:\s*1/);
   assert.match(src, /overflow:\s*'hidden'/);

@@ -5,6 +5,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { playerCharacterCardsApi } from '../../api/galgame/playerCharacterCards';
 import type { PlayerCharacterCard } from '../../lib/galgame/playerCharacterCard';
 import { getImageUrl } from '../../utils/constants';
+import TrimmedTransparentImg from '../../components/TrimmedTransparentImg';
 import { PERSONA_TAGS, genderLabel } from './warehouseNav';
 import panel from './WarehousePanel.module.css';
 
@@ -156,7 +157,7 @@ const WarehousePublicCards: React.FC = () => {
                 >
                   <div className={panel.portrait}>
                     {avatar ? (
-                      <img className={panel.portraitImg} src={avatar} alt="" />
+                      <TrimmedTransparentImg className={panel.portraitImg} src={avatar} variant="bust" />
                     ) : (
                       <div className={panel.portraitFallback}>
                         {(card.name || '?').slice(0, 1)}
@@ -219,10 +220,10 @@ const WarehousePublicCards: React.FC = () => {
               <>
                 <div className={panel.previewHero}>
                   {selected.avatarUrl ? (
-                    <img
+                    <TrimmedTransparentImg
                       className={panel.previewHeroImg}
                       src={getImageUrl(selected.avatarUrl)}
-                      alt=""
+                      variant="full"
                     />
                   ) : (
                     <div className={panel.previewHeroFallback}>

@@ -174,6 +174,9 @@ export function previewPlayerCardImportDiff(
   if (!current || current.name !== next.name) changedKeys.push('name');
   if (!current || current.gender !== next.gender) changedKeys.push('gender');
   if (!current || current.persona !== next.persona) changedKeys.push('persona');
+  if (String(current?.avatarUrl || '').trim() !== String(next.avatarUrl || '').trim()) {
+    changedKeys.push('avatarUrl');
+  }
   const curAttrs = current?.customAttributes || {};
   const allKeys = new Set([...Object.keys(curAttrs), ...Object.keys(next.customAttributes)]);
   for (const k of allKeys) {
@@ -182,6 +185,74 @@ export function previewPlayerCardImportDiff(
     }
   }
   return { ok: true, changedKeys, next };
+}
+
+/**
+ * 导入角色卡后合并本局面板档案。
+ * 硬规则：卡库有立绘必须写进 avatarUrl；avatarUrl 变更时禁止残留旧 avatarThumbUrl
+ * （列表优先 thumb，残留会导致「姓名已换、头像仍是旧人」）。
+ */
+export function mergeProfileAfterPlayerCardImport(opts: {
+  applied: SessionPlayerProfile;
+  serverProfile?: SessionPlayerProfile | null;
+  previousProfile?: SessionPlayerProfile | null;
+}): SessionPlayerProfile {
+  const applied = opts.applied;
+  const server = opts.serverProfile && typeof opts.serverProfile === 'object'
+    ? opts.serverProfile
+    : null;
+  const previous = opts.previousProfile && typeof opts.previousProfile === 'object'
+    ? opts.previousProfile
+    : null;
+
+  const cardAvatar = trimStr(applied.avatarUrl);
+  const serverAvatar = trimStr(server?.avatarUrl);
+  // 卡库立绘优先；服务端已落盘同图也可
+  const nextAvatar = cardAvatar || serverAvatar;
+
+  const cardThumb = trimStr(applied.avatarThumbUrl);
+  const serverThumb = trimStr(server?.avatarThumbUrl);
+  const prevAvatar = trimStr(previous?.avatarUrl);
+  const prevThumb = trimStr(previous?.avatarThumbUrl);
+  const avatarChanged = Boolean(nextAvatar) && nextAvatar !== prevAvatar;
+
+  let nextThumb = '';
+  if (cardThumb) {
+    nextThumb = cardThumb;
+  } else if (serverThumb && (!cardAvatar || serverAvatar === nextAvatar)) {
+    nextThumb = serverThumb;
+  } else if (!avatarChanged && prevThumb && nextAvatar === prevAvatar) {
+    nextThumb = prevThumb;
+  }
+
+  const merged: SessionPlayerProfile = {
+    name: trimStr(server?.name) || applied.name,
+    gender: (server?.gender || applied.gender) as SessionPlayerProfile['gender'],
+    persona: server?.persona != null ? String(server.persona) : applied.persona,
+    customAttributes: {
+      ...(applied.customAttributes || {}),
+      ...(server?.customAttributes || {}),
+    },
+    importedCardId: server?.importedCardId != null
+      ? server.importedCardId
+      : (applied.importedCardId ?? null),
+  };
+
+  if (nextAvatar) {
+    merged.avatarUrl = nextAvatar;
+    merged.avatarNeedsRegen = false;
+  } else if (typeof server?.avatarNeedsRegen === 'boolean') {
+    merged.avatarNeedsRegen = server.avatarNeedsRegen;
+  } else if (typeof applied.avatarNeedsRegen === 'boolean') {
+    merged.avatarNeedsRegen = applied.avatarNeedsRegen;
+  }
+
+  if (nextThumb) {
+    merged.avatarThumbUrl = nextThumb;
+  }
+  // 故意不写 avatarThumbUrl：清除旧小图，列表回落新原图
+
+  return merged;
 }
 
 /**
@@ -209,5 +280,44 @@ export function resolveSessionPlayerPortraitPath(
     if (path) return path;
   }
   return '';
+}
+
+/**
+ * 导入角色卡立绘 → 0.8；局内「重新生成头像」→ 0.85（裁透明后另加头顶留白）。
+ * 注意：documentPortraitScale 必须是文档/创作台原值，禁止传入 Message 上已解析过的 scale
+ * （否则导入写成 0.8 后，重生成仍会吃到陈旧 0.8）。
+ */
+export const SESSION_OVERRIDE_PORTRAIT_SCALE = 0.8;
+export const SESSION_GENERATED_PORTRAIT_SCALE = 0.85;
+
+/** 卡库立绘：/public/visual/player-cards/{userId}/avatars/... */
+export function isImportedCardPortraitUrl(url?: string | null): boolean {
+  const u = String(url || '').trim();
+  if (!u) return false;
+  return /\/player-cards\//i.test(u);
+}
+
+/** 局内重新生成：/public/visual/sessions/{sid}/avatars/... */
+export function isSessionGeneratedPortraitUrl(url?: string | null): boolean {
+  const u = String(url || '').trim();
+  if (!u) return false;
+  return /\/sessions\/[^/]+\/avatars\//i.test(u);
+}
+
+export function resolvePlayPortraitScale(opts: {
+  sessionAvatarUrl?: string | null;
+  documentPortraitScale?: number | null;
+}): number | undefined {
+  const sessionUrl = String(opts.sessionAvatarUrl || '').trim();
+  if (sessionUrl && isSessionGeneratedPortraitUrl(sessionUrl)) {
+    return SESSION_GENERATED_PORTRAIT_SCALE;
+  }
+  if (sessionUrl && isImportedCardPortraitUrl(sessionUrl)) {
+    return SESSION_OVERRIDE_PORTRAIT_SCALE;
+  }
+  const raw = opts.documentPortraitScale;
+  if (raw === undefined || raw === null) return undefined;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : undefined;
 }
 

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { IoArrowBack, IoClose, IoGitBranchOutline, IoMoonOutline, IoPause, IoPlay, IoPlayCircleOutline, IoPlaySkipForward, IoRefresh, IoSpeedometerOutline, IoStatsChartOutline, IoSunnyOutline } from 'react-icons/io5';
+import { IoChevronBackSharp, IoClose, IoMapOutline, IoMoonOutline, IoPause, IoPlay, IoPlayCircleOutline, IoPlaySkipForward, IoRefresh, IoSpeedometerOutline, IoStatsChartOutline, IoSunnyOutline } from 'react-icons/io5';
 import {
     Background,
     BaseEdge,
@@ -23,9 +23,14 @@ import {
 import 'reactflow/dist/style.css';
 import {
     createInteractiveVideoSession,
-    fetchInteractiveVideoJson,
+    getInteractiveVideoSessionManifest,
+    getInteractiveVideoSessionStory,
     patchInteractiveVideoSessionState,
     toBackendAssetUrl,
+    unlockInteractiveVideoContent,
+    type InteractiveVideoAccess,
+    type InteractiveVideoDirectoryPrice,
+    type InteractiveVideoPricingConfig,
     type InteractiveVideoHistoryItem,
     type InteractiveVideoSessionResponse,
     type InteractiveVideoSessionState,
@@ -50,6 +55,21 @@ import {
     getNextPlaybackRate,
     type InteractiveVideoPlaybackRate,
 } from '../utils/interactiveVideoControls';
+import {
+    getInteractiveVideoTargetVideo,
+    getInteractiveVideoTargetVideoRefs,
+    getInteractiveVideoTargetVideoSequence,
+    type InteractiveVideoPlaybackTarget,
+} from '../utils/interactiveVideoPlayback';
+import {
+    buildInteractiveVideoPlayerTestAccess,
+    findInteractiveVideoLockedDirectoryByNodeId,
+    findInteractiveVideoLockedDirectoryByScriptId,
+    findInteractiveVideoLockedDirectoryForRuntimeNode,
+    formatIvgUnlockCost,
+    getEffectiveInteractiveVideoPlayerTestPaidDirectories,
+    getInteractiveVideoPaidTargetType,
+} from '../utils/interactiveVideoPricing';
 import { isMiniProgramEnv } from '../utils/miniProgram';
 import styles from './InteractiveVideo.module.css';
 
@@ -114,6 +134,8 @@ type StoryChoiceOption = {
     body?: string;
     conditions?: StoryCondition[];
     mutations?: StoryMutation[];
+    video?: StoryVideo;
+    videoSequence?: StoryVideoSequence;
 };
 
 type StoryMinigameResultPort = {
@@ -257,6 +279,7 @@ type VideoPreloadStatus = ManagedVideoPreloadStatus;
 type InteractiveVideoTheme = 'light' | 'dark';
 type ViewportMode = 'desktop' | 'mobilePortrait' | 'mobileLandscape';
 type PortalPostureMode = 'desktop' | 'mobilePortraitVideo' | 'mobileLandscapeVideo';
+type InteractiveVideoTestMode = 'creator' | 'player' | null;
 type InteractiveVideoRouteState = {
     fromGameDetail?: boolean;
     restart?: boolean;
@@ -375,6 +398,83 @@ const MINI_PROGRAM_PLAYBACK_WATCHDOG_MS = 2600;
 const DEFAULT_BRANCH_WAIT_MS = 6500;
 const MINI_PROGRAM_DISABLED_PRELOAD_PRIORITIES = ['next-layer', 'replay'] as const;
 
+const getPaidTargetType = (item?: InteractiveVideoDirectoryPrice | null) =>
+    getInteractiveVideoPaidTargetType(item);
+
+const getPaidTargetKindText = (item?: InteractiveVideoDirectoryPrice | null) =>
+    getPaidTargetType(item) === 'node' ? '付费节点' : '付费脚本';
+
+const getPaidTargetTitle = (item?: InteractiveVideoDirectoryPrice | null) => {
+    if (!item) return '付费内容';
+    return getPaidTargetType(item) === 'node' && item.scriptName
+        ? `${item.scriptName} / ${item.name}`
+        : item.name || '付费内容';
+};
+
+const INTERACTIVE_VIDEO_UNLOCK_ERROR_MESSAGES: Record<string, string> = {
+    INSUFFICIENT_POINTS: '积分不足',
+    INSUFFICIENT_DIAMONDS: '钻石不足',
+    PAYMENT_METHOD_UNAVAILABLE: '当前支付方式不可用',
+    BUYOUT_NOT_FOR_SALE: '该互动影游暂不支持买断',
+    DIRECTORY_NOT_FOR_SALE: '该付费内容暂不可购买',
+    FREE_UNLOCK_UNAVAILABLE: '当前内容暂不支持免费解锁',
+    INVALID_CURRENCY: '支付方式无效',
+    INVALID_PURCHASE_TYPE: '购买类型无效',
+    INVALID_PARAM: '支付参数无效，请刷新后重试',
+    INVALID_PURCHASE_PARAM: '支付参数无效，请刷新后重试',
+    AUTH_REQUIRED: '请先登录后再解锁',
+};
+
+const getUnlockErrorMessage = (code?: string | null, message?: string | null) => {
+    const normalizedCode = String(code || '').trim();
+    const normalizedMessage = String(message || '').trim();
+    const mappedMessage = INTERACTIVE_VIDEO_UNLOCK_ERROR_MESSAGES[normalizedCode]
+        || INTERACTIVE_VIDEO_UNLOCK_ERROR_MESSAGES[normalizedMessage];
+    if (mappedMessage) return mappedMessage;
+    if (normalizedMessage && !/[A-Za-z]/.test(normalizedMessage)) return normalizedMessage;
+    return '解锁失败，请稍后重试';
+};
+
+const mergeLockedPayItems = (
+    pricedItems: InteractiveVideoDirectoryPrice[] = [],
+    metadataItems: InteractiveVideoDirectoryPrice[] = [],
+) => {
+    if (pricedItems.length === 0) return metadataItems;
+    const metadataById = new Map(metadataItems.map((item) => [item.directoryId, item]));
+    return pricedItems.map((item) => {
+        const metadata = metadataById.get(item.directoryId);
+        if (!metadata) return item;
+        return {
+            ...metadata,
+            ...item,
+            targetType: item.targetType || metadata.targetType,
+            scriptId: item.scriptId || metadata.scriptId,
+            nodeId: item.nodeId || metadata.nodeId,
+            scriptName: item.scriptName || metadata.scriptName,
+            groupId: item.groupId || metadata.groupId,
+            groupName: item.groupName || metadata.groupName,
+            scriptIds: item.scriptIds?.length ? item.scriptIds : metadata.scriptIds,
+        };
+    });
+};
+
+const INTERACTIVE_VIDEO_PAYMENT_CURRENCIES = ['points', 'diamonds'] as const;
+const IVG_PLAYER_TEST_UNLOCK_ACTION_TEXT = '\u521b\u4f5c\u80050\u79ef\u5206\u89e3\u9501\u6d4b\u8bd5';
+const IVG_PLAYER_TEST_UNLOCK_SUCCESS_TEXT = '\u6d4b\u8bd5\u89e3\u9501\u6210\u529f';
+const IVG_PLAYER_TEST_UNLOCK_CONTINUE_TEXT = '\u6d4b\u8bd5\u89e3\u9501\u6210\u529f\uff0c\u6b63\u5728\u8fdb\u5165\u5267\u60c5';
+
+const resolveInteractiveVideoTestMode = (search: string): InteractiveVideoTestMode => {
+    const value = new URLSearchParams(search).get('testMode')?.trim().toLowerCase();
+    if (value === 'creator') return 'creator';
+    if (value === 'player') return 'player';
+    return null;
+};
+
+const shouldRestartInteractiveVideoFromSearch = (search: string) => {
+    const value = new URLSearchParams(search).get('restart')?.trim().toLowerCase();
+    return value === '1' || value === 'true';
+};
+
 const emptyState = (entryNodeId: string | null): InteractiveVideoSessionState => ({
     currentNodeId: entryNodeId,
     currentScriptId: null,
@@ -427,9 +527,10 @@ const getNodeBody = (node?: StoryNode | null): string => {
     return String(node?.data?.body || node?.body || '').trim();
 };
 
-const getNodeVideo = (node?: StoryNode | null): StoryVideo | undefined => node?.data?.video || node?.video;
-const getNodeVideoSequence = (node?: StoryNode | null): StoryVideoSequence | undefined =>
-    node?.data?.videoSequence || node?.videoSequence;
+const getNodeVideo = (target?: InteractiveVideoPlaybackTarget): StoryVideo | undefined =>
+    getInteractiveVideoTargetVideo(target) as StoryVideo | undefined;
+const getNodeVideoSequence = (target?: InteractiveVideoPlaybackTarget): StoryVideoSequence | undefined =>
+    getInteractiveVideoTargetVideoSequence(target) as StoryVideoSequence | undefined;
 const getNodeOptions = (node?: StoryNode | null): StoryChoiceOption[] => node?.data?.options || node?.options || [];
 const getNodeMutations = (node?: StoryNode | null): StoryMutation[] => node?.data?.mutations || node?.mutations || [];
 const getNodeMinigameAssetId = (node?: StoryNode | null): string =>
@@ -653,20 +754,8 @@ const videoUrlsMatch = (left?: string | null, right?: string | null): boolean =>
     return Boolean(normalizedLeft && normalizedRight && normalizedLeft === normalizedRight);
 };
 
-const getNodeVideoRefs = (node: StoryNode | null | undefined): StoryVideo[] => {
-    const sequence = getNodeVideoSequence(node);
-    const sequenceVideos = Array.isArray(sequence?.segments)
-        ? sequence.segments
-            .slice()
-            .sort((left, right) => Number(left.index ?? 0) - Number(right.index ?? 0))
-            .map((segment) => segment.video)
-            .filter((video): video is StoryVideo => Boolean(video))
-        : [];
-
-    if (sequenceVideos.length > 0) return sequenceVideos;
-    const singleVideo = getNodeVideo(node);
-    return singleVideo ? [singleVideo] : [];
-};
+const getNodeVideoRefs = (target: InteractiveVideoPlaybackTarget): StoryVideo[] =>
+    getInteractiveVideoTargetVideoRefs(target) as StoryVideo[];
 
 const resolveVideoAspect = (
     video: StoryVideo | undefined,
@@ -696,8 +785,8 @@ const resolveMinigameUrl = (node: StoryNode | null | undefined, manifest: StoryM
     return baseUrl ? `${baseUrl.replace(/\/$/, '')}/index.html` : '';
 };
 
-const getNodeVideoUrls = (node: StoryNode | null | undefined, manifest: StoryManifest | null): string[] => {
-    const sequence = getNodeVideoSequence(node);
+const getNodeVideoUrls = (target: InteractiveVideoPlaybackTarget, manifest: StoryManifest | null): string[] => {
+    const sequence = getNodeVideoSequence(target);
     const sequenceUrls = Array.isArray(sequence?.segments)
         ? sequence.segments
             .slice()
@@ -708,7 +797,7 @@ const getNodeVideoUrls = (node: StoryNode | null | undefined, manifest: StoryMan
 
     if (sequenceUrls.length > 0) return sequenceUrls;
 
-    const singleVideoUrl = resolveVideoUrl(getNodeVideo(node), manifest);
+    const singleVideoUrl = resolveVideoUrl(getNodeVideo(target), manifest);
     return singleVideoUrl ? [singleVideoUrl] : [];
 };
 
@@ -720,6 +809,32 @@ type RuntimeResolveResult = {
     node: StoryNode | null;
     callStack: InteractiveVideoRuntimeFrame[];
     variables: Record<string, StoryVariableValue>;
+};
+
+type ChoiceTransitionResolution = {
+    edgeRuntimeId: string;
+    routeWasUnlocked: boolean;
+    targetNode: StoryNode;
+    targetNodeKind: StoryNodeKind;
+    targetVideoUrl: string;
+    resolvedTarget: RuntimeResolveResult;
+};
+
+type ChoiceBridgePlayback = {
+    option: StoryChoiceOption;
+    transition: ChoiceTransitionResolution;
+};
+
+type ChoiceTransitionSource = {
+    sourceNode: StoryNode;
+    sourceScript: StoryScript;
+    sourceState: InteractiveVideoSessionState;
+};
+
+type PendingUnlockTransition = ChoiceTransitionSource & {
+    option: StoryChoiceOption;
+    edge: StoryEdge;
+    lockedDirectoryId: string;
 };
 
 const getProjectFlowRuntimeScript = (story: StoryProject): StoryScript | null => {
@@ -2069,6 +2184,17 @@ const InteractiveVideo: React.FC = () => {
     const location = useLocation();
     const [manifest, setManifest] = useState<StoryManifest | null>(null);
     const [story, setStory] = useState<StoryProject | null>(null);
+    const [ivgAccess, setIvgAccess] = useState<InteractiveVideoAccess | null>(null);
+    const [ivgPricingConfig, setIvgPricingConfig] = useState<InteractiveVideoPricingConfig | null>(null);
+    const [lockedDirectories, setLockedDirectories] = useState<InteractiveVideoDirectoryPrice[]>([]);
+    const [unlockTarget, setUnlockTarget] = useState<InteractiveVideoDirectoryPrice | null>(null);
+    const [unlockConfirm, setUnlockConfirm] = useState<{
+        purchaseType: 'directory' | 'buyout';
+        directory?: InteractiveVideoDirectoryPrice;
+        currency: 'points' | 'diamonds';
+        amount: number;
+    } | null>(null);
+    const [isUnlocking, setIsUnlocking] = useState(false);
     const [sessionId, setSessionId] = useState('');
     const [sessionState, setSessionState] = useState<InteractiveVideoSessionState | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -2078,6 +2204,9 @@ const InteractiveVideo: React.FC = () => {
     const [videoGate, setVideoGate] = useState(false);
     const [videoError, setVideoError] = useState('');
     const [isVideoPaused, setIsVideoPaused] = useState(false);
+    const [isAutoplayMuted, setIsAutoplayMuted] = useState(false);
+    const [isVideoFrameSuppressed, setIsVideoFrameSuppressed] = useState(false);
+    const [videoFrameSuppressionTargetUrl, setVideoFrameSuppressionTargetUrl] = useState<string | null>(null);
     const [isVideoHudVisible, setIsVideoHudVisible] = useState(true);
     const [isNonVideoToolsVisible, setIsNonVideoToolsVisible] = useState(true);
     const [playbackRate, setPlaybackRate] = useState<InteractiveVideoPlaybackRate>(1);
@@ -2099,6 +2228,8 @@ const InteractiveVideo: React.FC = () => {
     const [ivgTheme, setIvgTheme] = useState<InteractiveVideoTheme>('light');
     const [isMiniProgramRuntime, setIsMiniProgramRuntime] = useState(() => isMiniProgramEnv());
     const [currentSequenceVideoIndex, setCurrentSequenceVideoIndex] = useState(0);
+    const [choiceBridgePlayback, setChoiceBridgePlayback] = useState<ChoiceBridgePlayback | null>(null);
+    const pendingUnlockTransitionRef = useRef<PendingUnlockTransition | null>(null);
     const isMiniProgramRuntimeRef = useRef(isMiniProgramRuntime);
     const preloadedVideoAspectRef = useRef<Record<string, VideoAspect>>({});
     const preloadManagerRef = useRef<VideoPreloadManager | null>(null);
@@ -2121,13 +2252,20 @@ const InteractiveVideo: React.FC = () => {
     });
     const monitorRef = useRef<HTMLDivElement | null>(null);
     const videoRef = useRef<HTMLVideoElement | null>(null);
+    const videoFrameSuppressionTargetUrlRef = useRef<string | null>(null);
+    const resumeVideoAfterPanelRef = useRef(false);
     const minigameIframeRef = useRef<HTMLIFrameElement | null>(null);
     const minigameCompletionTimerRef = useRef<number | null>(null);
 
     const fileId = String(fileIdParam || '').trim();
     const routeState = location.state as InteractiveVideoRouteState;
     const launchedFromGameDetail = Boolean(routeState?.fromGameDetail);
-    const initialRestartRef = useRef(Boolean(routeState?.restart));
+    const ivgTestMode = useMemo(() => resolveInteractiveVideoTestMode(location.search), [location.search]);
+    const isPlayerTestMode = ivgTestMode === 'player';
+    const interactiveVideoSessionSource = ivgTestMode ? `ivg_${ivgTestMode}_test` : 'game_detail';
+    const initialRestartRef = useRef(
+        Boolean(routeState?.restart) || shouldRestartInteractiveVideoFromSearch(location.search) || Boolean(ivgTestMode),
+    );
     const initialPlaybackOrientationRef = useRef(normalizePlaybackOrientation(routeState?.playbackOrientation));
 
     const runtimeScripts = useMemo(() => story ? getRuntimeScripts(story) : [], [story]);
@@ -2150,12 +2288,16 @@ const InteractiveVideo: React.FC = () => {
     const currentNode = sessionState?.currentNodeId ? nodeMap.get(sessionState.currentNodeId) : null;
     const isEndingNode = getNodeKind(currentNode) === 'ending';
     const isMinigameNode = getNodeKind(currentNode) === 'minigame';
+    const activeVideoTarget = choiceBridgePlayback?.option || currentNode;
+    const activeVideoTargetKey = choiceBridgePlayback
+        ? `choice:${currentNode?.id || ''}:${choiceBridgePlayback.option.id}`
+        : currentNode?.id || '';
     const projectPlaybackOrientation = useMemo(
         () => getProjectPlaybackOrientation(story, manifest, initialPlaybackOrientationRef.current),
         [manifest?.playbackOrientation, story?.playbackOrientation],
     );
-    const currentVideoRefs = useMemo(() => getNodeVideoRefs(currentNode), [currentNode]);
-    const currentVideoUrls = useMemo(() => getNodeVideoUrls(currentNode, manifest), [currentNode, manifest]);
+    const currentVideoRefs = useMemo(() => getNodeVideoRefs(activeVideoTarget), [activeVideoTarget]);
+    const currentVideoUrls = useMemo(() => getNodeVideoUrls(activeVideoTarget, manifest), [activeVideoTarget, manifest]);
     const currentVideoUrlsKey = currentVideoUrls.join('|');
     const currentVideoUrl = currentVideoUrls[currentSequenceVideoIndex] || currentVideoUrls[0] || '';
     const currentVideoRef = currentVideoRefs[currentSequenceVideoIndex] || currentVideoRefs[0];
@@ -2187,11 +2329,11 @@ const InteractiveVideo: React.FC = () => {
         preloadedVideoAspectRef.current = { ...preloadedVideoAspectRef.current, [url]: aspect };
     }, []);
 
-    const getKnownVideoAspect = useCallback((url: string, node: StoryNode | null | undefined, sequenceIndex = 0): VideoAspect => {
+    const getKnownVideoAspect = useCallback((url: string, target: InteractiveVideoPlaybackTarget, sequenceIndex = 0): VideoAspect => {
         if (!url) return 'unknown';
         const preloadedAspect = preloadedVideoAspectRef.current[url];
         if (preloadedAspect) return preloadedAspect;
-        const videoRefs = getNodeVideoRefs(node);
+        const videoRefs = getNodeVideoRefs(target);
         return resolveVideoAspect(videoRefs[sequenceIndex] || videoRefs[0], manifest, url);
     }, [manifest]);
 
@@ -2283,13 +2425,35 @@ const InteractiveVideo: React.FC = () => {
     });
 
     const returnToGameDetail = useCallback(() => {
+        if (ivgTestMode) {
+            navigate(`/interactive-video/edit/${encodeURIComponent(fileId)}?step=test`, { replace: true });
+            return;
+        }
+
         if (launchedFromGameDetail && typeof window !== 'undefined' && window.history.length > 1) {
             navigate(-1);
             return;
         }
 
         navigate(`/game/${fileId}`, { replace: true });
-    }, [fileId, launchedFromGameDetail, navigate]);
+    }, [fileId, ivgTestMode, launchedFromGameDetail, navigate]);
+
+    const updateVideoFrameSuppressionTarget = useCallback((targetUrl: string | null) => {
+        const normalizedUrl = targetUrl || null;
+        videoFrameSuppressionTargetUrlRef.current = normalizedUrl;
+        setVideoFrameSuppressionTargetUrl(normalizedUrl);
+    }, []);
+
+    const clearVideoFrameSuppression = useCallback(() => {
+        updateVideoFrameSuppressionTarget(null);
+        setIsVideoFrameSuppressed(false);
+    }, [updateVideoFrameSuppressionTarget]);
+
+    const revealSuppressedVideoFrame = useCallback((readyUrl: string) => {
+        const targetUrl = videoFrameSuppressionTargetUrlRef.current;
+        if (targetUrl && targetUrl !== readyUrl) return;
+        clearVideoFrameSuppression();
+    }, [clearVideoFrameSuppression]);
 
     const syncState = useCallback(async (nextState: InteractiveVideoSessionState) => {
         setSessionState(nextState);
@@ -2304,6 +2468,32 @@ const InteractiveVideo: React.FC = () => {
             setIsSyncing(false);
         }
     }, [sessionId]);
+
+    const loadProtectedPayload = useCallback(async (targetSessionId: string) => {
+        const [manifestResponse, storyResponse] = await Promise.all([
+            getInteractiveVideoSessionManifest<StoryManifest>(targetSessionId),
+            getInteractiveVideoSessionStory<StoryProject>(targetSessionId),
+        ]);
+        const loadedManifest = manifestResponse.data.manifest;
+        const loadedStory = storyResponse.data.story;
+        const loadedAccess = storyResponse.data.access || manifestResponse.data.access || null;
+        const loadedConfig = storyResponse.data.config || manifestResponse.data.config || null;
+        const playerTestAccess = isPlayerTestMode ? buildInteractiveVideoPlayerTestAccess(loadedConfig) : null;
+        const effectiveAccess = playerTestAccess || loadedAccess;
+        setManifest(loadedManifest);
+        setStory(loadedStory);
+        setIvgAccess(effectiveAccess);
+        setIvgPricingConfig(loadedConfig);
+        const lockedMetadata = storyResponse.data.lockedDirectories || manifestResponse.data.lockedDirectories || [];
+        setLockedDirectories(
+            playerTestAccess?.lockedDirectories
+                ? playerTestAccess.lockedDirectories
+                : effectiveAccess?.lockedDirectories
+                ? mergeLockedPayItems(effectiveAccess.lockedDirectories, lockedMetadata)
+                : lockedMetadata,
+        );
+        return { loadedManifest, loadedStory };
+    }, [isPlayerTestMode]);
 
     const loadSession = useCallback(async (restart = false) => {
         if (!fileId) {
@@ -2326,7 +2516,15 @@ const InteractiveVideo: React.FC = () => {
         setIsBranchTransitioning(false);
         setIsVideoBuffering(false);
         setIsVideoPaused(false);
+        setIsAutoplayMuted(false);
+        clearVideoFrameSuppression();
         setIsVideoHudVisible(true);
+        setChoiceBridgePlayback(null);
+        setUnlockTarget(null);
+        setUnlockConfirm(null);
+        setIvgAccess(null);
+        setIvgPricingConfig(null);
+        setLockedDirectories([]);
         setPlaybackRate(1);
         setPreloadedVideoStatus({});
         preloadedVideoAspectRef.current = {};
@@ -2345,8 +2543,8 @@ const InteractiveVideo: React.FC = () => {
         try {
             const response = await createInteractiveVideoSession({
                 fileId,
-                restart,
-                source: 'game_detail',
+                restart: restart || Boolean(ivgTestMode),
+                source: interactiveVideoSessionSource,
             });
             const data = response.data;
             if (!data.success || !data.state || !data.sessionId) {
@@ -2354,12 +2552,7 @@ const InteractiveVideo: React.FC = () => {
             }
 
             setSessionId(data.sessionId);
-            const manifestPath = data.manifestUrl || `/public/interactive-video/apps/${fileId}/manifest.json`;
-            const loadedManifest = await fetchInteractiveVideoJson<StoryManifest>(manifestPath);
-            const storyPath = data.storyUrl || loadedManifest.storyUrl;
-            const loadedStory = await fetchInteractiveVideoJson<StoryProject>(storyPath);
-            setManifest(loadedManifest);
-            setStory(loadedStory);
+            const { loadedManifest, loadedStory } = await loadProtectedPayload(data.sessionId);
 
             const initialState = hydrateSessionState(loadedStory, data.state || emptyState(loadedStory.entryNodeId));
             const loadedNodeMap = getRuntimeNodeMap(loadedStory);
@@ -2395,7 +2588,7 @@ const InteractiveVideo: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [fileId, publishPlaybackMetrics]);
+    }, [clearVideoFrameSuppression, fileId, interactiveVideoSessionSource, ivgTestMode, loadProtectedPayload, publishPlaybackMetrics]);
 
     useEffect(() => {
         const shouldRestart = initialRestartRef.current;
@@ -2416,11 +2609,21 @@ const InteractiveVideo: React.FC = () => {
     useEffect(() => {
         const preloadedAspect = currentVideoUrl ? preloadedVideoAspectRef.current[currentVideoUrl] : undefined;
         setVideoAspect(preloadedAspect || currentManifestVideoAspect);
-    }, [currentManifestVideoAspect, currentNode?.id, currentVideoUrl]);
+    }, [activeVideoTargetKey, currentManifestVideoAspect, currentVideoUrl]);
+
+    useEffect(() => {
+        if (!currentVideoUrl) {
+            clearVideoFrameSuppression();
+        }
+    }, [activeVideoTargetKey, clearVideoFrameSuppression, currentVideoUrl]);
 
     useEffect(() => {
         setCurrentSequenceVideoIndex(0);
-    }, [currentNode?.id, currentVideoUrlsKey]);
+    }, [activeVideoTargetKey, currentVideoUrlsKey]);
+
+    useEffect(() => {
+        setChoiceBridgePlayback(null);
+    }, [currentNode?.id]);
 
     useEffect(() => {
         if (typeof window === 'undefined') return undefined;
@@ -2460,7 +2663,7 @@ const InteractiveVideo: React.FC = () => {
             window.removeEventListener('resize', updateStageAspect);
             window.removeEventListener('orientationchange', updateStageAspect);
         };
-    }, [currentNode?.id, currentVideoUrl, videoAspect]);
+    }, [activeVideoTargetKey, currentVideoUrl, videoAspect]);
 
     useEffect(() => {
         if (!hasOrientableImmersiveMedia) {
@@ -2496,7 +2699,7 @@ const InteractiveVideo: React.FC = () => {
         if (isEndingNode && currentNode) {
             setEndingModalOpen(true);
         }
-    }, [currentNode?.id, currentVideoUrl, currentNode, isEndingNode]);
+    }, [activeVideoTargetKey, currentVideoUrl, currentNode, isEndingNode]);
 
     useEffect(() => {
         if (!currentVideoUrl || !videoGate) {
@@ -2509,24 +2712,50 @@ const InteractiveVideo: React.FC = () => {
         if (!video) return;
 
         setShowManualPlay(false);
+        video.playbackRate = playbackRate;
+        const markVideoStarted = () => {
+            if (cancelled) return;
+            revealSuppressedVideoFrame(currentVideoUrl);
+            setShowManualPlay(false);
+            setIsVideoPaused(false);
+            setIsBranchTransitioning(false);
+            setIsVideoBuffering(false);
+        };
+        const showBlockedPlayback = () => {
+            if (cancelled) return;
+            if (isMiniProgramRuntimeRef.current) {
+                setIsVideoBuffering(true);
+                return;
+            }
+            if (playbackMode === 'fresh') {
+                setShowManualPlay(true);
+            }
+        };
+        const retryMutedPlayback = () => {
+            if (cancelled || video.muted) {
+                showBlockedPlayback();
+                return;
+            }
+            video.muted = true;
+            setIsAutoplayMuted(true);
+            const mutedPlayPromise = video.play();
+            if (mutedPlayPromise && typeof mutedPlayPromise.then === 'function') {
+                mutedPlayPromise.then(markVideoStarted).catch(showBlockedPlayback);
+                return;
+            }
+            markVideoStarted();
+        };
         const playPromise = video.play();
         if (playPromise && typeof playPromise.catch === 'function') {
-            playPromise.catch(() => {
-                if (cancelled) return;
-                if (isMiniProgramRuntimeRef.current) {
-                    setIsVideoBuffering(true);
-                    return;
-                }
-                if (!cancelled && playbackMode === 'fresh') {
-                    setShowManualPlay(true);
-                }
-            });
+            playPromise.then(markVideoStarted).catch(retryMutedPlayback);
+        } else {
+            markVideoStarted();
         }
 
         return () => {
             cancelled = true;
         };
-    }, [currentNode?.id, currentVideoUrl, playbackMode, videoGate]);
+    }, [activeVideoTargetKey, currentVideoUrl, playbackMode, playbackRate, revealSuppressedVideoFrame, videoGate]);
 
     const currentNodeOptions = useMemo(() => {
         if (!currentNode || !sessionState || isEndingNode || isMinigameNode) return [];
@@ -2551,13 +2780,20 @@ const InteractiveVideo: React.FC = () => {
                 })
                 : null;
             const targetNode = resolvedTarget?.node || null;
-            const url = getNodeVideoUrls(targetNode, manifest)[0] || '';
+            const optionVideoUrls = getNodeVideoUrls(option, manifest);
+            const targetVideoUrls = getNodeVideoUrls(targetNode, manifest);
+            const url = optionVideoUrls[0] || targetVideoUrls[0] || '';
             if (!edge || !targetNode || !url || url === currentVideoUrl || usedUrls.has(url)) {
                 return items;
             }
 
             const targetScript = runtimeScripts.find((script) => script.scriptId === resolvedTarget?.scriptId) || currentScript;
             const nextLayerUrls: string[] = [];
+            [...optionVideoUrls.slice(1), ...targetVideoUrls].forEach((nextUrl) => {
+                if (nextUrl && nextUrl !== currentVideoUrl && nextUrl !== url && !nextLayerUrls.includes(nextUrl)) {
+                    nextLayerUrls.push(nextUrl);
+                }
+            });
             getNodeOptions(targetNode)
                 .filter((nextOption) => optionIsAvailable(nextOption, resolvedTarget?.variables || {}, variableMap))
                 .forEach((nextOption) => {
@@ -2572,10 +2808,13 @@ const InteractiveVideo: React.FC = () => {
                         variables: nextVariables,
                         variableMap,
                     });
-                    const nextUrl = getNodeVideoUrls(nextResolvedTarget.node, manifest)[0] || '';
-                    if (nextUrl && nextUrl !== currentVideoUrl && nextUrl !== url && !nextLayerUrls.includes(nextUrl)) {
-                        nextLayerUrls.push(nextUrl);
-                    }
+                    const nextOptionUrl = getNodeVideoUrls(nextOption, manifest)[0] || '';
+                    const nextTargetUrl = getNodeVideoUrls(nextResolvedTarget.node, manifest)[0] || '';
+                    [nextOptionUrl, nextTargetUrl].forEach((nextUrl) => {
+                        if (nextUrl && nextUrl !== currentVideoUrl && nextUrl !== url && !nextLayerUrls.includes(nextUrl)) {
+                            nextLayerUrls.push(nextUrl);
+                        }
+                    });
                 });
 
             usedUrls.add(url);
@@ -2646,19 +2885,11 @@ const InteractiveVideo: React.FC = () => {
         let cancelled = false;
         preloadManagerRef.current?.waitUntilReady(currentVideoUrl, 8000).then(() => {
             if (cancelled) return;
-            const startedAt = playbackMetricsRef.current.initialPrepareStartedAt;
-            if (startedAt != null) {
-                playbackMetricsRef.current.initialPrepareMs = Math.round(nowMs() - startedAt);
-                playbackMetricsRef.current.initialPrepareStartedAt = null;
-                publishPlaybackMetrics();
-            }
-            setIsInitialVideoPreparing(false);
-            setIsVideoBuffering(false);
         });
         return () => {
             cancelled = true;
         };
-    }, [currentVideoUrl, isInitialVideoPreparing, isMiniProgramRuntime, publishPlaybackMetrics]);
+    }, [currentVideoUrl, isInitialVideoPreparing, isMiniProgramRuntime]);
 
     const availableOptions = useMemo(() => {
         if (videoGate || isBranchTransitioning) return [];
@@ -2799,12 +3030,14 @@ const InteractiveVideo: React.FC = () => {
         video.playbackRate = playbackRate;
         const playPromise = video.play();
         if (!playPromise || typeof playPromise.then !== 'function') {
+            revealSuppressedVideoFrame(currentVideoUrl);
             markPlaybackHealthy();
             return;
         }
 
         playPromise
             .then(() => {
+                revealSuppressedVideoFrame(currentVideoUrl);
                 setShowManualPlay(false);
                 setIsVideoPaused(false);
                 markPlaybackHealthy();
@@ -2813,7 +3046,7 @@ const InteractiveVideo: React.FC = () => {
                 setShowManualPlay(false);
                 setIsVideoBuffering(true);
             });
-    }, [currentVideoUrl, markPlaybackHealthy, playbackRate, videoGate]);
+    }, [currentVideoUrl, markPlaybackHealthy, playbackRate, revealSuppressedVideoFrame, videoGate]);
 
     useEffect(() => {
         if (!isMiniProgramRuntime || !currentVideoUrl || !videoGate || typeof window === 'undefined') return undefined;
@@ -2883,6 +3116,229 @@ const InteractiveVideo: React.FC = () => {
         }
     }, [isMiniProgramRuntime, preloadedVideoStatus, publishPlaybackMetrics]);
 
+    const findLockedDirectoryByScriptId = useCallback((scriptId: string | null | undefined) => {
+        return findInteractiveVideoLockedDirectoryByScriptId(lockedDirectories, scriptId);
+    }, [lockedDirectories]);
+
+    const findLockedDirectoryByNodeId = useCallback((
+        scriptId: string | null | undefined,
+        nodeId: string | null | undefined,
+    ) => {
+        return findInteractiveVideoLockedDirectoryByNodeId(lockedDirectories, scriptId, nodeId);
+    }, [lockedDirectories]);
+
+    const pauseVideoForPanel = useCallback(() => {
+        if (isTreeOpen || isVariableBoardOpen) return;
+        const video = videoRef.current;
+        const shouldResume = Boolean(video && !video.paused && !video.ended);
+        resumeVideoAfterPanelRef.current = shouldResume;
+        if (!video || !shouldResume) return;
+
+        video.pause();
+        setIsVideoPaused(true);
+        setIsVideoHudVisible(true);
+    }, [isTreeOpen, isVariableBoardOpen]);
+
+    const pauseActiveVideoForTransition = useCallback(() => {
+        const video = videoRef.current;
+        resumeVideoAfterPanelRef.current = false;
+        if (video && !video.paused) video.pause();
+        setShowManualPlay(false);
+        setIsVideoPaused(false);
+    }, []);
+
+    const findLockedDirectoryFromEdge = useCallback((edge: StoryEdge) => {
+        if (!story || !currentScript) return null;
+        let nextScriptId: string | null = currentScript.scriptId;
+        let nextNodeId: string | null = edge.target;
+        const visited = new Set<string>();
+
+        for (let index = 0; index < 16 && nextScriptId && nextNodeId; index += 1) {
+            const visitKey = `${nextScriptId}:${nextNodeId}`;
+            if (visited.has(visitKey)) break;
+            visited.add(visitKey);
+
+            const script = getRuntimeScript(story, nextScriptId);
+            const node = getScriptNode(script, nextNodeId);
+            const lockedNodeDirectory = findLockedDirectoryByNodeId(nextScriptId, nextNodeId);
+            if (lockedNodeDirectory) return lockedNodeDirectory;
+            if (!script || !node) break;
+
+            const kind = getNodeKind(node);
+            if (kind === 'runScript') {
+                const targetScriptId = getNodeScriptId(node);
+                const lockedDirectory = findLockedDirectoryByScriptId(targetScriptId);
+                if (lockedDirectory) return lockedDirectory;
+                const targetScript = getRuntimeScript(story, targetScriptId);
+                if (!targetScript?.entryNodeId) break;
+                nextScriptId = targetScript.scriptId;
+                nextNodeId = targetScript.entryNodeId;
+                continue;
+            }
+
+            if (kind === 'start') {
+                nextNodeId = getFirstOutgoingEdge(script, node.id)?.target || null;
+                continue;
+            }
+
+            break;
+        }
+
+        return null;
+    }, [currentScript, findLockedDirectoryByNodeId, findLockedDirectoryByScriptId, story]);
+
+    const resolveChoiceTransition = useCallback((option: StoryChoiceOption): ChoiceTransitionResolution | null => {
+        if (!story || !currentNode || !currentScript || !sessionState) return null;
+
+        const edge = getChoiceOutgoingEdge(currentScript, currentNode.id, option.id);
+        if (!edge) {
+            toast.error('\u5206\u652f\u672a\u8fde\u63a5');
+            return null;
+        }
+
+        const blockLockedDirectory = (lockedDirectory: InteractiveVideoDirectoryPrice) => {
+            pendingUnlockTransitionRef.current = {
+                option,
+                edge,
+                lockedDirectoryId: lockedDirectory.directoryId,
+                sourceNode: currentNode,
+                sourceScript: currentScript,
+                sourceState: sessionState,
+            };
+            setUnlockTarget(lockedDirectory);
+            pauseVideoForPanel();
+            return null;
+        };
+
+        if (isPlayerTestMode) {
+            const lockedDirectory = findLockedDirectoryFromEdge(edge);
+            if (lockedDirectory) return blockLockedDirectory(lockedDirectory);
+        }
+
+        const optionVariables = applyMutations(sessionState.variables, option.mutations || [], variableMap);
+        const resolvedTarget = resolveRuntimeNode({
+            story,
+            scriptId: currentScript.scriptId,
+            nodeId: edge.target,
+            callStack: sessionState.callStack || [],
+            variables: optionVariables,
+            variableMap,
+        });
+        const targetNode = resolvedTarget.node;
+        if (!targetNode) {
+            const lockedDirectory = findLockedDirectoryFromEdge(edge);
+            if (lockedDirectory) {
+                return blockLockedDirectory(lockedDirectory);
+            }
+            pendingUnlockTransitionRef.current = null;
+            toast.error('\u76ee\u6807\u8282\u70b9\u4e0d\u5b58\u5728');
+            return null;
+        }
+        pendingUnlockTransitionRef.current = null;
+
+        const edgeRuntimeId = getEdgeRuntimeId(edge);
+        const targetWasUnlocked = (sessionState.unlocked?.nodeIds || []).includes(targetNode.id);
+        const routeWasUnlocked =
+            targetWasUnlocked ||
+            (sessionState.unlocked?.optionIds || []).includes(option.id) ||
+            (sessionState.unlocked?.edgeIds || []).includes(edgeRuntimeId);
+
+        return {
+            edgeRuntimeId,
+            routeWasUnlocked,
+            targetNode,
+            targetNodeKind: getNodeKind(targetNode),
+            targetVideoUrl: getNodeVideoUrls(targetNode, manifest)[0] || '',
+            resolvedTarget,
+        };
+    }, [currentNode, currentScript, findLockedDirectoryFromEdge, isPlayerTestMode, manifest, pauseVideoForPanel, sessionState, story, variableMap]);
+
+    const applyChoiceTransitionFromSource = useCallback(async (
+        option: StoryChoiceOption,
+        transition: ChoiceTransitionResolution,
+        source: ChoiceTransitionSource,
+    ) => {
+        const { sourceNode, sourceScript, sourceState } = source;
+
+        const targetVideoUrl = transition.targetVideoUrl;
+        await prepareTargetVideo(targetVideoUrl);
+
+        setChoiceBridgePlayback(null);
+        setPlaybackMode(transition.routeWasUnlocked ? 'replay' : 'fresh');
+        setCurrentSequenceVideoIndex(0);
+        setShowManualPlay(false);
+        setEndingModalOpen(false);
+        setVideoAspect(getKnownVideoAspect(targetVideoUrl, transition.targetNode));
+        setIsBranchTransitioning(Boolean(targetVideoUrl) && preloadManagerRef.current?.getStatus(targetVideoUrl) !== 'ready');
+        setIsVideoBuffering(false);
+        setVideoGate(Boolean(targetVideoUrl));
+        const sourceSnapshots = ensureSnapshot(
+            sourceState,
+            sourceNode.id,
+            sourceState.variables,
+            sourceState.history || [],
+            sourceState.currentScriptId || sourceScript.scriptId,
+            sourceState.callStack || [],
+        );
+        const variables = transition.resolvedTarget.variables;
+        const now = new Date().toISOString();
+        const history = [
+            ...(sourceState.history || []),
+            {
+                nodeId: transition.targetNode.id,
+                optionId: option.id,
+                edgeId: transition.edgeRuntimeId,
+                title: getNodeTitle(transition.targetNode),
+                enteredAt: now,
+            },
+        ];
+        const targetIsEnding = transition.targetNodeKind === 'ending';
+        const nextState: InteractiveVideoSessionState = {
+            ...sourceState,
+            currentNodeId: transition.targetNode.id,
+            currentScriptId: transition.resolvedTarget.scriptId,
+            callStack: cloneCallStack(transition.resolvedTarget.callStack),
+            variables,
+            history,
+            unlocked: {
+                nodeIds: uniquePush(sourceState.unlocked?.nodeIds || [], transition.targetNode.id),
+                optionIds: uniquePush(sourceState.unlocked?.optionIds || [], option.id),
+                edgeIds: uniquePush(sourceState.unlocked?.edgeIds || [], transition.edgeRuntimeId),
+            },
+            snapshots: ensureSnapshot(
+                { ...sourceState, snapshots: sourceSnapshots },
+                transition.targetNode.id,
+                variables,
+                history,
+                transition.resolvedTarget.scriptId,
+                transition.resolvedTarget.callStack,
+            ),
+            ending: {
+                reached: targetIsEnding,
+                nodeId: targetIsEnding ? transition.targetNode.id : null,
+            },
+            updatedAt: now,
+        };
+        await syncState(nextState);
+    }, [getKnownVideoAspect, prepareTargetVideo, syncState]);
+
+    const applyChoiceTransition = useCallback(async (
+        option: StoryChoiceOption,
+        transition: ChoiceTransitionResolution,
+    ) => {
+        if (!currentNode || !currentScript || !sessionState) return;
+        await applyChoiceTransitionFromSource(option, transition, {
+            sourceNode: currentNode,
+            sourceScript: currentScript,
+            sourceState: sessionState,
+        });
+    }, [applyChoiceTransitionFromSource, currentNode, currentScript, sessionState]);
+
+    const completeChoiceBridgePlayback = useCallback(() => {
+        if (!choiceBridgePlayback) return;
+        void applyChoiceTransition(choiceBridgePlayback.option, choiceBridgePlayback.transition);
+    }, [applyChoiceTransition, choiceBridgePlayback]);
+
     const handleVideoComplete = () => {
         if (currentSequenceVideoIndex < currentVideoUrls.length - 1) {
             const nextIndex = currentSequenceVideoIndex + 1;
@@ -2893,7 +3349,7 @@ const InteractiveVideo: React.FC = () => {
                 setIsBranchTransitioning(false);
                 setIsVideoBuffering(false);
                 setIsVideoPaused(false);
-                setVideoAspect(getKnownVideoAspect(nextUrl, currentNode, nextIndex));
+                setVideoAspect(getKnownVideoAspect(nextUrl, activeVideoTarget, nextIndex));
                 setVideoGate(Boolean(nextUrl));
             };
             if (nextUrl && preloadManagerRef.current?.getStatus(nextUrl) !== 'ready') {
@@ -2902,6 +3358,11 @@ const InteractiveVideo: React.FC = () => {
                 return;
             }
             switchToNextVideo();
+            return;
+        }
+
+        if (choiceBridgePlayback) {
+            completeChoiceBridgePlayback();
             return;
         }
 
@@ -2918,6 +3379,8 @@ const InteractiveVideo: React.FC = () => {
     const handleManualPlay = () => {
         const video = videoRef.current;
         if (!video) return;
+        video.muted = false;
+        setIsAutoplayMuted(false);
         video.playbackRate = playbackRate;
         video.play()
             .then(() => {
@@ -2933,6 +3396,8 @@ const InteractiveVideo: React.FC = () => {
         if (!video) return;
         revealVideoHud(true);
         if (video.paused) {
+            video.muted = false;
+            setIsAutoplayMuted(false);
             video.playbackRate = playbackRate;
             video.play()
                 .then(() => {
@@ -2949,6 +3414,26 @@ const InteractiveVideo: React.FC = () => {
         video.pause();
         setIsVideoPaused(true);
         setIsVideoHudVisible(true);
+    };
+
+    const resumeVideoAfterPanel = () => {
+        if (!resumeVideoAfterPanelRef.current) return;
+        resumeVideoAfterPanelRef.current = false;
+        const video = videoRef.current;
+        if (!video || video.ended) return;
+
+        video.playbackRate = playbackRate;
+        video.play()
+            .then(() => {
+                setShowManualPlay(false);
+                setIsVideoPaused(false);
+                revealVideoHud();
+            })
+            .catch(() => {
+                setShowManualPlay(true);
+                setIsVideoPaused(true);
+                setIsVideoHudVisible(true);
+            });
     };
 
     const handleCyclePlaybackRate = () => {
@@ -2972,94 +3457,321 @@ const InteractiveVideo: React.FC = () => {
     };
 
     const handleChooseOption = async (option: StoryChoiceOption) => {
-        if (!story || !currentNode || !currentScript || !sessionState) return;
+        if (isUnlocking || isBranchTransitioning) return;
+        const transition = resolveChoiceTransition(option);
+        if (!transition) return;
 
-        const edge = getChoiceOutgoingEdge(currentScript, currentNode.id, option.id);
-        if (!edge) {
-            toast.error('分支未连接');
+        const optionVideoUrl = getNodeVideoUrls(option, manifest)[0] || '';
+        if (optionVideoUrl) {
+            await prepareTargetVideo(optionVideoUrl);
+            setChoiceBridgePlayback({ option, transition });
+            setPlaybackMode(transition.routeWasUnlocked ? 'replay' : 'fresh');
+            setCurrentSequenceVideoIndex(0);
+            setShowManualPlay(false);
+            setEndingModalOpen(false);
+            setVideoAspect(getKnownVideoAspect(optionVideoUrl, option));
+            setIsBranchTransitioning(Boolean(optionVideoUrl) && preloadManagerRef.current?.getStatus(optionVideoUrl) !== 'ready');
+            setIsVideoBuffering(false);
+            setVideoGate(true);
             return;
         }
-        const optionVariables = applyMutations(sessionState.variables, option.mutations || [], variableMap);
+
+        await applyChoiceTransition(option, transition);
+        return;
+    };
+
+    const getDirectoryPaymentOption = (
+        directory: InteractiveVideoDirectoryPrice,
+        currency: 'points' | 'diamonds',
+    ) => {
+        const nested = directory.prices?.[currency];
+        if (nested) return nested;
+        return currency === 'points'
+            ? { enabled: Boolean(directory.pointsEnabled), price: directory.pointsPrice ?? null }
+            : { enabled: Boolean(directory.diamondsEnabled), price: directory.diamondsPrice ?? null };
+    };
+
+    const getBuyoutPaymentOption = (currency: 'points' | 'diamonds') => {
+        const option = ivgPricingConfig?.buyout?.[currency];
+        return option || { enabled: false, price: null };
+    };
+
+    const formatUnlockCost = (amount: number, currency: 'points' | 'diamonds') =>
+        formatIvgUnlockCost(amount, currency);
+
+    const getPlayerTestUnlockActionText = (_amount: number, _currency: 'points' | 'diamonds') =>
+        IVG_PLAYER_TEST_UNLOCK_ACTION_TEXT;
+
+    const getDirectoryUnlockCurrencies = (directory: InteractiveVideoDirectoryPrice) => {
+        const enabledCurrencies = INTERACTIVE_VIDEO_PAYMENT_CURRENCIES.filter((currency) => {
+            const option = getDirectoryPaymentOption(directory, currency);
+            return Boolean(option.enabled && option.price != null);
+        });
+        return isPlayerTestMode ? enabledCurrencies.slice(0, 1) : enabledCurrencies;
+    };
+
+    const getBuyoutUnlockCurrencies = () => {
+        const enabledCurrencies = INTERACTIVE_VIDEO_PAYMENT_CURRENCIES.filter((currency) => {
+            const option = getBuyoutPaymentOption(currency);
+            return Boolean(option.enabled && option.price != null);
+        });
+        return isPlayerTestMode ? enabledCurrencies.slice(0, 1) : enabledCurrencies;
+    };
+
+    const applyUnlockedAccessOptimistically = (
+        purchaseType: 'directory' | 'buyout',
+        directory?: InteractiveVideoDirectoryPrice,
+        accessSnapshot?: InteractiveVideoAccess | null,
+    ) => {
+        if (accessSnapshot) {
+            setIvgAccess(accessSnapshot);
+            setLockedDirectories(accessSnapshot.lockedDirectories || []);
+            return;
+        }
+
+        const directoryId = directory?.directoryId || '';
+        setIvgAccess((current) => {
+            if (!current) return current;
+            if (purchaseType === 'buyout') {
+                return {
+                    ...current,
+                    hasBuyout: true,
+                    buyoutLocked: false,
+                    lockedDirectoryIds: [],
+                    lockedDirectories: [],
+                };
+            }
+            if (!directoryId) return current;
+            const unlockedDirectoryIds = Array.from(new Set([
+                ...(current.unlockedDirectoryIds || []),
+                directoryId,
+            ]));
+            const lockedDirectories = (current.lockedDirectories || [])
+                .filter((item) => item.directoryId !== directoryId);
+            return {
+                ...current,
+                unlockedDirectoryIds,
+                lockedDirectoryIds: lockedDirectories.map((item) => item.directoryId),
+                lockedDirectories,
+            };
+        });
+        setLockedDirectories((current) => {
+            if (purchaseType === 'buyout') return [];
+            if (!directoryId) return current;
+            return current.filter((item) => item.directoryId !== directoryId);
+        });
+    };
+
+    const refreshProtectedPayloadAfterUnlock = async () => {
+        if (!sessionId) return null;
+        const { loadedManifest, loadedStory } = await loadProtectedPayload(sessionId);
+        setSessionState((current) => current ? hydrateSessionState(loadedStory, current) : current);
+        return { loadedManifest, loadedStory };
+    };
+
+    const continuePendingUnlockTransition = async (
+        loadedStory: StoryProject,
+        loadedManifest: StoryManifest,
+    ) => {
+        const pending = pendingUnlockTransitionRef.current;
+        if (!pending) return false;
+
+        const loadedVariableMap = new Map((loadedStory.variables || []).map((variable) => [variable.id, variable]));
+        const optionVariables = applyMutations(pending.sourceState.variables, pending.option.mutations || [], loadedVariableMap);
         const resolvedTarget = resolveRuntimeNode({
-            story,
-            scriptId: currentScript.scriptId,
-            nodeId: edge.target,
-            callStack: sessionState.callStack || [],
+            story: loadedStory,
+            scriptId: pending.sourceScript.scriptId,
+            nodeId: pending.edge.target,
+            callStack: cloneCallStack(pending.sourceState.callStack || []),
             variables: optionVariables,
-            variableMap,
+            variableMap: loadedVariableMap,
         });
         const targetNode = resolvedTarget.node;
         if (!targetNode) {
-            toast.error('目标节点不存在');
-            return;
+            pendingUnlockTransitionRef.current = null;
+            toast.error('\u89e3\u9501\u6210\u529f\uff0c\u8bf7\u91cd\u65b0\u9009\u62e9\u5267\u60c5\u5206\u652f');
+            return false;
         }
 
-        const edgeRuntimeId = getEdgeRuntimeId(edge);
-        const targetWasUnlocked = (sessionState.unlocked?.nodeIds || []).includes(targetNode.id);
+        const edgeRuntimeId = getEdgeRuntimeId(pending.edge);
+        const targetWasUnlocked = (pending.sourceState.unlocked?.nodeIds || []).includes(targetNode.id);
         const routeWasUnlocked =
             targetWasUnlocked ||
-            (sessionState.unlocked?.optionIds || []).includes(option.id) ||
-            (sessionState.unlocked?.edgeIds || []).includes(edgeRuntimeId);
-        const targetNodeKind = getNodeKind(targetNode);
-        const targetVideoUrl = getNodeVideoUrls(targetNode, manifest)[0] || '';
-        await prepareTargetVideo(targetVideoUrl);
+            (pending.sourceState.unlocked?.optionIds || []).includes(pending.option.id) ||
+            (pending.sourceState.unlocked?.edgeIds || []).includes(edgeRuntimeId);
+        pendingUnlockTransitionRef.current = null;
+        const targetVideoUrl = getNodeVideoUrls(targetNode, loadedManifest)[0] || '';
+        updateVideoFrameSuppressionTarget(targetVideoUrl || null);
+        await applyChoiceTransitionFromSource(pending.option, {
+            edgeRuntimeId,
+            routeWasUnlocked,
+            targetNode,
+            targetNodeKind: getNodeKind(targetNode),
+            targetVideoUrl,
+            resolvedTarget,
+        }, pending);
+        return true;
+    };
 
-        setPlaybackMode(routeWasUnlocked ? 'replay' : 'fresh');
-        setCurrentSequenceVideoIndex(0);
-        setShowManualPlay(false);
-        setEndingModalOpen(false);
-        setVideoAspect(getKnownVideoAspect(targetVideoUrl, targetNode));
-        setIsBranchTransitioning(Boolean(targetVideoUrl) && preloadManagerRef.current?.getStatus(targetVideoUrl) !== 'ready');
-        setIsVideoBuffering(false);
-        setVideoGate(Boolean(targetVideoUrl));
-        const sourceSnapshots = ensureSnapshot(
-            sessionState,
-            currentNode.id,
-            sessionState.variables,
-            sessionState.history || [],
-            sessionState.currentScriptId || currentScript.scriptId,
-            sessionState.callStack || [],
-        );
-        const variables = resolvedTarget.variables;
-        const now = new Date().toISOString();
-        const history = [
-            ...(sessionState.history || []),
-            {
-                nodeId: targetNode.id,
-                optionId: option.id,
-                edgeId: edgeRuntimeId,
-                title: getNodeTitle(targetNode),
-                enteredAt: now,
-            },
-        ];
-        const targetIsEnding = targetNodeKind === 'ending';
-        const nextState: InteractiveVideoSessionState = {
-            ...sessionState,
-            currentNodeId: targetNode.id,
-            currentScriptId: resolvedTarget.scriptId,
-            callStack: cloneCallStack(resolvedTarget.callStack),
-            variables,
-            history,
-            unlocked: {
-                nodeIds: uniquePush(sessionState.unlocked?.nodeIds || [], targetNode.id),
-                optionIds: uniquePush(sessionState.unlocked?.optionIds || [], option.id),
-                edgeIds: uniquePush(sessionState.unlocked?.edgeIds || [], edgeRuntimeId),
-            },
-            snapshots: ensureSnapshot(
-                { ...sessionState, snapshots: sourceSnapshots },
-                targetNode.id,
-                variables,
-                history,
-                resolvedTarget.scriptId,
-                resolvedTarget.callStack,
-            ),
-            ending: {
-                reached: targetIsEnding,
-                nodeId: targetIsEnding ? targetNode.id : null,
-            },
-            updatedAt: now,
+    const performPlayerTestUnlock = async (
+        purchaseType: 'directory' | 'buyout',
+        directory?: InteractiveVideoDirectoryPrice,
+    ) => {
+        if (!story || !manifest) return;
+        const directoryId = directory?.directoryId || '';
+        if (purchaseType === 'directory' && !directoryId) return;
+
+        const fallbackPaidDirectories = ivgAccess?.paidDirectories?.length
+            ? ivgAccess.paidDirectories
+            : getEffectiveInteractiveVideoPlayerTestPaidDirectories(ivgPricingConfig);
+        const nextUnlockedDirectoryIds = purchaseType === 'directory'
+            ? Array.from(new Set([...(ivgAccess?.unlockedDirectoryIds || []), directoryId].filter(Boolean)))
+            : (ivgAccess?.unlockedDirectoryIds || []);
+        const nextAccess = buildInteractiveVideoPlayerTestAccess(ivgPricingConfig, {
+            hasBuyout: purchaseType === 'buyout' || Boolean(ivgAccess?.hasBuyout),
+            unlockedDirectoryIds: nextUnlockedDirectoryIds,
+        }) || {
+            hasBuyout: purchaseType === 'buyout' || Boolean(ivgAccess?.hasBuyout),
+            buyoutLocked: false,
+            unlockedDirectoryIds: purchaseType === 'buyout'
+                ? fallbackPaidDirectories.map((item) => item.directoryId)
+                : nextUnlockedDirectoryIds,
+            lockedDirectoryIds: purchaseType === 'buyout'
+                ? []
+                : fallbackPaidDirectories
+                    .filter((item) => !nextUnlockedDirectoryIds.includes(item.directoryId))
+                    .map((item) => item.directoryId),
+            lockedDirectories: purchaseType === 'buyout'
+                ? []
+                : fallbackPaidDirectories.filter((item) => !nextUnlockedDirectoryIds.includes(item.directoryId)),
+            paidDirectories: fallbackPaidDirectories,
         };
-        await syncState(nextState);
+        setIvgAccess(nextAccess);
+        setLockedDirectories(nextAccess.lockedDirectories);
+
+        const pending = pendingUnlockTransitionRef.current;
+        const canContinuePending = Boolean(pending && (
+            purchaseType === 'buyout' ||
+            (purchaseType === 'directory' && pending.lockedDirectoryId === directoryId)
+        ));
+        setUnlockTarget(null);
+        setUnlockConfirm(null);
+        if (canContinuePending) {
+            pauseActiveVideoForTransition();
+            updateVideoFrameSuppressionTarget(null);
+            setIsVideoFrameSuppressed(true);
+            setIsBranchTransitioning(true);
+            setIsVideoBuffering(false);
+            setVideoGate(false);
+        }
+        const continued = canContinuePending
+            ? await continuePendingUnlockTransition(story, manifest)
+            : false;
+        if (canContinuePending && !continued) {
+            clearVideoFrameSuppression();
+            setIsBranchTransitioning(false);
+        }
+        toast.success(continued ? IVG_PLAYER_TEST_UNLOCK_CONTINUE_TEXT : IVG_PLAYER_TEST_UNLOCK_SUCCESS_TEXT);
+    };
+
+    const performUnlock = async (
+        purchaseType: 'directory' | 'buyout',
+        currency: 'points' | 'diamonds',
+        directory?: InteractiveVideoDirectoryPrice,
+    ) => {
+        if (!fileId || isUnlocking) return;
+        setIsUnlocking(true);
+        try {
+            if (isPlayerTestMode) {
+                await performPlayerTestUnlock(purchaseType, directory);
+                return;
+            }
+            const response = await unlockInteractiveVideoContent(fileId, {
+                purchaseType,
+                directoryId: purchaseType === 'directory' ? directory?.directoryId : undefined,
+                currency,
+            });
+            if (!response.data?.success) {
+                const responseData = response.data as { code?: string; message?: string };
+                toast.error(getUnlockErrorMessage(responseData?.code, responseData?.message));
+                return;
+            }
+            const pending = pendingUnlockTransitionRef.current;
+            const canContinuePending = Boolean(pending && (
+                purchaseType === 'buyout' ||
+                (purchaseType === 'directory' && pending.lockedDirectoryId === directory?.directoryId)
+            ));
+            setUnlockTarget(null);
+            setUnlockConfirm(null);
+            applyUnlockedAccessOptimistically(purchaseType, directory, response.data.data?.access);
+            if (canContinuePending) {
+                pauseActiveVideoForTransition();
+                updateVideoFrameSuppressionTarget(null);
+                setIsVideoFrameSuppressed(true);
+                setIsBranchTransitioning(true);
+                setIsVideoBuffering(false);
+                setVideoGate(false);
+            }
+            const refreshed = await refreshProtectedPayloadAfterUnlock();
+            const continued = canContinuePending && refreshed
+                ? await continuePendingUnlockTransition(refreshed.loadedStory, refreshed.loadedManifest)
+                : false;
+            if (canContinuePending && !continued) {
+                clearVideoFrameSuppression();
+                setIsBranchTransitioning(false);
+            }
+            toast.success(response.data.data?.alreadyOwned
+                ? (continued ? '已解锁，正在进入剧情' : '已解锁，可继续游玩')
+                : (continued ? '解锁成功，正在进入剧情' : '解锁成功'));
+        } catch (error) {
+            clearVideoFrameSuppression();
+            setIsBranchTransitioning(false);
+            const maybeError = error as { response?: { data?: { code?: string; message?: string } }; message?: string };
+            toast.error(getUnlockErrorMessage(maybeError.response?.data?.code, maybeError.response?.data?.message || maybeError.message));
+        } finally {
+            setIsUnlocking(false);
+        }
+    };
+
+    const requestDirectoryUnlock = (
+        directory: InteractiveVideoDirectoryPrice,
+        currency: 'points' | 'diamonds',
+    ) => {
+        if (isUnlocking) return;
+        const option = getDirectoryPaymentOption(directory, currency);
+        if (!option.enabled || option.price == null) {
+            toast.error('该支付方式不可用');
+            return;
+        }
+        const amount = Number(option.price || 0);
+        if (isPlayerTestMode) {
+            void performUnlock('directory', currency, directory);
+            return;
+        }
+        if (amount <= 0) {
+            void performUnlock('directory', currency, directory);
+            return;
+        }
+        setUnlockConfirm({ purchaseType: 'directory', directory, currency, amount });
+    };
+
+    const requestBuyoutUnlock = (currency: 'points' | 'diamonds') => {
+        if (isUnlocking) return;
+        const option = getBuyoutPaymentOption(currency);
+        if (!option.enabled || option.price == null) {
+            toast.error('该支付方式不可用');
+            return;
+        }
+        const amount = Number(option.price || 0);
+        if (isPlayerTestMode) {
+            void performUnlock('buyout', currency);
+            return;
+        }
+        if (amount <= 0) {
+            void performUnlock('buyout', currency);
+            return;
+        }
+        setUnlockConfirm({ purchaseType: 'buyout', currency, amount });
     };
 
     const handleMinigameComplete = useCallback((rawResult: unknown) => {
@@ -3190,6 +3902,7 @@ const InteractiveVideo: React.FC = () => {
 
     const handleRollback = async (nodeId: string) => {
         if (!story || !sessionState) return;
+        setChoiceBridgePlayback(null);
         if (minigameCompletionTimerRef.current != null) {
             window.clearTimeout(minigameCompletionTimerRef.current);
             minigameCompletionTimerRef.current = null;
@@ -3248,6 +3961,7 @@ const InteractiveVideo: React.FC = () => {
         setShowManualPlay(false);
         setEndingModalOpen(false);
         setRestartConfirmOpen(false);
+        setChoiceBridgePlayback(null);
         setIsBranchTransitioning(false);
         setIsVideoBuffering(false);
         await loadSession(true);
@@ -3267,6 +3981,7 @@ const InteractiveVideo: React.FC = () => {
     };
 
     const handleTreeRollback = (nodeId: string) => {
+        resumeVideoAfterPanelRef.current = false;
         setIsTreeOpen(false);
         setIsMobileToolsOpen(false);
         setIsVariableBoardOpen(false);
@@ -3274,16 +3989,29 @@ const InteractiveVideo: React.FC = () => {
     };
 
     const handleOpenTree = () => {
+        pauseVideoForPanel();
         setIsMobileToolsOpen(false);
         setIsVariableBoardOpen(false);
         setIsTreeOpen(true);
         revealVideoHud(true);
     };
 
+    const handleCloseTree = () => {
+        setIsTreeOpen(false);
+        if (!isVariableBoardOpen) resumeVideoAfterPanel();
+    };
+
     const handleOpenVariableBoard = () => {
+        pauseVideoForPanel();
         setIsMobileToolsOpen(false);
+        setIsTreeOpen(false);
         setIsVariableBoardOpen(true);
         revealVideoHud(true);
+    };
+
+    const handleCloseVariableBoard = () => {
+        setIsVariableBoardOpen(false);
+        if (!isTreeOpen) resumeVideoAfterPanel();
     };
 
     const handleOpenTreeFromEnding = () => {
@@ -3309,6 +4037,23 @@ const InteractiveVideo: React.FC = () => {
         ? '\u7ebf\u6027\u5267\u60c5'
         : `${routeExploreProgress.exploredCount}/${routeExploreProgress.totalCount} | ${routeExploreProgress.percent}%`;
     const history = sessionState?.history || [];
+    const isBuyoutLocked = Boolean(ivgAccess?.buyoutLocked);
+    const buyoutPoints = getBuyoutPaymentOption('points');
+    const buyoutDiamonds = getBuyoutPaymentOption('diamonds');
+    const hasBuyoutPlan = Boolean(buyoutPoints.enabled || buyoutDiamonds.enabled);
+    const currentLockedDirectory = sessionState?.currentNodeId
+        ? findInteractiveVideoLockedDirectoryForRuntimeNode(
+            lockedDirectories,
+            sessionState.currentScriptId || currentScript?.scriptId,
+            sessionState.currentNodeId,
+        )
+        : null;
+    const directUnlockPlanTitle = currentLockedDirectory
+        ? `解锁方案1：${getPaidTargetType(currentLockedDirectory) === 'node' ? '单节点解锁' : '单脚本解锁'}`
+        : '';
+    const buyoutUnlockPlanTitle = currentLockedDirectory
+        ? '解锁方案2：买断本互动影游解锁'
+        : '解锁方案：买断本互动影游解锁';
     const loadingPageClassName = [
         styles.pageRoot,
         ivgTheme === 'dark' ? styles.pageRootDark : '',
@@ -3316,7 +4061,7 @@ const InteractiveVideo: React.FC = () => {
         projectPlaybackOrientation === 'portrait' ? styles.portraitVideoPage : styles.landscapeVideoPage,
     ].filter(Boolean).join(' ');
 
-    if (isLoading || isInitialVideoPreparing) {
+    if (isLoading) {
         return (
             <div className={loadingPageClassName}>
                 <div className={styles.loadingPanel}>
@@ -3348,6 +4093,120 @@ const InteractiveVideo: React.FC = () => {
         );
     }
 
+    if (isBuyoutLocked || currentLockedDirectory) {
+        return (
+            <div className={loadingPageClassName}>
+                <div className={styles.messagePanel}>
+                    <h1>{currentLockedDirectory ? getPaidTargetTitle(currentLockedDirectory) : '互动影游已锁定'}</h1>
+                    <p>
+                        {currentLockedDirectory
+                            ? isPlayerTestMode
+                                ? '该付费内容尚未解锁。模拟玩家测试会以 0 积分完成测试解锁。'
+                                : '该付费内容尚未解锁。解锁后可继续游玩。'
+                            : '买断解锁后可永久游玩该作品。'}
+                    </p>
+                    {currentLockedDirectory ? (
+                        <div className={styles.unlockPlanSection}>
+                            <strong>{directUnlockPlanTitle}</strong>
+                            <div className={styles.unlockActions}>
+                                {getDirectoryUnlockCurrencies(currentLockedDirectory).map((currency) => {
+                                    const option = getDirectoryPaymentOption(currentLockedDirectory, currency);
+                                    if (!option.enabled || option.price == null) return null;
+                                    return (
+                                        <button
+                                            type="button"
+                                            key={`current-lock-${currency}`}
+                                            onClick={() => requestDirectoryUnlock(currentLockedDirectory, currency)}
+                                            disabled={isUnlocking}
+                                        >
+                                            {isPlayerTestMode
+                                                ? getPlayerTestUnlockActionText(Number(option.price || 0), currency)
+                                                : `\u4f7f\u7528${formatUnlockCost(Number(option.price || 0), currency)}\u89e3\u9501`}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ) : hasBuyoutPlan ? (
+                        <div className={styles.unlockPlanSection}>
+                            <strong>{buyoutUnlockPlanTitle}</strong>
+                            <div className={styles.unlockActions}>
+                                {getBuyoutUnlockCurrencies().map((currency) => {
+                                    const option = getBuyoutPaymentOption(currency);
+                                    if (!option.enabled || option.price == null) return null;
+                                    return (
+                                        <button
+                                            type="button"
+                                            key={`buyout-lock-${currency}`}
+                                            onClick={() => requestBuyoutUnlock(currency)}
+                                            disabled={isUnlocking}
+                                        >
+                                            {isPlayerTestMode
+                                                ? getPlayerTestUnlockActionText(Number(option.price || 0), currency)
+                                                : `${formatUnlockCost(Number(option.price || 0), currency)}\u4e70\u65ad\u6e38\u73a9`}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ) : (
+                        <p>暂无可用支付方式。</p>
+                    )}
+                    {currentLockedDirectory && hasBuyoutPlan ? (
+                        <div className={`${styles.unlockPlanSection} ${styles.unlockBuyout}`}>
+                            <strong>{buyoutUnlockPlanTitle}</strong>
+                            <div className={styles.unlockActions}>
+                                {getBuyoutUnlockCurrencies().map((currency) => {
+                                    const option = getBuyoutPaymentOption(currency);
+                                    if (!option.enabled || option.price == null) return null;
+                                    return (
+                                        <button
+                                            type="button"
+                                            key={`current-buyout-lock-${currency}`}
+                                            onClick={() => requestBuyoutUnlock(currency)}
+                                            disabled={isUnlocking}
+                                        >
+                                            {isPlayerTestMode
+                                                ? getPlayerTestUnlockActionText(Number(option.price || 0), currency)
+                                                : `\u4f7f\u7528${formatUnlockCost(Number(option.price || 0), currency)}\u4e70\u65ad`}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ) : null}
+                    {!isPlayerTestMode && unlockConfirm ? (
+                        <div className={styles.unlockConfirmActions}>
+                            <button type="button" onClick={() => setUnlockConfirm(null)} disabled={isUnlocking}>
+                                取消
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => void performUnlock(
+                                    unlockConfirm.purchaseType,
+                                    unlockConfirm.currency,
+                                    unlockConfirm.directory,
+                                )}
+                                disabled={isUnlocking}
+                            >
+                                {isUnlocking ? (
+                                    <>
+                                        <IoRefresh className={styles.unlockLoadingIcon} />
+                                        解锁中...
+                                    </>
+                                ) : getUnlockConfirmActionText()}
+                            </button>
+                        </div>
+                    ) : null}
+                    <button type="button" onClick={returnToGameDetail}>
+                        <IoChevronBackSharp />
+                        返回
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     if (loadError || !story || !sessionState || !currentNode) {
         return (
             <div className={styles.pageRoot}>
@@ -3355,7 +4214,7 @@ const InteractiveVideo: React.FC = () => {
                     <h1>无法加载互动影游</h1>
                     <p>{loadError || '剧情不可用'}</p>
                     <button type="button" onClick={returnToGameDetail}>
-                        <IoArrowBack />
+                        <IoChevronBackSharp />
                         返回详情
                     </button>
                 </div>
@@ -3387,12 +4246,12 @@ const InteractiveVideo: React.FC = () => {
     const renderTreePanel = () => (
         <section className={styles.panelSection}>
             <div className={styles.sectionTitle}>
-                <IoGitBranchOutline />
+                <IoMapOutline />
                 {'\u5267\u60c5\u6811'}
             </div>
             <button type="button" className={styles.openTreeButton} onClick={handleOpenTree} aria-label="打开剧情树">
                 <span className={styles.openTreeButtonContent}>
-                    <IoGitBranchOutline />
+                    <IoMapOutline />
                     <span className={styles.openTreeButtonText}>
                         <strong>{'\u6253\u5f00\u5267\u60c5\u6811'}</strong>
                         <small>{compactRouteExploreProgressLabel}</small>
@@ -3467,6 +4326,7 @@ const InteractiveVideo: React.FC = () => {
         availableOptions.length === 2 ? styles.choiceDockTwo : '',
         availableOptions.length === 3 ? styles.choiceDockThree : '',
         availableOptions.length >= 4 ? styles.choiceDockFour : '',
+        availableOptions.length === 5 ? styles.choiceDockFive : '',
     ].filter(Boolean).join(' ');
     const shouldShowSkipControl = canShowSkipControl(playbackMode) && Boolean(currentVideoUrl) && videoGate;
     const playbackRateLabel = playbackRate === 1 ? '1.0x' : `${playbackRate}x`;
@@ -3568,7 +4428,7 @@ const InteractiveVideo: React.FC = () => {
 
     const variableBoardPortal = isVariableBoardOpen
         ? renderIvgPortal(
-            <div className={styles.variableBoardOverlay} onClick={() => setIsVariableBoardOpen(false)}>
+            <div className={styles.variableBoardOverlay} onClick={handleCloseVariableBoard}>
                 <section
                     className={styles.variableBoardModal}
                     onClick={(event) => event.stopPropagation()}
@@ -3584,7 +4444,7 @@ const InteractiveVideo: React.FC = () => {
                         <button
                             type="button"
                             className={styles.variableBoardClose}
-                            onClick={() => setIsVariableBoardOpen(false)}
+                            onClick={handleCloseVariableBoard}
                             aria-label={'\u5173\u95ed\u53d8\u91cf\u677f'}
                         >
                             <IoClose />
@@ -3598,7 +4458,7 @@ const InteractiveVideo: React.FC = () => {
 
     const treePortal = isTreeOpen
         ? renderIvgPortal(
-            <div className={styles.treeOverlay} onClick={() => setIsTreeOpen(false)}>
+            <div className={styles.treeOverlay} onClick={handleCloseTree}>
                 <section className={styles.treeDialog} onClick={(event) => event.stopPropagation()}>
                     <header className={styles.treeDialogHeader}>
                         <div className={styles.treeDialogTitle}>
@@ -3611,7 +4471,7 @@ const InteractiveVideo: React.FC = () => {
                             <button
                                 type="button"
                                 className={styles.treeCloseButton}
-                                onClick={() => setIsTreeOpen(false)}
+                                onClick={handleCloseTree}
                                 aria-label="关闭剧情树"
                             >
                                 <IoClose />
@@ -3682,11 +4542,162 @@ const InteractiveVideo: React.FC = () => {
                     <p>{getNodeBody(currentNode)}</p>
                     <div className={styles.endingActions}>
                         <button type="button" onClick={handleOpenTreeFromEnding}>
-                            <IoGitBranchOutline />
+                            <IoMapOutline />
                             {"\u6253\u5F00\u5267\u60C5\u6811"}
                         </button>
                     </div>
                 </div>
+            </div>,
+        )
+        : null;
+
+    const remainingLockedCount = ivgAccess?.lockedDirectoryIds?.length ?? lockedDirectories.length;
+    const unlockConfirmDescription = unlockConfirm
+        ? `\u5c06\u6d88\u8017${formatUnlockCost(unlockConfirm.amount, unlockConfirm.currency)}\uff0c\u89e3\u9501\u540e\u6c38\u4e45\u7ed1\u5b9a\u5f53\u524d\u8d26\u53f7\u3002`
+        : '';
+    const showTransitionOverlay = !showManualPlay && (
+        isBranchTransitioning ||
+        (Boolean(currentVideoUrl) && videoGate && (isInitialVideoPreparing || isVideoBuffering)) ||
+        (isUnlocking && !unlockConfirm)
+    );
+    const transitionOverlayText = isUnlocking && !unlockConfirm
+        ? '正在进入剧情...'
+        : isBranchTransitioning
+            ? '正在准备下一段剧情...'
+            : '正在准备剧情...';
+    const isSuppressedTargetVideo = Boolean(
+        isVideoFrameSuppressed &&
+        videoFrameSuppressionTargetUrl &&
+        currentVideoUrl === videoFrameSuppressionTargetUrl &&
+        videoGate,
+    );
+    const shouldMountVideoFrame = Boolean(currentVideoUrl) && (!isVideoFrameSuppressed || isSuppressedTargetVideo);
+    const videoFrameClassName = [
+        styles.video,
+        isSuppressedTargetVideo ? styles.videoFrameSuppressed : '',
+    ].filter(Boolean).join(' ');
+
+    function getUnlockConfirmActionText() {
+        return '\u786e\u8ba4\u89e3\u9501';
+    }
+
+    const unlockPortal = unlockTarget
+        ? renderIvgPortal(
+            <div className={styles.unlockOverlay} onClick={() => { if (!isUnlocking) setUnlockTarget(null); }}>
+                <section
+                    className={styles.unlockModal}
+                    onClick={(event) => event.stopPropagation()}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="ivgUnlockTitle"
+                >
+                    <button
+                        type="button"
+                        className={styles.unlockCloseButton}
+                        onClick={() => { if (!isUnlocking) setUnlockTarget(null); }}
+                        disabled={isUnlocking}
+                        aria-label="关闭"
+                    >
+                        <IoClose />
+                    </button>
+                    <span>{getPaidTargetKindText(unlockTarget)}</span>
+                    <h1 id="ivgUnlockTitle">{getPaidTargetTitle(unlockTarget)}</h1>
+                    <p>{remainingLockedCount > 1 ? `还有 ${remainingLockedCount} 个付费内容尚未解锁。` : '该付费内容尚未解锁。'}</p>
+                    <div className={styles.unlockPlanSection}>
+                        <strong>{`解锁方案1：${getPaidTargetType(unlockTarget) === 'node' ? '单节点解锁' : '单脚本解锁'}`}</strong>
+                        <div className={styles.unlockActions}>
+                            {getDirectoryUnlockCurrencies(unlockTarget).map((currency) => {
+                                const option = getDirectoryPaymentOption(unlockTarget, currency);
+                                if (!option.enabled || option.price == null) return null;
+                                return (
+                                    <button
+                                        type="button"
+                                        key={`directory-${currency}`}
+                                        onClick={() => requestDirectoryUnlock(unlockTarget, currency)}
+                                        disabled={isUnlocking}
+                                    >
+                                        {isPlayerTestMode
+                                            ? getPlayerTestUnlockActionText(Number(option.price || 0), currency)
+                                            : `\u4f7f\u7528${formatUnlockCost(Number(option.price || 0), currency)}\u89e3\u9501`}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                    {hasBuyoutPlan ? (
+                        <div className={`${styles.unlockPlanSection} ${styles.unlockBuyout}`}>
+                            <strong>解锁方案2：买断本互动影游解锁</strong>
+                            <div className={styles.unlockActions}>
+                                {getBuyoutUnlockCurrencies().map((currency) => {
+                                    const option = getBuyoutPaymentOption(currency);
+                                    if (!option.enabled || option.price == null) return null;
+                                    return (
+                                        <button
+                                            type="button"
+                                            key={`buyout-${currency}`}
+                                            onClick={() => requestBuyoutUnlock(currency)}
+                                            disabled={isUnlocking}
+                                        >
+                                            {isPlayerTestMode
+                                                ? getPlayerTestUnlockActionText(Number(option.price || 0), currency)
+                                                : `\u4f7f\u7528${formatUnlockCost(Number(option.price || 0), currency)}\u4e70\u65ad`}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ) : null}
+                </section>
+            </div>,
+        )
+        : null;
+
+    const unlockConfirmPortal = !isPlayerTestMode && unlockConfirm
+        ? renderIvgPortal(
+            <div className={styles.unlockOverlay} onClick={() => { if (!isUnlocking) setUnlockConfirm(null); }}>
+                <section
+                    className={styles.unlockModal}
+                    onClick={(event) => event.stopPropagation()}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="ivgUnlockConfirmTitle"
+                >
+                    <button
+                        type="button"
+                        className={styles.unlockCloseButton}
+                        onClick={() => { if (!isUnlocking) setUnlockConfirm(null); }}
+                        disabled={isUnlocking}
+                        aria-label="关闭"
+                    >
+                        <IoClose />
+                    </button>
+                    <span>确认购买</span>
+                    <h1 id="ivgUnlockConfirmTitle">
+                        {unlockConfirm.purchaseType === 'buyout' ? '买断解锁' : getPaidTargetTitle(unlockConfirm.directory)}
+                    </h1>
+                    <p>{unlockConfirmDescription}</p>
+                    <div className={styles.unlockConfirmActions}>
+                        <button type="button" onClick={() => setUnlockConfirm(null)} disabled={isUnlocking}>
+                            取消
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => void performUnlock(
+                                unlockConfirm.purchaseType,
+                                unlockConfirm.currency,
+                                unlockConfirm.directory,
+                            )}
+                            disabled={isUnlocking}
+                        >
+                            {isUnlocking ? (
+                                <>
+                                    <IoRefresh className={styles.unlockLoadingIcon} />
+                                    解锁中...
+                                </>
+                            ) : getUnlockConfirmActionText()}
+                        </button>
+                    </div>
+                </section>
             </div>,
         )
         : null;
@@ -3697,7 +4708,7 @@ const InteractiveVideo: React.FC = () => {
             {!isMinigameNode && (
                 <header className={styles.header}>
                     <button type="button" className={styles.iconButton} onClick={returnToGameDetail} aria-label="返回">
-                        <IoArrowBack />
+                        <IoChevronBackSharp />
                     </button>
                 </header>
             )}
@@ -3729,63 +4740,83 @@ const InteractiveVideo: React.FC = () => {
                                 </div>
                             )
                         ) : currentVideoUrl ? (
-                            <video
-                                ref={videoRef}
-                                className={styles.video}
-                                src={currentVideoUrl}
-                                controls={false}
-                                controlsList="nodownload nofullscreen noremoteplayback"
-                                disablePictureInPicture
-                                autoPlay
-                                preload="auto"
-                                playsInline
-                                {...miniProgramVideoAttributes}
-                                onLoadStart={scheduleBufferingNotice}
-                                onLoadedMetadata={handleVideoMetadata}
-                                onLoadedData={() => {
-                                    markPlaybackHealthy();
-                                    if (isMiniProgramRuntime) attemptMiniProgramPlayback();
-                                }}
-                                onCanPlay={() => {
-                                    markPlaybackHealthy();
-                                    if (isMiniProgramRuntime) attemptMiniProgramPlayback();
-                                }}
-                                onCanPlayThrough={() => {
-                                    markPlaybackHealthy();
-                                    if (isMiniProgramRuntime) attemptMiniProgramPlayback();
-                                }}
-                                onPlay={() => {
-                                    setShowManualPlay(false);
-                                    setIsVideoPaused(false);
-                                    markPlaybackHealthy();
-                                }}
-                                onPlaying={() => {
-                                    setIsVideoPaused(false);
-                                    markPlaybackHealthy();
-                                }}
-                                onPause={(event) => {
-                                    if (isMiniProgramRuntime && event.currentTarget.currentTime <= 0.05 && videoGate) {
-                                        setIsVideoPaused(false);
-                                        setIsVideoBuffering(true);
-                                        return;
-                                    }
-                                    setIsVideoPaused(true);
-                                }}
-                                onWaiting={scheduleBufferingNotice}
-                                onStalled={scheduleBufferingNotice}
-                                onEnded={handleVideoComplete}
-                                onError={() => {
-                                    markPlaybackHealthy();
-                                    if (isMiniProgramRuntime) {
+                            shouldMountVideoFrame ? (
+                                <video
+                                    key={`${activeVideoTargetKey}:${currentVideoUrl}`}
+                                    ref={videoRef}
+                                    className={videoFrameClassName}
+                                    src={currentVideoUrl}
+                                    controls={false}
+                                    controlsList="nodownload nofullscreen noremoteplayback"
+                                    disablePictureInPicture
+                                    autoPlay
+                                    muted={isAutoplayMuted}
+                                    preload="auto"
+                                    playsInline
+                                    {...miniProgramVideoAttributes}
+                                    onLoadStart={scheduleBufferingNotice}
+                                    onLoadedMetadata={handleVideoMetadata}
+                                    onLoadedData={() => {
+                                        revealSuppressedVideoFrame(currentVideoUrl);
+                                        markPlaybackHealthy();
+                                        if (isMiniProgramRuntime) attemptMiniProgramPlayback();
+                                    }}
+                                    onCanPlay={() => {
+                                        revealSuppressedVideoFrame(currentVideoUrl);
+                                        markPlaybackHealthy();
+                                        if (isMiniProgramRuntime) attemptMiniProgramPlayback();
+                                    }}
+                                    onCanPlayThrough={() => {
+                                        revealSuppressedVideoFrame(currentVideoUrl);
+                                        markPlaybackHealthy();
+                                        if (isMiniProgramRuntime) attemptMiniProgramPlayback();
+                                    }}
+                                    onPlay={() => {
+                                        revealSuppressedVideoFrame(currentVideoUrl);
                                         setShowManualPlay(false);
-                                        setIsVideoBuffering(false);
-                                        setIsBranchTransitioning(false);
-                                        return;
-                                    }
-                                    setVideoError('视频加载失败');
-                                    handleVideoComplete();
-                                }}
-                            />
+                                        setIsVideoPaused(false);
+                                        markPlaybackHealthy();
+                                    }}
+                                    onPlaying={() => {
+                                        revealSuppressedVideoFrame(currentVideoUrl);
+                                        setIsVideoPaused(false);
+                                        if (isInitialVideoPreparing) {
+                                            const startedAt = playbackMetricsRef.current.initialPrepareStartedAt;
+                                            if (startedAt != null) {
+                                                playbackMetricsRef.current.initialPrepareMs = Math.round(nowMs() - startedAt);
+                                                playbackMetricsRef.current.initialPrepareStartedAt = null;
+                                                publishPlaybackMetrics();
+                                            }
+                                            setIsInitialVideoPreparing(false);
+                                        }
+                                        markPlaybackHealthy();
+                                    }}
+                                    onPause={(event) => {
+                                        if (isMiniProgramRuntime && event.currentTarget.currentTime <= 0.05 && videoGate) {
+                                            setIsVideoPaused(false);
+                                            setIsVideoBuffering(true);
+                                            return;
+                                        }
+                                        setIsVideoPaused(true);
+                                    }}
+                                    onWaiting={scheduleBufferingNotice}
+                                    onStalled={scheduleBufferingNotice}
+                                    onEnded={handleVideoComplete}
+                                    onError={() => {
+                                        markPlaybackHealthy();
+                                        if (isMiniProgramRuntime) {
+                                            setShowManualPlay(false);
+                                            setIsVideoBuffering(false);
+                                            setIsBranchTransitioning(false);
+                                            return;
+                                        }
+                                        setVideoError('视频加载失败');
+                                        handleVideoComplete();
+                                    }}
+                                />
+                            ) : (
+                                <div className={styles.videoBlankSurface} aria-hidden="true" />
+                            )
                         ) : (
                             <div className={styles.textScene}>
                                 <span>{isEndingNode ? '结局' : '剧情'}</span>
@@ -3801,7 +4832,7 @@ const InteractiveVideo: React.FC = () => {
                                 </div>
                                 <div className={styles.videoControlDock} aria-label="播放控制">
                                     <button type="button" className={styles.videoControlButton} onClick={handleOpenTree}>
-                                        <IoGitBranchOutline />
+                                        <IoMapOutline />
                                         <span>{'\u5267\u60c5\u6811'}</span>
                                     </button>
                                     <button type="button" className={styles.videoControlButton} onClick={handleOpenVariableBoard}>
@@ -3830,7 +4861,7 @@ const InteractiveVideo: React.FC = () => {
                             <div className={nonVideoToolsClassName} aria-label="播放工具">
                                 <div className={styles.videoControlDock}>
                                     <button type="button" className={styles.videoControlButton} onClick={handleOpenTree}>
-                                        <IoGitBranchOutline />
+                                        <IoMapOutline />
                                         <span>{'\u5267\u60c5\u6811'}</span>
                                     </button>
                                     <button type="button" className={styles.videoControlButton} onClick={handleOpenVariableBoard}>
@@ -3852,13 +4883,13 @@ const InteractiveVideo: React.FC = () => {
                             </button>
                         )}
 
-                        {currentVideoUrl && !showManualPlay && (isBranchTransitioning || (videoGate && isVideoBuffering)) && (
+                        {showTransitionOverlay && (
                             <div className={styles.videoTransitionOverlay} aria-live="polite">
                                 <div className={styles.videoTransitionLoader} aria-hidden="true">
                                     <span />
                                     <span />
                                 </div>
-                                <strong>{isBranchTransitioning ? '正在准备下一段剧情...' : '正在准备剧情...'}</strong>
+                                <strong>{transitionOverlayText}</strong>
                             </div>
                         )}
 
@@ -3873,6 +4904,7 @@ const InteractiveVideo: React.FC = () => {
                                             key={option.id}
                                             className={styles.choiceButton}
                                             onClick={() => void handleChooseOption(option)}
+                                            disabled={isUnlocking || isBranchTransitioning}
                                         >
                                             <strong>{getOptionLabel(option)}</strong>
                                         </button>
@@ -3924,7 +4956,7 @@ const InteractiveVideo: React.FC = () => {
                     onClick={() => setIsMobileToolsOpen(true)}
                     aria-label="打开播放工具"
                 >
-                    <IoGitBranchOutline />
+                    <IoMapOutline />
                     <span>{routeExploreProgress.percent}%</span>
                 </button>
             )}
@@ -3935,6 +4967,8 @@ const InteractiveVideo: React.FC = () => {
         {treePortal}
         {restartConfirmPortal}
         {endingPortal}
+        {unlockPortal}
+        {unlockConfirmPortal}
         </>
     );
 };

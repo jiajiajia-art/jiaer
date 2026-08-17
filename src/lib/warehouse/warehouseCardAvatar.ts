@@ -1,6 +1,6 @@
 /** 仓库人设/角色卡立绘约束（与后端 cardAvatarGenerate 对齐） */
 
-export const WAREHOUSE_CARD_AVATAR_MAX_BYTES = 200 * 1024;
+export const WAREHOUSE_CARD_AVATAR_MAX_BYTES = 500 * 1024;
 export const WAREHOUSE_CARD_AVATAR_MAX_WIDTH = 800;
 export const WAREHOUSE_CARD_AVATAR_FORMAT = 'webp' as const;
 

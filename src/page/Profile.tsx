@@ -12,7 +12,7 @@ import RechargeModal from '../components/Purchase/RechargeModal';
 import CheckInModal from '../components/CheckInModal';
 import MembershipRedeemResultModal from '../components/MembershipRedeemResultModal';
 import InviteRewardModal from '../components/InviteRewardModal';
-import { planLabelMap } from '../utils/planLabels';
+import { planLabelMap, resolveMemberDisplayEndAt } from '../utils/planLabels';
 import ExchangeModal from '../components/Purchase/ExchangeModal';
 import CreatorProfile, { type CreatorProfileFormData } from '../components/CreatorProfile.tsx';
 import { RiCopperCoinLine, RiLogoutCircleRLine } from 'react-icons/ri';
@@ -618,14 +618,24 @@ const Profile: React.FC = () => {
                                     <MdEdit className={styles.editNameIcon} onClick={handleStartEditName} />
                                 </div>
                                 <div className={styles.memberCodeWrapper}>
-                                    {user?.user?.isMember && user?.user?.memberEndAt ? (
+                                    {user?.user?.isMember ? (
                                         <div className={styles.memberInfo}>
                                             <span className={styles.memberBadge}>
                                                 {user.user.memberPlan && user.user.memberPlan in planLabelMap
                                                     ? planLabelMap[user.user.memberPlan as keyof typeof planLabelMap]
                                                     : t('profile.vip')}
                                             </span>
-                                            <span className={styles.memberExpire}>{t('profile.memberExpireDate', { date: formatDate(user.user.memberEndAt) })}</span>
+                                            {(() => {
+                                                const displayEndAt = resolveMemberDisplayEndAt(
+                                                    user.user.stackedPlans,
+                                                    user.user.memberEndAt
+                                                );
+                                                return displayEndAt ? (
+                                                    <span className={styles.memberExpire}>
+                                                        {t('profile.memberExpireDate', { date: formatDate(displayEndAt) })}
+                                                    </span>
+                                                ) : null;
+                                            })()}
                                         </div>
                                     ) : null}
                                     {userCode && (
@@ -717,6 +727,25 @@ const Profile: React.FC = () => {
                                 </button>
                             </div>
                         )}
+
+                        <div className={styles.functionItem} onClick={() => navigate('/interactive-video/purchased')}>
+                            <div className={styles.functionIcon}>
+                                <MdPlayCircleOutline />
+                            </div>
+                            <div className={styles.functionText}>
+                                <div className={styles.functionTitle}>我购买的互动影游</div>
+                                <div className={styles.functionDesc}>查看已解锁和已买断的互动影游</div>
+                            </div>
+                            <button
+                                className={styles.functionButton}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate('/interactive-video/purchased');
+                                }}
+                            >
+                                查看
+                            </button>
+                        </div>
 
                         <div className={styles.functionItem}>
                             <div className={styles.functionIcon}>
@@ -1095,7 +1124,6 @@ const Profile: React.FC = () => {
                 isOpen={isRechargeModalOpen}
                 onClose={() => setIsRechargeModalOpen(false)}
                 onRecharge={handleRecharge}
-                isFirstChargePlans={user?.user?.firstChargePlans}
             />
 
             <RechargeModal

@@ -212,10 +212,17 @@ export function parseWorldBookImportText(text: string): {
 
 /**
  * 功能注释：仓库「我的世界书」卡片 → 局内可编辑条目（新 id，避免与已装载冲突）。
+ * 兼容：只写了标题/描述、未填 entries JSON 的旧数据；以及 morePromptForms / worldBookEntries。
  */
 export function warehouseWorldBookToEntries(resource: {
   title?: string;
-  payload?: { entries?: unknown[] } | null;
+  description?: string;
+  tags?: string[];
+  payload?: {
+    entries?: unknown[];
+    worldBookEntries?: unknown[];
+    morePromptForms?: unknown[];
+  } | null;
 } | null | undefined): {
   ok: boolean;
   message?: string;
@@ -224,7 +231,31 @@ export function warehouseWorldBookToEntries(resource: {
   if (!resource || typeof resource !== 'object') {
     return { ok: false, message: '请选择世界书', entries: [] };
   }
-  const rawEntries = Array.isArray(resource.payload?.entries) ? resource.payload!.entries! : [];
+  const payload = resource.payload && typeof resource.payload === 'object'
+    ? resource.payload
+    : null;
+  let rawEntries: unknown[] = [];
+  if (Array.isArray(payload?.entries)) rawEntries = payload!.entries!;
+  else if (Array.isArray(payload?.worldBookEntries)) rawEntries = payload!.worldBookEntries!;
+  else if (Array.isArray(payload?.morePromptForms)) rawEntries = payload!.morePromptForms!;
+
+  if (rawEntries.length === 0) {
+    const title = trimStr(resource.title);
+    const description = trimStr(resource.description);
+    // 功能注释：仓库编辑页常见「标题+描述、条目 JSON 为空」——把描述当作一条常驻设定导入
+    if (title || description) {
+      rawEntries = [{
+        title: title || '世界书',
+        content: description || title,
+        keywords: Array.isArray(resource.tags)
+          ? resource.tags.map(trimStr).filter(Boolean)
+          : [],
+        constant: true,
+        enabled: true,
+      }];
+    }
+  }
+
   if (rawEntries.length === 0) {
     return { ok: false, message: '该世界书没有可导入的条目', entries: [] };
   }

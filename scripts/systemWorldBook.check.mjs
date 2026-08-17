@@ -70,10 +70,26 @@ test('warehouseWorldBookToEntries_从仓库payload导入并换新id', () => {
   assert.match(parsed.entries[0].id, /^wh_/);
 });
 
-test('warehouseWorldBookToEntries_空条目失败', () => {
-  const empty = warehouseWorldBookToEntries({ title: '空', payload: { entries: [] } });
+test('warehouseWorldBookToEntries_仅标题描述也可导入', () => {
+  const parsed = warehouseWorldBookToEntries({
+    title: '现代与魔法世界',
+    description: '世界上确实存在魔法 并且有木、火、风、水、土。',
+    tags: ['奇幻'],
+    payload: { entries: [] },
+  });
+  assert.equal(parsed.ok, true);
+  assert.equal(parsed.entries.length, 1);
+  assert.equal(parsed.entries[0].title, '现代与魔法世界');
+  assert.match(parsed.entries[0].content, /魔法/);
+  assert.deepEqual(parsed.entries[0].keywords, ['奇幻']);
+  assert.equal(parsed.entries[0].constant, true);
+});
+
+test('warehouseWorldBookToEntries_完全空内容失败', () => {
+  const empty = warehouseWorldBookToEntries({ title: '', description: '', payload: { entries: [] } });
   assert.equal(empty.ok, false);
   assert.equal(empty.entries.length, 0);
+  assert.match(String(empty.message), /没有可导入/);
 });
 
 test('SystemsPanel_导入页含我的世界书入口', () => {

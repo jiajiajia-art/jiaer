@@ -94,7 +94,7 @@ export const playerCharacterCardsApi = {
     });
     return parseJson(res);
   },
-  /** 仓库编辑卡：AI 生成立绘（WebP ≤200KB、宽 ≤800） */
+  /** 仓库编辑卡：AI 生成立绘（WebP ≤500KB、宽 ≤800） */
   generateAvatar: async (
     token: string,
     body: {
@@ -124,6 +124,33 @@ export const playerCharacterCardsApi = {
         width?: number;
         format?: string;
         card?: unknown;
+      };
+    }>;
+  },
+  /** 仓库人设/角色卡：AI 生成简介文案，扣分对齐局内人设字段 */
+  generatePersona: async (
+    token: string,
+    body: {
+      name: string;
+      gender?: string;
+      existingPersona?: string;
+      tags?: string;
+      cardKind?: string;
+    },
+  ) => {
+    const res = await fetch(`${HOST_ADDRESS}/api/player-character-cards/persona`, {
+      method: 'POST',
+      headers: authHeaders(token),
+      body: JSON.stringify(body),
+    });
+    return parseJson(res) as Promise<{
+      success: boolean;
+      message?: string;
+      code?: string;
+      data?: {
+        text: string;
+        pointsDeducted: number;
+        remainingPoints: number;
       };
     }>;
   },

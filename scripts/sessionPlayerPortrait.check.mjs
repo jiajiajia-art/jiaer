@@ -28,10 +28,79 @@ test('resolveSessionPlayerPortraitPath_无局内头像回落文档', () => {
   );
 });
 
-test('Galgame_CharacterLayer用normalModeMessage立绘', () => {
+test('resolvePlayPortraitScale_导入卡0_8_重生成0_85_禁止吃陈旧msgScale', async () => {
+  const {
+    resolvePlayPortraitScale,
+    SESSION_OVERRIDE_PORTRAIT_SCALE,
+    SESSION_GENERATED_PORTRAIT_SCALE,
+    isImportedCardPortraitUrl,
+    isSessionGeneratedPortraitUrl,
+  } = await import('../src/lib/galgame/playerCharacterCard.ts');
+  assert.equal(SESSION_OVERRIDE_PORTRAIT_SCALE, 0.8);
+  assert.equal(SESSION_GENERATED_PORTRAIT_SCALE, 0.85);
+  assert.equal(
+    isImportedCardPortraitUrl('/public/visual/player-cards/u1/avatars/a.webp'),
+    true,
+  );
+  assert.equal(
+    isImportedCardPortraitUrl('/public/visual/sessions/s1/avatars/player_1.webp'),
+    false,
+  );
+  assert.equal(
+    isSessionGeneratedPortraitUrl('/public/visual/sessions/s1/avatars/player_1.webp'),
+    true,
+  );
+  assert.equal(
+    isSessionGeneratedPortraitUrl('/public/visual/player-cards/u1/avatars/a.webp'),
+    false,
+  );
+  assert.equal(
+    resolvePlayPortraitScale({
+      sessionAvatarUrl: '/public/visual/player-cards/u1/avatars/a.webp',
+      documentPortraitScale: 1.2,
+    }),
+    0.8,
+  );
+  assert.equal(
+    resolvePlayPortraitScale({
+      sessionAvatarUrl: '/public/visual/sessions/s1/avatars/player_1.webp',
+      documentPortraitScale: 1.2,
+    }),
+    0.85,
+    '局内重新生成须 0.85，不受文档缩放影响',
+  );
+  assert.equal(
+    resolvePlayPortraitScale({
+      sessionAvatarUrl: '/public/visual/sessions/6492c8acaead61589e585d44a850a2d2/avatars/player_1786799862082.webp',
+      documentPortraitScale: 0.8,
+    }),
+    0.85,
+    '导入后 Message 上残留 0.8 时，重生成仍须回到 0.85',
+  );
+  assert.equal(
+    resolvePlayPortraitScale({ sessionAvatarUrl: '', documentPortraitScale: 1.2 }),
+    1.2,
+  );
+  assert.equal(
+    resolvePlayPortraitScale({ sessionAvatarUrl: null, documentPortraitScale: undefined }),
+    undefined,
+  );
+});
+
+test('Galgame_主角缩放须用文档portraitScale禁止msg残留', () => {
   const dir = dirname(fileURLToPath(import.meta.url));
   const src = readFileSync(join(dir, '../src/page/Galgame.tsx'), 'utf8');
   assert.match(src, /resolveSessionPlayerPortraitPath/);
+  assert.match(src, /resolvePlayPortraitScale/);
+  assert.match(
+    src,
+    /documentPortraitScale:\s*controller\.presetData\?\.world\?\.player\?\.portraitScale/,
+  );
+  assert.doesNotMatch(
+    src,
+    /documentPortraitScale:\s*msg\.portraitScale/,
+    '禁止把 Message 已解析的 scale 当文档缩放，否则重生成仍 0.8',
+  );
   assert.match(src, /sessionPlayerAvatarUrl:\s*sessionPlayerProfile\?\.avatarUrl/);
   assert.match(
     src,

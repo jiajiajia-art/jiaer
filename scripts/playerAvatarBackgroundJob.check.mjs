@@ -33,15 +33,31 @@ test('mergePlayerAvatarIntoProfile_只改头像保留姓名人设', () => {
   assert.deepEqual(next.customAttributes, { a: '1' });
 });
 
-test('mergePlayerAvatarIntoProfile_无档案时用fallback', () => {
-  const next = mergePlayerAvatarIntoProfile(null, { avatarUrl: '/a.webp' }, {
-    name: '甲',
-    gender: 'female',
-    persona: '人设',
-  });
-  assert.equal(next.name, '甲');
-  assert.equal(next.gender, 'female');
-  assert.equal(next.avatarUrl, '/a.webp');
+test('mergePlayerAvatarIntoProfile_重生成后缩放路径须识别为sessions', async () => {
+  const { resolvePlayPortraitScale } = await import('../src/lib/galgame/playerCharacterCard.ts');
+  const next = mergePlayerAvatarIntoProfile(
+    {
+      name: '黄黄',
+      gender: 'female',
+      persona: '人设',
+      customAttributes: {},
+      importedCardId: 'card1',
+      avatarUrl: '/public/visual/player-cards/u1/avatars/card.webp',
+    },
+    {
+      avatarUrl: '/public/visual/sessions/s1/avatars/player_regen.webp',
+      avatarThumbUrl: '/public/visual/sessions/s1/avatars/player_regen_150.webp',
+    },
+  );
+  assert.equal(next.avatarUrl, '/public/visual/sessions/s1/avatars/player_regen.webp');
+  assert.equal(
+    resolvePlayPortraitScale({
+      sessionAvatarUrl: next.avatarUrl,
+      documentPortraitScale: 0.8,
+    }),
+    0.85,
+    '点击重新生成后立绘须 0.85',
+  );
 });
 
 test('PlayerArchiveSection_生成中可保存离开', () => {

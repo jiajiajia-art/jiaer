@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   applyPlayerCardImport,
+  mergeProfileAfterPlayerCardImport,
   filterPlayerCharacterCards,
   PLAYER_CARD_GENDERS,
   PLAYER_CARD_LIMITS,
@@ -18,7 +19,6 @@ import { useAuthStore } from '../../../store/useAuthStore';
 import { useGameStore } from '../../../store/gameStore';
 import { CHARACTER_GENERATION_COST, NPC_PROFILE_FIELD_GENERATION_COST, getImageUrl } from '../../../utils/constants';
 import {
-  pickAvatarDisplayUrl,
   pickDisplayAvatarFullUrl,
 } from '../../../lib/galgame/avatarThumbUrl';
 import {
@@ -27,6 +27,7 @@ import {
   subscribePlayerAvatarGenBusy,
 } from '../../../lib/galgame/playerAvatarBackgroundJob';
 import { refreshAuthUserPoints } from '../../../lib/auth/refreshUserPoints';
+import TrimmedTransparentImg from '../../TrimmedTransparentImg';
 import GameConfirmModal from '../GameConfirmModal';
 import shell from './PlayPanelShell.module.css';
 import styles from './PlayerArchiveSection.module.css';
@@ -129,19 +130,14 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
   }, [previewCard, profile]);
 
   const displayName = resolvePlayerDisplayNameOrFallback([profile?.name, documentPlayerName]) || '未设置';
-  // 功能注释：有确认 150 用小图；未 ensure 前回落原图；放大用原图
-  const avatarThumbPath = pickAvatarDisplayUrl([
-    profile?.avatarThumbUrl,
-    profile?.avatarUrl,
-    documentPlayerAvatarUrl,
-  ]);
-  const avatarSrc = avatarThumbPath ? getImageUrl(avatarThumbPath) : '';
+  // 功能注释：方框 bust 裁切必须用原图；_150 小图再 bust 会裁成几十像素、脸被切碎
   const avatarFullPath = pickDisplayAvatarFullUrl([
     profile?.avatarUrl,
     documentPlayerAvatarUrl,
     profile?.avatarThumbUrl,
   ]);
   const avatarFullSrc = avatarFullPath ? getImageUrl(avatarFullPath) : '';
+  const avatarSrc = avatarFullSrc;
   const sessionAvatarFull = String(profile?.avatarUrl || '').trim();
   const needsAvatar = !!profile?.avatarNeedsRegen || !sessionAvatarFull;
 
@@ -399,35 +395,11 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
       if (typeof (res.data as { ab?: { generateOnChange?: boolean } })?.ab?.generateOnChange === 'boolean') {
         onPlayerAvatarAbChange?.(!!(res.data as { ab?: { generateOnChange?: boolean } }).ab?.generateOnChange);
       }
-      const merged: SessionPlayerProfile = serverProfile && typeof serverProfile === 'object'
-        ? {
-            ...applied.profile,
-            ...serverProfile,
-            customAttributes: {
-              ...(applied.profile.customAttributes || {}),
-              ...(serverProfile.customAttributes || {}),
-            },
-            // 卡库立绘优先于旧局档案；服务端已带回则用服务端
-            ...(serverProfile.avatarUrl
-              ? {}
-              : (applied.profile.avatarUrl
-                ? { avatarUrl: applied.profile.avatarUrl, avatarNeedsRegen: false }
-                : (profile?.avatarUrl ? { avatarUrl: profile.avatarUrl } : {}))),
-            ...(serverProfile.avatarThumbUrl
-              ? {}
-              : (applied.profile.avatarThumbUrl
-                ? { avatarThumbUrl: applied.profile.avatarThumbUrl }
-                : (profile?.avatarThumbUrl ? { avatarThumbUrl: profile.avatarThumbUrl } : {}))),
-          }
-        : {
-            ...applied.profile,
-            ...(applied.profile.avatarUrl
-              ? {}
-              : (profile?.avatarUrl ? { avatarUrl: profile.avatarUrl } : {})),
-            ...(applied.profile.avatarThumbUrl
-              ? {}
-              : (profile?.avatarThumbUrl ? { avatarThumbUrl: profile.avatarThumbUrl } : {})),
-          };
+      const merged = mergeProfileAfterPlayerCardImport({
+        applied: applied.profile,
+        serverProfile,
+        previousProfile: profile,
+      });
       onProfileChange(merged);
       closeToOverview();
       const change = (res.data as { protagonistChange?: { content?: string } } | undefined)
@@ -483,7 +455,12 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
               aria-label={avatarSrc ? '查看主角头像' : '暂无头像'}
             >
               {avatarSrc ? (
-                <img className={styles.editAvatarImg} src={avatarSrc} alt={displayName} />
+                <TrimmedTransparentImg
+                  className={styles.editAvatarImg}
+                  src={avatarSrc}
+                  alt={displayName}
+                  variant="bust"
+                />
               ) : (
                 <div className={styles.editAvatarEmpty}>暂无头像</div>
               )}
@@ -680,10 +657,22 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
         ) : filtered.length === 0 ? (
           <div className={shell.empty}>卡库为空，请先在账号下创建角色卡</div>
         ) : (
-          filtered.map((card) => (
+          filtered.map((card) => {
+            const cardAvatar = String(card.avatarUrl || '').trim();
+            const cardAvatarSrc = cardAvatar ? getImageUrl(cardAvatar) : '';
+            return (
             <div key={card.id} className={styles.importRow}>
               <div className={styles.importAvatar} aria-hidden>
-                {card.name.slice(0, 1) || '卡'}
+                {cardAvatarSrc ? (
+                  <TrimmedTransparentImg
+                    className={styles.importAvatarImg}
+                    src={cardAvatarSrc}
+                    alt=""
+                    variant="bust"
+                  />
+                ) : (
+                  card.name.slice(0, 1) || '卡'
+                )}
               </div>
               <div className={styles.importBody}>
                 <div className={styles.importName}>
@@ -700,7 +689,8 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
                 选择
               </button>
             </div>
-          ))
+            );
+          })
         )}
       </div>
     );
@@ -709,10 +699,22 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
   if (view === 'preview' && previewCard && previewDiff?.next) {
     const next = previewDiff.next;
     const attrEntries = Object.entries(next.customAttributes || {});
+    const previewAvatarPath = String(next.avatarUrl || previewCard.avatarUrl || '').trim();
+    const previewAvatarSrc = previewAvatarPath ? getImageUrl(previewAvatarPath) : '';
     return (
       <div className={styles.previewPanel}>
         <section className={styles.previewCard}>
           <h4 className={styles.previewSectionTitle}>角色卡</h4>
+          {previewAvatarSrc ? (
+            <div className={styles.previewAvatarWrap}>
+              <TrimmedTransparentImg
+                className={styles.previewAvatarImg}
+                src={previewAvatarSrc}
+                alt=""
+                variant="bust"
+              />
+            </div>
+          ) : null}
           <div className={styles.previewName}>{next.name}</div>
           <div className={styles.previewMeta}>{genderText(next.gender)}</div>
           <p className={styles.previewPersona}>{next.persona || '暂无人设'}</p>
@@ -745,7 +747,11 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
 
         <div className={styles.infoBanner} role="note">
           <span className={styles.infoIcon} aria-hidden>i</span>
-          <p>导入将填写或覆盖当前玩家档案，之后仍可继续编辑。</p>
+          <p>
+            {previewAvatarSrc
+              ? '导入将覆盖当前玩家档案并带上卡库立绘，之后仍可在档案中重新生成头像。'
+              : '导入将填写或覆盖当前玩家档案；该卡暂无立绘，导入后可在档案中生成头像。'}
+          </p>
         </div>
 
         <div className={styles.modalActions}>
@@ -808,7 +814,12 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
             aria-label={avatarSrc ? '查看主角头像' : '暂无头像'}
           >
             {avatarSrc ? (
-              <img className={styles.avatarImg} src={avatarSrc} alt={displayName} />
+              <TrimmedTransparentImg
+                className={styles.avatarImg}
+                src={avatarSrc}
+                alt={displayName}
+                variant="bust"
+              />
             ) : (
               <div className={styles.avatarEmpty}>头像</div>
             )}

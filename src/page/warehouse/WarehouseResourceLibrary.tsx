@@ -89,6 +89,16 @@ function resourceFromDraft(type: WarehouseResourceType, draft: Draft) {
     } catch {
       return { ok: false as const, message: '条目 JSON 无法解析' };
     }
+    // 功能注释：条目为空但写了描述时，自动生成一条，避免局内导入报「无可导入条目」
+    if (entries.length === 0 && (draft.title.trim() || draft.description.trim())) {
+      entries = [{
+        title: draft.title.trim() || '世界书',
+        content: draft.description.trim() || draft.title.trim(),
+        keywords: tags,
+        constant: true,
+        enabled: true,
+      }];
+    }
     return {
       ok: true as const,
       body: {
@@ -573,7 +583,9 @@ const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
                   {resourceType === 'worldbook' ? 'WORLD BOOK' : 'PLUGIN'}
                 </p>
                 <div className={panel.formPreviewPortrait}>
-                  {(draft.title || '?').slice(0, 1)}
+                  <div className={panel.formPreviewPortraitFallback} aria-hidden>
+                    {(draft.title || '?').slice(0, 1)}
+                  </div>
                 </div>
                 <h4 className={panel.formPreviewName}>{draft.title.trim() || '未命名'}</h4>
                 <p className={panel.formPreviewMeta}>

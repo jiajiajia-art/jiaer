@@ -5,12 +5,9 @@ import styles from './CreateGameModals.module.css';
 import MobileTipModal from './MobileTipModal';
 import type { CreatorGameType } from '../../utils/miniProgram';
 
-const IVG_TOOL_DOWNLOAD_FILE_NAME = 'Funloom互动影游工具-Windows.zip';
-const IVG_TOOL_DOWNLOAD_PATH = `/pdf/${IVG_TOOL_DOWNLOAD_FILE_NAME}`;
+const IVG_TOOL_DOWNLOAD_FILE_NAME = 'FunloomTool.zip';
+const IVG_TOOL_DOWNLOAD_URL = 'https://kurangames.com/download/FunloomTool.zip';
 const IVG_TUTORIAL_URL = 'https://avyx4ypb3lx.feishu.cn/docx/WTcZdQPipofJq1xb1A4caq6Tngd';
-
-const getPublicAssetUrl = (path: string) =>
-    `${import.meta.env.BASE_URL}${path.startsWith('/') ? path.slice(1) : path}`;
 
 interface CreateGameModalsProps {
     isCreateTypeModalOpen: boolean;
@@ -41,7 +38,6 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
 }) => {
     const { t } = useTranslation();
     const [isIvgToolModalOpen, setIsIvgToolModalOpen] = useState(false);
-    const ivgToolDownloadUrl = getPublicAssetUrl(IVG_TOOL_DOWNLOAD_PATH);
 
     const handleAvgClick = () => {
         if (isMiniProgram) {
@@ -171,7 +167,7 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
                         <div className={styles.ivgToolActions}>
                             <a
                                 className={`${styles.ivgToolAction} ${styles.ivgToolDownloadAction}`}
-                                href={ivgToolDownloadUrl}
+                                href={IVG_TOOL_DOWNLOAD_URL}
                                 download={IVG_TOOL_DOWNLOAD_FILE_NAME}
                             >
                                 <FaDesktop className={styles.ivgToolActionIcon} aria-hidden="true" />

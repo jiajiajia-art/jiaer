@@ -43,6 +43,19 @@ import {
     descriptionToPlainText,
     hydrateDescriptionHtmlForDisplay,
 } from '../utils/gameDescriptionHtml';
+import {
+    getInteractiveVideoAccess,
+    unlockInteractiveVideoContent,
+    type InteractiveVideoAccess,
+    type InteractiveVideoPricingConfig,
+} from '../api/interactiveVideo';
+import {
+    getInteractiveVideoBuyoutPaymentOptions,
+    getInteractiveVideoStartButtonLabel,
+    shouldConfirmInteractiveVideoBuyoutBeforeStart,
+    isInteractiveVideoOwnerUser,
+    type IvgBuyoutPaymentOption,
+} from '../utils/interactiveVideoPricing';
 
 // 检测是否在微信小程序环境
 const isWebViewEnv = (): boolean => {
@@ -132,6 +145,46 @@ const normalizePlaybackOrientation = (value?: string | null) => {
     return normalized === 'landscape' || normalized === 'portrait' ? normalized : null;
 };
 
+const INTERACTIVE_VIDEO_UNLOCK_ERROR_MESSAGES: Record<string, string> = {
+    INSUFFICIENT_POINTS: '积分不足',
+    'Insufficient points': '积分不足',
+    INSUFFICIENT_DIAMONDS: '钻石不足',
+    'Insufficient diamonds': '钻石不足',
+    PAYMENT_METHOD_UNAVAILABLE: '当前支付方式不可用',
+    'Payment method is unavailable': '当前支付方式不可用',
+    BUYOUT_NOT_FOR_SALE: '该互动影游暂不支持买断',
+    'Buyout is not for sale': '该互动影游暂不支持买断',
+    DIRECTORY_NOT_FOR_SALE: '该付费内容暂不可购买',
+    'Directory is not for sale': '该付费内容暂不可购买',
+    FREE_UNLOCK_UNAVAILABLE: '当前内容暂不支持免费解锁',
+    'Free unlock is unavailable': '当前内容暂不支持免费解锁',
+    INVALID_CURRENCY: '支付方式无效',
+    'Invalid currency': '支付方式无效',
+    INVALID_PURCHASE_TYPE: '购买类型无效',
+    'Invalid purchase type': '购买类型无效',
+    INVALID_PARAM: '支付参数无效，请刷新后重试',
+    INVALID_PURCHASE_PARAM: '支付参数无效，请刷新后重试',
+    'Invalid purchase parameter': '支付参数无效，请刷新后重试',
+    AUTH_REQUIRED: '请先登录后再解锁',
+    'Authentication token required': '请先登录后再解锁',
+    NOT_FOUND: '互动影游不存在或已下架',
+    'Game not found': '互动影游不存在或已下架',
+    FORBIDDEN: '暂无权限解锁该互动影游',
+    Forbidden: '暂无权限解锁该互动影游',
+    MONETIZATION_ERROR: '解锁失败，请稍后重试',
+    'Interactive video monetization error': '解锁失败，请稍后重试',
+};
+
+const getInteractiveVideoUnlockErrorMessage = (code?: string | null, message?: string | null) => {
+    const normalizedCode = String(code || '').trim();
+    const normalizedMessage = String(message || '').trim();
+    const mappedMessage = INTERACTIVE_VIDEO_UNLOCK_ERROR_MESSAGES[normalizedCode]
+        || INTERACTIVE_VIDEO_UNLOCK_ERROR_MESSAGES[normalizedMessage];
+    if (mappedMessage) return mappedMessage;
+    if (normalizedMessage && !/[A-Za-z]/.test(normalizedMessage)) return normalizedMessage;
+    return '解锁失败，请稍后重试';
+};
+
 const GameDetail: React.FC = () => {
     const { t } = useTranslation();
     const { fileId: fileIdParam } = useParams<{ fileId: string }>();
@@ -168,6 +221,13 @@ const GameDetail: React.FC = () => {
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const [isQRCodeModalOpen, setIsQRCodeModalOpen] = useState(false);
     const [activeSection, setActiveSection] = useState<'introduction' | 'reviews'>('introduction');
+    const [isInteractiveVideoAccessLoading, setIsInteractiveVideoAccessLoading] = useState(false);
+    const [isInteractiveVideoBuyoutConfirmOpen, setIsInteractiveVideoBuyoutConfirmOpen] = useState(false);
+    const [isInteractiveVideoBuyoutUnlocking, setIsInteractiveVideoBuyoutUnlocking] = useState(false);
+    const [interactiveVideoAccessInfo, setInteractiveVideoAccessInfo] = useState<{
+        config: InteractiveVideoPricingConfig;
+        access: InteractiveVideoAccess;
+    } | null>(null);
 
     // Refs
     const likeDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -179,7 +239,7 @@ const GameDetail: React.FC = () => {
     // 计算值
     const userId = useMemo(() => user?.user?.id, [user?.user?.id]);
     const fileId = useMemo(() => fileIdParam || game?.file_id || game?.id, [fileIdParam, game]);
-    const isStartButtonLoading = isLoading || isPlayStatusLoading;
+    const isStartButtonLoading = isLoading || isPlayStatusLoading || isInteractiveVideoAccessLoading || isInteractiveVideoBuyoutUnlocking;
     const normalizedGameMode = useMemo(
         () => normalizeGameMode(game?.engine, game?.game_tags),
         [game?.engine, game?.game_tags],
@@ -187,6 +247,33 @@ const GameDetail: React.FC = () => {
     const isGalgame = normalizedGameMode === 'TXT';
     const isNovel = normalizedGameMode === 'NOVEL';
     const isInteractiveVideo = normalizedGameMode === 'interactive-video';
+    const isInteractiveVideoOwner = useMemo(
+        () => isInteractiveVideoOwnerUser(game?.creator_user_id, user?.user),
+        [game?.creator_user_id, user?.user],
+    );
+    const startButtonText = useMemo(() => {
+        if (isNovel) return t('gameDetail.startReading');
+        const fallbackLabel = t('gameDetail.startExperience');
+        if (!isInteractiveVideo) return fallbackLabel;
+        return getInteractiveVideoStartButtonLabel({
+            config: interactiveVideoAccessInfo?.config,
+            access: interactiveVideoAccessInfo?.access,
+            isOwner: isInteractiveVideoOwner,
+            fallbackLabel,
+        });
+    }, [interactiveVideoAccessInfo, isInteractiveVideo, isInteractiveVideoOwner, isNovel, t]);
+    const interactiveVideoBuyoutPaymentOptions = useMemo(
+        () => getInteractiveVideoBuyoutPaymentOptions(interactiveVideoAccessInfo?.config),
+        [interactiveVideoAccessInfo?.config],
+    );
+    const shouldConfirmInteractiveVideoBuyout = useMemo(
+        () => shouldConfirmInteractiveVideoBuyoutBeforeStart({
+            config: interactiveVideoAccessInfo?.config,
+            access: interactiveVideoAccessInfo?.access,
+            isOwner: isInteractiveVideoOwner,
+        }),
+        [interactiveVideoAccessInfo, isInteractiveVideoOwner],
+    );
     const gameTypeLabel = useMemo(
         () => (game ? getGameTypeLabelFromMeta(game) : ''),
         [game],
@@ -385,6 +472,56 @@ const GameDetail: React.FC = () => {
             console.error('添加浏览统计失败:', error);
         });
     }, [fileId, userId, game]);
+
+    const fetchInteractiveVideoAccessInfo = useCallback(async () => {
+        if (!fileId || !isInteractiveVideo || !userId) {
+            setInteractiveVideoAccessInfo(null);
+            return null;
+        }
+
+        setIsInteractiveVideoAccessLoading(true);
+        try {
+            const response = await getInteractiveVideoAccess(String(fileId));
+            const data = response.data?.data;
+            const nextInfo = data ? { config: data.config, access: data.access } : null;
+            setInteractiveVideoAccessInfo(nextInfo);
+            return nextInfo;
+        } catch (error) {
+            console.warn('[GameDetail] load IVG access failed:', error);
+            setInteractiveVideoAccessInfo(null);
+            return null;
+        } finally {
+            setIsInteractiveVideoAccessLoading(false);
+        }
+    }, [fileId, isInteractiveVideo, userId]);
+
+    useEffect(() => {
+        if (!fileId || !isInteractiveVideo || !userId) {
+            setInteractiveVideoAccessInfo(null);
+            setIsInteractiveVideoAccessLoading(false);
+            return;
+        }
+
+        let cancelled = false;
+        setIsInteractiveVideoAccessLoading(true);
+        getInteractiveVideoAccess(String(fileId))
+            .then((response) => {
+                if (cancelled) return;
+                const data = response.data?.data;
+                setInteractiveVideoAccessInfo(data ? { config: data.config, access: data.access } : null);
+            })
+            .catch((error) => {
+                console.warn('[GameDetail] load IVG access failed:', error);
+                if (!cancelled) setInteractiveVideoAccessInfo(null);
+            })
+            .finally(() => {
+                if (!cancelled) setIsInteractiveVideoAccessLoading(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [fileId, isInteractiveVideo, userId]);
 
     // 原作详情：仅拉取已上架衍生视觉小说（草稿对原作者也不可见）
     useEffect(() => {
@@ -654,6 +791,38 @@ const GameDetail: React.FC = () => {
             return;
         }
 
+        if (isInteractiveVideo) {
+            const latestAccessInfo = interactiveVideoAccessInfo ?? await fetchInteractiveVideoAccessInfo();
+            if (!latestAccessInfo && !isInteractiveVideoOwner) {
+                toast.error('获取付费信息失败，请稍后重试');
+                return;
+            }
+
+            const paymentOptions = getInteractiveVideoBuyoutPaymentOptions(latestAccessInfo?.config);
+            const shouldConfirmBuyout = latestAccessInfo === interactiveVideoAccessInfo
+                ? shouldConfirmInteractiveVideoBuyout
+                : shouldConfirmInteractiveVideoBuyoutBeforeStart({
+                    config: latestAccessInfo?.config,
+                    access: latestAccessInfo?.access,
+                    isOwner: isInteractiveVideoOwner,
+                });
+
+            if (shouldConfirmBuyout) {
+                setIsInteractiveVideoBuyoutConfirmOpen(true);
+                return;
+            }
+
+            if (
+                !isInteractiveVideoOwner &&
+                String(latestAccessInfo?.config?.mode || 'free') === 'buyout' &&
+                !latestAccessInfo?.access?.hasBuyout &&
+                paymentOptions.length === 0
+            ) {
+                toast.error('暂无可用支付方式');
+                return;
+            }
+        }
+
         // CUSTOM/ST 模式：直接开始，不需要弹窗（IVG 走下方续玩/重开逻辑）
         if (normalizedGameMode === 'customif' || normalizedGameMode === 'st') {
 
@@ -734,6 +903,43 @@ const GameDetail: React.FC = () => {
     const handleConfirmInteractiveVideoRestart = async () => {
         setIsInteractiveVideoRestartConfirmOpen(false);
         await startInteractiveVideo(true);
+    };
+
+    const handleConfirmInteractiveVideoBuyout = async (option: IvgBuyoutPaymentOption) => {
+        if (!fileId) {
+            toast.error(t('gameDetail.gameIdInvalid'));
+            return;
+        }
+
+        setIsInteractiveVideoBuyoutUnlocking(true);
+        try {
+            const response = await unlockInteractiveVideoContent(String(fileId), {
+                purchaseType: 'buyout',
+                currency: option.currency,
+            });
+
+            if (response.data?.success) {
+                const nextAccess = response.data.data?.access;
+                if (nextAccess) {
+                    setInteractiveVideoAccessInfo((current) => current ? { ...current, access: nextAccess } : current);
+                }
+                await fetchInteractiveVideoAccessInfo();
+                setIsInteractiveVideoBuyoutConfirmOpen(false);
+                toast.success(response.data.data?.alreadyOwned ? '已购买，可直接游玩' : '解锁成功');
+                await startInteractiveVideo(false);
+                return;
+            }
+
+            toast.error(getInteractiveVideoUnlockErrorMessage(
+                (response.data as { code?: string })?.code,
+                response.data?.message,
+            ));
+        } catch (error) {
+            const errorData = (error as { response?: { data?: { code?: string; message?: string } } }).response?.data;
+            toast.error(getInteractiveVideoUnlockErrorMessage(errorData?.code, errorData?.message));
+        } finally {
+            setIsInteractiveVideoBuyoutUnlocking(false);
+        }
     };
 
     const handleLike = () => {
@@ -1194,7 +1400,7 @@ const GameDetail: React.FC = () => {
                                     <span className={styles.loadingDot}></span>
                                 </div>
                             ) : (
-                                isNovel ? t('gameDetail.startReading') : t('gameDetail.startExperience')
+                                startButtonText
                             )}
                         </button>
                     </div>
@@ -1223,6 +1429,67 @@ const GameDetail: React.FC = () => {
                 confirmButtonText={t('gameDetail.ivgRestartPlay')}
                 cancelButtonText={t('common.cancel')}
             />
+            {isInteractiveVideoBuyoutConfirmOpen && (
+                <div
+                    className={styles.startOptionsOverlay}
+                    onClick={() => {
+                        if (!isInteractiveVideoBuyoutUnlocking) {
+                            setIsInteractiveVideoBuyoutConfirmOpen(false);
+                        }
+                    }}
+                >
+                    <div
+                        className={styles.startOptionsModal}
+                        onClick={(e) => e.stopPropagation()}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="确认买断游玩"
+                    >
+                        <div className={styles.startOptionsHeader}>
+                            <div className={styles.startOptionsHeaderMain}>
+                                <h2 className={styles.startOptionsTitle}>确认买断游玩</h2>
+                            </div>
+                            <button
+                                type="button"
+                                className={styles.startOptionsClose}
+                                onClick={() => setIsInteractiveVideoBuyoutConfirmOpen(false)}
+                                disabled={isInteractiveVideoBuyoutUnlocking}
+                                aria-label={t('common.close')}
+                            >
+                                <img src={`${import.meta.env.BASE_URL}data/assets/gameDetail/关闭.png`} alt={t('common.close')} />
+                            </button>
+                        </div>
+                        <p className={styles.interactiveVideoBuyoutMessage}>
+                            解锁后将永久绑定当前账号，请确认支付后进入游戏。
+                        </p>
+                        <div className={styles.startOptionsButtons}>
+                            {interactiveVideoBuyoutPaymentOptions.length > 0 ? (
+                                interactiveVideoBuyoutPaymentOptions.map((option) => (
+                                    <button
+                                        key={option.currency}
+                                        type="button"
+                                        className={styles.startOptionsPrimary}
+                                        disabled={isInteractiveVideoBuyoutUnlocking}
+                                        onClick={() => handleConfirmInteractiveVideoBuyout(option)}
+                                    >
+                                        {isInteractiveVideoBuyoutUnlocking ? '处理中...' : `确认支付${option.label}`}
+                                    </button>
+                                ))
+                            ) : (
+                                <p className={styles.interactiveVideoBuyoutMessage}>暂无可用支付方式</p>
+                            )}
+                            <button
+                                type="button"
+                                className={styles.startOptionsGhost}
+                                disabled={isInteractiveVideoBuyoutUnlocking}
+                                onClick={() => setIsInteractiveVideoBuyoutConfirmOpen(false)}
+                            >
+                                取消
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             {/* 登录弹窗（当前详情页也挂一份，确保能在本页触发显示，微信小程序环境不显示） */}
             {!isWebViewEnv() && (
                 <AuthModal

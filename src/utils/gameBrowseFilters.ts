@@ -14,7 +14,7 @@ export type HomeListFilters = {
 };
 
 export const DEFAULT_HOME_LIST_MODE: HomeListMode = 'all';
-export const DEFAULT_HOME_LIST_SORT: HomeListSort = 'hot';
+export const DEFAULT_HOME_LIST_SORT: HomeListSort = 'recommended';
 
 export const DEFAULT_HOME_LIST_FILTERS: HomeListFilters = {
     mode: DEFAULT_HOME_LIST_MODE,

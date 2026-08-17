@@ -153,13 +153,17 @@
   aspect-ratio: 1 / 1.12;
   background: linear-gradient(160deg, #f3eef2, #e8e0e6);
   overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
 }
 
 .portraitImg {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: top center;
+  /* 有立绘：底部对齐站立；contain 保住裁切后的头肩 */
+  object-fit: contain;
+  object-position: bottom center;
   display: block;
 }
 
@@ -292,6 +296,10 @@
 .previewHero {
   aspect-ratio: 1 / 1.05;
   background: linear-gradient(160deg, #f3eef2, #e8e0e6);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
 }
 
 .previewHeroImg,
@@ -302,8 +310,8 @@
 }
 
 .previewHeroImg {
-  object-fit: cover;
-  object-position: top center;
+  object-fit: contain;
+  object-position: bottom center;
 }
 
 .previewHeroFallback {
@@ -472,8 +480,9 @@
   aspect-ratio: 1 / 1.15;
   border-radius: 14px;
   background: linear-gradient(165deg, #3a2e36, #2a2228);
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
   font-family: var(--wh-display);
   font-size: 64px;
   font-weight: 700;
@@ -484,101 +493,101 @@
   overflow: hidden;
 }
 
+/* 无立绘时占位字：铺满并居中，避免跟 flex-end 沉底 */
+.formPreviewPortraitFallback {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  font: inherit;
+  color: inherit;
+}
+
 .formPreviewPortraitImg {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: top center;
+  /* 左侧卡面预览展示全身立绘，底部对齐 */
+  object-fit: contain;
+  object-position: bottom center;
   display: block;
 }
 
 .avatarField {
-  display: flex;
-  flex-direction: column;
+  display: grid;
   gap: 10px;
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid var(--wh-line);
-  background: #faf9fa;
-}
-
-.avatarFieldHead {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--wh-ink);
+  padding: 0;
+  border: none;
+  background: transparent;
 }
 
 .avatarHint {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--wh-muted);
+  display: none;
 }
 
-.avatarRow {
-  display: flex;
-  gap: 12px;
-  align-items: stretch;
+.avatarIdentityRow {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
 }
 
 .avatarPreview {
-  width: 88px;
-  flex-shrink: 0;
-  aspect-ratio: 1 / 1.15;
-  border-radius: 12px;
+  width: 120px;
+  aspect-ratio: 1 / 1;
+  border-radius: 14px;
   overflow: hidden;
-  background: linear-gradient(160deg, #f3eef2, #e8e0e6);
-  display: grid;
-  place-items: center;
+  background: #f3eef1;
   border: 1px solid var(--wh-line);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
 }
 
 .avatarPreviewImg {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: top center;
+  /* bust 已裁成头肩方图：底部对齐；contain 避免二次裁切 */
+  object-fit: contain;
+  object-position: bottom center;
   display: block;
 }
 
 .avatarPreviewFallback {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
   font-family: var(--wh-display);
-  font-size: 28px;
+  font-size: 40px;
   font-weight: 700;
-  color: rgba(224, 61, 75, 0.4);
+  color: rgba(224, 61, 75, 0.35);
 }
 
-.avatarActions {
-  flex: 1;
+.avatarAside {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  justify-content: center;
+  gap: 12px;
 }
 
-.avatarTip {
+.avatarGenBtn {
+  align-self: stretch;
+  width: 100%;
+  white-space: normal;
+  line-height: 1.35;
+}
+
+.avatarAside .field {
   margin: 0;
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--wh-muted);
 }
 
 @media (max-width: 980px) {
-  .avatarRow {
-    flex-direction: column;
+  .avatarIdentityRow {
+    grid-template-columns: 1fr;
   }
 
   .avatarPreview {
-    width: 112px;
-  }
-
-  .avatarActions .primaryBtn {
-    width: 100%;
+    width: min(100%, 140px);
   }
 }
 
@@ -655,6 +664,38 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.labelWithAi {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.labelWithAi label,
+.labelWithAi > span {
+  font-size: 12px;
+  color: var(--wh-muted);
+  font-weight: 700;
+}
+
+.fieldAiBtn {
+  flex-shrink: 0;
+  border: 1px solid rgba(224, 61, 75, 0.35);
+  background: rgba(224, 61, 75, 0.08);
+  color: var(--wh-coral);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.fieldAiBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .field label,

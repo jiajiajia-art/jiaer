@@ -156,6 +156,42 @@ export function applyDisplayNameRewrites(
   return collapseStackedDisplayNames(out, collapseNames);
 }
 
+/** 角色档案笺展示字段：简介 / 详细简介 / 态度 / 关系等随玩家现用名替换 */
+export const DOSSIER_DISPLAY_TEXT_KEYS = Object.freeze([
+  'summary',
+  'detailedBio',
+  'attitudeToPlayer',
+  'relationship',
+  'description',
+  'personality',
+] as const);
+
+/**
+ * 对档案展示用字段做旧名→现用名替换（不改 id/name 等结构字段）
+ */
+export function rewriteDossierTextFields<T extends Record<string, unknown>>(
+  fields: T,
+  nameMap: NameReplacement[],
+  collapseNames: Array<string | null | undefined> = [],
+): T {
+  if (!fields || typeof fields !== 'object') return fields;
+  if (!(nameMap && nameMap.length) && !(collapseNames && collapseNames.length)) {
+    return fields;
+  }
+  const next: Record<string, unknown> = { ...fields };
+  let changed = false;
+  for (const key of DOSSIER_DISPLAY_TEXT_KEYS) {
+    const raw = next[key];
+    if (typeof raw !== 'string' || !raw) continue;
+    const rewritten = applyDisplayNameRewrites(raw, nameMap, collapseNames);
+    if (rewritten !== raw) {
+      next[key] = rewritten;
+      changed = true;
+    }
+  }
+  return (changed ? next : fields) as T;
+}
+
 export function applyNameMapToSteps<T extends Record<string, unknown>>(
   steps: T[],
   nameMap: NameReplacement[],
