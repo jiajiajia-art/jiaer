@@ -47,6 +47,13 @@
   background: rgba(255, 255, 255, 0.08);
 }
 
+.headAvatarPoster,
+.bubbleAvatarPoster {
+  object-fit: contain;
+  object-position: center center;
+  background: #12080c;
+}
+
 .headAvatarEmpty {
   display: block;
 }
@@ -573,6 +580,14 @@
   max-height: 16rem;
   object-fit: cover;
   object-position: top center;
+}
+
+.previewPortraitPoster {
+  object-fit: contain;
+  object-position: center center;
+  height: auto;
+  max-height: min(68vh, 16rem);
+  background: #12080c;
 }
 
 .previewPortraitEmpty {

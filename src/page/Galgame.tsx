@@ -3,7 +3,7 @@ import styles from './Galgame.module.css';
 import { useAuthStore } from "../store/useAuthStore";
 import { useGameStore } from "../store/gameStore";
 import { RiLogoutCircleRLine } from "react-icons/ri";
-import { MdSettings, MdTimeline, MdPerson, MdOutlineAssessment, MdFlag, MdDns, MdContentCopy } from "react-icons/md";
+import { MdSettings, MdTimeline, MdPerson, MdOutlineAssessment, MdFlag, MdDns, MdContentCopy, MdAutoStories } from "react-icons/md";
 import {
   buildOpeningRoutesFromWorldKeyEvents,
   buildSilentDefaultGameStartConfig,
@@ -22,10 +22,17 @@ import { isPlaceholderPlayerName, resolvePlayerDisplayName } from "../lib/galgam
 import { sessionPlayerProfileApi } from "../api/galgame/playerCharacterCards";
 import type { SessionPlayerProfile } from "../lib/galgame/playerCharacterCard";
 import { resolveSessionPlayerPortraitPath, resolvePlayPortraitScale, isImportedCardPortraitUrl } from "../lib/galgame/playerCharacterCard";
+import { pickSessionNpcAvatarUrl } from "../lib/galgame/npcPlayPortrait";
 import {
   mergePlayerAvatarIntoProfile,
   subscribePlayerAvatarGenComplete,
 } from "../lib/galgame/playerAvatarBackgroundJob";
+import {
+  mergeNpcAvatarIntoProfiles,
+  mergeIncomingNpcProfiles,
+  type NpcAvatarMergeInput,
+} from "../lib/galgame/npcAvatarMerge";
+import { subscribeNpcAvatarGenComplete } from "../lib/galgame/npcAvatarBackgroundJob";
 import { CHARACTER_GENERATION_COST } from "../utils/constants";
 import { ensureMinPlayChoiceOptions } from "../lib/galgame/playChoiceOptions";
 import type { SystemsConfigPatch } from "../components/Galgame/panels/SystemsPanel";
@@ -159,6 +166,8 @@ const Galgame = () => {
     const [systemWritingStyle, setSystemWritingStyle] = useState<GameStartWritingStyle | null>(null);
     const [systemPersonaBlocks, setSystemPersonaBlocks] = useState<GameStartPersonaBlocks | null>(null);
     const [sessionNpcEdits, setSessionNpcEdits] = useState<PlayerEditableNpc[]>([]);
+    /** 新角色尚未保存时，后台头像先挂这里，保存后再合并 */
+    const pendingNpcAvatarsRef = useRef<Record<string, NpcAvatarMergeInput>>({});
     /** A/B：未手改性别时跟创作台预设（默认 true=全开验收；play-ui 显式 false 才关） */
     const [npcGenderPreferPresetAb, setNpcGenderPreferPresetAb] = useState(true);
     /** 局内「我的档案」：改档后必须进父状态 + play-ui 回传，下一轮推演才稳定读到 */
@@ -178,6 +187,7 @@ const Galgame = () => {
         bootNewStart,
         sessionPlayerAvatarUrl: sessionPlayerProfile?.avatarUrl || null,
         sessionPlayerName: sessionPlayerProfile?.name || null,
+        sessionNpcEdits,
     });
 
     const openingRoutes = useMemo(
@@ -557,13 +567,35 @@ const Galgame = () => {
             : undefined;
         const importedCardPortrait = isPlayerBubble
             && isImportedCardPortraitUrl(sessionPlayerProfile?.avatarUrl);
+        const npcSessionAvatarPath = !isPlayerBubble
+            ? pickSessionNpcAvatarUrl(sessionNpcEdits, {
+                npcId: msg.npcId,
+                speakerName: rewrittenCharName || msg.characterName,
+            })
+            : '';
+        const sessionNpcPortraitUrl = npcSessionAvatarPath
+            ? (withCacheBust(getImageUrl(npcSessionAvatarPath)) || undefined)
+            : undefined;
+        const npcDoc = !isPlayerBubble
+            ? (controller.presetData?.npcs?.npcs || []).find((n) => {
+                if (msg.npcId && String(n?.id || '') === String(msg.npcId)) return true;
+                const name = String(n?.name || '').trim();
+                return Boolean(name && (name === rewrittenCharName || name === msg.characterName));
+            })
+            : undefined;
         // 功能注释：必须用创作台文档缩放，禁止用 msg.portraitScale（可能已是导入 0.8 的解析结果）
         const portraitScale = isPlayerBubble
             ? resolvePlayPortraitScale({
                 sessionAvatarUrl: sessionPlayerProfile?.avatarUrl,
                 documentPortraitScale: controller.presetData?.world?.player?.portraitScale,
             })
-            : msg.portraitScale;
+            : resolvePlayPortraitScale({
+                sessionAvatarUrl: npcSessionAvatarPath,
+                documentPortraitScale: npcDoc?.portraitScale ?? msg.portraitScale,
+            });
+        const npcImportedCardPortrait = Boolean(
+            npcSessionAvatarPath && isImportedCardPortraitUrl(npcSessionAvatarPath),
+        );
         return {
             id: msg.id,
             type: msg.type,
@@ -575,11 +607,11 @@ const Galgame = () => {
                 : rewrittenCharName,
             characterImage: isPlayerBubble
                 ? (sessionPortraitUrl || msg.characterImage)
-                : msg.characterImage,
+                : (sessionNpcPortraitUrl || msg.characterImage),
             characterPosition: msg.characterPosition,
             portraitScale,
-            portraitOffsetX: importedCardPortrait ? undefined : msg.portraitOffsetX,
-            portraitOffsetY: importedCardPortrait ? undefined : msg.portraitOffsetY,
+            portraitOffsetX: (importedCardPortrait || npcImportedCardPortrait) ? undefined : msg.portraitOffsetX,
+            portraitOffsetY: (importedCardPortrait || npcImportedCardPortrait) ? undefined : msg.portraitOffsetY,
             options,
         };
     }, [
@@ -590,6 +622,7 @@ const Galgame = () => {
         displayNameMap,
         displayNameCollapseList,
         sessionPlayerProfile,
+        sessionNpcEdits,
     ]);
 
     const normalModeDisplayText = useMemo(() => {
@@ -625,6 +658,40 @@ const Galgame = () => {
             );
         });
     }, [sessionId]);
+
+    // 功能注释：角色头像后台生成完成后写回列表；未保存的新角色先挂 pending
+    useEffect(() => {
+        if (!sessionId) return undefined;
+        return subscribeNpcAvatarGenComplete((sid, result) => {
+            if (sid !== sessionId) return;
+            setSessionNpcEdits((prev) => {
+                const merged = mergeNpcAvatarIntoProfiles(prev, result);
+                const found = merged.some((p) => String(p?.id || '') === result.npcId);
+                if (!found) pendingNpcAvatarsRef.current[result.npcId] = result;
+                else delete pendingNpcAvatarsRef.current[result.npcId];
+                return merged;
+            });
+            if (typeof result.remainingPoints === 'number') {
+                useAuthStore.getState().updateUser({ points: result.remainingPoints });
+            }
+            toast.success(
+                `角色头像已生成（-${result.pointsDeducted ?? CHARACTER_GENERATION_COST} 积分）`,
+            );
+        });
+    }, [sessionId]);
+
+    const applyPendingNpcAvatars = useCallback((profiles: PlayerEditableNpc[]) => {
+        let next = profiles;
+        const pending = pendingNpcAvatarsRef.current;
+        for (const id of Object.keys(pending)) {
+            const merged = mergeNpcAvatarIntoProfiles(next, pending[id]);
+            if (merged !== next) {
+                delete pending[id];
+                next = merged;
+            }
+        }
+        return next;
+    }, []);
 
     const playerProfile = useMemo((): PlayerProfileLike | null => {
         const raw = controller.presetData?.world?.player;
@@ -684,7 +751,10 @@ const Galgame = () => {
                 }));
             }
             if (Array.isArray(data.playerEditableNpcs)) {
-                setSessionNpcEdits(data.playerEditableNpcs as PlayerEditableNpc[]);
+                setSessionNpcEdits((prev) => mergeIncomingNpcProfiles(
+                    data.playerEditableNpcs as PlayerEditableNpc[],
+                    prev,
+                ));
             }
             if (typeof data.ab?.npcGenderPreferPreset === 'boolean') {
                 setNpcGenderPreferPresetAb(!!data.ab.npcGenderPreferPreset);
@@ -841,7 +911,10 @@ const Galgame = () => {
                 }
             }
             if (Array.isArray(result?.playerEditableNpcs)) {
-                setSessionNpcEdits(result.playerEditableNpcs as PlayerEditableNpc[]);
+                setSessionNpcEdits((prev) => mergeIncomingNpcProfiles(
+                    result.playerEditableNpcs as PlayerEditableNpc[],
+                    prev,
+                ));
             }
         } catch (e: unknown) {
             if (isAbortError(e) || (e as Error)?.name === 'AbortError') return;
@@ -1499,6 +1572,25 @@ const Galgame = () => {
                                 </span>
                             ) : null}
                         </div>
+                        {!controller.isReplay && controller.gameStarted && !controller.showGalgameHistory ? (
+                            <button
+                                type="button"
+                                className={styles.topExportButton}
+                                disabled={!sessionId || !fileId || controller.history.length === 0}
+                                onClick={() => {
+                                    logVisualButtonClick('export_visual_novel');
+                                    setIsExportNovelOpen(true);
+                                }}
+                                aria-label={t('galgame.exportVisualNovel')}
+                            >
+                                <span className={styles.topExportButtonInner}>
+                                    <MdAutoStories aria-hidden />
+                                    <span>{t('galgame.exportShort')}</span>
+                                </span>
+                            </button>
+                        ) : (
+                            <div className={styles.topExportSpacer} aria-hidden />
+                        )}
                     </div>
                     {/* {!controller.isReplay && controller.gameStarted && (
                         <div className={styles.contextMemoryMeter}>
@@ -1973,7 +2065,9 @@ const Galgame = () => {
                                 npcs={npcsList}
                                 player={playerProfile}
                                 editableProfiles={sessionNpcEdits}
-                                onProfilesChange={setSessionNpcEdits}
+                                onProfilesChange={(profiles) => {
+                                    setSessionNpcEdits(applyPendingNpcAvatars(profiles));
+                                }}
                                 sessionPlayerProfile={sessionPlayerProfile}
                                 onSessionPlayerProfileChange={handleSessionPlayerProfileChange}
                                 preferPresetGenderAb={npcGenderPreferPresetAb}
@@ -2008,7 +2102,10 @@ const Galgame = () => {
                                     void controller.refreshHistory();
                                 }}
                                 onPlayerEditableNpcsUpdated={(profiles) => {
-                                    setSessionNpcEdits(profiles as PlayerEditableNpc[]);
+                                    setSessionNpcEdits((prev) => mergeIncomingNpcProfiles(
+                                        profiles as PlayerEditableNpc[],
+                                        prev,
+                                    ));
                                 }}
                             />
                             <QuestsPanel

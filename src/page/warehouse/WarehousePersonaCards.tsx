@@ -612,7 +612,9 @@ const WarehousePersonaCards: React.FC = () => {
                   avatarUrl={draft.avatarUrl}
                   generating={generatingAvatar}
                   disabled={saving}
+                  cardId={editingId}
                   onGenerate={() => void requestGenerateAvatar()}
+                  onAvatarUrl={(url) => setDraft((d) => ({ ...d, avatarUrl: url }))}
                 >
                   <div className={panel.field}>
                     <label htmlFor="wh-persona-name">姓名</label>

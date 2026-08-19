@@ -518,6 +518,7 @@
   padding: 0;
   border: none;
   background: transparent;
+  position: relative;
 }
 
 .avatarHint {
@@ -568,6 +569,57 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.avatarActionStack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.avatarUploadBtn {
+  align-self: stretch;
+  width: 100%;
+  border: 1px dashed rgba(224, 61, 75, 0.45);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  background:
+    linear-gradient(180deg, #fff 0%, var(--wh-soft) 100%);
+  color: var(--wh-coral);
+  letter-spacing: 0.02em;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.avatarUploadBtn:hover:not(:disabled) {
+  border-color: var(--wh-coral);
+  box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.12);
+}
+
+.avatarUploadBtn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.avatarUploadBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.avatarUploadHint {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--wh-muted);
+}
+
+.avatarFileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .avatarGenBtn {

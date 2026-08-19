@@ -61,9 +61,12 @@ test('PlayerArchive_预览须展示立绘', () => {
   assert.match(archive, /TrimmedTransparentImg[\s\S]*?variant="bust"/);
 });
 
-test('PlayerArchive_总览方框头像须bust裁切禁止整身cover', () => {
-  assert.match(archive, /className=\{styles\.avatarImg\}[\s\S]*?variant="bust"/);
-  assert.match(archive, /className=\{styles\.editAvatarImg\}[\s\S]*?variant="bust"/);
+test('PlayerArchive_总览方框头像须bust默认_上传走full_禁止整身cover', () => {
+  assert.match(
+    archive,
+    /isSessionUploadedPortraitUrl\(profile\?\.avatarUrl\) \? 'full' : 'bust'/,
+  );
+  assert.match(archive, /variant=\{avatarVariant\}/);
   assert.match(
     archive,
     /方框 bust 裁切必须用原图/,

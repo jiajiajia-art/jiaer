@@ -27,47 +27,109 @@
 }
 
 .profileCard {
+  --dossier-ink: rgba(255, 236, 240, 0.94);
+  --dossier-mute: rgba(255, 210, 218, 0.52);
+  --dossier-line: rgba(255, 120, 140, 0.22);
+  --dossier-ember: rgba(224, 61, 75, 0.9);
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
-  padding: 0.85rem 0.9rem;
-  border-radius: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
+  gap: 0.85rem;
+  padding: 0.95rem 0.95rem 0.95rem 1.05rem;
+  border-radius: 0.95rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background:
+    radial-gradient(120% 80% at 0% 0%, rgba(224, 61, 75, 0.14), transparent 55%),
+    linear-gradient(165deg, rgba(28, 18, 22, 0.92), rgba(12, 10, 14, 0.96));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 12px 28px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
 }
 
-.avatarRow {
+.profileCard::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.7rem;
+  bottom: 0.7rem;
+  width: 0.18rem;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ff6b7a, #c41e3a 55%, rgba(196, 30, 58, 0.25));
+  box-shadow: 0 0 12px rgba(224, 61, 75, 0.35);
+}
+
+.dossierHero {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 0.85rem;
-  margin-bottom: 0.15rem;
 }
 
 .avatarHit {
+  position: relative;
   flex-shrink: 0;
-  width: 9rem;
-  height: 9rem;
+  width: 8.6rem;
+  height: 8.6rem;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 0.85rem;
+  border: 1px solid rgba(255, 180, 190, 0.22);
+  border-radius: 0.95rem;
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.35);
+  background:
+    radial-gradient(80% 70% at 50% 20%, rgba(224, 61, 75, 0.18), transparent 70%),
+    rgba(0, 0, 0, 0.45);
   cursor: pointer;
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  isolation: isolate;
+  transition: border-color 0.18s ease, transform 0.18s ease;
+}
+
+.avatarHit:hover {
+  border-color: rgba(255, 120, 140, 0.55);
+  transform: translateY(-1px);
+}
+
+.avatarHit:focus-visible {
+  outline: 2px solid rgba(255, 90, 103, 0.75);
+  outline-offset: 2px;
+}
+
+.avatarHitPoster {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.avatarStageGlow {
+  pointer-events: none;
+  position: absolute;
+  inset: auto 8% -18% 8%;
+  height: 45%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(224, 61, 75, 0.28), transparent 70%);
+  z-index: 0;
 }
 
 .avatarImg {
+  position: relative;
+  z-index: 1;
   display: block;
   width: 100%;
   height: 100%;
-  /* 与卡库一致：bust 裁切后 contain + 底对齐，禁止整身 cover 顶满方框 */
   object-fit: contain;
   object-position: bottom center;
 }
 
+.avatarImgPoster {
+  object-fit: contain;
+  object-position: center center;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
 .avatarEmpty {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -75,7 +137,24 @@
   height: 100%;
   font-size: 0.72rem;
   font-weight: 650;
-  color: rgba(255, 220, 224, 0.45);
+  letter-spacing: 0.12em;
+  color: rgba(255, 220, 224, 0.4);
+}
+
+.avatarZoomCue {
+  position: absolute;
+  right: 0.4rem;
+  bottom: 0.4rem;
+  z-index: 2;
+  padding: 0.12rem 0.4rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(8, 6, 10, 0.72);
+  color: rgba(255, 230, 234, 0.88);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  pointer-events: none;
 }
 
 .avatarMeta {
@@ -83,31 +162,322 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.45rem;
+  justify-content: center;
+}
+
+.identityLine {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.identityName {
+  font-size: 1.05rem;
+  font-weight: 780;
+  letter-spacing: 0.02em;
+  color: var(--dossier-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.identityGender {
+  flex-shrink: 0;
+  padding: 0.08rem 0.4rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 140, 155, 0.28);
+  background: rgba(224, 61, 75, 0.12);
+  color: rgba(255, 196, 208, 0.9);
+  font-size: 0.62rem;
+  font-weight: 700;
 }
 
 .avatarHint {
   margin: 0;
-  font-size: 0.72rem;
-  line-height: 1.35;
-  color: rgba(255, 220, 224, 0.55);
+  font-size: 0.7rem;
+  line-height: 1.4;
+  color: var(--dossier-mute);
+}
+
+.avatarActionRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  align-items: stretch;
+  margin-top: 0.1rem;
 }
 
 .avatarGenBtn {
-  align-self: flex-start;
-  padding: 0.35rem 0.65rem;
-  border-radius: 0.45rem;
-  border: 1px solid rgba(232, 72, 96, 0.55);
-  background: linear-gradient(135deg, rgba(180, 36, 56, 0.95), rgba(120, 18, 36, 0.95));
-  color: rgba(255, 240, 242, 0.96);
-  font-size: 0.75rem;
-  font-weight: 700;
+  width: 100%;
+  padding: 0.45rem 0.7rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(255, 110, 130, 0.45);
+  background: linear-gradient(135deg, rgba(210, 42, 66, 0.98), rgba(130, 18, 38, 0.98));
+  color: rgba(255, 246, 248, 0.98);
+  font-size: 0.74rem;
+  font-weight: 750;
+  letter-spacing: 0.01em;
   cursor: pointer;
+  box-shadow: 0 6px 14px rgba(160, 20, 40, 0.28);
+}
+
+.avatarGenBtn:hover:not(:disabled) {
+  filter: brightness(1.06);
 }
 
 .avatarGenBtn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+  box-shadow: none;
+}
+
+.avatarUploadBtn {
+  width: 100%;
+  padding: 0.42rem 0.7rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 240, 242, 0.92);
+  font-size: 0.74rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.avatarUploadBtn:hover:not(:disabled) {
+  border-color: rgba(255, 160, 175, 0.4);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.avatarUploadBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.dossierMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding-top: 0.15rem;
+  border-top: 1px solid var(--dossier-line);
+}
+
+.profileRow {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.profileKey {
+  flex-shrink: 0;
+  min-width: 2.5rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dossier-mute);
+}
+
+.profileVal {
+  font-size: 0.9rem;
+  font-weight: 650;
+  color: var(--dossier-ink);
+}
+
+.profileBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.profilePersona {
+  margin: 0;
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.28);
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: rgba(245, 236, 238, 0.9);
+  white-space: pre-wrap;
+}
+
+.fieldAiBtnSecondary {
+  margin-left: 0.35rem;
+  padding: 0.18rem 0.45rem;
+  border-radius: 0.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 232, 234, 0.9);
+  font-size: 0.68rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.fieldAiBtnSecondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hiddenFileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.confirmMsgStack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.confirmMsgText {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.promptCueBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.28);
+  color: rgba(255, 236, 238, 0.92);
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+  text-align: left;
+}
+
+.promptCueBtn:hover {
+  border-color: rgba(232, 72, 96, 0.45);
+}
+
+.promptCueBtnActive {
+  border-color: rgba(232, 72, 96, 0.55);
+  background: rgba(180, 36, 56, 0.18);
+}
+
+.promptCueChevron {
+  opacity: 0.75;
+  font-size: 0.7rem;
+}
+
+.promptCuePanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.15rem;
+  padding: 0.7rem 0.75rem;
+  border-radius: 0.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.promptCueSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.promptCueLabelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.promptCueLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba(255, 232, 234, 0.88);
+}
+
+.promptCueHint {
+  font-size: 0.66rem;
+  color: rgba(255, 220, 224, 0.5);
+}
+
+.promptCueReadonly,
+.promptCueInput {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem 0.55rem;
+  border-radius: 0.45rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.35);
+  color: rgba(255, 240, 242, 0.92);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.promptCueReadonly {
+  opacity: 0.85;
+  cursor: default;
+  max-height: 7.5rem;
+  overflow: auto;
+}
+
+.promptCueInput:focus {
+  outline: none;
+  border-color: rgba(232, 72, 96, 0.55);
+}
+
+/* 功能注释：确认弹窗内 A–D 画风点选，用户无需手写风格句 */
+.styleChipRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+.styleChip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.12rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.28);
+  color: rgba(255, 236, 238, 0.9);
+  text-align: left;
+  cursor: pointer;
+}
+
+.styleChip:hover {
+  border-color: rgba(255, 140, 155, 0.4);
+}
+
+.styleChipActive {
+  border-color: rgba(224, 61, 75, 0.75);
+  background: rgba(224, 61, 75, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(224, 61, 75, 0.25);
+}
+
+.styleChipId {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: rgba(255, 170, 180, 0.95);
+}
+
+.styleChipLabel {
+  font-size: 0.72rem;
+  font-weight: 650;
+  line-height: 1.3;
 }
 
 .avatarPreviewOverlay {
@@ -122,7 +492,10 @@
 }
 
 .avatarPreviewCard {
-  width: min(92vw, 22rem);
+  width: min(92vw, 26rem);
+  max-height: min(92vh, 40rem);
+  display: flex;
+  flex-direction: column;
   border-radius: 0.85rem;
   border: 1px solid rgba(255, 255, 255, 0.16);
   background: rgba(18, 14, 18, 0.96);
@@ -134,6 +507,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-shrink: 0;
   padding: 0.65rem 0.8rem;
   font-size: 0.9rem;
   font-weight: 700;
@@ -152,55 +526,37 @@
   cursor: pointer;
 }
 
+/* 功能注释：大图预览必须等比例完整可见，禁止 cover 裁切 */
+.avatarPreviewStage {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 12rem;
+  max-height: min(72vh, 32rem);
+  padding: 0.55rem 0.65rem;
+  background:
+    radial-gradient(70% 60% at 50% 40%, rgba(224, 61, 75, 0.1), transparent 70%),
+    rgba(0, 0, 0, 0.45);
+}
+
 .avatarPreviewImg {
   display: block;
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
-  object-position: center top;
-  background: rgba(0, 0, 0, 0.35);
+  max-width: 100%;
+  max-height: min(68vh, 30rem);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  object-position: center center;
 }
 
 .avatarPreviewName {
   margin: 0;
+  flex-shrink: 0;
   padding: 0.7rem 0.85rem 0.95rem;
   font-size: 1.05rem;
   font-weight: 750;
   color: rgba(255, 255, 255, 0.96);
-}
-
-.profileRow {
-  display: flex;
-  align-items: baseline;
-  gap: 0.75rem;
-}
-
-.profileKey {
-  flex-shrink: 0;
-  min-width: 2.5rem;
-  font-size: 0.75rem;
-  font-weight: 650;
-  color: rgba(255, 220, 224, 0.55);
-}
-
-.profileVal {
-  font-size: 0.9rem;
-  font-weight: 650;
-  color: rgba(232, 238, 248, 0.95);
-}
-
-.profileBlock {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.profilePersona {
-  margin: 0;
-  font-size: 0.84rem;
-  line-height: 1.5;
-  color: rgba(232, 238, 248, 0.88);
-  white-space: pre-wrap;
 }
 
 .profileAttrList {
@@ -262,29 +618,73 @@
   gap: 0.75rem;
 }
 
+/* 功能注释：编辑页头像区复用总览 dossier 舞台语言，避免表单感挤成一行小按钮 */
 .editAvatarBlock {
+  --dossier-ink: rgba(255, 236, 240, 0.94);
+  --dossier-mute: rgba(255, 210, 218, 0.52);
+  --dossier-line: rgba(255, 120, 140, 0.22);
+  position: relative;
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 0.85rem;
-  padding: 0.55rem 0.15rem 0.15rem;
+  margin: 0.15rem 0 0.35rem;
+  padding: 0.85rem 0.85rem 0.85rem 1rem;
+  border-radius: 0.95rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background:
+    radial-gradient(120% 80% at 0% 0%, rgba(224, 61, 75, 0.14), transparent 55%),
+    linear-gradient(165deg, rgba(28, 18, 22, 0.92), rgba(12, 10, 14, 0.96));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 10px 22px rgba(0, 0, 0, 0.22);
+  overflow: hidden;
+}
+
+.editAvatarBlock::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.65rem;
+  bottom: 0.65rem;
+  width: 0.18rem;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ff6b7a, #c41e3a 55%, rgba(196, 30, 58, 0.25));
+  box-shadow: 0 0 12px rgba(224, 61, 75, 0.35);
 }
 
 .editAvatarHit {
+  position: relative;
   flex-shrink: 0;
-  width: 9.5rem;
-  height: 9.5rem;
+  width: 9.8rem;
+  height: 9.8rem;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 0.85rem;
+  border: 1px solid rgba(255, 180, 190, 0.22);
+  border-radius: 0.95rem;
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.4);
+  background:
+    radial-gradient(80% 70% at 50% 20%, rgba(224, 61, 75, 0.18), transparent 70%),
+    rgba(0, 0, 0, 0.45);
   cursor: pointer;
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  isolation: isolate;
+  transition: border-color 0.18s ease, transform 0.18s ease;
+}
+
+.editAvatarHit:hover {
+  border-color: rgba(255, 120, 140, 0.55);
+  transform: translateY(-1px);
+}
+
+.editAvatarHit:focus-visible {
+  outline: 2px solid rgba(255, 90, 103, 0.75);
+  outline-offset: 2px;
 }
 
 .editAvatarImg {
+  position: relative;
+  z-index: 1;
   display: block;
   width: 100%;
   height: 100%;
@@ -293,6 +693,8 @@
 }
 
 .editAvatarEmpty {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -300,7 +702,8 @@
   height: 100%;
   font-size: 0.72rem;
   font-weight: 650;
-  color: rgba(255, 220, 224, 0.45);
+  letter-spacing: 0.12em;
+  color: rgba(255, 220, 224, 0.4);
 }
 
 .editAvatarMeta {
@@ -308,14 +711,29 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.4rem;
+  justify-content: center;
+}
+
+.editAvatarTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.editAvatarTitle {
+  font-size: 0.92rem;
+  font-weight: 780;
+  letter-spacing: 0.04em;
+  color: var(--dossier-ink);
 }
 
 .editAvatarHint {
   margin: 0;
-  font-size: 0.72rem;
-  line-height: 1.35;
-  color: rgba(255, 220, 224, 0.55);
+  font-size: 0.7rem;
+  line-height: 1.4;
+  color: var(--dossier-mute);
 }
 
 .modalTitle {
@@ -811,6 +1229,20 @@
 }
 
 @media (max-width: 380px) {
+  .dossierHero,
+  .editAvatarBlock {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .avatarHit,
+  .editAvatarHit {
+    width: 100%;
+    max-width: 11rem;
+    height: 11rem;
+    align-self: center;
+  }
+
   .previewAttrGrid {
     grid-template-columns: 1fr 1fr;
   }

@@ -11,6 +11,10 @@ export type PlayerAvatarGenPayload = {
   name: string;
   gender: string;
   persona?: string;
+  /** 用户补充外貌备注，拼到动态段之后 */
+  promptSupplement?: string;
+  /** 画风 A–D，默认 A */
+  avatarStyle?: string;
 };
 
 export type PlayerAvatarGenResult = PlayerAvatarMergeInput & {

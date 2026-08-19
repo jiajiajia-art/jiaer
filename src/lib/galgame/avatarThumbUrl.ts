@@ -2,7 +2,10 @@
  * 角色头像：列表/气泡优先 *_150.webp（须真实存在）；无确认小图时回落原图。
  * 禁止臆造未 ensure 的 *_150.webp（会导致裂图）。
  * 列表等待 ensure 时禁止先画原图再换成 150（会闪大图）。
+ * 用户上传图（sessions/.../_upload_）：禁止走「头顶 30% 裁切」的 150，改用原图 contain。
  */
+
+import { isSessionUploadedPortraitUrl } from './playerCharacterCard.ts';
 
 function trimStr(value: unknown): string {
   return String(value ?? '').trim();
@@ -37,6 +40,35 @@ export function deriveAvatarThumbUrl(sourceUrl: string | null | undefined): stri
 }
 
 /**
+ * 用户自传原图：禁止用头顶裁切的 *_150.webp（会放大发糊）。
+ */
+export function firstUploadedPortraitFullUrl(
+  candidates: Array<string | null | undefined>,
+): string {
+  for (const c of candidates) {
+    const u = trimStr(c);
+    if (!u || isAvatarThumbUrl(u)) continue;
+    if (isSessionUploadedPortraitUrl(u)) return u;
+  }
+  return '';
+}
+
+/**
+ * 小图必须派生自当前原图。换立绘后旧 *_150.webp 不能再当列表头像。
+ */
+export function isAvatarThumbForSource(
+  thumbUrl: string | null | undefined,
+  sourceUrl: string | null | undefined,
+): boolean {
+  const thumb = trimStr(thumbUrl);
+  const source = trimStr(sourceUrl);
+  if (!thumb || !source || !isAvatarThumbUrl(thumb)) return false;
+  const derived = deriveAvatarThumbUrl(source);
+  const norm = (u: string) => u.split('?')[0].split('#')[0].replace(/\/+$/, '');
+  return Boolean(derived) && norm(thumb) === norm(derived);
+}
+
+/**
  * 只返回已确认的 webp 小图路径；绝不从 PNG 臆造（避免 404 裂图）。
  */
 export function pickDisplayAvatarThumbUrl(
@@ -57,6 +89,8 @@ export function pickDisplayAvatarThumbUrl(
 export function pickAvatarDisplayUrl(
   candidates: Array<string | null | undefined>,
 ): string {
+  const uploaded = firstUploadedPortraitFullUrl(candidates);
+  if (uploaded) return uploaded;
   const thumb = pickDisplayAvatarThumbUrl(candidates);
   if (thumb) return thumb;
   for (const c of candidates) {
@@ -83,6 +117,8 @@ export function pickAvatarListDisplayUrl(
   candidates: Array<string | null | undefined>,
   options?: PickAvatarListDisplayOptions | null,
 ): string {
+  const uploaded = firstUploadedPortraitFullUrl(candidates);
+  if (uploaded) return uploaded;
   const thumb = pickDisplayAvatarThumbUrl(candidates);
   if (thumb) return thumb;
   if (options?.pendingThumbs) return '';
@@ -129,6 +165,37 @@ export function deriveAvatarFullUrlFromThumb(thumbUrl: string | null | undefined
   return raw
     .replace(/_150\.webp(?=[?#]|$)/i, '.webp')
     .replace(/\.150\.webp(?=[?#]|$)/i, '.webp');
+}
+
+/**
+ * 编辑人设头像坞：表单内刚生成的小图/原图优先于父级缓存的旧 150。
+ * 未换图时：匹配当前原图的 150 → 详情已有的原图。禁止空坞把详情头像弄丢。
+ */
+export function pickFormAvatarDockUrl(opts: {
+  formAvatarThumbUrl?: string | null;
+  formAvatarUrl?: string | null;
+  sessionAvatarThumbUrl?: string | null;
+  initialAvatarUrl?: string | null;
+}): string {
+  const formFull = trimStr(opts.formAvatarUrl);
+  const initialFull = trimStr(opts.initialAvatarUrl);
+  const source = formFull || initialFull;
+  if (isSessionUploadedPortraitUrl(source)) {
+    return source;
+  }
+  const avatarChanged = Boolean(formFull) && formFull !== initialFull;
+
+  const matchingThumb = (url?: string | null) => (
+    isAvatarThumbForSource(url, source) ? trimStr(url) : ''
+  );
+
+  if (avatarChanged) {
+    return matchingThumb(opts.formAvatarThumbUrl) || formFull;
+  }
+
+  return matchingThumb(opts.sessionAvatarThumbUrl)
+    || matchingThumb(opts.formAvatarThumbUrl)
+    || formFull;
 }
 
 /**

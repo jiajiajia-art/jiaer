@@ -127,6 +127,41 @@ export const playerCharacterCardsApi = {
       };
     }>;
   },
+  /**
+   * 仓库卡用户上传立绘：前端已压 WebP≤1MB（优先质量 100）；服务端不抠图。
+   * multipart: file；可选 cardId
+   */
+  uploadAvatar: async (
+    token: string,
+    file: Blob,
+    opts?: { fileName?: string; cardId?: string | null; signal?: AbortSignal },
+  ) => {
+    const form = new FormData();
+    const name = String(opts?.fileName || (file as File).name || 'avatar.webp');
+    form.append('file', file, name.endsWith('.webp') ? name : `${name}.webp`);
+    if (opts?.cardId) form.append('cardId', String(opts.cardId));
+    const res = await fetch(`${HOST_ADDRESS}/api/player-character-cards/avatar/upload`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: form,
+      signal: opts?.signal,
+    });
+    return parseJson(res) as Promise<{
+      success: boolean;
+      message?: string;
+      code?: string;
+      data?: {
+        avatarUrl: string;
+        avatarThumbUrl?: string;
+        bytes?: number;
+        maxBytes?: number;
+        format?: string;
+        card?: unknown;
+      };
+    }>;
+  },
   /** 仓库人设/角色卡：AI 生成简介文案，扣分对齐局内人设字段 */
   generatePersona: async (
     token: string,
@@ -233,6 +268,45 @@ export const sessionPlayerProfileApi = {
       };
     }>;
   },
+  /**
+   * 用户自传主角头像：前端已压 WebP≤1MB（优先质量 100）；服务端再不抠图，只落盘。
+   * multipart field: file
+   */
+  uploadPlayerAvatar: async (
+    token: string,
+    sessionId: string,
+    file: Blob,
+    opts?: { fileName?: string; signal?: AbortSignal },
+  ) => {
+    const form = new FormData();
+    const name = String(opts?.fileName || (file as File).name || 'avatar.webp');
+    form.append('file', file, name.endsWith('.webp') ? name : `${name}.webp`);
+    const res = await fetch(
+      `${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/player-avatar/upload`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: form,
+        signal: opts?.signal,
+      },
+    );
+    return parseJson(res) as Promise<{
+      success: boolean;
+      message?: string;
+      code?: string;
+      data?: {
+        avatarUrl: string;
+        avatarThumbUrl?: string;
+        profile?: SessionPlayerProfile;
+        bytes?: number;
+        maxBytes?: number;
+        format?: string;
+        removeBg?: boolean;
+      };
+    }>;
+  },
   /** AI 生成局内玩家人设并扣积分（仅返回文案，不写 session） */
   generatePlayerPersona: async (
     token: string,
@@ -295,11 +369,12 @@ export const sessionPlayerProfileApi = {
     );
     return parseJson(res);
   },
-  /** AI 生成局内 NPC 头像并扣积分 */
+  /** AI 生成局内 NPC 头像并扣积分（支持后台任务取消） */
   generateNpcAvatar: async (
     token: string,
     sessionId: string,
     body: Record<string, unknown>,
+    opts?: { signal?: AbortSignal },
   ) => {
     const res = await fetch(
       `${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/npc-avatar`,
@@ -307,6 +382,7 @@ export const sessionPlayerProfileApi = {
         method: 'POST',
         headers: authHeaders(token),
         body: JSON.stringify(body),
+        signal: opts?.signal,
       },
     );
     return parseJson(res) as Promise<{
@@ -319,6 +395,64 @@ export const sessionPlayerProfileApi = {
         npcId: string;
         pointsDeducted: number;
         remainingPoints: number;
+      };
+    }>;
+  },
+  /**
+   * 用户自传局内 NPC 头像：前端已压 WebP≤1MB（优先质量 100）；服务端再不抠图，只落盘。
+   * multipart: file + npcId（可附带 name/gender 等，供新建草稿建档）
+   */
+  uploadNpcAvatar: async (
+    token: string,
+    sessionId: string,
+    file: Blob,
+    opts: {
+      npcId: string;
+      fileName?: string;
+      name?: string;
+      gender?: string;
+      relationship?: string;
+      summary?: string;
+      attitudeToPlayer?: string;
+      detailedBio?: string;
+      source?: string;
+      signal?: AbortSignal;
+    },
+  ) => {
+    const form = new FormData();
+    const fileName = String(opts.fileName || (file as File).name || 'avatar.webp');
+    form.append('file', file, fileName.endsWith('.webp') ? fileName : `${fileName}.webp`);
+    form.append('npcId', String(opts.npcId || '').trim());
+    if (opts.name) form.append('name', opts.name);
+    if (opts.gender) form.append('gender', opts.gender);
+    if (opts.relationship) form.append('relationship', opts.relationship);
+    if (opts.summary) form.append('summary', opts.summary);
+    if (opts.attitudeToPlayer) form.append('attitudeToPlayer', opts.attitudeToPlayer);
+    if (opts.detailedBio) form.append('detailedBio', opts.detailedBio);
+    if (opts.source) form.append('source', opts.source);
+    const res = await fetch(
+      `${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/npc-avatar/upload`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: form,
+        signal: opts.signal,
+      },
+    );
+    return parseJson(res) as Promise<{
+      success: boolean;
+      message?: string;
+      code?: string;
+      data?: {
+        avatarUrl: string;
+        avatarThumbUrl?: string;
+        npcId: string;
+        bytes?: number;
+        maxBytes?: number;
+        format?: string;
+        removeBg?: boolean;
       };
     }>;
   },

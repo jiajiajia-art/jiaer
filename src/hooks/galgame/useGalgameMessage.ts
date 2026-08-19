@@ -5,6 +5,12 @@ import { getPlayerImageUrl, getImageUrl } from "../../utils/constants";
 import { withCacheBust } from "../../utils/imageCache";
 import { ensureMinPlayChoiceOptions } from "../../lib/galgame/playChoiceOptions";
 import { resolvePlayPortraitScale, isImportedCardPortraitUrl } from "../../lib/galgame/playerCharacterCard";
+import {
+    pickSessionNpcAvatarUrl,
+    resolveNpcPlayImagePath,
+    resolveNpcPlayPortraitScale,
+    type SessionNpcPortraitLike,
+} from "../../lib/galgame/npcPlayPortrait";
 
 export interface Message {
     id: number;
@@ -16,6 +22,8 @@ export interface Message {
     portraitScale?: number;
     portraitOffsetX?: number;
     portraitOffsetY?: number;
+    /** 对白 NPC id，供局内立绘覆盖按 id 匹配（改名后姓名不可靠） */
+    npcId?: string;
     options?: Array<{ id: number; text: string; isMain?: boolean }>;
 }
 
@@ -36,6 +44,8 @@ export const useGalgameMessage = (
     sessionPlayerAvatarUrl?: string | null,
     /** 局内档案角色名；选项文案优先用此名 */
     sessionPlayerName?: string | null,
+    /** 局内 NPC 档案；有 avatarUrl 时出场立绘优先于创作台文档图 */
+    sessionNpcEdits?: SessionNpcPortraitLike[] | null,
 ) => {
     const latestNpcById = useMemo(() => {
         const map = new Map<string, GetGalgamePresetResponse['npcs']['npcs'][0]>();
@@ -56,20 +66,17 @@ export const useGalgameMessage = (
 
     const resolveNpcImagePath = useCallback((step: any): string | undefined => {
         const npcId = step?.speakerId || step?.npcId;
+        const speakerName = step?.speakerName;
         const latestNpc = npcId ? latestNpcById.get(String(npcId)) : null;
-        const latestImages = latestNpc?.images;
-
-        if (latestImages && typeof latestImages === 'object') {
-            // 优先匹配 activeImage
-            if (step?.activeImage && latestImages[step.activeImage]) {
-                return latestImages[step.activeImage];
-            }
-            // 回退到 base 图片
-            return latestImages.base || Object.values(latestImages).find((value): value is string => typeof value === 'string' && value.trim() !== '');
-        }
-
-        return step?.activeImage;
-    }, [latestNpcById]);
+        const sessionAvatarUrl = pickSessionNpcAvatarUrl(sessionNpcEdits, { npcId, speakerName });
+        return resolveNpcPlayImagePath({
+            npcId,
+            speakerName,
+            activeImage: step?.activeImage,
+            documentImages: latestNpc?.images,
+            sessionAvatarUrl,
+        });
+    }, [latestNpcById, sessionNpcEdits]);
 
     // 转换步骤为消息
     const convertStepToMessage = useCallback((step: any): Message | null => {
@@ -117,15 +124,22 @@ export const useGalgameMessage = (
                     portraitOffsetY = worldSetting?.player?.portraitOffsetY;
                 }
             } else {
+                const npcId = step.speakerId || step.npcId;
+                const speakerName = step.speakerName;
+                const sessionAvatarUrl = pickSessionNpcAvatarUrl(sessionNpcEdits, { npcId, speakerName });
                 const npcImagePath = resolveNpcImagePath(step);
                 if (npcImagePath) {
                     characterImage = toDisplayImageUrl(npcImagePath);
                 }
-                const npcId = step.speakerId || step.npcId;
                 const npcData = npcId ? latestNpcById.get(String(npcId)) : null;
-                portraitScale = npcData?.portraitScale;
-                portraitOffsetX = (npcData as any)?.portraitOffsetX;
-                portraitOffsetY = (npcData as any)?.portraitOffsetY;
+                portraitScale = resolveNpcPlayPortraitScale({
+                    sessionAvatarUrl,
+                    documentPortraitScale: npcData?.portraitScale,
+                });
+                if (!isImportedCardPortraitUrl(sessionAvatarUrl)) {
+                    portraitOffsetX = (npcData as any)?.portraitOffsetX;
+                    portraitOffsetY = (npcData as any)?.portraitOffsetY;
+                }
             }
 
             if (!characterImage && step.activeImage) {
@@ -133,6 +147,9 @@ export const useGalgameMessage = (
                 characterImage = toDisplayImageUrl(step.activeImage);
             }
 
+            const dialogueNpcId = step.isPlayer
+                ? undefined
+                : String(step.speakerId || step.npcId || '').trim() || undefined;
             return {
                 id: Date.now(),
                 type: 'dialogue',
@@ -143,6 +160,7 @@ export const useGalgameMessage = (
                 portraitScale,
                 portraitOffsetX,
                 portraitOffsetY,
+                ...(dialogueNpcId ? { npcId: dialogueNpcId } : {}),
             };
         } else if (step.type === 'choice') {
             // 支持后端新增的 mainOptions/mainOption 字段，并在 UI 中高亮展示
@@ -234,7 +252,7 @@ export const useGalgameMessage = (
         }
 
         return null;
-    }, [worldSetting, npcSetting, resolveNpcImagePath, toDisplayImageUrl, sessionPlayerAvatarUrl, sessionPlayerName, latestNpcById]);
+    }, [worldSetting, npcSetting, resolveNpcImagePath, toDisplayImageUrl, sessionPlayerAvatarUrl, sessionPlayerName, sessionNpcEdits, latestNpcById]);
 
     const currentMessage = useMemo(() => {
         if (gameStarted && currentStep && currentStep.type) {

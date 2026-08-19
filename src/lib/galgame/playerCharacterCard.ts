@@ -283,12 +283,14 @@ export function resolveSessionPlayerPortraitPath(
 }
 
 /**
- * 导入角色卡立绘 → 0.8；局内「重新生成头像」→ 0.85（裁透明后另加头顶留白）。
+ * 导入角色卡立绘 → 0.8；局内 AI 生成头像 → 1（与文档立绘同级，禁止再缩成「小人」）；
+ * 用户上传原图 → 1（避免再缩小发糊）。
  * 注意：documentPortraitScale 必须是文档/创作台原值，禁止传入 Message 上已解析过的 scale
  * （否则导入写成 0.8 后，重生成仍会吃到陈旧 0.8）。
  */
 export const SESSION_OVERRIDE_PORTRAIT_SCALE = 0.8;
-export const SESSION_GENERATED_PORTRAIT_SCALE = 0.85;
+export const SESSION_GENERATED_PORTRAIT_SCALE = 1;
+export const SESSION_UPLOADED_PORTRAIT_SCALE = 1;
 
 /** 卡库立绘：/public/visual/player-cards/{userId}/avatars/... */
 export function isImportedCardPortraitUrl(url?: string | null): boolean {
@@ -297,7 +299,14 @@ export function isImportedCardPortraitUrl(url?: string | null): boolean {
   return /\/player-cards\//i.test(u);
 }
 
-/** 局内重新生成：/public/visual/sessions/{sid}/avatars/... */
+/** 用户上传：sessions/.../avatars/..._upload_....webp */
+export function isSessionUploadedPortraitUrl(url?: string | null): boolean {
+  const u = String(url || '').trim();
+  if (!u) return false;
+  return /\/sessions\/[^/]+\/avatars\/[^/?#]*_upload_/i.test(u);
+}
+
+/** 局内重新生成（含上传）：/public/visual/sessions/{sid}/avatars/... */
 export function isSessionGeneratedPortraitUrl(url?: string | null): boolean {
   const u = String(url || '').trim();
   if (!u) return false;
@@ -309,6 +318,9 @@ export function resolvePlayPortraitScale(opts: {
   documentPortraitScale?: number | null;
 }): number | undefined {
   const sessionUrl = String(opts.sessionAvatarUrl || '').trim();
+  if (sessionUrl && isSessionUploadedPortraitUrl(sessionUrl)) {
+    return SESSION_UPLOADED_PORTRAIT_SCALE;
+  }
   if (sessionUrl && isSessionGeneratedPortraitUrl(sessionUrl)) {
     return SESSION_GENERATED_PORTRAIT_SCALE;
   }

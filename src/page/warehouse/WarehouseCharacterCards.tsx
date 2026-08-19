@@ -621,7 +621,9 @@ const WarehouseCharacterCards: React.FC = () => {
                   generating={generatingAvatar}
                   disabled={saving}
                   fallbackChar="角"
+                  cardId={editingId}
                   onGenerate={() => void requestGenerateAvatar()}
+                  onAvatarUrl={(url) => setDraft((d) => ({ ...d, avatarUrl: url }))}
                 >
                   <div className={panel.field}>
                     <label htmlFor="wh-npc-name">姓名</label>

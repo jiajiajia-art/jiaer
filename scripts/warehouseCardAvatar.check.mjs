@@ -23,16 +23,24 @@ test('warehouseCardAvatar_编辑表单有生图入口', () => {
   const css = readFileSync(join(root, 'src/page/warehouse/WarehousePanel.module.css'), 'utf8');
   assert.match(api, /player-character-cards\/avatar/);
   assert.match(api, /generateAvatar/);
+  assert.match(api, /uploadAvatar/);
+  assert.match(api, /avatar\/upload/);
   assert.match(persona, /WarehouseCardAvatarField/);
   assert.match(persona, /startWarehouseCardAvatarBackgroundGen/);
+  assert.match(persona, /onAvatarUrl/);
   assert.match(npc, /WarehouseCardAvatarField/);
   assert.match(npc, /cardKind:\s*'npc'/);
+  assert.match(npc, /onAvatarUrl/);
   assert.match(field, /AI 生成图像|重新生成图像|后台生成中/);
+  assert.match(field, /上传图片/);
+  assert.match(field, /compressImageFileToWebpUnderMaxBytes/);
+  assert.match(field, /PLAYER_UPLOAD_AVATAR_MAX_BYTES/);
   assert.match(field, /avatarIdentityRow|avatarAside/);
   assert.match(field, /children/);
   assert.match(css, /object-fit:\s*contain/);
   assert.match(css, /object-position:\s*bottom center/);
   assert.match(css, /\.avatarIdentityRow\s*\{/);
+  assert.match(css, /\.avatarUploadBtn\b/);
   assert.match(css, /\.avatarPreviewFallback[\s\S]*?place-items:\s*center/);
   assert.match(field, /TrimmedTransparentImg/);
   assert.match(field, /variant="bust"/);
@@ -41,4 +49,10 @@ test('warehouseCardAvatar_编辑表单有生图入口', () => {
   assert.match(npc, /WarehouseCardAvatarField[\s\S]*?wh-npc-name/);
   assert.match(npc, /formPreviewPortraitFallback/);
   assert.doesNotMatch(field, /warehouseCardAvatarConstraintHint|avatarPlate/);
+});
+
+test('warehouseCardAvatar_上传常量1MB', async () => {
+  const mod = await import(join(root, 'src/lib/warehouse/warehouseCardAvatar.ts'));
+  assert.equal(mod.WAREHOUSE_CARD_UPLOAD_AVATAR_MAX_BYTES, 1024 * 1024);
+  assert.match(mod.warehouseCardUploadHint(), /1MB|质量 100|等比/);
 });

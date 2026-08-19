@@ -351,6 +351,7 @@
     "duplicateReplayTitle": "A replay with the same title already exists in this game",
     "generationInProgress": "Story generation is still in progress. Please try again later.",
     "exportVisualNovel": "Export Visual Novel",
+    "exportShort": "Export",
     "historyBack": "Back",
     "exportVisualNovelDefaultTitle": "My Visual Novel",
     "exportVisualNovelDescOptional": "Description (optional)",

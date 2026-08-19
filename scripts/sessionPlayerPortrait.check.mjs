@@ -28,7 +28,7 @@ test('resolveSessionPlayerPortraitPath_无局内头像回落文档', () => {
   );
 });
 
-test('resolvePlayPortraitScale_导入卡0_8_重生成0_85_禁止吃陈旧msgScale', async () => {
+test('resolvePlayPortraitScale_导入卡0_8_重生成1_禁止吃陈旧msgScale', async () => {
   const {
     resolvePlayPortraitScale,
     SESSION_OVERRIDE_PORTRAIT_SCALE,
@@ -37,7 +37,7 @@ test('resolvePlayPortraitScale_导入卡0_8_重生成0_85_禁止吃陈旧msgScal
     isSessionGeneratedPortraitUrl,
   } = await import('../src/lib/galgame/playerCharacterCard.ts');
   assert.equal(SESSION_OVERRIDE_PORTRAIT_SCALE, 0.8);
-  assert.equal(SESSION_GENERATED_PORTRAIT_SCALE, 0.85);
+  assert.equal(SESSION_GENERATED_PORTRAIT_SCALE, 1);
   assert.equal(
     isImportedCardPortraitUrl('/public/visual/player-cards/u1/avatars/a.webp'),
     true,
@@ -66,16 +66,24 @@ test('resolvePlayPortraitScale_导入卡0_8_重生成0_85_禁止吃陈旧msgScal
       sessionAvatarUrl: '/public/visual/sessions/s1/avatars/player_1.webp',
       documentPortraitScale: 1.2,
     }),
-    0.85,
-    '局内重新生成须 0.85，不受文档缩放影响',
+    1,
+    '局内重新生成须 1，与文档立绘同级，禁止再缩成小人',
   );
   assert.equal(
     resolvePlayPortraitScale({
       sessionAvatarUrl: '/public/visual/sessions/6492c8acaead61589e585d44a850a2d2/avatars/player_1786799862082.webp',
       documentPortraitScale: 0.8,
     }),
-    0.85,
-    '导入后 Message 上残留 0.8 时，重生成仍须回到 0.85',
+    1,
+    '导入后 Message 上残留 0.8 时，重生成仍须回到 1',
+  );
+  assert.equal(
+    resolvePlayPortraitScale({
+      sessionAvatarUrl: '/public/visual/sessions/s1/avatars/player_upload_99.webp',
+      documentPortraitScale: 0.8,
+    }),
+    1,
+    '用户上传立绘须 1，避免再缩小发糊',
   );
   assert.equal(
     resolvePlayPortraitScale({ sessionAvatarUrl: '', documentPortraitScale: 1.2 }),

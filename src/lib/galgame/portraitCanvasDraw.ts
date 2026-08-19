@@ -23,10 +23,11 @@ export type SourceCropRect = {
 export const PLAY_PORTRAIT_HEADROOM_RATIO = 0.05;
 
 /**
- * 局内导入/重生成立绘裁切后的最大占屏高（相对容器）。
- * 对照文档 NPC「陆沉舟」截图像素测量约 0.94，禁止紧裁后 100% 顶满。
+ * 出场立绘最大占屏高（相对角色容器）。
+ * 容器是整屏/95dvh：文档少留白图、局内裁透明边后的图若按 0.94～1 铺满，头顶会顶到音乐/导出。
+ * 0.76 让发顶落在顶栏下方、脚底仍贴地，接近常见视觉小说全身立绘。
  */
-export const PLAY_TRIMMED_PORTRAIT_MAX_FILL = 0.94;
+export const PLAY_TRIMMED_PORTRAIT_MAX_FILL = 0.76;
 
 /** contain + 底部对齐；可选限制最大占屏高（对齐文档 NPC） */
 export function computeContainBottomRect(

@@ -14,16 +14,34 @@ import {
   resolveDistinctDetailedBio,
 } from '../../../lib/galgame/characterProfile';
 import { sessionPlayerProfileApi } from '../../../api/galgame/playerCharacterCards';
+import {
+  compressImageFileToWebpUnderMaxBytes,
+  PLAYER_UPLOAD_AVATAR_ACCEPT,
+  PLAYER_UPLOAD_AVATAR_MAX_BYTES,
+} from '../../../lib/galgame/compressImageToWebp';
 import { CHARACTER_GENERATION_COST, NPC_PROFILE_FIELD_GENERATION_COST, getImageUrl } from '../../../utils/constants';
 import { refreshAuthUserPoints } from '../../../lib/auth/refreshUserPoints';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { useGameStore } from '../../../store/gameStore';
 import GameConfirmModal from '../GameConfirmModal';
-import { buildSessionNpcAvatarPrompt } from '../../../lib/galgame/sessionNpcAvatarPrompt';
 import {
   pickDisplayAvatarFullUrl,
-  pickDisplayAvatarThumbUrl,
+  pickFormAvatarDockUrl,
 } from '../../../lib/galgame/avatarThumbUrl';
+import {
+  isNpcAvatarGenBusy,
+  startNpcAvatarBackgroundGen,
+  cancelNpcAvatarBackgroundGen,
+  subscribeNpcAvatarGenBusy,
+  subscribeNpcAvatarGenComplete,
+  NPC_AVATAR_GEN_CANCELLED_MESSAGE,
+} from '../../../lib/galgame/npcAvatarBackgroundJob';
+import { isSessionUploadedPortraitUrl } from '../../../lib/galgame/playerCharacterCard';
+import {
+  AVATAR_STYLE_OPTIONS,
+  DEFAULT_AVATAR_STYLE,
+  type AvatarStyleId,
+} from '../../../lib/galgame/sessionNpcAvatarPrompt';
 import styles from './CharacterProfileForm.module.css';
 
 export type CharacterProfileFormValues = {
@@ -166,23 +184,47 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
   const [genderTouched, setGenderTouched] = useState(false);
   /** 各 AI 按钮独立忙碌：只锁当前按钮，互不阻塞 */
   const [aiBusy, setAiBusy] = useState<Partial<Record<AiBusyKey, boolean>>>({});
+  const [avatarAiBusy, setAvatarAiBusy] = useState(() => isNpcAvatarGenBusy(sessionId, draftId));
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [confirmKind, setConfirmKind] = useState<ConfirmKind | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   /** 头像确认弹窗：提示词补充面板 */
   const [avatarPromptOpen, setAvatarPromptOpen] = useState(false);
   const [avatarPromptSupplement, setAvatarPromptSupplement] = useState('');
+  const [avatarStyleId, setAvatarStyleId] = useState<AvatarStyleId>(DEFAULT_AVATAR_STYLE);
   const [supplementOpen, setSupplementOpen] = useState(() => Boolean(
     initial?.detailedBio || initial?.importance || initial?.survival,
   ));
   const formScrollRef = useRef<HTMLDivElement>(null);
   const supplementToggleRef = useRef<HTMLButtonElement>(null);
   const pendingSupplementScrollRef = useRef(false);
+  const avatarFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setValues(profileToValues(initial));
     setGenderTouched(false);
     setSupplementOpen(Boolean(initial?.detailedBio || initial?.importance || initial?.survival));
   }, [initial]);
+
+  useEffect(() => {
+    return subscribeNpcAvatarGenBusy(sessionId, draftId, setAvatarAiBusy);
+  }, [sessionId, draftId]);
+
+  // 功能注释：后台生成完成后只写头像字段，禁止用 initial 整表重置冲掉正在编辑的人设
+  useEffect(() => {
+    if (!sessionId) return undefined;
+    return subscribeNpcAvatarGenComplete((sid, result) => {
+      if (sid !== sessionId || result.npcId !== draftId) return;
+      setValues((prev) => ({
+        ...prev,
+        avatarUrl: result.avatarUrl,
+        avatarThumbUrl: result.avatarThumbUrl || '',
+      }));
+      if (typeof result.remainingPoints === 'number') {
+        updateUser({ points: result.remainingPoints });
+      }
+    });
+  }, [sessionId, draftId, updateUser]);
 
   /** 展开补充档案后，把标题滚到滚动区顶部，保证展开内容进可视区 */
   useEffect(() => {
@@ -212,14 +254,18 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
     setValues((prev) => ({ ...prev, [key]: value }));
   };
 
-  const isAiBusy = (key: AiBusyKey) => Boolean(aiBusy[key]);
-  const anyAiBusy = Object.values(aiBusy).some(Boolean);
+  const isAiBusy = (key: AiBusyKey) => (
+    key === 'avatar' ? avatarAiBusy : Boolean(aiBusy[key])
+  );
+  const fieldAiBusy = Object.entries(aiBusy).some(([key, busy]) => key !== 'avatar' && Boolean(busy));
 
-  // 功能注释：编辑坞只显示确认 150；不回落原图，避免大图闪一下（放大预览仍用原图）
-  const avatarThumbPath = pickDisplayAvatarThumbUrl([
+  // 功能注释：坞优先表单刚生成的图；禁止父级旧 150 盖住新立绘（生成已扣积分但头像不变）
+  const avatarThumbPath = pickFormAvatarDockUrl({
+    formAvatarThumbUrl: values.avatarThumbUrl,
+    formAvatarUrl: values.avatarUrl,
     sessionAvatarThumbUrl,
-    values.avatarThumbUrl,
-  ]);
+    initialAvatarUrl: initial?.avatarUrl,
+  });
   const avatarThumbSrc = avatarThumbPath ? getImageUrl(avatarThumbPath) : '';
   const avatarFullPath = pickDisplayAvatarFullUrl([
     values.avatarUrl,
@@ -227,6 +273,9 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
     sessionAvatarThumbUrl,
   ]);
   const avatarFullSrc = avatarFullPath ? getImageUrl(avatarFullPath) : avatarThumbSrc;
+  // 功能注释：详情已有原图时坞必须带过来；不能只认 150 导致空占位
+  const dockSrc = avatarThumbSrc || avatarFullSrc;
+  const uploadLetterbox = isSessionUploadedPortraitUrl(values.avatarUrl || initial?.avatarUrl);
   const previewName = values.name.trim() || '未命名角色';
   const introSummary = values.summary.trim();
   const introAttitude = values.attitudeToPlayer.trim();
@@ -237,7 +286,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
   const formLocked = saving;
 
   const openAvatarPreview = () => {
-    if (!avatarThumbSrc && !avatarFullSrc) {
+    if (!dockSrc) {
       toast.error('暂无头像可预览');
       return;
     }
@@ -269,10 +318,68 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
   const requestGenerateAvatar = async () => {
     if (!ensureReadyForAi()) return;
     if (!(await ensureEnoughPointsForAi(CHARACTER_GENERATION_COST))) return;
-    if (isAiBusy('avatar')) return;
-    setAvatarPromptOpen(false);
+    if (isAiBusy('avatar') || avatarUploading) return;
+    setAvatarStyleId(DEFAULT_AVATAR_STYLE);
     setAvatarPromptSupplement('');
+    setAvatarPromptOpen(true);
     setConfirmKind('avatar');
+  };
+
+  const requestUploadAvatar = () => {
+    if (!token || !sessionId) {
+      toast.error('请先登录并进入对局');
+      return;
+    }
+    if (isAiBusy('avatar') || avatarUploading || formLocked) return;
+    avatarFileInputRef.current?.click();
+  };
+
+  const onAvatarFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!token || !sessionId) {
+      toast.error('请先登录并进入对局');
+      return;
+    }
+    if (avatarUploading || isAiBusy('avatar')) return;
+    setAvatarUploading(true);
+    try {
+      // 功能注释：与「我的档案」同一套：客户端压 WebP≤1MB（质量 100）；服务端超限再等比转 WebP
+      const compressed = await compressImageFileToWebpUnderMaxBytes(file, {
+        maxBytes: PLAYER_UPLOAD_AVATAR_MAX_BYTES,
+      });
+      const res = await sessionPlayerProfileApi.uploadNpcAvatar(
+        token,
+        sessionId,
+        compressed.file,
+        {
+          npcId: draftId,
+          fileName: compressed.file.name,
+          name: values.name.trim() || undefined,
+          gender: values.gender,
+          relationship: values.relationship.trim() || undefined,
+          summary: values.summary.trim() || undefined,
+          attitudeToPlayer: values.attitudeToPlayer.trim() || undefined,
+          detailedBio: values.detailedBio.trim() || undefined,
+          source: initial?.source || 'player_created',
+        },
+      );
+      if (!res?.success || !res.data?.avatarUrl) {
+        toast.error(res?.message || '头像上传失败');
+        return;
+      }
+      setValues((prev) => ({
+        ...prev,
+        avatarUrl: res.data!.avatarUrl,
+        avatarThumbUrl: res.data!.avatarThumbUrl || '',
+      }));
+      toast.success('头像已上传');
+    } catch (err) {
+      toast.error((err as Error)?.message || '头像上传失败');
+    } finally {
+      setAvatarUploading(false);
+    }
   };
 
   const requestGenerateField = async (field: ProfileTextField) => {
@@ -284,41 +391,38 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
 
   const runGenerateAvatar = async () => {
     const promptSupplement = avatarPromptSupplement.trim();
+    const avatarStyle = avatarStyleId;
     setConfirmKind(null);
     setAvatarPromptOpen(false);
     if (!token || !sessionId) return;
-    if (isAiBusy('avatar')) return;
-    setAiBusy((prev) => ({ ...prev, avatar: true }));
+    if (isNpcAvatarGenBusy(sessionId, draftId)) return;
+    // 功能注释：后台任务不绑组件生命周期；可保存/离开，完成后服务端补丁头像
+    toast('头像生成中，可先保存或离开，完成后会自动写入');
     try {
-      const res = await sessionPlayerProfileApi.generateNpcAvatar(token, sessionId, {
-        npcId: draftId,
-        name: values.name,
-        gender: values.gender,
-        relationship: values.relationship,
-        summary: values.summary,
-        attitudeToPlayer: values.attitudeToPlayer,
-        detailedBio: values.detailedBio,
-        ...(promptSupplement ? { promptSupplement } : {}),
+      await startNpcAvatarBackgroundGen({
+        token,
+        sessionId,
+        payload: {
+          npcId: draftId,
+          name: values.name,
+          gender: values.gender,
+          relationship: values.relationship,
+          summary: values.summary,
+          attitudeToPlayer: values.attitudeToPlayer,
+          detailedBio: values.detailedBio,
+          avatarStyle,
+          ...(promptSupplement ? { promptSupplement } : {}),
+        },
       });
-      if (!res?.success || !res.data?.avatarUrl) {
-        toast.error(res?.message || '头像生成失败');
+      setAvatarPromptSupplement('');
+      setAvatarStyleId(DEFAULT_AVATAR_STYLE);
+    } catch (e) {
+      const msg = (e as Error)?.message || '头像生成失败';
+      if (msg.includes(NPC_AVATAR_GEN_CANCELLED_MESSAGE) || /已取消/.test(msg)) {
+        toast(NPC_AVATAR_GEN_CANCELLED_MESSAGE);
         return;
       }
-      setField('avatarUrl', res.data.avatarUrl);
-      if (res.data.avatarThumbUrl) {
-        setField('avatarThumbUrl', res.data.avatarThumbUrl);
-      } else {
-        setField('avatarThumbUrl', '');
-      }
-      if (typeof res.data.remainingPoints === 'number') {
-        updateUser({ points: res.data.remainingPoints });
-      }
-      toast.success(`头像已生成（-${res.data.pointsDeducted ?? CHARACTER_GENERATION_COST} 积分）`);
-      setAvatarPromptSupplement('');
-    } catch (e) {
-      toast.error((e as Error)?.message || '头像生成失败');
-    } finally {
-      setAiBusy((prev) => ({ ...prev, avatar: false }));
+      toast.error(msg);
     }
   };
 
@@ -355,11 +459,6 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
     }
   };
 
-  const avatarBasePrompt = useMemo(
-    () => buildSessionNpcAvatarPrompt(values),
-    [values],
-  );
-
   const closeConfirmModal = () => {
     setConfirmKind(null);
     setAvatarPromptOpen(false);
@@ -376,13 +475,14 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const omitAvatarWhileGenerating = avatarAiBusy;
     const checked = validateCharacterProfileInput({
       ...values,
       favorability: initial?.favorability,
       importance: values.importance || undefined,
       survival: values.survival || undefined,
-      avatarUrl: values.avatarUrl.trim() || undefined,
-      avatarThumbUrl: values.avatarThumbUrl || undefined,
+      avatarUrl: omitAvatarWhileGenerating ? undefined : (values.avatarUrl.trim() || undefined),
+      avatarThumbUrl: omitAvatarWhileGenerating ? undefined : (values.avatarThumbUrl || undefined),
       genderManuallySet: genderTouched || initial?.genderManuallySet === true,
     });
     if (!checked.ok || !checked.data) {
@@ -405,13 +505,20 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
     }
   };
 
+  const handleCancel = () => {
+    if (isNpcAvatarGenBusy(sessionId, draftId)) {
+      cancelNpcAvatarBackgroundGen(sessionId, draftId, NPC_AVATAR_GEN_CANCELLED_MESSAGE);
+    }
+    onCancel();
+  };
+
   return (
     <>
       <form className={styles.form} onSubmit={handleSubmit}>
         <div className={styles.formScroll} ref={formScrollRef}>
         <div className={styles.formTop}>
           <h3 className={styles.formTitle}>{formTitle}</h3>
-          <button type="button" className={styles.formClose} onClick={onCancel} aria-label="关闭" disabled={formLocked}>
+          <button type="button" className={styles.formClose} onClick={handleCancel} aria-label="关闭" disabled={formLocked}>
             ×
           </button>
         </div>
@@ -423,8 +530,13 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
             onClick={openAvatarPreview}
             aria-label={`查看 ${previewName} 头像与介绍`}
           >
-            {avatarThumbSrc ? (
-              <img className={styles.avatarImg} src={avatarThumbSrc} alt="角色头像" />
+            {dockSrc ? (
+              <img
+                key={dockSrc}
+                className={`${styles.avatarImg}${uploadLetterbox ? ` ${styles.avatarImgPoster}` : ''}`}
+                src={dockSrc}
+                alt="角色头像"
+              />
             ) : avatarThumbsPending ? (
               <div className={styles.avatarLoading} role="status" aria-label="头像加载中">
                 <span className={styles.avatarLoadingPulse} aria-hidden />
@@ -434,20 +546,42 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
             )}
           </button>
           <div className={styles.avatarActions}>
-            {reqLabel('头像', false)}
-            <p className={styles.avatarHint}>
-              点击头像可放大预览；可先保存再生成（AI 生成消耗 {CHARACTER_GENERATION_COST} 积分）
-            </p>
-            <button
-              type="button"
-              className={styles.avatarGenBtn}
-              disabled={formLocked || isAiBusy('avatar')}
-              onClick={() => {
-                void requestGenerateAvatar();
-              }}
-            >
-              {isAiBusy('avatar') ? '生成中…' : `AI 生成头像 · ${CHARACTER_GENERATION_COST} 积分`}
-            </button>
+            {avatarUploading || isAiBusy('avatar') ? (
+              <p className={styles.avatarHint}>
+                {avatarUploading
+                  ? '压缩上传中（≤1MB，转 WebP，不做背景处理）…'
+                  : '生成中可保存或去其他页，点取消会终止生图'}
+              </p>
+            ) : null}
+            <div className={styles.avatarActionRow}>
+              <button
+                type="button"
+                className={styles.avatarGenBtn}
+                disabled={formLocked || isAiBusy('avatar') || avatarUploading}
+                onClick={() => {
+                  void requestGenerateAvatar();
+                }}
+              >
+                {isAiBusy('avatar') ? '生成中…' : `AI 生成头像 · ${CHARACTER_GENERATION_COST} 积分`}
+              </button>
+              <button
+                type="button"
+                className={styles.avatarUploadBtn}
+                disabled={formLocked || isAiBusy('avatar') || avatarUploading || !token}
+                onClick={() => requestUploadAvatar()}
+              >
+                {avatarUploading ? '上传中…' : '上传图片'}
+              </button>
+            </div>
+            <input
+              ref={avatarFileInputRef}
+              type="file"
+              accept={PLAYER_UPLOAD_AVATAR_ACCEPT}
+              className={styles.hiddenFileInput}
+              onChange={(ev) => { void onAvatarFileSelected(ev); }}
+              aria-hidden
+              tabIndex={-1}
+            />
           </div>
         </section>
 
@@ -621,10 +755,10 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
         </div>
 
         <div className={styles.actions}>
-          <button type="button" className={styles.secondary} onClick={onCancel} disabled={formLocked}>
+          <button type="button" className={styles.secondary} onClick={handleCancel} disabled={formLocked}>
             取消
           </button>
-          <button type="submit" className={styles.primary} disabled={formLocked || anyAiBusy}>
+          <button type="submit" className={styles.primary} disabled={formLocked || fieldAiBusy || avatarUploading}>
             {saving ? '保存中…' : submitLabel}
           </button>
         </div>
@@ -647,7 +781,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
               onClick={() => setAvatarPromptOpen((open) => !open)}
               aria-expanded={avatarPromptOpen}
             >
-              <span>{avatarPromptOpen ? '收起提示词' : '提示词补充'}</span>
+              <span>{avatarPromptOpen ? '收起画风与提示词' : '画风与提示词'}</span>
               <span className={styles.promptCueChevron} aria-hidden>
                 {avatarPromptOpen ? '▴' : '▾'}
               </span>
@@ -663,28 +797,34 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
         onCancel={closeConfirmModal}
       >
         {confirmKind === 'avatar' && avatarPromptOpen ? (
-          <div className={styles.promptCuePanel} role="region" aria-label="头像生成提示词">
+          <div className={styles.promptCuePanel} role="region" aria-label="画风与提示词">
             <div className={styles.promptCueSection}>
               <div className={styles.promptCueLabelRow}>
-                <label className={styles.promptCueLabel} htmlFor="npc-avatar-base-prompt">
-                  当前提示词
-                </label>
-                <span className={styles.promptCueHint}>只读</span>
+                <span className={styles.promptCueLabel}>风格选择</span>
+                <span className={styles.promptCueHint}>点选即可 · 默认 A</span>
               </div>
-              <textarea
-                id="npc-avatar-base-prompt"
-                className={styles.promptCueReadonly}
-                value={avatarBasePrompt}
-                readOnly
-                rows={4}
-              />
+              <div className={styles.styleChipRow} role="radiogroup" aria-label="立绘画风">
+                {AVATAR_STYLE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={avatarStyleId === opt.id}
+                    className={`${styles.styleChip} ${avatarStyleId === opt.id ? styles.styleChipActive : ''}`}
+                    onClick={() => setAvatarStyleId(opt.id)}
+                  >
+                    <span className={styles.styleChipId}>{opt.id}</span>
+                    <span className={styles.styleChipLabel}>{opt.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
             <div className={styles.promptCueSection}>
               <div className={styles.promptCueLabelRow}>
                 <label className={styles.promptCueLabel} htmlFor="npc-avatar-prompt-supplement">
-                  补充描述
+                  外貌补充（可选）
                 </label>
-                <span className={styles.promptCueHint}>拼到末尾 · {avatarPromptSupplement.trim().length}/500</span>
+                <span className={styles.promptCueHint}>{avatarPromptSupplement.trim().length}/500</span>
               </div>
               <textarea
                 id="npc-avatar-prompt-supplement"
@@ -722,7 +862,11 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
             </div>
             <div className={styles.previewBody}>
               <div className={styles.previewPortraitWrap}>
-                <img className={styles.previewPortrait} src={avatarFullSrc} alt={previewName} />
+                <img
+                  className={`${styles.previewPortrait}${uploadLetterbox ? ` ${styles.previewPortraitPoster}` : ''}`}
+                  src={avatarFullSrc}
+                  alt={previewName}
+                />
               </div>
               <h3 className={styles.previewName}>{previewName}</h3>
               {introRelation ? (

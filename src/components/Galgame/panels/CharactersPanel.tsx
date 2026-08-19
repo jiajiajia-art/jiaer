@@ -26,6 +26,8 @@ import {
 } from '../../../lib/galgame/characterProfile';
 import {
   filterPlayerCharacterCards,
+  isSessionGeneratedPortraitUrl,
+  isSessionUploadedPortraitUrl,
   type PlayerCharacterCard,
   type SessionPlayerProfile,
 } from '../../../lib/galgame/playerCharacterCard';
@@ -33,6 +35,7 @@ import { getImageUrl, getPlayerImageUrl } from '../../../utils/constants';
 import {
   collectConfirmedAvatarThumbs,
   hasConfirmedAvatarThumb,
+  isAvatarThumbForSource,
   pickAvatarListDisplayUrl,
   pickDisplayAvatarFullUrl,
 } from '../../../lib/galgame/avatarThumbUrl';
@@ -40,6 +43,8 @@ import { useGameStore } from '../../../store/gameStore';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { playerCharacterCardsApi, sessionPlayerProfileApi } from '../../../api/galgame/playerCharacterCards';
 import { fetchCharacterAvatarThumbs } from '../../../api/galgame/playUi';
+import { pickPreferredNpcAvatarFields } from '../../../lib/galgame/npcAvatarMerge';
+import TrimmedTransparentImg from '../../TrimmedTransparentImg';
 import {
   applyDisplayNameRewrites,
   rewriteDossierTextFields,
@@ -113,16 +118,20 @@ function AvatarThumbSlot({
   alt,
   pending,
   variant = 'list',
+  letterbox = false,
 }: {
   src: string;
   alt: string;
   pending: boolean;
   variant?: 'list' | 'detail';
+  letterbox?: boolean;
 }) {
   if (src) {
+    const base = variant === 'detail' ? shell.detailPortrait : shell.avatar;
+    const poster = variant === 'detail' ? shell.detailPortraitPoster : shell.avatarPoster;
     return (
       <img
-        className={variant === 'detail' ? shell.detailPortrait : shell.avatar}
+        className={letterbox ? `${base} ${poster}` : base}
         src={src}
         alt={alt}
       />
@@ -203,6 +212,23 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
     setLocalProfiles(editableProfiles);
   }, [editableProfiles]);
 
+  // 功能注释：后台生图写回后，用档案上的新 150 覆盖 thumbs 缓存，避免列表/再编辑仍显示旧图
+  React.useEffect(() => {
+    const seeded = collectConfirmedAvatarThumbs(localProfiles);
+    if (!Object.keys(seeded).length) return;
+    setNpcAvatarThumbs((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const [id, url] of Object.entries(seeded)) {
+        if (next[id] !== url) {
+          next[id] = url;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [localProfiles]);
+
   // 功能注释：打开角色档案时批量 ensure 150；已有确认小图先播种立即显示，仅缺图项 pending
   React.useEffect(() => {
     if (!isOpen || !sessionId) return;
@@ -242,7 +268,32 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
         const data = await fetchCharacterAvatarThumbs(sessionId);
         if (cancelled) return;
         const fromServerThumbs = data.npcAvatarThumbs || {};
-        setNpcAvatarThumbs((prev) => ({ ...prev, ...fromServerThumbs }));
+        setNpcAvatarThumbs((prev) => {
+          const next = { ...prev };
+          const sourceById = new Map<string, string>();
+          for (const p of localProfiles) {
+            if (p?.id && p.avatarUrl) sourceById.set(p.id, String(p.avatarUrl));
+          }
+          for (const s of Array.isArray(data.playerEditableNpcs) ? data.playerEditableNpcs : []) {
+            const row = s as { id?: string; avatarUrl?: string };
+            const id = String(row?.id || '');
+            if (id && row?.avatarUrl && !sourceById.has(id)) sourceById.set(id, String(row.avatarUrl));
+          }
+          for (const [id, thumb] of Object.entries(fromServerThumbs)) {
+            const source = sourceById.get(id) || '';
+            if (!isAvatarThumbForSource(thumb, source)) continue;
+            const existing = next[id];
+            if (
+              existing
+              && isSessionGeneratedPortraitUrl(existing)
+              && !isSessionGeneratedPortraitUrl(thumb)
+            ) {
+              continue;
+            }
+            if (!isAvatarThumbForSource(existing, source)) next[id] = thumb;
+          }
+          return next;
+        });
         if (Array.isArray(data.playerEditableNpcs) && data.playerEditableNpcs.length > 0) {
           const fromServer = data.playerEditableNpcs as PlayerEditableNpc[];
           setLocalProfiles((prev) => {
@@ -265,10 +316,11 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                 byId.set(s.id, s);
                 continue;
               }
+              const picked = pickPreferredNpcAvatarFields(s, old);
               byId.set(s.id, {
                 ...old,
-                ...(s.avatarUrl ? { avatarUrl: s.avatarUrl } : {}),
-                ...(s.avatarThumbUrl ? { avatarThumbUrl: s.avatarThumbUrl } : {}),
+                ...(picked.avatarUrl ? { avatarUrl: picked.avatarUrl } : {}),
+                ...(picked.avatarThumbUrl ? { avatarThumbUrl: picked.avatarThumbUrl } : {}),
               });
             }
             return sortEditableNpcProfiles([...byId.values()]);
@@ -291,12 +343,18 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
   const resolveListAvatarCandidates = (
     profile: PlayerEditableNpc,
     preset?: CharacterPanelItem | null,
-  ) => ([
-    npcAvatarThumbs[profile.id],
-    profile.avatarThumbUrl,
-    profile.avatarUrl,
-    preset?.avatarUrl,
-  ]);
+  ) => {
+    const cached = npcAvatarThumbs[profile.id];
+    const full = profile.avatarUrl;
+    const profileThumbOk = isAvatarThumbForSource(profile.avatarThumbUrl, full);
+    const cachedOk = Boolean(cached) && isAvatarThumbForSource(cached, full);
+    return [
+      profileThumbOk ? profile.avatarThumbUrl : '',
+      cachedOk ? cached : '',
+      full,
+      isSessionGeneratedPortraitUrl(full) ? '' : (preset?.avatarUrl || ''),
+    ];
+  };
 
   const resolveListAvatarUrl = (profile: PlayerEditableNpc, preset?: CharacterPanelItem | null) => {
     // 功能注释：有确认 150 立刻显示；仅缺小图且仍 pending 时不回落原图
@@ -350,6 +408,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
       byId.set(p.id, {
         ...base,
         ...p,
+        name: String(p.name || '').trim() || String(base?.name || '').trim(),
         gender: resolveEditableNpcGender({
           preferPresetGender: preferPresetGenderAb,
           presetGender: presetNpc?.gender ?? base?.gender,
@@ -361,7 +420,11 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
         attitudeToPlayer,
         detailedBio: String(p.detailedBio || '').trim() || base?.detailedBio || p.detailedBio || '',
         avatarUrl: p.avatarUrl || base?.avatarUrl,
-        avatarThumbUrl: p.avatarThumbUrl || base?.avatarThumbUrl,
+        avatarThumbUrl: isAvatarThumbForSource(p.avatarThumbUrl, p.avatarUrl || base?.avatarUrl)
+          ? p.avatarThumbUrl
+          : (isAvatarThumbForSource(base?.avatarThumbUrl, p.avatarUrl || base?.avatarUrl)
+            ? base?.avatarThumbUrl
+            : ''),
         encountered: p.encountered || encounteredIds.includes(p.id) || !!base?.encountered,
       });
     }
@@ -691,31 +754,60 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
         />
       ) : mode === 'import' ? (
         <div className={shell.importPanel}>
-          <input
-            className={shell.importSearch}
-            value={importQuery}
-            placeholder="搜索卡库…"
-            onChange={(e) => setImportQuery(e.target.value)}
-          />
+          <label className={shell.importSearchWrap}>
+            <span className={shell.importSearchLabel}>名册</span>
+            <input
+              className={shell.importSearch}
+              value={importQuery}
+              placeholder="搜索卡库…"
+              onChange={(e) => setImportQuery(e.target.value)}
+            />
+          </label>
           {importLoading ? (
             <div className={shell.empty}>加载中…</div>
           ) : filteredImportCards.length === 0 ? (
             <div className={shell.empty}>卡库为空，请先在属性面板创建角色卡</div>
           ) : (
-            filteredImportCards.map((card) => (
+            filteredImportCards.map((card, index) => {
+              const portraitPath = String(card.avatarUrl || '').trim();
+              const portraitSrc = portraitPath ? getImageUrl(portraitPath) : '';
+              const genderLabel = card.gender === 'male'
+                ? '男'
+                : card.gender === 'female'
+                  ? '女'
+                  : '其他';
+              return (
               <button
                 key={card.id}
                 type="button"
-                className={`${shell.card} ${shell.importCard}`}
+                className={shell.importCard}
+                style={{ ['--import-i' as string]: String(index) }}
                 onClick={() => importCardAsNpc(card)}
               >
-                <strong className={shell.cardTitle}>{card.name}</strong>
-                <span className={shell.cardMeta}>
-                  {card.gender === 'male' ? '男' : card.gender === 'female' ? '女' : '其他'}
+                {/* 功能注释：卡库导入必须先看到立绘，避免只剩姓名简介对不上人 */}
+                <span className={shell.importPortrait} aria-hidden={!portraitSrc}>
+                  {portraitSrc ? (
+                    <TrimmedTransparentImg
+                      className={shell.importPortraitImg}
+                      src={portraitSrc}
+                      alt=""
+                      variant="bust"
+                    />
+                  ) : (
+                    <span className={shell.importPortraitSeal}>
+                      {(card.name || '卡').slice(0, 1)}
+                    </span>
+                  )}
+                  <span className={shell.importGenderSeal}>{genderLabel}</span>
                 </span>
-                {card.persona ? <p className={shell.cardBody}>{card.persona}</p> : null}
+                <span className={shell.importCopy}>
+                  <strong className={shell.importName}>{card.name}</strong>
+                  {card.persona ? <p className={shell.importBio}>{card.persona}</p> : null}
+                  <span className={shell.importCue}>点选导入</span>
+                </span>
               </button>
-            ))
+              );
+            })
           )}
         </div>
       ) : mode === 'detail' && detail ? (
@@ -794,6 +886,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                       ? isAvatarSlotPending(profile, detail)
                       : (avatarThumbsPending && !avatarUrl)}
                     variant="detail"
+                    letterbox={isSessionUploadedPortraitUrl(profile?.avatarUrl || detail.avatarUrl)}
                   />
                   <span className={shell.detailChatHint}>点击头像预览</span>
                 </button>
@@ -910,6 +1003,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                     alt={profile.name}
                     pending={isAvatarSlotPending(profile, preset)}
                     variant="list"
+                    letterbox={isSessionUploadedPortraitUrl(profile.avatarUrl)}
                   />
                 </button>
                 <button
@@ -1014,7 +1108,13 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
               <div className={shell.avatarPreviewScroll}>
                 <div className={shell.avatarPreviewPortraitWrap}>
                   {avatarUrl ? (
-                    <img className={shell.avatarPreviewPortrait} src={avatarUrl} alt={p.name} />
+                    <img
+                      className={`${shell.avatarPreviewPortrait}${
+                        isSessionUploadedPortraitUrl(p.avatarUrl) ? ` ${shell.avatarPreviewPortraitPoster}` : ''
+                      }`}
+                      src={avatarUrl}
+                      alt={p.name}
+                    />
                   ) : (
                     <div className={shell.avatarPreviewPortraitEmpty} aria-hidden />
                   )}

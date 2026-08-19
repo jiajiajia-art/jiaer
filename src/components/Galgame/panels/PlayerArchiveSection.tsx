@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   applyPlayerCardImport,
@@ -7,6 +7,7 @@ import {
   PLAYER_CARD_GENDERS,
   PLAYER_CARD_LIMITS,
   previewPlayerCardImportDiff,
+  isSessionUploadedPortraitUrl,
   type PlayerCardGender,
   type PlayerCharacterCard,
   type SessionPlayerProfile,
@@ -26,9 +27,20 @@ import {
   startPlayerAvatarBackgroundGen,
   subscribePlayerAvatarGenBusy,
 } from '../../../lib/galgame/playerAvatarBackgroundJob';
+import { mergePlayerAvatarIntoProfile } from '../../../lib/galgame/playerAvatarMerge';
+import {
+  PLAYER_UPLOAD_AVATAR_ACCEPT,
+  PLAYER_UPLOAD_AVATAR_MAX_BYTES,
+  compressImageFileToWebpUnderMaxBytes,
+} from '../../../lib/galgame/compressImageToWebp';
 import { refreshAuthUserPoints } from '../../../lib/auth/refreshUserPoints';
 import TrimmedTransparentImg from '../../TrimmedTransparentImg';
 import GameConfirmModal from '../GameConfirmModal';
+import {
+  AVATAR_STYLE_OPTIONS,
+  DEFAULT_AVATAR_STYLE,
+  type AvatarStyleId,
+} from '../../../lib/galgame/sessionNpcAvatarPrompt';
 import shell from './PlayPanelShell.module.css';
 import styles from './PlayerArchiveSection.module.css';
 
@@ -92,7 +104,13 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
   const [personaAiConfirmOpen, setPersonaAiConfirmOpen] = useState(false);
   const [avatarAiBusy, setAvatarAiBusy] = useState(() => isPlayerAvatarGenBusy(sessionId));
   const [avatarAiConfirmOpen, setAvatarAiConfirmOpen] = useState(false);
+  /** 对齐添加角色：确认弹窗内选画风 + 可选外貌补充 */
+  const [avatarPromptOpen, setAvatarPromptOpen] = useState(false);
+  const [avatarPromptSupplement, setAvatarPromptSupplement] = useState('');
+  const [avatarStyleId, setAvatarStyleId] = useState<AvatarStyleId>(DEFAULT_AVATAR_STYLE);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarPreviewOpen, setAvatarPreviewOpen] = useState(false);
+  const avatarFileInputRef = useRef<HTMLInputElement>(null);
   const [importLoading, setImportLoading] = useState(false);
   const [cards, setCards] = useState<PlayerCharacterCard[]>([]);
   const [query, setQuery] = useState('');
@@ -140,6 +158,9 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
   const avatarSrc = avatarFullSrc;
   const sessionAvatarFull = String(profile?.avatarUrl || '').trim();
   const needsAvatar = !!profile?.avatarNeedsRegen || !sessionAvatarFull;
+  /** 用户上传多为整图海报，bust 裁切会糊且裁歪 */
+  const avatarVariant = isSessionUploadedPortraitUrl(profile?.avatarUrl) ? 'full' : 'bust';
+  const avatarStageClass = `${styles.avatarHit}${avatarVariant === 'full' ? ` ${styles.avatarHitPoster}` : ''}`;
 
   const openEdit = () => {
     setDraft({
@@ -234,6 +255,11 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
     };
   };
 
+  const closeAvatarConfirm = () => {
+    setAvatarAiConfirmOpen(false);
+    setAvatarPromptOpen(false);
+  };
+
   const requestGenerateAvatar = async () => {
     const payload = avatarGenPayload();
     if (!payload.name) {
@@ -244,17 +270,21 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
       toast.error('请先登录并进入对局');
       return;
     }
-    if (avatarAiBusy || personaAiBusy) return;
+    if (avatarAiBusy || personaAiBusy || avatarUploading) return;
     const latestPoints = await refreshAuthUserPoints();
     if (typeof latestPoints === 'number' && latestPoints < CHARACTER_GENERATION_COST) {
       toast.error(`积分不足（需要 ${CHARACTER_GENERATION_COST}，当前 ${latestPoints}）`);
       return;
     }
+    setAvatarStyleId(DEFAULT_AVATAR_STYLE);
+    setAvatarPromptOpen(true);
     setAvatarAiConfirmOpen(true);
   };
 
   const runGenerateAvatar = async () => {
-    setAvatarAiConfirmOpen(false);
+    const promptSupplement = avatarPromptSupplement.trim().slice(0, 500);
+    const avatarStyle = avatarStyleId;
+    closeAvatarConfirm();
     const token = authUser?.token;
     if (!token || !sessionId || isPlayerAvatarGenBusy(sessionId)) return;
     const payload = avatarGenPayload();
@@ -268,13 +298,158 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
       await startPlayerAvatarBackgroundGen({
         token,
         sessionId,
-        payload,
+        payload: {
+          ...payload,
+          avatarStyle,
+          ...(promptSupplement ? { promptSupplement } : {}),
+        },
       });
+      setAvatarPromptSupplement('');
+      setAvatarStyleId(DEFAULT_AVATAR_STYLE);
       // 成功由 Galgame 订阅写回档案并 toast，避免面板卸载后丢更新
     } catch (e) {
       toast.error((e as Error)?.message || '头像生成失败');
     }
   };
+
+  const requestUploadAvatar = () => {
+    if (!authUser?.token || !sessionId) {
+      toast.error('请先登录并进入对局');
+      return;
+    }
+    if (avatarAiBusy || avatarUploading) return;
+    avatarFileInputRef.current?.click();
+  };
+
+  const onAvatarFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const token = authUser?.token;
+    if (!token || !sessionId) {
+      toast.error('请先登录并进入对局');
+      return;
+    }
+    if (avatarUploading || avatarAiBusy) return;
+    setAvatarUploading(true);
+    try {
+      // 功能注释：仅客户端压 WebP≤1MB（优先质量 100）；不做抠图/去背景
+      const compressed = await compressImageFileToWebpUnderMaxBytes(file, {
+        maxBytes: PLAYER_UPLOAD_AVATAR_MAX_BYTES,
+      });
+      const res = await sessionPlayerProfileApi.uploadPlayerAvatar(
+        token,
+        sessionId,
+        compressed.file,
+        { fileName: compressed.file.name },
+      );
+      if (!res?.success || !res.data?.avatarUrl) {
+        toast.error(res?.message || '头像上传失败');
+        return;
+      }
+      if (res.data.profile) {
+        onProfileChange(res.data.profile);
+      } else {
+        onProfileChange(mergePlayerAvatarIntoProfile(profile, {
+          avatarUrl: res.data.avatarUrl,
+          avatarThumbUrl: res.data.avatarThumbUrl || '',
+        }));
+      }
+      toast.success('头像已上传');
+    } catch (err) {
+      toast.error((err as Error)?.message || '头像上传失败');
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  const renderAvatarConfirmModal = (overlayZIndex: number) => (
+    <GameConfirmModal
+      isOpen={avatarAiConfirmOpen}
+      variant="dossier"
+      title="确认生成头像"
+      message={(
+        <div className={styles.confirmMsgStack}>
+          <p className={styles.confirmMsgText}>
+            {`将扣除 ${CHARACTER_GENERATION_COST} 积分生成 AI 头像，是否继续？`}
+          </p>
+          <button
+            type="button"
+            className={`${styles.promptCueBtn} ${avatarPromptOpen ? styles.promptCueBtnActive : ''}`}
+            onClick={() => setAvatarPromptOpen((open) => !open)}
+            aria-expanded={avatarPromptOpen}
+          >
+            <span>{avatarPromptOpen ? '收起画风与提示词' : '画风与提示词'}</span>
+            <span className={styles.promptCueChevron} aria-hidden>
+              {avatarPromptOpen ? '▴' : '▾'}
+            </span>
+          </button>
+        </div>
+      )}
+      confirmText="确认生成"
+      cancelText="取消"
+      overlayZIndex={overlayZIndex}
+      onConfirm={() => { void runGenerateAvatar(); }}
+      onCancel={closeAvatarConfirm}
+    >
+      {avatarPromptOpen ? (
+        <div className={styles.promptCuePanel} role="region" aria-label="画风与提示词">
+          <div className={styles.promptCueSection}>
+            <div className={styles.promptCueLabelRow}>
+              <span className={styles.promptCueLabel}>风格选择</span>
+              <span className={styles.promptCueHint}>点选即可 · 默认 A</span>
+            </div>
+            <div className={styles.styleChipRow} role="radiogroup" aria-label="立绘画风">
+              {AVATAR_STYLE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={avatarStyleId === opt.id}
+                  className={`${styles.styleChip} ${avatarStyleId === opt.id ? styles.styleChipActive : ''}`}
+                  onClick={() => setAvatarStyleId(opt.id)}
+                >
+                  <span className={styles.styleChipId}>{opt.id}</span>
+                  <span className={styles.styleChipLabel}>{opt.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className={styles.promptCueSection}>
+            <div className={styles.promptCueLabelRow}>
+              <label className={styles.promptCueLabel} htmlFor="player-archive-avatar-prompt-supplement">
+                外貌补充（可选）
+              </label>
+              <span className={styles.promptCueHint}>
+                {avatarPromptSupplement.trim().length}/500
+              </span>
+            </div>
+            <textarea
+              id="player-archive-avatar-prompt-supplement"
+              className={styles.promptCueInput}
+              value={avatarPromptSupplement}
+              onChange={(ev) => setAvatarPromptSupplement(ev.target.value.slice(0, 500))}
+              placeholder="短发、校服、冷白皮、侧分刘海…"
+              rows={3}
+              maxLength={500}
+            />
+          </div>
+        </div>
+      ) : null}
+    </GameConfirmModal>
+  );
+
+  const renderAvatarFileInput = () => (
+    <input
+      ref={avatarFileInputRef}
+      type="file"
+      accept={PLAYER_UPLOAD_AVATAR_ACCEPT}
+      className={styles.hiddenFileInput}
+      onChange={(ev) => { void onAvatarFileSelected(ev); }}
+      aria-hidden
+      tabIndex={-1}
+    />
+  );
 
   const requestGeneratePersona = async () => {
     if (!draft.name.trim()) {
@@ -444,59 +619,70 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
             </button>
           </div>
 
-          {/* 功能注释：头像展示与手动 AI 生成始终可用；换角强制清头像仍由 A/B 管 */}
+          {/* 功能注释：编辑页头像舞台对齐总览 Crimson Dossier；手动 AI 生成始终可用，换角清头像仍由 A/B 管 */}
           <div className={styles.editAvatarBlock}>
             <button
               type="button"
-              className={styles.editAvatarHit}
+              className={`${styles.editAvatarHit}${avatarVariant === 'full' ? ` ${styles.avatarHitPoster}` : ''}`}
               onClick={() => {
                 if (avatarSrc) setAvatarPreviewOpen(true);
               }}
               aria-label={avatarSrc ? '查看主角头像' : '暂无头像'}
             >
+              <span className={styles.avatarStageGlow} aria-hidden />
               {avatarSrc ? (
                 <TrimmedTransparentImg
-                  className={styles.editAvatarImg}
+                  className={`${styles.editAvatarImg}${avatarVariant === 'full' ? ` ${styles.avatarImgPoster}` : ''}`}
                   src={avatarSrc}
                   alt={displayName}
-                  variant="bust"
+                  variant={avatarVariant}
                 />
               ) : (
-                <div className={styles.editAvatarEmpty}>暂无头像</div>
+                <div className={styles.editAvatarEmpty}>头像</div>
               )}
+              {avatarSrc ? <span className={styles.avatarZoomCue}>放大</span> : null}
             </button>
             <div className={styles.editAvatarMeta}>
-              <div className={styles.labelRow}>
-                <span className={styles.labelWithAiLeft}>
-                  头像
-                  {avatarAiBusy ? (
-                    <span className={styles.fieldAiBusyBadge} aria-live="polite">生成中…</span>
-                  ) : null}
-                  <button
-                    type="button"
-                    className={styles.fieldAiBtn}
-                    disabled={personaAiBusy || avatarAiBusy || !authUser?.token}
-                    onClick={() => {
-                      void requestGenerateAvatar();
-                    }}
-                  >
-                    {avatarAiBusy
-                      ? '后台生成中'
-                      : `${needsAvatar ? 'AI生成' : '重新生成'} · ${CHARACTER_GENERATION_COST}`}
-                  </button>
-                </span>
+              <div className={styles.editAvatarTitleRow}>
+                <span className={styles.editAvatarTitle}>立绘</span>
+                {avatarAiBusy ? (
+                  <span className={styles.fieldAiBusyBadge} aria-live="polite">生成中…</span>
+                ) : null}
               </div>
               <p className={styles.editAvatarHint}>
-                {avatarAiBusy
-                  ? '生成中可先点保存或离开，完成后会自动写入档案'
-                  : (needsAvatar
-                    ? (avatarSrc
-                      ? '当前为主角立绘；可 AI 生成局内头像'
-                      : '请生成头像')
-                    : '点击头像可放大')}
+                {avatarUploading
+                  ? '压缩上传中（≤1MB，不做背景处理）…'
+                  : avatarAiBusy
+                    ? '可先保存或离开，完成后自动写入'
+                    : (needsAvatar
+                      ? (avatarSrc ? '可重新生成或上传局内头像' : '生成或上传头像')
+                      : '点击立绘可放大预览')}
               </p>
+              <div className={styles.avatarActionRow}>
+                <button
+                  type="button"
+                  className={styles.avatarGenBtn}
+                  disabled={personaAiBusy || avatarAiBusy || avatarUploading || !authUser?.token}
+                  onClick={() => {
+                    void requestGenerateAvatar();
+                  }}
+                >
+                  {avatarAiBusy
+                    ? '后台生成中…'
+                    : `${needsAvatar ? '生成头像' : '重新生成'} · ${CHARACTER_GENERATION_COST} 积分`}
+                </button>
+                <button
+                  type="button"
+                  className={styles.avatarUploadBtn}
+                  disabled={personaAiBusy || avatarAiBusy || avatarUploading || !authUser?.token}
+                  onClick={() => requestUploadAvatar()}
+                >
+                  {avatarUploading ? '上传中…' : '上传图片'}
+                </button>
+              </div>
             </div>
           </div>
+          {renderAvatarFileInput()}
 
           <label className={styles.field}>
             <span className={styles.labelRow}>
@@ -600,19 +786,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
           onCancel={() => setPersonaAiConfirmOpen(false)}
         />
 
-        <GameConfirmModal
-          isOpen={avatarAiConfirmOpen}
-          variant="dossier"
-          title="确认生成头像"
-          message={`将扣除 ${CHARACTER_GENERATION_COST} 积分生成 AI 主角头像，是否继续？`}
-          confirmText="确认生成"
-          cancelText="取消"
-          overlayZIndex={3800}
-          onConfirm={() => {
-            void runGenerateAvatar();
-          }}
-          onCancel={() => setAvatarAiConfirmOpen(false)}
-        />
+        {renderAvatarConfirmModal(3800)}
 
         {avatarPreviewOpen && avatarSrc ? (
           <div
@@ -634,7 +808,9 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
                   ×
                 </button>
               </div>
-              <img className={styles.avatarPreviewImg} src={avatarFullSrc || avatarSrc} alt={displayName} />
+              <div className={styles.avatarPreviewStage}>
+                <img className={styles.avatarPreviewImg} src={avatarFullSrc || avatarSrc} alt={displayName} />
+              </div>
               <p className={styles.avatarPreviewName}>{displayName}</p>
             </div>
           </div>
@@ -804,85 +980,91 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
 
       <div className={styles.profileCard}>
         {/* 功能注释：头像与「生成头像」始终可见；A/B 只影响换角后是否强制清头像引导 */}
-        <div className={styles.avatarRow}>
+        <div className={styles.dossierHero}>
           <button
             type="button"
-            className={styles.avatarHit}
+            className={avatarStageClass}
             onClick={() => {
               if (avatarSrc) setAvatarPreviewOpen(true);
             }}
             aria-label={avatarSrc ? '查看主角头像' : '暂无头像'}
           >
+            <span className={styles.avatarStageGlow} aria-hidden />
             {avatarSrc ? (
               <TrimmedTransparentImg
-                className={styles.avatarImg}
+                className={`${styles.avatarImg}${avatarVariant === 'full' ? ` ${styles.avatarImgPoster}` : ''}`}
                 src={avatarSrc}
                 alt={displayName}
-                variant="bust"
+                variant={avatarVariant}
               />
             ) : (
               <div className={styles.avatarEmpty}>头像</div>
             )}
+            {avatarSrc ? (
+              <span className={styles.avatarZoomCue}>放大</span>
+            ) : null}
           </button>
           <div className={styles.avatarMeta}>
+            <div className={styles.identityLine}>
+              <span className={styles.identityName}>{displayName}</span>
+              <span className={styles.identityGender}>{genderText(profile?.gender)}</span>
+            </div>
             <p className={styles.avatarHint}>
-              {needsAvatar
-                ? (avatarSrc
-                  ? '当前为主角立绘；可 AI 生成局内头像'
-                  : '可生成头像')
-                : '点击头像可放大'}
+              {avatarUploading
+                ? '压缩上传中…'
+                : needsAvatar
+                  ? (avatarSrc
+                    ? '可重新生成或上传局内头像'
+                    : '生成或上传头像')
+                  : '点击立绘可放大预览'}
             </p>
-            <button
-              type="button"
-              className={styles.avatarGenBtn}
-              disabled={avatarAiBusy || !authUser?.token}
-              onClick={() => void requestGenerateAvatar()}
-            >
-              {avatarAiBusy
-                ? '后台生成中…'
-                : `${needsAvatar ? '生成头像' : '重新生成头像'} · ${CHARACTER_GENERATION_COST} 积分`}
-            </button>
+            <div className={styles.avatarActionRow}>
+              <button
+                type="button"
+                className={styles.avatarGenBtn}
+                disabled={avatarAiBusy || avatarUploading || !authUser?.token}
+                onClick={() => void requestGenerateAvatar()}
+              >
+                {avatarAiBusy
+                  ? '后台生成中…'
+                  : `${needsAvatar ? '生成头像' : '重新生成'} · ${CHARACTER_GENERATION_COST} 积分`}
+              </button>
+              <button
+                type="button"
+                className={styles.avatarUploadBtn}
+                disabled={avatarAiBusy || avatarUploading || !authUser?.token}
+                onClick={() => requestUploadAvatar()}
+              >
+                {avatarUploading ? '上传中…' : '上传图片'}
+              </button>
+            </div>
           </div>
         </div>
-        <div className={styles.profileRow}>
-          <span className={styles.profileKey}>姓名</span>
-          <span className={styles.profileVal}>{displayName}</span>
-        </div>
-        <div className={styles.profileRow}>
-          <span className={styles.profileKey}>性别</span>
-          <span className={styles.profileVal}>{genderText(profile?.gender)}</span>
-        </div>
-        <div className={styles.profileBlock}>
-          <span className={styles.profileKey}>人设</span>
-          <p className={styles.profilePersona}>{profile?.persona || '暂无人设'}</p>
-        </div>
-        {profile?.customAttributes && Object.keys(profile.customAttributes).length > 0 ? (
+        {renderAvatarFileInput()}
+        <div className={styles.dossierMeta}>
           <div className={styles.profileBlock}>
-            <span className={styles.profileKey}>自设属性</span>
-            <ul className={styles.profileAttrList}>
-              {Object.entries(profile.customAttributes).map(([key, value]) => (
-                <li key={key} className={styles.profileAttrItem}>
-                  <span>{key}</span>
-                  <strong>{Number.isFinite(Number(value)) ? Math.round(Number(value)) : '—'}</strong>
-                </li>
-              ))}
-            </ul>
+            <span className={styles.profileKey}>人设</span>
+            <p className={styles.profilePersona}>{profile?.persona || '暂无人设'}</p>
           </div>
-        ) : null}
+          {profile?.customAttributes && Object.keys(profile.customAttributes).length > 0 ? (
+            <div className={styles.profileBlock}>
+              <span className={styles.profileKey}>自设属性</span>
+              <ul className={styles.profileAttrList}>
+                {Object.entries(profile.customAttributes).map(([key, value]) => (
+                  <li key={key} className={styles.profileAttrItem}>
+                    <span>{key}</span>
+                    <strong>{Number.isFinite(Number(value)) ? Math.round(Number(value)) : '—'}</strong>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
       </div>
 
       <p className={styles.dynHint}>下方为动态属性面板（LLM），与自设属性分区，互不覆盖。</p>
 
-      <GameConfirmModal
-        isOpen={avatarAiConfirmOpen}
-        title="确认生成头像"
-        message={`将扣除 ${CHARACTER_GENERATION_COST} 积分生成 AI 主角头像，是否继续？`}
-        confirmText="确认生成"
-        cancelText="取消"
-        overlayZIndex={3800}
-        onConfirm={() => { void runGenerateAvatar(); }}
-        onCancel={() => setAvatarAiConfirmOpen(false)}
-      />
+      {renderAvatarConfirmModal(3800)}
 
       {avatarPreviewOpen && avatarSrc ? (
         <div
@@ -904,7 +1086,9 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
                 ×
               </button>
             </div>
-            <img className={styles.avatarPreviewImg} src={avatarFullSrc || avatarSrc} alt={displayName} />
+            <div className={styles.avatarPreviewStage}>
+              <img className={styles.avatarPreviewImg} src={avatarFullSrc || avatarSrc} alt={displayName} />
+            </div>
             <p className={styles.avatarPreviewName}>{displayName}</p>
           </div>
         </div>

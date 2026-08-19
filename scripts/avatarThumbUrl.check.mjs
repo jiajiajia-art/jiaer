@@ -10,6 +10,9 @@ import {
   pickAvatarListDisplayUrl,
   pickDisplayAvatarFullUrl,
   pickDisplayAvatarThumbUrl,
+  pickFormAvatarDockUrl,
+  firstUploadedPortraitFullUrl,
+  isAvatarThumbForSource,
   collectConfirmedAvatarThumbs,
   hasConfirmedAvatarThumb,
 } from '../src/lib/galgame/avatarThumbUrl.ts';
@@ -92,6 +95,27 @@ test('pickAvatarListDisplayUrl_pending时不回落原图', () => {
   );
 });
 
+test('pickAvatarListDisplayUrl_用户上传跳过头顶150用原图', () => {
+  const full = '/public/visual/sessions/s1/avatars/chen_mo_upload_1787.webp';
+  const thumb = '/public/visual/sessions/s1/avatars/chen_mo_upload_1787_150.webp';
+  assert.equal(firstUploadedPortraitFullUrl([thumb, full]), full);
+  assert.equal(
+    pickAvatarListDisplayUrl([thumb, full], { pendingThumbs: true }),
+    full,
+    '上传图即使 pending 也必须立刻用原图，禁止头顶裁切小图',
+  );
+  assert.equal(pickAvatarDisplayUrl([thumb, full]), full);
+  assert.equal(
+    pickFormAvatarDockUrl({
+      formAvatarUrl: full,
+      formAvatarThumbUrl: thumb,
+      sessionAvatarThumbUrl: thumb,
+      initialAvatarUrl: full,
+    }),
+    full,
+  );
+});
+
 test('collectConfirmedAvatarThumbs_只收集确认150', () => {
   assert.deepEqual(
     collectConfirmedAvatarThumbs([
@@ -131,14 +155,87 @@ test('pickDisplayAvatarFullUrl_局内仅有150时反推webp', () => {
   );
 });
 
+test('isAvatarThumbForSource_换立绘后旧150不匹配', () => {
+  assert.equal(
+    isAvatarThumbForSource(
+      '/public/visual/sessions/s1/avatars/old_150.webp',
+      '/public/visual/sessions/s1/avatars/old.webp',
+    ),
+    true,
+  );
+  assert.equal(
+    isAvatarThumbForSource(
+      '/api/visual/images/x/npcs/a/base_150.webp',
+      '/public/visual/sessions/s1/avatars/new_999.webp',
+    ),
+    false,
+  );
+});
+
+test('pickFormAvatarDockUrl_新生成立绘不得被父级旧150盖住', () => {
+  const staleThumb = '/public/visual/sessions/s1/avatars/old_150.webp';
+  const nextFull = '/public/visual/sessions/s1/avatars/new_999.webp';
+  const nextThumb = '/public/visual/sessions/s1/avatars/new_999_150.webp';
+  assert.equal(
+    pickFormAvatarDockUrl({
+      formAvatarThumbUrl: nextThumb,
+      formAvatarUrl: nextFull,
+      sessionAvatarThumbUrl: staleThumb,
+      initialAvatarUrl: '/public/visual/sessions/s1/avatars/old.webp',
+    }),
+    nextThumb,
+  );
+  assert.equal(
+    pickFormAvatarDockUrl({
+      formAvatarThumbUrl: '',
+      formAvatarUrl: nextFull,
+      sessionAvatarThumbUrl: staleThumb,
+      initialAvatarUrl: '/public/visual/sessions/s1/avatars/old.webp',
+    }),
+    nextFull,
+    '新原图尚未有 150 时也要用新图，禁止回落旧 150',
+  );
+  assert.equal(
+    pickFormAvatarDockUrl({
+      formAvatarThumbUrl: '',
+      formAvatarUrl: '/public/visual/sessions/s1/avatars/old.webp',
+      sessionAvatarThumbUrl: staleThumb,
+      initialAvatarUrl: '/public/visual/sessions/s1/avatars/old.webp',
+    }),
+    staleThumb,
+    '未重新生成时仍用父级确认 150',
+  );
+  assert.equal(
+    pickFormAvatarDockUrl({
+      formAvatarThumbUrl: '',
+      formAvatarUrl: '/api/visual/images/x/npcs/wang/base.png',
+      sessionAvatarThumbUrl: '',
+      initialAvatarUrl: '/api/visual/images/x/npcs/wang/base.png',
+    }),
+    '/api/visual/images/x/npcs/wang/base.png',
+    '详情已有文档原图时编辑坞必须带回，不能空占位',
+  );
+  assert.equal(
+    pickFormAvatarDockUrl({
+      formAvatarThumbUrl: '',
+      formAvatarUrl: '/api/visual/images/x/npcs/wang/base.png',
+      sessionAvatarThumbUrl: '/public/visual/sessions/s1/avatars/old_150.webp',
+      initialAvatarUrl: '/api/visual/images/x/npcs/wang/base.png',
+    }),
+    '/api/visual/images/x/npcs/wang/base.png',
+    '不匹配当前原图的旧 150 不得挡住文档头像',
+  );
+});
+
 test('CharacterProfileForm_编辑人设坞用展示选择器', async () => {
   const { readFileSync } = await import('node:fs');
   const { fileURLToPath } = await import('node:url');
   const { dirname, join } = await import('node:path');
   const dir = dirname(fileURLToPath(import.meta.url));
   const src = readFileSync(join(dir, '../src/components/Galgame/panels/CharacterProfileForm.tsx'), 'utf8');
-  assert.match(src, /pickDisplayAvatarThumbUrl/, '编辑人设头像坞须只用确认 150');
+  assert.match(src, /pickFormAvatarDockUrl/, '编辑人设头像坞须用表单优先选择器');
   assert.match(src, /sessionAvatarThumbUrl/, '须接入会话侧 ensure 的角色 150');
+  assert.match(src, /const dockSrc = avatarThumbSrc \|\| avatarFullSrc/, '坞须带回原图，避免空占位');
   assert.doesNotMatch(
     src,
     /const avatarSrc = getImageUrl\(values\.avatarUrl\)/,
@@ -153,6 +250,9 @@ test('CharactersPanel_列表pending不回落原图', async () => {
   const dir = dirname(fileURLToPath(import.meta.url));
   const src = readFileSync(join(dir, '../src/components/Galgame/panels/CharactersPanel.tsx'), 'utf8');
   assert.match(src, /pickAvatarListDisplayUrl/);
+  assert.match(src, /isAvatarThumbForSource/);
+  assert.match(src, /pickPreferredNpcAvatarFields/);
+  assert.match(src, /isSessionGeneratedPortraitUrl\(full\) \? '' : \(preset\?\.avatarUrl/);
   assert.match(src, /collectConfirmedAvatarThumbs/);
   assert.match(src, /hasConfirmedAvatarThumb/);
   assert.match(src, /isAvatarSlotPending/);

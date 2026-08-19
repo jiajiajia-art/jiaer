@@ -55,8 +55,8 @@ test('mergePlayerAvatarIntoProfile_重生成后缩放路径须识别为sessions'
       sessionAvatarUrl: next.avatarUrl,
       documentPortraitScale: 0.8,
     }),
-    0.85,
-    '点击重新生成后立绘须 0.85',
+    1,
+    '点击重新生成后立绘须 1（与文档同级）',
   );
 });
 

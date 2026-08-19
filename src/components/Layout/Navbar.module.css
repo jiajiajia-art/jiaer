@@ -340,7 +340,7 @@
     border-radius: 8px;
     box-shadow: var(--navbar-menu-shadow);
     min-width: 120px;
-    z-index: 1000;
+    z-index: 1300;
     animation: slideDown 0.3s ease-out;
     overflow: hidden;
 }

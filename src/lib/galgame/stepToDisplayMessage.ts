@@ -5,6 +5,12 @@
 
 import { sanitizeVisualStepText } from '../../utils/textUtils.ts';
 import { ensureMinPlayChoiceOptions } from './playChoiceOptions.ts';
+import {
+  pickSessionNpcAvatarUrl,
+  resolveNpcPlayImagePath,
+  resolveNpcPlayPortraitScale,
+  type SessionNpcPortraitLike,
+} from './npcPlayPortrait.ts';
 
 export type DisplayMessage = {
   id: number;
@@ -52,30 +58,9 @@ export type StepToMessageOptions = {
   npcNames?: string[] | null;
   /** 主角名：补选项时用「角色+动宾」 */
   playerName?: string | null;
+  /** 局内 NPC 档案；有 avatarUrl 时优先于文档 images */
+  sessionNpcEdits?: SessionNpcPortraitLike[] | null;
 };
-
-function resolveNpcImagePath(
-  step: Record<string, unknown>,
-  npcsById: Map<string, NonNullable<StepToMessagePreset['npcs']>[number]>,
-): string | undefined {
-  const npcId = step.speakerId || step.npcId;
-  const latestNpc = npcId ? npcsById.get(String(npcId)) : null;
-  const latestImages = latestNpc?.images;
-
-  if (latestImages && typeof latestImages === 'object') {
-    const active = step.activeImage;
-    if (typeof active === 'string' && latestImages[active]) {
-      return latestImages[active];
-    }
-    if (latestImages.base) return latestImages.base;
-    const first = Object.values(latestImages).find(
-      (value): value is string => typeof value === 'string' && value.trim() !== '',
-    );
-    return first;
-  }
-
-  return typeof step.activeImage === 'string' ? step.activeImage : undefined;
-}
 
 function defaultResolveImageUrl(imagePath?: string | null): string | undefined {
   if (!imagePath) return undefined;
@@ -140,11 +125,25 @@ export function stepToDisplayMessage(
       portraitOffsetX = player?.portraitOffsetX;
       portraitOffsetY = player?.portraitOffsetY;
     } else {
-      const npcImagePath = resolveNpcImagePath(record, npcsById);
-      if (npcImagePath) characterImage = toDisplayImageUrl(npcImagePath);
       const npcId = record.speakerId || record.npcId;
+      const speakerName = typeof record.speakerName === 'string' ? record.speakerName : '';
       const npcData = npcId ? npcsById.get(String(npcId)) : null;
-      portraitScale = npcData?.portraitScale;
+      const sessionAvatarUrl = pickSessionNpcAvatarUrl(options.sessionNpcEdits, {
+        npcId: npcId == null ? '' : String(npcId),
+        speakerName,
+      });
+      const npcImagePath = resolveNpcPlayImagePath({
+        npcId: npcId == null ? '' : String(npcId),
+        speakerName,
+        activeImage: typeof record.activeImage === 'string' ? record.activeImage : undefined,
+        documentImages: npcData?.images,
+        sessionAvatarUrl,
+      });
+      if (npcImagePath) characterImage = toDisplayImageUrl(npcImagePath);
+      portraitScale = resolveNpcPlayPortraitScale({
+        sessionAvatarUrl,
+        documentPortraitScale: npcData?.portraitScale,
+      });
       portraitOffsetX = npcData?.portraitOffsetX;
       portraitOffsetY = npcData?.portraitOffsetY;
     }

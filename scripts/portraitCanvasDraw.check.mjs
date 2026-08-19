@@ -27,17 +27,17 @@ test('computeContainBottomRect_宽图以宽度铺满并底对齐', () => {
   assert.ok(Math.abs(r.dy - 400) < 0.01);
 });
 
-test('computeContainBottomRect_maxFill限制占屏高对齐文档NPC', () => {
-  assert.equal(PLAY_TRIMMED_PORTRAIT_MAX_FILL, 0.94);
-  const r = computeContainBottomRect(300, 500, 100, 400, 0.94);
-  assert.ok(Math.abs(r.drawHeight - 470) < 0.01);
-  assert.ok(Math.abs(r.dy - 30) < 0.01);
+test('computeContainBottomRect_maxFill限制占屏高避免顶满顶栏', () => {
+  assert.equal(PLAY_TRIMMED_PORTRAIT_MAX_FILL, 0.76);
+  const r = computeContainBottomRect(300, 500, 100, 400, PLAY_TRIMMED_PORTRAIT_MAX_FILL);
+  assert.ok(Math.abs(r.drawHeight - 380) < 0.01);
+  assert.ok(Math.abs(r.dy - 120) < 0.01);
 });
 
-test('重生成方形立绘_裁切加maxFill后占屏接近文档竖图NPC', () => {
+test('重生成方形立绘_裁切加maxFill后与文档紧裁NPC同高', () => {
   const containerW = 300;
   const containerH = 493;
-  // 对照 api-test2：黄黄 sessions 立绘 opaqueAspect≈0.435；陆沉舟竖图无 trim 铺满
+  // 对照 api-test2：黄黄 sessions 立绘 opaqueAspect≈0.435；文档竖图无 trim 时也会被 CharacterLayer 限高
   const playerOpaqueW = 323;
   const playerOpaqueH = 743;
   const headroom = Math.round(playerOpaqueH * PLAY_PORTRAIT_HEADROOM_RATIO);
@@ -48,16 +48,20 @@ test('重生成方形立绘_裁切加maxFill后占屏接近文档竖图NPC', () 
     playerOpaqueH + headroom,
     PLAY_TRIMMED_PORTRAIT_MAX_FILL,
   );
-  const npc = computeContainBottomRect(containerW, containerH, 768, 1376);
+  const npc = computeContainBottomRect(
+    containerW,
+    containerH,
+    768,
+    1376,
+    PLAY_TRIMMED_PORTRAIT_MAX_FILL,
+  );
   const playerFill = player.drawHeight / containerH;
   const npcFill = npc.drawHeight / containerH;
   assert.ok(playerFill <= PLAY_TRIMMED_PORTRAIT_MAX_FILL + 1e-6);
-  assert.ok(playerFill >= 0.90, `playerFill=${playerFill}`);
-  assert.equal(npcFill, 1);
-  assert.ok(Math.abs(playerFill - PLAY_TRIMMED_PORTRAIT_MAX_FILL) < 0.01);
-  // 与 NPC 铺满差约 6 个百分点（本机实测黄黄 vs 陆沉舟约 4.2%）
+  assert.ok(playerFill >= 0.74, `playerFill=${playerFill}`);
+  assert.ok(Math.abs(npcFill - PLAY_TRIMMED_PORTRAIT_MAX_FILL) < 0.01);
   assert.ok(
-    Math.abs(playerFill - npcFill) <= 0.065,
+    Math.abs(playerFill - npcFill) <= 0.02,
     `playerFill=${playerFill} npcFill=${npcFill}`,
   );
 });
@@ -99,7 +103,9 @@ test('CharacterLayer_导入或重生成立绘须开启trimOpaquePadding', () => 
   assert.match(layer, /trimOpaquePadding/);
   assert.match(layer, /isImportedCardPortraitUrl/);
   assert.match(layer, /isSessionGeneratedPortraitUrl/);
+  assert.match(layer, /maxFillRatio=\{PLAY_TRIMMED_PORTRAIT_MAX_FILL\}/);
   assert.match(renderer, /trimOpaquePadding/);
+  assert.match(renderer, /maxFillRatio/);
   assert.match(renderer, /measureOpaqueBoundsFromBitmap/);
   assert.match(renderer, /resolveOpaqueSourceCrop/);
   assert.match(renderer, /PLAY_PORTRAIT_HEADROOM_RATIO/);

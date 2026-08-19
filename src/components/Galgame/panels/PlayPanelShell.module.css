@@ -469,38 +469,213 @@
 }
 
 .importPanel {
+  --import-cinnabar: #e03d4b;
+  --import-petal: #ffb3ba;
+  --import-ink: #f4ece8;
+  --import-mute: rgba(244, 236, 232, 0.58);
+  --import-display: 'Noto Serif SC', 'Songti SC', 'STSong', 'Source Han Serif SC', serif;
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
+  gap: 0.85rem;
   min-height: 0;
 }
 
+.importSearchWrap {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  padding: 0 0.1rem 0.55rem;
+  border-bottom: 1px solid rgba(224, 61, 75, 0.28);
+}
+
+.importSearchLabel {
+  flex-shrink: 0;
+  font-family: var(--import-display);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.42em;
+  color: var(--import-petal);
+}
+
 .importSearch {
-  width: 100%;
-  border-radius: 0.55rem;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(0, 0, 0, 0.38);
-  color: #e8eef8;
-  padding: 0.55rem 0.7rem;
+  flex: 1;
+  min-width: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--import-ink);
+  padding: 0.2rem 0;
   font: inherit;
-  font-size: 0.875rem;
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.importSearch::placeholder {
+  color: rgba(244, 236, 232, 0.32);
 }
 
 .importCard {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  --import-i: 0;
+  display: grid;
+  grid-template-columns: 6.8rem minmax(0, 1fr);
+  align-items: stretch;
   width: 100%;
+  min-height: 8.6rem;
+  margin: 0;
+  padding: 0;
   text-align: left;
   cursor: pointer;
   color: inherit;
   font: inherit;
   appearance: none;
   -webkit-appearance: none;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+  background:
+    linear-gradient(90deg, rgba(224, 61, 75, 0.16) 0, rgba(224, 61, 75, 0.16) 3px, transparent 3px),
+    linear-gradient(105deg, rgba(22, 8, 12, 0.2) 0%, rgba(16, 10, 12, 0.72) 42%, rgba(10, 8, 10, 0.55) 100%);
+  box-shadow: 0 1px 0 rgba(255, 186, 194, 0.1);
+  animation: importCardIn 0.42s ease both;
+  animation-delay: calc(var(--import-i) * 55ms);
 }
 
-.importCard:hover {
-  border-color: rgba(224, 61, 75, 0.45);
+.importCard:hover,
+.importCard:focus-visible {
+  background:
+    linear-gradient(90deg, var(--import-cinnabar) 0, var(--import-cinnabar) 3px, transparent 3px),
+    linear-gradient(105deg, rgba(48, 12, 18, 0.45) 0%, rgba(18, 10, 12, 0.82) 48%, rgba(10, 8, 10, 0.6) 100%);
+}
+
+.importCard:focus-visible {
+  outline: 2px solid var(--import-petal);
+  outline-offset: 3px;
+}
+
+.importCard:hover .importPortrait,
+.importCard:focus-visible .importPortrait {
+  transform: translateY(-0.12rem);
+  filter: brightness(1.06);
+}
+
+@keyframes importCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(0.55rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .importCard {
+    animation: none;
+  }
+  .importCard:hover .importPortrait,
+  .importCard:focus-visible .importPortrait {
+    transform: none;
+  }
+}
+
+.importPortrait {
+  position: relative;
+  width: 6.8rem;
+  height: 9.05rem;
+  margin-top: -0.35rem;
+  margin-bottom: -0.35rem;
+  align-self: center;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse 90% 46% at 50% 8%, rgba(224, 61, 75, 0.28), transparent 58%),
+    #12080c;
+  box-shadow:
+    8px 0 18px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(255, 186, 194, 0.22);
+}
+
+.importPortraitImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: bottom center;
+  display: block;
+}
+
+.importPortraitSeal {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  font-family: var(--import-display);
+  color: var(--import-petal);
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.importGenderSeal {
+  position: absolute;
+  right: -0.28rem;
+  bottom: 0.7rem;
+  z-index: 2;
+  min-width: 1.35rem;
+  padding: 0.18rem 0.12rem;
+  background: var(--import-cinnabar);
+  color: #fff7f6;
+  font-family: var(--import-display);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  writing-mode: vertical-rl;
+  transform: rotate(-8deg);
+  box-shadow: 0 4px 10px rgba(224, 61, 75, 0.35);
+}
+
+.importCopy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.85rem 0.85rem 0.85rem 0.95rem;
+}
+
+.importName {
+  margin: 0;
+  font-family: var(--import-display);
+  font-size: 1.18rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--import-ink);
+  line-height: 1.25;
+}
+
+.importBio {
+  margin: 0;
+  max-width: 22em;
+  padding-left: 0.55rem;
+  border-left: 1px solid rgba(224, 61, 75, 0.55);
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: var(--import-mute);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.importCue {
+  align-self: flex-start;
+  margin-top: 0.1rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  color: rgba(255, 179, 186, 0.55);
 }
 
 .chatBtn {
@@ -561,6 +736,13 @@
   align-self: flex-start;
   margin: 0;
   display: block;
+}
+
+/* 用户上传图：整图等比装入，禁止再 cover/头顶裁切 */
+.avatarPoster {
+  object-fit: contain;
+  object-position: center center;
+  background: #12080c;
 }
 
 /* 头像 ensure 中：墨室余烬占位（非通用 spinner） */
@@ -720,6 +902,12 @@
   object-fit: cover;
   object-position: top center;
   border-radius: 0.55rem;
+}
+
+.detailPortraitPoster {
+  object-fit: contain;
+  object-position: center center;
+  background: #12080c;
 }
 
 .detailPortraitEmpty {
@@ -1132,6 +1320,14 @@
   max-height: 14.5rem;
   object-fit: cover;
   object-position: top center;
+}
+
+.avatarPreviewPortraitPoster {
+  object-fit: contain;
+  object-position: center center;
+  height: auto;
+  max-height: min(68vh, 16rem);
+  background: #12080c;
 }
 
 .avatarPreviewPortraitEmpty {

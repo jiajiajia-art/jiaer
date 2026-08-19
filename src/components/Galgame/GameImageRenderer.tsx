@@ -57,6 +57,8 @@ export interface GameImageRendererProps {
   disableMobileGuard?: boolean;
   /** 裁掉 PNG/WebP 四周透明边后再 contain 底对齐（局内导入/重生成立绘用） */
   trimOpaquePadding?: boolean;
+  /** 最大占屏高；CharacterLayer 一律传入，避免少留白文档图顶满屏 */
+  maxFillRatio?: number;
   placeholder?: React.ReactNode;
   errorPlaceholder?: React.ReactNode;
   onLoad?: () => void;
@@ -69,6 +71,7 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
   useCanvas = true,
   disableMobileGuard = false,
   trimOpaquePadding = false,
+  maxFillRatio,
   placeholder,
   errorPlaceholder,
   onLoad,
@@ -139,12 +142,16 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
               { padding: 2, headroomRatio: PLAY_PORTRAIT_HEADROOM_RATIO },
             )
             : { sx: 0, sy: 0, sw: imgWidth, sh: imgHeight };
+          const fillCap = Number(maxFillRatio);
+          const maxFill = Number.isFinite(fillCap) && fillCap > 0 && fillCap < 1
+            ? fillCap
+            : (trimOpaquePadding ? PLAY_TRIMMED_PORTRAIT_MAX_FILL : undefined);
           const { dx, dy, drawWidth, drawHeight } = computeContainBottomRect(
             containerWidth,
             containerHeight,
             crop.sw,
             crop.sh,
-            trimOpaquePadding ? PLAY_TRIMMED_PORTRAIT_MAX_FILL : undefined,
+            maxFill,
           );
 
           // 填充透明背景（防止 Canvas 默认黑色背景）
@@ -173,7 +180,7 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
       return false;
     }
     return false;
-  }, [preferImgFallback, src, trimOpaquePadding]);
+  }, [preferImgFallback, src, trimOpaquePadding, maxFillRatio]);
 
   useEffect(() => {
     const container = canvasRef.current?.parentElement;

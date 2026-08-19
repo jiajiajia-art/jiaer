@@ -18,6 +18,7 @@ import { gameResourceManager } from "../../utils/gameResourceManager";
 import { canSubmitChoiceInteraction } from "../../lib/galgame/choiceInteractionGate";
 import { choiceStepHasPlayableOptions } from "../../lib/galgame/playChoiceOptions";
 import { fetchGalgameDocument, peekGalgameDocument } from "../../lib/galgame/galgameDocumentCache";
+import { pickSessionNpcAvatarUrl, resolveNpcPlayImagePath } from "../../lib/galgame/npcPlayPortrait";
 import {
     buildScenePreloadPlan,
     drainLeadingSceneChanges,
@@ -105,6 +106,13 @@ export const useGalgameController = (options?: {
     sessionPlayerAvatarUrl?: string | null;
     /** 局内档案角色名；选项文案优先用此名 */
     sessionPlayerName?: string | null;
+    /** 局内 NPC 档案；出场立绘优先用 avatarUrl 替换创作台旧图 */
+    sessionNpcEdits?: Array<{
+        id?: string | null;
+        name?: string | null;
+        originalName?: string | null;
+        avatarUrl?: string | null;
+    }> | null;
 }) => {
     const { user } = useAuthStore();
     const { fileId, sessionId } = useGameStore();
@@ -114,6 +122,7 @@ export const useGalgameController = (options?: {
     const bootNewStart = options?.bootNewStart === true;
     const sessionPlayerAvatarUrl = String(options?.sessionPlayerAvatarUrl || '').trim();
     const sessionPlayerName = String(options?.sessionPlayerName || '').trim();
+    const sessionNpcEdits = options?.sessionNpcEdits || null;
 
     // 回放模式检测
     const replayId = replayIdParam || searchParams.get('replayId');
@@ -656,6 +665,7 @@ export const useGalgameController = (options?: {
         stepHandlers.currentStep,
         sessionPlayerAvatarUrl || null,
         sessionPlayerName || null,
+        sessionNpcEdits,
     );
 
     const typingSpeed = isTextMode ? 20 : 30;
@@ -678,6 +688,7 @@ export const useGalgameController = (options?: {
         stepHandlers.currentStep,
         sessionPlayerAvatarUrl || null,
         sessionPlayerName || null,
+        sessionNpcEdits,
     );
 
     // 提取步骤中的角色图片 URL（用于预加载）
@@ -692,24 +703,24 @@ export const useGalgameController = (options?: {
                     return imageUrl ? withCacheBust(imageUrl) : null;
                 }
             } else {
-                // NPC 图片逻辑（与 useGalgameMessage 中的逻辑一致）
+                // NPC 图片逻辑（与 useGalgameMessage 一致：局内 avatarUrl 优先于文档图）
                 const npcId = step.speakerId || step.npcId;
-                if (npcId && presetData?.npcs?.npcs) {
-                    const npc = presetData.npcs.npcs.find((n: any) => String(n.id) === String(npcId));
-                    if (npc?.images && typeof npc.images === 'object') {
-                        if (step.activeImage && npc.images[step.activeImage]) {
-                            const imageUrl = getImageUrl(npc.images[step.activeImage]);
-                            return imageUrl ? withCacheBust(imageUrl) : null;
-                        }
-                        const baseImage = npc.images.base || Object.values(npc.images).find((v: any) => typeof v === 'string');
-                        if (baseImage) {
-                            const imageUrl = getImageUrl(baseImage as string);
-                            return imageUrl ? withCacheBust(imageUrl) : null;
-                        }
-                    }
-                }
-                if (step.activeImage) {
-                    const imageUrl = getImageUrl(step.activeImage);
+                const npc = npcId && presetData?.npcs?.npcs
+                    ? presetData.npcs.npcs.find((n: any) => String(n.id) === String(npcId))
+                    : null;
+                const sessionAvatarUrl = pickSessionNpcAvatarUrl(sessionNpcEdits, {
+                    npcId,
+                    speakerName: step.speakerName,
+                });
+                const npcImagePath = resolveNpcPlayImagePath({
+                    npcId,
+                    speakerName: step.speakerName,
+                    activeImage: step.activeImage,
+                    documentImages: npc?.images,
+                    sessionAvatarUrl,
+                });
+                if (npcImagePath) {
+                    const imageUrl = getImageUrl(npcImagePath);
                     return imageUrl ? withCacheBust(imageUrl) : null;
                 }
             }
@@ -721,7 +732,7 @@ export const useGalgameController = (options?: {
             }
         }
         return null;
-    }, [worldSetting, presetData, sessionPlayerAvatarUrl]);
+    }, [worldSetting, presetData, sessionPlayerAvatarUrl, sessionNpcEdits]);
 
     // 预加载下一个步骤的角色图片
     useEffect(() => {

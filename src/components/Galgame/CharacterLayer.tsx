@@ -4,6 +4,7 @@ import {
     isImportedCardPortraitUrl,
     isSessionGeneratedPortraitUrl,
 } from '../../lib/galgame/playerCharacterCard';
+import { PLAY_TRIMMED_PORTRAIT_MAX_FILL } from '../../lib/galgame/portraitCanvasDraw';
 import galgameStyles from '../../page/Galgame.module.css';
 import GameImageRenderer from './GameImageRenderer';
 import styles from './CharacterLayer.module.css';
@@ -239,6 +240,7 @@ const CharacterLayer: React.FC<CharacterLayerProps> = ({
                         src={characterImage}
                         alt=""
                         className={imageClassName}
+                        style={{ maxHeight: `${Math.round(PLAY_TRIMMED_PORTRAIT_MAX_FILL * 100)}%` }}
                     />
                 ) : (
                     <GameImageRenderer
@@ -247,6 +249,7 @@ const CharacterLayer: React.FC<CharacterLayerProps> = ({
                         useCanvas={true}
                         disableMobileGuard={true}
                         trimOpaquePadding={trimOpaquePadding}
+                        maxFillRatio={PLAY_TRIMMED_PORTRAIT_MAX_FILL}
                     />
                 )}
             </div>

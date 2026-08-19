@@ -85,8 +85,9 @@ const Navbar: React.FC<NavbarProps> = ({
     }, []);
 
     useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            const target = event.target as Node;
+        const handleClickOutside = (event: Event) => {
+            const target = event.target as Node | null;
+            if (!target) return;
 
             if (showUserMenu && avatarContainerRef.current && !avatarContainerRef.current.contains(target)) {
                 setShowUserMenu(false);
@@ -98,9 +99,12 @@ const Navbar: React.FC<NavbarProps> = ({
         };
 
         if (!showUserMenu && !isSearchOpen) return;
+        // 功能注释：微信 web-view 常用 touch，仅 mousedown 会关不掉或点开即关
         document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('touchstart', handleClickOutside, { passive: true });
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('touchstart', handleClickOutside);
         };
     }, [isSearchOpen, showUserMenu]);
 
@@ -358,9 +362,20 @@ const Navbar: React.FC<NavbarProps> = ({
                             <div ref={avatarContainerRef} className={styles.avatarContainer}>
                                 <div
                                     className={styles.avatar}
-                                    onClick={() => {
-                                        if (isWebViewEnv()) return;
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-haspopup="menu"
+                                    aria-expanded={showUserMenu}
+                                    onClick={(event) => {
+                                        // 功能注释：小程序 web-view 也要下拉菜单（个人中心/仓库/退出），禁止再短路 return
+                                        event.stopPropagation();
                                         setShowUserMenu((prev) => !prev);
+                                    }}
+                                    onKeyDown={(event) => {
+                                        if (event.key === 'Enter' || event.key === ' ') {
+                                            event.preventDefault();
+                                            setShowUserMenu((prev) => !prev);
+                                        }
                                     }}
                                 >
                                     <UserAvatar
@@ -382,8 +397,8 @@ const Navbar: React.FC<NavbarProps> = ({
                                     </UserAvatar>
                                 </div>
 
-                                {showUserMenu && !isWebViewEnv() && (
-                                    <div className={styles.userMenu}>
+                                {showUserMenu && (
+                                    <div className={styles.userMenu} role="menu">
                                         <button
                                             className={styles.menuBtn}
                                             onClick={() => {

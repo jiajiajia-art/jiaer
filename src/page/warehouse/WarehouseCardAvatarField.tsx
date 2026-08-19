@@ -1,5 +1,13 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
+import toast from 'react-hot-toast';
 import TrimmedTransparentImg from '../../components/TrimmedTransparentImg';
+import { playerCharacterCardsApi } from '../../api/galgame/playerCharacterCards';
+import {
+  PLAYER_UPLOAD_AVATAR_ACCEPT,
+  PLAYER_UPLOAD_AVATAR_MAX_BYTES,
+  compressImageFileToWebpUnderMaxBytes,
+} from '../../lib/galgame/compressImageToWebp';
+import { useAuthStore } from '../../store/useAuthStore';
 import { CHARACTER_GENERATION_COST, getImageUrl } from '../../utils/constants';
 import panel from './WarehousePanel.module.css';
 
@@ -9,31 +17,83 @@ type Props = {
   generating: boolean;
   disabled?: boolean;
   onGenerate: () => void;
+  /** 上传成功后写回草稿 / 列表预览 */
+  onAvatarUrl: (url: string) => void;
+  /** 编辑已有卡时传入，便于服务端同步 avatarUrl */
+  cardId?: string | null;
   fallbackChar?: string;
   /** 头像右侧：姓名、性别等表单项 */
   children?: React.ReactNode;
 };
 
-/** 左立绘画布占满；右侧生成按钮 + 姓名/性别等 */
+/**
+ * 左立绘画布；右侧先「上传图片」再「AI 生成」。
+ * 上传：客户端 WebP 质量 100，超 1MB 等比缩边；不抠图、不扣积分。
+ */
 const WarehouseCardAvatarField: React.FC<Props> = ({
   name,
   avatarUrl,
   generating,
   disabled,
   onGenerate,
+  onAvatarUrl,
+  cardId = null,
   fallbackChar = '我',
   children,
 }) => {
+  const token = useAuthStore((s) => s.user?.token);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
   const preview = avatarUrl ? getImageUrl(avatarUrl) : '';
   const label = (name || fallbackChar).trim().slice(0, 1) || '角';
   const busy = Boolean(generating);
-  // 功能注释：生图后台跑时只锁本按钮，姓名/性别/保存等不受影响
-  const locked = Boolean(disabled || generating);
+  // 功能注释：生图/上传互斥；姓名性别仍可改
+  const locked = Boolean(disabled || generating || uploading);
+
+  const requestUpload = () => {
+    if (!token) {
+      toast.error('请先登录');
+      return;
+    }
+    if (locked) return;
+    fileRef.current?.click();
+  };
+
+  const onFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!token) {
+      toast.error('请先登录');
+      return;
+    }
+    if (uploading || generating) return;
+    setUploading(true);
+    try {
+      const compressed = await compressImageFileToWebpUnderMaxBytes(file, {
+        maxBytes: PLAYER_UPLOAD_AVATAR_MAX_BYTES,
+      });
+      const res = await playerCharacterCardsApi.uploadAvatar(token, compressed.file, {
+        fileName: compressed.file.name,
+        cardId,
+      });
+      if (!res?.success || !res.data?.avatarUrl) {
+        toast.error(res?.message || '图片上传失败');
+        return;
+      }
+      onAvatarUrl(res.data.avatarUrl);
+      toast.success('图片已上传');
+    } catch (err) {
+      toast.error((err as Error)?.message || '图片上传失败');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   return (
     <section className={panel.avatarField} aria-label="角色图像">
       <div className={panel.avatarIdentityRow}>
-        <div className={panel.avatarPreview} aria-busy={busy}>
+        <div className={panel.avatarPreview} aria-busy={busy || uploading}>
           {preview ? (
             <TrimmedTransparentImg src={preview} className={panel.avatarPreviewImg} variant="bust" />
           ) : (
@@ -44,21 +104,45 @@ const WarehouseCardAvatarField: React.FC<Props> = ({
         </div>
 
         <div className={panel.avatarAside}>
-          <button
-            type="button"
-            className={`${panel.primaryBtn} ${panel.avatarGenBtn}`}
-            disabled={locked}
-            onClick={onGenerate}
-          >
-            {busy
-              ? '后台生成中…'
-              : avatarUrl
-                ? `重新生成图像 · ${CHARACTER_GENERATION_COST} 积分`
-                : `AI 生成图像 · ${CHARACTER_GENERATION_COST} 积分`}
-          </button>
+          <div className={panel.avatarActionStack}>
+            <button
+              type="button"
+              className={panel.avatarUploadBtn}
+              disabled={locked || !token}
+              onClick={requestUpload}
+            >
+              {uploading ? '上传中…' : '上传图片'}
+            </button>
+            <button
+              type="button"
+              className={`${panel.primaryBtn} ${panel.avatarGenBtn}`}
+              disabled={locked}
+              onClick={onGenerate}
+            >
+              {busy
+                ? '后台生成中…'
+                : avatarUrl
+                  ? `重新生成图像 · ${CHARACTER_GENERATION_COST} 积分`
+                  : `AI 生成图像 · ${CHARACTER_GENERATION_COST} 积分`}
+            </button>
+            <p className={panel.avatarUploadHint}>
+              上传转 WebP（质量 100）；超过 1MB 等比缩小。不做抠图。
+            </p>
+          </div>
           {children}
         </div>
       </div>
+      <input
+        ref={fileRef}
+        type="file"
+        accept={PLAYER_UPLOAD_AVATAR_ACCEPT}
+        className={panel.avatarFileInput}
+        aria-hidden
+        tabIndex={-1}
+        onChange={(ev) => {
+          void onFileSelected(ev);
+        }}
+      />
     </section>
   );
 };

@@ -24,6 +24,7 @@ import {
   pickDisplayAvatarFullUrl,
 } from '../../../lib/galgame/avatarThumbUrl';
 import { getImageUrl } from '../../../utils/constants';
+import { isSessionUploadedPortraitUrl } from '../../../lib/galgame/playerCharacterCard';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { useGameStore } from '../../../store/gameStore';
 import GameConfirmModal from '../GameConfirmModal';
@@ -385,6 +386,8 @@ const PrivateChatPanel: React.FC<PrivateChatPanelProps> = ({
     serverPlayerAvatar?.avatarUrl,
   ]);
   const playerAvatarSrc = playerAvatarSrcPath ? getImageUrl(playerAvatarSrcPath) : '';
+  const npcUploadLetterbox = isSessionUploadedPortraitUrl(npc?.avatarUrl || npcAvatarUrl);
+  const playerUploadLetterbox = isSessionUploadedPortraitUrl(playerAvatarUrl || serverPlayerAvatar?.avatarUrl);
   const npcPreviewFullPath = pickDisplayAvatarFullUrl([
     npc?.avatarUrl,
     npcAvatarUrl,
@@ -430,7 +433,11 @@ const PrivateChatPanel: React.FC<PrivateChatPanelProps> = ({
       aria-label={playerPreviewSrc ? `查看 ${playerLabel} 头像` : `${playerLabel} 暂无头像`}
     >
       {playerAvatarSrc ? (
-        <img className={styles.bubbleAvatar} src={playerAvatarSrc} alt={playerLabel} />
+        <img
+          className={playerUploadLetterbox ? `${styles.bubbleAvatar} ${styles.bubbleAvatarPoster}` : styles.bubbleAvatar}
+          src={playerAvatarSrc}
+          alt={playerLabel}
+        />
       ) : (
         <div className={styles.bubbleAvatarEmpty} aria-hidden />
       )}
@@ -491,7 +498,11 @@ const PrivateChatPanel: React.FC<PrivateChatPanelProps> = ({
       aria-label={`查看 ${title} 头像与介绍`}
     >
       {avatarSrc ? (
-        <img className={className} src={avatarSrc} alt={title} />
+        <img
+          className={npcUploadLetterbox ? `${className} ${styles.headAvatarPoster}` : className}
+          src={avatarSrc}
+          alt={title}
+        />
       ) : (
         <div className={emptyClassName} aria-hidden />
       )}
@@ -679,7 +690,13 @@ const PrivateChatPanel: React.FC<PrivateChatPanelProps> = ({
             <div className={styles.previewBody}>
               <div className={styles.previewPortraitWrap}>
                 {npcPreviewSrc ? (
-                  <img className={styles.previewPortrait} src={npcPreviewSrc} alt={title} />
+                  <img
+                    className={`${styles.previewPortrait}${
+                      npcUploadLetterbox ? ` ${styles.previewPortraitPoster}` : ''
+                    }`}
+                    src={npcPreviewSrc}
+                    alt={title}
+                  />
                 ) : (
                   <div className={styles.previewPortraitEmpty} aria-hidden />
                 )}
@@ -724,7 +741,13 @@ const PrivateChatPanel: React.FC<PrivateChatPanelProps> = ({
             </div>
             <div className={styles.previewBody}>
               <div className={styles.previewPortraitWrap}>
-                <img className={styles.previewPortrait} src={playerPreviewSrc} alt={playerLabel} />
+                <img
+                  className={`${styles.previewPortrait}${
+                    playerUploadLetterbox ? ` ${styles.previewPortraitPoster}` : ''
+                  }`}
+                  src={playerPreviewSrc}
+                  alt={playerLabel}
+                />
               </div>
               <h3 className={styles.previewName}>{playerLabel}</h3>
               <p className={styles.previewMeta}>当前主角</p>
