@@ -11,6 +11,7 @@ import {
   PLAY_PORTRAIT_HEADROOM_RATIO,
   PLAY_TRIMMED_PORTRAIT_MAX_FILL,
   resolveOpaqueSourceCrop,
+  resolvePortraitCanvasBufferSize,
 } from '../src/lib/galgame/portraitCanvasDraw.ts';
 
 test('computeContainBottomRect_高图以高度铺满并底对齐', () => {
@@ -94,6 +95,24 @@ test('resolveOpaqueSourceCrop_头顶留白对齐文档NPC构图', () => {
   assert.deepEqual(crop, { sx: 50, sy: 90, sw: 120, sh: 210 });
   // 主体占裁窗高度 = 200/210 ≈ 0.952，接近陆沉舟 opaqueH 0.947
   assert.ok(Math.abs(200 / crop.sh - 0.952) < 0.01);
+});
+
+test('resolvePortraitCanvasBufferSize_须按DPR放大缓冲', () => {
+  const r = resolvePortraitCanvasBufferSize(390, 700, 3);
+  assert.equal(r.dpr, 3);
+  assert.equal(r.bufferWidth, 1170);
+  assert.equal(r.bufferHeight, 2100);
+  const capped = resolvePortraitCanvasBufferSize(100, 100, 4);
+  assert.equal(capped.dpr, 3);
+  assert.equal(capped.bufferWidth, 300);
+});
+
+test('GameImageRenderer_须用DPR缓冲避免手机发糊', () => {
+  const dir = dirname(fileURLToPath(import.meta.url));
+  const renderer = readFileSync(join(dir, '../src/components/Galgame/GameImageRenderer.tsx'), 'utf8');
+  assert.match(renderer, /resolvePortraitCanvasBufferSize/);
+  assert.match(renderer, /devicePixelRatio/);
+  assert.match(renderer, /setTransform\(dpr/);
 });
 
 test('CharacterLayer_导入或重生成立绘须开启trimOpaquePadding', () => {

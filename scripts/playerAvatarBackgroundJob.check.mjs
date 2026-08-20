@@ -6,7 +6,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { mergePlayerAvatarIntoProfile } from '../src/lib/galgame/playerAvatarMerge.ts';
+import {
+  mergeIncomingSessionPlayerProfile,
+  mergePlayerAvatarIntoProfile,
+} from '../src/lib/galgame/playerAvatarMerge.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const jobSrc = readFileSync(join(root, 'src/lib/galgame/playerAvatarBackgroundJob.ts'), 'utf8');
@@ -31,6 +34,49 @@ test('mergePlayerAvatarIntoProfile_只改头像保留姓名人设', () => {
   assert.equal(next.avatarThumbUrl, '/new_150.webp');
   assert.equal(next.avatarNeedsRegen, false);
   assert.deepEqual(next.customAttributes, { a: '1' });
+});
+
+test('mergeIncomingSessionPlayerProfile_playUi旧快照不得冲掉本局新立绘', () => {
+  const oldUrl = '/public/visual/sessions/s1/avatars/player_1700000001000.webp';
+  const newUrl = '/public/visual/sessions/s1/avatars/player_1700000009000.webp';
+  const local = {
+    name: '林知夏',
+    gender: 'female',
+    persona: '理性, 冷静',
+    customAttributes: {},
+    avatarUrl: newUrl,
+    avatarThumbUrl: '/public/visual/sessions/s1/avatars/player_1700000009000_150.webp',
+  };
+  const incoming = {
+    name: '林知夏',
+    gender: 'female',
+    persona: '理性, 冷静',
+    customAttributes: {},
+    avatarUrl: oldUrl,
+    avatarThumbUrl: '/public/visual/sessions/s1/avatars/player_1700000001000_150.webp',
+  };
+  const merged = mergeIncomingSessionPlayerProfile(incoming, local);
+  assert.equal(merged?.avatarUrl, newUrl);
+  assert.equal(
+    merged?.avatarThumbUrl,
+    '/public/visual/sessions/s1/avatars/player_1700000009000_150.webp',
+  );
+});
+
+test('AttributesPanel_playUi回写须择优合并主角立绘', () => {
+  const src = readFileSync(join(root, 'src/components/Galgame/panels/AttributesPanel.tsx'), 'utf8');
+  assert.match(src, /mergeIncomingSessionPlayerProfile/);
+  assert.doesNotMatch(
+    src,
+    /setPlayerProfile\(data\.sessionPlayerProfile\)/,
+    '禁止把 play-ui 档案整表直接 set 冲掉本局新头像',
+  );
+});
+
+test('Galgame_档案变更须按时间戳合并立绘', () => {
+  const src = readFileSync(join(root, 'src/page/Galgame.tsx'), 'utf8');
+  assert.match(src, /mergeIncomingSessionPlayerProfile/);
+  assert.match(src, /handleSessionPlayerProfileChange/);
 });
 
 test('mergePlayerAvatarIntoProfile_重生成后缩放路径须识别为sessions', async () => {

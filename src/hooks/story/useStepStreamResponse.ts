@@ -3,6 +3,7 @@ import { truncateStepsAfterChoice } from '../mapGalgame/common/interactionUtils'
 import { cleanHistoryMessage, sanitizeVisualOptionText, stripNonStoryControlMarkup } from '../../utils/textUtils';
 import { isGenerationBusyError } from '../../lib/galgame/choiceStepDisplayGate';
 import { choiceStepHasPlayableOptions } from '../../lib/galgame/playChoiceOptions';
+import { normalizeUserFacingStreamError } from '../../lib/galgame/normalizeStreamErrorMessage';
 
 interface UseStepStreamResponseOptions {
     setStepQueue: React.Dispatch<React.SetStateAction<any[]>>;
@@ -40,63 +41,6 @@ export const useStepStreamResponse = ({
     onMissionFlag,
     onCompleteAllSteps,
 }: UseStepStreamResponseOptions) => {
-
-    const normalizeUserFacingStreamError = useCallback((error: unknown): string => {
-        let message = typeof error === 'string'
-            ? error
-            : error instanceof Error
-                ? error.message
-                : '发生错误';
-
-        if (typeof message === 'string' && message.trim().startsWith('{')) {
-            try {
-                const parsed = JSON.parse(message);
-                if (parsed.error?.message) {
-                    message = parsed.error.message;
-                } else if (parsed.message) {
-                    message = parsed.message;
-                } else if (parsed.error) {
-                    message = typeof parsed.error === 'string' ? parsed.error : JSON.stringify(parsed.error);
-                }
-            } catch {
-                // JSON 解析失败时保持原始信息
-            }
-        }
-
-        if (
-            typeof message === 'string' &&
-            message.includes('Action is already processing')
-        ) {
-            return '内容正在生成中，请稍候。';
-        }
-
-        if (
-            typeof message === 'string' &&
-            (
-                message.includes('LLM_OUTPUT_INCOMPLETE') ||
-                message.includes('Narrative generation was interrupted') ||
-                message.includes('did not return usable options') ||
-                message.includes('did not return completion metrics')
-            )
-        ) {
-            return '生成结果不完整，请重试。';
-        }
-
-                        if (
-                            typeof message === 'string' &&
-                            (
-                                message.includes('Failed to acquire lock') ||
-                                message.includes('Lock acquisition timeout') ||
-                                message.includes('visual:locks:') ||
-                                message.includes('Session is busy') ||
-                                message === 'LOCKED'
-                            )
-                        ) {
-                            return '当前内容正在生成中，请稍后再试';
-                        }
-
-        return message;
-    }, []);
 
     // 从文本中提取 MAIN_OPTION / OPTION 列表
     const extractOptionsFromText = useCallback((text: string): { mainOptions: string[]; options: string[] } => {
@@ -674,7 +618,7 @@ export const useStepStreamResponse = ({
             setIsWaitingForData(false);
             options?.onError?.(normalizeUserFacingStreamError(error));
         }
-    }, [setStepQueue, setSelectedOptionIndex, setIsWaitingForData, currentRequestId, normalizeUserFacingStreamError]);
+    }, [setStepQueue, setSelectedOptionIndex, setIsWaitingForData, currentRequestId]);
 
     return {
         processStreamResponse,

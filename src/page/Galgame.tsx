@@ -27,6 +27,7 @@ import {
   mergePlayerAvatarIntoProfile,
   subscribePlayerAvatarGenComplete,
 } from "../lib/galgame/playerAvatarBackgroundJob";
+import { mergeIncomingSessionPlayerProfile } from "../lib/galgame/playerAvatarMerge";
 import {
   mergeNpcAvatarIntoProfiles,
   mergeIncomingNpcProfiles,
@@ -633,14 +634,15 @@ const Galgame = () => {
 
     const handleSessionPlayerProfileChange = useCallback((next: SessionPlayerProfile | null) => {
         setSessionPlayerProfile((prev) => {
+            const merged = mergeIncomingSessionPlayerProfile(next, prev);
             const oldName = String(prev?.name || '').trim();
-            const newName = String(next?.name || '').trim();
+            const newName = String(merged?.name || '').trim();
             if (oldName && newName && oldName !== newName) {
                 setPlayerNameAliases((aliases) => (
                     aliases.includes(oldName) ? aliases : [...aliases, oldName]
                 ));
             }
-            return next;
+            return merged;
         });
     }, []);
 
@@ -769,6 +771,7 @@ const Galgame = () => {
                         ? { ...incoming, name: docName }
                         : incoming;
                 // 本地已有有效自设名时保留姓名，但补齐空人设/空性别；占位名允许整表替换
+                // 立绘按时间戳取新，禁止 play-ui 旧快照把刚生成的头像冲掉
                 setSessionPlayerProfile((prev) => {
                     if (prev?.name && !isPlaceholderPlayerName(prev.name)) {
                         const mergedPersona =
@@ -776,18 +779,22 @@ const Galgame = () => {
                             || (!isMultiChoicePersonaText(fixed.persona) ? String(fixed.persona || '').trim() : '')
                             || prev.persona
                             || '';
+                        const picked = mergeIncomingSessionPlayerProfile(fixed, prev);
                         return {
                             ...prev,
+                            ...(picked || {}),
+                            name: prev.name,
                             persona: mergedPersona,
                             gender: prev.gender || fixed.gender || prev.gender,
-                            avatarUrl: prev.avatarUrl || fixed.avatarUrl,
-                            avatarThumbUrl: prev.avatarThumbUrl || fixed.avatarThumbUrl,
                         };
                     }
                     const persona = !isMultiChoicePersonaText(fixed.persona)
                         ? fixed.persona
                         : '';
-                    return { ...fixed, persona: persona || fixed.persona || '' };
+                    return mergeIncomingSessionPlayerProfile(
+                        { ...fixed, persona: persona || fixed.persona || '' },
+                        prev,
+                    );
                 });
                 if (docName) {
                     setPlayerNameAliases((prev) => (prev.includes(docName) ? prev : [...prev, docName]));

@@ -12,6 +12,7 @@ import {
   PLAY_PORTRAIT_HEADROOM_RATIO,
   PLAY_TRIMMED_PORTRAIT_MAX_FILL,
   resolveOpaqueSourceCrop,
+  resolvePortraitCanvasBufferSize,
   type OpaqueBounds,
 } from '../../lib/galgame/portraitCanvasDraw';
 import styles from './GameImageRenderer.module.css';
@@ -128,9 +129,17 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
           const containerWidth = Math.max(rawContainerWidth || imgWidth, MIN_SIZE);
           const containerHeight = Math.max(rawContainerHeight || imgHeight, MIN_SIZE);
 
-          // 设置 Canvas 分辨率为容器尺寸（与 CSS display 尺寸一致）
-          canvas.width = containerWidth;
-          canvas.height = containerHeight;
+          // 功能注释：缓冲按 DPR 放大、逻辑坐标仍用 CSS 像素，避免手机 2x/3x 屏立绘发糊
+          const { dpr, bufferWidth, bufferHeight } = resolvePortraitCanvasBufferSize(
+            containerWidth,
+            containerHeight,
+            typeof window !== 'undefined' ? window.devicePixelRatio : 1,
+          );
+          canvas.width = bufferWidth;
+          canvas.height = bufferHeight;
+          canvas.style.width = `${containerWidth}px`;
+          canvas.style.height = `${containerHeight}px`;
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
           // object-fit: contain + object-position: bottom；可选先裁透明边
           const cacheKey = String(targetSrc || src || '').trim();
@@ -154,10 +163,10 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
             maxFill,
           );
 
-          // 填充透明背景（防止 Canvas 默认黑色背景）
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          // 填充透明背景（防止 Canvas 默认黑色背景）；坐标已是 CSS 像素（setTransform 已乘 DPR）
+          ctx.clearRect(0, 0, containerWidth, containerHeight);
           ctx.fillStyle = 'rgba(0, 0, 0, 0)';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.fillRect(0, 0, containerWidth, containerHeight);
 
           ctx.drawImage(
             bitmap,

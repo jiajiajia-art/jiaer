@@ -29,6 +29,29 @@ export const PLAY_PORTRAIT_HEADROOM_RATIO = 0.05;
  */
 export const PLAY_TRIMMED_PORTRAIT_MAX_FILL = 0.76;
 
+/** 手机 Retina 上限：避免 3x 屏把 Canvas 缓冲打到过大占内存 */
+export const PLAY_PORTRAIT_CANVAS_MAX_DPR = 3;
+
+/**
+ * 功能注释：立绘 Canvas 缓冲按 devicePixelRatio 放大，CSS 仍用逻辑像素，避免手机发糊。
+ */
+export function resolvePortraitCanvasBufferSize(
+  cssWidth: number,
+  cssHeight: number,
+  devicePixelRatio: number,
+  maxDpr: number = PLAY_PORTRAIT_CANVAS_MAX_DPR,
+): { dpr: number; bufferWidth: number; bufferHeight: number } {
+  const cssW = Math.max(1, Number(cssWidth) || 1);
+  const cssH = Math.max(1, Number(cssHeight) || 1);
+  const cap = Math.max(1, Number(maxDpr) || PLAY_PORTRAIT_CANVAS_MAX_DPR);
+  const dpr = Math.min(Math.max(Number(devicePixelRatio) || 1, 1), cap);
+  return {
+    dpr,
+    bufferWidth: Math.max(1, Math.round(cssW * dpr)),
+    bufferHeight: Math.max(1, Math.round(cssH * dpr)),
+  };
+}
+
 /** contain + 底部对齐；可选限制最大占屏高（对齐文档 NPC） */
 export function computeContainBottomRect(
   containerWidth: number,

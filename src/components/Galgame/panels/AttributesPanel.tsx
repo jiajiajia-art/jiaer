@@ -12,6 +12,7 @@ import {
   shouldSkipAttributeAutoRefresh,
 } from '../../../lib/galgame/attributePanelValues';
 import type { SessionPlayerProfile } from '../../../lib/galgame/playerCharacterCard';
+import { mergeIncomingSessionPlayerProfile } from '../../../lib/galgame/playerAvatarMerge';
 import PlayerArchiveSection, { type PlayerArchiveView } from './PlayerArchiveSection';
 
 interface AttributesPanelProps {
@@ -132,9 +133,13 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
           ? data.attributePanels
           : {};
       applyPanels(next);
+      // 功能注释：play-ui 可能仍是 regenerate 前的旧立绘；按 URL 时间戳择优，避免档案区闪回旧图并冲掉父级新头像
       if (data.sessionPlayerProfile && typeof data.sessionPlayerProfile === 'object') {
-        setPlayerProfile(data.sessionPlayerProfile);
-        onSessionPlayerProfileChange?.(data.sessionPlayerProfile);
+        setPlayerProfile((prev) => {
+          const merged = mergeIncomingSessionPlayerProfile(data.sessionPlayerProfile, prev);
+          if (merged) onSessionPlayerProfileChange?.(merged);
+          return merged;
+        });
       }
       setPlayerAvatarAbOnChange(!!data.ab?.playerAvatarOnChange);
     } catch (e: unknown) {
@@ -249,9 +254,13 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
         const data = await fetchPlayUiState(sessionId);
         if (cancelled) return;
         setPlayerAvatarAbOnChange(!!data.ab?.playerAvatarOnChange);
+        // 功能注释：与 reloadCachedPanels 相同——禁止用旧 play-ui 快照整表覆盖本局已展示的新立绘
         if (data.sessionPlayerProfile && typeof data.sessionPlayerProfile === 'object') {
-          setPlayerProfile(data.sessionPlayerProfile);
-          onSessionPlayerProfileChange?.(data.sessionPlayerProfile);
+          setPlayerProfile((prev) => {
+            const merged = mergeIncomingSessionPlayerProfile(data.sessionPlayerProfile, prev);
+            if (merged) onSessionPlayerProfileChange?.(merged);
+            return merged;
+          });
         }
       } catch {
         /* 档案/AB 拉取失败不挡属性面板 */
