@@ -19,6 +19,7 @@ import {
 import {
     countBatchNpcBoardFailures,
     isBatchNpcBoardSettled,
+    markNextPendingNpcAsGenerating,
 } from '../../../utils/batchNpcBoardSettlement';
 import { resolveCharacterBatchSelection } from '../../../lib/galgame/characterBatchSelection';
 
@@ -1108,25 +1109,33 @@ export const createHandlers = (ctx: HandlersContext) => {
                 return;
             }
             activeJobId = String(jobId);
+            const startItems = Array.isArray(startPayload?.items) ? startPayload.items : [];
+            const startLogs = Array.isArray(startPayload?.logs) ? startPayload.logs : [];
+            const startTotal = Number(startPayload?.totalCount ?? bootstrapTotal) || bootstrapTotal;
             setNpcBatchJobStatus({
                 success: true,
                 jobId: activeJobId,
                 fileId: startPayload?.fileId ?? fileId,
                 status: startPayload?.status ?? 'queued',
-                totalCount: Number(startPayload?.totalCount ?? bootstrapTotal) || bootstrapTotal,
-                completedCount: 0,
-                failedCount: 0,
+                totalCount: startTotal,
+                completedCount: Number(startPayload?.completedCount) || 0,
+                failedCount: Number(startPayload?.failedCount) || 0,
                 estimatedRemainingSeconds: null,
-                items: [],
-                logs: [],
-                stageStats: {
+                items: startItems,
+                logs: startLogs,
+                stageStats: startPayload?.stageStats || {
                     generateActive: 0,
-                    generateDone: 0,
+                    generateDone: Number(startPayload?.generateDoneCount) || 0,
                     rembgActive: 0,
-                    rembgDone: 0,
-                    failed: 0,
-                    pending: Number(startPayload?.totalCount ?? bootstrapTotal) || bootstrapTotal,
-                    total: Number(startPayload?.totalCount ?? bootstrapTotal) || bootstrapTotal,
+                    rembgDone: Number(startPayload?.rembgDoneCount) || 0,
+                    failed: Number(startPayload?.failedCount) || 0,
+                    pending: startItems.length > 0
+                        ? startItems.filter((row: { stage?: string }) => {
+                            const stage = String(row?.stage || 'pending');
+                            return stage === 'pending' || stage === '';
+                        }).length
+                        : startTotal,
+                    total: startTotal,
                 },
             } as BatchImageJobStatus);
             const appliedPartialIds = new Set<string>();
@@ -1149,6 +1158,9 @@ export const createHandlers = (ctx: HandlersContext) => {
                 if (pollStep === 'timeout') {
                     break;
                 }
+
+                // status 内 await 单张约 60s：先乐观标「生图中」，避免整段只显示排队
+                setNpcBatchJobStatus((prev) => markNextPendingNpcAsGenerating(prev) || prev);
 
                 const statusResponse: any = await api.getNpcBatchJobStatus(activeJobId);
                 if (sessionId !== npcBatchGenerationSessionRef.current) {

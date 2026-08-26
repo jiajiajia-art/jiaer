@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
@@ -76,6 +76,8 @@ const AssetDetails: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+    const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
+    const loadingRef = useRef(false);
 
     const yearOptions = useMemo(() => {
         const years = new Set<number>([defaultYear]);
@@ -92,7 +94,9 @@ const AssetDetails: React.FC = () => {
         return currencyTab;
     };
 
-    const loadActivities = async (nextPage = 1, append = false) => {
+    const loadActivities = useCallback(async (nextPage = 1, append = false) => {
+        if (loadingRef.current) return;
+        loadingRef.current = true;
         setIsLoading(true);
         try {
             const params: GetPointsActivitiesParams = {
@@ -116,7 +120,8 @@ const AssetDetails: React.FC = () => {
             setPoints(payload.points ?? 0);
             setDiamonds(payload.diamonds ?? 0);
             setItems((prev) => (append ? [...prev, ...payload.items] : payload.items));
-            setTotalPages(1);
+            const nextTotalPages = Number(payload.totalPages);
+            setTotalPages(Number.isFinite(nextTotalPages) && nextTotalPages > 0 ? nextTotalPages : 1);
             setPage(nextPage);
         } catch (error: unknown) {
             const message =
@@ -127,16 +132,17 @@ const AssetDetails: React.FC = () => {
                         : 'Failed to load asset activities.';
             toast.error(message || 'Failed to load asset activities.');
         } finally {
+            loadingRef.current = false;
             setIsLoading(false);
         }
-    };
+    }, [currencyTab, direction, selectedYear, selectedMonth]);
 
     useEffect(() => {
-        void loadActivities(1, false);
         setItems([]);
         setPage(1);
         setTotalPages(1);
-    }, [currencyTab, direction, selectedYear, selectedMonth]);
+        void loadActivities(1, false);
+    }, [loadActivities]);
 
     useEffect(() => {
         if (!isFilterOpen) {
@@ -183,6 +189,23 @@ const AssetDetails: React.FC = () => {
     const filterLabel = selectedYear !== null && selectedMonth !== null
         ? `${selectedYear}.${String(selectedMonth).padStart(2, '0')}`
         : t('assetDetails.allTime');
+
+    // 功能注释：滚到底部 sentinel 自动加载下一页（移动端下拉/上滑翻页）
+    useEffect(() => {
+        const node = loadMoreSentinelRef.current;
+        if (!node || !hasMore) return undefined;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                const entry = entries[0];
+                if (!entry?.isIntersecting || loadingRef.current) return;
+                void loadActivities(page + 1, true);
+            },
+            { root: null, rootMargin: '120px', threshold: 0 },
+        );
+        observer.observe(node);
+        return () => observer.disconnect();
+    }, [hasMore, page, loadActivities, items.length]);
 
     const openFilter = () => {
         setDraftYear(selectedYear);
@@ -434,14 +457,20 @@ const AssetDetails: React.FC = () => {
                         )}
 
                         {items.length > 0 && hasMore ? (
-                            <button
-                                type="button"
-                                className={styles.loadMoreButton}
-                                disabled={isLoading}
-                                onClick={() => void loadActivities(page + 1, true)}
-                            >
-                                {isLoading ? t('assetDetails.loadingMore') : t('assetDetails.loadMore')}
-                            </button>
+                            <>
+                                <div ref={loadMoreSentinelRef} className={styles.loadMoreSentinel} aria-hidden />
+                                <button
+                                    type="button"
+                                    className={styles.loadMoreButton}
+                                    disabled={isLoading}
+                                    onClick={() => void loadActivities(page + 1, true)}
+                                >
+                                    {isLoading ? t('assetDetails.loadingMore') : t('assetDetails.loadMore')}
+                                </button>
+                            </>
+                        ) : null}
+                        {items.length > 0 && !hasMore ? (
+                            <p className={styles.listEndHint}>{t('assetDetails.noMore')}</p>
                         ) : null}
                     </section>
                 </section>

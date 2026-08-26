@@ -99,7 +99,8 @@ const PointsDetails: React.FC = () => {
       const payload = response.data.data;
       setCurrentPoints(payload.points ?? 0);
       setItems((prev) => (append ? [...prev, ...payload.items] : payload.items));
-      setTotalPages(1);
+      const nextTotalPages = Number(payload.totalPages);
+      setTotalPages(Number.isFinite(nextTotalPages) && nextTotalPages > 0 ? nextTotalPages : 1);
       setPage(nextPage);
     } catch (error: unknown) {
       toast.error(getApiErrorMessage(error, 'Failed to load points activities.'));

@@ -30,6 +30,21 @@ const EditorApi = {
     generateGameFromIdea: (idea:string) => {
         return api.post<UploadFileResponse>(`/visual/document/generate-from-idea`, { idea: idea });
     },
+    /** 一句话弹窗：AI 生成/扩写创意描述（扣 1 积分） */
+    generateIdeaText: (seed?: string) => {
+        return api.post<{
+            success: boolean;
+            data?: {
+                text: string;
+                pointsDeducted: number;
+                remainingPoints: number;
+            };
+            message?: string;
+            error?: string;
+        }>(`/visual/document/generate-idea-text`, {
+            seed: seed || '',
+        });
+    },
     uploadGameFile: (file:File) => {
         const formData = new FormData();
         formData.append('document', file);
@@ -180,7 +195,10 @@ const EditorApi = {
         });
     },
     getGenerateAllImagesJobStatus: (jobId: string) => {
-        return api.get<BatchImageJobStatus>(`/visual/generate-images/jobs/${jobId}/status`);
+        // 切片批任务在 status 内 await 生图，需与单人生图同「不限时」
+        return api.get<BatchImageJobStatus>(`/visual/generate-images/jobs/${jobId}/status`, {
+            timeout: 0,
+        });
     },
     getGenerateAllImagesJobResult: (jobId: string) => {
         return api.get<BatchImageJobResult>(`/visual/generate-images/jobs/${jobId}/result`);

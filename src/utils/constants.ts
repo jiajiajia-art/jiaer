@@ -8,6 +8,12 @@ export const SCENE_GENERATION_COST = 6;      // 场景生成费用
 export const CHARACTER_GENERATION_COST = 6;   // 角色/NPC/差分图生成费用
 /** 局内角色档案字段 AI 生成（关系/简介/态度），对齐后端 txt_npc_profile_field */
 export const NPC_PROFILE_FIELD_GENERATION_COST = 1;
+/** TXT 文游：AI 一句话生成游戏设定，对齐后端 txt_idea_generate */
+export const TXT_IDEA_GENERATE_COST = 10;
+/** TXT 文游：一句话弹窗内创意描述 AI 生成，对齐后端 txt_idea_text */
+export const TXT_IDEA_TEXT_COST = 1;
+/** TXT 文游：文档导入解析，对齐后端 txt_doc_parse */
+export const TXT_DOC_PARSE_COST = 10;
 export const OPTION_COST = 2;
 export const INPUT_COST = 3;
 export const HISTORY_MESSAGE_THRESHOLD = 5;

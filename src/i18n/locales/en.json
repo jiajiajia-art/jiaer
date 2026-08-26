@@ -1099,7 +1099,16 @@
     "parseCompleteDesc": "Parsing complete, ready to jump to next step...",
     "aiIdeaDesc": "Enter your game idea, AI will automatically generate a complete game setting document",
     "generateNow": "Generate Now",
-    "documentUploadTip": "Supports PDF / Word (.pdf / .docx), will automatically jump to \"World Settings Form\" after parsing",
+    "generateNowWithCost": "Generate Now · {{points}} pts",
+    "documentImportWithCost": "Document Import ({{points}} pts)",
+    "documentUploadTip": "Supports PDF / Word (.pdf / .docx). {{points}} points will be deducted after successful parsing, then jump to World Settings",
+    "ideaGenerateCostHint": "{{points}} points will be deducted after successful generation",
+    "startGenerateWithCost": "Generate · {{points}} pts",
+    "aiGenerateIdeaTextWithCost": "AI Generate · {{points}}",
+    "ideaTextSuccessDeducted": "Idea text generated (-{{points}} pts)",
+    "insufficientPointsForDoc": "Insufficient points (need {{required}}, have {{current}})",
+    "docParseSuccessDeducted": "Document parsed (-{{points}} pts)",
+    "ideaGenerateSuccessDeducted": "Game settings generated (-{{points}} pts)",
     "dragOrClickUpload": "Drag and drop file or click to upload",
     "step2AutoOpen": "After parsing is complete, the system will automatically open Step 2 for you to continue proofreading.",
     "errorInfo": "Error Information",
@@ -2045,7 +2054,8 @@
     "loading": "Loading...",
     "empty": "No transaction records under the current filter.",
     "loadMore": "Load More",
-    "loadingMore": "Loading More..."
+    "loadingMore": "Loading More...",
+    "noMore": "No more records"
   },
   "creatorStats": {
     "pageTitle": "Creator Dashboard",

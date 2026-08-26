@@ -10,6 +10,7 @@ import CreateEmptyGameModal from './CreateEmptyGameModal';
 import GenerateFromIdeaModal from './GenerateFromIdeaModal';
 import type { UploadResult } from '../../../hooks/editor/useFileUpload';
 import { getUploadEtaText } from '../../../utils/etaText';
+import { TXT_DOC_PARSE_COST, TXT_IDEA_GENERATE_COST } from '../../../utils/constants';
 
 interface DocumentsPanelProps {
     onFileUpload: (file: File) => Promise<UploadResult>;
@@ -405,7 +406,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                             onClick={() => setShowGenerateFromIdeaModal(true)}
                             disabled={isParsing}
                         >
-                            {t('createGame.generateNow')}
+                            {t('createGame.generateNowWithCost', { points: TXT_IDEA_GENERATE_COST })}
                         </button>
                     </div>
                 </div>
@@ -413,9 +414,9 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
 
             <div className={styles.twoCol}>
                 <div className={styles.card}>
-                    <h3>{t('createGame.documentImport')}</h3>
+                    <h3>{t('createGame.documentImportWithCost', { points: TXT_DOC_PARSE_COST })}</h3>
                     <p className={styles.muted}>
-                        {t('createGame.documentUploadTip')}
+                        {t('createGame.documentUploadTip', { points: TXT_DOC_PARSE_COST })}
                     </p>
 
                     {!uploadedFile ? (

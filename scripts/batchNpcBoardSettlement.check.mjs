@@ -8,6 +8,7 @@ import {
     isBatchSceneBoardAllSuccess,
     shouldShowRetryIncompleteBatchTasks,
     listBatchNpcRetryTargetItems,
+    markNextPendingNpcAsGenerating,
     BATCH_STUCK_GENERATE_SECONDS,
 } from '../src/utils/batchNpcBoardSettlement.ts';
 
@@ -136,4 +137,29 @@ test('场景有失败_不算allSuccess', () => {
     ];
     assert.equal(isBatchSceneBoardAllSuccess(items, 3), false);
     assert.equal(shouldShowRetryIncompleteBatchTasks(items, 3), true);
+});
+
+test('markNextPendingNpcAsGenerating_应把首张pending标为生图中', () => {
+    const next = markNextPendingNpcAsGenerating({
+        items: [
+            { id: 'a', name: '甲', stage: 'pending' },
+            { id: 'b', name: '乙', stage: 'pending' },
+        ],
+        stageStats: { generateActive: 0, pending: 2, total: 2 },
+    });
+    assert.equal(next?.items?.[0]?.stage, 'generate_start');
+    assert.equal(next?.items?.[1]?.stage, 'pending');
+    assert.equal(next?.stageStats?.generateActive, 1);
+    assert.equal(next?.stageStats?.pending, 1);
+});
+
+test('markNextPendingNpcAsGenerating_已有进行中则不改', () => {
+    const prev = {
+        items: [
+            { id: 'a', stage: 'generate_start' },
+            { id: 'b', stage: 'pending' },
+        ],
+        stageStats: { generateActive: 1, pending: 1, total: 2 },
+    };
+    assert.equal(markNextPendingNpcAsGenerating(prev), prev);
 });

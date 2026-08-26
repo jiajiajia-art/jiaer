@@ -174,3 +174,62 @@ export function resolveRetryCharacterIdsFromBoard(
     }
     return [...new Set(ids.filter(Boolean))];
 }
+
+const IN_FLIGHT_NPC_STAGES = new Set([
+    'generate_start',
+    'generate_done',
+    'rembg_start',
+    'rembg_done',
+]);
+
+/**
+ * 功能注释：status 长轮询（单张约 60s）返回前，把下一张 pending 乐观标为生图中，
+ * 避免看板长时间停在「排队 N / 进行中 0」。
+ */
+export function markNextPendingNpcAsGenerating<T extends {
+    items?: BatchNpcBoardItemLike[] | null;
+    stageStats?: {
+        generateActive?: number;
+        generateDone?: number;
+        rembgActive?: number;
+        rembgDone?: number;
+        failed?: number;
+        pending?: number;
+        total?: number;
+    } | null;
+}>(status: T | null | undefined): T | null | undefined {
+    if (!status || !Array.isArray(status.items) || status.items.length === 0) {
+        return status;
+    }
+    const items = status.items;
+    if (items.some((row) => IN_FLIGHT_NPC_STAGES.has(String(row?.stage || '')))) {
+        return status;
+    }
+    const nextIndex = items.findIndex((row) => {
+        const stage = String(row?.stage || 'pending');
+        return stage === 'pending' || stage === '';
+    });
+    if (nextIndex < 0) return status;
+
+    const nextItems = items.map((row, i) => (
+        i === nextIndex
+            ? { ...row, stage: 'generate_start' }
+            : row
+    ));
+    const pending = nextItems.filter((row) => {
+        const stage = String(row?.stage || 'pending');
+        return stage === 'pending' || stage === '';
+    }).length;
+    const prevStats = status.stageStats || {};
+    return {
+        ...status,
+        items: nextItems,
+        stageStats: {
+            ...prevStats,
+            generateActive: 1,
+            pending,
+            total: Number(prevStats.total) || nextItems.length,
+        },
+    };
+}
+

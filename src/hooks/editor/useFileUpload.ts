@@ -6,7 +6,10 @@ import worldEditor from '../../api/worldInteraction/worldEditor';
 import { useGameStore } from '../../store/gameStore';
 import { useUploadStore } from '../../store/uploadStore';
 import { useEditorStore } from '../../store/editorStore';
+import { useAuthStore } from '../../store/useAuthStore';
 import { formatIdeaJobStage } from '../../utils/ideaJobStage';
+import { refreshAuthUserPoints } from '../../lib/auth/refreshUserPoints';
+import { TXT_DOC_PARSE_COST, TXT_IDEA_GENERATE_COST } from '../../utils/constants';
 
 type JobStage =
     | 'uploaded'
@@ -46,6 +49,8 @@ interface JobStatusResponseCompleted {
     estimatedRemainingSeconds?: number;
     estimatedTotalSeconds?: number;
     estimateSource?: string;
+    pointsDeducted?: number;
+    pointsRemaining?: number;
 }
 
 interface JobStatusResponseFailed {
@@ -108,6 +113,59 @@ const getResponseErrorMessage = (payload: unknown, fallback = 'Upload failed, pl
     return responseData?.error || responseData?.message || fallback;
 };
 
+/**
+ * 功能注释：TXT 文档导入 / 一句话生成前本地预检积分（后端仍会再校验）。
+ */
+const ensureEnoughPointsForVisualDoc = async (
+    required: number,
+    t: (key: string, options?: Record<string, unknown>) => string,
+): Promise<boolean> => {
+    const latestPoints = await refreshAuthUserPoints();
+    const current = typeof latestPoints === 'number'
+        ? latestPoints
+        : (useAuthStore.getState().user?.user?.points ?? 0);
+    if (current < required) {
+        toast.error(t('createGame.insufficientPointsForDoc', {
+            required,
+            current,
+        }));
+        return false;
+    }
+    return true;
+};
+
+/**
+ * 功能注释：任务成功后根据 status 回写积分并 toast；缺字段时刷新服务端余额兜底。
+ */
+const applyVisualDocPointsSuccess = async (
+    completedData: JobStatusResponseCompleted,
+    kind: 'document' | 'idea',
+    t: (key: string, options?: Record<string, unknown>) => string,
+) => {
+    const fallbackCost = kind === 'idea' ? TXT_IDEA_GENERATE_COST : TXT_DOC_PARSE_COST;
+    // 功能注释：仅在后端明确返回扣分时 toast；未扣则刷新余额但不假装已扣
+    const hasDeductedField = typeof completedData.pointsDeducted === 'number';
+    const deducted = hasDeductedField
+        ? Math.max(0, completedData.pointsDeducted as number)
+        : 0;
+
+    if (typeof completedData.pointsRemaining === 'number') {
+        useAuthStore.getState().updateUser({ points: completedData.pointsRemaining });
+    } else {
+        await refreshAuthUserPoints();
+    }
+
+    if (deducted > 0) {
+        toast.success(
+            kind === 'idea'
+                ? t('createGame.ideaGenerateSuccessDeducted', { points: deducted })
+                : t('createGame.docParseSuccessDeducted', { points: deducted }),
+        );
+    } else if (!hasDeductedField) {
+        console.warn('[useFileUpload] completed without pointsDeducted, expected', fallbackCost);
+    }
+};
+
 export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions): UseFileUploadReturn => {
     const { t } = useTranslation();
     const { setFileId, setIsPreset } = useGameStore();
@@ -119,6 +177,7 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
         fileName: string,
         dataMode: string,
         startTime?: number,
+        pointsKind?: 'document' | 'idea',
     ) => {
         addJob(jobId, fileName, startTime);
 
@@ -170,7 +229,28 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                     }, delay);
                     delay = Math.min(Math.round(delay * 1.3), maxDelay);
                 } else if (statusData.status === 'completed') {
-                    const completedData = statusData as JobStatusResponseCompleted;
+                    let completedData = statusData as JobStatusResponseCompleted;
+
+                    // 功能注释：完成后若尚未带回扣分结果，再拉一次 status 触发 API 侧幂等补扣
+                    if (
+                        pointsKind
+                        && mode !== 'worldInteraction'
+                        && !(typeof completedData.pointsDeducted === 'number' && completedData.pointsDeducted > 0)
+                    ) {
+                        try {
+                            const settleRes = await EditorApi.checkUploadStatus(jobId);
+                            const settled = settleRes.data as JobStatusResponseCompleted;
+                            if (settled?.status === 'completed') {
+                                completedData = {
+                                    ...completedData,
+                                    ...settled,
+                                };
+                            }
+                        } catch (settleErr) {
+                            console.warn('[useFileUpload] settle re-fetch failed:', settleErr);
+                        }
+                    }
+
                     if (completedData.fileId) {
                         setFileId(completedData.fileId);
                         setIsParsed(false);
@@ -186,6 +266,10 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                             estimatedTotalSeconds: completedData.estimatedTotalSeconds ?? completedData.elapsedSeconds ?? null,
                             estimateSource: completedData.estimateSource ?? null,
                         });
+
+                        if (pointsKind) {
+                            await applyVisualDocPointsSuccess(completedData, pointsKind, t);
+                        }
 
                         onUploadComplete(completedData.fileId, dataMode).catch((error) => {
                             console.error('Error fetching editor data after upload:', error);
@@ -244,7 +328,7 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
         };
 
         pollStatus();
-    }, [mode, addJob, updateJob, removeJob, setFileId, setIsParsed, setIsPreset, onUploadComplete]);
+    }, [mode, addJob, updateJob, removeJob, setFileId, setIsParsed, setIsPreset, onUploadComplete, t]);
 
     const handleFileUpload = useCallback(async (file: File): Promise<UploadResult> => {
         const uploadStartTime = Date.now();
@@ -256,6 +340,20 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                 fileSize: file.size,
                 fileType: file.type,
             });
+
+            // 功能注释：TXT 文档导入需 10 积分，本地先预检再上传
+            if (mode !== 'worldInteraction') {
+                const enough = await ensureEnoughPointsForVisualDoc(TXT_DOC_PARSE_COST, t);
+                if (!enough) {
+                    return {
+                        success: false,
+                        error: t('createGame.insufficientPointsForDoc', {
+                            required: TXT_DOC_PARSE_COST,
+                            current: useAuthStore.getState().user?.user?.points ?? 0,
+                        }),
+                    };
+                }
+            }
 
             const uploadResponse = mode === 'worldInteraction'
                 ? await worldEditor.uploadWorldFile(file)
@@ -315,7 +413,13 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                 mode: mode || 'visual',
             });
 
-            startPollingUploadStatus(jobId, file.name, mode || 'visual', uploadStartTime);
+            startPollingUploadStatus(
+                jobId,
+                file.name,
+                mode || 'visual',
+                uploadStartTime,
+                mode === 'worldInteraction' ? undefined : 'document',
+            );
 
             if (initialFileId) {
                 updateJob(jobId, {
@@ -349,6 +453,12 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
             return false;
         }
         try {
+            // 功能注释：一句话生成需 10 积分，本地先预检
+            const enough = await ensureEnoughPointsForVisualDoc(TXT_IDEA_GENERATE_COST, t);
+            if (!enough) {
+                return false;
+            }
+
             const response = await EditorApi.generateGameFromIdea(idea);
             if (response.status === 200) {
                 const legacy = response.data;
@@ -386,12 +496,18 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
 
             const generateStartTime = Date.now();
             console.log('[一句话生成] 开始轮询, jobId:', jobId);
-            startPollingUploadStatus(jobId, `${t('createGame.generatingGame')}：${idea.substring(0, 20)}...`, 'visual', generateStartTime);
+            startPollingUploadStatus(
+                jobId,
+                `${t('createGame.generatingGame')}：${idea.substring(0, 20)}...`,
+                'visual',
+                generateStartTime,
+                'idea',
+            );
 
             return true;
         } catch (error) {
             console.error('Error generating from idea:', error);
-            toast.error(t('createGame.generateFailedRetry'));
+            toast.error(getBackendErrorMessage(error, t('createGame.generateFailedRetry')));
             return false;
         }
     }, [mode, t, setFileId, setIsParsed, setIsPreset, updateJob, startPollingUploadStatus]);

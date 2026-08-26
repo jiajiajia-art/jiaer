@@ -178,6 +178,10 @@ export interface PointsActivitiesResponse {
   points: number;
   diamonds: number;
   items: PointsActivityItem[];
+  page?: number;
+  pageSize?: number;
+  total?: number;
+  totalPages?: number;
 }
 
 // 钻石兑换积分

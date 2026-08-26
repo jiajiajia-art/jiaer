@@ -380,6 +380,10 @@ export interface CheckUploadStatusResponse {
   estimatedRemainingSeconds?: number;
   estimatedTotalSeconds?: number;
   estimateSource?: string;
+  /** 文档导入 / 一句话生成成功后的扣分结果 */
+  pointsDeducted?: number;
+  pointsRemaining?: number;
+  requiredPoints?: number;
 }
 
 export interface UploadGameCoverResponse {

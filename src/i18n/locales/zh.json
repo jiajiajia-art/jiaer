@@ -1099,7 +1099,16 @@
     "parseCompleteDesc": "解析完成，准备跳转到下一步...",
     "aiIdeaDesc": "输入你的游戏创意，AI 自动生成完整的游戏设定文档",
     "generateNow": "立即生成",
-    "documentUploadTip": "支持 PDF / Word（.pdf / .docx），解析完成后将自动跳转到「世界观表单」",
+    "generateNowWithCost": "立即生成 · {{points}} 积分",
+    "documentImportWithCost": "文档导入（{{points}} 积分）",
+    "documentUploadTip": "支持 PDF / Word（.pdf / .docx），解析成功后扣除 {{points}} 积分并自动跳转到「世界观表单」",
+    "ideaGenerateCostHint": "生成成功后将扣除 {{points}} 积分",
+    "startGenerateWithCost": "开始生成 · {{points}} 积分",
+    "aiGenerateIdeaTextWithCost": "AI生成 · {{points}}",
+    "ideaTextSuccessDeducted": "创意描述已生成（-{{points}} 积分）",
+    "insufficientPointsForDoc": "积分不足（需要 {{required}}，当前 {{current}}）",
+    "docParseSuccessDeducted": "文档解析完成（-{{points}} 积分）",
+    "ideaGenerateSuccessDeducted": "游戏设定已生成（-{{points}} 积分）",
     "dragOrClickUpload": "拖拽文件或点击上传",
     "step2AutoOpen": "解析完成后系统将自动为你打开 Step 2 继续校对。",
     "errorInfo": "异常信息",
@@ -2044,7 +2053,8 @@
     "loading": "加载中...",
     "empty": "当前筛选条件下暂无流水记录。",
     "loadMore": "加载更多",
-    "loadingMore": "加载中..."
+    "loadingMore": "加载中...",
+    "noMore": "没有更多了"
   },
   "creatorStats": {
     "pageTitle": "创作者数据中心",
