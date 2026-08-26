@@ -21,6 +21,13 @@ const getGameDataApi = {
     getGameData: (type: string, data: PublicGameRequest) => {
         return api.get<UserGameResponse>(`/auth/games/public/${type}`, { params: data });
     },
+    /** 首页推荐 campaign 曝光上报（登录态） */
+    exposeRecommended: (items: Array<{ fileId: string; campaignId: number }>) => {
+        return api.post<{ success: boolean; data?: { inserted: number } }>(
+            `/auth/games/recommend/expose`,
+            { items },
+        );
+    },
     getCarouselData: () => {
         return api.get<UserGameResponse>(`/auth/games/featured`);
     },

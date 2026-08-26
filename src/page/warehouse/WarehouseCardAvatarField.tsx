@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import TrimmedTransparentImg from '../../components/TrimmedTransparentImg';
 import { playerCharacterCardsApi } from '../../api/galgame/playerCharacterCards';
@@ -43,12 +43,19 @@ const WarehouseCardAvatarField: React.FC<Props> = ({
 }) => {
   const token = useAuthStore((s) => s.user?.token);
   const fileRef = useRef<HTMLInputElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
   const [uploading, setUploading] = useState(false);
   const preview = avatarUrl ? getImageUrl(avatarUrl) : '';
   const label = (name || fallbackChar).trim().slice(0, 1) || '角';
   const busy = Boolean(generating);
   // 功能注释：生图/上传互斥；姓名性别仍可改
   const locked = Boolean(disabled || generating || uploading);
+
+  /** 功能注释：立绘写入后滚回预览区，避免手机端头顶被挡在弹窗外。 */
+  useEffect(() => {
+    if (!preview || !previewRef.current) return;
+    previewRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [preview]);
 
   const requestUpload = () => {
     if (!token) {
@@ -93,9 +100,13 @@ const WarehouseCardAvatarField: React.FC<Props> = ({
   return (
     <section className={panel.avatarField} aria-label="角色图像">
       <div className={panel.avatarIdentityRow}>
-        <div className={panel.avatarPreview} aria-busy={busy || uploading}>
+        <div
+          ref={previewRef}
+          className={`${panel.avatarPreview}${preview ? ` ${panel.avatarPreviewHasImage}` : ''}`}
+          aria-busy={busy || uploading}
+        >
           {preview ? (
-            <TrimmedTransparentImg src={preview} className={panel.avatarPreviewImg} variant="bust" />
+            <TrimmedTransparentImg src={preview} className={panel.avatarPreviewImg} variant="full" />
           ) : (
             <span className={panel.avatarPreviewFallback} aria-hidden>
               {label}

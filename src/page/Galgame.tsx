@@ -7,6 +7,8 @@ import { MdSettings, MdTimeline, MdPerson, MdOutlineAssessment, MdFlag, MdDns, M
 import {
   buildOpeningRoutesFromWorldKeyEvents,
   buildSilentDefaultGameStartConfig,
+  clampMaxResponseChars,
+  GAME_START_LIMITS,
   GAME_START_UE_COPY,
   isMultiChoicePersonaText,
   normalizeGameStartGender,
@@ -103,6 +105,7 @@ import {
     mergeQuests,
     normalizeQuests,
     resolveQuestsPanelRefreshPlan,
+    shouldSkipQuestAutoRefresh,
     type QuestItem,
 } from "../lib/galgame/quests";
 import { useQuestTrackerTypewriter } from "../hooks/galgame/useQuestTrackerTypewriter";
@@ -139,6 +142,8 @@ const Galgame = () => {
     const questsRef = useRef<QuestItem[]>([]);
     questsRef.current = quests;
     const questsAbortRef = useRef<AbortController | null>(null);
+    const questsStreamingRef = useRef(false);
+    const questsLastStartedAtRef = useRef<number | null>(null);
     const attrsAbortRef = useRef<AbortController | null>(null);
     const attrsStreamingRef = useRef(false);
     const attrsLastStartedAtRef = useRef<number | null>(null);
@@ -166,6 +171,11 @@ const Galgame = () => {
     const [systemWorldBookEntries, setSystemWorldBookEntries] = useState<GameStartWorldBookEntry[] | null>(null);
     const [systemWritingStyle, setSystemWritingStyle] = useState<GameStartWritingStyle | null>(null);
     const [systemPersonaBlocks, setSystemPersonaBlocks] = useState<GameStartPersonaBlocks | null>(null);
+    /** 设置「最大回复」；默认 800，进局后可被 gameStartConfig 覆盖 */
+    const [maxResponseChars, setMaxResponseChars] = useState(
+      GAME_START_LIMITS.maxResponseChars.default,
+    );
+    const maxResponsePersistTimerRef = useRef<number | null>(null);
     const [sessionNpcEdits, setSessionNpcEdits] = useState<PlayerEditableNpc[]>([]);
     /** 新角色尚未保存时，后台头像先挂这里，保存后再合并 */
     const pendingNpcAvatarsRef = useRef<Record<string, NpcAvatarMergeInput>>({});
@@ -320,6 +330,7 @@ const Galgame = () => {
                 },
                 worldBookEntries: patch.worldBookEntries,
                 writingStyle: patch.writingStyle,
+                maxResponseChars,
                 openingRouteId: resolved.openingRouteId,
                 openingMonologue: patch.openingMonologue ?? resolved.openingMonologue,
                 retainedStorylineIds: patch.retainedStorylineIds ?? resolved.retainedStorylineIds,
@@ -333,6 +344,9 @@ const Galgame = () => {
             setSystemWorldBookEntries(checked.data.worldBookEntries || []);
             setSystemWritingStyle(checked.data.writingStyle || null);
             setSystemPersonaBlocks(checked.data.player.personaBlocks || null);
+            if (checked.data.maxResponseChars != null) {
+                setMaxResponseChars(checked.data.maxResponseChars);
+            }
             // 换路线后写入确定性人设
             if (routePersona) {
                 setSessionPlayerProfile((prev) => {
@@ -354,8 +368,101 @@ const Galgame = () => {
             controller.presetData?.world?.player,
             sessionPlayerProfile,
             persistGameStartConfig,
+            systemPersonaBlocks,
+            maxResponseChars,
         ],
     );
+
+    /**
+     * 功能注释：把最大回复立即写入 session（取消防抖），下一回合 narrative 即用新上限。
+     * @param overrideChars 拖条当帧值；不传则用当前 state（供「完成」按钮）
+     */
+    const flushMaxResponseCharsPersist = useCallback(async (overrideChars?: number) => {
+        if (controller.isReplay) return;
+        if (maxResponsePersistTimerRef.current != null) {
+            window.clearTimeout(maxResponsePersistTimerRef.current);
+            maxResponsePersistTimerRef.current = null;
+        }
+        const clamped = clampMaxResponseChars(
+            overrideChars != null ? overrideChars : maxResponseChars,
+        );
+        if (clamped == null) return;
+        const routeId = openingRouteId || openingRoutes[0]?.id || '';
+        const resolved = resolveOpeningRouteSelection(openingRoutes, routeId);
+        if (!resolved.ok || !resolved.openingRouteId) return;
+        const presetPlayer = controller.presetData?.world?.player as
+            | { name?: string; gender?: string }
+            | undefined;
+        const checked = validateGameStartConfig({
+            player: {
+                name: resolvePlayerDisplayName(
+                    [sessionPlayerProfile?.name, presetPlayer?.name],
+                ) || GAME_START_UE_COPY.fallbackPlayerName,
+                gender: normalizeGameStartGender(
+                    sessionPlayerProfile?.gender || presetPlayer?.gender,
+                ),
+                personaBlocks: systemPersonaBlocks ?? undefined,
+                attributes: sessionPlayerProfile?.customAttributes,
+            },
+            worldBookEntries: systemWorldBookEntries ?? undefined,
+            writingStyle: systemWritingStyle ?? undefined,
+            maxResponseChars: clamped,
+            openingRouteId: resolved.openingRouteId,
+            openingMonologue: resolved.openingMonologue,
+            retainedStorylineIds: resolved.retainedStorylineIds,
+        });
+        if (!checked.ok) return;
+        try {
+            await persistGameStartConfig(checked.data);
+        } catch (err) {
+            console.warn('[Galgame] putGameStartConfig maxResponse flush failed', err);
+        }
+    }, [
+        controller.isReplay,
+        controller.presetData?.world?.player,
+        maxResponseChars,
+        openingRouteId,
+        openingRoutes,
+        persistGameStartConfig,
+        sessionPlayerProfile,
+        systemPersonaBlocks,
+        systemWorldBookEntries,
+        systemWritingStyle,
+    ]);
+
+    /**
+     * 功能注释：设置里拖「最大回复」时本地立即生效，防抖写入 gameStartConfig，
+     * 避免滑条拖动时打爆 PUT；点「完成」时走 flush 立即落盘。
+     */
+    const handleMaxResponseCharsChange = useCallback(
+        (chars: number) => {
+            const clamped = clampMaxResponseChars(chars);
+            if (clamped == null) return;
+            setMaxResponseChars(clamped);
+            if (controller.isReplay) return;
+            if (maxResponsePersistTimerRef.current != null) {
+                window.clearTimeout(maxResponsePersistTimerRef.current);
+            }
+            maxResponsePersistTimerRef.current = window.setTimeout(() => {
+                maxResponsePersistTimerRef.current = null;
+                void flushMaxResponseCharsPersist(clamped);
+            }, 400);
+        },
+        [controller.isReplay, flushMaxResponseCharsPersist],
+    );
+
+    /** 功能注释：完成设置——立即落盘后关弹窗；不离开当前局。 */
+    const handleConfirmSettings = useCallback(async () => {
+        await flushMaxResponseCharsPersist();
+    }, [flushMaxResponseCharsPersist]);
+
+    useEffect(() => {
+        return () => {
+            if (maxResponsePersistTimerRef.current != null) {
+                window.clearTimeout(maxResponsePersistTimerRef.current);
+            }
+        };
+    }, []);
 
     // 自动追踪游戏时长（监听页面可见性变化和页面卸载）
     useGameDurationTracking(!controller.isReplay ? (fileId || undefined) : undefined);
@@ -811,6 +918,12 @@ const Galgame = () => {
                 if (gsc.writingStyle && typeof gsc.writingStyle === 'object') {
                     setSystemWritingStyle(gsc.writingStyle as GameStartWritingStyle);
                 }
+                const clampedMax = clampMaxResponseChars(
+                    (gsc as { maxResponseChars?: unknown }).maxResponseChars,
+                );
+                if (clampedMax != null) {
+                    setMaxResponseChars(clampedMax);
+                }
                 const player = gsc.player as { personaBlocks?: GameStartPersonaBlocks } | undefined;
                 if (player?.personaBlocks) {
                     setSystemPersonaBlocks(player.personaBlocks);
@@ -934,11 +1047,22 @@ const Galgame = () => {
 
     const refreshQuests = useCallback(async (opts?: { background?: boolean }) => {
         if (!sessionId || controller.isReplay) return;
+        if (
+            shouldSkipQuestAutoRefresh({
+                isStreaming: questsStreamingRef.current,
+                lastStartedAt: questsLastStartedAtRef.current,
+                now: Date.now(),
+            })
+        ) {
+            return;
+        }
         const plan = resolveQuestsPanelRefreshPlan(questsRef.current);
         const background = opts?.background ?? plan.hasCache;
         questsAbortRef.current?.abort();
         const controllerAbort = new AbortController();
         questsAbortRef.current = controllerAbort;
+        questsStreamingRef.current = true;
+        questsLastStartedAtRef.current = Date.now();
         if (background) {
             setQuestsRefreshing(true);
         } else {
@@ -1015,6 +1139,7 @@ const Galgame = () => {
             if (questsAbortRef.current === controllerAbort) {
                 setQuestsLoading(false);
                 setQuestsRefreshing(false);
+                questsStreamingRef.current = false;
             }
         }
     }, [sessionId, controller.isReplay, t]);
@@ -1035,6 +1160,23 @@ const Galgame = () => {
         controller.gameStarted,
         controller.stepHandlers?.isWaitingForData,
         refreshAttributePanels,
+    ]);
+
+    // 任务：每轮剧情结束后后台刷新，与属性面板对齐，避免完成态/截止时间滞后
+    const questsLastAutoTurnRef = useRef(false);
+    useEffect(() => {
+        if (controller.isReplay || !sessionId || !controller.gameStarted) return;
+        const waiting = Boolean(controller.stepHandlers?.isWaitingForData);
+        if (questsLastAutoTurnRef.current && !waiting) {
+            void refreshQuests({ background: true });
+        }
+        questsLastAutoTurnRef.current = waiting;
+    }, [
+        sessionId,
+        controller.isReplay,
+        controller.gameStarted,
+        controller.stepHandlers?.isWaitingForData,
+        refreshQuests,
     ]);
 
     // 打开属性/任务面板：缓存先展示；任务 LLM 异步 merge（不因有缓存而跳过）
@@ -1510,7 +1652,7 @@ const Galgame = () => {
         <>
             <div className={styles.pageRoot}>
                 <div
-                    className={`${styles.mainContent} ${characterAnimation === 'injury' ? styles.worldInjury : ''}`}
+                    className={`${styles.mainContent} ${characterAnimation === 'injury' ? styles.worldInjury : ''}${controller.isTextMode ? ` ${styles.mainContentTextMode}` : ''}`}
                     style={{
                         backgroundColor: 'transparent',
                         position: 'relative',
@@ -1659,6 +1801,7 @@ const Galgame = () => {
                         )}
                         {!controller.showGalgameHistory && controller.isTextMode && (
                             <TextModeDisplay
+                                key="galgame-text-mode-display"
                                 steps={textModeDisplaySteps}
                                 currentStepIndex={controller.currentStepIndex}
                                 currentDisplayText={controller.textModalDisplayText}
@@ -1676,8 +1819,8 @@ const Galgame = () => {
                             />
                         )}
                     </div>
-                    {/* 顶栏任务追踪（与任务面板同源）；新任务文案变化时打字机出场 */}
-                    {!controller.isReplay && controller.gameStarted && questTrackerText ? (
+                    {/* 顶栏任务追踪（与任务面板同源）；文本模式隐藏，避免与可滚动正文重叠 */}
+                    {!controller.isTextMode && !controller.isReplay && controller.gameStarted && questTrackerText ? (
                         <div
                             key={questTrackerText}
                             className={`${styles.questTracker} ${styles.questTrackerEnter}`}
@@ -2012,6 +2155,9 @@ const Galgame = () => {
                     <SettingsModal
                         isOpen={isSettingsOpen}
                         onClose={() => setIsSettingsOpen(false)}
+                        onConfirmSettings={
+                            controller.isReplay ? undefined : handleConfirmSettings
+                        }
                         onExitGame={controller.isReplay ? controller.handleExitGame : navigateBackSafe}
                         onDeleteSession={controller.isReplay ? undefined : handleDeleteSessionInGame}
                         hideExitButton={controller.isReplay}
@@ -2024,6 +2170,12 @@ const Galgame = () => {
                         }}
                         volume={volume}
                         onVolumeChange={setVolume}
+                        maxResponseChars={maxResponseChars}
+                        maxResponseCharsMin={GAME_START_LIMITS.maxResponseChars.min}
+                        maxResponseCharsMax={GAME_START_LIMITS.maxResponseChars.max}
+                        onMaxResponseCharsChange={
+                            controller.isReplay ? undefined : handleMaxResponseCharsChange
+                        }
                         points={controller.isReplay ? null : user?.user?.points}
                         onOpenSave={
                             controller.isReplay

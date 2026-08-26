@@ -23,7 +23,13 @@ test('warehouseCardAvatar_编辑表单有生图入口', () => {
   const css = readFileSync(join(root, 'src/page/warehouse/WarehousePanel.module.css'), 'utf8');
   assert.match(api, /player-character-cards\/avatar/);
   assert.match(api, /generateAvatar/);
+  assert.match(api, /avatarStyle\?:/);
   assert.match(api, /uploadAvatar/);
+  assert.match(persona, /WarehouseAvatarGenerateConfirm/);
+  assert.match(npc, /WarehouseAvatarGenerateConfirm/);
+  assert.match(persona, /avatarStyle:\s*opts\?\.avatarStyleId/);
+  assert.match(npc, /avatarStyle:\s*opts\?\.avatarStyleId/);
+  assert.match(persona, /promptSupplement:\s*opts\?\.promptSupplement/);
   assert.match(api, /avatar\/upload/);
   assert.match(persona, /WarehouseCardAvatarField/);
   assert.match(persona, /startWarehouseCardAvatarBackgroundGen/);
@@ -40,14 +46,21 @@ test('warehouseCardAvatar_编辑表单有生图入口', () => {
   assert.match(css, /object-fit:\s*contain/);
   assert.match(css, /object-position:\s*bottom center/);
   assert.match(css, /\.avatarIdentityRow\s*\{/);
+  assert.match(css, /\.avatarPreviewHasImage/);
+  assert.match(css, /\.formBody[\s\S]*?min-height:\s*0/);
+  assert.match(css, /\.formBody[\s\S]*?overflow-y:\s*scroll/);
+  assert.match(css, /\.formBody[\s\S]*?scrollbar-gutter:\s*stable/);
+  assert.match(css, /\.formCard[\s\S]*?grid-template-rows:\s*minmax\(0,\s*1fr\)/);
   assert.match(css, /\.avatarUploadBtn\b/);
   assert.match(css, /\.avatarPreviewFallback[\s\S]*?place-items:\s*center/);
   assert.match(field, /TrimmedTransparentImg/);
-  assert.match(field, /variant="bust"/);
+  assert.match(field, /variant="full"/);
   assert.match(persona, /WarehouseCardAvatarField[\s\S]*?wh-persona-name/);
   assert.match(persona, /formPreviewPortraitFallback/);
   assert.match(npc, /WarehouseCardAvatarField[\s\S]*?wh-npc-name/);
   assert.match(npc, /formPreviewPortraitFallback/);
+  assert.match(field, /avatarPreviewHasImage/);
+  assert.match(field, /scrollIntoView/);
   assert.doesNotMatch(field, /warehouseCardAvatarConstraintHint|avatarPlate/);
 });
 

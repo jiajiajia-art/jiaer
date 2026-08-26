@@ -110,6 +110,24 @@ test('Galgame_文本模式仍渲染场景背景', () => {
   );
 });
 
+test('Galgame_文本模式应隐藏任务追踪并使用可滚动布局', () => {
+  const galgame = readFileSync(join(root, 'src/page/Galgame.tsx'), 'utf8');
+  const css = readFileSync(join(root, 'src/page/Galgame.module.css'), 'utf8');
+  const textCss = readFileSync(join(root, 'src/components/Galgame/TextModeDisplay.module.css'), 'utf8');
+  assert.match(galgame, /!controller\.isTextMode && !controller\.isReplay[\s\S]*questTrackerText/);
+  assert.match(galgame, /mainContentTextMode/);
+  assert.match(galgame, /key="galgame-text-mode-display"/);
+  assert.match(css, /\.gameContentWrapperTextMode[\s\S]*top:\s*3\.5rem/);
+  assert.match(css, /\.gameContentWrapperTextMode[\s\S]*bottom:\s*5\.75rem/);
+  assert.match(textCss, /touch-action:\s*pan-y/);
+  assert.match(textCss, /min-height:\s*0/);
+  assert.match(textCss, /\.textModeComposer\b/);
+  assert.match(textCss, /\.messagesContainerWithComposer\b/);
+  const textMode = readFileSync(join(root, 'src/components/Galgame/TextModeDisplay.tsx'), 'utf8');
+  assert.match(textMode, /textModeComposer/);
+  assert.doesNotMatch(textMode, /customInputSection[\s\S]*createGame\.send/);
+});
+
 test('GameBackgroundRenderer_加载中不隐藏容器', () => {
   const src = readFileSync(
     join(root, 'src/components/Galgame/GameBackgroundRenderer.tsx'),

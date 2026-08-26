@@ -55,7 +55,6 @@ interface MessageItemProps {
     isWaitingForData: boolean;
     isCompressingContext?: boolean;
     onChoiceClick?: (option: { id: number; text: string }) => void;
-    onCustomInputSubmit?: (value: string) => void;
     isFreeRound?: boolean;
     readOnly?: boolean;
     surface?: 'dark' | 'light';
@@ -71,14 +70,11 @@ const MessageItem = memo<MessageItemProps>(({
     isWaitingForData,
     isCompressingContext = false,
     onChoiceClick, 
-    onCustomInputSubmit,
     isFreeRound = false,
     readOnly = false,
     t,
     surface = 'dark',
 }) => {
-    const [customInput, setCustomInput] = useState('');
-
     if (!step) return null;
 
     // 功能注释：只读阅读页用全局下标做目录锚点，避免窗口局部 index 错位
@@ -90,21 +86,7 @@ const MessageItem = memo<MessageItemProps>(({
           }
         : {};
 
-    const handleCustomSubmit = () => {
-        if (customInput.trim() && onCustomInputSubmit && !isTyping && !isCompressingContext) {
-            onCustomInputSubmit(customInput.trim());
-            setCustomInput('');
-        }
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleCustomSubmit();
-        }
-    };
-
-    // 计算要显示的文本
+    // 根据类型渲染不同的消息样式
     const getDisplayText = () => {
         // 当前步骤处于打字中：始终使用打字中的文本（即使刚开始还是空串）
         // 这样可以避免“先整段闪一下再开始打字”的问题
@@ -115,7 +97,6 @@ const MessageItem = memo<MessageItemProps>(({
         return step.content || '';
     };
 
-    // 根据类型渲染不同的消息样式
     if (step.type === 'narration' || step.type === 'transition') {
         const displayText = getDisplayText();
         
@@ -195,35 +176,6 @@ const MessageItem = memo<MessageItemProps>(({
                             ))}
                         </div>
                     )}
-
-                    {!readOnly && (
-                    <div className={styles.customInputSection}>
-                        <div className={styles.customInputHeader}>
-                            <span>{hasOptions ? t('createGame.orCustomInput') : t('createGame.customInput')}</span>
-                            {!isFreeRound && (
-                                <span className={styles.pointsCostHint}>{t('createGame.pointsCostHint').replace('{{cost}}', String(POINTS_CONFIG.custom))}</span>
-                            )}
-                        </div>
-                        <div className={styles.customInputWrapper}>
-                            <input
-                                type="text"
-                                className={styles.customInput}
-                                placeholder={t('createGame.inputPlaceholder')}
-                                value={customInput}
-                                onChange={(e) => setCustomInput(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                disabled={isTyping || isCompressingContext}
-                            />
-                            <button 
-                                className={styles.customInputButton}
-                                onClick={handleCustomSubmit}
-                                disabled={!customInput.trim() || isTyping || isCompressingContext}
-                            >
-                                {t('createGame.send')}
-                            </button>
-                        </div>
-                    </div>
-                    )}
                 </div>
             </div>
         );
@@ -255,6 +207,34 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const shouldStickToBottomRef = useRef(true);
     const hasInitialAutoScrolledRef = useRef(false);
+    const [customInput, setCustomInput] = useState('');
+
+    const currentStep = currentStepIndex >= 0 ? steps[currentStepIndex] : null;
+    const currentChoiceHasOptions = (currentStep?.options?.length ?? 0) > 0;
+    const showComposer = Boolean(
+        !readOnly
+        && onCustomInputSubmit
+        && currentStep?.type === 'choice'
+        && !isTyping
+        && !(isWaitingForData && currentStepIndex >= 0 && steps[currentStepIndex]?.type === 'choice'),
+    );
+
+    useEffect(() => {
+        setCustomInput('');
+    }, [currentStep?.id]);
+
+    const handleCustomSubmit = () => {
+        if (!customInput.trim() || !onCustomInputSubmit || isTyping || isCompressingContext) return;
+        onCustomInputSubmit(customInput.trim());
+        setCustomInput('');
+    };
+
+    const handleCustomKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleCustomSubmit();
+        }
+    };
 
     // 跟踪用户是否“贴底”（用户往上滚动阅读时不要强制拉回底部）
     useEffect(() => {
@@ -271,6 +251,12 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
         el.addEventListener('scroll', handleScroll, { passive: true });
         return () => el.removeEventListener('scroll', handleScroll);
     }, []);
+
+    // 功能注释：进入文本模式或步骤骤增时，首帧滚到底部，避免切换后卡在中间无法继续阅读。
+    useEffect(() => {
+        hasInitialAutoScrolledRef.current = false;
+        shouldStickToBottomRef.current = true;
+    }, [steps.length > 0 ? steps[0]?.id : 'empty']);
 
     useEffect(() => {
         const el = messagesContainerRef.current;
@@ -293,7 +279,7 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
             if (!el2) return;
             el2.scrollTop = el2.scrollHeight;
         });
-    }, [steps.length, currentStepIndex, currentDisplayText, isTyping, isWaitingForData]);
+    }, [steps.length, currentStepIndex, currentDisplayText, isTyping, isWaitingForData, showComposer]);
 
     const lastStep = steps.length > 0 ? steps[steps.length - 1] : null;
     const lastStepIsChoice = lastStep?.type === 'choice';
@@ -306,7 +292,11 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
             {steps.length === 0 && !isWaitingForData ? (
                 <div className={styles.emptyState}>{t('createGame.noContent')}</div>
             ) : (
-                <div className={styles.messagesContainer} ref={messagesContainerRef}>
+                <>
+                <div
+                    className={`${styles.messagesContainer}${showComposer ? ` ${styles.messagesContainerWithComposer}` : ''}`}
+                    ref={messagesContainerRef}
+                >
                     {steps.map((step, index) => {
                         // 只有当前步骤才传递打字相关状态
                         const isCurrent = index === currentStepIndex && currentStepIndex >= 0;
@@ -328,7 +318,6 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
                                 isWaitingForData={isWaitingForData}
                                 isCompressingContext={isCompressingContext}
                                 onChoiceClick={onChoiceClick}
-                                onCustomInputSubmit={onCustomInputSubmit}
                                 isFreeRound={isFreeRound}
                                 readOnly={readOnly}
                                 surface={surface}
@@ -361,6 +350,36 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
                         </div>
                     )}
                 </div>
+                {showComposer ? (
+                    <div className={styles.textModeComposer} aria-label={t('createGame.customInput')}>
+                        <div className={styles.customInputHeader}>
+                            <span>{currentChoiceHasOptions ? t('createGame.orCustomInput') : t('createGame.customInput')}</span>
+                            {!isFreeRound && (
+                                <span className={styles.pointsCostHint}>{t('createGame.pointsCostHint').replace('{{cost}}', String(POINTS_CONFIG.custom))}</span>
+                            )}
+                        </div>
+                        <div className={styles.customInputWrapper}>
+                            <input
+                                type="text"
+                                className={styles.customInput}
+                                placeholder={t('createGame.inputPlaceholder')}
+                                value={customInput}
+                                onChange={(e) => setCustomInput(e.target.value)}
+                                onKeyDown={handleCustomKeyDown}
+                                disabled={isCompressingContext}
+                            />
+                            <button
+                                type="button"
+                                className={styles.customInputButton}
+                                onClick={handleCustomSubmit}
+                                disabled={!customInput.trim() || isCompressingContext}
+                            >
+                                {t('createGame.send')}
+                            </button>
+                        </div>
+                    </div>
+                ) : null}
+                </>
             )}
         </div>
     );

@@ -24,6 +24,8 @@ import {
   mergeQuests,
   getTrackedQuest,
   getQuestTrackerLabel,
+  formatQuestDeadlineDisplay,
+  shouldSkipQuestAutoRefresh,
 } from '../src/lib/galgame/quests.ts';
 import {
   shouldRestartQuestTrackerTypewriter,
@@ -242,6 +244,78 @@ test('mergeQuests_同id覆盖且仅保留一个tracked', () => {
   assert.equal(merged.find((q) => q.tracked)?.id, 'q2');
 });
 
+test('mergeQuests_已完成任务不得被降级且保留deadline', () => {
+  const merged = mergeQuests(
+    [{
+      id: 'q-green',
+      title: '更换绿色衣服',
+      type: 'main',
+      status: 'completed',
+      description: '',
+      goalText: '已换好',
+      tracked: false,
+      deadlineAt: '18:00',
+      deadlineText: '下午六点前',
+    }],
+    [{
+      id: 'q-green',
+      title: '更换绿色衣服',
+      type: 'main',
+      status: 'active',
+      description: '',
+      goalText: '现在去换',
+      tracked: true,
+    }],
+  );
+  assert.equal(merged[0].status, 'completed');
+  assert.equal(merged[0].tracked, false);
+  assert.equal(merged[0].deadlineAt, '18:00');
+});
+
+test('formatQuestDeadlineDisplay_应优先展示原话与标准时间', () => {
+  const text = formatQuestDeadlineDisplay({
+    id: 'q1',
+    title: '汉堡',
+    type: 'side',
+    status: 'active',
+    description: '',
+    goalText: '',
+    tracked: false,
+    deadlineText: '下午六点前',
+    deadlineAt: '18:00',
+  });
+  assert.match(text, /下午六点前/);
+  assert.match(text, /18:00/);
+});
+
+test('shouldSkipQuestAutoRefresh_流中或短间隔应跳过', () => {
+  assert.equal(shouldSkipQuestAutoRefresh({ isStreaming: true, lastStartedAt: null, now: 1000 }), true);
+  assert.equal(
+    shouldSkipQuestAutoRefresh({ isStreaming: false, lastStartedAt: 1000, now: 2000, minIntervalMs: 2500 }),
+    true,
+  );
+  assert.equal(
+    shouldSkipQuestAutoRefresh({ isStreaming: false, lastStartedAt: 1000, now: 4000, minIntervalMs: 2500 }),
+    false,
+  );
+});
+
+test('getQuestTrackerLabel_应附带deadline', () => {
+  const label = getQuestTrackerLabel({
+    id: 'q1',
+    title: '汉堡',
+    type: 'main',
+    status: 'active',
+    description: '',
+    goalText: '买到汉堡',
+    tracked: true,
+    deadlineText: '下午六点前',
+    deadlineAt: '18:00',
+  });
+  assert.match(label, /买到汉堡/);
+  assert.match(label, /18:00/);
+});
+
 test('resolveQuestsPanelRefreshPlan_有缓存不阻塞loader仍跑LLM', async () => {
   const { resolveQuestsPanelRefreshPlan } = await import('../src/lib/galgame/quests.ts');
   const withCache = resolveQuestsPanelRefreshPlan([
@@ -276,6 +350,8 @@ test('Galgame_任务面板缓存优先异步LLM', async () => {
   assert.match(src, /fetchCachedQuests/);
   assert.match(src, /resolveQuestsPanelRefreshPlan/);
   assert.match(src, /refreshQuests\(\{ background: plan\.hasCache \}\)/);
+  assert.match(src, /refreshQuests\(\{ background: true \}\)/);
+  assert.match(src, /shouldSkipQuestAutoRefresh/);
   assert.doesNotMatch(
     src,
     /if \(questsRef\.current\.length > 0\) return;/,

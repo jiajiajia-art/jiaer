@@ -126,6 +126,19 @@ test('NormalModeDisplay_选项须全宽单列横条禁止两列夹角色', () =>
   assert.doesNotMatch(option, /skewX\(-6deg\)/);
 });
 
+test('TextModeDisplay_选项须卡片横条禁止斜切HUD', () => {
+  const dir = dirname(fileURLToPath(import.meta.url));
+  const css = readFileSync(join(dir, '../src/components/Galgame/TextModeDisplay.module.css'), 'utf8');
+  const option = css.match(/\.optionItem\s*\{[^}]+\}/s)?.[0] || '';
+  assert.match(option, /width:\s*100%/);
+  assert.match(option, /background:\s*rgba\(0,\s*0,\s*0,\s*0\.58\)/);
+  assert.match(option, /border-radius:\s*0\.45rem/);
+  assert.doesNotMatch(option, /skewX\(/);
+  assert.doesNotMatch(css, /optionHudScanDrift/);
+  assert.doesNotMatch(css, /optionHudTextDrift/);
+  assert.match(css, /counter-increment:\s*text-mode-option/);
+});
+
 test('useGalgameMessage_须ensureMin且传playerName', () => {
   const dir = dirname(fileURLToPath(import.meta.url));
   const src = readFileSync(join(dir, '../src/hooks/galgame/useGalgameMessage.ts'), 'utf8');

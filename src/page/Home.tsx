@@ -38,6 +38,7 @@ import {
     type HomeListMode,
     type HomeListSort,
 } from '../utils/gameBrowseFilters';
+import { collectRecommendExposeItems } from '../lib/homeRecommendExpose';
 import { resolveHomeFiltersForNovelThemeConflict } from '../utils/homeFilterNovelTheme';
 import { openConfiguredLink } from '../utils/promotionNavigation';
 import { useExternalLinkCopyModal } from '../hooks/useExternalLinkCopyModal';
@@ -760,6 +761,16 @@ const Home: React.FC = () => {
                         });
                         return Array.from(uniqueGames.values());
                     });
+                }
+
+                // 推荐列表：有 campaign 注入的卡片批量曝光（登录态由拦截器带 token）
+                if (filters.sort === 'recommended') {
+                    const exposeItems = collectRecommendExposeItems(nextGames);
+                    if (exposeItems.length > 0) {
+                        void libraryDataApi.exposeRecommended(exposeItems).catch((err) => {
+                            console.warn('[Home] recommend expose failed:', err);
+                        });
+                    }
                 }
                 
                 // 如果返回的游戏数量等于PAGE_SIZE，则设置为有更多

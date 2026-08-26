@@ -7,27 +7,9 @@ import worldEditor from '../../../api/worldInteraction/worldEditor';
 import type { Scene as ApiScene } from '../../../api/galgame/getGalgamePreset.type';
 import type { GenerateImgeResponse } from '../../../api/galgame/EditorData.type';
 import type { UploadSceneImageResponse, UploadSubSceneImageResponse } from '../../../api/worldInteraction/worldEditor.type';
+import { getAxiosErrorMessageAsync } from '../../../utils/error';
 
 export type SceneApiHelpers = ReturnType<typeof createSceneApiHelpers>;
-
-const extractBlobErrorMessage = async (blob: Blob | undefined): Promise<string | null> => {
-    if (!(blob instanceof Blob) || blob.size === 0) {
-        return null;
-    }
-
-    const contentType = blob.type || '';
-    if (!contentType.includes('application/json') && !contentType.includes('text/json')) {
-        return null;
-    }
-
-    try {
-        const text = await blob.text();
-        const parsed = JSON.parse(text) as { message?: string; error?: string };
-        return parsed?.message || parsed?.error || null;
-    } catch {
-        return null;
-    }
-};
 
 export const createSceneApiHelpers = (mode: string) => {
     const isWorldInteraction = mode === 'worldInteraction';
@@ -86,15 +68,7 @@ export const createSceneApiHelpers = (mode: string) => {
                 const sceneId = (response.headers['x-scene-id'] as string) || scene.id;
                 return { data: { success: true, blob: response.data, sceneId } };
             } catch (error) {
-                const err = error as { response?: { data?: Blob | { message?: string; error?: string } }; message?: string };
-                const responseData = err?.response?.data;
-                const blobMessage = responseData instanceof Blob
-                    ? await extractBlobErrorMessage(responseData)
-                    : null;
-                const jsonMessage = responseData && !(responseData instanceof Blob)
-                    ? responseData.message || responseData.error
-                    : null;
-                const message = blobMessage || jsonMessage || err?.message || '生成失败';
+                const message = await getAxiosErrorMessageAsync(error, '生成失败');
                 return { data: { success: false, message } };
             }
         },

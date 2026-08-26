@@ -40,6 +40,11 @@ export type GameStartConfig = {
   };
   worldBookEntries?: GameStartWorldBookEntry[];
   writingStyle?: GameStartWritingStyle;
+  /**
+   * 玩家设置的「最大回复」字数（汉字）。写入后覆盖世界 llmConfig 的输出长度引导。
+   * 未设置时沿用创作台 / 默认 target≈400。
+   */
+  maxResponseChars?: number;
   /** 玩法侧开局路线 id（必填） */
   openingRouteId: string;
   openingMonologue?: string;
@@ -64,7 +69,21 @@ export const GAME_START_LIMITS = Object.freeze({
   openingMonologue: { max: 2000 },
   avoidWordMax: 40,
   avoidWordsMax: 50,
+  /** 设置「最大回复」：200～2000 字（需求图） */
+  maxResponseChars: { min: 200, max: 2000, default: 800, step: 100 },
 });
+
+/**
+ * 功能注释：把玩家选择的最大回复字数钳到合法区间；非法则返回 null（表示不覆盖世界配置）。
+ * 注意：Number(null)===0，须先排除 null/空串。
+ */
+export function clampMaxResponseChars(raw: unknown): number | null {
+  if (raw == null || raw === '') return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return null;
+  const { min, max } = GAME_START_LIMITS.maxResponseChars;
+  return Math.min(max, Math.max(min, Math.round(n)));
+}
 
 /**
  * 开局 / 路线相关文案（对齐《TXT模式自由度改版》§4.3 / §4.4 UE）。
@@ -185,6 +204,8 @@ export function buildSilentDefaultGameStartConfig(input: {
       gender: normalizeGameStartGender(input.gender),
       ...(persona ? { personaBlocks: { identity: persona } } : {}),
     },
+    // 功能注释：新开局默认给更长回复，缓解「每次只有一两百字」；玩家可在设置再调
+    maxResponseChars: GAME_START_LIMITS.maxResponseChars.default,
     openingRouteId: resolved.openingRouteId,
     openingMonologue: resolved.openingMonologue,
     retainedStorylineIds: resolved.retainedStorylineIds,
@@ -241,6 +262,8 @@ export function validateGameStartConfig(input: Partial<GameStartConfig> | null |
     };
   }
 
+  const maxResponseChars = clampMaxResponseChars(input?.maxResponseChars);
+
   const personaBlocks = input?.player?.personaBlocks
     ? {
         identity: trimStr(input.player.personaBlocks.identity) || undefined,
@@ -273,6 +296,7 @@ export function validateGameStartConfig(input: Partial<GameStartConfig> | null |
           })).filter((e) => e.title || e.content)
         : undefined,
       writingStyle,
+      ...(maxResponseChars != null ? { maxResponseChars } : {}),
       openingRouteId,
       openingMonologue: openingMonologue || undefined,
       retainedStorylineIds: Array.isArray(input?.retainedStorylineIds)

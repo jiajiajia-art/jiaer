@@ -241,12 +241,11 @@ const NovelPlaybackShell: React.FC<NovelPlaybackShellProps> = ({
         </div>
       </div>
 
-      {/* 视觉小说只读：设置内「保存并退出」仅关弹窗，真正退出用底栏「退出」 */}
+      {/* 视觉小说只读：设置主钮「完成」仅关弹窗；真正退出用底栏「退出」 */}
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
-        onExitGame={() => setIsSettingsOpen(false)}
-        hideExitButton={false}
+        hideExitButton
         isMusicPlaying={false}
         musicDisabled
         musicDisabledReason={t('galgame.musicUnavailable')}

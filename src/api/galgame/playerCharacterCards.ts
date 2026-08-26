@@ -104,6 +104,7 @@ export const playerCharacterCardsApi = {
       cardId?: string;
       cardKind?: string;
       promptSupplement?: string;
+      avatarStyle?: string;
     },
   ) => {
     const res = await fetch(`${HOST_ADDRESS}/api/player-character-cards/avatar`, {

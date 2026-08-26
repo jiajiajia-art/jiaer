@@ -345,6 +345,7 @@ test('buildSilentDefaultGameStartConfig_应用创作台玩家与首条线', () =
   assert.equal(built.data?.player.gender, 'female');
   assert.equal(built.data?.openingRouteId, 'a');
   assert.deepEqual(built.data?.retainedStorylineIds, ['b']);
+  assert.equal(built.data?.maxResponseChars, 800);
 });
 
 test('validateGameStartConfig_与方案C路线裁剪', () => {

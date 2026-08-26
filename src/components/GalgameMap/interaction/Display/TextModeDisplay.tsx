@@ -41,7 +41,6 @@ interface MessageItemProps {
     isTyping: boolean;
     isWaitingForData: boolean;
     onChoiceClick?: (option: { id: number | string; text: string; optionId?: string }) => void;
-    onCustomInputSubmit?: (value: string) => void;
     isFreeRound?: boolean;
 }
 
@@ -52,26 +51,9 @@ const MessageItem = memo<MessageItemProps>(({
     isTyping,
     isWaitingForData,
     onChoiceClick, 
-    onCustomInputSubmit,
     isFreeRound = false,
 }) => {
-    const [customInput, setCustomInput] = useState('');
-
     if (!step) return null;
-
-    const handleCustomSubmit = () => {
-        if (customInput.trim() && onCustomInputSubmit && !isTyping && !isWaitingForData) {
-            onCustomInputSubmit(customInput.trim());
-            setCustomInput('');
-        }
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleCustomSubmit();
-        }
-    };
 
     // 计算要显示的文本
     const getDisplayText = () => {
@@ -158,34 +140,6 @@ const MessageItem = memo<MessageItemProps>(({
                                     </div>
                                 ))}
                             </div>
-                            
-                            {/* 自定义输入区域 */}
-                            <div className={styles.customInputSection}>
-                                <div className={styles.customInputHeader}>
-                                    <span>或者自定义输入</span>
-                                    {!isFreeRound && (
-                                        <span className={styles.pointsCostHint}>消耗 {POINTS_CONFIG.custom} 积分</span>
-                                    )}
-                                </div>
-                                <div className={styles.customInputWrapper}>
-                                    <input
-                                        type="text"
-                                        className={styles.customInput}
-                                        placeholder="输入你想说的话或行动..."
-                                        value={customInput}
-                                        onChange={(e) => setCustomInput(e.target.value)}
-                                        onKeyDown={handleKeyDown}
-                                        disabled={isTyping || isWaitingForData}
-                                    />
-                                    <button 
-                                        className={styles.customInputButton}
-                                        onClick={handleCustomSubmit}
-                                        disabled={!customInput.trim() || isTyping || isWaitingForData}
-                                    >
-                                        发送
-                                    </button>
-                                </div>
-                            </div>
                         </>
                     )}
                 </div>
@@ -215,6 +169,32 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const shouldStickToBottomRef = useRef(true);
     const hasInitialAutoScrolledRef = useRef(false);
+    const [customInput, setCustomInput] = useState('');
+
+    const currentStep = currentStepIndex >= 0 ? steps[currentStepIndex] : null;
+    const showComposer = Boolean(
+        onCustomInputSubmit
+        && currentStep?.type === 'choice'
+        && !isTyping
+        && !(isWaitingForData && currentStepIndex >= 0 && steps[currentStepIndex]?.type === 'choice'),
+    );
+
+    useEffect(() => {
+        setCustomInput('');
+    }, [currentStep?.id]);
+
+    const handleCustomSubmit = () => {
+        if (!customInput.trim() || !onCustomInputSubmit || isTyping || isWaitingForData) return;
+        onCustomInputSubmit(customInput.trim());
+        setCustomInput('');
+    };
+
+    const handleCustomKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleCustomSubmit();
+        }
+    };
 
     // 跟踪用户是否“贴底”，避免用户向上滚动阅读时被强制拉回底部
     useEffect(() => {
@@ -253,7 +233,7 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
             if (!el2) return;
             el2.scrollTop = el2.scrollHeight;
         });
-    }, [steps.length, currentStepIndex, currentDisplayText, isTyping, isWaitingForData]);
+    }, [steps.length, currentStepIndex, currentDisplayText, isTyping, isWaitingForData, showComposer]);
 
     const lastStep = steps.length > 0 ? steps[steps.length - 1] : null;
     const lastStepIsChoice = lastStep?.type === 'choice';
@@ -280,7 +260,11 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
                     </div>
                 </div>
             ) : (
-                <div className={styles.messagesContainer} ref={messagesContainerRef}>
+                <>
+                <div
+                    className={`${styles.messagesContainer}${showComposer ? ` ${styles.messagesContainerWithComposer}` : ''}`}
+                    ref={messagesContainerRef}
+                >
                     {steps.map((step, index) => {
                         // 只有当前步骤才传递打字相关状态
                         const isCurrent = index === currentStepIndex && currentStepIndex >= 0;
@@ -300,7 +284,6 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
                                     isTyping={isCurrent ? isTyping : false}
                                     isWaitingForData={isWaitingForData}
                                     onChoiceClick={onChoiceClick}
-                                    onCustomInputSubmit={onCustomInputSubmit}
                                     isFreeRound={isFreeRound}
                                 />
                         );
@@ -316,6 +299,36 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
                         </div>
                     )}
                 </div>
+                {showComposer ? (
+                    <div className={styles.textModeComposer} aria-label="自定义输入">
+                        <div className={styles.customInputHeader}>
+                            <span>或者自定义输入</span>
+                            {!isFreeRound && (
+                                <span className={styles.pointsCostHint}>消耗 {POINTS_CONFIG.custom} 积分</span>
+                            )}
+                        </div>
+                        <div className={styles.customInputWrapper}>
+                            <input
+                                type="text"
+                                className={styles.customInput}
+                                placeholder="输入你想说的话或行动..."
+                                value={customInput}
+                                onChange={(e) => setCustomInput(e.target.value)}
+                                onKeyDown={handleCustomKeyDown}
+                                disabled={isWaitingForData}
+                            />
+                            <button
+                                type="button"
+                                className={styles.customInputButton}
+                                onClick={handleCustomSubmit}
+                                disabled={!customInput.trim() || isWaitingForData}
+                            >
+                                发送
+                            </button>
+                        </div>
+                    </div>
+                ) : null}
+                </>
             )}
         </div>
     );

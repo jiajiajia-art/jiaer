@@ -911,7 +911,10 @@ export const createHandlers = (ctx: HandlersContext) => {
                 await setPendingImage(npc.id, response.data.blob, 'base');
                 await refreshUserPoints();
             } else {
-                toast.error(tToast('createGame.currentUserCountTooHighTryLater', '当前使用人数过多，请稍后再试'));
+                toast.error(
+                    response.data?.message
+                    || tToast('createGame.currentUserCountTooHighTryLater', '当前使用人数过多，请稍后再试'),
+                );
             }
         } catch (error) {
             toast.error(tToast('createGame.regenerateNpcImageFailedCheckNetwork', '重新生成NPC图片失败，请检查网络连接'));
@@ -935,7 +938,10 @@ export const createHandlers = (ctx: HandlersContext) => {
                 await setPendingImage('player', response.data.blob, 'base');
                 await refreshUserPoints();
             } else {
-                toast.error(tToast('createGame.currentUserCountTooHighTryLater', '当前使用人数过多，请稍后再试'));
+                toast.error(
+                    response.data?.message
+                    || tToast('createGame.currentUserCountTooHighTryLater', '当前使用人数过多，请稍后再试'),
+                );
             }
         } catch (error) {
             toast.error(tToast('createGame.regeneratePlayerImageFailedCheckNetwork', '重新生成主角图片失败，请检查网络连接'));

@@ -31,7 +31,10 @@ test('warehouseCardAvatar_生图后台且不锁其它按钮', () => {
   assert.match(field, /后台生成中/);
   assert.match(persona, /startWarehouseCardAvatarBackgroundGen/);
   assert.match(persona, /可继续编辑或保存/);
-  assert.match(npc, /startWarehouseCardAvatarBackgroundGen/);
+  assert.match(job, /avatarStyle:\s*opts\.payload\.avatarStyle/);
+  assert.match(job, /promptSupplement:\s*opts\.payload\.promptSupplement/);
+  assert.match(persona, /WarehouseAvatarGenerateConfirm/);
+  assert.match(npc, /WarehouseAvatarGenerateConfirm/);
   // 保存/取消不应再被 generatingAvatar 锁死
   assert.doesNotMatch(
     persona,

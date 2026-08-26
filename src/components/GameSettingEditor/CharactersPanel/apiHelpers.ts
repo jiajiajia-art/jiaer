@@ -9,6 +9,7 @@ import type { NPC, Player, GenerateVariantImageRequest } from '../../../api/galg
 import type { UploadPlayerImageResponse, UploadNpcImageResponse } from '../../../api/worldInteraction/worldEditor.type';
 import type { GenerateImgeResponse } from '../../../api/galgame/EditorData.type';
 import type { PlayerCharacter as WIPlayer, NPC as WINPC } from '../../../api/worldInteraction/worldInteractionApi.type';
+import { getAxiosErrorMessageAsync } from '../../../utils/error';
 
 export type ApiHelpers = ReturnType<typeof createApiHelpers>;
 
@@ -57,8 +58,12 @@ export const createApiHelpers = (mode: string) => {
                 // 从 blob 的文件名中获取 variant
                 const variant = (response.headers['x-variant'] as string) || 'base';
                 return { data: { success: true, blob: response.data, variant } };
-            } catch (error: any) {
-                const message = error?.response?.data?.message || error?.message || '生成失败';
+            } catch (error: unknown) {
+                // 功能注释：blob 响应下 500 JSON 需异步解析，禁止误报「人数过多」
+                let message = await getAxiosErrorMessageAsync(error, '生成失败');
+                if (/network error|connection_reset|econnreset|failed to fetch/i.test(message)) {
+                  message = '生图超时或连接中断，请稍后重试（单次约一分钟）';
+                }
                 return { data: { success: false, message } };
             }
         },
@@ -136,8 +141,11 @@ export const createApiHelpers = (mode: string) => {
 
                 const variant = (response.headers['x-variant'] as string) || 'base';
                 return { data: { success: true, blob: response.data, variant } };
-            } catch (error: any) {
-                const message = error?.response?.data?.message || error?.message || '生成失败';
+            } catch (error: unknown) {
+                let message = await getAxiosErrorMessageAsync(error, '生成失败');
+                if (/network error|connection_reset|econnreset|failed to fetch/i.test(message)) {
+                  message = '生图超时或连接中断，请稍后重试（单次约一分钟）';
+                }
                 return { data: { success: false, message } };
             }
         },

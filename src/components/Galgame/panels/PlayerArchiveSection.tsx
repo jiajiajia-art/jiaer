@@ -19,6 +19,7 @@ import { playerCharacterCardsApi, sessionPlayerProfileApi } from '../../../api/g
 import { useAuthStore } from '../../../store/useAuthStore';
 import { useGameStore } from '../../../store/gameStore';
 import { CHARACTER_GENERATION_COST, NPC_PROFILE_FIELD_GENERATION_COST, getImageUrl } from '../../../utils/constants';
+import { getApiErrorMessage } from '../../../utils/error';
 import {
   pickDisplayAvatarFullUrl,
 } from '../../../lib/galgame/avatarThumbUrl';
@@ -308,7 +309,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
       setAvatarStyleId(DEFAULT_AVATAR_STYLE);
       // 成功由 Galgame 订阅写回档案并 toast，避免面板卸载后丢更新
     } catch (e) {
-      toast.error((e as Error)?.message || '头像生成失败');
+      toast.error(getApiErrorMessage(e, '头像生成失败'));
     }
   };
 

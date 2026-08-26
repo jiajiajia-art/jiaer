@@ -26,6 +26,7 @@ import {
 } from '../../lib/warehouse/warehouseCardAvatarBackgroundJob';
 import { PERSONA_TAGS, genderLabel } from './warehouseNav';
 import WarehouseCardAvatarField from './WarehouseCardAvatarField';
+import WarehouseAvatarGenerateConfirm from './WarehouseAvatarGenerateConfirm';
 import panel from './WarehousePanel.module.css';
 
 type Draft = {
@@ -179,7 +180,10 @@ const WarehousePersonaCards: React.FC = () => {
     setAvatarConfirmOpen(true);
   };
 
-  const runGenerateAvatar = async () => {
+  const runGenerateAvatar = async (opts?: {
+    avatarStyleId?: string;
+    promptSupplement?: string;
+  }) => {
     setAvatarConfirmOpen(false);
     if (!token || !draft.name.trim() || generatingAvatar) return;
     toast('图像后台生成中，可继续编辑或保存');
@@ -192,6 +196,8 @@ const WarehousePersonaCards: React.FC = () => {
           persona: draft.persona.trim(),
           cardId: editingId || undefined,
           cardKind: 'player',
+          avatarStyle: opts?.avatarStyleId,
+          promptSupplement: opts?.promptSupplement,
         },
       });
     } catch (e) {
@@ -715,14 +721,13 @@ const WarehousePersonaCards: React.FC = () => {
         )
         : null}
 
-      <ConfirmModal
+      <WarehouseAvatarGenerateConfirm
         isOpen={avatarConfirmOpen}
-        onCancel={() => setAvatarConfirmOpen(false)}
-        onConfirm={() => void runGenerateAvatar()}
+        cost={CHARACTER_GENERATION_COST}
         title="确认生成图像"
-        message={`将扣除 ${CHARACTER_GENERATION_COST} 积分生成人设立绘，是否继续？`}
-        confirmButtonText="生成"
-        cancelButtonText="取消"
+        subjectLabel="人设立绘"
+        onCancel={() => setAvatarConfirmOpen(false)}
+        onConfirm={(result) => void runGenerateAvatar(result)}
       />
 
       <ConfirmModal

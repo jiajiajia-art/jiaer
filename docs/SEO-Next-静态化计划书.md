@@ -336,7 +336,7 @@ Interactive-fiction-frontend/
       home/page.tsx
       categories/page.tsx
       rank/page.tsx
-      library/page.tsx
+      library/page.tsximage.png
       specials/page.tsx
       game/[fileId]/page.tsx
       galgame/[fileId]/page.tsx  # 或 play/[fileId]（Phase 0 定名）

@@ -81,7 +81,7 @@ flowchart LR
     S3 --> Q2[story-generation-queue]
     Q2 --> LLM2[生成 story-structure]
 
-    S4 --> IMG["nano-banana 文生图<br/>+ Seedream 图生图 cleanup"]
+    S4 --> IMG["gpt-image-2 文生图<br/>+ Seedream 图生图 cleanup"]
 
     W --> API1["PUT /visual/edit/:fileId/world<br/>纯写 R2/D1"]
     P --> API2["POST /auth/games/publish<br/>纯写 D1"]
@@ -126,7 +126,7 @@ Handler：`interface/handlers/visual/storyGeneration.js`
 
 | 操作 | API | 模型 |
 |------|-----|------|
-| 批量/单张生图 | `/visual/generate-images/...` | 文生图 `nano-banana`；cleanup/变体用 Doubao Seedream |
+| 批量/单张生图 | `/visual/generate-images/...` | 文生图 `gpt-image-2`；cleanup/变体用 Doubao Seedream |
 
 这是你之前遇到的 `doubao-seedream-4-5-251128` 报错场景，属于**生图**，不是发布。
 

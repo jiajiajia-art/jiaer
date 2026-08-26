@@ -63,6 +63,12 @@ export interface UserGameData {
     groupNo?: string;
     /** 当前用户是否已收藏该游戏 */
     isFavorited?: boolean;
+    /** 首页推荐增量字段 */
+    recommend_reason?: string;
+    campaign_id?: number | null;
+    eligible?: boolean;
+    profile_source?: 'search' | 'behavior' | 'none' | string;
+    rank_score?: number;
 }
 
 export interface UserGameResponse {

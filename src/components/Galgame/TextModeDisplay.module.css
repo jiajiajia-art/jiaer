@@ -6,7 +6,8 @@
     flex-direction: column;
     overflow: hidden;
     min-height: 0;
-    padding-bottom: 5rem;
+    height: 100%;
+    padding-bottom: 0.75rem;
 }
 
 /* 当父容器已有 padding-bottom 时（如 galgameMap），移除 TextModeDisplay 的 padding-bottom */
@@ -17,10 +18,15 @@
 .messagesContainer {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 1rem 1.25rem; /* 16px 20px */
     display: flex;
     flex-direction: column;
     gap: 0.75rem; /* 12px */
+    min-height: 0;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
 }
 
 .messagesContainer::-webkit-scrollbar {
@@ -183,10 +189,10 @@
 
 .speakerName {
     font-size: 0.8125rem; /* 13px */
-    color: rgba(255, 255, 255, 0.7);
+    color: rgba(255, 154, 163, 0.95);
     margin-bottom: 0.375rem; /* 6px */
     font-weight: 600;
-    border-left: 0.1875rem solid #845DFF; /* 3px */
+    border-left: 0.1875rem solid #fb4655; /* 3px */
     padding-left: 0.5rem; /* 8px */
 }
 
@@ -200,102 +206,112 @@
     color: rgba(255, 255, 255, 0.95);
 }
 
-/* 选择气泡 */
+/* 选择气泡 — Funloom 朱红点缀，与正常模式选项卡片对齐 */
 .choiceBubble {
-    background: rgba(255, 255, 255, 0.12);
-    border-radius: 0.75rem; /* 12px */
-    padding: 1rem; /* 16px */
-    border: 0.0625rem solid rgba(255, 255, 255, 0.2); /* 1px */
+    --choice-accent: #fb4655;
+    --choice-accent-soft: #ff9aa3;
+    background: linear-gradient(
+        165deg,
+        rgba(28, 16, 18, 0.78) 0%,
+        rgba(12, 10, 14, 0.72) 100%
+    );
+    border-radius: 0.75rem;
+    padding: 1rem;
+    border: 0.0625rem solid rgba(251, 70, 85, 0.28);
+    box-shadow: 0 0.35rem 1.1rem rgba(0, 0, 0, 0.28);
 }
 
 .choiceTitle {
-    font-size: 1rem; /* 16px */
-    color: rgba(255, 255, 255, 0.95);
-    margin-bottom: 0.5rem; /* 8px */
-    font-weight: 600;
+    font-size: 1rem;
+    color: rgba(255, 245, 242, 0.96);
+    margin-bottom: 0.5rem;
+    font-weight: 650;
+    letter-spacing: 0.02em;
 }
 
 .choiceDescription {
-    font-size: 0.875rem; /* 14px */
-    margin-bottom: 0.75rem; /* 12px */
+    font-size: 0.875rem;
+    margin-bottom: 0.85rem;
     line-height: 1.5;
 }
 
 .choiceDescription > div {
-    color: rgba(255, 255, 255, 0.8);
+    color: rgba(255, 245, 242, 0.78);
 }
 
 .optionsList {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem; /* 8px */
+    align-items: stretch;
+    gap: 0.5rem;
+    counter-reset: text-mode-option;
 }
 
+/* 全宽单列卡片按钮，禁止斜切/扫描线 HUD */
 .optionItem {
     position: relative;
     isolation: isolate;
-    background: transparent;
-    border: 0;
-    border-radius: 0;
-    padding: 0.55rem 2.25rem;
+    counter-increment: text-mode-option;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    min-height: 2.75rem;
+    background: rgba(0, 0, 0, 0.58);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 0.45rem;
+    padding: 0.7rem 0.9rem 0.7rem 2.6rem;
     display: flex;
-    align-items: flex-start;
-    gap: 0.75rem; /* 12px */
-    font-weight: 900;
-    font-stretch: condensed;
-    text-shadow:
-        0 0 0.08rem rgba(255, 255, 255, 0.82),
-        0 0.125rem 0.625rem rgba(0, 0, 0, 0.88);
-    transform-origin: center left;
-    transform: skewX(-4deg);
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    font-weight: 600;
+    text-shadow: 0 0.0625rem 0.1875rem rgba(0, 0, 0, 0.75);
+    box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.28);
+    transform: none;
+    cursor: pointer;
     transition:
-        color 180ms ease,
-        text-shadow 180ms ease,
-        transform 180ms ease;
+        background-color 160ms ease,
+        border-color 160ms ease,
+        transform 160ms ease,
+        box-shadow 160ms ease;
 }
 
 .optionItem::before {
-    content: '';
+    content: counter(text-mode-option);
     position: absolute;
-    inset: 0.48rem -1.75rem;
-    z-index: 0;
-    display: block;
-    background: repeating-linear-gradient(
-        0deg,
-        rgba(255, 255, 255, 0.09) 0,
-        rgba(255, 255, 255, 0.09) 0.0625rem,
-        transparent 0.0625rem,
-        transparent 0.25rem
-    );
-    mask-image: linear-gradient(90deg, transparent 0%, #000 20%, #000 80%, transparent 100%);
-    opacity: 0.24;
+    left: 0.7rem;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+    width: 1.35rem;
+    height: 1.35rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    color: rgba(255, 245, 242, 0.92);
+    background: rgba(251, 70, 85, 0.28);
+    border: 1px solid rgba(251, 70, 85, 0.42);
     pointer-events: none;
-    mix-blend-mode: screen;
-    transform: translate3d(-0.125rem, 0.05rem, 0);
-    transition:
-        opacity 180ms ease,
-        transform 180ms ease;
-    animation: optionHudScanDrift 5.8s ease-in-out infinite;
 }
 
 .optionItem:hover {
-    background: transparent;
-    filter: none;
-    text-shadow:
-        0 0 0.1rem rgba(255, 255, 255, 0.95),
-        0 0.1875rem 0.75rem rgba(0, 0, 0, 0.92);
-    transform: skewX(-4deg) scale(1.035);
+    background: rgba(0, 0, 0, 0.72);
+    border-color: rgba(251, 70, 85, 0.38);
+    box-shadow: 0 0.3rem 0.9rem rgba(0, 0, 0, 0.36);
+    transform: translateY(-0.0625rem);
 }
 
-.optionItem:hover::before {
-    opacity: 0.34;
-    transform: translate3d(0.125rem, 0, 0);
-    animation-play-state: paused;
+.optionItem:active {
+    transform: translateY(0);
 }
 
 .optionNumber {
     color: rgba(255, 255, 255, 0.6);
-    font-size: 0.875rem; /* 14px */
+    font-size: 0.875rem;
     font-weight: 600;
     flex-shrink: 0;
 }
@@ -303,38 +319,56 @@
 .optionText {
     position: relative;
     z-index: 1;
-    color: rgba(255, 255, 255, 0.96);
-    font-size: 1.05rem;
-    font-weight: 900;
-    line-height: 1.28;
-    letter-spacing: 0;
-    flex: 1;
+    color: rgba(255, 245, 242, 0.96);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.45;
+    letter-spacing: 0.01em;
+    flex: 1 1 auto;
+    min-width: 0;
     word-wrap: break-word;
-    transform: translate3d(0, 0, 0) scaleX(0.9);
-    transition:
-        letter-spacing 180ms ease,
-        transform 180ms ease;
-    animation: optionHudTextDrift 5s ease-in-out infinite;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    transform: none;
+    animation: none;
 }
 
 .optionItem:hover .optionText {
     animation: none;
-    letter-spacing: 0.045em;
-    transform: translate3d(0, 0, 0) scaleX(0.94);
+    letter-spacing: 0.01em;
+    transform: none;
 }
 
-/* 主选项（mainOption）样式：比普通选项更高亮 */
+/* 主选项：暖金描边，与正常模式 mainOption 同级强调 */
+.optionItemMain {
+    border-color: rgba(255, 245, 207, 0.35);
+    background: rgba(40, 28, 12, 0.68);
+}
+
+.optionItemMain:hover {
+    background: rgba(52, 36, 14, 0.8);
+    border-color: rgba(255, 245, 207, 0.48);
+}
+
+.optionItemMain::before {
+    color: #fff5cf;
+    background: rgba(255, 180, 80, 0.22);
+    border-color: rgba(255, 245, 207, 0.42);
+}
+
 .optionTextMain {
-    color: rgb(252 126 30 / 90%);
+    color: #fff5cf;
 }
 
 .pointsCost {
     position: relative;
     z-index: 1;
-    color: rgba(255, 200, 100, 0.8);
-    font-size: 0.75rem; /* 12px */
+    color: rgba(255, 200, 100, 0.85);
+    font-size: 0.75rem;
+    font-weight: 600;
     flex-shrink: 0;
     margin-left: auto;
+    white-space: nowrap;
 }
 
 .choicePrice {
@@ -361,37 +395,27 @@
     margin-left: auto;
 }
 
-@keyframes optionHudTextDrift {
-    0%,
-    100% {
-        transform: translate3d(-0.025rem, 0, 0) scaleX(0.9);
-    }
-
-    35% {
-        transform: translate3d(0.025rem, -0.03rem, 0) scaleX(0.9);
-    }
-
-    70% {
-        transform: translate3d(0.01rem, 0.025rem, 0) scaleX(0.9);
-    }
+/* 功能注释：输入区固定在文本模式底部，避免长消息盖住「发送」。 */
+.textModeComposer {
+  flex-shrink: 0;
+  padding: 0.75rem 1.25rem 0.625rem;
+  padding-bottom: max(0.625rem, env(safe-area-inset-bottom, 0px));
+  border-top: 0.0625rem solid rgba(255, 255, 255, 0.14);
+  background:
+    linear-gradient(180deg, rgba(14, 10, 12, 0.9) 0%, rgba(8, 6, 8, 0.98) 100%);
+  box-shadow: 0 -0.35rem 1.1rem rgba(0, 0, 0, 0.38);
+  z-index: 6;
 }
 
-@keyframes optionHudScanDrift {
-    0%,
-    100% {
-        transform: translate3d(-0.125rem, 0.05rem, 0);
-    }
-
-    50% {
-        transform: translate3d(0.125rem, -0.05rem, 0);
-    }
+.messagesContainerWithComposer {
+  scroll-padding-bottom: 0.75rem;
 }
 
 /* 自定义输入区域 */
 .customInputSection {
-    margin-top: 1rem; /* 16px */
-    padding-top: 1rem; /* 16px */
-    border-top: 0.0625rem dashed rgba(255, 255, 255, 0.15); /* 1px */
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 0.0625rem solid rgba(255, 255, 255, 0.12);
 }
 
 .customInputHeader {
@@ -614,6 +638,7 @@
 .textModeContainerLight .choiceBubble {
     background: #fafafa;
     border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: none;
 }
 
 .textModeContainerLight .choiceTitle {
@@ -625,28 +650,33 @@
 }
 
 .textModeContainerLight .optionItem {
-    background: transparent;
-    border: 0;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.1);
     text-shadow: none;
     transform: none;
+    box-shadow: 0 0.125rem 0.4rem rgba(0, 0, 0, 0.06);
 }
 
 .textModeContainerLight .optionItem::before {
-    background: none;
-    opacity: 0;
+    color: #fff;
+    background: #fb4655;
+    border-color: #e03d4b;
 }
 
 .textModeContainerLight .optionItem:hover {
-    background: transparent;
+    background: #fff7f8;
+    border-color: rgba(251, 70, 85, 0.35);
     filter: none;
+}
+
+.textModeContainerLight .optionItemMain {
+    background: #fff8ef;
+    border-color: rgba(194, 65, 12, 0.28);
 }
 
 .textModeContainerLight .optionText {
     animation: none;
     transform: none;
-}
-
-.textModeContainerLight .optionText {
     color: #222;
 }
 
@@ -674,4 +704,11 @@
 
 .textModeContainerLight .core {
     background: rgba(251, 91, 103, 0.85);
+}
+
+.textModeContainerLight .textModeComposer {
+    border-top-color: rgba(0, 0, 0, 0.08);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 250, 250, 1) 100%);
+    box-shadow: 0 -0.25rem 0.85rem rgba(0, 0, 0, 0.08);
 }

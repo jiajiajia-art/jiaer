@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import PlayPanelShell from './PlayPanelShell';
 import shell from './PlayPanelShell.module.css';
 import type { QuestItem } from '../../../lib/galgame/quests';
+import { formatQuestDeadlineDisplay } from '../../../lib/galgame/quests';
 
 interface QuestsPanelProps {
   isOpen: boolean;
@@ -74,6 +75,11 @@ const QuestsPanel: React.FC<QuestsPanelProps> = ({
                     ? t('galgame.questMainGoal')
                     : t('galgame.questSideGoal')}
                   : {q.goalText}
+                </p>
+              ) : null}
+              {formatQuestDeadlineDisplay(q) ? (
+                <p className={shell.cardMeta}>
+                  {t('galgame.questDeadline', { defaultValue: '截止' })}: {formatQuestDeadlineDisplay(q)}
                 </p>
               ) : null}
             </article>

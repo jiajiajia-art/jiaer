@@ -125,7 +125,7 @@ test('warehouseCardAvatar_展示侧去透明边且卡面bust', () => {
   const util = readFileSync(join(root, 'src/utils/trimTransparentImage.ts'), 'utf8');
   const img = readFileSync(join(root, 'src/components/TrimmedTransparentImg.tsx'), 'utf8');
   assert.match(field, /TrimmedTransparentImg/);
-  assert.match(field, /variant="bust"/);
+  assert.match(field, /variant="full"/);
   assert.match(persona, /TrimmedTransparentImg/);
   assert.match(persona, /variant="bust"/);
   assert.match(persona, /formPreviewPortrait[\s\S]*?variant="full"/);
@@ -147,7 +147,8 @@ test('warehouseCardAvatar_展示侧去透明边且卡面bust', () => {
   assert.match(css, /\.formPreviewPortrait[\s\S]*?aspect-ratio:\s*1\s*\/\s*1\.15/);
   assert.match(css, /\.avatarPreview[\s\S]*?width:\s*120px/);
   assert.match(css, /\.avatarPreviewImg[\s\S]*?object-fit:\s*contain/);
-  assert.match(css, /\.avatarPreviewImg[\s\S]*?object-position:\s*bottom center/);
+  assert.match(css, /\.avatarPreviewImg[\s\S]*?object-position:\s*center center/);
+  assert.match(css, /\.avatarPreviewHasImage[\s\S]*?aspect-ratio:\s*3\s*\/\s*5/);
   assert.match(css, /\.avatarPreviewFallback[\s\S]*?place-items:\s*center/);
   assert.match(css, /\.portrait[\s\S]*?align-items:\s*flex-end/);
   assert.match(css, /\.portraitImg[\s\S]*?object-position:\s*bottom center/);

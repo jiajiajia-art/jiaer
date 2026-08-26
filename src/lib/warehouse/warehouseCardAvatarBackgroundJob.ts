@@ -14,6 +14,7 @@ export type WarehouseCardAvatarGenPayload = {
   cardId?: string;
   cardKind: WarehouseCardKind;
   promptSupplement?: string;
+  avatarStyle?: string;
 };
 
 export type WarehouseCardAvatarGenResult = {
@@ -173,6 +174,7 @@ export function startWarehouseCardAvatarBackgroundGen(opts: {
         cardId: opts.payload.cardId,
         cardKind,
         promptSupplement: opts.payload.promptSupplement,
+        avatarStyle: opts.payload.avatarStyle,
       });
       if (abort.signal.aborted) {
         throw new Error(abort.signal.reason instanceof Error

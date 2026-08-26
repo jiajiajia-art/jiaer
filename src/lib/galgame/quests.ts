@@ -13,10 +13,28 @@ export interface QuestItem {
   description: string;
   goalText: string;
   tracked: boolean;
+  deadlineAt?: string;
+  deadlineText?: string;
+  deadlineSource?: string;
   updatedAt?: string;
 }
 
 const ALLOWED_STATUS = new Set(['active', 'completed', 'failed', 'optional', 'in_progress', '进行中', '可选']);
+const TERMINAL_QUEST_STATUS = new Set(['completed', 'failed']);
+const ACTIVE_QUEST_STATUS = new Set(['active', 'in_progress', '进行中', 'optional', '可选']);
+
+function normalizeQuestStatus(status: unknown): QuestStatus {
+  let normalized = String(status || 'active').trim() || 'active';
+  if (normalized === 'in_progress' || normalized === '进行中') normalized = 'active';
+  if (normalized === '可选') normalized = 'optional';
+  return normalized;
+}
+
+function trimText(value: unknown, max = 200): string {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  return text.length > max ? `${text.slice(0, max)}…` : text;
+}
 
 /** 功能注释：清洗单条任务；缺 id/title 则丢弃。 */
 export function normalizeQuestItem(raw: unknown, index = 0): QuestItem | null {
@@ -26,9 +44,7 @@ export function normalizeQuestItem(raw: unknown, index = 0): QuestItem | null {
   if (!title) return null;
   const id = String(q.id || '').trim() || `quest-${index}-${title.slice(0, 24)}`;
   const type = String(q.type || 'side').trim() || 'side';
-  let status = String(q.status || 'active').trim() || 'active';
-  if (status === 'in_progress' || status === '进行中') status = 'active';
-  if (status === '可选') status = 'optional';
+  const status = normalizeQuestStatus(q.status);
   if (!ALLOWED_STATUS.has(status) && status !== 'active') {
     // 未知状态仍保留原文，便于展示
   }
@@ -40,6 +56,9 @@ export function normalizeQuestItem(raw: unknown, index = 0): QuestItem | null {
     description: String(q.description || '').trim(),
     goalText: String(q.goalText || q.goal || '').trim(),
     tracked: q.tracked === true,
+    deadlineAt: trimText(q.deadlineAt, 40) || undefined,
+    deadlineText: trimText(q.deadlineText || q.deadlineLabel, 120) || undefined,
+    deadlineSource: trimText(q.deadlineSource, 20) || undefined,
     updatedAt: q.updatedAt ? String(q.updatedAt) : undefined,
   };
 }
@@ -58,6 +77,34 @@ export function normalizeQuests(raw: unknown): QuestItem[] {
   return out;
 }
 
+function mergeQuestFields(previous: QuestItem | undefined, incoming: QuestItem): QuestItem {
+  const merged: QuestItem = {
+    ...(previous || incoming),
+    ...incoming,
+  };
+
+  if (previous && TERMINAL_QUEST_STATUS.has(String(previous.status)) && ACTIVE_QUEST_STATUS.has(String(incoming.status))) {
+    merged.status = previous.status;
+    merged.tracked = false;
+  }
+
+  if (previous?.deadlineAt && !incoming.deadlineAt) {
+    merged.deadlineAt = previous.deadlineAt;
+  }
+  if (previous?.deadlineText && !incoming.deadlineText) {
+    merged.deadlineText = previous.deadlineText;
+  }
+  if (previous?.deadlineSource && !incoming.deadlineSource) {
+    merged.deadlineSource = previous.deadlineSource;
+  }
+
+  if (TERMINAL_QUEST_STATUS.has(String(merged.status))) {
+    merged.tracked = false;
+  }
+
+  return merged;
+}
+
 /**
  * 功能注释：用最新列表覆盖同 id；新 id 追加；保证最多一个 tracked=true（优先新列表里最后一个 tracked）。
  */
@@ -71,7 +118,9 @@ export function mergeQuests(
 
   const map = new Map<string, QuestItem>();
   for (const q of prev) map.set(q.id, q);
-  for (const q of next) map.set(q.id, { ...map.get(q.id), ...q });
+  for (const q of next) {
+    map.set(q.id, mergeQuestFields(map.get(q.id), q));
+  }
 
   let list = Array.from(map.values());
   const trackedIds = list.filter((q) => q.tracked).map((q) => q.id);
@@ -95,7 +144,37 @@ export function getTrackedQuest(quests: QuestItem[] | null | undefined): QuestIt
 
 export function getQuestTrackerLabel(quest: QuestItem | null): string {
   if (!quest) return '';
-  return quest.goalText || quest.description || quest.title;
+  const deadline = formatQuestDeadlineDisplay(quest);
+  const goal = quest.goalText || quest.description || quest.title;
+  return deadline ? `${goal}（${deadline}）` : goal;
+}
+
+/** 功能注释：展示用 deadline 文案，优先原话再 fallback 到标准时间。 */
+export function formatQuestDeadlineDisplay(quest: QuestItem | null | undefined): string {
+  if (!quest) return '';
+  const text = trimText(quest.deadlineText, 80);
+  const at = trimText(quest.deadlineAt, 40);
+  if (text && at) return `${text} / ${at}`;
+  return text || at;
+}
+
+export type QuestAutoRefreshGate = {
+  isStreaming: boolean;
+  lastStartedAt: number | null;
+  now?: number;
+  minIntervalMs?: number;
+};
+
+/** 功能注释：任务后台刷新节流，避免与属性刷新同时打爆 LLM。 */
+export function shouldSkipQuestAutoRefresh({
+  isStreaming,
+  lastStartedAt,
+  now = Date.now(),
+  minIntervalMs = 2500,
+}: QuestAutoRefreshGate): boolean {
+  if (isStreaming) return true;
+  if (!lastStartedAt) return false;
+  return now - lastStartedAt < minIntervalMs;
 }
 
 export type QuestsPanelRefreshPlan = {

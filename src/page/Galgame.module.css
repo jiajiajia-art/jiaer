@@ -952,11 +952,24 @@
     pointer-events: auto;
 }
 
+.mainContentTextMode {
+    /* 文本模式：中间区域由 gameContentWrapperTextMode 绝对定位撑开，保证内部 messages 可滚动 */
+    overflow: hidden;
+}
+
 .gameContentWrapperTextMode {
-    position: relative;
-    background: none;
-    flex: 1;
+    position: absolute;
+    top: 3.5rem;
+    bottom: 5.75rem;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: auto;
     min-height: 0;
+    max-height: none;
+    background: none;
+    z-index: 2;
+    pointer-events: auto;
     display: flex;
     flex-direction: column;
 }

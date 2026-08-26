@@ -6,6 +6,7 @@
 import { sessionPlayerProfileApi } from '../../api/galgame/playerCharacterCards';
 import type { SessionPlayerProfile } from './playerCharacterCard';
 import type { PlayerAvatarMergeInput } from './playerAvatarMerge';
+import { sanitizeUpstreamLlmErrorMessage } from '../../utils/error';
 
 export type PlayerAvatarGenPayload = {
   name: string;
@@ -185,7 +186,9 @@ export function startPlayerAvatarBackgroundGen(opts: {
         { signal: abort.signal },
       );
       if (!res?.success || !res.data?.avatarUrl) {
-        const err = new Error(res?.message || '头像生成失败') as Error & { code?: string };
+        const err = new Error(
+          sanitizeUpstreamLlmErrorMessage(res?.message || '', '头像生成失败'),
+        ) as Error & { code?: string };
         if (res?.code) err.code = res.code;
         throw err;
       }

@@ -20,6 +20,7 @@ import {
   PLAYER_UPLOAD_AVATAR_MAX_BYTES,
 } from '../../../lib/galgame/compressImageToWebp';
 import { CHARACTER_GENERATION_COST, NPC_PROFILE_FIELD_GENERATION_COST, getImageUrl } from '../../../utils/constants';
+import { getApiErrorMessage } from '../../../utils/error';
 import { refreshAuthUserPoints } from '../../../lib/auth/refreshUserPoints';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { useGameStore } from '../../../store/gameStore';
@@ -417,7 +418,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
       setAvatarPromptSupplement('');
       setAvatarStyleId(DEFAULT_AVATAR_STYLE);
     } catch (e) {
-      const msg = (e as Error)?.message || '头像生成失败';
+      const msg = getApiErrorMessage(e, '头像生成失败');
       if (msg.includes(NPC_AVATAR_GEN_CANCELLED_MESSAGE) || /已取消/.test(msg)) {
         toast(NPC_AVATAR_GEN_CANCELLED_MESSAGE);
         return;
@@ -453,7 +454,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
         `${PROFILE_FIELD_LABEL[field]}已生成（-${res.data.pointsDeducted ?? NPC_PROFILE_FIELD_GENERATION_COST} 积分）`,
       );
     } catch (e) {
-      toast.error((e as Error)?.message || `${PROFILE_FIELD_LABEL[field]}生成失败`);
+      toast.error(getApiErrorMessage(e, `${PROFILE_FIELD_LABEL[field]}生成失败`));
     } finally {
       setAiBusy((prev) => ({ ...prev, [field]: false }));
     }
