@@ -894,25 +894,9 @@
   .layout { grid-template-columns: 1fr; }
   .preview { position: static; }
 
-  .title {
-    /* 手机顶栏已展示当前分区标题，避免重复 */
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-
+  /* 手机顶栏 mobileChrome 已展示分区标题，整块页头收起避免与 sticky 区叠字 */
   .header {
-    gap: 0;
-  }
-
-  .sub {
-    font-size: 12px;
+    display: none;
   }
 
   .toolbar {

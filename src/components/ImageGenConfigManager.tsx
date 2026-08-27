@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import adminImageGenConfigApi, {
   type AdminImageGenModuleRow,
@@ -24,6 +25,7 @@ function fallbackModules(): AdminImageGenModuleRow[] {
 
 /** 功能注释：运营按模块选择 nano-banana-2 / gpt-image-2 并保存。 */
 const ImageGenConfigManager: React.FC = () => {
+  const navigate = useNavigate();
   const [modules, setModules] = useState<AdminImageGenModuleRow[]>(fallbackModules);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -89,7 +91,17 @@ const ImageGenConfigManager: React.FC = () => {
       <section className={styles.heroCard}>
         <div>
           <div className={styles.sectionBadge}>生图配置</div>
-          <h2 className={styles.heroTitle}>按业务模块切换生图模型</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <h2 className={styles.heroTitle} style={{ margin: 0 }}>按业务模块切换生图模型</h2>
+            <button
+              type="button"
+              className={styles.secondaryButton}
+              onClick={() => navigate('/admin/text-llm')}
+              style={{ flexShrink: 0 }}
+            >
+              文案配置
+            </button>
+          </div>
           <p className={styles.heroDesc}>
             可选模型：{IMAGE_GEN_MODELS.join(' / ')}。保存后约 30 秒内对新的生图请求生效（短缓存）。
           </p>

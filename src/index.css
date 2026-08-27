@@ -3,6 +3,7 @@
   --app-desktop-shell-max: 1560px;
   --app-desktop-gutter: clamp(24px, 2vw, 40px);
   --app-desktop-navbar-height: 80px;
+  --app-mobile-navbar-height: 60px;
   --mobile-content-image-guard-scale: 1.045;
   --mobile-content-image-guard-shift-y: -2.5%;
   --mobile-content-image-guard-height: clamp(38px, 11vw, 84px);
@@ -53,6 +54,13 @@ body { background: #ffffff; color: #333; overflow: hidden; }
   max-height: 100vh;
   overflow-x: hidden;
   overflow-y: auto;
+}
+
+/* 与 Navbar.module.css 手机高度 60px 对齐，避免 sticky 顶栏与内容区错位叠层 */
+@media (max-width: 768px) {
+  :root {
+    --app-desktop-navbar-height: var(--app-mobile-navbar-height);
+  }
 }
 
 button {

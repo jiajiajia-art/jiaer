@@ -45,6 +45,10 @@ test('AdminPanel_应包含生图配置菜单与路由', () => {
   assert.match(panel, /\/admin\/image-gen/);
   assert.match(panel, /ImageGenConfigManager/);
 
+  const imageGenManager = readFileSync(join(root, 'src/components/ImageGenConfigManager.tsx'), 'utf8');
+  assert.match(imageGenManager, /文案配置/);
+  assert.match(imageGenManager, /\/admin\/text-llm/);
+
   const app = readFileSync(join(root, 'src/App.tsx'), 'utf8');
   assert.match(app, /path="\/admin\/image-gen"/);
 
