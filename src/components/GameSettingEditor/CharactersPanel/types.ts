@@ -34,6 +34,15 @@ export interface Character {
     goalShort: string;
     goalLong: string;
     secret: string;
+    /**
+     * 创作台「玩家目前定位」→ 开局写入 gameStartConfig.personaBlocks
+     * （与上方短字段 identity「种族/职业」分离）
+     */
+    positioningIdentity: string;
+    /** 当前立场（对外可察觉） */
+    positioningTraits: string;
+    /** 秘密：仅创作者填写；玩家局内 UI 不展示，叙事 AI 仍注入 */
+    positioningSecret: string;
     relationships: Relationship[];
     variations: Variation[];
 }

@@ -130,6 +130,7 @@ export interface WorldInfo {
   title: string;
   summary: string;
   background: string;
+  premise?: string;
   Theme: string[];
   preamble: string;
   initialPlot: string;

@@ -79,6 +79,27 @@ export const baseCharacter = (): Omit<Character, 'id' | 'name' | 'callName' | 'g
         goalShort: '',
         goalLong: '',
         secret: '',
+        positioningIdentity: '',
+        positioningTraits: '',
+        positioningSecret: '',
+    };
+};
+
+/** 功能注释：从 world.player 抽出创作者默认定位块（身份/立场/秘密）。 */
+export const extractDefaultPersonaBlocks = (player: any): {
+    identity: string;
+    traits: string;
+    secret: string;
+} => {
+    const trim = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
+    const blocks = player?.defaultPersonaBlocks && typeof player.defaultPersonaBlocks === 'object'
+        ? player.defaultPersonaBlocks
+        : null;
+    return {
+        identity: trim(blocks?.identity),
+        traits: trim(blocks?.traits),
+        // 兼容历史顶层 secret（曾并入背景文案）
+        secret: trim(blocks?.secret) || trim(player?.secret),
     };
 };
 
@@ -331,7 +352,7 @@ const mergeLegacyFieldsIntoBackground = (source: any, rawBackground: string): st
     appendSection('成长经历 / 转折', source?.growth);
     appendSection('短期目标', source?.goalShort);
     appendSection('长期愿景', source?.goalLong);
-    appendSection('隐藏秘密 / 禁忌', source?.secret);
+    // 秘密改由「玩家目前定位」独立字段承载，不再并入背景（避免玩家从背景读到）
     appendSection('人物关系', extractRelationshipSummary(source));
 
     if (sections.length === 0) return baseBackground;
@@ -344,6 +365,7 @@ export const playerToCharacter = (player: any): Character => {
     const portrait = pickBaseImage(imagesObject, baseImage) || DEFAULT_NPC_PORTRAIT;
     const playerIdentity = extractPlayerIdentity(player);
     const playerBackground = mergeLegacyFieldsIntoBackground(player, extractPlayerBackground(player));
+    const positioning = extractDefaultPersonaBlocks(player);
 
     return {
         ...baseCharacter(),
@@ -361,6 +383,9 @@ export const playerToCharacter = (player: any): Character => {
         portraitOffsetX: player?.portraitOffsetX,
         portraitOffsetY: player?.portraitOffsetY,
         background: playerBackground,
+        positioningIdentity: positioning.identity,
+        positioningTraits: positioning.traits,
+        positioningSecret: positioning.secret,
         relationships: [],
         variations: imagesToVariations(imagesObject, variationDescriptions),
     };

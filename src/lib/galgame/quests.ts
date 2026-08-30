@@ -36,25 +36,53 @@ function trimText(value: unknown, max = 200): string {
   return text.length > max ? `${text.slice(0, max)}…` : text;
 }
 
+/**
+ * 功能注释：问题2——清洗任务追踪出戏用词（「向游戏询问…」），改成剧情内目标。
+ */
+export function sanitizeQuestObjectiveText(text: unknown): string {
+  let out = String(text || '').trim();
+  if (!out) return '';
+
+  out = out
+    .replace(/向(?:游戏|系统|GM|Gm|主持人|叙事(?:者)?|引擎)(?:询问|打听|了解|确认|查询|咨询)/g, '弄清')
+    .replace(/(?:询问|打听|了解|咨询)(?:游戏|系统|GM|主持人)(?:关于|有关)?/g, '弄清')
+    .replace(/向游戏|问游戏|找游戏|对游戏说/g, '')
+    .replace(/当前的详细情况|目前的详细情况/g, '当前处境')
+    .replace(/详细情况/g, '眼下情况')
+    .replace(/查看任务(?:进度|列表|追踪)?/g, '推进当前目标')
+    .replace(/打开任务面板/g, '理清下一步目标')
+    .replace(/[ \t\u00a0]+/g, '')
+    .replace(/^[,，、。.!！？?\s]+|[,，、。.!！？?\s]+$/g, '')
+    .trim();
+
+  if (!out || /^(弄清|了解|确认)$/.test(out)) {
+    return '弄清当前处境';
+  }
+  return out.replace(/弄清弄清/g, '弄清');
+}
+
 /** 功能注释：清洗单条任务；缺 id/title 则丢弃。 */
 export function normalizeQuestItem(raw: unknown, index = 0): QuestItem | null {
   if (!raw || typeof raw !== 'object') return null;
   const q = raw as Record<string, unknown>;
-  const title = String(q.title || '').trim();
-  if (!title) return null;
+  const titleRaw = String(q.title || '').trim();
+  if (!titleRaw) return null;
+  const title = sanitizeQuestObjectiveText(titleRaw) || titleRaw;
   const id = String(q.id || '').trim() || `quest-${index}-${title.slice(0, 24)}`;
   const type = String(q.type || 'side').trim() || 'side';
   const status = normalizeQuestStatus(q.status);
   if (!ALLOWED_STATUS.has(status) && status !== 'active') {
     // 未知状态仍保留原文，便于展示
   }
+  const descriptionRaw = String(q.description || '').trim();
+  const goalRaw = String(q.goalText || q.goal || '').trim();
   return {
     id,
     title,
     type,
     status,
-    description: String(q.description || '').trim(),
-    goalText: String(q.goalText || q.goal || '').trim(),
+    description: descriptionRaw ? (sanitizeQuestObjectiveText(descriptionRaw) || descriptionRaw) : '',
+    goalText: goalRaw ? (sanitizeQuestObjectiveText(goalRaw) || goalRaw) : '',
     tracked: q.tracked === true,
     deadlineAt: trimText(q.deadlineAt, 40) || undefined,
     deadlineText: trimText(q.deadlineText || q.deadlineLabel, 120) || undefined,

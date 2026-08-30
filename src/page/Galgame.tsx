@@ -229,7 +229,15 @@ const Galgame = () => {
 
         void runSessionAutoStartOnce(sessionId, async () => {
             const presetPlayer = controller.presetData?.world?.player as
-                | { name?: string; gender?: string; persona?: string; background?: string; description?: string }
+                | {
+                    name?: string;
+                    gender?: string;
+                    persona?: string;
+                    background?: string;
+                    description?: string;
+                    defaultPersonaBlocks?: GameStartPersonaBlocks;
+                    secret?: string;
+                  }
                 | undefined;
             const docPersona = String(
                 presetPlayer?.persona
@@ -242,6 +250,10 @@ const Galgame = () => {
                 gender: presetPlayer?.gender,
                 routes: openingRoutes,
                 documentPersona: docPersona,
+                defaultPersonaBlocks: presetPlayer?.defaultPersonaBlocks
+                    || (presetPlayer?.secret
+                        ? { secret: String(presetPlayer.secret) }
+                        : null),
             });
             if (built.ok && built.data) {
                 setOpeningRouteId(built.data.openingRouteId);

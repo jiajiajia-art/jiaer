@@ -60,6 +60,42 @@ export function appendPrivateChatUserMessage(
   };
 }
 
+/** 功能注释：按索引删除私聊气泡（前端乐观校验 / 单测）；不碰主线。 */
+export function deletePrivateChatMessageAtIndex(
+  thread: PrivateChatThread,
+  index: number,
+): { ok: true; thread: PrivateChatThread } | { ok: false; message: string } {
+  const messages = [...(thread.messages || [])];
+  if (!Number.isInteger(index) || index < 0 || index >= messages.length) {
+    return { ok: false, message: '消息不存在' };
+  }
+  messages.splice(index, 1);
+  return { ok: true, thread: { ...thread, messages } };
+}
+
+/**
+ * 功能注释：问题8——AI 末条气泡（含自动第二句）是否可点「重新回复」。
+ * 仅当 messages 末条为 assistant 时为 true。
+ */
+export function canRegeneratePrivateChatLastMessage(
+  messages: Array<{ role?: string } | null | undefined> | null | undefined,
+): boolean {
+  const list = Array.isArray(messages) ? messages : [];
+  if (!list.length) return false;
+  return list[list.length - 1]?.role === 'assistant';
+}
+
+/** 功能注释：某下标是否为当前最后一条助手气泡（菜单「重新回复/再说一句」可用）。 */
+export function isLastPrivateChatAssistantMessage(
+  messages: Array<{ role?: string } | null | undefined> | null | undefined,
+  index: number,
+): boolean {
+  const list = Array.isArray(messages) ? messages : [];
+  if (!Number.isInteger(index) || index < 0 || index >= list.length) return false;
+  if (list[index]?.role !== 'assistant') return false;
+  return !list.slice(index + 1).some((m) => m?.role === 'assistant');
+}
+
 /**
  * 功能注释：序列化主线 history 时剥离误混入的私聊标记字段。
  * 若 step 带 privateChat:true 则丢弃。

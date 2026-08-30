@@ -172,6 +172,23 @@ export function buildOpeningRoutesFromWorldKeyEvents(
 }
 
 /**
+ * 功能注释：规范化创作者默认定位块；空对象返回 undefined。
+ */
+export function normalizeDefaultPersonaBlocks(
+  input: unknown,
+): GameStartPersonaBlocks | undefined {
+  if (!input || typeof input !== 'object') return undefined;
+  const src = input as GameStartPersonaBlocks;
+  const identity = trimStr(src.identity) || undefined;
+  const traits = trimStr(src.traits) || undefined;
+  const background = trimStr(src.background) || undefined;
+  const goal = trimStr(src.goal) || undefined;
+  const secret = trimStr(src.secret) || undefined;
+  if (!identity && !traits && !background && !goal && !secret) return undefined;
+  return { identity, traits, background, goal, secret };
+}
+
+/**
  * 功能注释：新开局无弹窗时的静默开局包——用创作台玩家信息 + 首条故事线。
  */
 export function buildSilentDefaultGameStartConfig(input: {
@@ -180,6 +197,8 @@ export function buildSilentDefaultGameStartConfig(input: {
   routes: OpeningRouteOption[];
   /** 文档人设；若是多选引导文则忽略，改用路线人设 */
   documentPersona?: string | null;
+  /** 创作者在「玩家目前定位」填写的默认身份/立场/秘密 */
+  defaultPersonaBlocks?: GameStartPersonaBlocks | null;
 }): { ok: true; data: GameStartConfig } | { ok: false; message: string } {
   const routes =
     Array.isArray(input.routes) && input.routes.length > 0
@@ -196,13 +215,27 @@ export function buildSilentDefaultGameStartConfig(input: {
   const persona =
     routePersona
     || (!isMultiChoicePersonaText(docPersona) ? docPersona : '');
+  const creatorBlocks = normalizeDefaultPersonaBlocks(input.defaultPersonaBlocks);
+  const identity = trimStr(creatorBlocks?.identity) || persona || undefined;
+  const traits = trimStr(creatorBlocks?.traits) || undefined;
+  const secret = trimStr(creatorBlocks?.secret) || undefined;
+  const personaBlocks =
+    identity || traits || secret || creatorBlocks?.background || creatorBlocks?.goal
+      ? {
+          identity,
+          traits,
+          background: creatorBlocks?.background,
+          goal: creatorBlocks?.goal,
+          secret,
+        }
+      : undefined;
   const validated = validateGameStartConfig({
     player: {
       name:
         resolvePlayerDisplayName([input.playerName])
         || GAME_START_UE_COPY.fallbackPlayerName,
       gender: normalizeGameStartGender(input.gender),
-      ...(persona ? { personaBlocks: { identity: persona } } : {}),
+      ...(personaBlocks ? { personaBlocks } : {}),
     },
     // 功能注释：新开局默认给更长回复，缓解「每次只有一两百字」；玩家可在设置再调
     maxResponseChars: GAME_START_LIMITS.maxResponseChars.default,

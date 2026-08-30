@@ -1,0 +1,543 @@
+/* Ink Desk Dual-Rail — 生图 / 文案同页 Tab；墨台轨 + 纸面内容 */
+
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&family=DM+Sans:opsz,wght@9..40,500;9..40,600;9..40,700&display=swap');
+
+.root {
+  --mc-ink: #14121a;
+  --mc-paper: #fffcf8;
+  --mc-muted: #7a7380;
+  --mc-line: rgba(20, 18, 26, 0.1);
+  --mc-coral: #e03d4b;
+  --mc-coral-soft: #fff0f2;
+  --mc-display: 'Noto Serif SC', 'Songti SC', serif;
+  --mc-body: 'DM Sans', 'PingFang SC', sans-serif;
+
+  font-family: var(--mc-body);
+  color: var(--mc-ink);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  animation: mcEnter 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes mcEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.masthead {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  padding: 24px 26px 22px;
+  background:
+    radial-gradient(ellipse 70% 80% at 100% -10%, rgba(224, 61, 75, 0.24), transparent 50%),
+    linear-gradient(150deg, #1a1620 0%, #121018 60%, #1c1418 100%);
+  color: #f5f1ea;
+  box-shadow: 0 22px 48px rgba(18, 14, 22, 0.28);
+}
+
+.masthead::after {
+  content: attr(data-watermark);
+  position: absolute;
+  right: -6px;
+  top: 46%;
+  transform: translateY(-50%);
+  font-family: var(--mc-display);
+  font-size: clamp(64px, 12vw, 112px);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.045);
+  pointer-events: none;
+  user-select: none;
+}
+
+.mastTop {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(224, 61, 75, 0.2);
+  border: 1px solid rgba(224, 61, 75, 0.35);
+  color: #ffb4bc;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+/* 功能注释：双轨滑块 — 生图/文案切换的视觉锚点 */
+.rail {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  min-width: min(320px, 100%);
+}
+
+.railThumb {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: calc(50% - 4px);
+  border-radius: 11px;
+  background: linear-gradient(160deg, #e03d4b 0%, #c93441 100%);
+  box-shadow: 0 8px 20px rgba(224, 61, 75, 0.4);
+  transition: left 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+
+.railThumbImage {
+  left: 4px;
+}
+
+.railThumbText {
+  left: calc(50% + 0px);
+}
+
+.railBtn {
+  position: relative;
+  z-index: 1;
+  border: none;
+  background: transparent;
+  color: rgba(245, 241, 234, 0.55);
+  border-radius: 11px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.2s ease;
+}
+
+.railBtnActive {
+  color: #fff;
+}
+
+.railBtn:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.55);
+  outline-offset: 2px;
+}
+
+.mastTitle {
+  position: relative;
+  z-index: 1;
+  margin: 16px 0 8px;
+  font-family: var(--mc-display);
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.mastDesc {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  max-width: 54ch;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: rgba(245, 241, 234, 0.66);
+}
+
+.mastDesc a {
+  color: #ffc9cf;
+  text-underline-offset: 3px;
+}
+
+.mastActions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+.ghostBtn,
+.saveBtn {
+  border-radius: 12px;
+  padding: 11px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.ghostBtn {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.ghostBtn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.saveBtn {
+  border: none;
+  background: var(--mc-coral);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(224, 61, 75, 0.35);
+}
+
+.saveBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.ghostBtn:disabled,
+.saveBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.pane {
+  animation: mcPane 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes mcPane {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* —— 文案 pane —— */
+.stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.75fr);
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 980px) {
+  .stage {
+    grid-template-columns: 1fr;
+  }
+
+  .rail {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .masthead::after {
+    font-size: 80px;
+  }
+}
+
+.panel {
+  background: var(--mc-paper);
+  border: 1px solid var(--mc-line);
+  border-radius: 18px;
+  padding: 22px 22px 20px;
+  box-shadow: 0 12px 32px rgba(20, 18, 26, 0.05);
+}
+
+.panelHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.panelTitle {
+  margin: 0;
+  font-family: var(--mc-display);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.panelHint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--mc-muted);
+  font-weight: 600;
+}
+
+.modelGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.modelCard,
+.modelCardActive {
+  appearance: none;
+  -webkit-appearance: none;
+  text-align: left;
+  border-radius: 14px;
+  padding: 14px 14px 12px;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.16s ease;
+}
+
+.modelCard {
+  border: 1px solid var(--mc-line);
+  background: #fff;
+  color: var(--mc-ink);
+}
+
+.modelCard:hover:not(:disabled) {
+  border-color: rgba(224, 61, 75, 0.35);
+  transform: translateY(-1px);
+}
+
+.modelCardActive {
+  border: 1px solid rgba(224, 61, 75, 0.55);
+  background: linear-gradient(165deg, #fff 0%, var(--mc-coral-soft) 100%);
+  box-shadow:
+    0 0 0 1px rgba(224, 61, 75, 0.12),
+    0 12px 28px rgba(224, 61, 75, 0.12);
+}
+
+.modelCard:disabled,
+.modelCardActive:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.modelVendor {
+  display: block;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mc-muted);
+  margin-bottom: 6px;
+}
+
+.modelCardActive .modelVendor {
+  color: var(--mc-coral);
+}
+
+.modelName {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.modelMeta {
+  display: block;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--mc-muted);
+  line-height: 1.4;
+}
+
+.checkDot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  margin-top: 10px;
+  font-size: 11px;
+  font-weight: 800;
+  background: #ece8eb;
+  color: transparent;
+}
+
+.modelCardActive .checkDot {
+  background: var(--mc-coral);
+  color: #fff;
+}
+
+.sidePanel {
+  background: var(--mc-ink);
+  color: #f5f1ea;
+  border-radius: 18px;
+  padding: 22px 20px;
+  box-shadow: 0 16px 40px rgba(20, 18, 26, 0.18);
+}
+
+.sideTitle {
+  margin: 0 0 6px;
+  font-family: var(--mc-display);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.sideSub {
+  margin: 0 0 16px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: rgba(245, 241, 234, 0.55);
+}
+
+.usageList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.usageItem {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.usageIndex {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 800;
+  background: rgba(224, 61, 75, 0.22);
+  color: #ffb4bc;
+}
+
+.usageLabel {
+  margin: 0 0 3px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.usageDesc {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: rgba(245, 241, 234, 0.5);
+}
+
+/* —— 生图 pane —— */
+.moduleList {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.moduleRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(200px, 0.55fr);
+  gap: 16px;
+  align-items: center;
+  padding: 16px 4px;
+  border-bottom: 1px solid var(--mc-line);
+}
+
+.moduleRow:last-child {
+  border-bottom: none;
+  padding-bottom: 4px;
+}
+
+@media (max-width: 720px) {
+  .moduleRow {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+.moduleLabel {
+  margin: 0 0 6px;
+  font-family: var(--mc-display);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.moduleDesc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--mc-muted);
+}
+
+.moduleKey {
+  margin: 6px 0 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: rgba(122, 115, 128, 0.85);
+}
+
+.moduleSelectLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--mc-muted);
+  letter-spacing: 0.06em;
+}
+
+.moduleSelect {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--mc-line);
+  background:
+    #fff
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%237a7380' d='M1 1l5 5 5-5'/%3E%3C/svg%3E")
+    no-repeat right 14px center;
+  color: var(--mc-ink);
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.moduleSelect:focus {
+  outline: none;
+  border-color: rgba(224, 61, 75, 0.55);
+  box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.12);
+}
+
+.loading {
+  margin: 0;
+  padding: 36px 20px;
+  text-align: center;
+  color: var(--mc-muted);
+  font-size: 14px;
+  background: var(--mc-paper);
+  border-radius: 18px;
+  border: 1px solid var(--mc-line);
+}

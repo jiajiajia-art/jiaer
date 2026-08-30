@@ -12,6 +12,10 @@ import { getImageUrl } from '../utils/constants';
 import { getGameTypeLabelFromMeta, getGameTypeToneFromMeta } from '../utils/gameTypeLabel';
 import { resolveGameTypeToneStyle } from '../utils/gameTypeToneClass';
 import { buildGameDetailNavigateState } from '../utils/gameDetailNavigation';
+import {
+  GAME_CARD_DEFAULT_AVATAR_PATH,
+  resolveGameCardAuthor,
+} from '../lib/gameCardAuthor';
 
 type GameGridLayoutVariant = 'default' | 'homeWide';
 
@@ -180,6 +184,12 @@ const GameGrid: React.FC<GameGridProps> = ({
                 const isUnpublished = Number(meta.is_public) !== 1;
                 const selectableId = getSelectableId(meta);
                 const isSelected = selectableId ? selectedIds.includes(selectableId) : false;
+                const author = resolveGameCardAuthor(meta, {
+                    unknownAuthor: t('gameDetail.unknownAuthor'),
+                });
+                const authorAvatarSrc =
+                    getImageUrl(author.avatarUrl)
+                    || `${import.meta.env.BASE_URL}${GAME_CARD_DEFAULT_AVATAR_PATH}`;
 
                 return (
                     <div
@@ -274,9 +284,16 @@ const GameGrid: React.FC<GameGridProps> = ({
                                 <div className={styles.goodsTitle}>
                                     {meta.title || `剧情${idx + 1}`}
                                 </div>
-                                {meta.subtitle && (
-                                    <div className={styles.goodsSubtitle}>{meta.subtitle}</div>
-                                )}
+                                <div className={styles.goodsAuthor} title={author.name}>
+                                    <img
+                                        className={styles.goodsAuthorAvatar}
+                                        src={authorAvatarSrc}
+                                        alt=""
+                                        loading="lazy"
+                                        decoding="async"
+                                    />
+                                    <span className={styles.goodsAuthorName}>{author.name}</span>
+                                </div>
                             </div>
                         </div>
                     </div>

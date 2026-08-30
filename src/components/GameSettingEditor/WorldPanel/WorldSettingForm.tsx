@@ -9,6 +9,7 @@ interface WorldSettingFormProps {
     title: string;
     tagline: string;
     era: string;
+    premise: string;
     playerRole: string;
     opening: string;
     openingPlot: string;
@@ -20,6 +21,7 @@ interface WorldSettingFormProps {
     onTitleChange: (value: string) => void;
     onTaglineChange: (value: string) => void;
     onEraChange: (value: string) => void;
+    onPremiseChange: (value: string) => void;
     onOpeningChange: (value: string) => void;
     onOpeningPlotChange: (value: string) => void;
     onThemeTagToggle: (tagId: number) => void;
@@ -29,6 +31,7 @@ interface WorldSettingFormProps {
     titleDirty?: boolean;
     taglineDirty?: boolean;
     eraDirty?: boolean;
+    premiseDirty?: boolean;
     openingDirty?: boolean;
     openingPlotDirty?: boolean;
     outputLengthDirty?: boolean;
@@ -36,6 +39,7 @@ interface WorldSettingFormProps {
     onTitleSave?: () => void | Promise<void> | Promise<boolean>;
     onTaglineSave?: () => void | Promise<void> | Promise<boolean>;
     onEraSave?: () => void | Promise<void> | Promise<boolean>;
+    onPremiseSave?: () => void | Promise<void> | Promise<boolean>;
     onOpeningSave?: () => void | Promise<void> | Promise<boolean>;
     onOpeningPlotSave?: () => void | Promise<void> | Promise<boolean>;
     onOutputLengthSave?: () => void | Promise<void> | Promise<boolean>;
@@ -47,16 +51,43 @@ interface WorldSettingFormProps {
 const WORD_LIMITS = {
     title: 20,
     tagline: 50,
-    era: 500,
+    era: 400,
+    premise: 400,
     opening: 400,
     openingPlot: 500,
 } as const;
+
+/** 功能注释：字段头——标题 +「作用于」徽章 + 写法提示，减少与相邻栏混淆。 */
+function FieldHeader(props: {
+    label: string;
+    required?: boolean;
+    actsOn: string;
+    hint: string;
+    wordCount: number;
+    wordLimit: number;
+}) {
+    const { label, required, actsOn, hint, wordCount, wordLimit } = props;
+    return (
+        <div className={styles.fieldTopRow}>
+            <div className={styles.fieldMeta}>
+                <span className={styles.fieldLabel}>
+                    {label}
+                    {required ? <span className={styles.required}>*</span> : null}
+                </span>
+                <span className={styles.fieldActsOn}>{actsOn}</span>
+                <span className={styles.fieldHint}>{hint}</span>
+            </div>
+            <span className={styles.wordCounter}>{wordCount}/{wordLimit}</span>
+        </div>
+    );
+}
 
 const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
     mode,
     title,
     tagline,
     era,
+    premise,
     playerRole,
     opening,
     openingPlot,
@@ -68,6 +99,7 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
     onTitleChange,
     onTaglineChange,
     onEraChange,
+    onPremiseChange,
     onOpeningChange,
     onOpeningPlotChange,
     onThemeTagToggle,
@@ -77,6 +109,7 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
     titleDirty = false,
     taglineDirty = false,
     eraDirty = false,
+    premiseDirty = false,
     openingDirty = false,
     openingPlotDirty = false,
     outputLengthDirty = false,
@@ -84,6 +117,7 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
     onTitleSave,
     onTaglineSave,
     onEraSave,
+    onPremiseSave,
     onOpeningSave,
     onOpeningPlotSave,
     onOutputLengthSave,
@@ -95,12 +129,14 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
     const titleWords = useWordCount(title);
     const taglineWords = useWordCount(tagline);
     const eraWords = useWordCount(era);
+    const premiseWords = useWordCount(premise);
     const openingWords = useWordCount(opening);
     const openingPlotWords = useWordCount(openingPlot);
 
     const titleLimit = useWordLimit(WORD_LIMITS.title, onTitleChange);
     const taglineLimit = useWordLimit(WORD_LIMITS.tagline, onTaglineChange);
     const eraLimit = useWordLimit(WORD_LIMITS.era, onEraChange);
+    const premiseLimit = useWordLimit(WORD_LIMITS.premise, onPremiseChange);
     const openingLimit = useWordLimit(WORD_LIMITS.opening, onOpeningChange);
     const openingPlotLimit = useWordLimit(WORD_LIMITS.openingPlot, onOpeningPlotChange);
 
@@ -200,24 +236,53 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
                     </div>
                 </div>
 
-                <label className={styles.fieldBlock}>
-                    <div className={styles.fieldTopRow}>
-                        <span className={styles.fieldLabel}>{t('createGame.eraBackground')}</span>
-                        <span className={styles.wordCounter}>{eraWords}/{WORD_LIMITS.era}</span>
-                    </div>
-                    <InlineFieldSave
-                        showSave={eraDirty}
-                        onSave={() => onEraSave?.()}
-                        disabled={inlineSaveDisabled}
-                        buttonPlacement="external"
-                    >
-                        <textarea
-                            rows={6}
-                            value={era}
-                            {...eraLimit}
+                <div className={styles.formStack}>
+                    <label className={styles.fieldBlock}>
+                        <FieldHeader
+                            label={t('createGame.worldview')}
+                            actsOn={t('createGame.worldviewActsOn')}
+                            hint={t('createGame.worldviewHint')}
+                            wordCount={eraWords}
+                            wordLimit={WORD_LIMITS.era}
                         />
-                    </InlineFieldSave>
-                </label>
+                        <InlineFieldSave
+                            showSave={eraDirty}
+                            onSave={() => onEraSave?.()}
+                            disabled={inlineSaveDisabled}
+                            buttonPlacement="external"
+                        >
+                            <textarea
+                                rows={5}
+                                value={era}
+                                placeholder={t('createGame.worldviewPlaceholder')}
+                                {...eraLimit}
+                            />
+                        </InlineFieldSave>
+                    </label>
+
+                    <label className={styles.fieldBlock}>
+                        <FieldHeader
+                            label={t('createGame.premise')}
+                            actsOn={t('createGame.premiseActsOn')}
+                            hint={t('createGame.premiseHint')}
+                            wordCount={premiseWords}
+                            wordLimit={WORD_LIMITS.premise}
+                        />
+                        <InlineFieldSave
+                            showSave={premiseDirty}
+                            onSave={() => onPremiseSave?.()}
+                            disabled={inlineSaveDisabled}
+                            buttonPlacement="external"
+                        >
+                            <textarea
+                                rows={5}
+                                value={premise}
+                                placeholder={t('createGame.premisePlaceholder')}
+                                {...premiseLimit}
+                            />
+                        </InlineFieldSave>
+                    </label>
+                </div>
             </section>
 
             <section className={styles.detailBlock}>
@@ -230,13 +295,14 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
 
                 <div className={styles.formStack}>
                     <label className={styles.fieldBlock}>
-                        <div className={styles.fieldTopRow}>
-                            <div className={styles.fieldMeta}>
-                                <span className={styles.fieldLabel}>{t('createGame.openingStatement')}<span className={styles.required}>*</span></span>
-                                <span className={styles.fieldHint}>{t('createGame.openingStatementHint')}</span>
-                            </div>
-                            <span className={styles.wordCounter}>{openingWords}/{WORD_LIMITS.opening}</span>
-                        </div>
+                        <FieldHeader
+                            label={t('createGame.openingStatement')}
+                            required
+                            actsOn={t('createGame.openingStatementActsOn')}
+                            hint={t('createGame.openingStatementHint')}
+                            wordCount={openingWords}
+                            wordLimit={WORD_LIMITS.opening}
+                        />
                         <InlineFieldSave
                             showSave={openingDirty}
                             onSave={() => onOpeningSave?.()}
@@ -246,6 +312,7 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
                             <textarea
                                 rows={5}
                                 value={opening}
+                                placeholder={t('createGame.openingStatementPlaceholder')}
                                 {...openingLimit}
                                 className={openingError ? styles.errorInput : ''}
                             />
@@ -256,13 +323,14 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
                     </label>
 
                     <label className={styles.fieldBlock}>
-                        <div className={styles.fieldTopRow}>
-                            <div className={styles.fieldMeta}>
-                                <span className={styles.fieldLabel}>{t('createGame.openingPlot')}<span className={styles.required}>*</span></span>
-                                <span className={styles.fieldHint}>{t('createGame.openingPlotHint')}</span>
-                            </div>
-                            <span className={styles.wordCounter}>{openingPlotWords}/{WORD_LIMITS.openingPlot}</span>
-                        </div>
+                        <FieldHeader
+                            label={t('createGame.openingPlot')}
+                            required
+                            actsOn={t('createGame.openingPlotActsOn')}
+                            hint={t('createGame.openingPlotHint')}
+                            wordCount={openingPlotWords}
+                            wordLimit={WORD_LIMITS.openingPlot}
+                        />
                         <InlineFieldSave
                             showSave={openingPlotDirty}
                             onSave={() => onOpeningPlotSave?.()}
@@ -272,6 +340,7 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
                             <textarea
                                 rows={5}
                                 value={openingPlot}
+                                placeholder={t('createGame.openingPlotPlaceholder')}
                                 {...openingPlotLimit}
                                 className={openingPlotError ? styles.errorInput : ''}
                             />

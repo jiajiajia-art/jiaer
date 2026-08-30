@@ -144,7 +144,10 @@ export type DataPromptForm = MorePromptForm;
 export interface WorldSetting {
   title: string;
   summary: string;
+  /** 世界观：世界运转规则（非已发生剧情） */
   background: string;
+  /** 前情提要：开局前已发生的事 */
+  premise?: string;
   Theme?: string[];
   preamble: string;
   initialPlot: string;

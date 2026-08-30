@@ -3,6 +3,7 @@ import styles from './StoryIntroModal.module.css';
 // import { useStoryTyping } from '../../../hooks/story/useStoryTyping';
 import type { AllGameData } from '../../../api/worldInteraction/mapWorldData.type';
 import { getImageUrl } from '../../../utils/constants';
+import { resolveStoryIntroText } from '../../../lib/worldSettingFields';
 
 interface StoryIntroModalProps {
     isOpen: boolean;
@@ -22,7 +23,11 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
     if (!isOpen) return null;
 
     const title = gameData?.worldSetting?.title || '故事';
-    const initialPlot = gameData?.worldSetting?.initialPlot || '欢迎来到这个精彩的故事世界，准备好开始你的冒险了吗？';
+    // 功能注释：优先开场白，旧档回退开场剧情
+    const introText = resolveStoryIntroText({
+        preamble: gameData?.worldSetting?.preamble,
+        initialPlot: gameData?.worldSetting?.initialPlot,
+    }) || '欢迎来到这个精彩的故事世界，准备好开始你的冒险了吗？';
     const worldMapImage = gameData?.worldSetting?.worldMapImage;
 
     const backgroundImage = worldMapImage
@@ -57,7 +62,7 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
                     <div className={styles.preambleText}>
                         {/* {displayedText}
                         {isTyping && <span className={styles.cursor}></span>} */}
-                        {initialPlot}
+                        {introText}
                     </div>
                 </div>
                 <div className={styles.modalFooter}>

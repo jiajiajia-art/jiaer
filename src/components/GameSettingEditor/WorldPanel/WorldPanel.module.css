@@ -274,6 +274,23 @@
     line-height: 1.4;
 }
 
+/* 功能注释：「作用于…」徽章，让世界观/前情/开场白/开场剧情一眼分清消费方 */
+.fieldActsOn {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    max-width: 100%;
+    margin-top: 2px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(224, 61, 75, 0.22);
+    background: rgba(224, 61, 75, 0.06);
+    color: #a12b36;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
 .fieldHintItalic {
     font-size: 0.8rem;
     color: rgba(0, 0, 0, 0.5);

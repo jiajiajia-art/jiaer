@@ -32,6 +32,9 @@ import {
 import {
   appendPrivateChatUserMessage,
   assertPrivateChatIsolatedFromNarrative,
+  canRegeneratePrivateChatLastMessage,
+  deletePrivateChatMessageAtIndex,
+  isLastPrivateChatAssistantMessage,
   isNarrativeGenerationBusy,
   isPrivateChatNarrativeBusyError,
   resolvePrivateChatBusyMessage,
@@ -388,6 +391,37 @@ test('privateChat_消息校验与追加', () => {
   if (!next.ok) return;
   assert.equal(next.thread.messages.length, 1);
   assert.equal(next.thread.messages[0].role, 'user');
+});
+
+test('deletePrivateChatMessageAtIndex_应删除指定气泡', () => {
+  const thread = {
+    sessionId: 's1',
+    npcId: 'n1',
+    messages: [
+      { role: 'user', content: 'a', createdAt: '1' },
+      { role: 'assistant', content: 'b', createdAt: '2' },
+      { role: 'user', content: 'c', createdAt: '3' },
+    ],
+  };
+  const bad = deletePrivateChatMessageAtIndex(thread, 9);
+  assert.equal(bad.ok, false);
+  const ok = deletePrivateChatMessageAtIndex(thread, 1);
+  assert.equal(ok.ok, true);
+  if (!ok.ok) return;
+  assert.equal(ok.thread.messages.length, 2);
+  assert.equal(ok.thread.messages[1].content, 'c');
+  assert.equal(thread.messages.length, 3);
+});
+
+test('问题8_自动第二句末条助手必须可重新回复', () => {
+  const messages = [
+    { role: 'user', content: '拼饭', createdAt: '1' },
+    { role: 'assistant', content: '第一句', createdAt: '2' },
+    { role: 'assistant', content: '自动第二句开黑不', createdAt: '3' },
+  ];
+  assert.equal(canRegeneratePrivateChatLastMessage(messages), true);
+  assert.equal(isLastPrivateChatAssistantMessage(messages, 2), true);
+  assert.equal(isLastPrivateChatAssistantMessage(messages, 1), false);
 });
 
 test('sanitizeNarrativeHistoryForPersist_应剥离私聊step', () => {

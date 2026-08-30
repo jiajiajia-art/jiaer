@@ -83,6 +83,7 @@ interface WorldFieldDirtyState {
     title: boolean;
     tagline: boolean;
     era: boolean;
+    premise: boolean;
     opening: boolean;
     openingPlot: boolean;
     outputLength: boolean;
@@ -92,6 +93,7 @@ const EMPTY_WORLD_FIELD_DIRTY_STATE: WorldFieldDirtyState = {
     title: false,
     tagline: false,
     era: false,
+    premise: false,
     opening: false,
     openingPlot: false,
     outputLength: false,
@@ -110,6 +112,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
     const [title, setTitle] = useState<string>('');
     const [tagline, setTagline] = useState<string>('');
     const [era, setEra] = useState<string>('');
+    const [premise, setPremise] = useState<string>('');
     const [opening, setOpening] = useState<string>('');
     const [openingPlot, setOpeningPlot] = useState<string>('');
     const [playerRole, setPlayerRole] = useState<string>('');
@@ -270,6 +273,8 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         setTitle(ws.title || '');
         setTagline(ws.summary || '');
         setEra(ws.background || '');
+        // 功能注释：前情提要独立字段；旧档无 premise 时留空，不强行从 background 拆分
+        setPremise((ws as { premise?: string }).premise || '');
         setPlayerRole(playerRoleText);
         setOpening(ws.preamble || '');
         setOpeningPlot(ws.initialPlot || '');
@@ -466,6 +471,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                 title,
                 summary: tagline,
                 background: era,
+                premise,
                 preamble: opening,
                 initialPlot: openingPlot,
                 literary: toneValue ?? '',
@@ -499,6 +505,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
             title,
             summary: tagline,
             background: era,
+            premise,
             preamble: opening,
             initialPlot: openingPlot,
             literary: toneValue ?? '',
@@ -508,6 +515,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         } as unknown as WorldWorldSetting;
     }, [
         era,
+        premise,
         gameData,
         maxOutputLength,
         minOutputLength,
@@ -543,6 +551,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
             if (isStrDiff(full.title, orig.title)) diff.title = full.title;
             if (isStrDiff(full.summary, orig.summary)) diff.summary = full.summary;
             if (isStrDiff(full.background, orig.background)) diff.background = full.background;
+            if (isStrDiff(full.premise, orig.premise)) diff.premise = full.premise;
             if (isStrDiff(full.preamble, orig.preamble)) diff.preamble = full.preamble;
             if (isStrDiff(full.initialPlot, orig.initialPlot)) diff.initialPlot = full.initialPlot;
             if (isStrDiff(full.literary, orig.literary)) diff.literary = full.literary;
@@ -572,6 +581,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         if (isStrDiff(full.title, orig.title)) diff.title = full.title;
         if (isStrDiff(full.summary, orig.summary)) diff.summary = full.summary;
         if (isStrDiff(full.background, orig.background)) diff.background = full.background;
+        if (isStrDiff(full.premise, orig.premise)) diff.premise = full.premise;
         if (isStrDiff(full.preamble, orig.preamble)) diff.preamble = full.preamble;
         if (isStrDiff(full.initialPlot, orig.initialPlot)) diff.initialPlot = full.initialPlot;
         if (isStrDiff(full.literary, orig.literary)) diff.literary = full.literary;
@@ -602,6 +612,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
             title: title !== (original.title || ''),
             tagline: tagline !== (original.summary || ''),
             era: era !== (original.background || ''),
+            premise: premise !== ((original as { premise?: string }).premise || ''),
             opening: opening !== (original.preamble || ''),
             openingPlot: openingPlot !== (original.initialPlot || ''),
             outputLength:
@@ -611,6 +622,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         };
     }, [
         era,
+        premise,
         maxOutputLength,
         minOutputLength,
         opening,
@@ -815,6 +827,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                         title={title}
                         tagline={tagline}
                         era={era}
+                        premise={premise}
                         playerRole={playerRole}
                         opening={opening}
                         openingPlot={openingPlot}
@@ -826,6 +839,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                         onTitleChange={setTitle}
                         onTaglineChange={setTagline}
                         onEraChange={setEra}
+                        onPremiseChange={setPremise}
                         onOpeningChange={(value) => {
                             setOpening(value);
                             if (openingError && value.trim()) {
@@ -845,6 +859,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                         titleDirty={worldFieldDirtyState.title}
                         taglineDirty={worldFieldDirtyState.tagline}
                         eraDirty={worldFieldDirtyState.era}
+                        premiseDirty={worldFieldDirtyState.premise}
                         openingDirty={worldFieldDirtyState.opening}
                         openingPlotDirty={worldFieldDirtyState.openingPlot}
                         outputLengthDirty={worldFieldDirtyState.outputLength}
@@ -852,6 +867,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                         onTitleSave={saveWorldSettingChanges}
                         onTaglineSave={saveWorldSettingChanges}
                         onEraSave={saveWorldSettingChanges}
+                        onPremiseSave={saveWorldSettingChanges}
                         onOpeningSave={saveWorldSettingChanges}
                         onOpeningPlotSave={saveWorldSettingChanges}
                         onOutputLengthSave={saveWorldSettingChanges}

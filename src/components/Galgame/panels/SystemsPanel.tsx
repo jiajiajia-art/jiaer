@@ -122,13 +122,13 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
   const [mineWorldBooksLoading, setMineWorldBooksLoading] = useState(false);
   const [selectedMineWorldBookId, setSelectedMineWorldBookId] = useState<string | null>(null);
   const [avoidDraft, setAvoidDraft] = useState('');
-  const [positionDraft, setPositionDraft] = useState({ identity: '', stance: '', secret: '' });
+  const [positionDraft, setPositionDraft] = useState({ identity: '', stance: '' });
   const [routeDraftId, setRouteDraftId] = useState(currentOpeningRouteId);
   const [routeMemo, setRouteMemo] = useState('');
   const [pendingRouteId, setPendingRouteId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [positionAiBusy, setPositionAiBusy] = useState<'traits' | 'secret' | null>(null);
-  const [positionAiConfirm, setPositionAiConfirm] = useState<'traits' | 'secret' | null>(null);
+  const [positionAiBusy, setPositionAiBusy] = useState<'traits' | null>(null);
+  const [positionAiConfirm, setPositionAiConfirm] = useState<'traits' | null>(null);
   const authUser = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
   const { sessionId } = useGameStore();
@@ -387,11 +387,12 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
   };
 
   const savePosition = async () => {
+    // 功能注释：秘密由创作者设定且不对玩家回传；保存时保留局内已有 secret，禁止被空草稿清空
     const next: GameStartPersonaBlocks = {
       ...personaBlocks,
       identity: positionDraft.identity.trim() || undefined,
       traits: positionDraft.stance.trim() || undefined,
-      secret: positionDraft.secret.trim() || undefined,
+      secret: personaBlocks.secret,
     };
     setPersonaBlocks(next);
     const ok = await persist({ personaBlocks: next });
@@ -401,9 +402,9 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
     }
   };
 
-  const POSITION_AI_LABEL = { traits: '当前立场', secret: '秘密' } as const;
+  const POSITION_AI_LABEL = { traits: '当前立场' } as const;
 
-  const requestPositionAi = async (field: 'traits' | 'secret') => {
+  const requestPositionAi = async (field: 'traits') => {
     if (!authUser?.token || !sessionId) {
       toast.error('请先登录并进入对局');
       return;
@@ -434,7 +435,6 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
         draft: {
           identity: positionDraft.identity,
           traits: positionDraft.stance,
-          secret: positionDraft.secret,
         },
       });
       if (!res?.success || !res.data?.text) {
@@ -444,8 +444,6 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
       const text = String(res.data.text);
       if (field === 'traits') {
         setPositionDraft((d) => ({ ...d, stance: text.slice(0, 200) }));
-      } else {
-        setPositionDraft((d) => ({ ...d, secret: text.slice(0, 400) }));
       }
       if (typeof res.data.remainingPoints === 'number') {
         updateUser({ points: res.data.remainingPoints });
@@ -509,7 +507,8 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
     if (view === 'worldBookImport') return '支持粘贴、上传、模板或从我的世界书导入';
     if (view === 'writingStyle') return '文风 / 节奏 / 视角 / 描写 / 剧情';
     if (view === 'avoidEdit') return '长按拖拽排序二期；可增删';
-    if (view === 'position') return '当前身份、立场与秘密';
+    if (view === 'position') return '当前身份与立场';
+    if (view === 'positionEdit') return '编辑当前身份与立场';
     if (view === 'route') return GAME_START_UE_COPY.currentRouteHint;
     return undefined;
   })();
@@ -560,7 +559,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
             {[
               { id: 'worldBook' as const, icon: '书', title: '世界书', desc: '已装载条目与规则' },
               { id: 'writingStyle' as const, icon: '风', title: '文风设定', desc: '文风偏好与避雷词' },
-              { id: 'position' as const, icon: '位', title: '玩家目前定位', desc: '当前身份、立场与秘密' },
+              { id: 'position' as const, icon: '位', title: '玩家目前定位', desc: '当前身份与立场' },
               { id: 'route' as const, icon: '线', title: GAME_START_UE_COPY.currentRouteSection, desc: '剧情路线与进度' },
             ].map((item) => (
               <button
@@ -1006,13 +1005,9 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
                 <span className={styles.positionKey}>当前立场</span>
                 <div className={styles.positionVal}>{personaBlocks.traits || '未设置'}</div>
               </div>
-              <div className={styles.positionRow}>
-                <span className={styles.positionKey}>秘密</span>
-                <div className={styles.positionVal}>{personaBlocks.secret || '未设置'}</div>
-              </div>
             </div>
             <p className={styles.infoHint}>
-              「秘密」玩家本人可读可知；扮演玩家的叙事必须遵守。NPC 默认不知情——请把不该被外人知道的动机写在这里，而不是「当前立场」。
+              「秘密」由创作者在创作台「玩家目前定位」中填写，局内不对玩家展示；叙事仍会遵守该秘密。NPC 默认不知情。
             </p>
             <button
               type="button"
@@ -1021,7 +1016,6 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
                 setPositionDraft({
                   identity: personaBlocks.identity || '',
                   stance: personaBlocks.traits || '',
-                  secret: personaBlocks.secret || '',
                 });
                 setView('positionEdit');
               }}
@@ -1065,31 +1059,6 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
                 placeholder="对外可被察觉的立场，如：表面随和、站队某派"
                 disabled={positionAiBusy === 'traits'}
                 onChange={(e) => setPositionDraft((d) => ({ ...d, stance: e.target.value }))}
-              />
-            </label>
-            <label className={styles.field}>
-              <div className={styles.labelWithAi}>
-                <span className={styles.labelRow}>秘密</span>
-                <button
-                  type="button"
-                  className={styles.fieldAiBtn}
-                  disabled={saving || Boolean(positionAiBusy)}
-                  onClick={() => {
-                    void requestPositionAi('secret');
-                  }}
-                >
-                  {positionAiBusy === 'secret'
-                    ? '生成中…'
-                    : `AI生成 · ${NPC_PROFILE_FIELD_GENERATION_COST}`}
-                </button>
-              </div>
-              <textarea
-                rows={4}
-                value={positionDraft.secret}
-                maxLength={400}
-                placeholder="不被他人所知道的事，如：真正喜欢的是......"
-                disabled={positionAiBusy === 'secret'}
-                onChange={(e) => setPositionDraft((d) => ({ ...d, secret: e.target.value }))}
               />
             </label>
             <div className={styles.actions}>

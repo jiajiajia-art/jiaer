@@ -58,7 +58,30 @@ export function normalizeTextLlmModel(value: unknown): TextLlmModel {
   return isTextLlmModel(value) ? value : DEFAULT_TEXT_LLM_MODEL;
 }
 
+/** 功能注释：卡片标题（运营可读）与网关侧真实 model id 分离展示。 */
 export function getTextLlmModelLabel(model: TextLlmModel): string {
-  if (model === 'doubao-seed-1-8-251228') return '豆包 Seed 1.8（默认）';
+  if (model === 'doubao-seed-1-8-251228') return '豆包 Seed 1.8';
+  if (model === 'DeepSeek-V4-Pro-0813') return 'DeepSeek V4 Pro';
+  if (model === 'DeepSeek-V4-Flash 0731') return 'DeepSeek V4 Flash';
+  if (model === 'DeepSeek-V3.2 Speciale') return 'DeepSeek V3.2 Speciale';
+  if (model === 'DeepSeek-V3.2') return 'DeepSeek V3.2';
+  if (model === 'deepseek-v3.1') return 'DeepSeek V3.1';
   return model;
+}
+
+export function getTextLlmModelVendor(model: TextLlmModel): string {
+  if (model.startsWith('doubao')) return 'Doubao';
+  return 'DeepSeek · epone';
+}
+
+export function getTextLlmModelMeta(model: TextLlmModel): string {
+  if (model === DEFAULT_TEXT_LLM_MODEL) return '全站默认 · Ark';
+  if (model.includes('V4-Pro')) return '1M ctx · 旗舰';
+  if (model.includes('Flash')) return '1M ctx · 更快';
+  if (model.includes('Speciale')) return '128K · 多模态';
+  return '128K · epone 网关';
+}
+
+export function isDefaultTextLlmModel(model: TextLlmModel): boolean {
+  return model === DEFAULT_TEXT_LLM_MODEL;
 }

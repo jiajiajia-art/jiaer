@@ -19,6 +19,7 @@ function trimStr(value: unknown): string {
 /**
  * 功能注释：按 npcId 优先、姓名/曾用名回落，取出局内档案立绘 URL。
  * 对白 step 有时只有 speakerName，列表改名后仍要对得上现用名。
+ * 问题10：当 npcId 与「唯一命中」的 speakerName 指向不同档案时，以姓名为准，避免错立绘。
  */
 export function pickSessionNpcAvatarUrl(
   edits: SessionNpcPortraitLike[] | null | undefined,
@@ -27,17 +28,37 @@ export function pickSessionNpcAvatarUrl(
   const list = Array.isArray(edits) ? edits : [];
   const npcId = trimStr(opts.npcId);
   const speakerName = trimStr(opts.speakerName);
-  if (npcId) {
-    const byId = list.find((item) => trimStr(item?.id) === npcId);
-    const url = trimStr(byId?.avatarUrl);
-    if (url) return url;
-  }
-  if (speakerName) {
-    const byName = list.find((item) => (
+
+  const byId = npcId ? list.find((item) => trimStr(item?.id) === npcId) : undefined;
+  const nameMatches = speakerName
+    ? list.filter((item) => (
       trimStr(item?.name) === speakerName
       || trimStr(item?.originalName) === speakerName
-    ));
-    const url = trimStr(byName?.avatarUrl);
+    ))
+    : [];
+  const byNameUnique = nameMatches.length === 1 ? nameMatches[0] : undefined;
+
+  // 唯一姓名命中另一 id → 跟姓名（LLM 错借 id）
+  if (
+    byId
+    && byNameUnique
+    && trimStr(byId.id) !== trimStr(byNameUnique.id)
+  ) {
+    const nameUrl = trimStr(byNameUnique.avatarUrl);
+    if (nameUrl) return nameUrl;
+  }
+
+  if (byId) {
+    const url = trimStr(byId.avatarUrl);
+    if (url) return url;
+  }
+  if (byNameUnique) {
+    const url = trimStr(byNameUnique.avatarUrl);
+    if (url) return url;
+  }
+  // 多名重名时回落到第一个姓名命中（无 id 场景）
+  if (!npcId && nameMatches.length > 0) {
+    const url = trimStr(nameMatches[0]?.avatarUrl);
     if (url) return url;
   }
   return '';

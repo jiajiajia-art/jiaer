@@ -12,6 +12,7 @@ import {
   TEXT_LLM_USAGE_CATALOG,
   normalizeTextLlmModel,
 } from '../src/lib/textLlmConfig.ts';
+import { resolveModelConfigPane } from '../src/lib/modelConfigPane.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -22,19 +23,37 @@ test('normalizeTextLlmModel_非法回落默认豆包', () => {
   assert.equal(TEXT_LLM_USAGE_CATALOG.length, 5);
 });
 
-test('生图配置页应有文案配置入口与独立路由', () => {
-  const imageGen = readFileSync(join(root, 'src/components/ImageGenConfigManager.tsx'), 'utf8');
-  assert.match(imageGen, /文案配置/);
-  assert.match(imageGen, /\/admin\/text-llm/);
+test('resolveModelConfigPane_按路由切换生图与文案', () => {
+  assert.equal(resolveModelConfigPane('/admin/image-gen'), 'image');
+  assert.equal(resolveModelConfigPane('/funloom/admin/image-gen'), 'image');
+  assert.equal(resolveModelConfigPane('/admin/text-llm'), 'text');
+  assert.equal(resolveModelConfigPane('/admin/text-llm?x=1'), 'text');
+});
 
-  const textLlm = readFileSync(join(root, 'src/components/TextLlmConfigManager.tsx'), 'utf8');
-  assert.match(textLlm, /全站统一文本模型/);
-  assert.match(textLlm, /epone\.ggb\.today/);
+test('ModelConfigHub_同页双轨Tab与文案内容', () => {
+  const hub = readFileSync(join(root, 'src/components/ModelConfigHub.tsx'), 'utf8');
+  assert.match(hub, /一处配置，全站文案同模型/);
+  assert.match(hub, /epone\.ggb\.today/);
+  assert.match(hub, /role="radiogroup"/);
+  assert.match(hub, /role="tablist"/);
+  assert.match(hub, /ModelConfigHub\.module\.css/);
+
+  const css = readFileSync(join(root, 'src/components/ModelConfigHub.module.css'), 'utf8');
+  assert.match(css, /--mc-coral/);
+  assert.match(css, /Noto Serif SC/);
+  assert.match(css, /\.railThumb/);
 
   const panel = readFileSync(join(root, 'src/page/AdminPanel.tsx'), 'utf8');
-  assert.match(panel, /TextLlmConfigManager/);
+  assert.match(panel, /ModelConfigHub/);
   assert.match(panel, /\/admin\/text-llm/);
 
   const app = readFileSync(join(root, 'src/App.tsx'), 'utf8');
   assert.match(app, /path="\/admin\/text-llm"/);
+});
+
+test('textLlmConfig_模型展示标签可读', async () => {
+  const mod = await import('../src/lib/textLlmConfig.ts');
+  assert.equal(mod.getTextLlmModelLabel('doubao-seed-1-8-251228'), '豆包 Seed 1.8');
+  assert.equal(mod.getTextLlmModelVendor('DeepSeek-V3.2'), 'DeepSeek · epone');
+  assert.ok(mod.isDefaultTextLlmModel(DEFAULT_TEXT_LLM_MODEL));
 });

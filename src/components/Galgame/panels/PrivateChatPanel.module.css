@@ -337,6 +337,16 @@
   color: rgba(255, 245, 242, 0.92);
 }
 
+.menuBtnDanger {
+  color: #ff8a93;
+  font-weight: 750;
+}
+
+.menuBtnDanger:hover:not(:disabled) {
+  background: rgba(224, 61, 75, 0.28);
+  color: #fff;
+}
+
 .menuDivider {
   width: 1px;
   align-self: stretch;

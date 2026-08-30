@@ -34,8 +34,7 @@ import DailyTasksAdminManager from '../components/DailyTasksAdminManager';
 import CommentAdminManager from '../components/admin/CommentAdminManager';
 import WithdrawAdminManager from '../components/WithdrawAdminManager';
 import LotteryAdminManager from '../components/LotteryAdminManager';
-import ImageGenConfigManager from '../components/ImageGenConfigManager';
-import TextLlmConfigManager from '../components/TextLlmConfigManager';
+import ModelConfigHub from '../components/ModelConfigHub';
 import announcementApi from '../api/announcement/announcementApi';
 import documentApi from '../api/document/documentApi';
 import gameTagsApi from '../api/gameTags/gameTagsApi';
@@ -58,7 +57,7 @@ import { useMessageStore } from '../store/useMessageStore';
 import { useAuthStore } from '../store/useAuthStore';
 
 type EditorMode = 'new' | 'draft' | 'published';
-type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points' | 'creatorIncentives' | 'subscriptions' | 'documents' | 'shareRatio' | 'dailyTasks' | 'users' | 'comments' | 'withdraw' | 'imageGen' | 'textLlm' | 'lottery';
+type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points' | 'creatorIncentives' | 'subscriptions' | 'documents' | 'shareRatio' | 'dailyTasks' | 'users' | 'comments' | 'withdraw' | 'imageGen' | 'lottery';
 type SortModalMode = 'featured' | 'all' | null;
 
 interface SortDraftItem {
@@ -91,8 +90,7 @@ const resolveAdminTab = (pathname: string, search: string): AdminTab => {
     if (pathname.startsWith('/admin/daily-tasks')) return 'dailyTasks';
     if (pathname.startsWith('/admin/comments')) return 'comments';
     if (pathname.startsWith('/admin/withdraw')) return 'withdraw';
-    if (pathname.startsWith('/admin/image-gen')) return 'imageGen';
-    if (pathname.startsWith('/admin/text-llm')) return 'textLlm';
+    if (pathname.startsWith('/admin/image-gen') || pathname.startsWith('/admin/text-llm')) return 'imageGen';
     if (pathname.startsWith('/admin/lottery')) return 'lottery';
     const tabParam = new URLSearchParams(search).get('tab');
     if (tabParam === 'announcements' || tabParam === 'banners' || tabParam === 'themes' || tabParam === 'comments') return tabParam;
@@ -1553,7 +1551,7 @@ const AdminPanel: React.FC = () => {
                                 className={`${styles.navItem} ${activeTab === 'imageGen' ? styles.navItemActive : ''}`}
                                 onClick={() => handleTabChange('imageGen')}
                             >
-                                <span className={styles.navTitle}>生图配置</span>
+                                <span className={styles.navTitle}>模型配置</span>
                             </button>
                             <button
                                 type="button"
@@ -1937,8 +1935,7 @@ const AdminPanel: React.FC = () => {
 
                         {activeTab === 'withdraw' && <WithdrawAdminManager />}
 
-                        {activeTab === 'imageGen' && <ImageGenConfigManager />}
-                        {activeTab === 'textLlm' && <TextLlmConfigManager />}
+                        {activeTab === 'imageGen' && <ModelConfigHub />}
 
                         {activeTab === 'lottery' && <LotteryAdminManager />}
 
