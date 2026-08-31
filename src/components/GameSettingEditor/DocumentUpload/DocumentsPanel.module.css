@@ -369,6 +369,7 @@
     display: flex;
     align-items: center;
     gap: 20px;
+    flex-wrap: wrap;
 }
 
 .generateFromIdeaIcon {
@@ -379,7 +380,7 @@
 
 .generateFromIdeaText {
     flex: 1;
-    min-width: 0;
+    min-width: 200px;
 }
 
 .generateFromIdeaTitle {
@@ -394,6 +395,41 @@
     color: rgba(0, 0, 0, 0.6);
     font-size: 0.9rem;
     line-height: 1.5;
+}
+
+.generateFromIdeaHint {
+    margin: 8px 0 0 0;
+    color: rgba(0, 0, 0, 0.45);
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+.generateFromIdeaActions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.generateFromIdeaSecondary {
+    padding: 10px 22px;
+    background: #fff;
+    color: var(--primary);
+    border: 1.5px solid rgba(224, 61, 75, 0.45);
+    border-radius: 999px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.generateFromIdeaSecondary:hover:not(:disabled) {
+    background: rgba(224, 61, 75, 0.06);
+}
+
+.generateFromIdeaSecondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .generateFromIdeaButton {

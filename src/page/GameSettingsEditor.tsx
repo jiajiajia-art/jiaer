@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styles from './GameSettingsEditor.module.css';
@@ -12,7 +12,9 @@ import MapPanel, { type MapPanelRef } from '../components/GameSettingEditor/MapP
 import FunctionalNPCsPanel, { type FunctionalNPCsPanelRef } from '../components/GameSettingEditor/FunctionalNPCsPanel/FunctionalNPCsPanel';
 import { type ObjectsPanelRef } from '../components/GameSettingEditor/ObjectsPanel/ObjectsPanel';
 import PublishSettingsModal, { type PublishSubmitPayload } from '../components/CommonModal/PublishSettingsModal';
+import PublishAssetCheckModal from '../components/CommonModal/PublishAssetCheckModal';
 import ConfirmModal from '../components/CommonModal/ConfirmModal';
+import AssetGapBanner from '../components/GameSettingEditor/AssetGapBanner';
 import { useEditorStore } from '../store/editorStore';
 import { useGameStore } from '../store/gameStore';
 import { useEditorData } from '../hooks/editor/useEditorData';
@@ -21,6 +23,13 @@ import { useEditorSubmit } from '../hooks/editor/useEditorSubmit';
 import { useEditorSession } from '../hooks/editor/useEditorSession';
 import type { AllGameData } from '../api/galgame/EditorData.type';
 import type { WorldInteractionGameData } from '../api/worldInteraction/worldInteractionApi.type';
+import type { IdeaGenerateOptions } from '../lib/galgame/ideaFullWorkEstimate';
+import { assetCompletenessFromEditorData } from '../lib/galgame/assetCompleteness';
+import {
+    dismissAssetGapBanner,
+    isAssetGapBannerDismissed,
+    peekAssetGapBannerKind,
+} from '../lib/galgame/ideaFullWorkSession';
 import FullPageLoading from '../components/Skeleton/FullPageLoading';
 import EditorApi from '../api/galgame/EditorData';
 import worldEditor from '../api/worldInteraction/worldEditor';
@@ -69,6 +78,8 @@ const GameSettingsEditor = () => {
     
     const [isParsing, setIsParsing] = useState<boolean>(false);
     const [showPublishModal, setShowPublishModal] = useState<boolean>(false);
+    const [showPublishAssetCheck, setShowPublishAssetCheck] = useState<boolean>(false);
+    const [assetBannerDismissed, setAssetBannerDismissed] = useState(false);
     const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
     const hasLoadedMapRef = useRef<boolean>(false);
     const parsingSuccessTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -192,20 +203,72 @@ const GameSettingsEditor = () => {
         setActivePanel('documents');
     }, [setActivePanel, setIsParsed]);
 
-    const handleGenerateFromIdeaWrapper = useCallback(async (idea: string) => {
+    const handleGenerateFromIdeaWrapper = useCallback(async (
+        idea: string,
+        options: IdeaGenerateOptions,
+    ) => {
         // mode 为 null 时默认为 visual 模式，只有 worldInteraction 模式才不允许
         if (mode === 'worldInteraction') {
             throw new Error('一句话生成功能仅在 visual 模式下可用');
         }
         // 开始解析状态
         handleParsingStart();
-        const result = await handleGenerateFromIdea(idea);
+        const result = await handleGenerateFromIdea(idea, options);
         // 如果失败，重置解析状态
         if (!result) {
             setIsParsing(false);
         }
         return result;
     }, [mode, handleGenerateFromIdea, handleParsingStart]);
+
+    // 功能注释：切换作品时同步素材提醒关闭态
+    useEffect(() => {
+        if (!fileId) {
+            setAssetBannerDismissed(false);
+            return;
+        }
+        setAssetBannerDismissed(isAssetGapBannerDismissed(fileId));
+    }, [fileId]);
+
+    const assetCompleteness = useMemo(() => {
+        if (!gameData || mode === 'worldInteraction') {
+            return null;
+        }
+        return assetCompletenessFromEditorData(gameData as AllGameData);
+    }, [gameData, mode]);
+
+    const assetBannerKind = fileId ? peekAssetGapBannerKind(fileId) : null;
+    const showAssetGapBanner = Boolean(
+        isParsed
+        && fileId
+        && assetBannerKind
+        && !assetBannerDismissed
+        && assetCompleteness?.hasGaps
+        && mode !== 'worldInteraction',
+    );
+
+    const openPublishFlow = useCallback(() => {
+        if (assetCompleteness?.hasGaps) {
+            setShowPublishAssetCheck(true);
+            return;
+        }
+        setShowPublishModal(true);
+    }, [assetCompleteness]);
+
+    const handleGoCompleteAssets = useCallback(() => {
+        setShowPublishAssetCheck(false);
+        if (!assetCompleteness) {
+            setActivePanel('characters');
+            return;
+        }
+        if (assetCompleteness.missingPortraits > 0) {
+            setActivePanel('characters');
+        } else if (assetCompleteness.missingScenes > 0) {
+            setActivePanel('scenes');
+        } else {
+            setActivePanel('world');
+        }
+    }, [assetCompleteness, setActivePanel]);
 
     // 初始化：当 fileId 存在且数据加载完成时，设置解析状态和初始面板
     const hasInitializedRef = useRef<string | null>(null);
@@ -594,15 +657,15 @@ const GameSettingsEditor = () => {
                             className={styles.primary}
                             onClick={async (e) => {
                                 e.preventDefault();
-                                // 实现直接发布前未保存校验
+                                // 实现直接发布前未保存校验 + 素材软检查
                                 const canOpenPublishModal = await checkActivePanelBeforeAction(() => {
-                                    setShowPublishModal(true);
+                                    openPublishFlow();
                                 });
                                 // 阻止未保存状态直接进入发布弹窗
                                 if (!canOpenPublishModal) {
                                     return;
                                 }
-                                setShowPublishModal(true);
+                                openPublishFlow();
                             }}
                             disabled={!fileId || !gameData || isSubmitting || isLoadingData}
                         >
@@ -610,6 +673,22 @@ const GameSettingsEditor = () => {
                         </button>
                     </div>
                 </header>
+
+                {showAssetGapBanner && assetCompleteness && assetBannerKind && (
+                    <AssetGapBanner
+                        kind={assetBannerKind}
+                        missingPortraits={assetCompleteness.missingPortraits}
+                        missingScenes={assetCompleteness.missingScenes}
+                        missingCover={assetCompleteness.missingCover}
+                        onGoCharacters={() => setActivePanel('characters')}
+                        onGoScenes={() => setActivePanel('scenes')}
+                        onGoCover={() => setActivePanel('world')}
+                        onDismiss={() => {
+                            if (fileId) dismissAssetGapBanner(fileId);
+                            setAssetBannerDismissed(true);
+                        }}
+                    />
+                )}
 
                 <section className={`${styles.panel} ${activePanel === 'documents' ? styles.active : ''}`} id="documents">
                     <DocumentsPanel
@@ -811,6 +890,18 @@ const GameSettingsEditor = () => {
                         engine="AVG"
                     />
                 )}
+                <PublishAssetCheckModal
+                    isOpen={showPublishAssetCheck}
+                    missingPortraits={assetCompleteness?.missingPortraits ?? 0}
+                    missingScenes={assetCompleteness?.missingScenes ?? 0}
+                    missingCover={Boolean(assetCompleteness?.missingCover)}
+                    onClose={() => setShowPublishAssetCheck(false)}
+                    onGoComplete={handleGoCompleteAssets}
+                    onPublishAnyway={() => {
+                        setShowPublishAssetCheck(false);
+                        setShowPublishModal(true);
+                    }}
+                />
                 <ConfirmModal
                     variant="alert"
                     isOpen={Boolean(noticeMessage)}

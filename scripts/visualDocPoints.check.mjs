@@ -27,9 +27,11 @@ test('useFileUpload wires points precheck and success deduct toast', () => {
   assert.match(src, /ideaGenerateSuccessDeducted/);
   assert.match(src, /docParseSuccessDeducted/);
   assert.match(src, /settle re-fetch|checkUploadStatus\(jobId\)/);
+  assert.match(src, /runIdeaFullWorkAssets/);
+  assert.match(src, /generateAssets/);
 });
 
-test('DocumentsPanel and GenerateFromIdeaModal show 10-point cost', () => {
+test('DocumentsPanel and GenerateFromIdeaModal show dual scope and 10-point text cost', () => {
   const panel = readFileSync(
     join(root, 'src/components/GameSettingEditor/DocumentUpload/DocumentsPanel.tsx'),
     'utf8',
@@ -40,12 +42,16 @@ test('DocumentsPanel and GenerateFromIdeaModal show 10-point cost', () => {
   );
   assert.match(panel, /TXT_IDEA_GENERATE_COST/);
   assert.match(panel, /TXT_DOC_PARSE_COST/);
-  assert.match(panel, /generateNowWithCost/);
+  assert.match(panel, /generateTextOnlyWithCost/);
+  assert.match(panel, /generateFullWorkCta/);
   assert.match(panel, /documentImportWithCost/);
   assert.match(modal, /startGenerateWithCost/);
-  assert.match(modal, /ideaGenerateCostHint/);
+  assert.match(modal, /startGenerateFullWorkWithCost/);
+  assert.match(modal, /generateScope/);
+  assert.match(modal, /scopeFullWorkTitle/);
   assert.match(modal, /TXT_IDEA_TEXT_COST/);
   assert.match(modal, /aiGenerateIdeaTextWithCost/);
   assert.match(modal, /generateIdeaText/);
   assert.match(modal, /labelWithAi/);
+  assert.match(modal, /estimateFullWorkPoints/);
 });

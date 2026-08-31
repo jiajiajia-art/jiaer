@@ -7,10 +7,11 @@ import { HiOutlineGlobeAlt, HiOutlineUserGroup, HiOutlineMap, HiOutlineCheckCirc
 import toast from 'react-hot-toast';
 import { useUploadStore, type UploadJob } from '../../../store/uploadStore';
 import CreateEmptyGameModal from './CreateEmptyGameModal';
-import GenerateFromIdeaModal from './GenerateFromIdeaModal';
+import GenerateFromIdeaModal, { type IdeaGenerateOptions } from './GenerateFromIdeaModal';
 import type { UploadResult } from '../../../hooks/editor/useFileUpload';
 import { getUploadEtaText } from '../../../utils/etaText';
 import { TXT_DOC_PARSE_COST, TXT_IDEA_GENERATE_COST } from '../../../utils/constants';
+import type { IdeaGenerateMode } from '../../../lib/galgame/ideaFullWorkEstimate';
 
 interface DocumentsPanelProps {
     onFileUpload: (file: File) => Promise<UploadResult>;
@@ -20,7 +21,7 @@ interface DocumentsPanelProps {
     onParsingFailed: () => void;
     fileId: string;
     onCreateEmptyGame?: (title: string) => Promise<void>;
-    onGenerateFromIdea?: (idea: string) => Promise<boolean>;
+    onGenerateFromIdea?: (idea: string, options: IdeaGenerateOptions) => Promise<boolean>;
     mode?: string;
 }
 
@@ -51,6 +52,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
     const defaultParseErrorMessage = t('createGame.parseErrorDefault');
     const [showCreateEmptyModal, setShowCreateEmptyModal] = useState(false);
     const [showGenerateFromIdeaModal, setShowGenerateFromIdeaModal] = useState(false);
+    const [ideaModalInitialMode, setIdeaModalInitialMode] = useState<IdeaGenerateMode>('text');
     const isVisualMode = mode === 'visual' || !mode;
     const fileInputRef = useRef<HTMLInputElement>(null);
     const handledJobStateRef = useRef<string | null>(null);
@@ -359,7 +361,12 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
     const currentStepIndex = getCurrentStepIndex();
     const isCompleted = currentJob?.status === 'completed';
 
-    const handleGenerateFromIdeaSubmit = useCallback(async (idea: string) => {
+    const openIdeaModal = useCallback((mode: IdeaGenerateMode) => {
+        setIdeaModalInitialMode(mode);
+        setShowGenerateFromIdeaModal(true);
+    }, []);
+
+    const handleGenerateFromIdeaSubmit = useCallback(async (idea: string, options: IdeaGenerateOptions) => {
         if (!onGenerateFromIdea) {
             return false;
         }
@@ -367,7 +374,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
         resetParseFeedback();
         setActiveParseStartedAt(Date.now());
         setUploadedFile(null);
-        return onGenerateFromIdea(idea);
+        return onGenerateFromIdea(idea, options);
     }, [onGenerateFromIdea, resetParseFeedback]);
 
     return (
@@ -400,14 +407,28 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                             <p className={styles.generateFromIdeaDesc}>
                                 {t('createGame.aiIdeaDesc')}
                             </p>
+                            <p className={styles.generateFromIdeaHint}>
+                                {t('createGame.aiIdeaLaterHint')}
+                            </p>
                         </div>
-                        <button
-                            className={styles.generateFromIdeaButton}
-                            onClick={() => setShowGenerateFromIdeaModal(true)}
-                            disabled={isParsing}
-                        >
-                            {t('createGame.generateNowWithCost', { points: TXT_IDEA_GENERATE_COST })}
-                        </button>
+                        <div className={styles.generateFromIdeaActions}>
+                            <button
+                                type="button"
+                                className={styles.generateFromIdeaSecondary}
+                                onClick={() => openIdeaModal('text')}
+                                disabled={isParsing}
+                            >
+                                {t('createGame.generateTextOnlyWithCost', { points: TXT_IDEA_GENERATE_COST })}
+                            </button>
+                            <button
+                                type="button"
+                                className={styles.generateFromIdeaButton}
+                                onClick={() => openIdeaModal('full')}
+                                disabled={isParsing}
+                            >
+                                {t('createGame.generateFullWorkCta')}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -543,6 +564,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                     isOpen={showGenerateFromIdeaModal}
                     onClose={() => setShowGenerateFromIdeaModal(false)}
                     onSubmit={handleGenerateFromIdeaSubmit}
+                    initialMode={ideaModalInitialMode}
                 />
             )}
 

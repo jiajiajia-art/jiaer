@@ -10,6 +10,18 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { formatIdeaJobStage } from '../../utils/ideaJobStage';
 import { refreshAuthUserPoints } from '../../lib/auth/refreshUserPoints';
 import { TXT_DOC_PARSE_COST, TXT_IDEA_GENERATE_COST } from '../../utils/constants';
+import {
+    DEFAULT_TEXT_GENERATE_OPTIONS,
+    shouldGenerateAssetsAfterIdea,
+    type IdeaGenerateOptions,
+} from '../../lib/galgame/ideaFullWorkEstimate';
+import {
+    clearAssetGapBannerDismissed,
+    markAssetGapBannerPending,
+    rememberIdeaFullWorkAssets,
+    consumeIdeaFullWorkAssets,
+} from '../../lib/galgame/ideaFullWorkSession';
+import { runIdeaFullWorkAssets } from '../../lib/galgame/runIdeaFullWorkAssets';
 
 type JobStage =
     | 'uploaded'
@@ -76,7 +88,7 @@ export interface UploadResult {
 
 interface UseFileUploadReturn {
     handleFileUpload: (file: File) => Promise<UploadResult>;
-    handleGenerateFromIdea: (idea: string) => Promise<boolean>;
+    handleGenerateFromIdea: (idea: string, options?: IdeaGenerateOptions) => Promise<boolean>;
 }
 
 /**
@@ -271,7 +283,43 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                             await applyVisualDocPointsSuccess(completedData, pointsKind, t);
                         }
 
-                        onUploadComplete(completedData.fileId, dataMode).catch((error) => {
+                        // 功能注释：一句话生成后标记素材提醒；完整作品再接力立绘/场景/封面
+                        const pendingAssets =
+                            consumeIdeaFullWorkAssets(jobId)
+                            || consumeIdeaFullWorkAssets(completedData.fileId);
+                        if (pointsKind === 'idea') {
+                            clearAssetGapBannerDismissed(completedData.fileId);
+                            markAssetGapBannerPending(
+                                completedData.fileId,
+                                pendingAssets ? 'full' : 'text',
+                            );
+                        }
+
+                        const finishAfterIdea = async () => {
+                            await onUploadComplete(completedData.fileId, dataMode);
+                            if (!pendingAssets) return;
+                            toast(t('createGame.fullWorkAssetsGenerating'));
+                            try {
+                                const assetResult = await runIdeaFullWorkAssets(
+                                    completedData.fileId,
+                                    pendingAssets,
+                                );
+                                const anyFail = !assetResult.portraitsOk
+                                    || !assetResult.scenesOk
+                                    || !assetResult.coverOk;
+                                if (anyFail) {
+                                    toast.error(t('createGame.fullWorkAssetsPartialFail'));
+                                } else {
+                                    toast.success(t('createGame.fullWorkAssetsDone'));
+                                }
+                                await onUploadComplete(completedData.fileId, dataMode);
+                            } catch (assetErr) {
+                                console.error('[useFileUpload] full-work assets failed:', assetErr);
+                                toast.error(t('createGame.fullWorkAssetsPartialFail'));
+                            }
+                        };
+
+                        finishAfterIdea().catch((error) => {
                             console.error('Error fetching editor data after upload:', error);
                             toast.error(t('createGame.parsingCompleteLoadFailed'));
                         });
@@ -447,25 +495,35 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
         }
     }, [mode, t, onUploadComplete, setFileId, setIsParsed, setIsPreset, startPollingUploadStatus, updateJob]);
 
-    const handleGenerateFromIdea = useCallback(async (idea: string): Promise<boolean> => {
+    const handleGenerateFromIdea = useCallback(async (
+        idea: string,
+        options: IdeaGenerateOptions = DEFAULT_TEXT_GENERATE_OPTIONS,
+    ): Promise<boolean> => {
         if (mode === 'worldInteraction') {
             toast.error(t('createGame.ideaGenerationOnlyVisual'));
             return false;
         }
         try {
-            // 功能注释：一句话生成需 10 积分，本地先预检
+            // 功能注释：一句话生成需 10 积分，本地先预检（图片按张另计）
             const enough = await ensureEnoughPointsForVisualDoc(TXT_IDEA_GENERATE_COST, t);
             if (!enough) {
                 return false;
             }
 
-            const response = await EditorApi.generateGameFromIdea(idea);
+            const generateAssets = shouldGenerateAssetsAfterIdea(options);
+            const response = await EditorApi.generateGameFromIdea(idea, {
+                generateAssets,
+                assetFlags: generateAssets ? options.assets : undefined,
+            });
             if (response.status === 200) {
                 const legacy = response.data;
                 if (legacy.success && legacy.fileId) {
                     setFileId(legacy.fileId);
                     setIsParsed(false);
                     setIsPreset(false);
+                    rememberIdeaFullWorkAssets(legacy.fileId, options);
+                    clearAssetGapBannerDismissed(legacy.fileId);
+                    markAssetGapBannerPending(legacy.fileId, generateAssets ? 'full' : 'text');
                     return true;
                 } else {
                     console.error('Unexpected generate response: 200 but no fileId in body');
@@ -488,14 +546,16 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
 
             const { jobId, fileId: initialFileId } = accepted;
 
+            rememberIdeaFullWorkAssets(jobId, options);
             if (initialFileId) {
+                rememberIdeaFullWorkAssets(initialFileId, options);
                 updateJob(jobId, {
                     fileId: initialFileId,
                 });
             }
 
             const generateStartTime = Date.now();
-            console.log('[一句话生成] 开始轮询, jobId:', jobId);
+            console.log('[一句话生成] 开始轮询, jobId:', jobId, 'generateAssets:', generateAssets);
             startPollingUploadStatus(
                 jobId,
                 `${t('createGame.generatingGame')}：${idea.substring(0, 20)}...`,

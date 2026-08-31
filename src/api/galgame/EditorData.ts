@@ -27,8 +27,18 @@ import type { Scene } from "./getGalgamePreset.type";
 import { extractImageExtension } from "../../utils/imageCache";
 
 const EditorApi = {
-    generateGameFromIdea: (idea:string) => {
-        return api.post<UploadFileResponse>(`/visual/document/generate-from-idea`, { idea: idea });
+    generateGameFromIdea: (
+        idea: string,
+        options?: {
+            generateAssets?: boolean;
+            assetFlags?: { portraits?: boolean; scenes?: boolean; cover?: boolean };
+        },
+    ) => {
+        return api.post<UploadFileResponse>(`/visual/document/generate-from-idea`, {
+            idea,
+            generateAssets: Boolean(options?.generateAssets),
+            assetFlags: options?.assetFlags || undefined,
+        });
     },
     /** 一句话弹窗：AI 生成/扩写创意描述（扣 1 积分） */
     generateIdeaText: (seed?: string) => {

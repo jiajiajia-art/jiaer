@@ -17,6 +17,10 @@
     padding: 20px;
 }
 
+.ideaModalWide {
+    max-width: 560px;
+}
+
 .modal {
     background: white;
     border-radius: 12px;
@@ -211,5 +215,157 @@
 .cancelButton:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+.textareaWrap {
+    position: relative;
+}
+
+.charCount {
+    position: absolute;
+    right: 12px;
+    bottom: 10px;
+    font-size: 0.75rem;
+    color: #999;
+    pointer-events: none;
+}
+
+.scopeLabel {
+    margin: 0 0 10px 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.scopeOption {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    width: 100%;
+    text-align: left;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    border: 1.5px solid #e5e5e5;
+    border-radius: 12px;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.scopeOption:hover:not(:disabled) {
+    border-color: rgba(224, 61, 75, 0.45);
+}
+
+.scopeOptionActive {
+    border-color: var(--primary, #e03d4b);
+    background: rgba(224, 61, 75, 0.04);
+}
+
+.scopeOption:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.scopeRadio {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    border-radius: 50%;
+    border: 2px solid #ccc;
+    box-sizing: border-box;
+    position: relative;
+}
+
+.scopeOptionActive .scopeRadio {
+    border-color: var(--primary, #e03d4b);
+}
+
+.scopeOptionActive .scopeRadio::after {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border-radius: 50%;
+    background: var(--primary, #e03d4b);
+}
+
+.scopeBody {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.scopeTitle {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.scopeDesc {
+    font-size: 0.8rem;
+    color: #666;
+    line-height: 1.4;
+}
+
+.scopeBadge {
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--primary, #e03d4b);
+    background: rgba(224, 61, 75, 0.08);
+    padding: 4px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.assetPickPanel {
+    margin: 4px 0 8px 0;
+    padding: 12px;
+    border-radius: 10px;
+    background: rgba(224, 61, 75, 0.04);
+    border: 1px dashed rgba(224, 61, 75, 0.25);
+}
+
+.assetPickLabel {
+    margin: 0 0 10px 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #555;
+}
+
+.assetPickRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.assetChip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid #e5e5e5;
+    background: #fff;
+    font-size: 0.8rem;
+    color: #333;
+    cursor: pointer;
+    user-select: none;
+}
+
+.assetChip input {
+    accent-color: var(--primary, #e03d4b);
+}
+
+.assetChipOn {
+    border-color: rgba(224, 61, 75, 0.55);
+    background: rgba(224, 61, 75, 0.08);
+}
+
+.assetCount {
+    color: #888;
+    font-size: 0.75rem;
 }
 
