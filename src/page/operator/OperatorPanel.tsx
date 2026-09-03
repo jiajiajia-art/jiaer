@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
 import Navbar from '../../components/Layout/Navbar';
 import PromotionAdminManager from '../../components/PromotionAdminManager';
 import DailyTasksAdminManager from '../../components/DailyTasksAdminManager';
@@ -45,6 +46,8 @@ const OperatorPanel: React.FC = () => {
   const activeTab = resolveOperatorTab(location.pathname);
 
   const [overview, setOverview] = useState<StatsOverview | null>(null);
+  const [overviewLoading, setOverviewLoading] = useState(false);
+  const [overviewLoadFailed, setOverviewLoadFailed] = useState(false);
   const [works, setWorks] = useState<CreatorWorkItem[]>([]);
   const [worksPage, setWorksPage] = useState(1);
   const [worksPageSize, setWorksPageSize] = useState(20);
@@ -70,9 +73,9 @@ const OperatorPanel: React.FC = () => {
   const sortedWorks = useMemo(() => {
     if (!worksSortField) return works;
     const getMetricValue = (work: CreatorWorkItem) => {
-      if (worksSortField === 'playCount') return work.metrics.playCount;
-      if (worksSortField === 'pv') return work.metrics.pv;
-      return work.metrics.shareCount ?? 0;
+      if (worksSortField === 'playCount') return work.metrics?.playCount ?? 0;
+      if (worksSortField === 'pv') return work.metrics?.pv ?? 0;
+      return work.metrics?.shareCount ?? 0;
     };
     return [...works].sort((left, right) => {
       const diff = getMetricValue(left) - getMetricValue(right);
@@ -118,18 +121,64 @@ const OperatorPanel: React.FC = () => {
     }
   }, [recruitmentPage, recruitmentPageSize]);
 
+  const loadOverview = useCallback(async () => {
+    setOverviewLoading(true);
+    setOverviewLoadFailed(false);
+    try {
+      let lastError: unknown = null;
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        try {
+          const overviewResp = await operatorStatsApi.getOverview();
+          if (overviewResp.data.success && overviewResp.data.data) {
+            setOverview(overviewResp.data.data);
+            return;
+          }
+          lastError = new Error(overviewResp.data.message || 'overview empty');
+        } catch (error) {
+          lastError = error;
+          if (attempt === 0) {
+            await new Promise((resolve) => window.setTimeout(resolve, 1200));
+          }
+        }
+      }
+      throw lastError;
+    } catch (error) {
+      console.error('[OperatorPanel] overview load failed', error);
+      setOverviewLoadFailed(true);
+      toast.error(t('operator.statsOverviewLoadFailed'));
+    } finally {
+      setOverviewLoading(false);
+    }
+  }, [t]);
+
   useEffect(() => {
     if (activeTab !== 'stats') return;
-    const loadOverview = async () => {
+    // 功能注释：overview 只随进入统计 Tab 触发；翻页不重拉汇总
+    void loadOverview();
+  }, [activeTab, loadOverview]);
+
+  useEffect(() => {
+    if (activeTab !== 'stats') return;
+    let cancelled = false;
+    const load = async () => {
+      setIsLoading(true);
       try {
-        const overviewResp = await operatorStatsApi.getOverview();
-        if (overviewResp.data.success) setOverview(overviewResp.data.data);
+        await loadWorks();
       } catch (error) {
-        console.error('[OperatorPanel] overview load failed', error);
+        if (!cancelled) {
+          console.error('[OperatorPanel] works load failed', error);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     };
-    void loadOverview();
-  }, [activeTab]);
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, loadWorks]);
 
   useEffect(() => {
     if (activeTab !== 'recruitment') return;
@@ -143,21 +192,6 @@ const OperatorPanel: React.FC = () => {
     };
     void loadOverview();
   }, [activeTab]);
-
-  useEffect(() => {
-    if (activeTab !== 'stats') return;
-    const load = async () => {
-      setIsLoading(true);
-      try {
-        await loadWorks();
-      } catch (error) {
-        console.error('[OperatorPanel] works load failed', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    void load();
-  }, [activeTab, loadWorks]);
 
   useEffect(() => {
     if (activeTab !== 'recruitment') return;
@@ -186,7 +220,13 @@ const OperatorPanel: React.FC = () => {
 
   const renderStats = () => (
     <>
-      <StatsOverviewSection stats={overview} updatedAt={new Date().toLocaleString()} />
+      <StatsOverviewSection
+        stats={overview}
+        updatedAt={overview ? new Date().toLocaleString() : undefined}
+        loading={overviewLoading}
+        loadFailed={overviewLoadFailed}
+        onRetry={() => { void loadOverview(); }}
+      />
       <section className={`${adminStyles.card} ${styles.panelSection}`}>
         <h2 className={adminStyles.cardTitle}>{t('operator.publicWorksTitle')}</h2>
         <div className={styles.tableWrap}>
@@ -238,9 +278,9 @@ const OperatorPanel: React.FC = () => {
                       {work.title}
                     </button>
                   </td>
-                  <td className={styles.metricCol}>{work.metrics.playCount}</td>
-                  <td className={styles.metricCol}>{work.metrics.pv}</td>
-                  <td className={styles.metricCol}>{work.metrics.shareCount ?? 0}</td>
+                  <td className={styles.metricCol}>{work.metrics?.playCount ?? 0}</td>
+                  <td className={styles.metricCol}>{work.metrics?.pv ?? 0}</td>
+                  <td className={styles.metricCol}>{work.metrics?.shareCount ?? 0}</td>
                 </tr>
               ))}
             </tbody>

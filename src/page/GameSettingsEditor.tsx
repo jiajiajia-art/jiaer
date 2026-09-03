@@ -15,6 +15,7 @@ import PublishSettingsModal, { type PublishSubmitPayload } from '../components/C
 import PublishAssetCheckModal from '../components/CommonModal/PublishAssetCheckModal';
 import ConfirmModal from '../components/CommonModal/ConfirmModal';
 import AssetGapBanner from '../components/GameSettingEditor/AssetGapBanner';
+import CreationFlowRail from '../components/GameSettingEditor/CreationFlowRail';
 import { useEditorStore } from '../store/editorStore';
 import { useGameStore } from '../store/gameStore';
 import { useEditorData } from '../hooks/editor/useEditorData';
@@ -24,12 +25,22 @@ import { useEditorSession } from '../hooks/editor/useEditorSession';
 import type { AllGameData } from '../api/galgame/EditorData.type';
 import type { WorldInteractionGameData } from '../api/worldInteraction/worldInteractionApi.type';
 import type { IdeaGenerateOptions } from '../lib/galgame/ideaFullWorkEstimate';
-import { assetCompletenessFromEditorData } from '../lib/galgame/assetCompleteness';
+import { assetCompletenessFromEditorData, editorAssetImageCountsFromEditorData } from '../lib/galgame/assetCompleteness';
 import {
     dismissAssetGapBanner,
     isAssetGapBannerDismissed,
     peekAssetGapBannerKind,
+    peekIdeaFullWorkAssets,
+    peekIdeaAssetGenStatus,
+    setIdeaAssetGenStatus,
+    markAssetGapBannerPending,
+    clearIdeaFullWorkAssets,
+    clearAssetGapBannerDismissed,
+    ASSET_GAP_BANNER_EVENT,
 } from '../lib/galgame/ideaFullWorkSession';
+import { runIdeaFullWorkAssets, isIdeaFullWorkAssetsInflight } from '../lib/galgame/runIdeaFullWorkAssets';
+import { createInitialIdeaAssetProgress, peekIdeaAssetProgress, publishIdeaAssetProgress, IDEA_ASSET_PROGRESS_EVENT } from '../lib/galgame/ideaFullWorkProgress';
+import toast from 'react-hot-toast';
 import FullPageLoading from '../components/Skeleton/FullPageLoading';
 import EditorApi from '../api/galgame/EditorData';
 import worldEditor from '../api/worldInteraction/worldEditor';
@@ -230,6 +241,27 @@ const GameSettingsEditor = () => {
         setAssetBannerDismissed(isAssetGapBannerDismissed(fileId));
     }, [fileId]);
 
+    // 功能注释：sessionStorage 横幅 kind / 进度变更时强制重渲染，避免仍显示「素材待补齐」
+    const [assetBannerEpoch, setAssetBannerEpoch] = useState(0);
+    useEffect(() => {
+        if (!fileId) return;
+        const bump = () => setAssetBannerEpoch((n) => n + 1);
+        const onBanner = (event: Event) => {
+            const detail = (event as CustomEvent<{ fileId?: string }>).detail;
+            if (!detail?.fileId || detail.fileId === fileId) bump();
+        };
+        const onProgress = (event: Event) => {
+            const detail = (event as CustomEvent<{ fileId?: string }>).detail;
+            if (detail?.fileId === fileId) bump();
+        };
+        window.addEventListener(ASSET_GAP_BANNER_EVENT, onBanner);
+        window.addEventListener(IDEA_ASSET_PROGRESS_EVENT, onProgress);
+        return () => {
+            window.removeEventListener(ASSET_GAP_BANNER_EVENT, onBanner);
+            window.removeEventListener(IDEA_ASSET_PROGRESS_EVENT, onProgress);
+        };
+    }, [fileId]);
+
     const assetCompleteness = useMemo(() => {
         if (!gameData || mode === 'worldInteraction') {
             return null;
@@ -237,15 +269,114 @@ const GameSettingsEditor = () => {
         return assetCompletenessFromEditorData(gameData as AllGameData);
     }, [gameData, mode]);
 
+    const liveAssetCounts = useMemo(() => {
+        if (!gameData || mode === 'worldInteraction') {
+            return null;
+        }
+        return editorAssetImageCountsFromEditorData(gameData as AllGameData);
+    }, [gameData, mode]);
+
+    // assetBannerEpoch：强制在 markAssetGapBannerPending 后重读 sessionStorage
+    void assetBannerEpoch;
     const assetBannerKind = fileId ? peekAssetGapBannerKind(fileId) : null;
     const showAssetGapBanner = Boolean(
         isParsed
         && fileId
         && assetBannerKind
         && !assetBannerDismissed
-        && assetCompleteness?.hasGaps
-        && mode !== 'worldInteraction',
+        && mode !== 'worldInteraction'
+        && (assetBannerKind === 'generating' || assetCompleteness?.hasGaps),
     );
+
+    // 功能注释：生成中定时刷新编辑器数据，让顶栏进度与侧栏真实场景图同步
+    useEffect(() => {
+        if (!fileId || mode === 'worldInteraction' || !isParsed) return;
+        if (assetBannerKind !== 'generating') return;
+        let cancelled = false;
+        const tick = async () => {
+            try {
+                await fetchEditorData(fileId);
+            } catch {
+                /* ignore */
+            }
+        };
+        void tick();
+        const timer = window.setInterval(() => {
+            if (!cancelled) void tick();
+        }, 8000);
+        return () => {
+            cancelled = true;
+            window.clearInterval(timer);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [fileId, mode, isParsed, assetBannerKind]);
+
+    // 功能注释：素材待补齐横幅出现时强制拉一次 complete，缺口张数对齐真实角色/场景数
+    useEffect(() => {
+        if (!fileId || mode === 'worldInteraction' || !isParsed) return;
+        if (!showAssetGapBanner) return;
+        if (assetBannerKind !== 'full' && assetBannerKind !== 'text') return;
+        void fetchEditorData(fileId);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [fileId, mode, isParsed, showAssetGapBanner, assetBannerKind]);
+
+    // 功能注释：仅在 pending/failed 且本页无人编排时续跑；running+inflight 表示上传回调已接管
+    useEffect(() => {
+        if (!fileId || mode === 'worldInteraction' || !isParsed) return;
+        const flags = peekIdeaFullWorkAssets(fileId);
+        if (!flags) return;
+        if (isIdeaFullWorkAssetsInflight(fileId)) return;
+        const status = peekIdeaAssetGenStatus(fileId);
+        if (status !== 'pending' && status !== 'failed') return;
+
+        let cancelled = false;
+        const resume = async () => {
+            setIdeaAssetGenStatus(fileId, 'running');
+            clearAssetGapBannerDismissed(fileId);
+            markAssetGapBannerPending(fileId, 'generating');
+            setAssetBannerDismissed(false);
+            const existingProgress = peekIdeaAssetProgress(fileId);
+            publishIdeaAssetProgress(
+                existingProgress
+                    ? { ...existingProgress, flags: { ...flags } }
+                    : createInitialIdeaAssetProgress(fileId, flags),
+            );
+            toast(t('createGame.fullWorkAssetsGenerating'));
+            try {
+                const assetResult = await runIdeaFullWorkAssets(fileId, flags);
+                if (cancelled) return;
+                if (assetResult.joinedExisting) return;
+                const anyFail = !assetResult.portraitsOk
+                    || !assetResult.scenesOk
+                    || !assetResult.coverOk;
+                if (anyFail) {
+                    setIdeaAssetGenStatus(fileId, 'failed');
+                    markAssetGapBannerPending(fileId, 'full');
+                    toast.error(
+                        assetResult.errors[0]
+                            ? `${t('createGame.fullWorkAssetsPartialFail')}：${assetResult.errors[0]}`
+                            : t('createGame.fullWorkAssetsPartialFail'),
+                    );
+                } else {
+                    setIdeaAssetGenStatus(fileId, 'done');
+                    clearIdeaFullWorkAssets(fileId);
+                    toast.success(t('createGame.fullWorkAssetsDone'));
+                }
+                await fetchEditorData(fileId);
+            } catch (err) {
+                if (cancelled) return;
+                console.error('[GameSettingsEditor] resume full-work assets failed', err);
+                setIdeaAssetGenStatus(fileId, 'failed');
+                markAssetGapBannerPending(fileId, 'full');
+                toast.error(t('createGame.fullWorkAssetsPartialFail'));
+            }
+        };
+        void resume();
+        return () => {
+            cancelled = true;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [fileId, isParsed, mode]);
 
     const openPublishFlow = useCallback(() => {
         if (assetCompleteness?.hasGaps) {
@@ -613,10 +744,12 @@ const GameSettingsEditor = () => {
                     <div className={styles.topBarLead}>
                         <p className={styles.eyebrow}>{t('createGame.eyebrow')}</p>
                         <h1>{t('createGame.title')}</h1>
-                        <p className={styles.subtitle}>
-                            {t('createGame.step1Tip')}
-                            {mode === 'worldInteraction' ? t('createGame.step5Tip') : ''}
-                        </p>
+                        <CreationFlowRail
+                            activePanel={activePanel}
+                            isParsing={isParsing}
+                            isParsed={isParsed}
+                            mode={mode ?? undefined}
+                        />
                     </div>
 
                     <div className={`${styles.topActions} ${isMiniProgramTxtMode ? styles.miniProgramTopActions : ''}`}>
@@ -677,9 +810,11 @@ const GameSettingsEditor = () => {
                 {showAssetGapBanner && assetCompleteness && assetBannerKind && (
                     <AssetGapBanner
                         kind={assetBannerKind}
+                        fileId={fileId || undefined}
                         missingPortraits={assetCompleteness.missingPortraits}
                         missingScenes={assetCompleteness.missingScenes}
                         missingCover={assetCompleteness.missingCover}
+                        liveAssetCounts={liveAssetCounts}
                         onGoCharacters={() => setActivePanel('characters')}
                         onGoScenes={() => setActivePanel('scenes')}
                         onGoCover={() => setActivePanel('world')}

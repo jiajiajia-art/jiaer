@@ -19,9 +19,12 @@ import {
     clearAssetGapBannerDismissed,
     markAssetGapBannerPending,
     rememberIdeaFullWorkAssets,
-    consumeIdeaFullWorkAssets,
+    peekIdeaFullWorkAssets,
+    clearIdeaFullWorkAssets,
+    setIdeaAssetGenStatus,
 } from '../../lib/galgame/ideaFullWorkSession';
 import { runIdeaFullWorkAssets } from '../../lib/galgame/runIdeaFullWorkAssets';
+import { createInitialIdeaAssetProgress, publishIdeaAssetProgress } from '../../lib/galgame/ideaFullWorkProgress';
 
 type JobStage =
     | 'uploaded'
@@ -268,6 +271,29 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                         setIsParsed(false);
                         setIsPreset(false);
 
+                        // 功能注释：必须在 updateJob(completed) / await 积分之前标 generating+running，
+                        // 否则 DocumentsPanel onParsingSuccess 会先触发续跑，与此处双开；旧逻辑会把
+                        // 「已在进行中」误判失败并打成「素材待补齐」。
+                        const pendingAssets =
+                            peekIdeaFullWorkAssets(jobId)
+                            || peekIdeaFullWorkAssets(completedData.fileId);
+                        if (pointsKind === 'idea') {
+                            clearAssetGapBannerDismissed(completedData.fileId);
+                            if (pendingAssets) {
+                                rememberIdeaFullWorkAssets(completedData.fileId, {
+                                    mode: 'full',
+                                    assets: pendingAssets,
+                                });
+                                setIdeaAssetGenStatus(completedData.fileId, 'running');
+                                markAssetGapBannerPending(completedData.fileId, 'generating');
+                                publishIdeaAssetProgress(
+                                    createInitialIdeaAssetProgress(completedData.fileId, pendingAssets),
+                                );
+                            } else {
+                                markAssetGapBannerPending(completedData.fileId, 'text');
+                            }
+                        }
+
                         updateJob(jobId, {
                             fileId: completedData.fileId,
                             status: 'completed',
@@ -283,42 +309,48 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                             await applyVisualDocPointsSuccess(completedData, pointsKind, t);
                         }
 
-                        // 功能注释：一句话生成后标记素材提醒；完整作品再接力立绘/场景/封面
-                        const pendingAssets =
-                            consumeIdeaFullWorkAssets(jobId)
-                            || consumeIdeaFullWorkAssets(completedData.fileId);
-                        if (pointsKind === 'idea') {
-                            clearAssetGapBannerDismissed(completedData.fileId);
-                            markAssetGapBannerPending(
-                                completedData.fileId,
-                                pendingAssets ? 'full' : 'text',
-                            );
-                        }
-
                         const finishAfterIdea = async () => {
                             await onUploadComplete(completedData.fileId, dataMode);
                             if (!pendingAssets) return;
-                            toast(t('createGame.fullWorkAssetsGenerating'));
                             try {
                                 const assetResult = await runIdeaFullWorkAssets(
                                     completedData.fileId,
                                     pendingAssets,
                                 );
+                                // 续跑已接管同一任务：勿重复 toast / 改横幅
+                                if (assetResult.joinedExisting) {
+                                    return;
+                                }
                                 const anyFail = !assetResult.portraitsOk
                                     || !assetResult.scenesOk
                                     || !assetResult.coverOk;
                                 if (anyFail) {
-                                    toast.error(t('createGame.fullWorkAssetsPartialFail'));
+                                    setIdeaAssetGenStatus(completedData.fileId, 'failed');
+                                    markAssetGapBannerPending(completedData.fileId, 'full');
+                                    const detail = assetResult.errors[0];
+                                    toast.error(
+                                        detail
+                                            ? `${t('createGame.fullWorkAssetsPartialFail')}：${detail}`
+                                            : t('createGame.fullWorkAssetsPartialFail'),
+                                    );
                                 } else {
+                                    setIdeaAssetGenStatus(completedData.fileId, 'done');
+                                    clearIdeaFullWorkAssets(jobId);
+                                    clearIdeaFullWorkAssets(completedData.fileId);
                                     toast.success(t('createGame.fullWorkAssetsDone'));
                                 }
                                 await onUploadComplete(completedData.fileId, dataMode);
                             } catch (assetErr) {
                                 console.error('[useFileUpload] full-work assets failed:', assetErr);
+                                setIdeaAssetGenStatus(completedData.fileId, 'failed');
+                                markAssetGapBannerPending(completedData.fileId, 'full');
                                 toast.error(t('createGame.fullWorkAssetsPartialFail'));
                             }
                         };
 
+                        if (pendingAssets) {
+                            toast(t('createGame.fullWorkAssetsGenerating'));
+                        }
                         finishAfterIdea().catch((error) => {
                             console.error('Error fetching editor data after upload:', error);
                             toast.error(t('createGame.parsingCompleteLoadFailed'));
@@ -523,7 +555,13 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                     setIsPreset(false);
                     rememberIdeaFullWorkAssets(legacy.fileId, options);
                     clearAssetGapBannerDismissed(legacy.fileId);
-                    markAssetGapBannerPending(legacy.fileId, generateAssets ? 'full' : 'text');
+                    markAssetGapBannerPending(legacy.fileId, generateAssets ? 'generating' : 'text');
+                    if (generateAssets) {
+                        setIdeaAssetGenStatus(legacy.fileId, 'pending');
+                        publishIdeaAssetProgress(
+                            createInitialIdeaAssetProgress(legacy.fileId, options.assets),
+                        );
+                    }
                     return true;
                 } else {
                     console.error('Unexpected generate response: 200 but no fileId in body');

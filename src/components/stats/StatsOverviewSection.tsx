@@ -8,6 +8,10 @@ import createStyles from '../../page/Create.module.css';
 interface StatsOverviewSectionProps {
   stats: StatsOverview | null;
   updatedAt?: string;
+  /** 功能注释：汇总接口较慢；loading 时不应展示 0 误导运营 */
+  loading?: boolean;
+  loadFailed?: boolean;
+  onRetry?: () => void;
 }
 
 const formatDuration = (seconds: number) => {
@@ -18,7 +22,13 @@ const formatDuration = (seconds: number) => {
   return `${minutes}m`;
 };
 
-const StatsOverviewSection: React.FC<StatsOverviewSectionProps> = ({ stats, updatedAt }) => {
+const StatsOverviewSection: React.FC<StatsOverviewSectionProps> = ({
+  stats,
+  updatedAt,
+  loading = false,
+  loadFailed = false,
+  onRetry,
+}) => {
   const { t } = useTranslation();
 
   const items = [
@@ -32,6 +42,12 @@ const StatsOverviewSection: React.FC<StatsOverviewSectionProps> = ({ stats, upda
     { key: 'spend', label: t('creatorStats.spendPoints'), value: stats?.spendPoints ?? 0, icon: <TbHandClick /> },
   ];
 
+  const renderValue = (item: typeof items[number]) => {
+    if (loading) return t('operator.statsOverviewLoading');
+    if (typeof item.value === 'string') return item.value;
+    return item.value;
+  };
+
   return (
     <section className={createStyles.statsSection}>
       <div className={createStyles.sectionHeader}>
@@ -43,17 +59,32 @@ const StatsOverviewSection: React.FC<StatsOverviewSectionProps> = ({ stats, upda
           </span>
         ) : null}
       </div>
-      <div className={createStyles.statsGrid}>
-        {items.map((item) => (
-          <div key={item.key} className={createStyles.statBox}>
+      {loadFailed && !loading ? (
+        <div className={createStyles.statsGrid}>
+          <div className={createStyles.statBox} style={{ gridColumn: '1 / -1' }}>
             <div className={createStyles.statLabel}>
-              {item.icon}
-              <span>{item.label}</span>
+              <span>{t('operator.statsOverviewLoadFailed')}</span>
             </div>
-            <div className={createStyles.statValue}>{item.value}</div>
+            {onRetry ? (
+              <button type="button" className={createStyles.statValue} onClick={onRetry}>
+                {t('operator.statsOverviewRetry')}
+              </button>
+            ) : null}
           </div>
-        ))}
-      </div>
+        </div>
+      ) : (
+        <div className={createStyles.statsGrid}>
+          {items.map((item) => (
+            <div key={item.key} className={createStyles.statBox}>
+              <div className={createStyles.statLabel}>
+                {item.icon}
+                <span>{item.label}</span>
+              </div>
+              <div className={createStyles.statValue}>{renderValue(item)}</div>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 };

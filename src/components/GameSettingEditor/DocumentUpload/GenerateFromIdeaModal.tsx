@@ -11,9 +11,8 @@ import {
     DEFAULT_FULL_ASSET_FLAGS,
     DEFAULT_TEXT_GENERATE_OPTIONS,
     EST_COVER_COUNT,
-    EST_PORTRAIT_COUNT,
-    EST_SCENE_COUNT,
     estimateFullWorkPoints,
+    estimateIdeaAssetCounts,
     type IdeaAssetFlags,
     type IdeaGenerateMode,
     type IdeaGenerateOptions,
@@ -53,9 +52,17 @@ const GenerateFromIdeaModal: React.FC<GenerateFromIdeaModalProps> = ({
         setError('');
     }, [isOpen, initialMode]);
 
+    // 功能注释：张数随创意描述变化，对齐后端将生成的场景/NPC 区间估算
+    const assetCounts = useMemo(() => estimateIdeaAssetCounts(idea), [idea]);
+
     const estimatedPoints = useMemo(
-        () => estimateFullWorkPoints({ mode, assets }),
-        [mode, assets],
+        () => estimateFullWorkPoints({
+            mode,
+            assets,
+            portraitCount: assetCounts.portraitCount,
+            sceneCount: assetCounts.sceneCount,
+        }),
+        [mode, assets, assetCounts.portraitCount, assetCounts.sceneCount],
     );
 
     if (!isOpen) return null;
@@ -271,7 +278,7 @@ const GenerateFromIdeaModal: React.FC<GenerateFromIdeaModalProps> = ({
                                             />
                                             <span>{t('createGame.assetPortraits')}</span>
                                             <span className={styles.assetCount}>
-                                                {t('createGame.assetCountSheets', { count: EST_PORTRAIT_COUNT })}
+                                                {t('createGame.assetCountSheets', { count: assetCounts.portraitCount })}
                                             </span>
                                         </label>
                                         <label className={`${styles.assetChip} ${assets.scenes ? styles.assetChipOn : ''}`}>
@@ -283,7 +290,7 @@ const GenerateFromIdeaModal: React.FC<GenerateFromIdeaModalProps> = ({
                                             />
                                             <span>{t('createGame.assetScenes')}</span>
                                             <span className={styles.assetCount}>
-                                                {t('createGame.assetCountSheets', { count: EST_SCENE_COUNT })}
+                                                {t('createGame.assetCountSheets', { count: assetCounts.sceneCount })}
                                             </span>
                                         </label>
                                         <label className={`${styles.assetChip} ${assets.cover ? styles.assetChipOn : ''}`}>

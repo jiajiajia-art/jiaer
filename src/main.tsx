@@ -19,6 +19,7 @@ const logAuthError = (...args: unknown[]) => {
 };
 
 const navigateToHome = () => {
+    // 兼容 Capacitor（origin 为 https://localhost）和 Web 部署（/funloom/）
     const targetUrl = window.location.origin + '/funloom/home';
     if (window.top && window.top.location.href !== targetUrl) {
         window.top.location.href = targetUrl;

@@ -54,4 +54,7 @@ test('DocumentsPanel and GenerateFromIdeaModal show dual scope and 10-point text
   assert.match(modal, /generateIdeaText/);
   assert.match(modal, /labelWithAi/);
   assert.match(modal, /estimateFullWorkPoints/);
+  assert.match(modal, /estimateIdeaAssetCounts/);
+  assert.match(modal, /assetCounts\.portraitCount/);
+  assert.match(modal, /assetCounts\.sceneCount/);
 });

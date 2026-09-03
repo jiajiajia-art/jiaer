@@ -37,16 +37,12 @@ test('CharactersPanel_创作台有玩家目前定位', () => {
   assert.match(src, /玩家目前定位/);
   assert.match(src, /positioningSecret/);
   assert.match(src, /positioningTraits/);
-  const handlers = readFileSync(
-    join(root, 'src/components/GameSettingEditor/CharactersPanel/handlers.ts'),
-    'utf8',
-  );
-  assert.match(handlers, /defaultPersonaBlocks/);
   const utils = readFileSync(
     join(root, 'src/components/GameSettingEditor/CharactersPanel/utils.ts'),
     'utf8',
   );
   assert.match(utils, /extractDefaultPersonaBlocks/);
+  assert.match(utils, /defaultPersonaBlocks/);
 });
 
 test('Galgame_保存系统配置保留定位且不把定位拼进人设种子', () => {

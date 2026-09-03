@@ -535,6 +535,21 @@ export const processGameTags = (content: string, translate?: (key: string, optio
     return result;
 };
 
+/**
+ * 功能注释：历史记录展示用——优先输出真实可读正文；processGameTags 若被剥空则回退原文清洗结果。
+ */
+export const formatHistoryAssistantContent = (
+    content: string,
+    translate?: (key: string, options?: Record<string, string | number>) => string,
+): string => {
+    const raw = String(content || '');
+    if (!raw.trim()) return '';
+    const processed = processGameTags(raw, translate);
+    if (processed.trim()) return processed;
+    const fallback = sanitizeVisualDisplayText(raw);
+    return fallback || raw.trim();
+};
+
 // ============================================================
 // 【核心函数4】提取纯文本（去掉所有颜色标签和动画标签）
 // 用于：计算打字机进度、选项文本显示等

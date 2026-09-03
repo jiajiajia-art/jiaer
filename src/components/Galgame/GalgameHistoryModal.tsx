@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { MdRefresh, MdEdit, MdCheck, MdClose } from 'react-icons/md';
 import type { HistoryWithId } from '../../hooks/galgame/useGalgameHistory';
-import { processGameTags } from '../../utils/textUtils';
+import { formatHistoryAssistantContent } from '../../utils/textUtils';
 import ColoredMarkdownText from './ColoredMarkdownText';
 import styles from './GalgameHistoryModal.module.css';
 import { logVisualButtonClick } from "../../api/statistics/scriptButtonEvent";
@@ -119,12 +119,12 @@ const GalgameHistoryModal = ({
             }
 
             const start = performance.now();
-            const processed = processGameTags(item.content || '', t);
+            const processed = formatHistoryAssistantContent(item.content || '', t);
             const duration = performance.now() - start;
 
             if (duration > 20) {
                 console.warn(
-                    `[GalgameHistoryModal] processGameTags slow: ${duration.toFixed(2)}ms, index=${index}, content.length=${item.content?.length || 0}`
+                    `[GalgameHistoryModal] formatHistoryAssistantContent slow: ${duration.toFixed(2)}ms, index=${index}, content.length=${item.content?.length || 0}`
                 );
             }
 

@@ -1,34 +1,51 @@
 /**
- * 一句话生成 pending「完整作品」素材勾选：按 jobId/fileId 暂存，文本完成后消费。
+ * 一句话生成 pending「完整作品」素材勾选与生图进度：按 fileId 暂存，支持刷新后续跑。
  */
 import type { IdeaAssetFlags, IdeaGenerateOptions } from './ideaFullWorkEstimate';
 import { shouldGenerateAssetsAfterIdea } from './ideaFullWorkEstimate';
 
-const STORAGE_PREFIX = 'idea-full-work-assets:';
+const FLAGS_PREFIX = 'idea-full-work-assets:';
+const STATUS_PREFIX = 'idea-full-work-status:';
+const BANNER_PREFIX = 'asset-gap-banner:';
+const BANNER_DISMISS_PREFIX = 'asset-gap-banner-dismissed:';
 
-function storageKey(id: string): string {
-  return `${STORAGE_PREFIX}${id}`;
+export type IdeaAssetGenStatus = 'pending' | 'running' | 'done' | 'failed';
+
+function flagsKey(id: string): string {
+  return `${FLAGS_PREFIX}${id}`;
 }
 
-/** 功能注释：文本 job 入队后记住勾选的素材类型，供完成后接力生图。 */
-export function rememberIdeaFullWorkAssets(jobOrFileId: string, options: IdeaGenerateOptions): void {
-  if (!jobOrFileId || !shouldGenerateAssetsAfterIdea(options)) {
-    return;
-  }
+function statusKey(id: string): string {
+  return `${STATUS_PREFIX}${id}`;
+}
+
+function safeGet(key: string): string | null {
   try {
-    sessionStorage.setItem(storageKey(jobOrFileId), JSON.stringify(options.assets));
+    return sessionStorage.getItem(key);
   } catch {
-    // ignore quota / private mode
+    return null;
   }
 }
 
-/** 功能注释：取出并清除 pending 素材勾选；无则返回 null。 */
-export function consumeIdeaFullWorkAssets(jobOrFileId: string): IdeaAssetFlags | null {
-  if (!jobOrFileId) return null;
+function safeSet(key: string, value: string): void {
   try {
-    const raw = sessionStorage.getItem(storageKey(jobOrFileId));
-    if (!raw) return null;
-    sessionStorage.removeItem(storageKey(jobOrFileId));
+    sessionStorage.setItem(key, value);
+  } catch {
+    // ignore
+  }
+}
+
+function safeRemove(key: string): void {
+  try {
+    sessionStorage.removeItem(key);
+  } catch {
+    // ignore
+  }
+}
+
+function parseFlags(raw: string | null): IdeaAssetFlags | null {
+  if (!raw) return null;
+  try {
     const parsed = JSON.parse(raw) as IdeaAssetFlags;
     if (!parsed || typeof parsed !== 'object') return null;
     return {
@@ -41,50 +58,76 @@ export function consumeIdeaFullWorkAssets(jobOrFileId: string): IdeaAssetFlags |
   }
 }
 
-/** 功能注释：标记本局需要展示「素材待补齐」提醒（按 fileId）。 */
-export function markAssetGapBannerPending(fileId: string, kind: 'text' | 'full'): void {
+/** 功能注释：文本 job 入队后记住勾选的素材类型，供完成后接力生图（刷新不丢）。 */
+export function rememberIdeaFullWorkAssets(jobOrFileId: string, options: IdeaGenerateOptions): void {
+  if (!jobOrFileId || !shouldGenerateAssetsAfterIdea(options)) {
+    return;
+  }
+  safeSet(flagsKey(jobOrFileId), JSON.stringify(options.assets));
+  safeSet(statusKey(jobOrFileId), 'pending');
+}
+
+/** 功能注释：读取 pending 素材勾选（不删除，便于失败重试 / 刷新续跑）。 */
+export function peekIdeaFullWorkAssets(jobOrFileId: string): IdeaAssetFlags | null {
+  return parseFlags(safeGet(flagsKey(jobOrFileId)));
+}
+
+/** 功能注释：清除素材勾选与生图状态（成功或用户放弃后）。 */
+export function clearIdeaFullWorkAssets(jobOrFileId: string): void {
+  if (!jobOrFileId) return;
+  safeRemove(flagsKey(jobOrFileId));
+  safeRemove(statusKey(jobOrFileId));
+  // 进度 key 与 ideaFullWorkProgress 约定一致，避免续跑横幅读到旧快照
+  safeRemove(`idea-full-work-progress:${jobOrFileId}`);
+}
+
+export function setIdeaAssetGenStatus(fileId: string, status: IdeaAssetGenStatus): void {
   if (!fileId) return;
-  try {
-    sessionStorage.setItem(`asset-gap-banner:${fileId}`, kind);
-  } catch {
-    // ignore
+  safeSet(statusKey(fileId), status);
+}
+
+export function peekIdeaAssetGenStatus(fileId: string): IdeaAssetGenStatus | null {
+  const v = safeGet(statusKey(fileId));
+  if (v === 'pending' || v === 'running' || v === 'done' || v === 'failed') return v;
+  return null;
+}
+
+/** @deprecated 改用 peek + clear；保留兼容旧调用 */
+export function consumeIdeaFullWorkAssets(jobOrFileId: string): IdeaAssetFlags | null {
+  const flags = peekIdeaFullWorkAssets(jobOrFileId);
+  if (flags) clearIdeaFullWorkAssets(jobOrFileId);
+  return flags;
+}
+
+/** 功能注释：标记本局素材横幅类型，并广播以便 React 立即重渲染（sessionStorage  alone 不触发）。 */
+export const ASSET_GAP_BANNER_EVENT = 'asset-gap-banner-changed';
+
+export function markAssetGapBannerPending(fileId: string, kind: 'text' | 'full' | 'generating'): void {
+  if (!fileId) return;
+  safeSet(`${BANNER_PREFIX}${fileId}`, kind);
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(ASSET_GAP_BANNER_EVENT, { detail: { fileId, kind } }));
   }
 }
 
-export function peekAssetGapBannerKind(fileId: string): 'text' | 'full' | null {
+export function peekAssetGapBannerKind(fileId: string): 'text' | 'full' | 'generating' | null {
   if (!fileId) return null;
-  try {
-    const v = sessionStorage.getItem(`asset-gap-banner:${fileId}`);
-    if (v === 'text' || v === 'full') return v;
-    return null;
-  } catch {
-    return null;
-  }
+  const v = safeGet(`${BANNER_PREFIX}${fileId}`);
+  if (v === 'text' || v === 'full' || v === 'generating') return v;
+  return null;
 }
 
 export function dismissAssetGapBanner(fileId: string): void {
   if (!fileId) return;
-  try {
-    sessionStorage.setItem(`asset-gap-banner-dismissed:${fileId}`, '1');
-  } catch {
-    // ignore
-  }
+  safeSet(`${BANNER_DISMISS_PREFIX}${fileId}`, '1');
 }
 
 export function isAssetGapBannerDismissed(fileId: string): boolean {
   if (!fileId) return false;
-  try {
-    return sessionStorage.getItem(`asset-gap-banner-dismissed:${fileId}`) === '1';
-  } catch {
-    return false;
-  }
+  return safeGet(`${BANNER_DISMISS_PREFIX}${fileId}`) === '1';
 }
 
 export function clearAssetGapBannerDismissed(fileId: string): void {
   if (!fileId) return;
-  try {
-    sessionStorage.removeItem(`asset-gap-banner-dismissed:${fileId}`);
-  } catch {
-    // ignore
-  }
+  safeRemove(`${BANNER_DISMISS_PREFIX}${fileId}`);
 }
