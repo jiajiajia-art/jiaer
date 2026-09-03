@@ -31,7 +31,7 @@ import CreatorIncentiveAdminManager from '../components/CreatorIncentiveAdminMan
 import ShareRatioAdminManager from '../components/ShareRatioAdminManager';
 import AdminUsersManager from '../components/AdminUsersManager';
 import DailyTasksAdminManager from '../components/DailyTasksAdminManager';
-import CommentAdminManager from '../components/admin/CommentAdminManager';
+import CommentAdminManager from '../components/Admin/CommentAdminManager';
 import WithdrawAdminManager from '../components/WithdrawAdminManager';
 import LotteryAdminManager from '../components/LotteryAdminManager';
 import ModelConfigHub from '../components/ModelConfigHub';

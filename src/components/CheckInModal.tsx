@@ -73,11 +73,55 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
     // 当月 1 号是星期几 (0 = 周日, 用于月初占位)
     const firstDayWeekday = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
 
-    // 补齐 schedule 不足当月天数的情况
     const lastReward = schedule.length > 0 ? schedule[schedule.length - 1] : 0;
-    const paddedSchedule = schedule.length >= daysInCurrentMonth
-        ? schedule.slice(0, daysInCurrentMonth)
-        : [...schedule, ...Array(daysInCurrentMonth - schedule.length).fill(lastReward)];
+
+    /** 按连续签到第 N 天取奖励（非日历日期） */
+    const getStreakReward = (streakDayNum: number): number => {
+        if (schedule.length === 0) return 0;
+        const index = streakDayNum - 1;
+        if (index < 0) return schedule[0] ?? 0;
+        if (index < schedule.length) return schedule[index];
+        return lastReward;
+    };
+
+    /** 计算某已签日期当时的连续签到天数 */
+    const getStreakDayAtSignedDate = (dayNum: number): number => {
+        let streak = 0;
+        for (let d = 1; d <= dayNum; d++) {
+            if (signedDaysThisMonth.includes(d)) {
+                streak += 1;
+            } else {
+                streak = 0;
+            }
+        }
+        return streak;
+    };
+
+    /**
+     * 日历格子积分：按连续签到天数展示。
+     * 断签日（历史未签）返回 null，仅显示日期。
+     */
+    const getDayPoints = (dayNum: number, isSigned: boolean): number | null => {
+        const isTodayCell = dayNum === todayDate;
+        const isUnreachable = !isSigned && dayNum < todayDate;
+
+        if (isUnreachable) return null;
+
+        if (isSigned) {
+            return getStreakReward(getStreakDayAtSignedDate(dayNum));
+        }
+
+        if (isTodayCell && !signedInToday) {
+            return getStreakReward(streakDay);
+        }
+
+        if (dayNum > todayDate) {
+            const futureStreakDay = streakDay + (dayNum - todayDate);
+            return getStreakReward(futureStreakDay);
+        }
+
+        return null;
+    };
 
     if (!isOpen) return null;
 
@@ -102,18 +146,11 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
         }
     };
 
-    // 构建当月每一天的显示数据
-    // 核心逻辑：按连续签到段计算，每段内 dayNum - startDay = scheduleIndex
     const monthDays = Array.from({ length: daysInCurrentMonth }, (_, index) => {
         const dayNum = index + 1;
         const isSigned = signedDaysThisMonth.includes(dayNum);
         return { dayNum, isSigned };
     });
-
-    // 当月每一天的奖励值：固定对应 displaySchedule[dayNum - 1]
-    const getDayDisplay = (dayNum: number) => {
-        return paddedSchedule[dayNum - 1] ?? lastReward;
-    };
 
     return (
         <div className={styles.overlay} onClick={onClose}>
@@ -150,7 +187,7 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                             </p>
                         </div>
 
-                        {paddedSchedule.length > 0 && (
+                        {schedule.length > 0 && (
                             <div className={styles.calendarWrapper}>
                                 <div className={styles.weekdayRow}>
                                     {['日', '一', '二', '三', '四', '五', '六'].map((label, idx) => (
@@ -184,9 +221,7 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                                         const isForecast = !isSigned && dayNum > todayDate;
                                         // 不可签到（历史断签）：今天之前 + 未签到
                                         const isUnreachable = !isSigned && dayNum < todayDate;
-                                        // 当前天应显示的奖励值
-                                        const points = getDayDisplay(dayNum);
-                                        // 是否展示对勾（已签到）
+                                        const points = getDayPoints(dayNum, isSigned);
                                         const showCheck = isClaimed || isHistoricalSigned;
 
                                         return (
@@ -199,7 +234,7 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                                                     ${isHistoricalSigned ? styles.dayCellCompleted : ''}
                                                     ${isForecast ? styles.dayCellForecast : ''}
                                                     ${isUnreachable ? styles.dayCellFuture : ''}
-                                                    ${points > 9 ? styles.dayCellBonus : ''}
+                                                    ${points !== null && points > 9 ? styles.dayCellBonus : ''}
                                                 `}
                                             >
                                                 <span className={styles.dayCellNumber}>
@@ -219,9 +254,11 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                                                         dayNum
                                                     )}
                                                 </span>
-                                                <span className={styles.dayCellPoints}>
-                                                    {`+${points}`}
-                                                </span>
+                                                {points !== null && (
+                                                    <span className={styles.dayCellPoints}>
+                                                        {`+${points}`}
+                                                    </span>
+                                                )}
                                             </div>
                                         );
                                     })}
