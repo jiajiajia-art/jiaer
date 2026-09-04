@@ -24,6 +24,15 @@
     position: relative;
 }
 
+/* Embeddable profile panel (Create/Profile unified page) */
+.profileFunctionPanel {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    position: relative;
+    margin-top: 28px;
+}
+
 /* 用户信息展示区域 */
 .userProfileSection {
     width: 100vw;
@@ -246,40 +255,127 @@
     font-size: 16px;
 }
 
-/* 功能列表 */
+/* 功能列表 — 更多服务（深色面板） */
 .functionList {
     width: 100%;
     max-width: none;
-    margin: 0 auto;
+    margin: 0;
     display: flex;
     flex-direction: column;
-    padding: 0 20px;
+    padding: 10px 8px 10px;
     box-sizing: border-box;
+    background: #1a1a1a;
+    border-radius: 16px;
+}
+
+.functionListHeading {
+    margin: 0 12px 6px;
+    padding: 8px 4px 10px;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.3;
 }
 
 .functionItem {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 16px 20px;
-    border-bottom: 1px dashed #e0e0e0;
+    gap: 12px;
+    width: 100%;
+    padding: 14px 12px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    box-sizing: border-box;
 }
 
-.functionItem:last-child {
-    border-bottom: none;
+.functionItem:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.functionItemExpanded {
+    flex-wrap: wrap;
+    cursor: default;
+}
+
+.functionItemExpanded:hover {
+    background: transparent;
 }
 
 .functionIcon {
-    width: 48px;
-    height: 48px;
+    width: 22px;
+    height: 22px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
-    border-radius: 12px;
-    color: #fff;
-    font-size: 24px;
+    background: none;
+    border-radius: 0;
+    color: #ffffff;
+    font-size: 20px;
     flex-shrink: 0;
+}
+
+.functionIcon img {
+    width: 18px;
+    height: 18px;
+    display: block;
+    object-fit: contain;
+}
+
+.functionIcon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.functionTitle {
+    flex: 1;
+    min-width: 0;
+    font-size: 15px;
+    font-weight: 500;
+    color: #ffffff;
+    line-height: 1.3;
+}
+
+.functionMeta {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    margin-left: auto;
+    appearance: none;
+    border: none;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    color: inherit;
+}
+
+.functionHint {
+    font-size: 13px;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.42);
+    white-space: nowrap;
+}
+
+.functionChevron {
+    color: rgba(255, 255, 255, 0.32);
+    font-size: 18px;
+    line-height: 1;
+    font-weight: 300;
+}
+
+.functionExpandRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1 1 100%;
+    width: 100%;
+    margin-top: 4px;
+    padding-left: 34px;
+    box-sizing: border-box;
 }
 
 .functionText {
@@ -290,24 +386,18 @@
     min-width: 0;
 }
 
-.functionTitle {
-    font-size: 16px;
-    font-weight: 600;
-    color: #262626;
-}
-
 .functionDesc {
     font-size: 14px;
-    color: #737373;
+    color: rgba(255, 255, 255, 0.42);
     word-break: break-word;
 }
 
 .inviteCodeHighlight {
-    color: #ff0000;
+    color: #ff6b6b;
     font-weight: 700;
 }
 
-/* 按钮基础样式（共同样式） */
+/* 按钮基础样式（弹窗等场景仍复用） */
 .functionButton {
     padding: 8px 20px;
     border: none;
@@ -404,10 +494,11 @@
 }
 
 .inviteCampaignSection {
-    border-top: 1px solid #ececec;
-    border-bottom: 1px solid #ececec;
-    background: #fef6f7;
-    padding: 20px 24px;
+    margin: 4px 8px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 20px 20px 16px;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -416,14 +507,14 @@
 .inviteCampaignHeader {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
 }
 
 .inviteCampaignIcon {
     width: 48px;
     height: 48px;
     border-radius: 12px;
-    background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
+    background: rgba(255, 255, 255, 0.12);
     color: #fff;
     display: flex;
     align-items: center;
@@ -432,11 +523,18 @@
     flex-shrink: 0;
 }
 
+.inviteCampaignIcon img {
+    width: 22px;
+    height: 22px;
+    display: block;
+    object-fit: contain;
+}
+
 .inviteCampaignTitle {
     font-size: 16px;
     line-height: 1.35;
     font-weight: 700;
-    color: #111;
+    color: #ffffff;
 }
 
 .inviteCampaignCodeRow {
@@ -453,25 +551,25 @@
     line-height: 1.2;
     font-weight: 600;
     letter-spacing: 0.06em;
-    color: #1a1a1a;
+    color: #ffffff;
 }
 
 .inviteCampaignCopyBtn {
     border: none;
     border-radius: 8px;
     padding: 8px 16px;
-    background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
+    background: rgba(255, 255, 255, 0.18);
     color: #fff;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
     white-space: nowrap;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease, transform 0.15s ease;
     flex-shrink: 0;
 }
 
 .inviteCampaignCopyBtn:hover {
-    background: linear-gradient(135deg, #e03545 0%, #e94a5a 100%);
+    background: rgba(255, 255, 255, 0.28);
     transform: translateY(-1px);
 }
 
@@ -479,24 +577,24 @@
     border: none;
     border-radius: 8px;
     padding: 8px 16px;
-    background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
+    background: rgba(255, 255, 255, 0.18);
     color: #fff;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease, transform 0.15s ease;
     flex-shrink: 0;
+    align-self: flex-start;
 }
 
 .inviteCampaignRewardBtn:hover {
-    background: linear-gradient(135deg, #e03545 0%, #e94a5a 100%);
+    background: rgba(255, 255, 255, 0.28);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(251, 70, 85, 0.25);
 }
 
 .inviteCampaignMeta {
     font-size: 13px;
-    color: #666;
+    color: rgba(255, 255, 255, 0.55);
     margin-top: 8px;
 }
 
@@ -518,18 +616,21 @@
 }
 
 .inviteInput {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     padding: 8px 12px;
-    border: 2px solid #ddd;
-    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 8px;
     font-size: 14px;
     outline: none;
     transition: border-color 0.2s;
     box-sizing: border-box;
+    background: rgba(255, 255, 255, 0.06);
+    color: #ffffff;
 }
 
 .inviteInput:focus {
-    border-color: #B69B74;
+    border-color: rgba(255, 255, 255, 0.35);
 }
 
 .redeemInput {
@@ -564,7 +665,26 @@
 }
 
 .inviteInput::placeholder {
-    color: #999;
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.functionExpandSubmit {
+    appearance: none;
+    border: none;
+    flex-shrink: 0;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 8px;
+    background: #7a2e35;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.functionExpandSubmit:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
 }
 
 .dailyTaskModalOverlay {
@@ -864,7 +984,7 @@
     }
 
     .functionList {
-        padding: 0 15px;
+        padding: 16px 6px 8px;
     }
 }
 
@@ -930,26 +1050,41 @@
     }
 
     .functionList {
-        padding: 0 10px;
+        padding: 16px 6px 8px;
+        border-radius: 14px;
     }
 
-    .functionItem {
-        padding: 16px 16px;
-        gap: 12px;
-    }
-
-    .functionIcon {
-        width: 40px;
-        height: 40px;
-        font-size: 20px;
-    }
-
-    .functionTitle {
+    .functionListHeading {
+        margin: 0 10px 4px;
         font-size: 15px;
     }
 
-    .functionDesc {
-        font-size: 13px;
+    .functionItem {
+        padding: 13px 10px;
+        gap: 10px;
+    }
+
+    .functionIcon {
+        width: 20px;
+        height: 20px;
+        font-size: 18px;
+    }
+
+    .functionIcon img {
+        width: 16px;
+        height: 16px;
+    }
+
+    .functionTitle {
+        font-size: 14px;
+    }
+
+    .functionHint {
+        font-size: 12px;
+    }
+
+    .functionExpandRow {
+        padding-left: 30px;
     }
 
     .functionButton {
@@ -1286,12 +1421,12 @@
 .profileTabContainer {
     display: flex;
     gap: 0;
-    padding: 0 20px;
+    padding: 0;
     margin-bottom: 20px;
-    background: #fff;
+    background: #1c1c1e;
     border-radius: 14px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-    border: 1px solid #f0f0f0;
+    box-shadow: none;
+    border: 1px solid rgba(255, 255, 255, 0.06);
     overflow: hidden;
 }
 
@@ -1306,7 +1441,7 @@
     border: none;
     font-size: 14px;
     font-weight: 600;
-    color: #999;
+    color: #8e8e93;
     cursor: pointer;
     transition: all 0.25s ease;
     position: relative;
@@ -1320,22 +1455,22 @@
     transform: translateY(-50%);
     width: 1px;
     height: 20px;
-    background: #e8e8e8;
+    background: rgba(255, 255, 255, 0.12);
 }
 
 .profileTab:hover {
-    color: #666;
-    background: #fafafa;
+    color: rgba(255, 255, 255, 0.88);
+    background: rgba(255, 255, 255, 0.04);
 }
 
 .profileTabActive {
-    color: #FB4655;
-    background: #fff5f6;
+    color: #ffffff;
+    background: rgba(166, 44, 63, 0.28);
 }
 
 .profileTabActive:hover {
-    color: #FB4655;
-    background: #fff5f6;
+    color: #ffffff;
+    background: rgba(166, 44, 63, 0.36);
 }
 
 .profileTab svg {

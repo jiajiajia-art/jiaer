@@ -1,7 +1,7 @@
 import React from 'react';
 import styles from './GameGridSkeleton.module.css';
 
-type GameGridSkeletonLayoutVariant = 'default' | 'homeWide';
+type GameGridSkeletonLayoutVariant = 'default' | 'homeWide' | 'works';
 
 interface GameGridSkeletonProps {
     count?: number;
@@ -12,13 +12,16 @@ const GameGridSkeleton: React.FC<GameGridSkeletonProps> = ({
     count = 8,
     layoutVariant = 'default',
 }) => {
+    const isWorksLayout = layoutVariant === 'works';
     const skeletonGridClassName = [
         styles.skeletonGrid,
         layoutVariant === 'homeWide' ? styles.skeletonGridHomeWide : '',
+        isWorksLayout ? styles.skeletonGridWorks : '',
     ].filter(Boolean).join(' ');
     const skeletonCardClassName = [
         styles.skeletonCard,
         layoutVariant === 'homeWide' ? styles.skeletonCardHomeWide : '',
+        isWorksLayout ? styles.skeletonCardWorks : '',
     ].filter(Boolean).join(' ');
 
     return (
@@ -32,7 +35,7 @@ const GameGridSkeleton: React.FC<GameGridSkeletonProps> = ({
                             <div className={styles.subtitleSkeleton} />
                             <div className={styles.tagSkeleton} />
                         </div>
-                        <div className={styles.priceSkeleton} />
+                        {!isWorksLayout ? <div className={styles.priceSkeleton} /> : null}
                     </div>
                 </div>
             ))}

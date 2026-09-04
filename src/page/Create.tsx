@@ -1,9 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { IoEye, IoStatsChartSharp, IoShareSocial, IoTime, IoChatbubbleEllipses } from 'react-icons/io5';
-import { TbHandClick } from 'react-icons/tb';
-import { HiOutlineLightBulb } from 'react-icons/hi';
-import { MdContentCopy } from 'react-icons/md';
-import { PiMoneyWavy } from "react-icons/pi";
+import { IoChevronDown } from 'react-icons/io5';
+import { HiOutlineExternalLink } from 'react-icons/hi';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -13,13 +10,13 @@ import FooterArea from '../components/Layout/FooterArea';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import GameGrid from '../components/GameGrid';
 import RechargeModal from '../components/Purchase/RechargeModal';
-import CreateGameModals from '../components/CreateGame/CreateGameModals';
+import ExchangeModal from '../components/Purchase/ExchangeModal';
+import CheckInModal from '../components/CheckInModal';
 import ConfirmModal from '../components/CommonModal/ConfirmModal';
 import GameGridSkeleton from '../components/Skeleton/GameGridSkeleton';
 import WithdrawFlowModal from '../components/Create/WithdrawFlowModal';
+import ProfileFunctionPanel from '../components/Profile/ProfileFunctionPanel';
 import { useAuthStore } from '../store/useAuthStore';
-import { useEditorStore } from '../store/editorStore';
-import { useGameStore } from '../store/gameStore';
 import getGameDataApi from '../api/home/getGameData';
 import type { UserGameData } from '../api/home/getGameData.type';
 import statisticsApi from '../api/statistics/statisticsApi';
@@ -28,15 +25,6 @@ import payApi from '../api/pay/payApi';
 import type { PayOrderRequest } from '../api/pay/pay.type';
 import { auth } from '../api/account/authApi';
 import GameAction from '../api/rpgGame/gameAction';
-import { HOST_ADDRESS } from '../config';
-import { authFetch } from '../api/base';
-import {
-    getMiniProgramCreatorBlockedMessage,
-    isMiniProgramCreatorTypeSupported,
-    isMiniProgramEnv,
-    MINI_PROGRAM_CREATOR_PC_URL,
-    type CreatorGameType,
-} from '../utils/miniProgram';
 import { partitionCreatorGames } from '../utils/novelGame';
 import {
     DRAFT_BOX_FILTER_ORDER,
@@ -45,8 +33,14 @@ import {
     type DraftBoxFilterKey,
 } from '../utils/draftBoxFilter';
 import { getApiErrorMessage } from '../utils/error';
+import { getImageUrl } from '../utils/constants';
+import favoriteApi from '../api/favorite/favoriteApi';
+import { buildGameDetailNavigateState } from '../utils/gameDetailNavigation';
 
 type CreatorStatsIncentiveType = 'none' | 'incentive' | 'game_incentive' | 'code_incentive' | 'all_incentive';
+type WorksTabKey = 'published' | 'drafts' | 'favorites';
+
+const FAVORITES_PAGE_SIZE = 40;
 
 const formatPlayDuration = (seconds: number) => {
     const safe = Math.max(0, Number(seconds) || 0);
@@ -59,8 +53,6 @@ const formatPlayDuration = (seconds: number) => {
 const Create: React.FC = () => {
     const { t } = useTranslation();
     const { user, updateUser } = useAuthStore();
-    const { clearState } = useEditorStore();
-    const { clearAll } = useGameStore();
     const navigate = useNavigate();
 
     const [fileMetas, setFileMetas] = useState<UserGameData[]>([]);
@@ -79,9 +71,9 @@ const Create: React.FC = () => {
     });
     const [creatorStats, setCreatorStats] = useState<StatsOverview | null>(null);
     const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
-    const [isCreateTypeModalOpen, setIsCreateTypeModalOpen] = useState(false);
-    const [isMobileTipModalOpen, setIsMobileTipModalOpen] = useState(false);
-    const [mobileTipMessage, setMobileTipMessage] = useState('');
+    const [isMembershipRechargeModalOpen, setIsMembershipRechargeModalOpen] = useState(false);
+    const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
+    const [isExchangeModalOpen, setIsExchangeModalOpen] = useState(false);
     const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
     const [isSettleDiamondsModalOpen, setIsSettleDiamondsModalOpen] = useState(false);
     const [isSettling, setIsSettling] = useState(false);
@@ -91,12 +83,20 @@ const Create: React.FC = () => {
     const [isBatchDeletingDrafts, setIsBatchDeletingDrafts] = useState(false);
     const [isBatchDeleteConfirmOpen, setIsBatchDeleteConfirmOpen] = useState(false);
     const [draftFilterKey, setDraftFilterKey] = useState<DraftBoxFilterKey>('all');
+    const [streakDays, setStreakDays] = useState(0);
+    const [isStatsExpanded, setIsStatsExpanded] = useState(false);
+    const [worksTab, setWorksTab] = useState<WorksTabKey>('published');
+    const [favoriteGames, setFavoriteGames] = useState<UserGameData[]>([]);
+    const [isLoadingFavorites, setIsLoadingFavorites] = useState(false);
+    const [favoritesLoaded, setFavoritesLoaded] = useState(false);
 
     const userName = user?.user?.nickname || user?.user?.name || t('create.userNameDefault');
     const userCode = user?.user?.userCode;
     const debugToken = user?.user?.debugToken;
     const truncatedDebugToken = debugToken ? `${debugToken.slice(0, 8)}...` : null;
-    const isMiniProgram = isMiniProgramEnv();
+    const userAvatar = getImageUrl(user?.user?.avatarUrl) || `${import.meta.env.BASE_URL}data/assets/defaultAvatar.png`;
+    const isMember = Boolean(user?.user?.isMember);
+    const isSignedAuthor = Boolean(user?.user?.userSegment && user.user.userSegment !== 'normal');
     const isWorkIncentive = stats.incentiveType === 'incentive' || stats.incentiveType === 'game_incentive' || stats.incentiveType === 'all_incentive';
 
     const handleWithdrawClick = () => {
@@ -192,11 +192,31 @@ const Create: React.FC = () => {
         }
     };
 
+    const getSignInStreak = async () => {
+        if (!user?.user?.id) {
+            return;
+        }
+
+        try {
+            const response = await auth.getSignInStatus();
+            if (response.data.success && response.data.data) {
+                const status = response.data.data;
+                const days = status.signedInToday
+                    ? status.streakDay
+                    : Math.max(0, (status.streakDay || 1) - 1);
+                setStreakDays(days);
+            }
+        } catch (error) {
+            console.error('获取签到状态错误:', error);
+        }
+    };
+
     useEffect(() => {
         loadMyGames();
         getGameTotalStats();
         getCreatorOverviewStats();
         getUserInfo();
+        getSignInStreak();
     }, [user?.user?.id]);
 
     useEffect(() => {
@@ -208,11 +228,6 @@ const Create: React.FC = () => {
 
         setSelectedDraftIds((prev) => prev.filter((id) => draftGames.some((game) => getGameManageId(game) === id)));
     }, [draftGames]);
-
-    const handleOpenBindPhoneGuide = () => {
-        setIsMobileTipModalOpen(false);
-        navigate('/profile?openBrowserLoginAccount=1');
-    };
 
     const handleCopyUserCode = async () => {
         if (!userCode) return;
@@ -252,6 +267,11 @@ const Create: React.FC = () => {
         return null;
     };
 
+    const formatEarningsValue = (value: number) => {
+        const safe = Number(value) || 0;
+        return safe.toLocaleString('zh-CN');
+    };
+
     const handleOpenDraftManage = () => {
         // 实现草稿管理模式
         setIsDraftManageMode(true);
@@ -288,6 +308,50 @@ const Create: React.FC = () => {
     const handleDraftFilterChange = (nextFilter: DraftBoxFilterKey) => {
         setDraftFilterKey(nextFilter);
         setSelectedDraftIds([]);
+    };
+
+    const loadFavoriteGames = async () => {
+        setIsLoadingFavorites(true);
+        try {
+            const response = await favoriteApi.list({
+                limit: String(FAVORITES_PAGE_SIZE),
+                offset: '0',
+            });
+            if (response.data.success && response.data.data) {
+                setFavoriteGames(response.data.data.rows || []);
+            } else {
+                setFavoriteGames([]);
+            }
+        } catch (error) {
+            console.error('获取收藏列表失败:', error);
+            setFavoriteGames([]);
+        } finally {
+            setIsLoadingFavorites(false);
+            setFavoritesLoaded(true);
+        }
+    };
+
+    const handleWorksTabChange = (nextTab: WorksTabKey) => {
+        setWorksTab(nextTab);
+        if (nextTab !== 'drafts') {
+            setIsDraftManageMode(false);
+            setSelectedDraftIds([]);
+        }
+        if (nextTab === 'favorites' && !favoritesLoaded && !isLoadingFavorites) {
+            void loadFavoriteGames();
+        }
+    };
+
+    const handleFavoriteGameClick = (game: UserGameData) => {
+        if (Number(game.is_public) !== 1) {
+            toast.error(t('favorites.unpublishedHint'));
+            return;
+        }
+        const gameId = game.file_id || game.id;
+        if (!gameId) return;
+        navigate(`/game/${gameId}`, {
+            state: buildGameDetailNavigateState('favorites', game),
+        });
     };
 
     const handleDraftCardClick = (game: UserGameData) => {
@@ -411,57 +475,6 @@ const Create: React.FC = () => {
         }
     };
 
-    const openMiniProgramTypeTip = (type: Extract<CreatorGameType, 'avg' | 'custom' | 'st' | 'ivg'>) => {
-        // 小程序端暂不开放 AVG / 自定义编辑，统一引导去 PC 端。
-        setMobileTipMessage(getMiniProgramCreatorBlockedMessage(type));
-        setIsMobileTipModalOpen(true);
-    };
-
-    const handleSelectGameType = async (type: CreatorGameType) => {
-        // 小程序端当前只允许 TXT 模式进入创作者编辑器。
-        if (isMiniProgram && !isMiniProgramCreatorTypeSupported(type)) {
-            if (type === 'avg' || type === 'custom' || type === 'st' || type === 'ivg') {
-                openMiniProgramTypeTip(type);
-            }
-            setIsCreateTypeModalOpen(false);
-            return;
-        }
-
-        clearAll();
-
-        if (type === 'rpg') {
-            navigate('/createGame');
-        } else if (type === 'txt') {
-            clearState();
-            navigate('/gameSettingsEditor');
-        } else if (type === 'custom') {
-            clearState();
-            navigate('/customif/create');
-        } else if (type === 'st') {
-            clearState();
-            navigate('/st/create');
-        } else if (type === 'avg') {
-            clearState();
-            try {
-                const resp = await authFetch(`${HOST_ADDRESS}/api/custom/apps/create-empty`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title: t('create.defaultAvgGameTitle'), engine: 'AVG' }),
-                });
-                const data = await resp.json();
-                const appId = data?.appId || data?.data?.appId;
-                if (!resp.ok || !appId) {
-                    throw new Error(data?.message || t('create.createAvgFailed'));
-                }
-                navigate(`/st/create?appId=${encodeURIComponent(appId)}`);
-            } catch (error: any) {
-                toast.error(String(error?.message || error || t('create.createAvgFailed')));
-            }
-        }
-
-        setIsCreateTypeModalOpen(false);
-    };
-
     return (
         <div className={styles.pageRoot}>
             <Navbar />
@@ -470,311 +483,311 @@ const Create: React.FC = () => {
                 <div className={styles.main}>
                     <div className={styles.creatorHeroSection}>
                         <div className={styles.creatorHeroCard}>
-                            <div className={styles.creatorHeroLeft}>
-                                <div className={styles.creatorHeroEyebrow}>Creator Studio</div>
-                                <div className={styles.creatorHeroName}>{userName}</div>
+                            <div className={styles.pageHeader}>
+                                <h1 className={styles.pageHeaderTitle}>{t('nav.profile')}</h1>
+                            </div>
 
-                                <div className={styles.creatorAccountCard}>
-                                    <div className={styles.creatorAccountHalf}>
-                                        <span className={styles.creatorAccountLabel}>{t('create.kuranIdPrefix')}</span>
-                                        <span className={styles.creatorAccountValue}>{userCode || '--'}</span>
+                            <div className={styles.creatorHeroTop}>
+                                <div className={styles.creatorHeroAvatarFrame}>
+                                    <img
+                                        className={styles.creatorHeroAvatar}
+                                        src={userAvatar}
+                                        alt={userName}
+                                    />
+                                </div>
+                                <div className={styles.creatorHeroInfo}>
+                                    <div className={styles.creatorHeroNameRow}>
+                                        <h2 className={styles.creatorHeroName}>{userName}</h2>
+                                        {streakDays > 0 && (
+                                            <span className={styles.creatorStreakBadge}>
+                                                {t('create.streakBadge', { days: streakDays })}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className={styles.creatorHeroMetaRow}>
+                                        <span className={styles.creatorHeroId}>
+                                            {t('create.idPrefix')}{userCode || '--'}
+                                        </span>
                                         {userCode && (
                                             <button
                                                 type="button"
-                                                className={styles.creatorAccountCopyButton}
+                                                className={styles.creatorCopyLink}
                                                 onClick={handleCopyUserCode}
-                                                title={t('profile.copyKuranId')}
                                             >
-                                                <MdContentCopy />
+                                                {t('create.copy')}
                                             </button>
                                         )}
                                     </div>
-                                    <div className={styles.creatorAccountDivider} />
-                                    <div className={styles.creatorAccountHalf}>
-                                        <span className={styles.creatorAccountLabel}>Token:</span>
-                                        <span className={styles.creatorAccountValue}>{truncatedDebugToken || '--'}</span>
+                                    {(isMember || isSignedAuthor) && (
+                                        <div className={styles.creatorHeroBadgeRow}>
+                                            {isMember && (
+                                                <span className={styles.creatorRoleBadge}>
+                                                    {t('create.memberBadge')}
+                                                </span>
+                                            )}
+                                            {isSignedAuthor && (
+                                                <span className={styles.creatorRoleBadge}>
+                                                    {t('create.signedAuthorBadge')}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+                                    <div className={styles.creatorHeroTokenRow}>
+                                        <span className={styles.creatorHeroTokenLabel}>Token:</span>
+                                        <span className={styles.creatorHeroTokenValue}>
+                                            {truncatedDebugToken || '--'}
+                                        </span>
                                         {debugToken && (
                                             <button
                                                 type="button"
-                                                className={styles.creatorAccountCopyButton}
+                                                className={styles.creatorCopyLink}
                                                 onClick={handleCopyDebugToken}
-                                                title={t('create.copyToken')}
                                             >
-                                                <MdContentCopy />
+                                                {t('create.copy')}
                                             </button>
                                         )}
                                     </div>
                                 </div>
+                            </div>
 
-                                <div className={styles.creatorAssets}>
-                                    <div className={styles.creatorAssetCard}>
-                                        <div>
-                                            <div className={styles.creatorAssetHeader}>
-                                                <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" className={styles.creatorAssetIcon} />
-                                                <span className={styles.creatorAssetLabel}>{t('profile.myPoints')}</span>
-                                            </div>
-                                            <div className={styles.creatorAssetRow}>
-                                                <div className={styles.creatorAssetValue}>{user?.user?.points ?? 0}</div>
-                                            </div>
-                                        </div>
+                            <div className={styles.creatorHeroStats}>
+                                <div className={styles.primaryStatsBar}>
+                                    <div className={styles.primaryStatItem}>
+                                        <div className={styles.primaryStatValue}>{stats.totalCreated}</div>
+                                        <div className={styles.primaryStatLabel}>{t('create.totalCreated')}</div>
                                     </div>
-                                    <div className={styles.creatorAssetCard}>
-                                        <div>
-                                            <div className={styles.creatorAssetHeader}>
-                                                <svg className={styles.creatorAssetIconDiamond} viewBox="0 0 1024 1024">
-                                                    <path d="M296.42524445 392.80526222H50.38421333L216.76942222 148.46179555h246.03875556zM798.02823111 149.81233778H551.98833778l166.38520889 244.34232889h246.03989333zM403.65169778 392.80526222L511.19786667 226.41777778l106.40611555 166.38748444zM617.75075555 487.09859555L511.34350222 1000.40248889 407.21066667 487.09859555zM300.18901333 487.09859555l211.90883556 531.02364445-454.30670222-531.02364445zM719.77642667 487.09859555l-207.35658667 531.02364445 449.75559111-531.02364445z" fill="#FB4655"/>
-                                                </svg>
-                                                <span className={styles.creatorAssetLabel}>{t('profile.myDiamonds')}</span>
+                                    <div className={styles.primaryStatItem}>
+                                        <div className={styles.primaryStatValue}>{creatorStats?.likeCount ?? 0}</div>
+                                        <div className={styles.primaryStatLabel}>{t('creatorStats.totalLikes')}</div>
+                                    </div>
+                                    <div className={styles.primaryStatItem}>
+                                        <div className={styles.primaryStatValue}>{user?.user?.points ?? 0}</div>
+                                        <div className={styles.primaryStatLabel}>{t('create.pointsStat')}</div>
+                                    </div>
+                                    <div className={`${styles.primaryStatItem} ${styles.primaryStatItemWithActions}`}>
+                                        <div className={styles.primaryStatValueRow}>
+                                            <div className={styles.primaryStatValueBlock}>
+                                                <div className={styles.primaryStatValue}>{user?.user?.diamonds ?? 0}</div>
+                                                <div className={styles.primaryStatLabel}>{t('create.diamondsStat')}</div>
                                             </div>
-                                            <div className={styles.creatorAssetRow}>
-                                                <div className={styles.creatorAssetValue}>{user?.user?.diamonds ?? 0}</div>
-                                            </div>
-                                        </div>
-                                        <div className={styles.creatorAssetActionsBox}>
-                                            {user?.user?.userSegment !== 'normal' && (
+                                            <div className={styles.primaryStatActions}>
+                                                {user?.user?.userSegment !== 'normal' && (
+                                                    <button
+                                                        type="button"
+                                                        className={`${styles.creatorAssetActionButton} ${styles.creatorWithdrawButton}`}
+                                                        onClick={handleWithdrawClick}
+                                                    >
+                                                        {t('create.withdraw')}
+                                                    </button>
+                                                )}
                                                 <button
                                                     type="button"
-                                                    className={`${styles.creatorAssetActionButton} ${styles.creatorWithdrawButton}`}
-                                                    onClick={handleWithdrawClick}
+                                                    className={`${styles.creatorAssetActionButton} ${styles.creatorRechargeButton}`}
+                                                    onClick={() => setIsRechargeModalOpen(true)}
                                                 >
-                                                    {t('create.withdraw')}
+                                                    {t('create.recharge')}
                                                 </button>
-                                            )}
-                                            <button
-                                                type="button"
-                                                className={`${styles.creatorAssetActionButton} ${styles.creatorRechargeButton}`}
-                                                onClick={() => setIsRechargeModalOpen(true)}
-                                            >
-                                                {t('create.recharge')}
-                                            </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className={styles.creatorHeroActions}>
                                 <button
-                                    className={styles.creatorPrimaryButton}
-                                    onClick={() => setIsCreateTypeModalOpen(true)}
+                                    type="button"
+                                    className={styles.statsExpandToggle}
+                                    onClick={() => setIsStatsExpanded((prev) => !prev)}
+                                    aria-expanded={isStatsExpanded}
                                 >
-                                    <HiOutlineLightBulb />
-                                    <span>{t('create.createGame')}</span>
+                                    <span>
+                                        {isStatsExpanded ? t('create.collapseMoreStats') : t('create.expandMoreStats')}
+                                    </span>
+                                    <IoChevronDown
+                                        className={`${styles.statsExpandIcon} ${isStatsExpanded ? styles.statsExpandIconOpen : ''}`}
+                                    />
+                                </button>
+
+                                {isStatsExpanded && (
+                                    <div className={styles.expandedStatsBar}>
+                                        <div className={styles.expandedStatItem}>
+                                            <div className={styles.primaryStatValue}>{stats.totalViews}</div>
+                                            <div className={styles.primaryStatLabel}>{t('create.totalViews')}</div>
+                                        </div>
+                                        <div className={styles.expandedStatItem}>
+                                            <div className={styles.primaryStatValue}>{stats.totalClicks}</div>
+                                            <div className={styles.primaryStatLabel}>{t('create.totalVisitors')}</div>
+                                        </div>
+                                        <div className={styles.expandedStatItem}>
+                                            <div className={styles.primaryStatValue}>{creatorStats?.playCount ?? 0}</div>
+                                            <div className={styles.primaryStatLabel}>{t('creatorStats.playCount')}</div>
+                                        </div>
+                                        <div className={styles.expandedStatItem}>
+                                            <div className={styles.primaryStatValue}>
+                                                {formatPlayDuration(creatorStats?.playDurationSeconds ?? 0)}
+                                            </div>
+                                            <div className={styles.primaryStatLabel}>{t('creatorStats.playDuration')}</div>
+                                        </div>
+                                        <div className={styles.expandedStatItem}>
+                                            <div className={styles.primaryStatValue}>{creatorStats?.shareCount ?? 0}</div>
+                                            <div className={styles.primaryStatLabel}>{t('creatorStats.shareCount')}</div>
+                                        </div>
+                                        <div className={styles.expandedStatItem}>
+                                            <div className={styles.primaryStatValue}>{creatorStats?.commentCount ?? 0}</div>
+                                            <div className={styles.primaryStatLabel}>{t('creatorStats.commentCount')}</div>
+                                        </div>
+                                        <div className={styles.expandedStatItem}>
+                                            <div className={styles.primaryStatValue}>{creatorStats?.spendPoints ?? 0}</div>
+                                            <div className={styles.primaryStatLabel}>{t('creatorStats.spendPoints')}</div>
+                                        </div>
+                                        {isWorkIncentive && (
+                                            <div className={styles.expandedStatItem}>
+                                                <div className={styles.primaryStatValue}>{stats.totalIncentiveAmount}</div>
+                                                <div className={styles.primaryStatLabel}>{t('create.totalIncentiveEarnings')}</div>
+                                            </div>
+                                        )}
+                                        {isWorkIncentive && (
+                                            <div className={styles.expandedStatItem}>
+                                                <div className={styles.primaryStatValue}>{stats.pendingIncome}</div>
+                                                <div className={styles.primaryStatLabel}>{t('create.pendingIncentiveEarnings')}</div>
+                                            </div>
+                                        )}
+                                        {isCodeIncentive && (
+                                            <div className={styles.expandedStatItem}>
+                                                <div className={styles.primaryStatValue}>{stats.inviteTotalAmount}</div>
+                                                <div className={styles.primaryStatLabel}>{t('create.inviteCodeTotalEarnings')}</div>
+                                            </div>
+                                        )}
+                                        {isCodeIncentive && (
+                                            <div className={styles.expandedStatItem}>
+                                                <div className={styles.primaryStatValue}>{stats.invitePendingIncome}</div>
+                                                <div className={styles.primaryStatLabel}>{t('create.inviteCodePendingEarnings')}</div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className={styles.accountPanel}>
+                            <div className={styles.accountPanelTitle}>{t('create.myAccount')}</div>
+                            <div className={styles.accountActionGrid}>
+                                <button
+                                    type="button"
+                                    className={styles.accountActionItem}
+                                    onClick={() => setIsCheckInModalOpen(true)}
+                                >
+                                    <span className={styles.accountActionIcon}>
+                                        <img src={`${import.meta.env.BASE_URL}data/assetsv2/personal/signin.svg`} alt="" />
+                                    </span>
+                                    <span className={styles.accountActionLabel}>{t('create.accountCheckIn')}</span>
                                 </button>
                                 <button
-                                    className={styles.creatorHelpButton}
-                                    onClick={() => navigate('/document')}
-                                    title={t('create.pdfGuide')}
+                                    type="button"
+                                    className={styles.accountActionItem}
+                                    onClick={() => setIsRechargeModalOpen(true)}
                                 >
-                                    <span className={styles.creatorHelpIcon}>?</span>
+                                    <span className={styles.accountActionIcon}>
+                                        <img src={`${import.meta.env.BASE_URL}data/assetsv2/personal/pay.svg`} alt="" />
+                                    </span>
+                                    <span className={styles.accountActionLabel}>{t('create.accountRecharge')}</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    className={styles.accountActionItem}
+                                    onClick={() => setIsMembershipRechargeModalOpen(true)}
+                                >
+                                    <span className={styles.accountActionIcon}>
+                                        <img src={`${import.meta.env.BASE_URL}data/assetsv2/personal/member.svg`} alt="" />
+                                    </span>
+                                    <span className={styles.accountActionLabel}>{t('create.accountMembership')}</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    className={styles.accountActionItem}
+                                    onClick={() => setIsExchangeModalOpen(true)}
+                                >
+                                    <span className={styles.accountActionIcon}>
+                                        <img src={`${import.meta.env.BASE_URL}data/assetsv2/personal/mall.svg`} alt="" />
+                                    </span>
+                                    <span className={styles.accountActionLabel}>{t('create.accountPointsMall')}</span>
                                 </button>
                             </div>
                         </div>
-                    </div>
 
-                    <div className={styles.statsSection}>
-                        <div className={styles.sectionHeader}>
-                            <h2 className={styles.sectionHeading}>{t('create.myData')}</h2>
-                            <div className={styles.sectionRule} aria-hidden="true">
-                                <span className={styles.sectionRuleLine} />
-                                <span className={styles.sectionRuleDiamond} />
-                            </div>
-                            <button
-                                type="button"
-                                className={`${styles.more} ${styles.moreText}`}
-                            >
-                                {t('create.statsUpdateTime')}
-                            </button>
-                        </div>
-                        <div className={styles.statsGrid}>
-                            <div className={styles.statBox}>
-                                <div className={styles.statLabel}>
-                                    <IoStatsChartSharp />
-                                    <span>{t('create.totalCreated')}</span>
-                                </div>
-                                <div className={styles.statValue}>{stats.totalCreated}</div>
-                            </div>
-                            <div className={styles.statBox}>
-                                <div className={styles.statLabel}>
-                                    <IoEye />
-                                    <span>{t('create.totalViews')}</span>
-                                </div>
-                                <div className={styles.statValue}>{stats.totalViews}</div>
-                            </div>
-                            <div className={styles.statBox}>
-                                <div className={styles.statLabel}>
-                                    <TbHandClick />
-                                    <span>{t('create.totalVisitors')}</span>
-                                </div>
-                                <div className={styles.statValue}>{stats.totalClicks}</div>
-                            </div>
-                            <div className={styles.statBox}>
-                                <div className={styles.statLabel}>
-                                    <TbHandClick />
-                                    <span>{t('creatorStats.totalLikes')}</span>
-                                </div>
-                                <div className={styles.statValue}>{creatorStats?.likeCount ?? 0}</div>
-                            </div>
-                            <div className={styles.statBox}>
-                                <div className={styles.statLabel}>
-                                    <IoStatsChartSharp />
-                                    <span>{t('creatorStats.playCount')}</span>
-                                </div>
-                                <div className={styles.statValue}>{creatorStats?.playCount ?? 0}</div>
-                            </div>
-                            <div className={styles.statBox}>
-                                <div className={styles.statLabel}>
-                                    <IoTime />
-                                    <span>{t('creatorStats.playDuration')}</span>
-                                </div>
-                                <div className={styles.statValue}>{formatPlayDuration(creatorStats?.playDurationSeconds ?? 0)}</div>
-                            </div>
-                            <div className={styles.statBox}>
-                                <div className={styles.statLabel}>
-                                    <IoShareSocial />
-                                    <span>{t('creatorStats.shareCount')}</span>
-                                </div>
-                                <div className={styles.statValue}>{creatorStats?.shareCount ?? 0}</div>
-                            </div>
-                            <div className={styles.statBox}>
-                                <div className={styles.statLabel}>
-                                    <IoChatbubbleEllipses />
-                                    <span>{t('creatorStats.commentCount')}</span>
-                                </div>
-                                <div className={styles.statValue}>{creatorStats?.commentCount ?? 0}</div>
-                            </div>
-                            <div className={styles.statBox}>
-                                <div className={styles.statLabel}>
-                                    <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
-                                    <span>{t('creatorStats.spendPoints')}</span>
-                                </div>
-                                <div className={styles.statValue}>{creatorStats?.spendPoints ?? 0}</div>
-                            </div>
-                            <div className={`${styles.statBox} ${stats.totalAmount > 0 ? styles.statBoxWithAction : ''}`}>
-                                <div className={styles.statLabel}>
-                                    <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
-                                    <span>{t('create.pendingRewardPoints')}</span>
-                                </div>
-                                <div className={styles.statActionRow}>
-                                    <div className={styles.statValue}>{stats.totalAmount}</div>
+                        <div className={styles.earningsPanel}>
+                            <div className={styles.earningsPanelItem}>
+                                <div className={styles.earningsPanelLabel}>{t('create.pendingRewardPoints')}</div>
+                                <div className={styles.earningsPanelValueRow}>
+                                    <div className={styles.earningsPanelValue}>{formatEarningsValue(stats.totalAmount)}</div>
                                     {stats.totalAmount > 0 && (
                                         <button
                                             type="button"
-                                            className={styles.settleButton}
+                                            className={styles.earningsInlineSettleButton}
                                             onClick={() => setIsSettleModalOpen(true)}
+                                            disabled={isSettling}
                                         >
                                             {t('create.settle')}
                                         </button>
                                     )}
                                 </div>
                             </div>
-                            <div className={`${styles.statBox} ${stats.totalDiamondsAmount > 0 ? styles.statBoxWithAction : ''}`}>
-                                    <div className={styles.statLabel}>
-                                        <img src={`${import.meta.env.BASE_URL}data/assets/create/钻石.svg`} alt="" />
-                                        <span>{t('create.pendingRewardDiamonds')}</span>
-                                    </div>
-                                    <div className={styles.statActionRow}>
-                                        <div className={styles.statValue}>{stats.totalDiamondsAmount}</div>
-                                        {stats.totalDiamondsAmount > 0 && (
-                                            <button
-                                                type="button"
-                                                className={styles.settleButton}
-                                                onClick={() => setIsSettleDiamondsModalOpen(true)}
-                                            >
-                                                {t('create.settle')}
-                                            </button>
-                                        )}
-                                    </div>
+                            <div className={styles.earningsPanelDivider} />
+                            <div className={styles.earningsPanelItem}>
+                                <div className={styles.earningsPanelLabel}>{t('create.pendingRewardDiamonds')}</div>
+                                <div className={styles.earningsPanelValueRow}>
+                                    <div className={styles.earningsPanelValue}>{formatEarningsValue(stats.totalDiamondsAmount)}</div>
+                                    {stats.totalDiamondsAmount > 0 && (
+                                        <button
+                                            type="button"
+                                            className={styles.earningsInlineSettleButton}
+                                            onClick={() => setIsSettleDiamondsModalOpen(true)}
+                                            disabled={isSettling}
+                                        >
+                                            {t('create.settle')}
+                                        </button>
+                                    )}
                                 </div>
-                            {isWorkIncentive && (
-                                <div className={styles.statBox}>
-                                    <div className={styles.statLabel} style={{ justifyContent: 'space-between', width: '100%' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <PiMoneyWavy size={16} color="#FB4655" />
-                                            <span>{t('create.totalIncentiveEarnings')}</span>
-                                        </div>
-                                    </div>
-                                    <div className={styles.statValue}>{stats.totalIncentiveAmount}</div>
-                                </div>
-                            )}
-                            {isWorkIncentive && (
-                                <div className={styles.statBox}>
-                                    <div className={styles.statLabel} style={{ justifyContent: 'space-between', width: '100%' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <PiMoneyWavy size={16} color="#FB4655" />
-                                            <span>{t('create.pendingIncentiveEarnings')}</span>
-                                        </div>
-                                    </div>
-                                    <div className={styles.statValue}>{stats.pendingIncome}</div>
-                                </div>
-                            )}
-                            {isCodeIncentive && (
-                                <div className={styles.statBox}>
-                                    <div className={styles.statLabel} style={{ justifyContent: 'space-between', width: '100%' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
-                                            <span>{t('create.inviteCodeTotalEarnings')}</span>
-                                        </div>
-                                    </div>
-                                    <div className={styles.statValue}>{stats.inviteTotalAmount}</div>
-                                </div>
-                            )}
-                            {isCodeIncentive && (
-                                <div className={styles.statBox}>
-                                    <div className={styles.statLabel} style={{ justifyContent: 'space-between', width: '100%' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
-                                            <span>{t('create.inviteCodePendingEarnings')}</span>
-                                        </div>
-                                    </div>
-                                    <div className={styles.statValue}>{stats.invitePendingIncome}</div>
-                                </div>
-                            )}
+                            </div>
+                            <div className={styles.earningsPanelActions}>
+                                <button
+                                    type="button"
+                                    className={styles.earningsRecordsLink}
+                                    onClick={() => navigate('/create/withdraw-records')}
+                                >
+                                    <span>{t('create.withdrawRecordsViewAll')}</span>
+                                    <HiOutlineExternalLink className={styles.earningsRecordsIcon} />
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    <div className={styles.shopSection}>
-                        <div className={styles.sectionHeader}>
-                            <h2 className={styles.sectionHeading}>{t('create.publishedGames')}</h2>
-                            <div className={styles.sectionRule} aria-hidden="true">
-                                <span className={styles.sectionRuleLine} />
-                                <span className={styles.sectionRuleDiamond} />
+                    <div className={styles.worksSection}>
+                        <div className={styles.worksTabBar}>
+                            <div className={styles.worksTabs}>
+                                <button
+                                    type="button"
+                                    className={`${styles.worksTab} ${worksTab === 'published' ? styles.worksTabActive : ''}`}
+                                    onClick={() => handleWorksTabChange('published')}
+                                >
+                                    {t('create.publishedWorksTab', { count: publishedGames.length })}
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`${styles.worksTab} ${worksTab === 'drafts' ? styles.worksTabActive : ''}`}
+                                    onClick={() => handleWorksTabChange('drafts')}
+                                >
+                                    {t('create.draftBox')}
+                                    {draftGames.length > 0 ? ` (${draftGames.length})` : ''}
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`${styles.worksTab} ${worksTab === 'favorites' ? styles.worksTabActive : ''}`}
+                                    onClick={() => handleWorksTabChange('favorites')}
+                                >
+                                    {t('create.favoritesTab')}
+                                    {favoritesLoaded && favoriteGames.length > 0 ? ` (${favoriteGames.length})` : ''}
+                                </button>
                             </div>
-                            <button
-                                type="button"
-                                className={`${styles.more} ${styles.moreText}`}
-                            >
-                                {t('create.more')}
-                            </button>
-                        </div>
-
-                        {isLoadingMyGames ? (
-                            <GameGridSkeleton count={8} />
-                        ) : publishedGames.length === 0 ? (
-                            <div className={styles.draftEmptyState}>
-                                {t('create.noPublishedGames')}
-                            </div>
-                        ) : (
-                            <GameGrid
-                                games={publishedGames}
-                                primaryStat="pv"
-                                showIncentiveUI={isWorkIncentive}
-                                onGameClick={(game) => {
-                                    const gameId = game.file_id || game.id;
-                                    if (!gameId) return;
-                                    navigate(`/createGame?mode=stats&gameId=${gameId}`);
-                                }}
-                            />
-                        )}
-                    </div>
-
-                    <div className={styles.shopSection}>
-                        <div className={`${styles.sectionHeader} ${styles.draftSectionHeader}`}>
-                            <h2 className={styles.sectionHeading}>{t('create.draftBox')}</h2>
-                            <div className={styles.sectionRule} aria-hidden="true">
-                                <span className={styles.sectionRuleLine} />
-                                <span className={styles.sectionRuleDiamond} />
-                            </div>
-                            {draftGames.length > 0 && (
+                            {worksTab === 'drafts' && draftGames.length > 0 && (
                                 <div className={`${styles.draftManageActions} ${isDraftManageMode ? styles.draftManageActionsExpanded : ''}`}>
                                     {isDraftManageMode ? (
                                         <>
@@ -813,74 +826,119 @@ const Create: React.FC = () => {
                                 </div>
                             )}
                         </div>
-                        {isLoadingMyGames ? (
-                            <GameGridSkeleton count={8} />
-                        ) : draftGames.length === 0 ? (
-                            <div className={styles.draftEmptyState}>
-                                {t('create.startCreating')}
-                            </div>
-                        ) : (
-                            <div className={styles.draftSectionBody}>
-                                <div className={styles.draftFilterBar}>
-                                    <div className={styles.draftFilterRow}>
-                                        {DRAFT_BOX_FILTER_ORDER.map((filterKey) => (
-                                            <button
-                                                key={filterKey}
-                                                type="button"
-                                                className={`${styles.draftFilterChip} ${draftFilterKey === filterKey ? styles.draftFilterChipActive : ''}`}
-                                                onClick={() => handleDraftFilterChange(filterKey)}
-                                            >
-                                                {t(getDraftBoxFilterLabelKey(filterKey))}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                                {isDraftManageMode && (
-                                    <div className={styles.draftManageTip}>
-                                        {t('create.draftsSelected', { count: selectedDraftCount })}
-                                    </div>
-                                )}
-                                {filteredDraftGames.length === 0 ? (
-                                    <div className={styles.draftFilterEmpty}>
-                                        {t('create.noDraftsForFilter')}
-                                    </div>
+
+                        <div className={styles.worksTabPanel}>
+                            {worksTab === 'published' && (
+                                isLoadingMyGames ? (
+                                    <GameGridSkeleton count={8} layoutVariant="works" />
+                                ) : publishedGames.length === 0 ? (
+                                    <div className={styles.worksEmpty}>{t('create.noPublishedGames')}</div>
                                 ) : (
                                     <GameGrid
-                                        games={filteredDraftGames}
-                                        onGameClick={handleDraftCardClick}
-                                        selectable={true}
-                                        selectedIds={selectedDraftIds}
-                                        onToggleSelect={handleToggleDraftSelect}
-                                        isSelectionMode={isDraftManageMode}
+                                        games={publishedGames}
+                                        layoutVariant="works"
+                                        primaryStat="pv"
+                                        showIncentiveUI={isWorkIncentive}
+                                        onGameClick={(game) => {
+                                            const gameId = game.file_id || game.id;
+                                            if (!gameId) return;
+                                            navigate(`/createGame?mode=stats&gameId=${gameId}`);
+                                        }}
                                     />
-                                )}
-                            </div>
-                        )}
+                                )
+                            )}
+
+                            {worksTab === 'drafts' && (
+                                isLoadingMyGames ? (
+                                    <GameGridSkeleton count={8} layoutVariant="works" />
+                                ) : draftGames.length === 0 ? (
+                                    <div className={styles.worksEmpty}>{t('create.startCreating')}</div>
+                                ) : (
+                                    <div className={styles.draftSectionBody}>
+                                        <div className={styles.draftFilterRow}>
+                                            {DRAFT_BOX_FILTER_ORDER.map((filterKey) => (
+                                                <button
+                                                    key={filterKey}
+                                                    type="button"
+                                                    className={`${styles.draftFilterChip} ${draftFilterKey === filterKey ? styles.draftFilterChipActive : ''}`}
+                                                    onClick={() => handleDraftFilterChange(filterKey)}
+                                                >
+                                                    {t(getDraftBoxFilterLabelKey(filterKey))}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        {isDraftManageMode && (
+                                            <div className={styles.draftManageTip}>
+                                                {t('create.draftsSelected', { count: selectedDraftCount })}
+                                            </div>
+                                        )}
+                                        {filteredDraftGames.length === 0 ? (
+                                            <div className={styles.draftFilterEmpty}>
+                                                {t('create.noDraftsForFilter')}
+                                            </div>
+                                        ) : (
+                                            <GameGrid
+                                                games={filteredDraftGames}
+                                                layoutVariant="works"
+                                                onGameClick={handleDraftCardClick}
+                                                selectable={true}
+                                                selectedIds={selectedDraftIds}
+                                                onToggleSelect={handleToggleDraftSelect}
+                                                isSelectionMode={isDraftManageMode}
+                                            />
+                                        )}
+                                    </div>
+                                )
+                            )}
+
+                            {worksTab === 'favorites' && (
+                                isLoadingFavorites ? (
+                                    <GameGridSkeleton count={8} layoutVariant="works" />
+                                ) : favoriteGames.length === 0 ? (
+                                    <div className={styles.worksEmpty}>{t('favorites.empty')}</div>
+                                ) : (
+                                    <GameGrid
+                                        games={favoriteGames}
+                                        layoutVariant="works"
+                                        showUnpublishedBadge
+                                        onGameClick={handleFavoriteGameClick}
+                                    />
+                                )
+                            )}
+                        </div>
                     </div>
+
+                    <ProfileFunctionPanel />
                 </div>
             </div>
 
             <MobileBottomNav />
             <FooterArea />
 
-            <CreateGameModals
-                isCreateTypeModalOpen={isCreateTypeModalOpen}
-                isMobileTipModalOpen={isMobileTipModalOpen}
-                isMiniProgram={isMiniProgram}
-                mobileTipTitle={t('create.goToPC')}
-                mobileTipMessage={mobileTipMessage}
-                mobileTipLinkUrl={MINI_PROGRAM_CREATOR_PC_URL}
-                onCloseCreateTypeModal={() => setIsCreateTypeModalOpen(false)}
-                onCloseMobileTipModal={() => setIsMobileTipModalOpen(false)}
-                onSelectGameType={handleSelectGameType}
-                onOpenMiniProgramTip={openMiniProgramTypeTip}
-                onOpenBindPhoneGuide={handleOpenBindPhoneGuide}
-            />
-
             <RechargeModal
                 isOpen={isRechargeModalOpen}
                 onClose={() => setIsRechargeModalOpen(false)}
                 onRecharge={handleRecharge}
+            />
+            <RechargeModal
+                isOpen={isMembershipRechargeModalOpen}
+                onClose={() => setIsMembershipRechargeModalOpen(false)}
+                onRecharge={handleRecharge}
+                fixedTab="membership"
+            />
+            <CheckInModal
+                isOpen={isCheckInModalOpen}
+                onClose={() => setIsCheckInModalOpen(false)}
+                onSignInSuccess={() => {
+                    void getUserInfo();
+                }}
+            />
+            <ExchangeModal
+                isOpen={isExchangeModalOpen}
+                onClose={() => setIsExchangeModalOpen(false)}
+                onSuccess={() => {
+                    void getUserInfo();
+                }}
             />
             <WithdrawFlowModal
                 open={isWithdrawModalOpen}

@@ -16,7 +16,7 @@ import {
 } from '../lib/gameCardAuthor';
 import { CardCoinIcon, CardFlameIcon, CardHeartIcon } from './GameCardStatIcons';
 
-type GameGridLayoutVariant = 'default' | 'homeWide';
+type GameGridLayoutVariant = 'default' | 'homeWide' | 'works';
 
 interface GameGridProps {
     games: UserGameData[];
@@ -48,13 +48,16 @@ const GameGrid: React.FC<GameGridProps> = ({
 }) => {
     const navigate = useNavigate();
     const { t } = useTranslation();
+    const isWorksLayout = layoutVariant === 'works';
     const gridClassName = [
         styles.grid4,
         layoutVariant === 'homeWide' ? styles.gridHomeWide : '',
+        isWorksLayout ? styles.gridWorks : '',
     ].filter(Boolean).join(' ');
     const cardClassName = (isSelected: boolean) => [
         styles.goodsCard,
         layoutVariant === 'homeWide' ? styles.goodsCardHomeWide : '',
+        isWorksLayout ? styles.goodsCardWorks : '',
         isSelectionMode ? styles.goodsCardSelectable : '',
         isSelected ? styles.goodsCardSelected : '',
     ].filter(Boolean).join(' ');

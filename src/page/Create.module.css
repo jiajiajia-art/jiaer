@@ -1,5 +1,5 @@
 /* ============================================
-   Create Page - 创作工作室
+   Create Page - 创作工作室 / 个人中心（深色主题）
    ============================================ */
 
 /* --- CSS Variables --- */
@@ -7,16 +7,22 @@
     --creator-radius: 16px;
     --creator-gap: 18px;
     --creator-padding: 26px;
+    --creator-bg: #000000;
+    --creator-card: #1C1C1E;
+    --creator-card-elevated: #242426;
     --creator-label: #8E8E93;
     --creator-value: #FFFFFF;
     --creator-title: #A8283C;
+    --creator-accent: #8E2135;
+    --creator-accent-soft: rgba(168, 40, 60, 0.28);
+    --creator-divider: rgba(255, 255, 255, 0.12);
     --primary: #A8283C;
     --primary-light: #C23A50;
     --primary-dark: #8E2135;
     width: 100%;
     min-height: 100vh;
-    max-width: none;
-    margin: 0;
+    max-width: 1920px;
+    margin: 0 auto;
     background: #000000;
     color: #FFFFFF;
 }
@@ -28,6 +34,7 @@
     margin: 0;
     padding: 0;
     margin-bottom: 248px;
+    background: var(--creator-bg);
 }
 
 .main {
@@ -42,19 +49,38 @@
     position: relative;
 }
 
+.pageHeader {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 0 4px;
+    position: relative;
+}
+
+.pageHeaderTitle {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: #ffffff;
+    letter-spacing: 0.02em;
+}
+
 /* --- User Profile Section --- */
 .userProfileSection {
-    width: 100%;
-    max-width: none;
+    width: 100vw;
+    max-width: 1920px;
     position: relative;
     padding: 0;
     flex-shrink: 0;
+    left: 50%;
+    transform: translateX(-50%);
     margin-bottom: 38px;
 }
 
 .userProfileBackground {
     width: 100%;
-    max-width: none;
+    max-width: 1920px;
     height: 400px;
     position: relative;
     overflow: hidden;
@@ -115,7 +141,10 @@
 /* --- Creator Hero Card --- */
 .creatorHeroSection {
     width: 100%;
-    margin: 108px 0 38px;
+    margin: var(--app-desktop-navbar-height) 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
 }
 
 .creatorHeroCard {
@@ -127,9 +156,335 @@
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: none;
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 32px;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.accountPanel {
+    margin-top: 0;
+    border-radius: var(--creator-radius);
+    padding: 18px 20px 14px;
+    background: var(--creator-card);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    box-shadow: none;
+}
+
+.accountPanelTitle {
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 16px;
+}
+
+.accountActionGrid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.accountActionItem {
+    appearance: none;
+    border: none;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 2px;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.88);
+}
+
+.accountActionIcon {
+    width: 36px;
+    height: 36px;
+    border-radius: 4px;
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    box-shadow: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.accountActionIcon img {
+    width: 20px;
+    height: 20px;
+    display: block;
+    object-fit: contain;
+}
+
+.accountActionLabel {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.2;
+    text-align: center;
+    white-space: nowrap;
+    color: rgba(255, 255, 255, 0.88);
+}
+
+.accountViewAllButton {
+    appearance: none;
+    border: none;
+    background: transparent;
+    width: 100%;
+    margin-top: 10px;
+    padding: 8px 0 2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    color: var(--creator-label);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.accountViewAllButton:hover {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.accountViewAllIcon {
+    width: 14px;
+    height: 14px;
+    transition: transform 0.2s ease;
+}
+
+.accountViewAllIconOpen {
+    transform: rotate(180deg);
+}
+
+.moreServicesSlot {
+    margin-top: 0;
+}
+
+.earningsPanel {
+    margin-top: 0;
+    border-radius: var(--creator-radius);
+    padding: 18px 16px;
+    background: var(--creator-card);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.earningsPanelItem {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+}
+
+.earningsPanelLabel {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.3;
+}
+
+.earningsPanelValueRow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.earningsPanelValue {
+    color: #ffffff;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.earningsInlineSettleButton {
+    appearance: none;
+    border: none;
+    flex-shrink: 0;
+    height: 32px;
+    padding: 0 16px;
+    border-radius: 999px;
+    background: var(--creator-accent);
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.earningsInlineSettleButton:hover:not(:disabled) {
+    background: #b8364a;
+}
+
+.earningsInlineSettleButton:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.earningsPanelDivider {
+    width: 1px;
+    align-self: stretch;
+    background: rgba(255, 255, 255, 0.12);
+    flex-shrink: 0;
+}
+
+.earningsPanelActions {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    align-self: stretch;
+    padding-left: 4px;
+}
+
+.earningsRecordsLink {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    padding: 0;
+}
+
+.earningsRecordsLink:hover {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.earningsRecordsIcon {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+}
+
+.creatorHeroTop {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 20px;
+    width: 100%;
+    margin: 0;
+    padding: 8px 4px 4px;
+}
+
+.creatorHeroAvatarFrame {
+    flex-shrink: 0;
+    width: 120px;
+    height: 120px;
+}
+
+.creatorHeroAvatar {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+}
+
+.creatorHeroInfo {
+    flex: 0 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.creatorHeroStats {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.creatorHeroNameRow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.creatorHeroName {
+    font-size: 28px;
+    line-height: 1.2;
+    font-weight: 700;
+    color: #ffffff;
+    word-break: break-word;
+    margin: 0;
+}
+
+.creatorStreakBadge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.creatorHeroMetaRow,
+.creatorHeroTokenRow,
+.creatorHeroBadgeRow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--creator-value);
+}
+
+.creatorHeroId,
+.creatorHeroTokenLabel,
+.creatorHeroTokenValue {
+    color: var(--creator-label);
+}
+
+.creatorHeroTokenValue {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 220px;
+}
+
+.creatorCopyLink {
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: var(--creator-label);
+    font-size: 13px;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+}
+
+.creatorCopyLink:hover {
+    color: #ffffff;
+}
+
+.creatorRoleBadge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: var(--creator-accent);
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
 }
 
 .creatorHeroLeft {
@@ -145,11 +500,10 @@
     display: flex;
     flex-direction: row;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: center;
     gap: 10px;
     align-self: center;
     flex-shrink: 0;
-    width: min(330px, 100%);
 }
 
 .creatorHeroEyebrow {
@@ -159,14 +513,6 @@
     text-transform: uppercase;
     color: #FF8A9A;
     margin-bottom: 4px;
-}
-
-.creatorHeroName {
-    font-size: 30px;
-    line-height: 1.2;
-    font-weight: 700;
-    color: var(--creator-value);
-    word-break: break-word;
 }
 
 /* --- Account Info Card --- */
@@ -346,16 +692,14 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    min-height: 46px;
-    /* 功能注释：主 CTA 吃满剩余宽度，避免只与左侧积分卡上下齐边成一条丑竖线 */
-    flex: 1 1 auto;
+    min-height: 40px;
+    padding: 0 18px;
     width: auto;
-    min-width: 0;
     border-radius: 999px;
     border: none;
     background: #8E2135;
     color: #ffffff;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
     cursor: pointer;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -368,13 +712,12 @@
 }
 
 .creatorPrimaryButton svg {
-    font-size: 18px;
+    font-size: 16px;
 }
 
 .creatorHelpButton {
-    width: 46px;
-    height: 46px;
-    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
     border-radius: 999px;
     border: 1px solid rgba(255, 255, 255, 0.14);
     background: #1C1C1E;
@@ -398,10 +741,142 @@
     font-size: 1.1rem;
 }
 
-/* --- Stats Section --- */
+.draftHeaderActions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+/* --- Stats (embedded in hero on Create; also used by StatsOverviewSection) --- */
 .statsSection {
     width: 100%;
-    margin: 0 auto;
+    margin: 0 auto 28px;
+}
+
+.primaryStatsBar,
+.expandedStatsBar {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    flex-wrap: nowrap;
+    gap: 0;
+}
+
+.primaryStatItem,
+.expandedStatItem {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 14px 4px;
+    text-align: center;
+    position: relative;
+}
+
+.primaryStatItem:not(:last-child)::after,
+.expandedStatItem:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 22%;
+    bottom: 22%;
+    width: 1px;
+    background: var(--creator-divider);
+}
+
+.primaryStatValue {
+    font-size: 24px;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+}
+
+.primaryStatLabel {
+    font-size: 12px;
+    color: var(--creator-label);
+    font-weight: 500;
+}
+
+.primaryStatItemWithActions {
+    gap: 0;
+    align-items: flex-end;
+    padding-right: 14px;
+}
+
+.primaryStatValueRow {
+    display: inline-flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    gap: 6px;
+    max-width: 100%;
+}
+
+.primaryStatValueBlock {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.primaryStatActions {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    gap: 4px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.statsExpandToggle {
+    margin: 4px auto 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: transparent;
+    border: none;
+    color: var(--creator-label);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 6px 10px;
+}
+
+.statsExpandToggle:hover {
+    color: #ffffff;
+}
+
+.statsExpandIcon {
+    transition: transform 0.2s ease;
+}
+
+.statsExpandIconOpen {
+    transform: rotate(180deg);
+}
+
+.expandedStatsBar {
+    margin-top: 4px;
+    flex-wrap: wrap;
+    border-top: 1px solid rgba(17, 24, 39, 0.06);
+    padding-top: 8px;
+}
+
+.expandedStatItem {
+    flex: 1 1 20%;
+    min-width: 120px;
+}
+
+.expandedStatItemAction .statActionRow {
+    justify-content: center;
+}
+
+.expandedStatItem:not(:last-child)::after {
+    display: none;
 }
 
 .sectionHeader {
@@ -409,44 +884,8 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 22px;
-    gap: 12px;
+    gap: 10px;
     width: 100%;
-}
-
-/* 功能注释：新版文字区标题，替代旧 PNG 切图标题 */
-.sectionHeading {
-    margin: 0;
-    flex-shrink: 0;
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    color: #FFFFFF;
-    line-height: 1.2;
-}
-
-/* 功能注释：暗色细线 + 菱形端点，对齐效果图分界装饰 */
-.sectionRule {
-    flex: 1;
-    min-width: 24px;
-    display: flex;
-    align-items: center;
-    gap: 0;
-}
-
-.sectionRuleLine {
-    flex: 1;
-    min-width: 0;
-    height: 1px;
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.06) 100%);
-}
-
-.sectionRuleDiamond {
-    width: 7px;
-    height: 7px;
-    margin-left: -1px;
-    flex-shrink: 0;
-    background: rgba(255, 255, 255, 0.35);
-    transform: rotate(45deg);
 }
 
 .sectionDividerDesktop {
@@ -577,11 +1016,9 @@
 }
 
 .statValue {
-    font-size: 22px;
+    font-size: 26px;
     font-weight: 700;
     color: #FFFFFF;
-    font-variant-numeric: tabular-nums;
-    line-height: 1.15;
 }
 
 .statLabel {
@@ -641,6 +1078,84 @@
     margin-top: 38px;
 }
 
+.worksSection {
+    width: 100%;
+    margin: 12px auto 0;
+}
+
+.worksTabBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    width: calc(100% + 40px);
+    margin-left: -20px;
+    margin-right: -20px;
+    margin-bottom: 18px;
+    min-height: 52px;
+    padding: 0 20px;
+    box-sizing: border-box;
+    border-radius: 0;
+    border-bottom: none;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.worksTabs {
+    display: flex;
+    align-items: stretch;
+    gap: 4px;
+    min-width: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.worksTabs::-webkit-scrollbar {
+    display: none;
+}
+
+.worksTab {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: var(--creator-label);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.2;
+    padding: 14px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    position: relative;
+}
+
+.worksTabActive {
+    color: #ffffff;
+}
+
+.worksTabActive::after {
+    content: '';
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 0;
+    height: 3px;
+    border-radius: 999px;
+    background: #ffffff;
+}
+
+.worksTabPanel {
+    width: 100%;
+    min-height: 120px;
+}
+
+.worksEmpty {
+    text-align: center;
+    color: var(--creator-label);
+    height: 100px;
+    line-height: 100px;
+}
+
 .draftSectionHeader {
     position: relative;
 }
@@ -693,29 +1208,17 @@
     display: flex;
     flex-direction: column;
     gap: 14px;
-    width: 100%;
-}
-
-/* 功能注释：筛选条暗底圆角容器，对齐首页/分类滤镜卡 */
-.draftFilterBar {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 10px 12px;
-    border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background: #1A1A1A;
 }
 
 .draftFilterRow {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    width: 100%;
+    gap: 10px;
 }
 
 .draftFilterChip {
-    border: 1px solid transparent;
-    background: #1C1C1E;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #2C2C2E;
     color: #C7C7CC;
     border-radius: 999px;
     padding: 8px 14px;
@@ -736,8 +1239,7 @@
     color: #fff;
 }
 
-.draftFilterEmpty,
-.draftEmptyState {
+.draftFilterEmpty {
     text-align: center;
     color: #8E8E93;
     min-height: 100px;
@@ -760,7 +1262,11 @@
 /* Large Desktop: > 1080px */
 @media (min-width: 1081px) {
     .creatorHeroActions {
-        width: 330px;
+        width: auto;
+    }
+
+    .draftHeaderActions .creatorPrimaryButton {
+        min-width: 132px;
     }
 }
 
@@ -777,15 +1283,83 @@
     }
 
     .creatorHeroSection {
-        margin: 76px 0 28px;
+        margin: var(--app-desktop-navbar-height) 0 16px;
+        gap: 20px;
+    }
+
+    .pageHeader {
+        margin: 0 0 2px;
     }
 
     .creatorHeroCard {
-        padding: 16px;
-        border-radius: 16px;
-        flex-direction: column;
-        gap: 12px;
+        width: calc(100% + 40px);
+        margin-left: -20px;
+        margin-right: -20px;
+        padding: 14px 20px 12px;
+        border-radius: 0;
+        max-width: none;
+        gap: 14px;
+    }
+
+    .accountPanel {
+        margin-top: 0;
+        padding: 14px 14px 10px;
+        border-radius: 14px;
+    }
+
+    .accountPanelTitle {
+        font-size: 15px;
+        margin-bottom: 12px;
+    }
+
+    .accountActionIcon {
+        width: 36px;
+        height: 36px;
+    }
+
+    .accountActionIcon img {
+        width: 18px;
+        height: 18px;
+    }
+
+    .accountActionLabel {
+        font-size: 12px;
+    }
+
+    .earningsPanel {
+        margin-top: 0;
+        padding: 14px 12px;
+        border-radius: 14px;
+        gap: 8px;
+    }
+
+    .earningsPanelLabel {
+        font-size: 11px;
+    }
+
+    .earningsPanelValue {
+        font-size: 18px;
+    }
+
+    .creatorHeroTop {
+        gap: 16px;
+        align-items: center;
+        justify-content: flex-start;
         max-width: 100%;
+        padding: 4px 0;
+    }
+
+    .creatorHeroAvatarFrame {
+        width: 96px;
+        height: 96px;
+    }
+
+    .creatorHeroInfo {
+        gap: 8px;
+    }
+
+    .creatorHeroName {
+        font-size: 20px;
     }
 
     .creatorHeroLeft {
@@ -797,15 +1371,10 @@
     .creatorHeroActions {
         flex: none;
         width: 100%;
-        align-self: stretch;
         flex-direction: row;
         align-items: center;
-        justify-content: flex-start;
+        justify-content: flex-end;
         gap: 10px;
-    }
-
-    .creatorHeroName {
-        font-size: 22px;
     }
 
     .creatorAccountCard,
@@ -823,75 +1392,124 @@
         font-size: 18px;
     }
 
+    .draftHeaderActions {
+        width: 100%;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
     .creatorPrimaryButton {
-        min-height: 42px;
-        flex: 1 1 auto;
+        min-height: 38px;
         width: auto;
-        font-size: 14px;
+        font-size: 13px;
         border-radius: 999px;
+        padding: 0 14px;
     }
 
     .creatorPrimaryButton svg {
-        font-size: 16px;
+        font-size: 15px;
     }
 
     .creatorHelpButton {
-        width: 42px;
-        height: 42px;
-        flex-shrink: 0;
+        width: 38px;
+        height: 38px;
         border-radius: 999px;
     }
 
+    .primaryStatsBar {
+        flex-wrap: nowrap;
+    }
+
+    .primaryStatItem {
+        flex: 1 1 0;
+        padding: 10px 2px;
+    }
+
+    .primaryStatItemWithActions {
+        padding-right: 12px;
+    }
+
+    .primaryStatValue {
+        font-size: 18px;
+    }
+
+    .primaryStatLabel {
+        font-size: 11px;
+    }
+
+    .primaryStatActions .creatorAssetActionButton {
+        height: 24px;
+        padding: 0 8px;
+        font-size: 11px;
+    }
+
+    .expandedStatItem {
+        flex: 1 1 40%;
+        min-width: 0;
+    }
+
     .statsSection,
-    .shopSection {
+    .shopSection,
+    .worksSection {
         width: 100%;
         padding: 0;
         box-sizing: border-box;
     }
 
+    .worksSection {
+        margin-top: 20px;
+    }
+
+    .worksTabBar {
+        width: calc(100% + 40px);
+        margin-left: -20px;
+        margin-right: -20px;
+        gap: 8px;
+        margin-bottom: 14px;
+        min-height: 52px;
+        padding: 0 20px;
+        border-radius: 0;
+    }
+
+    .worksTab {
+        font-size: 14px;
+        padding: 14px 10px;
+    }
+
+    .worksTabActive::after {
+        left: 10px;
+        right: 10px;
+        height: 2px;
+    }
+
     .statsGrid {
-        /* 功能注释：手机我的数据一行三格，避免两列大字刷屏 */
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 0;
     }
 
     .statBox {
         width: 100%;
         max-width: 100%;
-        height: 78px;
-        padding: 10px 8px;
+        height: 90px;
         border-right: 1px solid rgba(255, 255, 255, 0.08);
         border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        gap: 6px;
     }
 
     .statBox:nth-child(2n) {
-        border-right: 1px solid rgba(255, 255, 255, 0.08);
-    }
-
-    .statBox:nth-child(3n) {
         border-right: none;
     }
 
     .statBoxWithAction {
-        height: 78px;
-        min-height: 78px;
+        height: 90px;
+        min-height: 90px;
     }
 
     .statValue {
-        /* 功能注释：比原 26px 小两号，三列密度下仍可读 */
-        font-size: 18px;
+        font-size: 26px;
     }
 
     .statLabel {
-        font-size: 11px;
-        gap: 4px;
-    }
-
-    .statLabel svg {
-        width: 12px;
-        height: 12px;
-        flex-shrink: 0;
+        font-size: 14px;
     }
 
     .statActionRow {
@@ -906,14 +1524,10 @@
     }
 
     .sectionHeader {
-        gap: 8px;
+        gap: 6px;
         width: 100%;
         box-sizing: border-box;
-        margin-bottom: 12px;
-    }
-
-    .sectionHeading {
-        font-size: 18px;
+        margin-bottom: 6px;
     }
 
     .sectionDividerDesktop {
@@ -926,7 +1540,12 @@
     }
 
     .sectionDividerMobile {
-        display: none;
+        display: block;
+        flex: 1;
+        min-width: 0;
+        max-width: none;
+        margin: 0;
+        object-fit: contain;
     }
 
     .sectionTitle {
@@ -942,18 +1561,15 @@
     }
 
     .more {
-        font-size: 12px;
-        height: auto;
+        font-size: 14px;
+        height: 20px;
         gap: 2px;
         flex-shrink: 0;
-        max-width: 42%;
-        white-space: normal;
-        text-align: right;
-        line-height: 1.3;
     }
 
     .more img {
-        display: none;
+        height: 14px;
+        width: auto;
     }
 
     .draftManageActions {
@@ -965,16 +1581,19 @@
     }
 
     .draftSectionHeader {
-        flex-wrap: nowrap;
+        flex-wrap: wrap;
         align-items: center;
     }
 
-    .draftSectionHeader .sectionHeading {
+    .draftSectionHeader .sectionTitle {
         order: 1;
     }
 
-    .draftSectionHeader .sectionRule {
+    .draftSectionHeader .sectionDividerDesktop,
+    .draftSectionHeader .sectionDividerMobile {
         order: 2;
+        flex: 1 1 0;
+        min-width: 0;
     }
 
     .draftSectionHeader .draftManageActions {
@@ -982,50 +1601,23 @@
     }
 
     .draftSectionHeader .draftManageActionsExpanded {
-        order: 3;
+        flex-basis: 100%;
+        justify-content: flex-end;
     }
 
     .draftManageButton {
         min-height: 34px;
         padding: 0 12px;
-        font-size: 13px;
-    }
-
-    .draftSectionBody {
-        width: 100%;
-    }
-
-    /* 功能注释：手机版筛选条与卡片栅格铺满内容区 */
-    .draftFilterBar {
-        width: 100%;
-        padding: 8px;
-    }
-
-    .draftFilterRow {
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
-    }
-
-    .draftFilterRow::-webkit-scrollbar {
-        display: none;
-    }
-
-    .draftFilterChip {
-        flex-shrink: 0;
-    }
-
-    .draftManageTip {
-        font-size: 13px;
-    }
-
-    .draftSectionHeader .draftManageActionsExpanded {
-        flex-basis: auto;
-        justify-content: flex-end;
+        font-size: 12px;
     }
 
     .draftSectionBody {
         gap: 10px;
+    }
+
+    .draftManageTip {
+        padding: 8px 12px;
+        font-size: 12px;
+        border-radius: 12px;
     }
 }

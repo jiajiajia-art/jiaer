@@ -12,6 +12,7 @@ import { getImageUrl } from '../../utils/constants';
 import { buildGameDetailNavigateState } from '../../utils/gameDetailNavigation';
 import { isAdminRole, isOperatorRole, isVerifiedCreatorRole } from '../../utils/userRoles';
 import { resolveSearchResultSecondaryLine } from '../../lib/gameCardBody';
+import { isCreatorRoutePath } from '../../utils/miniProgram';
 import UserAvatar from '../UserAvatar';
 
 /** 功能注释：暗色 funloom 导航图标基路径（assetsv2/home） */
@@ -173,7 +174,9 @@ const Navbar: React.FC<NavbarProps> = ({
         const path = location.pathname;
         if (path === '/home' || path === '/') return 'home';
         if (path.startsWith('/categories')) return 'categories';
-        if (path.startsWith('/create')) return 'create';
+        // /create 已合并为「我的」统一页，顶栏创作仅在编辑器相关路由高亮
+        if (path === '/create' || path.startsWith('/create/withdraw-records')) return '';
+        if (path.startsWith('/create') || isCreatorRoutePath(path)) return 'create';
         if (path.startsWith('/warehouse')) return 'warehouse';
         if (path.startsWith('/rank')) return 'rank';
         return '';
@@ -279,7 +282,7 @@ const Navbar: React.FC<NavbarProps> = ({
                         className={`${styles.navLink} ${activeNav === 'create' ? styles.navLinkActive : ''}`}
                         onClick={() => {
                             if (!requireAuth()) return;
-                            runLeaveAction(() => navigate('/create'));
+                            runLeaveAction(() => navigate('/create/new'));
                         }}
                     >
                         {t('nav.create')}
@@ -417,7 +420,7 @@ const Navbar: React.FC<NavbarProps> = ({
                                             className={styles.menuBtn}
                                             onClick={() => {
                                                 runLeaveAction(() => {
-                                                    navigate('/profile');
+                                                    navigate('/create');
                                                     setShowUserMenu(false);
                                                 });
                                             }}
