@@ -36,6 +36,7 @@
     --navbar-menu-bg: rgba(255, 255, 255, 0.97);
     --navbar-menu-border: rgba(17, 24, 39, 0.08);
     --navbar-menu-shadow: 0 16px 32px rgba(5, 10, 18, 0.2);
+    --navbar-menu-text: #111827;
     height: var(--app-desktop-navbar-height);
     display: flex;
     justify-content: center;
@@ -172,6 +173,7 @@
     border: none;
     padding: 0;
     color: var(--navbar-search-icon-color);
+    /* 功能注释：搜索提交键保持原胶囊底，不用圆形按钮切图 */
     background: var(--navbar-search-icon-bg);
     border-radius: 20px;
     display: flex;
@@ -180,6 +182,22 @@
     cursor: pointer;
     appearance: none;
     -webkit-appearance: none;
+}
+
+.searchIcon img,
+.messageButton img {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+    display: block;
+    image-rendering: -webkit-optimize-contrast;
+}
+
+.navAssetIcon {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+    image-rendering: -webkit-optimize-contrast;
 }
 
 .searchInput {
@@ -269,9 +287,14 @@
 .messageButton {
     width: 42px;
     height: 42px;
-    border: 1px solid var(--navbar-action-border);
+    border: none;
     border-radius: 50%;
-    background: var(--navbar-action-bg);
+    /* 功能注释：圆形按钮底来自 assetsv2/home/nav_btn_bg.webp */
+    background-color: transparent;
+    background-image: var(--navbar-btn-circle-bg);
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
     color: var(--navbar-action-text);
     font-size: 20px;
     display: flex;
@@ -279,12 +302,14 @@
     justify-content: center;
     cursor: pointer;
     position: relative;
-    transition: transform 0.2s ease, background-color 0.2s ease;
+    transition: transform 0.2s ease, filter 0.2s ease;
 }
 
 .messageButton:hover {
     transform: translateY(-1px);
-    background: var(--navbar-action-bg-hover);
+    filter: brightness(1.12);
+    background-color: transparent;
+    background-image: var(--navbar-btn-circle-bg);
 }
 
 .messageBadge {
@@ -349,7 +374,7 @@
     width: 100%;
     padding: 12px 20px;
     background: transparent;
-    color: #111827;
+    color: var(--navbar-menu-text);
     border: none;
     border-radius: 0;
     font-size: 14px;
@@ -420,32 +445,37 @@
 
 @media (max-width: 768px) {
     .navbarContainer {
-        --navbar-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(244, 246, 249, 0.94) 100%);
-        --navbar-border: rgba(26, 29, 33, 0.08);
-        --navbar-shadow: 0 10px 24px rgba(17, 24, 39, 0.08);
-        --navbar-text: #1f2933;
-        --navbar-text-strong: #111827;
-        --navbar-search-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(245, 247, 250, 0.88) 100%);
-        --navbar-search-border: rgba(26, 29, 33, 0.08);
-        --navbar-search-input: #1f2933;
-        --navbar-search-placeholder: rgba(26, 29, 33, 0.45);
-        --navbar-search-icon-bg: linear-gradient(180deg, #2c3440 0%, #1f2732 100%);
-        --navbar-search-icon-color: #fff;
-        --navbar-search-panel-bg: #ffffff;
-        --navbar-search-panel-border: rgba(26, 29, 33, 0.08);
-        --navbar-search-panel-shadow: 0 14px 28px rgba(17, 24, 39, 0.12);
-        --navbar-search-panel-item-hover: rgba(31, 41, 51, 0.06);
-        --navbar-search-panel-title: #111827;
-        --navbar-search-panel-meta: rgba(31, 41, 51, 0.58);
-        --navbar-search-panel-empty: rgba(31, 41, 51, 0.62);
-        --navbar-action-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(238, 242, 247, 0.92) 100%);
-        --navbar-action-bg-hover: rgba(244, 247, 250, 0.98);
-        --navbar-action-border: rgba(26, 29, 33, 0.1);
-        --navbar-action-text: #1f2933;
-        --navbar-login-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(238, 242, 247, 0.94) 100%);
-        --navbar-login-bg-hover: linear-gradient(180deg, rgba(248, 250, 252, 0.98) 0%, rgba(233, 238, 244, 0.96) 100%);
-        --navbar-login-border: rgba(26, 29, 33, 0.1);
-        --navbar-login-text: #111827;
+        /* 功能注释：移动端顶栏对齐暗色 funloom，禁止回退浅色白底 */
+        --navbar-surface: #000000;
+        --navbar-border: rgba(255, 255, 255, 0.08);
+        --navbar-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+        --navbar-text: rgba(255, 255, 255, 0.78);
+        --navbar-text-strong: #FFFFFF;
+        --navbar-search-bg: #1C1C1E;
+        --navbar-search-border: rgba(255, 255, 255, 0.12);
+        --navbar-search-input: rgba(255, 255, 255, 0.94);
+        --navbar-search-placeholder: rgba(255, 255, 255, 0.46);
+        --navbar-search-icon-bg: linear-gradient(180deg, #3A3A3C 0%, #2C2C2E 100%);
+        --navbar-search-icon-color: #FFFFFF;
+        --navbar-search-panel-bg: #1C1C1E;
+        --navbar-search-panel-border: rgba(255, 255, 255, 0.1);
+        --navbar-search-panel-shadow: 0 14px 28px rgba(0, 0, 0, 0.45);
+        --navbar-search-panel-item-hover: rgba(255, 255, 255, 0.08);
+        --navbar-search-panel-title: #FFFFFF;
+        --navbar-search-panel-meta: rgba(255, 255, 255, 0.58);
+        --navbar-search-panel-empty: rgba(255, 255, 255, 0.62);
+        --navbar-action-bg: #1C1C1E;
+        --navbar-action-bg-hover: #2C2C2E;
+        --navbar-action-border: rgba(255, 255, 255, 0.12);
+        --navbar-action-text: #FFFFFF;
+        --navbar-login-bg: #1C1C1E;
+        --navbar-login-bg-hover: #2C2C2E;
+        --navbar-login-border: rgba(255, 255, 255, 0.12);
+        --navbar-login-text: #FFFFFF;
+        --navbar-menu-bg: #1C1C1E;
+        --navbar-menu-border: rgba(255, 255, 255, 0.1);
+        --navbar-menu-shadow: 0 16px 32px rgba(0, 0, 0, 0.45);
+        --navbar-menu-text: #FFFFFF;
         width: 100vw;
         height: 60px;
         padding: 0 12px;
@@ -489,7 +519,7 @@
         height: 28px;
         padding-left: 8px;
         padding-right: 0;
-        box-shadow: 0 8px 16px rgba(148, 163, 184, 0.08);
+        box-shadow: none;
     }
 
     .searchInput {
@@ -505,6 +535,7 @@
         width: 40px;
         min-width: 40px;
         font-size: 14px;
+        border-radius: 20px;
     }
 
     .searchPanel {
@@ -535,7 +566,7 @@
         height: 36px;
         font-size: 17px;
         flex-shrink: 0;
-        box-shadow: 0 6px 14px rgba(148, 163, 184, 0.1);
+        box-shadow: none;
     }
 
     .messageBadge {
@@ -568,35 +599,35 @@
         max-height: 32px !important;
         font-size: 14px;
         flex-shrink: 0;
-        box-shadow: 0 6px 14px rgba(148, 163, 184, 0.08);
+        box-shadow: none;
     }
 
     .navbarContainerMobileHomeOverlayActive {
-        --navbar-surface: transparent;
-        --navbar-border: transparent;
+        --navbar-surface: rgba(0, 0, 0, 0.72);
+        --navbar-border: rgba(255, 255, 255, 0.08);
         --navbar-shadow: none;
         --navbar-text: rgba(255, 255, 255, 0.88);
         --navbar-text-strong: #ffffff;
-        --navbar-search-bg: rgba(12, 20, 32, 0.14);
-        --navbar-search-border: rgba(255, 255, 255, 0.28);
+        --navbar-search-bg: rgba(28, 28, 30, 0.92);
+        --navbar-search-border: rgba(255, 255, 255, 0.14);
         --navbar-search-input: rgba(255, 255, 255, 0.96);
         --navbar-search-placeholder: rgba(255, 255, 255, 0.56);
-        --navbar-search-icon-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.08) 100%);
+        --navbar-search-icon-bg: linear-gradient(180deg, #3A3A3C 0%, #2C2C2E 100%);
         --navbar-search-icon-color: #ffffff;
-        --navbar-search-panel-bg: #ffffff;
-        --navbar-search-panel-border: rgba(26, 29, 33, 0.1);
-        --navbar-search-panel-shadow: 0 14px 28px rgba(17, 24, 39, 0.14);
-        --navbar-search-panel-item-hover: rgba(31, 41, 51, 0.06);
-        --navbar-search-panel-title: #111827;
-        --navbar-search-panel-meta: rgba(31, 41, 51, 0.58);
-        --navbar-search-panel-empty: rgba(31, 41, 51, 0.62);
-        --navbar-action-bg: rgba(12, 20, 32, 0.14);
-        --navbar-action-bg-hover: rgba(12, 20, 32, 0.24);
-        --navbar-action-border: rgba(255, 255, 255, 0.28);
+        --navbar-search-panel-bg: #1C1C1E;
+        --navbar-search-panel-border: rgba(255, 255, 255, 0.1);
+        --navbar-search-panel-shadow: 0 14px 28px rgba(0, 0, 0, 0.45);
+        --navbar-search-panel-item-hover: rgba(255, 255, 255, 0.08);
+        --navbar-search-panel-title: #ffffff;
+        --navbar-search-panel-meta: rgba(255, 255, 255, 0.58);
+        --navbar-search-panel-empty: rgba(255, 255, 255, 0.62);
+        --navbar-action-bg: rgba(28, 28, 30, 0.92);
+        --navbar-action-bg-hover: #2C2C2E;
+        --navbar-action-border: rgba(255, 255, 255, 0.14);
         --navbar-action-text: #ffffff;
-        --navbar-login-bg: rgba(12, 20, 32, 0.14);
-        --navbar-login-bg-hover: rgba(12, 20, 32, 0.24);
-        --navbar-login-border: rgba(255, 255, 255, 0.28);
+        --navbar-login-bg: rgba(28, 28, 30, 0.92);
+        --navbar-login-bg-hover: #2C2C2E;
+        --navbar-login-border: rgba(255, 255, 255, 0.14);
         --navbar-login-text: #ffffff;
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
@@ -609,6 +640,6 @@
     .navbarContainerMobileHomeOverlayActive .searchBox,
     .navbarContainerMobileHomeOverlayActive .messageButton,
     .navbarContainerMobileHomeOverlayActive .loginBtn {
-        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
+        box-shadow: none;
     }
 }

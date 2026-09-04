@@ -1,9 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { AiOutlineLike } from 'react-icons/ai';
-import { IoGameControllerOutline } from 'react-icons/io5';
-import { RiMoneyCnyCircleLine } from 'react-icons/ri';
 import styles from './GameGrid.module.css';
 import type { UserGameData } from '../api/home/getGameData.type';
 import { addImageTimestamp } from '../utils/imageCache';
@@ -12,10 +9,12 @@ import { getImageUrl } from '../utils/constants';
 import { getGameTypeLabelFromMeta, getGameTypeToneFromMeta } from '../utils/gameTypeLabel';
 import { resolveGameTypeToneStyle } from '../utils/gameTypeToneClass';
 import { buildGameDetailNavigateState } from '../utils/gameDetailNavigation';
+import { resolveGameCardBody } from '../lib/gameCardBody';
 import {
   GAME_CARD_DEFAULT_AVATAR_PATH,
   resolveGameCardAuthor,
 } from '../lib/gameCardAuthor';
+import { CardCoinIcon, CardFlameIcon, CardHeartIcon } from './GameCardStatIcons';
 
 type GameGridLayoutVariant = 'default' | 'homeWide';
 
@@ -62,41 +61,6 @@ const GameGrid: React.FC<GameGridProps> = ({
 
     const getTypeLabel = (meta: UserGameData): string => {
         return getGameTypeLabelFromMeta(meta);
-
-        const rawSource = String(meta.game_tags || (meta as { engine?: string }).engine || '').trim();
-        const normalizedRaw = rawSource
-            .replace(/^\[\s*/, '')
-            .replace(/\s*\]$/, '')
-            .replace(/^["']|["']$/g, '')
-            .trim();
-        if (
-            normalizedRaw === '\u6587\u5b57\u4e92\u52a8'
-            || normalizedRaw.toUpperCase() === 'ROLE-PLAYING'
-        ) {
-            return 'AI文游';
-        }
-        const raw = normalizedRaw.toUpperCase();
-        switch (raw) {
-            case 'TXT':
-                return 'AI文游';
-            case 'AVG':
-                return '酒馆卡';
-            case 'RPG':
-                return 'Story';
-            case 'CUSTOM':
-                return '自定义';
-            default:
-                return raw || '';
-        }
-    };
-
-    const getThemeLabel = (meta: UserGameData): string => {
-        const names = Array.isArray(meta.theme_tag_names) ? meta.theme_tag_names.filter(Boolean) : [];
-        const specificNames = names
-            .map((name) => String(name).trim())
-            .filter((name) => name && name !== '全部');
-        if (specificNames.length === 0) return '';
-        return specificNames.slice(0, 2).join(' | ');
     };
 
     const getIncentiveStatus = (meta: UserGameData): 'none' | 'incentive' | 'finished' => {
@@ -177,13 +141,12 @@ const GameGrid: React.FC<GameGridProps> = ({
                 const primaryValue = showIncentive
                     ? getIncentiveAmount(meta, status)
                     : (primaryStat === 'uv' ? (meta.total_uv_count ?? 0) : (meta.total_pv_count ?? 0));
-                const PrimaryIcon = showIncentive ? RiMoneyCnyCircleLine : IoGameControllerOutline;
                 const typeLabel = getTypeLabel(meta);
                 const typeToneStyle = resolveGameTypeToneStyle(getGameTypeToneFromMeta(meta));
-                const themeLabel = getThemeLabel(meta);
                 const isUnpublished = Number(meta.is_public) !== 1;
                 const selectableId = getSelectableId(meta);
                 const isSelected = selectableId ? selectedIds.includes(selectableId) : false;
+                const body = resolveGameCardBody(meta);
                 const author = resolveGameCardAuthor(meta, {
                     unknownAuthor: t('gameDetail.unknownAuthor'),
                 });
@@ -225,7 +188,6 @@ const GameGrid: React.FC<GameGridProps> = ({
                                             onToggleSelect?.(meta);
                                         }}
                                     >
-                                        {/* 实现草稿批量选择 */}
                                         <span className={styles.selectionToggleInner} />
                                     </button>
                                 </>
@@ -256,21 +218,21 @@ const GameGrid: React.FC<GameGridProps> = ({
                                 </div>
                             )}
 
+                            {/* 功能注释：封面底栏火焰/心形同套下载 mask + 统一小号，对齐效果图 */}
                             <div className={styles.goodsInfo}>
-                                {themeLabel && (
-                                    <div className={styles.goodsTheme} title={themeLabel}>
-                                        {themeLabel}
-                                    </div>
-                                )}
-                                <div className={styles.goodsInfoRight}>
+                                <div className={styles.goodsInfoStats}>
                                     <div className={styles.goodsInfoItem}>
-                                        <PrimaryIcon />
+                                        {showIncentive ? (
+                                            <CardCoinIcon className={styles.goodsInfoIcon} />
+                                        ) : (
+                                            <CardFlameIcon className={styles.goodsInfoFlame} />
+                                        )}
                                         <span className={styles.goodsInfoValue} title={String(primaryValue)}>
                                             {primaryValue}
                                         </span>
                                     </div>
                                     <div className={styles.goodsInfoItem}>
-                                        <AiOutlineLike />
+                                        <CardHeartIcon className={styles.goodsInfoHeart} />
                                         <span className={styles.goodsInfoValue} title={String(meta.like_count || 0)}>
                                             {meta.like_count || 0}
                                         </span>
@@ -280,10 +242,11 @@ const GameGrid: React.FC<GameGridProps> = ({
                         </div>
 
                         <div className={styles.goodsBody}>
-                            <div className={styles.goodsTitleWrap}>
-                                <div className={styles.goodsTitle}>
-                                    {meta.title || `剧情${idx + 1}`}
-                                </div>
+                            <div className={styles.goodsTitle} title={meta.title || undefined}>
+                                {meta.title || `剧情${idx + 1}`}
+                            </div>
+                            {/* 功能注释：左作者署名、右收藏徽标，同一行左右布局 */}
+                            <div className={styles.goodsMetaRow}>
                                 <div className={styles.goodsAuthor} title={author.name}>
                                     <img
                                         className={styles.goodsAuthorAvatar}
@@ -294,7 +257,17 @@ const GameGrid: React.FC<GameGridProps> = ({
                                     />
                                     <span className={styles.goodsAuthorName}>{author.name}</span>
                                 </div>
+                                {body.collectBadge ? (
+                                    <span className={styles.goodsCollectBadge}>{body.collectBadge}</span>
+                                ) : null}
                             </div>
+                            {body.tags.length > 0 ? (
+                                <div className={styles.goodsTagRow}>
+                                    {body.tags.map((tag) => (
+                                        <span key={tag} className={styles.goodsTagPill}>{tag}</span>
+                                    ))}
+                                </div>
+                            ) : null}
                         </div>
                     </div>
                 );

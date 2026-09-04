@@ -20,6 +20,10 @@ export interface UserGameData {
     is_public: number;
     like_count: number;
     dislike_count: number;
+    /** 收藏数（服务端可选，缺省时详情页展示 0） */
+    favorite_count?: number;
+    /** 分享数（服务端可选，缺省时详情页展示 0） */
+    share_count?: number;
     reaction: string;
     avatarUrl: string;
     total_uv_count?: number;

@@ -1,15 +1,21 @@
 /**
- * 推荐列表与官方精选轨：标题下均为作者头像 + 昵称。
+ * 推荐列表卡片：效果图角标（火焰/心形）+ 作者 byline（头像+名称）/标签/收藏徽标。
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   GAME_CARD_DEFAULT_AVATAR_PATH,
   resolveGameCardAuthor,
 } from '../src/lib/gameCardAuthor.ts';
+import {
+  resolveGameCardBody,
+  resolveGameCardCollectBadge,
+  resolveGameCardSubtitle,
+  resolveGameCardTags,
+} from '../src/lib/gameCardBody.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -30,26 +36,99 @@ test('resolveGameCardAuthor_缺作者回落未知', () => {
   assert.equal(author.hasNamedAuthor, false);
 });
 
-test('GameGrid_推荐列表第二行应渲染作者byline而非描述或subtitle', () => {
-  const tsx = readFileSync(join(root, 'src/components/GameGrid.tsx'), 'utf8');
-  const css = readFileSync(join(root, 'src/components/GameGrid.module.css'), 'utf8');
-  assert.match(tsx, /resolveGameCardAuthor/);
-  assert.match(tsx, /goodsAuthor/);
-  assert.match(tsx, /goodsAuthorAvatar/);
-  assert.doesNotMatch(tsx, /meta\.subtitle/);
-  assert.doesNotMatch(tsx, /resolveGameCardSecondaryText|goodsDesc/);
-  assert.match(css, /\.goodsAuthorAvatar/);
-  assert.match(css, /rgba\(224,\s*61,\s*75/);
-  assert.doesNotMatch(css, /\.goodsDesc\b/);
+test('resolveGameCardBody_应优先subtitle并截断标签', () => {
+  const body = resolveGameCardBody({
+    subtitle: '如果心跳可以被公式计算',
+    description: '很长的描述不应优先',
+    theme_tag_names: ['全部', '权谋', '穿越', 'Role-Playing', '多余'],
+    like_count: 100,
+  });
+  assert.equal(body.subtitle, '如果心跳可以被公式计算');
+  assert.deepEqual(body.tags, ['权谋', '穿越', 'Role-Playing']);
+  assert.equal(body.collectBadge, '100人收藏');
 });
 
-test('HomeThemePreviewRail_封面底栏应渲染作者byline而非subtitle', () => {
+test('resolveGameCardSubtitle_无subtitle时截取description', () => {
+  const subtitle = resolveGameCardSubtitle({
+    description: '权谋与背叛的终极博弈，还有更多不会显示的尾巴',
+  });
+  assert.match(subtitle, /^权谋与背叛/);
+  assert.ok(subtitle.length <= 29);
+});
+
+test('resolveGameCardCollectBadge_零或缺失不展示', () => {
+  assert.equal(resolveGameCardCollectBadge({ like_count: 0 }), null);
+  assert.equal(resolveGameCardCollectBadge({}), null);
+  assert.equal(resolveGameCardCollectBadge({ favorite_count: 12, like_count: 1 }), '12人收藏');
+});
+
+test('resolveGameCardTags_无题材时回落game_tags', () => {
+  assert.deepEqual(resolveGameCardTags({ game_tags: '权谋,穿越' }), ['权谋', '穿越']);
+});
+
+test('GameGrid_封面角标应使用下载切图火焰心形且正文含作者头像名称与标签', () => {
+  const tsx = readFileSync(join(root, 'src/components/GameGrid.tsx'), 'utf8');
+  const css = readFileSync(join(root, 'src/components/GameGrid.module.css'), 'utf8');
+  const icons = readFileSync(join(root, 'src/components/GameCardStatIcons.tsx'), 'utf8');
+  assert.match(tsx, /CardFlameIcon/);
+  assert.match(tsx, /CardHeartIcon/);
+  assert.match(icons, /icon_flame_pink\.webp/);
+  assert.match(icons, /icon_heart\.webp/);
+  assert.match(icons, /maskImage|WebkitMaskImage/);
+  assert.match(tsx, /resolveGameCardBody/);
+  assert.match(tsx, /resolveGameCardAuthor/);
+  assert.match(tsx, /goodsMetaRow/);
+  assert.match(tsx, /goodsCollectBadge/);
+  assert.match(tsx, /goodsAuthor/);
+  assert.match(tsx, /goodsAuthorAvatar/);
+  assert.match(tsx, /goodsAuthorName/);
+  assert.match(tsx, /goodsTagPill/);
+  assert.doesNotMatch(tsx, /goodsTitleRow/);
+  assert.doesNotMatch(tsx, /icon_flame\.webp|icon_heart\.svg/);
+  assert.doesNotMatch(tsx, /goodsDesc/);
+  assert.doesNotMatch(tsx, /body\.subtitle/);
+  assert.doesNotMatch(tsx, /icon_download\.webp|AiOutlineLike|IoGameControllerOutline/);
+  assert.ok(existsSync(join(root, 'public/data/assetsv2/home/icon_flame_pink.webp')));
+  assert.ok(existsSync(join(root, 'public/data/assetsv2/home/icon_heart.webp')));
+  assert.match(css, /\.goodsInfoFlame[\s\S]*height:\s*20\.16px/);
+  assert.match(css, /\.goodsInfoHeart[\s\S]*height:\s*15\.12px/);
+  assert.match(css, /\.goodsInfoItem[\s\S]*font-size:\s*13\.2px/);
+  assert.match(css, /\.goodsCard[\s\S]*background:\s*#1C1C1E/);
+  assert.match(css, /\.goodsCard[\s\S]*border-radius:\s*16px/);
+  assert.match(css, /\.goodsMetaRow[\s\S]*justify-content:\s*space-between/);
+  assert.match(css, /\.goodsMetaRow[\s\S]*flex-wrap:\s*nowrap/);
+  assert.match(css, /\.goodsCollectBadge[\s\S]*margin-left:\s*auto/);
+  assert.match(css, /\.goodsCollectBadge[\s\S]*rgba\(168,\s*40,\s*60/);
+  assert.match(css, /\.goodsCollectBadge[\s\S]*#FFB6C1/);
+  assert.match(css, /\.goodsAuthorAvatar[\s\S]*border-radius:\s*50%/);
+  assert.match(css, /\.goodsTagPill[\s\S]*background:\s*#333333/);
+  assert.match(css, /\.goodsTagPill[\s\S]*border-radius:\s*6px/);
+  assert.match(css, /\.goodsTagPill[\s\S]*color:\s*#FFFFFF/);
+  assert.match(css, /\.goodsTagPill[\s\S]*min-height:\s*24px/);
+  assert.doesNotMatch(css, /\.goodsTagPill[\s\S]*border-radius:\s*999px/);
+  assert.doesNotMatch(css, /\.goodsCollectBadge[\s\S]*background:\s*#8E2135/);
+});
+
+test('HomeThemePreviewRail_封面底栏应使用下载切图火焰心形', () => {
   const tsx = readFileSync(join(root, 'src/components/HomeThemePreviewRail.tsx'), 'utf8');
   const css = readFileSync(join(root, 'src/components/HomeThemePreviewRail.module.css'), 'utf8');
-  assert.match(tsx, /resolveGameCardAuthor/);
-  assert.match(tsx, /styles\.author/);
-  assert.match(tsx, /authorAvatar/);
-  assert.doesNotMatch(tsx, /game\.subtitle/);
-  assert.match(css, /\.authorAvatar/);
-  assert.match(css, /rgba\(224,\s*61,\s*75/);
+  assert.match(tsx, /CardFlameIcon/);
+  assert.match(tsx, /CardHeartIcon/);
+  assert.match(tsx, /coverBottomMeta/);
+  assert.doesNotMatch(tsx, /icon_flame\.webp|icon_heart\.svg|AiOutlineLike|IoGameControllerOutline/);
+  assert.match(css, /\.statFlame[\s\S]*height:\s*15px/);
+  assert.match(css, /\.statHeart[\s\S]*height:\s*11px/);
+  assert.match(css, /\.statFlame[\s\S]*width:\s*11px/);
+  assert.match(css, /\.statHeart[\s\S]*width:\s*13px/);
+  assert.match(css, /\.statsRow[\s\S]*flex-wrap:\s*nowrap/);
+  assert.match(css, /\.themeBadge,\s*\n\s*\.typeTag\s*\{[^}]*border:\s*none/);
+  assert.match(css, /\.themeBadge\s*\{[^}]*box-shadow:\s*none/);
+  assert.doesNotMatch(css, /\.themeBadge\s*\{[^}]*box-shadow:\s*inset/);
+  assert.match(css, /\.statItem\s*\{[^}]*border:\s*none/);
+  assert.match(css, /\.statItem\s*\{[^}]*box-shadow:\s*none/);
+  assert.doesNotMatch(css, /\.statItem\s*\{[^}]*box-shadow:\s*inset/);
+  /* 标题横向单行，禁止竖排断字 */
+  assert.match(css, /\.title\s*\{[^}]*white-space:\s*nowrap/);
+  assert.match(css, /\.coverBottomRow[\s\S]*flex-direction:\s*column/);
+  assert.doesNotMatch(css, /\.title\s*\{[^}]*-webkit-line-clamp:\s*2/);
 });

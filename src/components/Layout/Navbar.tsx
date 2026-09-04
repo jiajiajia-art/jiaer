@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { IoMailOutline, IoSearch } from 'react-icons/io5';
 import { useTranslation } from 'react-i18next';
 import styles from './Navbar.module.css';
 import AuthModal from '../AuthModal';
@@ -13,6 +12,16 @@ import { getImageUrl } from '../../utils/constants';
 import { buildGameDetailNavigateState } from '../../utils/gameDetailNavigation';
 import { isAdminRole, isOperatorRole, isVerifiedCreatorRole } from '../../utils/userRoles';
 import UserAvatar from '../UserAvatar';
+
+/** 功能注释：暗色 funloom 导航图标基路径（assetsv2/home） */
+const HOME_ICON_BASE = `${import.meta.env.BASE_URL}data/assetsv2/home`;
+const NAV_SEARCH_ICON = `${HOME_ICON_BASE}/nav_search.webp`;
+const NAV_MESSAGE_ICON = `${HOME_ICON_BASE}/nav_message.webp`;
+/** 功能注释：顶栏圆形按钮半透明底（效果图切图） */
+const NAV_BTN_BG = `${HOME_ICON_BASE}/nav_btn_bg.webp`;
+const NAVBAR_BTN_BG_STYLE = {
+    ['--navbar-btn-circle-bg' as string]: `url("${NAV_BTN_BG}")`,
+};
 
 const isWebViewEnv = (): boolean => {
     const win = window as { __wxjs_environment?: string };
@@ -177,7 +186,7 @@ const Navbar: React.FC<NavbarProps> = ({
 
     const activeNav = getActiveNav();
     const unreadBadgeText = unreadCount > 99 ? '99+' : (unreadCount > 0 ? String(unreadCount) : '');
-    const logoSrc = `${import.meta.env.BASE_URL}data/assets/${isDesktopLayout ? 'LOGO2.png' : 'LOGO2-mobile.png'}`;
+    const logoSrc = `${import.meta.env.BASE_URL}data/assets/LOGO2.png`;
     const navbarContainerClassName = [
         styles.navbarContainer,
         mobileVariant === 'home-overlay' ? styles.navbarContainerMobileHome : '',
@@ -246,7 +255,7 @@ const Navbar: React.FC<NavbarProps> = ({
     };
 
     return (
-        <div className={navbarContainerClassName}>
+        <div className={navbarContainerClassName} style={NAVBAR_BTN_BG_STYLE}>
             <div className={styles.navbar}>
                 <div className={styles.logo}>
                     <img src={logoSrc} alt="logo" />
@@ -317,7 +326,7 @@ const Navbar: React.FC<NavbarProps> = ({
                             aria-label={t('nav.searchAriaLabel')}
                         />
                         <button type="submit" className={styles.searchIcon} aria-label={t('nav.submitSearch')}>
-                            <IoSearch />
+                            <img src={NAV_SEARCH_ICON} alt="" className={styles.navAssetIcon} width={14} height={14} />
                         </button>
 
                         {shouldShowSearchPanel ? (
@@ -355,7 +364,7 @@ const Navbar: React.FC<NavbarProps> = ({
                                 onClick={() => runLeaveAction(() => navigate('/messages'))}
                                 aria-label={t('nav.messages')}
                             >
-                                <IoMailOutline />
+                                <img src={NAV_MESSAGE_ICON} alt="" className={styles.navAssetIcon} width={14} height={14} />
                                 {unreadBadgeText ? <span className={styles.messageBadge}>{unreadBadgeText}</span> : null}
                             </button>
 

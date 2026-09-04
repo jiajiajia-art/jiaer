@@ -30,6 +30,7 @@ const GameGridSkeleton: React.FC<GameGridSkeletonProps> = ({
                         <div className={styles.titleWrap}>
                             <div className={styles.titleSkeleton} />
                             <div className={styles.subtitleSkeleton} />
+                            <div className={styles.tagSkeleton} />
                         </div>
                         <div className={styles.priceSkeleton} />
                     </div>

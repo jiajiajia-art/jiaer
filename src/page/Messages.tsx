@@ -24,6 +24,9 @@ import { openConfiguredLink, resolvePromotionAdLink } from '../utils/promotionNa
 import { useExternalLinkCopyModal } from '../hooks/useExternalLinkCopyModal';
 import styles from './Messages.module.css';
 
+/** 功能注释：消息页「全部已读」图标对齐效果图 */
+const ICON_MARK_ALL_READ = `${import.meta.env.BASE_URL}data/assetsv2/home/icon_mark_all_read.webp`;
+
 type MessageFeedItem =
     | (MessageAnnouncement & { itemType: 'announcement'; sortTime: string | null })
     | (MessagePromotion & { itemType: 'promotion'; sortTime: string | null })
@@ -306,7 +309,12 @@ const Messages: React.FC = () => {
                                     onClick={() => void handleMarkAllRead()}
                                     disabled={isMarkingAllRead}
                                 >
-                                    {isMarkingAllRead ? t('messages.processing') : t('messages.markAllRead')}
+                                    {isMarkingAllRead ? t('messages.processing') : (
+                                        <>
+                                            <img src={ICON_MARK_ALL_READ} alt="" className={styles.markAllIcon} />
+                                            {t('messages.markAllRead')}
+                                        </>
+                                    )}
                                 </button>
                             ) : null}
                         </div>

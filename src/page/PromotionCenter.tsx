@@ -20,6 +20,11 @@ import {
 import { useExternalLinkCopyModal } from '../hooks/useExternalLinkCopyModal';
 import { useTranslation } from 'react-i18next';
 
+/** 功能注释：活动中心 Tab 图标对齐效果图（热门火焰 / 我的投稿文档） */
+const HOME_ICON_BASE = `${import.meta.env.BASE_URL}data/assetsv2/home`;
+const ICON_HOT = `${HOME_ICON_BASE}/icon_hot.webp`;
+const ICON_MY_SUBMISSIONS = `${HOME_ICON_BASE}/icon_my_submissions.webp`;
+
 type PromotionTab = 'activities' | 'submissions';
 type PromotionActivityStatusTone = 'active' | 'warning' | 'ended';
 type SubmissionDraftPayload = {
@@ -547,17 +552,19 @@ const PromotionCenter: React.FC = () => {
                 <div className={styles.tabRow}>
                     <button
                         type="button"
-                        className={`${styles.tabButton} ${activeTab === 'submissions' ? styles.tabButtonActive : ''}`}
-                        onClick={() => setActiveTab('submissions')}
-                    >
-                        {t('promotion.mySubmissions')}({submissionCount})
-                    </button>
-                    <button
-                        type="button"
                         className={`${styles.tabButton} ${activeTab === 'activities' ? styles.tabButtonActive : ''}`}
                         onClick={() => setActiveTab('activities')}
                     >
+                        <img src={ICON_HOT} alt="" className={styles.tabIcon} />
                         {t('promotion.publishedActivities')}({activities.length})
+                    </button>
+                    <button
+                        type="button"
+                        className={`${styles.tabButton} ${activeTab === 'submissions' ? styles.tabButtonActive : ''}`}
+                        onClick={() => setActiveTab('submissions')}
+                    >
+                        <img src={ICON_MY_SUBMISSIONS} alt="" className={styles.tabIcon} />
+                        {t('promotion.mySubmissions')}({submissionCount})
                     </button>
                 </div>
 

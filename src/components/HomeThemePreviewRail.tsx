@@ -1,8 +1,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { AiOutlineLike } from 'react-icons/ai';
-import { IoGameControllerOutline } from 'react-icons/io5';
+import { CardFlameIcon, CardHeartIcon } from './GameCardStatIcons';
 import styles from './HomeThemePreviewRail.module.css';
 import type { UserGameData } from '../api/home/getGameData.type';
 import { addImageTimestamp } from '../utils/imageCache';
@@ -336,10 +335,11 @@ const HomeThemePreviewRail: React.FC<HomeThemePreviewRailProps> = ({
                                             ) : null}
                                         </div>
                                         <div className={styles.coverBottomRow}>
-                                            <div className={styles.cardCopy}>
-                                                <div className={styles.title} title={game.title || ''}>
-                                                    {game.title || `${t('game.script')} ${index + 1}`}
-                                                </div>
+                                            {/* 功能注释：标题单独占满横向宽度，避免被统计徽标挤成竖排换行 */}
+                                            <div className={styles.title} title={game.title || ''}>
+                                                {game.title || `${t('game.script')} ${index + 1}`}
+                                            </div>
+                                            <div className={styles.coverBottomMeta}>
                                                 <div className={styles.author} title={author.name}>
                                                     <img
                                                         className={styles.authorAvatar}
@@ -351,16 +351,16 @@ const HomeThemePreviewRail: React.FC<HomeThemePreviewRailProps> = ({
                                                     />
                                                     <span className={styles.authorName}>{author.name}</span>
                                                 </div>
-                                            </div>
-                                            <div className={styles.statsRow}>
-                                                <span className={styles.statItem}>
-                                                    <IoGameControllerOutline />
-                                                    <span>{formatMetric(game.total_pv_count ?? 0)}</span>
-                                                </span>
-                                                <span className={styles.statItem}>
-                                                    <AiOutlineLike />
-                                                    <span>{formatMetric(game.like_count || 0)}</span>
-                                                </span>
+                                                <div className={styles.statsRow}>
+                                                    <span className={styles.statItem}>
+                                                        <CardFlameIcon className={styles.statFlame} />
+                                                        <span>{formatMetric(game.total_pv_count ?? 0)}</span>
+                                                    </span>
+                                                    <span className={styles.statItem}>
+                                                        <CardHeartIcon className={styles.statHeart} />
+                                                        <span>{formatMetric(game.like_count || 0)}</span>
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

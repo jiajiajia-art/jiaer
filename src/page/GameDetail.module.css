@@ -1,31 +1,35 @@
 /* ==================== 页面容器 ==================== */
 .pageContainer {
-    --hero-height: 30rem;
+    --hero-height: min(58vh, 28rem);
     --game-detail-shell-max: var(--app-desktop-shell-max);
     --game-detail-gutter: var(--app-desktop-gutter);
+    --primary: #A8283C;
+    --primary-light: #C23A50;
+    --primary-dark: #8E2135;
     min-height: 100vh;
     max-width: 1920px;
     width: 100%;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
-    background: #f5f5f5;
+    background: #000000;
     position: relative;
-    padding-top: var(--hero-height);
+    padding-top: 0;
+    color: #FFFFFF;
 }
 
 .topBar {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    z-index: 1000; /* 提高 z-index，确保在移动端也能显示 */
+    z-index: 1000;
     padding: 0.75rem 0;
     color: #fff;
     max-width: 1920px;
     width: 100%;
     margin: 0 auto;
-    pointer-events: auto; /* 确保可以点击 */
+    pointer-events: auto;
 }
 
 .topBarContent {
@@ -34,41 +38,60 @@
     margin: 0 auto;
     padding: 0 20px;
     box-sizing: border-box;
-    display: flex;
+    display: grid;
+    grid-template-columns: 2.25rem 1fr 2.25rem;
     align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
+    gap: 0.75rem;
+}
+
+.pageTitle {
+    margin: 0;
+    text-align: center;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #FFFFFF;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+}
+
+.topBarSpacer {
+    width: 2.25rem;
+    height: 2.25rem;
 }
 
 .topActions {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    flex-shrink: 0; /* 防止被压缩 */
+    flex-shrink: 0;
 }
 
 .backIconButton,
 .topIconButton {
-    display: inline-flex !important; /* 强制显示 */
+    display: inline-flex !important;
     align-items: center;
     justify-content: center;
     width: 2.25rem;
     height: 2.25rem;
-    min-width: 2.25rem; /* 防止被压缩 */
+    min-width: 2.25rem;
     min-height: 2.25rem;
-    background: rgba(62, 62, 62, 0.345);
-    border: 1px solid rgba(255,255,255,0.3);
+    background: transparent;
+    border: none;
     border-radius: 999px;
     color: #fff;
     cursor: pointer;
-    flex-shrink: 0; /* 防止被压缩 */
-    -webkit-tap-highlight-color: transparent; /* 移除移动端点击高亮 */
+    flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .backIconButton svg,
-.topIconButton svg {
-    width: 1.2rem;
-    height: 1.2rem;
+.backIconButton img,
+.topIconButton svg,
+.topIconButton img {
+    width: 1.35rem;
+    height: 1.35rem;
+    object-fit: contain;
+    image-rendering: -webkit-optimize-contrast;
 }
 
 /* ==================== 加载和错误状态 ==================== */
@@ -82,7 +105,7 @@
     justify-content: center;
     gap: 1.25rem;
     padding: 2.5rem 1.25rem;
-    background: #f5f5f5;
+    background: #000000;
 }
 
 .loadingContainer,
@@ -113,14 +136,14 @@
 
 .errorContainer p {
     font-size: 1.1rem;
-    color: rgba(0, 0, 0, 0.6);
+    color: #8E8E93;
 }
 
 .backButton {
     padding: 0.625rem 1.25rem;
-    background: var(--primary);
+    background: #8E2135;
     border: none;
-    border-radius: 0.75rem;
+    border-radius: 999px;
     font-size: 0.9rem;
     font-weight: 600;
     color: #fff;
@@ -135,12 +158,9 @@
 
 /* ==================== 英雄区域（封面图） ==================== */
 .heroSection {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
+    position: relative;
     height: var(--hero-height);
-    min-height: 25rem;
+    min-height: 22rem;
     width: 100%;
     max-width: 1920px;
     background-size: cover;
@@ -149,29 +169,131 @@
     background-color: #1a1a1a;
     z-index: 0;
     margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
 }
 
 .heroSection::after {
     content: '';
     position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 0;
+    inset: 0;
+    background: linear-gradient(
+        180deg,
+        rgba(0, 0, 0, 0.35) 0%,
+        rgba(0, 0, 0, 0.05) 38%,
+        rgba(0, 0, 0, 0.72) 78%,
+        #000000 100%
+    );
     pointer-events: none;
+    z-index: 1;
+}
+
+.heroContent {
+    position: relative;
+    z-index: 2;
+    width: min(var(--game-detail-shell-max), calc(100% - 2 * var(--game-detail-gutter)));
+    max-width: none;
+    margin: 0 auto;
+    padding: 0 20px 1.25rem;
+    box-sizing: border-box;
+}
+
+.heroTags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.heroTag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.28rem 0.7rem;
+    border-radius: 0.45rem;
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #FFFFFF;
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+.heroTitleRow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.55rem 0.65rem;
+    margin-bottom: 0.45rem;
+}
+
+.heroGameTitle {
+    margin: 0;
+    font-size: clamp(1.55rem, 5vw, 1.85rem);
+    font-weight: 700;
+    color: #FFFFFF;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+}
+
+.ratingBadge {
+    display: inline-flex;
+    align-items: baseline;
+    padding: 0.22rem 0.55rem;
+    border-radius: 0.4rem;
+    background: #8E2135;
+    color: #FFFFFF;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.ratingBadgeUnit {
+    margin-left: 0.15rem;
+    font-weight: 700;
+}
+
+/* 功能注释：作者头像 + 制作信息同一行，对齐效果图箭头位置 */
+.heroMetaRow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.heroAuthorAvatar {
+    width: 1.375rem;
+    height: 1.375rem;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: #2C2C2E;
+    box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.18),
+        0 0 0 2px rgba(142, 33, 53, 0.4);
+}
+
+.heroMeta {
+    margin: 0;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.72);
+    line-height: 1.4;
+    min-width: 0;
 }
 
 /* ==================== 内容区域 ==================== */
 .contentSection {
     flex: 1;
-    background: #fff;
-    border-radius: 2rem 2rem 0 0;
-    margin-top: -2rem;
+    background: #000000;
+    border-radius: 0;
+    margin-top: 0;
     position: relative;
     z-index: 1;
-    /* 预留底部悬浮按钮栏空间，避免内容被遮挡 */
-    padding: clamp(2.5rem, 4vw, 3rem) 0 calc(1.5rem + var(--floating-action-bar-space, 5.5rem));
-    box-shadow: 0 -0.75rem 2rem rgba(0, 0, 0, 0.06);
+    /* 预留双按钮悬浮栏高度（含底边距） */
+    padding: 0.75rem 0 calc(1.5rem + var(--floating-action-bar-space, 11rem));
+    box-shadow: none;
 }
 
 .contentWrapper {
@@ -180,6 +302,208 @@
     margin: 0 auto;
     padding: 0 20px;
     box-sizing: border-box;
+}
+
+/* 功能注释：效果图统计条 — 左圆钮图标 + 右数字/文案横排，三等分分隔 */
+.statsBar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    align-items: stretch;
+    background: #1C1C1E;
+    border-radius: 20px;
+    border: none;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    margin-bottom: 1.35rem;
+    overflow: hidden;
+}
+
+.statsItem {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    padding: 0.85rem 0.55rem;
+    background: transparent;
+    border: none;
+    color: #FFFFFF;
+    cursor: pointer;
+    position: relative;
+    -webkit-tap-highlight-color: transparent;
+    min-width: 0;
+}
+
+.statsItem:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 22%;
+    bottom: 22%;
+    width: 1px;
+    background: rgba(255, 255, 255, 0.14);
+}
+
+.statsIconWrap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 999px;
+    background: #2C2C2E;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    flex-shrink: 0;
+    color: #FFFFFF;
+}
+
+.statsItemActive .statsIconWrap {
+    background: rgba(142, 33, 53, 0.35);
+    border-color: rgba(168, 40, 60, 0.55);
+    color: #FF8A9A;
+}
+
+.statsItem:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.statsIcon {
+    width: 1.05rem;
+    height: 1.05rem;
+    display: block;
+    flex-shrink: 0;
+}
+
+.statsText {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0.12rem;
+    min-width: 0;
+}
+
+.statsValue {
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.15;
+    color: #FFFFFF;
+}
+
+.statsLabel {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: #8E8E93;
+    line-height: 1.2;
+}
+
+.synopsisHeader {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 0.75rem;
+}
+
+.synopsisTitle {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #FFFFFF;
+    line-height: 1.3;
+}
+
+.loadSaveBadge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    background: #2C2C2E;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #C7C7CC;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1.2;
+    cursor: pointer;
+}
+
+.loadSaveBadge:hover {
+    background: #3A3A3C;
+    color: #FFFFFF;
+}
+
+.synopsisHeaderSpacer {
+    flex: 1;
+}
+
+.reviewsTabLink {
+    border: none;
+    background: transparent;
+    color: #8E8E93;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+}
+
+.reviewsTabLinkActive {
+    color: #FFFFFF;
+}
+
+.readMoreButton {
+    display: inline-flex;
+    margin-top: 0.35rem;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: #8E8E93;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.readMoreButton:hover {
+    color: #C7C7CC;
+}
+
+.descriptionCollapsed {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    overflow: hidden;
+}
+
+.replayButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+    width: 100%;
+    height: 3.25rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: #1C1C1E;
+    color: #FFFFFF;
+    /* 与 startButton 同字号，避免双 CTA 视觉不一致 */
+    font-size: 1.15rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.replayButton:hover {
+    background: #2C2C2E;
+    transform: translateY(-0.0625rem);
+}
+
+.replayButtonIcon {
+    width: 1.45rem;
+    height: 1.45rem;
+    object-fit: contain;
+    flex-shrink: 0;
+    image-rendering: -webkit-optimize-contrast;
 }
 
 /* ==================== 标题区域 ==================== */
@@ -225,17 +549,17 @@
     width: 2.5rem;
     height: 2.5rem;
     padding: 0;
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 999px;
-    background: rgba(0, 0, 0, 0.04);
-    color: rgba(0, 0, 0, 0.55);
+    background: #1C1C1E;
+    color: #C7C7CC;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
 .favoriteButton:hover {
-    background: rgba(0, 0, 0, 0.08);
-    border-color: rgba(0, 0, 0, 0.12);
+    background: #2C2C2E;
+    border-color: rgba(255, 255, 255, 0.18);
     transform: translateY(-0.0625rem);
 }
 
@@ -244,15 +568,22 @@
     cursor: not-allowed;
 }
 
-.favoriteButton svg {
-    width: 1.25rem;
-    height: 1.25rem;
+.favoriteButton svg,
+.favoriteButton img {
+    width: 1.35rem;
+    height: 1.35rem;
+    object-fit: contain;
+    image-rendering: -webkit-optimize-contrast;
 }
 
 .favoriteButton.favorited {
-    background: rgba(255, 193, 7, 0.16);
-    border-color: #f5b400;
-    color: #f5b400;
+    background: rgba(142, 33, 53, 0.35);
+    border-color: #A8283C;
+    color: #FF8A9A;
+}
+
+.favoriteIconIdle {
+    opacity: 0.55;
 }
 
 .headerLikeButton {
@@ -272,7 +603,7 @@
 .gameTitle {
     font-size: 2rem;
     font-weight: 700;
-    color: #1a1a1a;
+    color: #FFFFFF;
     margin: 0;
     line-height: 1.3;
     letter-spacing: -0.02em;
@@ -285,6 +616,10 @@
     gap: 0.75rem;
     flex-wrap: wrap;
     margin-bottom: 0.75rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 999px;
+    background: #1C1C1E;
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .metaLeft {
@@ -299,15 +634,13 @@
     padding: 0.375rem 0.875rem;
     /* 底色由 resolveGameTypeToneStyle 内联写入 */
     color: #fff;
-    border: 1px solid transparent;
-    border-radius: 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
     font-size: 0.875rem;
     font-weight: 600;
     line-height: 1.4;
     text-shadow: 0 1px 1px rgba(0, 0, 0, 0.18);
-    box-shadow:
-        0 1px 2px rgba(0, 0, 0, 0.12),
-        inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    box-shadow: none;
 }
 
 .ratingSection {
@@ -317,10 +650,13 @@
 }
 
 .rating {
-    font-size: 1.1rem;
+    font-size: 0.95rem;
     font-weight: 700;
-    color: var(--primary);
+    color: #FFFFFF;
     line-height: 1;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    background: #8E2135;
 }
 
 .ratingUnit {
@@ -331,7 +667,7 @@
 
 .ratingCount {
     font-size: 0.9rem;
-    color: rgba(0, 0, 0, 0.5);
+    color: #8E8E93;
     font-weight: 400;
     line-height: 1;
 }
@@ -360,15 +696,15 @@
 
 .authorName {
     font-size: 0.875rem;
-    color: rgba(0, 0, 0, 0.65);
+    color: #8E8E93;
     font-weight: 500;
 }
 
 .sourceAuthorLink {
     margin-left: 12px;
     border: none;
-    background: rgba(251, 70, 85, 0.08);
-    color: #d63a49;
+    background: rgba(142, 33, 53, 0.28);
+    color: #FF8A9A;
     border-radius: 999px;
     padding: 0.35rem 0.75rem;
     font-size: 0.8125rem;
@@ -381,11 +717,11 @@
     align-items: center;
     gap: 0.25rem;
     padding: 0.25rem 0.625rem;
-    background: rgba(0, 0, 0, 0.06);
+    background: rgba(255, 255, 255, 0.08);
     border-radius: 999px;
     font-size: 0.8125rem;
     font-weight: 500;
-    color: rgba(0, 0, 0, 0.6);
+    color: #C7C7CC;
 }
 
 .groupNoIcon {
@@ -403,12 +739,12 @@
     padding: 0;
     margin-left: 0.125rem;
     cursor: pointer;
-    color: rgba(0, 0, 0, 0.4);
+    color: #8E8E93;
     transition: color 0.2s;
 }
 
 .groupNoCopyBtn:hover {
-    color: rgba(0, 0, 0, 0.7);
+    color: #FFFFFF;
 }
 
 .likeButton {
@@ -416,33 +752,35 @@
     align-items: center;
     gap: 0.375rem;
     padding: 0.625rem 1rem;
-    background: rgba(0, 0, 0, 0.04);
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 1.25rem;
+    background: #1C1C1E;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
     font-size: 0.875rem;
     font-weight: 600;
-    color: #1a1a1a;
+    color: #FFFFFF;
     cursor: pointer;
     transition: all 0.2s ease;
     white-space: nowrap;
 }
 
 .likeButton:hover {
-    background: rgba(0, 0, 0, 0.08);
-    border-color: rgba(0, 0, 0, 0.12);
+    background: #2C2C2E;
+    border-color: rgba(255, 255, 255, 0.18);
     transform: translateY(-0.0625rem);
 }
 
 .likeButton.liked {
-    background: rgba(224, 61, 75, 0.1);
-    border-color: var(--primary);
-    color: var(--primary);
+    background: rgba(142, 33, 53, 0.35);
+    border-color: #A8283C;
+    color: #FF8A9A;
 }
 
 .likeButton img {
-    width: 1.125rem;
-    height: 1.125rem;
+    width: 1.25rem;
+    height: 1.25rem;
     flex-shrink: 0;
+    object-fit: contain;
+    image-rendering: -webkit-optimize-contrast;
 }
 
 @media (min-width: 769px) {
@@ -509,7 +847,7 @@
 .detailSectionTitle {
     font-size: 1rem;
     font-weight: 600;
-    color: rgba(0, 0, 0, 0.88);
+    color: #FFFFFF;
     margin: 0 0 0.75rem;
 }
 
@@ -525,18 +863,18 @@
     padding: 0.5rem 0;
     font-size: 1rem;
     font-weight: 600;
-    color: rgba(0, 0, 0, 0.5);
+    color: #8E8E93;
     cursor: pointer;
     position: relative;
     transition: color 0.2s ease;
 }
 
 .sectionTab:hover {
-    color: rgba(0, 0, 0, 0.8);
+    color: #FFFFFF;
 }
 
 .sectionTabActive {
-    color: #1a1a1a;
+    color: #FFFFFF;
 }
 
 .sectionTabActive::after {
@@ -551,26 +889,26 @@
 }
 
 .descriptionSection {
-    padding: 1.35rem 1.5rem;
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0.025), rgba(0, 0, 0, 0.035));
-    border-radius: 1rem;
-    margin-bottom: 1.6rem;
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+    margin-bottom: 0.35rem;
 }
 
 .descriptionSection p {
-    font-size: 1rem;
-    line-height: 1.75;
-    color: rgba(0, 0, 0, 0.7);
+    font-size: 0.9375rem;
+    line-height: 1.7;
+    color: #FFFFFF;
     margin: 0;
-    max-height: 270px;
-    overflow-y: auto;
+    max-height: none;
+    overflow: visible;
     white-space: pre-line;
 }
 
 .descriptionHtml {
-    font-size: 1rem;
-    line-height: 1.75;
-    color: rgba(0, 0, 0, 0.7);
+    font-size: 0.9375rem;
+    line-height: 1.7;
+    color: #FFFFFF;
     margin: 0;
     /* 容纳右飘图片，避免高度塌陷 */
     display: flow-root;
@@ -623,18 +961,18 @@
     margin: 0 0 0.75rem;
     font-size: 1rem;
     font-weight: 700;
-    color: rgba(0, 0, 0, 0.82);
+    color: #FFFFFF;
 }
 
 .derivedNovelsLoading {
     font-size: 0.875rem;
-    color: rgba(0, 0, 0, 0.45);
+    color: #8E8E93;
     padding: 0.75rem 0.25rem;
 }
 
 .derivedNovelsEmpty {
     font-size: 0.875rem;
-    color: rgba(0, 0, 0, 0.45);
+    color: #8E8E93;
     padding: 1.25rem 0.25rem;
     text-align: center;
 }
@@ -654,9 +992,9 @@
     align-items: center;
     gap: 0.85rem;
     padding: 0.65rem 0.75rem;
-    border: 1px solid rgba(224, 61, 75, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 0.9rem;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(251, 246, 247, 0.9));
+    background: #1C1C1E;
     cursor: pointer;
     text-align: left;
 }
@@ -667,7 +1005,7 @@
     border-radius: 0.55rem;
     object-fit: cover;
     flex-shrink: 0;
-    background: rgba(0, 0, 0, 0.06);
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .derivedNovelMeta {
@@ -678,7 +1016,7 @@
 .derivedNovelName {
     font-size: 0.95rem;
     font-weight: 650;
-    color: #1a1a1a;
+    color: #FFFFFF;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -687,7 +1025,7 @@
 .derivedNovelAuthor {
     margin-top: 0.2rem;
     font-size: 0.8rem;
-    color: rgba(0, 0, 0, 0.5);
+    color: #8E8E93;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -704,9 +1042,9 @@
     justify-content: space-between;
     gap: 1rem;
     padding: 1rem 1.15rem;
-    border: 1px solid rgba(224, 61, 75, 0.16);
-    border-radius: 1rem;
-    background: linear-gradient(180deg, rgba(224, 61, 75, 0.08), rgba(224, 61, 75, 0.03));
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 999px;
+    background: #1C1C1E;
     cursor: pointer;
     text-align: left;
     transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
@@ -714,8 +1052,8 @@
 
 .replayEntryButton:hover {
     transform: translateY(-0.0625rem);
-    border-color: rgba(224, 61, 75, 0.28);
-    background: linear-gradient(180deg, rgba(224, 61, 75, 0.12), rgba(224, 61, 75, 0.05));
+    border-color: rgba(168, 40, 60, 0.45);
+    background: #2C2C2E;
 }
 
 .replayMetaButton {
@@ -724,9 +1062,9 @@
     justify-content: space-between;
     gap: 0.5rem;
     padding: 0.5rem 0.85rem;
-    border: 1px solid rgba(224, 61, 75, 0.2);
-    border-radius: 0.75rem;
-    background: linear-gradient(180deg, rgba(224, 61, 75, 0.08), rgba(224, 61, 75, 0.03));
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 999px;
+    background: #1C1C1E;
     cursor: pointer;
     transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
     flex-shrink: 0;
@@ -734,26 +1072,26 @@
 
 .replayMetaButton:hover {
     transform: translateY(-0.0625rem);
-    border-color: rgba(224, 61, 75, 0.35);
-    background: linear-gradient(180deg, rgba(224, 61, 75, 0.12), rgba(224, 61, 75, 0.05));
+    border-color: rgba(168, 40, 60, 0.45);
+    background: #2C2C2E;
 }
 
 .replayEntryLabel {
     font-size: 0.875rem;
     font-weight: 700;
-    color: #1a1a1a;
+    color: #FFFFFF;
 }
 
 .replayEntryArrow {
     font-size: 1rem;
     font-weight: 700;
-    color: rgba(0, 0, 0, 0.48);
+    color: #8E8E93;
     flex-shrink: 0;
 }
 
 /* Tabs */
-.tab { color: rgba(0,0,0,0.6); font-weight: 600; border-bottom: 2px solid transparent; }
-.tabActive { color: #1a1a1a; font-weight: 700; border-bottom: 2px solid var(--primary); }
+.tab { color: #8E8E93; font-weight: 600; border-bottom: 2px solid transparent; }
+.tabActive { color: #FFFFFF; font-weight: 700; border-bottom: 2px solid #A8283C; }
 
 /* ==================== 操作区域（价格和按钮） ==================== */
 .actionSection {
@@ -768,49 +1106,50 @@
     bottom: 0;
     z-index: 20;
     padding: 0;
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(0, 0, 0, 0.92);
     backdrop-filter: blur(10px);
-    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .floatingActionInner {
     width: min(var(--game-detail-shell-max), calc(100% - 2 * var(--game-detail-gutter)));
     max-width: none;
     margin: 0 auto;
-    padding: 0 20px;
+    /* 与屏幕底边留出明确间距（含安全区） */
+    padding: 0.75rem 20px calc(1.35rem + env(safe-area-inset-bottom, 0px));
     box-sizing: border-box;
 }
 
 .bottomActionRow {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
 }
 
 .bottomActionRow > :only-child {
-    grid-column: 1 / -1;
+    grid-column: auto;
 }
 
 .deleteInlineButton {
     padding: 0.625rem 1rem;
-    background: rgba(0, 0, 0, 0.05);
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: #1C1C1E;
+    border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 999px;
     font-size: 0.95rem;
     font-weight: 600;
-    color: rgba(0, 0, 0, 0.75);
+    color: #C7C7CC;
     cursor: pointer;
     white-space: nowrap;
     flex-shrink: 0;
 }
 
 .deleteInlineButton:hover {
-    background: rgba(0, 0, 0, 0.08);
+    background: #2C2C2E;
 }
 
 .topDeleteButton {
     padding: 0.55rem 1rem;
-    background: var(--primary);
+    background: #8E2135;
     border-radius: 999px;
     color: #fff;
     font-weight: 700;
@@ -851,7 +1190,7 @@
     display: flex;
     align-items: center;
     gap: 0.25rem;
-    color: rgba(0, 0, 0, 0.4);
+    color: #8E8E93;
     text-decoration: line-through;
 }
 
@@ -865,25 +1204,23 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.75rem;
+    gap: 0.65rem;
     position: relative;
-    background-image: url('/data/assets/gameDetail/价格按钮大.png');
-    background-color: transparent;
+    background-image: none;
+    background-color: #8E2135;
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
     width: 100%;
     height: 3.25rem;
     border: none;
+    border-radius: 999px;
     cursor: pointer;
     color: #fff;
-    font-size: 1.5rem;
+    font-size: 1.15rem;
     font-weight: 600;
     box-sizing: border-box;
-    box-shadow: 0 0.25rem 0.5rem rgba(251, 73, 88, 0.3),
-                0 -0.1875rem 0.5rem rgba(251, 73, 88, 0.3),
-                0.1875rem 0 0.5rem rgba(251, 73, 88, 0.3),
-                -0.1875rem 0 0.5rem rgba(251, 73, 88, 0.3);
+    box-shadow: none;
     overflow: visible;
     transition: transform 0.2s ease;
 }
@@ -902,6 +1239,14 @@
 .purchaseButton:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+}
+
+.startButtonIcon {
+    width: 1.45rem;
+    height: 1.45rem;
+    object-fit: contain;
+    flex-shrink: 0;
+    image-rendering: -webkit-optimize-contrast;
 }
 
 .purchaseButton img {
@@ -964,13 +1309,15 @@
 
 .startOptionsModal {
     width: min(26rem, 92vw);
-    background: #fff;
+    background: #1A1A1A;
     border-radius: 1.25rem;
-    box-shadow: 0 1.5rem 3rem rgba(0, 0, 0, 0.25);
+    box-shadow: 0 1.5rem 3rem rgba(0, 0, 0, 0.45);
     padding: 1.25rem 1.25rem 1.5rem;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+    color: #FFFFFF;
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .replayDrawerOverlay {
@@ -983,21 +1330,22 @@
 .replayDrawer {
     width: min(32rem, calc(100vw - 4rem));
     height: 100%;
-    background: #fff;
+    background: #1A1A1A;
     border-radius: 1.5rem 0 0 1.5rem;
-    box-shadow: -1rem 0 2.5rem rgba(0, 0, 0, 0.18);
+    box-shadow: -1rem 0 2.5rem rgba(0, 0, 0, 0.35);
     padding: 1.1rem 1rem 1rem 1rem;
     display: flex;
     flex-direction: column;
     gap: 0.7rem;
     overflow: hidden;
     animation: replayDrawerEnter 0.24s ease;
+    color: #FFFFFF;
 }
 
 .replayDrawerClose {
     border-radius: 999px;
-    background: rgba(0, 0, 0, 0.05);
-    color: rgba(0, 0, 0, 0.7);
+    background: rgba(255, 255, 255, 0.08);
+    color: #C7C7CC;
     font-size: 1.35rem;
     line-height: 1;
 }
@@ -1007,14 +1355,14 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.3rem;
     padding: 0.3rem;
-    background: rgba(0, 0, 0, 0.05);
+    background: #121212;
     border-radius: 0.875rem;
 }
 
 .replayDrawerTab {
     border: none;
     background: transparent;
-    color: rgba(0, 0, 0, 0.62);
+    color: #8E8E93;
     border-radius: 0.75rem;
     padding: 0.7rem 0.55rem;
     font-size: 0.875rem;
@@ -1025,14 +1373,14 @@
 }
 
 .replayDrawerTab:hover {
-    background: rgba(255, 255, 255, 0.55);
-    color: #1a1a1a;
+    background: rgba(255, 255, 255, 0.06);
+    color: #FFFFFF;
 }
 
 .replayDrawerTabActive {
-    background: #fff;
-    color: #1a1a1a;
-    box-shadow: 0 0.375rem 0.875rem rgba(0, 0, 0, 0.08);
+    background: #2C2C2E;
+    color: #FFFFFF;
+    box-shadow: none;
 }
 
 .replayDrawerBody {
@@ -1075,13 +1423,13 @@
     margin: 0;
     font-size: 1.1rem;
     font-weight: 700;
-    color: #1a1a1a;
+    color: #FFFFFF;
 }
 
 .startOptionsBack {
     border: none;
-    background: rgba(0, 0, 0, 0.06);
-    color: #1a1a1a;
+    background: rgba(255, 255, 255, 0.08);
+    color: #FFFFFF;
     border-radius: 999px;
     padding: 0.4rem 0.75rem;
     font-size: 0.875rem;
@@ -1108,13 +1456,13 @@
 
 .startOptionsDesc {
     margin: 0;
-    color: rgba(0, 0, 0, 0.6);
+    color: #8E8E93;
     font-size: 0.95rem;
 }
 
 .interactiveVideoBuyoutMessage {
     margin: 0;
-    color: rgba(0, 0, 0, 0.62);
+    color: #8E8E93;
     font-size: 0.95rem;
     line-height: 1.6;
 }
@@ -1138,7 +1486,7 @@
 
 .replayModalNote {
     margin: 0;
-    color: rgba(0, 0, 0, 0.58);
+    color: #8E8E93;
     font-size: 0.92rem;
     line-height: 1.6;
 }
@@ -1155,31 +1503,31 @@
 }
 
 .startOptionsPrimary {
-    background: #fb4655;
+    background: #8E2135;
     color: #fff;
-    box-shadow: 0 0.5rem 1rem rgba(251, 70, 85, 0.25);
+    box-shadow: none;
 }
 
 .startOptionsSecondary {
-    background: #fb4655;
+    background: #1C1C1E;
     color: #fff;
-    border: none;
-    box-shadow: 0 0.5rem 1rem rgba(251, 70, 85, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: none;
 }
 
 .startOptionsGhost {
-    background: #fb4655;
+    background: #1C1C1E;
     color: #fff;
-    border: none;
-    box-shadow: 0 0.5rem 1rem rgba(251, 70, 85, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: none;
 }
 
 .startOptionsPrimary:disabled,
 .startOptionsSecondary:disabled,
 .startOptionsGhost:disabled {
-    background: #d9d9d9;
-    color: rgba(0, 0, 0, 0.45);
-    border: 1px solid #d9d9d9;
+    background: #2C2C2E;
+    color: #8E8E93;
+    border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: none;
     cursor: not-allowed;
 }
@@ -1252,7 +1600,7 @@
     }
 
     .contentSection {
-        padding: 1.5rem 1rem 1.5rem;
+        padding: 1.5rem 1rem calc(1.5rem + var(--floating-action-bar-space, 11rem));
         border-radius: 1.5rem 1.5rem 0 0;
         margin-top: -1.5rem;
     }
@@ -1324,7 +1672,7 @@
     }
 
     .descriptionSection {
-        padding: 1rem;
+        padding: 0;
     }
 
     /* 手机：简介配图一行一张 */
@@ -1352,18 +1700,30 @@
         padding: 0 1rem;
     }
 
-    .contentWrapper,
-    .floatingActionInner {
+    .contentWrapper {
         width: 100%;
         padding: 0;
     }
 
+    /* 保留底边距，避免双 CTA 贴底 */
+    .floatingActionInner {
+        width: 100%;
+        padding: 0.75rem 0 calc(1.35rem + env(safe-area-inset-bottom, 0px));
+    }
+
     .startButton,
-    .purchaseButton {
-        font-size: 1.25rem;
+    .purchaseButton,
+    .replayButton {
+        font-size: 1.15rem;
         height: 3.6rem;
         background-size: 105% 105%;
         background-position: center;
+    }
+
+    .startButtonIcon,
+    .replayButtonIcon {
+        width: 1.45rem;
+        height: 1.45rem;
     }
 
     .purchaseButton img {
@@ -1431,7 +1791,7 @@
     }
 
     .contentSection {
-        padding: 1.25rem 0.875rem 1.25rem;
+        padding: 1.25rem 0.875rem calc(1.25rem + var(--floating-action-bar-space, 11rem));
         border-radius: 1.25rem 1.25rem 0 0;
         margin-top: -1.25rem;
     }
@@ -1493,7 +1853,7 @@
     }
 
     .descriptionSection {
-        padding: 0.875rem;
+        padding: 0;
     }
 
     .actionSection {
@@ -1505,13 +1865,26 @@
     }
 
     .startButton,
-    .purchaseButton {
-        font-size: 0.9375rem;
+    .purchaseButton,
+    .replayButton {
+        font-size: 1.15rem;
         height: 3.25rem;
-        gap: 0.375rem;
-        background-image: url('/data/assets/gameDetail/按钮.png');
+        gap: 0.5rem;
+        border-radius: 999px;
+    }
+
+    .startButton,
+    .purchaseButton {
+        background-image: none;
+        background-color: #8E2135;
         background-size: 100% 100%;
         box-shadow: none;
+    }
+
+    .startButtonIcon,
+    .replayButtonIcon {
+        width: 1.35rem;
+        height: 1.35rem;
     }
 
     .purchaseButton img {
