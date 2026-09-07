@@ -354,7 +354,8 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
 
             {mode === 'visual' && (
                 <section className={styles.detailBlock}>
-                    <div className={styles.sectionTitleRow}>
+                    {/* 功能注释：效果图输出字数标题居中，与下方设置行手风琴形成「主区块 + 可选折叠」节奏 */}
+                    <div className={`${styles.sectionTitleRow} ${styles.sectionTitleCentered}`}>
                         <div>
                             <h3 className={styles.sectionTitle}>{t('createGame.outputLength')}</h3>
                             <p className={styles.sectionDescription}>{t('createGame.outputLengthDescription')}</p>

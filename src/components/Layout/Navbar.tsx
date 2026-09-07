@@ -11,6 +11,7 @@ import type { UserGameData } from '../../api/home/getGameData.type';
 import { getImageUrl } from '../../utils/constants';
 import { buildGameDetailNavigateState } from '../../utils/gameDetailNavigation';
 import { isAdminRole, isOperatorRole, isVerifiedCreatorRole } from '../../utils/userRoles';
+import { resolveSearchResultSecondaryLine } from '../../lib/gameCardBody';
 import UserAvatar from '../UserAvatar';
 
 /** 功能注释：暗色 funloom 导航图标基路径（assetsv2/home） */
@@ -32,12 +33,6 @@ const SEARCH_DEBOUNCE_MS = 250;
 const SEARCH_PAGE_SIZE = 8;
 
 const getSearchResultId = (game: UserGameData): string => String(game.file_id || game.id || '').trim();
-
-const getSearchResultMeta = (game: UserGameData): string => {
-    const subtitle = String(game.subtitle || '').trim();
-    if (subtitle) return subtitle;
-    return String(game.file_id || '').trim();
-};
 
 type NavKey = 'home' | 'categories' | 'create' | 'warehouse' | 'rank' | '';
 type NavbarProps = {
@@ -257,9 +252,15 @@ const Navbar: React.FC<NavbarProps> = ({
     return (
         <div className={navbarContainerClassName} style={NAVBAR_BTN_BG_STYLE}>
             <div className={styles.navbar}>
-                <div className={styles.logo}>
-                    <img src={logoSrc} alt="logo" />
-                </div>
+                {/* 功能注释：点击品牌 Logo 回首页，与「首页」导航一致 */}
+                <button
+                    type="button"
+                    className={styles.logo}
+                    onClick={() => runLeaveAction(() => navigate('/home'))}
+                    aria-label="回到首页"
+                >
+                    <img src={logoSrc} alt="funloom" />
+                </button>
 
                 <div className={styles.navLinks}>
                     <div
@@ -339,6 +340,8 @@ const Navbar: React.FC<NavbarProps> = ({
                                 {!isSearching && !searchError && searchResults.map((game) => {
                                     const gameId = getSearchResultId(game);
                                     if (!gameId) return null;
+                                    const title = String(game.title || '').trim() || gameId;
+                                    const secondary = resolveSearchResultSecondaryLine(game);
 
                                     return (
                                         <button
@@ -347,8 +350,10 @@ const Navbar: React.FC<NavbarProps> = ({
                                             className={styles.searchItem}
                                             onClick={() => handleSearchSelect(game)}
                                         >
-                                            <span className={styles.searchItemTitle}>{game.title || gameId}</span>
-                                            <span className={styles.searchItemMeta}>{getSearchResultMeta(game)}</span>
+                                            <span className={styles.searchItemTitle}>{title}</span>
+                                            {secondary ? (
+                                                <span className={styles.searchItemMeta}>{secondary}</span>
+                                            ) : null}
                                         </button>
                                     );
                                 })}

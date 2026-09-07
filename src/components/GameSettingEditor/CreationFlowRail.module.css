@@ -1,5 +1,6 @@
+/* 功能注释：创作分步轨紧贴标题行，轨下仅靠 topBar row-gap */
 .rail {
-  margin: 12px 0 0;
+  margin: 0;
   width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -20,11 +21,11 @@
   flex: 1 1 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 10px 12px 12px;
+  gap: 4px;
+  padding: 8px 10px 10px;
   min-width: 96px;
-  border-bottom: 2px solid rgba(0, 0, 0, 0.08);
-  color: #888;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.45);
 }
 
 .step + .step::before {
@@ -34,7 +35,7 @@
   top: 18px;
   width: 1px;
   height: 18px;
-  background: rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .index {
@@ -46,9 +47,10 @@
   justify-content: center;
   font-size: 0.68rem;
   font-weight: 700;
-  background: rgba(0, 0, 0, 0.06);
-  color: #777;
+  background: #1C1C1E;
+  color: rgba(255, 255, 255, 0.55);
   font-variant-numeric: tabular-nums;
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .label {
@@ -59,27 +61,29 @@
 }
 
 .active {
-  border-bottom-color: var(--primary, #e03d4b);
-  color: #1a1a1a;
+  border-bottom-color: #8E2135;
+  color: #ffffff;
 }
 
 .active .index {
-  background: var(--primary, #e03d4b);
+  background: #8E2135;
+  border-color: transparent;
   color: #fff;
-  box-shadow: 0 0 0 4px rgba(224, 61, 75, 0.15);
+  box-shadow: 0 0 0 4px rgba(142, 33, 53, 0.28);
 }
 
 .active .label {
-  color: var(--primary, #e03d4b);
+  color: #FF8A9A;
 }
 
 .done {
-  color: #3a3a3a;
-  border-bottom-color: rgba(46, 160, 90, 0.45);
+  color: rgba(255, 255, 255, 0.7);
+  border-bottom-color: rgba(46, 160, 90, 0.55);
 }
 
 .done .index {
   background: #2ea05a;
+  border-color: transparent;
   color: #fff;
 }
 

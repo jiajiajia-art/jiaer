@@ -198,6 +198,24 @@ const buildDocumentHtml = (markdownText: string): { html: string; headings: Head
         preElement.appendChild(button);
     });
 
+    // 功能注释：去掉 Markdown 图的固定宽高，避免手机端按原图像素撑破版心；由 CSS 等比缩放
+    doc.querySelectorAll<HTMLImageElement>('img').forEach((imgElement) => {
+        imgElement.removeAttribute('width');
+        imgElement.removeAttribute('height');
+        const styleValue = imgElement.getAttribute('style') || '';
+        if (styleValue) {
+            const nextStyle = styleValue
+                .split(';')
+                .map((part) => part.trim())
+                .filter((part) => part && !/^(width|height|max-width|min-width)\s*:/i.test(part))
+                .join('; ');
+            if (nextStyle) imgElement.setAttribute('style', nextStyle);
+            else imgElement.removeAttribute('style');
+        }
+        imgElement.setAttribute('loading', 'lazy');
+        imgElement.setAttribute('decoding', 'async');
+    });
+
     return {
         html: doc.body.innerHTML,
         headings,
@@ -624,43 +642,22 @@ const Document: React.FC = () => {
 
     const renderTopNav = () => (
         <header className={styles.topNav}>
+            {/* 功能注释：顶栏对齐效果图 — 左汉堡/品牌，右描边「模板下载」，分组只在侧栏 */}
             <div className={styles.topNavInner}>
                 <div className={styles.topNavLeft}>
                     <button
                         type="button"
                         className={styles.mobileMenuButton}
                         onClick={() => setMobileSidebarOpen(true)}
+                        aria-label="打开文档导航"
                     >
                         <MenuIcon />
                     </button>
-                    <button
-                        type="button"
-                        className={styles.topNavBackButton}
-                        onClick={() => navigate('/home')}
-                    >
-                        <ArrowLeftIcon />
-                    </button>
-                    <a href="/" className={styles.topNavLogo}>
+                    <a href="/" className={styles.topNavLogo} aria-label="返回首页">
                         <LogoIcon />
                         <span className={styles.topNavLogoText}>文档中心</span>
                     </a>
                 </div>
-                <nav className={styles.topNavCenter}>
-                    {docState.guides.map((guideGroup) => (
-                        <button
-                            type="button"
-                            key={guideGroup.guide}
-                            className={`${styles.topNavLink} ${activeGuide === guideGroup.guide ? styles.topNavLinkActive : ''}`}
-                            onClick={() => {
-                                if (activeGuide === guideGroup.guide) return;
-                                userTriggeredGuideChangeRef.current = true;
-                                setActiveGuide(guideGroup.guide);
-                            }}
-                        >
-                            {guideGroup.guide}
-                        </button>
-                    ))}
-                </nav>
                 <div className={styles.topNavRight}>
                     <button
                         type="button"
@@ -845,14 +842,14 @@ const Document: React.FC = () => {
                         </div>
                         <button type="button" className={styles.copyButton} onClick={copyMarkdown}>
                             {copied ? <CheckIcon /> : <CopyIcon />}
-                            {copied ? 'Copied' : '复制 Markdown'}
+                            {copied ? '已复制' : '复制 MARKDOWN'}
                         </button>
                     </header>
 
                     {isLoading ? (
                         <div className={styles.loadingPanel}>
                             <div className="loadingSpinner" />
-                            <p className={styles.loadingText}>Loading document content...</p>
+                            <p className={styles.loadingText}>文档加载中…</p>
                         </div>
                     ) : (
                         <>
@@ -872,14 +869,15 @@ const Document: React.FC = () => {
                                             type="button"
                                             className={styles.pagerButton}
                                             onClick={() => navigateToSlug(docState.prevDoc!.slug)}
+                                            title={`上一页: ${docState.prevDoc.title}`}
                                         >
                                             <ArrowLeftIcon />
-                                            上一页: {docState.prevDoc.title}
+                                            <span className={styles.pagerLabel}>上一页</span>
                                         </button>
                                     ) : (
                                         <button type="button" className={`${styles.pagerButton} ${styles.pagerButtonDisabled}`} disabled>
                                             <ArrowLeftIcon />
-                                            上一页
+                                            <span className={styles.pagerLabel}>上一页</span>
                                         </button>
                                     )}
                                     {docState.nextDoc ? (
@@ -887,13 +885,15 @@ const Document: React.FC = () => {
                                             type="button"
                                             className={styles.pagerButton}
                                             onClick={() => navigateToSlug(docState.nextDoc!.slug)}
+                                            title={`下一页: ${docState.nextDoc.title}`}
                                         >
-                                            下一页: {docState.nextDoc.title}
+                                            <span className={styles.pagerLabel}>下一页</span>
                                             <ArrowRightIcon />
                                         </button>
                                     ) : (
                                         <button type="button" className={`${styles.pagerButton} ${styles.pagerButtonDisabled}`} disabled>
-                                            下一页
+                                            <span className={styles.pagerLabel}>下一页</span>
+                                            <ArrowRightIcon />
                                         </button>
                                     )}
                                 </div>

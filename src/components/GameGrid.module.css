@@ -45,6 +45,15 @@
     display: block;
 }
 
+/* 功能注释：无封面暗色占位，避免白底 welcome 图破坏 funloom 夜色卡面 */
+.goodsImgPlaceholder {
+    width: 100%;
+    height: 100%;
+    background:
+        radial-gradient(ellipse at 50% 42%, rgba(168, 40, 60, 0.22) 0%, transparent 58%),
+        linear-gradient(160deg, #2C2C2E 0%, #141414 55%, #0A0A0A 100%);
+}
+
 .goodsImg::after {
     content: '';
     position: absolute;

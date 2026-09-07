@@ -9,6 +9,7 @@ export type GameDetailTagSource = {
 
 export type GameDetailMetaSource = GameDetailTagSource & {
   author_name?: unknown;
+  title?: unknown;
   subtitle?: unknown;
   chapter_count?: unknown;
   duration_minutes?: unknown;
@@ -22,6 +23,22 @@ function cleanText(value: unknown): string {
     .replace(/<[^>]+>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+/** 功能注释：创作者概览卡用「万」缩写（效果图 150.6w），与详情页 k/m 区分。 */
+export function formatCreatorOverviewCount(value: unknown): string {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return '0';
+  const floored = Math.floor(n);
+  if (floored < 10_000) {
+    return String(floored);
+  }
+  const wan = floored / 10_000;
+  if (wan >= 1000) {
+    return `${Math.floor(wan)}w`;
+  }
+  const text = wan.toFixed(1).replace(/\.0$/, '');
+  return `${text}w`;
 }
 
 /** 功能注释：把点赞/收藏等整数格式化为 892 / 8.5k，避免效果图量级在窄屏溢出。 */
@@ -62,8 +79,10 @@ export function buildGameDetailMetaLine(
     parts.push(`${Math.floor(minutes)}${labels.minuteUnit}`);
   }
 
+  // 功能注释：无章节/时长时可用副标题补一行，但禁止与作品标题重复（效果图不要「制作 · 同名标题」）
+  const title = String(game.title ?? '').trim();
   const subtitle = String(game.subtitle ?? '').trim();
-  if (parts.length <= 1 && subtitle) {
+  if (parts.length <= 1 && subtitle && subtitle !== title) {
     parts.push(subtitle);
   }
 

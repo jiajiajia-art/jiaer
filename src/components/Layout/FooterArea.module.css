@@ -1,9 +1,17 @@
+/* 功能注释：页脚对齐 funloom 暗色壳，避免黑页底再接白条 */
 .footer {
+  --footer-surface: #0A0A0A;
+  --footer-title: #FFFFFF;
+  --footer-muted: rgba(255, 255, 255, 0.55);
+  --footer-faint: rgba(255, 255, 255, 0.38);
+  --footer-accent: #A8283C;
   width: 100%;
-  background-color: #f7f7f7;
+  background-color: var(--footer-surface);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   padding: 60px 0;
   display: flex;
   justify-content: center;
+  color: var(--footer-muted);
 }
 
 .container {
@@ -42,7 +50,7 @@
 .title {
   font-size: 24px;
   font-weight: 600;
-  color: #4c4c4c;
+  color: var(--footer-title);
 }
 
 .iconRow {
@@ -55,12 +63,24 @@
   align-items: center;
   gap: 6px;
   font-size: 24px;
-  color: #666;
+  color: var(--footer-muted);
+  transition: color 0.2s ease;
 }
 
+.iconItem:hover {
+  color: #ffffff;
+}
+
+/* 功能注释：切图为浅底深色，暗色页脚上反白以保证可读 */
 .iconItem img {
   width: 28px;
   height: 28px;
+  filter: brightness(0) invert(1);
+  opacity: 0.72;
+}
+
+.iconItem:hover img {
+  opacity: 1;
 }
 
 .joinSection {
@@ -81,19 +101,26 @@
 
 .item {
   font-size: 18px;
-  color: #999999;
+  color: var(--footer-faint);
   display: flex;
   align-items: center;
   gap: 6px;
+  transition: color 0.2s ease;
+}
+
+.item:hover {
+  color: rgba(255, 255, 255, 0.88);
 }
 
 .item img {
   width: 20px;
   height: 20px;
+  filter: brightness(0) invert(1);
+  opacity: 0.65;
 }
 
 .red {
-  color: #ff3333;
+  color: var(--footer-accent);
   font-weight: 600;
 }
 

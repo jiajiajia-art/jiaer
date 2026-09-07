@@ -36,6 +36,23 @@ const TYPE_LABELS: Record<string, string> = {
     '视觉小说': VISUAL_NOVEL_LABEL,
 };
 
+/** 功能注释：入库引擎码（非题材名）；列表正文 pill 过滤它们，避免与封面「自定义/AI文游」角标重复。 */
+const ENGINE_STORAGE_CODES = new Set([
+    'CUSTOM',
+    'TXT',
+    'AVG',
+    'RPG',
+    'IVG',
+    'NOVEL',
+    'ST',
+]);
+
+export const isGameEngineStorageTag = (raw: string): boolean => {
+    const name = String(raw || '').trim();
+    if (!name) return false;
+    return ENGINE_STORAGE_CODES.has(name.toUpperCase());
+};
+
 const TONE_BY_NORMALIZED: Record<string, GameTypeTone> = {
     TXT: 'aiWenyou',
     'ROLE-PLAYING': 'aiWenyou',

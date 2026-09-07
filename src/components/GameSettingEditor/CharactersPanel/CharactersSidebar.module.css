@@ -1,3 +1,5 @@
+/* 功能注释：角色侧栏对齐 funloom 暗色创作壳（与 TXT 创建一致） */
+
 /* 角色列表专用样式 */
 
 .characterRoster {
@@ -11,6 +13,8 @@
     height: 100%;
     min-height: 0;
     overflow: hidden;
+    /* 功能注释：列表标题到首卡间距减半，对齐标注区 */
+    gap: 8px;
 }
 
 .sidebarHeader {
@@ -18,9 +22,9 @@
     justify-content: space-between;
     align-items: center;
     gap: 12px;
-    margin-bottom: 14px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    margin-bottom: 7px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .rosterScroll {
@@ -36,16 +40,16 @@
     grid-template-columns: 72px 1fr;
     gap: 12px;
     padding: 12px;
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
     cursor: pointer;
-    background: rgba(0, 0, 0, 0.01);
+    background: #121212;
     transition: 0.2s ease;
 }
 
 .characterRow.rowChecked {
-    border-color: rgba(37, 99, 235, 0.55);
-    background: rgba(37, 99, 235, 0.04);
+    border-color: rgba(142, 33, 53, 0.55);
+    background: rgba(142, 33, 53, 0.1);
 }
 
 .selectCheck {
@@ -59,8 +63,8 @@
     width: 20px;
     height: 20px;
     border-radius: 4px;
-    background: rgba(255, 255, 255, 0.92);
-    border: 1.5px solid rgba(37, 99, 235, 0.75);
+    background: rgba(0, 0, 0, 0.75);
+    border: 1.5px solid rgba(142, 33, 53, 0.75);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
     cursor: pointer;
 }
@@ -69,31 +73,31 @@
     width: 14px;
     height: 14px;
     margin: 0;
-    accent-color: #2563eb;
+    accent-color: #8E2135;
     cursor: pointer;
 }
 
 .characterRow:hover {
-    background: rgba(0, 0, 0, 0.03);
-    border-color: rgba(224, 61, 75, 0.2);
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(142, 33, 53, 0.2);
 }
 
 .characterRow.active {
     border-color: var(--primary);
-    background: rgba(224, 61, 75, 0.06);
+    background: rgba(142, 33, 53, 0.12);
 }
 
 .characterThumb {
     width: 72px;
     height: 100%;
     border-radius: 12px;
-    /* 透明立绘可见：浅棋盘格，避免把图里残留米色误当成「容器底色」 */
-    background-color: #f5f5f5;
+    /* 透明立绘可见：浅灰棋盘格，降低纯白对比 */
+    background-color: #c8c8c8;
     background-image:
-        linear-gradient(45deg, #ebebeb 25%, transparent 25%),
-        linear-gradient(-45deg, #ebebeb 25%, transparent 25%),
-        linear-gradient(45deg, transparent 75%, #ebebeb 75%),
-        linear-gradient(-45deg, transparent 75%, #ebebeb 75%);
+        linear-gradient(45deg, #2a2a2a 25%, transparent 25%),
+        linear-gradient(-45deg, #2a2a2a 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #2a2a2a 75%),
+        linear-gradient(-45deg, transparent 75%, #2a2a2a 75%);
     background-size: 12px 12px;
     background-position: 0 0, 0 6px, 6px -6px, -6px 0;
     background-repeat: repeat;
@@ -108,7 +112,7 @@
 
 .characterMeta strong {
     font-size: 1rem;
-    color: #1a1a1a;
+    color: #ffffff;
 }
 
 .characterTitleRow {
@@ -132,7 +136,7 @@
     transition: all 0.2s ease;
     flex-shrink: 0;
     padding: 0;
-    color: #4f4f4f;
+    color: rgba(255, 255, 255, 0.55);
     border: none;
 }
 
@@ -163,10 +167,10 @@
         justify-content: center;
         width: 100%;
         margin-top: 12px;
-        border: 1px solid rgba(224, 61, 75, 0.14);
+        border: 1px solid rgba(142, 33, 53, 0.14);
         border-radius: 999px;
         padding: 10px 14px;
-        background: rgba(224, 61, 75, 0.04);
+        background: rgba(142, 33, 53, 0.04);
         color: var(--primary);
         font-size: 0.85rem;
         font-weight: 600;
@@ -175,7 +179,7 @@
     }
 
     .mobileToggleButton:hover {
-        background: rgba(224, 61, 75, 0.08);
+        background: rgba(142, 33, 53, 0.08);
     }
 }
 

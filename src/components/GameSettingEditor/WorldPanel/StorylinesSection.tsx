@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MdArrowDropDown } from 'react-icons/md';
+import { MdKeyboardArrowDown } from 'react-icons/md';
 import styles from './WorldPanel.module.css';
 import { useWordLimit, useWordCount } from '../../../hooks/editor/useWordLimit';
 
@@ -92,54 +92,48 @@ const StorylinesSection: React.FC<StorylinesSectionProps> = ({
     const [editingIndex, setEditingIndex] = useState<Record<string, string>>({});
     return (
         <div className={styles.storylineSection}>
-            <div className={styles.storylineHeader} style={{ cursor: 'pointer' }} onClick={onToggleExpand}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                    <span className={styles.fieldLabel}>
-                        {isWorldInteractionMode ? (
-                            <>
-                                {t('createGame.storyline')}
-                                <span className={styles.required}>*</span>
-                                <span style={{ color: 'var(--primary)', fontWeight: 600, marginLeft: '8px' }}>{t('createGame.storylineRequired2')}</span>
-                            </>
-                        ) : (
-                            t('createGame.storylineOptional')
-                        )}
-                    </span>
-                    {isWorldInteractionMode && (
-                        <span className={styles.fieldHint} style={{ fontSize: '0.8rem', color: 'rgba(224, 61, 75, 0.8)' }}>
-                            {t('createGame.storylineHint')}
-                        </span>
+            {/* 功能注释：效果图为设置行手风琴——标题左、chevron 右；新增按钮下沉到展开区 */}
+            <button
+                type="button"
+                className={styles.accordionTrigger}
+                onClick={onToggleExpand}
+                aria-expanded={isExpanded}
+            >
+                <span className={styles.accordionTitle}>
+                    {isWorldInteractionMode ? (
+                        <>
+                            {t('createGame.storyline')}
+                            <span className={styles.required}>*</span>
+                            <span className={styles.accordionRequiredHint}>{t('createGame.storylineRequired2')}</span>
+                        </>
+                    ) : (
+                        t('createGame.storylineOptional')
                     )}
-                    {!isExpanded && isWorldInteractionMode && storylines.length === 0 && (
-                        <span className={styles.errorText} style={{ fontSize: '0.85rem', marginTop: '4px' }}>
-                            {t('createGame.storylineAddRequired')}
-                        </span>
-                    )}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    {isExpanded && (
-                        <button
-                            className={styles.ghostSmall}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onAddStoryline();
-                            }}
-                        >
-                            {t('createGame.addStoryline')}
-                        </button>
-                    )}
-                    <MdArrowDropDown size={30} style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }} />
-                </div>
-            </div>
+                </span>
+                <MdKeyboardArrowDown
+                    className={`${styles.accordionChevron} ${isExpanded ? styles.accordionChevronOpen : ''}`}
+                    size={22}
+                    aria-hidden
+                />
+            </button>
+            {!isExpanded && isWorldInteractionMode && storylines.length === 0 && (
+                <span className={styles.errorText}>{t('createGame.storylineAddRequired')}</span>
+            )}
             {isExpanded && (
-                <>
-                    <span className={styles.fieldHint} style={{ marginBottom: '16px', display: 'block' }}>
-                        {t('createGame.storylineDescription')}
-                    </span>
+                <div className={styles.accordionBody}>
+                    {isWorldInteractionMode && (
+                        <span className={styles.fieldHint}>{t('createGame.storylineHint')}</span>
+                    )}
+                    <span className={styles.fieldHint}>{t('createGame.storylineDescription')}</span>
+                    <button
+                        type="button"
+                        className={styles.ghostSmall}
+                        onClick={onAddStoryline}
+                    >
+                        {t('createGame.addStoryline')}
+                    </button>
                     {error && (
-                        <span className={styles.errorText} style={{ marginBottom: '12px', display: 'block' }}>
-                            {error}
-                        </span>
+                        <span className={styles.errorText}>{error}</span>
                     )}
                     <div className={styles.storylineList}>
                         {sortedStorylines.length === 0 ? (
@@ -158,7 +152,6 @@ const StorylinesSection: React.FC<StorylinesSectionProps> = ({
                                             min="1"
                                             value={editingIndex[line.id] !== undefined ? editingIndex[line.id] : line.index}
                                             onChange={(e) => {
-                                                // 保存用户正在输入的值到本地状态
                                                 setEditingIndex(prev => ({ ...prev, [line.id]: e.target.value }));
                                             }}
                                             onBlur={(e) => {
@@ -166,7 +159,6 @@ const StorylinesSection: React.FC<StorylinesSectionProps> = ({
                                                 if (!isNaN(newIndex) && newIndex > 0) {
                                                     onStorylineChange(line.id, 'index', newIndex);
                                                 }
-                                                // 清除本地状态
                                                 setEditingIndex(prev => {
                                                     const next = { ...prev };
                                                     delete next[line.id];
@@ -174,7 +166,6 @@ const StorylinesSection: React.FC<StorylinesSectionProps> = ({
                                                 });
                                             }}
                                             onKeyDown={(e) => {
-                                                // 按Enter键时也触发blur
                                                 if (e.key === 'Enter') {
                                                     e.currentTarget.blur();
                                                 }
@@ -196,11 +187,10 @@ const StorylinesSection: React.FC<StorylinesSectionProps> = ({
                             ))
                         )}
                     </div>
-                </>
+                </div>
             )}
         </div>
     );
 };
 
 export default StorylinesSection;
-

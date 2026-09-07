@@ -17,6 +17,15 @@ import {
     openConfiguredLink,
     resolvePromotionAdLink,
 } from '../utils/promotionNavigation';
+import {
+    buildPromotionSubmissionStats,
+    collectAcceptedSubmissionLabels,
+    formatPromotionEndTimeBadge,
+    formatSubmissionListDate,
+    joinPromotionFormLabels,
+    resolveSubmissionCoverUrl,
+    resolveSubmissionListBadgeTone,
+} from '../lib/promotionCenterView';
 import { useExternalLinkCopyModal } from '../hooks/useExternalLinkCopyModal';
 import { useTranslation } from 'react-i18next';
 
@@ -26,16 +35,11 @@ const ICON_HOT = `${HOME_ICON_BASE}/icon_hot.webp`;
 const ICON_MY_SUBMISSIONS = `${HOME_ICON_BASE}/icon_my_submissions.webp`;
 
 type PromotionTab = 'activities' | 'submissions';
-type PromotionActivityStatusTone = 'active' | 'warning' | 'ended';
 type SubmissionDraftPayload = {
     texts: string[];
     links: string[];
     images: File[];
     videos: File[];
-};
-type PromotionActivityStatusBadge = {
-    label: string;
-    tone: PromotionActivityStatusTone;
 };
 
 type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
@@ -56,11 +60,17 @@ const statusClassMap: Record<PromotionReviewStatus, string> = {
     reward_issued: styles.statusApproved,
 };
 
-const activityStatusClassMap: Record<PromotionActivityStatusTone, string> = {
-    active: styles.activityStatusActive,
-    warning: styles.activityStatusWarning,
-    ended: styles.activityStatusEnded,
-};
+const listBadgeClassMap = {
+    reviewing: styles.listBadgeReviewing,
+    published: styles.listBadgePublished,
+    returned: styles.listBadgeReturned,
+} as const;
+
+const listBadgeLabelMap = (t: TranslateFn) => ({
+    reviewing: t('promotion.badgeReviewing'),
+    published: t('promotion.badgePublished'),
+    returned: t('promotion.badgeReturned'),
+});
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
@@ -73,13 +83,6 @@ const formatTime = (value?: string | null, t?: TranslateFn) => {
 const buildTimeSummary = (activity: PromotionActivity, t: TranslateFn) => {
     if (activity.isLongTerm) return t('promotion.longTermActivity');
     return `${formatTime(activity.startAt, t)} - ${formatTime(activity.endAt, t)}`;
-};
-
-const buildLimitSummary = (activity: PromotionActivity, t: TranslateFn) => {
-    if (activity.submissionLimitType === 'rolling_window') {
-        return t('promotion.everyNDaysLimitedN', { days: activity.submissionLimitDays, count: activity.submissionLimitCount });
-    }
-    return t('promotion.unlimitedDuringActivity');
 };
 
 const normalizeSubmissionConfig = (activity: PromotionActivity): PromotionActivity => {
@@ -130,7 +133,6 @@ const getSubmissionLimitSummary = (activity: PromotionActivity, t: TranslateFn) 
     }
     return t('promotion.unlimitedDuringActivity');
 };
-void buildLimitSummary;
 
 const getImportableGameId = (game: UserGameData) => String(game.file_id || game.id || '').trim();
 
@@ -194,45 +196,19 @@ const hydrateActivitySubmissionAvailability = (
     ...getActivitySubmissionAvailability(activity, mySubmissions, t),
 }));
 
-const buildPromotionStatusBadge = (activity: PromotionActivity, t: TranslateFn): PromotionActivityStatusBadge | null => {
-    if (activity.canSubmit === false) {
-        return activity.availabilityText === '活动已结束'
-            ? { label: t('promotion.activityEnded'), tone: 'ended' }
-            : null;
-    }
-
-    if (activity.isLongTerm) {
-        return { label: t('promotion.activityInProgress'), tone: 'active' };
-    }
-
-    if (!activity.endAt) {
-        return null;
-    }
-
-    const endTime = new Date(activity.endAt).getTime();
-    if (Number.isNaN(endTime)) {
-        return null;
-    }
-
-    const remainingDays = Math.max(1, Math.ceil((endTime - Date.now()) / DAY_IN_MS));
-    return remainingDays > 0
-        ? { label: t('promotion.activityDaysLeft', { days: remainingDays }), tone: 'warning' }
-        : null;
-};
-
 const PromotionCenter: React.FC = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
     const { requestCopy, modal: externalLinkCopyModal } = useExternalLinkCopyModal();
     const [searchParams] = useSearchParams();
-    const buildLimitSummary = getSubmissionLimitSummary;
     const [activeTab, setActiveTab] = useState<PromotionTab>('activities');
     const [activities, setActivities] = useState<PromotionActivity[]>([]);
     const [submissions, setSubmissions] = useState<PromotionSubmission[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [selectedActivity, setSelectedActivity] = useState<PromotionActivity | null>(null);
+    const [detailSubmission, setDetailSubmission] = useState<PromotionSubmission | null>(null);
     const [textInput, setTextInput] = useState('');
     const [linkInputs, setLinkInputs] = useState(['']);
     const [imageFiles, setImageFiles] = useState<FileList | null>(null);
@@ -368,7 +344,16 @@ const PromotionCenter: React.FC = () => {
         });
     }, [navigate, requestCopy]);
 
-    const submissionCount = submissions.length;
+    const submissionStats = useMemo(() => buildPromotionSubmissionStats(submissions), [submissions]);
+
+    const activityCoverById = useMemo(() => {
+        const map = new Map<number, string>();
+        for (const activity of activities) {
+            const cover = String(activity.coverImageUrl || '').trim();
+            if (cover) map.set(activity.id, cover);
+        }
+        return map;
+    }, [activities]);
 
     const resolveActivitySubmissionState = useCallback((activity: PromotionActivity) => {
         const latestActivity = activities.find((item) => item.id === activity.id) || activity;
@@ -398,17 +383,6 @@ const PromotionCenter: React.FC = () => {
 
         setSelectedActivity(nextActivity);
     }, [resolveActivitySubmissionState, t]);
-
-    const openDetail = (activity: PromotionActivity) => {
-        const detailLinkUrl = activity.detailLinkUrl.trim();
-
-        if (!detailLinkUrl) {
-            toast.error(t('promotion.activityNotConfigured'));
-            return;
-        }
-
-        navigateConfiguredLink(detailLinkUrl);
-    };
 
     const openPromotionAd = (activity: PromotionActivity) => {
         const targetLink = resolvePromotionAdLink(activity);
@@ -539,15 +513,20 @@ const PromotionCenter: React.FC = () => {
         <div className={styles.pageRoot}>
             <Navbar />
             <div className={styles.pageBody}>
-                <div className={styles.headerRow}>
-                    <button type="button" className={styles.backButton} onClick={() => window.history.back()}>
-                        <span>←</span>
-                        <span>{t('promotion.back')}</span>
+                <header className={styles.pageHeader}>
+                    <button
+                        type="button"
+                        className={styles.backButton}
+                        onClick={() => window.history.back()}
+                        aria-label={t('promotion.backAria')}
+                        title={t('promotion.backAria')}
+                    >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M15 6L9 12L15 18" />
+                        </svg>
                     </button>
-                    <div className={styles.heroCard}>
-                        <h2 className={styles.heroText}>{t('promotion.heroText')}</h2>
-                    </div>
-                </div>
+                    <h1 className={styles.pageTitle}>{t('promotion.pageTitle')}</h1>
+                </header>
 
                 <div className={styles.tabRow}>
                     <button
@@ -556,7 +535,7 @@ const PromotionCenter: React.FC = () => {
                         onClick={() => setActiveTab('activities')}
                     >
                         <img src={ICON_HOT} alt="" className={styles.tabIcon} />
-                        {t('promotion.publishedActivities')}({activities.length})
+                        {t('promotion.hotActivities')}
                     </button>
                     <button
                         type="button"
@@ -564,7 +543,7 @@ const PromotionCenter: React.FC = () => {
                         onClick={() => setActiveTab('submissions')}
                     >
                         <img src={ICON_MY_SUBMISSIONS} alt="" className={styles.tabIcon} />
-                        {t('promotion.mySubmissions')}({submissionCount})
+                        {t('promotion.mySubmissions')}
                     </button>
                 </div>
 
@@ -577,7 +556,18 @@ const PromotionCenter: React.FC = () => {
                         ) : (
                             <div className={styles.activityGrid}>
                                 {activities.map((activity) => {
-                                    const statusBadge = buildPromotionStatusBadge(activity, t);
+                                    const formLabels = joinPromotionFormLabels(
+                                        collectAcceptedSubmissionLabels(activity.submissionConfig, {
+                                            text: t('promotion.textSubmission'),
+                                            link: t('promotion.linkSubmission'),
+                                            image: t('promotion.imageSubmission'),
+                                            video: t('promotion.videoSubmission'),
+                                        }),
+                                    );
+                                    const endTimeBadge = formatPromotionEndTimeBadge(activity, {
+                                        longTerm: t('promotion.longTermActivity'),
+                                        endTimePrefix: t('promotion.endTimePrefix'),
+                                    });
 
                                     return (
                                         <article
@@ -589,7 +579,7 @@ const PromotionCenter: React.FC = () => {
                                             className={`${styles.card} ${highlightedActivityId === activity.id ? styles.cardHighlighted : ''}`}
                                         >
                                             <div
-                                                className={`${styles.imageGuard} ${styles.imageGuardLight} ${resolvePromotionAdLink(activity) ? styles.clickableCover : ''}`}
+                                                className={`${styles.imageGuard} ${resolvePromotionAdLink(activity) ? styles.clickableCover : ''}`}
                                                 onClick={() => {
                                                     if (!resolvePromotionAdLink(activity)) {
                                                         return;
@@ -610,46 +600,45 @@ const PromotionCenter: React.FC = () => {
                                                 tabIndex={resolvePromotionAdLink(activity) ? 0 : undefined}
                                             >
                                                 <img className={styles.cover} src={getImageUrl(activity.coverImageUrl)} alt={activity.title} />
+                                                <span className={styles.endTimeBadge}>{endTimeBadge}</span>
                                             </div>
+                                            <div className={styles.cardDivider} aria-hidden="true" />
                                             <div className={styles.cardBody}>
-                                                <div className={styles.cardTitleRow}>
-                                                    <div className={styles.cardTitle}>{activity.title}</div>
-                                                    {statusBadge ? (
-                                                        <span className={`${styles.activityStatusTag} ${activityStatusClassMap[statusBadge.tone]}`}>
-                                                            {statusBadge.label}
+                                                <div className={styles.cardMainRow}>
+                                                    <div className={styles.cardMainText}>
+                                                        <div className={styles.cardTitle}>{activity.title}</div>
+                                                        <div className={styles.cardSummary}>{activity.summary}</div>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        className={`${styles.primaryButton} ${styles.participateButton} ${activity.canSubmit === false ? styles.disabledButton : ''}`}
+                                                        onClick={() => handleStartSubmission(activity)}
+                                                        aria-disabled={activity.canSubmit === false}
+                                                    >
+                                                        {t('promotion.goParticipate')}
+                                                    </button>
+                                                </div>
+                                                <div className={styles.metaDetailList}>
+                                                    <div className={styles.metaDetailRow}>
+                                                        <span className={styles.metaDetailLabel}>{t('promotion.submissionLimit')}</span>
+                                                        <span className={styles.metaDetailValue}>{getSubmissionLimitSummary(activity, t)}</span>
+                                                    </div>
+                                                    <div className={styles.metaDetailRow}>
+                                                        <span className={styles.metaDetailLabel}>{t('promotion.rewardDescription')}</span>
+                                                        <span className={styles.metaDetailValue}>
+                                                            {t('promotion.rewardDescriptionValue', { points: activity.rewardPoints })}
                                                         </span>
+                                                    </div>
+                                                    {formLabels ? (
+                                                        <div className={styles.metaDetailRow}>
+                                                            <span className={styles.metaDetailLabel}>{t('promotion.submissionForm')}</span>
+                                                            <span className={styles.metaDetailValue}>{formLabels}</span>
+                                                        </div>
                                                     ) : null}
-                                                </div>
-                                                <div className={styles.cardSummary}>{activity.summary}</div>
-                                                <div className={styles.infoGrid}>
-                                                    <div className={styles.infoItem}>{t('promotion.activityTime')}{buildTimeSummary(activity, t)}</div>
-                                                    <div className={styles.infoItem}>{t('promotion.submissionLimit')}{buildLimitSummary(activity, t)}</div>
-                                                    <div className={styles.infoItem}>{t('promotion.rewardPoints')}{t('promotion.rewardPointsAfterApproval', { points: activity.rewardPoints })}</div>
-                                                </div>
-                                                <div className={styles.configRow}>
-                                                    {activity.submissionConfig.acceptTexts && <span className={styles.chip}>{t('promotion.textSubmission')}</span>}
-                                                    {activity.submissionConfig.acceptLinks && <span className={styles.chip}>{t('promotion.linkSubmission')}</span>}
-                                                    {activity.submissionConfig.acceptImages && <span className={styles.chip}>{t('promotion.imageSubmission')}</span>}
-                                                    {activity.submissionConfig.acceptVideos && <span className={styles.chip}>{t('promotion.videoSubmission')}</span>}
                                                 </div>
                                                 {activity.availabilityText ? (
                                                     <div className={styles.noticeText}>{activity.availabilityText}</div>
                                                 ) : null}
-                                                <div className={styles.actionRow}>
-                                                    {activity.detailLinkUrl.trim() ? (
-                                                        <button type="button" className={styles.secondaryButton} onClick={() => openDetail(activity)}>
-                                                        {t('promotion.activityDetails')}
-                                                        </button>
-                                                    ) : null}
-                                                    <button
-                                                        type="button"
-                                                        className={`${styles.primaryButton} ${activity.canSubmit === false ? styles.disabledButton : ''}`}
-                                                        onClick={() => handleStartSubmission(activity)}
-                                                        aria-disabled={activity.canSubmit === false}
-                                                    >
-                                                        {t('promotion.submitNow')}
-                                                    </button>
-                                                </div>
                                             </div>
                                         </article>
                                     );
@@ -660,77 +649,155 @@ const PromotionCenter: React.FC = () => {
                         <div className={styles.emptyState}>{t('promotion.noSubmissions')}</div>
                     ) : (
                         <div className={styles.submissionList}>
-                            {submissions.map((submission) => (
-                                <article
-                                    key={submission.id}
-                                    ref={(element) => {
-                                        submissionCardRefs.current[submission.id] = element;
-                                    }}
-                                    className={`${styles.submissionCard} ${highlightedSubmissionId === submission.id ? styles.submissionCardSelected : ''}`}
-                                >
-                                    <div className={styles.submissionHeader}>
-                                        <div>
-                                            <div className={styles.submissionTitle}>{submission.activityTitle || `#${submission.activityId}`}</div>
-                                            <div className={styles.metaRow}>
-                                                <span className={`${styles.statusTag} ${statusClassMap[submission.reviewStatus]}`}>{statusLabelMap(t)[submission.reviewStatus]}</span>
-                                                <span className={styles.chip}>{t('promotion.submissionTime')} {formatTime(submission.submittedAt, t)}</span>
-                                                {typeof submission.rewardPoints === 'number' ? <span className={styles.chip}>{t('promotion.rewardPoints')} {submission.rewardPoints}</span> : null}
-                                            </div>
+                            <div className={styles.submissionStatsCard} aria-label={t('promotion.mySubmissions')}>
+                                <div className={styles.submissionStatItem}>
+                                    <div className={styles.submissionStatValue}>{submissionStats.total}</div>
+                                    <div className={styles.submissionStatLabel}>{t('promotion.statsTotal')}</div>
+                                </div>
+                                <div className={styles.submissionStatDivider} aria-hidden="true" />
+                                <div className={styles.submissionStatItem}>
+                                    <div className={styles.submissionStatValue}>{submissionStats.reviewing}</div>
+                                    <div className={styles.submissionStatLabel}>{t('promotion.statsReviewing')}</div>
+                                </div>
+                                <div className={styles.submissionStatDivider} aria-hidden="true" />
+                                <div className={styles.submissionStatItem}>
+                                    <div className={styles.submissionStatValue}>{submissionStats.published}</div>
+                                    <div className={styles.submissionStatLabel}>{t('promotion.statsPublished')}</div>
+                                </div>
+                            </div>
+
+                            {submissions.map((submission) => {
+                                const badgeTone = resolveSubmissionListBadgeTone(submission.reviewStatus);
+                                const coverUrl = resolveSubmissionCoverUrl({
+                                    activityCoverImageUrl: submission.activityCoverImageUrl,
+                                    activityCoverFromList: activityCoverById.get(submission.activityId),
+                                    firstPayloadImage: submission.submitPayload.images[0],
+                                });
+                                const submittedDate = formatSubmissionListDate(submission.submittedAt);
+
+                                return (
+                                    <article
+                                        key={submission.id}
+                                        ref={(element) => {
+                                            submissionCardRefs.current[submission.id] = element;
+                                        }}
+                                        className={`${styles.submissionCard} ${highlightedSubmissionId === submission.id ? styles.submissionCardSelected : ''}`}
+                                    >
+                                        <div className={styles.submissionCoverWrap}>
+                                            {coverUrl ? (
+                                                <img
+                                                    className={styles.submissionCover}
+                                                    src={getImageUrl(coverUrl)}
+                                                    alt={submission.activityTitle || `#${submission.activityId}`}
+                                                />
+                                            ) : (
+                                                <div className={styles.submissionCoverPlaceholder} aria-hidden="true" />
+                                            )}
+                                            <span className={`${styles.listStatusBadge} ${listBadgeClassMap[badgeTone]}`}>
+                                                {listBadgeLabelMap(t)[badgeTone]}
+                                            </span>
                                         </div>
-                                    </div>
-                                    <div className={styles.submissionMeta}>
-                                        {submission.submitPayload.texts.length > 0 ? (
-                                            <div className={styles.payloadBlock}>
-                                                <div className={styles.payloadLabel}>{t('promotion.submissionText')}</div>
-                                                <div className={styles.payloadList}>
-                                                    {submission.submitPayload.texts.map((item, index) => (
-                                                        <div key={`${submission.id}-text-${index}`} className={styles.payloadItem}>{item}</div>
-                                                    ))}
+                                        <div className={styles.submissionCardFooter}>
+                                            <div className={styles.submissionCardText}>
+                                                <div className={styles.submissionTitle}>
+                                                    {submission.activityTitle || `#${submission.activityId}`}
                                                 </div>
+                                                {submittedDate ? (
+                                                    <div className={styles.submissionTimeLine}>
+                                                        {t('promotion.submittedAtLabel')}{submittedDate}
+                                                    </div>
+                                                ) : null}
                                             </div>
-                                        ) : null}
-                                        {submission.submitPayload.links.length > 0 ? (
-                                            <div className={styles.payloadBlock}>
-                                                <div className={styles.payloadLabel}>{t('promotion.submissionLinks')}</div>
-                                                <div className={styles.payloadList}>
-                                                    {submission.submitPayload.links.map((item) => (
-                                                        <a key={item} className={styles.payloadItem} href={item} target="_blank" rel="noreferrer">{item}</a>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        ) : null}
-                                        {submission.submitPayload.images.length > 0 ? (
-                                            <div className={styles.payloadBlock}>
-                                                <div className={styles.payloadLabel}>{t('promotion.submissionImages')}</div>
-                                                <div className={styles.payloadImageList}>
-                                                    {submission.submitPayload.images.map((item) => (
-                                                        <div key={item} className={styles.payloadImageWrap}>
-                                                        <img className={styles.payloadImage} src={getImageUrl(item)} alt={t('promotion.submissionImages')} />
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        ) : null}
-                                        {submission.submitPayload.videos.length > 0 ? (
-                                            <div className={styles.payloadBlock}>
-                                                <div className={styles.payloadLabel}>{t('promotion.submissionVideos')}</div>
-                                                <div className={styles.payloadList}>
-                                                    {submission.submitPayload.videos.map((item) => (
-                                                        <a key={item} className={styles.videoLink} href={getImageUrl(item)} target="_blank" rel="noreferrer">
-                                                            {t('promotion.viewVideoMaterial')}
-                                                        </a>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        ) : null}
-                                        {submission.reviewRemark ? <div className={styles.payloadItem}>{t('promotion.reviewRemark')} {submission.reviewRemark}</div> : null}
-                                    </div>
-                                </article>
-                            ))}
+                                            <button
+                                                type="button"
+                                                className={styles.viewDetailButton}
+                                                onClick={() => setDetailSubmission(submission)}
+                                            >
+                                                {t('promotion.viewDetails')}
+                                            </button>
+                                        </div>
+                                    </article>
+                                );
+                            })}
                         </div>
                     )}
                 </div>
             </div>
+
+            {detailSubmission ? (
+                <div className={styles.modalOverlay} onClick={() => setDetailSubmission(null)}>
+                    <div className={styles.modalCard} onClick={(event) => event.stopPropagation()}>
+                        <h2 className={styles.modalTitle}>
+                            {detailSubmission.activityTitle || t('promotion.submissionDetailTitle')}
+                        </h2>
+                        <div className={styles.metaRow}>
+                            <span className={`${styles.statusTag} ${statusClassMap[detailSubmission.reviewStatus]}`}>
+                                {statusLabelMap(t)[detailSubmission.reviewStatus]}
+                            </span>
+                            <span className={styles.chip}>
+                                {t('promotion.submissionTime')} {formatTime(detailSubmission.submittedAt, t)}
+                            </span>
+                            {typeof detailSubmission.rewardPoints === 'number' ? (
+                                <span className={styles.chip}>{t('promotion.rewardPoints')} {detailSubmission.rewardPoints}</span>
+                            ) : null}
+                        </div>
+                        <div className={styles.submissionMeta}>
+                            {detailSubmission.submitPayload.texts.length > 0 ? (
+                                <div className={styles.payloadBlock}>
+                                    <div className={styles.payloadLabel}>{t('promotion.submissionText')}</div>
+                                    <div className={styles.payloadList}>
+                                        {detailSubmission.submitPayload.texts.map((item, index) => (
+                                            <div key={`${detailSubmission.id}-text-${index}`} className={styles.payloadItem}>{item}</div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : null}
+                            {detailSubmission.submitPayload.links.length > 0 ? (
+                                <div className={styles.payloadBlock}>
+                                    <div className={styles.payloadLabel}>{t('promotion.submissionLinks')}</div>
+                                    <div className={styles.payloadList}>
+                                        {detailSubmission.submitPayload.links.map((item) => (
+                                            <a key={item} className={`${styles.payloadItem} ${styles.payloadItemFull}`} href={item} target="_blank" rel="noreferrer">{item}</a>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : null}
+                            {detailSubmission.submitPayload.images.length > 0 ? (
+                                <div className={styles.payloadBlock}>
+                                    <div className={styles.payloadLabel}>{t('promotion.submissionImages')}</div>
+                                    <div className={styles.payloadImageList}>
+                                        {detailSubmission.submitPayload.images.map((item) => (
+                                            <div key={item} className={styles.payloadImageWrap}>
+                                                <img className={styles.payloadImage} src={getImageUrl(item)} alt={t('promotion.submissionImages')} />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : null}
+                            {detailSubmission.submitPayload.videos.length > 0 ? (
+                                <div className={styles.payloadBlock}>
+                                    <div className={styles.payloadLabel}>{t('promotion.submissionVideos')}</div>
+                                    <div className={styles.payloadList}>
+                                        {detailSubmission.submitPayload.videos.map((item) => (
+                                            <a key={item} className={styles.videoLink} href={getImageUrl(item)} target="_blank" rel="noreferrer">
+                                                {t('promotion.viewVideoMaterial')}
+                                            </a>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : null}
+                            {detailSubmission.reviewRemark ? (
+                                <div className={styles.payloadItem}>{t('promotion.reviewRemark')} {detailSubmission.reviewRemark}</div>
+                            ) : null}
+                        </div>
+                        <div className={styles.modalActions}>
+                            <button type="button" className={styles.secondaryButton} onClick={() => setDetailSubmission(null)}>
+                                {t('promotion.cancel')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
 
             {selectedActivity ? (
                 <div className={styles.modalOverlay} onClick={resetSubmitState}>
@@ -738,7 +805,7 @@ const PromotionCenter: React.FC = () => {
                         <h2 className={styles.modalTitle}>{t('promotion.submitActivity', { title: selectedActivity.title })}</h2>
                         <div className={styles.infoGrid}>
                             <div className={styles.infoItem}>{t('promotion.activityTime')}{buildTimeSummary(selectedActivity, t)}</div>
-                            <div className={styles.infoItem}>{t('promotion.submissionLimit')}{buildLimitSummary(selectedActivity, t)}</div>
+                            <div className={styles.infoItem}>{t('promotion.submissionLimit')}：{getSubmissionLimitSummary(selectedActivity, t)}</div>
                             <div className={styles.infoItem}>{t('promotion.rewardPoints')}{t('promotion.rewardPointsAfterApproval', { points: selectedActivity.rewardPoints })}</div>
                         </div>
                         {selectedActivity.availabilityText ? (

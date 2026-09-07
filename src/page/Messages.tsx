@@ -18,26 +18,27 @@ import type {
 } from '../api/message/message.type';
 import type { PromotionReviewStatus } from '../api/promotion/promotion.type';
 import { useMessageStore } from '../store/useMessageStore';
-import { getImageUrl } from '../utils/constants';
 import { toAnnouncementPlainText } from '../utils/announcementLinks';
 import { openConfiguredLink, resolvePromotionAdLink } from '../utils/promotionNavigation';
 import { useExternalLinkCopyModal } from '../hooks/useExternalLinkCopyModal';
+import { GAME_CARD_DEFAULT_AVATAR_PATH } from '../lib/gameCardAuthor';
+import {
+    formatMessageListTime,
+    resolveMessageListSection,
+    truncateMessagePreview,
+    type MessageListSectionKey,
+} from '../lib/messageCenterView';
 import styles from './Messages.module.css';
 
 /** 功能注释：消息页「全部已读」图标对齐效果图 */
 const ICON_MARK_ALL_READ = `${import.meta.env.BASE_URL}data/assetsv2/home/icon_mark_all_read.webp`;
+const MESSAGE_AVATAR = `${import.meta.env.BASE_URL}${GAME_CARD_DEFAULT_AVATAR_PATH}`;
 
 type MessageFeedItem =
     | (MessageAnnouncement & { itemType: 'announcement'; sortTime: string | null })
     | (MessagePromotion & { itemType: 'promotion'; sortTime: string | null })
     | (MessagePromotionSubmissionNotification & { itemType: 'promotion_submission_status'; sortTime: string | null })
     | (MessageFavoriteGameUpdateNotification & { itemType: 'favorite_game_updated'; sortTime: string | null });
-
-const formatTime = (value?: string | null, fallbackText?: string) => {
-    if (!value) return fallbackText || '暂无时间';
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? value : date.toLocaleString('zh-CN', { hour12: false });
-};
 
 const getAnnouncementSortTime = (item: Pick<MessageAnnouncement, 'publishedAt' | 'updatedAt' | 'createdAt'>) =>
     item.publishedAt || item.updatedAt || item.createdAt || null;
@@ -88,6 +89,15 @@ const getSubmissionMessageText = (notification: MessagePromotionSubmissionNotifi
         default:
             return t('messages.submissionStatusUpdated');
     }
+};
+
+type RowView = {
+    key: string;
+    title: string;
+    preview: string;
+    time: string;
+    isRead: boolean;
+    onOpen: () => void;
 };
 
 const Messages: React.FC = () => {
@@ -281,197 +291,155 @@ const Messages: React.FC = () => {
         setSelectedFavoriteGameUpdate({ ...notification, isRead: true });
     }, [markMessageAsRead]);
 
+    const sectionRows = useMemo(() => {
+        const buckets: Record<MessageListSectionKey, RowView[]> = {
+            system: [],
+            activity: [],
+            interaction: [],
+        };
+
+        for (const item of messageFeed) {
+            const section = resolveMessageListSection(item.itemType);
+            const time = formatMessageListTime(item.sortTime);
+
+            if (item.itemType === 'announcement') {
+                buckets[section].push({
+                    key: `announcement-${item.sourceId}`,
+                    title: item.title || t('messages.announcement'),
+                    preview: truncateMessagePreview(
+                        toAnnouncementPlainText(item.sections[0]?.body || '') || t('messages.clickToViewAnnouncement'),
+                    ),
+                    time,
+                    isRead: item.isRead,
+                    onOpen: () => { void handleOpenAnnouncement(item); },
+                });
+                continue;
+            }
+
+            if (item.itemType === 'promotion') {
+                buckets[section].push({
+                    key: `promotion-${item.sourceId}`,
+                    title: item.title || t('messages.activity'),
+                    preview: truncateMessagePreview(item.summary || t('messages.clickToViewActivity')),
+                    time,
+                    isRead: item.isRead,
+                    onOpen: () => { void handleOpenPromotion(item); },
+                });
+                continue;
+            }
+
+            if (item.itemType === 'favorite_game_updated') {
+                buckets[section].push({
+                    key: `favorite-game-updated-${item.sourceId}`,
+                    title: t('messages.favoriteGameUpdatedTitle', {
+                        gameTitle: item.gameTitle?.trim() || item.fileId,
+                    }),
+                    preview: truncateMessagePreview(getFavoriteGameUpdateListPreview(item, t)),
+                    time,
+                    isRead: item.isRead,
+                    onOpen: () => { void handleOpenFavoriteGameUpdateNotification(item); },
+                });
+                continue;
+            }
+
+            buckets[section].push({
+                key: `promotion-submission-${item.sourceId}`,
+                title: getSubmissionMessageTitle(item, t),
+                preview: truncateMessagePreview(
+                    item.reviewRemark
+                        ? `${getSubmissionMessageText(item, t)} ${t('messages.reviewRemark')}${item.reviewRemark}`
+                        : getSubmissionMessageText(item, t),
+                ),
+                time: time || getSubmissionStatusLabel(item.reviewStatus, t),
+                isRead: item.isRead,
+                onOpen: () => { void handleOpenPromotionSubmissionNotification(item); },
+            });
+        }
+
+        return buckets;
+    }, [
+        handleOpenAnnouncement,
+        handleOpenFavoriteGameUpdateNotification,
+        handleOpenPromotion,
+        handleOpenPromotionSubmissionNotification,
+        messageFeed,
+        t,
+    ]);
+
+    const sections: Array<{ key: MessageListSectionKey; title: string; rows: RowView[] }> = [
+        { key: 'system', title: t('messages.sectionSystem'), rows: sectionRows.system },
+        { key: 'activity', title: t('messages.sectionActivity'), rows: sectionRows.activity },
+        { key: 'interaction', title: t('messages.sectionInteraction'), rows: sectionRows.interaction },
+    ];
+
+    const hasAnyRow = sections.some((section) => section.rows.length > 0);
+
+    const renderRow = (row: RowView) => (
+        <button
+            key={row.key}
+            type="button"
+            className={styles.messageRow}
+            onClick={row.onOpen}
+        >
+            <div className={styles.avatarWrap}>
+                <div className={styles.avatarFrame}>
+                    <img className={styles.avatarImage} src={MESSAGE_AVATAR} alt="" />
+                </div>
+                {!row.isRead ? <span className={styles.unreadDot} aria-hidden="true" /> : null}
+            </div>
+            <div className={styles.rowBody}>
+                <div className={styles.rowTop}>
+                    <h3 className={styles.rowTitle}>{row.title}</h3>
+                    {row.time ? <span className={styles.rowTime}>{row.time}</span> : null}
+                </div>
+                {row.preview ? <p className={styles.rowPreview}>{row.preview}</p> : null}
+            </div>
+        </button>
+    );
+
     return (
         <div className={styles.pageRoot}>
             <Navbar />
 
             <div className={styles.pageBody}>
-                <section className={styles.hero}>
-                    <div className={styles.heroContent}>
-                        <div className={styles.badge}>{t('messages.pageTitle')}</div>
-                        <h1 className={styles.title}>{t('messages.viewNotifications')}</h1>
-                    </div>
+                <header className={styles.pageHeader}>
+                    <button
+                        type="button"
+                        className={styles.backButton}
+                        onClick={() => navigate('/home')}
+                        aria-label={t('messages.backToHome')}
+                        title={t('messages.backToHome')}
+                    >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M15 6L9 12L15 18" />
+                        </svg>
+                    </button>
+                    <h1 className={styles.pageTitle}>{t('messages.listTitle')}</h1>
+                    <button
+                        type="button"
+                        className={styles.markAllButton}
+                        onClick={() => void handleMarkAllRead()}
+                        disabled={isMarkingAllRead || unreadCount <= 0}
+                        aria-label={t('messages.markAllRead')}
+                    >
+                        <img src={ICON_MARK_ALL_READ} alt="" className={styles.markAllIcon} />
+                        {isMarkingAllRead ? t('messages.processing') : t('messages.markAllRead')}
+                    </button>
+                </header>
 
-                    <div className={styles.heroActions}>
-                        <div className={styles.actionRow}>
-                            <button
-                                type="button"
-                                className={`${styles.actionButton} ${styles.refreshButton}`}
-                                onClick={() => void loadMessages()}
-                                disabled={isLoading}
-                            >
-                                {isLoading ? t('messages.refreshing') : t('messages.refreshList')}
-                            </button>
-                            {unreadCount > 0 ? (
-                                <button
-                                    type="button"
-                                    className={`${styles.actionButton} ${styles.markAllButton}`}
-                                    onClick={() => void handleMarkAllRead()}
-                                    disabled={isMarkingAllRead}
-                                >
-                                    {isMarkingAllRead ? t('messages.processing') : (
-                                        <>
-                                            <img src={ICON_MARK_ALL_READ} alt="" className={styles.markAllIcon} />
-                                            {t('messages.markAllRead')}
-                                        </>
-                                    )}
-                                </button>
-                            ) : null}
-                        </div>
-                    </div>
-                </section>
+                {isLoading ? <div className={styles.emptyState}>{t('messages.loadingMessages')}</div> : null}
+                {!isLoading && !hasAnyRow ? <div className={styles.emptyState}>{t('messages.noMessages')}</div> : null}
 
-                <section className={styles.feedCard}>
-                    <div className={styles.list}>
-                        {isLoading ? <div className={styles.emptyState}>{t('messages.loadingMessages')}</div> : null}
-                        {!isLoading && messageFeed.length === 0 ? (
-                            <div className={styles.emptyState}>{t('messages.noMessages')}</div>
-                        ) : null}
-
-                        {!isLoading && messageFeed.map((item) => {
-                            const isRead = item.isRead;
-                            const cardClassName = [
-                                styles.messageCard,
-                                isRead ? styles.messageCardRead : styles.messageCardUnread,
-                            ].join(' ');
-                            const stateClassName = `${styles.stateTag} ${isRead ? styles.stateTagRead : styles.stateTagUnread}`;
-
-                            if (item.itemType === 'announcement') {
-                                return (
-                                    <article
-                                        key={`announcement-${item.sourceId}`}
-                                        className={cardClassName}
-                                        onClick={() => void handleOpenAnnouncement(item)}
-                                    >
-                                        <div className={styles.messageHeader}>
-                                            <div className={styles.titleBlock}>
-                                                <span className={`${styles.typeTag} ${styles.typeTagAnnouncement}`}>{t('messages.announcement')}</span>
-                                                <div className={styles.messageTitle}>{item.title}</div>
-                                            </div>
-                                            <span className={stateClassName}>{isRead ? t('messages.read') : t('messages.unread')}</span>
-                                        </div>
-
-                                        <div className={styles.messageText}>
-                                            {toAnnouncementPlainText(item.sections[0]?.body || '') || t('messages.clickToViewAnnouncement')}
-                                        </div>
-
-                                        <div className={styles.messageMeta}>
-                                            <span className={styles.metaItem}>{t('messages.publishedAt')}{formatTime(item.sortTime, t('messages.noTime'))}</span>
-                                        </div>
-                                    </article>
-                                );
-                            }
-
-                            if (item.itemType === 'promotion') {
-                                return (
-                                    <article
-                                        key={`promotion-${item.sourceId}`}
-                                        className={cardClassName}
-                                        onClick={() => void handleOpenPromotion(item)}
-                                    >
-                                        <div className={styles.messageLayout}>
-                                            <div className={styles.promotionCoverWrap}>
-                                                <img
-                                                    className={styles.promotionCover}
-                                                    src={getImageUrl(item.coverImageUrl)}
-                                                    alt={item.title}
-                                                />
-                                            </div>
-                                            <div className={styles.messageMain}>
-                                                <div className={styles.messageHeader}>
-                                                    <div className={styles.titleBlock}>
-                                                        <span className={`${styles.typeTag} ${styles.typeTagPromotion}`}>{t('messages.activity')}</span>
-                                                        <div className={styles.messageTitle}>{item.title}</div>
-                                                    </div>
-                                                    <span className={stateClassName}>{isRead ? t('messages.read') : t('messages.unread')}</span>
-                                                </div>
-
-                                                <div className={styles.messageText}>{item.summary || t('messages.clickToViewActivity')}</div>
-
-                                                <div className={styles.messageMeta}>
-                                                    <span className={styles.metaItem}>{t('messages.publishedAt')}{formatTime(item.sortTime, t('messages.noTime'))}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </article>
-                                );
-                            }
-
-                            if (item.itemType === 'favorite_game_updated') {
-                                return (
-                                    <article
-                                        key={`favorite-game-updated-${item.sourceId}`}
-                                        className={cardClassName}
-                                        onClick={() => void handleOpenFavoriteGameUpdateNotification(item)}
-                                    >
-                                        <div className={styles.messageHeader}>
-                                            <div className={styles.titleBlock}>
-                                                <span className={`${styles.typeTag} ${styles.typeTagFavoriteGame}`}>{t('messages.favoriteGameUpdate')}</span>
-                                                <div className={styles.messageTitle}>
-                                                    {t('messages.favoriteGameUpdatedTitle', {
-                                                        gameTitle: item.gameTitle?.trim() || item.fileId,
-                                                    })}
-                                                </div>
-                                            </div>
-                                            <span className={stateClassName}>{isRead ? t('messages.read') : t('messages.unread')}</span>
-                                        </div>
-
-                                        <div className={styles.messageText}>
-                                            {getFavoriteGameUpdateListPreview(item, t)}
-                                        </div>
-
-                                        <div className={styles.messageMeta}>
-                                            <span className={styles.metaItem}>{t('messages.updatedAt')}{formatTime(item.sortTime, t('messages.noTime'))}</span>
-                                        </div>
-                                    </article>
-                                );
-                            }
-
-                            const coverImageUrl = item.activityCoverImageUrl ? getImageUrl(item.activityCoverImageUrl) : '';
-
-                            return (
-                                <article
-                                    key={`promotion-submission-${item.sourceId}`}
-                                    className={cardClassName}
-                                    onClick={() => void handleOpenPromotionSubmissionNotification(item)}
-                                >
-                                    <div className={styles.messageLayout}>
-                                        {coverImageUrl ? (
-                                            <div className={styles.promotionCoverWrap}>
-                                            <img
-                                                className={styles.promotionCover}
-                                                src={coverImageUrl}
-                                                alt={item.activityTitle || t('messages.submissionStatusUpdate')}
-                                            />
-                                            </div>
-                                        ) : (
-                                            <div className={styles.promotionCoverPlaceholder}>{t('messages.submission')}</div>
-                                        )}
-                                        <div className={styles.messageMain}>
-                                            <div className={styles.messageHeader}>
-                                                <div className={styles.titleBlock}>
-                                                    <span className={`${styles.typeTag} ${styles.typeTagSubmission}`}>{t('messages.submission')}</span>
-                                                    <div className={styles.messageTitle}>{getSubmissionMessageTitle(item, t)}</div>
-                                                </div>
-                                                <span className={stateClassName}>{isRead ? t('messages.read') : t('messages.unread')}</span>
-                                            </div>
-
-                                            <div className={styles.messageText}>{getSubmissionMessageText(item, t)}</div>
-                                            {item.reviewRemark ? (
-                                                <div className={styles.submissionRemark}>{t('messages.reviewRemark')}{item.reviewRemark}</div>
-                                            ) : null}
-
-                                            <div className={styles.messageMeta}>
-                                                <span className={styles.metaItem}>{t('messages.status')}{getSubmissionStatusLabel(item.reviewStatus, t)}</span>
-                                                <span className={styles.metaItem}>{t('messages.updatedAt')}{formatTime(item.sortTime, t('messages.noTime'))}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </article>
-                            );
-                        })}
-                    </div>
-                </section>
+                {!isLoading && sections.map((section) => (
+                    section.rows.length === 0 ? null : (
+                        <section key={section.key} className={styles.sectionBlock}>
+                            <h2 className={styles.sectionTitle}>{section.title}</h2>
+                            <div className={styles.sectionCard}>
+                                {section.rows.map(renderRow)}
+                            </div>
+                        </section>
+                    )
+                ))}
             </div>
 
             <AnnouncementModal

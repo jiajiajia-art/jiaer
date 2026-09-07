@@ -11,7 +11,8 @@ const FooterArea: React.FC = () => {
 
                 {/* 左侧 Logo + 关注我们区域 */}
                 <div className={styles.logoArea}>
-                    <img src={asset('data/assets/LOGO.png')} alt="funloom" className={styles.logo} />
+                    {/* 功能注释：与顶栏 Navbar 共用 LOGO2（白字），暗底可读 */}
+                    <img src={asset('data/assets/LOGO2.png')} alt="funloom" className={styles.logo} />
                 </div>
 
 

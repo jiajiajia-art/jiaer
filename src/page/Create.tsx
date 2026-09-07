@@ -573,25 +573,16 @@ const Create: React.FC = () => {
 
                     <div className={styles.statsSection}>
                         <div className={styles.sectionHeader}>
-                            <div className={styles.sectionTitle}>
-                                <img src={`${import.meta.env.BASE_URL}${t('create.images.myData')}`} alt="" />
+                            <h2 className={styles.sectionHeading}>{t('create.myData')}</h2>
+                            <div className={styles.sectionRule} aria-hidden="true">
+                                <span className={styles.sectionRuleLine} />
+                                <span className={styles.sectionRuleDiamond} />
                             </div>
-                            <img
-                                className={styles.sectionDividerDesktop}
-                                src={`${import.meta.env.BASE_URL}data/assets/home/分界线.png`}
-                                alt=""
-                            />
-                            <img
-                                className={styles.sectionDividerMobile}
-                                src={`${import.meta.env.BASE_URL}data/assets/home/分界线移动端.png`}
-                                alt=""
-                            />
                             <button
                                 type="button"
                                 className={`${styles.more} ${styles.moreText}`}
                             >
                                 {t('create.statsUpdateTime')}
-                                <img src={`${import.meta.env.BASE_URL}data/assets/home/箭头.png`} alt="" />
                             </button>
                         </div>
                         <div className={styles.statsGrid}>
@@ -743,32 +734,23 @@ const Create: React.FC = () => {
 
                     <div className={styles.shopSection}>
                         <div className={styles.sectionHeader}>
-                            <div className={styles.sectionTitle}>
-                                <img src={`${import.meta.env.BASE_URL}${t('create.images.publishWorks')}`} alt="" />
+                            <h2 className={styles.sectionHeading}>{t('create.publishedGames')}</h2>
+                            <div className={styles.sectionRule} aria-hidden="true">
+                                <span className={styles.sectionRuleLine} />
+                                <span className={styles.sectionRuleDiamond} />
                             </div>
-                            <img
-                                className={styles.sectionDividerDesktop}
-                                src={`${import.meta.env.BASE_URL}data/assets/home/分界线.png`}
-                                alt=""
-                            />
-                            <img
-                                className={styles.sectionDividerMobile}
-                                src={`${import.meta.env.BASE_URL}data/assets/home/分界线移动端.png`}
-                                alt=""
-                            />
                             <button
                                 type="button"
                                 className={`${styles.more} ${styles.moreText}`}
                             >
                                 {t('create.more')}
-                                <img src={`${import.meta.env.BASE_URL}data/assets/home/箭头.png`} alt="" />
                             </button>
                         </div>
 
                         {isLoadingMyGames ? (
                             <GameGridSkeleton count={8} />
                         ) : publishedGames.length === 0 ? (
-                            <div style={{ textAlign: 'center', color: '#999', height: '100px', lineHeight: '100px' }}>
+                            <div className={styles.draftEmptyState}>
                                 {t('create.noPublishedGames')}
                             </div>
                         ) : (
@@ -787,19 +769,11 @@ const Create: React.FC = () => {
 
                     <div className={styles.shopSection}>
                         <div className={`${styles.sectionHeader} ${styles.draftSectionHeader}`}>
-                            <div className={styles.sectionTitle}>
-                                <img src={`${import.meta.env.BASE_URL}${t('create.images.draftBox')}`} alt="" />
+                            <h2 className={styles.sectionHeading}>{t('create.draftBox')}</h2>
+                            <div className={styles.sectionRule} aria-hidden="true">
+                                <span className={styles.sectionRuleLine} />
+                                <span className={styles.sectionRuleDiamond} />
                             </div>
-                            <img
-                                className={styles.sectionDividerDesktop}
-                                src={`${import.meta.env.BASE_URL}data/assets/home/分界线.png`}
-                                alt=""
-                            />
-                            <img
-                                className={styles.sectionDividerMobile}
-                                src={`${import.meta.env.BASE_URL}data/assets/home/分界线移动端.png`}
-                                alt=""
-                            />
                             {draftGames.length > 0 && (
                                 <div className={`${styles.draftManageActions} ${isDraftManageMode ? styles.draftManageActionsExpanded : ''}`}>
                                     {isDraftManageMode ? (
@@ -842,26 +816,27 @@ const Create: React.FC = () => {
                         {isLoadingMyGames ? (
                             <GameGridSkeleton count={8} />
                         ) : draftGames.length === 0 ? (
-                            <div style={{ textAlign: 'center', color: '#999', height: '100px', lineHeight: '100px' }}>
+                            <div className={styles.draftEmptyState}>
                                 {t('create.startCreating')}
                             </div>
                         ) : (
                             <div className={styles.draftSectionBody}>
-                                <div className={styles.draftFilterRow}>
-                                    {DRAFT_BOX_FILTER_ORDER.map((filterKey) => (
-                                        <button
-                                            key={filterKey}
-                                            type="button"
-                                            className={`${styles.draftFilterChip} ${draftFilterKey === filterKey ? styles.draftFilterChipActive : ''}`}
-                                            onClick={() => handleDraftFilterChange(filterKey)}
-                                        >
-                                            {t(getDraftBoxFilterLabelKey(filterKey))}
-                                        </button>
-                                    ))}
+                                <div className={styles.draftFilterBar}>
+                                    <div className={styles.draftFilterRow}>
+                                        {DRAFT_BOX_FILTER_ORDER.map((filterKey) => (
+                                            <button
+                                                key={filterKey}
+                                                type="button"
+                                                className={`${styles.draftFilterChip} ${draftFilterKey === filterKey ? styles.draftFilterChipActive : ''}`}
+                                                onClick={() => handleDraftFilterChange(filterKey)}
+                                            >
+                                                {t(getDraftBoxFilterLabelKey(filterKey))}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                                 {isDraftManageMode && (
                                     <div className={styles.draftManageTip}>
-                                        {/* 适配移动端操作栏 */}
                                         {t('create.draftsSelected', { count: selectedDraftCount })}
                                     </div>
                                 )}

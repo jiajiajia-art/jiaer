@@ -161,19 +161,22 @@ const GameGrid: React.FC<GameGridProps> = ({
                         onClick={() => handleCardClick(meta)}
                     >
                         <div className={styles.goodsImg}>
-                            <img
-                                src={(() => {
-                                    // 功能注释：列表封面统一走 display-cover/cover.webp，禁止直接请求原图 cover.png
-                                    const displayCoverPath = resolveGameCoverUrl({
-                                        display_cover_url: meta.display_cover_url,
-                                        cover_url: meta.cover_url,
-                                    });
-                                    return displayCoverPath
-                                        ? addImageTimestamp(getImageUrl(displayCoverPath))
-                                        : `${import.meta.env.BASE_URL}data/events/welcome.png`;
-                                })()}
-                                alt={meta.title || `剧情${idx + 1}`}
-                            />
+                            {(() => {
+                                // 功能注释：列表封面统一走 display-cover；无封面时用暗色占位，避免 welcome 白底破暗色
+                                const displayCoverPath = resolveGameCoverUrl({
+                                    display_cover_url: meta.display_cover_url,
+                                    cover_url: meta.cover_url,
+                                });
+                                if (!displayCoverPath) {
+                                    return <div className={styles.goodsImgPlaceholder} aria-hidden="true" />;
+                                }
+                                return (
+                                    <img
+                                        src={addImageTimestamp(getImageUrl(displayCoverPath))}
+                                        alt={meta.title || `剧情${idx + 1}`}
+                                    />
+                                );
+                            })()}
 
                             {selectable && isSelectionMode && selectableId && (
                                 <>

@@ -15,29 +15,29 @@
     min-height: 44px;
     padding: 9px 14px;
     border-radius: 999px;
-    border: 1px solid rgba(251, 70, 85, 0.18);
-    background: rgba(255, 255, 255, 0.92);
-    color: #111827;
+    border: 1px solid rgba(168, 40, 60, 0.35);
+    background: #1C1C1E;
+    color: #ffffff;
     font-size: 0.9rem;
     font-weight: 600;
     line-height: 1;
     white-space: nowrap;
-    box-shadow: 0 8px 20px rgba(17, 24, 39, 0.06);
+    box-shadow: none;
 }
 
 .pointsIcon {
     width: 16px;
     height: 16px;
-    color: #fb4655;
+    color: #A8283C;
     flex: 0 0 auto;
 }
 
 .pointsLabel {
-    color: rgba(17, 24, 39, 0.68);
+    color: rgba(255, 255, 255, 0.55);
 }
 
 .pointsValue {
-    color: #111827;
+    color: #ffffff;
     font-variant-numeric: tabular-nums;
 }
 

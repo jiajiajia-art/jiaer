@@ -25,3 +25,86 @@ test('GameSettingsEditor_使用CreationFlowRail替代纯文案step1Tip', () => {
   assert.match(src, /CreationFlowRail/);
   assert.doesNotMatch(src, /createGame\.step1Tip/);
 });
+
+test('GameSettingsEditor_创作壳应对齐funloom暗色', () => {
+  const editorCss = readFileSync(join(root, 'src/page/GameSettingsEditor.module.css'), 'utf8');
+  const sidebarCss = readFileSync(join(root, 'src/components/GameSettingEditor/Sidebar.module.css'), 'utf8');
+  const railCss = readFileSync(join(root, 'src/components/GameSettingEditor/CreationFlowRail.module.css'), 'utf8');
+  const worldCss = readFileSync(join(root, 'src/components/GameSettingEditor/WorldPanel/WorldPanel.module.css'), 'utf8');
+  const docsCss = readFileSync(join(root, 'src/components/GameSettingEditor/DocumentUpload/DocumentsPanel.module.css'), 'utf8');
+  assert.match(editorCss, /--editor-bg:\s*#000000/);
+  assert.match(editorCss, /--primary-dark:\s*#8E2135/);
+  assert.doesNotMatch(editorCss, /background:\s*#FAFBFC/);
+  // 功能注释：顶栏改 CSS Grid，窄屏 titles→rail→actions，row-gap 8px 贴紧
+  assert.match(editorCss, /\.topBar\s*\{[\s\S]*?display:\s*grid/);
+  assert.match(editorCss, /\.topBar\s*\{[\s\S]*?row-gap:\s*8px/);
+  assert.match(editorCss, /\.topBarRail\s*\{[\s\S]*?grid-area:\s*rail/);
+  assert.match(editorCss, /@media \(max-width: 720px\)[\s\S]*?grid-template-areas:[\s\S]*?"rail"[\s\S]*?"actions"/);
+  assert.match(editorCss, /@media \(max-width: 720px\)[\s\S]*?\.main\s*\{[\s\S]*?gap:\s*14px/);
+  const editorTsxForTop = readFileSync(join(root, 'src/page/GameSettingsEditor.tsx'), 'utf8');
+  assert.match(editorTsxForTop, /styles\.topBarRail/);
+  assert.match(editorTsxForTop, /styles\.topBarTitles/);
+  assert.doesNotMatch(editorTsxForTop, /styles\.topBarLead/);
+  assert.match(editorTsxForTop, /CreationCircleNav/);
+  assert.match(editorTsxForTop, /txtCreatePageTitle/);
+  assert.match(editorTsxForTop, /<Navbar\s*\/>/);
+  assert.match(editorCss, /\.appShell\s*\{[\s\S]*?margin-top:\s*var\(--app-desktop-navbar-height\)/);
+  const circleNavCss = readFileSync(join(root, 'src/components/GameSettingEditor/CreationCircleNav.module.css'), 'utf8');
+  assert.match(circleNavCss, /\.iconWrap\s*\{[\s\S]*?border-radius:\s*50%/);
+  assert.match(circleNavCss, /\.itemActive \.iconWrap\s*\{[\s\S]*?background:\s*#8E2135/);
+  assert.match(docsCss, /\.createMethodBlock/);
+  assert.match(docsCss, /\.createMethodSelect/);
+  assert.match(sidebarCss, /\.sidebar\s*\{[\s\S]*?background:\s*#0A0A0A|#000000/);
+  assert.doesNotMatch(sidebarCss, /background:\s*#ffffff/);
+  assert.match(railCss, /\.active\s+\.index\s*\{[\s\S]*?background:\s*#8E2135/);
+  assert.match(worldCss, /\.formContainer\s*\{[\s\S]*?background:\s*#1A1A1A/);
+  assert.match(worldCss, /\.detailBlock\s*\{[\s\S]*?background:\s*transparent/);
+  assert.match(worldCss, /\.themeTagChip\s*\{[\s\S]*?background:\s*transparent/);
+  assert.match(worldCss, /\.themeTagChipActive\s*\{[\s\S]*?background:\s*#8E2135/);
+  assert.doesNotMatch(worldCss, /\.detailBlock\s*\{[^}]*background:\s*#1C1C1E/);
+  const worldTsx = readFileSync(join(root, 'src/components/GameSettingEditor/WorldPanel/WorldPanel.tsx'), 'utf8');
+  assert.doesNotMatch(worldTsx, /styles\.cardHead/);
+  assert.match(docsCss, /\.card\s*\{[\s\S]*?background:\s*#1A1A1A/);
+  // AI 一句话：两枚 CTA 左右并排，禁止再纵向堆叠
+  assert.match(docsCss, /\.generateFromIdeaActions\s*\{[\s\S]*?flex-direction:\s*row/);
+  assert.doesNotMatch(docsCss, /\.generateFromIdeaActions\s*\{[^}]*flex-direction:\s*column/);
+  // 创建空游戏 / AI 弹窗对齐暗色壳，禁止白底
+  const emptyModalCss = readFileSync(join(root, 'src/components/GameSettingEditor/DocumentUpload/CreateEmptyGameModal.module.css'), 'utf8');
+  assert.match(emptyModalCss, /\.modal\s*\{[\s\S]*?background:\s*#1A1A1A/);
+  assert.match(emptyModalCss, /\.input\s*\{[\s\S]*?background:\s*#1C1C1E/);
+  assert.match(emptyModalCss, /\.submitButton\s*\{[\s\S]*?border-radius:\s*999px/);
+  assert.match(emptyModalCss, /\.submitButton\s*\{[\s\S]*?background-color:\s*#8E2135/);
+  assert.doesNotMatch(emptyModalCss, /\.modal\s*\{[^}]*background:\s*white/);
+  assert.match(emptyModalCss, /\.modalOverlay\s*\{[\s\S]*?align-items:\s*center/);
+  assert.doesNotMatch(emptyModalCss, /align-self:\s*flex-end/);
+  const charsCss = readFileSync(join(root, 'src/components/GameSettingEditor/CharactersPanel/CharactersPanel.module.css'), 'utf8');
+  const scenesCss = readFileSync(join(root, 'src/components/GameSettingEditor/ScenesPanel/ScenesPanel.module.css'), 'utf8');
+  assert.match(charsCss, /#1A1A1A|#1C1C1E/);
+  assert.match(charsCss, /\.portraitLarge\s*\{[\s\S]*?height:\s*480px/);
+  assert.match(charsCss, /\.portraitLarge\s*\{[\s\S]*?background-color:\s*#c8c8c8/);
+  assert.match(charsCss, /\.detailActionRow\s*\{[\s\S]*?margin-bottom:\s*8px/);
+  assert.match(charsCss, /\.portraitImageActions\s*\{[\s\S]*?margin-top:\s*6px/);
+  assert.doesNotMatch(charsCss, /\.portraitLarge\s*\{[^}]*height:\s*320px/);
+  // 操作条：积分胶囊与一键生成 CTA、新增角色均用 999px 胶囊圆角
+  assert.match(charsCss, /\.ghost\s*\{[\s\S]*?border-radius:\s*999px/);
+  assert.match(charsCss, /\.ghostSmall\s*\{[\s\S]*?border-radius:\s*999px/);
+  assert.match(scenesCss, /\.ghost\s*\{[\s\S]*?border-radius:\s*999px/);
+  const actionBarCss = readFileSync(join(root, 'src/components/GameSettingEditor/GenerationActionBar.module.css'), 'utf8');
+  assert.match(actionBarCss, /\.pointsPill\s*\{[\s\S]*?border-radius:\s*999px/);
+  // 世界观：输出字数居中 + 故事线/文风设置行手风琴；底部步进胶囊
+  assert.match(worldCss, /\.sectionTitleCentered/);
+  assert.match(worldCss, /\.accordionTrigger\s*\{[\s\S]*?justify-content:\s*space-between/);
+  assert.match(worldCss, /\.outputLengthGrid input\s*\{[\s\S]*?border-radius:\s*8px/);
+  const storylinesTsx = readFileSync(join(root, 'src/components/GameSettingEditor/WorldPanel/StorylinesSection.tsx'), 'utf8');
+  assert.match(storylinesTsx, /accordionTrigger/);
+  assert.doesNotMatch(storylinesTsx, /storylineHeader/);
+  const stepFooterCss = readFileSync(join(root, 'src/components/GameSettingEditor/CreationStepFooter.module.css'), 'utf8');
+  assert.match(stepFooterCss, /\.prev,\s*\n\s*\.next\s*\{[\s\S]*?border-radius:\s*999px/);
+  assert.match(stepFooterCss, /\.next\s*\{[\s\S]*?background:\s*#8E2135/);
+  const editorTsx = readFileSync(join(root, 'src/page/GameSettingsEditor.tsx'), 'utf8');
+  assert.match(editorTsx, /CreationStepFooter/);
+  const charsSidebarCss = readFileSync(join(root, 'src/components/GameSettingEditor/CharactersPanel/CharactersSidebar.module.css'), 'utf8');
+  assert.match(charsSidebarCss, /\.sidebarHeader\s*\{[\s\S]*?margin-bottom:\s*7px/);
+  assert.match(scenesCss, /#1A1A1A|#1C1C1E/);
+  assert.doesNotMatch(charsCss, /\.card\s*\{[^}]*background:\s*#fff(?:fff)?\b/);
+});

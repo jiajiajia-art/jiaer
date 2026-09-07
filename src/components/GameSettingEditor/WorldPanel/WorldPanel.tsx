@@ -802,25 +802,21 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                     <h2>{t('createGame.worldSettingNarrativeStyle')}</h2>
                     <p className={styles.subtitle}>{t('createGame.worldSettingSubtitle')}</p>
                 </div>
+                {handleSubmit ? (
+                    <button
+                        className={styles.ghostSmall}
+                        onClick={handleConfirmSubmit}
+                        disabled={!gameData || isSubmitting}
+                    >
+                        {isSubmitting ? t('createGame.submitting') : t('createGame.confirmEdit')}
+                    </button>
+                ) : null}
             </div>
 
             {isWorldInteractionMode ? SaveConfirmModalComponent : null}
 
+            {/* 功能注释：单层分区，不再套「世界观设定」外框 + 基础信息内框 */}
             <div className={styles.formContainer}>
-                {/* 实现世界观设定标题与右上角确认按钮 */}
-                <div className={styles.cardHead}>
-                    <strong className={styles.cardTitle}>{t('createGame.worldSetting')}</strong>
-                    {handleSubmit && (
-                        <button
-                            className={styles.ghostSmall}
-                            onClick={handleConfirmSubmit}
-                            disabled={!gameData || isSubmitting}
-                        >
-                            {isSubmitting ? t('createGame.submitting') : t('createGame.confirmEdit')}
-                        </button>
-                    )}
-                </div>
-
                 <div className={styles.formBody}>
                     <WorldSettingForm
                         mode={mode}

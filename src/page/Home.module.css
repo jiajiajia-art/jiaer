@@ -7,10 +7,11 @@
     /* 功能注释：筛选条上间距 / 下间距=一半，保证精选卡→筛选→列表节奏一致 */
     --home-filter-gap-above: 16px;
     --home-filter-gap-below: calc(var(--home-filter-gap-above) / 2);
+    /* 功能注释：PC 全宽铺黑，避免超宽屏两侧露出 body 白底 */
     width: 100%;
     min-height: 100vh;
-    max-width: 1920px;
-    margin: 0 auto;
+    max-width: none;
+    margin: 0;
     background: #000000;
     color: #FFFFFF;
 }
@@ -49,20 +50,18 @@
 }
 
 .todayWrap {
-    width: 100vw;
-    max-width: 1920px;
+    width: 100%;
+    max-width: none;
     position: relative;
     padding: 0;
     margin-top: var(--home-navbar-height);
     flex-shrink: 0;
-    left: 50%;
-    transform: translateX(-50%);
 }
 
 /* 轮播容器 */
 .carouselContainer {
     width: 100%;
-    max-width: 1920px;
+    max-width: none;
     height: 520px;
     position: relative;
     overflow: hidden;

@@ -1,3 +1,5 @@
+/* 功能注释：文档上传面板对齐 funloom 暗色创作壳（与 TXT 创建一致） */
+
 .panelContent {
     display: flex;
     flex-direction: column;
@@ -23,34 +25,109 @@
 
 .panelHeader h2 {
     margin: 4px 0 4px 0;
-    /* font-size: 1.8rem; */
-    color: #1a1a1a;
+    color: #ffffff;
 }
 
 .coverUploadIcon {
-    color: rgba(0, 0, 0, 0.4);
+    color: rgba(255, 255, 255, 0.4);
 }
 
 .subtitle {
     margin: 0;
-    color: rgba(0, 0, 0, 0.6);
+    color: rgba(255, 255, 255, 0.55);
     font-size: 0.95rem;
+}
+
+/* 功能注释：效果图「选择创建方式」——移动端展示；桌面隐藏以免与 AI 卡片重复 */
+.createMethodBlock {
+    display: none;
+}
+
+.createMethodLabel {
+    margin: 0 0 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.createMethodSelect {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 48px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: #1C1C1E;
+    color: #ffffff;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.createMethodChevron {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 0.85rem;
+}
+
+.hideOnMobile {
+    /* desktop visible */
+}
+
+@media (max-width: 768px) {
+    .panelContent {
+        gap: 14px;
+    }
+
+    .panelHeader {
+        gap: 8px;
+    }
+
+    .panelHeader h2 {
+        margin: 0;
+        font-size: 1.15rem;
+    }
+
+    .subtitle {
+        margin-top: 6px;
+        font-size: 0.82rem;
+        line-height: 1.45;
+    }
+
+    .createMethodBlock {
+        display: block;
+    }
+
+    .hideOnMobile {
+        display: none !important;
+    }
+
+    .card {
+        padding: 14px;
+        gap: 12px;
+        border-radius: 14px;
+    }
+
+    .card h3 {
+        font-size: 1rem;
+    }
 }
 
 .ghost {
     border-radius: 999px;
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     padding: 10px 20px;
     font-weight: 600;
     cursor: pointer;
     transition: 0.25s ease;
-    color: #1a1a1a;
-    background: transparent;
+    color: #ffffff;
+    background: #1C1C1E;
 }
 
 .ghost:hover {
     border-color: var(--primary);
-    color: var(--primary);
+    color: #ffffff;
+    background: rgba(142, 33, 53, 0.22);
 }
 
 .twoCol {
@@ -62,8 +139,8 @@
 }
 
 .card {
-    background: #ffffff;
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: #1A1A1A;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
     padding: 20px;
     display: flex;
@@ -74,26 +151,26 @@
 .card h3 {
     margin: 0;
     font-size: 1.1rem;
-    color: #1a1a1a;
+    color: #ffffff;
 }
 
 .muted {
-    color: rgba(0, 0, 0, 0.6);
+    color: rgba(255, 255, 255, 0.55);
     margin: 0;
     font-size: 0.9rem;
     line-height: 1.5;
 }
 
 .mutedSmall {
-    color: rgba(0, 0, 0, 0.5);
+    color: rgba(255, 255, 255, 0.45);
     margin: 0;
     font-size: 0.8rem;
     padding-top: 12px;
-    border-top: 1px dashed rgba(0, 0, 0, 0.08);
+    border-top: 1px dashed rgba(255, 255, 255, 0.08);
 }
 
 .dropzone {
-    border: 1px dashed rgba(0, 0, 0, 0.2);
+    border: 1px dashed rgba(255, 255, 255, 0.2);
     border-radius: 8px;
     padding: 32px;
     text-align: center;
@@ -105,16 +182,17 @@
     justify-content: center;
     gap: 12px;
     height: 160px;
+    background: #121212;
 }
 
 .dropzone:hover {
     border-color: var(--primary);
-    background: rgba(224, 61, 75, 0.02);
+    background: rgba(142, 33, 53, 0.08);
 }
 
 .dropzone p {
     margin: 0;
-    color: rgba(0, 0, 0, 0.6);
+    color: rgba(255, 255, 255, 0.55);
     font-size: 0.9rem;
 }
 
@@ -131,8 +209,8 @@
 /* 已上传文件 */
 .uploadedFileBox {
     padding: 12px 16px;
-    background: rgba(0, 0, 0, 0.02);
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: #1C1C1E;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
     display: flex;
     align-items: center;
@@ -143,7 +221,7 @@
 .fileName {
     flex: 1;
     font-size: 0.9rem;
-    color: #1a1a1a;
+    color: #ffffff;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -151,7 +229,7 @@
 
 .fileSize {
     font-size: 0.8rem;
-    color: rgba(0, 0, 0, 0.5);
+    color: rgba(255, 255, 255, 0.55);
 }
 
 .retryLink {
@@ -176,9 +254,9 @@
     flex-direction: column;
     gap: 8px;
     padding: 10px 12px;
-    background: rgba(0, 0, 0, 0.02);
+    background: #1C1C1E;
     border-radius: 8px;
-    border: 1px solid rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* 进度头部 */
@@ -193,7 +271,7 @@
 .progressPercentage {
     font-size: 1.4rem;
     font-weight: 700;
-    background: linear-gradient(135deg, var(--primary) 0%, #ff6b7a 100%);
+    background: linear-gradient(135deg, var(--primary) 0%, #C23A50 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -203,17 +281,17 @@
 
 .progressStage {
     font-size: 0.75rem;
-    color: rgba(0, 0, 0, 0.5);
+    color: rgba(255, 255, 255, 0.55);
     font-weight: 500;
     padding: 2px 6px;
-    background: rgba(0, 0, 0, 0.04);
+    background: rgba(255, 255, 255, 0.06);
     border-radius: 8px;
     white-space: nowrap;
 }
 
 .progressMeta {
     font-size: 0.82rem;
-    color: rgba(0, 0, 0, 0.62);
+    color: rgba(255, 255, 255, 0.55);
     line-height: 1.45;
 }
 
@@ -231,28 +309,28 @@
     gap: 10px;
     padding: 8px 10px;
     position: relative;
-    background: #ffffff;
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: #1A1A1A;
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 8px;
     transition: all 0.2s ease;
 }
 
 .stepItem.stepPending {
     opacity: 0.6;
-    background: rgba(0, 0, 0, 0.02);
+    background: #121212;
 }
 
 .stepItem.stepActive {
     opacity: 1;
-    background: rgba(224, 61, 75, 0.05);
-    border-color: rgba(224, 61, 75, 0.2);
-    box-shadow: 0 1px 3px rgba(224, 61, 75, 0.1);
+    background: rgba(142, 33, 53, 0.12);
+    border-color: rgba(142, 33, 53, 0.35);
+    box-shadow: 0 1px 3px rgba(142, 33, 53, 0.2);
 }
 
 .stepItem.stepDone {
-    opacity: 0.8;
-    background: rgba(34, 197, 94, 0.03);
-    border-color: rgba(34, 197, 94, 0.15);
+    opacity: 0.85;
+    background: rgba(46, 160, 90, 0.08);
+    border-color: rgba(46, 160, 90, 0.25);
 }
 
 /* 图标和连接线容器 */
@@ -273,21 +351,21 @@
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    background: rgba(0, 0, 0, 0.04);
+    background: rgba(255, 255, 255, 0.06);
     position: relative;
     z-index: 1;
     font-size: 13px;
 }
 
 .stepItem.stepPending .stepIcon {
-    color: rgba(0, 0, 0, 0.3);
-    background: rgba(0, 0, 0, 0.03);
+    color: rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.04);
 }
 
 .stepItem.stepActive .stepIcon {
     color: #ffffff;
-    background: linear-gradient(135deg, var(--primary) 0%, #ff6b7a 100%);
-    box-shadow: 0 2px 4px rgba(224, 61, 75, 0.3);
+    background: linear-gradient(135deg, var(--primary) 0%, #8E2135 100%);
+    box-shadow: 0 2px 4px rgba(142, 33, 53, 0.35);
 }
 
 .stepItem.stepDone .stepIcon {
@@ -303,7 +381,7 @@
     top: 100%;
     width: 2px;
     height: 6px;
-    background: rgba(0, 0, 0, 0.08);
+    background: rgba(255, 255, 255, 0.08);
     border-radius: 1px;
     z-index: 0;
 }
@@ -324,12 +402,12 @@
 .stepLabel {
     font-size: 0.85rem;
     font-weight: 500;
-    color: #1a1a1a;
+    color: #ffffff;
     line-height: 1.4;
 }
 
 .stepItem.stepPending .stepLabel {
-    color: rgba(0, 0, 0, 0.45);
+    color: rgba(255, 255, 255, 0.45);
     font-weight: 400;
 }
 
@@ -339,12 +417,12 @@
 }
 
 .stepItem.stepDone .stepLabel {
-    color: rgba(0, 0, 0, 0.7);
+    color: rgba(255, 255, 255, 0.7);
 }
 
 .stepDescription {
     font-size: 0.75rem;
-    color: rgba(0, 0, 0, 0.55);
+    color: rgba(255, 255, 255, 0.55);
     line-height: 1.4;
     margin-top: 1px;
 }
@@ -352,16 +430,16 @@
 
 /* 一句话生成卡片 */
 .generateFromIdeaCard {
-    background: linear-gradient(135deg, rgba(224, 61, 75, 0.08) 0%, rgba(255, 107, 122, 0.05) 100%);
-    border: 2px solid rgba(224, 61, 75, 0.2);
+    background: linear-gradient(135deg, rgba(142, 33, 53, 0.15) 0%, rgba(168, 40, 60, 0.08) 100%);
+    border: 2px solid rgba(142, 33, 53, 0.35);
     border-radius: 16px;
     padding: 24px;
     transition: all 0.3s ease;
 }
 
 .generateFromIdeaCard:hover {
-    border-color: rgba(224, 61, 75, 0.4);
-    box-shadow: 0 4px 12px rgba(224, 61, 75, 0.15);
+    border-color: rgba(142, 33, 53, 0.55);
+    box-shadow: 0 4px 12px rgba(142, 33, 53, 0.2);
     transform: translateY(-2px);
 }
 
@@ -387,44 +465,51 @@
     margin: 0 0 8px 0;
     font-size: 1.2rem;
     font-weight: 600;
-    color: #1a1a1a;
+    color: #ffffff;
 }
 
 .generateFromIdeaDesc {
     margin: 0;
-    color: rgba(0, 0, 0, 0.6);
+    color: rgba(255, 255, 255, 0.55);
     font-size: 0.9rem;
     line-height: 1.5;
 }
 
 .generateFromIdeaHint {
     margin: 8px 0 0 0;
-    color: rgba(0, 0, 0, 0.45);
+    color: rgba(255, 255, 255, 0.45);
     font-size: 0.8rem;
     line-height: 1.4;
 }
 
+/* 功能注释：两枚 CTA 左右并排一行（效果图要求），窄屏等比收缩不换列 */
 .generateFromIdeaActions {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: stretch;
     gap: 10px;
     flex-shrink: 0;
 }
 
 .generateFromIdeaSecondary {
-    padding: 10px 22px;
-    background: #fff;
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 10px 14px;
+    background: #1C1C1E;
     color: var(--primary);
-    border: 1.5px solid rgba(224, 61, 75, 0.45);
+    border: 1.5px solid rgba(142, 33, 53, 0.45);
     border-radius: 999px;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
+    white-space: nowrap;
+    text-align: center;
 }
 
 .generateFromIdeaSecondary:hover:not(:disabled) {
-    background: rgba(224, 61, 75, 0.06);
+    background: rgba(142, 33, 53, 0.15);
 }
 
 .generateFromIdeaSecondary:disabled {
@@ -433,22 +518,25 @@
 }
 
 .generateFromIdeaButton {
-    flex-shrink: 0;
-    padding: 12px 28px;
-    background: linear-gradient(135deg, var(--primary) 0%, #ff6b7a 100%);
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, var(--primary) 0%, #8E2135 100%);
     color: white;
     border: none;
     border-radius: 999px;
-    font-size: 1rem;
+    font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(224, 61, 75, 0.3);
+    box-shadow: 0 2px 8px rgba(142, 33, 53, 0.35);
+    white-space: nowrap;
+    text-align: center;
 }
 
 .generateFromIdeaButton:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(224, 61, 75, 0.4);
+    box-shadow: 0 4px 16px rgba(142, 33, 53, 0.45);
 }
 
 .generateFromIdeaButton:active:not(:disabled) {
@@ -468,7 +556,7 @@
     align-items: center;
     justify-content: center;
     padding: 24px;
-    background: rgba(0, 0, 0, 0.56);
+    background: rgba(0, 0, 0, 0.72);
     backdrop-filter: blur(6px);
     z-index: 1400;
 }
@@ -476,9 +564,9 @@
 .errorModalContent {
     width: min(100%, 640px);
     border-radius: 24px;
-    background: #fff;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    box-shadow: 0 24px 72px rgba(0, 0, 0, 0.22);
+    background: #1A1A1A;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 24px 72px rgba(0, 0, 0, 0.55);
     overflow: hidden;
 }
 
@@ -488,7 +576,7 @@
     justify-content: space-between;
     gap: 16px;
     padding: 24px 24px 18px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .errorModalEyebrow {
@@ -503,7 +591,7 @@
 .errorModalHeader h3 {
     margin: 0;
     font-size: 1.35rem;
-    color: #1a1a1a;
+    color: #ffffff;
 }
 
 .errorModalClose {
@@ -511,8 +599,8 @@
     height: 40px;
     border: none;
     border-radius: 999px;
-    background: rgba(0, 0, 0, 0.05);
-    color: rgba(0, 0, 0, 0.65);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.65);
     font-size: 1.5rem;
     line-height: 1;
     cursor: pointer;
@@ -520,7 +608,7 @@
 }
 
 .errorModalClose:hover {
-    background: rgba(224, 61, 75, 0.1);
+    background: rgba(142, 33, 53, 0.22);
     color: var(--primary);
 }
 
@@ -535,13 +623,13 @@
     margin: 0;
     font-size: 1rem;
     line-height: 1.7;
-    color: rgba(0, 0, 0, 0.72);
+    color: rgba(255, 255, 255, 0.72);
 }
 
 .errorDetailBlock {
-    border: 1px solid rgba(224, 61, 75, 0.14);
+    border: 1px solid rgba(142, 33, 53, 0.25);
     border-radius: 18px;
-    background: linear-gradient(180deg, rgba(224, 61, 75, 0.04) 0%, rgba(0, 0, 0, 0.015) 100%);
+    background: linear-gradient(180deg, rgba(142, 33, 53, 0.1) 0%, rgba(0, 0, 0, 0.25) 100%);
     overflow: hidden;
 }
 
@@ -551,20 +639,20 @@
     justify-content: space-between;
     gap: 12px;
     padding: 14px 16px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .errorDetailHeader span {
     font-size: 0.9rem;
     font-weight: 600;
-    color: #1a1a1a;
+    color: #ffffff;
 }
 
 .copyErrorButton {
-    border: 1px solid rgba(224, 61, 75, 0.24);
+    border: 1px solid rgba(142, 33, 53, 0.35);
     border-radius: 999px;
     padding: 8px 14px;
-    background: #fff;
+    background: #1C1C1E;
     color: var(--primary);
     font-size: 0.85rem;
     font-weight: 600;
@@ -573,7 +661,7 @@
 }
 
 .copyErrorButton:hover {
-    background: rgba(224, 61, 75, 0.06);
+    background: rgba(142, 33, 53, 0.15);
 }
 
 .errorDetailText {
@@ -586,14 +674,14 @@
     line-height: 1.6;
     white-space: pre-wrap;
     word-break: break-word;
-    color: rgba(0, 0, 0, 0.78);
+    color: rgba(255, 255, 255, 0.78);
 }
 
 .errorModalHint {
     margin: 0;
     font-size: 0.9rem;
     line-height: 1.7;
-    color: rgba(0, 0, 0, 0.58);
+    color: rgba(255, 255, 255, 0.55);
 }
 
 .errorModalFooter {
@@ -607,18 +695,18 @@
     border: none;
     border-radius: 999px;
     padding: 12px 22px;
-    background: linear-gradient(135deg, var(--primary) 0%, #ff6b7a 100%);
+    background: linear-gradient(135deg, var(--primary) 0%, #8E2135 100%);
     color: #fff;
     font-size: 0.95rem;
     font-weight: 700;
     cursor: pointer;
     transition: 0.2s ease;
-    box-shadow: 0 8px 18px rgba(224, 61, 75, 0.25);
+    box-shadow: 0 8px 18px rgba(142, 33, 53, 0.35);
 }
 
 .errorModalPrimary:hover {
     transform: translateY(-1px);
-    box-shadow: 0 12px 24px rgba(224, 61, 75, 0.3);
+    box-shadow: 0 12px 24px rgba(142, 33, 53, 0.45);
 }
 
 @media (max-width: 720px) {
@@ -641,12 +729,19 @@
 
     .generateFromIdeaContent {
         flex-direction: column;
-        align-items: flex-start;
+        align-items: stretch;
         gap: 16px;
     }
 
-    .generateFromIdeaButton {
+    .generateFromIdeaActions {
         width: 100%;
+    }
+
+    .generateFromIdeaSecondary,
+    .generateFromIdeaButton {
+        width: auto;
+        padding: 10px 10px;
+        font-size: 0.82rem;
     }
 
     .errorModalOverlay {

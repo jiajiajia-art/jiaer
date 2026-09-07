@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { MdArrowDropDown } from 'react-icons/md';
+import { MdKeyboardArrowDown } from 'react-icons/md';
 import styles from './WorldPanel.module.css';
 
 interface ToneSectionProps {
@@ -10,6 +10,9 @@ interface ToneSectionProps {
     onChange: (value: string) => void;
 }
 
+/**
+ * 功能注释：文风区块对齐效果图设置行——折叠时仅标题 + chevron，展开后再露出说明与输入。
+ */
 const ToneSection: React.FC<ToneSectionProps> = ({
     value,
     isExpanded,
@@ -20,30 +23,32 @@ const ToneSection: React.FC<ToneSectionProps> = ({
 
     return (
         <div className={styles.storylineSection}>
-            <div
-                className={styles.storylineHeader}
-                style={{ marginBottom: isExpanded ? '8px' : '0', cursor: 'pointer' }}
+            <button
+                type="button"
+                className={styles.accordionTrigger}
                 onClick={onToggleExpand}
+                aria-expanded={isExpanded}
             >
-                <span className={styles.fieldLabel}>{t('createGame.toneLabel')}</span>
-                <MdArrowDropDown size={30} style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }} />
-            </div>
+                <span className={styles.accordionTitle}>{t('createGame.toneLabel')}</span>
+                <MdKeyboardArrowDown
+                    className={`${styles.accordionChevron} ${isExpanded ? styles.accordionChevronOpen : ''}`}
+                    size={22}
+                    aria-hidden
+                />
+            </button>
             {isExpanded && (
-                <>
-                    <span className={styles.fieldHint} style={{ marginBottom: '8px', display: 'block' }}>
-                        {t('createGame.toneHint')}
-                    </span>
+                <div className={styles.accordionBody}>
+                    <span className={styles.fieldHint}>{t('createGame.toneHint')}</span>
                     <textarea
                         rows={4}
                         value={value}
                         onChange={(e) => onChange(e.target.value)}
                         style={{ width: '100%', boxSizing: 'border-box' }}
                     />
-                </>
+                </div>
             )}
         </div>
     );
 };
 
 export default ToneSection;
-

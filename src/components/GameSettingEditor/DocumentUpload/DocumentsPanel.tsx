@@ -381,7 +381,6 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
         <div className={styles.panelContent}>
             <div className={styles.panelHeader}>
                 <div>
-                    <p className={styles.eyebrow}>{t('gameEditor.step1')}</p>
                     <h2>{t('createGame.uploadDocument')}</h2>
                     <p className={styles.subtitle}>
                         {t('createGame.oneClickUploadTip')}
@@ -389,7 +388,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                 </div>
                 {onCreateEmptyGame && (
                     <button
-                        className={styles.ghost}
+                        className={`${styles.ghost} ${styles.hideOnMobile}`}
                         onClick={() => setShowCreateEmptyModal(true)}
                         disabled={isParsing}
                     >
@@ -398,8 +397,17 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                 )}
             </div>
 
+            {/* 功能注释：移动端效果图「选择创建方式」下拉；桌面仍展示完整 AI 卡片 */}
+            <div className={styles.createMethodBlock}>
+                <p className={styles.createMethodLabel}>{t('createGame.selectCreateMethod')}</p>
+                <div className={styles.createMethodSelect} role="group" aria-label={t('createGame.selectCreateMethod')}>
+                    <span>{t('createGame.documentImport')}</span>
+                    <span className={styles.createMethodChevron} aria-hidden>▾</span>
+                </div>
+            </div>
+
             {isVisualMode && onGenerateFromIdea && (
-                <div className={styles.generateFromIdeaCard}>
+                <div className={`${styles.generateFromIdeaCard} ${styles.hideOnMobile}`}>
                     <div className={styles.generateFromIdeaContent}>
                         <div className={styles.generateFromIdeaIcon}>✨</div>
                         <div className={styles.generateFromIdeaText}>
@@ -436,7 +444,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
             <div className={styles.twoCol}>
                 <div className={styles.card}>
                     <h3>{t('createGame.documentImportWithCost', { points: TXT_DOC_PARSE_COST })}</h3>
-                    <p className={styles.muted}>
+                    <p className={`${styles.muted} ${styles.hideOnMobile}`}>
                         {t('createGame.documentUploadTip', { points: TXT_DOC_PARSE_COST })}
                     </p>
 

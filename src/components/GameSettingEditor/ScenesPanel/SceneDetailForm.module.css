@@ -1,3 +1,5 @@
+/* 功能注释：场景详情表单对齐 funloom 暗色创作壳（与 TXT 创建一致） */
+
 /* 场景大图 */
 .sceneHero {
     width: 100%;
@@ -6,8 +8,8 @@
     background-size: contain;
     background-position: center;
     background-repeat: no-repeat;
-    background-color: rgba(0, 0, 0, 0.02);
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    background-color: #121212;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     cursor: pointer;
     display: grid;
     place-items: center;
@@ -17,8 +19,8 @@
 
 .sceneHero.empty {
     border-style: dashed;
-    background: rgba(0, 0, 0, 0.02);
-    color: rgba(0, 0, 0, 0.4);
+    background: #1C1C1E;
+    color: rgba(255, 255, 255, 0.4);
 }
 
 .heroHint {
@@ -82,14 +84,14 @@
 /* 按钮样式 */
 .ghostSmall {
     border-radius: 999px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     padding: 6px 14px;
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
     transition: 0.25s ease;
-    color: #1a1a1a;
-    background: #fff;
+    color: #ffffff;
+    background: #1C1C1E;
 }
 
 .ghostSmall:hover {
@@ -98,8 +100,8 @@
 }
 
 .ghostSmall:disabled:hover {
-    border-color: rgba(0, 0, 0, 0.12);
-    color: #1a1a1a;
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
 }
 
 /* AI生成按钮样式优化 */
@@ -146,7 +148,7 @@
 }
 
 .discountPriceBlack {
-    color: rgba(0, 0, 0, 1);
+    color: rgba(255, 255, 255, 0.85);
 }
 
 .sceneImageActions:hover .discountPrice,
@@ -156,7 +158,7 @@
 
 .originalPrice {
     text-decoration: line-through;
-    color: rgba(0, 0, 0, 0.35);
+    color: rgba(255, 255, 255, 0.35);
     font-size: 0.85em;
     font-weight: 400;
 }
@@ -180,7 +182,7 @@
 
 .formGrid label span {
     font-size: 0.85rem;
-    color: rgba(0, 0, 0, 0.55);
+    color: rgba(255, 255, 255, 0.55);
     font-weight: 500;
 }
 
@@ -188,10 +190,10 @@
 .formGrid textarea,
 .formGrid select {
     border-radius: 12px;
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     padding: 11px 14px;
-    background: rgba(0, 0, 0, 0.02);
-    color: #1a1a1a;
+    background: #1C1C1E;
+    color: #ffffff;
     font-size: 0.95rem;
     font-family: inherit;
     transition: 0.2s ease;
@@ -211,8 +213,8 @@
     right: 16px;
     width: 10px;
     height: 10px;
-    border-right: 2px solid rgba(0, 0, 0, 0.35);
-    border-bottom: 2px solid rgba(0, 0, 0, 0.35);
+    border-right: 2px solid rgba(255, 255, 255, 0.35);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.35);
     transform: translateY(-65%) rotate(45deg);
     pointer-events: none;
 }
@@ -222,23 +224,23 @@
     -webkit-appearance: none;
     -moz-appearance: none;
     padding-right: 42px !important;
-    background: linear-gradient(180deg, #ffffff 0%, #f7f8fa 100%) !important;
-    border-color: rgba(224, 61, 75, 0.12) !important;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    background: #1C1C1E !important;
+    border-color: rgba(142, 33, 53, 0.12) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
     cursor: pointer;
 }
 
 .specialBgmSelect:hover {
-    border-color: rgba(224, 61, 75, 0.28) !important;
-    background: linear-gradient(180deg, #ffffff 0%, #fff7f8 100%) !important;
+    border-color: rgba(142, 33, 53, 0.28) !important;
+    background: rgba(142, 33, 53, 0.1) !important;
 }
 
 .mobileSelectTrigger {
     width: 100%;
     border-radius: 14px;
-    border: 1px solid rgba(224, 61, 75, 0.12);
+    border: 1px solid rgba(142, 33, 53, 0.12);
     padding: 13px 14px;
-    background: linear-gradient(180deg, #ffffff 0%, #f7f8fa 100%);
+    background: #1C1C1E;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -249,19 +251,19 @@
 }
 
 .mobileSelectTrigger:hover {
-    border-color: rgba(224, 61, 75, 0.28);
-    background: linear-gradient(180deg, #ffffff 0%, #fff7f8 100%);
+    border-color: rgba(142, 33, 53, 0.28);
+    background: rgba(142, 33, 53, 0.1);
 }
 
 .mobileSelectValue {
-    color: #1a1a1a;
+    color: #ffffff;
     font-size: 0.95rem;
     line-height: 1.5;
 }
 
 .mobileSelectArrow {
     flex-shrink: 0;
-    color: rgba(224, 61, 75, 0.88);
+    color: rgba(142, 33, 53, 0.88);
     font-size: 0.82rem;
     font-weight: 600;
 }
@@ -280,7 +282,7 @@
 .mobilePickerSheet {
     width: min(100%, 420px);
     max-height: min(72vh, 560px);
-    background: #fff;
+    background: #1A1A1A;
     border-radius: 24px 24px 18px 18px;
     box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.14);
     overflow: hidden;
@@ -294,18 +296,18 @@
     justify-content: space-between;
     gap: 12px;
     padding: 18px 18px 14px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .mobilePickerHeader strong {
     font-size: 1rem;
-    color: #1a1a1a;
+    color: #ffffff;
 }
 
 .mobilePickerClose {
     border: none;
     background: transparent;
-    color: rgba(224, 61, 75, 0.88);
+    color: rgba(142, 33, 53, 0.88);
     font-size: 0.88rem;
     font-weight: 600;
     cursor: pointer;
@@ -320,12 +322,12 @@
 }
 
 .mobilePickerOption {
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
-    background: #fff;
+    background: #1A1A1A;
     padding: 14px 16px;
     text-align: left;
-    color: #1a1a1a;
+    color: #ffffff;
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -334,13 +336,13 @@
 }
 
 .mobilePickerOptionActive {
-    border-color: rgba(224, 61, 75, 0.3);
-    background: rgba(224, 61, 75, 0.06);
-    box-shadow: inset 0 0 0 1px rgba(224, 61, 75, 0.08);
+    border-color: rgba(142, 33, 53, 0.3);
+    background: rgba(142, 33, 53, 0.12);
+    box-shadow: inset 0 0 0 1px rgba(142, 33, 53, 0.08);
 }
 
 .mobilePickerOptionDesc {
-    color: rgba(0, 0, 0, 0.5);
+    color: rgba(255, 255, 255, 0.55);
     font-size: 0.82rem;
     line-height: 1.45;
 }
@@ -350,12 +352,12 @@
 .formGrid select:focus {
     outline: none;
     border-color: var(--primary);
-    background: #fff;
-    box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.1);
+    background: #1C1C1E;
+    box-shadow: 0 0 0 3px rgba(142, 33, 53, 0.2);
 }
 
 .specialBgmSelect:focus {
-    box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.12), 0 10px 24px rgba(224, 61, 75, 0.08) !important;
+    box-shadow: 0 0 0 3px rgba(142, 33, 53, 0.2), 0 10px 24px rgba(142, 33, 53, 0.08) !important;
 }
 
 .formGrid textarea {
@@ -375,7 +377,7 @@
     margin-left: auto;
     font-size: 0.7rem;
     font-weight: 400;
-    color: rgba(0, 0, 0, 0.35);
+    color: rgba(255, 255, 255, 0.35);
 }
 
 @media (max-width: 720px) {

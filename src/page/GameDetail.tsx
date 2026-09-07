@@ -37,9 +37,8 @@ import { prefetchGalgameDocument } from '../lib/galgame/galgameDocumentCache';
 
 import { DetailHeartIcon, DetailShareIcon, DetailStarIcon } from '../components/GameDetailStatIcons';
 
-/** 功能注释：详情页顶部/底部操作图标；统计条改用内联 SVG 组件避免裂图 */
+/** 功能注释：详情页操作图标；返回改用分类页同款描边箭头，浅色封面上更清晰 */
 const HOME_ICON_BASE = `${import.meta.env.BASE_URL}data/assetsv2/home`;
-const ICON_BACK = `${HOME_ICON_BASE}/nav_back.webp`;
 const ICON_GAMEPAD = `${HOME_ICON_BASE}/icon_gamepad.webp`;
 const ICON_FILMSTRIP = `${HOME_ICON_BASE}/icon_filmstrip.webp`;
 import {
@@ -1248,14 +1247,15 @@ const GameDetail: React.FC = () => {
 
     return (
         <div className={styles.pageContainer}>
-            {/* 顶部：返回 + 居中「作品详情」 */}
+            {/* 顶部：仅保留返回，无顶栏底与标题 */}
             <div className={styles.topBar}>
                 <div className={styles.topBarContent}>
                     <button className={styles.backIconButton} onClick={handleBack} aria-label={t('gameDetail.back')}>
-                        <img src={ICON_BACK} alt="" />
+                        {/* 功能注释：与分类页同一描边 chevron，浅色封面更清晰 */}
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M15 6L9 12L15 18" />
+                        </svg>
                     </button>
-                    <h1 className={styles.pageTitle}>{t('gameDetail.pageTitle')}</h1>
-                    <div className={styles.topBarSpacer} aria-hidden="true" />
                 </div>
             </div>
 

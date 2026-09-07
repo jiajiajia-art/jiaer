@@ -17,6 +17,7 @@ import {
     normalizeHomeListMode,
     normalizeHomeListSort,
     normalizeHomeListTagId,
+    resolveCategoriesPageTitleKey,
     type HomeListMode,
     type HomeListSort,
 } from '../utils/gameBrowseFilters';
@@ -130,7 +131,6 @@ const Categories: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [isMobilePage, setIsMobilePage] = useState<boolean>(getInitialMobileState);
-    const [isThemeDragging, setIsThemeDragging] = useState(false);
 
     const observerRef = useRef<IntersectionObserver | null>(null);
     const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
@@ -139,16 +139,14 @@ const Categories: React.FC = () => {
     const isLoadingRef = useRef(false);
     const isLoadingMoreRef = useRef(false);
     const themeScrollRef = useRef<HTMLDivElement | null>(null);
-    const themeDragStateRef = useRef({
-        isDragging: false,
-        startX: 0,
-        startScrollLeft: 0,
-        moved: false,
-    });
 
     const selectedMode = useMemo(() => normalizeHomeListMode(searchParams.get('mode')), [searchParams]);
     const selectedSort = useMemo(() => normalizeHomeListSort(searchParams.get('sort')), [searchParams]);
     const selectedTagId = useMemo(() => normalizeHomeListTagId(searchParams.get('tagId')), [searchParams]);
+    const pageTitle = useMemo(
+        () => t(resolveCategoriesPageTitleKey(selectedSort)),
+        [selectedSort, t],
+    );
 
     const modeOptions = useMemo(
         () => HOME_LIST_MODE_OPTIONS.map((option) => ({
@@ -209,41 +207,12 @@ const Categories: React.FC = () => {
 
         let frameId = 0;
 
-        // 实现 渲染完成后定位选中题材
+        // 实现：换行布局下把选中题材滚进可视区
         frameId = window.requestAnimationFrame(() => {
             const selectedTagKey = selectedTagId === null ? 'all' : String(selectedTagId);
             const selectedButton = scrollContainer.querySelector<HTMLButtonElement>(`[data-tag-id="${selectedTagKey}"]`);
-            if (!selectedButton) return;
-
-            const containerLeft = scrollContainer.scrollLeft;
-            const containerRight = containerLeft + scrollContainer.clientWidth;
-            const buttonLeft = selectedButton.offsetLeft;
-            const buttonRight = buttonLeft + selectedButton.offsetWidth;
-
-            let nextScrollLeft: number | null = null;
-
-            // 实现 仅在超出可视区时滚动
-            if (buttonLeft < containerLeft) {
-                nextScrollLeft = buttonLeft;
-            } else if (buttonRight > containerRight) {
-                nextScrollLeft = buttonRight - scrollContainer.clientWidth;
-            }
-
-            if (nextScrollLeft === null) return;
-
-            const maxScrollLeft = Math.max(0, scrollContainer.scrollWidth - scrollContainer.clientWidth);
-            const safeScrollLeft = Math.min(Math.max(nextScrollLeft, 0), maxScrollLeft);
-
-            // 实现 选中题材自动滚动到可视区域
-            if (typeof scrollContainer.scrollTo === 'function') {
-                scrollContainer.scrollTo({
-                    left: safeScrollLeft,
-                    behavior: 'smooth',
-                });
-                return;
-            }
-
-            scrollContainer.scrollLeft = safeScrollLeft;
+            if (!selectedButton || typeof selectedButton.scrollIntoView !== 'function') return;
+            selectedButton.scrollIntoView({ block: 'nearest', inline: 'nearest' });
         });
 
         return () => {
@@ -394,48 +363,13 @@ const Categories: React.FC = () => {
         navigate('/home');
     };
 
-    const handleThemeMouseDown = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
-        if (isMobilePage || event.button !== 0 || !themeScrollRef.current) return;
-        // 实现桌面端按住拖动题材
-        themeDragStateRef.current = {
-            isDragging: true,
-            startX: event.clientX,
-            startScrollLeft: themeScrollRef.current.scrollLeft,
-            moved: false,
-        };
-        setIsThemeDragging(true);
-    }, [isMobilePage]);
-
-    const handleThemeMouseMove = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
-        if (!themeDragStateRef.current.isDragging || !themeScrollRef.current) return;
-        const deltaX = event.clientX - themeDragStateRef.current.startX;
-        if (Math.abs(deltaX) > 6) {
-            themeDragStateRef.current.moved = true;
-        }
-        themeScrollRef.current.scrollLeft = themeDragStateRef.current.startScrollLeft - deltaX;
-    }, []);
-
-    const stopThemeDragging = useCallback(() => {
-        if (!themeDragStateRef.current.isDragging) return;
-        themeDragStateRef.current.isDragging = false;
-        window.setTimeout(() => {
-            themeDragStateRef.current.moved = false;
-        }, 0);
-        setIsThemeDragging(false);
-    }, []);
-
-    const handleThemeClickCapture = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
-        if (!themeDragStateRef.current.moved) return;
-        event.preventDefault();
-        event.stopPropagation();
-    }, []);
-
     const renderChipRow = <T extends string>(
         options: Array<{ value: T; label: string }>,
         activeValue: T,
         onSelect: (value: T) => void,
+        optionsConfig?: { singleLine?: boolean },
     ) => (
-        <div className={styles.chipRow}>
+        <div className={`${styles.chipRow} ${optionsConfig?.singleLine ? styles.chipRowSingle : ''}`}>
             {options.map((option) => (
                 <button
                     key={option.value}
@@ -451,33 +385,36 @@ const Categories: React.FC = () => {
 
     return (
         <div className={styles.pageRoot}>
-            {!isMobilePage && <Navbar />}
+            <Navbar />
 
             <div className={styles.mainContent}>
                 <div className={styles.main}>
+                    {/* 功能注释：效果图标题在滤镜卡外，返回 + 居中标题 */}
+                    <div className={styles.pageHeader}>
+                        <button
+                            type="button"
+                            className={styles.backButton}
+                            onClick={handleBack}
+                            aria-label={t('categories.backToHome')}
+                            title={t('categories.backToHome')}
+                        >
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M15 6L9 12L15 18" />
+                            </svg>
+                        </button>
+                        <h1 className={styles.pageTitle}>{pageTitle}</h1>
+                    </div>
+
                     <div className={styles.filtersPanel}>
                         <div className={styles.filtersCard}>
-                            <div className={styles.filtersCardHead}>
-                                {/* 实现移动端框内返回与标题布局 */}
-                                {isMobilePage && (
-                                    <button
-                                        type="button"
-                                        className={`${styles.backButton} ${styles.backButtonInCard}`}
-                                        onClick={handleBack}
-                                        aria-label={t('categories.backToHome')}
-                                        title={t('categories.backToHome')}
-                                    >
-                                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                                            <path d="M15 6L9 12L15 18" />
-                                        </svg>
-                                    </button>
-                                )}
-                                <h2 className={`${styles.filtersTitle} ${isMobilePage ? styles.filtersTitleMobile : ''}`}>{t('categories.pageTitle')}</h2>
-                            </div>
-
                             <section className={styles.filterSection}>
                                 <div className={styles.filterTitle}>{t('categories.mode')}</div>
-                                {renderChipRow(modeOptions, selectedMode, (mode) => updateFilters({ mode }))}
+                                {renderChipRow(
+                                    modeOptions,
+                                    selectedMode,
+                                    (mode) => updateFilters({ mode }),
+                                    { singleLine: true },
+                                )}
                             </section>
 
                             <section className={styles.filterSection}>
@@ -487,16 +424,7 @@ const Categories: React.FC = () => {
 
                             <section className={styles.filterSection}>
                                 <div className={styles.filterTitle}>{t('categories.theme')}</div>
-                                <div
-                                    ref={themeScrollRef}
-                                    className={`${styles.themeScrollRow} ${isThemeDragging ? styles.themeScrollRowDragging : ''}`}
-                                    onMouseDown={handleThemeMouseDown}
-                                    onMouseMove={handleThemeMouseMove}
-                                    onMouseUp={stopThemeDragging}
-                                    onMouseLeave={stopThemeDragging}
-                                    onClickCapture={handleThemeClickCapture}
-                                >
-                                    {/* 实现题材第三层横向拖动 */}
+                                <div ref={themeScrollRef} className={styles.themeScrollRow}>
                                     <button
                                         type="button"
                                         data-tag-id="all"

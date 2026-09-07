@@ -2,6 +2,8 @@
  * 功能注释：列表卡片正文区（简介 + 题材标签 + 收藏徽标）解析，对齐首页效果图。
  */
 
+import { isGameEngineStorageTag } from '../utils/gameTypeLabel.ts';
+
 export type GameCardBodySource = {
   subtitle?: unknown;
   description?: unknown;
@@ -52,12 +54,42 @@ export function resolveGameCardSubtitle(game: GameCardBodySource): string {
   return truncate(description, MAX_SUBTITLE);
 }
 
-/** 功能注释：题材标签来自 theme_tag_names，过滤「全部」，最多 3 个。 */
+export type SearchResultSecondarySource = GameCardBodySource & {
+  title?: unknown;
+  author_name?: unknown;
+};
+
+/**
+ * 功能注释：搜索下拉第二行；与标题重复时跳过，避免「两行同一句」。
+ * 优先不同的 subtitle → description → 作者 → 题材标签。
+ */
+export function resolveSearchResultSecondaryLine(game: SearchResultSecondarySource): string {
+  const title = cleanText(game.title);
+  const subtitle = cleanText(game.subtitle);
+  if (subtitle && subtitle !== title) {
+    return truncate(subtitle, MAX_SUBTITLE);
+  }
+
+  const description = cleanText(game.description);
+  if (description && description !== title) {
+    return truncate(description, MAX_SUBTITLE);
+  }
+
+  const author = cleanText(game.author_name);
+  if (author) return author;
+
+  const tags = resolveGameCardTags(game);
+  if (tags.length > 0) return tags.join(' · ');
+
+  return '';
+}
+
+/** 功能注释：题材标签来自 theme_tag_names，过滤「全部」与入库引擎码（封面角标已展示），最多 3 个。 */
 export function resolveGameCardTags(game: GameCardBodySource): string[] {
   const names = Array.isArray(game.theme_tag_names) ? game.theme_tag_names : [];
   const tags = names
     .map((name) => cleanText(name))
-    .filter((name) => name && name !== '全部');
+    .filter((name) => name && name !== '全部' && !isGameEngineStorageTag(name));
   if (tags.length > 0) return tags.slice(0, MAX_TAGS);
 
   const raw = cleanText(game.game_tags)
@@ -67,7 +99,7 @@ export function resolveGameCardTags(game: GameCardBodySource): string[] {
   return raw
     .split(/[,，/|]/)
     .map((part) => part.trim())
-    .filter(Boolean)
+    .filter((part) => part && !isGameEngineStorageTag(part))
     .slice(0, MAX_TAGS);
 }
 

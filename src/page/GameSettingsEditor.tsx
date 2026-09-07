@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styles from './GameSettingsEditor.module.css';
 import DocumentsPanel from '../components/GameSettingEditor/DocumentUpload/DocumentsPanel';
@@ -15,7 +15,10 @@ import PublishSettingsModal, { type PublishSubmitPayload } from '../components/C
 import PublishAssetCheckModal from '../components/CommonModal/PublishAssetCheckModal';
 import ConfirmModal from '../components/CommonModal/ConfirmModal';
 import AssetGapBanner from '../components/GameSettingEditor/AssetGapBanner';
+import Navbar from '../components/Layout/Navbar';
 import CreationFlowRail from '../components/GameSettingEditor/CreationFlowRail';
+import CreationStepFooter from '../components/GameSettingEditor/CreationStepFooter';
+import CreationCircleNav from '../components/GameSettingEditor/CreationCircleNav';
 import { useEditorStore } from '../store/editorStore';
 import { useGameStore } from '../store/gameStore';
 import { useEditorData } from '../hooks/editor/useEditorData';
@@ -81,11 +84,13 @@ const ENABLE_SCREENWRITER_MODE = import.meta.env.VITE_ENABLE_SCREENWRITER_MODE =
 
 const GameSettingsEditor = () => {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const { activePanel, isParsed, setActivePanel, setIsParsed } = useEditorStore();
     const { fileId, setFileId } = useGameStore();
     const [searchParams] = useSearchParams();
     const mode = searchParams.get('mode'); // 默认为 'visual'，新按钮传 'worldInteraction'
     const isMiniProgramTxtMode = isMiniProgramEnv() && mode !== 'worldInteraction';
+    const isVisualTxtCreate = mode !== 'worldInteraction';
     
     const [isParsing, setIsParsing] = useState<boolean>(false);
     const [showPublishModal, setShowPublishModal] = useState<boolean>(false);
@@ -731,7 +736,9 @@ const GameSettingsEditor = () => {
 
     return (
         <>
-            <div className={`${styles.appShell} ${isMiniProgramTxtMode ? styles.miniProgramShell : ''}`}>
+            {/* 功能注释：全站统一 funloom 顶栏（logo / 查询游戏 / 消息 / 头像） */}
+            <Navbar />
+            <div className={`${styles.appShell} ${isMiniProgramTxtMode ? styles.miniProgramShell : ''} ${isVisualTxtCreate ? styles.txtCreateShell : ''}`}>
                 <Sidebar
                     activePanel={activePanel}
                     onPanelChange={handlePanelChange}
@@ -739,19 +746,43 @@ const GameSettingsEditor = () => {
                     isParsed={isParsed}
                     mode={mode ?? undefined}
                 />
-                <main className={`${styles.main} ${isMiniProgramTxtMode ? styles.miniProgramMain : ''}`}>
-                <header className={`${styles.topBar} ${isMiniProgramTxtMode ? styles.miniProgramTopBar : ''}`}>
-                    <div className={styles.topBarLead}>
+                <main className={`${styles.main} ${isMiniProgramTxtMode ? styles.miniProgramMain : ''} ${isVisualTxtCreate ? styles.txtCreateMain : ''}`}>
+                {/* 功能注释：移动端 TXT 创建页头（效果图：返回 + 标题），桌面仍用下方 topBar */}
+                {isVisualTxtCreate ? (
+                    <div className={styles.txtCreateMobileHeader}>
+                        <button
+                            type="button"
+                            className={styles.txtCreateBack}
+                            onClick={() => navigate('/create')}
+                            aria-label={t('createGame.txtCreatePageTitle')}
+                        >
+                            ‹
+                        </button>
+                        <h1 className={styles.txtCreateTitle}>{t('createGame.txtCreatePageTitle')}</h1>
+                    </div>
+                ) : null}
+                {isVisualTxtCreate ? (
+                    <CreationCircleNav
+                        activePanel={activePanel}
+                        isParsing={isParsing}
+                        isParsed={isParsed}
+                        onPanelChange={handlePanelChange}
+                        onPublish={async () => {
+                            const canOpen = await checkActivePanelBeforeAction(() => {
+                                openPublishFlow();
+                            });
+                            if (!canOpen) return;
+                            openPublishFlow();
+                        }}
+                        publishDisabled={!fileId || !gameData || isSubmitting || isLoadingData}
+                    />
+                ) : null}
+                <header className={`${styles.topBar} ${isMiniProgramTxtMode ? styles.miniProgramTopBar : ''} ${isVisualTxtCreate ? styles.txtCreateHideOnMobile : ''}`}>
+                    {/* 功能注释：grid 分区——桌面标题|按钮 / 轨通栏；窄屏标题→轨→按钮紧贴，杜绝 flex 折行空洞 */}
+                    <div className={styles.topBarTitles}>
                         <p className={styles.eyebrow}>{t('createGame.eyebrow')}</p>
                         <h1>{t('createGame.title')}</h1>
-                        <CreationFlowRail
-                            activePanel={activePanel}
-                            isParsing={isParsing}
-                            isParsed={isParsed}
-                            mode={mode ?? undefined}
-                        />
                     </div>
-
                     <div className={`${styles.topActions} ${isMiniProgramTxtMode ? styles.miniProgramTopActions : ''}`}>
                         {ENABLE_SCREENWRITER_MODE && (
                             <button
@@ -804,6 +835,14 @@ const GameSettingsEditor = () => {
                         >
                             {t('createGame.publishDirectly')}
                         </button>
+                    </div>
+                    <div className={styles.topBarRail}>
+                        <CreationFlowRail
+                            activePanel={activePanel}
+                            isParsing={isParsing}
+                            isParsed={isParsed}
+                            mode={mode ?? undefined}
+                        />
                     </div>
                 </header>
 
@@ -1016,6 +1055,15 @@ const GameSettingsEditor = () => {
                     />
                 )}
                 </main>
+                {isVisualTxtCreate ? null : (
+                <CreationStepFooter
+                    activePanel={activePanel}
+                    onPanelChange={handlePanelChange}
+                    isParsing={isParsing}
+                    isParsed={isParsed}
+                    mode={mode ?? undefined}
+                />
+                )}
                 {showPublishModal && (
                     <PublishSettingsModal
                         isOpen={showPublishModal}

@@ -1,12 +1,15 @@
+/* 功能注释：场景列表对齐 funloom 暗色创作壳（与 TXT 创建一致） */
+
 /* 卡片样式 */
 .card {
-    background: #fff;
+    background: #1A1A1A;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     padding: 20px;
     border-radius: 16px;
     display: flex;
     flex-direction: column;
     gap: 16px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
     max-height: 80vh;
     overflow-y: auto;
 }
@@ -14,7 +17,7 @@
 .card h3 {
     margin: 0;
     font-size: 1.1rem;
-    color: #1a1a1a;
+    color: #ffffff;
     font-weight: 600;
 }
 
@@ -29,14 +32,14 @@
 /* 按钮样式 */
 .ghostSmall {
     border-radius: 999px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     padding: 6px 14px;
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
     transition: 0.25s ease;
-    color: #1a1a1a;
-    background: #fff;
+    color: #ffffff;
+    background: #1C1C1E;
 }
 
 .ghostSmall:hover {
@@ -45,8 +48,8 @@
 }
 
 .ghostSmall:disabled:hover {
-    border-color: rgba(0, 0, 0, 0.12);
-    color: #1a1a1a;
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
 }
 
 /* 场景列表 */
@@ -61,10 +64,10 @@
     grid-template-columns: 120px 1fr;
     gap: 12px;
     align-items: stretch;
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
     cursor: pointer;
-    background: rgba(0, 0, 0, 0.01);
+    background: #121212;
     transition: 0.2s ease;
     padding: 10px;
     height: 200px;
@@ -72,12 +75,12 @@
 }
 
 .sceneRow:hover {
-    background: rgba(0, 0, 0, 0.03);
+    background: rgba(255, 255, 255, 0.04);
 }
 
 .sceneRow.active {
     border-color: var(--primary);
-    background: rgba(224, 61, 75, 0.04);
+    background: rgba(142, 33, 53, 0.04);
 }
 
 .sceneThumb {
@@ -91,11 +94,11 @@
 }
 
 .sceneThumb.empty {
-    border: 1px dashed rgba(0, 0, 0, 0.15);
-    background: rgba(0, 0, 0, 0.02);
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+    background: #1C1C1E;
     display: grid;
     place-items: center;
-    color: rgba(0, 0, 0, 0.4);
+    color: rgba(255, 255, 255, 0.4);
     font-size: 0.75rem;
 }
 
@@ -109,7 +112,7 @@
 
 .sceneMeta strong {
     font-size: 0.95rem;
-    color: #1a1a1a;
+    color: #ffffff;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -130,7 +133,7 @@
 
 .sceneMeta p {
     margin: 0;
-    color: rgba(0, 0, 0, 0.5);
+    color: rgba(255, 255, 255, 0.55);
     font-size: 0.82rem;
     line-height: 1.4;
     overflow: hidden;
@@ -143,7 +146,7 @@
 }
 
 .mutedSmall {
-    color: rgba(0, 0, 0, 0.5);
+    color: rgba(255, 255, 255, 0.55);
     margin: 0;
     font-size: 0.8rem;
     line-height: 1.4;
@@ -168,13 +171,13 @@
 
 .subsceneHeaderText {
     font-size: 0.78rem;
-    color: rgba(0, 0, 0, 0.45);
+    color: rgba(255, 255, 255, 0.45);
 }
 
 /* 子场景独立卡片：在父场景下方，整体小一号并稍微缩进 */
 .subsceneRowCard {
     margin-left: 12px; /* 视觉上与父场景拉开一点层级 */
-    background: rgba(0, 0, 0, 0.015);
+    background: #121212;
 }
 
 .subsceneTag {
@@ -183,7 +186,7 @@
     justify-content: center;
     padding: 2px 6px;
     border-radius: 999px;
-    background: rgba(224, 61, 75, 0.08);
+    background: rgba(142, 33, 53, 0.08);
     color: var(--primary);
     font-size: 0.7rem;
     margin-left: 4px;
@@ -248,10 +251,10 @@
         align-items: center;
         justify-content: center;
         width: 100%;
-        border: 1px solid rgba(224, 61, 75, 0.14);
+        border: 1px solid rgba(142, 33, 53, 0.14);
         border-radius: 999px;
         padding: 10px 14px;
-        background: rgba(224, 61, 75, 0.04);
+        background: rgba(142, 33, 53, 0.04);
         color: var(--primary);
         font-size: 0.85rem;
         font-weight: 600;
@@ -260,7 +263,7 @@
     }
 
     .mobileToggleButton:hover {
-        background: rgba(224, 61, 75, 0.08);
+        background: rgba(142, 33, 53, 0.08);
     }
 }
 

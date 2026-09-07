@@ -1,3 +1,5 @@
+/* 功能注释：场景面板对齐 funloom 暗色创作壳（与 TXT 创建一致） */
+
 /* 主组件布局 */
 .panelContent {
     display: flex;
@@ -25,26 +27,27 @@
 .panelHeader h2 {
     margin: 4px 0 0;
     font-size: 1.6rem;
-    color: #1a1a1a;
+    color: #ffffff;
     font-weight: 700;
 }
 
 .subtitle {
     margin: 4px 0 0;
-    color: rgba(0, 0, 0, 0.55);
+    color: rgba(255, 255, 255, 0.55);
     font-size: 0.9rem;
 }
 
-/* 主组件按钮样式 */
+/* 功能注释：与 GenerationActionBar 积分胶囊统一为全圆角胶囊 */
 .ghost {
-    border-radius: 12px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
-    padding: 10px 20px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    min-height: 44px;
+    padding: 9px 18px;
     font-weight: 600;
     cursor: pointer;
     transition: 0.25s ease;
-    color: #1a1a1a;
-    background: #fff;
+    color: #ffffff;
+    background: #1C1C1E;
 }
 
 .ghost:hover {
@@ -81,7 +84,7 @@
 
 .buttonSubText {
     font-size: 0.7rem;
-    color: rgba(0, 0, 0, 0.5);
+    color: rgba(255, 255, 255, 0.55);
     line-height: 1;
     font-weight: 400;
 }
@@ -91,19 +94,19 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    color: rgba(51, 51, 51, 0.5);
+    color: rgba(255, 255, 255, 0.5);
     font-size: 12px;
     margin-left: 4px;
     margin-right: 4px;
 }
 
 .discountPriceBlack {
-    color: rgba(0, 0, 0, 1);
+    color: rgba(255, 255, 255, 0.85);
 }
 
 .originalPrice {
     text-decoration: line-through;
-    color: rgba(0, 0, 0, 0.35);
+    color: rgba(255, 255, 255, 0.35);
     font-size: 0.85em;
     font-weight: 400;
 }
@@ -123,13 +126,14 @@
 
 /* 卡片样式（主组件右侧详情卡片） */
 .card {
-    background: #fff;
+    background: #1A1A1A;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     padding: 20px;
     border-radius: 16px;
     display: flex;
     flex-direction: column;
     gap: 16px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
     max-height: 80vh;
     overflow-y: auto;
 }
@@ -141,7 +145,7 @@
     left: 280px;
     right: 0;
     bottom: 0;
-    background: rgba(255, 255, 255, 0.92);
+    background: rgba(0, 0, 0, 0.75);
     backdrop-filter: blur(4px);
     display: flex;
     flex-direction: column;
@@ -175,7 +179,7 @@
 .plusLoadingSpinner {
     width: 40px;
     height: 40px;
-    border: 3px solid #f3f3f3;
+    border: 3px solid rgba(255, 255, 255, 0.12);
     border-top: 3px solid var(--primary);
     border-radius: 50%;
     animation: plusSpin 1s linear infinite;
@@ -184,7 +188,7 @@
 }
 
 .plusLoadingText {
-    color: #1a1a1a;
+    color: #ffffff;
     font-size: 14px;
     font-weight: 500;
     flex-shrink: 0;
@@ -194,7 +198,7 @@
 .plusLoadingHint {
     font-size: 12px;
     line-height: 1.6;
-    color: rgba(0, 0, 0, 0.5);
+    color: rgba(255, 255, 255, 0.55);
     text-align: center;
 }
 
@@ -206,15 +210,15 @@
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    border: 1px solid rgba(224, 61, 75, 0.35);
-    background: #ffffff;
+    border: 1px solid rgba(142, 33, 53, 0.35);
+    background: #1A1A1A;
     color: var(--primary);
     transition: all 0.2s ease;
 }
 
 .plusLoadingCancelBtn:hover {
     transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(224, 61, 75, 0.12);
+    box-shadow: 0 6px 16px rgba(142, 33, 53, 0.12);
 }
 
 /* 响应式布局 */
@@ -240,8 +244,8 @@
         min-height: min(52vh, 360px);
         padding: 28px 24px;
         border-radius: 28px;
-        background: rgba(255, 255, 255, 0.96);
-        border: 1px solid rgba(0, 0, 0, 0.06);
+        background: #1A1A1A;
+        border: 1px solid rgba(255, 255, 255, 0.08);
         box-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
         gap: 14px;
     }
@@ -283,21 +287,21 @@
 
 /* === batch board (aligned with CharactersPanel) === */
 .plusLoadingOverlay{
-    --atelier-ink: #1c1412;
-    --atelier-mute: rgba(28, 20, 18, 0.55);
-    --atelier-soft: rgba(28, 20, 18, 0.38);
-    --atelier-paper: #fff8f4;
-    --atelier-card: rgba(255, 252, 249, 0.94);
-    --atelier-line: rgba(224, 61, 75, 0.16);
-    --atelier-glow: rgba(224, 61, 75, 0.18);
+    --atelier-ink: #ffffff;
+    --atelier-mute: rgba(255, 255, 255, 0.55);
+    --atelier-soft: rgba(255, 255, 255, 0.38);
+    --atelier-paper: #1A1A1A;
+    --atelier-card: #1C1C1E;
+    --atelier-line: rgba(142, 33, 53, 0.25);
+    --atelier-glow: rgba(142, 33, 53, 0.22);
     position: fixed;
     top: 0;
     left: 280px;
     right: 0;
     bottom: 0;
     background:
-        radial-gradient(ellipse 70% 50% at 50% 42%, rgba(255, 236, 232, 0.72), transparent 62%),
-        linear-gradient(165deg, rgba(255, 255, 255, 0.9), rgba(255, 246, 242, 0.88));
+        radial-gradient(ellipse 70% 50% at 50% 42%, rgba(142, 33, 53, 0.18), transparent 62%),
+        linear-gradient(165deg, rgba(0, 0, 0, 0.85), rgba(26, 26, 26, 0.92));
     backdrop-filter: blur(8px);
     display: flex;
     flex-direction: column;
@@ -322,13 +326,13 @@
     padding: 20px 20px 16px;
     border-radius: 22px;
     background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.98), var(--atelier-card)),
+        linear-gradient(180deg, #1A1A1A, var(--atelier-card)),
         var(--atelier-paper);
     border: 1px solid var(--atelier-line);
     box-shadow:
-        0 1px 0 rgba(255, 255, 255, 0.9) inset,
-        0 24px 60px rgba(80, 24, 28, 0.1),
-        0 0 0 1px rgba(255, 255, 255, 0.4);
+        0 1px 0 rgba(255, 255, 255, 0.06) inset,
+        0 24px 60px rgba(0, 0, 0, 0.45),
+        0 0 0 1px rgba(255, 255, 255, 0.08);
     animation: plusDialogIn 0.38s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -385,11 +389,11 @@
         conic-gradient(
             from -90deg,
             var(--primary) calc(var(--batch-progress) * 1turn),
-            rgba(224, 61, 75, 0.12) 0
+            rgba(142, 33, 53, 0.12) 0
         );
     display: grid;
     place-items: center;
-    box-shadow: 0 0 0 4px rgba(224, 61, 75, 0.06), 0 10px 24px var(--atelier-glow);
+    box-shadow: 0 0 0 4px rgba(142, 33, 53, 0.06), 0 10px 24px var(--atelier-glow);
     position: relative;
 }
 
@@ -398,7 +402,7 @@
     position: absolute;
     inset: -3px;
     border-radius: 50%;
-    border: 1px dashed rgba(224, 61, 75, 0.28);
+    border: 1px dashed rgba(142, 33, 53, 0.28);
     animation: plusSpin 12s linear infinite;
 }
 
@@ -406,7 +410,7 @@
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    background: #fff;
+    background: #1A1A1A;
     display: flex;
     align-items: baseline;
     justify-content: center;
@@ -449,8 +453,8 @@
 .plusLoadingStatCard {
     border-radius: 14px;
     padding: 12px 12px 10px;
-    border: 1px solid rgba(28, 20, 18, 0.08);
-    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #1C1C1E;
 }
 
 .plusLoadingStatGen {
@@ -489,7 +493,7 @@
     margin-top: 8px;
     height: 4px;
     border-radius: 999px;
-    background: rgba(28, 20, 18, 0.08);
+    background: rgba(255, 255, 255, 0.08);
     overflow: hidden;
 }
 
@@ -519,8 +523,8 @@
 
 .plusLoadingBoardShell {
     border-radius: 16px;
-    border: 1px solid rgba(28, 20, 18, 0.08);
-    background: #faf6f3;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #121212;
     overflow: hidden;
 }
 
@@ -536,8 +540,8 @@
 .plusLoadingBoardItem {
     border-radius: 10px;
     padding: 8px 10px;
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(28, 20, 18, 0.06);
+    background: rgba(26, 26, 26, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .plusLoadingBoardTop {
@@ -563,7 +567,7 @@
     font-weight: 700;
     padding: 2px 7px;
     border-radius: 999px;
-    background: rgba(28, 20, 18, 0.06);
+    background: rgba(255, 255, 255, 0.06);
     color: var(--atelier-mute);
 }
 
@@ -574,7 +578,7 @@
 }
 
 .plusLoadingItemGen .plusLoadingBoardStage {
-    background: rgba(224, 61, 75, 0.12);
+    background: rgba(142, 33, 53, 0.12);
     color: #c62839;
 }
 
@@ -594,12 +598,12 @@
 }
 
 .plusLoadingItemPending .plusLoadingBoardStage {
-    background: rgba(28, 20, 18, 0.05);
+    background: rgba(255, 255, 255, 0.05);
     color: var(--atelier-soft);
 }
 
 .plusLoadingItemGen.plusLoadingBoardItem {
-    border-color: rgba(224, 61, 75, 0.18);
+    border-color: rgba(142, 33, 53, 0.18);
 }
 
 .plusLoadingItemCut.plusLoadingBoardItem {
@@ -625,7 +629,7 @@
 .plusLoadingTrack {
     height: 4px;
     border-radius: 999px;
-    background: rgba(224, 61, 75, 0.1);
+    background: rgba(142, 33, 53, 0.1);
     overflow: hidden;
 }
 
@@ -634,15 +638,15 @@
     border-radius: inherit;
     background: linear-gradient(90deg, #ff6b78, var(--primary));
     transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1);
-    box-shadow: 0 0 12px rgba(224, 61, 75, 0.35);
+    box-shadow: 0 0 12px rgba(142, 33, 53, 0.35);
 }
 
 .plusLoadingLogShell {
     border-radius: 16px;
-    border: 1px solid rgba(28, 20, 18, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     background:
-        linear-gradient(180deg, rgba(28, 20, 18, 0.03), rgba(28, 20, 18, 0.015)),
-        #faf6f3;
+        linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.2)),
+        #121212;
     overflow: hidden;
 }
 
@@ -651,7 +655,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 10px 12px 8px;
-    border-bottom: 1px solid rgba(28, 20, 18, 0.06);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .plusLoadingLogEyebrow {
@@ -694,9 +698,9 @@
 }
 
 .plusLoadingLogRowActive {
-    background: rgba(255, 255, 255, 0.85);
+    background: #1C1C1E;
     color: var(--atelier-ink);
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset;
 }
 
 .plusLoadingLogBadge {
@@ -709,13 +713,13 @@
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.02em;
-    background: rgba(28, 20, 18, 0.06);
+    background: rgba(255, 255, 255, 0.06);
     color: var(--atelier-mute);
     white-space: nowrap;
 }
 
 .plusLoadingLogRowGen .plusLoadingLogBadge {
-    background: rgba(224, 61, 75, 0.12);
+    background: rgba(142, 33, 53, 0.12);
     color: #c62839;
 }
 
@@ -787,10 +791,10 @@
     font-weight: 700;
     letter-spacing: 0.03em;
     cursor: pointer;
-    border: 1px solid rgba(42, 98, 128, 0.38);
+    border: 1px solid rgba(142, 33, 53, 0.45);
     background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(232, 244, 249, 0.96) 55%, rgba(214, 236, 245, 0.95) 100%);
-    color: #1e4d66;
+        linear-gradient(135deg, #1C1C1E 0%, rgba(142, 33, 53, 0.15) 100%);
+    color: #ffffff;
     box-shadow:
         inset 0 0 0 1px rgba(255, 255, 255, 0.6),
         0 1px 0 rgba(42, 98, 128, 0.06);
@@ -807,7 +811,7 @@
     height: 58%;
     transform: translateY(-50%);
     border-radius: 99px;
-    background: linear-gradient(180deg, #3d8fb0, #1e4d66);
+    background: linear-gradient(180deg, #A8283C, #8E2135);
     opacity: 0.85;
 }
 
@@ -841,16 +845,16 @@
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    border: 1px solid rgba(224, 61, 75, 0.35);
-    background: #ffffff;
+    border: 1px solid rgba(142, 33, 53, 0.35);
+    background: #1A1A1A;
     color: var(--primary);
     transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 .plusLoadingCancelBtn:hover {
     transform: translateY(-1px);
-    background: #fff7f8;
-    box-shadow: 0 8px 20px rgba(224, 61, 75, 0.14);
+    background: rgba(142, 33, 53, 0.1);
+    box-shadow: 0 8px 20px rgba(142, 33, 53, 0.14);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -870,7 +874,7 @@
 .plusLoadingSpinner {
     width: 40px;
     height: 40px;
-    border: 3px solid #f3f3f3;
+    border: 3px solid rgba(255, 255, 255, 0.12);
     border-top: 3px solid var(--primary);
     border-radius: 50%;
     animation: plusSpin 1s linear infinite;
@@ -882,11 +886,11 @@
 .plusLoadingLogItemActive {
     font-size: 12px;
     line-height: 1.55;
-    color: rgba(0, 0, 0, 0.45);
+    color: rgba(255, 255, 255, 0.45);
 }
 
 .plusLoadingLogItemActive {
-    color: rgba(26, 26, 26, 0.88);
+    color: rgba(255, 255, 255, 0.88);
     font-weight: 500;
 }
 
@@ -897,7 +901,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(26, 26, 26, 0.92);
     backdrop-filter: blur(2px);
     display: flex;
     flex-direction: column;
@@ -919,7 +923,7 @@
 .loadingSpinner {
     width: 24px;
     height: 24px;
-    border: 2px solid #f3f3f3;
+    border: 2px solid rgba(255, 255, 255, 0.12);
     border-top: 2px solid #FB4655;
     border-radius: 50%;
     animation: spin 1s linear infinite;
@@ -927,14 +931,14 @@
 }
 
 .loadingText {
-    color: #666;
+    color: rgba(255, 255, 255, 0.55);
     font-size: 12px;
     font-weight: 500;
 }
 
 .loadingHint {
     margin-top: 6px;
-    color: rgba(0, 0, 0, 0.56);
+    color: rgba(255, 255, 255, 0.55);
     font-size: 11px;
     line-height: 1.5;
     text-align: center;

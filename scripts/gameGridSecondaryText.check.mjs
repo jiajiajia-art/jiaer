@@ -15,6 +15,7 @@ import {
   resolveGameCardCollectBadge,
   resolveGameCardSubtitle,
   resolveGameCardTags,
+  resolveSearchResultSecondaryLine,
 } from '../src/lib/gameCardBody.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -56,6 +57,47 @@ test('resolveGameCardSubtitle_无subtitle时截取description', () => {
   assert.ok(subtitle.length <= 29);
 });
 
+test('resolveSearchResultSecondaryLine_subtitle与标题相同时不重复', () => {
+  assert.equal(
+    resolveSearchResultSecondaryLine({
+      title: '霍去病封狼居胥模拟器',
+      subtitle: '霍去病封狼居胥模拟器',
+      description: '西汉名将封狼居胥的互动史诗',
+    }),
+    '西汉名将封狼居胥的互动史诗',
+  );
+  assert.equal(
+    resolveSearchResultSecondaryLine({
+      title: '如果我是汉武帝',
+      subtitle: '如果我是汉武帝',
+      author_name: '史官甲',
+    }),
+    '史官甲',
+  );
+  assert.equal(
+    resolveSearchResultSecondaryLine({
+      title: '同名作品',
+      subtitle: '同名作品',
+      theme_tag_names: ['古风历史', '权谋争霸'],
+    }),
+    '古风历史 · 权谋争霸',
+  );
+  assert.equal(
+    resolveSearchResultSecondaryLine({
+      title: '空副线',
+      subtitle: '空副线',
+    }),
+    '',
+  );
+});
+
+test('Navbar_搜索项应使用去重副文案且可隐藏第二行', () => {
+  const tsx = readFileSync(join(root, 'src/components/Layout/Navbar.tsx'), 'utf8');
+  assert.match(tsx, /resolveSearchResultSecondaryLine/);
+  assert.match(tsx, /secondary \? \(/);
+  assert.doesNotMatch(tsx, /getSearchResultMeta/);
+});
+
 test('resolveGameCardCollectBadge_零或缺失不展示', () => {
   assert.equal(resolveGameCardCollectBadge({ like_count: 0 }), null);
   assert.equal(resolveGameCardCollectBadge({}), null);
@@ -64,6 +106,13 @@ test('resolveGameCardCollectBadge_零或缺失不展示', () => {
 
 test('resolveGameCardTags_无题材时回落game_tags', () => {
   assert.deepEqual(resolveGameCardTags({ game_tags: '权谋,穿越' }), ['权谋', '穿越']);
+});
+
+test('resolveGameCardTags_应过滤引擎码避免与封面角标重复', () => {
+  assert.deepEqual(resolveGameCardTags({ game_tags: 'CUSTOM' }), []);
+  assert.deepEqual(resolveGameCardTags({ game_tags: 'TXT' }), []);
+  assert.deepEqual(resolveGameCardTags({ game_tags: 'TXT,权谋' }), ['权谋']);
+  assert.deepEqual(resolveGameCardTags({ theme_tag_names: ['CUSTOM', '都市现代', '全部'] }), ['都市现代']);
 });
 
 test('GameGrid_封面角标应使用下载切图火焰心形且正文含作者头像名称与标签', () => {
@@ -95,6 +144,8 @@ test('GameGrid_封面角标应使用下载切图火焰心形且正文含作者�
   assert.match(css, /\.goodsInfoItem[\s\S]*font-size:\s*13\.2px/);
   assert.match(css, /\.goodsCard[\s\S]*background:\s*#1C1C1E/);
   assert.match(css, /\.goodsCard[\s\S]*border-radius:\s*16px/);
+  assert.match(css, /\.goodsImgPlaceholder/);
+  assert.doesNotMatch(tsx, /welcome\.png/);
   assert.match(css, /\.goodsMetaRow[\s\S]*justify-content:\s*space-between/);
   assert.match(css, /\.goodsMetaRow[\s\S]*flex-wrap:\s*nowrap/);
   assert.match(css, /\.goodsCollectBadge[\s\S]*margin-left:\s*auto/);
