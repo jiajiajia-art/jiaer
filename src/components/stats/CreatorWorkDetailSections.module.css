@@ -1,19 +1,32 @@
+/* 功能注释：创作台作品详情统计区块 — funloom 墨黑 + 酒红热力，禁止浅灰/白底残留 */
+
 .detailSection {
+  --admin-text-soft: rgba(255, 255, 255, 0.5);
+  --admin-accent: #A8283C;
+  --stat-surface: #1C1C1E;
+  --stat-surface-soft: #1A1A1A;
+  --stat-border: rgba(255, 255, 255, 0.1);
+  --stat-text: rgba(255, 255, 255, 0.88);
+  --stat-muted: rgba(255, 255, 255, 0.48);
+  --stat-accent: #A8283C;
+  --stat-accent-deep: #8E2135;
   margin-top: 28px;
+  color: var(--stat-text);
 }
 
 .sectionTitle {
   margin: 0;
   font-size: 20px;
   font-weight: 700;
-  color: #222;
+  color: #ffffff;
+  letter-spacing: -0.02em;
 }
 
 /* MetricTitleTip 挂在区块标题上时保持原 h2 视觉层级 */
 .sectionTitle > span:first-child {
   font-size: 20px;
   font-weight: 700;
-  color: #222;
+  color: #ffffff;
 }
 
 .ratingSummary {
@@ -21,14 +34,15 @@
   align-items: baseline;
   gap: 16px;
   margin-top: 12px;
-  color: #666;
+  color: var(--stat-muted);
   font-size: 15px;
 }
 
 .ratingValue {
   font-size: 32px;
   font-weight: 700;
-  color: #fb4655;
+  color: var(--stat-accent);
+  font-variant-numeric: tabular-nums;
 }
 
 .hourGrid {
@@ -40,23 +54,34 @@
 
 .hourCell {
   padding: 10px 8px;
-  border-radius: 8px;
-  background: #f5f5f5;
+  border-radius: 10px;
+  background: var(--stat-surface);
   text-align: center;
   font-size: 12px;
-  border: 1px solid transparent;
-  transition: background 0.2s ease, box-shadow 0.2s ease;
+  color: var(--stat-muted);
+  border: 1px solid var(--stat-border);
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
 }
 
+.hourCell strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--stat-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 功能注释：高峰时段用酒红墨渍高亮，与白底粉卡划清界限 */
 .hourCellTop {
-  background: linear-gradient(135deg, rgba(251, 70, 85, 0.16) 0%, rgba(255, 138, 149, 0.28) 100%);
-  border-color: rgba(251, 70, 85, 0.38);
-  box-shadow: 0 4px 14px rgba(251, 70, 85, 0.16);
-  color: #9b2f3a;
+  background: linear-gradient(145deg, rgba(168, 40, 60, 0.55) 0%, rgba(88, 20, 32, 0.95) 100%);
+  border-color: rgba(245, 180, 190, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  color: #ffd6dc;
 }
 
 .hourCellTop strong {
-  color: #fb4655;
+  color: #ffffff;
   font-size: 14px;
 }
 
@@ -68,35 +93,44 @@
 
 .commentItem {
   padding: 14px 16px;
-  border-radius: 10px;
-  background: #f7f7f7;
+  border-radius: 12px;
+  background: var(--stat-surface);
+  border: 1px solid var(--stat-border);
+  color: var(--stat-text);
 }
 
 .commentMeta {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  color: #888;
+  color: var(--stat-muted);
   font-size: 12px;
   margin-bottom: 8px;
 }
 
 .commentRating {
-  color: #fb4655;
+  color: #ffb3bf;
   font-weight: 600;
 }
 
 .emptyState {
-  padding: 24px;
+  padding: 28px 20px;
   text-align: center;
-  color: #888;
-  background: #f7f7f7;
-  border-radius: 10px;
+  color: var(--stat-muted);
+  background: var(--stat-surface-soft);
+  border: 1px dashed var(--stat-border);
+  border-radius: 12px;
   margin-top: 16px;
+  font-size: 14px;
 }
 
 @media (max-width: 768px) {
   .hourGrid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .hourCell {
+    padding: 8px 6px;
+    border-radius: 8px;
   }
 }

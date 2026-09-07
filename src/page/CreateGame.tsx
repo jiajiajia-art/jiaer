@@ -23,7 +23,7 @@ import {
     MINI_PROGRAM_CREATOR_PC_URL,
     resolveCreatorEngine,
 } from '../utils/miniProgram';
-import { isNovelEngine, getNovelSourceFileId, resolvePublishModalMode } from '../utils/novelGame';
+import { isNovelEngine, getNovelSourceFileId, resolvePublishButtonAction } from '../utils/novelGame';
 import {
     buildCreatorPlaySessionRequest,
     buildGalgameContinueNavigate,
@@ -383,13 +383,13 @@ const CreateGame: React.FC = () => {
                                 onDelete={handleDeleteGame}
                                 isDeleting={isDeleting}
                                 onPublish={() => {
-                                    if (!isPublished) {
-                                        setPublishModalMode(resolvePublishModalMode({
-                                            isNovel: isNovelEngine(gameDetail.engine, gameDetail.game_tags),
-                                            intent: 'publish',
-                                        }));
-                                        setShowPublishModal(true);
-                                    }
+                                    // 功能注释：已发布也要打开上架设置；旧逻辑 if (!isPublished) 会导致点击无反应
+                                    const action = resolvePublishButtonAction({
+                                        isNovel: isNovelEngine(gameDetail.engine, gameDetail.game_tags),
+                                        isPublished,
+                                    });
+                                    setPublishModalMode(action.mode);
+                                    setShowPublishModal(true);
                                 }}
                                 onUnpublish={handleUnpublishGame}
                                 isNovel={isNovelEngine(gameDetail.engine, gameDetail.game_tags)}

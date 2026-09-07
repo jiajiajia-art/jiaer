@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
+import { IoChevronDown } from 'react-icons/io5';
 import styles from './DocumentsPanel.module.css';
 import { BsUpload, BsCheckCircle } from 'react-icons/bs';
 import { HiOutlineGlobeAlt, HiOutlineUserGroup, HiOutlineMap, HiOutlineCheckCircle } from 'react-icons/hi';
@@ -13,6 +14,7 @@ import { getUploadEtaText } from '../../../utils/etaText';
 import { TXT_DOC_PARSE_COST, TXT_IDEA_GENERATE_COST } from '../../../utils/constants';
 import type { IdeaGenerateMode } from '../../../lib/galgame/ideaFullWorkEstimate';
 
+type CreateMethod = 'document' | 'idea';
 interface DocumentsPanelProps {
     onFileUpload: (file: File) => Promise<UploadResult>;
     isParsing: boolean;
@@ -53,7 +55,42 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
     const [showCreateEmptyModal, setShowCreateEmptyModal] = useState(false);
     const [showGenerateFromIdeaModal, setShowGenerateFromIdeaModal] = useState(false);
     const [ideaModalInitialMode, setIdeaModalInitialMode] = useState<IdeaGenerateMode>('text');
+    /** 功能注释：移动端「选择创建方式」在文档导入 / 一句话生成间切换 */
+    const [createMethod, setCreateMethod] = useState<CreateMethod>('document');
+    const [createMethodMenuOpen, setCreateMethodMenuOpen] = useState(false);
+    const createMethodSelectRef = useRef<HTMLDivElement>(null);
     const isVisualMode = mode === 'visual' || !mode;
+    const canGenerateFromIdea = Boolean(isVisualMode && onGenerateFromIdea);
+
+    const createMethodOptions = useMemo(
+        () => [
+            { value: 'document' as const, label: t('createGame.documentImport') },
+            { value: 'idea' as const, label: t('createGame.aiGenerateFromIdea') },
+        ],
+        [t],
+    );
+
+    const createMethodLabel = createMethodOptions.find((item) => item.value === createMethod)?.label
+        ?? t('createGame.documentImport');
+
+    useEffect(() => {
+        if (!createMethodMenuOpen) return;
+        const onPointerDown = (event: MouseEvent) => {
+            if (!createMethodSelectRef.current?.contains(event.target as Node)) {
+                setCreateMethodMenuOpen(false);
+            }
+        };
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') setCreateMethodMenuOpen(false);
+        };
+        document.addEventListener('mousedown', onPointerDown);
+        document.addEventListener('keydown', onKeyDown);
+        return () => {
+            document.removeEventListener('mousedown', onPointerDown);
+            document.removeEventListener('keydown', onKeyDown);
+        };
+    }, [createMethodMenuOpen]);
+
     const fileInputRef = useRef<HTMLInputElement>(null);
     const handledJobStateRef = useRef<string | null>(null);
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -378,12 +415,18 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
     }, [onGenerateFromIdea, resetParseFeedback]);
 
     return (
-        <div className={styles.panelContent}>
+        <div className={styles.panelContent} data-create-method={createMethod}>
             <div className={styles.panelHeader}>
                 <div>
-                    <h2>{t('createGame.uploadDocument')}</h2>
+                    <h2>
+                        {createMethod === 'idea' && canGenerateFromIdea
+                            ? t('createGame.aiGenerateFromIdea')
+                            : t('createGame.uploadDocument')}
+                    </h2>
                     <p className={styles.subtitle}>
-                        {t('createGame.oneClickUploadTip')}
+                        {createMethod === 'idea' && canGenerateFromIdea
+                            ? t('createGame.aiIdeaDesc')
+                            : t('createGame.oneClickUploadTip')}
                     </p>
                 </div>
                 {onCreateEmptyGame && (
@@ -397,17 +440,58 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                 )}
             </div>
 
-            {/* 功能注释：移动端效果图「选择创建方式」下拉；桌面仍展示完整 AI 卡片 */}
-            <div className={styles.createMethodBlock}>
-                <p className={styles.createMethodLabel}>{t('createGame.selectCreateMethod')}</p>
-                <div className={styles.createMethodSelect} role="group" aria-label={t('createGame.selectCreateMethod')}>
-                    <span>{t('createGame.documentImport')}</span>
-                    <span className={styles.createMethodChevron} aria-hidden>▾</span>
+            {/* 功能注释：移动端自定义暗色下拉，切换文档导入 / 一句话生成（禁原生 select 系统蓝框） */}
+            {canGenerateFromIdea && (
+                <div className={styles.createMethodBlock}>
+                    <p className={styles.createMethodLabel}>{t('createGame.selectCreateMethod')}</p>
+                    <div ref={createMethodSelectRef} className={styles.createMethodSelect}>
+                        <button
+                            type="button"
+                            className={`${styles.createMethodTrigger} ${createMethodMenuOpen ? styles.createMethodTriggerOpen : ''}`}
+                            disabled={isParsing}
+                            aria-haspopup="listbox"
+                            aria-expanded={createMethodMenuOpen}
+                            aria-label={t('createGame.selectCreateMethod')}
+                            onClick={() => {
+                                if (isParsing) return;
+                                setCreateMethodMenuOpen((open) => !open);
+                            }}
+                        >
+                            <span className={styles.createMethodTriggerLabel}>{createMethodLabel}</span>
+                            <IoChevronDown
+                                className={`${styles.createMethodChevron} ${createMethodMenuOpen ? styles.createMethodChevronOpen : ''}`}
+                                aria-hidden
+                            />
+                        </button>
+                        {createMethodMenuOpen ? (
+                            <ul className={styles.createMethodMenu} role="listbox" aria-label={t('createGame.selectCreateMethod')}>
+                                {createMethodOptions.map((option) => {
+                                    const selected = option.value === createMethod;
+                                    return (
+                                        <li key={option.value} role="presentation">
+                                            <button
+                                                type="button"
+                                                role="option"
+                                                aria-selected={selected}
+                                                className={`${styles.createMethodOption} ${selected ? styles.createMethodOptionSelected : ''}`}
+                                                onClick={() => {
+                                                    setCreateMethod(option.value);
+                                                    setCreateMethodMenuOpen(false);
+                                                }}
+                                            >
+                                                {option.label}
+                                            </button>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        ) : null}
+                    </div>
                 </div>
-            </div>
+            )}
 
-            {isVisualMode && onGenerateFromIdea && (
-                <div className={`${styles.generateFromIdeaCard} ${styles.hideOnMobile}`}>
+            {canGenerateFromIdea && (
+                <div className={`${styles.generateFromIdeaCard} ${styles.ideaMethodPanel}`}>
                     <div className={styles.generateFromIdeaContent}>
                         <div className={styles.generateFromIdeaIcon}>✨</div>
                         <div className={styles.generateFromIdeaText}>
@@ -441,7 +525,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                 </div>
             )}
 
-            <div className={styles.twoCol}>
+            <div className={`${styles.twoCol} ${styles.documentMethodPanel}`}>
                 <div className={styles.card}>
                     <h3>{t('createGame.documentImportWithCost', { points: TXT_DOC_PARSE_COST })}</h3>
                     <p className={`${styles.muted} ${styles.hideOnMobile}`}>

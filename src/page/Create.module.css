@@ -145,10 +145,11 @@
     display: flex;
     flex-direction: row;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 10px;
     align-self: center;
     flex-shrink: 0;
+    width: min(330px, 100%);
 }
 
 .creatorHeroEyebrow {
@@ -346,7 +347,10 @@
     justify-content: center;
     gap: 8px;
     min-height: 46px;
-    width: 70%;
+    /* 功能注释：主 CTA 吃满剩余宽度，避免只与左侧积分卡上下齐边成一条丑竖线 */
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
     border-radius: 999px;
     border: none;
     background: #8E2135;
@@ -370,6 +374,7 @@
 .creatorHelpButton {
     width: 46px;
     height: 46px;
+    flex-shrink: 0;
     border-radius: 999px;
     border: 1px solid rgba(255, 255, 255, 0.14);
     background: #1C1C1E;
@@ -572,9 +577,11 @@
 }
 
 .statValue {
-    font-size: 26px;
+    font-size: 22px;
     font-weight: 700;
     color: #FFFFFF;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.15;
 }
 
 .statLabel {
@@ -790,9 +797,10 @@
     .creatorHeroActions {
         flex: none;
         width: 100%;
+        align-self: stretch;
         flex-direction: row;
         align-items: center;
-        justify-content: flex-end;
+        justify-content: flex-start;
         gap: 10px;
     }
 
@@ -817,9 +825,10 @@
 
     .creatorPrimaryButton {
         min-height: 42px;
-        width: 80%;
+        flex: 1 1 auto;
+        width: auto;
         font-size: 14px;
-        border-radius: 12px;
+        border-radius: 999px;
     }
 
     .creatorPrimaryButton svg {
@@ -829,7 +838,8 @@
     .creatorHelpButton {
         width: 42px;
         height: 42px;
-        border-radius: 30px;
+        flex-shrink: 0;
+        border-radius: 999px;
     }
 
     .statsSection,
@@ -840,33 +850,48 @@
     }
 
     .statsGrid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        /* 功能注释：手机我的数据一行三格，避免两列大字刷屏 */
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 0;
     }
 
     .statBox {
         width: 100%;
         max-width: 100%;
-        height: 90px;
+        height: 78px;
+        padding: 10px 8px;
         border-right: 1px solid rgba(255, 255, 255, 0.08);
         border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        gap: 6px;
     }
 
     .statBox:nth-child(2n) {
+        border-right: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .statBox:nth-child(3n) {
         border-right: none;
     }
 
     .statBoxWithAction {
-        height: 90px;
-        min-height: 90px;
+        height: 78px;
+        min-height: 78px;
     }
 
     .statValue {
-        font-size: 26px;
+        /* 功能注释：比原 26px 小两号，三列密度下仍可读 */
+        font-size: 18px;
     }
 
     .statLabel {
-        font-size: 14px;
+        font-size: 11px;
+        gap: 4px;
+    }
+
+    .statLabel svg {
+        width: 12px;
+        height: 12px;
+        flex-shrink: 0;
     }
 
     .statActionRow {

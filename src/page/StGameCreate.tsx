@@ -735,7 +735,9 @@ const StGameCreate: React.FC = () => {
                     className={`${styles.stepLink} ${active ? styles.stepActive : styles.step}`}
                     onClick={(event) => handleStepLinkClick(event, item.key)}
                   >
-                    {item.index}. {item.label}
+                    {/* 功能注释：步号单独缩小，避免与文案同级抢视觉 */}
+                    <span className={styles.stepIndex}>{item.index}.</span>
+                    <span className={styles.stepLabel}>{item.label}</span>
                   </Link>
                   {index < stepItems.length - 1 ? (
                     <div className={styles.stepDivider} aria-hidden="true"></div>

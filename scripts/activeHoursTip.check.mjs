@@ -35,3 +35,18 @@ test('CreatorWorkDetailSections wires MetricTitleTip for active hours', () => {
   assert.match(source, /creatorStats\.activeHoursTip/);
   assert.match(source, /creatorStats\.activeHours/);
 });
+
+test('CreatorWorkDetailSections_活跃时段应对齐 funloom 暗色热力格', () => {
+  const css = readFileSync(
+    join(root, 'src/components/stats/CreatorWorkDetailSections.module.css'),
+    'utf8',
+  );
+  /* 功能注释：禁止 #f5f5f5/#f7f7f7 白底灰字；墨黑卡 + 酒红高峰 */
+  assert.match(css, /--stat-surface:\s*#1C1C1E/);
+  assert.match(css, /--stat-accent:\s*#A8283C/);
+  assert.match(css, /\.hourCell\s*\{[\s\S]*?background:\s*var\(--stat-surface\)/);
+  assert.match(css, /\.hourCellTop\s*\{[\s\S]*?rgba\(168,\s*40,\s*60/);
+  assert.match(css, /\.emptyState\s*\{[\s\S]*?background:\s*var\(--stat-surface-soft\)/);
+  assert.doesNotMatch(css, /#f5f5f5|#f7f7f7|#fb4655/);
+  assert.doesNotMatch(css, /\.sectionTitle\s*\{[^}]*color:\s*#222/);
+});

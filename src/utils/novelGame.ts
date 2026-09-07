@@ -138,6 +138,21 @@ export function resolvePublishModalMode(options: {
 }
 
 /**
+ * 功能注释：创作台「发布作品」点击策略。
+ * 已上架作品也必须打开弹窗（改简介/版本说明并可再次提交），禁止因 isPublished 静默无响应。
+ */
+export function resolvePublishButtonAction(options: {
+  isNovel: boolean;
+  isPublished: boolean;
+}): { openModal: true; mode: PublishModalMode } {
+  void options.isPublished;
+  return {
+    openModal: true,
+    mode: resolvePublishModalMode({ isNovel: options.isNovel, intent: 'publish' }),
+  };
+}
+
+/**
  * 判断是否应打开小说编辑弹窗。
  * 小说 engine=NOVEL 不在 resolveCreatorEngine 白名单，编辑入口需单独判断。
  */

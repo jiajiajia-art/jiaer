@@ -19,11 +19,16 @@
     display: flex;
     width: 100%;
     min-width: 0;
-    /* 功能注释：为固定 Navbar 留出高度，避免创作壳顶栏被遮挡 */
-    height: calc(100vh - var(--app-desktop-navbar-height));
-    margin-top: var(--app-desktop-navbar-height);
+    /* 功能注释：PC 无全站顶栏，创作壳占满视口；手机再为 Navbar 留高 */
+    height: 100vh;
+    margin-top: 0;
     background: var(--editor-bg);
     color: var(--editor-text);
+}
+
+/* 功能注释：PC 隐藏全站 Navbar；≤768 显示（TXT 移动创作仍要统一顶栏） */
+.editorNavbar {
+    display: none;
 }
 
 .main {
@@ -318,6 +323,15 @@
 }
 
 @media (max-width: 768px) {
+    .editorNavbar {
+        display: block;
+    }
+
+    .appShell {
+        height: calc(100vh - var(--app-desktop-navbar-height));
+        margin-top: var(--app-desktop-navbar-height);
+    }
+
     .txtCreateShell > aside {
         display: none !important;
     }

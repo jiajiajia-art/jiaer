@@ -327,6 +327,103 @@ test('Rankings_排行榜应对齐奶油台面与酒红榜单卡', () => {
   assert.doesNotMatch(tsx, /fill="#c94a3a;"/);
 });
 
+test('CreateGameModals_创作类型弹窗应对齐暗色卡片列表', () => {
+  const css = read('src/components/CreateGame/CreateGameModals.module.css');
+  const tsx = read('src/components/CreateGame/CreateGameModals.tsx');
+  const zh = read('src/i18n/locales/zh.json');
+  assert.match(css, /\.createTypeModal\s*\{[\s\S]*?--type-primary:\s*#A8283C/);
+  assert.match(css, /\.createTypeModal\s*\{[\s\S]*?background-color:\s*var\(--type-surface\)/);
+  assert.match(css, /\.createTypeOption\s*\{[\s\S]*?background-color:\s*var\(--type-card\)/);
+  assert.match(css, /\.createTypeOptionThumb/);
+  assert.match(css, /\.createTypeOptionChevron/);
+  assert.match(css, /@media \(max-width:\s*640px\)[\s\S]*?\.createTypeOptionThumb\s*\{[\s\S]*?aspect-ratio:\s*1/);
+  assert.doesNotMatch(css, /\.createTypeModal\s*\{[^}]*background-color:\s*#ffffff/);
+  assert.match(tsx, /TypeOptionRow/);
+  assert.match(tsx, /createTypeOptionThumb/);
+  assert.match(tsx, /IoChevronForward/);
+  assert.match(zh, /"selectGameTypeTitle":\s*"创建游戏类型"/);
+  assert.match(zh, /"optionHint":\s*"多种创作模式，开启你的灵感"/);
+});
+
+test('CreateGameModals_类型行应有区分色调的模式图标', () => {
+  const css = read('src/components/CreateGame/CreateGameModals.module.css');
+  const tsx = read('src/components/CreateGame/CreateGameModals.tsx');
+  /* 功能注释：禁止空 thumb；五种模式各有图标 + 色调 class */
+  assert.match(tsx, /icon=\{MdAutoStories\}/);
+  assert.match(tsx, /icon=\{HiOutlineUserGroup\}/);
+  assert.match(tsx, /icon=\{MdOutlineMovie\}/);
+  assert.match(tsx, /icon=\{HiOutlinePuzzle\}/);
+  assert.match(tsx, /icon=\{MdSportsEsports\}/);
+  assert.match(tsx, /tone="txt"/);
+  assert.match(tsx, /createTypeOptionIcon/);
+  assert.match(css, /\.createTypeOptionThumbTxt/);
+  assert.match(css, /\.createTypeOptionThumbAvg/);
+  assert.match(css, /\.createTypeOptionThumbIvg/);
+  assert.match(css, /\.createTypeOptionThumbCustom/);
+  assert.match(css, /\.createTypeOptionThumbRpg/);
+  assert.match(css, /\.createTypeOptionThumb\s*\{[\s\S]*?display:\s*inline-flex/);
+});
+
+test('CreateGameModals_手机取消按钮应满宽', () => {
+  const css = read('src/components/CreateGame/CreateGameModals.module.css');
+  /* 功能注释：≤640px 取消键 width:100%，禁止继续右下角小胶囊 */
+  assert.match(
+    css,
+    /@media \(max-width:\s*640px\)[\s\S]*?\.createTypeCancelButton\s*\{[\s\S]*?width:\s*100%/,
+  );
+  assert.match(
+    css,
+    /@media \(max-width:\s*640px\)[\s\S]*?\.createTypeCancelButton\s*\{[\s\S]*?min-height:\s*48px/,
+  );
+});
+
+test('Create_创作主按钮应铺满资产卡整行避免与积分卡齐边', () => {
+  const css = read('src/page/Create.module.css');
+  /* 功能注释：主 CTA flex:1 + 帮助按钮贴右，禁止再写死 70%/80% 宽导致只与左卡上下对齐 */
+  assert.match(css, /\.creatorPrimaryButton\s*\{[\s\S]*?flex:\s*1 1 auto/);
+  assert.doesNotMatch(css, /\.creatorPrimaryButton\s*\{[^}]*width:\s*70%/);
+  assert.doesNotMatch(css, /@media \(max-width:\s*1080px\)[\s\S]*?\.creatorPrimaryButton\s*\{[^}]*width:\s*80%/);
+  assert.match(css, /@media \(max-width:\s*1080px\)[\s\S]*?\.creatorHeroActions\s*\{[\s\S]*?width:\s*100%/);
+  assert.match(css, /@media \(max-width:\s*1080px\)[\s\S]*?\.creatorHeroActions\s*\{[\s\S]*?justify-content:\s*flex-start/);
+});
+
+test('Create_手机我的数据应三列且数字缩小', () => {
+  const css = read('src/page/Create.module.css');
+  /* 功能注释：≤1080 我的数据一行三格；数字 18px，禁止再写 26px */
+  assert.match(
+    css,
+    /@media \(max-width:\s*1080px\)[\s\S]*?\.statsGrid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/,
+  );
+  assert.match(
+    css,
+    /@media \(max-width:\s*1080px\)[\s\S]*?\.statValue\s*\{[\s\S]*?font-size:\s*18px/,
+  );
+  assert.doesNotMatch(
+    css,
+    /@media \(max-width:\s*1080px\)[\s\S]*?\.statValue\s*\{[^}]*font-size:\s*26px/,
+  );
+});
+
+test('StGameCreate_应对齐墨黑底白纸卡片新版风格', () => {
+  const css = read('src/page/StGameCreate.module.css');
+  const tsx = read('src/page/StGameCreate.tsx');
+  /* 功能注释：禁止浅灰页 + #fb5b67；墨黑底、白纸卡、酒红强调、步号缩小、手机三列标签 */
+  assert.match(css, /\.pageRoot\s*\{[\s\S]*?background:\s*var\(--st-ink\)|#000000/);
+  assert.match(css, /--st-accent-deep:\s*#8E2135/);
+  assert.match(css, /--st-paper:\s*#ffffff/);
+  assert.match(css, /\.pageRoot\s*\{[\s\S]*?max-width:\s*none/);
+  assert.doesNotMatch(css, /max-width:\s*1920px/);
+  assert.doesNotMatch(css, /#fb5b67/);
+  assert.match(css, /\.stepActive\s*\{[\s\S]*?background:\s*#ffffff/);
+  assert.match(css, /\.step\s*\{[\s\S]*?border:\s*1px solid rgba\(255,\s*255,\s*255/);
+  assert.match(css, /\.themeTagsPanel\s*\{[\s\S]*?background:\s*var\(--st-paper\)/);
+  assert.match(css, /\.group\s*\{[\s\S]*?background:\s*var\(--st-paper\)/);
+  assert.match(css, /@media \(max-width:\s*768px\)[\s\S]*?\.themeTagsWrap\s*\{[\s\S]*?repeat\(3,/);
+  assert.match(css, /@media \(max-width:\s*768px\)[\s\S]*?\.actions \.primary[\s\S]*?width:\s*100%/);
+  assert.match(tsx, /styles\.stepIndex/);
+  assert.match(tsx, /styles\.stepLabel/);
+});
+
 test('Document_文档中心应对齐白顶栏加墨黑阅读区', () => {
   const css = read('src/page/Document.module.css');
   const tsx = read('src/page/Document.tsx');

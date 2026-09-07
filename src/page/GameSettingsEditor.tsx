@@ -736,8 +736,10 @@ const GameSettingsEditor = () => {
 
     return (
         <>
-            {/* 功能注释：全站统一 funloom 顶栏（logo / 查询游戏 / 消息 / 头像） */}
-            <Navbar />
+            {/* 功能注释：PC 创作页用侧栏主导航，隐藏全站顶栏；手机仍保留 Navbar */}
+            <div className={styles.editorNavbar}>
+                <Navbar />
+            </div>
             <div className={`${styles.appShell} ${isMiniProgramTxtMode ? styles.miniProgramShell : ''} ${isVisualTxtCreate ? styles.txtCreateShell : ''}`}>
                 <Sidebar
                     activePanel={activePanel}

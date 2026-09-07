@@ -50,6 +50,23 @@ test('GameStatsView_应对齐暗色效果图结构', () => {
   assert.match(css, /\.overviewCard\s*\{[^}]*background:\s*#1A1A1A/);
 });
 
+test('GameStatsView_手机全部数据应一行三格且数字缩小', () => {
+  const css = read('src/components/CreateGame/GameStatsView.module.css');
+  /* 功能注释：禁止 ≤768 再写成 1fr 通栏；数字从 22px 降到 16px */
+  assert.match(
+    css,
+    /@media \(max-width:\s*768px\)[\s\S]*?\.statsGrid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/,
+  );
+  assert.match(
+    css,
+    /@media \(max-width:\s*768px\)[\s\S]*?\.statValue\s*\{[\s\S]*?font-size:\s*16px/,
+  );
+  assert.doesNotMatch(
+    css,
+    /@media \(max-width:\s*768px\)[\s\S]*?\.statsGrid\s*\{[^}]*grid-template-columns:\s*1fr/,
+  );
+});
+
 test('buildGameDetailMetaLine_应拼接制作方与可选章节时长', () => {
   const line = buildGameDetailMetaLine(
     { author_name: 'Studio Red', chapter_count: 12, duration_minutes: 45 },

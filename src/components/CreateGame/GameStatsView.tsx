@@ -441,7 +441,11 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                         onClick={onPublish}
                         disabled={isLoading}
                     >
-                        {isNovel && !isPublished ? t('createGame.listOnShelf') : t('createGame.publishWork')}
+                        {isNovel && !isPublished
+                            ? t('createGame.listOnShelf')
+                            : isPublished
+                              ? t('createGame.publishSettings')
+                              : t('createGame.publishWork')}
                     </button>
                 </div>
 

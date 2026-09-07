@@ -320,6 +320,8 @@
     font-size: 22px;
     font-weight: 700;
     color: #FF8A9A;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.15;
 }
 
 .statLabel {
@@ -332,8 +334,10 @@
 }
 
 @media (max-width: 860px) {
+    /* 功能注释：中屏仍保持三列，避免手机前先缩成两列再变回三列 */
     .statsGrid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
     }
 }
 
@@ -383,8 +387,32 @@
         font-size: 16px;
     }
 
+    /* 功能注释：手机全部数据一行三格；数字比桌面 22px 小两号，避免通栏大字刷屏 */
     .statsGrid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .statBox {
+        min-height: 72px;
+        padding: 10px 8px;
+        border-radius: 12px;
+        gap: 6px;
+    }
+
+    .statValue {
+        font-size: 16px;
+    }
+
+    .statLabel {
+        font-size: 11px;
+        gap: 4px;
+    }
+
+    .statLabel svg {
+        width: 12px;
+        height: 12px;
+        flex-shrink: 0;
     }
 }
 
