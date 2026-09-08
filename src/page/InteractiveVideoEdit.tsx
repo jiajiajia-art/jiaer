@@ -31,7 +31,7 @@ import {
     type InteractiveVideoEditStepStatus,
 } from '../utils/interactiveVideoEditSteps';
 import { resolveCreatorEngine } from '../utils/miniProgram';
-import { flattenThemeTags, type FlatThemeTag } from '../utils/themeTags';
+import { flattenThemeTags, useLocalizedThemeTags, type FlatThemeTag } from '../utils/themeTags';
 import styles from './InteractiveVideoEdit.module.css';
 
 const THEME_TAG_MIN = 1;
@@ -305,6 +305,7 @@ const InteractiveVideoEdit: React.FC = () => {
     const currentUserId = authUser?.user?.userId ?? authUser?.user?.id;
     const [gameDetail, setGameDetail] = useState<UserGameData | null>(null);
     const [themeTags, setThemeTags] = useState<FlatThemeTag[]>([]);
+    const displayThemeTags = useLocalizedThemeTags(themeTags);
     const [selectedThemeTagIds, setSelectedThemeTagIds] = useState<number[]>([]);
     const [savedThemeTagIds, setSavedThemeTagIds] = useState<number[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -331,8 +332,8 @@ const InteractiveVideoEdit: React.FC = () => {
     const hasUnsavedThemeTags = !areSameThemeTagIds(selectedThemeTagIds, savedThemeTagIds);
     const selectedThemeNames = useMemo(() => {
         const selectedIds = new Set(selectedThemeTagIds);
-        return themeTags.filter((tag) => selectedIds.has(tag.id)).map((tag) => tag.name);
-    }, [selectedThemeTagIds, themeTags]);
+        return displayThemeTags.filter((tag) => selectedIds.has(tag.id)).map((tag) => tag.name);
+    }, [selectedThemeTagIds, displayThemeTags]);
     const catalog: InteractiveVideoCatalog | null = monetization?.catalog || null;
     const hasCatalog = Boolean(catalog?.hasCatalog && catalog.directories.length > 0);
     const hasPaidPurchases = Boolean(monetization?.hasPaidPurchases);
@@ -1145,7 +1146,7 @@ const InteractiveVideoEdit: React.FC = () => {
             <p className={styles.panelHint}>{editSteps.theme.description}</p>
             {themeTagError ? <div className={styles.errorText}>{themeTagError}</div> : null}
             <div className={styles.themeTagsWrap}>
-                {themeTags.length > 0 ? themeTags.map((tag) => {
+                {displayThemeTags.length > 0 ? displayThemeTags.map((tag) => {
                     const active = selectedThemeTagIds.includes(tag.id);
                     return (
                         <button

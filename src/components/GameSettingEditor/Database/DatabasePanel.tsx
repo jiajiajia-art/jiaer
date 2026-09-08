@@ -23,7 +23,7 @@ export interface DatabasePanelProps {
 }
 
 /**
- * Step 6 数据库：左侧数据条目菜单 + 右侧编辑表单（复用 MorePromptFormPanel variant）
+ * Step 6 数据库：左侧数据条目菜单 + 右侧编辑表单（复用世界书墨黑壳 + MorePromptFormPanel）
  */
 const DatabasePanel: React.FC<DatabasePanelProps> = ({
   activePanel,

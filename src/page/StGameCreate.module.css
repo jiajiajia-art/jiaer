@@ -1,16 +1,14 @@
-/* 功能注释：酒馆卡创建 — 墨黑底 + 白纸卡片（对齐新版效果图），强调色走 funloom 酒红 */
+/* 功能注释：酒馆卡创建对齐图1「世界观设定」暗色卡——墨黑底 + #1A1A1A 面 + #1C1C1E 输入 + 酒红选中 */
 
 .pageRoot {
   --st-ink: #000000;
-  --st-paper: #ffffff;
-  --st-paper-soft: #f7f7f8;
-  --st-border: rgba(17, 24, 39, 0.12);
-  --st-muted: #6b7280;
-  --st-text: #111827;
+  --st-surface: #1A1A1A;
+  --st-input: #1C1C1E;
+  --st-border: rgba(255, 255, 255, 0.12);
+  --st-muted: rgba(255, 255, 255, 0.55);
+  --st-text: #ffffff;
   --st-accent: #A8283C;
   --st-accent-deep: #8E2135;
-  --st-chrome: rgba(255, 255, 255, 0.88);
-  --st-chrome-muted: rgba(255, 255, 255, 0.5);
   min-height: 100vh;
   width: 100%;
   max-width: none;
@@ -18,7 +16,7 @@
   display: flex;
   flex-direction: column;
   background: var(--st-ink);
-  color: var(--st-chrome);
+  color: var(--st-text);
 }
 
 .main {
@@ -33,38 +31,38 @@
 .columns {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 14px;
 }
 
 .columns3 {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 12px;
+  gap: 14px;
 }
 
 .col {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .formRow {
   display: flex;
-  gap: 12px;
-  align-items: center;
+  flex-direction: column;
+  gap: 8px;
   margin: 0 0 14px;
-  padding: 12px 16px;
+  padding: 16px;
   border-radius: 16px;
-  background: var(--st-paper);
-  border: 1px solid transparent;
+  background: var(--st-surface);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   box-sizing: border-box;
 }
 
 .formRow label {
-  min-width: 48px;
+  min-width: 0;
   font-weight: 600;
   color: var(--st-muted);
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .row2 {
@@ -83,24 +81,32 @@
 
 .text {
   flex: 1;
-  border: none;
-  border-radius: 10px;
-  padding: 8px 4px;
-  font-size: 15px;
-  font-weight: 600;
+  width: 100%;
+  border: 1px solid var(--st-border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-weight: 500;
   color: var(--st-text);
-  background: transparent;
+  background: var(--st-input);
   outline: none;
   min-width: 0;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .text:focus {
-  outline: none;
+  border-color: rgba(168, 40, 60, 0.55);
+  box-shadow: 0 0 0 3px rgba(142, 33, 53, 0.2);
+}
+
+.text::placeholder {
+  color: rgba(255, 255, 255, 0.35);
 }
 
 .inputHighlight {
-  box-shadow: inset 0 0 0 2px rgba(220, 38, 38, 0.35);
-  border-radius: 10px;
+  border-color: #C23A50 !important;
+  box-shadow: 0 0 0 3px rgba(194, 58, 80, 0.22);
 }
 
 .area {
@@ -112,52 +118,56 @@
   font-size: 14px;
   line-height: 1.55;
   color: var(--st-text);
-  background: var(--st-paper);
+  background: var(--st-input);
   box-sizing: border-box;
   resize: vertical;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.area:focus {
+  outline: none;
+  border-color: rgba(168, 40, 60, 0.55);
+  box-shadow: 0 0 0 3px rgba(142, 33, 53, 0.2);
 }
 
 .area::placeholder {
-  color: #9ca3af;
+  color: rgba(255, 255, 255, 0.35);
 }
 
 .group {
-  border: 1px solid transparent;
-  border-radius: 18px;
-  padding: 16px;
-  background: var(--st-paper);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 18px 16px;
+  background: var(--st-surface);
   color: var(--st-text);
 }
 
 .groupTitle {
   font-weight: 700;
   margin-bottom: 6px;
-  color: var(--st-text);
-  font-size: 15px;
+  color: #ffffff;
+  font-size: 16px;
 }
 
 .hint {
   font-size: 12px;
   color: var(--st-muted);
-  margin: 4px 0 10px;
+  margin: 4px 0 12px;
   line-height: 1.5;
 }
 
 .ruleItem {
-  border: 1px dashed rgba(17, 24, 39, 0.18);
+  border: 1px solid var(--st-border);
   border-radius: 12px;
-  padding: 10px;
+  padding: 12px;
   margin: 8px 0;
-  background: var(--st-paper-soft);
+  background: var(--st-input);
 }
 
-/* 功能注释：规则卡内输入需要描边，与标题行无边框白条区分 */
 .ruleItem .text,
 .group .row2 .text {
-  border: 1px solid var(--st-border);
-  padding: 8px 10px;
-  background: #ffffff;
-  font-weight: 500;
+  background: #121212;
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .actionsLegacy {
@@ -225,7 +235,7 @@
   padding: 6px 12px;
   border: 1px solid var(--st-border);
   border-radius: 999px;
-  background: transparent;
+  background: var(--st-input);
   color: var(--st-muted);
   font-size: 12px;
   font-weight: 600;
@@ -235,9 +245,9 @@
 }
 
 .clearFieldButton:hover:not(:disabled) {
-  border-color: rgba(168, 40, 60, 0.45);
-  color: var(--st-accent);
-  background: rgba(168, 40, 60, 0.06);
+  border-color: rgba(168, 40, 60, 0.55);
+  color: #ffffff;
+  background: rgba(142, 33, 53, 0.2);
 }
 
 .clearFieldButton:disabled {
@@ -277,9 +287,9 @@
   padding: 10px 16px;
   min-height: 44px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  background: transparent;
-  color: var(--st-chrome);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: var(--st-input);
+  color: #ffffff;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -287,8 +297,8 @@
 }
 
 .secondary:hover:not(:disabled) {
-  border-color: rgba(255, 255, 255, 0.5);
-  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--st-accent-deep);
+  background: #242426;
 }
 
 .secondary:disabled {
@@ -296,16 +306,15 @@
   cursor: not-allowed;
 }
 
-/* 白卡内的次要按钮（规则步骤里的添加/删除） */
 .group .secondary {
-  border-color: rgba(168, 40, 60, 0.45);
-  color: var(--st-accent);
-  background: #ffffff;
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  background: #121212;
 }
 
 .group .secondary:hover:not(:disabled) {
-  background: rgba(168, 40, 60, 0.06);
-  border-color: var(--st-accent);
+  border-color: var(--st-accent-deep);
+  background: rgba(142, 33, 53, 0.18);
 }
 
 .error {
@@ -329,7 +338,7 @@
 
 .headerRow h2 {
   margin: 0;
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
   color: #ffffff;
   letter-spacing: -0.02em;
@@ -370,26 +379,25 @@
 
 .stepLink:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(168, 40, 60, 0.35);
+  box-shadow: 0 0 0 3px rgba(142, 33, 53, 0.35);
 }
 
-/* 功能注释：未选步 = 墨底白描边；当前步 = 白纸黑字，对齐效果图 */
+/* 功能注释：步骤条对齐创作圈导航——未选暗面，当前酒红底 */
 .step {
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  color: rgba(255, 255, 255, 0.9);
-  background: transparent;
+  border: 1px solid transparent;
+  color: rgba(255, 255, 255, 0.55);
+  background: var(--st-surface);
 }
 
 .step:hover {
-  border-color: #ffffff;
   color: #ffffff;
-  background: rgba(255, 255, 255, 0.06);
+  background: #222226;
 }
 
 .stepActive {
-  border: 1px solid #ffffff;
-  color: #111827;
-  background: #ffffff;
+  border: 1px solid transparent;
+  color: #ffffff;
+  background: var(--st-accent-deep);
 }
 
 .stepIndex {
@@ -400,7 +408,7 @@
 }
 
 .stepActive .stepIndex {
-  opacity: 0.55;
+  opacity: 0.9;
 }
 
 .stepLabel {
@@ -409,18 +417,18 @@
 }
 
 .stepDivider {
-  flex: 0 0 20px;
-  width: 20px;
+  flex: 0 0 16px;
+  width: 16px;
   height: 1px;
-  background: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .themeTagsPanel {
   margin: 0 0 14px;
-  padding: 16px;
-  border: 1px solid transparent;
-  border-radius: 18px;
-  background: var(--st-paper);
+  padding: 18px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  background: var(--st-surface);
   color: var(--st-text);
 }
 
@@ -435,7 +443,7 @@
 
 .themeTagsLabel {
   font-weight: 700;
-  color: var(--st-text);
+  color: #ffffff;
   font-size: 15px;
 }
 
@@ -451,42 +459,56 @@
 
 .themeTagsWrap {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .themeTagChip {
-  padding: 10px 8px;
-  border-radius: 999px;
-  border: 1px solid var(--st-border);
-  background: #ffffff;
-  color: #374151;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 8px;
+  min-height: 48px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: var(--st-input);
+  color: rgba(255, 255, 255, 0.92);
   font-size: 13px;
   line-height: 1.2;
   cursor: pointer;
   text-align: center;
-  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  touch-action: manipulation;
+  user-select: none;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
 }
 
 .themeTagChip:hover {
-  border-color: rgba(168, 40, 60, 0.4);
+  border-color: rgba(168, 40, 60, 0.55);
+  color: #ffffff;
 }
 
+/* 功能注释：选中标签实心酒红，对齐图1作品标签 */
 .themeTagChipActive {
   border-color: var(--st-accent-deep);
-  background: rgba(142, 33, 53, 0.1);
-  color: var(--st-accent-deep);
+  background: var(--st-accent-deep);
+  color: #ffffff;
   font-weight: 600;
 }
 
 .themeTagError {
   margin-top: 10px;
-  color: #b91c1c;
+  color: #ff8a9a;
   font-size: 13px;
 }
 
 .requiredHighlight {
-  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.45);
+  box-shadow: 0 0 0 2px rgba(194, 58, 80, 0.45);
 }
 
 @media (max-width: 1080px) {
@@ -500,10 +522,6 @@
 
   .stepper {
     justify-content: flex-start;
-  }
-
-  .themeTagsWrap {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -522,7 +540,7 @@
   }
 
   .headerRow h2 {
-    font-size: 22px;
+    font-size: 20px;
   }
 
   .stepper {
@@ -559,27 +577,23 @@
     grid-template-columns: 1fr;
   }
 
-  .formRow {
-    width: 100%;
-    padding: 10px 14px;
-    border-radius: 14px;
-  }
-
+  .formRow,
   .themeTagsPanel,
   .group {
-    border-radius: 16px;
+    border-radius: 14px;
     padding: 14px;
   }
 
-  /* 功能注释：手机标签一行三枚，避免四列挤字 */
   .themeTagsWrap {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
   }
 
   .themeTagChip {
-    padding: 9px 6px;
+    padding: 10px 6px;
     font-size: 12px;
+    min-height: 44px;
+    border-radius: 12px;
   }
 
   .actions {
@@ -601,7 +615,6 @@
     gap: 8px;
   }
 
-  /* 功能注释：手机底栏主/次按钮满宽，避免右下角小胶囊 */
   .actions .primary,
   .actions .secondary {
     width: 100%;
@@ -610,10 +623,5 @@
 
   .stepOneArea {
     min-height: 180px;
-  }
-
-  .clearFieldButton {
-    padding: 6px 10px;
-    font-size: 12px;
   }
 }

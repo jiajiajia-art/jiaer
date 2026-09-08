@@ -2,9 +2,12 @@
  * 功能注释：作品详情页展示辅助（紧凑计数、制作信息行、简介是否需展开），对齐效果图文案结构。
  */
 
+import { getGameTypeLabel, isGameEngineStorageTag } from '../utils/gameTypeLabel.ts';
+
 export type GameDetailTagSource = {
   theme_tag_names?: unknown;
   game_tags?: unknown;
+  engine?: unknown;
 };
 
 export type GameDetailMetaSource = GameDetailTagSource & {
@@ -89,7 +92,7 @@ export function buildGameDetailMetaLine(
   return parts.join(' · ');
 }
 
-/** 功能注释：题材标签来自 theme_tag_names（过滤「全部」），最多 3 个；与列表卡片规则一致。 */
+/** 功能注释：题材标签来自 theme_tag_names（过滤「全部」），最多 3 个；引擎码 TXT 对外显示为「AI文游」。 */
 export function resolveGameDetailTags(game: GameDetailTagSource): string[] {
   const names = Array.isArray(game.theme_tag_names) ? game.theme_tag_names : [];
   const tags = names
@@ -100,12 +103,19 @@ export function resolveGameDetailTags(game: GameDetailTagSource): string[] {
   const raw = cleanText(game.game_tags)
     .replace(/^\[|\]$/g, '')
     .replace(/^["']|["']$/g, '');
-  if (!raw) return [];
-  return raw
-    .split(/[,，/|]/)
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .slice(0, MAX_TAGS);
+  const parts = raw
+    ? raw
+        .split(/[,，/|]/)
+        .map((part) => part.trim())
+        .filter(Boolean)
+    : [];
+  const mapped = parts.map((part) => (
+    isGameEngineStorageTag(part) ? getGameTypeLabel(part, part) : part
+  )).filter(Boolean);
+  if (mapped.length > 0) return mapped.slice(0, MAX_TAGS);
+
+  const engineLabel = getGameTypeLabel(null, cleanText(game.engine) || null);
+  return engineLabel ? [engineLabel] : [];
 }
 
 /** 功能注释：纯文本简介超过阈值时展示「阅读更多」。 */

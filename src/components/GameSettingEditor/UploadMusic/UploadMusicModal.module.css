@@ -1,307 +1,323 @@
+/* 功能注释：上传音乐弹窗对齐效果图——暗场上的白纸表单，描边控件 + 虚线投递区 */
+
 .modalOverlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    animation: fadeIn 0.2s ease;
+  --music-modal-ink: #1a1a1a;
+  --music-modal-muted: rgba(0, 0, 0, 0.45);
+  --music-modal-line: rgba(0, 0, 0, 0.12);
+  --music-modal-dash: rgba(0, 0, 0, 0.18);
+  --music-modal-accent: #8e2135;
+  --music-modal-required: #e03d4b;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+  animation: musicModalFadeIn 0.2s ease;
 }
 
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
+@keyframes musicModalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .modalContent {
-    background: #fff;
-    border-radius: 12px;
-    width: 90%;
-    max-width: 500px;
-    max-height: 85vh;
-    overflow-y: auto;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    animation: slideUp 0.3s ease;
+  background: #ffffff;
+  border-radius: 12px;
+  width: min(520px, 100%);
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
+  animation: musicModalSlideUp 0.28s ease;
 }
 
-@keyframes slideUp {
-    from {
-        transform: translateY(20px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
+@keyframes musicModalSlideUp {
+  from {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .modalHeader {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px 20px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--music-modal-line);
 }
 
 .modalHeader h3 {
-    margin: 0;
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #1a1a1a;
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--music-modal-ink);
+  letter-spacing: 0.01em;
 }
 
 .modalClose {
-    background: none;
-    border: none;
-    font-size: 28px;
-    color: rgba(0, 0, 0, 0.4);
-    cursor: pointer;
-    padding: 0;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    transition: 0.2s ease;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
-.modalClose:hover {
-    background: rgba(0, 0, 0, 0.05);
-    color: #1a1a1a;
+.modalClose:hover,
+.modalClose:focus-visible {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--music-modal-ink);
+}
+
+.modalClose:focus-visible {
+  outline: 2px solid var(--music-modal-accent);
+  outline-offset: 2px;
 }
 
 .modalBody {
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
+  padding: 18px 20px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.modalBody label {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.modalBody label span {
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: #1a1a1a;
-}
-
-.hiddenInput {
-    position: absolute;
-    width: 0;
-    height: 0;
-    opacity: 0;
-    pointer-events: none;
-}
-
-.modalBody input[type="text"],
-.modalBody textarea {
-    padding: 10px 12px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
-    border-radius: 8px;
-    font-size: 0.9rem;
-    font-family: inherit;
-    transition: 0.2s ease;
-}
-
-.modalBody input[type="text"]:focus,
-.modalBody textarea:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.1);
-}
-
-.modalBody input[type="text"]:disabled,
-.modalBody textarea:disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
-    background: rgba(0, 0, 0, 0.02);
-}
-
-.modalBody textarea {
-    resize: vertical;
-    min-height: 80px;
-}
-
-.uploadSection {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.uploadLabel {
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: #1a1a1a;
-}
-
-.uploadArea {
-    position: relative;
-    min-height: 140px;
-    border: 2px dashed rgba(0, 0, 0, 0.12);
-    border-radius: 10px;
-    background: rgba(0, 0, 0, 0.02);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    padding: 20px;
-}
-
-.uploadArea:hover {
-    border-color: var(--primary);
-    background: rgba(224, 61, 75, 0.03);
-}
-
-.uploadArea:active {
-    transform: scale(0.98);
-}
-
-.uploadAreaHasFile {
-    border-color: var(--primary);
-    background: rgba(224, 61, 75, 0.05);
-    border-style: solid;
-}
-
-.uploadPlaceholder {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    color: rgba(0, 0, 0, 0.5);
-}
-
-.uploadPlaceholder svg {
-    color: rgba(0, 0, 0, 0.3);
-}
-
-.uploadText {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #1a1a1a;
-    margin: 0;
-}
-
-.uploadHint {
-    font-size: 0.85rem;
-    color: rgba(0, 0, 0, 0.5);
-    margin: 0;
-}
-
-.fileSelected {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    width: 100%;
-    padding: 16px;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.fileSelected svg {
-    color: #10b981;
-    flex-shrink: 0;
-}
-
-.fileInfo {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
-}
-
-.fileName {
-    margin: 0;
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: #1a1a1a;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.fileSize {
-    margin: 0;
-    font-size: 0.85rem;
-    color: rgba(0, 0, 0, 0.6);
-}
-
-.removeFile {
-    background: rgba(0, 0, 0, 0.05);
-    border: none;
-    border-radius: 50%;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 20px;
-    color: rgba(0, 0, 0, 0.5);
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-}
-
-.removeFile:hover:not(:disabled) {
-    background: rgba(224, 61, 75, 0.1);
-    color: var(--primary);
-    transform: scale(1.1);
-}
-
-.removeFile:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
+.fieldLabel {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--music-modal-ink);
 }
 
 .required {
-    color: var(--primary);
-    margin-left: 2px;
+  color: var(--music-modal-required);
+  margin-left: 2px;
+}
+
+.fieldInput,
+.fieldTextarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--music-modal-line);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  color: var(--music-modal-ink);
+  background: #ffffff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.fieldInput::placeholder,
+.fieldTextarea::placeholder {
+  color: rgba(0, 0, 0, 0.35);
+}
+
+.fieldInput:focus,
+.fieldTextarea:focus {
+  outline: none;
+  border-color: var(--music-modal-accent);
+  box-shadow: 0 0 0 3px rgba(142, 33, 53, 0.12);
+}
+
+.fieldInput:disabled,
+.fieldTextarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.fieldTextarea {
+  resize: vertical;
+  min-height: 88px;
+}
+
+.uploadSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.uploadArea {
+  position: relative;
+  min-height: 132px;
+  border: 1px dashed var(--music-modal-dash);
+  border-radius: 10px;
+  background: #fafafa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  padding: 20px 16px;
+}
+
+.uploadArea:hover {
+  border-color: rgba(142, 33, 53, 0.45);
+  background: #f7f7f7;
+}
+
+.uploadAreaHasFile {
+  border-style: solid;
+  border-color: rgba(142, 33, 53, 0.4);
+  background: #fff8f9;
+}
+
+.hiddenInput {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.uploadPlaceholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.uploadText {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--music-modal-ink);
+  margin: 0;
+}
+
+.uploadHint {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--music-modal-muted);
+  margin: 0;
+  max-width: 28em;
+}
+
+.fileSelected {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  background: #ffffff;
+  border: 1px solid var(--music-modal-line);
+  border-radius: 8px;
+}
+
+.fileInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.fileName {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--music-modal-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileSize {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--music-modal-muted);
+}
+
+.removeFile {
+  background: rgba(0, 0, 0, 0.05);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.15rem;
+  color: rgba(0, 0, 0, 0.45);
+  transition: background 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.removeFile:hover:not(:disabled),
+.removeFile:focus-visible:not(:disabled) {
+  background: rgba(142, 33, 53, 0.1);
+  color: var(--music-modal-accent);
+}
+
+.removeFile:focus-visible {
+  outline: 2px solid var(--music-modal-accent);
+  outline-offset: 2px;
+}
+
+.removeFile:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .modalFooter {
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    padding: 16px 20px;
-    border-top: 1px solid rgba(0, 0, 0, 0.08);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px 18px;
+  border-top: 1px solid var(--music-modal-line);
 }
 
-.ghostSmall {
-    border-radius: 8px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
-    padding: 8px 16px;
-    font-weight: 600;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: 0.25s ease;
-    color: #1a1a1a;
-    background: #fff;
+.footerBtn {
+  border-radius: 8px;
+  border: 1px solid var(--music-modal-line);
+  padding: 8px 16px;
+  min-height: 36px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+  color: var(--music-modal-ink);
+  background: #ffffff;
 }
 
-.ghostSmall:hover:not(:disabled) {
-    border-color: var(--primary);
-    color: var(--primary);
-    background: rgba(224, 61, 75, 0.02);
+.footerBtn:hover:not(:disabled),
+.footerBtn:focus-visible:not(:disabled) {
+  border-color: var(--music-modal-accent);
+  color: var(--music-modal-accent);
+  background: rgba(142, 33, 53, 0.03);
 }
 
-.ghostSmall:disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
+.footerBtn:focus-visible {
+  outline: 2px solid var(--music-modal-accent);
+  outline-offset: 2px;
 }
 
+.footerBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}

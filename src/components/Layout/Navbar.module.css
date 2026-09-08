@@ -372,7 +372,7 @@
     border: 1px solid var(--navbar-menu-border);
     border-radius: 8px;
     box-shadow: var(--navbar-menu-shadow);
-    min-width: 120px;
+    min-width: 148px;
     z-index: 1300;
     animation: slideDown 0.3s ease-out;
     overflow: hidden;

@@ -99,8 +99,14 @@ const CharactersSidebar: React.FC<CharactersSidebarProps> = ({
         >
             <div className={sidebarStyles.sidebarHeader}>
                 <h3>{t('createGame.parsedCharacters')}</h3>
-                <button className={sharedStyles.ghostSmall} onClick={onAddNew}>
-                    + {t('createGame.addCharacter')}
+                <button
+                    type="button"
+                    className={`${sharedStyles.ghostSmall} ${sidebarStyles.addBtn}`}
+                    onClick={onAddNew}
+                    aria-label={t('createGame.addCharacter')}
+                >
+                    <span aria-hidden>+</span>
+                    <span className={sidebarStyles.addLabel}>{t('createGame.addCharacter')}</span>
                 </button>
             </div>
             <div className={sidebarStyles.rosterScroll}>
@@ -111,10 +117,11 @@ const CharactersSidebar: React.FC<CharactersSidebarProps> = ({
                         const personalityTags = normalizePersonalityTags(character.personality);
                         const isActiveCharacter = !isAddingNew && character.id === activeCharacterId;
                         const isChecked = selectedCharacterIds.has(character.id);
+                        const rowTone = character.id === 'player' ? sidebarStyles.rowPlayer : sidebarStyles.rowNpc;
                         return (
                             <article
                                 key={character.id}
-                                className={`${sidebarStyles.characterRow} ${isActiveCharacter ? sidebarStyles.active : ''} ${isChecked ? sidebarStyles.rowChecked : ''}`}
+                                className={`${sidebarStyles.characterRow} ${rowTone} ${isActiveCharacter ? sidebarStyles.active : ''} ${isChecked ? sidebarStyles.rowChecked : ''}`}
                                 onClick={() => handleCharacterClick(character.id)}
                             >
                                 <label
@@ -129,6 +136,7 @@ const CharactersSidebar: React.FC<CharactersSidebarProps> = ({
                                         aria-label={`选择 ${character.name || character.id}`}
                                     />
                                 </label>
+                                <div className={sidebarStyles.characterThumbWrap}>
                                 <div
                                     className={sidebarStyles.characterThumb}
                                     style={character.portrait ? {
@@ -146,6 +154,8 @@ const CharactersSidebar: React.FC<CharactersSidebarProps> = ({
                                         backgroundRepeat: 'no-repeat, repeat, repeat, repeat, repeat',
                                     } : undefined}
                                 />
+                                <span className={sidebarStyles.thumbFade} aria-hidden />
+                                </div>
                                 <div className={sidebarStyles.characterMeta}>
                                     <div className={sidebarStyles.characterTitleRow}>
                                         <strong>{character.name || t('createGame.unnamed')}</strong>
@@ -154,6 +164,7 @@ const CharactersSidebar: React.FC<CharactersSidebarProps> = ({
                                                 className={sidebarStyles.deleteButton}
                                                 onClick={(e) => onDeleteCharacter(character.id, e)}
                                                 title={t('createGame.deleteCharacter')}
+                                                aria-label={t('createGame.deleteCharacter')}
                                             >
                                                 <RiDeleteBin5Line />
                                             </button>

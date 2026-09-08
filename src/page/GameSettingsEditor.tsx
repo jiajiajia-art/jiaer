@@ -42,6 +42,7 @@ import {
     ASSET_GAP_BANNER_EVENT,
 } from '../lib/galgame/ideaFullWorkSession';
 import { runIdeaFullWorkAssets, isIdeaFullWorkAssetsInflight } from '../lib/galgame/runIdeaFullWorkAssets';
+import { shouldResumeIdeaFullWorkOrchestration } from '../lib/galgame/ideaFullWorkResume';
 import { createInitialIdeaAssetProgress, peekIdeaAssetProgress, publishIdeaAssetProgress, IDEA_ASSET_PROGRESS_EVENT } from '../lib/galgame/ideaFullWorkProgress';
 import toast from 'react-hot-toast';
 import FullPageLoading from '../components/Skeleton/FullPageLoading';
@@ -325,14 +326,19 @@ const GameSettingsEditor = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [fileId, mode, isParsed, showAssetGapBanner, assetBannerKind]);
 
-    // 功能注释：仅在 pending/failed 且本页无人编排时续跑；running+inflight 表示上传回调已接管
+    // 功能注释：只在文本完成后的 pending 开跑一次；切侧栏 / failed 不得再 POST 批量生图
     useEffect(() => {
         if (!fileId || mode === 'worldInteraction' || !isParsed) return;
         const flags = peekIdeaFullWorkAssets(fileId);
-        if (!flags) return;
-        if (isIdeaFullWorkAssetsInflight(fileId)) return;
         const status = peekIdeaAssetGenStatus(fileId);
-        if (status !== 'pending' && status !== 'failed') return;
+        if (!shouldResumeIdeaFullWorkOrchestration({
+            hasFlags: Boolean(flags),
+            inflight: isIdeaFullWorkAssetsInflight(fileId),
+            status,
+        })) {
+            return;
+        }
+        if (!flags) return;
 
         let cancelled = false;
         const resume = async () => {
@@ -346,7 +352,14 @@ const GameSettingsEditor = () => {
                     ? { ...existingProgress, flags: { ...flags } }
                     : createInitialIdeaAssetProgress(fileId, flags),
             );
-            toast(t('createGame.fullWorkAssetsGenerating'));
+            const alreadyGenerating = Boolean(
+                existingProgress
+                && existingProgress.phase !== 'idle'
+                && existingProgress.phase !== 'done',
+            );
+            if (!alreadyGenerating) {
+                toast(t('createGame.fullWorkAssetsGenerating'));
+            }
             try {
                 const assetResult = await runIdeaFullWorkAssets(fileId, flags);
                 if (cancelled) return;
@@ -852,6 +865,7 @@ const GameSettingsEditor = () => {
                     <AssetGapBanner
                         kind={assetBannerKind}
                         fileId={fileId || undefined}
+                        activePanel={activePanel}
                         missingPortraits={assetCompleteness.missingPortraits}
                         missingScenes={assetCompleteness.missingScenes}
                         missingCover={assetCompleteness.missingCover}

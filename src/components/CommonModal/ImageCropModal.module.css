@@ -1,25 +1,33 @@
+/* 功能注释：封面裁剪对齐 funloom 墨黑账本，禁止白卡粉渐变主按钮 */
+
 .overlay {
+    --crop-surface: #1A1A1A;
+    --crop-input: #1C1C1E;
+    --crop-accent: #8E2135;
+    --crop-accent-hot: #A8283C;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.72);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1100;
     padding: 20px;
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(8px);
 }
 
 .modal {
-    background: #fff;
-    border-radius: 16px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    background: var(--crop-surface);
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
     width: 100%;
     max-width: 700px;
     max-height: 90vh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    color: #ffffff;
     animation: modalSlideIn 0.2s ease-out;
 }
 
@@ -38,44 +46,55 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 20px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-    background: rgba(0, 0, 0, 0.01);
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--crop-surface);
 }
 
 .header h3 {
     margin: 0;
     font-size: 1.1rem;
-    font-weight: 600;
-    color: #1a1a1a;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: -0.02em;
 }
 
 .closeBtn {
-    background: transparent;
-    border: none;
     width: 32px;
     height: 32px;
-    display: flex;
+    min-width: 32px;
+    min-height: 32px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    background: var(--crop-input);
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 8px;
-    color: rgba(0, 0, 0, 0.5);
-    cursor: pointer;
-    transition: all 0.2s ease;
+    transition: color 0.15s ease, border-color 0.15s ease;
 }
 
-.closeBtn:hover {
-    background: rgba(0, 0, 0, 0.08);
-    color: #1a1a1a;
+.closeBtn:hover:not(:disabled) {
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.28);
+}
+
+.closeBtn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
 }
 
 .body {
-    padding: 20px;
+    padding: 16px 18px;
     overflow: auto;
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
 }
 
 .cropContainer {
@@ -87,6 +106,7 @@
     align-items: center;
     justify-content: center;
     min-height: 300px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .reactCrop {
@@ -94,7 +114,6 @@
     max-height: 400px;
 }
 
-/* react-image-crop 覆盖样式 */
 .reactCrop :global(.ReactCrop__crop-selection) {
     border: 2px solid #fff !important;
     box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5) !important;
@@ -104,7 +123,7 @@
     width: 12px !important;
     height: 12px !important;
     background: #fff !important;
-    border: 2px solid var(--primary, #e03d4b) !important;
+    border: 2px solid var(--crop-accent) !important;
     border-radius: 50% !important;
 }
 
@@ -122,77 +141,86 @@
 .hints p {
     margin: 4px 0;
     font-size: 0.85rem;
-    color: rgba(0, 0, 0, 0.6);
+    color: rgba(255, 255, 255, 0.48);
 }
 
 .hints p:first-child {
     font-weight: 500;
-    color: rgba(0, 0, 0, 0.8);
+    color: rgba(255, 255, 255, 0.72);
 }
 
 .errorText {
-    color: #c62828 !important;
+    color: #ffb4bf !important;
     font-weight: 500;
 }
 
 .footer {
     display: flex;
-    justify-content: flex-end;
+    align-items: center;
+    justify-content: center;
     gap: 12px;
-    padding: 16px 20px;
-    border-top: 1px solid rgba(0, 0, 0, 0.08);
-    background: rgba(0, 0, 0, 0.01);
+    padding: 14px 18px calc(14px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--crop-surface);
+}
+
+.cancelBtn,
+.confirmBtn {
+    min-height: 48px;
+    border-radius: 999px;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
 }
 
 .cancelBtn {
-    padding: 10px 20px;
-    border: 1px solid rgba(0, 0, 0, 0.15);
-    border-radius: 8px;
-    background: #fff;
-    color: rgba(0, 0, 0, 0.7);
-    font-size: 0.9rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
+    flex: 0 0 auto;
+    min-width: 108px;
+    padding: 0 22px;
+    border: 1.5px solid rgba(255, 255, 255, 0.16);
+    background: var(--crop-input);
+    color: #ffffff;
 }
 
-.cancelBtn:hover {
-    border-color: rgba(0, 0, 0, 0.3);
-    color: #1a1a1a;
+.cancelBtn:hover:not(:disabled) {
+    border-color: var(--crop-accent-hot);
+    background: rgba(142, 33, 53, 0.22);
 }
 
 .confirmBtn {
-    padding: 10px 24px;
+    flex: 1;
+    max-width: 280px;
+    padding: 0 28px;
     border: none;
-    border-radius: 8px;
-    background: linear-gradient(135deg, #e03d4b 0%, #e8575f 100%);
+    background: var(--crop-accent);
     color: #fff;
-    font-size: 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 4px 12px rgba(224, 61, 75, 0.3);
 }
 
 .confirmBtn:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(224, 61, 75, 0.4);
+    background: var(--crop-accent-hot);
 }
 
-.confirmBtn:disabled {
+.confirmBtn:active:not(:disabled),
+.cancelBtn:active:not(:disabled) {
+    transform: translateY(1px) scale(0.985);
+}
+
+.confirmBtn:disabled,
+.cancelBtn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
     transform: none;
 }
 
-/* 响应式 */
 @media (max-width: 600px) {
     .overlay {
         padding: 12px;
     }
 
     .modal {
-        max-height: 85vh;
+        max-height: 92vh;
     }
 
     .cropContainer {
@@ -204,12 +232,14 @@
     }
 
     .footer {
-        padding: 12px 16px;
+        padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
     }
 
-    .cancelBtn,
+    .cancelBtn {
+        min-width: 88px;
+    }
+
     .confirmBtn {
-        padding: 8px 16px;
-        font-size: 0.85rem;
+        max-width: none;
     }
 }

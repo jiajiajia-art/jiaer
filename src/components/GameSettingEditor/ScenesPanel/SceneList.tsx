@@ -130,18 +130,20 @@ const SceneList: React.FC<SceneListProps> = ({
                                     {!scene.image && <span>{t('createGame.waitingUpload')}</span>}
                                 </div>
                                 <div className={styles.sceneMeta}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                                    <div className={styles.sceneTitleRow}>
                                         <strong>{scene.name}</strong>
-                                        <button
-                                            className={styles.deleteButton}
-                                            onClick={(e) => onDeleteClick(scene.id, e)}
-                                            title={t('createGame.deleteScene')}
-                                        >
-                                            <RiDeleteBin5Line />
-                                        </button>
                                     </div>
                                     <p className={styles.mutedSmall}>{scene.desc}</p>
                                 </div>
+                                <button
+                                    type="button"
+                                    className={styles.deleteButton}
+                                    onClick={(e) => onDeleteClick(scene.id, e)}
+                                    title={t('createGame.deleteScene')}
+                                    aria-label={t('createGame.deleteScene')}
+                                >
+                                    <RiDeleteBin5Line />
+                                </button>
                             </article>
 
                             {/* 子场景卡片（独立盒子，轻微缩进） */}
@@ -206,16 +208,18 @@ const SceneList: React.FC<SceneListProps> = ({
                                                             <strong className={styles.subsceneName}>{sub.name || t('createGame.unnamedSubScene')}</strong>
                                                             <span className={styles.subsceneTag}>{t('createGame.subScene')}</span>
                                                         </div>
-                                                        <button
-                                                            className={styles.deleteButton}
-                                                            onClick={(e) => onSubsceneDeleteClick(scene.id, subId, e)}
-                                                            title={t('createGame.deleteSubScene')}
-                                                        >
-                                                            <RiDeleteBin5Line />
-                                                        </button>
                                                     </div>
                                                     <p className={styles.mutedSmall}>{sub.description}</p>
                                                 </div>
+                                                <button
+                                                    type="button"
+                                                    className={styles.deleteButton}
+                                                    onClick={(e) => onSubsceneDeleteClick(scene.id, subId, e)}
+                                                    title={t('createGame.deleteSubScene')}
+                                                    aria-label={t('createGame.deleteSubScene')}
+                                                >
+                                                    <RiDeleteBin5Line />
+                                                </button>
                                             </article>
                                         );
                                     })}

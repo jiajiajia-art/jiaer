@@ -17,6 +17,8 @@ export type IdeaAssetPhaseRow = {
   completed: number;
   total: number;
   failed?: number;
+  /** 已启动的 visual 批量 job，续跑只轮询此 id，禁止再 start */
+  jobId?: string;
 };
 
 export interface IdeaAssetProgressSnapshot {
@@ -199,7 +201,7 @@ export function clearIdeaAssetProgress(fileId: string): void {
 export function patchIdeaAssetPhase(
   fileId: string,
   phase: IdeaFullWorkAssetPhase,
-  patch: Partial<{ state: IdeaAssetPhaseState; completed: number; total: number; failed: number }>,
+  patch: Partial<{ state: IdeaAssetPhaseState; completed: number; total: number; failed: number; jobId: string }>,
   flags?: IdeaAssetFlags,
 ): IdeaAssetProgressSnapshot | null {
   const prev = peekIdeaAssetProgress(fileId)

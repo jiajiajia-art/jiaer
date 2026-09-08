@@ -115,6 +115,12 @@ test('resolveGameDetailTags_最多三个题材', () => {
   );
 });
 
+test('resolveGameDetailTags_TXT引擎码应展示为AI文游', () => {
+  assert.deepEqual(resolveGameDetailTags({ game_tags: 'TXT' }), ['AI文游']);
+  assert.deepEqual(resolveGameDetailTags({ engine: 'TXT' }), ['AI文游']);
+  assert.doesNotMatch(resolveGameDetailTags({ game_tags: 'TXT' }).join(','), /TXT/);
+});
+
 test('descriptionNeedsExpand_长文才需要阅读更多', () => {
   assert.equal(descriptionNeedsExpand('短'), false);
   assert.equal(descriptionNeedsExpand('字'.repeat(141)), true);

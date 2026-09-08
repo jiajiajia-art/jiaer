@@ -23,7 +23,7 @@ export interface WorldBookPanelProps {
 }
 
 /**
- * Step 5 世界书：左侧补充提示词菜单 + 右侧编辑表单（复用 MorePromptFormPanel）
+ * Step 5 世界书：左侧补充提示词菜单 + 右侧编辑表单（复用 MorePromptFormPanel，墨黑账本壳）
  */
 const WorldBookPanel: React.FC<WorldBookPanelProps> = ({
   activePanel,

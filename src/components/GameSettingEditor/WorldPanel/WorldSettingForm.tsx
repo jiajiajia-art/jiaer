@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import styles from './WorldPanel.module.css';
 import { useWordLimit, useWordCount } from '../../../hooks/editor/useWordLimit';
 import InlineFieldSave from '../InlineFieldSave';
+import { useLocalizedThemeTags } from '../../../utils/themeTags';
 
 interface WorldSettingFormProps {
     mode: 'visual' | 'worldInteraction';
@@ -126,6 +127,7 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
     themeTagError,
 }) => {
     const { t } = useTranslation();
+    const displayThemeTags = useLocalizedThemeTags(themeTags);
     const titleWords = useWordCount(title);
     const taglineWords = useWordCount(tagline);
     const eraWords = useWordCount(era);
@@ -188,12 +190,12 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
                     </label>
 
                     <div className={styles.wide}>
-                        <div className={styles.fieldTopRow}>
+                        <div className={styles.fieldHeader}>
                             <span className={styles.fieldLabel}>{t('createGame.gameTags')}<span className={styles.required}>*</span></span>
                             <span className={styles.fieldHint}>{t('createGame.min1Max2Tags')}</span>
                         </div>
                         <div className={`${styles.themeTagsWrap} ${themeTagError ? styles.themeTagsWrapError : ''}`}>
-                            {themeTags.map((tag) => {
+                            {displayThemeTags.map((tag) => {
                                 const selected = selectedThemeTagIds.includes(tag.id);
                                 return (
                                     <button
@@ -201,6 +203,7 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
                                         type="button"
                                         className={`${styles.themeTagChip} ${selected ? styles.themeTagChipActive : ''}`}
                                         onClick={() => onThemeTagToggle(tag.id)}
+                                        aria-pressed={selected}
                                         title={tag.pathLabel || tag.name}
                                     >
                                         {tag.name}
@@ -214,10 +217,10 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
                     </div>
 
                     <label className={styles.wide}>
-                        <div className={styles.fieldTopRow}>
+                        <div className={styles.fieldHeader}>
                             <span className={styles.fieldLabel}>{t('createGame.playerIdentity')}</span>
+                            <span className={styles.fieldHint}>{t('createGame.playerInfoHint')}</span>
                         </div>
-                        <span className={styles.fieldHintItalic}>{t('createGame.playerInfoHint')}</span>
                         <input
                             type="text"
                             value={playerRole}

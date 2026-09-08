@@ -9,7 +9,7 @@ import UploadProgress from '../components/CreateGame/UploadProgress';
 import toast from 'react-hot-toast';
 import getGameDataApi from '../api/home/getGameData';
 import gameTagsApi from '../api/gameTags/gameTagsApi';
-import { flattenThemeTags, type FlatThemeTag } from '../utils/themeTags';
+import { flattenThemeTags, useLocalizedThemeTags, type FlatThemeTag } from '../utils/themeTags';
 import SimpleRichTextEditor from '../components/Common/SimpleRichTextEditor';
 import EditorApi from '../api/galgame/EditorData';
 import {
@@ -31,6 +31,7 @@ const CustomIFCreate: React.FC = () => {
   const [availableThemeTags, setAvailableThemeTags] = useState<FlatThemeTag[]>([]);
   const [selectedThemeTagIds, setSelectedThemeTagIds] = useState<number[]>([]);
   const [themeTagError, setThemeTagError] = useState<string>('');
+  const displayThemeTags = useLocalizedThemeTags(availableThemeTags);
   const fileRef = useRef<HTMLInputElement>(null);
   const dirRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
@@ -512,11 +513,30 @@ const handleCreate = () => {
       <div className={styles.mainContent}>
         <div className={styles.main}>
           <div className={styles.formSection}>
+            {/* 功能注释：对齐 AVG 效果图顶栏——返回 + 居中标题 + 右侧测试，去掉落地页式大标题/长说明 */}
             <header className={styles.pageHeader}>
+              <button
+                type="button"
+                className={styles.pageBack}
+                onClick={() => navigate('/create')}
+                aria-label={t('customIFCreate.backAria')}
+              >
+                ‹
+              </button>
               <h1 className={styles.pageTitle}>
                 {isEditMode ? t('customIFCreate.editTitle') : t('customIFCreate.createTitle')}
               </h1>
-              <p className={styles.pageSubtitle}>{t('customIFCreate.pageSubtitle')}</p>
+              <div className={styles.pageHeaderSlot}>
+                {(isEditMode || lastUploadOk) && (appId || appIdFromQuery) ? (
+                  <button
+                    type="button"
+                    className={styles.pageTest}
+                    onClick={() => navigate(`/customif/${appId || appIdFromQuery}`)}
+                  >
+                    {t('customIFCreate.headerTest')}
+                  </button>
+                ) : null}
+              </div>
             </header>
 
             <section className={styles.formCard}>
@@ -556,13 +576,17 @@ const handleCreate = () => {
               </div>
 
               <div className={styles.fieldBlock}>
-                <div className={styles.fieldLabelRow}>
-                  <label className={styles.fieldLabel}>{t('createGame.gameTags')}</label>
+                {/* 功能注释：对齐图1——标题+必填星号，说明在下方；标签为描边芯片而非纯文字 */}
+                <div className={styles.themeTagsHead}>
+                  <label className={styles.fieldLabel}>
+                    {t('createGame.gameTags')}
+                    <span className={styles.requiredMark} aria-hidden="true">*</span>
+                  </label>
                   <span className={styles.themeTagHint}>{t('createGame.min1Max2Tags')}</span>
                 </div>
                 <div className={styles.themeTagsPanel}>
                   <div className={styles.themeTagsWrap}>
-                    {availableThemeTags.map((tag) => {
+                    {displayThemeTags.map((tag) => {
                       const active = selectedThemeTagIds.includes(tag.id);
                       return (
                         <button
@@ -583,14 +607,9 @@ const handleCreate = () => {
 
             {/* 版本号输入已移除：由服务端管理当前激活版本 */}
 
-            {/* 简化：单一大型拖放区域（支持 .zip / .html / 目录）且包含文件要求说明 */}
+            {/* 简化：直接从类型切换/拖放区开始，去掉与效果图不符的「上传内容」标题块 */}
             <section className={styles.formCard}>
-              <div className={styles.formCardHead}>
-                <h2 className={styles.formCardTitle}>{t('customIFCreate.uploadSectionTitle')}</h2>
-                <p className={styles.formCardDesc}>{t('customIFCreate.uploadSectionDesc')}</p>
-              </div>
               <div className={styles.fieldBlock}>
-                <label className={styles.fieldLabel}>{t('customIFCreate.uploadLabel')}</label>
                 <div className={styles.uploaderColumn}>
                   {/* 文件类型选择器：切换后渲染对应的上传区域与校验 */}
                   <div className={styles.seg}>
@@ -797,7 +816,17 @@ const handleCreate = () => {
               )}
 
               <div className={styles.fieldBlock}>
-                <label htmlFor="manifest" className={styles.fieldLabel}>{t('customIFCreate.manifestLabel')}</label>
+                <div className={styles.fieldLabelRow}>
+                  <label htmlFor="manifest" className={styles.fieldLabel}>{t('customIFCreate.manifestLabel')}</label>
+                  {/* 功能注释：对齐 AVG 效果图 Manifest 行右侧「一键清空」小酒红胶囊 */}
+                  <button
+                    type="button"
+                    className={styles.clearPill}
+                    onClick={() => setManifestText('')}
+                  >
+                    {t('createGame.clearAll')}
+                  </button>
+                </div>
                 <textarea
                   id="manifest"
                   className={styles.textarea}

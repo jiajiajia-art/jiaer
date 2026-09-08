@@ -7,9 +7,11 @@ import styles from './GenerationActionBar.module.css';
 
 interface GenerationActionBarProps {
     children: React.ReactNode;
+    /** dock：效果图拼合胶囊——左积分右生成；pill：独立积分胶囊 */
+    layout?: 'pill' | 'hero';
 }
 
-const GenerationActionBar: React.FC<GenerationActionBarProps> = ({ children }) => {
+const GenerationActionBar: React.FC<GenerationActionBarProps> = ({ children, layout = 'pill' }) => {
     const { t } = useTranslation();
     const { user, updateUser } = useAuthStore();
     const userId = user?.user?.userId;
@@ -42,11 +44,23 @@ const GenerationActionBar: React.FC<GenerationActionBarProps> = ({ children }) =
     }, [token, userId, updateUser]);
 
     return (
-        <div className={styles.actionBar}>
-            <div className={styles.pointsPill} aria-label={`${t('profile.myPoints')} ${userPoints}`}>
-                <FaCoins className={styles.pointsIcon} aria-hidden="true" />
-                <span className={styles.pointsLabel}>{t('profile.myPoints')}</span>
-                <span className={styles.pointsValue}>{userPoints}</span>
+        <div className={`${styles.actionBar} ${layout === 'hero' ? styles.actionBarHero : ''}`}>
+            <div
+                className={layout === 'hero' ? styles.pointsHero : styles.pointsPill}
+                aria-label={`${t('profile.myPoints')} ${userPoints}`}
+            >
+                {layout === 'hero' ? (
+                    <>
+                        <span className={styles.pointsValue}>{userPoints}</span>
+                        <span className={styles.pointsLabel}>{t('profile.myPoints')}</span>
+                    </>
+                ) : (
+                    <>
+                        <FaCoins className={styles.pointsIcon} aria-hidden="true" />
+                        <span className={styles.pointsLabel}>{t('profile.myPoints')}</span>
+                        <span className={styles.pointsValue}>{userPoints}</span>
+                    </>
+                )}
             </div>
             {children}
         </div>

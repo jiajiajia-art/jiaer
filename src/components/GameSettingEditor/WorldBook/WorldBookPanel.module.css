@@ -1,9 +1,18 @@
+/* 功能注释：世界书 / 数据库共用壳，对齐 funloom 墨黑账本，禁止白卡粉描边 */
+
 .worldBook {
+  --wb-ink: #000000;
+  --wb-surface: #1A1A1A;
+  --wb-rail: #121212;
+  --wb-input: #1C1C1E;
+  --wb-accent: #8E2135;
+  --wb-accent-hot: #A8283C;
   display: flex;
   flex-direction: column;
   gap: 20px;
   height: 100%;
   min-height: 0;
+  color: #ffffff;
 }
 
 .header {
@@ -14,12 +23,12 @@
   margin: 0 0 6px;
   font-size: 1.6rem;
   font-weight: 700;
-  color: #1a1a1a;
+  color: #ffffff;
 }
 
 .subtitle {
   margin: 0;
-  color: rgba(0, 0, 0, 0.55);
+  color: rgba(255, 255, 255, 0.55);
   font-size: 0.9rem;
   line-height: 1.5;
 }
@@ -29,18 +38,20 @@
   flex: 1;
   min-height: 0;
   gap: 0;
-  border: 1px solid rgba(224, 61, 75, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
   overflow: hidden;
-  background: #fff;
+  background: var(--wb-surface);
+  /* 功能注释：顶沿酒红印记，与素材进度条同一账本语汇 */
+  box-shadow: inset 0 2px 0 var(--wb-accent);
 }
 
 .subNav {
   flex: 0 0 260px;
   min-width: 220px;
   max-width: 300px;
-  border-right: 1px solid rgba(224, 61, 75, 0.1);
-  background: rgba(255, 248, 249, 0.5);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--wb-rail);
   padding: 12px;
   overflow-y: auto;
   display: flex;
@@ -52,6 +63,7 @@
   min-width: 0;
   overflow-y: auto;
   padding: 24px;
+  background: var(--wb-surface);
 }
 
 .empty {
@@ -62,7 +74,7 @@
   gap: 12px;
   min-height: 280px;
   text-align: center;
-  color: rgba(0, 0, 0, 0.55);
+  color: rgba(255, 255, 255, 0.55);
   padding: 32px 24px;
 }
 
@@ -70,7 +82,7 @@
   margin: 0;
   font-size: 1.1rem;
   font-weight: 600;
-  color: #1a1a1a;
+  color: #ffffff;
 }
 
 .emptyHint {
@@ -89,7 +101,7 @@
     flex: 0 0 auto;
     max-width: none;
     border-right: none;
-    border-bottom: 1px solid rgba(224, 61, 75, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     max-height: 220px;
   }
 
