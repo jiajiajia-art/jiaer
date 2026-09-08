@@ -413,44 +413,50 @@ const ProfileFunctionPanel: React.FC = () => {
     const tenMinuteTask = durationTaskMap.get('online_10m');
     const thirtyMinuteTask = durationTaskMap.get('online_30m');
     const hasDurationTaskFallback = !tenMinuteTask || !thirtyMinuteTask;
+    const claimableTaskCount = dailyTasks.filter((task) => Boolean(task.claimRequest) && task.claimable && !task.claimed).length;
+    const completedTaskCount = dailyTasks.filter((task) => task.completed || task.claimed).length;
 
     return (
         <div className={styles.profileFunctionPanel}>
-            {/* 创作者：Tab 同时充当分区标题（更多服务 / 创作者资料），避免与列表内标题重复 */}
-            {isCreator && (
-                <div className={styles.profileTabContainer}>
-                    <button
-                        type="button"
-                        className={`${styles.profileTab} ${profileTab === 'function' ? styles.profileTabActive : ''}`}
-                        onClick={() => setProfileTab('function')}
-                    >
-                        {t('profile.moreServices')}
-                    </button>
-                    <button
-                        type="button"
-                        className={`${styles.profileTab} ${profileTab === 'creator' ? styles.profileTabActive : ''}`}
-                        onClick={() => setProfileTab('creator')}
-                    >
-                        <MdAccountBalanceWallet />
-                        {t('profile.creatorProfile')}
-                    </button>
-                </div>
-            )}
+            <div className={styles.functionList}>
+                {isCreator ? (
+                    <div className={styles.profileTabContainer} role="tablist">
+                        <button
+                            type="button"
+                            role="tab"
+                            aria-selected={profileTab === 'function'}
+                            className={`${styles.profileTab} ${profileTab === 'function' ? styles.profileTabActive : ''}`}
+                            onClick={() => setProfileTab('function')}
+                        >
+                            {t('profile.moreServices')}
+                        </button>
+                        <button
+                            type="button"
+                            role="tab"
+                            aria-selected={profileTab === 'creator'}
+                            className={`${styles.profileTab} ${profileTab === 'creator' ? styles.profileTabActive : ''}`}
+                            onClick={() => setProfileTab('creator')}
+                        >
+                            <MdAccountBalanceWallet />
+                            {t('profile.creatorProfile')}
+                        </button>
+                    </div>
+                ) : (
+                    <div className={styles.functionListHeading}>{t('profile.moreServices')}</div>
+                )}
 
-            {profileTab === 'creator' ? (
-                <CreatorProfile
-                    data={creatorProfileData}
-                    onSave={async (data: CreatorProfileFormData) => {
-                        await saveCreatorProfile(data);
-                        setCreatorProfileData(data);
-                    }}
-                />
-            ) : (
-                <div className={styles.functionList}>
-                    {!isCreator && (
-                        <div className={styles.functionListHeading}>{t('profile.moreServices')}</div>
-                    )}
-
+                {profileTab === 'creator' ? (
+                    <div className={styles.creatorProfileSlot}>
+                        <CreatorProfile
+                            data={creatorProfileData}
+                            onSave={async (data: CreatorProfileFormData) => {
+                                await saveCreatorProfile(data);
+                                setCreatorProfileData(data);
+                            }}
+                        />
+                    </div>
+                ) : (
+                    <>
                     <div className={styles.inviteCampaignSection}>
                         <div className={styles.inviteCampaignHeader}>
                             <div className={styles.inviteCampaignIcon}>
@@ -682,8 +688,9 @@ const ProfileFunctionPanel: React.FC = () => {
                             </span>
                         </button>
                     )}
-                </div>
-            )}
+                    </>
+                )}
+            </div>
 
             {isBindAccountModalOpen && (
                 <div
@@ -792,16 +799,25 @@ const ProfileFunctionPanel: React.FC = () => {
                     onClick={() => setIsDailyTaskModalOpen(false)}
                 >
                     <div className={styles.dailyTaskModal} onClick={(e) => e.stopPropagation()}>
+                        <button
+                            type="button"
+                            className={styles.dailyTaskCloseBtn}
+                            aria-label={t('profile.closeDailyTasks')}
+                            onClick={() => setIsDailyTaskModalOpen(false)}
+                        >
+                            <span className={styles.dailyTaskCloseIcon} aria-hidden="true" />
+                        </button>
                         <div className={styles.dailyTaskModalHeader}>
                             <div className={styles.dailyTaskModalTitle}>{t('profile.tasksTitle')}</div>
-                            <button
-                                type="button"
-                                className={styles.dailyTaskCloseBtn}
-                                aria-label={t('profile.closeDailyTasks')}
-                                onClick={() => setIsDailyTaskModalOpen(false)}
-                            >
-                                ×
-                            </button>
+                            {isTaskLoadedOnce && dailyTasks.length > 0 && (
+                                <p className={styles.dailyTaskSummary}>
+                                    {t('profile.tasksSummary', {
+                                        claimable: claimableTaskCount,
+                                        completed: completedTaskCount,
+                                        total: dailyTasks.length,
+                                    })}
+                                </p>
+                            )}
                         </div>
                         {!isTaskLoadedOnce && isTaskLoading && (
                             <div className={styles.dailyTaskLoading}>{t('profile.tasksLoading')}</div>
@@ -823,7 +839,6 @@ const ProfileFunctionPanel: React.FC = () => {
                                 const isTaskActionLoading = Boolean(taskActionLoadingMap[task.key]);
                                 const canClaimNow = Boolean(task.claimRequest) && task.claimable && !task.claimed;
                                 const canAcceptNow = isDynamicTask && task.acceptRequired && !task.accepted && !task.claimed;
-                                const isInProgressTask = isDynamicTask && task.accepted && !task.claimable && !task.claimed;
                                 const effectiveProgress = isFixedDurationTask
                                     ? Math.max(task.progress, displayTotalSeconds)
                                     : task.progress;
@@ -835,24 +850,15 @@ const ProfileFunctionPanel: React.FC = () => {
                                     : isDynamicDurationTask
                                     ? `${formatDuration(Math.min(effectiveProgress, task.target))} / ${formatDuration(task.target)}`
                                     : `${Math.min(effectiveProgress, task.target)}/${task.target}`;
+                                const showProgressBar = progressRatio > 0 && !task.claimed;
 
-                                let statusText = task.statusText;
-                                if (task.claimed) {
-                                    statusText = t('profile.rewardClaimed');
-                                } else if (canClaimNow) {
-                                    statusText = t('profile.taskClaimReward');
-                                } else if (canAcceptNow) {
-                                    statusText = t('profile.taskAccept');
-                                } else if (isInProgressTask) {
-                                    statusText = t('profile.taskInProgress');
-                                } else if (task.completed) {
-                                    statusText = t('profile.taskCompleted');
-                                } else if (!statusText) {
-                                    statusText = t('profile.taskInProgress');
-                                }
+                                const itemClassName = [
+                                    styles.dailyTaskItem,
+                                    task.claimed ? styles.dailyTaskItemClaimed : '',
+                                ].filter(Boolean).join(' ');
 
                                 return (
-                                    <div key={task.key} className={styles.dailyTaskItem}>
+                                    <div key={task.key} className={itemClassName}>
                                         <div className={styles.dailyTaskItemHeader}>
                                             <div className={styles.dailyTaskItemTitle}>
                                                 {task.titleKey ? t(task.titleKey) : task.title}
@@ -862,86 +868,88 @@ const ProfileFunctionPanel: React.FC = () => {
                                         {task.description && (
                                             <div className={styles.dailyTaskDescription}>{task.description}</div>
                                         )}
-                                        <div className={styles.dailyTaskProgressRow}>
-                                            <div className={styles.dailyTaskProgressBar}>
-                                                <div
-                                                    className={`${styles.dailyTaskProgressFill} ${task.completed ? styles.dailyTaskProgressFillDone : ''}`}
-                                                    style={{ width: `${progressPercent}%` }}
-                                                />
+                                        <div className={styles.dailyTaskFooter}>
+                                            <div className={styles.dailyTaskProgressBlock}>
+                                                {showProgressBar && (
+                                                    <div className={styles.dailyTaskProgressBar}>
+                                                        <div
+                                                            className={styles.dailyTaskProgressFill}
+                                                            style={{ width: `${progressPercent}%` }}
+                                                        />
+                                                    </div>
+                                                )}
+                                                <div className={styles.dailyTaskProgressText}>{progressText}</div>
                                             </div>
-                                            <div className={styles.dailyTaskProgressText}>{progressText}</div>
-                                        </div>
-                                        <div className={styles.dailyTaskStatusRow}>
-                                            <span className={`${styles.dailyTaskStatus} ${task.completed ? styles.dailyTaskStatusDone : ''}`}>
-                                                {statusText}
-                                            </span>
-                                            {canCopyPromotionLink && task.promotionCode && task.gameFileId && (
-                                                <button
-                                                    type="button"
-                                                    className={styles.dailyTaskClaimBtn}
-                                                    onClick={() => {
-                                                        void copyPromotionLink(
-                                                            buildGamePromotionLink(task.gameFileId!, task.promotionCode!),
-                                                        );
-                                                    }}
-                                                >
-                                                    复制推广链接
-                                                </button>
-                                            )}
-                                            {canAcceptNow && (
-                                                <button
-                                                    type="button"
-                                                    className={styles.dailyTaskClaimBtn}
-                                                    disabled={isTaskActionLoading}
-                                                    onClick={() => {
-                                                        if (typeof task.taskId === 'number') {
-                                                            void handleAcceptTask({
-                                                                key: task.key,
-                                                                taskId: task.taskId,
-                                                            });
-                                                        }
-                                                    }}
-                                                >
-                                                    {isTaskActionLoading ? t('profile.claiming') : t('profile.taskAccept')}
-                                                </button>
-                                            )}
-                                            {canClaimNow && (
-                                                <button
-                                                    type="button"
-                                                    className={styles.dailyTaskClaimBtn}
-                                                    disabled={isTaskActionLoading}
-                                                    onClick={() => {
-                                                        void handleClaimTask({
-                                                            key: task.key,
-                                                            claimRequest: task.claimRequest,
-                                                        });
-                                                    }}
-                                                >
-                                                    {isTaskActionLoading ? t('profile.claiming') : t('profile.taskClaimReward')}
-                                                </button>
-                                            )}
-                                            {!canAcceptNow && !canClaimNow && !task.claimed && !canCopyPromotionLink && (
-                                                // 推广任务已展示「复制链接」，不再显示「去游玩」
-                                                isTaskPlayable(task) ? (
+                                            <div className={styles.dailyTaskActionSlot}>
+                                                {canCopyPromotionLink && task.promotionCode && task.gameFileId && (
                                                     <button
                                                         type="button"
-                                                        className={styles.dailyTaskGoPlayBtn}
+                                                        className={styles.dailyTaskSecondaryBtn}
                                                         onClick={() => {
-                                                            // 综合任务（玩 N 款不同游戏）没有具体 fileId，跳转到首页
-                                                            if (task.code === 'play_3_unique' || task.code === 'play_three_games') {
-                                                                navigate('/');
-                                                                return;
-                                                            }
-                                                            const targetGameFileId = task.gameFileId || task.key.replace(/^(play_specific_game_\d+_|config_\d+_)/, '');
-                                                            navigate(`/game/${targetGameFileId}?source=history`);
+                                                            void copyPromotionLink(
+                                                                buildGamePromotionLink(task.gameFileId!, task.promotionCode!),
+                                                            );
                                                         }}
                                                     >
-                                                        {getTaskActionText(task, t)}
+                                                        {t('profile.copyPromotionLink')}
                                                     </button>
-                                                ) : (
-                                                    <span className={styles.dailyTaskActionText}>{getTaskActionText(task, t)}</span>
-                                                )
-                                            )}
+                                                )}
+                                                {canAcceptNow && (
+                                                    <button
+                                                        type="button"
+                                                        className={styles.dailyTaskPrimaryBtn}
+                                                        disabled={isTaskActionLoading}
+                                                        onClick={() => {
+                                                            if (typeof task.taskId === 'number') {
+                                                                void handleAcceptTask({
+                                                                    key: task.key,
+                                                                    taskId: task.taskId,
+                                                                });
+                                                            }
+                                                        }}
+                                                    >
+                                                        {isTaskActionLoading ? t('profile.claiming') : t('profile.taskAccept')}
+                                                    </button>
+                                                )}
+                                                {canClaimNow && (
+                                                    <button
+                                                        type="button"
+                                                        className={styles.dailyTaskPrimaryBtn}
+                                                        disabled={isTaskActionLoading}
+                                                        onClick={() => {
+                                                            void handleClaimTask({
+                                                                key: task.key,
+                                                                claimRequest: task.claimRequest,
+                                                            });
+                                                        }}
+                                                    >
+                                                        {isTaskActionLoading ? t('profile.claiming') : t('profile.taskClaimReward')}
+                                                    </button>
+                                                )}
+                                                {task.claimed && (
+                                                    <span className={styles.dailyTaskDoneLabel}>{t('profile.rewardClaimed')}</span>
+                                                )}
+                                                {!canAcceptNow && !canClaimNow && !task.claimed && !canCopyPromotionLink && (
+                                                    isTaskPlayable(task) ? (
+                                                        <button
+                                                            type="button"
+                                                            className={styles.dailyTaskSecondaryBtn}
+                                                            onClick={() => {
+                                                                if (task.code === 'play_3_unique' || task.code === 'play_three_games') {
+                                                                    navigate('/');
+                                                                    return;
+                                                                }
+                                                                const targetGameFileId = task.gameFileId || task.key.replace(/^(play_specific_game_\d+_|config_\d+_)/, '');
+                                                                navigate(`/game/${targetGameFileId}?source=history`);
+                                                            }}
+                                                        >
+                                                            {getTaskActionText(task, t)}
+                                                        </button>
+                                                    ) : (
+                                                        <span className={styles.dailyTaskDoneLabel}>{getTaskActionText(task, t)}</span>
+                                                    )
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 );

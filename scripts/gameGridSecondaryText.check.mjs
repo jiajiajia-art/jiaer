@@ -104,8 +104,10 @@ test('resolveGameCardCollectBadge_零或缺失不展示', () => {
   assert.equal(resolveGameCardCollectBadge({ favorite_count: 12, like_count: 1 }), '12人收藏');
 });
 
-test('resolveGameCardTags_无题材时回落game_tags', () => {
-  assert.deepEqual(resolveGameCardTags({ game_tags: '权谋,穿越' }), ['权谋', '穿越']);
+test('resolveGameCardTags_无题材时不回落game_tags', () => {
+  assert.deepEqual(resolveGameCardTags({ game_tags: 'CUSTOM' }), []);
+  assert.deepEqual(resolveGameCardTags({ game_tags: '权谋,穿越' }), []);
+  assert.deepEqual(resolveGameCardTags({ theme_tag_names: ['科幻'], game_tags: 'CUSTOM' }), ['科幻']);
 });
 
 test('resolveGameCardTags_应过滤引擎码避免与封面角标重复', () => {

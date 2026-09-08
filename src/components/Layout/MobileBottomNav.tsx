@@ -37,26 +37,26 @@ const MobileBottomNav: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
             {
                 key: 'home',
                 labelKey: 'common.nav.home',
-                iconInactive: 'data/assets/切图/首页02.png',
-                iconActive: 'data/assets/切图/首页01.png',
+                iconInactive: 'data/assetsv2/home/home.svg',
+                iconActive: 'data/assetsv2/home/home.svg',
             },
             {
                 key: 'create',
                 labelKey: 'common.nav.create',
-                iconInactive: 'data/assets/切图/创作02.png',
-                iconActive: 'data/assets/切图/创作01.png',
+                iconInactive: 'data/assetsv2/home/create.svg',
+                iconActive: 'data/assetsv2/home/create.svg',
             },
             {
                 key: 'rankings',
                 labelKey: 'common.nav.rankings',
-                iconInactive: 'data/assets/排行榜.svg',
-                iconActive: 'data/assets/排行榜.svg',
+                iconInactive: 'data/assetsv2/home/rank.svg',
+                iconActive: 'data/assetsv2/home/rank.svg',
             },
             {
                 key: 'profile',
                 labelKey: 'common.nav.profile',
-                iconInactive: 'data/assets/切图/我的02.png',
-                iconActive: 'data/assets/切图/我的01.png',
+                iconInactive: 'data/assetsv2/home/mine.svg',
+                iconActive: 'data/assetsv2/home/mine.svg',
             },
         ];
         if (isAdminNavVisible) {

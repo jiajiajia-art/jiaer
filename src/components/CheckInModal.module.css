@@ -1,16 +1,20 @@
 .overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(10px);
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 2000;
-    animation: fadeIn 0.35s ease-out;
+    animation: fadeIn 0.3s ease-out;
+    margin: 0;
+    padding: 16px;
+    box-sizing: border-box;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
 }
 
 @keyframes fadeIn {
@@ -19,424 +23,391 @@
 }
 
 .content {
-    background: #ffffff;
-    border-radius: 20px;
-    width: 94%;
-    max-width: 380px;
-    max-height: 90vh;
-    padding: 24px 20px 20px;
     position: relative;
-    animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-    overflow-y: auto;
-    box-shadow:
-        0 32px 64px -12px rgba(0, 0, 0, 0.18),
-        0 8px 24px -4px rgba(0, 0, 0, 0.10),
-        0 0 0 1px rgba(0, 0, 0, 0.04),
-        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    width: min(360px, calc(100vw - 24px));
+    max-height: calc(100dvh - 32px - env(safe-area-inset-bottom));
+    border-radius: 14px;
+    background:
+        linear-gradient(0deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15)),
+        linear-gradient(180deg, #343434 0%, rgba(52, 52, 52, 0.78) 100%);
+    box-sizing: border-box;
+    border: 0.68px solid transparent;
+    backdrop-filter: blur(47px);
+    -webkit-backdrop-filter: blur(47px);
+    box-shadow: none;
+    animation: slideUp 0.3s ease-out;
+    display: flex;
+    flex-direction: column;
+    padding: 18px 16px 16px;
+    overflow: hidden;
+}
+
+.content::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 14px;
+    padding: 0.68px;
+    background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.55) 0%,
+        rgba(255, 255, 255, 0.18) 60%,
+        rgba(255, 255, 255, 0) 90%
+    );
+    -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 3;
+}
+
+.content::after {
+    content: '';
+    position: absolute;
+    right: -40px;
+    bottom: -50px;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    /* 减弱粉光，避免底部格子被染色后看起来颜色不一 */
+    background: radial-gradient(circle, rgba(255, 59, 97, 0.08) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
 }
 
 @keyframes slideUp {
     from {
         opacity: 0;
-        transform: translateY(40px) scale(0.95);
+        transform: translateY(30px);
     }
     to {
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: translateY(0);
     }
 }
 
 .closeButton {
     position: absolute;
-    top: 12px;
-    right: 12px;
-    width: 32px;
-    height: 32px;
+    top: 14px;
+    left: 12px;
+    z-index: 4;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    background: rgba(0, 0, 0, 0.04);
+    background: transparent;
     border: none;
-    color: #9ca3af;
-    font-size: 20px;
-    font-weight: 400;
-    transition: all 0.2s ease;
+    color: #ffffff;
+    padding: 0;
+    transition: opacity 0.2s ease;
 }
 
 .closeButton:hover {
-    background: rgba(0, 0, 0, 0.08);
-    color: #6b7280;
-    transform: rotate(90deg);
+    opacity: 0.75;
+}
+
+.closeIcon {
+    display: block;
+    width: 10px;
+    height: 10px;
+    border-left: 2px solid #ffffff;
+    border-bottom: 2px solid #ffffff;
+    transform: rotate(45deg);
+    margin-left: 4px;
 }
 
 .header {
-    text-align: center;
-    margin-bottom: 20px;
+    position: relative;
+    z-index: 1;
+    text-align: left;
+    margin: 2px 0 12px;
+    padding: 0 8px 0 4px;
+    flex-shrink: 0;
 }
 
 .title {
-    color: #1f2937;
-    font-size: 1.25rem;
+    margin: 0 0 12px;
+    color: #ffffff;
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-align: center;
+}
+
+.streakLine {
+    margin: 0 0 6px;
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.4;
+    text-align: left;
+}
+
+.streakNum {
+    display: inline-block;
+    margin: 0 4px;
+    color: #FF3B61;
     font-weight: 700;
-    margin: 0 0 6px 0;
-    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
 }
 
 .subtitle {
-    color: #6b7280;
-    font-size: 0.9rem;
     margin: 0;
-    font-weight: 500;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.4;
+    text-align: left;
+}
+
+.pointsHighlight {
+    color: #ffffff;
+    font-weight: 600;
 }
 
 .membershipHint {
-    color: #9ca3af;
-    font-size: 0.8rem;
-    margin: -10px 0 16px;
+    position: relative;
+    z-index: 1;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 11px;
+    margin: 0 0 8px;
     text-align: center;
+    flex-shrink: 0;
 }
 
 .loadingText {
-    margin: 40px 0;
+    position: relative;
+    z-index: 1;
+    margin: 48px 0;
     text-align: center;
-    color: #9ca3af;
+    color: rgba(255, 255, 255, 0.55);
     font-size: 0.95rem;
 }
 
-/* Calendar Container */
 .calendarWrapper {
-    border-radius: 16px;
-    padding: 10px;
-    margin-bottom: 20px;
+    position: relative;
+    z-index: 1;
+    border-radius: 12px;
+    padding: 0;
+    margin-bottom: 10px;
     overflow: hidden;
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
-/* 周标题行 */
 .weekdayRow {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 6px;
-    padding: 0 4px 8px;
-    border-bottom: 1px dashed #eee;
-    margin-bottom: 8px;
+    gap: 4px;
+    padding: 0 2px 6px;
 }
 
 .weekdayLabel {
     text-align: center;
-    font-size: 0.65rem;
-    font-weight: 700;
-    color: #b8a89c;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-size: 11px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.45);
 }
 
-/* 7 列月历网格 */
 .monthlyGrid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 6px;
-    padding: 4px;
+    gap: 4px;
+    padding: 0 2px;
 }
 
-/* 月初占位（不可点击的空白格）*/
 .emptyCell {
     aspect-ratio: 1;
+    min-height: 0;
 }
 
-/* Day Cell Base - 普通格子: 纯白 + 极浅细框 */
 .dayCell {
     position: relative;
+    width: 100%;
     aspect-ratio: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
-    border-radius: 10px;
-    background: #ffffff;
-    padding: 6px 4px;
-    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    gap: 1px;
+    border-radius: 5.95px;
+    /* 实色近似设计稿 rgba(255,255,255,0.123) 叠在 #343434 上，避免半透明被渐变/光晕染成不同色 */
+    background: #4d4d4d;
+    padding: 2px 1px;
+    border: 0.3px solid rgba(255, 255, 255, 0.4);
+    box-sizing: border-box;
     cursor: default;
-    border: 1px solid #f0eae3;
     overflow: hidden;
+    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
-.dayCell:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-
-/* Day Number */
 .dayCellNumber {
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: #c8c0b8;
-    line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    font-variant-numeric: tabular-nums;
-}
-
-.dayCellMissedNum {
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: #c8c0b8;
-    line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    font-variant-numeric: tabular-nums;
-}
-
-/* Points - 普通格文字: 浅灰 */
-.dayCellPoints {
-    font-size: 0.6rem;
+    font-size: 12px;
     font-weight: 600;
-    color: #c8c0b8;
+    color: rgba(255, 255, 255, 0.4);
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-variant-numeric: tabular-nums;
 }
 
-/* ===== 状态 1: 历史已签到 (实心我红渐变 + 白色对勾) ===== */
-.dayCellCompleted {
-    background: linear-gradient(135deg, #fb4655 0%, #f43f5e 50%, #e11d48 100%);
-    border-color: #e11d48;
-    color: #ffffff;
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.18),
-        0 2px 6px rgba(225, 29, 72, 0.22);
+.dayCellPoints {
+    font-size: 9px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.55);
+    font-variant-numeric: tabular-nums;
 }
 
-.dayCellCompleted .dayCellNumber {
-    color: rgba(255, 255, 255, 0.92);
-}
-
-.dayCellCompleted .dayCellPoints {
-    color: #fff5f7;
-    font-weight: 700;
-}
-
-.dayCellCompleted:hover {
-    transform: translateY(-2px);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.22),
-        0 4px 12px rgba(225, 29, 72, 0.32);
-}
-
-.dayCellCompleted .checkIcon {
-    color: #ffffff;
+.signedCheck {
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    transform: translateX(-50%);
     width: 16px;
     height: 16px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.95);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 }
 
-/* ===== 状态 2: 今天待签到 (浅粉底 + 我红描边 + 我红光晕) ===== */
-.dayCellToday {
-    background: #fff0f3;
-    border: 2px solid #fb4655;
-    color: #fb4655;
-    transform: scale(1.08);
-    z-index: 3;
-    box-shadow:
-        0 0 0 4px rgba(251, 70, 85, 0.18),
-        0 8px 20px rgba(251, 70, 85, 0.32),
-        inset 0 1px 0 rgba(255, 255, 255, 0.6);
-    animation: todayPulse 2.4s ease-in-out infinite;
+.signedCheck .checkIcon {
+    color: #FF3B61;
+    width: 10px;
+    height: 10px;
 }
 
-@keyframes todayPulse {
-    0%, 100% {
-        box-shadow:
-            0 0 0 4px rgba(251, 70, 85, 0.18),
-            0 8px 20px rgba(251, 70, 85, 0.32),
-            inset 0 1px 0 rgba(255, 255, 255, 0.25);
-    }
-    50% {
-        box-shadow:
-            0 0 0 10px rgba(251, 70, 85, 0.06),
-            0 12px 28px rgba(251, 70, 85, 0.48),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    }
+.signedText {
+    position: absolute;
+    left: 50%;
+    bottom: 4px;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 10px;
+    opacity: 1;
+    font-family: Inter, sans-serif;
+    font-size: 8px;
+    font-weight: 400;
+    line-height: normal;
+    letter-spacing: 0;
+    color: #ffffff;
+    text-align: center;
+    white-space: nowrap;
 }
 
-.dayCellToday .dayCellNumber {
-    color: #000000;
-    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
-}
-
-.dayCellToday .dayCellPoints {
-    color: #e11d48;
-    font-weight: 800;
-}
-
-.dayCellToday:hover {
-    transform: scale(1.12);
-    background: #ffe4ea;
-}
-
-/* ===== 状态 3: 今天已签到 (实心我红 + 对勾, 与历史同色) ===== */
+/* 历史已签 / 今日已签 — 设计稿渐变 */
+.dayCellCompleted,
 .dayCellTodayCompleted {
-    background: linear-gradient(135deg, #fb4655 0%, #f43f5e 50%, #e11d48 100%);
-    border-color: #e11d48;
-    transform: scale(1.08);
-    z-index: 3;
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.2),
-        0 4px 14px rgba(225, 29, 72, 0.35);
+    background: linear-gradient(180deg, #ff3b61 0%, #ff3b6166 100%);
+    border: 0.1px solid #ffffff;
 }
 
-.dayCellTodayCompleted .dayCellNumber {
-    color: rgba(255, 255, 255, 0.92);
+.dayCellTodayCompleted {
+    z-index: 2;
 }
 
-.dayCellTodayCompleted .dayCellPoints {
-    color: #fff5f7;
+/* 今日待签 */
+.dayCellToday {
+    background: linear-gradient(180deg, #FF5A7A 0%, #FF3B61 100%);
+    border: 0.1px solid #ffffff;
+    z-index: 2;
+}
+
+.dayCellToday .dayCellNumber,
+.dayCellToday .dayCellPoints {
+    color: #ffffff;
     font-weight: 700;
 }
 
-.dayCellTodayCompleted .checkIcon {
-    color: #ffffff;
-    width: 16px;
-    height: 16px;
-}
-
-.dayCellTodayCompleted:hover {
-    transform: scale(1.12);
-}
-
-/* ===== 状态 4: 预测可签到 (极浅粉 + 我红虚线) ===== */
+/* 未来可签 / 未签到 — 与默认格子同色 */
 .dayCellForecast {
-    background: #fff5f7;
-    border: 1px dashed #fda4af;
+    background: #4d4d4d;
+    border: 0.3px solid rgba(255, 255, 255, 0.4);
+    opacity: 1;
 }
 
 .dayCellForecast .dayCellNumber {
-    color: #000000;
-    font-weight: 600;
+    color: rgba(255, 255, 255, 0.85);
 }
 
 .dayCellForecast .dayCellPoints {
-    color: #fb4655;
-    font-weight: 700;
+    color: #ffffff;
 }
 
-.dayCellForecast:hover {
-    background: #ffe4ea;
-    transform: translateY(-1px);
-}
-
-/* ===== 状态 5: 不可签到 - 中间断签 (浅灰) ===== */
+/* 断签不可签 — 同色底，只压低文字，避免整格 opacity 造成色差 */
 .dayCellFuture {
-    background: #fafaf7;
-    border-color: #efe9e0;
-    opacity: 0.55;
+    background: #4d4d4d;
+    border: 0.3px solid rgba(255, 255, 255, 0.25);
+    opacity: 1;
 }
 
-.dayCellFuture .dayCellNumber {
-    color: #d8d2ca;
-}
-
+.dayCellFuture .dayCellNumber,
 .dayCellFuture .dayCellPoints {
-    color: #d8d2ca;
-}
-
-/* ===== 状态 6: 大奖格子 (>9 积分) ===== */
-.dayCellBonus {
-    position: relative;
+    color: rgba(255, 255, 255, 0.35);
 }
 
 .dayCellBonus .dayCellPoints {
-    font-size: 0.7rem;
-    font-weight: 800;
+    color: #FF3B61;
+    font-weight: 700;
 }
 
 .dayCellBonus.dayCellToday .dayCellPoints {
-    color: #e11d48;
-    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+    color: #ffffff;
 }
 
-.dayCellBonus.dayCellCompleted .dayCellPoints,
-.dayCellBonus.dayCellTodayCompleted .dayCellPoints {
-    color: #fff5f7;
-    font-weight: 800;
-}
-
-.dayCellBonus.dayCellForecast .dayCellPoints {
-    color: #f43f5e;
-    font-weight: 800;
-}
-
-/* Check Icon */
 .checkIcon {
-    color: #e63946;
-    width: 14px;
-    height: 14px;
-    animation: checkPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    width: 10px;
+    height: 10px;
 }
 
-@keyframes checkPop {
-    0% { transform: scale(0); }
-    50% { transform: scale(1.25); }
-    100% { transform: scale(1); }
-}
-
-/* Button Styles */
 .buttonContainer {
+    position: relative;
+    z-index: 1;
     display: flex;
     justify-content: center;
+    margin-top: 2px;
+    flex-shrink: 0;
 }
 
 .signInButton {
-    padding: 14px 48px;
-    background: linear-gradient(135deg, #fb4655 0%, #f43f5e 50%, #e11d48 100%);
-    color: #fff;
-    border: none;
-    border-radius: 50px;
-    font-size: 1rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-    box-shadow:
-        0 6px 20px rgba(251, 70, 85, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    letter-spacing: 0.02em;
-    position: relative;
-    overflow: hidden;
-}
-
-.signInButton::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
     width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-    transition: left 0.5s ease;
+    max-width: 280px;
+    height: 42px;
+    padding: 0 24px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 200px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, opacity 0.2s ease;
 }
 
-.signInButton:hover {
-    transform: translateY(-2px) scale(1.02);
-    box-shadow:
-        0 10px 28px rgba(251, 70, 85, 0.35),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+.signInButton:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.16);
 }
 
-.signInButton:hover::before {
-    left: 100%;
-}
-
-.signInButton:active {
-    transform: translateY(0) scale(0.98);
+.signInButton:active:not(:disabled) {
+    background: rgba(255, 255, 255, 0.12);
 }
 
 .signInButton:disabled {
-    opacity: 0.7;
     cursor: not-allowed;
-    transform: none;
+    opacity: 0.85;
+}
+
+.signInButtonDone {
+    opacity: 0.9;
 }
 
 .buttonLoading {
@@ -447,9 +418,9 @@
 }
 
 .spinner {
-    width: 16px;
-    height: 16px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.25);
     border-top-color: #fff;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;

@@ -3,7 +3,7 @@
 }
 
 @media (max-width: 768px) {
-    /* 功能注释：底部 Tab 对齐暗色 funloom，切图本身已是灰/酒红描边 */
+    /* 功能注释：底部 Tab 毛玻璃 — 底 #FFF 15% + blur，描边 #979797，选中 #FF3B61 */
     .container {
         display: flex;
         position: fixed;
@@ -11,13 +11,18 @@
         left: 50%;
         transform: translateX(-50%);
         width: 100vw;
-        height: calc(60px + env(safe-area-inset-bottom));
+        height: calc(72px + env(safe-area-inset-bottom));
         padding-bottom: env(safe-area-inset-bottom);
-        background: #000000;
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
         z-index: 999;
         justify-content: space-between;
         align-items: center;
-        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        border-top: 1px solid #979797;
+        border-radius: 22px 22px 0 0;
+        box-sizing: border-box;
+        overflow: hidden;
     }
 
     .navItem {
@@ -26,7 +31,7 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        color: #8E8E93;
+        color: #ffffff;
         font-size: 12px;
         font-weight: 600;
         background: transparent;
@@ -38,19 +43,25 @@
     }
 
     .navItemActive {
-        color: #A8283C;
+        color: #ff3b61;
+    }
+
+    .navItem:not(.navItemActive) .icon {
+        /* 未选中：统一压成白色剪影 */
+        filter: brightness(0) invert(1);
     }
 
     .navItemActive .icon {
-        filter: none;
+        /* 选中：任意底色统一染成 #FF3B61 */
+        filter: brightness(0) saturate(100%) invert(36%) sepia(86%) saturate(2476%) hue-rotate(325deg) brightness(101%) contrast(104%);
     }
 
     .adminIcon {
-        color: #8E8E93;
+        color: #ffffff;
     }
 
     .adminIconActive {
-        color: #A8283C;
+        color: #ff3b61;
     }
 
     .icon {
@@ -66,10 +77,10 @@
 
     .userMenu {
         position: fixed;
-        bottom: 70px;
+        bottom: 82px;
         right: 16px;
         left: 16px;
-        background: #1C1C1E;
+        background: #1c1c1e;
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 16px;
         padding: 16px;
@@ -86,8 +97,8 @@
         border: none;
         font-size: 15px;
         font-weight: 600;
-        color: #FFFFFF;
-        background: #8E2135;
+        color: #ffffff;
+        background: #8e2135;
         cursor: pointer;
     }
 

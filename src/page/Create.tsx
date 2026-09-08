@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { IoChevronDown } from 'react-icons/io5';
 import { HiOutlineExternalLink } from 'react-icons/hi';
+import { MdOutlineEdit } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -36,6 +37,9 @@ import { getApiErrorMessage } from '../utils/error';
 import { getImageUrl } from '../utils/constants';
 import favoriteApi from '../api/favorite/favoriteApi';
 import { buildGameDetailNavigateState } from '../utils/gameDetailNavigation';
+
+const NICKNAME_MAX_LENGTH = 20;
+const AVATAR_MAX_SIZE_BYTES = 5 * 1024 * 1024;
 
 type CreatorStatsIncentiveType = 'none' | 'incentive' | 'game_incentive' | 'code_incentive' | 'all_incentive';
 type WorksTabKey = 'published' | 'drafts' | 'favorites';
@@ -85,6 +89,11 @@ const Create: React.FC = () => {
     const [draftFilterKey, setDraftFilterKey] = useState<DraftBoxFilterKey>('all');
     const [streakDays, setStreakDays] = useState(0);
     const [isStatsExpanded, setIsStatsExpanded] = useState(false);
+    const [isEditNicknameOpen, setIsEditNicknameOpen] = useState(false);
+    const [nicknameDraft, setNicknameDraft] = useState('');
+    const [isSavingNickname, setIsSavingNickname] = useState(false);
+    const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+    const avatarInputRef = useRef<HTMLInputElement>(null);
     const [worksTab, setWorksTab] = useState<WorksTabKey>('published');
     const [favoriteGames, setFavoriteGames] = useState<UserGameData[]>([]);
     const [isLoadingFavorites, setIsLoadingFavorites] = useState(false);
@@ -101,6 +110,81 @@ const Create: React.FC = () => {
 
     const handleWithdrawClick = () => {
         setIsWithdrawModalOpen(true);
+    };
+
+    const openEditNickname = () => {
+        setNicknameDraft(user?.user?.nickname || user?.user?.name || '');
+        setIsEditNicknameOpen(true);
+    };
+
+    const closeEditNickname = () => {
+        if (isSavingNickname) return;
+        setIsEditNicknameOpen(false);
+    };
+
+    const handleConfirmEditNickname = async () => {
+        const nextName = nicknameDraft.trim();
+        if (!nextName) {
+            toast.error(t('profile.enterNewNickname'));
+            return;
+        }
+        if (nextName.length > NICKNAME_MAX_LENGTH) {
+            toast.error(t('profile.nicknameTip'));
+            return;
+        }
+        if (nextName === (user?.user?.nickname || '').trim()) {
+            setIsEditNicknameOpen(false);
+            return;
+        }
+
+        setIsSavingNickname(true);
+        try {
+            const response = await auth.updateUserInfo(nextName);
+            if (!response.data.success || !response.data.data) {
+                throw new Error(response.data.message || t('common.error'));
+            }
+            updateUser(response.data.data);
+            toast.success(t('common.success'));
+            setIsEditNicknameOpen(false);
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, t('common.error')));
+        } finally {
+            setIsSavingNickname(false);
+        }
+    };
+
+    const openAvatarPicker = () => {
+        if (isUploadingAvatar) return;
+        avatarInputRef.current?.click();
+    };
+
+    const handleAvatarFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            toast.error(t('profile.selectImageFile'));
+            return;
+        }
+        if (file.size > AVATAR_MAX_SIZE_BYTES) {
+            toast.error(t('profile.imageTooLarge'));
+            return;
+        }
+
+        setIsUploadingAvatar(true);
+        try {
+            const response = await auth.updateUserAvatar(file);
+            if (!response.data.success || !response.data.data?.avatarUrl) {
+                throw new Error(response.data.message || t('common.error'));
+            }
+            updateUser({ avatarUrl: response.data.data.avatarUrl });
+            toast.success(t('profile.avatarUpdated'));
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, t('common.error')));
+        } finally {
+            setIsUploadingAvatar(false);
+        }
     };
     const isCodeIncentive = stats.incentiveType === 'code_incentive' || stats.incentiveType === 'all_incentive';
 
@@ -489,15 +573,45 @@ const Create: React.FC = () => {
 
                             <div className={styles.creatorHeroTop}>
                                 <div className={styles.creatorHeroAvatarFrame}>
-                                    <img
-                                        className={styles.creatorHeroAvatar}
-                                        src={userAvatar}
-                                        alt={userName}
+                                    <button
+                                        type="button"
+                                        className={styles.creatorHeroAvatarBtn}
+                                        onClick={openAvatarPicker}
+                                        disabled={isUploadingAvatar}
+                                        aria-label={t('profile.changeAvatar')}
+                                    >
+                                        <img
+                                            className={styles.creatorHeroAvatar}
+                                            src={userAvatar}
+                                            alt={userName}
+                                        />
+                                        {isUploadingAvatar && (
+                                            <span className={styles.creatorHeroAvatarLoading} aria-hidden="true" />
+                                        )}
+                                    </button>
+                                    <input
+                                        ref={avatarInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        className={styles.hiddenFileInput}
+                                        onChange={handleAvatarFileChange}
+                                        tabIndex={-1}
+                                        aria-hidden="true"
                                     />
                                 </div>
                                 <div className={styles.creatorHeroInfo}>
                                     <div className={styles.creatorHeroNameRow}>
-                                        <h2 className={styles.creatorHeroName}>{userName}</h2>
+                                        <div className={styles.creatorHeroNameGroup}>
+                                            <h2 className={styles.creatorHeroName}>{userName}</h2>
+                                            <button
+                                                type="button"
+                                                className={styles.creatorEditNameBtn}
+                                                onClick={openEditNickname}
+                                                aria-label={t('profile.editNickname')}
+                                            >
+                                                <MdOutlineEdit aria-hidden="true" />
+                                            </button>
+                                        </div>
                                         {streakDays > 0 && (
                                             <span className={styles.creatorStreakBadge}>
                                                 {t('create.streakBadge', { days: streakDays })}
@@ -517,21 +631,21 @@ const Create: React.FC = () => {
                                                 {t('create.copy')}
                                             </button>
                                         )}
+                                        {(isMember || isSignedAuthor) && (
+                                            <div className={styles.creatorHeroBadgeRow}>
+                                                {isMember && (
+                                                    <span className={styles.creatorRoleBadge}>
+                                                        {t('create.memberBadge')}
+                                                    </span>
+                                                )}
+                                                {isSignedAuthor && (
+                                                    <span className={styles.creatorRoleBadge}>
+                                                        {t('create.signedAuthorBadge')}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
-                                    {(isMember || isSignedAuthor) && (
-                                        <div className={styles.creatorHeroBadgeRow}>
-                                            {isMember && (
-                                                <span className={styles.creatorRoleBadge}>
-                                                    {t('create.memberBadge')}
-                                                </span>
-                                            )}
-                                            {isSignedAuthor && (
-                                                <span className={styles.creatorRoleBadge}>
-                                                    {t('create.signedAuthorBadge')}
-                                                </span>
-                                            )}
-                                        </div>
-                                    )}
                                     <div className={styles.creatorHeroTokenRow}>
                                         <span className={styles.creatorHeroTokenLabel}>Token:</span>
                                         <span className={styles.creatorHeroTokenValue}>
@@ -560,11 +674,33 @@ const Create: React.FC = () => {
                                         <div className={styles.primaryStatValue}>{creatorStats?.likeCount ?? 0}</div>
                                         <div className={styles.primaryStatLabel}>{t('creatorStats.totalLikes')}</div>
                                     </div>
-                                    <div className={styles.primaryStatItem}>
+                                    <div
+                                        className={`${styles.primaryStatItem} ${styles.primaryStatItemClickable}`}
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={() => navigate('/asset/details')}
+                                        onKeyDown={(event) => {
+                                            if (event.key === 'Enter' || event.key === ' ') {
+                                                event.preventDefault();
+                                                navigate('/asset/details');
+                                            }
+                                        }}
+                                    >
                                         <div className={styles.primaryStatValue}>{user?.user?.points ?? 0}</div>
                                         <div className={styles.primaryStatLabel}>{t('create.pointsStat')}</div>
                                     </div>
-                                    <div className={`${styles.primaryStatItem} ${styles.primaryStatItemWithActions}`}>
+                                    <div
+                                        className={`${styles.primaryStatItem} ${styles.primaryStatItemWithActions} ${styles.primaryStatItemClickable}`}
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={() => navigate('/asset/details')}
+                                        onKeyDown={(event) => {
+                                            if (event.key === 'Enter' || event.key === ' ') {
+                                                event.preventDefault();
+                                                navigate('/asset/details');
+                                            }
+                                        }}
+                                    >
                                         <div className={styles.primaryStatValueRow}>
                                             <div className={styles.primaryStatValueBlock}>
                                                 <div className={styles.primaryStatValue}>{user?.user?.diamonds ?? 0}</div>
@@ -575,7 +711,10 @@ const Create: React.FC = () => {
                                                     <button
                                                         type="button"
                                                         className={`${styles.creatorAssetActionButton} ${styles.creatorWithdrawButton}`}
-                                                        onClick={handleWithdrawClick}
+                                                        onClick={(event) => {
+                                                            event.stopPropagation();
+                                                            handleWithdrawClick();
+                                                        }}
                                                     >
                                                         {t('create.withdraw')}
                                                     </button>
@@ -583,7 +722,10 @@ const Create: React.FC = () => {
                                                 <button
                                                     type="button"
                                                     className={`${styles.creatorAssetActionButton} ${styles.creatorRechargeButton}`}
-                                                    onClick={() => setIsRechargeModalOpen(true)}
+                                                    onClick={(event) => {
+                                                        event.stopPropagation();
+                                                        setIsRechargeModalOpen(true);
+                                                    }}
                                                 >
                                                     {t('create.recharge')}
                                                 </button>
@@ -944,6 +1086,55 @@ const Create: React.FC = () => {
                 open={isWithdrawModalOpen}
                 onClose={() => setIsWithdrawModalOpen(false)}
             />
+
+            {isEditNicknameOpen && (
+                <div className={styles.editNicknameOverlay} onClick={closeEditNickname}>
+                    <div
+                        className={styles.editNicknameModal}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label={t('profile.editNickname')}
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <button
+                            type="button"
+                            className={styles.editNicknameCloseBtn}
+                            onClick={closeEditNickname}
+                            disabled={isSavingNickname}
+                            aria-label={t('common.close')}
+                        >
+                            <span className={styles.editNicknameCloseIcon} aria-hidden="true" />
+                        </button>
+                        <h3 className={styles.editNicknameTitle}>{t('profile.editNickname')}</h3>
+                        <div className={styles.editNicknameBody}>
+                            <input
+                                className={styles.editNicknameInput}
+                                value={nicknameDraft}
+                                onChange={(event) => setNicknameDraft(event.target.value.slice(0, NICKNAME_MAX_LENGTH))}
+                                placeholder={t('profile.enterNewNickname')}
+                                maxLength={NICKNAME_MAX_LENGTH}
+                                autoFocus
+                                disabled={isSavingNickname}
+                                onKeyDown={(event) => {
+                                    if (event.key === 'Enter') {
+                                        event.preventDefault();
+                                        void handleConfirmEditNickname();
+                                    }
+                                }}
+                            />
+                            <p className={styles.editNicknameTip}>{t('profile.nicknameTip')}</p>
+                        </div>
+                        <button
+                            type="button"
+                            className={styles.editNicknameConfirm}
+                            onClick={() => void handleConfirmEditNickname()}
+                            disabled={isSavingNickname}
+                        >
+                            {isSavingNickname ? t('profile.saving') : t('profile.confirm')}
+                        </button>
+                    </div>
+                </div>
+            )}
 
             <ConfirmModal
                 isOpen={isSettleModalOpen}

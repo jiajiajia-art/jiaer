@@ -84,22 +84,15 @@ export function resolveSearchResultSecondaryLine(game: SearchResultSecondarySour
   return '';
 }
 
-/** 功能注释：题材标签来自 theme_tag_names，过滤「全部」与入库引擎码（封面角标已展示），最多 3 个。 */
+/**
+ * 功能注释：题材标签只取 theme_tag_names，过滤「全部」与入库引擎码（封面角标已展示），最多 3 个；
+ * 不回落 game_tags（与封面玩法类型重复）。
+ */
 export function resolveGameCardTags(game: GameCardBodySource): string[] {
   const names = Array.isArray(game.theme_tag_names) ? game.theme_tag_names : [];
-  const tags = names
+  return names
     .map((name) => cleanText(name))
-    .filter((name) => name && name !== '全部' && !isGameEngineStorageTag(name));
-  if (tags.length > 0) return tags.slice(0, MAX_TAGS);
-
-  const raw = cleanText(game.game_tags)
-    .replace(/^\[|\]$/g, '')
-    .replace(/^["']|["']$/g, '');
-  if (!raw) return [];
-  return raw
-    .split(/[,，/|]/)
-    .map((part) => part.trim())
-    .filter((part) => part && !isGameEngineStorageTag(part))
+    .filter((name) => name && name !== '全部' && !isGameEngineStorageTag(name))
     .slice(0, MAX_TAGS);
 }
 

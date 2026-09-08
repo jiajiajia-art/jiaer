@@ -23,14 +23,6 @@ const CreatorWorkDetailSections: React.FC<CreatorWorkDetailSectionsProps> = ({ d
   return (
     <>
       <section className={styles.detailSection}>
-        <h2 className={styles.sectionTitle}>{t('creatorStats.ratingsTitle')}</h2>
-        <div className={styles.ratingSummary}>
-          <span className={styles.ratingValue}>{(detail.ratingAvg ?? 0).toFixed(1)}</span>
-          <span>{t('creatorStats.ratingCount', { count: detail.ratingCount ?? 0 })}</span>
-        </div>
-      </section>
-
-      <section className={styles.detailSection}>
         <MetricTitleTip
           className={styles.sectionTitle}
           title={t('creatorStats.activeHours')}
@@ -49,6 +41,19 @@ const CreatorWorkDetailSections: React.FC<CreatorWorkDetailSectionsProps> = ({ d
         </div>
       </section>
 
+      {/* 评价/评论功能暂未开放，先隐藏
+      <section className={styles.detailSection}>
+        <h2 className={styles.sectionTitle}>{t('creatorStats.ratingsTitle')}</h2>
+        <div className={styles.ratingSummary}>
+          <span className={styles.ratingValue}>{(detail.ratingAvg ?? 0).toFixed(1)}</span>
+          <span className={styles.ratingCount}>
+            {t('creatorStats.ratingCount', { count: detail.ratingCount ?? 0 })}
+          </span>
+        </div>
+      </section>
+      */}
+
+      {/* 暂时隐藏最近评论
       <section className={styles.detailSection}>
         <h2 className={styles.sectionTitle}>{t('creatorStats.recentComments')}</h2>
         <div className={styles.commentList}>
@@ -74,6 +79,7 @@ const CreatorWorkDetailSections: React.FC<CreatorWorkDetailSectionsProps> = ({ d
           ) : null}
         </div>
       </section>
+      */}
     </>
   );
 };

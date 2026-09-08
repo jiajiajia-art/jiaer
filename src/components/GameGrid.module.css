@@ -225,8 +225,8 @@
 
 .goodsInfoItem svg,
 .goodsInfoIcon {
-    width: 13.2px;
-    height: 13.2px;
+    width: 16px;
+    height: 16px;
     object-fit: contain;
     flex-shrink: 0;
     color: #FFFFFF;
@@ -536,8 +536,8 @@
 
     .goodsInfoItem svg,
     .goodsInfoIcon {
-        width: 12px;
-        height: 12px;
+        width: 15px;
+        height: 15px;
     }
 
     .goodsInfoFlame {

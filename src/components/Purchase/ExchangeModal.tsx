@@ -133,24 +133,23 @@ const ExchangeModal: React.FC<ExchangeModalProps> = ({ isOpen, onClose, onSucces
     return createPortal(
         <div className={styles.modalOverlay} onClick={handleOverlayClick}>
             <div className={styles.modalContent} role="dialog" aria-modal="true" aria-label={t('exchangeModal.title')}>
-                <div className={styles.header}>
-                    <h2 className={styles.title}>{t('exchangeModal.title')}</h2>
-                    <button
-                        type="button"
-                        className={styles.closeBtn}
-                        onClick={handleClose}
-                        disabled={isSubmitting}
-                        aria-label="close"
-                    >
-                        ×
-                    </button>
-                </div>
+                <button
+                    type="button"
+                    className={styles.closeBtn}
+                    onClick={handleClose}
+                    disabled={isSubmitting}
+                    aria-label={t('common.close')}
+                >
+                    <span className={styles.closeIcon} aria-hidden="true" />
+                </button>
+
+                <h2 className={styles.title}>{t('exchangeModal.title')}</h2>
 
                 <div className={styles.balanceRow}>
                     <span className={styles.balanceLabel}>{t('exchangeModal.currentBalance')}</span>
                     <span className={styles.balanceValue}>
                         <svg className={styles.balanceIconDiamond} viewBox="0 0 1024 1024" width="18" height="18" aria-hidden="true">
-                            <path d="M296.42524445 392.80526222H50.38421333L216.76942222 148.46179555h246.03875556zM798.02823111 149.81233778H551.98833778l166.38520889 244.34232889h246.03989333zM403.65169778 392.80526222L511.19786667 226.41777778l106.40611555 166.38748444zM617.75075555 487.09859555L511.34350222 1000.40248889 407.21066667 487.09859555zM300.18901333 487.09859555l211.90883556 531.02364445-454.30670222-531.02364445zM719.77642667 487.09859555l-207.35658667 531.02364445 449.75559111-531.02364445z" fill="#FB4655"/>
+                            <path d="M296.42524445 392.80526222H50.38421333L216.76942222 148.46179555h246.03875556zM798.02823111 149.81233778H551.98833778l166.38520889 244.34232889h246.03989333zM403.65169778 392.80526222L511.19786667 226.41777778l106.40611555 166.38748444zM617.75075555 487.09859555L511.34350222 1000.40248889 407.21066667 487.09859555zM300.18901333 487.09859555l211.90883556 531.02364445-454.30670222-531.02364445zM719.77642667 487.09859555l-207.35658667 531.02364445 449.75559111-531.02364445z" fill="#A8283C"/>
                         </svg>
                         {currentDiamonds}
                     </span>

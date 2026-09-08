@@ -152,7 +152,8 @@
     overflow: hidden;
     border-radius: 16px;
     padding: 30px 28px 16px;
-    background: #1A1A1A;
+    /* 顶部衔接 Navbar 黑色，底部略深于原卡片色 */
+    background: linear-gradient(180deg, #000000 0%, #0a0a0a 100%);
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: none;
     display: flex;
@@ -162,7 +163,7 @@
 
 .accountPanel {
     margin-top: 0;
-    border-radius: var(--creator-radius);
+    border-radius: 10px;
     padding: 18px 20px 14px;
     background: var(--creator-card);
     border: 1px solid rgba(255, 255, 255, 0.04);
@@ -262,7 +263,7 @@
 
 .earningsPanel {
     margin-top: 0;
-    border-radius: var(--creator-radius);
+    border-radius: 10px;
     padding: 18px 16px;
     background: var(--creator-card);
     border: 1px solid rgba(255, 255, 255, 0.04);
@@ -380,9 +381,31 @@
 }
 
 .creatorHeroAvatarFrame {
+    position: relative;
     flex-shrink: 0;
     width: 120px;
     height: 120px;
+}
+
+.creatorHeroAvatarBtn {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.creatorHeroAvatarBtn:disabled {
+    cursor: wait;
+}
+
+.creatorHeroAvatarBtn:hover:not(:disabled) .creatorHeroAvatar {
+    opacity: 0.88;
 }
 
 .creatorHeroAvatar {
@@ -391,10 +414,30 @@
     border-radius: 50%;
     object-fit: cover;
     display: block;
+    transition: opacity 0.15s ease;
+}
+
+.creatorHeroAvatarLoading {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.45);
+}
+
+.hiddenFileInput {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
 }
 
 .creatorHeroInfo {
-    flex: 0 1 auto;
+    flex: 1 1 auto;
     min-width: 0;
     display: flex;
     flex-direction: column;
@@ -415,6 +458,14 @@
     gap: 10px;
 }
 
+.creatorHeroNameGroup {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    min-width: 0;
+    max-width: 100%;
+}
+
 .creatorHeroName {
     font-size: 28px;
     line-height: 1.2;
@@ -422,6 +473,245 @@
     color: #ffffff;
     word-break: break-word;
     margin: 0;
+}
+
+.creatorEditNameBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--creator-label);
+    cursor: pointer;
+    flex-shrink: 0;
+    padding: 0;
+    margin-left: -2px;
+    margin-top: 4px;
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.creatorEditNameBtn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.creatorEditNameBtn:hover {
+    color: var(--creator-value);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.editNicknameOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 16px;
+    box-sizing: border-box;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    animation: editNicknameFadeIn 0.3s ease-out;
+}
+
+@keyframes editNicknameFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.editNicknameModal {
+    position: relative;
+    width: min(322px, calc(100vw - 20px));
+    max-width: 380px;
+    border-radius: 10px;
+    opacity: 1;
+    background:
+        linear-gradient(0deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15)),
+        linear-gradient(180deg, #343434 0%, rgba(52, 52, 52, 0.72) 100%);
+    box-sizing: border-box;
+    border: 0.68px solid transparent;
+    backdrop-filter: blur(47px);
+    -webkit-backdrop-filter: blur(47px);
+    box-shadow: none;
+    animation: editNicknameSlideUp 0.3s ease-out;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 18px 22px;
+    overflow: hidden;
+    color: #ffffff;
+}
+
+.editNicknameModal::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    padding: 0.68px;
+    background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.55) 0%,
+        rgba(255, 255, 255, 0.18) 60%,
+        rgba(255, 255, 255, 0) 90%
+    );
+    -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 3;
+}
+
+@keyframes editNicknameSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.editNicknameCloseBtn {
+    position: absolute;
+    top: 14px;
+    left: 12px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    transition: opacity 0.2s ease;
+    color: #ffffff;
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+.editNicknameCloseBtn:hover:not(:disabled) {
+    opacity: 0.75;
+}
+
+.editNicknameCloseBtn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.editNicknameCloseIcon {
+    display: block;
+    width: 10px;
+    height: 10px;
+    border-left: 2px solid #ffffff;
+    border-bottom: 2px solid #ffffff;
+    transform: rotate(45deg);
+    margin-left: 4px;
+}
+
+.editNicknameTitle {
+    margin: 4px 0 18px;
+    padding: 0 40px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #ffffff;
+    letter-spacing: 0;
+    line-height: normal;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 22px;
+}
+
+.editNicknameBody {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+    z-index: 1;
+}
+
+.editNicknameInput {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 44px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(0, 0, 0, 0.22);
+    color: #ffffff;
+    font-size: 15px;
+    line-height: 1.4;
+    outline: none;
+}
+
+.editNicknameInput::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.editNicknameInput:focus {
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+.editNicknameInput:disabled {
+    opacity: 0.65;
+}
+
+.editNicknameTip {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.editNicknameConfirm {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 209px;
+    height: 42px;
+    padding: 0 16px;
+    margin: 18px auto 0;
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    border: none;
+    border-radius: 200px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s ease, opacity 0.2s ease;
+    box-shadow: none;
+    position: relative;
+    z-index: 1;
+}
+
+.editNicknameConfirm:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.editNicknameConfirm:disabled {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.35);
+    cursor: not-allowed;
 }
 
 .creatorStreakBadge {
@@ -436,9 +726,17 @@
     white-space: nowrap;
 }
 
-.creatorHeroMetaRow,
-.creatorHeroTokenRow,
-.creatorHeroBadgeRow {
+.creatorHeroMetaRow {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--creator-value);
+    min-width: 0;
+}
+
+.creatorHeroTokenRow {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
@@ -447,10 +745,23 @@
     color: var(--creator-value);
 }
 
+.creatorHeroBadgeRow {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    gap: 6px;
+    margin-left: 2px;
+}
+
 .creatorHeroId,
 .creatorHeroTokenLabel,
 .creatorHeroTokenValue {
     color: var(--creator-label);
+}
+
+.creatorHeroId {
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .creatorHeroTokenValue {
@@ -464,6 +775,7 @@
     background: transparent;
     border: none;
     padding: 0;
+    flex-shrink: 0;
     color: var(--creator-label);
     font-size: 13px;
     text-decoration: underline;
@@ -802,6 +1114,21 @@
     font-weight: 500;
 }
 
+.primaryStatItemClickable {
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background-color 0.15s ease;
+}
+
+.primaryStatItemClickable:hover {
+    background-color: rgba(255, 255, 255, 0.04);
+}
+
+.primaryStatItemClickable:focus-visible {
+    outline: 1px solid rgba(255, 255, 255, 0.35);
+    outline-offset: 2px;
+}
+
 .primaryStatItemWithActions {
     gap: 0;
     align-items: flex-end;
@@ -1084,17 +1411,16 @@
 }
 
 .worksTabBar {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
+    column-gap: 12px;
     width: calc(100% + 40px);
     margin-left: -20px;
     margin-right: -20px;
     margin-bottom: 18px;
     min-height: 52px;
-    padding: 0 20px;
+    padding: 0 16px;
     box-sizing: border-box;
     border-radius: 0;
     border-bottom: none;
@@ -1102,13 +1428,13 @@
 }
 
 .worksTabs {
+    grid-column: 2;
     display: flex;
     align-items: stretch;
-    gap: 4px;
+    justify-content: center;
+    gap: 28px;
     min-width: 0;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+    max-width: 100%;
 }
 
 .worksTabs::-webkit-scrollbar {
@@ -1150,10 +1476,16 @@
 }
 
 .worksEmpty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     text-align: center;
     color: var(--creator-label);
-    height: 100px;
-    line-height: 100px;
+    /* 约等于一张 GameGrid 卡（3:4 封面 + body）并略高一点 */
+    min-height: 360px;
+    padding: 28px 16px;
+    box-sizing: border-box;
+    line-height: 1.5;
 }
 
 .draftSectionHeader {
@@ -1161,12 +1493,14 @@
 }
 
 .draftManageActions {
+    grid-column: 3;
     display: flex;
     align-items: center;
     justify-content: flex-end;
     gap: 10px;
     flex-shrink: 0;
     flex-wrap: wrap;
+    min-width: 0;
 }
 
 .draftManageActionsExpanded {
@@ -1278,7 +1612,7 @@
 
     .main {
         max-width: 100%;
-        padding: 0 20px;
+        padding: 0 12px;
         width: 100%;
     }
 
@@ -1292,10 +1626,10 @@
     }
 
     .creatorHeroCard {
-        width: calc(100% + 40px);
-        margin-left: -20px;
-        margin-right: -20px;
-        padding: 14px 20px 12px;
+        width: calc(100% + 24px);
+        margin-left: -12px;
+        margin-right: -12px;
+        padding: 14px 16px 12px;
         border-radius: 0;
         max-width: none;
         gap: 14px;
@@ -1304,7 +1638,7 @@
     .accountPanel {
         margin-top: 0;
         padding: 14px 14px 10px;
-        border-radius: 14px;
+        border-radius: 10px;
     }
 
     .accountPanelTitle {
@@ -1329,7 +1663,7 @@
     .earningsPanel {
         margin-top: 0;
         padding: 14px 12px;
-        border-radius: 14px;
+        border-radius: 10px;
         gap: 8px;
     }
 
@@ -1461,25 +1795,75 @@
     }
 
     .worksTabBar {
-        width: calc(100% + 40px);
-        margin-left: -20px;
-        margin-right: -20px;
-        gap: 8px;
+        position: relative;
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
+        justify-content: center;
+        gap: 0;
+        width: calc(100% + 24px);
+        margin-left: -12px;
+        margin-right: -12px;
         margin-bottom: 14px;
         min-height: 52px;
-        padding: 0 20px;
+        padding: 0 12px;
         border-radius: 0;
+        box-sizing: border-box;
+    }
+
+    .worksTabs {
+        grid-column: auto;
+        flex: 0 1 auto;
+        width: auto;
+        max-width: 100%;
+        min-width: 0;
+        justify-content: center;
+        gap: 40px;
+        transform: translateX(-30px);
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
     }
 
     .worksTab {
-        font-size: 14px;
-        padding: 14px 10px;
+        flex: 0 0 auto;
+        min-width: 0;
+        text-align: center;
+        font-size: 13px;
+        padding: 14px 6px;
     }
 
     .worksTabActive::after {
-        left: 10px;
-        right: 10px;
+        left: 8px;
+        right: 8px;
         height: 2px;
+    }
+
+    .draftManageActions {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        grid-column: auto;
+        flex: 0 0 auto;
+        justify-content: flex-end;
+        gap: 6px;
+        flex-wrap: nowrap;
+        min-width: 0;
+        max-width: none;
+        padding: 0;
+        box-sizing: border-box;
+        z-index: 1;
+    }
+
+    .draftManageActionsExpanded {
+        position: static;
+        transform: none;
+        flex: 0 0 auto;
+        margin-left: auto;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        max-width: calc(100% - 16px);
     }
 
     .statsGrid {
@@ -1575,9 +1959,12 @@
     .draftManageActions {
         justify-content: flex-end;
         gap: 6px;
-        min-width: fit-content;
-        max-width: 100%;
-        margin-left: auto;
+        min-width: 0;
+    }
+
+    .worksTabBar .draftManageActions {
+        max-width: none;
+        flex-shrink: 0;
     }
 
     .draftSectionHeader {

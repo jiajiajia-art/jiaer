@@ -1,7 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import type { IconType } from 'react-icons';
 import { FaDesktop } from 'react-icons/fa';
+import { HiOutlinePuzzle, HiOutlineUserGroup } from 'react-icons/hi';
+import {
+  MdAutoStories,
+  MdOutlineMovie,
+  MdSportsEsports,
+} from 'react-icons/md';
+import { IoChevronForward } from 'react-icons/io5';
 import toast from 'react-hot-toast';
 import styles from '../components/CreateGame/CreateGameModals.module.css';
 import pageStyles from './CreateType.module.css';
@@ -24,21 +32,61 @@ const IVG_TOOL_DOWNLOAD_FILE_NAME = 'FunloomTool.zip';
 const IVG_TOOL_DOWNLOAD_URL = 'https://kurangames.com/download/FunloomTool.zip';
 const IVG_TUTORIAL_URL = 'https://avyx4ypb3lx.feishu.cn/docx/WTcZdQPipofJq1xb1A4caq6Tngd';
 
-/** 选择需创建游戏类型（独立页，非模态框） */
+type OptionBadge = 'recommend' | 'new' | 'locked';
+
+const TypeOptionRow: React.FC<{
+  title: string;
+  badge?: OptionBadge;
+  badgeText?: string;
+  hint: string;
+  icon: IconType;
+  thumbClass: string;
+  disabled?: boolean;
+  onClick?: () => void;
+}> = ({ title, badge, badgeText, hint, icon: Icon, thumbClass, disabled, onClick }) => (
+  <button
+    type="button"
+    className={`${styles.createTypeOption} ${disabled ? styles.createTypeOptionDisabled : ''}`}
+    onClick={onClick}
+    disabled={disabled}
+  >
+    <span className={`${styles.createTypeOptionThumb} ${thumbClass}`} aria-hidden="true">
+      <Icon className={styles.createTypeOptionIcon} />
+    </span>
+    <span className={styles.createTypeOptionBody}>
+      <span className={styles.createTypeOptionTitleRow}>
+        <span className={styles.createTypeOptionName}>{title}</span>
+        {badge && badgeText ? (
+          <span
+            className={
+              badge === 'recommend'
+                ? styles.createTypeOptionRecommend
+                : badge === 'locked'
+                  ? styles.createTypeOptionLocked
+                  : styles.createTypeOptionLockedTag
+            }
+          >
+            {badgeText}
+          </span>
+        ) : null}
+      </span>
+      <span className={styles.createTypeOptionHint}>{hint}</span>
+    </span>
+    <IoChevronForward className={styles.createTypeOptionChevron} aria-hidden="true" />
+  </button>
+);
+
 const CreateType: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { clearState } = useEditorStore();
   const { clearAll } = useGameStore();
   const isMiniProgram = isMiniProgramEnv();
+  const optionHint = t('createGame.optionHint');
 
   const [isIvgToolModalOpen, setIsIvgToolModalOpen] = useState(false);
   const [isMobileTipModalOpen, setIsMobileTipModalOpen] = useState(false);
   const [mobileTipMessage, setMobileTipMessage] = useState('');
-
-  const goBack = () => {
-    navigate('/create');
-  };
 
   const openMiniProgramTypeTip = (type: Extract<CreatorGameType, 'avg' | 'custom' | 'st' | 'ivg'>) => {
     setMobileTipMessage(getMiniProgramCreatorBlockedMessage(type));
@@ -87,22 +135,6 @@ const CreateType: React.FC = () => {
     }
   };
 
-  const handleAvgClick = () => {
-    if (isMiniProgram) {
-      openMiniProgramTypeTip('avg');
-      return;
-    }
-    void handleSelectGameType('avg');
-  };
-
-  const handleCustomClick = () => {
-    if (isMiniProgram) {
-      openMiniProgramTypeTip('custom');
-      return;
-    }
-    void handleSelectGameType('custom');
-  };
-
   const handleIvgClick = () => {
     if (isMiniProgram) {
       openMiniProgramTypeTip('ivg');
@@ -115,63 +147,61 @@ const CreateType: React.FC = () => {
     <div className={pageStyles.pageRoot}>
       <Navbar />
       <div className={pageStyles.mainContent}>
-        <div className={pageStyles.panel}>
-          <div className={styles.createTypeModalHeader}>
-            <div className={styles.createTypeModalTitle}>{t('createGame.selectGameTypeTitle')}</div>
+        <div className={pageStyles.content}>
+          <div className={`${styles.createTypeModalHeader} ${pageStyles.header}`}>
+            <div className={`${styles.createTypeModalTitle} ${pageStyles.title}`}>
+              {t('createGame.selectGameTypeTitle')}
+            </div>
           </div>
-          <div className={styles.createTypeModalDesc}>
+          <div className={`${styles.createTypeModalDesc} ${pageStyles.desc}`}>
             {t('createGame.selectGameTypeDesc')}
           </div>
-          <div className={styles.createTypeOptions}>
-            <button
-              type="button"
-              className={styles.createTypeOption}
+          <div className={`${styles.createTypeOptions} ${pageStyles.options}`}>
+            <TypeOptionRow
+              title={t('createGame.txtMode')}
+              badge="recommend"
+              badgeText={t('createGame.recommend')}
+              hint={optionHint}
+              icon={MdAutoStories}
+              thumbClass={styles.createTypeOptionThumbTxt}
               onClick={() => void handleSelectGameType('txt')}
-            >
-              <span>{t('createGame.txtMode')}</span>
-              <span className={styles.createTypeOptionRecommend}>{t('createGame.recommend')}</span>
-            </button>
-            <button
-              type="button"
-              className={styles.createTypeOption}
-              onClick={handleAvgClick}
-            >
-              <span>{t('createGame.avgBeta')}</span>
-              <span className={styles.createTypeOptionLockedTag}>{t('createGame.new')}</span>
-            </button>
-            <button
-              type="button"
-              className={styles.createTypeOption}
+            />
+            <TypeOptionRow
+              title={t('createGame.avgBeta')}
+              badge="new"
+              badgeText={t('createGame.new')}
+              hint={optionHint}
+              icon={HiOutlineUserGroup}
+              thumbClass={styles.createTypeOptionThumbAvg}
+              onClick={() => void handleSelectGameType('avg')}
+            />
+            <TypeOptionRow
+              title={t('createGame.interactiveVideo')}
+              badge="new"
+              badgeText={t('createGame.new')}
+              hint={optionHint}
+              icon={MdOutlineMovie}
+              thumbClass={styles.createTypeOptionThumbIvg}
               onClick={handleIvgClick}
-            >
-              <span>{t('createGame.interactiveVideo')}</span>
-              <span className={styles.createTypeOptionRecommend}>{t('createGame.new')}</span>
-            </button>
-            <button
-              type="button"
-              className={styles.createTypeOption}
-              onClick={handleCustomClick}
-            >
-              <span>{t('createGame.custom')}</span>
-              <span className={styles.createTypeOptionRecommend}>{t('createGame.new')}</span>
-            </button>
-            <button
-              type="button"
-              className={`${styles.createTypeOption} ${styles.createTypeOptionDisabled}`}
+            />
+            <TypeOptionRow
+              title={t('createGame.custom')}
+              badge="new"
+              badgeText={t('createGame.new')}
+              hint={optionHint}
+              icon={HiOutlinePuzzle}
+              thumbClass={styles.createTypeOptionThumbCustom}
+              onClick={() => void handleSelectGameType('custom')}
+            />
+            <TypeOptionRow
+              title="RPG"
+              badge="locked"
+              badgeText={t('createGame.locked')}
+              hint={optionHint}
+              icon={MdSportsEsports}
+              thumbClass={styles.createTypeOptionThumbRpg}
               disabled
-            >
-              <span>RPG</span>
-              <span className={styles.createTypeOptionLocked}>{t('createGame.locked')}</span>
-            </button>
-          </div>
-          <div className={styles.createTypeModalFooter}>
-            <button
-              type="button"
-              onClick={goBack}
-              className={styles.createTypeCancelButton}
-            >
-              {t('createGame.cancel')}
-            </button>
+            />
           </div>
         </div>
       </div>

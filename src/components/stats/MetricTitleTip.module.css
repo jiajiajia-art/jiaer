@@ -12,11 +12,11 @@
   flex-shrink: 0;
   width: 18px;
   height: 18px;
-  border-radius: 50%;
-  /* 浅色管理页用文字色派生边框，避免白边在浅底上几乎看不见 */
-  border: 1px solid color-mix(in srgb, var(--admin-text-soft, #6f5a49) 45%, transparent);
-  background: color-mix(in srgb, var(--admin-text-soft, #6f5a49) 8%, transparent);
-  color: var(--admin-text-soft, #6f5a49);
+  border-radius: 2px;
+  /* 默认适配深色面板；管理页可通过 --admin-text-soft 覆盖 */
+  border: 1px solid color-mix(in srgb, var(--admin-text-soft, rgba(255, 255, 255, 0.55)) 45%, transparent);
+  background: color-mix(in srgb, var(--admin-text-soft, rgba(255, 255, 255, 0.55)) 8%, transparent);
+  color: var(--admin-text-soft, rgba(255, 255, 255, 0.55));
   font-size: 12px;
   font-weight: 600;
   line-height: 1;
@@ -46,7 +46,7 @@
   width: max-content;
   max-width: min(320px, 70vw);
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: 4px;
   background: rgba(18, 18, 22, 0.96);
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);

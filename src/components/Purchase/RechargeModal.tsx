@@ -8,6 +8,21 @@ import { auth } from '../../api/account/authApi';
 import type { PayOrderRequest, PlanId, DiamondsPlanId } from '../../api/pay/pay.type';
 import { getApiErrorMessage } from '../../utils/error';
 import { useAuthStore } from '../../store/useAuthStore';
+import { resolveMemberDisplayEndAt } from '../../utils/planLabels';
+
+const COIN_ICON = `${import.meta.env.BASE_URL}data/assetsv2/personal/payment/coin.png`;
+const MEMBER_ICON = `${import.meta.env.BASE_URL}data/assetsv2/personal/member.png`;
+const ENJOY_ICON = `${import.meta.env.BASE_URL}data/assetsv2/personal/enjoy.png`;
+
+const formatMemberEndDate = (raw?: string | null): string | undefined => {
+    if (!raw) return undefined;
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return undefined;
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+};
 
 type RechargeTabType = 'diamonds' | 'membership';
 
@@ -66,7 +81,14 @@ const isMiniProgramEnv = (): boolean => {
 
 const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRecharge, fixedTab }) => {
     const { t } = useTranslation();
-    const { updateUser } = useAuthStore();
+    const { updateUser, user: authUser } = useAuthStore();
+    const memberProfile = authUser?.user;
+    const memberEndDate = useMemo(
+        () => formatMemberEndDate(
+            resolveMemberDisplayEndAt(memberProfile?.stackedPlans, memberProfile?.memberEndAt),
+        ),
+        [memberProfile?.stackedPlans, memberProfile?.memberEndAt],
+    );
     const [isLoading, setIsLoading] = useState(false);
     const [amountError, setAmountError] = useState('');
     const [inputShake, setInputShake] = useState(false);
@@ -151,6 +173,27 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             setSelectedFirstChargePlanId(null);
             setSelectedFixedPlanAmount(null);
             setCustomOriginalAmount(null);
+            setAmountError('');
+            setInputShake(false);
+            return;
+        }
+
+        setRechargeTab(fixedTab ?? 'diamonds');
+        if ((fixedTab ?? 'diamonds') === 'diamonds') {
+            const defaultPlan = FIRST_CHARGE_PLANS[0];
+            setAmountText(String(defaultPlan.amount));
+            setSelectedFirstChargePlanId(defaultPlan.planId);
+            setSelectedFixedPlanAmount(defaultPlan.amount);
+            setCustomOriginalAmount(null);
+            setAmountError('');
+            setInputShake(false);
+            setSelectedPlanIndex(-1);
+        } else {
+            setSelectedPlanIndex(0);
+            setSelectedFirstChargePlanId(null);
+            setSelectedFixedPlanAmount(null);
+            setCustomOriginalAmount(null);
+            setAmountText('');
             setAmountError('');
             setInputShake(false);
         }
@@ -560,33 +603,28 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     if (!isOpen) return null;
 
     const currentAmount = getCurrentAmount();
-    const currentDiamonds = currentAmount ? calculateDiamonds(currentAmount) : 0;
-    const displayDiamonds = currentDiamonds;
 
     const diamondsTabContent = (
         <>
             <div className={styles.fixedAmounts}>
-                <div className={styles.amountsLabel}>{t('rechargeModal.selectAmount')}</div>
                 <div className={styles.amountsGrid}>
                     {FIRST_CHARGE_PLANS.map((plan) => {
-                        const hasBonus = !plan.noFirstChargeBonus;
-                        const displayDiamonds = calculateDiamonds(plan.amount);
+                        const planDiamonds = calculateDiamonds(plan.amount);
+                        const isActive = selectedFirstChargePlanId === plan.planId;
                         return (
                             <button
                                 key={plan.planId}
                                 type="button"
-                                className={`${styles.amountBtn} ${selectedFirstChargePlanId === plan.planId ? styles.amountBtnActive : ''}`}
+                                className={`${styles.amountBtn} ${isActive ? styles.amountBtnActive : ''}`}
                                 onClick={() => handleFixedAmountClick(plan)}
                             >
-                                {hasBonus ? (
-                                    <div className={styles.firstChargeTag} />
-                                ) : (
-                                    <div className={styles.noBonusTag} />
-                                )}
                                 <div className={styles.amountTopSection}>
-                                    <div className={styles.amountMainPoints}>{displayDiamonds}{t('rechargeModal.diamonds')}</div>
+                                    <div className={styles.amountMainPoints}>
+                                        <img src={COIN_ICON} alt="" className={styles.amountCoin} aria-hidden="true" />
+                                        <span>{planDiamonds}</span>
+                                    </div>
                                     <div className={styles.amountPriceMeta}>
-                                        {t('rechargeModal.amount', { amount: plan.amount.toFixed(1) })}
+                                        {t('rechargeModal.priceShort', { amount: plan.amount })}
                                     </div>
                                 </div>
                             </button>
@@ -597,11 +635,11 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
 
             <div className={styles.customAmount}>
                 <div className={styles.customLabel}>{t('rechargeModal.customAmount')}</div>
-                <div className={styles.customInputWrapper}>
+                <div className={`${styles.customInputWrapper} ${amountError ? styles.inputError : ''}`}>
                     <span className={styles.currencySymbol}>{t('rechargeModal.currencySymbol')}</span>
                     <input
                         type="text"
-                        className={`${styles.customInput} ${amountError ? styles.inputError : ''} ${inputShake ? styles.shake : ''}`}
+                        className={`${styles.customInput} ${inputShake ? styles.shake : ''}`}
                         placeholder={t('rechargeModal.enterAmount')}
                         value={amountText}
                         onChange={handleCustomAmountChange}
@@ -622,20 +660,6 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                 )}
             </div>
 
-            {currentAmount && currentAmount >= MIN_AMOUNT && (
-                <div className={styles.rechargeSummary}>
-                    <div className={styles.summaryRow}>
-                        <span className={styles.summaryLabel}>{t('rechargeModal.rechargeAmount')}</span>
-                        <span className={styles.summaryValue}>{t('rechargeModal.currencySymbol')}{currentAmount.toFixed(2)}</span>
-                    </div>
-                    <div className={styles.summaryRow}>
-                        <span className={styles.summaryLabel}>{t('rechargeModal.receiveDiamonds')}</span>
-                        <span className={styles.summaryValue}>{displayDiamonds}</span>
-                    </div>
-                </div>
-            )}
-
-            {/* 确认充值按钮 */}
             <button
                 type="submit"
                 className={styles.submitBtn}
@@ -643,18 +667,37 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             >
                 {isLoading
                     ? t('rechargeModal.processing')
-                    : `${t('rechargeModal.confirmRecharge')} ${t('rechargeModal.currencySymbol')}${(currentAmount ?? 0).toFixed(2)}`}
+                    : t('rechargeModal.payNow', { amount: currentAmount ?? 0 })}
             </button>
-            {/* <button type="button" className={styles.submitBtn} disabled>
-                临时维护
-                请进交流群/活动页获取
-             </button> */}
         </>
     );
 
     const membershipTabContent = (
         <>
-            {/* 三列套餐卡片 - 保留不变 */}
+            <div className={styles.membershipStatusCard}>
+                <div className={styles.membershipStatusMain}>
+                    <div className={styles.membershipStatusInfo}>
+                        <img src={ENJOY_ICON} alt="" className={styles.membershipStatusIcon} aria-hidden="true" />
+                        <div className={styles.membershipStatusText}>
+                            <span className={styles.membershipStatusTitle}>
+                                {t('rechargeModal.enjoyMember')}
+                            </span>
+                            {memberEndDate ? (
+                                <div className={styles.membershipStatusExpire}>
+                                    <span className={styles.membershipStatusExpireLabel}>
+                                        {t('rechargeModal.validUntil')}
+                                    </span>
+                                    <span className={styles.membershipStatusExpireDate}>{memberEndDate}</span>
+                                </div>
+                            ) : null}
+                        </div>
+                    </div>
+                    <div className={styles.membershipStatusBadge}>
+                        <img src={MEMBER_ICON} alt="" className={styles.membershipStatusBadgeIcon} aria-hidden="true" />
+                    </div>
+                </div>
+            </div>
+
             <div className={styles.plansList}>
                 {MEMBERSHIP_PLANS.map((plan, index) => (
                     <button
@@ -664,96 +707,68 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                         onClick={() => setSelectedPlanIndex(index)}
                     >
                         <span className={styles.planItemName}>{plan.name}</span>
-                        <span className={styles.planItemPrice}>{t('rechargeModal.currencySymbol')}{plan.price}</span>
+                        <span className={styles.planItemPrice}>
+                            {t('rechargeModal.currencySymbol')}{plan.price}
+                        </span>
                     </button>
                 ))}
             </div>
 
-            {/* 会员权益对比表 - 百度网盘风格 */}
             <div className={styles.benefitsComparison}>
-                <div className={styles.comparisonTitle}>{t('rechargeModal.membershipBenefits')}</div>
                 <div className={styles.comparisonTable}>
                     <div className={styles.comparisonHeader}>
-                        <span className={styles.comparisonLabel}>{t('rechargeModal.benefitName')}</span>
+                        <span className={styles.comparisonLabel} aria-hidden="true" />
                         {allPlanBenefits.map((plan) => (
-                            <span
-                                key={plan.planId}
-                                className={styles.comparisonHeaderCell}
-                                style={{ color: plan.color }}
-                            >
-                                <span className={styles.planTag} style={{ background: plan.tagBg }}>
-                                    {plan.shortName.replace(/会员$/, '')}
-                                </span>
-                                <span className={styles.planPriceSmall}>
-                                    {plan.price > 0 ? `${t('rechargeModal.currencySymbol')}${plan.price}` : t('rechargeModal.free')}
-                                </span>
+                            <span key={plan.planId} className={styles.comparisonHeaderCell}>
+                                {plan.shortName.replace(/会员$/, '')}
                             </span>
                         ))}
                     </div>
                     {allPlanBenefits[0].perks.map((perk, perkIndex) => (
                         <div key={perkIndex} className={styles.comparisonRow}>
                             <span className={styles.comparisonLabel}>{perk.name}</span>
-                            {perk.values.map((value, valIndex) => {
-                                // 高亮：免积分回合数（月卡开始）和签到加成（月卡开始）
-                                const isHighlight = valIndex >= 1;
-                                const planColor = allPlanBenefits[valIndex].color;
-                                return (
-                                    <span
-                                        key={valIndex}
-                                        className={`${styles.comparisonValue} ${isHighlight ? styles.highlight : ''}`}
-                                        style={isHighlight ? { color: planColor, fontWeight: 700 } : {}}
-                                    >
-                                        {value}
-                                    </span>
-                                );
-                            })}
+                            {perk.values.map((value, valIndex) => (
+                                <span
+                                    key={valIndex}
+                                    className={`${styles.comparisonValue} ${valIndex >= 1 ? styles.highlight : ''}`}
+                                >
+                                    {value}
+                                </span>
+                            ))}
                         </div>
                     ))}
                 </div>
             </div>
 
-            {/* 确认购买按钮 */}
             <button
                 type="submit"
-                className={styles.submitBtn}
+                className={`${styles.submitBtn} ${styles.membershipSubmitBtn}`}
                 disabled={selectedPlanIndex < 0 || isLoading}
             >
-                {isLoading ? t('rechargeModal.processing') : `${t('rechargeModal.confirmPurchase')} ${MEMBERSHIP_PLANS[selectedPlanIndex]?.name || t('rechargeModal.membershipTab')}`}
+                {isLoading
+                    ? t('rechargeModal.processing')
+                    : t('rechargeModal.openNow', {
+                        amount: MEMBERSHIP_PLANS[selectedPlanIndex]?.price ?? 0,
+                    })}
             </button>
-            {/* <button type="button" className={styles.submitBtn} disabled>
-            临时维护
-                请进交流群/活动页获取
-            </button> */}
         </>
     );
 
     const formContent = (
         <div className={styles.modalOverlay} onClick={handleClose}>
-            <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-                <button type="button" className={styles.closeBtn} onClick={handleClose}>
-                    ×
+            <div
+                className={`${styles.modalContent} ${rechargeTab === 'membership' ? styles.modalContentWide : ''}`}
+                onClick={(e) => e.stopPropagation()}
+            >
+                <button type="button" className={styles.closeBtn} onClick={handleClose} aria-label={t('common.close')}>
+                    <span className={styles.closeIcon} aria-hidden="true" />
                 </button>
 
-                <h2 className={styles.title}>{t('rechargeModal.title')}</h2>
-
-                {!fixedTab && (
-                    <div className={styles.tabBar}>
-                        <button
-                            type="button"
-                            className={`${styles.tabBtn} ${rechargeTab === 'diamonds' ? styles.tabBtnActive : ''}`}
-                            onClick={() => setRechargeTab('diamonds')}
-                        >
-                            {t('rechargeModal.diamondsTab')}
-                        </button>
-                        <button
-                            type="button"
-                            className={`${styles.tabBtn} ${rechargeTab === 'membership' ? styles.tabBtnActive : ''}`}
-                            onClick={() => setRechargeTab('membership')}
-                        >
-                            {t('rechargeModal.membershipTab')}
-                        </button>
-                    </div>
-                )}
+                <h2 className={styles.title}>
+                    {rechargeTab === 'membership'
+                        ? t('rechargeModal.membershipCenter')
+                        : t('rechargeModal.diamondsTab')}
+                </h2>
 
                 <form className={styles.form} onSubmit={handleSubmit}>
                     {rechargeTab === 'diamonds' ? diamondsTabContent : membershipTabContent}
@@ -772,8 +787,9 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                     type="button"
                     className={styles.closeBtn}
                     onClick={paymentStatus === 'success' ? () => void handleCloseWithRefresh() : handleClose}
+                    aria-label={t('common.close')}
                 >
-                    ×
+                    <span className={styles.closeIcon} aria-hidden="true" />
                 </button>
                 <div className={styles.qrSection}>
                     <div className={styles.qrTitle}>{t('rechargeModal.scanToPay')}</div>

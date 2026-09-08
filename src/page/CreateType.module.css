@@ -1,39 +1,58 @@
 .pageRoot {
+    /* createTypeOption 卡片色来自模态框 CSS，需祖先提供变量 */
+    --type-card: #1C1C1E;
+    --type-border: rgba(255, 255, 255, 0.1);
     width: 100%;
     min-height: 100vh;
     max-width: 1920px;
     margin: 0 auto;
-    background: #f8fafc;
+    background: #000000;
+    color: #ffffff;
 }
 
 .mainContent {
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    padding: 28px 16px 120px;
+    padding: 28px 20px 120px;
     padding-top: calc(var(--app-desktop-navbar-height) + 28px);
     min-height: calc(100vh - var(--app-desktop-navbar-height));
     box-sizing: border-box;
 }
 
-.panel {
-    background-color: #ffffff;
-    border-radius: 18px;
-    padding: 28px 28px 24px;
+.content {
     width: 100%;
     max-width: 480px;
-    box-shadow: 0 12px 36px rgba(15, 23, 42, 0.08);
-    border: 1px solid rgba(248, 113, 113, 0.18);
+    color: #ffffff;
+}
+
+.header {
+    justify-content: center;
+    text-align: center;
+}
+
+.title {
+    text-align: center;
+    font-family: "Alibaba PuHuiTi 2.0", "Alibaba PuHuiTi", "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-weight: 500;
+}
+
+.desc {
+    text-align: center;
+}
+
+.options {
+    gap: 16px;
+    margin-bottom: 0;
 }
 
 @media (max-width: 768px) {
     .mainContent {
-        padding: 20px 16px 100px;
+        padding: 20px 20px 100px;
         padding-top: calc(var(--app-desktop-navbar-height) + 20px);
     }
 
-    .panel {
-        padding: 24px 20px 20px;
-        border-radius: 16px;
+    .content {
+        max-width: none;
     }
 }

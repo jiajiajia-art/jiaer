@@ -1,75 +1,166 @@
 .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 2000;
+    animation: fadeIn 0.3s ease-out;
+    margin: 0;
+    padding: 16px;
+    box-sizing: border-box;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(24px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .content {
-    width: 90%;
-    max-width: 420px;
-    max-height: 86vh;
-    overflow-y: auto;
-    background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
-    border-radius: 20px;
-    padding: 30px 22px 18px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
     position: relative;
+    width: min(420px, calc(100vw - 32px));
+    max-height: calc(100dvh - 32px - env(safe-area-inset-bottom));
+    overflow: hidden;
+    border-radius: 10px;
+    background:
+        linear-gradient(0deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15)),
+        linear-gradient(180deg, #343434 0%, rgba(52, 52, 52, 0.78) 100%);
+    border: 0.68px solid transparent;
+    backdrop-filter: blur(47px);
+    -webkit-backdrop-filter: blur(47px);
+    box-shadow: none;
+    padding: 18px 14px 14px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.3s ease-out;
+}
+
+.content::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    padding: 0.68px;
+    background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.55) 0%,
+        rgba(255, 255, 255, 0.18) 60%,
+        rgba(255, 255, 255, 0) 90%
+    );
+    -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 3;
+}
+
+.content::after {
+    content: '';
+    position: absolute;
+    right: -40px;
+    bottom: -50px;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 59, 97, 0.1) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
 }
 
 .closeButton {
     position: absolute;
     top: 12px;
     right: 12px;
+    z-index: 4;
     width: 32px;
     height: 32px;
     border-radius: 50%;
     border: none;
-    background: rgba(0, 0, 0, 0.05);
-    color: #999;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.72);
     font-size: 22px;
+    font-weight: 400;
     line-height: 1;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease;
+}
+
+.closeButton:hover {
+    color: #ffffff;
 }
 
 .header {
+    position: relative;
+    z-index: 1;
     text-align: center;
-    margin-bottom: 16px;
+    margin: 2px 0 14px;
+    padding: 0 28px;
+    flex-shrink: 0;
 }
 
 .title {
     margin: 0;
-    font-size: 24px;
-    font-weight: 700;
-    color: #111;
+    font-size: 17px;
+    font-weight: 600;
+    color: #ffffff;
+    letter-spacing: 0.02em;
 }
 
 .subtitle {
-    margin: 8px 0 0 0;
-    font-size: 14px;
-    color: #666;
+    margin: 8px 0 0;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.55);
 }
 
 .highlight {
-    color: #FB4655;
-    font-weight: 700;
+    color: #FF3B61;
+    font-weight: 600;
 }
 
 .rulesList {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     gap: 8px;
+    overflow-y: auto;
+    min-height: 0;
+    flex: 1 1 auto;
+    padding-right: 2px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
 .ruleItem {
-    border-radius: 12px;
-    background: #f4f4f5;
-    border: 1px solid #ececec;
-    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 12px;
     display: grid;
     grid-template-columns: 1fr auto auto;
     gap: 8px;
@@ -77,69 +168,93 @@
 }
 
 .ruleItemReached {
-    background: #fff1f2;
-    border-color: #ffd4d8;
+    background: rgba(255, 59, 97, 0.1);
+    border-color: rgba(255, 59, 97, 0.28);
 }
 
 .ruleMain {
-    font-size: 14px;
-    color: #222;
-    font-weight: 600;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.35;
+    color: rgba(255, 255, 255, 0.92);
+    letter-spacing: 0.01em;
 }
 
 .ruleReward {
-    font-size: 14px;
-    font-weight: 700;
-    color: #FB4655;
+    font-size: 12px;
+    font-weight: 600;
+    color: #FF3B61;
+    letter-spacing: 0.01em;
 }
 
 .ruleStatus {
     font-size: 12px;
-    color: #777;
+    color: rgba(255, 255, 255, 0.4);
 }
 
 .claimBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
     border: none;
-    border-radius: 999px;
-    padding: 6px 10px;
+    border-radius: 200px;
+    padding: 0 12px;
     font-size: 12px;
     font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.02em;
     white-space: nowrap;
 }
 
 .claimBtnReady {
     cursor: pointer;
-    color: #fff;
-    background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
+    color: #ffffff;
+    background: linear-gradient(135deg, #FF3B61 0%, #FF6B88 100%);
+    transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+.claimBtnReady:hover:not(:disabled) {
+    opacity: 0.92;
+    filter: brightness(1.05);
+}
+
+.claimBtnReady:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    filter: none;
 }
 
 .claimBtnDisabled {
     cursor: not-allowed;
-    color: #888;
-    background: #ececec;
+    color: rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .claimBtnDone {
-    color: #4B5563;
-    background: #e5e7eb;
+    color: rgba(255, 255, 255, 0.55);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    font-weight: 500;
 }
 
 .claimHint {
     font-size: 12px;
-    font-weight: 600;
-    color: #6b7280;
-    padding: 6px 4px;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.4);
+    padding: 0 4px;
     white-space: nowrap;
 }
 
 .loadingText {
-    border-radius: 12px;
-    background: #f4f4f5;
-    border: 1px solid #ececec;
-    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 12px;
     text-align: center;
     font-size: 13px;
-    color: #666;
+    color: rgba(255, 255, 255, 0.55);
 }
 
 .ruleProgress {
@@ -151,48 +266,57 @@
 
 .ruleProgressTrack {
     flex: 1;
-    height: 6px;
+    height: 5px;
     border-radius: 999px;
-    background: #ececec;
+    background: rgba(255, 255, 255, 0.1);
     overflow: hidden;
 }
 
 .ruleProgressFill {
     height: 100%;
     border-radius: 999px;
-    background: linear-gradient(90deg, #FB4655 0%, #FF5A6A 100%);
+    background: linear-gradient(90deg, #FF3B61 0%, #FF6B88 100%);
     transition: width 0.25s ease;
 }
 
 .ruleProgressText {
     min-width: 44px;
     text-align: right;
-    font-size: 12px;
-    color: #6b7280;
-    font-weight: 600;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.45);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
 }
 
 .tipText {
-    margin: 14px 0 0;
+    position: relative;
+    z-index: 1;
+    margin: 12px 0 0;
     text-align: center;
     font-size: 12px;
-    color: #9CA3AF;
+    line-height: 1.4;
+    color: rgba(255, 255, 255, 0.4);
+    flex-shrink: 0;
 }
 
 @media (max-width: 480px) {
     .content {
         width: calc(100vw - 24px);
-        padding: 26px 16px 14px;
-        border-radius: 16px;
+        padding: 16px 12px 12px;
+        border-radius: 10px;
+    }
+
+    .content::before {
+        border-radius: 10px;
     }
 
     .title {
-        font-size: 20px;
+        font-size: 16px;
     }
 
     .ruleItem {
         grid-template-columns: 1fr auto;
-        row-gap: 4px;
+        row-gap: 6px;
     }
 
     .ruleProgressText {
