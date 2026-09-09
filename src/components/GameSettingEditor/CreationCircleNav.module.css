@@ -1,4 +1,4 @@
-/* 功能注释：TXT 移动端圆形步进——未到灰底红标，已完成酒红白标，当前亮红更大一号 */
+/* 功能注释：TXT 移动端步进对齐效果图——横胶囊炭黑内高光 / 当前莓红白标 / 未到莓红图标 */
 
 .nav {
   display: none;
@@ -6,10 +6,17 @@
 
 @media (max-width: 768px) {
   .nav {
+    /* Stadium Capsule：横排均分，胶囊底与标签垂直节奏固定 */
+    --circle-nav-accent: #d8315b;
+    --circle-nav-accent-deep: #b82848;
+    --circle-nav-idle-bg: #1a1a1a;
+    --circle-nav-rim: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    --circle-nav-rim-strong: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 2px;
+    gap: 4px;
     width: 100%;
     padding: 8px 2px 14px;
     box-sizing: border-box;
@@ -27,20 +34,22 @@
     border: none;
     background: transparent;
     cursor: pointer;
-    color: #A8283C;
+    color: var(--circle-nav-accent);
   }
 
   .iconWrap {
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
+    /* 效果图：宽于高的圆角胶囊，非正圆；炭黑面 + 顶缘内高光 */
+    width: 56px;
+    height: 40px;
+    border-radius: 999px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: #1C1C1E;
+    background: var(--circle-nav-idle-bg);
+    box-shadow: var(--circle-nav-rim);
     border: none;
-    color: #A8283C;
-    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    color: var(--circle-nav-accent);
+    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
   }
 
   .icon {
@@ -55,20 +64,21 @@
     white-space: nowrap;
   }
 
-  /* 已走过的步：暗红底 + 白图标 */
+  /* 已走过：略深莓红底 + 白图标，同胶囊形与内高光 */
   .itemDone .iconWrap {
-    background: #8E2135;
+    background: var(--circle-nav-accent-deep);
     color: #ffffff;
+    box-shadow: var(--circle-nav-rim);
   }
 
-  /* 当前步：更亮的红 + 轻微放大与光晕 */
+  /* 当前步：实心莓红 + 内高光，禁止外发光与尺寸跳动 */
   .itemActive .iconWrap {
     width: 56px;
-    height: 56px;
-    background: #A8283C;
+    height: 40px;
+    background: var(--circle-nav-accent);
     color: #ffffff;
-    box-shadow: 0 6px 18px rgba(168, 40, 60, 0.45);
-    transform: translateY(-1px);
+    box-shadow: var(--circle-nav-rim-strong);
+    transform: none;
   }
 
   .itemActive .label {
@@ -78,9 +88,10 @@
 
   .itemDisabled {
     cursor: not-allowed;
+    opacity: 0.45;
   }
 
   .item:not(.itemActive):not(.itemDisabled):hover .iconWrap {
-    filter: brightness(1.08);
+    filter: brightness(1.1);
   }
 }

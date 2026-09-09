@@ -46,7 +46,7 @@ const STEPS: Array<{
 ];
 
 /**
- * 功能注释：TXT 创建移动端圆形步进（效果图：已完成酒红白标 / 当前亮红 / 未到灰底红标），
+ * 功能注释：TXT 创建移动端胶囊步进（效果图：炭黑内高光 + 莓红图标 / 当前实心莓红白标），
  * 与侧栏共用 onPanelChange；发布步直接走发布流程。
  */
 const CreationCircleNav: React.FC<CreationCircleNavProps> = ({
@@ -107,7 +107,7 @@ const CreationCircleNav: React.FC<CreationCircleNavProps> = ({
             }}
           >
             <span className={styles.iconWrap} aria-hidden>
-              <Icon className={styles.icon} size={active ? 24 : 22} />
+              <Icon className={styles.icon} size={22} />
             </span>
             <span className={styles.label}>{t(labelKey)}</span>
           </button>

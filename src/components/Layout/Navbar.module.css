@@ -29,10 +29,13 @@
     --navbar-action-bg-hover: rgba(255, 255, 255, 0.14);
     --navbar-action-border: rgba(255, 255, 255, 0.14);
     --navbar-action-text: #fff;
-    --navbar-login-bg: rgba(255, 255, 255, 0.08);
-    --navbar-login-bg-hover: rgba(255, 255, 255, 0.14);
-    --navbar-login-border: rgba(255, 255, 255, 0.14);
-    --navbar-login-text: #fff;
+    /* 与首页「立即加入」同色：酒红扁平胶囊，非亮珊瑚外发光 */
+    --navbar-login-bg: linear-gradient(180deg, #b83248 0%, #8e2135 100%);
+    --navbar-login-bg-hover: linear-gradient(180deg, #c53a52 0%, #9a2640 100%);
+    --navbar-login-border: transparent;
+    --navbar-login-text: #ffffff;
+    --navbar-login-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    --navbar-login-shadow-hover: inset 0 1px 0 rgba(255, 255, 255, 0.16);
     --navbar-menu-bg: rgba(255, 255, 255, 0.97);
     --navbar-menu-border: rgba(17, 24, 39, 0.08);
     --navbar-menu-shadow: 0 16px 32px rgba(5, 10, 18, 0.2);
@@ -428,23 +431,48 @@
 }
 
 .loginBtn {
-    padding: 0 !important;
+    /* 对齐 home.mobileJoinGroupAction：酒红竖向渐变 + 内高光，无外发光 */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    min-width: 84px;
+    padding: 0 18px !important;
     margin: 0 !important;
     flex: none !important;
     color: var(--navbar-login-text);
     border: 1px solid var(--navbar-login-border);
-    border-radius: 8px;
-    font-size: 16px;
-    font-weight: 600;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1;
     cursor: pointer;
-    transition: all 0.3s ease;
     white-space: nowrap;
     background: var(--navbar-login-bg);
+    box-shadow: var(--navbar-login-shadow);
+    transition:
+        background 0.2s ease,
+        box-shadow 0.2s ease,
+        filter 0.2s ease;
 }
 
 .loginBtn:hover {
-    transform: translateY(-2px);
+    transform: none;
     background: var(--navbar-login-bg-hover);
+    box-shadow: var(--navbar-login-shadow-hover);
+    filter: brightness(1.06);
+}
+
+.loginBtn:active {
+    transform: none;
+    filter: brightness(0.96);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.loginBtn:focus-visible {
+    outline: 2px solid rgba(184, 50, 72, 0.55);
+    outline-offset: 3px;
 }
 
 .navbarContainerMobileHome {
@@ -476,10 +504,12 @@
         --navbar-action-bg-hover: #2C2C2E;
         --navbar-action-border: rgba(255, 255, 255, 0.12);
         --navbar-action-text: #FFFFFF;
-        --navbar-login-bg: #1C1C1E;
-        --navbar-login-bg-hover: #2C2C2E;
-        --navbar-login-border: rgba(255, 255, 255, 0.12);
-        --navbar-login-text: #FFFFFF;
+        --navbar-login-bg: linear-gradient(180deg, #b83248 0%, #8e2135 100%);
+        --navbar-login-bg-hover: linear-gradient(180deg, #c53a52 0%, #9a2640 100%);
+        --navbar-login-border: transparent;
+        --navbar-login-text: #ffffff;
+        --navbar-login-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        --navbar-login-shadow-hover: inset 0 1px 0 rgba(255, 255, 255, 0.16);
         --navbar-menu-bg: #1C1C1E;
         --navbar-menu-border: rgba(255, 255, 255, 0.1);
         --navbar-menu-shadow: 0 16px 32px rgba(0, 0, 0, 0.45);
@@ -599,15 +629,16 @@
     }
 
     .loginBtn {
-        width: 60px !important;
-        height: 32px !important;
-        min-width: 60px !important;
-        max-width: 60px !important;
-        min-height: 32px !important;
-        max-height: 32px !important;
-        font-size: 14px;
+        width: auto !important;
+        height: 30px !important;
+        min-width: 68px !important;
+        max-width: none !important;
+        min-height: 30px !important;
+        max-height: 30px !important;
+        padding: 0 14px !important;
+        font-size: 13px;
         flex-shrink: 0;
-        box-shadow: none;
+        box-shadow: var(--navbar-login-shadow);
     }
 
     .navbarContainerMobileHomeOverlayActive {
@@ -633,10 +664,12 @@
         --navbar-action-bg-hover: #2C2C2E;
         --navbar-action-border: rgba(255, 255, 255, 0.14);
         --navbar-action-text: #ffffff;
-        --navbar-login-bg: rgba(28, 28, 30, 0.92);
-        --navbar-login-bg-hover: #2C2C2E;
-        --navbar-login-border: rgba(255, 255, 255, 0.14);
+        --navbar-login-bg: linear-gradient(180deg, #b83248 0%, #8e2135 100%);
+        --navbar-login-bg-hover: linear-gradient(180deg, #c53a52 0%, #9a2640 100%);
+        --navbar-login-border: transparent;
         --navbar-login-text: #ffffff;
+        --navbar-login-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        --navbar-login-shadow-hover: inset 0 1px 0 rgba(255, 255, 255, 0.16);
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
     }
@@ -646,8 +679,11 @@
     }
 
     .navbarContainerMobileHomeOverlayActive .searchBox,
-    .navbarContainerMobileHomeOverlayActive .messageButton,
-    .navbarContainerMobileHomeOverlayActive .loginBtn {
+    .navbarContainerMobileHomeOverlayActive .messageButton {
         box-shadow: none;
+    }
+
+    .navbarContainerMobileHomeOverlayActive .loginBtn {
+        box-shadow: var(--navbar-login-shadow);
     }
 }
