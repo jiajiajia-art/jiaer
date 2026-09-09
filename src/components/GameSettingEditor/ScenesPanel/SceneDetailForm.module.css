@@ -3,10 +3,11 @@
 /* 场景大图 */
 .sceneHero {
     width: 100%;
-    height: 280px;
+    /* 功能注释：竖构图预览需要更高画幅，280×1.8=504；图贴顶避免确认条下出现空带 */
+    height: 504px;
     border-radius: 20px;
     background-size: contain;
-    background-position: center;
+    background-position: center top;
     background-repeat: no-repeat;
     background-color: #121212;
     border: 1px solid rgba(255, 255, 255, 0.1);

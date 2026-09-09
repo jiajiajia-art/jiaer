@@ -10,10 +10,13 @@ import {
 } from '../../lib/galgame/ideaFullWorkProgress';
 import { peekIdeaFullWorkAssets } from '../../lib/galgame/ideaFullWorkSession';
 import type { EditorAssetImageCounts } from '../../lib/galgame/assetCompleteness';
+import { visibleAssetGapActions } from '../../lib/galgame/assetGapBannerActions';
 
 interface AssetGapBannerProps {
   kind: 'text' | 'full' | 'generating';
   fileId?: string;
+  /** 当前创作面板；已在目标页时隐藏对应跳转按钮 */
+  activePanel?: string;
   missingPortraits: number;
   missingScenes: number;
   missingCover: boolean;
@@ -38,6 +41,7 @@ type RailStep = {
 const AssetGapBanner: React.FC<AssetGapBannerProps> = ({
   kind,
   fileId,
+  activePanel = '',
   missingPortraits,
   missingScenes,
   missingCover,
@@ -156,6 +160,13 @@ const AssetGapBanner: React.FC<AssetGapBannerProps> = ({
 
   const percent = kind === 'generating' ? (progress?.percent ?? 0) : 0;
   const activeStep = steps.find((s) => s.state === 'active');
+  // 功能注释：当前页已是立绘/场景/封面所在面板时，不渲染「去那里」按钮
+  const gapActions = visibleAssetGapActions({
+    activePanel,
+    missingPortraits: resolvedMissingPortraits > 0,
+    missingScenes: resolvedMissingScenes > 0,
+    missingCover: resolvedMissingCover,
+  });
 
   return (
     <div
@@ -163,9 +174,7 @@ const AssetGapBanner: React.FC<AssetGapBannerProps> = ({
       role="status"
       aria-live="polite"
     >
-      <div className={styles.icon} aria-hidden>
-        {kind === 'generating' ? '◎' : '!'}
-      </div>
+      <div className={styles.icon} aria-hidden />
       <div className={styles.body}>
         <div className={styles.titleRow}>
           <p className={styles.title}>{title}</p>
@@ -200,8 +209,10 @@ const AssetGapBanner: React.FC<AssetGapBannerProps> = ({
                     <span className={styles.stepIndex} aria-hidden>
                       {isDone ? '✓' : isFailed ? '!' : index + 1}
                     </span>
-                    <span className={styles.stepLabel}>{step.label}</span>
-                    {step.meta && <span className={styles.stepMeta}>{step.meta}</span>}
+                    <span className={styles.stepCopy}>
+                      <span className={styles.stepLabel}>{step.label}</span>
+                      {step.meta && <span className={styles.stepMeta}>{step.meta}</span>}
+                    </span>
                   </li>
                 );
               })}
@@ -226,23 +237,25 @@ const AssetGapBanner: React.FC<AssetGapBannerProps> = ({
               )}
               {resolvedMissingCover && <span>{t('createGame.missingCoverLabel')}</span>}
             </div>
-            <div className={styles.actions}>
-              {resolvedMissingPortraits > 0 && (
-                <button type="button" className={styles.linkBtn} onClick={onGoCharacters}>
-                  {t('createGame.goGeneratePortraits')}
-                </button>
-              )}
-              {resolvedMissingScenes > 0 && (
-                <button type="button" className={styles.linkBtn} onClick={onGoScenes}>
-                  {t('createGame.goGenerateScenes')}
-                </button>
-              )}
-              {resolvedMissingCover && onGoCover && (
-                <button type="button" className={styles.linkBtn} onClick={onGoCover}>
-                  {t('createGame.goUploadCover')}
-                </button>
-              )}
-            </div>
+            {gapActions.length > 0 && (
+              <div className={styles.actions}>
+                {gapActions.includes('portraits') && (
+                  <button type="button" className={styles.linkBtn} onClick={onGoCharacters}>
+                    {t('createGame.goGeneratePortraits')}
+                  </button>
+                )}
+                {gapActions.includes('scenes') && (
+                  <button type="button" className={styles.linkBtn} onClick={onGoScenes}>
+                    {t('createGame.goGenerateScenes')}
+                  </button>
+                )}
+                {gapActions.includes('cover') && onGoCover && (
+                  <button type="button" className={styles.linkBtn} onClick={onGoCover}>
+                    {t('createGame.goUploadCover')}
+                  </button>
+                )}
+              </div>
+            )}
           </>
         )}
       </div>

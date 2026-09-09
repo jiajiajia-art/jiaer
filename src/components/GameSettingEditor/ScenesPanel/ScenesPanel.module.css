@@ -4,7 +4,7 @@
 .panelContent {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 16px;
 }
 
 .panelHeader {
@@ -128,11 +128,12 @@
 .card {
     background: #1A1A1A;
     border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 20px;
+    padding: 16px 16px 20px;
     border-radius: 16px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    /* 功能注释：确认修改与场景大图贴紧，避免 16px×2 的空洞 */
+    gap: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
     max-height: 80vh;
     overflow-y: auto;

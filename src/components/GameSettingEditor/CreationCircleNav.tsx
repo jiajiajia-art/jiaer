@@ -2,10 +2,10 @@ import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   MdDescription,
-  MdMenuBook,
-  MdPerson,
-  MdImage,
-  MdPublish,
+  MdAssignmentTurnedIn,
+  MdRecordVoiceOver,
+  MdBeachAccess,
+  MdSend,
 } from 'react-icons/md';
 import styles from './CreationCircleNav.module.css';
 
@@ -25,20 +25,28 @@ interface CreationCircleNavProps {
   publishDisabled?: boolean;
 }
 
+const STEP_ORDER: CreationCircleStepId[] = [
+  'documents',
+  'world',
+  'characters',
+  'scenes',
+  'publish',
+];
+
 const STEPS: Array<{
   id: CreationCircleStepId;
   labelKey: string;
   Icon: typeof MdDescription;
 }> = [
   { id: 'documents', labelKey: 'createGame.circleNav.file', Icon: MdDescription },
-  { id: 'world', labelKey: 'createGame.circleNav.script', Icon: MdMenuBook },
-  { id: 'characters', labelKey: 'createGame.circleNav.character', Icon: MdPerson },
-  { id: 'scenes', labelKey: 'createGame.circleNav.scene', Icon: MdImage },
-  { id: 'publish', labelKey: 'createGame.circleNav.publish', Icon: MdPublish },
+  { id: 'world', labelKey: 'createGame.circleNav.script', Icon: MdAssignmentTurnedIn },
+  { id: 'characters', labelKey: 'createGame.circleNav.character', Icon: MdRecordVoiceOver },
+  { id: 'scenes', labelKey: 'createGame.circleNav.scene', Icon: MdBeachAccess },
+  { id: 'publish', labelKey: 'createGame.circleNav.publish', Icon: MdSend },
 ];
 
 /**
- * 功能注释：TXT 创建移动端圆形步进（效果图：文件/脚本/角色/场景/发布），
+ * 功能注释：TXT 创建移动端圆形步进（效果图：已完成酒红白标 / 当前亮红 / 未到灰底红标），
  * 与侧栏共用 onPanelChange；发布步直接走发布流程。
  */
 const CreationCircleNav: React.FC<CreationCircleNavProps> = ({
@@ -63,6 +71,8 @@ const CreationCircleNav: React.FC<CreationCircleNavProps> = ({
     return 'documents';
   }, [activePanel, isParsing]);
 
+  const activeIndex = STEP_ORDER.indexOf(activeId);
+
   const isDisabled = (id: CreationCircleStepId) => {
     if (id === 'documents') return false;
     if (id === 'publish') return publishDisabled || isParsing || !isParsed;
@@ -73,6 +83,7 @@ const CreationCircleNav: React.FC<CreationCircleNavProps> = ({
     <nav className={styles.nav} aria-label={t('createGame.circleNav.ariaLabel')}>
       {STEPS.map(({ id, labelKey, Icon }) => {
         const active = activeId === id;
+        const done = !active && STEP_ORDER.indexOf(id) < activeIndex;
         const disabled = isDisabled(id);
         return (
           <button
@@ -81,6 +92,7 @@ const CreationCircleNav: React.FC<CreationCircleNavProps> = ({
             className={[
               styles.item,
               active ? styles.itemActive : '',
+              done ? styles.itemDone : '',
               disabled ? styles.itemDisabled : '',
             ].filter(Boolean).join(' ')}
             disabled={disabled}
@@ -95,7 +107,7 @@ const CreationCircleNav: React.FC<CreationCircleNavProps> = ({
             }}
           >
             <span className={styles.iconWrap} aria-hidden>
-              <Icon className={styles.icon} size={22} />
+              <Icon className={styles.icon} size={active ? 24 : 22} />
             </span>
             <span className={styles.label}>{t(labelKey)}</span>
           </button>

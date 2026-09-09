@@ -18,9 +18,11 @@ import {
   patchIdeaAssetPhase,
   publishIdeaAssetProgress,
   peekIdeaAssetProgress,
+  type IdeaAssetPhaseRow,
   type IdeaAssetPhaseState,
   type IdeaFullWorkAssetPhase,
 } from './ideaFullWorkProgress';
+import { resolveIdeaAssetPhaseAction } from './ideaFullWorkResume';
 
 const POLL_INTERVAL_MS = 1500;
 
@@ -176,6 +178,133 @@ async function pollBatchImageJob(
   return { status: 'timeout', counts: lastCounts };
 }
 
+type BatchPhaseStartBody = {
+  generateNPCs: boolean;
+  generatePlayer: boolean;
+  generateScenes: boolean;
+  generateVariants: boolean;
+  removeBg: boolean;
+  pluginType: 'visual';
+};
+
+/**
+ * 功能注释：按阶段 skip / 轮询已有 job / 新开任务。已完成或失败不 POST start，避免切页把已有图重生成。
+ */
+async function runBatchImagePhase(options: {
+  fileId: string;
+  assets: IdeaAssetFlags;
+  phase: 'portraits' | 'scenes';
+  enabled: boolean;
+  startBody: BatchPhaseStartBody;
+  failLabel: string;
+  onProgress?: (event: IdeaFullWorkProgressEvent) => void;
+  result: IdeaFullWorkAssetResult;
+  resultKey: 'portraitsOk' | 'scenesOk';
+}): Promise<void> {
+  const { fileId, assets, phase, enabled, startBody, failLabel, onProgress, result, resultKey } = options;
+  if (!enabled) return;
+
+  const row: IdeaAssetPhaseRow | undefined = peekIdeaAssetProgress(fileId)?.[phase];
+  const action = resolveIdeaAssetPhaseAction(true, row);
+  if (action === 'skip') {
+    result[resultKey] = row?.state !== 'failed';
+    if (row?.state === 'failed') {
+      result.errors.push(
+        row.failed && row.total
+          ? `${failLabel}仅成功 ${row.completed}/${row.total} 张`
+          : `${failLabel}未完成`,
+      );
+    }
+    return;
+  }
+
+  onProgress?.({ phase, state: 'starting' });
+  const keepCompleted = Number(row?.completed) || 0;
+  const keepTotal = Number(row?.total) || 0;
+  const keepFailed = Number(row?.failed) || 0;
+  patchIdeaAssetPhase(fileId, phase, {
+    state: 'active',
+    completed: keepCompleted,
+    total: keepTotal,
+    failed: keepFailed,
+    ...(row?.jobId ? { jobId: row.jobId } : {}),
+  }, assets);
+
+  try {
+    let jobId = action === 'poll' ? String(row?.jobId || '').trim() : '';
+    let bootstrapTotal = keepTotal;
+    if (!jobId) {
+      const start = await EditorApi.startGenerateAllImages(fileId, startBody);
+      const payload = start.data as {
+        success?: boolean;
+        jobId?: string;
+        message?: string;
+        error?: string;
+        totalCount?: number;
+      };
+      if (!payload?.success || !payload.jobId) {
+        result[resultKey] = false;
+        result.errors.push(payload?.message || payload?.error || `${failLabel}任务启动失败`);
+        patchIdeaAssetPhase(fileId, phase, { state: 'failed' }, assets);
+        onProgress?.({ phase, state: 'failed' });
+        return;
+      }
+      jobId = String(payload.jobId);
+      bootstrapTotal = Number(payload.totalCount) || keepTotal;
+      patchIdeaAssetPhase(fileId, phase, {
+        state: 'active',
+        jobId,
+        total: bootstrapTotal || keepTotal,
+        completed: keepCompleted,
+        failed: keepFailed,
+      }, assets);
+    }
+
+    const poll = await pollBatchImageJob(jobId, (counts) => {
+      patchIdeaAssetPhase(fileId, phase, {
+        state: 'active',
+        jobId,
+        completed: counts.successCount,
+        failed: counts.failedCount,
+        total: counts.totalCount || bootstrapTotal,
+      }, assets);
+      onProgress?.({
+        phase,
+        state: 'running',
+        completed: counts.successCount,
+        failed: counts.failedCount,
+        total: counts.totalCount || bootstrapTotal,
+      });
+    });
+    const reconciled = await reconcilePhaseWithEditorData(fileId, phase, {
+      successCount: poll.counts.successCount,
+      failedCount: poll.counts.failedCount,
+      totalCount: poll.counts.totalCount || bootstrapTotal,
+    }, assets);
+    result[resultKey] = reconciled.state === 'done';
+    onProgress?.({
+      phase,
+      state: result[resultKey] ? 'done' : 'failed',
+      completed: reconciled.completed,
+      failed: reconciled.failed,
+      total: reconciled.total,
+      detail: poll.status,
+    });
+    if (!result[resultKey]) {
+      result.errors.push(
+        reconciled.failed > 0
+          ? `${failLabel}仅成功 ${reconciled.completed}/${reconciled.total} 张`
+          : `${failLabel}生成未完成（${poll.status}）`,
+      );
+    }
+  } catch (err) {
+    result[resultKey] = false;
+    result.errors.push(errMessage(err, `${failLabel}生成失败`));
+    patchIdeaAssetPhase(fileId, phase, { state: 'failed' }, assets);
+    onProgress?.({ phase, state: 'failed' });
+  }
+}
+
 /**
  * 功能注释：是否已有进行中的完整作品生图编排（续跑 effect 避让上传回调）。
  */
@@ -234,182 +363,81 @@ async function runIdeaFullWorkAssetsInner(
   result: IdeaFullWorkAssetResult,
 ): Promise<IdeaFullWorkAssetResult> {
   const base = peekIdeaAssetProgress(fileId) || createInitialIdeaAssetProgress(fileId, assets);
-  publishIdeaAssetProgress({ ...base, flags: { ...assets }, phase: 'idle' });
+  publishIdeaAssetProgress({ ...base, flags: { ...assets }, phase: base.phase === 'idle' ? 'idle' : base.phase });
 
-  if (assets.portraits) {
-    onProgress?.({ phase: 'portraits', state: 'starting' });
-    patchIdeaAssetPhase(fileId, 'portraits', { state: 'active', completed: 0, total: 0 }, assets);
-    try {
-      const start = await EditorApi.startGenerateAllImages(fileId, {
-        generateNPCs: true,
-        generatePlayer: true,
-        generateScenes: false,
-        generateVariants: false,
-        removeBg: true,
-        pluginType: 'visual',
-      });
-      const payload = start.data as {
-        success?: boolean;
-        jobId?: string;
-        message?: string;
-        error?: string;
-        totalCount?: number;
-      };
-      if (!payload?.success || !payload.jobId) {
-        result.portraitsOk = false;
-        result.errors.push(payload?.message || payload?.error || '角色立绘任务启动失败');
-        patchIdeaAssetPhase(fileId, 'portraits', { state: 'failed' }, assets);
-        onProgress?.({ phase: 'portraits', state: 'failed' });
-      } else {
-        const bootstrapTotal = Number(payload.totalCount) || 0;
-        if (bootstrapTotal > 0) {
-          patchIdeaAssetPhase(fileId, 'portraits', { total: bootstrapTotal, completed: 0, failed: 0 }, assets);
-        }
-        const poll = await pollBatchImageJob(String(payload.jobId), (counts) => {
-          patchIdeaAssetPhase(fileId, 'portraits', {
-            state: 'active',
-            completed: counts.successCount,
-            failed: counts.failedCount,
-            total: counts.totalCount || bootstrapTotal,
-          }, assets);
-          onProgress?.({
-            phase: 'portraits',
-            state: 'running',
-            completed: counts.successCount,
-            failed: counts.failedCount,
-            total: counts.totalCount || bootstrapTotal,
-          });
-        });
-        const reconciled = await reconcilePhaseWithEditorData(fileId, 'portraits', {
-          successCount: poll.counts.successCount,
-          failedCount: poll.counts.failedCount,
-          totalCount: poll.counts.totalCount || bootstrapTotal,
-        }, assets);
-        result.portraitsOk = reconciled.state === 'done';
-        onProgress?.({
-          phase: 'portraits',
-          state: result.portraitsOk ? 'done' : 'failed',
-          completed: reconciled.completed,
-          failed: reconciled.failed,
-          total: reconciled.total,
-          detail: poll.status,
-        });
-        if (!result.portraitsOk) {
-          result.errors.push(
-            reconciled.failed > 0
-              ? `角色立绘仅成功 ${reconciled.completed}/${reconciled.total} 张`
-              : `角色立绘生成未完成（${poll.status}）`,
-          );
-        }
-      }
-    } catch (err) {
-      result.portraitsOk = false;
-      result.errors.push(errMessage(err, '角色立绘生成失败'));
-      patchIdeaAssetPhase(fileId, 'portraits', { state: 'failed' }, assets);
-      onProgress?.({ phase: 'portraits', state: 'failed' });
-    }
-  }
+  await runBatchImagePhase({
+    fileId,
+    assets,
+    phase: 'portraits',
+    enabled: assets.portraits,
+    startBody: {
+      generateNPCs: true,
+      generatePlayer: true,
+      generateScenes: false,
+      generateVariants: false,
+      removeBg: true,
+      pluginType: 'visual',
+    },
+    failLabel: '角色立绘',
+    onProgress,
+    result,
+    resultKey: 'portraitsOk',
+  });
 
-  if (assets.scenes) {
-    onProgress?.({ phase: 'scenes', state: 'starting' });
-    patchIdeaAssetPhase(fileId, 'scenes', { state: 'active', completed: 0, total: 0 }, assets);
-    try {
-      const start = await EditorApi.startGenerateAllImages(fileId, {
-        generateNPCs: false,
-        generatePlayer: false,
-        generateScenes: true,
-        generateVariants: false,
-        removeBg: false,
-        pluginType: 'visual',
-      });
-      const payload = start.data as {
-        success?: boolean;
-        jobId?: string;
-        message?: string;
-        error?: string;
-        totalCount?: number;
-      };
-      if (!payload?.success || !payload.jobId) {
-        result.scenesOk = false;
-        result.errors.push(payload?.message || payload?.error || '场景背景任务启动失败');
-        patchIdeaAssetPhase(fileId, 'scenes', { state: 'failed' }, assets);
-        onProgress?.({ phase: 'scenes', state: 'failed' });
-      } else {
-        const bootstrapTotal = Number(payload.totalCount) || 0;
-        if (bootstrapTotal > 0) {
-          patchIdeaAssetPhase(fileId, 'scenes', { total: bootstrapTotal, completed: 0, failed: 0 }, assets);
-        }
-        const poll = await pollBatchImageJob(String(payload.jobId), (counts) => {
-          patchIdeaAssetPhase(fileId, 'scenes', {
-            state: 'active',
-            completed: counts.successCount,
-            failed: counts.failedCount,
-            total: counts.totalCount || bootstrapTotal,
-          }, assets);
-          onProgress?.({
-            phase: 'scenes',
-            state: 'running',
-            completed: counts.successCount,
-            failed: counts.failedCount,
-            total: counts.totalCount || bootstrapTotal,
-          });
-        });
-        const reconciled = await reconcilePhaseWithEditorData(fileId, 'scenes', {
-          successCount: poll.counts.successCount,
-          failedCount: poll.counts.failedCount,
-          totalCount: poll.counts.totalCount || bootstrapTotal,
-        }, assets);
-        result.scenesOk = reconciled.state === 'done';
-        onProgress?.({
-          phase: 'scenes',
-          state: result.scenesOk ? 'done' : 'failed',
-          completed: reconciled.completed,
-          failed: reconciled.failed,
-          total: reconciled.total,
-          detail: poll.status,
-        });
-        if (!result.scenesOk) {
-          result.errors.push(
-            reconciled.failed > 0
-              ? `场景背景仅成功 ${reconciled.completed}/${reconciled.total} 张`
-              : `场景背景生成未完成（${poll.status}）`,
-          );
-        }
-      }
-    } catch (err) {
-      result.scenesOk = false;
-      result.errors.push(errMessage(err, '场景背景生成失败'));
-      patchIdeaAssetPhase(fileId, 'scenes', { state: 'failed' }, assets);
-      onProgress?.({ phase: 'scenes', state: 'failed' });
-    }
-  }
+  await runBatchImagePhase({
+    fileId,
+    assets,
+    phase: 'scenes',
+    enabled: assets.scenes,
+    startBody: {
+      generateNPCs: false,
+      generatePlayer: false,
+      generateScenes: true,
+      generateVariants: false,
+      removeBg: false,
+      pluginType: 'visual',
+    },
+    failLabel: '场景背景',
+    onProgress,
+    result,
+    resultKey: 'scenesOk',
+  });
 
   if (assets.cover) {
-    onProgress?.({ phase: 'cover', state: 'starting' });
-    patchIdeaAssetPhase(fileId, 'cover', { state: 'active', completed: 0, total: 1 }, assets);
-    try {
-      const coverRes = await EditorApi.generateGameCover(fileId, {});
-      const ok = Boolean((coverRes.data as { success?: boolean })?.success);
-      result.coverOk = ok;
-      patchIdeaAssetPhase(
-        fileId,
-        'cover',
-        { state: ok ? 'done' : 'failed', completed: ok ? 1 : 0, total: 1 },
-        assets,
-      );
-      onProgress?.({ phase: 'cover', state: ok ? 'done' : 'failed' });
-      if (!ok) {
-        result.errors.push(
-          (coverRes.data as { message?: string; error?: string })?.message
-          || (coverRes.data as { error?: string })?.error
-          || '封面生成失败',
-        );
+    const coverRow = peekIdeaAssetProgress(fileId)?.cover;
+    const coverAction = resolveIdeaAssetPhaseAction(true, coverRow);
+    if (coverAction === 'skip') {
+      result.coverOk = coverRow?.state !== 'failed';
+      if (coverRow?.state === 'failed') {
+        result.errors.push('封面生成失败');
       }
-    } catch (err) {
-      result.coverOk = false;
-      result.errors.push(errMessage(err, '封面生成失败'));
-      patchIdeaAssetPhase(fileId, 'cover', { state: 'failed' }, assets);
-      onProgress?.({ phase: 'cover', state: 'failed' });
+    } else {
+      onProgress?.({ phase: 'cover', state: 'starting' });
+      patchIdeaAssetPhase(fileId, 'cover', { state: 'active', completed: 0, total: 1 }, assets);
+      try {
+        const coverRes = await EditorApi.generateGameCover(fileId, {});
+        const ok = Boolean((coverRes.data as { success?: boolean })?.success);
+        result.coverOk = ok;
+        patchIdeaAssetPhase(
+          fileId,
+          'cover',
+          { state: ok ? 'done' : 'failed', completed: ok ? 1 : 0, total: 1 },
+          assets,
+        );
+        onProgress?.({ phase: 'cover', state: ok ? 'done' : 'failed' });
+        if (!ok) {
+          result.errors.push(
+            (coverRes.data as { message?: string; error?: string })?.message
+            || (coverRes.data as { error?: string })?.error
+            || '封面生成失败',
+          );
+        }
+      } catch (err) {
+        result.coverOk = false;
+        result.errors.push(errMessage(err, '封面生成失败'));
+        patchIdeaAssetPhase(fileId, 'cover', { state: 'failed' }, assets);
+        onProgress?.({ phase: 'cover', state: 'failed' });
+      }
     }
   }
 

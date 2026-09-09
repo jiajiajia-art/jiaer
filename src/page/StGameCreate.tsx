@@ -10,7 +10,7 @@ import type { StConfig, STRegexScript, STCharBookEntry } from '../utils/stRender
 import AssetsUpload, { type AssetsUploadHandle } from '../components/StGame/AssetsUpload';
 import getGameDataApi from '../api/home/getGameData';
 import gameTagsApi from '../api/gameTags/gameTagsApi';
-import { flattenThemeTags, type FlatThemeTag } from '../utils/themeTags';
+import { flattenThemeTags, useLocalizedThemeTags, type FlatThemeTag } from '../utils/themeTags';
 import ConfirmModal from '../components/CommonModal/ConfirmModal';
 import PublishSettingsModal, { type PublishSubmitPayload } from '../components/CommonModal/PublishSettingsModal';
 import GameAction from '../api/rpgGame/gameAction';
@@ -76,6 +76,7 @@ const StGameCreate: React.FC = () => {
   const [availableThemeTags, setAvailableThemeTags] = useState<FlatThemeTag[]>([]);
   const [selectedThemeTagIds, setSelectedThemeTagIds] = useState<number[]>([]);
   const [themeTagError, setThemeTagError] = useState('');
+  const displayThemeTags = useLocalizedThemeTags(availableThemeTags);
   const [highlightField, setHighlightField] = useState<RequiredFieldKey | ''>('');
   const [showPendingAssetsConfirm, setShowPendingAssetsConfirm] = useState(false);
   const [uploadingFromStepConfirm, setUploadingFromStepConfirm] = useState(false);
@@ -774,7 +775,7 @@ const StGameCreate: React.FC = () => {
               <span className={styles.themeTagsHint}>{t('createGame.min1Max2Tags')}</span>
             </div>
             <div className={styles.themeTagsWrap}>
-              {availableThemeTags.map((tag) => {
+              {displayThemeTags.map((tag) => {
                 const active = selectedThemeTagIds.includes(tag.id);
                 return (
                   <button

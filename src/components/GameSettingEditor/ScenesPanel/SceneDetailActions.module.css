@@ -1,8 +1,9 @@
+/* 功能注释：确认条贴着大图，禁止再叠一层 16px 把预览顶下去 */
 .actionsContainer {
     display: flex;
     justify-content: flex-end;
     gap: 8px;
-    margin-bottom: 16px;
+    margin-bottom: 0;
 }
 
 .ghostSmall {

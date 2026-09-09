@@ -11,6 +11,7 @@ import { MdArrowDropDown } from 'react-icons/md';
 import { MdDownload } from 'react-icons/md';
 import { MdEdit } from 'react-icons/md';
 import { RiDeleteBin5Line } from 'react-icons/ri';
+import { FaMagic } from 'react-icons/fa';
 import { withCacheBust, extractImageExtension } from './utils';
 import ConfirmModal from '../../CommonModal/ConfirmModal';
 import SaveConfirmModal from '../../CommonModal/SaveConfirmModal';
@@ -2018,42 +2019,25 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     return (
         <div className={`${styles.panelContent} ${isSaveOverlayVisible ? styles.panelContentSaving : ''}`}>
             <div className={styles.panelHeader}>
-                <div>
-                    <p className={styles.eyebrow}>{t('gameEditor.step3')}</p>
+                <div className={styles.headerCopy}>
                     <h2>{t('createGame.characterProfile')}</h2>
-                    <p className={styles.subtitle}>{t('createGame.characterProfileTip')}</p>
+                    <p className={styles.subtitle}>
+                        {t('createGame.characterProfileTip', { cost: discountedCost })}
+                    </p>
                 </div>
-                <GenerationActionBar>
+                <GenerationActionBar layout="hero">
                     <button
-                        className={`${styles.ghost} ${styles.generateButton}`}
+                        type="button"
+                        className={styles.generateButton}
                         onClick={openNpcCostModal}
                         disabled={isLoading || isGeneratingNpcImages || isLoadingNpcCost || isBlockingSwitch}
                     >
-                        <img
-                            src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
-                            alt=""
-                            className={styles.priceIcon}
-                        />
-                        <div className={styles.buttonTextContainer}>
-                            <span className={styles.buttonMainText}>
-                                {isGeneratingNpcImages ? t('createGame.generating') : t('createGame.generateAllCharacterPortraits')}
-                            </span>
-                            <span className={styles.buttonSubText}>
-                                {/* TODO: 恢复会员折扣UI时，取消下方注释
-                                {showDiscount ? (
-                                    <>
-                                        <span className={styles.discountPrice}>
-                                            {discountedCost}
-                                            <span className={styles.originalPrice}>{CHARACTER_GENERATION_COST}</span>
-                                        </span>
-                                        {t('createGame.pointsPerImage')}
-                                    </>
-                                ) : (
-                                    <>{discountedCost}{t('createGame.pointsPerImage')}</>
-                                )} */}
-                                {discountedCost}{t('createGame.pointsPerImage')}
-                            </span>
-                        </div>
+                        <span className={styles.generateIconWrap} aria-hidden>
+                            <FaMagic className={styles.generateIcon} />
+                        </span>
+                        <span className={styles.buttonMainText}>
+                            {isGeneratingNpcImages ? t('createGame.generating') : t('createGame.generateAllCharacterPortraits')}
+                        </span>
                     </button>
                 </GenerationActionBar>
             </div>
@@ -2116,19 +2100,6 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                             </div>
                         ) : (
                             <div className={styles.detailActionRow}>
-                                <button
-                                    className={`${styles.ghostSmall} ${isPreviewMode ? styles.ghostSmallActive : ''}`}
-                                    onClick={() => {
-                                        setIsPreviewMode(!isPreviewMode);
-                                        if (!isPreviewMode) {
-                                            // 进入预览模式时，用角色的 portraitScale 初始化
-                                            setPreviewScale(currentCharacter?.portraitScale ?? 1);
-                                        }
-                                    }}
-                                    disabled={!currentPortraitImage || isPortraitActionBusy}
-                                >
-                                    {isPreviewMode ? t('createGame.exitPreview') : t('createGame.portraitSizePreview')}
-                                </button>
                                 <button
                                     className={styles.ghostSmall}
                                     onClick={() => { void confirmEdit(); }}

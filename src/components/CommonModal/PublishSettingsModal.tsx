@@ -11,7 +11,7 @@ import { useImageCropper } from '../../hooks/useImageCropper';
 import { getImageUrl } from '../../utils/constants';
 import { addImageTimestamp, bumpCacheBust } from '../../utils/imageCache';
 import { fileToDataUrl } from '../../utils/uploadImageCrop';
-import { flattenThemeTags, type FlatThemeTag } from '../../utils/themeTags';
+import { flattenThemeTags, useLocalizedThemeTags, type FlatThemeTag } from '../../utils/themeTags';
 import {
     NOVEL_DESCRIPTION_MAX_LENGTH,
     THEME_TAG_MAX,
@@ -140,6 +140,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     const [selectedThemeTagIds, setSelectedThemeTagIds] = useState<number[]>([]);
     const [availableThemeTags, setAvailableThemeTags] = useState<FlatThemeTag[]>([]);
     const [themeTagError, setThemeTagError] = useState<string>('');
+    const displayThemeTags = useLocalizedThemeTags(availableThemeTags);
     const [saving, setSaving] = useState<boolean>(false);
     const [generatingDescription, setGeneratingDescription] = useState<boolean>(false);
     const [versionNotes, setVersionNotes] = useState<string>('');
@@ -491,10 +492,17 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     return (
         <div className={`${styles.modal} ${styles.modalShow}`}>
             <div className={styles.publishModalContent}>
-                <button type="button" className={styles.closeBtn} onClick={onClose}>
-                    <img src={`${import.meta.env.BASE_URL}data/assets/关闭.png`} alt={t('common.close')} />
-                </button>
-                <h2 className={styles.modalTitle}>{modalTitle}</h2>
+                <div className={styles.modalHead}>
+                    <h2 className={styles.modalTitle}>{modalTitle}</h2>
+                    <button
+                        type="button"
+                        className={styles.closeBtn}
+                        onClick={onClose}
+                        aria-label={t('common.close')}
+                    >
+                        ×
+                    </button>
+                </div>
 
                 <div className={styles.formScroll}>
                 <div className={styles.formContent}>
@@ -576,6 +584,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                                 ) : null}
                             </div>
                             <SimpleRichTextEditor
+                                className={styles.richEditorDark}
                                 value={description}
                                 onChange={setDescription}
                                 maxPlainLength={NOVEL_DESCRIPTION_MAX_LENGTH}
@@ -609,7 +618,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                                 </span>
                             </div>
                             <div className={styles.themeTagsWrap}>
-                                {availableThemeTags.map((tag) => {
+                                {displayThemeTags.map((tag) => {
                                     const active = selectedThemeTagIds.includes(tag.id);
                                     return (
                                         <button

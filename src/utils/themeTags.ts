@@ -1,4 +1,7 @@
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { GameTagTreeNode } from '../api/gameTags/gameTagsApi.type';
+import { localizeChineseByLanguage } from './chineseScript.ts';
 
 export interface FlatThemeTag {
     id: number;
@@ -39,3 +42,30 @@ export const flattenThemeTags = (tree: GameTagTreeNode[]): FlatThemeTag[] => {
 
     return flat.filter((item) => Number.isFinite(item.id) && item.id > 0 && item.name);
 };
+
+/** 功能注释：题材名来自后台简体；按当前语言转繁体，id 不变以免提交错标签 */
+export function localizeFlatThemeTags(
+    tags: FlatThemeTag[],
+    language?: string | null,
+): FlatThemeTag[] {
+    return (tags || []).map((tag) => ({
+        ...tag,
+        name: localizeChineseByLanguage(tag.name, language),
+        parentName: localizeChineseByLanguage(tag.parentName, language),
+        pathNames: tag.pathNames?.map((name) => localizeChineseByLanguage(name, language)),
+        pathLabel: tag.pathLabel
+            ? localizeChineseByLanguage(tag.pathLabel, language)
+            : tag.pathLabel,
+    }));
+}
+
+export function useLocalizedThemeTags<T extends Pick<FlatThemeTag, 'id' | 'name'> & Partial<FlatThemeTag>>(
+    tags: T[],
+): T[] {
+    const { i18n } = useTranslation();
+    const language = i18n.resolvedLanguage || i18n.language;
+    return useMemo(
+        () => localizeFlatThemeTags(tags as FlatThemeTag[], language) as T[],
+        [tags, language],
+    );
+}

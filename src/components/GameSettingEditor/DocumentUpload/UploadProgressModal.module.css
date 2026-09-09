@@ -1,4 +1,12 @@
+/* 功能注释：上传进度码头 — 墨黑片 + 酒红脉动，对齐 TXT 创建页而非旧白底浮层 */
+
 .modalOverlay {
+    --dock-ink: #000000;
+    --dock-surface: #1A1A1A;
+    --dock-input: #1C1C1E;
+    --dock-accent: #8E2135;
+    --dock-accent-hot: #A8283C;
+    --dock-ok: #3D9A6A;
     position: fixed;
     bottom: 20px;
     left: 20px;
@@ -7,15 +15,17 @@
 }
 
 .modalContent {
-    background: #fff;
-    border-radius: 8px;
+    background: var(--dock-surface);
+    border-radius: 18px;
     width: 380px;
     max-height: 500px;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    color: #ffffff;
     pointer-events: auto;
-    border: 1px solid #e8e8e8;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.55);
+    overflow: hidden;
 }
 
 .modalHeader {
@@ -23,10 +33,9 @@
     align-items: center;
     justify-content: space-between;
     padding: 12px 16px;
-    border-bottom: 1px solid #f0f0f0;
-    background: #fafafa;
-    border-radius: 8px 8px 0 0;
-    cursor: move;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--dock-surface);
+    cursor: default;
 }
 
 .headerActions {
@@ -35,55 +44,78 @@
     gap: 8px;
 }
 
-.minimizeButton {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 4px 8px;
+.minimizeButton,
+.closeButton {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    background: var(--dock-input);
+    color: rgba(255, 255, 255, 0.7);
     font-size: 12px;
-    color: #666;
-    transition: color 0.2s;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: color 0.15s ease, border-color 0.15s ease;
 }
 
-.minimizeButton:hover {
-    color: #333;
+.closeButton {
+    font-size: 20px;
+}
+
+.minimizeButton:hover,
+.closeButton:hover {
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.28);
 }
 
 .title {
     margin: 0;
-    font-size: 14px;
-    font-weight: 600;
-    color: #333;
-}
-
-.closeButton {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.closeButton img {
-    width: 20px;
-    height: 20px;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #ffffff;
 }
 
 .modalBody {
-    padding: 16px;
+    padding: 12px 14px 14px;
     overflow-y: auto;
-    flex: 1;
     max-height: 400px;
+    background: var(--dock-surface);
 }
 
 .jobItem {
+    /* 功能注释：任务卡内容上下居中，避免手机把状态拆成三行顶对齐 */
     margin-bottom: 12px;
-    padding: 12px;
-    background: #fafafa;
-    border-radius: 6px;
-    border: 1px solid #e8e8e8;
+    padding: 14px 14px 14px 16px;
+    background: var(--dock-input);
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+}
+
+.jobItem::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 10px;
+    bottom: 10px;
+    width: 3px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.jobItemLive::before {
+    background: linear-gradient(180deg, var(--dock-accent-hot), var(--dock-accent));
 }
 
 .jobItem:last-child {
@@ -95,7 +127,6 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    margin-bottom: 12px;
 }
 
 .jobInfo {
@@ -108,8 +139,8 @@
 
 .fileName {
     font-size: 14px;
-    font-weight: 500;
-    color: #333;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.92);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -117,82 +148,125 @@
 
 .status {
     font-size: 12px;
-    font-weight: 500;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.statusLive {
+    color: var(--dock-accent-hot);
+}
+
+.statusDone {
+    color: var(--dock-ok);
+}
+
+.statusFail {
+    color: var(--dock-accent-hot);
 }
 
 .removeButton {
-    background: #ff4d4f;
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    padding: 4px 12px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 999px;
+    padding: 6px 12px;
     font-size: 12px;
+    font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: border-color 0.15s ease, color 0.15s ease;
 }
 
 .removeButton:hover {
-    background: #ff7875;
+    color: #ffffff;
+    border-color: var(--dock-accent-hot);
 }
 
 .progressContainer {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 8px;
     min-width: 0;
 }
 
 .progressBar {
     flex: 1;
     min-width: 0;
-    height: 8px;
-    background: #e8e8e8;
-    border-radius: 4px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
     overflow: hidden;
 }
 
 .progressFill {
     height: 100%;
-    background: #FB4655;
-    border-radius: 4px;
+    border-radius: 999px;
     transition: width 0.3s ease;
+    background: var(--dock-ok);
+}
+
+.progressFill.statusLive,
+.progressFill.statusFail {
+    background: linear-gradient(90deg, var(--dock-accent-hot), var(--dock-accent));
+}
+
+.progressFillLive {
+    position: relative;
+    overflow: hidden;
+}
+
+.progressFillLive::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+    animation: dockShimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes dockShimmer {
+    from {
+        transform: translateX(-100%);
+    }
+    to {
+        transform: translateX(100%);
+    }
 }
 
 .progressText {
     font-size: 12px;
-    color: #666;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.55);
     min-width: 40px;
     text-align: right;
+    font-variant-numeric: tabular-nums;
 }
 
 .jobDetails {
     display: flex;
-    justify-content: space-between;
+    flex-wrap: wrap;
+    justify-content: flex-start;
     align-items: center;
-    gap: 12px;
+    gap: 8px 12px;
     font-size: 12px;
-    color: #999;
-    margin-top: 8px;
+    color: rgba(255, 255, 255, 0.42);
 }
 
 .stage {
-    color: #666;
-    flex: 1;
+    color: rgba(255, 255, 255, 0.55);
     min-width: 0;
     overflow-wrap: anywhere;
     word-break: break-word;
 }
 
 .time {
-    color: #999;
+    color: rgba(255, 255, 255, 0.42);
     flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
 }
 
 .etaText {
-    margin-top: 6px;
+    margin: 0;
     font-size: 12px;
-    color: #666;
+    color: rgba(255, 255, 255, 0.48);
     line-height: 1.45;
     overflow-wrap: anywhere;
     word-break: break-word;
@@ -200,11 +274,11 @@
 
 .errorMessage {
     margin-top: 8px;
-    padding: 8px;
-    background: #fff2f0;
-    border: 1px solid #ffccc7;
-    border-radius: 4px;
-    color: #ff4d4f;
+    padding: 8px 10px;
+    background: rgba(142, 33, 53, 0.22);
+    border: 1px solid rgba(168, 40, 60, 0.45);
+    border-radius: 10px;
+    color: #ffb4bf;
     font-size: 12px;
     overflow-wrap: anywhere;
     word-break: break-word;
@@ -212,18 +286,17 @@
 
 .successMessage {
     margin-top: 8px;
-    padding: 8px;
-    background: #f0fdf4;
-    border: 1px solid #86efac;
-    border-radius: 4px;
-    color: #22C55E;
+    padding: 8px 10px;
+    background: rgba(61, 154, 106, 0.16);
+    border: 1px solid rgba(61, 154, 106, 0.35);
+    border-radius: 10px;
+    color: #9be0bc;
     font-size: 12px;
     overflow-wrap: anywhere;
     word-break: break-word;
 }
 
 @media (max-width: 768px) {
-    /* 适配小程序底部导航与窄屏弹窗宽度。 */
     .modalOverlay {
         left: 12px;
         right: 12px;
@@ -234,13 +307,10 @@
         width: min(100%, 520px);
         max-height: min(62vh, 520px);
         border-radius: 20px;
-        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
     }
 
     .modalHeader {
         padding: 14px 16px;
-        border-radius: 20px 20px 0 0;
-        cursor: default;
     }
 
     .title {
@@ -248,34 +318,17 @@
     }
 
     .headerActions {
-        gap: 4px;
-    }
-
-    .minimizeButton,
-    .closeButton {
-        min-width: 32px;
-        min-height: 32px;
+        gap: 6px;
     }
 
     .modalBody {
-        padding: 14px;
+        padding: 12px 14px 14px;
         max-height: min(48vh, 420px);
     }
 
     .jobItem {
-        padding: 14px;
+        padding: 14px 14px 14px 16px;
         border-radius: 14px;
-    }
-
-    .jobHeader {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-    }
-
-    .jobInfo {
-        width: 100%;
-        gap: 6px;
     }
 
     .fileName {
@@ -287,29 +340,18 @@
     }
 
     .removeButton {
-        align-self: flex-start;
+        flex-shrink: 0;
         padding: 6px 12px;
-    }
-
-    .progressContainer {
-        align-items: flex-start;
-        gap: 10px;
-        min-width: 0;
     }
 
     .progressText {
         min-width: auto;
-        line-height: 1.4;
-    }
-
-    .jobDetails {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 6px;
+        line-height: 1;
     }
 
     .stage,
     .time,
+    .etaText,
     .errorMessage,
     .successMessage {
         overflow-wrap: anywhere;

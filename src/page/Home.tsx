@@ -29,6 +29,7 @@ import gameTagsApi from '../api/gameTags/gameTagsApi';
 import specialThemeTagsApi from '../api/specialThemeTags/specialThemeTagsApi';
 import type { HomePromotionTicker } from '../api/promotion/promotion.type';
 import { flattenThemeTags, type FlatThemeTag } from '../utils/themeTags';
+import { localizeChineseByLanguage } from '../utils/chineseScript';
 import type { SpecialThemeAutoSort, SpecialThemeTagRecord } from '../api/specialThemeTags/specialThemeTagsApi.type';
 import {
     DEFAULT_HOME_LIST_FILTERS,
@@ -110,7 +111,7 @@ const getCircularCarouselDistance = (currentIndex: number, targetIndex: number, 
 };
 
 const Home: React.FC = () => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const navigate = useNavigate();
     const { requestCopy, modal: externalLinkCopyModal } = useExternalLinkCopyModal();
     const SWIPE_THRESHOLD = 40;
@@ -262,12 +263,15 @@ const Home: React.FC = () => {
         if (allGamesFilters.mode !== 'all' && allGamesFilters.tagId != null) {
             const modeOption = HOME_LIST_MODE_OPTIONS.find((option) => option.value === allGamesFilters.mode);
             const modeLabel = modeOption?.labelKey ? t(modeOption.labelKey) : (modeOption?.label || allGamesFilters.mode);
-            const themeLabel = allThemeTags.find((tag) => Number(tag.id) === Number(allGamesFilters.tagId))?.name
-                || t('gameBrowse.theme');
+            const themeLabel = localizeChineseByLanguage(
+                allThemeTags.find((tag) => Number(tag.id) === Number(allGamesFilters.tagId))?.name
+                    || t('gameBrowse.theme'),
+                i18n.resolvedLanguage || i18n.language,
+            );
             return t('home.noMatchingWorksModeTheme', { mode: modeLabel, theme: themeLabel });
         }
         return t('home.noMatchingWorks');
-    }, [allGamesFilters.mode, allGamesFilters.tagId, allThemeTags, t]);
+    }, [allGamesFilters.mode, allGamesFilters.tagId, allThemeTags, t, i18n.resolvedLanguage, i18n.language]);
 
     useEffect(() => {
         carouselImageLoadedMapRef.current = carouselImageLoadedMap;
@@ -2180,7 +2184,7 @@ const Home: React.FC = () => {
                                         className={`${styles.themeShowcaseItem} ${activeShowcaseTagKey === tag.key ? styles.themeShowcaseItemActive : ''}`}
                                         onClick={() => handleThemeClick(tag)}
                                     >
-                                        {tag.code ? t(getShowcaseTagI18nCode(tag.code)!) || tag.name : tag.name}
+                                        {tag.code ? t(getShowcaseTagI18nCode(tag.code)!) || tag.name : localizeChineseByLanguage(tag.name, i18n.resolvedLanguage || i18n.language)}
                                     </button>
                                 ))}
                             </div>

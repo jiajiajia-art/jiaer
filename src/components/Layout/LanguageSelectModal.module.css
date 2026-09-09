@@ -1,0 +1,158 @@
+/* 功能注释：语言选择弹窗 — 墨黑片 + 酒红选中，对齐 funloom 头像菜单层级 */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(6px);
+  animation: langFadeIn 0.2s ease-out;
+}
+
+@keyframes langFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.sheet {
+  --lang-surface: #1A1A1A;
+  --lang-input: #1C1C1E;
+  --lang-accent: #8E2135;
+  --lang-accent-hot: #A8283C;
+  width: min(420px, 100%);
+  margin-bottom: calc(12px + env(safe-area-inset-bottom));
+  border-radius: 20px 20px 18px 18px;
+  background: var(--lang-surface);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.55);
+  color: #ffffff;
+  animation: langSheetUp 0.22s ease-out;
+  overflow: hidden;
+}
+
+@keyframes langSheetUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 18px 10px;
+}
+
+.title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.closeBtn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: var(--lang-input);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.closeBtn:hover {
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 14px 18px;
+}
+
+.option {
+  width: 100%;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--lang-input);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.option:hover {
+  border-color: rgba(168, 40, 60, 0.45);
+  background: #222226;
+}
+
+.optionActive {
+  border-color: var(--lang-accent);
+  background: linear-gradient(135deg, var(--lang-accent-hot) 0%, var(--lang-accent) 100%);
+  color: #ffffff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.optionActive:hover {
+  background: linear-gradient(135deg, #c2344a 0%, var(--lang-accent-hot) 100%);
+  border-color: var(--lang-accent-hot);
+}
+
+.optionLabel {
+  flex: 1;
+  min-width: 0;
+}
+
+.check {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@media (min-width: 769px) {
+  .overlay {
+    align-items: center;
+  }
+
+  .sheet {
+    margin-bottom: 0;
+    border-radius: 18px;
+  }
+}

@@ -4,7 +4,7 @@ import { toast } from 'react-hot-toast';
 import styles from './MusicList.module.css';
 import type { SceneApiHelpers } from '../ScenesPanel/apiHelpers';
 import { IoPauseCircleOutline, IoPlaySkipForwardCircleOutline } from 'react-icons/io5';
-import { MdDeleteOutline } from 'react-icons/md';
+import { MdDeleteOutline, MdLibraryMusic, MdUpload } from 'react-icons/md';
 import ConfirmModal from '../../CommonModal/ConfirmModal';
 
 export interface MusicItem {
@@ -409,13 +409,12 @@ const MusicList: React.FC<MusicListProps> = ({ musicList, onUploadClick, fileId,
         <div className={styles.musicListContainer}>
             <div className={styles.musicListHeader}>
                 <h4>{t('createGame.bgmLibrary')}</h4>
-                <button className={styles.ghostSmall} onClick={onUploadClick}>
-                    + {t('createGame.uploadMusic')}
-                </button>
             </div>
             {musicList.length === 0 ? (
                 <div className={styles.emptyState}>
-                    <div className={styles.emptyIcon}>🎵</div>
+                    <span className={styles.emptyIconWrap} aria-hidden>
+                        <MdLibraryMusic className={styles.emptyIcon} />
+                    </span>
                     <p className={styles.emptyTitle}>{t('createGame.noMusic')}</p>
                     <p className={styles.emptyDescription}>{t('createGame.clickToAddBgm')}</p>
                 </div>
@@ -514,6 +513,17 @@ const MusicList: React.FC<MusicListProps> = ({ musicList, onUploadClick, fileId,
                     })}
                 </div>
             )}
+
+            <button
+                type="button"
+                className={styles.uploadCta}
+                onClick={onUploadClick}
+            >
+                <span className={styles.uploadCtaIcon} aria-hidden>
+                    <MdUpload size={16} />
+                </span>
+                {t('createGame.uploadMusic')}
+            </button>
 
             {/* 删除确认弹窗 */}
             <ConfirmModal

@@ -10,7 +10,7 @@ import GameGridSkeleton from '../components/Skeleton/GameGridSkeleton';
 import libraryDataApi from '../api/home/getGameData';
 import type { UserGameData } from '../api/home/getGameData.type';
 import gameTagsApi from '../api/gameTags/gameTagsApi';
-import { flattenThemeTags, type FlatThemeTag } from '../utils/themeTags';
+import { flattenThemeTags, useLocalizedThemeTags, type FlatThemeTag } from '../utils/themeTags';
 import {
     HOME_LIST_MODE_OPTIONS,
     HOME_LIST_SORT_OPTIONS,
@@ -125,6 +125,7 @@ const Categories: React.FC = () => {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const [themeTags, setThemeTags] = useState<FlatThemeTag[]>([]);
+    const displayThemeTags = useLocalizedThemeTags(themeTags);
     const [games, setGames] = useState<UserGameData[]>([]);
     const [page, setPage] = useState(0);
     const [hasMore, setHasMore] = useState(true);
@@ -433,7 +434,7 @@ const Categories: React.FC = () => {
                                     >
                                         {t('categories.all')}
                                     </button>
-                                    {themeTags.map((tag) => (
+                                    {displayThemeTags.map((tag) => (
                                         <button
                                             key={tag.id}
                                             type="button"

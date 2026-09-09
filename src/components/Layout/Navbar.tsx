@@ -13,7 +13,13 @@ import { buildGameDetailNavigateState } from '../../utils/gameDetailNavigation';
 import { isAdminRole, isOperatorRole, isVerifiedCreatorRole } from '../../utils/userRoles';
 import { resolveSearchResultSecondaryLine } from '../../lib/gameCardBody';
 import { isCreatorRoutePath } from '../../utils/miniProgram';
+import {
+    applyAppLanguage,
+    normalizeAppLanguage,
+    type AppLanguageCode,
+} from '../../utils/appLanguage';
 import UserAvatar from '../UserAvatar';
+import LanguageSelectModal from './LanguageSelectModal';
 
 /** 功能注释：暗色 funloom 导航图标基路径（assetsv2/home） */
 const HOME_ICON_BASE = `${import.meta.env.BASE_URL}data/assetsv2/home`;
@@ -47,10 +53,11 @@ const Navbar: React.FC<NavbarProps> = ({
     mobileOverlayScrolled = false,
     beforeLeaveAction,
 }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
     const [showUserMenu, setShowUserMenu] = useState(false);
+    const [showLanguageModal, setShowLanguageModal] = useState(false);
     const [isDesktopLayout, setIsDesktopLayout] = useState(window.innerWidth > 768);
     const [searchKeyword, setSearchKeyword] = useState('');
     const [searchResults, setSearchResults] = useState<UserGameData[]>([]);
@@ -65,6 +72,12 @@ const Navbar: React.FC<NavbarProps> = ({
     const avatarContainerRef = useRef<HTMLDivElement | null>(null);
     const searchBoxRef = useRef<HTMLFormElement | null>(null);
     const searchRequestIdRef = useRef(0);
+    const activeLanguage: AppLanguageCode =
+        normalizeAppLanguage(i18n.resolvedLanguage || i18n.language) ?? 'zh';
+
+    const handleLanguageChange = (code: AppLanguageCode) => {
+        void applyAppLanguage(code, (lng) => i18n.changeLanguage(lng));
+    };
 
     useEffect(() => {
         initialize();
@@ -427,6 +440,17 @@ const Navbar: React.FC<NavbarProps> = ({
                                         >
                                             {t('nav.profile')}
                                         </button>
+                                        {/* 功能注释：菜单只留「语言」入口，不展示当前语种；三档在弹窗里选 */}
+                                        <button
+                                            type="button"
+                                            className={styles.menuBtn}
+                                            onClick={() => {
+                                                setShowUserMenu(false);
+                                                setShowLanguageModal(true);
+                                            }}
+                                        >
+                                            {t('nav.language')}
+                                        </button>
                                         {!isDesktopLayout && (
                                             <button
                                                 className={styles.menuBtn}
@@ -515,6 +539,13 @@ const Navbar: React.FC<NavbarProps> = ({
                     onClose={() => setIsAuthModalOpen(false)}
                 />
             )}
+
+            <LanguageSelectModal
+                isOpen={showLanguageModal}
+                activeLanguage={activeLanguage}
+                onClose={() => setShowLanguageModal(false)}
+                onSelect={handleLanguageChange}
+            />
         </div>
     );
 };

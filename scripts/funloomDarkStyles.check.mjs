@@ -295,18 +295,41 @@ test('CustomIFCreate_编辑页应对齐世界观暗色卡表单', () => {
   assert.doesNotMatch(css, /\.mainContent\s*\{[^}]*width:\s*min\(720px/);
   assert.match(css, /--primary-dark:\s*#8E2135|--primary:\s*#A8283C/);
   assert.match(css, /\.formCard\s*\{[\s\S]*?background:\s*var\(--custom-if-surface\)/);
+  assert.match(css, /\.formSection\s*\{[\s\S]*?gap:\s*8px/);
+  assert.match(css, /\.formCard\s*\{[\s\S]*?gap:\s*10px/);
+  /* 功能注释：效果图是返回+居中标题工具条，禁止再左对齐大标题+长副文把右侧留空 */
+  assert.match(css, /\.pageHeader\s*\{[\s\S]*?grid-template-columns:\s*72px minmax\(0, 1fr\) 72px/);
+  assert.match(css, /\.pageTitle\s*\{[\s\S]*?text-align:\s*center/);
+  /* 功能注释：图1未选为深底描边芯片，选中实心酒红；禁止再做成透明纯文字 */
+  assert.match(css, /\.pageRoot\s+\.themeTagChip\s*\{[\s\S]*?background:\s*#1C1C1E/);
+  assert.match(css, /\.pageRoot\s+\.themeTagChip\s*\{[\s\S]*?border:\s*1px solid/);
+  assert.doesNotMatch(css, /\.pageRoot\s+\.themeTagChip\s*\{[^}]*background:\s*transparent/);
   assert.match(css, /\.pageRoot\s+\.themeTagChipActive\s*\{[\s\S]*?background:\s*#8E2135/);
-  assert.match(css, /\.pageRoot\s+\.textInput[\s\S]*?background:\s*var\(--custom-if-input\)/);
+  assert.match(css, /\.themeTagsWrap\s*\{[\s\S]*?repeat\(6,/);
+  assert.match(css, /@media \(max-width:\s*768px\)[\s\S]*?\.themeTagsWrap\s*\{[\s\S]*?repeat\(4,/);
+  assert.match(tsx, /styles\.themeTagsHead/);
+  assert.match(tsx, /styles\.requiredMark/);
+  assert.match(css, /\.pageRoot \.clearPill\s*\{[\s\S]*?background:\s*#8E2135/);
+  assert.match(css, /\.pageRoot \.primaryBtn[\s\S]*?border-radius:\s*999px/);
+  assert.match(css, /\.pageRoot \.textInput[\s\S]*?background:\s*var\(--custom-if-input\)/);
   assert.match(css, /\.richEditorDark/);
   assert.match(tsx, /styles\.formCard/);
   assert.match(tsx, /styles\.fieldBlock/);
-  assert.match(tsx, /styles\.pageSubtitle/);
+  assert.match(tsx, /styles\.pageBack/);
+  assert.match(tsx, /styles\.pageHeaderSlot/);
+  assert.match(tsx, /customIFCreate\.headerTest/);
+  assert.doesNotMatch(tsx, /styles\.pageSubtitle/);
   assert.match(tsx, /className=\{styles\.richEditorDark\}/);
   assert.match(tsx, /customIFCreate\.basicInfoTitle/);
-  assert.match(tsx, /customIFCreate\.uploadSectionTitle/);
+  /* 功能注释：上传区去掉「上传内容」标题/说明/「上传」标签，从类型切换直接开始 */
+  assert.doesNotMatch(tsx, /customIFCreate\.uploadSectionTitle/);
+  assert.doesNotMatch(tsx, /customIFCreate\.uploadSectionDesc/);
+  assert.doesNotMatch(tsx, /customIFCreate\.uploadLabel/);
+  assert.match(tsx, /createGame\.clearAll/);
   assert.doesNotMatch(tsx, /FooterArea/);
   assert.match(zh, /"basicInfoTitle":\s*"基础信息"/);
-  assert.match(zh, /"pageSubtitle":/);
+  assert.match(zh, /"headerTest":\s*"测试"/);
+  assert.match(zh, /"backAria":\s*"返回创作中心"/);
 });
 
 test('Rankings_排行榜应对齐奶油台面与酒红榜单卡', () => {
@@ -404,20 +427,23 @@ test('Create_手机我的数据应三列且数字缩小', () => {
   );
 });
 
-test('StGameCreate_应对齐墨黑底白纸卡片新版风格', () => {
+test('StGameCreate_应对齐图1世界观设定暗色卡风格', () => {
   const css = read('src/page/StGameCreate.module.css');
   const tsx = read('src/page/StGameCreate.tsx');
-  /* 功能注释：禁止浅灰页 + #fb5b67；墨黑底、白纸卡、酒红强调、步号缩小、手机三列标签 */
-  assert.match(css, /\.pageRoot\s*\{[\s\S]*?background:\s*var\(--st-ink\)|#000000/);
+  /* 功能注释：对齐图1——墨黑底 + #1A1A1A 面 + #1C1C1E 输入 + 酒红选中；禁止白纸卡 */
+  assert.match(css, /--st-surface:\s*#1A1A1A/);
+  assert.match(css, /--st-input:\s*#1C1C1E/);
   assert.match(css, /--st-accent-deep:\s*#8E2135/);
-  assert.match(css, /--st-paper:\s*#ffffff/);
+  assert.match(css, /\.pageRoot\s*\{[\s\S]*?background:\s*var\(--st-ink\)|#000000/);
   assert.match(css, /\.pageRoot\s*\{[\s\S]*?max-width:\s*none/);
   assert.doesNotMatch(css, /max-width:\s*1920px/);
-  assert.doesNotMatch(css, /#fb5b67/);
-  assert.match(css, /\.stepActive\s*\{[\s\S]*?background:\s*#ffffff/);
-  assert.match(css, /\.step\s*\{[\s\S]*?border:\s*1px solid rgba\(255,\s*255,\s*255/);
-  assert.match(css, /\.themeTagsPanel\s*\{[\s\S]*?background:\s*var\(--st-paper\)/);
-  assert.match(css, /\.group\s*\{[\s\S]*?background:\s*var\(--st-paper\)/);
+  assert.doesNotMatch(css, /#fb5b67|--st-paper:\s*#ffffff/);
+  assert.match(css, /\.group\s*\{[\s\S]*?background:\s*var\(--st-surface\)/);
+  assert.match(css, /\.themeTagsPanel\s*\{[\s\S]*?background:\s*var\(--st-surface\)/);
+  assert.match(css, /\.text\s*\{[\s\S]*?background:\s*var\(--st-input\)/);
+  assert.match(css, /\.themeTagsWrap\s*\{[\s\S]*?repeat\(6,/);
+  assert.match(css, /\.themeTagChipActive\s*\{[\s\S]*?background:\s*var\(--st-accent-deep\)/);
+  assert.match(css, /\.stepActive\s*\{[\s\S]*?background:\s*var\(--st-accent-deep\)/);
   assert.match(css, /@media \(max-width:\s*768px\)[\s\S]*?\.themeTagsWrap\s*\{[\s\S]*?repeat\(3,/);
   assert.match(css, /@media \(max-width:\s*768px\)[\s\S]*?\.actions \.primary[\s\S]*?width:\s*100%/);
   assert.match(tsx, /styles\.stepIndex/);
@@ -456,3 +482,45 @@ test('Document_文档中心应对齐白顶栏加墨黑阅读区', () => {
   assert.match(css, /\.markdownBody img\s*\{[\s\S]*?height:\s*auto/);
   assert.match(css, /@media \(max-width:\s*768px\)[\s\S]*?\.markdownBody img\s*\{[\s\S]*?width:\s*100%/);
 });
+
+test('UploadProgressModal_应对齐墨黑码头而非白底浮层', () => {
+  const css = read('src/components/GameSettingEditor/DocumentUpload/UploadProgressModal.module.css');
+  const tsx = read('src/components/GameSettingEditor/DocumentUpload/UploadProgressModal.tsx');
+  const overlayCss = read('src/components/CreateGame/UploadProgress.module.css');
+  /* 功能注释：进度码头必须吃 funloom 墨黑/酒红，禁止再出白卡片和亮粉关闭图 */
+  assert.match(css, /--dock-surface:\s*#1A1A1A/);
+  assert.match(css, /--dock-input:\s*#1C1C1E/);
+  assert.match(css, /--dock-accent:\s*#8E2135/);
+  assert.match(css, /--dock-accent-hot:\s*#A8283C/);
+  assert.match(css, /\.modalContent\s*\{[\s\S]*?background:\s*var\(--dock-surface\)/);
+  assert.match(css, /\.jobItem\s*\{[\s\S]*?background:\s*var\(--dock-input\)/);
+  assert.match(css, /\.jobItem\s*\{[\s\S]*?justify-content:\s*center/);
+  assert.match(css, /\.progressContainer\s*\{[\s\S]*?align-items:\s*center/);
+  assert.doesNotMatch(css, /@media \(max-width:\s*768px\)[\s\S]*?\.jobDetails\s*\{[\s\S]*?flex-direction:\s*column/);
+  assert.doesNotMatch(css, /@media \(max-width:\s*768px\)[\s\S]*?\.progressContainer\s*\{[\s\S]*?align-items:\s*flex-start/);
+  assert.match(tsx, /styles\.jobDetails[\s\S]*styles\.etaText/);
+  assert.doesNotMatch(css, /\.modalContent\s*\{[\s\S]*?background:\s*#fff/);
+  assert.doesNotMatch(tsx, /关闭\.png|#FB4655/);
+  assert.match(tsx, /formatEtaPrecise/);
+  assert.match(overlayCss, /\.uploadOverlayContent\s*\{[^}]*background:\s*var\(--dock-surface\)/);
+  assert.doesNotMatch(overlayCss, /\.uploadOverlayContent\s*\{[^}]*background:\s*rgba\(255/);
+});
+
+test('AssetGapBanner_生成进度应走墨黑竖脊而非糖纸色块', () => {
+  const css = read('src/components/GameSettingEditor/AssetGapBanner.module.css');
+  const tsx = read('src/components/GameSettingEditor/AssetGapBanner.tsx');
+  /* 功能注释：禁止浅绿完成卡 / 浅红进行卡 / 手机双列折行；当前步只留酒红左边轨 */
+  assert.match(css, /--gap-surface:\s*#1A1A1A/);
+  assert.match(css, /--gap-input:\s*#1C1C1E/);
+  assert.match(css, /--gap-accent:\s*#8E2135/);
+  assert.match(css, /\.banner\s*\{[\s\S]*?background:\s*var\(--gap-surface\)/);
+  assert.match(css, /\.banner\s*\{[\s\S]*?margin:\s*0;/);
+  assert.doesNotMatch(css, /\.banner\s*\{[\s\S]*?margin:\s*0 0 16px/);
+  assert.match(css, /\.steps\s*\{[\s\S]*?flex-direction:\s*column/);
+  assert.match(css, /\.stepActive\s*\{[\s\S]*?inset 3px 0 0 var\(--gap-accent\)/);
+  assert.doesNotMatch(css, /#2ea05a|#1a1a1a|rgba\(255,\s*247,\s*248/);
+  assert.doesNotMatch(css, /grid-template-columns:\s*1fr 1fr/);
+  assert.match(tsx, /styles\.stepCopy/);
+  assert.match(tsx, /createGame\.assetProgressStepPortraits/);
+});
+
