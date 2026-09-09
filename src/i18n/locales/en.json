@@ -554,6 +554,7 @@
     "withdrawMaxPrefix": "Max withdrawable: ",
     "withdrawRecordsBack": "Back",
     "withdrawRecordsViewAll": "View more",
+    "earningsCollapse": "Collapse",
     "settleSuccessZero": "Settlement successful. No earnings this time.",
     "submitting": "Submitting...",
     "settleConfirmDiamondsMessage": "Are you sure you want to settle the current total earnings of {{amount}} diamonds? The diamonds will be transferred to your account balance after settlement.",

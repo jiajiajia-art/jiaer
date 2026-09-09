@@ -554,6 +554,7 @@
     "withdrawMaxPrefix": "可提上限：",
     "withdrawRecordsBack": "返回",
     "withdrawRecordsViewAll": "查看更多",
+    "earningsCollapse": "收起",
     "settleSuccessZero": "结算成功，本次无收益",
     "submitting": "提交中...",
     "settleConfirmDiamondsMessage": "确定要结算当前总收益 {{amount}} 钻石吗？结算后钻石将转入账户余额。",

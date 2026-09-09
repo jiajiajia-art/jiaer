@@ -6,20 +6,62 @@
   align-items: center;
   justify-content: center;
   padding: 16px;
-  background: rgba(15, 23, 42, 0.45);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
 }
 
 .modal {
+  --withdraw-accent: #A8283C;
+  --withdraw-accent-deep: #8E2135;
+  --withdraw-surface: transparent;
+  --withdraw-card: rgba(255, 255, 255, 0.06);
+  --withdraw-elevated: rgba(255, 255, 255, 0.08);
+  --withdraw-border: rgba(255, 255, 255, 0.08);
+  --withdraw-muted: rgba(255, 255, 255, 0.55);
+  --withdraw-faint: rgba(255, 255, 255, 0.35);
+  position: relative;
   width: min(520px, 100%);
   max-height: min(86vh, 720px);
   overflow: auto;
-  border-radius: 18px;
-  background: #fff;
-  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.22);
+  border-radius: 10px;
+  /* 上深下浅，底部保留灰，避免通透成黑 */
+  background:
+    linear-gradient(0deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15)),
+    linear-gradient(180deg, #343434 0%, rgba(52, 52, 52, 0.72) 100%);
+  border: 0.68px solid transparent;
+  backdrop-filter: blur(47px);
+  -webkit-backdrop-filter: blur(47px);
+  box-shadow: none;
   padding: 20px 22px 22px;
+  color: #ffffff;
+  box-sizing: border-box;
+}
+
+/* 白边线性渐变（border-image 与 border-radius 不兼容） */
+.modal::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  padding: 0.68px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(255, 255, 255, 0.18) 60%,
+    rgba(255, 255, 255, 0) 90%
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 3;
 }
 
 .header {
+  position: relative;
+  z-index: 4;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -30,7 +72,8 @@
   margin: 0;
   font-size: 18px;
   font-weight: 700;
-  color: #111827;
+  color: #ffffff;
+  letter-spacing: -0.02em;
 }
 
 .close {
@@ -39,10 +82,16 @@
   font-size: 24px;
   line-height: 1;
   cursor: pointer;
-  color: #6b7280;
+  color: var(--withdraw-muted);
+}
+
+.close:hover {
+  color: #ffffff;
 }
 
 .body {
+  position: relative;
+  z-index: 4;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -51,7 +100,7 @@
 .state,
 .hint {
   margin: 0;
-  color: #374151;
+  color: var(--withdraw-muted);
   line-height: 1.6;
   font-size: 14px;
 }
@@ -60,15 +109,22 @@
 .rejectBox {
   padding: 12px 14px;
   border-radius: 12px;
-  background: #fff7ed;
-  color: #9a3412;
+  background: rgba(168, 40, 60, 0.16);
+  border: 1px solid rgba(168, 40, 60, 0.35);
+  color: #ffd6dc;
   font-size: 14px;
   line-height: 1.6;
 }
 
+.rejectBox {
+  background: rgba(183, 58, 58, 0.18);
+  border-color: rgba(183, 58, 58, 0.4);
+  color: #ffb3b3;
+}
+
 .rejectRemark {
   margin-top: 6px;
-  color: #7c2d12;
+  color: #ffc9c9;
   font-size: 13px;
 }
 
@@ -77,20 +133,20 @@
   flex-wrap: wrap;
   gap: 10px 16px;
   font-size: 13px;
-  color: #4b5563;
+  color: var(--withdraw-muted);
 }
 
 /* 可提上限数字加粗，方便用户一眼看到能提多少 */
 .maxHighlight {
   font-weight: 800;
-  color: #111827;
+  color: #ffffff;
   margin-left: 2px;
 }
 
 .meta {
   margin: 0;
   font-size: 13px;
-  color: #6b7280;
+  color: var(--withdraw-faint);
 }
 
 .label {
@@ -99,7 +155,7 @@
   gap: 6px;
   font-size: 13px;
   font-weight: 600;
-  color: #111827;
+  color: #ffffff;
 }
 
 /* 标题与最低提现 tip 同一行：tip 靠右 */
@@ -114,7 +170,7 @@
 .amountHint {
   font-size: 12px;
   font-weight: 400;
-  color: #9ca3af;
+  color: var(--withdraw-faint);
   text-align: right;
 }
 
@@ -122,11 +178,24 @@
 .textarea {
   width: 100%;
   box-sizing: border-box;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--withdraw-border);
   border-radius: 10px;
   padding: 10px 12px;
   font-size: 14px;
   font-family: inherit;
+  background: var(--withdraw-elevated);
+  color: #ffffff;
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--withdraw-faint);
+}
+
+.input:focus,
+.textarea:focus {
+  outline: none;
+  border-color: rgba(168, 40, 60, 0.55);
 }
 
 .primaryButton {
@@ -134,11 +203,15 @@
   border-radius: 999px;
   min-height: 42px;
   padding: 0 18px;
-  background: #fb4655;
+  background: var(--withdraw-accent);
   color: #fff;
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
+}
+
+.primaryButton:hover:not(:disabled) {
+  background: var(--withdraw-accent-deep);
 }
 
 .primaryButton:disabled {
@@ -147,8 +220,10 @@
 }
 
 .records {
+  position: relative;
+  z-index: 4;
   margin-top: 18px;
-  border-top: 1px solid #f3f4f6;
+  border-top: 1px solid var(--withdraw-border);
   padding-top: 14px;
 }
 
@@ -164,17 +239,22 @@
   margin: 0;
   font-size: 14px;
   font-weight: 700;
+  color: #ffffff;
 }
 
 .viewAllButton {
   border: none;
   background: transparent;
-  color: #c2410c;
+  color: #f5d0a9;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   padding: 0;
   white-space: nowrap;
+}
+
+.viewAllButton:hover {
+  color: #ffd6dc;
 }
 
 .recordList {
@@ -190,14 +270,15 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
   font-size: 12px;
-  color: #374151;
+  color: rgba(255, 255, 255, 0.78);
   padding: 8px 10px;
   border-radius: 10px;
-  background: #f9fafb;
+  background: var(--withdraw-elevated);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .recordTime {
-  color: #9ca3af;
+  color: var(--withdraw-faint);
 }
 
 .statusText {
@@ -205,15 +286,15 @@
 }
 
 .statusPending {
-  color: #c9782a;
+  color: #f5d0a9;
 }
 
 .statusApproved {
-  color: #2d8c58;
+  color: #6fcf97;
 }
 
 .statusRejected {
-  color: #b73a3a;
+  color: #ff8a8a;
 }
 
 /* 列表内驳回说明独占一行；备注文字紧跟「备注：」左对齐 */
@@ -226,13 +307,13 @@
   gap: 4px;
   font-size: 12px;
   line-height: 1.5;
-  color: #b73a3a;
+  color: #ff8a8a;
   text-align: left;
 }
 
 .recordRejectLabel {
   flex-shrink: 0;
-  color: #9ca3af;
+  color: var(--withdraw-faint);
   font-weight: 600;
 }
 

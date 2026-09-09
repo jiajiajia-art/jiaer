@@ -261,25 +261,40 @@
     margin-top: 0;
 }
 
-.earningsPanel {
+.earningsPanelWrap {
+    display: flex;
+    flex-direction: column;
     margin-top: 0;
     border-radius: 10px;
-    padding: 18px 16px;
     background: var(--creator-card);
     border: 1px solid rgba(255, 255, 255, 0.04);
-    display: flex;
+    overflow: hidden;
+}
+
+.earningsPanelBody {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
     align-items: center;
-    gap: 12px;
+    min-width: 0;
+    padding: 10px 0 12px;
+}
+
+.earningsPanelTop {
+    display: contents;
 }
 
 .earningsPanelItem {
-    flex: 1 1 0;
     min-width: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 8px;
     text-align: center;
+    padding: 8px;
+}
+
+.earningsPanelItem:first-child {
+    border-right: 1px solid var(--creator-divider);
 }
 
 .earningsPanelLabel {
@@ -331,43 +346,84 @@
     cursor: not-allowed;
 }
 
-.earningsPanelDivider {
-    width: 1px;
-    align-self: stretch;
-    background: rgba(255, 255, 255, 0.12);
-    flex-shrink: 0;
-}
-
 .earningsPanelActions {
+    grid-column: 3;
+    grid-row: 1;
     flex: 0 0 auto;
     display: flex;
     align-items: center;
     justify-content: center;
-    align-self: stretch;
-    padding-left: 4px;
+    padding: 0 14px;
 }
 
-.earningsRecordsLink {
+.earningsMoreToggle {
     appearance: none;
     border: none;
     background: transparent;
     color: rgba(255, 255, 255, 0.55);
     font-size: 12px;
     display: inline-flex;
+    flex-direction: column;
     align-items: center;
-    gap: 4px;
+    justify-content: center;
+    gap: 2px;
     cursor: pointer;
     padding: 0;
+    line-height: 1.3;
 }
 
-.earningsRecordsLink:hover {
+.earningsMoreToggle:hover {
     color: rgba(255, 255, 255, 0.85);
 }
 
-.earningsRecordsIcon {
-    width: 12px;
-    height: 12px;
+.earningsMoreIcon {
+    width: 14px;
+    height: 14px;
     flex-shrink: 0;
+    transition: transform 0.2s ease;
+}
+
+.earningsMoreIconOpen {
+    transform: rotate(180deg);
+}
+
+.earningsExtraStats {
+    display: contents;
+}
+
+.earningsExtraItem {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 8px;
+    text-align: center;
+    min-width: 0;
+}
+
+.earningsExtraItem:nth-child(odd) {
+    grid-column: 1;
+    border-right: 1px solid var(--creator-divider);
+}
+
+.earningsExtraItem:nth-child(even) {
+    grid-column: 2;
+}
+
+.earningsExtraValue {
+    color: #ffffff;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+}
+
+.earningsExtraLabel {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.3;
 }
 
 .creatorHeroTop {
@@ -1066,8 +1122,7 @@
     margin: 0 auto 28px;
 }
 
-.primaryStatsBar,
-.expandedStatsBar {
+.primaryStatsBar {
     display: flex;
     align-items: stretch;
     width: 100%;
@@ -1089,8 +1144,7 @@
     position: relative;
 }
 
-.primaryStatItem:not(:last-child)::after,
-.expandedStatItem:not(:last-child)::after {
+.primaryStatItem:not(:last-child)::after {
     content: '';
     position: absolute;
     right: 0;
@@ -1187,23 +1241,40 @@
 }
 
 .expandedStatsBar {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: stretch;
+    width: 100%;
+    gap: 0;
     margin-top: 4px;
-    flex-wrap: wrap;
-    border-top: 1px solid rgba(17, 24, 39, 0.06);
     padding-top: 8px;
 }
 
 .expandedStatItem {
-    flex: 1 1 20%;
-    min-width: 120px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 14px 4px;
+    text-align: center;
+    position: relative;
 }
 
 .expandedStatItemAction .statActionRow {
     justify-content: center;
 }
 
-.expandedStatItem:not(:last-child)::after {
-    display: none;
+/* 四列网格：行末不加竖线 */
+.expandedStatItem:not(:nth-child(4n))::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 22%;
+    bottom: 22%;
+    width: 1px;
+    background: var(--creator-divider);
 }
 
 .sectionHeader {
@@ -1660,11 +1731,13 @@
         font-size: 12px;
     }
 
-    .earningsPanel {
+    .earningsPanelWrap {
         margin-top: 0;
-        padding: 14px 12px;
         border-radius: 10px;
-        gap: 8px;
+    }
+
+    .earningsPanelBody {
+        padding: 8px 0 10px;
     }
 
     .earningsPanelLabel {
@@ -1673,6 +1746,22 @@
 
     .earningsPanelValue {
         font-size: 18px;
+    }
+
+    .earningsPanelActions {
+        padding: 0 12px;
+    }
+
+    .earningsExtraValue {
+        font-size: 18px;
+    }
+
+    .earningsExtraLabel {
+        font-size: 11px;
+    }
+
+    .earningsExtraItem {
+        padding: 10px 6px;
     }
 
     .creatorHeroTop {
@@ -1777,9 +1866,22 @@
         font-size: 11px;
     }
 
+    .expandedStatsBar {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
     .expandedStatItem {
-        flex: 1 1 40%;
-        min-width: 0;
+        padding: 10px 2px;
+        gap: 4px;
+    }
+
+    .expandedStatItem .statValue {
+        font-size: 18px;
+    }
+
+    .expandedStatItem .statLabel {
+        font-size: 11px;
+        line-height: 1.25;
     }
 
     .statsSection,

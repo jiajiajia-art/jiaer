@@ -1,7 +1,8 @@
 .modalOverlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.72);
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -16,27 +17,54 @@
 }
 
 .modalContent {
-    --ex-card: #1C1C1E;
-    --ex-elevated: #242426;
-    --ex-label: #8E8E93;
+    --ex-elevated: rgba(255, 255, 255, 0.06);
+    --ex-label: rgba(255, 255, 255, 0.55);
     --ex-value: #FFFFFF;
-    --ex-border: #2C2C2E;
+    --ex-border: rgba(255, 255, 255, 0.08);
     --ex-primary: #A8283C;
     --ex-primary-hover: #C23A50;
     --ex-primary-dark: #8E2135;
-    background: var(--ex-card);
-    border-radius: 12px;
-    width: 92%;
-    max-width: 420px;
-    border: 1px solid var(--ex-border);
-    box-shadow: none;
     position: relative;
+    width: min(322px, calc(100vw - 20px));
+    max-width: 322px;
+    border-radius: 10px;
+    /* 上深下浅，底部保留灰，避免通透成黑 */
+    background:
+        linear-gradient(0deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15)),
+        linear-gradient(180deg, #343434 0%, rgba(52, 52, 52, 0.72) 100%);
+    box-sizing: border-box;
+    border: 0.68px solid transparent;
+    backdrop-filter: blur(47px);
+    -webkit-backdrop-filter: blur(47px);
+    box-shadow: none;
     display: flex;
     flex-direction: column;
     padding: 20px 18px 18px;
     max-height: calc(100dvh - 32px - env(safe-area-inset-bottom));
     overflow: hidden;
     color: var(--ex-value);
+}
+
+/* 白边线性渐变（border-image 与 border-radius 不兼容） */
+.modalContent::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    padding: 0.68px;
+    background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.55) 0%,
+        rgba(255, 255, 255, 0.18) 60%,
+        rgba(255, 255, 255, 0) 90%
+    );
+    -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 3;
 }
 
 .closeBtn {
@@ -175,7 +203,7 @@
     align-items: center;
     gap: 10px;
     padding: 12px 14px;
-    background: #000000;
+    background: rgba(0, 0, 0, 0.28);
     border-radius: 10px;
     border: 1px solid var(--ex-border);
     transition: border-color 0.2s ease;
@@ -345,8 +373,8 @@
     }
 
     .modalContent {
-        width: 100%;
-        max-width: none;
+        width: min(322px, calc(100vw - 20px));
+        max-width: 322px;
         padding: 18px 16px 16px;
         min-height: auto;
         max-height: calc(100dvh - 20px - env(safe-area-inset-bottom));

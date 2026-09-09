@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { IoChevronDown } from 'react-icons/io5';
-import { HiOutlineExternalLink } from 'react-icons/hi';
 import { MdOutlineEdit } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -89,6 +88,7 @@ const Create: React.FC = () => {
     const [draftFilterKey, setDraftFilterKey] = useState<DraftBoxFilterKey>('all');
     const [streakDays, setStreakDays] = useState(0);
     const [isStatsExpanded, setIsStatsExpanded] = useState(false);
+    const [isEarningsMoreExpanded, setIsEarningsMoreExpanded] = useState(false);
     const [isEditNicknameOpen, setIsEditNicknameOpen] = useState(false);
     const [nicknameDraft, setNicknameDraft] = useState('');
     const [isSavingNickname, setIsSavingNickname] = useState(false);
@@ -107,6 +107,8 @@ const Create: React.FC = () => {
     const isMember = Boolean(user?.user?.isMember);
     const isSignedAuthor = Boolean(user?.user?.userSegment && user.user.userSegment !== 'normal');
     const isWorkIncentive = stats.incentiveType === 'incentive' || stats.incentiveType === 'game_incentive' || stats.incentiveType === 'all_incentive';
+    const isCodeIncentive = stats.incentiveType === 'code_incentive' || stats.incentiveType === 'all_incentive';
+    const hasExtraEarnings = isWorkIncentive || isCodeIncentive;
 
     const handleWithdrawClick = () => {
         setIsWithdrawModalOpen(true);
@@ -186,7 +188,6 @@ const Create: React.FC = () => {
             setIsUploadingAvatar(false);
         }
     };
-    const isCodeIncentive = stats.incentiveType === 'code_incentive' || stats.incentiveType === 'all_incentive';
 
     const { publishedGames, draftGames } = useMemo(
         () => partitionCreatorGames(fileMetas),
@@ -780,30 +781,6 @@ const Create: React.FC = () => {
                                             <div className={styles.primaryStatValue}>{creatorStats?.spendPoints ?? 0}</div>
                                             <div className={styles.primaryStatLabel}>{t('creatorStats.spendPoints')}</div>
                                         </div>
-                                        {isWorkIncentive && (
-                                            <div className={styles.expandedStatItem}>
-                                                <div className={styles.primaryStatValue}>{stats.totalIncentiveAmount}</div>
-                                                <div className={styles.primaryStatLabel}>{t('create.totalIncentiveEarnings')}</div>
-                                            </div>
-                                        )}
-                                        {isWorkIncentive && (
-                                            <div className={styles.expandedStatItem}>
-                                                <div className={styles.primaryStatValue}>{stats.pendingIncome}</div>
-                                                <div className={styles.primaryStatLabel}>{t('create.pendingIncentiveEarnings')}</div>
-                                            </div>
-                                        )}
-                                        {isCodeIncentive && (
-                                            <div className={styles.expandedStatItem}>
-                                                <div className={styles.primaryStatValue}>{stats.inviteTotalAmount}</div>
-                                                <div className={styles.primaryStatLabel}>{t('create.inviteCodeTotalEarnings')}</div>
-                                            </div>
-                                        )}
-                                        {isCodeIncentive && (
-                                            <div className={styles.expandedStatItem}>
-                                                <div className={styles.primaryStatValue}>{stats.invitePendingIncome}</div>
-                                                <div className={styles.primaryStatLabel}>{t('create.inviteCodePendingEarnings')}</div>
-                                            </div>
-                                        )}
                                     </div>
                                 )}
                             </div>
@@ -855,49 +832,89 @@ const Create: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className={styles.earningsPanel}>
-                            <div className={styles.earningsPanelItem}>
-                                <div className={styles.earningsPanelLabel}>{t('create.pendingRewardPoints')}</div>
-                                <div className={styles.earningsPanelValueRow}>
-                                    <div className={styles.earningsPanelValue}>{formatEarningsValue(stats.totalAmount)}</div>
-                                    {stats.totalAmount > 0 && (
-                                        <button
-                                            type="button"
-                                            className={styles.earningsInlineSettleButton}
-                                            onClick={() => setIsSettleModalOpen(true)}
-                                            disabled={isSettling}
-                                        >
-                                            {t('create.settle')}
-                                        </button>
+                        <div className={styles.earningsPanelWrap}>
+                            <div className={styles.earningsPanelBody}>
+                                <div className={styles.earningsPanelTop}>
+                                    <div className={styles.earningsPanelItem}>
+                                        <div className={styles.earningsPanelLabel}>{t('create.pendingRewardPoints')}</div>
+                                        <div className={styles.earningsPanelValueRow}>
+                                            <div className={styles.earningsPanelValue}>{formatEarningsValue(stats.totalAmount)}</div>
+                                            {stats.totalAmount > 0 && (
+                                                <button
+                                                    type="button"
+                                                    className={styles.earningsInlineSettleButton}
+                                                    onClick={() => setIsSettleModalOpen(true)}
+                                                    disabled={isSettling}
+                                                >
+                                                    {t('create.settle')}
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className={styles.earningsPanelItem}>
+                                        <div className={styles.earningsPanelLabel}>{t('create.pendingRewardDiamonds')}</div>
+                                        <div className={styles.earningsPanelValueRow}>
+                                            <div className={styles.earningsPanelValue}>{formatEarningsValue(stats.totalDiamondsAmount)}</div>
+                                            {stats.totalDiamondsAmount > 0 && (
+                                                <button
+                                                    type="button"
+                                                    className={styles.earningsInlineSettleButton}
+                                                    onClick={() => setIsSettleDiamondsModalOpen(true)}
+                                                    disabled={isSettling}
+                                                >
+                                                    {t('create.settle')}
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {hasExtraEarnings && (
+                                        <div className={styles.earningsPanelActions}>
+                                            <button
+                                                type="button"
+                                                className={styles.earningsMoreToggle}
+                                                onClick={() => setIsEarningsMoreExpanded((prev) => !prev)}
+                                                aria-expanded={isEarningsMoreExpanded}
+                                            >
+                                                <span>
+                                                    {isEarningsMoreExpanded
+                                                        ? t('create.earningsCollapse')
+                                                        : t('create.withdrawRecordsViewAll')}
+                                                </span>
+                                                <IoChevronDown
+                                                    className={`${styles.earningsMoreIcon} ${isEarningsMoreExpanded ? styles.earningsMoreIconOpen : ''}`}
+                                                />
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
-                            </div>
-                            <div className={styles.earningsPanelDivider} />
-                            <div className={styles.earningsPanelItem}>
-                                <div className={styles.earningsPanelLabel}>{t('create.pendingRewardDiamonds')}</div>
-                                <div className={styles.earningsPanelValueRow}>
-                                    <div className={styles.earningsPanelValue}>{formatEarningsValue(stats.totalDiamondsAmount)}</div>
-                                    {stats.totalDiamondsAmount > 0 && (
-                                        <button
-                                            type="button"
-                                            className={styles.earningsInlineSettleButton}
-                                            onClick={() => setIsSettleDiamondsModalOpen(true)}
-                                            disabled={isSettling}
-                                        >
-                                            {t('create.settle')}
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                            <div className={styles.earningsPanelActions}>
-                                <button
-                                    type="button"
-                                    className={styles.earningsRecordsLink}
-                                    onClick={() => navigate('/create/withdraw-records')}
-                                >
-                                    <span>{t('create.withdrawRecordsViewAll')}</span>
-                                    <HiOutlineExternalLink className={styles.earningsRecordsIcon} />
-                                </button>
+                                {hasExtraEarnings && isEarningsMoreExpanded && (
+                                    <div className={styles.earningsExtraStats}>
+                                        {isWorkIncentive && (
+                                            <div className={styles.earningsExtraItem}>
+                                                <div className={styles.earningsExtraLabel}>{t('create.totalIncentiveEarnings')}</div>
+                                                <div className={styles.earningsExtraValue}>{stats.totalIncentiveAmount}</div>
+                                            </div>
+                                        )}
+                                        {isWorkIncentive && (
+                                            <div className={styles.earningsExtraItem}>
+                                                <div className={styles.earningsExtraLabel}>{t('create.pendingIncentiveEarnings')}</div>
+                                                <div className={styles.earningsExtraValue}>{stats.pendingIncome}</div>
+                                            </div>
+                                        )}
+                                        {isCodeIncentive && (
+                                            <div className={styles.earningsExtraItem}>
+                                                <div className={styles.earningsExtraLabel}>{t('create.inviteCodeTotalEarnings')}</div>
+                                                <div className={styles.earningsExtraValue}>{stats.inviteTotalAmount}</div>
+                                            </div>
+                                        )}
+                                        {isCodeIncentive && (
+                                            <div className={styles.earningsExtraItem}>
+                                                <div className={styles.earningsExtraLabel}>{t('create.inviteCodePendingEarnings')}</div>
+                                                <div className={styles.earningsExtraValue}>{stats.invitePendingIncome}</div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
