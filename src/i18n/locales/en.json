@@ -242,10 +242,10 @@
     "mode": "Mode",
     "modes": {
       "all": "All",
-      "rolePlaying": "AI文游",
-      "world": "酒馆卡",
-      "novel": "视觉小说",
-      "custom": "自定义",
+      "rolePlaying": "AI Text Game",
+      "world": "Tavern Card",
+      "novel": "Visual Novel",
+      "custom": "Custom",
       "interactiveVideo": "Interactive Video"
     },
     "modeOptions": "Mode Options",
@@ -307,10 +307,10 @@
     "all": "All",
     "modes": {
       "all": "All",
-      "rolePlaying": "AI文游",
-      "world": "酒馆卡",
-      "novel": "视觉小说",
-      "custom": "自定义",
+      "rolePlaying": "AI Text Game",
+      "world": "Tavern Card",
+      "novel": "Visual Novel",
+      "custom": "Custom",
       "interactiveVideo": "Interactive Video"
     },
     "sorts": {
@@ -482,11 +482,11 @@
     "noDraftsForFilter": "No drafts in this category",
     "draftFilters": {
       "all": "All",
-      "role-playing": "AI文游",
-      "world": "酒馆卡",
-      "custom": "自定义",
+      "role-playing": "AI Text Game",
+      "world": "Tavern Card",
+      "custom": "Custom",
       "ivg": "Interactive Video",
-      "novel": "视觉小说"
+      "novel": "Visual Novel"
     },
     "cancelSelectAll": "Cancel All",
     "selectAll": "Select All",
@@ -1854,6 +1854,7 @@
     "requirement4": "Recommended size: single file ≤ 10MB, total ≤ 50MB.",
     "requirement5": "manifest (optional): advanced config; contact support if needed.",
     "manifestLabel": "manifest (optional)",
+    "clearAll": "Clear all",
     "loadTitleFailed": "Failed to load game title, please try again later",
     "unzipFailed": "Unzip failed: {{message}}",
     "uploadIndexHtml": "Please upload index.html",

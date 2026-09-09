@@ -113,6 +113,15 @@ test('GameSettingsEditor_创作壳应对齐funloom暗色', () => {
   // AI 一句话：两枚 CTA 左右并排，禁止再纵向堆叠
   assert.match(docsCss, /\.generateFromIdeaActions\s*\{[\s\S]*?flex-direction:\s*row/);
   assert.doesNotMatch(docsCss, /\.generateFromIdeaActions\s*\{[^}]*flex-direction:\s*column/);
+  /* 功能注释：手机端 ✨ 作右上角背景水印，避免图标挤左上跑偏 */
+  assert.match(
+    docsCss,
+    /@media \(max-width:\s*768px\)[\s\S]*?\.ideaMethodPanel \.generateFromIdeaIcon\s*\{[\s\S]*?position:\s*absolute/,
+  );
+  assert.match(
+    docsCss,
+    /@media \(max-width:\s*768px\)[\s\S]*?\.ideaMethodPanel \.generateFromIdeaIcon\s*\{[\s\S]*?right:\s*12px/,
+  );
   // 创建空游戏 / AI 弹窗对齐暗色壳，禁止白底
   const emptyModalCss = readFileSync(join(root, 'src/components/GameSettingEditor/DocumentUpload/CreateEmptyGameModal.module.css'), 'utf8');
   assert.match(emptyModalCss, /\.modal\s*\{[\s\S]*?background:\s*#1A1A1A/);

@@ -227,32 +227,34 @@
 }
 
 .clearFieldButton {
+  /* 功能注释：对齐自定义上传「一键清空」实心酒红胶囊，避免灰描边弱按钮难辨认 */
   margin-left: auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  padding: 6px 12px;
-  border: 1px solid var(--st-border);
+  min-height: 28px;
+  padding: 4px 12px;
+  border: none;
   border-radius: 999px;
-  background: var(--st-input);
-  color: var(--st-muted);
+  background: var(--st-accent-deep);
+  color: #ffffff;
   font-size: 12px;
   font-weight: 600;
   line-height: 1.2;
   cursor: pointer;
-  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+  font-family: inherit;
+  transition: background 0.15s ease, opacity 0.15s ease;
 }
 
 .clearFieldButton:hover:not(:disabled) {
-  border-color: rgba(168, 40, 60, 0.55);
+  background: var(--st-accent);
   color: #ffffff;
-  background: rgba(142, 33, 53, 0.2);
 }
 
 .clearFieldButton:disabled {
   cursor: not-allowed;
-  opacity: 0.45;
+  opacity: 0.4;
 }
 
 .stepOneArea {
@@ -622,6 +624,9 @@
   }
 
   .stepOneArea {
-    min-height: 180px;
+    /* 功能注释：手机提示词/开场白高度压到约原 rows=18 的一半，避免首屏过长 */
+    min-height: 0;
+    height: calc(1.55em * 9 + 24px);
+    max-height: calc(1.55em * 9 + 24px);
   }
 }

@@ -824,7 +824,7 @@ const handleCreate = () => {
                     className={styles.clearPill}
                     onClick={() => setManifestText('')}
                   >
-                    {t('createGame.clearAll')}
+                    {t('customIFCreate.clearAll')}
                   </button>
                 </div>
                 <textarea

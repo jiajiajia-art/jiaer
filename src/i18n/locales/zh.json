@@ -1853,6 +1853,7 @@
     "requirement4": "大小建议：单文件 ≤ 10MB、总大小 ≤ 50MB。",
     "requirement5": "manifest 配置（可选）：高级功能，有特殊需求请联系客服。",
     "manifestLabel": "manifest（可选）",
+    "clearAll": "一键清空",
     "loadTitleFailed": "加载游戏标题失败，请稍后重试",
     "unzipFailed": "解压失败：{{message}}",
     "uploadIndexHtml": "请上传 index.html",

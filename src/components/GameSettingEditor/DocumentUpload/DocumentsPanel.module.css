@@ -213,6 +213,31 @@
         align-items: stretch;
     }
 
+    /* 功能注释：手机端把 ✨ 当右上角背景水印，避免挤在左上角像「图标跑偏」 */
+    .ideaMethodPanel .generateFromIdeaIcon {
+        position: absolute;
+        top: 10px;
+        right: 12px;
+        left: auto;
+        margin: 0;
+        font-size: 3.25rem;
+        line-height: 1;
+        opacity: 0.28;
+        pointer-events: none;
+        z-index: 0;
+        transform: rotate(12deg);
+    }
+
+    .ideaMethodPanel .generateFromIdeaText,
+    .ideaMethodPanel .generateFromIdeaActions {
+        position: relative;
+        z-index: 1;
+    }
+
+    .ideaMethodPanel .generateFromIdeaText {
+        padding-right: 52px;
+    }
+
     .card {
         padding: 14px;
         gap: 12px;
@@ -541,6 +566,8 @@
 
 /* 一句话生成卡片 */
 .generateFromIdeaCard {
+    position: relative;
+    overflow: hidden;
     background: linear-gradient(135deg, rgba(142, 33, 53, 0.15) 0%, rgba(168, 40, 60, 0.08) 100%);
     border: 2px solid rgba(142, 33, 53, 0.35);
     border-radius: 16px;

@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { IoChevronBack } from 'react-icons/io5';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import styles from './Favorites.module.css';
@@ -140,7 +139,9 @@ const Favorites: React.FC = () => {
         <div className={styles.main}>
           <div className={styles.pageHeader}>
             <button type="button" className={styles.backButton} onClick={handleBack} aria-label={t('favorites.back')}>
-              <IoChevronBack />
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M15 6L9 12L15 18" />
+              </svg>
             </button>
             <h1 className={styles.pageTitle}>{t('favorites.title')}</h1>
           </div>

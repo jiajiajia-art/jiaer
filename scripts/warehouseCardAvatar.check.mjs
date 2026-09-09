@@ -52,6 +52,14 @@ test('warehouseCardAvatar_编辑表单有生图入口', () => {
   assert.match(css, /\.formBody[\s\S]*?scrollbar-gutter:\s*stable/);
   assert.match(css, /\.formCard[\s\S]*?grid-template-rows:\s*minmax\(0,\s*1fr\)/);
   assert.match(css, /\.avatarUploadBtn\b/);
+  assert.match(css, /\.avatarUploadBtn\s*\{[\s\S]*?background:\s*#1c1c1e/i);
+  assert.match(css, /\.avatarUploadBtn\s*\{[\s\S]*?color:\s*#ffffff/i);
+  assert.doesNotMatch(css, /\.avatarUploadBtn\s*\{[\s\S]*?border:\s*1px dashed/);
+  assert.match(css, /\.fieldAiBtn\s*\{[\s\S]*?linear-gradient\(180deg,\s*#b83248/);
+  assert.match(css, /\.fieldAiBtn\s*\{[\s\S]*?color:\s*#ffffff/i);
+  assert.match(field, /MdOutlineFileUpload/);
+  assert.match(npc, /MdAutoAwesome/);
+  assert.match(persona, /MdAutoAwesome/);
   assert.match(css, /\.avatarPreviewFallback[\s\S]*?place-items:\s*center/);
   assert.match(field, /TrimmedTransparentImg/);
   assert.match(field, /variant="full"/);

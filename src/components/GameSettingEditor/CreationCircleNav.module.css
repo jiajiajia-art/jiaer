@@ -56,6 +56,17 @@
     display: block;
   }
 
+  /* 角色/场景步进：切图等比居中，勿被 currentColor 染色 */
+  .assetIcon,
+  .sceneIcon {
+    display: block;
+    width: 22px;
+    height: auto;
+    object-fit: contain;
+    pointer-events: none;
+    user-select: none;
+  }
+
   .label {
     font-size: 0.75rem;
     font-weight: 600;

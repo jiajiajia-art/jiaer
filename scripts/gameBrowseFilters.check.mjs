@@ -52,3 +52,15 @@ test('resolveCategoriesPageTitleKey_最热应为最热推荐文案键', () => {
   assert.equal(resolveCategoriesPageTitleKey('recommended'), 'categories.pageTitles.recommended');
   assert.equal(resolveCategoriesPageTitleKey('latest'), 'categories.pageTitles.latest');
 });
+
+test('en_gameBrowse_modes_novel应为Visual Novel而非中文残留', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { dirname, join } = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+  const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+  const en = JSON.parse(readFileSync(join(root, 'src/i18n/locales/en.json'), 'utf8'));
+  assert.equal(en.gameBrowse.modes.novel, 'Visual Novel');
+  assert.equal(en.categories.modes.novel, 'Visual Novel');
+  assert.equal(en.create.draftFilters.novel, 'Visual Novel');
+  assert.doesNotMatch(en.gameBrowse.modes.novel, /视觉小说/);
+});

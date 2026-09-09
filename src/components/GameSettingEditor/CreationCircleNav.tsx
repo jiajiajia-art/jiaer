@@ -3,10 +3,8 @@ import { useTranslation } from 'react-i18next';
 import {
   MdDescription,
   MdAssignmentTurnedIn,
-  MdRecordVoiceOver,
-  MdBeachAccess,
-  MdSend,
 } from 'react-icons/md';
+import type { IconType } from 'react-icons';
 import styles from './CreationCircleNav.module.css';
 
 export type CreationCircleStepId =
@@ -33,16 +31,54 @@ const STEP_ORDER: CreationCircleStepId[] = [
   'publish',
 ];
 
-const STEPS: Array<{
-  id: CreationCircleStepId;
-  labelKey: string;
-  Icon: typeof MdDescription;
-}> = [
-  { id: 'documents', labelKey: 'createGame.circleNav.file', Icon: MdDescription },
-  { id: 'world', labelKey: 'createGame.circleNav.script', Icon: MdAssignmentTurnedIn },
-  { id: 'characters', labelKey: 'createGame.circleNav.character', Icon: MdRecordVoiceOver },
-  { id: 'scenes', labelKey: 'createGame.circleNav.scene', Icon: MdBeachAccess },
-  { id: 'publish', labelKey: 'createGame.circleNav.publish', Icon: MdSend },
+/** 功能注释：步进切图基路径；未选中莓红剪影、选中/已完成白剪影（莓红胶囊底需白标对比度） */
+const CREATE_ICON_BASE = `${import.meta.env.BASE_URL}data/assetsv2/create`;
+const SCENE_ICON_IDLE = `${CREATE_ICON_BASE}/circle_nav_scene.webp`;
+const SCENE_ICON_ACTIVE = `${CREATE_ICON_BASE}/circle_nav_scene_active.webp`;
+const CHARACTER_ICON_IDLE = `${CREATE_ICON_BASE}/circle_nav_character.webp`;
+const CHARACTER_ICON_ACTIVE = `${CREATE_ICON_BASE}/circle_nav_character_active.webp`;
+const PUBLISH_ICON_IDLE = `${CREATE_ICON_BASE}/circle_nav_publish.webp`;
+const PUBLISH_ICON_ACTIVE = `${CREATE_ICON_BASE}/circle_nav_publish_active.webp`;
+
+type StepDef =
+  | {
+      id: CreationCircleStepId;
+      labelKey: string;
+      kind: 'reactIcon';
+      Icon: IconType;
+    }
+  | {
+      id: CreationCircleStepId;
+      labelKey: string;
+      kind: 'asset';
+      idleSrc: string;
+      activeSrc: string;
+    };
+
+const STEPS: StepDef[] = [
+  { id: 'documents', labelKey: 'createGame.circleNav.file', kind: 'reactIcon', Icon: MdDescription },
+  { id: 'world', labelKey: 'createGame.circleNav.script', kind: 'reactIcon', Icon: MdAssignmentTurnedIn },
+  {
+    id: 'characters',
+    labelKey: 'createGame.circleNav.character',
+    kind: 'asset',
+    idleSrc: CHARACTER_ICON_IDLE,
+    activeSrc: CHARACTER_ICON_ACTIVE,
+  },
+  {
+    id: 'scenes',
+    labelKey: 'createGame.circleNav.scene',
+    kind: 'asset',
+    idleSrc: SCENE_ICON_IDLE,
+    activeSrc: SCENE_ICON_ACTIVE,
+  },
+  {
+    id: 'publish',
+    labelKey: 'createGame.circleNav.publish',
+    kind: 'asset',
+    idleSrc: PUBLISH_ICON_IDLE,
+    activeSrc: PUBLISH_ICON_ACTIVE,
+  },
 ];
 
 /**
@@ -81,10 +117,12 @@ const CreationCircleNav: React.FC<CreationCircleNavProps> = ({
 
   return (
     <nav className={styles.nav} aria-label={t('createGame.circleNav.ariaLabel')}>
-      {STEPS.map(({ id, labelKey, Icon }) => {
+      {STEPS.map((step) => {
+        const { id, labelKey } = step;
         const active = activeId === id;
         const done = !active && STEP_ORDER.indexOf(id) < activeIndex;
         const disabled = isDisabled(id);
+        const assetLit = active || done;
         return (
           <button
             key={id}
@@ -107,7 +145,18 @@ const CreationCircleNav: React.FC<CreationCircleNavProps> = ({
             }}
           >
             <span className={styles.iconWrap} aria-hidden>
-              <Icon className={styles.icon} size={22} />
+              {step.kind === 'asset' ? (
+                <img
+                  className={styles.assetIcon}
+                  src={assetLit ? step.activeSrc : step.idleSrc}
+                  alt=""
+                  width={22}
+                  height={21}
+                  draggable={false}
+                />
+              ) : (
+                <step.Icon className={styles.icon} size={22} />
+              )}
             </span>
             <span className={styles.label}>{t(labelKey)}</span>
           </button>

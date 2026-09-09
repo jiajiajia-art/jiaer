@@ -284,7 +284,7 @@ const StGameCreate: React.FC = () => {
     setError('');
     if (!validateThemeTags()) {
       const message = t('stGameCreate.themeTagsFieldRequired');
-      setError(message);
+      // 功能注释：题材缺失只走 toast + 滚到标签区，不再在下一步按钮上插红色横幅
       guideToRequiredField('themeTags', message);
       return false;
     }
@@ -560,14 +560,12 @@ const StGameCreate: React.FC = () => {
     setError('');
     if (!title.trim()) {
       const message = t('stGameCreate.titleRequired');
-      setError(message);
       guideToRequiredField('title', message);
       return false;
     }
 
     if (!validateThemeTags()) {
       const message = t('stGameCreate.themeTagsFieldRequired');
-      setError(message);
       guideToRequiredField('themeTags', message);
       return false;
     }

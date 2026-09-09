@@ -27,14 +27,14 @@
 }
 
 .promptCueBtn:hover {
-  border-color: rgba(255, 90, 103, 0.4);
-  background: rgba(224, 61, 75, 0.12);
+  border-color: rgba(168, 40, 60, 0.4);
+  background: rgba(168, 40, 60, 0.12);
   color: #ffb3ba;
 }
 
 .promptCueBtnActive {
-  border-color: rgba(224, 61, 75, 0.45);
-  background: rgba(224, 61, 75, 0.16);
+  border-color: rgba(168, 40, 60, 0.45);
+  background: rgba(168, 40, 60, 0.16);
   color: #ffc9cf;
 }
 
