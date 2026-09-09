@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { IoChevronDown } from 'react-icons/io5';
 import { MdOutlineEdit } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import styles from './Create.module.css';
 import Navbar from '../components/Layout/Navbar';
@@ -13,6 +13,7 @@ import RechargeModal from '../components/Purchase/RechargeModal';
 import ExchangeModal from '../components/Purchase/ExchangeModal';
 import CheckInModal from '../components/CheckInModal';
 import ConfirmModal from '../components/CommonModal/ConfirmModal';
+import confirmModalStyles from '../components/CommonModal/ConfirmModal.module.css';
 import GameGridSkeleton from '../components/Skeleton/GameGridSkeleton';
 import WithdrawFlowModal from '../components/Create/WithdrawFlowModal';
 import ProfileFunctionPanel from '../components/Profile/ProfileFunctionPanel';
@@ -1158,9 +1159,16 @@ const Create: React.FC = () => {
                 onConfirm={handleSettle}
                 onCancel={() => setIsSettleModalOpen(false)}
                 title={t('create.confirmSettle')}
-                message={t('create.settleConfirmMessage', { amount: stats.totalAmount })}
+                message={(
+                    <Trans
+                        i18nKey="create.settleConfirmMessage"
+                        values={{ amount: stats.totalAmount }}
+                        components={{ hl: <strong className={confirmModalStyles.amountHighlight} /> }}
+                    />
+                )}
                 confirmButtonText={isSettling ? t('create.settling') : t('create.confirmSettleBtn')}
                 cancelButtonText={t('create.cancel')}
+                tone="dark"
             />
 
             <ConfirmModal
@@ -1168,9 +1176,16 @@ const Create: React.FC = () => {
                 onConfirm={handleSettleDiamonds}
                 onCancel={() => setIsSettleDiamondsModalOpen(false)}
                 title={t('create.confirmSettleDiamonds')}
-                message={t('create.settleConfirmDiamondsMessage', { amount: stats.totalDiamondsAmount })}
+                message={(
+                    <Trans
+                        i18nKey="create.settleConfirmDiamondsMessage"
+                        values={{ amount: stats.totalDiamondsAmount }}
+                        components={{ hl: <strong className={confirmModalStyles.amountHighlight} /> }}
+                    />
+                )}
                 confirmButtonText={isSettling ? t('create.settling') : t('create.confirmSettleBtn')}
                 cancelButtonText={t('create.cancel')}
+                tone="dark"
             />
 
             <ConfirmModal
