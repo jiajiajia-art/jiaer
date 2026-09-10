@@ -10,6 +10,8 @@ interface PaginationProps {
     showPageNumbers?: boolean;
     summary?: React.ReactNode;
     className?: string;
+    /** Create 页等深色背景使用 */
+    variant?: 'default' | 'creator';
 }
 
 const clampPage = (page: number, totalPages: number): number => Math.min(Math.max(page, 1), totalPages);
@@ -48,6 +50,7 @@ const Pagination: React.FC<PaginationProps> = ({
     showPageNumbers = true,
     summary,
     className = '',
+    variant = 'default',
 }) => {
     const safeTotalPages = Math.max(1, Math.floor(totalPages));
     const safeCurrentPage = clampPage(Math.floor(currentPage) || 1, safeTotalPages);
@@ -68,7 +71,9 @@ const Pagination: React.FC<PaginationProps> = ({
     };
 
     return (
-        <div className={`${styles.pagination} ${className}`.trim()}>
+        <div
+            className={`${styles.pagination} ${variant === 'creator' ? styles.paginationCreator : ''} ${className}`.trim()}
+        >
             <div className={styles.controls} aria-label="分页导航">
                 <button
                     type="button"

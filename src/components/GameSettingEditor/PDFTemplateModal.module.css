@@ -1,15 +1,14 @@
 .modalOverlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
+    inset: 0;
+    background: rgba(0, 0, 0, 0.72);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(6px);
+    padding: 16px;
+    box-sizing: border-box;
 }
 
 .modalWrapper {
@@ -22,28 +21,43 @@
 }
 
 .modalContent {
-    background: #ffffff;
+    --type-primary: #A8283C;
+    --type-primary-deep: #8E2135;
+    --type-surface: #1A1A1A;
+    --type-card: #1C1C1E;
+    --type-border: rgba(255, 255, 255, 0.1);
+    position: relative;
+    background:
+        linear-gradient(0deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.12)),
+        linear-gradient(180deg, #2e2e2e 0%, rgba(28, 28, 30, 0.92) 100%);
     border-radius: 16px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--type-border);
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.55);
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    color: #ffffff;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
 }
 
 .modalHeader {
-    padding: 24px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    position: relative;
+    z-index: 1;
+    padding: 22px 24px;
+    border-bottom: 1px solid var(--type-border);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #ffffff;
+    background: transparent;
 }
 
 .modalTitle {
     margin: 0;
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: #1a1a1a;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: -0.02em;
 }
 
 .closeButton {
@@ -54,21 +68,27 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    opacity: 0.9;
+    opacity: 0.75;
     transition: opacity 0.2s ease;
+    border-radius: 8px;
 }
 
 .closeButton:hover {
     opacity: 1;
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .closeButton img {
     width: 20px;
     height: 20px;
+    /* 关闭图标原为深色资源，暗色弹窗下反色 */
+    filter: invert(1);
 }
 
 .modalBody {
-    padding: 24px;
+    position: relative;
+    z-index: 1;
+    padding: 20px 24px 24px;
     overflow-y: auto;
     max-height: calc(90vh - 100px);
 }
@@ -83,16 +103,16 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px;
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    padding: 14px 16px;
+    border: 1px solid var(--type-border);
     border-radius: 12px;
-    background: rgba(0, 0, 0, 0.02);
-    transition: all 0.2s ease;
+    background: var(--type-card);
+    transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 .pdfItem:hover {
-    border-color: rgba(224, 61, 75, 0.3);
-    background: rgba(224, 61, 75, 0.04);
+    border-color: rgba(168, 40, 60, 0.45);
+    background: rgba(168, 40, 60, 0.12);
 }
 
 .pdfInfo {
@@ -100,60 +120,61 @@
     align-items: center;
     gap: 12px;
     flex: 1;
+    min-width: 0;
 }
 
 .pdfIcon {
     font-size: 1.5rem;
     line-height: 1;
+    flex-shrink: 0;
 }
 
 .pdfName {
     font-size: 0.95rem;
     font-weight: 500;
-    color: #1a1a1a;
+    color: #ffffff;
     word-break: break-word;
 }
 
 .downloadButton {
-    padding: 8px 20px;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    padding: 8px 18px;
+    background: linear-gradient(135deg, var(--type-primary-deep) 0%, var(--type-primary) 100%);
     color: #ffffff;
     border: none;
     border-radius: 8px;
     font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
     white-space: nowrap;
     flex-shrink: 0;
 }
 
 .downloadButton:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(224, 61, 75, 0.3);
+    box-shadow: 0 4px 14px rgba(168, 40, 60, 0.4);
 }
 
 .downloadButton:active {
     transform: translateY(0);
 }
 
-/* 响应式设计 */
 @media (max-width: 720px) {
     .modalWrapper {
-        width: 95%;
+        width: 100%;
         max-width: none;
     }
 
     .modalHeader {
-        padding: 20px;
+        padding: 18px 20px;
     }
 
     .modalTitle {
-        font-size: 1.1rem;
+        font-size: 1.05rem;
     }
 
     .modalBody {
-        padding: 20px;
+        padding: 16px 20px 20px;
     }
 
     .pdfItem {
@@ -166,4 +187,3 @@
         width: 100%;
     }
 }
-

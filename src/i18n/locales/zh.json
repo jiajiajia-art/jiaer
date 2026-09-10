@@ -231,6 +231,16 @@
     "favoriteGameUpdate": "通知",
     "clickToViewFavoriteGameUpdate": "点击查看更新详情"
   },
+  "gameType": {
+    "labels": {
+      "aiWenyou": "AI文游",
+      "tavern": "酒馆卡",
+      "custom": "自定义",
+      "visualNovel": "视觉小说",
+      "ivg": "互动影游",
+      "story": "Story"
+    }
+  },
   "gameBrowse": {
     "sort": "排序",
     "sorts": {
@@ -987,6 +997,8 @@
     "qqGroup": "QQ群号",
     "qqGroupPlaceholder": "请输入QQ群号（5-11位数字）",
     "selectGameTypeTitle": "创建游戏类型",
+    "docsHelp": "创作指南",
+    "howToStart": "如何开始？",
     "selectGameTypeDesc": "请选择你要创作的游戏形态，我们会为你匹配合适的创作流程。",
     "optionHint": "多种创作模式，开启你的灵感",
     "recommend": "推荐",

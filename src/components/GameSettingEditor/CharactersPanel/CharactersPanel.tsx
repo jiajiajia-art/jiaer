@@ -2101,6 +2101,19 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                         ) : (
                             <div className={styles.detailActionRow}>
                                 <button
+                                    className={`${styles.ghostSmall} ${isPreviewMode ? styles.ghostSmallActive : ''}`}
+                                    onClick={() => {
+                                        setIsPreviewMode(!isPreviewMode);
+                                        if (!isPreviewMode) {
+                                            // 进入预览模式时，用角色的 portraitScale 初始化
+                                            setPreviewScale(currentCharacter?.portraitScale ?? 1);
+                                        }
+                                    }}
+                                    disabled={!currentPortraitImage || isPortraitActionBusy}
+                                >
+                                    {isPreviewMode ? t('createGame.exitPreview') : t('createGame.portraitSizePreview')}
+                                </button>
+                                <button
                                     className={styles.ghostSmall}
                                     onClick={() => { void confirmEdit(); }}
                                     disabled={isPortraitActionBusy}

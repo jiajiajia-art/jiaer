@@ -1559,6 +1559,14 @@
     line-height: 1.5;
 }
 
+.worksPagination {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin-top: 24px;
+    margin-bottom: 4px;
+}
+
 .draftSectionHeader {
     position: relative;
 }

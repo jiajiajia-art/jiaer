@@ -150,11 +150,17 @@ const CreateType: React.FC = () => {
         <div className={pageStyles.content}>
           <div className={`${styles.createTypeModalHeader} ${pageStyles.header}`}>
             <div className={`${styles.createTypeModalTitle} ${pageStyles.title}`}>
-              {t('createGame.selectGameTypeTitle')}
+              <span>{t('createGame.selectGameTypeTitle')}</span>
+              <button
+                type="button"
+                className={pageStyles.helpBtn}
+                onClick={() => navigate('/document')}
+                aria-label={t('createGame.howToStart')}
+                title={t('createGame.howToStart')}
+              >
+                ?
+              </button>
             </div>
-          </div>
-          <div className={`${styles.createTypeModalDesc} ${pageStyles.desc}`}>
-            {t('createGame.selectGameTypeDesc')}
           </div>
           <div className={`${styles.createTypeOptions} ${pageStyles.options}`}>
             <TypeOptionRow

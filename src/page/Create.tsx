@@ -9,6 +9,7 @@ import Navbar from '../components/Layout/Navbar';
 import FooterArea from '../components/Layout/FooterArea';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import GameGrid from '../components/GameGrid';
+import Pagination from '../components/Pagination';
 import RechargeModal from '../components/Purchase/RechargeModal';
 import ExchangeModal from '../components/Purchase/ExchangeModal';
 import CheckInModal from '../components/CheckInModal';
@@ -44,7 +45,13 @@ const AVATAR_MAX_SIZE_BYTES = 5 * 1024 * 1024;
 type CreatorStatsIncentiveType = 'none' | 'incentive' | 'game_incentive' | 'code_incentive' | 'all_incentive';
 type WorksTabKey = 'published' | 'drafts' | 'favorites';
 
-const FAVORITES_PAGE_SIZE = 40;
+/** 2 列(手机)与 5 列(PC) 的最小公倍数，保证网格行完整 */
+const WORKS_PAGE_SIZE = 10;
+
+const paginateItems = <T,>(items: T[], page: number, pageSize: number): T[] => {
+    const start = (Math.max(1, page) - 1) * pageSize;
+    return items.slice(start, start + pageSize);
+};
 
 const formatPlayDuration = (seconds: number) => {
     const safe = Math.max(0, Number(seconds) || 0);
@@ -95,8 +102,11 @@ const Create: React.FC = () => {
     const [isSavingNickname, setIsSavingNickname] = useState(false);
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
     const avatarInputRef = useRef<HTMLInputElement>(null);
+    const worksSectionRef = useRef<HTMLDivElement>(null);
     const [worksTab, setWorksTab] = useState<WorksTabKey>('published');
+    const [worksPage, setWorksPage] = useState(1);
     const [favoriteGames, setFavoriteGames] = useState<UserGameData[]>([]);
+    const [favoritesTotal, setFavoritesTotal] = useState(0);
     const [isLoadingFavorites, setIsLoadingFavorites] = useState(false);
     const [favoritesLoaded, setFavoritesLoaded] = useState(false);
 
@@ -199,6 +209,25 @@ const Create: React.FC = () => {
         () => filterDraftGamesByType(draftGames, draftFilterKey),
         [draftGames, draftFilterKey],
     );
+
+    const publishedTotalPages = Math.max(1, Math.ceil(publishedGames.length / WORKS_PAGE_SIZE));
+    const draftTotalPages = Math.max(1, Math.ceil(filteredDraftGames.length / WORKS_PAGE_SIZE));
+    const favoritesTotalPages = Math.max(1, Math.ceil(favoritesTotal / WORKS_PAGE_SIZE));
+
+    const pagedPublishedGames = useMemo(
+        () => paginateItems(publishedGames, worksPage, WORKS_PAGE_SIZE),
+        [publishedGames, worksPage],
+    );
+    const pagedDraftGames = useMemo(
+        () => paginateItems(filteredDraftGames, worksPage, WORKS_PAGE_SIZE),
+        [filteredDraftGames, worksPage],
+    );
+
+    const worksTotalPages = worksTab === 'published'
+        ? publishedTotalPages
+        : worksTab === 'drafts'
+            ? draftTotalPages
+            : favoritesTotalPages;
 
     const getGameManageId = (game: UserGameData) => String(game.file_id || game.id || '');
     const selectedDraftCount = selectedDraftIds.length;
@@ -315,6 +344,12 @@ const Create: React.FC = () => {
         setSelectedDraftIds((prev) => prev.filter((id) => draftGames.some((game) => getGameManageId(game) === id)));
     }, [draftGames]);
 
+    useEffect(() => {
+        if (worksPage > worksTotalPages) {
+            setWorksPage(worksTotalPages);
+        }
+    }, [worksPage, worksTotalPages]);
+
     const handleCopyUserCode = async () => {
         if (!userCode) return;
 
@@ -394,23 +429,28 @@ const Create: React.FC = () => {
     const handleDraftFilterChange = (nextFilter: DraftBoxFilterKey) => {
         setDraftFilterKey(nextFilter);
         setSelectedDraftIds([]);
+        setWorksPage(1);
     };
 
-    const loadFavoriteGames = async () => {
+    const loadFavoriteGames = async (page = 1) => {
         setIsLoadingFavorites(true);
         try {
             const response = await favoriteApi.list({
-                limit: String(FAVORITES_PAGE_SIZE),
-                offset: '0',
+                limit: String(WORKS_PAGE_SIZE),
+                offset: String((Math.max(1, page) - 1) * WORKS_PAGE_SIZE),
             });
             if (response.data.success && response.data.data) {
-                setFavoriteGames(response.data.data.rows || []);
+                const { rows, total } = response.data.data;
+                setFavoriteGames(rows || []);
+                setFavoritesTotal(typeof total === 'number' ? total : (rows || []).length);
             } else {
                 setFavoriteGames([]);
+                setFavoritesTotal(0);
             }
         } catch (error) {
             console.error('获取收藏列表失败:', error);
             setFavoriteGames([]);
+            setFavoritesTotal(0);
         } finally {
             setIsLoadingFavorites(false);
             setFavoritesLoaded(true);
@@ -419,13 +459,22 @@ const Create: React.FC = () => {
 
     const handleWorksTabChange = (nextTab: WorksTabKey) => {
         setWorksTab(nextTab);
+        setWorksPage(1);
         if (nextTab !== 'drafts') {
             setIsDraftManageMode(false);
             setSelectedDraftIds([]);
         }
-        if (nextTab === 'favorites' && !favoritesLoaded && !isLoadingFavorites) {
-            void loadFavoriteGames();
+        if (nextTab === 'favorites') {
+            void loadFavoriteGames(1);
         }
+    };
+
+    const handleWorksPageChange = (nextPage: number) => {
+        setWorksPage(nextPage);
+        if (worksTab === 'favorites') {
+            void loadFavoriteGames(nextPage);
+        }
+        worksSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 
     const handleFavoriteGameClick = (game: UserGameData) => {
@@ -920,7 +969,7 @@ const Create: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className={styles.worksSection}>
+                    <div className={styles.worksSection} ref={worksSectionRef}>
                         <div className={styles.worksTabBar}>
                             <div className={styles.worksTabs}>
                                 <button
@@ -944,7 +993,7 @@ const Create: React.FC = () => {
                                     onClick={() => handleWorksTabChange('favorites')}
                                 >
                                     {t('create.favoritesTab')}
-                                    {favoritesLoaded && favoriteGames.length > 0 ? ` (${favoriteGames.length})` : ''}
+                                    {favoritesLoaded && favoritesTotal > 0 ? ` (${favoritesTotal})` : ''}
                                 </button>
                             </div>
                             {worksTab === 'drafts' && draftGames.length > 0 && (
@@ -995,7 +1044,7 @@ const Create: React.FC = () => {
                                     <div className={styles.worksEmpty}>{t('create.noPublishedGames')}</div>
                                 ) : (
                                     <GameGrid
-                                        games={publishedGames}
+                                        games={pagedPublishedGames}
                                         layoutVariant="works"
                                         primaryStat="pv"
                                         showIncentiveUI={isWorkIncentive}
@@ -1038,7 +1087,7 @@ const Create: React.FC = () => {
                                             </div>
                                         ) : (
                                             <GameGrid
-                                                games={filteredDraftGames}
+                                                games={pagedDraftGames}
                                                 layoutVariant="works"
                                                 onGameClick={handleDraftCardClick}
                                                 selectable={true}
@@ -1064,6 +1113,23 @@ const Create: React.FC = () => {
                                         onGameClick={handleFavoriteGameClick}
                                     />
                                 )
+                            )}
+
+                            {worksTotalPages > 1 && !(
+                                (worksTab === 'published' && (isLoadingMyGames || publishedGames.length === 0))
+                                || (worksTab === 'drafts' && (isLoadingMyGames || draftGames.length === 0 || filteredDraftGames.length === 0))
+                                || (worksTab === 'favorites' && favoritesTotal === 0)
+                            ) && (
+                                <div className={styles.worksPagination}>
+                                    <Pagination
+                                        variant="creator"
+                                        currentPage={worksPage}
+                                        totalPages={worksTotalPages}
+                                        onPageChange={handleWorksPageChange}
+                                        disabled={worksTab === 'favorites' && isLoadingFavorites}
+                                        maxVisiblePages={5}
+                                    />
+                                </div>
                             )}
                         </div>
                     </div>
