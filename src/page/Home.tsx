@@ -39,7 +39,7 @@ import {
     type HomeListMode,
     type HomeListSort,
 } from '../utils/gameBrowseFilters';
-import { collectRecommendExposeItems } from '../lib/homeRecommendExpose';
+import { collectRecommendExposeItems, shouldReportRecommendExpose } from '../lib/homeRecommendExpose';
 import { resolveHomeFiltersForNovelThemeConflict } from '../utils/homeFilterNovelTheme';
 import { openConfiguredLink } from '../utils/promotionNavigation';
 import { useExternalLinkCopyModal } from '../hooks/useExternalLinkCopyModal';
@@ -770,8 +770,11 @@ const Home: React.FC = () => {
                     });
                 }
 
-                // 推荐列表：有 campaign 注入的卡片批量曝光（登录态由拦截器带 token）
-                if (filters.sort === 'recommended') {
+                // 推荐列表：有 campaign 的卡片批量曝光（接口强制登录，游客跳过避免 401）
+                if (
+                    filters.sort === 'recommended'
+                    && shouldReportRecommendExpose(useAuthStore.getState().isAuthenticated)
+                ) {
                     const exposeItems = collectRecommendExposeItems(nextGames);
                     if (exposeItems.length > 0) {
                         void libraryDataApi.exposeRecommended(exposeItems).catch((err) => {

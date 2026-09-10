@@ -58,11 +58,12 @@ test('GameSettingsEditor_创作壳应对齐funloom暗色', () => {
   assert.match(editorCss, /\.appShell\s*\{[\s\S]*?margin-top:\s*0/);
   assert.match(editorCss, /@media \(max-width:\s*768px\)[\s\S]*?\.appShell\s*\{[\s\S]*?margin-top:\s*var\(--app-desktop-navbar-height\)/);
   const circleNavCss = readFileSync(join(root, 'src/components/GameSettingEditor/CreationCircleNav.module.css'), 'utf8');
-  assert.match(circleNavCss, /\.iconWrap\s*\{[\s\S]*?border-radius:\s*50%/);
-  assert.match(circleNavCss, /\.iconWrap\s*\{[\s\S]*?background:\s*#1C1C1E/);
-  assert.match(circleNavCss, /\.iconWrap\s*\{[\s\S]*?color:\s*#A8283C/);
-  assert.match(circleNavCss, /\.itemDone \.iconWrap\s*\{[\s\S]*?background:\s*#8E2135/);
-  assert.match(circleNavCss, /\.itemActive \.iconWrap\s*\{[\s\S]*?background:\s*#A8283C/);
+  assert.match(circleNavCss, /\.iconWrap\s*\{[\s\S]*?border-radius:\s*999px/);
+  assert.match(circleNavCss, /--circle-nav-idle-bg:\s*#1a1a1a/i);
+  assert.match(circleNavCss, /--circle-nav-accent:\s*#d8315b/i);
+  assert.match(circleNavCss, /\.iconWrap\s*\{[\s\S]*?box-shadow:\s*var\(--circle-nav-rim\)/);
+  assert.match(circleNavCss, /\.itemActive \.iconWrap\s*\{[\s\S]*?background:\s*var\(--circle-nav-accent\)/);
+  assert.doesNotMatch(circleNavCss, /\.iconWrap\s*\{[\s\S]*?border-radius:\s*50%/);
   assert.doesNotMatch(circleNavCss, /\.iconWrap\s*\{[\s\S]*?color:\s*#9A9A9E/);
   assert.match(docsCss, /\.createMethodBlock/);
   assert.match(docsCss, /\.createMethodSelect/);
@@ -112,6 +113,15 @@ test('GameSettingsEditor_创作壳应对齐funloom暗色', () => {
   // AI 一句话：两枚 CTA 左右并排，禁止再纵向堆叠
   assert.match(docsCss, /\.generateFromIdeaActions\s*\{[\s\S]*?flex-direction:\s*row/);
   assert.doesNotMatch(docsCss, /\.generateFromIdeaActions\s*\{[^}]*flex-direction:\s*column/);
+  /* 功能注释：手机端 ✨ 作右上角背景水印，避免图标挤左上跑偏 */
+  assert.match(
+    docsCss,
+    /@media \(max-width:\s*768px\)[\s\S]*?\.ideaMethodPanel \.generateFromIdeaIcon\s*\{[\s\S]*?position:\s*absolute/,
+  );
+  assert.match(
+    docsCss,
+    /@media \(max-width:\s*768px\)[\s\S]*?\.ideaMethodPanel \.generateFromIdeaIcon\s*\{[\s\S]*?right:\s*12px/,
+  );
   // 创建空游戏 / AI 弹窗对齐暗色壳，禁止白底
   const emptyModalCss = readFileSync(join(root, 'src/components/GameSettingEditor/DocumentUpload/CreateEmptyGameModal.module.css'), 'utf8');
   assert.match(emptyModalCss, /\.modal\s*\{[\s\S]*?background:\s*#1A1A1A/);

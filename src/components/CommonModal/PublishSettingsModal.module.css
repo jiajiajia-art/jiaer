@@ -626,11 +626,26 @@
     font-weight: 600;
 }
 
-/* 功能注释：富文本在墨黑弹窗内改为深底/白字，工具条对齐酒红 */
-.richEditorDark button {
+/* 功能注释：富文本工具条暗色；勿盖拖高手柄背景与图标 */
+.richEditorDark button:not([data-rich-editor-resize]) {
     border-color: rgba(255, 255, 255, 0.16) !important;
     background: var(--pub-input) !important;
     color: rgba(255, 255, 255, 0.88) !important;
+}
+
+.richEditorDark [data-rich-editor-resize] {
+    background: transparent !important;
+    color: rgba(255, 180, 188, 0.75) !important;
+}
+
+.richEditorDark [data-rich-editor-resize] * {
+    color: inherit !important;
+}
+
+.richEditorDark [data-rich-editor-resize]:hover,
+.richEditorDark [data-rich-editor-resize]:focus-visible {
+    background: rgba(168, 40, 60, 0.18) !important;
+    color: #ffb4bc !important;
 }
 
 .richEditorDark [contenteditable='true'],

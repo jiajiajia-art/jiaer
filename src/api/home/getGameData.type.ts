@@ -20,7 +20,7 @@ export interface UserGameData {
     is_public: number;
     like_count: number;
     dislike_count: number;
-    /** 收藏数（服务端可选，缺省时详情页展示 0） */
+    /** 收藏数（详情/列表均可选返回，缺省时展示 0） */
     favorite_count?: number;
     /** 分享数（服务端可选，缺省时详情页展示 0） */
     share_count?: number;
@@ -67,8 +67,6 @@ export interface UserGameData {
     groupNo?: string;
     /** 当前用户是否已收藏该游戏 */
     isFavorited?: boolean;
-    /** 作品被收藏次数（列表接口可选返回） */
-    favorite_count?: number;
     /** 首页推荐增量字段 */
     recommend_reason?: string;
     campaign_id?: number | null;

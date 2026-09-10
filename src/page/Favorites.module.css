@@ -1,17 +1,25 @@
 .pageRoot {
+  /* 功能注释：收藏夹对齐效果图——墨黑壳 + 返回/白字标题，禁止浅色灰底 */
+  --primary: #a8283c;
+  --primary-light: #c23a50;
+  --primary-dark: #8e2135;
+  --favorites-muted: #8e8e93;
   width: 100%;
   min-height: 100vh;
-  max-width: 1920px;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
+  background: #000000;
+  color: #ffffff;
+  overflow-x: hidden;
 }
 
 .mainContent {
-  color: black;
   display: flex;
   margin: 0;
   padding: 0;
   margin-bottom: 200px;
   min-height: 100vh;
+  color: inherit;
 }
 
 .main {
@@ -21,46 +29,69 @@
   max-width: none;
   margin: var(--app-desktop-navbar-height) auto 0;
   overflow: visible;
-  padding: 20px;
+  padding: 16px 20px 20px;
   box-sizing: border-box;
+  gap: 12px;
 }
 
+/* 功能注释：效果图箭头处——左返回细chevron + 左对齐白字「收藏夹」 */
 .pageHeader {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1.25rem;
+  gap: 6px;
+  min-height: 40px;
+  margin: 4px 0 8px;
+  padding: 0;
 }
 
 .backButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 36px;
+  height: 36px;
+  margin: 0;
+  padding: 0;
   border: none;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.06);
-  color: #1a1a1a;
+  background: transparent;
+  color: #ffffff;
   cursor: pointer;
   flex-shrink: 0;
 }
 
+.backButton svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .backButton:hover {
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.backButton:focus-visible {
+  outline: 2px solid rgba(168, 40, 60, 0.55);
+  outline-offset: 2px;
 }
 
 .pageTitle {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 20px;
   font-weight: 700;
-  color: #1a1a1a;
+  line-height: 1.35;
+  letter-spacing: 0.02em;
+  color: #ffffff;
 }
 
 .emptyState {
   padding: 3rem 1rem;
   text-align: center;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--favorites-muted);
   font-size: 0.95rem;
 }
 
@@ -70,7 +101,7 @@
 
 @media (max-width: 768px) {
   .pageRoot {
-    padding-bottom: 90px;
+    padding-bottom: calc(90px + env(safe-area-inset-bottom));
   }
 
   .mainContent {
@@ -80,7 +111,11 @@
   .main {
     width: 100%;
     max-width: 100%;
-    margin-top: 60px;
-    padding: 10px;
+    margin-top: var(--app-desktop-navbar-height);
+    padding: 10px 12px 20px;
+  }
+
+  .pageTitle {
+    font-size: 18px;
   }
 }

@@ -18,6 +18,7 @@ import {
   NPC_PROFILE_FIELD_GENERATION_COST,
   getImageUrl,
 } from '../../utils/constants';
+import { MdCheck, MdAutoAwesome } from 'react-icons/md';
 import {
   startWarehouseCardAvatarBackgroundGen,
   subscribeWarehouseCardAvatarGenBusy,
@@ -27,6 +28,7 @@ import {
 import { PERSONA_TAGS, genderLabel } from './warehouseNav';
 import WarehouseCardAvatarField from './WarehouseCardAvatarField';
 import WarehouseAvatarGenerateConfirm from './WarehouseAvatarGenerateConfirm';
+import WarehouseEmptyIcon from './WarehouseEmptyIcon';
 import panel from './WarehousePanel.module.css';
 
 type Draft = {
@@ -424,7 +426,7 @@ const WarehouseCharacterCards: React.FC = () => {
         <p className={panel.empty}>加载中…</p>
       ) : filtered.length === 0 ? (
         <div className={panel.emptyStage}>
-          <div className={panel.emptyOrb} aria-hidden />
+          <WarehouseEmptyIcon kind="character" />
           <h2>还没有角色卡</h2>
           <p>新建或导入一张 NPC 卡，带到不同故事里使用</p>
         </div>
@@ -655,6 +657,9 @@ const WarehouseCharacterCards: React.FC = () => {
                           className={draft.gender === g ? panel.segActive : panel.seg}
                           onClick={() => setDraft((d) => ({ ...d, gender: g }))}
                         >
+                          {draft.gender === g ? (
+                            <MdCheck className={panel.segActiveIcon} aria-hidden />
+                          ) : null}
                           {genderLabel(g)}
                         </button>
                       ))}
@@ -671,6 +676,9 @@ const WarehouseCharacterCards: React.FC = () => {
                       disabled={saving || generatingPersona}
                       onClick={() => void requestGeneratePersona()}
                     >
+                      {!generatingPersona ? (
+                        <MdAutoAwesome className={panel.fieldAiBtnIcon} aria-hidden />
+                      ) : null}
                       {generatingPersona
                         ? '生成中…'
                         : `AI生成 · ${NPC_PROFILE_FIELD_GENERATION_COST}`}

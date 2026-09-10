@@ -1,17 +1,23 @@
 .wrapper {
-  display: inline-flex;
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .tipTrigger {
-  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   width: 18px;
   height: 18px;
+  margin: 0;
+  padding: 0;
   border-radius: 2px;
   /* 默认适配深色面板；管理页可通过 --admin-text-soft 覆盖 */
   border: 1px solid color-mix(in srgb, var(--admin-text-soft, rgba(255, 255, 255, 0.55)) 45%, transparent);
@@ -22,31 +28,26 @@
   line-height: 1;
   cursor: help;
   user-select: none;
+  font-family: inherit;
 }
 
 .tipTrigger:hover,
 .tipTrigger:focus-visible {
   border-color: var(--admin-accent, #ff6b57);
   color: var(--admin-accent, #ff6b57);
+  outline: none;
 }
 
-.tipTrigger:hover .tipBubble,
-.tipTrigger:focus-visible .tipBubble {
-  opacity: 1;
-  visibility: visible;
-  transform: translate(-50%, 0);
-}
-
-/* 向下展开，避免页面顶部卡片 tooltip 被 Navbar 或 overflow 裁切 */
+/* 功能注释：通栏说明面板，避免相对「?」居中浮层在窄屏左侧/底部被裁切 */
 .tipBubble {
-  position: absolute;
-  left: 50%;
-  top: calc(100% + 10px);
-  z-index: 1300;
-  width: max-content;
-  max-width: min(320px, 70vw);
-  padding: 10px 12px;
-  border-radius: 4px;
+  flex: 1 1 100%;
+  order: 3;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 10px;
   background: rgba(18, 18, 22, 0.96);
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
@@ -56,19 +57,18 @@
   line-height: 1.55;
   text-align: left;
   white-space: normal;
-  pointer-events: none;
-  opacity: 0;
-  visibility: hidden;
-  transform: translate(-50%, -4px);
-  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  display: none;
 }
 
-.tipBubble::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: 100%;
-  transform: translateX(-50%);
-  border: 6px solid transparent;
-  border-bottom-color: rgba(18, 18, 22, 0.96);
+.wrapperOpen .tipBubble {
+  display: block;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .wrapper:hover .tipBubble,
+  .wrapper:focus-within .tipBubble {
+    display: block;
+  }
 }

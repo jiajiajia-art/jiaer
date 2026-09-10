@@ -36,6 +36,18 @@ test('CreatorWorkDetailSections wires MetricTitleTip for active hours', () => {
   assert.match(source, /creatorStats\.activeHours/);
 });
 
+test('MetricTitleTip_说明应为通栏展开避免窄屏裁切', () => {
+  const tsx = readFileSync(join(root, 'src/components/stats/MetricTitleTip.tsx'), 'utf8');
+  const css = readFileSync(join(root, 'src/components/stats/MetricTitleTip.module.css'), 'utf8');
+  assert.match(tsx, /aria-expanded/);
+  assert.match(tsx, /setOpen/);
+  assert.match(css, /\.tipBubble\s*\{[\s\S]*?flex:\s*1 1 100%/);
+  assert.match(css, /\.tipBubble\s*\{[\s\S]*?width:\s*100%/);
+  assert.match(css, /\.tipBubble\s*\{[\s\S]*?overflow-wrap:\s*anywhere/);
+  assert.doesNotMatch(css, /\.tipBubble\s*\{[\s\S]*?transform:\s*translate\(-50%/);
+  assert.doesNotMatch(css, /\.tipBubble\s*\{[\s\S]*?left:\s*50%/);
+});
+
 test('CreatorWorkDetailSections_活跃时段应对齐 funloom 暗色热力格', () => {
   const css = readFileSync(
     join(root, 'src/components/stats/CreatorWorkDetailSections.module.css'),

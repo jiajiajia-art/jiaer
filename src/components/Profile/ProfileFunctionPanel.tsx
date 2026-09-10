@@ -7,12 +7,15 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { auth } from '../../api/account/authApi';
 import MembershipRedeemResultModal from '../../components/MembershipRedeemResultModal';
 import InviteRewardModal from '../../components/InviteRewardModal';
+import ConfirmModal from '../CommonModal/ConfirmModal';
+import DeleteAccountModal from './DeleteAccountModal';
 import CreatorProfile, { type CreatorProfileFormData } from '../../components/CreatorProfile.tsx';
 import { RiCopperCoinLine, RiLogoutCircleRLine } from 'react-icons/ri';
 import {
     MdCardMembership,
     MdPlayCircleOutline,
     MdAccountBalanceWallet,
+    MdOutlinePersonOff,
 } from 'react-icons/md';
 import { HiChevronRight } from 'react-icons/hi';
 import toast from 'react-hot-toast';
@@ -125,6 +128,10 @@ const ProfileFunctionPanel: React.FC = () => {
     const [isBindingAccount, setIsBindingAccount] = useState(false);
     const [isBindAccountStatusModalOpen, setIsBindAccountStatusModalOpen] = useState(false);
     const [, setTaskNowTick] = useState<number>(Date.now());
+    // 功能注释：注销账户两步确认——先简确认，再重要提醒二次弹窗
+    const [isDeleteAccountFirstOpen, setIsDeleteAccountFirstOpen] = useState(false);
+    const [isDeleteAccountWarningOpen, setIsDeleteAccountWarningOpen] = useState(false);
+    const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
     const [searchParams, setSearchParams] = useSearchParams();
 
@@ -153,6 +160,28 @@ const ProfileFunctionPanel: React.FC = () => {
     const handleLogout = () => {
         logout();
         navigate('/home');
+    };
+
+    /** 功能注释：二次确认通过后调用注销接口，成功则清本地会话并回首页 */
+    const handleDeleteAccountConfirm = async () => {
+        if (isDeletingAccount) return;
+        setIsDeletingAccount(true);
+        try {
+            const response = await auth.deleteAccount();
+            if (!response.data.success) {
+                toast.error(response.data.message || t('profile.deleteAccount.failed'));
+                return;
+            }
+            toast.success(t('profile.deleteAccount.success'));
+            setIsDeleteAccountWarningOpen(false);
+            logout();
+            navigate('/home');
+        } catch (error) {
+            console.error('delete account failed:', error);
+            toast.error(getApiErrorMessage(error, t('profile.deleteAccount.failed')));
+        } finally {
+            setIsDeletingAccount(false);
+        }
     };
 
     const getUserInfo = async () => {
@@ -688,9 +717,51 @@ const ProfileFunctionPanel: React.FC = () => {
                             </span>
                         </button>
                     )}
+
+                    {/* 功能注释：个人中心注销入口；先简确认，再打开重要提醒二次弹窗 */}
+                    <button
+                        type="button"
+                        className={styles.functionItem}
+                        onClick={() => setIsDeleteAccountFirstOpen(true)}
+                    >
+                        <span className={styles.functionIcon}>
+                            <MdOutlinePersonOff />
+                        </span>
+                        <span className={styles.functionTitle}>{t('profile.deleteAccount.title')}</span>
+                        <span className={styles.functionMeta}>
+                            <span className={styles.functionHint}>{t('profile.deleteAccount.hint')}</span>
+                            <HiChevronRight className={styles.functionChevron} />
+                        </span>
+                    </button>
                     </>
                 )}
             </div>
+
+            <ConfirmModal
+                isOpen={isDeleteAccountFirstOpen}
+                tone="dark"
+                title={t('profile.deleteAccount.firstConfirmTitle')}
+                message={t('profile.deleteAccount.firstConfirmMessage')}
+                confirmButtonText={t('profile.confirm')}
+                cancelButtonText={t('profile.cancel')}
+                onCancel={() => setIsDeleteAccountFirstOpen(false)}
+                onConfirm={() => {
+                    setIsDeleteAccountFirstOpen(false);
+                    setIsDeleteAccountWarningOpen(true);
+                }}
+            />
+
+            <DeleteAccountModal
+                isOpen={isDeleteAccountWarningOpen}
+                isSubmitting={isDeletingAccount}
+                onCancel={() => {
+                    if (isDeletingAccount) return;
+                    setIsDeleteAccountWarningOpen(false);
+                }}
+                onConfirm={() => {
+                    void handleDeleteAccountConfirm();
+                }}
+            />
 
             {isBindAccountModalOpen && (
                 <div

@@ -304,6 +304,7 @@
 
 /* 功能注释：效果图收藏徽标——酒红半透明底 + 浅粉字，非实心白字按钮 */
 .goodsCollectBadge {
+    /* 功能注释：对齐收藏夹效果图——实心酒红胶囊白字，非半透明粉字 */
     flex: 0 0 auto;
     margin-left: auto;
     display: inline-flex;
@@ -312,8 +313,8 @@
     min-height: 22px;
     padding: 3px 10px;
     border-radius: 999px;
-    background: rgba(168, 40, 60, 0.38);
-    color: #FFB6C1;
+    background: #a8283c;
+    color: #ffffff;
     font-size: 12px;
     font-weight: 600;
     line-height: 1.2;
@@ -564,8 +565,8 @@
         min-height: 22px;
         font-size: 11px;
         padding: 3px 9px;
-        background: rgba(168, 40, 60, 0.38);
-        color: #FFB6C1;
+        background: #a8283c;
+        color: #ffffff;
     }
 
     .goodsDesc {

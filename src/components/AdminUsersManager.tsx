@@ -4,8 +4,7 @@ import toast from 'react-hot-toast';
 import adminUsersApi, { type AdminUserItem } from '../api/admin/adminUsersApi';
 import { normalizeUserRole } from '../utils/userRoles';
 import Pagination from './Pagination';
-import PageSectionHeader from './Admin/PageSectionHeader';
-// import PageSectionHeader from './Admin/PageSectionHeader';
+import PageSectionHeader from './admin/PageSectionHeader';
 import workbenchStyles from './admin/MetricSummary.module.css';
 import styles from './AdminUsersManager.module.css';
 

@@ -14,6 +14,11 @@ export type RecommendExposeItem = {
   campaignId: number;
 };
 
+/** 功能注释：曝光接口需登录；游客列表仍可看，禁止无 token 打 expose 刷 401 */
+export function shouldReportRecommendExpose(isAuthenticated: boolean): boolean {
+  return isAuthenticated === true;
+}
+
 export function collectRecommendExposeItems(
   games: RecommendExposeGame[] | null | undefined = [],
 ): RecommendExposeItem[] {
@@ -31,4 +36,4 @@ export function collectRecommendExposeItems(
   return items;
 }
 
-export default { collectRecommendExposeItems };
+export default { collectRecommendExposeItems, shouldReportRecommendExpose };

@@ -151,15 +151,16 @@ test('GameGrid_封面角标应使用下载切图火焰心形且正文含作者�
   assert.match(css, /\.goodsMetaRow[\s\S]*justify-content:\s*space-between/);
   assert.match(css, /\.goodsMetaRow[\s\S]*flex-wrap:\s*nowrap/);
   assert.match(css, /\.goodsCollectBadge[\s\S]*margin-left:\s*auto/);
-  assert.match(css, /\.goodsCollectBadge[\s\S]*rgba\(168,\s*40,\s*60/);
-  assert.match(css, /\.goodsCollectBadge[\s\S]*#FFB6C1/);
+  assert.match(css, /\.goodsCollectBadge[\s\S]*background:\s*#a8283c/i);
+  assert.match(css, /\.goodsCollectBadge[\s\S]*color:\s*#ffffff/i);
   assert.match(css, /\.goodsAuthorAvatar[\s\S]*border-radius:\s*50%/);
   assert.match(css, /\.goodsTagPill[\s\S]*background:\s*#333333/);
   assert.match(css, /\.goodsTagPill[\s\S]*border-radius:\s*6px/);
   assert.match(css, /\.goodsTagPill[\s\S]*color:\s*#FFFFFF/);
   assert.match(css, /\.goodsTagPill[\s\S]*min-height:\s*24px/);
   assert.doesNotMatch(css, /\.goodsTagPill[\s\S]*border-radius:\s*999px/);
-  assert.doesNotMatch(css, /\.goodsCollectBadge[\s\S]*background:\s*#8E2135/);
+  assert.doesNotMatch(css, /\.goodsCollectBadge[\s\S]*#FFB6C1/);
+  assert.doesNotMatch(css, /\.goodsCollectBadge[\s\S]*rgba\(168,\s*40,\s*60,\s*0\.38\)/);
 });
 
 test('HomeThemePreviewRail_封面底栏应使用下载切图火焰心形', () => {

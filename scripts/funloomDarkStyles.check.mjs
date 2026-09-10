@@ -281,6 +281,16 @@ test('FooterArea_应对齐全站暗色壳避免底部白条', () => {
   assert.match(tsx, /LOGO2\.png/);
   assert.doesNotMatch(tsx, /LOGO\.png/);
   assert.match(navbar, /LOGO2\.png/);
+  /* 功能注释：PC 端内容区 100% 铺满；手机端仍隐藏页脚 */
+  assert.match(css, /\.container\s*\{[\s\S]*?width:\s*100%/);
+  assert.doesNotMatch(
+    css,
+    /\.container\s*\{[^}]*width:\s*min\(var\(--app-desktop-shell-max\)/,
+  );
+  assert.match(
+    css,
+    /@media screen and \(max-width:\s*768px\)[\s\S]*?\.footer\s*\{[\s\S]*?display:\s*none/,
+  );
 });
 
 test('CustomIFCreate_编辑页应对齐世界观暗色卡表单', () => {
@@ -303,8 +313,12 @@ test('CustomIFCreate_编辑页应对齐世界观暗色卡表单', () => {
   /* 功能注释：图1未选为深底描边芯片，选中实心酒红；禁止再做成透明纯文字 */
   assert.match(css, /\.pageRoot\s+\.themeTagChip\s*\{[\s\S]*?background:\s*#1C1C1E/);
   assert.match(css, /\.pageRoot\s+\.themeTagChip\s*\{[\s\S]*?border:\s*1px solid/);
+  assert.match(css, /\.pageRoot\s+\.themeTagChip\s*\{[\s\S]*?min-height:\s*38px/);
+  assert.doesNotMatch(css, /\.pageRoot\s+\.themeTagChip\s*\{[^}]*min-height:\s*48px/);
   assert.doesNotMatch(css, /\.pageRoot\s+\.themeTagChip\s*\{[^}]*background:\s*transparent/);
   assert.match(css, /\.pageRoot\s+\.themeTagChipActive\s*\{[\s\S]*?background:\s*#8E2135/);
+  /* 功能注释：分段选中须带 :hover 实心酒红，避免触屏粘滞悬停盖成半透明 */
+  assert.match(css, /\.pageRoot\s+\.segBtn\.segBtnActive:hover\s*\{[\s\S]*?background:\s*#8E2135/);
   assert.match(css, /\.themeTagsWrap\s*\{[\s\S]*?repeat\(6,/);
   assert.match(css, /@media \(max-width:\s*768px\)[\s\S]*?\.themeTagsWrap\s*\{[\s\S]*?repeat\(4,/);
   assert.match(tsx, /styles\.themeTagsHead/);
@@ -325,11 +339,12 @@ test('CustomIFCreate_编辑页应对齐世界观暗色卡表单', () => {
   assert.doesNotMatch(tsx, /customIFCreate\.uploadSectionTitle/);
   assert.doesNotMatch(tsx, /customIFCreate\.uploadSectionDesc/);
   assert.doesNotMatch(tsx, /customIFCreate\.uploadLabel/);
-  assert.match(tsx, /createGame\.clearAll/);
+  assert.match(tsx, /customIFCreate\.clearAll/);
   assert.doesNotMatch(tsx, /FooterArea/);
   assert.match(zh, /"basicInfoTitle":\s*"基础信息"/);
   assert.match(zh, /"headerTest":\s*"测试"/);
   assert.match(zh, /"backAria":\s*"返回创作中心"/);
+  assert.match(zh, /"customIFCreate"[\s\S]*?"clearAll":\s*"一键清空"/);
 });
 
 test('Rankings_排行榜应对齐奶油台面与酒红榜单卡', () => {
@@ -446,8 +461,26 @@ test('StGameCreate_应对齐图1世界观设定暗色卡风格', () => {
   assert.match(css, /\.stepActive\s*\{[\s\S]*?background:\s*var\(--st-accent-deep\)/);
   assert.match(css, /@media \(max-width:\s*768px\)[\s\S]*?\.themeTagsWrap\s*\{[\s\S]*?repeat\(3,/);
   assert.match(css, /@media \(max-width:\s*768px\)[\s\S]*?\.actions \.primary[\s\S]*?width:\s*100%/);
+  assert.match(
+    css,
+    /@media \(max-width:\s*768px\)[\s\S]*?\.stepOneArea\s*\{[\s\S]*?height:\s*calc\(1\.55em \* 9 \+ 24px\)/,
+  );
+  assert.doesNotMatch(
+    css,
+    /@media \(max-width:\s*768px\)[\s\S]*?\.stepOneArea\s*\{[\s\S]*?min-height:\s*180px/,
+  );
   assert.match(tsx, /styles\.stepIndex/);
   assert.match(tsx, /styles\.stepLabel/);
+  assert.match(css, /\.clearFieldButton\s*\{[\s\S]*?background:\s*var\(--st-accent-deep\)/);
+  assert.match(css, /\.clearFieldButton:hover:not\(:disabled\)\s*\{[\s\S]*?background:\s*var\(--st-accent\)/);
+  assert.match(css, /\.clearFieldButton\s*\{[^}]*color:\s*#ffffff/);
+  assert.doesNotMatch(css, /\.clearFieldButton\s*\{[^}]*color:\s*var\(--st-muted\)/);
+  /* 功能注释：题材未填不再 setError 插在「下一步」上方横幅，只 toast + 滚到标签 */
+  assert.doesNotMatch(
+    tsx,
+    /themeTagsFieldRequired[\s\S]{0,80}setError\(message\)/,
+  );
+  assert.match(tsx, /guideToRequiredField\('themeTags'/);
 });
 
 test('Document_文档中心应对齐白顶栏加墨黑阅读区', () => {
