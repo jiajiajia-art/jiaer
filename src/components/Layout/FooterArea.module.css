@@ -15,10 +15,11 @@
 }
 
 .container {
-  width: min(var(--app-desktop-shell-max), calc(100% - 2 * var(--app-desktop-gutter)));
+  /* 功能注释：PC 端页脚内容区铺满可视宽度，不再卡桌面 shell max */
+  width: 100%;
   max-width: none;
   display: flex;
-  padding: 0;
+  padding: 0 var(--app-desktop-gutter);
   box-sizing: border-box;
 }
 

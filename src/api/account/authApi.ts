@@ -86,4 +86,10 @@ export const auth = {
 
   exchangeDiamonds: (data: ExchangeDiamondsRequest) =>
     api.post<ApiResponse<ExchangeDiamondsResponse>>('/auth/currency/exchange', data),
+
+  /** 功能注释：用户自助注销账号（不可逆；成功后前端应登出） */
+  deleteAccount: () =>
+    api.post<ApiResponse<{ alreadyDeleted?: boolean; deletedAt?: string | null }>>(
+      '/auth/user/delete-account',
+    ),
 };

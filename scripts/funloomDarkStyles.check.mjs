@@ -281,6 +281,16 @@ test('FooterArea_应对齐全站暗色壳避免底部白条', () => {
   assert.match(tsx, /LOGO2\.png/);
   assert.doesNotMatch(tsx, /LOGO\.png/);
   assert.match(navbar, /LOGO2\.png/);
+  /* 功能注释：PC 端内容区 100% 铺满；手机端仍隐藏页脚 */
+  assert.match(css, /\.container\s*\{[\s\S]*?width:\s*100%/);
+  assert.doesNotMatch(
+    css,
+    /\.container\s*\{[^}]*width:\s*min\(var\(--app-desktop-shell-max\)/,
+  );
+  assert.match(
+    css,
+    /@media screen and \(max-width:\s*768px\)[\s\S]*?\.footer\s*\{[\s\S]*?display:\s*none/,
+  );
 });
 
 test('CustomIFCreate_编辑页应对齐世界观暗色卡表单', () => {
