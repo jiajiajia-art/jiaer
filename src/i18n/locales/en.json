@@ -759,6 +759,26 @@
     "exchange": "Exchange Points",
     "myDiamonds": "My Diamonds"
   },
+  "footer": {
+    "shareTo": "Share to:",
+    "wechat": "WeChat",
+    "weibo": "Weibo",
+    "qq": "QQ",
+    "douyin": "Douyin",
+    "xiaohongshu": "Xiaohongshu",
+    "followUs": "Follow Us",
+    "joinUs": "Join Us",
+    "socialRecruit": "Social Recruitment",
+    "campusRecruit": "Campus Recruitment",
+    "intlRecruit": "International Recruitment",
+    "contactUs": "Contact Us",
+    "customerService": "Customer Service",
+    "businessCoop": "Business Cooperation",
+    "procurement": "Procurement",
+    "feedback": "Feedback",
+    "optimization": "Optimization Ideas",
+    "improvement": "Improvement Ideas"
+  },
   "nav": {
     "home": "Home",
     "categories": "Categories",

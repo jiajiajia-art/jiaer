@@ -758,6 +758,26 @@
     "exchange": "兑换积分",
     "myDiamonds": "我的钻石"
   },
+  "footer": {
+    "shareTo": "分享到：",
+    "wechat": "微信",
+    "weibo": "微博",
+    "qq": "QQ",
+    "douyin": "抖音",
+    "xiaohongshu": "小红书",
+    "followUs": "关注我们",
+    "joinUs": "加入我们",
+    "socialRecruit": "社会招聘",
+    "campusRecruit": "校园招聘",
+    "intlRecruit": "国际招聘",
+    "contactUs": "联系我们",
+    "customerService": "客户服务",
+    "businessCoop": "合作洽谈",
+    "procurement": "服务采购",
+    "feedback": "发表建议",
+    "optimization": "优化建议",
+    "improvement": "改进建议"
+  },
   "nav": {
     "home": "首页",
     "categories": "分类",

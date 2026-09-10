@@ -291,6 +291,12 @@ test('FooterArea_应对齐全站暗色壳避免底部白条', () => {
     css,
     /@media screen and \(max-width:\s*768px\)[\s\S]*?\.footer\s*\{[\s\S]*?display:\s*none/,
   );
+  /* 功能注释：页脚文案须走 i18n，禁止硬编码中文 */
+  assert.match(tsx, /useTranslation/);
+  assert.match(tsx, /t\('footer\.shareTo'\)/);
+  assert.match(tsx, /t\('footer\.feedback'\)/);
+  assert.doesNotMatch(tsx, /分享到：/);
+  assert.doesNotMatch(tsx, /发表建议/);
 });
 
 test('CustomIFCreate_编辑页应对齐世界观暗色卡表单', () => {
