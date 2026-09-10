@@ -1235,12 +1235,22 @@
     box-sizing: border-box;
     box-shadow: none;
     overflow: visible;
-    transition: transform 0.2s ease;
+    transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+/* 酒红→珊瑚渐变，不拖到白粉，深色页上更稳 */
+.startButton {
+    background-color: #A8283C;
+    background-image: linear-gradient(90deg, #8E2135 0%, #A8283C 42%, #E23A52 100%);
 }
 
 .startButton:hover:not(:disabled),
 .purchaseButton:hover:not(:disabled) {
     transform: translateY(-0.125rem);
+}
+
+.startButton:hover:not(:disabled) {
+    filter: brightness(1.04);
 }
 
 .startButton:active:not(:disabled),

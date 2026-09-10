@@ -64,8 +64,9 @@
     width: 100%;
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px;
+    gap: 18px;
+    min-height: 88px;
+    padding: 18px 14px;
     border-radius: 14px;
     background-color: var(--type-card);
     color: #ffffff;
@@ -76,14 +77,14 @@
 }
 
 .createTypeOption:hover:not(:disabled) {
-    border-color: rgba(168, 40, 60, 0.45);
+    border-color: rgba(255, 255, 255, 0.16);
     background-color: #222226;
     transform: translateY(-1px);
 }
 
 .createTypeOptionThumb {
-    width: 52px;
-    height: 52px;
+    width: 60px;
+    height: 60px;
     flex-shrink: 0;
     border-radius: 12px;
     display: inline-flex;
@@ -95,8 +96,8 @@
 }
 
 .createTypeOptionIcon {
-    width: 24px;
-    height: 24px;
+    width: 26px;
+    height: 26px;
     flex-shrink: 0;
 }
 
@@ -138,7 +139,7 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
 }
 
 .createTypeOptionTitleRow {
@@ -190,20 +191,20 @@
 .createTypeOptionRecommend {
     font-size: 11px;
     font-weight: 500;
-    color: #f5d0a9;
-    background-color: rgba(139, 90, 43, 0.45);
+    color: #ffffff;
+    background-color: rgba(255, 175, 54, 0.5);
     padding: 2px 7px;
-    border-radius: 999px;
+    border-radius: 6px;
     line-height: 1.3;
 }
 
 .createTypeOptionLockedTag {
     font-size: 11px;
     font-weight: 500;
-    color: #ffb3bf;
-    background-color: rgba(168, 40, 60, 0.35);
+    color: #ffffff;
+    background: rgba(255, 59, 97, 0.6);
     padding: 2px 7px;
-    border-radius: 999px;
+    border-radius: 6px;
     line-height: 1.3;
 }
 
@@ -296,21 +297,22 @@
     }
 
     .createTypeOption {
-        gap: 10px;
-        padding: 10px;
+        gap: 12px;
+        min-height: 84px;
+        padding: 14px 12px;
     }
 
     /* 功能注释：手机缩略图等比缩，避免固定像素撑破卡片 */
     .createTypeOptionThumb {
-        width: min(52px, 14vw);
-        height: min(52px, 14vw);
+        width: min(56px, 15vw);
+        height: min(56px, 15vw);
         aspect-ratio: 1;
         border-radius: 10px;
     }
 
     .createTypeOptionIcon {
-        width: min(22px, 5.5vw);
-        height: min(22px, 5.5vw);
+        width: min(24px, 6vw);
+        height: min(24px, 6vw);
     }
 
     .createTypeOptionName {

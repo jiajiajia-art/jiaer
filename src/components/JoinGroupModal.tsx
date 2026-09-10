@@ -41,7 +41,7 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, qqQrSr
         <div className={styles.title}>{t('home.joinGroup.modalTitle')}</div>
 
         <div className={styles.qrRow}>
-          <div className={styles.qrBox}>
+          <div className={`${styles.qrBox} ${styles.qrBoxGray}`}>
             <img
               src={qqSrc}
               alt={t('home.joinGroup.qqGroupQr')}

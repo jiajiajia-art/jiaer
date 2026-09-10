@@ -70,10 +70,60 @@
     white-space: nowrap;
 }
 
+.paginationCreator {
+    justify-content: center;
+    align-items: center;
+    gap: 0;
+}
+
+.paginationCreator .controls {
+    justify-content: center;
+    gap: 8px;
+}
+
+.paginationCreator .navButton,
+.paginationCreator .pageButton {
+    border-color: rgba(255, 255, 255, 0.14);
+    background: transparent;
+    color: rgba(255, 255, 255, 0.72);
+    font-weight: 600;
+    box-shadow: none;
+}
+
+.paginationCreator .navButton:hover,
+.paginationCreator .pageButton:hover {
+    border-color: rgba(255, 255, 255, 0.28);
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+    box-shadow: none;
+    transform: none;
+}
+
+.paginationCreator .pageButtonActive {
+    border-color: #a8283c;
+    background: #a8283c;
+    color: #fff;
+    box-shadow: none;
+}
+
+.paginationCreator .pageButtonActive:hover {
+    border-color: #a8283c;
+    background: #8e2135;
+    color: #fff;
+}
+
 @media (max-width: 768px) {
     .pagination {
         align-items: flex-start;
         gap: 10px;
+    }
+
+    .paginationCreator {
+        align-items: center;
+    }
+
+    .paginationCreator .controls {
+        gap: 6px;
     }
 
     .controls {
@@ -86,6 +136,11 @@
         padding: 0 12px;
         border-radius: 12px;
         font-size: 13px;
+    }
+
+    .paginationCreator .prevNextButton {
+        min-width: 72px;
+        padding: 0 10px;
     }
 
     .pageButton {

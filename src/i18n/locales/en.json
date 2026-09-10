@@ -231,6 +231,16 @@
     "favoriteGameUpdate": "Notification",
     "clickToViewFavoriteGameUpdate": "Click to view update details"
   },
+  "gameType": {
+    "labels": {
+      "aiWenyou": "AI Fiction",
+      "tavern": "Tavern Card",
+      "custom": "Custom",
+      "visualNovel": "Visual Novel",
+      "ivg": "Interactive Video",
+      "story": "Story"
+    }
+  },
   "gameBrowse": {
     "sort": "Sort",
     "sorts": {
@@ -242,10 +252,10 @@
     "mode": "Mode",
     "modes": {
       "all": "All",
-      "rolePlaying": "AI文游",
-      "world": "酒馆卡",
-      "novel": "视觉小说",
-      "custom": "自定义",
+      "rolePlaying": "AI Fiction",
+      "world": "Tavern Card",
+      "novel": "Visual Novel",
+      "custom": "Custom",
       "interactiveVideo": "Interactive Video"
     },
     "modeOptions": "Mode Options",
@@ -307,10 +317,10 @@
     "all": "All",
     "modes": {
       "all": "All",
-      "rolePlaying": "AI文游",
-      "world": "酒馆卡",
-      "novel": "视觉小说",
-      "custom": "自定义",
+      "rolePlaying": "AI Fiction",
+      "world": "Tavern Card",
+      "novel": "Visual Novel",
+      "custom": "Custom",
       "interactiveVideo": "Interactive Video"
     },
     "sorts": {
@@ -482,11 +492,11 @@
     "noDraftsForFilter": "No drafts in this category",
     "draftFilters": {
       "all": "All",
-      "role-playing": "AI文游",
-      "world": "酒馆卡",
-      "custom": "自定义",
+      "role-playing": "AI Fiction",
+      "world": "Tavern Card",
+      "custom": "Custom",
       "ivg": "Interactive Video",
-      "novel": "视觉小说"
+      "novel": "Visual Novel"
     },
     "cancelSelectAll": "Cancel All",
     "selectAll": "Select All",
@@ -944,11 +954,13 @@
     "qqGroup": "QQ Group",
     "qqGroupPlaceholder": "Please enter QQ group number (5-11 digits)",
     "selectGameTypeTitle": "Create Game Type",
+    "docsHelp": "Creation guide",
+    "howToStart": "How to start?",
     "selectGameTypeDesc": "Please select the type of game you want to create, and we will match you with the appropriate creation workflow.",
     "optionHint": "Multiple creation modes to spark your inspiration",
     "recommend": "Recommended",
     "new": "New",
-    "custom": "自定义",
+    "custom": "Custom",
     "unsavedChanges": "Unsaved Changes",
     "unsavedChangesMessage": "You have unsaved changes, do you want to save?",
     "loadSaveList": {
@@ -970,8 +982,8 @@
     },
     "locked": "Locked",
     "cancel": "Cancel",
-    "txtMode": "AI文游",
-    "avgBeta": "酒馆卡（内测中）",
+    "txtMode": "AI Fiction",
+    "avgBeta": "Tavern Card (Beta)",
     "interactiveVideo": "Interactive Video",
     "ivgToolTitle": "Interactive Video Creation Tool",
     "ivgToolDesc": "Download the Windows or Mac creation tool to start making interactive video games, or read the tutorial first.",

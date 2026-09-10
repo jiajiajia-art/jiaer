@@ -29,16 +29,48 @@
 .header {
     justify-content: center;
     text-align: center;
+    margin-bottom: 16px;
 }
 
 .title {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     text-align: center;
     font-family: "Alibaba PuHuiTi 2.0", "Alibaba PuHuiTi", "PingFang SC", "Microsoft YaHei", sans-serif;
     font-weight: 500;
 }
 
-.desc {
-    text-align: center;
+.helpBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    background: transparent;
+    color: rgba(255, 255, 255, 0.78);
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.helpBtn:hover {
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.65);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.helpBtn:focus-visible {
+    outline: 2px solid rgba(168, 40, 60, 0.8);
+    outline-offset: 2px;
 }
 
 .options {

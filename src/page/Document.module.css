@@ -1,6 +1,6 @@
 /* ============================================
    文档中心 — Spotlight Docs
-   白顶栏舞台沿 + 墨黑阅读区；酒红 (#A8283C) 作章节轨
+   全页暗色；酒红 (#A8283C) 作章节轨 / 主操作
    ============================================ */
 
 .pageRoot {
@@ -31,14 +31,14 @@
     min-height: calc(100vh - var(--nav-height));
 }
 
-/* —— 白顶栏（效果图：汉堡 + 品牌 | 描边胶囊「模板下载」） —— */
+/* —— 暗色顶栏（对齐 Create / 文档阅读区） —— */
 .topNav {
     position: sticky;
     top: 0;
     z-index: 100;
     width: 100%;
-    background: #ffffff;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    background: #000000;
+    border-bottom: 1px solid var(--doc-border);
 }
 
 .topNavInner {
@@ -70,7 +70,7 @@
     align-items: center;
     gap: 8px;
     text-decoration: none;
-    color: #111111;
+    color: #ffffff;
     min-width: 0;
 }
 
@@ -108,9 +108,9 @@
     justify-content: center;
     gap: 6px;
     padding: 7px 14px;
-    border: 1.5px solid #111111;
-    background: #ffffff;
-    color: #111111;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    background: transparent;
+    color: #ffffff;
     font-size: 13px;
     font-weight: 700;
     cursor: pointer;
@@ -144,12 +144,12 @@
     border-radius: 8px;
     background: transparent;
     cursor: pointer;
-    color: #111111;
+    color: #ffffff;
     flex-shrink: 0;
 }
 
 .mobileMenuButton:hover {
-    background: rgba(0, 0, 0, 0.05);
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .mobileMenuIcon {
@@ -742,26 +742,27 @@
 }
 
 .copyButton {
-    border: none;
-    background: #ffffff;
-    color: #111111;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: #1C1C1E;
+    color: #ffffff;
     font-size: 12px;
     font-weight: 700;
     line-height: 1;
     letter-spacing: 0.02em;
     padding: 11px 18px;
     cursor: pointer;
-    transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+    transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    border-radius: 999px;
+    border-radius: 10px;
     flex-shrink: 0;
     white-space: nowrap;
 }
 
 .copyButton:hover {
     background: var(--brand-red);
+    border-color: var(--brand-red);
     color: #ffffff;
 }
 
@@ -1042,16 +1043,17 @@
     width: 28px;
     height: 28px;
     padding: 0;
-    color: rgba(255, 255, 255, 0.65);
-    background: rgba(28, 28, 30, 0.95);
-    border: 1px solid var(--doc-border);
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.35);
     border-radius: 6px;
     cursor: pointer;
-    transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
+    transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
     z-index: 10;
     display: flex;
     align-items: center;
     justify-content: center;
+    backdrop-filter: blur(6px);
 }
 
 .markdownBody pre:hover :global(.copy-code-button) {
@@ -1060,26 +1062,30 @@
 
 :global(.copy-code-button:hover) {
     color: #ffffff;
-    background: var(--brand-red-deep);
+    background: var(--brand-red);
     border-color: var(--brand-red);
 }
 
 :global(.copy-code-button.copied) {
     color: #4ade80;
-    border-color: #4ade80;
+    background: rgba(74, 222, 128, 0.16);
+    border-color: rgba(74, 222, 128, 0.55);
 }
 
+/* background-image SVG 不继承 color，描边必须写死浅色 */
 :global(.copy-code-button)::before {
     content: '';
     display: block;
     width: 16px;
     height: 16px;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2' ry='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2' ry='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E");
     background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
 }
 
 :global(.copy-code-button.copied)::before {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%234ade80' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
 }
 
 /* —— 页脚导航 —— */
