@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next';
 import {
   CartesianGrid,
+  ComposedChart,
   Legend,
   Line,
   LineChart,
@@ -16,21 +17,28 @@ import operatorReportsApi, {
   type ActiveUsersSummaryResponse,
   type ActiveUserRetentionPoint,
   type ActivityTrendsResponse,
+  type FhlCampaignBreakdownResponse,
   type ConsumptionTrendResponse,
+  type FhlOnboardingFunnelResponse,
+  type FhlReportDeviceType,
+  type FhlRetentionResponse,
   type NewUserRetentionPoint,
   type RechargeSummaryResponse,
   type RechargeTrendResponse,
   type RegistrationTrendResponse,
+  type ReportDataSource,
   type ReportGranularity,
   type ReportPlatform,
 } from '../../api/stats/operatorReportsApi';
 import MetricTitleTip from '../../components/stats/MetricTitleTip';
 import metricStyles from '../../components/admin/MetricSummary.module.css';
-import PageSectionHeader from '../../components/Admin/PageSectionHeader';
-// import PageSectionHeader from '../../components/Admin/PageSectionHeader';
+import PageSectionHeader from '../../components/admin/PageSectionHeader';
+// import PageSectionHeader from '../../components/admin/PageSectionHeader';
 import styles from './OperatorReports.module.css';
 import {
   buildPresetRange,
+  filterFhlCampaignRows,
+  buildReportRequestParams,
   formatPercent,
   mergeSeriesForChart,
 } from '../../utils/operatorReportChart';
@@ -40,6 +48,7 @@ const ACTIVITY_COLORS: Record<string, string> = {
   pv: '#2f81f7',
   comment: '#23d18b',
   share: '#b15cff',
+  interaction: '#d05f2d',
 };
 
 const RECHARGE_COLORS: Record<string, string> = {
@@ -48,7 +57,22 @@ const RECHARGE_COLORS: Record<string, string> = {
   users: '#23a26d',
 };
 
+const FHL_RETENTION_COLORS: Record<string, string> = {
+  nextDayRetentionPct: '#2f81f7',
+  thirdDayRetentionPct: '#d05f2d',
+};
+
 const RETENTION_DAY_OPTIONS = [1, 7] as const;
+const DATA_SOURCE_OPTIONS: Array<{ value: ReportDataSource; labelKey: string }> = [
+  { value: 'funloom', labelKey: 'operator.reports.dataSourceFunloom' },
+  { value: 'fhl', labelKey: 'operator.reports.dataSourceFhl' },
+];
+const FHL_DEVICE_FILTER_OPTIONS: Array<{ value: FhlReportDeviceType; labelKey: string }> = [
+  { value: 'all', labelKey: 'operator.reports.fhlDeviceAll' },
+  { value: 'pc', labelKey: 'operator.reports.fhlDevicePc' },
+  { value: 'mobile', labelKey: 'operator.reports.fhlDeviceMobile' },
+  { value: 'tablet', labelKey: 'operator.reports.fhlDeviceTablet' },
+];
 const PLATFORM_OPTIONS: Array<{ value: ReportPlatform; labelKey: string }> = [
   { value: 'all', labelKey: 'operator.reports.platformAll' },
   { value: 'pc', labelKey: 'operator.reports.platformPc' },
@@ -88,6 +112,9 @@ type ReportSectionKey =
   | 'activeUsers'
   | 'newUserRetention'
   | 'activeUserRetention'
+  | 'fhlCampaign'
+  | 'fhlOnboarding'
+  | 'fhlRetention'
   | 'rechargeSummary'
   | 'rechargeTrend';
 
@@ -98,6 +125,9 @@ const INITIAL_LOADING_STATE: Record<ReportSectionKey, boolean> = {
   activeUsers: false,
   newUserRetention: false,
   activeUserRetention: false,
+  fhlCampaign: false,
+  fhlOnboarding: false,
+  fhlRetention: false,
   rechargeSummary: false,
   rechargeTrend: false,
 };
@@ -156,6 +186,59 @@ const formatTooltipCurrency = (value: number | string | readonly (number | strin
   return formatCurrency(Number(value ?? 0));
 };
 
+const formatTooltipScalarNumber = (value: unknown) => {
+  const raw = Array.isArray(value) ? value[0] : value;
+  const numeric = Number(raw || 0);
+  return Number.isFinite(numeric) ? new Intl.NumberFormat('zh-CN').format(numeric) : String(raw ?? 0);
+};
+
+const formatTooltipScalarCurrency = (value: unknown) => {
+  const raw = Array.isArray(value) ? value[0] : value;
+  const numeric = Number(raw || 0);
+  return formatCurrency(Number.isFinite(numeric) ? numeric : 0);
+};
+
+const formatRechargeTrendTooltip = (
+  value: unknown,
+  name: string | number | undefined,
+  item?: { dataKey?: unknown },
+): [string, string | number] => [
+  item?.dataKey === 'recharge' ? formatTooltipScalarCurrency(value) : formatTooltipScalarNumber(value),
+  name ?? '',
+];
+
+const deviceTypeLabelKeys: Record<string, string> = {
+  pc: 'operator.reports.fhlDevicePc',
+  mobile: 'operator.reports.fhlDeviceMobile',
+  tablet: 'operator.reports.fhlDeviceTablet',
+};
+
+const onboardingStepLabelKeys: Record<string, string> = {
+  intro_start: 'operator.reports.fhlIntroStart',
+  intro_complete: 'operator.reports.fhlIntroComplete',
+  tutorial_start: 'operator.reports.fhlTutorialStart',
+  tutorial_complete: 'operator.reports.fhlTutorialComplete',
+  valid_user: 'operator.reports.fhlValidUser',
+};
+
+const hasPartialError = (data?: { partial?: boolean; error?: { message?: string } } | null) =>
+  Boolean(data?.partial || data?.error);
+
+const sumNumeric = <T,>(items: T[], readValue: (item: T) => number | null | undefined): number =>
+  items.reduce((sum, item) => sum + Number(readValue(item) || 0), 0);
+
+const divideOrZero = (numerator: number, denominator: number): number =>
+  denominator > 0 ? numerator / denominator : 0;
+
+const countInclusiveDays = (start: string, end: string): number => {
+  const startMs = new Date(`${start}T00:00:00+08:00`).getTime();
+  const endMs = new Date(`${end}T00:00:00+08:00`).getTime();
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs < startMs) {
+    return 1;
+  }
+  return Math.max(1, Math.round((endMs - startMs) / 86400000) + 1);
+};
+
 const OperatorReports: React.FC = () => {
   const { t } = useTranslation();
   const [granularity, setGranularity] = useState<ReportGranularity>('day');
@@ -163,12 +246,18 @@ const OperatorReports: React.FC = () => {
   const [startDate, setStartDate] = useState(() => buildPresetRange(30).startDate);
   const [endDate, setEndDate] = useState(() => buildPresetRange(30).endDate);
   const [presetDays, setPresetDays] = useState<7 | 30>(30);
+  const [dataSource, setDataSource] = useState<ReportDataSource>('funloom');
   const [activityData, setActivityData] = useState<ActivityTrendsResponse | null>(null);
   const [registrationData, setRegistrationData] = useState<RegistrationTrendResponse | null>(null);
   const [consumptionData, setConsumptionData] = useState<ConsumptionTrendResponse | null>(null);
   const [activeUsers, setActiveUsers] = useState<ActiveUsersSummaryResponse | null>(null);
   const [newUserRetention, setNewUserRetention] = useState<NewUserRetentionPoint[]>([]);
   const [activeUserRetention, setActiveUserRetention] = useState<ActiveUserRetentionPoint[]>([]);
+  const [fhlCampaignData, setFhlCampaignData] = useState<FhlCampaignBreakdownResponse | null>(null);
+  const [fhlCampaignOptionsData, setFhlCampaignOptionsData] = useState<FhlCampaignBreakdownResponse | null>(null);
+  const [fhlSummaryCampaignData, setFhlSummaryCampaignData] = useState<FhlCampaignBreakdownResponse | null>(null);
+  const [fhlOnboardingData, setFhlOnboardingData] = useState<FhlOnboardingFunnelResponse | null>(null);
+  const [fhlRetentionData, setFhlRetentionData] = useState<FhlRetentionResponse | null>(null);
   const [rechargeSummary, setRechargeSummary] = useState<RechargeSummaryResponse | null>(null);
   const [rechargeTrend, setRechargeTrend] = useState<RechargeTrendResponse | null>(null);
   const [registrationPlatform, setRegistrationPlatform] = useState<ReportPlatform>('all');
@@ -178,6 +267,9 @@ const OperatorReports: React.FC = () => {
   const [activityPlatform, setActivityPlatform] = useState<ReportPlatform>('all');
   const [consumptionPlatform, setConsumptionPlatform] = useState<ReportPlatform>('all');
   const [rechargeTrendPlatform, setRechargeTrendPlatform] = useState<ReportPlatform>('all');
+  const [fhlCampaignId, setFhlCampaignId] = useState('all');
+  const [fhlCampaignDeviceType, setFhlCampaignDeviceType] = useState<FhlReportDeviceType>('all');
+  const [fhlSegmentDeviceType, setFhlSegmentDeviceType] = useState<FhlReportDeviceType>('all');
   const [loadingSections, setLoadingSections] = useState<Record<ReportSectionKey, boolean>>(INITIAL_LOADING_STATE);
   const batchRequestIdRef = useRef(0);
   const registrationPlatformMountedRef = useRef(false);
@@ -188,6 +280,7 @@ const OperatorReports: React.FC = () => {
   const rechargeTrendPlatformMountedRef = useRef(false);
   const rechargeSummaryPlatformMountedRef = useRef(false);
 
+  const isFhlDataSource = dataSource === 'fhl';
   const queryParams = useMemo(() => ({ granularity, startDate, endDate }), [granularity, startDate, endDate]);
   const retentionQueryParams = useMemo(
     () => ({ startDate, endDate, days: retentionDays }),
@@ -202,7 +295,9 @@ const OperatorReports: React.FC = () => {
   const loadActivityTrends = useCallback(async (requestId?: number) => {
     setSectionLoading('activity', true);
     try {
-      const resp = await operatorReportsApi.getActivityTrends({ ...queryParams, platform: activityPlatform });
+      const resp = await operatorReportsApi.getActivityTrends(
+        buildReportRequestParams(queryParams, dataSource, activityPlatform),
+      );
       if (requestId != null && requestId !== batchRequestIdRef.current) return;
       if (resp.data.success) setActivityData(resp.data.data || null);
     } catch (e) {
@@ -212,13 +307,15 @@ const OperatorReports: React.FC = () => {
         setSectionLoading('activity', false);
       }
     }
-  }, [queryParams, activityPlatform, setSectionLoading]);
+  }, [queryParams, dataSource, activityPlatform, setSectionLoading]);
 
   // 注册用户增长（独立 platform）
   const loadRegistrationTrend = useCallback(async (requestId?: number) => {
     setSectionLoading('registration', true);
     try {
-      const resp = await operatorReportsApi.getRegistrationTrend({ ...queryParams, platform: registrationPlatform });
+      const resp = await operatorReportsApi.getRegistrationTrend(
+        buildReportRequestParams(queryParams, dataSource, registrationPlatform),
+      );
       if (requestId != null && requestId !== batchRequestIdRef.current) return;
       if (resp.data.success) setRegistrationData(resp.data.data || null);
     } catch (e) {
@@ -228,13 +325,15 @@ const OperatorReports: React.FC = () => {
         setSectionLoading('registration', false);
       }
     }
-  }, [queryParams, registrationPlatform, setSectionLoading]);
+  }, [queryParams, dataSource, registrationPlatform, setSectionLoading]);
 
   // 积分消费趋势（独立 platform）
   const loadConsumptionTrend = useCallback(async (requestId?: number) => {
     setSectionLoading('consumption', true);
     try {
-      const resp = await operatorReportsApi.getConsumptionTrend({ ...queryParams, platform: consumptionPlatform });
+      const resp = await operatorReportsApi.getConsumptionTrend(
+        buildReportRequestParams(queryParams, dataSource, consumptionPlatform),
+      );
       if (requestId != null && requestId !== batchRequestIdRef.current) return;
       if (resp.data.success) setConsumptionData(resp.data.data || null);
     } catch (e) {
@@ -244,13 +343,13 @@ const OperatorReports: React.FC = () => {
         setSectionLoading('consumption', false);
       }
     }
-  }, [queryParams, consumptionPlatform, setSectionLoading]);
+  }, [queryParams, dataSource, consumptionPlatform, setSectionLoading]);
 
   // DAU 指标（无 platform，日期变化时重请求）
   const loadActiveUsersSummary = useCallback(async (requestId?: number) => {
     setSectionLoading('activeUsers', true);
     try {
-      const resp = await operatorReportsApi.getActiveUsersSummary({ startDate, endDate });
+      const resp = await operatorReportsApi.getActiveUsersSummary({ startDate, endDate, dataSource });
       if (requestId != null && requestId !== batchRequestIdRef.current) return;
       if (resp.data.success) setActiveUsers(resp.data.data || null);
     } catch (e) {
@@ -260,12 +359,16 @@ const OperatorReports: React.FC = () => {
         setSectionLoading('activeUsers', false);
       }
     }
-  }, [startDate, endDate, setSectionLoading]);
+  }, [startDate, endDate, dataSource, setSectionLoading]);
 
   // 注册留存（独立 platform）
   const loadNewUserRetention = useCallback(async (requestId?: number) => {
     setSectionLoading('newUserRetention', true);
     try {
+      if (isFhlDataSource) {
+        setNewUserRetention([]);
+        return;
+      }
       const resp = await operatorReportsApi.getNewUserRetention({ ...retentionQueryParams, platform: newUserRetentionPlatform });
       if (requestId != null && requestId !== batchRequestIdRef.current) return;
       if (resp.data.success) setNewUserRetention(resp.data.data || []);
@@ -276,12 +379,16 @@ const OperatorReports: React.FC = () => {
         setSectionLoading('newUserRetention', false);
       }
     }
-  }, [retentionQueryParams, newUserRetentionPlatform, setSectionLoading]);
+  }, [retentionQueryParams, newUserRetentionPlatform, isFhlDataSource, setSectionLoading]);
 
   // 活跃留存（独立 platform）
   const loadActiveUserRetention = useCallback(async (requestId?: number) => {
     setSectionLoading('activeUserRetention', true);
     try {
+      if (isFhlDataSource) {
+        setActiveUserRetention([]);
+        return;
+      }
       const resp = await operatorReportsApi.getActiveUserRetention({ ...retentionQueryParams, platform: activeUserRetentionPlatform });
       if (requestId != null && requestId !== batchRequestIdRef.current) return;
       if (resp.data.success) setActiveUserRetention(resp.data.data || []);
@@ -292,13 +399,99 @@ const OperatorReports: React.FC = () => {
         setSectionLoading('activeUserRetention', false);
       }
     }
-  }, [retentionQueryParams, activeUserRetentionPlatform, setSectionLoading]);
+  }, [retentionQueryParams, activeUserRetentionPlatform, isFhlDataSource, setSectionLoading]);
+
+  const loadFhlCampaignBreakdown = useCallback(async (requestId?: number) => {
+    setSectionLoading('fhlCampaign', true);
+    try {
+      if (!isFhlDataSource) {
+        setFhlCampaignData(null);
+        setFhlCampaignOptionsData(null);
+        setFhlSummaryCampaignData(null);
+        return;
+      }
+      const baseParams = {
+        startDate,
+        endDate,
+        deviceType: fhlCampaignDeviceType,
+      };
+      const dataRequest = operatorReportsApi.getFhlCampaignBreakdown({
+        ...baseParams,
+        campaignId: fhlCampaignId === 'all' ? undefined : fhlCampaignId,
+      });
+      const optionsRequest = fhlCampaignId === 'all'
+        ? dataRequest
+        : operatorReportsApi.getFhlCampaignBreakdown(baseParams);
+      const summaryRequest = fhlCampaignDeviceType === 'all'
+        ? optionsRequest
+        : operatorReportsApi.getFhlCampaignBreakdown({ startDate, endDate, deviceType: 'all' });
+      const [resp, optionsResp, summaryResp] = await Promise.all([dataRequest, optionsRequest, summaryRequest]);
+      if (requestId != null && requestId !== batchRequestIdRef.current) return;
+      if (resp.data.success) setFhlCampaignData(resp.data.data || null);
+      if (optionsResp.data.success) setFhlCampaignOptionsData(optionsResp.data.data || null);
+      if (summaryResp.data.success) setFhlSummaryCampaignData(summaryResp.data.data || null);
+    } catch (e) {
+      console.error('[OperatorReports] fhl/campaign failed', e);
+    } finally {
+      if (requestId == null || requestId === batchRequestIdRef.current) {
+        setSectionLoading('fhlCampaign', false);
+      }
+    }
+  }, [endDate, fhlCampaignDeviceType, fhlCampaignId, isFhlDataSource, setSectionLoading, startDate]);
+
+  const loadFhlOnboardingFunnel = useCallback(async (requestId?: number) => {
+    setSectionLoading('fhlOnboarding', true);
+    try {
+      if (!isFhlDataSource) {
+        setFhlOnboardingData(null);
+        return;
+      }
+      const resp = await operatorReportsApi.getFhlOnboardingFunnel({
+        startDate,
+        endDate,
+        deviceType: fhlSegmentDeviceType,
+      });
+      if (requestId != null && requestId !== batchRequestIdRef.current) return;
+      if (resp.data.success) setFhlOnboardingData(resp.data.data || null);
+    } catch (e) {
+      console.error('[OperatorReports] fhl/onboarding failed', e);
+    } finally {
+      if (requestId == null || requestId === batchRequestIdRef.current) {
+        setSectionLoading('fhlOnboarding', false);
+      }
+    }
+  }, [endDate, fhlSegmentDeviceType, isFhlDataSource, setSectionLoading, startDate]);
+
+  const loadFhlRetention = useCallback(async (requestId?: number) => {
+    setSectionLoading('fhlRetention', true);
+    try {
+      if (!isFhlDataSource) {
+        setFhlRetentionData(null);
+        return;
+      }
+      const resp = await operatorReportsApi.getFhlRetention({
+        startDate,
+        endDate,
+        deviceType: fhlSegmentDeviceType,
+      });
+      if (requestId != null && requestId !== batchRequestIdRef.current) return;
+      if (resp.data.success) setFhlRetentionData(resp.data.data || null);
+    } catch (e) {
+      console.error('[OperatorReports] fhl/retention failed', e);
+    } finally {
+      if (requestId == null || requestId === batchRequestIdRef.current) {
+        setSectionLoading('fhlRetention', false);
+      }
+    }
+  }, [endDate, fhlSegmentDeviceType, isFhlDataSource, setSectionLoading, startDate]);
 
   // 充值趋势（独立 platform）
   const loadRechargeTrend = useCallback(async (requestId?: number) => {
     setSectionLoading('rechargeTrend', true);
     try {
-      const resp = await operatorReportsApi.getRechargeTrend({ ...queryParams, platform: rechargeTrendPlatform });
+      const resp = await operatorReportsApi.getRechargeTrend(
+        buildReportRequestParams(queryParams, dataSource, rechargeTrendPlatform),
+      );
       if (requestId != null && requestId !== batchRequestIdRef.current) return;
       if (resp.data.success) setRechargeTrend(resp.data.data || null);
     } catch (e) {
@@ -308,13 +501,15 @@ const OperatorReports: React.FC = () => {
         setSectionLoading('rechargeTrend', false);
       }
     }
-  }, [queryParams, rechargeTrendPlatform, setSectionLoading]);
+  }, [queryParams, dataSource, rechargeTrendPlatform, setSectionLoading]);
 
   // 充值汇总（独立 platform）
   const loadRechargeSummary = useCallback(async (requestId?: number) => {
     setSectionLoading('rechargeSummary', true);
     try {
-      const resp = await operatorReportsApi.getRechargeSummary({ startDate, endDate, platform: rechargeSummaryPlatform });
+      const resp = await operatorReportsApi.getRechargeSummary(
+        buildReportRequestParams({ startDate, endDate }, dataSource, rechargeSummaryPlatform),
+      );
       if (requestId != null && requestId !== batchRequestIdRef.current) return;
       if (resp.data.success) setRechargeSummary(resp.data.data || null);
     } catch (e) {
@@ -324,7 +519,7 @@ const OperatorReports: React.FC = () => {
         setSectionLoading('rechargeSummary', false);
       }
     }
-  }, [startDate, endDate, rechargeSummaryPlatform, setSectionLoading]);
+  }, [startDate, endDate, dataSource, rechargeSummaryPlatform, setSectionLoading]);
 
   useEffect(() => {
     const requestId = batchRequestIdRef.current + 1;
@@ -338,6 +533,9 @@ const OperatorReports: React.FC = () => {
         loadConsumptionTrend(requestId),
         loadNewUserRetention(requestId),
         loadActiveUserRetention(requestId),
+        loadFhlCampaignBreakdown(requestId),
+        loadFhlOnboardingFunnel(requestId),
+        loadFhlRetention(requestId),
         loadRechargeTrend(requestId),
         loadRechargeSummary(requestId),
       ]);
@@ -351,6 +549,10 @@ const OperatorReports: React.FC = () => {
     startDate,
     endDate,
     retentionDays,
+    dataSource,
+    fhlCampaignId,
+    fhlCampaignDeviceType,
+    fhlSegmentDeviceType,
   ]);
 
   useEffect(() => {
@@ -480,12 +682,118 @@ const OperatorReports: React.FC = () => {
     [activeUserRetention, t],
   );
 
+  const fhlCampaignRows = useMemo(
+    () =>
+      filterFhlCampaignRows(fhlCampaignData?.rows, fhlCampaignId).map((row) => ({
+        ...row,
+        campaignLabel: row.campaignId === 'unknown' ? t('operator.reports.fhlCampaignUnknown') : row.campaignId,
+        payingUsers: Number(row.payingUsers || 0),
+        revenueAmount: row.revenueCents / 100,
+        registrationRate: divideOrZero(row.registrations, row.visits),
+        validUserRate: divideOrZero(row.validUsers, row.registrations),
+        activeUserRate: divideOrZero(row.activeUsers, row.validUsers),
+        payRate: divideOrZero(Number(row.payingUsers || 0), row.validUsers),
+        arpu: divideOrZero(row.revenueCents / 100, row.validUsers),
+        arppu: divideOrZero(row.revenueCents / 100, Number(row.payingUsers || 0)),
+      })),
+    [fhlCampaignData?.rows, fhlCampaignId, t],
+  );
+
+  const fhlCampaignFilterOptions = useMemo(() => {
+    const ids = Array.from(new Set((fhlCampaignOptionsData?.rows || []).map((row) => row.campaignId || 'unknown')));
+    ids.sort((a, b) => {
+      if (a === 'unknown') return 1;
+      if (b === 'unknown') return -1;
+      return a.localeCompare(b, 'zh-CN', { numeric: true });
+    });
+    if (fhlCampaignId !== 'all' && !ids.includes(fhlCampaignId)) {
+      ids.unshift(fhlCampaignId);
+    }
+    return ids;
+  }, [fhlCampaignId, fhlCampaignOptionsData?.rows]);
+
+  const fhlDeviceRegistrationRows = useMemo(
+    () =>
+      (registrationData?.summary.deviceRegistrations || []).map((row) => ({
+        ...row,
+        deviceLabel: t(deviceTypeLabelKeys[row.deviceType] || row.deviceType),
+        ratioPct: Number((row.ratio * 100).toFixed(1)),
+      })),
+    [registrationData?.summary.deviceRegistrations, t],
+  );
+
+  const fhlSummary = useMemo(() => {
+    const summaryRows = fhlSummaryCampaignData?.rows || fhlCampaignOptionsData?.rows || fhlCampaignData?.rows || [];
+    const totalVisits = sumNumeric(summaryRows, (row) => row.visits);
+    const totalRegistrations = registrationData?.summary.total ?? sumNumeric(summaryRows, (row) => row.registrations);
+    const totalValidUsers = sumNumeric(summaryRows, (row) => row.validUsers);
+    const totalActiveUsers = sumNumeric(summaryRows, (row) => row.activeUsers);
+    const campaignPayingUsers = sumNumeric(summaryRows, (row) => row.payingUsers || 0);
+    const revenueAmount = rechargeSummary?.totalAmount ?? sumNumeric(summaryRows, (row) => row.revenueCents / 100);
+    const payingUsers = rechargeSummary?.totalUsers ?? campaignPayingUsers;
+    const paymentOrders = rechargeSummary?.totalOrders ?? sumNumeric(summaryRows, (row) => row.payments);
+    const interactionSeries = activityData?.series.find((series) => series.key === 'interaction');
+    const totalInteractions = sumNumeric(interactionSeries?.points || [], (point) => point.value);
+
+    return {
+      totalVisits,
+      totalRegistrations,
+      totalValidUsers,
+      totalActiveUsers,
+      totalInteractions,
+      avgDailyInteractions: totalInteractions / countInclusiveDays(startDate, endDate),
+      activeUserRate: divideOrZero(totalActiveUsers, totalVisits),
+      revenueAmount,
+      payingUsers,
+      paymentOrders,
+      payRate: divideOrZero(payingUsers, totalValidUsers),
+      arpu: divideOrZero(revenueAmount, totalValidUsers),
+      arppu: divideOrZero(revenueAmount, payingUsers),
+    };
+  }, [activityData?.series, endDate, fhlCampaignData?.rows, fhlCampaignOptionsData?.rows, fhlSummaryCampaignData?.rows, rechargeSummary, registrationData?.summary.total, startDate]);
+
+  const fhlOnboardingRows = useMemo(
+    () =>
+      (fhlOnboardingData?.rows || []).map((row) => ({
+        ...row,
+        stepLabel: t(onboardingStepLabelKeys[row.step]),
+        conversionRatePct: Number((row.conversionRate * 100).toFixed(2)),
+      })),
+    [fhlOnboardingData?.rows, t],
+  );
+
+  const fhlRetentionChartData = useMemo(
+    () =>
+      (fhlRetentionData?.rows || []).map((row) => ({
+        ...row,
+        bucket: row.cohortDate,
+        nextDayRetentionPct: Number((row.nextDayRetentionRate * 100).toFixed(2)),
+        thirdDayRetentionPct: Number((row.thirdDayRetentionRate * 100).toFixed(2)),
+      })),
+    [fhlRetentionData?.rows],
+  );
+
   const renderChartContent = useCallback(
     (loading: boolean, hasData: boolean, chart: React.ReactNode) => {
       if (hasData) return chart;
       return (
         <div className={styles.emptyState}>
           {loading ? t('creatorStats.loading') : '暂无数据'}
+        </div>
+      );
+    },
+    [t],
+  );
+
+  const renderFhlReportNotice = useCallback(
+    (data: { partial?: boolean; error?: { message?: string } } | null, onRetry: () => void) => {
+      if (!hasPartialError(data)) return null;
+      return (
+        <div className={styles.sectionError} role="status">
+          <span>{t('operator.reports.fhlPartialError')}</span>
+          <button type="button" onClick={onRetry}>
+            {t('common.retry')}
+          </button>
         </div>
       );
     },
@@ -513,6 +821,19 @@ const OperatorReports: React.FC = () => {
         title={t('operator.reports.title')}
         description={t('operator.reports.desc')}
       />
+
+      <div className={styles.dataSourceSwitch} role="group" aria-label={t('operator.reports.dataSource')}>
+        {DATA_SOURCE_OPTIONS.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            className={`${styles.dataSourceButton} ${dataSource === option.value ? styles.dataSourceButtonActive : ''}`}
+            onClick={() => setDataSource(option.value)}
+          >
+            {t(option.labelKey)}
+          </button>
+        ))}
+      </div>
 
       <div className={`${metricStyles.toolbar} ${styles.filters}`}>
         <button
@@ -565,23 +886,134 @@ const OperatorReports: React.FC = () => {
             <option value="month">{t('operator.reports.granularityMonth')}</option>
           </select>
         </label>
-        <label className={styles.filterGroup}>
-          <span>{t('operator.reports.retentionDays')}</span>
-          <select
-            className={styles.select}
-            value={retentionDays}
-            onChange={(event) => setRetentionDays(Number(event.target.value) as (typeof RETENTION_DAY_OPTIONS)[number])}
-          >
-            {RETENTION_DAY_OPTIONS.map((days) => (
-              <option key={days} value={days}>
-                {t(days === 1 ? 'operator.reports.retentionDay1' : 'operator.reports.retentionDay7')}
-              </option>
-            ))}
-          </select>
-        </label>
+        {!isFhlDataSource && (
+          <label className={styles.filterGroup}>
+            <span>{t('operator.reports.retentionDays')}</span>
+            <select
+              className={styles.select}
+              value={retentionDays}
+              onChange={(event) => setRetentionDays(Number(event.target.value) as (typeof RETENTION_DAY_OPTIONS)[number])}
+            >
+              {RETENTION_DAY_OPTIONS.map((days) => (
+                <option key={days} value={days}>
+                  {t(days === 1 ? 'operator.reports.retentionDay1' : 'operator.reports.retentionDay7')}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
 
       <div className={metricStyles.grid}>
+        {isFhlDataSource ? (
+          <>
+            <div className={metricStyles.card}>
+              <MetricTitleTip
+                className={metricStyles.title}
+                title={t('operator.reports.fhlVisitsTotal')}
+                tip={t('operator.reports.fhlVisitsTotalTip')}
+              />
+              <div className={metricStyles.value}>
+                {loadingSections.fhlCampaign && fhlSummaryCampaignData === null ? t('creatorStats.loading') : fhlSummary.totalVisits}
+              </div>
+            </div>
+            <div className={metricStyles.card}>
+              <div className={metricStyles.title}>{t('operator.reports.registrationTotal')}</div>
+              <div className={metricStyles.value}>
+                {loadingSections.registration && registrationData === null ? t('creatorStats.loading') : fhlSummary.totalRegistrations}
+              </div>
+            </div>
+            <div className={metricStyles.card}>
+              <MetricTitleTip
+                className={metricStyles.title}
+                title={t('operator.reports.fhlValidUsersTotal')}
+                tip={t('operator.reports.fhlValidUsersTotalTip')}
+              />
+              <div className={metricStyles.value}>
+                {loadingSections.fhlCampaign && fhlSummaryCampaignData === null ? t('creatorStats.loading') : fhlSummary.totalValidUsers}
+              </div>
+            </div>
+            <div className={metricStyles.card}>
+              <MetricTitleTip
+                className={metricStyles.title}
+                title={t('operator.reports.fhlActiveUsersTotal')}
+                tip={t('operator.reports.fhlActiveUsersTotalTip')}
+              />
+              <div className={metricStyles.value}>
+                {loadingSections.fhlCampaign && fhlSummaryCampaignData === null ? t('creatorStats.loading') : fhlSummary.totalActiveUsers}
+              </div>
+            </div>
+            <div className={metricStyles.card}>
+              <MetricTitleTip
+                className={metricStyles.title}
+                title={t('operator.reports.fhlAvgDailyInteractions')}
+                tip={t('operator.reports.fhlAvgDailyInteractionsTip')}
+              />
+              <div className={metricStyles.value}>
+                {loadingSections.activity && activityData === null ? t('creatorStats.loading') : fhlSummary.avgDailyInteractions.toFixed(1)}
+              </div>
+            </div>
+            <div className={metricStyles.card}>
+              <MetricTitleTip
+                className={metricStyles.title}
+                title={t('operator.reports.fhlActiveUserRate')}
+                tip={t('operator.reports.fhlActiveUserRateTip')}
+              />
+              <div className={metricStyles.value}>
+                {loadingSections.fhlCampaign && fhlSummaryCampaignData === null ? t('creatorStats.loading') : formatPercent(fhlSummary.activeUserRate)}
+              </div>
+            </div>
+            <div className={metricStyles.card}>
+              <div className={metricStyles.title}>{t('operator.reports.rechargeAmountTotal')}</div>
+              <div className={metricStyles.value}>
+                {loadingSections.rechargeSummary && rechargeSummary === null ? t('creatorStats.loading') : formatCurrency(fhlSummary.revenueAmount)}
+              </div>
+            </div>
+            <div className={metricStyles.card}>
+              <div className={metricStyles.title}>{t('operator.reports.rechargeUsersTotal')}</div>
+              <div className={metricStyles.value}>
+                {loadingSections.rechargeSummary && rechargeSummary === null ? t('creatorStats.loading') : fhlSummary.payingUsers}
+              </div>
+            </div>
+            <div className={metricStyles.card}>
+              <div className={metricStyles.title}>{t('operator.reports.rechargeOrdersTotal')}</div>
+              <div className={metricStyles.value}>
+                {loadingSections.rechargeSummary && rechargeSummary === null ? t('creatorStats.loading') : fhlSummary.paymentOrders}
+              </div>
+            </div>
+            <div className={metricStyles.card}>
+              <MetricTitleTip
+                className={metricStyles.title}
+                title={t('operator.reports.fhlPayRate')}
+                tip={t('operator.reports.fhlPayRateTip')}
+              />
+              <div className={metricStyles.value}>
+                {loadingSections.rechargeSummary && rechargeSummary === null ? t('creatorStats.loading') : formatPercent(fhlSummary.payRate)}
+              </div>
+            </div>
+            <div className={metricStyles.card}>
+              <MetricTitleTip
+                className={metricStyles.title}
+                title={t('operator.reports.fhlArpu')}
+                tip={t('operator.reports.fhlArpuTip')}
+              />
+              <div className={metricStyles.value}>
+                {loadingSections.rechargeSummary && rechargeSummary === null ? t('creatorStats.loading') : formatCurrency(fhlSummary.arpu)}
+              </div>
+            </div>
+            <div className={metricStyles.card}>
+              <MetricTitleTip
+                className={metricStyles.title}
+                title={t('operator.reports.fhlArppu')}
+                tip={t('operator.reports.fhlArppuTip')}
+              />
+              <div className={metricStyles.value}>
+                {loadingSections.rechargeSummary && rechargeSummary === null ? t('creatorStats.loading') : formatCurrency(fhlSummary.arppu)}
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
             <div className={metricStyles.card}>
               <MetricTitleTip
                 className={metricStyles.title}
@@ -648,14 +1080,18 @@ const OperatorReports: React.FC = () => {
                 {loadingSections.rechargeSummary && rechargeSummary === null ? t('creatorStats.loading') : (rechargeSummary?.totalUsers ?? 0)}
               </div>
             </div>
+          </>
+        )}
       </div>
 
           <section className={styles.section}>
             <div className={styles.sectionToolbar}>
-              <h2 className={styles.sectionTitle}>{t('operator.reports.activityTitle')}</h2>
-              <PlatformSelect value={activityPlatform} onChange={setActivityPlatform} />
+              <h2 className={styles.sectionTitle}>
+                {t(isFhlDataSource ? 'operator.reports.fhlActivityTitle' : 'operator.reports.activityTitle')}
+              </h2>
+              {!isFhlDataSource && <PlatformSelect value={activityPlatform} onChange={setActivityPlatform} />}
             </div>
-            <p className={styles.sectionHint}>{t('operator.reports.activityHint')}</p>
+            <p className={styles.sectionHint}>{t(isFhlDataSource ? 'operator.reports.fhlActivityHint' : 'operator.reports.activityHint')}</p>
             <div className={styles.chartWrap}>
               {renderChartContent(
                 loadingSections.activity,
@@ -686,10 +1122,12 @@ const OperatorReports: React.FC = () => {
 
           <section className={styles.section}>
             <div className={styles.sectionToolbar}>
-              <h2 className={styles.sectionTitle}>{t('operator.reports.registrationTitle')}</h2>
-              <PlatformSelect value={registrationPlatform} onChange={setRegistrationPlatform} />
+              <h2 className={styles.sectionTitle}>
+                {t(isFhlDataSource ? 'operator.reports.fhlRegistrationTitle' : 'operator.reports.registrationTitle')}
+              </h2>
+              {!isFhlDataSource && <PlatformSelect value={registrationPlatform} onChange={setRegistrationPlatform} />}
             </div>
-            <p className={styles.sectionHint}>{t('operator.reports.registrationHint')}</p>
+            <p className={styles.sectionHint}>{t(isFhlDataSource ? 'operator.reports.fhlRegistrationHint' : 'operator.reports.registrationHint')}</p>
             <div className={styles.chartWrap}>
               {renderChartContent(
                 loadingSections.registration,
@@ -705,8 +1143,277 @@ const OperatorReports: React.FC = () => {
                 </ResponsiveContainer>,
               )}
             </div>
+            {isFhlDataSource && (
+              <div className={styles.deviceSplit}>
+                <div className={styles.deviceSplitTitle}>{t('operator.reports.fhlDeviceRegistrationTitle')}</div>
+                <div className={styles.deviceSplitRows}>
+                  {fhlDeviceRegistrationRows.map((row) => (
+                    <div className={styles.deviceSplitRow} key={row.deviceType}>
+                      <div className={styles.deviceSplitLabel}>{row.deviceLabel}</div>
+                      <div className={styles.deviceSplitBarTrack} aria-hidden="true">
+                        <div
+                          className={styles.deviceSplitBarFill}
+                          style={{
+                            width: `${Math.min(100, row.ratioPct)}%`,
+                            minWidth: row.registrations > 0 ? 2 : 0,
+                          }}
+                        />
+                      </div>
+                      <div className={styles.deviceSplitValue}>
+                        {row.registrations} / {row.ratioPct.toFixed(1)}%
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </section>
 
+          {isFhlDataSource && (
+            <section className={styles.section}>
+              <div className={styles.sectionToolbar}>
+                <h2 className={styles.sectionTitle}>{t('operator.reports.fhlCampaignTitle')}</h2>
+                <div className={styles.inlineFilters}>
+                  <label className={styles.filterGroup}>
+                    <span>{t('operator.reports.fhlCampaignFilter')}</span>
+                    <select
+                      className={styles.select}
+                      value={fhlCampaignId}
+                      onChange={(event) => setFhlCampaignId(event.target.value)}
+                    >
+                      <option value="all">{t('operator.reports.fhlCampaignAll')}</option>
+                      {fhlCampaignFilterOptions.map((campaignId) => (
+                        <option key={campaignId} value={campaignId}>
+                          {campaignId === 'unknown' ? t('operator.reports.fhlCampaignUnknown') : campaignId}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className={styles.filterGroup}>
+                    <span>{t('operator.reports.fhlDeviceFilter')}</span>
+                    <select
+                      className={styles.select}
+                      value={fhlCampaignDeviceType}
+                      onChange={(event) => setFhlCampaignDeviceType(event.target.value as FhlReportDeviceType)}
+                    >
+                      {FHL_DEVICE_FILTER_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {t(option.labelKey)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </div>
+              <p className={styles.sectionHint}>{t('operator.reports.fhlCampaignHint')}</p>
+              {renderFhlReportNotice(fhlCampaignData, () => void loadFhlCampaignBreakdown())}
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>{t('operator.reports.fhlCampaignLabel')}</th>
+                      <th>{t('operator.reports.metrics.visit_game')}</th>
+                      <th>{t('operator.reports.fhlRegistrationRate')}</th>
+                      <th>{t('operator.reports.metrics.registration')}</th>
+                      <th>{t('operator.reports.fhlValidUserRate')}</th>
+                      <th>{t('operator.reports.metrics.valid_user')}</th>
+                      <th>{t('operator.reports.fhlActiveUserRate')}</th>
+                      <th>{t('operator.reports.metrics.active_user')}</th>
+                      <th>{t('operator.reports.payingUsersLabel')}</th>
+                      <th>{t('operator.reports.orderCountLabel')}</th>
+                      <th>{t('operator.reports.fhlPayRate')}</th>
+                      <th>{t('operator.reports.totalAmountLabel')}</th>
+                      <th>{t('operator.reports.fhlArpu')}</th>
+                      <th>{t('operator.reports.fhlArppu')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {renderTableBody(
+                      loadingSections.fhlCampaign,
+                      fhlCampaignRows.length > 0,
+                      14,
+                      <>
+                        {fhlCampaignRows.map((row) => (
+                          <tr key={row.campaignId}>
+                            <td>{row.campaignLabel}</td>
+                            <td>{row.visits}</td>
+                            <td>{formatPercent(row.registrationRate)}</td>
+                            <td>{row.registrations}</td>
+                            <td>{formatPercent(row.validUserRate)}</td>
+                            <td>{row.validUsers}</td>
+                            <td>{formatPercent(row.activeUserRate)}</td>
+                            <td>{row.activeUsers}</td>
+                            <td>{row.payingUsers}</td>
+                            <td>{row.payments}</td>
+                            <td>{formatPercent(row.payRate)}</td>
+                            <td>{formatCurrency(row.revenueAmount)}</td>
+                            <td>{formatCurrency(row.arpu)}</td>
+                            <td>{formatCurrency(row.arppu)}</td>
+                          </tr>
+                        ))}
+                      </>,
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {isFhlDataSource && (
+            <section className={styles.section}>
+              <div className={styles.sectionToolbar}>
+                <h2 className={styles.sectionTitle}>{t('operator.reports.fhlOnboardingTitle')}</h2>
+                <div className={styles.inlineFilters}>
+                  <label className={styles.filterGroup}>
+                    <span>{t('operator.reports.fhlDeviceFilter')}</span>
+                    <select
+                      className={styles.select}
+                      value={fhlSegmentDeviceType}
+                      onChange={(event) => setFhlSegmentDeviceType(event.target.value as FhlReportDeviceType)}
+                    >
+                      {FHL_DEVICE_FILTER_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {t(option.labelKey)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </div>
+              <p className={styles.sectionHint}>{t('operator.reports.fhlOnboardingHint')}</p>
+              {renderFhlReportNotice(fhlOnboardingData, () => void loadFhlOnboardingFunnel())}
+              <div className={styles.chartWrap}>
+                {renderChartContent(
+                  loadingSections.fhlOnboarding,
+                  fhlOnboardingRows.length > 0,
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={fhlOnboardingRows} layout="vertical" margin={{ left: 42, right: 16 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis type="number" tick={{ fontSize: 12 }} />
+                      <YAxis dataKey="stepLabel" type="category" tick={{ fontSize: 12 }} width={118} />
+                      <Tooltip />
+                      <Bar dataKey="users" name={t('operator.reports.fhlUsersLabel')} fill="#23a26d" radius={[0, 6, 6, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>,
+                )}
+              </div>
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>{t('operator.reports.fhlOnboardingStep')}</th>
+                      <th>{t('operator.reports.fhlUsersLabel')}</th>
+                      <th>{t('operator.reports.fhlConversionRate')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {renderTableBody(
+                      loadingSections.fhlOnboarding,
+                      fhlOnboardingRows.length > 0,
+                      3,
+                      <>
+                        {fhlOnboardingRows.map((row) => (
+                          <tr key={row.step}>
+                            <td>{row.stepLabel}</td>
+                            <td>{row.users}</td>
+                            <td>{formatPercent(row.conversionRate)}</td>
+                          </tr>
+                        ))}
+                      </>,
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {isFhlDataSource && (
+            <section className={styles.section}>
+              <div className={styles.sectionToolbar}>
+                <h2 className={styles.sectionTitle}>{t('operator.reports.fhlRetentionTitle')}</h2>
+                <div className={styles.inlineFilters}>
+                  <label className={styles.filterGroup}>
+                    <span>{t('operator.reports.fhlDeviceFilter')}</span>
+                    <select
+                      className={styles.select}
+                      value={fhlSegmentDeviceType}
+                      onChange={(event) => setFhlSegmentDeviceType(event.target.value as FhlReportDeviceType)}
+                    >
+                      {FHL_DEVICE_FILTER_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {t(option.labelKey)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </div>
+              <p className={styles.sectionHint}>{t('operator.reports.fhlRetentionHint')}</p>
+              {renderFhlReportNotice(fhlRetentionData, () => void loadFhlRetention())}
+              <div className={styles.chartWrap}>
+                {renderChartContent(
+                  loadingSections.fhlRetention,
+                  fhlRetentionChartData.length > 0,
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={fhlRetentionChartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="bucket" tick={{ fontSize: 12 }} />
+                      <YAxis tick={{ fontSize: 12 }} unit="%" />
+                      <Tooltip />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey="nextDayRetentionPct"
+                        name={t('operator.reports.fhlNextDayRetention')}
+                        stroke={FHL_RETENTION_COLORS.nextDayRetentionPct}
+                        strokeWidth={2}
+                        dot={{ r: 3 }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="thirdDayRetentionPct"
+                        name={t('operator.reports.fhlThirdDayRetention')}
+                        stroke={FHL_RETENTION_COLORS.thirdDayRetentionPct}
+                        strokeWidth={2}
+                        dot={{ r: 3 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>,
+                )}
+              </div>
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>{t('operator.reports.fhlCohortDate')}</th>
+                      <th>{t('operator.reports.fhlNewValidUsers')}</th>
+                      <th>{t('operator.reports.fhlNextDayRetention')}</th>
+                      <th>{t('operator.reports.fhlThirdDayRetention')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {renderTableBody(
+                      loadingSections.fhlRetention,
+                      fhlRetentionChartData.length > 0,
+                      4,
+                      <>
+                        {fhlRetentionChartData.map((row) => (
+                          <tr key={row.cohortDate}>
+                            <td>{row.cohortDate}</td>
+                            <td>{row.newValidUsers}</td>
+                            <td>{`${formatPercent(row.nextDayRetentionRate)} (${row.nextDayRetained})`}</td>
+                            <td>{`${formatPercent(row.thirdDayRetentionRate)} (${row.thirdDayRetained})`}</td>
+                          </tr>
+                        ))}
+                      </>,
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {!isFhlDataSource && (
           <section className={styles.section}>
             <div className={styles.sectionToolbar}>
               <h2 className={styles.sectionTitle}>{t('operator.reports.consumptionTitle')}</h2>
@@ -734,7 +1441,9 @@ const OperatorReports: React.FC = () => {
               )}
             </div>
           </section>
+          )}
 
+          {!isFhlDataSource && (
           <section className={styles.section}>
             <div className={styles.sectionToolbar}>
               <h2 className={styles.sectionTitle}>{t('operator.reports.newUserRetentionTitle')}</h2>
@@ -769,7 +1478,9 @@ const OperatorReports: React.FC = () => {
               )}
             </div>
           </section>
+          )}
 
+          {!isFhlDataSource && (
           <section className={styles.section}>
             <div className={styles.sectionToolbar}>
               <h2 className={styles.sectionTitle}>{t('operator.reports.activeUserRetentionTitle')}</h2>
@@ -804,11 +1515,12 @@ const OperatorReports: React.FC = () => {
               )}
             </div>
           </section>
+          )}
 
           <section className={styles.section}>
             <div className={styles.sectionToolbar}>
               <h2 className={styles.sectionTitle}>{t('operator.reports.rechargeTrendTitle')}</h2>
-              <PlatformSelect value={rechargeTrendPlatform} onChange={setRechargeTrendPlatform} />
+              {!isFhlDataSource && <PlatformSelect value={rechargeTrendPlatform} onChange={setRechargeTrendPlatform} />}
             </div>
             <p className={styles.sectionHint}>{t('operator.reports.rechargeTrendHint')}</p>
             <div className={styles.chartWrap}>
@@ -816,24 +1528,39 @@ const OperatorReports: React.FC = () => {
                 loadingSections.rechargeTrend,
                 rechargeTrendChartData.length > 0,
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={rechargeTrendChartData}>
+                  <ComposedChart data={rechargeTrendChartData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="bucket" tick={{ fontSize: 12 }} />
-                    <YAxis tick={{ fontSize: 12 }} />
-                    <Tooltip />
+                    <YAxis yAxisId="amount" tick={{ fontSize: 12 }} />
+                    <YAxis yAxisId="count" orientation="right" tick={{ fontSize: 12 }} />
+                    <Tooltip formatter={formatRechargeTrendTooltip} />
                     <Legend />
-                    {(rechargeTrend?.series || []).map((series) => (
-                      <Line
-                        key={series.key}
-                        type="monotone"
-                        dataKey={series.key}
-                        name={t(`operator.reports.rechargeMetrics.${series.key}`, { defaultValue: series.label })}
-                        stroke={RECHARGE_COLORS[series.key] || '#888'}
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                    ))}
-                  </LineChart>
+                    <Bar
+                      yAxisId="amount"
+                      dataKey="recharge"
+                      name={t('operator.reports.rechargeMetrics.recharge')}
+                      fill={RECHARGE_COLORS.recharge}
+                      radius={[6, 6, 0, 0]}
+                    />
+                    <Line
+                      yAxisId="count"
+                      type="monotone"
+                      dataKey="orders"
+                      name={t('operator.reports.rechargeMetrics.orders')}
+                      stroke={RECHARGE_COLORS.orders}
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                    <Line
+                      yAxisId="count"
+                      type="monotone"
+                      dataKey="users"
+                      name={t('operator.reports.rechargeMetrics.users')}
+                      stroke={RECHARGE_COLORS.users}
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </ComposedChart>
                 </ResponsiveContainer>,
               )}
             </div>
@@ -842,7 +1569,7 @@ const OperatorReports: React.FC = () => {
           <section className={styles.section}>
             <div className={styles.sectionToolbar}>
               <h2 className={styles.sectionTitle}>{t('operator.reports.rechargeSummaryTitle')}</h2>
-              <PlatformSelect value={rechargeSummaryPlatform} onChange={setRechargeSummaryPlatform} />
+              {!isFhlDataSource && <PlatformSelect value={rechargeSummaryPlatform} onChange={setRechargeSummaryPlatform} />}
             </div>
             <p className={styles.sectionHint}>{t('operator.reports.rechargeSummaryHint')}</p>
 
