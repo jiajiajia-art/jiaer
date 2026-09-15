@@ -12,6 +12,7 @@ import {
   APP_LANGUAGE_STORAGE_KEY,
   DEFAULT_APP_LANGUAGE,
   applyAppLanguage,
+  getNavbarLanguageTriggerLabel,
   mapTranslationTree,
   normalizeAppLanguage,
   persistAppLanguage,
@@ -100,16 +101,19 @@ test('i18n_应注册 zh zh-TW en 且默认简体', () => {
   assert.match(read('src/config.ts'), /LANGUAGE:\s*'zh'\s*\|\s*'zh-TW'\s*\|\s*'en'\s*=\s*'zh'/);
 });
 
-test('Navbar_用户菜单应打开语言弹窗而非内嵌三档列表', () => {
+test('Navbar_语言入口应在顶栏最右且未登录也可用', () => {
   const tsx = read('src/components/Layout/Navbar.tsx');
   const css = read('src/components/Layout/Navbar.module.css');
   const modalTsx = read('src/components/Layout/LanguageSelectModal.tsx');
   const modalCss = read('src/components/Layout/LanguageSelectModal.module.css');
   assert.match(tsx, /LanguageSelectModal/);
   assert.match(tsx, /showLanguageModal/);
-  assert.match(tsx, /nav\.profile[\s\S]*setShowLanguageModal\(true\)[\s\S]*nav\.language/);
-  assert.doesNotMatch(tsx, /langSwitcher|langMenuValue|getAppLanguageLabel/);
-  assert.doesNotMatch(css, /\.langSwitcher|\.langMenuValue/);
+  assert.match(tsx, /getNavbarLanguageTriggerLabel\(activeLanguage\)/);
+  assert.match(tsx, /className=\{styles\.langTrigger\}/);
+  // 功能注释：语言不再藏在个人菜单；入口在登录/头像之后，访客也可开弹窗
+  assert.doesNotMatch(tsx, /nav\.profile[\s\S]*setShowLanguageModal\(true\)[\s\S]*nav\.language/);
+  assert.doesNotMatch(tsx, /\{t\('nav\.language'\)\}/);
+  assert.match(css, /\.langTrigger\s*\{/);
   assert.match(modalTsx, /APP_LANGUAGE_OPTIONS/);
   assert.match(modalTsx, /nav\.chooseLanguage/);
   assert.match(modalCss, /\.sheet\s*\{[\s\S]*?#1A1A1A/);
@@ -117,6 +121,12 @@ test('Navbar_用户菜单应打开语言弹窗而非内嵌三档列表', () => {
   assert.match(modalCss, /\.optionActive\s*\{[\s\S]*?var\(--lang-accent\)/);
   assert.match(read('src/i18n/locales/zh.json'), /"chooseLanguage":\s*"选择语言"/);
   assert.match(read('src/i18n/locales/en.json'), /"chooseLanguage":\s*"Choose language"/);
+});
+
+test('getNavbarLanguageTriggerLabel_应为简体繁体EN', () => {
+  assert.equal(getNavbarLanguageTriggerLabel('zh'), '简体');
+  assert.equal(getNavbarLanguageTriggerLabel('zh-TW'), '繁体');
+  assert.equal(getNavbarLanguageTriggerLabel('en'), 'EN');
 });
 
 test('localizeChineseByLanguage_繁体才转写接口中文', async () => {

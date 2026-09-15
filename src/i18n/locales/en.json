@@ -842,7 +842,9 @@
     "googleLogin": "Login with Google",
     "googleLoginFailed": "Google login failed",
     "loginCancelled": "Login cancelled",
-    "networkError": "Network error, please check your connection"
+    "networkError": "Network error, please check your connection",
+    "privacyAgreePrefix": "I have read and agree to the ",
+    "privacyPolicy": "Privacy Policy"
   },
   "validation": {
     "enterGameName": "Please enter game name",
@@ -853,7 +855,8 @@
     "confirmPasswordRequired": "Please confirm your password",
     "passwordMismatch": "Passwords do not match",
     "codeRequired": "Please enter verification code",
-    "codeLength": "Verification code must be 6 digits"
+    "codeLength": "Verification code must be 6 digits",
+    "privacyRequired": "Please read and agree to the Privacy Policy"
   },
   "editorData": {
     "loadFailed": "Failed to load editor data, please try again later"
@@ -2078,9 +2081,13 @@
     "rechargeAmount": "Recharge Amount:",
     "receivePoints": "Receive Points:",
     "confirmRecharge": "Confirm Recharge",
-    "payNow": "Pay ¥{{amount}} Now",
+    "payNow": "{{symbol}}{{amount}} Pay Now",
+    "choosePayMethod": "Choose payment method",
+    "payWechat": "WeChat Pay",
+    "payOverseas": "Overseas Pay",
+    "redirectingOverseas": "Redirecting to overseas payment...",
     "openNow": "Activate for ¥{{amount}}",
-    "priceShort": "¥{{amount}}",
+    "priceShort": "{{symbol}}{{amount}}",
     "currentDiamonds": "Current Diamonds",
     "processing": "Processing...",
     "firstChargeBonus": "First Purchase Bonus",
@@ -2111,8 +2118,9 @@
     "miniProgramNotSupported": "Mini program payment not supported, please try again later.",
     "paymentRequestFailed": "Payment request failed, please try again later.",
     "queryPaymentStatusFailed": "Failed to query payment status, will retry automatically...",
-    "amountTooLow": "Recharge amount cannot be less than ${{amount}}",
-    "amountMustBeInteger": "Recharge amount must be an integer (yuan)",
+    "amountTooLow": "Recharge amount cannot be less than {{symbol}}{{amount}}",
+    "amountMustBeInteger": "WeChat Pay amount must be an integer (yuan)",
+    "amountMaxTwoDecimals": "Overseas amount allows at most 2 decimal places",
     "pleaseInputComplete": "Please complete input before submitting",
     "doNotRepeatClick": "Request in progress, please do not repeat click",
     "creatorDiscount": "TXT AVG Creation Discount",

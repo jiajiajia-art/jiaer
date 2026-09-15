@@ -15,10 +15,12 @@
 }
 
 .container {
-  /* 功能注释：PC 端页脚内容区铺满可视宽度，不再卡桌面 shell max */
-  width: 100%;
-  max-width: none;
+  /* 功能注释：PC 端页脚内容块整体水平居中，宽度随内容，不再左贴齐铺满 */
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
   display: flex;
+  justify-content: center;
   padding: 0 var(--app-desktop-gutter);
   box-sizing: border-box;
 }
@@ -36,7 +38,7 @@
 }
 
 .shareSection {
-  flex: 1;
+  flex: 0 1 auto;
   display: flex;
   flex-direction: column;
 }
@@ -132,7 +134,9 @@
   }
 
   .container {
-    width: 100%;
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 auto;
     padding: 0 20px;
   }
 

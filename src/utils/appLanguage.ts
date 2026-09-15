@@ -24,6 +24,15 @@ export function getAppLanguageLabel(code: AppLanguageCode): string {
     ?? APP_LANGUAGE_OPTIONS[0].label;
 }
 
+/**
+ * 功能注释：顶栏语言入口简称——简体/繁体/EN，未登录也可见。
+ */
+export function getNavbarLanguageTriggerLabel(code: AppLanguageCode): string {
+  if (code === 'en') return 'EN';
+  if (code === 'zh-TW') return '繁体';
+  return '简体';
+}
+
 /** 功能注释：把浏览器/历史写法归一到三档语言码 */
 export function normalizeAppLanguage(raw: string | null | undefined): AppLanguageCode | null {
   const value = String(raw || '').trim().replace(/_/g, '-');

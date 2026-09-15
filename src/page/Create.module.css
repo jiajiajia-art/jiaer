@@ -1486,15 +1486,15 @@
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
     column-gap: 12px;
-    width: calc(100% + 40px);
-    margin-left: -20px;
-    margin-right: -20px;
-    margin-bottom: 18px;
+    width: 100%;
+    margin: 0 0 18px;
     min-height: 52px;
     padding: 0 16px;
     box-sizing: border-box;
-    border-radius: 0;
-    border-bottom: none;
+    /* 功能注释：与账户卡/统计条一致用 16px 圆角，避免通栏直角条突兀 */
+    border-radius: var(--creator-radius);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     background: rgba(255, 255, 255, 0.1);
 }
 
@@ -1907,29 +1907,28 @@
     .worksTabBar {
         position: relative;
         display: flex;
-        flex-wrap: nowrap;
+        flex-wrap: wrap;
         align-items: center;
-        justify-content: center;
-        gap: 0;
-        width: calc(100% + 24px);
-        margin-left: -12px;
-        margin-right: -12px;
-        margin-bottom: 14px;
+        justify-content: flex-start;
+        gap: 8px 0;
+        width: 100%;
+        margin: 0 0 14px;
         min-height: 52px;
         padding: 0 12px;
-        border-radius: 0;
+        border-radius: var(--creator-radius);
         box-sizing: border-box;
+        overflow: visible;
     }
 
     .worksTabs {
         grid-column: auto;
-        flex: 0 1 auto;
+        flex: 1 1 auto;
         width: auto;
         max-width: 100%;
         min-width: 0;
-        justify-content: center;
-        gap: 40px;
-        transform: translateX(-30px);
+        justify-content: flex-start;
+        gap: 20px;
+        transform: none;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
@@ -1969,11 +1968,13 @@
     .draftManageActionsExpanded {
         position: static;
         transform: none;
-        flex: 0 0 auto;
-        margin-left: auto;
+        flex: 1 0 100%;
+        width: 100%;
+        margin-left: 0;
+        margin-bottom: 10px;
         justify-content: flex-end;
         flex-wrap: wrap;
-        max-width: calc(100% - 16px);
+        max-width: none;
     }
 
     .statsGrid {

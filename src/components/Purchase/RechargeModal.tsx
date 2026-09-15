@@ -9,6 +9,16 @@ import type { PayOrderRequest, PlanId, DiamondsPlanId } from '../../api/pay/pay.
 import { getApiErrorMessage } from '../../utils/error';
 import { useAuthStore } from '../../store/useAuthStore';
 import { resolveMemberDisplayEndAt } from '../../utils/planLabels';
+import { useGeoRegionStore } from '../../store/useGeoRegionStore';
+import type { DefaultPayMethod } from '../../lib/geoRegion';
+import {
+    calcDiamondsForPayMethod,
+    getPayMethodCurrencySymbol,
+    getPayMethodMinAmount,
+    isAmountReadyToPay,
+    sanitizeAmountInput,
+    validateRechargeAmount,
+} from '../../lib/rechargeAmountRules';
 
 const COIN_ICON = `${import.meta.env.BASE_URL}data/assetsv2/personal/payment/coin.png`;
 const MEMBER_ICON = `${import.meta.env.BASE_URL}data/assetsv2/personal/member.png`;
@@ -68,8 +78,6 @@ interface RechargeModalProps {
     fixedTab?: RechargeTabType;
 }
 
-const POINTS_PER_YUAN = 10;
-const MIN_AMOUNT = 0.1;
 const POLL_INTERVAL_MS = 3000;
 const POLL_TIMEOUT_MS = 2 * 60 * 1000;
 const COUNTDOWN_SECONDS = POLL_TIMEOUT_MS / 1000;
@@ -107,6 +115,11 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     const [customOriginalAmount, setCustomOriginalAmount] = useState<number | null>(null);
     // 用户实际看到的（可能是折扣后的）金额文本
     const [amountText, setAmountText] = useState<string>('');
+    /** 功能注释：钻石充值顶部互切支付方式；点立即支付直接走当前选中方式，不再二次弹窗 */
+    const defaultPayMethod = useGeoRegionStore((s) => s.region.defaultPayMethod);
+    const [selectedPayMethod, setSelectedPayMethod] = useState<DefaultPayMethod>('wechat');
+    const payMinAmount = getPayMethodMinAmount(selectedPayMethod);
+    const currencySymbol = getPayMethodCurrencySymbol(selectedPayMethod);
 
     const inFlightRef = useRef(false);
     const isComposingRef = useRef(false);
@@ -178,6 +191,8 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             return;
         }
 
+        // 功能注释：每次打开按 IP 默认支付方式重置
+        setSelectedPayMethod(defaultPayMethod);
         setRechargeTab(fixedTab ?? 'diamonds');
         if ((fixedTab ?? 'diamonds') === 'diamonds') {
             const defaultPlan = FIRST_CHARGE_PLANS[0];
@@ -197,7 +212,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             setAmountError('');
             setInputShake(false);
         }
-    }, [isOpen, fixedTab]);
+    }, [isOpen, fixedTab, defaultPayMethod]);
 
     useEffect(() => {
         if (isOpen && fixedTab && rechargeTab !== fixedTab) {
@@ -215,39 +230,34 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     };
 
     const handleCustomAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        let value = e.target.value;
-        value = value.replace(/[^\d.]/g, '');
-
-        const parts = value.split('.');
-        if (parts.length > 2) {
+        const sanitized = sanitizeAmountInput(e.target.value, selectedPayMethod);
+        if (sanitized === null) {
             return;
         }
-
-        if (parts.length === 2) {
-            if (parts[1].length > 1) {
-                return;
-            }
-            if (parts[0] === '0' && parts[1] === '1') {
-                value = '0.1';
-            }
-        }
+        const value = sanitized;
 
         const numericValue = Number.parseFloat(value || '0');
-        if (Number.isFinite(numericValue)) {
-            if (numericValue > 0 && numericValue < MIN_AMOUNT) {
-                setAmountError(t('rechargeModal.amountTooLow', { amount: MIN_AMOUNT }));
-                setInputShake(false);
-            } else if (numericValue >= MIN_AMOUNT && !Number.isInteger(numericValue)) {
-                setAmountError(t('rechargeModal.amountMustBeInteger'));
-                setInputShake(true);
-                window.setTimeout(() => setInputShake(false), 500);
+        if (Number.isFinite(numericValue) && value !== '' && value !== '.') {
+            const validation = validateRechargeAmount(numericValue, selectedPayMethod);
+            if (!validation.ok) {
+                if (validation.reason === 'tooLow') {
+                    setAmountError(t('rechargeModal.amountTooLow', { amount: payMinAmount, symbol: currencySymbol }));
+                } else if (validation.reason === 'notInteger') {
+                    setAmountError(t('rechargeModal.amountMustBeInteger'));
+                } else {
+                    setAmountError(t('rechargeModal.amountMaxTwoDecimals'));
+                }
+                setInputShake(validation.reason !== 'tooLow');
+                if (validation.reason !== 'tooLow') {
+                    window.setTimeout(() => setInputShake(false), 500);
+                }
             } else {
                 setAmountError('');
                 setInputShake(false);
             }
             const matchedPlan = FIRST_CHARGE_PLANS.find((plan) => plan.amount === numericValue);
             setSelectedFirstChargePlanId(matchedPlan?.planId ?? null);
-            setCustomOriginalAmount(numericValue >= MIN_AMOUNT ? numericValue : null);
+            setCustomOriginalAmount(validation.ok ? numericValue : null);
         } else {
             setSelectedFirstChargePlanId(null);
             setCustomOriginalAmount(null);
@@ -268,13 +278,13 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
         }
         if (amountText) {
             const amount = parseFloat(amountText);
-            return !isNaN(amount) && amount >= MIN_AMOUNT ? amount : null;
+            return !isNaN(amount) && amount >= payMinAmount ? amount : null;
         }
         return null;
     };
 
-    const calculateDiamonds = (amount: number): number => {
-        return Math.floor(amount * POINTS_PER_YUAN);
+    const calculateDiamonds = (amount: number, isFixedPlan = true): number => {
+        return calcDiamondsForPayMethod(amount, selectedPayMethod, isFixedPlan);
     };
 
     const normalizeQrCodeUrl = (raw: string | null): string | null => {
@@ -380,18 +390,20 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
 
         if (!amount) {
             if (amountText) {
-                setAmountError(t('rechargeModal.amountTooLow', { amount: MIN_AMOUNT }));
+                setAmountError(t('rechargeModal.amountTooLow', { amount: payMinAmount, symbol: currencySymbol }));
             }
             return;
         }
 
-        if (amount < MIN_AMOUNT) {
-            setAmountError(t('rechargeModal.amountTooLow', { amount: MIN_AMOUNT }));
-            return;
-        }
-
-        if (!Number.isInteger(amount)) {
-            setAmountError(t('rechargeModal.amountMustBeInteger'));
+        const amountValidation = validateRechargeAmount(amount, selectedPayMethod);
+        if (!amountValidation.ok) {
+            if (amountValidation.reason === 'tooLow') {
+                setAmountError(t('rechargeModal.amountTooLow', { amount: payMinAmount, symbol: currencySymbol }));
+            } else if (amountValidation.reason === 'notInteger') {
+                setAmountError(t('rechargeModal.amountMustBeInteger'));
+            } else {
+                setAmountError(t('rechargeModal.amountMaxTwoDecimals'));
+            }
             setInputShake(true);
             window.setTimeout(() => setInputShake(false), 500);
             return;
@@ -416,6 +428,16 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             };
         }
 
+        // 小程序仅走微信；H5/Web 直接按顶部已选支付方式下单，不再二次确认弹窗
+        if (isMiniProgramEnv() || selectedPayMethod === 'wechat') {
+            await startWechatDiamondPay(orderData);
+            return;
+        }
+        await startOverseasDiamondPay(orderData);
+    };
+
+    /** 功能注释：既有微信 Native / 小程序支付链路 */
+    const startWechatDiamondPay = async (orderData: PayOrderRequest) => {
         inFlightRef.current = true;
         setIsLoading(true);
         try {
@@ -429,20 +451,21 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                     setOrderId(outTradeNo);
                     const mp = (window as WindowWithWx).wx?.miniProgram;
                     if (mp && typeof mp.postMessage === 'function') {
-                            const payParamsStr = encodeURIComponent(JSON.stringify(payParams));
-                            mp.navigateTo({
-                                url: `/pages/pay/pay?outTradeNo=${outTradeNo}&payParams=${payParamsStr}`
-                            });
-                            toast.success(t('rechargeModal.redirectingToPayment'));
-                        } else {
-                            toast.error(t('rechargeModal.miniProgramNotSupported'));
-                        }
-                        setPaymentStatus('failed');
-                        setPollingError(data.message || t('rechargeModal.paymentRequestFailed'));
+                        const payParamsStr = encodeURIComponent(JSON.stringify(payParams));
+                        mp.navigateTo({
+                            url: `/pages/pay/pay?outTradeNo=${outTradeNo}&payParams=${payParamsStr}`,
+                        });
+                        toast.success(t('rechargeModal.redirectingToPayment'));
+                    } else {
+                        toast.error(t('rechargeModal.miniProgramNotSupported'));
+                    }
+                    setPaymentStatus('failed');
+                    setPollingError(data.message || t('rechargeModal.paymentRequestFailed'));
                 }
                 setIsLoading(false);
                 return;
-            } else if (onRecharge) {
+            }
+            if (onRecharge) {
                 const result = await onRecharge(orderData);
                 const qrDataUrl = normalizeQrCodeUrl(result?.qrDataUrl ?? null);
                 if (result && qrDataUrl) {
@@ -455,6 +478,32 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             }
         } catch (error) {
             console.error('充值失败:', error);
+            const errorMessage = getApiErrorMessage(error, t('rechargeModal.paymentRequestFailed'));
+            setPaymentStatus('failed');
+            setPollingError(errorMessage);
+            toast.error(errorMessage);
+        } finally {
+            setIsLoading(false);
+            inFlightRef.current = false;
+        }
+    };
+
+    /** 功能注释：海外支付 → EnjoyPayment 收银台；金额/IP/用户ID 由后端组单 */
+    const startOverseasDiamondPay = async (orderData: PayOrderRequest) => {
+        inFlightRef.current = true;
+        setIsLoading(true);
+        try {
+            toast.success(t('rechargeModal.redirectingOverseas'));
+            const response = await payApi.createOverseasOrder(orderData);
+            const data = response.data;
+            if (data.code === 200 && data.data?.payUrl) {
+                setOrderId(data.data.outTradeNo);
+                window.location.assign(data.data.payUrl);
+                return;
+            }
+            throw new Error(data.message || t('rechargeModal.paymentRequestFailed'));
+        } catch (error) {
+            console.error('海外支付失败:', error);
             const errorMessage = getApiErrorMessage(error, t('rechargeModal.paymentRequestFailed'));
             setPaymentStatus('failed');
             setPollingError(errorMessage);
@@ -606,10 +655,31 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
 
     const diamondsTabContent = (
         <>
+            {/* 功能注释：支付方式互切；IP 默认高亮，切换后金额校验与货币符号跟着变 */}
+            <div className={styles.payMethodToggle} role="group" aria-label={t('rechargeModal.choosePayMethod')}>
+                {(defaultPayMethod === 'overseas'
+                    ? (['overseas', 'wechat'] as const)
+                    : (['wechat', 'overseas'] as const)
+                ).map((method) => (
+                    <button
+                        key={method}
+                        type="button"
+                        className={`${styles.payMethodToggleBtn} ${selectedPayMethod === method ? styles.payMethodToggleBtnActive : ''}`}
+                        onClick={() => {
+                            setSelectedPayMethod(method);
+                            setAmountError('');
+                            setInputShake(false);
+                        }}
+                    >
+                        {method === 'wechat' ? t('rechargeModal.payWechat') : t('rechargeModal.payOverseas')}
+                    </button>
+                ))}
+            </div>
+
             <div className={styles.fixedAmounts}>
                 <div className={styles.amountsGrid}>
                     {FIRST_CHARGE_PLANS.map((plan) => {
-                        const planDiamonds = calculateDiamonds(plan.amount);
+                        const planDiamonds = calculateDiamonds(plan.amount, true);
                         const isActive = selectedFirstChargePlanId === plan.planId;
                         return (
                             <button
@@ -624,7 +694,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                                         <span>{planDiamonds}</span>
                                     </div>
                                     <div className={styles.amountPriceMeta}>
-                                        {t('rechargeModal.priceShort', { amount: plan.amount })}
+                                        {t('rechargeModal.priceShort', { amount: plan.amount, symbol: currencySymbol })}
                                     </div>
                                 </div>
                             </button>
@@ -636,7 +706,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             <div className={styles.customAmount}>
                 <div className={styles.customLabel}>{t('rechargeModal.customAmount')}</div>
                 <div className={`${styles.customInputWrapper} ${amountError ? styles.inputError : ''}`}>
-                    <span className={styles.currencySymbol}>{t('rechargeModal.currencySymbol')}</span>
+                    <span className={styles.currencySymbol}>{currencySymbol}</span>
                     <input
                         type="text"
                         className={`${styles.customInput} ${inputShake ? styles.shake : ''}`}
@@ -663,11 +733,14 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             <button
                 type="submit"
                 className={styles.submitBtn}
-                disabled={!currentAmount || currentAmount < MIN_AMOUNT || !Number.isInteger(currentAmount) || isLoading}
+                disabled={!isAmountReadyToPay(currentAmount, selectedPayMethod) || isLoading}
             >
                 {isLoading
                     ? t('rechargeModal.processing')
-                    : t('rechargeModal.payNow', { amount: currentAmount ?? 0 })}
+                    : t('rechargeModal.payNow', {
+                        amount: currentAmount ?? 0,
+                        symbol: currencySymbol,
+                    })}
             </button>
         </>
     );

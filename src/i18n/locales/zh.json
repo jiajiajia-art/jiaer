@@ -841,7 +841,9 @@
     "googleLogin": "使用谷歌账号登录",
     "googleLoginFailed": "谷歌登录失败",
     "loginCancelled": "登录已取消",
-    "networkError": "网络错误，请检查网络连接"
+    "networkError": "网络错误，请检查网络连接",
+    "privacyAgreePrefix": "我已阅读并同意",
+    "privacyPolicy": "《隐私政策》"
   },
   "validation": {
     "enterGameName": "请输入游戏名称",
@@ -852,7 +854,8 @@
     "confirmPasswordRequired": "请再次输入密码",
     "passwordMismatch": "两次输入的密码不一致",
     "codeRequired": "请输入验证码",
-    "codeLength": "验证码为6位数字"
+    "codeLength": "验证码为6位数字",
+    "privacyRequired": "请先阅读并同意隐私政策"
   },
   "editorData": {
     "loadFailed": "获取游戏数据失败，请稍后重试"
@@ -2077,9 +2080,13 @@
     "rechargeAmount": "充值金额：",
     "receivePoints": "获得积分：",
     "confirmRecharge": "确认充值",
-    "payNow": "¥{{amount}}元立即支付",
+    "payNow": "{{symbol}}{{amount}}立即支付",
+    "choosePayMethod": "选择支付方式",
+    "payWechat": "微信支付",
+    "payOverseas": "海外支付",
+    "redirectingOverseas": "正在跳转海外支付...",
     "openNow": "¥{{amount}}元立即开通",
-    "priceShort": "¥{{amount}}",
+    "priceShort": "{{symbol}}{{amount}}",
     "currentDiamonds": "当前钻石",
     "processing": "处理中...",
     "firstChargeBonus": "首充送钻石",
@@ -2111,8 +2118,9 @@
     "miniProgramNotSupported": "当前小程序环境不支持支付，请稍后重试",
     "paymentRequestFailed": "发起支付请求失败，请稍后重试。",
     "queryPaymentStatusFailed": "查询支付状态失败，稍后自动重试...",
-    "amountTooLow": "充值金额不能低于 ¥{{amount}} 元",
-    "amountMustBeInteger": "充值金额必须为整数（元）",
+    "amountTooLow": "充值金额不能低于 {{symbol}}{{amount}}",
+    "amountMustBeInteger": "微信支付金额必须为整数（元）",
+    "amountMaxTwoDecimals": "海外支付金额最多保留两位小数",
     "pleaseInputComplete": "请输入完成后再提交",
     "doNotRepeatClick": "请求处理中，请勿重复点击",
     "creatorDiscount": "TXT AVG 模式创作折扣",

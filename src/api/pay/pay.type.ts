@@ -37,6 +37,21 @@ export interface PayResponse {
     }
 }
 
+/** 海外支付（EnjoyPayment）下单响应 */
+export interface OverseasPayResponse {
+    code: number;
+    message: string;
+    data: {
+        outTradeNo: string;
+        payUrl: string;
+        mchOrderNo: string;
+        amountYuan: number;
+        amountFen: number;
+        notifyUrl: string;
+        returnUrl: string;
+    };
+}
+
 export interface CheckPayStatusResponse {
     code: number;
     message: string;

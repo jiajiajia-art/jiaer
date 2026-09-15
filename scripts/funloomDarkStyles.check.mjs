@@ -281,8 +281,10 @@ test('FooterArea_应对齐全站暗色壳避免底部白条', () => {
   assert.match(tsx, /LOGO2\.png/);
   assert.doesNotMatch(tsx, /LOGO\.png/);
   assert.match(navbar, /LOGO2\.png/);
-  /* 功能注释：PC 端内容区 100% 铺满；手机端仍隐藏页脚 */
-  assert.match(css, /\.container\s*\{[\s\S]*?width:\s*100%/);
+  /* 功能注释：PC 端内容块整体居中；手机端仍隐藏页脚 */
+  assert.match(css, /\.container\s*\{[\s\S]*?width:\s*fit-content/);
+  assert.match(css, /\.container\s*\{[\s\S]*?margin:\s*0\s+auto/);
+  assert.match(css, /\.shareSection\s*\{[\s\S]*?flex:\s*0\s+1\s+auto/);
   assert.doesNotMatch(
     css,
     /\.container\s*\{[^}]*width:\s*min\(var\(--app-desktop-shell-max\)/,

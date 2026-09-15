@@ -52,16 +52,23 @@ import PointsDetails from './page/PointsDetails';
 import Document from './page/Document';
 import { useEffect, lazy, Suspense } from 'react';
 import { useAuthStore } from './store/useAuthStore';
+import { useGeoRegionStore } from './store/useGeoRegionStore';
 
 const FunloomLotteryPage = lazy(() => import('./activities/funloom-lottery-20260731'));
 
 function App() {
   usePlatformDurationTracking();
   const initializeAuth = useAuthStore((state) => state.initialize);
+  const hydrateFromIp = useGeoRegionStore((state) => state.hydrateFromIp);
 
   useEffect(() => {
     void initializeAuth();
   }, [initializeAuth]);
+
+  // 功能注释：每次进站按 IP 强制语言与支付区域（覆盖本地语言偏好）
+  useEffect(() => {
+    void hydrateFromIp();
+  }, [hydrateFromIp]);
 
   return (
     <BrowserRouter basename='/funloom'>

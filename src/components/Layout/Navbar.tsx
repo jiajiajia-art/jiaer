@@ -15,6 +15,7 @@ import { resolveSearchResultSecondaryLine } from '../../lib/gameCardBody';
 import { isCreatorRoutePath } from '../../utils/miniProgram';
 import {
     applyAppLanguage,
+    getNavbarLanguageTriggerLabel,
     normalizeAppLanguage,
     type AppLanguageCode,
 } from '../../utils/appLanguage';
@@ -440,17 +441,6 @@ const Navbar: React.FC<NavbarProps> = ({
                                         >
                                             {t('nav.profile')}
                                         </button>
-                                        {/* 功能注释：菜单只留「语言」入口，不展示当前语种；三档在弹窗里选 */}
-                                        <button
-                                            type="button"
-                                            className={styles.menuBtn}
-                                            onClick={() => {
-                                                setShowUserMenu(false);
-                                                setShowLanguageModal(true);
-                                            }}
-                                        >
-                                            {t('nav.language')}
-                                        </button>
                                         {!isDesktopLayout && (
                                             <button
                                                 className={styles.menuBtn}
@@ -530,6 +520,16 @@ const Navbar: React.FC<NavbarProps> = ({
                             </button>
                         )
                     )}
+
+                    {/* 功能注释：语言入口固定在顶栏最右（头像/登录右侧），未登录也可用 */}
+                    <button
+                        type="button"
+                        className={styles.langTrigger}
+                        aria-label={t('nav.chooseLanguage')}
+                        onClick={() => setShowLanguageModal(true)}
+                    >
+                        {getNavbarLanguageTriggerLabel(activeLanguage)}
+                    </button>
                 </div>
             </div>
 

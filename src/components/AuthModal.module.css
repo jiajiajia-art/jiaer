@@ -451,3 +451,42 @@
     }
 }
 
+.privacyRow {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin: 2px 0 4px;
+}
+
+.privacyLabel {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 13px;
+    line-height: 1.45;
+    color: #444;
+    cursor: pointer;
+    user-select: none;
+}
+
+.privacyCheckbox {
+    margin-top: 2px;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    accent-color: #FB4655;
+    cursor: pointer;
+}
+
+.privacyLink {
+    color: #FB4655;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.privacyLink:hover {
+    text-decoration: underline;
+}
+
