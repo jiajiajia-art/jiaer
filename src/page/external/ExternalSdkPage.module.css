@@ -1,0 +1,278 @@
+.shell {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: max(24px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+  background:
+    radial-gradient(circle at top left, rgba(63, 109, 255, 0.14), transparent 34%),
+    linear-gradient(135deg, #f7f3ea 0%, #eef6f2 46%, #f4f7fb 100%);
+  color: #172033;
+}
+
+.panel {
+  width: min(100%, 760px);
+  border: 1px solid rgba(31, 43, 64, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 24px 70px rgba(32, 45, 70, 0.16);
+  padding: clamp(24px, 4vw, 40px);
+}
+
+.rechargePanel {
+  width: min(100%, 920px);
+}
+
+.brandRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.logo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.brandName {
+  font-size: 15px;
+  font-weight: 700;
+  color: #2b364c;
+}
+
+.heroBlock {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #4765a6;
+}
+
+.heroBlock h1 {
+  margin: 0;
+  font-size: clamp(26px, 4vw, 40px);
+  line-height: 1.16;
+  color: #111827;
+}
+
+.lead {
+  max-width: 680px;
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.7;
+  color: #566172;
+}
+
+.summary {
+  display: grid;
+  gap: 12px;
+  margin: 24px 0;
+}
+
+.summary > div {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid #e1e7ef;
+  border-radius: 8px;
+  background: #fbfcfe;
+}
+
+.summary span {
+  font-size: 13px;
+  color: #687386;
+}
+
+.summary strong {
+  overflow-wrap: anywhere;
+  font-size: 16px;
+  color: #172033;
+}
+
+.noticeError,
+.noticeSuccess,
+.loadingBlock,
+.statusStrip {
+  border-radius: 8px;
+  padding: 14px 16px;
+  line-height: 1.6;
+}
+
+.noticeError {
+  border: 1px solid #f2b8bd;
+  background: #fff1f2;
+  color: #9f1239;
+}
+
+.noticeSuccess {
+  border: 1px solid #9ed8bd;
+  background: #eefaf3;
+  color: #166534;
+}
+
+.loadingBlock {
+  border: 1px solid #d7e0ea;
+  background: #f7fafc;
+  color: #4b5563;
+}
+
+.statusStrip {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 16px;
+  border: 1px solid #d7e0ea;
+  background: #f7fafc;
+  color: #445166;
+}
+
+.statusStrip strong {
+  color: #172033;
+}
+
+.statusStrip[data-state='paid'] {
+  border-color: #9ed8bd;
+  background: #eefaf3;
+  color: #166534;
+}
+
+.statusStrip[data-state='expired'],
+.statusStrip[data-state='failed'],
+.statusStrip[data-state='missing'] {
+  border-color: #f2b8bd;
+  background: #fff1f2;
+  color: #9f1239;
+}
+
+.checkoutGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 320px);
+  gap: 20px;
+  align-items: start;
+}
+
+.qrBox {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid #dfe7f0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #596579;
+}
+
+.qrImage,
+.qrPlaceholder {
+  width: min(100%, 260px);
+  aspect-ratio: 1;
+  border-radius: 8px;
+}
+
+.qrImage {
+  border: 1px solid #edf1f6;
+  background: #ffffff;
+}
+
+.qrPlaceholder {
+  display: grid;
+  place-items: center;
+  border: 1px dashed #b9c5d6;
+  background: #f7fafc;
+  color: #66758a;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.primaryButton,
+.secondaryButton {
+  min-height: 46px;
+  border-radius: 8px;
+  padding: 0 18px;
+  border: 1px solid transparent;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, opacity 180ms ease;
+}
+
+.primaryButton {
+  background: #1f5eff;
+  color: #ffffff;
+}
+
+.primaryButton:hover {
+  background: #184dcc;
+}
+
+.secondaryButton {
+  background: #ffffff;
+  border-color: #cfd8e6;
+  color: #253149;
+}
+
+.secondaryButton:hover {
+  border-color: #90a4c6;
+  background: #f7faff;
+}
+
+.primaryButton:focus-visible,
+.secondaryButton:focus-visible {
+  outline: 3px solid rgba(31, 94, 255, 0.28);
+  outline-offset: 2px;
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.56;
+}
+
+@media (max-width: 720px) {
+  .shell {
+    place-items: stretch;
+    padding: 12px;
+  }
+
+  .panel,
+  .rechargePanel {
+    width: 100%;
+    min-height: calc(100dvh - 24px);
+    padding: 22px 18px;
+  }
+
+  .brandRow {
+    margin-bottom: 22px;
+  }
+
+  .checkoutGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .primaryButton,
+  .secondaryButton {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .primaryButton,
+  .secondaryButton {
+    transition: none;
+  }
+}

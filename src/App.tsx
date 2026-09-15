@@ -49,6 +49,9 @@ import Messages from './page/Messages';
 import AssetDetails from './page/AssetDetails';
 import PointsDetails from './page/PointsDetails';
 import Document from './page/Document';
+import DeveloperCliAuthorize from './page/external/DeveloperCliAuthorize';
+import ExternalOAuthAuthorize from './page/external/ExternalOAuthAuthorize';
+import ExternalRecharge from './page/external/ExternalRecharge';
 import { useEffect, lazy, Suspense } from 'react';
 import { useAuthStore } from './store/useAuthStore';
 
@@ -120,6 +123,9 @@ function App() {
         <Route path="/novel/:fileId/read" element={<NovelReader />} />
         <Route path="/replay/:replayId" element={<Galgame />} />
         <Route path="/document" element={<Document />} />
+        <Route path="/developer/cli/authorize" element={<DeveloperCliAuthorize />} />
+        <Route path="/external/oauth/authorize" element={<ExternalOAuthAuthorize />} />
+        <Route path="/external/recharge" element={<ExternalRecharge />} />
         {/* Funloom 限定抽奖：独立活动链接；懒加载避免拖大主包 */}
         <Route
           path="/activity/funloom-lottery-20260731"
