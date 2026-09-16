@@ -398,7 +398,6 @@ const Navbar: React.FC<NavbarProps> = ({
                                     aria-haspopup="menu"
                                     aria-expanded={showUserMenu}
                                     onClick={(event) => {
-                                        // 功能注释：小程序 web-view 也要下拉菜单（仓库/退出等），禁止再短路 return
                                         event.stopPropagation();
                                         setShowUserMenu((prev) => !prev);
                                     }}
@@ -430,6 +429,19 @@ const Navbar: React.FC<NavbarProps> = ({
 
                                 {showUserMenu && (
                                     <div className={styles.userMenu} role="menu">
+                                        {isDesktopLayout && (
+                                            <button
+                                                className={styles.menuBtn}
+                                                onClick={() => {
+                                                    runLeaveAction(() => {
+                                                        navigate('/create');
+                                                        setShowUserMenu(false);
+                                                    });
+                                                }}
+                                            >
+                                                {t('nav.profile')}
+                                            </button>
+                                        )}
                                         {!isDesktopLayout && (
                                             <button
                                                 className={styles.menuBtn}
@@ -467,7 +479,7 @@ const Navbar: React.FC<NavbarProps> = ({
                                                 {t('nav.operatorPanel')}
                                             </button>
                                         )}
-                                        {isAdminRole(user?.user?.role) && (
+                                        {isAdminRole(user?.user?.role) && isDesktopLayout && (
                                             <button
                                                 className={styles.menuBtn}
                                                 onClick={() => {
