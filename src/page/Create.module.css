@@ -885,15 +885,23 @@
 }
 
 .creatorCopyLink {
-    background: transparent;
-    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
     padding: 0;
     flex-shrink: 0;
+    border: none;
+    background: transparent;
     color: var(--creator-label);
-    font-size: 13px;
-    text-decoration: underline;
-    text-underline-offset: 2px;
     cursor: pointer;
+    line-height: 0;
+}
+
+.creatorCopyLink svg {
+    width: 14px;
+    height: 14px;
 }
 
 .creatorCopyLink:hover {
@@ -1100,17 +1108,6 @@
     background: #2C2C2E;
 }
 
-.creatorRechargeButton {
-    background: #8E2135;
-    color: #ffffff;
-    border-color: transparent;
-}
-
-.creatorRechargeButton:hover {
-    transform: translateY(-1px);
-    box-shadow: none;
-}
-
 /* --- Action Buttons --- */
 .creatorPrimaryButton {
     display: inline-flex;
@@ -1179,17 +1176,17 @@
     margin: 0 auto 28px;
 }
 
-.primaryStatsBar {
-    display: flex;
+.primaryStatsBar,
+.expandedStatsBar {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     align-items: stretch;
     width: 100%;
-    flex-wrap: nowrap;
     gap: 0;
 }
 
 .primaryStatItem,
 .expandedStatItem {
-    flex: 1 1 0;
     min-width: 0;
     display: flex;
     flex-direction: column;
@@ -1201,7 +1198,9 @@
     position: relative;
 }
 
-.primaryStatItem:not(:last-child)::after {
+/* 四列网格：行末不加竖线 */
+.primaryStatItem:not(:nth-child(4n))::after,
+.expandedStatItem:not(:nth-child(4n))::after {
     content: '';
     position: absolute;
     right: 0;
@@ -1242,14 +1241,12 @@
 
 .primaryStatItemWithActions {
     gap: 0;
-    align-items: flex-end;
-    padding-right: 14px;
 }
 
 .primaryStatValueRow {
     display: inline-flex;
     align-items: flex-start;
-    justify-content: flex-end;
+    justify-content: center;
     gap: 6px;
     max-width: 100%;
 }
@@ -1285,6 +1282,11 @@
     padding: 6px 10px;
 }
 
+.statsExpandToggleFooter {
+    margin: 0 auto;
+    align-self: center;
+}
+
 .statsExpandToggle:hover {
     color: #ffffff;
 }
@@ -1297,41 +1299,8 @@
     transform: rotate(180deg);
 }
 
-.expandedStatsBar {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    align-items: stretch;
-    width: 100%;
-    gap: 0;
-    margin-top: 4px;
-    padding-top: 8px;
-}
-
-.expandedStatItem {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 14px 4px;
-    text-align: center;
-    position: relative;
-}
-
 .expandedStatItemAction .statActionRow {
     justify-content: center;
-}
-
-/* 四列网格：行末不加竖线 */
-.expandedStatItem:not(:nth-child(4n))::after {
-    content: '';
-    position: absolute;
-    right: 0;
-    top: 22%;
-    bottom: 22%;
-    width: 1px;
-    background: var(--creator-divider);
 }
 
 .sectionHeader {
@@ -1904,17 +1873,14 @@
         border-radius: 999px;
     }
 
-    .primaryStatsBar {
-        flex-wrap: nowrap;
+    .primaryStatsBar,
+    .expandedStatsBar {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 
-    .primaryStatItem {
-        flex: 1 1 0;
+    .primaryStatItem,
+    .expandedStatItem {
         padding: 10px 2px;
-    }
-
-    .primaryStatItemWithActions {
-        padding-right: 12px;
     }
 
     .primaryStatValue {
@@ -1931,12 +1897,7 @@
         font-size: 11px;
     }
 
-    .expandedStatsBar {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-
     .expandedStatItem {
-        padding: 10px 2px;
         gap: 4px;
     }
 

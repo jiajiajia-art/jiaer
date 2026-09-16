@@ -604,16 +604,6 @@ const ProfileFunctionPanel: React.FC = () => {
                         </span>
                     </button>
 
-                    <button type="button" className={styles.functionItem} onClick={() => navigate('/messages')}>
-                        <span className={styles.functionIcon}>
-                            <img src={personalAsset('notice')} alt="" />
-                        </span>
-                        <span className={styles.functionTitle}>{t('profile.messageCenter')}</span>
-                        <span className={styles.functionMeta}>
-                            <HiChevronRight className={styles.functionChevron} />
-                        </span>
-                    </button>
-
                     <button
                         type="button"
                         className={styles.functionItem}
