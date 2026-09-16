@@ -1,6 +1,8 @@
 .root {
   display: grid;
   gap: 20px;
+  /* 功能注释：管理台浅色区必须显式落墨色；否则继承全站 body 白字，列表会「看不见」 */
+  color: var(--admin-text, #2f241d);
 }
 
 .input,
@@ -10,6 +12,7 @@
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 10px;
   background: #fff;
+  color: var(--admin-text, #2f241d);
   font-size: 14px;
 }
 
@@ -25,12 +28,16 @@
 
 .tableWrap {
   overflow-x: auto;
+  border-radius: 14px;
+  border: 1px solid rgba(47, 36, 29, 0.08);
+  background: #fff;
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
   background: #fff;
+  color: var(--admin-text, #2f241d);
 }
 
 .table th,
@@ -41,10 +48,21 @@
   color: var(--admin-text, #2f241d);
 }
 
+.table th {
+  color: var(--admin-text-soft, #6f5a49);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
 .emptyState {
   padding: 24px;
   text-align: center;
-  color: #777;
+  color: var(--admin-muted, #8d7664);
 }
 
 .paginationBar {
@@ -59,7 +77,7 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  color: #666;
+  color: var(--admin-text-soft, #6f5a49);
   font-size: 14px;
   flex-shrink: 0;
 }
@@ -77,6 +95,6 @@
 }
 
 .paginationHint {
-  color: #999;
+  color: var(--admin-muted, #8d7664);
   font-size: 13px;
 }

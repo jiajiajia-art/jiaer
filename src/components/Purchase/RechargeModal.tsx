@@ -497,6 +497,12 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             const response = await payApi.createOverseasOrder(orderData);
             const data = response.data;
             if (data.code === 200 && data.data?.payUrl) {
+                // 功能注释：下单响应里应带回当前 Origin；缺失则回跳会落到线上兜底，本地需硬刷新前端
+                if (!data.data.returnWebBase) {
+                    console.warn('[overseas-pay] returnWebBase missing from create response', data.data.returnUrl);
+                    toast.error(t('rechargeModal.paymentRequestFailed'));
+                    return;
+                }
                 setOrderId(data.data.outTradeNo);
                 window.location.assign(data.data.payUrl);
                 return;

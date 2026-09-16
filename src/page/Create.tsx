@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { IoChevronDown } from 'react-icons/io5';
 import { MdContentCopy, MdOutlineEdit } from 'react-icons/md';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Trans, useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import styles from './Create.module.css';
@@ -40,6 +40,10 @@ import { getImageUrl } from '../utils/constants';
 import favoriteApi from '../api/favorite/favoriteApi';
 import { buildGameDetailNavigateState } from '../utils/gameDetailNavigation';
 import { getGenderSymbol, normalizeGender } from '../utils/profileCompletion';
+import {
+    parseOverseasPayReturnSearch,
+    resolveOverseasPayReturnStatus,
+} from '../lib/overseasPayReturn';
 
 const NICKNAME_MAX_LENGTH = 20;
 const AVATAR_MAX_SIZE_BYTES = 5 * 1024 * 1024;
@@ -67,6 +71,7 @@ const Create: React.FC = () => {
     const { t } = useTranslation();
     const { user, updateUser } = useAuthStore();
     const navigate = useNavigate();
+    const location = useLocation();
 
     const [fileMetas, setFileMetas] = useState<UserGameData[]>([]);
     const [isLoadingMyGames, setIsLoadingMyGames] = useState(true);
@@ -105,6 +110,7 @@ const Create: React.FC = () => {
     const [isSavingNickname, setIsSavingNickname] = useState(false);
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
     const avatarInputRef = useRef<HTMLInputElement>(null);
+    const overseasPayReturnHandledRef = useRef(false);
     const worksSectionRef = useRef<HTMLDivElement>(null);
     const [worksTab, setWorksTab] = useState<WorksTabKey>('published');
     const [worksPage, setWorksPage] = useState(1);
@@ -338,6 +344,36 @@ const Create: React.FC = () => {
         getUserInfo();
         getSignInStreak();
     }, [user?.user?.id]);
+
+    // 功能注释：海外收银台回站后查单并 Toast，不再只打开空白充值弹窗
+    useEffect(() => {
+        const parsed = parseOverseasPayReturnSearch(location.search);
+        if (!parsed.handled || overseasPayReturnHandledRef.current) return;
+        overseasPayReturnHandledRef.current = true;
+        navigate(
+            { pathname: location.pathname, search: parsed.nextSearch ? `?${parsed.nextSearch}` : '' },
+            { replace: true },
+        );
+        void (async () => {
+            const status = await resolveOverseasPayReturnStatus(
+                parsed.outTradeNo,
+                async (outTradeNo) => {
+                    const response = await payApi.checkPayStatus(outTradeNo);
+                    return response.data?.data;
+                },
+            );
+            if (status === 'paid') {
+                toast.success(t('rechargeModal.overseasPaySuccess'));
+                await getUserInfo();
+                return;
+            }
+            if (status === 'failed') {
+                toast.error(t('rechargeModal.overseasPayFailed'));
+                return;
+            }
+            toast(t('rechargeModal.overseasPayPending'));
+        })();
+    }, [location.pathname, location.search, navigate, t]);
 
     useEffect(() => {
         if (draftGames.length === 0) {

@@ -28,6 +28,16 @@ test('RechargeModal_应支持微信与海外支付直接下单', () => {
 test('payApi_应提供海外下单接口', () => {
   assert.match(api, /createOverseasOrder/);
   assert.match(api, /\/pay\/overseas\/create/);
+  assert.match(api, /returnWebBase/);
+  assert.match(api, /window\.location\.origin/);
+  assert.match(api, /X-Return-Web-Base/);
+});
+
+test('Create_海外回跳应查单并提示结果', () => {
+  const createPage = readFileSync(join(root, 'src/page/Create.tsx'), 'utf8');
+  assert.match(createPage, /overseasPay/);
+  assert.match(createPage, /resolveOverseasPayReturnStatus/);
+  assert.match(createPage, /overseasPaySuccess/);
 });
 
 test('i18n_应有支付方式文案', () => {

@@ -49,6 +49,7 @@ export interface OverseasPayResponse {
         amountFen: number;
         notifyUrl: string;
         returnUrl: string;
+        returnWebBase?: string | null;
     };
 }
 
