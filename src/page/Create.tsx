@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { IoChevronDown } from 'react-icons/io5';
-import { MdOutlineEdit } from 'react-icons/md';
+import { MdContentCopy, MdOutlineEdit } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import { Trans, useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -678,8 +678,10 @@ const Create: React.FC = () => {
                                                 type="button"
                                                 className={styles.creatorCopyLink}
                                                 onClick={handleCopyUserCode}
+                                                aria-label={t('create.copy')}
+                                                title={t('create.copy')}
                                             >
-                                                {t('create.copy')}
+                                                <MdContentCopy aria-hidden="true" />
                                             </button>
                                         )}
                                         {(isMember || isSignedAuthor) && (
@@ -707,8 +709,10 @@ const Create: React.FC = () => {
                                                 type="button"
                                                 className={styles.creatorCopyLink}
                                                 onClick={handleCopyDebugToken}
+                                                aria-label={t('create.copy')}
+                                                title={t('create.copy')}
                                             >
-                                                {t('create.copy')}
+                                                <MdContentCopy aria-hidden="true" />
                                             </button>
                                         )}
                                     </div>
@@ -741,7 +745,7 @@ const Create: React.FC = () => {
                                         <div className={styles.primaryStatLabel}>{t('create.pointsStat')}</div>
                                     </div>
                                     <div
-                                        className={`${styles.primaryStatItem} ${styles.primaryStatItemWithActions} ${styles.primaryStatItemClickable}`}
+                                        className={`${styles.primaryStatItem} ${user?.user?.userSegment !== 'normal' ? styles.primaryStatItemWithActions : ''} ${styles.primaryStatItemClickable}`}
                                         role="button"
                                         tabIndex={0}
                                         onClick={() => navigate('/asset/details')}
@@ -752,13 +756,13 @@ const Create: React.FC = () => {
                                             }
                                         }}
                                     >
-                                        <div className={styles.primaryStatValueRow}>
-                                            <div className={styles.primaryStatValueBlock}>
-                                                <div className={styles.primaryStatValue}>{user?.user?.diamonds ?? 0}</div>
-                                                <div className={styles.primaryStatLabel}>{t('create.diamondsStat')}</div>
-                                            </div>
-                                            <div className={styles.primaryStatActions}>
-                                                {user?.user?.userSegment !== 'normal' && (
+                                        {user?.user?.userSegment !== 'normal' ? (
+                                            <div className={styles.primaryStatValueRow}>
+                                                <div className={styles.primaryStatValueBlock}>
+                                                    <div className={styles.primaryStatValue}>{user?.user?.diamonds ?? 0}</div>
+                                                    <div className={styles.primaryStatLabel}>{t('create.diamondsStat')}</div>
+                                                </div>
+                                                <div className={styles.primaryStatActions}>
                                                     <button
                                                         type="button"
                                                         className={`${styles.creatorAssetActionButton} ${styles.creatorWithdrawButton}`}
@@ -769,35 +773,28 @@ const Create: React.FC = () => {
                                                     >
                                                         {t('create.withdraw')}
                                                     </button>
-                                                )}
-                                                <button
-                                                    type="button"
-                                                    className={`${styles.creatorAssetActionButton} ${styles.creatorRechargeButton}`}
-                                                    onClick={(event) => {
-                                                        event.stopPropagation();
-                                                        setIsRechargeModalOpen(true);
-                                                    }}
-                                                >
-                                                    {t('create.recharge')}
-                                                </button>
+                                                </div>
                                             </div>
-                                        </div>
+                                        ) : (
+                                            <>
+                                                <div className={styles.primaryStatValue}>{user?.user?.diamonds ?? 0}</div>
+                                                <div className={styles.primaryStatLabel}>{t('create.diamondsStat')}</div>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
 
-                                <button
-                                    type="button"
-                                    className={styles.statsExpandToggle}
-                                    onClick={() => setIsStatsExpanded((prev) => !prev)}
-                                    aria-expanded={isStatsExpanded}
-                                >
-                                    <span>
-                                        {isStatsExpanded ? t('create.collapseMoreStats') : t('create.expandMoreStats')}
-                                    </span>
-                                    <IoChevronDown
-                                        className={`${styles.statsExpandIcon} ${isStatsExpanded ? styles.statsExpandIconOpen : ''}`}
-                                    />
-                                </button>
+                                {!isStatsExpanded && (
+                                    <button
+                                        type="button"
+                                        className={styles.statsExpandToggle}
+                                        onClick={() => setIsStatsExpanded(true)}
+                                        aria-expanded={false}
+                                    >
+                                        <span>{t('create.expandMoreStats')}</span>
+                                        <IoChevronDown className={styles.statsExpandIcon} />
+                                    </button>
+                                )}
 
                                 {isStatsExpanded && (
                                     <div className={styles.expandedStatsBar}>
@@ -834,6 +831,20 @@ const Create: React.FC = () => {
                                     </div>
                                 )}
                             </div>
+
+                            {isStatsExpanded && (
+                                <button
+                                    type="button"
+                                    className={`${styles.statsExpandToggle} ${styles.statsExpandToggleFooter}`}
+                                    onClick={() => setIsStatsExpanded(false)}
+                                    aria-expanded={true}
+                                >
+                                    <span>{t('create.collapseMoreStats')}</span>
+                                    <IoChevronDown
+                                        className={`${styles.statsExpandIcon} ${styles.statsExpandIconOpen}`}
+                                    />
+                                </button>
+                            )}
                         </div>
 
                         <div className={styles.accountPanel}>
