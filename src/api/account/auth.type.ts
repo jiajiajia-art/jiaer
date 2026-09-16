@@ -42,6 +42,8 @@ export interface CheckInResponse {
   endAt?: string | null;
 }
 
+export type UserGender = 'male' | 'female';
+
 // 用户信息
 export interface User {
   name: string;
@@ -57,6 +59,9 @@ export interface User {
   email: string;
   nickname: string;
   avatarUrl: string;
+  gender?: UserGender | null;
+  preferredTagIds?: number[];
+  profileCompleted?: boolean;
   points: number;
   diamonds?: number;
   inviteCode: string;
@@ -78,6 +83,18 @@ export interface SignupRequest {
   /** 未登录点击推广链时的匿名 ID，注册时带给后端以归因 invitee（见 promoAnonId.ts / GameDetail） */
   promoAnonId?: string;
   // code: string;
+}
+
+export interface SaveProfilePreferencesRequest {
+  gender: UserGender;
+  tagIds: number[];
+}
+
+export interface SaveProfilePreferencesResponse {
+  gender: UserGender;
+  preferredTagIds: number[];
+  profileCompleted: boolean;
+  user: User;
 }
 
 // 登录请求

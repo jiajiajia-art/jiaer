@@ -2,6 +2,8 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import styles from "./JoinGroupModal.module.css";
+import { useAuthStore } from "../store/useAuthStore";
+import { getQqGroupQrSrc } from "../utils/groupQr";
 
 interface JoinGroupModalProps {
   isOpen: boolean;
@@ -13,10 +15,11 @@ interface JoinGroupModalProps {
 const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, qqQrSrc, wechatQrSrc }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
 
   if (!isOpen) return null;
 
-  const qqSrc = qqQrSrc || `${import.meta.env.BASE_URL}data/assets/group/qr_qq.jpeg`;
+  const qqSrc = qqQrSrc || getQqGroupQrSrc(user?.user?.gender, import.meta.env.BASE_URL);
   const wxSrc = wechatQrSrc || `${import.meta.env.BASE_URL}data/assets/group/qr_wx.jpeg`;
   const fallbackSrc = `${import.meta.env.BASE_URL}data/assets/defaultAvatar.png`;
 
