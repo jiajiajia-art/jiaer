@@ -32,6 +32,7 @@ import GameDetail from './page/GameDetail';
 import NovelReader from './page/NovelReader';
 import Favorites from './page/Favorites';
 import ScrollToTop from './components/ScrollToTop';
+import ProfilePreferenceGate from './components/ProfilePreferenceGate';
 import Analytics from './page/Analytics';
 import RouteReporter from './components/RouteReporter';
 import { usePlatformDurationTracking } from './hooks/usePlatformDurationTracking';
@@ -201,6 +202,7 @@ function App() {
       </Routes>
       <ScrollToTop />
       <UploadProgressModal />
+      <ProfilePreferenceGate />
     </BrowserRouter>
   )
 }

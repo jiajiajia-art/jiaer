@@ -377,15 +377,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                 });
 
                 if (response.data?.data) {
-                    setMode('login');
-                    setPassword('');
-                    setConfirmPassword('');
-                    resetErrors();
-                    setSubmitError(t('auth.registerSuccess'));
+                    login(response.data.data);
+                    void gamePromotionApi.consumePending(getOrCreatePromoAnonId()).catch(() => {});
 
                     if (onRegister) {
                         onRegister(phone, password);
                     }
+                    resetAllStates();
+                    onClose();
                 } else {
                     throw new Error(t('common.error'));
                 }

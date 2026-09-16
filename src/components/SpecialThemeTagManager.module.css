@@ -229,6 +229,46 @@
     gap: 12px;
 }
 
+.genderTabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 4px;
+    border-radius: 16px;
+    border: 1px solid rgba(205, 157, 120, 0.18);
+    background: rgba(255, 246, 238, 0.72);
+}
+
+.genderTab {
+    min-height: 40px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    background: transparent;
+    color: #7a6a59;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.genderTab:hover {
+    color: #9b4c21;
+    background: rgba(255, 255, 255, 0.68);
+}
+
+.genderTab:focus-visible {
+    outline: none;
+    border-color: rgba(201, 115, 63, 0.46);
+    box-shadow: 0 0 0 3px rgba(201, 115, 63, 0.12);
+}
+
+.genderTabActive {
+    border-color: rgba(201, 115, 63, 0.34);
+    background: #fff;
+    color: #9b4c21;
+    box-shadow: 0 8px 18px rgba(117, 72, 39, 0.08);
+}
+
 .limitText {
     color: #b45a31;
     font-size: 14px;

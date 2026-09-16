@@ -18,6 +18,7 @@ import confirmModalStyles from '../components/CommonModal/ConfirmModal.module.cs
 import GameGridSkeleton from '../components/Skeleton/GameGridSkeleton';
 import WithdrawFlowModal from '../components/Create/WithdrawFlowModal';
 import ProfileFunctionPanel from '../components/Profile/ProfileFunctionPanel';
+import ProfilePreferenceModal from '../components/ProfilePreferenceModal';
 import { useAuthStore } from '../store/useAuthStore';
 import getGameDataApi from '../api/home/getGameData';
 import type { UserGameData } from '../api/home/getGameData.type';
@@ -38,6 +39,7 @@ import { getApiErrorMessage } from '../utils/error';
 import { getImageUrl } from '../utils/constants';
 import favoriteApi from '../api/favorite/favoriteApi';
 import { buildGameDetailNavigateState } from '../utils/gameDetailNavigation';
+import { getGenderSymbol, normalizeGender } from '../utils/profileCompletion';
 
 const NICKNAME_MAX_LENGTH = 20;
 const AVATAR_MAX_SIZE_BYTES = 5 * 1024 * 1024;
@@ -98,6 +100,7 @@ const Create: React.FC = () => {
     const [isStatsExpanded, setIsStatsExpanded] = useState(false);
     const [isEarningsMoreExpanded, setIsEarningsMoreExpanded] = useState(false);
     const [isEditNicknameOpen, setIsEditNicknameOpen] = useState(false);
+    const [isProfilePreferenceOpen, setIsProfilePreferenceOpen] = useState(false);
     const [nicknameDraft, setNicknameDraft] = useState('');
     const [isSavingNickname, setIsSavingNickname] = useState(false);
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
@@ -112,6 +115,8 @@ const Create: React.FC = () => {
 
     const userName = user?.user?.nickname || user?.user?.name || t('create.userNameDefault');
     const userCode = user?.user?.userCode;
+    const normalizedGender = normalizeGender(user?.user?.gender);
+    const genderSymbol = getGenderSymbol(normalizedGender);
     const debugToken = user?.user?.debugToken;
     const truncatedDebugToken = debugToken ? `${debugToken.slice(0, 8)}...` : null;
     const userAvatar = getImageUrl(user?.user?.avatarUrl) || `${import.meta.env.BASE_URL}data/assets/defaultAvatar.png`;
@@ -662,6 +667,17 @@ const Create: React.FC = () => {
                                             >
                                                 <MdOutlineEdit aria-hidden="true" />
                                             </button>
+                                            {genderSymbol && (
+                                                <button
+                                                    type="button"
+                                                    className={`${styles.creatorGenderBadge} ${normalizedGender === 'male' ? styles.creatorGenderBadgeMale : styles.creatorGenderBadgeFemale}`}
+                                                    onClick={() => setIsProfilePreferenceOpen(true)}
+                                                    aria-label={t('profile.changeProfilePreference')}
+                                                    title={t('profile.changeProfilePreference')}
+                                                >
+                                                    {genderSymbol}
+                                                </button>
+                                            )}
                                         </div>
                                         {streakDays > 0 && (
                                             <span className={styles.creatorStreakBadge}>
@@ -1265,6 +1281,12 @@ const Create: React.FC = () => {
                 message={t('create.batchDeleteConfirmMessage', { count: selectedDraftCount })}
                 confirmButtonText={isBatchDeletingDrafts ? t('create.deletingDrafts') : t('create.confirmDelete')}
                 cancelButtonText={t('create.cancel')}
+            />
+
+            <ProfilePreferenceModal
+                isOpen={isProfilePreferenceOpen}
+                onClose={() => setIsProfilePreferenceOpen(false)}
+                onSaved={() => setIsProfilePreferenceOpen(false)}
             />
         </div>
     );

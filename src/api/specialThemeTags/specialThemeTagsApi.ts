@@ -5,6 +5,7 @@ import type {
     PublicSpecialThemeTagGamesResponse,
     PublicSpecialThemeTagListResponse,
     SaveSpecialThemeGamesRequest,
+    SpecialThemeAudienceGender,
     SpecialThemeTagMutationResponse,
     UpdateSpecialThemeTagRequest,
 } from './specialThemeTagsApi.type';
@@ -17,8 +18,11 @@ const specialThemeTagsApi = {
     reorderAdminTags: (ids: number[]) => api.post<SpecialThemeTagMutationResponse>('/admin/special-theme-tags/reorder', { ids }),
     saveAdminTagGames: (id: number, data: SaveSpecialThemeGamesRequest) => api.put<SpecialThemeTagMutationResponse>(`/admin/special-theme-tags/${id}/games`, data),
     getPublicTags: () => api.get<PublicSpecialThemeTagListResponse>('/auth/special-theme-tags'),
-    getPublicTagGames: (id: number, limit = 12) => api.get<PublicSpecialThemeTagGamesResponse>(`/auth/special-theme-tags/${id}/games`, {
-        params: { limit },
+    getPublicTagGames: (id: number, limit = 12, gender?: SpecialThemeAudienceGender | null) => api.get<PublicSpecialThemeTagGamesResponse>(`/auth/special-theme-tags/${id}/games`, {
+        params: {
+            limit,
+            ...(gender ? { gender } : {}),
+        },
     }),
 };
 

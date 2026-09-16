@@ -43,6 +43,7 @@ import { collectRecommendExposeItems, shouldReportRecommendExpose } from '../lib
 import { resolveHomeFiltersForNovelThemeConflict } from '../utils/homeFilterNovelTheme';
 import { openConfiguredLink } from '../utils/promotionNavigation';
 import { useExternalLinkCopyModal } from '../hooks/useExternalLinkCopyModal';
+import { normalizeGender } from '../utils/profileCompletion';
 
 /** 功能注释：加群横幅图标用下载切图原 SVG（组 9013），不用手写矢量 */
 const JOIN_GROUP_ICON = `${import.meta.env.BASE_URL}data/assetsv2/home/icon_community.svg`;
@@ -251,10 +252,11 @@ const Home: React.FC = () => {
         () => homeShowcaseTags.find((tag) => tag.key === activeShowcaseTagKey) || null,
         [activeShowcaseTagKey, homeShowcaseTags],
     );
+    const showcaseAudienceGender = normalizeGender(user?.user?.gender);
     const activeShowcaseGames = activeShowcaseTag
         ? (showcaseGamesCache[activeShowcaseTag.key] || [])
         : [];
-    const themePreviewResetKey = `${activeShowcaseTagKey || 'none'}-${showcaseLoadingKey === activeShowcaseTagKey ? 'loading' : 'ready'}`;
+    const themePreviewResetKey = `${activeShowcaseTagKey || 'none'}-${showcaseAudienceGender || 'auto'}-${showcaseLoadingKey === activeShowcaseTagKey ? 'loading' : 'ready'}`;
     const allGamesFilterKey = useMemo(
         () => getHomeListFilterKey(allGamesFilters),
         [allGamesFilters],
@@ -953,7 +955,7 @@ const Home: React.FC = () => {
         try {
             let games: UserGameData[] = [];
         if (showcaseTag.kind === 'special') {
-            const response = await specialThemeTagsApi.getPublicTagGames(showcaseTag.id, 12);
+            const response = await specialThemeTagsApi.getPublicTagGames(showcaseTag.id, 12, showcaseAudienceGender);
             if (response.data.success) {
                 // 实现加载普通热门题材剧本预览
                 games = response.data.data || [];
@@ -989,7 +991,7 @@ const Home: React.FC = () => {
         } finally {
             setShowcaseLoadingKey((prev) => (prev === showcaseTag.key ? null : prev));
         }
-    }, [showcaseGamesCache]);
+    }, [showcaseAudienceGender, showcaseGamesCache]);
 
     const updateAllGamesFilters = useCallback((updater: (prev: HomeListFilters) => HomeListFilters) => {
         setAllGamesFilters((prev) => {
@@ -1029,6 +1031,10 @@ const Home: React.FC = () => {
     useEffect(() => {
         void loadHomeShowcaseTags();
     }, [loadHomeShowcaseTags]);
+
+    useEffect(() => {
+        setShowcaseGamesCache({});
+    }, [showcaseAudienceGender]);
 
     useEffect(() => {
         let cancelled = false;

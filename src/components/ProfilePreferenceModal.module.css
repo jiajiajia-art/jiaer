@@ -1,0 +1,370 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 3600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100vw;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 18px;
+    overflow-y: auto;
+    box-sizing: border-box;
+    background: rgba(0, 0, 0, 0.78);
+    backdrop-filter: blur(8px);
+}
+
+.modal {
+    position: relative;
+    width: min(560px, calc(100vw - 28px));
+    max-height: calc(100dvh - 36px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 26px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background:
+        linear-gradient(180deg, rgba(30, 30, 34, 0.98) 0%, rgba(10, 10, 12, 0.98) 100%);
+    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.58);
+    color: #fff;
+}
+
+.closeButton {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    cursor: pointer;
+}
+
+.closeButton span,
+.closeButton span::after {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 15px;
+    height: 2px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.72);
+    content: '';
+}
+
+.closeButton span {
+    transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.closeButton span::after {
+    transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.closeButton:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.closeButton:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.header {
+    padding-right: 34px;
+    margin-bottom: 18px;
+}
+
+.eyebrow {
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: rgba(251, 70, 85, 0.16);
+    color: #ff7c87;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.title {
+    margin: 12px 0 8px;
+    color: #fff;
+    font-size: 24px;
+    line-height: 1.25;
+    font-weight: 800;
+    letter-spacing: 0;
+}
+
+.subtitle {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.66);
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+.section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.sectionHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.sectionHeader h3 {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.94);
+    font-size: 15px;
+    line-height: 1.3;
+    font-weight: 700;
+}
+
+.sectionHeader span {
+    flex-shrink: 0;
+    color: rgba(255, 255, 255, 0.46);
+    font-size: 12px;
+    line-height: 1.2;
+}
+
+.genderGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.genderCard {
+    min-height: 76px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.82);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.genderCard:hover {
+    border-color: rgba(251, 70, 85, 0.5);
+    background: rgba(251, 70, 85, 0.12);
+}
+
+.genderCardMale:hover {
+    border-color: rgba(56, 189, 248, 0.58);
+    background: rgba(56, 189, 248, 0.13);
+}
+
+.genderCardFemale:hover {
+    border-color: rgba(251, 70, 85, 0.5);
+    background: rgba(251, 70, 85, 0.12);
+}
+
+.genderCardActive,
+.genderCardFemale.genderCardActive {
+    border-color: rgba(251, 70, 85, 0.88);
+    background: rgba(251, 70, 85, 0.2);
+    color: #fff;
+}
+
+.genderCardMale.genderCardActive {
+    border-color: rgba(56, 189, 248, 0.9);
+    background: rgba(56, 189, 248, 0.2);
+}
+
+.genderSymbol {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #ff6d7a;
+    font-size: 24px;
+    line-height: 1;
+    font-weight: 800;
+}
+
+.genderCardMale .genderSymbol {
+    color: #38bdf8;
+}
+
+.genderLabel {
+    font-size: 15px;
+    line-height: 1.2;
+    font-weight: 700;
+}
+
+.themeHint {
+    margin: -2px 0 0;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.tagPanel {
+    max-height: min(260px, 34dvh);
+    overflow-y: auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    gap: 8px;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.045);
+}
+
+.tagChip {
+    min-height: 36px;
+    max-width: 100%;
+    padding: 0 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.07);
+    color: rgba(255, 255, 255, 0.74);
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1.2;
+    font-weight: 650;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.tagChip:hover {
+    border-color: rgba(255, 255, 255, 0.26);
+    color: #fff;
+}
+
+.tagChipActive {
+    border-color: rgba(251, 70, 85, 0.86);
+    background: #fb4655;
+    color: #fff;
+}
+
+.loading {
+    width: 100%;
+    min-height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.58);
+    font-size: 13px;
+}
+
+.loadFailed {
+    width: 100%;
+    min-height: 86px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: rgba(255, 255, 255, 0.66);
+    font-size: 13px;
+    line-height: 1.45;
+    text-align: center;
+}
+
+.retryButton {
+    min-height: 36px;
+    padding: 0 16px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    transition: background-color 0.18s ease, border-color 0.18s ease;
+}
+
+.retryButton:hover,
+.retryButton:focus-visible {
+    border-color: rgba(251, 70, 85, 0.72);
+    background: rgba(251, 70, 85, 0.18);
+    outline: none;
+}
+
+.helper,
+.error {
+    margin-top: 12px;
+    min-height: 20px;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.helper {
+    color: rgba(255, 255, 255, 0.54);
+}
+
+.error {
+    color: #ff7c87;
+}
+
+.submitButton {
+    width: 100%;
+    min-height: 46px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 10px;
+    background: #fb4655;
+    color: #fff;
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1.2;
+    font-weight: 800;
+    transition: background-color 0.18s ease, opacity 0.18s ease;
+}
+
+.submitButton:hover:not(:disabled) {
+    background: #ff5a68;
+}
+
+.submitButton:disabled {
+    cursor: not-allowed;
+    opacity: 0.48;
+}
+
+@media (max-width: 560px) {
+    .overlay {
+        align-items: flex-end;
+        padding: 12px;
+    }
+
+    .modal {
+        width: 100%;
+        max-height: calc(100dvh - 24px);
+        padding: 22px 18px 18px;
+        border-radius: 12px;
+    }
+
+    .header {
+        padding-right: 0;
+    }
+
+    .title {
+        font-size: 21px;
+    }
+
+    .genderCard {
+        min-height: 68px;
+    }
+
+    .tagPanel {
+        max-height: 32dvh;
+    }
+}
