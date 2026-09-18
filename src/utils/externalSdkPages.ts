@@ -23,9 +23,19 @@ export interface DeveloperCliAuthorizeParams {
 
 export type ExternalRechargeDisplayState = 'missing' | 'ready' | 'paying' | 'paid' | 'expired' | 'failed';
 
+export interface ExternalRechargePlanLike {
+  id: string;
+  price: number;
+  diamonds: number;
+  label: string;
+  currency?: string | null;
+}
+
 export interface ExternalRechargeSessionLike {
   status?: string | null;
   expiresAt?: string | null;
+  plan?: ExternalRechargePlanLike | null;
+  plans?: ExternalRechargePlanLike[] | null;
   payment?: {
     status?: string | null;
   } | null;
@@ -84,6 +94,12 @@ export function getRechargeDisplayState(
   if (session.expiresAt && Date.parse(session.expiresAt) <= now.getTime()) return 'expired';
   if (status === 'pending' || paymentStatus === 'pending') return 'paying';
   return 'ready';
+}
+
+export function getRechargePlanOptions(session: ExternalRechargeSessionLike | null | undefined): ExternalRechargePlanLike[] {
+  if (!session) return [];
+  if (Array.isArray(session.plans) && session.plans.length > 0) return session.plans;
+  return session.plan ? [session.plan] : [];
 }
 
 export function buildExternalReturnUrl(

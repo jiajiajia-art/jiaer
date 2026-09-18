@@ -73,7 +73,7 @@
 .summary {
   display: grid;
   gap: 12px;
-  margin: 24px 0;
+  margin: 0;
 }
 
 .summary > div {
@@ -155,6 +155,67 @@
   grid-template-columns: minmax(0, 1fr) minmax(240px, 320px);
   gap: 20px;
   align-items: start;
+}
+
+.checkoutDetails {
+  display: grid;
+  gap: 16px;
+}
+
+.planPicker {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.planChoice {
+  display: grid;
+  gap: 4px;
+  min-height: 96px;
+  padding: 14px 16px;
+  border: 1px solid #d7e0ea;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #253149;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.planChoice:hover {
+  border-color: #91a8d6;
+  background: #f8fbff;
+}
+
+.planChoiceActive {
+  border-color: #1f5eff;
+  box-shadow: 0 0 0 3px rgba(31, 94, 255, 0.14);
+}
+
+.planChoice span {
+  font-size: 13px;
+  color: #687386;
+}
+
+.planChoice strong {
+  font-size: 18px;
+  color: #172033;
+}
+
+.planChoice em {
+  font-size: 14px;
+  font-style: normal;
+  color: #1f5eff;
+}
+
+.planChoice:focus-visible {
+  outline: 3px solid rgba(31, 94, 255, 0.28);
+  outline-offset: 2px;
+}
+
+.planChoice:disabled {
+  cursor: not-allowed;
+  opacity: 0.64;
 }
 
 .qrBox {

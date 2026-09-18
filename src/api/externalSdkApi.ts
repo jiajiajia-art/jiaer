@@ -70,6 +70,7 @@ export interface ExternalRechargeSession {
   appId: string;
   appName: string;
   plan: ExternalRechargePlan | null;
+  plans?: ExternalRechargePlan[];
   status: string;
   returnUrl: string | null;
   expiresAt: string | null;
@@ -96,8 +97,8 @@ export const externalSdkApi = {
   getRechargeSession: (sessionId: string) =>
     openapiApi.get<OpenApiResponse<ExternalRechargeSession>>(`/public/recharge/sessions/${encodeURIComponent(sessionId)}`),
 
-  createRechargePayment: (sessionId: string) =>
-    openapiApi.post<OpenApiResponse<ExternalRechargeSession>>(`/public/recharge/sessions/${encodeURIComponent(sessionId)}/payment`),
+  createRechargePayment: (sessionId: string, data?: { planId?: string }) =>
+    openapiApi.post<OpenApiResponse<ExternalRechargeSession>>(`/public/recharge/sessions/${encodeURIComponent(sessionId)}/payment`, data),
 
   getRechargeStatus: (sessionId: string) =>
     openapiApi.get<OpenApiResponse<ExternalRechargeSession>>(`/public/recharge/sessions/${encodeURIComponent(sessionId)}/status`),

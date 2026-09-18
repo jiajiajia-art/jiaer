@@ -5,18 +5,19 @@ import { getApiErrorMessage } from '../../utils/error';
 import {
   buildExternalReturnUrl,
   getRechargeDisplayState,
+  getRechargePlanOptions,
   parseExternalRechargeParams,
   type ExternalRechargeDisplayState,
+  type ExternalRechargePlanLike,
 } from '../../utils/externalSdkPages';
 import styles from './ExternalSdkPage.module.css';
 
 const POLL_INTERVAL_MS = 3000;
 const AUTO_RETURN_SECONDS = 3;
 
-function formatPrice(session: ExternalRechargeSession | null): string {
-  const plan = session?.plan;
+function formatPlanPrice(plan: ExternalRechargePlanLike | null | undefined): string {
   if (!plan) return '--';
-  return `${plan.currency === 'CNY' ? '¥' : plan.currency} ${plan.price.toFixed(2)}`;
+  return `${!plan.currency || plan.currency === 'CNY' ? '¥' : plan.currency} ${plan.price.toFixed(2)}`;
 }
 
 function getStatusCopy(state: ExternalRechargeDisplayState): { title: string; body: string } {
@@ -45,10 +46,16 @@ export default function ExternalRecharge() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [selectedPlanId, setSelectedPlanId] = useState('');
   const [autoReturnLeft, setAutoReturnLeft] = useState<number | null>(null);
   const pollingRef = useRef<number | null>(null);
 
   const displayState = useMemo(() => getRechargeDisplayState(session), [session]);
+  const planOptions = useMemo(() => getRechargePlanOptions(session), [session]);
+  const selectedPlan = useMemo(() => {
+    if (session?.plan) return session.plan;
+    return planOptions.find((plan) => plan.id === selectedPlanId) || planOptions[0] || null;
+  }, [planOptions, selectedPlanId, session]);
   const statusCopy = getStatusCopy(params.valid ? displayState : 'missing');
   const returnUrl = useMemo(() => {
     if (!session) return '';
@@ -115,6 +122,17 @@ export default function ExternalRecharge() {
   }, [clearPolling, loadSession]);
 
   useEffect(() => {
+    if (session?.plan?.id) {
+      setSelectedPlanId(session.plan.id);
+      return;
+    }
+    setSelectedPlanId((current) => {
+      if (current && planOptions.some((plan) => plan.id === current)) return current;
+      return planOptions[0]?.id || '';
+    });
+  }, [planOptions, session]);
+
+  useEffect(() => {
     clearPolling();
     if (displayState === 'paying') {
       pollingRef.current = window.setTimeout(() => {
@@ -146,10 +164,14 @@ export default function ExternalRecharge() {
 
   const handleCreatePayment = async () => {
     if (!params.valid || submitting) return;
+    if (!selectedPlan?.id) {
+      setError('请选择一个充值礼包。');
+      return;
+    }
     setSubmitting(true);
     setError('');
     try {
-      const response = await externalSdkApi.createRechargePayment(params.sessionId);
+      const response = await externalSdkApi.createRechargePayment(params.sessionId, { planId: selectedPlan.id });
       setSession(response.data.data);
     } catch (err) {
       setError(getApiErrorMessage(err, '支付二维码生成失败，请稍后重试。'));
@@ -165,7 +187,8 @@ export default function ExternalRecharge() {
   };
 
   const qrDataUrl = session?.payment?.qrDataUrl || '';
-  const canCreatePayment = params.valid && !loading && (displayState === 'ready' || displayState === 'failed');
+  const canCreatePayment = params.valid && !loading && Boolean(selectedPlan) && (displayState === 'ready' || displayState === 'failed');
+  const canSelectPlan = Boolean(session && !session.payment && (displayState === 'ready' || displayState === 'failed'));
 
   return (
     <main className={styles.shell}>
@@ -194,23 +217,44 @@ export default function ExternalRecharge() {
 
             {session && (
               <div className={styles.checkoutGrid}>
-                <div className={styles.summary}>
-                  <div>
-                    <span>外部应用</span>
-                    <strong>{session.appName}</strong>
+                <div className={styles.checkoutDetails}>
+                  <div className={styles.summary}>
+                    <div>
+                      <span>外部应用</span>
+                      <strong>{session.appName}</strong>
+                    </div>
+                    <div>
+                      <span>充值档位</span>
+                      <strong>{selectedPlan ? `${selectedPlan.label} · ${selectedPlan.diamonds} 钻石` : '--'}</strong>
+                    </div>
+                    <div>
+                      <span>支付金额</span>
+                      <strong>{formatPlanPrice(selectedPlan)}</strong>
+                    </div>
+                    <div>
+                      <span>会话状态</span>
+                      <strong>{session.status}</strong>
+                    </div>
                   </div>
-                  <div>
-                    <span>充值档位</span>
-                    <strong>{session.plan ? `${session.plan.label} · ${session.plan.diamonds} 钻石` : '--'}</strong>
-                  </div>
-                  <div>
-                    <span>支付金额</span>
-                    <strong>{formatPrice(session)}</strong>
-                  </div>
-                  <div>
-                    <span>会话状态</span>
-                    <strong>{session.status}</strong>
-                  </div>
+
+                  {planOptions.length > 0 && !session.payment ? (
+                    <div className={styles.planPicker} aria-label="选择充值礼包">
+                      {planOptions.map((plan) => (
+                        <button
+                          key={plan.id}
+                          type="button"
+                          className={`${styles.planChoice} ${selectedPlan?.id === plan.id ? styles.planChoiceActive : ''}`}
+                          aria-pressed={selectedPlan?.id === plan.id}
+                          disabled={!canSelectPlan || submitting}
+                          onClick={() => setSelectedPlanId(plan.id)}
+                        >
+                          <span>{plan.label}</span>
+                          <strong>{plan.diamonds} 钻石</strong>
+                          <em>{formatPlanPrice(plan)}</em>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className={styles.qrBox}>
