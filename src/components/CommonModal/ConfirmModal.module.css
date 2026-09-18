@@ -323,12 +323,14 @@
     }
 }
 
-/* ========== dark tone：对齐个人中心 / 提现弹窗 ========== */
+/* ========== dark tone：对齐兑换弹窗 / 个人中心墨黑酒红 ========== */
 .darkModal {
     --confirm-accent: #A8283C;
+    --confirm-accent-hover: #C23A50;
     --confirm-accent-deep: #8E2135;
     --confirm-muted: rgba(255, 255, 255, 0.55);
-    width: min(420px, calc(100vw - 32px));
+    width: min(322px, calc(100vw - 20px));
+    max-width: 322px;
     min-width: 0;
     min-height: 0;
     border-radius: 10px;
@@ -340,7 +342,7 @@
     -webkit-backdrop-filter: blur(47px);
     box-shadow: none;
     color: #ffffff;
-    padding: 20px 22px 22px;
+    padding: 20px 18px 18px;
     overflow: hidden;
     position: relative;
 }
@@ -371,46 +373,62 @@
     z-index: 4;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 14px;
+    justify-content: center;
+    min-height: 36px;
+    margin: 0 0 18px;
+    padding: 0;
 }
 
 .darkTitle {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 700;
+    margin: 4px 0 0;
+    padding: 0 40px;
+    font-size: 16px;
+    font-weight: 500;
     color: #ffffff;
-    letter-spacing: -0.02em;
+    letter-spacing: 0;
+    line-height: normal;
+    text-align: center;
 }
 
 .darkCloseButton {
-    width: 32px;
-    height: 32px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.06);
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 22px;
-    line-height: 1;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: #ffffff;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     padding: 0;
     flex-shrink: 0;
+    z-index: 10;
+    transition: opacity 0.2s ease;
 }
 
 .darkCloseButton:hover {
-    color: #ffffff;
-    border-color: rgba(255, 255, 255, 0.28);
+    opacity: 0.75;
+}
+
+.darkCloseIcon {
+    display: block;
+    width: 10px;
+    height: 10px;
+    border-left: 2px solid #ffffff;
+    border-bottom: 2px solid #ffffff;
+    transform: rotate(45deg);
+    margin-left: 4px;
 }
 
 .darkBody {
     position: relative;
     z-index: 4;
     padding: 0;
-    gap: 20px;
+    gap: 16px;
     background: transparent;
     justify-content: flex-start;
     align-items: stretch;
@@ -423,10 +441,10 @@
 }
 
 .darkMessage {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 400;
     color: var(--confirm-muted);
-    line-height: 1.65;
+    line-height: 1.55;
     text-align: left;
 }
 
@@ -445,16 +463,17 @@
     width: 100%;
     gap: 10px;
     flex-direction: column-reverse;
+    margin-top: 4px;
 }
 
 .darkConfirmButton,
 .darkCancelButton {
     width: 100%;
     height: auto;
-    min-height: 42px;
+    min-height: 44px;
     border-radius: 999px;
-    font-size: 14px;
-    font-weight: 700;
+    font-size: 15px;
+    font-weight: 600;
     background-image: none;
 }
 
@@ -464,7 +483,7 @@
 }
 
 .darkConfirmButton:hover {
-    background: var(--confirm-accent-deep);
+    background: var(--confirm-accent-hover);
     color: #ffffff;
     background-image: none;
 }
@@ -482,19 +501,19 @@
 
 @media (max-width: 768px) {
     .darkModal {
-        width: min(420px, calc(100vw - 32px));
-        max-width: calc(100vw - 32px);
+        width: min(322px, calc(100vw - 20px));
+        max-width: 322px;
         min-width: 0;
-        padding: 18px 18px 20px;
+        padding: 18px 16px 16px;
         border-radius: 10px;
     }
 
     .darkTitle {
-        font-size: 17px;
+        font-size: 16px;
     }
 
     .darkMessage {
-        font-size: 14px;
+        font-size: 13px;
     }
 
     .darkButtonGroup {
@@ -504,7 +523,7 @@
     .darkConfirmButton,
     .darkCancelButton {
         width: 100%;
-        min-height: 42px;
+        min-height: 44px;
         font-size: 14px;
     }
 }

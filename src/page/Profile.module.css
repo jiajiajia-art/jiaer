@@ -30,7 +30,7 @@
     flex-direction: column;
     width: 100%;
     position: relative;
-    margin-top: 28px;
+    margin-top: 0;
 }
 
 /* 用户信息展示区域 */
@@ -255,26 +255,104 @@
     font-size: 16px;
 }
 
-/* 功能列表 — 更多服务（深色面板） */
+/* 功能列表 — 更多服务（深色面板 · 图标网格） */
 .functionList {
     width: 100%;
     max-width: none;
     margin: 0;
     display: flex;
     flex-direction: column;
-    padding: 10px 8px 10px;
+    padding: 12px 12px 10px;
     box-sizing: border-box;
-    background: #1a1a1a;
-    border-radius: 16px;
+    background: var(--creator-card, #1C1C1E);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 10px;
 }
 
 .functionListHeading {
-    margin: 0 12px 6px;
-    padding: 8px 4px 10px;
+    margin: 0 4px 10px;
+    padding: 0;
     color: #ffffff;
-    font-size: 16px;
-    font-weight: 600;
+    font-size: 15px;
+    font-weight: 700;
     line-height: 1.3;
+}
+
+.functionGrid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px 2px;
+}
+
+.functionGridItem {
+    appearance: none;
+    border: none;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 4px;
+    border-radius: 10px;
+    background: transparent;
+    color: #ffffff;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: background 0.15s ease;
+}
+
+.functionGridItem:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.functionGridItemActive {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.functionGridIcon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 30px;
+    flex-shrink: 0;
+}
+
+.functionGridIcon img {
+    width: 28px;
+    height: 28px;
+    display: block;
+    object-fit: contain;
+}
+
+.functionGridIcon svg {
+    width: 30px;
+    height: 30px;
+}
+
+.functionGridLabel {
+    width: 100%;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.35;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.92);
+    word-break: break-word;
+}
+
+.functionExpandPanel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 0 4px;
+}
+
+.functionExpandPanel .inviteInput {
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 .functionItem {
@@ -1074,7 +1152,7 @@
     }
 
     .functionList {
-        padding: 16px 6px 8px;
+        padding: 10px 10px 8px;
     }
 }
 
@@ -1140,13 +1218,42 @@
     }
 
     .functionList {
-        padding: 16px 6px 8px;
-        border-radius: 14px;
+        padding: 10px 10px 8px;
+        border-radius: 10px;
     }
 
     .functionListHeading {
-        margin: 0 10px 4px;
-        font-size: 15px;
+        margin: 0 2px 8px;
+        font-size: 14px;
+    }
+
+    .functionGrid {
+        gap: 2px 0;
+    }
+
+    .functionGridItem {
+        padding: 6px 4px;
+        gap: 5px;
+    }
+
+    .functionGridIcon {
+        width: 32px;
+        height: 32px;
+        font-size: 26px;
+    }
+
+    .functionGridIcon img {
+        width: 24px;
+        height: 24px;
+    }
+
+    .functionGridIcon svg {
+        width: 26px;
+        height: 26px;
+    }
+
+    .functionGridLabel {
+        font-size: 11px;
     }
 
     .functionItem {

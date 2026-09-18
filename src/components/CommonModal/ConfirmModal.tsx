@@ -44,15 +44,15 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 >
                     {isDark ? (
                         <div className={styles.darkHeader}>
-                            <h1 className={styles.darkTitle}>{title}</h1>
                             <button
                                 className={styles.darkCloseButton}
                                 onClick={onCancel}
                                 type="button"
                                 aria-label="close"
                             >
-                                ×
+                                <span className={styles.darkCloseIcon} aria-hidden="true" />
                             </button>
+                            <h1 className={styles.darkTitle}>{title}</h1>
                         </div>
                     ) : (
                         <div className={styles.modalHeader}>

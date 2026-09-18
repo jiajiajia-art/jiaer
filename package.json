@@ -42,6 +42,8 @@
     "test:displayCoverUrl": "node --experimental-strip-types --test scripts/displayCoverUrl.check.mjs",
     "test:groupQr": "node --experimental-strip-types --test scripts/groupQr.check.mjs",
     "test:profileCompletion": "node --experimental-strip-types --test scripts/profileCompletion.check.mjs",
+    "test:createRewardSettlement": "node --experimental-strip-types --test scripts/createRewardSettlement.check.mjs",
+    "test:createWithdrawStatLayout": "node --experimental-strip-types --test scripts/createWithdrawStatLayout.check.mjs",
     "test": "node --experimental-strip-types --test scripts/*.check.mjs checks/*.check.mjs"
   },
   "dependencies": {

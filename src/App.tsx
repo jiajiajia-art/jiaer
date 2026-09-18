@@ -5,6 +5,7 @@ import './styles/funloomToast.css';
 import Home from './page/Home';
 import Create from './page/Create';
 import CreateType from './page/CreateType';
+import CreateWorks from './page/CreateWorks';
 import WithdrawRecords from './page/WithdrawRecords';
 import WareHouse from './page/WareHouse';
 import WarehouseHub from './page/warehouse/WarehouseHub';
@@ -142,6 +143,7 @@ function App() {
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/create" element={<Create />} />
           <Route path="/create/new" element={<CreateType />} />
+          <Route path="/create/works" element={<CreateWorks />} />
           <Route path="/create/withdraw-records" element={<WithdrawRecords />} />
           <Route path="/asset/details" element={<AssetDetails />} />
           <Route path="/creator" element={<Navigate to="/create" replace />} />
