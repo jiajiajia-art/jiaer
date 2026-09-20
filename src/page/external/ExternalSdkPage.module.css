@@ -337,3 +337,918 @@
     transition: none;
   }
 }
+
+.rechargeShell {
+  --recharge-bg: #070604;
+  --recharge-panel: rgba(26, 19, 11, 0.9);
+  --recharge-panel-strong: rgba(12, 10, 8, 0.92);
+  --recharge-gold: #f4cf86;
+  --recharge-gold-strong: #ffd98a;
+  --recharge-gold-deep: #8d6234;
+  --recharge-ink: #fff2d7;
+  --recharge-muted: #bea77f;
+  --recharge-line: rgba(244, 207, 134, 0.26);
+  --recharge-cyan: #71d5ff;
+  min-height: 100dvh;
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: clamp(10px, 1.8vh, 18px) clamp(12px, 2.5vw, 32px);
+  background:
+    linear-gradient(180deg, rgba(255, 221, 151, 0.06), rgba(7, 6, 4, 0) 28%),
+    linear-gradient(120deg, #090705 0%, #120d08 38%, #050506 100%);
+  color: var(--recharge-ink);
+}
+
+.rechargeShell,
+.paymentDialog {
+  scrollbar-width: none;
+}
+
+.rechargeShell::-webkit-scrollbar,
+.paymentDialog::-webkit-scrollbar {
+  display: none;
+}
+
+.rechargeShell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle, rgba(255, 231, 178, 0.46) 0 1px, transparent 1.6px),
+    linear-gradient(90deg, rgba(255, 216, 143, 0.08), transparent 24%, transparent 76%, rgba(113, 213, 255, 0.06));
+  background-size: 170px 150px, 100% 100%;
+  opacity: 0.2;
+}
+
+.rechargeBackdrop {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.rechargeBackdrop span {
+  position: absolute;
+  display: block;
+  opacity: 0.56;
+}
+
+.rechargeBackdrop span:nth-child(1) {
+  width: 72vw;
+  height: 1px;
+  left: 14vw;
+  top: 12vh;
+  background: linear-gradient(90deg, transparent, rgba(255, 224, 154, 0.62), transparent);
+}
+
+.rechargeBackdrop span:nth-child(2) {
+  width: 1px;
+  height: 70vh;
+  left: 12vw;
+  top: 10vh;
+  background: linear-gradient(180deg, transparent, rgba(255, 224, 154, 0.3), transparent);
+}
+
+.rechargeBackdrop span:nth-child(3) {
+  width: 1px;
+  height: 64vh;
+  right: 9vw;
+  top: 16vh;
+  background: linear-gradient(180deg, transparent, rgba(113, 213, 255, 0.24), transparent);
+}
+
+.rechargeStage {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 1120px);
+  display: grid;
+  gap: clamp(10px, 1.6vh, 16px);
+  overflow: visible;
+  padding: clamp(16px, 2.2vh, 22px);
+  border: 1px solid var(--recharge-line);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(47, 32, 17, 0.8), rgba(11, 9, 7, 0.96)),
+    var(--recharge-panel);
+  box-shadow:
+    0 28px 80px rgba(0, 0, 0, 0.46),
+    inset 0 1px 0 rgba(255, 232, 180, 0.18);
+}
+
+.rechargeStage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(255, 214, 137, 0.08), transparent 24%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 84px);
+  opacity: 0.7;
+}
+
+.rechargeTopbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 34px;
+}
+
+.rechargeBrand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: #ffe8ba;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.rechargeLogo {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 14px rgba(255, 202, 105, 0.38));
+}
+
+.rechargePill {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 224, 154, 0.34);
+  border-radius: 999px;
+  background: rgba(255, 223, 170, 0.11);
+  color: #ffe6b5;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.rechargeHero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(250px, 340px);
+  gap: clamp(14px, 2.6vw, 30px);
+  align-items: stretch;
+}
+
+.rechargeHeroCopy {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.rechargeEyebrow {
+  margin: 0;
+  color: var(--recharge-cyan);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.rechargeHeroCopy h1 {
+  margin: 0;
+  color: #ffe9ba;
+  font-size: clamp(30px, 3.8vw, 46px);
+  line-height: 1.04;
+  font-weight: 900;
+  text-shadow: 0 0 24px rgba(255, 203, 111, 0.24);
+}
+
+.rechargeHeroCopy p {
+  max-width: 560px;
+  margin: 0;
+  color: #d8c49c;
+  font-size: clamp(13px, 1.15vw, 15px);
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.rechargeBalanceCard {
+  min-height: 104px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 217, 137, 0.34);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(71, 47, 18, 0.78), rgba(12, 10, 8, 0.86)),
+    rgba(0, 0, 0, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 243, 204, 0.1);
+}
+
+.balanceMedal {
+  width: clamp(52px, 6vw, 70px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 38% 28%, #fff6c9 0 12%, #f8d987 26%, #a96f2e 58%, #2e1d0c 100%);
+  box-shadow:
+    0 0 26px rgba(255, 206, 96, 0.36),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.18);
+}
+
+.balanceMedal span {
+  width: 42%;
+  aspect-ratio: 1;
+  display: block;
+  transform: rotate(45deg);
+  border-radius: 4px;
+  background:
+    linear-gradient(135deg, #ffffff 0%, #87e7ff 34%, #1b8dff 68%, #e3fbff 100%);
+  box-shadow: 0 0 18px rgba(91, 213, 255, 0.72);
+}
+
+.balanceLabel,
+.rechargeBalanceCard small {
+  display: block;
+  color: var(--recharge-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.rechargeBalanceCard strong {
+  display: block;
+  margin: 4px 0;
+  color: #fff2cf;
+  font-size: clamp(26px, 3.2vw, 38px);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.rechargeLoading,
+.rechargeStatusStrip,
+.rechargeError {
+  border-radius: 8px;
+  line-height: 1.5;
+}
+
+.rechargeLoading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid rgba(255, 220, 149, 0.24);
+  background: rgba(255, 235, 186, 0.08);
+  color: #edd9ad;
+}
+
+.rechargeLoading span,
+.paymentQrPlaceholder span {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 230, 181, 0.18);
+  border-top-color: var(--recharge-gold-strong);
+  border-radius: 50%;
+  animation: rechargeSpin 760ms linear infinite;
+}
+
+.rechargeStatusStrip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 14px;
+  border: 1px solid rgba(255, 219, 144, 0.22);
+  background: rgba(255, 235, 186, 0.07);
+  color: #d8c49c;
+}
+
+.rechargeStatusStrip strong {
+  color: #ffe9ba;
+  white-space: nowrap;
+}
+
+.rechargeStatusStrip span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
+.rechargeStatusStrip[data-state='paid'] {
+  border-color: rgba(91, 224, 151, 0.4);
+  background: rgba(26, 110, 62, 0.22);
+  color: #c7f7db;
+}
+
+.rechargeStatusStrip[data-state='expired'],
+.rechargeStatusStrip[data-state='failed'],
+.rechargeStatusStrip[data-state='missing'] {
+  border-color: rgba(255, 126, 126, 0.45);
+  background: rgba(139, 40, 40, 0.22);
+  color: #ffd0d0;
+}
+
+.rechargeError,
+.paymentError {
+  border: 1px solid rgba(255, 126, 126, 0.46);
+  background: rgba(146, 35, 35, 0.24);
+  color: #ffd9d9;
+}
+
+.rechargeError {
+  padding: 10px 14px;
+}
+
+.rechargePackages {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(255, 223, 163, 0.24);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 235, 186, 0.04), transparent 42%),
+    rgba(10, 8, 6, 0.62);
+}
+
+.packageHeader {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 14px;
+  min-width: 0;
+}
+
+.packageHeader span {
+  display: block;
+  color: var(--recharge-cyan);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.packageHeader h2 {
+  margin: 3px 0 0;
+  color: #fff0cb;
+  font-size: clamp(18px, 1.8vw, 22px);
+  line-height: 1.2;
+}
+
+.packageHeader small {
+  min-width: 0;
+  color: var(--recharge-muted);
+  font-size: 12px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.packageGrid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.packageCard {
+  position: relative;
+  min-height: 206px;
+  display: grid;
+  grid-template-rows: auto auto auto auto;
+  align-items: end;
+  gap: 5px;
+  padding: 14px 10px 10px;
+  border: 1px solid rgba(255, 222, 155, 0.24);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 231, 181, 0.08), rgba(255, 205, 104, 0.03) 48%, rgba(36, 23, 12, 0.86)),
+    rgba(13, 11, 9, 0.92);
+  color: #f9e5bd;
+  text-align: center;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease;
+}
+
+.packageCard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 238, 190, 0.12), transparent 28%, rgba(255, 189, 92, 0.1));
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.packageCard:hover:not(:disabled),
+.packageCard:focus-visible {
+  transform: translateY(-3px);
+  border-color: rgba(255, 219, 134, 0.88);
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, 0.34),
+    0 0 0 3px rgba(255, 206, 95, 0.1);
+}
+
+.packageCard:hover:not(:disabled)::before,
+.packageCard:focus-visible::before {
+  opacity: 1;
+}
+
+.packageCardActive {
+  border-color: rgba(255, 220, 126, 0.92);
+  box-shadow:
+    0 0 0 2px rgba(255, 203, 88, 0.16),
+    0 18px 42px rgba(0, 0, 0, 0.38);
+}
+
+.packageCard:focus-visible {
+  outline: 3px solid rgba(113, 213, 255, 0.32);
+  outline-offset: 2px;
+}
+
+.packageCard:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.packageBadge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border-bottom-left-radius: 8px;
+  background: linear-gradient(180deg, #fff0c3, #d69c51);
+  color: #4b2a09;
+  font-size: 12px;
+  font-weight: 900;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.24);
+}
+
+.packageArtwork {
+  display: block;
+  width: clamp(108px, 9.4vw, 138px);
+  max-width: 100%;
+  aspect-ratio: 1;
+  justify-self: center;
+  align-self: center;
+  background-repeat: no-repeat;
+  background-size: 300% 200%;
+  background-color: transparent;
+  filter: drop-shadow(0 12px 16px rgba(0, 0, 0, 0.48));
+}
+
+.packageName {
+  color: var(--recharge-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.packageCard strong {
+  color: #fff1cf;
+  font-size: clamp(17px, 1.55vw, 21px);
+  line-height: 1.08;
+  font-variant-numeric: tabular-nums;
+}
+
+.packagePrice {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: stretch;
+  margin-top: 5px;
+  border: 1px solid rgba(255, 231, 174, 0.32);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #f8d78d, #b77b3d);
+  color: #241609;
+  font-size: 15px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.rechargeFooterBar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 219, 144, 0.18);
+  border-radius: 8px;
+  background: rgba(255, 222, 155, 0.16);
+}
+
+.rechargeFooterBar span {
+  min-height: 42px;
+  display: grid;
+  place-items: center;
+  padding: 0 12px;
+  background: rgba(11, 9, 7, 0.86);
+  color: #dcc498;
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.rechargeActions,
+.paymentDialogActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.rechargeActions {
+  justify-content: center;
+}
+
+.rechargePrimaryButton,
+.rechargeSecondaryButton,
+.rechargeGhostButton {
+  min-height: 46px;
+  border-radius: 8px;
+  padding: 0 18px;
+  border: 1px solid transparent;
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease,
+    opacity 160ms ease;
+}
+
+.rechargePrimaryButton {
+  background: linear-gradient(180deg, #ffe5ad, #d49a4b);
+  color: #2a1807;
+  box-shadow: 0 12px 28px rgba(218, 157, 76, 0.24);
+}
+
+.rechargeSecondaryButton {
+  border-color: rgba(255, 219, 144, 0.32);
+  background: rgba(255, 230, 183, 0.08);
+  color: #ffe7b7;
+}
+
+.rechargeGhostButton {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: transparent;
+  color: #d7c09a;
+}
+
+.rechargePrimaryButton:hover,
+.rechargeSecondaryButton:hover,
+.rechargeGhostButton:hover {
+  transform: translateY(-1px);
+}
+
+.rechargePrimaryButton:focus-visible,
+.rechargeSecondaryButton:focus-visible,
+.rechargeGhostButton:focus-visible {
+  outline: 3px solid rgba(113, 213, 255, 0.34);
+  outline-offset: 2px;
+}
+
+.rechargePrimaryButton:disabled,
+.rechargeSecondaryButton:disabled,
+.rechargeGhostButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.56;
+}
+
+.paymentOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: max(18px, env(safe-area-inset-top)) 18px max(18px, env(safe-area-inset-bottom));
+  background: rgba(2, 2, 2, 0.66);
+  backdrop-filter: blur(16px);
+}
+
+.paymentDialog {
+  position: relative;
+  width: min(100%, 460px);
+  max-height: calc(100dvh - 36px);
+  overflow: auto;
+  display: grid;
+  gap: 16px;
+  padding: 24px;
+  border: 1px solid rgba(255, 219, 144, 0.36);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(40, 27, 15, 0.96), rgba(9, 8, 7, 0.98)),
+    #0b0907;
+  color: #f7e6c4;
+  box-shadow:
+    0 30px 90px rgba(0, 0, 0, 0.62),
+    inset 0 1px 0 rgba(255, 255, 255, 0.09);
+}
+
+.paymentCloseButton {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(255, 219, 144, 0.22);
+  border-radius: 8px;
+  background: rgba(255, 238, 198, 0.08);
+  color: #ffe6b5;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.paymentDialogHeader {
+  padding-right: 44px;
+}
+
+.paymentDialogHeader span {
+  display: block;
+  color: var(--recharge-cyan);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.paymentDialogHeader h2 {
+  margin: 5px 0;
+  color: #ffe9ba;
+  font-size: 28px;
+  line-height: 1.1;
+}
+
+.paymentDialogHeader p {
+  margin: 0;
+  color: #cdb891;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.paymentDialogBody {
+  display: grid;
+  grid-template-columns: 1fr 190px;
+  gap: 14px;
+  align-items: stretch;
+}
+
+.paymentPlanCard,
+.paymentQrFrame {
+  border: 1px solid rgba(255, 219, 144, 0.24);
+  border-radius: 8px;
+  background: rgba(255, 238, 196, 0.07);
+}
+
+.paymentPlanCard {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+}
+
+.paymentPlanArt {
+  width: 96px;
+  height: 96px;
+  background-repeat: no-repeat;
+  background-size: 300% 200%;
+  filter: drop-shadow(0 12px 14px rgba(0, 0, 0, 0.45));
+}
+
+.paymentPlanCard span {
+  display: block;
+  color: var(--recharge-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.paymentPlanCard strong {
+  display: block;
+  margin: 5px 0;
+  color: #fff1cf;
+  font-size: 24px;
+  line-height: 1.08;
+}
+
+.paymentPlanCard small {
+  color: var(--recharge-gold-strong);
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.paymentQrFrame {
+  min-height: 190px;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+}
+
+.paymentQrFrame[data-state='paid'] {
+  border-color: rgba(91, 224, 151, 0.42);
+  background: rgba(22, 102, 58, 0.18);
+}
+
+.paymentQrImage {
+  width: 100%;
+  aspect-ratio: 1;
+  display: block;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 0 0 8px #ffffff;
+}
+
+.paymentQrPlaceholder {
+  width: 100%;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  border: 1px dashed rgba(255, 219, 144, 0.34);
+  border-radius: 8px;
+  color: #d7c09a;
+  font-size: 13px;
+  text-align: center;
+}
+
+.paymentSuccessMark {
+  width: 98px;
+  height: 98px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #a8ffd0, #32b66d);
+  color: #082b17;
+  font-size: 54px;
+  font-weight: 900;
+  box-shadow: 0 0 26px rgba(91, 224, 151, 0.34);
+}
+
+.paymentError {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.paymentDialogActions {
+  justify-content: flex-end;
+}
+
+@keyframes rechargeSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 1080px) {
+  .rechargeShell {
+    overflow-y: auto;
+  }
+
+  .rechargeStage {
+    overflow: visible;
+  }
+
+  .packageGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .rechargeShell {
+    place-items: stretch;
+    padding: 10px;
+    overflow-y: auto;
+  }
+
+  .rechargeStage {
+    width: 100%;
+    min-height: calc(100dvh - 20px);
+    padding: 16px;
+    gap: 14px;
+  }
+
+  .rechargePackages {
+    grid-template-rows: none;
+  }
+
+  .rechargeTopbar,
+  .packageHeader,
+  .rechargeStatusStrip {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .rechargePill {
+    align-self: start;
+  }
+
+  .rechargeHero {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .rechargeBalanceCard {
+    min-height: 96px;
+    padding: 14px;
+  }
+
+  .rechargeHeroCopy h1 {
+    font-size: clamp(28px, 10vw, 36px);
+  }
+
+  .packageHeader small {
+    text-align: left;
+  }
+
+  .packageGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .packageCard {
+    min-height: 198px;
+    padding: 10px 8px;
+  }
+
+  .packageArtwork {
+    width: min(100%, 116px);
+  }
+
+  .rechargeFooterBar {
+    grid-template-columns: 1fr;
+  }
+
+  .rechargeActions,
+  .paymentDialogActions {
+    flex-direction: column;
+  }
+
+  .rechargePrimaryButton,
+  .rechargeSecondaryButton,
+  .rechargeGhostButton {
+    width: 100%;
+  }
+
+  .paymentOverlay {
+    align-items: end;
+    padding: 12px;
+  }
+
+  .paymentDialog {
+    width: 100%;
+    max-height: calc(100dvh - 24px);
+    padding: 20px;
+  }
+
+  .paymentDialogBody {
+    grid-template-columns: 1fr;
+  }
+
+  .paymentQrFrame {
+    width: min(100%, 260px);
+    justify-self: center;
+  }
+}
+
+@media (max-width: 390px) {
+  .packageGrid {
+    gap: 8px;
+  }
+
+  .packageArtwork {
+    width: min(100%, 104px);
+  }
+
+  .packageCard strong {
+    font-size: 17px;
+  }
+
+  .packagePrice {
+    font-size: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rechargeLoading span,
+  .paymentQrPlaceholder span {
+    animation: none;
+  }
+
+  .packageCard,
+  .rechargePrimaryButton,
+  .rechargeSecondaryButton,
+  .rechargeGhostButton {
+    transition: none;
+  }
+}
