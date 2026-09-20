@@ -273,7 +273,11 @@ const Profile: React.FC = () => {
     const fetchCreatorProfile = async () => {
         try {
             const data = await getCreatorProfile();
-            setCreatorProfileData(data);
+            const storePhone = String(useAuthStore.getState().user?.user?.phoneNumber || '').trim();
+            setCreatorProfileData({
+                ...data,
+                phoneNumber: String(data.phoneNumber || storePhone || '').trim(),
+            });
         } catch (error) {
             console.error('Fetch creator profile failed:', error);
         }
@@ -683,6 +687,10 @@ const Profile: React.FC = () => {
                             onSave={async (data: CreatorProfileFormData) => {
                                 await saveCreatorProfile(data);
                                 setCreatorProfileData(data);
+                                const nextPhone = String(data.phoneNumber || '').trim();
+                                if (nextPhone && nextPhone !== String(user?.user?.phoneNumber || '').trim()) {
+                                    updateUser({ phoneNumber: nextPhone });
+                                }
                             }}
                         />
                     ) : (
