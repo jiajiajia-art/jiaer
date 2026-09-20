@@ -1,7 +1,8 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.funloom.interactivefiction',
+  // 必须与 Google Play 控制台登记的软件包名称完全一致（含大小写）
+  appId: 'com.Funloom.myapp',
   appName: 'funloom',
   webDir: 'dist',
   bundledWebRuntime: false,

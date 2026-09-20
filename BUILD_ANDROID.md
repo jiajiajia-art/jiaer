@@ -1,10 +1,47 @@
-# Android APK 打包说明
+# Android APK / AAB 打包说明
 
-把 Capacitor Web 应用打包成安卓手机可以直接安装的 APK 文件。
+把 Capacitor Web 应用打包成：
 
-## ⚡ 一键打包（最快）
+- **APK**：可直接装到手机（内测 / 侧载）
+- **AAB (Android App Bundle)**：给 Google Play 上架用（不能直接装手机）
 
-在项目根目录执行：
+## ⚡ npm 一键打包（推荐）
+
+在 `Interactive-fiction-frontend` 根目录：
+
+```bash
+cd ~/Documents/cursor/gameWork/Interactive-fiction-frontend
+
+# Google Play 上架用（AAB）
+npm run android:aab:release
+
+# 手机直接安装用（APK）
+npm run android:apk:debug
+npm run android:apk:release
+
+# 仅构建 web + 同步到 android/（不调 gradle）
+npm run android:sync
+```
+
+脚本会自动：`npm run build` → `npx cap sync android` → 对齐 `applicationId=com.Funloom.myapp` + release 签名 → `./gradlew …`，并优先使用 Android Studio 自带 JDK。
+
+> Google Play 本应用登记包名为 **`com.Funloom.myapp`**（`F` 大写）。上传 AAB 的 `applicationId` 必须完全一致，否则控制台会报「软件包名称必须为…」。
+> 新上架还要求 **`targetSdkVersion ≥ 36`**（打包脚本会把 `android/variables.gradle` 对齐到 36）。
+
+| 命令 | 产物 |
+|------|------|
+| `npm run android:apk:debug` | `android/app/build/outputs/apk/debug/app-debug.apk` |
+| `npm run android:apk:release` | `android/app/build/outputs/apk/release/app-release.apk` |
+| `npm run android:aab:debug` | `android/app/build/outputs/bundle/debug/app-debug.aab` |
+| `npm run android:aab:release` | `android/app/build/outputs/bundle/release/app-release.aab` |
+
+已同步过、只想重打 gradle 时：
+
+```bash
+ANDROID_SKIP_WEB=1 npm run android:aab:release
+```
+
+## ⚡ 手动命令（与脚本等价）
 
 ```bash
 cd ~/Documents/cursor/gameWork/Interactive-fiction-frontend
@@ -15,19 +52,17 @@ npm run build
 # 2. 同步 web 资源到 android 工程
 npx cap sync android
 
-# 3. 构建 Debug APK
+# 3. 构建
 cd android
 export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
-./gradlew assembleDebug
+
+./gradlew assembleDebug     # → APK debug
+./gradlew assembleRelease   # → APK release
+./gradlew bundleDebug       # → AAB debug
+./gradlew bundleRelease     # → AAB release（Play 上架）
 ```
 
-完成后 APK 在：
-
-```
-android/app/build/outputs/apk/debug/app-debug.apk
-```
-
-（通常 80~120MB，包含 Capacitor 运行时 + 你的 web 资源）
+Debug APK 通常约几十到一百多 MB（含 Capacitor 运行时；若 `capacitor.config` 指向线上 URL，本地 assets 会更小）。
 
 ---
 
@@ -64,9 +99,9 @@ adb install android/app/build/outputs/apk/debug/app-debug.apk
 如果你想在 AS 里点鼠标操作（不用命令行）：
 
 1. AS 打开 `android/` 子目录作为项目
-2. 菜单 **构建** → **Build App Bundle(s) / APK(s)** ▶ → **Build APK(s)**
+2. 菜单 **构建** → **Build App Bundle(s) / APK(s)** ▶ → **Build APK(s)** 或 **Build Bundle(s)**
 3. 等底部"构建"面板显示 `BUILD SUCCESSFUL`
-4. 完成后点 **locate** 链接直接跳到 APK 位置
+4. 完成后点 **locate** 链接直接跳到 APK / AAB 位置
 
 ---
 
@@ -85,7 +120,7 @@ pnpm add -D @capacitor/cli@7 @capacitor/core@7 @capacitor/android@7
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.funloom.interactivefiction',
+  appId: 'com.Funloom.myapp',
   appName: 'Interactive Fiction',
   webDir: 'dist',
   bundledWebRuntime: false,
@@ -127,39 +162,43 @@ AS 首次打开会帮你配置好。
 
 ---
 
-## 🚀 Release 版本（发布给别人）
+## 🚀 Release 签名（keystore）
 
-Debug 版装自己手机够了，但如果要发布：
+正式上架的 keystore **就是自己生成的**（或向已发版同事要同一把）。本项目用本地目录：
 
-1. **生成签名 keystore**（一次性）：
+```
+signing/funloom-upload.jks      # 密钥库（勿提交 git）
+signing/keystore.properties     # 口令 / alias（勿提交 git）
+```
 
-   ```bash
-   cd android/app
-   keytool -genkey -v -keystore my-release-key.jks \
-     -keyalg RSA -keysize 2048 -validity 10000 -alias my-key
-   ```
+一键生成并写入 `android/app/build.gradle`：
 
-2. **配置签名**：`android/app/build.gradle` 里加 `signingConfigs`，并把 `buildTypes.release.signingConfig` 指向它。
+```bash
+npm run android:signing
+# 打 release 时也会自动跑：npm run android:aab:release
+```
 
-3. **构建 Release APK**：
+- **务必备份整个 `signing/`**（网盘/密码管理器均可）。丢了就无法用同一签名更新 Play 应用。
+- `signing/` 已在 `.gitignore`，不会进仓库。
+- 已有 jks 时脚本**不会**重新生成，避免误换钥。
 
-   ```bash
-   ./gradlew assembleRelease
-   # 输出：android/app/build/outputs/apk/release/app-release.apk
-   ```
+构建 Release：
 
-或者用 AS 菜单：**构建** → **Generate Signed App Bundle / APK...** → 选 APK → 选 keystore → 选 release。
+```bash
+npm run android:aab:release   # → android/.../bundle/release/app-release.aab
+npm run android:apk:release   # → android/.../apk/release/app-release.apk
+```
 
 ---
 
 ## 📦 关于不同"版本"
 
-**一个 APK 就能装所有 Android 手机**，不用为不同分辨率建多个。
+**一个 APK 就能装所有 Android 手机**；**AAB 交给 Play**，由商店按设备切分下载。
 
 - **分辨率**（hdpi/xhdpi/xxhdpi 等）：APK 里包含全部分辨率资源，Android 系统自动选合适的
-- **构建变体**（debug/release）：在 AS 左下角 **构建变体** 面板切换，或命令行 `./gradlew assembleDebug`/`assembleRelease`
-- **ABI 拆分**（arm64/x86 等）：仅超大型 App 需要，本项目 99MB 不必拆
-- **App Bundle (AAB)**：仅 Google Play 用，本地装手机不能用 AAB
+- **构建变体**（debug/release）：在 AS 左下角 **构建变体** 面板切换，或命令行 `assemble*` / `bundle*`
+- **ABI 拆分**（arm64/x86 等）：仅超大型 App 需要，本项目一般不必拆
+- **App Bundle (AAB)**：Google Play 上架格式；本地装手机请用 APK
 
 ---
 
@@ -184,12 +223,12 @@ npm run build           构建 React/web 到 dist/
   ↓
 npx cap sync android    同步 dist → android/app/src/main/assets/public/
   ↓
-./gradlew assembleDebug 编译并打包 → APK
+./gradlew assembleDebug | assembleRelease | bundleRelease
   ↓
-adb install 或 文件传输 → 装到手机
+APK → 装手机；AAB → 上传 Google Play
 ```
 
 ---
 
-**更新日期**: 2026-09-01
+**更新日期**: 2026-09-17
 **适用版本**: Capacitor 7.6.9 + Android Gradle Plugin 8.x
