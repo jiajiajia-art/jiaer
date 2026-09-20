@@ -723,7 +723,7 @@
     "view": "View",
     "inviteCampaignTitle": "Invite friends to register, both get 30 points!",
     "copyInviteCode": "Copy Invite Code",
-    "inviteStatsText": "{{count}} invited · {{points}} pts claimed",
+    "inviteStatsText": "<count>{{count}}</count> invited · <points>{{points}}</points> pts claimed",
     "subscribeMembership": "Subscribe Membership",
     "subscribeMembershipDesc": "Monthly/Seasonal/Yearly plans, get membership benefits now",
     "subscribe": "Subscribe",

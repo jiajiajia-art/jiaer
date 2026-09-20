@@ -5,20 +5,21 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
-    padding: 12px 14px;
+    padding: 0 14px 12px;
     border-radius: 10px;
     background: var(--creator-card, #1C1C1E);
     border: 1px solid rgba(255, 59, 97, 0.22);
+    overflow: hidden;
 }
 
 .inviteCampaignHeader {
-    position: relative;
     display: flex;
     align-items: center;
     gap: 8px;
-    overflow: hidden;
-    margin: 0;
-    padding: 0;
+    margin: 0 -14px;
+    padding: 12px 14px 10px;
+    background: #241719;
+    border-bottom: 1px solid rgba(255, 59, 97, 0.12);
 }
 
 .inviteCampaignGiftIcon {
@@ -39,8 +40,6 @@
 }
 
 .inviteCampaignTitle {
-    position: relative;
-    z-index: 1;
     margin: 0;
     flex: 1 1 auto;
     min-width: 0;
@@ -58,20 +57,24 @@
     min-width: 0;
 }
 
-.inviteCampaignCodeTray {
+.inviteCampaignCodeTray,
+.inviteCampaignRedeemRow {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    align-items: stretch;
+    gap: 0;
     min-height: 38px;
-    padding: 6px 6px 6px 12px;
+    padding: 0 0 0 12px;
     border-radius: 10px;
     background: rgba(255, 255, 255, 0.06);
     box-sizing: border-box;
+    overflow: hidden;
 }
 
 .inviteCampaignCode {
     flex: 1 1 auto;
     min-width: 0;
+    display: flex;
+    align-items: center;
     color: #ffffff;
     font-size: 18px;
     font-weight: 700;
@@ -85,10 +88,12 @@
     appearance: none;
     border: none;
     flex-shrink: 0;
-    height: 28px;
+    align-self: stretch;
+    height: auto;
+    min-height: 38px;
     min-width: 72px;
-    padding: 0 10px;
-    border-radius: 8px;
+    padding: 0 14px;
+    border-radius: 0 10px 10px 0;
     background: rgba(255, 255, 255, 0.12);
     color: rgba(255, 255, 255, 0.92);
     font-size: 12px;
@@ -108,21 +113,11 @@
     cursor: not-allowed;
 }
 
-.inviteCampaignRedeemRow {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-height: 38px;
-    padding: 6px 6px 6px 12px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.06);
-    box-sizing: border-box;
-}
-
 .inviteCampaignRedeemInput {
     flex: 1 1 auto;
     min-width: 0;
-    height: 28px;
+    height: auto;
+    min-height: 38px;
     border: none;
     border-radius: 0;
     padding: 0;
@@ -137,10 +132,6 @@
     color: rgba(255, 255, 255, 0.38);
 }
 
-.inviteCampaignRedeemInput:focus {
-    outline: none;
-}
-
 .inviteCampaignFooterRow {
     display: flex;
     align-items: center;
@@ -148,19 +139,26 @@
     gap: 10px;
     width: 100%;
     min-width: 0;
-    padding-top: 0;
 }
 
 .inviteCampaignMeta {
     margin: 0;
     flex: 1 1 auto;
     min-width: 0;
-    color: rgba(255, 255, 255, 0.45);
+    color: #ffffff;
     font-size: 12px;
     line-height: 1.25;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.inviteCampaignMetaValue {
+    color: var(--creator-title, #A8283C);
+    font-weight: 700;
+    font-size: 14px;
+    line-height: 1.25;
+    vertical-align: baseline;
 }
 
 .inviteCampaignRewardBtn {
@@ -191,29 +189,41 @@
     box-shadow: 0 2px 8px rgba(168, 40, 60, 0.18);
 }
 
-/* PC：两行控件收成左对齐双列，避免通栏拉空 */
 @media (min-width: 769px) {
     .inviteCampaignFields {
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-        gap: 10px;
-        width: min(100%, 720px);
+        gap: 12px;
     }
 
     .inviteCampaignCodeTray,
     .inviteCampaignRedeemRow {
         min-width: 0;
+        min-height: 44px;
+        padding: 0 0 0 16px;
     }
 
     .inviteCampaignCode {
-        font-size: 17px;
-        letter-spacing: 0.07em;
+        letter-spacing: 0.06em;
+    }
+
+    .inviteCampaignCopyBtn,
+    .inviteCampaignRedeemSubmit {
+        min-height: 44px;
+        min-width: 96px;
+        padding: 0 16px;
+        font-size: 13px;
+    }
+
+    .inviteCampaignRedeemInput {
+        min-height: 44px;
+        font-size: 14px;
     }
 }
 
 @media (max-width: 768px) {
     .inviteCampaignSection {
-        padding: 10px 12px;
+        padding: 0 12px 10px;
         gap: 8px;
     }
 
@@ -222,8 +232,8 @@
     }
 
     .inviteCampaignHeader {
-        margin: 0;
-        padding: 0;
+        margin: 0 -12px;
+        padding: 10px 12px 8px;
     }
 
     .inviteCampaignGiftIcon {
@@ -241,9 +251,11 @@
         font-size: 13px;
     }
 
-    .inviteCampaignCodeTray {
+    .inviteCampaignCodeTray,
+    .inviteCampaignRedeemRow {
         min-height: 36px;
-        padding: 4px 6px 4px 10px;
+        padding: 0 0 0 10px;
+        border-radius: 8px;
     }
 
     .inviteCampaignCode {
@@ -252,10 +264,11 @@
 
     .inviteCampaignCopyBtn,
     .inviteCampaignRedeemSubmit {
-        height: 26px;
+        min-height: 36px;
         min-width: 64px;
         font-size: 11px;
-        padding: 0 8px;
+        padding: 0 10px;
+        border-radius: 0 8px 8px 0;
     }
 
     .inviteCampaignRewardBtn {
@@ -264,14 +277,8 @@
         padding: 0 12px;
     }
 
-    .inviteCampaignRedeemRow {
-        min-height: 36px;
-        padding: 4px 6px 4px 10px;
-        border-radius: 8px;
-    }
-
     .inviteCampaignRedeemInput {
-        height: 26px;
+        min-height: 36px;
         font-size: 12px;
     }
 

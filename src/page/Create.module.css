@@ -903,7 +903,7 @@
     align-items: center;
     flex-wrap: nowrap;
     gap: 8px;
-    font-size: 14px;
+    font-size: 12px;
     color: var(--creator-value);
     min-width: 0;
 }
@@ -913,7 +913,7 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 8px;
-    font-size: 14px;
+    font-size: 12px;
     color: var(--creator-value);
 }
 

@@ -723,7 +723,7 @@
     "view": "查看",
     "inviteCampaignTitle": "邀请好友注册，双方各得 30 积分！",
     "copyInviteCode": "复制邀请码",
-    "inviteStatsText": "已邀请 {{count}} 人 · 已领 {{points}} 积分",
+    "inviteStatsText": "已邀请 <count>{{count}}</count> 人 · 已领 <points>{{points}}</points> 积分",
     "subscribeMembership": "开通会员",
     "subscribeMembershipDesc": "月卡/季卡/年卡，立即开通会员权益",
     "subscribe": "开通",

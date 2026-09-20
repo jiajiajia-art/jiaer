@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import { HiOutlineGift } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import { auth } from '../../api/account/authApi';
@@ -8,16 +8,15 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { getApiErrorMessage } from '../../utils/error';
 import styles from './InviteCampaignCard.module.css';
 
+const EMPTY_INVITE_STATS = { inviteCount: 0, claimedPoints: 0 };
+
 const InviteCampaignCard: React.FC = () => {
     const { t } = useTranslation();
     const { user, updateUser } = useAuthStore();
     const [isInviteRewardModalOpen, setIsInviteRewardModalOpen] = useState(false);
     const [inputInviteCode, setInputInviteCode] = useState('');
     const [isSubmittingInvite, setIsSubmittingInvite] = useState(false);
-    const [inviteStats, setInviteStats] = useState<{ inviteCount: number; claimedPoints: number }>({
-        inviteCount: 0,
-        claimedPoints: 0,
-    });
+    const [inviteStats, setInviteStats] = useState(EMPTY_INVITE_STATS);
 
     const inviteDisplayCode = user?.user?.inviteCode || '002436';
 
@@ -34,9 +33,9 @@ const InviteCampaignCard: React.FC = () => {
                 });
                 return;
             }
-            setInviteStats({ inviteCount: 0, claimedPoints: 0 });
+            setInviteStats(EMPTY_INVITE_STATS);
         } catch {
-            setInviteStats({ inviteCount: 0, claimedPoints: 0 });
+            setInviteStats(EMPTY_INVITE_STATS);
         }
     };
 
@@ -136,10 +135,17 @@ const InviteCampaignCard: React.FC = () => {
 
                 <footer className={styles.inviteCampaignFooterRow}>
                     <p className={styles.inviteCampaignMeta}>
-                        {t('profile.inviteStatsText', {
-                            count: inviteStats.inviteCount,
-                            points: inviteStats.claimedPoints,
-                        })}
+                        <Trans
+                            i18nKey="profile.inviteStatsText"
+                            values={{
+                                count: inviteStats.inviteCount,
+                                points: inviteStats.claimedPoints,
+                            }}
+                            components={{
+                                count: <span className={styles.inviteCampaignMetaValue} />,
+                                points: <span className={styles.inviteCampaignMetaValue} />,
+                            }}
+                        />
                     </p>
                     <button
                         type="button"

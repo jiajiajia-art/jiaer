@@ -32,12 +32,26 @@ test('Create_邀请卡片应在账户面板底部且离开功能列表', () => {
   assert.match(card, /inviteCampaignRedeemRow/);
   assert.match(card, /inviteCampaignFooterRow/);
 
+  assert.match(card, /<Trans[\s\S]*?i18nKey="profile\.inviteStatsText"/);
+  assert.match(card, /inviteCampaignMetaValue/);
+  assert.match(card, /count:\s*<span className=\{styles\.inviteCampaignMetaValue\}/);
+  assert.match(card, /points:\s*<span className=\{styles\.inviteCampaignMetaValue\}/);
+
   const cardCss = read('src/components/Profile/InviteCampaignCard.module.css');
-  assert.match(cardCss, /inviteCampaignFields/);
-  assert.match(cardCss, /@media \(min-width: 769px\)[\s\S]*?width:\s*min\(100%,\s*720px\)/);
+  assert.match(cardCss, /\.inviteCampaignFields\s*\{[\s\S]*?width:\s*100%/);
   assert.match(cardCss, /@media \(min-width: 769px\)[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)\s+minmax\(0,\s*1fr\)/);
   assert.match(cardCss, /\.inviteCampaignRewardBtn\s*\{[\s\S]*?background:\s*#A8283C/);
   assert.doesNotMatch(cardCss, /\.inviteCampaignRewardBtn\s*\{[\s\S]*?background:\s*#FF3B61/);
+  assert.match(
+    cardCss,
+    /\.inviteCampaignMetaValue\s*\{[\s\S]*?color:\s*var\(--creator-title,\s*#A8283C\)/,
+  );
+  assert.doesNotMatch(cardCss, /\.inviteCampaignMetaValue\s*\{[\s\S]*?color:\s*#b72525/);
+
+  const en = read('src/i18n/locales/en.json');
+  const zh = read('src/i18n/locales/zh.json');
+  assert.match(en, /"inviteStatsText":\s*"<count>\{\{count\}\}<\/count>/);
+  assert.match(zh, /"inviteStatsText":\s*"已邀请 <count>\{\{count\}\}<\/count>/);
 
   assert.doesNotMatch(card, /inviteCampaignRedeemToggle|showRedeemInvite/);
   assert.doesNotMatch(panel, /inviteCampaignSection/);
