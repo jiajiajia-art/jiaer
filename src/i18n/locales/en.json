@@ -698,6 +698,7 @@
     "creatorDataCenter": "Creator Dashboard",
     "rank": "Rankings",
     "favorites": "Favorites",
+    "developerMode": "Developer Mode",
     "commentManagement": "Comment Management",
     "operatorPanel": "Operator Center"
   },

@@ -365,6 +365,10 @@
     color: var(--primary);
 }
 
+.desktopOnlyMenuBtn {
+    display: block;
+}
+
 @keyframes slideDown {
     from {
         opacity: 0;
@@ -569,6 +573,10 @@
         font-size: 14px;
         flex-shrink: 0;
         box-shadow: 0 6px 14px rgba(148, 163, 184, 0.08);
+    }
+
+    .desktopOnlyMenuBtn {
+        display: none;
     }
 
     .navbarContainerMobileHomeOverlayActive {

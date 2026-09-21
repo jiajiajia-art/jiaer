@@ -49,6 +49,7 @@ import Messages from './page/Messages';
 import AssetDetails from './page/AssetDetails';
 import PointsDetails from './page/PointsDetails';
 import Document from './page/Document';
+import DeveloperExternalGames from './page/external/DeveloperExternalGames';
 import DeveloperCliAuthorize from './page/external/DeveloperCliAuthorize';
 import ExternalOAuthAuthorize from './page/external/ExternalOAuthAuthorize';
 import ExternalRecharge from './page/external/ExternalRecharge';
@@ -140,6 +141,7 @@ function App() {
           <Route path="/create" element={<Create />} />
           <Route path="/create/withdraw-records" element={<WithdrawRecords />} />
           <Route path="/asset/details" element={<AssetDetails />} />
+          <Route path="/developer/external-games" element={<DeveloperExternalGames />} />
           <Route path="/creator" element={<Navigate to="/create" replace />} />
           <Route path="/creator/works/:fileId/stats" element={<CreatorRoute><CreatorWorkStats /></CreatorRoute>} />
           <Route path="/operator" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
