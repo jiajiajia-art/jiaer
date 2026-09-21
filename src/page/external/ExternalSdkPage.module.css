@@ -257,7 +257,8 @@
 }
 
 .primaryButton,
-.secondaryButton {
+.secondaryButton,
+.ghostButton {
   min-height: 46px;
   border-radius: 8px;
   padding: 0 18px;
@@ -288,14 +289,27 @@
   background: #f7faff;
 }
 
+.ghostButton {
+  background: transparent;
+  border-color: transparent;
+  color: #4765a6;
+}
+
+.ghostButton:hover {
+  background: #f4f7fb;
+  border-color: #d7e0ea;
+}
+
 .primaryButton:focus-visible,
-.secondaryButton:focus-visible {
+.secondaryButton:focus-visible,
+.ghostButton:focus-visible {
   outline: 3px solid rgba(31, 94, 255, 0.28);
   outline-offset: 2px;
 }
 
 .primaryButton:disabled,
-.secondaryButton:disabled {
+.secondaryButton:disabled,
+.ghostButton:disabled {
   cursor: not-allowed;
   opacity: 0.56;
 }
@@ -326,14 +340,16 @@
   }
 
   .primaryButton,
-  .secondaryButton {
+  .secondaryButton,
+  .ghostButton {
     width: 100%;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .primaryButton,
-  .secondaryButton {
+  .secondaryButton,
+  .ghostButton {
     transition: none;
   }
 }

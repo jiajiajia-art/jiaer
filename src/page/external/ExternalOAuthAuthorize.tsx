@@ -12,6 +12,7 @@ export default function ExternalOAuthAuthorize() {
   const params = useMemo(() => parseExternalAuthorizeParams(searchParams), [searchParams]);
   const authUser = useAuthStore((state) => state.user?.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const logout = useAuthStore((state) => state.logout);
   const [authOpen, setAuthOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -45,6 +46,14 @@ export default function ExternalOAuthAuthorize() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSwitchAccount = () => {
+    if (submitting) return;
+    logout();
+    setError('');
+    setSuccessText('已退出当前 Funloom 账号，请登录你要授权的账号。');
+    setAuthOpen(true);
   };
 
   const handleDeny = async () => {
@@ -130,6 +139,11 @@ export default function ExternalOAuthAuthorize() {
               <button type="button" className={styles.secondaryButton} onClick={handleDeny} disabled={submitting}>
                 拒绝并返回
               </button>
+              {isAuthenticated && (
+                <button type="button" className={styles.ghostButton} onClick={handleSwitchAccount} disabled={submitting}>
+                  切换 Funloom 账号
+                </button>
+              )}
             </div>
           </>
         )}

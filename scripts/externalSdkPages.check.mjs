@@ -1,5 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import {
   buildExternalReturnUrl,
@@ -9,6 +12,12 @@ import {
   parseExternalAuthorizeParams,
   parseExternalRechargeParams,
 } from '../src/utils/externalSdkPages.ts';
+
+const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+function readProjectFile(relativePath) {
+  return fs.readFileSync(path.join(projectRoot, relativePath), 'utf8');
+}
 
 test('parseExternalAuthorizeParams requires appId and redirectUri while preserving state', () => {
   const params = new URLSearchParams({
@@ -100,4 +109,18 @@ test('buildExternalReturnUrl appends sdk status without dropping existing query'
   );
 
   assert.equal(buildExternalReturnUrl('', { sessionId: 'ers_abc', status: 'paid' }), '');
+});
+
+test('external authorization pages let signed-in users switch Funloom accounts', () => {
+  for (const relativePath of [
+    'src/page/external/ExternalOAuthAuthorize.tsx',
+    'src/page/external/DeveloperCliAuthorize.tsx',
+  ]) {
+    const source = readProjectFile(relativePath);
+
+    assert.match(source, /handleSwitchAccount/);
+    assert.match(source, /logout\(\)/);
+    assert.match(source, /setAuthOpen\(true\)/);
+    assert.match(source, /切换 Funloom 账号/);
+  }
 });
