@@ -1,4 +1,4 @@
-import type { TrendSeries } from '../api/stats/operatorReportsApi';
+import type { ReportDataSource, ReportPlatform, ReportQueryParams, TrendSeries } from '../api/stats/operatorReportsApi';
 
 export function shiftIsoDate(dateStr: string, dayDelta: number): string {
   const base = new Date(`${dateStr}T12:00:00+08:00`);
@@ -37,4 +37,24 @@ export function mergeSeriesForChart(series: TrendSeries[]) {
 export function formatPercent(value: number | null | undefined) {
   if (value == null || Number.isNaN(value)) return '—';
   return `${(value * 100).toFixed(1)}%`;
+}
+
+export function buildReportRequestParams<T extends ReportQueryParams>(
+  params: T,
+  dataSource: ReportDataSource,
+  platform?: ReportPlatform,
+): T {
+  const next = { ...params, dataSource };
+  if (dataSource === 'funloom' && platform) {
+    return { ...next, platform } as T;
+  }
+  return next as T;
+}
+
+export function filterFhlCampaignRows<T extends { campaignId?: string | null }>(
+  rows: T[] | null | undefined,
+  campaignId?: string,
+): T[] {
+  if (!campaignId || campaignId === 'all') return rows || [];
+  return (rows || []).filter((row) => String(row.campaignId || 'unknown') === campaignId);
 }

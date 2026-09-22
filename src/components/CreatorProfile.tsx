@@ -10,8 +10,10 @@ import {
     MdVisibilityOff,
 } from 'react-icons/md';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '../store/useAuthStore';
 
 export interface CreatorProfileData {
+    phoneNumber?: string;
     groupNo?: string;
     realName?: string;
     idCard?: string;
@@ -20,12 +22,15 @@ export interface CreatorProfileData {
 }
 
 export interface CreatorProfileFormData {
+    phoneNumber: string;
     groupNo: string;
     realName: string;
     idCard: string;
     bankCard: string;
     bankBranch: string;
 }
+
+const CN_PHONE_RE = /^1[3-9]\d{9}$/;
 
 const maskString = (str: string, visibleStart = 3, visibleEnd = 1): string => {
     if (!str || str.length <= visibleStart + visibleEnd) return str;
@@ -49,6 +54,11 @@ const maskBankCard = (card: string): string => {
         return `**** **** **** ${card.slice(-4)}`;
     }
     return maskString(card);
+};
+
+const maskPhone = (phone: string): string => {
+    if (!phone || phone.length < 7) return phone || '';
+    return `${phone.slice(0, 3)}****${phone.slice(-4)}`;
 };
 
 interface SectionCardProps {
@@ -123,7 +133,12 @@ interface CreatorProfileFormProps {
 
 const CreatorProfileForm: React.FC<CreatorProfileFormProps> = ({ initialData, onSave, onCancel }) => {
     const { t } = useTranslation();
+    const storePhone = String(useAuthStore((s) => s.user?.user?.phoneNumber) || '').trim();
+    const lockedPhone = String(initialData.phoneNumber || storePhone || '').trim();
+    const phoneLocked = Boolean(lockedPhone);
+
     const [formData, setFormData] = useState<CreatorProfileFormData>({
+        phoneNumber: lockedPhone,
         groupNo: initialData.groupNo || '',
         realName: initialData.realName || '',
         idCard: initialData.idCard || '',
@@ -135,6 +150,15 @@ const CreatorProfileForm: React.FC<CreatorProfileFormProps> = ({ initialData, on
 
     const validateForm = (): boolean => {
         const newErrors: Partial<Record<keyof CreatorProfileFormData, string>> = {};
+
+        if (!phoneLocked) {
+            const phone = formData.phoneNumber.trim();
+            if (!phone) {
+                newErrors.phoneNumber = t('profile.phoneRequired');
+            } else if (!CN_PHONE_RE.test(phone)) {
+                newErrors.phoneNumber = t('profile.phoneInvalid');
+            }
+        }
 
         if (formData.groupNo && !/^\d{5,11}$/.test(formData.groupNo)) {
             newErrors.groupNo = t('profile.groupNoError');
@@ -161,7 +185,11 @@ const CreatorProfileForm: React.FC<CreatorProfileFormProps> = ({ initialData, on
 
         try {
             setIsSaving(true);
-            await onSave(formData);
+            const payload: CreatorProfileFormData = {
+                ...formData,
+                phoneNumber: phoneLocked ? lockedPhone : formData.phoneNumber.trim(),
+            };
+            await onSave(payload);
             toast.success(t('profile.saveSuccess'));
         } catch {
             toast.error(t('profile.saveFailed'));
@@ -177,8 +205,8 @@ const CreatorProfileForm: React.FC<CreatorProfileFormProps> = ({ initialData, on
         }
     };
 
-    const inputClass = (field: keyof CreatorProfileFormData) =>
-        `${styles.formInput} ${errors[field] ? styles.formInputError : ''}`;
+    const inputClass = (field: keyof CreatorProfileFormData, extra?: string) =>
+        `${styles.formInput} ${errors[field] ? styles.formInputError : ''} ${extra || ''}`.trim();
 
     return (
         <form className={styles.form} onSubmit={handleSubmit}>
@@ -205,6 +233,28 @@ const CreatorProfileForm: React.FC<CreatorProfileFormProps> = ({ initialData, on
                 <div className={styles.formSectionTitle}>
                     <MdAccountBalanceWallet />
                     <span>{t('profile.paymentInfo')}</span>
+                </div>
+                <div className={styles.formField}>
+                    <label className={styles.formLabel}>{t('profile.phone')}</label>
+                    <input
+                        type="text"
+                        className={inputClass('phoneNumber', phoneLocked ? styles.formInputReadonly : '')}
+                        placeholder={t('profile.phonePlaceholder')}
+                        value={phoneLocked ? maskPhone(lockedPhone) : formData.phoneNumber}
+                        onChange={(e) => {
+                            if (phoneLocked) return;
+                            handleChange('phoneNumber', e.target.value.replace(/\D/g, '').slice(0, 11));
+                        }}
+                        readOnly={phoneLocked}
+                        maxLength={11}
+                        inputMode="numeric"
+                        autoComplete="tel"
+                    />
+                    {phoneLocked ? (
+                        <span className={styles.formHint}>{t('profile.phoneBoundHint')}</span>
+                    ) : (
+                        errors.phoneNumber && <span className={styles.formError}>{errors.phoneNumber}</span>
+                    )}
                 </div>
                 <div className={styles.formField}>
                     <label className={styles.formLabel}>{t('profile.realName')}</label>
@@ -280,6 +330,9 @@ interface CreatorProfileViewProps {
 
 const CreatorProfileView: React.FC<CreatorProfileViewProps> = ({ data, onEdit }) => {
     const { t } = useTranslation();
+    const storePhone = String(useAuthStore((s) => s.user?.user?.phoneNumber) || '').trim();
+    const phoneNumber = String(data.phoneNumber || storePhone || '').trim();
+
     const handleCopyGroupNo = async () => {
         if (data.groupNo) {
             try {
@@ -291,8 +344,8 @@ const CreatorProfileView: React.FC<CreatorProfileViewProps> = ({ data, onEdit })
         }
     };
 
-    const hasAnyData = data.groupNo || data.realName || data.idCard || data.bankCard || data.bankBranch;
-    const hasPayoutData = data.realName || data.idCard || data.bankCard || data.bankBranch;
+    const hasAnyData = phoneNumber || data.groupNo || data.realName || data.idCard || data.bankCard || data.bankBranch;
+    const hasPayoutData = phoneNumber || data.realName || data.idCard || data.bankCard || data.bankBranch;
 
     return (
         <div className={styles.viewContainer}>
@@ -309,6 +362,12 @@ const CreatorProfileView: React.FC<CreatorProfileViewProps> = ({ data, onEdit })
             <SectionCard title={t('profile.paymentInfo')} icon={<MdAccountBalanceWallet />} isEmpty={!hasPayoutData}>
                 {hasPayoutData ? (
                     <>
+                        <InfoRow
+                            labelKey="profile.phone"
+                            value={phoneNumber || t('profile.notFilled')}
+                            masked={phoneNumber ? maskPhone(phoneNumber) : undefined}
+                            isSecret={Boolean(phoneNumber)}
+                        />
                         <InfoRow labelKey="profile.realName" value={data.realName || t('profile.notFilled')} />
                         <InfoRow
                             labelKey="profile.idCardNo"
@@ -356,6 +415,10 @@ interface CreatorProfileProps {
 const CreatorProfile: React.FC<CreatorProfileProps> = ({ data, onSave }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [viewData, setViewData] = useState(data);
+
+    React.useEffect(() => {
+        setViewData(data);
+    }, [data]);
 
     const handleSave = async (formData: CreatorProfileFormData) => {
         await onSave(formData);

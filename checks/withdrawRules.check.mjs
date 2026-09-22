@@ -36,7 +36,8 @@ test('diamondsToCny and role/profile helpers', () => {
   assert.equal(diamondsToCny(20), 2);
   assert.equal(canWithdrawByRole('creator_verified'), true);
   assert.equal(canWithdrawByRole('creator'), false);
-  assert.equal(checkPayoutProfile({ realName: 'a', idCard: 'b', bankCard: 'c', bankBranch: 'd' }).complete, true);
+  assert.equal(checkPayoutProfile({ phoneNumber: '13800138000', realName: 'a', idCard: 'b', bankCard: 'c', bankBranch: 'd' }).complete, true);
+  assert.equal(checkPayoutProfile({ realName: 'a', idCard: 'b', bankCard: 'c', bankBranch: 'd' }).complete, false);
   assert.equal(checkPayoutProfile({ realName: 'a' }).complete, false);
 });
 

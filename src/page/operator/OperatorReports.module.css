@@ -2,6 +2,58 @@
   margin-bottom: 20px;
 }
 
+.dataSourceSwitch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 14px;
+  border: 1px solid rgba(47, 36, 29, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.dataSourceButton {
+  border: 0;
+  background: transparent;
+  color: #6d5f56;
+  border-radius: 9px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dataSourceButtonActive {
+  background: #2f241d;
+  color: #fff;
+}
+
+.sectionError {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px 0 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(190, 83, 47, 0.22);
+  border-radius: 8px;
+  background: rgba(255, 244, 238, 0.86);
+  color: #8a3b23;
+  font-size: 13px;
+}
+
+.sectionError button {
+  border: 1px solid rgba(138, 59, 35, 0.28);
+  border-radius: 7px;
+  background: #fff;
+  color: #8a3b23;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 10px;
+}
+
 .filterGroup {
   display: inline-flex;
   align-items: center;
@@ -63,6 +115,14 @@
   margin-bottom: 0;
 }
 
+.inlineFilters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
 .sectionHint {
   margin: 0 0 16px;
   color: #888;
@@ -101,6 +161,57 @@
 
 .table td {
   color: #3f352e;
+}
+
+.deviceSplit {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(47, 36, 29, 0.08);
+}
+
+.deviceSplitTitle {
+  margin-bottom: 12px;
+  color: #7a6a61;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.deviceSplitRows {
+  display: grid;
+  gap: 10px;
+}
+
+.deviceSplitRow {
+  display: grid;
+  grid-template-columns: minmax(72px, 96px) minmax(120px, 1fr) minmax(92px, auto);
+  gap: 10px;
+  align-items: center;
+  color: #3f352e;
+  font-size: 13px;
+}
+
+.deviceSplitLabel,
+.deviceSplitValue {
+  white-space: nowrap;
+}
+
+.deviceSplitValue {
+  color: #7a6a61;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.deviceSplitBarTrack {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(47, 36, 29, 0.08);
+}
+
+.deviceSplitBarFill {
+  height: 100%;
+  border-radius: inherit;
+  background: #2f81f7;
 }
 
 .legend {
@@ -155,4 +266,20 @@
 
 .tooltipRow + .tooltipRow {
   margin-top: 6px;
+}
+
+@media (max-width: 720px) {
+  .inlineFilters {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .deviceSplitRow {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .deviceSplitValue {
+    text-align: left;
+  }
 }

@@ -323,6 +323,25 @@
     box-shadow: 0 0 0 3px rgba(255, 77, 79, 0.18);
 }
 
+.formInputReadonly {
+    color: #666;
+    background: #f0f0f0;
+    cursor: not-allowed;
+}
+
+.formInputReadonly:focus {
+    border-color: #e8e8e8;
+    background: #f0f0f0;
+    box-shadow: none;
+}
+
+.formHint {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: #999;
+}
+
 .formError {
     display: block;
     margin-top: 4px;
