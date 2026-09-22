@@ -37,6 +37,9 @@ test('A: rembg_fail settled board shows retry CTA and targets only failed ids', 
         resolveRetryCharacterIdsFromBoard(rembgFailBoard),
         ['c4'],
     );
+    // 功能注释：已完成 id 不得进入重试列表
+    assert.equal(resolveRetryCharacterIdsFromBoard(rembgFailBoard).includes('c3'), false);
+    assert.equal(resolveRetryCharacterIdsFromBoard(rembgFailBoard).includes('c6'), false);
     assert.equal(
         shouldShowBatchProgressOverlay({
             batchJobActive: true,

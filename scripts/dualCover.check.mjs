@@ -62,15 +62,38 @@ test('CoverUpload_手机企划笺按钮横排不竖叠', () => {
   assert.match(css, /\.coverBriefActions\s*\{[\s\S]*?border-top:/);
 });
 
-test('CoverUpload_提示词占位引导画面与字体给AI', () => {
+test('CoverUpload_AI生成按钮红底白字对齐更换按钮', () => {
+  const css = read('src/components/GameSettingEditor/WorldPanel/WorldPanel.module.css');
+  // 功能注释：行首 .coverAiBtn，避开 .uploadCoverCompact .coverAiBtn
+  const ai = css.match(/(?:^|\n)\.coverAiBtn\s*\{[^}]*\}/)?.[0] || '';
+  assert.match(ai, /background:\s*#A8283C/);
+  assert.match(ai, /color:\s*#fff(?:fff)?/);
+  assert.doesNotMatch(ai, /rgba\(142,\s*33,\s*53,\s*0\.12\)/);
+});
+
+test('generateGameCover_超时应长于上传120s', () => {
+  const base = read('src/api/base.ts');
+  const editor = read('src/api/galgame/EditorData.ts');
+  assert.match(base, /COVER_GENERATE_TIMEOUT_MS\s*=\s*600000/);
+  assert.match(editor, /timeout:\s*COVER_GENERATE_TIMEOUT_MS/);
+  assert.doesNotMatch(
+    editor.match(/generateGameCover:[\s\S]*?\},\s*\{[\s\S]*?timeout:[^,]+/)?.[0] || '',
+    /UPLOAD_TIMEOUT_MS/,
+  );
+  const zh = read('src/i18n/locales/zh.json');
+  assert.match(zh, /"aiGenerateTimeout":\s*"[^"]*超时/);
+});
+
+test('CoverUpload_提示词占位_无样式示例芯片', () => {
   const zh = read('src/i18n/locales/zh.json');
   const en = read('src/i18n/locales/en.json');
+  const tsx = read('src/components/GameSettingEditor/WorldPanel/CoverUpload.tsx');
   assert.match(zh, /"promptPlaceholder":\s*"[^"]*画风[^"]*色调/);
-  assert.match(zh, /"titleStyleLabel":\s*"标题样式示例（写入提示词给 AI）"/);
-  assert.match(zh, /"cheeseNeon":\s*"黄字蓝描边"/);
-  assert.match(zh, /"promptModalHint":\s*"[^"]*AI[^"]*标题/);
+  assert.match(zh, /"promptModalHintWithRef":\s*"[^"]*沿用参考图标题/);
+  assert.doesNotMatch(zh, /"titleStyleLabel"/);
+  assert.doesNotMatch(tsx, /POSTER_TITLE_STYLE_ORDER|titleStyleId|coverBriefStyleRow/);
   assert.match(en, /"promptPlaceholder":\s*"[^"]*Scene style/i);
-  assert.match(en, /"titleStyleLabel":\s*"Title style examples \(sent to AI\)"/);
+  assert.match(en, /keep the reference title style/i);
 });
 
 test('PublishSettingsModal_复用CoverUpload并校验双封面', () => {

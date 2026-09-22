@@ -11,12 +11,6 @@ import { addImageTimestamp, bumpCacheBust } from '../../../utils/imageCache';
 import { fileToDataUrl } from '../../../utils/uploadImageCrop';
 import { refreshAuthUserPoints } from '../../../lib/auth/refreshUserPoints';
 import { compositePosterTitleOntoCover } from '../../../lib/galgame/compositePosterTitle';
-import {
-    POSTER_TITLE_STYLE_ORDER,
-    promptHasTitleStyleRequest,
-    resolveEffectivePosterTitleStyle,
-    type PosterTitleStyleId,
-} from '../../../lib/galgame/posterTitleStyle';
 import { resolveCoverPosterOverlay } from '../../../utils/coverPosterOverlay';
 import { buildCoverAiCreativePrompt } from '../../../utils/buildCoverAiCreativePrompt';
 import ImageCropModal from '../../CommonModal/ImageCropModal';
@@ -58,17 +52,11 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
     const [promptModalOpen, setPromptModalOpen] = useState(false);
     const [promptTarget, setPromptTarget] = useState<CoverOrientation>('landscape');
     const [promptDraft, setPromptDraft] = useState('');
-    const [titleStyleId, setTitleStyleId] = useState<PosterTitleStyleId>('classic');
     const [coverError, setCoverError] = useState<string | null>(null);
     const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
     const resolvedWorkTitle = String(workTitle || '').trim();
     const busy = Boolean(busyOrientation) || coverGenerating;
-    const effectiveTitleStyle = resolveEffectivePosterTitleStyle({
-        presetId: titleStyleId,
-        prompt: promptDraft,
-    });
-    const titleStyleFromPrompt = promptHasTitleStyleRequest(promptDraft);
 
     const displaySrc = (preview: string | null) => {
         if (!preview) return '';
@@ -204,7 +192,6 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
         }
         setPromptTarget(orientation);
         setPromptDraft('');
-        setTitleStyleId('classic');
         setPromptModalOpen(true);
     };
 
@@ -215,16 +202,13 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
 
     const runAiGenerate = async () => {
         if (!fileId || coverGenerating) return;
-        const orientation = promptTarget;
-        const creativePrompt = buildCoverAiCreativePrompt({
-            promptDraft,
-            styleId: titleStyleId,
-            workTitle: resolvedWorkTitle,
-        });
-        if (!creativePrompt) {
+        if (!resolvedWorkTitle) {
             toast.error(t('common.coverUpload.titleRequired'));
             return;
         }
+        const orientation = promptTarget;
+        // 功能注释：仅用户输入进提示词；空则后端垫图时沿用参考图标题字效
+        const creativePrompt = buildCoverAiCreativePrompt({ promptDraft });
 
         setPromptModalOpen(false);
         try {
@@ -235,7 +219,7 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
                 prompt: creativePrompt,
                 title: resolvedWorkTitle,
                 orientation,
-                // 功能注释：模型画海报标题，字效跟提示词/示例样式走
+                // 功能注释：模型画标题；无提示词+有参考图时保持参考字效只改尺寸
                 abArm: 'control',
             });
             if (!response.data?.success || !response.data?.data?.coverUrl) {
@@ -258,7 +242,6 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
                         overlayTitle,
                         {
                             orientation,
-                            styleId: titleStyleId,
                             prompt: promptDraft,
                         },
                     );
@@ -282,10 +265,19 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
             onCoverUploaded?.({ orientation, coverUrl: nextCoverUrl });
         } catch (error) {
             console.error('AI generate game cover failed:', error);
-            const apiMessage = (error as { response?: { data?: { message?: string; error?: string } } })
-                ?.response?.data?.message
-                || (error as { response?: { data?: { error?: string } } })?.response?.data?.error;
-            toast.error(apiMessage || t('common.coverUpload.aiGenerateFailed'));
+            const err = error as {
+                code?: string;
+                message?: string;
+                response?: { data?: { message?: string; error?: string } };
+            };
+            const timedOut = err?.code === 'ECONNABORTED'
+                || /timeout/i.test(String(err?.message || ''));
+            const apiMessage = err?.response?.data?.message || err?.response?.data?.error;
+            toast.error(
+                timedOut
+                    ? t('common.coverUpload.aiGenerateTimeout')
+                    : (apiMessage || t('common.coverUpload.aiGenerateFailed')),
+            );
         } finally {
             setCoverGenerating(false);
             setBusyOrientation(null);
@@ -470,21 +462,7 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
                             <p className={styles.coverBriefStageLabel}>
                                 {t('common.coverUpload.posterTitlePreview')}
                             </p>
-                            <p
-                                className={styles.coverBriefStageTitle}
-                                style={{
-                                    fontFamily: effectiveTitleStyle.fontFamily,
-                                    fontWeight: effectiveTitleStyle.fontWeight,
-                                    color: effectiveTitleStyle.fill,
-                                    WebkitTextStroke: effectiveTitleStyle.stroke
-                                        ? `1.5px ${effectiveTitleStyle.stroke}`
-                                        : '0',
-                                    paintOrder: effectiveTitleStyle.stroke ? 'stroke fill' : undefined,
-                                    textShadow: `0 ${effectiveTitleStyle.stroke ? 0 : 2}px ${
-                                        effectiveTitleStyle.stroke ? 14 : 18
-                                    }px ${effectiveTitleStyle.shadowColor}`,
-                                }}
-                            >
+                            <p className={styles.coverBriefStageTitle}>
                                 {resolvedWorkTitle}
                             </p>
                         </div>
@@ -499,35 +477,6 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
                             <span className={styles.coverBriefCost}>
                                 {t('common.coverUpload.promptCostBadge', { cost: SCENE_GENERATION_COST })}
                             </span>
-                        </div>
-
-                        <div className={styles.coverBriefStyleRow}>
-                            <span className={styles.coverBriefStyleLabel}>
-                                {t('common.coverUpload.titleStyleLabel')}
-                            </span>
-                            <div className={styles.coverBriefStyleChips} role="group" aria-label={t('common.coverUpload.titleStyleLabel')}>
-                                {POSTER_TITLE_STYLE_ORDER.map((styleId) => (
-                                    <button
-                                        key={styleId}
-                                        type="button"
-                                        className={`${styles.coverBriefStyleChip} ${
-                                            !titleStyleFromPrompt && titleStyleId === styleId
-                                                ? styles.coverBriefStyleChipActive
-                                                : ''
-                                        } ${styleId === 'cheeseNeon' ? styles.coverBriefStyleChipCheese : ''} ${
-                                            titleStyleFromPrompt ? styles.coverBriefStyleChipMuted : ''
-                                        }`}
-                                        onClick={() => setTitleStyleId(styleId)}
-                                    >
-                                        {t(`common.coverUpload.titleStyle.${styleId}`)}
-                                    </button>
-                                ))}
-                            </div>
-                            {titleStyleFromPrompt ? (
-                                <p className={styles.coverBriefStyleOverrideHint}>
-                                    {t('common.coverUpload.titleStyleFromPrompt')}
-                                </p>
-                            ) : null}
                         </div>
 
                         <div className={styles.coverBriefField}>

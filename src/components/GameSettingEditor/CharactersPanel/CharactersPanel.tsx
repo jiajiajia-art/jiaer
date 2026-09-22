@@ -1890,12 +1890,14 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         setNpcCostModalOpen(false);
         // 关闭积分弹窗后立刻清进度，避免遮罩打开时闪上一轮数据
         setNpcBatchJobStatus(null);
+        // 功能注释：走 handlers 内 pendingBatchSelection（失败重试时仅为未完成 id，不含已完成）
         await generateAllNpcImages();
         onDataChange?.();
     };
 
     const handleContinueFailedBatchTasks = async () => {
         if (!handlers) return;
+        // 功能注释：只解析失败/卡住/排队项 id，已完成（item_done/rembg_done）已被 listBatchNpcRetryTargetItems 排除
         const uniqueIds = resolveRetryCharacterIdsFromBoard(
             batchRetryTargetItems,
             (name) => characterData.find((char) => char.name === name && !char.id.startsWith('temp-'))?.id,
@@ -1904,7 +1906,6 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             toast.error(t('createGame.selectCharactersToGenerate'));
             return;
         }
-        // 先打开积分确认；遮罩会因 npcCostModalOpen 自动让路（否则 ConfirmModal 被压在下面像「没反应」）
         await handlers.continueFailedBatchNpcImages(uniqueIds);
     };
 

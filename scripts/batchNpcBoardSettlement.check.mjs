@@ -90,6 +90,27 @@ test('生图卡住超过阈值_其余已完成_必须显示重试', () => {
     assert.equal(targets[0].id, 'b');
 });
 
+test('重试目标_绝不包含已完成_只含失败卡住与排队', () => {
+    const items = [
+        { stage: 'item_done', id: 'done1', name: '已完成甲' },
+        { stage: 'rembg_done', id: 'done2', name: '已完成乙' },
+        { stage: 'generate_fail', id: 'fail1', name: '失败甲' },
+        { stage: 'rembg_fail', id: 'fail2', name: '失败乙' },
+        { stage: 'pending', id: 'pend1', name: '排队甲' },
+        {
+            stage: 'generate_start',
+            id: 'stuck1',
+            name: '卡住甲',
+            stageElapsedSeconds: BATCH_STUCK_GENERATE_SECONDS,
+        },
+    ];
+    const targets = listBatchNpcRetryTargetItems(items);
+    const ids = targets.map((row) => row.id);
+    assert.deepEqual(ids.sort(), ['fail1', 'fail2', 'pend1', 'stuck1'].sort());
+    assert.equal(ids.includes('done1'), false);
+    assert.equal(ids.includes('done2'), false);
+});
+
 test('生图仅68s_未达卡住阈值_不显示重试', () => {
     const items = [
         { stage: 'item_done' },

@@ -1,5 +1,5 @@
 import type { ApiResponse } from "../api.types";
-import { api, UPLOAD_TIMEOUT_MS } from "../base";
+import { api, COVER_GENERATE_TIMEOUT_MS, UPLOAD_TIMEOUT_MS } from "../base";
 import type { CalculatePointsResponse, GetMusicListResponse, UploadMusicResponse, UploadNpcImageResponse, UploadPlayerImageResponse, UploadSceneImageResponse } from "../worldInteraction/worldEditor.type";
 import type {
     AllGameData,
@@ -163,7 +163,8 @@ const EditorApi = {
             ...(data?.orientation != null ? { orientation: data.orientation } : {}),
             ...(data?.abArm != null ? { abArm: data.abArm } : {}),
         }, {
-            timeout: UPLOAD_TIMEOUT_MS,
+            // 功能注释：生图+可选垫图常超过上传 120s，单独放宽避免 ECONNABORTED
+            timeout: COVER_GENERATE_TIMEOUT_MS,
         }),
     uploadPlayerImage: (fileId:string, data:{file:File, variant:string, variationDescription?: string}) => {
         const formData = new FormData();

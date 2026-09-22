@@ -84,9 +84,7 @@ test('封面主路径模型画字_不再托管黄油体文件', () => {
 
 test('CoverUpload_示例写入AI提示词', () => {
   const tsx = read('src/components/GameSettingEditor/WorldPanel/CoverUpload.tsx');
-  assert.match(tsx, /titleStyleId/);
   assert.match(tsx, /buildCoverAiCreativePrompt/);
   assert.match(tsx, /abArm:\s*'control'/);
-  assert.match(tsx, /POSTER_TITLE_STYLE_ORDER/);
-  assert.match(tsx, /titleStyleFromPrompt/);
+  assert.doesNotMatch(tsx, /titleStyleId|POSTER_TITLE_STYLE_ORDER/);
 });

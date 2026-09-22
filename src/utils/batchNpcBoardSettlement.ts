@@ -127,14 +127,17 @@ export function shouldShowRetryIncompleteBatchTasks(
     });
 }
 
-/** 重试目标：失败项 + 卡住项 */
+/** 重试目标：失败项 + 卡住项 + 仍排队未跑完的 pending（绝不含已完成） */
 export function listBatchNpcRetryTargetItems(
     items: BatchNpcBoardItemLike[] | null | undefined,
 ): BatchNpcBoardItemLike[] {
     const list = Array.isArray(items) ? items : [];
     return list.filter((item) => {
         const stage = String(item?.stage || '');
+        // 功能注释：已完成绝不再进重试队列
+        if (stage === 'item_done' || stage === 'rembg_done') return false;
         if (stage === 'generate_fail' || stage === 'rembg_fail') return true;
+        if (stage === 'pending' || stage === '') return true;
         return isBatchNpcBoardItemStuck(item);
     });
 }
