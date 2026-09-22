@@ -46,10 +46,11 @@ test('i18n_应有支付方式文案', () => {
   assert.match(zh, /"payOverseas":\s*"海外支付"/);
 });
 
-test('RechargeModal_应按区域默认支付并可互切', () => {
-  assert.match(modal, /useGeoRegionStore/);
-  assert.match(modal, /defaultPayMethod/);
-  assert.match(modal, /setSelectedPayMethod\(defaultPayMethod\)/);
+test('RechargeModal_微信支付应固定首位并默认选中', () => {
+  assert.match(modal, /setSelectedPayMethod\('wechat'\)/);
+  assert.match(modal, /\(\['wechat', 'overseas'\] as const\)/);
+  assert.doesNotMatch(modal, /defaultPayMethod === 'overseas'/);
+  assert.doesNotMatch(modal, /setSelectedPayMethod\(defaultPayMethod\)/);
   assert.match(modal, /payMethodToggle/);
   const css = readFileSync(join(root, 'src/components/Purchase/RechargeModal.module.css'), 'utf8');
   assert.match(css, /\.payMethodToggle\s*\{/);

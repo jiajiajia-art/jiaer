@@ -9,7 +9,6 @@ import type { PayOrderRequest, PlanId, DiamondsPlanId } from '../../api/pay/pay.
 import { getApiErrorMessage } from '../../utils/error';
 import { useAuthStore } from '../../store/useAuthStore';
 import { resolveMemberDisplayEndAt } from '../../utils/planLabels';
-import { useGeoRegionStore } from '../../store/useGeoRegionStore';
 import type { DefaultPayMethod } from '../../lib/geoRegion';
 import {
     calcDiamondsForPayMethod,
@@ -116,7 +115,6 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     // 用户实际看到的（可能是折扣后的）金额文本
     const [amountText, setAmountText] = useState<string>('');
     /** 功能注释：钻石充值顶部互切支付方式；点立即支付直接走当前选中方式，不再二次弹窗 */
-    const defaultPayMethod = useGeoRegionStore((s) => s.region.defaultPayMethod);
     const [selectedPayMethod, setSelectedPayMethod] = useState<DefaultPayMethod>('wechat');
     const payMinAmount = getPayMethodMinAmount(selectedPayMethod);
     const currencySymbol = getPayMethodCurrencySymbol(selectedPayMethod);
@@ -191,8 +189,8 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             return;
         }
 
-        // 功能注释：每次打开按 IP 默认支付方式重置
-        setSelectedPayMethod(defaultPayMethod);
+        // 功能注释：每次打开默认微信支付（首位）；用户仍可切到海外支付
+        setSelectedPayMethod('wechat');
         setRechargeTab(fixedTab ?? 'diamonds');
         if ((fixedTab ?? 'diamonds') === 'diamonds') {
             const defaultPlan = FIRST_CHARGE_PLANS[0];
@@ -212,7 +210,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             setAmountError('');
             setInputShake(false);
         }
-    }, [isOpen, fixedTab, defaultPayMethod]);
+    }, [isOpen, fixedTab]);
 
     useEffect(() => {
         if (isOpen && fixedTab && rechargeTab !== fixedTab) {
@@ -661,12 +659,9 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
 
     const diamondsTabContent = (
         <>
-            {/* 功能注释：支付方式互切；IP 默认高亮，切换后金额校验与货币符号跟着变 */}
+            {/* 功能注释：微信支付固定首位并默认选中；切换后金额校验与货币符号跟着变 */}
             <div className={styles.payMethodToggle} role="group" aria-label={t('rechargeModal.choosePayMethod')}>
-                {(defaultPayMethod === 'overseas'
-                    ? (['overseas', 'wechat'] as const)
-                    : (['wechat', 'overseas'] as const)
-                ).map((method) => (
+                {(['wechat', 'overseas'] as const).map((method) => (
                     <button
                         key={method}
                         type="button"

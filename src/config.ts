@@ -4,9 +4,9 @@ export const ON_SERVER: boolean = import.meta.env.PROD;
 // export const HOST_ADDRESS = import.meta.env.VITE_API_BASE_URL ||
 //   (ON_SERVER ? 'https://api.kurangames.com' : '');
 // 测试
-export const HOST_ADDRESS = 'https://api-test.kurangames.com';
-// 测试2
-// export const HOST_ADDRESS = 'https://api-test2.kurangames.com';
+// export const HOST_ADDRESS = 'https://api-test.kurangames.com';
+// 测试2（当前后端 wrangler 部署到 interactive-fiction-backend-test2）
+export const HOST_ADDRESS = 'https://api-test2.kurangames.com';
 // 国内正式生产
  //export const HOST_ADDRESS = 'https://api.kurangames.com';
 // 海外正式生产
