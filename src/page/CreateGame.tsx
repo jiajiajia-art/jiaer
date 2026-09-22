@@ -188,6 +188,7 @@ const CreateGame: React.FC = () => {
                 shareType: payload.shareType,
                 versionNotes: payload.versionNotes,
                 notifyFavoritedUsers: payload.notifyFavoritedUsers,
+                audienceType: payload.audienceType,
             });
 
             if (response.data.success) {
@@ -411,6 +412,7 @@ const CreateGame: React.FC = () => {
                     onPublish={handlePublishGame}
                     fileId={gameId || undefined}
                     coverUrl={gameDetail?.cover_url}
+                    portraitCoverUrl={gameDetail?.portrait_cover_url || undefined}
                     mode={publishModalMode}
                     isNovel={isNovelEngine(gameDetail.engine, gameDetail.game_tags)}
                     onCoverUploaded={refreshGameDetail}

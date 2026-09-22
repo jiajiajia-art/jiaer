@@ -16,6 +16,7 @@ export interface GameTagTreeResponse {
 export interface SetGameTagsRequest {
     fileId: string;
     tagIds: number[];
+    audienceType?: 'male' | 'female' | 'all';
 }
 
 export interface SetGameTagsResponse {

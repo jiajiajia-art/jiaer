@@ -17,6 +17,7 @@ import { getPlayerImageUrl } from '../../../utils/constants';
 import getGameDataApi from '../../../api/home/getGameData';
 import gameTagsApi from '../../../api/gameTags/gameTagsApi';
 import { flattenThemeTags, type FlatThemeTag } from '../../../utils/themeTags';
+import { isValidContentAudience, type ContentAudience } from '../../../utils/contentAudience';
 
 const WORLD_PANEL_TOAST_DURATION = 2200;
 
@@ -133,13 +134,18 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
     const [selectedThemeTagIds, setSelectedThemeTagIds] = useState<number[]>([]);
     const [persistedThemeTagIds, setPersistedThemeTagIds] = useState<number[]>([]);
     const [themeTagError, setThemeTagError] = useState<string>('');
+    const [selectedAudienceType, setSelectedAudienceType] = useState<ContentAudience | null>(null);
+    const [persistedAudienceType, setPersistedAudienceType] = useState<ContentAudience | null>(null);
+    const [audienceError, setAudienceError] = useState<string>('');
 
     const lastFileIdRef = useRef<string | null>(null);
     const originalDataRef = useRef<VisualWorldSetting | WorldWorldSetting | null>(null);
     const lastWorldSettingSnapshotRef = useRef<string | null>(null);
     const lastAppliedGameDataSnapshotRef = useRef<string | null>(null);
     const originalThemeTagIdsRef = useRef<number[]>([]);
+    const originalAudienceTypeRef = useRef<ContentAudience | null>(null);
     const hasTouchedThemeTagsRef = useRef(false);
+    const hasTouchedAudienceRef = useRef(false);
     const saveWorldSettingChangesRef = useRef<(() => Promise<boolean>) | null>(null);
     const hasUnsavedChangesRef = useRef(false);
     const pendingLeaveActionRef = useRef<(() => void) | null>(null);
@@ -218,6 +224,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         const fetchSelectedThemeTags = async () => {
             if (!currentFileId) {
                 setPersistedThemeTagIds([]);
+                setPersistedAudienceType(null);
                 return;
             }
 
@@ -227,10 +234,15 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                 const nextThemeTagIds = normalizeThemeTagIds(resp.data.data?.theme_tag_ids);
                 // 实现编辑页作品标签回显
                 setPersistedThemeTagIds(nextThemeTagIds);
+                const nextAudience = isValidContentAudience(resp.data.data?.audience_type)
+                    ? resp.data.data.audience_type
+                    : null;
+                setPersistedAudienceType(nextAudience);
             } catch (error) {
                 if (!cancelled) {
                     console.error('加载编辑作品标签失败:', error);
                     setPersistedThemeTagIds([]);
+                    setPersistedAudienceType(null);
                 }
             }
         };
@@ -256,6 +268,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
             lastAppliedGameDataSnapshotRef.current = currentWorldSettingSnapshot;
             originalDataRef.current = JSON.parse(JSON.stringify(ws));
             hasTouchedThemeTagsRef.current = false;
+            hasTouchedAudienceRef.current = false;
         } else if (lastAppliedGameDataSnapshotRef.current !== currentWorldSettingSnapshot) {
             lastAppliedGameDataSnapshotRef.current = currentWorldSettingSnapshot;
             originalDataRef.current = JSON.parse(JSON.stringify(ws));
@@ -310,7 +323,10 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         originalThemeTagIdsRef.current = initialThemeTagIds;
         setSelectedThemeTagIds(initialThemeTagIds);
         setThemeTagError('');
-    }, [displayThemeTags, gameData, isWorldInteractionMode, persistedThemeTagIds]);
+        originalAudienceTypeRef.current = persistedAudienceType;
+        setSelectedAudienceType(persistedAudienceType);
+        setAudienceError('');
+    }, [displayThemeTags, gameData, isWorldInteractionMode, persistedAudienceType, persistedThemeTagIds]);
 
     useEffect(() => {
         if (!gameData?.worldSetting) return;
@@ -325,7 +341,15 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
             setSelectedThemeTagIds(initialThemeTagIds);
             setThemeTagError('');
         }
-    }, [displayThemeTags, gameData, persistedThemeTagIds]);
+        if (persistedAudienceType !== originalAudienceTypeRef.current) {
+            if (hasTouchedAudienceRef.current) {
+                return;
+            }
+            originalAudienceTypeRef.current = persistedAudienceType;
+            setSelectedAudienceType(persistedAudienceType);
+            setAudienceError('');
+        }
+    }, [displayThemeTags, gameData, persistedAudienceType, persistedThemeTagIds]);
 
     const handleToneChange = (value: string) => {
         setToneValue(value);
@@ -348,7 +372,13 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
             setThemeTagError('');
             return [...prev, tagId];
         });
-    }, [showWorldPanelErrorToast]);
+    }, [showWorldPanelErrorToast, t]);
+
+    const handleAudienceTypeChange = useCallback((next: ContentAudience) => {
+        hasTouchedAudienceRef.current = true;
+        setSelectedAudienceType(next);
+        setAudienceError('');
+    }, []);
 
     const reorderStorylines = (items: StoryLine[]): StoryLine[] => {
         const sorted = [...items].sort((a, b) => a.index - b.index);
@@ -637,15 +667,19 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
     const syncSavedBaseline = useCallback((
         savedWorldSetting: VisualWorldSetting | WorldWorldSetting,
         savedThemeTagIds: number[],
+        savedAudienceType: ContentAudience | null,
     ) => {
         // 实现世界观保存后同步基线
         originalDataRef.current = JSON.parse(JSON.stringify(savedWorldSetting));
         lastWorldSettingSnapshotRef.current = JSON.stringify(savedWorldSetting);
         lastAppliedGameDataSnapshotRef.current = lastAppliedGameDataSnapshotRef.current;
         originalThemeTagIdsRef.current = [...savedThemeTagIds];
+        originalAudienceTypeRef.current = savedAudienceType;
         hasTouchedThemeTagsRef.current = false;
+        hasTouchedAudienceRef.current = false;
         hasUnsavedChangesRef.current = false;
         setPersistedThemeTagIds([...savedThemeTagIds]);
+        setPersistedAudienceType(savedAudienceType);
         setHasUnsavedChanges(false);
     }, [setHasUnsavedChanges]);
 
@@ -666,6 +700,14 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         }
         setOpeningPlotError('');
 
+        // 实现作品分类必填校验
+        if (!isValidContentAudience(selectedAudienceType)) {
+            setAudienceError(t('createGame.contentAudienceRequired'));
+            showWorldPanelErrorToast(t('createGame.contentAudienceRequired'));
+            return false;
+        }
+        setAudienceError('');
+
         // 实现题材标签保存校验
         if (selectedThemeTagIds.length < 1 || selectedThemeTagIds.length > 2) {
             setThemeTagError(t('createGame.themeTagRequired'));
@@ -682,7 +724,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         }
         setStorylineError('');
         return true;
-    }, [isWorldInteractionMode, opening, openingPlot, selectedThemeTagIds.length, showWorldPanelErrorToast, storylines.length]);
+    }, [isWorldInteractionMode, opening, openingPlot, selectedAudienceType, selectedThemeTagIds.length, showWorldPanelErrorToast, storylines.length, t]);
 
     const saveWorldSettingChanges = useCallback(async () => {
         if (!handleSubmit) {
@@ -700,12 +742,13 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         }
 
         const nextThemeTagIds = [...selectedThemeTagIds];
+        const nextAudienceType = selectedAudienceType;
         return await handleSubmit({
             onSuccess: () => {
-                syncSavedBaseline(fullWorldSetting, nextThemeTagIds);
+                syncSavedBaseline(fullWorldSetting, nextThemeTagIds, nextAudienceType);
             },
         });
-    }, [getFullWorldSettingData, handleSubmit, selectedThemeTagIds, showWorldPanelErrorToast, syncSavedBaseline, validateWorldSettingBeforeSave]);
+    }, [getFullWorldSettingData, handleSubmit, selectedAudienceType, selectedThemeTagIds, showWorldPanelErrorToast, syncSavedBaseline, t, validateWorldSettingBeforeSave]);
 
     saveWorldSettingChangesRef.current = saveWorldSettingChanges;
 
@@ -759,10 +802,11 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         if (!originalDataRef.current) {
             return;
         }
-        // 实现题材修改纳入未保存检测
+        // 实现题材与作品分类修改纳入未保存检测
         const hasThemeTagChanges = !isSameThemeTagIds(selectedThemeTagIds, originalThemeTagIdsRef.current);
-        setHasUnsavedChanges(getWorldSettingData() !== null || hasThemeTagChanges);
-    }, [getWorldSettingData, selectedThemeTagIds, setHasUnsavedChanges]);
+        const hasAudienceChanges = selectedAudienceType !== originalAudienceTypeRef.current;
+        setHasUnsavedChanges(getWorldSettingData() !== null || hasThemeTagChanges || hasAudienceChanges);
+    }, [getWorldSettingData, selectedAudienceType, selectedThemeTagIds, setHasUnsavedChanges]);
 
     useLayoutEffect(() => {
         if (!onGetData) {
@@ -777,9 +821,16 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                 themeTagIds: selectedThemeTagIds,
                 // 透传原始题材快照
                 originalThemeTagIds: originalThemeTagIdsRef.current,
-            } as Partial<AllGameData | WorldInteractionGameData> & { themeTagIds: number[]; originalThemeTagIds: number[] };
+                audienceType: selectedAudienceType,
+                originalAudienceType: originalAudienceTypeRef.current,
+            } as Partial<AllGameData | WorldInteractionGameData> & {
+                themeTagIds: number[];
+                originalThemeTagIds: number[];
+                audienceType: ContentAudience | null;
+                originalAudienceType: ContentAudience | null;
+            };
         });
-    }, [getWorldSettingData, onGetData, selectedThemeTagIds]);
+    }, [getWorldSettingData, onGetData, selectedAudienceType, selectedThemeTagIds]);
 
     const handleConfirmSubmit = useCallback(async (event: React.MouseEvent<HTMLButtonElement>) => {
         event.preventDefault();
@@ -791,6 +842,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
             <CoverUpload
                 fileId={currentFileId}
                 coverUrl={gameData?.coverUrl || undefined}
+                portraitCoverUrl={gameData?.portraitCoverUrl || undefined}
                 workTitle={title}
                 onCoverUploaded={() => {
                     onDataChange?.();
@@ -829,6 +881,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                         openingPlot={openingPlot}
                         themeTags={displayThemeTags}
                         selectedThemeTagIds={selectedThemeTagIds}
+                        audienceType={selectedAudienceType}
                         targetOutputLength={targetOutputLength}
                         minOutputLength={minOutputLength}
                         maxOutputLength={maxOutputLength}
@@ -849,6 +902,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                             }
                         }}
                         onThemeTagToggle={handleThemeTagToggle}
+                        onAudienceTypeChange={handleAudienceTypeChange}
                         onTargetOutputLengthChange={setTargetOutputLength}
                         onMinOutputLengthChange={setMinOutputLength}
                         onMaxOutputLengthChange={setMaxOutputLength}
@@ -870,6 +924,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                         openingError={openingError}
                         openingPlotError={openingPlotError}
                         themeTagError={themeTagError}
+                        audienceError={audienceError}
                     />
 
                     <StorylinesSection

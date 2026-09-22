@@ -4,6 +4,8 @@ import styles from './WorldPanel.module.css';
 import { useWordLimit, useWordCount } from '../../../hooks/editor/useWordLimit';
 import InlineFieldSave from '../InlineFieldSave';
 import { useLocalizedThemeTags } from '../../../utils/themeTags';
+import ContentAudienceField from '../../ContentAudienceField';
+import type { ContentAudience } from '../../../utils/contentAudience';
 
 interface WorldSettingFormProps {
     mode: 'visual' | 'worldInteraction';
@@ -16,6 +18,7 @@ interface WorldSettingFormProps {
     openingPlot: string;
     themeTags: Array<{ id: number; name: string; parentName: string; pathLabel?: string }>;
     selectedThemeTagIds: number[];
+    audienceType: ContentAudience | null;
     targetOutputLength?: number;
     minOutputLength?: number;
     maxOutputLength?: number;
@@ -26,6 +29,7 @@ interface WorldSettingFormProps {
     onOpeningChange: (value: string) => void;
     onOpeningPlotChange: (value: string) => void;
     onThemeTagToggle: (tagId: number) => void;
+    onAudienceTypeChange: (value: ContentAudience) => void;
     onTargetOutputLengthChange: (value: number | undefined) => void;
     onMinOutputLengthChange: (value: number | undefined) => void;
     onMaxOutputLengthChange: (value: number | undefined) => void;
@@ -47,6 +51,7 @@ interface WorldSettingFormProps {
     openingError?: string;
     openingPlotError?: string;
     themeTagError?: string;
+    audienceError?: string;
 }
 
 const WORD_LIMITS = {
@@ -94,6 +99,7 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
     openingPlot,
     themeTags,
     selectedThemeTagIds,
+    audienceType,
     targetOutputLength,
     minOutputLength,
     maxOutputLength,
@@ -104,6 +110,7 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
     onOpeningChange,
     onOpeningPlotChange,
     onThemeTagToggle,
+    onAudienceTypeChange,
     onTargetOutputLengthChange,
     onMinOutputLengthChange,
     onMaxOutputLengthChange,
@@ -125,6 +132,7 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
     openingError,
     openingPlotError,
     themeTagError,
+    audienceError,
 }) => {
     const { t } = useTranslation();
     const displayThemeTags = useLocalizedThemeTags(themeTags);
@@ -190,6 +198,14 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
                     </label>
 
                     <div className={styles.wide}>
+                        {/* 功能注释：作品分类在作品标签之前，必选且单选 */}
+                        <ContentAudienceField
+                            value={audienceType}
+                            onChange={onAudienceTypeChange}
+                            required
+                            error={audienceError}
+                            disabled={inlineSaveDisabled}
+                        />
                         <div className={styles.fieldHeader}>
                             <span className={styles.fieldLabel}>{t('createGame.gameTags')}<span className={styles.required}>*</span></span>
                             <span className={styles.fieldHint}>{t('createGame.min1Max2Tags')}</span>

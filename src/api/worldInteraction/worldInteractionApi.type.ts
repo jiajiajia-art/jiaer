@@ -183,6 +183,7 @@ export interface WorldInteractionGameData {
     abilityNodeSetting?: AbilityNodeSetting;
     attributeSetting?: AttributeSetting;
     coverUrl: string;
+    portraitCoverUrl?: string | null;
 }
 
 export interface UploadWorldFileResponse {

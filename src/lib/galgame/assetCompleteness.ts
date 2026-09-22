@@ -14,6 +14,8 @@ export interface AssetCompletenessInput {
   scenes?: Array<{ image?: unknown; images?: unknown } | null | undefined> | null;
   /** 游戏封面 URL */
   coverUrl?: string | null;
+  /** 竖版 3:4 封面 */
+  portraitCoverUrl?: string | null;
 }
 
 export interface AssetCompletenessResult {
@@ -133,7 +135,8 @@ export function summarizeAssetCompleteness(input: AssetCompletenessInput): Asset
   }
 
   const cover = typeof input.coverUrl === 'string' ? input.coverUrl.trim() : '';
-  const missingCover = cover.length === 0;
+  const portrait = typeof input.portraitCoverUrl === 'string' ? input.portraitCoverUrl.trim() : '';
+  const missingCover = cover.length === 0 || portrait.length === 0;
   const portraitsTotal = 1 + npcList.length;
   const scenesTotal = sceneList.length;
 
@@ -173,11 +176,13 @@ type EditorCompleteLike = {
   sceneSetting?: { scenes?: Array<{ image?: unknown; images?: unknown }> } | null;
   cover_url?: string | null;
   coverUrl?: string | null;
+  portrait_cover_url?: string | null;
+  portraitCoverUrl?: string | null;
 } | null | undefined;
 
 function extractCompletenessInput(gameData: EditorCompleteLike): AssetCompletenessInput {
   if (!gameData) {
-    return { player: null, playerImages: null, npcs: [], scenes: [], coverUrl: null };
+    return { player: null, playerImages: null, npcs: [], scenes: [], coverUrl: null, portraitCoverUrl: null };
   }
   const world = gameData.worldSetting || {};
   const coverUrl =
@@ -186,12 +191,17 @@ function extractCompletenessInput(gameData: EditorCompleteLike): AssetCompletene
     || (world as { cover_url?: string }).cover_url
     || (world as { coverUrl?: string }).coverUrl
     || null;
+  const portraitCoverUrl =
+    gameData.portrait_cover_url
+    || gameData.portraitCoverUrl
+    || null;
   return {
     player: world.player || null,
     playerImages: world.player?.images,
     npcs: gameData.npcSetting?.npcs || [],
     scenes: gameData.sceneSetting?.scenes || [],
     coverUrl,
+    portraitCoverUrl,
   };
 }
 

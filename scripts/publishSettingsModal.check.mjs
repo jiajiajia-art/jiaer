@@ -26,5 +26,9 @@ test('PublishSettingsModal_应对齐墨黑账本而非白卡粉描边', () => {
   assert.doesNotMatch(tsx, /关闭\.png|#FB4655/);
   assert.match(tsx, /styles\.modalHead/);
   assert.match(tsx, /styles\.richEditorDark/);
+  assert.match(tsx, /ContentAudienceField/);
+  assert.match(tsx, /CoverUpload/);
   assert.match(css, /\.richEditorDark/);
+  assert.match(css, /\.formContent\s*\{[\s\S]*?width:\s*100%/);
+  assert.doesNotMatch(css, /min\(520px/);
 });

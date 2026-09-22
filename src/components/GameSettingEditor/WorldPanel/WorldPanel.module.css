@@ -670,19 +670,70 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .coverHeaderRow {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
-    gap: 12px;
+    gap: 6px;
+    flex-wrap: wrap;
 }
 
 .uploadCover h2 {
     margin: 0;
     font-size: 1.5rem;
     color: #ffffff;
+}
+
+.coverDualHint {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.82rem;
+}
+
+/* 功能注释：64:27 列宽让 16:9 与 3:4 同高，避免横图撑满、竖图缩成邮票 */
+.coverSlots {
+    display: grid;
+    grid-template-columns: 64fr 27fr;
+    grid-template-rows: auto auto;
+    column-gap: 14px;
+    row-gap: 8px;
+    align-items: start;
+    width: 100%;
+}
+
+.coverSlot {
+    display: contents;
+}
+
+.uploadCoverCompact {
+    gap: 10px;
+}
+
+.uploadCoverCompact .coverDualHint {
+    font-size: 0.75rem;
+    line-height: 1.4;
+}
+
+.uploadCoverCompact .coverAiBtn {
+    padding: 5px 10px;
+    font-size: 0.72rem;
+}
+
+.coverSlotTitle {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.coverSlotHint {
+    margin: 4px 0 0;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
 }
 
 .coverAiBtn {
@@ -881,6 +932,78 @@
     max-width: 92%;
 }
 
+.coverBriefStageTitleCheese {
+    font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    font-weight: 400;
+    color: #FFE566;
+    -webkit-text-stroke: 1.5px #2B6CFF;
+    paint-order: stroke fill;
+    text-shadow: 0 0 14px rgba(255, 214, 70, 0.85);
+}
+
+.coverBriefStyleRow {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.coverBriefStyleLabel {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.coverBriefStyleChips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.coverBriefStyleChip {
+    appearance: none;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: #141414;
+    color: rgba(255, 255, 255, 0.82);
+    border-radius: 999px;
+    min-height: 34px;
+    padding: 0 14px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.coverBriefStyleChip:hover {
+    border-color: rgba(168, 40, 60, 0.55);
+}
+
+.coverBriefStyleChipActive {
+    border-color: #A8283C;
+    background: rgba(142, 33, 53, 0.28);
+    color: #fff;
+}
+
+.coverBriefStyleChipCheese {
+    font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+}
+
+.coverBriefStyleChipCheese.coverBriefStyleChipActive {
+    color: #FFE566;
+    border-color: #2B6CFF;
+    background: rgba(43, 108, 255, 0.18);
+}
+
+.coverBriefStyleChipMuted {
+    opacity: 0.55;
+}
+
+.coverBriefStyleOverrideHint {
+    margin: 0;
+    font-size: 0.72rem;
+    line-height: 1.4;
+    color: rgba(255, 214, 70, 0.88);
+}
+
 .coverBriefMetaRow {
     display: flex;
     align-items: center;
@@ -973,31 +1096,40 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-top: 2px;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--brief-line);
 }
 
 .coverBriefGhost {
     flex: 0 0 auto;
-    min-width: 88px;
+    min-width: 96px;
     height: 44px;
-    padding: 0 16px;
+    padding: 0 18px;
     border-radius: 999px;
-    border: 1px solid var(--brief-line);
-    background: transparent;
-    color: var(--brief-ink);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: #141414;
+    color: rgba(255, 255, 255, 0.88);
     font-size: 0.9rem;
     font-weight: 600;
+    letter-spacing: 0.02em;
     cursor: pointer;
-    transition: background 0.15s ease, border-color 0.15s ease;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .coverBriefGhost:hover {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.18);
+    background: rgba(142, 33, 53, 0.22);
+    border-color: rgba(168, 40, 60, 0.55);
+    color: #fff;
+}
+
+.coverBriefGhost:active {
+    transform: translateY(1px) scale(0.985);
 }
 
 .coverBriefPrimary {
     flex: 1;
+    min-width: 0;
     height: 44px;
     border: none;
     border-radius: 999px;
@@ -1005,6 +1137,7 @@
     color: #fff;
     font-size: 0.92rem;
     font-weight: 700;
+    letter-spacing: 0.04em;
     cursor: pointer;
     box-shadow: 0 8px 20px rgba(142, 33, 53, 0.35);
     transition: transform 0.12s ease, box-shadow 0.15s ease, filter 0.15s ease;
@@ -1016,7 +1149,7 @@
 }
 
 .coverBriefPrimary:active {
-    transform: scale(0.985);
+    transform: translateY(1px) scale(0.985);
 }
 
 @media (max-width: 480px) {
@@ -1031,30 +1164,56 @@
         padding-right: 16px;
     }
 
+    /* 功能注释：手机保持横排「取消 + 生成」，禁止双全宽胶囊竖叠（丑且占高） */
     .coverBriefActions {
-        flex-direction: column-reverse;
+        flex-direction: row;
+        gap: 10px;
+        margin-top: 12px;
+        padding: 12px 0 calc(4px + env(safe-area-inset-bottom, 0px));
     }
 
-    .coverBriefGhost,
+    .coverBriefGhost {
+        flex: 0 0 auto;
+        width: auto;
+        min-width: 88px;
+        height: 48px;
+        padding: 0 16px;
+    }
+
     .coverBriefPrimary {
-        width: 100%;
+        flex: 1 1 auto;
+        width: auto;
+        height: 48px;
+        font-size: 0.95rem;
     }
 }
 
 .coverUploadArea {
     width: 100%;
-    min-height: 200px;
+    min-height: 0;
+    box-sizing: border-box;
     border: 1px dashed rgba(255, 255, 255, 0.2);
-    border-radius: 12px;
-    padding: 24px;
+    border-radius: 10px;
+    padding: 0;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: border-color 0.2s ease, background 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
     background: #121212;
     position: relative;
     overflow: hidden;
+}
+
+.coverUploadAreaLandscape {
+    aspect-ratio: 16 / 9;
+    min-width: 0;
+}
+
+.coverUploadAreaPortrait {
+    aspect-ratio: 3 / 4;
+    width: 100%;
+    min-width: 0;
 }
 
 .coverUploadArea:hover {
@@ -1072,8 +1231,10 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: 6px;
+    padding: 8px;
     pointer-events: none;
+    text-align: center;
 }
 
 .coverUploadIcon {
@@ -1083,25 +1244,42 @@
 .coverUploadText {
     margin: 0;
     color: rgba(255, 255, 255, 0.85);
-    font-size: 0.95rem;
+    font-size: 0.8rem;
     font-weight: 500;
 }
 
 .coverUploadHint {
     margin: 0;
     color: rgba(255, 255, 255, 0.55);
-    font-size: 0.8rem;
+    font-size: 0.68rem;
+    line-height: 1.35;
+}
+
+.coverUploadAreaPortrait .coverUploadIcon {
+    width: 22px;
+    height: 22px;
 }
 
 .coverPreviewContainer {
-    /* 预览框：只让“展示区域”是 16:9，不撑满整个上传区域 */
     width: 100%;
-    max-width: 520px;
-    aspect-ratio: 16 / 9;
+    height: 100%;
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+.coverUploadAreaPreview {
+    cursor: default;
+    border-style: solid;
+    border-color: rgba(255, 255, 255, 0.12);
+    padding: 0;
+    background: #0d0d0d;
+}
+
+.coverUploadAreaPreview:hover {
+    background: #0d0d0d;
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
 /* 仅图区可点预览；「更换」绝对定位叠在上层，不在此 button 内 */
@@ -1130,16 +1308,14 @@
     outline-offset: 2px;
 }
 
+/* 编辑预览完整等比显示，避免 cover 裁顶把叠字标题切掉 */
 .coverPreview {
     width: 100%;
     height: 100%;
-    object-fit: cover; /* 与列表一致：居中裁切铺满 16:9 预览框 */
+    object-fit: contain;
+    object-position: center;
     border-radius: 8px;
     pointer-events: none;
-}
-
-.coverUploadAreaPreview {
-    cursor: default;
 }
 
 .coverPreviewHint {
@@ -1411,6 +1587,11 @@
 
 /* 响应式布局 */
 @media (max-width: 720px) {
+    .coverSlots {
+        grid-template-columns: 64fr 27fr;
+        column-gap: 10px;
+    }
+
     .panelHeader {
         flex-direction: column;
         align-items: flex-start;

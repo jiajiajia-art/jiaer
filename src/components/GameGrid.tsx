@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import styles from './GameGrid.module.css';
 import type { UserGameData } from '../api/home/getGameData.type';
 import { addImageTimestamp } from '../utils/imageCache';
-import { resolveGameCoverUrl } from '../utils/displayCoverUrl';
+import { resolveGameListCoverUrl } from '../utils/displayCoverUrl';
 import { getImageUrl } from '../utils/constants';
 import { getGameTypeLabelFromMeta, getGameTypeToneFromMeta } from '../utils/gameTypeLabel';
 import { resolveGameTypeToneStyle } from '../utils/gameTypeToneClass';
@@ -166,9 +166,10 @@ const GameGrid: React.FC<GameGridProps> = ({
                         <div className={styles.goodsImg}>
                             {(() => {
                                 // 功能注释：列表封面统一走 display-cover；无封面时用暗色占位，避免 welcome 白底破暗色
-                                const displayCoverPath = resolveGameCoverUrl({
+                                const displayCoverPath = resolveGameListCoverUrl({
                                     display_cover_url: meta.display_cover_url,
                                     cover_url: meta.cover_url,
+                                    portrait_cover_url: meta.portrait_cover_url,
                                 });
                                 if (!displayCoverPath) {
                                     return <div className={styles.goodsImgPlaceholder} aria-hidden="true" />;

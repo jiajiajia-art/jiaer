@@ -1,5 +1,5 @@
 import { HOST_ADDRESS } from "../config";
-export { toDisplayCoverUrl, resolveGameCoverUrl } from './displayCoverUrl';
+export { toDisplayCoverUrl, resolveGameCoverUrl, resolveGameListCoverUrl } from './displayCoverUrl';
 export { preferCharacterPortraitWebp } from './characterPortraitUrl';
 import { preferCharacterPortraitWebp } from './characterPortraitUrl';
 

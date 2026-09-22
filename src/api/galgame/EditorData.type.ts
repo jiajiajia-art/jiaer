@@ -195,6 +195,7 @@ export interface AllGameData {
   metadata: Metadata | null;
   storySetting: StoryStructure;
   coverUrl: string;
+  portraitCoverUrl?: string | null;
 }
 
 export interface GeneratePlayerImageRequest {
@@ -394,6 +395,7 @@ export interface UploadGameCoverResponse {
   message: string;
   data: {
     coverUrl: string;
+    orientation?: 'landscape' | 'portrait';
     filename: string;
     fileId: string;
     pointsDeducted?: number;

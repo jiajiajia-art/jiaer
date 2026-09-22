@@ -50,8 +50,9 @@ test('validateNovelDraftSave requires title, description and cover', () => {
 test('validateNovelPublish requires 1-2 theme tags', () => {
   assert.equal(validateNovelPublish(baseInput).valid, false);
   assert.equal(validateNovelPublish(baseInput).error, 'THEME_TAG_MIN');
-  assert.equal(validateNovelPublish({ ...baseInput, themeTagIds: [1] }).valid, true);
-  assert.equal(validateNovelPublish({ ...baseInput, themeTagIds: [1, 2] }).valid, true);
+  assert.equal(validateNovelPublish({ ...baseInput, themeTagIds: [1] }).error, 'AUDIENCE_REQUIRED');
+  assert.equal(validateNovelPublish({ ...baseInput, themeTagIds: [1], audienceType: 'male' }).valid, true);
+  assert.equal(validateNovelPublish({ ...baseInput, themeTagIds: [1, 2], audienceType: 'all' }).valid, true);
   assert.equal(validateNovelPublish({ ...baseInput, themeTagIds: [1, 2, 3] }).error, 'THEME_TAG_MAX');
 });
 
@@ -74,6 +75,7 @@ test('toggleThemeTagSelection enforces max selection', () => {
 test('mapNovelEditErrorToI18nKey maps validation errors', () => {
   assert.equal(mapNovelEditErrorToI18nKey('TITLE_REQUIRED'), 'common.publishSettings.titleRequired');
   assert.equal(mapNovelEditErrorToI18nKey('THEME_TAG_MIN'), 'createGame.themeTagRequired');
+  assert.equal(mapNovelEditErrorToI18nKey('AUDIENCE_REQUIRED'), 'createGame.contentAudienceRequired');
 });
 
 test('resolvePublishModalMode keeps novel-edit for intent=edit (legacy helper)', () => {

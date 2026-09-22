@@ -15,7 +15,13 @@ interface UseEditorSessionOptions {
 
 interface UseEditorSessionReturn {
     createGalgameSession: () => Promise<string | null>;
-    handlePublishGame: (description?: string, shareType?: Currency, versionNotes?: string, notifyFavoritedUsers?: boolean) => Promise<void>;
+    handlePublishGame: (
+        description?: string,
+        shareType?: Currency,
+        versionNotes?: string,
+        notifyFavoritedUsers?: boolean,
+        audienceType?: 'male' | 'female' | 'all',
+    ) => Promise<void>;
 }
 
 export const useEditorSession = ({ fileId, mode }: UseEditorSessionOptions): UseEditorSessionReturn => {
@@ -65,7 +71,13 @@ export const useEditorSession = ({ fileId, mode }: UseEditorSessionOptions): Use
     }, [user?.user?.id, fileId, navigate, setFileId, setSessionId, setIsPreset, mode]);
 
     // 发布游戏：当前不设置积分/价格，统一按免费处理（priceAmount 固定为 0）
-    const handlePublishGame = useCallback(async (description?: string, shareType?: Currency, versionNotes?: string, notifyFavoritedUsers?: boolean): Promise<void> => {
+    const handlePublishGame = useCallback(async (
+        description?: string,
+        shareType?: Currency,
+        versionNotes?: string,
+        notifyFavoritedUsers?: boolean,
+        audienceType?: 'male' | 'female' | 'all',
+    ): Promise<void> => {
         if (!fileId) return;
 
         try {
@@ -76,6 +88,7 @@ export const useEditorSession = ({ fileId, mode }: UseEditorSessionOptions): Use
                 shareType,
                 versionNotes,
                 notifyFavoritedUsers,
+                audienceType,
             });
 
             if (response.data.success) {

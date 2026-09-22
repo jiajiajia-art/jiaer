@@ -651,6 +651,7 @@ const GameSettingsEditor = () => {
                 payload.shareType,
                 payload.versionNotes,
                 payload.notifyFavoritedUsers,
+                payload.audienceType,
             );
             setShowPublishModal(false);
         } catch (error: any) {
@@ -1086,6 +1087,8 @@ const GameSettingsEditor = () => {
                         onClose={() => setShowPublishModal(false)}
                         onPublish={onPublishGame}
                         fileId={fileId || undefined}
+                        coverUrl={gameData?.coverUrl || undefined}
+                        portraitCoverUrl={gameData?.portraitCoverUrl || undefined}
                         engine="AVG"
                     />
                 )}

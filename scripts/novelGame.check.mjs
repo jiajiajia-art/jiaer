@@ -88,6 +88,27 @@ test('partitionCreatorGames splits novels from drafts and published', () => {
   assert.equal(buckets.novelGames[0].file_id, 'novel-pub');
 });
 
+test('partitionCreatorGames_已发布按updated_at新的在前', () => {
+  const buckets = partitionCreatorGames([
+    createGame({
+      id: '9',
+      file_id: 'old-pub',
+      is_public: 1,
+      engine: 'TXT',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    }),
+    createGame({
+      id: '2',
+      file_id: 'just-published',
+      is_public: 1,
+      engine: 'TXT',
+      updated_at: '2026-09-21T12:00:00.000Z',
+    }),
+  ]);
+  assert.equal(buckets.publishedGames[0].file_id, 'just-published');
+  assert.equal(buckets.publishedGames[1].file_id, 'old-pub');
+});
+
 test('buildNovelReadPath and buildSourceGameDetailPath encode file id', () => {
   assert.equal(buildNovelReadPath('abc'), '/novel/abc/read');
   assert.equal(buildSourceGameDetailPath('src-1'), '/game/src-1');

@@ -415,8 +415,20 @@ async function runIdeaFullWorkAssetsInner(
       onProgress?.({ phase: 'cover', state: 'starting' });
       patchIdeaAssetPhase(fileId, 'cover', { state: 'active', completed: 0, total: 1 }, assets);
       try {
-        const coverRes = await EditorApi.generateGameCover(fileId, {});
-        const ok = Boolean((coverRes.data as { success?: boolean })?.success);
+        const landscapeRes = await EditorApi.generateGameCover(fileId, { orientation: 'landscape' });
+        const landscapeOk = Boolean((landscapeRes.data as { success?: boolean })?.success);
+        let portraitOk = false;
+        let portraitMessage = '';
+        if (landscapeOk) {
+          const portraitRes = await EditorApi.generateGameCover(fileId, { orientation: 'portrait' });
+          portraitOk = Boolean((portraitRes.data as { success?: boolean })?.success);
+          portraitMessage = String(
+            (portraitRes.data as { message?: string; error?: string })?.message
+            || (portraitRes.data as { error?: string })?.error
+            || '',
+          );
+        }
+        const ok = landscapeOk && portraitOk;
         result.coverOk = ok;
         patchIdeaAssetPhase(
           fileId,
@@ -427,8 +439,9 @@ async function runIdeaFullWorkAssetsInner(
         onProgress?.({ phase: 'cover', state: ok ? 'done' : 'failed' });
         if (!ok) {
           result.errors.push(
-            (coverRes.data as { message?: string; error?: string })?.message
-            || (coverRes.data as { error?: string })?.error
+            portraitMessage
+            || (landscapeRes.data as { message?: string; error?: string })?.message
+            || (landscapeRes.data as { error?: string })?.error
             || '封面生成失败',
           );
         }

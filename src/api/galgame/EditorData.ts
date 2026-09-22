@@ -116,10 +116,11 @@ const EditorApi = {
         api.delete<AllGameData>(`/visual/edit/${fileId}/scenes/${id}`),
     updateScene: (fileId:string, data:Scene) =>
         api.put<AllGameData>(`/visual/edit/${fileId}/scenes/${data.id}`, data),
-    uploadGameCover: (fileId:string, file:File) => {
+    uploadGameCover: (fileId:string, file:File, orientation: 'landscape' | 'portrait' = 'landscape') => {
         const formData = new FormData();
         formData.append('cover', file);
         formData.append('fileId', fileId);
+        formData.append('orientation', orientation);
         return api.post<UploadGameCoverResponse>(`/optical/games/upload-cover`, 
             formData , {
             headers: {
@@ -145,11 +146,22 @@ const EditorApi = {
         );
     },
     /** AI 生成游戏封面（扣积分，规则同场景生图） */
-    generateGameCover: (fileId: string, data?: { prompt?: string; title?: string }) =>
+    generateGameCover: (
+        fileId: string,
+        data?: {
+            prompt?: string;
+            title?: string;
+            orientation?: 'landscape' | 'portrait';
+            /** control=模型画标题字效；treatment=无字生图+客户端叠字 */
+            abArm?: 'treatment' | 'control';
+        },
+    ) =>
         api.post<UploadGameCoverResponse>(`/optical/games/generate-cover`, {
             fileId,
             ...(data?.prompt != null ? { prompt: data.prompt } : {}),
             ...(data?.title != null ? { title: data.title } : {}),
+            ...(data?.orientation != null ? { orientation: data.orientation } : {}),
+            ...(data?.abArm != null ? { abArm: data.abArm } : {}),
         }, {
             timeout: UPLOAD_TIMEOUT_MS,
         }),

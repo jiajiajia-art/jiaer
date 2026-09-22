@@ -11,6 +11,8 @@ import AssetsUpload, { type AssetsUploadHandle } from '../components/StGame/Asse
 import getGameDataApi from '../api/home/getGameData';
 import gameTagsApi from '../api/gameTags/gameTagsApi';
 import { flattenThemeTags, useLocalizedThemeTags, type FlatThemeTag } from '../utils/themeTags';
+import ContentAudienceField from '../components/ContentAudienceField';
+import { isValidContentAudience, type ContentAudience } from '../utils/contentAudience';
 import ConfirmModal from '../components/CommonModal/ConfirmModal';
 import PublishSettingsModal, { type PublishSubmitPayload } from '../components/CommonModal/PublishSettingsModal';
 import GameAction from '../api/rpgGame/gameAction';
@@ -34,7 +36,7 @@ const THEME_TAG_MIN = 1;
 const THEME_TAG_MAX = 2;
 const THEME_TAG_REQUIRED_TOAST_ID = 'st-theme-tags-required';
 const THEME_TAG_REQUIRED_TOAST_DURATION = 4500;
-type RequiredFieldKey = 'title' | 'themeTags';
+type RequiredFieldKey = 'title' | 'themeTags' | 'audience';
 type ClearFieldKey = 'description' | 'firstMes';
 type StCreateStepKey = 'info' | 'assets' | 'rules';
 type StCreateStepIndex = 1 | 2 | 3;
@@ -76,6 +78,8 @@ const StGameCreate: React.FC = () => {
   const [availableThemeTags, setAvailableThemeTags] = useState<FlatThemeTag[]>([]);
   const [selectedThemeTagIds, setSelectedThemeTagIds] = useState<number[]>([]);
   const [themeTagError, setThemeTagError] = useState('');
+  const [selectedAudienceType, setSelectedAudienceType] = useState<ContentAudience | null>(null);
+  const [audienceError, setAudienceError] = useState('');
   const displayThemeTags = useLocalizedThemeTags(availableThemeTags);
   const [highlightField, setHighlightField] = useState<RequiredFieldKey | ''>('');
   const [showPendingAssetsConfirm, setShowPendingAssetsConfirm] = useState(false);
@@ -282,6 +286,10 @@ const StGameCreate: React.FC = () => {
 
   const canProceedToAssetsStep = () => {
     setError('');
+    if (!validateAudienceType()) {
+      guideToRequiredField('audience', t('createGame.contentAudienceRequired'));
+      return false;
+    }
     if (!validateThemeTags()) {
       const message = t('stGameCreate.themeTagsFieldRequired');
       // 功能注释：题材缺失只走 toast + 滚到标签区，不再在下一步按钮上插红色横幅
@@ -434,6 +442,8 @@ const StGameCreate: React.FC = () => {
         const data: any = resp?.data?.data;
         if (!destroyed) {
           setSelectedThemeTagIds(normalizeThemeTagIds(data?.theme_tag_ids));
+          setSelectedAudienceType(isValidContentAudience(data?.audience_type) ? data.audience_type : null);
+          setAudienceError('');
         }
       } catch {
         // ignore theme tag hydrate errors
@@ -461,12 +471,27 @@ const StGameCreate: React.FC = () => {
     });
   };
 
+  const handleAudienceTypeChange = (next: ContentAudience) => {
+    setSelectedAudienceType(next);
+    setAudienceError('');
+    setHighlightField((current) => current === 'audience' ? '' : current);
+  };
+
   const validateThemeTags = (): boolean => {
     if (selectedThemeTagIds.length < THEME_TAG_MIN || selectedThemeTagIds.length > THEME_TAG_MAX) {
       setThemeTagError(t('createGame.themeTagRequired'));
       return false;
     }
     setThemeTagError('');
+    return true;
+  };
+
+  const validateAudienceType = (): boolean => {
+    if (!isValidContentAudience(selectedAudienceType)) {
+      setAudienceError(t('createGame.contentAudienceRequired'));
+      return false;
+    }
+    setAudienceError('');
     return true;
   };
 
@@ -564,6 +589,12 @@ const StGameCreate: React.FC = () => {
       return false;
     }
 
+    if (!validateAudienceType()) {
+      const message = t('createGame.contentAudienceRequired');
+      guideToRequiredField('audience', message);
+      return false;
+    }
+
     if (!validateThemeTags()) {
       const message = t('stGameCreate.themeTagsFieldRequired');
       guideToRequiredField('themeTags', message);
@@ -579,6 +610,10 @@ const StGameCreate: React.FC = () => {
     if (!trimmedTitle) {
       setError(t('stGameCreate.titleRequired'));
       throw new Error(t('stGameCreate.titleRequired'));
+    }
+
+    if (!validateAudienceType()) {
+      throw new Error(t('createGame.contentAudienceRequired'));
     }
 
     if (!validateThemeTags()) {
@@ -632,6 +667,7 @@ const StGameCreate: React.FC = () => {
       await gameTagsApi.setGameTagsForGame({
         fileId: String(id),
         tagIds: selectedThemeTagIds,
+        audienceType: selectedAudienceType || undefined,
       });
       return id;
     } catch (e: any) {
@@ -699,6 +735,7 @@ const StGameCreate: React.FC = () => {
         shareType: payload.shareType,
         versionNotes: payload.versionNotes,
         notifyFavoritedUsers: payload.notifyFavoritedUsers,
+        audienceType: payload.audienceType,
       });
 
       if (!response.data.success) {
@@ -764,32 +801,45 @@ const StGameCreate: React.FC = () => {
         </div>
 
         {step === 1 && (
-          <div
-            ref={themeTagsPanelRef}
-            className={`${styles.themeTagsPanel} ${highlightField === 'themeTags' ? styles.requiredHighlight : ''}`}
-          >
-            <div className={styles.themeTagsHeader}>
-              <span className={styles.themeTagsLabel}>{t('createGame.gameTags')}<span className={styles.requiredMark}>*</span></span>
-              <span className={styles.themeTagsHint}>{t('createGame.min1Max2Tags')}</span>
+          <>
+            <div
+              className={`${styles.themeTagsPanel} ${highlightField === 'audience' ? styles.requiredHighlight : ''}`}
+            >
+              <ContentAudienceField
+                value={selectedAudienceType}
+                onChange={handleAudienceTypeChange}
+                required
+                error={audienceError}
+                disabled={saving || publishing}
+              />
             </div>
-            <div className={styles.themeTagsWrap}>
-              {displayThemeTags.map((tag) => {
-                const active = selectedThemeTagIds.includes(tag.id);
-                return (
-                  <button
-                    key={tag.id}
-                    type="button"
-                    className={`${styles.themeTagChip} ${active ? styles.themeTagChipActive : ''}`}
-                    onClick={() => handleThemeTagToggle(tag.id)}
-                    title={tag.pathLabel || tag.name}
-                  >
-                    {tag.name}
-                  </button>
-                );
-              })}
+            <div
+              ref={themeTagsPanelRef}
+              className={`${styles.themeTagsPanel} ${highlightField === 'themeTags' ? styles.requiredHighlight : ''}`}
+            >
+              <div className={styles.themeTagsHeader}>
+                <span className={styles.themeTagsLabel}>{t('createGame.gameTags')}<span className={styles.requiredMark}>*</span></span>
+                <span className={styles.themeTagsHint}>{t('createGame.min1Max2Tags')}</span>
+              </div>
+              <div className={styles.themeTagsWrap}>
+                {displayThemeTags.map((tag) => {
+                  const active = selectedThemeTagIds.includes(tag.id);
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      className={`${styles.themeTagChip} ${active ? styles.themeTagChipActive : ''}`}
+                      onClick={() => handleThemeTagToggle(tag.id)}
+                      title={tag.pathLabel || tag.name}
+                    >
+                      {tag.name}
+                    </button>
+                  );
+                })}
+              </div>
+              {themeTagError ? <div className={styles.themeTagError}>{themeTagError}</div> : null}
             </div>
-            {themeTagError ? <div className={styles.themeTagError}>{themeTagError}</div> : null}
-          </div>
+          </>
         )}
 
         {step === 1 && (

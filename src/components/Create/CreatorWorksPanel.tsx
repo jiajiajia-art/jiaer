@@ -20,12 +20,17 @@ import {
     type DraftBoxFilterKey,
 } from '../../utils/draftBoxFilter';
 import { buildGameDetailNavigateState } from '../../utils/gameDetailNavigation';
+import {
+    WORKS_MOBILE_MEDIA,
+    WORKS_MOBILE_PREVIEW_SIZE,
+    WORKS_PAGE_SIZE,
+    resolveWorksListLimit,
+    shouldShowWorksViewAll,
+} from '../../utils/creatorWorksPreview';
 
 export type WorksTabKey = 'published' | 'drafts' | 'favorites';
 
-/** 2 列(手机)与 5 列(PC) 的最小公倍数，保证网格行完整 */
-export const WORKS_PAGE_SIZE = 10;
-const WORKS_PREVIEW_SIZE = 2;
+export { WORKS_PAGE_SIZE };
 
 const paginateItems = <T,>(items: T[], page: number, pageSize: number): T[] => {
     const start = (Math.max(1, page) - 1) * pageSize;
@@ -67,7 +72,11 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     const [favoritesLoaded, setFavoritesLoaded] = useState(false);
 
     const isPreview = mode === 'preview';
-    const listPageSize = isPreview ? WORKS_PREVIEW_SIZE : WORKS_PAGE_SIZE;
+    const [isMobileViewport, setIsMobileViewport] = useState(() => (
+        typeof window !== 'undefined' ? window.matchMedia(WORKS_MOBILE_MEDIA).matches : false
+    ));
+    const listPageSize = resolveWorksListLimit({ mode, isMobile: isMobileViewport });
+    const showWorksViewAll = shouldShowWorksViewAll({ mode, isMobile: isMobileViewport });
 
     const { publishedGames, draftGames } = useMemo(
         () => partitionCreatorGames(fileMetas),
@@ -92,8 +101,8 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
         [filteredDraftGames, worksPage, isPreview, listPageSize],
     );
     const displayedFavoriteGames = useMemo(
-        () => (isPreview ? favoriteGames.slice(0, WORKS_PREVIEW_SIZE) : favoriteGames),
-        [favoriteGames, isPreview],
+        () => (isPreview ? favoriteGames.slice(0, listPageSize) : favoriteGames),
+        [favoriteGames, isPreview, listPageSize],
     );
 
     const worksTotalPages = worksTab === 'published'
@@ -133,9 +142,10 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     const loadFavoriteGames = async (page = 1) => {
         setIsLoadingFavorites(true);
         try {
+            const favoritePageSize = resolveWorksListLimit({ mode, isMobile: isMobileViewport });
             const response = await favoriteApi.list({
-                limit: String(isPreview ? WORKS_PREVIEW_SIZE : WORKS_PAGE_SIZE),
-                offset: String((Math.max(1, page) - 1) * (isPreview ? WORKS_PREVIEW_SIZE : WORKS_PAGE_SIZE)),
+                limit: String(favoritePageSize),
+                offset: String((Math.max(1, page) - 1) * favoritePageSize),
             });
             if (response.data.success && response.data.data) {
                 const { rows, total } = response.data.data;
@@ -158,6 +168,14 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     useEffect(() => {
         void loadMyGames();
     }, [user?.user?.id]);
+
+    useEffect(() => {
+        const mediaQuery = window.matchMedia(WORKS_MOBILE_MEDIA);
+        const syncViewport = () => setIsMobileViewport(mediaQuery.matches);
+        syncViewport();
+        mediaQuery.addEventListener('change', syncViewport);
+        return () => mediaQuery.removeEventListener('change', syncViewport);
+    }, []);
 
     useEffect(() => {
         if (!isWorksTabKey(initialTab)) return;
@@ -308,7 +326,9 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
         navigate(`/create/works?tab=${worksTab}`);
     };
 
-    const skeletonCount = isPreview ? WORKS_PREVIEW_SIZE : 8;
+    const skeletonCount = isPreview
+        ? (isMobileViewport ? WORKS_MOBILE_PREVIEW_SIZE : 5)
+        : 8;
     const showPagination = !isPreview && worksTotalPages > 1 && !(
         (worksTab === 'published' && (isLoadingMyGames || publishedGames.length === 0))
         || (worksTab === 'drafts' && (isLoadingMyGames || draftGames.length === 0 || filteredDraftGames.length === 0))
@@ -348,7 +368,7 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                     )}
                 </div>
 
-                {isPreview ? (
+                {showWorksViewAll ? (
                     <div className={styles.worksViewAllSlot}>
                         <button
                             type="button"

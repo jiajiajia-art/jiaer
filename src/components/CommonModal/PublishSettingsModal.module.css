@@ -109,9 +109,10 @@
     display: flex;
     flex-direction: column;
     gap: 14px;
-    width: min(520px, 100%);
-    margin: 0 auto;
+    width: 100%;
+    margin: 0;
     padding-bottom: 8px;
+    box-sizing: border-box;
 }
 
 .formGroup {
@@ -122,7 +123,7 @@
 .coverFormGroup {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 8px;
     width: 100%;
 }

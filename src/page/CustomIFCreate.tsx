@@ -10,6 +10,8 @@ import toast from 'react-hot-toast';
 import getGameDataApi from '../api/home/getGameData';
 import gameTagsApi from '../api/gameTags/gameTagsApi';
 import { flattenThemeTags, useLocalizedThemeTags, type FlatThemeTag } from '../utils/themeTags';
+import ContentAudienceField from '../components/ContentAudienceField';
+import { isValidContentAudience, type ContentAudience } from '../utils/contentAudience';
 import SimpleRichTextEditor from '../components/Common/SimpleRichTextEditor';
 import EditorApi from '../api/galgame/EditorData';
 import {
@@ -31,6 +33,8 @@ const CustomIFCreate: React.FC = () => {
   const [availableThemeTags, setAvailableThemeTags] = useState<FlatThemeTag[]>([]);
   const [selectedThemeTagIds, setSelectedThemeTagIds] = useState<number[]>([]);
   const [themeTagError, setThemeTagError] = useState<string>('');
+  const [selectedAudienceType, setSelectedAudienceType] = useState<ContentAudience | null>(null);
+  const [audienceError, setAudienceError] = useState<string>('');
   const displayThemeTags = useLocalizedThemeTags(availableThemeTags);
   const fileRef = useRef<HTMLInputElement>(null);
   const dirRef = useRef<HTMLInputElement>(null);
@@ -85,6 +89,8 @@ const CustomIFCreate: React.FC = () => {
             .filter((id) => Number.isInteger(id) && id > 0)
           : [];
         setSelectedThemeTagIds(existingTagIds.slice(0, 2));
+        setSelectedAudienceType(isValidContentAudience(data?.audience_type) ? data.audience_type : null);
+        setAudienceError('');
       } catch (error) {
         console.error('加载游戏信息失败:', error);
         // 失败时不打断流程，仅提示
@@ -136,6 +142,11 @@ const CustomIFCreate: React.FC = () => {
       setThemeTagError('');
       return [...prev, tagId];
     });
+  };
+
+  const handleAudienceTypeChange = (next: ContentAudience) => {
+    setSelectedAudienceType(next);
+    setAudienceError('');
   };
   // 旧的 zip/dir 选择器删除；保留单文件选择器以支持点击选择
   const singleRef = fileRef; // 语义别名：单文件 index.html 选择器
@@ -346,7 +357,13 @@ const CustomIFCreate: React.FC = () => {
     if (creating) return;
     const metaOnly = !!opts?.metaOnly;
     try {
-      // 实现作品标签必填与数量限制
+      // 实现作品分类与作品标签必填校验
+      if (!isValidContentAudience(selectedAudienceType)) {
+        setAudienceError(t('createGame.contentAudienceRequired'));
+        toast.error(t('createGame.contentAudienceRequired'));
+        return;
+      }
+      setAudienceError('');
       if (selectedThemeTagIds.length < 1 || selectedThemeTagIds.length > 2) {
         setThemeTagError(t('createGame.themeTagRequired'));
         toast.error(t('createGame.themeTagRequiredMax2'));
@@ -440,6 +457,7 @@ const CustomIFCreate: React.FC = () => {
       await gameTagsApi.setGameTagsForGame({
         fileId: String(id),
         tagIds: selectedThemeTagIds,
+        audienceType: selectedAudienceType,
       });
 
       setLastUploadOk(true);
@@ -469,6 +487,12 @@ const CustomIFCreate: React.FC = () => {
   };
 const handleCreate = () => {
     setError('');
+    if (!isValidContentAudience(selectedAudienceType)) {
+      setAudienceError(t('createGame.contentAudienceRequired'));
+      toast.error(t('createGame.contentAudienceRequired'));
+      return;
+    }
+    setAudienceError('');
     if (selectedThemeTagIds.length < 1 || selectedThemeTagIds.length > 2) {
       setThemeTagError(t('createGame.themeTagRequired'));
       toast.error(t('createGame.themeTagRequiredMax2'));
@@ -576,6 +600,14 @@ const handleCreate = () => {
               </div>
 
               <div className={styles.fieldBlock}>
+                {/* 功能注释：作品分类在作品标签之前，必选且只能选一项 */}
+                <ContentAudienceField
+                  value={selectedAudienceType}
+                  onChange={handleAudienceTypeChange}
+                  required
+                  error={audienceError}
+                  disabled={creating || isUploading}
+                />
                 {/* 功能注释：对齐图1——标题+必填星号，说明在下方；标签为描边芯片而非纯文字 */}
                 <div className={styles.themeTagsHead}>
                   <label className={styles.fieldLabel}>

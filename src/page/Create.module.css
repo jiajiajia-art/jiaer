@@ -1599,6 +1599,13 @@
     min-width: 0;
 }
 
+@media (min-width: 769px) {
+    /* PC 预览已铺满作品，不展示「全部」 */
+    .worksViewAllSlot {
+        display: none;
+    }
+}
+
 .worksViewAllBtn {
     appearance: none;
     border: none;

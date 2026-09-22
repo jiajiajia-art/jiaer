@@ -8,6 +8,7 @@ import gameTagsApi from '../../api/gameTags/gameTagsApi';
 import type { AllGameData, WorldSetting as GalgameWorldSetting } from '../../api/galgame/EditorData.type';
 import type { WorldInteractionGameData, WorldSetting as WIWorldSetting } from '../../api/worldInteraction/worldInteractionApi.type';
 import type { Scene as ApiScene } from '../../api/galgame/getGalgamePreset.type';
+import { isValidContentAudience, type ContentAudience } from '../../utils/contentAudience';
 
 interface UseEditorSubmitOptions {
     fileId: string | null;
@@ -29,6 +30,8 @@ interface WorldPanelSubmitData {
     worldSetting?: Partial<GalgameWorldSetting> | Partial<WIWorldSetting>;
     themeTagIds?: number[];
     originalThemeTagIds?: number[];
+    audienceType?: ContentAudience | null;
+    originalAudienceType?: ContentAudience | null;
 }
 
 const normalizeThemeTagIds = (ids?: number[]) =>
@@ -81,10 +84,23 @@ export const useEditorSubmit = ({
                         const themeTagIds = normalizeThemeTagIds(worldData?.themeTagIds);
                         const originalThemeTagIds = normalizeThemeTagIds(worldData?.originalThemeTagIds);
                         const hasThemeTagChanges = !isSameThemeTagIds(themeTagIds, originalThemeTagIds);
+                        const audienceType = isValidContentAudience(worldData?.audienceType)
+                            ? worldData.audienceType
+                            : null;
+                        const originalAudienceType = isValidContentAudience(worldData?.originalAudienceType)
+                            ? worldData.originalAudienceType
+                            : null;
+                        const hasAudienceChanges = audienceType !== originalAudienceType;
 
                         // 实现题材必填校验
                         if (themeTagIds.length < 1 || themeTagIds.length > 2) {
                             toast.error(t('common.editorSubmit.themeTagRequired'));
+                            setIsSubmitting(false);
+                            return false;
+                        }
+                        // 实现作品分类必填校验
+                        if (!audienceType) {
+                            toast.error(t('createGame.contentAudienceRequired'));
                             setIsSubmitting(false);
                             return false;
                         }
@@ -95,17 +111,18 @@ export const useEditorSubmit = ({
                             } else {
                                 response = await EditorApi.updateWorldSetting(fileId, worldData.worldSetting as Partial<GalgameWorldSetting>);
                             }
-                        } else if (!hasThemeTagChanges) {
+                        } else if (!hasThemeTagChanges && !hasAudienceChanges) {
                             toast.error(t('common.editorSubmit.noChangesToSave'));
                             setIsSubmitting(false);
                             return false;
                         }
 
-                        // 实现题材标签独立保存
-                        if (worldData?.worldSetting || hasThemeTagChanges) {
+                        // 实现题材标签与作品分类独立保存
+                        if (worldData?.worldSetting || hasThemeTagChanges || hasAudienceChanges) {
                             const tagResponse = await gameTagsApi.setGameTagsForGame({
                                 fileId,
                                 tagIds: themeTagIds,
+                                audienceType,
                             });
                             if (!tagResponse.data?.success) {
                                 toast.error(t('common.editorSubmit.tagSaveFailed'));

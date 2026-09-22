@@ -14,8 +14,8 @@ export const IDEA_NPC_COUNT_MAX = 8;
 /** 创意过短时的回退预计（仍落在合法区间内） */
 export const EST_PORTRAIT_COUNT = IDEA_NPC_COUNT_MIN + 1;
 export const EST_SCENE_COUNT = 6;
-/** 封面固定 1 张 */
-export const EST_COVER_COUNT = 1;
+/** 封面固定横+竖各 1 张（各扣一次生图积分） */
+export const EST_COVER_COUNT = 2;
 
 const DEFAULT_TEXT_COST = 10;
 const DEFAULT_IMAGE_UNIT = 6;

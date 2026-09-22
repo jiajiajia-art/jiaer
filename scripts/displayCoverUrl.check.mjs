@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 
 import {
   resolveGameCoverUrl,
+  resolveGameListCoverUrl,
   toDisplayCoverUrl,
 } from '../src/utils/displayCoverUrl.ts';
 
@@ -42,6 +43,25 @@ test('resolveGameCoverUrl_即使display误填原图也应纠正', () => {
     resolveGameCoverUrl({
       display_cover_url: '/public/visual/images/abc/display-cover/cover.webp',
       cover_url: raw,
+    }),
+    '/public/visual/images/abc/display-cover/cover.webp',
+  );
+});
+
+test('resolveGameListCoverUrl_优先竖版封面且不改写portrait-cover路径', () => {
+  const portrait = '/public/visual/images/abc/portrait-cover/cover.webp';
+  assert.equal(
+    resolveGameListCoverUrl({
+      portrait_cover_url: portrait,
+      cover_url: '/public/visual/images/abc/cover/cover.webp',
+      display_cover_url: '/public/visual/images/abc/display-cover/cover.webp',
+    }),
+    portrait,
+  );
+  assert.equal(
+    resolveGameListCoverUrl({
+      portrait_cover_url: '',
+      cover_url: '/public/visual/images/abc/cover/cover.png',
     }),
     '/public/visual/images/abc/display-cover/cover.webp',
   );

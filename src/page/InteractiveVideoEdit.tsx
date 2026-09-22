@@ -818,6 +818,7 @@ const InteractiveVideoEdit: React.FC = () => {
                 shareType: payload.shareType,
                 versionNotes: payload.versionNotes,
                 notifyFavoritedUsers: payload.notifyFavoritedUsers,
+                audienceType: payload.audienceType,
             });
             if (!response.data?.success) {
                 throw new Error(response.data?.message || '发布失败');
@@ -1495,6 +1496,7 @@ const InteractiveVideoEdit: React.FC = () => {
                     onPublish={handlePublishGame}
                     fileId={normalizedFileId}
                     coverUrl={gameDetail.cover_url}
+                    portraitCoverUrl={gameDetail.portrait_cover_url || undefined}
                     onCoverUploaded={loadEditData}
                     publishing={isPublishing}
                     engine="INTERACTIVE-VIDEO"

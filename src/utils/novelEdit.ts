@@ -3,6 +3,7 @@ import {
   descriptionToPlainText,
   validateDescriptionContent,
 } from './gameDescriptionHtml.ts';
+import { isValidContentAudience, type ContentAudience } from './contentAudience.ts';
 
 export { NOVEL_DESCRIPTION_MAX_LENGTH };
 export const THEME_TAG_MAX = 2;
@@ -15,13 +16,15 @@ export type NovelEditValidationError =
   | 'DESCRIPTION_TOO_LONG'
   | 'COVER_REQUIRED'
   | 'THEME_TAG_MIN'
-  | 'THEME_TAG_MAX';
+  | 'THEME_TAG_MAX'
+  | 'AUDIENCE_REQUIRED';
 
 export type NovelEditFormInput = {
   title: string;
   description: string;
   hasCover: boolean;
   themeTagIds: number[];
+  audienceType?: ContentAudience | null;
 };
 
 export function toggleThemeTagSelection(
@@ -91,6 +94,9 @@ export function validateNovelPublish(input: NovelEditFormInput): {
   if (tagCount < THEME_TAG_MIN_PUBLISH) {
     return { valid: false, error: 'THEME_TAG_MIN' };
   }
+  if (!isValidContentAudience(input.audienceType)) {
+    return { valid: false, error: 'AUDIENCE_REQUIRED' };
+  }
 
   return { valid: true };
 }
@@ -108,6 +114,8 @@ export function mapNovelEditErrorToI18nKey(error?: NovelEditValidationError): st
     case 'THEME_TAG_MIN':
     case 'THEME_TAG_MAX':
       return 'createGame.themeTagRequired';
+    case 'AUDIENCE_REQUIRED':
+      return 'createGame.contentAudienceRequired';
     default:
       return 'createGame.publishFailed';
   }

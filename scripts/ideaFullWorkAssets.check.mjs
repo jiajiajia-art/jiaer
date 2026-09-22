@@ -73,7 +73,7 @@ test('estimateFullWorkPoints_可按创意描述重算积分', async () => {
   );
 });
 
-test('estimateFullWorkPoints_勾选封面增加6', async () => {
+test('estimateFullWorkPoints_勾选封面增加12', async () => {
   const { estimateFullWorkPoints } = await loadEstimate();
   const base = estimateFullWorkPoints({
     mode: 'full',
@@ -84,7 +84,7 @@ test('estimateFullWorkPoints_勾选封面增加6', async () => {
     assets: { portraits: false, scenes: false, cover: true },
   });
   assert.equal(base, 10);
-  assert.equal(withCover, 16);
+  assert.equal(withCover, 22);
 });
 
 test('shouldGenerateAssetsAfterIdea_full且有勾选', async () => {
@@ -135,6 +135,7 @@ test('summarizeAssetCompleteness_齐全无缺口', async () => {
     npcs: [{ images: { base: '/n.webp' } }],
     scenes: [{ image: '/s.webp' }],
     coverUrl: '/cover.webp',
+    portraitCoverUrl: '/portrait.webp',
   });
   assert.equal(r.missingPortraits, 0);
   assert.equal(r.missingScenes, 0);
