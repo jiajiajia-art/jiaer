@@ -1,0 +1,1128 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Noto+Serif+SC:wght@500;600;700;900&family=ZCOOL+KuaiLe&family=ZCOOL+XiaoWei&family=Ma+Shan+Zheng&family=Pixelify+Sans:wght@400;500;600;700&family=VT323&display=swap');
+@import 'tailwindcss';
+
+/* 主题色以运行时 CSS 变量驱动，支持深色/浅色与主题色全局切换 */
+@theme {
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-jade: var(--jade);
+  --color-jade-deep: var(--jade-deep);
+  --color-coral: var(--coral);
+  --color-gold: var(--gold);
+  --color-danger: var(--danger);
+  --color-line: var(--line);
+
+  --font-serif: 'Noto Serif SC', serif;
+  --font-sans: 'Noto Sans SC', sans-serif;
+}
+
+/* —— 字体皮肤：整体换字，仅改字形不动布局 ——
+   通过 <html class="font-xxx"> 覆盖 --font-serif / --font-sans。
+   默认（font-song）沿用思源宋体/黑体，无需类名也成立。 */
+.font-round {
+  --font-serif: 'ZCOOL KuaiLe', 'Noto Serif SC', serif;
+  --font-sans: 'ZCOOL KuaiLe', 'Noto Sans SC', sans-serif;
+}
+.font-elegant {
+  --font-serif: 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
+  --font-sans: 'ZCOOL XiaoWei', 'Noto Sans SC', sans-serif;
+}
+.font-brush {
+  --font-serif: 'Ma Shan Zheng', 'Noto Serif SC', serif;
+  --font-sans: 'Noto Sans SC', sans-serif;
+}
+
+/* 星光2005 · 年代美术：奶油纸白 / 旧报深褐 / 酒红 / 唱片墨绿 */
+:root {
+  --paper: #f3e9d6;
+  --paper-2: #faf3e4;
+  --ink: #342c28;
+  --ink-soft: #6b5d50;
+  --jade: #31594f;
+  --jade-deep: #23423a;
+  --coral: #8f3c4a;
+  --gold: #b98a46;
+  --danger: #9a3540;
+  --line: #dfcfb4;
+  --char: #4a4a8f; /* 人物实体 · 靛色 */
+  color-scheme: light;
+}
+
+.dark {
+  --paper: #1b1815;
+  --paper-2: #262220;
+  --ink: #ece3d4;
+  --ink-soft: #a99f8d;
+  --jade: #4db3a4;
+  --jade-deep: #79cabd;
+  --coral: #ef927f;
+  --gold: #d9b676;
+  --danger: #db6f76;
+  --line: #3b352d;
+  --char: #9a9ae0; /* 人物实体 · 靛色（深色） */
+  color-scheme: dark;
+}
+
+/* 主题色预设（primary = jade 槽位） */
+.accent-jade { --jade: #31594f; --jade-deep: #23423a; }
+.accent-jade.dark { --jade: #5aa596; --jade-deep: #7fc4b6; }
+.accent-plum { --jade: #8f3c4a; --jade-deep: #6b2b37; }
+.accent-plum.dark { --jade: #c9788a; --jade-deep: #e0a2b0; }
+.accent-ink { --jade: #3d4a57; --jade-deep: #232c34; }
+.accent-ink.dark { --jade: #8fa4b6; --jade-deep: #b6c6d4; }
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+/* 组件基础规范：所有原生控件共享字体、盒模型与行高，避免不同页面出现尺寸跳变。 */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  line-height: 1.4;
+}
+
+button {
+  min-height: 2.25rem;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+select,
+textarea {
+  max-width: 100%;
+}
+
+textarea {
+  min-height: 4.5rem;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background-color: var(--color-paper);
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--coral) 30%, transparent);
+}
+
+/* Hide scrollbars until scrolling */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+*:hover {
+  scrollbar-color: color-mix(in srgb, var(--ink-soft) 50%, transparent) transparent;
+}
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 8px;
+}
+*:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--ink-soft) 45%, transparent);
+}
+
+/* 键盘可达焦点环：仅在键盘导航时出现，鼠标点击不打扰 */
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--jade) 65%, transparent);
+  outline-offset: 2px;
+}
+
+/* 滑杆细节：更纤细的轨道、圆润带光晕的滑块，跟随 accent-color 语义色 */
+input[type="range"] {
+  height: 1.5rem;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 14px;
+  width: 14px;
+  border-radius: 9999px;
+  background: currentColor;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25), 0 0 0 3px color-mix(in srgb, currentColor 22%, transparent);
+  transition: box-shadow 0.15s ease, transform 0.1s ease;
+}
+input[type="range"]:active::-webkit-slider-thumb {
+  transform: scale(1.12);
+}
+input[type="range"]::-moz-range-thumb {
+  height: 14px;
+  width: 14px;
+  border: none;
+  border-radius: 9999px;
+  background: currentColor;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25), 0 0 0 3px color-mix(in srgb, currentColor 22%, transparent);
+}
+
+/* Paper grain texture */
+.paper-grain {
+  background-image: radial-gradient(color-mix(in srgb, var(--ink) 4%, transparent) 1px, transparent 1px);
+  background-size: 4px 4px;
+}
+
+/* 剧情文本换行与排版 */
+.story-prose {
+  /* 剧情正文统一跟随「设置 · 字体风格」——用 --font-serif（宋/圆/雅/毛笔四种皆随之切换），
+     文艺质感更贴合叙事，且毛笔等风格下也能真正生效。 */
+  font-family: var(--font-serif);
+  white-space: pre-wrap;
+  line-height: 1.95;
+  letter-spacing: 0.01em;
+}
+
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-pop { animation: pop-in 0.35s ease both; }
+
+@keyframes value-flash {
+  0% { color: var(--coral); transform: scale(1.25); }
+  100% { color: inherit; transform: scale(1); }
+}
+.animate-flash { animation: value-flash 0.9s ease; }
+
+/* 度日「推进」圆钮：缓旋虚线光环 + 呼吸柔光 */
+@keyframes advance-spin { to { transform: rotate(360deg); } }
+@keyframes advance-breath {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 0.95; transform: scale(1.12); }
+}
+.advance-ring { animation: advance-spin 14s linear infinite; }
+.advance-halo { animation: advance-breath 3.4s ease-in-out infinite; }
+
+/* 流转的渐变描边光环：conic 渐变 + 遮罩挖空成一圈细边 */
+.advance-conic {
+  background: conic-gradient(from 0deg,
+    var(--coral), var(--jade), #f5e6a8, var(--jade-deep), var(--coral));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+  animation: advance-spin 6s linear infinite;
+}
+/* 环绕星光：定点闪烁 + 轻微飘动 */
+@keyframes advance-twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.4) rotate(0deg); }
+  40% { opacity: 1; transform: scale(1.1) rotate(20deg); }
+  70% { opacity: 0.5; transform: scale(0.8) rotate(-10deg); }
+}
+.advance-star { animation: advance-twinkle 2.6s ease-in-out infinite; }
+
+@keyframes blink {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
+}
+.typing-dot { animation: blink 1.2s infinite; }
+
+/* 当前所在地节点的柔光呼吸（世界地图） */
+@keyframes here-glow {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--jade) 45%, transparent); }
+  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--jade) 0%, transparent); }
+}
+.here-glow { animation: here-glow 2.4s ease-in-out infinite; }
+
+/* 地图纸面暗角，营造老地图质感 */
+.map-vignette {
+  box-shadow: inset 0 0 60px color-mix(in srgb, var(--ink) 18%, transparent),
+              inset 0 0 0 1px color-mix(in srgb, var(--gold) 12%, transparent);
+}
+
+/* ═══════════ MUD 石牌点选皮肤（.mud-shell，不影响封面/建角） ═══════════ */
+
+/* 回纹金线：金色双细线夹一枚菱形，作章节分隔 */
+.mud-rule {
+  position: relative;
+  height: 12px;
+  margin: 2px 0;
+}
+.mud-rule::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  transform: translateY(-0.5px);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--gold) 72%, transparent) 14%,
+    color-mix(in srgb, var(--gold) 72%, transparent) 86%,
+    transparent
+  );
+}
+.mud-rule::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  background: var(--gold);
+  box-shadow: 0 0 0 3px var(--paper-2), -13px 0 0 -2px var(--gold), 13px 0 0 -2px var(--gold);
+}
+
+/* 石牌：地点 / 人物 / 导航的点选牌位 */
+.stone-tablet {
+  position: relative;
+  border-radius: 13px 13px 5px 5px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--paper-2) 90%, var(--gold) 10%),
+    color-mix(in srgb, var(--paper) 84%, var(--ink) 4%)
+  );
+  border: 1px solid color-mix(in srgb, var(--gold) 38%, var(--line));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #ffffff 34%, transparent),
+    0 2px 7px color-mix(in srgb, var(--ink) 14%, transparent);
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+.stone-tablet:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--jade) 55%, var(--gold));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #ffffff 40%, transparent),
+    0 5px 14px color-mix(in srgb, var(--ink) 20%, transparent);
+}
+.stone-tablet--here {
+  background: linear-gradient(180deg, var(--jade), var(--jade-deep));
+  border-color: color-mix(in srgb, var(--gold) 60%, var(--jade));
+  color: var(--paper-2);
+}
+.stone-tablet--unknown {
+  background: repeating-linear-gradient(
+    45deg,
+    color-mix(in srgb, var(--gold) 7%, var(--paper)),
+    color-mix(in srgb, var(--gold) 7%, var(--paper)) 6px,
+    color-mix(in srgb, var(--gold) 13%, var(--paper)) 6px,
+    color-mix(in srgb, var(--gold) 13%, var(--paper)) 12px
+  );
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--gold) 60%, transparent);
+}
+
+/* ═══════════ 仿真手机 UI ═══════════ */
+
+/* 应用打开：从右侧轻滑入并微放大，模拟 iOS 层级切换 */
+@keyframes phone-app-in {
+  from { opacity: 0; transform: translateX(14px) scale(0.985); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+.phone-app-in { animation: phone-app-in 0.28s cubic-bezier(0.32, 0.72, 0, 1) both; }
+
+/* 主屏图标网格：逐个错落浮现 */
+@keyframes phone-icon-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.9); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.phone-icon-in { animation: phone-icon-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+/* 编辑模式：图标抖动（仿 iOS 长按排序） */
+@keyframes phone-jiggle {
+  0% { transform: rotate(-1.4deg); }
+  50% { transform: rotate(1.4deg); }
+  100% { transform: rotate(-1.4deg); }
+}
+.phone-jiggle { animation: phone-jiggle 0.28s ease-in-out infinite; }
+.phone-jiggle:nth-child(even) { animation-delay: -0.14s; }
+
+/* 主屏翻页：横向滑动、吸附、隐藏滚动条 */
+.phone-pages { scroll-behavior: smooth; scrollbar-width: none; -ms-overflow-style: none; }
+.phone-pages::-webkit-scrollbar { display: none; }
+
+/* 隐藏滚动条（快捷回复横排等） */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* 聊天气泡：从下方轻弹入 */
+@keyframes bubble-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.bubble-in { animation: bubble-in 0.26s cubic-bezier(0.32, 0.72, 0, 1) both; }
+
+/* 打字指示器：三点错峰起伏 */
+@keyframes type-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+.type-dot { animation: type-bounce 1.3s infinite ease-in-out; }
+
+/* iOS squircle 图标：连续曲率圆角 + 极柔向下落影（不勾边、不成外圈） */
+.ios-icon {
+  position: relative;
+  border-radius: 22.5%; /* 接近 Apple 连续曲率圆角比例 */
+  /* 分层投影：近处收紧的接触阴影 + 远处柔和的落影，贴面更有质感 */
+  box-shadow:
+    0 1px 1px rgba(0, 0, 0, 0.22),
+    0 4px 9px -2px rgba(0, 0, 0, 0.28),
+    0 10px 22px -6px rgba(0, 0, 0, 0.22);
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.18s ease;
+}
+.ios-icon:active { transform: scale(0.9); }
+.group:active .ios-icon {
+  box-shadow:
+    0 1px 1px rgba(0, 0, 0, 0.2),
+    0 2px 5px -1px rgba(0, 0, 0, 0.24);
+}
+
+/* 手机壁纸：柔和网格光晕 */
+.phone-wallpaper {
+  background:
+    radial-gradient(120% 80% at 20% 0%, color-mix(in srgb, var(--jade) 55%, transparent), transparent 60%),
+    radial-gradient(120% 90% at 90% 100%, color-mix(in srgb, var(--coral) 40%, transparent), transparent 55%),
+    linear-gradient(160deg, #12241f, #0b1310);
+}
+
+/* 钛金属中框：多层渐变模拟拉丝金属 + 高光棱边 + 外投影 */
+.phone-frame {
+  background:
+    linear-gradient(145deg, #6e7075 0%, #3a3c40 18%, #26282b 50%, #3a3c40 82%, #6e7075 100%);
+  box-shadow:
+    0 34px 70px -18px rgba(0, 0, 0, 0.65),
+    0 2px 6px rgba(0, 0, 0, 0.4),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12),
+    inset 0 1px 2px rgba(255, 255, 255, 0.25);
+}
+/* 侧边实体键：与中框同色系、带微高光 */
+.phone-btn {
+  background: linear-gradient(180deg, #55575c, #303236);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* 抖音旋转唱片 */
+@keyframes dy-spin { to { transform: rotate(360deg); } }
+.dy-disc { animation: dy-spin 4s linear infinite; }
+
+/* 抖音音乐名滚动 */
+@keyframes dy-marquee { 0%,15% { transform: translateX(0); } 85%,100% { transform: translateX(calc(-100% + 210px)); } }
+.dy-marquee { animation: dy-marquee 6s ease-in-out infinite alternate; }
+
+/* 抖音双击爱心迸出 */
+@keyframes dy-burst {
+  0% { transform: translate(-50%, -50%) rotate(var(--r, 0deg)) scale(0.3); opacity: 0; }
+  30% { transform: translate(-50%, -50%) rotate(var(--r, 0deg)) scale(1.15); opacity: 1; }
+  60% { transform: translate(-50%, -50%) rotate(var(--r, 0deg)) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -80%) rotate(var(--r, 0deg)) scale(0.9); opacity: 0; }
+}
+.dy-burst { animation: dy-burst 0.8s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* 抖音底部播放进度条 */
+@keyframes dy-progress { from { width: 0%; } to { width: 100%; } }
+.dy-progress { animation: dy-progress 18s linear infinite; }
+.dy-progress-paused { animation-play-state: paused; }
+
+/* 灵动岛 */
+.dynamic-island {
+  background: #000;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* 微信气泡尾巴（左右两向） */
+.wx-bubble { position: relative; }
+.wx-bubble-left::before,
+.wx-bubble-right::after {
+  content: "";
+  position: absolute;
+  top: 12px;
+  width: 0;
+  height: 0;
+  border: 6px solid transparent;
+}
+.wx-bubble-left::before {
+  left: -5px;
+  border-right-color: #fff;
+  border-left: 0;
+}
+.wx-bubble-right::after {
+  right: -5px;
+  border-left-color: #95ec69;
+  border-right: 0;
+}
+
+/* 时辰盘：底栏中央的度日圆牌 */
+.hour-dial {
+  background: radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--gold) 26%, var(--paper-2)), var(--paper));
+  border: 2px solid color-mix(in srgb, var(--gold) 60%, var(--line));
+  box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--paper-2) 80%, transparent),
+    0 3px 10px color-mix(in srgb, var(--ink) 22%, transparent);
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+.hour-dial:hover {
+  transform: translateY(-2px) rotate(-4deg);
+  box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--paper-2) 80%, transparent),
+    0 6px 16px color-mix(in srgb, var(--gold) 40%, transparent);
+}
+.hour-dial:active {
+  transform: translateY(0) scale(0.96);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   毛玻璃皮肤（.skin-glass）
+   —— 极简 + 玻璃拟态：半透明表面 + 背景模糊 + 极细描边 + 环境光晕。
+   通过 <html class="skin-glass"> 全局开关，仅重皮不改结构；关闭即回到纸质皮肤。
+   ═══════════════════════════════════════════════════════════════ */
+
+/* 皮肤色板：把纸面 token 换成半透明表面，让底层环境光透出形成玻璃感 */
+.skin-glass {
+  --paper: rgba(255, 255, 255, 0.5);
+  --paper-2: rgba(255, 255, 255, 0.64);
+  --ink: #242a33;
+  --ink-soft: #5c6675;
+  --line: rgba(92, 104, 128, 0.2);
+  --glass-base: #eef1f7;
+  --glass-blur: 18px;
+}
+.skin-glass.dark {
+  --paper: rgba(28, 32, 42, 0.46);
+  --paper-2: rgba(40, 46, 60, 0.62);
+  --ink: #eef1f7;
+  --ink-soft: #b3bcce;
+  --line: rgba(255, 255, 255, 0.12);
+  --glass-base: #0d1017;
+}
+
+/* 环境光晕背景：跟随主题色（jade）、暖金与酒红做三点柔光，固定不随内容滚动 */
+.skin-glass body {
+  background:
+    radial-gradient(58% 48% at 12% -4%, color-mix(in srgb, var(--jade) 26%, transparent), transparent 68%),
+    radial-gradient(52% 44% at 104% 22%, color-mix(in srgb, var(--coral) 22%, transparent), transparent 66%),
+    radial-gradient(72% 60% at 50% 108%, color-mix(in srgb, var(--gold) 20%, transparent), transparent 68%),
+    var(--glass-base);
+  background-attachment: fixed;
+}
+
+/* 所有纸面表面统一玻璃化：半透明 + 背景模糊 + 提饱和（一处命中全站 bg-paper / bg-paper-2/xx） */
+.skin-glass [class*="bg-paper"] {
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+}
+
+/* 极简：去掉纸面颗粒与老地图暗角的厚重感 */
+.skin-glass .paper-grain { background-image: none; }
+.skin-glass .map-vignette {
+  box-shadow: inset 0 0 70px color-mix(in srgb, var(--ink) 10%, transparent),
+              inset 0 0 0 1px var(--line);
+}
+
+/* 石牌 → 玻璃卡片：柔和圆角、极细描边、内高光、悬浮轻起 */
+.skin-glass .stone-tablet {
+  border-radius: 14px;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  box-shadow: 0 6px 22px -10px color-mix(in srgb, var(--ink) 40%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+}
+.skin-glass .stone-tablet:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--jade) 55%, var(--line));
+  box-shadow: 0 12px 30px -12px color-mix(in srgb, var(--ink) 50%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+.skin-glass .stone-tablet--here {
+  background: linear-gradient(155deg,
+    color-mix(in srgb, var(--jade) 82%, transparent),
+    color-mix(in srgb, var(--jade-deep) 82%, transparent));
+  border-color: color-mix(in srgb, var(--jade) 60%, transparent);
+  color: #fff;
+}
+.skin-glass .stone-tablet--unknown {
+  background: color-mix(in srgb, var(--paper) 100%, transparent);
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--ink-soft) 40%, transparent);
+}
+
+/* 分隔线 → 极简发丝线，去掉金色菱形的年代装饰 */
+.skin-glass .mud-rule::before {
+  background: linear-gradient(90deg, transparent, var(--line) 18%, var(--line) 82%, transparent);
+}
+.skin-glass .mud-rule::after {
+  width: 5px;
+  height: 5px;
+  background: color-mix(in srgb, var(--jade) 65%, transparent);
+  box-shadow: none;
+}
+
+/* 时辰盘 → 玻璃圆牌 */
+.skin-glass .hour-dial {
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  box-shadow: 0 6px 18px -8px color-mix(in srgb, var(--ink) 40%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+}
+.skin-glass .hour-dial:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px -10px color-mix(in srgb, var(--jade) 45%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   超级可爱奢华皮肤（.skin-cute）
+   —— 蜜桃奶油 + 玫瑰金：粉调糖霜表面 + 圆润卡片 + 金边描线 + 柔光星尘。
+   通过 <html class="skin-cute"> 全局开关；仅重皮不改结构。
+   ═══════════════════════════════════════════════════════════════ */
+
+.skin-cute {
+  --paper: #fff6fa;
+  --paper-2: #fffdfe;
+  --ink: #5a3a4d;
+  --ink-soft: #a8788f;
+  --line: rgba(214, 137, 175, 0.28);
+  --jade: #e9779e;        /* 主色转玫瑰粉 */
+  --jade-deep: #c85585;
+  --coral: #f6a5b8;
+  --gold: #e6b45a;        /* 玫瑰金点缀 */
+  --cute-glow: rgba(233, 119, 158, 0.22);
+}
+.skin-cute.dark {
+  --paper: #2c1f2b;
+  --paper-2: #3a2838;
+  --ink: #ffe8f2;
+  --ink-soft: #d5a9c2;
+  --line: rgba(246, 165, 184, 0.24);
+  --jade: #ff9dc0;
+  --jade-deep: #e9779e;
+  --cute-glow: rgba(255, 157, 192, 0.24);
+}
+
+/* 糖霜柔光背景：蜜桃、玫瑰、鹅黄三点渐晕 + 细腻星尘 */
+.skin-cute body {
+  background:
+    radial-gradient(55% 45% at 8% -6%, color-mix(in srgb, var(--coral) 40%, transparent), transparent 66%),
+    radial-gradient(50% 42% at 106% 18%, color-mix(in srgb, var(--jade) 30%, transparent), transparent 64%),
+    radial-gradient(70% 58% at 50% 110%, color-mix(in srgb, var(--gold) 24%, transparent), transparent 68%),
+    linear-gradient(160deg, #fff0f6, #ffeef3 60%, #fdf3e8);
+  background-attachment: fixed;
+}
+
+/* 纸面糖霜化：柔和提亮 + 极淡玫瑰 */
+.skin-cute [class*="bg-paper"] {
+  backdrop-filter: saturate(1.15) brightness(1.02);
+  -webkit-backdrop-filter: saturate(1.15) brightness(1.02);
+}
+.skin-cute .paper-grain { background-image: none; }
+
+/* 石牌 → 奶油糖果卡：大圆角、玫瑰金细边、双层柔影、悬浮弹起 */
+.skin-cute .stone-tablet {
+  border-radius: 20px;
+  background: linear-gradient(160deg, var(--paper-2), color-mix(in srgb, var(--coral) 12%, var(--paper)));
+  border: 1.5px solid color-mix(in srgb, var(--gold) 45%, var(--line));
+  box-shadow: 0 10px 26px -12px var(--cute-glow),
+    0 2px 0 color-mix(in srgb, var(--gold) 30%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+.skin-cute .stone-tablet:hover {
+  transform: translateY(-3px) scale(1.015);
+  border-color: color-mix(in srgb, var(--jade) 60%, var(--gold));
+  box-shadow: 0 16px 34px -14px var(--cute-glow),
+    0 2px 0 color-mix(in srgb, var(--gold) 40%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.skin-cute .stone-tablet--here {
+  background: linear-gradient(155deg,
+    color-mix(in srgb, var(--jade) 88%, transparent),
+    color-mix(in srgb, var(--jade-deep) 88%, transparent));
+  border-color: color-mix(in srgb, var(--gold) 55%, transparent);
+  color: #fff;
+}
+.skin-cute .stone-tablet--unknown {
+  background: color-mix(in srgb, var(--paper) 100%, transparent);
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--jade) 35%, var(--line));
+}
+
+/* 老地图暗角 → 玫瑰柔框 */
+.skin-cute .map-vignette {
+  box-shadow: inset 0 0 80px color-mix(in srgb, var(--jade) 12%, transparent),
+              inset 0 0 0 1.5px color-mix(in srgb, var(--gold) 40%, var(--line));
+}
+
+/* 分隔线 → 玫瑰金发丝线 + 爱心/星点结节 */
+.skin-cute .mud-rule::before {
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--gold) 60%, var(--line)) 18%, color-mix(in srgb, var(--jade) 45%, var(--line)) 82%, transparent);
+}
+.skin-cute .mud-rule::after {
+  width: 6px;
+  height: 6px;
+  background: color-mix(in srgb, var(--jade) 70%, transparent);
+  box-shadow: 0 0 8px 1px var(--cute-glow);
+}
+
+/* 时辰盘 → 糖果圆牌 */
+.skin-cute .hour-dial {
+  background: linear-gradient(160deg, var(--paper-2), color-mix(in srgb, var(--coral) 14%, var(--paper)));
+  border: 1.5px solid color-mix(in srgb, var(--gold) 45%, var(--line));
+  box-shadow: 0 8px 20px -10px var(--cute-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+.skin-cute .hour-dial:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 14px 28px -12px var(--cute-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* 圆润所有虚线/实线卡片描边，让整体更软糯 */
+.skin-cute [class*="rounded-sm"] { border-radius: 12px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   梦幻星紫皮肤（.skin-dream）
+   —— 淡紫糖霜 + 星光玻璃：薰衣草表面 + 圆润卡片 + 柔光晕染 + 星尘。
+   仿明星养成手游的梦幻淡紫菜单，扩展至全站；仅重皮不改结构。
+   ═══════════════════════════════════════════════════════════════ */
+
+.skin-dream {
+  --paper: #f1ecfd;
+  --paper-2: #fbf9ff;
+  --ink: #47376f;
+  --ink-soft: #8b7cb4;
+  --line: rgba(150, 120, 220, 0.24);
+  --jade: #8b6fe0;        /* 主色转梦幻紫 */
+  --jade-deep: #6f52c4;
+  --coral: #e79ac9;       /* 蜜桃粉 */
+  --gold: #d6a94e;        /* 暖金点缀（金币/支票仍读作金） */
+  --dream-glow: rgba(150, 110, 220, 0.24);
+}
+.skin-dream.dark {
+  --paper: #221c38;
+  --paper-2: #2e2748;
+  --ink: #ece7ff;
+  --ink-soft: #b7ace0;
+  --line: rgba(180, 160, 240, 0.22);
+  --jade: #b49bf5;
+  --jade-deep: #cbb8ff;
+  --coral: #f0abd8;
+  --gold: #e0be6e;
+  --dream-glow: rgba(180, 150, 245, 0.28);
+}
+
+/* 星光柔光背景：薰衣草、蜜桃、鹅黄三点渐晕 + 梦幻底色 */
+.skin-dream body {
+  background:
+    radial-gradient(56% 46% at 6% -6%, color-mix(in srgb, var(--jade) 34%, transparent), transparent 66%),
+    radial-gradient(52% 44% at 106% 16%, color-mix(in srgb, var(--coral) 34%, transparent), transparent 64%),
+    radial-gradient(72% 60% at 50% 112%, color-mix(in srgb, var(--gold) 20%, transparent), transparent 68%),
+    linear-gradient(160deg, #f3eefe, #efe9fb 58%, #f7eef9);
+  background-attachment: fixed;
+}
+.skin-dream.dark body {
+  background:
+    radial-gradient(56% 46% at 6% -6%, color-mix(in srgb, var(--jade) 30%, transparent), transparent 66%),
+    radial-gradient(52% 44% at 106% 16%, color-mix(in srgb, var(--coral) 26%, transparent), transparent 64%),
+    radial-gradient(72% 60% at 50% 112%, color-mix(in srgb, var(--gold) 16%, transparent), transparent 68%),
+    linear-gradient(160deg, #1c1730, #221c38 58%, #281f3c);
+}
+
+/* 纸面星霜化：柔和提亮 + 极淡薰衣草 + 背景模糊玻璃感 */
+.skin-dream [class*="bg-paper"] {
+  backdrop-filter: blur(12px) saturate(1.2) brightness(1.02);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2) brightness(1.02);
+}
+.skin-dream .paper-grain { background-image: none; }
+
+/* 石牌 → 星光糖果卡：大圆角、淡紫细边、柔光双影、悬浮弹起 */
+.skin-dream .stone-tablet {
+  border-radius: 20px;
+  background: linear-gradient(160deg, var(--paper-2), color-mix(in srgb, var(--jade) 10%, var(--paper)));
+  border: 1.5px solid color-mix(in srgb, var(--jade) 30%, var(--line));
+  box-shadow: 0 10px 26px -12px var(--dream-glow),
+    0 2px 0 color-mix(in srgb, var(--jade) 18%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+.skin-dream .stone-tablet:hover {
+  transform: translateY(-3px) scale(1.015);
+  border-color: color-mix(in srgb, var(--jade) 55%, transparent);
+  box-shadow: 0 16px 34px -14px var(--dream-glow),
+    0 2px 0 color-mix(in srgb, var(--jade) 28%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.skin-dream .stone-tablet--here {
+  background: linear-gradient(155deg,
+    color-mix(in srgb, var(--jade) 90%, transparent),
+    color-mix(in srgb, var(--coral) 78%, transparent));
+  border-color: color-mix(in srgb, #ffffff 55%, transparent);
+  color: #fff;
+}
+.skin-dream .stone-tablet--unknown {
+  background: color-mix(in srgb, var(--paper) 100%, transparent);
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--jade) 32%, var(--line));
+}
+
+/* 老地图暗角 → 薰衣草柔框 */
+.skin-dream .map-vignette {
+  box-shadow: inset 0 0 80px color-mix(in srgb, var(--jade) 14%, transparent),
+              inset 0 0 0 1.5px color-mix(in srgb, var(--jade) 32%, var(--line));
+}
+
+/* 分隔线 → 星光发丝线 + 柔光结节 */
+.skin-dream .mud-rule::before {
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--jade) 50%, var(--line)) 18%, color-mix(in srgb, var(--coral) 45%, var(--line)) 82%, transparent);
+}
+.skin-dream .mud-rule::after {
+  width: 6px;
+  height: 6px;
+  background: color-mix(in srgb, var(--jade) 70%, transparent);
+  box-shadow: 0 0 8px 1px var(--dream-glow);
+}
+
+/* 时辰盘 → 星光圆牌 */
+.skin-dream .hour-dial {
+  background: linear-gradient(160deg, var(--paper-2), color-mix(in srgb, var(--jade) 12%, var(--paper)));
+  border: 1.5px solid color-mix(in srgb, var(--jade) 38%, var(--line));
+  box-shadow: 0 8px 20px -10px var(--dream-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+.skin-dream .hour-dial:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 14px 28px -12px var(--dream-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* 圆润卡片描边，整体更梦幻软糯 */
+.skin-dream [class*="rounded-sm"] { border-radius: 12px; }
+
+/* 梦幻星城专业 UI：参考乙女/明星养成手游的暮光玻璃 HUD。 */
+.skin-dream .dream-game-shell {
+  isolation: isolate;
+  background:
+    radial-gradient(90% 34% at 50% 0%, rgba(244, 198, 255, .42), transparent 72%),
+    linear-gradient(180deg, rgba(221, 203, 249, .92), rgba(243, 231, 252, .9));
+  box-shadow: 0 0 0 1px rgba(255,255,255,.72), 0 30px 90px rgba(67, 41, 121, .26);
+}
+.skin-dream .dream-game-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: .42;
+  background-image:
+    radial-gradient(circle at 12% 9%, #fff 0 1px, transparent 1.8px),
+    radial-gradient(circle at 78% 7%, #fff 0 1.5px, transparent 2.2px),
+    radial-gradient(circle at 91% 24%, #fff 0 1px, transparent 1.8px);
+  background-size: 130px 130px, 190px 190px, 230px 230px;
+}
+.skin-dream .dream-topbar {
+  border-color: rgba(255,255,255,.52);
+  color: #fff;
+  background:
+    linear-gradient(180deg, rgba(77, 49, 139, .70), rgba(108, 78, 165, .64)),
+    radial-gradient(80% 150% at 75% -30%, rgba(255, 184, 229, .72), transparent 62%);
+  box-shadow: inset 0 -1px rgba(255,255,255,.35), 0 10px 28px rgba(76,48,139,.28);
+}
+.skin-dream .dream-topbar .text-ink,
+.skin-dream .dream-topbar .text-jade-deep { color: #fff; }
+.skin-dream .dream-topbar .text-ink-soft { color: rgba(255,255,255,.72); }
+.skin-dream .dream-topbar .border-line { border-color: rgba(255,255,255,.2); }
+.skin-dream .dream-city-map {
+  border-radius: 22px;
+  border-color: rgba(255,255,255,.72);
+  box-shadow: inset 0 0 70px rgba(55,28,99,.28), 0 18px 36px -20px rgba(59,31,105,.72);
+}
+.skin-dream .dream-city-map::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(117,75,176,.12), rgba(34,20,62,.18));
+  box-shadow: inset 0 0 42px rgba(255,219,248,.28);
+}
+.skin-dream .dream-map-node {
+  height: 38px;
+  width: 76px;
+  border-radius: 11px;
+  border: 1px solid rgba(244,222,255,.72);
+  box-shadow: 0 6px 14px rgba(30,17,53,.38), inset 0 1px rgba(255,255,255,.34), 0 0 12px rgba(205,144,255,.22);
+}
+.skin-dream .dream-map-node:hover { transform: translate(-50%,-54%) scale(1.04); }
+.skin-dream .dream-story-panel {
+  margin: 0 10px 8px;
+  border: 1px solid rgba(255,255,255,.58);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(74,54,126,.86), rgba(101,77,152,.74));
+  color: #fff;
+  box-shadow: inset 0 1px rgba(255,255,255,.24), 0 10px 24px rgba(60,38,105,.24);
+  backdrop-filter: blur(18px) saturate(1.25);
+}
+.skin-dream .dream-story-panel .text-ink { color: #fff; }
+.skin-dream .dream-story-panel .text-ink-soft { color: rgba(255,255,255,.66); }
+.skin-dream .dream-story-panel .border-line { border-color: rgba(255,255,255,.18); }
+.skin-dream .dream-action-bar {
+  margin: 0 10px 8px;
+  border: 1px solid rgba(255,255,255,.76);
+  border-radius: 18px;
+  background: rgba(250,247,255,.88);
+  box-shadow: 0 9px 24px rgba(82,52,139,.22), inset 0 1px #fff;
+  backdrop-filter: blur(20px) saturate(1.3);
+}
+.skin-dream .dream-action-bar textarea {
+  border-color: rgba(133,96,202,.20);
+  background: rgba(255,255,255,.78);
+  box-shadow: inset 0 2px 8px rgba(105,75,158,.07);
+}
+.skin-dream .dream-bottom-nav {
+  overflow: visible;
+  border-color: rgba(255,255,255,.76);
+  background: linear-gradient(180deg, rgba(253,250,255,.94), rgba(236,226,250,.96));
+  box-shadow: 0 -10px 30px rgba(76,48,139,.22), inset 0 1px #fff;
+}
+.skin-dream .dream-bottom-slot[aria-current="true"] { filter: drop-shadow(0 5px 8px rgba(132,82,212,.24)); }
+.skin-dream .dream-advance {
+  transform: translateY(-7px);
+  border-radius: 50%;
+  border-color: rgba(255,255,255,.9);
+  background: radial-gradient(circle at 38% 28%, #fff 0 4%, #e8c1ff 20%, #9d6cec 54%, #7043c3 78%, #d58be7 100%);
+  box-shadow: 0 0 0 5px rgba(255,255,255,.68), 0 0 0 8px rgba(190,137,241,.22), 0 0 24px rgba(173,98,239,.72), inset 0 2px 5px rgba(255,255,255,.86);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   血腥玛丽皮肤（.skin-bloody）
+   —— 活泼甜美红 × 白天鹅奶白：鲜亮玛丽红作主色，奶油白纸面，
+   糖果圆角 + 红晕柔光 + 甜心结节。仅重皮不改结构。
+   主色 玛丽红 #fb5a5f（rgb 251,90,95）；纸面 白天鹅 #faf5e4（rgb 250,245,228）。
+   ═══════════════════════════════════════════════════════════════ */
+
+.skin-bloody {
+  --paper: #f6eed6;          /* 白天鹅稍压一档，作次级纸面 */
+  --paper-2: #faf5e4;        /* 白天鹅奶白 */
+  --ink: #4a2226;            /* 深酒红墨字，落在奶白上对比充足 */
+  --ink-soft: #9c5a5e;
+  --line: rgba(251, 90, 95, 0.26);
+  --jade: #fb5a5f;           /* 主色转玛丽红 */
+  --jade-deep: #e23a44;
+  --coral: #ff9195;          /* 甜心浅红粉 */
+  --gold: #e0a94e;           /* 暖金点缀（金币/支票仍读作金） */
+  --danger: #d02a38;
+  --bloody-glow: rgba(251, 90, 95, 0.28);
+}
+.skin-bloody.dark {
+  --paper: #26100f;
+  --paper-2: #351617;
+  --ink: #ffe7e1;
+  --ink-soft: #dca39f;
+  --line: rgba(255, 111, 116, 0.28);
+  --jade: #ff6f74;
+  --jade-deep: #ff9498;
+  --coral: #ff9ea0;
+  --gold: #e6c06e;
+  --danger: #ff7078;
+  --bloody-glow: rgba(255, 111, 116, 0.32);
+}
+
+/* 甜美柔光背景：玛丽红、浅红粉、暖金三点渐晕 + 奶白底 */
+.skin-bloody body {
+  background:
+    radial-gradient(55% 45% at 8% -6%, color-mix(in srgb, var(--jade) 32%, transparent), transparent 66%),
+    radial-gradient(50% 42% at 106% 18%, color-mix(in srgb, var(--coral) 40%, transparent), transparent 64%),
+    radial-gradient(70% 58% at 50% 110%, color-mix(in srgb, var(--gold) 20%, transparent), transparent 68%),
+    linear-gradient(160deg, #fff6e6, #fdf2df 58%, #faf5e4);
+  background-attachment: fixed;
+}
+.skin-bloody.dark body {
+  background:
+    radial-gradient(55% 45% at 8% -6%, color-mix(in srgb, var(--jade) 28%, transparent), transparent 66%),
+    radial-gradient(50% 42% at 106% 18%, color-mix(in srgb, var(--coral) 26%, transparent), transparent 64%),
+    radial-gradient(70% 58% at 50% 110%, color-mix(in srgb, var(--gold) 14%, transparent), transparent 68%),
+    linear-gradient(160deg, #1f0d0c, #26100f 58%, #2c1312);
+}
+
+/* 纸面奶油化：柔和提亮 + 极淡暖调 */
+.skin-bloody [class*="bg-paper"] {
+  backdrop-filter: saturate(1.12) brightness(1.02);
+  -webkit-backdrop-filter: saturate(1.12) brightness(1.02);
+}
+.skin-bloody .paper-grain { background-image: none; }
+
+/* 石牌 → 甜心糖果卡：大圆角、玛丽红细边、红晕柔影、悬浮弹起 */
+.skin-bloody .stone-tablet {
+  border-radius: 20px;
+  background: linear-gradient(160deg, var(--paper-2), color-mix(in srgb, var(--coral) 14%, var(--paper)));
+  border: 1.5px solid color-mix(in srgb, var(--jade) 40%, var(--line));
+  box-shadow: 0 10px 26px -12px var(--bloody-glow),
+    0 2px 0 color-mix(in srgb, var(--jade) 20%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+.skin-bloody .stone-tablet:hover {
+  transform: translateY(-3px) scale(1.015);
+  border-color: color-mix(in srgb, var(--jade) 62%, transparent);
+  box-shadow: 0 16px 34px -14px var(--bloody-glow),
+    0 2px 0 color-mix(in srgb, var(--jade) 30%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.skin-bloody .stone-tablet--here {
+  background: linear-gradient(155deg,
+    color-mix(in srgb, var(--jade) 90%, transparent),
+    color-mix(in srgb, var(--coral) 82%, transparent));
+  border-color: color-mix(in srgb, #ffffff 55%, transparent);
+  color: #fff;
+}
+.skin-bloody .stone-tablet--unknown {
+  background: color-mix(in srgb, var(--paper) 100%, transparent);
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--jade) 34%, var(--line));
+}
+
+/* 老地图暗角 → 玛丽红柔框 */
+.skin-bloody .map-vignette {
+  box-shadow: inset 0 0 80px color-mix(in srgb, var(--jade) 12%, transparent),
+              inset 0 0 0 1.5px color-mix(in srgb, var(--jade) 34%, var(--line));
+}
+
+/* 分隔线 → 玛丽红发丝线 + 甜心柔光结节 */
+.skin-bloody .mud-rule::before {
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--gold) 55%, var(--line)) 18%, color-mix(in srgb, var(--jade) 50%, var(--line)) 82%, transparent);
+}
+.skin-bloody .mud-rule::after {
+  width: 6px;
+  height: 6px;
+  background: color-mix(in srgb, var(--jade) 72%, transparent);
+  box-shadow: 0 0 8px 1px var(--bloody-glow);
+}
+
+/* 时辰盘 → 甜心圆牌 */
+.skin-bloody .hour-dial {
+  background: linear-gradient(160deg, var(--paper-2), color-mix(in srgb, var(--coral) 16%, var(--paper)));
+  border: 1.5px solid color-mix(in srgb, var(--jade) 42%, var(--line));
+  box-shadow: 0 8px 20px -10px var(--bloody-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+.skin-bloody .hour-dial:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 14px 28px -12px var(--bloody-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* 圆润卡片描边，整体更甜软 */
+.skin-bloody [class*="rounded-sm"] { border-radius: 12px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   像素复古皮肤（.skin-pixel）
+   —— 8-bit 掌机风：奶油底 + 硬直边框 + 像素投影 + 点阵网格，
+   全站方角、硬阴影、像素字体，照片按像素化渲染。仅重皮不改结构。
+   ═══════════════════════════════════════════════════════════════ */
+.skin-pixel {
+  --paper: #e7e2cf;
+  --paper-2: #f4f0e0;
+  --ink: #2b2b3c;
+  --ink-soft: #6b6a84;
+  --line: #2b2b3c;
+  --jade: #3f9d78;
+  --jade-deep: #2c7d5f;
+  --coral: #e2618c;
+  --gold: #e0a338;
+  --dream-glow: rgba(43, 43, 60, 0.25);
+  --font-serif: 'Pixelify Sans', 'Noto Serif SC', serif;
+  --font-sans: 'Pixelify Sans', 'Noto Sans SC', sans-serif;
+  /* 关闭字体平滑，让像素字更硬朗 */
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: grayscale;
+  font-synthesis: none;
+}
+.skin-pixel.dark {
+  --paper: #20202e;
+  --paper-2: #2a2a3d;
+  --ink: #ece7ff;
+  --ink-soft: #a7a2c8;
+  --line: #ece7ff;
+  --jade: #57c79b;
+  --jade-deep: #7be0b8;
+  --coral: #f086ac;
+  --gold: #f0be5e;
+  --dream-glow: rgba(236, 231, 255, 0.28);
+}
+
+/* 点阵网格底：像素坐标纸 */
+.skin-pixel body {
+  background:
+    repeating-linear-gradient(0deg, transparent 0 15px, color-mix(in srgb, var(--ink) 5%, transparent) 15px 16px),
+    repeating-linear-gradient(90deg, transparent 0 15px, color-mix(in srgb, var(--ink) 5%, transparent) 15px 16px),
+    var(--paper);
+  background-attachment: fixed;
+}
+.skin-pixel .paper-grain { background-image: none; }
+
+/* 照片像素化：强化 8-bit 观感 */
+.skin-pixel img { image-rendering: pixelated; }
+
+/* 全站方角：像素世界里没有圆角 */
+.skin-pixel [class*="rounded"] { border-radius: 0; }
+
+/* 卡片 / 面板 → 硬边框 + 像素直角投影（右下 4px 实心影） */
+.skin-pixel [class*="bg-paper"],
+.skin-pixel [class*="bg-white"] {
+  border-radius: 0;
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+/* 石牌 → 像素按钮：2px 硬边 + 实心投影，按下时位移吃掉投影 */
+.skin-pixel .stone-tablet {
+  border-radius: 0;
+  background: var(--paper-2);
+  border: 2px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+.skin-pixel .stone-tablet:hover {
+  transform: translate(1px, 1px);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.skin-pixel .stone-tablet--here {
+  background: var(--jade);
+  color: #fff;
+}
+.skin-pixel .stone-tablet--unknown {
+  background: var(--paper);
+  border-style: dashed;
+}
+
+/* 老地图暗角 → 像素硬框 */
+.skin-pixel .map-vignette {
+  box-shadow: inset 0 0 0 3px var(--ink);
+}
+
+/* 分隔线 → 虚线像素带 + 方形结节 */
+.skin-pixel .mud-rule::before {
+  background: repeating-linear-gradient(90deg, var(--ink) 0 4px, transparent 4px 8px);
+}
+.skin-pixel .mud-rule::after {
+  width: 6px;
+  height: 6px;
+  border-radius: 0;
+  background: var(--jade);
+  box-shadow: none;
+}
+
+/* 时辰盘 → 像素圆牌（仍走方角硬边） */
+.skin-pixel .hour-dial {
+  border-radius: 0;
+  background: var(--paper-2);
+  border: 2px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+.skin-pixel .hour-dial:hover {
+  transform: translate(1px, 1px);
+  box-shadow: 3px 3px 0 var(--ink);
+}

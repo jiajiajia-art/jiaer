@@ -58,11 +58,8 @@ const EditorApi = {
     uploadGameFile: (file:File) => {
         const formData = new FormData();
         formData.append('document', file);
-        return api.post<UploadFileResponse>(`/optical/games/upload`, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
-        });
+        // 功能注释：Content-Type 由 base 拦截器对 FormData 清除，浏览器自动带 boundary
+        return api.post<UploadFileResponse>(`/optical/games/upload`, formData);
     },
     createVisualEmptyGame: (title:string) => {
         return api.post<UploadFileResponse>(`/visual/document/create-empty`, { title: title });
@@ -123,9 +120,7 @@ const EditorApi = {
         formData.append('orientation', orientation);
         return api.post<UploadGameCoverResponse>(`/optical/games/upload-cover`, 
             formData , {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
+            // 功能注释：勿手写 multipart Content-Type，交给浏览器自动带 boundary
             timeout: UPLOAD_TIMEOUT_MS,
         });
     },
@@ -137,12 +132,7 @@ const EditorApi = {
         return api.post<{ success: boolean; message?: string; data?: { url: string } }>(
             `/optical/games/upload-desc-image`,
             formData,
-            {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-                timeout: UPLOAD_TIMEOUT_MS,
-            },
+            { timeout: UPLOAD_TIMEOUT_MS },
         );
     },
     /** AI 生成游戏封面（扣积分，规则同场景生图） */
@@ -173,19 +163,12 @@ const EditorApi = {
         if (data.variationDescription !== undefined) {
             formData.append('variationDescription', data.variationDescription);
         }
-        return api.post<UploadPlayerImageResponse>(`/visual/edit/${fileId}/player/image`, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
-        });
+        return api.post<UploadPlayerImageResponse>(`/visual/edit/${fileId}/player/image`, formData);
     },
     uploadSceneImage: (fileId:string, sceneId:string, file:File) => {
         const formData = new FormData();
         formData.append('image', file);
         return api.post<UploadSceneImageResponse>(`/visual/edit/${fileId}/scenes/${sceneId}/image`, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
             // 上传/后端处理可能超过全局默认 10s，单独放宽超时，避免 ECONNABORTED
             timeout: UPLOAD_TIMEOUT_MS,
         });
@@ -197,11 +180,7 @@ const EditorApi = {
         if (data.variationDescription !== undefined) {
             formData.append('variationDescription', data.variationDescription);
         }
-        return api.post<UploadNpcImageResponse>(`/visual/edit/${fileId}/npcs/${npcId}/image`, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
-        });
+        return api.post<UploadNpcImageResponse>(`/visual/edit/${fileId}/npcs/${npcId}/image`, formData);
     },
     generateAllImages: (fileId: string, data: GenerateAllImageRequest) => {
         return api.post<GenerateAllImagesResponse | ApiResponse<GenerateAllImagesResponse>>(
@@ -282,12 +261,7 @@ const EditorApi = {
         return api.post<UploadMusicResponse>(
             `/visual/edit/${fileId}/music`,
             formData,
-            {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-                timeout: 1500000,
-            }
+            { timeout: 1500000 },
         );
     },
     getVisualMusicList: (fileId: string) => {

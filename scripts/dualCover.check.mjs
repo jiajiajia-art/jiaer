@@ -115,3 +115,21 @@ test('GameGrid_列表卡优先竖版封面', () => {
   assert.match(tsx, /resolveGameListCoverUrl/);
   assert.match(tsx, /portrait_cover_url/);
 });
+
+test('uploadGameCover_FormData不得手写multipart_且拦截器清除Content-Type', () => {
+  const editor = read('src/api/galgame/EditorData.ts');
+  const uploadBlock = editor.match(/uploadGameCover:[\s\S]*?\},\s*\n\s*\/\*\*/)?.[0]
+    || editor.match(/uploadGameCover:[\s\S]*?UPLOAD_TIMEOUT_MS[\s\S]*?\},/)?.[0]
+    || '';
+  assert.match(uploadBlock, /new FormData\(\)/);
+  assert.match(uploadBlock, /orientation/);
+  assert.doesNotMatch(uploadBlock, /Content-Type['"]?\s*:\s*['"]multipart\/form-data/);
+
+  const base = read('src/api/base.ts');
+  assert.match(base, /config\.data instanceof FormData/);
+  assert.match(base, /setContentType\(false\)|delete\(['"]Content-Type['"]\)/);
+
+  const zh = JSON.parse(read('src/i18n/locales/zh.json'));
+  assert.match(String(zh?.common?.coverUpload?.uploadFailed || ''), /封面上传失败/);
+  assert.doesNotMatch(String(zh?.common?.coverUpload?.uploadFailed || ''), /Failed to upload cover/);
+});

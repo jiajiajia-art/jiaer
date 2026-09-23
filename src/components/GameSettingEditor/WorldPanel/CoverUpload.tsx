@@ -13,6 +13,7 @@ import { refreshAuthUserPoints } from '../../../lib/auth/refreshUserPoints';
 import { compositePosterTitleOntoCover } from '../../../lib/galgame/compositePosterTitle';
 import { resolveCoverPosterOverlay } from '../../../utils/coverPosterOverlay';
 import { buildCoverAiCreativePrompt } from '../../../utils/buildCoverAiCreativePrompt';
+import { getApiErrorMessage } from '../../../utils/error';
 import ImageCropModal from '../../CommonModal/ImageCropModal';
 import PortraitLightbox from '../CharactersPanel/PortraitLightbox';
 import styles from './WorldPanel.module.css';
@@ -95,12 +96,15 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
                 toast.success(t('common.coverUpload.uploadSuccess'));
                 onCoverUploaded?.({ orientation, coverUrl: nextCoverUrl });
             } else {
-                setCoverError(response.data.message || t('common.coverUpload.uploadFailed'));
+                const msg = response.data.message || t('common.coverUpload.uploadFailed');
+                setCoverError(msg);
+                toast.error(msg);
             }
         } catch (error) {
             console.error('upload world cover failed:', error);
-            const apiMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
-            setCoverError(apiMessage || t('common.coverUpload.uploadFailed'));
+            const apiMessage = getApiErrorMessage(error, t('common.coverUpload.uploadFailed'));
+            setCoverError(apiMessage);
+            toast.error(apiMessage);
         } finally {
             setBusyOrientation(null);
         }

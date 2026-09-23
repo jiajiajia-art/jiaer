@@ -1,0 +1,677 @@
+# ═══════════════════════════════════════════════════════════════
+#  星光2005 · 项目/通告全生命周期内容池 (projects)
+#  明星养成式通告：线索→申请→试镜→竞争→offer→合同→逐日拍摄→评价→
+#  尾款→待发行作品→发行反馈。所有中文名称、题材、门槛、报酬、发行延迟、
+#  公式权重、状态与结果文案都在此；引擎 (projects.ts) 只做状态机、竞争分、
+#  账本、档期与幂等，不内嵌任何中文或星级报酬表。
+# ═══════════════════════════════════════════════════════════════
+
+statusLabels:
+  open: 公告开放
+  applied: 已投递
+  auditioning: 试镜中
+  pending_result: 待结果
+  offered: 已录用
+  signed: 已签约
+  in_progress: 拍摄中
+  completed: 已杀青
+  failed: 竞争失败
+  breached: 违约
+  released: 已发行
+  expired: 已过期
+
+categoryLabels:
+  film: 电影
+  tv: 电视剧
+  music: 音乐
+  advertising: 广告
+  variety: 综艺
+  stage: 舞台
+  special: 特殊限时
+
+roleTypeLabels:
+  lead: 主角
+  support: 配角
+  minor: 龙套
+  guest: 嘉宾
+  spokesperson: 代言人
+  performer: 表演者
+
+# —— 试镜竞争分权重（玩家与 NPC 同一公式，section 六）——
+audition:
+  wMain: 35
+  wSub: 20
+  wFit: 15
+  wPrep: 10
+  wTrust: 10
+  wRep: 10
+  stressPer10: 0.5
+  breachPer: 3
+  jitter: 5
+  formalMin: 55
+  standbyGap: 8
+  downgradeMin: 40
+  refExtra: 10
+  # 准备分：基线 + 负责人关系加成（好感与私人信任满值时最多叠加 managerPrepBonus）
+  prepBase: 0.4
+  managerPrepBonus: 0.35
+  # 报名后到「试镜结果公布」的处理天数（§19.6：结果不即时，须等到处理日）
+  processDelay: 3
+
+# —— 完成评价 Q（section 九）——
+quality:
+  wBase: 0.30
+  wPerf: 0.30
+  wFulfil: 0.15
+  wTrust: 0.10
+  wPrep: 0.10
+  wFit: 0.05
+  crashPenalty: 8
+  tiers:
+    - { id: perfect, min: 85, label: 完美完成, payMul: 1.2, growthMul: 1.2, trust: 8,   rep: 3 }
+    - { id: smooth,  min: 65, label: 顺利完成, payMul: 1.0, growthMul: 1.0, trust: 4,   rep: 0 }
+    - { id: barely,  min: 45, label: 勉强完成, payMul: 0.6, growthMul: 0.5, trust: -3,  rep: -1 }
+    - { id: failed,  min: 0,  label: 项目失败, payMul: 0.3, growthMul: 0.25, trust: -10, rep: -3 }
+
+# —— 高压失控（section 八·补充）：压力≥stressGate 且体力≤energyGate 时按概率失控 ——
+# 体能、身边有人撑腰、有恋人陪伴都能降低失控概率；引擎只做条件判定与掷点。
+crash:
+  baseChance: 20
+  minChance: 5
+  stressGate: 90
+  energyGate: 20
+  perfPenalty: 30
+  tinengThreshold: 500
+  tinengRelief: 5
+  friendReliefMin: 60       # 任一好友好感达标即减压
+  friendRelief: 5
+  datingRelief: 5           # 有恋人陪伴再降低
+
+# —— 每日工作策略（section 八）——
+workStrategies:
+  - { id: steady,   label: 稳定发挥, energy: 14, stress: 4,  floor: 55, ceil: 80,  desc: 正常消耗，波动最小 }
+  - { id: allout,   label: 全力表现, energy: 22, stress: 10, floor: 45, ceil: 100, desc: 额外体力压力，上限更高 }
+  - { id: cautious, label: 保守完成, energy: 10, stress: 2,  floor: 60, ceil: 70,  desc: 消耗低、失误少，但封顶 }
+
+# —— 星级公开门槛（section 六，展示）——
+starThresholds:
+  1: { fame: 0,   ability: 120 }
+  2: { fame: 50,  ability: 200 }
+  3: { fame: 150, ability: 350 }
+  4: { fame: 300, ability: 500 }
+  5: { fame: 500, ability: 650 }
+
+# —— 发行延迟（天）与发行名气（按星级，section 十）——
+releaseDelays: { advertising: 7, tv: 28, film: 42, music: 14, variety: 7, stage: 3, special: 14 }
+releaseFame: { 1: 8, 2: 20, 3: 40, 4: 80, 5: 120 }
+releaseQBonus: 35
+releaseRepBase: 4
+
+# —— 工作成长基数（按星级；主/副属性，section 九）——
+growthMain: { 1: 8, 2: 16, 3: 28, 4: 45, 5: 65 }
+growthSub:  { 1: 4, 2: 8,  3: 14, 4: 22, 5: 32 }
+
+# —— 发行宣传与传播（section 十）——
+# 发行前可宣传，每部最多 maxUses 次，每次一夜、costYuan 元、压力+stress、宣传指数+indexPer。
+# 传播分 = wQ×Q + wFame×(发布时名气/10) + wPublicity×宣传指数；达阈值触发小爆/大爆额外名气。
+publicity:
+  maxUses: 2
+  costYuan: 3000
+  stress: 3
+  indexPer: 50
+  labels:
+    button: 为作品造势宣传
+    maxed: 该作品宣传已达上限（每部最多两次）
+    lowMoney: 现金不足，无法支付宣传费用
+    done: 一夜通稿与专访铺开，声量见涨
+buzz:
+  wQ: 0.7
+  wFame: 0.2
+  wPublicity: 0.1
+  smallMin: 80
+  smallBonus: 35
+  bigMin: 90
+  bigBonus: 80
+  labels:
+    small: 小爆
+    big: 大爆
+    flat: 平稳发行
+
+# —— 片场结构化事件（section 八·补充）——
+# 每个工作日按 triggerChance 概率触发一条与题材相关的现场事件；
+# 引擎按 stat≥threshold 判定过关，套用 perf/stress/rep 增减并记入历史。
+# 全部中文文案、判定属性、阈值、增减幅度都在此，引擎只做掷点与结算。
+onSet:
+  triggerChance: 42
+  byCategory:
+    tv:
+      - { id: tv_retake,   label: 导演要求补拍, stat: yanji,  threshold: 220, pass: { perf: 6,  stress: 3,  rep: 2,  note: 一条过，导演当场鼓掌，剧组士气大振。 }, fail: { perf: -8, stress: 9,  rep: -2, note: 同一场戏反复补拍到深夜，眼神里全是疲惫。 } }
+      - { id: tv_scene,    label: 重场对手戏, stat: yanji,  threshold: 260, pass: { perf: 8,  stress: 4,  rep: 3,  note: 对手戏火花四溅，前辈都愿意多给你几个特写。 }, fail: { perf: -6, stress: 7,  rep: -1, note: 情绪没接住，节奏被带乱，只能靠剪辑补救。 } }
+    film:
+      - { id: film_longtake, label: 长镜头调度, stat: yanji, threshold: 240, pass: { perf: 9,  stress: 5,  rep: 3,  note: 一镜到底走位精准，摄影指导难得点了头。 }, fail: { perf: -9, stress: 10, rep: -2, note: 走位屡屡出错，整组人陪你耗了一下午。 } }
+      - { id: film_weather,  label: 外景天气突变, stat: tineng, threshold: 200, pass: { perf: 4,  stress: 6,  rep: 1,  note: 冒着阴雨抢完外景，全组都记住了你的敬业。 }, fail: { perf: -5, stress: 11, rep: -1, note: 淋了半天雨仍没抢到光，只能择日再拍。 } }
+    music:
+      - { id: music_pitch,  label: 录音棚抠音准, stat: geyi, threshold: 230, pass: { perf: 7,  stress: 3,  rep: 2,  note: 一遍过母带，制作人说省下的棚费请你喝汽水。 }, fail: { perf: -7, stress: 8,  rep: -1, note: 高音总差半个调，反复补录到嗓子发紧。 } }
+      - { id: music_arrange, label: 临时改编曲, stat: caizhi, threshold: 200, pass: { perf: 6,  stress: 4,  rep: 2,  note: 你顺着新编曲即兴加了段和声，编曲老师眼前一亮。 }, fail: { perf: -6, stress: 7,  rep: -1, note: 改编后的调子没跟上，只能照旧版将就。 } }
+    advertising:
+      - { id: ad_smile,   label: 长时间定妆微笑, stat: yitai, threshold: 210, pass: { perf: 7,  stress: 3,  rep: 2,  note: 镜头前的仪态挑不出毛病，甲方当场加了个特写。 }, fail: { perf: -5, stress: 7,  rep: -1, note: 笑到脸僵仍不达标，甲方皱着眉要求返工。 } }
+      - { id: ad_slogan,  label: 现场念广告词, stat: koucai, threshold: 190, pass: { perf: 6,  stress: 2,  rep: 2,  note: 广告词念得抑扬顿挫，导演直接收工。 }, fail: { perf: -6, stress: 6,  rep: -1, note: 台词磕磕绊绊，NG 了十来条。 } }
+    variety:
+      - { id: variety_gaffe, label: 综艺失言风波, stat: koucai, threshold: 180, pass: { perf: 8,  stress: 3,  rep: 3,  note: 一句机灵话救了场，节目效果直接拉满。 }, fail: { perf: -9, stress: 9,  rep: -4, note: 一句话说得欠考虑，录完就得请人帮着圆场。 } }
+      - { id: variety_game,  label: 体力游戏环节, stat: tineng, threshold: 220, pass: { perf: 6,  stress: 5,  rep: 2,  note: 游戏环节拼到最后，观众缘一下就上来了。 }, fail: { perf: -5, stress: 8,  rep: -1, note: 体力跟不上被淘汰，镜头都没给几个。 } }
+    stage:
+      - { id: stage_fault,  label: 舞台设备故障, stat: zixin, threshold: 200, pass: { perf: 9,  stress: 6,  rep: 3,  note: 耳返突然失声，你稳住台风清唱救场，全场喝彩。 }, fail: { perf: -10, stress: 12, rep: -3, note: 设备一出问题就慌了神，节奏彻底乱掉。 } }
+      - { id: stage_dance,  label: 群舞卡点, stat: yitai, threshold: 230, pass: { perf: 7,  stress: 4,  rep: 2,  note: 卡点丝毫不差，导演组把你调到了 C 位附近。 }, fail: { perf: -6, stress: 7,  rep: -1, note: 有个动作慢了半拍，被要求单独加练。 } }
+    special:
+      - { id: special_judge, label: 评委临场提问, stat: koucai, threshold: 200, pass: { perf: 8,  stress: 4,  rep: 3,  note: 从容答完刁钻提问，评委席频频点头。 }, fail: { perf: -7, stress: 9,  rep: -2, note: 被问住卡了壳，台下响起窃窃私语。 } }
+      - { id: special_charity, label: 公益临时加演, stat: zixin, threshold: 190, pass: { perf: 6,  stress: 3,  rep: 3,  note: 主动补了个节目，善举被到场媒体记了一笔。 }, fail: { perf: -4, stress: 6,  rep: -1, note: 临时加演准备不足，效果平平。 } }
+
+# —— 报酬谈判（section 七/18.4）：offer 后可协商一次，引擎按交情裁决 ——
+# 成功/部分/拒绝三档写入合同版本；文本不得直接改钱。
+negotiate:
+  friendMin: 40          # 负责人好感门槛，低于此对方不愿松口
+  baseChance: 30
+  perFriend: 0.45        # 每点好感提升成功率
+  perTrust: 0.35         # 每点私人信任提升成功率
+  maxChance: 85
+  raiseRate: 0.15        # 成功：总报酬上浮
+  partialRate: 0.06      # 部分成功：象征性上浮
+  partialBand: 25        # 掷点落在 chance..chance+partialBand 视为部分成功
+  labels:
+    button: 尝试争取更高报酬（协商一次）
+    already: 已经谈过一次，不便再提
+    lowRel: 交情尚浅，对方不愿松口，维持原报价
+    success: 对方爽快松口，报酬上浮
+    partial: 对方象征性加了一点，聊胜于无
+    reject: 对方委婉拒绝，维持原报价
+
+# —— 制作人对话接通告（section 十八·核心交互）——
+# 玩家须登门洽谈、逐步追问才解锁项目字段；解锁到「要求」后方可「争取角色」。
+# 全部问句、遮罩文案、按钮文案在此；引擎只做解锁记录、幂等、行动力扣减。
+producer:
+  meetEnergyCost: 8
+  labels:
+    meet: 登门洽谈（行动力 -8）
+    meetDone: 今日已在洽谈中，可继续追问
+    offSite: 负责人今日不在，改日再来或先约时间
+    notManager: 这位手上暂时没有适合你的项目
+    pursue: 争取这个角色
+    considered: 我再考虑一下
+    lockedHint: 先追问相关信息才能了解
+    intro: 你上门拜访，寒暄过后开始谈正事。
+  masks:
+    synopsis: ——（剧本尚未细谈）
+    starLevel: ——（级别未知）
+    roleType: ——（角色定位未谈）
+    requirements: ——（要求未谈）
+    feeRange: ——（报酬未谈）
+    exactFee: ——（待询价）
+    workDates: ——（档期待确认）
+    deadline: ——（报名截止未定）
+    releaseDelay: ——（发行安排未谈）
+    exclusivity: ——（排他条款未谈）
+    breachFee: ——（违约金未谈）
+  # 问句按依赖逐层解锁；reveals 为该问句解锁的字段。全链路覆盖
+  # 类别→截止→剧本→星级→角色定位→属性要求→报酬区间→精确片酬/档期→发行/排他/违约金
+  questions:
+    - { id: intro,   label: 最近有适合我的工作吗？,           reveals: [category, deadline] }
+    - { id: script,  label: 能详细介绍一下剧本吗？,           reveals: [synopsis],                          requires: [category] }
+    - { id: level,   label: 这个项目是什么级别？,             reveals: [starLevel],                         requires: [category] }
+    - { id: role,    label: 想让我演什么角色定位？,           reveals: [roleType],                          requires: [starLevel] }
+    - { id: require, label: 对演员有什么属性要求？,           reveals: [requirements],                      requires: [roleType] }
+    - { id: pay,     label: 报酬区间大概如何？,               reveals: [feeRange],                          requires: [requirements] }
+    - { id: exact,   label: 能说清确切片酬和工作日期吗？,     reveals: [exactFee, workDates],               requires: [feeRange] }
+    - { id: terms,   label: 发行、排他和违约金怎么约定？,     reveals: [releaseDelay, exclusivity, breachFee], requires: [exactFee] }
+
+# ═══════════════ P0：第一张走通全链路的通告 ═══════════════
+projects:
+  - id: p_tv_support_wugang
+    category: tv
+    title: 《雾港旧事》· 配角「沈书言」
+    synopsis: 年代群像剧里一个有分量的配角——沉默寡言的报馆学徒，几场对手戏足以让新人被记住。
+    source: 事务所公告栏 · 方知远来电
+    starLevel: 2
+    baseQuality: 62
+    managerNpcId: fangzhiyuan
+    openWeek: 1
+    deadlineWeek: 6
+    workDayCount: 2
+    releaseDelayDays: 28
+    feeYuan: 80000
+    advanceRate: 0.3
+    breachRate: 0.4
+    exclusivityTags: []
+    mainStat: yanji
+    subStat: caizhi
+    fit: 0.7
+    followUps: []
+    roleSlot:
+      roleType: support
+      rewardMultiplier: 1.0
+      downgradeType: minor
+      downgradeMultiplier: 0.55
+      requirements:
+        - { metric: fame, op: gte, value: 50, hint: 名气≥50 }
+        - { metric: stats.yanji, op: gte, value: 200, hint: 演技≥200 }
+    competitor:
+      name: 江晚
+      main: 235
+      sub: 180
+      fit: 0.65
+      prep: 0.5
+      trust: 40
+      rep: 55
+
+# ═══════════════ P1：六类通告各两张（含排他/版权/临场/排练/限时） ═══════════════
+  # —— 影视（另一张：入门级龙套，早期可达）——
+  - id: p_film_minor_changjie
+    category: film
+    title: 《长街雪》· 龙套「卖报女孩」
+    synopsis: 文艺电影里一个只有半场戏的小角色，镜头不多，却是新人进剧组、认识前辈的敲门砖。
+    source: 报刊招募 · 《影讯周刊》分类栏
+    starLevel: 1
+    baseQuality: 50
+    managerNpcId: fangzhiyuan
+    openWeek: 1
+    deadlineWeek: 4
+    workDayCount: 1
+    releaseDelayDays: 42
+    feeYuan: 12000
+    advanceRate: 0.3
+    breachRate: 0.4
+    exclusivityTags: []
+    mainStat: yanji
+    subStat: caizhi
+    fit: 0.6
+    followUps: []
+    roleSlot:
+      roleType: minor
+      rewardMultiplier: 1.0
+      downgradeType: minor
+      downgradeMultiplier: 0.8
+      requirements:
+        - { metric: stats.yanji, op: gte, value: 90, hint: 演技≥90 }
+    competitor:
+      name: 蒋小鱼
+      main: 95
+      sub: 70
+      fit: 0.55
+      prep: 0.4
+      trust: 20
+      rep: 40
+
+  # —— 音乐 1：小厂牌单曲试唱（版权排他）——
+  - id: p_music_single_yehang
+    category: music
+    title: 「夜航船」· 厂牌新人单曲
+    synopsis: 一家老唱片行旗下的厂牌想推一首都市民谣新单，需要试唱定人，签下即锁一年内同类竞品。
+    source: 事务所公告栏 · 梁怀音引荐
+    starLevel: 2
+    baseQuality: 58
+    managerNpcId: lianghuaiyin
+    openWeek: 2
+    deadlineWeek: 7
+    workDayCount: 2
+    releaseDelayDays: 14
+    feeYuan: 45000
+    advanceRate: 0.3
+    breachRate: 0.5
+    exclusivityTags: [唱片厂牌]
+    mainStat: geyi
+    subStat: donggan
+    fit: 0.65
+    followUps: []
+    roleSlot:
+      roleType: performer
+      rewardMultiplier: 1.0
+      downgradeType: performer
+      downgradeMultiplier: 0.6
+      requirements:
+        - { metric: fame, op: gte, value: 50, hint: 名气≥50 }
+        - { metric: stats.geyi, op: gte, value: 200, hint: 歌艺≥200 }
+    competitor:
+      name: 温小满
+      main: 220
+      sub: 190
+      fit: 0.6
+      prep: 0.5
+      trust: 30
+      rep: 50
+
+  # —— 音乐 2：入门电台驻唱（早期可达）——
+  - id: p_music_radio_wandeng
+    category: music
+    title: 「晚灯电台」· 周末驻唱
+    synopsis: 本地电台的深夜音乐节目招周末驻唱，酬劳不高，却是练胆量、攒听众缘的好去处。
+    source: 报刊招募 · 电台招募启事
+    starLevel: 1
+    baseQuality: 46
+    managerNpcId: lianghuaiyin
+    openWeek: 1
+    deadlineWeek: 5
+    workDayCount: 1
+    releaseDelayDays: 14
+    feeYuan: 9000
+    advanceRate: 0.3
+    breachRate: 0.3
+    exclusivityTags: []
+    mainStat: geyi
+    subStat: donggan
+    fit: 0.6
+    followUps: []
+    roleSlot:
+      roleType: performer
+      rewardMultiplier: 1.0
+      downgradeType: performer
+      downgradeMultiplier: 0.8
+      requirements:
+        - { metric: stats.geyi, op: gte, value: 85, hint: 歌艺≥85 }
+    competitor:
+      name: 苗苗
+      main: 90
+      sub: 80
+      fit: 0.5
+      prep: 0.4
+      trust: 15
+      rep: 35
+
+  # —— 广告 1：饮品代言比稿（品类排他）——
+  - id: p_ad_drink_qingcheng
+    category: advertising
+    title: 「青橙汽水」· 平面广告代言
+    synopsis: 老字号汽水厂要换新一季的广告脸，需要比稿定人；签约即锁同期所有饮品类竞品。
+    source: 事务所公告栏 · 孟晚乔来电
+    starLevel: 2
+    baseQuality: 55
+    managerNpcId: mengwanqiao
+    openWeek: 2
+    deadlineWeek: 6
+    workDayCount: 1
+    releaseDelayDays: 7
+    feeYuan: 60000
+    advanceRate: 0.3
+    breachRate: 0.6
+    exclusivityTags: [饮品]
+    mainStat: yitai
+    subStat: zixin
+    fit: 0.7
+    followUps: []
+    roleSlot:
+      roleType: spokesperson
+      rewardMultiplier: 1.0
+      downgradeType: performer
+      downgradeMultiplier: 0.5
+      requirements:
+        - { metric: fame, op: gte, value: 50, hint: 名气≥50 }
+        - { metric: stats.yitai, op: gte, value: 200, hint: 仪态≥200 }
+    competitor:
+      name: 白露
+      main: 230
+      sub: 200
+      fit: 0.68
+      prep: 0.6
+      trust: 35
+      rep: 60
+
+  # —— 广告 2：饮品竞品（用于验证品类排他冲突）——
+  - id: p_ad_drink_bingquan
+    category: advertising
+    title: 「冰泉苏打」· 海报代言
+    synopsis: 另一家饮料厂的苏打水海报代言。与「青橙汽水」同属饮品类，两者只能签其一。
+    source: 报刊招募 · 品牌招募
+    starLevel: 2
+    baseQuality: 52
+    managerNpcId: mengwanqiao
+    openWeek: 2
+    deadlineWeek: 6
+    workDayCount: 1
+    releaseDelayDays: 7
+    feeYuan: 55000
+    advanceRate: 0.3
+    breachRate: 0.6
+    exclusivityTags: [饮品]
+    mainStat: yitai
+    subStat: zixin
+    fit: 0.65
+    followUps: []
+    roleSlot:
+      roleType: spokesperson
+      rewardMultiplier: 1.0
+      downgradeType: performer
+      downgradeMultiplier: 0.5
+      requirements:
+        - { metric: fame, op: gte, value: 50, hint: 名气≥50 }
+        - { metric: stats.yitai, op: gte, value: 200, hint: 仪态≥200 }
+    competitor:
+      name: 夏鸢
+      main: 215
+      sub: 190
+      fit: 0.62
+      prep: 0.5
+      trust: 30
+      rep: 55
+
+  # —— 综艺 1：访谈节目嘉宾（临场失言风险）——
+  - id: p_variety_talk_xingqi
+    category: variety
+    title: 「星期五会客厅」· 访谈嘉宾
+    synopsis: 一档周末访谈节目请新人上镜聊聊心路，机敏应答能圈粉，一句失言也能上报纸八卦版。
+    source: 论坛行业消息 · 秦砚舟推荐
+    starLevel: 1
+    baseQuality: 48
+    managerNpcId: qinyanzhou
+    openWeek: 1
+    deadlineWeek: 5
+    workDayCount: 1
+    releaseDelayDays: 7
+    feeYuan: 15000
+    advanceRate: 0.3
+    breachRate: 0.4
+    exclusivityTags: []
+    mainStat: koucai
+    subStat: zixin
+    fit: 0.6
+    followUps: []
+    roleSlot:
+      roleType: guest
+      rewardMultiplier: 1.0
+      downgradeType: guest
+      downgradeMultiplier: 0.7
+      requirements:
+        - { metric: stats.koucai, op: gte, value: 90, hint: 口才≥90 }
+    competitor:
+      name: 郑好
+      main: 100
+      sub: 85
+      fit: 0.55
+      prep: 0.4
+      trust: 20
+      rep: 45
+
+  # —— 综艺 2：常规游戏综艺（体力+反应）——
+  - id: p_variety_game_huanle
+    category: variety
+    title: 「欢乐大转盘」· 常驻游戏
+    synopsis: 一档棚内游戏综艺招新面孔常驻，靠反应和体力搏出镜，录制辛苦但曝光稳定。
+    source: 事务所公告栏 · 秦砚舟来电
+    starLevel: 2
+    baseQuality: 54
+    managerNpcId: qinyanzhou
+    openWeek: 3
+    deadlineWeek: 8
+    workDayCount: 2
+    releaseDelayDays: 7
+    feeYuan: 50000
+    advanceRate: 0.3
+    breachRate: 0.4
+    exclusivityTags: []
+    mainStat: koucai
+    subStat: zixin
+    fit: 0.6
+    followUps: []
+    roleSlot:
+      roleType: performer
+      rewardMultiplier: 1.0
+      downgradeType: guest
+      downgradeMultiplier: 0.6
+      requirements:
+        - { metric: fame, op: gte, value: 50, hint: 名气≥50 }
+        - { metric: stats.koucai, op: gte, value: 200, hint: 口才≥200 }
+    competitor:
+      name: 田乐
+      main: 225
+      sub: 195
+      fit: 0.6
+      prep: 0.55
+      trust: 35
+      rep: 50
+
+  # —— 舞台 1：商演拼盘（排练+体力透支风险）——
+  - id: p_stage_gala_chunfeng
+    category: stage
+    title: 「春风歌会」· 拼盘商演
+    synopsis: 城郊剧场的拼盘歌会招新人开场表演，需要排练两天，现场设备老旧、体力吃紧。
+    source: 报刊招募 · 演出公司启事
+    starLevel: 1
+    baseQuality: 47
+    managerNpcId: lianghuaiyin
+    openWeek: 2
+    deadlineWeek: 6
+    workDayCount: 2
+    releaseDelayDays: 3
+    feeYuan: 18000
+    advanceRate: 0.3
+    breachRate: 0.4
+    exclusivityTags: []
+    mainStat: donggan
+    subStat: tineng
+    fit: 0.6
+    followUps: []
+    roleSlot:
+      roleType: performer
+      rewardMultiplier: 1.0
+      downgradeType: performer
+      downgradeMultiplier: 0.7
+      requirements:
+        - { metric: stats.donggan, op: gte, value: 90, hint: 动感≥90 }
+    competitor:
+      name: 小野
+      main: 95
+      sub: 90
+      fit: 0.55
+      prep: 0.45
+      trust: 20
+      rep: 40
+
+  # —— 舞台 2：年度晚会分会场（高星） ——
+  - id: p_stage_annual_liangye
+    category: stage
+    title: 「良夜晚会」· 分会场表演
+    synopsis: 电视台年度晚会分会场的一个表演位，露脸机会难得，排练强度和体力要求都不低。
+    source: 年度活动日历 · 台里点名
+    starLevel: 3
+    baseQuality: 60
+    managerNpcId: lianghuaiyin
+    openWeek: 4
+    deadlineWeek: 10
+    workDayCount: 2
+    releaseDelayDays: 3
+    feeYuan: 90000
+    advanceRate: 0.3
+    breachRate: 0.5
+    exclusivityTags: []
+    mainStat: donggan
+    subStat: tineng
+    fit: 0.65
+    followUps: []
+    roleSlot:
+      roleType: performer
+      rewardMultiplier: 1.0
+      downgradeType: performer
+      downgradeMultiplier: 0.6
+      requirements:
+        - { metric: fame, op: gte, value: 150, hint: 名气≥150 }
+        - { metric: stats.donggan, op: gte, value: 350, hint: 动感≥350 }
+    competitor:
+      name: 顾青禾
+      main: 380
+      sub: 320
+      fit: 0.7
+      prep: 0.6
+      trust: 45
+      rep: 65
+
+  # —— 特殊限时 1：新人选拔（错过不补）——
+  - id: p_special_contest_xinsheng
+    category: special
+    title: 「新声选拔」· 限时海选
+    synopsis: 一年一度的新人选拔海选，名额有限、窗口极短，错过就要再等一年。晋级即打开续作机会。
+    source: 年度活动日历 · 限时报名
+    starLevel: 2
+    baseQuality: 56
+    managerNpcId: linyi
+    openWeek: 3
+    deadlineWeek: 4
+    workDayCount: 1
+    releaseDelayDays: 14
+    feeYuan: 30000
+    advanceRate: 0.3
+    breachRate: 0.4
+    exclusivityTags: []
+    mainStat: zixin
+    subStat: yitai
+    fit: 0.65
+    followUps: []
+    roleSlot:
+      roleType: performer
+      rewardMultiplier: 1.0
+      downgradeType: performer
+      downgradeMultiplier: 0.6
+      requirements:
+        - { metric: fame, op: gte, value: 50, hint: 名气≥50 }
+        - { metric: stats.zixin, op: gte, value: 200, hint: 自信≥200 }
+    competitor:
+      name: 舒窈
+      main: 210
+      sub: 205
+      fit: 0.62
+      prep: 0.5
+      trust: 25
+      rep: 45
+
+  # —— 特殊限时 2：慈善义演（口碑向，早期可达）——
+  - id: p_special_charity_nuandong
+    category: special
+    title: 「暖冬义演」· 公益演出
+    synopsis: 岁末的一场公益义演招新人无偿或低酬参演，赚不到钱，却能攒下难得的好口碑。
+    source: 朋友介绍 · 闻予安相邀
+    starLevel: 1
+    baseQuality: 44
+    managerNpcId: linyi
+    openWeek: 2
+    deadlineWeek: 5
+    workDayCount: 1
+    releaseDelayDays: 14
+    feeYuan: 6000
+    advanceRate: 0.3
+    breachRate: 0.2
+    exclusivityTags: []
+    mainStat: zixin
+    subStat: yitai
+    fit: 0.6
+    followUps: []
+    roleSlot:
+      roleType: performer
+      rewardMultiplier: 1.0
+      downgradeType: performer
+      downgradeMultiplier: 0.8
+      requirements:
+        - { metric: stats.zixin, op: gte, value: 80, hint: 自信≥80 }
+    competitor:
+      name: 阿念
+      main: 85
+      sub: 80
+      fit: 0.5
+      prep: 0.4
+      trust: 15
+      rep: 40

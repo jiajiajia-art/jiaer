@@ -1,0 +1,89 @@
+# ═══════════════════════════════════════════════════════════════
+#  星光2005 · 通告/合同内容池 (entertainment-contracts)
+#  这里存放「项目性质」分类、每张通告的性质与隐藏取舍，以及交涉结果的
+#  文案与调参。数值本体（报酬/门槛/档期/成长）暂仍在 data.ts:GIG_POOL，
+#  后续可整体迁入本文件的 templates 段。引擎只读参数、做裁决，不写中文。
+# ═══════════════════════════════════════════════════════════════
+
+# —— 项目性质（明星志愿式）：决定这张卡的「用途」与取舍 ——
+natures:
+  - { id: commercial, label: 商业通告, hint: 现金流快、易占重要档期 }
+  - { id: drama,      label: 戏剧通告, hint: 演技成长与代表作、周期长 }
+  - { id: music,      label: 音乐通告, hint: 歌艺与原创线、前期销量不稳 }
+  - { id: variety,    label: 综艺通告, hint: 名气口才爆发、压力高易露怯 }
+  - { id: promo,      label: 宣传活动, hint: 维护曝光、收益低 }
+  - { id: special,    label: 特殊限时, hint: 限时高回报、门槛与代价俱高 }
+  - { id: personal,   label: 个人事件, hint: 剧情驱动、收益独特 }
+
+# —— 按通告 id 附加性质与隐藏取舍（对应 GIG_POOL）——
+meta:
+  g1: { nature: commercial, tradeoff: 占掉本周电视剧试镜档期 }
+  g2: { nature: drama,      tradeoff: 片酬低、拍摄周期长 }
+  g3: { nature: music,      tradeoff: 团体单曲、前期销量不稳 }
+  g4: { nature: variety,    tradeoff: 压力高、容易暴露短板 }
+  g5: { nature: commercial, tradeoff: 门槛高、吃掉重要档期 }
+  g6: { nature: drama,      tradeoff: 周期最长、失败代价大 }
+  g7: { nature: special,    tradeoff: 门槛极高、失败会拖垮口碑 }
+  g8: { nature: music,      tradeoff: 投入大、销量回报不稳定 }
+
+# —— 开局候选经纪合约（三份，偏影视/音乐/商业）——
+# 明星养成式建角最后一步：查看独家条款、保底工资、分成、违约金、公司风格后签署。
+# 引擎只读参数并把 signBonus/trust/reputation 落到开局数值，不写死中文。
+signing:
+  - id: yinhe-film
+    company: 星河传媒
+    companyStyle: 老牌强控盘
+    focusLabel: 影视向
+    tone: coral
+    icon: ""
+    baseSalary: 8000
+    revenueShare: 30
+    penalty: 200000
+    exclusive: 独家经纪；戏约须经公司报备，季度有回本考核
+    signBonus: 25000
+    trust: 18
+    reputation: 4
+    blurb: 影视资源最硬，能给到大制作试镜位，但季度考核压人，前期自由最少——因当年艺人违约拖垮资金链，合约违约金格外高。
+  - id: qingyin-music
+    company: 清音娱乐
+    companyStyle: 音乐厂牌
+    focusLabel: 音乐向
+    tone: jade
+    icon: ""
+    baseSalary: 6000
+    revenueShare: 45
+    penalty: 80000
+    exclusive: 音乐作品独家发行；影视商务较自由
+    signBonus: 12000
+    trust: 12
+    reputation: 2
+    blurb: 分成高、违约金低、创作自由，主打原创歌手线；但保底薄、前期销量不稳，得自己熬出代表作。
+  - id: xingmang-biz
+    company: 星芒经纪
+    companyStyle: 流量商务盘
+    focusLabel: 商业向
+    tone: gold
+    icon: ""
+    baseSalary: 5000
+    revenueShare: 25
+    penalty: 120000
+    exclusive: 商务代言独家；接戏须避开代言竞品
+    signBonus: 40000
+    trust: 10
+    reputation: -2
+    blurb: 签约预付最丰厚、商务通告接不完、现金流最快；代价是口碑起点低、易被贴流量标签，代言排他也会挡掉部分戏约。
+
+# —— 交涉结果：不是「看到卡就能接」。参数在此，判定在引擎 ——
+negotiation:
+  standbyBonus: 12      # 候补资格：下次交涉同一通告的成功率加成
+  formalMargin: 25      # roll ≤ rate-该值 → 正式过；否则接取偏弱
+  waitMargin: 15        # 失败但 roll ≤ rate+该值 → 尚有候补/等待余地
+  standbyTrust: 30      # 信任≥该值时给候补资格，否则仅等待通知
+  snatchChance: 0.35    # 直接拒绝时通告被同期艺人抢走的概率
+  outcomes:
+    formal:    { label: 试镜通过, payMul: 1.0,  fameMul: 1.0, note: "" }
+    lowprice:  { label: 低价出演, payMul: 0.75, fameMul: 1.0, note: 报酬缩水，但先站住位置 }
+    downgrade: { label: 角色降级, payMul: 0.85, fameMul: 0.7, note: 戏份被砍，成长与曝光打折 }
+    standby:   { label: 候补资格, payMul: 1.0,  fameMul: 1.0, note: 暂列候补，下次交涉更有把握 }
+    wait:      { label: 等待通知, payMul: 1.0,  fameMul: 1.0, note: 负责人让你回去等消息 }
+    reject:    { label: 直接拒绝, payMul: 1.0,  fameMul: 1.0, note: 这次没能谈成 }
