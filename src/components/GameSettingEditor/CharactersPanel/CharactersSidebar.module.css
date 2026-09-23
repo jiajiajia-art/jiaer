@@ -1,3 +1,5 @@
+/* 功能注释：角色侧栏对齐 funloom 暗色创作壳（与 TXT 创建一致） */
+
 /* 角色列表专用样式 */
 
 .characterRoster {
@@ -11,6 +13,8 @@
     height: 100%;
     min-height: 0;
     overflow: hidden;
+    /* 功能注释：列表标题到首卡间距减半，对齐标注区 */
+    gap: 8px;
 }
 
 .sidebarHeader {
@@ -18,9 +22,9 @@
     justify-content: space-between;
     align-items: center;
     gap: 12px;
-    margin-bottom: 14px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    margin-bottom: 7px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .rosterScroll {
@@ -31,37 +35,52 @@
 }
 
 .characterRow {
+    --row-ink: #141414;
     position: relative;
     display: grid;
-    grid-template-columns: 72px 1fr;
-    gap: 12px;
-    padding: 12px;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 8px;
+    /* 功能注释：立绘列按效果图标注加宽 20%（112 → 134） */
+    grid-template-columns: 134px minmax(0, 1fr);
+    align-items: stretch;
+    gap: 0;
+    min-height: 112px;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 18px;
     cursor: pointer;
-    background: rgba(0, 0, 0, 0.01);
-    transition: 0.2s ease;
+    background: var(--row-ink);
+    box-shadow: 0 8px 22px rgba(40, 70, 110, 0.18);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
-.characterRow.rowChecked {
-    border-color: rgba(37, 99, 235, 0.55);
-    background: rgba(37, 99, 235, 0.04);
+.characterRow.rowNpc {
+    --row-ink: #12151a;
+    box-shadow: 0 0 0 1px rgba(90, 120, 155, 0.22), 0 10px 28px rgba(30, 50, 80, 0.28);
+}
+
+.characterRow.rowChecked,
+.characterRow.active,
+.characterRow.rowPlayer {
+    --row-ink: #1a1014;
+    border-color: rgba(168, 40, 60, 0.65);
+    background: var(--row-ink);
+    box-shadow: 0 0 0 1px rgba(142, 33, 53, 0.45), 0 10px 32px rgba(142, 33, 53, 0.32);
 }
 
 .selectCheck {
     position: absolute;
-    top: 8px;
-    left: 8px;
+    top: 10px;
+    left: 10px;
     z-index: 2;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
-    background: rgba(255, 255, 255, 0.92);
-    border: 1.5px solid rgba(37, 99, 235, 0.75);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.72);
+    border: 1.5px solid rgba(168, 40, 60, 0.8);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
     cursor: pointer;
 }
 
@@ -69,46 +88,59 @@
     width: 14px;
     height: 14px;
     margin: 0;
-    accent-color: #2563eb;
+    accent-color: #8E2135;
     cursor: pointer;
 }
 
 .characterRow:hover {
-    background: rgba(0, 0, 0, 0.03);
-    border-color: rgba(224, 61, 75, 0.2);
+    border-color: rgba(168, 40, 60, 0.4);
 }
 
-.characterRow.active {
-    border-color: var(--primary);
-    background: rgba(224, 61, 75, 0.06);
+.characterThumbWrap {
+    position: relative;
+    min-height: 112px;
+    overflow: hidden;
 }
 
 .characterThumb {
-    width: 72px;
+    width: 100%;
     height: 100%;
-    border-radius: 12px;
-    /* 透明立绘可见：浅棋盘格，避免把图里残留米色误当成「容器底色」 */
-    background-color: #f5f5f5;
+    min-height: 112px;
+    border-radius: 0;
+    /* 透明立绘可见：浅灰棋盘格，降低纯白对比 */
+    background-color: #c8c8c8;
     background-image:
-        linear-gradient(45deg, #ebebeb 25%, transparent 25%),
-        linear-gradient(-45deg, #ebebeb 25%, transparent 25%),
-        linear-gradient(45deg, transparent 75%, #ebebeb 75%),
-        linear-gradient(-45deg, transparent 75%, #ebebeb 75%);
+        linear-gradient(45deg, #2a2a2a 25%, transparent 25%),
+        linear-gradient(-45deg, #2a2a2a 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #2a2a2a 75%),
+        linear-gradient(-45deg, transparent 75%, #2a2a2a 75%);
     background-size: 12px 12px;
     background-position: 0 0, 0 6px, 6px -6px, -6px 0;
     background-repeat: repeat;
 }
 
+/* 功能注释：立绘右侧雾化溶进卡面，对齐效果图而不是硬切方块 */
+.thumbFade {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(90deg, transparent 38%, var(--row-ink) 94%);
+}
+
 .characterMeta {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    justify-content: center;
+    gap: 6px;
     flex: 1;
+    min-width: 0;
+    padding: 12px 14px 12px 8px;
 }
 
 .characterMeta strong {
-    font-size: 1rem;
-    color: #1a1a1a;
+    font-size: 1.05rem;
+    color: #ffffff;
+    font-weight: 700;
 }
 
 .characterTitleRow {
@@ -120,24 +152,55 @@
 }
 
 .deleteButton {
-    width: 24px;
-    height: 24px;
-    font-size: 20px;
-    background: none;
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
     line-height: 1;
     cursor: pointer;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+    transition: transform 0.16s ease, background 0.16s ease;
     flex-shrink: 0;
     padding: 0;
-    color: #4f4f4f;
+    color: #ffffff;
     border: none;
+    border-radius: 999px;
+    background: #8E2135;
 }
 
 .deleteButton:hover {
-    color: var(--primary);
+    background: #A8283C;
+    color: #ffffff;
+    transform: scale(1.06);
+}
+
+.addBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+@media (max-width: 720px) {
+    .addBtn {
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
+        padding: 0;
+        border: none;
+        background: #8E2135;
+        color: #ffffff;
+    }
+
+    .addBtn:hover {
+        background: #A8283C;
+        color: #ffffff;
+    }
+
+    .addLabel {
+        display: none;
+    }
 }
 
 .mobileToggleButton {
@@ -163,10 +226,10 @@
         justify-content: center;
         width: 100%;
         margin-top: 12px;
-        border: 1px solid rgba(224, 61, 75, 0.14);
+        border: 1px solid rgba(142, 33, 53, 0.14);
         border-radius: 999px;
         padding: 10px 14px;
-        background: rgba(224, 61, 75, 0.04);
+        background: rgba(142, 33, 53, 0.04);
         color: var(--primary);
         font-size: 0.85rem;
         font-weight: 600;
@@ -175,7 +238,7 @@
     }
 
     .mobileToggleButton:hover {
-        background: rgba(224, 61, 75, 0.08);
+        background: rgba(142, 33, 53, 0.08);
     }
 }
 

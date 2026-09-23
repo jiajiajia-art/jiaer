@@ -7,6 +7,7 @@ import type { PlayerCharacterCard } from '../../lib/galgame/playerCharacterCard'
 import { getImageUrl } from '../../utils/constants';
 import TrimmedTransparentImg from '../../components/TrimmedTransparentImg';
 import { PERSONA_TAGS, genderLabel } from './warehouseNav';
+import WarehouseEmptyIcon from './WarehouseEmptyIcon';
 import panel from './WarehousePanel.module.css';
 
 type CardKindTab = 'player' | 'npc';
@@ -139,7 +140,7 @@ const WarehousePublicCards: React.FC = () => {
         <p className={panel.empty}>加载中…</p>
       ) : filtered.length === 0 ? (
         <div className={panel.emptyStage}>
-          <div className={panel.emptyOrb} aria-hidden />
+          <WarehouseEmptyIcon kind={kind === 'npc' ? 'character' : 'persona'} />
           <h2>公共卡库还是空的</h2>
           <p>去「我的{kindLabel}」发布你的第一张卡</p>
         </div>

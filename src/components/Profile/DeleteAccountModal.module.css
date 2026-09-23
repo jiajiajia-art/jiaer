@@ -1,0 +1,147 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 12000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 16px;
+    background: rgba(0, 0, 0, 0.78);
+    backdrop-filter: blur(4px);
+}
+
+.modal {
+    width: min(420px, calc(100vw - 32px));
+    max-height: min(86vh, 720px);
+    overflow: auto;
+    border-radius: 18px;
+    padding: 28px 22px 20px;
+    background: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
+    color: #ffffff;
+    text-align: center;
+}
+
+/* 功能注释：警告圆标居中，避免伪元素/阴影偏移造成「背景图标跑偏」 */
+.warningIcon {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 14px;
+    border-radius: 50%;
+    background: #e53935;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    box-shadow: none;
+}
+
+.warningMark {
+    color: #ffffff;
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1;
+    transform: none;
+}
+
+.title {
+    margin: 0 0 12px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.intro {
+    margin: 0 0 14px;
+    font-size: 13px;
+    line-height: 1.65;
+    color: rgba(255, 255, 255, 0.88);
+    text-align: left;
+}
+
+.list {
+    margin: 0 0 14px;
+    padding-left: 1.25em;
+    text-align: left;
+    font-size: 13px;
+    line-height: 1.7;
+    color: rgba(255, 255, 255, 0.88);
+}
+
+.list li + li {
+    margin-top: 4px;
+}
+
+.footerNote {
+    margin: 0 0 18px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.55);
+    text-align: left;
+}
+
+.actions {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+}
+
+.cancelBtn,
+.confirmBtn {
+    flex: 1;
+    min-height: 44px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    outline: none;
+    transition: background 0.2s ease, opacity 0.2s ease;
+}
+
+.cancelBtn {
+    background: #f3efe6;
+    color: #1a1a1a;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+.cancelBtn:hover:not(:disabled) {
+    background: #ebe6db;
+}
+
+.confirmBtn {
+    background: #e53935;
+    color: #ffffff;
+}
+
+.confirmBtn:hover:not(:disabled) {
+    background: #c62828;
+}
+
+.cancelBtn:disabled,
+.confirmBtn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+    .modal {
+        width: min(420px, calc(100vw - 28px));
+        padding: 24px 18px 18px;
+        border-radius: 16px;
+    }
+
+    .warningIcon {
+        width: 52px;
+        height: 52px;
+    }
+
+    .title {
+        font-size: 18px;
+    }
+
+    .intro,
+    .list {
+        font-size: 12.5px;
+    }
+}

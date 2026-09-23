@@ -1,3 +1,5 @@
+import { portraitCoverUrl } from './gameCovers.ts';
+
 /**
  * 游戏封面展示路径：原图 cover → display-cover webp（与后端列表推导规则一致）
  */
@@ -24,4 +26,20 @@ export const resolveGameCoverUrl = (
   const preferred = display || cover;
   if (!preferred) return '';
   return toDisplayCoverUrl(preferred);
+};
+
+/**
+ * 功能注释：首页/列表 3:4 卡片优先竖版封面；不得把 portrait-cover 再改写成 display-cover。
+ */
+export const resolveGameListCoverUrl = (
+  game: {
+    portrait_cover_url?: string | null;
+    portraitCoverUrl?: string | null;
+    display_cover_url?: string | null;
+    cover_url?: string | null;
+  } | null | undefined,
+): string => {
+  const portrait = portraitCoverUrl(game);
+  if (portrait) return portrait;
+  return resolveGameCoverUrl(game);
 };

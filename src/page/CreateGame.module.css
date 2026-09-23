@@ -1,21 +1,24 @@
 .pageRoot {
-    min-height: 64px;
+    min-height: 100vh;
     width: 100%;
-    max-width: 1920px;
-    margin: 0 auto;
+    max-width: none;
+    margin: 0;
+    background: #000000;
+    color: #FFFFFF;
 }
 
 .gameStatsWrapper {
     min-height: 100vh;
-    margin-bottom: 100px;
+    margin-bottom: 0;
+    background: #000000;
 }
 
 .detailLoading,
 .detailError {
     width: 100%;
     text-align: center;
-    padding: 40px 0;
-    color: #fb5b67;
+    padding: 120px 16px 40px;
+    color: #FF8A9A;
     font-size: 18px;
 }
 
@@ -28,9 +31,8 @@
     .detailLoading,
     .detailError {
         font-size: 14px;
-        padding: 20px 0;
+        padding: 96px 16px 20px;
     }
-
 }
 
 @media (max-width: 480px) {
@@ -38,10 +40,8 @@
         width: 100%;
         min-width: auto;
         min-height: 100vh;
-        background-size: cover;
-        background-attachment: fixed;
         padding-bottom: 90px;
-        margin: 0 auto;
+        margin: 0;
         overflow-x: hidden;
         overflow-y: auto;
         position: relative;

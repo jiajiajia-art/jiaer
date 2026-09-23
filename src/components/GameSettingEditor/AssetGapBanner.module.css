@@ -1,0 +1,271 @@
+/* 功能注释：素材进度账本 — 墨黑底 + 竖脊，禁止浅绿/浅红糖纸卡和折行双列 */
+
+.banner {
+  --gap-surface: #1A1A1A;
+  --gap-input: #1C1C1E;
+  --gap-accent: #8E2135;
+  --gap-accent-hot: #A8283C;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--gap-surface);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.bannerGenerating {
+  background: var(--gap-surface);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+}
+
+.icon {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  margin-top: 6px;
+  border-radius: 2px;
+  background: var(--gap-accent);
+  box-shadow: 0 0 0 4px rgba(142, 33, 53, 0.22);
+}
+
+.bannerGenerating .icon {
+  animation: none;
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+}
+
+.titleRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+}
+
+.percentBadge {
+  flex-shrink: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: #ffffff;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.message {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.52);
+  line-height: 1.5;
+}
+
+.pipeline {
+  margin-top: 14px;
+}
+
+.track {
+  height: 2px;
+  border-radius: 0;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.trackFill {
+  height: 100%;
+  border-radius: 0;
+  background: var(--gap-accent-hot);
+  transition: width 0.35s ease;
+}
+
+.steps {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.step {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: transparent;
+  min-height: 0;
+}
+
+.stepIndex {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.42);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+
+.stepCopy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.stepLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.stepMeta {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.42);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.stepDone .stepIndex {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.28);
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.stepDone .stepLabel {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.stepActive {
+  background: var(--gap-input);
+  border-color: rgba(142, 33, 53, 0.55);
+  box-shadow: inset 3px 0 0 var(--gap-accent);
+}
+
+.stepActive .stepIndex {
+  background: var(--gap-accent);
+  border-color: var(--gap-accent);
+  color: #fff;
+}
+
+.stepActive .stepLabel {
+  color: #ffffff;
+}
+
+.stepActive .stepMeta {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.stepFailed {
+  background: var(--gap-input);
+  border-color: rgba(168, 40, 60, 0.45);
+}
+
+.stepFailed .stepIndex {
+  background: var(--gap-accent-hot);
+  border-color: var(--gap-accent-hot);
+  color: #fff;
+}
+
+.nowLine {
+  margin: 10px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.48);
+  letter-spacing: 0.02em;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.48);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.linkBtn {
+  border: 1px solid rgba(168, 40, 60, 0.7);
+  background: transparent;
+  color: #ffb4bf;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.linkBtn:hover {
+  background: var(--gap-accent);
+  color: #ffffff;
+  border-color: var(--gap-accent);
+}
+
+.close {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: var(--gap-input);
+  font-size: 20px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close:hover {
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+@media (max-width: 640px) {
+  .steps {
+    display: flex;
+    flex-direction: column;
+    grid-template-columns: none;
+  }
+
+  .percentBadge {
+    font-size: 16px;
+  }
+}

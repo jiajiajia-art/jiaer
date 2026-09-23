@@ -1,22 +1,26 @@
-/* Studio Catalog — 桌面侧栏；手机「书架索引」条 + 底栏目录 */
+/* Funloom Ink Warehouse — 与首页同色：墨黑舞台 + 酒红强调 */
 
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&display=swap');
 
 .pageRoot {
-  --wh-ink: #17141a;
-  --wh-muted: #8c8490;
-  --wh-line: #ece8eb;
-  --wh-paper: #ffffff;
-  --wh-stage: #f4f2f5;
-  --wh-coral: #e03d4b;
-  --wh-coral-soft: #fff0f2;
+  /* 功能注释：仓库壳对齐首页 Home 色板，禁止浅灰纸质 Studio Catalog */
+  --wh-ink: #ffffff;
+  --wh-muted: #8e8e93;
+  --wh-line: rgba(255, 255, 255, 0.12);
+  --wh-paper: #1a1a1a;
+  --wh-stage: #000000;
+  --wh-coral: #a8283c;
+  --wh-coral-deep: #8e2135;
+  --wh-coral-soft: rgba(168, 40, 60, 0.22);
+  --wh-chip: #1c1c1e;
+  --wh-hover: #2c2c2e;
   --wh-display: 'Noto Serif SC', 'Songti SC', serif;
   --wh-radius: 16px;
 
   width: 100%;
   min-height: 100vh;
-  max-width: 1920px;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
   background: var(--wh-stage);
   color: var(--wh-ink);
 }
@@ -72,31 +76,38 @@
   padding: 10px 12px;
   border-radius: 10px;
   font-size: 14px;
-  color: #4b4450;
+  color: rgba(255, 255, 255, 0.72);
   cursor: pointer;
   text-decoration: none;
   transition: background 0.15s ease, color 0.15s ease;
 }
 
 .navBtn:hover {
-  background: #f7f5f7;
+  background: var(--wh-hover);
   color: var(--wh-ink);
 }
 
 .navBtnActive {
-  background: var(--wh-coral-soft);
-  color: var(--wh-coral);
+  /* 效果图选中：实心珊瑚白字，非浅粉底 */
+  background: var(--wh-coral);
+  color: #fff;
   font-weight: 700;
+  box-shadow: 0 6px 16px rgba(168, 40, 60, 0.35);
 }
 
 .soon {
   font-size: 10px;
-  color: #a39aa6;
+  color: var(--wh-muted);
   font-weight: 600;
   padding: 2px 6px;
   border-radius: 6px;
-  background: #f0eef1;
+  background: var(--wh-chip);
   flex-shrink: 0;
+}
+
+.navBtnActive .soon {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
 }
 
 .uploadCard {
@@ -127,7 +138,7 @@
 }
 
 .uploadBtn:hover {
-  background: #c93441;
+  background: var(--wh-coral-deep);
 }
 
 .content {
@@ -182,8 +193,8 @@
 
 .mobileCatalogBtn {
   flex-shrink: 0;
-  border: 1px solid var(--wh-ink);
-  background: var(--wh-ink);
+  border: 1px solid var(--wh-line);
+  background: var(--wh-chip);
   color: #fff;
   border-radius: 999px;
   padding: 9px 16px;
@@ -215,14 +226,14 @@
   align-items: center;
   gap: 6px;
   text-decoration: none;
-  border: 1px solid var(--wh-line);
-  background: var(--wh-paper);
-  color: #5a5360;
+  border: 1px solid transparent;
+  background: var(--wh-chip);
+  color: rgba(255, 255, 255, 0.72);
   border-radius: 999px;
-  padding: 7px 14px;
+  padding: 8px 14px;
   font-size: 13px;
   white-space: nowrap;
-  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .railChipActive {
@@ -230,7 +241,7 @@
   background: var(--wh-coral);
   color: #fff;
   font-weight: 700;
-  box-shadow: 0 6px 16px rgba(224, 61, 75, 0.28);
+  box-shadow: 0 6px 18px rgba(168, 40, 60, 0.38);
 }
 
 .mobileUploadStrip {
@@ -240,10 +251,10 @@
   gap: 10px;
   width: 100%;
   border: none;
-  border-radius: 12px;
-  padding: 11px 14px;
+  border-radius: 14px;
+  padding: 12px 14px;
   background:
-    linear-gradient(105deg, rgba(224, 61, 75, 0.12) 0%, transparent 42%),
+    linear-gradient(105deg, rgba(168, 40, 60, 0.18) 0%, transparent 42%),
     linear-gradient(160deg, #2a2228 0%, #1a1418 100%);
   color: #fff;
   cursor: pointer;
@@ -251,20 +262,23 @@
 }
 
 .mobileUploadCopy {
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.35;
-  color: rgba(255, 255, 255, 0.78);
+  color: rgba(255, 255, 255, 0.88);
   min-width: 0;
+  font-weight: 500;
 }
 
 .mobileUploadCta {
+  /* 效果图：立即上传为胶囊珊瑚 CTA */
   flex-shrink: 0;
   font-size: 12px;
   font-weight: 800;
   color: #fff;
   background: var(--wh-coral);
-  border-radius: 8px;
-  padding: 6px 10px;
+  border-radius: 999px;
+  padding: 7px 14px;
+  box-shadow: 0 4px 12px rgba(168, 40, 60, 0.4);
 }
 
 /* —— 底栏目录 sheet（仅手机挂载时出现） —— */
@@ -278,6 +292,7 @@
     padding: 10px 12px 100px;
     width: 100%;
     gap: 10px;
+    overflow-x: clip;
   }
 
   .sidebar {
@@ -290,21 +305,34 @@
     gap: 10px;
     position: sticky;
     top: var(--app-desktop-navbar-height);
-    z-index: 20;
-    margin: 0 -2px;
-    padding: 8px 2px 10px;
-    background: linear-gradient(
-      180deg,
-      var(--wh-stage) 70%,
-      rgba(244, 242, 245, 0.92) 100%
-    );
-    backdrop-filter: blur(8px);
+    z-index: 30;
+    width: 100%;
+    margin: 0;
+    padding: 8px 0 10px;
+    isolation: isolate;
+  }
+
+  /* 功能注释：不透明底 + 底边阴影，避免下方白卡片滚入时透出/压住标题区 */
+  .mobileChrome::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--wh-stage);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45);
+    pointer-events: none;
   }
 
   .content {
-    padding: 16px 14px 20px;
+    /* 效果图：舞台露灰底，工具区与卡面各自成卡，禁止整页白纸套壳 */
+    position: relative;
+    z-index: 0;
+    padding: 0;
     min-height: auto;
-    border-radius: 14px;
+    border-radius: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
   }
 
   .sheetRoot {
@@ -335,7 +363,7 @@
     width: 36px;
     height: 4px;
     border-radius: 999px;
-    background: #ddd8de;
+    background: #3a3a3c;
     margin: 2px auto 12px;
   }
 
@@ -355,8 +383,8 @@
 
   .sheetClose {
     border: none;
-    background: #f3f1f4;
-    color: #5a5360;
+    background: var(--wh-hover);
+    color: rgba(255, 255, 255, 0.72);
     border-radius: 999px;
     padding: 6px 12px;
     font-size: 13px;
@@ -389,17 +417,18 @@
     text-decoration: none;
     padding: 12px 14px;
     border-radius: 12px;
-    color: #4b4450;
+    color: rgba(255, 255, 255, 0.72);
     font-size: 15px;
-    background: #faf9fa;
+    background: var(--wh-chip);
     border: 1px solid transparent;
   }
 
   .sheetLinkActive {
-    background: var(--wh-coral-soft);
-    border-color: rgba(224, 61, 75, 0.28);
-    color: var(--wh-coral);
+    background: var(--wh-coral);
+    border-color: transparent;
+    color: #fff;
     font-weight: 700;
+    box-shadow: 0 6px 16px rgba(168, 40, 60, 0.35);
   }
 
   .sheetUpload {

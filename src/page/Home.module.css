@@ -1,9 +1,19 @@
 .pageRoot {
     --home-navbar-height: var(--app-desktop-navbar-height);
+    /* 功能注释：首页本地暗色 funloom 令牌，不改全局 body */
+    --primary: #A8283C;
+    --primary-light: #C23A50;
+    --primary-dark: #8E2135;
+    /* 功能注释：筛选条上间距 / 下间距=一半，保证精选卡→筛选→列表节奏一致 */
+    --home-filter-gap-above: 16px;
+    --home-filter-gap-below: calc(var(--home-filter-gap-above) / 2);
+    /* 功能注释：PC 全宽铺黑，避免超宽屏两侧露出 body 白底 */
     width: 100%;
     min-height: 100vh;
-    max-width: 1920px;
-    margin: 0 auto;
+    max-width: none;
+    margin: 0;
+    background: #000000;
+    color: #FFFFFF;
 }
 
 .logo {
@@ -18,7 +28,7 @@
 }
 
 .mainContent {
-    color: black;
+    color: #FFFFFF;
     display: flex;
     margin: 0;
     padding: 0;
@@ -40,20 +50,18 @@
 }
 
 .todayWrap {
-    width: 100vw;
-    max-width: 1920px;
+    width: 100%;
+    max-width: none;
     position: relative;
     padding: 0;
     margin-top: var(--home-navbar-height);
     flex-shrink: 0;
-    left: 50%;
-    transform: translateX(-50%);
 }
 
 /* 轮播容器 */
 .carouselContainer {
     width: 100%;
-    max-width: 1920px;
+    max-width: none;
     height: 520px;
     position: relative;
     overflow: hidden;
@@ -105,7 +113,7 @@
     left: 0;
     z-index: 1;
     overflow: hidden;
-    background: #f5f5f5;
+    background: #1C1C1E;
 }
 
 .carouselImage img {
@@ -126,7 +134,7 @@
 .carouselImagePlaceholder {
     position: absolute;
     inset: 0;
-    background: linear-gradient(90deg, #e8e8e8 25%, #f5f5f5 50%, #e8e8e8 75%);
+    background: linear-gradient(90deg, #1C1C1E 25%, #2C2C2E 50%, #1C1C1E 75%);
     background-size: 400% 100%;
     animation: carousel-image-skeleton 1.5s ease-in-out infinite;
     z-index: 2;
@@ -246,24 +254,24 @@
 }
 
 .carouselIndicator {
-    width: 30px;
-    height: 6px;
-    background-color: #fff;
+    width: 8px;
+    height: 8px;
+    background-color: rgba(255, 255, 255, 0.35);
     border: none;
-    border-radius: 2px;
+    border-radius: 999px;
     cursor: pointer;
     transition: all 0.3s ease;
     padding: 0;
 }
 
 .carouselIndicator:hover {
-    background-color: #fb4756cb;
+    background-color: rgba(255, 255, 255, 0.7);
 }
 
 .carouselIndicatorActive {
-    width: 50px;
-    height: 6px;
-    background-color: var(--primary);
+    width: 18px;
+    height: 8px;
+    background-color: #FFFFFF;
 }
 
 .carouselNavButton {
@@ -331,7 +339,7 @@
 .carouselEmpty {
     width: 100%;
     height: 100%;
-    background: #f5f5f5;
+    background: #1C1C1E;
     border-radius: 12px;
 }
 
@@ -339,64 +347,49 @@
 .shopSection {
     width: 100%;
     margin: 0 auto;
-    margin-top: 38px;
+    /* 功能注释：列表距筛选条约为上间距一半 */
+    margin-top: var(--home-filter-gap-below, 8px);
+}
+
+/* 功能注释：加载更多骨架与 GameGrid 同宽，禁止再套水平 padding 导致错位 */
+.loadMoreSkeleton {
+    width: 100%;
+    margin-top: 12px;
+    padding: 0;
+    box-sizing: border-box;
 }
 
 .homeTicker {
-    --home-ticker-gap: 32px;
+    --home-ticker-gap: 28px;
     width: 100%;
     margin: 16px auto 0;
-    padding: 14px 18px 14px 22px;
-    border: 1px solid rgba(224, 61, 75, 0.22);
-    border-radius: 20px;
+    padding: 12px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
     align-items: center;
-    gap: 16px;
+    gap: 10px;
     cursor: pointer;
     text-align: left;
-    background:
-        radial-gradient(circle at 0% 50%, rgba(224, 61, 75, 0.22) 0%, rgba(224, 61, 75, 0.08) 18%, transparent 48%),
-        linear-gradient(135deg, rgba(35, 16, 22, 0.98) 0%, rgba(28, 32, 41, 0.98) 54%, rgba(22, 25, 33, 0.98) 100%);
-    box-shadow:
-        0 16px 38px rgba(15, 17, 24, 0.16),
-        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    background: #1A1A1A;
+    box-shadow: none;
     position: relative;
     overflow: hidden;
     isolation: isolate;
-    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+    transition: background 0.2s ease, border-color 0.2s ease;
 }
 
-.homeTicker::before {
-    content: '';
-    position: absolute;
-    left: 10px;
-    top: 10px;
-    bottom: 10px;
-    width: 4px;
-    border-radius: 999px;
-    background: linear-gradient(180deg, var(--primary-light) 0%, var(--primary) 55%, var(--primary-dark) 100%);
-    box-shadow: 0 0 18px rgba(224, 61, 75, 0.4);
-    opacity: 0.96;
-}
-
+.homeTicker::before,
 .homeTicker::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background:
-        radial-gradient(circle at 88% 50%, rgba(255, 255, 255, 0.08), transparent 26%),
-        linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.04) 100%);
-    pointer-events: none;
-    z-index: -1;
+    content: none;
 }
 
 .homeTicker:hover {
-    transform: translateY(-1px);
-    border-color: rgba(224, 61, 75, 0.32);
-    box-shadow:
-        0 22px 44px rgba(15, 17, 24, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.07);
+    background: #222222;
+    border-color: rgba(255, 255, 255, 0.12);
+    transform: none;
+    box-shadow: none;
 }
 
 .homeTicker:focus-visible {
@@ -404,32 +397,26 @@
     outline-offset: 2px;
 }
 
-.homeTickerIcon {
-    width: 44px;
-    height: 44px;
+/* 功能注释：效果图「公告」文字标签 */
+.homeTickerBadge {
     flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 999px;
-    background:
-        radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.24), transparent 36%),
-        linear-gradient(135deg, rgba(255, 102, 118, 0.26) 0%, rgba(224, 61, 75, 0.18) 100%);
-    border: 1px solid rgba(255, 120, 133, 0.2);
-    color: #ff7d89;
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.12),
-        0 10px 24px rgba(224, 61, 75, 0.16);
+    color: #FFFFFF;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
 }
 
-.homeTickerIcon svg {
-    width: 21px;
-    height: 21px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.8;
-    stroke-linecap: round;
-    stroke-linejoin: round;
+.homeTickerDivider {
+    width: 1px;
+    height: 14px;
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.28);
+}
+
+.homeTickerIcon {
+    display: none;
 }
 
 .homeTickerViewport {
@@ -460,10 +447,10 @@
 
 .homeTickerText {
     display: block;
-    color: rgba(255, 246, 247, 0.94);
-    font-size: 15px;
-    font-weight: 600;
-    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
     white-space: nowrap;
     letter-spacing: 0.01em;
 }
@@ -473,34 +460,45 @@
 }
 
 .homeTickerDot {
-    width: 7px;
-    height: 7px;
+    width: 4px;
+    height: 4px;
     border-radius: 999px;
-    background: linear-gradient(135deg, rgba(255, 180, 186, 0.9) 0%, rgba(224, 61, 75, 0.88) 100%);
-    box-shadow: 0 0 12px rgba(224, 61, 75, 0.32);
+    background: rgba(255, 255, 255, 0.35);
+    box-shadow: none;
 }
 
+/* 功能注释：效果图右侧仅保留 chevron，无实心按钮 */
 .homeTickerAction {
     flex-shrink: 0;
-    min-height: 38px;
-    padding: 0 16px;
-    border-radius: 999px;
+    width: 18px;
+    height: 18px;
+    min-height: 18px;
+    padding: 0;
+    border: none;
+    border-radius: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: #ffffff;
-    font-size: 13px;
-    font-weight: 700;
-    white-space: nowrap;
-    background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 68%, var(--primary-dark) 100%);
-    box-shadow: 0 12px 24px rgba(224, 61, 75, 0.22);
-    letter-spacing: 0.04em;
-    transition: transform 0.22s ease, box-shadow 0.22s ease;
+    color: transparent;
+    font-size: 0;
+    background: none;
+    box-shadow: none;
+    position: relative;
+}
+
+.homeTickerAction::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-top: 1.6px solid rgba(255, 255, 255, 0.78);
+    border-right: 1.6px solid rgba(255, 255, 255, 0.78);
+    transform: rotate(45deg);
+    display: block;
 }
 
 .homeTicker:hover .homeTickerAction {
-    transform: translateX(2px);
-    box-shadow: 0 14px 28px rgba(224, 61, 75, 0.28);
+    transform: none;
+    box-shadow: none;
 }
 
 @keyframes homeTickerMarquee {
@@ -552,7 +550,7 @@
     background-color: transparent;
     outline: none;
     border: none;
-    color: #737373;
+    color: #8E8E93;
     font-size: 20px;
     display: flex;
     align-items: center;
@@ -593,52 +591,55 @@
 
     .homeWideSections .homeTicker {
         margin-top: 18px;
-        padding: 16px 22px 16px 24px;
-        gap: 18px;
-        border-radius: 22px;
+        padding: 12px 18px;
+        gap: 12px;
+        border-radius: 999px;
     }
 
-    .homeWideSections .homeTickerIcon {
-        width: 46px;
-        height: 46px;
+    .homeWideSections .homeTickerBadge {
+        font-size: 15px;
     }
 
     .homeWideSections .homeTickerText {
-        font-size: 16px;
+        font-size: 15px;
     }
 
     .homeWideSections .homeTickerAction {
-        min-height: 40px;
-        padding: 0 18px;
-        font-size: 14px;
+        width: 18px;
+        min-height: 18px;
+        padding: 0;
     }
 
     .homeWideSections .themeShowcase {
-        margin-top: 18px;
-        padding: 28px 30px 30px;
-        border-radius: 24px;
+        margin-top: 16px;
+        padding: 0;
+        border-radius: 0;
+        background: transparent;
+        border: none;
+        box-shadow: none;
     }
 
     .homeWideSections .themeShowcaseList {
-        gap: 14px;
-        padding-bottom: 6px;
+        gap: 12px;
+        padding-bottom: 2px;
     }
 
     .homeWideSections .themeShowcaseItem {
-        padding: 11px 20px;
+        min-height: 42px;
+        padding: 11px 22px;
         font-size: 15px;
     }
 
     .homeWideSections .themeShowcaseTitle {
-        font-size: 28px;
+        font-size: 17px;
     }
 
     .homeWideSections .themeShowcaseMoreLink {
-        font-size: 15px;
+        font-size: 14px;
     }
 
     .homeWideSections .shopSection {
-        margin-top: 40px;
+        margin-top: var(--home-filter-gap-below, 8px);
     }
 
     .carouselContainerPc {
@@ -1007,22 +1008,15 @@
         display: none;
     }
 
-    /* 商城区域外层容器（用于多层边框） */
+    /* 商城区域外层：左右边距与加群卡/筛选条（calc(100% - 24px)）对齐为 12px */
     .shopSection {
-        clip-path: polygon(10px 0%,
-                calc(100% - 10px) 0%,
-                100% 10px,
-                100% calc(100% - 10px),
-                calc(100% - 10px) 100%,
-                10px 100%,
-                0% calc(100% - 10px),
-                0% 10px);
+        clip-path: none;
         border-radius: 0;
         max-height: none;
         height: auto;
-        margin-top: 6px;
+        margin-top: var(--home-filter-gap-below, 8px);
         width: 100%;
-        padding: 0 20px;
+        padding: 0 12px;
         box-sizing: border-box;
     }
 
@@ -1072,47 +1066,23 @@
     }
 }
 
-/* 题材功能新增样式 */
+/* 题材功能新增样式 —— 效果图：黑底上胶囊标签 + 分区标题，无大卡片底板 */
 .themeShowcase {
     width: 100%;
-    margin: 16px auto 0;
+    margin: 14px auto 0;
     position: relative;
     isolation: isolate;
-    padding: 30px 28px 30px;
-    border-radius: 22px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background: linear-gradient(180deg, rgba(20, 24, 31, 0.98) 0%, rgba(16, 20, 27, 0.96) 100%);
-    box-shadow:
-        0 22px 54px rgba(8, 11, 16, 0.34),
-        inset 0 1px 0 rgba(255, 255, 255, 0.04);
-    overflow: hidden;
+    padding: 0;
+    border-radius: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
 }
 
 .themeShowcase::before,
 .themeShowcase::after {
-    content: '';
-    position: absolute;
-    border-radius: 999px;
-    pointer-events: none;
-    z-index: 0;
-}
-
-.themeShowcase::before {
-    top: -120px;
-    left: -48px;
-    width: 300px;
-    height: 300px;
-    background: radial-gradient(circle, var(--primary-glow) 0%, rgba(224, 61, 75, 0.12) 42%, transparent 74%);
-    opacity: 0.95;
-}
-
-.themeShowcase::after {
-    right: -120px;
-    bottom: -180px;
-    width: 360px;
-    height: 360px;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 35%, transparent 72%);
-    opacity: 0.85;
+    content: none;
 }
 
 .themeShowcaseList {
@@ -1120,10 +1090,10 @@
     z-index: 1;
     display: flex;
     flex-wrap: nowrap;
-    gap: 12px;
+    gap: 10px;
     overflow-x: auto;
     overflow-y: hidden;
-    padding: 8px 0 6px;
+    padding: 4px 0 2px;
     scrollbar-width: none;
     -ms-overflow-style: none;
     -webkit-overflow-scrolling: touch;
@@ -1141,11 +1111,12 @@
 }
 
 .themeShowcaseItem {
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 999px;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.04) 100%);
-    color: rgba(255, 255, 255, 0.82);
-    padding: 10px 18px;
+    background: #252525;
+    color: #FFFFFF;
+    min-height: 40px;
+    padding: 10px 20px;
     white-space: nowrap;
     flex: 0 0 auto;
     font-size: 14px;
@@ -1154,37 +1125,31 @@
     letter-spacing: 0.02em;
     cursor: pointer;
     scroll-snap-align: start;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    box-shadow:
-        0 12px 30px rgba(0, 0, 0, 0.18),
-        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: none;
     transition:
-        transform 0.22s ease,
-        border-color 0.22s ease,
-        background 0.22s ease,
-        color 0.22s ease,
-        box-shadow 0.22s ease;
+        transform 0.2s ease,
+        border-color 0.2s ease,
+        background 0.2s ease,
+        color 0.2s ease;
 }
 
 .themeShowcaseItem:hover {
-    transform: translateY(-1px);
+    transform: none;
     border-color: rgba(255, 255, 255, 0.2);
     color: #ffffff;
-    box-shadow:
-        0 16px 34px rgba(0, 0, 0, 0.24),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    background: #2C2C2E;
+    box-shadow: none;
 }
 
 .themeShowcaseItemActive,
 .themeShowcaseItemActive:hover {
-    transform: translateY(-1px);
-    border-color: rgba(255, 255, 255, 0.18);
-    background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 68%, var(--primary-dark) 100%);
+    transform: none;
+    border-color: transparent;
+    background: #8E2135;
     color: #ffffff;
-    box-shadow:
-        0 18px 36px rgba(224, 61, 75, 0.34),
-        inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    box-shadow: none;
 }
 
 .themeShowcaseItem:focus-visible,
@@ -1199,37 +1164,30 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    margin-top: 22px;
+    gap: 12px;
+    margin-top: 18px;
 }
 
 .themeShowcaseTitleGroup {
     min-width: 0;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 0;
 }
 
 .themeShowcaseTitleMarker {
-    width: 10px;
-    height: 10px;
-    border-radius: 3px;
-    flex: 0 0 auto;
-    background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 72%, var(--primary-dark) 100%);
-    box-shadow:
-        0 0 0 4px rgba(224, 61, 75, 0.12),
-        0 8px 18px rgba(224, 61, 75, 0.28);
+    display: none;
 }
 
 .themeShowcaseTitle {
     min-width: 0;
     margin: 0;
-    color: #ffffff;
-    font-size: 26px;
-    font-weight: 700;
-    line-height: 1.15;
-    letter-spacing: 0.02em;
-    font-family: 'QingNiaoFont', 'Sarasa Gothic Rounded', 'Microsoft YaHei', sans-serif;
+    color: #FFFFFF;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.35;
+    letter-spacing: 0.01em;
+    font-family: 'Sarasa Gothic Rounded', 'PingFang SC', 'Microsoft YaHei', sans-serif;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1241,18 +1199,18 @@
     padding: 0;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     background: transparent;
-    color: rgba(255, 255, 255, 0.82);
+    color: rgba(255, 255, 255, 0.78);
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 500;
     cursor: pointer;
-    transition: color 0.2s ease, transform 0.2s ease;
+    transition: color 0.2s ease;
 }
 
 .themeShowcaseMoreLink:hover {
     color: #ffffff;
-    transform: translateX(2px);
+    transform: none;
 }
 
 .themeShowcaseMoreLink span:first-child {
@@ -1265,9 +1223,9 @@
 
 .themeShowcaseMoreArrow::before {
     content: '\203A';
-    font-size: 18px;
+    font-size: 16px;
     line-height: 1;
-    color: var(--primary-light);
+    color: rgba(255, 255, 255, 0.78);
 }
 
 .themeShowcasePreview {
@@ -1278,132 +1236,109 @@
 
 @media (min-width: 769px) {
     .homeTicker {
-        border-color: rgba(224, 61, 75, 0.16);
-        background:
-            radial-gradient(circle at 0% 50%, rgba(224, 61, 75, 0.12) 0%, rgba(224, 61, 75, 0.04) 18%, transparent 48%),
-            linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 248, 249, 0.94) 100%);
-        box-shadow:
-            0 16px 36px rgba(224, 61, 75, 0.1),
-            inset 0 1px 0 rgba(255, 255, 255, 0.86);
+        border-color: rgba(255, 255, 255, 0.1);
+        background: #1A1A1A;
+        box-shadow: none;
     }
 
-    .homeTicker::before {
-        box-shadow: 0 0 8px rgba(224, 61, 75, 0.16);
-    }
-
+    .homeTicker::before,
     .homeTicker::after {
-        background:
-            radial-gradient(circle at 88% 50%, rgba(255, 255, 255, 0.42), transparent 28%),
-            linear-gradient(90deg, transparent 0%, rgba(224, 61, 75, 0.05) 100%);
+        content: none;
     }
 
     .homeTicker:hover {
-        border-color: rgba(224, 61, 75, 0.24);
-        box-shadow:
-            0 20px 42px rgba(224, 61, 75, 0.12),
-            inset 0 1px 0 rgba(255, 255, 255, 0.92);
+        border-color: rgba(255, 255, 255, 0.14);
+        background: #222222;
+        box-shadow: none;
     }
 
     .homeTicker:focus-visible {
-        outline: 2px solid rgba(224, 61, 75, 0.32);
+        outline: 2px solid rgba(168, 40, 60, 0.55);
     }
 
     .homeTickerIcon {
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 244, 245, 0.88) 100%);
-        border-color: rgba(224, 61, 75, 0.18);
-        color: var(--primary);
-        box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.94),
-            0 10px 22px rgba(224, 61, 75, 0.12);
+        display: none;
     }
 
     .homeTickerText {
-        color: #5b2430;
+        color: rgba(255, 255, 255, 0.92);
     }
 
     .homeTickerDot {
-        box-shadow: 0 0 8px rgba(224, 61, 75, 0.18);
+        background: rgba(255, 255, 255, 0.35);
+        box-shadow: none;
     }
 
     .homeTickerAction {
-        border: 1px solid rgba(224, 61, 75, 0.18);
-        color: var(--primary-dark);
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 241, 243, 0.92) 100%);
-        box-shadow: 0 12px 24px rgba(224, 61, 75, 0.12);
+        border: none;
+        color: transparent;
+        background: none;
+        box-shadow: none;
     }
 
     .homeTicker:hover .homeTickerAction {
-        box-shadow: 0 14px 28px rgba(224, 61, 75, 0.16);
+        box-shadow: none;
     }
 
     .themeShowcase {
-        border-color: rgba(224, 61, 75, 0.12);
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 249, 250, 0.92) 100%);
-        box-shadow:
-            0 20px 44px rgba(224, 61, 75, 0.08),
-            inset 0 1px 0 rgba(255, 255, 255, 0.92);
+        border: none;
+        background: transparent;
+        box-shadow: none;
     }
 
-    .themeShowcase::before {
-        background: radial-gradient(circle, rgba(224, 61, 75, 0.08) 0%, rgba(224, 61, 75, 0.03) 40%, transparent 74%);
-        opacity: 0.88;
-    }
-
+    .themeShowcase::before,
     .themeShowcase::after {
-        background: radial-gradient(circle, rgba(255, 255, 255, 0.92) 0%, rgba(255, 240, 243, 0.18) 34%, transparent 72%);
-        opacity: 1;
+        content: none;
     }
 
     .themeShowcaseItem {
-        border-color: rgba(224, 61, 75, 0.18);
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 246, 247, 0.86) 100%);
-        color: var(--primary-dark);
+        border-color: rgba(255, 255, 255, 0.12);
+        background: #252525;
+        color: #FFFFFF;
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
-        box-shadow: 0 10px 24px rgba(224, 61, 75, 0.08);
+        box-shadow: none;
     }
 
     .themeShowcaseItem:hover {
-        border-color: rgba(224, 61, 75, 0.34);
-        color: var(--primary);
-        box-shadow: 0 14px 28px rgba(224, 61, 75, 0.12);
+        border-color: rgba(255, 255, 255, 0.2);
+        color: #FFFFFF;
+        background: #2C2C2E;
+        box-shadow: none;
     }
 
     .themeShowcaseItemActive,
     .themeShowcaseItemActive:hover {
-        border-color: rgba(224, 61, 75, 0.36);
-        background: linear-gradient(180deg, rgba(255, 246, 247, 0.98) 0%, rgba(255, 236, 239, 0.94) 100%);
-        color: var(--primary-dark);
-        box-shadow:
-            0 12px 24px rgba(224, 61, 75, 0.14),
-            inset 0 1px 0 rgba(255, 255, 255, 0.82);
+        border-color: transparent;
+        background: #8E2135;
+        color: #FFFFFF;
+        box-shadow: none;
     }
 
     .themeShowcaseItem:focus-visible,
     .themeShowcaseMoreLink:focus-visible {
-        outline: 2px solid rgba(224, 61, 75, 0.38);
+        outline: 2px solid rgba(168, 40, 60, 0.55);
     }
 
     .themeShowcaseTitleMarker {
-        box-shadow:
-            0 0 0 4px rgba(224, 61, 75, 0.1),
-            0 8px 18px rgba(224, 61, 75, 0.18);
+        display: none;
     }
 
     .themeShowcaseTitle {
-        color: #111827;
+        color: #FFFFFF;
+        font-size: 16px;
     }
 
     .themeShowcaseMoreLink {
-        color: var(--primary-dark);
+        color: rgba(255, 255, 255, 0.78);
     }
 
     .themeShowcaseMoreLink:hover {
-        color: var(--primary);
+        color: #FFFFFF;
     }
 
     .themeShowcaseMoreArrow::before {
-        color: var(--primary);
+        color: rgba(255, 255, 255, 0.78);
     }
 }
 
@@ -1461,12 +1396,15 @@
     .themeShowcase {
         width: calc(100% - 20px);
         margin: 14px auto 0;
-        padding: 26px 22px 24px;
-        border-radius: 20px;
+        padding: 0;
+        border-radius: 0;
+        background: transparent;
+        border: none;
+        box-shadow: none;
     }
 
     .themeShowcaseTitle {
-        font-size: 24px;
+        font-size: 16px;
     }
 
     .carouselContainerPc {
@@ -1479,57 +1417,52 @@
     .homeTicker {
         --home-ticker-gap: 18px;
         width: calc(100% - 24px);
-        margin: 6px auto 0;
-        padding: 6px 10px 6px 14px;
+        margin: 10px auto 0;
+        padding: 11px 14px;
         gap: 8px;
-        border-radius: 14px;
-        grid-template-columns: auto minmax(0, 1fr) auto;
-        border-color: rgba(224, 61, 75, 0.12);
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 248, 249, 0.94) 100%);
-        box-shadow: 0 5px 14px rgba(224, 61, 75, 0.08);
+        border-radius: 999px;
+        grid-template-columns: auto auto minmax(0, 1fr) auto;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: #1A1A1A;
+        box-shadow: none;
     }
 
-    .homeTicker::before {
-        left: 7px;
-        top: 5px;
-        bottom: 5px;
-        width: 2px;
-        box-shadow: 0 0 6px rgba(224, 61, 75, 0.14);
-    }
-
+    .homeTicker::before,
     .homeTicker::after {
         content: none;
     }
 
-    .homeTickerIcon {
-        width: 24px;
-        height: 24px;
-        background: none;
-        border: none;
-        color: var(--primary);
-        box-shadow: none;
+    .homeTickerBadge {
+        font-size: 13px;
     }
 
-    .homeTickerIcon svg {
-        width: 15px;
-        height: 15px;
+    .homeTickerDivider {
+        height: 12px;
+    }
+
+    .homeTickerIcon {
+        display: none;
     }
 
     .homeTickerText {
-        font-size: 12px;
+        font-size: 13px;
         line-height: 1.35;
-        color: #5b2430;
+        color: rgba(255, 255, 255, 0.92);
+        font-weight: 500;
     }
 
     .homeTickerDot {
-        width: 5px;
-        height: 5px;
-        box-shadow: 0 0 6px rgba(224, 61, 75, 0.2);
+        width: 4px;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.35);
+        box-shadow: none;
     }
 
     .homeTickerAction {
-        min-width: 18px;
-        min-height: 18px;
+        width: 16px;
+        height: 16px;
+        min-width: 16px;
+        min-height: 16px;
         padding: 0;
         border-radius: 0;
         font-size: 0;
@@ -1543,18 +1476,19 @@
 
     .homeTickerAction::before {
         content: '';
-        width: 7px;
-        height: 7px;
-        border-top: 1.5px solid rgba(224, 61, 75, 0.86);
-        border-right: 1.5px solid rgba(224, 61, 75, 0.86);
+        width: 6px;
+        height: 6px;
+        border-top: 1.5px solid rgba(255, 255, 255, 0.75);
+        border-right: 1.5px solid rgba(255, 255, 255, 0.75);
         transform: rotate(45deg);
         display: block;
     }
 
     .homeTicker:hover {
         transform: none;
-        border-color: rgba(224, 61, 75, 0.12);
-        box-shadow: 0 5px 14px rgba(224, 61, 75, 0.08);
+        border-color: rgba(255, 255, 255, 0.1);
+        background: #222222;
+        box-shadow: none;
     }
 
     .homeTicker:hover .homeTickerAction {
@@ -1564,88 +1498,85 @@
 
     .themeShowcase {
         width: calc(100% - 24px);
-        margin: 6px auto 0;
+        margin: 12px auto 0;
         padding: 0;
-        border-radius: 18px;
+        border-radius: 0;
         border: none;
         background: transparent;
         box-shadow: none;
         overflow: visible;
     }
 
-    .themeShowcase::before {
-        content: none;
-    }
-
+    .themeShowcase::before,
     .themeShowcase::after {
         content: none;
     }
 
     .themeShowcaseList {
         gap: 10px;
-        padding: 6px 0 2px;
+        padding: 2px 0;
         cursor: auto;
     }
 
     .themeShowcaseItem {
-        padding: 10px 16px;
-        font-size: 13px;
-        border: 1px solid rgba(224, 61, 75, 0.26);
-        background: transparent;
-        color: var(--primary-dark);
+        min-height: 38px;
+        padding: 9px 18px;
+        font-size: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: #252525;
+        color: #FFFFFF;
         box-shadow: none;
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
     }
 
     .themeShowcaseTitleRow {
-        margin-top: 14px;
+        margin-top: 16px;
         gap: 10px;
-        padding-left: 4px;
+        padding-left: 0;
     }
 
     .themeShowcaseTitleGroup {
-        gap: 10px;
+        gap: 0;
     }
 
     .themeShowcaseTitleMarker {
-        width: 8px;
-        height: 8px;
-        border-radius: 2px;
+        display: none;
     }
 
     .themeShowcaseTitle {
-        font-size: 18px;
-        color: #111827;
+        font-size: 15px;
+        font-weight: 600;
+        color: #FFFFFF;
     }
 
     .themeShowcaseItem:hover {
-        border-color: rgba(224, 61, 75, 0.48);
-        color: var(--primary);
-        box-shadow:
-            0 8px 18px rgba(224, 61, 75, 0.14);
+        border-color: rgba(255, 255, 255, 0.18);
+        color: #FFFFFF;
+        background: #2C2C2E;
+        box-shadow: none;
     }
 
     .themeShowcaseItem:focus-visible,
     .themeShowcaseMoreLink:focus-visible {
-        outline: 2px solid rgba(224, 61, 75, 0.38);
+        outline: 2px solid rgba(168, 40, 60, 0.55);
         outline-offset: 2px;
     }
 
     .themeShowcaseItemActive,
     .themeShowcaseItemActive:hover {
-        border-color: rgba(224, 61, 75, 0.92);
-        background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 68%, var(--primary-dark) 100%);
+        border-color: transparent;
+        background: #8E2135;
         color: #ffffff;
         box-shadow: none;
     }
 
     .themeShowcaseMoreLink {
-        color: var(--primary-dark);
+        color: rgba(255, 255, 255, 0.72);
     }
 
     .themeShowcaseMoreLink:hover {
-        color: var(--primary);
+        color: #FFFFFF;
     }
 
     .themeShowcaseMoreLink span:first-child {
@@ -1653,17 +1584,18 @@
     }
 
     .themeShowcaseMoreArrow::before {
-        font-size: 16px;
+        font-size: 15px;
+        color: rgba(255, 255, 255, 0.72);
     }
 
     .themeShowcasePreview {
-        margin-top: 14px;
+        margin-top: 12px;
     }
 
-    /* 实现移动端白底卡片样式 */
+    /* 功能注释：移动端加群横幅——效果图圆角卡（非胶囊）+ 左图标 + 右酒红按钮 */
     .mobileJoinGroupSection {
         width: calc(100% - 24px);
-        margin: 12px auto 0;
+        margin: var(--home-filter-gap-above, 16px) auto 0;
         display: block;
     }
 
@@ -1672,13 +1604,11 @@
         z-index: 1;
         width: 100%;
         margin-top: 0;
-        padding: 14px;
-        border: 1px solid rgba(15, 23, 42, 0.08);
-        border-radius: 16px;
-        background: #ffffff;
-        box-shadow:
-            0 12px 28px rgba(15, 23, 42, 0.12),
-            inset 0 0 0 1px rgba(255, 255, 255, 0.82);
+        padding: 12px 14px 12px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 18px;
+        background: #1C1C1E;
+        box-shadow: none;
         display: grid;
         grid-template-columns: auto minmax(0, 1fr) max-content;
         align-items: center;
@@ -1686,7 +1616,7 @@
         cursor: pointer;
         text-align: left;
         box-sizing: border-box;
-        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        transition: transform 0.2s ease, border-color 0.2s ease;
     }
 
     .mobileJoinGroupCard:focus {
@@ -1694,61 +1624,62 @@
     }
 
     .mobileJoinGroupCard:focus-visible {
-        outline: 2px solid rgba(224, 61, 75, 0.38);
+        outline: 2px solid rgba(168, 40, 60, 0.55);
         outline-offset: 2px;
     }
 
     .mobileJoinGroupCard:active {
         transform: scale(0.99);
-        box-shadow:
-            0 8px 20px rgba(15, 23, 42, 0.14),
-            inset 0 0 0 1px rgba(255, 255, 255, 0.82);
+        box-shadow: none;
     }
 
     .mobileJoinGroupIcon {
-        width: 52px;
-        height: 52px;
+        width: 44px;
+        height: 44px;
         border-radius: 50%;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        background: linear-gradient(180deg, #f4f5f7 0%, #e8ebf0 100%);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92);
+        background: linear-gradient(180deg, #3A3A3C 0%, #2C2C2E 100%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
         flex-shrink: 0;
     }
 
-    .mobileJoinGroupIcon svg {
-        width: 28px;
-        height: 28px;
-        fill: #e03d4b;
+    .mobileJoinGroupIconImg {
+        width: 22px;
+        height: auto;
         display: block;
+        object-fit: contain;
     }
 
     .mobileJoinGroupContent {
         display: flex;
         flex-direction: column;
-        gap: 4px;
+        gap: 3px;
+        min-width: 0;
     }
 
     .mobileJoinGroupTitle {
-        color: #111827;
-        font-size: 16px;
-        font-weight: 700;
-        line-height: 1.35;
+        color: #FFFFFF;
+        font-size: 15px;
+        font-weight: 600;
+        line-height: 1.3;
+        letter-spacing: 0.01em;
     }
 
     .mobileJoinGroupDesc {
-        color: #6b7280;
+        color: #8E8E93;
         font-size: 12px;
-        line-height: 1.5;
+        font-weight: 400;
+        line-height: 1.35;
     }
 
     .mobileJoinGroupAction {
-        min-width: 92px;
-        padding: 10px 16px;
+        min-width: 88px;
+        padding: 11px 18px;
         border-radius: 999px;
-        background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 68%, var(--primary-dark) 100%);
-        box-shadow: 0 12px 24px rgba(224, 61, 75, 0.24);
+        background: linear-gradient(180deg, #B83248 0%, #8E2135 100%);
+        box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset;
         color: #ffffff;
         font-size: 14px;
         font-weight: 700;
@@ -1787,17 +1718,21 @@
     .mobileJoinGroupCard {
         grid-template-columns: auto minmax(0, 1fr) max-content;
         gap: 8px;
-        padding: 12px;
+        padding: 10px 12px 10px 10px;
+        border-radius: 16px;
     }
 
     .mobileJoinGroupIcon {
-        width: 44px;
-        height: 44px;
+        width: 40px;
+        height: 40px;
     }
 
-    .mobileJoinGroupIcon svg {
-        width: 24px;
-        height: 24px;
+    .mobileJoinGroupIconImg {
+        width: 20px;
+    }
+
+    .mobileJoinGroupTitle {
+        font-size: 14px;
     }
 
     .mobileJoinGroupAction {
@@ -1805,7 +1740,7 @@
         min-width: 76px;
         width: auto;
         margin-top: 0;
-        padding: 9px 12px;
+        padding: 10px 14px;
         font-size: 13px;
     }
 }

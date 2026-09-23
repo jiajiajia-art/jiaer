@@ -5,6 +5,7 @@ import type { BannerGameOption } from '../api/banner/banner.type';
 import specialThemeTagsApi from '../api/specialThemeTags/specialThemeTagsApi';
 import type {
     AdminSpecialThemeTagRecord,
+    SpecialThemeAudienceGender,
     SpecialThemeAutoSort,
     SpecialThemeConfigMode,
     SpecialThemeSelectedGame,
@@ -21,6 +22,47 @@ const CONFIG_MODE_OPTIONS: Array<{ value: SpecialThemeConfigMode; label: string 
     { value: 'manual', label: '手动配置' },
     { value: 'auto', label: '自动配置' },
 ];
+
+const MANUAL_GENDER_OPTIONS: Array<{ value: SpecialThemeAudienceGender; label: string }> = [
+    { value: 'male', label: '男生可见' },
+    { value: 'female', label: '女生可见' },
+];
+
+const createEmptyGamesByGender = (): Record<SpecialThemeAudienceGender, SpecialThemeSelectedGame[]> => ({
+    male: [],
+    female: [],
+});
+
+const getTagGamesByGender = (
+    tag: AdminSpecialThemeTagRecord | null,
+): Record<SpecialThemeAudienceGender, SpecialThemeSelectedGame[]> => {
+    if (!tag) return createEmptyGamesByGender();
+    const grouped = tag.selected_games_by_gender;
+    if (grouped) {
+        return {
+            male: grouped.male || [],
+            female: grouped.female || [],
+        };
+    }
+
+    return {
+        male: tag.selected_games || [],
+        female: tag.selected_games || [],
+    };
+};
+
+const getTagCountByGender = (tag: AdminSpecialThemeTagRecord): Record<SpecialThemeAudienceGender, number> => {
+    if (tag.selected_game_count_by_gender) {
+        return {
+            male: tag.selected_game_count_by_gender.male || 0,
+            female: tag.selected_game_count_by_gender.female || 0,
+        };
+    }
+    return {
+        male: tag.selected_game_count || 0,
+        female: tag.selected_game_count || 0,
+    };
+};
 
 const moveByKey = <T, K extends string | number>(
     list: T[],
@@ -75,7 +117,8 @@ const SpecialThemeTagManager: React.FC = () => {
     const [editorName, setEditorName] = useState('');
     const [editorMode, setEditorMode] = useState<SpecialThemeConfigMode>('manual');
     const [editorAutoSort, setEditorAutoSort] = useState<SpecialThemeAutoSort>('hot');
-    const [editorGames, setEditorGames] = useState<SpecialThemeSelectedGame[]>([]);
+    const [activeManualGender, setActiveManualGender] = useState<SpecialThemeAudienceGender>('male');
+    const [editorGamesByGender, setEditorGamesByGender] = useState<Record<SpecialThemeAudienceGender, SpecialThemeSelectedGame[]>>(() => createEmptyGamesByGender());
     const [searchKeyword, setSearchKeyword] = useState('');
     const [searchResults, setSearchResults] = useState<BannerGameOption[]>([]);
     const [draggingTagId, setDraggingTagId] = useState<number | null>(null);
@@ -86,6 +129,7 @@ const SpecialThemeTagManager: React.FC = () => {
         () => specialTags.find((tag) => tag.id === activeTagId) || null,
         [activeTagId, specialTags],
     );
+    const activeEditorGames = editorGamesByGender[activeManualGender] || [];
 
     const loadSpecialTags = useCallback(async (focusId?: number | null) => {
         try {
@@ -121,7 +165,8 @@ const SpecialThemeTagManager: React.FC = () => {
             setEditorName('');
             setEditorMode('manual');
             setEditorAutoSort('hot');
-            setEditorGames([]);
+            setActiveManualGender('male');
+            setEditorGamesByGender(createEmptyGamesByGender());
             setSearchKeyword('');
             setSearchResults([]);
             return;
@@ -130,7 +175,8 @@ const SpecialThemeTagManager: React.FC = () => {
         setEditorName(activeTag.name);
         setEditorMode(activeTag.config_mode);
         setEditorAutoSort(activeTag.auto_sort || 'hot');
-        setEditorGames(activeTag.selected_games || []);
+        setActiveManualGender('male');
+        setEditorGamesByGender(getTagGamesByGender(activeTag));
         setSearchKeyword('');
         setSearchResults([]);
     }, [activeTag]);
@@ -201,8 +247,11 @@ const SpecialThemeTagManager: React.FC = () => {
             return;
         }
 
-        if (editorMode === 'manual' && editorGames.length > manualLimit) {
-            toast.error(`手动模式最多只能配置 ${manualLimit} 个剧本`);
+        const overLimitGender = MANUAL_GENDER_OPTIONS.find((option) => (
+            (editorGamesByGender[option.value] || []).length > manualLimit
+        ));
+        if (editorMode === 'manual' && overLimitGender) {
+            toast.error(`${overLimitGender.label}最多只能配置 ${manualLimit} 个剧本`);
             return;
         }
 
@@ -219,7 +268,8 @@ const SpecialThemeTagManager: React.FC = () => {
             if (editorMode === 'manual') {
                 // 实现手动模式剧本排序保存
                 await specialThemeTagsApi.saveAdminTagGames(activeTag.id, {
-                    fileIds: editorGames.map((game) => game.file_id),
+                    maleFileIds: editorGamesByGender.male.map((game) => game.file_id),
+                    femaleFileIds: editorGamesByGender.female.map((game) => game.file_id),
                 });
             }
 
@@ -264,18 +314,25 @@ const SpecialThemeTagManager: React.FC = () => {
     }, [activeTagId, hasTagOrderChanges, loadSpecialTags, specialTags]);
 
     const handleAddGame = (game: BannerGameOption) => {
-        setEditorGames((previousGames) => {
+        setEditorGamesByGender((previousGroups) => {
+            const previousGames = previousGroups[activeManualGender] || [];
             if (previousGames.some((item) => item.file_id === game.file_id)) {
-                toast.error('该剧本已加入当前特殊标签');
-                return previousGames;
+                toast.error('该剧本已加入当前性别分组');
+                return previousGroups;
             }
 
             if (previousGames.length >= manualLimit) {
-                toast.error(`手动模式最多只能配置 ${manualLimit} 个剧本`);
-                return previousGames;
+                toast.error(`手动模式每个性别最多只能配置 ${manualLimit} 个剧本`);
+                return previousGroups;
             }
 
-            return [...previousGames, mapBannerGameToSelected(game, previousGames.length)];
+            return {
+                ...previousGroups,
+                [activeManualGender]: [
+                    ...previousGames,
+                    mapBannerGameToSelected(game, previousGames.length),
+                ],
+            };
         });
 
         setSearchKeyword('');
@@ -283,12 +340,15 @@ const SpecialThemeTagManager: React.FC = () => {
     };
 
     const handleRemoveGame = (fileId: string) => {
-        setEditorGames((previousGames) => previousGames
-            .filter((game) => game.file_id !== fileId)
-            .map((game, index) => ({
-                ...game,
-                sort_order: index,
-            })));
+        setEditorGamesByGender((previousGroups) => ({
+            ...previousGroups,
+            [activeManualGender]: (previousGroups[activeManualGender] || [])
+                .filter((game) => game.file_id !== fileId)
+                .map((game, index) => ({
+                    ...game,
+                    sort_order: index,
+                })),
+        }));
     };
 
     const handleTagDragStart = (tagId: number) => {
@@ -314,10 +374,18 @@ const SpecialThemeTagManager: React.FC = () => {
         if (!draggingGameFileId || draggingGameFileId === targetFileId) return;
 
         event.preventDefault();
-        setEditorGames((previousGames) => moveByKey(previousGames, draggingGameFileId, targetFileId, (game) => game.file_id).map((game, index) => ({
-            ...game,
-            sort_order: index,
-        })));
+        setEditorGamesByGender((previousGroups) => ({
+            ...previousGroups,
+            [activeManualGender]: moveByKey(
+                previousGroups[activeManualGender] || [],
+                draggingGameFileId,
+                targetFileId,
+                (game) => game.file_id,
+            ).map((game, index) => ({
+                ...game,
+                sort_order: index,
+            })),
+        }));
     };
 
     useEffect(() => {
@@ -409,28 +477,31 @@ const SpecialThemeTagManager: React.FC = () => {
                         {!isLoading && specialTags.length === 0 ? (
                             <div className={styles.emptyState}>当前还没有特殊标签。</div>
                         ) : null}
-                        {!isLoading && specialTags.map((tag, index) => (
-                            <button
-                                key={tag.id}
-                                type="button"
-                                draggable={!isSaving}
-                                className={`${styles.tagItem} ${activeTagId === tag.id ? styles.tagItemActive : ''}`}
-                                onClick={() => setActiveTagId(tag.id)}
-                                onDragStart={() => handleTagDragStart(tag.id)}
-                                onDragOver={(event) => handleTagDragOver(event, tag.id)}
-                                onDragEnd={() => setDraggingTagId(null)}
-                            >
-                                <span className={styles.tagOrder}>{index + 1}</span>
-                                <span className={styles.tagInfo}>
-                                    <span className={styles.tagName}>{tag.name}</span>
-                                    <span className={styles.tagMode}>
-                                        {tag.config_mode === 'manual'
-                                            ? `手动配置 · ${tag.selected_game_count} / ${manualLimit}`
-                                            : `自动配置 · ${AUTO_SORT_OPTIONS.find((option) => option.value === tag.auto_sort)?.label || '最热'}`}
+                        {!isLoading && specialTags.map((tag, index) => {
+                            const genderCounts = getTagCountByGender(tag);
+                            return (
+                                <button
+                                    key={tag.id}
+                                    type="button"
+                                    draggable={!isSaving}
+                                    className={`${styles.tagItem} ${activeTagId === tag.id ? styles.tagItemActive : ''}`}
+                                    onClick={() => setActiveTagId(tag.id)}
+                                    onDragStart={() => handleTagDragStart(tag.id)}
+                                    onDragOver={(event) => handleTagDragOver(event, tag.id)}
+                                    onDragEnd={() => setDraggingTagId(null)}
+                                >
+                                    <span className={styles.tagOrder}>{index + 1}</span>
+                                    <span className={styles.tagInfo}>
+                                        <span className={styles.tagName}>{tag.name}</span>
+                                        <span className={styles.tagMode}>
+                                            {tag.config_mode === 'manual'
+                                                ? `手动配置 · 男 ${genderCounts.male} / 女 ${genderCounts.female}`
+                                                : `自动配置 · ${AUTO_SORT_OPTIONS.find((option) => option.value === tag.auto_sort)?.label || '最热'}`}
+                                        </span>
                                     </span>
-                                </span>
-                            </button>
-                        ))}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 
@@ -492,7 +563,27 @@ const SpecialThemeTagManager: React.FC = () => {
                                 <div className={styles.manualPanel}>
                                     <div className={styles.manualHeader}>
                                         <div className={styles.cardTitle}>手动剧本配置</div>
-                                        <div className={styles.limitText}>{editorGames.length} / {manualLimit}</div>
+                                        <div className={styles.limitText}>{activeEditorGames.length} / {manualLimit}</div>
+                                    </div>
+
+                                    <div className={styles.genderTabs} role="tablist" aria-label="手动剧本性别分组">
+                                        {MANUAL_GENDER_OPTIONS.map((option) => (
+                                            <button
+                                                key={option.value}
+                                                type="button"
+                                                role="tab"
+                                                aria-selected={activeManualGender === option.value}
+                                                className={`${styles.genderTab} ${activeManualGender === option.value ? styles.genderTabActive : ''}`}
+                                                onClick={() => {
+                                                    setActiveManualGender(option.value);
+                                                    setSearchKeyword('');
+                                                    setSearchResults([]);
+                                                    setDraggingGameFileId(null);
+                                                }}
+                                            >
+                                                {option.label}
+                                            </button>
+                                        ))}
                                     </div>
 
                                     <label className={styles.field}>
@@ -526,10 +617,10 @@ const SpecialThemeTagManager: React.FC = () => {
                                     ) : null}
 
                                     <div className={styles.selectedGameList}>
-                                        {editorGames.length === 0 ? (
-                                            <div className={styles.emptyState}>当前还没有配置手动剧本。</div>
+                                        {activeEditorGames.length === 0 ? (
+                                            <div className={styles.emptyState}>当前还没有配置{MANUAL_GENDER_OPTIONS.find((option) => option.value === activeManualGender)?.label}剧本。</div>
                                         ) : (
-                                            editorGames.map((game, index) => (
+                                            activeEditorGames.map((game, index) => (
                                                 <div
                                                     key={game.file_id}
                                                     draggable

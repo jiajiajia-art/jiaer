@@ -38,20 +38,54 @@
 }
 
 .modalContent {
-    background: #ffffff;
-    border-radius: 14px;
-    width: 90%;
-    max-width: 500px;
-    min-height: 400px;
-    border: 1px solid rgba(251, 70, 85, 0.18);
-    box-shadow: 0 18px 48px rgba(251, 70, 85, 0.22);
-    animation: slideUp 0.3s ease-out;
     position: relative;
+    width: min(322px, calc(100vw - 20px));
+    max-width: 380px;
+    min-height: 385px;
+    max-height: calc(100dvh - 32px - env(safe-area-inset-bottom));
+    border-radius: 10px;
+    opacity: 1;
+    /* 上深下浅，底部保留灰，避免通透成黑 */
+    background:
+        linear-gradient(0deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15)),
+        linear-gradient(180deg, #343434 0%, rgba(52, 52, 52, 0.72) 100%);
+    box-sizing: border-box;
+    border: 0.68px solid transparent;
+    backdrop-filter: blur(47px);
+    -webkit-backdrop-filter: blur(47px);
+    box-shadow: none;
+    animation: slideUp 0.3s ease-out;
     display: flex;
     flex-direction: column;
-    padding: 36px 32px;
-    max-height: calc(100dvh - 32px - env(safe-area-inset-bottom));
+    padding: 20px 18px 22px;
     overflow: hidden;
+}
+
+/* 白边线性渐变（border-image 与 border-radius 不兼容） */
+.modalContent::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    padding: 0.68px;
+    background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.55) 0%,
+        rgba(255, 255, 255, 0.18) 60%,
+        rgba(255, 255, 255, 0) 90%
+    );
+    -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 3;
+}
+
+.modalContentWide {
+    width: min(520px, calc(100vw - 20px));
+    max-width: 560px;
 }
 
 @keyframes slideUp {
@@ -67,37 +101,49 @@
 
 .closeBtn {
     position: absolute;
-    top: 12px;
-    right: 12px;
-    width: 42px;
-    height: 42px;
+    top: 14px;
+    left: 12px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     z-index: 10;
-    transition: all 0.3s ease;
-    color: #FB4655;
-    font-size: 24px;
-    line-height: 1;
-    font-weight: 600;
+    transition: opacity 0.2s ease;
+    color: #ffffff;
     background: transparent;
     border: none;
+    padding: 0;
 }
 
 .closeBtn:hover {
-    transform: translateY(-2px);
-    color: #ff5c68;
+    opacity: 0.75;
+}
+
+.closeIcon {
+    display: block;
+    width: 10px;
+    height: 10px;
+    border-left: 2px solid #ffffff;
+    border-bottom: 2px solid #ffffff;
+    transform: rotate(45deg);
+    margin-left: 4px;
 }
 
 .title {
-    color: #111;
-    font-size: 1.7rem;
-    font-weight: 700;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 500;
     text-align: center;
-    margin: 0 0 12px 0;
-    letter-spacing: 0.5px;
+    margin: 4px 0 18px;
+    letter-spacing: 0;
+    line-height: normal;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 22px;
 }
 
 .exchangeRate {
@@ -120,11 +166,57 @@
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 16px;
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    padding-bottom: calc(4px + env(safe-area-inset-bottom));
+}
+
+.balanceCard {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.balanceMain {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+.balanceLabel {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.55);
+    line-height: 1.2;
+}
+
+.balanceValueRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.balanceCoin {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    flex-shrink: 0;
+    display: block;
+}
+
+.balanceValue {
+    font-size: 36px;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1;
+    letter-spacing: 0.01em;
 }
 
 .fixedAmounts {
@@ -133,7 +225,7 @@
 
 .amountsLabel {
     font-size: 0.95rem;
-    color: #111;
+    color: rgba(255, 255, 255, 0.7);
     margin-bottom: 12px;
     font-weight: 600;
 }
@@ -141,91 +233,78 @@
 .firstChargeHint {
     margin: 0 0 14px 0;
     font-size: 0.86rem;
-    color: #FB4655;
+    color: #ff6b7a;
     font-weight: 600;
     line-height: 1.4;
 }
 
 .firstChargeHintInactive {
-    color: #ea8e97;
+    color: rgba(255, 107, 122, 0.65);
 }
 
 .amountsGrid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
+    gap: 10px;
 }
 
 .amountBtn {
-    background: #fff;
-    border: 2px solid #e9ecef;
-    border-radius: 12px;
-    padding: 14px 12px;
-    margin-left: 2px;
-    margin-right: 2px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 6px 4px;
     cursor: pointer;
-    transition: all 0.22s ease;
+    transition: background 0.2s ease, border-color 0.2s ease;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: center;
     gap: 0;
+    width: 100%;
+    height: 71px;
+    min-height: 71px;
+    box-sizing: border-box;
     overflow: hidden;
 }
 
-.firstChargeTag {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #FB4655;
-    color: #fff;
-    font-size: 0.72rem;
-    line-height: 1;
-    padding: 10px 0;
-    border-radius: 10px 10px 0 0;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    width: calc(100% + 24px);
-    margin: -14px -12px 0;
-    min-height: 24px;
-}
-
+.firstChargeTag,
 .noBonusTag {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #FB4655;
-    color: #fff;
-    font-size: 0.72rem;
-    line-height: 1;
-    padding: 10px 0;
-    border-radius: 10px 10px 0 0;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    width: calc(100% + 24px);
-    margin: -14px -12px 0;
-    min-height: 24px;
+    display: none;
 }
 
 .amountBtn:hover {
-    border-color: #dfe4ea;
-    background: #fff;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(17, 17, 17, 0.06);
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .amountBtnActive {
-    border-color: #FB4655;
-    background: #fff;
-    box-shadow: 0 4px 12px rgba(251, 70, 85, 0.16);
+    border: 1px solid #FF3B61;
+    background: rgba(255, 59, 97, 0.4);
+    box-shadow: none;
 }
 
 .amountMainPoints {
-    font-size: 1.22rem;
-    line-height: 1.1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    font-size: 1.05rem;
+    line-height: 1;
     font-weight: 700;
-    color: #111;
+    color: #ffffff;
     letter-spacing: 0.01em;
+    transform: translateX(-3px);
+}
+
+.amountMainPoints span {
+    transform: translateX(-2px);
+}
+
+.amountCoin {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    flex-shrink: 0;
+    display: block;
 }
 
 .amountTopSection {
@@ -233,18 +312,18 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
-    padding: 10px 0 4px;
+    gap: 4px;
+    padding: 0;
 }
 
 .amountPriceMeta {
     font-size: 0.8rem;
-    color: #8e95a3;
+    color: rgba(255, 255, 255, 0.55);
     line-height: 1.25;
 }
 
 .amountPriceOriginal {
-    color: #b6bcc7;
+    color: rgba(255, 255, 255, 0.35);
     margin-right: 0.35em;
 }
 
@@ -259,7 +338,7 @@
 
 .amountBtnActive .amountMainPoints,
 .amountBtnActive .amountFirstChargePoints {
-    color: #111;
+    color: #ffffff;
 }
 
 .amountNoBonus {
@@ -271,27 +350,27 @@
 }
 
 .customLabel {
-    font-size: 0.95rem;
-    color: #111;
-    margin-bottom: 12px;
-    font-weight: 600;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.55);
+    margin-bottom: 10px;
+    font-weight: 500;
 }
 
 .customInputWrapper {
     position: relative;
     display: flex;
     align-items: center;
-    background: #f8f9fa;
-    border: 2px solid #e9ecef;
-    border-radius: 12px;
-    padding: 0 16px;
-    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 0 14px;
+    transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 .customInputWrapper:focus-within {
-    border-color: #FB4655;
-    background: #ffffff;
-    box-shadow: 0 0 0 3px rgba(251, 70, 85, 0.1);
+    border-color: rgba(255, 41, 41, 0.55);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: none;
 }
 
 .customInputWrapper.inputError {
@@ -303,16 +382,16 @@
 }
 
 .errorText {
-    color: #e74c3c;
+    color: #ff6b7a;
     font-size: 0.85rem;
     margin-top: 4px;
     text-align: center;
 }
 
 .currencySymbol {
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 600;
-    color: #666;
+    color: rgba(255, 255, 255, 0.65);
     margin-right: 8px;
 }
 
@@ -320,27 +399,34 @@
     flex: 1;
     border: none;
     background: transparent;
-    padding: 14px 0;
-    font-size: 1.1rem;
-    color: #111;
+    padding: 12px 0;
+    font-size: 1rem;
+    color: #ffffff;
     outline: none;
     font-weight: 500;
 }
 
 .customInput::placeholder {
-    color: #bbb;
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.customReceiveHint {
+    margin-top: 8px;
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.55);
+    text-align: center;
 }
 
 .customPoints {
     margin-top: 8px;
     font-size: 0.9rem;
-    color: #FB4655;
+    color: #ff6b7a;
     font-weight: 600;
     text-align: center;
 }
 
 .rechargeSummary {
-    background: #f8f9fa;
+    background: rgba(255, 255, 255, 0.06);
     border-radius: 12px;
     padding: 16px;
     display: flex;
@@ -351,10 +437,10 @@
 .qrSection {
     margin-top: 8px;
     padding: 20px 16px;
-    border: 1px dashed rgba(251, 70, 85, 0.4);
+    border: none;
     border-radius: 12px;
     text-align: center;
-    background: #fff9fa;
+    background: transparent;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -363,7 +449,7 @@
 .qrTitle {
     font-size: 1rem;
     font-weight: 600;
-    color: #FB4655;
+    color: #ffffff;
 }
 
 .qrImage {
@@ -379,13 +465,13 @@
 
 .qrHint {
     font-size: 0.9rem;
-    color: #888;
+    color: rgba(255, 255, 255, 0.55);
 }
 
 .countdownText {
     font-size: 0.95rem;
     font-weight: 600;
-    color: #FB4655;
+    color: #ff6b7a;
 }
 
 .pollingText {
@@ -474,74 +560,404 @@
 }
 
 .submitBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 100%;
-    padding: 16px;
-    background: linear-gradient(135deg, #FB4655 0%, #ff6b7a 100%);
+    max-width: 209px;
+    height: 42px;
+    padding: 0 16px;
+    margin: 12px auto 0;
+    background: rgba(255, 255, 255, 0.1);
     color: #ffffff;
     border: none;
-    border-radius: 12px;
-    font-size: 1.1rem;
-    font-weight: 700;
+    border-radius: 200px;
+    font-size: 15px;
+    font-weight: 500;
     cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(251, 70, 85, 0.3);
+    transition: background 0.2s ease, opacity 0.2s ease;
+    box-shadow: none;
     position: sticky;
     bottom: 0;
     z-index: 2;
-    margin-top: 4px;
 }
 
 .submitBtn:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(251, 70, 85, 0.4);
+    background: rgba(255, 255, 255, 0.16);
+    transform: none;
+    box-shadow: none;
 }
 
 .submitBtn:active:not(:disabled) {
-    transform: translateY(0);
+    transform: none;
 }
 
 .submitBtn:disabled {
-    background: #e9ecef;
-    color: #adb5bd;
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.35);
     cursor: not-allowed;
     box-shadow: none;
+}
+
+/* 功能注释：支付方式片——墨黑账本 + 右上关闭；微信行带绿标，去掉底部取消 */
+.payMethodOverlay {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.62);
+    border-radius: 10px;
+    animation: payMethodFade 0.18s ease-out;
+}
+
+@keyframes payMethodFade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.payMethodSheet {
+    --pay-sheet: #1a1a1a;
+    --pay-wechat: #07c160;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 14px 16px;
+    border-radius: 16px;
+    background: var(--pay-sheet);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+    animation: payMethodUp 0.2s ease-out;
+}
+
+@keyframes payMethodUp {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.payMethodHeader {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    margin-bottom: 2px;
+}
+
+.payMethodTitle {
+    margin: 0;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #ffffff;
+}
+
+.payMethodClose {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%);
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.75);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.payMethodClose:hover:not(:disabled) {
+    color: #ffffff;
+    background: transparent;
+}
+
+.payMethodClose:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.payMethodCloseIcon {
+    position: relative;
+    width: 12px;
+    height: 12px;
+    display: block;
+}
+
+.payMethodCloseIcon::before,
+.payMethodCloseIcon::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 1.5px;
+    background: currentColor;
+    border-radius: 1px;
+}
+
+.payMethodCloseIcon::before {
+    transform: translateY(-50%) rotate(45deg);
+}
+
+.payMethodCloseIcon::after {
+    transform: translateY(-50%) rotate(-45deg);
+}
+
+/* 功能注释：钻石页支付方式互切条；默认项高亮 */
+.payMethodToggle {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.payMethodToggleBtn {
+    flex: 1;
+    min-height: 36px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.payMethodToggleBtn:hover {
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.22);
+}
+
+.payMethodToggleBtnActive {
+    color: #ffffff;
+    border-color: rgba(7, 193, 96, 0.65);
+    background: rgba(7, 193, 96, 0.16);
+}
+
+.payMethodBtnPreferred {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.28);
+}
+
+.payMethodBtn {
+    width: 100%;
+    min-height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+    background: #1c1c1e;
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, filter 0.15s ease;
+}
+
+.payMethodBtn:hover:not(:disabled) {
+    background: #222226;
+    border-color: rgba(255, 255, 255, 0.18);
+}
+
+.payMethodBtnWechat {
+    border-color: rgba(7, 193, 96, 0.35);
+    background: linear-gradient(180deg, rgba(7, 193, 96, 0.16) 0%, rgba(28, 28, 30, 0.95) 100%);
+}
+
+.payMethodBtnWechat:hover:not(:disabled) {
+    border-color: rgba(7, 193, 96, 0.55);
+    background: linear-gradient(180deg, rgba(7, 193, 96, 0.22) 0%, rgba(34, 34, 38, 0.98) 100%);
+}
+
+.payMethodWechatIcon {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    color: var(--pay-wechat);
+}
+
+.payMethodBtnOverseas {
+    border-color: transparent;
+    background: linear-gradient(180deg, #b83248 0%, #8e2135 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.payMethodBtnOverseas:hover:not(:disabled) {
+    filter: brightness(1.06);
+    background: linear-gradient(180deg, #c53a52 0%, #9a2640 100%);
+    border-color: transparent;
+}
+
+.payMethodBtn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
 }
 
 /* Tab 样式 */
 .tabBar {
     display: flex;
     gap: 8px;
-    margin-bottom: 24px;
+    margin-bottom: 8px;
     padding: 4px;
-    background: #f5f5f5;
+    background: rgba(255, 255, 255, 0.06);
     border-radius: 12px;
 }
 
 .tabBtn {
     flex: 1;
-    padding: 12px 16px;
+    padding: 10px 12px;
     border: none;
     border-radius: 10px;
     background: transparent;
-    color: #666;
-    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.92rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
 }
 
 .tabBtnActive {
-    background: #ffffff;
-    color: #FB4655;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    background: rgba(255, 41, 41, 0.2);
+    color: #ffffff;
+    box-shadow: none;
+}
+
+/* 会员状态卡（畅享会员） */
+.membershipStatusCard {
+    position: relative;
+    width: 100%;
+    height: 120px;
+    border-radius: 14px;
+    border: 1px solid transparent;
+    background: linear-gradient(293deg, #262928 0%, #151312 100%);
+    overflow: hidden;
+    padding: 0 10px 0 18px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+}
+
+.membershipStatusCard::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 14px;
+    padding: 1px;
+    background: linear-gradient(113deg, #949492 0%, #ffffff1a 100%);
+    -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.membershipStatusMain {
+    position: relative;
+    z-index: 0;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.membershipStatusInfo {
+    min-width: 0;
+    flex: 1 1 auto;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.membershipStatusIcon {
+    width: 18px;
+    height: 18px;
+    margin-top: 3px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.membershipStatusText {
+    min-width: max-content;
+    flex: 0 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.membershipStatusTitle {
+    font-size: 17px;
+    font-weight: 600;
+    color: #ffffff;
+    line-height: 1.25;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+.membershipStatusExpire {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: nowrap;
+    gap: 4px;
+    font-size: 12px;
+    line-height: 1.3;
+    white-space: nowrap;
+}
+
+.membershipStatusExpireLabel {
+    color: #FF3B61;
+    font-weight: 500;
+}
+
+.membershipStatusExpireDate {
+    color: rgba(255, 255, 255, 0.92);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+}
+
+.membershipStatusBadge {
+    flex-shrink: 0;
+    width: 72px;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.membershipStatusBadgeIcon {
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
 }
 
 /* 会员卡套餐列表 */
 .plansList {
-    display: flex;
-    flex-direction: row;
-    gap: 12px;
-    margin-bottom: -10px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 0;
+}
+
+@media (min-width: 420px) {
+    .plansList {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
 }
 
 .planItem {
@@ -550,40 +966,69 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 18px 12px;
-    background: #f8f9fa;
-    border: 2px solid #e9ecef;
-    border-radius: 12px;
+    gap: 8px;
+    padding: 14px 8px;
+    min-height: 72px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid transparent;
+    border-radius: 10px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: background 0.2s ease, border-color 0.2s ease;
+    box-sizing: border-box;
 }
 
 .planItem:hover {
-    border-color: #FB4655;
-    background: #fff5f6;
+    border-color: rgba(255, 59, 97, 0.35);
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .planItemActive {
-    border-color: #FB4655;
-    background: linear-gradient(135deg, #fff5f6 0%, #ffeef0 100%);
-    box-shadow: 0 4px 12px rgba(251, 70, 85, 0.2);
+    border: 1px solid #FF3B61;
+    background: rgba(255, 59, 97, 0.4);
+    box-shadow: none;
 }
 
 .planItemName {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 0;
+    line-height: 1.2;
+    text-align: center;
 }
 
 .planItemActive .planItemName {
-    color: #FB4655;
+    color: #ffffff;
 }
 
 .planItemPrice {
-    font-size: 1.2rem;
+    font-size: 18px;
     font-weight: 700;
-    color: #FB4655;
+    color: #ffffff;
+    line-height: 1;
+}
+
+.membershipSubmitBtn {
+    width: 100%;
+    max-width: 209px;
+    height: 42px;
+    margin: 12px auto 0;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 200px;
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.membershipSubmitBtn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.membershipSubmitBtn:disabled {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: transparent;
+    color: rgba(255, 255, 255, 0.35);
 }
 
 /* ========== 会员特权页面 ========== */
@@ -942,20 +1387,37 @@
 
 /* ========== 会员权益对比表 ========== */
 .benefitsComparison {
-    margin-top: 8px;
-    border-radius: 14px;
-    border: 1px solid #eee;
-    background: #fafafa;
+    position: relative;
+    margin-top: 4px;
+    border-radius: 10px;
+    border: 0.68px solid transparent;
+    background: rgba(255, 255, 255, 0.03);
     overflow: hidden;
 }
 
+.benefitsComparison::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    padding: 0.68px;
+    background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.55) 0%,
+        rgba(255, 255, 255, 0.18) 60%,
+        rgba(255, 255, 255, 0) 90%
+    );
+    -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 1;
+}
+
 .comparisonTitle {
-    padding: 14px 16px;
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: #333;
-    background: linear-gradient(180deg, #fff 0%, #f8f8f8 100%);
-    border-bottom: 1px solid #eee;
+    display: none;
 }
 
 .comparisonTable {
@@ -964,48 +1426,57 @@
 
 .comparisonHeader {
     display: grid;
-    grid-template-columns: 1fr repeat(5, 1fr);
+    grid-template-columns: minmax(72px, 1.4fr) repeat(5, minmax(0, 1fr));
     gap: 0;
-    padding: 10px 12px;
-    background: #f5f5f5;
-    border-bottom: 1px solid #eee;
+    padding: 0;
+    background: rgba(255, 255, 255, 0.04);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .comparisonLabel {
-    font-size: 0.85rem;
-    color: #666;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.55);
     font-weight: 500;
+    padding: 10px 8px;
+    display: flex;
+    align-items: center;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    line-height: 1.3;
 }
 
 .comparisonHeaderCell {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    justify-content: center;
+    gap: 0;
+    padding: 10px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.85);
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    text-align: center;
+}
+
+.comparisonHeaderCell:last-child,
+.comparisonRow .comparisonValue:last-child {
+    border-right: none;
 }
 
 .planTag {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 4px 12px;
-    border-radius: 999px;
-    color: #fff;
-    font-size: 0.75rem;
-    font-weight: 700;
+    display: none;
 }
 
 .planPriceSmall {
-    font-size: 0.8rem;
-    font-weight: 600;
+    display: none;
 }
 
 .comparisonRow {
     display: grid;
-    grid-template-columns: 1fr repeat(5, 1fr);
+    grid-template-columns: minmax(72px, 1.4fr) repeat(5, minmax(0, 1fr));
     gap: 0;
-    padding: 10px 12px;
-    border-bottom: 1px solid #f0f0f0;
+    padding: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     transition: background 0.2s ease;
 }
 
@@ -1014,21 +1485,27 @@
 }
 
 .comparisonRow:hover {
-    background: rgba(0, 0, 0, 0.01);
+    background: rgba(255, 255, 255, 0.03);
 }
 
 .comparisonValue {
     text-align: center;
-    font-size: 0.9rem;
-    color: #555;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+    padding: 10px 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .comparisonValue.highlight {
-    font-weight: 700;
+    font-weight: 600;
+    color: #ffffff;
 }
 
 .comparisonValue.disabled {
-    color: #ccc;
+    color: rgba(255, 255, 255, 0.25);
 }
 
 .comparisonFooter {
@@ -1064,35 +1541,36 @@
     }
 
     .modalContent {
-        width: 100%;
+        width: min(322px, calc(100vw - 20px));
         max-width: none;
-        padding: 28px 20px;
+        padding: 18px 16px 20px;
         min-height: auto;
         max-height: calc(100dvh - 20px - env(safe-area-inset-bottom));
     }
 
     .title {
-        font-size: 1.5rem;
-        margin-bottom: 10px;
+        font-size: 16px;
+        margin-bottom: 16px;
     }
 
     .amountsGrid {
         grid-template-columns: repeat(3, 1fr);
-        gap: 10px;
+        gap: 8px;
     }
 
     .amountBtn {
-        padding: 12px 8px;
-        min-height: 100px;
+        padding: 6px 4px;
+        min-height: 71px;
+        height: 71px;
     }
 
     .amountTopSection {
         gap: 6px;
-        padding: 10px 0 8px;
+        padding: 0;
     }
 
     .amountMainPoints {
-        font-size: 1.05rem;
+        font-size: 0.98rem;
     }
 
     .amountPriceMeta {
@@ -1104,10 +1582,7 @@
     }
 
     .firstChargeTag {
-        font-size: 0.66rem;
-        padding: 7px 0;
-        width: calc(100% + 16px);
-        margin: -12px -8px 0;
+        display: none;
     }
 
     .customInput {
@@ -1116,22 +1591,33 @@
     }
 
     .submitBtn {
-        padding: 14px;
-        font-size: 1rem;
-        margin-top: 2px;
+        height: 42px;
+        padding: 0 16px;
+        font-size: 15px;
+        margin-top: 12px;
+        max-width: 209px;
+        border-radius: 200px;
+    }
+
+    .membershipSubmitBtn {
+        max-width: 209px;
+        height: 42px;
+        margin-top: 12px;
     }
 
     .planItem {
-        padding: 14px 8px;
+        padding: 12px 6px;
+        min-height: 68px;
+        gap: 6px;
     }
 
     .planItemName {
-        font-size: 0.95rem;
-        margin-bottom: 6px;
+        font-size: 11px;
+        margin-bottom: 0;
     }
 
     .planItemPrice {
-        font-size: 1rem;
+        font-size: 16px;
     }
 
     /* 会员页面移动端适配 */
@@ -1185,20 +1671,26 @@
     /* 对比表移动端适配 */
     .comparisonHeader,
     .comparisonRow {
-        padding: 10px 12px;
+        padding: 0;
     }
 
     .comparisonLabel {
-        font-size: 0.7rem;
+        font-size: 10px;
+        padding: 8px 6px;
+    }
+
+    .comparisonHeaderCell {
+        font-size: 10px;
+        padding: 8px 2px;
     }
 
     .comparisonValue {
-        font-size: 0.75rem;
+        font-size: 11px;
+        padding: 8px 2px;
     }
 
     .planTag {
-        padding: 2px 6px;
-        font-size: 0.65rem;
+        display: none;
     }
 
     .planPriceSmall {

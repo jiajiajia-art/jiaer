@@ -1,0 +1,76 @@
+.heroSection {
+    margin: 100px 0 16px !important;
+}
+
+.mainContent {
+    margin-bottom: 10px !important;
+}
+
+.heroCard {
+    position: relative !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0 !important;
+    padding: 20px 32px 8px !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.backToCreateButton {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    color: #F5F5F7;
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.2;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.backToCreateButton:hover {
+    opacity: 0.75;
+}
+
+.backChevron {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    display: block;
+    width: 12px;
+    height: 12px;
+    border-left: 2.5px solid currentColor;
+    border-bottom: 2.5px solid currentColor;
+    transform: translateY(-50%) rotate(45deg);
+    margin-left: 4px;
+    flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+    .heroSection {
+        margin: 72px 0 12px !important;
+    }
+
+    .heroCard {
+        padding: 12px 16px 4px !important;
+    }
+
+    .backToCreateButton {
+        font-size: 16px;
+    }
+
+    .backChevron {
+        left: 0;
+        width: 11px;
+        height: 11px;
+    }
+}

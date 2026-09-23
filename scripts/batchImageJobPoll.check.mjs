@@ -84,6 +84,17 @@ test('resolveBatchImageJobPollStep returns board_settled_retry when items finish
     );
 });
 
+test('settling status keeps polling (await points finalize)', () => {
+    assert.equal(
+        resolveBatchImageJobPollStep({
+            cancelRequested: false,
+            status: 'settling',
+            attempt: 4,
+        }),
+        'continue',
+    );
+});
+
 test('completed status wins over boardSettledWithFailures', () => {
     assert.equal(
         resolveBatchImageJobPollStep({

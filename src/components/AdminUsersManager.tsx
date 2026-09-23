@@ -5,7 +5,6 @@ import adminUsersApi, { type AdminUserItem } from '../api/admin/adminUsersApi';
 import { normalizeUserRole } from '../utils/userRoles';
 import Pagination from './Pagination';
 import PageSectionHeader from './Admin/PageSectionHeader';
-// import PageSectionHeader from './Admin/PageSectionHeader';
 import workbenchStyles from './Admin/MetricSummary.module.css';
 import styles from './AdminUsersManager.module.css';
 

@@ -29,6 +29,7 @@ import gameTagsApi from '../api/gameTags/gameTagsApi';
 import specialThemeTagsApi from '../api/specialThemeTags/specialThemeTagsApi';
 import type { HomePromotionTicker } from '../api/promotion/promotion.type';
 import { flattenThemeTags, type FlatThemeTag } from '../utils/themeTags';
+import { localizeChineseByLanguage } from '../utils/chineseScript';
 import type { SpecialThemeAutoSort, SpecialThemeTagRecord } from '../api/specialThemeTags/specialThemeTagsApi.type';
 import {
     DEFAULT_HOME_LIST_FILTERS,
@@ -38,10 +39,14 @@ import {
     type HomeListMode,
     type HomeListSort,
 } from '../utils/gameBrowseFilters';
-import { collectRecommendExposeItems } from '../lib/homeRecommendExpose';
+import { collectRecommendExposeItems, shouldReportRecommendExpose } from '../lib/homeRecommendExpose';
 import { resolveHomeFiltersForNovelThemeConflict } from '../utils/homeFilterNovelTheme';
 import { openConfiguredLink } from '../utils/promotionNavigation';
 import { useExternalLinkCopyModal } from '../hooks/useExternalLinkCopyModal';
+import { normalizeGender } from '../utils/profileCompletion';
+
+/** 功能注释：加群横幅图标用下载切图原 SVG（组 9013），不用手写矢量 */
+const JOIN_GROUP_ICON = `${import.meta.env.BASE_URL}data/assetsv2/home/icon_community.svg`;
 
 type CarouselItem = UserGameData | BannerItem;
 
@@ -107,7 +112,7 @@ const getCircularCarouselDistance = (currentIndex: number, targetIndex: number, 
 };
 
 const Home: React.FC = () => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const navigate = useNavigate();
     const { requestCopy, modal: externalLinkCopyModal } = useExternalLinkCopyModal();
     const SWIPE_THRESHOLD = 40;
@@ -247,10 +252,11 @@ const Home: React.FC = () => {
         () => homeShowcaseTags.find((tag) => tag.key === activeShowcaseTagKey) || null,
         [activeShowcaseTagKey, homeShowcaseTags],
     );
+    const showcaseAudienceGender = normalizeGender(user?.user?.gender);
     const activeShowcaseGames = activeShowcaseTag
         ? (showcaseGamesCache[activeShowcaseTag.key] || [])
         : [];
-    const themePreviewResetKey = `${activeShowcaseTagKey || 'none'}-${showcaseLoadingKey === activeShowcaseTagKey ? 'loading' : 'ready'}`;
+    const themePreviewResetKey = `${activeShowcaseTagKey || 'none'}-${showcaseAudienceGender || 'auto'}-${showcaseLoadingKey === activeShowcaseTagKey ? 'loading' : 'ready'}`;
     const allGamesFilterKey = useMemo(
         () => getHomeListFilterKey(allGamesFilters),
         [allGamesFilters],
@@ -259,12 +265,15 @@ const Home: React.FC = () => {
         if (allGamesFilters.mode !== 'all' && allGamesFilters.tagId != null) {
             const modeOption = HOME_LIST_MODE_OPTIONS.find((option) => option.value === allGamesFilters.mode);
             const modeLabel = modeOption?.labelKey ? t(modeOption.labelKey) : (modeOption?.label || allGamesFilters.mode);
-            const themeLabel = allThemeTags.find((tag) => Number(tag.id) === Number(allGamesFilters.tagId))?.name
-                || t('gameBrowse.theme');
+            const themeLabel = localizeChineseByLanguage(
+                allThemeTags.find((tag) => Number(tag.id) === Number(allGamesFilters.tagId))?.name
+                    || t('gameBrowse.theme'),
+                i18n.resolvedLanguage || i18n.language,
+            );
             return t('home.noMatchingWorksModeTheme', { mode: modeLabel, theme: themeLabel });
         }
         return t('home.noMatchingWorks');
-    }, [allGamesFilters.mode, allGamesFilters.tagId, allThemeTags, t]);
+    }, [allGamesFilters.mode, allGamesFilters.tagId, allThemeTags, t, i18n.resolvedLanguage, i18n.language]);
 
     useEffect(() => {
         carouselImageLoadedMapRef.current = carouselImageLoadedMap;
@@ -763,8 +772,11 @@ const Home: React.FC = () => {
                     });
                 }
 
-                // 推荐列表：有 campaign 注入的卡片批量曝光（登录态由拦截器带 token）
-                if (filters.sort === 'recommended') {
+                // 推荐列表：有 campaign 的卡片批量曝光（接口强制登录，游客跳过避免 401）
+                if (
+                    filters.sort === 'recommended'
+                    && shouldReportRecommendExpose(useAuthStore.getState().isAuthenticated)
+                ) {
                     const exposeItems = collectRecommendExposeItems(nextGames);
                     if (exposeItems.length > 0) {
                         void libraryDataApi.exposeRecommended(exposeItems).catch((err) => {
@@ -943,7 +955,7 @@ const Home: React.FC = () => {
         try {
             let games: UserGameData[] = [];
         if (showcaseTag.kind === 'special') {
-            const response = await specialThemeTagsApi.getPublicTagGames(showcaseTag.id, 12);
+            const response = await specialThemeTagsApi.getPublicTagGames(showcaseTag.id, 12, showcaseAudienceGender);
             if (response.data.success) {
                 // 实现加载普通热门题材剧本预览
                 games = response.data.data || [];
@@ -979,7 +991,7 @@ const Home: React.FC = () => {
         } finally {
             setShowcaseLoadingKey((prev) => (prev === showcaseTag.key ? null : prev));
         }
-    }, [showcaseGamesCache]);
+    }, [showcaseAudienceGender, showcaseGamesCache]);
 
     const updateAllGamesFilters = useCallback((updater: (prev: HomeListFilters) => HomeListFilters) => {
         setAllGamesFilters((prev) => {
@@ -1019,6 +1031,10 @@ const Home: React.FC = () => {
     useEffect(() => {
         void loadHomeShowcaseTags();
     }, [loadHomeShowcaseTags]);
+
+    useEffect(() => {
+        setShowcaseGamesCache({});
+    }, [showcaseAudienceGender]);
 
     useEffect(() => {
         let cancelled = false;
@@ -2129,13 +2145,9 @@ const Home: React.FC = () => {
                                 onClick={handleHomeTickerClick}
                                 aria-label={t('home.carousel.openTicker', { text: homeTicker.text })}
                             >
-                                <span className={styles.homeTickerIcon} aria-hidden="true">
-                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M4 10V14H7L12 18V6L7 10H4Z" />
-                                        <path d="M16 9C17.2 10.2 17.2 13.8 16 15" />
-                                        <path d="M18.5 6.5C21 9 21 15 18.5 17.5" />
-                                    </svg>
-                                </span>
+                                {/* 功能注释：效果图公告条——左侧「公告」标签 + 分隔线 + 文案 + 右侧箭头 */}
+                                <span className={styles.homeTickerBadge}>{t('home.announcementBadge')}</span>
+                                <span className={styles.homeTickerDivider} aria-hidden="true" />
                                 <span ref={homeTickerViewportRef} className={styles.homeTickerViewport}>
                                     {isTickerOverflowing ? (
                                         <span className={`${styles.homeTickerTrack} ${styles.homeTickerTrackScrolling}`}>
@@ -2157,7 +2169,7 @@ const Home: React.FC = () => {
                                         </span>
                                     )}
                                 </span>
-                                <span className={styles.homeTickerAction}>{t('home.view')}</span>
+                                <span className={styles.homeTickerAction} aria-hidden="true" />
                             </button>
                         ) : null}
 
@@ -2181,18 +2193,15 @@ const Home: React.FC = () => {
                                         className={`${styles.themeShowcaseItem} ${activeShowcaseTagKey === tag.key ? styles.themeShowcaseItemActive : ''}`}
                                         onClick={() => handleThemeClick(tag)}
                                     >
-                                        {tag.code ? t(getShowcaseTagI18nCode(tag.code)!) || tag.name : tag.name}
+                                        {tag.code ? t(getShowcaseTagI18nCode(tag.code)!) || tag.name : localizeChineseByLanguage(tag.name, i18n.resolvedLanguage || i18n.language)}
                                     </button>
                                 ))}
                             </div>
                             {homeShowcaseTags.length > 0 ? (
                                 <div className={styles.themeShowcaseTitleRow}>
                                     <div className={styles.themeShowcaseTitleGroup}>
-                                        <span className={styles.themeShowcaseTitleMarker} aria-hidden="true" />
                                         <h3 className={styles.themeShowcaseTitle}>
-                                            {activeShowcaseTag?.code
-                                                ? t(getShowcaseTagI18nCode(activeShowcaseTag.code)!) || activeShowcaseTag.name
-                                                : activeShowcaseTag?.name || ''}
+                                            {t('home.showcasePickTitle')}
                                         </h3>
                                     </div>
                                     {activeShowcaseTag ? (
@@ -2230,6 +2239,7 @@ const Home: React.FC = () => {
                             />
                         ) : null}
                         <div className={styles.mobileJoinGroupSection}>
+                            {/* 功能注释：移动端加群横幅严格对齐效果图——圆角卡 + 白双人图标 + 酒红渐变按钮 */}
                             <button
                                 type="button"
                                 className={styles.mobileJoinGroupCard}
@@ -2237,17 +2247,20 @@ const Home: React.FC = () => {
                                 aria-label={t('home.joinGroup.openQr')}
                             >
                                 <span className={styles.mobileJoinGroupIcon} aria-hidden="true">
-                                    <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M217.9 356.5c-14.1 0-25.5 11.4-25.5 25.5s11.4 25.5 25.5 25.5 25.5-11.4 25.5-25.5-11.4-25.5-25.5-25.5zM217.4 433.7c-11.2 0-20.4 9.2-20.4 20.4v174.4c0 11.2 9.2 20.4 20.4 20.4s20.4-9.2 20.4-20.4V454.1c0-11.2-9.2-20.4-20.4-20.4z" />
-                                        <path d="M878.7 379.5v-86c0-96.3-57.5-153.7-153.7-153.7H218c-96.3 0-153.7 57.5-153.7 153.7v320.7C64.3 710.5 121.8 768 218 768h45.8v120.4L449.9 768h11.2c17.2 11.3 39 17.5 64.6 17.5h161.6l130.7 85v-85.1h33.5c66.6 0 107.9-41.3 107.9-107.9V484.8c-0.1-56.9-30.3-95.3-80.7-105.3zM417.8 484.8v192.8c0 16.2 2.5 31 7.2 44l-106.1 70.1v-74.9h-101c-67.7-0.3-102.2-34.8-102.5-102.5V293.5c0.3-67.7 34.8-102.2 102.5-102.5H725c67.7 0.3 102.2 34.8 102.5 102.5v83.3H525.7c-66.5 0.1-107.9 41.4-107.9 108z m490.4 192.7c-0.2 38.6-18.2 56.6-56.7 56.7h-87.2v40.3l-61-40.3H525.7c-38.5-0.2-56.6-18.2-56.7-56.7V484.8c0.2-38.6 18.2-56.6 56.7-56.7h325.7c38.5 0.2 56.6 18.2 56.7 56.7v192.7z" />
-                                        <path d="M851.4 428.1H525.7c-38.5 0.2-56.6 18.2-56.7 56.7v192.8c0.2 38.5 18.2 56.6 56.7 56.7h177.5l61 40.3v-40.3h87.2c38.5-0.2 56.6-18.2 56.7-56.7V484.8c-0.1-38.6-18.1-56.6-56.7-56.7zM567 627.4c-21.1 0-38.3-17.2-38.3-38.3 0-21.1 17.2-38.3 38.3-38.3 21.1 0 38.3 17.2 38.3 38.3 0 21.1-17.2 38.3-38.3 38.3z m122.2 0c-21.1 0-38.3-17.2-38.3-38.3 0-21.1 17.2-38.3 38.3-38.3 21.1 0 38.3 17.2 38.3 38.3 0 21.1-17.2 38.3-38.3 38.3z m122.3 0c-21.1 0-38.3-17.2-38.3-38.3 0-21.1 17.2-38.3 38.3-38.3 21.1 0 38.3 17.2 38.3 38.3 0 21.1-17.2 38.3-38.3 38.3z" />
-                                    </svg>
+                                    <img
+                                        className={styles.mobileJoinGroupIconImg}
+                                        src={JOIN_GROUP_ICON}
+                                        alt=""
+                                        width={22}
+                                        height={15}
+                                        decoding="async"
+                                    />
                                 </span>
                                 <span className={styles.mobileJoinGroupContent}>
                                     <span className={styles.mobileJoinGroupTitle}>{t('home.joinGroup.title')}</span>
                                     <span className={styles.mobileJoinGroupDesc}>{t('home.joinGroup.desc')}</span>
                                 </span>
-                                    <span className={styles.mobileJoinGroupAction}>
+                                <span className={styles.mobileJoinGroupAction}>
                                     {t('home.joinGroup.joinNow')}
                                 </span>
                             </button>
@@ -2291,7 +2304,7 @@ const Home: React.FC = () => {
                                     layoutVariant="homeWide"
                                 />
                                 {isLoadingMoreSpecial && (
-                                    <div style={{ padding: '20px', textAlign: 'center' }}>
+                                    <div className={styles.loadMoreSkeleton}>
                                         <GameGridSkeleton count={8} layoutVariant="homeWide" />
                                     </div>
                                 )}
@@ -2327,7 +2340,7 @@ const Home: React.FC = () => {
                                         emptyText={allGamesEmptyText}
                                     />
                                     {isLoadingMoreAll && (
-                                        <div style={{ padding: '20px', textAlign: 'center' }}>
+                                        <div className={styles.loadMoreSkeleton}>
                                             <GameGridSkeleton count={10} layoutVariant="homeWide" />
                                         </div>
                                     )}

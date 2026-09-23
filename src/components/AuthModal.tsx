@@ -9,9 +9,7 @@ import gamePromotionApi from '../api/promotion/gamePromotionApi';
 import { getOrCreatePromoAnonId } from '../utils/promoAnonId';
 import { useAuthStore } from '../store/useAuthStore';
 import { useGoogleAuth } from '../hooks/useGoogleAuth';
-import { LANGUAGE } from '../config';
-
-const isGoogleOnly = LANGUAGE === 'en';
+import { isPrivacyAgreementAccepted, resolvePrivacyPolicyUrl } from '../lib/privacyPolicy';
 
 interface AuthModalProps {
     isOpen: boolean;
@@ -29,7 +27,9 @@ const isWebViewEnv = (): boolean => {
 };
 
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegister }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    // 功能注释：按运行时语言决定 Google-only（IP 英文区），不用编译期 LANGUAGE
+    const isGoogleOnly = String(i18n.language || '').toLowerCase().startsWith('en');
     // 在微信小程序环境中不渲染
     if (isWebViewEnv()) {
         return null;
@@ -64,9 +64,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
     const [countdown, setCountdown] = useState(0);
     const [submitError, setSubmitError] = useState('');
     const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+    /** 功能注释：注册须勾选同意外置隐私政策后才能提交 */
+    const [privacyAgreed, setPrivacyAgreed] = useState(false);
+    const [privacyError, setPrivacyError] = useState('');
     const { login } = useAuthStore();
     const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const { loginWithGoogle } = useGoogleAuth();
+    const privacyPolicyUrl = resolvePrivacyPolicyUrl({ darkMode: true });
 
     // 清理倒计时定时器
     useEffect(() => {
@@ -117,6 +121,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         setResetPhoneShake(false);
         setVerificationCodeShake(false);
         setSubmitError('');
+        setPrivacyAgreed(false);
+        setPrivacyError('');
         setPasswordVisible(false);
         setConfirmPasswordVisible(false);
         setCountdown(0);
@@ -138,6 +144,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         setResetPhoneShake(false);
         setVerificationCodeShake(false);
         setSubmitError('');
+        setPrivacyError('');
     };
 
     // ========== 输入处理函数 ==========
@@ -266,6 +273,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                 setFieldError(setConfirmPasswordError, setConfirmPasswordShake, t('validation.passwordMismatch'));
                 hasError = true;
             }
+            if (!isPrivacyAgreementAccepted(privacyAgreed)) {
+                setPrivacyError(t('validation.privacyRequired'));
+                hasError = true;
+            }
         }
 
         // 重置密码模式验证
@@ -302,6 +313,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
 
     // ========== Google 登录 ==========
     const handleGoogleLogin = async () => {
+        // 功能注释：海外 Google 一键登录同样须先同意外置隐私政策
+        if (!isPrivacyAgreementAccepted(privacyAgreed)) {
+            setPrivacyError(t('validation.privacyRequired'));
+            return;
+        }
+        setPrivacyError('');
         setIsGoogleLoading(true);
         setSubmitError('');
         try {
@@ -360,15 +377,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                 });
 
                 if (response.data?.data) {
-                    setMode('login');
-                    setPassword('');
-                    setConfirmPassword('');
-                    resetErrors();
-                    setSubmitError(t('auth.registerSuccess'));
+                    login(response.data.data);
+                    void gamePromotionApi.consumePending(getOrCreatePromoAnonId()).catch(() => {});
 
                     if (onRegister) {
                         onRegister(phone, password);
                     }
+                    resetAllStates();
+                    onClose();
                 } else {
                     throw new Error(t('common.error'));
                 }
@@ -468,10 +484,39 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                     {t('auth.login')}
                 </h2>
 
-                {/* Google-only login (LANGUAGE === 'en') */}
+                {/* Google-only login when runtime language is English */}
                 {isGoogleOnly ? (
                     <>
                         <div className={styles.googleOnlyDivider} />
+                        {/* 功能注释：海外 Google 登录前须勾选同意外置隐私政策 */}
+                        <div className={styles.privacyRow}>
+                            <label className={styles.privacyLabel}>
+                                <input
+                                    type="checkbox"
+                                    className={styles.privacyCheckbox}
+                                    checked={privacyAgreed}
+                                    onChange={(e) => {
+                                        setPrivacyAgreed(e.target.checked);
+                                        if (e.target.checked) setPrivacyError('');
+                                    }}
+                                />
+                                <span>
+                                    {t('auth.privacyAgreePrefix')}
+                                    <a
+                                        href={privacyPolicyUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className={styles.privacyLink}
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        {t('auth.privacyPolicy')}
+                                    </a>
+                                </span>
+                            </label>
+                            {privacyError ? (
+                                <div className={styles.errorMessage}>{privacyError}</div>
+                            ) : null}
+                        </div>
                         <button
                             type="button"
                             className={`${styles.googleBtn} ${styles.googleOnlyBtn}`}
@@ -605,6 +650,38 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                                 {confirmPasswordError && (
                                     <div className={styles.errorMessage}>{confirmPasswordError}</div>
                                 )}
+                            </div>
+                        )}
+
+                        {/* 功能注释：注册态展示隐私政策勾选，链接打开外置静态页 */}
+                        {mode === 'register' && (
+                            <div className={styles.privacyRow}>
+                                <label className={styles.privacyLabel}>
+                                    <input
+                                        type="checkbox"
+                                        className={styles.privacyCheckbox}
+                                        checked={privacyAgreed}
+                                        onChange={(e) => {
+                                            setPrivacyAgreed(e.target.checked);
+                                            if (e.target.checked) setPrivacyError('');
+                                        }}
+                                    />
+                                    <span>
+                                        {t('auth.privacyAgreePrefix')}
+                                        <a
+                                            href={privacyPolicyUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className={styles.privacyLink}
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            {t('auth.privacyPolicy')}
+                                        </a>
+                                    </span>
+                                </label>
+                                {privacyError ? (
+                                    <div className={styles.errorMessage}>{privacyError}</div>
+                                ) : null}
                             </div>
                         )}
 

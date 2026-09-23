@@ -177,6 +177,23 @@ export const privateChatApi = {
     await consumeSse(res, onEvent);
   },
 
+  /** 删除指定气泡（index 为 thread.messages 下标） */
+  deleteMessage: async (token: string, sessionId: string, npcId: string, index: number) => {
+    const res = await fetch(
+      `${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/private-chat/${encodeURIComponent(npcId)}/delete-message`,
+      {
+        method: 'POST',
+        headers: authHeaders(token),
+        body: JSON.stringify({ index }),
+      },
+    );
+    return parseJson(res) as Promise<{
+      success: boolean;
+      message?: string;
+      data?: { thread: PrivateChatThreadDto; npc: PrivateChatNpcDto };
+    }>;
+  },
+
   /** 空线程时角色主动打招呼 */
   greet: async (
     token: string,

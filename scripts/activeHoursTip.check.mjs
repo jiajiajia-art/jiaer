@@ -35,3 +35,30 @@ test('CreatorWorkDetailSections wires MetricTitleTip for active hours', () => {
   assert.match(source, /creatorStats\.activeHoursTip/);
   assert.match(source, /creatorStats\.activeHours/);
 });
+
+test('MetricTitleTip_说明应为通栏展开避免窄屏裁切', () => {
+  const tsx = readFileSync(join(root, 'src/components/stats/MetricTitleTip.tsx'), 'utf8');
+  const css = readFileSync(join(root, 'src/components/stats/MetricTitleTip.module.css'), 'utf8');
+  assert.match(tsx, /aria-expanded/);
+  assert.match(tsx, /setOpen/);
+  assert.match(css, /\.tipBubble\s*\{[\s\S]*?flex:\s*1 1 100%/);
+  assert.match(css, /\.tipBubble\s*\{[\s\S]*?width:\s*100%/);
+  assert.match(css, /\.tipBubble\s*\{[\s\S]*?overflow-wrap:\s*anywhere/);
+  assert.doesNotMatch(css, /\.tipBubble\s*\{[\s\S]*?transform:\s*translate\(-50%/);
+  assert.doesNotMatch(css, /\.tipBubble\s*\{[\s\S]*?left:\s*50%/);
+});
+
+test('CreatorWorkDetailSections_活跃时段应对齐 funloom 暗色热力格', () => {
+  const css = readFileSync(
+    join(root, 'src/components/stats/CreatorWorkDetailSections.module.css'),
+    'utf8',
+  );
+  /* 功能注释：禁止 #f5f5f5/#f7f7f7 白底灰字；墨黑卡 + 酒红高峰 */
+  assert.match(css, /--stat-surface:\s*#1C1C1E/);
+  assert.match(css, /--stat-accent:\s*#A8283C/);
+  assert.match(css, /\.hourCell\s*\{[\s\S]*?background:\s*var\(--stat-surface\)/);
+  assert.match(css, /\.hourCellTop\s*\{[\s\S]*?rgba\(168,\s*40,\s*60/);
+  assert.match(css, /\.emptyState\s*\{[\s\S]*?background:\s*var\(--stat-surface-soft\)/);
+  assert.doesNotMatch(css, /#f5f5f5|#f7f7f7|#fb4655/);
+  assert.doesNotMatch(css, /\.sectionTitle\s*\{[^}]*color:\s*#222/);
+});

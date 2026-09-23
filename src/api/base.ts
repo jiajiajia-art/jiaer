@@ -13,8 +13,10 @@ const REFRESH_URL = '/auth/refresh';
 // Creator Profile API 路径
 const CREATOR_PROFILE_API_PATH = '/creator/profile';
 
-// 更宽松的超时
+// 更宽松的超时（普通上传）
 export const UPLOAD_TIMEOUT_MS = 120000;
+/** 功能注释：封面 AI 生图含模型画字/垫图，常超过 2 分钟，勿复用上传超时 */
+export const COVER_GENERATE_TIMEOUT_MS = 600000;
 
 export interface ApiConfig {
   baseURL?: string;

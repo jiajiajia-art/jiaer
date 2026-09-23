@@ -21,5 +21,5 @@ export const RECORD_CONVERSION = import.meta.env.PROD
   ? true
   : import.meta.env.VITE_RECORD_CONVERSION === 'true';
 
-// Language: 'zh' | 'en' — hardcoded, no user switching
-export const LANGUAGE: 'zh' | 'en' = 'zh'
+// Language default: Simplified Chinese. Runtime switch via Navbar (zh / zh-TW / en).
+export const LANGUAGE: 'zh' | 'zh-TW' | 'en' = 'zh';

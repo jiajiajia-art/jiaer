@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import styles from "./FloatingJoinGroup.module.css";
 import { useNavigate } from "react-router-dom";
 import { LANGUAGE } from "../config";
+import { useAuthStore } from "../store/useAuthStore";
+import { getQqGroupQrSrc } from "../utils/groupQr";
 
 interface FloatingJoinGroupProps {
     qrSrc?: string;
@@ -40,6 +42,7 @@ const getDefaultMobilePosition = (): MobilePosition => {
 const FloatingJoinGroup: React.FC<FloatingJoinGroupProps> = ({ qrSrc, qqQrSrc }) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
+    const { user } = useAuthStore();
     const [isOpen, setIsOpen] = useState(false);
     const [isMobileViewport, setIsMobileViewport] = useState(
         () => typeof window !== "undefined" && window.innerWidth <= MOBILE_BREAKPOINT
@@ -59,7 +62,7 @@ const FloatingJoinGroup: React.FC<FloatingJoinGroupProps> = ({ qrSrc, qqQrSrc })
         moved: false,
     });
     const wechatQrSrc = qrSrc || `${import.meta.env.BASE_URL}data/assets/group/qr_wx.jpeg`;
-    const qqGroupQrSrc = qqQrSrc || `${import.meta.env.BASE_URL}data/assets/group/qr_qq.jpeg`;
+    const qqGroupQrSrc = qqQrSrc || getQqGroupQrSrc(user?.user?.gender, import.meta.env.BASE_URL);
     const fallbackSrc = `${import.meta.env.BASE_URL}data/assets/defaultAvatar.png`;
 
     const getButtonSize = useCallback(() => {

@@ -77,6 +77,8 @@ export interface WorldSetting {
     title: string;
     summary: string;
     background: string;
+    /** 前情提要：开局前已发生的事 */
+    premise?: string;
     Theme: string[];
     preamble: string;
     initialPlot: string;
@@ -181,6 +183,7 @@ export interface WorldInteractionGameData {
     abilityNodeSetting?: AbilityNodeSetting;
     attributeSetting?: AttributeSetting;
     coverUrl: string;
+    portraitCoverUrl?: string | null;
 }
 
 export interface UploadWorldFileResponse {

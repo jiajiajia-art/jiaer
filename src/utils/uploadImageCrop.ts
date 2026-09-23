@@ -1,5 +1,6 @@
 export type UploadCropPresetKey =
     | 'gameCover'
+    | 'gamePortraitCover'
     | 'homeBanner'
     | 'avatar'
     | 'promotionCover'
@@ -25,6 +26,13 @@ export const uploadCropPresets: Record<UploadCropPresetKey, Omit<UploadCropPrese
         aspectRatio: 16 / 9,
         aspectLabel: '16:9',
         descriptionKey: 'common.imageCrop.gameCover.description',
+        defaultCropScale: 0.94,
+    },
+    gamePortraitCover: {
+        titleKey: 'common.imageCrop.gamePortraitCover.title',
+        aspectRatio: 3 / 4,
+        aspectLabel: '3:4',
+        descriptionKey: 'common.imageCrop.gamePortraitCover.description',
         defaultCropScale: 0.94,
     },
     homeBanner: {

@@ -83,6 +83,20 @@ export type CreatorGameBuckets = {
   novelGames: UserGameData[];
 };
 
+function gameUpdatedAtMs(game: UserGameData): number {
+  const ms = Date.parse(String(game.updated_at || game.created_at || ''));
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+/**
+ * 功能注释：创作台按最近更新倒序。发布会刷新 updated_at，刚上架的应排在已发布第一张，而不是按建草稿时的 id。
+ */
+export function compareCreatorGamesByRecent(a: UserGameData, b: UserGameData): number {
+  const byTime = gameUpdatedAtMs(b) - gameUpdatedAtMs(a);
+  if (byTime !== 0) return byTime;
+  return Number(b.id) - Number(a.id);
+}
+
 /** 将创作者作品列表拆分为已发布、草稿（含未发布小说） */
 export function partitionCreatorGames(fileMetas: UserGameData[]): CreatorGameBuckets {
   const publishedGames: UserGameData[] = [];
@@ -100,6 +114,10 @@ export function partitionCreatorGames(fileMetas: UserGameData[]): CreatorGameBuc
 
     draftGames.push(game);
   });
+
+  publishedGames.sort(compareCreatorGamesByRecent);
+  draftGames.sort(compareCreatorGamesByRecent);
+  novelGames.sort(compareCreatorGamesByRecent);
 
   return { publishedGames, draftGames, novelGames };
 }
@@ -135,6 +153,21 @@ export function resolvePublishModalMode(options: {
     return 'novel-edit';
   }
   return 'publish';
+}
+
+/**
+ * 功能注释：创作台「发布作品」点击策略。
+ * 已上架作品也必须打开弹窗（改简介/版本说明并可再次提交），禁止因 isPublished 静默无响应。
+ */
+export function resolvePublishButtonAction(options: {
+  isNovel: boolean;
+  isPublished: boolean;
+}): { openModal: true; mode: PublishModalMode } {
+  void options.isPublished;
+  return {
+    openModal: true,
+    mode: resolvePublishModalMode({ isNovel: options.isNovel, intent: 'publish' }),
+  };
 }
 
 /**

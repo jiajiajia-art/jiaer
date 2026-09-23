@@ -6,20 +6,30 @@ import { toast } from 'react-hot-toast';
 import EditorApi from '../../../api/galgame/EditorData';
 import { useImageCropper } from '../../../hooks/useImageCropper';
 import { getImageUrl, SCENE_GENERATION_COST } from '../../../utils/constants';
+import type { CoverOrientation } from '../../../utils/gameCovers.ts';
 import { addImageTimestamp, bumpCacheBust } from '../../../utils/imageCache';
 import { fileToDataUrl } from '../../../utils/uploadImageCrop';
 import { refreshAuthUserPoints } from '../../../lib/auth/refreshUserPoints';
 import { compositePosterTitleOntoCover } from '../../../lib/galgame/compositePosterTitle';
+import { resolveCoverPosterOverlay } from '../../../utils/coverPosterOverlay';
+import { buildCoverAiCreativePrompt } from '../../../utils/buildCoverAiCreativePrompt';
 import ImageCropModal from '../../CommonModal/ImageCropModal';
 import PortraitLightbox from '../CharactersPanel/PortraitLightbox';
 import styles from './WorldPanel.module.css';
 
+export type CoverUploadedInfo = {
+    orientation: CoverOrientation;
+    coverUrl: string;
+};
+
 interface CoverUploadProps {
     fileId?: string;
     coverUrl?: string;
+    portraitCoverUrl?: string;
     /** 作品标题：海报主标题；提示词为空时也用它 */
     workTitle?: string;
-    onCoverUploaded?: () => void;
+    onCoverUploaded?: (info?: CoverUploadedInfo) => void;
+    compact?: boolean;
 }
 
 const COVER_PROMPT_MAX = 200;
@@ -27,47 +37,63 @@ const COVER_PROMPT_MAX = 200;
 const CoverUpload: React.FC<CoverUploadProps> = ({
     fileId,
     coverUrl,
+    portraitCoverUrl,
     workTitle = '',
     onCoverUploaded,
+    compact = false,
 }) => {
     const { t } = useTranslation();
-    const coverInputRef = useRef<HTMLInputElement>(null);
-    const [coverPreview, setCoverPreview] = useState<string | null>(coverUrl || null);
-    const [coverUploading, setCoverUploading] = useState(false);
+    const landscapeInputRef = useRef<HTMLInputElement>(null);
+    const portraitInputRef = useRef<HTMLInputElement>(null);
+    const [landscapePreview, setLandscapePreview] = useState<string | null>(coverUrl || null);
+    const [portraitPreview, setPortraitPreview] = useState<string | null>(portraitCoverUrl || null);
+    const [busyOrientation, setBusyOrientation] = useState<CoverOrientation | null>(null);
     const [coverGenerating, setCoverGenerating] = useState(false);
     const [promptModalOpen, setPromptModalOpen] = useState(false);
+    const [promptTarget, setPromptTarget] = useState<CoverOrientation>('landscape');
     const [promptDraft, setPromptDraft] = useState('');
     const [coverError, setCoverError] = useState<string | null>(null);
-    const [lightboxOpen, setLightboxOpen] = useState(false);
+    const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
     const resolvedWorkTitle = String(workTitle || '').trim();
+    const busy = Boolean(busyOrientation) || coverGenerating;
 
-    const coverDisplaySrc = coverPreview
-        ? (coverPreview.startsWith('data:image/')
-            ? coverPreview
-            : addImageTimestamp(getImageUrl(coverPreview)))
-        : '';
+    const displaySrc = (preview: string | null) => {
+        if (!preview) return '';
+        return preview.startsWith('data:image/')
+            ? preview
+            : addImageTimestamp(getImageUrl(preview));
+    };
 
     useEffect(() => {
-        setCoverPreview(coverUrl || null);
+        setLandscapePreview(coverUrl || null);
     }, [coverUrl]);
 
-    const uploadCover = useCallback(async (file: File) => {
+    useEffect(() => {
+        setPortraitPreview(portraitCoverUrl || null);
+    }, [portraitCoverUrl]);
+
+    const setPreviewFor = (orientation: CoverOrientation, next: string | null) => {
+        if (orientation === 'portrait') setPortraitPreview(next);
+        else setLandscapePreview(next);
+    };
+
+    const uploadCover = useCallback(async (file: File, orientation: CoverOrientation) => {
         if (!fileId) {
             setCoverError(t('common.coverUpload.missingFileId'));
             return;
         }
 
         try {
-            setCoverUploading(true);
+            setBusyOrientation(orientation);
             setCoverError(null);
-            const response = await EditorApi.uploadGameCover(fileId, file);
+            const response = await EditorApi.uploadGameCover(fileId, file, orientation);
             if (response.data.success) {
                 const nextCoverUrl = response.data.data.coverUrl;
                 bumpCacheBust(nextCoverUrl);
-                setCoverPreview(nextCoverUrl);
+                setPreviewFor(orientation, nextCoverUrl);
                 toast.success(t('common.coverUpload.uploadSuccess'));
-                onCoverUploaded?.();
+                onCoverUploaded?.({ orientation, coverUrl: nextCoverUrl });
             } else {
                 setCoverError(response.data.message || t('common.coverUpload.uploadFailed'));
             }
@@ -76,46 +102,45 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
             const apiMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
             setCoverError(apiMessage || t('common.coverUpload.uploadFailed'));
         } finally {
-            setCoverUploading(false);
+            setBusyOrientation(null);
         }
     }, [fileId, onCoverUploaded, t]);
 
-    const {
-        cropPreset,
-        pendingCropFile,
-        openCropper,
-        closeCropper,
-        handleCropComplete,
-    } = useImageCropper({
+    const landscapeCropper = useImageCropper({
         preset: 'gameCover',
         onCropped: async (croppedFile) => {
             const preview = await fileToDataUrl(croppedFile);
-            setCoverPreview(preview);
-            await uploadCover(croppedFile);
+            setLandscapePreview(preview);
+            await uploadCover(croppedFile, 'landscape');
         },
     });
 
-    const handleCoverSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const portraitCropper = useImageCropper({
+        preset: 'gamePortraitCover',
+        onCropped: async (croppedFile) => {
+            const preview = await fileToDataUrl(croppedFile);
+            setPortraitPreview(preview);
+            await uploadCover(croppedFile, 'portrait');
+        },
+    });
+
+    const handleCoverSelect = (orientation: CoverOrientation, event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         event.target.value = '';
-
         if (!file) return;
-
         if (!file.type.startsWith('image/')) {
             setCoverError(t('common.coverUpload.invalidImage'));
             return;
         }
-
         setCoverError(null);
-        void openCropper(file).catch((error) => {
+        const cropper = orientation === 'portrait' ? portraitCropper : landscapeCropper;
+        void cropper.openCropper(file).catch((error) => {
             console.error('open world cover cropper failed:', error);
             setCoverError(t('common.coverUpload.imageLoadFailed'));
         });
     };
 
-    /** 选完文件后浏览器可能回放一次 click，短暂屏蔽预览 */
     const suppressPreviewRef = useRef(false);
-
     const armSuppressPreview = () => {
         suppressPreviewRef.current = true;
         window.setTimeout(() => {
@@ -123,32 +148,34 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
         }, 1000);
     };
 
-    /** 无封面：整块区域点选上传 */
-    const handleEmptyCoverClick = () => {
-        if (coverUploading || coverGenerating || !fileId) return;
+    const inputRefFor = (orientation: CoverOrientation) => (
+        orientation === 'portrait' ? portraitInputRef : landscapeInputRef
+    );
+
+    const handleEmptyCoverClick = (orientation: CoverOrientation) => {
+        if (busy || !fileId) return;
         armSuppressPreview();
-        coverInputRef.current?.click();
+        inputRefFor(orientation).current?.click();
     };
 
-    /** 点图放大；「更换」在同层但不在此 hit 内，并 stopPropagation */
-    const handlePreviewCover = (event?: React.MouseEvent) => {
+    const handlePreviewCover = (src: string, event?: React.MouseEvent) => {
         event?.stopPropagation();
         if (suppressPreviewRef.current) return;
-        if (coverUploading || coverGenerating || !coverDisplaySrc) return;
-        setLightboxOpen(true);
+        if (busy || !src) return;
+        setLightboxSrc(src);
     };
 
-    const handleReplaceCover = (event: React.MouseEvent<HTMLButtonElement>) => {
+    const handleReplaceCover = (orientation: CoverOrientation, event: React.MouseEvent<HTMLButtonElement>) => {
         event.preventDefault();
         event.stopPropagation();
-        if (!fileId || coverUploading || coverGenerating) return;
+        if (!fileId || busy) return;
         armSuppressPreview();
-        coverInputRef.current?.click();
+        inputRefFor(orientation).current?.click();
     };
 
-    const openPromptModal = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    const openPromptModal = async (orientation: CoverOrientation, event: React.MouseEvent<HTMLButtonElement>) => {
         event.stopPropagation();
-        if (!fileId || coverUploading || coverGenerating) return;
+        if (!fileId || busy) return;
         if (!resolvedWorkTitle) {
             toast.error(t('common.coverUpload.titleRequired'));
             return;
@@ -163,6 +190,7 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
             );
             return;
         }
+        setPromptTarget(orientation);
         setPromptDraft('');
         setPromptModalOpen(true);
     };
@@ -174,40 +202,50 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
 
     const runAiGenerate = async () => {
         if (!fileId || coverGenerating) return;
-        const creativePrompt = String(promptDraft || '').trim() || resolvedWorkTitle;
-        if (!creativePrompt) {
+        if (!resolvedWorkTitle) {
             toast.error(t('common.coverUpload.titleRequired'));
             return;
         }
+        const orientation = promptTarget;
+        // 功能注释：仅用户输入进提示词；空则后端垫图时沿用参考图标题字效
+        const creativePrompt = buildCoverAiCreativePrompt({ promptDraft });
 
         setPromptModalOpen(false);
         try {
             setCoverGenerating(true);
+            setBusyOrientation(orientation);
             setCoverError(null);
             const response = await EditorApi.generateGameCover(fileId, {
                 prompt: creativePrompt,
                 title: resolvedWorkTitle,
+                orientation,
+                // 功能注释：模型画标题；无提示词+有参考图时保持参考字效只改尺寸
+                abArm: 'control',
             });
             if (!response.data?.success || !response.data?.data?.coverUrl) {
                 toast.error(response.data?.message || t('common.coverUpload.aiGenerateFailed'));
                 return;
             }
             let nextCoverUrl = response.data.data.coverUrl;
-            const posterTitle = String(
-                response.data.data.posterTitle || resolvedWorkTitle || '',
-            ).trim();
-            const needsOverlay = response.data.data.needsTitleOverlay === true
-                || response.data.data.titleMode === 'overlay'
-                || response.data.data.abArm === 'treatment';
+            const { overlayTitle, shouldOverlay } = resolveCoverPosterOverlay({
+                workTitle: resolvedWorkTitle,
+                serverPosterTitle: response.data.data.posterTitle,
+                needsTitleOverlay: response.data.data.needsTitleOverlay,
+                titleMode: response.data.data.titleMode,
+                abArm: response.data.data.abArm,
+            });
 
-            // treatment：用真实字体叠正确标题，再写回封面（不二次扣积分）
-            if (needsOverlay && posterTitle) {
+            if (shouldOverlay && overlayTitle) {
                 try {
                     const composited = await compositePosterTitleOntoCover(
                         addImageTimestamp(getImageUrl(nextCoverUrl)),
-                        posterTitle,
+                        overlayTitle,
+                        {
+                            orientation,
+                            prompt: promptDraft,
+                        },
                     );
-                    const uploadRes = await EditorApi.uploadGameCover(fileId, composited);
+                    const uploadRes = await EditorApi.uploadGameCover(fileId, composited, orientation);
                     if (uploadRes.data?.success && uploadRes.data?.data?.coverUrl) {
                         nextCoverUrl = uploadRes.data.data.coverUrl;
                     }
@@ -218,25 +256,170 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
             }
 
             bumpCacheBust(nextCoverUrl);
-            setCoverPreview(nextCoverUrl);
+            setPreviewFor(orientation, nextCoverUrl);
             const deducted = response.data.data.pointsDeducted ?? SCENE_GENERATION_COST;
             toast.success(
                 t('common.coverUpload.aiGenerateSuccess', { cost: deducted }),
             );
             await refreshAuthUserPoints();
-            onCoverUploaded?.();
+            onCoverUploaded?.({ orientation, coverUrl: nextCoverUrl });
         } catch (error) {
             console.error('AI generate game cover failed:', error);
-            const apiMessage = (error as { response?: { data?: { message?: string; error?: string } } })
-                ?.response?.data?.message
-                || (error as { response?: { data?: { error?: string } } })?.response?.data?.error;
-            toast.error(apiMessage || t('common.coverUpload.aiGenerateFailed'));
+            const err = error as {
+                code?: string;
+                message?: string;
+                response?: { data?: { message?: string; error?: string } };
+            };
+            const timedOut = err?.code === 'ECONNABORTED'
+                || /timeout/i.test(String(err?.message || ''));
+            const apiMessage = err?.response?.data?.message || err?.response?.data?.error;
+            toast.error(
+                timedOut
+                    ? t('common.coverUpload.aiGenerateTimeout')
+                    : (apiMessage || t('common.coverUpload.aiGenerateFailed')),
+            );
         } finally {
             setCoverGenerating(false);
+            setBusyOrientation(null);
         }
     };
 
-    const busy = coverUploading || coverGenerating;
+    const slotMeta = (orientation: CoverOrientation) => {
+        const preview = orientation === 'portrait' ? portraitPreview : landscapePreview;
+        return {
+            preview,
+            src: displaySrc(preview),
+            slotBusy: busyOrientation === orientation,
+            titleKey: orientation === 'portrait'
+                ? 'common.coverUpload.portraitTitle'
+                : 'common.coverUpload.landscapeTitle',
+            hintKey: orientation === 'portrait'
+                ? 'common.coverUpload.portraitHint'
+                : 'common.coverUpload.landscapeHint',
+        };
+    };
+
+    const renderSlotHeader = (orientation: CoverOrientation) => {
+        const { slotBusy, titleKey, hintKey } = slotMeta(orientation);
+        return (
+            <div className={styles.coverHeaderRow} key={`${orientation}-head`}>
+                <div>
+                    <h3 className={styles.coverSlotTitle}>{t(titleKey)}</h3>
+                    <p className={styles.coverSlotHint}>{t(hintKey)}</p>
+                </div>
+                <button
+                    type="button"
+                    className={styles.coverAiBtn}
+                    onClick={(e) => void openPromptModal(orientation, e)}
+                    disabled={!fileId || busy}
+                >
+                    {slotBusy && coverGenerating
+                        ? t('common.coverUpload.aiGenerating')
+                        : t('common.coverUpload.aiGenerate', { cost: SCENE_GENERATION_COST })}
+                </button>
+            </div>
+        );
+    };
+
+    const renderSlotFrame = (orientation: CoverOrientation) => {
+        const { preview, src, slotBusy, titleKey } = slotMeta(orientation);
+        const ratioClass = orientation === 'portrait'
+            ? styles.coverUploadAreaPortrait
+            : styles.coverUploadAreaLandscape;
+        const fileInput = (
+            <input
+                ref={inputRefFor(orientation)}
+                type="file"
+                accept="image/jpeg,image/png,image/jpg,image/webp"
+                hidden
+                onChange={(event) => handleCoverSelect(orientation, event)}
+                disabled={busy || !fileId}
+            />
+        );
+
+        if (preview) {
+            return (
+                <div
+                    className={`${styles.coverUploadArea} ${styles.coverUploadAreaPreview} ${ratioClass}`}
+                    key={`${orientation}-frame`}
+                >
+                    {fileInput}
+                    <div
+                        className={`${styles.coverPreviewContainer} ${
+                            orientation === 'portrait' ? styles.coverPreviewPortrait : ''
+                        }`}
+                    >
+                        <button
+                            type="button"
+                            className={styles.coverPreviewHit}
+                            onClick={(event) => handlePreviewCover(src, event)}
+                            disabled={busy}
+                            aria-label={t('common.coverUpload.clickToPreview')}
+                        >
+                            <img
+                                src={src}
+                                alt={resolvedWorkTitle || t(titleKey)}
+                                className={styles.coverPreview}
+                                draggable={false}
+                            />
+                            {!(slotBusy && coverGenerating) ? (
+                                <span className={styles.coverPreviewHint}>
+                                    {t('common.coverUpload.clickToPreview')}
+                                </span>
+                            ) : null}
+                        </button>
+                        <div
+                            className={styles.coverActions}
+                            onClick={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
+                        >
+                            <button
+                                type="button"
+                                className={styles.removeCoverBtn}
+                                onClick={(event) => handleReplaceCover(orientation, event)}
+                                disabled={busy}
+                            >
+                                {t('common.coverUpload.replace')}
+                            </button>
+                        </div>
+                        {slotBusy && coverGenerating ? (
+                            <div className={styles.coverGeneratingOverlay} aria-live="polite">
+                                <div className={styles.coverGeneratingSpinner} />
+                                <span>{t('common.coverUpload.aiGenerating')}</span>
+                            </div>
+                        ) : null}
+                    </div>
+                </div>
+            );
+        }
+
+        return (
+            <div
+                className={`${styles.coverUploadArea} ${ratioClass}`}
+                key={`${orientation}-frame`}
+                onClick={() => handleEmptyCoverClick(orientation)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleEmptyCoverClick(orientation);
+                    }
+                }}
+                aria-label={t('common.coverUpload.clickToUpload')}
+            >
+                {fileInput}
+                <div className={styles.coverPlaceholder}>
+                    <BsUpload className={styles.coverUploadIcon} size={32} />
+                    <p className={styles.coverUploadText}>{t('common.coverUpload.clickToUpload')}</p>
+                    <p className={styles.coverUploadHint}>{t('common.coverUpload.supportFormats')}</p>
+                    {slotBusy && coverGenerating ? (
+                        <p className={styles.coverUploadHint}>{t('common.coverUpload.aiGenerating')}</p>
+                    ) : null}
+                </div>
+            </div>
+        );
+    };
 
     const promptModal = promptModalOpen
         ? createPortal(
@@ -258,7 +441,9 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
                                 {t('common.coverUpload.promptModalEyebrow')}
                             </p>
                             <h2 id="cover-brief-title" className={styles.coverBriefHeading}>
-                                {t('common.coverUpload.promptModalTitle')}
+                                {promptTarget === 'portrait'
+                                    ? t('common.coverUpload.promptModalTitlePortrait')
+                                    : t('common.coverUpload.promptModalTitle')}
                             </h2>
                         </div>
                         <button
@@ -277,12 +462,17 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
                             <p className={styles.coverBriefStageLabel}>
                                 {t('common.coverUpload.posterTitlePreview')}
                             </p>
-                            <p className={styles.coverBriefStageTitle}>{resolvedWorkTitle}</p>
+                            <p className={styles.coverBriefStageTitle}>
+                                {resolvedWorkTitle}
+                            </p>
                         </div>
 
                         <div className={styles.coverBriefMetaRow}>
                             <p className={styles.coverBriefHint}>
-                                {t('common.coverUpload.promptModalHint')}
+                                {(promptTarget === 'portrait' && landscapePreview)
+                                    || (promptTarget === 'landscape' && portraitPreview)
+                                    ? t('common.coverUpload.promptModalHintWithRef')
+                                    : t('common.coverUpload.promptModalHint')}
                             </p>
                             <span className={styles.coverBriefCost}>
                                 {t('common.coverUpload.promptCostBadge', { cost: SCENE_GENERATION_COST })}
@@ -304,7 +494,9 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
                                 value={promptDraft}
                                 maxLength={COVER_PROMPT_MAX}
                                 placeholder={t('common.coverUpload.promptPlaceholder')}
-                                onChange={(e) => setPromptDraft(e.target.value.slice(0, COVER_PROMPT_MAX))}
+                                onChange={(e) => {
+                                    setPromptDraft(e.target.value.slice(0, COVER_PROMPT_MAX));
+                                }}
                                 rows={3}
                                 // eslint-disable-next-line jsx-a11y/no-autofocus -- 打开弹窗即编辑提示词
                                 autoFocus
@@ -337,123 +529,47 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
         )
         : null;
 
-    return (
-        <div className={styles.uploadCover}>
-            <div className={styles.coverHeaderRow}>
-                <h2>{t('common.coverUpload.title')}</h2>
-                <button
-                    type="button"
-                    className={styles.coverAiBtn}
-                    onClick={(e) => void openPromptModal(e)}
-                    disabled={!fileId || busy}
-                >
-                    {coverGenerating
-                        ? t('common.coverUpload.aiGenerating')
-                        : t('common.coverUpload.aiGenerate', { cost: SCENE_GENERATION_COST })}
-                </button>
-            </div>
-            <input
-                ref={coverInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/jpg,image/webp"
-                hidden
-                onChange={handleCoverSelect}
-                disabled={busy || !fileId}
-            />
+    const pendingCrop = landscapeCropper.pendingCropFile
+        ? landscapeCropper
+        : portraitCropper.pendingCropFile
+            ? portraitCropper
+            : null;
 
-            {coverPreview ? (
-                <div className={`${styles.coverUploadArea} ${styles.coverUploadAreaPreview}`}>
-                    <div className={styles.coverPreviewContainer}>
-                        <button
-                            type="button"
-                            className={styles.coverPreviewHit}
-                            onClick={handlePreviewCover}
-                            disabled={busy}
-                            aria-label={t('common.coverUpload.clickToPreview')}
-                        >
-                            <img
-                                src={coverDisplaySrc}
-                                alt={resolvedWorkTitle || 'Game cover preview'}
-                                className={styles.coverPreview}
-                                draggable={false}
-                            />
-                            {!coverGenerating ? (
-                                <span className={styles.coverPreviewHint}>
-                                    {t('common.coverUpload.clickToPreview')}
-                                </span>
-                            ) : null}
-                        </button>
-                        <div
-                            className={styles.coverActions}
-                            onClick={(e) => e.stopPropagation()}
-                            onMouseDown={(e) => e.stopPropagation()}
-                        >
-                            <button
-                                type="button"
-                                className={styles.removeCoverBtn}
-                                onClick={handleReplaceCover}
-                                disabled={busy}
-                            >
-                                {t('common.coverUpload.replace')}
-                            </button>
-                        </div>
-                        {coverGenerating ? (
-                            <div className={styles.coverGeneratingOverlay} aria-live="polite">
-                                <div className={styles.coverGeneratingSpinner} />
-                                <span>{t('common.coverUpload.aiGenerating')}</span>
-                            </div>
-                        ) : null}
-                    </div>
-                </div>
-            ) : (
-                <div
-                    className={styles.coverUploadArea}
-                    onClick={handleEmptyCoverClick}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            handleEmptyCoverClick();
-                        }
-                    }}
-                    aria-label={t('common.coverUpload.clickToUpload')}
-                >
-                    <div className={styles.coverPlaceholder}>
-                        <BsUpload className={styles.coverUploadIcon} size={32} />
-                        <p className={styles.coverUploadText}>{t('common.coverUpload.clickToUpload')}</p>
-                        <p className={styles.coverUploadHint}>{t('common.coverUpload.supportFormats')}</p>
-                        {coverGenerating ? (
-                            <p className={styles.coverUploadHint}>{t('common.coverUpload.aiGenerating')}</p>
-                        ) : null}
-                    </div>
-                </div>
-            )}
+    return (
+        <div className={`${styles.uploadCover} ${compact ? styles.uploadCoverCompact : ''}`}>
+            {compact ? null : <h2>{t('common.coverUpload.title')}</h2>}
+            <p className={styles.coverDualHint}>{t('common.coverUpload.bothRequired')}</p>
+            <div className={styles.coverSlots}>
+                {renderSlotHeader('landscape')}
+                {renderSlotHeader('portrait')}
+                {renderSlotFrame('landscape')}
+                {renderSlotFrame('portrait')}
+            </div>
 
             {coverError ? (
                 <p className={styles.coverErrorText}>{coverError}</p>
             ) : null}
 
-            {pendingCropFile ? (
+            {pendingCrop?.pendingCropFile ? (
                 <ImageCropModal
                     isOpen
-                    imageSrc={pendingCropFile.imageSrc}
-                    title={cropPreset.title}
-                    description={cropPreset.description}
-                    aspectRatio={cropPreset.aspectRatio}
-                    aspectLabel={cropPreset.aspectLabel}
-                    defaultCropScale={cropPreset.defaultCropScale}
-                    mimeType={pendingCropFile.mimeType}
-                    onClose={closeCropper}
-                    onCropComplete={handleCropComplete}
+                    imageSrc={pendingCrop.pendingCropFile.imageSrc}
+                    title={pendingCrop.cropPreset.title}
+                    description={pendingCrop.cropPreset.description}
+                    aspectRatio={pendingCrop.cropPreset.aspectRatio}
+                    aspectLabel={pendingCrop.cropPreset.aspectLabel}
+                    defaultCropScale={pendingCrop.cropPreset.defaultCropScale}
+                    mimeType={pendingCrop.pendingCropFile.mimeType}
+                    onClose={pendingCrop.closeCropper}
+                    onCropComplete={pendingCrop.handleCropComplete}
                 />
             ) : null}
 
             <PortraitLightbox
-                open={lightboxOpen && Boolean(coverDisplaySrc)}
-                src={coverDisplaySrc || null}
+                open={Boolean(lightboxSrc)}
+                src={lightboxSrc}
                 title={resolvedWorkTitle || t('common.coverUpload.title')}
-                onClose={() => setLightboxOpen(false)}
+                onClose={() => setLightboxSrc(null)}
             />
 
             {promptModal}

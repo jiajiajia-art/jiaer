@@ -1,10 +1,10 @@
+/* 功能注释：创建空游戏 / AI 一句话弹窗对齐 funloom 暗色壳（#1A1A1A 面、#1C1C1E 输入、酒红主按钮） */
+
 .modalOverlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(6px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -17,33 +17,42 @@
     padding: 20px;
 }
 
+.ideaModalWide {
+    max-width: 560px;
+}
+
 .modal {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    --primary: #A8283C;
+    --primary-dark: #8E2135;
+    background: #1A1A1A;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
     overflow: hidden;
+    color: #ffffff;
 }
 
 .modalHeader {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px 24px;
-    border-bottom: 1px solid #e5e5e5;
+    padding: 18px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .title {
     margin: 0;
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: #1a1a1a;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #ffffff;
 }
 
 .closeButton {
-    background: none;
-    border: none;
-    font-size: 28px;
-    color: #666;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    font-size: 22px;
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.55);
     cursor: pointer;
     padding: 0;
     width: 32px;
@@ -51,12 +60,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 4px;
-    transition: background-color 0.2s;
+    border-radius: 999px;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
 }
 
 .closeButton:hover:not(:disabled) {
-    background-color: #f5f5f5;
+    background-color: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.22);
 }
 
 .closeButton:disabled {
@@ -65,19 +76,19 @@
 }
 
 .modalBody {
-    padding: 24px;
+    padding: 20px;
 }
 
 .formGroup {
-    margin-bottom: 24px;
+    margin-bottom: 20px;
 }
 
 .label {
     display: block;
     margin-bottom: 8px;
     font-size: 0.875rem;
-    font-weight: 500;
-    color: #333;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.75);
 }
 
 .labelWithAi {
@@ -96,11 +107,11 @@
 .fieldAiBtn {
     flex-shrink: 0;
     min-height: 28px;
-    padding: 4px 10px;
-    border-radius: 6px;
-    border: 1px solid rgba(224, 61, 75, 0.75);
-    background: rgba(224, 61, 75, 0.08);
-    color: #e03d4b;
+    padding: 4px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(142, 33, 53, 0.55);
+    background: rgba(142, 33, 53, 0.18);
+    color: #FF8A9A;
     font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
@@ -108,7 +119,7 @@
 }
 
 .fieldAiBtn:hover:not(:disabled) {
-    background: rgba(224, 61, 75, 0.16);
+    background: rgba(142, 33, 53, 0.28);
 }
 
 .fieldAiBtn:disabled {
@@ -118,93 +129,112 @@
 
 .input {
     width: 100%;
-    padding: 12px 16px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
+    padding: 12px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
     font-size: 1rem;
-    transition: border-color 0.2s;
+    background: #1C1C1E;
+    color: #ffffff;
+    transition: border-color 0.2s, box-shadow 0.2s;
     box-sizing: border-box;
+}
+
+.input::placeholder {
+    color: rgba(255, 255, 255, 0.35);
 }
 
 .input:focus {
     outline: none;
-    border-color: var(--primary);
+    border-color: #8E2135;
+    box-shadow: 0 0 0 3px rgba(142, 33, 53, 0.25);
 }
 
 .input:disabled {
-    background-color: #f5f5f5;
+    background-color: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.45);
     cursor: not-allowed;
 }
 
 .textarea {
     width: 100%;
-    padding: 12px 16px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
+    padding: 12px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
     font-size: 1rem;
-    transition: border-color 0.2s;
+    background: #1C1C1E;
+    color: #ffffff;
+    transition: border-color 0.2s, box-shadow 0.2s;
     box-sizing: border-box;
     resize: vertical;
     font-family: inherit;
     min-height: 120px;
 }
 
+.textarea::placeholder {
+    color: rgba(255, 255, 255, 0.35);
+}
+
 .textarea:focus {
     outline: none;
-    border-color: var(--primary);
+    border-color: #8E2135;
+    box-shadow: 0 0 0 3px rgba(142, 33, 53, 0.25);
 }
 
 .textarea:disabled {
-    background-color: #f5f5f5;
+    background-color: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.45);
     cursor: not-allowed;
 }
 
 .errorText {
     margin: 8px 0 0 0;
-    color: var(--primary);
+    color: #C23A50;
     font-size: 0.875rem;
 }
 
 .hintText {
     margin: 8px 0 0 0;
-    color: #666;
+    color: rgba(255, 255, 255, 0.45);
     font-size: 0.75rem;
     line-height: 1.4;
 }
 
 .buttonGroup {
     display: flex;
-    gap: 12px;
+    gap: 10px;
     justify-content: flex-end;
 }
 
 .cancelButton,
 .submitButton {
-    padding: 10px 24px;
-    border: none;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-weight: 500;
+    min-height: 42px;
+    padding: 10px 22px;
+    border-radius: 999px;
+    font-size: 0.95rem;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s, border-color 0.2s, opacity 0.2s;
 }
 
 .cancelButton {
-    background-color: #f5f5f5;
-    color: #333;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background-color: #1C1C1E;
+    color: #ffffff;
 }
 
 .cancelButton:hover:not(:disabled) {
-    background-color: #e5e5e5;
+    border-color: rgba(255, 255, 255, 0.35);
+    background-color: #242426;
 }
 
 .submitButton {
-    background-color: var(--primary);
-    color: white;
+    border: none;
+    background-color: #8E2135;
+    color: #ffffff;
 }
 
 .submitButton:hover:not(:disabled) {
-    background-color: #c93543;
+    background-color: #A8283C;
 }
 
 .submitButton:disabled,
@@ -213,3 +243,179 @@
     cursor: not-allowed;
 }
 
+.textareaWrap {
+    position: relative;
+}
+
+.charCount {
+    position: absolute;
+    right: 12px;
+    bottom: 10px;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.35);
+    pointer-events: none;
+}
+
+.scopeLabel {
+    margin: 0 0 10px 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.scopeOption {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    width: 100%;
+    text-align: left;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    border: 1.5px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    background: #1C1C1E;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    color: #ffffff;
+}
+
+.scopeOption:hover:not(:disabled) {
+    border-color: rgba(142, 33, 53, 0.55);
+}
+
+.scopeOptionActive {
+    border-color: #8E2135;
+    background: rgba(142, 33, 53, 0.14);
+}
+
+.scopeOption:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.scopeRadio {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.28);
+    box-sizing: border-box;
+    position: relative;
+}
+
+.scopeOptionActive .scopeRadio {
+    border-color: #8E2135;
+}
+
+.scopeOptionActive .scopeRadio::after {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border-radius: 50%;
+    background: #8E2135;
+}
+
+.scopeBody {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.scopeTitle {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.scopeDesc {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
+    line-height: 1.4;
+}
+
+.scopeBadge {
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #FF8A9A;
+    background: rgba(142, 33, 53, 0.22);
+    padding: 4px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.assetPickPanel {
+    margin: 4px 0 8px 0;
+    padding: 12px;
+    border-radius: 10px;
+    background: rgba(142, 33, 53, 0.1);
+    border: 1px dashed rgba(142, 33, 53, 0.35);
+}
+
+.assetPickLabel {
+    margin: 0 0 10px 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.assetPickRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.assetChip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: #1C1C1E;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.85);
+    cursor: pointer;
+    user-select: none;
+}
+
+.assetChip input {
+    accent-color: #8E2135;
+}
+
+.assetChipOn {
+    border-color: rgba(142, 33, 53, 0.55);
+    background: rgba(142, 33, 53, 0.18);
+}
+
+.assetCount {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.75rem;
+}
+
+@media (max-width: 720px) {
+    .modalWrapper {
+        padding: 16px;
+        width: 100%;
+        max-width: 500px;
+        align-self: center;
+    }
+
+    .modal {
+        border-radius: 16px;
+    }
+
+    .buttonGroup {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .cancelButton,
+    .submitButton {
+        width: 100%;
+        justify-content: center;
+    }
+}

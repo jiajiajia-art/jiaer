@@ -9,6 +9,7 @@ import {
 } from '../../lib/galgame/compressImageToWebp';
 import { useAuthStore } from '../../store/useAuthStore';
 import { CHARACTER_GENERATION_COST, getImageUrl } from '../../utils/constants';
+import { MdOutlineFileUpload } from 'react-icons/md';
 import panel from './WarehousePanel.module.css';
 
 type Props = {
@@ -122,6 +123,7 @@ const WarehouseCardAvatarField: React.FC<Props> = ({
               disabled={locked || !token}
               onClick={requestUpload}
             >
+              <MdOutlineFileUpload className={panel.avatarUploadBtnIcon} aria-hidden />
               {uploading ? '上传中…' : '上传图片'}
             </button>
             <button

@@ -8,6 +8,8 @@ import {
   type PrivateChatSseEvent,
 } from '../../../api/galgame/privateChat';
 import {
+  canRegeneratePrivateChatLastMessage,
+  isLastPrivateChatAssistantMessage,
   isPrivateChatNarrativeBusyError,
   resolvePrivateChatBusyMessage,
   shouldWaitPrivateChatForNarrative,
@@ -454,39 +456,69 @@ const PrivateChatPanel: React.FC<PrivateChatPanelProps> = ({
       toast.error(selfBusyTip);
       return;
     }
-    if (shouldWaitPrivateChatForNarrative(narrativeBusyRef.current)) {
-      return;
-    }
     setClearConfirmOpen(false);
     setBusy(true);
-    setStreaming('');
-    setMenuIndex(null);
     try {
       const res = await privateChatApi.clearThread(token, sessionId, npcId);
       if (!res?.success || !res.data) {
         toast.error(res?.message || '清空失败');
         return;
       }
-      setMessages([]);
-      if (res.data.npc) setNpc(res.data.npc);
-      toast.success('已清空私聊记录');
-      setAwaitingGreet(true);
-
-      const onEvent = (ev: PrivateChatSseEvent) => {
-        handleStreamEvent(ev, () => enterNarrativeWait({ kind: 'greet' }));
-      };
-      await privateChatApi.greet(token, sessionId, npcId, onEvent);
+      setMessages(res.data.thread?.messages || []);
+      setNpc(res.data.npc || null);
+      setStreaming('');
+      toast.success('已清空私聊');
+      // 清空后自动再打招呼
+      if (!shouldWaitPrivateChatForNarrative(narrativeBusyRef.current)) {
+        await runStream('greet');
+      } else {
+        enterNarrativeWait({ kind: 'greet' });
+      }
     } catch (e) {
       if (isPrivateChatNarrativeBusyError(e)) {
-        enterNarrativeWait({ kind: 'greet' });
+        toast.error('主线正在生成，请稍后再试');
         return;
       }
       toast.error((e as Error)?.message || '清空失败');
-      setStreaming('');
-      setAwaitingGreet(false);
     } finally {
       setBusy(false);
-      setAwaitingGreet(false);
+    }
+  };
+
+  /** 功能注释：长按菜单删除单条气泡（不碰主线）。 */
+  const handleDeleteMessage = async (index: number) => {
+    if (!token || !sessionId) {
+      toast.error('请先登录');
+      return;
+    }
+    const selfBusyTip = resolvePrivateChatBusyMessage({ privateChatBusy: busy });
+    if (selfBusyTip) {
+      toast.error(selfBusyTip);
+      return;
+    }
+    if (shouldWaitPrivateChatForNarrative(narrativeBusyRef.current)) {
+      toast.error('主线正在生成，请稍后再试');
+      return;
+    }
+    setMenuIndex(null);
+    setBusy(true);
+    try {
+      const res = await privateChatApi.deleteMessage(token, sessionId, npcId, index);
+      if (!res?.success || !res.data) {
+        toast.error(res?.message || '删除失败');
+        return;
+      }
+      setMessages(res.data.thread?.messages || []);
+      if (res.data.npc) setNpc(res.data.npc);
+      toast.success('已删除');
+    } catch (e) {
+      if (isPrivateChatNarrativeBusyError(e)) {
+        toast.error('主线正在生成，请稍后再试');
+        return;
+      }
+      toast.error((e as Error)?.message || '删除失败');
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -555,9 +587,8 @@ const PrivateChatPanel: React.FC<PrivateChatPanelProps> = ({
           <p className={styles.empty}>和 {title} 说点什么吧</p>
         ) : (
           messages.map((m, i) => {
-            const isLastAssistant =
-              m.role === 'assistant'
-              && !messages.slice(i + 1).some((x) => x.role === 'assistant');
+            const isLastAssistant = isLastPrivateChatAssistantMessage(messages, i);
+            const canRegenLast = canRegeneratePrivateChatLastMessage(messages);
             return (
             <div
               key={`${m.createdAt}-${i}`}
@@ -600,10 +631,20 @@ const PrivateChatPanel: React.FC<PrivateChatPanelProps> = ({
                       type="button"
                       role="menuitem"
                       className={styles.menuBtn}
-                      disabled={busy || waitingNarrative || !isLastAssistant}
+                      disabled={busy || waitingNarrative || !isLastAssistant || !canRegenLast}
                       onClick={() => void runStream('regen')}
                     >
                       重新回复
+                    </button>
+                    <span className={styles.menuDivider} aria-hidden />
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className={`${styles.menuBtn} ${styles.menuBtnDanger}`}
+                      disabled={busy || waitingNarrative}
+                      onClick={() => void handleDeleteMessage(i)}
+                    >
+                      删除消息
                     </button>
                     <span className={styles.menuDivider} aria-hidden />
                     <button

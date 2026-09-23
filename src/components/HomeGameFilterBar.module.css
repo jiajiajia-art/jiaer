@@ -5,17 +5,13 @@
     align-items: center;
     gap: 0;
     width: 100%;
-    margin-top: 18px;
+    /* 功能注释：筛选条上边距；下边距由首页 shopSection 用一半值承接 */
+    margin-top: var(--home-filter-gap-above, 16px);
     padding: 10px 16px;
-    border-radius: 24px;
-    border: 1px solid rgba(224, 61, 75, 0.12);
-    background:
-        radial-gradient(circle at 10% 18%, rgba(255, 255, 255, 0.9), transparent 32%),
-        radial-gradient(circle at 0% 50%, rgba(224, 61, 75, 0.08) 0%, rgba(224, 61, 75, 0.02) 18%, transparent 44%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 248, 249, 0.94) 100%);
-    box-shadow:
-        0 18px 40px rgba(224, 61, 75, 0.1),
-        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: #1A1A1A;
+    box-shadow: none;
     overflow: visible;
 }
 
@@ -33,7 +29,7 @@
     width: 1px;
     height: 24px;
     margin: 0 6px;
-    background: linear-gradient(180deg, transparent 0%, rgba(224, 61, 75, 0.18) 24%, rgba(224, 61, 75, 0.18) 76%, transparent 100%);
+    background: linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.16) 24%, rgba(255, 255, 255, 0.16) 76%, transparent 100%);
     flex: 0 0 auto;
 }
 
@@ -47,7 +43,7 @@
     align-items: center;
     gap: 8px;
     background: transparent;
-    color: #111827;
+    color: #FFFFFF;
     font-size: 16px;
     font-weight: 700;
     line-height: 1;
@@ -57,17 +53,17 @@
 }
 
 .trigger:hover {
-    color: #111827;
-    background: rgba(224, 61, 75, 0.06);
+    color: #FFFFFF;
+    background: rgba(255, 255, 255, 0.06);
 }
 
 .triggerOpen,
 .triggerChanged {
-    color: var(--primary-dark);
+    color: #FFFFFF;
 }
 
 .triggerChanged {
-    background: rgba(224, 61, 75, 0.08);
+    background: rgba(142, 33, 53, 0.35);
 }
 
 .triggerOpen {
@@ -114,16 +110,12 @@
     min-width: 188px;
     max-height: min(55vh, 420px);
     padding: 10px;
-    border-radius: 18px;
-    border: 1px solid rgba(224, 61, 75, 0.12);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     display: grid;
     gap: 6px;
-    background:
-        radial-gradient(circle at top left, rgba(255, 255, 255, 0.92), transparent 34%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(255, 247, 248, 0.97) 100%);
-    box-shadow:
-        0 20px 44px rgba(224, 61, 75, 0.12),
-        inset 0 1px 0 rgba(255, 255, 255, 0.94);
+    background: #1C1C1E;
+    box-shadow: 0 20px 44px rgba(0, 0, 0, 0.45);
     overflow-y: auto;
 }
 
@@ -142,26 +134,26 @@
     width: 100%;
     padding: 12px 14px;
     border: none;
-    border-radius: 14px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
     background: transparent;
-    color: #374151;
+    color: #C7C7CC;
     cursor: pointer;
     text-align: left;
     transition: background-color 0.18s ease, color 0.18s ease;
 }
 
 .menuItem:hover {
-    background: rgba(224, 61, 75, 0.06);
-    color: #111827;
+    background: rgba(255, 255, 255, 0.06);
+    color: #FFFFFF;
 }
 
 .menuItemActive {
-    background: linear-gradient(135deg, rgba(255, 123, 136, 0.12) 0%, rgba(224, 61, 75, 0.14) 100%);
-    color: var(--primary-dark);
+    background: rgba(142, 33, 53, 0.4);
+    color: #FFFFFF;
 }
 
 .menuItemLabel {
@@ -177,7 +169,7 @@
 
 .menuItemCheck {
     flex: 0 0 auto;
-    color: var(--primary);
+    color: #FF8A9A;
     font-size: 15px;
     font-weight: 700;
 }
@@ -190,7 +182,7 @@
     display: inline-flex;
     align-items: center;
     background: transparent;
-    color: #111827;
+    color: #FFFFFF;
     font-size: 16px;
     font-weight: 700;
     line-height: 1;
@@ -200,32 +192,30 @@
 }
 
 .quickFilter:hover {
-    background: rgba(224, 61, 75, 0.06);
+    background: rgba(255, 255, 255, 0.06);
 }
 
 .quickFilterActive {
-    color: var(--primary-dark);
-    background: rgba(224, 61, 75, 0.08);
+    color: #FFFFFF;
+    background: #8E2135;
 }
 
 .trigger:focus-visible,
 .menuItem:focus-visible,
 .quickFilter:focus-visible {
-    outline: 2px solid rgba(224, 61, 75, 0.38);
+    outline: 2px solid rgba(168, 40, 60, 0.7);
     outline-offset: 2px;
 }
 
 @media (max-width: 768px) {
     .bar {
-        margin-top: 12px;
+        margin-top: var(--home-filter-gap-above, 16px);
         padding: 6px 10px;
-        border-radius: 18px;
-        border: 1px solid rgba(15, 23, 42, 0.08);
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
         flex-wrap: nowrap;
-        background: #ffffff;
-        box-shadow:
-            0 12px 28px rgba(15, 23, 42, 0.12),
-            inset 0 0 0 1px rgba(255, 255, 255, 0.82);
+        background: #1A1A1A;
+        box-shadow: none;
         overflow: visible;
     }
 
@@ -247,36 +237,34 @@
         height: 20px;
         margin: 0 4px;
         flex: 0 0 auto;
-        background: linear-gradient(180deg, transparent 0%, rgba(15, 23, 42, 0.14) 18%, rgba(15, 23, 42, 0.14) 82%, transparent 100%);
+        background: linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.14) 18%, rgba(255, 255, 255, 0.14) 82%, transparent 100%);
     }
 
     .trigger {
         min-height: 38px;
         max-width: 100%;
         padding: 0 8px;
-        color: #111827;
+        color: #FFFFFF;
         font-size: 14px;
         background: transparent;
     }
 
     .trigger:hover {
-        color: #111827;
-        background: rgba(15, 23, 42, 0.04);
+        color: #FFFFFF;
+        background: rgba(255, 255, 255, 0.06);
     }
 
     .triggerChanged {
-        color: var(--primary-dark);
-        background: rgba(224, 61, 75, 0.08);
+        color: #FFFFFF;
+        background: rgba(142, 33, 53, 0.4);
     }
 
     .menu {
         top: calc(100% + 10px);
         min-width: 168px;
-        border: 1px solid rgba(15, 23, 42, 0.08);
-        background: #ffffff;
-        box-shadow:
-            0 16px 32px rgba(15, 23, 42, 0.16),
-            inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: #1C1C1E;
+        box-shadow: 0 16px 32px rgba(0, 0, 0, 0.5);
     }
 
     .menuWide {
@@ -296,26 +284,26 @@
     }
 
     .menuItem {
-        color: #374151;
+        color: #C7C7CC;
     }
 
     .menuItem:hover {
-        background: rgba(15, 23, 42, 0.05);
-        color: #111827;
+        background: rgba(255, 255, 255, 0.06);
+        color: #FFFFFF;
     }
 
     .menuItemActive {
-        background: linear-gradient(135deg, rgba(255, 123, 136, 0.12) 0%, rgba(224, 61, 75, 0.14) 100%);
-        color: var(--primary-dark);
+        background: rgba(142, 33, 53, 0.45);
+        color: #FFFFFF;
     }
 
     .menuItemCheck {
-        color: var(--primary);
+        color: #FF8A9A;
     }
 
     .trigger:focus-visible,
     .menuItem:focus-visible,
     .quickFilter:focus-visible {
-        outline: 2px solid rgba(224, 61, 75, 0.38);
+        outline: 2px solid rgba(168, 40, 60, 0.7);
     }
 }

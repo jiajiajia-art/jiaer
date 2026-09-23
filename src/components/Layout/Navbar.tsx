@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { IoMailOutline, IoSearch } from 'react-icons/io5';
 import { useTranslation } from 'react-i18next';
 import styles from './Navbar.module.css';
 import AuthModal from '../AuthModal';
@@ -12,7 +11,26 @@ import type { UserGameData } from '../../api/home/getGameData.type';
 import { getImageUrl } from '../../utils/constants';
 import { buildGameDetailNavigateState } from '../../utils/gameDetailNavigation';
 import { isAdminRole, isOperatorRole, isVerifiedCreatorRole } from '../../utils/userRoles';
+import { resolveSearchResultSecondaryLine } from '../../lib/gameCardBody';
+import { isCreatorRoutePath } from '../../utils/miniProgram';
+import {
+    applyAppLanguage,
+    getNavbarLanguageTriggerLabel,
+    normalizeAppLanguage,
+    type AppLanguageCode,
+} from '../../utils/appLanguage';
 import UserAvatar from '../UserAvatar';
+import LanguageSelectModal from './LanguageSelectModal';
+
+/** 功能注释：暗色 funloom 导航图标基路径（assetsv2/home） */
+const HOME_ICON_BASE = `${import.meta.env.BASE_URL}data/assetsv2/home`;
+const NAV_SEARCH_ICON = `${HOME_ICON_BASE}/nav_search.webp`;
+const NAV_MESSAGE_ICON = `${HOME_ICON_BASE}/nav_message.webp`;
+/** 功能注释：顶栏圆形按钮半透明底（效果图切图） */
+const NAV_BTN_BG = `${HOME_ICON_BASE}/nav_btn_bg.webp`;
+const NAVBAR_BTN_BG_STYLE = {
+    ['--navbar-btn-circle-bg' as string]: `url("${NAV_BTN_BG}")`,
+};
 
 const isWebViewEnv = (): boolean => {
     const win = window as { __wxjs_environment?: string };
@@ -23,12 +41,6 @@ const SEARCH_DEBOUNCE_MS = 250;
 const SEARCH_PAGE_SIZE = 8;
 
 const getSearchResultId = (game: UserGameData): string => String(game.file_id || game.id || '').trim();
-
-const getSearchResultMeta = (game: UserGameData): string => {
-    const subtitle = String(game.subtitle || '').trim();
-    if (subtitle) return subtitle;
-    return String(game.file_id || '').trim();
-};
 
 type NavKey = 'home' | 'categories' | 'create' | 'warehouse' | 'rank' | '';
 type NavbarProps = {
@@ -42,10 +54,11 @@ const Navbar: React.FC<NavbarProps> = ({
     mobileOverlayScrolled = false,
     beforeLeaveAction,
 }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
     const [showUserMenu, setShowUserMenu] = useState(false);
+    const [showLanguageModal, setShowLanguageModal] = useState(false);
     const [isDesktopLayout, setIsDesktopLayout] = useState(window.innerWidth > 768);
     const [searchKeyword, setSearchKeyword] = useState('');
     const [searchResults, setSearchResults] = useState<UserGameData[]>([]);
@@ -60,6 +73,12 @@ const Navbar: React.FC<NavbarProps> = ({
     const avatarContainerRef = useRef<HTMLDivElement | null>(null);
     const searchBoxRef = useRef<HTMLFormElement | null>(null);
     const searchRequestIdRef = useRef(0);
+    const activeLanguage: AppLanguageCode =
+        normalizeAppLanguage(i18n.resolvedLanguage || i18n.language) ?? 'zh';
+
+    const handleLanguageChange = (code: AppLanguageCode) => {
+        void applyAppLanguage(code, (lng) => i18n.changeLanguage(lng));
+    };
 
     useEffect(() => {
         initialize();
@@ -169,7 +188,9 @@ const Navbar: React.FC<NavbarProps> = ({
         const path = location.pathname;
         if (path === '/home' || path === '/') return 'home';
         if (path.startsWith('/categories')) return 'categories';
-        if (path.startsWith('/create')) return 'create';
+        // /create 已合并为「我的」统一页，顶栏创作仅在编辑器相关路由高亮
+        if (path === '/create' || path.startsWith('/create/withdraw-records')) return '';
+        if (path.startsWith('/create') || isCreatorRoutePath(path)) return 'create';
         if (path.startsWith('/warehouse')) return 'warehouse';
         if (path.startsWith('/rank')) return 'rank';
         return '';
@@ -177,7 +198,7 @@ const Navbar: React.FC<NavbarProps> = ({
 
     const activeNav = getActiveNav();
     const unreadBadgeText = unreadCount > 99 ? '99+' : (unreadCount > 0 ? String(unreadCount) : '');
-    const logoSrc = `${import.meta.env.BASE_URL}data/assets/${isDesktopLayout ? 'LOGO2.png' : 'LOGO2-mobile.png'}`;
+    const logoSrc = `${import.meta.env.BASE_URL}data/assets/LOGO2.png`;
     const showDeveloperModeEntry = isDesktopLayout;
     const navbarContainerClassName = [
         styles.navbarContainer,
@@ -247,11 +268,17 @@ const Navbar: React.FC<NavbarProps> = ({
     };
 
     return (
-        <div className={navbarContainerClassName}>
+        <div className={navbarContainerClassName} style={NAVBAR_BTN_BG_STYLE}>
             <div className={styles.navbar}>
-                <div className={styles.logo}>
-                    <img src={logoSrc} alt="logo" />
-                </div>
+                {/* 功能注释：点击品牌 Logo 回首页，与「首页」导航一致 */}
+                <button
+                    type="button"
+                    className={styles.logo}
+                    onClick={() => runLeaveAction(() => navigate('/home'))}
+                    aria-label="回到首页"
+                >
+                    <img src={logoSrc} alt="funloom" />
+                </button>
 
                 <div className={styles.navLinks}>
                     <div
@@ -270,7 +297,7 @@ const Navbar: React.FC<NavbarProps> = ({
                         className={`${styles.navLink} ${activeNav === 'create' ? styles.navLinkActive : ''}`}
                         onClick={() => {
                             if (!requireAuth()) return;
-                            runLeaveAction(() => navigate('/create'));
+                            runLeaveAction(() => navigate('/create/new'));
                         }}
                     >
                         {t('nav.create')}
@@ -318,7 +345,7 @@ const Navbar: React.FC<NavbarProps> = ({
                             aria-label={t('nav.searchAriaLabel')}
                         />
                         <button type="submit" className={styles.searchIcon} aria-label={t('nav.submitSearch')}>
-                            <IoSearch />
+                            <img src={NAV_SEARCH_ICON} alt="" className={styles.navAssetIcon} width={14} height={14} />
                         </button>
 
                         {shouldShowSearchPanel ? (
@@ -331,6 +358,8 @@ const Navbar: React.FC<NavbarProps> = ({
                                 {!isSearching && !searchError && searchResults.map((game) => {
                                     const gameId = getSearchResultId(game);
                                     if (!gameId) return null;
+                                    const title = String(game.title || '').trim() || gameId;
+                                    const secondary = resolveSearchResultSecondaryLine(game);
 
                                     return (
                                         <button
@@ -339,8 +368,10 @@ const Navbar: React.FC<NavbarProps> = ({
                                             className={styles.searchItem}
                                             onClick={() => handleSearchSelect(game)}
                                         >
-                                            <span className={styles.searchItemTitle}>{game.title || gameId}</span>
-                                            <span className={styles.searchItemMeta}>{getSearchResultMeta(game)}</span>
+                                            <span className={styles.searchItemTitle}>{title}</span>
+                                            {secondary ? (
+                                                <span className={styles.searchItemMeta}>{secondary}</span>
+                                            ) : null}
                                         </button>
                                     );
                                 })}
@@ -356,7 +387,7 @@ const Navbar: React.FC<NavbarProps> = ({
                                 onClick={() => runLeaveAction(() => navigate('/messages'))}
                                 aria-label={t('nav.messages')}
                             >
-                                <IoMailOutline />
+                                <img src={NAV_MESSAGE_ICON} alt="" className={styles.navAssetIcon} width={14} height={14} />
                                 {unreadBadgeText ? <span className={styles.messageBadge}>{unreadBadgeText}</span> : null}
                             </button>
 
@@ -368,7 +399,6 @@ const Navbar: React.FC<NavbarProps> = ({
                                     aria-haspopup="menu"
                                     aria-expanded={showUserMenu}
                                     onClick={(event) => {
-                                        // 功能注释：小程序 web-view 也要下拉菜单（个人中心/仓库/退出），禁止再短路 return
                                         event.stopPropagation();
                                         setShowUserMenu((prev) => !prev);
                                     }}
@@ -400,17 +430,19 @@ const Navbar: React.FC<NavbarProps> = ({
 
                                 {showUserMenu && (
                                     <div className={styles.userMenu} role="menu">
-                                        <button
-                                            className={styles.menuBtn}
-                                            onClick={() => {
-                                                runLeaveAction(() => {
-                                                    navigate('/profile');
-                                                    setShowUserMenu(false);
-                                                });
-                                            }}
-                                        >
-                                            {t('nav.profile')}
-                                        </button>
+                                        {isDesktopLayout && (
+                                            <button
+                                                className={styles.menuBtn}
+                                                onClick={() => {
+                                                    runLeaveAction(() => {
+                                                        navigate('/create');
+                                                        setShowUserMenu(false);
+                                                    });
+                                                }}
+                                            >
+                                                {t('nav.profile')}
+                                            </button>
+                                        )}
                                         {!isDesktopLayout && (
                                             <button
                                                 className={styles.menuBtn}
@@ -448,7 +480,7 @@ const Navbar: React.FC<NavbarProps> = ({
                                                 {t('nav.operatorPanel')}
                                             </button>
                                         )}
-                                        {isAdminRole(user?.user?.role) && (
+                                        {isAdminRole(user?.user?.role) && isDesktopLayout && (
                                             <button
                                                 className={styles.menuBtn}
                                                 onClick={() => {
@@ -503,6 +535,16 @@ const Navbar: React.FC<NavbarProps> = ({
                             </button>
                         )
                     )}
+
+                    {/* 功能注释：语言入口固定在顶栏最右（头像/登录右侧），未登录也可用 */}
+                    <button
+                        type="button"
+                        className={styles.langTrigger}
+                        aria-label={t('nav.chooseLanguage')}
+                        onClick={() => setShowLanguageModal(true)}
+                    >
+                        {getNavbarLanguageTriggerLabel(activeLanguage)}
+                    </button>
                 </div>
             </div>
 
@@ -512,6 +554,13 @@ const Navbar: React.FC<NavbarProps> = ({
                     onClose={() => setIsAuthModalOpen(false)}
                 />
             )}
+
+            <LanguageSelectModal
+                isOpen={showLanguageModal}
+                activeLanguage={activeLanguage}
+                onClose={() => setShowLanguageModal(false)}
+                onSelect={handleLanguageChange}
+            />
         </div>
     );
 };

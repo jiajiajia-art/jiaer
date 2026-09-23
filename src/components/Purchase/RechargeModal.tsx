@@ -8,6 +8,30 @@ import { auth } from '../../api/account/authApi';
 import type { PayOrderRequest, PlanId, DiamondsPlanId } from '../../api/pay/pay.type';
 import { getApiErrorMessage } from '../../utils/error';
 import { useAuthStore } from '../../store/useAuthStore';
+import { resolveMemberDisplayEndAt } from '../../utils/planLabels';
+import type { DefaultPayMethod } from '../../lib/geoRegion';
+import {
+    calcDiamondsForPayMethod,
+    getPayMethodCurrencySymbol,
+    getPayMethodMinAmount,
+    isAmountReadyToPay,
+    sanitizeAmountInput,
+    validateRechargeAmount,
+} from '../../lib/rechargeAmountRules';
+
+const COIN_ICON = `${import.meta.env.BASE_URL}data/assetsv2/personal/payment/coin.png`;
+const MEMBER_ICON = `${import.meta.env.BASE_URL}data/assetsv2/personal/member.png`;
+const ENJOY_ICON = `${import.meta.env.BASE_URL}data/assetsv2/personal/enjoy.png`;
+
+const formatMemberEndDate = (raw?: string | null): string | undefined => {
+    if (!raw) return undefined;
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return undefined;
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+};
 
 type RechargeTabType = 'diamonds' | 'membership';
 
@@ -53,8 +77,6 @@ interface RechargeModalProps {
     fixedTab?: RechargeTabType;
 }
 
-const POINTS_PER_YUAN = 10;
-const MIN_AMOUNT = 0.1;
 const POLL_INTERVAL_MS = 3000;
 const POLL_TIMEOUT_MS = 2 * 60 * 1000;
 const COUNTDOWN_SECONDS = POLL_TIMEOUT_MS / 1000;
@@ -66,7 +88,14 @@ const isMiniProgramEnv = (): boolean => {
 
 const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRecharge, fixedTab }) => {
     const { t } = useTranslation();
-    const { updateUser } = useAuthStore();
+    const { updateUser, user: authUser } = useAuthStore();
+    const memberProfile = authUser?.user;
+    const memberEndDate = useMemo(
+        () => formatMemberEndDate(
+            resolveMemberDisplayEndAt(memberProfile?.stackedPlans, memberProfile?.memberEndAt),
+        ),
+        [memberProfile?.stackedPlans, memberProfile?.memberEndAt],
+    );
     const [isLoading, setIsLoading] = useState(false);
     const [amountError, setAmountError] = useState('');
     const [inputShake, setInputShake] = useState(false);
@@ -85,6 +114,10 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     const [customOriginalAmount, setCustomOriginalAmount] = useState<number | null>(null);
     // 用户实际看到的（可能是折扣后的）金额文本
     const [amountText, setAmountText] = useState<string>('');
+    /** 功能注释：钻石充值顶部互切支付方式；点立即支付直接走当前选中方式，不再二次弹窗 */
+    const [selectedPayMethod, setSelectedPayMethod] = useState<DefaultPayMethod>('wechat');
+    const payMinAmount = getPayMethodMinAmount(selectedPayMethod);
+    const currencySymbol = getPayMethodCurrencySymbol(selectedPayMethod);
 
     const inFlightRef = useRef(false);
     const isComposingRef = useRef(false);
@@ -153,6 +186,29 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             setCustomOriginalAmount(null);
             setAmountError('');
             setInputShake(false);
+            return;
+        }
+
+        // 功能注释：每次打开默认微信支付（首位）；用户仍可切到海外支付
+        setSelectedPayMethod('wechat');
+        setRechargeTab(fixedTab ?? 'diamonds');
+        if ((fixedTab ?? 'diamonds') === 'diamonds') {
+            const defaultPlan = FIRST_CHARGE_PLANS[0];
+            setAmountText(String(defaultPlan.amount));
+            setSelectedFirstChargePlanId(defaultPlan.planId);
+            setSelectedFixedPlanAmount(defaultPlan.amount);
+            setCustomOriginalAmount(null);
+            setAmountError('');
+            setInputShake(false);
+            setSelectedPlanIndex(-1);
+        } else {
+            setSelectedPlanIndex(0);
+            setSelectedFirstChargePlanId(null);
+            setSelectedFixedPlanAmount(null);
+            setCustomOriginalAmount(null);
+            setAmountText('');
+            setAmountError('');
+            setInputShake(false);
         }
     }, [isOpen, fixedTab]);
 
@@ -172,39 +228,34 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     };
 
     const handleCustomAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        let value = e.target.value;
-        value = value.replace(/[^\d.]/g, '');
-
-        const parts = value.split('.');
-        if (parts.length > 2) {
+        const sanitized = sanitizeAmountInput(e.target.value, selectedPayMethod);
+        if (sanitized === null) {
             return;
         }
-
-        if (parts.length === 2) {
-            if (parts[1].length > 1) {
-                return;
-            }
-            if (parts[0] === '0' && parts[1] === '1') {
-                value = '0.1';
-            }
-        }
+        const value = sanitized;
 
         const numericValue = Number.parseFloat(value || '0');
-        if (Number.isFinite(numericValue)) {
-            if (numericValue > 0 && numericValue < MIN_AMOUNT) {
-                setAmountError(t('rechargeModal.amountTooLow', { amount: MIN_AMOUNT }));
-                setInputShake(false);
-            } else if (numericValue >= MIN_AMOUNT && !Number.isInteger(numericValue)) {
-                setAmountError(t('rechargeModal.amountMustBeInteger'));
-                setInputShake(true);
-                window.setTimeout(() => setInputShake(false), 500);
+        if (Number.isFinite(numericValue) && value !== '' && value !== '.') {
+            const validation = validateRechargeAmount(numericValue, selectedPayMethod);
+            if (!validation.ok) {
+                if (validation.reason === 'tooLow') {
+                    setAmountError(t('rechargeModal.amountTooLow', { amount: payMinAmount, symbol: currencySymbol }));
+                } else if (validation.reason === 'notInteger') {
+                    setAmountError(t('rechargeModal.amountMustBeInteger'));
+                } else {
+                    setAmountError(t('rechargeModal.amountMaxTwoDecimals'));
+                }
+                setInputShake(validation.reason !== 'tooLow');
+                if (validation.reason !== 'tooLow') {
+                    window.setTimeout(() => setInputShake(false), 500);
+                }
             } else {
                 setAmountError('');
                 setInputShake(false);
             }
             const matchedPlan = FIRST_CHARGE_PLANS.find((plan) => plan.amount === numericValue);
             setSelectedFirstChargePlanId(matchedPlan?.planId ?? null);
-            setCustomOriginalAmount(numericValue >= MIN_AMOUNT ? numericValue : null);
+            setCustomOriginalAmount(validation.ok ? numericValue : null);
         } else {
             setSelectedFirstChargePlanId(null);
             setCustomOriginalAmount(null);
@@ -225,13 +276,13 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
         }
         if (amountText) {
             const amount = parseFloat(amountText);
-            return !isNaN(amount) && amount >= MIN_AMOUNT ? amount : null;
+            return !isNaN(amount) && amount >= payMinAmount ? amount : null;
         }
         return null;
     };
 
-    const calculateDiamonds = (amount: number): number => {
-        return Math.floor(amount * POINTS_PER_YUAN);
+    const calculateDiamonds = (amount: number, isFixedPlan = true): number => {
+        return calcDiamondsForPayMethod(amount, selectedPayMethod, isFixedPlan);
     };
 
     const normalizeQrCodeUrl = (raw: string | null): string | null => {
@@ -337,18 +388,20 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
 
         if (!amount) {
             if (amountText) {
-                setAmountError(t('rechargeModal.amountTooLow', { amount: MIN_AMOUNT }));
+                setAmountError(t('rechargeModal.amountTooLow', { amount: payMinAmount, symbol: currencySymbol }));
             }
             return;
         }
 
-        if (amount < MIN_AMOUNT) {
-            setAmountError(t('rechargeModal.amountTooLow', { amount: MIN_AMOUNT }));
-            return;
-        }
-
-        if (!Number.isInteger(amount)) {
-            setAmountError(t('rechargeModal.amountMustBeInteger'));
+        const amountValidation = validateRechargeAmount(amount, selectedPayMethod);
+        if (!amountValidation.ok) {
+            if (amountValidation.reason === 'tooLow') {
+                setAmountError(t('rechargeModal.amountTooLow', { amount: payMinAmount, symbol: currencySymbol }));
+            } else if (amountValidation.reason === 'notInteger') {
+                setAmountError(t('rechargeModal.amountMustBeInteger'));
+            } else {
+                setAmountError(t('rechargeModal.amountMaxTwoDecimals'));
+            }
             setInputShake(true);
             window.setTimeout(() => setInputShake(false), 500);
             return;
@@ -373,6 +426,16 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             };
         }
 
+        // 小程序仅走微信；H5/Web 直接按顶部已选支付方式下单，不再二次确认弹窗
+        if (isMiniProgramEnv() || selectedPayMethod === 'wechat') {
+            await startWechatDiamondPay(orderData);
+            return;
+        }
+        await startOverseasDiamondPay(orderData);
+    };
+
+    /** 功能注释：既有微信 Native / 小程序支付链路 */
+    const startWechatDiamondPay = async (orderData: PayOrderRequest) => {
         inFlightRef.current = true;
         setIsLoading(true);
         try {
@@ -386,20 +449,21 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                     setOrderId(outTradeNo);
                     const mp = (window as WindowWithWx).wx?.miniProgram;
                     if (mp && typeof mp.postMessage === 'function') {
-                            const payParamsStr = encodeURIComponent(JSON.stringify(payParams));
-                            mp.navigateTo({
-                                url: `/pages/pay/pay?outTradeNo=${outTradeNo}&payParams=${payParamsStr}`
-                            });
-                            toast.success(t('rechargeModal.redirectingToPayment'));
-                        } else {
-                            toast.error(t('rechargeModal.miniProgramNotSupported'));
-                        }
-                        setPaymentStatus('failed');
-                        setPollingError(data.message || t('rechargeModal.paymentRequestFailed'));
+                        const payParamsStr = encodeURIComponent(JSON.stringify(payParams));
+                        mp.navigateTo({
+                            url: `/pages/pay/pay?outTradeNo=${outTradeNo}&payParams=${payParamsStr}`,
+                        });
+                        toast.success(t('rechargeModal.redirectingToPayment'));
+                    } else {
+                        toast.error(t('rechargeModal.miniProgramNotSupported'));
+                    }
+                    setPaymentStatus('failed');
+                    setPollingError(data.message || t('rechargeModal.paymentRequestFailed'));
                 }
                 setIsLoading(false);
                 return;
-            } else if (onRecharge) {
+            }
+            if (onRecharge) {
                 const result = await onRecharge(orderData);
                 const qrDataUrl = normalizeQrCodeUrl(result?.qrDataUrl ?? null);
                 if (result && qrDataUrl) {
@@ -412,6 +476,38 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             }
         } catch (error) {
             console.error('充值失败:', error);
+            const errorMessage = getApiErrorMessage(error, t('rechargeModal.paymentRequestFailed'));
+            setPaymentStatus('failed');
+            setPollingError(errorMessage);
+            toast.error(errorMessage);
+        } finally {
+            setIsLoading(false);
+            inFlightRef.current = false;
+        }
+    };
+
+    /** 功能注释：海外支付 → EnjoyPayment 收银台；金额/IP/用户ID 由后端组单 */
+    const startOverseasDiamondPay = async (orderData: PayOrderRequest) => {
+        inFlightRef.current = true;
+        setIsLoading(true);
+        try {
+            toast.success(t('rechargeModal.redirectingOverseas'));
+            const response = await payApi.createOverseasOrder(orderData);
+            const data = response.data;
+            if (data.code === 200 && data.data?.payUrl) {
+                // 功能注释：下单响应里应带回当前 Origin；缺失则回跳会落到线上兜底，本地需硬刷新前端
+                if (!data.data.returnWebBase) {
+                    console.warn('[overseas-pay] returnWebBase missing from create response', data.data.returnUrl);
+                    toast.error(t('rechargeModal.paymentRequestFailed'));
+                    return;
+                }
+                setOrderId(data.data.outTradeNo);
+                window.location.assign(data.data.payUrl);
+                return;
+            }
+            throw new Error(data.message || t('rechargeModal.paymentRequestFailed'));
+        } catch (error) {
+            console.error('海外支付失败:', error);
             const errorMessage = getApiErrorMessage(error, t('rechargeModal.paymentRequestFailed'));
             setPaymentStatus('failed');
             setPollingError(errorMessage);
@@ -560,33 +656,46 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     if (!isOpen) return null;
 
     const currentAmount = getCurrentAmount();
-    const currentDiamonds = currentAmount ? calculateDiamonds(currentAmount) : 0;
-    const displayDiamonds = currentDiamonds;
 
     const diamondsTabContent = (
         <>
+            {/* 功能注释：微信支付固定首位并默认选中；切换后金额校验与货币符号跟着变 */}
+            <div className={styles.payMethodToggle} role="group" aria-label={t('rechargeModal.choosePayMethod')}>
+                {(['wechat', 'overseas'] as const).map((method) => (
+                    <button
+                        key={method}
+                        type="button"
+                        className={`${styles.payMethodToggleBtn} ${selectedPayMethod === method ? styles.payMethodToggleBtnActive : ''}`}
+                        onClick={() => {
+                            setSelectedPayMethod(method);
+                            setAmountError('');
+                            setInputShake(false);
+                        }}
+                    >
+                        {method === 'wechat' ? t('rechargeModal.payWechat') : t('rechargeModal.payOverseas')}
+                    </button>
+                ))}
+            </div>
+
             <div className={styles.fixedAmounts}>
-                <div className={styles.amountsLabel}>{t('rechargeModal.selectAmount')}</div>
                 <div className={styles.amountsGrid}>
                     {FIRST_CHARGE_PLANS.map((plan) => {
-                        const hasBonus = !plan.noFirstChargeBonus;
-                        const displayDiamonds = calculateDiamonds(plan.amount);
+                        const planDiamonds = calculateDiamonds(plan.amount, true);
+                        const isActive = selectedFirstChargePlanId === plan.planId;
                         return (
                             <button
                                 key={plan.planId}
                                 type="button"
-                                className={`${styles.amountBtn} ${selectedFirstChargePlanId === plan.planId ? styles.amountBtnActive : ''}`}
+                                className={`${styles.amountBtn} ${isActive ? styles.amountBtnActive : ''}`}
                                 onClick={() => handleFixedAmountClick(plan)}
                             >
-                                {hasBonus ? (
-                                    <div className={styles.firstChargeTag} />
-                                ) : (
-                                    <div className={styles.noBonusTag} />
-                                )}
                                 <div className={styles.amountTopSection}>
-                                    <div className={styles.amountMainPoints}>{displayDiamonds}{t('rechargeModal.diamonds')}</div>
+                                    <div className={styles.amountMainPoints}>
+                                        <img src={COIN_ICON} alt="" className={styles.amountCoin} aria-hidden="true" />
+                                        <span>{planDiamonds}</span>
+                                    </div>
                                     <div className={styles.amountPriceMeta}>
-                                        {t('rechargeModal.amount', { amount: plan.amount.toFixed(1) })}
+                                        {t('rechargeModal.priceShort', { amount: plan.amount, symbol: currencySymbol })}
                                     </div>
                                 </div>
                             </button>
@@ -597,11 +706,11 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
 
             <div className={styles.customAmount}>
                 <div className={styles.customLabel}>{t('rechargeModal.customAmount')}</div>
-                <div className={styles.customInputWrapper}>
-                    <span className={styles.currencySymbol}>{t('rechargeModal.currencySymbol')}</span>
+                <div className={`${styles.customInputWrapper} ${amountError ? styles.inputError : ''}`}>
+                    <span className={styles.currencySymbol}>{currencySymbol}</span>
                     <input
                         type="text"
-                        className={`${styles.customInput} ${amountError ? styles.inputError : ''} ${inputShake ? styles.shake : ''}`}
+                        className={`${styles.customInput} ${inputShake ? styles.shake : ''}`}
                         placeholder={t('rechargeModal.enterAmount')}
                         value={amountText}
                         onChange={handleCustomAmountChange}
@@ -622,39 +731,47 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                 )}
             </div>
 
-            {currentAmount && currentAmount >= MIN_AMOUNT && (
-                <div className={styles.rechargeSummary}>
-                    <div className={styles.summaryRow}>
-                        <span className={styles.summaryLabel}>{t('rechargeModal.rechargeAmount')}</span>
-                        <span className={styles.summaryValue}>{t('rechargeModal.currencySymbol')}{currentAmount.toFixed(2)}</span>
-                    </div>
-                    <div className={styles.summaryRow}>
-                        <span className={styles.summaryLabel}>{t('rechargeModal.receiveDiamonds')}</span>
-                        <span className={styles.summaryValue}>{displayDiamonds}</span>
-                    </div>
-                </div>
-            )}
-
-            {/* 确认充值按钮 */}
             <button
                 type="submit"
                 className={styles.submitBtn}
-                disabled={!currentAmount || currentAmount < MIN_AMOUNT || !Number.isInteger(currentAmount) || isLoading}
+                disabled={!isAmountReadyToPay(currentAmount, selectedPayMethod) || isLoading}
             >
                 {isLoading
                     ? t('rechargeModal.processing')
-                    : `${t('rechargeModal.confirmRecharge')} ${t('rechargeModal.currencySymbol')}${(currentAmount ?? 0).toFixed(2)}`}
+                    : t('rechargeModal.payNow', {
+                        amount: currentAmount ?? 0,
+                        symbol: currencySymbol,
+                    })}
             </button>
-            {/* <button type="button" className={styles.submitBtn} disabled>
-                临时维护
-                请进交流群/活动页获取
-             </button> */}
         </>
     );
 
     const membershipTabContent = (
         <>
-            {/* 三列套餐卡片 - 保留不变 */}
+            <div className={styles.membershipStatusCard}>
+                <div className={styles.membershipStatusMain}>
+                    <div className={styles.membershipStatusInfo}>
+                        <img src={ENJOY_ICON} alt="" className={styles.membershipStatusIcon} aria-hidden="true" />
+                        <div className={styles.membershipStatusText}>
+                            <span className={styles.membershipStatusTitle}>
+                                {t('rechargeModal.enjoyMember')}
+                            </span>
+                            {memberEndDate ? (
+                                <div className={styles.membershipStatusExpire}>
+                                    <span className={styles.membershipStatusExpireLabel}>
+                                        {t('rechargeModal.validUntil')}
+                                    </span>
+                                    <span className={styles.membershipStatusExpireDate}>{memberEndDate}</span>
+                                </div>
+                            ) : null}
+                        </div>
+                    </div>
+                    <div className={styles.membershipStatusBadge}>
+                        <img src={MEMBER_ICON} alt="" className={styles.membershipStatusBadgeIcon} aria-hidden="true" />
+                    </div>
+                </div>
+            </div>
+
             <div className={styles.plansList}>
                 {MEMBERSHIP_PLANS.map((plan, index) => (
                     <button
@@ -664,96 +781,68 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                         onClick={() => setSelectedPlanIndex(index)}
                     >
                         <span className={styles.planItemName}>{plan.name}</span>
-                        <span className={styles.planItemPrice}>{t('rechargeModal.currencySymbol')}{plan.price}</span>
+                        <span className={styles.planItemPrice}>
+                            {t('rechargeModal.currencySymbol')}{plan.price}
+                        </span>
                     </button>
                 ))}
             </div>
 
-            {/* 会员权益对比表 - 百度网盘风格 */}
             <div className={styles.benefitsComparison}>
-                <div className={styles.comparisonTitle}>{t('rechargeModal.membershipBenefits')}</div>
                 <div className={styles.comparisonTable}>
                     <div className={styles.comparisonHeader}>
-                        <span className={styles.comparisonLabel}>{t('rechargeModal.benefitName')}</span>
+                        <span className={styles.comparisonLabel} aria-hidden="true" />
                         {allPlanBenefits.map((plan) => (
-                            <span
-                                key={plan.planId}
-                                className={styles.comparisonHeaderCell}
-                                style={{ color: plan.color }}
-                            >
-                                <span className={styles.planTag} style={{ background: plan.tagBg }}>
-                                    {plan.shortName.replace(/会员$/, '')}
-                                </span>
-                                <span className={styles.planPriceSmall}>
-                                    {plan.price > 0 ? `${t('rechargeModal.currencySymbol')}${plan.price}` : t('rechargeModal.free')}
-                                </span>
+                            <span key={plan.planId} className={styles.comparisonHeaderCell}>
+                                {plan.shortName.replace(/会员$/, '')}
                             </span>
                         ))}
                     </div>
                     {allPlanBenefits[0].perks.map((perk, perkIndex) => (
                         <div key={perkIndex} className={styles.comparisonRow}>
                             <span className={styles.comparisonLabel}>{perk.name}</span>
-                            {perk.values.map((value, valIndex) => {
-                                // 高亮：免积分回合数（月卡开始）和签到加成（月卡开始）
-                                const isHighlight = valIndex >= 1;
-                                const planColor = allPlanBenefits[valIndex].color;
-                                return (
-                                    <span
-                                        key={valIndex}
-                                        className={`${styles.comparisonValue} ${isHighlight ? styles.highlight : ''}`}
-                                        style={isHighlight ? { color: planColor, fontWeight: 700 } : {}}
-                                    >
-                                        {value}
-                                    </span>
-                                );
-                            })}
+                            {perk.values.map((value, valIndex) => (
+                                <span
+                                    key={valIndex}
+                                    className={`${styles.comparisonValue} ${valIndex >= 1 ? styles.highlight : ''}`}
+                                >
+                                    {value}
+                                </span>
+                            ))}
                         </div>
                     ))}
                 </div>
             </div>
 
-            {/* 确认购买按钮 */}
             <button
                 type="submit"
-                className={styles.submitBtn}
+                className={`${styles.submitBtn} ${styles.membershipSubmitBtn}`}
                 disabled={selectedPlanIndex < 0 || isLoading}
             >
-                {isLoading ? t('rechargeModal.processing') : `${t('rechargeModal.confirmPurchase')} ${MEMBERSHIP_PLANS[selectedPlanIndex]?.name || t('rechargeModal.membershipTab')}`}
+                {isLoading
+                    ? t('rechargeModal.processing')
+                    : t('rechargeModal.openNow', {
+                        amount: MEMBERSHIP_PLANS[selectedPlanIndex]?.price ?? 0,
+                    })}
             </button>
-            {/* <button type="button" className={styles.submitBtn} disabled>
-            临时维护
-                请进交流群/活动页获取
-            </button> */}
         </>
     );
 
     const formContent = (
         <div className={styles.modalOverlay} onClick={handleClose}>
-            <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-                <button type="button" className={styles.closeBtn} onClick={handleClose}>
-                    ×
+            <div
+                className={`${styles.modalContent} ${rechargeTab === 'membership' ? styles.modalContentWide : ''}`}
+                onClick={(e) => e.stopPropagation()}
+            >
+                <button type="button" className={styles.closeBtn} onClick={handleClose} aria-label={t('common.close')}>
+                    <span className={styles.closeIcon} aria-hidden="true" />
                 </button>
 
-                <h2 className={styles.title}>{t('rechargeModal.title')}</h2>
-
-                {!fixedTab && (
-                    <div className={styles.tabBar}>
-                        <button
-                            type="button"
-                            className={`${styles.tabBtn} ${rechargeTab === 'diamonds' ? styles.tabBtnActive : ''}`}
-                            onClick={() => setRechargeTab('diamonds')}
-                        >
-                            {t('rechargeModal.diamondsTab')}
-                        </button>
-                        <button
-                            type="button"
-                            className={`${styles.tabBtn} ${rechargeTab === 'membership' ? styles.tabBtnActive : ''}`}
-                            onClick={() => setRechargeTab('membership')}
-                        >
-                            {t('rechargeModal.membershipTab')}
-                        </button>
-                    </div>
-                )}
+                <h2 className={styles.title}>
+                    {rechargeTab === 'membership'
+                        ? t('rechargeModal.membershipCenter')
+                        : t('rechargeModal.diamondsTab')}
+                </h2>
 
                 <form className={styles.form} onSubmit={handleSubmit}>
                     {rechargeTab === 'diamonds' ? diamondsTabContent : membershipTabContent}
@@ -772,8 +861,9 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                     type="button"
                     className={styles.closeBtn}
                     onClick={paymentStatus === 'success' ? () => void handleCloseWithRefresh() : handleClose}
+                    aria-label={t('common.close')}
                 >
-                    ×
+                    <span className={styles.closeIcon} aria-hidden="true" />
                 </button>
                 <div className={styles.qrSection}>
                     <div className={styles.qrTitle}>{t('rechargeModal.scanToPay')}</div>

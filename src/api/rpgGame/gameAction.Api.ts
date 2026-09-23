@@ -8,6 +8,7 @@ export interface PublishGameRequest {
     shareType?: Currency;
     versionNotes?: string;
     notifyFavoritedUsers?: boolean;
+    audienceType?: 'male' | 'female' | 'all';
 }
 
 export interface PublishGameResponse {

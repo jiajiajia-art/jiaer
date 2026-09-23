@@ -1,19 +1,22 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { AiOutlineLike } from 'react-icons/ai';
-import { IoGameControllerOutline } from 'react-icons/io5';
-import { RiMoneyCnyCircleLine } from 'react-icons/ri';
 import styles from './GameGrid.module.css';
 import type { UserGameData } from '../api/home/getGameData.type';
 import { addImageTimestamp } from '../utils/imageCache';
-import { resolveGameCoverUrl } from '../utils/displayCoverUrl';
+import { resolveGameListCoverUrl } from '../utils/displayCoverUrl';
 import { getImageUrl } from '../utils/constants';
 import { getGameTypeLabelFromMeta, getGameTypeToneFromMeta } from '../utils/gameTypeLabel';
 import { resolveGameTypeToneStyle } from '../utils/gameTypeToneClass';
 import { buildGameDetailNavigateState } from '../utils/gameDetailNavigation';
+import { resolveGameCardBody } from '../lib/gameCardBody';
+import {
+  GAME_CARD_DEFAULT_AVATAR_PATH,
+  resolveGameCardAuthor,
+} from '../lib/gameCardAuthor';
+import { CardCoinIcon, CardFlameIcon, CardHeartIcon } from './GameCardStatIcons';
 
-type GameGridLayoutVariant = 'default' | 'homeWide';
+type GameGridLayoutVariant = 'default' | 'homeWide' | 'works';
 
 interface GameGridProps {
     games: UserGameData[];
@@ -45,54 +48,22 @@ const GameGrid: React.FC<GameGridProps> = ({
 }) => {
     const navigate = useNavigate();
     const { t } = useTranslation();
+    const isWorksLayout = layoutVariant === 'works';
     const gridClassName = [
         styles.grid4,
         layoutVariant === 'homeWide' ? styles.gridHomeWide : '',
+        isWorksLayout ? styles.gridWorks : '',
     ].filter(Boolean).join(' ');
     const cardClassName = (isSelected: boolean) => [
         styles.goodsCard,
         layoutVariant === 'homeWide' ? styles.goodsCardHomeWide : '',
+        isWorksLayout ? styles.goodsCardWorks : '',
         isSelectionMode ? styles.goodsCardSelectable : '',
         isSelected ? styles.goodsCardSelected : '',
     ].filter(Boolean).join(' ');
 
     const getTypeLabel = (meta: UserGameData): string => {
         return getGameTypeLabelFromMeta(meta);
-
-        const rawSource = String(meta.game_tags || (meta as { engine?: string }).engine || '').trim();
-        const normalizedRaw = rawSource
-            .replace(/^\[\s*/, '')
-            .replace(/\s*\]$/, '')
-            .replace(/^["']|["']$/g, '')
-            .trim();
-        if (
-            normalizedRaw === '\u6587\u5b57\u4e92\u52a8'
-            || normalizedRaw.toUpperCase() === 'ROLE-PLAYING'
-        ) {
-            return 'AI文游';
-        }
-        const raw = normalizedRaw.toUpperCase();
-        switch (raw) {
-            case 'TXT':
-                return 'AI文游';
-            case 'AVG':
-                return '酒馆卡';
-            case 'RPG':
-                return 'Story';
-            case 'CUSTOM':
-                return '自定义';
-            default:
-                return raw || '';
-        }
-    };
-
-    const getThemeLabel = (meta: UserGameData): string => {
-        const names = Array.isArray(meta.theme_tag_names) ? meta.theme_tag_names.filter(Boolean) : [];
-        const specificNames = names
-            .map((name) => String(name).trim())
-            .filter((name) => name && name !== '全部');
-        if (specificNames.length === 0) return '';
-        return specificNames.slice(0, 2).join(' | ');
     };
 
     const getIncentiveStatus = (meta: UserGameData): 'none' | 'incentive' | 'finished' => {
@@ -173,13 +144,18 @@ const GameGrid: React.FC<GameGridProps> = ({
                 const primaryValue = showIncentive
                     ? getIncentiveAmount(meta, status)
                     : (primaryStat === 'uv' ? (meta.total_uv_count ?? 0) : (meta.total_pv_count ?? 0));
-                const PrimaryIcon = showIncentive ? RiMoneyCnyCircleLine : IoGameControllerOutline;
                 const typeLabel = getTypeLabel(meta);
                 const typeToneStyle = resolveGameTypeToneStyle(getGameTypeToneFromMeta(meta));
-                const themeLabel = getThemeLabel(meta);
                 const isUnpublished = Number(meta.is_public) !== 1;
                 const selectableId = getSelectableId(meta);
                 const isSelected = selectableId ? selectedIds.includes(selectableId) : false;
+                const body = resolveGameCardBody(meta);
+                const author = resolveGameCardAuthor(meta, {
+                    unknownAuthor: t('gameDetail.unknownAuthor'),
+                });
+                const authorAvatarSrc =
+                    getImageUrl(author.avatarUrl)
+                    || `${import.meta.env.BASE_URL}${GAME_CARD_DEFAULT_AVATAR_PATH}`;
 
                 return (
                     <div
@@ -188,19 +164,23 @@ const GameGrid: React.FC<GameGridProps> = ({
                         onClick={() => handleCardClick(meta)}
                     >
                         <div className={styles.goodsImg}>
-                            <img
-                                src={(() => {
-                                    // 功能注释：列表封面统一走 display-cover/cover.webp，禁止直接请求原图 cover.png
-                                    const displayCoverPath = resolveGameCoverUrl({
-                                        display_cover_url: meta.display_cover_url,
-                                        cover_url: meta.cover_url,
-                                    });
-                                    return displayCoverPath
-                                        ? addImageTimestamp(getImageUrl(displayCoverPath))
-                                        : `${import.meta.env.BASE_URL}data/events/welcome.png`;
-                                })()}
-                                alt={meta.title || `剧情${idx + 1}`}
-                            />
+                            {(() => {
+                                // 功能注释：列表封面统一走 display-cover；无封面时用暗色占位，避免 welcome 白底破暗色
+                                const displayCoverPath = resolveGameListCoverUrl({
+                                    display_cover_url: meta.display_cover_url,
+                                    cover_url: meta.cover_url,
+                                    portrait_cover_url: meta.portrait_cover_url,
+                                });
+                                if (!displayCoverPath) {
+                                    return <div className={styles.goodsImgPlaceholder} aria-hidden="true" />;
+                                }
+                                return (
+                                    <img
+                                        src={addImageTimestamp(getImageUrl(displayCoverPath))}
+                                        alt={meta.title || `剧情${idx + 1}`}
+                                    />
+                                );
+                            })()}
 
                             {selectable && isSelectionMode && selectableId && (
                                 <>
@@ -215,7 +195,6 @@ const GameGrid: React.FC<GameGridProps> = ({
                                             onToggleSelect?.(meta);
                                         }}
                                     >
-                                        {/* 实现草稿批量选择 */}
                                         <span className={styles.selectionToggleInner} />
                                     </button>
                                 </>
@@ -246,21 +225,21 @@ const GameGrid: React.FC<GameGridProps> = ({
                                 </div>
                             )}
 
+                            {/* 功能注释：封面底栏火焰/心形同套下载 mask + 统一小号，对齐效果图 */}
                             <div className={styles.goodsInfo}>
-                                {themeLabel && (
-                                    <div className={styles.goodsTheme} title={themeLabel}>
-                                        {themeLabel}
-                                    </div>
-                                )}
-                                <div className={styles.goodsInfoRight}>
+                                <div className={styles.goodsInfoStats}>
                                     <div className={styles.goodsInfoItem}>
-                                        <PrimaryIcon />
+                                        {showIncentive ? (
+                                            <CardCoinIcon className={styles.goodsInfoIcon} />
+                                        ) : (
+                                            <CardFlameIcon className={styles.goodsInfoFlame} />
+                                        )}
                                         <span className={styles.goodsInfoValue} title={String(primaryValue)}>
                                             {primaryValue}
                                         </span>
                                     </div>
                                     <div className={styles.goodsInfoItem}>
-                                        <AiOutlineLike />
+                                        <CardHeartIcon className={styles.goodsInfoHeart} />
                                         <span className={styles.goodsInfoValue} title={String(meta.like_count || 0)}>
                                             {meta.like_count || 0}
                                         </span>
@@ -270,14 +249,32 @@ const GameGrid: React.FC<GameGridProps> = ({
                         </div>
 
                         <div className={styles.goodsBody}>
-                            <div className={styles.goodsTitleWrap}>
-                                <div className={styles.goodsTitle}>
-                                    {meta.title || `剧情${idx + 1}`}
-                                </div>
-                                {meta.subtitle && (
-                                    <div className={styles.goodsSubtitle}>{meta.subtitle}</div>
-                                )}
+                            <div className={styles.goodsTitle} title={meta.title || undefined}>
+                                {meta.title || `剧情${idx + 1}`}
                             </div>
+                            {/* 功能注释：左作者署名、右收藏徽标，同一行左右布局 */}
+                            <div className={styles.goodsMetaRow}>
+                                <div className={styles.goodsAuthor} title={author.name}>
+                                    <img
+                                        className={styles.goodsAuthorAvatar}
+                                        src={authorAvatarSrc}
+                                        alt=""
+                                        loading="lazy"
+                                        decoding="async"
+                                    />
+                                    <span className={styles.goodsAuthorName}>{author.name}</span>
+                                </div>
+                                {body.collectBadge ? (
+                                    <span className={styles.goodsCollectBadge}>{body.collectBadge}</span>
+                                ) : null}
+                            </div>
+                            {body.tags.length > 0 ? (
+                                <div className={styles.goodsTagRow}>
+                                    {body.tags.map((tag) => (
+                                        <span key={tag} className={styles.goodsTagPill}>{tag}</span>
+                                    ))}
+                                </div>
+                            ) : null}
                         </div>
                     </div>
                 );

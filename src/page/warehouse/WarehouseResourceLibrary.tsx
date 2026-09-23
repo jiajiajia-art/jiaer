@@ -9,7 +9,9 @@ import {
   type WarehouseResourceType,
 } from '../../api/galgame/warehouseResources';
 import ConfirmModal from '../../components/CommonModal/ConfirmModal';
+import { MdCheck } from 'react-icons/md';
 import { PERSONA_TAGS } from './warehouseNav';
+import WarehouseEmptyIcon from './WarehouseEmptyIcon';
 import panel from './WarehousePanel.module.css';
 
 type Props = {
@@ -423,7 +425,7 @@ const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
         <p className={panel.empty}>加载中…</p>
       ) : filtered.length === 0 ? (
         <div className={panel.emptyStage}>
-          <div className={panel.emptyOrb} aria-hidden />
+          <WarehouseEmptyIcon kind={resourceType === 'plugin' ? 'plugin' : 'worldbook'} />
           <h2>{isPublic ? meta.emptyPublic : meta.emptyMine}</h2>
           <p>{isPublic ? '去「我的」发布第一份资源吧' : '新建或导入一份资源开始整理'}</p>
         </div>
@@ -663,6 +665,9 @@ const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
                             className={draft.pluginKind === k ? panel.segActive : panel.seg}
                             onClick={() => setDraft((d) => ({ ...d, pluginKind: k }))}
                           >
+                            {draft.pluginKind === k ? (
+                              <MdCheck className={panel.segActiveIcon} aria-hidden />
+                            ) : null}
                             {k}
                           </button>
                         ))}

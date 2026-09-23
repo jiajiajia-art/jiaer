@@ -34,7 +34,7 @@ import DailyTasksAdminManager from '../components/DailyTasksAdminManager';
 import CommentAdminManager from '../components/Admin/CommentAdminManager';
 import WithdrawAdminManager from '../components/WithdrawAdminManager';
 import LotteryAdminManager from '../components/LotteryAdminManager';
-import ImageGenConfigManager from '../components/ImageGenConfigManager';
+import ModelConfigHub from '../components/ModelConfigHub';
 import announcementApi from '../api/announcement/announcementApi';
 import documentApi from '../api/document/documentApi';
 import gameTagsApi from '../api/gameTags/gameTagsApi';
@@ -90,7 +90,7 @@ const resolveAdminTab = (pathname: string, search: string): AdminTab => {
     if (pathname.startsWith('/admin/daily-tasks')) return 'dailyTasks';
     if (pathname.startsWith('/admin/comments')) return 'comments';
     if (pathname.startsWith('/admin/withdraw')) return 'withdraw';
-    if (pathname.startsWith('/admin/image-gen')) return 'imageGen';
+    if (pathname.startsWith('/admin/image-gen') || pathname.startsWith('/admin/text-llm')) return 'imageGen';
     if (pathname.startsWith('/admin/lottery')) return 'lottery';
     const tabParam = new URLSearchParams(search).get('tab');
     if (tabParam === 'announcements' || tabParam === 'banners' || tabParam === 'themes' || tabParam === 'comments') return tabParam;
@@ -1551,7 +1551,7 @@ const AdminPanel: React.FC = () => {
                                 className={`${styles.navItem} ${activeTab === 'imageGen' ? styles.navItemActive : ''}`}
                                 onClick={() => handleTabChange('imageGen')}
                             >
-                                <span className={styles.navTitle}>生图配置</span>
+                                <span className={styles.navTitle}>模型配置</span>
                             </button>
                             <button
                                 type="button"
@@ -1935,7 +1935,7 @@ const AdminPanel: React.FC = () => {
 
                         {activeTab === 'withdraw' && <WithdrawAdminManager />}
 
-                        {activeTab === 'imageGen' && <ImageGenConfigManager />}
+                        {activeTab === 'imageGen' && <ModelConfigHub />}
 
                         {activeTab === 'lottery' && <LotteryAdminManager />}
 

@@ -27,6 +27,17 @@ test('pickSessionNpcAvatarUrl_按id优先于同名', () => {
   assert.equal(url, newSession);
 });
 
+test('pickSessionNpcAvatarUrl_问题10_id与姓名冲突时跟姓名立绘', () => {
+  const url = pickSessionNpcAvatarUrl(
+    [
+      { id: 'shen_jiashu', name: '沈嘉树', avatarUrl: '/shen.webp' },
+      { id: 'gu_wenjing', name: '顾闻璟', avatarUrl: '/gu.webp' },
+    ],
+    { npcId: 'shen_jiashu', speakerName: '顾闻璟' },
+  );
+  assert.equal(url, '/gu.webp');
+});
+
 test('pickSessionNpcAvatarUrl_无id时按现用名或曾用名', () => {
   assert.equal(
     pickSessionNpcAvatarUrl(

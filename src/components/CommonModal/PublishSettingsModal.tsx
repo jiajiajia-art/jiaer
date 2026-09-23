@@ -1,17 +1,13 @@
 import React, { useRef, useCallback, useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BsUpload, BsChevronDown } from 'react-icons/bs';
+import { BsChevronDown } from 'react-icons/bs';
 import { toast } from 'react-hot-toast';
 import styles from './PublishSettingsModal.module.css';
 import EditorApi from '../../api/galgame/EditorData';
 import getGameDataApi from '../../api/home/getGameData';
 import gameTagsApi from '../../api/gameTags/gameTagsApi';
 import novelMetaApi from '../../api/novel/novelMetaApi';
-import { useImageCropper } from '../../hooks/useImageCropper';
-import { getImageUrl } from '../../utils/constants';
-import { addImageTimestamp, bumpCacheBust } from '../../utils/imageCache';
-import { fileToDataUrl } from '../../utils/uploadImageCrop';
-import { flattenThemeTags, type FlatThemeTag } from '../../utils/themeTags';
+import { flattenThemeTags, useLocalizedThemeTags, type FlatThemeTag } from '../../utils/themeTags';
 import {
     NOVEL_DESCRIPTION_MAX_LENGTH,
     THEME_TAG_MAX,
@@ -21,13 +17,16 @@ import {
     validateNovelPublish,
     mapNovelEditErrorToI18nKey,
 } from '../../utils/novelEdit';
+import { isValidContentAudience, type ContentAudience } from '../../utils/contentAudience';
+import { hasBothGameCovers } from '../../utils/gameCovers.ts';
+import ContentAudienceField from '../ContentAudienceField';
+import CoverUpload from '../GameSettingEditor/WorldPanel/CoverUpload';
 import {
     descriptionToPlainText,
     normalizeDescriptionForSave,
     toEditorHtml,
 } from '../../utils/gameDescriptionHtml';
 import { stripReplayMarkerFromTitle } from '../../utils/novelGame';
-import ImageCropModal from './ImageCropModal';
 import SimpleRichTextEditor from '../Common/SimpleRichTextEditor';
 import { CURRENCY_OPTIONS, type Currency } from '../../api/common/currency';
 
@@ -39,6 +38,7 @@ export type PublishSubmitPayload = {
     shareType?: Currency;
     versionNotes?: string;
     notifyFavoritedUsers?: boolean;
+    audienceType?: 'male' | 'female' | 'all';
 };
 
 interface PublishSettingsModalProps {
@@ -47,6 +47,7 @@ interface PublishSettingsModalProps {
     onPublish: (payload: PublishSubmitPayload) => Promise<void> | void;
     fileId?: string;
     coverUrl?: string;
+    portraitCoverUrl?: string;
     onCoverUploaded?: () => void;
     onSaved?: () => void;
     publishing?: boolean;
@@ -114,6 +115,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     onPublish,
     fileId,
     coverUrl,
+    portraitCoverUrl,
     onCoverUploaded,
     onSaved,
     publishing = false,
@@ -131,43 +133,30 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     const isTxtMode = !gameTags && !engine || gameTags === 'TXT' || engine === 'TXT';
     const requiresShareType = !isTxtMode;
 
-    const coverInputRef = useRef<HTMLInputElement>(null);
-    const [coverPreview, setCoverPreview] = useState<string | null>(coverUrl || null);
-    const [coverUploading, setCoverUploading] = useState<boolean>(false);
-    const [coverError, setCoverError] = useState<string | null>(null);
+    const [landscapePreview, setLandscapePreview] = useState<string | null>(coverUrl || null);
+    const [portraitPreview, setPortraitPreview] = useState<string | null>(portraitCoverUrl || null);
     const [title, setTitle] = useState<string>('');
     const [description, setDescription] = useState<string>('');
     const [selectedThemeTagIds, setSelectedThemeTagIds] = useState<number[]>([]);
+    const [selectedAudienceType, setSelectedAudienceType] = useState<ContentAudience | null>(null);
     const [availableThemeTags, setAvailableThemeTags] = useState<FlatThemeTag[]>([]);
     const [themeTagError, setThemeTagError] = useState<string>('');
+    const [audienceError, setAudienceError] = useState<string>('');
+    const displayThemeTags = useLocalizedThemeTags(availableThemeTags);
     const [saving, setSaving] = useState<boolean>(false);
     const [generatingDescription, setGeneratingDescription] = useState<boolean>(false);
     const [versionNotes, setVersionNotes] = useState<string>('');
     const [notifyFavoritedUsers, setNotifyFavoritedUsers] = useState<boolean>(false);
     const [shareType, setShareType] = useState<Currency>('points');
 
-    const {
-        cropPreset,
-        pendingCropFile,
-        openCropper,
-        closeCropper,
-        handleCropComplete,
-    } = useImageCropper({
-        preset: 'gameCover',
-        onCropped: async (croppedFile) => {
-            const preview = await fileToDataUrl(croppedFile);
-            setCoverPreview(preview);
-            await uploadCover(croppedFile);
-        },
-    });
-
     useEffect(() => {
         if (!isOpen) {
             setNotifyFavoritedUsers(false);
             return;
         }
-        setCoverPreview(coverUrl || null);
-    }, [coverUrl, isOpen]);
+        setLandscapePreview(coverUrl || null);
+        setPortraitPreview(portraitCoverUrl || null);
+    }, [coverUrl, portraitCoverUrl, isOpen]);
 
     useEffect(() => {
         if (!isOpen || !fileId) return;
@@ -185,11 +174,14 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                     );
                     setDescription(toEditorHtml(detail.description || ''));
                     setVersionNotes(detail.version_notes || '');
-                    setCoverPreview(detail.cover_url || null);
+                    setLandscapePreview(detail.cover_url || null);
+                    setPortraitPreview(detail.portrait_cover_url || null);
                     const tagIds = Array.isArray(detail.theme_tag_ids)
                         ? detail.theme_tag_ids.filter((id) => Number.isFinite(Number(id)))
                         : [];
                     setSelectedThemeTagIds(tagIds.map((id) => Number(id)));
+                    setSelectedAudienceType(isValidContentAudience(detail.audience_type) ? detail.audience_type : null);
+                    setAudienceError('');
                 }
             } catch (error) {
                 console.error('Failed to fetch publish details:', error);
@@ -216,41 +208,16 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
         void fetchThemeTags();
     }, [isOpen, showThemeTags]);
 
-    const uploadCover = useCallback(async (file: File) => {
-        if (!fileId) {
-            setCoverError(t('common.publishSettings.missingFileId'));
-            return;
-        }
-
-        try {
-            setCoverUploading(true);
-            setCoverError(null);
-            const response = await EditorApi.uploadGameCover(fileId, file);
-            if (response.data.success) {
-                toast.success(t('common.publishSettings.uploadSuccess'));
-                bumpCacheBust(response.data.data.coverUrl);
-                setCoverPreview(response.data.data.coverUrl);
-                if (onCoverUploaded) {
-                    onCoverUploaded();
-                }
-            } else {
-                setCoverError(response.data.message || t('common.publishSettings.uploadFailed'));
-            }
-        } catch (error) {
-            console.error('上传封面失败:', error);
-            const apiMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
-            setCoverError(apiMessage || t('common.publishSettings.uploadFailed'));
-        } finally {
-            setCoverUploading(false);
-        }
-    }, [fileId, onCoverUploaded, t]);
-
     const buildFormInput = useCallback(() => ({
         title,
         description,
-        hasCover: Boolean(coverPreview),
+        hasCover: hasBothGameCovers({
+            cover_url: landscapePreview,
+            portrait_cover_url: portraitPreview,
+        }),
         themeTagIds: selectedThemeTagIds,
-    }), [title, description, coverPreview, selectedThemeTagIds]);
+        audienceType: selectedAudienceType,
+    }), [title, description, landscapePreview, portraitPreview, selectedThemeTagIds, selectedAudienceType]);
 
     const handleThemeTagToggle = (tagId: number) => {
         const { next, atMax } = toggleThemeTagSelection(selectedThemeTagIds, tagId);
@@ -264,6 +231,11 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
         } else if (!themeTagsRequired && next.length <= 2) {
             setThemeTagError('');
         }
+    };
+
+    const handleAudienceSelect = (next: ContentAudience) => {
+        setSelectedAudienceType(next);
+        setAudienceError('');
     };
 
     const handleGenerateDescription = async () => {
@@ -310,6 +282,9 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                 if (result.error === 'THEME_TAG_MIN' || result.error === 'THEME_TAG_MAX') {
                     setThemeTagError(t('createGame.themeTagRequired'));
                 }
+                if (result.error === 'AUDIENCE_REQUIRED') {
+                    setAudienceError(t('createGame.contentAudienceRequired'));
+                }
                 return false;
             }
             return true;
@@ -327,6 +302,9 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                 if (result.error === 'THEME_TAG_MIN' || result.error === 'THEME_TAG_MAX') {
                     setThemeTagError(t('createGame.themeTagRequired'));
                 }
+                if (result.error === 'AUDIENCE_REQUIRED') {
+                    setAudienceError(t('createGame.contentAudienceRequired'));
+                }
                 return false;
             }
             return true;
@@ -341,8 +319,18 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
             toast.error(t('common.publishSettings.descriptionTooLong', { max: NOVEL_DESCRIPTION_MAX_LENGTH }));
             return false;
         }
-        if (!coverPreview) {
+        if (!hasBothGameCovers({
+            cover_url: landscapePreview,
+            portrait_cover_url: portraitPreview,
+        })) {
             toast.error(t('common.publishSettings.coverRequired'));
+            return false;
+        }
+
+        // 实现发布前作品分类必填（男性向/女性向/全性向，单选）
+        if (!isValidContentAudience(selectedAudienceType)) {
+            setAudienceError(t('createGame.contentAudienceRequired'));
+            toast.error(t('createGame.contentAudienceRequired'));
             return false;
         }
 
@@ -368,6 +356,10 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
         await gameTagsApi.setGameTagsForGame({
             fileId,
             tagIds: selectedThemeTagIds,
+            // 草稿编辑也可顺带保存已选分类；发布路径必有合法值
+            ...(isValidContentAudience(selectedAudienceType)
+                ? { audienceType: selectedAudienceType }
+                : {}),
         });
     };
 
@@ -386,7 +378,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     const handleSubmit = async (event?: React.MouseEvent<HTMLButtonElement>) => {
         event?.preventDefault();
         event?.stopPropagation();
-        if (publishing || saving || coverUploading) {
+        if (publishing || saving) {
             return;
         }
 
@@ -435,6 +427,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
             shareType: requiresShareType ? shareType : undefined,
             versionNotes: versionNotes.trim(),
             notifyFavoritedUsers,
+            audienceType: selectedAudienceType || undefined,
         });
     };
 
@@ -460,41 +453,22 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
 
     if (!isOpen) return null;
 
-    const handleCoverSelectForCrop = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        event.target.value = '';
-        if (!file) return;
-
-        if (!file.type.startsWith('image/')) {
-            setCoverError(t('common.publishSettings.invalidImageType'));
-            return;
-        }
-
-        setCoverError(null);
-        void openCropper(file).catch((error) => {
-            console.error('open publish cover cropper failed:', error);
-            setCoverError(t('common.coverUpload.imageLoadFailed'));
-        });
-    };
-
-    const handleCoverClick = () => {
-        coverInputRef.current?.click();
-    };
-
-    const handleReplaceCover = (event: React.MouseEvent<HTMLButtonElement>) => {
-        event.stopPropagation();
-        coverInputRef.current?.click();
-    };
-
     const showTitleField = isNovelEditMode || (mode === 'publish' && isNovel);
 
     return (
         <div className={`${styles.modal} ${styles.modalShow}`}>
             <div className={styles.publishModalContent}>
-                <button type="button" className={styles.closeBtn} onClick={onClose}>
-                    <img src={`${import.meta.env.BASE_URL}data/assets/关闭.png`} alt={t('common.close')} />
-                </button>
-                <h2 className={styles.modalTitle}>{modalTitle}</h2>
+                <div className={styles.modalHead}>
+                    <h2 className={styles.modalTitle}>{modalTitle}</h2>
+                    <button
+                        type="button"
+                        className={styles.closeBtn}
+                        onClick={onClose}
+                        aria-label={t('common.close')}
+                    >
+                        ×
+                    </button>
+                </div>
 
                 <div className={styles.formScroll}>
                 <div className={styles.formContent}>
@@ -511,52 +485,21 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                     ) : null}
 
                     <div className={styles.coverFormGroup}>
-                        <label className={styles.label}>{t('common.publishSettings.coverImage')}</label>
-                        <div
-                            className={`${styles.coverUploadArea} ${(coverUploading || !fileId) ? styles.coverUploadAreaDisabled : ''}`}
-                            onClick={handleCoverClick}
-                        >
-                            <input
-                                ref={coverInputRef}
-                                type="file"
-                                accept="image/jpeg,image/png,image/jpg,image/webp"
-                                hidden
-                                onChange={handleCoverSelectForCrop}
-                                disabled={coverUploading || !fileId}
-                            />
-                            {coverPreview ? (
-                                <div className={styles.coverPreviewContainer}>
-                                    <img
-                                        src={
-                                            coverPreview.startsWith('data:image/')
-                                                ? coverPreview
-                                                : addImageTimestamp(getImageUrl(coverPreview))
-                                        }
-                                        alt={t('common.publishSettings.coverPreview')}
-                                        className={styles.coverPreview}
-                                    />
-                                    <div className={styles.coverActions}>
-                                        <button
-                                            type="button"
-                                            className={styles.removeCoverBtn}
-                                            onClick={handleReplaceCover}
-                                            disabled={coverUploading}
-                                        >
-                                            {t('common.publishSettings.replace')}
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className={styles.coverPlaceholder}>
-                                    <BsUpload className={styles.coverUploadIcon} size={32} />
-                                    <p className={styles.coverUploadText}>{t('common.publishSettings.clickToUpload')}</p>
-                                    <p className={styles.coverUploadHint}>{t('common.publishSettings.supportFormats')}</p>
-                                </div>
-                            )}
-                        </div>
-                        {coverError && (
-                            <p className={styles.coverErrorText}>{coverError}</p>
-                        )}
+                        <CoverUpload
+                            compact
+                            fileId={fileId}
+                            coverUrl={landscapePreview || undefined}
+                            portraitCoverUrl={portraitPreview || undefined}
+                            workTitle={title}
+                            onCoverUploaded={(info) => {
+                                if (info?.orientation === 'portrait') {
+                                    setPortraitPreview(info.coverUrl);
+                                } else if (info?.orientation === 'landscape') {
+                                    setLandscapePreview(info.coverUrl);
+                                }
+                                onCoverUploaded?.();
+                            }}
+                        />
                     </div>
 
                     <div className={styles.descriptionFormGroup}>
@@ -576,6 +519,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                                 ) : null}
                             </div>
                             <SimpleRichTextEditor
+                                className={styles.richEditorDark}
                                 value={description}
                                 onChange={setDescription}
                                 maxPlainLength={NOVEL_DESCRIPTION_MAX_LENGTH}
@@ -596,36 +540,46 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                         </div>
 
                     {showThemeTags ? (
-                        <div className={styles.themeTagsPanel}>
-                            <div className={styles.themeTagsHeader}>
-                                <span className={styles.themeTagsLabel}>
-                                    {t('common.publishSettings.gameTags')}
-                                    {themeTagsRequired ? <span className={styles.requiredMark}>*</span> : null}
-                                </span>
-                                <span className={styles.themeTagsHint}>
-                                    {themeTagsRequired
-                                        ? t('createGame.min1Max2Tags')
-                                        : t('common.publishSettings.draftTagsOptionalHint')}
-                                </span>
+                        <>
+                            {/* 功能注释：作品分类放在作品标签之前，发布必选且只能选一项 */}
+                            <ContentAudienceField
+                                value={selectedAudienceType}
+                                onChange={handleAudienceSelect}
+                                required={themeTagsRequired}
+                                error={audienceError}
+                                disabled={publishing || saving}
+                            />
+                            <div className={styles.themeTagsPanel}>
+                                <div className={styles.themeTagsHeader}>
+                                    <span className={styles.themeTagsLabel}>
+                                        {t('common.publishSettings.gameTags')}
+                                        {themeTagsRequired ? <span className={styles.requiredMark}>*</span> : null}
+                                    </span>
+                                    <span className={styles.themeTagsHint}>
+                                        {themeTagsRequired
+                                            ? t('createGame.min1Max2Tags')
+                                            : t('common.publishSettings.draftTagsOptionalHint')}
+                                    </span>
+                                </div>
+                                <div className={styles.themeTagsWrap}>
+                                    {displayThemeTags.map((tag) => {
+                                        const active = selectedThemeTagIds.includes(tag.id);
+                                        return (
+                                            <button
+                                                key={tag.id}
+                                                type="button"
+                                                className={`${styles.themeTagChip} ${active ? styles.themeTagChipActive : ''}`}
+                                                onClick={() => handleThemeTagToggle(tag.id)}
+                                                title={tag.pathLabel || tag.name}
+                                            >
+                                                {tag.name}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                {themeTagError ? <div className={styles.themeTagError}>{themeTagError}</div> : null}
                             </div>
-                            <div className={styles.themeTagsWrap}>
-                                {availableThemeTags.map((tag) => {
-                                    const active = selectedThemeTagIds.includes(tag.id);
-                                    return (
-                                        <button
-                                            key={tag.id}
-                                            type="button"
-                                            className={`${styles.themeTagChip} ${active ? styles.themeTagChipActive : ''}`}
-                                            onClick={() => handleThemeTagToggle(tag.id)}
-                                            title={tag.pathLabel || tag.name}
-                                        >
-                                            {tag.name}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                            {themeTagError ? <div className={styles.themeTagError}>{themeTagError}</div> : null}
-                        </div>
+                        </>
                     ) : null}
 
                     {!isNovelEditMode && requiresShareType && (
@@ -675,7 +629,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                         type="button"
                         className={styles.cancelBtn}
                         onClick={onClose}
-                        disabled={publishing || saving || coverUploading}
+                        disabled={publishing || saving}
                     >
                         {t('common.cancel')}
                     </button>
@@ -683,26 +637,12 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                         type="button"
                         className={styles.publishBtn}
                         onClick={handleSubmit}
-                        disabled={publishing || saving || coverUploading || generatingDescription}
+                        disabled={publishing || saving || generatingDescription}
                     >
                         {submitLabel}
                     </button>
                 </div>
             </div>
-            {pendingCropFile ? (
-                <ImageCropModal
-                    isOpen
-                    imageSrc={pendingCropFile.imageSrc}
-                    title={cropPreset.title}
-                    description={cropPreset.description}
-                    aspectRatio={cropPreset.aspectRatio}
-                    aspectLabel={cropPreset.aspectLabel}
-                    defaultCropScale={cropPreset.defaultCropScale}
-                    mimeType={pendingCropFile.mimeType}
-                    onClose={closeCropper}
-                    onCropComplete={handleCropComplete}
-                />
-            ) : null}
         </div>
     );
 };

@@ -11,6 +11,7 @@ import { MdArrowDropDown } from 'react-icons/md';
 import { MdDownload } from 'react-icons/md';
 import { MdEdit } from 'react-icons/md';
 import { RiDeleteBin5Line } from 'react-icons/ri';
+import { FaMagic } from 'react-icons/fa';
 import { withCacheBust, extractImageExtension } from './utils';
 import ConfirmModal from '../../CommonModal/ConfirmModal';
 import SaveConfirmModal from '../../CommonModal/SaveConfirmModal';
@@ -47,7 +48,11 @@ const CHARACTER_WORD_LIMITS = {
     personality: 100,
     speech: 100,
     appearance: 500,
-    background: 800, 
+    background: 800,
+    /** 对齐局内 SystemsPanel「玩家目前定位」上限 */
+    positioningIdentity: 80,
+    positioningTraits: 200,
+    positioningSecret: 400,
 } as const;
 
 const SINGLE_CHARACTER_ETA_SECONDS = 95;
@@ -75,6 +80,9 @@ interface CharacterFieldDirtyState {
     speech: boolean;
     appearance: boolean;
     background: boolean;
+    positioningIdentity: boolean;
+    positioningTraits: boolean;
+    positioningSecret: boolean;
 }
 
 const EMPTY_CHARACTER_FIELD_DIRTY_STATE: CharacterFieldDirtyState = {
@@ -86,6 +94,9 @@ const EMPTY_CHARACTER_FIELD_DIRTY_STATE: CharacterFieldDirtyState = {
     speech: false,
     appearance: false,
     background: false,
+    positioningIdentity: false,
+    positioningTraits: false,
+    positioningSecret: false,
 };
 
 const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProps>(({
@@ -109,6 +120,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     const [activeCharacterId, setActiveCharacterId] = useState<string>('');
     const [characterData, setCharacterData] = useState<Character[]>([]);
     const [isBackgroundExpanded, setIsBackgroundExpanded] = useState<boolean>(false);
+    const [isPositioningExpanded, setIsPositioningExpanded] = useState<boolean>(true);
     const [isVariationExpanded, setIsVariationExpanded] = useState<boolean>(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
     const [characterToDelete, setCharacterToDelete] = useState<string | null>(null);
@@ -1140,6 +1152,15 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             speech: (currentCharacter.speech || '') !== (currentCharacterBaseline.speech || ''),
             appearance: (currentCharacter.appearance || '') !== (currentCharacterBaseline.appearance || ''),
             background: (currentCharacter.background || '') !== (currentCharacterBaseline.background || ''),
+            positioningIdentity:
+                (currentCharacter.positioningIdentity || '')
+                !== (currentCharacterBaseline.positioningIdentity || ''),
+            positioningTraits:
+                (currentCharacter.positioningTraits || '')
+                !== (currentCharacterBaseline.positioningTraits || ''),
+            positioningSecret:
+                (currentCharacter.positioningSecret || '')
+                !== (currentCharacterBaseline.positioningSecret || ''),
         };
     }, [currentCharacter, currentCharacterBaseline, personalityInputValue]);
 
@@ -1197,6 +1218,9 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     const speechWords = useWordCount(currentCharacter?.speech ?? '');
     const appearanceWords = useWordCount(currentCharacter?.appearance ?? '');
     const backgroundWords = useWordCount(currentCharacter?.background ?? '');
+    const positioningIdentityWords = useWordCount(currentCharacter?.positioningIdentity ?? '');
+    const positioningTraitsWords = useWordCount(currentCharacter?.positioningTraits ?? '');
+    const positioningSecretWords = useWordCount(currentCharacter?.positioningSecret ?? '');
 
     // 字数限制处理
     const nameLimit = useWordLimit(CHARACTER_WORD_LIMITS.name, (value) => handleFieldChange('name', value));
@@ -1205,6 +1229,18 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     const speechLimit = useWordLimit(CHARACTER_WORD_LIMITS.speech, (value) => handleFieldChange('speech', value));
     const appearanceLimit = useWordLimit(CHARACTER_WORD_LIMITS.appearance, (value) => handleFieldChange('appearance', value));
     const backgroundLimit = useWordLimit(CHARACTER_WORD_LIMITS.background, (value) => handleFieldChange('background', value));
+    const positioningIdentityLimit = useWordLimit(
+        CHARACTER_WORD_LIMITS.positioningIdentity,
+        (value) => handleFieldChange('positioningIdentity', value),
+    );
+    const positioningTraitsLimit = useWordLimit(
+        CHARACTER_WORD_LIMITS.positioningTraits,
+        (value) => handleFieldChange('positioningTraits', value),
+    );
+    const positioningSecretLimit = useWordLimit(
+        CHARACTER_WORD_LIMITS.positioningSecret,
+        (value) => handleFieldChange('positioningSecret', value),
+    );
     
     // 性格标签特殊处理（需要分割后限制）
     const personalityLimit = useWordLimit(CHARACTER_WORD_LIMITS.personality, (value) => {
@@ -1366,6 +1402,9 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             goalShort: '',
             goalLong: '',
             secret: '',
+            positioningIdentity: '',
+            positioningTraits: '',
+            positioningSecret: '',
             relationships: [],
             variations: [],
         };
@@ -1851,12 +1890,14 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         setNpcCostModalOpen(false);
         // 关闭积分弹窗后立刻清进度，避免遮罩打开时闪上一轮数据
         setNpcBatchJobStatus(null);
+        // 功能注释：走 handlers 内 pendingBatchSelection（失败重试时仅为未完成 id，不含已完成）
         await generateAllNpcImages();
         onDataChange?.();
     };
 
     const handleContinueFailedBatchTasks = async () => {
         if (!handlers) return;
+        // 功能注释：只解析失败/卡住/排队项 id，已完成（item_done/rembg_done）已被 listBatchNpcRetryTargetItems 排除
         const uniqueIds = resolveRetryCharacterIdsFromBoard(
             batchRetryTargetItems,
             (name) => characterData.find((char) => char.name === name && !char.id.startsWith('temp-'))?.id,
@@ -1865,7 +1906,6 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             toast.error(t('createGame.selectCharactersToGenerate'));
             return;
         }
-        // 先打开积分确认；遮罩会因 npcCostModalOpen 自动让路（否则 ConfirmModal 被压在下面像「没反应」）
         await handlers.continueFailedBatchNpcImages(uniqueIds);
     };
 
@@ -1980,42 +2020,25 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     return (
         <div className={`${styles.panelContent} ${isSaveOverlayVisible ? styles.panelContentSaving : ''}`}>
             <div className={styles.panelHeader}>
-                <div>
-                    <p className={styles.eyebrow}>{t('gameEditor.step3')}</p>
+                <div className={styles.headerCopy}>
                     <h2>{t('createGame.characterProfile')}</h2>
-                    <p className={styles.subtitle}>{t('createGame.characterProfileTip')}</p>
+                    <p className={styles.subtitle}>
+                        {t('createGame.characterProfileTip', { cost: discountedCost })}
+                    </p>
                 </div>
-                <GenerationActionBar>
+                <GenerationActionBar layout="hero">
                     <button
-                        className={`${styles.ghost} ${styles.generateButton}`}
+                        type="button"
+                        className={styles.generateButton}
                         onClick={openNpcCostModal}
                         disabled={isLoading || isGeneratingNpcImages || isLoadingNpcCost || isBlockingSwitch}
                     >
-                        <img
-                            src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
-                            alt=""
-                            className={styles.priceIcon}
-                        />
-                        <div className={styles.buttonTextContainer}>
-                            <span className={styles.buttonMainText}>
-                                {isGeneratingNpcImages ? t('createGame.generating') : t('createGame.generateAllCharacterPortraits')}
-                            </span>
-                            <span className={styles.buttonSubText}>
-                                {/* TODO: 恢复会员折扣UI时，取消下方注释
-                                {showDiscount ? (
-                                    <>
-                                        <span className={styles.discountPrice}>
-                                            {discountedCost}
-                                            <span className={styles.originalPrice}>{CHARACTER_GENERATION_COST}</span>
-                                        </span>
-                                        {t('createGame.pointsPerImage')}
-                                    </>
-                                ) : (
-                                    <>{discountedCost}{t('createGame.pointsPerImage')}</>
-                                )} */}
-                                {discountedCost}{t('createGame.pointsPerImage')}
-                            </span>
-                        </div>
+                        <span className={styles.generateIconWrap} aria-hidden>
+                            <FaMagic className={styles.generateIcon} />
+                        </span>
+                        <span className={styles.buttonMainText}>
+                            {isGeneratingNpcImages ? t('createGame.generating') : t('createGame.generateAllCharacterPortraits')}
+                        </span>
                     </button>
                 </GenerationActionBar>
             </div>
@@ -2653,6 +2676,90 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                 />
                             )}
 
+
+                            {/* 玩家目前定位：对应局内系统面板同名板块；秘密不对玩家展示 */}
+                            {currentCharacter.id === 'player' && (
+                                <div className={styles.detailBlock}>
+                                    <div
+                                        className={styles.collapsibleHeader}
+                                        style={{ cursor: 'pointer' }}
+                                        onClick={() => setIsPositioningExpanded(!isPositioningExpanded)}
+                                    >
+                                        <strong>玩家目前定位</strong>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <span className={styles.mutedSmall}>当前身份、立场与秘密</span>
+                                            <MdArrowDropDown size={30} style={{ transform: isPositioningExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+                                        </div>
+                                    </div>
+                                    {isPositioningExpanded && (
+                                        <div className={styles.formGrid}>
+                                            <p className={styles.mutedSmall} style={{ gridColumn: '1 / -1', margin: '0 0 8px' }}>
+                                                对应游玩页系统面板「玩家目前定位」。秘密仅创作者可见与填写，开局注入叙事 AI，玩家界面不展示。
+                                            </p>
+                                            <label className={styles.wide}>
+                                                <div className={styles.labelRowWithCounter}>
+                                                    <span>当前身份</span>
+                                                    <span className={styles.wordCounter}>
+                                                        {positioningIdentityWords}/{CHARACTER_WORD_LIMITS.positioningIdentity}
+                                                    </span>
+                                                </div>
+                                                <InlineFieldSave
+                                                    showSave={characterFieldDirtyState.positioningIdentity}
+                                                    onSave={() => { void confirmEdit(); }}
+                                                    disabled={isPortraitActionBusy}
+                                                >
+                                                    <textarea
+                                                        rows={3}
+                                                        value={currentCharacter.positioningIdentity || ''}
+                                                        placeholder="如：假扮双胞胎哥哥混入男校的江知夏"
+                                                        {...positioningIdentityLimit}
+                                                    />
+                                                </InlineFieldSave>
+                                            </label>
+                                            <label className={styles.wide}>
+                                                <div className={styles.labelRowWithCounter}>
+                                                    <span>当前立场</span>
+                                                    <span className={styles.wordCounter}>
+                                                        {positioningTraitsWords}/{CHARACTER_WORD_LIMITS.positioningTraits}
+                                                    </span>
+                                                </div>
+                                                <InlineFieldSave
+                                                    showSave={characterFieldDirtyState.positioningTraits}
+                                                    onSave={() => { void confirmEdit(); }}
+                                                    disabled={isPortraitActionBusy}
+                                                >
+                                                    <textarea
+                                                        rows={3}
+                                                        value={currentCharacter.positioningTraits || ''}
+                                                        placeholder="对外可被察觉的立场，如：表面随和、站队某派"
+                                                        {...positioningTraitsLimit}
+                                                    />
+                                                </InlineFieldSave>
+                                            </label>
+                                            <label className={styles.wide}>
+                                                <div className={styles.labelRowWithCounter}>
+                                                    <span>秘密</span>
+                                                    <span className={styles.wordCounter}>
+                                                        {positioningSecretWords}/{CHARACTER_WORD_LIMITS.positioningSecret}
+                                                    </span>
+                                                </div>
+                                                <InlineFieldSave
+                                                    showSave={characterFieldDirtyState.positioningSecret}
+                                                    onSave={() => { void confirmEdit(); }}
+                                                    disabled={isPortraitActionBusy}
+                                                >
+                                                    <textarea
+                                                        rows={4}
+                                                        value={currentCharacter.positioningSecret || ''}
+                                                        placeholder="不被他人所知道的事；玩家局内看不到这段，仅影响叙事 AI"
+                                                        {...positioningSecretLimit}
+                                                    />
+                                                </InlineFieldSave>
+                                            </label>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             {/* 仅保留可持久化且可被剧情使用的“人物背景故事”字段 */}
                             <div className={styles.detailBlock}>

@@ -17,6 +17,7 @@ import { getPlayerImageUrl } from '../../../utils/constants';
 import getGameDataApi from '../../../api/home/getGameData';
 import gameTagsApi from '../../../api/gameTags/gameTagsApi';
 import { flattenThemeTags, type FlatThemeTag } from '../../../utils/themeTags';
+import { isValidContentAudience, type ContentAudience } from '../../../utils/contentAudience';
 
 const WORLD_PANEL_TOAST_DURATION = 2200;
 
@@ -83,6 +84,7 @@ interface WorldFieldDirtyState {
     title: boolean;
     tagline: boolean;
     era: boolean;
+    premise: boolean;
     opening: boolean;
     openingPlot: boolean;
     outputLength: boolean;
@@ -92,6 +94,7 @@ const EMPTY_WORLD_FIELD_DIRTY_STATE: WorldFieldDirtyState = {
     title: false,
     tagline: false,
     era: false,
+    premise: false,
     opening: false,
     openingPlot: false,
     outputLength: false,
@@ -110,6 +113,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
     const [title, setTitle] = useState<string>('');
     const [tagline, setTagline] = useState<string>('');
     const [era, setEra] = useState<string>('');
+    const [premise, setPremise] = useState<string>('');
     const [opening, setOpening] = useState<string>('');
     const [openingPlot, setOpeningPlot] = useState<string>('');
     const [playerRole, setPlayerRole] = useState<string>('');
@@ -130,13 +134,18 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
     const [selectedThemeTagIds, setSelectedThemeTagIds] = useState<number[]>([]);
     const [persistedThemeTagIds, setPersistedThemeTagIds] = useState<number[]>([]);
     const [themeTagError, setThemeTagError] = useState<string>('');
+    const [selectedAudienceType, setSelectedAudienceType] = useState<ContentAudience | null>(null);
+    const [persistedAudienceType, setPersistedAudienceType] = useState<ContentAudience | null>(null);
+    const [audienceError, setAudienceError] = useState<string>('');
 
     const lastFileIdRef = useRef<string | null>(null);
     const originalDataRef = useRef<VisualWorldSetting | WorldWorldSetting | null>(null);
     const lastWorldSettingSnapshotRef = useRef<string | null>(null);
     const lastAppliedGameDataSnapshotRef = useRef<string | null>(null);
     const originalThemeTagIdsRef = useRef<number[]>([]);
+    const originalAudienceTypeRef = useRef<ContentAudience | null>(null);
     const hasTouchedThemeTagsRef = useRef(false);
+    const hasTouchedAudienceRef = useRef(false);
     const saveWorldSettingChangesRef = useRef<(() => Promise<boolean>) | null>(null);
     const hasUnsavedChangesRef = useRef(false);
     const pendingLeaveActionRef = useRef<(() => void) | null>(null);
@@ -215,6 +224,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         const fetchSelectedThemeTags = async () => {
             if (!currentFileId) {
                 setPersistedThemeTagIds([]);
+                setPersistedAudienceType(null);
                 return;
             }
 
@@ -224,10 +234,15 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                 const nextThemeTagIds = normalizeThemeTagIds(resp.data.data?.theme_tag_ids);
                 // 实现编辑页作品标签回显
                 setPersistedThemeTagIds(nextThemeTagIds);
+                const nextAudience = isValidContentAudience(resp.data.data?.audience_type)
+                    ? resp.data.data.audience_type
+                    : null;
+                setPersistedAudienceType(nextAudience);
             } catch (error) {
                 if (!cancelled) {
                     console.error('加载编辑作品标签失败:', error);
                     setPersistedThemeTagIds([]);
+                    setPersistedAudienceType(null);
                 }
             }
         };
@@ -253,6 +268,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
             lastAppliedGameDataSnapshotRef.current = currentWorldSettingSnapshot;
             originalDataRef.current = JSON.parse(JSON.stringify(ws));
             hasTouchedThemeTagsRef.current = false;
+            hasTouchedAudienceRef.current = false;
         } else if (lastAppliedGameDataSnapshotRef.current !== currentWorldSettingSnapshot) {
             lastAppliedGameDataSnapshotRef.current = currentWorldSettingSnapshot;
             originalDataRef.current = JSON.parse(JSON.stringify(ws));
@@ -270,6 +286,8 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         setTitle(ws.title || '');
         setTagline(ws.summary || '');
         setEra(ws.background || '');
+        // 功能注释：前情提要独立字段；旧档无 premise 时留空，不强行从 background 拆分
+        setPremise((ws as { premise?: string }).premise || '');
         setPlayerRole(playerRoleText);
         setOpening(ws.preamble || '');
         setOpeningPlot(ws.initialPlot || '');
@@ -305,7 +323,10 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         originalThemeTagIdsRef.current = initialThemeTagIds;
         setSelectedThemeTagIds(initialThemeTagIds);
         setThemeTagError('');
-    }, [displayThemeTags, gameData, isWorldInteractionMode, persistedThemeTagIds]);
+        originalAudienceTypeRef.current = persistedAudienceType;
+        setSelectedAudienceType(persistedAudienceType);
+        setAudienceError('');
+    }, [displayThemeTags, gameData, isWorldInteractionMode, persistedAudienceType, persistedThemeTagIds]);
 
     useEffect(() => {
         if (!gameData?.worldSetting) return;
@@ -320,7 +341,15 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
             setSelectedThemeTagIds(initialThemeTagIds);
             setThemeTagError('');
         }
-    }, [displayThemeTags, gameData, persistedThemeTagIds]);
+        if (persistedAudienceType !== originalAudienceTypeRef.current) {
+            if (hasTouchedAudienceRef.current) {
+                return;
+            }
+            originalAudienceTypeRef.current = persistedAudienceType;
+            setSelectedAudienceType(persistedAudienceType);
+            setAudienceError('');
+        }
+    }, [displayThemeTags, gameData, persistedAudienceType, persistedThemeTagIds]);
 
     const handleToneChange = (value: string) => {
         setToneValue(value);
@@ -343,7 +372,13 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
             setThemeTagError('');
             return [...prev, tagId];
         });
-    }, [showWorldPanelErrorToast]);
+    }, [showWorldPanelErrorToast, t]);
+
+    const handleAudienceTypeChange = useCallback((next: ContentAudience) => {
+        hasTouchedAudienceRef.current = true;
+        setSelectedAudienceType(next);
+        setAudienceError('');
+    }, []);
 
     const reorderStorylines = (items: StoryLine[]): StoryLine[] => {
         const sorted = [...items].sort((a, b) => a.index - b.index);
@@ -466,6 +501,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                 title,
                 summary: tagline,
                 background: era,
+                premise,
                 preamble: opening,
                 initialPlot: openingPlot,
                 literary: toneValue ?? '',
@@ -499,6 +535,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
             title,
             summary: tagline,
             background: era,
+            premise,
             preamble: opening,
             initialPlot: openingPlot,
             literary: toneValue ?? '',
@@ -508,6 +545,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         } as unknown as WorldWorldSetting;
     }, [
         era,
+        premise,
         gameData,
         maxOutputLength,
         minOutputLength,
@@ -543,6 +581,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
             if (isStrDiff(full.title, orig.title)) diff.title = full.title;
             if (isStrDiff(full.summary, orig.summary)) diff.summary = full.summary;
             if (isStrDiff(full.background, orig.background)) diff.background = full.background;
+            if (isStrDiff(full.premise, orig.premise)) diff.premise = full.premise;
             if (isStrDiff(full.preamble, orig.preamble)) diff.preamble = full.preamble;
             if (isStrDiff(full.initialPlot, orig.initialPlot)) diff.initialPlot = full.initialPlot;
             if (isStrDiff(full.literary, orig.literary)) diff.literary = full.literary;
@@ -572,6 +611,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         if (isStrDiff(full.title, orig.title)) diff.title = full.title;
         if (isStrDiff(full.summary, orig.summary)) diff.summary = full.summary;
         if (isStrDiff(full.background, orig.background)) diff.background = full.background;
+        if (isStrDiff(full.premise, orig.premise)) diff.premise = full.premise;
         if (isStrDiff(full.preamble, orig.preamble)) diff.preamble = full.preamble;
         if (isStrDiff(full.initialPlot, orig.initialPlot)) diff.initialPlot = full.initialPlot;
         if (isStrDiff(full.literary, orig.literary)) diff.literary = full.literary;
@@ -602,6 +642,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
             title: title !== (original.title || ''),
             tagline: tagline !== (original.summary || ''),
             era: era !== (original.background || ''),
+            premise: premise !== ((original as { premise?: string }).premise || ''),
             opening: opening !== (original.preamble || ''),
             openingPlot: openingPlot !== (original.initialPlot || ''),
             outputLength:
@@ -611,6 +652,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         };
     }, [
         era,
+        premise,
         maxOutputLength,
         minOutputLength,
         opening,
@@ -625,15 +667,19 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
     const syncSavedBaseline = useCallback((
         savedWorldSetting: VisualWorldSetting | WorldWorldSetting,
         savedThemeTagIds: number[],
+        savedAudienceType: ContentAudience | null,
     ) => {
         // 实现世界观保存后同步基线
         originalDataRef.current = JSON.parse(JSON.stringify(savedWorldSetting));
         lastWorldSettingSnapshotRef.current = JSON.stringify(savedWorldSetting);
         lastAppliedGameDataSnapshotRef.current = lastAppliedGameDataSnapshotRef.current;
         originalThemeTagIdsRef.current = [...savedThemeTagIds];
+        originalAudienceTypeRef.current = savedAudienceType;
         hasTouchedThemeTagsRef.current = false;
+        hasTouchedAudienceRef.current = false;
         hasUnsavedChangesRef.current = false;
         setPersistedThemeTagIds([...savedThemeTagIds]);
+        setPersistedAudienceType(savedAudienceType);
         setHasUnsavedChanges(false);
     }, [setHasUnsavedChanges]);
 
@@ -654,6 +700,14 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         }
         setOpeningPlotError('');
 
+        // 实现作品分类必填校验
+        if (!isValidContentAudience(selectedAudienceType)) {
+            setAudienceError(t('createGame.contentAudienceRequired'));
+            showWorldPanelErrorToast(t('createGame.contentAudienceRequired'));
+            return false;
+        }
+        setAudienceError('');
+
         // 实现题材标签保存校验
         if (selectedThemeTagIds.length < 1 || selectedThemeTagIds.length > 2) {
             setThemeTagError(t('createGame.themeTagRequired'));
@@ -670,7 +724,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         }
         setStorylineError('');
         return true;
-    }, [isWorldInteractionMode, opening, openingPlot, selectedThemeTagIds.length, showWorldPanelErrorToast, storylines.length]);
+    }, [isWorldInteractionMode, opening, openingPlot, selectedAudienceType, selectedThemeTagIds.length, showWorldPanelErrorToast, storylines.length, t]);
 
     const saveWorldSettingChanges = useCallback(async () => {
         if (!handleSubmit) {
@@ -688,12 +742,13 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         }
 
         const nextThemeTagIds = [...selectedThemeTagIds];
+        const nextAudienceType = selectedAudienceType;
         return await handleSubmit({
             onSuccess: () => {
-                syncSavedBaseline(fullWorldSetting, nextThemeTagIds);
+                syncSavedBaseline(fullWorldSetting, nextThemeTagIds, nextAudienceType);
             },
         });
-    }, [getFullWorldSettingData, handleSubmit, selectedThemeTagIds, showWorldPanelErrorToast, syncSavedBaseline, validateWorldSettingBeforeSave]);
+    }, [getFullWorldSettingData, handleSubmit, selectedAudienceType, selectedThemeTagIds, showWorldPanelErrorToast, syncSavedBaseline, t, validateWorldSettingBeforeSave]);
 
     saveWorldSettingChangesRef.current = saveWorldSettingChanges;
 
@@ -747,10 +802,11 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         if (!originalDataRef.current) {
             return;
         }
-        // 实现题材修改纳入未保存检测
+        // 实现题材与作品分类修改纳入未保存检测
         const hasThemeTagChanges = !isSameThemeTagIds(selectedThemeTagIds, originalThemeTagIdsRef.current);
-        setHasUnsavedChanges(getWorldSettingData() !== null || hasThemeTagChanges);
-    }, [getWorldSettingData, selectedThemeTagIds, setHasUnsavedChanges]);
+        const hasAudienceChanges = selectedAudienceType !== originalAudienceTypeRef.current;
+        setHasUnsavedChanges(getWorldSettingData() !== null || hasThemeTagChanges || hasAudienceChanges);
+    }, [getWorldSettingData, selectedAudienceType, selectedThemeTagIds, setHasUnsavedChanges]);
 
     useLayoutEffect(() => {
         if (!onGetData) {
@@ -765,9 +821,16 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                 themeTagIds: selectedThemeTagIds,
                 // 透传原始题材快照
                 originalThemeTagIds: originalThemeTagIdsRef.current,
-            } as Partial<AllGameData | WorldInteractionGameData> & { themeTagIds: number[]; originalThemeTagIds: number[] };
+                audienceType: selectedAudienceType,
+                originalAudienceType: originalAudienceTypeRef.current,
+            } as Partial<AllGameData | WorldInteractionGameData> & {
+                themeTagIds: number[];
+                originalThemeTagIds: number[];
+                audienceType: ContentAudience | null;
+                originalAudienceType: ContentAudience | null;
+            };
         });
-    }, [getWorldSettingData, onGetData, selectedThemeTagIds]);
+    }, [getWorldSettingData, onGetData, selectedAudienceType, selectedThemeTagIds]);
 
     const handleConfirmSubmit = useCallback(async (event: React.MouseEvent<HTMLButtonElement>) => {
         event.preventDefault();
@@ -779,6 +842,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
             <CoverUpload
                 fileId={currentFileId}
                 coverUrl={gameData?.coverUrl || undefined}
+                portraitCoverUrl={gameData?.portraitCoverUrl || undefined}
                 workTitle={title}
                 onCoverUploaded={() => {
                     onDataChange?.();
@@ -790,42 +854,41 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                     <h2>{t('createGame.worldSettingNarrativeStyle')}</h2>
                     <p className={styles.subtitle}>{t('createGame.worldSettingSubtitle')}</p>
                 </div>
+                {handleSubmit ? (
+                    <button
+                        className={styles.ghostSmall}
+                        onClick={handleConfirmSubmit}
+                        disabled={!gameData || isSubmitting}
+                    >
+                        {isSubmitting ? t('createGame.submitting') : t('createGame.confirmEdit')}
+                    </button>
+                ) : null}
             </div>
 
             {isWorldInteractionMode ? SaveConfirmModalComponent : null}
 
+            {/* 功能注释：单层分区，不再套「世界观设定」外框 + 基础信息内框 */}
             <div className={styles.formContainer}>
-                {/* 实现世界观设定标题与右上角确认按钮 */}
-                <div className={styles.cardHead}>
-                    <strong className={styles.cardTitle}>{t('createGame.worldSetting')}</strong>
-                    {handleSubmit && (
-                        <button
-                            className={styles.ghostSmall}
-                            onClick={handleConfirmSubmit}
-                            disabled={!gameData || isSubmitting}
-                        >
-                            {isSubmitting ? t('createGame.submitting') : t('createGame.confirmEdit')}
-                        </button>
-                    )}
-                </div>
-
                 <div className={styles.formBody}>
                     <WorldSettingForm
                         mode={mode}
                         title={title}
                         tagline={tagline}
                         era={era}
+                        premise={premise}
                         playerRole={playerRole}
                         opening={opening}
                         openingPlot={openingPlot}
                         themeTags={displayThemeTags}
                         selectedThemeTagIds={selectedThemeTagIds}
+                        audienceType={selectedAudienceType}
                         targetOutputLength={targetOutputLength}
                         minOutputLength={minOutputLength}
                         maxOutputLength={maxOutputLength}
                         onTitleChange={setTitle}
                         onTaglineChange={setTagline}
                         onEraChange={setEra}
+                        onPremiseChange={setPremise}
                         onOpeningChange={(value) => {
                             setOpening(value);
                             if (openingError && value.trim()) {
@@ -839,12 +902,14 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                             }
                         }}
                         onThemeTagToggle={handleThemeTagToggle}
+                        onAudienceTypeChange={handleAudienceTypeChange}
                         onTargetOutputLengthChange={setTargetOutputLength}
                         onMinOutputLengthChange={setMinOutputLength}
                         onMaxOutputLengthChange={setMaxOutputLength}
                         titleDirty={worldFieldDirtyState.title}
                         taglineDirty={worldFieldDirtyState.tagline}
                         eraDirty={worldFieldDirtyState.era}
+                        premiseDirty={worldFieldDirtyState.premise}
                         openingDirty={worldFieldDirtyState.opening}
                         openingPlotDirty={worldFieldDirtyState.openingPlot}
                         outputLengthDirty={worldFieldDirtyState.outputLength}
@@ -852,12 +917,14 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                         onTitleSave={saveWorldSettingChanges}
                         onTaglineSave={saveWorldSettingChanges}
                         onEraSave={saveWorldSettingChanges}
+                        onPremiseSave={saveWorldSettingChanges}
                         onOpeningSave={saveWorldSettingChanges}
                         onOpeningPlotSave={saveWorldSettingChanges}
                         onOutputLengthSave={saveWorldSettingChanges}
                         openingError={openingError}
                         openingPlotError={openingPlotError}
                         themeTagError={themeTagError}
+                        audienceError={audienceError}
                     />
 
                     <StorylinesSection

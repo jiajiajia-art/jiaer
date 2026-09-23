@@ -1,5 +1,6 @@
 import React from 'react';
 import panel from './WarehousePanel.module.css';
+import WarehouseEmptyIcon from './WarehouseEmptyIcon';
 
 type Props = {
   title: string;
@@ -13,7 +14,7 @@ const WarehouseComingSoon: React.FC<Props> = ({ title, description }) => (
       <p className={panel.sub}>{description || '功能开发中，敬请期待'}</p>
     </header>
     <div className={panel.emptyStage}>
-      <div className={panel.emptyOrb} aria-hidden />
+      <WarehouseEmptyIcon kind="generic" />
       <h2>即将开放</h2>
       <p>界面骨架已就绪，能力模块正在接入。先去「玩家人设卡」或「公共卡库」逛逛吧。</p>
     </div>

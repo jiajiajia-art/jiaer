@@ -29,4 +29,8 @@ dist-ssr
 .env.*
 !.env.example
 android/
+android.backup-*/
 dist-app/
+
+# Android upload keystore（本地生成，禁止提交）
+signing/

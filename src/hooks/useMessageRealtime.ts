@@ -15,7 +15,7 @@ type RealtimeMessage = {
 
 /**
  * WS 地址与 HTTP API 对齐：
- * - HOST_ADDRESS 为绝对 URL（如 api-test2）→ 直连该主机 wss
+ * - HOST_ADDRESS 为绝对 URL（如 api-test）→ 直连该主机 wss
  * - HOST 为空且本地开发 → 走 Vite 同源 /api 代理（需本机后端在 3000）
  */
 function buildWebSocketUrl(token: string): string {
@@ -35,7 +35,7 @@ function buildWebSocketUrl(token: string): string {
     return url.toString();
   }
 
-  const fallback = (host || 'https://api-test2.kurangames.com').replace(/^http/i, 'ws');
+  const fallback = (host || 'https://api-test.kurangames.com').replace(/^http/i, 'ws');
   const url = new URL('/api/auth/messages/ws', fallback.endsWith('/') ? fallback : `${fallback}/`);
   url.searchParams.set('token', token);
   return url.toString();

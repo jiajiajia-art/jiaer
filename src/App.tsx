@@ -4,6 +4,8 @@ import { Toaster } from 'react-hot-toast';
 import './styles/funloomToast.css';
 import Home from './page/Home';
 import Create from './page/Create';
+import CreateType from './page/CreateType';
+import CreateWorks from './page/CreateWorks';
 import WithdrawRecords from './page/WithdrawRecords';
 import WareHouse from './page/WareHouse';
 import WarehouseHub from './page/warehouse/WarehouseHub';
@@ -31,6 +33,7 @@ import GameDetail from './page/GameDetail';
 import NovelReader from './page/NovelReader';
 import Favorites from './page/Favorites';
 import ScrollToTop from './components/ScrollToTop';
+import ProfilePreferenceGate from './components/ProfilePreferenceGate';
 import Analytics from './page/Analytics';
 import RouteReporter from './components/RouteReporter';
 import { usePlatformDurationTracking } from './hooks/usePlatformDurationTracking';
@@ -55,16 +58,23 @@ import ExternalOAuthAuthorize from './page/external/ExternalOAuthAuthorize';
 import ExternalRecharge from './page/external/ExternalRecharge';
 import { useEffect, lazy, Suspense } from 'react';
 import { useAuthStore } from './store/useAuthStore';
+import { useGeoRegionStore } from './store/useGeoRegionStore';
 
 const FunloomLotteryPage = lazy(() => import('./activities/funloom-lottery-20260731'));
 
 function App() {
   usePlatformDurationTracking();
   const initializeAuth = useAuthStore((state) => state.initialize);
+  const hydrateFromIp = useGeoRegionStore((state) => state.hydrateFromIp);
 
   useEffect(() => {
     void initializeAuth();
   }, [initializeAuth]);
+
+  // 功能注释：每次进站按 IP 强制语言与支付区域（覆盖本地语言偏好）
+  useEffect(() => {
+    void hydrateFromIp();
+  }, [hydrateFromIp]);
 
   return (
     <BrowserRouter basename='/funloom'>
@@ -139,6 +149,8 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/create" element={<Create />} />
+          <Route path="/create/new" element={<CreateType />} />
+          <Route path="/create/works" element={<CreateWorks />} />
           <Route path="/create/withdraw-records" element={<WithdrawRecords />} />
           <Route path="/asset/details" element={<AssetDetails />} />
           <Route path="/developer/external-games" element={<DeveloperExternalGames />} />
@@ -184,6 +196,7 @@ function App() {
           <Route path="/admin/users" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/withdraw" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/image-gen" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/text-llm" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/lottery" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/comments" element={<AdminRoute><CommentAdminPage /></AdminRoute>} />
           <Route path="/galgame" element={<Galgame />} />
@@ -199,6 +212,7 @@ function App() {
       </Routes>
       <ScrollToTop />
       <UploadProgressModal />
+      <ProfilePreferenceGate />
     </BrowserRouter>
   )
 }

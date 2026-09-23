@@ -1,5 +1,5 @@
 import type { ApiResponse } from "../api.types";
-import { api, UPLOAD_TIMEOUT_MS } from "../base";
+import { api, COVER_GENERATE_TIMEOUT_MS, UPLOAD_TIMEOUT_MS } from "../base";
 import type { CalculatePointsResponse, GetMusicListResponse, UploadMusicResponse, UploadNpcImageResponse, UploadPlayerImageResponse, UploadSceneImageResponse } from "../worldInteraction/worldEditor.type";
 import type {
     AllGameData,
@@ -27,8 +27,18 @@ import type { Scene } from "./getGalgamePreset.type";
 import { extractImageExtension } from "../../utils/imageCache";
 
 const EditorApi = {
-    generateGameFromIdea: (idea:string) => {
-        return api.post<UploadFileResponse>(`/visual/document/generate-from-idea`, { idea: idea });
+    generateGameFromIdea: (
+        idea: string,
+        options?: {
+            generateAssets?: boolean;
+            assetFlags?: { portraits?: boolean; scenes?: boolean; cover?: boolean };
+        },
+    ) => {
+        return api.post<UploadFileResponse>(`/visual/document/generate-from-idea`, {
+            idea,
+            generateAssets: Boolean(options?.generateAssets),
+            assetFlags: options?.assetFlags || undefined,
+        });
     },
     /** 一句话弹窗：AI 生成/扩写创意描述（扣 1 积分） */
     generateIdeaText: (seed?: string) => {
@@ -106,10 +116,11 @@ const EditorApi = {
         api.delete<AllGameData>(`/visual/edit/${fileId}/scenes/${id}`),
     updateScene: (fileId:string, data:Scene) =>
         api.put<AllGameData>(`/visual/edit/${fileId}/scenes/${data.id}`, data),
-    uploadGameCover: (fileId:string, file:File) => {
+    uploadGameCover: (fileId:string, file:File, orientation: 'landscape' | 'portrait' = 'landscape') => {
         const formData = new FormData();
         formData.append('cover', file);
         formData.append('fileId', fileId);
+        formData.append('orientation', orientation);
         return api.post<UploadGameCoverResponse>(`/optical/games/upload-cover`, 
             formData , {
             headers: {
@@ -135,13 +146,25 @@ const EditorApi = {
         );
     },
     /** AI 生成游戏封面（扣积分，规则同场景生图） */
-    generateGameCover: (fileId: string, data?: { prompt?: string; title?: string }) =>
+    generateGameCover: (
+        fileId: string,
+        data?: {
+            prompt?: string;
+            title?: string;
+            orientation?: 'landscape' | 'portrait';
+            /** control=模型画标题字效；treatment=无字生图+客户端叠字 */
+            abArm?: 'treatment' | 'control';
+        },
+    ) =>
         api.post<UploadGameCoverResponse>(`/optical/games/generate-cover`, {
             fileId,
             ...(data?.prompt != null ? { prompt: data.prompt } : {}),
             ...(data?.title != null ? { title: data.title } : {}),
+            ...(data?.orientation != null ? { orientation: data.orientation } : {}),
+            ...(data?.abArm != null ? { abArm: data.abArm } : {}),
         }, {
-            timeout: UPLOAD_TIMEOUT_MS,
+            // 功能注释：生图+可选垫图常超过上传 120s，单独放宽避免 ECONNABORTED
+            timeout: COVER_GENERATE_TIMEOUT_MS,
         }),
     uploadPlayerImage: (fileId:string, data:{file:File, variant:string, variationDescription?: string}) => {
         const formData = new FormData();

@@ -1,7 +1,9 @@
+/* 功能注释：角色面板对齐 funloom 暗色创作壳（与 TXT 创建一致） */
+
 .panelContent {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 16px;
 }
 
 /* 保存中禁用状态 - 禁止输入但允许滚动查看 */
@@ -14,46 +16,57 @@
     cursor: not-allowed;
 }
 
+/* 功能注释：效果图标题卡——#1C1C1E 圆角面，居中标题 + 说明 + 底部拼合生成胶囊 */
 .panelHeader {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 16px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 18px;
+    padding: 22px 18px 16px;
+    border-radius: 22px;
+    background: #1C1C1E;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.headerCopy {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
 }
 
 .eyebrow {
-    margin: 0;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    font-size: 0.75rem;
-    color: var(--primary);
-    font-weight: 600;
+    display: none;
 }
 
 .panelHeader h2 {
-    margin: 4px 0 0;
-    font-size: 1.6rem;
-    color: #1a1a1a;
-    font-weight: 700;
+    margin: 0;
+    font-size: 1.28rem;
+    color: #ffffff;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    line-height: 1.35;
+    text-align: center;
 }
 
 .subtitle {
-    margin: 4px 0 0;
-    color: rgba(0, 0, 0, 0.55);
-    font-size: 0.9rem;
+    margin: 12px 0 0;
+    color: rgba(255, 255, 255, 0.48);
+    font-size: 0.86rem;
+    line-height: 1.7;
+    text-align: left;
 }
 
-/* 按钮样式 */
+/* 功能注释：与积分胶囊 / ghostSmall 统一为全圆角胶囊，避免操作条左右圆角不一致 */
 .ghost {
-    border-radius: 12px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
-    padding: 10px 20px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    min-height: 44px;
+    padding: 9px 18px;
     font-weight: 600;
     cursor: pointer;
     transition: 0.2s ease;
-    color: #1a1a1a;
-    background: #fff;
+    color: #ffffff;
+    background: #1C1C1E;
 }
 
 .ghost:hover {
@@ -63,20 +76,20 @@
 
 .ghostTiny {
     border-radius: 999px;
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     padding: 4px 10px;
     font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
     transition: 0.2s ease;
-    color: rgba(0, 0, 0, 0.6);
+    color: rgba(255, 255, 255, 0.55);
     background: transparent;
 }
 
 .ghostTiny:hover {
     border-color: var(--primary);
     color: var(--primary);
-    background: rgba(224, 61, 75, 0.05);
+    background: rgba(142, 33, 53, 0.05);
 }
 
 /* 布局 */
@@ -92,14 +105,14 @@
 
 /* 卡片样式 */
 .card {
-    background: #ffffff;
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: #1A1A1A;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 24px;
     padding: 20px;
     display: flex;
     flex-direction: column;
     gap: 16px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
     height: 100%;
     min-height: 0;
     overflow: hidden;
@@ -108,13 +121,15 @@
 .card h3 {
     margin: 0;
     font-size: 1.1rem;
-    color: #1a1a1a;
+    color: #ffffff;
     font-weight: 600;
 }
 
 .detailCard {
     overflow-y: auto;
     overflow-x: hidden;
+    /* 功能注释：立绘上下区块间距减半 */
+    gap: 8px;
 }
 
 .detailCard > * {
@@ -125,28 +140,28 @@
     display: flex;
     justify-content: flex-end;
     gap: 8px;
-    margin-bottom: 16px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
 }
 
 .ghostSmall {
     border-radius: 999px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     padding: 6px 14px;
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
     transition: 0.2s ease;
-    color: #1a1a1a;
-    background: #fff;
+    color: #ffffff;
+    background: #1C1C1E;
     flex-shrink: 0;
 }
 
 .ghostSmall:hover {
     border-color: var(--primary);
     color: var(--primary);
-    background: rgba(224, 61, 75, 0.05);
+    background: rgba(142, 33, 53, 0.05);
 }
 
 .primaryButton {
@@ -163,12 +178,12 @@
 }
 
 .primaryButton:hover {
-    background: rgba(224, 61, 75, 0.9);
-    border-color: rgba(224, 61, 75, 0.9);
+    background: linear-gradient(135deg, var(--primary) 0%, #8E2135 100%);
+    border-color: rgba(142, 33, 53, 0.9);
 }
 
 .mutedSmall {
-    color: rgba(0, 0, 0, 0.5);
+    color: rgba(255, 255, 255, 0.55);
     margin: 0;
     font-size: 0.8rem;
     line-height: 1.4;
@@ -184,18 +199,19 @@
 .tag {
     display: inline-flex;
     align-items: center;
-    border-radius: 5px;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    padding: 2px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    padding: 3px 10px;
     font-size: 0.72rem;
-    color: rgba(0, 0, 0, 0.6);
+    color: rgba(255, 255, 255, 0.78);
+    background: rgba(255, 255, 255, 0.04);
 }
 
 .portraitImageActions {
     display: flex;
     gap: 8px;
-    margin-top: 12px;
-    margin-bottom: 20px;
+    margin-top: 6px;
+    margin-bottom: 10px;
 }
 
 .portraitImageActions button {
@@ -204,20 +220,21 @@
 
 .portraitLarge {
     width: 100%;
-    height: 320px;
-    min-height: 320px;
+    /* 功能注释：高度较原 320 抬高 50%，便于看清全身立绘 */
+    height: 480px;
+    min-height: 480px;
     flex-shrink: 0;
     border-radius: 20px;
-    /* 棋盘格：透明立绘可辨；有米色块说明图里像素未抠干净 */
-    background-color: #f3f3f3;
+    /* 棋盘格：浅灰 + 深灰，避免高对比纯白刺眼，仍能辨透明抠图 */
+    background-color: #c8c8c8;
     background-image:
-        linear-gradient(45deg, #e8e8e8 25%, transparent 25%),
-        linear-gradient(-45deg, #e8e8e8 25%, transparent 25%),
-        linear-gradient(45deg, transparent 75%, #e8e8e8 75%),
-        linear-gradient(-45deg, transparent 75%, #e8e8e8 75%);
+        linear-gradient(45deg, #2a2a2a 25%, transparent 25%),
+        linear-gradient(-45deg, #2a2a2a 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #2a2a2a 75%),
+        linear-gradient(-45deg, transparent 75%, #2a2a2a 75%);
     background-size: 16px 16px;
     background-position: 0 0, 0 8px, 8px -8px, -8px 0;
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     position: relative;
     cursor: pointer;
     overflow: hidden;
@@ -268,10 +285,10 @@
     flex-shrink: 0;
     margin: 0 auto; /* PC端居中 */
     border-radius: 12px;
-    background: linear-gradient(180deg, #f0f0f0 0%, #e0e0e0 100%);
+    background: linear-gradient(180deg, #1C1C1E 0%, #121212 100%);
     box-shadow:
-        0 4px 20px rgba(0, 0, 0, 0.08),
-        0 0 0 1px rgba(0, 0, 0, 0.04);
+        0 4px 20px rgba(0, 0, 0, 0.35),
+        0 0 0 1px rgba(255, 255, 255, 0.08);
     display: flex;
     align-items: flex-end;
     justify-content: center;
@@ -321,10 +338,10 @@
     flex-direction: column;
     gap: 10px;
     padding: 24px;
-    background: #fff;
+    background: #1A1A1A;
     border-radius: 16px;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
 .portraitPreviewSection {
@@ -336,7 +353,7 @@
 .portraitPreviewSectionTitle {
     font-size: 13px;
     font-weight: 600;
-    color: #374151;
+    color: #ffffff;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -356,7 +373,7 @@
 
 .portraitPreviewLabel {
     font-size: 13px;
-    color: #666;
+    color: rgba(255, 255, 255, 0.55);
     width: 38px;
     text-align: center;
     flex-shrink: 0;
@@ -376,13 +393,13 @@
 
 .portraitPreviewRange::-webkit-slider-runnable-track {
     height: 6px;
-    background: #e5e7eb;
+    background: rgba(255, 255, 255, 0.15);
     border-radius: 3px;
 }
 
 .portraitPreviewRange::-moz-range-track {
     height: 6px;
-    background: #e5e7eb;
+    background: rgba(255, 255, 255, 0.15);
     border-radius: 3px;
 }
 
@@ -395,14 +412,14 @@
     background: var(--primary);
     cursor: pointer;
     border: 3px solid #fff;
-    box-shadow: 0 2px 8px rgba(224, 61, 75, 0.3);
+    box-shadow: 0 2px 8px rgba(142, 33, 53, 0.3);
     will-change: transform;
     margin-top: -7px;
 }
 
 .portraitPreviewRange::-webkit-slider-thumb:hover {
     transform: scale(1.1);
-    box-shadow: 0 4px 12px rgba(224, 61, 75, 0.4);
+    box-shadow: 0 4px 12px rgba(142, 33, 53, 0.4);
 }
 
 .portraitPreviewRange::-moz-range-thumb {
@@ -412,32 +429,32 @@
     background: var(--primary);
     cursor: pointer;
     border: 3px solid #fff;
-    box-shadow: 0 2px 8px rgba(224, 61, 75, 0.3);
+    box-shadow: 0 2px 8px rgba(142, 33, 53, 0.3);
 }
 
 .portraitPreviewValue {
     min-width: 52px;
     padding: 6px 10px;
-    background: #f5f5f5;
+    background: #1C1C1E;
     border-radius: 8px;
     text-align: center;
     font-weight: 700;
     font-size: 14px;
-    color: #111827;
+    color: #ffffff;
 }
 
 .portraitPreviewActions {
     display: flex;
     gap: 10px;
     padding-top: 8px;
-    border-top: 1px solid #f0f0f0;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* 激活状态的按钮样式 */
 .ghostSmallActive {
     border-color: var(--primary);
     color: var(--primary);
-    background: rgba(224, 61, 75, 0.08);
+    background: rgba(142, 33, 53, 0.08);
 }
 
 /* 下载按钮 */
@@ -697,7 +714,7 @@
 .detailBlock label span,
 .relationshipRow label span {
     font-size: 0.85rem;
-    color: rgba(0, 0, 0, 0.55);
+    color: rgba(255, 255, 255, 0.55);
     font-weight: 500;
 }
 
@@ -715,10 +732,10 @@
 .relationshipRow input,
 .relationshipRow textarea {
     border-radius: 12px;
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     padding: 10px 12px;
-    background: rgba(0, 0, 0, 0.015);
-    color: #1a1a1a;
+    background: #121212;
+    color: #ffffff;
     font-size: 0.95rem;
     font-family: inherit;
     transition: 0.2s ease;
@@ -734,8 +751,8 @@
 .relationshipRow textarea:focus {
     outline: none;
     border-color: var(--primary);
-    background: #fff;
-    box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.1);
+    background: #1C1C1E;
+    box-shadow: 0 0 0 3px rgba(142, 33, 53, 0.2);
 }
 
 .formGrid textarea,
@@ -748,7 +765,7 @@
 
 /* 详情区块 */
 .detailBlock {
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
     padding: 14px;
     display: flex;
@@ -765,7 +782,7 @@
 
 .cardHead strong {
     font-size: 1rem;
-    color: #1a1a1a;
+    color: #ffffff;
 }
 
 .collapsibleHeader {
@@ -778,7 +795,7 @@
 
 .collapsibleHeader strong {
     font-size: 1rem;
-    color: #1a1a1a;
+    color: #ffffff;
 }
 
 .collapsedContent {
@@ -793,18 +810,18 @@
 }
 
 .relationshipRow {
-    border: 1px solid rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 14px;
     padding: 10px;
-    background: rgba(0, 0, 0, 0.01);
+    background: #121212;
     display: flex;
     flex-direction: column;
     gap: 8px;
 }
 
 .relationshipRow:hover {
-    border-color: rgba(224, 61, 75, 0.2);
-    background: rgba(224, 61, 75, 0.02);
+    border-color: rgba(142, 33, 53, 0.2);
+    background: rgba(142, 33, 53, 0.02);
 }
 
 
@@ -819,11 +836,11 @@
 }
 
 .variationCard {
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
     padding: 10px;
     text-align: center;
-    background: rgba(0, 0, 0, 0.01);
+    background: #121212;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -834,7 +851,7 @@
 .variationCard p {
     margin: 0;
     font-size: 0.9rem;
-    color: #1a1a1a;
+    color: #ffffff;
     word-break: break-word;
 }
 
@@ -850,8 +867,8 @@
 }
 
 .variationThumb.empty {
-    border: 1px dashed rgba(0, 0, 0, 0.15);
-    background: rgba(0, 0, 0, 0.02);
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+    background: #1C1C1E;
     display: grid;
     place-items: center;
 }
@@ -870,10 +887,10 @@
 }
 
 .addCard {
-    border: 1px dashed rgba(0, 0, 0, 0.15);
+    border: 1px dashed rgba(255, 255, 255, 0.2);
     border-radius: 16px;
     background: transparent;
-    color: #1a1a1a;
+    color: #ffffff;
     font-weight: 600;
     cursor: pointer;
     min-height: 180px;
@@ -885,7 +902,7 @@
 .addCard:hover {
     border-color: var(--primary);
     color: var(--primary);
-    background: rgba(224, 61, 75, 0.02);
+    background: rgba(142, 33, 53, 0.02);
 }
 
 /* 必填标识 */
@@ -904,19 +921,19 @@
 
 /* 错误样式 */
 .errorInput {
-    border-color: #e03d4b !important;
-    background: #fff5f5 !important;
+    border-color: #8E2135 !important;
+    background: rgba(142, 33, 53, 0.12) !important;
 }
 
 .errorInput:focus {
-    border-color: #e03d4b !important;
-    box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.15) !important;
+    border-color: #8E2135 !important;
+    box-shadow: 0 0 0 3px rgba(142, 33, 53, 0.25) !important;
 }
 
 .errorMessage {
     margin-top: 6px;
     font-size: 0.8rem;
-    color: #e03d4b;
+    color: #8E2135;
     line-height: 1.4;
 }
 
@@ -931,7 +948,7 @@
     margin-left: auto;
     font-size: 0.7rem;
     font-weight: 400;
-    color: rgba(0, 0, 0, 0.35);
+    color: rgba(255, 255, 255, 0.35);
 }
 
 /* 弹窗样式 */
@@ -971,7 +988,7 @@
 }
 
 .modalContent {
-    background: #fff;
+    background: #1A1A1A;
     border-radius: 24px;
     padding: 24px;
     min-width: 420px;
@@ -989,22 +1006,22 @@
     align-items: center;
     margin-bottom: 24px;
     padding-bottom: 16px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .modalHeader h3 {
     margin: 0;
     font-size: 1.4rem;
-    color: #1a1a1a;
+    color: #ffffff;
     font-weight: 700;
     letter-spacing: -0.02em;
 }
 
 .modalClose {
-    background: rgba(0, 0, 0, 0.04);
+    background: rgba(255, 255, 255, 0.06);
     border: none;
     font-size: 24px;
-    color: rgba(0, 0, 0, 0.6);
+    color: rgba(255, 255, 255, 0.55);
     cursor: pointer;
     padding: 0;
     width: 36px;
@@ -1018,7 +1035,7 @@
 }
 
 .modalClose:hover {
-    background: rgba(224, 61, 75, 0.1);
+    background: rgba(142, 33, 53, 0.1);
     color: var(--primary);
     transform: rotate(90deg);
 }
@@ -1038,7 +1055,7 @@
 
 .modalBody label span {
     font-size: 0.9rem;
-    color: rgba(0, 0, 0, 0.7);
+    color: rgba(255, 255, 255, 0.85);
     font-weight: 600;
     letter-spacing: 0.01em;
 }
@@ -1057,18 +1074,18 @@
     gap: 10px;
     padding: 12px 14px;
     border-radius: 16px;
-    border: 1.5px solid rgba(0, 0, 0, 0.08);
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0.02) 0%, rgba(0, 0, 0, 0.03) 100%);
-    color: rgba(0, 0, 0, 0.72);
+    border: 1.5px solid rgba(255, 255, 255, 0.1);
+    background: #1C1C1E;
+    color: rgba(255, 255, 255, 0.72);
     cursor: pointer;
     transition: 0.2s ease;
 }
 
 .variationTypeButtonActive {
-    border-color: rgba(224, 61, 75, 0.48);
-    background: linear-gradient(135deg, rgba(224, 61, 75, 0.14) 0%, rgba(255, 107, 122, 0.08) 100%);
+    border-color: rgba(142, 33, 53, 0.48);
+    background: linear-gradient(135deg, rgba(142, 33, 53, 0.14) 0%, rgba(255, 107, 122, 0.08) 100%);
     color: var(--primary);
-    box-shadow: 0 8px 18px rgba(224, 61, 75, 0.12);
+    box-shadow: 0 8px 18px rgba(142, 33, 53, 0.12);
 }
 
 .variationTypeLabel {
@@ -1082,9 +1099,9 @@
     height: 18px;
     flex: 0 0 18px;
     border-radius: 999px;
-    border: 1.5px solid rgba(0, 0, 0, 0.18);
-    background: #fff;
-    box-shadow: inset 0 0 0 3px #fff;
+    border: 1.5px solid rgba(255, 255, 255, 0.2);
+    background: #1C1C1E;
+    box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.15);
     transition: 0.2s ease;
 }
 
@@ -1095,14 +1112,14 @@
 
 .variationTypeButton:focus-visible {
     outline: none;
-    border-color: rgba(224, 61, 75, 0.4);
-    box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.1);
+    border-color: rgba(142, 33, 53, 0.4);
+    box-shadow: 0 0 0 3px rgba(142, 33, 53, 0.2);
 }
 
 @media (hover: hover) and (pointer: fine) {
     .variationTypeButton:hover:not(.variationTypeButtonActive) {
-        border-color: rgba(224, 61, 75, 0.28);
-        background: rgba(224, 61, 75, 0.05);
+        border-color: rgba(142, 33, 53, 0.28);
+        background: rgba(142, 33, 53, 0.05);
         color: var(--primary);
     }
 }
@@ -1111,10 +1128,10 @@
 .modalBody select,
 .modalBody textarea {
     border-radius: 12px;
-    border: 1.5px solid rgba(0, 0, 0, 0.1);
+    border: 1.5px solid rgba(255, 255, 255, 0.12);
     padding: 12px 16px;
-    background: rgba(0, 0, 0, 0.02);
-    color: #1a1a1a;
+    background: #1C1C1E;
+    color: #ffffff;
     font-size: 0.95rem;
     font-family: inherit;
     transition: all 0.2s ease;
@@ -1124,13 +1141,13 @@
 
 .modalBody input::placeholder,
 .modalBody textarea::placeholder {
-    color: rgba(0, 0, 0, 0.35);
+    color: rgba(255, 255, 255, 0.35);
 }
 
 .modalBody select {
     cursor: pointer;
     appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23ffffff' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 16px center;
     background-size: 12px;
@@ -1142,8 +1159,8 @@
 .modalBody textarea:focus {
     outline: none;
     border-color: var(--primary);
-    background: #fff;
-    box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.1);
+    background: #1C1C1E;
+    box-shadow: 0 0 0 3px rgba(142, 33, 53, 0.2);
 }
 
 .modalBody textarea {
@@ -1157,7 +1174,7 @@
     justify-content: flex-end;
     gap: 12px;
     padding-top: 20px;
-    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .modalFooter .ghostSmall {
@@ -1173,36 +1190,90 @@
 }
 
 .modalFooter .ghostSmall:last-child:hover {
-    background: #d03242;
-    border-color: #d03242;
+    background: #8E2135;
+    border-color: #8E2135;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(224, 61, 75, 0.3);
+    box-shadow: 0 4px 12px rgba(142, 33, 53, 0.3);
 }
 
 .modalFooter .ghostSmall:disabled,
 .modalFooter .ghostSmall:disabled:hover {
-    background: #f0f0f0;
-    color: #666;
-    border-color: #f0f0f0;
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.35);
+    border-color: rgba(255, 255, 255, 0.08);
 }
 
 /* 立绘操作区按钮禁用态样式 */
 .portraitImageActions .ghostSmall:disabled,
 .portraitImageActions .ghostSmall:disabled:hover {
-    background: #f0f0f0;
-    color: #666;
-    border-color: #f0f0f0;
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.35);
+    border-color: rgba(255, 255, 255, 0.08);
     cursor: not-allowed;
 }
 
-/* AI生成按钮样式优化 */
+/* 立绘行内 AI 生成小胶囊；顶栏拼合 CTA 用 .panelHeader 提高优先级 */
 .generateButton {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 5px;
+    gap: 6px;
+    border-radius: 999px;
+    background: #8E2135;
+    color: #ffffff;
+    border: none;
+    cursor: pointer;
+}
+
+.panelHeader .generateButton {
+    gap: 8px;
     white-space: nowrap;
     flex-wrap: nowrap;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 44px;
+    padding: 8px 14px;
+    background: #A8283C;
+    font-weight: 700;
+    box-shadow: none;
+    transition: background 0.16s ease, filter 0.16s ease;
+}
+
+.panelHeader .generateButton:hover:not(:disabled) {
+    background: #C23A50;
+    color: #ffffff;
+}
+
+.panelHeader .generateButton:active:not(:disabled) {
+    filter: brightness(0.94);
+}
+
+.panelHeader .generateButton:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.panelHeader .generateButton .buttonMainText {
+    font-size: 0.84rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.generateIconWrap {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.18);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.generateIcon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
 }
 
 .priceIcon {
@@ -1226,7 +1297,7 @@
 
 .buttonSubText {
     font-size: 0.7rem;
-    color: rgba(0, 0, 0, 0.5);
+    color: rgba(255, 255, 255, 0.55);
     line-height: 1;
     font-weight: 400;
 }
@@ -1236,7 +1307,7 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    color: rgba(0, 0, 0, 0.5);
+    color: rgba(255, 255, 255, 0.55);
     font-weight: 600;
     margin-left: 4px;
     margin-right: 4px;
@@ -1244,7 +1315,7 @@
 }
 
 .discountPriceBlack {
-    color: rgba(0, 0, 0, 1);
+    color: rgba(255, 255, 255, 0.85);
 }
 
 .portraitImageActions:hover .discountPrice,
@@ -1256,7 +1327,7 @@
 
 .originalPrice {
     text-decoration: line-through;
-    color: rgba(0, 0, 0, 0.35);
+    color: rgba(255, 255, 255, 0.35);
     font-size: 0.85em;
     font-weight: 400;
 }
@@ -1272,21 +1343,21 @@
 }
 
 .plusLoadingOverlay{
-    --atelier-ink: #1c1412;
-    --atelier-mute: rgba(28, 20, 18, 0.55);
-    --atelier-soft: rgba(28, 20, 18, 0.38);
-    --atelier-paper: #fff8f4;
-    --atelier-card: rgba(255, 252, 249, 0.94);
-    --atelier-line: rgba(224, 61, 75, 0.16);
-    --atelier-glow: rgba(224, 61, 75, 0.18);
+    --atelier-ink: #ffffff;
+    --atelier-mute: rgba(255, 255, 255, 0.55);
+    --atelier-soft: rgba(255, 255, 255, 0.38);
+    --atelier-paper: #1A1A1A;
+    --atelier-card: #1C1C1E;
+    --atelier-line: rgba(142, 33, 53, 0.25);
+    --atelier-glow: rgba(142, 33, 53, 0.22);
     position: fixed;
     top: 0;
     left: 280px;
     right: 0;
     bottom: 0;
     background:
-        radial-gradient(ellipse 70% 50% at 50% 42%, rgba(255, 236, 232, 0.72), transparent 62%),
-        linear-gradient(165deg, rgba(255, 255, 255, 0.9), rgba(255, 246, 242, 0.88));
+        radial-gradient(ellipse 70% 50% at 50% 42%, rgba(142, 33, 53, 0.18), transparent 62%),
+        linear-gradient(165deg, rgba(0, 0, 0, 0.85), rgba(26, 26, 26, 0.92));
     backdrop-filter: blur(8px);
     display: flex;
     flex-direction: column;
@@ -1311,13 +1382,13 @@
     padding: 20px 20px 16px;
     border-radius: 22px;
     background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.98), var(--atelier-card)),
+        linear-gradient(180deg, #1A1A1A, var(--atelier-card)),
         var(--atelier-paper);
     border: 1px solid var(--atelier-line);
     box-shadow:
-        0 1px 0 rgba(255, 255, 255, 0.9) inset,
-        0 24px 60px rgba(80, 24, 28, 0.1),
-        0 0 0 1px rgba(255, 255, 255, 0.4);
+        0 1px 0 rgba(255, 255, 255, 0.06) inset,
+        0 24px 60px rgba(0, 0, 0, 0.45),
+        0 0 0 1px rgba(255, 255, 255, 0.08);
     animation: plusDialogIn 0.38s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -1374,11 +1445,11 @@
         conic-gradient(
             from -90deg,
             var(--primary) calc(var(--batch-progress) * 1turn),
-            rgba(224, 61, 75, 0.12) 0
+            rgba(142, 33, 53, 0.12) 0
         );
     display: grid;
     place-items: center;
-    box-shadow: 0 0 0 4px rgba(224, 61, 75, 0.06), 0 10px 24px var(--atelier-glow);
+    box-shadow: 0 0 0 4px rgba(142, 33, 53, 0.06), 0 10px 24px var(--atelier-glow);
     position: relative;
 }
 
@@ -1387,7 +1458,7 @@
     position: absolute;
     inset: -3px;
     border-radius: 50%;
-    border: 1px dashed rgba(224, 61, 75, 0.28);
+    border: 1px dashed rgba(142, 33, 53, 0.28);
     animation: plusSpin 12s linear infinite;
 }
 
@@ -1395,7 +1466,7 @@
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    background: #fff;
+    background: #1A1A1A;
     display: flex;
     align-items: baseline;
     justify-content: center;
@@ -1434,8 +1505,8 @@
 .plusLoadingStatCard {
     border-radius: 14px;
     padding: 12px 12px 10px;
-    border: 1px solid rgba(28, 20, 18, 0.08);
-    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #1C1C1E;
 }
 
 .plusLoadingStatGen {
@@ -1474,7 +1545,7 @@
     margin-top: 8px;
     height: 4px;
     border-radius: 999px;
-    background: rgba(28, 20, 18, 0.08);
+    background: rgba(255, 255, 255, 0.08);
     overflow: hidden;
 }
 
@@ -1504,8 +1575,8 @@
 
 .plusLoadingBoardShell {
     border-radius: 16px;
-    border: 1px solid rgba(28, 20, 18, 0.08);
-    background: #faf6f3;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #121212;
     overflow: hidden;
 }
 
@@ -1521,8 +1592,8 @@
 .plusLoadingBoardItem {
     border-radius: 10px;
     padding: 8px 10px;
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(28, 20, 18, 0.06);
+    background: rgba(26, 26, 26, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .plusLoadingBoardTop {
@@ -1548,7 +1619,7 @@
     font-weight: 700;
     padding: 2px 7px;
     border-radius: 999px;
-    background: rgba(28, 20, 18, 0.06);
+    background: rgba(255, 255, 255, 0.06);
     color: var(--atelier-mute);
 }
 
@@ -1559,7 +1630,7 @@
 }
 
 .plusLoadingItemGen .plusLoadingBoardStage {
-    background: rgba(224, 61, 75, 0.12);
+    background: rgba(142, 33, 53, 0.12);
     color: #c62839;
 }
 
@@ -1579,12 +1650,12 @@
 }
 
 .plusLoadingItemPending .plusLoadingBoardStage {
-    background: rgba(28, 20, 18, 0.05);
+    background: rgba(255, 255, 255, 0.05);
     color: var(--atelier-soft);
 }
 
 .plusLoadingItemGen.plusLoadingBoardItem {
-    border-color: rgba(224, 61, 75, 0.18);
+    border-color: rgba(142, 33, 53, 0.18);
 }
 
 .plusLoadingItemCut.plusLoadingBoardItem {
@@ -1610,7 +1681,7 @@
 .plusLoadingTrack {
     height: 4px;
     border-radius: 999px;
-    background: rgba(224, 61, 75, 0.1);
+    background: rgba(142, 33, 53, 0.1);
     overflow: hidden;
 }
 
@@ -1619,15 +1690,15 @@
     border-radius: inherit;
     background: linear-gradient(90deg, #ff6b78, var(--primary));
     transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1);
-    box-shadow: 0 0 12px rgba(224, 61, 75, 0.35);
+    box-shadow: 0 0 12px rgba(142, 33, 53, 0.35);
 }
 
 .plusLoadingLogShell {
     border-radius: 16px;
-    border: 1px solid rgba(28, 20, 18, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     background:
-        linear-gradient(180deg, rgba(28, 20, 18, 0.03), rgba(28, 20, 18, 0.015)),
-        #faf6f3;
+        linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.2)),
+        #121212;
     overflow: hidden;
 }
 
@@ -1636,7 +1707,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 10px 12px 8px;
-    border-bottom: 1px solid rgba(28, 20, 18, 0.06);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .plusLoadingLogEyebrow {
@@ -1679,9 +1750,9 @@
 }
 
 .plusLoadingLogRowActive {
-    background: rgba(255, 255, 255, 0.85);
+    background: #1C1C1E;
     color: var(--atelier-ink);
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset;
 }
 
 .plusLoadingLogBadge {
@@ -1694,13 +1765,13 @@
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.02em;
-    background: rgba(28, 20, 18, 0.06);
+    background: rgba(255, 255, 255, 0.06);
     color: var(--atelier-mute);
     white-space: nowrap;
 }
 
 .plusLoadingLogRowGen .plusLoadingLogBadge {
-    background: rgba(224, 61, 75, 0.12);
+    background: rgba(142, 33, 53, 0.12);
     color: #c62839;
 }
 
@@ -1768,10 +1839,10 @@
     font-weight: 700;
     letter-spacing: 0.03em;
     cursor: pointer;
-    border: 1px solid rgba(42, 98, 128, 0.38);
+    border: 1px solid rgba(142, 33, 53, 0.45);
     background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(232, 244, 249, 0.96) 55%, rgba(214, 236, 245, 0.95) 100%);
-    color: #1e4d66;
+        linear-gradient(135deg, #1C1C1E 0%, rgba(142, 33, 53, 0.15) 100%);
+    color: #ffffff;
     box-shadow:
         inset 0 0 0 1px rgba(255, 255, 255, 0.6),
         0 1px 0 rgba(42, 98, 128, 0.06);
@@ -1788,7 +1859,7 @@
     height: 58%;
     transform: translateY(-50%);
     border-radius: 99px;
-    background: linear-gradient(180deg, #3d8fb0, #1e4d66);
+    background: linear-gradient(180deg, #A8283C, #8E2135);
     opacity: 0.85;
 }
 
@@ -1822,16 +1893,16 @@
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    border: 1px solid rgba(224, 61, 75, 0.35);
-    background: #ffffff;
+    border: 1px solid rgba(142, 33, 53, 0.35);
+    background: #1A1A1A;
     color: var(--primary);
     transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 .plusLoadingCancelBtn:hover {
     transform: translateY(-1px);
-    background: #fff7f8;
-    box-shadow: 0 8px 20px rgba(224, 61, 75, 0.14);
+    background: rgba(142, 33, 53, 0.1);
+    box-shadow: 0 8px 20px rgba(142, 33, 53, 0.14);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1851,7 +1922,7 @@
 .plusLoadingSpinner {
     width: 40px;
     height: 40px;
-    border: 3px solid #f3f3f3;
+    border: 3px solid rgba(255, 255, 255, 0.12);
     border-top: 3px solid var(--primary);
     border-radius: 50%;
     animation: plusSpin 1s linear infinite;
@@ -1863,11 +1934,11 @@
 .plusLoadingLogItemActive {
     font-size: 12px;
     line-height: 1.55;
-    color: rgba(0, 0, 0, 0.45);
+    color: rgba(255, 255, 255, 0.45);
 }
 
 .plusLoadingLogItemActive {
-    color: rgba(26, 26, 26, 0.88);
+    color: rgba(255, 255, 255, 0.88);
     font-weight: 500;
 }
 
@@ -1878,7 +1949,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(26, 26, 26, 0.92);
     backdrop-filter: blur(2px);
     display: flex;
     flex-direction: column;
@@ -1900,7 +1971,7 @@
 .loadingSpinner {
     width: 24px;
     height: 24px;
-    border: 2px solid #f3f3f3;
+    border: 2px solid rgba(255, 255, 255, 0.12);
     border-top: 2px solid #FB4655;
     border-radius: 50%;
     animation: spin 1s linear infinite;
@@ -1908,14 +1979,14 @@
 }
 
 .loadingText {
-    color: #666;
+    color: rgba(255, 255, 255, 0.55);
     font-size: 12px;
     font-weight: 500;
 }
 
 .loadingHint {
     margin-top: 6px;
-    color: rgba(0, 0, 0, 0.56);
+    color: rgba(255, 255, 255, 0.55);
     font-size: 11px;
     line-height: 1.5;
     text-align: center;
@@ -1971,8 +2042,8 @@
     }
 
     .portraitLarge {
-        height: clamp(220px, 42vh, 320px);
-        min-height: 220px;
+        height: clamp(330px, 42vh, 480px);
+        min-height: 330px;
     }
 
     .portraitPreviewMode {
@@ -2021,8 +2092,8 @@
     }
 
     .portraitLarge {
-        height: clamp(220px, 42vh, 320px);
-        min-height: 220px;
+        height: clamp(330px, 42vh, 480px);
+        min-height: 330px;
     }
 
     .portraitPreviewMode {
@@ -2162,11 +2233,14 @@
 
     .panelHeader {
         flex-direction: column;
-        align-items: flex-start;
+        align-items: stretch;
+        gap: 16px;
+        padding: 20px 16px 14px;
+        border-radius: 20px;
     }
 
     .panelHeader h2 {
-        font-size: 1.4rem;
+        font-size: 1.22rem;
     }
 
     .card {
@@ -2280,7 +2354,7 @@
     border-radius: 8px;
     z-index: 10001;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .saveOverlayContent {

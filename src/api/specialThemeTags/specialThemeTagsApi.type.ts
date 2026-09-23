@@ -2,9 +2,11 @@ import type { UserGameData } from '../home/getGameData.type';
 
 export type SpecialThemeConfigMode = 'manual' | 'auto';
 export type SpecialThemeAutoSort = 'hot' | 'recommended' | 'latest';
+export type SpecialThemeAudienceGender = 'male' | 'female';
 
 export interface SpecialThemeSelectedGame {
     file_id: string;
+    gender_target?: SpecialThemeAudienceGender | 'all' | '';
     title: string;
     description: string;
     cover_url: string;
@@ -28,7 +30,9 @@ export interface SpecialThemeTagRecord {
 
 export interface AdminSpecialThemeTagRecord extends SpecialThemeTagRecord {
     selected_games: SpecialThemeSelectedGame[];
+    selected_games_by_gender?: Record<SpecialThemeAudienceGender, SpecialThemeSelectedGame[]>;
     selected_game_count: number;
+    selected_game_count_by_gender?: Record<SpecialThemeAudienceGender, number>;
 }
 
 export interface AdminSpecialThemeTagListResponse {
@@ -55,7 +59,9 @@ export interface ReorderSpecialThemeTagsRequest {
 }
 
 export interface SaveSpecialThemeGamesRequest {
-    fileIds: string[];
+    fileIds?: string[];
+    maleFileIds?: string[];
+    femaleFileIds?: string[];
 }
 
 export interface SpecialThemeTagMutationResponse {

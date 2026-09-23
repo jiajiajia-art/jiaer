@@ -1,20 +1,27 @@
+/* 功能注释：提示词编辑表单对齐墨黑账本输入井，主按钮为酒红胶囊 */
+
 .panel {
+  --prompt-surface: #1A1A1A;
+  --prompt-input: #1C1C1E;
+  --prompt-accent: #8E2135;
+  --prompt-accent-hot: #A8283C;
   display: flex;
   flex-direction: column;
   gap: 24px;
   max-width: 760px;
+  color: #ffffff;
 }
 
 .header h2 {
   margin: 0 0 4px;
   font-size: 1.6rem;
-  color: #1a1a1a;
+  color: #ffffff;
   font-weight: 700;
 }
 
 .subtitle {
   margin: 0;
-  color: rgba(0, 0, 0, 0.55);
+  color: rgba(255, 255, 255, 0.55);
   font-size: 0.9rem;
 }
 
@@ -33,7 +40,7 @@
 .field > span {
   font-size: 0.92rem;
   font-weight: 600;
-  color: #1a1a1a;
+  color: #ffffff;
 }
 
 .fieldLabelRow {
@@ -42,27 +49,38 @@
   gap: 4px;
   font-size: 0.92rem;
   font-weight: 600;
-  color: #1a1a1a;
+  color: #ffffff;
 }
 
 .required {
-  color: var(--primary);
+  color: var(--prompt-accent-hot);
   margin-left: 4px;
 }
 
 .field input[type='text'] {
   border-radius: 12px;
-  border: 1px solid rgba(224, 61, 75, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   padding: 12px 14px;
   font-size: 0.95rem;
   font-family: inherit;
+  background: var(--prompt-input);
+  color: #ffffff;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.field input[type='text']::placeholder {
+  color: rgba(255, 255, 255, 0.35);
 }
 
 .field input[type='text']:focus {
   outline: none;
-  border-color: rgba(224, 61, 75, 0.55);
-  box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.08);
+  border-color: var(--prompt-accent);
+  box-shadow: 0 0 0 3px rgba(142, 33, 53, 0.2);
+}
+
+.field input[type='text']:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .fieldCheckbox {
@@ -70,7 +88,7 @@
   align-items: center;
   gap: 8px;
   font-size: 0.92rem;
-  color: #1a1a1a;
+  color: #ffffff;
 }
 
 .constantRow {
@@ -83,7 +101,7 @@
 .fieldCheckbox input {
   width: 16px;
   height: 16px;
-  accent-color: var(--primary);
+  accent-color: var(--prompt-accent);
 }
 
 .tipWrap {
@@ -102,15 +120,15 @@
   border: none;
   border-radius: 50%;
   background: transparent;
-  color: rgba(0, 0, 0, 0.45);
+  color: rgba(255, 255, 255, 0.45);
   cursor: help;
   transition: color 0.2s ease, background 0.2s ease;
 }
 
 .tipBtn:hover:not(:disabled),
 .tipBtn:focus-visible {
-  color: var(--primary);
-  background: rgba(224, 61, 75, 0.08);
+  color: var(--prompt-accent-hot);
+  background: rgba(142, 33, 53, 0.22);
   outline: none;
 }
 
@@ -129,11 +147,11 @@
   max-width: 280px;
   padding: 10px 12px;
   border-radius: 10px;
-  background: rgba(26, 26, 26, 0.92);
+  background: rgba(0, 0, 0, 0.92);
   color: #fff;
   font-size: 0.8rem;
   line-height: 1.5;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
@@ -156,12 +174,12 @@
 }
 
 .descHint {
-  color: rgba(0, 0, 0, 0.45);
+  color: rgba(255, 255, 255, 0.45);
   font-size: 0.8rem;
 }
 
 .descOver {
-  color: var(--primary);
+  color: var(--prompt-accent-hot);
   font-size: 0.8rem;
 }
 
@@ -173,27 +191,43 @@
 
 .confirmBtn,
 .cancelBtn {
-  border-radius: 12px;
-  padding: 10px 22px;
+  min-height: 48px;
+  border-radius: 999px;
+  padding: 0 22px;
   font-size: 0.92rem;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   cursor: pointer;
-  border: 1px solid rgba(224, 61, 75, 0.35);
-  background: #ffffff;
-  color: var(--primary);
-  transition: all 0.2s ease;
+  border: 1.5px solid transparent;
+  transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease;
 }
 
 .confirmBtn {
-  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  background: var(--prompt-accent);
   color: #ffffff;
   border-color: transparent;
+  min-width: 108px;
 }
 
-.confirmBtn:hover:not(:disabled),
+.cancelBtn {
+  background: var(--prompt-input);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.16);
+  min-width: 108px;
+}
+
+.confirmBtn:hover:not(:disabled) {
+  background: var(--prompt-accent-hot);
+}
+
 .cancelBtn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(224, 61, 75, 0.12);
+  border-color: var(--prompt-accent-hot);
+  background: rgba(142, 33, 53, 0.22);
+}
+
+.confirmBtn:active:not(:disabled),
+.cancelBtn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.985);
 }
 
 .confirmBtn:disabled,
@@ -201,5 +235,4 @@
   opacity: 0.55;
   cursor: not-allowed;
   transform: none;
-  box-shadow: none;
 }

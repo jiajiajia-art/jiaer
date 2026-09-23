@@ -1,23 +1,33 @@
+/* 功能注释：编辑/创建自定义游戏页对齐世界观设定暗色卡表单；共享类仍保留浅色基线供 AssetsUpload 复用 */
 .pageRoot {
-  min-height: 64px;
+  --primary: #A8283C;
+  --primary-dark: #8E2135;
+  --custom-if-surface: #1A1A1A;
+  --custom-if-input: #1C1C1E;
+  --custom-if-border: rgba(255, 255, 255, 0.12);
+  --custom-if-muted: rgba(255, 255, 255, 0.55);
+  min-height: 100vh;
   width: 100%;
-  max-width: 1920px;
+  max-width: none;
   margin: 0 auto;
+  background: #000000;
+  color: #ffffff;
 }
 
 .mainContent {
   display: flex;
   min-height: calc(100vh - var(--app-desktop-navbar-height));
+  /* 功能注释：与创作页（图1）同壳宽，避免编辑页过窄 */
   width: min(var(--app-desktop-shell-max), calc(100% - 2 * var(--app-desktop-gutter)));
   max-width: none;
   margin: 0 auto;
-  margin-bottom: 120px;
+  margin-bottom: 48px;
 }
 
 .main {
   flex: 1;
   min-height: calc(100vh - var(--app-desktop-navbar-height));
-  padding: 20px 0 10px 0;
+  padding: 4px 0 10px 0;
   box-sizing: border-box;
   width: 100%;
 }
@@ -25,8 +35,145 @@
 .formSection {
   display: flex;
   flex-direction: column;
-  gap: 26px;
+  gap: 8px;
   margin-top: var(--app-desktop-navbar-height); /* keep content clear of fixed navbar */
+}
+
+/* 功能注释：效果图顶栏为返回 + 居中标题，禁止再左对齐大标题把右侧留空 */
+.pageHeader {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) 72px;
+  align-items: center;
+  min-height: 40px;
+  padding: 0;
+  gap: 4px;
+}
+
+.pageBack {
+  width: 36px;
+  height: 36px;
+  margin: 0;
+  padding: 0 0 2px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #ffffff;
+  font-size: 1.75rem;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pageBack:hover,
+.pageBack:focus-visible {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.pageBack:focus-visible,
+.pageTest:focus-visible {
+  outline: 2px solid #A8283C;
+  outline-offset: 2px;
+}
+
+.pageTitle {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: #ffffff;
+  text-align: center;
+  line-height: 1.3;
+}
+
+.pageHeaderSlot {
+  display: flex;
+  justify-content: flex-end;
+  min-height: 28px;
+}
+
+.pageTest {
+  border: none;
+  border-radius: 999px;
+  background: #1C1C1E;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  min-height: 28px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.pageTest:hover {
+  background: #8E2135;
+}
+
+.formCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 12px 14px;
+  border-radius: 18px;
+  background: var(--custom-if-surface);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.formCardHead {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.formCardTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.formCardDesc {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--custom-if-muted);
+}
+
+.fieldBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.fieldLabelRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.fieldLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.88);
+  line-height: 1.3;
+}
+
+.formFooter {
+  display: flex;
+  justify-content: stretch;
+  padding: 8px 0 4px;
+}
+
+.formErrorBanner {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(251, 91, 103, 0.12);
+  border: 1px solid rgba(251, 91, 103, 0.35);
+  color: #ff8a93;
+  font-size: 14px;
 }
 
 .formGroup {
@@ -47,6 +194,7 @@
 .descriptionEditor {
   flex: 1;
   min-width: 0;
+  width: 100%;
 }
 
 .textInput,
@@ -80,11 +228,295 @@
   resize: vertical;
 }
 
+/* 功能注释：仅本页暗色壳内覆盖输入/标签/上传区，避免拖垮 StGame AssetsUpload 浅色复用 */
+.pageRoot .textInput,
+.pageRoot .textarea {
+  width: 100%;
+  min-height: 44px;
+  height: auto;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--custom-if-input);
+  border: 1px solid var(--custom-if-border);
+  color: #ffffff;
+  font-size: 14px;
+}
+
+.pageRoot .textInput:focus,
+.pageRoot .textarea:focus {
+  color: #ffffff;
+  border-color: rgba(168, 40, 60, 0.65);
+  box-shadow: 0 0 0 3px rgba(142, 33, 53, 0.25);
+}
+
+.pageRoot .textInput::placeholder,
+.pageRoot .textarea::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.pageRoot .hint {
+  color: var(--custom-if-muted);
+}
+
+.pageRoot .error {
+  color: #ff8a93;
+}
+
+.pageRoot .seg {
+  width: 100%;
+  display: flex;
+  background: #121212;
+  border: 1px solid var(--custom-if-border);
+  border-radius: 999px;
+  padding: 3px;
+}
+
+.pageRoot .segBtn {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 36px;
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+}
+
+.pageRoot .segBtn:hover {
+  background: rgba(142, 33, 53, 0.2);
+  color: #ffffff;
+}
+
+/* 功能注释：选中实心酒红须压过 :hover（0,2,1），否则触屏粘滞悬停会变成半透明褐红 */
+.pageRoot .segBtn.segBtnActive,
+.pageRoot .segBtn.segBtnActive:hover {
+  background: #8E2135;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.pageRoot .dropZoneLarge {
+  background: #121212;
+  border-color: rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.pageRoot .dropZoneLarge:hover {
+  border-color: #8E2135;
+  box-shadow: 0 4px 16px rgba(142, 33, 53, 0.22);
+}
+
+.pageRoot .dropZoneLarge.drag {
+  border-color: #A8283C;
+  background: rgba(142, 33, 53, 0.12);
+  box-shadow: 0 6px 20px rgba(142, 33, 53, 0.28);
+}
+
+.pageRoot .dropIconWrapper {
+  background: #1C1C1E;
+}
+
+.pageRoot .dropZoneLarge:hover .dropIconWrapper {
+  background: #8E2135;
+}
+
+.pageRoot .dropIcon {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.pageRoot .dropHeading {
+  color: #ffffff;
+}
+
+.pageRoot .dropHint,
+.pageRoot .dropList {
+  color: var(--custom-if-muted);
+}
+
+.pageRoot .dropListWrapper {
+  background: #0E0E0E;
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.pageRoot .dropList li::before {
+  color: #8E2135;
+}
+
+.pageRoot .fileList {
+  background: #121212;
+  border-color: var(--custom-if-border);
+}
+
+.pageRoot .fileStats,
+.pageRoot .filePath,
+.pageRoot .fileSize {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.pageRoot .smallBtn {
+  border-color: var(--custom-if-border);
+  background: #1C1C1E;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.pageRoot .smallBtn:hover:not(:disabled) {
+  border-color: #8E2135;
+  color: #ffffff;
+}
+
+/* 功能注释：图1作品标签为描边圆角芯片，禁止再做成无底纯文字 */
+.pageRoot .themeTagsHead {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.pageRoot .requiredMark {
+  color: #A8283C;
+  margin-left: 4px;
+  font-weight: 700;
+}
+
+.pageRoot .themeTagsWrap {
+  gap: 8px;
+}
+
+.pageRoot .themeTagChip {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: #1C1C1E;
+  color: rgba(255, 255, 255, 0.92);
+  /* 功能注释：作品标签芯片高度相对原稿再压 20%，避免标签区过高 */
+  min-height: 38px;
+  padding: 10px 8px;
+  border-radius: 14px;
+  font-weight: 500;
+}
+
+.pageRoot .themeTagChip:hover {
+  border-color: rgba(168, 40, 60, 0.55);
+  color: #ffffff;
+  background: #1C1C1E;
+}
+
+.pageRoot .themeTagChipActive {
+  border-color: #8E2135;
+  background: #8E2135;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.pageRoot .themeTagChipActive:hover {
+  border-color: #8E2135;
+  background: #8E2135;
+  color: #ffffff;
+}
+
+.pageRoot .themeTagHint {
+  color: var(--custom-if-muted);
+}
+
+.pageRoot .secondaryBtn {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: #1C1C1E;
+  color: #ffffff;
+}
+
+.pageRoot .secondaryBtn:hover {
+  background: #242426;
+  border-color: #8E2135;
+}
+
+.pageRoot .primaryBtn,
+.pageRoot .primaryBtnMeta {
+  --cta: #A8283C;
+  --cta-deep: #8E2135;
+  width: 100%;
+  min-width: 0;
+  height: 48px;
+  border-radius: 999px;
+  background: #8E2135;
+  box-shadow: none;
+}
+
+.pageRoot .primaryBtn::before,
+.pageRoot .primaryBtnMeta::before {
+  display: none;
+}
+
+.pageRoot .primaryBtn:hover:not(:disabled),
+.pageRoot .primaryBtnMeta:hover:not(:disabled) {
+  background: #A8283C;
+  filter: none;
+  transform: none;
+  box-shadow: none;
+}
+
+.pageRoot .clearPill {
+  margin-left: auto;
+  border: none;
+  border-radius: 999px;
+  background: #8E2135;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  min-height: 28px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+
+.pageRoot .clearPill:hover {
+  background: #A8283C;
+}
+
+.pageRoot .actions {
+  width: 100%;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* 功能注释：富文本工具条暗色；勿盖拖高手柄（data-rich-editor-resize）背景与图标 */
+.richEditorDark button:not([data-rich-editor-resize]) {
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  background: #1C1C1E !important;
+  color: rgba(255, 255, 255, 0.88) !important;
+}
+
+.richEditorDark [data-rich-editor-resize] {
+  background: transparent !important;
+  color: rgba(255, 180, 188, 0.75) !important;
+}
+
+.richEditorDark [data-rich-editor-resize] *,
+.richEditorDark [data-rich-editor-resize][aria-hidden='true'] {
+  color: inherit !important;
+}
+
+.richEditorDark [data-rich-editor-resize]:hover,
+.richEditorDark [data-rich-editor-resize]:focus-visible {
+  background: rgba(168, 40, 60, 0.18) !important;
+  color: #ffb4bc !important;
+}
+
+.richEditorDark [contenteditable='true'],
+.richEditorDark textarea {
+  background: #121212 !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.richEditorDark [aria-hidden='true'] {
+  color: rgba(255, 255, 255, 0.35) !important;
+}
+
+.richEditorDark span {
+  color: rgba(255, 255, 255, 0.5);
+}
+
 .fileRow {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  width: min(100%, 1120px);
+  width: 100%;
 }
 
 .fileInput {
@@ -424,10 +856,10 @@
   gap: 12px;
 }
 
-.uploaderColumn{ display:flex; flex-direction:column; gap:12px; width: min(100%, 1120px); }
+.uploaderColumn{ display:flex; flex-direction:column; gap:12px; width: 100%; }
 
 .themeTagsPanel {
-  width: min(100%, 1120px);
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -439,20 +871,33 @@
 }
 
 .themeTagsWrap {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px 4px;
 }
 
 .themeTagChip {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid rgba(17, 24, 39, 0.15);
   background: #fff;
   color: #111827;
-  border-radius: 999px;
-  padding: 8px 12px;
+  border-radius: 14px;
+  padding: 10px 8px;
+  min-height: 38px;
   font-size: 13px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  touch-action: manipulation;
+  user-select: none;
+  transition: all 0.15s ease;
 }
 
 .themeTagChip:hover {
@@ -923,17 +1368,21 @@
   .mainContent {
     width: 100%;
     max-width: 100%;
-    padding: 0 10px;
+    padding: 0 8px;
     min-height: auto;
   }
   .main {
-    padding: 10px 0;
+    padding: 8px 0 16px;
   }
-  .formSection { margin-top: 60px; }
+  .formSection { margin-top: 56px; gap: 8px; }
+  .pageTitle { font-size: 1.05rem; }
+  .formCard { padding: 14px 10px 14px; border-radius: 16px; gap: 10px; }
+  .themeTagsWrap { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
   .formGroup { gap: 8px; }
   .formGroup label { font-size: 14px; width: 100px; }
   .textInput { width: 100%; height: 40px; font-size: 14px; }
   .textarea { width: 100%; height: 100px; font-size: 14px; }
+  .pageRoot .actions { flex-direction: column; align-items: stretch; }
   .fileRow { width: 100%; }
   .primaryBtn,
   .primaryBtnMeta {
@@ -941,7 +1390,7 @@
     min-width: 0;
     height: 48px;
     font-size: 14px;
-    border-radius: 14px;
+    border-radius: 999px;
   }
   .secondaryBtn {
     width: 100%;

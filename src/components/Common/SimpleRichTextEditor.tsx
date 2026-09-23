@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { MdSouthEast } from 'react-icons/md';
 import { HOST_ADDRESS } from '../../config';
 import { getImageUrl } from '../../utils/constants';
 import {
@@ -446,11 +447,14 @@ const SimpleRichTextEditor: React.FC<SimpleRichTextEditorProps> = ({
         <button
           type="button"
           className={styles.resizeHandle}
+          data-rich-editor-resize=""
           aria-label={t('common.richEditor.resize', { defaultValue: '拖拽调整高度' })}
           title={t('common.richEditor.resize', { defaultValue: '拖拽调整高度' })}
           disabled={disabled}
           onPointerDown={beginResize}
-        />
+        >
+          <MdSouthEast className={styles.resizeHandleIcon} aria-hidden />
+        </button>
       </div>
       <div className={styles.metaRow}>
         {sourceMode ? (

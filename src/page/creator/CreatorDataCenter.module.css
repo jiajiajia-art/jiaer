@@ -6,13 +6,13 @@
   margin: 24px 0 32px;
   padding: 24px 28px;
   border-radius: 16px;
-  background: linear-gradient(135deg, rgba(251, 70, 85, 0.08), rgba(255, 255, 255, 0.9));
-  border: 1px solid rgba(251, 70, 85, 0.12);
+  background: #1A1A1A;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .heroEyebrow {
   margin: 0 0 8px;
-  color: #888;
+  color: #8E8E93;
   font-size: 14px;
 }
 
@@ -21,19 +21,19 @@
   display: flex;
   align-items: center;
   font-size: 28px;
-  color: #222;
+  color: #FFFFFF;
 }
 
 .heroDesc {
   margin: 8px 0 0;
-  color: #666;
+  color: #999999;
 }
 
 .linkButton {
   border: none;
   border-radius: 999px;
   padding: 10px 18px;
-  background: #fb4655;
+  background: #8E2135;
   color: #fff;
   cursor: pointer;
 }
@@ -42,8 +42,8 @@
 .emptyState {
   padding: 32px;
   text-align: center;
-  color: #666;
-  background: #f7f7f7;
+  color: #8E8E93;
+  background: #1C1C1E;
   border-radius: 12px;
 }
 
@@ -54,6 +54,7 @@
 .sectionTitle {
   margin: 0;
   font-size: 20px;
+  color: #FFFFFF;
 }
 
 .workList {
@@ -64,23 +65,23 @@
 
 .workCard {
   text-align: left;
-  border: 1px solid #eee;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   padding: 16px 18px;
-  background: #fff;
+  background: #1A1A1A;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.15s ease, border-color 0.15s ease;
 }
 
 .workCard:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  border-color: rgba(168, 40, 60, 0.4);
 }
 
 .workTitle {
   font-size: 16px;
   font-weight: 600;
-  color: #222;
+  color: #FFFFFF;
 }
 
 .workMeta {
@@ -88,7 +89,7 @@
   flex-wrap: wrap;
   gap: 12px;
   margin-top: 8px;
-  color: #777;
+  color: #8E8E93;
   font-size: 13px;
 }
 
@@ -105,14 +106,15 @@
 .commentItem {
   padding: 14px 16px;
   border-radius: 10px;
-  background: #f7f7f7;
+  background: #1C1C1E;
+  color: #C7C7CC;
 }
 
 .commentMeta {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  color: #888;
+  color: #8E8E93;
   font-size: 12px;
   margin-bottom: 8px;
 }
@@ -127,9 +129,10 @@
 .hourCell {
   padding: 10px 8px;
   border-radius: 8px;
-  background: #f5f5f5;
+  background: #1C1C1E;
   text-align: center;
   font-size: 12px;
+  color: #C7C7CC;
 }
 
 @media (max-width: 768px) {

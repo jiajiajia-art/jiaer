@@ -1,70 +1,60 @@
+/* 功能注释：BGM 库对齐效果图——墨底卡 + 描边空井 + 底栏酒红胶囊上传 */
+
 .musicListContainer {
-    background: #fff;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 16px;
-    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: #1C1C1E;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 16px 12px 14px;
+    box-sizing: border-box;
+    width: 100%;
 }
 
 .musicListHeader {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
-    margin-bottom: 20px;
+    margin: 0;
 }
 
-.musicListHeader h2 {
-    margin: 4px 0 0;
-    font-size: 1.6rem;
+.musicListHeader h4 {
+    margin: 0;
+    font-size: 1.05rem;
     font-weight: 700;
-    color: #1a1a1a;
-}
-
-.ghostSmall {
-    border-radius: 8px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
-    padding: 8px 16px;
-    font-weight: 600;
-    font-size: 0.875rem;
-    cursor: pointer;
-    transition: 0.25s ease;
-    color: #1a1a1a;
-    background: #fff;
-}
-
-.ghostSmall:hover {
-    border-color: var(--primary);
-    color: var(--primary);
-    background: rgba(224, 61, 75, 0.02);
+    color: #ffffff;
+    letter-spacing: 0.01em;
 }
 
 .musicList {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
 }
 
 .musicItem {
     display: flex;
     flex-direction: column;
     padding: 14px;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 10px;
-    background: rgba(0, 0, 0, 0.01);
-    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    background: #141414;
+    transition: border-color 0.2s ease, background 0.2s ease;
     gap: 12px;
     cursor: pointer;
 }
 
 .musicItem:hover {
-    border-color: rgba(224, 61, 75, 0.2);
-    background: rgba(224, 61, 75, 0.02);
+    border-color: rgba(168, 40, 60, 0.4);
+    background: #1a1014;
 }
 
 .musicItemExpanded {
-    padding: 18px;
-    border-color: rgba(224, 61, 75, 0.4);
-    background: rgba(224, 61, 75, 0.05);
-    box-shadow: 0 4px 12px rgba(224, 61, 75, 0.15);
+    padding: 16px;
+    border-color: rgba(168, 40, 60, 0.55);
+    background: #1a1014;
+    box-shadow: 0 0 0 1px rgba(142, 33, 53, 0.28);
 }
 
 .musicInfo {
@@ -87,21 +77,21 @@
 .deleteButton {
     width: 32px;
     height: 32px;
-    border-radius: 6px;
+    border-radius: 999px;
     border: none;
-    background: transparent;
-    color: rgba(0, 0, 0, 0.4);
+    background: #8E2135;
+    color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background 0.16s ease, transform 0.16s ease;
     flex-shrink: 0;
 }
 
 .deleteButton:hover {
-    background: rgba(220, 53, 69, 0.1);
-    color: #dc3545;
+    background: #A8283C;
+    transform: scale(1.06);
 }
 
 .musicControls {
@@ -117,11 +107,12 @@
     border-radius: 50%;
     border: none;
     background: transparent;
+    color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: color 0.2s ease;
     flex-shrink: 0;
 }
 
@@ -132,7 +123,7 @@
 
 .musicName {
     font-size: 0.95rem;
-    color: #1a1a1a;
+    color: #ffffff;
     font-weight: 600;
     margin: 0;
     white-space: nowrap;
@@ -142,7 +133,7 @@
 
 .musicDescription {
     font-size: 0.8rem;
-    color: rgba(0, 0, 0, 0.55);
+    color: rgba(255, 255, 255, 0.55);
     margin: 0;
     line-height: 1.4;
     white-space: nowrap;
@@ -160,7 +151,7 @@
 .progressBar {
     flex: 1;
     height: 4px;
-    background: rgba(0, 0, 0, 0.08);
+    background: rgba(255, 255, 255, 0.12);
     border-radius: 2px;
     overflow: visible;
     position: relative;
@@ -173,7 +164,7 @@
 
 .progressFill {
     height: 100%;
-    background: var(--primary);
+    background: #8E2135;
     border-radius: 2px;
     transition: width 0.1s linear;
     width: 0%;
@@ -181,7 +172,7 @@
 }
 
 .progressActive {
-    background: linear-gradient(90deg, var(--primary) 0%, #ff5a6e 100%);
+    background: linear-gradient(90deg, #8E2135 0%, #A8283C 100%);
 }
 
 .progressThumb {
@@ -190,10 +181,10 @@
     transform: translate(-50%, -50%);
     width: 14px;
     height: 14px;
-    background: var(--primary);
-    border: 2px solid #fff;
+    background: #A8283C;
+    border: 2px solid #ffffff;
     border-radius: 50%;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
     pointer-events: none;
     opacity: 0;
     transition: opacity 0.2s ease;
@@ -206,7 +197,7 @@
 
 .musicDuration {
     font-size: 0.75rem;
-    color: rgba(0, 0, 0, 0.5);
+    color: rgba(255, 255, 255, 0.5);
     font-variant-numeric: tabular-nums;
     min-width: 80px;
     text-align: right;
@@ -218,50 +209,102 @@
     height: 28px;
     border-radius: 50%;
     border: none;
-    background: rgba(224, 61, 75, 0.1);
-    color: var(--primary);
+    background: rgba(142, 33, 53, 0.28);
+    color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     font-size: 16px;
     font-weight: 600;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease, transform 0.2s ease;
     flex-shrink: 0;
     line-height: 1;
 }
 
 .restartButton:hover {
-    background: rgba(224, 61, 75, 0.2);
+    background: rgba(168, 40, 60, 0.45);
     transform: rotate(180deg);
 }
 
-/* 空状态样式 */
+/* 功能注释：空井铺满卡片内容宽（相对旧 24px 内边距加宽约两成），高度按内容收，避免 60px 空洞 */
 .emptyState {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 60px 20px;
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 168px;
+    padding: 28px 16px;
     text-align: center;
+    gap: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    background: #0E0E10;
+}
+
+.emptyIconWrap {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background: #3A3A3C;
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
 }
 
 .emptyIcon {
-    font-size: 3rem;
-    margin-bottom: 16px;
-    opacity: 0.3;
+    width: 26px;
+    height: 26px;
 }
 
 .emptyTitle {
-    margin: 0 0 8px 0;
+    margin: 0;
     font-size: 1rem;
-    font-weight: 600;
-    color: rgba(0, 0, 0, 0.6);
+    font-weight: 700;
+    color: #ffffff;
 }
 
 .emptyDescription {
     margin: 0;
-    font-size: 0.875rem;
-    color: rgba(0, 0, 0, 0.5);
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.48);
 }
 
+.uploadCta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 48px;
+    margin: 0;
+    padding: 10px 18px;
+    border: none;
+    border-radius: 999px;
+    background: #8E2135;
+    color: #ffffff;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.16s ease;
+}
+
+.uploadCta:hover {
+    background: #A8283C;
+}
+
+.uploadCtaIcon {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.18);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}

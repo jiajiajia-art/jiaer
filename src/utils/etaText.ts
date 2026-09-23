@@ -19,16 +19,16 @@ const defaultTranslations: TranslateFn = (key: string) => {
     return translations[key] || key;
 };
 
-/** i18n 可能是 eta.second，默认表也可能是 short key */
+/** i18n 可能是 eta.second，也可能已被调用方加上 eta. 前缀；未命中再回默认中文 */
 const tx = (t: TranslateFn, shortKey: string): string => {
+    const direct = t(shortKey);
+    if (direct && direct !== shortKey && !String(direct).startsWith('eta.')) {
+        return direct;
+    }
     const nestedKey = `eta.${shortKey}`;
     const nested = t(nestedKey);
-    if (nested && nested !== nestedKey) {
+    if (nested && nested !== nestedKey && !String(nested).startsWith('eta.eta.')) {
         return nested;
-    }
-    const direct = t(shortKey);
-    if (direct && direct !== shortKey) {
-        return direct;
     }
     return defaultTranslations(shortKey);
 };
@@ -81,12 +81,13 @@ export const getUploadEtaText = (
     const elapsed = Math.max(0, Math.floor(Number(elapsedSeconds || 0)));
 
     if (totalSeconds > 0 && elapsed >= totalSeconds && remainingSeconds === 0) {
-        return t('takingLonger');
+        return tx(t, 'takingLonger');
     }
 
     if (remainingSeconds <= 0) {
         return '';
     }
 
-    return `${t('remaining')} ${formatEtaMinutes(remainingSeconds, t)}`;
+    // 功能注释：必须走 tx，避免 t('remaining') 命中不到 eta.remaining 时英文 key 和中文「分钟」拼在一起
+    return `${tx(t, 'remaining')} ${formatEtaMinutes(remainingSeconds, t)}`;
 };

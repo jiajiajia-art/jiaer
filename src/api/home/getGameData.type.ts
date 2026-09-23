@@ -6,7 +6,10 @@ export interface UserGameData {
     subtitle: string;
     description: string;
     version_notes?: string | null;
+    /** 横版 16:9 封面 */
     cover_url: string;
+    /** 竖版 3:4 封面（首页列表卡） */
+    portrait_cover_url?: string | null;
     doc_url: string;
     files: string;
     version?: string | number;
@@ -20,6 +23,10 @@ export interface UserGameData {
     is_public: number;
     like_count: number;
     dislike_count: number;
+    /** 收藏数（详情/列表均可选返回，缺省时展示 0） */
+    favorite_count?: number;
+    /** 分享数（服务端可选，缺省时详情页展示 0） */
+    share_count?: number;
     reaction: string;
     avatarUrl: string;
     total_uv_count?: number;
@@ -41,6 +48,8 @@ export interface UserGameData {
     novel_content_version?: string | null;
     theme_tag_ids?: number[];
     theme_tag_names?: string[];
+    /** 作品分类：male=男性向 / female=女性向 / all=全性向 */
+    audience_type?: 'male' | 'female' | 'all' | null;
     /** 以下为激励计划相关的可选字段（由服务端逐步补充，前端做兼容） */
     /** 作品激励开始时间（ISO 字符串），为空表示未参与 */
     incentiveStartTime?: string | null;

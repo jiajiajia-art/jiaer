@@ -15,6 +15,9 @@ const normalize = (path: string) => {
         : normalized;
 };
 
+const isUnifiedProfilePath = (path: string) =>
+    path === '/create' || path.startsWith('/create/withdraw-records') || path.startsWith('/profile');
+
 const MobileBottomNav: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
@@ -34,26 +37,26 @@ const MobileBottomNav: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
             {
                 key: 'home',
                 labelKey: 'common.nav.home',
-                iconInactive: 'data/assets/切图/首页02.png',
-                iconActive: 'data/assets/切图/首页01.png',
+                iconInactive: 'data/assetsv2/home/home.svg',
+                iconActive: 'data/assetsv2/home/home.svg',
             },
             {
                 key: 'create',
                 labelKey: 'common.nav.create',
-                iconInactive: 'data/assets/切图/创作02.png',
-                iconActive: 'data/assets/切图/创作01.png',
+                iconInactive: 'data/assetsv2/home/create.svg',
+                iconActive: 'data/assetsv2/home/create.svg',
             },
             {
                 key: 'rankings',
                 labelKey: 'common.nav.rankings',
-                iconInactive: 'data/assets/排行榜.svg',
-                iconActive: 'data/assets/排行榜.svg',
+                iconInactive: 'data/assetsv2/home/rank.svg',
+                iconActive: 'data/assetsv2/home/rank.svg',
             },
             {
                 key: 'profile',
                 labelKey: 'common.nav.profile',
-                iconInactive: 'data/assets/切图/我的02.png',
-                iconActive: 'data/assets/切图/我的01.png',
+                iconInactive: 'data/assetsv2/home/mine.svg',
+                iconActive: 'data/assetsv2/home/mine.svg',
             },
         ];
         if (isAdminNavVisible) {
@@ -74,11 +77,10 @@ const MobileBottomNav: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
     const currentPath = normalize(location.pathname);
 
     const activeKey = useMemo<BottomNavKey>(() => {
-        if (currentPath.startsWith('/create')) return 'create';
+        if (isUnifiedProfilePath(currentPath)) return 'profile';
         if (currentPath.startsWith('/home')) return 'home';
-        if (isCreatorRoutePath(currentPath)) return 'create';
+        if (currentPath === '/create/new' || isCreatorRoutePath(currentPath)) return 'create';
         if (currentPath.startsWith('/rank')) return 'rankings';
-        if (currentPath.startsWith('/profile')) return 'profile';
         if (currentPath.startsWith('/admin')) return 'admin';
         return 'home';
     }, [currentPath]);
@@ -101,14 +103,14 @@ const MobileBottomNav: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
                 break;
             case 'create':
                 if (!ensureAuthenticated()) return;
-                navigate('/create');
+                navigate('/create/new');
                 break;
             case 'rankings':
                 navigate('/rank');
                 break;
             case 'profile':
                 if (!ensureAuthenticated()) return;
-                navigate('/profile');
+                navigate('/create');
                 break;
             case 'admin':
                 navigate('/admin/comments');
@@ -126,32 +128,32 @@ const MobileBottomNav: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
                 const isActive = activeKey === key;
                 const iconSrc = `${import.meta.env.BASE_URL}${isActive ? iconActive : iconInactive}`;
 
-        return (
-            <button
-                key={key}
-                type="button"
-                className={`${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
-                onClick={() => handleNav(key)}
-            >
-                {key === 'admin' ? (
-                    <svg
-                        className={`${styles.icon} ${isActive ? styles.adminIconActive : styles.adminIcon}`}
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.75"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+                return (
+                    <button
+                        key={key}
+                        type="button"
+                        className={`${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
+                        onClick={() => handleNav(key)}
                     >
-                        <circle cx="12" cy="12" r="3" />
-                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                    </svg>
-                ) : (
-                    <img src={iconSrc} alt={t(labelKey)} className={styles.icon} />
-                )}
-                <span className={styles.label}>{t(labelKey)}</span>
-            </button>
-        );
+                        {key === 'admin' ? (
+                            <svg
+                                className={`${styles.icon} ${isActive ? styles.adminIconActive : styles.adminIcon}`}
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.75"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            >
+                                <circle cx="12" cy="12" r="3" />
+                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                            </svg>
+                        ) : (
+                            <img src={iconSrc} alt={t(labelKey)} className={styles.icon} />
+                        )}
+                        <span className={styles.label}>{t(labelKey)}</span>
+                    </button>
+                );
             })}
         </div>
     );

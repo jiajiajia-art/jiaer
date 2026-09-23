@@ -1,14 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
     IoChatbubbleEllipses,
     IoEye,
+    IoGameControllerOutline,
     IoShareSocial,
     IoStatsChartSharp,
     IoTime,
 } from 'react-icons/io5';
 import { TbHandClick } from 'react-icons/tb';
+import { PiCurrencyCnyBold } from 'react-icons/pi';
 import toast from 'react-hot-toast';
 import type { UserGameData } from '../../api/home/getGameData.type';
 import styles from './GameStatsView.module.css';
@@ -35,6 +37,11 @@ import {
     type CreatorPlayIntent,
 } from '../../utils/creatorContinuePlay';
 import { buildNovelReadPath } from '../../utils/novelGame';
+import {
+    buildGameDetailMetaLine,
+    formatCreatorOverviewCount,
+    resolveGameDetailTags,
+} from '../../lib/gameDetailView';
 import { useTranslation } from 'react-i18next';
 import getGameDataApi from '../../api/home/getGameData';
 
@@ -90,6 +97,31 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
     const [isStartOptionsOpen, setIsStartOptionsOpen] = useState(false);
     const [isPlayStatusLoading, setIsPlayStatusLoading] = useState(false);
     const [playStatus, setPlayStatus] = useState(DEFAULT_PLAY_STATUS);
+    const [showAllStats, setShowAllStats] = useState(false);
+
+    const isPublished = Number(gameDetail.is_public) === 1;
+    const heroTags = useMemo(() => resolveGameDetailTags(gameDetail), [gameDetail]);
+    const heroMetaLine = useMemo(
+        // 功能注释：创作者看自己的作品不展示「由 xxx 制作」，仅保留章节/时长等客观信息
+        () => buildGameDetailMetaLine(
+            {
+                title: gameDetail.title,
+                subtitle: gameDetail.subtitle,
+                chapter_count: (gameDetail as { chapter_count?: unknown }).chapter_count,
+                duration_minutes: (gameDetail as { duration_minutes?: unknown }).duration_minutes,
+            },
+            {
+                producedBy: (author) => t('gameDetail.producedBy', { author }),
+                chapterUnit: t('gameDetail.chapterUnit'),
+                minuteUnit: t('gameDetail.minuteUnit'),
+            },
+        ),
+        [gameDetail, t],
+    );
+    const ratingText = `${(Number(gameDetail.rating_avg ?? 0)).toFixed(1)}${t('gameDetail.ratingUnit')}`;
+    const commentText = t('createGame.reviewsCount', {
+        count: (gameDetail.rating_count || 0).toLocaleString(),
+    });
 
     /**
      * 创建会话（按引擎类型分发）。
@@ -348,166 +380,202 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
             >
                 <div className={styles.heroOverlay}>
                     <div className={styles.heroContent}>
-                        <div className={styles.heroTitle}>{gameDetail.title || t('createGame.untitledScript')}</div>
-                        <div className={styles.heroMeta}>
-                            <span className={styles.heroRating}>
-                                {(Number(gameDetail.rating_avg ?? 0)).toFixed(1)}
-                            </span>
-                            <span className={styles.heroMetaLabel}>
-                                {(gameDetail.rating_count || 0).toLocaleString()} {t('createGame.reviews')}
-                            </span>
+                        {heroTags.length > 0 ? (
+                            <div className={styles.heroTags}>
+                                {heroTags.map((tag) => (
+                                    <span key={tag} className={styles.heroTag}>{tag}</span>
+                                ))}
+                            </div>
+                        ) : null}
+                        <div className={styles.heroTitleRow}>
+                            <h1 className={styles.heroTitle}>{gameDetail.title || t('createGame.untitledScript')}</h1>
+                            <span className={styles.ratingBadge}>{ratingText}</span>
                         </div>
-                        <div className={styles.heroPrimaryActions}>
-                            <button
-                                className={`${styles.primaryActionBtn} ${styles.startGameBtn}`}
-                                onClick={handleStartGame}
-                                disabled={isLoading || isPlayStatusLoading}
-                            >
-                                {isLoading || isPlayStatusLoading ? t('createGame.loading') : t('createGame.startTesting')}
-                            </button>
-
-                            {
-                                gameDetail.is_public == 0 ?
-                                    <button
-                                        className={`${styles.primaryActionBtn} ${styles.publishGameBtn}`}
-                                        onClick={onPublish}
-                                        disabled={isLoading}
-                                    >
-                                        {isNovel ? t('createGame.listOnShelf') : t('createGame.publish')}
-                                    </button>
-                                    : <button
-                                        className={`${styles.primaryActionBtn} ${styles.publishGameBtn}`}
-                                        onClick={() => onUnpublish(gameDetail.file_id)}
-                                        disabled={isLoading}
-                                    >
-                                        {isNovel ? t('createGame.unlistFromShelf') : t('createGame.unpublish')}
-                                    </button>
-                            }
-
-                            {/* {gameDetail.is_public == 1 && onPriceAdjust && (
-                                <button 
-                                    className={`${styles.primaryActionBtn} ${styles.publishGameBtn}`} 
-                                    onClick={onPriceAdjust}
-                                >
-                                    价格调整
-                                </button>
-                            )} */}
-                        </div>
+                        {heroMetaLine ? <p className={styles.heroMetaLine}>{heroMetaLine}</p> : null}
+                        <p className={styles.heroComments}>{commentText}</p>
                     </div>
                 </div>
             </div>
-            <div className={styles.heroStatsWrapper}>
-                <div className={styles.statsSection}>
-                    <div className={styles.sectionHeader}>
-                        <div className={styles.sectionTitle}>
-                            <img src={`${import.meta.env.BASE_URL}${t('create.images.myData')}`} alt={t('createGame.myData')} />
-                        </div>
-                        <img className={styles.sectionDividerDesktop} src={`${import.meta.env.BASE_URL}data/assets/home/分界线.png`} alt={t('createGame.divider')} />
-                        <button
-                            type="button"
-                            className={`${styles.more} ${styles.moreText}`}
-                        >
-                            {t('createGame.statsUpdateDaily')}
-                            <img src={`${import.meta.env.BASE_URL}data/assets/home/箭头.png`} alt={t('createGame.arrow')} />
-                        </button>
-                    </div>
-                    {isStatsLoading ? (
-                        <div className={styles.statsLoading}>{t('creatorStats.loading')}</div>
-                    ) : (
-                        <>
-                            <div className={styles.statsGrid}>
-                                <div className={styles.statBox}>
-                                    <div className={styles.statLabel}>
-                                        <IoEye />
-                                        <span>{t('creatorStats.totalViews')}</span>
-                                    </div>
-                                    <div className={styles.statValue}>{workDetail?.pv ?? gameStats?.pv ?? 0}</div>
-                                </div>
-                                <div className={styles.statBox}>
-                                    <div className={styles.statLabel}>
-                                        <TbHandClick />
-                                        <span>{t('creatorStats.totalVisitors')}</span>
-                                    </div>
-                                    <div className={styles.statValue}>{workDetail?.uv ?? 0}</div>
-                                </div>
-                                <div className={styles.statBox}>
-                                    <div className={styles.statLabel}>
-                                        <TbHandClick />
-                                        <span>{t('creatorStats.totalLikes')}</span>
-                                    </div>
-                                    <div className={styles.statValue}>{workDetail?.likeCount ?? 0}</div>
-                                </div>
-                                <div className={styles.statBox}>
-                                    <div className={styles.statLabel}>
-                                        <IoStatsChartSharp />
-                                        <span>{t('creatorStats.playCount')}</span>
-                                    </div>
-                                    <div className={styles.statValue}>{workDetail?.playCount ?? 0}</div>
-                                </div>
-                                <div className={styles.statBox}>
-                                    <div className={styles.statLabel}>
-                                        <IoTime />
-                                        <span>{t('creatorStats.playDuration')}</span>
-                                    </div>
-                                    <div className={styles.statValue}>
-                                        {formatPlayDuration(workDetail?.playDurationSeconds ?? 0)}
-                                    </div>
-                                </div>
-                                <div className={styles.statBox}>
-                                    <div className={styles.statLabel}>
-                                        <IoShareSocial />
-                                        <span>{t('creatorStats.shareCount')}</span>
-                                    </div>
-                                    <div className={styles.statValue}>{workDetail?.shareCount ?? 0}</div>
-                                </div>
-                                <div className={styles.statBox}>
-                                    <div className={styles.statLabel}>
-                                        <IoChatbubbleEllipses />
-                                        <span>{t('creatorStats.commentCount')}</span>
-                                    </div>
-                                    <div className={styles.statValue}>{workDetail?.commentCount ?? 0}</div>
-                                </div>
-                                <div className={styles.statBox}>
-                                    <div className={styles.statLabel}>
-                                        <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
-                                        <span>{t('creatorStats.spendPoints')}</span>
-                                    </div>
-                                    <div className={styles.statValue}>{workDetail?.spendPoints ?? 0}</div>
-                                </div>
-                                <div className={styles.statBox}>
-                                    <div className={styles.statLabel}>
-                                        <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
-                                        <span>{t('createGame.earnings')}</span>
-                                    </div>
-                                    <div className={styles.statValue}>{gameStats?.count ?? 0}</div>
-                                </div>
-                            </div>
-                            {workDetail ? <CreatorWorkDetailSections detail={workDetail} /> : null}
-                        </>
-                    )}
-                </div>
 
-                <div className={styles.heroActionGroup}>
+            <div className={styles.bodyShell}>
+                <button
+                    type="button"
+                    className={styles.primaryStartBtn}
+                    onClick={() => void handleStartGame()}
+                    disabled={isLoading || isPlayStatusLoading}
+                >
+                    <IoGameControllerOutline aria-hidden="true" />
+                    <span>
+                        {isLoading || isPlayStatusLoading ? t('createGame.loading') : t('createGame.startPlaying')}
+                    </span>
+                </button>
+
+                <div className={styles.secondaryActions}>
                     <button
-                        className={styles.editGameBtn}
+                        type="button"
+                        className={styles.secondaryActionBtn}
                         onClick={onEdit}
                         disabled={isLoading || isEditContinuing || isDeleting}
                     >
-                        {isEditContinuing
-                            ? t('createGame.loading')
-                            : isNovel
-                              ? t('createGame.editNovel')
-                              : t('createGame.editGame')}
+                        {isEditContinuing ? t('createGame.loading') : t('createGame.edit')}
                     </button>
-
                     <button
-                        className={styles.deleteGameBtn}
+                        type="button"
+                        className={styles.secondaryActionBtn}
                         onClick={onDelete}
                         disabled={isDeleting}
                     >
-                        {isDeleting ? t('createGame.deleting') : t('createGame.deleteGame')}
+                        {isDeleting ? t('createGame.deleting') : t('createGame.delete')}
+                    </button>
+                    <button
+                        type="button"
+                        className={styles.secondaryActionBtn}
+                        onClick={() => onUnpublish(gameDetail.file_id)}
+                        disabled={isLoading || !isPublished}
+                    >
+                        {isNovel ? t('createGame.unlistFromShelf') : t('createGame.unpublish')}
+                    </button>
+                    <button
+                        type="button"
+                        className={styles.secondaryActionBtn}
+                        onClick={onPublish}
+                        disabled={isLoading}
+                    >
+                        {isNovel && !isPublished
+                            ? t('createGame.listOnShelf')
+                            : isPublished
+                              ? t('createGame.publishSettings')
+                              : t('createGame.publishWork')}
                     </button>
                 </div>
+
+                <section className={styles.overviewCard}>
+                    <div className={styles.overviewHeader}>
+                        <div className={styles.overviewTitleBlock}>
+                            <h2 className={styles.overviewTitle}>{t('createGame.dataOverview')}</h2>
+                            <span className={styles.overviewHint}>({t('createGame.statsUpdateDaily')})</span>
+                        </div>
+                        <button
+                            type="button"
+                            className={styles.overviewViewAll}
+                            onClick={() => setShowAllStats((prev) => !prev)}
+                        >
+                            {showAllStats ? t('createGame.myData') : t('createGame.viewAllStats')}
+                            <span aria-hidden="true"> ›</span>
+                        </button>
+                    </div>
+
+                    {isStatsLoading ? (
+                        <div className={styles.statsLoading}>{t('creatorStats.loading')}</div>
+                    ) : (
+                        <div className={styles.overviewGrid}>
+                            <div className={styles.overviewItem}>
+                                <span className={styles.overviewIcon}><IoStatsChartSharp /></span>
+                                <span className={styles.overviewLabel}>{t('createGame.playVolume')}</span>
+                                <span className={styles.overviewValue}>
+                                    {formatCreatorOverviewCount(workDetail?.playCount ?? 0)}
+                                </span>
+                            </div>
+                            <div className={styles.overviewDivider} aria-hidden="true" />
+                            <div className={styles.overviewItem}>
+                                <span className={styles.overviewIcon}><IoEye /></span>
+                                <span className={styles.overviewLabel}>{t('createGame.clickVolume')}</span>
+                                <span className={styles.overviewValue}>
+                                    {formatCreatorOverviewCount(workDetail?.pv ?? gameStats?.pv ?? 0)}
+                                </span>
+                            </div>
+                            <div className={styles.overviewDivider} aria-hidden="true" />
+                            <div className={styles.overviewItem}>
+                                <span className={styles.overviewIcon}><PiCurrencyCnyBold /></span>
+                                <span className={styles.overviewLabel}>{t('createGame.earnings')}</span>
+                                <span className={styles.overviewValue}>
+                                    {formatCreatorOverviewCount(gameStats?.count ?? workDetail?.spendPoints ?? 0)}
+                                </span>
+                            </div>
+                            <div className={styles.overviewDivider} aria-hidden="true" />
+                            <div className={styles.overviewItem}>
+                                <span className={styles.overviewIcon}><IoShareSocial /></span>
+                                <span className={styles.overviewLabel}>{t('createGame.shareVolume')}</span>
+                                <span className={styles.overviewValue}>
+                                    {formatCreatorOverviewCount(workDetail?.shareCount ?? 0)}
+                                </span>
+                            </div>
+                        </div>
+                    )}
+                </section>
+
+                {showAllStats && !isStatsLoading ? (
+                    <div className={styles.statsSection}>
+                        <div className={styles.statsGrid}>
+                            <div className={styles.statBox}>
+                                <div className={styles.statLabel}>
+                                    <IoEye />
+                                    <span>{t('creatorStats.totalViews')}</span>
+                                </div>
+                                <div className={styles.statValue}>{workDetail?.pv ?? gameStats?.pv ?? 0}</div>
+                            </div>
+                            <div className={styles.statBox}>
+                                <div className={styles.statLabel}>
+                                    <TbHandClick />
+                                    <span>{t('creatorStats.totalVisitors')}</span>
+                                </div>
+                                <div className={styles.statValue}>{workDetail?.uv ?? 0}</div>
+                            </div>
+                            <div className={styles.statBox}>
+                                <div className={styles.statLabel}>
+                                    <TbHandClick />
+                                    <span>{t('creatorStats.totalLikes')}</span>
+                                </div>
+                                <div className={styles.statValue}>{workDetail?.likeCount ?? 0}</div>
+                            </div>
+                            <div className={styles.statBox}>
+                                <div className={styles.statLabel}>
+                                    <IoStatsChartSharp />
+                                    <span>{t('creatorStats.playCount')}</span>
+                                </div>
+                                <div className={styles.statValue}>{workDetail?.playCount ?? 0}</div>
+                            </div>
+                            <div className={styles.statBox}>
+                                <div className={styles.statLabel}>
+                                    <IoTime />
+                                    <span>{t('creatorStats.playDuration')}</span>
+                                </div>
+                                <div className={styles.statValue}>
+                                    {formatPlayDuration(workDetail?.playDurationSeconds ?? 0)}
+                                </div>
+                            </div>
+                            <div className={styles.statBox}>
+                                <div className={styles.statLabel}>
+                                    <IoShareSocial />
+                                    <span>{t('creatorStats.shareCount')}</span>
+                                </div>
+                                <div className={styles.statValue}>{workDetail?.shareCount ?? 0}</div>
+                            </div>
+                            <div className={styles.statBox}>
+                                <div className={styles.statLabel}>
+                                    <IoChatbubbleEllipses />
+                                    <span>{t('creatorStats.commentCount')}</span>
+                                </div>
+                                <div className={styles.statValue}>{workDetail?.commentCount ?? 0}</div>
+                            </div>
+                            <div className={styles.statBox}>
+                                <div className={styles.statLabel}>
+                                    <PiCurrencyCnyBold />
+                                    <span>{t('creatorStats.spendPoints')}</span>
+                                </div>
+                                <div className={styles.statValue}>{workDetail?.spendPoints ?? 0}</div>
+                            </div>
+                            <div className={styles.statBox}>
+                                <div className={styles.statLabel}>
+                                    <PiCurrencyCnyBold />
+                                    <span>{t('createGame.earnings')}</span>
+                                </div>
+                                <div className={styles.statValue}>{gameStats?.count ?? 0}</div>
+                            </div>
+                        </div>
+                        {workDetail ? <CreatorWorkDetailSections detail={workDetail} /> : null}
+                    </div>
+                ) : null}
             </div>
 
             {/* 读取存档 → 列表 → 预览 → 加载 */}

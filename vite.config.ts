@@ -26,6 +26,14 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    // 功能注释：5173 被占时禁止静默改到 5174，避免 HMR WebSocket 端口错乱
+    strictPort: true,
+    hmr: {
+      protocol: 'ws',
+      host: 'localhost',
+      port: 5173,
+      clientPort: 5173,
+    },
     proxy: {
       // 后端 API 代理（局域网同事访问时，请求经本机 Vite 转发到 localhost:3000）
       // 含 WebSocket 升级

@@ -24,6 +24,15 @@
     position: relative;
 }
 
+/* Embeddable profile panel (Create/Profile unified page) */
+.profileFunctionPanel {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    position: relative;
+    margin-top: 0;
+}
+
 /* 用户信息展示区域 */
 .userProfileSection {
     width: 100vw;
@@ -246,40 +255,205 @@
     font-size: 16px;
 }
 
-/* 功能列表 */
+/* 功能列表 — 更多服务（深色面板 · 图标网格） */
 .functionList {
     width: 100%;
     max-width: none;
-    margin: 0 auto;
+    margin: 0;
     display: flex;
     flex-direction: column;
-    padding: 0 20px;
+    padding: 12px 12px 10px;
     box-sizing: border-box;
+    background: var(--creator-card, #1C1C1E);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 10px;
+}
+
+.functionListHeading {
+    margin: 0 4px 10px;
+    padding: 0;
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.functionGrid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px 2px;
+}
+
+.functionGridItem {
+    appearance: none;
+    border: none;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 4px;
+    border-radius: 10px;
+    background: transparent;
+    color: #ffffff;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: background 0.15s ease;
+}
+
+.functionGridItem:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.functionGridItemActive {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.functionGridIcon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 30px;
+    flex-shrink: 0;
+}
+
+.functionGridIcon img {
+    width: 28px;
+    height: 28px;
+    display: block;
+    object-fit: contain;
+}
+
+.functionGridIcon svg {
+    width: 30px;
+    height: 30px;
+}
+
+.functionGridLabel {
+    width: 100%;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.35;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.92);
+    word-break: break-word;
+}
+
+.functionExpandPanel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 0 4px;
+}
+
+.functionExpandPanel .inviteInput {
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 .functionItem {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 16px 20px;
-    border-bottom: 1px dashed #e0e0e0;
+    gap: 12px;
+    width: 100%;
+    padding: 14px 12px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    box-sizing: border-box;
 }
 
-.functionItem:last-child {
-    border-bottom: none;
+.functionItem:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.functionItemExpanded {
+    flex-wrap: wrap;
+    cursor: default;
+}
+
+.functionItemExpanded:hover {
+    background: transparent;
 }
 
 .functionIcon {
-    width: 48px;
-    height: 48px;
+    width: 22px;
+    height: 22px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
-    border-radius: 12px;
-    color: #fff;
-    font-size: 24px;
+    background: none;
+    border-radius: 0;
+    color: #ffffff;
+    font-size: 20px;
     flex-shrink: 0;
+}
+
+.functionIcon img {
+    width: 18px;
+    height: 18px;
+    display: block;
+    object-fit: contain;
+}
+
+.functionIcon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.functionTitle {
+    flex: 1;
+    min-width: 0;
+    font-size: 15px;
+    font-weight: 500;
+    color: #ffffff;
+    line-height: 1.3;
+}
+
+.functionMeta {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    margin-left: auto;
+    appearance: none;
+    border: none;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    color: inherit;
+}
+
+.functionHint {
+    font-size: 13px;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.42);
+    white-space: nowrap;
+}
+
+.functionChevron {
+    color: rgba(255, 255, 255, 0.32);
+    font-size: 18px;
+    line-height: 1;
+    font-weight: 300;
+}
+
+.functionExpandRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1 1 100%;
+    width: 100%;
+    margin-top: 4px;
+    padding-left: 34px;
+    box-sizing: border-box;
 }
 
 .functionText {
@@ -290,24 +464,18 @@
     min-width: 0;
 }
 
-.functionTitle {
-    font-size: 16px;
-    font-weight: 600;
-    color: #262626;
-}
-
 .functionDesc {
     font-size: 14px;
-    color: #737373;
+    color: rgba(255, 255, 255, 0.42);
     word-break: break-word;
 }
 
 .inviteCodeHighlight {
-    color: #ff0000;
+    color: #ff6b6b;
     font-weight: 700;
 }
 
-/* 按钮基础样式（共同样式） */
+/* 按钮基础样式（弹窗等场景仍复用） */
 .functionButton {
     padding: 8px 20px;
     border: none;
@@ -404,10 +572,11 @@
 }
 
 .inviteCampaignSection {
-    border-top: 1px solid #ececec;
-    border-bottom: 1px solid #ececec;
-    background: #fef6f7;
-    padding: 20px 24px;
+    margin: 4px 8px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 20px 20px 16px;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -416,14 +585,14 @@
 .inviteCampaignHeader {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
 }
 
 .inviteCampaignIcon {
     width: 48px;
     height: 48px;
     border-radius: 12px;
-    background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
+    background: rgba(255, 255, 255, 0.12);
     color: #fff;
     display: flex;
     align-items: center;
@@ -432,11 +601,18 @@
     flex-shrink: 0;
 }
 
+.inviteCampaignIcon img {
+    width: 22px;
+    height: 22px;
+    display: block;
+    object-fit: contain;
+}
+
 .inviteCampaignTitle {
     font-size: 16px;
     line-height: 1.35;
     font-weight: 700;
-    color: #111;
+    color: #ffffff;
 }
 
 .inviteCampaignCodeRow {
@@ -453,25 +629,25 @@
     line-height: 1.2;
     font-weight: 600;
     letter-spacing: 0.06em;
-    color: #1a1a1a;
+    color: #ffffff;
 }
 
 .inviteCampaignCopyBtn {
     border: none;
     border-radius: 8px;
     padding: 8px 16px;
-    background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
+    background: rgba(255, 255, 255, 0.18);
     color: #fff;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
     white-space: nowrap;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease, transform 0.15s ease;
     flex-shrink: 0;
 }
 
 .inviteCampaignCopyBtn:hover {
-    background: linear-gradient(135deg, #e03545 0%, #e94a5a 100%);
+    background: rgba(255, 255, 255, 0.28);
     transform: translateY(-1px);
 }
 
@@ -479,24 +655,24 @@
     border: none;
     border-radius: 8px;
     padding: 8px 16px;
-    background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
+    background: rgba(255, 255, 255, 0.18);
     color: #fff;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease, transform 0.15s ease;
     flex-shrink: 0;
+    align-self: flex-start;
 }
 
 .inviteCampaignRewardBtn:hover {
-    background: linear-gradient(135deg, #e03545 0%, #e94a5a 100%);
+    background: rgba(255, 255, 255, 0.28);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(251, 70, 85, 0.25);
 }
 
 .inviteCampaignMeta {
     font-size: 13px;
-    color: #666;
+    color: rgba(255, 255, 255, 0.55);
     margin-top: 8px;
 }
 
@@ -518,18 +694,21 @@
 }
 
 .inviteInput {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     padding: 8px 12px;
-    border: 2px solid #ddd;
-    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 8px;
     font-size: 14px;
     outline: none;
     transition: border-color 0.2s;
     box-sizing: border-box;
+    background: rgba(255, 255, 255, 0.06);
+    color: #ffffff;
 }
 
 .inviteInput:focus {
-    border-color: #B69B74;
+    border-color: rgba(255, 255, 255, 0.35);
 }
 
 .redeemInput {
@@ -564,178 +743,284 @@
 }
 
 .inviteInput::placeholder {
-    color: #999;
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.functionExpandSubmit {
+    appearance: none;
+    border: none;
+    flex-shrink: 0;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 8px;
+    background: #7a2e35;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.functionExpandSubmit:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
 }
 
 .dailyTaskModalOverlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.45);
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 16px;
-    z-index: 1200;
+    box-sizing: border-box;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    z-index: 2000;
+    animation: dailyTaskFadeIn 0.3s ease-out;
+}
+
+@keyframes dailyTaskFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes dailyTaskSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(24px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .dailyTaskModal {
-    width: 100%;
-    max-width: 460px;
-    max-height: 78vh;
-    overflow-y: auto;
-    border-radius: 14px;
-    background: #fff8f8;
-    border: 1px solid #f1d9dc;
-    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.22);
-    padding: 16px;
+    position: relative;
+    width: min(360px, calc(100vw - 24px));
+    max-height: calc(100dvh - 32px - env(safe-area-inset-bottom));
+    overflow: hidden;
+    border-radius: 6px;
+    background:
+        linear-gradient(0deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15)),
+        linear-gradient(180deg, #343434 0%, rgba(52, 52, 52, 0.78) 100%);
+    border: 0.68px solid transparent;
+    backdrop-filter: blur(47px);
+    -webkit-backdrop-filter: blur(47px);
+    box-shadow: none;
+    padding: 18px 16px 14px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
+    box-sizing: border-box;
+    animation: dailyTaskSlideUp 0.3s ease-out;
 }
 
-.dailyTaskModalHeader {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
+.dailyTaskModal::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 6px;
+    padding: 0.68px;
+    background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.55) 0%,
+        rgba(255, 255, 255, 0.18) 60%,
+        rgba(255, 255, 255, 0) 90%
+    );
+    -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 3;
 }
 
-.dailyTaskModalTitle {
-    font-size: 17px;
-    font-weight: 700;
-    color: #111;
-}
-
-.dailyTaskSection {
-    border-top: 1px solid #ececec;
-    border-bottom: 1px solid #ececec;
-    background: #fff8f8;
-    padding: 16px 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.dailyTaskHeader {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-}
-
-.dailyTaskTitle {
-    font-size: 16px;
-    font-weight: 700;
-    color: #111;
-}
-
-.dailyTaskRefreshBtn {
-    border: none;
-    background: transparent;
-    color: #FB4655;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    padding: 2px 0;
+.dailyTaskModal::after {
+    content: '';
+    position: absolute;
+    right: -40px;
+    bottom: -50px;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 59, 97, 0.08) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
 }
 
 .dailyTaskCloseBtn {
+    position: absolute;
+    top: 14px;
+    left: 12px;
+    z-index: 4;
+    width: 36px;
+    height: 36px;
     border: none;
+    border-radius: 50%;
     background: transparent;
-    color: #666;
-    font-size: 22px;
-    line-height: 1;
+    color: #ffffff;
     cursor: pointer;
-    width: 28px;
-    height: 28px;
-    border-radius: 999px;
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: center;
+    padding: 0;
+    transition: opacity 0.2s ease;
 }
 
 .dailyTaskCloseBtn:hover {
-    background: rgba(0, 0, 0, 0.06);
+    opacity: 0.75;
+}
+
+.dailyTaskCloseIcon {
+    display: block;
+    width: 10px;
+    height: 10px;
+    border-left: 2px solid #ffffff;
+    border-bottom: 2px solid #ffffff;
+    transform: rotate(45deg);
+    margin-left: 4px;
+}
+
+.dailyTaskModalHeader {
+    position: relative;
+    z-index: 1;
+    flex-shrink: 0;
+    margin: 2px 0 0;
+    padding: 0 8px 0 4px;
+    text-align: left;
+}
+
+.dailyTaskModalTitle {
+    margin: 0 0 8px;
+    font-size: 17px;
+    font-weight: 600;
+    color: #ffffff;
+    letter-spacing: 0.02em;
+    text-align: center;
 }
 
 .dailyTaskSummary {
-    font-size: 14px;
-    color: #333;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.dailyTaskSummaryMeta {
-    font-size: 12px;
-    color: #777;
+    margin: 0;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.4;
+    color: rgba(255, 255, 255, 0.55);
+    text-align: left;
 }
 
 .dailyTaskLoading {
+    position: relative;
+    z-index: 1;
     font-size: 13px;
-    color: #666;
+    color: rgba(255, 255, 255, 0.55);
+    text-align: center;
+    padding: 24px 0;
 }
 
 .dailyTaskError {
+    position: relative;
+    z-index: 1;
     font-size: 13px;
-    color: #d23f4d;
+    color: #FF7D7D;
 }
 
 .dailyTaskList {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    overflow-y: auto;
+    min-height: 0;
+    flex: 1 1 auto;
+    margin: 0 -4px;
+    padding: 0 4px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
 .dailyTaskItem {
-    border: 1px solid #f1d9dc;
-    background: #fff;
-    border-radius: 10px;
-    padding: 10px 12px;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0;
+    background: transparent;
+    padding: 14px 2px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
+}
+
+.dailyTaskItem:last-child {
+    border-bottom: none;
+}
+
+.dailyTaskItemClaimed {
+    opacity: 0.62;
 }
 
 .dailyTaskItemHeader {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     justify-content: space-between;
-    gap: 10px;
+    gap: 12px;
 }
 
 .dailyTaskItemTitle {
     font-size: 14px;
-    font-weight: 600;
-    color: #222;
+    font-weight: 500;
+    line-height: 1.35;
+    color: rgba(255, 255, 255, 0.92);
+    letter-spacing: 0.01em;
 }
 
 .dailyTaskReward {
     font-size: 12px;
-    font-weight: 700;
-    color: #FB4655;
+    font-weight: 600;
+    color: #FF3B61;
+    flex-shrink: 0;
+    letter-spacing: 0.01em;
+    font-variant-numeric: tabular-nums;
 }
 
 .dailyTaskDescription {
     font-size: 12px;
-    line-height: 1.5;
-    color: #666;
+    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.38);
+    word-break: break-word;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
-.dailyTaskProgressRow {
+.dailyTaskFooter {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 2px;
+}
+
+.dailyTaskProgressBlock {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
 }
 
 .dailyTaskProgressBar {
     position: relative;
-    flex: 1;
-    min-width: 0;
-    height: 7px;
-    background: #f0f0f0;
-    border-radius: 999px;
+    width: 100%;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 0;
     overflow: hidden;
 }
 
@@ -745,83 +1030,86 @@
     top: 0;
     bottom: 0;
     width: 0;
-    background: linear-gradient(135deg, #FB4655 0%, #FF7D7D 100%);
-    border-radius: inherit;
+    background: #FF3B61;
+    border-radius: 0;
     transition: width 0.2s ease;
 }
 
-.dailyTaskProgressFillDone {
-    background: linear-gradient(135deg, #2f8f46 0%, #54b46b 100%);
-}
-
 .dailyTaskProgressText {
-    flex-shrink: 0;
-    font-size: 12px;
-    color: #666;
-    min-width: 78px;
-    text-align: right;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.42);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
 }
 
-.dailyTaskStatusRow {
+.dailyTaskActionSlot {
+    flex-shrink: 0;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
+    justify-content: flex-end;
+    gap: 8px;
 }
 
-.dailyTaskStatus {
+.dailyTaskPrimaryBtn,
+.dailyTaskSecondaryBtn {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    padding: 0 12px;
+    border-radius: 2px;
     font-size: 12px;
-    color: #999;
-}
-
-.dailyTaskStatusDone {
-    color: #2f8f46;
-    font-weight: 600;
-}
-
-.dailyTaskActionText {
-    font-size: 12px;
-    color: #FB4655;
-    font-weight: 600;
-}
-
-.dailyTaskGoPlayBtn {
-    border: none;
-    border-radius: 999px;
-    background: linear-gradient(135deg, #FB4655 0%, #FF7D7D 100%);
-    color: #fff;
-    font-size: 12px;
-    font-weight: 600;
-    padding: 4px 12px;
+    font-weight: 500;
     line-height: 1;
+    letter-spacing: 0.02em;
     cursor: pointer;
-    text-decoration: none;
+    white-space: nowrap;
+    transition: background 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
 }
 
-.dailyTaskGoPlayBtn:hover {
-    opacity: 0.9;
-}
-
-.dailyTaskClaimBtn {
+.dailyTaskPrimaryBtn {
     border: none;
-    border-radius: 999px;
-    background: linear-gradient(135deg, #FB4655 0%, #FF7D7D 100%);
-    color: #fff;
-    font-size: 12px;
-    font-weight: 700;
-    padding: 4px 12px;
-    line-height: 1;
-    cursor: pointer;
+    background: #FF3B61;
+    color: #ffffff;
 }
 
-.dailyTaskClaimBtn:disabled {
-    opacity: 0.65;
+.dailyTaskPrimaryBtn:hover:not(:disabled) {
+    background: #ff4d6f;
+}
+
+.dailyTaskPrimaryBtn:disabled {
+    opacity: 0.5;
     cursor: not-allowed;
 }
 
-.dailyTaskHint {
+.dailyTaskSecondaryBtn {
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: transparent;
+    color: rgba(255, 255, 255, 0.88);
+}
+
+.dailyTaskSecondaryBtn:hover {
+    border-color: rgba(255, 255, 255, 0.32);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.dailyTaskDoneLabel {
     font-size: 12px;
-    color: #8b8b8b;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.4);
+    line-height: 30px;
+    white-space: nowrap;
+}
+
+.dailyTaskHint {
+    position: relative;
+    z-index: 1;
+    font-size: 11px;
+    line-height: 1.4;
+    color: rgba(255, 255, 255, 0.38);
+    flex-shrink: 0;
+    text-align: center;
 }
 
 /* 在 1920px 以下时，用户信息区域占据 100% 宽度 */
@@ -864,7 +1152,7 @@
     }
 
     .functionList {
-        padding: 0 15px;
+        padding: 10px 10px 8px;
     }
 }
 
@@ -930,26 +1218,70 @@
     }
 
     .functionList {
-        padding: 0 10px;
+        padding: 10px 10px 8px;
+        border-radius: 10px;
+    }
+
+    .functionListHeading {
+        margin: 0 2px 8px;
+        font-size: 14px;
+    }
+
+    .functionGrid {
+        gap: 2px 0;
+    }
+
+    .functionGridItem {
+        padding: 6px 4px;
+        gap: 5px;
+    }
+
+    .functionGridIcon {
+        width: 32px;
+        height: 32px;
+        font-size: 26px;
+    }
+
+    .functionGridIcon img {
+        width: 24px;
+        height: 24px;
+    }
+
+    .functionGridIcon svg {
+        width: 26px;
+        height: 26px;
+    }
+
+    .functionGridLabel {
+        font-size: 11px;
     }
 
     .functionItem {
-        padding: 16px 16px;
-        gap: 12px;
+        padding: 13px 10px;
+        gap: 10px;
     }
 
     .functionIcon {
-        width: 40px;
-        height: 40px;
-        font-size: 20px;
+        width: 20px;
+        height: 20px;
+        font-size: 18px;
+    }
+
+    .functionIcon img {
+        width: 16px;
+        height: 16px;
     }
 
     .functionTitle {
-        font-size: 15px;
+        font-size: 14px;
     }
 
-    .functionDesc {
-        font-size: 13px;
+    .functionHint {
+        font-size: 12px;
+    }
+
+    .functionExpandRow {
+        padding-left: 30px;
     }
 
     .functionButton {
@@ -962,30 +1294,26 @@
     }
 
     .dailyTaskModal {
-        max-width: 100%;
-        max-height: 82vh;
-        border-radius: 12px;
-        padding: 14px 12px;
+        width: min(360px, calc(100vw - 24px));
+        max-height: calc(100dvh - 32px - env(safe-area-inset-bottom));
+        border-radius: 6px;
+        padding: 16px 14px 12px;
+    }
+
+    .dailyTaskModal::before {
+        border-radius: 6px;
     }
 
     .dailyTaskModalTitle {
         font-size: 16px;
     }
 
-    .dailyTaskSection {
-        padding: 14px 16px;
-    }
-
-    .dailyTaskTitle {
-        font-size: 15px;
-    }
-
     .dailyTaskSummary {
-        font-size: 13px;
+        font-size: 12px;
     }
 
     .dailyTaskItem {
-        padding: 9px 10px;
+        padding: 12px 2px;
     }
 
     .dailyTaskItemTitle {
@@ -1280,19 +1608,20 @@
 }
 
 /* ========================================
-   Tab 切换样式
+   Tab 切换（嵌在 functionList 顶部，同一面板）
    ======================================== */
 
 .profileTabContainer {
     display: flex;
     gap: 0;
-    padding: 0 20px;
-    margin-bottom: 20px;
-    background: #fff;
-    border-radius: 14px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-    border: 1px solid #f0f0f0;
-    overflow: hidden;
+    padding: 0 4px;
+    margin: 0 4px 8px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
 }
 
 .profileTab {
@@ -1300,61 +1629,74 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 14px 20px;
+    gap: 6px;
+    padding: 12px 12px 14px;
     background: transparent;
     border: none;
     font-size: 14px;
     font-weight: 600;
-    color: #999;
+    color: rgba(255, 255, 255, 0.4);
     cursor: pointer;
-    transition: all 0.25s ease;
+    transition: color 0.2s ease;
     position: relative;
 }
 
 .profileTab:not(:last-child)::after {
-    content: '';
-    position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 1px;
-    height: 20px;
-    background: #e8e8e8;
+    display: none;
 }
 
 .profileTab:hover {
-    color: #666;
-    background: #fafafa;
+    color: rgba(255, 255, 255, 0.75);
+    background: transparent;
 }
 
 .profileTabActive {
-    color: #FB4655;
-    background: #fff5f6;
+    color: #ffffff;
+    background: transparent;
 }
 
 .profileTabActive:hover {
-    color: #FB4655;
-    background: #fff5f6;
+    color: #ffffff;
+    background: transparent;
+}
+
+.profileTabActive::after {
+    content: '';
+    position: absolute;
+    left: 18%;
+    right: 18%;
+    bottom: 0;
+    height: 2px;
+    border-radius: 2px;
+    background: #FF3B61;
 }
 
 .profileTab svg {
-    font-size: 16px;
+    font-size: 15px;
+}
+
+.creatorProfileSlot {
+    padding: 4px 4px 8px;
 }
 
 /* 响应式 */
 @media (max-width: 768px) {
     .profileTabContainer {
-        padding: 0 10px;
-        border-radius: 12px;
+        margin: 0 2px 6px;
+        padding: 0 2px;
     }
 
     .profileTab {
-        padding: 12px 16px;
+        padding: 10px 8px 12px;
         font-size: 13px;
+        gap: 4px;
     }
 
     .profileTab svg {
-        font-size: 15px;
+        font-size: 14px;
+    }
+
+    .creatorProfileSlot {
+        padding: 2px 2px 6px;
     }
 }

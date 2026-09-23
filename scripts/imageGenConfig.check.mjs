@@ -38,19 +38,24 @@ test('toImageGenModelsPayload_应按 key 组装', () => {
   assert.equal(Object.keys(payload).includes(''), false);
 });
 
-test('AdminPanel_应包含生图配置菜单与路由', () => {
+test('AdminPanel_应包含模型配置菜单与路由', () => {
   const panel = readFileSync(join(root, 'src/page/AdminPanel.tsx'), 'utf8');
-  assert.match(panel, /生图配置/);
+  assert.match(panel, /模型配置/);
   assert.match(panel, /imageGen/);
   assert.match(panel, /\/admin\/image-gen/);
-  assert.match(panel, /ImageGenConfigManager/);
+  assert.match(panel, /ModelConfigHub/);
+
+  const hub = readFileSync(join(root, 'src/components/ModelConfigHub.tsx'), 'utf8');
+  assert.match(hub, /role="tablist"/);
+  assert.match(hub, /生图配置/);
+  assert.match(hub, /文案配置/);
+  assert.match(hub, /\/admin\/text-llm/);
 
   const app = readFileSync(join(root, 'src/App.tsx'), 'utf8');
   assert.match(app, /path="\/admin\/image-gen"/);
 
-  // 功能注释：菜单顺序须在提现与抽奖之间
-  const withdrawIdx = panel.indexOf(">提现管理<");
-  const imageGenIdx = panel.indexOf(">生图配置<");
-  const lotteryIdx = panel.indexOf(">抽奖活动<");
-  assert.ok(withdrawIdx > 0 && imageGenIdx > withdrawIdx && lotteryIdx > imageGenIdx);
+  const withdrawIdx = panel.indexOf('>提现管理<');
+  const modelIdx = panel.indexOf('>模型配置<');
+  const lotteryIdx = panel.indexOf('>抽奖活动<');
+  assert.ok(withdrawIdx > 0 && modelIdx > withdrawIdx && lotteryIdx > modelIdx);
 });

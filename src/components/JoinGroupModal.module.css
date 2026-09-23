@@ -1,4 +1,3 @@
-
 .overlay {
   position: fixed;
   inset: 0;
@@ -17,15 +16,44 @@
 }
 
 .content {
-  background: #fff;
+  position: relative;
+  /* 与 RechargeModal 一致的暗色面板 */
+  background:
+    linear-gradient(0deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15)),
+    linear-gradient(180deg, #343434 0%, rgba(52, 52, 52, 0.72) 100%);
   border-radius: 16px;
-  /* 让弹窗在不同屏幕下自适应，同时为两列留出空间 */
   width: min(92vw, 620px);
-  box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+  box-shadow: none;
+  border: 0.68px solid transparent;
+  backdrop-filter: blur(47px);
+  -webkit-backdrop-filter: blur(47px);
   animation: slideUp 0.25s ease-out;
   padding: 24px 20px 20px 20px;
   box-sizing: border-box;
   text-align: center;
+  overflow: hidden;
+}
+
+/* 白边线性渐变（border-image 与 border-radius 不兼容） */
+.content::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  padding: 0.68px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(255, 255, 255, 0.18) 60%,
+    rgba(255, 255, 255, 0) 90%
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 3;
 }
 
 @keyframes slideUp {
@@ -34,14 +62,17 @@
 }
 
 .title {
-  color: #333;
+  position: relative;
+  z-index: 1;
+  color: #ffffff;
   font-size: 18px;
   font-weight: 600;
   margin-bottom: 16px;
 }
 
 .qrRow {
-  /* 固定为横排两列，不换行 */
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
   align-items: center;
@@ -55,32 +86,45 @@
   flex-direction: column;
   align-items: center;
   width: 100%;
-  max-width: 280px; /* 防止过宽 */
+  max-width: 280px;
 }
 
 .qrBox img {
   width: 100%;
   height: auto;
-  aspect-ratio: 1 / 1; /* 保持正方形 */
+  aspect-ratio: 1 / 1;
   object-fit: contain;
-  max-height: 36vh; /* 避免超出屏幕高度 */
+  max-height: 36vh;
   border-radius: 8px;
-  background: #f8f8f8;
+  /* 二维码需白底保证可扫 */
+  background: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 6px;
+  box-sizing: border-box;
+}
+
+/* QQ 图自带白边，灰底托住后不再像硬切白框 */
+.qrBoxGray img {
+  background: #2C2C2E;
+  border-color: rgba(255, 255, 255, 0.08);
+  padding: 0;
 }
 
 .qrLabel {
   margin-top: 8px;
-  color: #666;
+  color: rgba(255, 255, 255, 0.65);
   font-size: 13px;
 }
 
 .promotionHintButton {
+  position: relative;
+  z-index: 1;
   width: 100%;
   margin: 4px auto 16px;
   padding: 0;
   border: none;
   background: none;
-  color: #2563eb;
+  color: #C23A50;
   font-size: 15px;
   font-weight: 600;
   line-height: 1.6;
@@ -90,7 +134,7 @@
 }
 
 .promotionHintButton:hover {
-  color: #1d4ed8;
+  color: #E04A60;
   opacity: 0.92;
 }
 
@@ -99,30 +143,39 @@
 }
 
 .buttons {
+  position: relative;
+  z-index: 1;
   display: flex;
   justify-content: center;
 }
 
 .cancelBtn {
   padding: 10px 24px;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
-  background: #f5f5f5;
-  color: #333;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.88);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
-.cancelBtn:hover { background: #eaeaea; transform: translateY(-1px); }
-.cancelBtn:active { transform: translateY(0); }
+.cancelBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.cancelBtn:active {
+  transform: translateY(0);
+}
 
 @media (max-width: 768px) {
   .content { width: min(95vw, 560px); padding: 20px 14px 16px 14px; }
   .title { font-size: 16px; margin-bottom: 12px; }
   .qrRow { gap: 12px; margin-bottom: 12px; }
-  /* 依旧保持两列横排，缩放占比自适应 */
   .qrBox { max-width: none; }
   .qrBox img { max-height: 34vh; }
   .promotionHintButton { margin-bottom: 12px; font-size: 14px; line-height: 1.5; }

@@ -23,25 +23,34 @@ export const useEditorData = ({ fileId, mode }: UseEditorDataOptions): UseEditor
     const [isLoadingData, setIsLoadingData] = useState<boolean>(false);
     const hasFetchedRef = useRef<string | null>(null);
     const initialLoadDoneRef = useRef<boolean>(false);
+    // 功能注释：并发刷新用序号丢弃过期响应，禁止再用 isLoadingData 直接 return（会丢掉生图后的刷新）
+    const fetchSeqRef = useRef(0);
+    const modeRef = useRef(mode);
+    modeRef.current = mode;
 
     const fetchEditorData = useCallback(async (id: string, dataMode?: string) => {
-        if (!id || isLoadingData) return;
+        if (!id) return;
 
+        const seq = ++fetchSeqRef.current;
         const shouldShowGlobalLoading = !initialLoadDoneRef.current;
         if (shouldShowGlobalLoading) {
             setIsLoadingData(true);
         }
-        
+
         try {
-            const currentMode = dataMode || mode;
+            const currentMode = dataMode || modeRef.current;
             let response;
-            
+
             if (currentMode === 'worldInteraction') {
                 response = await MapWorldData.getMapWorldData(id);
             } else {
                 response = await EditorApi.getEditorData(id);
             }
-            
+
+            if (seq !== fetchSeqRef.current) {
+                return;
+            }
+
             if (response.data?.success && response.data) {
                 const rawData = response.data as any;
                 if (rawData.worldSetting) {
@@ -49,7 +58,7 @@ export const useEditorData = ({ fileId, mode }: UseEditorDataOptions): UseEditor
                         rawData.worldSetting.player = rawData.worldSetting.Player;
                     }
                 }
-                
+
                 const unifiedData = rawData as AllGameData | WorldInteractionGameData;
                 setGameData(unifiedData);
                 initialLoadDoneRef.current = true;
@@ -62,25 +71,28 @@ export const useEditorData = ({ fileId, mode }: UseEditorDataOptions): UseEditor
                 }
             }
         } catch (error) {
+            if (seq !== fetchSeqRef.current) {
+                return;
+            }
             console.error('Error fetching editor data:', error);
             toast.error(t('editorData.loadFailed'));
             if (hasFetchedRef.current === id) {
                 hasFetchedRef.current = null;
             }
         } finally {
-            if (shouldShowGlobalLoading) {
+            if (shouldShowGlobalLoading && seq === fetchSeqRef.current) {
                 setIsLoadingData(false);
             }
         }
-    }, [mode, isLoadingData]);
+    }, [t]);
 
     // 初始化：如果有保存的 fileId，自动加载数据
     useEffect(() => {
-        if (fileId && fileId !== hasFetchedRef.current && !isLoadingData) {
+        if (fileId && fileId !== hasFetchedRef.current) {
             hasFetchedRef.current = fileId;
-            fetchEditorData(fileId);
+            void fetchEditorData(fileId);
         }
-    }, [fileId]);
+    }, [fileId, fetchEditorData]);
 
     return {
         gameData,
@@ -88,4 +100,3 @@ export const useEditorData = ({ fileId, mode }: UseEditorDataOptions): UseEditor
         fetchEditorData,
     };
 };
-

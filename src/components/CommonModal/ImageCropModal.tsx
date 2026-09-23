@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import ReactCrop, { centerCrop } from 'react-image-crop';
 import type { Crop, PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
-import { IoClose } from 'react-icons/io5';
 import {
     buildCropExportAttempts,
     MAX_UPLOAD_IMAGE_SIZE,
@@ -198,8 +197,14 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
             <div className={styles.modal} onClick={(event) => event.stopPropagation()}>
                 <div className={styles.header}>
                     <h3>{title}</h3>
-                    <button type="button" className={styles.closeBtn} onClick={onClose} disabled={isExporting}>
-                        <IoClose size={20} />
+                    <button
+                        type="button"
+                        className={styles.closeBtn}
+                        onClick={onClose}
+                        disabled={isExporting}
+                        aria-label={t('common.close')}
+                    >
+                        ×
                     </button>
                 </div>
 

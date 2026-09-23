@@ -82,6 +82,7 @@ export function withdrawListTotalPages(total: number, pageSize: number): number 
 }
 
 export type PayoutProfileFields = {
+  phoneNumber?: string;
   realName?: string;
   idCard?: string;
   bankCard?: string;
@@ -91,6 +92,7 @@ export type PayoutProfileFields = {
 
 export function checkPayoutProfile(profile: PayoutProfileFields = {}) {
   const missing: string[] = [];
+  if (!String(profile.phoneNumber || '').trim()) missing.push('phoneNumber');
   if (!String(profile.realName || '').trim()) missing.push('realName');
   if (!String(profile.idCard || '').trim()) missing.push('idCard');
   if (!String(profile.bankCard || profile.bankCardNumber || '').trim()) missing.push('bankCard');

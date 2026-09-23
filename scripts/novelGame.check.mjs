@@ -88,6 +88,27 @@ test('partitionCreatorGames splits novels from drafts and published', () => {
   assert.equal(buckets.novelGames[0].file_id, 'novel-pub');
 });
 
+test('partitionCreatorGames_已发布按updated_at新的在前', () => {
+  const buckets = partitionCreatorGames([
+    createGame({
+      id: '9',
+      file_id: 'old-pub',
+      is_public: 1,
+      engine: 'TXT',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    }),
+    createGame({
+      id: '2',
+      file_id: 'just-published',
+      is_public: 1,
+      engine: 'TXT',
+      updated_at: '2026-09-21T12:00:00.000Z',
+    }),
+  ]);
+  assert.equal(buckets.publishedGames[0].file_id, 'just-published');
+  assert.equal(buckets.publishedGames[1].file_id, 'old-pub');
+});
+
 test('buildNovelReadPath and buildSourceGameDetailPath encode file id', () => {
   assert.equal(buildNovelReadPath('abc'), '/novel/abc/read');
   assert.equal(buildSourceGameDetailPath('src-1'), '/game/src-1');
@@ -168,4 +189,30 @@ test('resolvePublishModalMode uses novel-edit for novel draft edit', async () =>
   assert.equal(resolvePublishModalMode({ isNovel: false, intent: 'edit' }), 'publish');
   assert.equal(shouldOpenNovelEditModal('NOVEL', 'NOVEL'), true);
   assert.equal(shouldOpenNovelEditModal('TXT', 'TXT'), false);
+});
+
+test('resolvePublishButtonAction_已发布也应打开弹窗', async () => {
+  const { resolvePublishButtonAction } = await import('../src/utils/novelGame.ts');
+  /* 功能注释：回归「已上架点发布作品无反应」——不得因 isPublished 返回不打开 */
+  const published = resolvePublishButtonAction({ isNovel: false, isPublished: true });
+  assert.equal(published.openModal, true);
+  assert.equal(published.mode, 'publish');
+  const draft = resolvePublishButtonAction({ isNovel: true, isPublished: false });
+  assert.equal(draft.openModal, true);
+  assert.equal(draft.mode, 'publish');
+});
+
+test('CreateGame_发布按钮不得在已发布时静默 return', async () => {
+  const fs = await import('node:fs');
+  const path = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+  const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const tsx = fs.readFileSync(path.join(root, 'src/page/CreateGame.tsx'), 'utf8');
+  assert.match(tsx, /resolvePublishButtonAction/);
+  assert.doesNotMatch(
+    tsx,
+    /onPublish=\{\(\)\s*=>\s*\{\s*if\s*\(\s*!isPublished\s*\)/,
+  );
+  const stats = fs.readFileSync(path.join(root, 'src/components/CreateGame/GameStatsView.tsx'), 'utf8');
+  assert.match(stats, /createGame\.publishSettings/);
 });

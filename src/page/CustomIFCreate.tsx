@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Navbar from '../components/Layout/Navbar';
-import FooterArea from '../components/Layout/FooterArea';
 import { HOST_ADDRESS } from '../config';
 import { authFetch } from '../api/base';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -10,7 +9,9 @@ import UploadProgress from '../components/CreateGame/UploadProgress';
 import toast from 'react-hot-toast';
 import getGameDataApi from '../api/home/getGameData';
 import gameTagsApi from '../api/gameTags/gameTagsApi';
-import { flattenThemeTags, type FlatThemeTag } from '../utils/themeTags';
+import { flattenThemeTags, useLocalizedThemeTags, type FlatThemeTag } from '../utils/themeTags';
+import ContentAudienceField from '../components/ContentAudienceField';
+import { isValidContentAudience, type ContentAudience } from '../utils/contentAudience';
 import SimpleRichTextEditor from '../components/Common/SimpleRichTextEditor';
 import EditorApi from '../api/galgame/EditorData';
 import {
@@ -32,6 +33,9 @@ const CustomIFCreate: React.FC = () => {
   const [availableThemeTags, setAvailableThemeTags] = useState<FlatThemeTag[]>([]);
   const [selectedThemeTagIds, setSelectedThemeTagIds] = useState<number[]>([]);
   const [themeTagError, setThemeTagError] = useState<string>('');
+  const [selectedAudienceType, setSelectedAudienceType] = useState<ContentAudience | null>(null);
+  const [audienceError, setAudienceError] = useState<string>('');
+  const displayThemeTags = useLocalizedThemeTags(availableThemeTags);
   const fileRef = useRef<HTMLInputElement>(null);
   const dirRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
@@ -85,6 +89,8 @@ const CustomIFCreate: React.FC = () => {
             .filter((id) => Number.isInteger(id) && id > 0)
           : [];
         setSelectedThemeTagIds(existingTagIds.slice(0, 2));
+        setSelectedAudienceType(isValidContentAudience(data?.audience_type) ? data.audience_type : null);
+        setAudienceError('');
       } catch (error) {
         console.error('加载游戏信息失败:', error);
         // 失败时不打断流程，仅提示
@@ -136,6 +142,11 @@ const CustomIFCreate: React.FC = () => {
       setThemeTagError('');
       return [...prev, tagId];
     });
+  };
+
+  const handleAudienceTypeChange = (next: ContentAudience) => {
+    setSelectedAudienceType(next);
+    setAudienceError('');
   };
   // 旧的 zip/dir 选择器删除；保留单文件选择器以支持点击选择
   const singleRef = fileRef; // 语义别名：单文件 index.html 选择器
@@ -346,7 +357,13 @@ const CustomIFCreate: React.FC = () => {
     if (creating) return;
     const metaOnly = !!opts?.metaOnly;
     try {
-      // 实现作品标签必填与数量限制
+      // 实现作品分类与作品标签必填校验
+      if (!isValidContentAudience(selectedAudienceType)) {
+        setAudienceError(t('createGame.contentAudienceRequired'));
+        toast.error(t('createGame.contentAudienceRequired'));
+        return;
+      }
+      setAudienceError('');
       if (selectedThemeTagIds.length < 1 || selectedThemeTagIds.length > 2) {
         setThemeTagError(t('createGame.themeTagRequired'));
         toast.error(t('createGame.themeTagRequiredMax2'));
@@ -440,6 +457,7 @@ const CustomIFCreate: React.FC = () => {
       await gameTagsApi.setGameTagsForGame({
         fileId: String(id),
         tagIds: selectedThemeTagIds,
+        audienceType: selectedAudienceType,
       });
 
       setLastUploadOk(true);
@@ -469,6 +487,12 @@ const CustomIFCreate: React.FC = () => {
   };
 const handleCreate = () => {
     setError('');
+    if (!isValidContentAudience(selectedAudienceType)) {
+      setAudienceError(t('createGame.contentAudienceRequired'));
+      toast.error(t('createGame.contentAudienceRequired'));
+      return;
+    }
+    setAudienceError('');
     if (selectedThemeTagIds.length < 1 || selectedThemeTagIds.length > 2) {
       setThemeTagError(t('createGame.themeTagRequired'));
       toast.error(t('createGame.themeTagRequiredMax2'));
@@ -513,22 +537,55 @@ const handleCreate = () => {
       <div className={styles.mainContent}>
         <div className={styles.main}>
           <div className={styles.formSection}>
-            <h2 style={{margin:'0 0 6px'}}>{isEditMode ? t('customIFCreate.editTitle') : t('customIFCreate.createTitle')}</h2>
-              <div className={styles.formGroup}>
-                <label htmlFor="title">{t('customIFCreate.titleLabel')}</label>
+            {/* 功能注释：对齐 AVG 效果图顶栏——返回 + 居中标题 + 右侧测试，去掉落地页式大标题/长说明 */}
+            <header className={styles.pageHeader}>
+              <button
+                type="button"
+                className={styles.pageBack}
+                onClick={() => navigate('/create')}
+                aria-label={t('customIFCreate.backAria')}
+              >
+                ‹
+              </button>
+              <h1 className={styles.pageTitle}>
+                {isEditMode ? t('customIFCreate.editTitle') : t('customIFCreate.createTitle')}
+              </h1>
+              <div className={styles.pageHeaderSlot}>
+                {(isEditMode || lastUploadOk) && (appId || appIdFromQuery) ? (
+                  <button
+                    type="button"
+                    className={styles.pageTest}
+                    onClick={() => navigate(`/customif/${appId || appIdFromQuery}`)}
+                  >
+                    {t('customIFCreate.headerTest')}
+                  </button>
+                ) : null}
+              </div>
+            </header>
+
+            <section className={styles.formCard}>
+              <div className={styles.formCardHead}>
+                <h2 className={styles.formCardTitle}>{t('customIFCreate.basicInfoTitle')}</h2>
+                <p className={styles.formCardDesc}>{t('customIFCreate.basicInfoDesc')}</p>
+              </div>
+
+              <div className={styles.fieldBlock}>
+                <label htmlFor="title" className={styles.fieldLabel}>{t('customIFCreate.titleLabel')}</label>
                 <input
                   id="title"
                   className={styles.textInput}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
+                  placeholder={t('customIFCreate.titlePlaceholder')}
                   autoComplete="off"
                 />
               </div>
 
-              <div className={styles.formGroup}>
-                <label>{t('customIFCreate.descriptionLabel')}</label>
+              <div className={styles.fieldBlock}>
+                <label className={styles.fieldLabel}>{t('customIFCreate.descriptionLabel')}</label>
                 <div className={styles.descriptionEditor}>
                   <SimpleRichTextEditor
+                    className={styles.richEditorDark}
                     value={description}
                     onChange={setDescription}
                     maxPlainLength={NOVEL_DESCRIPTION_MAX_LENGTH}
@@ -542,12 +599,26 @@ const handleCreate = () => {
                 </div>
               </div>
 
-              <div className={styles.formGroup}>
-                <label>{t('createGame.gameTags')}</label>
+              <div className={styles.fieldBlock}>
+                {/* 功能注释：作品分类在作品标签之前，必选且只能选一项 */}
+                <ContentAudienceField
+                  value={selectedAudienceType}
+                  onChange={handleAudienceTypeChange}
+                  required
+                  error={audienceError}
+                  disabled={creating || isUploading}
+                />
+                {/* 功能注释：对齐图1——标题+必填星号，说明在下方；标签为描边芯片而非纯文字 */}
+                <div className={styles.themeTagsHead}>
+                  <label className={styles.fieldLabel}>
+                    {t('createGame.gameTags')}
+                    <span className={styles.requiredMark} aria-hidden="true">*</span>
+                  </label>
+                  <span className={styles.themeTagHint}>{t('createGame.min1Max2Tags')}</span>
+                </div>
                 <div className={styles.themeTagsPanel}>
-                  <div className={styles.themeTagHint}>{t('createGame.min1Max2Tags')}</div>
                   <div className={styles.themeTagsWrap}>
-                    {availableThemeTags.map((tag) => {
+                    {displayThemeTags.map((tag) => {
                       const active = selectedThemeTagIds.includes(tag.id);
                       return (
                         <button
@@ -564,238 +635,246 @@ const handleCreate = () => {
                   {themeTagError && <div className={styles.themeTagError}>{themeTagError}</div>}
                 </div>
               </div>
+            </section>
 
             {/* 版本号输入已移除：由服务端管理当前激活版本 */}
 
-            {/* 简化：单一大型拖放区域（支持 .zip / .html / 目录）且包含文件要求说明 */}
-            <div className={styles.formGroup}>
-              <label>{t('customIFCreate.uploadLabel')}</label>
+            {/* 简化：直接从类型切换/拖放区开始，去掉与效果图不符的「上传内容」标题块 */}
+            <section className={styles.formCard}>
+              <div className={styles.fieldBlock}>
                 <div className={styles.uploaderColumn}>
-                {/* 文件类型选择器：切换后渲染对应的上传区域与校验 */}
-                <div className={styles.seg}>
-                  <button type="button" className={`${styles.segBtn} ${sourceType==='single' ? styles.segBtnActive : ''}`} onClick={()=> changeSourceType('single')}>{t('customIFCreate.sourceSingle')}</button>
-                  <button type="button" className={`${styles.segBtn} ${sourceType==='zip' ? styles.segBtnActive : ''}`} onClick={()=> changeSourceType('zip')}>{t('customIFCreate.sourceZip')}</button>
-                  <button type="button" className={`${styles.segBtn} ${sourceType==='dir' ? styles.segBtnActive : ''}`} onClick={()=> changeSourceType('dir')}>{t('customIFCreate.sourceDir')}</button>
-                </div>
+                  {/* 文件类型选择器：切换后渲染对应的上传区域与校验 */}
+                  <div className={styles.seg}>
+                    <button type="button" className={`${styles.segBtn} ${sourceType==='single' ? styles.segBtnActive : ''}`} onClick={()=> changeSourceType('single')}>{t('customIFCreate.sourceSingle')}</button>
+                    <button type="button" className={`${styles.segBtn} ${sourceType==='zip' ? styles.segBtnActive : ''}`} onClick={()=> changeSourceType('zip')}>{t('customIFCreate.sourceZip')}</button>
+                    <button type="button" className={`${styles.segBtn} ${sourceType==='dir' ? styles.segBtnActive : ''}`} onClick={()=> changeSourceType('dir')}>{t('customIFCreate.sourceDir')}</button>
+                  </div>
 
-                <div className={`${styles.dropZoneLarge} ${dragOver? 'drag' : ''}`}
-                   onDragOver={(e)=>{e.preventDefault(); setDragOver(true);}}
-                   onDragLeave={(e)=>{e.preventDefault(); setDragOver(false);}}
-                   onDrop={async (e)=>{
-                     e.preventDefault(); setDragOver(false);
-                     const items = e.dataTransfer.items;
-                     if (items && items.length){
-                       // @ts-ignore
-                       const entry = items[0].webkitGetAsEntry && items[0].webkitGetAsEntry();
-                       if (entry && entry.isDirectory){
+                  <div className={`${styles.dropZoneLarge} ${dragOver? 'drag' : ''}`}
+                     onDragOver={(e)=>{e.preventDefault(); setDragOver(true);}}
+                     onDragLeave={(e)=>{e.preventDefault(); setDragOver(false);}}
+                     onDrop={async (e)=>{
+                       e.preventDefault(); setDragOver(false);
+                       const items = e.dataTransfer.items;
+                       if (items && items.length){
                          // @ts-ignore
-                         const readDirEntry = async (en:any, prefix:string): Promise<any[]> => {
-                           const results: any[] = [];
-                           if (en.isFile){ await new Promise<void>(res=> en.file((file:any)=>{ results.push({ path: normalizePath(prefix + file.name), file, selected:true }); res(); })); }
-                           else if (en.isDirectory){ const reader = en.createReader(); await new Promise<void>(r=> reader.readEntries(async (ents:any[])=>{ for(const sub of ents){ const subList:any[]= await readDirEntry(sub, `${prefix}${en.name}/`); results.push(...subList);} r(); })); }
-                           return results;
-                         };
-                          const list = await readDirEntry(entry, '');
-                          // 切到目录模式并直接设置清单，避免因切换类型时清空列表的竞态
-                          setSourceType('dir');
-                          setSingleFile(null);
-                          setMultiFiles(list as any);
-                          updateMultiStats(list as any);
-                          return;
-                        }
-                     }
-                     const f = e.dataTransfer.files?.[0]; if (!f) return;
-                     const name = (f.name||'').toLowerCase();
-                     if (name.endsWith('.zip')) { setSingleFile(null); await handleZipFile(f); }
-                     else if (name.endsWith('.html')) { changeSourceType('single'); setSingleFile(f); const dt = new DataTransfer(); dt.items.add(f); if (singleRef.current) singleRef.current.files = dt.files; }
-                     else { setError(t('customIFCreate.unsupportedDrop')); }
-                   }}
-                   onClick={(e)=>{
-                     const target = e.target as HTMLElement;
-                     // 整个红色虚线区域都可以点击触发上传
-                     if (target.closest(`.${styles.cardFooter}`)) return;
-                     if (sourceType === 'single') { if (singleRef.current){ singleRef.current.accept = 'text/html,.html'; singleRef.current.click(); } }
-                     else if (sourceType === 'zip') { if (singleRef.current){ singleRef.current.accept = '.zip,application/zip'; singleRef.current.click(); } }
-                     else if (sourceType === 'dir') { dirRef.current?.click(); }
-                   }}
-                >
-                  <div className={styles.dropZoneInner}>
-                    <div className={styles.dropContent}>
-                      <div className={styles.dropIconWrapper}>
-                        <svg className={styles.dropIcon} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                        </svg>
+                         const entry = items[0].webkitGetAsEntry && items[0].webkitGetAsEntry();
+                         if (entry && entry.isDirectory){
+                           // @ts-ignore
+                           const readDirEntry = async (en:any, prefix:string): Promise<any[]> => {
+                             const results: any[] = [];
+                             if (en.isFile){ await new Promise<void>(res=> en.file((file:any)=>{ results.push({ path: normalizePath(prefix + file.name), file, selected:true }); res(); })); }
+                             else if (en.isDirectory){ const reader = en.createReader(); await new Promise<void>(r=> reader.readEntries(async (ents:any[])=>{ for(const sub of ents){ const subList:any[]= await readDirEntry(sub, `${prefix}${en.name}/`); results.push(...subList);} r(); })); }
+                             return results;
+                           };
+                            const list = await readDirEntry(entry, '');
+                            // 切到目录模式并直接设置清单，避免因切换类型时清空列表的竞态
+                            setSourceType('dir');
+                            setSingleFile(null);
+                            setMultiFiles(list as any);
+                            updateMultiStats(list as any);
+                            return;
+                          }
+                       }
+                       const f = e.dataTransfer.files?.[0]; if (!f) return;
+                       const name = (f.name||'').toLowerCase();
+                       if (name.endsWith('.zip')) { setSingleFile(null); await handleZipFile(f); }
+                       else if (name.endsWith('.html')) { changeSourceType('single'); setSingleFile(f); const dt = new DataTransfer(); dt.items.add(f); if (singleRef.current) singleRef.current.files = dt.files; }
+                       else { setError(t('customIFCreate.unsupportedDrop')); }
+                     }}
+                     onClick={(e)=>{
+                       const target = e.target as HTMLElement;
+                       // 整个红色虚线区域都可以点击触发上传
+                       if (target.closest(`.${styles.cardFooter}`)) return;
+                       if (sourceType === 'single') { if (singleRef.current){ singleRef.current.accept = 'text/html,.html'; singleRef.current.click(); } }
+                       else if (sourceType === 'zip') { if (singleRef.current){ singleRef.current.accept = '.zip,application/zip'; singleRef.current.click(); } }
+                       else if (sourceType === 'dir') { dirRef.current?.click(); }
+                     }}
+                  >
+                    <div className={styles.dropZoneInner}>
+                      <div className={styles.dropContent}>
+                        <div className={styles.dropIconWrapper}>
+                          <svg className={styles.dropIcon} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          </svg>
+                        </div>
+                        <div className={styles.dropHeading}>{t('customIFCreate.dropHeading')}</div>
+                        <div className={styles.dropHint}>{t('customIFCreate.dropHint')}</div>
                       </div>
-                      <div className={styles.dropHeading}>{t('customIFCreate.dropHeading')}</div>
-                      <div className={styles.dropHint}>{t('customIFCreate.dropHint')}</div>
                     </div>
-                  </div>
 
-                  <div className={styles.dropListWrapper}>
-                    <ul className={styles.dropList}>
-                      <li>{t('customIFCreate.requirement1')}</li>
-                      <li>{t('customIFCreate.requirement2')}</li>
-                      <li>{t('customIFCreate.requirement3')}</li>
-                      <li>{t('customIFCreate.requirement4')}</li>
-                      <li>{t('customIFCreate.requirement5')}</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 隐藏文件选择器（点击大区域触发） */}
-            <input id="index" ref={singleRef} type="file" accept="text/html,.html,.zip,application/zip" className={styles.fileInput} style={{display:'none'}} onChange={async (e)=>{ const input=e.currentTarget; const f=e.target.files?.[0]; if(!f){ input.value=''; return; } const n=(f.name||'').toLowerCase(); if(n.endsWith('.zip')) { setSingleFile(null); await handleZipFile(f); } else if(n.endsWith('.html')) { changeSourceType('single'); setSingleFile(f); } else setError(t('customIFCreate.unsupportedFileType')); input.value=''; }} />
-            {/** 目录选择器（支持选择文件夹） */}
-            {/* eslint-disable-next-line jsx-a11y/aria-proptypes */}
-            {/* @ts-ignore webkitdirectory 非标准属性，主流浏览器支持 */}
-            <input ref={dirRef} type="file" multiple webkitdirectory="true" style={{display:'none'}} onChange={(e)=>{
-              const files = Array.from(e.target.files || []);
-              if (!files.length) return;
-              const list = files.map((f:any)=> ({ path: normalizePath(f.webkitRelativePath || f.name), file: f as File, selected: true }));
-              // 切到目录模式并直接设置清单，避免因切换类型时清空列表的竞态
-              setSourceType('dir');
-              setSingleFile(null);
-              setMultiFiles(list);
-              updateMultiStats(list);
-              const candidates = list.filter(i=> /(^|\/)index\.html$/i.test(i.path)).map(i=> i.path);
-              if (candidates.length === 1) setEntryPath(candidates[0]);
-              (e.currentTarget as HTMLInputElement).value = '';
-            }} />
-
-            {sourceType === 'zip' && (
-              <div className={styles.formGroup}>
-                <label>{t('customIFCreate.zipFileList')}</label>
-                <div className={styles.fileRow}>
-                  <div className={styles.hint}>{t('customIFCreate.zipHint')}</div>
-                  {multiFiles.length>0 && (
-                    <>
-                      <div className={styles.listActions}>
-                        <button type="button" className={styles.smallBtn} onClick={()=> selectAll(true)}>{t('customIFCreate.selectAll')}</button>
-                        <button type="button" className={styles.smallBtn} onClick={()=> selectAll(false)}>{t('customIFCreate.selectNone')}</button>
-                      </div>
-                      <div className={styles.fileStats}>
-                        {entryPath
-                          ? t('customIFCreate.fileStatsWithEntry', {
-                            count: multiStats.count,
-                            size: formatBytes(multiStats.bytes),
-                            selectedCount: multiStats.selCount,
-                            selectedSize: formatBytes(multiStats.selBytes),
-                            entry: entryPath,
-                          })
-                          : t('customIFCreate.fileStats', {
-                            count: multiStats.count,
-                            size: formatBytes(multiStats.bytes),
-                            selectedCount: multiStats.selCount,
-                            selectedSize: formatBytes(multiStats.selBytes),
-                          })}
-                      </div>
-                      {multiFiles.filter(i=> /(^|\/)index\.html$/i.test(i.path)).length > 1 && (
-                        <div className={styles.hint}>{t('customIFCreate.multipleIndexHtml')}</div>
-                      )}
-                      <div className={styles.fileList}>
-                        {multiFiles.map((it, idx)=> (
-                          <div className={styles.fileRowLine} key={it.path}>
-                            <input className={styles.fileCheckbox} type="checkbox" checked={it.selected} onChange={(ev)=> toggleSelect(idx, ev.target.checked)} />
-                            <span className={styles.filePath}>{it.path}</span>
-                            <span className={styles.fileSize}>{formatBytes(it.file.size||0)}</span>
-                            {/index\.html$/i.test(it.path) && (
-                              <button type="button" className={styles.smallBtn} onClick={()=> setEntryPath(it.path)} title={t('customIFCreate.setAsEntry')}>{t('customIFCreate.setAsEntry')}</button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {sourceType === 'single' && singleFile && (
-              <div className={styles.formGroup}>
-                <label>{t('customIFCreate.singleFileList')}</label>
-                <div className={styles.fileRow}>
-                  <div className={styles.fileStats}>{t('customIFCreate.singleFileSelected', { name: singleFile.name, size: formatBytes(singleFile.size || 0) })}</div>
-                  <div className={styles.fileList}>
-                    <div className={styles.fileRowLine}>
-                      <span className={styles.filePath}>index.html</span>
-                      <span className={styles.fileSize}>{formatBytes(singleFile.size||0)}</span>
-                      <button type="button" className={styles.smallBtn} onClick={()=> { if (singleRef.current){ singleRef.current.accept='text/html,.html'; singleRef.current.click(); } }}>{t('customIFCreate.reselect')}</button>
+                    <div className={styles.dropListWrapper}>
+                      <ul className={styles.dropList}>
+                        <li>{t('customIFCreate.requirement1')}</li>
+                        <li>{t('customIFCreate.requirement2')}</li>
+                        <li>{t('customIFCreate.requirement3')}</li>
+                        <li>{t('customIFCreate.requirement4')}</li>
+                        <li>{t('customIFCreate.requirement5')}</li>
+                      </ul>
                     </div>
                   </div>
                 </div>
               </div>
-            )}
 
-            {sourceType === 'dir' && (
-              <div className={styles.formGroup}>
-                <label>{t('customIFCreate.dirFileList')}</label>
-                <div className={styles.fileRow}>
-                  <div className={styles.hint}>{t('customIFCreate.dirHint')}</div>
-                  {multiFiles.length>0 && (
-                    <>
-                      <div className={styles.listActions}>
-                        <button type="button" className={styles.smallBtn} onClick={()=> selectAll(true)}>{t('customIFCreate.selectAll')}</button>
-                        <button type="button" className={styles.smallBtn} onClick={()=> selectAll(false)}>{t('customIFCreate.selectNone')}</button>
-                      </div>
-                      <div className={styles.fileStats}>
-                        {entryPath
-                          ? t('customIFCreate.fileStatsWithEntry', {
-                            count: multiStats.count,
-                            size: formatBytes(multiStats.bytes),
-                            selectedCount: multiStats.selCount,
-                            selectedSize: formatBytes(multiStats.selBytes),
-                            entry: entryPath,
-                          })
-                          : t('customIFCreate.fileStats', {
-                            count: multiStats.count,
-                            size: formatBytes(multiStats.bytes),
-                            selectedCount: multiStats.selCount,
-                            selectedSize: formatBytes(multiStats.selBytes),
-                          })}
-                      </div>
-                      {multiFiles.filter(i=> /(^|\/)index\.html$/i.test(i.path)).length > 1 && (
-                        <div className={styles.hint}>{t('customIFCreate.multipleIndexHtml')}</div>
-                      )}
-                      <div className={styles.fileList}>
-                        {multiFiles.map((it, idx)=> (
-                          <div className={styles.fileRowLine} key={it.path}>
-                            <input className={styles.fileCheckbox} type="checkbox" checked={it.selected} onChange={(ev)=> toggleSelect(idx, ev.target.checked)} />
-                            <span className={styles.filePath}>{it.path}</span>
-                            <span className={styles.fileSize}>{formatBytes(it.file.size||0)}</span>
-                            {/index\.html$/i.test(it.path) && (
-                              <button type="button" className={styles.smallBtn} onClick={()=> setEntryPath(it.path)} title={t('customIFCreate.setAsEntry')}>{t('customIFCreate.setAsEntry')}</button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
+              {/* 隐藏文件选择器（点击大区域触发） */}
+              <input id="index" ref={singleRef} type="file" accept="text/html,.html,.zip,application/zip" className={styles.fileInput} style={{display:'none'}} onChange={async (e)=>{ const input=e.currentTarget; const f=e.target.files?.[0]; if(!f){ input.value=''; return; } const n=(f.name||'').toLowerCase(); if(n.endsWith('.zip')) { setSingleFile(null); await handleZipFile(f); } else if(n.endsWith('.html')) { changeSourceType('single'); setSingleFile(f); } else setError(t('customIFCreate.unsupportedFileType')); input.value=''; }} />
+              {/** 目录选择器（支持选择文件夹） */}
+              {/* eslint-disable-next-line jsx-a11y/aria-proptypes */}
+              {/* @ts-ignore webkitdirectory 非标准属性，主流浏览器支持 */}
+              <input ref={dirRef} type="file" multiple webkitdirectory="true" style={{display:'none'}} onChange={(e)=>{
+                const files = Array.from(e.target.files || []);
+                if (!files.length) return;
+                const list = files.map((f:any)=> ({ path: normalizePath(f.webkitRelativePath || f.name), file: f as File, selected: true }));
+                // 切到目录模式并直接设置清单，避免因切换类型时清空列表的竞态
+                setSourceType('dir');
+                setSingleFile(null);
+                setMultiFiles(list);
+                updateMultiStats(list);
+                const candidates = list.filter(i=> /(^|\/)index\.html$/i.test(i.path)).map(i=> i.path);
+                if (candidates.length === 1) setEntryPath(candidates[0]);
+                (e.currentTarget as HTMLInputElement).value = '';
+              }} />
+
+              {sourceType === 'zip' && (
+                <div className={styles.fieldBlock}>
+                  <label className={styles.fieldLabel}>{t('customIFCreate.zipFileList')}</label>
+                  <div className={styles.fileRow}>
+                    <div className={styles.hint}>{t('customIFCreate.zipHint')}</div>
+                    {multiFiles.length>0 && (
+                      <>
+                        <div className={styles.listActions}>
+                          <button type="button" className={styles.smallBtn} onClick={()=> selectAll(true)}>{t('customIFCreate.selectAll')}</button>
+                          <button type="button" className={styles.smallBtn} onClick={()=> selectAll(false)}>{t('customIFCreate.selectNone')}</button>
+                        </div>
+                        <div className={styles.fileStats}>
+                          {entryPath
+                            ? t('customIFCreate.fileStatsWithEntry', {
+                              count: multiStats.count,
+                              size: formatBytes(multiStats.bytes),
+                              selectedCount: multiStats.selCount,
+                              selectedSize: formatBytes(multiStats.selBytes),
+                              entry: entryPath,
+                            })
+                            : t('customIFCreate.fileStats', {
+                              count: multiStats.count,
+                              size: formatBytes(multiStats.bytes),
+                              selectedCount: multiStats.selCount,
+                              selectedSize: formatBytes(multiStats.selBytes),
+                            })}
+                        </div>
+                        {multiFiles.filter(i=> /(^|\/)index\.html$/i.test(i.path)).length > 1 && (
+                          <div className={styles.hint}>{t('customIFCreate.multipleIndexHtml')}</div>
+                        )}
+                        <div className={styles.fileList}>
+                          {multiFiles.map((it, idx)=> (
+                            <div className={styles.fileRowLine} key={it.path}>
+                              <input className={styles.fileCheckbox} type="checkbox" checked={it.selected} onChange={(ev)=> toggleSelect(idx, ev.target.checked)} />
+                              <span className={styles.filePath}>{it.path}</span>
+                              <span className={styles.fileSize}>{formatBytes(it.file.size||0)}</span>
+                              {/index\.html$/i.test(it.path) && (
+                                <button type="button" className={styles.smallBtn} onClick={()=> setEntryPath(it.path)} title={t('customIFCreate.setAsEntry')}>{t('customIFCreate.setAsEntry')}</button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            <div className={styles.formGroup}>
-              <label htmlFor="manifest">{t('customIFCreate.manifestLabel')}</label>
-              <textarea
-                id="manifest"
-                className={styles.textarea}
-                value={manifestText}
-                onChange={(e) => setManifestText(e.target.value)}
-                placeholder='{"allowedModels":["claude-3-5-sonnet-20240620"]}'
-                rows={6}
-              />
-            </div>
+              {sourceType === 'single' && singleFile && (
+                <div className={styles.fieldBlock}>
+                  <label className={styles.fieldLabel}>{t('customIFCreate.singleFileList')}</label>
+                  <div className={styles.fileRow}>
+                    <div className={styles.fileStats}>{t('customIFCreate.singleFileSelected', { name: singleFile.name, size: formatBytes(singleFile.size || 0) })}</div>
+                    <div className={styles.fileList}>
+                      <div className={styles.fileRowLine}>
+                        <span className={styles.filePath}>index.html</span>
+                        <span className={styles.fileSize}>{formatBytes(singleFile.size||0)}</span>
+                        <button type="button" className={styles.smallBtn} onClick={()=> { if (singleRef.current){ singleRef.current.accept='text/html,.html'; singleRef.current.click(); } }}>{t('customIFCreate.reselect')}</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {sourceType === 'dir' && (
+                <div className={styles.fieldBlock}>
+                  <label className={styles.fieldLabel}>{t('customIFCreate.dirFileList')}</label>
+                  <div className={styles.fileRow}>
+                    <div className={styles.hint}>{t('customIFCreate.dirHint')}</div>
+                    {multiFiles.length>0 && (
+                      <>
+                        <div className={styles.listActions}>
+                          <button type="button" className={styles.smallBtn} onClick={()=> selectAll(true)}>{t('customIFCreate.selectAll')}</button>
+                          <button type="button" className={styles.smallBtn} onClick={()=> selectAll(false)}>{t('customIFCreate.selectNone')}</button>
+                        </div>
+                        <div className={styles.fileStats}>
+                          {entryPath
+                            ? t('customIFCreate.fileStatsWithEntry', {
+                              count: multiStats.count,
+                              size: formatBytes(multiStats.bytes),
+                              selectedCount: multiStats.selCount,
+                              selectedSize: formatBytes(multiStats.selBytes),
+                              entry: entryPath,
+                            })
+                            : t('customIFCreate.fileStats', {
+                              count: multiStats.count,
+                              size: formatBytes(multiStats.bytes),
+                              selectedCount: multiStats.selCount,
+                              selectedSize: formatBytes(multiStats.selBytes),
+                            })}
+                        </div>
+                        {multiFiles.filter(i=> /(^|\/)index\.html$/i.test(i.path)).length > 1 && (
+                          <div className={styles.hint}>{t('customIFCreate.multipleIndexHtml')}</div>
+                        )}
+                        <div className={styles.fileList}>
+                          {multiFiles.map((it, idx)=> (
+                            <div className={styles.fileRowLine} key={it.path}>
+                              <input className={styles.fileCheckbox} type="checkbox" checked={it.selected} onChange={(ev)=> toggleSelect(idx, ev.target.checked)} />
+                              <span className={styles.filePath}>{it.path}</span>
+                              <span className={styles.fileSize}>{formatBytes(it.file.size||0)}</span>
+                              {/index\.html$/i.test(it.path) && (
+                                <button type="button" className={styles.smallBtn} onClick={()=> setEntryPath(it.path)} title={t('customIFCreate.setAsEntry')}>{t('customIFCreate.setAsEntry')}</button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className={styles.fieldBlock}>
+                <div className={styles.fieldLabelRow}>
+                  <label htmlFor="manifest" className={styles.fieldLabel}>{t('customIFCreate.manifestLabel')}</label>
+                  {/* 功能注释：对齐 AVG 效果图 Manifest 行右侧「一键清空」小酒红胶囊 */}
+                  <button
+                    type="button"
+                    className={styles.clearPill}
+                    onClick={() => setManifestText('')}
+                  >
+                    {t('customIFCreate.clearAll')}
+                  </button>
+                </div>
+                <textarea
+                  id="manifest"
+                  className={styles.textarea}
+                  value={manifestText}
+                  onChange={(e) => setManifestText(e.target.value)}
+                  placeholder='{"allowedModels":["claude-3-5-sonnet-20240620"]}'
+                  rows={6}
+                />
+              </div>
+            </section>
 
             {error && (
-              <div className={styles.formGroup}>
-                <label />
-                <div className={styles.error}>{error}</div>
-              </div>
+              <div className={styles.formErrorBanner}>{error}</div>
             )}
 
-            <div className={styles.formGroup}>
-              <label />
+            <div className={styles.formFooter}>
               <div className={styles.actions}>
                 {(() => {
                   const hasPendingFiles = !!(singleFile || fileRef.current?.files?.[0] || multiFiles.length > 0);
@@ -817,21 +896,20 @@ const handleCreate = () => {
                     </button>
                   );
                 })()}
-                {(appId || appIdFromQuery) && (
-                  <div className={styles.infoRow}>
-                    {lastUploadOk && (
-                      <button onClick={() => navigate(`/customif/${appId || appIdFromQuery}`)} className={styles.secondaryBtn}>
-                        {t('customIFCreate.startTest')}
-                      </button>
-                    )}
-                  </div>
+                {(appId || appIdFromQuery) && lastUploadOk && (
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/customif/${appId || appIdFromQuery}`)}
+                    className={styles.secondaryBtn}
+                  >
+                    {t('customIFCreate.startTest')}
+                  </button>
                 )}
               </div>
             </div>
           </div>
         </div>
       </div>
-      <FooterArea />
       <UploadProgress
         isOpen={isUploading}
         progress={progress}

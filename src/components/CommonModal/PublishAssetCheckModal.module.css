@@ -1,0 +1,22 @@
+.warnBox {
+  padding: 16px;
+  border-radius: 12px;
+  background: rgba(224, 61, 75, 0.08);
+  border: 1px solid rgba(224, 61, 75, 0.25);
+  margin-bottom: 12px;
+}
+
+.warnLead {
+  margin: 0 0 10px 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.list {
+  margin: 0;
+  padding-left: 1.2rem;
+  color: #444;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}

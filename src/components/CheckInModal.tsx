@@ -11,6 +11,8 @@ interface CheckInModalProps {
     onSignInSuccess?: () => void;
 }
 
+const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
+
 const CheckInModal: React.FC<CheckInModalProps> = ({
     isOpen,
     onClose,
@@ -43,16 +45,17 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
         }
     };
 
-    // 核心数据
-    const streakDay = signInStatus?.streakDay ?? 1; // 今天该签第几天
-    const schedule = signInStatus?.displaySchedule ?? []; // 奖励表
-    const signedInToday = signInStatus?.signedInToday ?? false; // 今天是否已签
-    const todayPoints = signInStatus?.totalPointsToday ?? 0; // 今天可得积分
-    const signedDaysThisMonth = signInStatus?.signedDaysThisMonth ?? []; // 本月已签到天数
-
+    const streakDay = signInStatus?.streakDay ?? 1;
+    const schedule = signInStatus?.displaySchedule ?? [];
+    const signedInToday = signInStatus?.signedInToday ?? false;
+    const todayPoints = signInStatus?.totalPointsToday ?? 0;
+    const signedDaysThisMonth = signInStatus?.signedDaysThisMonth ?? [];
     const isStatusReady = Boolean(signInStatus);
 
-    // 根据会员等级获取额外奖励点数
+    const consecutiveDays = signedInToday
+        ? streakDay
+        : Math.max(0, streakDay - 1);
+
     const getMembershipBonusPoints = () => {
         switch (signInStatus?.planId) {
             case 'month':
@@ -66,16 +69,13 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
         }
     };
 
-    // 当月天数
     const now = new Date();
-    const todayDate = now.getDate(); // 今天是这个月的几号
+    const todayDate = now.getDate();
     const daysInCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    // 当月 1 号是星期几 (0 = 周日, 用于月初占位)
     const firstDayWeekday = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
 
     const lastReward = schedule.length > 0 ? schedule[schedule.length - 1] : 0;
 
-    /** 按连续签到第 N 天取奖励（非日历日期） */
     const getStreakReward = (streakDayNum: number): number => {
         if (schedule.length === 0) return 0;
         const index = streakDayNum - 1;
@@ -84,7 +84,6 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
         return lastReward;
     };
 
-    /** 计算某已签日期当时的连续签到天数 */
     const getStreakDayAtSignedDate = (dayNum: number): number => {
         let streak = 0;
         for (let d = 1; d <= dayNum; d++) {
@@ -97,10 +96,6 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
         return streak;
     };
 
-    /**
-     * 日历格子积分：按连续签到天数展示。
-     * 断签日（历史未签）返回 null，仅显示日期。
-     */
     const getDayPoints = (dayNum: number, isSigned: boolean): number | null => {
         const isTodayCell = dayNum === todayDate;
         const isUnreachable = !isSigned && dayNum < todayDate;
@@ -122,6 +117,10 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
 
         return null;
     };
+
+    const hintPoints = signedInToday
+        ? getStreakReward(signInStatus?.nextStreakDay ?? streakDay + 1)
+        : todayPoints;
 
     if (!isOpen) return null;
 
@@ -155,8 +154,8 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
     return (
         <div className={styles.overlay} onClick={onClose}>
             <div className={styles.content} onClick={(event) => event.stopPropagation()}>
-                <button type="button" className={styles.closeButton} onClick={onClose}>
-                    ×
+                <button type="button" className={styles.closeButton} onClick={onClose} aria-label={t('common.close')}>
+                    <span className={styles.closeIcon} aria-hidden="true" />
                 </button>
 
                 {isFetchingStatus && !isStatusReady ? (
@@ -177,30 +176,32 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                 ) : (
                     <>
                         <div className={styles.header}>
-                            <h3 className={styles.title}>
-                                {signedInToday ? t('checkIn.titleSignedIn') : t('checkIn.title')}
-                            </h3>
+                            <h3 className={styles.title}>{t('checkIn.title')}</h3>
+                            <p className={styles.streakLine}>
+                                {t('checkIn.streakPrefix')}
+                                <span className={styles.streakNum}>{consecutiveDays}</span>
+                                {t('checkIn.streakSuffix')}
+                            </p>
                             <p className={styles.subtitle}>
                                 {signedInToday
-                                    ? t('checkIn.subtitleTomorrow', { streakDay: streakDay + 1 })
-                                    : t('checkIn.subtitlePoints', { points: todayPoints })}
+                                    ? t('checkIn.tomorrowRewardPrefix')
+                                    : t('checkIn.subtitlePointsPrefix')}
+                                <span className={styles.pointsHighlight}>
+                                    {t('checkIn.pointsQuote', { points: hintPoints })}
+                                </span>
                             </p>
                         </div>
 
                         {schedule.length > 0 && (
                             <div className={styles.calendarWrapper}>
                                 <div className={styles.weekdayRow}>
-                                    {['日', '一', '二', '三', '四', '五', '六'].map((label, idx) => (
-                                        <span
-                                            key={`${label}-${idx}`}
-                                            className={styles.weekdayLabel}
-                                        >
-                                            {label}
+                                    {WEEKDAY_KEYS.map((key) => (
+                                        <span key={key} className={styles.weekdayLabel}>
+                                            {t(`checkIn.weekdays.${key}`)}
                                         </span>
                                     ))}
                                 </div>
                                 <div className={styles.monthlyGrid}>
-                                    {/* 月初占位 */}
                                     {Array.from({ length: firstDayWeekday }).map((_, idx) => (
                                         <div
                                             key={`empty-${idx}`}
@@ -209,17 +210,11 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                                         />
                                     ))}
                                     {monthDays.map(({ dayNum, isSigned }) => {
-                                        // 今天的签到格（按日历今天几号）
                                         const isTodayCell = dayNum === todayDate;
-                                        // 今天已签到：今天 + 已签到
                                         const isClaimed = isTodayCell && isSigned;
-                                        // 历史已签到天（除今天外）
                                         const isHistoricalSigned = isSigned && !isTodayCell;
-                                        // 今天待签到：今天 + 未签到
                                         const isStreakActive = isTodayCell && !signedInToday;
-                                        // 预测可签到：今天之后 + 未签到
                                         const isForecast = !isSigned && dayNum > todayDate;
-                                        // 不可签到（历史断签）：今天之前 + 未签到
                                         const isUnreachable = !isSigned && dayNum < todayDate;
                                         const points = getDayPoints(dayNum, isSigned);
                                         const showCheck = isClaimed || isHistoricalSigned;
@@ -234,30 +229,37 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                                                     ${isHistoricalSigned ? styles.dayCellCompleted : ''}
                                                     ${isForecast ? styles.dayCellForecast : ''}
                                                     ${isUnreachable ? styles.dayCellFuture : ''}
-                                                    ${points !== null && points > 9 ? styles.dayCellBonus : ''}
+                                                    ${points !== null && points > 20 ? styles.dayCellBonus : ''}
                                                 `}
                                             >
-                                                <span className={styles.dayCellNumber}>
-                                                    {showCheck ? (
-                                                        <svg
-                                                            className={styles.checkIcon}
-                                                            width="16"
-                                                            height="16"
-                                                            viewBox="0 0 24 24"
-                                                            fill="none"
-                                                            stroke="currentColor"
-                                                            strokeWidth="3"
-                                                        >
-                                                            <polyline points="20 6 9 17 4 12" />
-                                                        </svg>
-                                                    ) : (
-                                                        dayNum
-                                                    )}
-                                                </span>
-                                                {points !== null && (
-                                                    <span className={styles.dayCellPoints}>
-                                                        {`+${points}`}
-                                                    </span>
+                                                {showCheck ? (
+                                                    <>
+                                                        <span className={styles.signedCheck} aria-hidden="true">
+                                                            <svg
+                                                                className={styles.checkIcon}
+                                                                width="10"
+                                                                height="10"
+                                                                viewBox="0 0 24 24"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                strokeWidth="3.5"
+                                                            >
+                                                                <polyline points="20 6 9 17 4 12" />
+                                                            </svg>
+                                                        </span>
+                                                        <span className={styles.signedText}>
+                                                            {t('checkIn.signed')}
+                                                        </span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <span className={styles.dayCellNumber}>{dayNum}</span>
+                                                        {points !== null && (
+                                                            <span className={styles.dayCellPoints}>
+                                                                {`+${points}`}
+                                                            </span>
+                                                        )}
+                                                    </>
                                                 )}
                                             </div>
                                         );
@@ -272,23 +274,23 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                             </p>
                         )}
 
-                        {!signedInToday && (
-                            <div className={styles.buttonContainer}>
-                                <button
-                                    type="button"
-                                    className={styles.signInButton}
-                                    onClick={handleCheckIn}
-                                    disabled={isLoading || isFetchingStatus}
-                                >
-                                    {isLoading ? (
-                                        <span className={styles.buttonLoading}>
-                                            <span className={styles.spinner} />
-                                            {t('checkIn.signingIn')}
-                                        </span>
-                                    ) : t('checkIn.signInNow')}
-                                </button>
-                            </div>
-                        )}
+                        <div className={styles.buttonContainer}>
+                            <button
+                                type="button"
+                                className={`${styles.signInButton} ${signedInToday ? styles.signInButtonDone : ''}`}
+                                onClick={handleCheckIn}
+                                disabled={isLoading || isFetchingStatus || signedInToday}
+                            >
+                                {isLoading ? (
+                                    <span className={styles.buttonLoading}>
+                                        <span className={styles.spinner} />
+                                        {t('checkIn.signingIn')}
+                                    </span>
+                                ) : signedInToday
+                                    ? t('checkIn.titleSignedIn')
+                                    : t('checkIn.signInNow')}
+                            </button>
+                        </div>
                     </>
                 )}
             </div>

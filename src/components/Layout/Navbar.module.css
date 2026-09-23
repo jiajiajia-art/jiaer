@@ -29,13 +29,22 @@
     --navbar-action-bg-hover: rgba(255, 255, 255, 0.14);
     --navbar-action-border: rgba(255, 255, 255, 0.14);
     --navbar-action-text: #fff;
-    --navbar-login-bg: rgba(255, 255, 255, 0.08);
-    --navbar-login-bg-hover: rgba(255, 255, 255, 0.14);
-    --navbar-login-border: rgba(255, 255, 255, 0.14);
-    --navbar-login-text: #fff;
-    --navbar-menu-bg: rgba(255, 255, 255, 0.97);
-    --navbar-menu-border: rgba(17, 24, 39, 0.08);
-    --navbar-menu-shadow: 0 16px 32px rgba(5, 10, 18, 0.2);
+    /* 与首页「立即加入」同色：酒红扁平胶囊，非亮珊瑚外发光 */
+    --navbar-login-bg: linear-gradient(180deg, #b83248 0%, #8e2135 100%);
+    --navbar-login-bg-hover: linear-gradient(180deg, #c53a52 0%, #9a2640 100%);
+    --navbar-login-border: transparent;
+    --navbar-login-text: #ffffff;
+    --navbar-login-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    --navbar-login-shadow-hover: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    /* 功能注释：头像下拉对齐 funloom 墨黑片 + 白字（与语言弹窗同层级），禁止白底粉条旧稿 */
+    --navbar-menu-bg: #1C1C1E;
+    --navbar-menu-border: rgba(255, 255, 255, 0.1);
+    --navbar-menu-shadow: 0 16px 32px rgba(0, 0, 0, 0.45);
+    --navbar-menu-text: #FFFFFF;
+    --navbar-menu-item-hover: rgba(255, 255, 255, 0.08);
+    --navbar-menu-logout-bg: linear-gradient(180deg, #b83248 0%, #8e2135 100%);
+    --navbar-menu-logout-bg-hover: linear-gradient(180deg, #c53a52 0%, #9a2640 100%);
+    --navbar-menu-logout-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
     height: var(--app-desktop-navbar-height);
     display: flex;
     justify-content: center;
@@ -45,13 +54,15 @@
     background: var(--navbar-surface);
     border-bottom: 1px solid var(--navbar-border);
     box-shadow: var(--navbar-shadow);
-    max-width: 1920px;
+    /* 功能注释：顶栏全宽铺底，内容仍由 .navbar 的 inner-max 居中约束 */
+    max-width: none;
     color: var(--navbar-text);
     position: fixed;
     top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: min(100%, 1920px);
+    left: 0;
+    right: 0;
+    transform: none;
+    width: 100%;
     padding: 0 10px;
     box-sizing: border-box;
 }
@@ -94,6 +105,11 @@
     width: 160px;
     height: 86px;
     flex-shrink: 0;
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
 }
 
 .logo img {
@@ -101,6 +117,7 @@
     height: 80%;
     margin-top: 10px;
     object-fit: contain;
+    pointer-events: none;
 }
 
 .navLinks {
@@ -172,6 +189,7 @@
     border: none;
     padding: 0;
     color: var(--navbar-search-icon-color);
+    /* 功能注释：搜索提交键保持原胶囊底，不用圆形按钮切图 */
     background: var(--navbar-search-icon-bg);
     border-radius: 20px;
     display: flex;
@@ -180,6 +198,22 @@
     cursor: pointer;
     appearance: none;
     -webkit-appearance: none;
+}
+
+.searchIcon img,
+.messageButton img {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+    display: block;
+    image-rendering: -webkit-optimize-contrast;
+}
+
+.navAssetIcon {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+    image-rendering: -webkit-optimize-contrast;
 }
 
 .searchInput {
@@ -269,9 +303,14 @@
 .messageButton {
     width: 42px;
     height: 42px;
-    border: 1px solid var(--navbar-action-border);
+    border: none;
     border-radius: 50%;
-    background: var(--navbar-action-bg);
+    /* 功能注释：圆形按钮底来自 assetsv2/home/nav_btn_bg.webp */
+    background-color: transparent;
+    background-image: var(--navbar-btn-circle-bg);
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
     color: var(--navbar-action-text);
     font-size: 20px;
     display: flex;
@@ -279,12 +318,14 @@
     justify-content: center;
     cursor: pointer;
     position: relative;
-    transition: transform 0.2s ease, background-color 0.2s ease;
+    transition: transform 0.2s ease, filter 0.2s ease;
 }
 
 .messageButton:hover {
     transform: translateY(-1px);
-    background: var(--navbar-action-bg-hover);
+    filter: brightness(1.12);
+    background-color: transparent;
+    background-image: var(--navbar-btn-circle-bg);
 }
 
 .messageBadge {
@@ -337,9 +378,10 @@
     right: 0;
     background: var(--navbar-menu-bg);
     border: 1px solid var(--navbar-menu-border);
-    border-radius: 8px;
+    border-radius: 14px;
     box-shadow: var(--navbar-menu-shadow);
-    min-width: 120px;
+    min-width: 168px;
+    padding: 6px;
     z-index: 1300;
     animation: slideDown 0.3s ease-out;
     overflow: hidden;
@@ -347,22 +389,28 @@
 
 .menuBtn {
     width: 100%;
-    padding: 12px 20px;
+    padding: 11px 16px;
     background: transparent;
-    color: #111827;
+    color: var(--navbar-menu-text);
     border: none;
-    border-radius: 0;
+    border-radius: 10px;
     font-size: 14px;
     font-weight: 600;
+    letter-spacing: 0.01em;
     cursor: pointer;
-    transition: background-color 0.2s ease, color 0.2s ease;
+    transition: background-color 0.2s ease, color 0.2s ease, filter 0.2s ease;
     text-align: center;
     white-space: nowrap;
 }
 
 .menuBtn:hover {
-    background: rgba(224, 61, 75, 0.08);
-    color: var(--primary);
+    background: var(--navbar-menu-item-hover);
+    color: #ffffff;
+}
+
+.menuBtn:focus-visible {
+    outline: 2px solid rgba(168, 40, 60, 0.65);
+    outline-offset: 1px;
 }
 
 .desktopOnlyMenuBtn {
@@ -380,15 +428,19 @@
     }
 }
 
+/* 功能注释：退出项复用登录酒红扁平渐变，禁止亮珊瑚 #FB4655 条块 */
 .logoutBtn {
-    background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
+    margin-top: 4px;
+    background: var(--navbar-menu-logout-bg);
     color: #fff;
-    transition: all 0.3s ease;
+    box-shadow: var(--navbar-menu-logout-shadow);
+    transition: background 0.2s ease, filter 0.2s ease;
 }
 
 .logoutBtn:hover {
-    background: linear-gradient(135deg, #e63b4b 0%, #f65061 100%);
+    background: var(--navbar-menu-logout-bg-hover);
     color: #fff;
+    filter: brightness(1.06);
 }
 
 .settingIcon {
@@ -399,23 +451,81 @@
 }
 
 .loginBtn {
-    padding: 0 !important;
+    /* 对齐 home.mobileJoinGroupAction：酒红竖向渐变 + 内高光，无外发光 */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    min-width: 84px;
+    padding: 0 18px !important;
     margin: 0 !important;
     flex: none !important;
     color: var(--navbar-login-text);
     border: 1px solid var(--navbar-login-border);
-    border-radius: 8px;
-    font-size: 16px;
-    font-weight: 600;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1;
     cursor: pointer;
-    transition: all 0.3s ease;
     white-space: nowrap;
     background: var(--navbar-login-bg);
+    box-shadow: var(--navbar-login-shadow);
+    transition:
+        background 0.2s ease,
+        box-shadow 0.2s ease,
+        filter 0.2s ease;
 }
 
 .loginBtn:hover {
-    transform: translateY(-2px);
+    transform: none;
     background: var(--navbar-login-bg-hover);
+    box-shadow: var(--navbar-login-shadow-hover);
+    filter: brightness(1.06);
+}
+
+.loginBtn:active {
+    transform: none;
+    filter: brightness(0.96);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.loginBtn:focus-visible {
+    outline: 2px solid rgba(184, 50, 72, 0.55);
+    outline-offset: 3px;
+}
+
+/* 功能注释：顶栏最右语言入口；中文显示「语言」、英文显示 EN，登录无关 */
+.langTrigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    min-width: 44px;
+    padding: 0 12px;
+    flex-shrink: 0;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s ease, border-color 0.2s ease, filter 0.2s ease;
+}
+
+.langTrigger:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.28);
+    filter: brightness(1.05);
+}
+
+.langTrigger:focus-visible {
+    outline: 2px solid rgba(184, 50, 72, 0.55);
+    outline-offset: 3px;
 }
 
 .navbarContainerMobileHome {
@@ -424,32 +534,43 @@
 
 @media (max-width: 768px) {
     .navbarContainer {
-        --navbar-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(244, 246, 249, 0.94) 100%);
-        --navbar-border: rgba(26, 29, 33, 0.08);
-        --navbar-shadow: 0 10px 24px rgba(17, 24, 39, 0.08);
-        --navbar-text: #1f2933;
-        --navbar-text-strong: #111827;
-        --navbar-search-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(245, 247, 250, 0.88) 100%);
-        --navbar-search-border: rgba(26, 29, 33, 0.08);
-        --navbar-search-input: #1f2933;
-        --navbar-search-placeholder: rgba(26, 29, 33, 0.45);
-        --navbar-search-icon-bg: linear-gradient(180deg, #2c3440 0%, #1f2732 100%);
-        --navbar-search-icon-color: #fff;
-        --navbar-search-panel-bg: #ffffff;
-        --navbar-search-panel-border: rgba(26, 29, 33, 0.08);
-        --navbar-search-panel-shadow: 0 14px 28px rgba(17, 24, 39, 0.12);
-        --navbar-search-panel-item-hover: rgba(31, 41, 51, 0.06);
-        --navbar-search-panel-title: #111827;
-        --navbar-search-panel-meta: rgba(31, 41, 51, 0.58);
-        --navbar-search-panel-empty: rgba(31, 41, 51, 0.62);
-        --navbar-action-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(238, 242, 247, 0.92) 100%);
-        --navbar-action-bg-hover: rgba(244, 247, 250, 0.98);
-        --navbar-action-border: rgba(26, 29, 33, 0.1);
-        --navbar-action-text: #1f2933;
-        --navbar-login-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(238, 242, 247, 0.94) 100%);
-        --navbar-login-bg-hover: linear-gradient(180deg, rgba(248, 250, 252, 0.98) 0%, rgba(233, 238, 244, 0.96) 100%);
-        --navbar-login-border: rgba(26, 29, 33, 0.1);
-        --navbar-login-text: #111827;
+        /* 功能注释：移动端顶栏对齐暗色 funloom，禁止回退浅色白底 */
+        --navbar-surface: #000000;
+        --navbar-border: rgba(255, 255, 255, 0.08);
+        --navbar-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+        --navbar-text: rgba(255, 255, 255, 0.78);
+        --navbar-text-strong: #FFFFFF;
+        --navbar-search-bg: #1C1C1E;
+        --navbar-search-border: rgba(255, 255, 255, 0.12);
+        --navbar-search-input: rgba(255, 255, 255, 0.94);
+        --navbar-search-placeholder: rgba(255, 255, 255, 0.46);
+        --navbar-search-icon-bg: linear-gradient(180deg, #3A3A3C 0%, #2C2C2E 100%);
+        --navbar-search-icon-color: #FFFFFF;
+        --navbar-search-panel-bg: #1C1C1E;
+        --navbar-search-panel-border: rgba(255, 255, 255, 0.1);
+        --navbar-search-panel-shadow: 0 14px 28px rgba(0, 0, 0, 0.45);
+        --navbar-search-panel-item-hover: rgba(255, 255, 255, 0.08);
+        --navbar-search-panel-title: #FFFFFF;
+        --navbar-search-panel-meta: rgba(255, 255, 255, 0.58);
+        --navbar-search-panel-empty: rgba(255, 255, 255, 0.62);
+        --navbar-action-bg: #1C1C1E;
+        --navbar-action-bg-hover: #2C2C2E;
+        --navbar-action-border: rgba(255, 255, 255, 0.12);
+        --navbar-action-text: #FFFFFF;
+        --navbar-login-bg: linear-gradient(180deg, #b83248 0%, #8e2135 100%);
+        --navbar-login-bg-hover: linear-gradient(180deg, #c53a52 0%, #9a2640 100%);
+        --navbar-login-border: transparent;
+        --navbar-login-text: #ffffff;
+        --navbar-login-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        --navbar-login-shadow-hover: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+        --navbar-menu-bg: #1C1C1E;
+        --navbar-menu-border: rgba(255, 255, 255, 0.1);
+        --navbar-menu-shadow: 0 16px 32px rgba(0, 0, 0, 0.45);
+        --navbar-menu-text: #FFFFFF;
+        --navbar-menu-item-hover: rgba(255, 255, 255, 0.08);
+        --navbar-menu-logout-bg: linear-gradient(180deg, #b83248 0%, #8e2135 100%);
+        --navbar-menu-logout-bg-hover: linear-gradient(180deg, #c53a52 0%, #9a2640 100%);
+        --navbar-menu-logout-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
         width: 100vw;
         height: 60px;
         padding: 0 12px;
@@ -493,7 +614,7 @@
         height: 28px;
         padding-left: 8px;
         padding-right: 0;
-        box-shadow: 0 8px 16px rgba(148, 163, 184, 0.08);
+        box-shadow: none;
     }
 
     .searchInput {
@@ -509,6 +630,7 @@
         width: 40px;
         min-width: 40px;
         font-size: 14px;
+        border-radius: 20px;
     }
 
     .searchPanel {
@@ -539,7 +661,7 @@
         height: 36px;
         font-size: 17px;
         flex-shrink: 0;
-        box-shadow: 0 6px 14px rgba(148, 163, 184, 0.1);
+        box-shadow: none;
     }
 
     .messageBadge {
@@ -564,15 +686,23 @@
     }
 
     .loginBtn {
-        width: 60px !important;
-        height: 32px !important;
-        min-width: 60px !important;
-        max-width: 60px !important;
-        min-height: 32px !important;
-        max-height: 32px !important;
-        font-size: 14px;
+        width: auto !important;
+        height: 30px !important;
+        min-width: 68px !important;
+        max-width: none !important;
+        min-height: 30px !important;
+        max-height: 30px !important;
+        padding: 0 14px !important;
+        font-size: 13px;
         flex-shrink: 0;
-        box-shadow: 0 6px 14px rgba(148, 163, 184, 0.08);
+        box-shadow: var(--navbar-login-shadow);
+    }
+
+    .langTrigger {
+        height: 30px;
+        min-width: 40px;
+        padding: 0 10px;
+        font-size: 12px;
     }
 
     .desktopOnlyMenuBtn {
@@ -580,32 +710,34 @@
     }
 
     .navbarContainerMobileHomeOverlayActive {
-        --navbar-surface: transparent;
-        --navbar-border: transparent;
+        --navbar-surface: rgba(0, 0, 0, 0.72);
+        --navbar-border: rgba(255, 255, 255, 0.08);
         --navbar-shadow: none;
         --navbar-text: rgba(255, 255, 255, 0.88);
         --navbar-text-strong: #ffffff;
-        --navbar-search-bg: rgba(12, 20, 32, 0.14);
-        --navbar-search-border: rgba(255, 255, 255, 0.28);
+        --navbar-search-bg: rgba(28, 28, 30, 0.92);
+        --navbar-search-border: rgba(255, 255, 255, 0.14);
         --navbar-search-input: rgba(255, 255, 255, 0.96);
         --navbar-search-placeholder: rgba(255, 255, 255, 0.56);
-        --navbar-search-icon-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.08) 100%);
+        --navbar-search-icon-bg: linear-gradient(180deg, #3A3A3C 0%, #2C2C2E 100%);
         --navbar-search-icon-color: #ffffff;
-        --navbar-search-panel-bg: #ffffff;
-        --navbar-search-panel-border: rgba(26, 29, 33, 0.1);
-        --navbar-search-panel-shadow: 0 14px 28px rgba(17, 24, 39, 0.14);
-        --navbar-search-panel-item-hover: rgba(31, 41, 51, 0.06);
-        --navbar-search-panel-title: #111827;
-        --navbar-search-panel-meta: rgba(31, 41, 51, 0.58);
-        --navbar-search-panel-empty: rgba(31, 41, 51, 0.62);
-        --navbar-action-bg: rgba(12, 20, 32, 0.14);
-        --navbar-action-bg-hover: rgba(12, 20, 32, 0.24);
-        --navbar-action-border: rgba(255, 255, 255, 0.28);
+        --navbar-search-panel-bg: #1C1C1E;
+        --navbar-search-panel-border: rgba(255, 255, 255, 0.1);
+        --navbar-search-panel-shadow: 0 14px 28px rgba(0, 0, 0, 0.45);
+        --navbar-search-panel-item-hover: rgba(255, 255, 255, 0.08);
+        --navbar-search-panel-title: #ffffff;
+        --navbar-search-panel-meta: rgba(255, 255, 255, 0.58);
+        --navbar-search-panel-empty: rgba(255, 255, 255, 0.62);
+        --navbar-action-bg: rgba(28, 28, 30, 0.92);
+        --navbar-action-bg-hover: #2C2C2E;
+        --navbar-action-border: rgba(255, 255, 255, 0.14);
         --navbar-action-text: #ffffff;
-        --navbar-login-bg: rgba(12, 20, 32, 0.14);
-        --navbar-login-bg-hover: rgba(12, 20, 32, 0.24);
-        --navbar-login-border: rgba(255, 255, 255, 0.28);
+        --navbar-login-bg: linear-gradient(180deg, #b83248 0%, #8e2135 100%);
+        --navbar-login-bg-hover: linear-gradient(180deg, #c53a52 0%, #9a2640 100%);
+        --navbar-login-border: transparent;
         --navbar-login-text: #ffffff;
+        --navbar-login-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        --navbar-login-shadow-hover: inset 0 1px 0 rgba(255, 255, 255, 0.16);
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
     }
@@ -615,8 +747,11 @@
     }
 
     .navbarContainerMobileHomeOverlayActive .searchBox,
-    .navbarContainerMobileHomeOverlayActive .messageButton,
+    .navbarContainerMobileHomeOverlayActive .messageButton {
+        box-shadow: none;
+    }
+
     .navbarContainerMobileHomeOverlayActive .loginBtn {
-        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
+        box-shadow: var(--navbar-login-shadow);
     }
 }

@@ -13,6 +13,8 @@ import type {
   MembershipSignInStatus,
   PointsActivitiesResponse,
   ResetPasswordRequest,
+  SaveProfilePreferencesRequest,
+  SaveProfilePreferencesResponse,
   SendCodeRequest,
   SettlePointsResponse,
   SignupRequest,
@@ -24,7 +26,7 @@ import type {
 
 export const auth = {
   signup: (data: SignupRequest) =>
-    api.post<ApiResponse<User>>('/auth/register', data),
+    api.post<ApiResponse<AuthResponse>>('/auth/register', data),
 
   login: (data: LoginRequest) =>
     api.post<ApiResponse<AuthResponse>>('/auth/login', data),
@@ -40,6 +42,9 @@ export const auth = {
 
   updateUserInfo: (newUserName: string) =>
     api.post<ApiResponse<User>>('/auth/update/username', { newUserName: newUserName }),
+
+  saveProfilePreferences: (data: SaveProfilePreferencesRequest) =>
+    api.post<ApiResponse<SaveProfilePreferencesResponse>>('/auth/user/preferences', data),
 
   checkIn: () =>
     api.post<ApiResponse<CheckInResponse | null>>('/auth/user/signin'),
@@ -86,4 +91,10 @@ export const auth = {
 
   exchangeDiamonds: (data: ExchangeDiamondsRequest) =>
     api.post<ApiResponse<ExchangeDiamondsResponse>>('/auth/currency/exchange', data),
+
+  /** 功能注释：用户自助注销账号（不可逆；成功后前端应登出） */
+  deleteAccount: () =>
+    api.post<ApiResponse<{ alreadyDeleted?: boolean; deletedAt?: string | null }>>(
+      '/auth/user/delete-account',
+    ),
 };

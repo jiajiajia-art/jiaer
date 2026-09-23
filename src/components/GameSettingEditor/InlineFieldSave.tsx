@@ -41,7 +41,12 @@ const InlineFieldSave: React.FC<InlineFieldSaveProps> = ({
         && buttonPlacement === 'overlay'
         && React.isValidElement<{ className?: string }>(children)
             ? React.cloneElement(children, {
-                className: [children.props.className, styles.fieldControl, inputClassName].filter(Boolean).join(' '),
+                // 功能注释：只在出现保存钮时留右侧内边距，避免未改字段右侧空一截
+                className: [
+                    children.props.className,
+                    showSave ? styles.fieldControl : '',
+                    inputClassName,
+                ].filter(Boolean).join(' '),
             })
             : children;
 

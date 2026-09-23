@@ -1,0 +1,98 @@
+/* 功能注释：创作分步轨紧贴标题行，轨下仅靠 topBar row-gap */
+.rail {
+  margin: 0;
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  min-width: min(100%, 720px);
+}
+
+.step {
+  position: relative;
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px 10px;
+  min-width: 96px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.step + .step::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 18px;
+  width: 1px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.index {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: #1C1C1E;
+  color: rgba(255, 255, 255, 0.55);
+  font-variant-numeric: tabular-nums;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+}
+
+.active {
+  border-bottom-color: #8E2135;
+  color: #ffffff;
+}
+
+.active .index {
+  background: #8E2135;
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(142, 33, 53, 0.28);
+}
+
+.active .label {
+  color: #FF8A9A;
+}
+
+.done {
+  color: rgba(255, 255, 255, 0.7);
+  border-bottom-color: rgba(46, 160, 90, 0.55);
+}
+
+.done .index {
+  background: #2ea05a;
+  border-color: transparent;
+  color: #fff;
+}
+
+@media (max-width: 768px) {
+  .list {
+    min-width: 560px;
+  }
+
+  .label {
+    font-size: 0.72rem;
+  }
+}

@@ -50,10 +50,22 @@ export const normalizeHomeListMode = (value: string | null): HomeListMode => {
 };
 
 export const normalizeHomeListSort = (value: string | null): HomeListSort => {
+    if (value === 'hot') return 'hot';
     if (value === 'recommended') return 'recommended';
     if (value === 'latest') return 'latest';
     return DEFAULT_HOME_LIST_SORT;
 };
+
+/** 功能注释：分类页顶栏标题随排序变化（最热 → 最热推荐） */
+export const CATEGORIES_PAGE_TITLE_KEYS = {
+    hot: 'categories.pageTitles.hot',
+    recommended: 'categories.pageTitles.recommended',
+    latest: 'categories.pageTitles.latest',
+} as const satisfies Record<HomeListSort, string>;
+
+export const resolveCategoriesPageTitleKey = (sort: HomeListSort): string => (
+    CATEGORIES_PAGE_TITLE_KEYS[sort] || CATEGORIES_PAGE_TITLE_KEYS.recommended
+);
 
 export const normalizeHomeListTagId = (value: string | null): number | null => {
     if (!value || value === 'all') return null;

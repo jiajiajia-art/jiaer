@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSta
 import { useTranslation } from 'react-i18next';
 import styles from './HomeGameFilterBar.module.css';
 import type { FlatThemeTag } from '../utils/themeTags';
+import { useLocalizedThemeTags } from '../utils/themeTags';
 import {
     HOME_LIST_MODE_OPTIONS,
     HOME_LIST_SORT_OPTIONS,
@@ -37,6 +38,7 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
     onTagChange,
 }) => {
     const { t } = useTranslation();
+    const localizedThemeTags = useLocalizedThemeTags(themeTags);
     const rootRef = useRef<HTMLDivElement | null>(null);
     const tagGroupRef = useRef<HTMLDivElement | null>(null);
     const tagTriggerRef = useRef<HTMLButtonElement | null>(null);
@@ -50,12 +52,12 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
             label: t('gameBrowse.all'),
             title: t('gameBrowse.all'),
         },
-        ...themeTags.map((tag) => ({
+        ...localizedThemeTags.map((tag) => ({
             value: Number(tag.id),
             label: tag.name,
             title: tag.pathLabel || tag.name,
         })),
-    ]), [themeTags, t]);
+    ]), [localizedThemeTags, t]);
 
     const selectedSortLabel = useMemo(
         () => HOME_LIST_SORT_OPTIONS.find((option) => option.value === sort)?.labelKey
