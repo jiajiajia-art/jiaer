@@ -135,8 +135,8 @@ const WarehouseCardAvatarField: React.FC<Props> = ({
               {busy
                 ? '后台生成中…'
                 : avatarUrl
-                  ? `重新生成图像 · ${CHARACTER_GENERATION_COST} 积分`
-                  : `AI 生成图像 · ${CHARACTER_GENERATION_COST} 积分`}
+                  ? `重新生成图像 · ${CHARACTER_GENERATION_COST} 织梦豆`
+                  : `AI 生成图像 · ${CHARACTER_GENERATION_COST} 织梦豆`}
             </button>
             <p className={panel.avatarUploadHint}>
               上传转 WebP（质量 100）；超过 1MB 等比缩小。不做抠图。

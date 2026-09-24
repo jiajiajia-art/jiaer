@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { HOST_ADDRESS } from '../config';
 import { authFetch } from '../api/base';
 import { CustomIFHostBridge } from '../custom/hostBridge';
@@ -21,6 +21,8 @@ type CreateSessionResp = {
 const CustomIF: React.FC = () => {
   const { t } = useTranslation();
   const { appId } = useParams();
+  const [searchParams] = useSearchParams();
+  const creatorTest = searchParams.get('testMode') === 'creator';
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [session, setSession] = useState<CreateSessionResp | null>(null);
@@ -54,7 +56,7 @@ const CustomIF: React.FC = () => {
       try {
         setLoading(true);
         // 1) create session
-        const resp = await authFetch(`${HOST_ADDRESS}/api/custom/apps/${appId}/session/create`, { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({}) });
+        const resp = await authFetch(`${HOST_ADDRESS}/api/custom/apps/${appId}/session/create`, { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify(creatorTest ? { billingMode: 'creator_test' } : {}) });
         if (!resp.ok) throw new Error(await resp.text());
         const data = await resp.json() as CreateSessionResp;
         if (cancelled) return;
@@ -85,7 +87,7 @@ const CustomIF: React.FC = () => {
       }
     })();
     return () => { cancelled = true; };
-  }, [appId, setStartedAt, syncDailyTaskPayload]);
+  }, [appId, creatorTest, setStartedAt, syncDailyTaskPayload]);
 
   useEffect(() => {
     // attach host bridge when iframe is ready and session exists

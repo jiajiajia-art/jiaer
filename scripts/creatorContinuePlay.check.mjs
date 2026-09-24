@@ -110,6 +110,7 @@ test('buildCreatorPlaySessionRequest sets restart by intent', () => {
     fileId: 'f1',
     restart: true,
     source: 'other',
+    billingMode: 'creator_test',
   });
   assert.deepEqual(
     buildCreatorPlaySessionRequest({ intent: 'edit-continue', fileId: 'f2', source: 'game_detail' }),

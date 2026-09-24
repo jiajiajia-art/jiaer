@@ -156,10 +156,10 @@ const normalizePlaybackOrientation = (value?: string | null) => {
 };
 
 const INTERACTIVE_VIDEO_UNLOCK_ERROR_MESSAGES: Record<string, string> = {
-    INSUFFICIENT_POINTS: '积分不足',
-    'Insufficient points': '积分不足',
-    INSUFFICIENT_DIAMONDS: '钻石不足',
-    'Insufficient diamonds': '钻石不足',
+    INSUFFICIENT_POINTS: '织梦豆不足',
+    'Insufficient points': '织梦豆不足',
+    INSUFFICIENT_DIAMONDS: 'KK币不足',
+    'Insufficient diamonds': 'KK币不足',
     PAYMENT_METHOD_UNAVAILABLE: '当前支付方式不可用',
     'Payment method is unavailable': '当前支付方式不可用',
     BUYOUT_NOT_FOR_SALE: '该互动影游暂不支持买断',

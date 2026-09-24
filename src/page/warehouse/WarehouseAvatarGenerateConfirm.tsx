@@ -57,7 +57,7 @@ const WarehouseAvatarGenerateConfirm: React.FC<Props> = ({
       message={(
         <div className={styles.confirmMsgStack}>
           <p className={styles.confirmMsgText}>
-            {`将扣除 ${cost} 积分生成 ${subjectLabel}，是否继续？`}
+            {`将扣除 ${cost} 织梦豆生成 ${subjectLabel}，是否继续？`}
           </p>
           <button
             type="button"

@@ -285,7 +285,7 @@ const LotteryAdminManager: React.FC = () => {
             <option value="mini_handheld">迷你掌机</option>
             <option value="badge">吧唧</option>
             <option value="poke_ball">精灵球</option>
-            <option value="points_300">300积分</option>
+            <option value="points_300">300织梦豆</option>
           </select>
           <button type="button" onClick={() => void load()} disabled={loading}>
             刷新

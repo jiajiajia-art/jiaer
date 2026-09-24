@@ -113,7 +113,7 @@ const ShareRatioAdminManager: React.FC<ShareRatioAdminManagerProps> = () => {
     };
 
     const getShareTypeLabel = (shareType: Currency) => {
-        return shareType === 'points' ? '积分' : '钻石';
+        return shareType === 'points' ? '织梦豆' : 'KK币';
     };
 
     return (

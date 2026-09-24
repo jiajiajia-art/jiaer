@@ -3,6 +3,7 @@ export interface CreateGalgamePlaySessionRequest {
   playerName?: string;
   source?: 'link' | 'game_detail' | 'history' | 'other';
   restart?: boolean;
+  billingMode?: 'creator_test';
 }
 
 export interface CreateGalgameSessionRequest {

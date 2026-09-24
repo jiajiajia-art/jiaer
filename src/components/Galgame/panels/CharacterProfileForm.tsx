@@ -310,7 +310,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
   const ensureEnoughPointsForAi = async (cost: number) => {
     const latestPoints = await refreshAuthUserPoints();
     if (typeof latestPoints === 'number' && latestPoints < cost) {
-      toast.error(`积分不足（需要 ${cost}，当前 ${latestPoints}）`);
+      toast.error(`织梦豆不足（需要 ${cost}，当前 ${latestPoints}）`);
       return false;
     }
     return true;
@@ -451,7 +451,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
         updateUser({ points: res.data.remainingPoints });
       }
       toast.success(
-        `${PROFILE_FIELD_LABEL[field]}已生成（-${res.data.pointsDeducted ?? NPC_PROFILE_FIELD_GENERATION_COST} 积分）`,
+        `${PROFILE_FIELD_LABEL[field]}已生成（-${res.data.pointsDeducted ?? NPC_PROFILE_FIELD_GENERATION_COST} 织梦豆）`,
       );
     } catch (e) {
       toast.error(getApiErrorMessage(e, `${PROFILE_FIELD_LABEL[field]}生成失败`));
@@ -563,7 +563,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
                   void requestGenerateAvatar();
                 }}
               >
-                {isAiBusy('avatar') ? '生成中…' : `AI 生成头像 · ${CHARACTER_GENERATION_COST} 积分`}
+                {isAiBusy('avatar') ? '生成中…' : `AI 生成头像 · ${CHARACTER_GENERATION_COST} 织梦豆`}
               </button>
               <button
                 type="button"
@@ -774,7 +774,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
         message={confirmKind === 'avatar' ? (
           <div className={styles.confirmMsgStack}>
             <p className={styles.confirmMsgText}>
-              {`将扣除 ${CHARACTER_GENERATION_COST} 积分生成 AI 头像，是否继续？`}
+              {`将扣除 ${CHARACTER_GENERATION_COST} 织梦豆生成 AI 头像，是否继续？`}
             </p>
             <button
               type="button"
@@ -789,7 +789,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
             </button>
           </div>
         ) : (
-          `将扣除 ${NPC_PROFILE_FIELD_GENERATION_COST} 积分生成「${confirmKind ? PROFILE_FIELD_LABEL[confirmKind] : ''}」，是否继续？`
+          `将扣除 ${NPC_PROFILE_FIELD_GENERATION_COST} 织梦豆生成「${confirmKind ? PROFILE_FIELD_LABEL[confirmKind] : ''}」，是否继续？`
         )}
         confirmText="确认生成"
         cancelText="取消"

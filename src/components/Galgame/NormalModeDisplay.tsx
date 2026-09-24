@@ -54,6 +54,9 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
     const { t } = useTranslation();
     const [showCustomInput, setShowCustomInput] = useState(false);
     const [customInputValue, setCustomInputValue] = useState('');
+    const creatorTest = new URLSearchParams(window.location.search).get('testMode') === 'creator';
+    const optionCost = creatorTest ? 2 : POINTS_CONFIG.option;
+    const customCost = creatorTest ? 2 : POINTS_CONFIG.custom;
     // 是否强制展示当前 step 的完整文本（用于点击跳过打字机效果）
     const [forceShowFullText, setForceShowFullText] = useState(false);
 
@@ -221,7 +224,7 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                                     {!isFreeRound && (
                                         <div className={styles.choicePrice}>
                                             <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
-                                            <span>{POINTS_CONFIG.option}</span>
+                                            <span>{optionCost}</span>
                                         </div>
                                     )}
                                 </div>
@@ -255,7 +258,7 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                                 {!isFreeRound && (
                                     <div className={styles.choicePrice}>
                                         <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
-                                        <span>{POINTS_CONFIG.custom}</span>
+                                        <span>{customCost}</span>
                                     </div>
                                 )}
                             </button>

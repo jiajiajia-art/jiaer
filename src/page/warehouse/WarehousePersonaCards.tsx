@@ -90,7 +90,7 @@ const WarehousePersonaCards: React.FC = () => {
         void refreshAuthUserPoints();
       }
       toast.success(
-        `图像已生成（-${result.pointsDeducted ?? CHARACTER_GENERATION_COST} 积分）`,
+        `图像已生成（-${result.pointsDeducted ?? CHARACTER_GENERATION_COST} 织梦豆）`,
       );
       if (result.cardId) {
         void loadRef.current?.();
@@ -176,7 +176,7 @@ const WarehousePersonaCards: React.FC = () => {
     if (!token || generatingAvatar) return;
     const latestPoints = await refreshAuthUserPoints();
     if (typeof latestPoints === 'number' && latestPoints < CHARACTER_GENERATION_COST) {
-      toast.error(`积分不足（需要 ${CHARACTER_GENERATION_COST}，当前 ${latestPoints}）`);
+      toast.error(`织梦豆不足（需要 ${CHARACTER_GENERATION_COST}，当前 ${latestPoints}）`);
       return;
     }
     setAvatarConfirmOpen(true);
@@ -219,7 +219,7 @@ const WarehousePersonaCards: React.FC = () => {
       && latestPoints < NPC_PROFILE_FIELD_GENERATION_COST
     ) {
       toast.error(
-        `积分不足（需要 ${NPC_PROFILE_FIELD_GENERATION_COST}，当前 ${latestPoints}）`,
+        `织梦豆不足（需要 ${NPC_PROFILE_FIELD_GENERATION_COST}，当前 ${latestPoints}）`,
       );
       return;
     }
@@ -248,7 +248,7 @@ const WarehousePersonaCards: React.FC = () => {
       }));
       await refreshAuthUserPoints();
       toast.success(
-        `人设已生成（-${res.data.pointsDeducted ?? NPC_PROFILE_FIELD_GENERATION_COST} 积分）`,
+        `人设已生成（-${res.data.pointsDeducted ?? NPC_PROFILE_FIELD_GENERATION_COST} 织梦豆）`,
       );
     } catch (e) {
       toast.error((e as Error)?.message || '人设生成失败');
@@ -743,7 +743,7 @@ const WarehousePersonaCards: React.FC = () => {
         onCancel={() => setPersonaConfirmOpen(false)}
         onConfirm={() => void runGeneratePersona()}
         title="确认生成人设"
-        message={`将扣除 ${NPC_PROFILE_FIELD_GENERATION_COST} 积分生成「人设简介」，是否继续？`}
+        message={`将扣除 ${NPC_PROFILE_FIELD_GENERATION_COST} 织梦豆生成「人设简介」，是否继续？`}
         confirmButtonText="生成"
         cancelButtonText="取消"
       />

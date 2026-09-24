@@ -228,7 +228,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
         }
         if (playerAvatarAbOnChange || res.data?.ab?.generateOnChange) {
           if (saved.avatarNeedsRegen || !saved.avatarUrl) {
-            toast('实验组：请为新身份生成头像（将扣除积分）');
+            toast('实验组：请为新身份生成头像（将扣除织梦豆）');
           }
         }
         return;
@@ -274,7 +274,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
     if (avatarAiBusy || personaAiBusy || avatarUploading) return;
     const latestPoints = await refreshAuthUserPoints();
     if (typeof latestPoints === 'number' && latestPoints < CHARACTER_GENERATION_COST) {
-      toast.error(`积分不足（需要 ${CHARACTER_GENERATION_COST}，当前 ${latestPoints}）`);
+      toast.error(`织梦豆不足（需要 ${CHARACTER_GENERATION_COST}，当前 ${latestPoints}）`);
       return;
     }
     setAvatarStyleId(DEFAULT_AVATAR_STYLE);
@@ -372,7 +372,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
       message={(
         <div className={styles.confirmMsgStack}>
           <p className={styles.confirmMsgText}>
-            {`将扣除 ${CHARACTER_GENERATION_COST} 积分生成 AI 头像，是否继续？`}
+            {`将扣除 ${CHARACTER_GENERATION_COST} 织梦豆生成 AI 头像，是否继续？`}
           </p>
           <button
             type="button"
@@ -469,7 +469,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
       && latestPoints < NPC_PROFILE_FIELD_GENERATION_COST
     ) {
       toast.error(
-        `积分不足（需要 ${NPC_PROFILE_FIELD_GENERATION_COST}，当前 ${latestPoints}）`,
+        `织梦豆不足（需要 ${NPC_PROFILE_FIELD_GENERATION_COST}，当前 ${latestPoints}）`,
       );
       return;
     }
@@ -499,7 +499,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
         updateUser({ points: res.data.remainingPoints });
       }
       toast.success(
-        `人设已生成（-${res.data.pointsDeducted ?? NPC_PROFILE_FIELD_GENERATION_COST} 积分）`,
+        `人设已生成（-${res.data.pointsDeducted ?? NPC_PROFILE_FIELD_GENERATION_COST} 织梦豆）`,
       );
     } catch (e) {
       toast.error((e as Error)?.message || '人设生成失败');
@@ -590,7 +590,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
         (playerAvatarAbOnChange || (res.data as { ab?: { generateOnChange?: boolean } })?.ab?.generateOnChange)
         && (merged.avatarNeedsRegen || !merged.avatarUrl)
       ) {
-        toast('实验组：请为新角色生成头像（将扣除积分）');
+        toast('实验组：请为新角色生成头像（将扣除织梦豆）');
       }
     } finally {
       setSaving(false);
@@ -670,7 +670,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
                 >
                   {avatarAiBusy
                     ? '后台生成中…'
-                    : `${needsAvatar ? '生成头像' : '重新生成'} · ${CHARACTER_GENERATION_COST} 积分`}
+                    : `${needsAvatar ? '生成头像' : '重新生成'} · ${CHARACTER_GENERATION_COST} 织梦豆`}
                 </button>
                 <button
                   type="button"
@@ -777,7 +777,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
           isOpen={personaAiConfirmOpen}
           variant="dossier"
           title="确认生成人设"
-          message={`将扣除 ${NPC_PROFILE_FIELD_GENERATION_COST} 积分生成「人设」，是否继续？`}
+          message={`将扣除 ${NPC_PROFILE_FIELD_GENERATION_COST} 织梦豆生成「人设」，是否继续？`}
           confirmText="确认生成"
           cancelText="取消"
           overlayZIndex={3600}
@@ -1028,7 +1028,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
               >
                 {avatarAiBusy
                   ? '后台生成中…'
-                  : `${needsAvatar ? '生成头像' : '重新生成'} · ${CHARACTER_GENERATION_COST} 积分`}
+                  : `${needsAvatar ? '生成头像' : '重新生成'} · ${CHARACTER_GENERATION_COST} 织梦豆`}
               </button>
               <button
                 type="button"

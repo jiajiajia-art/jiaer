@@ -1,5 +1,5 @@
 /**
- * Create 页：今日可赚积分模块在邀请卡片下方；签到/每日任务/观看广告从原入口迁出。
+ * Create 页：今日可赚织梦豆模块在邀请卡片下方；签到/每日任务/观看广告从原入口迁出。
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => readFileSync(join(root, rel), 'utf8');
 
-test('Create_今日可赚积分应在邀请下方且迁出旧入口', () => {
+test('Create_今日可赚织梦豆应在邀请下方且迁出旧入口', () => {
   const create = read('src/page/Create.tsx');
   const panel = read('src/components/Profile/ProfileFunctionPanel.tsx');
   const today = read('src/components/Profile/TodayEarnPointsPanel.tsx');
@@ -22,9 +22,9 @@ test('Create_今日可赚积分应在邀请下方且迁出旧入口', () => {
   assert.match(today, /setIsCheckInOpen\(true\)/);
   assert.match(today, /DailyTasksModal/);
   assert.match(today, /profile\.adFeatureDeveloping|handleWatchAd/);
-  assert.match(zh, /"todayEarnPointsTitle":\s*"今日可赚积分"/);
-  assert.match(zh, /"todayEarnCheckInHint":\s*"每日领积分"/);
-  assert.match(zh, /"todayEarnDailyTasksHint":\s*"做任务领积分"/);
+  assert.match(zh, /"todayEarnPointsTitle":\s*"今日可赚织梦豆"/);
+  assert.match(zh, /"todayEarnCheckInHint":\s*"每日领织梦豆"/);
+  assert.match(zh, /"todayEarnDailyTasksHint":\s*"做任务领织梦豆"/);
   assert.match(zh, /"todayEarnWatchAdHint":\s*"看广告领奖"/);
   assert.match(today, /create\.todayEarnCheckInHint/);
 

@@ -66,7 +66,7 @@ const PRICING_MODE_OPTIONS: Array<{
     description: string;
     requiresCatalog?: boolean;
 }> = [
-    { value: 'free', label: '免费开放', description: '玩家 0 积分/钻石获得访问权益。' },
+    { value: 'free', label: '免费开放', description: '玩家无需 KK币即可获得访问权益。' },
     { value: 'buyout', label: '一次性买断', description: '玩家支付一次后永久解锁整部互动影游。' },
     { value: 'catalog', label: '按脚本/节点付费', description: '只对勾选脚本或节点上锁，未勾选内容继续免费。', requiresCatalog: true },
     { value: 'catalog_buyout', label: '脚本/节点 + 买断', description: '脚本/节点单独购买和全量买断可同时提供。', requiresCatalog: true },
@@ -162,11 +162,11 @@ const parsePriceInput = (value: string) => {
     return Number.isInteger(next) ? next : Number.NaN;
 };
 
-const paymentLabel = (currency: PaymentCurrency) => (currency === 'points' ? '积分' : '钻石');
+const paymentLabel = (currency: PaymentCurrency) => (currency === 'points' ? '织梦豆' : 'KK币');
 const formatProjectCostText = (value?: number | null) => {
     const points = Number(value);
     if (!Number.isFinite(points) || points < 0) return '-';
-    return `${Math.round(points)} 积分`;
+    return `${Math.round(points)} 织梦豆`;
 };
 const paidItemTypeLabel = (item: { targetType?: string }) => (item.targetType === 'node' ? '节点' : '脚本');
 const paidItemTitle = (item: { targetType?: string; name?: string; scriptName?: string | null }) => (
@@ -582,9 +582,9 @@ const InteractiveVideoEdit: React.FC = () => {
     };
 
     const validatePaymentGroup = (group: PaymentGroup, label: string, requireMethod: boolean) => {
-        const enabledOptions = (['points', 'diamonds'] as const).filter((currency) => group[currency].enabled);
+        const enabledOptions = (['diamonds'] as const).filter((currency) => group[currency].enabled);
         if (requireMethod && enabledOptions.length === 0) {
-            return `${label}至少启用积分或钻石一种支付方式。`;
+            return `${label}必须启用 KK币支付。`;
         }
         for (const currency of enabledOptions) {
             const price = Number(group[currency].price);
@@ -920,7 +920,7 @@ const InteractiveVideoEdit: React.FC = () => {
     ) => (
         <div className={styles.priceGroup}>
             <div className={styles.priceGroupTitle}>{title}</div>
-            {(['points', 'diamonds'] as const).map((currency) => {
+            {(['diamonds'] as const).map((currency) => {
                 const option = group[currency];
                 const savedOption = savedGroup?.[currency];
                 const currentPrice = Number(option.price);
@@ -1036,7 +1036,7 @@ const InteractiveVideoEdit: React.FC = () => {
                     <section className={styles.priceSection}>
                         <div className={styles.priceSectionHeader}>
                             <h3>一次性买断价</h3>
-                            <span>积分和钻石可只启用一种，也可同时启用。</span>
+                            <span>发布后统一使用 KK币买断。</span>
                         </div>
                         {renderPaymentInputs('买断价', pricingDraft.buyout, updateBuyoutPayment, makePaymentGroup(monetization.config.buyout))}
                     </section>
@@ -1102,7 +1102,7 @@ const InteractiveVideoEdit: React.FC = () => {
                     {monetizationError ? (
                         <div className={styles.errorText}>{monetizationError}</div>
                     ) : (
-                        <p className={styles.panelHint}>创作者分润按用户实付积分/钻石的 30% 入账，用户购买权益永久绑定账号。</p>
+                        <p className={styles.panelHint}>创作者分润按用户实付 KK币的 30% 入账，用户购买权益永久绑定账号。</p>
                     )}
                     <button
                         type="button"

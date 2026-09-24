@@ -33,8 +33,8 @@ const MembershipSignInResultModal: React.FC<MembershipSignInResultModalProps> = 
                     <h3 className={styles.title}>{signedInToday ? '今日已签到' : '每日签到'}</h3>
                     <p className={styles.subtitle}>
                         {signedInToday
-                            ? '明天继续签到可获得更多积分'
-                            : `今日签到可获得 ${status?.totalPointsToday ?? 0} 积分`}
+                            ? '明天继续签到可获得更多织梦豆'
+                            : `今日签到可获得 ${status?.totalPointsToday ?? 0} 织梦豆`}
                     </p>
                 </div>
 

@@ -713,7 +713,7 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
                                         onClick={handleGenerateImageClick}
                                         disabled={isCurrentPanelGenerating}
                                     >
-                                        {isCurrentPanelGenerating ? '生成中...' : `${CHARACTER_GENERATION_COST} 积分 AI生成`}
+                                        {isCurrentPanelGenerating ? '生成中...' : `${CHARACTER_GENERATION_COST} 织梦豆 AI生成`}
                                     </button>
                                 </div>
                                 <div className={styles.imagePreviewSection}>
@@ -922,8 +922,8 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
                 isOpen={generateModalOpen}
                 onConfirm={handleConfirmGenerateImage}
                 onCancel={handleCancelGenerateImage}
-                title="积分扣除确认"
-                message={`本次生成图片将扣除 ${CHARACTER_GENERATION_COST} 积分，是否继续？`}
+                title="织梦豆扣除确认"
+                message={`本次生成图片将扣除 ${CHARACTER_GENERATION_COST} 织梦豆，是否继续？`}
                 confirmButtonText="确认生成"
                 cancelButtonText="取消"
             />

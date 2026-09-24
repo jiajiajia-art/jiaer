@@ -158,15 +158,15 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                     toast.error(t('createGame.missingCustomAppIdStart'));
                     return { sessionId: null, redirectUrl: '' };
                 }
-                return { sessionId: null, redirectUrl: `/customif/${appId}` };
+                return { sessionId: null, redirectUrl: `/customif/${appId}?testMode=creator` };
             }
 
             if (normalized === 'st') {
-                return { sessionId: null, redirectUrl: `/st/${fileId}` };
+                return { sessionId: null, redirectUrl: `/st/${fileId}?testMode=creator` };
             }
 
             if (normalized === 'interactive-video') {
-                return { sessionId: null, redirectUrl: `/interactive-video/${fileId}` };
+                return { sessionId: null, redirectUrl: `/interactive-video/${fileId}?testMode=creator&restart=1` };
             }
 
             if (normalized === 'TXT') {
@@ -178,7 +178,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                 const response = await createGalgameSessionApi.createGalgamePlaySession(payload);
                 if (response.data.success) {
                     const sessionId = parseOpticalPlaySessionId(response.data.data);
-                    return { sessionId, redirectUrl: '/galgame' };
+                    return { sessionId, redirectUrl: intent !== 'edit-continue' ? '/galgame?testMode=creator' : '/galgame' };
                 }
                 toast.error(response.data.message || t('createGame.createGameFailed'));
                 return { sessionId: null, redirectUrl: '' };
@@ -190,10 +190,10 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
             }
 
             if (normalized === 'AVG') {
-                const response = await createWorldSessionApi.createWorldEditSession({ fileId });
+                const response = await createWorldSessionApi.createWorldEditSession({ fileId, restart: true, billingMode: 'creator_test' });
                 if (response.data.success) {
                     const sessionId = response.data.session.sessionId;
-                    return { sessionId, redirectUrl: '/galgameMap' };
+                    return { sessionId, redirectUrl: '/galgameMap?testMode=creator' };
                 }
                 toast.error(response.data.message || t('createGame.createGameFailed'));
                 return { sessionId: null, redirectUrl: '' };

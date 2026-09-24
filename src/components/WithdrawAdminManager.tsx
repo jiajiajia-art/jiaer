@@ -138,7 +138,7 @@ const WithdrawAdminManager: React.FC = () => {
         toast.error(resp.data.message || '驳回失败');
         return;
       }
-      toast.success('已驳回并退回钻石');
+      toast.success('已驳回并退回KK币');
       setDetail(null);
       await loadWithdraw();
     } catch (error) {
@@ -234,7 +234,7 @@ const WithdrawAdminManager: React.FC = () => {
           <MetricTitleTip
             className={styles.titleTip}
             title={<h2 className={styles.title}>提现管理</h2>}
-            tip="审核钻石提现与创作者官方认证升级；导出含明文收款信息用于打款。"
+            tip="审核KK币提现与创作者官方认证升级；导出含明文收款信息用于打款。"
           />
         </div>
         <div className={styles.headerActions}>
@@ -298,7 +298,7 @@ const WithdrawAdminManager: React.FC = () => {
               <tr>
                 <th>用户名</th>
                 <th>手机号</th>
-                <th>钻石</th>
+                <th>KK币</th>
                 <th>折合元</th>
                 <th>银行卡</th>
                 <th>开户银行</th>
@@ -420,7 +420,7 @@ const WithdrawAdminManager: React.FC = () => {
             <div className={styles.detailGrid}>
               <div><span>用户</span><strong>{detail.nickname}</strong></div>
               <div><span>手机</span><strong>{detail.phone}</strong></div>
-              <div><span>钻石</span><strong>{detail.amount}</strong></div>
+              <div><span>KK币</span><strong>{detail.amount}</strong></div>
               <div><span>人民币</span><strong>¥{detail.amountCny}</strong></div>
               <div><span>真实姓名</span><strong>{detail.realName}</strong></div>
               <div><span>身份证</span><strong>{detail.idCard}</strong></div>
@@ -454,7 +454,7 @@ const WithdrawAdminManager: React.FC = () => {
               </div>
             ) : null}
 
-            <h4 className={styles.timelineTitle}>钻石时间线</h4>
+            <h4 className={styles.timelineTitle}>KK币时间线</h4>
             {timeline.length === 0 ? (
               <div className={styles.empty}>暂无流水</div>
             ) : (

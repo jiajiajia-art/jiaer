@@ -412,8 +412,8 @@ const getPaidTargetTitle = (item?: InteractiveVideoDirectoryPrice | null) => {
 };
 
 const INTERACTIVE_VIDEO_UNLOCK_ERROR_MESSAGES: Record<string, string> = {
-    INSUFFICIENT_POINTS: '积分不足',
-    INSUFFICIENT_DIAMONDS: '钻石不足',
+    INSUFFICIENT_POINTS: '织梦豆不足',
+    INSUFFICIENT_DIAMONDS: 'KK币不足',
     PAYMENT_METHOD_UNAVAILABLE: '当前支付方式不可用',
     BUYOUT_NOT_FOR_SALE: '该互动影游暂不支持买断',
     DIRECTORY_NOT_FOR_SALE: '该付费内容暂不可购买',
@@ -458,8 +458,8 @@ const mergeLockedPayItems = (
     });
 };
 
-const INTERACTIVE_VIDEO_PAYMENT_CURRENCIES = ['points', 'diamonds'] as const;
-const IVG_PLAYER_TEST_UNLOCK_ACTION_TEXT = '\u521b\u4f5c\u80050\u79ef\u5206\u89e3\u9501\u6d4b\u8bd5';
+const INTERACTIVE_VIDEO_PAYMENT_CURRENCIES = ['diamonds'] as const;
+const IVG_PLAYER_TEST_UNLOCK_ACTION_TEXT = '\u6d4b\u8bd5\u6a21\u5f0f\u6a21\u62df\u89e3\u9501';
 const IVG_PLAYER_TEST_UNLOCK_SUCCESS_TEXT = '\u6d4b\u8bd5\u89e3\u9501\u6210\u529f';
 const IVG_PLAYER_TEST_UNLOCK_CONTINUE_TEXT = '\u6d4b\u8bd5\u89e3\u9501\u6210\u529f\uff0c\u6b63\u5728\u8fdb\u5165\u5267\u60c5';
 
@@ -4101,7 +4101,7 @@ const InteractiveVideo: React.FC = () => {
                     <p>
                         {currentLockedDirectory
                             ? isPlayerTestMode
-                                ? '该付费内容尚未解锁。模拟玩家测试会以 0 积分完成测试解锁。'
+                                ? '该付费内容尚未解锁。测试模式会模拟完成解锁，不扣除货币。'
                                 : '该付费内容尚未解锁。解锁后可继续游玩。'
                             : '买断解锁后可永久游玩该作品。'}
                     </p>

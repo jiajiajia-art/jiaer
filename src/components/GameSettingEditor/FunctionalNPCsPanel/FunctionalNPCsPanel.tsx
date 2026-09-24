@@ -310,11 +310,11 @@ const FunctionalNPCsPanel = React.forwardRef<FunctionalNPCsPanelRef, FunctionalN
                 setAllImagesCostPoints(points);
                 setAllImagesCostModalOpen(true);
             } else {
-                toast.error(response.data?.message || '获取积分消耗失败');
+                toast.error(response.data?.message || '获取织梦豆消耗失败');
             }
         } catch (error: any) {
             console.error('获取功能性NPC生图积分消耗失败:', error);
-            toast.error('获取积分消耗失败，请稍后重试');
+            toast.error('获取织梦豆消耗失败，请稍后重试');
         } finally {
             setIsLoadingAllImagesCost(false);
         }
@@ -328,7 +328,7 @@ const FunctionalNPCsPanel = React.forwardRef<FunctionalNPCsPanelRef, FunctionalN
             return;
         }
         if (allImagesCostPoints != null && userPoints < allImagesCostPoints) {
-            toast.error('积分不足');
+            toast.error('织梦豆不足');
             return;
         }
         setAllImagesCostModalOpen(false);
@@ -376,7 +376,7 @@ const FunctionalNPCsPanel = React.forwardRef<FunctionalNPCsPanelRef, FunctionalN
                         <span className={styles.buttonMainText}>
                             {isGeneratingAllImages ? '生成中...' : '一键生成所有功能性NPC图片'}
                         </span>
-                        <span className={styles.buttonSubText}>{CHARACTER_GENERATION_COST}积分/张</span>
+                        <span className={styles.buttonSubText}>{CHARACTER_GENERATION_COST}织梦豆/张</span>
                     </div>
                 </button>
             </div>
@@ -426,11 +426,11 @@ const FunctionalNPCsPanel = React.forwardRef<FunctionalNPCsPanelRef, FunctionalN
                 isOpen={allImagesCostModalOpen}
                 onConfirm={handleConfirmGenerateAllImages}
                 onCancel={() => setAllImagesCostModalOpen(false)}
-                title="积分扣除确认"
+                title="织梦豆扣除确认"
                 message={
                     allImagesCostPoints != null
-                        ? `本次一键生成功能性NPC图片将扣除 ${allImagesCostPoints} 积分（当前积分 ${userPoints}${allImagesCostPoints > userPoints ? '，积分不足' : ''}），是否继续？`
-                        : `将扣除一定积分（当前积分 ${userPoints}），是否继续？`
+                        ? `本次一键生成功能性NPC图片将扣除 ${allImagesCostPoints} 织梦豆（当前织梦豆 ${userPoints}${allImagesCostPoints > userPoints ? '，织梦豆不足' : ''}），是否继续？`
+                        : `将扣除一定织梦豆（当前织梦豆 ${userPoints}），是否继续？`
                 }
                 confirmButtonText="确认生成"
                 cancelButtonText="取消"

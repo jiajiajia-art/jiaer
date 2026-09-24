@@ -88,7 +88,7 @@ const PriceAdjustmentModal: React.FC<PriceAdjustmentModalProps> = ({
                                 alt="金币" 
                                 className={styles.labelIcon}
                             />
-                            原价（积分）
+                            原价（KK币）
                         </label>
                         <input
                             type="number"
@@ -111,7 +111,7 @@ const PriceAdjustmentModal: React.FC<PriceAdjustmentModalProps> = ({
                                     alt="金币" 
                                     className={styles.labelIcon}
                                 />
-                                特惠价格（积分，可选）
+                                特惠价格（KK币，可选）
                             </label>
                             <label className={styles.checkboxLabel}>
                                 <input

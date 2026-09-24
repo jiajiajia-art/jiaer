@@ -1750,7 +1750,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             onSceneCostModalOpen(points);
         } catch (error) {
             console.error('获取场景生图积分消耗失败:', error);
-            toast.error(ctx.t?.('createGame.getPointsCostFailed') || '获取积分消耗失败，请稍后重试');
+            toast.error(ctx.t?.('createGame.getPointsCostFailed') || '获取织梦豆消耗失败，请稍后重试');
         } finally {
             setIsLoadingSceneCost(false);
         }

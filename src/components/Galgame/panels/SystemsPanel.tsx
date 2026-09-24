@@ -416,7 +416,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
       && latestPoints < NPC_PROFILE_FIELD_GENERATION_COST
     ) {
       toast.error(
-        `积分不足（需要 ${NPC_PROFILE_FIELD_GENERATION_COST}，当前 ${latestPoints}）`,
+        `织梦豆不足（需要 ${NPC_PROFILE_FIELD_GENERATION_COST}，当前 ${latestPoints}）`,
       );
       return;
     }
@@ -449,7 +449,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
         updateUser({ points: res.data.remainingPoints });
       }
       toast.success(
-        `${POSITION_AI_LABEL[field]}已生成（-${res.data.pointsDeducted ?? NPC_PROFILE_FIELD_GENERATION_COST} 积分）`,
+        `${POSITION_AI_LABEL[field]}已生成（-${res.data.pointsDeducted ?? NPC_PROFILE_FIELD_GENERATION_COST} 织梦豆）`,
       );
     } catch (e) {
       toast.error((e as Error)?.message || '生成失败');
@@ -1194,7 +1194,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
         isOpen={Boolean(positionAiConfirm)}
         variant="dossier"
         title={`确认生成${positionAiConfirm ? POSITION_AI_LABEL[positionAiConfirm] : ''}`}
-        message={`将扣除 ${NPC_PROFILE_FIELD_GENERATION_COST} 积分生成「${positionAiConfirm ? POSITION_AI_LABEL[positionAiConfirm] : ''}」，是否继续？`}
+        message={`将扣除 ${NPC_PROFILE_FIELD_GENERATION_COST} 织梦豆生成「${positionAiConfirm ? POSITION_AI_LABEL[positionAiConfirm] : ''}」，是否继续？`}
         confirmText="确认生成"
         cancelText="取消"
         onConfirm={() => {

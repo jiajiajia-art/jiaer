@@ -17,13 +17,13 @@ export type CurrencyWithAll = 'all' | Currency;
  * 货币选项（用于下拉选择等 UI 场景）
  */
 export const CURRENCY_OPTIONS: readonly { value: Currency; label: string }[] = [
-  { value: 'points', label: '积分' },
-  { value: 'diamonds', label: '钻石' },
+  { value: 'points', label: '织梦豆' },
+  { value: 'diamonds', label: 'KK币' },
 ] as const;
 
 /**
  * 格式化货币显示
  */
 export function formatCurrency(currency: Currency): string {
-  return currency === 'points' ? '积分' : '钻石';
+  return currency === 'points' ? '织梦豆' : 'KK币';
 }

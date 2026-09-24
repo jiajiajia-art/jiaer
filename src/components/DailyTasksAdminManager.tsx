@@ -278,7 +278,7 @@ const DailyTasksAdminManager: React.FC = () => {
             }
         }
         if (!Number.isInteger(rewardPoints) || rewardPoints <= 0) {
-            setFormError('奖励积分必须是大于 0 的整数');
+            setFormError('奖励织梦豆必须是大于 0 的整数');
             return null;
         }
         if (form.startAt.trim() && startAt === null) {
@@ -460,7 +460,7 @@ const DailyTasksAdminManager: React.FC = () => {
                                                 <code className={styles.gameCode}>{task.gameFileId}</code>
                                             </div>
                                         </td>
-                                        <td>{task.rewardPoints} 积分</td>
+                                        <td>{task.rewardPoints} 织梦豆</td>
                                         <td>
                                             <div>{formatTime(task.startAt)}</div>
                                             <div>{formatTime(task.endAt)}</div>
@@ -604,7 +604,7 @@ const DailyTasksAdminManager: React.FC = () => {
                             )}
 
                             <label className={styles.fieldLabel}>
-                                奖励积分
+                                奖励织梦豆
                                 <input
                                     className={styles.textInput}
                                     type="number"

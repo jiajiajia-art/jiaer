@@ -327,7 +327,7 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
       if (!Number.isInteger(form.submissionLimitCount) || Number(form.submissionLimitCount) <= 0) return toast.error('投稿限制次数必须为大于 0 的整数'), false;
     }
 
-    if (!Number.isInteger(form.rewardPoints) || Number(form.rewardPoints) <= 0) return toast.error('奖励积分必须为大于 0 的整数'), false;
+    if (!Number.isInteger(form.rewardPoints) || Number(form.rewardPoints) <= 0) return toast.error('奖励织梦豆必须为大于 0 的整数'), false;
     return true;
   };
 
@@ -612,7 +612,7 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
             <label className={styles.fieldLabel}>{'次（b）'}<input className={styles.textInput} type="number" value={form.submissionLimitCount ?? ''} onChange={(event) => setForm((prev) => ({ ...prev, submissionLimitCount: Number(event.target.value || 0) }))} /></label>
           </div>
         )}
-        <label className={styles.fieldLabel}>审核通过奖励积分<input className={styles.textInput} type="number" value={form.rewardPoints} onChange={(event) => setForm((prev) => ({ ...prev, rewardPoints: Number(event.target.value || 0) }))} /></label>
+        <label className={styles.fieldLabel}>审核通过奖励织梦豆<input className={styles.textInput} type="number" value={form.rewardPoints} onChange={(event) => setForm((prev) => ({ ...prev, rewardPoints: Number(event.target.value || 0) }))} /></label>
         <label className={styles.fieldLabel}>排序值<input className={styles.textInput} type="number" value={form.sortOrder} onChange={(event) => setForm((prev) => ({ ...prev, sortOrder: Number(event.target.value || 0) }))} /></label>
         <label className={styles.fieldLabel}>发布状态<select className={styles.select} value={form.status} onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value as PromotionActivityPayload['status'] }))}><option value="draft">草稿</option><option value="published">已发布</option></select></label>
         <div className={styles.configSection}>
@@ -652,7 +652,7 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
             <div className={styles.itemHeader}><div className={styles.itemTitle}>{activity.title}</div><span className={styles.statusTag}>{activity.status === 'published' ? '已发布' : '草稿'}</span></div>
             <div className={styles.itemMeta}>活动时间：{buildTimeSummary(activity)}</div>
             <div className={styles.itemMeta}>投稿限制：{buildLimitSummary(activity)}</div>
-            <div className={styles.itemMeta}>固定奖励积分：{activity.rewardPoints}</div>
+            <div className={styles.itemMeta}>固定奖励织梦豆：{activity.rewardPoints}</div>
             <div className={styles.itemMeta}>排序：{activity.sortOrder} · 更新时间：{formatTime(activity.updatedAt)}</div>
             <div className={styles.actionRow}><button type="button" className={styles.secondaryButton} onClick={() => handleSelectActivity(activity)}>编辑活动</button><button type="button" className={styles.dangerButton} onClick={() => void handleDelete(activity.id)}>删除活动</button></div>
           </article>
@@ -863,7 +863,7 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
                   <div className={styles.detailField}><span className={styles.detailLabel}>Kuran号</span><span className={styles.detailValue}>{submission.userCode || '未填写'}</span></div>
                   <div className={styles.detailField}><span className={styles.detailLabel}>手机号</span><span className={styles.detailValue}>{submission.phoneNumber || '未填写'}</span></div>
                   <div className={styles.detailField}><span className={styles.detailLabel}>用户ID</span><span className={styles.detailValue}>{submission.userId || '未填写'}</span></div>
-                  <div className={styles.detailField}><span className={styles.detailLabel}>奖励积分</span><span className={styles.detailValue}>{submission.rewardPoints ?? '无'}</span></div>
+                  <div className={styles.detailField}><span className={styles.detailLabel}>奖励织梦豆</span><span className={styles.detailValue}>{submission.rewardPoints ?? '无'}</span></div>
                   <div className={styles.detailField}><span className={styles.detailLabel}>奖励任务ID</span><span className={styles.detailValue}>{submission.rewardTaskId ?? '无'}</span></div>
                   <div className={styles.detailField}><span className={styles.detailLabel}>审核时间</span><span className={styles.detailValue}>{formatTime(submission.reviewedAt)}</span></div>
                 </div>

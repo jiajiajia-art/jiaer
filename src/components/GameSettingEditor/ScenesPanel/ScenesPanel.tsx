@@ -1839,7 +1839,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                             )}
                             {sceneBoardAllSuccess && !showSceneContinueFailed && (
                                 <div className={styles.plusLoadingHint}>
-                                    {isGeneratingAllSceneImages ? '正在同步结果与积分…' : '生成完成'}
+                                    {isGeneratingAllSceneImages ? '正在同步结果与织梦豆…' : '生成完成'}
                                 </div>
                             )}
                         </div>

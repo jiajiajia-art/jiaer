@@ -271,11 +271,11 @@ const ObjectsPanel = React.forwardRef<ObjectsPanelRef, ObjectsPanelProps>(({
                 setRequiredPoints(response.data.points || 0);
                 setGenerateAllModalOpen(true);
             } else {
-                toast.error('计算积分失败');
+                toast.error('计算织梦豆失败');
             }
         } catch (error: any) {
             console.error('计算积分失败:', error);
-            toast.error('计算积分失败：' + (error.message || '请检查网络连接'));
+            toast.error('计算织梦豆失败：' + (error.message || '请检查网络连接'));
         }
     };
 
@@ -383,7 +383,7 @@ const ObjectsPanel = React.forwardRef<ObjectsPanelRef, ObjectsPanelProps>(({
                         <span className={styles.buttonMainText}>
                             {isGeneratingAll ? '生成中...' : '一键生成所有物品图片'}
                         </span>
-                        <span className={styles.buttonSubText}>10积分/张</span>
+                        <span className={styles.buttonSubText}>10织梦豆/张</span>
                     </div>
                 </button>
             </div>
@@ -470,7 +470,7 @@ const ObjectsPanel = React.forwardRef<ObjectsPanelRef, ObjectsPanelProps>(({
                 onConfirm={handleConfirmGenerateAll}
                 onCancel={handleCancelGenerateAll}
                 title="一键生成所有物品图片"
-                message={`本次将为所有物品生成图片，共需扣除 ${requiredPoints} 积分，是否继续？`}
+                message={`本次将为所有物品生成图片，共需扣除 ${requiredPoints} 织梦豆，是否继续？`}
                 confirmButtonText="确认生成"
                 cancelButtonText="取消"
             />

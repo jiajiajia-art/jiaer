@@ -422,7 +422,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             orderData = {
                 orderType: 'diamonds',
                 amount,
-                description: `钻石充值 ${amount} 元`,
+                description: `KK币充值 ${amount} 元`,
             };
         }
 
@@ -606,7 +606,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
         // { name: t('rechargeModal.noAdFreeRounds'), values: ['30', '100', '100', '100'] },
         // { name: t('rechargeModal.dailyCheckInBonus'), values: ['0%', '0%', '+100%', '+210%'] },
         //{ name: t('rechargeModal.creatorDiscount'), values: ['-', '50%', '50%', '50%'] },
-        { name: "钻石兑换积分折扣", values: ['-', '9折', '8折', '7折', '6折'] },
+        { name: "KK币兑换织梦豆折扣", values: ['-', '9折', '8折', '7折', '6折'] },
     ];
 
     // 会员特权对比数据（普通用户 + 日卡 + 月卡 + 季卡 + 年卡）

@@ -26,7 +26,7 @@ test('CharactersSidebar_角色卡应为雾化立绘加酒红或青灰光晕', ()
   assert.match(tsx, /addBtn/);
 });
 
-test('CharactersPanel_标题卡居中且底部为拼合积分生成胶囊', () => {
+test('CharactersPanel_标题卡居中且底部为拼合织梦豆生成胶囊', () => {
   const css = read('src/components/GameSettingEditor/CharactersPanel/CharactersPanel.module.css');
   const tsx = read('src/components/GameSettingEditor/CharactersPanel/CharactersPanel.tsx');
   const barCss = read('src/components/GameSettingEditor/GenerationActionBar.module.css');
@@ -53,7 +53,7 @@ test('CharactersPanel_标题卡居中且底部为拼合积分生成胶囊', () =
   assert.doesNotMatch(barCss, /\.actionBarHero \.pointsValue[\s\S]*?#8E2135/);
   assert.match(barTsx, /layout === 'hero'/);
   assert.match(zh, /"generateAllCharacterPortraits":\s*"一键生成所有角色立绘"/);
-  assert.match(zh, /"characterProfileTip":\s*"[^"]*\{\{cost\}\}积分\/张/);
+  assert.match(zh, /"characterProfileTip":\s*"[^"]*\{\{cost\}\}织梦豆\/张/);
   assert.doesNotMatch(css, /\.tag\s*\{[\s\S]*?border-radius:\s*5px/);
 });
 

@@ -11,7 +11,7 @@ test('formatDiamondTimelineLog translates exchange_to_points', () => {
     diamonds: -2,
     description: JSON.stringify({ exchangeRate: '1:10', diamondsSpent: 2, pointsEarned: 20 }),
   });
-  assert.equal(text, '兑换积分（消耗 2 钻，获得 20 积分）');
+  assert.equal(text, '兑换织梦豆（消耗 2 KK币，获得 20 织梦豆）');
 });
 
 test('formatDiamondTimelineLog translates revenue_share with settle id', () => {

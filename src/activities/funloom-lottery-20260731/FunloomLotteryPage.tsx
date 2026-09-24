@@ -170,10 +170,10 @@ const FunloomLotteryPage: React.FC = () => {
       const draw = res.data?.data;
       if (draw) {
         setPendingResult((prev) => (prev ? { ...prev, draw } : prev));
-        toast.success('积分已发放');
+        toast.success('织梦豆已发放');
       }
     } catch (error) {
-      toast.error(getErrorMessage(error, '积分发放失败'));
+      toast.error(getErrorMessage(error, '织梦豆发放失败'));
     }
   };
 

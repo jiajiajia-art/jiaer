@@ -51,12 +51,14 @@ type SceneActionByMessagesPayload = {
   globals?: unknown;
   model?: unknown;
   stream?: unknown;
+  inputType?: 'option' | 'free';
 };
 
 const StGame: React.FC = () => {
     const { t } = useTranslation();
     const { appId } = useParams();
     const [searchParams] = useSearchParams();
+    const creatorTest = searchParams.get('testMode') === 'creator';
     const sessionSource = useMemo<'link' | 'game_detail' | 'history' | 'other'>(() => {
         const raw = String(searchParams.get('source') || '').trim().toLowerCase();
         if (raw === 'link' || raw === 'game_detail' || raw === 'history') return raw;
@@ -100,7 +102,11 @@ const StGame: React.FC = () => {
       if (!appId) return;
       try {
         setLoading(true);
-        const resp = await stApi.createSession(appId, { autoStart: true, source: sessionSource });
+        const resp = await stApi.createSession(appId, {
+          autoStart: true,
+          source: sessionSource,
+          ...(creatorTest ? { billingMode: 'creator_test' as const } : {}),
+        });
         const data: CreateResp = resp.data;
         if (cancelled) return;
         if (!data?.success) throw new Error(t('stGame.sessionCreateFailed'));
@@ -121,7 +127,7 @@ const StGame: React.FC = () => {
       }
     })();
     return () => { cancelled = true; };
-  }, [appId]);
+  }, [appId, creatorTest, sessionSource, t]);
 
   useEffect(() => {
     if (!listRef.current) return;
@@ -224,9 +230,13 @@ const StGame: React.FC = () => {
       globals?: unknown;
       model?: string;
       stream?: boolean;
+      requestId?: string;
+      inputType?: 'option' | 'free';
     } = {
       messages: managedMessages,
       stream,
+      requestId,
+      inputType: payload.inputType === 'free' ? 'free' : 'option',
     };
     if (payload.globals !== undefined) {
       body.globals = payload.globals;
@@ -315,7 +325,7 @@ const StGame: React.FC = () => {
       const resp = await authFetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
-        body: JSON.stringify({ input: text, stream: true }),
+        body: JSON.stringify({ input: text, stream: true, requestId, inputType: rawText ? 'option' : 'free' }),
         signal: controller.signal,
       });
       let acc = '';
@@ -378,7 +388,11 @@ const StGame: React.FC = () => {
       console.error('stream failed, fallback to non-stream:', err);
       // 回退到非流式
       try {
-        const resp2 = await stApi.act(appId, sessionId, { input: text });
+        const resp2 = await stApi.act(appId, sessionId, {
+          input: text,
+          requestId: crypto.randomUUID(),
+          inputType: rawText ? 'option' : 'free',
+        });
         const data2 = resp2.data as ActResp;
         if (data2?.success) {
           setRules(data2.renderRegex || rules);
@@ -504,6 +518,7 @@ const StGame: React.FC = () => {
       const body = {
         amount: payload.amount,
         idempotencyKey: requestId,
+        sessionId,
         ...(payload.currency && { currency: payload.currency }),
         ...(payload.dryRun && { dryRun: true }),
       };
@@ -596,7 +611,7 @@ const StGame: React.FC = () => {
       }
 
       if (type === 'st:points:pay') {
-        postSceneDebug('bridge', '收到 st:points:pay，转发积分支付');
+        postSceneDebug('bridge', '收到 st:points:pay，转发游戏内支付');
         void handlePointsPay(payload as StPointsPayPayload);
       }
     };

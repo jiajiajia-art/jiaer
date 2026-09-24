@@ -775,7 +775,7 @@ const Galgame = () => {
                 useAuthStore.getState().updateUser({ points: result.remainingPoints });
             }
             toast.success(
-                `头像已生成并保存（-${result.pointsDeducted ?? CHARACTER_GENERATION_COST} 积分）`,
+                `头像已生成并保存（-${result.pointsDeducted ?? CHARACTER_GENERATION_COST} 织梦豆）`,
             );
         });
     }, [sessionId]);
@@ -796,7 +796,7 @@ const Galgame = () => {
                 useAuthStore.getState().updateUser({ points: result.remainingPoints });
             }
             toast.success(
-                `角色头像已生成（-${result.pointsDeducted ?? CHARACTER_GENERATION_COST} 积分）`,
+                `角色头像已生成（-${result.pointsDeducted ?? CHARACTER_GENERATION_COST} 织梦豆）`,
             );
         });
     }, [sessionId]);

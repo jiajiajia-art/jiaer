@@ -114,7 +114,7 @@ function formatCurrencyChartValue(value: unknown) {
 function formatDiamondChartValue(value: unknown) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return '-';
-  return `${numeric} 钻石`;
+  return `${numeric} KK币`;
 }
 
 function buildRechargeChartData(summary?: ExternalDeveloperAppRechargeSummary) {
@@ -143,7 +143,7 @@ function formatRechargeTooltip(value: unknown, name: unknown): [string, string] 
 
 function formatDiamondTooltip(value: unknown, name: unknown): [string, string] {
   const label = String(name || '');
-  if (label === '消耗钻石') {
+  if (label === '消耗 KK币') {
     return [formatDiamondChartValue(value), label];
   }
   return [String(value ?? '-'), label];
@@ -592,7 +592,7 @@ export default function DeveloperExternalGames() {
       <div className={styles.dataOverview}>
         <div className={styles.metricStrip}>
           <div className={styles.metricItem}>
-            <span>成功消耗钻石</span>
+            <span>成功消耗 KK币</span>
             <strong>{summary?.totalDiamonds ?? 0}</strong>
           </div>
           <div className={styles.metricItem}>
@@ -611,7 +611,7 @@ export default function DeveloperExternalGames() {
                 <Line
                   type="monotone"
                   dataKey="diamonds"
-                  name="消耗钻石"
+                  name="消耗 KK币"
                   stroke="#d29922"
                   strokeWidth={2.5}
                   dot={{ r: 3 }}
@@ -766,7 +766,7 @@ export default function DeveloperExternalGames() {
                         aria-expanded={isDiamondExpanded}
                       >
                         <MdDiamond />
-                        钻石消费
+                        KK币消费
                         {diamondState?.loaded ? ` ${diamondState.total}` : ''}
                         {isDiamondExpanded ? <MdExpandLess /> : <MdExpandMore />}
                       </button>
@@ -933,7 +933,7 @@ export default function DeveloperExternalGames() {
                         <div className={styles.linksPanelHeader}>
                           <div className={styles.sectionTitleBlock}>
                             <strong>成功扣钻流水</strong>
-                            <span>仅展示 Funloom 平台已成功扣除钻石的外部游戏消耗。</span>
+                            <span>仅展示 Funloom 平台已成功扣除 KK币的外部游戏消耗。</span>
                           </div>
                           <button
                             type="button"

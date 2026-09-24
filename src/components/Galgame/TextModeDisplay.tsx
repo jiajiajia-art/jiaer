@@ -76,6 +76,9 @@ const MessageItem = memo<MessageItemProps>(({
     surface = 'dark',
 }) => {
     if (!step) return null;
+    const creatorTest = new URLSearchParams(window.location.search).get('testMode') === 'creator';
+    const optionCost = creatorTest ? 2 : POINTS_CONFIG.option;
+    const currencyName = creatorTest ? '织梦豆' : 'KK币';
 
     // 功能注释：只读阅读页用全局下标做目录锚点，避免窗口局部 index 错位
     const stepAnchorProps = readOnly
@@ -170,7 +173,7 @@ const MessageItem = memo<MessageItemProps>(({
                                         {extractPlainText(opt.text)}
                                     </span>
                                     {!readOnly && !isFreeRound && (
-                                        <span className={styles.pointsCost}>-{POINTS_CONFIG.option}{t('createGame.pointsUnit')}</span>
+                                        <span className={styles.pointsCost}>-{optionCost}{currencyName}</span>
                                     )}
                                 </div>
                             ))}
@@ -208,6 +211,9 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
     const shouldStickToBottomRef = useRef(true);
     const hasInitialAutoScrolledRef = useRef(false);
     const [customInput, setCustomInput] = useState('');
+    const creatorTest = new URLSearchParams(window.location.search).get('testMode') === 'creator';
+    const customCost = creatorTest ? 2 : POINTS_CONFIG.custom;
+    const currencyName = creatorTest ? '织梦豆' : 'KK币';
 
     const currentStep = currentStepIndex >= 0 ? steps[currentStepIndex] : null;
     const currentChoiceHasOptions = (currentStep?.options?.length ?? 0) > 0;
@@ -355,7 +361,7 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
                         <div className={styles.customInputHeader}>
                             <span>{currentChoiceHasOptions ? t('createGame.orCustomInput') : t('createGame.customInput')}</span>
                             {!isFreeRound && (
-                                <span className={styles.pointsCostHint}>{t('createGame.pointsCostHint').replace('{{cost}}', String(POINTS_CONFIG.custom))}</span>
+                                <span className={styles.pointsCostHint}>消耗 {customCost} {currencyName}</span>
                             )}
                         </div>
                         <div className={styles.customInputWrapper}>

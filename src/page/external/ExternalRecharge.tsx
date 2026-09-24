@@ -30,7 +30,7 @@ function formatDiamondCount(value: number | null | undefined): string {
 
 function getStatusCopy(state: ExternalRechargeDisplayState): { title: string; body: string } {
   if (state === 'paid') {
-    return { title: '支付成功', body: '充值已完成，钻石会同步回外部游戏。' };
+    return { title: '支付成功', body: '充值已完成，KK币会同步回外部游戏。' };
   }
   if (state === 'expired') {
     return { title: '充值链接已过期', body: '请回到外部游戏重新发起充值。' };
@@ -280,8 +280,8 @@ export default function ExternalRecharge() {
         <div className={styles.rechargeHero}>
           <div className={styles.rechargeHeroCopy}>
             <p className={styles.rechargeEyebrow}>External Game Checkout</p>
-            <h1 id="external-recharge-title">钻石充值</h1>
-            <p>为你当前进入的游戏补充 Funloom 钻石，支付完成后自动同步回游戏。</p>
+            <h1 id="external-recharge-title">KK币充值</h1>
+            <p>为你当前进入的游戏补充 Funloom KK币，支付完成后自动同步回游戏。</p>
           </div>
 
           <div className={styles.rechargeBalanceCard}>
@@ -289,7 +289,7 @@ export default function ExternalRecharge() {
               <span />
             </div>
             <div>
-              <span className={styles.balanceLabel}>当前钻石余额</span>
+              <span className={styles.balanceLabel}>当前 KK币余额</span>
               <strong>{balanceText}</strong>
               <small>当前游戏：{appDisplayName}</small>
             </div>
@@ -315,7 +315,7 @@ export default function ExternalRecharge() {
                 <div className={styles.packageHeader}>
                   <div>
                     <span>Recharge Packages</span>
-                    <h2>选择适合你的钻石礼包</h2>
+                    <h2>选择 KK币充值档位</h2>
                   </div>
                   <small>Funloom 通用收银台</small>
                 </div>
@@ -341,7 +341,7 @@ export default function ExternalRecharge() {
                         <span className={styles.packageBadge}>{getPackageBadge(index, planOptions.length)}</span>
                         <span className={styles.packageArtwork} style={getPackageSpriteStyle(index)} aria-hidden="true" />
                         <span className={styles.packageName}>{getPackageName(index)}</span>
-                        <strong>{formatDiamondCount(plan.diamonds)} 钻石</strong>
+                        <strong>{formatDiamondCount(plan.diamonds)} KK币</strong>
                         <span className={styles.packagePrice}>{formatPlanPrice(plan)}</span>
                       </button>
                     );
@@ -409,7 +409,7 @@ export default function ExternalRecharge() {
                 />
                 <div>
                   <span>当前礼包</span>
-                  <strong>{selectedPlan ? `${formatDiamondCount(selectedPlan.diamonds)} 钻石` : '--'}</strong>
+                  <strong>{selectedPlan ? `${formatDiamondCount(selectedPlan.diamonds)} KK币` : '--'}</strong>
                   <small>{formatPlanPrice(selectedPlan)}</small>
                 </div>
               </div>

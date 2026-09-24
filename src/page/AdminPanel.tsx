@@ -1495,7 +1495,7 @@ const AdminPanel: React.FC = () => {
                                 {pendingPromotionRewardCount > 0 ? (
                                     <span className={styles.navCounter}>{formatBadgeCount(pendingPromotionRewardCount)}</span>
                                 ) : null}
-                                <span className={styles.navTitle}>积分管理</span>
+                                <span className={styles.navTitle}>织梦豆管理</span>
                             </button>
                             <button
                                 type="button"
