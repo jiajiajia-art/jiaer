@@ -1,5 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Noto+Serif+SC:wght@500;600;700;900&family=ZCOOL+KuaiLe&family=ZCOOL+XiaoWei&family=Ma+Shan+Zheng&family=Pixelify+Sans:wght@400;500;600;700&family=VT323&display=swap');
-@import 'tailwindcss';
+/* 功能注释：嵌入 funloom 时勿引入 Tailwind preflight，避免重置全站样式；standalone 也足够 */
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
 
 /* 主题色以运行时 CSS 变量驱动，支持深色/浅色与主题色全局切换 */
 @theme {
