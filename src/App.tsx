@@ -57,6 +57,7 @@ import { useAuthStore } from './store/useAuthStore';
 import { useGeoRegionStore } from './store/useGeoRegionStore';
 
 const FunloomLotteryPage = lazy(() => import('./activities/funloom-lottery-20260731'));
+const RomanceHost = lazy(() => import('./page/RomanceHost'));
 
 function App() {
   usePlatformDurationTracking();
@@ -136,6 +137,15 @@ function App() {
           element={(
             <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#fff' }}>加载中…</div>}>
               <FunloomLotteryPage />
+            </Suspense>
+          )}
+        />
+        {/* Romance 子应用：同构建同端口，访问 /funloom/romance/ */}
+        <Route
+          path="/romance/*"
+          element={(
+            <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#fff' }}>加载中…</div>}>
+              <RomanceHost />
             </Suspense>
           )}
         />

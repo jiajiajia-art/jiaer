@@ -35,9 +35,11 @@ export const bumpCacheBust = (url?: string | null): void => {
     
     if (!processedUrl) return;
     
-    const cleanUrl = processedUrl.split('?')[0].split('&')[0];
-    
+    const cleanUrl = processedUrl.split(/[?#]/, 1)[0] || processedUrl;
+    // 功能注释：删除旧 bust 后立刻写入新时间戳，避免生图后仍命中旧 ?t= 导致不刷新
     imageCacheBustMap.delete(cleanUrl);
+    const separator = cleanUrl.includes('?') ? '&' : '?';
+    imageCacheBustMap.set(cleanUrl, `${cleanUrl}${separator}t=${Date.now()}`);
 };
 
 export const clearImageCache = (): void => {

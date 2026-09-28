@@ -194,7 +194,7 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
         startTime?: number,
         pointsKind?: 'document' | 'idea',
     ) => {
-        addJob(jobId, fileName, startTime);
+        addJob(jobId, fileName, startTime, pointsKind === 'idea' ? 'idea' : 'document');
 
         let delay = 1000;
         const maxDelay = 5000;

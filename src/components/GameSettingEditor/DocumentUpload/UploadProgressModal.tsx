@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useUploadStore } from '../../../store/uploadStore';
+import { useUploadStore, type UploadJob } from '../../../store/uploadStore';
 import styles from './UploadProgressModal.module.css';
 import { formatEtaPrecise, getUploadEtaText } from '../../../utils/etaText';
 import { formatIdeaJobStage } from '../../../utils/ideaJobStage';
+import { resolveUploadProgressTitle, resolveUploadJobStatusLabel } from '../../../utils/uploadProgressCopy';
 
 const STATUS_CLASS: Record<string, string> = {
     uploading: styles.statusLive,
@@ -27,6 +28,11 @@ const UploadProgressModal: React.FC = () => {
         return () => clearInterval(interval);
     }, []);
 
+    const modalTitle = useMemo(
+        () => resolveUploadProgressTitle(jobList, t),
+        [jobList, t],
+    );
+
     if (jobList.length === 0) return null;
 
     const hasActiveJobs = jobList.some(
@@ -35,26 +41,13 @@ const UploadProgressModal: React.FC = () => {
 
     if (!hasActiveJobs && !showProgressModal) return null;
 
-    const getStatusText = (status: string) => {
-        switch (status) {
-            case 'uploading':
-                return t('createGame.statusUpload');
-            case 'processing':
-                return t('createGame.statusParsing');
-            case 'completed':
-                return t('createGame.statusComplete');
-            case 'failed':
-                return t('createGame.statusFailed');
-            default:
-                return t('createGame.statusProcessing');
-        }
-    };
+    const getStatusText = (job: UploadJob) => resolveUploadJobStatusLabel(job, t);
 
     return (
         <div className={styles.modalOverlay}>
             <div className={styles.modalContent}>
                 <div className={styles.modalHeader}>
-                    <h2 className={styles.title}>{t('createGame.uploadProgress')}</h2>
+                    <h2 className={styles.title}>{modalTitle}</h2>
                     <div className={styles.headerActions}>
                         <button
                             type="button"
@@ -94,6 +87,7 @@ const UploadProgressModal: React.FC = () => {
                             key={job.jobId}
                             className={`${styles.jobItem} ${isLive ? styles.jobItemLive : ''}`}
                             data-status={job.status}
+                            data-kind={job.kind}
                         >
                             <div className={styles.jobHeader}>
                                 <div className={styles.jobInfo}>
@@ -101,7 +95,7 @@ const UploadProgressModal: React.FC = () => {
                                         {job.fileName}
                                     </span>
                                     <span className={`${styles.status} ${STATUS_CLASS[job.status] || styles.statusLive}`}>
-                                        {getStatusText(job.status)}
+                                        {getStatusText(job)}
                                     </span>
                                 </div>
                                 {job.status === 'completed' || job.status === 'failed' ? (
