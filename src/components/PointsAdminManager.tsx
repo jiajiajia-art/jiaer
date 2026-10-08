@@ -13,6 +13,7 @@ import type {
 import { getImageUrl } from '../utils/constants';
 import { getApiErrorMessage } from '../utils/error';
 import Pagination from './Pagination';
+import AdminManualAdjustmentHistory from './AdminManualAdjustmentHistory';
 import styles from './PointsAdminManager.module.css';
 
 type PointsTab = 'activity' | 'special';
@@ -57,6 +58,7 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
     const [adjustPoints, setAdjustPoints] = useState('');
     const [remark, setRemark] = useState('');
     const [isSubmittingAdjust, setIsSubmittingAdjust] = useState(false);
+    const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
 
     const [pendingTaskCount, setPendingTaskCount] = useState(0);
     const [pendingRewardPoints, setPendingRewardPoints] = useState(0);
@@ -188,6 +190,7 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
             setLookupResult(response.data.data?.user || null);
             setAdjustPoints('');
             setRemark('');
+            setHistoryRefreshKey((value) => value + 1);
             toast.success(changeType === 'increment' ? '特殊织梦豆增加成功' : '特殊织梦豆扣减成功');
         } catch (error) {
             toast.error(getApiErrorMessage(error, '特殊织梦豆变更失败'));
@@ -302,80 +305,83 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
     );
 
     const renderSpecialPanel = () => (
-        <div className={styles.specialGrid}>
-            <section className={styles.card}>
-                <div className={styles.cardHeader}>
-                    <div>
-                        <h3 className={styles.cardTitle}>定位用户</h3>
-                        <div className={styles.cardDesc}>{t('admin.lookupUserDesc')}</div>
-                    </div>
-                </div>
-                <div className={styles.formArea}>
-                    <label className={styles.fieldLabel}>
-                        定位方式
-                        <select className={styles.select} value={lookupMode} onChange={(event) => setLookupMode(event.target.value as AdminPointsLookupMode)}>
-                            <option value="userCode">Kuran 号</option>
-                            <option value="phoneNumber">手机号</option>
-                        </select>
-                    </label>
-                    <label className={styles.fieldLabel}>
-                        用户定位输入
-                        <input
-                            className={styles.textInput}
-                            value={lookupKeyword}
-                            onChange={(event) => setLookupKeyword(event.target.value)}
-                            placeholder={lookupMode === 'userCode' ? t('admin.enterKuranId') : t('profile.enterValidPhone')}
-                        />
-                    </label>
-                    <div className={styles.actionRow}>
-                        <button type="button" className={styles.primaryButton} onClick={() => void handleLookup()} disabled={isLookingUp}>
-                            {isLookingUp ? '查询中...' : '查询用户'}
-                        </button>
-                    </div>
-                </div>
-            </section>
-
-            <section className={styles.card}>
-                <div className={styles.cardHeader}>
-                    <div>
-                        <h3 className={styles.cardTitle}>特殊织梦豆管理</h3>
-                        <div className={styles.cardDesc}>支持直接对目标账号增加织梦豆或扣减织梦豆，并填写备注。</div>
-                    </div>
-                </div>
-                {lookupResult ? (
-                    <div className={styles.formArea}>
-                        <div className={styles.userCard}>
-                            <div className={styles.userName}>{lookupResult.nickname || '未命名用户'}</div>
-                            <div className={styles.itemMeta}>Kuran 号：{lookupResult.userCode || '-'}</div>
-                            <div className={styles.itemMeta}>手机号：{lookupResult.phoneNumber || '-'}</div>
-                            <div className={styles.itemMeta}>当前织梦豆：{lookupResult.points}</div>
+        <>
+            <div className={styles.specialGrid}>
+                <section className={styles.card}>
+                    <div className={styles.cardHeader}>
+                        <div>
+                            <h3 className={styles.cardTitle}>定位用户</h3>
+                            <div className={styles.cardDesc}>{t('admin.lookupUserDesc')}</div>
                         </div>
+                    </div>
+                    <div className={styles.formArea}>
                         <label className={styles.fieldLabel}>
-                            变更类型
-                            <select className={styles.select} value={changeType} onChange={(event) => setChangeType(event.target.value as AdminManualPointChangeType)}>
-                                <option value="increment">增加织梦豆</option>
-                                <option value="decrement">扣减织梦豆</option>
+                            定位方式
+                            <select className={styles.select} value={lookupMode} onChange={(event) => setLookupMode(event.target.value as AdminPointsLookupMode)}>
+                                <option value="userCode">Kuran 号</option>
+                                <option value="phoneNumber">手机号</option>
                             </select>
                         </label>
                         <label className={styles.fieldLabel}>
-                            织梦豆数量
-                            <input className={styles.textInput} type="number" value={adjustPoints} onChange={(event) => setAdjustPoints(event.target.value)} />
-                        </label>
-                        <label className={styles.fieldLabel}>
-                            备注
-                            <textarea className={styles.textArea} value={remark} onChange={(event) => setRemark(event.target.value)} />
+                            用户定位输入
+                            <input
+                                className={styles.textInput}
+                                value={lookupKeyword}
+                                onChange={(event) => setLookupKeyword(event.target.value)}
+                                placeholder={lookupMode === 'userCode' ? t('admin.enterKuranId') : t('profile.enterValidPhone')}
+                            />
                         </label>
                         <div className={styles.actionRow}>
-                            <button type="button" className={styles.primaryButton} onClick={() => void handleAdjust()} disabled={isSubmittingAdjust}>
-                                {isSubmittingAdjust ? '提交中...' : '确认变更织梦豆'}
+                            <button type="button" className={styles.primaryButton} onClick={() => void handleLookup()} disabled={isLookingUp}>
+                                {isLookingUp ? '查询中...' : '查询用户'}
                             </button>
                         </div>
                     </div>
-                ) : (
-                    <div className={styles.emptyState}>{t('admin.lookupUserFirst')}</div>
-                )}
-            </section>
-        </div>
+                </section>
+
+                <section className={styles.card}>
+                    <div className={styles.cardHeader}>
+                        <div>
+                            <h3 className={styles.cardTitle}>特殊织梦豆管理</h3>
+                            <div className={styles.cardDesc}>支持直接对目标账号增加织梦豆或扣减织梦豆，并填写备注。</div>
+                        </div>
+                    </div>
+                    {lookupResult ? (
+                        <div className={styles.formArea}>
+                            <div className={styles.userCard}>
+                                <div className={styles.userName}>{lookupResult.nickname || '未命名用户'}</div>
+                                <div className={styles.itemMeta}>Kuran 号：{lookupResult.userCode || '-'}</div>
+                                <div className={styles.itemMeta}>手机号：{lookupResult.phoneNumber || '-'}</div>
+                                <div className={styles.itemMeta}>当前织梦豆：{lookupResult.points}</div>
+                            </div>
+                            <label className={styles.fieldLabel}>
+                                变更类型
+                                <select className={styles.select} value={changeType} onChange={(event) => setChangeType(event.target.value as AdminManualPointChangeType)}>
+                                    <option value="increment">增加织梦豆</option>
+                                    <option value="decrement">扣减织梦豆</option>
+                                </select>
+                            </label>
+                            <label className={styles.fieldLabel}>
+                                织梦豆数量
+                                <input className={styles.textInput} type="number" value={adjustPoints} onChange={(event) => setAdjustPoints(event.target.value)} />
+                            </label>
+                            <label className={styles.fieldLabel}>
+                                备注
+                                <textarea className={styles.textArea} value={remark} onChange={(event) => setRemark(event.target.value)} />
+                            </label>
+                            <div className={styles.actionRow}>
+                                <button type="button" className={styles.primaryButton} onClick={() => void handleAdjust()} disabled={isSubmittingAdjust}>
+                                    {isSubmittingAdjust ? '提交中...' : '确认变更织梦豆'}
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className={styles.emptyState}>{t('admin.lookupUserFirst')}</div>
+                    )}
+                </section>
+            </div>
+            <AdminManualAdjustmentHistory currency="points" refreshKey={historyRefreshKey} />
+        </>
     );
 
     const renderDetailModal = () => {

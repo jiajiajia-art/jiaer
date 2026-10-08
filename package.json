@@ -43,6 +43,8 @@
     "test:operatorReports": "node --experimental-strip-types --test checks/operatorReports.check.mjs",
     "test:withdrawRules": "node --experimental-strip-types --test checks/withdrawRules.check.mjs",
     "test:diamondTimelineLog": "node --experimental-strip-types --test checks/diamondTimelineLog.check.mjs",
+    "test:admin-diamonds": "node --experimental-strip-types --test checks/adminDiamonds.check.mjs",
+    "test:admin-adjustment-history": "node --test checks/adminManualAdjustmentHistory.check.mjs",
     "test:funloomLottery": "node --experimental-strip-types --test scripts/funloomLottery.check.mjs",
     "test:lotteryAdmin": "node --experimental-strip-types --test scripts/lotteryAdminConfig.check.mjs",
     "test:displayCoverUrl": "node --experimental-strip-types --test scripts/displayCoverUrl.check.mjs",

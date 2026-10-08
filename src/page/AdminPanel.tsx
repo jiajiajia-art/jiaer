@@ -30,6 +30,7 @@ import SubscriptionAdminManager from '../components/SubscriptionAdminManager';
 import CreatorIncentiveAdminManager from '../components/CreatorIncentiveAdminManager';
 import ShareRatioAdminManager from '../components/ShareRatioAdminManager';
 import AdminUsersManager from '../components/AdminUsersManager';
+import DiamondAdminManager from '../components/DiamondAdminManager';
 import DailyTasksAdminManager from '../components/DailyTasksAdminManager';
 import CommentAdminManager from '../components/Admin/CommentAdminManager';
 import WithdrawAdminManager from '../components/WithdrawAdminManager';
@@ -57,7 +58,7 @@ import { useMessageStore } from '../store/useMessageStore';
 import { useAuthStore } from '../store/useAuthStore';
 
 type EditorMode = 'new' | 'draft' | 'published';
-type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points' | 'creatorIncentives' | 'subscriptions' | 'documents' | 'shareRatio' | 'dailyTasks' | 'users' | 'comments' | 'withdraw' | 'imageGen' | 'lottery';
+type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points' | 'diamonds' | 'creatorIncentives' | 'subscriptions' | 'documents' | 'shareRatio' | 'dailyTasks' | 'users' | 'comments' | 'withdraw' | 'imageGen' | 'lottery';
 type SortModalMode = 'featured' | 'all' | null;
 
 interface SortDraftItem {
@@ -84,6 +85,7 @@ const resolveAdminTab = (pathname: string, search: string): AdminTab => {
     if (pathname.startsWith('/admin/users')) return 'users';
     if (pathname.startsWith('/admin/promotions')) return 'promotions';
     if (pathname.startsWith('/admin/points')) return 'points';
+    if (pathname.startsWith('/admin/diamonds')) return 'diamonds';
     if (pathname.startsWith('/admin/creator-incentives')) return 'creatorIncentives';
     if (pathname.startsWith('/admin/subscriptions')) return 'subscriptions';
     if (pathname.startsWith('/admin/share-ratio')) return 'shareRatio';
@@ -984,6 +986,10 @@ const AdminPanel: React.FC = () => {
             navigate('/admin/points');
             return;
         }
+        if (tab === 'diamonds') {
+            navigate('/admin/diamonds');
+            return;
+        }
         if (tab === 'creatorIncentives') {
             navigate('/admin/creator-incentives');
             return;
@@ -1499,6 +1505,13 @@ const AdminPanel: React.FC = () => {
                             </button>
                             <button
                                 type="button"
+                                className={`${styles.navItem} ${activeTab === 'diamonds' ? styles.navItemActive : ''}`}
+                                onClick={() => handleTabChange('diamonds')}
+                            >
+                                <span className={styles.navTitle}>KK币管理</span>
+                            </button>
+                            <button
+                                type="button"
                                 className={`${styles.navItem} ${activeTab === 'creatorIncentives' ? styles.navItemActive : ''}`}
                                 onClick={() => handleTabChange('creatorIncentives')}
                             >
@@ -1926,6 +1939,8 @@ const AdminPanel: React.FC = () => {
                                 onRefreshCounts={refreshAdminBadgeCounts}
                             />
                         )}
+
+                        {activeTab === 'diamonds' && <DiamondAdminManager />}
 
                         {activeTab === 'creatorIncentives' && <CreatorIncentiveAdminManager />}
 
