@@ -41,6 +41,57 @@
     line-height: 1.2;
 }
 
+.audienceTabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.audienceTab {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 15px 18px;
+    border: 1px solid var(--admin-border, rgba(201, 139, 92, 0.22));
+    border-radius: 16px;
+    background: var(--admin-surface, rgba(255, 251, 246, 0.92));
+    color: var(--admin-text, #2f241d);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.audienceTab:hover {
+    transform: translateY(-1px);
+    border-color: var(--admin-border-strong, rgba(201, 115, 63, 0.34));
+}
+
+.audienceTab:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+    transform: none;
+}
+
+.audienceTabActive {
+    border-color: var(--admin-border-strong, rgba(201, 115, 63, 0.34));
+    background: var(--admin-accent-soft, rgba(201, 115, 63, 0.12));
+    color: var(--admin-accent-strong, #aa5a2d);
+}
+
+.audienceTabCount {
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.audienceHint {
+    margin-top: -10px;
+    color: var(--admin-text-soft, #6f5a49);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
 .primaryGhostButton,
 .primaryButton,
 .secondaryButton,
@@ -420,5 +471,9 @@
 
     .orderActions {
         justify-content: flex-start;
+    }
+
+    .audienceTabs {
+        grid-template-columns: 1fr;
     }
 }

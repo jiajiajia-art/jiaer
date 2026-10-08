@@ -151,7 +151,9 @@ const Home: React.FC = () => {
     const lastUserIdRef = useRef<string | number | undefined>(undefined);
     const hasInitializedRef = useRef(false);
     const latestAllGamesRequestIdRef = useRef(0);
+    const latestCarouselRequestIdRef = useRef(0);
     const [carouselItems, setCarouselItems] = useState<CarouselItem[]>([]);
+    const [carouselDataVersion, setCarouselDataVersion] = useState(0);
     const [showJoinGroupModal, setShowJoinGroupModal] = useState(false);
     const [latestAnnouncement, setLatestAnnouncement] = useState<AnnouncementRecord | null>(null);
     const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
@@ -814,31 +816,41 @@ const Home: React.FC = () => {
     }, []);
 
     const loadCarouselData = useCallback(async () => {
+        const requestId = ++latestCarouselRequestIdRef.current;
+        // 实现用户性别变化后重新请求轮播图
+        void showcaseAudienceGender;
         try {
             const bannerResponse = await bannerApi.getLatest();
+            if (requestId !== latestCarouselRequestIdRef.current) return;
             const bannerItems = bannerResponse.data.data?.banners || [];
             if (bannerResponse.data.success && bannerItems.length > 0) {
                 // 实现加载首页轮播图
                 setCarouselItems(bannerItems);
+                setCarouselDataVersion((version) => version + 1);
                 return;
             }
         } catch (error) {
             console.error('加载首页轮播图失败:', error);
         }
 
+        if (requestId !== latestCarouselRequestIdRef.current) return;
         try {
             const response = await libraryDataApi.getCarouselData();
+            if (requestId !== latestCarouselRequestIdRef.current) return;
             if (response.data.success && response.data.data) {
                 // 实现加载首页轮播图
                 setCarouselItems(response.data.data);
+                setCarouselDataVersion((version) => version + 1);
                 return;
             }
         } catch (error) {
             console.error('加载首页轮播图失败:', error);
         }
 
+        if (requestId !== latestCarouselRequestIdRef.current) return;
         setCarouselItems([]);
-    }, []);
+        setCarouselDataVersion((version) => version + 1);
+    }, [showcaseAudienceGender]);
 
     const loadLatestAnnouncement = useCallback(async () => {
         try {
@@ -1344,7 +1356,7 @@ const Home: React.FC = () => {
         setCarouselImageLoadedMap({});
         carouselImageRetryMapRef.current = {};
         carouselImageLoadedMapRef.current = {};
-    }, [hasMultipleCarouselItems, carouselItems.length]);
+    }, [hasMultipleCarouselItems, carouselItems.length, carouselDataVersion]);
 
     useEffect(() => {
         if (isDesktopCarousel || carouselItems.length === 0) {
