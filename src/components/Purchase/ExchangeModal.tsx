@@ -6,21 +6,8 @@ import { RiCopperCoinLine } from 'react-icons/ri';
 import { auth } from '../../api/account/authApi';
 import { useAuthStore } from '../../store/useAuthStore';
 import { getApiErrorMessage } from '../../utils/error';
-import type { MembershipPlanId } from '../../api/account/auth.type';
+import { getExchangeDiscountForPlan } from '../../lib/galgame/playBilling';
 import styles from './ExchangeModal.module.css';
-
-const MEMBER_DISCOUNTS: Record<MembershipPlanId, number> = {
-    creator_day: 0.9,
-    creator_month: 0.8,
-    creator_season: 0.7,
-    creator_year: 0.6,
-    month: 1,
-    season: 1,
-    year: 1,
-};
-
-const getMemberDiscount = (memberPlan?: MembershipPlanId | null): number =>
-    memberPlan ? (MEMBER_DISCOUNTS[memberPlan] ?? 1) : 1;
 
 const getExchangeValidationErrorKey = (
     points: number,
@@ -49,7 +36,7 @@ const ExchangeModal: React.FC<ExchangeModalProps> = ({ isOpen, onClose, onSucces
     const currentDiamonds = user?.user?.diamonds ?? 0;
     const currentPoints = user?.user?.points ?? 0;
     const pointsToExchange = Number.parseInt(pointsInput, 10) || 0;
-    const memberDiscount = getMemberDiscount(user?.user?.memberPlan);
+    const memberDiscount = getExchangeDiscountForPlan(user?.user?.memberPlan);
     const estimatedDiamondsCost = Math.ceil(pointsToExchange * memberDiscount);
 
     const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {

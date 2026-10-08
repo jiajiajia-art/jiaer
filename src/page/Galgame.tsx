@@ -122,12 +122,16 @@ import { fetchCachedQuests, streamQuests } from "../api/galgame/questsStream";
 import { streamAttributePanels } from "../api/galgame/attributePanelsStream";
 import { runSessionAutoStartOnce } from "../lib/galgame/sessionStartInflight";
 import { ensurePlayUiHydratedOnce, resetPlayUiHydrationGate } from "../lib/galgame/playUiHydrationGate";
+import RechargeModal from "../components/Purchase/RechargeModal";
+import payApi from "../api/pay/payApi";
+import type { PayOrderRequest } from "../api/pay/pay.type";
+import { auth } from "../api/account/authApi";
 
 const Galgame = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
-    const { user } = useAuthStore();
+    const { user, updateUser } = useAuthStore();
     const { fileId, sessionId } = useGameStore();
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isExportNovelOpen, setIsExportNovelOpen] = useState(false);
@@ -162,6 +166,7 @@ const Galgame = () => {
         return (location.state as { bootNewStart?: boolean } | null)?.bootNewStart === true;
     });
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+    const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
     const [overwriteDraftConfirm, setOverwriteDraftConfirm] = useState<{
         title: string;
         description?: string;
@@ -1651,6 +1656,33 @@ const Galgame = () => {
         />
     );
 
+    const handleRecharge = useCallback(async (order: PayOrderRequest) => {
+        try {
+            const response = await payApi.getPayQrCode(order);
+            if (response.data.code === 200 && response.data.data) {
+                return response.data.data;
+            }
+            toast.error(response.data.message || t('galgame.rechargeFailed'));
+        } catch (error) {
+            console.error('[Galgame] Failed to create recharge order:', error);
+            toast.error(t('galgame.rechargeFailed'));
+        }
+        return null;
+    }, [t]);
+
+    const handleRechargeClose = useCallback(() => {
+        setIsRechargeModalOpen(false);
+        void auth.getUserInfo()
+            .then((response) => {
+                if (response.data.success && response.data.data) {
+                    updateUser(response.data.data);
+                }
+            })
+            .catch((error) => {
+                console.error('[Galgame] Failed to refresh user after recharge:', error);
+            });
+    }, [updateUser]);
+
     if (controller.isLoading) {
         return (
             <FullPageLoading
@@ -2365,6 +2397,32 @@ const Galgame = () => {
                             },
                         }
                     )}
+
+                    {/* KK币不足提示 */}
+                    {renderErrorModal(
+                        controller.insufficientDiamondsVisible,
+                        t('galgame.insufficientKkCoins'),
+                        t('galgame.insufficientKkCoinsMessage'),
+                        {
+                            confirmText: t('galgame.goRecharge'),
+                            cancelText: t('galgame.cancel'),
+                            primaryType: "confirm",
+                            onConfirm: () => {
+                                controller.setInsufficientDiamondsVisible(false);
+                                setIsRechargeModalOpen(true);
+                            },
+                            onCancel: () => {
+                                controller.setInsufficientDiamondsVisible(false);
+                            },
+                        }
+                    )}
+
+                    <RechargeModal
+                        isOpen={isRechargeModalOpen}
+                        onClose={handleRechargeClose}
+                        onRecharge={handleRecharge}
+                        fixedTab="diamonds"
+                    />
 
                     {/* 一般请求错误弹窗 */}
                     {renderErrorModal(

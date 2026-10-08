@@ -6,6 +6,11 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { auth } from '../../api/account/authApi';
 import type { ContextMemoryStatus } from '../../api/galgame/getGalgamePreset.type';
 import { isGenerationBusyError, shouldDeferChoiceUntilStreamReady, GENERATION_BUSY_MAX_RETRIES, getGenerationBusyRetryDelayMs } from '../../lib/galgame/choiceStepDisplayGate';
+import {
+    isInsufficientDiamondsError,
+    type PlayInteractionType,
+    type StreamBusinessError,
+} from '../../lib/galgame/playBilling';
 
 export function createGalgameActionId(sessionId: string | null, _action: string): string {
     const randomPart = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
@@ -32,6 +37,7 @@ interface UseGalgameStepOptions {
     onContextMemoryUpdate?: (status: ContextMemoryStatus) => void;
     onContextCompressionDone?: (status: ContextMemoryStatus | null) => void;
     onStreamActivity?: (data: any) => void;
+    onInsufficientDiamonds?: (error: StreamBusinessError) => void;
 }
 
 export const useGalgameStep = ({
@@ -48,6 +54,7 @@ export const useGalgameStep = ({
     onContextMemoryUpdate,
     onContextCompressionDone,
     onStreamActivity,
+    onInsufficientDiamonds,
 }: UseGalgameStepOptions) => {
     const [currentStep, setCurrentStep] = useState<any>(null);
     const [stepQueue, setStepQueue] = useState<any[]>([]);
@@ -169,6 +176,8 @@ export const useGalgameStep = ({
                 onError?: (error: string) => void;
                 deduct?: boolean;
                 actionId?: string;
+                interactionType?: PlayInteractionType;
+                choiceSnapshot?: unknown;
             }
         ) => {
             if (!sessionId) {
@@ -178,6 +187,10 @@ export const useGalgameStep = ({
 
             try {
                 const requestId = ++currentRequestId.current;
+                const choiceSnapshot = options?.choiceSnapshot
+                    || (currentStepRef.current?.type === 'choice' ? currentStepRef.current : null);
+                const interactionType = options?.interactionType
+                    || (options?.deduct ? 'custom_input' : 'preset_option');
 
                 // Start fresh for new request so previous step does not block queue
                 setCurrentStep(null);
@@ -187,7 +200,7 @@ export const useGalgameStep = ({
                 setLoading(true);
 
                 onMessagesClear?.();
-                if (!isReplay) {
+                if (!isReplay && (interactionType === 'preset_option' || interactionType === 'custom_input')) {
                     onUserAction?.(action);
                 }
                 options?.onBeforeRequest?.();
@@ -195,6 +208,7 @@ export const useGalgameStep = ({
                 const requestBody: any = {
                     action,
                     actionId: options?.actionId || createGalgameActionId(sessionId, action),
+                    interactionType,
                 };
                 if (options?.deduct) {
                     requestBody.deduct = true;
@@ -242,6 +256,20 @@ export const useGalgameStep = ({
                             setShowNextButton(false);
                             options?.onError?.(error);
                         },
+                        onBusinessError: (error) => {
+                            if (!isInsufficientDiamondsError(error)) {
+                                return false;
+                            }
+                            setIsCompressingContext(false);
+                            setLoading(false);
+                            setCurrentStep(choiceSnapshot);
+                            setStepQueue([]);
+                            setShowNextButton(false);
+                            setSelectedOptionIndex(null);
+                            setIsWaitingForData(false);
+                            onInsufficientDiamonds?.(error);
+                            return true;
+                        },
                         onFirstStep: options?.onFirstStep,
                         onActivity: onStreamActivity,
                         onData: (data) => {
@@ -288,7 +316,7 @@ export const useGalgameStep = ({
                 options?.onError?.(errorMsg);
             }
         },
-        [sessionId, processStreamResponse, onMessagesClear, onStreamComplete, onErrorAfterAlert, onUserAction, getUserInfo, isTextMode, isReplay, onContextMemoryUpdate, onContextCompressionDone, onStreamActivity, resetStreamRetryDisplay]
+        [sessionId, processStreamResponse, onMessagesClear, onStreamComplete, onErrorAfterAlert, onUserAction, getUserInfo, isTextMode, isReplay, onContextMemoryUpdate, onContextCompressionDone, onStreamActivity, onInsufficientDiamonds, resetStreamRetryDisplay]
     );
 
     // Handle next step in queue
@@ -330,11 +358,9 @@ export const useGalgameStep = ({
         });
     }, [showStep, isReplay, onExhausted]);
 
-    // const FREE_ROUNDS = 30;
-
     // Handle selecting a choice option
     const handleChoiceOption = useCallback(
-        async (option: { text: string; nextId: string }, optionIndex: number, actionId?: string) => {
+        async (option: { text: string; nextId: string }, optionIndex: number, actionId?: string, choiceSnapshot?: unknown) => {
             setSelectedOptionIndex(optionIndex);
             setIsWaitingForData(true);
             setShowNextButton(false);
@@ -357,6 +383,8 @@ export const useGalgameStep = ({
                         }
                     },
                     actionId,
+                    interactionType: 'preset_option',
+                    choiceSnapshot,
                 });
             };
             await run(0);
@@ -366,7 +394,7 @@ export const useGalgameStep = ({
 
     // Handle custom input send
     const handleChoiceSend = useCallback(
-        async (inputText: string, actionId?: string) => {
+        async (inputText: string, actionId?: string, choiceSnapshot?: unknown) => {
             if (!inputText.trim()) {
                 return;
             }
@@ -391,6 +419,8 @@ export const useGalgameStep = ({
                     },
                     deduct: true,
                     actionId,
+                    interactionType: 'custom_input',
+                    choiceSnapshot,
                 });
             };
             await run(0);
