@@ -33,6 +33,7 @@ import { authFetch } from '../../../api/base';
 import { useGenerationEta } from '../../../hooks/editor/useGenerationEta';
 import GenerationActionBar from '../GenerationActionBar';
 import InlineFieldSave from '../InlineFieldSave';
+import CurrencyIcon from '../../CurrencyIcon';
 import {
     listBatchNpcRetryTargetItems,
     resolveRetryCharacterIdsFromBoard,
@@ -2334,9 +2335,8 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                         onClick={() => handleRequestSingleNpcGenerate(currentCharacter)}
                                         disabled={isAddingNew || isPortraitActionBusy}
                                     >
-                                        <img
-                                            src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
-                                            alt=""
+                                        <CurrencyIcon
+                                            currency="points"
                                             className={styles.priceIcon}
                                         />
                                         {/* TODO: 恢复会员折扣UI时，取消下方注释
@@ -2637,9 +2637,8 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                                             onClick={() => handleRequestVariationGenerate(variation)}
                                                             disabled={isAddingNew || (isGeneratingVariation && generatingVariationId === variation.id)}
                                                         >
-                                                            <img
-                                                                src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
-                                                                alt=""
+                                                            <CurrencyIcon
+                                                                currency="points"
                                                                 className={styles.priceIcon}
                                                             />
                                                             {isGeneratingVariation && generatingVariationId === variation.id ? (

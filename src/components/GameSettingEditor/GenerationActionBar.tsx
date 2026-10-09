@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FaCoins } from 'react-icons/fa';
 import { auth } from '../../api/account/authApi';
 import { useAuthStore } from '../../store/useAuthStore';
+import CurrencyIcon from '../CurrencyIcon';
 import styles from './GenerationActionBar.module.css';
 
 interface GenerationActionBarProps {
@@ -56,7 +56,7 @@ const GenerationActionBar: React.FC<GenerationActionBarProps> = ({ children, lay
                     </>
                 ) : (
                     <>
-                        <FaCoins className={styles.pointsIcon} aria-hidden="true" />
+                        <CurrencyIcon currency="points" className={styles.pointsIcon} aria-hidden="true" />
                         <span className={styles.pointsLabel}>{t('profile.myPoints')}</span>
                         <span className={styles.pointsValue}>{userPoints}</span>
                     </>

@@ -2,11 +2,11 @@ import React, { useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
-import { RiCopperCoinLine } from 'react-icons/ri';
 import { auth } from '../../api/account/authApi';
 import { useAuthStore } from '../../store/useAuthStore';
 import { getApiErrorMessage } from '../../utils/error';
 import { getExchangeDiscountForPlan } from '../../lib/galgame/playBilling';
+import CurrencyIcon from '../CurrencyIcon';
 import styles from './ExchangeModal.module.css';
 
 const getExchangeValidationErrorKey = (
@@ -135,14 +135,12 @@ const ExchangeModal: React.FC<ExchangeModalProps> = ({ isOpen, onClose, onSucces
                 <div className={styles.balanceRow}>
                     <span className={styles.balanceLabel}>{t('exchangeModal.currentBalance')}</span>
                     <span className={styles.balanceValue}>
-                        <svg className={styles.balanceIconDiamond} viewBox="0 0 1024 1024" width="18" height="18" aria-hidden="true">
-                            <path d="M296.42524445 392.80526222H50.38421333L216.76942222 148.46179555h246.03875556zM798.02823111 149.81233778H551.98833778l166.38520889 244.34232889h246.03989333zM403.65169778 392.80526222L511.19786667 226.41777778l106.40611555 166.38748444zM617.75075555 487.09859555L511.34350222 1000.40248889 407.21066667 487.09859555zM300.18901333 487.09859555l211.90883556 531.02364445-454.30670222-531.02364445zM719.77642667 487.09859555l-207.35658667 531.02364445 449.75559111-531.02364445z" fill="#A8283C"/>
-                        </svg>
+                        <CurrencyIcon currency="diamonds" className={styles.balanceIconDiamond} aria-hidden="true" />
                         {currentDiamonds}
                     </span>
                     <span className={styles.balanceDivider}>|</span>
                     <span className={styles.balanceValue}>
-                        <RiCopperCoinLine className={styles.balanceIconPoints} />
+                        <CurrencyIcon currency="points" className={styles.balanceIconPoints} aria-hidden="true" />
                         {currentPoints}
                     </span>
                 </div>
@@ -150,7 +148,7 @@ const ExchangeModal: React.FC<ExchangeModalProps> = ({ isOpen, onClose, onSucces
                 <div className={styles.formSection}>
                     <div className={styles.inputRow}>
                         <span className={styles.inputPrefix} aria-hidden="true">
-                            <RiCopperCoinLine style={{ width: 18, height: 18 }} />
+                            <CurrencyIcon currency="points" style={{ width: 18, height: 18 }} />
                         </span>
                         <input
                             type="text"

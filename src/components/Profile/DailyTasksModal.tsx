@@ -61,11 +61,21 @@ type DailyTasksModalProps = {
     onClose: () => void;
 };
 
+const DAILY_TASK_FOCUSABLE_SELECTOR = [
+    'button:not([disabled])',
+    'a[href]',
+    'input:not([disabled])',
+    '[tabindex]:not([tabindex="-1"])',
+].join(',');
+
 const DailyTasksModal: React.FC<DailyTasksModalProps> = ({ isOpen, onClose }) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const { updateUser } = useAuthStore();
     const [, setTaskNowTick] = React.useState<number>(Date.now());
+    const dailyTaskModalRef = React.useRef<HTMLDivElement | null>(null);
+    const dailyTaskCloseRef = React.useRef<HTMLButtonElement | null>(null);
+    const previousFocusRef = React.useRef<HTMLElement | null>(null);
 
     const {
         tasks: dailyTasks,
@@ -76,6 +86,9 @@ const DailyTasksModal: React.FC<DailyTasksModalProps> = ({ isOpen, onClose }) =>
         refreshDailyTasks,
         acceptDailyTask,
         claimDailyTask,
+        claimMakeupCard,
+        makeupCardReward,
+        isClaimingMakeupCard,
         getDisplayTotalSeconds,
     } = useDailyTaskStore(useShallow((state) => ({
         tasks: state.tasks,
@@ -86,8 +99,49 @@ const DailyTasksModal: React.FC<DailyTasksModalProps> = ({ isOpen, onClose }) =>
         refreshDailyTasks: state.refreshDailyTasks,
         acceptDailyTask: state.acceptDailyTask,
         claimDailyTask: state.claimDailyTask,
+        claimMakeupCard: state.claimMakeupCard,
+        makeupCardReward: state.makeupCardReward,
+        isClaimingMakeupCard: state.isClaimingMakeupCard,
         getDisplayTotalSeconds: state.getDisplayTotalSeconds,
     })));
+
+    useEffect(() => {
+        if (!isOpen) return;
+        previousFocusRef.current = document.activeElement instanceof HTMLElement
+            ? document.activeElement
+            : null;
+        const frame = window.requestAnimationFrame(() => dailyTaskCloseRef.current?.focus());
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                onClose();
+                return;
+            }
+            if (event.key !== 'Tab' || !dailyTaskModalRef.current) return;
+            const focusable = Array.from(
+                dailyTaskModalRef.current.querySelectorAll<HTMLElement>(DAILY_TASK_FOCUSABLE_SELECTOR),
+            );
+            if (!focusable.length) {
+                event.preventDefault();
+                dailyTaskModalRef.current.focus();
+                return;
+            }
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+            }
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.cancelAnimationFrame(frame);
+            document.removeEventListener('keydown', handleKeyDown);
+            previousFocusRef.current?.focus();
+        };
+    }, [isOpen, onClose]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -144,6 +198,15 @@ const DailyTasksModal: React.FC<DailyTasksModalProps> = ({ isOpen, onClose }) =>
         await getUserInfo();
     };
 
+    const handleClaimMakeupCard = async () => {
+        const result = await claimMakeupCard();
+        if (!result.success) {
+            toast.error(result.message || t('profile.makeupCardClaimFailed'));
+            return;
+        }
+        toast.success(result.message || t('profile.makeupCardClaimSuccess'));
+    };
+
     const displayTotalSeconds = getDisplayTotalSeconds();
     const durationTaskMap = new Map(
         dailyTasks.filter((task) => isDurationTaskCode(task.code)).map((task) => [task.code, task]),
@@ -158,8 +221,17 @@ const DailyTasksModal: React.FC<DailyTasksModalProps> = ({ isOpen, onClose }) =>
 
     return (
         <div className={styles.dailyTaskModalOverlay} onClick={onClose}>
-            <div className={styles.dailyTaskModal} onClick={(e) => e.stopPropagation()}>
+            <div
+                ref={dailyTaskModalRef}
+                className={styles.dailyTaskModal}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="daily-task-dialog-title"
+                tabIndex={-1}
+                onClick={(e) => e.stopPropagation()}
+            >
                 <button
+                    ref={dailyTaskCloseRef}
                     type="button"
                     className={styles.dailyTaskCloseBtn}
                     aria-label={t('profile.closeDailyTasks')}
@@ -168,7 +240,7 @@ const DailyTasksModal: React.FC<DailyTasksModalProps> = ({ isOpen, onClose }) =>
                     <span className={styles.dailyTaskCloseIcon} aria-hidden="true" />
                 </button>
                 <div className={styles.dailyTaskModalHeader}>
-                    <div className={styles.dailyTaskModalTitle}>{t('profile.tasksTitle')}</div>
+                    <div id="daily-task-dialog-title" className={styles.dailyTaskModalTitle}>{t('profile.tasksTitle')}</div>
                     {isTaskLoadedOnce && dailyTasks.length > 0 && (
                         <p className={styles.dailyTaskSummary}>
                             {t('profile.tasksSummary', {
@@ -314,6 +386,37 @@ const DailyTasksModal: React.FC<DailyTasksModalProps> = ({ isOpen, onClose }) =>
                         );
                     })}
                 </div>
+                <section
+                    className={`${styles.makeupCardReward} ${makeupCardReward.claimable ? styles.makeupCardRewardReady : ''}`}
+                    aria-label={t('profile.makeupCardRewardTitle')}
+                >
+                    <div className={styles.makeupCardRewardHeader}>
+                        <div>
+                            <strong>{t('profile.makeupCardRewardTitle')}</strong>
+                            <span>{t('profile.makeupCardRewardRule')}</span>
+                        </div>
+                        <b>{makeupCardReward.current}/{makeupCardReward.target}</b>
+                    </div>
+                    <div className={styles.makeupCardProgress} aria-hidden="true">
+                        <span
+                            style={{
+                                width: `${Math.min(100, Math.round((makeupCardReward.current / makeupCardReward.target) * 100))}%`,
+                            }}
+                        />
+                    </div>
+                    <button
+                        type="button"
+                        className={styles.makeupCardClaimButton}
+                        disabled={!makeupCardReward.claimable || makeupCardReward.claimed || isClaimingMakeupCard}
+                        onClick={() => void handleClaimMakeupCard()}
+                    >
+                        {makeupCardReward.claimed
+                            ? t('profile.makeupCardClaimed')
+                            : isClaimingMakeupCard
+                                ? t('profile.claiming')
+                                : t('profile.makeupCardClaim')}
+                    </button>
+                </section>
                 {hasDurationTaskFallback && (
                     <div className={styles.dailyTaskHint}>{t('profile.tasksTip')}</div>
                 )}

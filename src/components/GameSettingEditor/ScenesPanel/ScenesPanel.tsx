@@ -36,6 +36,7 @@ import GenerateResultModal from '../../CommonModal/GenerateResultModal';
 import { useGenerationEta } from '../../../hooks/editor/useGenerationEta';
 import GenerationActionBar from '../GenerationActionBar';
 import PortraitLightbox from '../CharactersPanel/PortraitLightbox';
+import CurrencyIcon from '../../CurrencyIcon';
 import { authFetch } from '../../../api/base';
 import {
     isBatchSceneBoardAllSuccess,
@@ -1531,9 +1532,8 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                         onClick={() => handlers.openSceneCostModal()}
                         disabled={isBatchSceneJobActive || isLoadingSceneCost || isBlockingSwitch}
                     >
-                        <img
-                            src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
-                            alt=""
+                        <CurrencyIcon
+                            currency="points"
                             className={styles.priceIcon}
                         />
                         <div className={styles.buttonTextContainer}>

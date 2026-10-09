@@ -18,8 +18,8 @@ import {
     sanitizeAmountInput,
     validateRechargeAmount,
 } from '../../lib/rechargeAmountRules';
+import CurrencyIcon from '../CurrencyIcon';
 
-const COIN_ICON = `${import.meta.env.BASE_URL}data/assetsv2/personal/payment/coin.png`;
 const MEMBER_ICON = `${import.meta.env.BASE_URL}data/assetsv2/personal/member.png`;
 const ENJOY_ICON = `${import.meta.env.BASE_URL}data/assetsv2/personal/enjoy.png`;
 
@@ -691,7 +691,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                             >
                                 <div className={styles.amountTopSection}>
                                     <div className={styles.amountMainPoints}>
-                                        <img src={COIN_ICON} alt="" className={styles.amountCoin} aria-hidden="true" />
+                                        <CurrencyIcon currency="diamonds" className={styles.amountCoin} aria-hidden="true" />
                                         <span>{planDiamonds}</span>
                                     </div>
                                     <div className={styles.amountPriceMeta}>

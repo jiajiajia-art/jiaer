@@ -5,6 +5,7 @@ import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import { auth } from '../api/account/authApi';
 import type { GetPointsActivitiesParams, PointsActivityDirection, PointsActivityItem, PointsActivityCurrency } from '../api/account/auth.type';
 import { useTranslation } from 'react-i18next';
+import CurrencyIcon from '../components/CurrencyIcon';
 import styles from './AssetDetails.module.css';
 
 type CurrencyTab = 'all' | 'points' | 'diamonds';
@@ -89,7 +90,7 @@ const AssetDetails: React.FC = () => {
 
     const buildCurrencyParam = (currencyTab: CurrencyTab): PointsActivityCurrency => {
         if (currencyTab === 'all') {
-            return 'all';
+            return 'wallet';
         }
         return currencyTab;
     };
@@ -247,16 +248,14 @@ const AssetDetails: React.FC = () => {
                     <section className={styles.balanceSection}>
                         <div className={styles.balanceRow}>
                             <div className={styles.balanceCard}>
-                                <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" className={styles.balanceIcon} />
+                                <CurrencyIcon currency="points" className={styles.balanceIcon} />
                                 <div className={styles.balanceInfo}>
                                     <span className={styles.balanceLabel}>{t('assetDetails.points')}</span>
                                     <span className={styles.balanceValue}>{points}</span>
                                 </div>
                             </div>
                             <div className={styles.balanceCard}>
-                                <svg className={styles.balanceIconDiamond} viewBox="0 0 1024 1024" width="18" height="18">
-                                    <path d="M296.42524445 392.80526222H50.38421333L216.76942222 148.46179555h246.03875556zM798.02823111 149.81233778H551.98833778l166.38520889 244.34232889h246.03989333zM403.65169778 392.80526222L511.19786667 226.41777778l106.40611555 166.38748444zM617.75075555 487.09859555L511.34350222 1000.40248889 407.21066667 487.09859555zM300.18901333 487.09859555l211.90883556 531.02364445-454.30670222-531.02364445zM719.77642667 487.09859555l-207.35658667 531.02364445 449.75559111-531.02364445z" fill="#A8283C"/>
-                                </svg>
+                                <CurrencyIcon currency="diamonds" className={styles.balanceIconDiamond} />
                                 <div className={styles.balanceInfo}>
                                     <span className={styles.balanceLabel}>{t('assetDetails.diamonds')}</span>
                                     <span className={styles.balanceValue}>{diamonds}</span>

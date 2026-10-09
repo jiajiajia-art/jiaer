@@ -11,6 +11,7 @@ import worldEditor from '../../../api/worldInteraction/worldEditor';
 import { CHARACTER_GENERATION_COST } from '../../../utils/constants';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { auth } from '../../../api/account/authApi';
+import CurrencyIcon from '../../CurrencyIcon';
 
 interface FunctionalNPCsPanelProps {
     fileId?: string | null;
@@ -367,9 +368,8 @@ const FunctionalNPCsPanel = React.forwardRef<FunctionalNPCsPanelRef, FunctionalN
                     onClick={openAllImagesCostModal}
                     disabled={isGeneratingAllImages || isLoadingAllImagesCost}
                 >
-                    <img
-                        src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
-                        alt=""
+                    <CurrencyIcon
+                        currency="points"
                         className={styles.priceIcon}
                     />
                     <div className={styles.buttonTextContainer}>

@@ -3,7 +3,6 @@ import styles from '../../../../components/Galgame/NormalModeDisplay.module.css'
 import { extractPlainText, truncateTextWithTags } from '../../../../utils/textUtils';
 import ColoredMarkdownText from '../../../Galgame/ColoredMarkdownText';
 import { IoArrowDownCircleOutline } from 'react-icons/io5';
-import { OPTION_COST, INPUT_COST } from '../../../../utils/constants';
 
 type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';
 
@@ -37,11 +36,6 @@ interface NormalModeDisplayProps {
     isFreeRound?: boolean;
 }
 
-const POINTS_CONFIG = {
-    option: OPTION_COST,
-    custom: INPUT_COST,
-};
-
 const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
     currentMessage,
     finalDisplayText,
@@ -51,7 +45,6 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
     onNextMessage,
     onChoiceClick,
     onCustomInputSubmit,
-    isFreeRound = false,
 }) => {
     const debugNext = useCallback((source: 'button' | 'container') => {
         const nextFromQueue = stepQueue && stepQueue.length > 0 ? stepQueue[0] : undefined;
@@ -72,9 +65,6 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
     }, [currentMessage, finalIsTyping, isAutoPlay]);
     const [showCustomInput, setShowCustomInput] = useState(false);
     const [customInputValue, setCustomInputValue] = useState('');
-    const creatorTest = new URLSearchParams(window.location.search).get('testMode') === 'creator';
-    const optionCost = creatorTest ? 2 : POINTS_CONFIG.option;
-    const customCost = creatorTest ? 2 : POINTS_CONFIG.custom;
 
     const { isWaitingForData, currentStep, showNextButton, stepQueue } = stepHandlers;
     
@@ -248,12 +238,6 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                             <span className={styles.choiceText}>
                                 {extractPlainText(option.text)}
                             </span>
-                            {!isFreeRound && (
-                                <div className={styles.choicePrice}>
-                                    <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
-                                    <span>{optionCost}</span>
-                                </div>
-                            )}
                         </div>
                     ))}
                     {!showCustomInput ? (
@@ -284,12 +268,6 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                                 className={styles.customInputButton}
                             >
                                 <span>发送</span>
-                                {!isFreeRound && (
-                                    <div className={styles.choicePrice}>
-                                        <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
-                                        <span>{customCost}</span>
-                                    </div>
-                                )}
                             </button>
                         </div>
                     )}

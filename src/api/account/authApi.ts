@@ -15,6 +15,7 @@ import type {
   ResetPasswordRequest,
   SaveProfilePreferencesRequest,
   SaveProfilePreferencesResponse,
+  SignInMakeupResponse,
   SendCodeRequest,
   SettlePointsResponse,
   SignupRequest,
@@ -48,6 +49,9 @@ export const auth = {
 
   checkIn: () =>
     api.post<ApiResponse<CheckInResponse | null>>('/auth/user/signin'),
+
+  makeUpSignIn: (date: string) =>
+    api.post<ApiResponse<SignInMakeupResponse | null>>('/auth/user/signin/makeup', { date }),
 
   getSignInStatus: () =>
     api.get<ApiResponse<MembershipSignInStatus>>('/auth/user/signin-status'),

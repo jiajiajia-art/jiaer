@@ -3,7 +3,7 @@
  */
 
 export const TEXT_LLM_MODELS = [
-  'doubao-seed-1-8-251228',
+  'doubao-seed-2-1-lite-260915',
   'DeepSeek-V4-Pro-0813',
   'DeepSeek-V4-Flash 0731',
   'DeepSeek-V3.2 Speciale',
@@ -13,7 +13,7 @@ export const TEXT_LLM_MODELS = [
 
 export type TextLlmModel = (typeof TEXT_LLM_MODELS)[number];
 
-export const DEFAULT_TEXT_LLM_MODEL: TextLlmModel = 'doubao-seed-1-8-251228';
+export const DEFAULT_TEXT_LLM_MODEL: TextLlmModel = 'doubao-seed-2-1-lite-260915';
 
 export interface TextLlmUsageRow {
   key: string;
@@ -60,7 +60,7 @@ export function normalizeTextLlmModel(value: unknown): TextLlmModel {
 
 /** 功能注释：卡片标题（运营可读）与网关侧真实 model id 分离展示。 */
 export function getTextLlmModelLabel(model: TextLlmModel): string {
-  if (model === 'doubao-seed-1-8-251228') return '豆包 Seed 1.8';
+  if (model === 'doubao-seed-2-1-lite-260915') return '豆包 Seed 2.1';
   if (model === 'DeepSeek-V4-Pro-0813') return 'DeepSeek V4 Pro';
   if (model === 'DeepSeek-V4-Flash 0731') return 'DeepSeek V4 Flash';
   if (model === 'DeepSeek-V3.2 Speciale') return 'DeepSeek V3.2 Speciale';

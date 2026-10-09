@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import CurrencyIcon from '../../CurrencyIcon';
 import styles from './WorldMapCard.module.css';
 
 interface WorldMapCardProps {
@@ -56,9 +57,8 @@ const WorldMapCard: React.FC<WorldMapCardProps> = ({
                         onClick={onGenerateClick}
                         disabled={!fileId || isGeneratingWorldMap}
                     >
-                        <img 
-                            src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} 
-                            alt="" 
+                        <CurrencyIcon
+                            currency="points"
                             className={styles.priceIcon} 
                         />
                         {isGeneratingWorldMap ? t('createGame.generating') : t('createGame.aiGenerate')}

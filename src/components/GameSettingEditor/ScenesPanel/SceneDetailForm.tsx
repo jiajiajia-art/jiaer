@@ -8,6 +8,7 @@ import { withCacheBust } from '../../../utils/imageCache';
 import { useWordLimit, useWordCount } from '../../../hooks/editor/useWordLimit';
 import { isMiniProgramEnv } from '../../../utils/miniProgram';
 import InlineFieldSave from '../InlineFieldSave';
+import CurrencyIcon from '../../CurrencyIcon';
 
 // 字数限制配置
 const SCENE_WORD_LIMITS = {
@@ -212,9 +213,8 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
                         disabled={isImageActionDisabled}
                         style={{ opacity: isImageActionDisabled ? 0.5 : 1 }}
                     >
-                        <img
-                            src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
-                            alt=""
+                        <CurrencyIcon
+                            currency="points"
                             className={styles.priceIcon}
                         />
                         {/* TODO: 恢复会员折扣UI时，取消下方注释

@@ -8,6 +8,7 @@ import SaveConfirmModal from '../../CommonModal/SaveConfirmModal';
 import { toast } from 'react-hot-toast';
 import type { ObjectItem } from '../../../api/worldInteraction/objectsData.type';
 import { objectsData } from '../../../api/worldInteraction/objectsData';
+import CurrencyIcon from '../../CurrencyIcon';
 
 interface ObjectsPanelProps {
     fileId?: string | null;
@@ -374,9 +375,8 @@ const ObjectsPanel = React.forwardRef<ObjectsPanelRef, ObjectsPanelProps>(({
                     onClick={handleGenerateAllClick}
                     disabled={isGeneratingAll || objects.length === 0}
                 >
-                    <img
-                        src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
-                        alt=""
+                    <CurrencyIcon
+                        currency="points"
                         className={styles.priceIcon}
                     />
                     <div className={styles.buttonTextContainer}>

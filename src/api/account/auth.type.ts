@@ -13,9 +13,60 @@ export interface StackedPlan {
 export type Currency = import('../common/currency').Currency;
 export type CurrencyWithAll = import('../common/currency').CurrencyWithAll;
 
+export type SignInDayState = 'signed' | 'made_up' | 'missed' | 'today' | 'upcoming';
+
+export interface SignInRewardBreakdown {
+  basePoints: number;
+  weeklyBonusPoints: number;
+  monthlyBonusPoints: number;
+  totalPoints: number;
+}
+
+export interface SignInCalendarDay {
+  date: string;
+  weekday: number;
+  dayOfMonth: number;
+  state: SignInDayState;
+  canMakeup?: boolean;
+}
+
+export interface SignInWeekDay extends SignInCalendarDay {
+  basePoints: number;
+  weeklyBonusPoints: number;
+  totalPoints: number;
+}
+
+export interface SignInWeekStatus {
+  startDate: string;
+  endDate: string;
+  consecutiveDays: number;
+  signedDays: number;
+  bonusEligible: boolean;
+  days: SignInWeekDay[];
+}
+
+export interface SignInMonthStatus {
+  monthKey: string;
+  daysInMonth: number;
+  targetDays: number;
+  currentConsecutiveDays: number;
+  bestConsecutiveDays: number;
+  progressDays: number;
+  bonusPoints: number;
+  bonusRewarded: boolean;
+  days: SignInCalendarDay[];
+}
+
 export interface MembershipSignInStatus {
+  serverDate: string;
+  serverTime: string;
+  timeZone: 'UTC' | 'UTC+8';
   signedInToday: boolean;
   canClaim: boolean;
+  makeupCardCount: number;
+  todayReward: SignInRewardBreakdown;
+  week: SignInWeekStatus;
+  month: SignInMonthStatus;
   streakDay: number;
   nextStreakDay: number;
   planId: MembershipPlanId | null;
@@ -26,10 +77,24 @@ export interface MembershipSignInStatus {
   baseSchedule: number[];
   bonusSchedule: number[];
   displaySchedule: number[];
-  signedDaysThisMonth: number[];
+  signedDaysThisMonth: string[];
+  daysInMonth: number;
+  perfectAttendance: {
+    enabled: boolean;
+    reward: number;
+    achieved: boolean;
+    rewarded: boolean;
+    canClaim: boolean;
+  };
 }
 
 export interface CheckInResponse {
+  alreadySigned: boolean;
+  signedIn: boolean;
+  pointsAdded: number;
+  remainingPoints: number;
+  rewardBreakdown: SignInRewardBreakdown;
+  status: MembershipSignInStatus;
   rewardPoints?: number;
   signInStatus?: MembershipSignInStatus | null;
   activePlanId?: MembershipPlanId | null;
@@ -40,6 +105,17 @@ export interface CheckInResponse {
   todayBonusPoints?: number;
   signinBonusSchedule?: number[] | null;
   endAt?: string | null;
+}
+
+export interface SignInMakeupResponse {
+  madeUp: boolean;
+  alreadyMadeUp: boolean;
+  errorCode: string | null;
+  pointsAdded: number;
+  remainingPoints: number;
+  makeupCardCount: number;
+  rewardBreakdown: SignInRewardBreakdown;
+  status: MembershipSignInStatus;
 }
 
 export type UserGender = 'male' | 'female';
@@ -169,7 +245,7 @@ export interface InviteClaimResult {
 
 // 积分活动查询
 export type PointsActivityDirection = 'all' | 'income' | 'expense';
-export type PointsActivityCurrency = CurrencyWithAll;
+export type PointsActivityCurrency = CurrencyWithAll | 'wallet';
 
 export interface GetPointsActivitiesParams {
   currency?: PointsActivityCurrency;

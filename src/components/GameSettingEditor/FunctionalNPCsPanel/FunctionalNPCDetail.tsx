@@ -10,6 +10,7 @@ import { addImageTimestamp } from '../../../utils/imageCache';
 import worldEditor from '../../../api/worldInteraction/worldEditor';
 import { useGameStore } from '../../../store/gameStore';
 import { useWordLimit, useWordCount } from '../../../hooks/editor/useWordLimit';
+import CurrencyIcon from '../../CurrencyIcon';
 
 // 字数限制配置
 const FUNCTIONAL_NPC_WORD_LIMITS = {
@@ -600,7 +601,7 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
                                             onClick={handleGenerateImageClick}
                                             disabled={isGenerating}
                                         >
-                                            <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" style={{ width: '16px', height: '16px' }} />
+                                            <CurrencyIcon currency="points" style={{ width: '16px', height: '16px' }} />
                                             {isGenerating ? '生成中...' : `${CHARACTER_GENERATION_COST} AI生成`}
                                         </button>
                                     </div>

@@ -5,6 +5,7 @@ import { MdOutlineAutoStories, MdSettings, MdOutlinePerson } from 'react-icons/m
 import styles from './GameControlBar.module.css';
 import { logWorldButtonClick } from "../../../api/statistics/scriptButtonEvent";
 import { useAuthStore } from '../../../store/useAuthStore';
+import CurrencyIcon from '../../CurrencyIcon';
 
 interface GameControlBarProps {
   // 积分显示
@@ -57,6 +58,7 @@ const GameControlBar: React.FC<GameControlBarProps> = ({
   const autoPlayDisabled = disableAutoPlay || isTextMode;
   const account = useAuthStore((state) => state.user?.user);
   const creatorTest = new URLSearchParams(window.location.search).get('testMode') === 'creator';
+  const currencyType = creatorTest ? 'points' : 'diamonds';
   const displayedBalance = creatorTest ? userPoints : account?.diamonds;
   const currencyName = creatorTest ? '织梦豆' : 'KK币';
 
@@ -66,8 +68,8 @@ const GameControlBar: React.FC<GameControlBarProps> = ({
       {displayedBalance !== undefined && (
         <div className={styles.buttonItem}>
           <div className={styles.buttonInner}>
-            <img
-              src={`${import.meta.env.BASE_URL}data/assets/金币.png`}
+            <CurrencyIcon
+              currency={currencyType}
               alt={currencyName}
             />
             <span>{displayedBalance}</span>

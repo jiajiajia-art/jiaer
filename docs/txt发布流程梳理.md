@@ -100,7 +100,7 @@ flowchart LR
 - `processVisualDocJob`：解析文档 → 依次生成 `worldSetting` → `sceneSetting` → `npcSetting`  
 - `processGenerateFromIdeaJob`：从 idea 文本直接生成上述三块 JSON  
 
-模型：默认 `doubao-seed-1-8-251228`（或 Claude，看 `LLM_PROVIDER`），通过 `doubaoCompleteWithSchema` / `llmStream`。
+模型：默认 `doubao-seed-2-1-lite-260915`（或 Claude，看 `LLM_PROVIDER`），通过 `doubaoCompleteWithSchema` / `llmStream`。
 
 前端轮询：`useFileUpload.ts` → `checkUploadStatus(jobId)`。
 

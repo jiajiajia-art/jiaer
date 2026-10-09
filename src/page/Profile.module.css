@@ -960,6 +960,83 @@
     border-bottom: none;
 }
 
+.makeupCardReward {
+    position: relative;
+    z-index: 1;
+    flex-shrink: 0;
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    background: rgba(18, 18, 21, 0.56);
+    opacity: 0.58;
+    transition: opacity 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.makeupCardRewardReady {
+    opacity: 1;
+    border-color: rgba(255, 64, 103, 0.55);
+    background: linear-gradient(135deg, rgba(255, 47, 91, 0.16), rgba(255, 255, 255, 0.04));
+}
+
+.makeupCardRewardHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.makeupCardRewardHeader div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.makeupCardRewardHeader strong {
+    color: #fff;
+    font-size: 14px;
+}
+
+.makeupCardRewardHeader span,
+.makeupCardRewardHeader b {
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.makeupCardProgress {
+    height: 5px;
+    margin: 10px 0;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.makeupCardProgress span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #ff315f, #ff6f8e);
+    transition: width 0.2s ease;
+}
+
+.makeupCardClaimButton {
+    width: 100%;
+    min-height: 36px;
+    border: 0;
+    border-radius: 999px;
+    background: #ff315f;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.makeupCardClaimButton:disabled {
+    background: rgba(255, 255, 255, 0.09);
+    color: rgba(255, 255, 255, 0.42);
+    cursor: not-allowed;
+}
+
 .dailyTaskItemClaimed {
     opacity: 0.62;
 }

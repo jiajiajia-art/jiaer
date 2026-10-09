@@ -2,12 +2,6 @@ import React, { useEffect, useRef, memo, useState } from 'react';
 import { extractPlainText } from '../../../../utils/textUtils';
 import ColoredMarkdownText from '../../../Galgame/ColoredMarkdownText';
 import styles from '../../../Galgame/TextModeDisplay.module.css';
-import { OPTION_COST, INPUT_COST } from '../../../../utils/constants';
-
-const POINTS_CONFIG = {
-    option: OPTION_COST,
-    custom: INPUT_COST,
-};
 
 interface TextModalStep {
     id: string;
@@ -41,7 +35,6 @@ interface MessageItemProps {
     isTyping: boolean;
     isWaitingForData: boolean;
     onChoiceClick?: (option: { id: number | string; text: string; optionId?: string }) => void;
-    isFreeRound?: boolean;
 }
 
 const MessageItem = memo<MessageItemProps>(({ 
@@ -51,12 +44,8 @@ const MessageItem = memo<MessageItemProps>(({
     isTyping,
     isWaitingForData,
     onChoiceClick, 
-    isFreeRound = false,
 }) => {
     if (!step) return null;
-    const creatorTest = new URLSearchParams(window.location.search).get('testMode') === 'creator';
-    const optionCost = creatorTest ? 2 : POINTS_CONFIG.option;
-    const currencyName = creatorTest ? '织梦豆' : 'KK币';
 
     // 计算要显示的文本
     const getDisplayText = () => {
@@ -137,9 +126,6 @@ const MessageItem = memo<MessageItemProps>(({
                                     >
                                         <span className={styles.optionNumber}>{opt.id}</span>
                                         <span className={styles.optionText}>{extractPlainText(opt.text)}</span>
-                                        {!isFreeRound && (
-                                            <span className={styles.pointsCost}>-{optionCost}{currencyName}</span>
-                                        )}
                                     </div>
                                 ))}
                             </div>
@@ -167,15 +153,11 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
     onChoiceClick,
     onCustomInputSubmit,
     noPaddingBottom = false,
-    isFreeRound = false,
 }) => {
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const shouldStickToBottomRef = useRef(true);
     const hasInitialAutoScrolledRef = useRef(false);
     const [customInput, setCustomInput] = useState('');
-    const creatorTest = new URLSearchParams(window.location.search).get('testMode') === 'creator';
-    const customCost = creatorTest ? 2 : POINTS_CONFIG.custom;
-    const currencyName = creatorTest ? '织梦豆' : 'KK币';
 
     const currentStep = currentStepIndex >= 0 ? steps[currentStepIndex] : null;
     const showComposer = Boolean(
@@ -290,7 +272,6 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
                                     isTyping={isCurrent ? isTyping : false}
                                     isWaitingForData={isWaitingForData}
                                     onChoiceClick={onChoiceClick}
-                                    isFreeRound={isFreeRound}
                                 />
                         );
                     })}
@@ -309,9 +290,6 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
                     <div className={styles.textModeComposer} aria-label="自定义输入">
                         <div className={styles.customInputHeader}>
                             <span>或者自定义输入</span>
-                            {!isFreeRound && (
-                                <span className={styles.pointsCostHint}>消耗 {customCost} {currencyName}</span>
-                            )}
                         </div>
                         <div className={styles.customInputWrapper}>
                             <input

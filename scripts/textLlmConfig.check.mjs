@@ -53,7 +53,7 @@ test('ModelConfigHub_同页双轨Tab与文案内容', () => {
 
 test('textLlmConfig_模型展示标签可读', async () => {
   const mod = await import('../src/lib/textLlmConfig.ts');
-  assert.equal(mod.getTextLlmModelLabel('doubao-seed-1-8-251228'), '豆包 Seed 1.8');
+  assert.equal(mod.getTextLlmModelLabel('doubao-seed-2-1-lite-260915'), '豆包 Seed 2.1');
   assert.equal(mod.getTextLlmModelVendor('DeepSeek-V3.2'), 'DeepSeek · epone');
   assert.ok(mod.isDefaultTextLlmModel(DEFAULT_TEXT_LLM_MODEL));
 });

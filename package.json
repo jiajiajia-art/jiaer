@@ -25,6 +25,7 @@
     "test:gameBrowseFilters": "node --experimental-strip-types --test scripts/gameBrowseFilters.check.mjs",
     "test:batchImageJobPoll": "node --experimental-strip-types --test scripts/batchImageJobPoll.check.mjs",
     "test:activeHoursTip": "node --experimental-strip-types --test scripts/activeHoursTip.check.mjs",
+    "test:checkIn": "node --experimental-strip-types --test scripts/checkInCalendar.check.mjs",
     "test:homeFilterNovelTheme": "node --experimental-strip-types --test scripts/homeFilterNovelTheme.check.mjs",
     "test:exportVisualNovel": "node --experimental-strip-types --test scripts/exportVisualNovel.check.mjs",
     "test:novelChapters": "node --experimental-strip-types --test scripts/novelChapters.check.mjs",

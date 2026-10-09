@@ -6,6 +6,7 @@ import {
     normalizeDailyTaskPayload,
     type DailyTaskClaimRequest,
     type DailyTaskItem,
+    type DailyTaskMakeupCardReward,
     type DailyTaskPayload,
     type DailyTaskRewardIssue,
     type DailyTaskSummary,
@@ -19,6 +20,9 @@ interface DailyTaskState {
     lastSyncedAt: number | null;
     summary: DailyTaskSummary;
     tasks: DailyTaskItem[];
+    makeupCardReward: DailyTaskMakeupCardReward;
+    makeupCardCount: number;
+    isClaimingMakeupCard: boolean;
     updatedTaskKeys: string[];
     rewardsIssued: DailyTaskRewardIssue[];
     lastRewardDigest: string;
@@ -38,6 +42,7 @@ interface DailyTaskState {
     claimDailyTask: (
         task: Pick<DailyTaskItem, 'key' | 'claimRequest'>,
     ) => Promise<{ success: boolean; message: string }>;
+    claimMakeupCard: () => Promise<{ success: boolean; message: string }>;
     consumeRewardsIssued: () => DailyTaskRewardIssue[];
     reset: () => void;
 }
@@ -46,6 +51,14 @@ const defaultSummary: DailyTaskSummary = {
     platformSeconds: 0,
     gameSeconds: 0,
     totalSeconds: 0,
+};
+
+const defaultMakeupCardReward: DailyTaskMakeupCardReward = {
+    current: 0,
+    target: 4,
+    completed: false,
+    claimable: false,
+    claimed: false,
 };
 
 const createDefaultTaskActionLoadingMap = (): Record<string, boolean> => ({});
@@ -179,6 +192,9 @@ export const useDailyTaskStore = create<DailyTaskState>((set, get) => ({
     lastSyncedAt: null,
     summary: defaultSummary,
     tasks: createDefaultDailyTaskList(),
+    makeupCardReward: defaultMakeupCardReward,
+    makeupCardCount: 0,
+    isClaimingMakeupCard: false,
     updatedTaskKeys: [],
     rewardsIssued: [],
     lastRewardDigest: '',
@@ -252,6 +268,8 @@ export const useDailyTaskStore = create<DailyTaskState>((set, get) => ({
             lastSyncedAt: Date.now(),
             summary: payloadHasSummary ? normalized.summary : prev.summary,
             tasks: mergeTasksByUpdatedKeys(prev.tasks, normalized.tasks, normalized.updatedTaskKeys),
+            makeupCardReward: normalized.makeupCardReward,
+            makeupCardCount: normalized.makeupCardCount,
             updatedTaskKeys: normalized.updatedTaskKeys,
             rewardsIssued: hasNewReward ? normalized.rewardsIssued : [],
             lastRewardDigest: nextDigest,
@@ -300,6 +318,8 @@ export const useDailyTaskStore = create<DailyTaskState>((set, get) => ({
                 lastSyncedAt: Date.now(),
                 summary: payload.summary,
                 tasks: mergedTasks,
+                makeupCardReward: payload.makeupCardReward,
+                makeupCardCount: payload.makeupCardCount,
                 updatedTaskKeys: payload.updatedTaskKeys,
                 rewardsIssued: rewardsChanged ? payload.rewardsIssued : [],
                 lastRewardDigest: nextDigest,
@@ -416,6 +436,44 @@ export const useDailyTaskStore = create<DailyTaskState>((set, get) => ({
         }
     },
 
+    claimMakeupCard: async () => {
+        if (get().isClaimingMakeupCard) {
+            return { success: false, message: '补签卡领取中，请稍候' };
+        }
+
+        const wasClaimed = get().makeupCardReward.claimed;
+        set((state) => ({ ...state, isClaimingMakeupCard: true }));
+        try {
+            const response = await dailyTaskApi.claimMakeupCard();
+            if (!response.data.success) {
+                throw new Error(response.data.message || '补签卡领取失败');
+            }
+            if (response.data.data) {
+                const normalized = normalizeDailyTaskPayload(response.data.data);
+                set((state) => ({
+                    ...state,
+                    makeupCardReward: normalized.makeupCardReward,
+                    makeupCardCount: normalized.makeupCardCount,
+                }));
+            }
+            await get().refreshDailyTasks({ silent: true });
+            return { success: true, message: response.data.message || '补签卡 +1' };
+        } catch (error) {
+            await get().refreshDailyTasks({ silent: true });
+            if (!wasClaimed && get().makeupCardReward.claimed) {
+                return { success: true, message: '补签卡领取成功' };
+            }
+            return {
+                success: false,
+                message: resolveActionErrorMessage(error, '补签卡领取失败', {
+                    DAILY_TASKS_INCOMPLETE: '完成今日全部四项每日任务后才可领取',
+                }),
+            };
+        } finally {
+            set((state) => ({ ...state, isClaimingMakeupCard: false }));
+        }
+    },
+
     consumeRewardsIssued: () => {
         const { rewardsIssued } = get();
         if (!rewardsIssued.length) return [];
@@ -436,6 +494,9 @@ export const useDailyTaskStore = create<DailyTaskState>((set, get) => ({
             lastSyncedAt: null,
             summary: defaultSummary,
             tasks: createDefaultDailyTaskList(),
+            makeupCardReward: defaultMakeupCardReward,
+            makeupCardCount: 0,
+            isClaimingMakeupCard: false,
             updatedTaskKeys: [],
             rewardsIssued: [],
             lastRewardDigest: '',
