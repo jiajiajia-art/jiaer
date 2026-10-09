@@ -19,7 +19,7 @@ export const ANNOUNCEMENT_QUICK_PAGE_OPTIONS: AnnouncementQuickPageOption[] = [
     { key: 'promotions', label: 'Promotions', path: '/promotions' },
     { key: 'messages', label: 'Messages', path: '/messages' },
     { key: 'profile', label: 'Profile', path: '/profile' },
-    { key: 'create', label: 'Create', path: '/create' },
+    { key: 'create', label: 'Create', path: '/create/new' },
     { key: 'warehouse', label: 'Warehouse', path: '/warehouse' },
 ];
 

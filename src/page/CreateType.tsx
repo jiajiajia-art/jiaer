@@ -269,7 +269,7 @@ const CreateType: React.FC = () => {
         bindPhoneActionHint={t('createGame.bindPhoneTip')}
         onBindPhoneAction={() => {
           setIsMobileTipModalOpen(false);
-          navigate('/create?openBrowserLoginAccount=1');
+          navigate('/profile?openBrowserLoginAccount=1');
         }}
       />
     </div>

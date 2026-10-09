@@ -14,7 +14,8 @@ import WarehouseCharacterCards from './page/warehouse/WarehouseCharacterCards';
 import WarehousePublicCards from './page/warehouse/WarehousePublicCards';
 import WarehousePlayHistory from './page/warehouse/WarehousePlayHistory';
 import WarehouseResourceLibrary from './page/warehouse/WarehouseResourceLibrary';
-import Profile from './page/Profile';
+import AccountHomepage from './page/account/AccountHomepage';
+import AccountSocialList from './page/account/AccountSocialList';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import CreateGame from './page/CreateGame';
 import Library from './page/Library';
@@ -151,12 +152,13 @@ function App() {
         />
         <Route element={<ProtectedRoute />}>
           <Route path="/analytics" element={<Analytics />} />
-          <Route path="/create" element={<Create />} />
           <Route path="/create/new" element={<CreateType />} />
           <Route path="/create/works" element={<CreateWorks />} />
           <Route path="/create/withdraw-records" element={<WithdrawRecords />} />
           <Route path="/asset/details" element={<AssetDetails />} />
-          <Route path="/creator" element={<Navigate to="/create" replace />} />
+          <Route path="/creator" element={<Navigate to="/profile" replace />} />
+          <Route path="/account/:userCode/social" element={<AccountSocialList />} />
+          <Route path="/account/:userCode" element={<AccountHomepage />} />
           <Route path="/creator/works/:fileId/stats" element={<CreatorRoute><CreatorWorkStats /></CreatorRoute>} />
           <Route path="/operator" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/reports" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
@@ -183,7 +185,7 @@ function App() {
           <Route path="/warehouse-legacy" element={<WareHouse />} />
           <Route path="/favorites" element={<Favorites />} />
           <Route path="/gameSettingsEditor" element={<GameSettingsEditor />} />
-          <Route path="/profile" element={<Profile />} />
+          <Route path="/profile" element={<Create />} />
           <Route path="/promotions" element={<PromotionCenter />} />
           <Route path="/messages" element={<Messages />} />
           <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />

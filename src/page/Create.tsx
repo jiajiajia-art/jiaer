@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { IoChevronDown } from 'react-icons/io5';
+import { IoChevronDown, IoEyeOutline } from 'react-icons/io5';
 import { MdContentCopy, MdOutlineEdit } from 'react-icons/md';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Trans, useTranslation } from 'react-i18next';
@@ -31,6 +31,10 @@ import {
     parseOverseasPayReturnSearch,
     resolveOverseasPayReturnStatus,
 } from '../lib/overseasPayReturn';
+import {
+    PLACEHOLDER_FOLLOWERS_COUNT,
+    PLACEHOLDER_FOLLOWING_COUNT,
+} from '../constants/accountSocial';
 
 const NICKNAME_MAX_LENGTH = 20;
 const AVATAR_MAX_SIZE_BYTES = 5 * 1024 * 1024;
@@ -282,6 +286,22 @@ const Create: React.FC = () => {
         })();
     }, [location.pathname, location.search, navigate, t]);
 
+    const handlePreviewHomepage = () => {
+        if (!userCode) {
+            toast.error(t('create.previewHomepageNoCode'));
+            return;
+        }
+        navigate(`/account/${encodeURIComponent(userCode)}`);
+    };
+
+    const handleOpenSocialList = (tab: 'following' | 'followers') => {
+        if (!userCode) {
+            toast.error(t('create.previewHomepageNoCode'));
+            return;
+        }
+        navigate(`/account/${encodeURIComponent(userCode)}/social?tab=${tab}`);
+    };
+
     const handleCopyUserCode = async () => {
         if (!userCode) return;
 
@@ -459,6 +479,20 @@ const Create: React.FC = () => {
                                             </span>
                                         )}
                                     </div>
+                                    {(isMember || isSignedAuthor) && (
+                                        <div className={styles.creatorHeroBadgeRow}>
+                                            {isMember && (
+                                                <span className={styles.creatorRoleBadge}>
+                                                    {t('create.memberBadge')}
+                                                </span>
+                                            )}
+                                            {isSignedAuthor && (
+                                                <span className={styles.creatorRoleBadge}>
+                                                    {t('create.signedAuthorBadge')}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
                                     <div className={styles.creatorHeroMetaRow}>
                                         <span className={styles.creatorHeroId}>
                                             {t('create.idPrefix')}{userCode || '--'}
@@ -474,22 +508,6 @@ const Create: React.FC = () => {
                                                 <MdContentCopy aria-hidden="true" />
                                             </button>
                                         )}
-                                        {(isMember || isSignedAuthor) && (
-                                            <div className={styles.creatorHeroBadgeRow}>
-                                                {isMember && (
-                                                    <span className={styles.creatorRoleBadge}>
-                                                        {t('create.memberBadge')}
-                                                    </span>
-                                                )}
-                                                {isSignedAuthor && (
-                                                    <span className={styles.creatorRoleBadge}>
-                                                        {t('create.signedAuthorBadge')}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className={styles.creatorHeroTokenRow}>
                                         <span className={styles.creatorHeroTokenLabel}>Token:</span>
                                         <span className={styles.creatorHeroTokenValue}>
                                             {truncatedDebugToken || '--'}
@@ -505,6 +523,36 @@ const Create: React.FC = () => {
                                                 <MdContentCopy aria-hidden="true" />
                                             </button>
                                         )}
+                                    </div>
+                                    <div className={styles.creatorSocialRow}>
+                                        <div className={styles.creatorSocialStats}>
+                                            <button
+                                                type="button"
+                                                className={styles.creatorSocialItem}
+                                                onClick={() => handleOpenSocialList('following')}
+                                            >
+                                                <span className={styles.creatorSocialLabel}>{t('create.followingLabel')}</span>
+                                                <span className={styles.creatorSocialValue}>{PLACEHOLDER_FOLLOWING_COUNT}</span>
+                                            </button>
+                                            <span className={styles.creatorSocialDivider} aria-hidden="true" />
+                                            <button
+                                                type="button"
+                                                className={styles.creatorSocialItem}
+                                                onClick={() => handleOpenSocialList('followers')}
+                                            >
+                                                <span className={styles.creatorSocialLabel}>{t('create.followersLabel')}</span>
+                                                <span className={styles.creatorSocialValue}>{PLACEHOLDER_FOLLOWERS_COUNT}</span>
+                                            </button>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            className={styles.creatorPreviewHomeBtn}
+                                            onClick={handlePreviewHomepage}
+                                            aria-label={t('create.previewHomepage')}
+                                        >
+                                            <IoEyeOutline className={styles.creatorPreviewHomeIcon} aria-hidden="true" />
+                                            <span>{t('create.previewHomepage')}</span>
+                                        </button>
                                     </div>
                                 </div>
                             </div>

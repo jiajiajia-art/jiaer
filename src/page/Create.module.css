@@ -898,31 +898,105 @@
     white-space: nowrap;
 }
 
-.creatorHeroMetaRow {
+.creatorHeroBadgeRow {
     display: flex;
     align-items: center;
-    flex-wrap: nowrap;
-    gap: 8px;
-    font-size: 12px;
-    color: var(--creator-value);
-    min-width: 0;
+    flex-wrap: wrap;
+    gap: 6px;
 }
 
-.creatorHeroTokenRow {
+.creatorHeroMetaRow {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
     gap: 8px;
     font-size: 12px;
     color: var(--creator-value);
+    min-width: 0;
 }
 
-.creatorHeroBadgeRow {
+.creatorSocialRow {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    width: 100%;
+    margin-top: 4px;
+    min-width: 0;
+}
+
+.creatorSocialStats {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    font-size: 13px;
+    line-height: 1.2;
+}
+
+.creatorSocialItem {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    white-space: nowrap;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.creatorSocialItem:hover .creatorSocialValue {
+    color: #ffffff;
+}
+
+.creatorSocialLabel {
+    color: var(--creator-label);
+}
+
+.creatorSocialValue {
+    color: var(--creator-value);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.creatorSocialDivider {
+    width: 1px;
+    height: 12px;
+    background: var(--creator-divider);
+    flex-shrink: 0;
+}
+
+.creatorPreviewHomeBtn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+    gap: 4px;
     flex-shrink: 0;
-    gap: 6px;
-    margin-left: 2px;
+    height: 26px;
+    padding: 0 10px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 999px;
+    background: #2C2C2E;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.creatorPreviewHomeBtn:hover {
+    background: #3A3A3C;
+    border-color: rgba(255, 255, 255, 0.32);
+}
+
+.creatorPreviewHomeIcon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
 }
 
 .creatorHeroId,

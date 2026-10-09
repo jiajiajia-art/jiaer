@@ -92,7 +92,7 @@ export const useEditorSession = ({ fileId, mode }: UseEditorSessionOptions): Use
             });
 
             if (response.data.success) {
-                navigate('/create');
+                navigate('/profile');
                 return;
             }
 

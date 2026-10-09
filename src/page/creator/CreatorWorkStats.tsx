@@ -58,7 +58,7 @@ const CreatorWorkStats: React.FC = () => {
       <div className={createStyles.mainContent}>
         <main className={createStyles.main}>
           <div className={styles.detailHeader}>
-            <button type="button" className={styles.linkButton} onClick={() => navigate('/create')}>
+            <button type="button" className={styles.linkButton} onClick={() => navigate('/profile')}>
               {t('creatorStats.backToOverview')}
             </button>
             <h1>{detail?.title || t('creatorStats.workStatsTitle')}</h1>

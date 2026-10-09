@@ -542,7 +542,7 @@ const handleCreate = () => {
               <button
                 type="button"
                 className={styles.pageBack}
-                onClick={() => navigate('/create')}
+                onClick={() => navigate('/profile')}
                 aria-label={t('customIFCreate.backAria')}
               >
                 ‹

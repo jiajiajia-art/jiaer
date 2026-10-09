@@ -45,12 +45,15 @@ export type CreatorWorksPanelProps = {
     mode: 'preview' | 'full';
     initialTab?: WorksTabKey;
     showIncentiveUI?: boolean;
+    /** owner：自己看自己；visitor：仅已发布 Tab，不拉当前登录用户私有列表 */
+    access?: 'owner' | 'visitor';
 };
 
 const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     mode,
     initialTab = 'published',
     showIncentiveUI = false,
+    access = 'owner',
 }) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
@@ -72,11 +75,12 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     const [favoritesLoaded, setFavoritesLoaded] = useState(false);
 
     const isPreview = mode === 'preview';
+    const isVisitor = access === 'visitor';
     const [isMobileViewport, setIsMobileViewport] = useState(() => (
         typeof window !== 'undefined' ? window.matchMedia(WORKS_MOBILE_MEDIA).matches : false
     ));
     const listPageSize = resolveWorksListLimit({ mode, isMobile: isMobileViewport });
-    const showWorksViewAll = shouldShowWorksViewAll({ mode, isMobile: isMobileViewport });
+    const showWorksViewAll = !isVisitor && shouldShowWorksViewAll({ mode, isMobile: isMobileViewport });
 
     const { publishedGames, draftGames } = useMemo(
         () => partitionCreatorGames(fileMetas),
@@ -117,7 +121,7 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
         && filteredDraftGames.every((game) => selectedDraftIds.includes(getGameManageId(game)));
 
     const loadMyGames = async () => {
-        if (!user?.user?.id) {
+        if (isVisitor || !user?.user?.id) {
             setFileMetas([]);
             setIsLoadingMyGames(false);
             return;
@@ -140,6 +144,14 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     };
 
     const loadFavoriteGames = async (page = 1) => {
+        if (isVisitor) {
+            setFavoriteGames([]);
+            setFavoritesTotal(0);
+            setFavoritesLoaded(true);
+            setIsLoadingFavorites(false);
+            return;
+        }
+
         setIsLoadingFavorites(true);
         try {
             const favoritePageSize = resolveWorksListLimit({ mode, isMobile: isMobileViewport });
@@ -167,7 +179,15 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
 
     useEffect(() => {
         void loadMyGames();
-    }, [user?.user?.id]);
+    }, [user?.user?.id, isVisitor]);
+
+    useEffect(() => {
+        if (!isVisitor) return;
+        setWorksTab('published');
+        setWorksPage(1);
+        setIsDraftManageMode(false);
+        setSelectedDraftIds([]);
+    }, [isVisitor]);
 
     useEffect(() => {
         const mediaQuery = window.matchMedia(WORKS_MOBILE_MEDIA);
@@ -239,6 +259,7 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     };
 
     const handleWorksTabChange = (nextTab: WorksTabKey) => {
+        if (isVisitor && nextTab !== 'published') return;
         setWorksTab(nextTab);
         setWorksPage(1);
         if (nextTab !== 'drafts') {
@@ -348,15 +369,17 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                             {t('create.publishedWorksTab', { count: publishedGames.length })}
                         </button>
                     )}
-                    <button
-                        type="button"
-                        className={`${styles.worksTab} ${worksTab === 'drafts' ? styles.worksTabActive : ''}`}
-                        onClick={() => handleWorksTabChange('drafts')}
-                    >
-                        {t('create.draftBox')}
-                        {draftGames.length > 0 ? ` (${draftGames.length})` : ''}
-                    </button>
-                    {!isDraftManageMode && (
+                    {!isVisitor && (
+                        <button
+                            type="button"
+                            className={`${styles.worksTab} ${worksTab === 'drafts' ? styles.worksTabActive : ''}`}
+                            onClick={() => handleWorksTabChange('drafts')}
+                        >
+                            {t('create.draftBox')}
+                            {draftGames.length > 0 ? ` (${draftGames.length})` : ''}
+                        </button>
+                    )}
+                    {!isVisitor && !isDraftManageMode && (
                         <button
                             type="button"
                             className={`${styles.worksTab} ${worksTab === 'favorites' ? styles.worksTabActive : ''}`}
@@ -436,6 +459,10 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                             onGameClick={(game) => {
                                 const gameId = game.file_id || game.id;
                                 if (!gameId) return;
+                                if (isVisitor) {
+                                    navigate(`/game/${gameId}`);
+                                    return;
+                                }
                                 navigate(`/createGame?mode=stats&gameId=${gameId}`);
                             }}
                         />

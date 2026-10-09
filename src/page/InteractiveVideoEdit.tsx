@@ -837,7 +837,7 @@ const InteractiveVideoEdit: React.FC = () => {
                 } : current);
             }
             setShowPublishModal(false);
-            navigate('/create');
+            navigate('/profile');
             toast.success('互动影游已发布');
         } catch (error) {
             console.error('发布互动影游失败:', error);
@@ -1300,7 +1300,7 @@ const InteractiveVideoEdit: React.FC = () => {
             <Navbar />
             <main className={styles.editorShell}>
                 <div className={styles.toolbar}>
-                    <button type="button" className={styles.iconTextButton} onClick={() => navigate('/create')}>
+                    <button type="button" className={styles.iconTextButton} onClick={() => navigate('/profile')}>
                         <MdArrowBack />
                         返回创作中心
                     </button>

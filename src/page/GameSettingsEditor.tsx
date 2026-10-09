@@ -769,7 +769,7 @@ const GameSettingsEditor = () => {
                         <button
                             type="button"
                             className={styles.txtCreateBack}
-                            onClick={() => navigate('/create')}
+                            onClick={() => navigate('/profile')}
                             aria-label={t('createGame.txtCreatePageTitle')}
                         >
                             ‹

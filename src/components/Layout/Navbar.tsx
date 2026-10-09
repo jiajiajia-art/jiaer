@@ -189,7 +189,7 @@ const Navbar: React.FC<NavbarProps> = ({
         if (path === '/home' || path === '/') return 'home';
         if (path.startsWith('/categories')) return 'categories';
         // /create 已合并为「我的」统一页，顶栏创作仅在编辑器相关路由高亮
-        if (path === '/create' || path.startsWith('/create/withdraw-records')) return '';
+        if (path === '/profile' || path.startsWith('/create/withdraw-records')) return '';
         if (path.startsWith('/create') || isCreatorRoutePath(path)) return 'create';
         if (path.startsWith('/warehouse')) return 'warehouse';
         if (path.startsWith('/rank')) return 'rank';
@@ -434,7 +434,7 @@ const Navbar: React.FC<NavbarProps> = ({
                                                 className={styles.menuBtn}
                                                 onClick={() => {
                                                     runLeaveAction(() => {
-                                                        navigate('/create');
+                                                        navigate('/profile');
                                                         setShowUserMenu(false);
                                                     });
                                                 }}

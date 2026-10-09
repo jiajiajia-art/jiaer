@@ -168,7 +168,7 @@ const CreateGame: React.FC = () => {
             setIsDeleting(true);
             await GameAction.deleteGame(gameId);
             setShowDeleteModal(false);
-            navigate('/create');
+            navigate('/profile');
         } catch (error) {
             console.error('删除游戏失败:', error);
             toast.error(t('createGame.deleteFailed'));
@@ -193,7 +193,7 @@ const CreateGame: React.FC = () => {
 
             if (response.data.success) {
                 setShowPublishModal(false);
-                navigate('/create');
+                navigate('/profile');
             } else {
                 console.error('发布游戏失败:', response.data);
                 const errorMessage = response.data.message || t('createGame.publishFailed');
@@ -211,7 +211,7 @@ const CreateGame: React.FC = () => {
         try {
             const response = await GameAction.unpublishGame({ fileId: fileId });
             if (response.data.success) {
-                navigate('/create');
+                navigate('/profile');
             } else {
                 toast.error(response.data.message || t('createGame.unpublishFailed'));
             }

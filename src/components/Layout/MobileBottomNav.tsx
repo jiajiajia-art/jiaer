@@ -16,7 +16,7 @@ const normalize = (path: string) => {
 };
 
 const isUnifiedProfilePath = (path: string) =>
-    path === '/create' || path.startsWith('/create/withdraw-records') || path.startsWith('/profile');
+    path === '/profile' || path.startsWith('/create/withdraw-records');
 
 const MobileBottomNav: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
     const { t } = useTranslation();
@@ -110,7 +110,7 @@ const MobileBottomNav: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
                 break;
             case 'profile':
                 if (!ensureAuthenticated()) return;
-                navigate('/create');
+                navigate('/profile');
                 break;
             case 'admin':
                 navigate('/admin/comments');
