@@ -11,7 +11,10 @@ node_modules
 dist
 dist-ssr
 *.local
-.cursor*
+# 忽略 .cursor 本地态，但强制入库双运行时规则供同事/Agent 共用
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
 
 # Editor directories and files
 .vscode/*
