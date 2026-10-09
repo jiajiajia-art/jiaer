@@ -7,6 +7,7 @@ import Create from './page/Create';
 import CreateType from './page/CreateType';
 import CreateWorks from './page/CreateWorks';
 import WithdrawRecords from './page/WithdrawRecords';
+import CreatorIncentive from './page/CreatorIncentive';
 import WareHouse from './page/WareHouse';
 import WarehouseHub from './page/warehouse/WarehouseHub';
 import WarehousePersonaCards from './page/warehouse/WarehousePersonaCards';
@@ -149,6 +150,7 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/create" element={<Create />} />
+          <Route path="/create/incentives" element={<CreatorIncentive />} />
           <Route path="/create/new" element={<CreateType />} />
           <Route path="/create/works" element={<CreateWorks />} />
           <Route path="/create/withdraw-records" element={<WithdrawRecords />} />

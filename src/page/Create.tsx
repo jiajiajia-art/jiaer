@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { IoChevronDown } from 'react-icons/io5';
 import { MdContentCopy, MdOutlineEdit } from 'react-icons/md';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Trans, useTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import styles from './Create.module.css';
 import Navbar from '../components/Layout/Navbar';
@@ -10,9 +10,6 @@ import FooterArea from '../components/Layout/FooterArea';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import RechargeModal from '../components/Purchase/RechargeModal';
 import ExchangeModal from '../components/Purchase/ExchangeModal';
-import ConfirmModal from '../components/CommonModal/ConfirmModal';
-import confirmModalStyles from '../components/CommonModal/ConfirmModal.module.css';
-import WithdrawFlowModal from '../components/Create/WithdrawFlowModal';
 import CreatorWorksPanel from '../components/Create/CreatorWorksPanel';
 import ProfileFunctionPanel from '../components/Profile/ProfileFunctionPanel';
 import InviteCampaignCard from '../components/Profile/InviteCampaignCard';
@@ -67,13 +64,8 @@ const Create: React.FC = () => {
     const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
     const [isMembershipRechargeModalOpen, setIsMembershipRechargeModalOpen] = useState(false);
     const [isExchangeModalOpen, setIsExchangeModalOpen] = useState(false);
-    const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
-    const [isSettleDiamondsModalOpen, setIsSettleDiamondsModalOpen] = useState(false);
-    const [isSettling, setIsSettling] = useState(false);
-    const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
     const [streakDays, setStreakDays] = useState(0);
     const [isStatsExpanded, setIsStatsExpanded] = useState(false);
-    const [isEarningsModalOpen, setIsEarningsModalOpen] = useState(false);
     const [isEditNicknameOpen, setIsEditNicknameOpen] = useState(false);
     const [isProfilePreferenceOpen, setIsProfilePreferenceOpen] = useState(false);
     const [nicknameDraft, setNicknameDraft] = useState('');
@@ -92,12 +84,6 @@ const Create: React.FC = () => {
     const isMember = Boolean(user?.user?.isMember);
     const isSignedAuthor = Boolean(user?.user?.userSegment && user.user.userSegment !== 'normal');
     const isWorkIncentive = stats.incentiveType === 'incentive' || stats.incentiveType === 'game_incentive' || stats.incentiveType === 'all_incentive';
-    const isCodeIncentive = stats.incentiveType === 'code_incentive' || stats.incentiveType === 'all_incentive';
-    const hasExtraEarnings = isWorkIncentive || isCodeIncentive;
-
-    const handleWithdrawClick = () => {
-        setIsWithdrawModalOpen(true);
-    };
 
     const openEditNickname = () => {
         setNicknameDraft(user?.user?.nickname || user?.user?.name || '');
@@ -320,79 +306,6 @@ const Create: React.FC = () => {
         return null;
     };
 
-    const formatEarningsValue = (value: number) => {
-        const safe = Number(value) || 0;
-        return safe.toLocaleString('zh-CN');
-    };
-
-    const handleSettle = async () => {
-        if (isSettling) return;
-
-        setIsSettling(true);
-        try {
-            const response = await auth.settlePoints('points');
-            if (response.data.success && response.data.data) {
-                const data = response.data.data;
-                const pointsAmount = data.pointsSettled || 0;
-                const diamondsAmount = data.diamondsSettled || 0;
-
-                let successMsg = '';
-                if (pointsAmount > 0 && diamondsAmount > 0) {
-                    successMsg = t('create.settleSuccessDual', { points: pointsAmount, diamonds: diamondsAmount });
-                } else if (pointsAmount > 0) {
-                    successMsg = t('create.settleSuccess', { amount: pointsAmount });
-                } else if (diamondsAmount > 0) {
-                    successMsg = t('create.settleSuccessDiamonds', { amount: diamondsAmount });
-                } else {
-                    successMsg = t('create.settleSuccessZero');
-                }
-
-                toast.success(successMsg);
-                await getGameTotalStats();
-                await getCreatorOverviewStats();
-                await getUserInfo();
-                setIsSettleModalOpen(false);
-            } else {
-                toast.error(response.data.message || t('create.settleFailed'));
-            }
-        } catch (error: unknown) {
-            toast.error(getApiErrorMessage(error, t('create.settleFailed')));
-        } finally {
-            setIsSettling(false);
-        }
-    };
-
-    const handleSettleDiamonds = async () => {
-        if (isSettling) return;
-
-        setIsSettling(true);
-        try {
-            const response = await auth.settlePoints('diamonds');
-            if (response.data.success && response.data.data) {
-                const data = response.data.data;
-                const diamondsAmount = data.diamondsSettled || 0;
-
-                let successMsg = '';
-                if (diamondsAmount > 0) {
-                    successMsg = t('create.settleSuccessDiamonds', { amount: diamondsAmount });
-                } else {
-                    successMsg = t('create.settleSuccessZero');
-                }
-
-                toast.success(successMsg);
-                await getGameTotalStats();
-                await getUserInfo();
-                setIsSettleDiamondsModalOpen(false);
-            } else {
-                toast.error(response.data.message || t('create.settleFailed'));
-            }
-        } catch (error: unknown) {
-            toast.error(getApiErrorMessage(error, t('create.settleFailed')));
-        } finally {
-            setIsSettling(false);
-        }
-    };
-
     return (
         <div className={styles.pageRoot}>
             <Navbar />
@@ -535,7 +448,7 @@ const Create: React.FC = () => {
                                         <div className={styles.primaryStatLabel}>{t('create.pointsStat')}</div>
                                     </div>
                                     <div
-                                        className={`${styles.primaryStatItem} ${user?.user?.userSegment !== 'normal' ? styles.primaryStatItemWithActions : ''} ${styles.primaryStatItemClickable}`}
+                                        className={`${styles.primaryStatItem} ${styles.primaryStatItemClickable}`}
                                         role="button"
                                         tabIndex={0}
                                         onClick={() => navigate('/asset/details')}
@@ -547,24 +460,7 @@ const Create: React.FC = () => {
                                         }}
                                     >
                                         <div className={styles.primaryStatValue}>{user?.user?.diamonds ?? 0}</div>
-                                        {user?.user?.userSegment !== 'normal' ? (
-                                            <div className={styles.primaryStatLabelRow}>
-                                                <span className={styles.primaryStatLabel}>{t('create.diamondsStat')}</span>
-                                                <span className={styles.primaryStatLabelSep} aria-hidden="true">·</span>
-                                                <button
-                                                    type="button"
-                                                    className={styles.primaryStatWithdrawLink}
-                                                    onClick={(event) => {
-                                                        event.stopPropagation();
-                                                        handleWithdrawClick();
-                                                    }}
-                                                >
-                                                    {t('create.withdraw')}
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <div className={styles.primaryStatLabel}>{t('create.diamondsStat')}</div>
-                                        )}
+                                        <div className={styles.primaryStatLabel}>{t('create.diamondsStat')}</div>
                                     </div>
                                 </div>
 
@@ -667,12 +563,12 @@ const Create: React.FC = () => {
                                 <button
                                     type="button"
                                     className={styles.accountActionItem}
-                                    onClick={() => setIsEarningsModalOpen(true)}
+                                    onClick={() => navigate('/create/incentives')}
                                 >
                                     <span className={styles.accountActionIcon}>
                                         <img src={`${import.meta.env.BASE_URL}data/assetsv2/personal/exchange.svg`} alt="" />
                                     </span>
-                                    <span className={styles.accountActionLabel}>{t('create.accountRewardSettlement')}</span>
+                                    <span className={styles.accountActionLabel}>{t('create.accountCreatorIncentive')}</span>
                                 </button>
                             </div>
                         </div>
@@ -709,100 +605,6 @@ const Create: React.FC = () => {
                     void getUserInfo();
                 }}
             />
-            <WithdrawFlowModal
-                open={isWithdrawModalOpen}
-                onClose={() => setIsWithdrawModalOpen(false)}
-            />
-
-            {isEarningsModalOpen && (
-                <div
-                    className={styles.earningsModalOverlay}
-                    onClick={() => setIsEarningsModalOpen(false)}
-                >
-                    <div
-                        className={styles.earningsModal}
-                        role="dialog"
-                        aria-modal="true"
-                        aria-label={t('create.accountRewardSettlement')}
-                        onClick={(event) => event.stopPropagation()}
-                    >
-                        <button
-                            type="button"
-                            className={styles.earningsModalCloseBtn}
-                            onClick={() => setIsEarningsModalOpen(false)}
-                            aria-label={t('common.close')}
-                        >
-                            <span className={styles.earningsModalCloseIcon} aria-hidden="true" />
-                        </button>
-                        <h3 className={styles.earningsModalTitle}>{t('create.accountRewardSettlement')}</h3>
-                        <div className={styles.earningsModalBody}>
-                            <div className={styles.earningsModalPrimary}>
-                                <div className={styles.earningsPanelItem}>
-                                    <div className={styles.earningsPanelLabel}>{t('create.pendingRewardPoints')}</div>
-                                    <div className={styles.earningsPanelValueRow}>
-                                        <div className={styles.earningsPanelValue}>{formatEarningsValue(stats.totalAmount)}</div>
-                                        {stats.totalAmount > 0 && (
-                                            <button
-                                                type="button"
-                                                className={styles.earningsInlineSettleButton}
-                                                onClick={() => setIsSettleModalOpen(true)}
-                                                disabled={isSettling}
-                                            >
-                                                {t('create.settle')}
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                                <div className={styles.earningsPanelItem}>
-                                    <div className={styles.earningsPanelLabel}>{t('create.pendingRewardDiamonds')}</div>
-                                    <div className={styles.earningsPanelValueRow}>
-                                        <div className={styles.earningsPanelValue}>{formatEarningsValue(stats.totalDiamondsAmount)}</div>
-                                        {stats.totalDiamondsAmount > 0 && (
-                                            <button
-                                                type="button"
-                                                className={styles.earningsInlineSettleButton}
-                                                onClick={() => setIsSettleDiamondsModalOpen(true)}
-                                                disabled={isSettling}
-                                            >
-                                                {t('create.settle')}
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                            {hasExtraEarnings && (
-                                <div className={styles.earningsModalExtra}>
-                                    {isWorkIncentive && (
-                                        <div className={styles.earningsExtraItem}>
-                                            <div className={styles.earningsExtraLabel}>{t('create.totalIncentiveEarnings')}</div>
-                                            <div className={styles.earningsExtraValue}>{stats.totalIncentiveAmount}</div>
-                                        </div>
-                                    )}
-                                    {isWorkIncentive && (
-                                        <div className={styles.earningsExtraItem}>
-                                            <div className={styles.earningsExtraLabel}>{t('create.pendingIncentiveEarnings')}</div>
-                                            <div className={styles.earningsExtraValue}>{stats.pendingIncome}</div>
-                                        </div>
-                                    )}
-                                    {isCodeIncentive && (
-                                        <div className={styles.earningsExtraItem}>
-                                            <div className={styles.earningsExtraLabel}>{t('create.inviteCodeTotalEarnings')}</div>
-                                            <div className={styles.earningsExtraValue}>{stats.inviteTotalAmount}</div>
-                                        </div>
-                                    )}
-                                    {isCodeIncentive && (
-                                        <div className={styles.earningsExtraItem}>
-                                            <div className={styles.earningsExtraLabel}>{t('create.inviteCodePendingEarnings')}</div>
-                                            <div className={styles.earningsExtraValue}>{stats.invitePendingIncome}</div>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {isEditNicknameOpen && (
                 <div className={styles.editNicknameOverlay} onClick={closeEditNickname}>
                     <div
@@ -851,40 +653,6 @@ const Create: React.FC = () => {
                     </div>
                 </div>
             )}
-
-            <ConfirmModal
-                isOpen={isSettleModalOpen}
-                onConfirm={handleSettle}
-                onCancel={() => setIsSettleModalOpen(false)}
-                title={t('create.confirmSettle')}
-                message={(
-                    <Trans
-                        i18nKey="create.settleConfirmMessage"
-                        values={{ amount: stats.totalAmount }}
-                        components={{ hl: <strong className={confirmModalStyles.amountHighlight} /> }}
-                    />
-                )}
-                confirmButtonText={isSettling ? t('create.settling') : t('create.confirmSettleBtn')}
-                cancelButtonText={t('create.cancel')}
-                tone="dark"
-            />
-
-            <ConfirmModal
-                isOpen={isSettleDiamondsModalOpen}
-                onConfirm={handleSettleDiamonds}
-                onCancel={() => setIsSettleDiamondsModalOpen(false)}
-                title={t('create.confirmSettleDiamonds')}
-                message={(
-                    <Trans
-                        i18nKey="create.settleConfirmDiamondsMessage"
-                        values={{ amount: stats.totalDiamondsAmount }}
-                        components={{ hl: <strong className={confirmModalStyles.amountHighlight} /> }}
-                    />
-                )}
-                confirmButtonText={isSettling ? t('create.settling') : t('create.confirmSettleBtn')}
-                cancelButtonText={t('create.cancel')}
-                tone="dark"
-            />
 
             <ProfilePreferenceModal
                 isOpen={isProfilePreferenceOpen}

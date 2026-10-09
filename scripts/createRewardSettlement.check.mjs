@@ -1,5 +1,5 @@
 /**
- * Create 页：奖励结算入口在「我的账户」，详情走模态框；禁止页内常驻收益条与「个人中心」标题回退。
+ * 创作激励：Create 页只保留页面入口，结算能力集中到独立收益面板。
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -10,31 +10,27 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => readFileSync(join(root, rel), 'utf8');
 
-test('Create_奖励结算应从账户入口打开模态框且去掉个人中心标题', () => {
-  const tsx = read('src/page/Create.tsx');
+test('Create_创作激励应跳转独立页面且删除旧收益弹窗', () => {
+  const app = read('src/App.tsx');
+  const create = read('src/page/Create.tsx');
+  const incentive = read('src/page/CreatorIncentive.tsx');
   const css = read('src/page/Create.module.css');
   const zh = read('src/i18n/locales/zh.json');
   const en = read('src/i18n/locales/en.json');
 
-  assert.match(tsx, /create\.accountRewardSettlement/);
-  assert.match(tsx, /setIsEarningsModalOpen\(true\)/);
-  assert.match(tsx, /styles\.earningsModalOverlay/);
-  assert.match(tsx, /styles\.earningsModal/);
-  assert.match(tsx, /styles\.earningsModalCloseIcon/);
-  assert.doesNotMatch(tsx, /nav\.profile/);
-  assert.doesNotMatch(tsx, /styles\.pageHeader/);
-  assert.doesNotMatch(tsx, /earningsPanelWrap/);
-  assert.doesNotMatch(tsx, /isEarningsMoreExpanded/);
+  assert.match(app, /path="\/create\/incentives"/);
+  assert.match(create, /navigate\('\/create\/incentives'\)/);
+  assert.match(create, /create\.accountCreatorIncentive/);
+  assert.doesNotMatch(create, /isEarningsModalOpen|earningsModalOverlay|earningsModalCloseIcon/);
+  assert.doesNotMatch(css, /\.earningsModal(?:Overlay|CloseBtn|Title|CloseIcon)?\s*\{/);
 
-  assert.match(css, /\.accountActionGrid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(4,/);
-  assert.match(css, /\.earningsModalCloseBtn\s*\{[^}]*left:\s*12px/);
-  assert.match(css, /\.earningsModalTitle\s*\{[\s\S]*?text-align:\s*center/);
-  assert.match(css, /\.earningsModal\s*\{[\s\S]*?width:\s*min\(322px/);
-  assert.match(css, /\.earningsModal::before\s*\{/);
-  assert.match(css, /\.earningsModalCloseIcon\s*\{/);
-  assert.doesNotMatch(css, /\.earningsPanelWrap\s*\{/);
-  assert.doesNotMatch(css, /\.pageHeader\s*\{/);
+  assert.match(incentive, /statisticsApi\.getALLGameStats/);
+  assert.match(incentive, /settlePoints\('points'\)/);
+  assert.match(incentive, /settlePoints\('diamonds'\)/);
+  assert.match(incentive, /data-testid="creator-incentive-overview"/);
+  assert.match(incentive, /data-testid="creator-incentive-chart"/);
+  assert.match(incentive, /data-testid="creator-incentive-works"/);
 
-  assert.match(zh, /"accountRewardSettlement":\s*"奖励结算"/);
-  assert.match(en, /"accountRewardSettlement":\s*"Reward Settlement"/);
+  assert.match(zh, /"accountCreatorIncentive":\s*"创作激励"/);
+  assert.match(en, /"accountCreatorIncentive":\s*"Creator Incentives"/);
 });

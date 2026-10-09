@@ -7,7 +7,6 @@ import { auth } from '../../api/account/authApi';
 import MembershipRedeemResultModal from '../../components/MembershipRedeemResultModal';
 import ConfirmModal from '../CommonModal/ConfirmModal';
 import DeleteAccountModal from './DeleteAccountModal';
-import CreatorProfile, { type CreatorProfileFormData } from '../../components/CreatorProfile.tsx';
 import { RiLogoutCircleRLine } from 'react-icons/ri';
 import {
     MdOutlineCardMembership,
@@ -23,8 +22,6 @@ import toast from 'react-hot-toast';
 import JoinGroupModal from '../../components/JoinGroupModal';
 import type { SubscriptionRedeemResult, User } from '../../api/account/auth.type';
 import type { SubscriptionPlanId } from '../../api/subscriptionKeys/subscriptionKeysApi.type';
-import { getCreatorProfile, saveCreatorProfile } from '../../api/incentive/creatorProfileApi';
-import type { CreatorProfileData } from '../../components/CreatorProfile.tsx';
 import { getApiErrorMessage } from '../../utils/error';
 
 const isWebViewEnv = (): boolean => {
@@ -46,19 +43,6 @@ const ProfileFunctionPanel: React.FC = () => {
     const [redeemKey, setRedeemKey] = useState('');
     const [isRedeemingMembership, setIsRedeemingMembership] = useState(false);
     const [redeemSuccessPlanId, setRedeemSuccessPlanId] = useState<SubscriptionRedeemResult['planId'] | null>(null);
-
-    // 创作者资料 Tab 状态
-    const [profileTab, setProfileTab] = useState<'function' | 'creator'>('function');
-    const [creatorProfileData, setCreatorProfileData] = useState<CreatorProfileData>({
-        groupNo: '',
-        realName: '',
-        idCard: '',
-        bankCard: '',
-        bankBranch: '',
-    });
-
-    // 判断是否为创作者（基于 userSegment 是否为 incentive）
-    const isCreator = user?.user?.userSegment !== 'normal';
 
     const [isBindAccountModalOpen, setIsBindAccountModalOpen] = useState(false);
     const [bindPhone, setBindPhone] = useState('');
@@ -112,20 +96,8 @@ const ProfileFunctionPanel: React.FC = () => {
     };
 
     useEffect(() => {
-        getUserInfo();
-        if (isCreator) {
-            void fetchCreatorProfile();
-        }
-    }, [isCreator]);
-
-    const fetchCreatorProfile = async () => {
-        try {
-            const data = await getCreatorProfile();
-            setCreatorProfileData(data);
-        } catch (error) {
-            console.error('Fetch creator profile failed:', error);
-        }
-    };
+        void getUserInfo();
+    }, []);
 
     const handleRedeemMembership = async () => {
         const key = redeemKey.trim().toUpperCase();
@@ -242,43 +214,7 @@ const ProfileFunctionPanel: React.FC = () => {
     return (
         <div className={styles.profileFunctionPanel}>
             <div className={styles.functionList}>
-                {isCreator ? (
-                    <div className={styles.profileTabContainer} role="tablist">
-                        <button
-                            type="button"
-                            role="tab"
-                            aria-selected={profileTab === 'function'}
-                            className={`${styles.profileTab} ${profileTab === 'function' ? styles.profileTabActive : ''}`}
-                            onClick={() => setProfileTab('function')}
-                        >
-                            {t('profile.moreServices')}
-                        </button>
-                        <button
-                            type="button"
-                            role="tab"
-                            aria-selected={profileTab === 'creator'}
-                            className={`${styles.profileTab} ${profileTab === 'creator' ? styles.profileTabActive : ''}`}
-                            onClick={() => setProfileTab('creator')}
-                        >
-                            {t('profile.creatorProfile')}
-                        </button>
-                    </div>
-                ) : (
-                    <div className={styles.functionListHeading}>{t('profile.moreServices')}</div>
-                )}
-
-                {profileTab === 'creator' ? (
-                    <div className={styles.creatorProfileSlot}>
-                        <CreatorProfile
-                            data={creatorProfileData}
-                            onSave={async (data: CreatorProfileFormData) => {
-                                await saveCreatorProfile(data);
-                                setCreatorProfileData(data);
-                            }}
-                        />
-                    </div>
-                ) : (
-                    <>
+                <div className={styles.functionListHeading}>{t('profile.moreServices')}</div>
                     <div className={styles.functionGrid}>
                         <button
                             type="button"
@@ -406,8 +342,6 @@ const ProfileFunctionPanel: React.FC = () => {
                             </button>
                         </div>
                     )}
-                    </>
-                )}
             </div>
 
             <ConfirmModal
