@@ -10,8 +10,10 @@ import GameGridSkeleton from '../Skeleton/GameGridSkeleton';
 import { useAuthStore } from '../../store/useAuthStore';
 import getGameDataApi from '../../api/home/getGameData';
 import type { UserGameData } from '../../api/home/getGameData.type';
+import accountSocialApi from '../../api/account/accountSocialApi';
 import GameAction from '../../api/rpgGame/gameAction';
 import favoriteApi from '../../api/favorite/favoriteApi';
+import { getApiErrorCode } from '../../utils/error';
 import { partitionCreatorGames } from '../../utils/novelGame';
 import {
     DRAFT_BOX_FILTER_ORDER,
@@ -30,6 +32,8 @@ import {
 
 export type WorksTabKey = 'published' | 'drafts' | 'favorites';
 
+const WORKS_FETCH_LIMIT = 50;
+
 export { WORKS_PAGE_SIZE };
 
 const paginateItems = <T,>(items: T[], page: number, pageSize: number): T[] => {
@@ -45,8 +49,10 @@ export type CreatorWorksPanelProps = {
     mode: 'preview' | 'full';
     initialTab?: WorksTabKey;
     showIncentiveUI?: boolean;
-    /** owner：自己看自己；visitor：仅已发布 Tab，不拉当前登录用户私有列表 */
+    /** owner：自己看自己；visitor：仅已发布 Tab，按 ownerUserCode 拉公开作品 */
     access?: 'owner' | 'visitor';
+    /** visitor 必填：主页主人的 userCode */
+    ownerUserCode?: string;
 };
 
 const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
@@ -54,6 +60,7 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     initialTab = 'published',
     showIncentiveUI = false,
     access = 'owner',
+    ownerUserCode = '',
 }) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
@@ -121,7 +128,37 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
         && filteredDraftGames.every((game) => selectedDraftIds.includes(getGameManageId(game)));
 
     const loadMyGames = async () => {
-        if (isVisitor || !user?.user?.id) {
+        if (isVisitor) {
+            const code = ownerUserCode.trim();
+            if (!code) {
+                setFileMetas([]);
+                setIsLoadingMyGames(false);
+                return;
+            }
+
+            setIsLoadingMyGames(true);
+            try {
+                const response = await accountSocialApi.getWorks(code, {
+                    limit: WORKS_FETCH_LIMIT,
+                    offset: 0,
+                });
+                if (response.data.success && response.data.data) {
+                    setFileMetas(response.data.data.list || []);
+                } else {
+                    setFileMetas([]);
+                }
+            } catch (error) {
+                if (getApiErrorCode(error) !== 'USER_BLOCKED') {
+                    console.error('获取主页已发布作品错误:', error);
+                }
+                setFileMetas([]);
+            } finally {
+                setIsLoadingMyGames(false);
+            }
+            return;
+        }
+
+        if (!user?.user?.id) {
             setFileMetas([]);
             setIsLoadingMyGames(false);
             return;
@@ -179,7 +216,7 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
 
     useEffect(() => {
         void loadMyGames();
-    }, [user?.user?.id, isVisitor]);
+    }, [user?.user?.id, isVisitor, ownerUserCode]);
 
     useEffect(() => {
         if (!isVisitor) return;

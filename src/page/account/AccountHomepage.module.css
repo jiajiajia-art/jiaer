@@ -54,9 +54,95 @@
 }
 
 .banner {
+    position: relative;
     width: 100%;
-    height: 320px;
+    height: 220px;
+    margin: 0;
     background: #8E8E93;
+    background-size: cover;
+    background-position: center;
+    border-radius: 0;
+}
+
+.settingsBtn {
+    position: absolute;
+    top: 14px;
+    right: 12px;
+    height: 32px;
+    padding: 0 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.28);
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1;
+    cursor: pointer;
+    z-index: 2;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.settingsBtnIcon {
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.settingsBtn:hover {
+    background: rgba(255, 255, 255, 0.38);
+}
+
+.visitorActions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+.followBtn,
+.blockBtn {
+    flex-shrink: 0;
+    height: 30px;
+    min-width: 72px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.followBtnActive {
+    background: #2c2c2e;
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.16);
+}
+
+.followBtnIdle {
+    background: rgba(168, 40, 60, 0.85);
+    color: #ffffff;
+}
+
+.blockBtn {
+    background: transparent;
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.28);
+}
+
+.blockBtn:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.followBtn:disabled,
+.blockBtn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
 }
 
 .profileCard {
@@ -160,7 +246,7 @@
 
 @media (min-width: 768px) {
     .banner {
-        height: 400px;
+        height: 280px;
         border-radius: 0;
     }
 

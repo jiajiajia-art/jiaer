@@ -1,118 +1,48 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
+import accountSocialApi from '../../api/account/accountSocialApi';
+import type { FollowListSort, SocialListUser } from '../../api/account/accountSocial.type';
+import { useAuthStore } from '../../store/useAuthStore';
+import { getApiErrorCode, getApiErrorMessage } from '../../utils/error';
+import { getImageUrl } from '../../utils/constants';
+import { GAME_CARD_DEFAULT_AVATAR_PATH } from '../../lib/gameCardAuthor';
 import styles from './AccountSocialList.module.css';
 
 type SocialTab = 'following' | 'followers';
 
-type SocialUserItem = {
-    id: string;
-    nickname: string;
-    bio: string;
-    avatarUrl: string;
-    isFollowing: boolean;
-};
-
-const DEFAULT_AVATAR = `${import.meta.env.BASE_URL}data/assets/defaultAvatar.png`;
-
-/** 功能注释：关注/粉丝列表暂无接口，先用假数据展示布局 */
-const MOCK_FOLLOWING: SocialUserItem[] = [
-    {
-        id: 'f1',
-        nickname: '星尘叙事者',
-        bio: '写点温柔的互动故事，欢迎来玩。',
-        avatarUrl: DEFAULT_AVATAR,
-        isFollowing: true,
-    },
-    {
-        id: 'f2',
-        nickname: '夜航编辑部',
-        bio: 'AVG / 文字冒险爱好者，偶尔更新长线剧本。',
-        avatarUrl: DEFAULT_AVATAR,
-        isFollowing: true,
-    },
-    {
-        id: 'f3',
-        nickname: 'Kuran_lab',
-        bio: '这位玩家还没有留下个人简介。',
-        avatarUrl: DEFAULT_AVATAR,
-        isFollowing: true,
-    },
-    {
-        id: 'f4',
-        nickname: '月下书简',
-        bio: '古风向文游创作者，主打选择分支与人物关系。',
-        avatarUrl: DEFAULT_AVATAR,
-        isFollowing: false,
-    },
-    {
-        id: 'f5',
-        nickname: '雾港电台',
-        bio: '喜欢悬疑与都市奇幻，正在连载第二部。',
-        avatarUrl: DEFAULT_AVATAR,
-        isFollowing: true,
-    },
-];
-
-const MOCK_FOLLOWERS: SocialUserItem[] = [
-    {
-        id: 'r1',
-        nickname: '路过的读者A',
-        bio: '追更中，催更请温柔。',
-        avatarUrl: DEFAULT_AVATAR,
-        isFollowing: false,
-    },
-    {
-        id: 'r2',
-        nickname: '甜度超标',
-        bio: '只吃糖，不吃刀。',
-        avatarUrl: DEFAULT_AVATAR,
-        isFollowing: true,
-    },
-    {
-        id: 'r3',
-        nickname: '分支强迫症',
-        bio: '每个选项都要存档试一遍。',
-        avatarUrl: DEFAULT_AVATAR,
-        isFollowing: false,
-    },
-    {
-        id: 'r4',
-        nickname: '灰调摄影师',
-        bio: '这位玩家还没有留下个人简介。',
-        avatarUrl: DEFAULT_AVATAR,
-        isFollowing: false,
-    },
-    {
-        id: 'r5',
-        nickname: '剧本收藏夹',
-        bio: '收藏了很多作品，慢慢看。',
-        avatarUrl: DEFAULT_AVATAR,
-        isFollowing: true,
-    },
-    {
-        id: 'r6',
-        nickname: '晨雾旅人',
-        bio: '新用户，先关注几位作者。',
-        avatarUrl: DEFAULT_AVATAR,
-        isFollowing: false,
-    },
-];
+const SOCIAL_PAGE_LIMIT = 10;
+const DEFAULT_AVATAR = `${import.meta.env.BASE_URL}${GAME_CARD_DEFAULT_AVATAR_PATH}`;
 
 const isSocialTab = (value: string | null): value is SocialTab =>
     value === 'following' || value === 'followers';
+
+const isSort = (value: string | null): value is FollowListSort =>
+    value === 'recent' || value === 'earliest';
 
 const AccountSocialList: React.FC = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const { userCode = '' } = useParams<{ userCode: string }>();
     const [searchParams, setSearchParams] = useSearchParams();
+    const { user } = useAuthStore();
+
+    const selfCode = user?.user?.userCode || '';
+    const isOwner = Boolean(selfCode && userCode && selfCode === userCode);
 
     const tabParam = searchParams.get('tab');
+    const sortParam = searchParams.get('sort');
     const activeTab: SocialTab = isSocialTab(tabParam) ? tabParam : 'following';
+    const activeSort: FollowListSort = isSort(sortParam) ? sortParam : 'recent';
 
-    const [followingList, setFollowingList] = useState(MOCK_FOLLOWING);
-    const [followersList, setFollowersList] = useState(MOCK_FOLLOWERS);
+    const [list, setList] = useState<SocialListUser[]>([]);
+    const [total, setTotal] = useState(0);
+    const [nextCursor, setNextCursor] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [privateBlocked, setPrivateBlocked] = useState(false);
+    const [busyUserCode, setBusyUserCode] = useState<string | null>(null);
 
     useEffect(() => {
         if (!userCode.trim()) {
@@ -121,40 +51,176 @@ const AccountSocialList: React.FC = () => {
     }, [userCode, navigate]);
 
     useEffect(() => {
-        if (isSocialTab(tabParam)) return;
-        setSearchParams({ tab: 'following' }, { replace: true });
-    }, [tabParam, setSearchParams]);
+        const next: Record<string, string> = {};
+        if (!isSocialTab(tabParam)) next.tab = 'following';
+        else next.tab = tabParam;
+        if (!isSort(sortParam)) next.sort = 'recent';
+        else next.sort = sortParam;
+        if (!isSocialTab(tabParam) || !isSort(sortParam)) {
+            setSearchParams(next, { replace: true });
+        }
+    }, [tabParam, sortParam, setSearchParams]);
 
-    const list = activeTab === 'following' ? followingList : followersList;
+    const fetchPage = useCallback(async (cursor?: string | null) => {
+        const code = userCode.trim();
+        if (!code) return;
+
+        const isMore = Boolean(cursor);
+        if (isMore) setLoadingMore(true);
+        else {
+            setLoading(true);
+            setPrivateBlocked(false);
+        }
+
+        try {
+            const params = {
+                limit: SOCIAL_PAGE_LIMIT,
+                sort: activeSort,
+                ...(cursor ? { cursor } : {}),
+            };
+            const response = activeTab === 'following'
+                ? await accountSocialApi.getFollowing(code, params)
+                : await accountSocialApi.getFollowers(code, params);
+
+            if (!response.data.success || !response.data.data) {
+                throw new Error(response.data.message || t('common.error'));
+            }
+
+            const data = response.data.data;
+            setTotal(data.total);
+            setNextCursor(data.nextCursor);
+            setList((prev) => (isMore ? [...prev, ...data.list] : data.list));
+        } catch (error: unknown) {
+            const code = getApiErrorCode(error);
+            if (code === 'USER_BLOCKED') {
+                setPrivateBlocked(false);
+                setList([]);
+                setTotal(0);
+                setNextCursor(null);
+            } else if (code === 'FOLLOWING_LIST_PRIVATE' || code === 'FOLLOWERS_LIST_PRIVATE') {
+                setPrivateBlocked(true);
+                setList([]);
+                setTotal(0);
+                setNextCursor(null);
+                toast.error(
+                    code === 'FOLLOWING_LIST_PRIVATE'
+                        ? t('create.socialFollowingPrivate')
+                        : t('create.socialFollowersPrivate'),
+                );
+            } else {
+                toast.error(getApiErrorMessage(error, t('common.error')));
+                if (!isMore) {
+                    setList([]);
+                    setTotal(0);
+                    setNextCursor(null);
+                }
+            }
+        } finally {
+            setLoading(false);
+            setLoadingMore(false);
+        }
+    }, [userCode, activeTab, activeSort, t]);
+
+    useEffect(() => {
+        if (!userCode.trim() || !isSocialTab(tabParam) || !isSort(sortParam)) return;
+        setList([]);
+        setNextCursor(null);
+        void fetchPage(null);
+    }, [userCode, activeTab, activeSort, tabParam, sortParam, fetchPage]);
 
     const handleBack = () => {
         if (window.history.length > 1) {
             navigate(-1);
             return;
         }
-        navigate('/profile');
+        navigate(userCode ? `/account/${encodeURIComponent(userCode)}` : '/profile');
     };
 
     const handleTabChange = (tab: SocialTab) => {
-        setSearchParams({ tab }, { replace: true });
+        setSearchParams({ tab, sort: activeSort }, { replace: true });
     };
 
-    const handleToggleFollow = (id: string) => {
-        const toggle = (items: SocialUserItem[]) =>
-            items.map((item) => (
-                item.id === id ? { ...item, isFollowing: !item.isFollowing } : item
-            ));
+    const handleSortChange = (sort: FollowListSort) => {
+        setSearchParams({ tab: activeTab, sort }, { replace: true });
+    };
 
-        if (activeTab === 'following') {
-            setFollowingList(toggle);
-            return;
+    const handleToggleFollow = async (item: SocialListUser) => {
+        if (busyUserCode) return;
+        setBusyUserCode(item.userCode);
+        try {
+            const response = item.isFollowing
+                ? await accountSocialApi.unfollowOrRemove(item.userCode, 'unfollow')
+                : await accountSocialApi.follow(item.userCode);
+            if (!response.data.success || !response.data.data) {
+                throw new Error(response.data.message || t('common.error'));
+            }
+            const { isFollowing } = response.data.data;
+
+            if (activeTab === 'following' && isOwner && !isFollowing) {
+                setList((prev) => prev.filter((row) => row.userCode !== item.userCode));
+                setTotal((n) => Math.max(0, n - 1));
+                return;
+            }
+
+            setList((prev) =>
+                prev.map((row) => (
+                    row.userCode === item.userCode ? { ...row, isFollowing } : row
+                )),
+            );
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, t('common.error')));
+        } finally {
+            setBusyUserCode(null);
         }
-        setFollowersList(toggle);
+    };
+
+    const handleRemoveFollower = async (item: SocialListUser) => {
+        if (busyUserCode || !isOwner) return;
+        setBusyUserCode(item.userCode);
+        try {
+            const response = await accountSocialApi.unfollowOrRemove(item.userCode, 'removeFollower');
+            if (!response.data.success) {
+                throw new Error(response.data.message || t('common.error'));
+            }
+            setList((prev) => prev.filter((row) => row.userCode !== item.userCode));
+            setTotal((n) => Math.max(0, n - 1));
+            toast.success(t('create.socialRemovedFollower'));
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, t('common.error')));
+        } finally {
+            setBusyUserCode(null);
+        }
+    };
+
+    const openUser = (code: string) => {
+        navigate(`/account/${encodeURIComponent(code)}`);
     };
 
     if (!userCode.trim()) {
         return null;
     }
+
+    const tabLabel = activeTab === 'following'
+        ? t('create.followingLabel')
+        : t('create.followersLabel');
+    const countLabel = activeTab === 'following'
+        ? t('create.socialFollowingCount', { count: total })
+        : t('create.socialFollowersCount', { count: total });
+
+    const renderNavTab = (tab: SocialTab, label: string) => (
+        <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab}
+            className={`${styles.tab} ${activeTab === tab ? styles.tabActive : ''}`}
+            onClick={() => handleTabChange(tab)}
+        >
+            <span className={styles.tabLabel}>{label}</span>
+            {activeTab === tab && !loading ? (
+                <span className={styles.tabCount}>{total}</span>
+            ) : null}
+        </button>
+    );
 
     return (
         <div className={styles.pageRoot}>
@@ -171,51 +237,115 @@ const AccountSocialList: React.FC = () => {
                 <span className={styles.headerSpacer} aria-hidden="true" />
             </header>
 
-            <div className={styles.tabs} role="tablist" aria-label={t('create.socialFriendsTitle')}>
-                <button
-                    type="button"
-                    role="tab"
-                    aria-selected={activeTab === 'following'}
-                    className={`${styles.tab} ${activeTab === 'following' ? styles.tabActive : ''}`}
-                    onClick={() => handleTabChange('following')}
-                >
-                    {t('create.followingLabel')}
-                </button>
-                <button
-                    type="button"
-                    role="tab"
-                    aria-selected={activeTab === 'followers'}
-                    className={`${styles.tab} ${activeTab === 'followers' ? styles.tabActive : ''}`}
-                    onClick={() => handleTabChange('followers')}
-                >
-                    {t('create.followersLabel')}
-                </button>
-            </div>
+            <div className={styles.layout}>
+                <nav className={styles.nav} role="tablist" aria-label={t('create.socialFriendsTitle')}>
+                    {renderNavTab('following', t('create.followingLabel'))}
+                    {renderNavTab('followers', t('create.followersLabel'))}
+                </nav>
 
-            <div className={styles.countRow}>
-                {activeTab === 'following'
-                    ? t('create.socialFollowingCount', { count: followingList.length })
-                    : t('create.socialFollowersCount', { count: followersList.length })}
-            </div>
-
-            <ul className={styles.list}>
-                {list.map((item) => (
-                    <li key={item.id} className={styles.listItem}>
-                        <img className={styles.avatar} src={item.avatarUrl} alt={item.nickname} />
-                        <div className={styles.meta}>
-                            <div className={styles.nickname}>{item.nickname}</div>
-                            <div className={styles.bio}>{item.bio}</div>
+                <div className={styles.main}>
+                    <div className={styles.metaRow}>
+                        <div className={styles.metaCopy}>
+                            <h2 className={styles.panelTitle}>{tabLabel}</h2>
+                            <div className={styles.countRow}>{countLabel}</div>
                         </div>
                         <button
                             type="button"
-                            className={`${styles.followBtn} ${item.isFollowing ? styles.followBtnActive : styles.followBtnIdle}`}
-                            onClick={() => handleToggleFollow(item.id)}
+                            className={styles.sortToggle}
+                            aria-label={t('create.socialSortLabel')}
+                            onClick={() => handleSortChange(activeSort === 'recent' ? 'earliest' : 'recent')}
                         >
-                            {item.isFollowing ? t('create.socialFollowingBtn') : t('create.socialFollowBtn')}
+                            <span>
+                                {activeSort === 'recent'
+                                    ? t('create.socialSortRecent')
+                                    : t('create.socialSortEarliest')}
+                            </span>
+                            <img
+                                className={styles.sortIcon}
+                                src={`${import.meta.env.BASE_URL}data/assetsv2/personal/change.svg`}
+                                alt=""
+                                aria-hidden="true"
+                            />
                         </button>
-                    </li>
-                ))}
-            </ul>
+                    </div>
+
+                    {loading ? (
+                        <p className={styles.emptyHint}>{t('common.loading')}</p>
+                    ) : privateBlocked ? (
+                        <p className={styles.emptyHint}>
+                            {activeTab === 'following'
+                                ? t('create.socialFollowingPrivate')
+                                : t('create.socialFollowersPrivate')}
+                        </p>
+                    ) : list.length === 0 ? (
+                        <p className={styles.emptyHint}>{t('create.socialListEmpty')}</p>
+                    ) : (
+                        <ul className={styles.list}>
+                            {list.map((item) => {
+                                const avatar = getImageUrl(item.avatarUrl) || DEFAULT_AVATAR;
+                                const isSelfRow = Boolean(selfCode && item.userCode === selfCode);
+                                return (
+                                    <li key={item.userCode} className={styles.listItem}>
+                                        <button
+                                            type="button"
+                                            className={styles.userHit}
+                                            onClick={() => openUser(item.userCode)}
+                                        >
+                                            <img className={styles.avatar} src={avatar} alt={item.nickname} />
+                                            <div className={styles.meta}>
+                                                <div className={styles.nickname}>{item.nickname}</div>
+                                                <div className={styles.bio}>
+                                                    {item.bio?.trim()
+                                                        || t('create.accountHomepageBioPlaceholder')}
+                                                </div>
+                                            </div>
+                                        </button>
+                                        <div className={styles.actions}>
+                                            {isOwner && activeTab === 'followers' && !isSelfRow && (
+                                                <button
+                                                    type="button"
+                                                    className={styles.removeBtn}
+                                                    disabled={busyUserCode === item.userCode}
+                                                    onClick={() => void handleRemoveFollower(item)}
+                                                >
+                                                    {t('create.socialRemoveFollower')}
+                                                </button>
+                                            )}
+                                            {!isSelfRow && (
+                                                <button
+                                                    type="button"
+                                                    className={`${styles.followBtn} ${item.isFollowing ? styles.followBtnActive : styles.followBtnIdle}`}
+                                                    disabled={busyUserCode === item.userCode}
+                                                    onClick={() => void handleToggleFollow(item)}
+                                                >
+                                                    {item.isFollowing
+                                                        ? t('create.socialFollowingBtn')
+                                                        : (isOwner && activeTab === 'followers'
+                                                            ? t('create.socialFollowBackBtn')
+                                                            : t('create.socialFollowBtn'))}
+                                                </button>
+                                            )}
+                                        </div>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    )}
+
+                    {!loading && !privateBlocked && nextCursor && (
+                        <div className={styles.loadMoreWrap}>
+                            <button
+                                type="button"
+                                className={styles.loadMoreBtn}
+                                disabled={loadingMore}
+                                onClick={() => void fetchPage(nextCursor)}
+                            >
+                                {loadingMore ? t('common.loading') : t('create.socialLoadMore')}
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
         </div>
     );
 };

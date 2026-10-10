@@ -2,6 +2,7 @@ export type UploadCropPresetKey =
     | 'gameCover'
     | 'gamePortraitCover'
     | 'homeBanner'
+    | 'accountBanner'
     | 'avatar'
     | 'promotionCover'
     | 'objectIcon';
@@ -42,6 +43,13 @@ export const uploadCropPresets: Record<UploadCropPresetKey, Omit<UploadCropPrese
         descriptionKey: 'common.imageCrop.homeBanner.description',
         defaultCropScale: 0.94,
     },
+    accountBanner: {
+        titleKey: 'common.imageCrop.accountBanner.title',
+        aspectRatio: 16 / 9,
+        aspectLabel: '16:9',
+        descriptionKey: 'common.imageCrop.accountBanner.description',
+        defaultCropScale: 0.94,
+    },
     avatar: {
         titleKey: 'common.imageCrop.avatar.title',
         aspectRatio: 1,
@@ -66,6 +74,8 @@ export const uploadCropPresets: Record<UploadCropPresetKey, Omit<UploadCropPrese
 };
 
 export const MAX_UPLOAD_IMAGE_SIZE = 5 * 1024 * 1024;
+export const UPLOAD_IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
+export const UPLOAD_IMAGE_ACCEPT = UPLOAD_IMAGE_MIME_TYPES.join(',');
 export const CROP_EXPORT_SCALES = [1, 0.9, 0.8, 0.7, 0.6];
 export const CROP_EXPORT_QUALITIES = [0.92, 0.85, 0.78, 0.7];
 

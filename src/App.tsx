@@ -16,6 +16,7 @@ import WarehousePlayHistory from './page/warehouse/WarehousePlayHistory';
 import WarehouseResourceLibrary from './page/warehouse/WarehouseResourceLibrary';
 import AccountHomepage from './page/account/AccountHomepage';
 import AccountSocialList from './page/account/AccountSocialList';
+import AccountSettings from './page/account/AccountSettings';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import CreateGame from './page/CreateGame';
 import Library from './page/Library';
@@ -157,6 +158,7 @@ function App() {
           <Route path="/create/withdraw-records" element={<WithdrawRecords />} />
           <Route path="/asset/details" element={<AssetDetails />} />
           <Route path="/creator" element={<Navigate to="/profile" replace />} />
+          <Route path="/account/settings" element={<AccountSettings />} />
           <Route path="/account/:userCode/social" element={<AccountSocialList />} />
           <Route path="/account/:userCode" element={<AccountHomepage />} />
           <Route path="/creator/works/:fileId/stats" element={<CreatorRoute><CreatorWorkStats /></CreatorRoute>} />

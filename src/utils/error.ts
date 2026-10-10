@@ -99,3 +99,9 @@ export const getApiErrorMessage = (
     }
     return fallback;
 };
+
+export const getApiErrorCode = (error: unknown): string | null => {
+    if (!error || typeof error !== 'object' || !('response' in error)) return null;
+    const data = (error as { response?: { data?: { code?: string } } }).response?.data;
+    return typeof data?.code === 'string' ? data.code : null;
+};

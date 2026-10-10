@@ -52,7 +52,7 @@ import {
     formatDetailStatCount,
     resolveGameDetailTags,
 } from '../lib/gameDetailView';
-import { resolveGameCardAuthor } from '../lib/gameCardAuthor';
+import { resolveCreatorUserCode, resolveGameCardAuthor } from '../lib/gameCardAuthor';
 import {
     getInteractiveVideoAccess,
     unlockInteractiveVideoContent,
@@ -316,6 +316,15 @@ const GameDetail: React.FC = () => {
             || `${import.meta.env.BASE_URL}${DEFAULT_AVATAR_PATH}`
         );
     }, [game, t]);
+    const creatorUserCode = useMemo(() => resolveCreatorUserCode(game), [game]);
+
+    const handleOpenCreatorHomepage = () => {
+        if (!creatorUserCode) {
+            toast.error(t('create.previewHomepageNoCode'));
+            return;
+        }
+        navigate(`/account/${encodeURIComponent(creatorUserCode)}`);
+    };
     const shareCountDisplay = useMemo(
         () => formatDetailStatCount(game?.share_count),
         [game?.share_count],
@@ -1279,7 +1288,12 @@ const GameDetail: React.FC = () => {
                         </span>
                     </div>
                     {heroMetaLine ? (
-                        <div className={styles.heroMetaRow}>
+                        <button
+                            type="button"
+                            className={`${styles.heroMetaRow} ${styles.heroMetaRowClickable}`}
+                            onClick={handleOpenCreatorHomepage}
+                            aria-label={t('gameDetail.openCreatorHomepage')}
+                        >
                             <img
                                 className={styles.heroAuthorAvatar}
                                 src={heroAuthorAvatarSrc}
@@ -1288,7 +1302,7 @@ const GameDetail: React.FC = () => {
                                 decoding="async"
                             />
                             <p className={styles.heroMeta}>{heroMetaLine}</p>
-                        </div>
+                        </button>
                     ) : null}
                 </div>
             </div>

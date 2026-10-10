@@ -20,6 +20,9 @@ export interface UserGameData {
     created_at: string;
     updated_at: string;
     author_name: string;
+    userCode?: string | null;
+    author_user_code?: string | null;
+    creator_user_code?: string | null;
     is_public: number;
     like_count: number;
     dislike_count: number;
