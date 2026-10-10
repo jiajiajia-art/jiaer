@@ -26,6 +26,7 @@ type LoadStatus = 'loading' | 'success' | 'error';
 type IncentiveType = 'none' | 'incentive' | 'game_incentive' | 'code_incentive' | 'all_incentive';
 type PeriodKey = '7d' | '30d' | '1y' | 'all';
 type Granularity = 'daily' | 'monthly';
+type WorkTabKey = 'all' | 'role-playing' | 'world' | 'custom' | 'ivg' | 'novel';
 
 interface SettlementStats {
     totalAmount: number;
@@ -54,6 +55,25 @@ const PERIODS: Array<{ key: PeriodKey; labelKey: string }> = [
     { key: 'all', labelKey: 'create.incentivePeriodAll' },
 ];
 
+const WORKS_PER_PAGE = 6;
+
+const WORK_TABS: Array<{ key: WorkTabKey; labelKey: string }> = [
+    { key: 'all', labelKey: 'create.draftFilters.all' },
+    { key: 'role-playing', labelKey: 'create.draftFilters.role-playing' },
+    { key: 'world', labelKey: 'create.draftFilters.world' },
+    { key: 'custom', labelKey: 'create.draftFilters.custom' },
+    { key: 'ivg', labelKey: 'create.draftFilters.ivg' },
+    { key: 'novel', labelKey: 'create.draftFilters.novel' },
+];
+
+const getWorkTypeKey = (work: UserGameData): Exclude<WorkTabKey, 'all'> => {
+    if (work.engine === 'AVG') return 'world';
+    if (work.engine === 'CUSTOM') return 'custom';
+    if (work.engine === 'IVG') return 'ivg';
+    if (work.engine === 'NOVEL') return 'novel';
+    return 'role-playing';
+};
+
 const CreatorIncentive: React.FC = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
@@ -62,6 +82,8 @@ const CreatorIncentive: React.FC = () => {
     const [settlementStatus, setSettlementStatus] = useState<LoadStatus>('loading');
     const [works, setWorks] = useState<UserGameData[]>([]);
     const [worksStatus, setWorksStatus] = useState<LoadStatus>('loading');
+    const [selectedWorkTab, setSelectedWorkTab] = useState<WorkTabKey>('all');
+    const [workPage, setWorkPage] = useState(1);
     const [profileData, setProfileData] = useState<CreatorProfileData>({});
     const [profileStatus, setProfileStatus] = useState<LoadStatus>('loading');
     const [isProfileExpanded, setIsProfileExpanded] = useState(false);
@@ -169,6 +191,47 @@ const CreatorIncentive: React.FC = () => {
         return requiredValues.every((value) => Boolean(String(value || '').trim()));
     }, [profileData, user?.user?.phoneNumber]);
 
+    const workTabCounts = useMemo<Record<WorkTabKey, number>>(() => {
+        const counts: Record<WorkTabKey, number> = {
+            all: works.length,
+            'role-playing': 0,
+            world: 0,
+            custom: 0,
+            ivg: 0,
+            novel: 0,
+        };
+        works.forEach((work) => {
+            counts[getWorkTypeKey(work)] += 1;
+        });
+        return counts;
+    }, [works]);
+
+    const filteredWorks = useMemo(
+        () => selectedWorkTab === 'all'
+            ? works
+            : works.filter((work) => getWorkTypeKey(work) === selectedWorkTab),
+        [selectedWorkTab, works],
+    );
+    const totalWorkPages = Math.max(1, Math.ceil(filteredWorks.length / WORKS_PER_PAGE));
+    const currentWorkPage = Math.min(workPage, totalWorkPages);
+    const paginatedWorks = useMemo(
+        () => filteredWorks.slice(
+            (currentWorkPage - 1) * WORKS_PER_PAGE,
+            currentWorkPage * WORKS_PER_PAGE,
+        ),
+        [currentWorkPage, filteredWorks],
+    );
+    const visibleWorkPages = useMemo(() => {
+        const visibleCount = Math.min(5, totalWorkPages);
+        const maxStart = Math.max(1, totalWorkPages - visibleCount + 1);
+        const start = Math.min(Math.max(1, currentWorkPage - 2), maxStart);
+        return Array.from({ length: visibleCount }, (_, index) => start + index);
+    }, [currentWorkPage, totalWorkPages]);
+
+    useEffect(() => {
+        setWorkPage((page) => Math.min(page, totalWorkPages));
+    }, [totalWorkPages]);
+
     const settlementSuccessMessage = (pointsAmount: number, diamondsAmount: number) => {
         if (pointsAmount > 0 && diamondsAmount > 0) {
             return t('create.settleSuccessDual', { points: pointsAmount, diamonds: diamondsAmount });
@@ -224,13 +287,14 @@ const CreatorIncentive: React.FC = () => {
         setGranularity(period === '1y' || period === 'all' ? 'monthly' : 'daily');
     };
 
-    const workTypeLabel = (work: UserGameData) => {
-        if (work.engine === 'AVG') return t('create.draftFilters.world');
-        if (work.engine === 'CUSTOM') return t('create.draftFilters.custom');
-        if (work.engine === 'IVG') return t('create.draftFilters.ivg');
-        if (work.engine === 'NOVEL') return t('create.draftFilters.novel');
-        return t('create.draftFilters.role-playing');
+    const handleWorkTabChange = (tab: WorkTabKey) => {
+        setSelectedWorkTab(tab);
+        setWorkPage(1);
     };
+
+    const workTypeLabel = (work: UserGameData) => t(
+        `create.draftFilters.${getWorkTypeKey(work)}`,
+    );
 
     const selectedPeriodLabel = t(
         PERIODS.find((period) => period.key === selectedPeriod)?.labelKey || 'create.incentivePeriod30Days',
@@ -246,16 +310,40 @@ const CreatorIncentive: React.FC = () => {
                             type="button"
                             className={styles.backButton}
                             onClick={() => navigate('/create')}
+                            aria-label={t('create.incentiveBack')}
                         >
                             <IoArrowBack aria-hidden="true" />
                             <span>{t('create.incentiveBack')}</span>
                         </button>
                         <div className={styles.headerCopy}>
-                            <p className={styles.eyebrow}>{t('create.incentivePageEyebrow')}</p>
                             <h1>{t('create.incentivePageTitle')}</h1>
                             <p>{t('create.incentivePageSubtitle')}</p>
                         </div>
                     </header>
+
+                    <section
+                        className={`${styles.panel} ${styles.newIncentiveSettlementPanel}`}
+                        data-testid="new-incentive-settlement"
+                        aria-labelledby="new-incentive-settlement-title"
+                    >
+                        <div className={styles.newIncentiveSettlementCopy}>
+                            <span id="new-incentive-settlement-title">
+                                {t('create.newIncentiveSettlementTitle')}
+                            </span>
+                            <strong>{t('create.incentiveUnavailableAmount')}</strong>
+                            <small id="new-incentive-settlement-hint">
+                                {t('create.incentiveDataPending')}
+                            </small>
+                        </div>
+                        <button
+                            type="button"
+                            className={styles.newIncentiveSettlementButton}
+                            aria-describedby="new-incentive-settlement-hint"
+                            disabled
+                        >
+                            {t('create.settle')}
+                        </button>
+                    </section>
 
                     <section className={`${styles.panel} ${styles.settlementPanel}`} aria-labelledby="settlement-title">
                         <div className={styles.sectionHeader}>
@@ -291,38 +379,48 @@ const CreatorIncentive: React.FC = () => {
                             <div className={styles.settlementGrid} aria-busy={isSettling}>
                                 <article className={styles.settlementCard}>
                                     <span className={styles.cardLabel}>{t('create.pendingRewardPoints')}</span>
-                                    <strong>{formatValue(stats.totalAmount)}</strong>
-                                    <span className={styles.cardUnit}>{t('create.pointsStat')}</span>
-                                    {stats.totalAmount > 0 && (
-                                        <button
-                                            type="button"
-                                            className={styles.settleButton}
-                                            onClick={() => setIsSettleModalOpen(true)}
-                                            disabled={isSettling}
-                                        >
-                                            {isSettling ? t('create.settling') : t('create.settle')}
-                                        </button>
-                                    )}
+                                    <div className={styles.settlementValueRow}>
+                                        <span className={styles.amountGroup}>
+                                            <strong>{formatValue(stats.totalAmount)}</strong>
+                                            <span className={styles.cardUnit}>{t('create.pointsStat')}</span>
+                                        </span>
+                                        {stats.totalAmount > 0 && (
+                                            <button
+                                                type="button"
+                                                className={styles.settleButton}
+                                                onClick={() => setIsSettleModalOpen(true)}
+                                                disabled={isSettling}
+                                            >
+                                                {isSettling ? t('create.settling') : t('create.settle')}
+                                            </button>
+                                        )}
+                                    </div>
                                 </article>
                                 <article className={styles.settlementCard}>
                                     <span className={styles.cardLabel}>{t('create.pendingRewardDiamonds')}</span>
-                                    <strong>{formatValue(stats.totalDiamondsAmount)}</strong>
-                                    <span className={styles.cardUnit}>{t('create.diamondsStat')}</span>
-                                    {stats.totalDiamondsAmount > 0 && (
-                                        <button
-                                            type="button"
-                                            className={styles.settleButton}
-                                            onClick={() => setIsSettleDiamondsModalOpen(true)}
-                                            disabled={isSettling}
-                                        >
-                                            {isSettling ? t('create.settling') : t('create.settle')}
-                                        </button>
-                                    )}
+                                    <div className={styles.settlementValueRow}>
+                                        <span className={styles.amountGroup}>
+                                            <strong>{formatValue(stats.totalDiamondsAmount)}</strong>
+                                            <span className={styles.cardUnit}>{t('create.diamondsStat')}</span>
+                                        </span>
+                                        {stats.totalDiamondsAmount > 0 && (
+                                            <button
+                                                type="button"
+                                                className={styles.settleButton}
+                                                onClick={() => setIsSettleDiamondsModalOpen(true)}
+                                                disabled={isSettling}
+                                            >
+                                                {isSettling ? t('create.settling') : t('create.settle')}
+                                            </button>
+                                        )}
+                                    </div>
                                 </article>
                                 {isWorkIncentive && (
                                     <article className={styles.settlementCard}>
                                         <span className={styles.cardLabel}>{t('create.totalIncentiveEarnings')}</span>
-                                        <strong>{formatValue(stats.totalIncentiveAmount)}</strong>
+                                        <span className={styles.amountGroup}>
+                                            <strong>{formatValue(stats.totalIncentiveAmount)}</strong>
+                                        </span>
                                         <span className={styles.cardSubvalue}>
                                             {t('create.pendingIncentiveEarnings')}: {formatValue(stats.pendingIncome)}
                                         </span>
@@ -331,7 +429,9 @@ const CreatorIncentive: React.FC = () => {
                                 {isCodeIncentive && (
                                     <article className={styles.settlementCard}>
                                         <span className={styles.cardLabel}>{t('create.inviteCodeTotalEarnings')}</span>
-                                        <strong>{formatValue(stats.inviteTotalAmount)}</strong>
+                                        <span className={styles.amountGroup}>
+                                            <strong>{formatValue(stats.inviteTotalAmount)}</strong>
+                                        </span>
                                         <span className={styles.cardSubvalue}>
                                             {t('create.inviteCodePendingEarnings')}: {formatValue(stats.invitePendingIncome)}
                                         </span>
@@ -341,68 +441,84 @@ const CreatorIncentive: React.FC = () => {
                         )}
                     </section>
 
-                    <section className={styles.panel} data-testid="creator-incentive-overview" aria-labelledby="overview-title">
+                    <section
+                        className={`${styles.panel} ${styles.analyticsPanel}`}
+                        data-testid="creator-incentive-overview"
+                        aria-labelledby="overview-title"
+                    >
                         <div className={styles.sectionHeader}>
                             <div>
                                 <h2 id="overview-title">{t('create.incentiveOverviewTitle')}</h2>
                                 <p>{t('create.incentiveOverviewHint')}</p>
                             </div>
                         </div>
-                        <div className={styles.periodGrid}>
-                            {PERIODS.map((period) => (
-                                <button
-                                    key={period.key}
-                                    type="button"
-                                    className={`${styles.periodCard} ${selectedPeriod === period.key ? styles.periodCardActive : ''}`}
-                                    onClick={() => handlePeriodChange(period.key)}
-                                    aria-pressed={selectedPeriod === period.key}
-                                >
-                                    <span>{t(period.labelKey)}</span>
+                        <div className={styles.analyticsBody}>
+                            <div className={styles.overviewPane}>
+                                <div className={styles.periodGrid} aria-label={t('create.incentiveOverviewTitle')}>
+                                    {PERIODS.map((period) => (
+                                        <button
+                                            key={period.key}
+                                            type="button"
+                                            className={`${styles.periodCard} ${selectedPeriod === period.key ? styles.periodCardActive : ''}`}
+                                            onClick={() => handlePeriodChange(period.key)}
+                                            aria-pressed={selectedPeriod === period.key}
+                                        >
+                                            {t(period.labelKey)}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className={styles.periodAmount} aria-live="polite">
+                                    <span>{selectedPeriodLabel}</span>
                                     <strong>{t('create.incentiveUnavailableAmount')}</strong>
-                                </button>
-                            ))}
-                        </div>
-                    </section>
+                                    <small>{t('create.incentiveDataPending')}</small>
+                                </div>
+                            </div>
 
-                    <section className={styles.panel} data-testid="creator-incentive-chart" aria-labelledby="chart-title">
-                        <div className={styles.sectionHeader}>
-                            <div>
-                                <h2 id="chart-title">{t('create.incentiveChartTitle')}</h2>
-                                <p>{t('create.incentiveChartHint')}</p>
-                            </div>
-                            <div className={styles.segmentedControl} aria-label={t('create.incentiveGranularity')}>
-                                <button
-                                    type="button"
-                                    className={granularity === 'daily' ? styles.segmentActive : ''}
-                                    onClick={() => setGranularity('daily')}
-                                    aria-pressed={granularity === 'daily'}
+                            <div
+                                className={styles.chartPane}
+                                data-testid="creator-incentive-chart"
+                                aria-labelledby="chart-title"
+                            >
+                                <div className={styles.chartToolbar}>
+                                    <div>
+                                        <h3 id="chart-title">{t('create.incentiveChartTitle')}</h3>
+                                        <p>{t('create.incentiveChartHint')}</p>
+                                    </div>
+                                    <div className={styles.segmentedControl} aria-label={t('create.incentiveGranularity')}>
+                                        <button
+                                            type="button"
+                                            className={granularity === 'daily' ? styles.segmentActive : ''}
+                                            onClick={() => setGranularity('daily')}
+                                            aria-pressed={granularity === 'daily'}
+                                        >
+                                            {t('create.incentiveDaily')}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={granularity === 'monthly' ? styles.segmentActive : ''}
+                                            onClick={() => setGranularity('monthly')}
+                                            aria-pressed={granularity === 'monthly'}
+                                        >
+                                            {t('create.incentiveMonthly')}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div
+                                    className={styles.chartPlaceholder}
+                                    role="img"
+                                    aria-label={t('create.incentiveChartAria', {
+                                        period: selectedPeriodLabel,
+                                        granularity: t(`create.incentive${granularity === 'daily' ? 'Daily' : 'Monthly'}`),
+                                    })}
                                 >
-                                    {t('create.incentiveDaily')}
-                                </button>
-                                <button
-                                    type="button"
-                                    className={granularity === 'monthly' ? styles.segmentActive : ''}
-                                    onClick={() => setGranularity('monthly')}
-                                    aria-pressed={granularity === 'monthly'}
-                                >
-                                    {t('create.incentiveMonthly')}
-                                </button>
-                            </div>
-                        </div>
-                        <div
-                            className={styles.chartPlaceholder}
-                            role="img"
-                            aria-label={t('create.incentiveChartAria', {
-                                period: selectedPeriodLabel,
-                                granularity: t(`create.incentive${granularity === 'daily' ? 'Daily' : 'Monthly'}`),
-                            })}
-                        >
-                            <div className={styles.chartGrid} aria-hidden="true">
-                                <span /><span /><span /><span />
-                            </div>
-                            <div className={styles.chartEmpty}>
-                                <strong>{t('create.incentiveChartUnavailable')}</strong>
-                                <span>{selectedPeriodLabel} · {t(`create.incentive${granularity === 'daily' ? 'Daily' : 'Monthly'}`)}</span>
+                                    <div className={styles.chartGrid} aria-hidden="true">
+                                        <span /><span /><span /><span />
+                                    </div>
+                                    <div className={styles.chartEmpty}>
+                                        <strong>{t('create.incentiveChartUnavailable')}</strong>
+                                        <span>{selectedPeriodLabel} · {t(`create.incentive${granularity === 'daily' ? 'Daily' : 'Monthly'}`)}</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </section>
@@ -427,20 +543,92 @@ const CreatorIncentive: React.FC = () => {
                             <div className={styles.stateBox}>{t('create.incentiveWorksEmpty')}</div>
                         )}
                         {worksStatus === 'success' && works.length > 0 && (
-                            <div className={styles.workList}>
-                                {works.map((work) => (
-                                    <article className={styles.workRow} key={work.file_id || work.id}>
-                                        <div className={styles.workMeta}>
-                                            <strong>{work.title || t('create.incentiveUntitledWork')}</strong>
-                                            <span>{workTypeLabel(work)}</span>
+                            <>
+                                <div className={styles.workTabs} role="tablist" aria-label={t('create.incentiveWorksCategoryLabel')}>
+                                    {WORK_TABS.map((tab) => (
+                                        <button
+                                            key={tab.key}
+                                            id={`work-tab-${tab.key}`}
+                                            type="button"
+                                            role="tab"
+                                            className={selectedWorkTab === tab.key ? styles.workTabActive : ''}
+                                            aria-selected={selectedWorkTab === tab.key}
+                                            aria-controls="creator-incentive-work-list"
+                                            onClick={() => handleWorkTabChange(tab.key)}
+                                        >
+                                            <span>{t(tab.labelKey)}</span>
+                                            <small>{workTabCounts[tab.key]}</small>
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <div
+                                    id="creator-incentive-work-list"
+                                    className={styles.workPanel}
+                                    role="tabpanel"
+                                    aria-labelledby={`work-tab-${selectedWorkTab}`}
+                                >
+                                    {filteredWorks.length === 0 ? (
+                                        <div className={styles.stateBox}>{t('create.incentiveWorksCategoryEmpty')}</div>
+                                    ) : (
+                                        <div className={styles.workGrid}>
+                                            {paginatedWorks.map((work) => (
+                                                <article className={styles.workRow} key={work.file_id || work.id}>
+                                                    <div className={styles.workMeta}>
+                                                        <strong>{work.title || t('create.incentiveUntitledWork')}</strong>
+                                                        <span>{workTypeLabel(work)}</span>
+                                                    </div>
+                                                    <div className={styles.workAmount}>
+                                                        <strong>{t('create.incentiveUnavailableAmount')}</strong>
+                                                        <span>{t('create.incentiveDataPending')}</span>
+                                                    </div>
+                                                </article>
+                                            ))}
                                         </div>
-                                        <div className={styles.workAmount}>
-                                            <strong>{t('create.incentiveUnavailableAmount')}</strong>
-                                            <span>{t('create.incentiveDataPending')}</span>
+                                    )}
+                                </div>
+
+                                {filteredWorks.length > WORKS_PER_PAGE && (
+                                    <nav className={styles.pagination} aria-label={t('create.incentiveWorksPagination')}>
+                                        <button
+                                            type="button"
+                                            className={styles.pageNavButton}
+                                            onClick={() => setWorkPage((page) => Math.max(1, page - 1))}
+                                            disabled={currentWorkPage === 1}
+                                        >
+                                            {t('create.incentivePreviousPage')}
+                                        </button>
+                                        <div className={styles.pageNumbers}>
+                                            {visibleWorkPages.map((page) => (
+                                                <button
+                                                    key={page}
+                                                    type="button"
+                                                    className={currentWorkPage === page ? styles.pageButtonActive : ''}
+                                                    onClick={() => setWorkPage(page)}
+                                                    aria-current={currentWorkPage === page ? 'page' : undefined}
+                                                    aria-label={t('create.incentiveGoToPage', { page })}
+                                                >
+                                                    {page}
+                                                </button>
+                                            ))}
                                         </div>
-                                    </article>
-                                ))}
-                            </div>
+                                        <span className={styles.pageSummary}>
+                                            {t('create.incentivePageSummary', {
+                                                current: currentWorkPage,
+                                                total: totalWorkPages,
+                                            })}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            className={styles.pageNavButton}
+                                            onClick={() => setWorkPage((page) => Math.min(totalWorkPages, page + 1))}
+                                            disabled={currentWorkPage === totalWorkPages}
+                                        >
+                                            {t('create.incentiveNextPage')}
+                                        </button>
+                                    </nav>
+                                )}
+                            </>
                         )}
                     </section>
 

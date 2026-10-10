@@ -22,4 +22,9 @@ test('Create_KK币统计行不再展示提现且新页面复用提现流程', ()
   assert.match(incentive, /setIsWithdrawModalOpen\(true\)/);
   assert.match(incentive, /create\.withdraw/);
   assert.match(incentiveCss, /\.withdrawButton\s*\{[\s\S]*?min-height:\s*44px/);
+  assert.match(incentiveCss, /\.settlementGrid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(4,/);
+  assert.doesNotMatch(
+    incentiveCss,
+    /@media \(max-width: 640px\)[\s\S]*?\.withdrawButton\s*\{[^}]*width:\s*100%/,
+  );
 });

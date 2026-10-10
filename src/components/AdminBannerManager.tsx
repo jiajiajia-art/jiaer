@@ -12,6 +12,7 @@ import type {
 import { useImageCropper } from '../hooks/useImageCropper';
 import { getImageUrl } from '../utils/constants';
 import AdminBannerDialog from './AdminBannerDialog';
+import ActivityBannerManager from './ActivityBannerManager';
 import ImageCropModal from './CommonModal/ImageCropModal';
 import styles from './AdminBannerManager.module.css';
 
@@ -115,7 +116,7 @@ const getFallbackActiveId = (items: BannerItem[], preferredIndex: number): strin
     return items[safeIndex]?.id || items[0]?.id || null;
 };
 
-const AdminBannerManager: React.FC = () => {
+const AdminHomeBannerManager: React.FC = () => {
     const [published, setPublished] = useState<AdminBannerRecord | null>(null);
     const [activeAudience, setActiveAudience] = useState<BannerAudience>('common');
     const [bannerGroups, setBannerGroups] = useState<BannerGroups>(() => createEditableBannerGroups());
@@ -830,6 +831,41 @@ const AdminBannerManager: React.FC = () => {
                     onCropComplete={handleCropComplete}
                 />
             ) : null}
+        </div>
+    );
+};
+
+const AdminBannerManager: React.FC = () => {
+    const [activeSection, setActiveSection] = useState<'home' | 'activity'>('home');
+
+    return (
+        <div className={styles.managerStack}>
+            <div className={styles.placementTabs} role="tablist" aria-label="轮播图发布位置">
+                <button
+                    type="button"
+                    role="tab"
+                    aria-selected={activeSection === 'home'}
+                    className={`${styles.placementTab} ${activeSection === 'home' ? styles.placementTabActive : ''}`}
+                    onClick={() => setActiveSection('home')}
+                >
+                    首页轮播图
+                </button>
+                <button
+                    type="button"
+                    role="tab"
+                    aria-selected={activeSection === 'activity'}
+                    className={`${styles.placementTab} ${activeSection === 'activity' ? styles.placementTabActive : ''}`}
+                    onClick={() => setActiveSection('activity')}
+                >
+                    活动轮播图
+                </button>
+            </div>
+            <div hidden={activeSection !== 'home'}>
+                <AdminHomeBannerManager />
+            </div>
+            <div hidden={activeSection !== 'activity'}>
+                <ActivityBannerManager />
+            </div>
         </div>
     );
 };

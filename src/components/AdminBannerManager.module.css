@@ -267,6 +267,13 @@
     font-weight: 700;
 }
 
+.workflowStatus {
+    margin-left: auto;
+    color: var(--admin-muted, #8a7365);
+    font-size: 12px;
+    font-weight: 600;
+}
+
 .editorList {
     display: flex;
     flex-direction: column;
@@ -452,6 +459,103 @@
     margin-top: 20px;
 }
 
+.managerStack {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+.placementTabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 10px;
+    border-radius: 20px;
+    border: 1px solid var(--admin-border, rgba(201, 139, 92, 0.22));
+    background: var(--admin-surface, rgba(255, 251, 246, 0.92));
+}
+
+.placementTab {
+    min-height: 48px;
+    border: 1px solid transparent;
+    border-radius: 14px;
+    background: transparent;
+    color: var(--admin-text-soft, #6f5a49);
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.placementTabActive {
+    border-color: var(--admin-border-strong, rgba(201, 115, 63, 0.34));
+    background: var(--admin-accent-soft, rgba(201, 115, 63, 0.12));
+    color: var(--admin-accent-strong, #aa5a2d);
+}
+
+.heroDescription,
+.cardHint {
+    margin: 8px 0 0;
+    color: var(--admin-text-soft, #6f5a49);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.scheduleGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.scheduleHint {
+    color: var(--admin-text-soft, #6f5a49);
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.historyBlock {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 26px;
+    padding-top: 22px;
+    border-top: 1px solid rgba(205, 157, 120, 0.22);
+}
+
+.historyItem {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid rgba(205, 157, 120, 0.24);
+    border-radius: 16px;
+    background: rgba(250, 242, 234, 0.92);
+}
+
+.historyInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    color: var(--admin-text, #2f241d);
+    font-size: 13px;
+}
+
+.historyInfo span {
+    color: var(--admin-text-soft, #6f5a49);
+}
+
+.historyActions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+.historyActions .secondaryButton {
+    padding: 9px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
 @media (max-width: 1100px) {
     .bannerPanelGrid,
     .bannerEditorBody {
@@ -459,6 +563,10 @@
     }
 
     .editorListRow {
+        grid-template-columns: 1fr;
+    }
+
+    .scheduleGrid {
         grid-template-columns: 1fr;
     }
 }
@@ -474,6 +582,10 @@
     }
 
     .audienceTabs {
+        grid-template-columns: 1fr;
+    }
+
+    .placementTabs {
         grid-template-columns: 1fr;
     }
 }
