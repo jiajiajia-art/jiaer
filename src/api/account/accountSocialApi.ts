@@ -51,6 +51,9 @@ const accountSocialApi = {
   getFollowers: (userCode: string, params?: SocialListParams) =>
     api.get<ApiResponse<SocialListPage>>(accountPath(userCode, '/followers'), { params }),
 
+  getMutual: (userCode: string, params?: SocialListParams) =>
+    api.get<ApiResponse<SocialListPage>>(accountPath(userCode, '/mutual'), { params }),
+
   getWorks: (userCode: string, params?: AccountWorksParams) =>
     api.get<ApiResponse<AccountWorksPage>>(accountPath(userCode, '/works'), { params }),
 

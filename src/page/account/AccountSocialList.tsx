@@ -10,16 +10,35 @@ import { getImageUrl } from '../../utils/constants';
 import { GAME_CARD_DEFAULT_AVATAR_PATH } from '../../lib/gameCardAuthor';
 import styles from './AccountSocialList.module.css';
 
-type SocialTab = 'following' | 'followers';
+type SocialTab = 'following' | 'followers' | 'mutual';
 
 const SOCIAL_PAGE_LIMIT = 10;
+const DESKTOP_MEDIA = '(min-width: 768px)';
 const DEFAULT_AVATAR = `${import.meta.env.BASE_URL}${GAME_CARD_DEFAULT_AVATAR_PATH}`;
 
+const readIsDesktop = (): boolean => (
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+        ? window.matchMedia(DESKTOP_MEDIA).matches
+        : false
+);
+
 const isSocialTab = (value: string | null): value is SocialTab =>
-    value === 'following' || value === 'followers';
+    value === 'following' || value === 'followers' || value === 'mutual';
 
 const isSort = (value: string | null): value is FollowListSort =>
     value === 'recent' || value === 'earliest';
+
+/** 功能注释：关注按钮文案按 isFollowing + isFollowedBy（v1.2） */
+const resolveFollowButtonLabel = (
+    item: SocialListUser,
+    t: (key: string) => string,
+): string => {
+    const isFollowedBy = Boolean(item.isFollowedBy);
+    if (item.isFollowing && isFollowedBy) return t('create.socialMutualBtn');
+    if (item.isFollowing) return t('create.socialFollowingBtn');
+    if (isFollowedBy) return t('create.socialFollowBackBtn');
+    return t('create.socialFollowBtn');
+};
 
 const AccountSocialList: React.FC = () => {
     const { t } = useTranslation();
@@ -43,12 +62,46 @@ const AccountSocialList: React.FC = () => {
     const [loadingMore, setLoadingMore] = useState(false);
     const [privateBlocked, setPrivateBlocked] = useState(false);
     const [busyUserCode, setBusyUserCode] = useState<string | null>(null);
+    /** 功能注释：本人粉丝 Tab 点 ⋮ 后待移除的用户 */
+    const [removeTarget, setRemoveTarget] = useState<SocialListUser | null>(null);
+    /** 功能注释：PC 用按钮旁下拉；手机用底部面板 */
+    const [isDesktop, setIsDesktop] = useState(readIsDesktop);
 
     useEffect(() => {
         if (!userCode.trim()) {
             navigate('/profile', { replace: true });
         }
     }, [userCode, navigate]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+        const mediaQuery = window.matchMedia(DESKTOP_MEDIA);
+        const onChange = () => setIsDesktop(mediaQuery.matches);
+        onChange();
+        mediaQuery.addEventListener('change', onChange);
+        return () => mediaQuery.removeEventListener('change', onChange);
+    }, []);
+
+    useEffect(() => {
+        if (!removeTarget || !isDesktop) return;
+        const onPointerDown = (event: MouseEvent | TouchEvent) => {
+            const target = event.target;
+            if (!(target instanceof Element)) return;
+            if (target.closest(`.${styles.moreWrap}`)) return;
+            setRemoveTarget(null);
+        };
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') setRemoveTarget(null);
+        };
+        document.addEventListener('mousedown', onPointerDown);
+        document.addEventListener('touchstart', onPointerDown);
+        document.addEventListener('keydown', onKeyDown);
+        return () => {
+            document.removeEventListener('mousedown', onPointerDown);
+            document.removeEventListener('touchstart', onPointerDown);
+            document.removeEventListener('keydown', onKeyDown);
+        };
+    }, [removeTarget, isDesktop]);
 
     useEffect(() => {
         const next: Record<string, string> = {};
@@ -80,7 +133,9 @@ const AccountSocialList: React.FC = () => {
             };
             const response = activeTab === 'following'
                 ? await accountSocialApi.getFollowing(code, params)
-                : await accountSocialApi.getFollowers(code, params);
+                : activeTab === 'followers'
+                    ? await accountSocialApi.getFollowers(code, params)
+                    : await accountSocialApi.getMutual(code, params);
 
             if (!response.data.success || !response.data.data) {
                 throw new Error(response.data.message || t('common.error'));
@@ -91,21 +146,21 @@ const AccountSocialList: React.FC = () => {
             setNextCursor(data.nextCursor);
             setList((prev) => (isMore ? [...prev, ...data.list] : data.list));
         } catch (error: unknown) {
-            const code = getApiErrorCode(error);
-            if (code === 'USER_BLOCKED') {
+            const errCode = getApiErrorCode(error);
+            if (errCode === 'USER_BLOCKED') {
                 setPrivateBlocked(false);
                 setList([]);
                 setTotal(0);
                 setNextCursor(null);
-            } else if (code === 'FOLLOWING_LIST_PRIVATE' || code === 'FOLLOWERS_LIST_PRIVATE') {
+            } else if (errCode === 'FOLLOWING_LIST_PRIVATE' || errCode === 'FOLLOWERS_LIST_PRIVATE') {
                 setPrivateBlocked(true);
                 setList([]);
                 setTotal(0);
                 setNextCursor(null);
                 toast.error(
-                    code === 'FOLLOWING_LIST_PRIVATE'
-                        ? t('create.socialFollowingPrivate')
-                        : t('create.socialFollowersPrivate'),
+                    errCode === 'FOLLOWERS_LIST_PRIVATE'
+                        ? t('create.socialFollowersPrivate')
+                        : t('create.socialFollowingPrivate'),
                 );
             } else {
                 toast.error(getApiErrorMessage(error, t('common.error')));
@@ -137,6 +192,7 @@ const AccountSocialList: React.FC = () => {
     };
 
     const handleTabChange = (tab: SocialTab) => {
+        setRemoveTarget(null);
         setSearchParams({ tab, sort: activeSort }, { replace: true });
     };
 
@@ -156,7 +212,12 @@ const AccountSocialList: React.FC = () => {
             }
             const { isFollowing } = response.data.data;
 
-            if (activeTab === 'following' && isOwner && !isFollowing) {
+            // 功能注释：本人关注/互关列表取关后该项不再属于该 Tab，直接移除
+            if (
+                isOwner
+                && !isFollowing
+                && (activeTab === 'following' || activeTab === 'mutual')
+            ) {
                 setList((prev) => prev.filter((row) => row.userCode !== item.userCode));
                 setTotal((n) => Math.max(0, n - 1));
                 return;
@@ -174,8 +235,20 @@ const AccountSocialList: React.FC = () => {
         }
     };
 
-    const handleRemoveFollower = async (item: SocialListUser) => {
-        if (busyUserCode || !isOwner) return;
+    const closeRemoveMenu = () => {
+        if (busyUserCode) return;
+        setRemoveTarget(null);
+    };
+
+    const openRemoveMenu = (item: SocialListUser) => {
+        setRemoveTarget((prev) => (
+            prev?.userCode === item.userCode ? null : item
+        ));
+    };
+
+    const handleRemoveFollower = async () => {
+        const item = removeTarget;
+        if (!item || busyUserCode || !isOwner) return;
         setBusyUserCode(item.userCode);
         try {
             const response = await accountSocialApi.unfollowOrRemove(item.userCode, 'removeFollower');
@@ -184,6 +257,7 @@ const AccountSocialList: React.FC = () => {
             }
             setList((prev) => prev.filter((row) => row.userCode !== item.userCode));
             setTotal((n) => Math.max(0, n - 1));
+            setRemoveTarget(null);
             toast.success(t('create.socialRemovedFollower'));
         } catch (error: unknown) {
             toast.error(getApiErrorMessage(error, t('common.error')));
@@ -202,10 +276,17 @@ const AccountSocialList: React.FC = () => {
 
     const tabLabel = activeTab === 'following'
         ? t('create.followingLabel')
-        : t('create.followersLabel');
+        : activeTab === 'followers'
+            ? t('create.followersLabel')
+            : t('create.mutualLabel');
     const countLabel = activeTab === 'following'
         ? t('create.socialFollowingCount', { count: total })
-        : t('create.socialFollowersCount', { count: total });
+        : activeTab === 'followers'
+            ? t('create.socialFollowersCount', { count: total })
+            : t('create.socialMutualCount', { count: total });
+    const privateHint = activeTab === 'followers'
+        ? t('create.socialFollowersPrivate')
+        : t('create.socialFollowingPrivate');
 
     const renderNavTab = (tab: SocialTab, label: string) => (
         <button
@@ -241,6 +322,7 @@ const AccountSocialList: React.FC = () => {
                 <nav className={styles.nav} role="tablist" aria-label={t('create.socialFriendsTitle')}>
                     {renderNavTab('following', t('create.followingLabel'))}
                     {renderNavTab('followers', t('create.followersLabel'))}
+                    {renderNavTab('mutual', t('create.mutualLabel'))}
                 </nav>
 
                 <div className={styles.main}>
@@ -272,11 +354,7 @@ const AccountSocialList: React.FC = () => {
                     {loading ? (
                         <p className={styles.emptyHint}>{t('common.loading')}</p>
                     ) : privateBlocked ? (
-                        <p className={styles.emptyHint}>
-                            {activeTab === 'following'
-                                ? t('create.socialFollowingPrivate')
-                                : t('create.socialFollowersPrivate')}
-                        </p>
+                        <p className={styles.emptyHint}>{privateHint}</p>
                     ) : list.length === 0 ? (
                         <p className={styles.emptyHint}>{t('create.socialListEmpty')}</p>
                     ) : (
@@ -284,47 +362,78 @@ const AccountSocialList: React.FC = () => {
                             {list.map((item) => {
                                 const avatar = getImageUrl(item.avatarUrl) || DEFAULT_AVATAR;
                                 const isSelfRow = Boolean(selfCode && item.userCode === selfCode);
+                                const followLabel = resolveFollowButtonLabel(item, t);
                                 return (
                                     <li key={item.userCode} className={styles.listItem}>
                                         <button
                                             type="button"
-                                            className={styles.userHit}
+                                            className={styles.avatarHit}
                                             onClick={() => openUser(item.userCode)}
+                                            aria-label={item.nickname}
                                         >
-                                            <img className={styles.avatar} src={avatar} alt={item.nickname} />
-                                            <div className={styles.meta}>
+                                            <img className={styles.avatar} src={avatar} alt="" />
+                                        </button>
+                                        <div className={styles.body}>
+                                            <button
+                                                type="button"
+                                                className={styles.metaHit}
+                                                onClick={() => openUser(item.userCode)}
+                                            >
                                                 <div className={styles.nickname}>{item.nickname}</div>
                                                 <div className={styles.bio}>
                                                     {item.bio?.trim()
                                                         || t('create.accountHomepageBioPlaceholder')}
                                                 </div>
+                                            </button>
+                                            <div className={styles.actions}>
+                                                {!isSelfRow && (
+                                                    <button
+                                                        type="button"
+                                                        className={`${styles.followBtn} ${item.isFollowing ? styles.followBtnActive : styles.followBtnIdle}`}
+                                                        disabled={busyUserCode === item.userCode}
+                                                        onClick={() => void handleToggleFollow(item)}
+                                                    >
+                                                        {followLabel}
+                                                    </button>
+                                                )}
+                                                {isOwner && activeTab === 'followers' && !isSelfRow && (
+                                                    <div className={styles.moreWrap}>
+                                                        <button
+                                                            type="button"
+                                                            className={styles.moreBtn}
+                                                            disabled={busyUserCode === item.userCode}
+                                                            aria-label={t('create.socialMoreActions')}
+                                                            aria-expanded={removeTarget?.userCode === item.userCode}
+                                                            aria-haspopup="menu"
+                                                            onClick={() => openRemoveMenu(item)}
+                                                        >
+                                                            <img
+                                                                className={styles.moreIcon}
+                                                                src={`${import.meta.env.BASE_URL}data/assetsv2/personal/more.svg`}
+                                                                alt=""
+                                                                aria-hidden="true"
+                                                            />
+                                                        </button>
+                                                        {isDesktop && removeTarget?.userCode === item.userCode ? (
+                                                            <div
+                                                                className={styles.moreMenu}
+                                                                role="menu"
+                                                                aria-label={t('create.socialMoreActions')}
+                                                            >
+                                                                <button
+                                                                    type="button"
+                                                                    role="menuitem"
+                                                                    className={styles.moreMenuItem}
+                                                                    disabled={busyUserCode === item.userCode}
+                                                                    onClick={() => void handleRemoveFollower()}
+                                                                >
+                                                                    {t('create.socialRemoveFollower')}
+                                                                </button>
+                                                            </div>
+                                                        ) : null}
+                                                    </div>
+                                                )}
                                             </div>
-                                        </button>
-                                        <div className={styles.actions}>
-                                            {isOwner && activeTab === 'followers' && !isSelfRow && (
-                                                <button
-                                                    type="button"
-                                                    className={styles.removeBtn}
-                                                    disabled={busyUserCode === item.userCode}
-                                                    onClick={() => void handleRemoveFollower(item)}
-                                                >
-                                                    {t('create.socialRemoveFollower')}
-                                                </button>
-                                            )}
-                                            {!isSelfRow && (
-                                                <button
-                                                    type="button"
-                                                    className={`${styles.followBtn} ${item.isFollowing ? styles.followBtnActive : styles.followBtnIdle}`}
-                                                    disabled={busyUserCode === item.userCode}
-                                                    onClick={() => void handleToggleFollow(item)}
-                                                >
-                                                    {item.isFollowing
-                                                        ? t('create.socialFollowingBtn')
-                                                        : (isOwner && activeTab === 'followers'
-                                                            ? t('create.socialFollowBackBtn')
-                                                            : t('create.socialFollowBtn'))}
-                                                </button>
-                                            )}
                                         </div>
                                     </li>
                                 );
@@ -346,6 +455,46 @@ const AccountSocialList: React.FC = () => {
                     )}
                 </div>
             </div>
+
+            {!isDesktop && removeTarget ? (
+                <div className={styles.sheetRoot} role="presentation">
+                    <button
+                        type="button"
+                        className={styles.sheetBackdrop}
+                        aria-label={t('common.cancel')}
+                        onClick={closeRemoveMenu}
+                    />
+                    <div
+                        className={styles.sheetPanel}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label={t('create.socialMoreActions')}
+                    >
+                        <button
+                            type="button"
+                            className={styles.sheetAction}
+                            disabled={busyUserCode === removeTarget.userCode}
+                            onClick={() => void handleRemoveFollower()}
+                        >
+                            <img
+                                className={styles.sheetActionIcon}
+                                src={`${import.meta.env.BASE_URL}data/assetsv2/personal/delete.svg`}
+                                alt=""
+                                aria-hidden="true"
+                            />
+                            <span>{t('create.socialRemoveFollower')}</span>
+                        </button>
+                        <button
+                            type="button"
+                            className={styles.sheetCancel}
+                            disabled={Boolean(busyUserCode)}
+                            onClick={closeRemoveMenu}
+                        >
+                            {t('common.cancel')}
+                        </button>
+                    </div>
+                </div>
+            ) : null}
         </div>
     );
 };

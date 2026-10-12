@@ -48,7 +48,10 @@ export interface SocialListUser {
   nickname: string;
   avatarUrl: string | null;
   bio: string;
+  /** 我是否关注了该行用户（相对当前登录用户） */
   isFollowing: boolean;
+  /** 该行用户是否关注了我（相对当前登录用户；缺省按未关注） */
+  isFollowedBy?: boolean;
   followedAt: string;
 }
 

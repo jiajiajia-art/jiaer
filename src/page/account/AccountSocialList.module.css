@@ -78,8 +78,8 @@
 .nav {
     display: flex;
     align-items: stretch;
-    justify-content: center;
-    gap: 36px;
+    justify-content: space-between;
+    gap: 8px;
     border-bottom: 1px solid var(--social-divider);
     margin: 0 12px;
 }
@@ -90,13 +90,16 @@
     border: none;
     background: transparent;
     color: var(--social-label);
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 500;
-    padding: 12px 4px 14px;
+    padding: 12px 2px 14px;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    gap: 6px;
+    flex: 1 1 0;
+    min-width: 0;
 }
 
 .tabLabel {
@@ -203,18 +206,36 @@
 .listItem {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     padding: 14px 4px;
     border-bottom: 1px solid var(--social-divider);
     min-width: 0;
 }
 
-.userHit {
+.avatarHit {
+    flex-shrink: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    line-height: 0;
+}
+
+.body {
     flex: 1 1 auto;
     min-width: 0;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
+}
+
+.metaHit {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
     margin: 0;
     padding: 0;
     border: none;
@@ -231,24 +252,179 @@
     flex-shrink: 0;
 }
 
-.removeBtn {
+/* 功能注释：本人粉丝 Tab 右侧 ⋮；PC 下拉 / 手机底部面板 */
+.moreWrap {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.moreBtn {
+    width: 28px;
     height: 30px;
-    padding: 0 10px;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.16);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 8px;
     background: transparent;
     color: var(--social-label);
-    font-size: 12px;
     cursor: pointer;
 }
 
-.removeBtn:hover {
+.moreBtn:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.moreBtn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.moreIcon {
+    width: 20px;
+    height: 20px;
+    display: block;
+    object-fit: contain;
+}
+
+.moreMenu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 20;
+    min-width: 120px;
+    padding: 6px 0;
+    border-radius: 10px;
+    background: var(--social-card);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+    border: 1px solid var(--social-divider);
+}
+
+.moreMenuItem {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 10px 16px;
+    border: none;
+    background: transparent;
+    color: var(--social-value);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.3;
+    text-align: center;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.moreMenuItem:hover {
+    background: rgba(255, 255, 255, 0.06);
     color: #ffffff;
 }
 
-.removeBtn:disabled {
+.moreMenuItem:disabled {
     opacity: 0.55;
     cursor: not-allowed;
+}
+
+.sheetRoot {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.sheetBackdrop {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: rgba(0, 0, 0, 0.55);
+    cursor: pointer;
+}
+
+.sheetPanel {
+    position: relative;
+    z-index: 1;
+    width: min(720px, 100%);
+    margin: 0 auto;
+    padding: 10px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    animation: sheetRise 0.2s ease-out;
+}
+
+.sheetAction,
+.sheetCancel {
+    width: 100%;
+    min-height: 52px;
+    margin: 0;
+    border: none;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    line-height: 1.2;
+}
+
+.sheetAction {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: #2c2c2e;
+    color: #ffffff;
+}
+
+.sheetAction:hover {
+    background: #3a3a3c;
+}
+
+.sheetAction:disabled,
+.sheetCancel:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.sheetActionIcon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    display: block;
+    object-fit: contain;
+}
+
+.sheetCancel {
+    background: #3a3a3c;
+    color: #ffffff;
+}
+
+.sheetCancel:hover {
+    background: #48484a;
+}
+
+@keyframes sheetRise {
+    from {
+        transform: translateY(12px);
+        opacity: 0.6;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sheetPanel {
+        animation: none;
+    }
 }
 
 .loadMoreWrap {
@@ -283,14 +459,6 @@
     border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.meta {
-    flex: 1 1 auto;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
 .nickname {
     font-size: 15px;
     font-weight: 600;
@@ -321,6 +489,7 @@
     font-weight: 500;
     cursor: pointer;
     line-height: 1;
+    white-space: nowrap;
 }
 
 .followBtnActive {
@@ -411,8 +580,8 @@
         padding: 0;
     }
 
+    /* 功能注释：PC 头像左对齐，右侧昵称/简介/操作为上下一列 */
     .listItem {
-        flex-wrap: wrap;
         align-items: flex-start;
         gap: 12px;
         padding: 14px 4px;
@@ -421,14 +590,27 @@
         background: transparent;
     }
 
-    .userHit {
+    .avatar {
+        width: 72px;
+        height: 72px;
+    }
+
+    .body {
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 8px;
+        min-height: 72px;
+    }
+
+    .metaHit {
         width: 100%;
-        flex: 1 1 100%;
+        gap: 2px;
     }
 
     .actions {
-        width: 100%;
-        padding-left: 60px;
+        width: auto;
+        padding-left: 0;
         justify-content: flex-start;
     }
 

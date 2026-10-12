@@ -75,6 +75,13 @@ export interface UserGameData {
     groupNo?: string;
     /** 当前用户是否已收藏该游戏 */
     isFavorited?: boolean;
+    /** 详情页创作者关系态（GET /auth/games/info；未登录/缺省按 false） */
+    isCreatorSelf?: boolean;
+    isFollowingCreator?: boolean;
+    /** 我是否屏蔽了创作者 */
+    isCreatorBlocked?: boolean;
+    /** 创作者是否屏蔽了我 */
+    isCreatorBlockedBy?: boolean;
     /** 首页推荐增量字段 */
     recommend_reason?: string;
     campaign_id?: number | null;
