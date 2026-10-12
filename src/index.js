@@ -3,6 +3,14 @@ export default {
       const url = new URL(request.url);
       const path = url.pathname;
       const decodedPath = safeDecodePath(path);
+
+      // 功能注释：短链 /romance → 嵌入 funloom SPA 的 /funloom/romance/
+      if (path === '/romance' || path.startsWith('/romance/')) {
+        const rest = path === '/romance' ? '/' : path.slice('/romance'.length);
+        const target = new URL(`/funloom/romance${rest === '/' ? '/' : rest}`, url.origin);
+        target.search = url.search;
+        return Response.redirect(target.toString(), 302);
+      }
   
       if (!path.startsWith('/funloom')) {
         return new Response('Not Found', { status: 404 });

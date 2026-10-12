@@ -178,6 +178,24 @@ export const createApi = (config?: ApiConfig): AxiosInstance => {
         delete config.headers.Authorization;
       }
 
+      // 功能注释：FormData 必须由浏览器自动带 boundary。
+      // 若保留默认 application/json，axios 会把 FormData JSON 化；若手写 multipart/form-data 又缺 boundary，封面等上传都会失败。
+      if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+        const headers = config.headers as {
+          setContentType?: (value: false | string) => void;
+          delete?: (key: string) => void;
+        } & Record<string, unknown>;
+        if (typeof headers.setContentType === 'function') {
+          headers.setContentType(false);
+        } else if (typeof headers.delete === 'function') {
+          headers.delete('Content-Type');
+          headers.delete('content-type');
+        } else {
+          delete headers['Content-Type'];
+          delete headers['content-type'];
+        }
+      }
+
       await encryptCreatorProfileIfNeeded(config);
       return config;
     },

@@ -1,0 +1,65 @@
+# ═══════════════════════════════════════════════════════════════
+#  星光2005 · 娱乐圈关系内容池 (entertainmentRelation)
+#  在既有「好感(rel)」单轴之外，扩展多维私人关系：心情 / 心动 / 私人信任，
+#  以及「联系冷落」随日衰减。所有中文维度名、提示、阈值、衰减与联系参数、
+#  每人心动上限都在此；引擎 (relations.ts) 只做数值推进、边界与幂等，
+#  不写死任何中文或人物专属数字。
+# ═══════════════════════════════════════════════════════════════
+
+# —— 维度展示（引擎读 label，不内嵌中文）——
+dimensions:
+  - { id: friendship, label: 好感,   hint: 日常相处累积的亲近，攻略线主轴 }
+  - { id: romantic,   label: 心动,   hint: 私下的悸动，独立于好感，决定告白与专属结局 }
+  - { id: trust,      label: 私人信任, hint: 是否愿把真心话与软肋交给你 }
+  - { id: mood,       label: 近况心情, hint: 对方最近的状态，被冷落会低落、被陪伴会回暖 }
+
+# —— 心情初值与「冷落」衰减（按天）——
+mood:
+  init: 60
+  min: 20
+  max: 100
+  # 距上次联系超过 coldDays 天，每天心情 -decayPerDay（低于 warmFloor 不再自然掉）
+  coldDays: 4
+  decayPerDay: 2
+  warmFloor: 35
+
+# —— 主动联系（问候/约见）动作参数 ——
+contact:
+  energyCost: 6
+  cooldownDays: 2          # 同一人两次联系至少间隔
+  friendship: 3
+  trust: 2
+  moodLift: 12
+  romanticCasual: 2        # 任何人都能在相处中慢慢积累心动
+  romanticIfDating: 4      # 已确认交往时，联系额外推进心动
+  stressRelief: 5          # 陪伴带来的基础缓压（联系一次，玩家压力下降）
+  stressReliefDating: 4    # 与恋人相处时的额外缓压
+  labels:
+    button: 私下联系
+    cooldown: 最近刚联系过，过两天再约
+    lowEnergy: 行动力不足，改天再联系
+    done: 你与「{name}」小聚了一会儿
+
+# —— 表白 / 确认心意（普通 NPC 的轻量攻略路径；固定角色走七段情感线，更难）——
+confess:
+  friendshipMin: 60        # 好感门槛
+  romanticMin: 60          # 心动门槛
+  labels:
+    button: 向 TA 表白心意
+    locked: 还差一点默契，多相处、把好感与心动养到 60
+    done: 你向「{name}」说出了心意，两人确认了关系
+    alreadyDating: 你们已经在一起了
+    hardLocked: TA 是需要长线经营的人，先在情感进展里走完每一段
+
+# —— 心动上限（默认 100；天王/资本线可攀升到 1000，呼应既有好感上限）——
+romanticCap:
+  default: 100
+  byPerson:
+    guchen: 1000
+    songshixu: 1000
+
+# —— 私人信任范围 ——
+trust:
+  init: 10
+  min: 0
+  max: 100

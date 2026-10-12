@@ -1,0 +1,722 @@
+# ═══════════════════════════════════════════════════════════════
+#  星光2005 · 世界内容池 (ContentPool)
+#  所有娱乐圈名称、地点、履历、门槛参数、按钮文案、年代设定都在此。
+#  引擎 (mud.ts / logic.ts) 只做通用规则运算，不得内嵌中文映射或阈值。
+# ═══════════════════════════════════════════════════════════════
+
+# —— 年代与日历（②日推进将读取此处，先落地设定）——
+calendar:
+  eraName: 公元
+  startYear: 2005
+  startDate: "2005-01-03"      # 第 1 周周一
+  careerWeeks: 104             # 生涯总周数（第104周末 = 2006-12-31）
+  weekdayNames: [周一, 周二, 周三, 周四, 周五, 周六, 周日]
+  monthLabel: "月"
+  dayLabel: "日"
+
+# —— 方向标签（MUD 出口）——
+directions:
+  n: 北
+  s: 南
+  e: 东
+  w: 西
+  ne: 东北
+  nw: 西北
+  se: 东南
+  sw: 西南
+
+# —— 城市通行（移动耗时/交通费公式参数；引擎只做图搜索，不写死数值）——
+travel:
+  minutesPerHop: 20            # 每跨越一段路程约需的分钟数（移动即令当日时刻流动）
+  feePerHop: 20                # 每段路程的交通费（元，整数）
+  energyPerHop: 6              # 每段路程消耗的行动力（点；跑得越远越累，形成资源闭环）
+  dayStartMinute: 480          # 每天从 08:00 开始活动（当日时刻起点）
+  dayEndMinute: 1380           # 到 23:00 天色已晚，宜歇息「度日」翻页
+
+# —— 指标显示名（生成门槛提示用；引擎不写中文）——
+metricLabels:
+  week: 周
+  fame: 名气
+  reputation: 口碑
+  blackFans: 黑粉
+  works: 作品
+  looks: 容貌
+  energy: 行动力
+  stress: 压力
+  stats.yanji: 演技
+  stats.geyi: 歌艺
+  stats.koucai: 口才
+  stats.yitai: 仪态
+  stats.donggan: 动感
+  stats.tineng: 体能
+  stats.caizhi: 才智
+  stats.zixin: 自信
+
+# —— 营业/开放状态文案（引擎按房间的 hours/openDays 与在场剧组推导状态键，中文只在此）——
+roomStatus:
+  open: 开放中
+  closed: 今日休息
+  busy: 拍摄中
+  event: 活动进行中
+
+# —— 房间：出口图 + 叙述文 + 物品/居家活动（对应 data.ts 的 LOCATIONS 地点）——
+# 可选字段：hours(营业时段展示) · openDays(开放星期 1=周一…7=周日，缺省=每日)
+#           tint(背景色调键 jade|coral|gold|ink|plum) · access(通行门槛 {requires,note})
+rooms:
+  apartment:
+    exits: { s: tianguang }
+    tint: jade
+    desc: 天光公寓的小屋朝南，虽算不上宽敞，却被你收拾得干干净净。窗台上一盆绿萝正抽新芽。这里是你一个人的地方，出门往南便是楼下的天光小区。
+    items:
+      - { id: schedulebook, name: 日程本, icon: "", desc: 封皮磨得发白的横线日程本，密密麻麻记着这一周要跑的通告与试镜。翻开它就想起离出道还有多少天。 }
+      - { id: greentea, name: 一盒枸杞茶, icon: "", desc: 母亲塞进行李的枸杞茶，说熬夜拍戏要养身子。喝一口，心里稍微踏实些。 }
+    # —— 居家活动：在家可点选的日常小事（增益/消耗全在此登记，引擎只按数值增减）——
+    # 可选字段：energy/stress/fame(数值增减) · stat/statDelta(某项属性±) · requiresItem(需先拥有某物) · lockedMsg(缺物提示)
+    activities:
+      - { id: watchtv, name: 看电视, icon: "", energy: -4, stress: -10, fame: 1, desc: 窝在沙发里看一档娱乐节目，顺便瞄一眼同行都在忙些什么。, msg: 你窝在沙发里看了会儿电视，紧绷的神经松了松（压力 -10、行动力 -4、名气 +1）。 }
+      - { id: rest, name: 好好休息, icon: "", energy: 40, stress: -12, desc: 拉上窗帘，什么也不想，踏踏实实睡一觉、发一会儿呆。, msg: 你在天光公寓好好歇了一场，行动力与压力都缓了过来（行动力 +40、压力 -12）。 }
+      - { id: readbook, name: 看书, icon: "", energy: -8, stress: 3, stat: caizhi, statDelta: 6, requiresItem: actingbook, lockedMsg: 你手边没有可读的书——先去星桥商业街的墨痕书店买一本吧。, desc: 就着台灯翻一本表演理论的书，字字都得琢磨，读完脑子涨涨的，却踏实。, msg: 你就着台灯读完一章表演理论，笔记记了满满一页（才智 +6、行动力 -8、压力 +3）。 }
+  tianguang:
+    exits: { n: apartment, s: street }
+    tint: jade
+    intro: 天光小区的院子不大，几株香樟撑开一片阴凉，长椅上晒着太阳的老人和追逐的孩子把日子过得慢悠悠。你拎着行李站在楼下，忽然觉得——再漂泊的人，也总要有个能喊出名字的邻里。
+    desc: 天光小区的中庭，梧桐、长椅与晾在阳台上的被单。街坊邻里常在这儿晒太阳、唠家常。往北上楼是你的小屋，往南出小区门便是星桥商业街。
+    items:
+      - { id: noticeboard, name: 小区公告栏, icon: "", desc: 贴着水电通知与寻猫启事的公告栏，边角压着几张琴行招生的传单。市井的暖意，都在这些琐碎里。 }
+    activities:
+      - { id: courtyardsit, name: 长椅上坐坐, icon: "", energy: 4, stress: -8, desc: 在中庭的长椅上坐一会儿，看孩子追跑、老人下棋，让脚步慢下来。, msg: 你在小区长椅上坐了会儿，晒着太阳看邻里家常，心里松快了些（压力 -8、行动力 +4）。 }
+      - { id: chatneighbor, name: 和街坊唠家常, icon: "", energy: -3, stress: -5, stat: koucai, statDelta: 2, desc: 跟晾被单的阿姨、遛弯的大爷搭两句，市井的人情也是一种功课。, msg: 你和小区街坊唠了两句家常，嘴皮子和人缘都热络了些（口才 +2、压力 -5、行动力 -3）。 }
+  street:
+    exits: { n: tianguang, e: cafe, w: gym, s: agency, ne: redcarpet, nw: bookstore, se: wardrobe, sw: academy }
+    tint: gold
+    intro: 你第一次真正站在星桥商业街的中央——霓虹漫过头顶，人流像一条不肯停的河。你忽然意识到，这座城不会为任何人放慢脚步，包括你。
+    desc: 星桥商业街人来人往，霓虹与灯箱在暮色里次第亮起。这里是星城的十字路口——北回天光公寓，东去咖啡馆，西往练习馆，南抵事务所，东北那栋气派的楼便是红毯会客厅。
+    items:
+      - { id: streetposter, name: 街边海报栏, icon: "", desc: 贴满新片与代言的巨幅海报，边角已被雨水泡皱。榜上有名的那几张脸，你还只能仰望。 }
+    activities:
+      - { id: streetsnack, name: 吃份街边小吃, icon: "", energy: 6, stress: -8, money: -15, desc: 街角那家糖油粑粑排着队，热气腾腾。犒劳一下连轴转的自己。, msg: 你就着夜风吃了份热乎的街边小吃，心情松快了些（压力 -8、行动力 +6、¥-15）。 }
+      - { id: windowshop, name: 逛街淘搭配, icon: "", energy: -6, stress: -6, money: -80, stat: yitai, statDelta: 4, desc: 挨家挨店试穿、比价，把自己收拾得清爽入时，也顺带练了眼光。, msg: 你逛了一圈淘到几件合身的搭配，穿衣品味长进不少（仪态 +4、压力 -6、行动力 -6、¥-80）。 }
+      - { id: streetsnap, name: 认真凹造型街拍, icon: "", energy: -8, fame: 4, stat: zixin, statDelta: 2, desc: 挑个有光的墙角，认真凹几组造型让路人拍——曝光是新人攒脸熟的笨办法。, msg: 你在街头认真凹了组造型，被路人拍了发上网，攒了点脸熟（名气 +4、自信 +2、行动力 -8）。 }
+  wardrobe:
+    exits: { nw: street, n: beauty }
+    tint: coral
+    hours: 10:00–21:00
+    intro: 华裳时装屋的落地镜排成一列，衣架上垂着一整季的当红剪裁。你伸手抚过一件缎面礼服，指尖凉得发烫——原来站在镜头前的底气，也是这样一寸寸披挂上身的。
+    desc: 华裳时装屋是星桥街最挑剔的一家买手店，从日常通勤到红毯战袍应有尽有。镜前多站一会儿，你便更懂得镜头想要什么。往西北可回商业街。
+    items:
+      - { id: galadress, name: 一袭高定礼服, icon: "", price: 260, desc: 挂在 C 位的高定礼服，剪裁利落、缎面流光。披上它出席晚宴，气场先赢三分——攒够身价的人才敢下手。 }
+      - { id: styleboard, name: 当季搭配灵感墙, icon: "", desc: 贴满剪报与色卡的灵感墙，写着这一季的流行公式。免费翻看，权当练眼光。 }
+    activities:
+      - { id: fittry, name: 试搭一身行头, icon: "", energy: -6, stress: -4, stat: yitai, statDelta: 4, desc: 在落地镜前一件件试搭，找最衬自己的版型与配色，把镜头感穿在身上。, msg: 你在镜前试搭了大半天，对自己的版型和气场更有数了（仪态 +4、压力 -4、行动力 -6）。 }
+      - { id: studystyle, name: 研读灵感墙, icon: "", energy: -5, stat: caizhi, statDelta: 3, desc: 对着灵感墙拆解当季流行的配色与廓形，把审美一点点补上来。, msg: 你把灵感墙的当季公式抄记了一遍，审美与品味长进不少（才智 +3、行动力 -5）。 }
+  bookstore:
+    exits: { se: street }
+    tint: ink
+    hours: 09:00–22:00
+    intro: 墨痕书店的木门一推，纸张与油墨的旧气味扑面而来。窄窄的过道两侧顶到天花板的书架，把街市的喧嚣挡在了门外。你忽然想，成名的路太吵，偶尔钻进这样一格安静，也是给自己续命。
+    desc: 墨痕书店藏在星桥商业街的西北角，一排排旧书架从地面顶到天花板，空气里浮着纸香。表演、声乐、传记，想补哪一课，这里大抵都找得到。往东南可回商业街。
+    items:
+      - { id: actingbook, name: 表演理论教材, icon: "", price: 120, desc: 一本被翻得起了毛边的表演理论教材，扉页有前主人密密麻麻的批注。买回家慢慢啃，才智会一点点涨上来。 }
+      - { id: shelfnote, name: 书店留言墙, icon: "", desc: 收银台旁贴满便签的留言墙，写着淘书人的心事与暗号。免费翻看，权当歇脚。 }
+    activities:
+      - { id: browsebooks, name: 蹭读半本传记, icon: "", energy: -6, stress: -6, stat: caizhi, statDelta: 3, desc: 靠在书架间站着读半本明星传记，别人的浮沉里也藏着给自己的答案。, msg: 你在书架间蹭读了半本传记，心里那点浮躁沉淀了下来（才智 +3、压力 -6、行动力 -6）。 }
+      - { id: pennote, name: 在留言墙写句话, icon: "", energy: -3, stress: -5, stat: zixin, statDelta: 2, desc: 撕张便签，写下此刻不敢对人说的心事，贴上那面墙。, msg: 你在留言墙上贴了张便签，把憋着的话交给了陌生人，轻松了一点（自信 +2、压力 -5、行动力 -3）。 }
+  cafe:
+    exits: { w: street, s: yuntai }
+    tint: coral
+    hours: 10:00–23:00
+    intro: 推开白栀咖啡馆的玻璃门，风铃轻响。靠窗那桌坐着几个眼熟的圈内人，压低声音谈着什么——你第一次嗅到，很多机会不是在片场谈成的，而是在这样一杯咖啡的功夫里。
+    desc: 白栀咖啡馆里飘着现磨的焦香，靠窗的位置最适合谈事情，也最适合发呆。往南走两条街就是云台传媒城。
+    items:
+      - { id: gossippaper, name: 一份娱乐周报, icon: "", desc: 摊在桌上的当期娱乐周报，头版是排行榜与绯闻。逐字读下去，能摸清这座城此刻在追捧谁。 }
+    activities:
+      - { id: pourover, name: 点一杯手冲, icon: "", energy: 8, stress: -10, money: -35, desc: 靠窗坐下，要一杯现磨手冲，看焦糖色慢慢晕开。这半小时只属于自己。, msg: 你在窗边慢慢喝完一杯手冲，紧绷的神经彻底松了（压力 -10、行动力 +8、¥-35）。 }
+      - { id: eavesdrop, name: 旁听圈内闲谈, icon: "", energy: -5, stress: 2, stat: koucai, statDelta: 3, desc: 竖起耳朵听邻桌圈内人聊行情——很多门道不在片场，在这样一杯咖啡的功夫里。, msg: 你留神听了会儿邻桌的圈内闲谈，学了几句场面话与门道（口才 +3、压力 +2、行动力 -5）。 }
+  gym:
+    exits: { e: street, s: dieyin, n: fours }
+    tint: jade
+    hours: 06:00–23:00
+    intro: 星栖练习馆的镜墙第一次把你整个人照了进去——发梢、站姿、连眼神里的怯意都无所遁形。把杆冰凉，地垫上还留着上一拨人的汗味。你深吸一口气：想被看见，得先熬得过这面镜子。
+    desc: 星栖练习馆的镜墙映出一排排身影，把杆与地垫一尘不染。汗水与决心在这里发酵。往南是迭音音乐工坊。
+    activities:
+      - { id: stretch, name: 拉伸热身, icon: "", energy: -6, stress: -4, stat: tineng, statDelta: 3, desc: 趁没人占把杆，认真做一套拉伸热身，把僵住的身子唤醒。, msg: 你独自做完一套拉伸热身，身子松开了，也更耐练了（体能 +3、压力 -4、行动力 -6）。 }
+      - { id: mirrorpose, name: 对镜练台风, icon: "", energy: -8, stat: yitai, statDelta: 4, desc: 一个人站在镜墙前，反复琢磨站姿、眼神与转身的角度。, msg: 你对着镜墙磨了半天台风，站姿和眼神都稳了不少（仪态 +4、行动力 -8）。 }
+  fours:
+    exits: { s: gym }
+    tint: gold
+    hours: 09:00–20:00
+    intro: 星辉 4S 汽车城的落地玻璃亮得晃眼，一排排新车在射灯下泛着漆光。销售顾问迎上来递水递名片——你摸了摸口袋，忽然意识到：有辆自己的车，就再不必赶末班地铁、也不必在雨里等车了。
+    desc: 星辉 4S 汽车城，展厅锃亮的新车与洽谈区的真皮沙发。想买车、置换或把旧车卖个残值，都在这儿谈。往南回星栖练习馆。
+  agency:
+    exits: { n: street, e: fuguang, w: cancan, s: theater }
+    tint: ink
+    hours: 周一至周五 09:00–19:00
+    openDays: [1, 2, 3, 4, 5]
+    intro: 启星事务所的旋转门第一次为你转动。前台抬眼打量了你一秒，公告栏上密密麻麻的通告条子在灯下泛白。你摸了摸口袋里的新人工牌——从这一刻起，你不再只是个做梦的女孩。
+    desc: 启星事务所的前台永远亮着灯，公告栏上贴满了新人的通告与试镜条子。东边通往浮光影视基地，西边是璀璨广告中心。
+    items:
+      - { id: bulletinboard, name: 通告公告栏, icon: "", desc: 钉满彩色便签的公告栏，写着各家剧组、品牌、节目的招募条子。真正的机会得去对应公司当面找负责人谈。 }
+      - { id: newbiebadge, name: 新人工牌, icon: "", desc: 启星发给你的新人工牌，塑封还带着毛边。挂上它，才算真正踏进了这个圈子。 }
+    activities:
+      - { id: readboard, name: 抄录通告条子, icon: "", energy: -5, stat: caizhi, statDelta: 3, desc: 站在公告栏前把新贴的招募条子一条条抄进本子，摸清行情该往哪儿使劲。, msg: 你把公告栏上新贴的条子抄了满满一页，行情心里有了数（才智 +3、行动力 -5）。 }
+      - { id: frontdeskchat, name: 和前台唠两句, icon: "", energy: -4, stress: -5, stat: koucai, statDelta: 2, desc: 赖在前台边上跟老员工套近乎，八卦里往往藏着最新的风声。, msg: 你和前台老员工唠了两句，套出些圈里的新风声（口才 +2、压力 -5、行动力 -4）。 }
+  redcarpet:
+    exits: { sw: street, e: lounge }
+    tint: coral
+    hours: 晚宴时段（受邀开放）
+    access:
+      note: 红毯会客厅只在名流晚宴时敞开——门口的迎宾扫了你一眼，你的口碑还不足以受邀入内。
+      requires:
+        - { metric: reputation, op: gte, value: 40, hint: 口碑≥40 方能受邀 }
+    intro: 第一次踏上红毯会客厅的酒红长毯，水晶灯晃得你有些眩。四下的寒暄声、碰杯声里，每一句「久仰」背后都压着看不见的筹码。你站在门口，忽然懂了：这里不是终点，是另一场更凶险的开始。
+    desc: 红毯会客厅铺着酒红长毯，水晶灯下觥筹交错，每一次寒暄背后都是资源的暗流。往西南可回商业街。
+    activities:
+      - { id: mingle, name: 端着酒杯周旋, icon: "", energy: -8, stress: 4, fame: 3, stat: koucai, statDelta: 3, desc: 端一杯香槟在人群里穿梭，一句"久仰"接一句"改天约"，社交场就是没有硝烟的战场。, msg: 你端着酒杯在名流间周旋了一晚，脸熟攒了、话术也练了，只是身心俱疲（口才 +3、名气 +3、压力 +4、行动力 -8）。 }
+  fuguang:
+    exits: { w: agency, n: yuntai }
+    tint: plum
+    hours: 08:00–22:00（拍摄日程为准）
+    intro: 浮光影视基地的大棚一座连一座，轨道车在黑暗里滑过，一束追光突然打亮了远处的实景街道。你站在片场边缘，看着灯组、场记、群演各就各位——原来一部戏是被这么多双手一寸寸搭起来的。
+    desc: 浮光影视基地的摄影棚一座连着一座，轨道与灯架间藏着无数个成名的梦。西邻事务所，往北可达云台传媒城。
+    items:
+      - { id: scriptbag, name: 剧本资料袋, icon: "", desc: 摊在选角桌上的牛皮纸资料袋，里头是待定角色的分场剧本与人物小传。想接戏，得先找制片方把这些细节问清楚。, linksProjects: true }
+      - { id: extrapass, name: 临时演员证, icon: "", desc: 群演进出片场的临时通行证。攥着它，你能在棚里多站一会儿，看看真正的剧组怎么运转。 }
+    activities:
+      - { id: watchblocking, name: 蹲片场看走位, icon: "", energy: -8, stat: yanji, statDelta: 4, desc: 缩在棚边看主演一遍遍走位、对词，导演怎么调、光怎么打，全记进心里。, msg: 你蹲在片场看了整场走位，偷师了不少表演的门道（演技 +4、行动力 -8）。 }
+      - { id: readlines, name: 对着空棚念台词, icon: "", energy: -6, stress: 2, stat: koucai, statDelta: 3, desc: 趁收工没人，站在空棚里放开嗓子念一段独白，找镜头前的分寸。, msg: 你在空棚里反复念了段独白，台词的分寸拿捏得更稳了（口才 +3、压力 +2、行动力 -6）。 }
+  cancan:
+    exits: { e: agency, n: dieyin }
+    tint: gold
+    hours: 周一至周六 09:00–20:00
+    openDays: [1, 2, 3, 4, 5, 6]
+    intro: 璀璨广告中心的样片墙第一次在你面前亮起，一整面墙的品牌大片流光溢彩。你看着那些被精修到毫无瑕疵的脸，心里泛起一阵微妙的凉意——在这里，容貌和商业价值被明码标价。
+    desc: 璀璨广告中心的样片墙流光溢彩，品牌方的目光比闪光灯更挑剔。东接事务所，北面是迭音音乐工坊。
+    items:
+      - { id: lookbook, name: 品牌样片册, icon: "", desc: 印刷精美的样片册，翻开是各大品牌的当季主视觉。想被选中，容貌与商业价值一样都不能少。 }
+    activities:
+      - { id: studylookbook, name: 研读样片册, icon: "", energy: -6, stat: yitai, statDelta: 3, desc: 一页页拆解品牌大片的姿态、光影与情绪，揣摩镜头到底想要什么。, msg: 你把样片册研读了一遍，对镜头前的姿态更有感觉了（仪态 +3、行动力 -6）。 }
+      - { id: trymakeup, name: 试妆造体验, icon: "", energy: -8, money: -50, stat: zixin, statDelta: 3, desc: 央化妆间的师傅给你上个当季妆造，第一次看清"被精修"的自己。, msg: 你体验了一次专业妆造，镜子里的自己让你多了几分底气（自信 +3、行动力 -8、¥-50）。 }
+  yuntai:
+    exits: { n: cafe, s: fuguang }
+    tint: coral
+    hours: 录制日程为准
+    intro: 云台传媒城的演播厅第一次向你敞开，录制红灯高悬，观众席的欢呼被隔音门闷成一片嗡响。你站在侧台，看着主持人在镜头前收放自如——综艺是能把素人一夜捧红的舞台，也是会把每句失言无限放大的照妖镜。
+    desc: 云台传媒城的演播厅红灯常亮，综艺的欢呼与采访的机锋在此交汇。北回咖啡馆，南抵浮光影视基地。
+    items:
+      - { id: cuecard, name: 节目提词板, icon: "", desc: 主持台边的提词板，写满流程与串场词。综艺是把双刃剑——镜头感能捧红你，也能放大每一次失言。 }
+    activities:
+      - { id: watchtaping, name: 旁听一场录制, icon: "", energy: -8, fame: 2, stat: donggan, statDelta: 3, desc: 挤在观众席看整场综艺录制，学主持怎么救场、嘉宾怎么抢镜头。, msg: 你旁听了一整场录制，镜头感和临场反应都长了本事（动感 +3、名气 +2、行动力 -8）。 }
+      - { id: mockhost, name: 对着镜头练串场, icon: "", energy: -6, stress: 2, stat: koucai, statDelta: 3, desc: 借空档站上主持位，照着提词板练几遍串场，找综艺感。, msg: 你照着提词板练了几遍串场，口条顺了不少（口才 +3、压力 +2、行动力 -6）。 }
+  dieyin:
+    exits: { n: gym, s: cancan }
+    tint: plum
+    hours: 10:00–次日02:00
+    intro: 迭音音乐工坊的隔音门在身后合上，城市的喧嚣被一口吞掉，只剩混音台指示灯明明灭灭。空气里浮着旋律的碎片。你第一次明白，有些东西不靠曝光和排名，只靠一副能把人唱哭的好嗓子。
+    desc: 迭音音乐工坊里混音台的推子微微发亮，隔音棉吞掉了城市的喧嚣，只剩旋律。北通练习馆，南接广告中心。
+    items:
+      - { id: demotape, name: 一盘样带, icon: "", desc: 贴着手写标签的试唱样带。带子里是某个还没成型的旋律，等一把对的嗓音把它唱活。 }
+    activities:
+      - { id: vocalwarmup, name: 跟唱练声, icon: "", energy: -8, stress: -3, stat: geyi, statDelta: 4, desc: 戴上耳机跟着伴奏一句句抠音准与气息，隔音棉吞掉了所有走音的尴尬。, msg: 你在隔音棚里认真练了半晌声，气息和音准都稳了些（歌艺 +4、压力 -3、行动力 -8）。 }
+      - { id: writemelody, name: 哼一段旋律, icon: "", energy: -6, stat: caizhi, statDelta: 3, desc: 抱着吉他或对着混音台，把脑子里飘着的旋律碎片哼出来、记下来。, msg: 你把脑海里的旋律碎片哼着记了下来，灵感落了地（才智 +3、行动力 -6）。 }
+  academy:
+    exits: { ne: street, s: airport }
+    tint: jade
+    hours: 08:00–22:00
+    intro: 京都电影学院的梧桐道还是老样子，教学楼的琴声与台词声隔着窗漫出来。你在这里熬过无数个通宵，如今再回来，身份已经不同——你是要真正走进这个圈子的人了。
+    desc: 京都电影学院的红砖楼掩在梧桐荫里，表演系的排练厅昼夜灯火通明。这是你科班出身的起点，恩师与同窗都在此处。东北回星桥商业街，往南可去京畿国际机场。
+    items:
+      - { id: gradphoto, name: 毕业合影, icon: "", desc: 挂在系馆走廊的毕业合影，你站在第二排边上，笑得有点拘谨。那时谁也不知道，谁能真正走出去。 }
+    activities:
+      - { id: auditclass, name: 回母校旁听, icon: "", energy: -6, stress: -4, stat: caizhi, statDelta: 3, desc: 溜进熟悉的排练厅蹭一节表演课，看学弟学妹排戏，也把自己荒疏的基本功捡回来。, msg: 你回母校蹭了一节表演课，久违的踏实感回来了（才智 +3、压力 -4、行动力 -6）。 }
+      - { id: visitmentor, name: 探望恩师, icon: "", energy: -5, stress: -6, stat: yanji, statDelta: 3, desc: 提两盒点心去系办公室看当年的老师，听一句"戏比天大"的叮嘱，心里就定了。, msg: 你去看了当年的恩师，一席话让你对表演又多了几分敬畏（演技 +3、压力 -6、行动力 -5）。 }
+  airport:
+    exits: { n: academy }
+    tint: gold
+    hours: 全天
+    intro: 京畿国际机场的候机大厅高旷明亮，广播一遍遍念着起飞的城市。拖着行李箱站在这里，你第一次真切感到——这座城之外，还有更大的舞台在等你去闯。
+    desc: 京畿国际机场的落地窗外停机坪一望无际，出发大厅里行色匆匆。外地拍摄、跨城通告与国际活动都从这里启程。往北可回京都电影学院。
+    items:
+      - { id: boardingpass, name: 一张登机牌, icon: "", desc: 攥在手心的登机牌，目的地一栏还空着。它提醒你，机会往往在别处，敢不敢飞是另一回事。 }
+    activities:
+      - { id: loungerest, name: 候机厅小憩, icon: "", energy: 6, stress: -8, desc: 找个安静的角落坐下，看飞机一架架起落，让连轴转的神经彻底松一松。, msg: 你在候机厅角落歇了一会儿，看着飞机起落，紧绷的心事淡了些（压力 -8、行动力 +6）。 }
+      - { id: peoplewatch, name: 观察南来北往, icon: "", energy: -4, stat: caizhi, statDelta: 2, desc: 靠在栏杆边看南来北往的旅人，各色人生匆匆而过，都是揣摩角色的鲜活素材。, msg: 你在出发大厅看了半天南来北往的人，攒下不少揣摩角色的素材（才智 +2、行动力 -4）。 }
+  beauty:
+    exits: { s: wardrobe }
+    tint: coral
+    hours: 10:00–22:00（预约制）
+    access:
+      note: 昭华形象管理中心只接待有名气的客人——前台礼貌地表示，你的名气还不够预约。
+      requires:
+        - { metric: fame, op: gte, value: 50, hint: 名气≥50 方能预约 }
+    intro: 昭华形象管理中心的走廊铺着米白地毯，空气里是清冷的精油香。玻璃门后，一张张被光线打磨得近乎无瑕的脸从护理床上起身。你忽然懂了：在这一行，容貌也是一门要持续投入的功课。
+    desc: 昭华形象管理中心安静得像另一个世界，医美与皮肤管理在这里被做成了精密的流水线。舍得砸时间与钱，镜头里的自己便更经得起放大。往南可回华裳时装屋。
+    items:
+      - { id: skincard, name: 一张护理会员卡, icon: "", desc: 烫金的会员卡，背面印着长长的项目单。这行的脸面，是用一次次预约堆出来的。 }
+    activities:
+      - { id: skincare, name: 做一次深层护理, icon: "", energy: -4, stress: -6, money: -300, stat: yitai, statDelta: 5, desc: 躺上护理床交给专业师傅，从皮肤到轮廓一处处打理，起身时连气色都不一样了。, msg: 你做了一次深层护理，气色与状态肉眼可见地提亮（仪态 +5、压力 -6、行动力 -4、¥-300）。 }
+      - { id: consultimg, name: 咨询形象方案, icon: "", energy: -5, stat: caizhi, statDelta: 3, desc: 和形象顾问坐下来聊风格定位与镜头适配，把"该长成什么样"想明白。, msg: 你和形象顾问细聊了一轮定位，对镜头里的自己更有规划了（才智 +3、行动力 -5）。 }
+  theater:
+    exits: { n: agency }
+    tint: plum
+    hours: 演出日程为准
+    access:
+      note: 星光剧场的场务翻了翻档期——还没作品傍身的新人，暂时排不上见面会的场子。
+      requires:
+        - { metric: works, op: gte, value: 1, hint: 需至少 1 部作品 }
+    intro: 星光剧场的后台第一次为你亮灯，幕布外隐约传来粉丝此起彼伏的呼喊。你攥紧手心站在侧台，忽然意识到——那些名字被喊出口的人，才算真正被这座城记住了。
+    desc: 星光剧场的红丝绒座椅层层向上，舞台追光已经就位。粉丝见面会与小型演出在此举办，是把作品热度换成真实拥趸的地方。往北可回启星事务所。
+    items:
+      - { id: fanboard, name: 粉丝应援板, icon: "", desc: 堆在后台的荧光应援板，写满了粉丝手写的名字与告白。它们提醒你，名气不是数字，是一张张具体的脸。 }
+    activities:
+      - { id: soundcheck, name: 走台彩排, icon: "", energy: -8, stress: 2, stat: donggan, statDelta: 4, desc: 趁开场前在空场里走一遍台、对一遍灯光与走位，把舞台的分寸吃进身体。, msg: 你把舞台从头到尾走了一遍彩排，台风和节奏都更稳了（动感 +4、压力 +2、行动力 -8）。 }
+      - { id: greetfans, name: 与到场粉丝寒暄, icon: "", energy: -6, fame: 5, stress: -4, stat: koucai, statDelta: 2, desc: 走到台前和早到的粉丝聊几句、签几张海报，真诚的互动比通稿更留得住人。, msg: 你和到场的粉丝真诚地聊了会儿、签了海报，口碑与人气都攒了一点（名气 +5、口才 +2、压力 -4、行动力 -6）。 }
+  lounge:
+    exits: { w: redcarpet }
+    tint: gold
+    hours: 夜场（引荐制）
+    access:
+      note: 云顶私人会所的门童只认熟脸与请柬——你的名气与口碑还不足以被引荐入内。
+      requires:
+        - { metric: fame, op: gte, value: 120, hint: 名气≥120 }
+        - { metric: reputation, op: gte, value: 60, hint: 口碑≥60 }
+    intro: 云顶私人会所的电梯直上顶层，门一开，整座星城的夜景铺在脚下。这里没有闪光灯，只有压低的谈笑与不动声色的掂量——你第一次踏进真正决定资源流向的房间。
+    desc: 云顶私人会所隐在城市顶端，落地窗外是万家灯火。这里谈的从不是通告，而是通告背后的人与钱。分寸拿捏得好，一夜之间的机遇抵过半年奔波。往西可回红毯会客厅。
+    items:
+      - { id: invitecard, name: 一张烫金请柬, icon: "", desc: 没有署名的烫金请柬，只印着时间与楼层。能收到它，本身就是一种身价的证明。 }
+    activities:
+      - { id: dealtalk, name: 加入一桌资本局, icon: "", energy: -8, stress: 5, stat: koucai, statDelta: 4, desc: 在低声谈笑的牌桌边坐下，听懂弦外之音、接住每一句试探，人脉与资源都在这几杯酒里流转。, msg: 你在资本局里周旋了一晚，听懂了不少弦外之音，也被人记住了脸（口才 +4、压力 +5、行动力 -8）。 }
+      - { id: nightview, name: 独自凭窗看夜景, icon: "", energy: 4, stress: -10, stat: zixin, statDelta: 2, desc: 避开人群走到落地窗边，把整座城的灯火看进眼里，也把野心与倦意一起理一理。, msg: 你独自凭窗看了很久夜景，野心与疲惫都沉淀了下来（自信 +2、压力 -10、行动力 +4）。 }
+
+# —— 人物 (mob)：履历 + 据点/轨迹 + 通告资源 + 结识门槛 ——
+# kind: staff=常驻岗位不走动、随时可谈；roam=有活动轨迹、需满足 requires 才可谈
+# requires: [{ metric, op(gte|lte), value, hint }]；空数组=无门槛
+# offers: 掌管的通告类别（找 TA 当面打听才能拿到）
+# intel: 该人物「只知道自己相关」的可打听情报——须先结识方可打听，一次性解锁。
+#   [{ id(全局唯一), topic(打听话题), text(得到的消息), requires?(更深的话题另设门槛) }]
+people:
+  - id: linyi
+    name: 林宜
+    role: 你的经纪人
+    relation: 一手带你的金牌经纪人
+    gender: 女
+    age: 38
+    tags: [经纪人, 毒舌心软]
+    kind: staff
+    home: agency
+    roam: [agency]
+    bio: 启星事务所元老经纪人，一手带过三届新人。嘴上毒舌，心里却把你的通告排得比自己的头发还密。启星事务所隶属谢家的启星娱乐，她也算半只脚踏在这艘大船上。
+    family:
+      parents: [{ name: 林国栋, note: 父亲 · 退休中学教师 }, { name: 赵秀云, note: 母亲 · 退休会计 }]
+    resume:
+      - { year: 1994, type: 入行, title: 入行启星, detail: 从前台助理做起，一头扎进这家老牌事务所。 }
+      - { year: 2001, type: 荣誉, title: 带出当红新人, detail: 一手带的新人一炮而红，坐稳金牌经纪的位子。 }
+    intel:
+      - { id: linyi_ladder, topic: 新人怎么起步, text: "「记住喽，新人别挑食。广告攒脸熟、综艺攒镜头感、小配角攒作品——先让人认得你这张脸，才轮得到你挑本子。真正的好资源，得你自己登门去各家公司找负责人谈，公告栏上贴的都是别人挑剩的。」" }
+      - { id: linyi_where, topic: 各路人都在哪, text: "「找戏去东边浮光，找代言往西边璀璨，综艺北边云台，出唱片南边迭音——别在前台干等。想见的人不在，就换个点、换个钟头再来。」" }
+    presentHint: 常驻前台，随时可交谈
+    offers: { cats: [ad, tv, record, variety], maxStar: 2, label: 新人基础资源 }
+    requires: []
+  - id: coach
+    name: 训练导师
+    role: 星栖金牌教练
+    relation: 严格的训练导师
+    gender: 女
+    age: 41
+    tags: [教练, 严格]
+    kind: staff
+    home: gym
+    roam: [gym]
+    bio: 退役舞者出身，练习馆里那面镜墙前一站就是十五年。信奉「台上一分钟」，对偷懒零容忍。
+    family:
+      parents: [{ name: 郑卫东, note: 父亲 · 机械厂老技工 }, { name: 孙丽华, note: 母亲 · 居委会退休干事 }]
+    resume:
+      - { year: 1988, type: 入行, title: 舞团首席, detail: 曾是省歌舞团的当家首席，一支独舞技惊四座。 }
+      - { year: 1996, type: 变故, title: 伤退幕后, detail: 一次舞台重伤断了演出生涯，转身做起培养新人的教练。 }
+      - { year: 2003, type: 荣誉, title: 桃李成名, detail: 带出的学员接连出道成名，星栖的金牌教练之名不胫而走。 }
+    intel:
+      - { id: coach_train, topic: 怎么练最有效, text: "「基本功没有捷径。仪态、台风得每天磨，练一分是一分，都记在你身子里，谁也偷不走。别指望临阵抱佛脚——镜头比谁都诚实。」" }
+      - { id: coach_rest, topic: 状态怎么调, text: "「练废了比不练还糟。累到眼神发直就歇，压力顶到嗓子眼就停——这行拼的是两年,不是两天。」" }
+    presentHint: 常驻练习馆，随时可指导
+    requires: []
+  - id: fangzhiyuan
+    name: 方知远
+    role: 浮光选角导演
+    relation: 递戏的伯乐
+    gender: 男
+    age: 45
+    tags: [选角导演, 影视]
+    kind: staff
+    home: fuguang
+    roam: [fuguang]
+    bio: 拍过两部年度爆款剧的选角导演，眼光毒辣。一句「这孩子有戏」能改写一个新人的命运。
+    family:
+      parents: [{ name: 方广济, note: 父亲 · 老电影放映员 }, { name: 周敏, note: 母亲 · 剧院售票员 }]
+    credits:
+      - { title: 长街灯火, role: 选角导演, genre: 年代剧集, year: 2003, synopsis: 战乱年代一条老街上三户人家二十年的悲欢离合，一部追到深夜的年度爆款，也是他一手为新人铺路的成名作。, lead: { name: 沈曼, id: shenman }, costars: [{ name: 陆曜, id: luyao }] }
+      - { title: 少年游, role: 选角导演, genre: 青春剧集, year: 2004, synopsis: 一群艺校少年在天台上追梦的青春群像，他从上千试镜者里挑出了如今的几张顶流面孔。, lead: { name: 陆曜, id: luyao } }
+    resume:
+      - { year: 1998, type: 入行, title: 转行选角, detail: 从片场场记转做选角，练就一双识人的眼。 }
+      - { year: 2003, type: 作品, title: 年度爆款剧, detail: 参与选角的剧集成为年度爆款，声名鹊起。 }
+    intel:
+      - { id: fang_cast, topic: 选角看什么, text: "「我选人不看名气，看眼里有没有戏。同一个角色能来试的一堆，最后留下的都是把人物小传吃透了的。想接我的戏，先把演技磨上去，再来找我谈。」" }
+      - { id: fang_role, topic: 角色是怎么定的, text: "「本子上写的角色只是起点。谁准备得足、跟组信得过，主角配角随时能换——差一档的备选，我从来都留着。」", requires: [{ metric: stats.yanji, op: gte, value: 120, hint: 演技≥120他才肯细说 }] }
+    presentHint: 常驻片场，随时可交谈
+    offers: { cats: [tv], label: 剧集角色 }
+    requires: []
+  - id: xuyanqing
+    name: 许砚清
+    role: 浮光电影制片
+    relation: 手握电影本子的老制片
+    gender: 男
+    age: 52
+    tags: [制片, 电影]
+    kind: staff
+    home: fuguang
+    roam: [fuguang]
+    bio: 在片场熬了二十年的老制片，剧本翻得比谁都烂。手里攥着最难拿、也最长脸的电影本子。
+    family:
+      parents: [{ name: 许敬亭, note: 父亲 · 片场老场工 }, { name: 何巧珍, note: 母亲 · 戏服裁缝 }]
+    credits:
+      - { title: 一江烟雨, role: 监制, genre: 文艺电影, year: 2004, synopsis: 江南水乡一对恋人跨越二十年的错过与重逢，入围金奖的年度文艺片，也是他压箱底的骄傲。, lead: { name: 沈曼, id: shenman }, costars: [{ name: 傅承霖, note: 已息影影帝 }] }
+      - { title: 旧岁纪, role: 制片, genre: 历史电影, year: 1996, synopsis: 他独立操盘的第一部电影，小众却在影展捧回奖杯，主演如今早已息影归隐。, lead: { name: 傅承霖, note: 已息影影帝 } }
+    resume:
+      - { year: 1985, type: 入行, title: 场务出身, detail: 从片场扛器材的场务做起，一步步摸清一部电影的每根骨头。 }
+      - { year: 1996, type: 作品, title: 首挑大梁, detail: 独立操盘第一部文艺片，虽小众却在影展拿了奖。 }
+      - { year: 2004, type: 荣誉, title: 金奖提名, detail: 监制的电影入围金奖，坐稳老牌制片之名。 }
+    intel:
+      - { id: xu_film, topic: 电影和电视剧的区别, text: "「电视剧攒人气,电影攒身价。一部好电影能让人记你一辈子,但门槛也高——没点真本事和口碑,本子递到你手上你也接不住。」" }
+    presentHint: 常驻片场，随时可交谈
+    offers: { cats: [film], label: 电影本子 }
+    requires: []
+  - id: mengwanqiao
+    name: 孟晚乔
+    role: 璀璨品牌总监
+    relation: 商务负责人
+    gender: 女
+    age: 36
+    tags: [广告, 商务]
+    kind: staff
+    home: cancan
+    roam: [cancan]
+    bio: 从柜姐做到品牌总监的狠角色，样片墙前的目光比闪光灯更挑。认脸、更认商业价值。
+    family:
+      parents: [{ name: 孟繁礼, note: 父亲 · 供销社主任 }, { name: 蒋玉琴, note: 母亲 · 百货售货员 }]
+    credits:
+      - { title: 璀璨秋冬大秀, role: 商务操盘, genre: 品牌代言, year: 2004, synopsis: 她为高端珠宝操盘的年度大秀，一夜之间把代言人的商业身价抬到新高。, lead: { name: 陆曜, id: luyao } }
+    resume:
+      - { year: 1997, type: 入行, title: 从专柜起步, detail: 从商场专柜导购做起，摸透了品牌的脾气。 }
+      - { year: 2004, type: 荣誉, title: 升任品牌总监, detail: 手握多个品牌的代言决策权。 }
+    intel:
+      - { id: meng_brand, topic: 品牌看新人看什么, text: "「广告是最快让全城认得你的路子,可品牌方也最挑——仪态、镜头前的分寸,差一点都不行。脸是敲门砖,但砸了口碑,牌子跑得比谁都快。」" }
+    presentHint: 常驻样片墙，随时可交谈
+    offers: { cats: [ad], label: 广告代言 }
+    requires: []
+  - id: qinyanzhou
+    name: 秦砚舟
+    role: 云台综艺制作人
+    relation: 节目组负责人
+    gender: 男
+    age: 40
+    tags: [综艺, 制作人]
+    kind: staff
+    home: yuntai
+    roam: [yuntai]
+    bio: 综艺鬼才制作人，最擅长在剪辑里把素人捧成话题。镜头感是他给新人的第一堂课。
+    family:
+      parents: [{ name: 秦振邦, note: 父亲 · 电视台老编导 }, { name: 邵兰, note: 母亲 · 话剧演员 }]
+    credits:
+      - { title: 星动全城, role: 制作人, genre: 选秀综艺, year: 2004, synopsis: 一档全民票选新星的选秀节目，意外成了收视黑马，也是许多素人一夜成名的起点。, lead: { name: 苏晴, id: suqing } }
+    resume:
+      - { year: 2000, type: 入行, title: 入行电视台, detail: 从综艺编导做起，熬过无数个通宵机房。 }
+      - { year: 2004, type: 作品, title: 打造收视黑马, detail: 制作的综艺意外成为收视黑马。 }
+    intel:
+      - { id: qin_variety, topic: 综艺怎么出彩, text: "「综艺捧人也毁人。反应快、敢真性情的,一期就能红;可剪辑是把刀,一句话失言,能让你黑粉翻着倍涨。想上我的节目,先练出临场那股机灵劲。」" }
+    presentHint: 常驻演播厅，随时可交谈
+    offers: { cats: [variety], label: 综艺邀约 }
+    requires: []
+  - id: lianghuaiyin
+    name: 梁怀音
+    role: 迭音金牌制作人
+    relation: 音乐资源方
+    gender: 男
+    age: 43
+    tags: [厂牌, 音乐]
+    kind: staff
+    home: dieyin
+    roam: [dieyin]
+    bio: 写过无数金曲的幕后之王，混音台前寡言。只要你唱得动人，他愿意为你熬通宵。
+    family:
+      parents: [{ name: 梁书亭, note: 父亲 · 交响乐团指挥 }, { name: 杜若, note: 母亲 · 钢琴教师 }]
+    credits:
+      - { title: 夜色手记, role: 制作人, genre: 唱片, year: 2003, synopsis: 一张写给城市夜归人的创作专辑，他把一个清冷的声音打磨成了年度金曲。, lead: { name: 林知夏, id: linzhixia } }
+      - { title: 千灯之城, role: 音乐制作人, genre: 影视原声, year: 2004, synopsis: 为国民天王量身打造的电影主题曲，传唱一时，也让他坐稳金牌之名。, lead: { name: 顾沉, id: guchen } }
+    resume:
+      - { year: 1995, type: 入行, title: 创立迭音, detail: 组建独立厂牌，专注挖掘打动人心的声音。 }
+      - { year: 2002, type: 荣誉, title: 年度金曲, detail: 一手制作的单曲拿下年度金曲。 }
+    intel:
+      - { id: liang_record, topic: 出唱片的门道, text: "「唱片不骗人。企划、宣发能帮一把,可最后留在人心里的,是那副嗓子。歌艺不到位,再大的排面也只是热闹一阵。想让我为你熬通宵,先唱到我抬头。」" }
+    presentHint: 常驻录音棚，随时可交谈
+    offers: { cats: [record], label: 唱片企划 }
+    requires: []
+  - id: suqing
+    name: 苏晴
+    role: 元气小花
+    relation: 同期挚友
+    gender: 女
+    age: 20
+    tags: [闺蜜, 直率]
+    kind: roam
+    home: cafe
+    roam: [cafe, gym, street]
+    bio: 与你同期出道的元气女孩，笑起来有两颗虎牙。没什么心机，是这圈子里难得能交心的朋友。
+    family:
+      parents: [{ name: 苏建军, note: 父亲 · 汽修厂师傅 }, { name: 周桂芳, note: 母亲 · 小学老师 }]
+    works: [青柠有点甜, 夏日邮筒]
+    stats: { yanji: 180, geyi: 210, koucai: 160, yitai: 200, donggan: 230, tineng: 190, caizhi: 150, zixin: 170 }
+    credits:
+      - { title: 青柠有点甜, role: 主演, genre: 青春剧集, year: 2004, synopsis: 校园里酸酸甜甜的初恋故事，她几乎本色出演，靠两颗虎牙圈粉无数。, lead: { name: 苏晴, id: suqing }, costars: [{ name: 陆曜, id: luyao }] }
+      - { title: 夏日邮筒, role: 主演, genre: 电影, year: 2005, synopsis: 一个女孩守着老邮筒，等一封永远寄不到的信——她的第一部大银幕作品。, lead: { name: 苏晴, id: suqing } }
+    resume:
+      - { year: 1988, type: 出身, title: 生于南方小城, detail: 出生在一座湿漉漉的南方小城，普通人家的独女。 }
+      - { year: 2004, type: 入行, title: 进入启星, detail: 和你同期考进启星，成了朝夕相处的练习生。 }
+    intel:
+      - { id: suqing_self, topic: 你最近怎么样, text: "「我啊?昨天试镜又被刷了,哭鼻子的功夫都省了。」她挤挤眼,「不过没事,咱俩这种笨鸟,多飞几趟总能落到枝头上。你可别先我一步红了把我忘咯!」" }
+      - { id: suqing_tip, topic: 有没有内部消息, text: "「诶我就知道你要问这个!」她压低声音,「我也就知道跟自己有关的那点事——像我们这种新人,机会不会自己找上门,得勤快点各家公司跑腿脸熟。别的圈里大人物的事,我可打听不来,你得自己去问人家本人。」" }
+    requires:
+      - { metric: week, op: gte, value: 6, hint: 第6周后熟络 }
+  - id: linzhixia
+    name: 林知夏
+    role: 创作才女
+    relation: 合作过的创作才女
+    gender: 女
+    age: 24
+    tags: [创作, 才女]
+    kind: roam
+    home: dieyin
+    roam: [dieyin, cancan]
+    bio: 抱着吉他写歌的独立音乐人，清冷寡言。她的旋律里藏着整座城市的夜色，只认可懂音乐的人。
+    family:
+      parents: [{ name: 林越, note: 父亲 · 音乐学院教授 }, { name: 沈青禾, note: 母亲 · 民谣歌手 }]
+    works: [夜色手记, 未完成的副歌, 城南旧事·主题曲]
+    stats: { yanji: 150, geyi: 460, koucai: 200, yitai: 240, donggan: 260, tineng: 180, caizhi: 380, zixin: 250 }
+    credits:
+      - { title: 夜色手记, role: 词曲/主唱, genre: 唱片, year: 2003, synopsis: 写给城市夜归人的创作专辑，年度金曲，也是她与制作人梁怀音结缘之作。, lead: { name: 林知夏, id: linzhixia } }
+      - { title: 城南旧事·主题曲, role: 词曲/主唱, genre: 影视原声, year: 2004, synopsis: 为一部怀旧电影量身写的主题曲，传遍街头巷尾。, lead: { name: 林知夏, id: linzhixia } }
+    resume:
+      - { year: 1985, type: 出身, title: 自幼学琴, detail: 生在爱乐的家庭，很小就抱起了吉他。 }
+      - { year: 2002, type: 入行, title: 独立发歌, detail: 以创作歌手的身份低调出道，只写自己相信的歌。 }
+    intel:
+      - { id: linzhixia_self, topic: 你在写什么, text: "「一首没写完的歌,卡在副歌好几个礼拜了。」她拨了个和弦,「旋律得等一把对的嗓子才活得过来。你要是唱得动它,或许哪天,我把这半首给你。」" }
+    requires:
+      - { metric: stats.geyi, op: gte, value: 160, hint: 歌艺≥160 }
+  - id: luyao
+    name: 陆曜
+    role: 顶流同期
+    relation: 排行榜宿敌
+    gender: 男
+    age: 22
+    tags: [顶流, 宿敌]
+    kind: roam
+    home: yuntai
+    roam: [yuntai, redcarpet, cafe, street]
+    bio: 出道即顶流的天之骄子，排行榜上永远压你一头。看似高傲，却总在你以为放弃时出现在赛道对面。
+    works: [逆风少年, 光年之外, 顶峰对决]
+    stats: { yanji: 420, geyi: 480, koucai: 400, yitai: 520, donggan: 500, tineng: 460, caizhi: 380, zixin: 540 }
+    credits:
+      - { title: 逆风少年, role: 主演, genre: 体育剧集, year: 2004, synopsis: 一个被所有人看衰的少年一路逆风翻盘的热血故事，他出道即顶流的成名作。, lead: { name: 陆曜, id: luyao }, costars: [{ name: 苏晴, id: suqing }] }
+      - { title: 光年之外, role: 主演, genre: 科幻电影, year: 2005, synopsis: 星际航行中一段跨越光年的守望，他首次挑战大制作。, lead: { name: 陆曜, id: luyao } }
+      - { title: 顶峰对决, role: 主演, genre: 竞技电影, year: 2005, synopsis: 两个天才对手在赛场上的宿命对决，一时话题满城。, lead: { name: 陆曜, id: luyao }, costars: [{ name: 顾沉, id: guchen }] }
+    family:
+      parents: [{ name: 陆振声, note: 父亲 · 话剧演员 }, { name: 谢云汀, note: 母亲 · 谢家旁支 · 昔日当红花旦 }]
+      spouse: { name: 苏晴, id: suqing, note: 传闻绯闻 · 未证实 }
+    resume:
+      - { year: 1986, type: 出身, title: 童星出身, detail: 少年成名，很早便站上镜头前。 }
+      - { year: 2002, type: 入行, title: 练习生签约, detail: 被星探挖走，签进一线公司做重点培养的练习生。 }
+      - { year: 2004, type: 入行, title: 出道即顶流, detail: 一出道便登上排行榜前列，风头无两。 }
+      - { year: 2005, type: 情感, title: 绯闻缠身, detail: 与同期女艺人的绯闻被小报翻炒，本人始终不置一词。, hidden: true }
+    intel:
+      - { id: luyao_self, topic: 你怎么看排行榜, text: "「榜?」他嗤了一声,「我在上面待久了,早看腻了。倒是你——追得比我想的快。」他别过脸,「别得意,我可没打算让位。有本事,榜上见。」" }
+    requires:
+      - { metric: fame, op: gte, value: 150, hint: 需名气≥150方能平视 }
+  - id: shenman
+    name: 沈曼
+    role: 金奖影后
+    relation: 提携你的前辈
+    gender: 女
+    age: 38
+    tags: [影后, 前辈]
+    kind: roam
+    home: fuguang
+    roam: [fuguang, yuntai]
+    bio: 拿遍奖杯的影后前辈，眼神能看穿一场戏的真假。极少提携新人，除非她在你眼里看见当年的自己。
+    works: [长夜有灯, 春日迟迟, 一江烟雨, 旧年花事]
+    stats: { yanji: 720, geyi: 300, koucai: 560, yitai: 640, donggan: 340, tineng: 380, caizhi: 620, zixin: 660 }
+    credits:
+      - { title: 长夜有灯, role: 主演, genre: 文艺电影, year: 1999, synopsis: 一个女人在长夜里守着一盏灯等人归来，她凭此片首度封后。, lead: { name: 沈曼, id: shenman }, costars: [{ name: 傅承霖, note: 已息影影帝 }] }
+      - { title: 一江烟雨, role: 主演, genre: 文艺电影, year: 2004, synopsis: 江南水乡跨越二十年的重逢与错过，她二度问鼎影后。, lead: { name: 沈曼, id: shenman } }
+      - { title: 旧年花事, role: 主演, genre: 年代电影, year: 2003, synopsis: 大宅院里一位旧式女子隐忍的一生，她的转型之作。, lead: { name: 沈曼, id: shenman } }
+    family:
+      parents: [{ name: 沈砚秋, note: 父亲 · 京剧名角 }, { name: 白露, note: 母亲 · 青衣名伶 }]
+      spouse: { name: 陈铭远, note: 现任丈夫 · 幕后导演 }
+    resume:
+      - { year: 1978, type: 出身, title: 梨园世家, detail: 出身戏曲世家，幼承庭训，台上台下都是戏。 }
+      - { year: 1996, type: 入行, title: 龙套熬起, detail: 从没有台词的龙套演起，一场一场磨出真功夫。 }
+      - { year: 1999, type: 荣誉, title: 首度封后, detail: 凭一部文艺片首次捧回影后奖杯。 }
+      - { year: 2001, type: 情感, title: 下嫁导演, detail: 与合作多年的幕后导演陈铭远低调成婚。 }
+      - { year: 2003, type: 荣誉, title: 二度封后, detail: 再度斩获金奖，坐稳影后之名。 }
+    intel:
+      - { id: shenman_self, topic: 演戏的真谛, text: "「奖杯是别人给的,戏是自己交的。」她端着酒,目光却很静,「我这辈子只信一条——把角色当成一个真的人去活。你眼里若真有那团火,我自然看得见。」" }
+    requires:
+      - { metric: week, op: gte, value: 7, hint: 第7周后 }
+      - { metric: stats.yanji, op: gte, value: 240, hint: 演技≥240 }
+      - { metric: reputation, op: gte, value: 45, hint: 口碑≥45 }
+  - id: songshixu
+    name: 宋时序
+    role: 顶级金主
+    relation: 神秘金主
+    gender: 男
+    age: 33
+    tags: [资本, 危险]
+    kind: roam
+    home: cancan
+    roam: [cancan, agency]
+    bio: 翻手为云的资本新贵，投资眼光和危险气质一样出名。他的青睐是通天的资源，也是随时收网的赌局。母族出自慕容家，那点翻云覆雨的手腕，一半是天生，一半是家学。
+    family:
+      parents: [{ name: 宋敬堂, note: 父亲 · 实业家 }, { name: 慕容瑾, note: 母亲 · 慕容家嫡女 }]
+    resume:
+      - { year: 1980, type: 出身, title: 商贾之家, detail: 生于富商之家，从小在谈判桌边长大。 }
+      - { year: 2002, type: 入行, title: 进军娱乐, detail: 携资本大举进入娱乐产业，翻手为云。 }
+      - { year: 2003, type: 变故, title: 手段成谜, detail: 数桩资本运作真相隐秘，外界众说纷纭。, hidden: true }
+    intel:
+      - { id: songshixu_self, topic: 你想从我这得到什么, text: "「我从不做亏本买卖。」他把玩着酒杯,笑意不达眼底,「捧红一个人对我而言易如反掌——前提是,你得值这个价。记住,我给的是资源,不是恩情,收网的时机由我定。」" }
+    requires:
+      - { metric: looks, op: gte, value: 600, hint: 容貌≥600 }
+      - { metric: fame, op: gte, value: 70, hint: 名气≥70 }
+      - { metric: reputation, op: gte, value: 50, hint: 口碑≥50 }
+  - id: guchen
+    name: 顾沉
+    role: 国民天王
+    relation: 同行的顶流前辈
+    gender: 男
+    age: 29
+    tags: [天王, 清冷]
+    kind: roam
+    home: redcarpet
+    roam: [redcarpet, lounge]
+    bio: 神坛之上的国民天王，绯闻绝缘、私生活成谜。传闻里冷漠疏离，唯独对认真的人卸下防备。
+    family:
+      parents: [{ name: 顾长河, note: 父亲 · 小镇中学教师 · 已故 }, { name: 陈素云, note: 母亲 · 镇上裁缝 }]
+    works: [沉默的证人, 山河故人, 千灯之城, 无名之辈]
+    stats: { yanji: 680, geyi: 700, koucai: 620, yitai: 720, donggan: 640, tineng: 660, caizhi: 700, zixin: 760 }
+    credits:
+      - { title: 沉默的证人, role: 主演, genre: 悬疑电影, year: 2001, synopsis: 一桩悬案里唯一沉默的目击者，他凭一双冷峻的眼一战封神。, lead: { name: 顾沉, id: guchen } }
+      - { title: 千灯之城, role: 主演, genre: 剧情电影, year: 2004, synopsis: 万家灯火里一个孤独歌者的救赎，主题曲传唱一时。, lead: { name: 顾沉, id: guchen } }
+      - { title: 山河故人, role: 主演, genre: 年代电影, year: 2003, synopsis: 时代洪流里三代人的离散与重逢，他与已息影的前辈同台飙戏。, lead: { name: 顾沉, id: guchen }, costars: [{ name: 傅承霖, note: 已息影影帝 }] }
+    resume:
+      - { year: 1982, type: 出身, title: 小镇少年, detail: 出身平凡的小镇，靠自己一步步走到聚光灯下。 }
+      - { year: 1998, type: 入行, title: 选秀出道, detail: 一场选秀一鸣惊人，从此星途扶摇。 }
+      - { year: 2004, type: 荣誉, title: 加冕天王, detail: 稳坐国民天王之位，却也把自己锁进了神坛。 }
+      - { year: 2001, type: 情感, title: 私生活成谜, detail: 从不回应任何绯闻，感情世界始终是空白。, hidden: true }
+    intel:
+      - { id: guchen_self, topic: 站在顶端是什么感觉, text: "他沉默了很久,才低声开口:「高处冷,也孤。每个人靠近都带着目的,久了,连自己都分不清谁是真心。」他看了你一眼,「你还没到那一步——趁现在,把真心的人记牢。」" }
+    requires:
+      - { metric: fame, op: gte, value: 250, hint: 名气≥250 }
+      - { metric: reputation, op: gte, value: 70, hint: 口碑≥70 }
+      - { metric: blackFans, op: lte, value: 5, hint: 黑粉≤5 }
+  - id: wenyuan
+    name: 闻予安
+    role: 市长之子
+    relation: 偶遇的温柔青年
+    gender: 男
+    age: 26
+    tags: [温柔, 公益]
+    kind: roam
+    home: redcarpet
+    roam: [redcarpet]
+    bio: 世家出身、清贵自持的市长之子，公共形象洁白无瑕。与他相关的每一步都被放在放大镜下审视。母族出自最古老、最隐秘的九家，那份不容有失的分寸，是从小刻进骨血的。
+    family:
+      parents: [{ name: 闻定邦, note: 父亲 · 现任市长 }, { name: 九明玥, note: 母亲 · 九家嫡女 }]
+    resume:
+      - { year: 1983, type: 出身, title: 政要世家, detail: 生于清贵的政要之家，从小被寄予厚望。 }
+      - { year: 2002, type: 学业, title: 归国, detail: 海外深造后回国，行事低调。 }
+      - { year: 2003, type: 公益, title: 投身公益, detail: 不挂名地资助多项公益，鲜少露面。 }
+    intel:
+      - { id: wenyuan_self, topic: 你的顾虑, text: "「和我走得近的人,会被放在放大镜下看。」他语气温和,却带着歉意,「我不是不敢,是不想连累你——你的路要靠作品和口碑铺,而不是我的姓氏。」" }
+    requires:
+      - { metric: week, op: gte, value: 13, hint: 第13周后 }
+      - { metric: looks, op: gte, value: 700, hint: 容貌≥700 }
+      - { metric: fame, op: gte, value: 180, hint: 名气≥180 }
+      - { metric: reputation, op: gte, value: 75, hint: 口碑≥75 }
+      - { metric: blackFans, op: lte, value: 8, hint: 黑粉≤8 }
+  - id: jiangxu
+    name: 江叙白
+    role: 邻居哥哥
+    relation: 隔壁邻居
+    gender: 男
+    age: 25
+    tags: [音乐, 邻家]
+    kind: roam
+    home: tianguang
+    roam: [tianguang, street, cafe]
+    bio: 住在天光公寓隔壁的温柔男孩，会在你深夜收工时留一盏灯、一碗热汤。平凡，却是最稳的港湾。
+    family:
+      parents: [{ name: 江建国, note: 父亲 · 退休公交司机 }, { name: 许秀兰, note: 母亲 · 社区诊所护士 }]
+    resume:
+      - { year: 1984, type: 出身, title: 普通人家, detail: 生于寻常人家，自学吉他，靠一副好脾气过日子。 }
+      - { year: 2003, type: 入行, title: 驻唱为生, detail: 在小酒吧驻唱、替人写歌，守着不温不火的梦。 }
+    intel:
+      - { id: jiangxu_self, topic: 你怎么总在, text: "「我?没什么大本事,就守着隔壁这盏灯。」他挠挠头笑了,「你收工晚,我锅里总留着热汤。外头那些排名啊资源啊我帮不上,可你要是撑不住了,回来就成——这门,一直给你留着。」" }
+    requires: []
+  - id: zhouyan
+    name: 周砚川
+    role: 离婚创一代
+    relation: 创业伙伴
+    gender: 男
+    age: 35
+    tags: [成熟, 事业]
+    kind: roam
+    home: cafe
+    roam: [cafe, yuntai]
+    bio: 创业成功又离过婚的成熟男人，把分寸感刻进骨子里。谈合作滴水不漏，谈感情却格外克制。
+    family:
+      parents: [{ name: 周德胜, note: 父亲 · 煤矿工人 · 已故 }, { name: 刘桂香, note: 母亲 · 纺织厂退休 }]
+      spouse: { name: 前妻, note: 已离异 · 姓名尚未得知 }
+    resume:
+      - { year: 1976, type: 出身, title: 寒门出身, detail: 白手起家，靠一股狠劲从底层爬起。 }
+      - { year: 2000, type: 情感, title: 步入婚姻, detail: 与相恋多年的伴侣成婚。 }
+      - { year: 2001, type: 荣誉, title: 创业上岸, detail: 一手创办的公司步入正轨。 }
+      - { year: 2003, type: 情感, title: 和平离异, detail: 一段婚姻以体面的方式画上句号。 }
+    intel:
+      - { id: zhouyan_self, topic: 你为何这样克制, text: "「我栽过一次跟头,学会了慢一点。」他替你续上茶,语气平稳,「成年人的分寸,是把话说清、把界限划明。合作我给你最实在的条件;至于别的——我不急,好的东西经得起等。」" }
+    requires:
+      - { metric: week, op: gte, value: 18, hint: 第18周后 }
+      - { metric: fame, op: gte, value: 160, hint: 名气≥160 }
+      - { metric: reputation, op: gte, value: 60, hint: 口碑≥60 }
+      - { metric: works, op: gte, value: 2, hint: 作品≥2 }
+  - id: xiechen
+    name: 谢忱
+    role: 启星娱乐 CEO · 谢家家主
+    relation: 你所属公司背后的最高话事人
+    gender: 男
+    age: 23
+    tags: [谢家, 掌权者, 深不可测]
+    kind: roam
+    home: agency
+    roam: [agency, fuguang]
+    bio: 二十三岁执掌谢家的年轻家主。这座城的水面之下，向来是谢、慕容、九三家分踞——谢家坐拥娱乐与传媒帝国，慕容家执金融资本之牛耳，九家则是最古老隐秘的政军望族。他名下产业盘根错节，你所属的启星娱乐（连同启星事务所）不过是这座冰山浮出水面的一角。年少夺权，手腕与城府一样出名；待人温雅有礼，却没人敢真把那份礼数当成软弱。
+    family:
+      parents: [{ name: 谢远山, note: 父亲 · 谢家上任家主 · 退居幕后 }, { name: 慕容霜, note: 母亲 · 慕容家嫡长女 }]
+    stats: { yanji: 200, geyi: 180, koucai: 720, yitai: 700, donggan: 300, tineng: 320, caizhi: 760, zixin: 780 }
+    resume:
+      - { year: 1982, type: 出身, title: 生于谢家, detail: 谢家嫡长子，母族出自慕容家，自幼在两大世家的博弈里长大。 }
+      - { year: 2000, type: 学业, title: 少年归国, detail: 海外修完商科提前归国，进入谢家产业历练。 }
+      - { year: 2005, type: 荣誉, title: 二十三岁执掌谢家, detail: 在一场家族风波后临危受命，坐上家主之位，兼任启星娱乐 CEO。 }
+      - { year: 2005, type: 商业, title: 手段成谜, detail: 数桩收购与人事更迭雷厉风行，外界看不清他真正的棋局。, hidden: true }
+    intel:
+      - { id: xiechen_self, topic: 你想要什么, text: "「启星？」他指尖在桌沿轻轻一叩,笑意温和,「那不过是我账面上很小的一块。我看人，不看你现在站得多高，看你摔下来还爬不爬得起来。你若真能走到那一步，谢家的资源，我不介意为你开一扇门——前提是，你别让我失望。」" }
+      - { id: xiechen_houses, topic: 三大世家, text: "「谢、慕容、九。」他念得很慢,「娱乐、资本、权柄，各占一角，谁也吞不下谁。这城里叫得出名字的风光，大半都在这三个姓氏的影子底下。你能听见这个说法，说明你已经不算圈外人了。」" }
+    requires:
+      - { metric: week, op: gte, value: 20, hint: 第20周后方有机会被引见 }
+      - { metric: fame, op: gte, value: 220, hint: 名气≥220 }
+      - { metric: reputation, op: gte, value: 65, hint: 口碑≥65 }
+      - { metric: works, op: gte, value: 3, hint: 作品≥3 }

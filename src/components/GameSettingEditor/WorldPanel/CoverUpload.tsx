@@ -8,11 +8,13 @@ import { useImageCropper } from '../../../hooks/useImageCropper';
 import { getImageUrl, SCENE_GENERATION_COST } from '../../../utils/constants';
 import type { CoverOrientation } from '../../../utils/gameCovers.ts';
 import { addImageTimestamp, bumpCacheBust } from '../../../utils/imageCache';
+import { resolveCoverPreviewSrc } from '../../../utils/resolveCoverPreviewSrc';
 import { fileToDataUrl } from '../../../utils/uploadImageCrop';
 import { refreshAuthUserPoints } from '../../../lib/auth/refreshUserPoints';
 import { compositePosterTitleOntoCover } from '../../../lib/galgame/compositePosterTitle';
 import { resolveCoverPosterOverlay } from '../../../utils/coverPosterOverlay';
 import { buildCoverAiCreativePrompt } from '../../../utils/buildCoverAiCreativePrompt';
+import { getApiErrorMessage } from '../../../utils/error';
 import ImageCropModal from '../../CommonModal/ImageCropModal';
 import PortraitLightbox from '../CharactersPanel/PortraitLightbox';
 import styles from './WorldPanel.module.css';
@@ -60,22 +62,30 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
 
     const displaySrc = (preview: string | null) => {
         if (!preview) return '';
-        return preview.startsWith('data:image/')
-            ? preview
-            : addImageTimestamp(getImageUrl(preview));
+        if (preview.startsWith('data:image/') || preview.startsWith('blob:')) return preview;
+        // 功能注释：已是带 ?t= 的绝对地址则直接用，避免再包一层旧 cache
+        if (/^https?:\/\//i.test(preview) && /[?&]t=/.test(preview)) return preview;
+        return addImageTimestamp(getImageUrl(preview));
     };
 
+    // 功能注释：父级刷新瞬间 coverUrl 可能短暂为空，禁止清空已成功的 AI/上传预览
     useEffect(() => {
-        setLandscapePreview(coverUrl || null);
+        if (coverUrl) setLandscapePreview(coverUrl);
     }, [coverUrl]);
 
     useEffect(() => {
-        setPortraitPreview(portraitCoverUrl || null);
+        if (portraitCoverUrl) setPortraitPreview(portraitCoverUrl);
     }, [portraitCoverUrl]);
 
     const setPreviewFor = (orientation: CoverOrientation, next: string | null) => {
         if (orientation === 'portrait') setPortraitPreview(next);
         else setLandscapePreview(next);
+    };
+
+    /** 功能注释：生图/上传成功后预取封面，降低 ERR_CONNECTION_CLOSED 导致的裂图 */
+    const applyCoverPreview = async (orientation: CoverOrientation, nextCoverUrl: string) => {
+        const previewSrc = await resolveCoverPreviewSrc(nextCoverUrl);
+        setPreviewFor(orientation, previewSrc || nextCoverUrl);
     };
 
     const uploadCover = useCallback(async (file: File, orientation: CoverOrientation) => {
@@ -90,17 +100,19 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
             const response = await EditorApi.uploadGameCover(fileId, file, orientation);
             if (response.data.success) {
                 const nextCoverUrl = response.data.data.coverUrl;
-                bumpCacheBust(nextCoverUrl);
-                setPreviewFor(orientation, nextCoverUrl);
+                await applyCoverPreview(orientation, nextCoverUrl);
                 toast.success(t('common.coverUpload.uploadSuccess'));
                 onCoverUploaded?.({ orientation, coverUrl: nextCoverUrl });
             } else {
-                setCoverError(response.data.message || t('common.coverUpload.uploadFailed'));
+                const msg = response.data.message || t('common.coverUpload.uploadFailed');
+                setCoverError(msg);
+                toast.error(msg);
             }
         } catch (error) {
             console.error('upload world cover failed:', error);
-            const apiMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
-            setCoverError(apiMessage || t('common.coverUpload.uploadFailed'));
+            const apiMessage = getApiErrorMessage(error, t('common.coverUpload.uploadFailed'));
+            setCoverError(apiMessage);
+            toast.error(apiMessage);
         } finally {
             setBusyOrientation(null);
         }
@@ -255,8 +267,7 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
                 }
             }
 
-            bumpCacheBust(nextCoverUrl);
-            setPreviewFor(orientation, nextCoverUrl);
+            await applyCoverPreview(orientation, nextCoverUrl);
             const deducted = response.data.data.pointsDeducted ?? SCENE_GENERATION_COST;
             toast.success(
                 t('common.coverUpload.aiGenerateSuccess', { cost: deducted }),
@@ -361,6 +372,15 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
                                 alt={resolvedWorkTitle || t(titleKey)}
                                 className={styles.coverPreview}
                                 draggable={false}
+                                onError={(event) => {
+                                    // 功能注释：首次拉取闪断时换新 bust 再试一次，避免一直裂图
+                                    const img = event.currentTarget;
+                                    const failed = String(img.dataset.coverRetry || '');
+                                    if (failed === '1' || !preview) return;
+                                    img.dataset.coverRetry = '1';
+                                    bumpCacheBust(preview);
+                                    img.src = addImageTimestamp(getImageUrl(preview));
+                                }}
                             />
                             {!(slotBusy && coverGenerating) ? (
                                 <span className={styles.coverPreviewHint}>

@@ -1,0 +1,217 @@
+# ═══════════════════════════════════════════════════════════════
+#  星光2005 · 人设与危机内容池 (image-crisis)
+#  存放：公开人设标签、可安排的公开内容、危机模板、五种回应方式与
+#  结算参数。引擎只读参数、按证据/时机/诚信/舆情阈值做确定性裁决，
+#  不在代码里写死任何中文标签或数值表。AI 只描写公开范围内的评论，
+#  不制造热搜事实、不改判定结果。
+# ═══════════════════════════════════════════════════════════════
+
+# —— 解锁门槛：名气达标（≈ 粉丝规模破圈）或已经历首次争议 ——
+unlock:
+  fame: 60
+  note: 粉丝规模开始破圈，媒体与品牌方盯上了你的公众形象。
+
+# —— 粉丝分层（仅用于展示；数量由引擎按名气/匹配度/黑粉派生）——
+fanTiers:
+  perFame: 46          # 每点名气折合的路人盘基数
+  coreFromMatch: 0.55  # 品牌匹配度→核心粉转化系数
+  antiPerBlack: 60     # 每点黑粉折合的对家规模
+  labels:
+    core: 核心粉
+    casual: 路人盘
+    anti: 对家黑粉
+
+# —— 可公开的人设标签：选定后媒体与品牌按此认知你 ——
+personas:
+  - id: linjia
+    label: 邻家
+    icon: ""
+    audience: 家庭观众 / 下沉市场
+    desc: 亲切、真实、有烟火气。适合国民度与长线口碑，忌塌房。
+  - id: lenggan
+    label: 冷感
+    icon: ""
+    audience: 时尚圈 / 一线品牌
+    desc: 疏离、高级、话题性强。溢价高，但亲和力低、争议一点就着。
+  - id: shili
+    label: 实力
+    icon: ""
+    audience: 业内 / 剧粉影评
+    desc: 靠作品说话，抗风险最强。起量慢，需要代表作背书。
+  - id: tianku
+    label: 甜酷
+    icon: ""
+    audience: 年轻粉丝 / 饭圈
+    desc: 反差、有梗、粉丝黏性高。数据猛，但饭圈易内耗、易反噬。
+  - id: zhixing
+    label: 知性
+    icon: ""
+    audience: 都市白领 / 高知
+    desc: 得体、有观点、代言溢价稳。发言容易踩立场争议。
+
+# —— 可安排的公开内容：每条都有其「气质归属」fits，与当前人设比对 ——
+#   fits 命中当前人设 → 一致（涨匹配度/受众认可、连贯度+1）
+#   fits 未命中且属于别的强人设 → 反转（涨争议、反转次数+1、掉匹配度）
+publicActs:
+  - id: interview
+    label: 深度专访
+    icon: ""
+    energy: 14
+    fameGain: 4
+    fits: [shili, zhixing]
+    desc: 杂志或电视专访，谈作品与成长。
+  - id: livestream
+    label: 直播互动
+    icon: ""
+    energy: 10
+    fameGain: 6
+    fits: [tianku, linjia]
+    desc: 直播间和粉丝唠嗑、玩梗、抽奖。
+  - id: charity
+    label: 公益行动
+    icon: ""
+    energy: 12
+    fameGain: 3
+    fits: [linjia, zhixing]
+    desc: 支教、义卖或公益短片，攒国民好感。
+  - id: fashion
+    label: 时尚大片
+    icon: ""
+    energy: 12
+    fameGain: 5
+    fits: [lenggan, tianku]
+    desc: 高奢红毯或封面硬照，立高级感。
+  - id: social
+    label: 社媒发声
+    icon: ""
+    energy: 6
+    fameGain: 4
+    fits: [tianku, zhixing]
+    desc: 微博发长文/短视频，表达观点或态度。
+
+# —— 单条公开内容的结算参数（引擎按一致/反转套用）——
+actOutcome:
+  consistent:  { brandMatch: 6,  audience: 5,  controversy: -3, streakBonusEvery: 3, streakBonusMatch: 4 }
+  neutral:     { brandMatch: 1,  audience: 1,  controversy: 0 }
+  reversal:    { brandMatch: -8, audience: -4, controversy: 12, blackFans: 2 }
+  # 反转累计触发危机的争议阈值
+  crisisAtControversy: 55
+
+# —— 危机模板：触发时给定严重度与「是否可举证」的底色 ——
+#   baseEvidence 缺省时由口碑（诚信代理）派生：≥60 clear / 40-59 mixed / <40 none
+crises:
+  - id: late-diva
+    label: 耍大牌迟到
+    icon: "⏰"
+    severity: 1
+    desc: 通告现场迟到三小时，工作人员爆料你耍大牌。
+    voices:
+      pro: ["路透视频没头没尾，等等再判断吧。", "谁还没堵过车，别急着挂人。"]
+      con: ["把别人时间不当回事？", "有点成绩就飘了。"]
+  - id: old-photo
+    label: 旧照争议
+    icon: ""
+    severity: 2
+    baseEvidence: mixed
+    desc: 早年一组争议旧照被翻出，配文断章取义。
+    voices:
+      pro: ["都是多少年前的事了。", "明显是恶意剪辑。"]
+      con: ["三观有问题吧。", "人设崩了。"]
+  - id: brand-fail
+    label: 代言翻车
+    icon: ""
+    severity: 2
+    desc: 代言品牌被曝质量问题，粉丝要求你切割。
+    voices:
+      pro: ["艺人也是被蒙的受害者。", "该追责的是品牌方。"]
+      con: ["恰烂钱不看货？", "让粉丝买单太难看。"]
+  - id: scandal
+    label: 绯闻曝光
+    icon: ""
+    severity: 3
+    baseEvidence: none
+    desc: 深夜同框路透流出，被指恋情瓜。
+    voices:
+      pro: ["私生活是个人自由。", "图很糊，别乱嗑。"]
+      con: ["立的单身人设呢？", "恰粉丝钱谈恋爱？"]
+  - id: stance
+    label: 立场争议
+    icon: ""
+    severity: 3
+    desc: 一条社媒发言被指立场不当，迅速发酵。
+    voices:
+      pro: ["就事论事，没必要上纲上线。", "断章取义带节奏。"]
+      con: ["公众人物要慎言。", "这次真的踩线了。"]
+
+# —— 五种回应方式：base 基准分 + 对各因素的敏感度 + 三档结果的数值 ——
+#   诚信 = 口碑代理；及时 = 危机触发后 timingFastDays 天内回应
+responses:
+  - id: silence
+    label: 沉默冷处理
+    icon: ""
+    desc: 不回应，等舆论自然平息。稳，但显得心虚。
+    base: 42
+    evidenceSens: 0.2
+    timingSens: 0.3
+    integritySens: 0.6
+    tiers:
+      good:  { rep: 2,  fame: 0,  controversy: -18, blackFans: -2, trust: 1,  brandMatch: 0,  audience: 1 }
+      mixed: { rep: 0,  fame: -3, controversy: -6,  blackFans: 0,  trust: 0,  brandMatch: -2, audience: -1 }
+      bad:   { rep: -4, fame: -8, controversy: 8,   blackFans: 4,  trust: -3, brandMatch: -5, audience: -4 }
+  - id: apologize
+    label: 诚恳道歉
+    icon: ""
+    desc: 公开道歉、认错整改。示弱换台阶，掉一点高级感。
+    base: 50
+    evidenceSens: 0.1
+    timingSens: 1.0
+    integritySens: 0.7
+    tiers:
+      good:  { rep: 6,  fame: 0,  controversy: -22, blackFans: -4, trust: 4,  brandMatch: 2,  audience: 4 }
+      mixed: { rep: 2,  fame: -2, controversy: -10, blackFans: -1, trust: 1,  brandMatch: 0,  audience: 1 }
+      bad:   { rep: -2, fame: -5, controversy: 4,   blackFans: 2,  trust: -1, brandMatch: -3, audience: -3 }
+  - id: evidence
+    label: 举证澄清
+    icon: ""
+    desc: 甩出证据自证清白。有实锤则封神，无实锤则火上浇油。
+    base: 40
+    evidenceSens: 1.4
+    timingSens: 0.6
+    integritySens: 0.5
+    tiers:
+      good:  { rep: 10, fame: 8,  controversy: -30, blackFans: -8, trust: 5,  brandMatch: 5,  audience: 7 }
+      mixed: { rep: 1,  fame: 0,  controversy: -4,  blackFans: 0,  trust: 0,  brandMatch: 0,  audience: 0 }
+      bad:   { rep: -8, fame: -10,controversy: 16,  blackFans: 8,  trust: -4, brandMatch: -6, audience: -6 }
+  - id: counter
+    label: 强硬反击
+    icon: ""
+    desc: 发律师函、点名对线。粉丝解气，但极易反噬升级。
+    base: 36
+    evidenceSens: 1.1
+    timingSens: 0.8
+    integritySens: 0.3
+    tiers:
+      good:  { rep: 4,  fame: 12, controversy: -20, blackFans: -6, trust: 2,  brandMatch: 3,  audience: 6 }
+      mixed: { rep: -2, fame: 4,  controversy: 6,   blackFans: 3,  trust: -1, brandMatch: -2, audience: 1 }
+      bad:   { rep: -10,fame: -6, controversy: 24,  blackFans: 12, trust: -6, brandMatch: -8, audience: -7 }
+  - id: private
+    label: 私下和解
+    icon: ""
+    desc: 走公司公关、私下摆平爆料方。花钱消灾，赌不外泄。
+    base: 48
+    evidenceSens: 0.3
+    timingSens: 0.5
+    integritySens: 0.4
+    trustSens: 0.5     # 负责人信任越高越好办
+    costMoney: 60000
+    tiers:
+      good:  { rep: 1,  fame: 0,  controversy: -26, blackFans: -5, trust: 3,  brandMatch: 1,  audience: 2 }
+      mixed: { rep: 0,  fame: -1, controversy: -8,  blackFans: -1, trust: 0,  brandMatch: 0,  audience: 0 }
+      bad:   { rep: -6, fame: -4, controversy: 14,  blackFans: 6,  trust: -2, brandMatch: -4, audience: -3 }
+
+# —— 危机结算权重与阈值（全局，引擎据此把回应分数落到三档）——
+resolve:
+  weights: { evidence: 20, timing: 15, integrity: 0.35, severity: -9, controversy: -0.18, trust: 12 }
+  timingFastDays: 2   # 危机触发后 ≤ 该天数内回应算「及时」
+  goodAt: 60          # 结算分 ≥ 该值 → 上策
+  badBelow: 32        # 结算分 < 该值 → 下策；之间为中策

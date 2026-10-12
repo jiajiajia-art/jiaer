@@ -1,9 +1,13 @@
 import { create } from 'zustand';
 
+/** 功能注释：document=文档导入；idea=一句话生成——进度文案需分流 */
+export type UploadJobKind = 'document' | 'idea';
+
 export interface UploadJob {
     jobId: string;
     fileId: string | null;
     fileName: string;
+    kind: UploadJobKind;
     status: 'uploading' | 'processing' | 'completed' | 'failed';
     progress: number;
     stage: string;
@@ -17,24 +21,15 @@ export interface UploadJob {
 }
 
 interface UploadState {
-    // 当前上传任务列表（支持多个任务）
     jobs: Record<string, UploadJob>;
-    
-    // 是否显示进度弹窗
     showProgressModal: boolean;
-    
-    // 是否最小化
     isMinimized: boolean;
-    
-    // Actions
-    addJob: (jobId: string, fileName: string, startTime?: number) => void;
+    addJob: (jobId: string, fileName: string, startTime?: number, kind?: UploadJobKind) => void;
     updateJob: (jobId: string, updates: Partial<UploadJob>) => void;
     removeJob: (jobId: string) => void;
     setShowProgressModal: (show: boolean) => void;
     setIsMinimized: (minimized: boolean) => void;
     clearAllJobs: () => void;
-    
-    // 获取所有进行中的任务
     getActiveJobs: () => UploadJob[];
 }
 
@@ -42,8 +37,8 @@ export const useUploadStore = create<UploadState>((set, get) => ({
     jobs: {},
     showProgressModal: false,
     isMinimized: false,
-    
-    addJob: (jobId: string, fileName: string, startTime?: number) => {
+
+    addJob: (jobId: string, fileName: string, startTime?: number, kind: UploadJobKind = 'document') => {
         set((state) => ({
             jobs: {
                 ...state.jobs,
@@ -51,11 +46,13 @@ export const useUploadStore = create<UploadState>((set, get) => ({
                     jobId,
                     fileId: null,
                     fileName,
+                    kind,
                     status: 'uploading',
                     progress: 0,
-                    stage: '上传中',
+                    // 功能注释：一句话任务初始不是「上传中」
+                    stage: kind === 'idea' ? '排队中' : '上传中',
                     error: null,
-                    startTime: startTime || Date.now(), // 使用传入的开始时间，如果没有则使用当前时间
+                    startTime: startTime || Date.now(),
                     updatedAt: null,
                     elapsedSeconds: null,
                     estimatedRemainingSeconds: null,
@@ -63,22 +60,21 @@ export const useUploadStore = create<UploadState>((set, get) => ({
                     estimateSource: null,
                 },
             },
-            showProgressModal: true, // 自动显示弹窗
+            showProgressModal: true,
         }));
     },
-    
+
     updateJob: (jobId: string, updates: Partial<UploadJob>) => {
         set((state) => {
             const job = state.jobs[jobId];
             if (!job) return state;
-            
+
             const updatedJob: UploadJob = {
                 ...job,
                 ...updates,
                 updatedAt: updates.updatedAt || job.updatedAt || new Date().toISOString(),
             };
-            
-            // 如果任务完成或失败，延迟移除（可选，也可以保留显示）
+
             return {
                 jobs: {
                     ...state.jobs,
@@ -87,42 +83,40 @@ export const useUploadStore = create<UploadState>((set, get) => ({
             };
         });
     },
-    
+
     removeJob: (jobId: string) => {
         set((state) => {
             const newJobs = { ...state.jobs };
             delete newJobs[jobId];
-            
-            // 如果没有任务了，自动关闭弹窗
+
             if (Object.keys(newJobs).length === 0) {
                 return {
                     jobs: newJobs,
                     showProgressModal: false,
                 };
             }
-            
+
             return {
                 jobs: newJobs,
             };
         });
     },
-    
+
     setShowProgressModal: (show: boolean) => {
         set({ showProgressModal: show });
     },
-    
+
     setIsMinimized: (minimized: boolean) => {
         set({ isMinimized: minimized });
     },
-    
+
     clearAllJobs: () => {
         set({ jobs: {}, showProgressModal: false, isMinimized: false });
     },
-    
+
     getActiveJobs: () => {
         return Object.values(get().jobs).filter(
-            job => job.status === 'uploading' || job.status === 'processing'
+            (job) => job.status === 'uploading' || job.status === 'processing',
         );
     },
 }));
-

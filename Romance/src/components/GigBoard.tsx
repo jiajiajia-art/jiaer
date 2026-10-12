@@ -1,0 +1,100 @@
+import { useGame } from "../store/gameCtx";
+import { Chip } from "./ui";
+import { GIG_POOL, STAT_LABELS, type Gig, type StatKey } from "../game/data";
+import { offersFrom, gigEligible, gigManager, type GigCat } from "../game/logic";
+import { PERSON_BY_ID, type PersonContent } from "../worlds/star2005/content";
+
+/* 通告接洽（踩地图·当面接单）：走到对应公司找到负责人后，直接查看 TA 手上的通告
+ * ——具体内容、男女主/男女配阵容、你要出演的角色、片酬与档期，重点通告还有固定开机日期，
+ * 就地「交涉」争取出演，签下即回日程排「拍摄」。取代过去「打听→去养成页交涉」的绕路。 */
+const fmtWan = (yuan: number) => `¥${(yuan / 10000).toFixed(1)}万`;
+
+export default function GigBoard({ pid, name }: { pid: string; name: string }) {
+  const { game, simNegotiate } = useGame();
+  if (!game) return null;
+  const s = game.sim;
+  const person = PERSON_BY_ID[pid] as PersonContent | undefined;
+  const off = person?.offers;
+
+  if (!off) {
+    return <p className="rounded-lg bg-paper px-3 py-3 text-center text-[13px] text-ink-soft">{name}不经手通告资源，去找对应的制片人/制作人吧。</p>;
+  }
+
+  // 本周该负责人手上的通告（按类别 + 发布节奏 + 名气就近）
+  const weeklyIds = offersFrom(s, off.cats as GigCat[], off.maxStar);
+  // 重点通告：该负责人名下、有固定开机周、临近开机（提前 4 周开放接洽）
+  const fixedIds = GIG_POOL.filter(
+    (g) =>
+      g.fixedWeek &&
+      gigManager(g).name === name &&
+      !(s.usedGigs ?? []).includes(g.id) &&
+      g.id !== s.activeGigId &&
+      s.week <= g.fixedWeek &&
+      s.week >= g.fixedWeek - 4,
+  ).map((g) => g.id);
+
+  const ids = Array.from(new Set([...fixedIds, ...weeklyIds]));
+  const gigs = ids.map((id) => GIG_POOL.find((g) => g.id === id)).filter((g): g is Gig => !!g);
+
+  if (!gigs.length) {
+    return <p className="rounded-lg bg-paper px-3 py-3 text-center text-[13px] text-ink-soft">{name}说这阵子没有适合你的{off.label}，过些日子再来碰碰。</p>;
+  }
+
+  return (
+    <div>
+      <p className="mb-2.5 text-[11.5px] leading-relaxed text-ink-soft">
+        {name}翻开手上的<span className="text-coral">{off.label}</span>——看清角色与档期，谈得拢就当面签。签下后回「养成 · 日程」把「拍摄」排进这一周。
+      </p>
+      <div className="space-y-2.5">
+        {gigs.map((g) => {
+          const eligible = gigEligible(g, s);
+          const busy = !!s.activeGigId;
+          return (
+            <div key={g.id} className="rounded-xl border border-line bg-paper p-3">
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="min-w-0 flex-1 truncate font-serif text-[14.5px] font-bold text-ink">
+                  {"★".repeat(g.star)} {g.name}
+                </p>
+                {g.fixedWeek ? <Chip tone="coral">固定档 · 第 {g.fixedWeek} 周</Chip> : <Chip tone="jade">{g.genre ?? g.type}</Chip>}
+              </div>
+              {g.note && <p className="mt-1 text-[12px] leading-relaxed text-ink-soft">{g.note}</p>}
+
+              {g.role && (
+                <p className="mt-1.5 text-[12px]">
+                  你出演：<span className="font-bold text-coral">{g.role}</span>
+                </p>
+              )}
+              {g.cast && (
+                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-ink-soft">
+                  <span>男主 <span className="text-ink">{g.cast.maleLead}</span></span>
+                  <span>女主 <span className="text-ink">{g.cast.femaleLead}</span></span>
+                  <span>男配 <span className="text-ink">{g.cast.maleSupport}</span></span>
+                  <span>女配 <span className="text-ink">{g.cast.femaleSupport}</span></span>
+                </div>
+              )}
+
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px]">
+                <span className="text-coral">片酬 {fmtWan(g.pay)}</span>
+                <span className="text-gold">名气 +{g.fame}</span>
+                <span className="text-ink-soft">档期 {g.days} 天</span>
+                {g.fixedWeek && <span className="text-ink-soft">开机 第 {g.fixedWeek} 周</span>}
+              </div>
+              <div className="mt-1 text-[11px] text-ink-soft">
+                门槛：{g.fameReq > 0 ? `名气 ${g.fameReq}` : "名气不限"}
+                {Object.entries(g.statReq).map(([k, v]) => `　${STAT_LABELS[k as StatKey]} ${v}`).join("")}
+              </div>
+
+              <button
+                onClick={() => simNegotiate(g.id)}
+                disabled={busy || !eligible}
+                className="mt-2.5 w-full rounded-lg border border-solid border-coral bg-coral/10 py-1.5 text-[12.5px] font-bold text-coral transition hover:bg-coral/20 disabled:cursor-not-allowed disabled:border-line disabled:text-ink-soft/60"
+              >
+                {busy ? "已有通告在身 · 档期冲突" : eligible ? "交涉接单（争取出演）" : "硬性门槛未达标 · 暂无法交涉"}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

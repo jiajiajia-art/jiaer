@@ -356,36 +356,72 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
         estimatedTotalSeconds: currentJob?.estimatedTotalSeconds,
     }, (key) => t(`eta.${key}`));
 
-    const parseSteps = useMemo(() => [
-        {
-            id: 'world',
-            label: t('createGame.generatingWorld'),
-            progress: 30,
-            icon: HiOutlineGlobeAlt,
-            description: t('createGame.generatingWorldDesc'),
-        },
-        {
-            id: 'npc',
-            label: t('createGame.parsingNpc'),
-            progress: 55,
-            icon: HiOutlineUserGroup,
-            description: t('createGame.parsingNpcDesc'),
-        },
-        {
-            id: 'scene',
-            label: t('createGame.parsingScene'),
-            progress: 75,
-            icon: HiOutlineMap,
-            description: t('createGame.parsingSceneDesc'),
-        },
-        {
-            id: 'complete',
-            label: t('createGame.complete'),
-            progress: 100,
-            icon: HiOutlineCheckCircle,
-            description: t('createGame.parseCompleteDesc'),
-        },
-    ], [t]);
+    const isIdeaJob = currentJob?.kind === 'idea';
+    const parseSteps = useMemo(() => {
+        // 功能注释：一句话生成与文档导入阶段同进度阈值，但文案用「生成」而非「解析」
+        if (isIdeaJob) {
+            return [
+                {
+                    id: 'world',
+                    label: t('createGame.generatingWorld'),
+                    progress: 30,
+                    icon: HiOutlineGlobeAlt,
+                    description: t('createGame.generatingWorldIdeaDesc'),
+                },
+                {
+                    id: 'npc',
+                    label: t('createGame.generatingNpc'),
+                    progress: 55,
+                    icon: HiOutlineUserGroup,
+                    description: t('createGame.generatingNpcDesc'),
+                },
+                {
+                    id: 'scene',
+                    label: t('createGame.generatingScene'),
+                    progress: 75,
+                    icon: HiOutlineMap,
+                    description: t('createGame.generatingSceneDesc'),
+                },
+                {
+                    id: 'complete',
+                    label: t('createGame.complete'),
+                    progress: 100,
+                    icon: HiOutlineCheckCircle,
+                    description: t('createGame.generateCompleteDesc'),
+                },
+            ];
+        }
+        return [
+            {
+                id: 'world',
+                label: t('createGame.generatingWorld'),
+                progress: 30,
+                icon: HiOutlineGlobeAlt,
+                description: t('createGame.generatingWorldDesc'),
+            },
+            {
+                id: 'npc',
+                label: t('createGame.parsingNpc'),
+                progress: 55,
+                icon: HiOutlineUserGroup,
+                description: t('createGame.parsingNpcDesc'),
+            },
+            {
+                id: 'scene',
+                label: t('createGame.parsingScene'),
+                progress: 75,
+                icon: HiOutlineMap,
+                description: t('createGame.parsingSceneDesc'),
+            },
+            {
+                id: 'complete',
+                label: t('createGame.complete'),
+                progress: 100,
+                icon: HiOutlineCheckCircle,
+                description: t('createGame.parseCompleteDesc'),
+            },
+        ];
+    }, [isIdeaJob, t]);
 
     const getCurrentStepIndex = () => {
         if (progress >= 100) return 3;
@@ -409,10 +445,69 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
         }
 
         resetParseFeedback();
+        setCreateMethod('idea');
         setActiveParseStartedAt(Date.now());
         setUploadedFile(null);
         return onGenerateFromIdea(idea, options);
     }, [onGenerateFromIdea, resetParseFeedback]);
+
+    const showLiveProgress = (isParsing || isUploading) && !apiError;
+
+    const renderProgressSection = () => (
+        <div className={styles.progressSection}>
+            <div className={styles.progressHeader}>
+                <span className={styles.progressPercentage}>
+                    {Math.round(progress)}%
+                </span>
+                {stage && (
+                    <span className={styles.progressStage}>{stage}</span>
+                )}
+            </div>
+            {uploadEtaText && (
+                <div className={styles.progressMeta}>{uploadEtaText}</div>
+            )}
+
+            <div className={styles.stepsIndicator}>
+                {parseSteps.map((step, index) => {
+                    const StepIcon = step.icon;
+                    const isActive = index === currentStepIndex && !isCompleted;
+                    const isDone = index < currentStepIndex || (isCompleted && index === 3);
+
+                    return (
+                        <div
+                            key={step.id}
+                            className={`${styles.stepItem} ${
+                                isActive ? styles.stepActive :
+                                isDone ? styles.stepDone :
+                                styles.stepPending
+                            }`}
+                        >
+                            <div className={styles.stepIconWrapper}>
+                                <div className={styles.stepIcon}>
+                                    {isDone ? <BsCheckCircle /> : <StepIcon />}
+                                </div>
+                                {index < parseSteps.length - 1 && (
+                                    <div
+                                        className={`${styles.stepConnector} ${
+                                            isDone ? styles.stepConnectorDone : ''
+                                        }`}
+                                    />
+                                )}
+                            </div>
+                            <div className={styles.stepContent}>
+                                <span className={styles.stepLabel}>{step.label}</span>
+                                {isActive && (
+                                    <span className={styles.stepDescription}>
+                                        {step.description}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
 
     return (
         <div className={styles.panelContent} data-create-method={createMethod}>
@@ -522,6 +617,23 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                             </button>
                         </div>
                     </div>
+                    {/* 功能注释：一句话任务进度挂在本卡片下，避免误显在「文档导入」区 */}
+                    {apiError && isIdeaJob ? (
+                        <>
+                            <p className={styles.errorText}>{t('createGame.uploadFailed', { error: apiError })}</p>
+                            <div className={styles.progressSection}>
+                                <div className={styles.progressHeader}>
+                                    <span className={styles.progressPercentage}>
+                                        {Math.round(progress)}%
+                                    </span>
+                                    {stage ? (
+                                        <span className={styles.progressStage}>{stage}</span>
+                                    ) : null}
+                                </div>
+                            </div>
+                        </>
+                    ) : null}
+                    {showLiveProgress && isIdeaJob ? renderProgressSection() : null}
                 </div>
             )}
 
@@ -557,13 +669,13 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                         <div className={styles.uploadedFileBox}>
                             <span className={styles.fileName}>{uploadedFile.name}</span>
                             <span className={styles.fileSize}>{formatFileSize(uploadedFile.size)}</span>
-                            {apiError && (
+                            {apiError && !isIdeaJob ? (
                                 <span className={styles.retryLink} onClick={handleRetry}>{t('common.retry')}</span>
-                            )}
+                            ) : null}
                         </div>
                     )}
 
-                    {apiError && (
+                    {apiError && !isIdeaJob ? (
                         <>
                             <p className={styles.errorText}>{t('createGame.uploadFailed', { error: apiError })}</p>
                             <div className={styles.progressSection}>
@@ -571,75 +683,21 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                                     <span className={styles.progressPercentage}>
                                         {Math.round(progress)}%
                                     </span>
-                                    {stage && (
+                                    {stage ? (
                                         <span className={styles.progressStage}>{stage}</span>
-                                    )}
+                                    ) : null}
                                 </div>
                             </div>
                         </>
-                    )}
+                    ) : null}
 
-                    {(isParsing || isUploading) && !apiError && (
-                        <div className={styles.progressSection}>
-                            <div className={styles.progressHeader}>
-                                <span className={styles.progressPercentage}>
-                                    {Math.round(progress)}%
-                                </span>
-                                {stage && (
-                                    <span className={styles.progressStage}>{stage}</span>
-                                )}
-                            </div>
-                            {uploadEtaText && (
-                                <div className={styles.progressMeta}>{uploadEtaText}</div>
-                            )}
+                    {showLiveProgress && !isIdeaJob ? renderProgressSection() : null}
 
-                            <div className={styles.stepsIndicator}>
-                                {parseSteps.map((step, index) => {
-                                    const StepIcon = step.icon;
-                                    const isActive = index === currentStepIndex && !isCompleted;
-                                    const isDone = index < currentStepIndex || (isCompleted && index === 3);
-
-                                    return (
-                                        <div
-                                            key={step.id}
-                                            className={`${styles.stepItem} ${
-                                                isActive ? styles.stepActive :
-                                                isDone ? styles.stepDone :
-                                                styles.stepPending
-                                            }`}
-                                        >
-                                            <div className={styles.stepIconWrapper}>
-                                                <div className={styles.stepIcon}>
-                                                    {isDone ? <BsCheckCircle /> : <StepIcon />}
-                                                </div>
-                                                {index < parseSteps.length - 1 && (
-                                                    <div
-                                                        className={`${styles.stepConnector} ${
-                                                            isDone ? styles.stepConnectorDone : ''
-                                                        }`}
-                                                    />
-                                                )}
-                                            </div>
-                                            <div className={styles.stepContent}>
-                                                <span className={styles.stepLabel}>{step.label}</span>
-                                                {isActive && (
-                                                    <span className={styles.stepDescription}>
-                                                        {step.description}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    )}
-
-                    {!isParsing && !apiError && (
+                    {!isParsing && !apiError ? (
                         <p className={styles.mutedSmall}>
                             {t('createGame.step2AutoOpen')}
                         </p>
-                    )}
+                    ) : null}
                 </div>
             </div>
 
