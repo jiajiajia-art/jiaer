@@ -32,3 +32,13 @@ test('PublishSettingsModal_应对齐墨黑账本而非白卡粉描边', () => {
   assert.match(css, /\.formContent\s*\{[\s\S]*?width:\s*100%/);
   assert.doesNotMatch(css, /min\(520px/);
 });
+
+test('发布设置_结算货币应固定为KK币且不向用户暴露选择项', () => {
+  const modal = read('src/components/CommonModal/PublishSettingsModal.tsx');
+  const createGame = read('src/page/CreateGame.tsx');
+  const publishApi = read('src/api/rpgGame/gameAction.Api.ts');
+
+  assert.doesNotMatch(modal, /shareType|CustomSelect|CURRENCY_OPTIONS/);
+  assert.doesNotMatch(createGame, /shareType/);
+  assert.doesNotMatch(publishApi, /shareType/);
+});

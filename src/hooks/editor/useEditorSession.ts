@@ -6,7 +6,7 @@ import createGalgameSessionApi from '../../api/galgame/createGalgameSession';
 import createWorldSessionApi from '../../api/worldInteraction/createWorldSession';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useGameStore } from '../../store/gameStore';
-import type { Currency } from '../../api/common/currency';
+import { attachPublishErrorData } from '../../utils/gamePublishAppeal';
 
 interface UseEditorSessionOptions {
     fileId: string | null;
@@ -17,7 +17,6 @@ interface UseEditorSessionReturn {
     createGalgameSession: () => Promise<string | null>;
     handlePublishGame: (
         description?: string,
-        shareType?: Currency,
         versionNotes?: string,
         notifyFavoritedUsers?: boolean,
         audienceType?: 'male' | 'female' | 'all',
@@ -73,7 +72,6 @@ export const useEditorSession = ({ fileId, mode }: UseEditorSessionOptions): Use
     // 发布游戏：当前不设置积分/价格，统一按免费处理（priceAmount 固定为 0）
     const handlePublishGame = useCallback(async (
         description?: string,
-        shareType?: Currency,
         versionNotes?: string,
         notifyFavoritedUsers?: boolean,
         audienceType?: 'male' | 'female' | 'all',
@@ -85,7 +83,6 @@ export const useEditorSession = ({ fileId, mode }: UseEditorSessionOptions): Use
                 fileId: fileId,
                 priceAmount: 0,
                 description: description ?? '',
-                shareType,
                 versionNotes,
                 notifyFavoritedUsers,
                 audienceType,
@@ -97,12 +94,12 @@ export const useEditorSession = ({ fileId, mode }: UseEditorSessionOptions): Use
             }
 
             console.error('发布游戏失败:', response.data);
-            throw new Error(response.data.message || '发布游戏失败');
+            throw attachPublishErrorData(response.data.message || '发布游戏失败', response.data);
         } catch (error: any) {
             console.error('发布游戏失败:', error);
             const errorMessage =
                 error?.response?.data?.message || error?.message || '发布游戏失败';
-            throw new Error(errorMessage);
+            throw attachPublishErrorData(errorMessage, error?.response?.data || error);
         }
     }, [fileId, navigate]);
 

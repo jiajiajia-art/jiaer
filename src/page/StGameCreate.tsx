@@ -17,6 +17,12 @@ import ConfirmModal from '../components/CommonModal/ConfirmModal';
 import PublishSettingsModal, { type PublishSubmitPayload } from '../components/CommonModal/PublishSettingsModal';
 import GameAction from '../api/rpgGame/gameAction';
 import toast from 'react-hot-toast';
+import GamePublishAppealPrompt from '../components/GamePublishAppealPrompt';
+import {
+  GAME_ADMIN_TAKEDOWN,
+  resolveGamePublishAppealBlock,
+  type GamePublishAppealBlock,
+} from '../utils/gamePublishAppeal';
 
 const emptyConfig: StConfig = {
   regex: [],
@@ -91,6 +97,7 @@ const StGameCreate: React.FC = () => {
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [publishTargetGameId, setPublishTargetGameId] = useState('');
   const [publishing, setPublishing] = useState(false);
+  const [appealBlock, setAppealBlock] = useState<GamePublishAppealBlock | null>(null);
   const titleRowRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const themeTagsPanelRef = useRef<HTMLDivElement>(null);
@@ -732,13 +739,17 @@ const StGameCreate: React.FC = () => {
         fileId,
         priceAmount: 0,
         description: payload.description,
-        shareType: payload.shareType,
         versionNotes: payload.versionNotes,
         notifyFavoritedUsers: payload.notifyFavoritedUsers,
         audienceType: payload.audienceType,
       });
 
       if (!response.data.success) {
+        if (response.data.code === GAME_ADMIN_TAKEDOWN) {
+          setShowPublishModal(false);
+          setAppealBlock(resolveGamePublishAppealBlock(response.data, fileId));
+          return;
+        }
         const errorMessage = response.data.message || t('stGameCreate.publishFailed');
         toast.error(errorMessage);
         return;
@@ -747,6 +758,11 @@ const StGameCreate: React.FC = () => {
       setShowPublishModal(false);
       nav(`/createGame?mode=stats&gameId=${encodeURIComponent(fileId)}`);
     } catch (error: any) {
+      if ((error?.response?.data?.code || error?.code) === GAME_ADMIN_TAKEDOWN) {
+        setShowPublishModal(false);
+        setAppealBlock(resolveGamePublishAppealBlock(error, fileId));
+        return;
+      }
       const errorMessage = error?.response?.data?.message || error?.message || t('stGameCreate.publishFailed');
       toast.error(errorMessage);
     } finally {
@@ -1196,8 +1212,8 @@ const StGameCreate: React.FC = () => {
           onPublish={handlePublishGame}
           fileId={publishTargetGameId || undefined}
           publishing={publishing}
-          engine="ST"
         />
+        <GamePublishAppealPrompt block={appealBlock} onClose={() => setAppealBlock(null)} />
       </div>
       <FooterArea />
     </div>

@@ -76,6 +76,12 @@ import {
     resolveGameDatabaseTargetPanel,
 } from '../utils/dataPromptPanel';
 import type { DataPromptForm, MorePromptForm } from '../api/galgame/EditorData.type';
+import GamePublishAppealPrompt from '../components/GamePublishAppealPrompt';
+import {
+    GAME_ADMIN_TAKEDOWN,
+    resolveGamePublishAppealBlock,
+    type GamePublishAppealBlock,
+} from '../utils/gamePublishAppeal';
 
 const SCREENWRITER_SEED_KEY = 'funloom_screenwriter_seed';
 const SCREENWRITER_API_BASE_URL = 'http://localhost:3000/api';
@@ -98,6 +104,7 @@ const GameSettingsEditor = () => {
     const [showPublishAssetCheck, setShowPublishAssetCheck] = useState<boolean>(false);
     const [assetBannerDismissed, setAssetBannerDismissed] = useState(false);
     const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
+    const [appealBlock, setAppealBlock] = useState<GamePublishAppealBlock | null>(null);
     const hasLoadedMapRef = useRef<boolean>(false);
     const parsingSuccessTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -648,16 +655,20 @@ const GameSettingsEditor = () => {
         try {
             await handlePublishGame(
                 payload.description,
-                payload.shareType,
                 payload.versionNotes,
                 payload.notifyFavoritedUsers,
                 payload.audienceType,
             );
             setShowPublishModal(false);
         } catch (error: any) {
+            if ((error?.response?.data?.code || error?.code) === GAME_ADMIN_TAKEDOWN) {
+                setShowPublishModal(false);
+                setAppealBlock(resolveGamePublishAppealBlock(error, fileId));
+                return;
+            }
             setNoticeMessage(error?.message || t('createGame.publishFailed'));
         }
-    }, [handlePublishGame, t]);
+    }, [fileId, handlePublishGame, t]);
 
     const checkActivePanelBeforeAction = useCallback(async (action?: () => void): Promise<boolean> => {
         // 实现操作前统一复用当前面板未保存检查
@@ -1089,7 +1100,6 @@ const GameSettingsEditor = () => {
                         fileId={fileId || undefined}
                         coverUrl={gameData?.coverUrl || undefined}
                         portraitCoverUrl={gameData?.portraitCoverUrl || undefined}
-                        engine="AVG"
                     />
                 )}
                 <PublishAssetCheckModal
@@ -1113,6 +1123,7 @@ const GameSettingsEditor = () => {
                     onConfirm={() => setNoticeMessage(null)}
                     onCancel={() => setNoticeMessage(null)}
                 />
+                <GamePublishAppealPrompt block={appealBlock} onClose={() => setAppealBlock(null)} />
             </div>
             {isMiniProgramTxtMode && <MobileBottomNav />}
         </>

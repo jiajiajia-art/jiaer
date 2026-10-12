@@ -9,6 +9,10 @@ export interface AdminShareRatioGame {
     shareType: Currency;
     shareRatio: number;
     shareRatioDisplay: string;
+    effectiveShareRatio: number;
+    effectiveShareRatioDisplay: string;
+    shareRatioEditable: boolean;
+    shareRatioSource: 'creator_level' | 'special_author' | 'game';
     isPublic: boolean;
     createdAt: string;
     updatedAt: string;
@@ -19,6 +23,7 @@ export interface AdminShareRatioUser {
     nickname: string;
     userCode: string;
     phoneNumber: string;
+    creatorBenefitLabel: string;
 }
 
 export interface AdminShareRatioResponse {

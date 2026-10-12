@@ -8,6 +8,8 @@ import CreateType from './page/CreateType';
 import CreateWorks from './page/CreateWorks';
 import WithdrawRecords from './page/WithdrawRecords';
 import CreatorIncentive from './page/CreatorIncentive';
+import CreatorBenefits from './page/CreatorBenefits';
+import GamePublishAppeal from './page/GamePublishAppeal';
 import WareHouse from './page/WareHouse';
 import WarehouseHub from './page/warehouse/WarehouseHub';
 import WarehousePersonaCards from './page/warehouse/WarehousePersonaCards';
@@ -157,12 +159,17 @@ function App() {
           <Route path="/asset/details" element={<AssetDetails />} />
           <Route path="/developer/external-games" element={<DeveloperExternalGames />} />
           <Route path="/creator" element={<Navigate to="/create" replace />} />
+          <Route path="/creator-benefits" element={<CreatorBenefits />} />
+          <Route path="/game-publish-appeals/:fileId" element={<GamePublishAppeal />} />
           <Route path="/creator/works/:fileId/stats" element={<CreatorRoute><CreatorWorkStats /></CreatorRoute>} />
           <Route path="/operator" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/reports" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/promotion" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/promotion/:promotionView" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/recruitment" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/special-authors" element={<AdminRoute><OperatorRoute><OperatorPanel /></OperatorRoute></AdminRoute>} />
+          <Route path="/operator/platform-works" element={<AdminRoute><OperatorRoute><OperatorPanel /></OperatorRoute></AdminRoute>} />
+          <Route path="/operator/promoters" element={<AdminRoute><OperatorRoute><OperatorPanel /></OperatorRoute></AdminRoute>} />
           <Route path="/operator/daily-tasks" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/withdraw" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/works/:fileId/stats" element={<OperatorRoute><OperatorWorkStats /></OperatorRoute>} />
@@ -191,7 +198,8 @@ function App() {
           <Route path="/admin/promotions/:promotionView" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/points" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/diamonds" element={<AdminRoute><AdminPanel /></AdminRoute>} />
-          <Route path="/admin/creator-incentives" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/creator-incentives" element={<AdminRoute><Navigate to="/operator/promoters" replace /></AdminRoute>} />
+          <Route path="/admin/creator-benefits" element={<AdminRoute><Navigate to="/operator/special-authors" replace /></AdminRoute>} />
           <Route path="/admin/subscriptions" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/documents" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/share-ratio" element={<AdminRoute><AdminPanel /></AdminRoute>} />

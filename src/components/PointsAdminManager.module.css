@@ -299,6 +299,47 @@
     font-weight: 700;
 }
 
+.shareRatioTypeCell {
+    color: #3f332a;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.shareRatioValueCell {
+    color: #2e241d;
+}
+
+.shareRatioValue {
+    display: block;
+    color: #2e241d;
+    font-size: 15px;
+    line-height: 1.35;
+}
+
+.shareRatioSource {
+    display: block;
+    margin-top: 3px;
+    color: #806b59;
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.shareRatioLocked {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    padding: 6px 10px;
+    border: 1px solid rgba(201, 169, 142, 0.72);
+    border-radius: 999px;
+    background: rgba(246, 238, 230, 0.92);
+    color: #6f5a49;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.35;
+    text-align: center;
+}
+
 .rewardPointsCell {
     color: #2e241d;
     font-size: 14px;

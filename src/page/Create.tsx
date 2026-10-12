@@ -18,6 +18,8 @@ import ProfilePreferenceModal from '../components/ProfilePreferenceModal';
 import { useAuthStore } from '../store/useAuthStore';
 import statisticsApi from '../api/statistics/statisticsApi';
 import creatorStatsApi, { type StatsOverview } from '../api/stats/creatorStatsApi';
+import creatorBenefitsApi from '../api/creatorBenefits/creatorBenefitsApi';
+import type { CreatorBenefitSummary } from '../api/creatorBenefits/creatorBenefits.type';
 import payApi from '../api/pay/payApi';
 import type { PayOrderRequest } from '../api/pay/pay.type';
 import { auth } from '../api/account/authApi';
@@ -61,6 +63,7 @@ const Create: React.FC = () => {
         incentiveType: 'none' as CreatorStatsIncentiveType,
     });
     const [creatorStats, setCreatorStats] = useState<StatsOverview | null>(null);
+    const [creatorBenefits, setCreatorBenefits] = useState<CreatorBenefitSummary | null>(null);
     const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
     const [isMembershipRechargeModalOpen, setIsMembershipRechargeModalOpen] = useState(false);
     const [isExchangeModalOpen, setIsExchangeModalOpen] = useState(false);
@@ -82,7 +85,7 @@ const Create: React.FC = () => {
     const truncatedDebugToken = debugToken ? `${debugToken.slice(0, 8)}...` : null;
     const userAvatar = getImageUrl(user?.user?.avatarUrl) || `${import.meta.env.BASE_URL}data/assets/defaultAvatar.png`;
     const isMember = Boolean(user?.user?.isMember);
-    const isSignedAuthor = Boolean(user?.user?.userSegment && user.user.userSegment !== 'normal');
+    const isPromotionPartner = Boolean(user?.user?.userSegment && user.user.userSegment !== 'normal');
     const isWorkIncentive = stats.incentiveType === 'incentive' || stats.incentiveType === 'game_incentive' || stats.incentiveType === 'all_incentive';
 
     const openEditNickname = () => {
@@ -201,6 +204,18 @@ const Create: React.FC = () => {
         }
     };
 
+    const getCreatorBenefits = async () => {
+        if (!user?.user?.id) return;
+        try {
+            const response = await creatorBenefitsApi.getSummary();
+            if (response.data.success && response.data.data) {
+                setCreatorBenefits(response.data.data);
+            }
+        } catch (error) {
+            console.error('Load creator benefits failed:', error);
+        }
+    };
+
     const getUserInfo = async () => {
         try {
             const response = await auth.getUserInfo();
@@ -234,6 +249,7 @@ const Create: React.FC = () => {
     useEffect(() => {
         getGameTotalStats();
         getCreatorOverviewStats();
+        getCreatorBenefits();
         getUserInfo();
         getSignInStreak();
     }, [user?.user?.id]);
@@ -373,28 +389,39 @@ const Create: React.FC = () => {
                                         )}
                                     </div>
                                     <div className={styles.creatorHeroMetaRow}>
-                                        <span className={styles.creatorHeroId}>
-                                            {t('create.idPrefix')}{userCode || '--'}
-                                        </span>
-                                        {userCode && (
-                                            <button
-                                                type="button"
-                                                className={styles.creatorCopyLink}
-                                                onClick={handleCopyUserCode}
-                                                aria-label={t('create.copy')}
-                                                title={t('create.copy')}
-                                            >
-                                                <MdContentCopy aria-hidden="true" />
-                                            </button>
-                                        )}
-                                        {(isMember || isSignedAuthor) && (
+                                        <div className={styles.creatorHeroIdGroup}>
+                                            <span className={styles.creatorHeroId}>
+                                                {t('create.idPrefix')}{userCode || '--'}
+                                            </span>
+                                            {userCode && (
+                                                <button
+                                                    type="button"
+                                                    className={styles.creatorCopyLink}
+                                                    onClick={handleCopyUserCode}
+                                                    aria-label={t('create.copy')}
+                                                    title={t('create.copy')}
+                                                >
+                                                    <MdContentCopy aria-hidden="true" />
+                                                </button>
+                                            )}
+                                        </div>
+                                        {(isMember || isPromotionPartner || creatorBenefits) && (
                                             <div className={styles.creatorHeroBadgeRow}>
+                                                {creatorBenefits && (
+                                                    <button
+                                                        type="button"
+                                                        className={styles.creatorLevelBadge}
+                                                        onClick={() => navigate('/creator-benefits')}
+                                                    >
+                                                        {creatorBenefits.label}
+                                                    </button>
+                                                )}
                                                 {isMember && (
                                                     <span className={styles.creatorRoleBadge}>
                                                         {t('create.memberBadge')}
                                                     </span>
                                                 )}
-                                                {isSignedAuthor && (
+                                                {isPromotionPartner && (
                                                     <span className={styles.creatorRoleBadge}>
                                                         {t('create.signedAuthorBadge')}
                                                     </span>

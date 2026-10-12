@@ -1,7 +1,7 @@
 import type { AnnouncementRecord } from '../announcement/announcement.type';
 import type { PromotionActivity, PromotionReviewStatus } from '../promotion/promotion.type';
 
-export type MessageType = 'announcement' | 'promotion' | 'promotion_submission_status' | 'favorite_game_updated';
+export type MessageType = 'announcement' | 'promotion' | 'promotion_submission_status' | 'favorite_game_updated' | 'game_moderation' | 'game_publish_appeal';
 
 export interface MessageAnnouncement extends AnnouncementRecord {
     messageType: 'announcement';
@@ -42,12 +42,49 @@ export interface MessageFavoriteGameUpdateNotification {
     isRead: boolean;
 }
 
+export interface MessageGameModerationNotification {
+    id: number;
+    userId: string;
+    fileId: string;
+    gameTitle: string;
+    action: 'takedown' | 'restore';
+    reason: string;
+    createdBy: string | null;
+    createdAt: string | null;
+    messageType: 'game_moderation';
+    sourceId: number;
+    isRead: boolean;
+}
+
+export interface MessageGamePublishAppeal {
+    id: number;
+    userId: string;
+    fileId: string;
+    gameTitle: string;
+    gameEngine: string;
+    takedownReason: string | null;
+    takedownAt: string | null;
+    gameUpdatedAt: string | null;
+    appealReason: string;
+    status: 'pending' | 'approved' | 'rejected';
+    reviewRemark: string | null;
+    reviewedBy: string | null;
+    reviewedAt: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+    messageType: 'game_publish_appeal';
+    sourceId: number;
+    isRead: boolean;
+}
+
 export interface MessageCenterData {
     unreadCount: number;
     announcements: MessageAnnouncement[];
     promotions: MessagePromotion[];
     promotionSubmissionNotifications: MessagePromotionSubmissionNotification[];
     favoriteGameUpdateNotifications: MessageFavoriteGameUpdateNotification[];
+    gameModerationNotifications: MessageGameModerationNotification[];
+    gamePublishAppeals: MessageGamePublishAppeal[];
 }
 
 export interface MessageUnreadCountData {

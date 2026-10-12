@@ -321,35 +321,11 @@ const CreatorIncentive: React.FC = () => {
                         </div>
                     </header>
 
-                    <section
-                        className={`${styles.panel} ${styles.newIncentiveSettlementPanel}`}
-                        data-testid="new-incentive-settlement"
-                        aria-labelledby="new-incentive-settlement-title"
-                    >
-                        <div className={styles.newIncentiveSettlementCopy}>
-                            <span id="new-incentive-settlement-title">
-                                {t('create.newIncentiveSettlementTitle')}
-                            </span>
-                            <strong>{t('create.incentiveUnavailableAmount')}</strong>
-                            <small id="new-incentive-settlement-hint">
-                                {t('create.incentiveDataPending')}
-                            </small>
-                        </div>
-                        <button
-                            type="button"
-                            className={styles.newIncentiveSettlementButton}
-                            aria-describedby="new-incentive-settlement-hint"
-                            disabled
-                        >
-                            {t('create.settle')}
-                        </button>
-                    </section>
-
                     <section className={`${styles.panel} ${styles.settlementPanel}`} aria-labelledby="settlement-title">
                         <div className={styles.sectionHeader}>
                             <div>
-                                <h2 id="settlement-title">{t('create.incentiveSettlementTitle')}</h2>
-                                <p>{t('create.incentiveSettlementHint')}</p>
+                                <h2 id="settlement-title">{t('create.creativeRevenueTitle')}</h2>
+                                <p>{t('create.creativeRevenueHint')}</p>
                             </div>
                             {isCreator && (
                                 <button
@@ -415,6 +391,19 @@ const CreatorIncentive: React.FC = () => {
                                         )}
                                     </div>
                                 </article>
+                            </div>
+                        )}
+                    </section>
+
+                    <section className={`${styles.panel} ${styles.promotionPanel}`} aria-labelledby="promotion-incentive-title">
+                        <div className={styles.sectionHeader}>
+                            <div>
+                                <h2 id="promotion-incentive-title">{t('create.promotionIncentiveTitle')}</h2>
+                                <p>{t('create.promotionIncentiveHint')}</p>
+                            </div>
+                        </div>
+                        {isWorkIncentive || isCodeIncentive ? (
+                            <div className={styles.settlementGrid}>
                                 {isWorkIncentive && (
                                     <article className={styles.settlementCard}>
                                         <span className={styles.cardLabel}>{t('create.totalIncentiveEarnings')}</span>
@@ -438,6 +427,8 @@ const CreatorIncentive: React.FC = () => {
                                     </article>
                                 )}
                             </div>
+                        ) : (
+                            <div className={styles.promotionEmpty}>{t('create.promotionIncentiveEmpty')}</div>
                         )}
                     </section>
 

@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import Navbar from '../../components/Layout/Navbar';
 import PromotionAdminManager from '../../components/PromotionAdminManager';
+import CreatorIncentiveAdminManager from '../../components/CreatorIncentiveAdminManager';
+import CreatorBenefitsAdminManager from '../../components/CreatorBenefitsAdminManager';
 import DailyTasksAdminManager from '../../components/DailyTasksAdminManager';
 import StatsOverviewSection from '../../components/stats/StatsOverviewSection';
 import MetricTitleTip from '../../components/stats/MetricTitleTip';
@@ -16,10 +18,13 @@ import operatorStatsApi, {
 import type { CreatorWorkItem, StatsOverview } from '../../api/stats/creatorStatsApi';
 import OperatorReports from './OperatorReports';
 import WithdrawAdminManager from '../../components/WithdrawAdminManager';
+import { useAuthStore } from '../../store/useAuthStore';
+import { isAdminRole } from '../../utils/userRoles';
 import adminStyles from '../AdminPanel.module.css';
 import styles from './OperatorPanel.module.css';
+import gamePublishAppealsApi from '../../api/gamePublishAppeals/gamePublishAppealsApi';
 
-type OperatorTab = 'stats' | 'reports' | 'promotions' | 'recruitment' | 'dailyTasks' | 'withdraw';
+type OperatorTab = 'stats' | 'reports' | 'promotions' | 'recruitment' | 'specialAuthors' | 'platformWorks' | 'promoters' | 'dailyTasks' | 'withdraw';
 type WorksSortField = 'playCount' | 'pv' | 'shareCount';
 type SortDirection = 'asc' | 'desc';
 
@@ -34,6 +39,9 @@ const resolveOperatorTab = (pathname: string): OperatorTab => {
   if (pathname.startsWith('/operator/reports')) return 'reports';
   if (pathname.startsWith('/operator/promotion')) return 'promotions';
   if (pathname.startsWith('/operator/recruitment')) return 'recruitment';
+  if (pathname.startsWith('/operator/special-authors')) return 'specialAuthors';
+  if (pathname.startsWith('/operator/platform-works')) return 'platformWorks';
+  if (pathname.startsWith('/operator/promoters')) return 'promoters';
   if (pathname.startsWith('/operator/daily-tasks')) return 'dailyTasks';
   if (pathname.startsWith('/operator/withdraw')) return 'withdraw';
   return 'stats';
@@ -44,6 +52,7 @@ const OperatorPanel: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const activeTab = resolveOperatorTab(location.pathname);
+  const isAdmin = isAdminRole(useAuthStore((state) => state.user?.user?.role));
 
   const [overview, setOverview] = useState<StatsOverview | null>(null);
   const [overviewLoading, setOverviewLoading] = useState(false);
@@ -60,15 +69,21 @@ const OperatorPanel: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [worksSortField, setWorksSortField] = useState<WorksSortField | null>(null);
   const [worksSortDir, setWorksSortDir] = useState<SortDirection>('desc');
+  const [appealPendingCount, setAppealPendingCount] = useState(0);
 
   const tabs: Array<{ id: OperatorTab; label: string; path: string }> = useMemo(() => ([
     { id: 'stats', label: t('operator.tabs.stats'), path: '/operator' },
     { id: 'reports', label: t('operator.tabs.reports'), path: '/operator/reports' },
     { id: 'promotions', label: t('operator.tabs.promotions'), path: '/operator/promotion' },
     { id: 'recruitment', label: t('operator.tabs.recruitment'), path: '/operator/recruitment' },
+    ...(isAdmin ? [
+      { id: 'specialAuthors' as const, label: t('operator.tabs.specialAuthors'), path: '/operator/special-authors' },
+      { id: 'platformWorks' as const, label: t('operator.tabs.platformWorks'), path: '/operator/platform-works' },
+      { id: 'promoters' as const, label: t('operator.tabs.promoters'), path: '/operator/promoters' },
+    ] : []),
     { id: 'dailyTasks', label: t('operator.tabs.dailyTasks'), path: '/operator/daily-tasks' },
     { id: 'withdraw', label: t('operator.tabs.withdraw'), path: '/operator/withdraw' },
-  ]), [t]);
+  ]), [isAdmin, t]);
 
   const sortedWorks = useMemo(() => {
     if (!worksSortField) return works;
@@ -207,6 +222,23 @@ const OperatorPanel: React.FC = () => {
     };
     void load();
   }, [activeTab, loadRecruitmentUsers]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    let cancelled = false;
+    const loadAppealPendingCount = async () => {
+      try {
+        const response = await gamePublishAppealsApi.getPendingCount();
+        if (!cancelled) setAppealPendingCount(Number(response.data.data?.pendingCount || 0));
+      } catch {
+        // 待处理角标失败不阻断运营中心其他功能。
+      }
+    };
+    void loadAppealPendingCount();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, isAdmin]);
 
   const handleWorksPageSizeChange = (nextPageSize: number) => {
     setWorksPageSize(nextPageSize);
@@ -379,6 +411,11 @@ const OperatorPanel: React.FC = () => {
                 className={`${adminStyles.navItem} ${activeTab === tab.id ? adminStyles.navItemActive : ''}`}
                 onClick={() => navigate(tab.path)}
               >
+                {tab.id === 'platformWorks' && appealPendingCount > 0 ? (
+                  <span className={adminStyles.navCounter} aria-label={t('operator.pendingAppeals', { count: appealPendingCount })}>
+                    {appealPendingCount > 99 ? '99+' : appealPendingCount}
+                  </span>
+                ) : null}
                 <span className={adminStyles.navTitle}>{tab.label}</span>
               </button>
             ))}
@@ -392,6 +429,16 @@ const OperatorPanel: React.FC = () => {
               <PromotionAdminManager pendingReviewCount={0} onRefreshCounts={async () => {}} />
             ) : null}
             {!isLoading && activeTab === 'recruitment' ? renderRecruitment() : null}
+            {activeTab === 'specialAuthors' ? <CreatorBenefitsAdminManager key="special-authors" view="benefits" /> : null}
+            {activeTab === 'platformWorks' ? (
+              <CreatorBenefitsAdminManager
+                key="platform-works"
+                view="games"
+                appealPendingCount={appealPendingCount}
+                onAppealPendingCountChange={setAppealPendingCount}
+              />
+            ) : null}
+            {activeTab === 'promoters' ? <CreatorIncentiveAdminManager /> : null}
             {activeTab === 'dailyTasks' ? renderDailyTasks() : null}
           </section>
         </div>

@@ -41,9 +41,9 @@ export function truncateMessagePreview(text: string, maxLen = 36): string {
 
 /** 功能注释：把消息类型归到效果图三个分区 */
 export function resolveMessageListSection(
-  itemType: 'announcement' | 'promotion' | 'promotion_submission_status' | 'favorite_game_updated',
+  itemType: 'announcement' | 'promotion' | 'promotion_submission_status' | 'favorite_game_updated' | 'game_moderation' | 'game_publish_appeal',
 ): MessageListSectionKey {
-  if (itemType === 'announcement') return 'system';
+  if (itemType === 'announcement' || itemType === 'game_moderation' || itemType === 'game_publish_appeal') return 'system';
   if (itemType === 'favorite_game_updated') return 'interaction';
   return 'activity';
 }

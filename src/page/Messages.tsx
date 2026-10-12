@@ -12,6 +12,8 @@ import type {
     MessageAnnouncement,
     MessageCenterData,
     MessageFavoriteGameUpdateNotification,
+    MessageGameModerationNotification,
+    MessageGamePublishAppeal,
     MessagePromotion,
     MessagePromotionSubmissionNotification,
     MessageType,
@@ -38,7 +40,9 @@ type MessageFeedItem =
     | (MessageAnnouncement & { itemType: 'announcement'; sortTime: string | null })
     | (MessagePromotion & { itemType: 'promotion'; sortTime: string | null })
     | (MessagePromotionSubmissionNotification & { itemType: 'promotion_submission_status'; sortTime: string | null })
-    | (MessageFavoriteGameUpdateNotification & { itemType: 'favorite_game_updated'; sortTime: string | null });
+    | (MessageFavoriteGameUpdateNotification & { itemType: 'favorite_game_updated'; sortTime: string | null })
+    | (MessageGameModerationNotification & { itemType: 'game_moderation'; sortTime: string | null })
+    | (MessageGamePublishAppeal & { itemType: 'game_publish_appeal'; sortTime: string | null });
 
 const getAnnouncementSortTime = (item: Pick<MessageAnnouncement, 'publishedAt' | 'updatedAt' | 'createdAt'>) =>
     item.publishedAt || item.updatedAt || item.createdAt || null;
@@ -162,7 +166,19 @@ const Messages: React.FC = () => {
             sortTime: item.createdAt || null,
         }));
 
-        return [...announcements, ...promotions, ...promotionSubmissionNotifications, ...favoriteGameUpdateNotifications].sort((left, right) => {
+        const gameModerationNotifications = (messageCenter?.gameModerationNotifications || []).map((item) => ({
+            ...item,
+            itemType: 'game_moderation' as const,
+            sortTime: item.createdAt || null,
+        }));
+
+        const gamePublishAppeals = (messageCenter?.gamePublishAppeals || []).map((item) => ({
+            ...item,
+            itemType: 'game_publish_appeal' as const,
+            sortTime: item.updatedAt || item.createdAt || null,
+        }));
+
+        return [...announcements, ...promotions, ...promotionSubmissionNotifications, ...favoriteGameUpdateNotifications, ...gameModerationNotifications, ...gamePublishAppeals].sort((left, right) => {
             const leftTime = new Date(left.sortTime || 0).getTime();
             const rightTime = new Date(right.sortTime || 0).getTime();
             return rightTime - leftTime;
@@ -197,6 +213,18 @@ const Messages: React.FC = () => {
                     : item
             ));
 
+            const gameModerationNotifications = (prev.gameModerationNotifications || []).map((item) => (
+                messageType === 'game_moderation' && item.sourceId === sourceId
+                    ? { ...item, isRead: true }
+                    : item
+            ));
+
+            const gamePublishAppeals = (prev.gamePublishAppeals || []).map((item) => (
+                messageType === 'game_publish_appeal' && item.sourceId === sourceId
+                    ? { ...item, isRead: true }
+                    : item
+            ));
+
             return {
                 ...prev,
                 unreadCount: nextUnreadCount,
@@ -204,6 +232,8 @@ const Messages: React.FC = () => {
                 promotions,
                 promotionSubmissionNotifications,
                 favoriteGameUpdateNotifications,
+                gameModerationNotifications,
+                gamePublishAppeals,
             };
         });
     }, []);
@@ -219,6 +249,8 @@ const Messages: React.FC = () => {
                 promotions: markCollectionAsRead(prev.promotions),
                 promotionSubmissionNotifications: markCollectionAsRead(prev.promotionSubmissionNotifications),
                 favoriteGameUpdateNotifications: markCollectionAsRead(prev.favoriteGameUpdateNotifications || []),
+                gameModerationNotifications: markCollectionAsRead(prev.gameModerationNotifications || []),
+                gamePublishAppeals: markCollectionAsRead(prev.gamePublishAppeals || []),
             };
         });
     }, []);
@@ -291,6 +323,16 @@ const Messages: React.FC = () => {
         setSelectedFavoriteGameUpdate({ ...notification, isRead: true });
     }, [markMessageAsRead]);
 
+    const handleOpenGameModerationNotification = useCallback(async (notification: MessageGameModerationNotification) => {
+        await markMessageAsRead('game_moderation', notification.sourceId, notification.isRead);
+        navigate(notification.action === 'takedown' ? '/create/works?tab=drafts' : '/creator-benefits');
+    }, [markMessageAsRead, navigate]);
+
+    const handleOpenGamePublishAppeal = useCallback(async (appeal: MessageGamePublishAppeal) => {
+        await markMessageAsRead('game_publish_appeal', appeal.sourceId, appeal.isRead);
+        navigate(`/game-publish-appeals/${encodeURIComponent(appeal.fileId)}`);
+    }, [markMessageAsRead, navigate]);
+
     const sectionRows = useMemo(() => {
         const buckets: Record<MessageListSectionKey, RowView[]> = {
             system: [],
@@ -342,6 +384,41 @@ const Messages: React.FC = () => {
                 continue;
             }
 
+            if (item.itemType === 'game_moderation') {
+                buckets[section].push({
+                    key: `game-moderation-${item.sourceId}`,
+                    title: item.action === 'restore'
+                        ? t('messages.gameRestoredTitle', { gameTitle: item.gameTitle })
+                        : t('messages.gameTakenDownTitle', { gameTitle: item.gameTitle }),
+                    preview: truncateMessagePreview(item.reason || t('messages.gameModerationNoReason')),
+                    time,
+                    isRead: item.isRead,
+                    onOpen: () => { void handleOpenGameModerationNotification(item); },
+                });
+                continue;
+            }
+
+            if (item.itemType === 'game_publish_appeal') {
+                const titleKey = item.status === 'approved'
+                    ? 'messages.gameAppealApprovedTitle'
+                    : item.status === 'rejected'
+                        ? 'messages.gameAppealRejectedTitle'
+                        : 'messages.gameAppealPendingTitle';
+                buckets[section].push({
+                    key: `game-publish-appeal-${item.sourceId}`,
+                    title: t(titleKey, { gameTitle: item.gameTitle || item.fileId }),
+                    preview: truncateMessagePreview(
+                        item.status === 'pending'
+                            ? item.appealReason
+                            : item.reviewRemark || t('messages.gameAppealViewDetails'),
+                    ),
+                    time,
+                    isRead: item.isRead,
+                    onOpen: () => { void handleOpenGamePublishAppeal(item); },
+                });
+                continue;
+            }
+
             buckets[section].push({
                 key: `promotion-submission-${item.sourceId}`,
                 title: getSubmissionMessageTitle(item, t),
@@ -360,6 +437,8 @@ const Messages: React.FC = () => {
     }, [
         handleOpenAnnouncement,
         handleOpenFavoriteGameUpdateNotification,
+        handleOpenGameModerationNotification,
+        handleOpenGamePublishAppeal,
         handleOpenPromotion,
         handleOpenPromotionSubmissionNotification,
         messageFeed,
