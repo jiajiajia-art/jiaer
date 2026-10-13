@@ -489,6 +489,7 @@
 
 .followBtn {
     flex-shrink: 0;
+    box-sizing: border-box;
     height: 30px;
     min-width: 72px;
     padding: 0 12px;
@@ -499,6 +500,9 @@
     cursor: pointer;
     line-height: 1;
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .followBtnActive {
@@ -514,6 +518,12 @@
 }
 
 .followBtn:hover {
+    opacity: 0.9;
+}
+
+.followBtnSelf {
+    cursor: default;
+    pointer-events: none;
     opacity: 0.9;
 }
 

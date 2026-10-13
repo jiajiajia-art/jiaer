@@ -78,12 +78,34 @@ const AccountSocialList: React.FC = () => {
     const [removeTarget, setRemoveTarget] = useState<SocialListUser | null>(null);
     /** 功能注释：PC 用按钮旁下拉；手机用底部面板 */
     const [isDesktop, setIsDesktop] = useState(readIsDesktop);
+    /** 访客态：我是否已关注名单主人（自己出现在对方名单时用来展示「互相关注」） */
+    const [followingListOwner, setFollowingListOwner] = useState(false);
 
     useEffect(() => {
         if (!userCode.trim()) {
             navigate('/profile', { replace: true });
         }
     }, [userCode, navigate]);
+
+    useEffect(() => {
+        if (isOwner || !userCode.trim() || !selfCode) {
+            setFollowingListOwner(false);
+            return;
+        }
+        let cancelled = false;
+        void (async () => {
+            try {
+                const response = await accountSocialApi.getProfile(userCode.trim());
+                if (cancelled || !response.data.success || !response.data.data) return;
+                setFollowingListOwner(Boolean(response.data.data.isFollowing));
+            } catch {
+                if (!cancelled) setFollowingListOwner(false);
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [isOwner, userCode, selfCode]);
 
     useEffect(() => {
         if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
@@ -296,23 +318,12 @@ const AccountSocialList: React.FC = () => {
                     )));
                 }
             } else {
-                setList((prev) => {
-                    if (
-                        !isFollowing
-                        && (activeTab === 'following' || activeTab === 'mutual')
-                    ) {
-                        return prev.filter((row) => row.userCode !== item.userCode);
-                    }
-                    return prev.map((row) => (
+                // 关注/粉丝/互关：取关只改按钮，不删行，方便误触后回关；下次进入再与服务端对齐
+                setList((prev) =>
+                    prev.map((row) => (
                         row.userCode === item.userCode ? { ...row, isFollowing } : row
-                    ));
-                });
-                if (
-                    !isFollowing
-                    && (activeTab === 'following' || activeTab === 'mutual')
-                ) {
-                    setTotal((n) => Math.max(0, n - 1));
-                }
+                    )),
+                );
             }
         } catch (error: unknown) {
             toast.error(getApiErrorMessage(error, t('common.error')));
@@ -502,7 +513,16 @@ const AccountSocialList: React.FC = () => {
                                                 )}
                                             </button>
                                             <div className={styles.actions}>
-                                                {!isSelfRow && (
+                                                {isSelfRow ? (
+                                                    // 别人名单里的「我」：不可点；与主人互关时展示互相关注
+                                                    <span
+                                                        className={`${styles.followBtn} ${styles.followBtnActive} ${styles.followBtnSelf}`}
+                                                    >
+                                                        {followingListOwner
+                                                            ? t('create.socialMutualBtn')
+                                                            : t('create.socialMeBtn')}
+                                                    </span>
+                                                ) : (
                                                     <button
                                                         type="button"
                                                         className={`${styles.followBtn} ${item.isFollowing ? styles.followBtnActive : styles.followBtnIdle}`}
