@@ -12,15 +12,14 @@ import { RiLogoutCircleRLine } from 'react-icons/ri';
 import {
     MdOutlineCardMembership,
     MdOutlineCampaign,
-    MdOutlineGroups,
     MdOutlineHistory,
+    MdOutlineLock,
     MdOutlineManageAccounts,
     MdOutlinePersonOff,
     MdOutlinePlayCircle,
     MdOutlineReceiptLong,
 } from 'react-icons/md';
 import toast from 'react-hot-toast';
-import JoinGroupModal from '../../components/JoinGroupModal';
 import type { SubscriptionRedeemResult, User } from '../../api/account/auth.type';
 import type { SubscriptionPlanId } from '../../api/subscriptionKeys/subscriptionKeysApi.type';
 import { getCreatorProfile, saveCreatorProfile } from '../../api/incentive/creatorProfileApi';
@@ -41,7 +40,6 @@ const ProfileFunctionPanel: React.FC = () => {
     const { t } = useTranslation();
     const { user, logout, updateUser, login } = useAuthStore();
     const navigate = useNavigate();
-    const [showJoinGroupModal, setShowJoinGroupModal] = useState(false);
     const [showRedeemInput, setShowRedeemInput] = useState(false);
     const [redeemKey, setRedeemKey] = useState('');
     const [isRedeemingMembership, setIsRedeemingMembership] = useState(false);
@@ -154,10 +152,6 @@ const ProfileFunctionPanel: React.FC = () => {
         } finally {
             setIsRedeemingMembership(false);
         }
-    };
-
-    const handleJoinGroup = () => {
-        setShowJoinGroupModal(true);
     };
 
     const clearBindAccountDraft = () => {
@@ -340,12 +334,12 @@ const ProfileFunctionPanel: React.FC = () => {
                         <button
                             type="button"
                             className={styles.functionGridItem}
-                            onClick={handleJoinGroup}
+                            onClick={() => navigate('/account/privacy')}
                         >
                             <span className={styles.functionGridIcon} aria-hidden="true">
-                                <MdOutlineGroups />
+                                <MdOutlineLock />
                             </span>
-                            <span className={styles.functionGridLabel}>{t('profile.joinOfficialQQGroup')}</span>
+                            <span className={styles.functionGridLabel}>{t('profile.privacySettings')}</span>
                         </button>
 
                         {isWebViewEnv() && (
@@ -519,8 +513,6 @@ const ProfileFunctionPanel: React.FC = () => {
                     </div>
                 </div>
             )}
-
-            <JoinGroupModal isOpen={showJoinGroupModal} onClose={() => setShowJoinGroupModal(false)} />
 
             <MembershipRedeemResultModal
                 isOpen={redeemSuccessPlanId !== null}

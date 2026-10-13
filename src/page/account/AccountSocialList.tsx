@@ -3,16 +3,22 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import accountSocialApi from '../../api/account/accountSocialApi';
-import type { FollowListSort, SocialListUser } from '../../api/account/accountSocial.type';
+import type {
+    FollowListSort,
+    RecommendEmptyReason,
+    RecommendListUser,
+    SocialListUser,
+} from '../../api/account/accountSocial.type';
 import { useAuthStore } from '../../store/useAuthStore';
 import { getApiErrorCode, getApiErrorMessage } from '../../utils/error';
 import { getImageUrl } from '../../utils/constants';
 import { GAME_CARD_DEFAULT_AVATAR_PATH } from '../../lib/gameCardAuthor';
 import styles from './AccountSocialList.module.css';
 
-type SocialTab = 'following' | 'followers' | 'mutual';
+type SocialTab = 'following' | 'followers' | 'mutual' | 'recommend';
 
 const SOCIAL_PAGE_LIMIT = 10;
+const RECOMMEND_PAGE_LIMIT = 10;
 const DESKTOP_MEDIA = '(min-width: 768px)';
 const DEFAULT_AVATAR = `${import.meta.env.BASE_URL}${GAME_CARD_DEFAULT_AVATAR_PATH}`;
 
@@ -22,15 +28,18 @@ const readIsDesktop = (): boolean => (
         : false
 );
 
-const isSocialTab = (value: string | null): value is SocialTab =>
+const isRelationTab = (value: string | null): value is Exclude<SocialTab, 'recommend'> =>
     value === 'following' || value === 'followers' || value === 'mutual';
+
+const isSocialTab = (value: string | null, allowRecommend: boolean): value is SocialTab =>
+    isRelationTab(value) || (allowRecommend && value === 'recommend');
 
 const isSort = (value: string | null): value is FollowListSort =>
     value === 'recent' || value === 'earliest';
 
 /** 功能注释：关注按钮文案按 isFollowing + isFollowedBy（v1.2） */
 const resolveFollowButtonLabel = (
-    item: SocialListUser,
+    item: Pick<SocialListUser, 'isFollowing' | 'isFollowedBy'>,
     t: (key: string) => string,
 ): string => {
     const isFollowedBy = Boolean(item.isFollowedBy);
@@ -52,10 +61,13 @@ const AccountSocialList: React.FC = () => {
 
     const tabParam = searchParams.get('tab');
     const sortParam = searchParams.get('sort');
-    const activeTab: SocialTab = isSocialTab(tabParam) ? tabParam : 'following';
+    const activeTab: SocialTab = isSocialTab(tabParam, isOwner) ? tabParam : 'following';
     const activeSort: FollowListSort = isSort(sortParam) ? sortParam : 'recent';
+    const isRecommendTab = activeTab === 'recommend';
 
     const [list, setList] = useState<SocialListUser[]>([]);
+    const [recommendList, setRecommendList] = useState<RecommendListUser[]>([]);
+    const [emptyReason, setEmptyReason] = useState<RecommendEmptyReason | null>(null);
     const [total, setTotal] = useState(0);
     const [nextCursor, setNextCursor] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
@@ -104,19 +116,32 @@ const AccountSocialList: React.FC = () => {
     }, [removeTarget, isDesktop]);
 
     useEffect(() => {
+        // 非本人访问时不允许停留在推荐 Tab
+        if (!isOwner && tabParam === 'recommend') {
+            setSearchParams({ tab: 'following', sort: 'recent' }, { replace: true });
+            return;
+        }
+
+        if (tabParam === 'recommend') {
+            if (sortParam) {
+                setSearchParams({ tab: 'recommend' }, { replace: true });
+            }
+            return;
+        }
+
         const next: Record<string, string> = {};
-        if (!isSocialTab(tabParam)) next.tab = 'following';
+        if (!isRelationTab(tabParam)) next.tab = 'following';
         else next.tab = tabParam;
         if (!isSort(sortParam)) next.sort = 'recent';
         else next.sort = sortParam;
-        if (!isSocialTab(tabParam) || !isSort(sortParam)) {
+        if (!isRelationTab(tabParam) || !isSort(sortParam)) {
             setSearchParams(next, { replace: true });
         }
-    }, [tabParam, sortParam, setSearchParams]);
+    }, [tabParam, sortParam, isOwner, setSearchParams]);
 
-    const fetchPage = useCallback(async (cursor?: string | null) => {
+    const fetchRelationPage = useCallback(async (cursor?: string | null) => {
         const code = userCode.trim();
-        if (!code) return;
+        if (!code || !isRelationTab(activeTab)) return;
 
         const isMore = Boolean(cursor);
         if (isMore) setLoadingMore(true);
@@ -176,12 +201,55 @@ const AccountSocialList: React.FC = () => {
         }
     }, [userCode, activeTab, activeSort, t]);
 
+    const fetchRecommend = useCallback(async () => {
+        if (!isOwner) return;
+        setLoading(true);
+        setPrivateBlocked(false);
+        setNextCursor(null);
+        setEmptyReason(null);
+        try {
+            const response = await accountSocialApi.getRecommendUsers({ limit: RECOMMEND_PAGE_LIMIT });
+            if (!response.data.success || !response.data.data) {
+                throw new Error(response.data.message || t('common.error'));
+            }
+            const data = response.data.data;
+            setRecommendList(data.list || []);
+            setTotal(data.total ?? data.list?.length ?? 0);
+            setEmptyReason(data.emptyReason ?? null);
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, t('common.error')));
+            setRecommendList([]);
+            setTotal(0);
+            setEmptyReason(null);
+        } finally {
+            setLoading(false);
+        }
+    }, [isOwner, t]);
+
     useEffect(() => {
-        if (!userCode.trim() || !isSocialTab(tabParam) || !isSort(sortParam)) return;
+        if (!userCode.trim()) return;
+        if (isRecommendTab) {
+            if (!isOwner) return;
+            setRecommendList([]);
+            void fetchRecommend();
+            return;
+        }
+        if (!isRelationTab(tabParam) || !isSort(sortParam)) return;
         setList([]);
         setNextCursor(null);
-        void fetchPage(null);
-    }, [userCode, activeTab, activeSort, tabParam, sortParam, fetchPage]);
+        setEmptyReason(null);
+        void fetchRelationPage(null);
+    }, [
+        userCode,
+        activeTab,
+        activeSort,
+        tabParam,
+        sortParam,
+        isRecommendTab,
+        isOwner,
+        fetchRelationPage,
+        fetchRecommend,
+    ]);
 
     const handleBack = () => {
         if (window.history.length > 1) {
@@ -193,14 +261,19 @@ const AccountSocialList: React.FC = () => {
 
     const handleTabChange = (tab: SocialTab) => {
         setRemoveTarget(null);
+        if (tab === 'recommend') {
+            setSearchParams({ tab: 'recommend' }, { replace: true });
+            return;
+        }
         setSearchParams({ tab, sort: activeSort }, { replace: true });
     };
 
     const handleSortChange = (sort: FollowListSort) => {
+        if (isRecommendTab) return;
         setSearchParams({ tab: activeTab, sort }, { replace: true });
     };
 
-    const handleToggleFollow = async (item: SocialListUser) => {
+    const handleToggleFollow = async (item: SocialListUser | RecommendListUser) => {
         if (busyUserCode) return;
         setBusyUserCode(item.userCode);
         try {
@@ -212,22 +285,35 @@ const AccountSocialList: React.FC = () => {
             }
             const { isFollowing } = response.data.data;
 
-            // 功能注释：本人关注/互关列表取关后该项不再属于该 Tab，直接移除
-            if (
-                isOwner
-                && !isFollowing
-                && (activeTab === 'following' || activeTab === 'mutual')
-            ) {
-                setList((prev) => prev.filter((row) => row.userCode !== item.userCode));
-                setTotal((n) => Math.max(0, n - 1));
-                return;
+            if (isRecommendTab) {
+                // 推荐列表不含已关注用户；关注成功后移出本页
+                if (isFollowing) {
+                    setRecommendList((prev) => prev.filter((row) => row.userCode !== item.userCode));
+                    setTotal((n) => Math.max(0, n - 1));
+                } else {
+                    setRecommendList((prev) => prev.map((row) => (
+                        row.userCode === item.userCode ? { ...row, isFollowing } : row
+                    )));
+                }
+            } else {
+                setList((prev) => {
+                    if (
+                        !isFollowing
+                        && (activeTab === 'following' || activeTab === 'mutual')
+                    ) {
+                        return prev.filter((row) => row.userCode !== item.userCode);
+                    }
+                    return prev.map((row) => (
+                        row.userCode === item.userCode ? { ...row, isFollowing } : row
+                    ));
+                });
+                if (
+                    !isFollowing
+                    && (activeTab === 'following' || activeTab === 'mutual')
+                ) {
+                    setTotal((n) => Math.max(0, n - 1));
+                }
             }
-
-            setList((prev) =>
-                prev.map((row) => (
-                    row.userCode === item.userCode ? { ...row, isFollowing } : row
-                )),
-            );
         } catch (error: unknown) {
             toast.error(getApiErrorMessage(error, t('common.error')));
         } finally {
@@ -236,7 +322,6 @@ const AccountSocialList: React.FC = () => {
     };
 
     const closeRemoveMenu = () => {
-        if (busyUserCode) return;
         setRemoveTarget(null);
     };
 
@@ -274,19 +359,25 @@ const AccountSocialList: React.FC = () => {
         return null;
     }
 
-    const tabLabel = activeTab === 'following'
-        ? t('create.followingLabel')
-        : activeTab === 'followers'
-            ? t('create.followersLabel')
-            : t('create.mutualLabel');
-    const countLabel = activeTab === 'following'
-        ? t('create.socialFollowingCount', { count: total })
-        : activeTab === 'followers'
-            ? t('create.socialFollowersCount', { count: total })
-            : t('create.socialMutualCount', { count: total });
+    const tabLabel = activeTab === 'followers'
+        ? t('create.followersLabel')
+        : activeTab === 'mutual'
+            ? t('create.mutualLabel')
+            : t('create.followingLabel');
+    const countLabel = activeTab === 'followers'
+        ? t('create.socialFollowersCount', { count: total })
+        : activeTab === 'mutual'
+            ? t('create.socialMutualCount', { count: total })
+            : t('create.socialFollowingCount', { count: total });
     const privateHint = activeTab === 'followers'
         ? t('create.socialFollowersPrivate')
         : t('create.socialFollowingPrivate');
+
+    const recommendEmptyHint = emptyReason === 'privacy_opt_out'
+        ? t('create.socialRecommendEmptyPrivacy')
+        : emptyReason === 'new_user'
+            ? t('create.socialRecommendEmptyNewUser')
+            : t('create.socialRecommendEmptyNone');
 
     const renderNavTab = (tab: SocialTab, label: string) => (
         <button
@@ -302,6 +393,9 @@ const AccountSocialList: React.FC = () => {
             ) : null}
         </button>
     );
+
+    const displayList = isRecommendTab ? recommendList : list;
+    const showMetaRow = !isRecommendTab || (!loading && displayList.length > 0);
 
     return (
         <div className={styles.pageRoot}>
@@ -323,46 +417,64 @@ const AccountSocialList: React.FC = () => {
                     {renderNavTab('following', t('create.followingLabel'))}
                     {renderNavTab('followers', t('create.followersLabel'))}
                     {renderNavTab('mutual', t('create.mutualLabel'))}
+                    {isOwner ? renderNavTab('recommend', t('create.socialRecommendLabel')) : null}
                 </nav>
 
                 <div className={styles.main}>
-                    <div className={styles.metaRow}>
-                        <div className={styles.metaCopy}>
-                            <h2 className={styles.panelTitle}>{tabLabel}</h2>
-                            <div className={styles.countRow}>{countLabel}</div>
+                    {showMetaRow ? (
+                        <div className={styles.metaRow}>
+                            <div className={styles.metaCopy}>
+                                {isRecommendTab ? (
+                                    <h2 className={styles.panelTitle}>
+                                        {t('create.socialRecommendPanelTitle')}
+                                    </h2>
+                                ) : (
+                                    <>
+                                        <h2 className={styles.panelTitle}>{tabLabel}</h2>
+                                        <div className={styles.countRow}>{countLabel}</div>
+                                    </>
+                                )}
+                            </div>
+                            {!isRecommendTab ? (
+                                <button
+                                    type="button"
+                                    className={styles.sortToggle}
+                                    aria-label={t('create.socialSortLabel')}
+                                    onClick={() => handleSortChange(activeSort === 'recent' ? 'earliest' : 'recent')}
+                                >
+                                    <span>
+                                        {activeSort === 'recent'
+                                            ? t('create.socialSortRecent')
+                                            : t('create.socialSortEarliest')}
+                                    </span>
+                                    <img
+                                        className={styles.sortIcon}
+                                        src={`${import.meta.env.BASE_URL}data/assetsv2/personal/change.svg`}
+                                        alt=""
+                                        aria-hidden="true"
+                                    />
+                                </button>
+                            ) : null}
                         </div>
-                        <button
-                            type="button"
-                            className={styles.sortToggle}
-                            aria-label={t('create.socialSortLabel')}
-                            onClick={() => handleSortChange(activeSort === 'recent' ? 'earliest' : 'recent')}
-                        >
-                            <span>
-                                {activeSort === 'recent'
-                                    ? t('create.socialSortRecent')
-                                    : t('create.socialSortEarliest')}
-                            </span>
-                            <img
-                                className={styles.sortIcon}
-                                src={`${import.meta.env.BASE_URL}data/assetsv2/personal/change.svg`}
-                                alt=""
-                                aria-hidden="true"
-                            />
-                        </button>
-                    </div>
+                    ) : null}
 
                     {loading ? (
                         <p className={styles.emptyHint}>{t('common.loading')}</p>
                     ) : privateBlocked ? (
                         <p className={styles.emptyHint}>{privateHint}</p>
-                    ) : list.length === 0 ? (
-                        <p className={styles.emptyHint}>{t('create.socialListEmpty')}</p>
+                    ) : displayList.length === 0 ? (
+                        <p className={styles.emptyHint}>
+                            {isRecommendTab ? recommendEmptyHint : t('create.socialListEmpty')}
+                        </p>
                     ) : (
                         <ul className={styles.list}>
-                            {list.map((item) => {
+                            {displayList.map((item) => {
                                 const avatar = getImageUrl(item.avatarUrl) || DEFAULT_AVATAR;
                                 const isSelfRow = Boolean(selfCode && item.userCode === selfCode);
                                 const followLabel = resolveFollowButtonLabel(item, t);
+                                const reasonText = isRecommendTab
+                                    ? (item as RecommendListUser).reasonText
+                                    : '';
                                 return (
                                     <li key={item.userCode} className={styles.listItem}>
                                         <button
@@ -380,10 +492,14 @@ const AccountSocialList: React.FC = () => {
                                                 onClick={() => openUser(item.userCode)}
                                             >
                                                 <div className={styles.nickname}>{item.nickname}</div>
-                                                <div className={styles.bio}>
-                                                    {item.bio?.trim()
-                                                        || t('create.accountHomepageBioPlaceholder')}
-                                                </div>
+                                                {reasonText ? (
+                                                    <div className={styles.reasonText}>{reasonText}</div>
+                                                ) : (
+                                                    <div className={styles.bio}>
+                                                        {item.bio?.trim()
+                                                            || t('create.accountHomepageBioPlaceholder')}
+                                                    </div>
+                                                )}
                                             </button>
                                             <div className={styles.actions}>
                                                 {!isSelfRow && (
@@ -405,7 +521,7 @@ const AccountSocialList: React.FC = () => {
                                                             aria-label={t('create.socialMoreActions')}
                                                             aria-expanded={removeTarget?.userCode === item.userCode}
                                                             aria-haspopup="menu"
-                                                            onClick={() => openRemoveMenu(item)}
+                                                            onClick={() => openRemoveMenu(item as SocialListUser)}
                                                         >
                                                             <img
                                                                 className={styles.moreIcon}
@@ -441,13 +557,13 @@ const AccountSocialList: React.FC = () => {
                         </ul>
                     )}
 
-                    {!loading && !privateBlocked && nextCursor && (
+                    {!loading && !privateBlocked && !isRecommendTab && nextCursor && (
                         <div className={styles.loadMoreWrap}>
                             <button
                                 type="button"
                                 className={styles.loadMoreBtn}
                                 disabled={loadingMore}
-                                onClick={() => void fetchPage(nextCursor)}
+                                onClick={() => void fetchRelationPage(nextCursor)}
                             >
                                 {loadingMore ? t('common.loading') : t('create.socialLoadMore')}
                             </button>

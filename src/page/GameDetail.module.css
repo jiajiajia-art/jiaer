@@ -329,6 +329,15 @@
     transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
+/* 功能注释：等详情关系态落地时占位，避免先闪错误态再把布局撑开 */
+.followBtnPlaceholder {
+    flex-shrink: 0;
+    height: 1.5625rem;
+    width: 3.8rem;
+    visibility: hidden;
+    pointer-events: none;
+}
+
 .followBtnIdle {
     background: rgba(142, 33, 53, 0.72);
     color: #ffffff;

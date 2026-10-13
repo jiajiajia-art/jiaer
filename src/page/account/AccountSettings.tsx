@@ -53,6 +53,9 @@ const AccountSettings: React.FC = () => {
     const [privacy, setPrivacy] = useState<AccountPrivacy>({
         followingListPublic: true,
         followersListPublic: true,
+        listDiscoverable: true,
+        peopleSuggestIn: false,
+        peopleSuggestOut: true,
     });
     const [loading, setLoading] = useState(true);
     const [savingBio, setSavingBio] = useState(false);

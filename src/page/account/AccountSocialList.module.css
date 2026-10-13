@@ -478,6 +478,15 @@
     white-space: nowrap;
 }
 
+.reasonText {
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--social-label);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .followBtn {
     flex-shrink: 0;
     height: 30px;

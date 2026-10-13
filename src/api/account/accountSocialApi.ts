@@ -5,9 +5,13 @@ import type {
   AccountProfile,
   AccountWorksPage,
   AccountWorksParams,
+  BlockedListPage,
+  BlockedListParams,
   BlockMutationResult,
   FollowAction,
   FollowMutationResult,
+  RecommendUsersPage,
+  RecommendUsersParams,
   SocialListPage,
   SocialListParams,
 } from './accountSocial.type';
@@ -62,6 +66,12 @@ const accountSocialApi = {
 
   unblock: (userCode: string) =>
     api.delete<ApiResponse<BlockMutationResult>>(accountPath(userCode, '/block')),
+
+  getBlocked: (params?: BlockedListParams) =>
+    api.get<ApiResponse<BlockedListPage>>('/account/blocked', { params }),
+
+  getRecommendUsers: (params?: RecommendUsersParams) =>
+    api.get<ApiResponse<RecommendUsersPage>>('/account/recommend/users', { params }),
 };
 
 export default accountSocialApi;

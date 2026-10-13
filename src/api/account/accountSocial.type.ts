@@ -28,6 +28,32 @@ export interface AccountProfile {
 export interface AccountPrivacy {
   followingListPublic: boolean;
   followersListPublic: boolean;
+  /** 别人打开他人名单时，我这条能不能出现 */
+  listDiscoverable: boolean;
+  /** 是否允许系统向我下发推荐关注列表（默认 false） */
+  peopleSuggestIn: boolean;
+  /** 是否允许把我放进别人的推荐候选 */
+  peopleSuggestOut: boolean;
+}
+
+export interface BlockedListUser {
+  userCode: string;
+  nickname: string;
+  avatarUrl: string | null;
+  bio: string;
+  blockedAt: string;
+}
+
+export interface BlockedListPage {
+  total: number;
+  limit: number;
+  nextCursor: string | null;
+  list: BlockedListUser[];
+}
+
+export interface BlockedListParams {
+  limit?: number;
+  cursor?: string;
 }
 
 export interface FollowMutationResult {
@@ -79,4 +105,31 @@ export interface AccountWorksPage {
 export interface AccountWorksParams {
   limit?: number;
   offset?: number;
+}
+
+export type RecommendEmptyReason = 'privacy_opt_out' | 'new_user' | 'no_candidates';
+
+export type RecommendReasonType = 'frequent_play' | 'preferred_tag_hot' | 'follow_of_follow';
+
+export interface RecommendListUser {
+  userCode: string;
+  nickname: string;
+  avatarUrl: string | null;
+  bio: string;
+  isFollowing: boolean;
+  isFollowedBy: boolean;
+  reasonType: RecommendReasonType;
+  reasonText: string;
+  fofCount: number | null;
+}
+
+export interface RecommendUsersPage {
+  total: number;
+  limit: number;
+  emptyReason: RecommendEmptyReason | null;
+  list: RecommendListUser[];
+}
+
+export interface RecommendUsersParams {
+  limit?: number;
 }

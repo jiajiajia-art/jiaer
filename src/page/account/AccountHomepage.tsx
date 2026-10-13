@@ -66,7 +66,12 @@ const AccountHomepage: React.FC = () => {
         };
     }, [routeUserCode, navigate, t]);
 
+    /** 功能注释：优先回上一页（如游戏详情），无历史再回个人中心 */
     const handleClose = () => {
+        if (window.history.length > 1) {
+            navigate(-1);
+            return;
+        }
         navigate('/profile');
     };
 

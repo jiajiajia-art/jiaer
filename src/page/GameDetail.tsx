@@ -244,6 +244,8 @@ const GameDetail: React.FC = () => {
     } | null>(null);
     /** 功能注释：关注写操作忙碌态；关系态来自详情 info 字段 */
     const [followBusy, setFollowBusy] = useState(false);
+    /** 功能注释：列表预览无关注态，等详情接口落地后再展示按钮，避免先闪「关注」 */
+    const [creatorRelationReady, setCreatorRelationReady] = useState(false);
 
     // Refs
     const likeDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -333,7 +335,8 @@ const GameDetail: React.FC = () => {
     const isFollowingCreator = Boolean(game?.isFollowingCreator);
     const isCreatorBlocked = Boolean(game?.isCreatorBlocked);
     const isCreatorBlockedBy = Boolean(game?.isCreatorBlockedBy);
-    const showCreatorFollowBtn = Boolean(heroMetaLine && creatorUserCode && !isCreatorSelf);
+    const canShowCreatorFollowSlot = Boolean(heroMetaLine && creatorUserCode && !isCreatorSelf);
+    const showCreatorFollowBtn = canShowCreatorFollowSlot && creatorRelationReady;
     const creatorFollowActionable = showCreatorFollowBtn && !isCreatorBlocked && !isCreatorBlockedBy;
 
     const handleOpenCreatorHomepage = () => {
@@ -506,6 +509,8 @@ const GameDetail: React.FC = () => {
             setGameDetailToStore(gameData);
         };
 
+        setCreatorRelationReady(false);
+
         if (preview) {
             applyGameData(preview);
             setIsLoading(false);
@@ -543,6 +548,7 @@ const GameDetail: React.FC = () => {
             } finally {
                 if (!cancelled) {
                     setIsLoading(false);
+                    setCreatorRelationReady(true);
                 }
             }
         };
@@ -1388,27 +1394,31 @@ const GameDetail: React.FC = () => {
                                 />
                                 <p className={styles.heroMeta}>{heroMetaLine}</p>
                             </button>
-                            {showCreatorFollowBtn ? (
-                                <button
-                                    type="button"
-                                    className={`${styles.followBtn} ${
-                                        isCreatorBlocked || isCreatorBlockedBy
-                                            ? styles.followBtnMuted
-                                            : isFollowingCreator
-                                                ? styles.followBtnActive
-                                                : styles.followBtnIdle
-                                    }`}
-                                    disabled={followBusy || !creatorFollowActionable}
-                                    onClick={() => void handleToggleCreatorFollow()}
-                                >
-                                    {isCreatorBlocked
-                                        ? t('create.socialBlockedBtn')
-                                        : isCreatorBlockedBy
-                                            ? t('create.socialCannotFollowBtn')
-                                            : isFollowingCreator
-                                                ? t('create.socialFollowingBtn')
-                                                : t('create.socialFollowBtn')}
-                                </button>
+                            {canShowCreatorFollowSlot ? (
+                                showCreatorFollowBtn ? (
+                                    <button
+                                        type="button"
+                                        className={`${styles.followBtn} ${
+                                            isCreatorBlocked || isCreatorBlockedBy
+                                                ? styles.followBtnMuted
+                                                : isFollowingCreator
+                                                    ? styles.followBtnActive
+                                                    : styles.followBtnIdle
+                                        }`}
+                                        disabled={followBusy || !creatorFollowActionable}
+                                        onClick={() => void handleToggleCreatorFollow()}
+                                    >
+                                        {isCreatorBlocked
+                                            ? t('create.socialBlockedBtn')
+                                            : isCreatorBlockedBy
+                                                ? t('create.socialCannotFollowBtn')
+                                                : isFollowingCreator
+                                                    ? t('create.socialFollowingBtn')
+                                                    : t('create.socialFollowBtn')}
+                                    </button>
+                                ) : (
+                                    <span className={styles.followBtnPlaceholder} aria-hidden="true" />
+                                )
                             ) : null}
                         </div>
                     ) : null}
