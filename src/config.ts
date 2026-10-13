@@ -6,11 +6,13 @@ export const ON_SERVER: boolean = import.meta.env.PROD;
 // 测试
 // export const HOST_ADDRESS = 'https://api-test.kurangames.com';
 // 测试2（后端 interactive-fiction-backend-test2）
- export const HOST_ADDRESS = 'https://api-test2.kurangames.com';
+// export const HOST_ADDRESS = 'https://api-test2.kurangames.com';
 // 国内正式生产（funloom.kurangames.com）
 //export const HOST_ADDRESS = 'https://api.kurangames.com';
-// 海外正式生产
+// 海外正式生产(忽略)
 // export const HOST_ADDRESS = 'https://api-overseas.kurangames.com';
+// funloom.ai海外正式生产
+export const HOST_ADDRESS = 'https://api-cf.kurangames.com';
 // 本地直连（私聊去自我介绍 / 30s 主动开口等改动在本地后端）
 // 本地直连
 // export const HOST_ADDRESS = 'http://localhost:3000';
