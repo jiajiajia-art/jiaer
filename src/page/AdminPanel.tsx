@@ -35,6 +35,7 @@ import CommentAdminManager from '../components/Admin/CommentAdminManager';
 import WithdrawAdminManager from '../components/WithdrawAdminManager';
 import LotteryAdminManager from '../components/LotteryAdminManager';
 import ModelConfigHub from '../components/ModelConfigHub';
+import AiModelPricingManager from '../components/AiModelPricingManager';
 import announcementApi from '../api/announcement/announcementApi';
 import documentApi from '../api/document/documentApi';
 import gameTagsApi from '../api/gameTags/gameTagsApi';
@@ -57,7 +58,7 @@ import { useMessageStore } from '../store/useMessageStore';
 import { useAuthStore } from '../store/useAuthStore';
 
 type EditorMode = 'new' | 'draft' | 'published';
-type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points' | 'diamonds' | 'subscriptions' | 'documents' | 'shareRatio' | 'dailyTasks' | 'users' | 'comments' | 'withdraw' | 'imageGen' | 'lottery';
+type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points' | 'diamonds' | 'subscriptions' | 'documents' | 'shareRatio' | 'dailyTasks' | 'users' | 'comments' | 'withdraw' | 'imageGen' | 'aiModelPricing' | 'lottery';
 type SortModalMode = 'featured' | 'all' | null;
 
 interface SortDraftItem {
@@ -90,6 +91,7 @@ const resolveAdminTab = (pathname: string, search: string): AdminTab => {
     if (pathname.startsWith('/admin/daily-tasks')) return 'dailyTasks';
     if (pathname.startsWith('/admin/comments')) return 'comments';
     if (pathname.startsWith('/admin/withdraw')) return 'withdraw';
+    if (pathname.startsWith('/admin/ai-model-pricing')) return 'aiModelPricing';
     if (pathname.startsWith('/admin/image-gen') || pathname.startsWith('/admin/text-llm')) return 'imageGen';
     if (pathname.startsWith('/admin/lottery')) return 'lottery';
     const tabParam = new URLSearchParams(search).get('tab');
@@ -1020,6 +1022,10 @@ const AdminPanel: React.FC = () => {
             navigate('/admin/image-gen');
             return;
         }
+        if (tab === 'aiModelPricing') {
+            navigate('/admin/ai-model-pricing');
+            return;
+        }
         if (tab === 'lottery') {
             navigate('/admin/lottery');
             return;
@@ -1555,6 +1561,13 @@ const AdminPanel: React.FC = () => {
                             </button>
                             <button
                                 type="button"
+                                className={`${styles.navItem} ${activeTab === 'aiModelPricing' ? styles.navItemActive : ''}`}
+                                onClick={() => handleTabChange('aiModelPricing')}
+                            >
+                                <span className={styles.navTitle}>AI 模型计费管理</span>
+                            </button>
+                            <button
+                                type="button"
                                 className={`${styles.navItem} ${activeTab === 'lottery' ? styles.navItemActive : ''}`}
                                 onClick={() => handleTabChange('lottery')}
                             >
@@ -1936,6 +1949,8 @@ const AdminPanel: React.FC = () => {
                         {activeTab === 'withdraw' && <WithdrawAdminManager />}
 
                         {activeTab === 'imageGen' && <ModelConfigHub />}
+
+                        {activeTab === 'aiModelPricing' && <AiModelPricingManager />}
 
                         {activeTab === 'lottery' && <LotteryAdminManager />}
 
