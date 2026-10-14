@@ -10,6 +10,9 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+# 功能注释：分环境构建产物，勿提交
+dist-cn-test/
+dist-cn-prod/
 *.local
 .cursor*
 
