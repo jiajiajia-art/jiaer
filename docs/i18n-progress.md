@@ -287,7 +287,6 @@
 | `src/components/AnnouncementModal.tsx` | ✅ |
 | `src/components/CheckInModal.tsx` | ✅ |
 | `src/components/ImageCropModal.tsx` | ✅ |
-| `src/components/InviteRewardModal.tsx` | ✅ |
 | `src/components/JoinGroupModal.tsx` | ✅ |
 | `src/components/FloatingJoinGroup.tsx` | ✅ |
 | `src/components/LoadSaveListModal.tsx` | ✅ |

@@ -20,8 +20,7 @@ import type {
   SettlePointsResponse,
   SignupRequest,
   SubscriptionRedeemResult,
-  InviteStats,
-  InviteClaimResult,
+  InviteCodeUseResult,
   User,
 } from "./auth.type";
 
@@ -62,13 +61,7 @@ export const auth = {
   },
 
   useInviteCode: (data: { inviteCode: string }) =>
-    api.post<ApiResponse<null>>('/auth/invite/use-code', data),
-
-  getInviteStats: () =>
-    api.get<ApiResponse<InviteStats>>('/auth/invite/stats'),
-
-  claimInviteReward: (data: { threshold: number }) =>
-    api.post<ApiResponse<InviteClaimResult>>('/auth/invite/claim', data),
+    api.post<ApiResponse<InviteCodeUseResult>>('/auth/invite/use-code', data),
 
   updateUserAvatar: (file: File) => {
     const formData = new FormData();

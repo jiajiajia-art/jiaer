@@ -132,63 +132,6 @@
     color: rgba(255, 255, 255, 0.38);
 }
 
-.inviteCampaignFooterRow {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    width: 100%;
-    min-width: 0;
-}
-
-.inviteCampaignMeta {
-    margin: 0;
-    flex: 1 1 auto;
-    min-width: 0;
-    color: #ffffff;
-    font-size: 12px;
-    line-height: 1.25;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.inviteCampaignMetaValue {
-    color: var(--creator-title, #A8283C);
-    font-weight: 700;
-    font-size: 14px;
-    line-height: 1.25;
-    vertical-align: baseline;
-}
-
-.inviteCampaignRewardBtn {
-    appearance: none;
-    border: none;
-    flex-shrink: 0;
-    height: 30px;
-    padding: 0 14px;
-    border-radius: 999px;
-    background: #A8283C;
-    color: #ffffff;
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    white-space: nowrap;
-    box-shadow: 0 4px 12px rgba(168, 40, 60, 0.22);
-    transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.inviteCampaignRewardBtn:hover {
-    background: #C23A50;
-    transform: translateY(-1px);
-    box-shadow: 0 6px 14px rgba(168, 40, 60, 0.28);
-}
-
-.inviteCampaignRewardBtn:active {
-    transform: translateY(0);
-    box-shadow: 0 2px 8px rgba(168, 40, 60, 0.18);
-}
-
 @media (min-width: 769px) {
     .inviteCampaignFields {
         display: grid;
@@ -271,18 +214,8 @@
         border-radius: 0 8px 8px 0;
     }
 
-    .inviteCampaignRewardBtn {
-        height: 28px;
-        font-size: 11px;
-        padding: 0 12px;
-    }
-
     .inviteCampaignRedeemInput {
         min-height: 36px;
         font-size: 12px;
-    }
-
-    .inviteCampaignMeta {
-        font-size: 11px;
     }
 }
