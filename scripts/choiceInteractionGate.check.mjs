@@ -9,8 +9,11 @@ import {
   GENERATION_BUSY_MAX_RETRIES,
   getGenerationBusyRetryDelayMs,
   isGenerationBusyError,
+  shouldAutoPromoteReadyChoice,
+  shouldClearCurrentStepWhenDeferringChoice,
   shouldDeferChoiceUntilStreamReady,
 } from '../src/lib/galgame/choiceStepDisplayGate.ts';
+import { resolveChoiceStepPromptMessage } from '../src/lib/galgame/choiceStepPrompt.ts';
 
 test('canSubmitChoiceInteraction_选项已展示且流式结束时应允许点击', () => {
   assert.equal(
@@ -90,4 +93,61 @@ test('getGenerationBusyRetryDelayMs_随次数递增且有上限', () => {
   assert.equal(getGenerationBusyRetryDelayMs(1), 1400);
   assert.equal(getGenerationBusyRetryDelayMs(10), 2800);
   assert.ok(GENERATION_BUSY_MAX_RETRIES >= 3);
+});
+
+test('shouldClearCurrentStepWhenDeferringChoice_CF清空_Aliyun保留', () => {
+  assert.equal(shouldClearCurrentStepWhenDeferringChoice(false), true);
+  assert.equal(shouldClearCurrentStepWhenDeferringChoice(true), false);
+});
+
+test('shouldAutoPromoteReadyChoice_仅Aliyun在旁白后衔choice', () => {
+  assert.equal(
+    shouldAutoPromoteReadyChoice({
+      aliyunRuntime: false,
+      currentStepType: 'narration',
+      nextStepType: 'choice',
+      streamLoading: false,
+      hasCurrentStep: true,
+      isWaitingForData: false,
+    }),
+    false,
+  );
+  assert.equal(
+    shouldAutoPromoteReadyChoice({
+      aliyunRuntime: true,
+      currentStepType: 'narration',
+      nextStepType: 'choice',
+      streamLoading: false,
+      hasCurrentStep: true,
+      isWaitingForData: false,
+    }),
+    true,
+  );
+  assert.equal(
+    shouldAutoPromoteReadyChoice({
+      aliyunRuntime: true,
+      currentStepType: 'narration',
+      nextStepType: 'choice',
+      streamLoading: true,
+      hasCurrentStep: true,
+      isWaitingForData: false,
+    }),
+    false,
+  );
+});
+
+test('resolveChoiceStepPromptMessage_description优先_content回退', () => {
+  assert.equal(
+    resolveChoiceStepPromptMessage({ description: '请抉择', content: '旁白正文' }),
+    '请抉择',
+  );
+  assert.equal(
+    resolveChoiceStepPromptMessage({ content: '旁白正文' }),
+    '旁白正文',
+  );
+  assert.equal(
+    resolveChoiceStepPromptMessage({ title: '抉择', content: '月下' }),
+    '抉择\n月下',
+  );
+  assert.equal(resolveChoiceStepPromptMessage({}), '请选择你的行动');
 });

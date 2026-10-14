@@ -7,6 +7,7 @@ import { onAuthStateChanged, getRedirectResult } from 'firebase/auth'
 import { auth as firebaseAuth } from './config/firebase'
 import { auth as authApi } from './api/account/authApi'
 import { useAuthStore } from './store/useAuthStore'
+import { appPath } from './lib/appBasePath'
 
 const isDev = import.meta.env.DEV;
 const logAuth = (...args: unknown[]) => {
@@ -19,8 +20,8 @@ const logAuthError = (...args: unknown[]) => {
 };
 
 const navigateToHome = () => {
-    // 兼容 Capacitor（origin 为 https://localhost）和 Web 部署（/funloom/）
-    const targetUrl = window.location.origin + '/funloom/home';
+    // 兼容 Capacitor 与 Web（/funloom 或 /funloom-test）
+    const targetUrl = window.location.origin + appPath('home');
     if (window.top && window.top.location.href !== targetUrl) {
         window.top.location.href = targetUrl;
     } else if (window.location.href !== targetUrl) {

@@ -1,0 +1,36 @@
+---
+description: Visual 编辑器 world.json 新字段须同步后端 D1 schema registry 与前端 types/i18n
+globs:
+  - "src/api/galgame/**/*.{ts,tsx}"
+  - "src/components/GameSettingEditor/**/*.{ts,tsx}"
+  - "src/utils/**/*.{ts,tsx}"
+  - "docs/**/*.md"
+  - "src/i18n/locales/*.json"
+alwaysApply: false
+---
+
+# Visual world.json 字段 — 前后端 + SQL 同步（强制）
+
+在 Visual/TXT 编辑器为 `world.json` **新增或变更**字段时，除实现 UI 与 API 外，必须同步登记到后端 D1 元数据表（规则详见 `Interactive-fiction-backend/.cursor/rules/visual-world-json-schema-registry.mdc`）。
+
+## 前端交付清单
+
+1. **类型**：`src/api/galgame/EditorData.type.ts`（或等价类型文件）
+2. **校验**：`src/utils/` 中与字段相关的纯函数 + `*.test.ts` / `scripts/*.check.mjs`
+3. **i18n**：`src/i18n/locales/zh.json`、`en.json` 的字段标签与 `*Hint` tips 文案
+4. **SQL 登记**（由后端同事或同一任务完成）：
+   - `Interactive-fiction-backend/cf/migrations/YYYY-MM-DD-*.sql`
+   - `Interactive-fiction-backend/cf/d1-schema.sql` 种子 INSERT
+   - `field_description` 须包含 UI 说明，与 `*Hint` 一致
+5. **文档**：`docs/` 计划书更新字段表与触发规则（如有运行时行为）
+
+## 禁止
+
+- 仅改前端 UI/i18n 而不更新 `visual_world_json_schema_registry`
+- `field_description` 与编辑器 tips 文案矛盾
+- 新字段无校验单测即交付（见 `duanju.testing` 同类要求：业务逻辑必须带测）
+
+## 参考实现
+
+- 补充提示词：`morePromptForms`（title/constant/content/description）
+- 后端 registry：`cf/migrations/2026-07-09-more-prompt-forms-schema-registry-docs.sql`

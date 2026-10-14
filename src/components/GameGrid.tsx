@@ -4,7 +4,11 @@ import { useTranslation } from 'react-i18next';
 import styles from './GameGrid.module.css';
 import type { UserGameData } from '../api/home/getGameData.type';
 import { addImageTimestamp } from '../utils/imageCache';
-import { resolveGameListCoverUrl } from '../utils/displayCoverUrl';
+import {
+    resolveGameListCoverUrl,
+    resolveOriginalCoverUrl,
+    coverUrlAfterDisplayCoverError,
+} from '../utils/displayCoverUrl';
 import { getImageUrl } from '../utils/constants';
 import { getGameTypeLabelFromMeta, getGameTypeToneFromMeta } from '../utils/gameTypeLabel';
 import { resolveGameTypeToneStyle } from '../utils/gameTypeToneClass';
@@ -178,6 +182,19 @@ const GameGrid: React.FC<GameGridProps> = ({
                                     <img
                                         src={addImageTimestamp(getImageUrl(displayCoverPath))}
                                         alt={meta.title || `剧情${idx + 1}`}
+                                        onError={(event) => {
+                                            // 功能注释：缺 display-cover 时回退原图，避免列表裂图
+                                            const img = event.currentTarget;
+                                            const fallbackPath = coverUrlAfterDisplayCoverError(
+                                                displayCoverPath,
+                                                resolveOriginalCoverUrl(meta),
+                                            );
+                                            if (!fallbackPath) return;
+                                            const next = addImageTimestamp(getImageUrl(fallbackPath));
+                                            if (!next || img.src === next || img.dataset.coverFallback === '1') return;
+                                            img.dataset.coverFallback = '1';
+                                            img.src = next;
+                                        }}
                                     />
                                 );
                             })()}

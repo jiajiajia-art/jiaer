@@ -11,6 +11,8 @@ import type { Message } from '../../hooks/galgame/useGalgameMessage';
 interface StepHandlers {
     isWaitingForData: boolean;
     isCompressingContext?: boolean;
+    /** 功能注释：流式请求进行中；为 true 时不展示选项，避免抢锁 */
+    loading?: boolean;
     currentStep: any;
     showNextButton: boolean;
     selectedOptionIndex: number | null;
@@ -136,7 +138,8 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                         </div>
                     )}
 
-                    {!isWaitingForData && currentMessage && currentMessage.type === 'narration' && currentMessage.message && (
+                    {/* 功能注释：有 currentStep 时也渲染（Aliyun raw_text 按句上屏时 isWaitingForData 可能仍为 true） */}
+                    {(currentStep || !isWaitingForData) && currentMessage && currentMessage.type === 'narration' && currentMessage.message && (
                         <div className={styles.narrationMessage}>
                             <div className={styles.characterDivider} style={{ marginBottom: '8px' }}></div>
                             {renderTextWithMarkdown(
@@ -147,7 +150,7 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                         </div>
                     )}
 
-                    {!isWaitingForData && currentMessage && currentMessage.type === 'dialogue' && currentMessage.message && (
+                    {(currentStep || !isWaitingForData) && currentMessage && currentMessage.type === 'dialogue' && currentMessage.message && (
                         <>
                             <div className={styles.characterMessage}>
                                 <div className={styles.characterName}>{currentMessage.characterName}</div>
@@ -163,7 +166,7 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                         </>
                     )}
 
-                    {!isWaitingForData && currentMessage && (currentMessage.type === 'scene_change' || currentMessage.type === 'transition') && currentMessage.message && (
+                    {(currentStep || !isWaitingForData) && currentMessage && (currentMessage.type === 'scene_change' || currentMessage.type === 'transition') && currentMessage.message && (
                         <div className={styles.narrationMessage}>
                             <div className={styles.characterDivider} style={{ marginBottom: '8px' }}></div>
                             {renderTextWithMarkdown(
@@ -190,23 +193,29 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                                     <MdAutorenew />
                                 </button>
                             )}
-                            <button
-                                className={styles.nextButton}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onNextMessage();
-                                }}
-                                disabled={isWaitingForData || isCompressingContext}
-                            >
-                                <IoArrowDownCircleOutline />
-                            </button>
+                            {/* 功能注释：仅 showNextButton 时渲染下一步，避免「看得见点不动」 */}
+                            {showNextButton && (
+                                <button
+                                    className={styles.nextButton}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onNextMessage();
+                                    }}
+                                    // 功能注释：有下一步就应可点；勿被 isWaitingForData 误禁用（Aliyun 分页）
+                                    disabled={isCompressingContext}
+                                >
+                                    <IoArrowDownCircleOutline />
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>
             )}
 
-            {currentMessage && currentMessage.type === 'choice' && !isWaitingForData && !isCompressingContext && (
+            {/* 功能注释：流式 loading 中不展示选项，避免点选撞会话锁弹出「正在生成中」 */}
+            {currentMessage && currentMessage.type === 'choice' && !isWaitingForData && !isCompressingContext && !stepHandlers.loading && (
                 <div className={styles.choiceContainer}>
+                    {/* 功能注释：与 CF 一致——选项步只渲染选项/自定义输入，引导旁白走独立 narration 步 */}
                     {currentMessage.options && currentMessage.options.length > 0 && (
                         <>
                             {currentMessage.options.map((option) => (

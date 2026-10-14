@@ -13,12 +13,16 @@ import { extractChoiceFromHistory, extractPlainText, parseHistoryToSteps } from 
 import statisticsApi from "../../api/statistics/statisticsApi";
 import toast from "react-hot-toast";
 import replayApi from "../../api/galgame/replay";
-import { withCacheBust } from "../../utils/imageCache";
+import { stripImageCacheBust, withCacheBust } from "../../utils/imageCache";
 import { gameResourceManager } from "../../utils/gameResourceManager";
 import { canSubmitChoiceInteraction } from "../../lib/galgame/choiceInteractionGate";
 import { choiceStepHasPlayableOptions } from "../../lib/galgame/playChoiceOptions";
 import { fetchGalgameDocument, peekGalgameDocument } from "../../lib/galgame/galgameDocumentCache";
-import { pickSessionNpcAvatarUrl, resolveNpcPlayImagePath } from "../../lib/galgame/npcPlayPortrait";
+import {
+    pickSessionNpcAvatarUrl,
+    resolveNpcPlayImagePath,
+    resolveRawBridgeDialogueImagePath,
+} from "../../lib/galgame/npcPlayPortrait";
 import {
     buildScenePreloadPlan,
     drainLeadingSceneChanges,
@@ -31,6 +35,8 @@ import {
     getGenerationBusyRetryDelayMs,
     isGenerationBusyError,
 } from "../../lib/galgame/choiceStepDisplayGate";
+import { isAliyunFrontendRuntime } from "../../lib/aliyunFrontendRuntime";
+import { shouldSkipTypewriterForRawTextBridge } from "../../lib/story/rawTextStreamPolicy";
 
 export type { Message } from "./useGalgameMessage";
 
@@ -137,6 +143,14 @@ export const useGalgameController = (options?: {
     }, [playableSessionId]);
 
     const [backgroundImage, setBackgroundImage] = useState<string>('');
+    /** 功能注释：Aliyun raw bridge 旁路立绘（不依赖 currentStep 转成 dialogue） */
+    const [rawBridgePortrait, setRawBridgePortrait] = useState<{
+        characterImage: string;
+        characterPosition: 'left' | 'right';
+        portraitScale?: number;
+        portraitOffsetX?: number;
+        portraitOffsetY?: number;
+    } | null>(null);
     const [currentScene, setCurrentScene] = useState<GetGalgamePresetResponse['scenes']['scenes'][0] | null>(null);
     const [worldSetting, setWorldSetting] = useState<GetGalgamePresetResponse['world'] | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -547,10 +561,106 @@ export const useGalgameController = (options?: {
         setStreamActivityTick((value) => value + 1);
     }, []);
 
+    const applyRawTextBridgeSceneChange = useCallback((sceneStep: any) => {
+        if (!sceneStep || String(sceneStep.type || '') !== 'scene_change') return;
+        if (sceneStep.sceneId) {
+            updateSceneFromId(String(sceneStep.sceneId));
+        }
+        const latestSceneImagePath = getSceneImagePath(getLatestSceneById(sceneStep.sceneId));
+        const sceneImagePath = latestSceneImagePath || sceneStep.sceneImage;
+        if (!sceneImagePath) return;
+        const sceneImageUrl = toSceneBackgroundUrl(sceneImagePath);
+        if (sceneImageUrl) {
+            setBackgroundImage((prev) => (prev !== sceneImageUrl ? sceneImageUrl : prev));
+        }
+    }, [updateSceneFromId, getLatestSceneById, getSceneImagePath, toSceneBackgroundUrl]);
+
+    const pendingBridgeDialogueRef = useRef<any>(null);
+
+    /** 功能注释：Aliyun raw 旁白期间把 dialogue 立绘落到独立层，避免依赖 currentStep 转 dialogue */
+    const applyRawTextBridgeDialoguePortraitNotify = useCallback((dialogueStep: any) => {
+        if (!dialogueStep || String(dialogueStep.type || '') !== 'dialogue') return;
+        pendingBridgeDialogueRef.current = dialogueStep;
+        const isPlayer = Boolean(dialogueStep.isPlayer)
+            || String(dialogueStep.speakerId || '') === 'player';
+        const npcId = dialogueStep.speakerId || dialogueStep.npcId;
+        const npcList = presetData?.npcs?.npcs || [];
+        const npc = !isPlayer && npcId
+            ? npcList.find((n: any) => String(n.id) === String(npcId))
+            : null;
+        const speakerName = String(dialogueStep.speakerName || '').trim();
+        const byName = !isPlayer && !npc && speakerName
+            ? npcList.find((n: any) => String(n?.name || '').trim() === speakerName)
+            : null;
+        const npcDoc = npc || byName;
+        const sessionAvatarUrl = !isPlayer
+            ? pickSessionNpcAvatarUrl(sessionNpcEdits, {
+                npcId: npcDoc?.id || npcId,
+                speakerName: dialogueStep.speakerName,
+            })
+            : '';
+        const imagePath = resolveRawBridgeDialogueImagePath({
+            isPlayer,
+            activeImage: dialogueStep.activeImage,
+            sessionPlayerAvatarUrl,
+            playerDocumentImagePath: getPlayerImageUrl(worldSetting?.player) || null,
+            npcId: npcDoc?.id || npcId,
+            speakerName: dialogueStep.speakerName,
+            documentImages: npcDoc?.images,
+            sessionNpcAvatarUrl: sessionAvatarUrl,
+        }) || null;
+        if (!imagePath) {
+            // preset 可能尚未就绪；保留 pending，等 document 到达后再挂
+            return;
+        }
+        const imageUrl = getImageUrl(imagePath);
+        if (!imageUrl) return;
+        const nextPathKey = stripImageCacheBust(imageUrl);
+        const nextPosition = isPlayer ? 'right' : 'left';
+        // 功能注释：同路径不换图（忽略 ?t=），避免选项后连发对白反复触发进场动画
+        setRawBridgePortrait((prev) => {
+            if (
+                prev
+                && stripImageCacheBust(prev.characterImage) === nextPathKey
+                && prev.characterPosition === nextPosition
+            ) {
+                return prev;
+            }
+            const nextImage = withCacheBust(imageUrl) || imageUrl;
+            return {
+                characterImage: nextImage,
+                characterPosition: nextPosition,
+            };
+        });
+    }, [
+        sessionPlayerAvatarUrl,
+        worldSetting,
+        presetData,
+        sessionNpcEdits,
+    ]);
+
+    /** 功能注释：纯旁白流无 dialogue 时也挂主角，避免画布整段无人 */
+    const ensureRawBridgePlayerPortraitFallback = useCallback(() => {
+        if (rawBridgePortrait?.characterImage) return;
+        applyRawTextBridgeDialoguePortraitNotify({
+            type: 'dialogue',
+            isPlayer: true,
+            speakerId: 'player',
+        });
+    }, [rawBridgePortrait?.characterImage, applyRawTextBridgeDialoguePortraitNotify]);
+
+    // 功能注释：document/preset 晚于对白 step 到达时，补挂旁路立绘
+    useEffect(() => {
+        if (!presetData || !pendingBridgeDialogueRef.current) return;
+        applyRawTextBridgeDialoguePortraitNotify(pendingBridgeDialogueRef.current);
+    }, [presetData, worldSetting, applyRawTextBridgeDialoguePortraitNotify]);
+
     const stepHandlers = useGalgameStep({
         sessionId,
         historyLength: assistantRoundCount,
         onMessagesClear: () => {
+            pendingBridgeDialogueRef.current = null;
+            // 功能注释：选项后新流开始时不清空立绘，避免 CharacterLayer 卸载再挂载连环闪入
             setInitialMessages([]);
             try {
                 localStorage.removeItem(allStepsStorageKey);
@@ -581,6 +691,8 @@ export const useGalgameController = (options?: {
         onUserAction: appendLocalUserMessage,
         isReplay,
         isTextMode,
+        onRawTextBridgeSceneChange: applyRawTextBridgeSceneChange,
+        onRawTextBridgeDialoguePortraitNotify: applyRawTextBridgeDialoguePortraitNotify,
         onContextMemoryUpdate: setLiveContextMemory,
         onContextCompressionDone: (status) => {
             if (status) {
@@ -669,12 +781,29 @@ export const useGalgameController = (options?: {
     );
 
     const typingSpeed = isTextMode ? 20 : 30;
+    // 功能注释：raw 旁白保留打字机（本地联调与发布后生产一致）
+    const skipTypingForAliyunRaw = shouldSkipTypewriterForRawTextBridge({
+        aliyunRuntime: isAliyunFrontendRuntime(),
+        isDev: Boolean(import.meta.env.DEV),
+        fromRawText: Boolean(stepHandlers.currentStep?._fromRawText),
+    });
 
     const { displayedText, isTyping } = useStoryTyping({
         text: messageUtils.plainTextForTyping,
-        enabled: messageUtils.currentMessage && messageUtils.currentMessage.type !== 'choice' && gameStarted && !!messageUtils.plainTextForTyping,
+        enabled: !skipTypingForAliyunRaw
+            && Boolean(
+                messageUtils.currentMessage
+                && messageUtils.currentMessage.type !== 'choice'
+                && gameStarted
+                && messageUtils.plainTextForTyping,
+            ),
         speed: typingSpeed,
     });
+
+    const canvasDisplayText = skipTypingForAliyunRaw
+        ? messageUtils.plainTextForTyping
+        : displayedText;
+    const canvasIsTyping = skipTypingForAliyunRaw ? false : isTyping;
 
     const messageUtilsWithTyping = useGalgameMessage(
         worldSetting,
@@ -682,8 +811,8 @@ export const useGalgameController = (options?: {
         gameStarted,
         stepHandlers.currentStep,
         initialMessages,
-        displayedText,
-        isTyping,
+        canvasDisplayText,
+        canvasIsTyping,
         stepHandlers.isWaitingForData,
         stepHandlers.currentStep,
         sessionPlayerAvatarUrl || null,
@@ -921,6 +1050,37 @@ export const useGalgameController = (options?: {
     }, [refreshHistoryAfterTyping]);
 
     const lastDrainedSceneStepRef = useRef<any>(null);
+    const lastRawBridgeSceneKeyRef = useRef<string>('');
+
+    // 功能注释：Aliyun raw 旁白期间若队列里仍塞着 scene_change，立刻旁路切背景并清出队列，避免开场白屏
+    useEffect(() => {
+        if (!isAliyunFrontendRuntime()) return;
+        const currentStep = stepHandlers.currentStep;
+        if (!currentStep?._fromRawText) return;
+        const queue = stepHandlers.stepQueue || [];
+        let latest: any = null;
+        for (const step of queue) {
+            if (String(step?.type || '') === 'scene_change') latest = step;
+        }
+        if (!latest) return;
+        const key = `${String(latest.sceneId || '')}|${String(latest.sceneImage || '')}`;
+        if (key && key === lastRawBridgeSceneKeyRef.current) {
+            // 仍清队列，避免反复堵在 scene_change
+        } else {
+            lastRawBridgeSceneKeyRef.current = key;
+            applyRawTextBridgeSceneChange(latest);
+        }
+        if (typeof stepHandlers.setStepQueue === 'function') {
+            stepHandlers.setStepQueue((prev: any[]) =>
+                prev.filter((step) => String(step?.type || '') !== 'scene_change'),
+            );
+        }
+    }, [
+        stepHandlers.currentStep,
+        stepHandlers.stepQueue,
+        stepHandlers.setStepQueue,
+        applyRawTextBridgeSceneChange,
+    ]);
 
     // 处理场景切换：连续 scene_change 只落最终背景，避免开场一口气拉很多图
     useEffect(() => {
@@ -1620,6 +1780,26 @@ export const useGalgameController = (options?: {
         navigate('/');
     }, [allStepsStorageKey, isPublicReplayRoute, navigate]);
 
+    // 功能注释：选项步保留旁路立绘（或由 choice 消息自带主角图）；禁止清空导致「选完后人消失」
+    useEffect(() => {
+        const step = stepHandlers.currentStep;
+        if (!step) return;
+        if (step.type === 'choice') {
+            // 功能注释：choice 无图且旁路也空时，补挂主角，避免选项屏空白
+            if (!rawBridgePortrait?.characterImage) {
+                ensureRawBridgePlayerPortraitFallback();
+            }
+            return;
+        }
+        if (step._fromRawText && !rawBridgePortrait?.characterImage) {
+            ensureRawBridgePlayerPortraitFallback();
+        }
+    }, [
+        stepHandlers.currentStep,
+        rawBridgePortrait?.characterImage,
+        ensureRawBridgePlayerPortraitFallback,
+    ]);
+
     return {
         isReplay,
         replayFinished,
@@ -1629,6 +1809,7 @@ export const useGalgameController = (options?: {
         replaySpeedOptions: REPLAY_SPEED_OPTIONS,
         isLoading,
         backgroundImage,
+        rawBridgePortrait,
         currentScene,
         worldSetting,
         presetData,

@@ -55,6 +55,7 @@ import Document from './page/Document';
 import { useEffect, lazy, Suspense } from 'react';
 import { useAuthStore } from './store/useAuthStore';
 import { useGeoRegionStore } from './store/useGeoRegionStore';
+import { getAppBasePath } from './lib/appBasePath';
 
 const FunloomLotteryPage = lazy(() => import('./activities/funloom-lottery-20260731'));
 const RomanceHost = lazy(() => import('./page/RomanceHost'));
@@ -63,6 +64,8 @@ function App() {
   usePlatformDurationTracking();
   const initializeAuth = useAuthStore((state) => state.initialize);
   const hydrateFromIp = useGeoRegionStore((state) => state.hydrateFromIp);
+  // 功能注释：与 Vite base / VITE_BASE 对齐，避免 /funloom-test 下 Router 不渲染
+  const routerBasename = getAppBasePath();
 
   useEffect(() => {
     void initializeAuth();
@@ -74,7 +77,7 @@ function App() {
   }, [hydrateFromIp]);
 
   return (
-    <BrowserRouter basename='/funloom'>
+    <BrowserRouter basename={routerBasename}>
       <RouteReporter />
       <Toaster
         position="top-center"

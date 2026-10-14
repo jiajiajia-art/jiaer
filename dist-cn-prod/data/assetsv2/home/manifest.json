@@ -1,0 +1,530 @@
+[
+  {
+    "name": "icon_badge_circle",
+    "source": "svg:icon_badge_circle",
+    "file": "icon_badge_circle.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_badge_circle_alt",
+    "source": "svg:icon_badge_circle_alt",
+    "file": "icon_badge_circle_alt.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_chat_dots_alt",
+    "source": "svg:icon_chat_dots_alt",
+    "file": "icon_chat_dots_alt.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_comment",
+    "source": "svg:icon_comment",
+    "file": "icon_comment.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_comment_alt",
+    "source": "svg:icon_comment_alt",
+    "file": "icon_comment_alt.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_community",
+    "source": "svg:icon_community",
+    "file": "icon_community.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_diamond_pink",
+    "source": "svg:icon_diamond_pink",
+    "file": "icon_diamond_pink.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_diamond_pink_alt",
+    "source": "svg:icon_diamond_pink_alt",
+    "file": "icon_diamond_pink_alt.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_edit",
+    "source": "svg:icon_edit",
+    "file": "icon_edit.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_edit_alt",
+    "source": "svg:icon_edit_alt",
+    "file": "icon_edit_alt.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_grid",
+    "source": "svg:icon_grid",
+    "file": "icon_grid.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_grid_alt",
+    "source": "svg:icon_grid_alt",
+    "file": "icon_grid_alt.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_history",
+    "source": "svg:icon_history",
+    "file": "icon_history.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_history_alt",
+    "source": "svg:icon_history_alt",
+    "file": "icon_history_alt.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_home_pink",
+    "source": "svg:icon_home_pink",
+    "file": "icon_home_pink.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_network",
+    "source": "svg:icon_network",
+    "file": "icon_network.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_profile_mine",
+    "source": "svg:icon_profile_mine",
+    "file": "icon_profile_mine.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_recharge_yen_pink",
+    "source": "svg:icon_recharge_yen_pink",
+    "file": "icon_recharge_yen_pink.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_recharge_yen_pink_alt",
+    "source": "svg:icon_recharge_yen_pink_alt",
+    "file": "icon_recharge_yen_pink_alt.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_sound",
+    "source": "svg:icon_sound",
+    "file": "icon_sound.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_sound_alt",
+    "source": "svg:icon_sound_alt",
+    "file": "icon_sound_alt.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_store_pink",
+    "source": "svg:icon_store_pink",
+    "file": "icon_store_pink.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_store_pink_alt",
+    "source": "svg:icon_store_pink_alt",
+    "file": "icon_store_pink_alt.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_switch_account",
+    "source": "svg:icon_switch_account",
+    "file": "icon_switch_account.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_users",
+    "source": "svg:icon_users",
+    "file": "icon_users.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "nav_message",
+    "source": "mockup:容器7713@4x / 图2 topbar message glyph (rounded bubble + 2 text lines)",
+    "file": "nav_message.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "nav_message_svg",
+    "source": "svg:nav_message.svg (vector source for regen)",
+    "file": "nav_message.svg",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_message_rect",
+    "source": "alias:nav_message.webp (图2消息气泡)",
+    "file": "icon_message_rect.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "nav_btn_bg",
+    "source": "mockup:___1041@3x circular frosted button background",
+    "file": "nav_btn_bg.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "nav_search",
+    "source": "svg:nav_search",
+    "file": "nav_search.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "nav_menu",
+    "source": "mockup:容器7713@4x menu glyph",
+    "file": "nav_menu.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "nav_menu_btn",
+    "source": "mockup:容器7713@4x menu button",
+    "file": "nav_menu_btn.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_gamepad",
+    "source": "png:切图 306.png",
+    "file": "icon_gamepad.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_heart_pink",
+    "source": "png:切图 139.png",
+    "file": "icon_heart_pink.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_heart",
+    "source": "png:路径-6.png",
+    "file": "icon_heart.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_star",
+    "source": "png:路径-2.png",
+    "file": "icon_star.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_share",
+    "source": "png:路径-3.png",
+    "file": "icon_share.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_eye",
+    "source": "png:减去顶层 11.png",
+    "file": "icon_eye.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_download",
+    "source": "png:切图 228.png",
+    "file": "icon_download.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_flame_pink",
+    "source": "png:切图 40.png",
+    "file": "icon_flame_pink.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_filmstrip",
+    "source": "png:组 9017.png",
+    "file": "icon_filmstrip.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "nav_menu_sm",
+    "source": "png:切图 1@2x.png",
+    "file": "nav_menu_sm.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "nav_back",
+    "source": "png:切图 110.png",
+    "file": "nav_back.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "nav_chevron_right",
+    "source": "png:切图 130.png",
+    "file": "nav_chevron_right.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_upload_doc",
+    "source": "png:切图 261.png",
+    "file": "icon_upload_doc.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_add_image",
+    "source": "png:切图 180.png",
+    "file": "icon_add_image.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_folder_add",
+    "source": "png:切图 195.png",
+    "file": "icon_folder_add.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_settings",
+    "source": "png:切图 318-17.png",
+    "file": "icon_settings.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_trash",
+    "source": "png:切图 310.png",
+    "file": "icon_trash.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_check_circle",
+    "source": "png:切图 311.png",
+    "file": "icon_check_circle.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_coin",
+    "source": "png:切图 126.png",
+    "file": "icon_coin.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "avatar_girl_camera",
+    "source": "png:切图 28.png",
+    "file": "avatar_girl_camera.webp",
+    "size": [
+      192,
+      192
+    ]
+  },
+  {
+    "name": "icon_hamburger",
+    "source": "alias:nav_menu.webp",
+    "file": "icon_hamburger.webp"
+  },
+  {
+    "name": "icon_hot",
+    "source": "alias:icon_flame_pink.webp",
+    "file": "icon_hot.webp"
+  },
+  {
+    "name": "icon_group",
+    "source": "alias:icon_community.webp",
+    "file": "icon_group.webp"
+  },
+  {
+    "name": "icon_my_submissions",
+    "source": "alias:icon_upload_doc.webp",
+    "file": "icon_my_submissions.webp"
+  },
+  {
+    "name": "icon_playback",
+    "source": "alias:icon_filmstrip.webp",
+    "file": "icon_playback.webp"
+  },
+  {
+    "name": "icon_mark_all_read",
+    "source": "alias:icon_check_circle.webp",
+    "file": "icon_mark_all_read.webp"
+  },
+  {
+    "name": "stats_view",
+    "source": "alias:icon_eye.webp",
+    "file": "stats_view.webp"
+  },
+  {
+    "name": "stats_share",
+    "source": "alias:icon_share.webp",
+    "file": "stats_share.webp"
+  },
+  {
+    "name": "stats_play",
+    "source": "alias:icon_gamepad.webp",
+    "file": "stats_play.webp"
+  },
+  {
+    "name": "stats_income",
+    "source": "alias:icon_recharge_yen_pink.webp",
+    "file": "stats_income.webp"
+  },
+  {
+    "name": "icon_play_count",
+    "source": "alias:icon_download.webp",
+    "file": "icon_play_count.webp"
+  },
+  {
+    "name": "icon_chat_dots",
+    "source": "legacy:circular bubble with 3 dots (切图 77.svg)",
+    "file": "icon_chat_dots.webp"
+  }
+]

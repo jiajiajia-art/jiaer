@@ -25,4 +25,10 @@
 | cn-prod | http://\<ECS\>/funloom/ |
 | cn-test | http://\<ECS\>/funloom-test/ |
 
+## 本地联调：切换后端（同事最常用）
+
+**只改一个文件一行**：`Interactive-fiction-frontend/devApiPresets.ts` 顶部的 `ACTIVE_DEV_API`。
+
+可选：`cn-test` | `cn-prod` | `cn-gogo` | `cn-neo` | `cn-qqq` | `cf-test2` | `local`。保存后重启 `npm run dev`。
+
 仓库外总览：`gameWork/项目启动文档.md`。

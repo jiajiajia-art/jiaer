@@ -14,7 +14,12 @@ import toast from 'react-hot-toast';
 import createGalgameSessionApi from '../api/galgame/createGalgameSession';
 import betaWhitelistApi from '../api/galgame/betaWhitelist';
 import createWorldSessionApi from '../api/worldInteraction/createWorldSession';
-import { getImageUrl, resolveGameCoverUrl } from '../utils/constants';
+import {
+    getImageUrl,
+    resolveGameCoverUrl,
+    resolveOriginalCoverUrl,
+    coverUrlAfterDisplayCoverError,
+} from '../utils/constants';
 import { readGameDetailPreview } from '../utils/gameDetailNavigation';
 import { MdContentCopy } from 'react-icons/md';
 import AuthModal from '../components/AuthModal';
@@ -1073,15 +1078,44 @@ const GameDetail: React.FC = () => {
         };
     }, []);
 
-    // 价格相关计算：统一处理原价 / 特价 / 免费
-    // 计算样式：详情 hero 用 display-cover（webp），勿直接用原图 cover.png
-    const heroStyle = useMemo(() => {
-        const coverPath = resolveGameCoverUrl(game);
-        if (!coverPath) return {};
-        return {
-            backgroundImage: `url(${getImageUrl(coverPath)})`,
+    // 功能注释：hero 优先 display-cover；OSS 缺图时回退 cover_url，避免详情顶栏空白 + 控制台 404
+    const [heroCoverAbs, setHeroCoverAbs] = useState('');
+    useEffect(() => {
+        const displayPath = resolveGameCoverUrl(game);
+        if (!displayPath) {
+            setHeroCoverAbs('');
+            return;
+        }
+        const preferred = getImageUrl(displayPath);
+        const originalPath = resolveOriginalCoverUrl(game);
+        const fallbackPath = coverUrlAfterDisplayCoverError(displayPath, originalPath);
+        const fallbackAbs = fallbackPath ? getImageUrl(fallbackPath) : '';
+        let cancelled = false;
+        setHeroCoverAbs(preferred);
+        const probe = new Image();
+        probe.onload = () => {
+            if (!cancelled) setHeroCoverAbs(preferred);
+        };
+        probe.onerror = () => {
+            if (cancelled) return;
+            if (fallbackAbs && fallbackAbs !== preferred) {
+                setHeroCoverAbs(fallbackAbs);
+            } else {
+                setHeroCoverAbs('');
+            }
+        };
+        probe.src = preferred;
+        return () => {
+            cancelled = true;
         };
     }, [game]);
+
+    const heroStyle = useMemo(() => {
+        if (!heroCoverAbs) return {};
+        return {
+            backgroundImage: `url(${heroCoverAbs})`,
+        };
+    }, [heroCoverAbs]);
 
     const normalizeNewlines = useCallback((text: string) => {
         return (text ?? '').replaceAll('\\n', '\n').replaceAll('/n', '\n');

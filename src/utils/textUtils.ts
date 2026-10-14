@@ -550,6 +550,35 @@ export const formatHistoryAssistantContent = (
     return fallback || raw.trim();
 };
 
+/**
+ * 功能注释：游玩画布步正文不得混入选项列表（选项只走独立 choice 步）。
+ * 剥协议 CHOICE/OPTION，以及历史格式泄漏的「选项：\n1. …」。
+ */
+export function stripPlayStepChoiceLeakage(text: string): string {
+    let value = String(text || '');
+    if (!value) return '';
+    value = value
+        .replace(/\[CHOICE:[^\]]*\][\s\S]*?\[END_CHOICE\]/gi, '')
+        .replace(/\[(?:MAIN_)?OPTION:[^\]]*\]/gi, '')
+        .replace(/\[END_CHOICE\]/gi, '')
+        .replace(/\[CHOICE:[^\]]*\]/gi, '');
+    // 可读列表：选项：\n1. xxx\n2. xxx
+    value = value.replace(/(?:\r?\n){0,2}选项[：:]\s*(?:\r?\n\s*\d+[\.、．]\s*[^\r\n]+)+/g, '');
+    value = value.replace(/(?:\r?\n){0,2}选项[：:]\s*\d+[\.、．][\s\S]*$/g, '');
+    value = value.replace(/【\s*接下来怎么办[？?]?\s*】[\s\S]*$/g, '');
+    value = value.replace(/【[^】]{0,24}怎么办[^】]{0,12}】[\s\S]*$/g, '');
+    value = value.replace(
+        /(?:^|\r?\n)\s*\d+[\.、．]\s+\S[^\r\n]*(?:\r?\n\s*\d+[\.、．]\s+\S[^\r\n]+)+[\s\S]*$/g,
+        '\n',
+    );
+    value = value.replace(/([。！？…」』”’])\s*\d+[\.、．]\s+\S[\s\S]*$/g, '$1');
+    value = value.replace(/(【[^】]*?)\s+\d+[\.、．]\s+[^】]*】/g, '$1】');
+    return value
+        .replace(/\n{3,}/g, '\n\n')
+        .replace(/[ \t]{2,}/g, ' ')
+        .trim();
+}
+
 // ============================================================
 // 【核心函数4】提取纯文本（去掉所有颜色标签和动画标签）
 // 用于：计算打字机进度、选项文本显示等
@@ -559,9 +588,13 @@ export const sanitizeVisualStepText = (text: string): string => {
     text = sanitizeVisualDisplayText(text);
     // 功能注释：去掉已泄漏到正文的「场景切换：scene_id」行（控制指令，非读者文案）。
     text = text.replace(LEAKED_SCENE_CHANGE_LABEL_REGEX, '$1').replace(/^\s+/, '');
+    // 功能注释：先剥选项泄漏，禁止走 processGameTags（历史用）把 OPTION 拼回「选项：1.2.3」
+    text = stripPlayStepChoiceLeakage(text);
     if (!VISUAL_STEP_MARKER_REGEX.test(text)) return text;
 
-    let cleaned = processGameTags(text);
+    const optionStore = { mainOptions: [] as string[], options: [] as string[] };
+    let cleaned = processGameTagText(text, { collectOptions: false }, optionStore);
+    cleaned = stripPlayStepChoiceLeakage(cleaned);
     if (VISUAL_STEP_MARKER_REGEX.test(cleaned) || cleaned.includes(']')) {
         cleaned = cleaned
             .replace(/\[DIALOGUE:\s*([^,\]]+),\s*([^,\]]+),\s*["']([^"'\]]*)["']?/gi, (_match, _speaker, speakerName, content) => {
@@ -581,7 +614,9 @@ export const sanitizeVisualStepText = (text: string): string => {
             .trim();
     }
 
-    return cleaned.replace(LEAKED_SCENE_CHANGE_LABEL_REGEX, '$1').replace(/^\s+/, '').trim();
+    return stripPlayStepChoiceLeakage(
+        cleaned.replace(LEAKED_SCENE_CHANGE_LABEL_REGEX, '$1').replace(/^\s+/, ''),
+    );
 };
 
 export const extractPlainText = (text: string): string => {
