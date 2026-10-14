@@ -1,5 +1,6 @@
 /**
- * 功能注释：Linux 部署区分大小写；MetricSummary 必须从 Admin/ 引入，禁止 admin/。
+ * 功能注释：与 adminPathCasing 一致 —— MetricSummary / InteractWithNpc
+ * 在 Linux 上必须大小写与磁盘文件名一致。
  */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -9,13 +10,13 @@ import test from 'node:test';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
-test('OperatorPanel_MetricSummary应从Admin目录引入', () => {
+test('OperatorPanel_MetricSummary应使用小写admin目录', () => {
   const src = readFileSync(
     join(root, 'src/page/operator/OperatorPanel.tsx'),
     'utf8',
   );
-  assert.match(src, /components\/Admin\/MetricSummary\.module\.css/);
-  assert.doesNotMatch(src, /components\/admin\/MetricSummary\.module\.css/);
+  assert.match(src, /components\/admin\/MetricSummary\.module\.css/);
+  assert.doesNotMatch(src, /components\/Admin\/MetricSummary\.module\.css/);
 });
 
 test('InteractWithNpcModal_CSS模块大小写与文件名一致', () => {
