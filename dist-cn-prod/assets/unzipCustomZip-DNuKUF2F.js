@@ -1,1 +1,0 @@
-import{_ as e}from"./index-B-34JuFx.js";let n=null;async function a(){return n||(n=(await e(()=>import("./browser-CXh1ITwj.js"),[])).unzipSync,n)}async function s(t){const i=await a();try{return i(t)}catch(r){const o=r instanceof Error?r.message:String(r);throw new Error(o||"unzip failed")}}export{a as loadUnzipSync,s as unzipCustomZipBytes};
