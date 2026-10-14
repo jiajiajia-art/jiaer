@@ -153,6 +153,10 @@ export interface User {
 export interface SignupRequest {
   phoneNumber: string;
   password: string;
+  code: string;
+  inviteCode?: string;
+  agreementAccepted: boolean;
+  requestId: string;
   // email: string;
   avatarUrl: string;
   nickname: string;
@@ -196,6 +200,7 @@ export interface AuthResponse {
 // 发送验证码请求
 export interface SendCodeRequest {
   phoneNumber: string;
+  purpose?: 'register' | 'password_reset';
 }
 
 // 重置密码请求

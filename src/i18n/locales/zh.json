@@ -959,7 +959,11 @@
     "loginCancelled": "登录已取消",
     "networkError": "网络错误，请检查网络连接",
     "privacyAgreePrefix": "我已阅读并同意",
-    "privacyPolicy": "《隐私政策》"
+    "privacyPolicy": "《隐私政策》",
+    "agreementPrefix": "我已阅读并同意",
+    "agreementJoiner": "和",
+    "userAgreement": "《用户协议》",
+    "inviteCode": "请输入邀请码（选填）"
   },
   "validation": {
     "enterGameName": "请输入游戏名称",
@@ -971,7 +975,10 @@
     "passwordMismatch": "两次输入的密码不一致",
     "codeRequired": "请输入验证码",
     "codeLength": "验证码为6位数字",
-    "privacyRequired": "请先阅读并同意隐私政策"
+    "privacyRequired": "请先阅读并同意隐私政策",
+    "agreementRequired": "请先阅读并同意用户协议和隐私政策",
+    "codeNotSent": "请先获取验证码",
+    "inviteCodeInvalid": "邀请码应为7位字母或数字"
   },
   "editorData": {
     "loadFailed": "获取游戏数据失败，请稍后重试"

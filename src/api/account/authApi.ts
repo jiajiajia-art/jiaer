@@ -34,6 +34,9 @@ export const auth = {
   sendResetCode: (data: SendCodeRequest) =>
     api.post<ApiResponse<{ data: string }>>('/auth/code/send', data),
 
+  sendCode: (data: SendCodeRequest) =>
+    api.post<ApiResponse<null>>('/auth/code/send', data),
+
   resetPassword: (data: ResetPasswordRequest) =>
     api.post<ApiResponse<null>>('/auth/code/verify', data),
 

@@ -959,7 +959,11 @@
     "loginCancelled": "Login cancelled",
     "networkError": "Network error, please check your connection",
     "privacyAgreePrefix": "I have read and agree to the ",
-    "privacyPolicy": "Privacy Policy"
+    "privacyPolicy": "Privacy Policy",
+    "agreementPrefix": "I have read and agree to ",
+    "agreementJoiner": " and ",
+    "userAgreement": "User Agreement",
+    "inviteCode": "Invite code (optional)"
   },
   "validation": {
     "enterGameName": "Please enter game name",
@@ -971,7 +975,10 @@
     "passwordMismatch": "Passwords do not match",
     "codeRequired": "Please enter verification code",
     "codeLength": "Verification code must be 6 digits",
-    "privacyRequired": "Please read and agree to the Privacy Policy"
+    "privacyRequired": "Please read and agree to the Privacy Policy",
+    "agreementRequired": "Please read and agree to the User Agreement and Privacy Policy",
+    "codeNotSent": "Please request a verification code first",
+    "inviteCodeInvalid": "Invite code must be 7 letters or numbers"
   },
   "editorData": {
     "loadFailed": "Failed to load editor data, please try again later"
