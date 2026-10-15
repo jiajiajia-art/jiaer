@@ -4,7 +4,7 @@
  */
 
 /** ↓↓↓ 只改这里（合法值见下方注释）↓↓↓ */
-export const ACTIVE_DEV_API = 'cn-test'
+export const ACTIVE_DEV_API = 'local'
 /** ↑↑↑ 只改这里 ↑↑↑ */
 
 /**

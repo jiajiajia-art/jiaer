@@ -43,3 +43,6 @@ dist-cn-neo/
 
 # Android upload keystore（本地生成，禁止提交）
 signing/
+
+# local
+devApiPresets.ts
