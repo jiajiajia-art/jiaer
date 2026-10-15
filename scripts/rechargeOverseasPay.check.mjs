@@ -33,6 +33,16 @@ test('payApi_应提供海外下单接口', () => {
   assert.match(api, /X-Return-Web-Base/);
 });
 
+test('RechargeModal_有payUrl即使缺returnWebBase也须跳转收银台', () => {
+  // 功能注释：www.kurangames.cn 曾被后端 sanitize 拒掉，前端硬失败会导致「正在跳转」后立刻报错
+  assert.match(modal, /still redirect/);
+  assert.match(modal, /window\.location\.assign\(data\.data\.payUrl\)/);
+  assert.doesNotMatch(
+    modal,
+    /if \(!data\.data\.returnWebBase\) \{[\s\S]*?toast\.error\(t\('rechargeModal\.paymentRequestFailed'\)\);[\s\S]*?return;/,
+  );
+});
+
 test('Create_海外回跳应查单并提示结果', () => {
   const createPage = readFileSync(join(root, 'src/page/Create.tsx'), 'utf8');
   assert.match(createPage, /overseasPay/);

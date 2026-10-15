@@ -7,7 +7,7 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { CiLocationOn } from 'react-icons/ci';
 import { MdOutlinePerson } from 'react-icons/md';
-import styles from './interactWithNpc.module.css';
+import styles from './InteractWithNpc.module.css';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { useGameStore } from '../../../store/gameStore';
 import { useMapGalgameStore, MapViewState } from '../../../store/mapGalgameStore';

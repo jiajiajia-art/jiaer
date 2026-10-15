@@ -4,6 +4,7 @@ import { extractPlainText, sanitizeVisualStepText, truncateTextWithTags } from "
 import { getPlayerImageUrl, getImageUrl } from "../../utils/constants";
 import { withCacheBust } from "../../utils/imageCache";
 import { ensureMinPlayChoiceOptions } from "../../lib/galgame/playChoiceOptions";
+import { resolveChoiceStepPromptMessage } from "../../lib/galgame/choiceStepPrompt";
 import { resolvePlayPortraitScale, isImportedCardPortraitUrl } from "../../lib/galgame/playerCharacterCard";
 import {
     pickSessionNpcAvatarUrl,
@@ -194,9 +195,12 @@ export const useGalgameMessage = (
                 },
             );
 
-            const message = step.title
-                ? (step.description ? `${step.title}\n${step.description}` : step.title)
-                : (step.description || '请选择你的行动');
+            // 功能注释：部分流式 choice 只把引导写在 content/text，description 为空；回退避免只剩按钮无正文
+            const message = resolveChoiceStepPromptMessage({
+                title: step.title,
+                description: step.description,
+                content: stepText,
+            });
 
             let characterImage: string | undefined;
             let portraitScale: number | undefined;

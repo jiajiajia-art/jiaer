@@ -51,6 +51,19 @@ export function normalizeUserFacingStreamError(error: unknown): string {
         return '生成内容含无法展示的残留标记，请重试。';
     }
 
+    // 功能注释：豆包/OpenAI 兼容网关内容安全拦截（Aliyun 常见英文原文）
+    if (
+        typeof message === 'string' &&
+        (
+            message.includes('inappropriate content')
+            || message.includes('content_filter')
+            || message.includes('ContentFilter')
+            || /Output data may contain/i.test(message)
+        )
+    ) {
+        return '生成内容触发了模型安全审核，请点击重试；若反复出现，可换一种行动或弱化敏感描写。';
+    }
+
     if (
         typeof message === 'string' &&
         (

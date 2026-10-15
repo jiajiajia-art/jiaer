@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
-import { HOST_ADDRESS, ON_SERVER } from '../config';
+import { HOST_ADDRESS } from '../config';
 import { useAuthStore } from '../store/useAuthStore';
 import { useMessageStore } from '../store/useMessageStore';
+import { buildMessageRealtimeWebSocketUrl } from './messageRealtimeUrl';
 
 const RECONNECT_BASE_MS = 3000;
 const RECONNECT_MAX_MS = 60000;
@@ -13,32 +14,14 @@ type RealtimeMessage = {
   ts?: number;
 };
 
-/**
- * WS 地址与 HTTP API 对齐：
- * - HOST_ADDRESS 为绝对 URL（如 api-test）→ 直连该主机 wss
- * - HOST 为空且本地开发 → 走 Vite 同源 /api 代理（需本机后端在 3000）
- */
+/** 功能注释：包装纯函数，注入当前页 origin，供 hook 内连接使用 */
 function buildWebSocketUrl(token: string): string {
-  const host = String(HOST_ADDRESS || '').trim();
-
-  if (/^https?:\/\//i.test(host)) {
-    const base = host.replace(/^http/i, 'ws');
-    const url = new URL('/api/auth/messages/ws', base.endsWith('/') ? base : `${base}/`);
-    url.searchParams.set('token', token);
-    return url.toString();
-  }
-
-  if (!ON_SERVER && typeof window !== 'undefined') {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const url = new URL(`${protocol}//${window.location.host}/api/auth/messages/ws`);
-    url.searchParams.set('token', token);
-    return url.toString();
-  }
-
-  const fallback = (host || 'https://api-test.kurangames.com').replace(/^http/i, 'ws');
-  const url = new URL('/api/auth/messages/ws', fallback.endsWith('/') ? fallback : `${fallback}/`);
-  url.searchParams.set('token', token);
-  return url.toString();
+  return buildMessageRealtimeWebSocketUrl({
+    token,
+    hostAddress: HOST_ADDRESS,
+    pageProtocol: typeof window !== 'undefined' ? window.location.protocol : '',
+    pageHost: typeof window !== 'undefined' ? window.location.host : '',
+  });
 }
 
 function detachSocket(socket: WebSocket | null | undefined) {

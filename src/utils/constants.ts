@@ -1,5 +1,11 @@
-import { HOST_ADDRESS } from "../config";
-export { toDisplayCoverUrl, resolveGameCoverUrl, resolveGameListCoverUrl } from './displayCoverUrl';
+import { ASSET_HOST_ADDRESS, HOST_ADDRESS } from "../config";
+export {
+  toDisplayCoverUrl,
+  resolveGameCoverUrl,
+  resolveGameListCoverUrl,
+  resolveOriginalCoverUrl,
+  coverUrlAfterDisplayCoverError,
+} from './displayCoverUrl';
 export { preferCharacterPortraitWebp } from './characterPortraitUrl';
 import { preferCharacterPortraitWebp } from './characterPortraitUrl';
 
@@ -55,7 +61,8 @@ export const getImageUrl = (imagePath: string | null | undefined): string => {
   const normalizedPath = displayPath.startsWith("/")
     ? displayPath
     : `/${displayPath}`;
-  return `${HOST_ADDRESS}${normalizedPath}`;
+  // 功能注释：用 ASSET_HOST（去 cn-test-api），避免测试环境图片打到未反代的 /cn-test-api/public
+  return `${ASSET_HOST_ADDRESS}${normalizedPath}`;
 };
 
 export const getPlayerImageUrl = (player: any, defaultImage?: string): string => {
@@ -90,7 +97,8 @@ export const getMusicUrlWithHost = (musicPath: string | null | undefined): strin
   if (musicPath.startsWith("/api")) {
     return `${HOST_ADDRESS}${musicPath}`;
   }
-  return `${HOST_ADDRESS}${musicPath}`;
+  // 功能注释：音频等同静态资源，走 ASSET_HOST，避免 cn-test-api 前缀导致 404
+  return `${ASSET_HOST_ADDRESS}${musicPath.startsWith("/") ? musicPath : `/${musicPath}`}`;
 };
 
 export const normalizeIcon = (icon: any): string => {

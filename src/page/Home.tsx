@@ -17,7 +17,12 @@ import CheckInModal from '../components/CheckInModal';
 import JoinGroupModal from '../components/JoinGroupModal';
 import FloatingJoinGroup from '../components/FloatingJoinGroup';
 import HomeGameFilterBar from '../components/HomeGameFilterBar';
-import { getImageUrl, resolveGameCoverUrl } from '../utils/constants';
+import {
+    getImageUrl,
+    resolveGameCoverUrl,
+    resolveOriginalCoverUrl,
+    coverUrlAfterDisplayCoverError,
+} from '../utils/constants';
 import { buildGameDetailNavigateState } from '../utils/gameDetailNavigation';
 import { auth } from '../api/account/authApi';
 import announcementApi from '../api/announcement/announcementApi';
@@ -477,7 +482,13 @@ const Home: React.FC = () => {
     }, []);
 
     const buildCarouselImageSrc = useCallback((item: CarouselItem, retryVersion: number) => {
-        const baseUrl = getImageUrl(getCarouselItemImage(item));
+        // 功能注释：轮播首帧用 display-cover；失败重试时游戏项回退 cover_url，避免缺图一直裂
+        let path = getCarouselItemImage(item);
+        if (retryVersion > 0 && !isBannerCarouselItem(item)) {
+            const fallback = coverUrlAfterDisplayCoverError(path, resolveOriginalCoverUrl(item));
+            if (fallback) path = fallback;
+        }
+        const baseUrl = getImageUrl(path);
         if (!baseUrl) return '';
 
         if (retryVersion <= 0) {

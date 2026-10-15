@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import {
   pickSessionNpcAvatarUrl,
   resolveNpcPlayImagePath,
+  resolveRawBridgeDialogueImagePath,
 } from '../src/lib/galgame/npcPlayPortrait.ts';
 import { stepToDisplayMessage } from '../src/lib/galgame/stepToDisplayMessage.ts';
 
@@ -143,4 +144,35 @@ test('Galgame与消息层须接入局内NPC立绘', () => {
   const controller = readFileSync(join(root, 'src/hooks/galgame/useGalgameController.ts'), 'utf8');
   assert.match(controller, /sessionNpcEdits,/);
   assert.match(controller, /resolveNpcPlayImagePath/);
+  assert.match(controller, /resolveRawBridgeDialogueImagePath/);
+});
+
+test('resolveRawBridgeDialogueImagePath_主角须吃activeImage兜底', () => {
+  assert.equal(
+    resolveRawBridgeDialogueImagePath({
+      isPlayer: true,
+      sessionPlayerAvatarUrl: '',
+      playerDocumentImagePath: '',
+      activeImage: '/public/players/base.png',
+    }),
+    '/public/players/base.png',
+  );
+  assert.equal(
+    resolveRawBridgeDialogueImagePath({
+      isPlayer: true,
+      sessionPlayerAvatarUrl: '/session-player.webp',
+      playerDocumentImagePath: '/doc-player.png',
+      activeImage: '/public/players/base.png',
+    }),
+    '/session-player.webp',
+  );
+  assert.equal(
+    resolveRawBridgeDialogueImagePath({
+      isPlayer: false,
+      activeImage: 'base',
+      documentImages: { base: oldDoc },
+      sessionNpcAvatarUrl: '',
+    }),
+    oldDoc,
+  );
 });

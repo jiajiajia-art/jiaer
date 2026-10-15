@@ -118,3 +118,34 @@ export function resolveNpcPlayPortraitScale(opts: {
     documentPortraitScale: opts.documentPortraitScale,
   });
 }
+
+/**
+ * 功能注释：Aliyun raw 旁路立绘路径（player / NPC 统一）。
+ * 主角也必须吃 activeImage，避免 preset 未就绪时旁路立绘整段空窗。
+ */
+export function resolveRawBridgeDialogueImagePath(opts: {
+  isPlayer: boolean;
+  activeImage?: string | null;
+  sessionPlayerAvatarUrl?: string | null;
+  playerDocumentImagePath?: string | null;
+  npcId?: string | null;
+  speakerName?: string | null;
+  documentImages?: Record<string, string | undefined> | string | null;
+  sessionNpcAvatarUrl?: string | null;
+}): string | undefined {
+  if (opts.isPlayer) {
+    const sessionUrl = trimStr(opts.sessionPlayerAvatarUrl);
+    if (sessionUrl) return sessionUrl;
+    const doc = trimStr(opts.playerDocumentImagePath);
+    if (doc) return doc;
+    const active = trimStr(opts.activeImage);
+    return active || undefined;
+  }
+  return resolveNpcPlayImagePath({
+    npcId: opts.npcId,
+    speakerName: opts.speakerName,
+    activeImage: opts.activeImage,
+    documentImages: opts.documentImages,
+    sessionAvatarUrl: opts.sessionNpcAvatarUrl,
+  });
+}

@@ -19,6 +19,7 @@ import {
   normalizeDescriptionForSave,
   toEditorHtml,
 } from '../utils/gameDescriptionHtml';
+import { checkCustomUiUploadSize } from '../lib/customUiUploadSize';
 
 const CustomIFCreate: React.FC = () => {
   const { t } = useTranslation();
@@ -297,22 +298,12 @@ const CustomIFCreate: React.FC = () => {
 
   // 目录上传（通过拖拽 DataTransferItem 递归读取）
 
-  // ZIP 上传：动态加载 fflate 并解压
-  async function ensureZipLib(){
-    if ((window as any).fflate) return;
-    await new Promise<void>((resolve, reject)=>{
-      const s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js';
-      s.onload = ()=> resolve(); s.onerror = ()=> reject(new Error('fflate load failed'));
-      document.head.appendChild(s);
-    });
-  }
+  // ZIP 上传：打包内动态 import fflate（禁止外链 CDN，国内常加载失败）
   async function handleZipFile(file: File){
     try {
-      await ensureZipLib();
+      const { unzipCustomZipBytes } = await import('../lib/unzipCustomZip');
       const buf = new Uint8Array(await file.arrayBuffer());
-      // @ts-ignore
-      const out = (window as any).fflate.unzipSync(buf);
+      const out = await unzipCustomZipBytes(buf);
       const list: MultiItem[] = [];
       for (const k of Object.keys(out||{})){
         const u8 = out[k];
@@ -320,7 +311,9 @@ const CustomIFCreate: React.FC = () => {
         const path = normalizePath(k);
         if (!path) continue;
         const mime = guessMime(path);
-        const f = new File([u8], path.split('/').pop()||'file', { type: mime });
+        // 功能注释：拷一份到新 Uint8Array，满足 File/BlobPart 的 ArrayBuffer 类型约束
+        const bytes = new Uint8Array(u8);
+        const f = new File([bytes], path.split('/').pop()||'file', { type: mime });
         list.push({ path, file: f, selected: true });
       }
       setSourceType('zip');
@@ -428,24 +421,47 @@ const CustomIFCreate: React.FC = () => {
           if ((file.size || 0) <= 0) {
             throw new Error(t('customIFCreate.indexHtmlEmpty'));
           }
+          // 功能注释：上传前体积预检，避免 nginx 413 被浏览器显示成 Failed to fetch
+          const sizeCheck = checkCustomUiUploadSize({
+            totalBytes: file.size || 0,
+            largestFileBytes: file.size || 0,
+          });
+          if (!sizeCheck.ok) throw new Error(sizeCheck.message);
           fd.append('index', file, file.name || 'index.html');
         } else {
+          const selected = multiFiles.filter((item) => item.selected);
+          const totalBytes = selected.reduce((sum, it) => sum + (it.file?.size || 0), 0);
+          const largestFileBytes = selected.reduce(
+            (max, it) => Math.max(max, it.file?.size || 0),
+            0,
+          );
+          const sizeCheck = checkCustomUiUploadSize({ totalBytes, largestFileBytes });
+          if (!sizeCheck.ok) throw new Error(sizeCheck.message);
           fd.append('mode', 'multi');
           if (entryPath) {
             fd.append('entryPath', entryPath);
           }
-          for (const it of multiFiles.filter((item) => item.selected)) {
+          for (const it of selected) {
             fd.append('files[]', it.file, it.path.split('/').pop() || 'file');
             fd.append('paths[]', it.path);
           }
         }
 
         abortRef.current = new AbortController();
-        const up = await authFetch(`${HOST_ADDRESS}/api/custom/apps/${id}/ui/upload`, {
-          method: 'POST',
-          body: fd,
-          signal: abortRef.current.signal,
-        });
+        let up: Response;
+        try {
+          up = await authFetch(`${HOST_ADDRESS}/api/custom/apps/${id}/ui/upload`, {
+            method: 'POST',
+            body: fd,
+            signal: abortRef.current.signal,
+          });
+        } catch (netErr: any) {
+          const m = String(netErr?.message || netErr || '');
+          if (/failed to fetch|networkerror|load failed/i.test(m)) {
+            throw new Error(t('customIFCreate.uploadNetworkFailed'));
+          }
+          throw netErr;
+        }
         if (!up.ok) throw new Error(await up.text());
 
         const upJson = await up.json();

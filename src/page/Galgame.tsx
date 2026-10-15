@@ -1808,13 +1808,30 @@ const Galgame = () => {
                             )}
                         </div>
                     )} */}
-                    {normalModeMessage?.characterImage && !controller.isTextMode && (
+                    {/* 功能注释：优先消息立绘；Aliyun raw bridge 旁路立绘作兜底（不依赖 step 转 dialogue） */}
+                    {(normalModeMessage?.characterImage || controller.rawBridgePortrait?.characterImage)
+                        && !controller.isTextMode && (
                         <CharacterLayer
-                            characterImage={normalModeMessage.characterImage}
-                            characterPosition={normalModeMessage.characterPosition}
-                            portraitScale={normalModeMessage.portraitScale}
-                            portraitOffsetX={normalModeMessage.portraitOffsetX}
-                            portraitOffsetY={normalModeMessage.portraitOffsetY}
+                            characterImage={
+                                normalModeMessage?.characterImage
+                                || controller.rawBridgePortrait?.characterImage
+                            }
+                            characterPosition={
+                                normalModeMessage?.characterPosition
+                                || controller.rawBridgePortrait?.characterPosition
+                            }
+                            portraitScale={
+                                normalModeMessage?.portraitScale
+                                ?? controller.rawBridgePortrait?.portraitScale
+                            }
+                            portraitOffsetX={
+                                normalModeMessage?.portraitOffsetX
+                                ?? controller.rawBridgePortrait?.portraitOffsetX
+                            }
+                            portraitOffsetY={
+                                normalModeMessage?.portraitOffsetY
+                                ?? controller.rawBridgePortrait?.portraitOffsetY
+                            }
                             animation={characterAnimation}
                         />
                     )}
@@ -1829,6 +1846,7 @@ const Galgame = () => {
                                     stepHandlers={{
                                         isWaitingForData: controller.stepHandlers.isWaitingForData,
                                         isCompressingContext: controller.stepHandlers.isCompressingContext,
+                                        loading: controller.stepHandlers.loading,
                                         currentStep: controller.stepHandlers.currentStep,
                                         showNextButton: controller.stepHandlers.showNextButton,
                                         selectedOptionIndex: controller.stepHandlers.selectedOptionIndex,
