@@ -38,6 +38,8 @@ dist-cn-prod/
 android/
 android.backup-*/
 dist-app/
+dist-cn-gogo/
+dist-cn-neo/
 
 # Android upload keystore（本地生成，禁止提交）
 signing/
