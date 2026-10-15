@@ -245,48 +245,55 @@ export const useStepStreamResponse = ({
                     options?.onFirstStep?.();
                 }
             };
-            // 功能注释：首张立绘立刻挂（避免旁白先上屏却无人）；后续对话尾部防抖，减轻选项后连环闪
-            const RAW_BRIDGE_PORTRAIT_COALESCE_MS = 150;
+            /**
+             * 功能注释：选项后流式会连发多句不同说话人对白。
+             * 策略：只「记住」最新对白；本轮首次立刻挂一张；中间换人不刷；
+             * complete/data/handoff 再刷最终说话人一次。避免连环进场像多个立绘在闪。
+             */
             let portraitCoalesceHandle: ReturnType<typeof setTimeout> | number | null = null;
             let portraitFlushedOnce = false;
-            const flushRawTextBridgeDialoguePortrait = () => {
+            const clearPortraitCoalesceHandle = () => {
+                if (portraitCoalesceHandle == null) return;
+                if (typeof portraitCoalesceHandle === 'number'
+                    && typeof cancelAnimationFrame === 'function') {
+                    cancelAnimationFrame(portraitCoalesceHandle);
+                } else {
+                    clearTimeout(portraitCoalesceHandle as ReturnType<typeof setTimeout>);
+                }
                 portraitCoalesceHandle = null;
+            };
+            const flushRawTextBridgeDialoguePortrait = () => {
+                clearPortraitCoalesceHandle();
                 const step = latestDialoguePortrait;
                 if (!step || typeof options?.onRawTextBridgeDialoguePortrait !== 'function') return;
                 portraitFlushedOnce = true;
                 options.onRawTextBridgeDialoguePortrait(step);
             };
-            const scheduleRawTextBridgeDialoguePortraitFlush = () => {
-                if (portraitCoalesceHandle != null) {
-                    if (typeof portraitCoalesceHandle === 'number'
-                        && typeof cancelAnimationFrame === 'function') {
-                        cancelAnimationFrame(portraitCoalesceHandle);
-                    } else {
-                        clearTimeout(portraitCoalesceHandle as ReturnType<typeof setTimeout>);
-                    }
-                    portraitCoalesceHandle = null;
-                }
-                // 功能注释：本轮流式第一张立刻上屏，保证画布有人
-                if (!portraitFlushedOnce) {
-                    if (typeof requestAnimationFrame === 'function') {
-                        portraitCoalesceHandle = requestAnimationFrame(() => {
-                            flushRawTextBridgeDialoguePortrait();
-                        });
-                        return;
-                    }
-                    flushRawTextBridgeDialoguePortrait();
-                    return;
-                }
-                portraitCoalesceHandle = setTimeout(() => {
-                    flushRawTextBridgeDialoguePortrait();
-                }, RAW_BRIDGE_PORTRAIT_COALESCE_MS);
-            };
-            const emitRawTextBridgeDialoguePortrait = (dialogueStep: any) => {
+            const rememberRawTextBridgeDialoguePortrait = (dialogueStep: any) => {
                 if (!enableRawTextStepBridge) return;
                 if (!dialogueStep || String(dialogueStep.type || '') !== 'dialogue') return;
                 latestDialoguePortrait = dialogueStep;
+            };
+            /** 本轮首次立绘：立刻挂；已挂过则只更新 latest，等 final flush */
+            const emitRawTextBridgeDialoguePortrait = (dialogueStep: any) => {
+                rememberRawTextBridgeDialoguePortrait(dialogueStep);
                 if (typeof options?.onRawTextBridgeDialoguePortrait !== 'function') return;
-                scheduleRawTextBridgeDialoguePortraitFlush();
+                if (portraitFlushedOnce) return;
+                clearPortraitCoalesceHandle();
+                if (typeof requestAnimationFrame === 'function') {
+                    portraitCoalesceHandle = requestAnimationFrame(() => {
+                        flushRawTextBridgeDialoguePortrait();
+                    });
+                    return;
+                }
+                flushRawTextBridgeDialoguePortrait();
+            };
+            /** 收尾：强制刷最新说话人（允许与首次不同） */
+            const finalizeRawTextBridgeDialoguePortrait = (dialogueStep?: any) => {
+                if (dialogueStep) rememberRawTextBridgeDialoguePortrait(dialogueStep);
+                if (!latestDialoguePortrait) return;
+                if (typeof options?.onRawTextBridgeDialoguePortrait !== 'function') return;
+                flushRawTextBridgeDialoguePortrait();
             };
             const emitRawTextBridgeSceneChange = (sceneStep: any) => {
                 if (!enableRawTextStepBridge) return;
@@ -296,7 +303,8 @@ export const useStepStreamResponse = ({
                 }
             };
             const emitRawTextBridgeSideEffectsFromSteps = (steps: any[]) => {
-                emitRawTextBridgeDialoguePortrait(pickLatestDialogueStep(steps));
+                // 功能注释：整包 steps 视为收尾，刷最终立绘 + 场景
+                finalizeRawTextBridgeDialoguePortrait(pickLatestDialogueStep(steps));
                 emitRawTextBridgeSceneChange(pickLatestSceneChangeStep(steps));
             };
             const enqueueBridgeSteps = (bridgeSteps: ReturnType<typeof appendRawTextBridge>['steps']) => {
@@ -307,7 +315,7 @@ export const useStepStreamResponse = ({
                 if (typeof options?.onRawTextBridgeAppend === 'function') {
                     rawTextAppendActive = true;
                     options.onRawTextBridgeAppend(bridgeSteps.map((step) => String(step.content || '')));
-                    // 功能注释：若对白立绘先于首句到达，上屏后立刻补挂
+                    // 功能注释：若对白立绘先于首句到达，上屏后立刻补挂（仅首次；已挂过不中途换人）
                     if (latestDialoguePortrait) {
                         emitRawTextBridgeDialoguePortrait(latestDialoguePortrait);
                     }
@@ -327,19 +335,8 @@ export const useStepStreamResponse = ({
             };
             const handoffFromRawTextBridge = () => {
                 if (!enableRawTextStepBridge || formalStepsStarted) return;
-                // 功能注释：交接前冲刷待挂立绘，避免防抖未到点被 requestId 门闩丢掉
-                if (portraitCoalesceHandle != null) {
-                    if (typeof portraitCoalesceHandle === 'number'
-                        && typeof cancelAnimationFrame === 'function') {
-                        cancelAnimationFrame(portraitCoalesceHandle);
-                    } else {
-                        clearTimeout(portraitCoalesceHandle as ReturnType<typeof setTimeout>);
-                    }
-                    portraitCoalesceHandle = null;
-                }
-                if (latestDialoguePortrait) {
-                    flushRawTextBridgeDialoguePortrait();
-                }
+                // 功能注释：交接前强制刷最终说话人，避免 rAF 未跑完被 formal 门闩丢掉
+                finalizeRawTextBridgeDialoguePortrait();
                 formalStepsStarted = true;
                 rawTextBridgeBuffer = '';
                 // 功能注释：已追加展示时不清空画布，只停止继续 bridge；由下方过滤正式旁白防覆盖
@@ -362,15 +359,7 @@ export const useStepStreamResponse = ({
                 rawTextAppendActive = false;
                 latestDialoguePortrait = null;
                 portraitFlushedOnce = false;
-                if (portraitCoalesceHandle != null) {
-                    if (typeof portraitCoalesceHandle === 'number'
-                        && typeof cancelAnimationFrame === 'function') {
-                        cancelAnimationFrame(portraitCoalesceHandle);
-                    } else {
-                        clearTimeout(portraitCoalesceHandle as ReturnType<typeof setTimeout>);
-                    }
-                    portraitCoalesceHandle = null;
-                }
+                clearPortraitCoalesceHandle();
                 setSelectedOptionIndex(null);
                 setStepQueue([]);
                 setIsWaitingForData(true);

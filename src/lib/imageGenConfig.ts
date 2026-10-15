@@ -1,12 +1,43 @@
 /**
- * 后台生图配置：模块 key / 可选模型（与后端 IMAGE_GEN_* 对齐，供 UI 与单测复用）。
+ * 后台生图配置：模块 key / 可选模型 / 独立网关（与文案 TEXT_LLM_* 互不影响）。
  */
 
 export const IMAGE_GEN_MODELS = ['nano-banana-2', 'gpt-image-2'] as const;
 export type ImageGenModel = (typeof IMAGE_GEN_MODELS)[number];
 
 export const DEFAULT_IMAGE_GEN_MODEL: ImageGenModel = 'gpt-image-2';
+export const DEFAULT_IMAGE_GEN_OPENAI_BASE_URL = 'https://epone.ggb.today';
 
+export interface ImageGenGatewayPreset {
+  id: string;
+  label: string;
+  baseUrl: string;
+}
+
+export const DEFAULT_IMAGE_GEN_GATEWAY_PRESETS: readonly ImageGenGatewayPreset[] = [
+  { id: 'epone', label: 'epone / ggb', baseUrl: 'https://epone.ggb.today' },
+  { id: 'openai', label: 'OpenAI', baseUrl: 'https://api.openai.com' },
+  { id: 'openrouter', label: 'OpenRouter', baseUrl: 'https://openrouter.ai/api' },
+];
+
+/** 功能注释：剥误填路径，只保留基础 URL。 */
+export function normalizeImageGenOpenAiBaseUrl(value: unknown): string {
+  let raw = String(value || '').trim();
+  if (!raw) return '';
+  raw = raw.replace(/\/+$/, '');
+  raw = raw.replace(/\/v1\/images\/generations$/i, '');
+  raw = raw.replace(/\/v1\/chat\/completions$/i, '');
+  raw = raw.replace(/\/chat\/completions$/i, '');
+  raw = raw.replace(/\/v1$/i, '');
+  if (!/^https?:\/\//i.test(raw)) return '';
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return '';
+    return `${u.origin}${u.pathname}`.replace(/\/+$/, '');
+  } catch {
+    return '';
+  }
+}
 export type ImageGenModuleKey =
   | 'visual'
   | 'session_avatar'

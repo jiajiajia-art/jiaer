@@ -473,7 +473,7 @@
   --import-petal: #ffb3ba;
   --import-ink: #f4ece8;
   --import-mute: rgba(244, 236, 232, 0.58);
-  --import-display: 'Noto Serif SC', 'Songti SC', 'STSong', 'Source Han Serif SC', serif;
+  --import-display: 'Songti SC', 'STSong', 'Source Han Serif SC', 'Noto Serif SC', serif;
   display: flex;
   flex-direction: column;
   gap: 0.85rem;

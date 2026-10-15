@@ -191,15 +191,19 @@ export type QuestAutoRefreshGate = {
   lastStartedAt: number | null;
   now?: number;
   minIntervalMs?: number;
+  /** 主线 stream/压缩进行中：勿与叙事抢同一 DeepSeek/epone 配额 */
+  narrativeBusy?: boolean;
 };
 
-/** 功能注释：任务后台刷新节流，避免与属性刷新同时打爆 LLM。 */
+/** 功能注释：任务后台刷新节流，避免与属性刷新/主线叙事同时打爆 LLM。 */
 export function shouldSkipQuestAutoRefresh({
   isStreaming,
   lastStartedAt,
   now = Date.now(),
   minIntervalMs = 2500,
+  narrativeBusy = false,
 }: QuestAutoRefreshGate): boolean {
+  if (narrativeBusy) return true;
   if (isStreaming) return true;
   if (!lastStartedAt) return false;
   return now - lastStartedAt < minIntervalMs;

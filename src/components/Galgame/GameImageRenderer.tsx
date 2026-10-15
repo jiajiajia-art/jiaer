@@ -255,8 +255,9 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
 
       requestAnimationFrame(() => {
         if (cancelled) return;
-        const renderSuccess = renderBitmap(bitmap!);
+        const renderSuccess = renderBitmap(bitmap!, src);
         if (renderSuccess) {
+          setCurrentSrc(src);
           setIsLoading(false);
           setHasError(false);
           setUseFallback(false);
@@ -264,6 +265,7 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
           return;
         }
         // canvas 未就绪 / 中等屏无 imgRef：改原生 img，避免 hasError 把画面隐掉
+        setCurrentSrc(src);
         setUseFallback(true);
         setHasError(false);
         setIsLoading(false);
@@ -297,11 +299,14 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
         return;
       }
 
-      // 缓存未命中，需要加载
-      setIsLoading(true);
+      // 功能注释：已有立绘时换图不先清空/透明，等新图就绪再换，避免双立绘闪或空白闪
+      const keepShowingPrevious = Boolean(currentSrc);
+      setIsLoading(!keepShowingPrevious);
       setHasError(false);
-      setUseFallback(preferImgFallback);
-      setCurrentSrc(src);
+      if (!keepShowingPrevious) {
+        setUseFallback(preferImgFallback);
+        setCurrentSrc(src);
+      }
 
       try {
         await loadAndRenderImage();

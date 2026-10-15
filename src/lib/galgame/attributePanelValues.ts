@@ -269,13 +269,16 @@ export function extractJsonFromStreamText(text: string): unknown | null {
   return null;
 }
 
-/** 功能注释：每轮结束后自动刷属性时的并发/短时去重窗口。 */
+/** 功能注释：每轮结束后自动刷属性时的并发/短时去重窗口；主线叙事占用 epone 时也跳过。 */
 export function shouldSkipAttributeAutoRefresh(input: {
   isStreaming: boolean;
   lastStartedAt: number | null;
   now: number;
   minIntervalMs?: number;
+  /** 主线 stream/压缩进行中：勿与叙事抢同一 DeepSeek/epone 配额 */
+  narrativeBusy?: boolean;
 }): boolean {
+  if (input.narrativeBusy) return true;
   if (input.isStreaming) return true;
   const minIntervalMs = input.minIntervalMs ?? 2500;
   if (input.lastStartedAt == null) return false;

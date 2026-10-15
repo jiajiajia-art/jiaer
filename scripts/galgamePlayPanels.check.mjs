@@ -298,6 +298,15 @@ test('shouldSkipQuestAutoRefresh_流中或短间隔应跳过', () => {
     shouldSkipQuestAutoRefresh({ isStreaming: false, lastStartedAt: 1000, now: 4000, minIntervalMs: 2500 }),
     false,
   );
+  assert.equal(
+    shouldSkipQuestAutoRefresh({
+      isStreaming: false,
+      lastStartedAt: null,
+      now: 5000,
+      narrativeBusy: true,
+    }),
+    true,
+  );
 });
 
 test('getQuestTrackerLabel_应附带deadline', () => {
@@ -352,6 +361,9 @@ test('Galgame_任务面板缓存优先异步LLM', async () => {
   assert.match(src, /refreshQuests\(\{ background: plan\.hasCache \}\)/);
   assert.match(src, /refreshQuests\(\{ background: true \}\)/);
   assert.match(src, /shouldSkipQuestAutoRefresh/);
+  assert.match(src, /narrativeBusy/);
+  assert.match(src, /attrsAbortRef\.current\?\.abort\(\)/);
+  assert.match(src, /questsAbortRef\.current\?\.abort\(\)/);
   assert.doesNotMatch(
     src,
     /if \(questsRef\.current\.length > 0\) return;/,
@@ -520,6 +532,15 @@ test('shouldSkipAttributeAutoRefresh_流中或短间隔应跳过', () => {
   assert.equal(
     shouldSkipAttributeAutoRefresh({ isStreaming: false, lastStartedAt: 1000, now: 4000, minIntervalMs: 2500 }),
     false
+  );
+  assert.equal(
+    shouldSkipAttributeAutoRefresh({
+      isStreaming: false,
+      lastStartedAt: null,
+      now: 5000,
+      narrativeBusy: true,
+    }),
+    true
   );
 });
 
