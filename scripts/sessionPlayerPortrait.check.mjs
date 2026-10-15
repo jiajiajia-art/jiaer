@@ -112,8 +112,8 @@ test('Galgame_主角缩放须用文档portraitScale禁止msg残留', () => {
   assert.match(src, /sessionPlayerAvatarUrl:\s*sessionPlayerProfile\?\.avatarUrl/);
   assert.match(
     src,
-    /characterImage=\{normalModeMessage\.characterImage\}/,
-    '主线立绘层须吃局内覆盖后的 normalModeMessage，禁止仍用 controller 原图',
+    /normalModeMessage\?\.characterImage\s*\|\|\s*controller\.rawBridgePortrait\?\.characterImage/,
+    '主线立绘层须优先吃局内覆盖后的 normalModeMessage，并允许 Aliyun raw bridge 立绘兜底',
   );
   assert.doesNotMatch(
     src,
