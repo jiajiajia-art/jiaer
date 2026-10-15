@@ -4,6 +4,7 @@ import { HiOutlineGift } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import { auth } from '../../api/account/authApi';
 import { useAuthStore } from '../../store/useAuthStore';
+import { copyTextToClipboard } from '../../utils/clipboard';
 import { getApiErrorMessage } from '../../utils/error';
 import styles from './InviteCampaignCard.module.css';
 
@@ -26,13 +27,18 @@ const InviteCampaignCard: React.FC = () => {
         }
     };
 
-    const handleCopyInviteCode = () => {
+    const handleCopyInviteCode = async () => {
         if (!inviteDisplayCode) {
             toast.error(t('profile.noInviteCode'));
             return;
         }
-        void navigator.clipboard.writeText(inviteDisplayCode);
-        toast.success(t('profile.inviteCodeCopied'));
+        try {
+            await copyTextToClipboard(inviteDisplayCode);
+            toast.success(t('profile.inviteCodeCopied'));
+        } catch (error) {
+            console.error('copy invite code failed:', error);
+            toast.error(t('profile.copyFailed'));
+        }
     };
 
     const handleSubmitInviteCode = async () => {

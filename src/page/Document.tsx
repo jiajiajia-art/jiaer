@@ -9,6 +9,7 @@ import documentApi from '../api/document/documentApi';
 import type { DocumentItem, GuideGroup } from '../api/document/document.type';
 import styles from './Document.module.css';
 import PDFTemplateModal from '../components/GameSettingEditor/PDFTemplateModal';
+import { copyTextToClipboard } from '../utils/clipboard';
 
 interface DocumentState {
     list: DocumentItem[];
@@ -449,7 +450,7 @@ const Document: React.FC = () => {
 
     const copyCode = useCallback(async (code: string, codeId: string) => {
         try {
-            await navigator.clipboard.writeText(code);
+            await copyTextToClipboard(code);
             setCopiedCodeId(codeId);
             setTimeout(() => setCopiedCodeId(null), 1800);
         } catch {
@@ -584,7 +585,7 @@ const Document: React.FC = () => {
 
     const copyMarkdown = useCallback(async () => {
         try {
-            await navigator.clipboard.writeText(docState.markdown);
+            await copyTextToClipboard(docState.markdown);
             setCopied(true);
         } catch {
             setCopied(false);

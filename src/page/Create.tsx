@@ -24,6 +24,7 @@ import payApi from '../api/pay/payApi';
 import type { PayOrderRequest } from '../api/pay/pay.type';
 import { auth } from '../api/account/authApi';
 import { getApiErrorMessage } from '../utils/error';
+import { copyTextToClipboard } from '../utils/clipboard';
 import { getImageUrl } from '../utils/constants';
 import { getGenderSymbol, normalizeGender } from '../utils/profileCompletion';
 import {
@@ -288,7 +289,7 @@ const Create: React.FC = () => {
         if (!userCode) return;
 
         try {
-            await navigator.clipboard.writeText(userCode);
+            await copyTextToClipboard(userCode);
             toast.success(t('create.kuranIdCopied'));
         } catch (error) {
             console.error('复制 Kuran 号失败:', error);
@@ -300,7 +301,7 @@ const Create: React.FC = () => {
         if (!debugToken) return;
 
         try {
-            await navigator.clipboard.writeText(debugToken);
+            await copyTextToClipboard(debugToken);
             toast.success(t('create.tokenCopied'));
         } catch (error) {
             console.error('复制 Token 失败:', error);

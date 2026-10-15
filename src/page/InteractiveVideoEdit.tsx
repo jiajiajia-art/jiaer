@@ -31,6 +31,7 @@ import {
     type InteractiveVideoEditStepStatus,
 } from '../utils/interactiveVideoEditSteps';
 import { resolveCreatorEngine } from '../utils/miniProgram';
+import { copyTextToClipboard } from '../utils/clipboard';
 import { flattenThemeTags, useLocalizedThemeTags, type FlatThemeTag } from '../utils/themeTags';
 import styles from './InteractiveVideoEdit.module.css';
 import GamePublishAppealPrompt from '../components/GamePublishAppealPrompt';
@@ -260,27 +261,6 @@ const triggerBlobDownload = (blob: Blob, fileName: string) => {
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
-};
-
-const copyTextToClipboard = async (text: string) => {
-    if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
-        return;
-    }
-
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.setAttribute('readonly', '');
-    textarea.style.position = 'fixed';
-    textarea.style.left = '-9999px';
-    textarea.style.top = '0';
-    document.body.appendChild(textarea);
-    textarea.select();
-    const copied = document.execCommand('copy');
-    textarea.remove();
-    if (!copied) {
-        throw new Error('Copy command failed');
-    }
 };
 
 const getVideoEditErrorMessage = async (error: unknown, fallback: string) => {

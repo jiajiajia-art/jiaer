@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
+import { copyTextToClipboard } from '../../utils/clipboard';
 import styles from './MobileTipModal.module.css';
 
 interface MobileTipModalProps {
@@ -32,32 +33,14 @@ const MobileTipModal: React.FC<MobileTipModalProps> = ({
 
     const handleCopy = async () => {
         try {
-            await navigator.clipboard.writeText(url);
+            await copyTextToClipboard(url);
             toast.success('链接已复制到剪贴板');
             setTimeout(() => {
                 onClose();
             }, 1000);
-        } catch {
-            // 兼容剪贴板能力较弱的 WebView，降级到传统复制方案。
-            const textArea = document.createElement('textarea');
-            textArea.value = url;
-            textArea.style.position = 'fixed';
-            textArea.style.opacity = '0';
-            document.body.appendChild(textArea);
-            textArea.select();
-
-            try {
-                document.execCommand('copy');
-                toast.success('链接已复制到剪贴板');
-                setTimeout(() => {
-                    onClose();
-                }, 1000);
-            } catch (execError) {
-                console.error('复制失败:', execError);
-                toast.error('复制失败，请稍后重试');
-            }
-
-            document.body.removeChild(textArea);
+        } catch (error) {
+            console.error('复制失败:', error);
+            toast.error('复制失败，请稍后重试');
         }
     };
 

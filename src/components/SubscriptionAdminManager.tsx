@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import Pagination from './Pagination';
 import subscriptionKeysApi from '../api/subscriptionKeys/subscriptionKeysApi';
 import { getApiErrorMessage } from '../utils/error';
+import { copyTextToClipboard as copyText } from '../utils/clipboard';
 import { planLabelMap } from '../utils/planLabels';
 import type {
     AdminSubscriptionKeyRecord,
@@ -79,23 +80,6 @@ const toIsoDateTime = (value: string) => {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return null;
     return date.toISOString();
-};
-
-const copyText = async (text: string) => {
-    if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
-        return;
-    }
-    const tempInput = document.createElement('textarea');
-    tempInput.value = text;
-    tempInput.style.position = 'fixed';
-    tempInput.style.opacity = '0';
-    document.body.appendChild(tempInput);
-    tempInput.focus();
-    tempInput.select();
-    const copied = document.execCommand('copy');
-    document.body.removeChild(tempInput);
-    if (!copied) throw new Error('copy failed');
 };
 
 const SubscriptionAdminManager: React.FC = () => {

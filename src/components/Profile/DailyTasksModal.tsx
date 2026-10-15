@@ -14,6 +14,7 @@ import {
     isDurationTaskCode,
 } from '../../api/statistics/dailyTask.type';
 import { buildGamePromotionLink } from '../../utils/gamePromotionLink';
+import { copyTextToClipboard } from '../../utils/clipboard';
 import type { User } from '../../api/account/auth.type';
 
 const formatDuration = (totalSeconds: number): string => {
@@ -48,7 +49,7 @@ const isTaskPlayable = (task: { code: string; taskKind?: string; gameFileId?: st
 
 const copyPromotionLink = async (link: string) => {
     try {
-        await navigator.clipboard.writeText(link);
+        await copyTextToClipboard(link);
         toast.success('推广链接已复制');
     } catch (error) {
         console.error('copy promotion link failed:', error);

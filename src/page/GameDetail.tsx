@@ -33,6 +33,7 @@ import { useTrackingStore } from '../store/trackingStore';
 import { trackingApi } from '../api/statistics/trackingApi';
 import gamePromotionApi from '../api/promotion/gamePromotionApi';
 import { getOrCreatePromoAnonId } from '../utils/promoAnonId';
+import { copyTextToClipboard } from '../utils/clipboard';
 import GameRating from '../components/GameRating/GameRating';
 import { useDailyTaskStore } from '../store/dailyTaskStore';
 import { useTranslation } from 'react-i18next';
@@ -1148,24 +1149,11 @@ const GameDetail: React.FC = () => {
 
     const handleCopyLink = async () => {
         try {
-            await navigator.clipboard.writeText(window.location.href);
+            await copyTextToClipboard(window.location.href);
             await reportShareEvent('copy_link');
             toast.success(t('gameDetail.linkCopied'));
-        } catch (error) {
-            const textArea = document.createElement('textarea');
-            textArea.value = window.location.href;
-            textArea.style.position = 'fixed';
-            textArea.style.opacity = '0';
-            document.body.appendChild(textArea);
-            textArea.select();
-            try {
-                document.execCommand('copy');
-                await reportShareEvent('copy_link');
-                toast.success(t('gameDetail.linkCopied'));
-            } catch (err) {
-                toast.error(t('copyFailed'));
-            }
-            document.body.removeChild(textArea);
+        } catch {
+            toast.error(t('copyFailed'));
         }
     };
 
@@ -1436,9 +1424,13 @@ const GameDetail: React.FC = () => {
                                         {t('createGame.qqGroup')}: {game.groupNo}
                                         <button
                                             className={styles.groupNoCopyBtn}
-                                            onClick={() => {
-                                                navigator.clipboard.writeText(game.groupNo!).catch(() => {});
-                                                toast.success(t('gameDetail.qqGroupCopied'));
+                                            onClick={async () => {
+                                                try {
+                                                    await copyTextToClipboard(game.groupNo!);
+                                                    toast.success(t('gameDetail.qqGroupCopied'));
+                                                } catch {
+                                                    toast.error(t('copyFailed'));
+                                                }
                                             }}
                                             title={t('createGame.copyGroupNo')}
                                         >

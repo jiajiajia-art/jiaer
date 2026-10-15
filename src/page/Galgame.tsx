@@ -1,5 +1,6 @@
 import { CiLocationOn } from "react-icons/ci";
 import styles from './Galgame.module.css';
+import { copyTextToClipboard as copyTextWithFallback } from '../utils/clipboard';
 import { useAuthStore } from "../store/useAuthStore";
 import { useGameStore } from "../store/gameStore";
 import { RiLogoutCircleRLine } from "react-icons/ri";
@@ -1499,35 +1500,12 @@ const Galgame = () => {
     };
 
     const copyTextToClipboard = async (text: string) => {
-        if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-            try {
-                await navigator.clipboard.writeText(text);
-                return true;
-            } catch (error) {
-                console.warn('[Replay] Failed to copy replay link with clipboard API:', error);
-            }
-        }
-
-        if (typeof document === 'undefined') {
-            return false;
-        }
-
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        textArea.setAttribute('readonly', 'true');
-        textArea.style.position = 'fixed';
-        textArea.style.opacity = '0';
-        textArea.style.pointerEvents = 'none';
-        document.body.appendChild(textArea);
-        textArea.select();
-
         try {
-            return document.execCommand('copy');
+            await copyTextWithFallback(text);
+            return true;
         } catch (error) {
-            console.warn('[Replay] Failed to copy replay link with fallback:', error);
+            console.warn('[Replay] Failed to copy text:', error);
             return false;
-        } finally {
-            document.body.removeChild(textArea);
         }
     };
 

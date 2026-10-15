@@ -26,6 +26,7 @@ import MobileBottomNav from '../../components/Layout/MobileBottomNav';
 import Pagination from '../../components/Pagination';
 import { useAuthStore } from '../../store/useAuthStore';
 import { isAdminRole } from '../../utils/userRoles';
+import { copyTextToClipboard } from '../../utils/clipboard';
 import {
   externalSdkApi,
   type CreateDeveloperAppResponse,
@@ -507,7 +508,7 @@ export default function DeveloperExternalGames() {
 
   const copyText = async (label: string, value: string) => {
     try {
-      await navigator.clipboard.writeText(value);
+      await copyTextToClipboard(value);
       toast.success(`${label}已复制`);
     } catch {
       toast.error('复制失败，请手动复制');
