@@ -23,10 +23,16 @@ import type {
   InviteCodeUseResult,
   User,
 } from "./auth.type";
+import {
+  REGISTRATION_CODE_REQUEST_TIMEOUT_MS,
+  REGISTRATION_SUBMIT_TIMEOUT_MS,
+} from '../../lib/registrationRequest';
 
 export const auth = {
   signup: (data: SignupRequest) =>
-    api.post<ApiResponse<AuthResponse>>('/auth/register', data),
+    api.post<ApiResponse<AuthResponse>>('/auth/register', data, {
+      timeout: REGISTRATION_SUBMIT_TIMEOUT_MS,
+    }),
 
   login: (data: LoginRequest) =>
     api.post<ApiResponse<AuthResponse>>('/auth/login', data),
@@ -35,7 +41,9 @@ export const auth = {
     api.post<ApiResponse<{ data: string }>>('/auth/code/send', data),
 
   sendCode: (data: SendCodeRequest) =>
-    api.post<ApiResponse<null>>('/auth/code/send', data),
+    api.post<ApiResponse<null>>('/auth/code/send', data, {
+      timeout: REGISTRATION_CODE_REQUEST_TIMEOUT_MS,
+    }),
 
   resetPassword: (data: ResetPasswordRequest) =>
     api.post<ApiResponse<null>>('/auth/code/verify', data),

@@ -59,6 +59,7 @@ import DeveloperExternalGames from './page/external/DeveloperExternalGames';
 import DeveloperCliAuthorize from './page/external/DeveloperCliAuthorize';
 import ExternalOAuthAuthorize from './page/external/ExternalOAuthAuthorize';
 import ExternalRecharge from './page/external/ExternalRecharge';
+import LegalDocument from './page/LegalDocument';
 import { useEffect, lazy, Suspense } from 'react';
 import { useAuthStore } from './store/useAuthStore';
 import { useGeoRegionStore } from './store/useGeoRegionStore';
@@ -144,6 +145,8 @@ function App() {
         <Route path="/developer/cli/authorize" element={<DeveloperCliAuthorize />} />
         <Route path="/external/oauth/authorize" element={<ExternalOAuthAuthorize />} />
         <Route path="/external/recharge" element={<ExternalRecharge />} />
+        <Route path="/legal/user-agreement" element={<LegalDocument document="user-agreement" />} />
+        <Route path="/legal/privacy-policy" element={<LegalDocument document="privacy-policy" />} />
         {/* Funloom 限定抽奖：独立活动链接；懒加载避免拖大主包 */}
         <Route
           path="/activity/funloom-lottery-20260731"

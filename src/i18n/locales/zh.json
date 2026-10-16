@@ -963,7 +963,9 @@
     "agreementPrefix": "我已阅读并同意",
     "agreementJoiner": "和",
     "userAgreement": "《用户协议》",
-    "inviteCode": "请输入邀请码（选填）"
+    "inviteCode": "请输入邀请码（选填）",
+    "codeSendTimeout": "发送响应超时；如已收到验证码可直接填写，未收到请在倒计时结束后重试",
+    "registrationTimeout": "注册响应超时，账号可能已经创建；请保留当前内容并再次点击注册确认结果"
   },
   "validation": {
     "enterGameName": "请输入游戏名称",

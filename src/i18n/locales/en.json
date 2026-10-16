@@ -963,7 +963,9 @@
     "agreementPrefix": "I have read and agree to ",
     "agreementJoiner": " and ",
     "userAgreement": "User Agreement",
-    "inviteCode": "Invite code (optional)"
+    "inviteCode": "Invite code (optional)",
+    "codeSendTimeout": "The send response timed out. Use the code if it arrived, or retry after the countdown.",
+    "registrationTimeout": "The registration response timed out and the account may already exist. Keep the form and submit again to recover the result."
   },
   "validation": {
     "enterGameName": "Please enter game name",

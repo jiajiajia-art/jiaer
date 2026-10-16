@@ -10,7 +10,13 @@ import { getOrCreatePromoAnonId } from '../utils/promoAnonId';
 import { useAuthStore } from '../store/useAuthStore';
 import { useGoogleAuth } from '../hooks/useGoogleAuth';
 import { isPrivacyAgreementAccepted, resolvePrivacyPolicyUrl } from '../lib/privacyPolicy';
-import { USER_AGREEMENT_URL } from '../lib/registrationAgreement';
+import { resolveRegistrationAgreementUrl } from '../lib/registrationAgreement';
+import { isRegistrationRequestTimeout } from '../lib/registrationRequest';
+import {
+    clearRegistrationSessionId,
+    getOrCreateRegistrationSessionId,
+    trackRegistrationEvent,
+} from '../lib/registrationAnalytics';
 import {
     isValidPhoneNumber,
     normalizeInviteCode,
@@ -92,8 +98,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
     const sendCodeRequestVersionRef = useRef(0);
     const sendCodeInFlightRef = useRef(false);
     const { loginWithGoogle } = useGoogleAuth();
-    const privacyPolicyUrl = resolvePrivacyPolicyUrl({ darkMode: true });
-    const userAgreementUrl = USER_AGREEMENT_URL;
+    const privacyPolicyUrl = isGoogleOnly
+        ? resolvePrivacyPolicyUrl({ darkMode: true })
+        : resolveRegistrationAgreementUrl('privacy-policy');
+    const userAgreementUrl = resolveRegistrationAgreementUrl('user-agreement');
 
     // 清理倒计时定时器
     useEffect(() => {
@@ -303,6 +311,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         sendCodeRequestVersionRef.current = requestVersion;
         setSubmitError('');
         setCodeNotice('');
+        if (mode === 'register') {
+            trackRegistrationEvent('registration_code_send');
+        }
         try {
             if (mode === 'register') {
                 await auth.sendCode({ phoneNumber: targetPhone, purpose: 'register' });
@@ -317,6 +328,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         } catch (error: any) {
             if (requestVersion !== sendCodeRequestVersionRef.current) return;
             console.error('Failed to send verification code');
+            if (mode === 'register' && isRegistrationRequestTimeout(error)) {
+                setVerificationCode('');
+                setHasSentCode(true);
+                setCodeNotice(t('auth.codeSendTimeout'));
+                startCountdown();
+                return;
+            }
             const errorMessage = error.response?.data?.message || error.message || t('common.error');
             setSubmitError(errorMessage);
         } finally {
@@ -467,6 +485,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
             } else if (mode === 'register') {
                 const requestId = registrationRequestIdRef.current || createRegistrationRequestId();
                 registrationRequestIdRef.current = requestId;
+                const registrationSessionId = getOrCreateRegistrationSessionId();
+                trackRegistrationEvent('registration_submit', registrationSessionId);
                 const response = await auth.signup({
                     phoneNumber: phone,
                     password: password,
@@ -481,12 +501,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                 });
 
                 if (response.data?.data) {
+                    trackRegistrationEvent('registration_success', registrationSessionId);
                     login(response.data.data);
                     void gamePromotionApi.consumePending(getOrCreatePromoAnonId()).catch(() => {});
 
                     if (onRegister) {
                         onRegister(phone, password);
                     }
+                    clearRegistrationSessionId();
                     resetAllStates();
                     onClose();
                 } else {
@@ -513,6 +535,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
             }
         } catch (error: any) {
             console.error('Authentication request failed');
+            if (mode === 'register') {
+                trackRegistrationEvent('registration_failure');
+            }
+            if (mode === 'register' && isRegistrationRequestTimeout(error)) {
+                setSubmitError(t('auth.registrationTimeout'));
+                return;
+            }
             const errorMessage = error.response?.data?.message || error.message || t('common.error');
             const errorCode = error.response?.data?.code;
             if (mode === 'register' && errorCode === 'INVALID_INVITE_CODE') {
@@ -531,8 +560,15 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
     const handleModeSwitch = () => {
         if (isLoading) return;
         if (mode === 'login') {
+            const registrationSessionId = getOrCreateRegistrationSessionId();
+            trackRegistrationEvent('registration_mode_switch', registrationSessionId);
+            trackRegistrationEvent('registration_enter', registrationSessionId);
             setMode('register');
         } else if (mode === 'register') {
+            const registrationSessionId = getOrCreateRegistrationSessionId();
+            trackRegistrationEvent('registration_mode_switch', registrationSessionId);
+            trackRegistrationEvent('registration_exit', registrationSessionId);
+            clearRegistrationSessionId();
             setMode('login');
         }
         resetErrors();
@@ -561,6 +597,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
 
     const handleClose = () => {
         if (isLoading) return;
+        if (mode === 'register') {
+            const registrationSessionId = getOrCreateRegistrationSessionId();
+            trackRegistrationEvent('registration_exit', registrationSessionId);
+            clearRegistrationSessionId();
+        }
         resetAllStates();
         setMode('login');
         onClose();
