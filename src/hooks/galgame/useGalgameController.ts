@@ -19,6 +19,7 @@ import { canSubmitChoiceInteraction } from "../../lib/galgame/choiceInteractionG
 import { choiceStepHasPlayableOptions } from "../../lib/galgame/playChoiceOptions";
 import { fetchGalgameDocument, peekGalgameDocument } from "../../lib/galgame/galgameDocumentCache";
 import {
+    buildPortraitSpeakerKey,
     pickSessionNpcAvatarUrl,
     resolveNpcPlayImagePath,
     resolveRawBridgeDialogueImagePath,
@@ -152,6 +153,8 @@ export const useGalgameController = (options?: {
     const [rawBridgePortrait, setRawBridgePortrait] = useState<{
         characterImage: string;
         characterPosition: 'left' | 'right';
+        /** 同说话人不因 activeImage 抖动反复换图 */
+        speakerKey?: string;
         portraitScale?: number;
         portraitOffsetX?: number;
         portraitOffsetY?: number;
@@ -633,12 +636,18 @@ export const useGalgameController = (options?: {
         if (!imageUrl) return;
         const nextPathKey = stripImageCacheBust(imageUrl);
         const nextPosition = isPlayer ? 'right' : 'left';
-        // 功能注释：同路径不换图（忽略 ?t=），避免选项后连发对白反复触发进场动画
+        const nextSpeakerKey = buildPortraitSpeakerKey(dialogueStep) || nextPathKey;
+        // 功能注释：同说话人/同路径不换图，避免流式多句对白连环进场像「多个立绘在闪」
         setRawBridgePortrait((prev) => {
             if (
                 prev
-                && stripImageCacheBust(prev.characterImage) === nextPathKey
-                && prev.characterPosition === nextPosition
+                && (
+                    (prev.speakerKey && prev.speakerKey === nextSpeakerKey)
+                    || (
+                        stripImageCacheBust(prev.characterImage) === nextPathKey
+                        && prev.characterPosition === nextPosition
+                    )
+                )
             ) {
                 return prev;
             }
@@ -646,6 +655,7 @@ export const useGalgameController = (options?: {
             return {
                 characterImage: nextImage,
                 characterPosition: nextPosition,
+                speakerKey: nextSpeakerKey,
             };
         });
     }, [

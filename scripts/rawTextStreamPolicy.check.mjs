@@ -119,12 +119,14 @@ test('useStepStreamResponse_Aliyun过滤dialogue前须挂立绘', () => {
     src,
     /rawTextAppendActive\s*&&\s*String\(jsonData\.step\?\.type/,
   );
-  // 功能注释：首张立刻挂 + 后续防抖；交接前强制 flush，禁止丢立绘
-  assert.match(src, /scheduleRawTextBridgeDialoguePortraitFlush/);
-  assert.match(src, /RAW_BRIDGE_PORTRAIT_COALESCE_MS/);
+  // 功能注释：选项后多说话人只记 latest；首次立刻挂；中间不换；收尾 finalize 再刷一次
+  assert.match(src, /finalizeRawTextBridgeDialoguePortrait/);
+  assert.match(src, /rememberRawTextBridgeDialoguePortrait/);
   assert.match(src, /portraitFlushedOnce/);
+  assert.match(src, /if \(portraitFlushedOnce\) return/);
   assert.match(src, /requestAnimationFrame/);
   assert.match(src, /flushRawTextBridgeDialoguePortrait\(\)/);
+  assert.doesNotMatch(src, /RAW_BRIDGE_PORTRAIT_COALESCE_MS/);
   assert.doesNotMatch(
     src,
     /onRawTextBridgeDialoguePortrait\(dialogueStep\);\s*\n\s*\}/,
@@ -152,4 +154,11 @@ test('useStepStreamResponse_Aliyun过滤dialogue前须挂立绘', () => {
   assert.match(controller, /resolveRawBridgeDialogueImagePath/);
   const galgamePage = readFileSync(join(root, 'src/page/Galgame.tsx'), 'utf8');
   assert.match(galgamePage, /rawBridgePortrait\?\.characterImage/);
+  // 功能注释：旁路立绘优先于消息层，避免双源抢图连环闪
+  assert.match(
+    galgamePage,
+    /controller\.rawBridgePortrait\?\.characterImage\s*\|\|\s*normalModeMessage\?\.characterImage/,
+  );
+  assert.match(controller, /buildPortraitSpeakerKey/);
+  assert.match(controller, /speakerKey/);
 });

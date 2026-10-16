@@ -19,4 +19,14 @@ test('useGalgameController_旁路立绘比较须用stripImageCacheBust', () => {
   const src = readFileSync(join(root, 'src/hooks/galgame/useGalgameController.ts'), 'utf8');
   assert.match(src, /stripImageCacheBust\(prev\.characterImage\)/);
   assert.match(src, /stripImageCacheBust\(imageUrl\)/);
+  assert.match(src, /buildPortraitSpeakerKey/);
+  assert.match(src, /prev\.speakerKey === nextSpeakerKey/);
+});
+
+test('CharacterLayer_同身份不再重放进场动画', () => {
+  const src = readFileSync(join(root, 'src/components/Galgame/CharacterLayer.tsx'), 'utf8');
+  const css = readFileSync(join(root, 'src/components/Galgame/CharacterLayer.module.css'), 'utf8');
+  assert.match(src, /enterAnimActive/);
+  assert.match(src, /enterSettled/);
+  assert.match(css, /\.enterSettled/);
 });

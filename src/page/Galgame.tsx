@@ -1014,6 +1014,18 @@ const Galgame = () => {
         playerProfile,
     ]);
 
+    const narrativeBusy = isNarrativeGenerationBusy({
+        streamLoading: controller.stepHandlers?.loading,
+        isCompressingContext: controller.stepHandlers?.isCompressingContext,
+    });
+
+    // 功能注释：主线叙事一占用 epone，立刻取消属性/任务旁路 LLM，避免与 stream 三路并发拖慢首包
+    useEffect(() => {
+        if (!narrativeBusy) return;
+        attrsAbortRef.current?.abort();
+        questsAbortRef.current?.abort();
+    }, [narrativeBusy]);
+
     const refreshAttributePanels = useCallback(async () => {
         if (!sessionId || controller.isReplay) return;
         if (
@@ -1021,6 +1033,10 @@ const Galgame = () => {
                 isStreaming: attrsStreamingRef.current,
                 lastStartedAt: attrsLastStartedAtRef.current,
                 now: Date.now(),
+                narrativeBusy: isNarrativeGenerationBusy({
+                    streamLoading: controller.stepHandlers?.loading,
+                    isCompressingContext: controller.stepHandlers?.isCompressingContext,
+                }),
             })
         ) {
             return;
@@ -1061,7 +1077,13 @@ const Galgame = () => {
                 attrsStreamingRef.current = false;
             }
         }
-    }, [sessionId, controller.isReplay, attributeNpcNames]);
+    }, [
+        sessionId,
+        controller.isReplay,
+        attributeNpcNames,
+        controller.stepHandlers?.loading,
+        controller.stepHandlers?.isCompressingContext,
+    ]);
 
     const refreshQuests = useCallback(async (opts?: { background?: boolean }) => {
         if (!sessionId || controller.isReplay) return;
@@ -1070,6 +1092,10 @@ const Galgame = () => {
                 isStreaming: questsStreamingRef.current,
                 lastStartedAt: questsLastStartedAtRef.current,
                 now: Date.now(),
+                narrativeBusy: isNarrativeGenerationBusy({
+                    streamLoading: controller.stepHandlers?.loading,
+                    isCompressingContext: controller.stepHandlers?.isCompressingContext,
+                }),
             })
         ) {
             return;
@@ -1160,12 +1186,19 @@ const Galgame = () => {
                 questsStreamingRef.current = false;
             }
         }
-    }, [sessionId, controller.isReplay, t]);
+    }, [
+        sessionId,
+        controller.isReplay,
+        t,
+        controller.stepHandlers?.loading,
+        controller.stepHandlers?.isCompressingContext,
+    ]);
 
     // 属性：每轮剧情结束后自动 LLM 更新；打开空面板时补一次；失败可重试
     const attrsLastAutoTurnRef = useRef(false);
     useEffect(() => {
         if (controller.isReplay || !sessionId || !controller.gameStarted) return;
+        if (narrativeBusy) return;
         const waiting = Boolean(controller.stepHandlers?.isWaitingForData);
         // 等待 → 结束：本轮叙事落盘完成，刷属性
         if (attrsLastAutoTurnRef.current && !waiting) {
@@ -1177,6 +1210,7 @@ const Galgame = () => {
         controller.isReplay,
         controller.gameStarted,
         controller.stepHandlers?.isWaitingForData,
+        narrativeBusy,
         refreshAttributePanels,
     ]);
 
@@ -1184,6 +1218,7 @@ const Galgame = () => {
     const questsLastAutoTurnRef = useRef(false);
     useEffect(() => {
         if (controller.isReplay || !sessionId || !controller.gameStarted) return;
+        if (narrativeBusy) return;
         const waiting = Boolean(controller.stepHandlers?.isWaitingForData);
         if (questsLastAutoTurnRef.current && !waiting) {
             void refreshQuests({ background: true });
@@ -1194,6 +1229,7 @@ const Galgame = () => {
         controller.isReplay,
         controller.gameStarted,
         controller.stepHandlers?.isWaitingForData,
+        narrativeBusy,
         refreshQuests,
     ]);
 
@@ -1204,6 +1240,8 @@ const Galgame = () => {
             return;
         }
         if (controller.isReplay || !sessionId || !controller.gameStarted) return;
+        // 功能注释：叙事生成中只展示缓存，不另开 DeepSeek 旁路流
+        if (narrativeBusy) return;
 
         if (activePlayPanel === 'attrs') {
             if (Object.keys(attributePanelsCache).length > 0) return;
@@ -1229,6 +1267,7 @@ const Galgame = () => {
         controller.isReplay,
         controller.gameStarted,
         attributePanelsCache,
+        narrativeBusy,
         refreshAttributePanels,
         refreshQuests,
     ]);
@@ -1786,29 +1825,29 @@ const Galgame = () => {
                             )}
                         </div>
                     )} */}
-                    {/* 功能注释：优先消息立绘；Aliyun raw bridge 旁路立绘作兜底（不依赖 step 转 dialogue） */}
-                    {(normalModeMessage?.characterImage || controller.rawBridgePortrait?.characterImage)
+                    {/* 功能注释：旁路立绘优先，避免消息层与 bridge 抢源导致连环换图闪屏 */}
+                    {(controller.rawBridgePortrait?.characterImage || normalModeMessage?.characterImage)
                         && !controller.isTextMode && (
                         <CharacterLayer
                             characterImage={
-                                normalModeMessage?.characterImage
-                                || controller.rawBridgePortrait?.characterImage
+                                controller.rawBridgePortrait?.characterImage
+                                || normalModeMessage?.characterImage
                             }
                             characterPosition={
-                                normalModeMessage?.characterPosition
-                                || controller.rawBridgePortrait?.characterPosition
+                                controller.rawBridgePortrait?.characterPosition
+                                || normalModeMessage?.characterPosition
                             }
                             portraitScale={
-                                normalModeMessage?.portraitScale
-                                ?? controller.rawBridgePortrait?.portraitScale
+                                controller.rawBridgePortrait?.portraitScale
+                                ?? normalModeMessage?.portraitScale
                             }
                             portraitOffsetX={
-                                normalModeMessage?.portraitOffsetX
-                                ?? controller.rawBridgePortrait?.portraitOffsetX
+                                controller.rawBridgePortrait?.portraitOffsetX
+                                ?? normalModeMessage?.portraitOffsetX
                             }
                             portraitOffsetY={
-                                normalModeMessage?.portraitOffsetY
-                                ?? controller.rawBridgePortrait?.portraitOffsetY
+                                controller.rawBridgePortrait?.portraitOffsetY
+                                ?? normalModeMessage?.portraitOffsetY
                             }
                             animation={characterAnimation}
                         />

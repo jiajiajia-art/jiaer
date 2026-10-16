@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  buildPortraitSpeakerKey,
   pickSessionNpcAvatarUrl,
   resolveNpcPlayImagePath,
   resolveRawBridgeDialogueImagePath,
@@ -16,6 +17,14 @@ import { stepToDisplayMessage } from '../src/lib/galgame/stepToDisplayMessage.ts
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const oldDoc = '/api/visual/images/file1/npcs/npc_jin/base_1.png';
 const newSession = '/public/visual/sessions/sid1/avatars/npc_jin_1710000000000.webp';
+
+test('buildPortraitSpeakerKey_玩家与npc稳定键', () => {
+  assert.equal(buildPortraitSpeakerKey({ isPlayer: true }), 'player');
+  assert.equal(buildPortraitSpeakerKey({ speakerId: 'player' }), 'player');
+  assert.equal(buildPortraitSpeakerKey({ speakerId: 'npc_a', speakerName: '甲' }), 'npc:npc_a');
+  assert.equal(buildPortraitSpeakerKey({ speakerName: '甲' }), 'name:甲');
+  assert.equal(buildPortraitSpeakerKey(null), '');
+});
 
 test('pickSessionNpcAvatarUrl_按id优先于同名', () => {
   const url = pickSessionNpcAvatarUrl(
