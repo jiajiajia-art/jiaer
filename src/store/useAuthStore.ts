@@ -209,14 +209,20 @@ export const useAuthStore = create<AuthState>()(
 );
 
 
+export type AuthModalMode = 'login' | 'register' | 'reset';
+
 interface AuthModalState {
   isAuthModalOpen: boolean;
+  authModalMode: AuthModalMode;
   setIsAuthModalOpen: (isAuthModalOpen: boolean) => void;
+  setAuthModalMode: (authModalMode: AuthModalMode) => void;
 }
 
 export const authModalStore = create<AuthModalState>()(
     (set) => ({
       isAuthModalOpen: false,
+      authModalMode: 'login',
       setIsAuthModalOpen: (data: boolean) => set({ isAuthModalOpen: data }),
+      setAuthModalMode: (data: AuthModalMode) => set({ authModalMode: data }),
     }),
 );

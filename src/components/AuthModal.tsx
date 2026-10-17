@@ -3,13 +3,14 @@ import { createPortal } from 'react-dom';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 import { FcGoogle } from 'react-icons/fc';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import styles from './AuthModal.module.css';
 import { auth } from '../api/account/authApi';
 import gamePromotionApi from '../api/promotion/gamePromotionApi';
 import { getOrCreatePromoAnonId } from '../utils/promoAnonId';
-import { useAuthStore } from '../store/useAuthStore';
+import { authModalStore, useAuthStore } from '../store/useAuthStore';
 import { useGoogleAuth } from '../hooks/useGoogleAuth';
-import { isPrivacyAgreementAccepted, resolvePrivacyPolicyUrl } from '../lib/privacyPolicy';
+import { isPrivacyAgreementAccepted } from '../lib/privacyPolicy';
 import { resolveRegistrationAgreementUrl } from '../lib/registrationAgreement';
 import { isRegistrationRequestTimeout } from '../lib/registrationRequest';
 import {
@@ -49,13 +50,15 @@ const createRegistrationRequestId = (): string => {
 
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegister }) => {
     const { t, i18n } = useTranslation();
+    const navigate = useNavigate();
+    const requestedAuthMode = authModalStore.getState().authModalMode;
     // 功能注释：按运行时语言决定 Google-only（IP 英文区），不用编译期 LANGUAGE
     const isGoogleOnly = String(i18n.language || '').toLowerCase().startsWith('en');
     // 在微信小程序环境中不渲染
     if (isWebViewEnv()) {
         return null;
     }
-    const [mode, setMode] = useState<AuthMode>('login');
+    const [mode, setMode] = useState<AuthMode>(requestedAuthMode);
     const [phone, setPhone] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -97,11 +100,22 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
     const registrationRequestIdRef = useRef<string | null>(null);
     const sendCodeRequestVersionRef = useRef(0);
     const sendCodeInFlightRef = useRef(false);
+    const overlayPointerRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
     const { loginWithGoogle } = useGoogleAuth();
-    const privacyPolicyUrl = isGoogleOnly
-        ? resolvePrivacyPolicyUrl({ darkMode: true })
-        : resolveRegistrationAgreementUrl('privacy-policy');
+    const privacyPolicyUrl = resolveRegistrationAgreementUrl('privacy-policy');
     const userAgreementUrl = resolveRegistrationAgreementUrl('user-agreement');
+
+    const handleLegalDocumentClick = (
+        event: React.MouseEvent<HTMLAnchorElement>,
+        document: 'user-agreement' | 'privacy-policy',
+    ) => {
+        event.stopPropagation();
+        if (typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 767px)').matches) {
+            event.preventDefault();
+            authModalStore.getState().setAuthModalMode(mode);
+            navigate(`/legal/${document}`);
+        }
+    };
 
     // 清理倒计时定时器
     useEffect(() => {
@@ -111,6 +125,34 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
             }
         };
     }, []);
+
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handlePointerDown = (event: PointerEvent) => {
+            overlayPointerRef.current = {
+                x: event.clientX,
+                y: event.clientY,
+                moved: false,
+            };
+        };
+        const handlePointerMove = (event: PointerEvent) => {
+            const gesture = overlayPointerRef.current;
+            if (!gesture || gesture.moved) return;
+
+            if (Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) > 4) {
+                gesture.moved = true;
+            }
+        };
+
+        window.addEventListener('pointerdown', handlePointerDown, true);
+        window.addEventListener('pointermove', handlePointerMove, true);
+        return () => {
+            window.removeEventListener('pointerdown', handlePointerDown, true);
+            window.removeEventListener('pointermove', handlePointerMove, true);
+            overlayPointerRef.current = null;
+        };
+    }, [isOpen]);
 
     // ========== 验证函数 ==========
     const validatePhone = (phoneNumber: string): boolean => {
@@ -478,6 +520,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                         onLogin(phone, password);
                     }
                     resetAllStates();
+                    authModalStore.getState().setAuthModalMode('login');
                     onClose();
                 } else {
                     throw new Error(t('common.error'));
@@ -510,6 +553,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                     }
                     clearRegistrationSessionId();
                     resetAllStates();
+                    authModalStore.getState().setAuthModalMode('login');
                     onClose();
                 } else {
                     throw new Error(t('common.error'));
@@ -527,6 +571,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                     resetAllStates();
                     setTimeout(() => {
                         setMode('login');
+                        authModalStore.getState().setAuthModalMode('login');
                         setSubmitError('');
                     }, 2000);
                 } else {
@@ -564,12 +609,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
             trackRegistrationEvent('registration_mode_switch', registrationSessionId);
             trackRegistrationEvent('registration_enter', registrationSessionId);
             setMode('register');
+            authModalStore.getState().setAuthModalMode('register');
         } else if (mode === 'register') {
             const registrationSessionId = getOrCreateRegistrationSessionId();
             trackRegistrationEvent('registration_mode_switch', registrationSessionId);
             trackRegistrationEvent('registration_exit', registrationSessionId);
             clearRegistrationSessionId();
             setMode('login');
+            authModalStore.getState().setAuthModalMode('login');
         }
         resetErrors();
         resetVerificationState();
@@ -584,6 +631,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
     const handleForgetPassword = () => {
         if (isLoading) return;
         setMode('reset');
+        authModalStore.getState().setAuthModalMode('reset');
         resetErrors();
         resetVerificationState();
         setPasswordVisible(false);
@@ -604,6 +652,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         }
         resetAllStates();
         setMode('login');
+        authModalStore.getState().setAuthModalMode('login');
         onClose();
     };
 
@@ -611,6 +660,25 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         if (isLoading) return;
         resetAllStates();
         setMode('login');
+        authModalStore.getState().setAuthModalMode('login');
+    };
+
+    const handleOverlayClick = (event: React.MouseEvent<HTMLDivElement>) => {
+        const pointerGesture = overlayPointerRef.current;
+        overlayPointerRef.current = null;
+        if (pointerGesture?.moved) return;
+        if (event.target !== event.currentTarget) return;
+
+        const selection = window.getSelection();
+        if (selection && !selection.isCollapsed && selection.toString()) return;
+
+        const activeElement = document.activeElement;
+        if (activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement) {
+            const { selectionStart, selectionEnd } = activeElement;
+            if (selectionStart !== null && selectionEnd !== null && selectionStart !== selectionEnd) return;
+        }
+
+        handleClose();
     };
 
     // ========== 渲染辅助函数 ==========
@@ -628,7 +696,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
     const modalContent = (
         <div
             className={`${styles.modalOverlay} ${isGoogleOnly ? styles.googleOnlyOverlay : ''}`}
-            onClick={handleClose}
+            onClick={handleOverlayClick}
         >
             <div
                 className={`${styles.modalContent} ${isGoogleOnly ? styles.googleOnlyContent : ''}`}
@@ -674,7 +742,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className={styles.privacyLink}
-                                        onClick={(e) => e.stopPropagation()}
+                                        onClick={(event) => handleLegalDocumentClick(event, 'privacy-policy')}
                                     >
                                         {t('auth.privacyPolicy')}
                                     </a>
@@ -875,7 +943,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className={styles.privacyLink}
-                                            onClick={(e) => e.stopPropagation()}
+                                            onClick={(event) => handleLegalDocumentClick(event, 'user-agreement')}
                                         >
                                             {t('auth.userAgreement')}
                                         </a>
@@ -885,7 +953,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className={styles.privacyLink}
-                                            onClick={(e) => e.stopPropagation()}
+                                            onClick={(event) => handleLegalDocumentClick(event, 'privacy-policy')}
                                         >
                                             {t('auth.privacyPolicy')}
                                         </a>
