@@ -28,6 +28,8 @@ import {
   isSafeCustomTextLlmModelId,
   normalizeTextLlmModel,
   normalizeTextLlmOpenAiBaseUrl,
+  resolvePreferredTextLlmGatewayPresetId,
+  resolveTextLlmGatewayPresetId,
   type TextLlmGatewayPreset,
   type TextLlmModel,
 } from '../lib/textLlmConfig';
@@ -80,8 +82,9 @@ const ModelConfigHub: React.FC = () => {
   const [openaiBaseUrlFallback, setOpenaiBaseUrlFallback] = useState('https://epone.ggb.today');
   const [openaiApiKey, setOpenaiApiKey] = useState('');
   const [apiKeySet, setApiKeySet] = useState(false);
-  const [apiKeyHint, setApiKeyHint] = useState('');
   const [clearApiKey, setClearApiKey] = useState(false);
+  /** 功能注释：各网关明文密钥草稿；切换 DeepSeek/TokenHub 时本地暂存，保存时一并落库 */
+  const [gatewayKeys, setGatewayKeys] = useState<Record<string, string>>({});
   const [gatewayPresets, setGatewayPresets] = useState<readonly TextLlmGatewayPreset[]>(
     DEFAULT_TEXT_LLM_GATEWAY_PRESETS,
   );
@@ -135,20 +138,32 @@ const ModelConfigHub: React.FC = () => {
     model?: string;
     openaiBaseUrl?: string;
     openaiBaseUrlFallback?: string;
+    openaiApiKey?: string;
+    gatewayKeys?: Record<string, string>;
     apiKeySet?: boolean;
     apiKeyHint?: string;
     gatewayPresets?: TextLlmGatewayPreset[];
   }) => {
     if (data.model) setTextModel(normalizeTextLlmModel(data.model));
-    setOpenaiBaseUrl(String(data.openaiBaseUrl || ''));
+    const nextBase = String(data.openaiBaseUrl || '');
+    setOpenaiBaseUrl(nextBase);
     if (data.openaiBaseUrlFallback) {
       setOpenaiBaseUrlFallback(String(data.openaiBaseUrlFallback));
     }
-    setApiKeySet(Boolean(data.apiKeySet));
-    setApiKeyHint(String(data.apiKeyHint || ''));
-    setOpenaiApiKey('');
-    setClearApiKey(false);
+    const nextPresets = data.gatewayPresets?.length
+      ? data.gatewayPresets
+      : DEFAULT_TEXT_LLM_GATEWAY_PRESETS;
     if (data.gatewayPresets?.length) setGatewayPresets(data.gatewayPresets);
+    const keys = { ...(data.gatewayKeys || {}) };
+    setGatewayKeys(keys);
+    const presetId = resolveTextLlmGatewayPresetId(nextBase, nextPresets);
+    const plaintext =
+      String(data.openaiApiKey || '').trim()
+      || (presetId ? String(keys[presetId] || '').trim() : '')
+      || String(data.apiKeyHint || '').trim();
+    setOpenaiApiKey(plaintext);
+    setApiKeySet(Boolean(data.apiKeySet) || Boolean(plaintext));
+    setClearApiKey(false);
   }, []);
 
   const loadText = useCallback(async () => {
@@ -241,6 +256,46 @@ const ModelConfigHub: React.FC = () => {
     }
   };
 
+  /** 功能注释：切换网关前把当前密钥记入对应槽，再回显目标网关已存密钥 */
+  const switchTextGatewayPreset = (preset: TextLlmGatewayPreset) => {
+    const prevId = resolveTextLlmGatewayPresetId(openaiBaseUrl, gatewayPresets);
+    const nextKeys = { ...gatewayKeys };
+    if (prevId && openaiApiKey.trim() && !clearApiKey) {
+      nextKeys[prevId] = openaiApiKey.trim();
+    }
+    setGatewayKeys(nextKeys);
+    setOpenaiBaseUrl(preset.baseUrl);
+    setOpenaiApiKey(String(nextKeys[preset.id] || ''));
+    setClearApiKey(false);
+    setApiKeySet(Boolean(nextKeys[preset.id]));
+  };
+
+  /**
+   * 功能注释：点预置模型——DeepSeek/ggb 卡切到 epone 并回显该网关密钥，便于直接「拉取模型」。
+   * 豆包不改 OpenAI 网关（走 Ark）。
+   */
+  const selectPresetTextModel = (item: TextLlmModel) => {
+    const nextModel = normalizeTextLlmModel(item);
+    setTextModel(nextModel);
+    const preferredId = resolvePreferredTextLlmGatewayPresetId(nextModel);
+    if (!preferredId) return;
+    const preset = gatewayPresets.find((row) => row.id === preferredId);
+    if (!preset) return;
+    const alreadyOn =
+      normalizeTextLlmOpenAiBaseUrl(openaiBaseUrl) === preset.baseUrl;
+    if (!alreadyOn) {
+      switchTextGatewayPreset(preset);
+      return;
+    }
+    // 功能注释：已在目标网关时仍强制回显该槽密钥（避免表单仍停在别家 key）
+    const key = String(gatewayKeys[preferredId] || '').trim();
+    if (key && key !== openaiApiKey.trim()) {
+      setOpenaiApiKey(key);
+      setClearApiKey(false);
+      setApiKeySet(true);
+    }
+  };
+
   const handleSaveText = async () => {
     const model = normalizeTextLlmModel(textModel);
     if (!isSafeCustomTextLlmModelId(model) && !TEXT_LLM_MODELS.includes(model as typeof TEXT_LLM_MODELS[number])) {
@@ -252,12 +307,21 @@ const ModelConfigHub: React.FC = () => {
       toast.error('API 地址无效，请填写 https:// 开头的基础 URL');
       return;
     }
+    const presetId = resolveTextLlmGatewayPresetId(baseNormalized, gatewayPresets);
+    const nextKeys = { ...gatewayKeys };
+    if (!clearApiKey && presetId && openaiApiKey.trim()) {
+      nextKeys[presetId] = openaiApiKey.trim();
+    }
+    if (clearApiKey && presetId) {
+      delete nextKeys[presetId];
+    }
     try {
       setTextSaving(true);
       const response = await adminTextLlmConfigApi.saveConfig({
         model,
         openaiBaseUrl: baseNormalized,
         openaiApiKey: clearApiKey ? undefined : openaiApiKey,
+        gatewayKeys: nextKeys,
         clearApiKey,
       });
       if (response.data.success && response.data.data) {
@@ -554,7 +618,7 @@ const ModelConfigHub: React.FC = () => {
                 <section className={styles.panel} aria-label="文案模型请求设置">
                   <div className={styles.panelHead}>
                     <h3 className={styles.panelTitle}>文案请求设置</h3>
-                    <p className={styles.panelHint}>仅文案 · 不影响生图 ggb</p>
+                    <p className={styles.panelHint}>仅文案链路 · 不影响生图配置</p>
                   </div>
 
                   <label className={styles.fieldLabel}>
@@ -582,7 +646,7 @@ const ModelConfigHub: React.FC = () => {
                           key={preset.id}
                           type="button"
                           className={active ? styles.presetChipActive : styles.presetChip}
-                          onClick={() => setOpenaiBaseUrl(preset.baseUrl)}
+                          onClick={() => switchTextGatewayPreset(preset)}
                           disabled={textSaving}
                         >
                           {preset.label}
@@ -595,19 +659,25 @@ const ModelConfigHub: React.FC = () => {
                     文案 API 密钥
                     <input
                       className={styles.fieldInput}
-                      type="password"
-                      value={openaiApiKey}
-                      placeholder={
-                        apiKeySet
-                          ? `已保存 ${apiKeyHint || '••••'}，留空不修改`
-                          : 'sk-...（仅文案；生图仍用服务器 ggb 密钥）'
-                      }
+                      type="text"
+                      value={clearApiKey ? '' : openaiApiKey}
+                      placeholder="sk-...（明文；每个网关各自保存，切换即回显；改完请点保存）"
                       onChange={(e) => {
-                        setOpenaiApiKey(e.target.value);
+                        const next = e.target.value;
+                        setOpenaiApiKey(next);
                         if (clearApiKey) setClearApiKey(false);
+                        // 功能注释：输入时立刻写入当前网关槽，切换 TokenHub/epone 时不丢未保存草稿
+                        const presetId = resolveTextLlmGatewayPresetId(openaiBaseUrl, gatewayPresets);
+                        if (presetId) {
+                          setGatewayKeys((prev) => ({
+                            ...prev,
+                            [presetId]: next.trim(),
+                          }));
+                        }
                       }}
                       disabled={textSaving || clearApiKey}
-                      autoComplete="new-password"
+                      autoComplete="off"
+                      spellCheck={false}
                     />
                   </label>
                   {apiKeySet ? (
@@ -684,7 +754,7 @@ const ModelConfigHub: React.FC = () => {
                           role="radio"
                           aria-checked={active}
                           className={active ? styles.modelCardActive : styles.modelCard}
-                          onClick={() => setTextModel(item)}
+                          onClick={() => selectPresetTextModel(item)}
                           disabled={textSaving}
                         >
                           <span className={styles.modelVendor}>

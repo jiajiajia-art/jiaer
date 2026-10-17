@@ -11,10 +11,16 @@ import {
     shouldClearCurrentStepWhenDeferringChoice,
     shouldAutoPromoteReadyChoice,
     GENERATION_BUSY_MAX_RETRIES,
+    NETWORK_STREAM_MAX_RETRIES,
     getGenerationBusyRetryDelayMs,
+    getNetworkStreamRetryDelayMs,
 } from '../../lib/galgame/choiceStepDisplayGate';
+import { isTransientNetworkStreamError } from '../../lib/galgame/normalizeStreamErrorMessage';
 import { isAliyunFrontendRuntime } from '../../lib/aliyunFrontendRuntime';
-import { shouldEnableRawTextStepBridge } from '../../lib/story/rawTextStreamPolicy';
+import {
+    shouldEnableRawTextStepBridge,
+    shouldPreserveCanvasOnGenerationRetry,
+} from '../../lib/story/rawTextStreamPolicy';
 import {
     advanceRawTextBridgePage,
     applyRawTextBridgeDialoguePortrait,
@@ -26,6 +32,11 @@ import {
     shouldShowRawTextBridgeNextButton,
     type RawTextBridgePageState,
 } from '../../lib/story/rawTextStepBridge';
+import {
+    clearStreamPerfHistory,
+    markStreamPerfCanvasFirstPaint,
+    markStreamPerfRequestStart,
+} from '../../lib/galgame/streamPerfDebug';
 
 export function createGalgameActionId(sessionId: string | null, _action: string): string {
     const randomPart = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
@@ -114,7 +125,7 @@ export const useGalgameStep = ({
         }));
     }, []);
 
-    /** 功能注释：Aliyun 画布立刻落字（完句 + 未满页预览），并清掉「生成中」空等 */
+    /** 功能注释：Aliyun 画布立刻落字（可见字即上屏，不等句号）；并记画布首字打点 */
     const paintAliyunRawCanvas = useCallback((unfinished = '') => {
         const page = rawTextPageRef.current;
         const content = buildRawTextBridgeCanvasContent({
@@ -122,6 +133,7 @@ export const useGalgameStep = ({
             unfinished,
         });
         if (!content.trim()) return;
+        markStreamPerfCanvasFirstPaint(currentRequestId.current);
         setCurrentStep((prev: any) => {
             const portraitSource = pendingDialoguePortraitRef.current
                 || ((prev?._portraitFromRawBridge || prev?.type === 'dialogue') ? prev : null);
@@ -167,6 +179,8 @@ export const useGalgameStep = ({
     // Reset all state when session changes
     useEffect(() => {
         currentRequestId.current = 0;
+        // 功能注释：换局清空 STREAM_PERF 累计，避免上一局残留被当成「本局多条」
+        clearStreamPerfHistory();
         resetRawTextBridgePage();
         setCurrentStep(null);
         setStepQueue([]);
@@ -192,8 +206,12 @@ export const useGalgameStep = ({
     }, [updateUser]);
 
     const resetStreamRetryDisplay = useCallback(() => {
-        resetRawTextBridgePage();
-        setCurrentStep(null);
+        // 功能注释：已上屏旁白时保留画布，避免 generation_retry 闪成「出完字又重载」
+        const preserveCanvas = shouldPreserveCanvasOnGenerationRetry(currentStepRef.current);
+        if (!preserveCanvas) {
+            resetRawTextBridgePage();
+            setCurrentStep(null);
+        }
         setStepQueue([]);
         setShowNextButton(false);
         setSelectedOptionIndex(null);
@@ -288,6 +306,8 @@ export const useGalgameStep = ({
 
             try {
                 const requestId = ++currentRequestId.current;
+                // 功能注释：STREAM_PERF 画布首字相对此打点计时
+                markStreamPerfRequestStart(requestId);
 
                 // Start fresh for new request so previous step does not block queue
                 resetRawTextBridgePage();
@@ -337,8 +357,8 @@ export const useGalgameStep = ({
                                     console.error('Failed to run onStreamComplete:', e);
                                 }
                             }
-                            // KV 锁释放存在短暂可见性延迟：稍等再解锁，避免选项一点就抢锁失败
-                            await new Promise((resolve) => window.setTimeout(resolve, 700));
+                            // 功能注释：锁可见性缓冲；过长会叠在「出选项前空等」上，Aliyun 压到 250ms
+                            await new Promise((resolve) => window.setTimeout(resolve, rawTextBridgeEnabled ? 250 : 700));
                             if (currentRequestId.current !== requestId) {
                                 return;
                             }
@@ -356,8 +376,12 @@ export const useGalgameStep = ({
                         onError: (error) => {
                             setIsCompressingContext(false);
                             setLoading(false);
-                            resetRawTextBridgePage();
-                            setCurrentStep(null);
+                            // 功能注释：断流时若已有旁白，保留画布，避免清空后 history 自动重发再失败
+                            const preserveCanvas = shouldPreserveCanvasOnGenerationRetry(currentStepRef.current);
+                            if (!preserveCanvas) {
+                                resetRawTextBridgePage();
+                                setCurrentStep(null);
+                            }
                             setStepQueue([]);
                             setShowNextButton(false);
                             options?.onError?.(error);
@@ -563,10 +587,16 @@ export const useGalgameStep = ({
                             }, getGenerationBusyRetryDelayMs(attempt));
                             return;
                         }
+                        if (isTransientNetworkStreamError(error) && attempt < NETWORK_STREAM_MAX_RETRIES) {
+                            window.setTimeout(() => {
+                                void run(attempt + 1);
+                            }, getNetworkStreamRetryDelayMs(attempt));
+                            return;
+                        }
                         console.error('[Galgame] choice option error:', error);
                         setIsWaitingForData(false);
                         setSelectedOptionIndex(null);
-                        if (isGenerationBusyError(error)) {
+                        if (isGenerationBusyError(error) || isTransientNetworkStreamError(error)) {
                             onErrorAfterAlert?.(String(error));
                         }
                     },
@@ -597,9 +627,15 @@ export const useGalgameStep = ({
                             }, getGenerationBusyRetryDelayMs(attempt));
                             return;
                         }
+                        if (isTransientNetworkStreamError(error) && attempt < NETWORK_STREAM_MAX_RETRIES) {
+                            window.setTimeout(() => {
+                                void run(attempt + 1);
+                            }, getNetworkStreamRetryDelayMs(attempt));
+                            return;
+                        }
                         console.error('[Galgame] custom input error:', error);
                         setIsWaitingForData(false);
-                        if (isGenerationBusyError(error)) {
+                        if (isGenerationBusyError(error) || isTransientNetworkStreamError(error)) {
                             onErrorAfterAlert?.(String(error));
                         }
                     },
@@ -661,8 +697,8 @@ export const useGalgameStep = ({
                                     console.error('Failed to run onStreamComplete:', e);
                                 }
                             }
-                            // KV 锁释放存在短暂可见性延迟：稍等再解锁，避免选项一点就抢锁失败
-                            await new Promise((resolve) => window.setTimeout(resolve, 700));
+                            // 功能注释：与主流程一致，Aliyun 缩短锁缓冲，减少出选项前空等
+                            await new Promise((resolve) => window.setTimeout(resolve, rawTextBridgeEnabled ? 250 : 700));
                             if (currentRequestId.current !== requestId) {
                                 return;
                             }
@@ -671,7 +707,10 @@ export const useGalgameStep = ({
                         },
                         onError: (error) => {
                             setLoading(false);
-                            setCurrentStep(null);
+                            const preserveCanvas = shouldPreserveCanvasOnGenerationRetry(currentStepRef.current);
+                            if (!preserveCanvas) {
+                                setCurrentStep(null);
+                            }
                             setStepQueue([]);
                             setShowNextButton(false);
                             options?.onError?.(error);

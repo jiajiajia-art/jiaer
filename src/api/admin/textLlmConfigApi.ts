@@ -14,6 +14,10 @@ export interface AdminTextLlmConfigData {
   gatewayPresets?: TextLlmGatewayPreset[];
   openaiBaseUrl?: string;
   openaiBaseUrlFallback?: string;
+  /** 功能注释：管理端明文回传当前网关密钥 */
+  openaiApiKey?: string;
+  /** 功能注释：各快捷网关 id → 明文密钥 */
+  gatewayKeys?: Record<string, string>;
   apiKeySet?: boolean;
   apiKeyHint?: string;
 }
@@ -28,6 +32,7 @@ export interface SaveTextLlmConfigPayload {
   model: string;
   openaiBaseUrl?: string;
   openaiApiKey?: string;
+  gatewayKeys?: Record<string, string>;
   clearApiKey?: boolean;
 }
 

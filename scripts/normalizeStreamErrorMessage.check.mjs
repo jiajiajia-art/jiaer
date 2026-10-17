@@ -1,7 +1,23 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { normalizeUserFacingStreamError } from '../src/lib/galgame/normalizeStreamErrorMessage.ts';
+import {
+  isTransientNetworkStreamError,
+  normalizeUserFacingStreamError,
+} from '../src/lib/galgame/normalizeStreamErrorMessage.ts';
+
+test('isTransientNetworkStreamError_应识别浏览器断流文案', () => {
+  assert.equal(isTransientNetworkStreamError(new TypeError('network error')), true);
+  assert.equal(isTransientNetworkStreamError('Failed to fetch'), true);
+  assert.equal(isTransientNetworkStreamError('生成结果不完整，请重试。'), false);
+});
+
+test('normalizeUserFacingStreamError_网络断流应中文提示', () => {
+  assert.equal(
+    normalizeUserFacingStreamError(new TypeError('network error')),
+    '网络中断，生成连接已断开，请点击重试。',
+  );
+});
 
 test('normalizeUserFacingStreamError_脏输出应转为中文提示', () => {
   assert.equal(

@@ -7,11 +7,14 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  DEFAULT_TEXT_LLM_GATEWAY_PRESETS,
   DEFAULT_TEXT_LLM_MODEL,
   TEXT_LLM_MODELS,
   TEXT_LLM_USAGE_CATALOG,
   normalizeTextLlmModel,
   normalizeTextLlmOpenAiBaseUrl,
+  resolvePreferredTextLlmGatewayPresetId,
+  resolveTextLlmGatewayPresetId,
 } from '../src/lib/textLlmConfig.ts';
 import { resolveModelConfigPane } from '../src/lib/modelConfigPane.ts';
 
@@ -34,6 +37,22 @@ test('normalizeTextLlmOpenAiBaseUrl_剥completions路径', () => {
     normalizeTextLlmOpenAiBaseUrl('https://api.deepseek.com/v1/chat/completions'),
     'https://api.deepseek.com',
   );
+  assert.equal(
+    normalizeTextLlmOpenAiBaseUrl('https://tokenhub.tencentmaas.com/v1'),
+    'https://tokenhub.tencentmaas.com',
+  );
+  const tokenhub = DEFAULT_TEXT_LLM_GATEWAY_PRESETS.find((p) => p.id === 'tokenhub');
+  assert.equal(tokenhub?.label, 'TokenHub');
+  assert.equal(tokenhub?.baseUrl, 'https://tokenhub.tencentmaas.com');
+  assert.equal(resolveTextLlmGatewayPresetId('https://api.deepseek.com'), 'deepseek');
+  assert.equal(resolveTextLlmGatewayPresetId('https://tokenhub.tencentmaas.com/v1'), 'tokenhub');
+});
+
+test('resolvePreferredTextLlmGatewayPresetId_DeepSeek预置走epone_豆包不切', () => {
+  assert.equal(resolvePreferredTextLlmGatewayPresetId('deepseek-v4.1-flash'), 'epone');
+  assert.equal(resolvePreferredTextLlmGatewayPresetId('deepseek-v4-pro-0813'), 'epone');
+  assert.equal(resolvePreferredTextLlmGatewayPresetId('doubao-seed-2-1-lite-260915'), '');
+  assert.equal(resolvePreferredTextLlmGatewayPresetId(''), '');
 });
 
 test('resolveModelConfigPane_按路由切换生图与文案', () => {
@@ -47,7 +66,8 @@ test('ModelConfigHub_同页双轨Tab与文案网关设置', () => {
   const hub = readFileSync(join(root, 'src/components/ModelConfigHub.tsx'), 'utf8');
   assert.match(hub, /一处配置，全站文案同模型/);
   assert.match(hub, /文案请求设置/);
-  assert.match(hub, /不影响生图 ggb/);
+  assert.match(hub, /不影响生图配置/);
+  assert.doesNotMatch(hub, /不影响生图 ggb/);
   assert.match(hub, /拉取模型/);
   assert.match(hub, /openaiBaseUrl/);
   assert.match(hub, /listModels/);
@@ -57,6 +77,21 @@ test('ModelConfigHub_同页双轨Tab与文案网关设置', () => {
   // 功能注释：文案与生图网关 state 必须分离
   assert.match(hub, /imageOpenaiBaseUrl/);
   assert.match(hub, /openaiBaseUrl/);
+  // 功能注释：密钥明文 + 按网关切换回显
+  assert.match(hub, /switchTextGatewayPreset/);
+  assert.match(hub, /selectPresetTextModel/);
+  assert.match(hub, /resolvePreferredTextLlmGatewayPresetId/);
+  assert.match(hub, /gatewayKeys/);
+  assert.match(hub, /明文/);
+  assert.match(hub, /onClick=\{\(\) => selectPresetTextModel\(item\)\}/);
+  // 功能注释：密钥输入即时写入 gatewayKeys，切换网关不丢 TokenHub 草稿
+  assert.match(hub, /setGatewayKeys\(\(prev\) =>/);
+  assert.match(hub, /改完请点保存/);
+  assert.match(
+    hub,
+    /文案 API 密钥[\s\S]{0,280}type="text"/,
+  );
+
 
   assert.match(hub, /role="tablist"/);
   assert.match(hub, /ModelConfigHub\.module\.css/);
@@ -84,6 +119,6 @@ test('textLlmConfig_模型展示标签可读', async () => {
   assert.equal(mod.getTextLlmModelLabel('doubao-seed-2-1-lite-260915'), '豆包 Seed 2.1 Lite');
   assert.equal(mod.getTextLlmModelLabel('deepseek-v4.1-flash'), 'DeepSeek V4.1 Flash');
   assert.equal(mod.getTextLlmModelLabel('deepseek-v4-flash-0731'), 'DeepSeek V4 Flash 0731');
-  assert.equal(mod.getTextLlmModelVendor('deepseek-v3.2'), 'DeepSeek · OpenAI 兼容');
+  assert.equal(mod.getTextLlmModelVendor('deepseek-v3.2'), 'DeepSeek · epone / ggb');
   assert.ok(mod.isDefaultTextLlmModel(DEFAULT_TEXT_LLM_MODEL));
 });

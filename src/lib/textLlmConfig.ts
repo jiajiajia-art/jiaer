@@ -39,6 +39,8 @@ export const DEFAULT_TEXT_LLM_MODEL: TextLlmPresetModel = 'doubao-seed-2-1-lite-
 export const DEFAULT_TEXT_LLM_GATEWAY_PRESETS: readonly TextLlmGatewayPreset[] = [
   { id: 'deepseek', label: 'DeepSeek 官方', baseUrl: 'https://api.deepseek.com' },
   { id: 'epone', label: 'epone 代理', baseUrl: 'https://epone.ggb.today' },
+  // 功能注释：TokenHub 文档 baseURL 为 …/v1；此处存根地址，保存时会剥掉 /v1
+  { id: 'tokenhub', label: 'TokenHub', baseUrl: 'https://tokenhub.tencentmaas.com' },
   { id: 'openai', label: 'OpenAI', baseUrl: 'https://api.openai.com' },
   { id: 'openrouter', label: 'OpenRouter', baseUrl: 'https://openrouter.ai/api' },
 ];
@@ -127,6 +129,29 @@ export function normalizeTextLlmOpenAiBaseUrl(value: unknown): string {
   }
 }
 
+/** 功能注释：按标准化 baseUrl 反查快捷网关 id，供切换时读写对应密钥。 */
+export function resolveTextLlmGatewayPresetId(
+  baseUrl: unknown,
+  presets: readonly TextLlmGatewayPreset[] = DEFAULT_TEXT_LLM_GATEWAY_PRESETS,
+): string {
+  const normalized = normalizeTextLlmOpenAiBaseUrl(baseUrl);
+  if (!normalized) return '';
+  const hit = presets.find((p) => p.baseUrl === normalized);
+  return hit ? String(hit.id) : '';
+}
+
+/**
+ * 功能注释：点预置模型卡片时，应切到哪条网关以便回显密钥 / 拉取模型。
+ * DeepSeek 预置 id 走 epone（ggb）；豆包走 Ark，不强制改 OpenAI 网关。
+ */
+export function resolvePreferredTextLlmGatewayPresetId(model: unknown): string {
+  const id = String(model || '').trim();
+  if (!id) return '';
+  if (id.startsWith('doubao')) return '';
+  if (/^deepseek/i.test(id)) return 'epone';
+  return '';
+}
+
 /** 功能注释：卡片标题（运营可读）与网关侧真实 model id 分离展示。 */
 export function getTextLlmModelLabel(model: TextLlmModel): string {
   if (model === 'doubao-seed-2-1-lite-260915') return '豆包 Seed 2.1 Lite';
@@ -141,16 +166,19 @@ export function getTextLlmModelLabel(model: TextLlmModel): string {
 
 export function getTextLlmModelVendor(model: TextLlmModel): string {
   if (String(model).startsWith('doubao')) return 'Doubao';
-  if (/^deepseek/i.test(String(model))) return 'DeepSeek · OpenAI 兼容';
+  if (/^deepseek/i.test(String(model))) return 'DeepSeek · epone / ggb';
   return 'OpenAI 兼容';
 }
 
 export function getTextLlmModelMeta(model: TextLlmModel): string {
   if (model === DEFAULT_TEXT_LLM_MODEL) return '全站默认 · Ark';
-  if (model === 'deepseek-v4.1-flash') return '1M ctx · V4.1 更快';
-  if (String(model).includes('v4-pro')) return '1M ctx · 旗舰';
-  if (String(model).includes('flash')) return '1M ctx · 更快';
-  if (String(model).includes('speciale')) return '128K · Speciale';
+  if (model === 'deepseek-v4.1-flash') return '1M ctx · 点选切 epone 密钥';
+  if (String(model).includes('v4-pro')) return '1M ctx · 点选切 epone 密钥';
+  if (String(model).includes('flash')) return '1M ctx · 点选切 epone 密钥';
+  if (String(model).includes('speciale')) return '128K · 点选切 epone 密钥';
+  if (isTextLlmPresetModel(model) && /^deepseek/i.test(String(model))) {
+    return '128K · 点选切 epone 密钥';
+  }
   if (isTextLlmPresetModel(model)) return '128K · 网关';
   return '自定义 · 网关拉取';
 }

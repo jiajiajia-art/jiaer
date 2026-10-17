@@ -10,6 +10,7 @@ import {
   shouldDeferFormalStepForRawTextBridge,
   shouldEnableRawTextStepBridge,
   shouldSkipTypewriterForRawTextBridge,
+  shouldPreserveCanvasOnGenerationRetry,
 } from '../src/lib/story/rawTextStreamPolicy.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -25,19 +26,33 @@ test('shouldEnableRawTextStepBridge_本地DEV或Aliyun开启_CF生产关闭', ()
   assert.equal(shouldEnableRawTextStepBridge({ aliyunRuntime: false, isDev: false }), false);
 });
 
-test('shouldSkipTypewriterForRawTextBridge_本地与生产均保留打字机', () => {
+test('shouldSkipTypewriterForRawTextBridge_raw旁白应跳过打字机', () => {
   assert.equal(
     shouldSkipTypewriterForRawTextBridge({ aliyunRuntime: true, isDev: true, fromRawText: true }),
-    false,
+    true,
   );
   assert.equal(
     shouldSkipTypewriterForRawTextBridge({ aliyunRuntime: true, isDev: false, fromRawText: true }),
-    false,
+    true,
   );
   assert.equal(
-    shouldSkipTypewriterForRawTextBridge({ aliyunRuntime: false, isDev: false, fromRawText: true }),
+    shouldSkipTypewriterForRawTextBridge({ aliyunRuntime: false, isDev: false, fromRawText: false }),
     false,
   );
+});
+
+test('shouldPreserveCanvasOnGenerationRetry_已有旁白应保留', () => {
+  assert.equal(shouldPreserveCanvasOnGenerationRetry(null), false);
+  assert.equal(shouldPreserveCanvasOnGenerationRetry({}), false);
+  assert.equal(shouldPreserveCanvasOnGenerationRetry({ _fromRawText: true, content: 'a' }), true);
+  assert.equal(shouldPreserveCanvasOnGenerationRetry({ content: '已上屏' }), true);
+  assert.equal(shouldPreserveCanvasOnGenerationRetry({ content: '   ' }), false);
+});
+
+test('useGalgameStep_retry时须按策略决定是否清画布', () => {
+  const src = readFileSync(join(root, 'src/hooks/galgame/useGalgameStep.ts'), 'utf8');
+  assert.match(src, /shouldPreserveCanvasOnGenerationRetry/);
+  assert.match(src, /preserveCanvas/);
 });
 
 test('useStepStreamResponse_Aliyun须在step分支调用推迟策略', () => {

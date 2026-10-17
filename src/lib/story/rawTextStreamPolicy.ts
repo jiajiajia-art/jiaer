@@ -25,13 +25,28 @@ export function shouldEnableRawTextStepBridge(options: {
 }
 
 /**
- * 功能注释：raw 旁白是否跳过打字机。
- * 本地与生产统一保留打字机（完句上屏后逐字出现）；参数保留便于调用方统一传参。
+ * 功能注释：raw 旁白跳过打字机——有 SSE 可见字即整段上屏，不等逐字、也不等句号。
+ * 正式 step（非 _fromRawText）仍走打字机。
  */
-export function shouldSkipTypewriterForRawTextBridge(_options: {
+export function shouldSkipTypewriterForRawTextBridge(options: {
   aliyunRuntime: boolean;
   isDev?: boolean;
   fromRawText: boolean;
 }): boolean {
-  return false;
+  return Boolean(options?.fromRawText);
+}
+
+/**
+ * 功能注释：generation_retry 时若画布已有旁白，禁止整屏清空。
+ * 否则用户看到「字出完 → 未点下一步 → 突然重载」。
+ */
+export function shouldPreserveCanvasOnGenerationRetry(currentStep: {
+  _fromRawText?: boolean;
+  content?: unknown;
+  text?: unknown;
+} | null | undefined): boolean {
+  if (!currentStep) return false;
+  if (currentStep._fromRawText) return true;
+  const content = String(currentStep.content || currentStep.text || '').trim();
+  return content.length > 0;
 }
