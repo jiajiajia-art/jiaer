@@ -32,6 +32,7 @@ import {
 } from '../utils/interactiveVideoEditSteps';
 import { resolveCreatorEngine } from '../utils/miniProgram';
 import { flattenThemeTags, useLocalizedThemeTags, type FlatThemeTag } from '../utils/themeTags';
+import { getApiErrorMessage } from '../utils/error';
 import styles from './InteractiveVideoEdit.module.css';
 
 const THEME_TAG_MIN = 1;
@@ -285,16 +286,17 @@ const getVideoEditErrorMessage = async (error: unknown, fallback: string) => {
     const data = maybeError?.response?.data;
     if (data instanceof Blob) {
         try {
-            const parsed = JSON.parse(await data.text()) as { message?: string };
-            return parsed.message || fallback;
+            const parsed = JSON.parse(await data.text()) as { message?: string; code?: string };
+            if (parsed.message) return parsed.message;
+            if (parsed.code === 'publish_blocked') return '账号处于发布限制中';
+            if (parsed.code === 'creator_frozen') return '创作者功能已被冻结';
+            if (parsed.code === 'publish_need_review') return '作品需审核通过后才能公开';
+            return fallback;
         } catch {
             return fallback;
         }
     }
-    if (data && typeof data === 'object' && 'message' in data) {
-        return String((data as { message?: unknown }).message || fallback);
-    }
-    return maybeError?.message || fallback;
+    return getApiErrorMessage(error, fallback);
 };
 
 const InteractiveVideoEdit: React.FC = () => {

@@ -71,6 +71,10 @@ export interface User {
   memberPlan?: MembershipPlanId | null;
   memberEndAt?: string | null;
   stackedPlans?: StackedPlan[];
+  /** 禁发截止（P0；来自 user_punishment.publish_blocked_until） */
+  publishBanUntil?: string | null;
+  /** 主页对外隐藏（P0.5） */
+  homeHidden?: boolean;
 }
 
 // 注册请求

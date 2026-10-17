@@ -43,18 +43,21 @@
 
 .modal {
     width: 340px;
-    background: #ffffff;
-    border-radius: 12px;
+    background: #1a1a1a;
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
     overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
 }
 
 .header {
-    background: linear-gradient(135deg, #FB4655 0%, #e63946 100%);
+    background: #1a1a1a;
     padding: 16px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .title {
@@ -65,22 +68,27 @@
 }
 
 .closeButton {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.3s ease;
     background: transparent;
     border: none;
     padding: 0;
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 22px;
+    line-height: 1;
 }
 
-.closeButton img {
-    width: 36px;
-    height: 36px;
-    filter: brightness(0) invert(1);
+.closeButton:hover {
+    color: #ffffff;
+}
+
+.closeButton:focus-visible {
+    outline: 2px solid #a8283c;
+    outline-offset: 2px;
 }
 
 .closeButton:active {
@@ -99,18 +107,23 @@
     align-items: center;
     gap: 16px;
     padding: 16px;
-    background: #f8f8f8;
-    border: 2px solid transparent;
+    background: #1c1c1e;
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 12px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: border-color 0.2s ease, background 0.2s ease;
     text-align: left;
     width: 100%;
 }
 
 .shareOption:hover {
-    border-color: #FB4655;
-    background: #fff5f5;
+    border-color: #a8283c;
+    background: rgba(142, 33, 53, 0.28);
+}
+
+.shareOption:focus-visible {
+    outline: 2px solid #a8283c;
+    outline-offset: 2px;
 }
 
 .shareOption:active {
@@ -123,7 +136,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #FB4655 0%, #e63946 100%);
+    background: #8e2135;
     border-radius: 12px;
     color: #ffffff;
     flex-shrink: 0;
@@ -138,12 +151,18 @@
 .optionTitle {
     font-size: 16px;
     font-weight: 600;
-    color: #333333;
+    color: #ffffff;
 }
 
 .optionDesc {
     font-size: 13px;
-    color: #888888;
+    color: rgba(255, 255, 255, 0.48);
+}
+
+.reportIconImg {
+    width: 32px;
+    height: 32px;
+    display: block;
 }
 
 /* 移动端适配 */
@@ -176,7 +195,8 @@
         border-radius: 10px;
     }
 
-    .iconWrapper svg {
+    .iconWrapper svg,
+    .reportIconImg {
         width: 26px;
         height: 26px;
     }

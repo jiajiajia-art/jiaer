@@ -80,9 +80,18 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     const [favoritesTotal, setFavoritesTotal] = useState(0);
     const [isLoadingFavorites, setIsLoadingFavorites] = useState(false);
     const [favoritesLoaded, setFavoritesLoaded] = useState(false);
+    const [homepageUnavailable, setHomepageUnavailable] = useState(false);
+    const [unavailableReason, setUnavailableReason] = useState('');
 
     const isPreview = mode === 'preview';
     const isVisitor = access === 'visitor';
+    const hasTakenDownWork = useMemo(
+        () => !isVisitor && fileMetas.some((game) => {
+            const status = String(game.moderationStatus || game.moderation_status || 'none');
+            return status === 'taken_down';
+        }),
+        [fileMetas, isVisitor],
+    );
     const [isMobileViewport, setIsMobileViewport] = useState(() => (
         typeof window !== 'undefined' ? window.matchMedia(WORKS_MOBILE_MEDIA).matches : false
     ));
@@ -137,21 +146,54 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
             }
 
             setIsLoadingMyGames(true);
+            setHomepageUnavailable(false);
+            setUnavailableReason('');
             try {
                 const response = await accountSocialApi.getWorks(code, {
                     limit: WORKS_FETCH_LIMIT,
                     offset: 0,
                 });
                 if (response.data.success && response.data.data) {
-                    setFileMetas(response.data.data.list || []);
+                    const page = response.data.data;
+                    if (page.homepageUnavailable) {
+                        setHomepageUnavailable(true);
+                        setUnavailableReason(
+                            page.unavailableReason?.trim()
+                            || t('report.homepageUnavailableDefault'),
+                        );
+                        setFileMetas([]);
+                    } else {
+                        setFileMetas(page.list || []);
+                    }
                 } else {
                     setFileMetas([]);
                 }
             } catch (error) {
-                if (getApiErrorCode(error) !== 'USER_BLOCKED') {
-                    console.error('获取主页已发布作品错误:', error);
+                const axiosData = (error as {
+                    response?: {
+                        data?: {
+                            data?: {
+                                homepageUnavailable?: boolean;
+                                unavailableReason?: string | null;
+                            };
+                            message?: string;
+                        };
+                    };
+                })?.response?.data;
+                if (axiosData?.data?.homepageUnavailable) {
+                    setHomepageUnavailable(true);
+                    setUnavailableReason(
+                        axiosData.data.unavailableReason?.trim()
+                        || axiosData.message
+                        || t('report.homepageUnavailableDefault'),
+                    );
+                    setFileMetas([]);
+                } else {
+                    if (getApiErrorCode(error) !== 'USER_BLOCKED') {
+                        console.error('获取主页已发布作品错误:', error);
+                    }
+                    setFileMetas([]);
                 }
-                setFileMetas([]);
             } finally {
                 setIsLoadingMyGames(false);
             }
@@ -481,10 +523,27 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                 )}
             </div>
 
+            {hasTakenDownWork ? (
+                <div className={styles.appealBanner}>
+                    <span>{t('appeal.takenDownHint')}</span>
+                    <button
+                        type="button"
+                        className={styles.appealBannerBtn}
+                        onClick={() => navigate('/appeals')}
+                    >
+                        {t('appeal.goAppeal')}
+                    </button>
+                </div>
+            ) : null}
+
             <div className={styles.worksTabPanel}>
                 {worksTab === 'published' && (
                     isLoadingMyGames ? (
                         <GameGridSkeleton count={skeletonCount} layoutVariant="works" />
+                    ) : homepageUnavailable ? (
+                        <div className={styles.worksEmpty}>
+                            {unavailableReason || t('report.homepageUnavailableDefault')}
+                        </div>
                     ) : publishedGames.length === 0 ? (
                         <div className={styles.worksEmpty}>{t('create.noPublishedGames')}</div>
                     ) : (
@@ -493,6 +552,7 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                             layoutVariant="works"
                             primaryStat="pv"
                             showIncentiveUI={showIncentiveUI}
+                            showTakenDownBadge={!isVisitor}
                             onGameClick={(game) => {
                                 const gameId = game.file_id || game.id;
                                 if (!gameId) return;

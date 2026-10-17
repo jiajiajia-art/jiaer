@@ -7,6 +7,7 @@ import createWorldSessionApi from '../../api/worldInteraction/createWorldSession
 import { useAuthStore } from '../../store/useAuthStore';
 import { useGameStore } from '../../store/gameStore';
 import type { Currency } from '../../api/common/currency';
+import { getApiErrorMessage } from '../../utils/error';
 
 interface UseEditorSessionOptions {
     fileId: string | null;
@@ -98,11 +99,9 @@ export const useEditorSession = ({ fileId, mode }: UseEditorSessionOptions): Use
 
             console.error('发布游戏失败:', response.data);
             throw new Error(response.data.message || '发布游戏失败');
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('发布游戏失败:', error);
-            const errorMessage =
-                error?.response?.data?.message || error?.message || '发布游戏失败';
-            throw new Error(errorMessage);
+            throw new Error(getApiErrorMessage(error, '发布游戏失败'));
         }
     }, [fileId, navigate]);
 

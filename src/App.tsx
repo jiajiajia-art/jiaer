@@ -44,6 +44,7 @@ import { usePlatformDurationTracking } from './hooks/usePlatformDurationTracking
 import AdminPanel from './page/AdminPanel';
 import { AdminRoute } from './components/AdminRoute';
 import CommentAdminPage from './page/CommentAdminPage';
+import Appeals from './page/Appeals';
 import OperatorWorkStats from './page/operator/OperatorWorkStats';
 import CreatorWorkStats from './page/creator/CreatorWorkStats';
 import OperatorPanel from './page/operator/OperatorPanel';
@@ -195,6 +196,7 @@ function App() {
           <Route path="/profile" element={<Create />} />
           <Route path="/promotions" element={<PromotionCenter />} />
           <Route path="/messages" element={<Messages />} />
+          <Route path="/appeals" element={<Appeals />} />
           <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/promotions" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/promotions/:promotionView" element={<AdminRoute><AdminPanel /></AdminRoute>} />
@@ -210,6 +212,8 @@ function App() {
           <Route path="/admin/text-llm" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/lottery" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/comments" element={<AdminRoute><CommentAdminPage /></AdminRoute>} />
+          <Route path="/admin/content-reports" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/appeals" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/galgame" element={<Galgame />} />
           <Route path="/galgameMap" element={<GalgameMap />} />
           <Route path="/customif/create" element={<CustomIFCreate />} />

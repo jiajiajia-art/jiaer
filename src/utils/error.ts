@@ -77,22 +77,41 @@ export async function getAxiosErrorMessageAsync(
   return fallback;
 }
 
+/** 功能注释：处罚/风控/申诉业务码；有 message 优先，否则用短文案 toast */
+const PUNISHMENT_ERROR_MESSAGES: Record<string, string> = {
+    publish_blocked: '账号处于发布限制中',
+    creator_frozen: '创作者功能已被冻结',
+    publish_need_review: '作品需审核通过后才能公开',
+    login_banned: '账号已被禁止登录',
+    appeal_window_expired: '已超过 7 天申诉期限',
+    duplicate_appeal: '该记录已申诉过',
+    already_revoked: '该处罚已撤销，无需申诉',
+    invalid_evidence: '请上传有效的证据图片',
+    admin_required: '该操作需要管理员权限',
+};
+
 export const getApiErrorMessage = (
     error: unknown,
     fallback: string
 ): string => {
     if (error && typeof error === 'object' && 'response' in error) {
-        const axiosError = error as { response?: { data?: { message?: string; error?: string } } };
+        const axiosError = error as {
+            response?: { data?: { message?: string; error?: string; code?: string } };
+        };
         const data = axiosError.response?.data;
         // 功能注释：同步路径遇 Blob 无法 await，回落 fallback，避免再读出 [object Blob]
         if (typeof Blob !== 'undefined' && data instanceof Blob) {
             return fallback;
         }
-        const raw =
-            data?.message ||
-            data?.error ||
-            fallback;
-        return sanitizeUpstreamLlmErrorMessage(String(raw), fallback);
+        const code = typeof data?.code === 'string' ? data.code : '';
+        const raw = data?.message || data?.error || '';
+        if (raw) {
+            return sanitizeUpstreamLlmErrorMessage(String(raw), fallback);
+        }
+        if (code && PUNISHMENT_ERROR_MESSAGES[code]) {
+            return PUNISHMENT_ERROR_MESSAGES[code];
+        }
+        return fallback;
     }
     if (error instanceof Error && error.message) {
         return sanitizeUpstreamLlmErrorMessage(error.message, fallback);

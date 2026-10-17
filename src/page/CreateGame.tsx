@@ -15,6 +15,7 @@ import FooterArea from '../components/Layout/FooterArea';
 import toast from 'react-hot-toast';
 import PriceAdjustmentModal from '../components/CreateGame/PriceAdjustmentModal';
 import { getImageUrl } from '../utils/constants';
+import { getApiErrorMessage } from '../utils/error';
 import { resolveGameCoverUrl } from '../utils/displayCoverUrl';
 import MobileTipModal from '../components/CreateGame/MobileTipModal';
 import {
@@ -199,10 +200,11 @@ const CreateGame: React.FC = () => {
                 const errorMessage = response.data.message || t('createGame.publishFailed');
                 setNoticeMessage(errorMessage);
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('发布游戏失败:', error);
-            const errorMessage = error.response?.data?.message || error.message || t('createGame.publishFailed');
+            const errorMessage = getApiErrorMessage(error, t('createGame.publishFailed'));
             setNoticeMessage(errorMessage);
+            toast.error(errorMessage);
         }
     };
     // 下架游戏

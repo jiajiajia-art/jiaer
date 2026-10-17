@@ -32,6 +32,8 @@ import ShareRatioAdminManager from '../components/ShareRatioAdminManager';
 import AdminUsersManager from '../components/AdminUsersManager';
 import DailyTasksAdminManager from '../components/DailyTasksAdminManager';
 import CommentAdminManager from '../components/Admin/CommentAdminManager.tsx';
+import ContentReportAdminManager from '../components/Admin/ContentReportAdminManager.tsx';
+import ContentAppealAdminManager from '../components/Admin/ContentAppealAdminManager.tsx';
 import WithdrawAdminManager from '../components/WithdrawAdminManager';
 import LotteryAdminManager from '../components/LotteryAdminManager';
 import ModelConfigHub from '../components/ModelConfigHub';
@@ -57,7 +59,7 @@ import { useMessageStore } from '../store/useMessageStore';
 import { useAuthStore } from '../store/useAuthStore';
 
 type EditorMode = 'new' | 'draft' | 'published';
-type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points' | 'creatorIncentives' | 'subscriptions' | 'documents' | 'shareRatio' | 'dailyTasks' | 'users' | 'comments' | 'withdraw' | 'imageGen' | 'lottery';
+type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points' | 'creatorIncentives' | 'subscriptions' | 'documents' | 'shareRatio' | 'dailyTasks' | 'users' | 'comments' | 'contentReports' | 'appeals' | 'withdraw' | 'imageGen' | 'lottery';
 type SortModalMode = 'featured' | 'all' | null;
 
 interface SortDraftItem {
@@ -89,6 +91,8 @@ const resolveAdminTab = (pathname: string, search: string): AdminTab => {
     if (pathname.startsWith('/admin/share-ratio')) return 'shareRatio';
     if (pathname.startsWith('/admin/daily-tasks')) return 'dailyTasks';
     if (pathname.startsWith('/admin/comments')) return 'comments';
+    if (pathname.startsWith('/admin/content-reports')) return 'contentReports';
+    if (pathname.startsWith('/admin/appeals')) return 'appeals';
     if (pathname.startsWith('/admin/withdraw')) return 'withdraw';
     if (pathname.startsWith('/admin/image-gen') || pathname.startsWith('/admin/text-llm')) return 'imageGen';
     if (pathname.startsWith('/admin/lottery')) return 'lottery';
@@ -1012,6 +1016,14 @@ const AdminPanel: React.FC = () => {
             navigate('/admin/comments');
             return;
         }
+        if (tab === 'contentReports') {
+            navigate('/admin/content-reports');
+            return;
+        }
+        if (tab === 'appeals') {
+            navigate('/admin/appeals');
+            return;
+        }
         if (tab === 'withdraw') {
             navigate('/admin/withdraw');
             return;
@@ -1567,6 +1579,20 @@ const AdminPanel: React.FC = () => {
                             >
                                 <span className={styles.navTitle}>评论管理</span>
                             </button>
+                            <button
+                                type="button"
+                                className={`${styles.navItem} ${activeTab === 'contentReports' ? styles.navItemActive : ''}`}
+                                onClick={() => handleTabChange('contentReports')}
+                            >
+                                <span className={styles.navTitle}>内容举报</span>
+                            </button>
+                            <button
+                                type="button"
+                                className={`${styles.navItem} ${activeTab === 'appeals' ? styles.navItemActive : ''}`}
+                                onClick={() => handleTabChange('appeals')}
+                            >
+                                <span className={styles.navTitle}>申诉复核</span>
+                            </button>
                         </>
                     )}
                     </aside>
@@ -1944,6 +1970,10 @@ const AdminPanel: React.FC = () => {
                         {activeTab === 'dailyTasks' && <DailyTasksAdminManager />}
 
                         {activeTab === 'comments' && <CommentAdminManager />}
+
+                        {activeTab === 'contentReports' && <ContentReportAdminManager />}
+
+                        {activeTab === 'appeals' && <ContentAppealAdminManager />}
 
                         {activeTab === 'documents' && (
                             <div className={styles.panelStack}>

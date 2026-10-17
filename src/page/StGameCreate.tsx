@@ -17,6 +17,7 @@ import ConfirmModal from '../components/CommonModal/ConfirmModal';
 import PublishSettingsModal, { type PublishSubmitPayload } from '../components/CommonModal/PublishSettingsModal';
 import GameAction from '../api/rpgGame/gameAction';
 import toast from 'react-hot-toast';
+import { getApiErrorMessage } from '../utils/error';
 
 const emptyConfig: StConfig = {
   regex: [],
@@ -746,9 +747,8 @@ const StGameCreate: React.FC = () => {
 
       setShowPublishModal(false);
       nav(`/createGame?mode=stats&gameId=${encodeURIComponent(fileId)}`);
-    } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || error?.message || t('stGameCreate.publishFailed');
-      toast.error(errorMessage);
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error, t('stGameCreate.publishFailed')));
     } finally {
       setPublishing(false);
     }

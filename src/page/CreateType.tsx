@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { IconType } from 'react-icons';
@@ -18,8 +18,12 @@ import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import MobileTipModal from '../components/CreateGame/MobileTipModal';
 import { useEditorStore } from '../store/editorStore';
 import { useGameStore } from '../store/gameStore';
+import { useAuthStore } from '../store/useAuthStore';
 import { HOST_ADDRESS } from '../config';
 import { authFetch } from '../api/base';
+import { auth } from '../api/account/authApi';
+import { getApiErrorMessage } from '../utils/error';
+import { isPublishBanned } from '../lib/userPunishment';
 import {
   getMiniProgramCreatorBlockedMessage,
   isMiniProgramCreatorTypeSupported,
@@ -81,6 +85,9 @@ const CreateType: React.FC = () => {
   const navigate = useNavigate();
   const { clearState } = useEditorStore();
   const { clearAll } = useGameStore();
+  const updateUser = useAuthStore((s) => s.updateUser);
+  const publishBanUntil = useAuthStore((s) => s.user?.user?.publishBanUntil);
+  const publishBanned = isPublishBanned(publishBanUntil);
   const isMiniProgram = isMiniProgramEnv();
   const optionHint = t('createGame.optionHint');
 
@@ -88,12 +95,26 @@ const CreateType: React.FC = () => {
   const [isMobileTipModalOpen, setIsMobileTipModalOpen] = useState(false);
   const [mobileTipMessage, setMobileTipMessage] = useState('');
 
+  useEffect(() => {
+    void auth.getUserInfo().then((response) => {
+      if (response.data.success && response.data.data) {
+        updateUser(response.data.data);
+      }
+    }).catch(() => {
+      /* 忽略：仍用 store */
+    });
+  }, [updateUser]);
+
   const openMiniProgramTypeTip = (type: Extract<CreatorGameType, 'avg' | 'custom' | 'st' | 'ivg'>) => {
     setMobileTipMessage(getMiniProgramCreatorBlockedMessage(type));
     setIsMobileTipModalOpen(true);
   };
 
   const handleSelectGameType = async (type: CreatorGameType) => {
+    if (publishBanned) {
+      toast.error(t('report.createBannedHint'));
+      return;
+    }
     if (isMiniProgram && !isMiniProgramCreatorTypeSupported(type)) {
       if (type === 'avg' || type === 'custom' || type === 'st' || type === 'ivg') {
         openMiniProgramTypeTip(type);
@@ -129,13 +150,16 @@ const CreateType: React.FC = () => {
         }
         navigate(`/st/create?appId=${encodeURIComponent(appId)}`);
       } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : String(error || t('create.createAvgFailed'));
-        toast.error(message);
+        toast.error(getApiErrorMessage(error, t('create.createAvgFailed')));
       }
     }
   };
 
   const handleIvgClick = () => {
+    if (publishBanned) {
+      toast.error(t('report.createBannedHint'));
+      return;
+    }
     if (isMiniProgram) {
       openMiniProgramTypeTip('ivg');
       return;
@@ -162,6 +186,9 @@ const CreateType: React.FC = () => {
               </button>
             </div>
           </div>
+          {publishBanned ? (
+            <p className={pageStyles.banHint}>{t('report.createBannedHint')}</p>
+          ) : null}
           <div className={`${styles.createTypeOptions} ${pageStyles.options}`}>
             <TypeOptionRow
               title={t('createGame.txtMode')}
@@ -170,6 +197,7 @@ const CreateType: React.FC = () => {
               hint={optionHint}
               icon={MdAutoStories}
               thumbClass={styles.createTypeOptionThumbTxt}
+              disabled={publishBanned}
               onClick={() => void handleSelectGameType('txt')}
             />
             <TypeOptionRow
@@ -179,6 +207,7 @@ const CreateType: React.FC = () => {
               hint={optionHint}
               icon={HiOutlineUserGroup}
               thumbClass={styles.createTypeOptionThumbAvg}
+              disabled={publishBanned}
               onClick={() => void handleSelectGameType('avg')}
             />
             <TypeOptionRow
@@ -188,6 +217,7 @@ const CreateType: React.FC = () => {
               hint={optionHint}
               icon={MdOutlineMovie}
               thumbClass={styles.createTypeOptionThumbIvg}
+              disabled={publishBanned}
               onClick={handleIvgClick}
             />
             <TypeOptionRow
@@ -197,6 +227,7 @@ const CreateType: React.FC = () => {
               hint={optionHint}
               icon={HiOutlinePuzzle}
               thumbClass={styles.createTypeOptionThumbCustom}
+              disabled={publishBanned}
               onClick={() => void handleSelectGameType('custom')}
             />
             <TypeOptionRow

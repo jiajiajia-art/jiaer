@@ -150,6 +150,15 @@
     color: var(--navbar-text-strong);
 }
 
+.navLinkDisabled {
+    opacity: 0.42;
+    cursor: not-allowed;
+}
+
+.navLinkDisabled:hover {
+    color: var(--navbar-text);
+}
+
 .navLinkActive {
     color: var(--navbar-text-strong);
     border-bottom: 4px solid var(--primary);

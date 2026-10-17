@@ -1,17 +1,21 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { MdOutlineEdit } from 'react-icons/md';
+import { MdMoreHoriz, MdOutlineEdit } from 'react-icons/md';
 import toast from 'react-hot-toast';
 import styles from './AccountHomepage.module.css';
 import createStyles from '../Create.module.css';
 import CreatorWorksPanel from '../../components/Create/CreatorWorksPanel';
 import accountSocialApi from '../../api/account/accountSocialApi';
 import type { AccountProfile } from '../../api/account/accountSocial.type';
-import { useAuthStore } from '../../store/useAuthStore';
+import { auth } from '../../api/account/authApi';
+import { authModalStore, useAuthStore } from '../../store/useAuthStore';
 import { getApiErrorMessage } from '../../utils/error';
 import { getImageUrl } from '../../utils/constants';
 import { GAME_CARD_DEFAULT_AVATAR_PATH } from '../../lib/gameCardAuthor';
+import { isHomeHidden } from '../../lib/userPunishment';
+import ReportSheet from '../../components/Report/ReportSheet';
+import AuthModal from '../../components/AuthModal';
 
 const DEFAULT_AVATAR = `${import.meta.env.BASE_URL}${GAME_CARD_DEFAULT_AVATAR_PATH}`;
 
@@ -22,13 +26,29 @@ const AccountHomepage: React.FC = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const { userCode: routeUserCode = '' } = useParams<{ userCode: string }>();
-    const { user } = useAuthStore();
+    const { user, isAuthenticated, updateUser } = useAuthStore();
+    const { isAuthModalOpen, setIsAuthModalOpen } = authModalStore();
 
     const selfCode = user?.user?.userCode || '';
     const [profile, setProfile] = useState<AccountProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [followBusy, setFollowBusy] = useState(false);
     const [blockBusy, setBlockBusy] = useState(false);
+    const [moreOpen, setMoreOpen] = useState(false);
+    const [reportOpen, setReportOpen] = useState(false);
+    const moreWrapRef = useRef<HTMLDivElement | null>(null);
+    const ownerHomeHidden = isHomeHidden(user?.user?.homeHidden);
+
+    useEffect(() => {
+        if (!moreOpen) return;
+        const onDoc = (event: MouseEvent) => {
+            if (!moreWrapRef.current?.contains(event.target as Node)) {
+                setMoreOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', onDoc);
+        return () => document.removeEventListener('mousedown', onDoc);
+    }, [moreOpen]);
 
     useEffect(() => {
         if (!routeUserCode.trim()) {
@@ -50,12 +70,56 @@ const AccountHomepage: React.FC = () => {
                 if (!response.data.success || !response.data.data) {
                     throw new Error(response.data.message || t('common.error'));
                 }
-                setProfile(response.data.data);
-            } catch (error: unknown) {
-                if (!cancelled) {
-                    toast.error(getApiErrorMessage(error, t('common.error')));
-                    navigate('/profile', { replace: true });
+                const next = response.data.data;
+                if (next.homepageUnavailable && !next.isSelf) {
+                    setProfile({
+                        ...next,
+                        unavailableReason:
+                            next.unavailableReason?.trim()
+                            || t('report.homepageUnavailableDefault'),
+                    });
+                    return;
                 }
+                setProfile(next);
+            } catch (error: unknown) {
+                if (cancelled) return;
+                const axiosData = (error as {
+                    response?: {
+                        data?: {
+                            data?: Partial<AccountProfile>;
+                            message?: string;
+                        };
+                    };
+                })?.response?.data;
+                const flagged = axiosData?.data;
+                // 功能注释：主页隐藏勿当 404，展示 unavailableReason 空态
+                if (flagged?.homepageUnavailable === true) {
+                    setProfile({
+                        userCode: code,
+                        nickname: flagged.nickname || '',
+                        avatarUrl: flagged.avatarUrl ?? null,
+                        bio: flagged.bio || '',
+                        bannerUrl: flagged.bannerUrl ?? null,
+                        followingCount: null,
+                        followersCount: null,
+                        isFollowing: false,
+                        isSelf: Boolean(selfCode && selfCode === code),
+                        isBlocked: false,
+                        isBlockedBy: false,
+                        followingListPublic: false,
+                        followersListPublic: false,
+                        canViewFollowingList: false,
+                        canViewFollowersList: false,
+                        homepageUnavailable: true,
+                        unavailableReason:
+                            flagged.unavailableReason
+                            || axiosData?.message
+                            || t('report.homepageUnavailableDefault'),
+                    });
+                    return;
+                }
+                toast.error(getApiErrorMessage(error, t('common.error')));
+                navigate('/profile', { replace: true });
             } finally {
                 if (!cancelled) setLoading(false);
             }
@@ -64,7 +128,19 @@ const AccountHomepage: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, [routeUserCode, navigate, t]);
+    }, [routeUserCode, navigate, t, selfCode]);
+
+    useEffect(() => {
+        const code = routeUserCode.trim();
+        if (!code || !selfCode || selfCode !== code) return;
+        void auth.getUserInfo().then((response) => {
+            if (response.data.success && response.data.data) {
+                updateUser(response.data.data);
+            }
+        }).catch(() => {
+            /* 忽略 */
+        });
+    }, [routeUserCode, selfCode, updateUser]);
 
     /** 功能注释：优先回上一页（如游戏详情），无历史再回个人中心 */
     const handleClose = () => {
@@ -162,7 +238,11 @@ const AccountHomepage: React.FC = () => {
     const isOwner = Boolean(profile?.isSelf ?? (selfCode && selfCode === routeUserCode));
     const isBlockedBy = Boolean(profile?.isBlockedBy);
     const isBlocked = Boolean(profile?.isBlocked);
-    const showSocialAndWorks = !isBlockedBy;
+    const homepageUnavailable = Boolean(profile?.homepageUnavailable) && !isOwner;
+    const unavailableReason =
+        profile?.unavailableReason?.trim()
+        || t('report.homepageUnavailableDefault');
+    const showSocialAndWorks = !isBlockedBy && !homepageUnavailable;
     const displayName = profile?.nickname
         || (isOwner ? (user?.user?.nickname || user?.user?.name) : '')
         || t('create.userNameDefault');
@@ -188,6 +268,11 @@ const AccountHomepage: React.FC = () => {
             </button>
 
             <div className={styles.mainContent}>
+                {isOwner && ownerHomeHidden ? (
+                    <div className={styles.homeHiddenBanner} role="status">
+                        {t('report.homeHiddenBanner')}
+                    </div>
+                ) : null}
                 <div
                     className={styles.banner}
                     style={bannerCss}
@@ -203,6 +288,38 @@ const AccountHomepage: React.FC = () => {
                             <MdOutlineEdit className={styles.settingsBtnIcon} aria-hidden="true" />
                             <span>{t('create.accountEditHomepage')}</span>
                         </button>
+                    )}
+                    {!isOwner && profile && !isBlockedBy && (
+                        <div className={styles.moreWrap} ref={moreWrapRef}>
+                            <button
+                                type="button"
+                                className={styles.moreBtn}
+                                aria-label={t('report.moreActions')}
+                                aria-expanded={moreOpen}
+                                onClick={() => setMoreOpen((v) => !v)}
+                            >
+                                <MdMoreHoriz size={22} aria-hidden="true" />
+                            </button>
+                            {moreOpen ? (
+                                <div className={styles.moreMenu} role="menu">
+                                    <button
+                                        type="button"
+                                        className={styles.moreMenuItem}
+                                        role="menuitem"
+                                        onClick={() => {
+                                            setMoreOpen(false);
+                                            if (!isAuthenticated) {
+                                                setIsAuthModalOpen(true);
+                                                return;
+                                            }
+                                            setReportOpen(true);
+                                        }}
+                                    >
+                                        {t('report.reportAction')}
+                                    </button>
+                                </div>
+                            ) : null}
+                        </div>
                     )}
                 </div>
 
@@ -246,6 +363,12 @@ const AccountHomepage: React.FC = () => {
                     </div>
                 </section>
 
+                {homepageUnavailable ? (
+                    <div className={styles.unavailableState} role="status">
+                        <p className={styles.unavailableReason}>{unavailableReason}</p>
+                    </div>
+                ) : null}
+
                 {showSocialAndWorks && (
                     <>
                         <div className={styles.socialStats}>
@@ -283,6 +406,19 @@ const AccountHomepage: React.FC = () => {
                     </>
                 )}
             </div>
+
+            {reportOpen && routeUserCode.trim() ? (
+                <ReportSheet
+                    isOpen={reportOpen}
+                    onClose={() => setReportOpen(false)}
+                    targetType="user"
+                    targetId={routeUserCode.trim()}
+                />
+            ) : null}
+            <AuthModal
+                isOpen={isAuthModalOpen}
+                onClose={() => setIsAuthModalOpen(false)}
+            />
         </div>
     );
 };

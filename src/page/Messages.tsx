@@ -7,13 +7,17 @@ import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import AnnouncementModal from '../components/AnnouncementModal';
 import FavoriteGameUpdateModal from '../components/FavoriteGameUpdateModal';
 import messageApi from '../api/message/messageApi';
+import { buildMockSafetyMessages } from '../api/message/messageSafetyMock';
+import { USE_REPORT_MOCK } from '../api/report/reportApi';
 import { getApiErrorMessage } from '../utils/error';
 import type {
     MessageAnnouncement,
     MessageCenterData,
     MessageFavoriteGameUpdateNotification,
+    MessageModerationNotification,
     MessagePromotion,
     MessagePromotionSubmissionNotification,
+    MessageReportReceivedNotification,
     MessageType,
 } from '../api/message/message.type';
 import type { PromotionReviewStatus } from '../api/promotion/promotion.type';
@@ -28,6 +32,7 @@ import {
     truncateMessagePreview,
     type MessageListSectionKey,
 } from '../lib/messageCenterView';
+import ConfirmModal from '../components/CommonModal/ConfirmModal';
 import styles from './Messages.module.css';
 
 /** 功能注释：消息页「全部已读」图标对齐效果图 */
@@ -38,7 +43,17 @@ type MessageFeedItem =
     | (MessageAnnouncement & { itemType: 'announcement'; sortTime: string | null })
     | (MessagePromotion & { itemType: 'promotion'; sortTime: string | null })
     | (MessagePromotionSubmissionNotification & { itemType: 'promotion_submission_status'; sortTime: string | null })
-    | (MessageFavoriteGameUpdateNotification & { itemType: 'favorite_game_updated'; sortTime: string | null });
+    | (MessageFavoriteGameUpdateNotification & { itemType: 'favorite_game_updated'; sortTime: string | null })
+    | (MessageReportReceivedNotification & { itemType: 'report_received'; sortTime: string | null })
+    | (MessageModerationNotification & { itemType: 'moderation'; sortTime: string | null });
+
+type SafetyDetail = {
+    title: string;
+    body: string;
+    relatedGameId?: string | null;
+    /** moderation.sourceId → 申诉 relatedId */
+    appealRelatedId?: number | null;
+};
 
 const getAnnouncementSortTime = (item: Pick<MessageAnnouncement, 'publishedAt' | 'updatedAt' | 'createdAt'>) =>
     item.publishedAt || item.updatedAt || item.createdAt || null;
@@ -110,17 +125,60 @@ const Messages: React.FC = () => {
     const [isMarkingAllRead, setIsMarkingAllRead] = useState(false);
     const [selectedAnnouncement, setSelectedAnnouncement] = useState<MessageAnnouncement | null>(null);
     const [selectedFavoriteGameUpdate, setSelectedFavoriteGameUpdate] = useState<MessageFavoriteGameUpdateNotification | null>(null);
+    const [safetyDetail, setSafetyDetail] = useState<SafetyDetail | null>(null);
+
+    const canAppealFromModeration = (notification: MessageModerationNotification): boolean => {
+        const recordType = String(notification.recordType || '').toLowerCase();
+        const title = String(notification.title || '');
+        // 功能注释：仅 warning/penalty 可申；appeal / 申诉结果通知不出「去申诉」
+        if (recordType === 'appeal' || title.includes('申诉结果')) return false;
+        return recordType === 'warning' || recordType === 'penalty';
+    };
 
     const loadMessages = useCallback(async () => {
         try {
             setIsLoading(true);
             const response = await messageApi.list();
-            const nextData = response.data.data;
+            let nextData = response.data.data;
+
+            if (USE_REPORT_MOCK && nextData) {
+                const mock = buildMockSafetyMessages();
+                const extraUnread = [...mock.reportReceivedNotifications, ...mock.moderationNotifications]
+                    .filter((item) => !item.isRead).length;
+                nextData = {
+                    ...nextData,
+                    reportReceivedNotifications: nextData.reportReceivedNotifications?.length
+                        ? nextData.reportReceivedNotifications
+                        : mock.reportReceivedNotifications,
+                    moderationNotifications: nextData.moderationNotifications?.length
+                        ? nextData.moderationNotifications
+                        : mock.moderationNotifications,
+                    unreadCount: (nextData.unreadCount || 0) + (
+                        nextData.reportReceivedNotifications?.length || nextData.moderationNotifications?.length
+                            ? 0
+                            : extraUnread
+                    ),
+                };
+            }
 
             setMessageCenter(nextData);
             setUnreadCount(nextData?.unreadCount || 0);
         } catch (error) {
-            toast.error(getApiErrorMessage(error, t('messages.loadFailed')));
+            if (USE_REPORT_MOCK) {
+                const mock = buildMockSafetyMessages();
+                const nextData: MessageCenterData = {
+                    unreadCount: 2,
+                    announcements: [],
+                    promotions: [],
+                    promotionSubmissionNotifications: [],
+                    favoriteGameUpdateNotifications: [],
+                    ...mock,
+                };
+                setMessageCenter(nextData);
+                setUnreadCount(2);
+            } else {
+                toast.error(getApiErrorMessage(error, t('messages.loadFailed')));
+            }
         } finally {
             setIsLoading(false);
         }
@@ -162,7 +220,26 @@ const Messages: React.FC = () => {
             sortTime: item.createdAt || null,
         }));
 
-        return [...announcements, ...promotions, ...promotionSubmissionNotifications, ...favoriteGameUpdateNotifications].sort((left, right) => {
+        const reportReceivedNotifications = (messageCenter?.reportReceivedNotifications || []).map((item) => ({
+            ...item,
+            itemType: 'report_received' as const,
+            sortTime: item.publishedAt || item.createdAt || null,
+        }));
+
+        const moderationNotifications = (messageCenter?.moderationNotifications || []).map((item) => ({
+            ...item,
+            itemType: 'moderation' as const,
+            sortTime: item.publishedAt || item.createdAt || null,
+        }));
+
+        return [
+            ...announcements,
+            ...promotions,
+            ...promotionSubmissionNotifications,
+            ...favoriteGameUpdateNotifications,
+            ...reportReceivedNotifications,
+            ...moderationNotifications,
+        ].sort((left, right) => {
             const leftTime = new Date(left.sortTime || 0).getTime();
             const rightTime = new Date(right.sortTime || 0).getTime();
             return rightTime - leftTime;
@@ -197,6 +274,18 @@ const Messages: React.FC = () => {
                     : item
             ));
 
+            const reportReceivedNotifications = (prev.reportReceivedNotifications || []).map((item) => (
+                messageType === 'report_received' && item.sourceId === sourceId
+                    ? { ...item, isRead: true }
+                    : item
+            ));
+
+            const moderationNotifications = (prev.moderationNotifications || []).map((item) => (
+                messageType === 'moderation' && item.sourceId === sourceId
+                    ? { ...item, isRead: true }
+                    : item
+            ));
+
             return {
                 ...prev,
                 unreadCount: nextUnreadCount,
@@ -204,6 +293,8 @@ const Messages: React.FC = () => {
                 promotions,
                 promotionSubmissionNotifications,
                 favoriteGameUpdateNotifications,
+                reportReceivedNotifications,
+                moderationNotifications,
             };
         });
     }, []);
@@ -219,12 +310,25 @@ const Messages: React.FC = () => {
                 promotions: markCollectionAsRead(prev.promotions),
                 promotionSubmissionNotifications: markCollectionAsRead(prev.promotionSubmissionNotifications),
                 favoriteGameUpdateNotifications: markCollectionAsRead(prev.favoriteGameUpdateNotifications || []),
+                reportReceivedNotifications: markCollectionAsRead(prev.reportReceivedNotifications || []),
+                moderationNotifications: markCollectionAsRead(prev.moderationNotifications || []),
             };
         });
     }, []);
 
     const markMessageAsRead = useCallback(async (messageType: MessageType, sourceId: number, isRead: boolean) => {
         if (isRead) {
+            return;
+        }
+
+        // 功能注释：举报 mock 消息尚未接真接口，只做本地已读
+        if (
+            USE_REPORT_MOCK
+            && (messageType === 'report_received' || messageType === 'moderation')
+        ) {
+            const nextUnreadCount = Math.max(0, unreadCount - 1);
+            applyReadState(messageType, sourceId, nextUnreadCount);
+            setUnreadCount(nextUnreadCount);
             return;
         }
 
@@ -291,11 +395,30 @@ const Messages: React.FC = () => {
         setSelectedFavoriteGameUpdate({ ...notification, isRead: true });
     }, [markMessageAsRead]);
 
+    const handleOpenReportReceived = useCallback(async (notification: MessageReportReceivedNotification) => {
+        await markMessageAsRead('report_received', notification.sourceId, notification.isRead);
+        setSafetyDetail({
+            title: notification.title?.trim() || t('messages.reportReceivedTitle'),
+            body: notification.body || t('messages.reportReceivedBody'),
+        });
+    }, [markMessageAsRead, t]);
+
+    const handleOpenModeration = useCallback(async (notification: MessageModerationNotification) => {
+        await markMessageAsRead('moderation', notification.sourceId, notification.isRead);
+        setSafetyDetail({
+            title: notification.title || t('messages.moderationTitle'),
+            body: notification.body,
+            relatedGameId: notification.relatedGameId,
+            appealRelatedId: canAppealFromModeration(notification) ? notification.sourceId : null,
+        });
+    }, [markMessageAsRead, t]);
+
     const sectionRows = useMemo(() => {
         const buckets: Record<MessageListSectionKey, RowView[]> = {
             system: [],
             activity: [],
             interaction: [],
+            safety: [],
         };
 
         for (const item of messageFeed) {
@@ -342,6 +465,30 @@ const Messages: React.FC = () => {
                 continue;
             }
 
+            if (item.itemType === 'report_received') {
+                buckets[section].push({
+                    key: `report-received-${item.sourceId}`,
+                    title: item.title?.trim() || t('messages.reportReceivedTitle'),
+                    preview: truncateMessagePreview(item.body || t('messages.reportReceivedBody')),
+                    time,
+                    isRead: item.isRead,
+                    onOpen: () => { void handleOpenReportReceived(item); },
+                });
+                continue;
+            }
+
+            if (item.itemType === 'moderation') {
+                buckets[section].push({
+                    key: `moderation-${item.sourceId}`,
+                    title: item.title || t('messages.moderationTitle'),
+                    preview: truncateMessagePreview(item.body),
+                    time,
+                    isRead: item.isRead,
+                    onOpen: () => { void handleOpenModeration(item); },
+                });
+                continue;
+            }
+
             buckets[section].push({
                 key: `promotion-submission-${item.sourceId}`,
                 title: getSubmissionMessageTitle(item, t),
@@ -360,8 +507,10 @@ const Messages: React.FC = () => {
     }, [
         handleOpenAnnouncement,
         handleOpenFavoriteGameUpdateNotification,
+        handleOpenModeration,
         handleOpenPromotion,
         handleOpenPromotionSubmissionNotification,
+        handleOpenReportReceived,
         messageFeed,
         t,
     ]);
@@ -370,6 +519,7 @@ const Messages: React.FC = () => {
         { key: 'system', title: t('messages.sectionSystem'), rows: sectionRows.system },
         { key: 'activity', title: t('messages.sectionActivity'), rows: sectionRows.activity },
         { key: 'interaction', title: t('messages.sectionInteraction'), rows: sectionRows.interaction },
+        { key: 'safety', title: t('messages.sectionSafety'), rows: sectionRows.safety },
     ];
 
     const hasAnyRow = sections.some((section) => section.rows.length > 0);
@@ -454,6 +604,57 @@ const Messages: React.FC = () => {
                 isOpen={Boolean(selectedFavoriteGameUpdate)}
                 onClose={() => setSelectedFavoriteGameUpdate(null)}
                 badgeText={t('messages.favoriteGameUpdate')}
+            />
+            <ConfirmModal
+                isOpen={Boolean(safetyDetail)}
+                variant="alert"
+                tone="glass"
+                title={safetyDetail?.title || t('messages.sectionSafety')}
+                message={(
+                    <span>
+                        {safetyDetail?.body}
+                        {safetyDetail?.relatedGameId || safetyDetail?.appealRelatedId ? (
+                            <>
+                                <br />
+                                <br />
+                                {safetyDetail.relatedGameId ? (
+                                    <button
+                                        type="button"
+                                        className={styles.safetyAction}
+                                        onClick={() => {
+                                            const gameId = safetyDetail.relatedGameId;
+                                            setSafetyDetail(null);
+                                            // 功能注释：违规下架后公开详情不可开，创作者进作品数据页
+                                            if (gameId) {
+                                                navigate(`/createGame?mode=stats&gameId=${encodeURIComponent(gameId)}`);
+                                            }
+                                        }}
+                                    >
+                                        {t('messages.viewReportedGame')}
+                                    </button>
+                                ) : null}
+                                {safetyDetail.appealRelatedId ? (
+                                    <button
+                                        type="button"
+                                        className={styles.safetyAction}
+                                        onClick={() => {
+                                            const relatedId = safetyDetail.appealRelatedId;
+                                            setSafetyDetail(null);
+                                            if (relatedId) {
+                                                navigate(`/appeals?relatedId=${encodeURIComponent(String(relatedId))}`);
+                                            }
+                                        }}
+                                    >
+                                        {t('appeal.goAppeal')}
+                                    </button>
+                                ) : null}
+                            </>
+                        ) : null}
+                    </span>
+                )}
+                confirmButtonText={t('common.confirm')}
+                onConfirm={() => setSafetyDetail(null)}
+                onCancel={() => setSafetyDetail(null)}
             />
             <MobileBottomNav />
             {externalLinkCopyModal}

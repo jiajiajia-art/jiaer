@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
 import styles from './MobileBottomNav.module.css';
 import { authModalStore, useAuthStore } from '../../store/useAuthStore';
 import { isCreatorRoutePath, isMiniProgramEnv } from '../../utils/miniProgram';
 import { isOperatorRole } from '../../utils/userRoles';
+import { isPublishBanned } from '../../lib/userPunishment';
 
 type BottomNavKey = 'home' | 'create' | 'rankings' | 'profile' | 'admin';
 
@@ -24,6 +26,7 @@ const MobileBottomNav: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
     const location = useLocation();
     const { isAuthenticated, user, initialize } = useAuthStore();
     const { setIsAuthModalOpen } = authModalStore();
+    const publishBanned = isPublishBanned(user?.user?.publishBanUntil);
 
     const isAdminNavVisible = isOperatorRole(user?.user?.role) && user?.user?.userId === '96e89940badf1f67';
 
@@ -103,6 +106,10 @@ const MobileBottomNav: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
                 break;
             case 'create':
                 if (!ensureAuthenticated()) return;
+                if (publishBanned) {
+                    toast.error(t('report.createBannedHint'));
+                    return;
+                }
                 navigate('/create/new');
                 break;
             case 'rankings':
@@ -132,7 +139,7 @@ const MobileBottomNav: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
                     <button
                         key={key}
                         type="button"
-                        className={`${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
+                        className={`${styles.navItem} ${isActive ? styles.navItemActive : ''} ${key === 'create' && publishBanned ? styles.navItemDisabled : ''}`}
                         onClick={() => handleNav(key)}
                     >
                         {key === 'admin' ? (

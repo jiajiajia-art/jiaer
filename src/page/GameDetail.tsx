@@ -21,6 +21,7 @@ import AuthModal from '../components/AuthModal';
 import LoadSaveListModal from '../components/CreateGame/LoadSaveListModal';
 import SavePreviewModal from '../components/CreateGame/SavePreviewModal';
 import ShareModal from '../components/CommonModal/ShareModal';
+import ReportSheet from '../components/Report/ReportSheet';
 import QRCodeModal from '../components/CommonModal/QRCodeModal';
 import { savesApi, type SaveSummaryItem } from '../api/galgame/saves';
 import novelApi, { type DerivedNovelSummary } from '../api/galgame/novel';
@@ -204,7 +205,7 @@ const GameDetail: React.FC = () => {
     const location = useLocation();
 
     // Hooks
-    const { user } = useAuthStore();
+    const { user, isAuthenticated } = useAuthStore();
     const { isAuthModalOpen, setIsAuthModalOpen } = authModalStore();
     const { setGameDetail: setGameDetailToStore } = useGameStore();
     const { setStartedAt } = useTrackingStore();
@@ -231,6 +232,7 @@ const GameDetail: React.FC = () => {
     const [derivedNovels, setDerivedNovels] = useState<DerivedNovelSummary[]>([]);
     const [derivedNovelsLoading, setDerivedNovelsLoading] = useState(false);
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+    const [isReportSheetOpen, setIsReportSheetOpen] = useState(false);
     const [isQRCodeModalOpen, setIsQRCodeModalOpen] = useState(false);
     const [activeSection, setActiveSection] = useState<'introduction' | 'reviews'>('introduction');
     /** 功能注释：剧情简介折叠，对齐效果图「阅读更多」 */
@@ -1724,7 +1726,27 @@ const GameDetail: React.FC = () => {
                 onClose={() => setIsShareModalOpen(false)}
                 onCopyLink={handleCopyLink}
                 onShowQRCode={handleShowQRCode}
+                onReport={
+                    !isCreatorSelf && fileId
+                        ? () => {
+                            if (!isAuthenticated) {
+                                setIsAuthModalOpen(true);
+                                return;
+                            }
+                            setIsReportSheetOpen(true);
+                        }
+                        : undefined
+                }
             />
+            {fileId ? (
+                <ReportSheet
+                    isOpen={isReportSheetOpen}
+                    onClose={() => setIsReportSheetOpen(false)}
+                    targetType="game"
+                    targetId={String(fileId)}
+                    showPolicyHint
+                />
+            ) : null}
             <QRCodeModal
                 isOpen={isQRCodeModalOpen}
                 onClose={() => setIsQRCodeModalOpen(false)}

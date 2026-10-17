@@ -27,11 +27,13 @@ test('truncateMessagePreview_应截断过长预览', () => {
   assert.ok(truncateMessagePreview('字'.repeat(40)).endsWith('…'));
 });
 
-test('resolveMessageListSection_应按类型归入三区', () => {
+test('resolveMessageListSection_应按类型归入分区', () => {
   assert.equal(resolveMessageListSection('announcement'), 'system');
   assert.equal(resolveMessageListSection('promotion'), 'activity');
   assert.equal(resolveMessageListSection('promotion_submission_status'), 'activity');
   assert.equal(resolveMessageListSection('favorite_game_updated'), 'interaction');
+  assert.equal(resolveMessageListSection('report_received'), 'safety');
+  assert.equal(resolveMessageListSection('moderation'), 'safety');
 });
 
 test('Messages_应对齐效果图会话列表结构', () => {
@@ -47,6 +49,7 @@ test('Messages_应对齐效果图会话列表结构', () => {
   assert.match(zh, /"backToHome":\s*"返回首页"/);
   assert.match(tsx, /messages\.sectionActivity/);
   assert.match(tsx, /messages\.sectionInteraction/);
+  assert.match(tsx, /messages\.sectionSafety/);
   assert.match(tsx, /styles\.sectionCard/);
   assert.match(tsx, /styles\.messageRow/);
   assert.match(tsx, /styles\.avatarFrame/);

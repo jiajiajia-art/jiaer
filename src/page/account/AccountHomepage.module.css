@@ -53,6 +53,36 @@
     width: 100%;
 }
 
+.homeHiddenBanner {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    margin: 0;
+    padding: 10px 16px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: #fff4e8;
+    background: rgba(120, 72, 28, 0.92);
+    border-bottom: 1px solid rgba(255, 210, 150, 0.28);
+}
+
+.unavailableState {
+    margin: 28px 16px 0;
+    padding: 36px 20px;
+    border-radius: var(--creator-radius);
+    background: var(--creator-card);
+    text-align: center;
+}
+
+.unavailableReason {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.78);
+}
+
 .banner {
     position: relative;
     width: 100%;
@@ -94,6 +124,61 @@
 
 .settingsBtn:hover {
     background: rgba(255, 255, 255, 0.38);
+}
+
+.moreWrap {
+    position: absolute;
+    top: 14px;
+    right: 12px;
+    z-index: 2;
+}
+
+.moreBtn {
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    color: #ffffff;
+    cursor: pointer;
+    padding: 0;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
+}
+
+.moreBtn:hover {
+    background: transparent;
+    opacity: 0.82;
+}
+
+.moreMenu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 120px;
+    background: #1c1c1e;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.moreMenuItem {
+    display: block;
+    width: 100%;
+    border: none;
+    background: transparent;
+    color: #ffffff;
+    text-align: left;
+    padding: 12px 14px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.moreMenuItem:hover {
+    background: rgba(255, 255, 255, 0.06);
 }
 
 .visitorActions {

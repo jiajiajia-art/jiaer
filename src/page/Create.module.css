@@ -1523,6 +1523,34 @@
     background: #ffffff;
 }
 
+.appealBanner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 0 12px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: rgba(184, 50, 72, 0.16);
+    border: 1px solid rgba(184, 50, 72, 0.35);
+    color: rgba(255, 220, 224, 0.95);
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.appealBannerBtn {
+    appearance: none;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 999px;
+    padding: 6px 12px;
+    background: rgba(184, 50, 72, 0.9);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 650;
+    cursor: pointer;
+}
+
 .worksTabPanel {
     width: 100%;
     min-height: 120px;

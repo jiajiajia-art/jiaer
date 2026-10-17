@@ -9,6 +9,8 @@ interface ShareModalProps {
     onClose: () => void;
     onCopyLink: () => void;
     onShowQRCode: () => void;
+    /** 可选：底部举报入口（游戏详情） */
+    onReport?: () => void;
 }
 
 const ShareModal: React.FC<ShareModalProps> = ({
@@ -16,6 +18,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
     onClose,
     onCopyLink,
     onShowQRCode,
+    onReport,
 }) => {
     const { t } = useTranslation();
 
@@ -31,17 +34,24 @@ const ShareModal: React.FC<ShareModalProps> = ({
         onClose();
     };
 
+    const handleReport = () => {
+        onClose();
+        onReport?.();
+    };
+
     const modalContent = (
         <div className={styles.modalOverlay} onClick={onClose}>
             <div className={styles.modalWrapper} onClick={(e) => e.stopPropagation()}>
                 <div className={styles.modal}>
                     <div className={styles.header}>
                         <h2 className={styles.title}>{t('gameDetail.shareMethods')}</h2>
-                        <button className={styles.closeButton} onClick={onClose}>
-                            <img
-                                src={`${import.meta.env.BASE_URL}data/assets/gameDetail/关闭.png`}
-                                alt="关闭"
-                            />
+                        <button
+                            type="button"
+                            className={styles.closeButton}
+                            onClick={onClose}
+                            aria-label={t('common.close')}
+                        >
+                            ×
                         </button>
                     </div>
 
@@ -65,6 +75,28 @@ const ShareModal: React.FC<ShareModalProps> = ({
                                 <span className={styles.optionDesc}>{t('gameDetail.generateQRCodeDesc')}</span>
                             </div>
                         </button>
+
+                        {onReport ? (
+                            <button
+                                type="button"
+                                className={styles.shareOption}
+                                onClick={handleReport}
+                            >
+                                <div className={styles.iconWrapper}>
+                                    <img
+                                        className={styles.reportIconImg}
+                                        src={`${import.meta.env.BASE_URL}data/assetsv2/common/report.svg`}
+                                        alt=""
+                                    />
+                                </div>
+                                <div className={styles.optionText}>
+                                    <span className={styles.optionTitle}>
+                                        {t('report.reportAction')}
+                                    </span>
+                                    <span className={styles.optionDesc}>{t('report.reportFromShareDesc')}</span>
+                                </div>
+                            </button>
+                        ) : null}
                     </div>
                 </div>
             </div>
