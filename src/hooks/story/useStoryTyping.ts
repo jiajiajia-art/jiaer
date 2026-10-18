@@ -1,4 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { isStreamingTextExtension } from '../../lib/story/storyTypingStream';
 
 interface UseStoryTypingOptions {
     text: string;
@@ -76,6 +77,14 @@ const parseTextParts = (text: string): TextPart[] => {
     return parts.length > 0 ? parts : [{ type: 'text', content: processedText }];
 };
 
+function toPlainTypingText(text: string): string {
+    const textParts = parseTextParts(text);
+    return textParts
+        .filter(part => part.type === 'text' || part.type === 'color')
+        .map(part => part.content)
+        .join('');
+}
+
 export const useStoryTyping = ({ text, enabled, speed = 60 }: UseStoryTypingOptions) => {
     const [displayedText, setDisplayedText] = useState<string>('');
     const [isTyping, setIsTyping] = useState(false);
@@ -85,12 +94,13 @@ export const useStoryTyping = ({ text, enabled, speed = 60 }: UseStoryTypingOpti
     const plainTextRef = useRef<string>('');
     const prevTextRef = useRef<string>('');
 
-    // 确保在 DOM 更新前清空，避免闪烁
+    // 确保在 DOM 更新前处理文案切换；流式增长时保留已显示字，避免闪屏
     useLayoutEffect(() => {
-        // 检测 text 变化，立即同步清空 displayedText
-        if (text !== prevTextRef.current) {
-            prevTextRef.current = text;
-            // 立即同步清空，避免在 useEffect 中异步清空导致的闪烁
+        if (text === prevTextRef.current) return;
+        const prev = prevTextRef.current;
+        const keep = isStreamingTextExtension(prev, text);
+        prevTextRef.current = text;
+        if (!keep) {
             setDisplayedText('');
         }
     }, [text]);
@@ -104,24 +114,32 @@ export const useStoryTyping = ({ text, enabled, speed = 60 }: UseStoryTypingOpti
         if (!enabled || !text) {
             setDisplayedText('');
             setIsTyping(false);
+            plainTextRef.current = '';
+            currentIndexRef.current = 0;
             return;
         }
 
-        // 解析文本部分，完全跳过动画标签
-        const textParts = parseTextParts(text);
-        
-        // 构建纯文本（只包含普通文本和颜色标签的内容）
-        const plainText = textParts
-            .filter(part => part.type === 'text' || part.type === 'color')
-            .map(part => part.content)
-            .join('');
-        
+        const plainText = toPlainTypingText(text);
+        const prevPlain = plainTextRef.current;
+        const keepProgress = isStreamingTextExtension(prevPlain, plainText)
+            && currentIndexRef.current > 0;
+
         plainTextRef.current = plainText;
-        currentIndexRef.current = 0;
-        lastTimeRef.current = 0;
-        
-        // 确保 displayedText 为空（useLayoutEffect 已经处理了，这里作为双重保险）
-        setDisplayedText('');
+
+        if (!keepProgress) {
+            currentIndexRef.current = 0;
+            lastTimeRef.current = 0;
+            setDisplayedText('');
+        } else if (currentIndexRef.current > plainText.length) {
+            currentIndexRef.current = plainText.length;
+        }
+
+        if (currentIndexRef.current >= plainText.length) {
+            setDisplayedText(plainText);
+            setIsTyping(false);
+            return;
+        }
+
         setIsTyping(true);
 
         // 使用 requestAnimationFrame 实现更流畅的打字效果
@@ -164,4 +182,3 @@ export const useStoryTyping = ({ text, enabled, speed = 60 }: UseStoryTypingOpti
 
     return { displayedText, isTyping };
 };
-

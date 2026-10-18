@@ -1,6 +1,5 @@
 /* Funloom Ink Warehouse — 与首页同色：墨黑舞台 + 酒红强调 */
-
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&display=swap');
+/* 功能注释：禁止 fonts.googleapis.com，国内会超时拖慢首屏 */
 
 .pageRoot {
   /* 功能注释：仓库壳对齐首页 Home 色板，禁止浅灰纸质 Studio Catalog */
@@ -14,7 +13,7 @@
   --wh-coral-soft: rgba(168, 40, 60, 0.22);
   --wh-chip: #1c1c1e;
   --wh-hover: #2c2c2e;
-  --wh-display: 'Noto Serif SC', 'Songti SC', serif;
+  --wh-display: 'Songti SC', 'STSong', 'Source Han Serif SC', 'Noto Serif SC', serif;
   --wh-radius: 16px;
 
   width: 100%;

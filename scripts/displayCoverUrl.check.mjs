@@ -5,8 +5,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  coverUrlAfterDisplayCoverError,
   resolveGameCoverUrl,
   resolveGameListCoverUrl,
+  resolveOriginalCoverUrl,
   toDisplayCoverUrl,
 } from '../src/utils/displayCoverUrl.ts';
 
@@ -65,4 +67,14 @@ test('resolveGameListCoverUrl_优先竖版封面且不改写portrait-cover路径
     }),
     '/public/visual/images/abc/display-cover/cover.webp',
   );
+});
+
+test('coverUrlAfterDisplayCoverError_缺display时应回退原图cover', () => {
+  const cover = '/public/visual/images/abc/cover/cover.webp';
+  const display = '/public/visual/images/abc/display-cover/cover.webp';
+  assert.equal(coverUrlAfterDisplayCoverError(display, cover), cover);
+  assert.equal(coverUrlAfterDisplayCoverError(`${display}?t=1`, `${cover}?x=1`), cover);
+  assert.equal(coverUrlAfterDisplayCoverError(cover, cover), '');
+  assert.equal(coverUrlAfterDisplayCoverError(display, ''), '');
+  assert.equal(resolveOriginalCoverUrl({ cover_url: `${cover}?t=9` }), cover);
 });

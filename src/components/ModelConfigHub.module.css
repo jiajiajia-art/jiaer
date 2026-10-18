@@ -1,6 +1,5 @@
 /* Ink Desk Dual-Rail — 生图 / 文案同页 Tab；墨台轨 + 纸面内容 */
-
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&family=DM+Sans:opsz,wght@9..40,500;9..40,600;9..40,700&display=swap');
+/* 功能注释：禁止 fonts.googleapis.com，国内 ECS/用户会 ERR_CONNECTION_TIMED_OUT */
 
 .root {
   --mc-ink: #14121a;
@@ -9,8 +8,8 @@
   --mc-line: rgba(20, 18, 26, 0.1);
   --mc-coral: #e03d4b;
   --mc-coral-soft: #fff0f2;
-  --mc-display: 'Noto Serif SC', 'Songti SC', serif;
-  --mc-body: 'DM Sans', 'PingFang SC', sans-serif;
+  --mc-display: 'Songti SC', 'STSong', 'Source Han Serif SC', 'Noto Serif SC', serif;
+  --mc-body: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
 
   font-family: var(--mc-body);
   color: var(--mc-ink);
@@ -540,4 +539,160 @@
   background: var(--mc-paper);
   border-radius: 18px;
   border: 1px solid var(--mc-line);
+}
+
+/* —— 文案：模型请求设置（官方 DeepSeek / 代理站） —— */
+.mainCol {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.inlineCode {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.92em;
+  color: #ffb4bc;
+}
+
+.fieldLabel,
+.fieldLabelGrow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--mc-ink);
+}
+
+.fieldLabel:first-of-type {
+  margin-top: 0;
+}
+
+.fieldLabelGrow {
+  flex: 1;
+  min-width: 0;
+  margin-top: 0;
+}
+
+.fieldInput,
+.fieldSelect {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--mc-line);
+  background: #fff;
+  color: var(--mc-ink);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+}
+
+.fieldInput:focus,
+.fieldSelect:focus {
+  outline: none;
+  border-color: rgba(224, 61, 75, 0.55);
+  box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.12);
+}
+
+.fieldHint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--mc-muted);
+  line-height: 1.45;
+}
+
+.presetRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.presetChip,
+.presetChipActive {
+  appearance: none;
+  -webkit-appearance: none;
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.presetChip {
+  border: 1px solid var(--mc-line);
+  background: #fff;
+  color: var(--mc-muted);
+}
+
+.presetChip:hover:not(:disabled) {
+  border-color: rgba(224, 61, 75, 0.4);
+  color: var(--mc-ink);
+}
+
+.presetChipActive {
+  border: 1px solid rgba(46, 160, 110, 0.55);
+  background: rgba(46, 160, 110, 0.12);
+  color: #1f7a52;
+}
+
+.presetChip:disabled,
+.presetChipActive:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.checkRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mc-muted);
+  cursor: pointer;
+}
+
+.modelFetchRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.fetchBtn {
+  appearance: none;
+  -webkit-appearance: none;
+  flex-shrink: 0;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid var(--mc-line);
+  background: #14121a;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.fetchBtn:hover:not(:disabled) {
+  background: #2a2433;
+}
+
+.fetchBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }

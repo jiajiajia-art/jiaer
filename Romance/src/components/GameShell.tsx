@@ -226,12 +226,13 @@ export default function GameShell() {
                 <span className="text-[9.5px] font-semibold tracking-[0.2em] text-ink-soft">FONT</span>
               </span>
               <span className="mb-2 block text-[11px] text-ink-soft">整体换字，不改动排版</span>
+              {/* 功能注释：预览字族用系统字体，避免依赖 fonts.googleapis.com */}
               <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
                 {([
-                  { id: "song", label: "典雅宋体", family: "'Noto Serif SC', serif", desc: "沉稳端庄" },
-                  { id: "round", label: "圆润可爱", family: "'ZCOOL KuaiLe', sans-serif", desc: "软萌活泼" },
-                  { id: "elegant", label: "清瘦雅致", family: "'ZCOOL XiaoWei', serif", desc: "秀气文艺" },
-                  { id: "brush", label: "手写毛笔", family: "'Ma Shan Zheng', serif", desc: "洒脱写意" },
+                  { id: "song", label: "典雅宋体", family: "'Songti SC', 'STSong', serif", desc: "沉稳端庄" },
+                  { id: "round", label: "圆润可爱", family: "'PingFang SC', 'Hiragino Sans GB', sans-serif", desc: "软萌活泼" },
+                  { id: "elegant", label: "清瘦雅致", family: "'Kaiti SC', 'STKaiti', serif", desc: "秀气文艺" },
+                  { id: "brush", label: "手写毛笔", family: "'Kaiti SC', 'STKaiti', serif", desc: "洒脱写意" },
                 ] as const).map((ft) => {
                   const cur = (theme.font ?? "song") === ft.id;
                   return (

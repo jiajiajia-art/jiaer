@@ -1,6 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&display=swap');
-
 /* 功能注释：世界观面板对齐 funloom 暗色创作壳（与 TXT 创建一致） */
+/* 功能注释：禁止 fonts.googleapis.com，国内会 ERR_CONNECTION_TIMED_OUT */
 
 .panelContent {
     display: flex;
@@ -772,7 +771,7 @@
     --brief-coral: #A8283C;
     --brief-coral-deep: #8E2135;
     --brief-stage: #121212;
-    --brief-display: 'Noto Serif SC', 'Songti SC', 'PingFang SC', serif;
+    --brief-display: 'Songti SC', 'STSong', 'Noto Serif SC', 'PingFang SC', serif;
 
     position: fixed;
     inset: 0;

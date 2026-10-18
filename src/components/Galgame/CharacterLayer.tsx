@@ -1,10 +1,11 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import type { CharacterAnimationType } from '../../hooks/galgame/useCharacterAnimation';
 import {
     isImportedCardPortraitUrl,
     isSessionGeneratedPortraitUrl,
 } from '../../lib/galgame/playerCharacterCard';
 import { PLAY_TRIMMED_PORTRAIT_MAX_FILL } from '../../lib/galgame/portraitCanvasDraw';
+import { stripImageCacheBust } from '../../utils/imageCache';
 import galgameStyles from '../../page/Galgame.module.css';
 import GameImageRenderer from './GameImageRenderer';
 import styles from './CharacterLayer.module.css';
@@ -46,6 +47,25 @@ const CharacterLayer: React.FC<CharacterLayerProps> = ({
     const [isDragging, setIsDragging] = useState(false);
     const dragStartRef = useRef({ x: 0, y: 0, offsetX: 0, offsetY: 0 });
     const containerRef = useRef<HTMLDivElement>(null);
+    // 功能注释：仅在立绘身份变化时播进场动画；同人换图不再重放 1s slide，避免「闪多个立绘」
+    const portraitIdentity = `${stripImageCacheBust(characterImage)}:${characterPosition}`;
+    const lastPortraitIdentityRef = useRef(portraitIdentity);
+    const [enterAnimActive, setEnterAnimActive] = useState(Boolean(characterImage));
+    useLayoutEffect(() => {
+        if (!characterImage) {
+            lastPortraitIdentityRef.current = '';
+            setEnterAnimActive(false);
+            return;
+        }
+        if (lastPortraitIdentityRef.current === portraitIdentity) {
+            setEnterAnimActive(false);
+            return;
+        }
+        lastPortraitIdentityRef.current = portraitIdentity;
+        setEnterAnimActive(true);
+        const timer = window.setTimeout(() => setEnterAnimActive(false), 1000);
+        return () => window.clearTimeout(timer);
+    }, [portraitIdentity, characterImage]);
 
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
         if (!draggable) return;
@@ -150,6 +170,10 @@ const CharacterLayer: React.FC<CharacterLayerProps> = ({
             classes.push(galgameStyles.characterSlideLeft);
         } else {
             classes.push(galgameStyles.characterSlideRight);
+        }
+        // 进场结束后去掉 slide，避免同人换图再次侧滑淡入
+        if (!enterAnimActive) {
+            classes.push(styles.enterSettled);
         }
 
         if (animation === 'jump') {

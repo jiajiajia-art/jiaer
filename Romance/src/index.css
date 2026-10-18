@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Noto+Serif+SC:wght@500;600;700;900&family=ZCOOL+KuaiLe&family=ZCOOL+XiaoWei&family=Ma+Shan+Zheng&family=Pixelify+Sans:wght@400;500;600;700&family=VT323&display=swap');
+/* 功能注释：禁止 fonts.googleapis.com（国内超时）；用系统中文字体栈兜底 */
 /* 功能注释：嵌入 funloom 时勿引入 Tailwind preflight，避免重置全站样式；standalone 也足够 */
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities);
@@ -16,24 +16,24 @@
   --color-danger: var(--danger);
   --color-line: var(--line);
 
-  --font-serif: 'Noto Serif SC', serif;
-  --font-sans: 'Noto Sans SC', sans-serif;
+  --font-serif: 'Songti SC', 'STSong', 'Source Han Serif SC', 'Noto Serif SC', serif;
+  --font-sans: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
 }
 
 /* —— 字体皮肤：整体换字，仅改字形不动布局 ——
    通过 <html class="font-xxx"> 覆盖 --font-serif / --font-sans。
-   默认（font-song）沿用思源宋体/黑体，无需类名也成立。 */
+   无 Google 字体时回落系统圆体/楷体/手写风格近似字体。 */
 .font-round {
-  --font-serif: 'ZCOOL KuaiLe', 'Noto Serif SC', serif;
-  --font-sans: 'ZCOOL KuaiLe', 'Noto Sans SC', sans-serif;
+  --font-serif: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --font-sans: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
 }
 .font-elegant {
-  --font-serif: 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
-  --font-sans: 'ZCOOL XiaoWei', 'Noto Sans SC', sans-serif;
+  --font-serif: 'Kaiti SC', 'STKaiti', 'Songti SC', serif;
+  --font-sans: 'Kaiti SC', 'STKaiti', 'PingFang SC', sans-serif;
 }
 .font-brush {
-  --font-serif: 'Ma Shan Zheng', 'Noto Serif SC', serif;
-  --font-sans: 'Noto Sans SC', sans-serif;
+  --font-serif: 'Kaiti SC', 'STKaiti', 'Songti SC', serif;
+  --font-sans: 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
 
 /* 星光2005 · 年代美术：奶油纸白 / 旧报深褐 / 酒红 / 唱片墨绿 */
@@ -1037,8 +1037,9 @@ input[type="range"]::-moz-range-thumb {
   --coral: #e2618c;
   --gold: #e0a338;
   --dream-glow: rgba(43, 43, 60, 0.25);
-  --font-serif: 'Pixelify Sans', 'Noto Serif SC', serif;
-  --font-sans: 'Pixelify Sans', 'Noto Sans SC', sans-serif;
+  /* 功能注释：无 Google Pixelify 时用等宽/系统黑体近似像素感 */
+  --font-serif: ui-monospace, 'SF Mono', Menlo, Consolas, 'PingFang SC', monospace;
+  --font-sans: ui-monospace, 'SF Mono', Menlo, Consolas, 'PingFang SC', monospace;
   /* 关闭字体平滑，让像素字更硬朗 */
   -webkit-font-smoothing: none;
   -moz-osx-font-smoothing: grayscale;

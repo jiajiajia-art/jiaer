@@ -7,14 +7,24 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  buildPortraitSpeakerKey,
   pickSessionNpcAvatarUrl,
   resolveNpcPlayImagePath,
+  resolveRawBridgeDialogueImagePath,
 } from '../src/lib/galgame/npcPlayPortrait.ts';
 import { stepToDisplayMessage } from '../src/lib/galgame/stepToDisplayMessage.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const oldDoc = '/api/visual/images/file1/npcs/npc_jin/base_1.png';
 const newSession = '/public/visual/sessions/sid1/avatars/npc_jin_1710000000000.webp';
+
+test('buildPortraitSpeakerKey_玩家与npc稳定键', () => {
+  assert.equal(buildPortraitSpeakerKey({ isPlayer: true }), 'player');
+  assert.equal(buildPortraitSpeakerKey({ speakerId: 'player' }), 'player');
+  assert.equal(buildPortraitSpeakerKey({ speakerId: 'npc_a', speakerName: '甲' }), 'npc:npc_a');
+  assert.equal(buildPortraitSpeakerKey({ speakerName: '甲' }), 'name:甲');
+  assert.equal(buildPortraitSpeakerKey(null), '');
+});
 
 test('pickSessionNpcAvatarUrl_按id优先于同名', () => {
   const url = pickSessionNpcAvatarUrl(
@@ -143,4 +153,35 @@ test('Galgame与消息层须接入局内NPC立绘', () => {
   const controller = readFileSync(join(root, 'src/hooks/galgame/useGalgameController.ts'), 'utf8');
   assert.match(controller, /sessionNpcEdits,/);
   assert.match(controller, /resolveNpcPlayImagePath/);
+  assert.match(controller, /resolveRawBridgeDialogueImagePath/);
+});
+
+test('resolveRawBridgeDialogueImagePath_主角须吃activeImage兜底', () => {
+  assert.equal(
+    resolveRawBridgeDialogueImagePath({
+      isPlayer: true,
+      sessionPlayerAvatarUrl: '',
+      playerDocumentImagePath: '',
+      activeImage: '/public/players/base.png',
+    }),
+    '/public/players/base.png',
+  );
+  assert.equal(
+    resolveRawBridgeDialogueImagePath({
+      isPlayer: true,
+      sessionPlayerAvatarUrl: '/session-player.webp',
+      playerDocumentImagePath: '/doc-player.png',
+      activeImage: '/public/players/base.png',
+    }),
+    '/session-player.webp',
+  );
+  assert.equal(
+    resolveRawBridgeDialogueImagePath({
+      isPlayer: false,
+      activeImage: 'base',
+      documentImages: { base: oldDoc },
+      sessionNpcAvatarUrl: '',
+    }),
+    oldDoc,
+  );
 });

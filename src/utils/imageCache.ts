@@ -2,6 +2,12 @@ import { getImageUrl } from './constants';
 
 const imageCacheBustMap = new Map<string, string>();
 
+/** 功能注释：去掉 ?t= / ?cb= 后比较是否同一资源，避免旁路立绘误判为新图而反复进场 */
+export const stripImageCacheBust = (url?: string | null): string => {
+    if (!url) return '';
+    return String(url).split(/[?#]/)[0] || '';
+};
+
 export const withCacheBust = (url?: string | null): string => {
     if (!url || url === 'null' || url === 'undefined' || url.trim() === '') return '';
     

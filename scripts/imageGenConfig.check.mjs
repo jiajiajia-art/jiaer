@@ -49,7 +49,17 @@ test('AdminPanel_应包含模型配置菜单与路由', () => {
   assert.match(hub, /role="tablist"/);
   assert.match(hub, /生图配置/);
   assert.match(hub, /文案配置/);
+  // 功能注释：生图有独立请求设置，与文案网关互不影响
+  assert.match(hub, /生图请求设置/);
+  assert.match(hub, /与文案网关隔离/);
+  assert.match(hub, /与「文案配置」完全隔离/);
+  assert.match(hub, /handleFetchImageModels|image-gen-config\/models|listModels/);
+  assert.match(hub, /imageOpenaiBaseUrl/);
   assert.match(hub, /\/admin\/text-llm/);
+
+  const api = readFileSync(join(root, 'src/api/admin/imageGenConfigApi.ts'), 'utf8');
+  assert.match(api, /image-gen-config\/models/);
+  assert.match(api, /openaiApiKey/);
 
   const app = readFileSync(join(root, 'src/App.tsx'), 'utf8');
   assert.match(app, /path="\/admin\/image-gen"/);

@@ -10,8 +10,15 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+# 功能注释：分环境构建产物（cn-test / cn-prod），勿提交
+# 功能注释：分环境构建产物，勿提交
+dist-cn-test/
+dist-cn-prod/
 *.local
-.cursor*
+# 忽略 .cursor 本地态，但强制入库双运行时规则供同事/Agent 共用
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
 
 # Editor directories and files
 .vscode/*
@@ -31,6 +38,13 @@ dist-ssr
 android/
 android.backup-*/
 dist-app/
+dist-cn-test/
+dist-cn-gogo/
+dist-cn-neo/
+dist-cn-qqq/
 
 # Android upload keystore（本地生成，禁止提交）
 signing/
+
+# local
+devApiPresets.ts

@@ -3,7 +3,23 @@ import { truncateStepsAfterChoice } from '../mapGalgame/common/interactionUtils'
 import { cleanHistoryMessage, sanitizeVisualOptionText, stripNonStoryControlMarkup } from '../../utils/textUtils';
 import { isGenerationBusyError } from '../../lib/galgame/choiceStepDisplayGate';
 import { choiceStepHasPlayableOptions } from '../../lib/galgame/playChoiceOptions';
-import { normalizeUserFacingStreamError } from '../../lib/galgame/normalizeStreamErrorMessage';
+import {
+    isTransientNetworkStreamError,
+    normalizeUserFacingStreamError,
+} from '../../lib/galgame/normalizeStreamErrorMessage';
+import {
+    appendRawTextBridge,
+    filterFormalStepsAfterRawAppend,
+    flushRawTextBridge,
+    isRawTextBridgeStep,
+    pickLatestDialogueStep,
+    pickLatestSceneChangeStep,
+} from '../../lib/story/rawTextStepBridge';
+import { shouldDeferFormalStepForRawTextBridge } from '../../lib/story/rawTextStreamPolicy';
+import {
+    extractStreamPerfFromSseJson,
+    recordAndLogStreamPerf,
+} from '../../lib/galgame/streamPerfDebug';
 
 interface UseStepStreamResponseOptions {
     setStepQueue: React.Dispatch<React.SetStateAction<any[]>>;
@@ -15,6 +31,11 @@ interface UseStepStreamResponseOptions {
     onCompleteAllSteps?: (steps: any[]) => void;
     // 是否启用「无 choice 时自动补一个空 choice」的兜底逻辑（仅 Galgame 需要，世界交互不启用）
     enableFallbackEmptyChoice?: boolean;
+    /**
+     * 功能注释：Aliyun 在正式 step 迟到时，把 raw_text 拆句入同一 stepQueue（非另写画布）。
+     * CF 不启用以保持原行为。
+     */
+    enableRawTextStepBridge?: boolean;
 }
 
 interface ProcessStepStreamResponseOptions {
@@ -25,6 +46,25 @@ interface ProcessStepStreamResponseOptions {
     onFirstStep?: () => void; // 接收到后端数据，清空一些状态缓存等
     onActivity?: (data: any) => void;
     onData?: (data: any) => void; // 任意数据回调（含 type=data/complete 等），便于业务层拿到附加字段
+    /** 正式 step 接手时清掉当前 raw 旁白，便于同一套 promote 上屏 */
+    onRawTextBridgeHandoff?: () => void;
+    /**
+     * 功能注释：Aliyun 按句追加到同一画布旁白（非新 step 覆盖）。
+     * 传入已完句文案数组；未提供时回退为入 stepQueue。
+     */
+    onRawTextBridgeAppend?: (segments: string[]) => void;
+    /**
+     * 功能注释：Aliyun 未完句也立刻刷画布预览（满 3 句后不再刷），减少「一直加载」空等。
+     */
+    onRawTextBridgeLive?: (unfinishedBuffer: string) => void;
+    /**
+     * 功能注释：Aliyun raw 旁白期间正式 dialogue 不入队，但要把立绘说话人挂回当前旁白。
+     */
+    onRawTextBridgeDialoguePortrait?: (dialogueStep: any) => void;
+    /**
+     * 功能注释：Aliyun raw 旁白期间 scene_change 不入队，但要立刻切背景，避免开场白屏。
+     */
+    onRawTextBridgeSceneChange?: (sceneStep: any) => void;
 }
 
 /**
@@ -40,6 +80,7 @@ export const useStepStreamResponse = ({
     currentRequestId,
     onMissionFlag,
     onCompleteAllSteps,
+    enableRawTextStepBridge = false,
 }: UseStepStreamResponseOptions) => {
 
     // 从文本中提取 MAIN_OPTION / OPTION 列表
@@ -198,14 +239,134 @@ export const useStepStreamResponse = ({
         let aggregatedResponse = '';
         let choiceEmittedFromResponse = false;
         let streamFailed = false;
+        let rawTextBridgeBuffer = '';
+        let formalStepsStarted = false;
+        let rawTextAppendActive = false;
+        /** 功能注释：dialogue 可能早于首句上屏；记下最近立绘，raw flush 后再补挂 */
+        let latestDialoguePortrait: any = null;
         try {
             let missionFlagged = false;
+            const markFirstStep = () => {
+                if (!firstStepReceived) {
+                    firstStepReceived = true;
+                    options?.onFirstStep?.();
+                }
+            };
+            /**
+             * 功能注释：选项后流式会连发多句不同说话人对白。
+             * 策略：只「记住」最新对白；本轮首次立刻挂一张；中间换人不刷；
+             * complete/data/handoff 再刷最终说话人一次。避免连环进场像多个立绘在闪。
+             */
+            let portraitCoalesceHandle: ReturnType<typeof setTimeout> | number | null = null;
+            let portraitFlushedOnce = false;
+            const clearPortraitCoalesceHandle = () => {
+                if (portraitCoalesceHandle == null) return;
+                if (typeof portraitCoalesceHandle === 'number'
+                    && typeof cancelAnimationFrame === 'function') {
+                    cancelAnimationFrame(portraitCoalesceHandle);
+                } else {
+                    clearTimeout(portraitCoalesceHandle as ReturnType<typeof setTimeout>);
+                }
+                portraitCoalesceHandle = null;
+            };
+            const flushRawTextBridgeDialoguePortrait = () => {
+                clearPortraitCoalesceHandle();
+                const step = latestDialoguePortrait;
+                if (!step || typeof options?.onRawTextBridgeDialoguePortrait !== 'function') return;
+                portraitFlushedOnce = true;
+                options.onRawTextBridgeDialoguePortrait(step);
+            };
+            const rememberRawTextBridgeDialoguePortrait = (dialogueStep: any) => {
+                if (!enableRawTextStepBridge) return;
+                if (!dialogueStep || String(dialogueStep.type || '') !== 'dialogue') return;
+                latestDialoguePortrait = dialogueStep;
+            };
+            /** 本轮首次立绘：立刻挂；已挂过则只更新 latest，等 final flush */
+            const emitRawTextBridgeDialoguePortrait = (dialogueStep: any) => {
+                rememberRawTextBridgeDialoguePortrait(dialogueStep);
+                if (typeof options?.onRawTextBridgeDialoguePortrait !== 'function') return;
+                if (portraitFlushedOnce) return;
+                clearPortraitCoalesceHandle();
+                if (typeof requestAnimationFrame === 'function') {
+                    portraitCoalesceHandle = requestAnimationFrame(() => {
+                        flushRawTextBridgeDialoguePortrait();
+                    });
+                    return;
+                }
+                flushRawTextBridgeDialoguePortrait();
+            };
+            /** 收尾：强制刷最新说话人（允许与首次不同） */
+            const finalizeRawTextBridgeDialoguePortrait = (dialogueStep?: any) => {
+                if (dialogueStep) rememberRawTextBridgeDialoguePortrait(dialogueStep);
+                if (!latestDialoguePortrait) return;
+                if (typeof options?.onRawTextBridgeDialoguePortrait !== 'function') return;
+                flushRawTextBridgeDialoguePortrait();
+            };
+            const emitRawTextBridgeSceneChange = (sceneStep: any) => {
+                if (!enableRawTextStepBridge) return;
+                if (!sceneStep || String(sceneStep.type || '') !== 'scene_change') return;
+                if (typeof options?.onRawTextBridgeSceneChange === 'function') {
+                    options.onRawTextBridgeSceneChange(sceneStep);
+                }
+            };
+            const emitRawTextBridgeSideEffectsFromSteps = (steps: any[]) => {
+                // 功能注释：整包 steps 视为收尾，刷最终立绘 + 场景
+                finalizeRawTextBridgeDialoguePortrait(pickLatestDialogueStep(steps));
+                emitRawTextBridgeSceneChange(pickLatestSceneChangeStep(steps));
+            };
+            const enqueueBridgeSteps = (bridgeSteps: ReturnType<typeof appendRawTextBridge>['steps']) => {
+                if (!bridgeSteps.length || formalStepsStarted) return;
+                hasReceivedStep = true;
+                markFirstStep();
+                // 功能注释：Aliyun 追加到同一旁白；避免新句入队后 promote 覆盖已显示句子
+                if (typeof options?.onRawTextBridgeAppend === 'function') {
+                    rawTextAppendActive = true;
+                    options.onRawTextBridgeAppend(bridgeSteps.map((step) => String(step.content || '')));
+                    // 功能注释：若对白立绘先于首句到达，上屏后立刻补挂（仅首次；已挂过不中途换人）
+                    if (latestDialoguePortrait) {
+                        emitRawTextBridgeDialoguePortrait(latestDialoguePortrait);
+                    }
+                    return;
+                }
+                setStepQueue((prev) => {
+                    if (currentRequestId.current !== requestId) return prev;
+                    if (formalStepsStarted) return prev;
+                    const hasChoice = prev.some((s: any) => s?.type === 'choice');
+                    if (hasChoice) return prev;
+                    let next = prev;
+                    for (const step of bridgeSteps) {
+                        next = isDuplicateStep(next, step) ? next : [...next, step];
+                    }
+                    return next;
+                });
+            };
+            const handoffFromRawTextBridge = () => {
+                if (!enableRawTextStepBridge || formalStepsStarted) return;
+                // 功能注释：交接前强制刷最终说话人，避免 rAF 未跑完被 formal 门闩丢掉
+                finalizeRawTextBridgeDialoguePortrait();
+                formalStepsStarted = true;
+                rawTextBridgeBuffer = '';
+                // 功能注释：已追加展示时不清空画布，只停止继续 bridge；由下方过滤正式旁白防覆盖
+                if (!rawTextAppendActive) {
+                    options?.onRawTextBridgeHandoff?.();
+                }
+                setStepQueue((prev) => {
+                    if (currentRequestId.current !== requestId) return prev;
+                    return prev.filter((s) => !isRawTextBridgeStep(s));
+                });
+            };
             const resetTransientStreamStateForRetry = () => {
                 aggregatedResponse = '';
                 choiceEmittedFromResponse = false;
                 hasReceivedStep = false;
                 firstStepReceived = false;
                 streamFailed = false;
+                rawTextBridgeBuffer = '';
+                // 功能注释：保留 rawAppendActive，避免 retry 后短窗内 formal handoff 清掉已上屏旁白
+                formalStepsStarted = false;
+                latestDialoguePortrait = null;
+                portraitFlushedOnce = false;
+                clearPortraitCoalesceHandle();
                 setSelectedOptionIndex(null);
                 setStepQueue([]);
                 setIsWaitingForData(true);
@@ -226,6 +387,12 @@ export const useStepStreamResponse = ({
                 const { value, done } = await reader.read();
 
                 if (done) {
+                    // 流式响应结束：仍无正式 step 时冲刷 raw 半句入队
+                    if (enableRawTextStepBridge && !formalStepsStarted) {
+                        const flushed = flushRawTextBridge(rawTextBridgeBuffer);
+                        rawTextBridgeBuffer = flushed.buffer;
+                        enqueueBridgeSteps(flushed.steps);
+                    }
                     // 流式响应结束
                     if (!hasReceivedStep) {
                         // 兜底：如果累计的 response 文本里有 [OPTION]，在结束时生成一个 choice
@@ -290,6 +457,12 @@ export const useStepStreamResponse = ({
                             continue;
                         }
 
+                        // 功能注释：测试环境 STREAM_PERF——控制台比对 TTFT/吞吐（带 requestId，便于对照）
+                        const streamPerf = extractStreamPerfFromSseJson(jsonData);
+                        if (streamPerf) {
+                            recordAndLogStreamPerf(streamPerf, { requestId });
+                        }
+
                         // 透传给上层（例如 worldInteraction 想拿到 interaction / allSteps 等）
                         options?.onActivity?.(jsonData);
                         options?.onData?.(jsonData);
@@ -297,6 +470,23 @@ export const useStepStreamResponse = ({
                         if (jsonData.type === 'generation_retry') {
                             resetTransientStreamStateForRetry();
                             continue;
+                        }
+
+                        // 功能注释：正式 step 未到前，raw_text 按句入同一 stepQueue（Aliyun bridge）
+                        if (
+                            enableRawTextStepBridge
+                            && !formalStepsStarted
+                            && (jsonData.type === 'raw_text' || jsonData.type === 'new_text')
+                            && typeof jsonData.text === 'string'
+                            && jsonData.text
+                        ) {
+                            const bridged = appendRawTextBridge(rawTextBridgeBuffer, jsonData.text);
+                            rawTextBridgeBuffer = bridged.buffer;
+                            enqueueBridgeSteps(bridged.steps);
+                            // 功能注释：完句入页后，未完句也预览上屏，避免等句号才出字
+                            if (typeof options?.onRawTextBridgeLive === 'function') {
+                                options.onRawTextBridgeLive(rawTextBridgeBuffer);
+                            }
                         }
 
                         if (!missionFlagged && shouldTriggerMissionFlag(jsonData)) {
@@ -364,38 +554,44 @@ export const useStepStreamResponse = ({
                             continue;
                         }
 
-                        // 处理 step 类型的数据（增量 step）
+                        // 处理 step 类型的数据（增量 / 收尾 step）
                         if (jsonData.type === 'step' && jsonData.step) {
+                            // 功能注释：Aliyun bridge 开启时忽略 formal step，避免 handoff 清掉按句旁白；CF 仍即时入队
+                            if (shouldDeferFormalStepForRawTextBridge(enableRawTextStepBridge)) {
+                                // 功能注释：不依赖 rawTextAppendActive——对白/场景常比首句更早到达
+                                emitRawTextBridgeDialoguePortrait(jsonData.step);
+                                emitRawTextBridgeSceneChange(jsonData.step);
+                                continue;
+                            }
                             // 如果 step 文本中包含 [OPTION: ...]，则转换为 choice，避免依赖其它包裹标签
                             const step = toChoiceIfHasOptions(jsonData.step);
                             hasReceivedStep = true;
                             console.log('step data:', step);
-
-                            // 如果是第一个 step，触发回调（清除超时定时器）
-                            if (!firstStepReceived) {
-                                firstStepReceived = true;
-                                options?.onFirstStep?.();
-                            }
+                            handoffFromRawTextBridge();
+                            markFirstStep();
 
                             setStepQueue(prev => {
                                 if (currentRequestId.current !== requestId) {
                                     return prev;
                                 }
+                                const base = enableRawTextStepBridge
+                                    ? prev.filter((s) => !isRawTextBridgeStep(s))
+                                    : prev;
                                 
                                 // 检查队列中是否已有 choice 步骤
-                                const hasChoice = prev.some((s: any) => s?.type === 'choice');
+                                const hasChoice = base.some((s: any) => s?.type === 'choice');
                                 if (hasChoice) {
-                                    return prev;
+                                    return base;
                                 }
                                 
                                 // 如果当前步骤是 choice，直接添加
                                 if (step?.type === 'choice') {
-                                    const newQueue = [...prev, step];
+                                    const newQueue = [...base, step];
                                     return newQueue;
                                 }
                                 
                                 // 避免连续重复的相同步骤（常见于 step + narrativeSteps 重复）
-                                const newQueue = isDuplicateStep(prev, step) ? prev : [...prev, step];
+                                const newQueue = isDuplicateStep(base, step) ? base : [...base, step];
                                 console.log('[流式接收] 单个step加入队列:', {
                                     stepType: step?.type,
                                     queueLength: newQueue.length,
@@ -409,32 +605,33 @@ export const useStepStreamResponse = ({
                         if (jsonData.type === 'data' && jsonData.narrativeSteps && Array.isArray(jsonData.narrativeSteps)) {
                             if (jsonData.narrativeSteps.length > 0) {
                                 hasReceivedStep = true;
+                                handoffFromRawTextBridge();
+                                markFirstStep();
 
-                                // 如果是第一个 step（narrativeSteps 不为空），触发回调（清除超时定时器）
-                                if (!firstStepReceived && jsonData.narrativeSteps.length > 0) {
-                                    firstStepReceived = true;
-                                    options?.onFirstStep?.();
-                                }
+                                const mapped = jsonData.narrativeSteps.map((s: any) => toChoiceIfHasOptions(s));
+                                const truncatedSteps = truncateStepsAfterChoice(mapped);
+                                // 功能注释：过滤前挂立绘/切场景（不要求 raw 已上屏）
+                                emitRawTextBridgeSideEffectsFromSteps(truncatedSteps);
 
                                 setStepQueue(prev => {
                                     if (currentRequestId.current !== requestId) {
                                         return prev;
                                     }
+                                    const base = enableRawTextStepBridge
+                                        ? prev.filter((s) => !isRawTextBridgeStep(s))
+                                        : prev;
                                     
                                     // 检查队列中是否已有 choice 步骤
-                                    const hasChoice = prev.some((s: any) => s?.type === 'choice');
+                                    const hasChoice = base.some((s: any) => s?.type === 'choice');
                                     if (hasChoice) {
-                                        return prev;
+                                        return base;
                                     }
                                     
-                                    // 逐个转换 narrativeSteps，若包含 [OPTION] 则生成为 choice
-                                    const mapped = jsonData.narrativeSteps.map((s: any) => toChoiceIfHasOptions(s));
-                                    const truncatedSteps = truncateStepsAfterChoice(mapped);
-                                    
-                                    // 如果截断后的步骤数组中有 choice，且队列中还没有 choice，则只添加 choice 及其之前的步骤
-                                    const newSteps = truncatedSteps;
-                                    // 逐一追加，避免与结尾元素重复
-                                    let newQueue = prev;
+                                    // 功能注释：Aliyun 已按句追加时跳过正式旁白，只入队 choice，避免整段覆盖
+                                    const newSteps = filterFormalStepsAfterRawAppend(truncatedSteps, {
+                                        rawAppendActive: enableRawTextStepBridge && rawTextAppendActive,
+                                    });
+                                    let newQueue = base;
                                     for (const s of newSteps) {
                                         newQueue = isDuplicateStep(newQueue, s) ? newQueue : [...newQueue, s];
                                     }
@@ -454,7 +651,8 @@ export const useStepStreamResponse = ({
                         if (!streamFailed && jsonData.type === 'complete' && Array.isArray(jsonData.allSteps)) {
                             try {
                                 const finalAllSteps = jsonData.allSteps.map((s: any) => toChoiceIfHasOptions(s));
-
+                                // 功能注释：complete 可能早于 data；再挂立绘/场景兜底
+                                emitRawTextBridgeSideEffectsFromSteps(finalAllSteps);
                                 onCompleteAllSteps?.(finalAllSteps);
                             } catch (e) {
                                 console.warn('onCompleteAllSteps 回调执行失败:', e);
@@ -475,6 +673,11 @@ export const useStepStreamResponse = ({
                 try {
                     const jsonData = JSON.parse(dataStr);
 
+                    const streamPerfTail = extractStreamPerfFromSseJson(jsonData);
+                    if (streamPerfTail) {
+                        recordAndLogStreamPerf(streamPerfTail, { requestId });
+                    }
+
                     // 透传给上层
                     options?.onActivity?.(jsonData);
                     options?.onData?.(jsonData);
@@ -484,8 +687,8 @@ export const useStepStreamResponse = ({
                     }
 
                     if (jsonData.type === 'generation_retry') {
+                        // 功能注释：缓冲区尾部的 retry 不得提前 return 整段流处理；继续走成功/失败收尾
                         resetTransientStreamStateForRetry();
-                        return;
                     }
 
                     if (!missionFlagged && shouldTriggerMissionFlag(jsonData)) {
@@ -553,56 +756,67 @@ export const useStepStreamResponse = ({
                     }
 
                     if (jsonData.type === 'step' && jsonData.step) {
-                        hasReceivedStep = true;
-                        if (!firstStepReceived) {
-                            firstStepReceived = true;
-                            options?.onFirstStep?.();
+                        if (shouldDeferFormalStepForRawTextBridge(enableRawTextStepBridge)) {
+                            emitRawTextBridgeDialoguePortrait(jsonData.step);
+                            emitRawTextBridgeSceneChange(jsonData.step);
+                        } else {
+                            hasReceivedStep = true;
+                            handoffFromRawTextBridge();
+                            markFirstStep();
+                            setStepQueue(prev => {
+                                if (currentRequestId.current !== requestId) {
+                                    return prev;
+                                }
+                                const base = enableRawTextStepBridge
+                                    ? prev.filter((s) => !isRawTextBridgeStep(s))
+                                    : prev;
+                                const hasChoice = base.some((s: any) => s?.type === 'choice');
+                                if (hasChoice) {
+                                    return base;
+                                }
+                                
+                                // 如果当前步骤（或转换后）是 choice，直接添加
+                                const step = toChoiceIfHasOptions(jsonData.step);
+                                if (step?.type === 'choice') {
+                                    return [...base, step];
+                                }
+                                
+                                // 普通步骤，正常添加（去重）
+                                return isDuplicateStep(base, step) ? base : [...base, step];
+                            });
                         }
-                        setStepQueue(prev => {
-                            if (currentRequestId.current !== requestId) {
-                                return prev;
-                            }
-                            const hasChoice = prev.some((s: any) => s?.type === 'choice');
-                            if (hasChoice) {
-                                return prev;
-                            }
-                            
-                            // 如果当前步骤（或转换后）是 choice，直接添加
-                            const step = toChoiceIfHasOptions(jsonData.step);
-                            if (step?.type === 'choice') {
-                                return [...prev, step];
-                            }
-                            
-                            // 普通步骤，正常添加（去重）
-                            return isDuplicateStep(prev, step) ? prev : [...prev, step];
-                        });
                     }
                     if (jsonData.type === 'data' && jsonData.narrativeSteps && Array.isArray(jsonData.narrativeSteps)) {
                         if (jsonData.narrativeSteps.length > 0) {
                             hasReceivedStep = true;
+                            handoffFromRawTextBridge();
                             if (!firstStepReceived && jsonData.narrativeSteps.length > 0) {
                                 firstStepReceived = true;
                                 options?.onFirstStep?.();
                             }
-                        }
-                        setStepQueue(prev => {
-                            if (currentRequestId.current !== requestId) {
-                                return prev;
-                            }
-                            
-                            const hasChoice = prev.some((s: any) => s?.type === 'choice');
-                            if (hasChoice) {
-                                return prev;
-                            }
-                            
                             const mapped = jsonData.narrativeSteps.map((s: any) => toChoiceIfHasOptions(s));
                             const truncatedSteps = truncateStepsAfterChoice(mapped);
-                            let merged = prev;
-                            for (const s of truncatedSteps) {
-                                merged = isDuplicateStep(merged, s) ? merged : [...merged, s];
-                            }
-                            return merged;
-                        });
+                            emitRawTextBridgeSideEffectsFromSteps(truncatedSteps);
+                            setStepQueue(prev => {
+                                if (currentRequestId.current !== requestId) {
+                                    return prev;
+                                }
+                                
+                                const hasChoice = prev.some((s: any) => s?.type === 'choice');
+                                if (hasChoice) {
+                                    return prev;
+                                }
+                                
+                                const newSteps = filterFormalStepsAfterRawAppend(truncatedSteps, {
+                                    rawAppendActive: enableRawTextStepBridge && rawTextAppendActive,
+                                });
+                                let merged = prev;
+                                for (const s of newSteps) {
+                                    merged = isDuplicateStep(merged, s) ? merged : [...merged, s];
+                                }
+                                return merged;
+                            });
+                        }
                     }
                 } catch (e) {
                     // 忽略无法解析的数据
@@ -613,12 +827,18 @@ export const useStepStreamResponse = ({
                 options?.onSuccess?.();
             }
         } catch (error) {
-            console.error('❌ 流式数据接收错误:', error);
+            const friendly = normalizeUserFacingStreamError(error);
+            // 功能注释：部署/代理闪断常见 TypeError: network error；降级为 warn，由上层有限重试或弹窗
+            if (isTransientNetworkStreamError(error) || isTransientNetworkStreamError(friendly)) {
+                console.warn('❌ 流式数据接收错误(网络瞬时):', friendly);
+            } else {
+                console.error('❌ 流式数据接收错误:', error);
+            }
             setSelectedOptionIndex(null);
             setIsWaitingForData(false);
-            options?.onError?.(normalizeUserFacingStreamError(error));
+            options?.onError?.(friendly);
         }
-    }, [setStepQueue, setSelectedOptionIndex, setIsWaitingForData, currentRequestId]);
+    }, [setStepQueue, setSelectedOptionIndex, setIsWaitingForData, currentRequestId, enableRawTextStepBridge]);
 
     return {
         processStreamResponse,

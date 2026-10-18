@@ -1,13 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
-import { HOST_ADDRESS } from '../config';
+import { ASSET_HOST_ADDRESS, HOST_ADDRESS } from '../config';
 import { authFetch } from '../api/base';
 import { CustomIFHostBridge } from '../custom/hostBridge';
 import { useTrackingStore } from '../store/trackingStore';
 import { useGameDurationTracking } from '../hooks/useGameDurationTracking';
 import { trackingApi } from '../api/statistics/trackingApi';
 import { useDailyTaskStore } from '../store/dailyTaskStore';
+import { isMiniProgramEnv } from '../utils/miniProgram';
 
 type CreateSessionResp = {
   sessionId: string;
@@ -39,7 +40,11 @@ const CustomIF: React.FC = () => {
     // 支持“/public/…”与“public/…”两种返回格式
     if (raw.startsWith('/public/') || raw.startsWith('public/')) {
       const path = raw.startsWith('/') ? raw : `/${raw}`;
-      try { return new URL(path, HOST_ADDRESS).href; } catch { return `${HOST_ADDRESS}${path}`; }
+      // 功能注释：小程序 web-view 必须同源加载 iframe，避免跳到另一域名触发「不支持打开」
+      const assetBase = isMiniProgramEnv()
+        ? window.location.origin
+        : (ASSET_HOST_ADDRESS || HOST_ADDRESS || window.location.origin);
+      try { return new URL(path, assetBase).href; } catch { return `${assetBase}${path}`; }
     }
     // fall back to current origin
     try { return new URL(raw, window.location.origin).href; } catch { return raw; }

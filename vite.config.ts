@@ -1,8 +1,13 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { rm } from 'node:fs/promises'
 import { resolve } from 'node:path'
+import {
+  buildViteDevProxy,
+  getDevApiPreset,
+  resolveDevApiPresetKey,
+} from './devApiPresets'
 
 const oversizedLocalDownloads = [
   ['pdf', 'Funloom互动影游工具.zip'],
@@ -66,53 +71,56 @@ const romanceVirtualModules = () => {
   }
 }
 
+/** 功能注释：启动时打印联调后端，避免同事搞不清当前打哪套环境 */
+const logDevApiPreset = (preset: ReturnType<typeof getDevApiPreset>) => ({
+  name: 'log-dev-api-preset',
+  configureServer() {
+    const dest = `${preset.apiOrigin}${preset.apiPathPrefix || ''}`
+    console.log(`[vite] ACTIVE_DEV_API=${preset.key} (${preset.label}) → ${dest}`)
+    console.log('[vite] 切换：只改 Interactive-fiction-frontend/devApiPresets.ts 里的 ACTIVE_DEV_API')
+  },
+})
+
 // https://vite.dev/config/
-export default defineConfig({
-  base: '/funloom/',
-  plugins: [
-    react(),
-    tailwindcss(),
-    romanceVirtualModules(),
-    romanceShortLinkRedirect(),
-    removeOversizedLocalDownloads(),
-  ],
-  resolve: {
-    alias: {
-      // 功能注释：Romance 子应用源码仍放在仓库 Romance/，经别名嵌入 funloom 打包
-      '@romance': resolve(__dirname, 'Romance/src'),
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  // 功能注释：默认 /funloom/；cn-test 同机并存可设 VITE_BASE=/funloom-test/
+  const viteBase = String(env.VITE_BASE || process.env.VITE_BASE || '/funloom/').replace(/\/?$/, '/')
+  const presetKey = resolveDevApiPresetKey()
+  const preset = getDevApiPreset(presetKey)
+
+  return {
+    base: viteBase,
+    plugins: [
+      react(),
+      tailwindcss(),
+      romanceVirtualModules(),
+      romanceShortLinkRedirect(),
+      removeOversizedLocalDownloads(),
+      ...(mode === 'development' ? [logDevApiPreset(preset)] : []),
+    ],
+    resolve: {
+      alias: {
+        // 功能注释：Romance 子应用源码仍放在仓库 Romance/，经别名嵌入 funloom 打包
+        '@romance': resolve(__dirname, 'Romance/src'),
+      },
     },
-  },
-  server: {
-    host: true,
-    port: 5173,
-    // 功能注释：5173 被占时禁止静默改到 5174，避免 HMR WebSocket 端口错乱
-    strictPort: true,
-    hmr: {
-      protocol: 'ws',
-      host: 'localhost',
+    server: {
+      host: true,
       port: 5173,
-      clientPort: 5173,
-    },
-    proxy: {
-      // 后端 API 代理（局域网同事访问时，请求经本机 Vite 转发到 localhost:3000）
-      // 含 WebSocket 升级
-      '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-        secure: false,
-        ws: true,
+      // 功能注释：5173 被占时禁止静默改到 5174，避免 HMR WebSocket 端口错乱
+      strictPort: true,
+      hmr: {
+        protocol: 'ws',
+        host: 'localhost',
+        port: 5173,
+        clientPort: 5173,
       },
-      '/public': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-        secure: false,
-      },
-      // 注意：开发环境使用 signInWithPopup，不需要 Firebase Auth 代理
-      // 生产环境部署到 Firebase Hosting，也不需代理
+      proxy: buildViteDevProxy(preset),
     },
-  },
-  preview: {
-    host: true,
-    port: 5173,
-  },
+    preview: {
+      host: true,
+      port: 5173,
+    },
+  }
 })
