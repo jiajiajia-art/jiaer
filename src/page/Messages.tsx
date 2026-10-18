@@ -3,12 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import Navbar from '../components/Layout/Navbar';
-import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import AnnouncementModal from '../components/AnnouncementModal';
 import FavoriteGameUpdateModal from '../components/FavoriteGameUpdateModal';
 import messageApi from '../api/message/messageApi';
-import { buildMockSafetyMessages } from '../api/message/messageSafetyMock';
-import { USE_REPORT_MOCK } from '../api/report/reportApi';
 import { getApiErrorMessage } from '../utils/error';
 import type {
     MessageAnnouncement,
@@ -27,6 +24,8 @@ import { openConfiguredLink, resolvePromotionAdLink } from '../utils/promotionNa
 import { useExternalLinkCopyModal } from '../hooks/useExternalLinkCopyModal';
 import { GAME_CARD_DEFAULT_AVATAR_PATH } from '../lib/gameCardAuthor';
 import {
+    formatMessageDateTime,
+    formatMessageDateYmd,
     formatMessageListTime,
     resolveMessageListSection,
     truncateMessagePreview,
@@ -51,8 +50,8 @@ type SafetyDetail = {
     title: string;
     body: string;
     relatedGameId?: string | null;
-    /** moderation.sourceId → 申诉 relatedId */
-    appealRelatedId?: number | null;
+    /** 16 位 moderation_id，跳转申诉提交 */
+    appealRelatedId?: string | null;
 };
 
 const getAnnouncementSortTime = (item: Pick<MessageAnnouncement, 'publishedAt' | 'updatedAt' | 'createdAt'>) =>
@@ -106,13 +105,45 @@ const getSubmissionMessageText = (notification: MessagePromotionSubmissionNotifi
     }
 };
 
+type SafetyNoticeField = {
+    label: string;
+    value: string;
+};
+
 type RowView = {
     key: string;
+    variant?: 'default' | 'safetyNotice';
     title: string;
-    preview: string;
-    time: string;
+    preview?: string;
+    time?: string;
+    dateLabel?: string;
+    fields?: SafetyNoticeField[];
+    actionLabel?: string;
     isRead: boolean;
     onOpen: () => void;
+};
+
+const isAppealResultNotification = (notification: MessageModerationNotification): boolean => {
+    const recordType = String(notification.recordType || '').toLowerCase();
+    const title = String(notification.title || '');
+    return recordType === 'appeal' || title.includes('申诉结果');
+};
+
+const getAppealResultLabel = (
+    status: string | undefined,
+    t: (key: string, options?: Record<string, unknown>) => string,
+): string => {
+    const normalized = String(status || '').toLowerCase();
+    if (normalized === 'approved' || normalized === 'revoked') {
+        return t('messages.appealResultApproved');
+    }
+    if (normalized === 'rejected') {
+        return t('messages.appealResultRejected');
+    }
+    if (normalized === 'pending') {
+        return t('messages.appealResultPending');
+    }
+    return status?.trim() || '—';
 };
 
 const Messages: React.FC = () => {
@@ -127,58 +158,16 @@ const Messages: React.FC = () => {
     const [selectedFavoriteGameUpdate, setSelectedFavoriteGameUpdate] = useState<MessageFavoriteGameUpdateNotification | null>(null);
     const [safetyDetail, setSafetyDetail] = useState<SafetyDetail | null>(null);
 
-    const canAppealFromModeration = (notification: MessageModerationNotification): boolean => {
-        const recordType = String(notification.recordType || '').toLowerCase();
-        const title = String(notification.title || '');
-        // 功能注释：仅 warning/penalty 可申；appeal / 申诉结果通知不出「去申诉」
-        if (recordType === 'appeal' || title.includes('申诉结果')) return false;
-        return recordType === 'warning' || recordType === 'penalty';
-    };
-
     const loadMessages = useCallback(async () => {
         try {
             setIsLoading(true);
             const response = await messageApi.list();
-            let nextData = response.data.data;
-
-            if (USE_REPORT_MOCK && nextData) {
-                const mock = buildMockSafetyMessages();
-                const extraUnread = [...mock.reportReceivedNotifications, ...mock.moderationNotifications]
-                    .filter((item) => !item.isRead).length;
-                nextData = {
-                    ...nextData,
-                    reportReceivedNotifications: nextData.reportReceivedNotifications?.length
-                        ? nextData.reportReceivedNotifications
-                        : mock.reportReceivedNotifications,
-                    moderationNotifications: nextData.moderationNotifications?.length
-                        ? nextData.moderationNotifications
-                        : mock.moderationNotifications,
-                    unreadCount: (nextData.unreadCount || 0) + (
-                        nextData.reportReceivedNotifications?.length || nextData.moderationNotifications?.length
-                            ? 0
-                            : extraUnread
-                    ),
-                };
-            }
+            const nextData = response.data.data;
 
             setMessageCenter(nextData);
             setUnreadCount(nextData?.unreadCount || 0);
         } catch (error) {
-            if (USE_REPORT_MOCK) {
-                const mock = buildMockSafetyMessages();
-                const nextData: MessageCenterData = {
-                    unreadCount: 2,
-                    announcements: [],
-                    promotions: [],
-                    promotionSubmissionNotifications: [],
-                    favoriteGameUpdateNotifications: [],
-                    ...mock,
-                };
-                setMessageCenter(nextData);
-                setUnreadCount(2);
-            } else {
-                toast.error(getApiErrorMessage(error, t('messages.loadFailed')));
-            }
+            toast.error(getApiErrorMessage(error, t('messages.loadFailed')));
         } finally {
             setIsLoading(false);
         }
@@ -321,17 +310,6 @@ const Messages: React.FC = () => {
             return;
         }
 
-        // 功能注释：举报 mock 消息尚未接真接口，只做本地已读
-        if (
-            USE_REPORT_MOCK
-            && (messageType === 'report_received' || messageType === 'moderation')
-        ) {
-            const nextUnreadCount = Math.max(0, unreadCount - 1);
-            applyReadState(messageType, sourceId, nextUnreadCount);
-            setUnreadCount(nextUnreadCount);
-            return;
-        }
-
         try {
             const response = await messageApi.markRead({ messageType, sourceId });
             const nextUnreadCount = response.data.data?.unreadCount ?? Math.max(0, unreadCount - 1);
@@ -405,13 +383,19 @@ const Messages: React.FC = () => {
 
     const handleOpenModeration = useCallback(async (notification: MessageModerationNotification) => {
         await markMessageAsRead('moderation', notification.sourceId, notification.isRead);
-        setSafetyDetail({
-            title: notification.title || t('messages.moderationTitle'),
-            body: notification.body,
-            relatedGameId: notification.relatedGameId,
-            appealRelatedId: canAppealFromModeration(notification) ? notification.sourceId : null,
-        });
-    }, [markMessageAsRead, t]);
+        // 功能注释：申诉结果进结果页；违规通知进账号审核详情
+        if (isAppealResultNotification(notification)) {
+            const appealId = String(notification.appealId || '').trim();
+            if (appealId) {
+                navigate(`/appeals/${appealId}`);
+            }
+            return;
+        }
+        const moderationId = String(notification.moderationId || '').trim();
+        if (moderationId) {
+            navigate(`/moderation/${encodeURIComponent(moderationId)}`);
+        }
+    }, [markMessageAsRead, navigate]);
 
     const sectionRows = useMemo(() => {
         const buckets: Record<MessageListSectionKey, RowView[]> = {
@@ -478,14 +462,58 @@ const Messages: React.FC = () => {
             }
 
             if (item.itemType === 'moderation') {
-                buckets[section].push({
-                    key: `moderation-${item.sourceId}`,
-                    title: item.title || t('messages.moderationTitle'),
-                    preview: truncateMessagePreview(item.body),
-                    time,
-                    isRead: item.isRead,
-                    onOpen: () => { void handleOpenModeration(item); },
-                });
+                if (isAppealResultNotification(item)) {
+                    const appealTime = formatMessageDateTime(item.appealedAt || item.createdAt);
+                    buckets[section].push({
+                        key: `moderation-${item.sourceId}`,
+                        variant: 'safetyNotice',
+                        title: t('messages.appealResultNoticeTitle'),
+                        dateLabel: formatMessageDateYmd(item.createdAt || item.publishedAt),
+                        fields: [
+                            {
+                                label: t('messages.appealTimeLabel'),
+                                value: appealTime || '—',
+                            },
+                            {
+                                label: t('messages.appealResultLabel'),
+                                value: getAppealResultLabel(item.status, t),
+                            },
+                        ],
+                        actionLabel: t('messages.viewDetails'),
+                        isRead: item.isRead,
+                        onOpen: () => { void handleOpenModeration(item); },
+                    });
+                } else {
+                    const actionTime = formatMessageDateTime(item.startsAt || item.createdAt);
+                    const endTime = formatMessageDateTime(item.endsAt);
+                    const reasonText = (item.reason || '').trim() || '—';
+                    const fields: SafetyNoticeField[] = [
+                        {
+                            label: t('messages.violationReasonLabel'),
+                            value: reasonText,
+                        },
+                        {
+                            label: t('messages.actionTimeLabel'),
+                            value: actionTime || '—',
+                        },
+                    ];
+                    if (endTime) {
+                        fields.push({
+                            label: t('messages.endTimeLabel'),
+                            value: endTime,
+                        });
+                    }
+                    buckets[section].push({
+                        key: `moderation-${item.sourceId}`,
+                        variant: 'safetyNotice',
+                        title: t('messages.violationNoticeTitle'),
+                        dateLabel: formatMessageDateYmd(item.createdAt || item.publishedAt || item.startsAt),
+                        fields,
+                        actionLabel: t('messages.viewDetails'),
+                        isRead: item.isRead,
+                        onOpen: () => { void handleOpenModeration(item); },
+                    });
+                }
                 continue;
             }
 
@@ -524,9 +552,8 @@ const Messages: React.FC = () => {
 
     const hasAnyRow = sections.some((section) => section.rows.length > 0);
 
-    const renderRow = (row: RowView) => (
+    const renderDefaultRow = (row: RowView) => (
         <button
-            key={row.key}
             type="button"
             className={styles.messageRow}
             onClick={row.onOpen}
@@ -545,6 +572,49 @@ const Messages: React.FC = () => {
                 {row.preview ? <p className={styles.rowPreview}>{row.preview}</p> : null}
             </div>
         </button>
+    );
+
+    const renderSafetyNotice = (row: RowView) => (
+        <button
+            key={row.key}
+            type="button"
+            className={styles.safetyNoticeCard}
+            onClick={row.onOpen}
+        >
+            {!row.isRead ? <span className={styles.safetyUnreadDot} aria-hidden="true" /> : null}
+            <div className={styles.safetyNoticeHead}>
+                <h3 className={styles.safetyNoticeTitle}>{row.title}</h3>
+                {row.dateLabel ? <p className={styles.safetyNoticeDate}>{row.dateLabel}</p> : null}
+            </div>
+            {row.fields?.length ? (
+                <dl className={styles.safetyNoticeFields}>
+                    {row.fields.map((field) => (
+                        <div key={`${row.key}-${field.label}`} className={styles.safetyNoticeField}>
+                            <dt className={styles.safetyNoticeLabel}>{field.label}</dt>
+                            <dd className={styles.safetyNoticeValue}>{field.value}</dd>
+                        </div>
+                    ))}
+                </dl>
+            ) : null}
+            <div className={styles.safetyNoticeFoot}>
+                <span className={styles.safetyNoticeAction}>{row.actionLabel || t('messages.viewDetails')}</span>
+                <span className={styles.safetyNoticeChevron} aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M9 6L15 12L9 18" />
+                    </svg>
+                </span>
+            </div>
+        </button>
+    );
+
+    const renderRow = (row: RowView) => (
+        row.variant === 'safetyNotice'
+            ? renderSafetyNotice(row)
+            : (
+                <React.Fragment key={row.key}>
+                    {renderDefaultRow(row)}
+                </React.Fragment>
+            )
     );
 
     return (
@@ -584,9 +654,23 @@ const Messages: React.FC = () => {
                     section.rows.length === 0 ? null : (
                         <section key={section.key} className={styles.sectionBlock}>
                             <h2 className={styles.sectionTitle}>{section.title}</h2>
-                            <div className={styles.sectionCard}>
-                                {section.rows.map(renderRow)}
-                            </div>
+                            {section.key === 'safety' ? (
+                                <div className={styles.sectionList}>
+                                    {section.rows.map((row) => (
+                                        row.variant === 'safetyNotice'
+                                            ? renderSafetyNotice(row)
+                                            : (
+                                                <div key={row.key} className={styles.messageRowCard}>
+                                                    {renderDefaultRow(row)}
+                                                </div>
+                                            )
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className={styles.sectionCard}>
+                                    {section.rows.map(renderRow)}
+                                </div>
+                            )}
                         </section>
                     )
                 ))}
@@ -641,7 +725,7 @@ const Messages: React.FC = () => {
                                             const relatedId = safetyDetail.appealRelatedId;
                                             setSafetyDetail(null);
                                             if (relatedId) {
-                                                navigate(`/appeals?relatedId=${encodeURIComponent(String(relatedId))}`);
+                                                navigate(`/appeal/submit?relatedModerationId=${encodeURIComponent(relatedId)}`);
                                             }
                                         }}
                                     >
@@ -656,7 +740,6 @@ const Messages: React.FC = () => {
                 onConfirm={() => setSafetyDetail(null)}
                 onCancel={() => setSafetyDetail(null)}
             />
-            <MobileBottomNav />
             {externalLinkCopyModal}
         </div>
     );

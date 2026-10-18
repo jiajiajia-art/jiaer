@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { MdMoreHoriz, MdOutlineEdit } from 'react-icons/md';
 import toast from 'react-hot-toast';
@@ -25,6 +25,7 @@ const formatSocialCount = (value: number | null | undefined): string =>
 const AccountHomepage: React.FC = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
+    const location = useLocation();
     const { userCode: routeUserCode = '' } = useParams<{ userCode: string }>();
     const { user, isAuthenticated, updateUser } = useAuthStore();
     const { isAuthModalOpen, setIsAuthModalOpen } = authModalStore();
@@ -142,8 +143,13 @@ const AccountHomepage: React.FC = () => {
         });
     }, [routeUserCode, selfCode, updateUser]);
 
-    /** 功能注释：优先回上一页（如游戏详情），无历史再回个人中心 */
+    /** 功能注释：管理端带来源时回管理页；否则上一页；无历史再回个人中心 */
     const handleClose = () => {
+        const from = (location.state as { from?: unknown } | null)?.from;
+        if (typeof from === 'string' && from.startsWith('/') && !from.startsWith('//')) {
+            navigate(from);
+            return;
+        }
         if (window.history.length > 1) {
             navigate(-1);
             return;
@@ -315,6 +321,11 @@ const AccountHomepage: React.FC = () => {
                                             setReportOpen(true);
                                         }}
                                     >
+                                        <img
+                                            className={styles.moreMenuIcon}
+                                            src={`${import.meta.env.BASE_URL}data/assetsv2/common/report.svg`}
+                                            alt=""
+                                        />
                                         {t('report.reportAction')}
                                     </button>
                                 </div>

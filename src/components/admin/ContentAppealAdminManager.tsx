@@ -111,7 +111,7 @@ const ContentAppealAdminManager: React.FC = () => {
     void loadList();
   }, [loadList]);
 
-  const openDetail = async (id: number) => {
+  const openDetail = async (id: string) => {
     setDetailLoading(true);
     setDetail(null);
     setReviewNote('');
@@ -230,7 +230,7 @@ const ContentAppealAdminManager: React.FC = () => {
                     <td>
                       {row.targetRecordType
                         ? formatRecordTitle(row.targetRecordType, row.targetLevel)
-                        : `#${row.relatedId}`}
+                        : `#${row.relatedModerationId}`}
                     </td>
                     <td>{statusLabel[row.status] || row.status}</td>
                     <td title={row.reason || ''}>{truncate(row.reason, 24)}</td>

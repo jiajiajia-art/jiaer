@@ -1,16 +1,18 @@
+/* 功能注释：申诉中心对齐墨黑账本 — #1A1A1A 面、酒红操作 */
+
 .pageRoot {
   min-height: 100vh;
   background: #0b0b0c;
-  color: #fff;
+  color: #ffffff;
 }
 
 .main {
   max-width: 720px;
   margin: 0 auto;
-  padding: calc(var(--app-desktop-navbar-height, 64px) + 16px) 16px 120px;
+  padding: calc(var(--app-desktop-navbar-height, 64px) + 20px) 16px 120px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 }
 
 .header {
@@ -24,19 +26,27 @@
 .actionBtn,
 .pageBtn {
   appearance: none;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #1c1c1e;
+  color: rgba(255, 255, 255, 0.88);
   border-radius: 999px;
   padding: 8px 14px;
   font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
 }
 
 .newBtn,
 .actionBtn {
-  background: rgba(184, 50, 72, 0.85);
-  border-color: transparent;
+  background: #8e2135;
+  border-color: #8e2135;
+  color: #ffffff;
+}
+
+.newBtn:hover,
+.actionBtn:hover {
+  background: #a8283c;
+  border-color: #a8283c;
 }
 
 .title {
@@ -48,21 +58,25 @@
 }
 
 .card {
-  background: #1c1c1e;
+  background: #1a1a1a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
-  padding: 16px;
+  padding: 16px 16px 14px;
 }
 
 .sectionTitle {
-  margin: 0 0 12px;
-  font-size: 15px;
+  margin: 0 0 14px;
+  font-size: 13px;
   font-weight: 650;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .empty {
   margin: 0;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(255, 255, 255, 0.45);
   font-size: 13px;
+  line-height: 1.5;
 }
 
 .list {
@@ -71,41 +85,70 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .listItem {
   display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  padding: 12px;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 14px 12px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #1c1c1e;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-sizing: border-box;
 }
 
-.itemBody {
-  flex: 1;
-  min-width: 0;
+.listItem:hover {
+  background: #222224;
+}
+
+.itemHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .itemTitle {
-  font-size: 14px;
-  font-weight: 600;
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.35;
+  color: #ffffff;
 }
 
 .itemMeta {
-  margin-top: 4px;
+  flex-shrink: 0;
+  margin: 0;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.45);
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.42);
+  font-variant-numeric: tabular-nums;
 }
 
 .itemDesc {
-  margin: 8px 0 0;
+  margin: 0;
   font-size: 13px;
-  line-height: 1.45;
-  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.62);
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.itemFoot {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 2px;
+}
+
+.actionBtn {
+  padding: 7px 16px;
+  font-size: 13px;
 }
 
 .pagination {

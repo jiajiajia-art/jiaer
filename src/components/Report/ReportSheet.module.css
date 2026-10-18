@@ -18,7 +18,7 @@
   background: #1a1a1a;
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px 16px 0 0;
+  border-radius: 0;
   display: flex;
   flex-direction: column;
   box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.45);
@@ -151,13 +151,17 @@
   line-height: 1.45;
 }
 
+.textareaWrap {
+  position: relative;
+}
+
 .textarea {
   width: 100%;
   min-height: 72px;
   resize: vertical;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 10px;
-  padding: 10px 12px;
+  padding: 10px 12px 28px;
   font-size: 14px;
   font-family: inherit;
   box-sizing: border-box;
@@ -175,10 +179,13 @@
 }
 
 .charCount {
-  margin: 4px 0 0;
-  text-align: right;
+  position: absolute;
+  right: 12px;
+  bottom: 8px;
+  margin: 0;
   font-size: 11px;
   color: rgba(255, 255, 255, 0.36);
+  pointer-events: none;
 }
 
 .evidenceRow {
@@ -190,8 +197,8 @@
 
 .evidenceThumb {
   position: relative;
-  width: 72px;
-  height: 72px;
+  width: 96px;
+  height: 96px;
   border-radius: 8px;
   overflow: hidden;
   background: #121212;
@@ -222,13 +229,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 72px;
-  height: 72px;
+  width: 96px;
+  height: 96px;
   border: 1px dashed rgba(255, 255, 255, 0.22);
   border-radius: 8px;
   background: #121212;
   color: rgba(255, 255, 255, 0.72);
-  font-size: 28px;
+  font-size: 34px;
   line-height: 1;
   cursor: pointer;
 }
@@ -291,7 +298,7 @@
   }
 
   .panel {
-    border-radius: 14px;
+    border-radius: 0;
     max-height: min(86vh, 680px);
     animation: modalIn 0.22s ease-out;
   }

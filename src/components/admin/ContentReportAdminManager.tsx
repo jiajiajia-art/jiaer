@@ -1,7 +1,9 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import adminAppealApi from '../../api/admin/adminAppealApi';
 import adminReportApi, {
+  type AdminModerationDetail,
   type AdminModerationHistoryItem,
   type AdminPenaltyListItem,
   type AdminReportDetail,
@@ -9,6 +11,7 @@ import adminReportApi, {
   type AdminReportStatus,
   type AdminReportTargetType,
 } from '../../api/admin/adminReportApi';
+import type { AdminAppealDetail } from '../../api/appeal/appeal.type';
 import ConfirmModal from '../CommonModal/ConfirmModal';
 import { useAuthStore } from '../../store/useAuthStore';
 import { isAdminRole } from '../../utils/userRoles';
@@ -91,6 +94,16 @@ const displayNickname = (name: string | null | undefined): string => {
   return trimmed || '未设置昵称';
 };
 
+type PersonFilter = {
+  role: 'target' | 'reporter';
+  userId: string;
+  name: string;
+};
+
+type HistoryExtra =
+  | { kind: 'moderation'; data: AdminModerationDetail }
+  | { kind: 'appeal'; data: AdminAppealDetail };
+
 const listObjectLabel = (row: AdminReportListItem): string => {
   if (row.targetType === 'game') {
     return row.gameTitle?.trim() || '作品已不存在';
@@ -111,6 +124,10 @@ const ContentReportAdminManager: React.FC = () => {
   const [targetType, setTargetType] = useState<AdminReportTargetType | ''>('');
   const [keyword, setKeyword] = useState('');
   const [keywordInput, setKeywordInput] = useState('');
+  const [personFilter, setPersonFilter] = useState<PersonFilter | null>(null);
+  const [objectNickname, setObjectNickname] = useState('');
+  const [objectNicknameDraft, setObjectNicknameDraft] = useState('');
+  const [objectFilterOpen, setObjectFilterOpen] = useState(false);
 
   const [list, setList] = useState<AdminReportListItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -139,6 +156,9 @@ const ContentReportAdminManager: React.FC = () => {
   const [restoring, setRestoring] = useState(false);
   const [reasonByCode, setReasonByCode] = useState<Record<string, ReportReasonItem>>({});
   const [historyPreview, setHistoryPreview] = useState<AdminModerationHistoryItem | null>(null);
+  const [historyExtra, setHistoryExtra] = useState<HistoryExtra | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const objectFilterRef = useRef<HTMLTableCellElement | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const penaltyTotalPages = Math.max(1, Math.ceil(penaltyTotal / PAGE_SIZE));
@@ -150,6 +170,9 @@ const ContentReportAdminManager: React.FC = () => {
         status: status || undefined,
         targetType: targetType || undefined,
         keyword: keyword.trim() || undefined,
+        targetOwnerUserId: personFilter?.role === 'target' ? personFilter.userId : undefined,
+        targetOwnerNickname: objectNickname.trim() || undefined,
+        reporterUserId: personFilter?.role === 'reporter' ? personFilter.userId : undefined,
         page,
         pageSize: PAGE_SIZE,
       });
@@ -161,7 +184,18 @@ const ContentReportAdminManager: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [keyword, page, status, targetType]);
+  }, [keyword, objectNickname, page, personFilter, status, targetType]);
+
+  useEffect(() => {
+    if (!objectFilterOpen) return;
+    const onDoc = (event: MouseEvent) => {
+      if (!objectFilterRef.current?.contains(event.target as Node)) {
+        setObjectFilterOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [objectFilterOpen]);
 
   const loadPenalties = useCallback(async () => {
     try {
@@ -231,9 +265,61 @@ const ContentReportAdminManager: React.FC = () => {
     if (reviewing) return;
     setDetail(null);
     setHistoryPreview(null);
+    setHistoryExtra(null);
     setConfirmDecision(null);
     setSevereMode(false);
     setPenaltyLevel(1);
+  };
+
+  const applyPersonFilter = (role: PersonFilter['role'], userId: string, name: string) => {
+    const id = userId.trim();
+    if (!id) return;
+    setPage(1);
+    setStatus('');
+    setObjectNickname('');
+    setObjectNicknameDraft('');
+    setObjectFilterOpen(false);
+    setPersonFilter({ role, userId: id, name: name.trim() || id });
+    setDetail(null);
+  };
+
+  const applyObjectNicknameFilter = () => {
+    const nick = objectNicknameDraft.trim();
+    setPage(1);
+    setStatus('');
+    setPersonFilter((prev) => (prev?.role === 'target' ? null : prev));
+    setObjectNickname(nick);
+    setObjectFilterOpen(false);
+    setDetail(null);
+  };
+
+  const openHistory = async (item: AdminModerationHistoryItem) => {
+    setHistoryPreview(item);
+    setHistoryExtra(null);
+    setHistoryLoading(true);
+    try {
+      const publicId = String(item.id || '').trim();
+      if (!publicId) {
+        throw new Error('记录缺少对外编号');
+      }
+      if (item.recordType === 'appeal') {
+        const response = await adminAppealApi.getAppeal(publicId);
+        if (!response.data.success || !response.data.data) {
+          throw new Error(response.data.message || '加载申诉详情失败');
+        }
+        setHistoryExtra({ kind: 'appeal', data: response.data.data });
+      } else {
+        const response = await adminReportApi.getModeration(publicId);
+        if (!response.data.success || !response.data.data) {
+          throw new Error(response.data.message || '加载记录详情失败');
+        }
+        setHistoryExtra({ kind: 'moderation', data: response.data.data });
+      }
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, '加载记录详情失败'));
+    } finally {
+      setHistoryLoading(false);
+    }
   };
 
   const handleConfirmReview = async () => {
@@ -401,6 +487,27 @@ const ContentReportAdminManager: React.FC = () => {
             >
               搜索
             </button>
+            {personFilter || objectNickname.trim() ? (
+              <div className={local.personFilter}>
+                <span>
+                  {personFilter
+                    ? `${personFilter.role === 'target' ? '被举报人' : '举报人'} ${personFilter.name}`
+                    : `对象昵称 ${objectNickname.trim()}`}
+                </span>
+                <button
+                  type="button"
+                  className={local.toolbarBtn}
+                  onClick={() => {
+                    setPage(1);
+                    setPersonFilter(null);
+                    setObjectNickname('');
+                    setObjectNicknameDraft('');
+                  }}
+                >
+                  清除
+                </button>
+              </div>
+            ) : null}
             <button type="button" className={local.toolbarBtn} onClick={() => void loadReports()}>
               刷新
               <svg className={local.toolbarIcon} viewBox="0 0 24 24" aria-hidden="true">
@@ -444,7 +551,63 @@ const ContentReportAdminManager: React.FC = () => {
                     <tr>
                       <th>ID</th>
                       <th>类型</th>
-                      <th>对象</th>
+                      <th ref={objectFilterRef} className={local.thFilter}>
+                        <span className={local.thFilterLabel}>
+                          对象
+                          <button
+                            type="button"
+                            className={`${local.thFilterBtn}${objectNickname.trim() || objectFilterOpen ? ` ${local.thFilterBtnActive}` : ''}`}
+                            aria-label="按昵称筛选对象"
+                            aria-expanded={objectFilterOpen}
+                            onClick={() => {
+                              setObjectNicknameDraft(objectNickname);
+                              setObjectFilterOpen((open) => !open);
+                            }}
+                          >
+                            <img
+                              className={local.thFilterIcon}
+                              src={`${import.meta.env.BASE_URL}data/assetsv2/common/select.svg`}
+                              alt=""
+                            />
+                          </button>
+                        </span>
+                        {objectFilterOpen ? (
+                          <div className={local.thFilterPop} onClick={(e) => e.stopPropagation()}>
+                            <input
+                              className={local.thFilterInput}
+                              value={objectNicknameDraft}
+                              placeholder="输入昵称"
+                              autoFocus
+                              onChange={(e) => setObjectNicknameDraft(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') applyObjectNicknameFilter();
+                                if (e.key === 'Escape') setObjectFilterOpen(false);
+                              }}
+                            />
+                            <div className={local.thFilterActions}>
+                              <button
+                                type="button"
+                                className={local.toolbarBtn}
+                                onClick={() => {
+                                  setObjectNicknameDraft('');
+                                  setObjectNickname('');
+                                  setPage(1);
+                                  setObjectFilterOpen(false);
+                                }}
+                              >
+                                清空
+                              </button>
+                              <button
+                                type="button"
+                                className={styles.detailButton}
+                                onClick={applyObjectNicknameFilter}
+                              >
+                                筛选
+                              </button>
+                            </div>
+                          </div>
+                        ) : null}
+                      </th>
                       <th>理由</th>
                       <th>举报人</th>
                       <th>时间</th>
@@ -457,12 +620,23 @@ const ContentReportAdminManager: React.FC = () => {
                       <tr key={row.id}>
                         <td>{row.id}</td>
                         <td>{targetLabel[row.targetType] || row.targetType}</td>
-                        <td title={row.targetType === 'game' ? row.targetId : row.targetOwnerUserId}>
+                        <td title={row.targetOwnerUserId}>
                           {truncate(listObjectLabel(row), 24)}
                         </td>
                         <td>{truncate(row.reasonTitle, 16)}</td>
                         <td title={row.reporterUserId}>
-                          {truncate(displayNickname(row.reporterNickname), 12)}
+                          <button
+                            type="button"
+                            className={local.nameFilter}
+                            title="只看此人举报"
+                            onClick={() => applyPersonFilter(
+                              'reporter',
+                              row.reporterUserId,
+                              displayNickname(row.reporterNickname),
+                            )}
+                          >
+                            {truncate(displayNickname(row.reporterNickname), 12)}
+                          </button>
                         </td>
                         <td>{formatTime(row.createdAt)}</td>
                         <td>{statusLabel[row.status] || row.status}</td>
@@ -603,8 +777,7 @@ const ContentReportAdminManager: React.FC = () => {
                         <Link
                           className={local.subjectLink}
                           to={`/account/${encodeURIComponent(detail.targetOwnerUserCode)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                          state={{ from: '/admin/content-reports' }}
                         >
                           {displayNickname(detail.targetOwnerNickname)}
                         </Link>
@@ -623,8 +796,7 @@ const ContentReportAdminManager: React.FC = () => {
                         <Link
                           className={local.subjectLink}
                           to={`/game/${encodeURIComponent(detail.targetId)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                          state={{ from: '/admin/content-reports' }}
                         >
                           {detail.gameTitle?.trim() || '作品已不存在'}
                         </Link>
@@ -693,8 +865,7 @@ const ContentReportAdminManager: React.FC = () => {
                           <Link
                             className={local.factLink}
                             to={`/account/${encodeURIComponent(detail.targetOwnerUserCode)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                            state={{ from: '/admin/content-reports' }}
                           >
                             {displayNickname(detail.targetOwnerNickname)}
                           </Link>
@@ -730,15 +901,15 @@ const ContentReportAdminManager: React.FC = () => {
                     <div>
                       <span className={local.factLabel}>近期记录</span>
                       <ul className={local.historyList}>
-                        {detail.ownerModerationHistory.slice(0, 8).map((item) => {
+                        {detail.ownerModerationHistory.slice(0, 8).map((item, index) => {
                           const statusText = formatHistoryStatus(item.status);
                           const revoked = item.status === 'revoked';
                           return (
-                            <li key={item.id}>
+                            <li key={item.id || `history-${index}`}>
                               <button
                                 type="button"
                                 className={`${local.historyItem}${revoked ? ` ${local.historyItemMuted}` : ''}`}
-                                onClick={() => setHistoryPreview(item)}
+                                onClick={() => void openHistory(item)}
                               >
                                 <div className={local.historyMain}>
                                   <span className={local.historyType}>
@@ -882,7 +1053,10 @@ const ContentReportAdminManager: React.FC = () => {
       {historyPreview ? (
         <div
           className={local.historySheetBackdrop}
-          onClick={() => setHistoryPreview(null)}
+                onClick={() => {
+                  setHistoryPreview(null);
+                  setHistoryExtra(null);
+                }}
           role="presentation"
         >
           <div
@@ -897,7 +1071,10 @@ const ContentReportAdminManager: React.FC = () => {
               <button
                 type="button"
                 className={styles.detailButton}
-                onClick={() => setHistoryPreview(null)}
+                onClick={() => {
+              setHistoryPreview(null);
+              setHistoryExtra(null);
+            }}
               >
                 关闭
               </button>
@@ -929,10 +1106,59 @@ const ContentReportAdminManager: React.FC = () => {
                   </p>
                 </div>
               ) : null}
-              <div>
-                <span className={local.factLabel}>通知正文</span>
-                <p className={local.factValue}>{historyPreview.body?.trim() || '—'}</p>
-              </div>
+              {historyLoading ? (
+                <p className={local.factValue}>加载中…</p>
+              ) : historyExtra?.kind === 'moderation' ? (
+                <>
+                  <div>
+                    <span className={local.factLabel}>举报理由</span>
+                    <p className={local.factValue}>{historyExtra.data.reasonTitle?.trim() || '—'}</p>
+                  </div>
+                  <div>
+                    <span className={local.factLabel}>举报说明</span>
+                    <p className={local.factValue}>{historyExtra.data.reportDetail?.trim() || '—'}</p>
+                  </div>
+                  <div>
+                    <span className={local.factLabel}>通知正文</span>
+                    <p className={local.factValue}>{historyExtra.data.notifyBody?.trim() || '—'}</p>
+                  </div>
+                </>
+              ) : historyExtra?.kind === 'appeal' ? (
+                <>
+                  <div>
+                    <span className={local.factLabel}>申诉内容</span>
+                    <p className={local.factValue}>{historyExtra.data.reason?.trim() || '—'}</p>
+                  </div>
+                  <div>
+                    <span className={local.factLabel}>申诉图片</span>
+                    {historyExtra.data.evidenceUrls?.length ? (
+                      <div className={local.evidenceGrid}>
+                        {historyExtra.data.evidenceUrls.map((url) => {
+                          const src = resolveEvidenceImageUrl(url);
+                          return (
+                            <a
+                              key={url}
+                              className={local.evidenceThumb}
+                              href={src}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <img src={src} alt="申诉证据" />
+                            </a>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className={local.factValue}>—</p>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <span className={local.factLabel}>通知正文</span>
+                  <p className={local.factValue}>{historyPreview.body?.trim() || '—'}</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

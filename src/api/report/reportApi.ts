@@ -1,12 +1,5 @@
 import type { ApiResponse } from '../api.types';
 import { api, UPLOAD_TIMEOUT_MS } from '../base';
-import {
-  USE_REPORT_MOCK,
-  mockBlockContent,
-  mockGetReasons,
-  mockSubmitReport,
-  mockUploadEvidence,
-} from './reportMock';
 import type {
   ContentBlockPayload,
   ReportReasonsData,
@@ -17,15 +10,12 @@ import type {
 } from './report.type';
 
 const reportApi = {
-  getReasons: (targetType: ReportTargetType) => {
-    if (USE_REPORT_MOCK) return mockGetReasons(targetType);
-    return api.get<ApiResponse<ReportReasonsData>>('/report/reasons', {
+  getReasons: (targetType: ReportTargetType) =>
+    api.get<ApiResponse<ReportReasonsData>>('/report/reasons', {
       params: { targetType },
-    });
-  },
+    }),
 
   uploadEvidence: (file: File) => {
-    if (USE_REPORT_MOCK) return mockUploadEvidence(file);
     const formData = new FormData();
     formData.append('file', file);
     return api.post<ApiResponse<UploadEvidenceData>>('/report/evidence', formData, {
@@ -34,20 +24,15 @@ const reportApi = {
     });
   },
 
-  submit: (payload: SubmitReportPayload) => {
-    if (USE_REPORT_MOCK) return mockSubmitReport(payload);
-    return api.post<ApiResponse<SubmitReportData>>('/report', payload);
-  },
+  submit: (payload: SubmitReportPayload) =>
+    api.post<ApiResponse<SubmitReportData>>('/report', payload),
 
-  blockContent: (payload: ContentBlockPayload) => {
-    if (USE_REPORT_MOCK) return mockBlockContent(payload);
-    return api.post<ApiResponse<{
+  blockContent: (payload: ContentBlockPayload) =>
+    api.post<ApiResponse<{
       targetType: string;
       targetId: string;
       blocked: boolean;
-    }>>('/content/block', payload);
-  },
+    }>>('/content/block', payload),
 };
 
 export default reportApi;
-export { USE_REPORT_MOCK };

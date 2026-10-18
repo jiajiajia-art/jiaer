@@ -166,15 +166,25 @@
 }
 
 .moreMenuItem {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     width: 100%;
     border: none;
     background: transparent;
     color: #ffffff;
-    text-align: left;
-    padding: 12px 14px;
+    text-align: center;
+    padding: 12px 18px 12px 10px;
     font-size: 14px;
     cursor: pointer;
+}
+
+.moreMenuIcon {
+    width: 16px;
+    height: 16px;
+    display: block;
+    flex-shrink: 0;
 }
 
 .moreMenuItem:hover {

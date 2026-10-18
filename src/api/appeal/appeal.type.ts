@@ -1,10 +1,14 @@
-/** 申诉 P1 — 对齐 API-申诉.md */
+/** 申诉 P1 — 对齐 API-申诉.md / §15 16 位 moderation_id */
 
 export type AppealRecordType = 'warning' | 'penalty' | 'appeal';
 export type AppealStatus = 'pending' | 'approved' | 'rejected' | 'revoked' | 'active' | string;
 
+/** 功能注释：对外 16 位数字字符串（moderation_id / appeal_id），勿 Number() */
+export type ExternalModerationId = string;
+
 export type AppealEligibleItem = {
-  id: number;
+  /** 16 位 moderation_id */
+  id: ExternalModerationId;
   recordType: 'warning' | 'penalty' | string;
   level?: number | null;
   status?: string | null;
@@ -26,27 +30,38 @@ export type AppealUploadEvidenceData = {
 };
 
 export type SubmitAppealPayload = {
-  relatedId: number;
+  /** 被申诉警告/处罚的 16 位 moderation_id（= GET /moderation/:id 的 id） */
+  relatedModerationId: ExternalModerationId;
+  /** 功能注释：GET /report/reasons?targetType=appeal 的 code */
+  reasonCode: string;
   reason: string;
   evidenceKeys: string[];
 };
 
 export type SubmitAppealData = {
-  appealId: number;
+  /** 16 位数字字符串，跳转 /appeals/{appealId} */
+  appealId: string;
   status: 'pending';
-  relatedId: number;
+  relatedModerationId: ExternalModerationId;
 };
 
 export type AppealListItem = {
-  id: number;
-  relatedId: number;
+  /** 16 位申诉 id 字符串 */
+  id: string;
+  relatedModerationId: ExternalModerationId;
   status: AppealStatus;
+  reasonCode?: string | null;
+  reasonTitle?: string | null;
   reason?: string | null;
   evidenceUrls?: string[];
   reviewNote?: string | null;
   createdAt?: string | null;
   reviewedAt?: string | null;
   notifyBody?: string | null;
+  targetOwnerNickname?: string | null;
+  targetOwnerUserCode?: string | null;
+  /** 仅作品对象 */
+  gameTitle?: string | null;
 };
 
 export type AppealListData = {
@@ -57,7 +72,8 @@ export type AppealListData = {
 };
 
 export type AppealTargetSnapshot = {
-  id: number;
+  /** 被申诉记录的 16 位 moderation_id */
+  id: ExternalModerationId;
   recordType?: string | null;
   level?: number | null;
   status?: string | null;
@@ -74,9 +90,10 @@ export type AppealDetail = AppealListItem & {
 export type AdminAppealStatus = 'pending' | 'approved' | 'rejected' | string;
 
 export type AdminAppealListItem = {
-  id: number;
+  /** 16 位 appealId */
+  id: string;
   userId: string;
-  relatedId: number;
+  relatedModerationId: ExternalModerationId;
   status: AdminAppealStatus;
   reason?: string | null;
   evidenceUrls?: string[];
@@ -106,6 +123,6 @@ export type AdminAppealReviewPayload = {
 };
 
 export type AdminAppealReviewResult = {
-  appealId: number;
+  appealId: string;
   status: AdminAppealStatus;
 };

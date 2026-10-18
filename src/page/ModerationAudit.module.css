@@ -1,0 +1,206 @@
+/* 功能注释：账号审核详情 — 结构对齐效果图，配色跟申诉中心墨黑 */
+
+.pageRoot {
+  min-height: 100vh;
+  background: #0b0b0c;
+  color: #ffffff;
+}
+
+.main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 100px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+}
+
+.backBtn {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.backBtn svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.profileCard,
+.card {
+  background: #1a1a1a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+}
+
+.profileCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+}
+
+.avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  object-fit: cover;
+  background: #2a2a2c;
+  flex-shrink: 0;
+}
+
+.nickname {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.accountId {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.card {
+  padding: 16px;
+}
+
+.cardHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.cardCount {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.bodyText {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.88);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.subText {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.55);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.statusChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #2a2a2c;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.statusValue {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: env(safe-area-inset-bottom, 0px);
+  display: flex;
+  justify-content: center;
+  padding: 10px 16px 12px;
+  background: linear-gradient(to top, #0b0b0c 70%, rgba(11, 11, 12, 0));
+  pointer-events: none;
+}
+
+.appealBtn {
+  pointer-events: auto;
+  appearance: none;
+  min-width: 220px;
+  padding: 12px 28px;
+  border-radius: 999px;
+  border: 1px solid #8e2135;
+  background: #8e2135;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.appealBtn:hover:not(:disabled) {
+  background: #a8283c;
+  border-color: #a8283c;
+}
+
+.appealBtn:disabled {
+  background: #2a2a2c;
+  border-color: transparent;
+  color: rgba(255, 255, 255, 0.35);
+  cursor: not-allowed;
+}
+
+.empty,
+.error {
+  margin: 32px 8px;
+  text-align: center;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.error {
+  color: #ff8a9a;
+}
+
+@media (min-width: 769px) {
+  .footer {
+    bottom: 16px;
+  }
+}

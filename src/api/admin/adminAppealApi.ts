@@ -18,10 +18,10 @@ const adminAppealApi = {
   listAppeals: (params?: AdminAppealListParams) =>
     api.get<ApiResponse<AdminAppealListData>>('/admin/appeals', { params }),
 
-  getAppeal: (id: number) =>
-    api.get<ApiResponse<AdminAppealDetail>>(`/admin/appeals/${id}`),
+  getAppeal: (id: string) =>
+    api.get<ApiResponse<AdminAppealDetail>>(`/appeals/${id}`),
 
-  reviewAppeal: (id: number, payload: AdminAppealReviewPayload) =>
+  reviewAppeal: (id: string, payload: AdminAppealReviewPayload) =>
     api.post<ApiResponse<AdminAppealReviewResult>>(`/admin/appeals/${id}/review`, payload),
 };
 

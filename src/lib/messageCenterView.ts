@@ -37,6 +37,26 @@ export function formatMessageListTime(value?: string | null, now: Date = new Dat
   return `${date.getMonth() + 1}月${date.getDate()}日`;
 }
 
+function pad2(n: number): string {
+  return String(n).padStart(2, '0');
+}
+
+/** 功能注释：安全通知卡片标题下日期 YYYY-MM-DD */
+export function formatMessageDateYmd(value?: string | null): string {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+}
+
+/** 功能注释：安全通知卡片字段时间 YYYY-MM-DD HH:mm:ss */
+export function formatMessageDateTime(value?: string | null): string {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`;
+}
+
 /** 功能注释：预览一行截断，避免列表撑高 */
 export function truncateMessagePreview(text: string, maxLen = 36): string {
   const cleaned = String(text || '')

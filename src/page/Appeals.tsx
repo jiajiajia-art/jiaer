@@ -4,9 +4,10 @@ import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import Navbar from '../components/Layout/Navbar';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
-import AppealSheet from '../components/Appeal/AppealSheet';
 import appealApi from '../api/appeal/appealApi';
 import type { AppealEligibleItem, AppealListItem } from '../api/appeal/appeal.type';
+import { formatAppealRecordTitle } from '../lib/appealRecordLabel';
+import { readRelatedModerationIdParam } from '../lib/externalModerationId';
 import { getApiErrorMessage } from '../utils/error';
 import styles from './Appeals.module.css';
 
@@ -21,14 +22,12 @@ const formatTime = (value?: string | null): string => {
 const Appeals: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
 
-  const relatedIdParam = useMemo(() => {
-    const raw = searchParams.get('relatedId');
-    if (!raw) return null;
-    const num = Number(raw);
-    return Number.isFinite(num) && num > 0 ? num : null;
-  }, [searchParams]);
+  const relatedModerationIdParam = useMemo(
+    () => readRelatedModerationIdParam(searchParams),
+    [searchParams],
+  );
 
   const [eligible, setEligible] = useState<AppealEligibleItem[]>([]);
   const [mine, setMine] = useState<AppealListItem[]>([]);
@@ -36,10 +35,16 @@ const Appeals: React.FC = () => {
   const [page, setPage] = useState(1);
   const [loadingEligible, setLoadingEligible] = useState(true);
   const [loadingMine, setLoadingMine] = useState(true);
-  const [sheetOpen, setSheetOpen] = useState(Boolean(relatedIdParam));
-  const [sheetRelatedId, setSheetRelatedId] = useState<number | null>(relatedIdParam);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const openSubmit = (id?: string | null) => {
+    if (id) {
+      navigate(`/appeal/submit?relatedModerationId=${encodeURIComponent(id)}`);
+      return;
+    }
+    navigate('/appeal/submit');
+  };
 
   const loadEligible = useCallback(async () => {
     setLoadingEligible(true);
@@ -87,26 +92,10 @@ const Appeals: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (relatedIdParam != null) {
-      setSheetRelatedId(relatedIdParam);
-      setSheetOpen(true);
+    if (relatedModerationIdParam != null) {
+      navigate(`/appeal/submit?relatedModerationId=${encodeURIComponent(relatedModerationIdParam)}`, { replace: true });
     }
-  }, [relatedIdParam]);
-
-  const openSheet = (id?: number | null) => {
-    setSheetRelatedId(id ?? null);
-    setSheetOpen(true);
-  };
-
-  const closeSheet = () => {
-    setSheetOpen(false);
-    setSheetRelatedId(null);
-    if (searchParams.has('relatedId')) {
-      const next = new URLSearchParams(searchParams);
-      next.delete('relatedId');
-      setSearchParams(next, { replace: true });
-    }
-  };
+  }, [navigate, relatedModerationIdParam]);
 
   const statusLabel = (status: string) => {
     if (status === 'pending') return t('appeal.statusPending');
@@ -124,7 +113,7 @@ const Appeals: React.FC = () => {
             {t('common.close')}
           </button>
           <h1 className={styles.title}>{t('appeal.pageTitle')}</h1>
-          <button type="button" className={styles.newBtn} onClick={() => openSheet(null)}>
+          <button type="button" className={styles.newBtn} onClick={() => openSubmit(null)}>
             {t('appeal.newAppeal')}
           </button>
         </header>
@@ -139,21 +128,22 @@ const Appeals: React.FC = () => {
             <ul className={styles.list}>
               {eligible.map((item) => (
                 <li key={item.id} className={styles.listItem}>
-                  <div className={styles.itemBody}>
+                  <div className={styles.itemHead}>
                     <div className={styles.itemTitle}>
-                      #{item.id} · {item.recordType}
-                      {item.level != null ? ` L${item.level}` : ''}
+                      {formatAppealRecordTitle(t, item.recordType, item.level)}
                     </div>
-                    <div className={styles.itemMeta}>{formatTime(item.createdAt)}</div>
-                    <p className={styles.itemDesc}>{item.notifyBody || t('appeal.targetFallback')}</p>
+                    <time className={styles.itemMeta}>{formatTime(item.createdAt)}</time>
                   </div>
-                  <button
-                    type="button"
-                    className={styles.actionBtn}
-                    onClick={() => openSheet(item.id)}
-                  >
-                    {t('appeal.goAppeal')}
-                  </button>
+                  <p className={styles.itemDesc}>{item.notifyBody || t('appeal.targetFallback')}</p>
+                  <div className={styles.itemFoot}>
+                    <button
+                      type="button"
+                      className={styles.actionBtn}
+                      onClick={() => openSubmit(item.id)}
+                    >
+                      {t('appeal.goAppeal')}
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -170,16 +160,20 @@ const Appeals: React.FC = () => {
             <>
               <ul className={styles.list}>
                 {mine.map((item) => (
-                  <li key={item.id} className={styles.listItem}>
-                    <div className={styles.itemBody}>
-                      <div className={styles.itemTitle}>
-                        #{item.id} · {statusLabel(String(item.status))}
-                      </div>
-                      <div className={styles.itemMeta}>
-                        {t('appeal.relatedIdLabel', { id: item.relatedId })} · {formatTime(item.createdAt)}
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      className={styles.listItem}
+                      onClick={() => navigate(`/appeals/${item.id}`)}
+                    >
+                      <div className={styles.itemHead}>
+                        <div className={styles.itemTitle}>
+                          {statusLabel(String(item.status))}
+                        </div>
+                        <time className={styles.itemMeta}>{formatTime(item.createdAt)}</time>
                       </div>
                       <p className={styles.itemDesc}>{item.reason || '—'}</p>
-                    </div>
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -209,16 +203,6 @@ const Appeals: React.FC = () => {
         </section>
       </div>
       <MobileBottomNav />
-
-      <AppealSheet
-        isOpen={sheetOpen}
-        relatedId={sheetRelatedId}
-        onClose={closeSheet}
-        onSubmitted={() => {
-          void loadEligible();
-          void loadMine(1);
-        }}
-      />
     </div>
   );
 };

@@ -46,7 +46,8 @@ export type AdminPunishmentSnapshot = {
 };
 
 export type AdminModerationHistoryItem = {
-  id: number;
+  /** 警告/处罚 → moderation_id；申诉 → appeal_id（均为 16 位字符串；未补数可能为 null） */
+  id: string | null;
   recordType: string;
   level?: number | null;
   status?: string | null;
@@ -81,7 +82,8 @@ export type AdminReportReviewResult = {
 };
 
 export type AdminPenaltyListItem = {
-  id: number;
+  /** 16 位 moderation_id */
+  id: string;
   userId: string;
   recordType: string;
   level: number | null;
@@ -104,8 +106,35 @@ export type AdminReportListParams = {
   status?: AdminReportStatus | '';
   targetType?: AdminReportTargetType | '';
   keyword?: string;
+  targetOwnerUserId?: string;
+  /** 被举报人 / 创作者当前昵称，模糊匹配 */
+  targetOwnerNickname?: string;
+  reporterUserId?: string;
   page?: number;
   pageSize?: number;
+};
+
+export type AdminModerationDetail = {
+  /** 16 位 moderation_id 字符串 */
+  id: string;
+  userId?: string;
+  recordType: string;
+  level?: number | null;
+  status?: string | null;
+  notifyBody?: string | null;
+  reportId?: number | null;
+  reasonCode?: string | null;
+  reasonTitle?: string | null;
+  reportDetail?: string | null;
+  sourceType?: string | null;
+  sourceId?: string | null;
+  createdAt?: string | null;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  observationUntil?: string | null;
+  hasAppealed?: boolean;
+  canAppeal?: boolean;
+  appealId?: string | null;
 };
 
 const adminReportApi = {
@@ -114,6 +143,9 @@ const adminReportApi = {
 
   getReport: (id: number) =>
     api.get<ApiResponse<AdminReportDetail>>(`/admin/reports/${id}`),
+
+  getModeration: (id: string) =>
+    api.get<ApiResponse<AdminModerationDetail>>(`/moderation/${encodeURIComponent(id)}`),
 
   reviewReport: (id: number, payload: AdminReportReviewPayload) =>
     api.post<ApiResponse<AdminReportReviewResult>>(`/admin/reports/${id}/review`, payload),

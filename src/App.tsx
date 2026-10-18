@@ -45,6 +45,9 @@ import AdminPanel from './page/AdminPanel';
 import { AdminRoute } from './components/AdminRoute';
 import CommentAdminPage from './page/CommentAdminPage';
 import Appeals from './page/Appeals';
+import AppealResult from './page/AppealResult';
+import AppealSubmit from './page/AppealSubmit';
+import ModerationAudit from './page/ModerationAudit';
 import OperatorWorkStats from './page/operator/OperatorWorkStats';
 import CreatorWorkStats from './page/creator/CreatorWorkStats';
 import OperatorPanel from './page/operator/OperatorPanel';
@@ -197,6 +200,10 @@ function App() {
           <Route path="/promotions" element={<PromotionCenter />} />
           <Route path="/messages" element={<Messages />} />
           <Route path="/appeals" element={<Appeals />} />
+          {/* 功能注释：发起申诉勿挂在 /appeals/:id 下，否则 submit 会被当成 appealId */}
+          <Route path="/appeal/submit" element={<AppealSubmit />} />
+          <Route path="/appeals/:appealId" element={<AppealResult />} />
+          <Route path="/moderation/:moderationId" element={<ModerationAudit />} />
           <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/promotions" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/promotions/:promotionView" element={<AdminRoute><AdminPanel /></AdminRoute>} />

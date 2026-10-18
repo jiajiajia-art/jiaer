@@ -1,13 +1,6 @@
 import type { ApiResponse } from '../api.types';
 import { api, UPLOAD_TIMEOUT_MS } from '../base';
-import {
-  USE_APPEAL_MOCK,
-  mockGetAppeal,
-  mockGetEligible,
-  mockListAppeals,
-  mockSubmitAppeal,
-  mockUploadEvidence,
-} from './appealMock';
+import type { ReportReasonsData } from '../report/report.type';
 import type {
   AppealDetail,
   AppealEligibleData,
@@ -18,13 +11,15 @@ import type {
 } from './appeal.type';
 
 const appealApi = {
-  getEligible: () => {
-    if (USE_APPEAL_MOCK) return mockGetEligible();
-    return api.get<ApiResponse<AppealEligibleData>>('/appeals/eligible');
-  },
+  getEligible: () =>
+    api.get<ApiResponse<AppealEligibleData>>('/appeals/eligible'),
+
+  getReasonOptions: () =>
+    api.get<ApiResponse<ReportReasonsData>>('/report/reasons', {
+      params: { targetType: 'appeal' },
+    }),
 
   uploadEvidence: (file: File) => {
-    if (USE_APPEAL_MOCK) return mockUploadEvidence(file);
     const formData = new FormData();
     formData.append('file', file);
     return api.post<ApiResponse<AppealUploadEvidenceData>>('/appeals/evidence', formData, {
@@ -33,21 +28,14 @@ const appealApi = {
     });
   },
 
-  submit: (payload: SubmitAppealPayload) => {
-    if (USE_APPEAL_MOCK) return mockSubmitAppeal(payload);
-    return api.post<ApiResponse<SubmitAppealData>>('/appeals', payload);
-  },
+  submit: (payload: SubmitAppealPayload) =>
+    api.post<ApiResponse<SubmitAppealData>>('/appeals', payload),
 
-  listMine: (params?: { page?: number; pageSize?: number }) => {
-    if (USE_APPEAL_MOCK) return mockListAppeals(params);
-    return api.get<ApiResponse<AppealListData>>('/appeals', { params });
-  },
+  listMine: (params?: { page?: number; pageSize?: number }) =>
+    api.get<ApiResponse<AppealListData>>('/appeals', { params }),
 
-  getMine: (id: number) => {
-    if (USE_APPEAL_MOCK) return mockGetAppeal(id);
-    return api.get<ApiResponse<AppealDetail>>(`/appeals/${id}`);
-  },
+  getMine: (id: string) =>
+    api.get<ApiResponse<AppealDetail>>(`/appeals/${id}`),
 };
 
 export default appealApi;
-export { USE_APPEAL_MOCK };

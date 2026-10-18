@@ -7,7 +7,7 @@ import type { ReportReasonItem, ReportTargetType } from '../../api/report/report
 import { getApiErrorMessage } from '../../utils/error';
 import styles from './ReportSheet.module.css';
 
-const MAX_DETAIL = 500;
+const MAX_DETAIL = 400;
 const MAX_EVIDENCE = 3;
 const MAX_EVIDENCE_BYTES = 5 * 1024 * 1024;
 
@@ -148,14 +148,15 @@ const ReportSheet: React.FC<ReportSheetProps> = ({
   };
 
   const handleSubmit = async () => {
-    if (!reasonCode || submitting) return;
+    const trimmedDetail = detail.trim();
+    if (!reasonCode || submitting || trimmedDetail.length > MAX_DETAIL) return;
     setSubmitting(true);
     try {
       const res = await reportApi.submit({
         targetType,
         targetId,
         reasonCode,
-        detail: detail.trim() || undefined,
+        detail: trimmedDetail || undefined,
         evidenceKeys: evidence.map((item) => item.key),
       });
       if (!res.data.success) {
@@ -245,14 +246,16 @@ const ReportSheet: React.FC<ReportSheetProps> = ({
           )}
 
           <div className={styles.sectionLabel}>{t('report.detailLabel')}</div>
-          <textarea
-            className={styles.textarea}
-            value={detail}
-            maxLength={MAX_DETAIL}
-            placeholder={t('report.detailPlaceholder')}
-            onChange={(e) => setDetail(e.target.value)}
-          />
-          <p className={styles.charCount}>{detail.length}/{MAX_DETAIL}</p>
+          <div className={styles.textareaWrap}>
+            <textarea
+              className={styles.textarea}
+              value={detail}
+              maxLength={MAX_DETAIL}
+              placeholder={t('report.detailPlaceholder')}
+              onChange={(e) => setDetail(e.target.value)}
+            />
+            <p className={styles.charCount}>{detail.length}/{MAX_DETAIL}</p>
+          </div>
 
           <div className={styles.sectionLabel}>{t('report.evidenceLabel')}</div>
           <div className={styles.evidenceRow}>
