@@ -25,8 +25,9 @@ test('registration legal links stay inside the active Vite base path', () => {
     resolveRegistrationAgreementUrl('privacy-policy', {
       origin: '',
       base: '/',
+      language: 'en',
     }),
-    '/legal/privacy-policy',
+    '/legal/privacy-policy?lang=en',
   );
 });
 

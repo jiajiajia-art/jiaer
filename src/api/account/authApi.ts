@@ -9,6 +9,7 @@ import type {
   ExchangeDiamondsRequest,
   ExchangeDiamondsResponse,
   GetPointsActivitiesParams,
+  GoogleLoginRequest,
   LoginRequest,
   MembershipSignInStatus,
   PointsActivitiesResponse,
@@ -94,7 +95,7 @@ export const auth = {
   redeemSubscriptionKey: (data: { redeemKey: string }) =>
     api.post<ApiResponse<SubscriptionRedeemResult>>('/subscriptions/redeem', data),
 
-  googleLogin: (data: { idToken: string }) =>
+  googleLogin: (data: GoogleLoginRequest) =>
     api.post<ApiResponse<AuthResponse>>('/auth/google/login', data),
 
   exchangeDiamonds: (data: ExchangeDiamondsRequest) =>

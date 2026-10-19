@@ -210,19 +210,30 @@ export const useAuthStore = create<AuthState>()(
 
 
 export type AuthModalMode = 'login' | 'register' | 'reset';
+export type LoginAgreementErrorCode = 'AGREEMENT_REQUIRED' | 'AGREEMENT_VERSION_MISMATCH';
 
 interface AuthModalState {
   isAuthModalOpen: boolean;
   authModalMode: AuthModalMode;
+  pendingAuthErrorCode: LoginAgreementErrorCode | null;
   setIsAuthModalOpen: (isAuthModalOpen: boolean) => void;
   setAuthModalMode: (authModalMode: AuthModalMode) => void;
+  setPendingAuthErrorCode: (errorCode: LoginAgreementErrorCode | null) => void;
+  consumePendingAuthErrorCode: () => LoginAgreementErrorCode | null;
 }
 
 export const authModalStore = create<AuthModalState>()(
-    (set) => ({
+    (set, get) => ({
       isAuthModalOpen: false,
       authModalMode: 'login',
+      pendingAuthErrorCode: null,
       setIsAuthModalOpen: (data: boolean) => set({ isAuthModalOpen: data }),
       setAuthModalMode: (data: AuthModalMode) => set({ authModalMode: data }),
+      setPendingAuthErrorCode: (data) => set({ pendingAuthErrorCode: data }),
+      consumePendingAuthErrorCode: () => {
+        const errorCode = get().pendingAuthErrorCode;
+        set({ pendingAuthErrorCode: null });
+        return errorCode;
+      },
     }),
 );

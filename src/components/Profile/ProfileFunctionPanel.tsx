@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styles from '../../page/Profile.module.css';
-import { useAuthStore } from '../../store/useAuthStore';
+import { authModalStore, useAuthStore } from '../../store/useAuthStore';
 import { auth } from '../../api/account/authApi';
 import MembershipRedeemResultModal from '../../components/MembershipRedeemResultModal';
 import ConfirmModal from '../CommonModal/ConfirmModal';
@@ -23,6 +23,14 @@ import JoinGroupModal from '../../components/JoinGroupModal';
 import type { SubscriptionRedeemResult, User } from '../../api/account/auth.type';
 import type { SubscriptionPlanId } from '../../api/subscriptionKeys/subscriptionKeysApi.type';
 import { getApiErrorMessage } from '../../utils/error';
+import {
+    hasCurrentHostLoginAgreementAccepted,
+    hasCurrentLoginAgreementAccepted,
+    markLoginAgreementAccepted,
+    REGISTRATION_AGREEMENT_VERSION,
+    REGISTRATION_PRIVACY_POLICY_VERSION,
+} from '../../lib/registrationAgreement';
+import { notifyMiniProgramLoginAgreementRequired } from '../../lib/miniProgramLoginAgreement';
 
 const isWebViewEnv = (): boolean => {
     const win = window as unknown as Record<string, unknown>;
@@ -161,6 +169,23 @@ const ProfileFunctionPanel: React.FC = () => {
             return;
         }
 
+        const agreementSubject = user?.user?.userId;
+        if (!agreementSubject || !hasCurrentLoginAgreementAccepted(agreementSubject)) {
+            if (isWebViewEnv()) {
+                if (!agreementSubject || !hasCurrentHostLoginAgreementAccepted()) {
+                    notifyMiniProgramLoginAgreementRequired();
+                    return;
+                }
+                markLoginAgreementAccepted(agreementSubject);
+            } else {
+                const modal = authModalStore.getState();
+                modal.setPendingAuthErrorCode('AGREEMENT_REQUIRED');
+                modal.setAuthModalMode('login');
+                modal.setIsAuthModalOpen(true);
+                return;
+            }
+        }
+
         try {
             setIsBindingAccount(true);
             const response = await auth.bindAccount({
@@ -175,7 +200,13 @@ const ProfileFunctionPanel: React.FC = () => {
 
                 logout();
                 try {
-                    const loginResp = await auth.login({ phoneNumber: phone, password: bindPassword });
+                    const loginResp = await auth.login({
+                        phoneNumber: phone,
+                        password: bindPassword,
+                        agreementAccepted: true,
+                        userAgreementVersion: REGISTRATION_AGREEMENT_VERSION,
+                        privacyPolicyVersion: REGISTRATION_PRIVACY_POLICY_VERSION,
+                    });
                     if (loginResp.data.success && loginResp.data.data) {
                         login(loginResp.data.data);
                     }

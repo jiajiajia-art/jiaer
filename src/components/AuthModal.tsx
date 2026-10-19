@@ -11,7 +11,14 @@ import { getOrCreatePromoAnonId } from '../utils/promoAnonId';
 import { authModalStore, useAuthStore } from '../store/useAuthStore';
 import { useGoogleAuth } from '../hooks/useGoogleAuth';
 import { isPrivacyAgreementAccepted } from '../lib/privacyPolicy';
-import { resolveRegistrationAgreementUrl } from '../lib/registrationAgreement';
+import {
+    REGISTRATION_AGREEMENT_VERSION,
+    REGISTRATION_PRIVACY_POLICY_VERSION,
+    clearPendingGoogleLoginAgreementAccepted,
+    markLoginAgreementAccepted,
+    markPendingGoogleLoginAgreementAccepted,
+    resolveRegistrationAgreementUrl,
+} from '../lib/registrationAgreement';
 import { isRegistrationRequestTimeout } from '../lib/registrationRequest';
 import {
     clearRegistrationSessionId,
@@ -51,6 +58,9 @@ const createRegistrationRequestId = (): string => {
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegister }) => {
     const { t, i18n } = useTranslation();
     const navigate = useNavigate();
+    const pendingAuthErrorCode = authModalStore(
+        (state) => state.pendingAuthErrorCode,
+    );
     const requestedAuthMode = authModalStore.getState().authModalMode;
     // 功能注释：按运行时语言决定 Google-only（IP 英文区），不用编译期 LANGUAGE
     const isGoogleOnly = String(i18n.language || '').toLowerCase().startsWith('en');
@@ -92,7 +102,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
     const [submitError, setSubmitError] = useState('');
     const [codeNotice, setCodeNotice] = useState('');
     const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-    /** Registration requires the shared user-agreement and privacy-policy checkbox. */
+    /** Login and registration require the shared user-agreement and privacy-policy checkbox. */
     const [privacyAgreed, setPrivacyAgreed] = useState(false);
     const [privacyError, setPrivacyError] = useState('');
     const { login } = useAuthStore();
@@ -102,8 +112,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
     const sendCodeInFlightRef = useRef(false);
     const overlayPointerRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
     const { loginWithGoogle } = useGoogleAuth();
-    const privacyPolicyUrl = resolveRegistrationAgreementUrl('privacy-policy');
-    const userAgreementUrl = resolveRegistrationAgreementUrl('user-agreement');
+    const legalLanguage = isGoogleOnly ? 'en' : 'zh';
+    const privacyPolicyUrl = resolveRegistrationAgreementUrl('privacy-policy', { language: legalLanguage });
+    const userAgreementUrl = resolveRegistrationAgreementUrl('user-agreement', { language: legalLanguage });
 
     const handleLegalDocumentClick = (
         event: React.MouseEvent<HTMLAnchorElement>,
@@ -113,7 +124,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         if (typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 767px)').matches) {
             event.preventDefault();
             authModalStore.getState().setAuthModalMode(mode);
-            navigate(`/legal/${document}`);
+            navigate(`/legal/${document}?lang=${legalLanguage}`);
         }
     };
 
@@ -125,6 +136,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
             }
         };
     }, []);
+
+    useEffect(() => {
+        if (isOpen) {
+            setPrivacyAgreed(false);
+            setPrivacyError('');
+        }
+    }, [isOpen]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -174,6 +192,26 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         setError('');
         setShake(false);
     };
+
+    const handleAgreementRequestError = (errorCode?: string): boolean => {
+        if (errorCode === 'AGREEMENT_REQUIRED') {
+            setPrivacyAgreed(false);
+            setPrivacyError(t('validation.agreementRequired'));
+            return true;
+        }
+        if (errorCode === 'AGREEMENT_VERSION_MISMATCH') {
+            setPrivacyAgreed(false);
+            setPrivacyError(t('auth.agreementUpdatedPleaseConfirm'));
+            return true;
+        }
+        return false;
+    };
+
+    useEffect(() => {
+        if (!isOpen || !pendingAuthErrorCode) return;
+        const pendingErrorCode = authModalStore.getState().consumePendingAuthErrorCode();
+        if (pendingErrorCode) handleAgreementRequestError(pendingErrorCode);
+    }, [isOpen, pendingAuthErrorCode]);
 
     const invalidateRegistrationRequest = () => {
         registrationRequestIdRef.current = null;
@@ -258,6 +296,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         }
         setPhone(value);
         if (phoneError) clearFieldError(setPhoneError, setPhoneShake);
+        if (mode === 'login' && submitError) setSubmitError('');
     };
 
     const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -265,6 +304,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         setPassword(value);
         if (mode === 'register') invalidateRegistrationRequest();
         if (passwordError) clearFieldError(setPasswordError, setPasswordShake);
+        if (mode === 'login' && submitError) setSubmitError('');
 
         // 如果确认密码已填写，重新验证
         if (confirmPassword && (mode === 'register' || mode === 'reset')) {
@@ -402,6 +442,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                 setFieldError(setPasswordError, setPasswordShake, t('validation.passwordMinLength'));
                 hasError = true;
             }
+            if (!isPrivacyAgreementAccepted(privacyAgreed)) {
+                setPrivacyError(t('validation.agreementRequired'));
+                hasError = true;
+            }
         }
 
         // 注册模式验证
@@ -470,25 +514,44 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
 
     // ========== Google 登录 ==========
     const handleGoogleLogin = async () => {
-        // 功能注释：海外 Google 一键登录同样须先同意外置隐私政策
+        // 海外 Google 登录须先同意用户协议和隐私政策
         if (!isPrivacyAgreementAccepted(privacyAgreed)) {
-            setPrivacyError(t('validation.privacyRequired'));
+            setPrivacyError(t('validation.agreementRequired'));
             return;
         }
         setPrivacyError('');
         setIsGoogleLoading(true);
         setSubmitError('');
+        const isRedirectLogin = !import.meta.env.DEV;
         try {
+            if (isRedirectLogin) {
+                markPendingGoogleLoginAgreementAccepted();
+            }
             const result = await loginWithGoogle();
-            if (result.success) {
+            if (isRedirectLogin && !(result.success && result.redirecting)) {
+                clearPendingGoogleLoginAgreementAccepted();
+            }
+            if (result.success && result.data) {
+                login(result.data);
+                markLoginAgreementAccepted(result.firebaseUid);
                 resetAllStates();
                 onClose();
+            } else if (result.success && result.redirecting) {
+                return;
+            } else if (handleAgreementRequestError(result.code)) {
+                return;
             } else {
                 setSubmitError(result.message || t('auth.googleLoginFailed'));
             }
         } catch (error: any) {
             console.error('Google login error:', error);
-            setSubmitError(error.message || t('auth.googleLoginFailed'));
+            if (isRedirectLogin) {
+                clearPendingGoogleLoginAgreementAccepted();
+            }
+            const errorCode = error.response?.data?.code || error.code;
+            if (!handleAgreementRequestError(errorCode)) {
+                setSubmitError(error.message || t('auth.googleLoginFailed'));
+            }
         } finally {
             setIsGoogleLoading(false);
         }
@@ -510,10 +573,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                 const response = await auth.login({
                     phoneNumber: phone,
                     password: password,
+                    agreementAccepted: true,
+                    userAgreementVersion: REGISTRATION_AGREEMENT_VERSION,
+                    privacyPolicyVersion: REGISTRATION_PRIVACY_POLICY_VERSION,
                 });
 
                 if (response.data?.data) {
                     login(response.data.data);
+                    markLoginAgreementAccepted(response.data.data.user.userId);
                     // 登录前若点过推广链，session 里可能有 pending click，交给后端一次性归因
                     void gamePromotionApi.consumePending(getOrCreatePromoAnonId()).catch(() => {});
                     if (onLogin) {
@@ -546,6 +613,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                 if (response.data?.data) {
                     trackRegistrationEvent('registration_success', registrationSessionId);
                     login(response.data.data);
+                    markLoginAgreementAccepted(response.data.data.user.userId);
                     void gamePromotionApi.consumePending(getOrCreatePromoAnonId()).catch(() => {});
 
                     if (onRegister) {
@@ -589,7 +657,19 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
             }
             const errorMessage = error.response?.data?.message || error.message || t('common.error');
             const errorCode = error.response?.data?.code;
-            if (mode === 'register' && errorCode === 'INVALID_INVITE_CODE') {
+            if (mode === 'login' && handleAgreementRequestError(errorCode)) {
+                return;
+            } else if (mode === 'login' && errorCode === 'INVALID_LOGIN_CREDENTIALS') {
+                setSubmitError(t('auth.invalidLoginCredentials'));
+            } else if (mode === 'reset' && errorCode === 'PHONE_NOT_REGISTERED') {
+                setFieldError(setResetPhoneError, setResetPhoneShake, t('auth.phoneNotRegistered'));
+            } else if (mode === 'reset' && errorCode === 'INVALID_CODE') {
+                setFieldError(setVerificationCodeError, setVerificationCodeShake, t('auth.invalidVerificationCode'));
+            } else if (mode === 'reset' && errorCode === 'CODE_EXPIRED') {
+                setFieldError(setVerificationCodeError, setVerificationCodeShake, t('auth.verificationCodeExpired'));
+            } else if (mode === 'reset' && errorCode === 'TOO_MANY_ATTEMPTS') {
+                setFieldError(setVerificationCodeError, setVerificationCodeShake, t('auth.tooManyVerificationAttempts'));
+            } else if (mode === 'register' && errorCode === 'INVALID_INVITE_CODE') {
                 setInviteCodeError(errorMessage);
             } else if (mode === 'register' && ['INVALID_CODE', 'CODE_EXPIRED', 'TOO_MANY_ATTEMPTS'].includes(errorCode)) {
                 setFieldError(setVerificationCodeError, setVerificationCodeShake, errorMessage);
@@ -723,10 +803,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                 {isGoogleOnly ? (
                     <>
                         <div className={styles.googleOnlyDivider} />
-                        {/* 功能注释：海外 Google 登录前须勾选同意外置隐私政策 */}
+                        {/* 海外 Google 登录前须勾选同意用户协议和隐私政策 */}
                         <div className={styles.privacyRow}>
-                            <label className={styles.privacyLabel}>
+                            <div className={styles.privacyLabel}>
                                 <input
+                                    id="google-login-agreement"
                                     type="checkbox"
                                     className={styles.privacyCheckbox}
                                     checked={privacyAgreed}
@@ -736,7 +817,19 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                                     }}
                                 />
                                 <span>
-                                    {t('auth.privacyAgreePrefix')}
+                                    <label htmlFor="google-login-agreement">
+                                        {t('auth.agreementPrefix')}
+                                    </label>
+                                    <a
+                                        href={userAgreementUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className={styles.privacyLink}
+                                        onClick={(event) => handleLegalDocumentClick(event, 'user-agreement')}
+                                    >
+                                        {t('auth.userAgreement')}
+                                    </a>
+                                    {t('auth.agreementJoiner')}
                                     <a
                                         href={privacyPolicyUrl}
                                         target="_blank"
@@ -747,7 +840,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                                         {t('auth.privacyPolicy')}
                                     </a>
                                 </span>
-                            </label>
+                            </div>
                             {privacyError ? (
                                 <div className={styles.errorMessage}>{privacyError}</div>
                             ) : null}
@@ -918,24 +1011,24 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                             </div>
                         )}
 
-                        {/* One checkbox covers both registration agreements; links do not toggle it. */}
-                        {mode === 'register' && (
+                        {/* 登录和注册共用双协议勾选；重置密码不要求勾选。 */}
+                        {mode !== 'reset' && (
                             <div className={styles.privacyRow}>
                                 <div className={styles.privacyLabel}>
                                     <input
-                                        id="registration-agreement"
+                                        id="phone-auth-agreement"
                                         type="checkbox"
                                         className={styles.privacyCheckbox}
                                         checked={privacyAgreed}
                                         disabled={isLoading}
                                         onChange={(e) => {
                                             setPrivacyAgreed(e.target.checked);
-                                            invalidateRegistrationRequest();
+                                            if (mode === 'register') invalidateRegistrationRequest();
                                             if (e.target.checked) setPrivacyError('');
                                         }}
                                     />
                                     <span>
-                                        <label htmlFor="registration-agreement">
+                                        <label htmlFor="phone-auth-agreement">
                                             {t('auth.agreementPrefix')}
                                         </label>
                                         <a

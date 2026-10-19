@@ -186,6 +186,16 @@ export interface BindAccountRequest {
 export interface LoginRequest {
   phoneNumber: string;
   password: string;
+  agreementAccepted: true;
+  userAgreementVersion: string;
+  privacyPolicyVersion: string;
+}
+
+export interface GoogleLoginRequest {
+  idToken: string;
+  agreementAccepted: true;
+  userAgreementVersion: string;
+  privacyPolicyVersion: string;
 }
 
 // 登录响应
