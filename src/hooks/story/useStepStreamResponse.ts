@@ -3,7 +3,10 @@ import { truncateStepsAfterChoice } from '../mapGalgame/common/interactionUtils'
 import { cleanHistoryMessage, sanitizeVisualOptionText, stripNonStoryControlMarkup } from '../../utils/textUtils';
 import { isGenerationBusyError } from '../../lib/galgame/choiceStepDisplayGate';
 import { choiceStepHasPlayableOptions } from '../../lib/galgame/playChoiceOptions';
-import { normalizeUserFacingStreamError } from '../../lib/galgame/normalizeStreamErrorMessage';
+import {
+    isTransientNetworkStreamError,
+    normalizeUserFacingStreamError,
+} from '../../lib/galgame/normalizeStreamErrorMessage';
 import type { StreamBusinessError } from '../../lib/galgame/playBilling';
 import {
     appendRawTextBridge,
@@ -14,6 +17,10 @@ import {
     pickLatestSceneChangeStep,
 } from '../../lib/story/rawTextStepBridge';
 import { shouldDeferFormalStepForRawTextBridge } from '../../lib/story/rawTextStreamPolicy';
+import {
+    extractStreamPerfFromSseJson,
+    recordAndLogStreamPerf,
+} from '../../lib/galgame/streamPerfDebug';
 
 interface UseStepStreamResponseOptions {
     setStepQueue: React.Dispatch<React.SetStateAction<any[]>>;
@@ -357,8 +364,8 @@ export const useStepStreamResponse = ({
                 firstStepReceived = false;
                 streamFailed = false;
                 rawTextBridgeBuffer = '';
+                // 功能注释：保留 rawAppendActive，避免 retry 后短窗内 formal handoff 清掉已上屏旁白
                 formalStepsStarted = false;
-                rawTextAppendActive = false;
                 latestDialoguePortrait = null;
                 portraitFlushedOnce = false;
                 clearPortraitCoalesceHandle();
@@ -450,6 +457,12 @@ export const useStepStreamResponse = ({
                         // 检查是否是当前请求的数据
                         if (currentRequestId.current !== requestId) {
                             continue;
+                        }
+
+                        // 功能注释：测试环境 STREAM_PERF——控制台比对 TTFT/吞吐（带 requestId，便于对照）
+                        const streamPerf = extractStreamPerfFromSseJson(jsonData);
+                        if (streamPerf) {
+                            recordAndLogStreamPerf(streamPerf, { requestId });
                         }
 
                         // 透传给上层（例如 worldInteraction 想拿到 interaction / allSteps 等）
@@ -674,6 +687,11 @@ export const useStepStreamResponse = ({
                 try {
                     const jsonData = JSON.parse(dataStr);
 
+                    const streamPerfTail = extractStreamPerfFromSseJson(jsonData);
+                    if (streamPerfTail) {
+                        recordAndLogStreamPerf(streamPerfTail, { requestId });
+                    }
+
                     // 透传给上层
                     options?.onActivity?.(jsonData);
                     options?.onData?.(jsonData);
@@ -683,8 +701,8 @@ export const useStepStreamResponse = ({
                     }
 
                     if (jsonData.type === 'generation_retry') {
+                        // 功能注释：缓冲区尾部的 retry 不得提前 return 整段流处理；继续走成功/失败收尾
                         resetTransientStreamStateForRetry();
-                        return;
                     }
 
                     if (!missionFlagged && shouldTriggerMissionFlag(jsonData)) {
@@ -831,10 +849,16 @@ export const useStepStreamResponse = ({
                 options?.onSuccess?.();
             }
         } catch (error) {
-            console.error('❌ 流式数据接收错误:', error);
+            const friendly = normalizeUserFacingStreamError(error);
+            // 功能注释：部署/代理闪断常见 TypeError: network error；降级为 warn，由上层有限重试或弹窗
+            if (isTransientNetworkStreamError(error) || isTransientNetworkStreamError(friendly)) {
+                console.warn('❌ 流式数据接收错误(网络瞬时):', friendly);
+            } else {
+                console.error('❌ 流式数据接收错误:', error);
+            }
             setSelectedOptionIndex(null);
             setIsWaitingForData(false);
-            options?.onError?.(normalizeUserFacingStreamError(error));
+            options?.onError?.(friendly);
         }
     }, [setStepQueue, setSelectedOptionIndex, setIsWaitingForData, currentRequestId, enableRawTextStepBridge]);
 

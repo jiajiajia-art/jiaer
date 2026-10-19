@@ -7,7 +7,9 @@ import assert from 'node:assert/strict';
 import { canSubmitChoiceInteraction } from '../src/lib/galgame/choiceInteractionGate.ts';
 import {
   GENERATION_BUSY_MAX_RETRIES,
+  NETWORK_STREAM_MAX_RETRIES,
   getGenerationBusyRetryDelayMs,
+  getNetworkStreamRetryDelayMs,
   isGenerationBusyError,
   shouldAutoPromoteReadyChoice,
   shouldClearCurrentStepWhenDeferringChoice,
@@ -150,4 +152,11 @@ test('resolveChoiceStepPromptMessage_description优先_content回退', () => {
     '抉择\n月下',
   );
   assert.equal(resolveChoiceStepPromptMessage({}), '请选择你的行动');
+});
+
+test('networkStreamRetry_退避应长于锁冲突且次数有限', () => {
+  assert.equal(NETWORK_STREAM_MAX_RETRIES, 2);
+  assert.ok(getNetworkStreamRetryDelayMs(0) >= getGenerationBusyRetryDelayMs(0));
+  assert.ok(getNetworkStreamRetryDelayMs(2) <= 4000);
+  assert.ok(GENERATION_BUSY_MAX_RETRIES >= 1);
 });

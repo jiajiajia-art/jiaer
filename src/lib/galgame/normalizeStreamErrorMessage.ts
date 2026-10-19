@@ -1,3 +1,34 @@
+/**
+ * 功能注释：识别 SSE/fetch 瞬时断连（部署重启、代理闪断、浏览器 TypeError: network error）。
+ * 用于友好文案、有限重试，并避免清空画布后立刻「自动重发」再刷一条红错。
+ */
+export function isTransientNetworkStreamError(error: unknown): boolean {
+    const parts: string[] = [];
+    if (typeof error === 'string') {
+        parts.push(error);
+    } else if (error instanceof Error) {
+        parts.push(error.name || '', error.message || '');
+    } else if (error != null) {
+        parts.push(String(error));
+    }
+    const text = parts.join(' ').toLowerCase();
+    if (!text.trim()) return false;
+    return (
+        text.includes('network error')
+        || text.includes('networkerror')
+        || text.includes('failed to fetch')
+        || text.includes('load failed')
+        || text.includes('err_network')
+        || text.includes('err_connection')
+        || text.includes('econnreset')
+        || text.includes('connection_reset')
+        || text.includes('connection was lost')
+        || text.includes('the network connection was lost')
+        || text.includes('流式连接中断')
+        || text.includes('网络中断')
+    );
+}
+
 /** 将流式游玩接口的错误原文转为用户可读中文文案 */
 export function normalizeUserFacingStreamError(error: unknown): string {
     let message = typeof error === 'string'
@@ -5,6 +36,10 @@ export function normalizeUserFacingStreamError(error: unknown): string {
         : error instanceof Error
             ? error.message
             : '发生错误';
+
+    if (isTransientNetworkStreamError(error) || isTransientNetworkStreamError(message)) {
+        return '网络中断，生成连接已断开，请点击重试。';
+    }
 
     if (typeof message === 'string' && message.trim().startsWith('{')) {
         try {
