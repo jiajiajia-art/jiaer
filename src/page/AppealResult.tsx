@@ -5,20 +5,11 @@ import toast from 'react-hot-toast';
 import appealApi from '../api/appeal/appealApi';
 import type { AppealDetail } from '../api/appeal/appeal.type';
 import { formatMessageDateTime } from '../lib/messageCenterView';
-import { getImageUrl } from '../utils/constants';
+import { resolveEvidenceImageUrl } from '../utils/evidenceImageUrl';
 import { getApiErrorMessage } from '../utils/error';
 import styles from './AppealResult.module.css';
 
 const DESC_COLLAPSE_LEN = 72;
-
-/** 功能注释：申诉证据多为 R2 key，读图走 /public 代理（与 Admin 举报/申诉证据一致） */
-function resolveEvidenceImageUrl(keyOrUrl: string): string {
-  const raw = String(keyOrUrl || '').trim();
-  if (!raw) return '';
-  if (/^https?:\/\//i.test(raw)) return raw;
-  if (raw.startsWith('/public/') || raw.startsWith('public/')) return getImageUrl(raw);
-  return getImageUrl(`public/${raw.replace(/^\//, '')}`);
-}
 
 const AppealResult: React.FC = () => {
   const { t } = useTranslation();
@@ -98,11 +89,6 @@ const AppealResult: React.FC = () => {
     }
   };
 
-  const handleReappeal = () => {
-    if (!detail?.relatedModerationId) return;
-    navigate(`/appeal/submit?relatedModerationId=${encodeURIComponent(detail.relatedModerationId)}`);
-  };
-
   return (
     <div className={styles.pageRoot}>
       <div className={styles.main}>
@@ -142,11 +128,6 @@ const AppealResult: React.FC = () => {
                 )}
               </div>
               <p className={styles.statusLabel}>{statusText}</p>
-              {isRejected ? (
-                <button type="button" className={styles.reappealBtn} onClick={handleReappeal}>
-                  {t('appeal.reappeal')}
-                </button>
-              ) : null}
             </section>
 
             <section className={styles.card}>

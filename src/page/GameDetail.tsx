@@ -347,6 +347,8 @@ const GameDetail: React.FC = () => {
     const creatorFollowActionable = showCreatorFollowBtn && !isCreatorBlocked && !isCreatorBlockedBy;
 
     const handleOpenCreatorHomepage = () => {
+        // 功能注释：未登录先弹登录
+        if (!checkAuth()) return;
         if (!creatorUserCode) {
             toast.error(t('create.previewHomepageNoCode'));
             return;

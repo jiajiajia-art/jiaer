@@ -93,7 +93,7 @@
     "timeLabel": "申诉时间",
     "expandDescription": "展开申诉描述",
     "collapseDescription": "收起申诉描述",
-    "reappeal": "再次申诉",
+    "cannotAppeal": "该记录已申诉过或已超过申诉期限，无法再次提交",
     "loadDetailFailed": "加载申诉详情失败",
     "resultNotFound": "申诉不存在"
   },
@@ -112,6 +112,17 @@
     "appeal": "申诉",
     "loadFailed": "加载审核详情失败",
     "notFound": "记录不存在"
+  },
+  "apiErrors": {
+    "publishBlocked": "账号处于发布限制中",
+    "creatorFrozen": "创作者功能已被冻结",
+    "publishNeedReview": "作品需审核通过后才能公开",
+    "loginBanned": "账号已被禁止登录",
+    "appealWindowExpired": "已超过 7 天申诉期限",
+    "duplicateAppeal": "该记录已申诉过",
+    "alreadyRevoked": "该处罚已撤销，无需申诉",
+    "invalidEvidence": "请上传有效的证据图片",
+    "adminRequired": "该操作需要管理员权限"
   },
   "common": {
     "points": "积分",

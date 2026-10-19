@@ -50,8 +50,6 @@ type SafetyDetail = {
     title: string;
     body: string;
     relatedGameId?: string | null;
-    /** 16 位 moderation_id，跳转申诉提交 */
-    appealRelatedId?: string | null;
 };
 
 const getAnnouncementSortTime = (item: Pick<MessageAnnouncement, 'publishedAt' | 'updatedAt' | 'createdAt'>) =>
@@ -123,11 +121,8 @@ type RowView = {
     onOpen: () => void;
 };
 
-const isAppealResultNotification = (notification: MessageModerationNotification): boolean => {
-    const recordType = String(notification.recordType || '').toLowerCase();
-    const title = String(notification.title || '');
-    return recordType === 'appeal' || title.includes('申诉结果');
-};
+const isAppealResultNotification = (notification: MessageModerationNotification): boolean =>
+    String(notification.recordType || '').toLowerCase() === 'appeal';
 
 const getAppealResultLabel = (
     status: string | undefined,
@@ -697,41 +692,24 @@ const Messages: React.FC = () => {
                 message={(
                     <span>
                         {safetyDetail?.body}
-                        {safetyDetail?.relatedGameId || safetyDetail?.appealRelatedId ? (
+                        {safetyDetail?.relatedGameId ? (
                             <>
                                 <br />
                                 <br />
-                                {safetyDetail.relatedGameId ? (
-                                    <button
-                                        type="button"
-                                        className={styles.safetyAction}
-                                        onClick={() => {
-                                            const gameId = safetyDetail.relatedGameId;
-                                            setSafetyDetail(null);
-                                            // 功能注释：违规下架后公开详情不可开，创作者进作品数据页
-                                            if (gameId) {
-                                                navigate(`/createGame?mode=stats&gameId=${encodeURIComponent(gameId)}`);
-                                            }
-                                        }}
-                                    >
-                                        {t('messages.viewReportedGame')}
-                                    </button>
-                                ) : null}
-                                {safetyDetail.appealRelatedId ? (
-                                    <button
-                                        type="button"
-                                        className={styles.safetyAction}
-                                        onClick={() => {
-                                            const relatedId = safetyDetail.appealRelatedId;
-                                            setSafetyDetail(null);
-                                            if (relatedId) {
-                                                navigate(`/appeal/submit?relatedModerationId=${encodeURIComponent(relatedId)}`);
-                                            }
-                                        }}
-                                    >
-                                        {t('appeal.goAppeal')}
-                                    </button>
-                                ) : null}
+                                <button
+                                    type="button"
+                                    className={styles.safetyAction}
+                                    onClick={() => {
+                                        const gameId = safetyDetail.relatedGameId;
+                                        setSafetyDetail(null);
+                                        // 功能注释：违规下架后公开详情不可开，创作者进作品数据页
+                                        if (gameId) {
+                                            navigate(`/createGame?mode=stats&gameId=${encodeURIComponent(gameId)}`);
+                                        }
+                                    }}
+                                >
+                                    {t('messages.viewReportedGame')}
+                                </button>
                             </>
                         ) : null}
                     </span>

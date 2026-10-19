@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import adminReportApi from '../api/admin/adminReportApi';
 import appealApi from '../api/appeal/appealApi';
 import type { AppealEligibleItem } from '../api/appeal/appeal.type';
 import type { ReportReasonItem } from '../api/report/report.type';
@@ -14,18 +15,6 @@ const MAX_REASON = 100;
 const MAX_EVIDENCE = 3;
 const MIN_EVIDENCE = 1;
 const MAX_EVIDENCE_BYTES = 5 * 1024 * 1024;
-
-/** 功能注释：展示顺序微调——「账号被禁言」与「昵称/头像/简介违规」对调 */
-function reorderAppealReasons(list: ReportReasonItem[]): ReportReasonItem[] {
-  const muteIdx = list.findIndex((item) => item.title === '账号被禁言');
-  const profileIdx = list.findIndex((item) => item.title === '昵称/头像/简介违规');
-  if (muteIdx < 0 || profileIdx < 0 || muteIdx === profileIdx) return list;
-  const next = list.slice();
-  const tmp = next[muteIdx];
-  next[muteIdx] = next[profileIdx];
-  next[profileIdx] = tmp;
-  return next;
-}
 
 type EvidenceItem = {
   key: string;
@@ -44,6 +33,8 @@ const AppealSubmit: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [eligible, setEligible] = useState<AppealEligibleItem[]>([]);
   const [loadingEligible, setLoadingEligible] = useState(false);
+  const [checkingTarget, setCheckingTarget] = useState(false);
+  const [targetBlocked, setTargetBlocked] = useState(false);
   const [selectedRelatedId, setSelectedRelatedId] = useState<string | null>(relatedModerationIdParam);
   const [reasonOptions, setReasonOptions] = useState<ReportReasonItem[]>([]);
   const [loadingReasons, setLoadingReasons] = useState(true);
@@ -67,7 +58,7 @@ const AppealSubmit: React.FC = () => {
         if (!res.data.success || !res.data.data) {
           throw new Error(res.data.message || t('appeal.loadReasonsFailed'));
         }
-        setReasonOptions(reorderAppealReasons(res.data.data.list || []));
+        setReasonOptions(res.data.data.list || []);
       })
       .catch((error: unknown) => {
         if (!cancelled) {
@@ -88,8 +79,29 @@ const AppealSubmit: React.FC = () => {
     if (relatedModerationIdParam != null) {
       setEligible([]);
       setLoadingEligible(false);
-      return undefined;
+      let cancelled = false;
+      setCheckingTarget(true);
+      setTargetBlocked(false);
+      void adminReportApi
+        .getModeration(relatedModerationIdParam)
+        .then((res) => {
+          if (cancelled) return;
+          const canAppeal = Boolean(res.data.success && res.data.data?.canAppeal === true);
+          setTargetBlocked(!canAppeal);
+        })
+        .catch(() => {
+          if (!cancelled) setTargetBlocked(true);
+        })
+        .finally(() => {
+          if (!cancelled) setCheckingTarget(false);
+        });
+      return () => {
+        cancelled = true;
+      };
     }
+
+    setCheckingTarget(false);
+    setTargetBlocked(false);
 
     let cancelled = false;
     setLoadingEligible(true);
@@ -179,7 +191,9 @@ const AppealSubmit: React.FC = () => {
     && !submitting
     && !uploading
     && !loadingEligible
-    && !loadingReasons;
+    && !loadingReasons
+    && !checkingTarget
+    && !targetBlocked;
 
   const handleSubmit = async () => {
     if (!canSubmit || selectedRelatedId == null) return;
@@ -221,7 +235,13 @@ const AppealSubmit: React.FC = () => {
       </header>
 
       <div className={styles.main}>
-        {needPickTarget ? (
+        {checkingTarget ? (
+          <div className={styles.loading}>{t('common.loading')}</div>
+        ) : null}
+        {!checkingTarget && targetBlocked ? (
+          <p className={styles.hint}>{t('appeal.cannotAppeal')}</p>
+        ) : null}
+        {!checkingTarget && !targetBlocked && needPickTarget ? (
           <>
             <div className={styles.sectionLabel}>{t('appeal.selectTarget')}</div>
             {loadingEligible ? (
@@ -250,6 +270,8 @@ const AppealSubmit: React.FC = () => {
           </>
         ) : null}
 
+        {!checkingTarget && !targetBlocked ? (
+        <>
         <div className={styles.sectionLabel}>
           {t('appeal.reasonTypeLabel')}
           <span className={styles.requiredMark}>*</span>
@@ -323,8 +345,11 @@ const AppealSubmit: React.FC = () => {
             onChange={(e) => void handleEvidenceChange(e)}
           />
         </div>
+        </>
+        ) : null}
       </div>
 
+      {!checkingTarget && !targetBlocked ? (
       <div className={styles.footer}>
         <button
           type="button"
@@ -335,6 +360,7 @@ const AppealSubmit: React.FC = () => {
           {submitting ? t('appeal.submitting') : t('appeal.submit')}
         </button>
       </div>
+      ) : null}
     </div>
   );
 };

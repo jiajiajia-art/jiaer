@@ -104,23 +104,6 @@
   color: #ffffff;
 }
 
-.reappealBtn {
-  appearance: none;
-  margin-top: 2px;
-  padding: 9px 28px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: #1c1c1e;
-  color: rgba(255, 255, 255, 0.92);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.reappealBtn:hover {
-  background: #252528;
-}
-
 .card {
   background: #1a1a1a;
   border: 1px solid rgba(255, 255, 255, 0.08);

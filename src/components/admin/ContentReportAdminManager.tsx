@@ -18,18 +18,9 @@ import { isAdminRole } from '../../utils/userRoles';
 import { getApiErrorMessage } from '../../utils/error';
 import reportApi from '../../api/report/reportApi';
 import type { ReportReasonItem } from '../../api/report/report.type';
-import { getImageUrl } from '../../utils/constants';
+import { resolveEvidenceImageUrl } from '../../utils/evidenceImageUrl';
 import styles from './CommentAdminManager.module.css';
 import local from './ContentReportAdminManager.module.css';
-
-/** 功能注释：举报证据存的是 R2 key，读图走 /public 代理 */
-function resolveEvidenceImageUrl(keyOrUrl: string): string {
-  const raw = String(keyOrUrl || '').trim();
-  if (!raw) return '';
-  if (/^https?:\/\//i.test(raw)) return raw;
-  if (raw.startsWith('/public/') || raw.startsWith('public/')) return getImageUrl(raw);
-  return getImageUrl(`public/${raw.replace(/^\//, '')}`);
-}
 
 const PAGE_SIZE = 20;
 

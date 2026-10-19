@@ -1,3 +1,5 @@
+import i18n from '../i18n';
+
 /**
  * Handles axios error responses, standard Error objects, and unknown errors.
  * 并清洗上游 LLM/生图网关脏文案（JSON、美元额度等），避免直接弹给玩家。
@@ -77,18 +79,24 @@ export async function getAxiosErrorMessageAsync(
   return fallback;
 }
 
-/** 功能注释：处罚/风控/申诉业务码；有 message 优先，否则用短文案 toast */
-const PUNISHMENT_ERROR_MESSAGES: Record<string, string> = {
-    publish_blocked: '账号处于发布限制中',
-    creator_frozen: '创作者功能已被冻结',
-    publish_need_review: '作品需审核通过后才能公开',
-    login_banned: '账号已被禁止登录',
-    appeal_window_expired: '已超过 7 天申诉期限',
-    duplicate_appeal: '该记录已申诉过',
-    already_revoked: '该处罚已撤销，无需申诉',
-    invalid_evidence: '请上传有效的证据图片',
-    admin_required: '该操作需要管理员权限',
+/** 功能注释：处罚/风控/申诉业务码；有 message 优先，否则按当前语言取短文案 */
+const PUNISHMENT_ERROR_KEYS: Record<string, string> = {
+    publish_blocked: 'apiErrors.publishBlocked',
+    creator_frozen: 'apiErrors.creatorFrozen',
+    publish_need_review: 'apiErrors.publishNeedReview',
+    login_banned: 'apiErrors.loginBanned',
+    appeal_window_expired: 'apiErrors.appealWindowExpired',
+    duplicate_appeal: 'apiErrors.duplicateAppeal',
+    already_revoked: 'apiErrors.alreadyRevoked',
+    invalid_evidence: 'apiErrors.invalidEvidence',
+    admin_required: 'apiErrors.adminRequired',
 };
+
+export function messageForApiCode(code?: string | null): string | null {
+    const key = code ? PUNISHMENT_ERROR_KEYS[code] : '';
+    if (!key) return null;
+    return i18n.t(key);
+}
 
 export const getApiErrorMessage = (
     error: unknown,
@@ -108,9 +116,8 @@ export const getApiErrorMessage = (
         if (raw) {
             return sanitizeUpstreamLlmErrorMessage(String(raw), fallback);
         }
-        if (code && PUNISHMENT_ERROR_MESSAGES[code]) {
-            return PUNISHMENT_ERROR_MESSAGES[code];
-        }
+        const coded = messageForApiCode(code);
+        if (coded) return coded;
         return fallback;
     }
     if (error instanceof Error && error.message) {

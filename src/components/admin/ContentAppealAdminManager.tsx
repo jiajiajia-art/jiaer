@@ -10,17 +10,9 @@ import ConfirmModal from '../CommonModal/ConfirmModal';
 import { useAuthStore } from '../../store/useAuthStore';
 import { isAdminRole } from '../../utils/userRoles';
 import { getApiErrorMessage } from '../../utils/error';
-import { getImageUrl } from '../../utils/constants';
+import { resolveEvidenceImageUrl } from '../../utils/evidenceImageUrl';
 import styles from './CommentAdminManager.module.css';
 import local from './ContentReportAdminManager.module.css';
-
-function resolveEvidenceImageUrl(keyOrUrl: string): string {
-  const raw = String(keyOrUrl || '').trim();
-  if (!raw) return '';
-  if (/^https?:\/\//i.test(raw)) return raw;
-  if (raw.startsWith('/public/') || raw.startsWith('public/')) return getImageUrl(raw);
-  return getImageUrl(`public/${raw.replace(/^\//, '')}`);
-}
 
 const RECORD_TYPE_LABEL: Record<string, string> = {
   warning: '警告',

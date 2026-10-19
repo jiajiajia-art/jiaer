@@ -93,7 +93,7 @@
     "timeLabel": "Submitted at",
     "expandDescription": "Expand description",
     "collapseDescription": "Collapse description",
-    "reappeal": "Appeal again",
+    "cannotAppeal": "This record was already appealed or is past the appeal window",
     "loadDetailFailed": "Failed to load appeal details",
     "resultNotFound": "Appeal not found"
   },
@@ -112,6 +112,17 @@
     "appeal": "Appeal",
     "loadFailed": "Failed to load review details",
     "notFound": "Record not found"
+  },
+  "apiErrors": {
+    "publishBlocked": "Publishing is restricted on this account",
+    "creatorFrozen": "Creator features are frozen",
+    "publishNeedReview": "This work must pass review before it can be public",
+    "loginBanned": "This account is banned from signing in",
+    "appealWindowExpired": "The 7-day appeal window has passed",
+    "duplicateAppeal": "This record has already been appealed",
+    "alreadyRevoked": "This action was already revoked",
+    "invalidEvidence": "Upload a valid evidence image",
+    "adminRequired": "This action requires an admin"
   },
   "common": {
     "points": "Points",
