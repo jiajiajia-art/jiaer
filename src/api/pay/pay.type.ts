@@ -2,7 +2,7 @@ export type OrderType = 'points' | 'subscription' | 'diamonds';
 
 export type PlanId = import('../account/auth.type').MembershipPlanId;
 export type PointsPlanId = 'pr_1' | 'pr_6' | 'pr_24' | 'pr_45' | 'pr_95' | 'pr_198';
-export type DiamondsPlanId ='dr_1' | 'dr_6' | 'dr_24' | 'dr_45' | 'dr_95' | 'dr_198';
+export type DiamondsPlanId = 'dr_6_v2' | 'dr_30_v2' | 'dr_68_v2' | 'dr_128_v2' | 'dr_328_v2';
 
 export interface PointsOrderRequest {
     orderType: 'points';

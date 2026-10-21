@@ -14,13 +14,8 @@ export interface StreamBusinessError {
 }
 
 const EXCHANGE_DISCOUNTS: Record<MembershipPlanId, number> = {
-  creator_day: 0.9,
-  creator_month: 0.8,
-  creator_season: 0.7,
-  creator_year: 0.6,
-  month: 0.8,
-  season: 0.7,
-  year: 0.6,
+  week: 1,
+  month_v2: 1,
 };
 
 export const isInsufficientDiamondsError = (

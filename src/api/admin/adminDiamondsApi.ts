@@ -1,6 +1,7 @@
 import { api } from '../base';
 import type { ApiResponse } from '../api.types';
 import type { AdminDiamondChangeType } from '../../utils/adminDiamondAdjustment';
+import type { KkValidityType } from '../../utils/adminDiamondAdjustment';
 
 export interface AdminDiamondUser {
   userId: string;
@@ -16,6 +17,8 @@ export interface AdminDiamondAdjustmentPayload {
   diamonds: number;
   remark?: string;
   operationId: string;
+  validityType?: KkValidityType;
+  validDays?: number;
 }
 
 export interface AdminDiamondAdjustmentResult {

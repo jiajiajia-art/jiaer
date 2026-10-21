@@ -5,7 +5,9 @@ import {
   calculateDiamondBalance,
   parseAdminDiamondAmount,
   type AdminDiamondChangeType,
+  type KkValidityType,
   validateAdminDiamondAmount,
+  validateAdminKkValidity,
 } from '../utils/adminDiamondAdjustment';
 import { getApiErrorMessage } from '../utils/error';
 import AdminManualAdjustmentHistory from './AdminManualAdjustmentHistory';
@@ -28,6 +30,9 @@ const DiamondAdminManager: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<AdminDiamondUser | null>(null);
   const [changeType, setChangeType] = useState<AdminDiamondChangeType>('increment');
   const [amountInput, setAmountInput] = useState('');
+  const [validityType, setValidityType] = useState<KkValidityType>('limited');
+  const [validDaysMode, setValidDaysMode] = useState('3');
+  const [customValidDays, setCustomValidDays] = useState('1');
   const [remark, setRemark] = useState('');
   const [amountError, setAmountError] = useState('');
   const [isLookingUp, setIsLookingUp] = useState(false);
@@ -39,14 +44,18 @@ const DiamondAdminManager: React.FC = () => {
 
   const amount = parseAdminDiamondAmount(amountInput);
   const nextBalance = useMemo(() => (
-    selectedUser && Number.isSafeInteger(amount) && amount > 0
+    selectedUser && Number.isFinite(amount) && amount > 0
       ? calculateDiamondBalance(selectedUser.diamonds, changeType, amount)
       : selectedUser?.diamonds ?? 0
   ), [amount, changeType, selectedUser]);
+  const effectiveValidDays = Number(validDaysMode === 'custom' ? customValidDays : validDaysMode);
 
   const resetAdjustment = () => {
     setChangeType('increment');
     setAmountInput('');
+    setValidityType('limited');
+    setValidDaysMode('3');
+    setCustomValidDays('1');
     setRemark('');
     setAmountError('');
     setOperationId(null);
@@ -104,6 +113,13 @@ const DiamondAdminManager: React.FC = () => {
       setAmountError(validationError);
       return;
     }
+    if (changeType === 'increment') {
+      const validityError = validateAdminKkValidity(validityType, effectiveValidDays);
+      if (validityError) {
+        setAmountError(validityError);
+        return;
+      }
+    }
     setAmountError('');
     setOperationId(crypto.randomUUID());
     setIsConfirmOpen(true);
@@ -124,6 +140,15 @@ const DiamondAdminManager: React.FC = () => {
       setOperationId(null);
       return;
     }
+    if (changeType === 'increment') {
+      const validityError = validateAdminKkValidity(validityType, effectiveValidDays);
+      if (validityError) {
+        setAmountError(validityError);
+        setIsConfirmOpen(false);
+        setOperationId(null);
+        return;
+      }
+    }
 
     try {
       setIsSubmitting(true);
@@ -133,6 +158,10 @@ const DiamondAdminManager: React.FC = () => {
         diamonds: amount,
         remark: remark.trim(),
         operationId,
+        ...(changeType === 'increment' ? {
+          validityType,
+          ...(validityType === 'limited' ? { validDays: effectiveValidDays } : {}),
+        } : {}),
       });
       if (!response.data.success || !response.data.data) {
         throw new Error(response.data.message || '特殊KK币变更失败');
@@ -264,8 +293,8 @@ const DiamondAdminManager: React.FC = () => {
                 id="admin-diamond-amount"
                 className={`${styles.textInput} ${amountError ? styles.inputError : ''}`}
                 type="number"
-                min="1"
-                step="1"
+                min="0.01"
+                step="0.01"
                 value={amountInput}
                 onChange={(event) => handleAdjustmentChange(event.target.value)}
                 aria-invalid={Boolean(amountError)}
@@ -276,6 +305,70 @@ const DiamondAdminManager: React.FC = () => {
                 <div id="admin-diamond-amount-error" className={styles.fieldError} role="alert">
                   {amountError}
                 </div>
+              ) : null}
+
+              {changeType === 'increment' ? (
+                <>
+                  <label className={styles.fieldLabel} htmlFor="admin-diamond-validity-type">
+                    KK币有效期
+                  </label>
+                  <select
+                    id="admin-diamond-validity-type"
+                    className={styles.select}
+                    value={validityType}
+                    onChange={(event) => {
+                      setValidityType(event.target.value as KkValidityType);
+                      setAmountError('');
+                      setOperationId(null);
+                    }}
+                    disabled={isBusy}
+                  >
+                    <option value="permanent">永久KK币</option>
+                    <option value="limited">限时KK币</option>
+                  </select>
+                  {validityType === 'limited' ? (
+                    <>
+                      <label className={styles.fieldLabel} htmlFor="admin-diamond-valid-days-mode">
+                        有效天数
+                      </label>
+                      <select
+                        id="admin-diamond-valid-days-mode"
+                        className={styles.select}
+                        value={validDaysMode}
+                        onChange={(event) => {
+                          setValidDaysMode(event.target.value);
+                          setAmountError('');
+                          setOperationId(null);
+                        }}
+                        disabled={isBusy}
+                      >
+                        <option value="3">3 天</option>
+                        <option value="7">7 天</option>
+                        <option value="30">30 天</option>
+                        <option value="60">60 天</option>
+                        <option value="90">90 天</option>
+                        <option value="custom">自定义天数</option>
+                      </select>
+                      {validDaysMode === 'custom' ? (
+                        <input
+                          className={styles.textInput}
+                          type="number"
+                          min="1"
+                          max="3650"
+                          step="1"
+                          value={customValidDays}
+                          aria-label="自定义天数"
+                          onChange={(event) => {
+                            setCustomValidDays(event.target.value);
+                            setAmountError('');
+                            setOperationId(null);
+                          }}
+                          disabled={isBusy}
+                        />
+                      ) : null}
+                    </>
+                  ) : null}
+                </>
               ) : null}
 
               <label className={styles.fieldLabel} htmlFor="admin-diamond-remark">
@@ -332,6 +425,12 @@ const DiamondAdminManager: React.FC = () => {
               <div><dt>Kuran 号</dt><dd>{selectedUser.userCode}</dd></div>
               <div><dt>当前余额</dt><dd>{selectedUser.diamonds} KK币</dd></div>
               <div><dt>{actionLabel}数量</dt><dd>{amount} KK币</dd></div>
+              {changeType === 'increment' ? (
+                <div>
+                  <dt>有效期</dt>
+                  <dd>{validityType === 'permanent' ? '永久KK币' : `限时KK币（${effectiveValidDays} 天）`}</dd>
+                </div>
+              ) : null}
               <div><dt>变更后余额</dt><dd className={styles.confirmBalance}>{nextBalance} KK币</dd></div>
               <div><dt>内部备注</dt><dd>{remark.trim() || '无'}</dd></div>
             </dl>

@@ -8,10 +8,8 @@ import { auth } from '../../api/account/authApi';
 import type { PayOrderRequest, PlanId, DiamondsPlanId } from '../../api/pay/pay.type';
 import { getApiErrorMessage } from '../../utils/error';
 import { useAuthStore } from '../../store/useAuthStore';
-import { resolveMemberDisplayEndAt } from '../../utils/planLabels';
 import type { DefaultPayMethod } from '../../lib/geoRegion';
 import {
-    calcDiamondsForPayMethod,
     getPayMethodCurrencySymbol,
     getPayMethodMinAmount,
     isAmountReadyToPay,
@@ -40,22 +38,26 @@ interface MembershipPlan {
     name: string;
     shortName: string;
     price: number;
+    dailyReward: number;
+    finalDayReward: number;
+    durationLabel: string;
 }
 
 interface DiamondPlan {
     planId: DiamondsPlanId;
     amount: number;
-    firstChargeDiamonds: number;
-    noFirstChargeBonus?: boolean;
+    baseDiamonds: number;
+    firstBonusDiamonds: number;
+    firstTotalDiamonds: number;
+    firstChargeEligible: boolean;
 }
 
-const FIRST_CHARGE_PLANS: DiamondPlan[] = [
-    { planId: 'dr_1', amount: 1, firstChargeDiamonds: 19 },
-    { planId: 'dr_6', amount: 6, firstChargeDiamonds: 60, noFirstChargeBonus: true },
-    { planId: 'dr_24', amount: 24, firstChargeDiamonds: 240 },
-    { planId: 'dr_45', amount: 45, firstChargeDiamonds: 450 },
-    { planId: 'dr_95', amount: 95, firstChargeDiamonds: 950 },
-    { planId: 'dr_198', amount: 198, firstChargeDiamonds: 1980 },
+const DEFAULT_KK_RECHARGE_PLANS: DiamondPlan[] = [
+    { planId: 'dr_6_v2', amount: 6, baseDiamonds: 60, firstBonusDiamonds: 6, firstTotalDiamonds: 66, firstChargeEligible: true },
+    { planId: 'dr_30_v2', amount: 30, baseDiamonds: 300, firstBonusDiamonds: 30, firstTotalDiamonds: 330, firstChargeEligible: true },
+    { planId: 'dr_68_v2', amount: 68, baseDiamonds: 680, firstBonusDiamonds: 68, firstTotalDiamonds: 748, firstChargeEligible: true },
+    { planId: 'dr_128_v2', amount: 128, baseDiamonds: 1280, firstBonusDiamonds: 192, firstTotalDiamonds: 1472, firstChargeEligible: true },
+    { planId: 'dr_328_v2', amount: 328, baseDiamonds: 3280, firstBonusDiamonds: 1312, firstTotalDiamonds: 4592, firstChargeEligible: true },
 ];
 
 interface WechatMiniProgram {
@@ -90,12 +92,20 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     const { t } = useTranslation();
     const { updateUser, user: authUser } = useAuthStore();
     const memberProfile = authUser?.user;
-    const memberEndDate = useMemo(
-        () => formatMemberEndDate(
-            resolveMemberDisplayEndAt(memberProfile?.stackedPlans, memberProfile?.memberEndAt),
-        ),
-        [memberProfile?.stackedPlans, memberProfile?.memberEndAt],
-    );
+    const weekEndDate = formatMemberEndDate(memberProfile?.membership?.week?.endAt);
+    const monthEndDate = formatMemberEndDate(memberProfile?.membership?.month?.endAt);
+    const rechargePlans = useMemo<DiamondPlan[]>(() => {
+        const plans = memberProfile?.kkRechargePlans;
+        if (!plans?.length) return DEFAULT_KK_RECHARGE_PLANS;
+        return plans.map((plan) => ({
+            planId: plan.id as DiamondsPlanId,
+            amount: plan.price,
+            baseDiamonds: plan.baseDiamonds,
+            firstBonusDiamonds: plan.firstBonusDiamonds,
+            firstTotalDiamonds: plan.firstTotalDiamonds,
+            firstChargeEligible: plan.firstChargeEligible,
+        }));
+    }, [memberProfile?.kkRechargePlans]);
     const [isLoading, setIsLoading] = useState(false);
     const [amountError, setAmountError] = useState('');
     const [inputShake, setInputShake] = useState(false);
@@ -145,30 +155,24 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
 
     const MEMBERSHIP_PLANS = useMemo<MembershipPlan[]>(() => [
         {
-            planId: 'creator_day',
-            name: t('profile.dailyMember'),
-            shortName: t('profile.dailyMemberShort'),
-            price: 1,
+            planId: 'week',
+            name: '周卡',
+            shortName: '周卡',
+            price: 45,
+            dailyReward: 77,
+            finalDayReward: 78,
+            durationLabel: '7 天',
         },
         {
-            planId: 'creator_month',
-            name: t('profile.monthlyMember'),
-            shortName: t('profile.monthlyMemberShort'),
-            price: 30,
+            planId: 'month_v2',
+            name: '月卡',
+            shortName: '月卡',
+            price: 148,
+            dailyReward: 66,
+            finalDayReward: 86,
+            durationLabel: '30 天',
         },
-        {
-            planId: 'creator_season',
-            name: t('profile.seasonalMember'),
-            shortName: t('profile.seasonalMemberShort'),
-            price: 90,
-        },
-        {
-            planId: 'creator_year',
-            name: t('profile.yearlyMember'),
-            shortName: t('profile.yearlyMemberShort'),
-            price: 365,
-        },
-    ], [t]);
+    ], []);
 
     useEffect(() => {
         if (!isOpen) {
@@ -193,7 +197,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
         setSelectedPayMethod('wechat');
         setRechargeTab(fixedTab ?? 'diamonds');
         if ((fixedTab ?? 'diamonds') === 'diamonds') {
-            const defaultPlan = FIRST_CHARGE_PLANS[0];
+            const defaultPlan = rechargePlans[0];
             setAmountText(String(defaultPlan.amount));
             setSelectedFirstChargePlanId(defaultPlan.planId);
             setSelectedFixedPlanAmount(defaultPlan.amount);
@@ -210,7 +214,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             setAmountError('');
             setInputShake(false);
         }
-    }, [isOpen, fixedTab]);
+    }, [isOpen, fixedTab, rechargePlans]);
 
     useEffect(() => {
         if (isOpen && fixedTab && rechargeTab !== fixedTab) {
@@ -253,7 +257,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                 setAmountError('');
                 setInputShake(false);
             }
-            const matchedPlan = FIRST_CHARGE_PLANS.find((plan) => plan.amount === numericValue);
+            const matchedPlan = rechargePlans.find((plan) => plan.amount === numericValue);
             setSelectedFirstChargePlanId(matchedPlan?.planId ?? null);
             setCustomOriginalAmount(validation.ok ? numericValue : null);
         } else {
@@ -279,10 +283,6 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             return !isNaN(amount) && amount >= payMinAmount ? amount : null;
         }
         return null;
-    };
-
-    const calculateDiamonds = (amount: number, isFixedPlan = true): number => {
-        return calcDiamondsForPayMethod(amount, selectedPayMethod, isFixedPlan);
     };
 
     const normalizeQrCodeUrl = (raw: string | null): string | null => {
@@ -599,58 +599,6 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
         };
     }, [isOpen, paymentStatus, handleClose, handleCloseWithRefresh]);
 
-    // 会员特权项（所有套餐共用）
-    const MEMBERSHIP_BENEFITS = [
-        // { name: t('rechargeModal.noAdFreeRounds'), values: ['30', '100', '100', '100'] },
-        // { name: t('rechargeModal.dailyCheckInBonus'), values: ['0%', '0%', '+100%', '+210%'] },
-        //{ name: t('rechargeModal.creatorDiscount'), values: ['-', '50%', '50%', '50%'] },
-        { name: "KK币兑换织梦豆折扣", values: ['-', '9折', '8折', '7折', '6折'] },
-    ];
-
-    // 会员特权对比数据（普通用户 + 日卡 + 月卡 + 季卡 + 年卡）
-    const allPlanBenefits = useMemo(() => [
-        {
-            planId: 'free',
-            name: t('rechargeModal.free'),
-            shortName: t('rechargeModal.free'),
-            price: 0,
-            color: '#999',
-            tagBg: '#999',
-        },
-        {
-            planId: 'creator_day',
-            name: t('profile.dailyMember'),
-            shortName: t('profile.dailyMemberShort'),
-            price: 1,
-            color: '#64b5f6',
-            tagBg: '#64b5f6',
-        },
-        {
-            planId: 'creator_month',
-            name: t('profile.monthlyMember'),
-            shortName: t('profile.monthlyMemberShort'),
-            price: 30,
-            color: '#228b22',
-            tagBg: '#228b22',
-        },
-        {
-            planId: 'creator_season',
-            name: t('profile.seasonalMember'),
-            shortName: t('profile.seasonalMemberShort'),
-            price: 90,
-            color: '#e57373',
-            tagBg: '#e57373',
-        },
-        {
-            planId: 'creator_year',
-            name: t('profile.yearlyMember'),
-            shortName: t('profile.yearlyMemberShort'),
-            price: 365,
-            color: '#d4a84b',
-            tagBg: '#d4a84b',
-        },
-    ].map((plan) => ({ ...plan, perks: MEMBERSHIP_BENEFITS })), [t, MEMBERSHIP_BENEFITS]);
-
     if (!isOpen) return null;
 
     const currentAmount = getCurrentAmount();
@@ -677,8 +625,8 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
 
             <div className={styles.fixedAmounts}>
                 <div className={styles.amountsGrid}>
-                    {FIRST_CHARGE_PLANS.map((plan) => {
-                        const planDiamonds = calculateDiamonds(plan.amount, true);
+                    {rechargePlans.map((plan) => {
+                        const planDiamonds = plan.firstChargeEligible ? plan.firstTotalDiamonds : plan.baseDiamonds;
                         const isActive = selectedFirstChargePlanId === plan.planId;
                         return (
                             <button
@@ -694,6 +642,11 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                                     </div>
                                     <div className={styles.amountPriceMeta}>
                                         {t('rechargeModal.priceShort', { amount: plan.amount, symbol: currencySymbol })}
+                                    </div>
+                                    <div className={styles.firstChargeMeta}>
+                                        {plan.firstChargeEligible
+                                            ? `首充：基础 ${plan.baseDiamonds} + 加赠 ${plan.firstBonusDiamonds} = ${planDiamonds} 币`
+                                            : `基础 ${plan.baseDiamonds} 币（首充加赠已领取）`}
                                     </div>
                                 </div>
                             </button>
@@ -754,14 +707,14 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                             <span className={styles.membershipStatusTitle}>
                                 {t('rechargeModal.enjoyMember')}
                             </span>
-                            {memberEndDate ? (
-                                <div className={styles.membershipStatusExpire}>
-                                    <span className={styles.membershipStatusExpireLabel}>
-                                        {t('rechargeModal.validUntil')}
-                                    </span>
-                                    <span className={styles.membershipStatusExpireDate}>{memberEndDate}</span>
-                                </div>
-                            ) : null}
+                            <div className={styles.membershipStatusExpire}>
+                                <span className={styles.membershipStatusExpireLabel}>周卡有效期</span>
+                                <span className={styles.membershipStatusExpireDate}>{weekEndDate ?? '未开通'}</span>
+                            </div>
+                            <div className={styles.membershipStatusExpire}>
+                                <span className={styles.membershipStatusExpireLabel}>月卡有效期</span>
+                                <span className={styles.membershipStatusExpireDate}>{monthEndDate ?? '未开通'}</span>
+                            </div>
                         </div>
                     </div>
                     <div className={styles.membershipStatusBadge}>
@@ -779,6 +732,9 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                         onClick={() => setSelectedPlanIndex(index)}
                     >
                         <span className={styles.planItemName}>{plan.name}</span>
+                        <span className={styles.planRewardSummary}>
+                            {plan.durationLabel} · 每日签到额外 {plan.dailyReward} 永久KK币 · 最后一天 {plan.finalDayReward} 币
+                        </span>
                         <span className={styles.planItemPrice}>
                             {t('rechargeModal.currencySymbol')}{plan.price}
                         </span>
@@ -787,28 +743,11 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             </div>
 
             <div className={styles.benefitsComparison}>
-                <div className={styles.comparisonTable}>
-                    <div className={styles.comparisonHeader}>
-                        <span className={styles.comparisonLabel} aria-hidden="true" />
-                        {allPlanBenefits.map((plan) => (
-                            <span key={plan.planId} className={styles.comparisonHeaderCell}>
-                                {plan.shortName.replace(/会员$/, '')}
-                            </span>
-                        ))}
-                    </div>
-                    {allPlanBenefits[0].perks.map((perk, perkIndex) => (
-                        <div key={perkIndex} className={styles.comparisonRow}>
-                            <span className={styles.comparisonLabel}>{perk.name}</span>
-                            {perk.values.map((value, valIndex) => (
-                                <span
-                                    key={valIndex}
-                                    className={`${styles.comparisonValue} ${valIndex >= 1 ? styles.highlight : ''}`}
-                                >
-                                    {value}
-                                </span>
-                            ))}
-                        </div>
-                    ))}
+                <div className={styles.membershipRules}>
+                    <strong>会员通用权益</strong>
+                    <span>正式发布的 AI 文游游玩扣费享 85 折，创作者测试不参与折扣。</span>
+                    <span>周卡与月卡有效期独立，可同时生效并分别领取每日永久KK币。</span>
+                    <span>同档位再次购买会从当前有效期结束后顺延，未领取的每日奖励不补发。</span>
                 </div>
             </div>
 

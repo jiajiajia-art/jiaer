@@ -69,6 +69,10 @@ const trapFocus = (event: KeyboardEvent, root: HTMLElement | null) => {
     }
 };
 
+const describeMembershipRewards = (rewards: CheckInResponse['membershipRewards'] = []): string => (
+    rewards.map((reward) => `${reward.planId === 'week' ? '周卡' : '月卡'} +${reward.amount}`).join('、')
+);
+
 const CheckInModal: React.FC<CheckInModalProps> = ({
     isOpen,
     mode = 'home',
@@ -186,6 +190,13 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                 toast.success(t('checkIn.alreadySigned'));
             } else {
                 toast.success(t('checkIn.success', { points: result.pointsAdded }));
+            }
+            if (result.membershipRewards?.length) {
+                toast.success(`会员签到额外获得永久KK币：${describeMembershipRewards(result.membershipRewards)}`);
+                const userResponse = await auth.getUserInfo().catch(() => null);
+                if (userResponse?.data.success && userResponse.data.data) {
+                    updateUser(userResponse.data.data);
+                }
             }
             onSignInSuccess?.(result);
         } catch (error) {
@@ -562,6 +573,11 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                                                 points: makeupDialog.result.rewardBreakdown.monthlyBonusPoints,
                                             })}</span>
                                         )}
+                                        {makeupDialog.result.membershipRewards?.length ? (
+                                            <span>
+                                                会员补签额外永久KK币：{describeMembershipRewards(makeupDialog.result.membershipRewards)}
+                                            </span>
+                                        ) : null}
                                     </div>
                                     <button
                                         type="button"

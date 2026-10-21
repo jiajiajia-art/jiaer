@@ -94,6 +94,41 @@
     gap: 12px;
 }
 
+.kkBreakdownGrid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.kkBreakdownGrid > div {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid var(--ad-border);
+    border-radius: 10px;
+    background: var(--ad-card);
+}
+
+.kkBreakdownGrid span,
+.expiryHint {
+    color: var(--ad-label);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.kkBreakdownGrid strong {
+    color: var(--ad-value);
+    font-size: 16px;
+    font-variant-numeric: tabular-nums;
+}
+
+.expiryHint {
+    margin: 10px 0 0;
+}
+
 .balanceCard {
     display: flex;
     align-items: center;
@@ -441,6 +476,23 @@
     color: #c7c7cc;
 }
 
+.itemValidityBadge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 22px;
+    padding: 0 8px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 6px;
+    color: #d1d1d6;
+    font-size: 11px;
+    line-height: 1;
+}
+
+.itemValidityBadgeLimited {
+    border-color: rgba(232, 90, 112, 0.45);
+    color: #ff8ca0;
+}
+
 .itemTitle {
     margin: 4px 0 0;
     font-size: 15px;
@@ -578,5 +630,21 @@
 
     .balanceValue {
         font-size: 24px;
+    }
+}
+
+@media (max-width: 560px) {
+    .kkBreakdownGrid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .toolbar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .filterRow {
+        width: 100%;
+        justify-content: flex-end;
     }
 }

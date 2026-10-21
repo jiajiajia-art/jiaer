@@ -236,6 +236,10 @@ export interface ExternalRechargePlan {
   diamonds: number;
   label: string;
   currency: string;
+  baseDiamonds?: number;
+  firstBonusDiamonds?: number;
+  firstTotalDiamonds?: number;
+  firstChargeEligible?: boolean;
 }
 
 export interface ExternalRechargePayment {

@@ -490,7 +490,7 @@ const ProfileFunctionPanel: React.FC = () => {
             <MembershipRedeemResultModal
                 isOpen={redeemSuccessPlanId !== null}
                 onClose={() => setRedeemSuccessPlanId(null)}
-                planId={redeemSuccessPlanId ?? 'creator_month'}
+                planId={redeemSuccessPlanId ?? 'month_v2'}
             />
         </div>
     );

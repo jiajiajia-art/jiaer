@@ -90,6 +90,7 @@ const createEmptyForm = (): PromotionActivityPayload => ({
   submissionLimitDays: null,
   submissionLimitCount: null,
   rewardPoints: 10,
+  kkReward: { enabled: false, amount: 0, validDays: null },
   status: 'draft',
   sortOrder: 0,
 });
@@ -270,6 +271,7 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
       submissionLimitDays: activity.submissionLimitDays,
       submissionLimitCount: activity.submissionLimitCount,
       rewardPoints: activity.rewardPoints,
+      kkReward: activity.kkReward || { enabled: false, amount: 0, validDays: null },
       status: activity.status,
       sortOrder: activity.sortOrder,
     });
@@ -328,6 +330,14 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
     }
 
     if (!Number.isInteger(form.rewardPoints) || Number(form.rewardPoints) <= 0) return toast.error('奖励织梦豆必须为大于 0 的整数'), false;
+    if (form.kkReward.enabled) {
+      if (!/^\d+(?:\.\d{1,2})?$/.test(String(form.kkReward.amount)) || form.kkReward.amount <= 0) {
+        return toast.error('活动限时KK币奖励必须大于 0 且最多保留两位小数'), false;
+      }
+      if (!Number.isInteger(form.kkReward.validDays) || Number(form.kkReward.validDays) < 1 || Number(form.kkReward.validDays) > 3650) {
+        return toast.error('活动限时KK币有效期必须为 1 至 3650 天'), false;
+      }
+    }
     return true;
   };
 
@@ -613,6 +623,57 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
           </div>
         )}
         <label className={styles.fieldLabel}>审核通过奖励织梦豆<input className={styles.textInput} type="number" value={form.rewardPoints} onChange={(event) => setForm((prev) => ({ ...prev, rewardPoints: Number(event.target.value || 0) }))} /></label>
+        <div className={styles.configSection}>
+          <label className={styles.switchLabel}>
+            <input
+              type="checkbox"
+              checked={form.kkReward.enabled}
+              onChange={(event) => setForm((prev) => ({
+                ...prev,
+                kkReward: {
+                  enabled: event.target.checked,
+                  amount: event.target.checked ? (prev.kkReward.amount || 1) : 0,
+                  validDays: event.target.checked ? (prev.kkReward.validDays || 3) : null,
+                },
+              }))}
+            />
+            活动限时KK币奖励
+          </label>
+          {form.kkReward.enabled ? (
+            <div className={styles.inlineGrid}>
+              <label className={styles.fieldLabel}>
+                奖励数量
+                <input
+                  className={styles.textInput}
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={form.kkReward.amount}
+                  onChange={(event) => setForm((prev) => ({
+                    ...prev,
+                    kkReward: { ...prev.kkReward, amount: Number(event.target.value || 0) },
+                  }))}
+                />
+              </label>
+              <label className={styles.fieldLabel}>
+                有效天数
+                <input
+                  className={styles.textInput}
+                  type="number"
+                  min="1"
+                  max="3650"
+                  step="1"
+                  value={form.kkReward.validDays ?? ''}
+                  onChange={(event) => setForm((prev) => ({
+                    ...prev,
+                    kkReward: { ...prev.kkReward, validDays: Number(event.target.value || 0) },
+                  }))}
+                />
+              </label>
+            </div>
+          ) : null}
+          <span className={styles.fieldHint}>启用后只能发放限时KK币，到期时间从管理员确认发放时开始计算。</span>
+        </div>
         <label className={styles.fieldLabel}>排序值<input className={styles.textInput} type="number" value={form.sortOrder} onChange={(event) => setForm((prev) => ({ ...prev, sortOrder: Number(event.target.value || 0) }))} /></label>
         <label className={styles.fieldLabel}>发布状态<select className={styles.select} value={form.status} onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value as PromotionActivityPayload['status'] }))}><option value="draft">草稿</option><option value="published">已发布</option></select></label>
         <div className={styles.configSection}>
@@ -653,6 +714,11 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
             <div className={styles.itemMeta}>活动时间：{buildTimeSummary(activity)}</div>
             <div className={styles.itemMeta}>投稿限制：{buildLimitSummary(activity)}</div>
             <div className={styles.itemMeta}>固定奖励织梦豆：{activity.rewardPoints}</div>
+            <div className={styles.itemMeta}>
+              活动KK币奖励：{activity.kkReward?.enabled
+                ? `${activity.kkReward.amount} 限时KK币（${activity.kkReward.validDays} 天）`
+                : '未启用'}
+            </div>
             <div className={styles.itemMeta}>排序：{activity.sortOrder} · 更新时间：{formatTime(activity.updatedAt)}</div>
             <div className={styles.actionRow}><button type="button" className={styles.secondaryButton} onClick={() => handleSelectActivity(activity)}>编辑活动</button><button type="button" className={styles.dangerButton} onClick={() => void handleDelete(activity.id)}>删除活动</button></div>
           </article>

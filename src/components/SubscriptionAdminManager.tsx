@@ -84,7 +84,7 @@ const toIsoDateTime = (value: string) => {
 
 const SubscriptionAdminManager: React.FC = () => {
     const { t } = useTranslation();
-    const [planId, setPlanId] = useState<SubscriptionPlanId>('creator_month');
+    const [planId, setPlanId] = useState<SubscriptionPlanId>('month_v2');
     const [count, setCount] = useState('1');
     const [expireAt, setExpireAt] = useState('');
     const [channel, setChannel] = useState('');
@@ -209,7 +209,7 @@ const SubscriptionAdminManager: React.FC = () => {
                 <div>
                     <div className={styles.sectionBadge}>会员管理</div>
                     <h2 className={styles.heroTitle}>会员订阅 Key 管理</h2>
-                    <p className={styles.heroDesc}>用于管理日卡、月卡、季卡、年卡的 Key 发放、查询与冻结/解冻。</p>
+                    <p className={styles.heroDesc}>用于管理新周卡、月卡的 Key 发放、查询与冻结/解冻。</p>
                 </div>
             </section>
 
@@ -226,10 +226,8 @@ const SubscriptionAdminManager: React.FC = () => {
                         <label className={styles.fieldLabel}>
                             <span className={styles.fieldLabelText}>会员类型</span>
                             <select className={styles.select} value={planId} onChange={(event) => setPlanId(event.target.value as SubscriptionPlanId)}>
-                                <option value="creator_day">日卡</option>
-                                <option value="creator_month">月卡</option>
-                                <option value="creator_season">季卡</option>
-                                <option value="creator_year">年卡</option>
+                                <option value="week">周卡</option>
+                                <option value="month_v2">月卡</option>
                             </select>
                         </label>
                         <label className={styles.fieldLabel}>
@@ -291,10 +289,8 @@ const SubscriptionAdminManager: React.FC = () => {
                             }}
                         >
                             <option value="all">全部</option>
-                            <option value="creator_day">日卡</option>
-                            <option value="creator_month">月卡</option>
-                            <option value="creator_season">季卡</option>
-                            <option value="creator_year">年卡</option>
+                            <option value="week">周卡</option>
+                            <option value="month_v2">月卡</option>
                         </select>
                     </label>
                     <label className={styles.fieldLabel}>

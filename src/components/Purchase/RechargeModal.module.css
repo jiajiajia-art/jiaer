@@ -322,6 +322,13 @@
     line-height: 1.25;
 }
 
+.firstChargeMeta {
+    margin-top: 6px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 11px;
+    line-height: 1.4;
+}
+
 .amountPriceOriginal {
     color: rgba(255, 255, 255, 0.35);
     margin-right: 0.35em;
@@ -995,6 +1002,29 @@
     margin-bottom: 0;
     line-height: 1.2;
     text-align: center;
+}
+
+.planRewardSummary {
+    flex: 1;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 12px;
+    line-height: 1.45;
+    text-align: left;
+}
+
+.membershipRules {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 18px;
+    color: rgba(255, 255, 255, 0.76);
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.membershipRules strong {
+    color: #fff;
+    font-size: 15px;
 }
 
 .planItemActive .planItemName {

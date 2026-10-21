@@ -1,4 +1,43 @@
-export type MembershipPlanId = 'creator_day' | 'creator_month' | 'creator_season' | 'creator_year' | 'month' | 'season' | 'year';
+export type MembershipPlanId = 'week' | 'month_v2';
+
+export interface KkBalance {
+  total: number;
+  permanent: number;
+  limited: number;
+  recharge: number;
+  gift: number;
+  nextExpiryAt: string | null;
+  nextExpiryAmount: number;
+}
+
+export interface MembershipPlanState {
+  active: true;
+  planId: MembershipPlanId;
+  startAt: string;
+  endAt: string;
+}
+
+export interface MembershipState {
+  week: MembershipPlanState | null;
+  month: MembershipPlanState | null;
+  publishedPlayDiscountPercent: number | null;
+}
+
+export interface KkRechargePlan {
+  id: string;
+  price: number;
+  baseDiamonds: number;
+  firstBonusDiamonds: number;
+  firstTotalDiamonds: number;
+  firstChargeEligible: boolean;
+  label: string;
+}
+
+export interface MembershipKkReward {
+  planId: MembershipPlanId;
+  amount: number;
+  rewardDate?: string;
+}
 
 export type StackedPlanStatus = 'active' | 'paused' | 'expired' | string;
 
@@ -105,6 +144,7 @@ export interface CheckInResponse {
   todayBonusPoints?: number;
   signinBonusSchedule?: number[] | null;
   endAt?: string | null;
+  membershipRewards?: MembershipKkReward[];
 }
 
 export interface SignInMakeupResponse {
@@ -116,6 +156,7 @@ export interface SignInMakeupResponse {
   makeupCardCount: number;
   rewardBreakdown: SignInRewardBreakdown;
   status: MembershipSignInStatus;
+  membershipRewards?: MembershipKkReward[];
 }
 
 export type UserGender = 'male' | 'female';
@@ -140,6 +181,9 @@ export interface User {
   profileCompleted?: boolean;
   points: number;
   diamonds?: number;
+  kkBalance?: KkBalance;
+  kkRechargePlans?: KkRechargePlan[];
+  membership?: MembershipState;
   inviteCode: string;
   hasSignedIn: boolean;
   firstChargePlans?: Record<string, boolean>;
@@ -247,6 +291,7 @@ export interface InviteCodeUseResult {
 // 积分活动查询
 export type PointsActivityDirection = 'all' | 'income' | 'expense';
 export type PointsActivityCurrency = CurrencyWithAll | 'wallet';
+export type KkActivityFilter = 'all' | 'recharge' | 'gift' | 'consume' | 'expired' | 'refund';
 
 export interface GetPointsActivitiesParams {
   currency?: PointsActivityCurrency;
@@ -255,6 +300,7 @@ export interface GetPointsActivitiesParams {
   month?: number;
   page?: number;
   pageSize?: number;
+  kkFilter?: KkActivityFilter;
 }
 
 export interface PointsActivityItem {
@@ -266,11 +312,17 @@ export interface PointsActivityItem {
   id: number;
   title: string;
   subtitle: string;
+  assetCategory?: 'recharge' | 'gift' | null;
+  validityType?: 'permanent' | 'limited' | null;
+  expiresAt?: string | null;
+  eventStatus?: 'completed' | 'expired' | string;
+  relatedActivityId?: number | null;
 }
 
 export interface PointsActivitiesResponse {
   points: number;
   diamonds: number;
+  kkBalance?: KkBalance;
   items: PointsActivityItem[];
   page?: number;
   pageSize?: number;

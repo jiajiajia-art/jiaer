@@ -3,10 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import { auth } from '../api/account/authApi';
-import type { GetPointsActivitiesParams, PointsActivityDirection, PointsActivityItem, PointsActivityCurrency } from '../api/account/auth.type';
+import type {
+    GetPointsActivitiesParams,
+    KkActivityFilter,
+    KkBalance,
+    PointsActivityDirection,
+    PointsActivityItem,
+    PointsActivityCurrency,
+} from '../api/account/auth.type';
 import { useTranslation } from 'react-i18next';
 import CurrencyIcon from '../components/CurrencyIcon';
 import styles from './AssetDetails.module.css';
+import { formatKk } from '../utils/kkMoney';
 
 type CurrencyTab = 'all' | 'points' | 'diamonds';
 
@@ -17,6 +25,24 @@ const tabs: Array<{ key: CurrencyTab; label: string }> = [
 ];
 
 const monthOptions = Array.from({ length: 12 }, (_, index) => index + 1);
+const EMPTY_KK_BALANCE: KkBalance = {
+    total: 0,
+    permanent: 0,
+    limited: 0,
+    recharge: 0,
+    gift: 0,
+    nextExpiryAt: null,
+    nextExpiryAmount: 0,
+};
+
+const KK_FILTER_OPTIONS: Array<{ key: KkActivityFilter; label: string }> = [
+    { key: 'all', label: '全部' },
+    { key: 'recharge', label: '充值币' },
+    { key: 'gift', label: '赠币' },
+    { key: 'consume', label: '消费' },
+    { key: 'expired', label: '已过期' },
+    { key: 'refund', label: '退款' },
+];
 
 function formatActivityTime(value: string) {
     const normalizedValue = String(value || '').trim();
@@ -65,6 +91,7 @@ const AssetDetails: React.FC = () => {
     const defaultMonth = now.getMonth() + 1;
     const [currencyTab, setCurrencyTab] = useState<CurrencyTab>('all');
     const [direction, setDirection] = useState<PointsActivityDirection>('all');
+    const [kkFilter, setKkFilter] = useState<KkActivityFilter>('all');
     const [directionOpen, setDirectionOpen] = useState(false);
     const [selectedYear, setSelectedYear] = useState<number | null>(defaultYear);
     const [selectedMonth, setSelectedMonth] = useState<number | null>(defaultMonth);
@@ -73,6 +100,7 @@ const AssetDetails: React.FC = () => {
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [points, setPoints] = useState(0);
     const [diamonds, setDiamonds] = useState(0);
+    const [kkBalance, setKkBalance] = useState<KkBalance>(EMPTY_KK_BALANCE);
     const [items, setItems] = useState<PointsActivityItem[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [page, setPage] = useState(1);
@@ -106,6 +134,9 @@ const AssetDetails: React.FC = () => {
                 page: nextPage,
                 pageSize: 20,
             };
+            if (currencyTab === 'diamonds') {
+                params.kkFilter = kkFilter;
+            }
 
             if (selectedYear !== null && selectedMonth !== null) {
                 params.year = selectedYear;
@@ -120,6 +151,11 @@ const AssetDetails: React.FC = () => {
             const payload = response.data.data;
             setPoints(payload.points ?? 0);
             setDiamonds(payload.diamonds ?? 0);
+            setKkBalance(payload.kkBalance ?? {
+                ...EMPTY_KK_BALANCE,
+                total: payload.diamonds ?? 0,
+                permanent: payload.diamonds ?? 0,
+            });
             setItems((prev) => (append ? [...prev, ...payload.items] : payload.items));
             const nextTotalPages = Number(payload.totalPages);
             setTotalPages(Number.isFinite(nextTotalPages) && nextTotalPages > 0 ? nextTotalPages : 1);
@@ -136,7 +172,7 @@ const AssetDetails: React.FC = () => {
             loadingRef.current = false;
             setIsLoading(false);
         }
-    }, [currencyTab, direction, selectedYear, selectedMonth]);
+    }, [currencyTab, direction, kkFilter, selectedYear, selectedMonth]);
 
     useEffect(() => {
         setItems([]);
@@ -225,6 +261,8 @@ const AssetDetails: React.FC = () => {
         : direction === 'income'
             ? t('assetDetails.directionIncome')
             : t('assetDetails.directionExpense');
+    const kkFilterLabel = KK_FILTER_OPTIONS.find((option) => option.key === kkFilter)?.label ?? '全部';
+    const formatExpiry = (value: string) => formatActivityTime(value);
 
     return (
         <div className={styles.pageRoot}>
@@ -258,10 +296,21 @@ const AssetDetails: React.FC = () => {
                                 <CurrencyIcon currency="diamonds" className={styles.balanceIconDiamond} />
                                 <div className={styles.balanceInfo}>
                                     <span className={styles.balanceLabel}>{t('assetDetails.diamonds')}</span>
-                                    <span className={styles.balanceValue}>{diamonds}</span>
+                                    <span className={styles.balanceValue}>{formatKk(kkBalance.total ?? diamonds)}</span>
                                 </div>
                             </div>
                         </div>
+                        <div className={styles.kkBreakdownGrid} aria-label="KK币余额构成">
+                            <div><span>永久币</span><strong>{formatKk(kkBalance.permanent)}</strong></div>
+                            <div><span>限时币</span><strong>{formatKk(kkBalance.limited)}</strong></div>
+                            <div><span>充值币</span><strong>{formatKk(kkBalance.recharge)}</strong></div>
+                            <div><span>赠币</span><strong>{formatKk(kkBalance.gift)}</strong></div>
+                        </div>
+                        {kkBalance.nextExpiryAt && kkBalance.nextExpiryAmount > 0 ? (
+                            <p className={styles.expiryHint}>
+                                {formatExpiry(kkBalance.nextExpiryAt)} 将有 {formatKk(kkBalance.nextExpiryAmount)} 限时币到期
+                            </p>
+                        ) : null}
                     </section>
 
                     <section className={styles.toolbar}>
@@ -279,7 +328,7 @@ const AssetDetails: React.FC = () => {
                         </div>
 
                         <div className={styles.filterRow}>
-                            {/* 收支下拉 */}
+                            {/* KK币页展示业务流水筛选，其余页保留收支筛选。 */}
                             <div className={styles.selectArea}>
                                 <button
                                     type="button"
@@ -288,7 +337,7 @@ const AssetDetails: React.FC = () => {
                                     aria-expanded={directionOpen}
                                     onClick={() => setDirectionOpen((v) => !v)}
                                 >
-                                    <span>{directionLabel}</span>
+                                    <span>{currencyTab === 'diamonds' ? kkFilterLabel : directionLabel}</span>
                                     <svg viewBox="0 0 20 20" aria-hidden="true" className={styles.filterChevron}>
                                         <path d="M5.5 7.5L10 12l4.5-4.5" />
                                     </svg>
@@ -302,23 +351,27 @@ const AssetDetails: React.FC = () => {
                                             onClick={() => setDirectionOpen(false)}
                                         />
                                         <div className={styles.selectPopup} role="listbox">
-                                            {([
-                                                { key: 'all' as PointsActivityDirection, label: 'directionAll' },
-                                                { key: 'income' as PointsActivityDirection, label: 'directionIncome' },
-                                                { key: 'expense' as PointsActivityDirection, label: 'directionExpense' },
+                                            {(currencyTab === 'diamonds' ? KK_FILTER_OPTIONS : [
+                                                { key: 'all' as PointsActivityDirection, label: t('assetDetails.directionAll') },
+                                                { key: 'income' as PointsActivityDirection, label: t('assetDetails.directionIncome') },
+                                                { key: 'expense' as PointsActivityDirection, label: t('assetDetails.directionExpense') },
                                             ]).map((opt) => (
                                                 <button
                                                     key={opt.key}
                                                     type="button"
                                                     role="option"
-                                                    aria-selected={direction === opt.key}
-                                                    className={`${styles.selectOption} ${direction === opt.key ? styles.selectOptionActive : ''}`}
+                                                    aria-selected={currencyTab === 'diamonds' ? kkFilter === opt.key : direction === opt.key}
+                                                    className={`${styles.selectOption} ${(currencyTab === 'diamonds' ? kkFilter === opt.key : direction === opt.key) ? styles.selectOptionActive : ''}`}
                                                     onClick={() => {
-                                                        setDirection(opt.key);
+                                                        if (currencyTab === 'diamonds') {
+                                                            setKkFilter(opt.key as KkActivityFilter);
+                                                        } else {
+                                                            setDirection(opt.key as PointsActivityDirection);
+                                                        }
                                                         setDirectionOpen(false);
                                                     }}
                                                 >
-                                                    {t(`assetDetails.${opt.label}`)}
+                                                    {currencyTab === 'diamonds' ? opt.label : opt.label}
                                                 </button>
                                             ))}
                                         </div>
@@ -436,6 +489,13 @@ const AssetDetails: React.FC = () => {
                                             <div className={styles.itemMain}>
                                                 <div className={styles.itemTypeRow}>
                                                     <span className={`${styles.itemTypeBadge} ${item.currency === 'points' ? styles.itemTypeBadgePoints : ''}`}>{t(`assetDetails.${typeLabel}`)}</span>
+                                                    {item.currency === 'diamonds' && item.validityType ? (
+                                                        <span className={`${styles.itemValidityBadge} ${item.validityType === 'limited' ? styles.itemValidityBadgeLimited : ''}`}>
+                                                            {item.eventStatus === 'expired'
+                                                                ? '已过期'
+                                                                : item.validityType === 'limited' ? '限时币' : '永久币'}
+                                                        </span>
+                                                    ) : null}
                                                     <h2 className={styles.itemTitle}>{item.title}</h2>
                                                 </div>
                                                 {item.subtitle ? <p className={styles.itemSubtitle}>{item.subtitle}</p> : null}
@@ -447,7 +507,7 @@ const AssetDetails: React.FC = () => {
                                                 }`}
                                             >
                                                 {isIncome ? '+' : '-'}
-                                                {displayValue}
+                                                {formatKk(displayValue)}
                                             </div>
                                         </article>
                                     );

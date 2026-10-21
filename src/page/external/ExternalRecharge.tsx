@@ -28,6 +28,12 @@ function formatDiamondCount(value: number | null | undefined): string {
   return new Intl.NumberFormat('zh-CN').format(value);
 }
 
+function getPlanDisplayDiamonds(plan: ExternalRechargePlanLike): number {
+  return plan.firstChargeEligible
+    ? (plan.firstTotalDiamonds ?? plan.diamonds)
+    : (plan.baseDiamonds ?? plan.diamonds);
+}
+
 function getStatusCopy(state: ExternalRechargeDisplayState): { title: string; body: string } {
   if (state === 'paid') {
     return { title: '支付成功', body: '充值已完成，KK币会同步回外部游戏。' };
@@ -341,7 +347,12 @@ export default function ExternalRecharge() {
                         <span className={styles.packageBadge}>{getPackageBadge(index, planOptions.length)}</span>
                         <span className={styles.packageArtwork} style={getPackageSpriteStyle(index)} aria-hidden="true" />
                         <span className={styles.packageName}>{getPackageName(index)}</span>
-                        <strong>{formatDiamondCount(plan.diamonds)} KK币</strong>
+                        <strong>{formatDiamondCount(getPlanDisplayDiamonds(plan))} KK币</strong>
+                        <span className={styles.packageBonusCopy}>
+                          {plan.firstChargeEligible
+                            ? `首充含 ${formatDiamondCount(plan.firstBonusDiamonds ?? 0)} 加赠币`
+                            : '基础充值币（首充加赠已领取）'}
+                        </span>
                         <span className={styles.packagePrice}>{formatPlanPrice(plan)}</span>
                       </button>
                     );
@@ -409,7 +420,14 @@ export default function ExternalRecharge() {
                 />
                 <div>
                   <span>当前礼包</span>
-                  <strong>{selectedPlan ? `${formatDiamondCount(selectedPlan.diamonds)} KK币` : '--'}</strong>
+                  <strong>{selectedPlan ? `${formatDiamondCount(getPlanDisplayDiamonds(selectedPlan))} KK币` : '--'}</strong>
+                  {selectedPlan ? (
+                    <small>
+                      {selectedPlan.firstChargeEligible
+                        ? `首充：基础 ${formatDiamondCount(selectedPlan.baseDiamonds)} + 加赠 ${formatDiamondCount(selectedPlan.firstBonusDiamonds)}`
+                        : '本档位按基础币数到账'}
+                    </small>
+                  ) : null}
                   <small>{formatPlanPrice(selectedPlan)}</small>
                 </div>
               </div>

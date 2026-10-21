@@ -1,6 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import type { MembershipSignInStatus } from '../api/account/auth.type';
+import type { MembershipKkReward, MembershipSignInStatus } from '../api/account/auth.type';
 import styles from './MembershipSignInResultModal.module.css';
 
 interface MembershipSignInResultModalProps {
@@ -8,6 +8,7 @@ interface MembershipSignInResultModalProps {
     onClose: () => void;
     status: MembershipSignInStatus | null;
     isLoading?: boolean;
+    membershipRewards?: MembershipKkReward[];
 }
 
 const MembershipSignInResultModal: React.FC<MembershipSignInResultModalProps> = ({
@@ -15,6 +16,7 @@ const MembershipSignInResultModal: React.FC<MembershipSignInResultModalProps> = 
     onClose,
     status,
     isLoading = false,
+    membershipRewards = [],
 }) => {
     if (!isOpen) return null;
 
@@ -80,6 +82,13 @@ const MembershipSignInResultModal: React.FC<MembershipSignInResultModalProps> = 
                         </div>
                     </div>
                 )}
+                {membershipRewards.length > 0 ? (
+                    <p className={styles.subtitle}>
+                        会员签到额外获得永久KK币：{membershipRewards.map((reward) => (
+                            `${reward.planId === 'week' ? '周卡' : '月卡'} +${reward.amount}`
+                        )).join('、')}
+                    </p>
+                ) : null}
             </div>
         </div>,
         document.body,

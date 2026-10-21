@@ -27,6 +27,7 @@ import { getApiErrorMessage } from '../utils/error';
 import { copyTextToClipboard } from '../utils/clipboard';
 import { getImageUrl } from '../utils/constants';
 import { getGenderSymbol, normalizeGender } from '../utils/profileCompletion';
+import { formatKk } from '../utils/kkMoney';
 import {
     parseOverseasPayReturnSearch,
     resolveOverseasPayReturnStatus,
@@ -487,8 +488,12 @@ const Create: React.FC = () => {
                                             }
                                         }}
                                     >
-                                        <div className={styles.primaryStatValue}>{user?.user?.diamonds ?? 0}</div>
-                                        <div className={styles.primaryStatLabel}>{t('create.diamondsStat')}</div>
+                                        <div className={styles.primaryStatValue}>
+                                            KK币：{formatKk(user?.user?.kkBalance?.total ?? user?.user?.diamonds ?? 0)}币
+                                        </div>
+                                        <div className={styles.primaryStatLabel}>
+                                            （含{formatKk(user?.user?.kkBalance?.limited ?? 0)}限时币）
+                                        </div>
                                     </div>
                                 </div>
 

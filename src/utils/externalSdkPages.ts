@@ -29,6 +29,10 @@ export interface ExternalRechargePlanLike {
   diamonds: number;
   label: string;
   currency?: string | null;
+  baseDiamonds?: number;
+  firstBonusDiamonds?: number;
+  firstTotalDiamonds?: number;
+  firstChargeEligible?: boolean;
 }
 
 export interface ExternalRechargeSessionLike {

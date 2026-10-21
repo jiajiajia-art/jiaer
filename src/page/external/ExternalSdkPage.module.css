@@ -851,6 +851,13 @@
   font-variant-numeric: tabular-nums;
 }
 
+.packageBonusCopy {
+  min-height: 34px;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .rechargeFooterBar {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

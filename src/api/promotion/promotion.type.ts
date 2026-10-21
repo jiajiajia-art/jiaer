@@ -27,6 +27,12 @@ export type PromotionReviewStatus = 'pending_review' | 'approved' | 'rejected' |
 export type PromotionRewardTaskStatus = 'pending_issue' | 'issued' | 'cancelled';
 export type PromotionSubmissionLimitType = 'unlimited' | 'rolling_window' | 'once_per_activity';
 
+export interface PromotionKkReward {
+    enabled: boolean;
+    amount: number;
+    validDays: number | null;
+}
+
 export interface PromotionActivity {
     id: number;
     title: string;
@@ -43,6 +49,7 @@ export interface PromotionActivity {
     submissionLimitDays: number | null;
     submissionLimitCount: number | null;
     rewardPoints: number;
+    kkReward: PromotionKkReward;
     canSubmit?: boolean;
     availabilityText?: string;
     status: PromotionActivityStatus;
@@ -123,6 +130,7 @@ export interface PromotionRewardTask {
     activityId: number;
     userId: string;
     rewardPoints: number;
+    kkReward: PromotionKkReward;
     status: PromotionRewardTaskStatus;
     issuedAt: string | null;
     issuedByUserId: string | null;
@@ -155,6 +163,7 @@ export interface PromotionActivityPayload {
     submissionLimitDays: number | null;
     submissionLimitCount: number | null;
     rewardPoints: number;
+    kkReward: PromotionKkReward;
     status: PromotionActivityStatus;
     sortOrder: number;
 }
