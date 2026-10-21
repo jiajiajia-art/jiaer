@@ -127,11 +127,12 @@ const AccountSettings: React.FC = () => {
     }, [editingBio]);
 
     const handleBack = () => {
+        // 功能注释：replace 掉 settings，避免主页再 -1 回到编辑页形成循环
         if (selfCode) {
-            navigate(`/account/${encodeURIComponent(selfCode)}`);
+            navigate(`/account/${encodeURIComponent(selfCode)}`, { replace: true });
             return;
         }
-        navigate('/profile');
+        navigate('/profile', { replace: true });
     };
 
     const bioDirty = bio.trim() !== savedBio.trim();

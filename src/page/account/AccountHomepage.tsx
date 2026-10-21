@@ -143,20 +143,6 @@ const AccountHomepage: React.FC = () => {
         });
     }, [routeUserCode, selfCode, updateUser]);
 
-    /** 功能注释：管理端带来源时回管理页；否则上一页；无历史再回个人中心 */
-    const handleClose = () => {
-        const from = (location.state as { from?: unknown } | null)?.from;
-        if (typeof from === 'string' && from.startsWith('/') && !from.startsWith('//')) {
-            navigate(from);
-            return;
-        }
-        if (window.history.length > 1) {
-            navigate(-1);
-            return;
-        }
-        navigate('/profile');
-    };
-
     const openSocial = (tab: 'following' | 'followers') => {
         if (!profile || profile.isBlockedBy) return;
         const canView = tab === 'following'
@@ -242,6 +228,25 @@ const AccountHomepage: React.FC = () => {
     }
 
     const isOwner = Boolean(profile?.isSelf ?? (selfCode && selfCode === routeUserCode));
+
+    /** 功能注释：管理端带回管理；本人主页固定回个人中心；访客回上一页 */
+    const handleClose = () => {
+        const from = (location.state as { from?: unknown } | null)?.from;
+        if (typeof from === 'string' && from.startsWith('/') && !from.startsWith('//')) {
+            navigate(from);
+            return;
+        }
+        if (isOwner) {
+            navigate('/profile');
+            return;
+        }
+        if (window.history.length > 1) {
+            navigate(-1);
+            return;
+        }
+        navigate('/profile');
+    };
+
     const isBlockedBy = Boolean(profile?.isBlockedBy);
     const isBlocked = Boolean(profile?.isBlocked);
     const homepageUnavailable = Boolean(profile?.homepageUnavailable) && !isOwner;

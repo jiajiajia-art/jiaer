@@ -2,7 +2,7 @@
 
 > 对齐前端：`/account/:userCode`、`/account/:userCode/social`  
 > 仓储习惯：Cloudflare D1 + raw SQL；响应 `{ success, message?, data }`  
-> 本版：**接口需登录**；`bio`/`bannerUrl` 在 `user`；列表可见性在 `user_privacy`（无行=默认公开）；关注列表游标+排序；Banner R2 路径对齐头像模式（方案 A）。
+> 本版：**接口需登录**；`bio`/`bannerUrl` 在 `user`；列表可见性在 `user_privacy`（无行=默认公开）；关注列表游标+排序；Banner 存 `public/account/{userId}/banner/...`。
 
 ---
 
@@ -12,7 +12,7 @@
 |------|------|
 | 公开主页资料 | 按 `userCode` 取昵称、头像、简介、Banner、关注/粉丝数、相对当前用户是否已关注 |
 | 编辑简介 | 仅本人 |
-| 上传 / 清除 Banner | 仅本人；jpg/png/webp，≤ 5MB；服务端可压缩；读图走 Cloudflare 图片转换（参照头像） |
+| 上传 / 清除 Banner | 仅本人；jpg/png/webp，≤ 5MB；服务端可压缩；读图走 `/public/*` |
 | 关注 / 取消关注 / 移除粉丝 | 对任意其他用户；幂等；取关与移除粉丝共用 `DELETE .../follow`，用 `action` 区分方向 |
 | 关注列表 / 粉丝列表 | 默认他人可看（仅公开字段）；支持「最近 / 最早」+ 游标分页；受隐私开关约束 |
 | 列表隐私设置 | 本人可分别设置「关注列表 / 粉丝列表」是否对他人可见；**未设置 = 全部可见**；本人始终可看自己的列表 |
@@ -110,32 +110,21 @@ CREATE INDEX IF NOT EXISTS idx_user_follow_followee_time
 
 ---
 
-## 3. 存储与图片（Banner）— 方案 A（对齐头像）
+## 3. 存储与图片（Banner）
 
-**头像现状（对照）：**
-
-- R2 key：`interactive-fiction-game-avatar/{userId}/{timestamp}_{sanitizedName}`
-- 库字段 `avatarUrl` 存该 key
-- 读图：`GET /interactive-fiction-game-avatar/:userId/:filename?`（可选 webp 转换）
-
-**Banner 采用同一模式，仅换前缀：**
+**Banner 走 `/public`（与游戏封面同源反代，不单独开 Nginx location）：**
 
 1. multipart 校验：`image/jpeg` | `image/png` | `image/webp`；大小 ≤ 5MB  
 2. R2 key（已拍板）：
 
 ```text
-interactive-fiction-game-banner/{userId}/{timestamp}_{sanitizedName}
+public/account/{userId}/banner/{timestamp}_{sanitizedName}
 ```
 
 3. 写库 `user.bannerUrl = objectKey`（与头像一样存 key，不存完整 https）  
-4. 读图路由（建议）：
+4. 读图：`GET /public/account/{userId}/banner/...`（现有 `GET /public/*`）  
+5. 前端继续用 `getImageUrl(bannerUrl)` 拼资源主机  
 
-```text
-GET /interactive-fiction-game-banner/:userId/:filename?
-```
-
-   转换逻辑仿照头像 handler（Cloudflare 图片转换；展示按主页 Banner 尺寸/16:9，不必照搬 150 小头像）  
-5. 前端继续用 `getImageUrl(bannerUrl)` 拼 `HOST_ADDRESS`  
 
 可选：`DELETE` 清 Banner 时只清库字段（R2 对象可异步 GC）。  
 勿与运营首页 Banner（`/uploads/admin/banners/...`）混用。
@@ -204,7 +193,7 @@ GET /interactive-fiction-game-banner/:userId/:filename?
 成功：
 
 ```json
-{ "success": true, "data": { "bannerUrl": "interactive-fiction-game-banner/..." } }
+{ "success": true, "data": { "bannerUrl": "public/account/.../banner/..." } }
 ```
 
 ### 4.4 清除 Banner
@@ -351,7 +340,7 @@ LIMIT :limit
 | 删用户清理 follow | **建议做** |
 | 列表隐私开关 | **本版要做**：独立表 `user_privacy`（无行=默认公开） |
 
-一句话：资料在 `user`，隐私在 `user_privacy`，关注单表 + 游标；Banner 路径对齐头像（换前缀）；不加 Redis、不加计数字段。
+一句话：资料在 `user`，隐私在 `user_privacy`，关注单表 + 游标；Banner 在 `public/account/...`；不加 Redis、不加计数字段。
 
 ---
 
@@ -363,7 +352,7 @@ LIMIT :limit
 | Schema 快照 | 同步 `cf/d1-schema.sql` |
 | Service | `userFollowService.js`；`userPrivacyService.js`；`userService` 增 bio/banner |
 | Routes | `interface/routes/account.js`，登录中间件；**固定路径** `bio` / `banner` / `privacy` **须注册在** `:userCode` **之前** |
-| Banner 读图 | `GET /interactive-fiction-game-banner/:userId/:filename?`，仿头像转换 |
+| Banner 读图 | `GET /public/account/{userId}/banner/...`（走 `/public/*`） |
 
 ---
 
@@ -384,7 +373,7 @@ LIMIT :limit
 - 接口需登录  
 - `bio` / `bannerUrl` 在 `user`；列表可见性在 **`user_privacy`**（无行=默认都可见）  
 - 关列表后仍显示人数；列表接口 403；`GET|PATCH /api/account/privacy`  
-- Banner 方案 A：`interactive-fiction-game-banner/{userId}/{ts}_{name}` + 专用 GET，仿头像 + Cloudflare 转换  
+- Banner：`public/account/{userId}/banner/{ts}_{name}`，读图走 `/public/*`  
 - 列表：`sort` + 游标，默认每页 10  
 - `DELETE .../follow?action=unfollow|removeFollower`  
 - 不加 `follow_count`/`fan_count`；不加 Redis  
