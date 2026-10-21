@@ -488,12 +488,13 @@ const Create: React.FC = () => {
                                             }
                                         }}
                                     >
-                                        <div className={styles.primaryStatValue}>
-                                            KK币：{formatKk(user?.user?.kkBalance?.total ?? user?.user?.diamonds ?? 0)}币
+                                        <div className={`${styles.primaryStatValue} ${styles.primaryStatValueWithHint}`}>
+                                            <span>{formatKk(user?.user?.kkBalance?.total ?? user?.user?.diamonds ?? 0)}</span>
+                                            <span className={styles.primaryStatValueHint}>
+                                                （含{formatKk(user?.user?.kkBalance?.limited ?? 0)}限时币）
+                                            </span>
                                         </div>
-                                        <div className={styles.primaryStatLabel}>
-                                            （含{formatKk(user?.user?.kkBalance?.limited ?? 0)}限时币）
-                                        </div>
+                                        <div className={styles.primaryStatLabel}>KK币</div>
                                     </div>
                                 </div>
 

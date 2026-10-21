@@ -28,9 +28,14 @@ test('account types expose wallet, membership, recharge, and activity metadata',
 
 test('profile overview shows total KK coins and included limited coins', () => {
   const source = readSource('src/page/Create.tsx');
+  const styles = readSource('src/page/Create.module.css');
   assert.match(source, /含.*限时币/);
   assert.match(source, /kkBalance/);
   assert.match(source, /formatKk/);
+  assert.match(source, /primaryStatValueHint/);
+  assert.match(source, /primaryStatLabel[^]*KK币/);
+  assert.doesNotMatch(source, /KK币：.*币/);
+  assert.match(styles, /\.primaryStatValueHint/);
 });
 
 test('asset details expose wallet breakdown and KK activity filters', () => {

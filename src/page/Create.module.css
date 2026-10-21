@@ -1037,6 +1037,25 @@
     font-variant-numeric: tabular-nums;
 }
 
+.primaryStatValueWithHint {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 3px;
+    min-width: 0;
+}
+
+.primaryStatValueHint {
+    flex: 0 1 auto;
+    min-width: 0;
+    color: var(--creator-label);
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+}
+
 .primaryStatLabel {
     font-size: 12px;
     color: var(--creator-label);
@@ -1713,6 +1732,10 @@
 
     .primaryStatValue {
         font-size: 17px;
+    }
+
+    .primaryStatValueHint {
+        font-size: 9px;
     }
 
     .primaryStatLabel {
