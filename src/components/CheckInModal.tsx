@@ -442,8 +442,13 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                                         <div>
                                             <strong>{t('checkIn.monthRewardTitle')}</strong>
                                             <p>{status.month.bonusRewarded
-                                                ? t('checkIn.monthRewarded')
-                                                : t('checkIn.monthRewardRule', { days: status.month.targetDays })}</p>
+                                                ? t('checkIn.monthRewarded', {
+                                                    points: status.month.bonusPoints,
+                                                })
+                                                : t('checkIn.monthRewardRule', {
+                                                    days: status.month.targetDays,
+                                                    points: status.month.bonusPoints,
+                                                })}</p>
                                         </div>
                                         <span>{monthProgress}/{status.month.targetDays}</span>
                                     </div>

@@ -110,10 +110,21 @@ test('签到界面隐藏实现术语，只展示奖励规则', () => {
   assert.doesNotMatch(modalSource, /checkIn\.utcCalendar|<span>UTC<\/span>/);
   assert.doesNotMatch(modalSource, /checkIn\.bonusEligible|checkIn\.bonusMissed/);
   assert.doesNotMatch(zhLocale.checkIn.weekRule, /UTC|自然周/);
-  assert.match(zhLocale.checkIn.weekRule, /每日.*5 织梦豆/);
-  assert.match(zhLocale.checkIn.weekRule, /第 6 天.*15 织梦豆/);
-  assert.match(zhLocale.checkIn.weekRule, /第 7 天.*25 织梦豆/);
+  assert.match(zhLocale.checkIn.weekRule, /前 6 天.*5 织梦豆/);
+  assert.match(zhLocale.checkIn.weekRule, /第 7 天.*15 织梦豆/);
+  assert.doesNotMatch(zhLocale.checkIn.weekRule, /25 织梦豆/);
   assert.doesNotMatch(enLocale.checkIn.weekRule, /UTC|calendar week/i);
+});
+
+test('月奖励提示使用后端返回的奖励数量', () => {
+  assert.match(modalSource, /monthRewarded',\s*\{\s*points:\s*status\.month\.bonusPoints,?\s*\}/);
+  assert.match(modalSource, /monthRewardRule',[\s\S]*?points:\s*status\.month\.bonusPoints/);
+  assert.match(zhLocale.checkIn.monthRewardRule, /\{\{points\}\}/);
+  assert.match(zhLocale.checkIn.monthRewarded, /\{\{points\}\}/);
+  assert.match(enLocale.checkIn.monthRewardRule, /\{\{points\}\}/);
+  assert.match(enLocale.checkIn.monthRewarded, /\{\{points\}\}/);
+  assert.doesNotMatch(zhLocale.checkIn.monthRewardRule, /100/);
+  assert.doesNotMatch(enLocale.checkIn.monthRewardRule, /100/);
 });
 
 test('关闭按钮无外圆框且保留可访问点击区域', () => {
