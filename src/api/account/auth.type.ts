@@ -292,6 +292,9 @@ export interface InviteCodeUseResult {
 export type PointsActivityDirection = 'all' | 'income' | 'expense';
 export type PointsActivityCurrency = CurrencyWithAll | 'wallet';
 export type KkActivityFilter = 'all' | 'recharge' | 'gift' | 'consume' | 'expired' | 'refund';
+export type KkValidityFilter = 'all' | 'permanent' | 'limited';
+export type KkAssetCategoryFilter = 'all' | 'recharge' | 'gift';
+export type KkEventTypeFilter = 'all' | 'income' | 'consume' | 'expired' | 'refund';
 
 export interface GetPointsActivitiesParams {
   currency?: PointsActivityCurrency;
@@ -301,6 +304,9 @@ export interface GetPointsActivitiesParams {
   page?: number;
   pageSize?: number;
   kkFilter?: KkActivityFilter;
+  validityType?: KkValidityFilter;
+  assetCategory?: KkAssetCategoryFilter;
+  eventType?: KkEventTypeFilter;
 }
 
 export interface PointsActivityItem {

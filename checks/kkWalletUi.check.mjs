@@ -22,6 +22,12 @@ test('account types expose wallet, membership, recharge, and activity metadata',
   assert.match(source, /membership\?: MembershipState/);
   assert.match(source, /kkRechargePlans\?: KkRechargePlan\[\]/);
   assert.match(source, /kkFilter\?: KkActivityFilter/);
+  assert.match(source, /KkValidityFilter = 'all' \| 'permanent' \| 'limited'/);
+  assert.match(source, /KkAssetCategoryFilter = 'all' \| 'recharge' \| 'gift'/);
+  assert.match(source, /KkEventTypeFilter = 'all' \| 'income' \| 'consume' \| 'expired' \| 'refund'/);
+  assert.match(source, /validityType\?: KkValidityFilter/);
+  assert.match(source, /assetCategory\?: KkAssetCategoryFilter/);
+  assert.match(source, /eventType\?: KkEventTypeFilter/);
   assert.match(source, /assetCategory\?: 'recharge' \| 'gift' \| null/);
   assert.match(source, /validityType\?: 'permanent' \| 'limited' \| null/);
 });
@@ -40,13 +46,24 @@ test('profile overview shows total KK coins and included limited coins', () => {
 
 test('asset details expose wallet breakdown and KK activity filters', () => {
   const source = readSource('src/page/AssetDetails.tsx');
+  const styles = readSource('src/page/AssetDetails.module.css');
   assert.match(source, /永久币/);
   assert.match(source, /限时币/);
   assert.match(source, /充值币/);
   assert.match(source, /赠币/);
   assert.match(source, /已过期/);
-  assert.match(source, /kkFilter/);
+  assert.match(source, /按有效期/);
+  assert.match(source, /按来源/);
+  assert.match(source, /流水类型/);
+  assert.match(source, /aria-pressed/);
+  assert.match(source, /一键清除/);
+  assert.match(source, /kkValidity/);
+  assert.match(source, /kkAssetCategory/);
+  assert.match(source, /kkEventType/);
   assert.match(source, /nextExpiryAt/);
+  assert.match(styles, /\.toolbar\s*\{[^}]*flex-wrap:\s*nowrap/s);
+  assert.match(styles, /\.kkBreakdownButton:focus-visible/);
+  assert.doesNotMatch(styles, /@media\s*\(max-width:\s*560px\)[^]*\.toolbar\s*\{[^}]*flex-direction:\s*column/s);
 });
 
 test('recharge and membership UI only exposes the new plans and benefits', () => {

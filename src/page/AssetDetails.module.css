@@ -94,32 +94,79 @@
     gap: 12px;
 }
 
-.kkBreakdownGrid {
+.kkBreakdownGroups {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 8px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
     margin-top: 12px;
 }
 
-.kkBreakdownGrid > div {
+.kkBreakdownGroup {
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid var(--ad-border);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.025);
+}
+
+.kkBreakdownHeading {
+    margin: 0 0 8px;
+    color: var(--ad-label);
+    font-size: 12px;
+    line-height: 1.3;
+    font-weight: 500;
+}
+
+.kkBreakdownGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.kkBreakdownButton {
     display: flex;
     flex-direction: column;
+    align-items: flex-start;
     gap: 6px;
     min-width: 0;
-    padding: 12px;
+    min-height: 64px;
+    padding: 10px;
     border: 1px solid var(--ad-border);
     border-radius: 10px;
     background: var(--ad-card);
+    color: var(--ad-value);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
 }
 
-.kkBreakdownGrid span,
+.kkBreakdownButton:hover {
+    border-color: rgba(255, 255, 255, 0.28);
+    background: var(--ad-elevated);
+}
+
+.kkBreakdownButton:active {
+    transform: translateY(1px);
+}
+
+.kkBreakdownButton:focus-visible {
+    outline: 2px solid rgba(232, 90, 112, 0.75);
+    outline-offset: 2px;
+}
+
+.kkBreakdownButtonActive {
+    border-color: var(--ad-primary);
+    background: rgba(168, 40, 60, 0.16);
+}
+
+.kkBreakdownButton span,
 .expiryHint {
     color: var(--ad-label);
     font-size: 12px;
     line-height: 1.5;
 }
 
-.kkBreakdownGrid strong {
+.kkBreakdownButton strong {
     color: var(--ad-value);
     font-size: 16px;
     font-variant-numeric: tabular-nums;
@@ -180,6 +227,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: nowrap;
     gap: 8px;
     padding: 10px 16px;
     background: rgba(0, 0, 0, 0.92);
@@ -191,7 +239,8 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    min-width: 0;
+    flex: 0 0 auto;
+    min-width: max-content;
 }
 
 .tabButton {
@@ -235,11 +284,20 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    flex-shrink: 0;
+    flex: 0 0 auto;
+    min-width: max-content;
 }
 
 .selectArea {
     position: relative;
+}
+
+.dateFilterArea {
+    order: 1;
+}
+
+.activityFilterArea {
+    order: 2;
 }
 
 .selectTrigger {
@@ -248,7 +306,7 @@
     justify-content: center;
     gap: 4px;
     min-width: 68px;
-    height: 30px;
+    min-height: 44px;
     padding: 0 10px;
     border: 1px solid var(--ad-border);
     border-radius: 8px;
@@ -476,6 +534,95 @@
     color: #c7c7cc;
 }
 
+.kkFilterPopup {
+    width: min(360px, calc(100vw - 32px));
+    padding: 12px;
+    overflow: visible;
+}
+
+.kkFilterSection + .kkFilterSection {
+    margin-top: 12px;
+}
+
+.kkFilterSection h3 {
+    margin: 0 0 8px;
+    color: var(--ad-label);
+    font-size: 12px;
+    line-height: 1.3;
+    font-weight: 500;
+}
+
+.kkFilterOptions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.kkFilterOption {
+    min-width: 68px;
+    min-height: 40px;
+    padding: 0 12px;
+    border: 1px solid var(--ad-border);
+    border-radius: 8px;
+    background: var(--ad-card);
+    color: var(--ad-label);
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+}
+
+.kkFilterOption:hover,
+.kkFilterOption:focus-visible {
+    border-color: rgba(255, 255, 255, 0.28);
+    color: var(--ad-value);
+}
+
+.kkFilterOption:focus-visible {
+    outline: 2px solid rgba(232, 90, 112, 0.75);
+    outline-offset: 2px;
+}
+
+.kkFilterOptionActive {
+    border-color: var(--ad-primary);
+    background: rgba(168, 40, 60, 0.18);
+    color: var(--ad-value);
+    font-weight: 600;
+}
+
+.kkFilterFooter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--ad-border);
+}
+
+.kkFilterFooter span {
+    min-width: 0;
+    color: var(--ad-label);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.kkFilterFooter button {
+    flex: 0 0 auto;
+    min-height: 36px;
+    padding: 0 12px;
+    border: 1px solid var(--ad-border);
+    border-radius: 8px;
+    background: var(--ad-card);
+    color: var(--ad-value);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.kkFilterFooter button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
 .itemValidityBadge {
     display: inline-flex;
     align-items: center;
@@ -634,17 +781,52 @@
 }
 
 @media (max-width: 560px) {
-    .kkBreakdownGrid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+    .kkBreakdownGroups {
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .toolbar {
-        align-items: flex-start;
-        flex-direction: column;
+        align-items: center;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        gap: 4px;
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+    .tabs {
+        gap: 0;
+    }
+
+    .tabButton {
+        min-height: 44px;
+        padding: 0 7px;
+        font-size: 12px;
+    }
+
+    .tabButtonActive::after {
+        left: 7px;
+        right: 7px;
     }
 
     .filterRow {
-        width: 100%;
-        justify-content: flex-end;
+        width: auto;
+        justify-content: flex-start;
+        gap: 4px;
+    }
+
+    .selectTrigger {
+        min-width: 62px;
+        padding: 0 7px;
+        font-size: 11px;
+    }
+
+    .kkFilterPopup {
+        position: fixed;
+        top: auto;
+        right: 16px;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+        left: 16px;
+        width: auto;
     }
 }
