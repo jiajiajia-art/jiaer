@@ -12,6 +12,7 @@ import RechargeModal from '../components/Purchase/RechargeModal';
 import ExchangeModal from '../components/Purchase/ExchangeModal';
 import CreatorWorksPanel from '../components/Create/CreatorWorksPanel';
 import ProfileFunctionPanel from '../components/Profile/ProfileFunctionPanel';
+import VipStatusModal from '../components/Profile/VipStatusModal';
 import InviteCampaignCard from '../components/Profile/InviteCampaignCard';
 import TodayEarnPointsPanel from '../components/Profile/TodayEarnPointsPanel';
 import ProfilePreferenceModal from '../components/ProfilePreferenceModal';
@@ -28,6 +29,7 @@ import { copyTextToClipboard } from '../utils/clipboard';
 import { getImageUrl } from '../utils/constants';
 import { getGenderSymbol, normalizeGender } from '../utils/profileCompletion';
 import { formatKk } from '../utils/kkMoney';
+import { hasActiveVip } from '../lib/membershipStatus';
 import {
     parseOverseasPayReturnSearch,
     resolveOverseasPayReturnStatus,
@@ -68,6 +70,7 @@ const Create: React.FC = () => {
     const [creatorBenefits, setCreatorBenefits] = useState<CreatorBenefitSummary | null>(null);
     const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
     const [isMembershipRechargeModalOpen, setIsMembershipRechargeModalOpen] = useState(false);
+    const [isVipStatusModalOpen, setIsVipStatusModalOpen] = useState(false);
     const [isExchangeModalOpen, setIsExchangeModalOpen] = useState(false);
     const [streakDays, setStreakDays] = useState(0);
     const [isStatsExpanded, setIsStatsExpanded] = useState(false);
@@ -86,7 +89,8 @@ const Create: React.FC = () => {
     const debugToken = user?.user?.debugToken;
     const truncatedDebugToken = debugToken ? `${debugToken.slice(0, 8)}...` : null;
     const userAvatar = getImageUrl(user?.user?.avatarUrl) || `${import.meta.env.BASE_URL}data/assets/defaultAvatar.png`;
-    const isMember = Boolean(user?.user?.isMember);
+    const membership = user?.user?.membership;
+    const isVipActive = hasActiveVip(membership);
     const isPromotionPartner = Boolean(user?.user?.userSegment && user.user.userSegment !== 'normal');
     const isWorkIncentive = stats.incentiveType === 'incentive' || stats.incentiveType === 'game_incentive' || stats.incentiveType === 'all_incentive';
 
@@ -407,7 +411,7 @@ const Create: React.FC = () => {
                                                 </button>
                                             )}
                                         </div>
-                                        {(isMember || isPromotionPartner || creatorBenefits) && (
+                                        {(isVipActive || isPromotionPartner || creatorBenefits) && (
                                             <div className={styles.creatorHeroBadgeRow}>
                                                 {creatorBenefits && (
                                                     <button
@@ -418,10 +422,16 @@ const Create: React.FC = () => {
                                                         {creatorBenefits.label}
                                                     </button>
                                                 )}
-                                                {isMember && (
-                                                    <span className={styles.creatorRoleBadge}>
-                                                        {t('create.memberBadge')}
-                                                    </span>
+                                                {isVipActive && (
+                                                    <button
+                                                        type="button"
+                                                        className={styles.creatorVipBadge}
+                                                        onClick={() => setIsVipStatusModalOpen(true)}
+                                                        aria-label="查看VIP会员状态与福利"
+                                                        title="查看VIP会员状态与福利"
+                                                    >
+                                                        VIP
+                                                    </button>
                                                 )}
                                                 {isPromotionPartner && (
                                                     <span className={styles.creatorRoleBadge}>
@@ -620,6 +630,16 @@ const Create: React.FC = () => {
 
             <MobileBottomNav />
             <FooterArea />
+
+            <VipStatusModal
+                isOpen={isVipStatusModalOpen}
+                membership={membership}
+                onClose={() => setIsVipStatusModalOpen(false)}
+                onPurchase={() => {
+                    setIsVipStatusModalOpen(false);
+                    setIsMembershipRechargeModalOpen(true);
+                }}
+            />
 
             <RechargeModal
                 isOpen={isRechargeModalOpen}

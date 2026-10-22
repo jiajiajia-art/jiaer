@@ -84,8 +84,13 @@
 }
 
 .modalContentWide {
-    width: min(520px, calc(100vw - 20px));
-    max-width: 560px;
+    width: min(520px, calc(100vw - 32px));
+    max-width: 520px;
+}
+
+.rechargeCenter {
+    min-height: 0;
+    padding: 20px 22px 24px;
 }
 
 @keyframes slideUp {
@@ -122,6 +127,39 @@
     opacity: 0.75;
 }
 
+.dismissBtn {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 10;
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+}
+
+.dismissIcon::before,
+.dismissIcon::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 11px;
+    width: 14px;
+    height: 1.5px;
+    border-radius: 2px;
+    background: currentColor;
+}
+
+.dismissIcon::before {
+    transform: rotate(45deg);
+}
+
+.dismissIcon::after {
+    transform: rotate(-45deg);
+}
+
 .closeIcon {
     display: block;
     width: 10px;
@@ -144,6 +182,7 @@
     align-items: center;
     justify-content: center;
     min-height: 22px;
+    flex-shrink: 0;
 }
 
 .exchangeRate {
@@ -166,11 +205,74 @@
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 18px;
     flex: 1;
     min-height: 0;
     overflow-y: auto;
     padding-bottom: calc(4px + env(safe-area-inset-bottom));
+}
+
+.form > * {
+    flex-shrink: 0;
+}
+
+.regionSummary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 48px;
+    margin-bottom: 14px;
+    padding: 0 14px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.58);
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.regionSummary strong {
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 600;
+    text-align: right;
+}
+
+.rechargeTabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-bottom: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.rechargeTabs button {
+    min-height: 46px;
+    border: none;
+    background: rgba(255, 255, 255, 0.03);
+    color: rgba(255, 255, 255, 0.68);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.rechargeTabs button + button {
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.rechargeTabs .rechargeTabActive {
+    background: rgba(255, 59, 97, 0.28);
+    color: #fff;
+}
+
+.sectionHeading {
+    margin: 0 0 10px;
+    color: #fff;
+    font-size: 14px;
+    line-height: 1.35;
+    font-weight: 600;
 }
 
 .balanceCard {
@@ -252,7 +354,7 @@
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid transparent;
     border-radius: 8px;
-    padding: 6px 4px;
+    padding: 12px 8px;
     cursor: pointer;
     transition: background 0.2s ease, border-color 0.2s ease;
     display: flex;
@@ -261,10 +363,10 @@
     justify-content: center;
     gap: 0;
     width: 100%;
-    height: 71px;
-    min-height: 71px;
+    height: auto;
+    min-height: 96px;
     box-sizing: border-box;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .firstChargeTag,
@@ -287,24 +389,16 @@
     align-items: center;
     justify-content: center;
     gap: 2px;
-    font-size: 1.05rem;
+    font-size: 0.98rem;
     line-height: 1;
     font-weight: 700;
     color: #ffffff;
     letter-spacing: 0.01em;
-    transform: translateX(-3px);
+    transform: none;
 }
 
 .amountMainPoints span {
-    transform: translateX(-2px);
-}
-
-.amountCoin {
-    width: 32px;
-    height: 32px;
-    object-fit: contain;
-    flex-shrink: 0;
-    display: block;
+    transform: none;
 }
 
 .amountTopSection {
@@ -323,10 +417,15 @@
 }
 
 .firstChargeMeta {
-    margin-top: 6px;
+    margin-top: 2px;
     color: rgba(255, 255, 255, 0.7);
     font-size: 11px;
     line-height: 1.4;
+}
+
+.firstChargeMeta strong {
+    color: #fff;
+    font-weight: 700;
 }
 
 .amountPriceOriginal {
@@ -363,25 +462,30 @@
     font-weight: 500;
 }
 
-.customInputWrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
+.customAmountPanel {
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 10px;
-    padding: 0 14px;
+    overflow: hidden;
     transition: border-color 0.2s ease, background 0.2s ease;
 }
 
-.customInputWrapper:focus-within {
+.customAmountPanel:focus-within {
     border-color: rgba(255, 41, 41, 0.55);
     background: rgba(255, 255, 255, 0.08);
     box-shadow: none;
 }
 
-.customInputWrapper.inputError {
+.customAmountPanel.inputError {
     border-color: #e74c3c;
+}
+
+.customInputWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 48px;
+    padding: 0 14px;
 }
 
 .shake {
@@ -417,11 +521,33 @@
     color: rgba(255, 255, 255, 0.3);
 }
 
+.currencyUnit {
+    flex-shrink: 0;
+    color: rgba(255, 255, 255, 0.58);
+    font-size: 12px;
+}
+
 .customReceiveHint {
-    margin-top: 8px;
-    font-size: 0.82rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 42px;
+    padding: 0 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 0.8rem;
     color: rgba(255, 255, 255, 0.55);
-    text-align: center;
+}
+
+.customReceiveHint strong {
+    color: #fff;
+}
+
+.customAmountNotice {
+    margin: 8px 0 0;
+    color: rgba(255, 255, 255, 0.46);
+    font-size: 11px;
+    line-height: 1.5;
 }
 
 .customPoints {
@@ -571,26 +697,23 @@
     align-items: center;
     justify-content: center;
     width: 100%;
-    max-width: 209px;
-    height: 42px;
+    max-width: none;
+    min-height: 48px;
     padding: 0 16px;
     margin: 12px auto 0;
-    background: rgba(255, 255, 255, 0.1);
+    background: #a8283c;
     color: #ffffff;
     border: none;
-    border-radius: 200px;
+    border-radius: 10px;
     font-size: 15px;
     font-weight: 500;
     cursor: pointer;
     transition: background 0.2s ease, opacity 0.2s ease;
     box-shadow: none;
-    position: sticky;
-    bottom: 0;
-    z-index: 2;
 }
 
 .submitBtn:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.16);
+    background: #c23a50;
     transform: none;
     box-shadow: none;
 }
@@ -604,6 +727,46 @@
     color: rgba(255, 255, 255, 0.35);
     cursor: not-allowed;
     box-shadow: none;
+}
+
+.paymentSection {
+    padding-top: 2px;
+}
+
+.orderSummary {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.orderSummary > div,
+.confirmationRows > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 44px;
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 13px;
+}
+
+.orderSummary > div + div,
+.confirmationRows > div + div {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.orderSummary strong,
+.confirmationRows strong {
+    color: #fff;
+    font-weight: 600;
+    text-align: right;
+}
+
+.paymentNotice {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.46);
+    font-size: 12px;
+    line-height: 1.55;
+    text-align: center;
 }
 
 /* 功能注释：支付方式片——墨黑账本 + 右上关闭；微信行带绿标，去掉底部取消 */
@@ -726,14 +889,15 @@
 
 /* 功能注释：钻石页支付方式互切条；默认项高亮 */
 .payMethodToggle {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
-    margin-bottom: 12px;
+    margin-bottom: 0;
 }
 
 .payMethodToggleBtn {
     flex: 1;
-    min-height: 36px;
+    min-height: 46px;
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 10px;
     background: rgba(255, 255, 255, 0.04);
@@ -843,116 +1007,6 @@
     box-shadow: none;
 }
 
-/* 会员状态卡（畅享会员） */
-.membershipStatusCard {
-    position: relative;
-    width: 100%;
-    height: 120px;
-    border-radius: 14px;
-    border: 1px solid transparent;
-    background: linear-gradient(293deg, #262928 0%, #151312 100%);
-    overflow: hidden;
-    padding: 0 10px 0 18px;
-    box-sizing: border-box;
-    display: flex;
-    align-items: center;
-}
-
-.membershipStatusCard::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: 14px;
-    padding: 1px;
-    background: linear-gradient(113deg, #949492 0%, #ffffff1a 100%);
-    -webkit-mask:
-        linear-gradient(#fff 0 0) content-box,
-        linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    pointer-events: none;
-    z-index: 1;
-}
-
-.membershipStatusMain {
-    position: relative;
-    z-index: 0;
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-}
-
-.membershipStatusInfo {
-    min-width: 0;
-    flex: 1 1 auto;
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-}
-
-.membershipStatusIcon {
-    width: 18px;
-    height: 18px;
-    margin-top: 3px;
-    object-fit: contain;
-    flex-shrink: 0;
-}
-
-.membershipStatusText {
-    min-width: max-content;
-    flex: 0 1 auto;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.membershipStatusTitle {
-    font-size: 17px;
-    font-weight: 600;
-    color: #ffffff;
-    line-height: 1.25;
-    letter-spacing: 0.02em;
-    white-space: nowrap;
-}
-
-.membershipStatusExpire {
-    display: flex;
-    align-items: baseline;
-    flex-wrap: nowrap;
-    gap: 4px;
-    font-size: 12px;
-    line-height: 1.3;
-    white-space: nowrap;
-}
-
-.membershipStatusExpireLabel {
-    color: #FF3B61;
-    font-weight: 500;
-}
-
-.membershipStatusExpireDate {
-    color: rgba(255, 255, 255, 0.92);
-    font-weight: 500;
-    font-variant-numeric: tabular-nums;
-}
-
-.membershipStatusBadge {
-    flex-shrink: 0;
-    width: 72px;
-    height: 72px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.membershipStatusBadgeIcon {
-    width: 72px;
-    height: 72px;
-    object-fit: contain;
-}
-
 /* 会员卡套餐列表 */
 .plansList {
     display: grid;
@@ -961,21 +1015,14 @@
     margin-bottom: 0;
 }
 
-@media (min-width: 420px) {
-    .plansList {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-}
-
 .planItem {
     flex: 1;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 14px 8px;
-    min-height: 72px;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 16px 14px;
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid transparent;
     border-radius: 10px;
@@ -996,35 +1043,38 @@
 }
 
 .planItemName {
-    font-size: 12px;
-    font-weight: 500;
+    font-size: 15px;
+    font-weight: 600;
     color: rgba(255, 255, 255, 0.9);
     margin-bottom: 0;
     line-height: 1.2;
-    text-align: center;
+    text-align: left;
+}
+
+.planItemHeader {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.payMethodToggleBtn:disabled {
+    opacity: 0.42;
+    cursor: not-allowed;
 }
 
 .planRewardSummary {
-    flex: 1;
     color: rgba(255, 255, 255, 0.72);
     font-size: 12px;
     line-height: 1.45;
     text-align: left;
 }
 
-.membershipRules {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 18px;
-    color: rgba(255, 255, 255, 0.76);
-    font-size: 13px;
-    line-height: 1.55;
-}
-
-.membershipRules strong {
-    color: #fff;
-    font-size: 15px;
+.planDiscount {
+    color: rgba(255, 255, 255, 0.58);
+    font-size: 12px;
+    line-height: 1.4;
+    text-align: left;
 }
 
 .planItemActive .planItemName {
@@ -1032,7 +1082,7 @@
 }
 
 .planItemPrice {
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 700;
     color: #ffffff;
     line-height: 1;
@@ -1040,19 +1090,19 @@
 
 .membershipSubmitBtn {
     width: 100%;
-    max-width: 209px;
-    height: 42px;
+    max-width: none;
+    min-height: 48px;
     margin: 12px auto 0;
-    background: rgba(255, 255, 255, 0.1);
+    background: #a8283c;
     border: none;
-    border-radius: 200px;
+    border-radius: 10px;
     color: #ffffff;
     font-size: 15px;
     font-weight: 500;
 }
 
 .membershipSubmitBtn:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.16);
+    background: #c23a50;
 }
 
 .membershipSubmitBtn:disabled {
@@ -1562,6 +1612,170 @@
     font-weight: 700;
 }
 
+.confirmationOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.74);
+    backdrop-filter: blur(4px);
+}
+
+.membershipBenefitsCard,
+.membershipRulesCard {
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.membershipBenefitsHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 48px;
+    margin: 0 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.membershipBenefitsHeader strong {
+    color: #fff;
+    font-size: 14px;
+}
+
+.membershipBenefitsHeader span {
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 11px;
+}
+
+.membershipBenefitRow {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) 20px;
+    align-items: center;
+    gap: 10px;
+    min-height: 64px;
+    margin: 0 14px;
+}
+
+.membershipBenefitRow + .membershipBenefitRow {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.membershipBenefitIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 7px;
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.membershipBenefitText {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.membershipBenefitText strong {
+    color: rgba(255, 255, 255, 0.94);
+    font-size: 13px;
+    line-height: 1.35;
+}
+
+.membershipBenefitText small {
+    color: rgba(255, 255, 255, 0.54);
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.membershipBenefitCheck {
+    color: rgba(255, 255, 255, 0.76);
+    font-size: 14px;
+    text-align: right;
+}
+
+.membershipRulesCard {
+    padding: 14px;
+}
+
+.membershipRulesCard > strong {
+    display: block;
+    margin-bottom: 8px;
+    color: #fff;
+    font-size: 13px;
+}
+
+.membershipRulesCard ul {
+    margin: 0;
+    padding-left: 18px;
+    color: rgba(255, 255, 255, 0.58);
+    font-size: 11px;
+    line-height: 1.65;
+}
+
+.confirmationPanel {
+    width: min(520px, calc(100vw - 40px));
+    max-height: calc(100dvh - 40px);
+    overflow-y: auto;
+    padding: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 14px;
+    background: #242426;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.56);
+}
+
+.confirmationPanel h2 {
+    margin: 0 0 16px;
+    color: #fff;
+    font-size: 18px;
+    line-height: 1.4;
+}
+
+.confirmationRows {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.confirmationActions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.confirmationActions button {
+    min-height: 46px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.confirmationActions .confirmationPrimary {
+    border-color: #a8283c;
+    background: #a8283c;
+}
+
+.confirmationActions button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 /* ========== 移动端适配 ========== */
 @media (max-width: 768px) {
     .modalOverlay {
@@ -1571,8 +1785,8 @@
     }
 
     .modalContent {
-        width: min(322px, calc(100vw - 20px));
-        max-width: none;
+        width: min(520px, calc(100vw - 20px));
+        max-width: 520px;
         padding: 18px 16px 20px;
         min-height: auto;
         max-height: calc(100dvh - 20px - env(safe-area-inset-bottom));
@@ -1589,9 +1803,9 @@
     }
 
     .amountBtn {
-        padding: 6px 4px;
-        min-height: 71px;
-        height: 71px;
+        padding: 10px 6px;
+        min-height: 96px;
+        height: auto;
     }
 
     .amountTopSection {
@@ -1621,28 +1835,27 @@
     }
 
     .submitBtn {
-        height: 42px;
+        min-height: 48px;
         padding: 0 16px;
         font-size: 15px;
         margin-top: 12px;
-        max-width: 209px;
-        border-radius: 200px;
+        max-width: none;
+        border-radius: 10px;
     }
 
     .membershipSubmitBtn {
-        max-width: 209px;
-        height: 42px;
+        max-width: none;
+        min-height: 48px;
         margin-top: 12px;
     }
 
     .planItem {
-        padding: 12px 6px;
-        min-height: 68px;
+        padding: 12px 10px;
         gap: 6px;
     }
 
     .planItemName {
-        font-size: 11px;
+        font-size: 14px;
         margin-bottom: 0;
     }
 
@@ -1658,6 +1871,35 @@
     .plansCards {
         grid-template-columns: 1fr;
         gap: 16px;
+    }
+
+    .plansList {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .regionSummary {
+        align-items: center;
+        flex-direction: row;
+        gap: 8px;
+        padding: 0 12px;
+        font-size: 12px;
+    }
+
+    .regionSummary strong {
+        text-align: right;
+        font-size: 12px;
+    }
+
+    .confirmationOverlay {
+        align-items: flex-end;
+        padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+    }
+
+    .confirmationPanel {
+        width: 100%;
+        max-height: calc(100dvh - 24px - env(safe-area-inset-bottom));
+        padding: 20px 16px;
+        border-radius: 14px;
     }
 
     .planCard {

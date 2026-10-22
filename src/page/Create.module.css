@@ -749,6 +749,31 @@
     white-space: nowrap;
 }
 
+.creatorVipBadge {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 24px;
+    padding: 2px 9px;
+    border: 1px solid rgba(255, 196, 207, 0.48);
+    border-radius: 6px;
+    background: var(--creator-accent);
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.creatorVipBadge:hover,
+.creatorVipBadge:focus-visible {
+    border-color: rgba(255, 224, 230, 0.86);
+    background: var(--creator-accent-soft);
+    outline: none;
+}
+
 .creatorLevelBadge {
     min-height: 28px;
     display: inline-flex;

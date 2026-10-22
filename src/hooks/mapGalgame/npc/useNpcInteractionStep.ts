@@ -364,7 +364,7 @@ export const useNpcInteractionStep = ({
     });
   }, [showStep]);
 
-  const FREE_ROUNDS = 5;
+  const FREE_ROUNDS = 0;
 
   const handleChoiceOption = useCallback(
     async (

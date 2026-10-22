@@ -1,7 +1,7 @@
 .panelStack {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 18px;
     color-scheme: light;
 }
 
@@ -14,7 +14,7 @@
 }
 
 .heroCard {
-    padding: 30px 34px;
+    padding: 24px 28px;
 }
 
 .card {
@@ -33,9 +33,54 @@
 }
 
 .heroTitle {
-    margin: 18px 0 12px;
+    margin: 14px 0 8px;
     font-size: 24px;
     color: #2e241d;
+}
+
+.adminTabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    padding: 7px;
+    border: 1px solid rgba(222, 191, 166, 0.48);
+    border-radius: 18px;
+    background: rgba(255, 250, 245, 0.9);
+    box-shadow: 0 12px 28px rgba(181, 135, 92, 0.1);
+}
+
+.adminTab,
+.adminTabActive {
+    min-height: 46px;
+    padding: 9px 14px;
+    border: 1px solid transparent;
+    border-radius: 13px;
+    background: transparent;
+    color: #725a48;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.adminTab:hover {
+    background: rgba(209, 147, 99, 0.08);
+    color: #8b4f28;
+}
+
+.adminTabActive {
+    border-color: rgba(201, 115, 63, 0.28);
+    background: linear-gradient(135deg, rgba(181, 111, 59, 0.14), rgba(215, 156, 104, 0.18));
+    color: #8b4f28;
+    box-shadow: 0 6px 16px rgba(181, 111, 59, 0.1);
+}
+
+.adminTab:focus-visible,
+.adminTabActive:focus-visible,
+.iconButton:focus-visible,
+.ghostButton:focus-visible {
+    outline: 3px solid rgba(201, 115, 63, 0.24);
+    outline-offset: 2px;
 }
 
 .heroDesc,
@@ -57,6 +102,19 @@
     margin: 0 0 8px;
     font-size: 18px;
     color: #2e241d;
+}
+
+.recordCount {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: rgba(209, 147, 99, 0.1);
+    color: #8d6245;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
 }
 
 .formArea {
@@ -212,6 +270,27 @@
     gap: 12px;
 }
 
+.membershipFilterGrid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.searchRow {
+    display: grid;
+    grid-template-columns: minmax(260px, 1fr) auto auto;
+    align-items: end;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.searchField {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
 .inlineGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -237,7 +316,8 @@
 
 .primaryButton,
 .secondaryButton,
-.dangerButton {
+.dangerButton,
+.ghostButton {
     padding: 10px 18px;
     border-radius: 999px;
     font-size: 14px;
@@ -263,6 +343,17 @@
     color: #b73a3a;
 }
 
+.ghostButton {
+    border: 1px solid rgba(220, 195, 175, 0.78);
+    background: transparent;
+    color: #725b4a;
+}
+
+.ghostButton:hover {
+    border-color: rgba(201, 115, 63, 0.5);
+    background: rgba(209, 147, 99, 0.08);
+}
+
 .primaryButton:disabled,
 .secondaryButton:disabled,
 .dangerButton:disabled {
@@ -271,9 +362,23 @@
 }
 
 .generatedPanel {
+    margin-top: 20px;
     display: flex;
     flex-direction: column;
     gap: 12px;
+    padding: 16px;
+    border: 1px solid rgba(220, 195, 175, 0.7);
+    border-radius: 16px;
+    background: rgba(250, 242, 234, 0.7);
+}
+
+.generatedPanelHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    color: #47372c;
 }
 
 .generatedMeta {
@@ -321,6 +426,107 @@
     gap: 8px;
 }
 
+.iconButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid rgba(220, 195, 175, 0.82);
+    border-radius: 10px;
+    background: rgba(255, 253, 250, 0.96);
+    color: #6d513d;
+    cursor: pointer;
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.iconButton svg {
+    width: 18px;
+    height: 18px;
+}
+
+.iconButton:hover {
+    border-color: rgba(201, 115, 63, 0.55);
+    background: rgba(209, 147, 99, 0.1);
+    color: #9a5529;
+}
+
+.iconButton:disabled {
+    opacity: 0.52;
+    cursor: wait;
+}
+
+.dangerIconButton {
+    border-color: rgba(187, 53, 53, 0.2);
+    background: rgba(187, 53, 53, 0.06);
+    color: #b73a3a;
+}
+
+.statusPill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 26px;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: rgba(112, 91, 75, 0.1);
+    color: #695447;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.status_active,
+.keyStatus_used {
+    background: rgba(53, 145, 91, 0.12);
+    color: #2f8051;
+}
+
+.status_pending,
+.keyStatus_unused {
+    background: rgba(204, 137, 50, 0.14);
+    color: #95621f;
+}
+
+.status_expired,
+.keyStatus_expired,
+.keyStatus_archived {
+    background: rgba(112, 103, 96, 0.12);
+    color: #6f665f;
+}
+
+.statusFrozen {
+    background: rgba(187, 53, 53, 0.1);
+    color: #ab3434;
+}
+
+.userCode,
+.userNickname {
+    display: block;
+}
+
+.userCode {
+    color: #3c2f25;
+    font-size: 13px;
+}
+
+.userNickname {
+    margin-top: 3px;
+    color: #8a7565;
+    font-size: 11px;
+}
+
+.referenceCode {
+    display: inline-block;
+    max-width: 210px;
+    overflow: hidden;
+    color: #6a4b37;
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .tableWrapper {
     overflow-x: auto;
     border-radius: 16px;
@@ -333,6 +539,10 @@
     min-width: 1480px;
     border-collapse: separate;
     border-spacing: 0;
+}
+
+.membershipTable {
+    min-width: 1120px;
 }
 
 .table th,
@@ -386,6 +596,10 @@
     .createFormRow:last-child {
         grid-template-columns: 1fr 1fr;
     }
+
+    .membershipFilterGrid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 @media (max-width: 768px) {
@@ -399,9 +613,101 @@
         font-size: 21px;
     }
 
+    .adminTabs {
+        gap: 5px;
+        padding: 5px;
+        border-radius: 14px;
+    }
+
+    .adminTab,
+    .adminTabActive {
+        min-height: 52px;
+        padding: 7px 6px;
+        font-size: 12px;
+        line-height: 1.35;
+    }
+
     .inlineGrid,
-    .filterGrid {
+    .filterGrid,
+    .membershipFilterGrid {
         grid-template-columns: 1fr;
+    }
+
+    .searchRow {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .searchField {
+        grid-column: 1 / -1;
+    }
+
+    .searchRow .primaryButton,
+    .searchRow .ghostButton {
+        width: 100%;
+    }
+
+    .tableWrapper {
+        overflow: visible;
+        border: none;
+        background: transparent;
+    }
+
+    .responsiveTable {
+        display: block;
+        min-width: 0;
+    }
+
+    .responsiveTable thead {
+        display: none;
+    }
+
+    .responsiveTable tbody {
+        display: grid;
+        gap: 12px;
+    }
+
+    .responsiveTable tr {
+        display: block;
+        overflow: hidden;
+        border: 1px solid rgba(220, 195, 175, 0.72);
+        border-radius: 14px;
+        background: rgba(255, 253, 250, 0.96);
+    }
+
+    .responsiveTable td {
+        display: grid;
+        grid-template-columns: minmax(96px, 0.8fr) minmax(0, 1.4fr);
+        gap: 10px;
+        align-items: center;
+        padding: 10px 12px;
+        text-align: right;
+        overflow-wrap: anywhere;
+    }
+
+    .responsiveTable td::before {
+        content: attr(data-label);
+        color: #7a6555;
+        font-size: 12px;
+        font-weight: 700;
+        text-align: left;
+    }
+
+    .responsiveTable td > * {
+        justify-self: end;
+    }
+
+    .responsiveTable .keyCell {
+        min-width: 0;
+    }
+
+    .responsiveTable .keyCode,
+    .responsiveTable .referenceCode {
+        max-width: 160px;
+    }
+
+    .iconButton {
+        width: 44px;
+        height: 44px;
     }
 
     .createFormRow:first-child,

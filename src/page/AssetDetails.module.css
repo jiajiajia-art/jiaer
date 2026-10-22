@@ -94,6 +94,20 @@
     gap: 12px;
 }
 
+.kkBreakdownSection {
+    padding: 14px 16px 16px;
+    border-bottom: 1px solid var(--ad-border);
+    background: var(--ad-bg);
+}
+
+.kkBreakdownTitle {
+    margin: 0;
+    color: var(--ad-value);
+    font-size: 14px;
+    line-height: 1.4;
+    font-weight: 600;
+}
+
 .kkBreakdownGroups {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -281,6 +295,7 @@
 }
 
 .filterRow {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -289,7 +304,7 @@
 }
 
 .selectArea {
-    position: relative;
+    position: static;
 }
 
 .dateFilterArea {
@@ -349,14 +364,18 @@
 
 .selectPopup {
     position: absolute;
-    top: calc(100% + 6px);
+    top: calc(100% + 8px);
     right: 0;
+    bottom: auto;
+    left: auto;
     z-index: 20;
-    min-width: 96px;
+    box-sizing: border-box;
+    min-width: 112px;
+    max-width: calc(100vw - 24px);
     border: 1px solid var(--ad-border);
-    border-radius: 10px;
+    border-radius: 12px;
     background: var(--ad-elevated);
-    box-shadow: none;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.48);
     overflow: hidden;
 }
 
@@ -392,14 +411,17 @@
 
 .filterPopup {
     position: absolute;
-    top: calc(100% + 10px);
+    top: calc(100% + 8px);
     right: 0;
+    bottom: auto;
+    left: auto;
     z-index: 20;
-    width: min(290px, calc(100vw - 32px));
+    box-sizing: border-box;
+    width: min(320px, calc(100vw - 24px));
     border: 1px solid var(--ad-border);
     border-radius: 12px;
     background: var(--ad-elevated);
-    box-shadow: none;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.48);
     overflow: hidden;
 }
 
@@ -535,9 +557,10 @@
 }
 
 .kkFilterPopup {
-    width: min(360px, calc(100vw - 32px));
-    padding: 12px;
-    overflow: visible;
+    width: min(360px, calc(100vw - 24px));
+    max-height: min(70vh, 520px);
+    padding: 14px;
+    overflow-y: auto;
 }
 
 .kkFilterSection + .kkFilterSection {
@@ -685,6 +708,45 @@
     color: #e85a70;
 }
 
+.itemAmountStack {
+    display: flex;
+    flex: 0 0 auto;
+    min-width: 72px;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    padding-top: 1px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.itemOriginalAmount {
+    color: var(--ad-label);
+    font-size: 12px;
+    line-height: 1;
+    text-decoration: line-through;
+    text-decoration-thickness: 1px;
+}
+
+.itemActualAmount {
+    padding-top: 0;
+    font-size: 16px;
+}
+
+.itemDiscountBadge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 20px;
+    padding: 0 6px;
+    border: 1px solid rgba(232, 90, 112, 0.35);
+    border-radius: 5px;
+    background: rgba(168, 40, 60, 0.12);
+    color: #e85a70;
+    font-size: 10px;
+    line-height: 1;
+    font-weight: 600;
+}
+
 .stateBlock {
     display: flex;
     align-items: center;
@@ -821,12 +883,17 @@
         font-size: 11px;
     }
 
-    .kkFilterPopup {
-        position: fixed;
-        top: auto;
-        right: 16px;
-        bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
-        left: 16px;
-        width: auto;
+    .item {
+        gap: 10px;
     }
+
+    .itemAmountStack {
+        min-width: 64px;
+        gap: 3px;
+    }
+
+    .itemActualAmount {
+        font-size: 15px;
+    }
+
 }

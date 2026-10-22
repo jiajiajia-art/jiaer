@@ -1,13 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { MdContentCopy, MdLock, MdLockOpen } from 'react-icons/md';
 import Pagination from './Pagination';
+import MembershipRecordsPanel from './MembershipRecordsPanel';
 import subscriptionKeysApi from '../api/subscriptionKeys/subscriptionKeysApi';
 import { getApiErrorMessage } from '../utils/error';
 import { copyTextToClipboard as copyText } from '../utils/clipboard';
 import { planLabelMap } from '../utils/planLabels';
 import type {
     AdminSubscriptionKeyRecord,
+    CreatedSubscriptionKeyRecord,
     CreateSubscriptionKeysPayload,
     SubscriptionKeyListResult,
     SubscriptionKeySourceType,
@@ -20,6 +23,7 @@ type FilterPlan = 'all' | SubscriptionPlanId;
 type FilterStatus = 'all' | SubscriptionKeyStatus;
 type FilterSourceType = 'all' | SubscriptionKeySourceType;
 type FilterDisabled = 'all' | 'enabled' | 'disabled';
+type AdminMembershipTab = 'membershipRecords' | 'keyGeneration' | 'keyRecords';
 
 const emptyListResult: SubscriptionKeyListResult = {
     total: 0,
@@ -31,12 +35,13 @@ const emptyListResult: SubscriptionKeyListResult = {
 const statusLabelMap: Record<SubscriptionKeyStatus, string> = {
     unused: '未使用',
     used: '已使用',
+    expired: '已过期',
     archived: '已归档',
 };
 
 const sourceTypeLabelMap: Record<SubscriptionKeySourceType, string> = {
-    paid: '付费',
-    campaign: '活动',
+    paid: '充值购买',
+    campaign: '运营生成',
 };
 
 const formatTime = (value?: string | null) => {
@@ -84,12 +89,14 @@ const toIsoDateTime = (value: string) => {
 
 const SubscriptionAdminManager: React.FC = () => {
     const { t } = useTranslation();
+    const [activeTab, setActiveTab] = useState<AdminMembershipTab>('membershipRecords');
     const [planId, setPlanId] = useState<SubscriptionPlanId>('month_v2');
     const [count, setCount] = useState('1');
     const [expireAt, setExpireAt] = useState('');
     const [channel, setChannel] = useState('');
     const [issuedToUserCode, setIssuedToUserCode] = useState('');
     const [isCreating, setIsCreating] = useState(false);
+    const [createdKeys, setCreatedKeys] = useState<CreatedSubscriptionKeyRecord[]>([]);
 
     const [planFilter, setPlanFilter] = useState<FilterPlan>('all');
     const [statusFilter, setStatusFilter] = useState<FilterStatus>('all');
@@ -132,8 +139,10 @@ const SubscriptionAdminManager: React.FC = () => {
     }, [disabledFilter, page, pageSize, planFilter, sourceTypeFilter, statusFilter, userCodeFilter]);
 
     useEffect(() => {
-        void loadList();
-    }, [loadList]);
+        if (activeTab === 'keyRecords') {
+            void loadList();
+        }
+    }, [activeTab, loadList]);
 
     const handleCreateKeys = async () => {
         const nextCount = Number(count);
@@ -161,7 +170,10 @@ const SubscriptionAdminManager: React.FC = () => {
                 toast.error('接口未返回可用的 Key');
                 return;
             }
-            toast.success(`已创建 ${data.keys.length} 个 Key`);
+            setCreatedKeys(data.keys);
+            toast.success(issuedToUserCode.trim()
+                ? `已向 ${issuedToUserCode.trim()} 发放 ${data.keys.length} 张会员兑换卡`
+                : `已生成 ${data.keys.length} 张会员兑换卡`);
 
             if (page !== 1) {
                 setPage(1);
@@ -208,16 +220,37 @@ const SubscriptionAdminManager: React.FC = () => {
             <section className={styles.heroCard}>
                 <div>
                     <div className={styles.sectionBadge}>会员管理</div>
-                    <h2 className={styles.heroTitle}>会员订阅 Key 管理</h2>
-                    <p className={styles.heroDesc}>用于管理新周卡、月卡的 Key 发放、查询与冻结/解冻。</p>
+                    <h2 className={styles.heroTitle}>会员管理中心</h2>
+                    <p className={styles.heroDesc}>查询会员状态，生成会员兑换卡，并追踪兑换卡的使用与冻结情况。</p>
                 </div>
             </section>
 
-            <section className={styles.card}>
+            <div className={styles.adminTabs} role="tablist" aria-label="会员管理功能">
+                {([
+                    ['membershipRecords', '会员状态记录'],
+                    ['keyGeneration', '会员兑换卡密钥生成'],
+                    ['keyRecords', '会员兑换卡使用记录'],
+                ] as const).map(([tab, label]) => (
+                    <button
+                        key={tab}
+                        type="button"
+                        role="tab"
+                        aria-selected={activeTab === tab}
+                        className={activeTab === tab ? styles.adminTabActive : styles.adminTab}
+                        onClick={() => setActiveTab(tab)}
+                    >
+                        {label}
+                    </button>
+                ))}
+            </div>
+
+            {activeTab === 'membershipRecords' ? <MembershipRecordsPanel /> : null}
+
+            {activeTab === 'keyGeneration' ? <section className={styles.card}>
                 <div className={styles.cardHeader}>
                     <div>
-                        <h3 className={styles.cardTitle}>发放 Key</h3>
-                        <div className={styles.cardDesc}>支持批量创建会员 Key，用于活动或手动发放。</div>
+                        <h3 className={styles.cardTitle}>会员兑换卡密钥生成</h3>
+                        <div className={styles.cardDesc}>批量生成周卡或月卡兑换密钥，也可以直接发放给指定用户。</div>
                     </div>
                 </div>
 
@@ -242,7 +275,7 @@ const SubscriptionAdminManager: React.FC = () => {
                             />
                         </label>
                         <label className={styles.fieldLabel}>
-                            <span className={styles.fieldLabelText}>过期时间</span>
+                            <span className={styles.fieldLabelText}>兑换截止时间 <span className={styles.optionalTag}>可选</span></span>
                             <input className={styles.textInput} type="datetime-local" value={expireAt} onChange={(event) => setExpireAt(event.target.value)} />
                         </label>
                     </div>
@@ -252,13 +285,14 @@ const SubscriptionAdminManager: React.FC = () => {
                             <input className={styles.textInput} value={channel} onChange={(event) => setChannel(event.target.value)} placeholder="用于标记更具体的活动" />
                         </label>
                         <label className={`${styles.fieldLabel} ${styles.targetUserCodeField}`}>
-                            <span className={styles.fieldLabelText}>指定兑换人 <span className={styles.optionalTag}>可选</span></span>
+                            <span className={styles.fieldLabelText}>直接发放给用户（Kuran号） <span className={styles.optionalTag}>可选</span></span>
                             <input
                                 className={styles.textInput}
                                 value={issuedToUserCode}
                                 onChange={(event) => setIssuedToUserCode(event.target.value)}
-                                placeholder="输入后该 Key 仅限指定用户兑换"
+                                placeholder="请输入完整 Kuran号"
                             />
+                            <small className={styles.formHint}>留空则仅生成密钥，填写后将立即兑换并发放会员。</small>
                         </label>
                         <div className={styles.createAction}>
                             <button type="button" className={styles.primaryButton} onClick={() => void handleCreateKeys()} disabled={isCreating}>
@@ -267,14 +301,34 @@ const SubscriptionAdminManager: React.FC = () => {
                         </div>
                     </div>
                 </div>
-            </section>
 
-            <section className={styles.card}>
+                {createdKeys.length > 0 ? (
+                    <div className={styles.generatedPanel}>
+                        <div className={styles.generatedPanelHeader}>
+                            <strong>本次生成结果</strong>
+                            <button type="button" className={styles.ghostButton} onClick={() => setActiveTab('keyRecords')}>查看使用记录</button>
+                        </div>
+                        <div className={styles.generatedList}>
+                            {createdKeys.map((item) => (
+                                <div key={item.keyCode} className={styles.generatedItem}>
+                                    <code className={styles.keyCode}>{item.keyCode}</code>
+                                    <button type="button" className={styles.iconButton} onClick={() => void handleCopyKey(item.keyCode)} aria-label={`复制密钥 ${item.keyCode}`} title="复制密钥">
+                                        <MdContentCopy aria-hidden="true" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ) : null}
+            </section> : null}
+
+            {activeTab === 'keyRecords' ? <section className={styles.card}>
                 <div className={styles.cardHeader}>
                     <div>
-                        <h3 className={styles.cardTitle}>Key 列表</h3>
-                        <div className={styles.cardDesc}>支持筛选查询，并执行冻结/解冻操作。</div>
+                        <h3 className={styles.cardTitle}>会员兑换卡使用记录</h3>
+                        <div className={styles.cardDesc}>查询全部兑换卡状态，并执行冻结或解冻操作。</div>
                     </div>
+                    <span className={styles.recordCount}>共 {listResult.total} 条</span>
                 </div>
 
                 <div className={styles.filterGrid}>
@@ -306,6 +360,7 @@ const SubscriptionAdminManager: React.FC = () => {
                             <option value="all">全部</option>
                             <option value="unused">未使用</option>
                             <option value="used">已使用</option>
+                            <option value="expired">已过期</option>
                             <option value="archived">已归档</option>
                         </select>
                     </label>
@@ -374,7 +429,7 @@ const SubscriptionAdminManager: React.FC = () => {
                     <div className={styles.emptyState}>当前筛选条件下暂无数据。</div>
                 ) : (
                     <div className={styles.tableWrapper}>
-                        <table className={styles.table}>
+                        <table className={`${styles.table} ${styles.responsiveTable}`}>
                             <thead>
                                 <tr>
                                     <th>Key 编码</th>
@@ -396,36 +451,40 @@ const SubscriptionAdminManager: React.FC = () => {
                                     const disabled = Number(item.disabled) === 1;
                                     return (
                                         <tr key={item.id}>
-                                            <td>
+                                            <td data-label="兑换卡密钥">
                                                 <div className={styles.keyCell}>
                                                     <code className={styles.keyCode}>{item.key_code}</code>
                                                     <button
                                                         type="button"
-                                                        className={styles.secondaryButton}
+                                                        className={styles.iconButton}
                                                         onClick={() => void handleCopyKey(item.key_code)}
+                                                        aria-label={`复制密钥 ${item.key_code}`}
+                                                        title="复制密钥"
                                                     >
-                                                        复制
+                                                        <MdContentCopy aria-hidden="true" />
                                                     </button>
                                                 </div>
                                             </td>
-                                            <td>{planLabelMap[item.plan_id]}</td>
-                                            <td>{sourceTypeLabelMap[item.source_type]}</td>
-                                            <td>{statusLabelMap[item.status]}</td>
-                                            <td>{disabled ? '是' : '否'}</td>
-                                            <td>{formatTime(item.expire_at)}</td>
-                                            <td>{item.redeemed_by_user_code ?? '-'}</td>
-                                            <td>{formatTime(item.redeemed_at)}</td>
-                                            <td title={item.metadata_json || ''}>{formatMetadataSummary(item.metadata_json)}</td>
-                                            <td>{item.created_by || '-'}</td>
-                                            <td>{formatTime(item.created_at)}</td>
-                                            <td>
+                                            <td data-label="会员类型">{planLabelMap[item.plan_id]}</td>
+                                            <td data-label="来源">{sourceTypeLabelMap[item.source_type]}</td>
+                                            <td data-label="状态"><span className={`${styles.statusPill} ${styles[`keyStatus_${item.effective_status ?? item.status}`]}`}>{statusLabelMap[item.effective_status ?? item.status]}</span></td>
+                                            <td data-label="冻结状态">{disabled ? <span className={`${styles.statusPill} ${styles.statusFrozen}`}>已冻结</span> : '未冻结'}</td>
+                                            <td data-label="兑换截止时间">{formatTime(item.expire_at)}</td>
+                                            <td data-label="兑换人">{item.redeemed_by_user_code ?? '-'}</td>
+                                            <td data-label="兑换时间">{formatTime(item.redeemed_at)}</td>
+                                            <td data-label="渠道" title={item.metadata_json || ''}>{formatMetadataSummary(item.metadata_json)}</td>
+                                            <td data-label="创建人">{item.created_by || '-'}</td>
+                                            <td data-label="创建时间">{formatTime(item.created_at)}</td>
+                                            <td data-label="操作">
                                                 <button
                                                     type="button"
-                                                    className={disabled ? styles.secondaryButton : styles.dangerButton}
+                                                    className={`${styles.iconButton} ${disabled ? '' : styles.dangerIconButton}`}
                                                     onClick={() => void handleToggleDisabled(item)}
                                                     disabled={togglingId === item.id}
+                                                    aria-label={disabled ? `解冻密钥 ${item.key_code}` : `冻结密钥 ${item.key_code}`}
+                                                    title={disabled ? '解冻密钥' : '冻结密钥'}
                                                 >
-                                                    {togglingId === item.id ? '处理中...' : disabled ? '解冻' : '冻结'}
+                                                    {disabled ? <MdLockOpen aria-hidden="true" /> : <MdLock aria-hidden="true" />}
                                                 </button>
                                             </td>
                                         </tr>
@@ -444,7 +503,7 @@ const SubscriptionAdminManager: React.FC = () => {
                     disabled={isLoadingList || togglingId !== null}
                     summary={`第 ${page} 页，共 ${totalPages} 页，共 ${listResult.total} 条记录`}
                 />
-            </section>
+            </section> : null}
         </div>
     );
 };

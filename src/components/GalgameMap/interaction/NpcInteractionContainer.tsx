@@ -107,7 +107,7 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
     return interactions.filter((it: any) => it && it.type === 'player_choice').length;
   }, [latestHistory]);
 
-  const FREE_ROUNDS = 5;
+  const FREE_ROUNDS = 0;
   const isFreeRound = playerChoiceCount < FREE_ROUNDS;
 
   const stepHandlers = useNpcInteractionStep({

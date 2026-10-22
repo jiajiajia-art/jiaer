@@ -8,28 +8,16 @@ import { auth } from '../../api/account/authApi';
 import type { PayOrderRequest, PlanId, DiamondsPlanId } from '../../api/pay/pay.type';
 import { getApiErrorMessage } from '../../utils/error';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useGeoRegionStore } from '../../store/useGeoRegionStore';
 import type { DefaultPayMethod } from '../../lib/geoRegion';
 import {
+    calcDiamondsForPayMethod,
     getPayMethodCurrencySymbol,
     getPayMethodMinAmount,
     isAmountReadyToPay,
     sanitizeAmountInput,
     validateRechargeAmount,
 } from '../../lib/rechargeAmountRules';
-import CurrencyIcon from '../CurrencyIcon';
-
-const MEMBER_ICON = `${import.meta.env.BASE_URL}data/assetsv2/personal/member.png`;
-const ENJOY_ICON = `${import.meta.env.BASE_URL}data/assetsv2/personal/enjoy.png`;
-
-const formatMemberEndDate = (raw?: string | null): string | undefined => {
-    if (!raw) return undefined;
-    const d = new Date(raw);
-    if (Number.isNaN(d.getTime())) return undefined;
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-};
 
 type RechargeTabType = 'diamonds' | 'membership';
 
@@ -41,6 +29,7 @@ interface MembershipPlan {
     dailyReward: number;
     finalDayReward: number;
     durationLabel: string;
+    totalReward: number;
 }
 
 interface DiamondPlan {
@@ -52,12 +41,22 @@ interface DiamondPlan {
     firstChargeEligible: boolean;
 }
 
+interface PendingPayment {
+    orderData: PayOrderRequest;
+    payMethod: DefaultPayMethod;
+    kind: RechargeTabType;
+    amount: number;
+    diamondPlan?: DiamondPlan;
+    estimatedDiamonds?: number;
+    membershipPlan?: MembershipPlan;
+}
+
 const DEFAULT_KK_RECHARGE_PLANS: DiamondPlan[] = [
     { planId: 'dr_6_v2', amount: 6, baseDiamonds: 60, firstBonusDiamonds: 6, firstTotalDiamonds: 66, firstChargeEligible: true },
     { planId: 'dr_30_v2', amount: 30, baseDiamonds: 300, firstBonusDiamonds: 30, firstTotalDiamonds: 330, firstChargeEligible: true },
     { planId: 'dr_68_v2', amount: 68, baseDiamonds: 680, firstBonusDiamonds: 68, firstTotalDiamonds: 748, firstChargeEligible: true },
-    { planId: 'dr_128_v2', amount: 128, baseDiamonds: 1280, firstBonusDiamonds: 192, firstTotalDiamonds: 1472, firstChargeEligible: true },
-    { planId: 'dr_328_v2', amount: 328, baseDiamonds: 3280, firstBonusDiamonds: 1312, firstTotalDiamonds: 4592, firstChargeEligible: true },
+    { planId: 'dr_128_v2', amount: 128, baseDiamonds: 1280, firstBonusDiamonds: 128, firstTotalDiamonds: 1408, firstChargeEligible: true },
+    { planId: 'dr_328_v2', amount: 328, baseDiamonds: 3280, firstBonusDiamonds: 328, firstTotalDiamonds: 3608, firstChargeEligible: true },
 ];
 
 interface WechatMiniProgram {
@@ -91,9 +90,9 @@ const isMiniProgramEnv = (): boolean => {
 const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRecharge, fixedTab }) => {
     const { t } = useTranslation();
     const { updateUser, user: authUser } = useAuthStore();
+    const region = useGeoRegionStore((state) => state.region);
+    const regionLoaded = useGeoRegionStore((state) => state.loaded);
     const memberProfile = authUser?.user;
-    const weekEndDate = formatMemberEndDate(memberProfile?.membership?.week?.endAt);
-    const monthEndDate = formatMemberEndDate(memberProfile?.membership?.month?.endAt);
     const rechargePlans = useMemo<DiamondPlan[]>(() => {
         const plans = memberProfile?.kkRechargePlans;
         if (!plans?.length) return DEFAULT_KK_RECHARGE_PLANS;
@@ -114,6 +113,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     const [paymentStatus, setPaymentStatus] = useState<'idle' | 'polling' | 'success' | 'failed'>('idle');
     const [pollingError, setPollingError] = useState<string>('');
     const [timeLeft, setTimeLeft] = useState(COUNTDOWN_SECONDS);
+    const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(null);
 
     const [rechargeTab, setRechargeTab] = useState<RechargeTabType>(fixedTab ?? 'diamonds');
     const [selectedPlanIndex, setSelectedPlanIndex] = useState<number>(-1);
@@ -124,7 +124,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     const [customOriginalAmount, setCustomOriginalAmount] = useState<number | null>(null);
     // 用户实际看到的（可能是折扣后的）金额文本
     const [amountText, setAmountText] = useState<string>('');
-    /** 功能注释：钻石充值顶部互切支付方式；点立即支付直接走当前选中方式，不再二次弹窗 */
+    /** 功能注释：地区决定首次默认值，用户仍可在本次打开期间手动切换。 */
     const [selectedPayMethod, setSelectedPayMethod] = useState<DefaultPayMethod>('wechat');
     const payMinAmount = getPayMethodMinAmount(selectedPayMethod);
     const currencySymbol = getPayMethodCurrencySymbol(selectedPayMethod);
@@ -132,6 +132,15 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     const inFlightRef = useRef(false);
     const isComposingRef = useRef(false);
     const amountInputRef = useRef<HTMLInputElement | null>(null);
+    const openedRef = useRef(false);
+    const payMethodTouchedRef = useRef(false);
+
+    const currentPaymentRegion = useMemo(() => {
+        const countrySuffix = region.country ? ` · ${region.country}` : '';
+        return region.payRegion === 'greaterChina'
+            ? `中国大陆及港澳台${countrySuffix}`
+            : `海外地区${countrySuffix}`;
+    }, [region.country, region.payRegion]);
 
     const handleClose = useCallback(() => {
         onClose();
@@ -162,6 +171,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             dailyReward: 77,
             finalDayReward: 78,
             durationLabel: '7 天',
+            totalReward: 540,
         },
         {
             planId: 'month_v2',
@@ -171,11 +181,14 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             dailyReward: 66,
             finalDayReward: 86,
             durationLabel: '30 天',
+            totalReward: 2000,
         },
     ], []);
 
     useEffect(() => {
         if (!isOpen) {
+            openedRef.current = false;
+            payMethodTouchedRef.current = false;
             setAmountText('');
             setIsLoading(false);
             setQrCodeUrl(null);
@@ -190,15 +203,18 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             setCustomOriginalAmount(null);
             setAmountError('');
             setInputShake(false);
+            setPendingPayment(null);
             return;
         }
 
-        // 功能注释：每次打开默认微信支付（首位）；用户仍可切到海外支付
-        setSelectedPayMethod('wechat');
+        if (openedRef.current) return;
+        openedRef.current = true;
+        payMethodTouchedRef.current = false;
+        setSelectedPayMethod(isMiniProgramEnv() ? 'wechat' : region.defaultPayMethod);
         setRechargeTab(fixedTab ?? 'diamonds');
         if ((fixedTab ?? 'diamonds') === 'diamonds') {
             const defaultPlan = rechargePlans[0];
-            setAmountText(String(defaultPlan.amount));
+            setAmountText('');
             setSelectedFirstChargePlanId(defaultPlan.planId);
             setSelectedFixedPlanAmount(defaultPlan.amount);
             setCustomOriginalAmount(null);
@@ -214,16 +230,16 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             setAmountError('');
             setInputShake(false);
         }
-    }, [isOpen, fixedTab, rechargePlans]);
+    }, [isOpen, fixedTab, rechargePlans, region.defaultPayMethod]);
 
     useEffect(() => {
-        if (isOpen && fixedTab && rechargeTab !== fixedTab) {
-            setRechargeTab(fixedTab);
+        if (isOpen && regionLoaded && !isMiniProgramEnv() && !payMethodTouchedRef.current) {
+            setSelectedPayMethod(region.defaultPayMethod);
         }
-    }, [isOpen, fixedTab, rechargeTab]);
+    }, [isOpen, region.defaultPayMethod, regionLoaded]);
 
     const handleFixedAmountClick = (plan: DiamondPlan) => {
-        setAmountText(String(plan.amount));
+        setAmountText('');
         setSelectedFirstChargePlanId(plan.planId);
         setSelectedFixedPlanAmount(plan.amount);
         setCustomOriginalAmount(null);
@@ -257,8 +273,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                 setAmountError('');
                 setInputShake(false);
             }
-            const matchedPlan = rechargePlans.find((plan) => plan.amount === numericValue);
-            setSelectedFirstChargePlanId(matchedPlan?.planId ?? null);
+            setSelectedFirstChargePlanId(null);
             setCustomOriginalAmount(validation.ok ? numericValue : null);
         } else {
             setSelectedFirstChargePlanId(null);
@@ -315,7 +330,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             return;
         }
 
-        // 会员卡充值分支
+        // 会员卡先进入确认步骤，确认后再按当前支付方式下单。
         if (rechargeTab === 'membership') {
             if (selectedPlanIndex < 0 || selectedPlanIndex >= MEMBERSHIP_PLANS.length) {
                 toast.error(t('rechargeModal.selectMembershipPlan'));
@@ -327,53 +342,13 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                 planId: selectedPlan.planId,
             };
 
-            inFlightRef.current = true;
-            setIsLoading(true);
-            try {
-                if (isMiniProgramEnv()) {
-                    setPaymentStatus('polling');
-                    setPollingError('');
-                    const response = await payApi.createMiniOrder(orderData);
-                    const data = response.data;
-                    if (data.code === 200 && data.data) {
-                        const { outTradeNo, payParams } = data.data;
-                        setOrderId(outTradeNo);
-                        const mp = (window as WindowWithWx).wx?.miniProgram;
-                        if (mp && typeof mp.postMessage === 'function') {
-                            const payParamsStr = encodeURIComponent(JSON.stringify(payParams));
-                            mp.navigateTo({
-                                url: `/pages/pay/pay?outTradeNo=${outTradeNo}&payParams=${payParamsStr}`
-                            });
-                            toast.success(t('rechargeModal.redirectingToPayment'));
-                        } else {
-                            toast.error(t('rechargeModal.miniProgramNotSupported'));
-                        }
-                        setPaymentStatus('failed');
-                        setPollingError(data.message || t('rechargeModal.paymentRequestFailed'));
-                    }
-                    setIsLoading(false);
-                    return;
-                } else if (onRecharge) {
-                    const result = await onRecharge(orderData);
-                    const qrDataUrl = normalizeQrCodeUrl(result?.qrDataUrl ?? null);
-                    if (result && qrDataUrl) {
-                        setQrCodeUrl(qrDataUrl);
-                        setOrderId(result.outTradeNo);
-                        setPaymentStatus('polling');
-                        setPollingError('');
-                        setTimeLeft(COUNTDOWN_SECONDS);
-                    }
-                }
-            } catch (error) {
-                console.error('充值失败:', error);
-                const errorMessage = getApiErrorMessage(error, t('rechargeModal.paymentRequestFailed'));
-                setPaymentStatus('failed');
-                setPollingError(errorMessage);
-                toast.error(errorMessage);
-            } finally {
-                setIsLoading(false);
-                inFlightRef.current = false;
-            }
+            setPendingPayment({
+                orderData,
+                payMethod: isMiniProgramEnv() ? 'wechat' : selectedPayMethod,
+                kind: 'membership',
+                amount: selectedPlan.price,
+                membershipPlan: selectedPlan,
+            });
             return;
         }
 
@@ -426,16 +401,24 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             };
         }
 
-        // 小程序仅走微信；H5/Web 直接按顶部已选支付方式下单，不再二次确认弹窗
-        if (isMiniProgramEnv() || selectedPayMethod === 'wechat') {
-            await startWechatDiamondPay(orderData);
-            return;
-        }
-        await startOverseasDiamondPay(orderData);
+        const diamondPlan = selectedFirstChargePlanId
+            ? rechargePlans.find((plan) => plan.planId === selectedFirstChargePlanId)
+            : undefined;
+        const estimatedDiamonds = diamondPlan
+            ? (diamondPlan.firstChargeEligible ? diamondPlan.firstTotalDiamonds : diamondPlan.baseDiamonds)
+            : calcDiamondsForPayMethod(amount, selectedPayMethod, false);
+        setPendingPayment({
+            orderData,
+            payMethod: isMiniProgramEnv() ? 'wechat' : selectedPayMethod,
+            kind: 'diamonds',
+            amount,
+            diamondPlan,
+            estimatedDiamonds,
+        });
     };
 
-    /** 功能注释：既有微信 Native / 小程序支付链路 */
-    const startWechatDiamondPay = async (orderData: PayOrderRequest) => {
+    /** 功能注释：KK币和会员共用既有微信 Native / 小程序支付链路。 */
+    const startWechatPay = async (orderData: PayOrderRequest) => {
         inFlightRef.current = true;
         setIsLoading(true);
         try {
@@ -487,7 +470,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     };
 
     /** 功能注释：海外支付 → EnjoyPayment 收银台；金额/IP/用户ID 由后端组单 */
-    const startOverseasDiamondPay = async (orderData: PayOrderRequest) => {
+    const startOverseasPay = async (orderData: PayOrderRequest) => {
         inFlightRef.current = true;
         setIsLoading(true);
         try {
@@ -514,6 +497,22 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             setIsLoading(false);
             inFlightRef.current = false;
         }
+    };
+
+    const cancelPaymentConfirmation = () => {
+        if (isLoading) return;
+        setPendingPayment(null);
+    };
+
+    const confirmPayment = async () => {
+        if (!pendingPayment || inFlightRef.current) return;
+        const confirmed = pendingPayment;
+        setPendingPayment(null);
+        if (confirmed.payMethod === 'overseas') {
+            await startOverseasPay(confirmed.orderData);
+            return;
+        }
+        await startWechatPay(confirmed.orderData);
     };
 
     useEffect(() => {
@@ -585,6 +584,10 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     useEffect(() => {
         const handleEscKey = (e: KeyboardEvent) => {
             if (e.key === 'Escape' && isOpen) {
+                if (pendingPayment) {
+                    setPendingPayment(null);
+                    return;
+                }
                 if (paymentStatus === 'success') {
                     void handleCloseWithRefresh();
                     return;
@@ -597,33 +600,31 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
         return () => {
             document.removeEventListener('keydown', handleEscKey);
         };
-    }, [isOpen, paymentStatus, handleClose, handleCloseWithRefresh]);
+    }, [isOpen, paymentStatus, pendingPayment, handleClose, handleCloseWithRefresh]);
 
     if (!isOpen) return null;
 
     const currentAmount = getCurrentAmount();
+    const selectedMembershipPlan = selectedPlanIndex >= 0 ? MEMBERSHIP_PLANS[selectedPlanIndex] : undefined;
+    const selectedDiamondPlan = selectedFirstChargePlanId
+        ? rechargePlans.find((plan) => plan.planId === selectedFirstChargePlanId)
+        : undefined;
+    const estimatedDiamonds = currentAmount == null
+        ? 0
+        : selectedDiamondPlan
+            ? (selectedDiamondPlan.firstChargeEligible
+                ? selectedDiamondPlan.firstTotalDiamonds
+                : selectedDiamondPlan.baseDiamonds)
+            : calcDiamondsForPayMethod(currentAmount, selectedPayMethod, false);
+    const canSubmit = rechargeTab === 'membership'
+        ? Boolean(selectedMembershipPlan)
+        : isAmountReadyToPay(currentAmount, selectedPayMethod);
+    const currencyName = selectedPayMethod === 'wechat' ? '人民币' : '美元';
 
     const diamondsTabContent = (
         <>
-            {/* 功能注释：微信支付固定首位并默认选中；切换后金额校验与货币符号跟着变 */}
-            <div className={styles.payMethodToggle} role="group" aria-label={t('rechargeModal.choosePayMethod')}>
-                {(['wechat', 'overseas'] as const).map((method) => (
-                    <button
-                        key={method}
-                        type="button"
-                        className={`${styles.payMethodToggleBtn} ${selectedPayMethod === method ? styles.payMethodToggleBtnActive : ''}`}
-                        onClick={() => {
-                            setSelectedPayMethod(method);
-                            setAmountError('');
-                            setInputShake(false);
-                        }}
-                    >
-                        {method === 'wechat' ? t('rechargeModal.payWechat') : t('rechargeModal.payOverseas')}
-                    </button>
-                ))}
-            </div>
-
             <div className={styles.fixedAmounts}>
+                <h3 className={styles.sectionHeading}>选择充值档位</h3>
                 <div className={styles.amountsGrid}>
                     {rechargePlans.map((plan) => {
                         const planDiamonds = plan.firstChargeEligible ? plan.firstTotalDiamonds : plan.baseDiamonds;
@@ -637,16 +638,15 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                             >
                                 <div className={styles.amountTopSection}>
                                     <div className={styles.amountMainPoints}>
-                                        <CurrencyIcon currency="diamonds" className={styles.amountCoin} aria-hidden="true" />
-                                        <span>{planDiamonds}</span>
+                                        <span>{plan.baseDiamonds} KK币</span>
                                     </div>
                                     <div className={styles.amountPriceMeta}>
                                         {t('rechargeModal.priceShort', { amount: plan.amount, symbol: currencySymbol })}
                                     </div>
                                     <div className={styles.firstChargeMeta}>
                                         {plan.firstChargeEligible
-                                            ? `首充：基础 ${plan.baseDiamonds} + 加赠 ${plan.firstBonusDiamonds} = ${planDiamonds} 币`
-                                            : `基础 ${plan.baseDiamonds} 币（首充加赠已领取）`}
+                                            ? <>首充得 <strong>{planDiamonds}</strong></>
+                                            : <>本次获得 <strong>{plan.baseDiamonds}</strong></>}
                                     </div>
                                 </div>
                             </button>
@@ -657,72 +657,44 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
 
             <div className={styles.customAmount}>
                 <div className={styles.customLabel}>{t('rechargeModal.customAmount')}</div>
-                <div className={`${styles.customInputWrapper} ${amountError ? styles.inputError : ''}`}>
-                    <span className={styles.currencySymbol}>{currencySymbol}</span>
-                    <input
-                        type="text"
-                        className={`${styles.customInput} ${inputShake ? styles.shake : ''}`}
-                        placeholder={t('rechargeModal.enterAmount')}
-                        value={amountText}
-                        onChange={handleCustomAmountChange}
-                        onCompositionStart={() => {
-                            isComposingRef.current = true;
-                        }}
-                        onCompositionEnd={() => {
-                            isComposingRef.current = false;
-                        }}
-                        maxLength={10}
-                        ref={amountInputRef}
-                    />
+                <div className={`${styles.customAmountPanel} ${amountError ? styles.inputError : ''}`}>
+                    <div className={styles.customInputWrapper}>
+                        <span className={styles.currencySymbol}>{currencySymbol}</span>
+                        <input
+                            type="text"
+                            className={`${styles.customInput} ${inputShake ? styles.shake : ''}`}
+                            placeholder={t('rechargeModal.enterAmount')}
+                            value={amountText}
+                            onChange={handleCustomAmountChange}
+                            onCompositionStart={() => {
+                                isComposingRef.current = true;
+                            }}
+                            onCompositionEnd={() => {
+                                isComposingRef.current = false;
+                            }}
+                            maxLength={10}
+                            ref={amountInputRef}
+                        />
+                        <span className={styles.currencyUnit}>{currencyName}</span>
+                    </div>
+                    <div className={styles.customReceiveHint}>
+                        <span>预计获得</span>
+                        <strong>{currentAmount != null ? `${estimatedDiamonds} KK币` : '— KK币'}</strong>
+                    </div>
                 </div>
                 {amountError && (
                     <div className={styles.amountHint}>
                         <span className={styles.errorText}>{amountError}</span>
                     </div>
                 )}
+                <p className={styles.customAmountNotice}>自定义金额按当前支付方式换算，不参与固定档位首充加赠。</p>
             </div>
-
-            <button
-                type="submit"
-                className={styles.submitBtn}
-                disabled={!isAmountReadyToPay(currentAmount, selectedPayMethod) || isLoading}
-            >
-                {isLoading
-                    ? t('rechargeModal.processing')
-                    : t('rechargeModal.payNow', {
-                        amount: currentAmount ?? 0,
-                        symbol: currencySymbol,
-                    })}
-            </button>
         </>
     );
 
     const membershipTabContent = (
         <>
-            <div className={styles.membershipStatusCard}>
-                <div className={styles.membershipStatusMain}>
-                    <div className={styles.membershipStatusInfo}>
-                        <img src={ENJOY_ICON} alt="" className={styles.membershipStatusIcon} aria-hidden="true" />
-                        <div className={styles.membershipStatusText}>
-                            <span className={styles.membershipStatusTitle}>
-                                {t('rechargeModal.enjoyMember')}
-                            </span>
-                            <div className={styles.membershipStatusExpire}>
-                                <span className={styles.membershipStatusExpireLabel}>周卡有效期</span>
-                                <span className={styles.membershipStatusExpireDate}>{weekEndDate ?? '未开通'}</span>
-                            </div>
-                            <div className={styles.membershipStatusExpire}>
-                                <span className={styles.membershipStatusExpireLabel}>月卡有效期</span>
-                                <span className={styles.membershipStatusExpireDate}>{monthEndDate ?? '未开通'}</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div className={styles.membershipStatusBadge}>
-                        <img src={MEMBER_ICON} alt="" className={styles.membershipStatusBadgeIcon} aria-hidden="true" />
-                    </div>
-                </div>
-            </div>
-
+            <h3 className={styles.sectionHeading}>选择会员卡</h3>
             <div className={styles.plansList}>
                 {MEMBERSHIP_PLANS.map((plan, index) => (
                     <button
@@ -731,61 +703,235 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                         className={`${styles.planItem} ${selectedPlanIndex === index ? styles.planItemActive : ''}`}
                         onClick={() => setSelectedPlanIndex(index)}
                     >
-                        <span className={styles.planItemName}>{plan.name}</span>
+                        <span className={styles.planItemHeader}>
+                            <span className={styles.planItemName}>{plan.name}</span>
+                            <span className={styles.planItemPrice}>
+                                {t('rechargeModal.currencySymbol')}{plan.price}
+                            </span>
+                        </span>
                         <span className={styles.planRewardSummary}>
-                            {plan.durationLabel} · 每日签到额外 {plan.dailyReward} 永久KK币 · 最后一天 {plan.finalDayReward} 币
+                            {plan.durationLabel}累计 {plan.totalReward.toLocaleString()} 永久 KK币
                         </span>
-                        <span className={styles.planItemPrice}>
-                            {t('rechargeModal.currencySymbol')}{plan.price}
-                        </span>
+                        <span className={styles.planDiscount}>游玩正式发布 AI 文游 85 折</span>
                     </button>
                 ))}
             </div>
 
-            <div className={styles.benefitsComparison}>
-                <div className={styles.membershipRules}>
-                    <strong>会员通用权益</strong>
-                    <span>正式发布的 AI 文游游玩扣费享 85 折，创作者测试不参与折扣。</span>
-                    <span>周卡与月卡有效期独立，可同时生效并分别领取每日永久KK币。</span>
-                    <span>同档位再次购买会从当前有效期结束后顺延，未领取的每日奖励不补发。</span>
+            <section className={styles.membershipBenefitsCard} aria-labelledby="membership-benefits-title">
+                <header className={styles.membershipBenefitsHeader}>
+                    <strong id="membership-benefits-title">会员权益</strong>
+                    <span>有效期内生效</span>
+                </header>
+                <div className={styles.membershipBenefitRow}>
+                    <span className={styles.membershipBenefitIcon} aria-hidden="true">币</span>
+                    <span className={styles.membershipBenefitText}>
+                        <strong>每日领币</strong>
+                        <small>
+                            {selectedMembershipPlan
+                                ? `每日 ${selectedMembershipPlan.dailyReward} 永久KK币，最后一天 ${selectedMembershipPlan.finalDayReward} 币`
+                                : '登录签到领取对应会员卡永久KK币'}
+                        </small>
+                    </span>
+                    <span className={styles.membershipBenefitCheck} aria-hidden="true">✓</span>
                 </div>
-            </div>
-
-            <button
-                type="submit"
-                className={`${styles.submitBtn} ${styles.membershipSubmitBtn}`}
-                disabled={selectedPlanIndex < 0 || isLoading}
-            >
-                {isLoading
-                    ? t('rechargeModal.processing')
-                    : t('rechargeModal.openNow', {
-                        amount: MEMBERSHIP_PLANS[selectedPlanIndex]?.price ?? 0,
-                    })}
-            </button>
+                <div className={styles.membershipBenefitRow}>
+                    <span className={styles.membershipBenefitIcon} aria-hidden="true">85</span>
+                    <span className={styles.membershipBenefitText}>
+                        <strong>游玩 AI 85 折</strong>
+                        <small>仅适用于正式发布的 AI 文游游玩扣费</small>
+                    </span>
+                    <span className={styles.membershipBenefitCheck} aria-hidden="true">✓</span>
+                </div>
+                <div className={styles.membershipBenefitRow}>
+                    <span className={styles.membershipBenefitIcon} aria-hidden="true">双</span>
+                    <span className={styles.membershipBenefitText}>
+                        <strong>两档独立生效</strong>
+                        <small>周卡、月卡可同时持有并分别领取奖励</small>
+                    </span>
+                    <span className={styles.membershipBenefitCheck} aria-hidden="true">✓</span>
+                </div>
+                <div className={styles.membershipBenefitRow}>
+                    <span className={styles.membershipBenefitIcon} aria-hidden="true">续</span>
+                    <span className={styles.membershipBenefitText}>
+                        <strong>同档购买顺延</strong>
+                        <small>重复购买同档会员卡会直接延长有效期</small>
+                    </span>
+                    <span className={styles.membershipBenefitCheck} aria-hidden="true">✓</span>
+                </div>
+            </section>
         </>
     );
 
     const formContent = (
-        <div className={styles.modalOverlay} onClick={handleClose}>
-            <div
-                className={`${styles.modalContent} ${rechargeTab === 'membership' ? styles.modalContentWide : ''}`}
-                onClick={(e) => e.stopPropagation()}
-            >
-                <button type="button" className={styles.closeBtn} onClick={handleClose} aria-label={t('common.close')}>
-                    <span className={styles.closeIcon} aria-hidden="true" />
-                </button>
+        <>
+            <div className={styles.modalOverlay} onClick={handleClose}>
+                <div
+                    className={`${styles.modalContent} ${styles.modalContentWide} ${styles.rechargeCenter}`}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <button type="button" className={styles.closeBtn} onClick={handleClose} aria-label={t('common.close')}>
+                        <span className={styles.closeIcon} aria-hidden="true" />
+                    </button>
+                    <button type="button" className={styles.dismissBtn} onClick={handleClose} aria-label={t('common.close')}>
+                        <span className={styles.dismissIcon} aria-hidden="true" />
+                    </button>
 
-                <h2 className={styles.title}>
-                    {rechargeTab === 'membership'
-                        ? t('rechargeModal.membershipCenter')
-                        : t('rechargeModal.diamondsTab')}
-                </h2>
+                    <h2 className={styles.title}>充值中心</h2>
 
-                <form className={styles.form} onSubmit={handleSubmit}>
-                    {rechargeTab === 'diamonds' ? diamondsTabContent : membershipTabContent}
-                </form>
+                    <div className={styles.regionSummary}>
+                        <span>当前支付地区</span>
+                        <strong>{currentPaymentRegion}</strong>
+                    </div>
+
+                    <div className={styles.rechargeTabs} role="tablist" aria-label="充值类型">
+                        <button
+                            type="button"
+                            role="tab"
+                            aria-selected={rechargeTab === 'diamonds'}
+                            className={rechargeTab === 'diamonds' ? styles.rechargeTabActive : ''}
+                            onClick={() => {
+                                setRechargeTab('diamonds');
+                                if (getCurrentAmount() == null) handleFixedAmountClick(rechargePlans[0]);
+                            }}
+                        >
+                            KK币充值
+                        </button>
+                        <button
+                            type="button"
+                            role="tab"
+                            aria-selected={rechargeTab === 'membership'}
+                            className={rechargeTab === 'membership' ? styles.rechargeTabActive : ''}
+                            onClick={() => {
+                                setRechargeTab('membership');
+                                if (selectedPlanIndex < 0) setSelectedPlanIndex(0);
+                            }}
+                        >
+                            会员卡
+                        </button>
+                    </div>
+
+                    <form className={styles.form} onSubmit={handleSubmit}>
+                        {rechargeTab === 'diamonds' ? diamondsTabContent : membershipTabContent}
+
+                        <section className={styles.paymentSection} aria-labelledby="payment-method-heading">
+                            <h3 id="payment-method-heading" className={styles.sectionHeading}>支付方式</h3>
+                            <div className={styles.payMethodToggle} role="group" aria-label={t('rechargeModal.choosePayMethod')}>
+                                {(['wechat', 'overseas'] as const).map((method) => (
+                                    <button
+                                        key={method}
+                                        type="button"
+                                        disabled={isMiniProgramEnv() && method === 'overseas'}
+                                        aria-pressed={selectedPayMethod === method}
+                                        className={`${styles.payMethodToggleBtn} ${selectedPayMethod === method ? styles.payMethodToggleBtnActive : ''}`}
+                                        onClick={() => {
+                                            payMethodTouchedRef.current = true;
+                                            setSelectedPayMethod(method);
+                                            setAmountError('');
+                                            setInputShake(false);
+                                        }}
+                                    >
+                                        {method === 'wechat' ? t('rechargeModal.payWechat') : t('rechargeModal.payOverseas')}
+                                    </button>
+                                ))}
+                            </div>
+                        </section>
+
+                        <section className={styles.orderSummary} aria-label="订单摘要">
+                            {rechargeTab === 'membership' ? (
+                                <>
+                                    <div><span>选择商品</span><strong>{selectedMembershipPlan?.name ?? '未选择'}</strong></div>
+                                    <div><span>支付金额</span><strong>¥{selectedMembershipPlan?.price ?? 0}</strong></div>
+                                </>
+                            ) : (
+                                <>
+                                    <div><span>支付金额</span><strong>{currencySymbol}{currentAmount ?? 0}</strong></div>
+                                    <div><span>本次获得</span><strong>{estimatedDiamonds} KK币</strong></div>
+                                </>
+                            )}
+                        </section>
+
+                        <button
+                            type="submit"
+                            className={`${styles.submitBtn} ${rechargeTab === 'membership' ? styles.membershipSubmitBtn : ''}`}
+                            disabled={!canSubmit || isLoading}
+                        >
+                            {isLoading
+                                ? t('rechargeModal.processing')
+                                : rechargeTab === 'membership'
+                                    ? `支付 ¥${selectedMembershipPlan?.price ?? 0}，开通${selectedMembershipPlan?.name ?? '会员卡'}`
+                                    : `支付 ${currencySymbol}${currentAmount ?? 0}，获得 ${estimatedDiamonds} KK币`}
+                        </button>
+
+                        {rechargeTab === 'membership' ? (
+                            <section className={styles.membershipRulesCard} aria-labelledby="membership-rules-title">
+                                <strong id="membership-rules-title">领取规则</strong>
+                                <ul>
+                                    <li>会员币需每日登录并完成签到后领取，到账后永久有效。</li>
+                                    <li>周卡每日 77 币、最后一天 78 币，7 天累计 540 币。</li>
+                                    <li>月卡每日 66 币、最后一天 86 币，30 天累计 2,000 币。</li>
+                                    <li>周卡与月卡同时有效时分别领取；同档重复购买直接延长有效期。</li>
+                                    <li>当日未签到不自动发放，可补签后领取对应日期奖励。</li>
+                                </ul>
+                            </section>
+                        ) : (
+                            <p className={styles.paymentNotice}>充值KK币永久有效，虚拟商品支付后不支持退款。</p>
+                        )}
+                    </form>
+                </div>
             </div>
-        </div>
+
+            {pendingPayment ? (
+                <div className={styles.confirmationOverlay} onClick={cancelPaymentConfirmation}>
+                    <section
+                        className={styles.confirmationPanel}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="payment-confirmation-title"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <h2 id="payment-confirmation-title">
+                            {pendingPayment.kind === 'membership' ? '确认开通会员卡' : '确认充值'}
+                        </h2>
+                        <div className={styles.confirmationRows}>
+                            <div>
+                                <span>支付方式</span>
+                                <strong>{pendingPayment.payMethod === 'wechat' ? '微信支付' : '海外支付'}</strong>
+                            </div>
+                            <div>
+                                <span>支付金额</span>
+                                <strong>
+                                    {pendingPayment.kind === 'membership' ? '¥' : getPayMethodCurrencySymbol(pendingPayment.payMethod)}
+                                    {pendingPayment.amount}
+                                </strong>
+                            </div>
+                            {pendingPayment.kind === 'membership' ? (
+                                <>
+                                    <div><span>会员卡</span><strong>{pendingPayment.membershipPlan?.name} · {pendingPayment.membershipPlan?.durationLabel}</strong></div>
+                                    <div><span>领取方式</span><strong>每日登录签到领取</strong></div>
+                                </>
+                            ) : (
+                                <>
+                                    <div>
+                                        <span>基础到账</span>
+                                        <strong>{pendingPayment.diamondPlan?.baseDiamonds ?? pendingPayment.estimatedDiamonds ?? 0} KK币</strong>
+                                    </div>
+                                    {pendingPayment.diamondPlan?.firstChargeEligible ? (
+                                        <div><span>首充赠送</span><strong>+{pendingPayment.diamondPlan.firstBonusDiamonds} KK币</strong></div>
+                                    ) : null}
+                                    <div><span>实际获得</span><strong>{pendingPayment.estimatedDiamonds ?? 0} KK币</strong></div>
+                                </>
+                            )}
+                        </div>
+                        <div className={styles.confirmationActions}>
+                            <button type="button" onClick={cancelPaymentConfirmation} disabled={isLoading}>取消</button>
+                            <button type="button" className={styles.confirmationPrimary} onClick={() => void confirmPayment()} disabled={isLoading}>
+                                {isLoading ? t('rechargeModal.processing') : '确认支付'}
+                            </button>
+                        </div>
+                    </section>
+                </div>
+            ) : null}
+        </>
     );
 
     const qrContent = (

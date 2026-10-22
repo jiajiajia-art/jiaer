@@ -1,6 +1,6 @@
 import type { MembershipPlanId } from '../../api/account/auth.type';
 
-export const GALGAME_FREE_ROUNDS = 5;
+export const GALGAME_FREE_ROUNDS = 0;
 export const PRESET_OPTION_KK_COST = 2;
 export const CUSTOM_INPUT_KK_COST = 3;
 

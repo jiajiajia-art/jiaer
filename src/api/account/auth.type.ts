@@ -313,6 +313,8 @@ export interface PointsActivityItem {
   currency: Currency;
   activityType: string;
   amount: number;
+  originalAmount?: number;
+  discountPercent?: number;
   direction: 'income' | 'expense';
   occurredAt: string;
   id: number;
