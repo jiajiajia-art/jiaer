@@ -29,11 +29,33 @@ export type AppealUploadEvidenceData = {
   url?: string;
 };
 
+/**
+ * 申诉原因字典 targetType（与举报 game/user/post 分套，勿混用）。
+ * 列表：GET /report/reasons?targetType=…
+ * 提交：同名字段 reasonTargetType（或 targetType）
+ */
+export type AppealReasonTargetType = 'appeal_user' | 'appeal_game' | 'appeal_post';
+
+/** 功能注释：由 moderation/eligible 的 sourceType 映射到申诉原因套 */
+export const resolveAppealReasonTargetType = (
+  sourceType?: string | null,
+): AppealReasonTargetType => {
+  const normalized = String(sourceType || '').trim().toLowerCase();
+  if (normalized === 'game') return 'appeal_game';
+  if (normalized === 'post') return 'appeal_post';
+  return 'appeal_user';
+};
+
 export type SubmitAppealPayload = {
   /** 被申诉警告/处罚的 16 位 moderation_id（= GET /moderation/:id 的 id） */
   relatedModerationId: ExternalModerationId;
-  /** 功能注释：GET /report/reasons?targetType=appeal 的 code */
+  /** 功能注释：须来自同 reasonTargetType 下列表返回的 code */
   reasonCode: string;
+  /**
+   * 与当前申诉对象类型一致：appeal_user / appeal_game / appeal_post。
+   * 游戏/帖子必须显式传，否则后端默认 appeal_user 会校验失败。
+   */
+  reasonTargetType: AppealReasonTargetType;
   reason: string;
   evidenceKeys: string[];
 };

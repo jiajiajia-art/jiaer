@@ -660,6 +660,8 @@
     "socialFollowBtn": "Follow",
     "socialFollowBackBtn": "Follow back",
     "socialFollowingBtn": "Following",
+    "socialFollowSuccess": "Followed",
+    "socialUnfollowSuccess": "Unfollowed",
     "socialMutualBtn": "Mutual",
     "socialMeBtn": "You",
     "socialBlockedBtn": "Blocked",

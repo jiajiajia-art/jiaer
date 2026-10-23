@@ -1435,6 +1435,7 @@
     background: rgba(255, 255, 255, 0.1);
 }
 
+/* 功能注释：栏目常驻左侧；草稿「管理」/「全部」靠右占位，切 Tab 不左右跳动 */
 .worksTabs {
     display: flex;
     align-items: stretch;
@@ -1446,11 +1447,6 @@
     overflow-x: auto;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
-}
-
-/* 功能注释：无右侧操作时 Tab 居中，有管理/全部时靠左留给右侧操作 */
-.worksTabBar:not(:has(.draftManageActions)):not(:has(.worksViewAllSlot)) .worksTabs {
-    justify-content: center;
 }
 
 .worksViewAllSlot {

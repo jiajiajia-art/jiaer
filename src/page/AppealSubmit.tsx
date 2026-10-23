@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import adminReportApi from '../api/admin/adminReportApi';
 import appealApi from '../api/appeal/appealApi';
 import type { AppealEligibleItem } from '../api/appeal/appeal.type';
+import { resolveAppealReasonTargetType } from '../api/appeal/appeal.type';
 import type { ReportReasonItem } from '../api/report/report.type';
 import { formatAppealRecordTitle } from '../lib/appealRecordLabel';
 import { readRelatedModerationIdParam } from '../lib/externalModerationId';
@@ -36,44 +37,29 @@ const AppealSubmit: React.FC = () => {
   const [checkingTarget, setCheckingTarget] = useState(false);
   const [targetBlocked, setTargetBlocked] = useState(false);
   const [selectedRelatedId, setSelectedRelatedId] = useState<string | null>(relatedModerationIdParam);
+  /** 功能注释：用于映射 appeal_user / appeal_game / appeal_post */
+  const [targetSourceType, setTargetSourceType] = useState<string | null>(null);
   const [reasonOptions, setReasonOptions] = useState<ReportReasonItem[]>([]);
-  const [loadingReasons, setLoadingReasons] = useState(true);
+  const [loadingReasons, setLoadingReasons] = useState(false);
   const [reasonCode, setReasonCode] = useState('');
   const [reason, setReason] = useState('');
   const [evidence, setEvidence] = useState<EvidenceItem[]>([]);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  const reasonTargetType = useMemo(() => {
+    if (selectedRelatedId == null) return null;
+    // 功能注释：带 relatedModerationId 时等 moderation 返回 sourceType 再映射，避免先误拉 appeal_user
+    if (relatedModerationIdParam != null && checkingTarget) return null;
+    return resolveAppealReasonTargetType(targetSourceType);
+  }, [selectedRelatedId, targetSourceType, relatedModerationIdParam, checkingTarget]);
+
   useEffect(() => {
     setSelectedRelatedId(relatedModerationIdParam);
+    if (relatedModerationIdParam == null) {
+      setTargetSourceType(null);
+    }
   }, [relatedModerationIdParam]);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoadingReasons(true);
-    void appealApi
-      .getReasonOptions()
-      .then((res) => {
-        if (cancelled) return;
-        if (!res.data.success || !res.data.data) {
-          throw new Error(res.data.message || t('appeal.loadReasonsFailed'));
-        }
-        setReasonOptions(res.data.data.list || []);
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) {
-          toast.error(getApiErrorMessage(error, t('appeal.loadReasonsFailed')));
-          setReasonOptions([]);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingReasons(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [t]);
 
   useEffect(() => {
     if (relatedModerationIdParam != null) {
@@ -82,15 +68,20 @@ const AppealSubmit: React.FC = () => {
       let cancelled = false;
       setCheckingTarget(true);
       setTargetBlocked(false);
+      setTargetSourceType(null);
       void adminReportApi
         .getModeration(relatedModerationIdParam)
         .then((res) => {
           if (cancelled) return;
           const canAppeal = Boolean(res.data.success && res.data.data?.canAppeal === true);
           setTargetBlocked(!canAppeal);
+          setTargetSourceType(res.data.data?.sourceType ?? null);
         })
         .catch(() => {
-          if (!cancelled) setTargetBlocked(true);
+          if (!cancelled) {
+            setTargetBlocked(true);
+            setTargetSourceType(null);
+          }
         })
         .finally(() => {
           if (!cancelled) setCheckingTarget(false);
@@ -114,7 +105,10 @@ const AppealSubmit: React.FC = () => {
         }
         const list = (res.data.data.list || []).filter((item) => item.canAppeal !== false);
         setEligible(list);
-        if (list.length === 1) setSelectedRelatedId(list[0].id);
+        if (list.length === 1) {
+          setSelectedRelatedId(list[0].id);
+          setTargetSourceType(list[0].sourceType ?? null);
+        }
       })
       .catch((error: unknown) => {
         if (!cancelled) {
@@ -130,6 +124,43 @@ const AppealSubmit: React.FC = () => {
       cancelled = true;
     };
   }, [relatedModerationIdParam, t]);
+
+  /** 功能注释：原因列表与当前申诉对象类型绑定；未选定对象前不拉 */
+  useEffect(() => {
+    if (!reasonTargetType) {
+      setReasonOptions([]);
+      setReasonCode('');
+      setLoadingReasons(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingReasons(true);
+    setReasonCode('');
+    setReasonOptions([]);
+    void appealApi
+      .getReasonOptions(reasonTargetType)
+      .then((res) => {
+        if (cancelled) return;
+        if (!res.data.success || !res.data.data) {
+          throw new Error(res.data.message || t('appeal.loadReasonsFailed'));
+        }
+        setReasonOptions(res.data.data.list || []);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          toast.error(getApiErrorMessage(error, t('appeal.loadReasonsFailed')));
+          setReasonOptions([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingReasons(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [reasonTargetType, t]);
 
   useEffect(() => () => {
     evidence.forEach((item) => {
@@ -184,6 +215,7 @@ const AppealSubmit: React.FC = () => {
 
   const canSubmit =
     Boolean(selectedRelatedId)
+    && Boolean(reasonTargetType)
     && Boolean(reasonCode)
     && reason.trim().length > 0
     && reason.trim().length <= MAX_REASON
@@ -196,12 +228,13 @@ const AppealSubmit: React.FC = () => {
     && !targetBlocked;
 
   const handleSubmit = async () => {
-    if (!canSubmit || selectedRelatedId == null) return;
+    if (!canSubmit || selectedRelatedId == null || !reasonTargetType) return;
     setSubmitting(true);
     try {
       const res = await appealApi.submit({
         relatedModerationId: selectedRelatedId,
         reasonCode,
+        reasonTargetType,
         reason: reason.trim(),
         evidenceKeys: evidence.map((item) => item.key),
       });
@@ -255,7 +288,10 @@ const AppealSubmit: React.FC = () => {
                     key={item.id}
                     type="button"
                     className={`${styles.reasonItem} ${selectedRelatedId === item.id ? styles.reasonItemActive : ''}`}
-                    onClick={() => setSelectedRelatedId(item.id)}
+                    onClick={() => {
+                      setSelectedRelatedId(item.id);
+                      setTargetSourceType(item.sourceType ?? null);
+                    }}
                   >
                     <span className={styles.reasonTitle}>
                       {formatAppealRecordTitle(t, item.recordType, item.level)}
@@ -270,7 +306,7 @@ const AppealSubmit: React.FC = () => {
           </>
         ) : null}
 
-        {!checkingTarget && !targetBlocked ? (
+        {!checkingTarget && !targetBlocked && reasonTargetType ? (
         <>
         <div className={styles.sectionLabel}>
           {t('appeal.reasonTypeLabel')}

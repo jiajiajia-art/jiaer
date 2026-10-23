@@ -5,6 +5,7 @@ import type {
   AppealDetail,
   AppealEligibleData,
   AppealListData,
+  AppealReasonTargetType,
   AppealUploadEvidenceData,
   SubmitAppealData,
   SubmitAppealPayload,
@@ -14,9 +15,10 @@ const appealApi = {
   getEligible: () =>
     api.get<ApiResponse<AppealEligibleData>>('/appeals/eligible'),
 
-  getReasonOptions: () =>
+  /** 功能注释：按申诉对象类型拉原因；勿再用 targetType=appeal */
+  getReasonOptions: (targetType: AppealReasonTargetType) =>
     api.get<ApiResponse<ReportReasonsData>>('/report/reasons', {
-      params: { targetType: 'appeal' },
+      params: { targetType },
     }),
 
   uploadEvidence: (file: File) => {

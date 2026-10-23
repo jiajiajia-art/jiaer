@@ -661,6 +661,8 @@
     "socialFollowBtn": "关注",
     "socialFollowBackBtn": "回关",
     "socialFollowingBtn": "已关注",
+    "socialFollowSuccess": "关注成功",
+    "socialUnfollowSuccess": "已取消关注",
     "socialMutualBtn": "互相关注",
     "socialMeBtn": "我",
     "socialBlockedBtn": "已屏蔽",

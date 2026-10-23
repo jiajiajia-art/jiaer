@@ -489,6 +489,11 @@ const GameDetail: React.FC = () => {
                     ? { ...prev, isFollowingCreator: isFollowing }
                     : prev
             ));
+            toast.success(
+                isFollowing
+                    ? t('create.socialFollowSuccess')
+                    : t('create.socialUnfollowSuccess'),
+            );
         } catch (error: unknown) {
             toast.error(getApiErrorMessage(error, t('common.error')));
         } finally {
