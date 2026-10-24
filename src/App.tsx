@@ -188,6 +188,7 @@ function App() {
           <Route path="/operator/promoters" element={<AdminRoute><OperatorRoute><OperatorPanel /></OperatorRoute></AdminRoute>} />
           <Route path="/operator/daily-tasks" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/withdraw" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/ai-model-center" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/works/:fileId/stats" element={<OperatorRoute><OperatorWorkStats /></OperatorRoute>} />
           <Route path="/points/details" element={<PointsDetails />} />
           <Route path="/createGame" element={<CreateGame />} />
@@ -225,6 +226,7 @@ function App() {
           <Route path="/admin/image-gen" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/text-llm" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/ai-model-pricing" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/ai-model-center" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/lottery" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/comments" element={<AdminRoute><CommentAdminPage /></AdminRoute>} />
           <Route path="/galgame" element={<Galgame />} />

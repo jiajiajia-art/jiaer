@@ -19,7 +19,8 @@ import {
   PLAYER_UPLOAD_AVATAR_ACCEPT,
   PLAYER_UPLOAD_AVATAR_MAX_BYTES,
 } from '../../../lib/galgame/compressImageToWebp';
-import { CHARACTER_GENERATION_COST, NPC_PROFILE_FIELD_GENERATION_COST, getImageUrl } from '../../../utils/constants';
+import { NPC_PROFILE_FIELD_GENERATION_COST, getImageUrl } from '../../../utils/constants';
+import { useImageBusinessPrice } from '../../../hooks/useImageBusinessPrice';
 import { getApiErrorMessage } from '../../../utils/error';
 import { refreshAuthUserPoints } from '../../../lib/auth/refreshUserPoints';
 import { useAuthStore } from '../../../store/useAuthStore';
@@ -175,6 +176,12 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
   onCancel,
   onSubmit,
 }) => {
+  const {
+    estimatedPoints: sessionAvatarPrice,
+    priceUnavailable: sessionAvatarPriceUnavailable,
+    error: sessionAvatarPriceError,
+  } = useImageBusinessPrice('session_avatar_control');
+  const sessionAvatarCost = sessionAvatarPrice ?? 0;
   const token = useAuthStore((s) => s.user?.token);
   const updateUser = useAuthStore((s) => s.updateUser);
   const { sessionId } = useGameStore();
@@ -318,7 +325,11 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
 
   const requestGenerateAvatar = async () => {
     if (!ensureReadyForAi()) return;
-    if (!(await ensureEnoughPointsForAi(CHARACTER_GENERATION_COST))) return;
+    if (sessionAvatarPriceUnavailable || sessionAvatarPrice == null) {
+      toast.error(sessionAvatarPriceError || 'Price unavailable');
+      return;
+    }
+    if (!(await ensureEnoughPointsForAi(sessionAvatarCost))) return;
     if (isAiBusy('avatar') || avatarUploading) return;
     setAvatarStyleId(DEFAULT_AVATAR_STYLE);
     setAvatarPromptSupplement('');
@@ -563,7 +574,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
                   void requestGenerateAvatar();
                 }}
               >
-                {isAiBusy('avatar') ? '生成中…' : `AI 生成头像 · ${CHARACTER_GENERATION_COST} 织梦豆`}
+                {isAiBusy('avatar') ? '生成中…' : `AI 生成头像 · ${sessionAvatarPrice ?? '—'} 织梦豆`}
               </button>
               <button
                 type="button"
@@ -774,7 +785,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
         message={confirmKind === 'avatar' ? (
           <div className={styles.confirmMsgStack}>
             <p className={styles.confirmMsgText}>
-              {`将扣除 ${CHARACTER_GENERATION_COST} 织梦豆生成 AI 头像，是否继续？`}
+              {`将扣除 ${sessionAvatarPrice ?? '—'} 织梦豆生成 AI 头像，是否继续？`}
             </p>
             <button
               type="button"

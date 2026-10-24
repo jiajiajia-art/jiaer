@@ -36,7 +36,7 @@ export const useEditorSession = ({ fileId, mode }: UseEditorSessionOptions): Use
             useGameStore.getState().clearAll();
 
             if (mode === 'worldInteraction') {
-                const sessionResponse = await createWorldSessionApi.createWorldEditSession({ fileId });
+                const sessionResponse = await createWorldSessionApi.createWorldEditSession({ fileId, billingMode: 'creator_test' });
                 if (sessionResponse.data.success) {
                     const sessionId = sessionResponse.data.session.sessionId;
                     setFileId(fileId);
@@ -48,7 +48,7 @@ export const useEditorSession = ({ fileId, mode }: UseEditorSessionOptions): Use
                     return null;
                 }
             } else {
-                const sessionResponse = await createGalgameSessionApi.createGalgameEditSession({ fileId: fileId });
+                const sessionResponse = await createGalgameSessionApi.createGalgameEditSession({ fileId, billingMode: 'creator_test' });
                 if (sessionResponse.data.success) {
                     const sessionId = sessionResponse.data.data.session;
                     setFileId(fileId);

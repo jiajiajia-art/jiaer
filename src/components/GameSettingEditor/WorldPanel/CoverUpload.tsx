@@ -5,7 +5,8 @@ import { BsUpload } from 'react-icons/bs';
 import { toast } from 'react-hot-toast';
 import EditorApi from '../../../api/galgame/EditorData';
 import { useImageCropper } from '../../../hooks/useImageCropper';
-import { getImageUrl, SCENE_GENERATION_COST } from '../../../utils/constants';
+import { getImageUrl } from '../../../utils/constants';
+import { useImageBusinessPrice } from '../../../hooks/useImageBusinessPrice';
 import type { CoverOrientation } from '../../../utils/gameCovers.ts';
 import { addImageTimestamp, bumpCacheBust } from '../../../utils/imageCache';
 import { resolveCoverPreviewSrc } from '../../../utils/resolveCoverPreviewSrc';
@@ -45,6 +46,11 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
     compact = false,
 }) => {
     const { t } = useTranslation();
+    const landscapePricing = useImageBusinessPrice('visual_cover_landscape', fileId);
+    const portraitPricing = useImageBusinessPrice('visual_cover_portrait', fileId);
+    const priceFor = (orientation: CoverOrientation) => (
+        orientation === 'portrait' ? portraitPricing.estimatedPoints : landscapePricing.estimatedPoints
+    );
     const landscapeInputRef = useRef<HTMLInputElement>(null);
     const portraitInputRef = useRef<HTMLInputElement>(null);
     const [landscapePreview, setLandscapePreview] = useState<string | null>(coverUrl || null);
@@ -193,10 +199,15 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
             return;
         }
         const latestPoints = await refreshAuthUserPoints();
-        if (typeof latestPoints === 'number' && latestPoints < SCENE_GENERATION_COST) {
+        const coverPrice = priceFor(orientation);
+        if (coverPrice == null) {
+            toast.error('Price unavailable');
+            return;
+        }
+        if (typeof latestPoints === 'number' && latestPoints < coverPrice) {
             toast.error(
                 t('common.coverUpload.pointsInsufficient', {
-                    cost: SCENE_GENERATION_COST,
+                    cost: coverPrice,
                     current: latestPoints,
                 }),
             );
@@ -268,7 +279,7 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
             }
 
             await applyCoverPreview(orientation, nextCoverUrl);
-            const deducted = response.data.data.pointsDeducted ?? SCENE_GENERATION_COST;
+            const deducted = response.data.data.pointsDeducted ?? priceFor(orientation) ?? 0;
             toast.success(
                 t('common.coverUpload.aiGenerateSuccess', { cost: deducted }),
             );
@@ -326,7 +337,7 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
                 >
                     {slotBusy && coverGenerating
                         ? t('common.coverUpload.aiGenerating')
-                        : t('common.coverUpload.aiGenerate', { cost: SCENE_GENERATION_COST })}
+                        : t('common.coverUpload.aiGenerate', { cost: priceFor(orientation) ?? '—' })}
                 </button>
             </div>
         );
@@ -495,7 +506,7 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
                                     : t('common.coverUpload.promptModalHint')}
                             </p>
                             <span className={styles.coverBriefCost}>
-                                {t('common.coverUpload.promptCostBadge', { cost: SCENE_GENERATION_COST })}
+                                {t('common.coverUpload.promptCostBadge', { cost: priceFor(promptTarget) ?? '—' })}
                             </span>
                         </div>
 

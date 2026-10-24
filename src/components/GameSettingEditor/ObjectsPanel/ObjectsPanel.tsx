@@ -9,6 +9,7 @@ import { toast } from 'react-hot-toast';
 import type { ObjectItem } from '../../../api/worldInteraction/objectsData.type';
 import { objectsData } from '../../../api/worldInteraction/objectsData';
 import CurrencyIcon from '../../CurrencyIcon';
+import { LEGACY_WORLD_OBJECT_BATCH_GENERATION_COST } from '../../../utils/constants';
 
 interface ObjectsPanelProps {
     fileId?: string | null;
@@ -383,7 +384,7 @@ const ObjectsPanel = React.forwardRef<ObjectsPanelRef, ObjectsPanelProps>(({
                         <span className={styles.buttonMainText}>
                             {isGeneratingAll ? '生成中...' : '一键生成所有物品图片'}
                         </span>
-                        <span className={styles.buttonSubText}>10织梦豆/张</span>
+                        <span className={styles.buttonSubText}>{LEGACY_WORLD_OBJECT_BATCH_GENERATION_COST}织梦豆/张</span>
                     </div>
                 </button>
             </div>

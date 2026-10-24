@@ -1,0 +1,189 @@
+.root {
+  --usage-surface: #ffffff;
+  --usage-border: #e3e8f0;
+  --usage-text: #172033;
+  --usage-muted: #667085;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  color: var(--usage-text);
+}
+
+.filterCard,
+.metric,
+.chartCard,
+.tableCard {
+  border: 1px solid var(--usage-border);
+  box-shadow: none;
+}
+
+.filterCard {
+  background: linear-gradient(135deg, #ffffff 0%, #faf9ff 100%);
+}
+
+.sectionHead,
+.sectionTitle {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.sectionHead {
+  margin-bottom: 20px;
+}
+
+.sectionHead h3,
+.sectionTitle h3 {
+  margin: 0 0 6px;
+  font-size: 18px;
+}
+
+.sectionHead p,
+.sectionTitle span,
+.tableHint,
+.muted {
+  color: var(--usage-muted);
+}
+
+.sectionHead p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr)) auto;
+  gap: 16px;
+  align-items: end;
+}
+
+.timeField {
+  grid-column: span 2;
+}
+
+.field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+  color: #475467;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.queryButton {
+  min-width: 96px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.metric {
+  height: 100%;
+  border-left: 4px solid #654bd6;
+}
+
+.warningMetric {
+  border-left-color: #e0783f;
+  background: #fffaf6;
+}
+
+.chartGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.chartCard {
+  min-width: 0;
+}
+
+.chart {
+  width: 100%;
+  min-height: 280px;
+}
+
+.cellStack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 120px;
+}
+
+.cellStack span {
+  color: var(--usage-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.tableCard :global(.ant-table-cell),
+.metric :global(.ant-statistic-content) {
+  font-variant-numeric: tabular-nums;
+}
+
+.tableCard :global(.ant-pagination-item),
+.tableCard :global(.ant-pagination-prev),
+.tableCard :global(.ant-pagination-next),
+.tableCard :global(.ant-select-selector) {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+@media (max-width: 1280px) {
+  .filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .chartGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .chartGrid > :first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 720px) {
+  .root {
+    gap: 14px;
+  }
+
+  .sectionHead,
+  .sectionTitle {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .filters,
+  .chartGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .timeField {
+    grid-column: auto;
+  }
+
+  .chartGrid > :first-child {
+    grid-column: auto;
+  }
+
+  .filterCard :global(.ant-card-body),
+  .tableCard :global(.ant-card-body),
+  .chartCard :global(.ant-card-body) {
+    padding: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root *,
+  .root *::before,
+  .root *::after {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+  }
+}

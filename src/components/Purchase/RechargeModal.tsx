@@ -76,6 +76,7 @@ interface RechargeModalProps {
     onClose: () => void;
     onRecharge: (order: PayOrderRequest) => Promise<{ qrDataUrl: string; outTradeNo: string } | null>;
     fixedTab?: RechargeTabType;
+    constrainToGameViewport?: boolean;
 }
 
 const POLL_INTERVAL_MS = 3000;
@@ -87,7 +88,13 @@ const isMiniProgramEnv = (): boolean => {
     return String(win.__wxjs_environment || '').toLowerCase() === 'miniprogram';
 };
 
-const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRecharge, fixedTab }) => {
+const RechargeModal: React.FC<RechargeModalProps> = ({
+    isOpen,
+    onClose,
+    onRecharge,
+    fixedTab,
+    constrainToGameViewport = false,
+}) => {
     const { t } = useTranslation();
     const { updateUser, user: authUser } = useAuthStore();
     const region = useGeoRegionStore((state) => state.region);
@@ -766,7 +773,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
         <>
             <div className={styles.modalOverlay} onClick={handleClose}>
                 <div
-                    className={`${styles.modalContent} ${styles.modalContentWide} ${styles.rechargeCenter}`}
+                    className={`${styles.modalContent} ${styles.modalContentWide} ${styles.rechargeCenter}${constrainToGameViewport ? ` ${styles.modalContentGameViewport}` : ''}`}
                     onClick={(e) => e.stopPropagation()}
                 >
                     <button type="button" className={styles.closeBtn} onClick={handleClose} aria-label={t('common.close')}>

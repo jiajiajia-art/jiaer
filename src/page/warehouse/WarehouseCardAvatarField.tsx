@@ -8,7 +8,8 @@ import {
   compressImageFileToWebpUnderMaxBytes,
 } from '../../lib/galgame/compressImageToWebp';
 import { useAuthStore } from '../../store/useAuthStore';
-import { CHARACTER_GENERATION_COST, getImageUrl } from '../../utils/constants';
+import { getImageUrl } from '../../utils/constants';
+import { useImageBusinessPrice } from '../../hooks/useImageBusinessPrice';
 import { MdOutlineFileUpload } from 'react-icons/md';
 import panel from './WarehousePanel.module.css';
 
@@ -42,6 +43,8 @@ const WarehouseCardAvatarField: React.FC<Props> = ({
   fallbackChar = '我',
   children,
 }) => {
+  const { estimatedPoints } = useImageBusinessPrice('warehouse_card');
+  const priceLabel = estimatedPoints == null ? '—' : String(estimatedPoints);
   const token = useAuthStore((s) => s.user?.token);
   const fileRef = useRef<HTMLInputElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -50,7 +53,7 @@ const WarehouseCardAvatarField: React.FC<Props> = ({
   const label = (name || fallbackChar).trim().slice(0, 1) || '角';
   const busy = Boolean(generating);
   // 功能注释：生图/上传互斥；姓名性别仍可改
-  const locked = Boolean(disabled || generating || uploading);
+  const locked = Boolean(disabled || generating || uploading || estimatedPoints == null);
 
   /** 功能注释：立绘写入后滚回预览区，避免手机端头顶被挡在弹窗外。 */
   useEffect(() => {
@@ -135,8 +138,8 @@ const WarehouseCardAvatarField: React.FC<Props> = ({
               {busy
                 ? '后台生成中…'
                 : avatarUrl
-                  ? `重新生成图像 · ${CHARACTER_GENERATION_COST} 织梦豆`
-                  : `AI 生成图像 · ${CHARACTER_GENERATION_COST} 织梦豆`}
+                  ? `重新生成图像 · ${priceLabel} 织梦豆`
+                  : `AI 生成图像 · ${priceLabel} 织梦豆`}
             </button>
             <p className={panel.avatarUploadHint}>
               上传转 WebP（质量 100）；超过 1MB 等比缩小。不做抠图。

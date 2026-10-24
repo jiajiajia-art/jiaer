@@ -38,24 +38,21 @@ test('toImageGenModelsPayload_应按 key 组装', () => {
   assert.equal(Object.keys(payload).includes(''), false);
 });
 
-test('AdminPanel_应包含模型配置菜单与路由', () => {
+test('AdminPanel_应包含 AI 模型中心与兼容路由', () => {
   const panel = readFileSync(join(root, 'src/page/AdminPanel.tsx'), 'utf8');
-  assert.match(panel, /模型配置/);
-  assert.match(panel, /imageGen/);
+  assert.match(panel, /AI 模型中心/);
+  assert.match(panel, /aiModelCenter/);
   assert.match(panel, /\/admin\/image-gen/);
-  assert.match(panel, /ModelConfigHub/);
+  assert.match(panel, /AiModelCenter/);
 
   const hub = readFileSync(join(root, 'src/components/ModelConfigHub.tsx'), 'utf8');
   assert.match(hub, /role="tablist"/);
   assert.match(hub, /生图配置/);
-  assert.match(hub, /文案配置/);
-  // 功能注释：生图有独立请求设置，与文案网关互不影响
-  assert.match(hub, /生图请求设置/);
-  assert.match(hub, /与文案网关隔离/);
-  assert.match(hub, /与「文案配置」完全隔离/);
-  assert.match(hub, /handleFetchImageModels|image-gen-config\/models|listModels/);
-  assert.match(hub, /imageOpenaiBaseUrl/);
-  assert.match(hub, /\/admin\/text-llm/);
+  assert.match(hub, /生文配置/);
+  assert.match(hub, /保存并拉取模型/);
+  assert.match(hub, /ModelImportDialog/);
+  assert.match(hub, /ModelCatalogCards/);
+  assert.doesNotMatch(hub, /toImageGenModelsPayload|handleImageModelChange/);
 
   const api = readFileSync(join(root, 'src/api/admin/imageGenConfigApi.ts'), 'utf8');
   assert.match(api, /image-gen-config\/models/);
@@ -64,8 +61,5 @@ test('AdminPanel_应包含模型配置菜单与路由', () => {
   const app = readFileSync(join(root, 'src/App.tsx'), 'utf8');
   assert.match(app, /path="\/admin\/image-gen"/);
 
-  const withdrawIdx = panel.indexOf('>提现管理<');
-  const modelIdx = panel.indexOf('>模型配置<');
-  const lotteryIdx = panel.indexOf('>抽奖活动<');
-  assert.ok(withdrawIdx > 0 && modelIdx > withdrawIdx && lotteryIdx > modelIdx);
+  assert.match(panel, /<AiModelCenter isAdmin \/>/);
 });

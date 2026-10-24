@@ -8,7 +8,7 @@ import SaveConfirmModal from '../../CommonModal/SaveConfirmModal';
 import { toast } from 'react-hot-toast';
 import type { AbilityNodeSetting, AbilityNode } from '../../../api/worldInteraction/worldInteractionApi.type';
 import worldEditor from '../../../api/worldInteraction/worldEditor';
-import { CHARACTER_GENERATION_COST } from '../../../utils/constants';
+import { LEGACY_WORLD_ABILITY_NODE_GENERATION_COST } from '../../../utils/constants';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { auth } from '../../../api/account/authApi';
 import CurrencyIcon from '../../CurrencyIcon';
@@ -376,7 +376,7 @@ const FunctionalNPCsPanel = React.forwardRef<FunctionalNPCsPanelRef, FunctionalN
                         <span className={styles.buttonMainText}>
                             {isGeneratingAllImages ? '生成中...' : '一键生成所有功能性NPC图片'}
                         </span>
-                        <span className={styles.buttonSubText}>{CHARACTER_GENERATION_COST}织梦豆/张</span>
+                        <span className={styles.buttonSubText}>{LEGACY_WORLD_ABILITY_NODE_GENERATION_COST}织梦豆/张</span>
                     </div>
                 </button>
             </div>

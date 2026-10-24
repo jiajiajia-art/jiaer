@@ -325,7 +325,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
             // 进入游戏前清理旧状态；必须同时写回 fileId + sessionId，否则 Galgame 会卡在「正在获取数据」
             useGameStore.getState().clearAll();
             prefetchGalgameDocument(fileId);
-            const resp = await createGalgameSessionApi.createGalgameEditSession({ fileId, saveId });
+            const resp = await createGalgameSessionApi.createGalgameEditSession({ fileId, saveId, billingMode: 'creator_test' });
             if (resp.data.success) {
                 const sessionId = resp.data.data.session;
                 setFileId(fileId);

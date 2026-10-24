@@ -18,7 +18,8 @@ import { normalizeGameStartGender } from '../../../lib/galgame/gameStartConfig';
 import { playerCharacterCardsApi, sessionPlayerProfileApi } from '../../../api/galgame/playerCharacterCards';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { useGameStore } from '../../../store/gameStore';
-import { CHARACTER_GENERATION_COST, NPC_PROFILE_FIELD_GENERATION_COST, getImageUrl } from '../../../utils/constants';
+import { NPC_PROFILE_FIELD_GENERATION_COST, getImageUrl } from '../../../utils/constants';
+import { useImageBusinessPrice } from '../../../hooks/useImageBusinessPrice';
 import { getApiErrorMessage } from '../../../utils/error';
 import {
   pickDisplayAvatarFullUrl,
@@ -97,6 +98,12 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
   playerAvatarAbOnChange = false,
   onPlayerAvatarAbChange,
 }) => {
+  const {
+    estimatedPoints: sessionAvatarPrice,
+    priceUnavailable: sessionAvatarPriceUnavailable,
+    error: sessionAvatarPriceError,
+  } = useImageBusinessPrice('session_avatar_control');
+  const sessionAvatarCost = sessionAvatarPrice ?? 0;
   const authUser = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
   const { sessionId } = useGameStore();
@@ -272,9 +279,13 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
       return;
     }
     if (avatarAiBusy || personaAiBusy || avatarUploading) return;
+    if (sessionAvatarPriceUnavailable || sessionAvatarPrice == null) {
+      toast.error(sessionAvatarPriceError || 'Price unavailable');
+      return;
+    }
     const latestPoints = await refreshAuthUserPoints();
-    if (typeof latestPoints === 'number' && latestPoints < CHARACTER_GENERATION_COST) {
-      toast.error(`织梦豆不足（需要 ${CHARACTER_GENERATION_COST}，当前 ${latestPoints}）`);
+    if (typeof latestPoints === 'number' && latestPoints < sessionAvatarCost) {
+      toast.error(`织梦豆不足（需要 ${sessionAvatarCost}，当前 ${latestPoints}）`);
       return;
     }
     setAvatarStyleId(DEFAULT_AVATAR_STYLE);
@@ -372,7 +383,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
       message={(
         <div className={styles.confirmMsgStack}>
           <p className={styles.confirmMsgText}>
-            {`将扣除 ${CHARACTER_GENERATION_COST} 织梦豆生成 AI 头像，是否继续？`}
+            {`将扣除 ${sessionAvatarPrice ?? '—'} 织梦豆生成 AI 头像，是否继续？`}
           </p>
           <button
             type="button"
@@ -670,7 +681,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
                 >
                   {avatarAiBusy
                     ? '后台生成中…'
-                    : `${needsAvatar ? '生成头像' : '重新生成'} · ${CHARACTER_GENERATION_COST} 织梦豆`}
+                    : `${needsAvatar ? '生成头像' : '重新生成'} · ${sessionAvatarPrice ?? '—'} 织梦豆`}
                 </button>
                 <button
                   type="button"
@@ -1028,7 +1039,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
               >
                 {avatarAiBusy
                   ? '后台生成中…'
-                  : `${needsAvatar ? '生成头像' : '重新生成'} · ${CHARACTER_GENERATION_COST} 织梦豆`}
+                  : `${needsAvatar ? '生成头像' : '重新生成'} · ${sessionAvatarPrice ?? '—'} 织梦豆`}
               </button>
               <button
                 type="button"

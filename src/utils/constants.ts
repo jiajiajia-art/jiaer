@@ -10,8 +10,6 @@ export { preferCharacterPortraitWebp } from './characterPortraitUrl';
 import { preferCharacterPortraitWebp } from './characterPortraitUrl';
 
 // ==================== 积分相关常量 ====================
-export const SCENE_GENERATION_COST = 6;      // 场景生成费用
-export const CHARACTER_GENERATION_COST = 6;   // 角色/NPC/差分图生成费用
 /** 局内角色档案字段 AI 生成（关系/简介/态度），对齐后端 txt_npc_profile_field */
 export const NPC_PROFILE_FIELD_GENERATION_COST = 1;
 /** TXT 文游：AI 一句话生成游戏设定，对齐后端 txt_idea_generate */
@@ -24,6 +22,12 @@ export const OPTION_COST = 2;
 export const INPUT_COST = 3;
 export const HISTORY_MESSAGE_THRESHOLD = 5;
 export const CHECK_IN_REWARD_POINTS = 9;
+/** 旧世界互动编辑器继续沿用固定织梦豆价格，不接入平台生图动态配置。 */
+export const LEGACY_WORLD_CHARACTER_GENERATION_COST = 6;
+export const LEGACY_WORLD_SCENE_GENERATION_COST = 6;
+export const LEGACY_WORLD_ABILITY_NODE_GENERATION_COST = 6;
+export const LEGACY_WORLD_OBJECT_BATCH_GENERATION_COST = 10;
+export const LEGACY_WORLD_MAP_GENERATION_COST = 6;
 
 // ==================== 会员折扣 ====================
 // 会员在创作类操作（生成角色立绘/场景/差分等）上的折扣比例

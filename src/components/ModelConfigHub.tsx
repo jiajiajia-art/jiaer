@@ -1,805 +1,174 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import adminImageGenConfigApi, {
-  type AdminImageGenModuleRow,
-} from '../api/admin/imageGenConfigApi';
-import adminTextLlmConfigApi from '../api/admin/textLlmConfigApi';
-import {
-  DEFAULT_IMAGE_GEN_GATEWAY_PRESETS,
-  DEFAULT_IMAGE_GEN_OPENAI_BASE_URL,
-  IMAGE_GEN_MODELS,
-  IMAGE_GEN_MODULE_CATALOG,
-  normalizeImageGenModel,
-  normalizeImageGenOpenAiBaseUrl,
-  toImageGenModelsPayload,
-  type ImageGenGatewayPreset,
-  type ImageGenModel,
-} from '../lib/imageGenConfig';
-import {
-  DEFAULT_TEXT_LLM_GATEWAY_PRESETS,
-  DEFAULT_TEXT_LLM_MODEL,
-  TEXT_LLM_MODELS,
-  TEXT_LLM_USAGE_CATALOG,
-  getTextLlmModelLabel,
-  getTextLlmModelMeta,
-  getTextLlmModelVendor,
-  isDefaultTextLlmModel,
-  isSafeCustomTextLlmModelId,
-  normalizeTextLlmModel,
-  normalizeTextLlmOpenAiBaseUrl,
-  resolvePreferredTextLlmGatewayPresetId,
-  resolveTextLlmGatewayPresetId,
-  type TextLlmGatewayPreset,
-  type TextLlmModel,
-} from '../lib/textLlmConfig';
+import adminTextLlmConfigApi, { type AdminTextLlmConfigData } from '../api/admin/textLlmConfigApi';
+import adminImageGenConfigApi, { type AdminImageGenConfigData } from '../api/admin/imageGenConfigApi';
+import aiModelCatalogApi from '../api/admin/aiModelCatalogApi';
+import aiModelCenterApi, { type AiBillingModelCatalogRow } from '../api/operator/aiModelCenterApi';
+import ModelCatalogCards from './ai-model-center/ModelCatalogCards';
+import ModelImportDialog from './ai-model-center/ModelImportDialog';
+import ModelPricingDialog from './ai-model-center/ModelPricingDialog';
+import ImageBusinessConfigPanel from './ImageBusinessConfigPanel';
+import { toModelCatalogCards, type AiModelCapability, type AiModelCatalogCard } from '../lib/aiModelCatalog';
 import { getApiErrorMessage } from '../utils/error';
-import { resolveModelConfigPane, type ModelConfigPane } from '../lib/modelConfigPane';
 import styles from './ModelConfigHub.module.css';
 
-export type { ModelConfigPane };
-export { resolveModelConfigPane };
+type Pane = 'text' | 'image';
+type GatewayForm = { baseUrl: string; fallback: string; apiKey: string; apiKeySet: boolean; apiKeyHint: string; clearApiKey: boolean };
+const emptyGateway = (): GatewayForm => ({ baseUrl: '', fallback: '', apiKey: '', apiKeySet: false, apiKeyHint: '', clearApiKey: false });
 
-function fallbackImageModules(): AdminImageGenModuleRow[] {
-  return IMAGE_GEN_MODULE_CATALOG.map((mod) => ({
-    key: mod.key,
-    label: mod.label,
-    description: mod.description,
-    model: 'gpt-image-2',
-  }));
-}
-
-/**
- * 功能注释：生图 / 文案同页双轨 Tab；文案轨含 OpenAI 兼容网关（官方 DeepSeek 等）。
- */
 const ModelConfigHub: React.FC = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const pane = resolveModelConfigPane(location.pathname);
+  const [pane, setPane] = useState<Pane>('text');
+  const [textGateway, setTextGateway] = useState(emptyGateway);
+  const [imageGateway, setImageGateway] = useState(emptyGateway);
+  const [models, setModels] = useState<AiBillingModelCatalogRow[]>([]);
+  const [fetched, setFetched] = useState<Record<Pane, string[]>>({ text: [], image: [] });
+  const [importCapability, setImportCapability] = useState<AiModelCapability | null>(null);
+  const [editing, setEditing] = useState<AiModelCatalogCard | null>(null);
+  const [activatingId, setActivatingId] = useState<number | null>(null);
+  const [deactivatingId, setDeactivatingId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const [imageModules, setImageModules] = useState<AdminImageGenModuleRow[]>(fallbackImageModules);
-  const [imageLoading, setImageLoading] = useState(false);
-  const [imageSaving, setImageSaving] = useState(false);
-  // 功能注释：生图网关状态与文案网关完全独立，禁止共用一套 state
-  const [imageOpenaiBaseUrl, setImageOpenaiBaseUrl] = useState('');
-  const [imageOpenaiBaseUrlFallback, setImageOpenaiBaseUrlFallback] = useState(
-    DEFAULT_IMAGE_GEN_OPENAI_BASE_URL,
-  );
-  const [imageOpenaiApiKey, setImageOpenaiApiKey] = useState('');
-  const [imageApiKeySet, setImageApiKeySet] = useState(false);
-  const [imageApiKeyHint, setImageApiKeyHint] = useState('');
-  const [imageClearApiKey, setImageClearApiKey] = useState(false);
-  const [imageGatewayPresets, setImageGatewayPresets] = useState<readonly ImageGenGatewayPreset[]>(
-    DEFAULT_IMAGE_GEN_GATEWAY_PRESETS,
-  );
-  const [imageFetchedModels, setImageFetchedModels] = useState<string[]>([]);
-  const [imageFetchingModels, setImageFetchingModels] = useState(false);
+  const applyTextConfig = (data: AdminTextLlmConfigData) => setTextGateway({
+    baseUrl: String(data.openaiBaseUrl || ''),
+    fallback: String(data.openaiBaseUrlFallback || ''),
+    apiKey: '', apiKeySet: Boolean(data.apiKeySet), apiKeyHint: String(data.apiKeyHint || ''), clearApiKey: false,
+  });
+  const applyImageConfig = (data: AdminImageGenConfigData) => setImageGateway({
+    baseUrl: String(data.openaiBaseUrl || ''),
+    fallback: String(data.openaiBaseUrlFallback || ''),
+    apiKey: '', apiKeySet: Boolean(data.apiKeySet), apiKeyHint: String(data.apiKeyHint || ''), clearApiKey: false,
+  });
 
-  const [textModel, setTextModel] = useState<TextLlmModel>(DEFAULT_TEXT_LLM_MODEL);
-  const [textLoading, setTextLoading] = useState(false);
-  const [textSaving, setTextSaving] = useState(false);
-  const [openaiBaseUrl, setOpenaiBaseUrl] = useState('');
-  const [openaiBaseUrlFallback, setOpenaiBaseUrlFallback] = useState('https://epone.ggb.today');
-  const [openaiApiKey, setOpenaiApiKey] = useState('');
-  const [apiKeySet, setApiKeySet] = useState(false);
-  const [clearApiKey, setClearApiKey] = useState(false);
-  /** 功能注释：各网关明文密钥草稿；切换 DeepSeek/TokenHub 时本地暂存，保存时一并落库 */
-  const [gatewayKeys, setGatewayKeys] = useState<Record<string, string>>({});
-  const [gatewayPresets, setGatewayPresets] = useState<readonly TextLlmGatewayPreset[]>(
-    DEFAULT_TEXT_LLM_GATEWAY_PRESETS,
-  );
-  const [fetchedModels, setFetchedModels] = useState<string[]>([]);
-  const [fetchingModels, setFetchingModels] = useState(false);
-
-  const applyImageConfigData = useCallback((data: {
-    modules?: AdminImageGenModuleRow[];
-    openaiBaseUrl?: string;
-    openaiBaseUrlFallback?: string;
-    apiKeySet?: boolean;
-    apiKeyHint?: string;
-    gatewayPresets?: ImageGenGatewayPreset[];
-  }) => {
-    if (data.modules?.length) {
-      setImageModules(
-        data.modules.map((row) => ({
-          ...row,
-          model: normalizeImageGenModel(row.model),
-        })),
-      );
-    }
-    setImageOpenaiBaseUrl(String(data.openaiBaseUrl || ''));
-    if (data.openaiBaseUrlFallback) {
-      setImageOpenaiBaseUrlFallback(String(data.openaiBaseUrlFallback));
-    }
-    setImageApiKeySet(Boolean(data.apiKeySet));
-    setImageApiKeyHint(String(data.apiKeyHint || ''));
-    setImageOpenaiApiKey('');
-    setImageClearApiKey(false);
-    if (data.gatewayPresets?.length) setImageGatewayPresets(data.gatewayPresets);
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [textResponse, imageResponse, modelsResponse] = await Promise.all([
+        adminTextLlmConfigApi.getConfig(), adminImageGenConfigApi.getConfig(), aiModelCenterApi.listModels(),
+      ]);
+      if (textResponse.data.data) applyTextConfig(textResponse.data.data);
+      if (imageResponse.data.data) applyImageConfig(imageResponse.data.data);
+      setModels(modelsResponse.data.data?.items || []);
+    } catch (error) { toast.error(getApiErrorMessage(error, '运行配置加载失败')); }
+    finally { setLoading(false); }
   }, []);
 
-  const loadImage = useCallback(async () => {
+  useEffect(() => { void load(); }, [load]);
+  const grouped = useMemo(() => toModelCatalogCards(models), [models]);
+  const currentGateway = pane === 'text' ? textGateway : imageGateway;
+  const setCurrentGateway = (next: GatewayForm) => pane === 'text' ? setTextGateway(next) : setImageGateway(next);
+  const currentModels = pane === 'text' ? grouped.text : grouped.image;
+
+  const saveGateway = async (capability: Pane, showToast = true) => {
+    const gateway = capability === 'text' ? textGateway : imageGateway;
+    const payload = {
+      openaiBaseUrl: gateway.baseUrl.trim(),
+      openaiApiKey: gateway.clearApiKey ? '' : gateway.apiKey.trim() || undefined,
+      clearApiKey: gateway.clearApiKey,
+    };
+    if (capability === 'text') {
+      const response = await adminTextLlmConfigApi.saveConfig(payload);
+      if (response.data.data) applyTextConfig(response.data.data);
+    } else {
+      const response = await adminImageGenConfigApi.saveConfig(payload);
+      if (response.data.data) applyImageConfig(response.data.data);
+    }
+    if (showToast) toast.success(`${capability === 'text' ? '生文' : '生图'}网关已保存`);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try { await saveGateway(pane); }
+    catch (error) { toast.error(getApiErrorMessage(error, '网关保存失败')); }
+    finally { setSaving(false); }
+  };
+
+  const handleFetch = async () => {
+    setSaving(true);
     try {
-      setImageLoading(true);
-      const response = await adminImageGenConfigApi.getConfig();
-      if (response.data.success && response.data.data?.modules?.length) {
-        applyImageConfigData(response.data.data);
-      } else {
-        toast.error(response.data.message || '加载生图配置失败');
-      }
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, '加载生图配置失败'));
-    } finally {
-      setImageLoading(false);
-    }
-  }, [applyImageConfigData]);
+      const gateway = pane === 'text' ? textGateway : imageGateway;
+      await saveGateway(pane, false);
+      const response = pane === 'text'
+        ? await adminTextLlmConfigApi.listModels({ openaiBaseUrl: gateway.baseUrl, openaiApiKey: gateway.apiKey || undefined })
+        : await adminImageGenConfigApi.listModels({ openaiBaseUrl: gateway.baseUrl, openaiApiKey: gateway.apiKey || undefined });
+      const ids = response.data.data?.models || [];
+      setFetched((current) => ({ ...current, [pane]: ids }));
+      setImportCapability(pane);
+    } catch (error) { toast.error(getApiErrorMessage(error, '模型拉取失败')); }
+    finally { setSaving(false); }
+  };
 
-  const applyTextConfigData = useCallback((data: {
-    model?: string;
-    openaiBaseUrl?: string;
-    openaiBaseUrlFallback?: string;
-    openaiApiKey?: string;
-    gatewayKeys?: Record<string, string>;
-    apiKeySet?: boolean;
-    apiKeyHint?: string;
-    gatewayPresets?: TextLlmGatewayPreset[];
-  }) => {
-    if (data.model) setTextModel(normalizeTextLlmModel(data.model));
-    const nextBase = String(data.openaiBaseUrl || '');
-    setOpenaiBaseUrl(nextBase);
-    if (data.openaiBaseUrlFallback) {
-      setOpenaiBaseUrlFallback(String(data.openaiBaseUrlFallback));
-    }
-    const nextPresets = data.gatewayPresets?.length
-      ? data.gatewayPresets
-      : DEFAULT_TEXT_LLM_GATEWAY_PRESETS;
-    if (data.gatewayPresets?.length) setGatewayPresets(data.gatewayPresets);
-    const keys = { ...(data.gatewayKeys || {}) };
-    setGatewayKeys(keys);
-    const presetId = resolveTextLlmGatewayPresetId(nextBase, nextPresets);
-    const plaintext =
-      String(data.openaiApiKey || '').trim()
-      || (presetId ? String(keys[presetId] || '').trim() : '')
-      || String(data.apiKeyHint || '').trim();
-    setOpenaiApiKey(plaintext);
-    setApiKeySet(Boolean(data.apiKeySet) || Boolean(plaintext));
-    setClearApiKey(false);
-  }, []);
-
-  const loadText = useCallback(async () => {
+  const handleImport = async (capability: AiModelCapability, modelIds: string[]) => {
     try {
-      setTextLoading(true);
-      const response = await adminTextLlmConfigApi.getConfig();
-      if (response.data.success && response.data.data?.model) {
-        applyTextConfigData(response.data.data);
-      } else {
-        toast.error(response.data.message || '加载文案配置失败');
-      }
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, '加载文案配置失败'));
-    } finally {
-      setTextLoading(false);
-    }
-  }, [applyTextConfigData]);
-
-  useEffect(() => {
-    if (pane === 'image') void loadImage();
-    else void loadText();
-  }, [pane, loadImage, loadText]);
-
-  const switchPane = (next: ModelConfigPane) => {
-    if (next === pane) return;
-    navigate(next === 'text' ? '/admin/text-llm' : '/admin/image-gen');
+      await aiModelCatalogApi.importModels({ capability, modelIds });
+      toast.success(`已导入 ${modelIds.length} 个模型`);
+      await load();
+    } catch (error) { throw new Error(getApiErrorMessage(error, '模型导入失败')); }
   };
 
-  const handleImageModelChange = (key: string, model: ImageGenModel) => {
-    setImageModules((prev) =>
-      prev.map((row) => (row.key === key ? { ...row, model } : row)),
-    );
-  };
-
-  const handleSaveImage = async () => {
-    const baseNormalized = normalizeImageGenOpenAiBaseUrl(imageOpenaiBaseUrl);
-    if (imageOpenaiBaseUrl.trim() && !baseNormalized) {
-      toast.error('生图 API 地址无效，请填写 https:// 开头的基础 URL');
-      return;
-    }
+  const handleActivate = async (model: AiModelCatalogCard) => {
+    if (model.active) return;
+    if (!window.confirm(`确认将 ${model.displayName} 设为全平台${model.capability === 'text' ? '生文' : '生图'}模型？`)) return;
+    setActivatingId(model.id);
     try {
-      setImageSaving(true);
-      const response = await adminImageGenConfigApi.saveConfig({
-        models: toImageGenModelsPayload(imageModules),
-        openaiBaseUrl: baseNormalized,
-        openaiApiKey: imageClearApiKey ? undefined : imageOpenaiApiKey,
-        clearApiKey: imageClearApiKey,
-      });
-      if (response.data.success && response.data.data) {
-        applyImageConfigData(response.data.data);
-        toast.success(response.data.message || '生图配置已保存');
-      } else {
-        toast.error(response.data.message || '保存失败');
-      }
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, '保存失败'));
-    } finally {
-      setImageSaving(false);
-    }
+      await aiModelCatalogApi.activateModel(model.id, model.capability);
+      toast.success('模型已启用');
+      await load();
+    } catch (error) { toast.error(getApiErrorMessage(error, '模型启用失败')); }
+    finally { setActivatingId(null); }
   };
 
-  /** 功能注释：生图独立拉模型，走 image-gen-config/models，不碰文案密钥 */
-  const handleFetchImageModels = async () => {
-    const baseNormalized = normalizeImageGenOpenAiBaseUrl(imageOpenaiBaseUrl)
-      || normalizeImageGenOpenAiBaseUrl(imageOpenaiBaseUrlFallback);
-    if (!baseNormalized) {
-      toast.error('请先填写生图 API 地址');
-      return;
-    }
-    if (!imageOpenaiApiKey.trim() && !imageApiKeySet) {
-      toast.error('请先填写生图 API 密钥');
-      return;
-    }
+  const handleDeactivate = async (model: AiModelCatalogCard) => {
+    if (!window.confirm(`确认停用生图模型 ${model.displayName}？正在被业务场景使用时将无法停用。`)) return;
+    setDeactivatingId(model.id);
     try {
-      setImageFetchingModels(true);
-      const response = await adminImageGenConfigApi.listModels({
-        openaiBaseUrl: baseNormalized,
-        openaiApiKey: imageOpenaiApiKey.trim() || undefined,
-      });
-      if (response.data.success && response.data.data?.models) {
-        setImageFetchedModels(response.data.data.models);
-        toast.success(`已拉取 ${response.data.data.count} 个模型`);
-      } else {
-        toast.error(response.data.message || '拉取模型失败');
-      }
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, '拉取模型失败'));
-    } finally {
-      setImageFetchingModels(false);
-    }
+      await aiModelCatalogApi.deactivateModel(model.id);
+      toast.success('生图模型已停用');
+      await load();
+    } catch (error) { toast.error(getApiErrorMessage(error, '模型停用失败')); }
+    finally { setDeactivatingId(null); }
   };
 
-  /** 功能注释：切换网关前把当前密钥记入对应槽，再回显目标网关已存密钥 */
-  const switchTextGatewayPreset = (preset: TextLlmGatewayPreset) => {
-    const prevId = resolveTextLlmGatewayPresetId(openaiBaseUrl, gatewayPresets);
-    const nextKeys = { ...gatewayKeys };
-    if (prevId && openaiApiKey.trim() && !clearApiKey) {
-      nextKeys[prevId] = openaiApiKey.trim();
-    }
-    setGatewayKeys(nextKeys);
-    setOpenaiBaseUrl(preset.baseUrl);
-    setOpenaiApiKey(String(nextKeys[preset.id] || ''));
-    setClearApiKey(false);
-    setApiKeySet(Boolean(nextKeys[preset.id]));
-  };
-
-  /**
-   * 功能注释：点预置模型——DeepSeek/ggb 卡切到 epone 并回显该网关密钥，便于直接「拉取模型」。
-   * 豆包不改 OpenAI 网关（走 Ark）。
-   */
-  const selectPresetTextModel = (item: TextLlmModel) => {
-    const nextModel = normalizeTextLlmModel(item);
-    setTextModel(nextModel);
-    const preferredId = resolvePreferredTextLlmGatewayPresetId(nextModel);
-    if (!preferredId) return;
-    const preset = gatewayPresets.find((row) => row.id === preferredId);
-    if (!preset) return;
-    const alreadyOn =
-      normalizeTextLlmOpenAiBaseUrl(openaiBaseUrl) === preset.baseUrl;
-    if (!alreadyOn) {
-      switchTextGatewayPreset(preset);
-      return;
-    }
-    // 功能注释：已在目标网关时仍强制回显该槽密钥（避免表单仍停在别家 key）
-    const key = String(gatewayKeys[preferredId] || '').trim();
-    if (key && key !== openaiApiKey.trim()) {
-      setOpenaiApiKey(key);
-      setClearApiKey(false);
-      setApiKeySet(true);
-    }
-  };
-
-  const handleSaveText = async () => {
-    const model = normalizeTextLlmModel(textModel);
-    if (!isSafeCustomTextLlmModelId(model) && !TEXT_LLM_MODELS.includes(model as typeof TEXT_LLM_MODELS[number])) {
-      toast.error('模型 id 无效');
-      return;
-    }
-    const baseNormalized = normalizeTextLlmOpenAiBaseUrl(openaiBaseUrl);
-    if (openaiBaseUrl.trim() && !baseNormalized) {
-      toast.error('API 地址无效，请填写 https:// 开头的基础 URL');
-      return;
-    }
-    const presetId = resolveTextLlmGatewayPresetId(baseNormalized, gatewayPresets);
-    const nextKeys = { ...gatewayKeys };
-    if (!clearApiKey && presetId && openaiApiKey.trim()) {
-      nextKeys[presetId] = openaiApiKey.trim();
-    }
-    if (clearApiKey && presetId) {
-      delete nextKeys[presetId];
-    }
-    try {
-      setTextSaving(true);
-      const response = await adminTextLlmConfigApi.saveConfig({
-        model,
-        openaiBaseUrl: baseNormalized,
-        openaiApiKey: clearApiKey ? undefined : openaiApiKey,
-        gatewayKeys: nextKeys,
-        clearApiKey,
-      });
-      if (response.data.success && response.data.data) {
-        applyTextConfigData(response.data.data);
-        toast.success(response.data.message || '文案模型配置已保存');
-      } else {
-        toast.error(response.data.message || '保存失败');
-      }
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, '保存失败'));
-    } finally {
-      setTextSaving(false);
-    }
-  };
-
-  /** 功能注释：用当前表单地址/密钥（或已保存密钥）打 /v1/models */
-  const handleFetchModels = async () => {
-    const baseNormalized = normalizeTextLlmOpenAiBaseUrl(openaiBaseUrl)
-      || normalizeTextLlmOpenAiBaseUrl(openaiBaseUrlFallback);
-    if (!baseNormalized) {
-      toast.error('请先填写 API 地址');
-      return;
-    }
-    if (!openaiApiKey.trim() && !apiKeySet) {
-      toast.error('请先填写 API 密钥');
-      return;
-    }
-    try {
-      setFetchingModels(true);
-      const response = await adminTextLlmConfigApi.listModels({
-        openaiBaseUrl: baseNormalized,
-        openaiApiKey: openaiApiKey.trim() || undefined,
-      });
-      if (response.data.success && response.data.data?.models) {
-        setFetchedModels(response.data.data.models);
-        toast.success(`已拉取 ${response.data.data.count} 个模型`);
-      } else {
-        toast.error(response.data.message || '拉取模型失败');
-      }
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, '拉取模型失败'));
-    } finally {
-      setFetchingModels(false);
-    }
-  };
-
-  const busy = pane === 'image'
-    ? imageLoading || imageSaving || imageFetchingModels
-    : textLoading || textSaving || fetchingModels;
-
-  const effectiveImageGatewayHint = imageOpenaiBaseUrl.trim() || imageOpenaiBaseUrlFallback;
-  const effectiveGatewayHint = openaiBaseUrl.trim() || openaiBaseUrlFallback;
-
-  return (
-    <div className={styles.root}>
-      <header
-        className={styles.masthead}
-        data-watermark={pane === 'image' ? 'IMG' : 'ONE'}
-      >
-        <div className={styles.mastTop}>
-          <span className={styles.badge}>模型配置 · MODEL HUB</span>
-          <div className={styles.rail} role="tablist" aria-label="生图与文案切换">
-            <span
-              className={`${styles.railThumb} ${
-                pane === 'image' ? styles.railThumbImage : styles.railThumbText
-              }`}
-              aria-hidden
-            />
-            <button
-              type="button"
-              role="tab"
-              aria-selected={pane === 'image'}
-              className={`${styles.railBtn} ${pane === 'image' ? styles.railBtnActive : ''}`}
-              onClick={() => switchPane('image')}
-            >
-              生图配置
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={pane === 'text'}
-              className={`${styles.railBtn} ${pane === 'text' ? styles.railBtnActive : ''}`}
-              onClick={() => switchPane('text')}
-            >
-              文案配置
-            </button>
-          </div>
-        </div>
-
-        {pane === 'image' ? (
-          <>
-            <h2 className={styles.mastTitle}>按业务模块切换生图模型</h2>
-            <p className={styles.mastDesc}>
-              可选 {IMAGE_GEN_MODELS.join(' / ')}。下方「生图请求设置」可配独立 API 地址/密钥（默认 ggb），
-              与「文案配置」完全隔离、互不影响。未填地址时回落{' '}
-              <code className={styles.inlineCode}>{imageOpenaiBaseUrlFallback}</code>
-              。保存后约 30 秒生效。
-            </p>
-            <div className={styles.mastActions}>
-              <button
-                type="button"
-                className={styles.ghostBtn}
-                onClick={() => void loadImage()}
-                disabled={busy}
-              >
-                刷新
-              </button>
-              <button
-                type="button"
-                className={styles.saveBtn}
-                onClick={() => void handleSaveImage()}
-                disabled={busy}
-              >
-                {imageSaving ? '保存中…' : '保存生图配置'}
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <h2 className={styles.mastTitle}>一处配置，全站文案同模型</h2>
-            <p className={styles.mastDesc}>
-              叙事、私聊、文档解析、记忆压缩与故事结构共用同一模型。下方「文案请求设置」仅作用于文案链路（可切官方 DeepSeek），
-              与生图网关互不影响。未填文案地址时回落{' '}
-              <code className={styles.inlineCode}>{openaiBaseUrlFallback}</code>
-              。保存后约 30 秒生效。
-            </p>
-            <div className={styles.mastActions}>
-              <button
-                type="button"
-                className={styles.ghostBtn}
-                onClick={() => void loadText()}
-                disabled={busy}
-              >
-                刷新
-              </button>
-              <button
-                type="button"
-                className={styles.saveBtn}
-                onClick={() => void handleSaveText()}
-                disabled={busy}
-              >
-                {textSaving ? '保存中…' : '保存文案配置'}
-              </button>
-            </div>
-          </>
-        )}
-      </header>
-
-      {pane === 'image' ? (
-        <div className={styles.pane} role="tabpanel" aria-label="生图配置">
-          {imageLoading && imageModules.length === 0 ? (
-            <p className={styles.loading}>加载中…</p>
-          ) : (
-            <div className={styles.mainCol}>
-              <section className={styles.panel} aria-label="生图请求设置">
-                <div className={styles.panelHead}>
-                  <h3 className={styles.panelTitle}>生图请求设置</h3>
-                  <p className={styles.panelHint}>仅生图 · 与文案网关隔离</p>
-                </div>
-                <label className={styles.fieldLabel}>
-                  生图 API 地址
-                  <input
-                    className={styles.fieldInput}
-                    type="url"
-                    value={imageOpenaiBaseUrl}
-                    placeholder={imageOpenaiBaseUrlFallback || 'https://epone.ggb.today'}
-                    onChange={(e) => setImageOpenaiBaseUrl(e.target.value)}
-                    disabled={imageSaving}
-                    autoComplete="off"
-                  />
-                </label>
-                <p className={styles.fieldHint}>
-                  只需填写基础 URL，系统自动拼接 /v1/images/generations。当前生效预览：
-                  {' '}
-                  <strong>{effectiveImageGatewayHint || '（未配置）'}</strong>
-                </p>
-                <div className={styles.presetRow} role="group" aria-label="生图常用网关">
-                  {imageGatewayPresets.map((preset) => {
-                    const active = normalizeImageGenOpenAiBaseUrl(imageOpenaiBaseUrl) === preset.baseUrl;
-                    return (
-                      <button
-                        key={preset.id}
-                        type="button"
-                        className={active ? styles.presetChipActive : styles.presetChip}
-                        onClick={() => setImageOpenaiBaseUrl(preset.baseUrl)}
-                        disabled={imageSaving}
-                      >
-                        {preset.label}
-                      </button>
-                    );
-                  })}
-                </div>
-                <label className={styles.fieldLabel}>
-                  生图 API 密钥
-                  <input
-                    className={styles.fieldInput}
-                    type="password"
-                    value={imageOpenaiApiKey}
-                    placeholder={
-                      imageApiKeySet
-                        ? `已保存 ${imageApiKeyHint || '••••'}，留空不修改`
-                        : 'sk-...（仅生图；文案密钥另存）'
-                    }
-                    onChange={(e) => {
-                      setImageOpenaiApiKey(e.target.value);
-                      if (imageClearApiKey) setImageClearApiKey(false);
-                    }}
-                    disabled={imageSaving || imageClearApiKey}
-                    autoComplete="new-password"
-                  />
-                </label>
-                {imageApiKeySet ? (
-                  <label className={styles.checkRow}>
-                    <input
-                      type="checkbox"
-                      checked={imageClearApiKey}
-                      onChange={(e) => {
-                        setImageClearApiKey(e.target.checked);
-                        if (e.target.checked) setImageOpenaiApiKey('');
-                      }}
-                      disabled={imageSaving}
-                    />
-                    清除已保存生图密钥（改回使用服务器环境变量）
-                  </label>
-                ) : null}
-                <div className={styles.modelFetchRow}>
-                  <p className={styles.fieldHint} style={{ margin: 0, flex: 1 }}>
-                    模块模型仍用下方下拉（nano-banana-2 / gpt-image-2）。「拉取模型」用于校验网关连通性。
-                  </p>
-                  <button
-                    type="button"
-                    className={styles.fetchBtn}
-                    onClick={() => void handleFetchImageModels()}
-                    disabled={busy}
-                  >
-                    {imageFetchingModels ? '拉取中…' : '拉取模型'}
-                  </button>
-                </div>
-                {imageFetchedModels.length > 0 ? (
-                  <p className={styles.fieldHint}>
-                    网关返回 {imageFetchedModels.length} 个模型（连通正常）。生图业务仍用模块下拉中的模型名。
-                  </p>
-                ) : null}
-              </section>
-
-              <section className={styles.panel}>
-                <div className={styles.panelHead}>
-                  <h3 className={styles.panelTitle}>业务模块</h3>
-                  <p className={styles.panelHint}>{imageModules.length} 个模块</p>
-                </div>
-                <div className={styles.moduleList}>
-                  {imageModules.map((row) => (
-                    <div key={row.key} className={styles.moduleRow}>
-                      <div>
-                        <p className={styles.moduleLabel}>{row.label}</p>
-                        <p className={styles.moduleDesc}>{row.description}</p>
-                        <p className={styles.moduleKey}>key · {row.key}</p>
-                      </div>
-                      <label className={styles.moduleSelectLabel}>
-                        生图模型
-                        <select
-                          className={styles.moduleSelect}
-                          value={normalizeImageGenModel(row.model)}
-                          onChange={(e) =>
-                            handleImageModelChange(
-                              row.key,
-                              normalizeImageGenModel(e.target.value),
-                            )
-                          }
-                          disabled={imageSaving}
-                        >
-                          {IMAGE_GEN_MODELS.map((model) => (
-                            <option key={model} value={model}>
-                              {model}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className={styles.pane} role="tabpanel" aria-label="文案配置">
-          {textLoading ? (
-            <p className={styles.loading}>加载中…</p>
-          ) : (
-            <div className={styles.stage}>
-              <div className={styles.mainCol}>
-                {/* 功能注释：参照中转站设置——基础 URL / 密钥 / 拉取模型 */}
-                <section className={styles.panel} aria-label="文案模型请求设置">
-                  <div className={styles.panelHead}>
-                    <h3 className={styles.panelTitle}>文案请求设置</h3>
-                    <p className={styles.panelHint}>仅文案链路 · 不影响生图配置</p>
-                  </div>
-
-                  <label className={styles.fieldLabel}>
-                    文案 API 地址
-                    <input
-                      className={styles.fieldInput}
-                      type="url"
-                      value={openaiBaseUrl}
-                      placeholder={openaiBaseUrlFallback || 'https://api.deepseek.com'}
-                      onChange={(e) => setOpenaiBaseUrl(e.target.value)}
-                      disabled={textSaving}
-                      autoComplete="off"
-                    />
-                  </label>
-                  <p className={styles.fieldHint}>
-                    只需填写基础 URL，系统自动拼接 /v1/chat/completions。当前生效预览：
-                    {' '}
-                    <strong>{effectiveGatewayHint || '（未配置）'}</strong>
-                  </p>
-                  <div className={styles.presetRow} role="group" aria-label="常用网关">
-                    {gatewayPresets.map((preset) => {
-                      const active = normalizeTextLlmOpenAiBaseUrl(openaiBaseUrl) === preset.baseUrl;
-                      return (
-                        <button
-                          key={preset.id}
-                          type="button"
-                          className={active ? styles.presetChipActive : styles.presetChip}
-                          onClick={() => switchTextGatewayPreset(preset)}
-                          disabled={textSaving}
-                        >
-                          {preset.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <label className={styles.fieldLabel}>
-                    文案 API 密钥
-                    <input
-                      className={styles.fieldInput}
-                      type="text"
-                      value={clearApiKey ? '' : openaiApiKey}
-                      placeholder="sk-...（明文；每个网关各自保存，切换即回显；改完请点保存）"
-                      onChange={(e) => {
-                        const next = e.target.value;
-                        setOpenaiApiKey(next);
-                        if (clearApiKey) setClearApiKey(false);
-                        // 功能注释：输入时立刻写入当前网关槽，切换 TokenHub/epone 时不丢未保存草稿
-                        const presetId = resolveTextLlmGatewayPresetId(openaiBaseUrl, gatewayPresets);
-                        if (presetId) {
-                          setGatewayKeys((prev) => ({
-                            ...prev,
-                            [presetId]: next.trim(),
-                          }));
-                        }
-                      }}
-                      disabled={textSaving || clearApiKey}
-                      autoComplete="off"
-                      spellCheck={false}
-                    />
-                  </label>
-                  {apiKeySet ? (
-                    <label className={styles.checkRow}>
-                      <input
-                        type="checkbox"
-                        checked={clearApiKey}
-                        onChange={(e) => {
-                          setClearApiKey(e.target.checked);
-                          if (e.target.checked) setOpenaiApiKey('');
-                        }}
-                        disabled={textSaving}
-                      />
-                      清除已保存密钥（改回使用服务器环境变量）
-                    </label>
-                  ) : null}
-
-                  <div className={styles.modelFetchRow}>
-                    <label className={styles.fieldLabelGrow}>
-                      模型
-                      <input
-                        className={styles.fieldInput}
-                        type="text"
-                        value={textModel}
-                        onChange={(e) => setTextModel(e.target.value.trim())}
-                        disabled={textSaving}
-                        placeholder="deepseek-chat / deepseek-v4.1-flash …"
-                        spellCheck={false}
-                      />
-                    </label>
-                    <button
-                      type="button"
-                      className={styles.fetchBtn}
-                      onClick={() => void handleFetchModels()}
-                      disabled={busy}
-                    >
-                      {fetchingModels ? '拉取中…' : '拉取模型'}
-                    </button>
-                  </div>
-                  {fetchedModels.length > 0 ? (
-                    <label className={styles.fieldLabel}>
-                      从网关选择
-                      <select
-                        className={styles.fieldSelect}
-                        value={fetchedModels.includes(String(textModel)) ? String(textModel) : ''}
-                        onChange={(e) => {
-                          if (e.target.value) setTextModel(e.target.value);
-                        }}
-                        disabled={textSaving}
-                      >
-                        <option value="">— 选择已拉取的模型 —</option>
-                        {fetchedModels.map((id) => (
-                          <option key={id} value={id}>
-                            {id}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  ) : null}
-                </section>
-
-                <section className={styles.panel} aria-label="选择文案模型">
-                  <div className={styles.panelHead}>
-                    <h3 className={styles.panelTitle}>预置模型</h3>
-                    <p className={styles.panelHint}>当前：{getTextLlmModelLabel(textModel)}</p>
-                  </div>
-                  <div className={styles.modelGrid} role="radiogroup" aria-label="文案模型">
-                    {TEXT_LLM_MODELS.map((item) => {
-                      const active = item === textModel;
-                      return (
-                        <button
-                          key={item}
-                          type="button"
-                          role="radio"
-                          aria-checked={active}
-                          className={active ? styles.modelCardActive : styles.modelCard}
-                          onClick={() => selectPresetTextModel(item)}
-                          disabled={textSaving}
-                        >
-                          <span className={styles.modelVendor}>
-                            {getTextLlmModelVendor(item)}
-                          </span>
-                          <span className={styles.modelName}>
-                            {getTextLlmModelLabel(item)}
-                            {isDefaultTextLlmModel(item) ? ' · 默认' : ''}
-                          </span>
-                          <span className={styles.modelMeta}>{getTextLlmModelMeta(item)}</span>
-                          <span className={styles.checkDot} aria-hidden>
-                            ✓
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </section>
-              </div>
-
-              <aside className={styles.sidePanel} aria-label="生效范围">
-                <h3 className={styles.sideTitle}>同步生效范围</h3>
-                <p className={styles.sideSub}>
-                  改一处即覆盖下列全部文案链路，无需分模块配置。
-                </p>
-                <ol className={styles.usageList}>
-                  {TEXT_LLM_USAGE_CATALOG.map((row, index) => (
-                    <li key={row.key} className={styles.usageItem}>
-                      <span className={styles.usageIndex}>
-                        {String(index + 1).padStart(2, '0')}
-                      </span>
-                      <div>
-                        <p className={styles.usageLabel}>{row.label}</p>
-                        <p className={styles.usageDesc}>{row.description}</p>
-                      </div>
-                    </li>
-                  ))}
-                </ol>
-              </aside>
-            </div>
-          )}
-        </div>
-      )}
+  if (loading) return <div className={styles.loading}>加载运行配置…</div>;
+  return <div className={styles.root}>
+    <header className={styles.masthead} data-watermark={pane === 'text' ? 'TXT' : 'IMG'}>
+      <div className={styles.mastTop}><span className={styles.badge}>运行配置 · MODEL HUB</span><div className={styles.rail} role="tablist" aria-label="模型能力切换"><span className={`${styles.railThumb} ${pane === 'image' ? styles.railThumbImage : styles.railThumbText}`} aria-hidden /><button type="button" role="tab" aria-selected={pane === 'text'} className={`${styles.railBtn} ${pane === 'text' ? styles.railBtnActive : ''}`} onClick={() => setPane('text')}>生文配置</button><button type="button" role="tab" aria-selected={pane === 'image'} className={`${styles.railBtn} ${pane === 'image' ? styles.railBtnActive : ''}`} onClick={() => setPane('image')}>生图配置</button></div></div>
+      <h2 className={styles.mastTitle}>{pane === 'text' ? '全平台统一生文模型' : '各业务场景独立选择生图模型'}</h2>
+      <p className={styles.mastDesc}>管理员维护 URL 与密钥，从上游拉取模型后导入目录。模型 ID 不允许手填；生文模型在价格生效后启用，生图模型由各业务场景独立选择。</p>
+      <div className={styles.mastActions}><button type="button" className={styles.ghostBtn} onClick={() => void load()} disabled={saving}>刷新</button><button type="button" className={styles.saveBtn} onClick={() => void handleSave()} disabled={saving}>{saving ? '处理中…' : '保存网关配置'}</button></div>
+    </header>
+    <div className={styles.pane} role="tabpanel" aria-label={pane === 'text' ? '生文运行配置' : '生图运行配置'}>
+      <div className={styles.mainCol}>
+        <section className={styles.panel}>
+          <div className={styles.panelHead}><h3 className={styles.panelTitle}>{pane === 'text' ? '生文' : '生图'}请求设置</h3><p className={styles.panelHint}>密钥仅写入服务端，页面不会回显明文</p></div>
+          <label className={styles.fieldLabel}>API 地址<input className={styles.fieldInput} type="url" value={currentGateway.baseUrl} placeholder={currentGateway.fallback} onChange={(e) => setCurrentGateway({ ...currentGateway, baseUrl: e.target.value })} autoComplete="off" /></label>
+          <p className={styles.fieldHint}>留空时使用服务器默认地址：<strong>{currentGateway.fallback || '未配置'}</strong></p>
+          <label className={styles.fieldLabel}>API 密钥<input className={styles.fieldInput} type="password" value={currentGateway.apiKey} placeholder={currentGateway.apiKeySet ? `已保存 ${currentGateway.apiKeyHint || '••••'}，留空不修改` : '请输入密钥'} onChange={(e) => setCurrentGateway({ ...currentGateway, apiKey: e.target.value, clearApiKey: false })} disabled={currentGateway.clearApiKey} autoComplete="new-password" /></label>
+          {currentGateway.apiKeySet ? <label className={styles.checkRow}><input type="checkbox" checked={currentGateway.clearApiKey} onChange={(e) => setCurrentGateway({ ...currentGateway, clearApiKey: e.target.checked, apiKey: e.target.checked ? '' : currentGateway.apiKey })} />清除已保存密钥</label> : null}
+          <div className={styles.modelFetchRow}><p className={styles.fieldHint} style={{ margin: 0, flex: 1 }}>“保存并拉取模型”会先保存当前网关，再读取上游模型列表供多选导入。</p><button type="button" className={styles.fetchBtn} onClick={() => void handleFetch()} disabled={saving}>{saving ? '处理中…' : '保存并拉取模型'}</button></div>
+        </section>
+        <section className={styles.panel}>
+          <div className={styles.panelHead}><h3 className={styles.panelTitle}>{pane === 'text' ? '生文' : '生图'}模型目录</h3><p className={styles.panelHint}>{currentModels.length} 个模型</p></div>
+          <ModelCatalogCards
+            items={currentModels}
+            emptyText="尚无模型，请先保存网关并拉取模型。"
+            onEdit={setEditing}
+            onActivate={pane === 'text' ? (model) => void handleActivate(model) : undefined}
+            onDeactivate={pane === 'image' ? (model) => void handleDeactivate(model) : undefined}
+            activatingId={activatingId}
+            deactivatingId={deactivatingId}
+            showRuntimeActive={pane === 'text'}
+          />
+        </section>
+        {pane === 'image' ? <section className={styles.panel}>
+          <div className={styles.panelHead}><h3 className={styles.panelTitle}>业务模块配置</h3><p className={styles.panelHint}>保存后仅影响新请求</p></div>
+          <ImageBusinessConfigPanel />
+        </section> : null}
+      </div>
     </div>
-  );
+    {importCapability ? <ModelImportDialog capability={importCapability} modelIds={fetched[importCapability]} importedModelIds={models.filter((item) => item.capability === importCapability).map((item) => item.modelId)} onImport={(ids) => handleImport(importCapability, ids)} onClose={() => setImportCapability(null)} /> : null}
+    {editing ? <ModelPricingDialog model={editing} onClose={() => setEditing(null)} onChanged={load} /> : null}
+  </div>;
 };
 
 export default ModelConfigHub;

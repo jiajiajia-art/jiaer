@@ -9,7 +9,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 2000;
+    z-index: 5000;
     animation: fadeIn 0.3s ease-out;
     margin: 0;
     padding: 16px;
@@ -86,6 +86,24 @@
 .modalContentWide {
     width: min(520px, calc(100vw - 32px));
     max-width: 520px;
+}
+
+.modalContentGameViewport {
+    width: min(22rem, calc(100vw - 24px));
+    max-width: calc(25.875rem - 2rem);
+    max-height: min(
+        calc(100dvh - 24px - env(safe-area-inset-bottom)),
+        calc(56rem - 24px)
+    );
+}
+
+.modalContentGameViewport .amountsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.modalContentGameViewport .form {
+    overflow-x: hidden;
+    overscroll-behavior: contain;
 }
 
 .rechargeCenter {
@@ -1615,7 +1633,7 @@
 .confirmationOverlay {
     position: fixed;
     inset: 0;
-    z-index: 2100;
+    z-index: 5100;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1785,8 +1803,8 @@
     }
 
     .modalContent {
-        width: min(520px, calc(100vw - 20px));
-        max-width: 520px;
+        width: 100%;
+        max-width: 100%;
         padding: 18px 16px 20px;
         min-height: auto;
         max-height: calc(100dvh - 20px - env(safe-area-inset-bottom));
@@ -1798,7 +1816,7 @@
     }
 
     .amountsGrid {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 8px;
     }
 

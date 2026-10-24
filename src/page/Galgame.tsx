@@ -37,7 +37,7 @@ import {
   type NpcAvatarMergeInput,
 } from "../lib/galgame/npcAvatarMerge";
 import { subscribeNpcAvatarGenComplete } from "../lib/galgame/npcAvatarBackgroundJob";
-import { CHARACTER_GENERATION_COST } from "../utils/constants";
+import { useImageBusinessPrice } from '../hooks/useImageBusinessPrice';
 import { ensureMinPlayChoiceOptions } from "../lib/galgame/playChoiceOptions";
 import type { SystemsConfigPatch } from "../components/Galgame/panels/SystemsPanel";
 import type { PlayerEditableNpc } from "../lib/galgame/characterProfile";
@@ -129,6 +129,7 @@ import type { PayOrderRequest } from "../api/pay/pay.type";
 import { auth } from "../api/account/authApi";
 
 const Galgame = () => {
+    const { estimatedPoints: sessionAvatarPrice } = useImageBusinessPrice('session_avatar_control');
     const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
@@ -781,7 +782,7 @@ const Galgame = () => {
                 useAuthStore.getState().updateUser({ points: result.remainingPoints });
             }
             toast.success(
-                `头像已生成并保存（-${result.pointsDeducted ?? CHARACTER_GENERATION_COST} 织梦豆）`,
+                `头像已生成并保存（-${result.pointsDeducted ?? sessionAvatarPrice ?? 0} 织梦豆）`,
             );
         });
     }, [sessionId]);
@@ -802,7 +803,7 @@ const Galgame = () => {
                 useAuthStore.getState().updateUser({ points: result.remainingPoints });
             }
             toast.success(
-                `角色头像已生成（-${result.pointsDeducted ?? CHARACTER_GENERATION_COST} 织梦豆）`,
+                `角色头像已生成（-${result.pointsDeducted ?? sessionAvatarPrice ?? 0} 织梦豆）`,
             );
         });
     }, [sessionId]);
@@ -1688,6 +1689,7 @@ const Galgame = () => {
     }, [t]);
 
     const handleRechargeClose = useCallback(() => {
+        controller.setInsufficientDiamondsVisible(false);
         setIsRechargeModalOpen(false);
         void auth.getUserInfo()
             .then((response) => {
@@ -1698,7 +1700,7 @@ const Galgame = () => {
             .catch((error) => {
                 console.error('[Galgame] Failed to refresh user after recharge:', error);
             });
-    }, [updateUser]);
+    }, [controller.setInsufficientDiamondsVisible, updateUser]);
 
     if (controller.isLoading) {
         return (
@@ -2435,7 +2437,7 @@ const Galgame = () => {
 
                     {/* KK币不足提示 */}
                     {renderErrorModal(
-                        controller.insufficientDiamondsVisible,
+                        controller.insufficientDiamondsVisible && !isRechargeModalOpen,
                         t('galgame.insufficientKkCoins'),
                         t('galgame.insufficientKkCoinsMessage'),
                         {
@@ -2457,6 +2459,7 @@ const Galgame = () => {
                         onClose={handleRechargeClose}
                         onRecharge={handleRecharge}
                         fixedTab="diamonds"
+                        constrainToGameViewport
                     />
 
                     {/* 一般请求错误弹窗 */}

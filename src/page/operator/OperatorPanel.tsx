@@ -23,8 +23,9 @@ import { isAdminRole } from '../../utils/userRoles';
 import adminStyles from '../AdminPanel.module.css';
 import styles from './OperatorPanel.module.css';
 import gamePublishAppealsApi from '../../api/gamePublishAppeals/gamePublishAppealsApi';
+import AiModelCenter from '../../components/AiModelCenter';
 
-type OperatorTab = 'stats' | 'reports' | 'promotions' | 'recruitment' | 'specialAuthors' | 'platformWorks' | 'promoters' | 'dailyTasks' | 'withdraw';
+type OperatorTab = 'stats' | 'reports' | 'promotions' | 'recruitment' | 'specialAuthors' | 'platformWorks' | 'promoters' | 'dailyTasks' | 'withdraw' | 'aiModelCenter';
 type WorksSortField = 'playCount' | 'pv' | 'shareCount';
 type SortDirection = 'asc' | 'desc';
 
@@ -44,6 +45,7 @@ const resolveOperatorTab = (pathname: string): OperatorTab => {
   if (pathname.startsWith('/operator/promoters')) return 'promoters';
   if (pathname.startsWith('/operator/daily-tasks')) return 'dailyTasks';
   if (pathname.startsWith('/operator/withdraw')) return 'withdraw';
+  if (pathname.startsWith('/operator/ai-model-center')) return 'aiModelCenter';
   return 'stats';
 };
 
@@ -76,6 +78,7 @@ const OperatorPanel: React.FC = () => {
     { id: 'reports', label: t('operator.tabs.reports'), path: '/operator/reports' },
     { id: 'promotions', label: t('operator.tabs.promotions'), path: '/operator/promotion' },
     { id: 'recruitment', label: t('operator.tabs.recruitment'), path: '/operator/recruitment' },
+    { id: 'aiModelCenter', label: 'AI 模型中心', path: '/operator/ai-model-center' },
     ...(isAdmin ? [
       { id: 'specialAuthors' as const, label: t('operator.tabs.specialAuthors'), path: '/operator/special-authors' },
       { id: 'platformWorks' as const, label: t('operator.tabs.platformWorks'), path: '/operator/platform-works' },
@@ -440,6 +443,7 @@ const OperatorPanel: React.FC = () => {
             ) : null}
             {activeTab === 'promoters' ? <CreatorIncentiveAdminManager /> : null}
             {activeTab === 'dailyTasks' ? renderDailyTasks() : null}
+            {activeTab === 'aiModelCenter' ? <AiModelCenter isAdmin={false} /> : null}
           </section>
         </div>
       </div>
