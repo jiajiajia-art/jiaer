@@ -16,12 +16,43 @@
 }
 
 .header {
+  position: relative;
   display: flex;
   align-items: center;
+  justify-content: center;
+  min-height: 44px;
   gap: 12px;
 }
 
-.backBtn,
+/* 功能注释：对齐 Messages 返回键 — 描边 chevron，36×36 */
+.backBtn {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.backBtn svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .newBtn,
 .actionBtn,
 .pageBtn {
@@ -34,6 +65,13 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+}
+
+.newBtn {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .newBtn,
@@ -50,7 +88,6 @@
 }
 
 .title {
-  flex: 1;
   margin: 0;
   font-size: 18px;
   font-weight: 650;

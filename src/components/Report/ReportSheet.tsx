@@ -64,6 +64,8 @@ const ReportSheet: React.FC<ReportSheetProps> = ({
   const activeGroup = reasonGroups.find(
     (group) => (group.category || '__uncategorized__') === categoryKey,
   );
+  /** 功能注释：大类下仅 1 个小类时跳过「具体问题」（如「其他」） */
+  const hideSpecificBlock = Boolean(activeGroup && activeGroup.items.length === 1);
   const selectedReason = activeGroup?.items.find((item) => item.code === reasonCode);
 
   useEffect(() => {
@@ -207,6 +209,10 @@ const ReportSheet: React.FC<ReportSheetProps> = ({
                       aria-pressed={selectedCategory}
                       onClick={() => {
                         setCategoryKey(key);
+                        if (group.items.length === 1) {
+                          setReasonCode(group.items[0].code);
+                          return;
+                        }
                         setReasonCode('');
                       }}
                     >
@@ -215,7 +221,7 @@ const ReportSheet: React.FC<ReportSheetProps> = ({
                   );
                 })}
               </div>
-              {activeGroup ? (
+              {activeGroup && !hideSpecificBlock ? (
                 <div className={styles.specificBlock}>
                   <div className={styles.sectionLabel}>
                     {t('report.specificReasonLabel')}

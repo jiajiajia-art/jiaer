@@ -343,6 +343,9 @@
     "sectionSafety": "安全 / 违规",
     "reportReceivedTitle": "举报已受理",
     "reportReceivedBody": "我们已收到你的举报，将尽快处理。",
+    "reportResolvedTitle": "举报处理结果",
+    "reportResolvedUpheldBody": "你的举报已处理经核查已采取措施，感谢你对社区美好氛围做出的贡献。",
+    "reportResolvedRejectedBody": "你的举报已收到，平台将持续关注，一经核实将进行相应处理，感谢你对社区美好氛围做出的贡献。",
     "moderationTitle": "违规处理通知",
     "violationNoticeTitle": "账号违规提示",
     "appealResultNoticeTitle": "账号申诉结果反馈",
@@ -2720,7 +2723,9 @@
       "promotions": "推广管理",
       "recruitment": "拉新总览",
       "dailyTasks": "每日任务管理",
-      "withdraw": "提现管理"
+      "withdraw": "提现管理",
+      "contentReports": "内容举报",
+      "appeals": "申诉复核"
     },
     "reports": {
       "title": "数据报表",

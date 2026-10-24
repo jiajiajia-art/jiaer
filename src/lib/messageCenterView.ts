@@ -10,6 +10,7 @@ export type MessageFeedItemType =
   | 'promotion_submission_status'
   | 'favorite_game_updated'
   | 'report_received'
+  | 'report_resolved'
   | 'moderation';
 
 const WEEKDAY_LABELS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'] as const;
@@ -71,6 +72,12 @@ export function truncateMessagePreview(text: string, maxLen = 36): string {
 export function resolveMessageListSection(itemType: MessageFeedItemType): MessageListSectionKey {
   if (itemType === 'announcement') return 'system';
   if (itemType === 'favorite_game_updated') return 'interaction';
-  if (itemType === 'report_received' || itemType === 'moderation') return 'safety';
+  if (
+    itemType === 'report_received'
+    || itemType === 'report_resolved'
+    || itemType === 'moderation'
+  ) {
+    return 'safety';
+  }
   return 'activity';
 }

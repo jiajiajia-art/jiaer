@@ -1,7 +1,7 @@
-# 内容举报 / 内容屏蔽 / 创作者处罚 — 计划书（v1.1）
+# 内容举报 / 内容屏蔽 / 创作者处罚 — 计划书（v1.2）
 
 > **日期**：2026-10-14  
-> **最后修订**：2026-10-19（已把 `举报申诉功能/后端整改-Admin举报详情.md` 的现行约定写入正文各节）  
+> **最后修订**：2026-10-24（**举报人结果通知**：管理端成立/驳回后举报人收 `report_resolved`；见 R12b、§2.9；**严重直达**见 R33）  
 > **前端落点细则**：`.cursor/doc/前端交互.md`（与本文冲突时，**入口/过滤/契约字段以本文 + 前端交互为准**）  
 > **入口**：  
 > - 游戏详情页「分享」菜单 → **举报**（P0 展示说明文案）  
@@ -17,8 +17,8 @@
 > **不改**：站外分享重做；帖子举报/屏蔽 UI；物理删作品；人级屏蔽语义；**本版不做「暂停收益/停结算」**；P0 **不做**取消屏蔽 UI  
 > **可复用**：`user_block`、`games.is_public`、消息中心 `message_type`、注册默认昵称/头像生成、R2、`admin`+`operator`  
 
-**文档版本**：v1.1  
-**最后更新**：2026-10-19  
+**文档版本**：v1.3  
+**最后更新**：2026-10-24（举报人 `report_resolved`） 
 **风格参照**：`创作者钻石提现-计划书` / `推荐关注列表-计划书`  
 **关联整改纪要**：`.cursor/doc/举报申诉功能/后端整改-Admin举报详情.md`（历史过程；现行约定以本文为准）
 
@@ -36,7 +36,7 @@
 | **严重违规升级** | 运营可选跳过普通警告，直接施处罚等级（**P0.5** UI） |
 | **处罚阶梯** | 一级 7 天禁发→观察7天；二级 30 天禁发+主页不展示→观察7天；三级 90 天+冻结等→观察30天；观察期内再违规升级；四级永久（**不做停结算**）；P0 先落地自动一级 |
 | **运营面板** | 列表筛选、详情、通过/驳回、选处理动作、写审核备注；P0 含处罚记录只读；留下完整审计字段 |
-| **通知** | 举报人：提交后 toast + 站内「已受理」；创作者：处罚/警告文案（§2.9）；`moderation` 可带 `relatedGameId`；**不开放审核进度页** |
+| **通知** | 举报人：提交后 toast + 站内「已受理」；**审核成立/驳回后再发一条结果通知**（§2.9）；创作者：处罚/警告文案；`moderation` 可带 `relatedGameId`；**不开放审核进度页** |
 
 **非目标（本版）**：
 
@@ -63,7 +63,7 @@
   → GET  /api/report/reasons?targetType=game|user|post
   → POST /api/report                 （写 user_report + 可选证据）
         → 前端 toast「已提交…」
-        → 消息中心写给举报人：已受理（无进度）
+        → 消息中心写给举报人：已受理（report_received）
   → （可选）POST /api/content/block  （仅屏蔽，不进审核）
 
 运营：Admin「内容举报」
@@ -72,8 +72,10 @@
   → POST /api/admin/reports/:id/review
         → 驳回 | 成立(标准) | 成立(严重)
         → 副作用：下架/清资料/记警告/触发处罚/通知创作者
+        → **同时**消息中心写给举报人：处理结果（report_resolved）
 
-创作者：消息中心看到处罚通知
+创作者：消息中心看到处罚/警告通知（moderation）
+举报人：消息中心可回看「已受理」+「处理结果」两条
   →（P1）申诉 → 运营复核 → 撤销或维持
 ```
 
@@ -85,7 +87,7 @@
 | 内容屏蔽 | **无** | 新建 `user_content_block`（game / 预留 post） |
 | 内容举报 | **无**（`operator/reports` 是运营数据报表） | 新建举报表 + 审核 API |
 | 作品可见 | `games.is_public` | 下架 = `is_public=0` + **`moderation_status='taken_down'`**，防止创作者自行再公开 |
-| 消息中心 | `announcement` / `promotion` / `favorite_game_updated` 等 | 扩展 `message_type`：`report_received`（举报人）+ `moderation`（创作者）；**不新建通知表** |
+| 消息中心 | `announcement` / `promotion` / `favorite_game_updated` 等 | 扩展 `message_type`：`report_received` + **`report_resolved`**（举报人）+ `moderation`（创作者）；**不新建通知表** |
 | 创作者禁发 | **无**统一开关 | `user_punishment`（当前态）+ `creator_moderation`（流水） |
 | 帖子 | **无表** | 仅枚举占位；审核侧若收到 `post` 暂标「未接入」 |
 | 管理端审核 UI | 评论 `CommentAdminManager`、提现审核 | 新 Tab，交互对齐评论/提现 |
@@ -110,7 +112,7 @@
 | FE | `AccountHomepage` 分享菜单 | 账号举报 |
 | FE | 举报流程页/弹层 | 选理由、补充说明、证据 |
 | FE | `AdminPanel` 新 Tab | 审核列表+详情+动作 |
-| FE | 消息中心 | 展示 moderation 通知 |
+| FE | 消息中心 | 展示 `report_received` / `report_resolved` / moderation 通知 |
 
 ### 1.4 与其它模块
 
@@ -151,7 +153,8 @@
 | R9 | 证据**仅图片**，可选，最多 **3** 张，单张 ≤ **5MB**，jpg/png/webp；视频不做；链接可写补充说明 | ✅ |
 | R10 | 同一用户对同一 `(targetType, targetId)` 仅允许 **1 条 pending**；已有 pending 再提 → 400 `duplicate_pending` | ✅ |
 | R11 | 曾「成立」→ 400 `already_upheld`；驳回未满 **7** 天 → 400 `report_cooldown`；前端 P0 **不预检入口**，提交失败 toast | ✅ |
-| R12 | 提交成功：**页面 toast**「已提交，我们会尽快处理」+ **消息中心**给举报人一条受理回执；**不**提供审核进度/结果页 | ✅ |
+| R12 | 提交成功：**页面 toast**「已提交，我们会尽快处理」+ **消息中心**给举报人一条受理回执（`report_received`）；**不**提供审核进度/结果页 | ✅ |
+| R12b | 管理端 **成立或驳回** 后：再给举报人一条 **处理结果** 站内信（`report_resolved`，与受理分条、已读互不覆盖）。成立正文：`你的举报已处理经核查已采取措施，感谢你对社区美好氛围做出的贡献。`；驳回正文：`你的举报已收到，平台将持续关注，一经核实将进行相应处理，感谢你对社区美好氛围做出的贡献。` 标题建议「举报处理结果」。**仍不**做结果详情页 | ✅ |
 
 ### 2.3 举报成立 — 作品（game）
 
@@ -193,7 +196,7 @@
 | R31 | 三级处罚结束后进入 **30** 天观察期；**观察期内再次违规 → 可升级为四级**（或由运营判定四级） | ✅ |
 | R31b | **观察期通则**：处罚期满后进入对应观察期；观察期内再获警告/成立违规 = **直接升一级处罚**，不重新走「凑满 3 次警告」；观察期结束后无新违规则观察解除，之后警告重新按 365 天滚动累计 | ✅ |
 | R32 | **四级**：永久禁发；取消创作者身份；下架其全部**已标记违规**作品（非一键删全站）；禁止再申请创作者认证；情节严重可禁登录 | ✅ |
-| R33 | 严重违规可**跳过**「三次警告」直接任一级～四级 | ✅ |
+| R33 | **严重直达**（管理端勾选并指定 `penaltyLevel`=1～4）：**跳过**「凑满 3 次警告」阶梯，**直接**记对应等级处罚。同一次成立：**只写一条 penalty**，**不写** warning、**不增加**有效警告计数、**不**再跑「因本次警告触发自动升 L1」。对用户只发 **一条** 处罚类 `moderation` 通知（禁止「警告通知 + 处罚通知」双发）。内容类处置（下架、重置资料等）可与直达并存，与警告档位互斥 | ✅ |
 | R34 | 处罚期满：发布权限自动恢复（三级需保持「先审后发」标记直至运营关闭） | ✅ |
 
 #### 2.6.1 「滚动 365 天」与「consumed」白话说明
@@ -257,18 +260,25 @@
 ### 2.9 通知（消息中心 + toast）
 
 **实现方式**：只扩展现有消息中心允许的 `message_type`，**不**建 `moderation_notifications` 表。  
-建议类型：`report_received`（给举报人）、`moderation`（给被处理创作者）。读写复用 `user_message_reads`。
+类型：`report_received` / **`report_resolved`**（给举报人）、`moderation`（给被处理创作者）。读写复用 `user_message_reads`。
 
 | 对象 | 时机 | 形态 | 文案 |
 |------|------|------|------|
 | 举报人 | 提交成功当下 | **Toast**（页面顶部/底部短暂提示，几秒消失） | `已提交，我们会尽快处理` |
-| 举报人 | 提交成功后 | **消息中心**一条（可回看） | `我们已收到你的举报，将尽快处理。`（不展示进度/结果） |
+| 举报人 | 提交成功后 | **消息中心** `report_received` | 标题「举报已受理」；正文 `我们已收到你的举报，将尽快处理。` |
+| 举报人 | 管理端**成立** | **消息中心** `report_resolved` | 标题「举报处理结果」；正文 `你的举报已处理经核查已采取措施，感谢你对社区美好氛围做出的贡献。` |
+| 举报人 | 管理端**驳回** | **消息中心** `report_resolved` | 标题「举报处理结果」；正文 `你的举报已收到，平台将持续关注，一经核实将进行相应处理，感谢你对社区美好氛围做出的贡献。` |
 | 创作者 | 作品成立 | 消息中心 | 你的作品因违反平台规范已被下架，并记为一次警告。请查看违规原因并避免再次违规。 |
 | 创作者 | 帖子成立 | 消息中心 | 你的帖子因违反平台规范已被删除，并记为一次警告。请查看违规原因并避免再次违规。 |
 | 创作者 | 账号成立 | 消息中心 | 你的账号信息或行为因违反平台规范已被处理，并记为一次警告。请及时修改相关内容。 |
-| 创作者 | 一级处罚 | 消息中心 | 由于你在警告有效期内累计达到 3 次警告，平台将限制你 7 天内发布作品和帖子。处罚结束后，账号将进入 7 天观察期。 |
+| 创作者 | 一级处罚（凑满 3 次警告自动触发，或严重直达选一级） | 消息中心 | 由于你在警告有效期内累计达到 3 次警告，平台将限制你 7 天内发布作品和帖子。处罚结束后，账号将进入 7 天观察期。（严重直达一级可用等价处罚语气，**不再另发**「记为一次警告」那条） |
+| 创作者 | 严重直达二～四级 | 消息中心 | 仅 **一条** 对应等级处罚通知；**不得**再附带同单警告通知 |
 
 （二～四级文案同语气补全。消息数字 `sourceId` **只用于标已读**；跳转违规页用 16 位 `moderationId`，跳转申诉结果用 16 位 `appealId`。）
+
+**举报人通知（锁定）**：受理与结果 **分两条**（`report_received` vs `report_resolved`），`sourceId` 均可为 `user_report.id`；已读键为 `(messageType, sourceId)`，互不覆盖。列表只展开正文，**不**跳业务页。驳回文案偏安抚「持续关注」，不向举报人透露内部审核细节。
+
+**通知互斥（锁定）**：同一次 `uphold` 对创作者可见结果取**最高处置档**。有 `penaltyLevel` 时最高档即该处罚，源头只产处罚记录与一条通知，**禁止**先写警告再写处罚再双推。
 
 ### 2.10 口径已全部锁定（原待确认项）
 
@@ -277,7 +287,7 @@
 | Q1 | 警告滚动 365 天 + 触发一级后 consumed（§2.6.1） |
 | Q2 | 二级后观察期 **7** 天；三级后观察期 **30** 天；观察期内再违规则处罚升级 |
 | Q3 | 重置昵称 = `genRandomNickname()`；头像 = `DEFAULT_AVATAR_URL`；简介清空（R20） |
-| Q4 | 举报人：toast + 受理站内信；无进度/结果页 |
+| Q4 | 举报人：toast + 受理站内信 + **审核后结果站内信**（R12b）；仍无进度/结果页 |
 | Q5 | 二级主页隐藏：本人可进可编辑 + 顶栏「对外暂不可见」；访客「因违规暂不可见」（P0.5） |
 | Q6 | 暂停收益/停结算：**本版不做** |
 | Q7 | 管理入口：内容安全分组；P0 举报审核 + 处罚记录只读；`admin`+`operator` 可审；禁登录仅 admin 可见 |
@@ -286,6 +296,8 @@
 | Q10 | 用户信息下发：`publishBanUntil`（P0）/ `homeHidden`（P0.5）挂 `GET /auth/user/info` |
 | Q11 | R11 错误码：`already_upheld` / `report_cooldown`（及已有 `duplicate_pending`） |
 | Q12 | `moderation` 消息可选 `relatedGameId`；消息中心新建分区「安全 / 违规」 |
+| Q13 | **严重直达**：`penaltyLevel` 有值时只记处罚、不记警告、只发一条处罚通知（见 R33、§5.2.1）；前端直达请求不带 `uphold_warn` |
+| Q14 | **举报人结果通知**：成立/驳回固定文案见 R12b / §2.9；`message_type=report_resolved` |
 
 ---
 
@@ -312,6 +324,7 @@ pending ──review(reject)──► rejected
                                     │（观察期内再违规 → 升级）
                                     └──► L4(permanent)
 严重直达：pending_report ──► L1|L2|L3|L4
+         （不经 warning；不写同单 warning 行）
 ```
 
 ### 3.3 作品审核态 `games.moderation_status`
@@ -429,12 +442,14 @@ none ──takedown──► taken_down ──(appeal_ok|admin_restore)──►
 
 | message_type | 消息源 | 已读 `sourceId` | 跳转与额外字段 |
 |--------------|--------|------------------|----------------|
-| `report_received` | `user_report`（举报人=当前用户） | `user_report.id`（数字） | 只展开正文 |
+| `report_received` | `user_report`（举报人=当前用户；**提交后即可见**） | `user_report.id`（数字） | 只展开正文（受理文案） |
+| `report_resolved` | `user_report`（举报人=当前用户；**仅 status=upheld\|rejected**） | `user_report.id`（数字） | 只展开正文（结果文案）；列表时间用 `reviewed_at` |
 | `moderation` | `creator_moderation`（**warning / penalty / appeal**，user_id=当前用户） | 消息数字 `id`（**只用于 mark-read**） | 见下表 |
 
-正文：举报人侧固定「已受理」文案；创作者侧读 `notify_body`。  
+正文：举报人受理固定文案；举报人结果按成立/驳回锁定文案（R12b）；创作者侧读 `notify_body`。  
 前端列表分区：**「安全 / 违规」**（与系统/活动/互动并列）。  
-`MessageCenterService` 需扩展聚合这两路；**仍不建** `moderation_notifications`。
+`MessageCenterService` 需聚合 `report_received` / `report_resolved` / `moderation`；**仍不建** `moderation_notifications`。  
+审核 `review` 成功后必须写入举报人结果可见性（终态 + 固化结果正文，或聚合时按 status 选模板）；**禁止**只通知创作者、漏推举报人。
 
 | `recordType` | 跳转 | 「查看作品」 | 列表卡额外字段 |
 |--------------|------|--------------|----------------|
@@ -673,10 +688,12 @@ GET /api/appeals/:appealId
 
 #### 5.2.1 审核
 
+**普通成立（无严重直达）示例**：
+
 ```http
 POST /api/admin/reports/:id/review
 {
-  "decision": "reject" | "uphold",
+  "decision": "uphold",
   "actions": ["uphold_takedown", "uphold_warn"],
   "penaltyLevel": null,
   "resetFields": ["avatar", "nickname", "bio"],
@@ -685,16 +702,36 @@ POST /api/admin/reports/:id/review
 }
 ```
 
-**副作用顺序（uphold）**：
+**严重直达示例**（只处罚，不带警告动作）：
+
+```http
+POST /api/admin/reports/:id/review
+{
+  "decision": "uphold",
+  "actions": ["uphold_takedown"],
+  "penaltyLevel": 1,
+  "reviewNote": "内部备注"
+}
+```
+
+账号严重直达若需重置资料：`actions` 可含 `uphold_reset_profile` + `resetFields`，**仍不得**含 `uphold_warn`。
+
+**分支与副作用顺序（uphold）**：
 
 1. 校验 report pending  
-2. 执行 actions（下架 / 重置资料 / …）  
-3. 按 dedupe 写入 `creator_moderation`（warning）  
-4. 若警告累计达阈值或指定 penaltyLevel → 写 penalty 行 + upsert `user_punishment`  
-5. 消息中心通知创作者（`message_type=moderation`）  
-6. 更新 report 终态与审计字段  
+2. 执行**内容类** actions（下架 / 重置资料 / …）。严重直达时若请求仍含 `uphold_warn`：后端应**忽略**或 **400**（推荐忽略并按直达执行，避免双写）  
+3. **若 `penaltyLevel` ∈ {1,2,3,4}（严重直达）**：  
+   - **只**写一条 `creator_moderation`（`record_type=penalty`，对应 level）+ upsert `user_punishment`  
+   - **不写** warning；**不增加**有效警告计数；**不**因「本次警告」触发凑满升档  
+   - 消息中心 **只发一条** 处罚类 `moderation` 通知  
+4. **否则（普通成立）**：  
+   - 若 actions 含 `uphold_warn`（或默认需警告）：按 dedupe 写入 warning  
+   - 若有效警告累计达阈值 → 再写 penalty + upsert `user_punishment`，并按规则通知（凑满升档场景可有警告通知 + 处罚通知，因来自「警告阶梯」而非同单直达叠写）  
+5. 更新 report 终态与审计字段  
 
-**错误**：404；409 非 pending；400 动作与 targetType 不匹配。
+**互斥（锁定）**：同一次 review **禁止**「先写 warning 再因同单 `penaltyLevel` 再写 penalty」的叠加路径；有 `penaltyLevel` 则走第 3 步，不走第 4 步的写警告。
+
+**错误**：404；409 非 pending；400 动作与 targetType 不匹配（及可选：直达却强制要求带 `uphold_warn` 的冲突）。
 
 ### 5.3 行为变更（现有接口）
 
@@ -708,7 +745,7 @@ POST /api/admin/reports/:id/review
 | 发布作品/帖子 | `publish_blocked_until > now` 时 403，文案「账号处于发布限制中」 |
 | `GET /auth/user/info`（及登录 user） | 增加 `publishBanUntil`（P0）、`homeHidden`（P0.5）；见 §4.5 |
 | 个人主页 GET | `homepage_hidden=1`：本人与管理员正常进（本人可出顶栏提示）；其它访客空态「因违规暂不可见」 |
-| 消息中心 | 允许 `report_received`、`moderation`；可选 `relatedGameId`；违规跳转带 `moderationId`，申诉结果带 `appealId`；`sourceId` 只用于已读；前端分区「安全 / 违规」 |
+| 消息中心 | 允许 `report_received`、`report_resolved`、`moderation`；可选 `relatedGameId`；违规跳转带 `moderationId`，申诉结果带 `appealId`；`sourceId` 只用于已读；前端分区「安全 / 违规」 |
 
 ---
 
@@ -767,7 +804,8 @@ POST /api/admin/reports/:id/review
 
 **P0.5**
 
-- **严重**入口：手选 L1～L4，跳过凑满 3 次警告  
+- **严重直达**入口：手选 L1～L4，跳过凑满 3 次警告；成立后**只记该级处罚**（见 R33）  
+- 前端提交：带 `penaltyLevel`；`actions` **不要**带 `uphold_warn`（重置资料只用 `uphold_reset_profile` 等）  
 - 禁登录：**仅 admin 可见**（operator 不展示）  
 - 主页隐藏等升档副作用的运营可见性  
 
@@ -775,11 +813,12 @@ POST /api/admin/reports/:id/review
 
 ### 6.5 消息中心
 
-- 新建分区：**「安全 / 违规」**（`report_received` / `moderation`）  
-- `report_received`：只展开正文，不跳业务页  
+- 新建分区：**「安全 / 违规」**（`report_received` / `report_resolved` / `moderation`）  
+- `report_received`：受理回执，只展开正文，不跳业务页  
+- `report_resolved`：成立/驳回结果，只展开正文，不跳业务页；标题「举报处理结果」  
 - 违规通知：进 `/moderation/{moderationId}`（16 位）；有 `relatedGameId` → **「查看作品」**进 stats  
 - 申诉结果：进 `/appeals/{appealId}`；**不出**「去申诉」  
-- 标已读仍用数字 `sourceId`  
+- 标已读仍用数字 `sourceId`（与 `messageType` 组合）  
 
 ### 6.6 处罚副作用（用户侧 FE）
 
@@ -809,11 +848,11 @@ POST /api/admin/reports/:id/review
 | S1 | `reportReasonService` + GET reasons | |
 | S2 | 证据上传 R2 + `userReportService.create` + 举报人 `report_received` 消息 | |
 | S3 | `userContentBlockService`：**仅推荐**滤 block；搜索/作者主页/详情不因 block 藏 | |
-| S4 | `creatorModerationService.review`：下架、warning/自动一级 penalty、upsert `user_punishment`、通知（含 `relatedGameId`）；R11 错误码 | |
+| S4 | `creatorModerationService.review`：下架、warning/自动一级 penalty、upsert `user_punishment`、通知创作者（含 `relatedGameId`）+ **推送举报人 `report_resolved`**；R11 错误码 | |
 | S4b | 将 `genRandomNickname` / `DEFAULT_AVATAR_URL` 抽到公共模块，注册改 import | |
 | S5 | 发布/公开/主页 + **`/auth/user/info` 下发 `publishBanUntil`**；owner 列表带 `moderationStatus` | |
 | S6 | Admin list/detail/review + 昵称/`gameTitle`/按人筛 + **penalties 只读列表**（16 位 id） | |
-| S7 | 消息中心 ALLOWED 扩展 `report_received` / `moderation` + `relatedGameId` + `moderationId` / `appealId` | |
+| S7 | 消息中心 ALLOWED 扩展 `report_received` / **`report_resolved`** / `moderation` + `relatedGameId` + `moderationId` / `appealId` | |
 | S5b |（P0.5）二～四级升档、`homeHidden` 下发、严重直达、先审后发、冻创作者、禁登录 | |
 | S8 |（P1）申诉：同表 `record_type=appeal`；`appeal_id` / `moderation_id`；统一 GET `/appeals/:appealId`、`/moderation/:id`；`relatedModerationId` 提交 | |
 
@@ -826,7 +865,7 @@ POST /api/admin/reports/:id/review
 | F2 | **首页推荐**长按/右键：屏蔽+举报 | |
 | F3 | AccountHomepage「⋯」账号举报；自己入口隐藏 | |
 | F4 | Admin 举报审核 + 处罚记录只读（P0）；严重 UI（P0.5） | |
-| F5 | 消息中心「安全/违规」+ `moderationId` / `appealId` 跳转 + `relatedGameId`「查看作品」→ **stats** | |
+| F5 | 消息中心「安全/违规」+ `report_received` / **`report_resolved`** + `moderationId` / `appealId` 跳转 + `relatedGameId`「查看作品」→ **stats** | |
 | F5b | `publishBanUntil` 灰发布；`taken_down` 标签/锁公开；`homeHidden` 顶栏（P0.5 用户侧） | |
 | F6 |（P1）`/appeal/submit`、`/moderation/:id`、`/appeals/:appealId` + Admin 申诉复核；L4 非 admin 隐藏「通过」 | |
 | F4b |（P0.5 Admin 下一轮）严重直达 L1–L4、先审后发、冻创作者、禁登录（仅 admin） | |
@@ -879,9 +918,10 @@ POST /api/admin/reports/:id/review
 - [ ] `GET /api/moderation/:id`、`GET /api/appeals/:appealId` 无 `/admin`、`/operator` 别名；`canAppeal=false` 时底栏申诉为灰，不做「再次申诉」  
 - [ ] 申诉通过的警告（`status=revoked`）不计入 `ownerWarningCount`  
 - [ ] 举报人 toast +「已受理」站内信；点开不跳进度页  
+- [ ] 管理端成立后举报人收到「举报处理结果」：采取措施文案；驳回后收到持续关注文案；与受理分条、可分别已读  
 - [ ] P0 Admin：举报审核 + 处罚记录只读；成立默认下架+警告  
 - [ ] P1 Admin：申诉复核；目标 L4 时非 admin 不可见「通过」  
-- [ ] P0.5：严重直达可跳过三次警告（Admin 下一轮）；主页隐藏访客空态 + 本人顶栏（用户侧）  
+- [ ] P0.5：严重直达可跳过三次警告；同单只记一条处罚、玩家只收到一条处罚通知（无同单警告通知）；主页隐藏访客空态 + 本人顶栏（用户侧）  
 - [ ] 本版结算/收益逻辑**未被**处罚改动  
 - [ ] 账号举报可重置资料并记警告  
 - [ ] 帖子 UI 不出现；reasons?targetType=post 可返回种子  
@@ -918,6 +958,7 @@ POST /api/admin/reports/:id/review
 | Admin 展示 | 当前昵称 / `userCode` / `gameTitle`；可按 `targetOwnerUserId`、`reporterUserId` 精确筛 |
 | 四级申诉通过 | 仅 admin；前端对非 admin 隐藏「通过」 |
 | 他人主页入口 | 「⋯」；长按仅首页推荐 + 桌面右键 |
+| 严重直达 vs 警告 | `penaltyLevel` 有值 → 只记处罚、不记警告、只发一条处罚通知；FE 直达不带 `uphold_warn`（2026-10-24） |
 
 ---
 

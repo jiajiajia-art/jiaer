@@ -7,6 +7,7 @@ export type MessageType =
     | 'promotion_submission_status'
     | 'favorite_game_updated'
     | 'report_received'
+    | 'report_resolved'
     | 'moderation';
 
 export interface MessageAnnouncement extends AnnouncementRecord {
@@ -48,7 +49,7 @@ export interface MessageFavoriteGameUpdateNotification {
     isRead: boolean;
 }
 
-/** 举报人：已受理回执（无进度） */
+/** 举报人：已受理回执（无进度页） */
 export interface MessageReportReceivedNotification {
     id: number;
     sourceId: number;
@@ -61,6 +62,24 @@ export interface MessageReportReceivedNotification {
     status?: string;
     createdAt: string | null;
     publishedAt?: string | null;
+    isRead: boolean;
+}
+
+/** 举报人：审核成立/驳回后的处理结果（与受理分条） */
+export interface MessageReportResolvedNotification {
+    id: number;
+    sourceId: number;
+    messageType: 'report_resolved';
+    title?: string;
+    body: string;
+    targetType?: string;
+    targetId?: string;
+    reasonTitle?: string;
+    /** upheld | rejected */
+    status?: string;
+    createdAt: string | null;
+    publishedAt?: string | null;
+    reviewedAt?: string | null;
     isRead: boolean;
 }
 
@@ -98,6 +117,7 @@ export interface MessageCenterData {
     promotionSubmissionNotifications: MessagePromotionSubmissionNotification[];
     favoriteGameUpdateNotifications: MessageFavoriteGameUpdateNotification[];
     reportReceivedNotifications?: MessageReportReceivedNotification[];
+    reportResolvedNotifications?: MessageReportResolvedNotification[];
     moderationNotifications?: MessageModerationNotification[];
 }
 

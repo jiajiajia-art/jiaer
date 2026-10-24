@@ -76,6 +76,7 @@ const AppealResult: React.FC = () => {
   }, [detail, t]);
 
   const reasonText = (detail?.reason || '').trim();
+  const notifyBody = (detail?.notifyBody || '').trim();
   const canCollapseDesc = reasonText.length > DESC_COLLAPSE_LEN;
   const evidenceUrls = detail?.evidenceUrls || [];
 
@@ -128,6 +129,10 @@ const AppealResult: React.FC = () => {
                 )}
               </div>
               <p className={styles.statusLabel}>{statusText}</p>
+              {/* 功能注释：接口 notifyBody，放在结果标题下作平台结论说明 */}
+              {notifyBody ? (
+                <p className={styles.notifyBody}>{notifyBody}</p>
+              ) : null}
             </section>
 
             <section className={styles.card}>

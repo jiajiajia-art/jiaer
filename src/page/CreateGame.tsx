@@ -405,7 +405,7 @@ const CreateGame: React.FC = () => {
                     </>
                 )}
             </div>
-            <MobileBottomNav />
+            {!isStatsMode ? <MobileBottomNav /> : null}
 
             {gameDetail && (
                 <PublishSettingsModal

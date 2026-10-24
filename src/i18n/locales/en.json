@@ -342,6 +342,9 @@
     "sectionSafety": "Safety / Moderation",
     "reportReceivedTitle": "Report received",
     "reportReceivedBody": "We have received your report and will process it soon.",
+    "reportResolvedTitle": "Report result",
+    "reportResolvedUpheldBody": "Your report has been reviewed and action has been taken. Thank you for helping keep the community safe.",
+    "reportResolvedRejectedBody": "We have received your report and will continue to monitor. Thank you for helping keep the community safe.",
     "moderationTitle": "Moderation notice",
     "violationNoticeTitle": "Account violation notice",
     "appealResultNoticeTitle": "Appeal result",
@@ -2720,7 +2723,9 @@
       "promotions": "Promotions",
       "recruitment": "Recruitment",
       "dailyTasks": "Daily Task Management",
-      "withdraw": "Withdrawals"
+      "withdraw": "Withdrawals",
+      "contentReports": "Content Reports",
+      "appeals": "Appeal Review"
     },
     "reports": {
       "title": "Reports",

@@ -329,17 +329,32 @@ const ContentReportAdminManager: React.FC = () => {
         if (resetBio) resetFields.push('bio');
       }
 
+      const actions: string[] = [];
+      if (confirmDecision === 'uphold') {
+        if (severeMode) {
+          // 功能注释：严重直达只写处罚，不带 uphold_warn，避免叠警告通知
+          if (detail.targetType === 'game' || detail.targetType === 'post') {
+            actions.push('uphold_takedown');
+          }
+          if (resetFields.length > 0) {
+            actions.push('uphold_reset_profile');
+          }
+        } else if (resetFields.length > 0) {
+          actions.push('uphold_warn', 'uphold_reset_profile');
+        }
+      }
+
       const payload = {
         decision: confirmDecision,
         reviewNote: reviewNote.trim() || undefined,
         ...(confirmDecision === 'uphold' && severeMode
           ? { penaltyLevel }
           : {}),
+        ...(confirmDecision === 'uphold' && actions.length > 0
+          ? { actions }
+          : {}),
         ...(confirmDecision === 'uphold' && resetFields.length > 0
-          ? {
-              actions: ['uphold_warn', 'uphold_reset_profile'] as string[],
-              resetFields,
-            }
+          ? { resetFields }
           : {}),
       };
 
@@ -768,7 +783,7 @@ const ContentReportAdminManager: React.FC = () => {
                         <Link
                           className={local.subjectLink}
                           to={`/account/${encodeURIComponent(detail.targetOwnerUserCode)}`}
-                          state={{ from: '/admin/content-reports' }}
+                          state={{ from: '/operator/content-reports' }}
                         >
                           {displayNickname(detail.targetOwnerNickname)}
                         </Link>
@@ -787,7 +802,7 @@ const ContentReportAdminManager: React.FC = () => {
                         <Link
                           className={local.subjectLink}
                           to={`/game/${encodeURIComponent(detail.targetId)}`}
-                          state={{ from: '/admin/content-reports' }}
+                          state={{ from: '/operator/content-reports' }}
                         >
                           {detail.gameTitle?.trim() || '作品已不存在'}
                         </Link>
@@ -856,7 +871,7 @@ const ContentReportAdminManager: React.FC = () => {
                           <Link
                             className={local.factLink}
                             to={`/account/${encodeURIComponent(detail.targetOwnerUserCode)}`}
-                            state={{ from: '/admin/content-reports' }}
+                            state={{ from: '/operator/content-reports' }}
                           >
                             {displayNickname(detail.targetOwnerNickname)}
                           </Link>
@@ -966,7 +981,9 @@ const ContentReportAdminManager: React.FC = () => {
                       </div>
                     ) : (
                       <p className={styles.cardDesc} style={{ margin: 0 }}>
-                        游戏成立后会下架，并记一次警告。
+                        {severeMode
+                          ? '游戏成立后会下架，并直接按所选等级处罚（不记警告）。'
+                          : '游戏成立后会下架，并记一次警告。'}
                       </p>
                     )}
 
@@ -1162,7 +1179,7 @@ const ContentReportAdminManager: React.FC = () => {
         message={
           confirmDecision === 'uphold'
             ? (severeMode
-              ? `严重直达：将直接施加 ${penaltyLevel} 级处罚（跳过凑满 3 次警告）。${penaltyLevel === 4 ? '四级可能导致禁登录。' : ''}`
+              ? `严重直达：将直接施加 ${penaltyLevel} 级处罚，不记警告。${penaltyLevel === 4 ? '四级可能导致禁登录。' : ''}`
               : '将按默认处置执行（游戏：下架+警告；账号：警告）。满 3 次有效警告会自动触发一级处罚。')
             : '驳回后举报人需等待 7 天冷却才可再报同一对象。'
         }

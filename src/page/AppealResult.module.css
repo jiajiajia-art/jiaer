@@ -104,6 +104,16 @@
   color: #ffffff;
 }
 
+.notifyBody {
+  margin: 0;
+  max-width: 22em;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.62);
+}
+
 .card {
   background: #1a1a1a;
   border: 1px solid rgba(255, 255, 255, 0.08);

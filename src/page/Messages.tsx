@@ -15,6 +15,7 @@ import type {
     MessagePromotion,
     MessagePromotionSubmissionNotification,
     MessageReportReceivedNotification,
+    MessageReportResolvedNotification,
     MessageType,
 } from '../api/message/message.type';
 import type { PromotionReviewStatus } from '../api/promotion/promotion.type';
@@ -44,6 +45,7 @@ type MessageFeedItem =
     | (MessagePromotionSubmissionNotification & { itemType: 'promotion_submission_status'; sortTime: string | null })
     | (MessageFavoriteGameUpdateNotification & { itemType: 'favorite_game_updated'; sortTime: string | null })
     | (MessageReportReceivedNotification & { itemType: 'report_received'; sortTime: string | null })
+    | (MessageReportResolvedNotification & { itemType: 'report_resolved'; sortTime: string | null })
     | (MessageModerationNotification & { itemType: 'moderation'; sortTime: string | null });
 
 type SafetyDetail = {
@@ -210,6 +212,12 @@ const Messages: React.FC = () => {
             sortTime: item.publishedAt || item.createdAt || null,
         }));
 
+        const reportResolvedNotifications = (messageCenter?.reportResolvedNotifications || []).map((item) => ({
+            ...item,
+            itemType: 'report_resolved' as const,
+            sortTime: item.reviewedAt || item.publishedAt || item.createdAt || null,
+        }));
+
         const moderationNotifications = (messageCenter?.moderationNotifications || []).map((item) => ({
             ...item,
             itemType: 'moderation' as const,
@@ -222,6 +230,7 @@ const Messages: React.FC = () => {
             ...promotionSubmissionNotifications,
             ...favoriteGameUpdateNotifications,
             ...reportReceivedNotifications,
+            ...reportResolvedNotifications,
             ...moderationNotifications,
         ].sort((left, right) => {
             const leftTime = new Date(left.sortTime || 0).getTime();
@@ -264,6 +273,12 @@ const Messages: React.FC = () => {
                     : item
             ));
 
+            const reportResolvedNotifications = (prev.reportResolvedNotifications || []).map((item) => (
+                messageType === 'report_resolved' && item.sourceId === sourceId
+                    ? { ...item, isRead: true }
+                    : item
+            ));
+
             const moderationNotifications = (prev.moderationNotifications || []).map((item) => (
                 messageType === 'moderation' && item.sourceId === sourceId
                     ? { ...item, isRead: true }
@@ -278,6 +293,7 @@ const Messages: React.FC = () => {
                 promotionSubmissionNotifications,
                 favoriteGameUpdateNotifications,
                 reportReceivedNotifications,
+                reportResolvedNotifications,
                 moderationNotifications,
             };
         });
@@ -295,6 +311,7 @@ const Messages: React.FC = () => {
                 promotionSubmissionNotifications: markCollectionAsRead(prev.promotionSubmissionNotifications),
                 favoriteGameUpdateNotifications: markCollectionAsRead(prev.favoriteGameUpdateNotifications || []),
                 reportReceivedNotifications: markCollectionAsRead(prev.reportReceivedNotifications || []),
+                reportResolvedNotifications: markCollectionAsRead(prev.reportResolvedNotifications || []),
                 moderationNotifications: markCollectionAsRead(prev.moderationNotifications || []),
             };
         });
@@ -368,6 +385,15 @@ const Messages: React.FC = () => {
         setSelectedFavoriteGameUpdate({ ...notification, isRead: true });
     }, [markMessageAsRead]);
 
+    const resolveReportResolvedBody = useCallback((notification: MessageReportResolvedNotification) => {
+        const fromApi = (notification.body || '').trim();
+        if (fromApi) return fromApi;
+        const status = String(notification.status || '').toLowerCase();
+        if (status === 'upheld') return t('messages.reportResolvedUpheldBody');
+        if (status === 'rejected') return t('messages.reportResolvedRejectedBody');
+        return t('messages.reportResolvedUpheldBody');
+    }, [t]);
+
     const handleOpenReportReceived = useCallback(async (notification: MessageReportReceivedNotification) => {
         await markMessageAsRead('report_received', notification.sourceId, notification.isRead);
         setSafetyDetail({
@@ -375,6 +401,14 @@ const Messages: React.FC = () => {
             body: notification.body || t('messages.reportReceivedBody'),
         });
     }, [markMessageAsRead, t]);
+
+    const handleOpenReportResolved = useCallback(async (notification: MessageReportResolvedNotification) => {
+        await markMessageAsRead('report_resolved', notification.sourceId, notification.isRead);
+        setSafetyDetail({
+            title: notification.title?.trim() || t('messages.reportResolvedTitle'),
+            body: resolveReportResolvedBody(notification),
+        });
+    }, [markMessageAsRead, resolveReportResolvedBody, t]);
 
     const handleOpenModeration = useCallback(async (notification: MessageModerationNotification) => {
         await markMessageAsRead('moderation', notification.sourceId, notification.isRead);
@@ -452,6 +486,22 @@ const Messages: React.FC = () => {
                     time,
                     isRead: item.isRead,
                     onOpen: () => { void handleOpenReportReceived(item); },
+                });
+                continue;
+            }
+
+            if (item.itemType === 'report_resolved') {
+                const resolvedBody = (item.body || '').trim()
+                    || (String(item.status || '').toLowerCase() === 'rejected'
+                        ? t('messages.reportResolvedRejectedBody')
+                        : t('messages.reportResolvedUpheldBody'));
+                buckets[section].push({
+                    key: `report-resolved-${item.sourceId}`,
+                    title: item.title?.trim() || t('messages.reportResolvedTitle'),
+                    preview: truncateMessagePreview(resolvedBody),
+                    time,
+                    isRead: item.isRead,
+                    onOpen: () => { void handleOpenReportResolved(item); },
                 });
                 continue;
             }
@@ -534,6 +584,7 @@ const Messages: React.FC = () => {
         handleOpenPromotion,
         handleOpenPromotionSubmissionNotification,
         handleOpenReportReceived,
+        handleOpenReportResolved,
         messageFeed,
         t,
     ]);

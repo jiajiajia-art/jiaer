@@ -109,8 +109,16 @@ const Appeals: React.FC = () => {
       <Navbar />
       <div className={styles.main}>
         <header className={styles.header}>
-          <button type="button" className={styles.backBtn} onClick={() => navigate(-1)}>
-            {t('common.close')}
+          <button
+            type="button"
+            className={styles.backBtn}
+            onClick={() => navigate(-1)}
+            aria-label={t('appeal.back')}
+            title={t('appeal.back')}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M15 6L9 12L15 18" />
+            </svg>
           </button>
           <h1 className={styles.title}>{t('appeal.pageTitle')}</h1>
           <button type="button" className={styles.newBtn} onClick={() => openSubmit(null)}>

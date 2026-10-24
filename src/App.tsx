@@ -181,6 +181,8 @@ function App() {
           <Route path="/operator/recruitment" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/daily-tasks" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/withdraw" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/content-reports" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/appeals" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/works/:fileId/stats" element={<OperatorRoute><OperatorWorkStats /></OperatorRoute>} />
           <Route path="/points/details" element={<PointsDetails />} />
           <Route path="/createGame" element={<CreateGame />} />
@@ -222,8 +224,9 @@ function App() {
           <Route path="/admin/text-llm" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/lottery" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/comments" element={<AdminRoute><CommentAdminPage /></AdminRoute>} />
-          <Route path="/admin/content-reports" element={<AdminRoute><AdminPanel /></AdminRoute>} />
-          <Route path="/admin/appeals" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          {/* 功能注释：内容举报/申诉复核已迁到运营中心；旧路径兼容跳转 */}
+          <Route path="/admin/content-reports" element={<Navigate to="/operator/content-reports" replace />} />
+          <Route path="/admin/appeals" element={<Navigate to="/operator/appeals" replace />} />
           <Route path="/galgame" element={<Galgame />} />
           <Route path="/galgameMap" element={<GalgameMap />} />
           <Route path="/customif/create" element={<CustomIFCreate />} />

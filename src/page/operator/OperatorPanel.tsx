@@ -16,10 +16,20 @@ import operatorStatsApi, {
 import type { CreatorWorkItem, StatsOverview } from '../../api/stats/creatorStatsApi';
 import OperatorReports from './OperatorReports';
 import WithdrawAdminManager from '../../components/WithdrawAdminManager';
+import ContentReportAdminManager from '../../components/Admin/ContentReportAdminManager';
+import ContentAppealAdminManager from '../../components/Admin/ContentAppealAdminManager';
 import adminStyles from '../AdminPanel.module.css';
 import styles from './OperatorPanel.module.css';
 
-type OperatorTab = 'stats' | 'reports' | 'promotions' | 'recruitment' | 'dailyTasks' | 'withdraw';
+type OperatorTab =
+  | 'stats'
+  | 'reports'
+  | 'promotions'
+  | 'recruitment'
+  | 'dailyTasks'
+  | 'withdraw'
+  | 'contentReports'
+  | 'appeals';
 type WorksSortField = 'playCount' | 'pv' | 'shareCount';
 type SortDirection = 'asc' | 'desc';
 
@@ -36,6 +46,8 @@ const resolveOperatorTab = (pathname: string): OperatorTab => {
   if (pathname.startsWith('/operator/recruitment')) return 'recruitment';
   if (pathname.startsWith('/operator/daily-tasks')) return 'dailyTasks';
   if (pathname.startsWith('/operator/withdraw')) return 'withdraw';
+  if (pathname.startsWith('/operator/content-reports')) return 'contentReports';
+  if (pathname.startsWith('/operator/appeals')) return 'appeals';
   return 'stats';
 };
 
@@ -68,6 +80,8 @@ const OperatorPanel: React.FC = () => {
     { id: 'recruitment', label: t('operator.tabs.recruitment'), path: '/operator/recruitment' },
     { id: 'dailyTasks', label: t('operator.tabs.dailyTasks'), path: '/operator/daily-tasks' },
     { id: 'withdraw', label: t('operator.tabs.withdraw'), path: '/operator/withdraw' },
+    { id: 'contentReports', label: t('operator.tabs.contentReports'), path: '/operator/content-reports' },
+    { id: 'appeals', label: t('operator.tabs.appeals'), path: '/operator/appeals' },
   ]), [t]);
 
   const sortedWorks = useMemo(() => {
@@ -393,6 +407,8 @@ const OperatorPanel: React.FC = () => {
             ) : null}
             {!isLoading && activeTab === 'recruitment' ? renderRecruitment() : null}
             {activeTab === 'dailyTasks' ? renderDailyTasks() : null}
+            {activeTab === 'contentReports' ? <ContentReportAdminManager /> : null}
+            {activeTab === 'appeals' ? <ContentAppealAdminManager /> : null}
           </section>
         </div>
       </div>
