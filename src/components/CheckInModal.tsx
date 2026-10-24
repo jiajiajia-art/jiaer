@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
@@ -23,9 +24,11 @@ import styles from './CheckInModal.module.css';
 interface CheckInModalProps {
     isOpen: boolean;
     mode?: CheckInViewMode;
+    presentation?: 'modal' | 'embedded';
     onClose: () => void;
     onSignInSuccess?: (result?: CheckInResponse) => void;
     onGoToDailyTasks?: () => void;
+    embeddedActionContainer?: HTMLElement | null;
 }
 
 type MakeupDialogState =
@@ -76,9 +79,11 @@ const describeMembershipRewards = (rewards: CheckInResponse['membershipRewards']
 const CheckInModal: React.FC<CheckInModalProps> = ({
     isOpen,
     mode = 'home',
+    presentation = 'modal',
     onClose,
     onSignInSuccess,
     onGoToDailyTasks,
+    embeddedActionContainer,
 }) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
@@ -96,6 +101,7 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
     const closeButtonRef = useRef<HTMLButtonElement | null>(null);
     const previousFocusRef = useRef<HTMLElement | null>(null);
     const suppressRestoreFocusRef = useRef(false);
+    const isEmbedded = presentation === 'embedded';
 
     const fetchSignInStatus = useCallback(async (): Promise<MembershipSignInStatus | null> => {
         setIsFetchingStatus(true);
@@ -121,19 +127,21 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
         }
         setSignInStatus(null);
         setHasLoadError(false);
-        setIsMonthExpanded(false);
+        setIsMonthExpanded(isEmbedded);
         setMakeupDialog(null);
         suppressRestoreFocusRef.current = false;
         previousFocusRef.current = document.activeElement instanceof HTMLElement
             ? document.activeElement
             : null;
         void fetchSignInStatus();
-        const frame = window.requestAnimationFrame(() => closeButtonRef.current?.focus());
+        const frame = isEmbedded
+            ? 0
+            : window.requestAnimationFrame(() => closeButtonRef.current?.focus());
         return () => window.cancelAnimationFrame(frame);
-    }, [fetchSignInStatus, isOpen]);
+    }, [fetchSignInStatus, isEmbedded, isOpen]);
 
     useEffect(() => {
-        if (!isOpen) return;
+        if (!isOpen || isEmbedded) return;
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Tab') {
                 trapFocus(event, makeupDialog ? makeupDialogRef.current : modalRef.current);
@@ -149,14 +157,14 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
         };
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [isOpen, makeupDialog, onClose]);
+    }, [isEmbedded, isOpen, makeupDialog, onClose]);
 
     useEffect(() => {
-        if (!isOpen) return;
+        if (!isOpen || isEmbedded) return;
         return () => {
             if (!suppressRestoreFocusRef.current) previousFocusRef.current?.focus();
         };
-    }, [isOpen]);
+    }, [isEmbedded, isOpen]);
 
     useEffect(() => {
         if (!makeupDialog) return;
@@ -281,7 +289,7 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
     const handleGoToDailyTasks = () => {
         setMakeupDialog(null);
         suppressRestoreFocusRef.current = true;
-        onClose();
+        if (!isEmbedded) onClose();
         if (onGoToDailyTasks) {
             onGoToDailyTasks();
             return;
@@ -321,42 +329,65 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
         );
     };
 
+    const signInButton = status ? (
+        <button
+            type="button"
+            className={`${styles.signInButton} ${isEmbedded ? styles.embeddedSignInButton : ''}`}
+            onClick={() => void handleCheckIn()}
+            disabled={isSubmitting || isFetchingStatus || !status.canClaim}
+        >
+            {isSubmitting ? (
+                <span className={styles.buttonLoading}>
+                    <span className={styles.spinner} aria-hidden="true" />
+                    {t('checkIn.signingIn')}
+                </span>
+            ) : status.signedInToday
+                ? t('checkIn.titleSignedIn')
+                : t('checkIn.signInForPoints', { points: status.todayReward.totalPoints })}
+        </button>
+    ) : null;
+
     return (
         <div
-            className={styles.overlay}
+            className={isEmbedded ? styles.embeddedRoot : styles.overlay}
             onMouseDown={(event) => {
-                if (event.target === event.currentTarget) onClose();
+                if (!isEmbedded && event.target === event.currentTarget) onClose();
             }}
         >
             <div
                 ref={modalRef}
-                className={`${styles.content} ${isMonthExpanded ? styles.contentExpanded : ''}`}
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="check-in-dialog-title"
+                className={`${styles.content} ${isMonthExpanded ? styles.contentExpanded : ''} ${isEmbedded ? styles.embeddedContent : ''}`}
+                role={isEmbedded ? 'region' : 'dialog'}
+                aria-modal={isEmbedded ? undefined : true}
+                aria-labelledby={isEmbedded ? undefined : 'check-in-dialog-title'}
+                aria-label={isEmbedded ? t('checkIn.title') : undefined}
                 tabIndex={-1}
             >
-                <button
-                    ref={closeButtonRef}
-                    type="button"
-                    className={styles.closeButton}
-                    onClick={onClose}
-                    aria-label={t('common.close')}
-                >
-                    <span aria-hidden="true">×</span>
-                </button>
+                {!isEmbedded && (
+                    <button
+                        ref={closeButtonRef}
+                        type="button"
+                        className={styles.closeButton}
+                        onClick={onClose}
+                        aria-label={t('common.close')}
+                    >
+                        <span aria-hidden="true">×</span>
+                    </button>
+                )}
 
-                <header className={styles.header}>
-                    <div>
-                        <h2 id="check-in-dialog-title" className={styles.title}>{t('checkIn.title')}</h2>
-                    </div>
-                    {status && (
-                        <div className={styles.headerReward}>
-                            <span>{status.signedInToday ? t('checkIn.receivedToday') : t('checkIn.todayReward')}</span>
-                            <strong>+{status.todayReward.totalPoints}</strong>
+                {!isEmbedded && (
+                    <header className={styles.header}>
+                        <div>
+                            <h2 id="check-in-dialog-title" className={styles.title}>{t('checkIn.title')}</h2>
                         </div>
-                    )}
-                </header>
+                        {status && (
+                            <div className={styles.headerReward}>
+                                <span>{status.signedInToday ? t('checkIn.receivedToday') : t('checkIn.todayReward')}</span>
+                                <strong>+{status.todayReward.totalPoints}</strong>
+                            </div>
+                        )}
+                    </header>
+                )}
 
                 <div className={styles.scrollArea}>
                     {isFetchingStatus && !status ? (
@@ -378,127 +409,149 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                         </div>
                     ) : status ? (
                         <>
-                            <section className={styles.weekSection} aria-labelledby="check-in-week-title">
-                                <div className={styles.sectionHeading}>
-                                    <div>
-                                        <h3 id="check-in-week-title">{t('checkIn.weekTitle')}</h3>
-                                        <p>{t('checkIn.weekProgress', { days: status.week.signedDays })}</p>
-                                    </div>
-                                    <span className={styles.makeupCardBalance}>
-                                        {t('checkIn.makeupCards', { count: status.makeupCardCount ?? 0 })}
-                                    </span>
-                                </div>
-                                <div className={styles.weekGrid}>{status.week.days.map(renderWeekDay)}</div>
-                                <p className={styles.weekRule}>{t('checkIn.weekRule')}</p>
+                            <section
+                                className={isEmbedded ? styles.embeddedCalendarSection : styles.weekSection}
+                                aria-labelledby={isEmbedded ? undefined : 'check-in-week-title'}
+                                aria-label={isEmbedded ? t('checkIn.title') : undefined}
+                            >
+                                {!isEmbedded && (
+                                    <>
+                                        <div className={styles.sectionHeading}>
+                                            <div>
+                                                <h3 id="check-in-week-title">{t('checkIn.weekTitle')}</h3>
+                                                <p>{t('checkIn.weekProgress', { days: status.week.signedDays })}</p>
+                                            </div>
+                                            <span className={styles.makeupCardBalance}>
+                                                {t('checkIn.makeupCards', { count: status.makeupCardCount ?? 0 })}
+                                            </span>
+                                        </div>
+                                        <div className={styles.weekGrid}>{status.week.days.map(renderWeekDay)}</div>
+                                        <p className={styles.weekRule}>{t('checkIn.weekRule')}</p>
 
-                            {mode === 'profile' && (
-                                <button
-                                    type="button"
-                                    className={styles.expandButton}
-                                    onClick={() => setIsMonthExpanded((value) => !value)}
-                                    aria-expanded={isMonthExpanded}
-                                    aria-controls="check-in-month-panel"
-                                >
-                                    {isMonthExpanded ? t('checkIn.collapseMonth') : t('checkIn.expandMonth')}
-                                    <span className={isMonthExpanded ? styles.chevronUp : styles.chevronDown} aria-hidden="true" />
-                                </button>
-                            )}
-
-                            {mode === 'profile' && isMonthExpanded && (
-                                <section id="check-in-month-panel" className={styles.monthSection} aria-labelledby="check-in-month-title">
-                                    <div className={styles.monthHeading}>
-                                        <h3 id="check-in-month-title">
-                                            {t('checkIn.monthTitle', { year: monthYear, month: Number(monthNumber) })}
-                                        </h3>
-                                    </div>
-                                    <div className={styles.monthWeekdays} aria-hidden="true">
-                                        {[1, 2, 3, 4, 5, 6, 7].map((weekday) => (
-                                            <span key={weekday}>{t(`checkIn.weekdays.${getWeekdayKey(weekday)}`)}</span>
-                                        ))}
-                                    </div>
-                                    <div className={styles.monthGrid}>
-                                        {monthGrid.map((day, index) => day ? (
+                                        {mode === 'profile' && (
                                             <button
                                                 type="button"
-                                                key={day.date}
-                                                className={`${styles.monthDay} ${STATE_CLASS[day.state]}`}
-                                                aria-label={`${day.date} ${t(`checkIn.states.${day.state}`)}`}
-                                                data-can-makeup={day.canMakeup || undefined}
-                                                disabled={!day.canMakeup || isMakeupSubmitting}
-                                                onClick={(event) => openMakeupConfirm(day.date, event.currentTarget)}
+                                                className={styles.expandButton}
+                                                onClick={() => setIsMonthExpanded((value) => !value)}
+                                                aria-expanded={isMonthExpanded}
+                                                aria-controls="check-in-month-panel"
                                             >
-                                                <span>{day.dayOfMonth}</span>
-                                                <small>
-                                                    {day.canMakeup
-                                                        ? t('checkIn.makeupAction')
-                                                        : day.state === 'signed' || day.state === 'made_up'
-                                                            ? '✓'
-                                                            : t(`checkIn.stateMarks.${day.state}`)}
-                                                </small>
+                                                {isMonthExpanded ? t('checkIn.collapseMonth') : t('checkIn.expandMonth')}
+                                                <span className={isMonthExpanded ? styles.chevronUp : styles.chevronDown} aria-hidden="true" />
                                             </button>
-                                        ) : (
-                                            <span key={`empty-${index}`} className={styles.monthEmpty} aria-hidden="true" />
-                                        ))}
+                                        )}
+                                    </>
+                                )}
+
+                                {(isEmbedded || (mode === 'profile' && isMonthExpanded)) && (
+                                    <section id="check-in-month-panel" className={styles.monthSection} aria-labelledby="check-in-month-title">
+                                        <div className={styles.monthHeading}>
+                                            <h3 id="check-in-month-title">
+                                                {t('checkIn.monthTitle', { year: monthYear, month: Number(monthNumber) })}
+                                            </h3>
+                                        </div>
+                                        <div className={styles.monthWeekdays} aria-hidden="true">
+                                            {[1, 2, 3, 4, 5, 6, 7].map((weekday) => (
+                                                <span key={weekday}>{t(`checkIn.weekdays.${getWeekdayKey(weekday)}`)}</span>
+                                            ))}
+                                        </div>
+                                        <div className={styles.monthGrid}>
+                                            {monthGrid.map((day, index) => day ? (
+                                                <button
+                                                    type="button"
+                                                    key={day.date}
+                                                    className={`${styles.monthDay} ${STATE_CLASS[day.state]}`}
+                                                    aria-label={`${day.date} ${t(`checkIn.states.${day.state}`)}`}
+                                                    data-can-makeup={day.canMakeup || undefined}
+                                                    disabled={!day.canMakeup || isMakeupSubmitting}
+                                                    onClick={(event) => openMakeupConfirm(day.date, event.currentTarget)}
+                                                >
+                                                    <span>{day.dayOfMonth}</span>
+                                                    <small>
+                                                        {day.canMakeup
+                                                            ? t('checkIn.makeupAction')
+                                                            : day.state === 'signed' || day.state === 'made_up'
+                                                                ? '✓'
+                                                                : t(`checkIn.stateMarks.${day.state}`)}
+                                                    </small>
+                                                </button>
+                                            ) : (
+                                                <span key={`empty-${index}`} className={styles.monthEmpty} aria-hidden="true" />
+                                            ))}
+                                        </div>
+                                    </section>
+                                )}
+
+                                {isEmbedded && (
+                                    <div className={styles.embeddedSummary}>
+                                        <span>{t('checkIn.embeddedWeekSummary', { days: status.week.consecutiveDays })}</span>
+                                        <span>{t('checkIn.embeddedMonthSummary', { days: status.month.progressDays })}</span>
+                                    </div>
+                                )}
+                            </section>
+
+                            {!isEmbedded && (
+                                <section className={styles.monthReward} aria-label={t('checkIn.monthRewardTitle')}>
+                                    <div className={styles.rewardBadge} aria-hidden="true">
+                                        <span>+</span>{status.month.bonusPoints}
+                                    </div>
+                                    <div className={styles.rewardProgress}>
+                                        <div className={styles.rewardProgressTop}>
+                                            <div>
+                                                <strong>{t('checkIn.monthRewardTitle')}</strong>
+                                                <p>{status.month.bonusRewarded
+                                                    ? t('checkIn.monthRewarded', {
+                                                        points: status.month.bonusPoints,
+                                                    })
+                                                    : t('checkIn.monthRewardRule', {
+                                                        days: status.month.targetDays,
+                                                        points: status.month.bonusPoints,
+                                                    })}</p>
+                                            </div>
+                                            <span>{monthProgress}/{status.month.targetDays}</span>
+                                        </div>
+                                        <div className={styles.progressTrack}>
+                                            <span style={{ width: `${monthProgressPercent}%` }} />
+                                        </div>
                                     </div>
                                 </section>
                             )}
-                            </section>
-
-                            <section className={styles.monthReward} aria-label={t('checkIn.monthRewardTitle')}>
-                                <div className={styles.rewardBadge} aria-hidden="true">
-                                    <span>+</span>{status.month.bonusPoints}
-                                </div>
-                                <div className={styles.rewardProgress}>
-                                    <div className={styles.rewardProgressTop}>
-                                        <div>
-                                            <strong>{t('checkIn.monthRewardTitle')}</strong>
-                                            <p>{status.month.bonusRewarded
-                                                ? t('checkIn.monthRewarded', {
-                                                    points: status.month.bonusPoints,
-                                                })
-                                                : t('checkIn.monthRewardRule', {
-                                                    days: status.month.targetDays,
-                                                    points: status.month.bonusPoints,
-                                                })}</p>
-                                        </div>
-                                        <span>{monthProgress}/{status.month.targetDays}</span>
-                                    </div>
-                                    <div className={styles.progressTrack}>
-                                        <span style={{ width: `${monthProgressPercent}%` }} />
-                                    </div>
-                                </div>
-                            </section>
                         </>
                     ) : null}
                 </div>
 
                 {status && (
-                    <footer className={styles.footer}>
-                        <div className={styles.breakdown}>
-                            <span>{t('checkIn.baseReward', { points: status.todayReward.basePoints })}</span>
-                            {status.todayReward.weeklyBonusPoints > 0 && (
-                                <span>{t('checkIn.weekBonus', { points: status.todayReward.weeklyBonusPoints })}</span>
+                    <>
+                        {isEmbedded && embeddedActionContainer
+                            ? createPortal(signInButton, embeddedActionContainer)
+                            : null}
+                        <footer className={`${styles.footer} ${isEmbedded ? styles.embeddedFooter : ''}`}>
+                            {!isEmbedded && (
+                                <div className={styles.breakdown}>
+                                    <span>{t('checkIn.baseReward', { points: status.todayReward.basePoints })}</span>
+                                    {status.todayReward.weeklyBonusPoints > 0 && (
+                                        <span>{t('checkIn.weekBonus', { points: status.todayReward.weeklyBonusPoints })}</span>
+                                    )}
+                                    {status.todayReward.monthlyBonusPoints > 0 && (
+                                        <span>{t('checkIn.monthBonus', { points: status.todayReward.monthlyBonusPoints })}</span>
+                                    )}
+                                </div>
                             )}
-                            {status.todayReward.monthlyBonusPoints > 0 && (
-                                <span>{t('checkIn.monthBonus', { points: status.todayReward.monthlyBonusPoints })}</span>
+                            {(!isEmbedded || !embeddedActionContainer) && signInButton}
+                            {isEmbedded && (
+                                <section className={styles.embeddedRewardInfo} aria-label={t('checkIn.embeddedRewardTitle')}>
+                                    <strong>{t('checkIn.embeddedRewardTitle')}</strong>
+                                    <p>{t('checkIn.weekRule')}</p>
+                                    <p>{status.month.bonusRewarded
+                                        ? t('checkIn.monthRewarded', { points: status.month.bonusPoints })
+                                        : t('checkIn.monthRewardRule', {
+                                            days: status.month.targetDays,
+                                            points: status.month.bonusPoints,
+                                        })}</p>
+                                </section>
                             )}
-                        </div>
-                        <button
-                            type="button"
-                            className={styles.signInButton}
-                            onClick={() => void handleCheckIn()}
-                            disabled={isSubmitting || isFetchingStatus || !status.canClaim}
-                        >
-                            {isSubmitting ? (
-                                <span className={styles.buttonLoading}>
-                                    <span className={styles.spinner} aria-hidden="true" />
-                                    {t('checkIn.signingIn')}
-                                </span>
-                            ) : status.signedInToday
-                                ? t('checkIn.titleSignedIn')
-                                : t('checkIn.signInForPoints', { points: status.todayReward.totalPoints })}
-                        </button>
-                    </footer>
+                        </footer>
+                    </>
                 )}
 
                 {makeupDialog && (

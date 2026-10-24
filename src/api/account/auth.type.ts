@@ -23,6 +23,18 @@ export interface MembershipState {
   publishedPlayDiscountPercent: number | null;
 }
 
+export interface InviteStats {
+  inviteCount: number;
+  rewardedLimitedKk: number;
+}
+
+export interface PlatformBenefits {
+  inviteRewardKk: number;
+  registrationRewardKk: number;
+  updatedAt: string | null;
+  updatedBy: string | null;
+}
+
 export interface KkRechargePlan {
   id: string;
   price: number;
@@ -185,6 +197,8 @@ export interface User {
   kkRechargePlans?: KkRechargePlan[];
   membership?: MembershipState;
   inviteCode: string;
+  inviteStats?: InviteStats;
+  platformBenefits?: PlatformBenefits;
   hasSignedIn: boolean;
   firstChargePlans?: Record<string, boolean>;
   isMember?: boolean;

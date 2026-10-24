@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { IoChevronForward } from 'react-icons/io5';
 import toast from 'react-hot-toast';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
+import RechargeModal from '../components/Purchase/RechargeModal';
 import { auth } from '../api/account/authApi';
 import type {
     GetPointsActivitiesParams,
@@ -13,6 +15,8 @@ import type {
     PointsActivityItem,
     PointsActivityCurrency,
 } from '../api/account/auth.type';
+import payApi from '../api/pay/payApi';
+import type { PayOrderRequest } from '../api/pay/pay.type';
 import { useTranslation } from 'react-i18next';
 import CurrencyIcon from '../components/CurrencyIcon';
 import styles from './AssetDetails.module.css';
@@ -22,8 +26,8 @@ type CurrencyTab = 'all' | 'points' | 'diamonds';
 
 const tabs: Array<{ key: CurrencyTab; label: string }> = [
     { key: 'all', label: 'tabAll' },
-    { key: 'points', label: 'tabPoints' },
     { key: 'diamonds', label: 'tabDiamonds' },
+    { key: 'points', label: 'tabPoints' },
 ];
 
 const monthOptions = Array.from({ length: 12 }, (_, index) => index + 1);
@@ -118,6 +122,7 @@ const AssetDetails: React.FC = () => {
     const [kkBalance, setKkBalance] = useState<KkBalance>(EMPTY_KK_BALANCE);
     const [items, setItems] = useState<PointsActivityItem[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
@@ -308,6 +313,18 @@ const AssetDetails: React.FC = () => {
         setKkAssetCategory('all');
         setKkEventType('all');
     };
+    const handleRecharge = async (order: PayOrderRequest) => {
+        const response = await payApi.getPayQrCode(order);
+        if (response.data.code === 200 && response.data.data) {
+            return {
+                qrDataUrl: response.data.data.qrDataUrl,
+                outTradeNo: response.data.data.outTradeNo,
+            };
+        }
+
+        toast.error(response.data.message || t('assetDetails.rechargeFailed'));
+        return null;
+    };
     const formatExpiry = (value: string) => formatActivityTime(value);
 
     return (
@@ -332,17 +349,45 @@ const AssetDetails: React.FC = () => {
                     <section className={styles.balanceSection}>
                         <div className={styles.balanceRow}>
                             <div className={styles.balanceCard}>
-                                <CurrencyIcon currency="points" className={styles.balanceIcon} />
                                 <div className={styles.balanceInfo}>
-                                    <span className={styles.balanceLabel}>{t('assetDetails.points')}</span>
-                                    <span className={styles.balanceValue}>{points}</span>
+                                    <div className={styles.balanceHeading}>
+                                        <CurrencyIcon currency="diamonds" className={styles.balanceIconDiamond} />
+                                        <span className={styles.balanceLabel}>{t('assetDetails.diamonds')}</span>
+                                    </div>
+                                    <div className={styles.balanceValueRow}>
+                                        <span className={styles.balanceValue}>{formatKk(kkBalance.total ?? diamonds)}</span>
+                                        <div className={styles.balanceActions}>
+                                            <button
+                                                type="button"
+                                                className={styles.balanceAction}
+                                                onClick={() => setIsRechargeModalOpen(true)}
+                                            >
+                                                <span>{t('assetDetails.goRecharge')}</span>
+                                                <IoChevronForward aria-hidden="true" />
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div className={styles.balanceCard}>
-                                <CurrencyIcon currency="diamonds" className={styles.balanceIconDiamond} />
                                 <div className={styles.balanceInfo}>
-                                    <span className={styles.balanceLabel}>{t('assetDetails.diamonds')}</span>
-                                    <span className={styles.balanceValue}>{formatKk(kkBalance.total ?? diamonds)}</span>
+                                    <div className={styles.balanceHeading}>
+                                        <CurrencyIcon currency="points" className={styles.balanceIcon} />
+                                        <span className={styles.balanceLabel}>{t('assetDetails.points')}</span>
+                                    </div>
+                                    <div className={styles.balanceValueRow}>
+                                        <span className={styles.balanceValue}>{points}</span>
+                                        <div className={styles.balanceActions}>
+                                            <button
+                                                type="button"
+                                                className={styles.balanceAction}
+                                                onClick={() => navigate('/points/earn')}
+                                            >
+                                                <span>{t('assetDetails.goToTasks')}</span>
+                                                <IoChevronForward aria-hidden="true" />
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -641,22 +686,26 @@ const AssetDetails: React.FC = () => {
                                         && typeof item.originalAmount === 'number'
                                         && item.originalAmount > item.amount
                                         && typeof item.discountPercent === 'number';
+                                    const validityText = item.currency !== 'diamonds' || !item.validityType
+                                        ? null
+                                        : item.validityType === 'permanent'
+                                            ? t('assetDetails.validityPermanent')
+                                            : item.expiresAt
+                                                ? t(
+                                                    item.eventStatus === 'expired'
+                                                        ? 'assetDetails.validityExpiredAt'
+                                                        : 'assetDetails.validityUntil',
+                                                    { time: formatActivityTime(item.expiresAt) },
+                                                )
+                                                : t('assetDetails.validityLimited');
                                     return (
                                         <article key={`${item.currency}-${item.activityType}-${item.id}`} className={styles.item}>
                                             <div className={styles.itemMain}>
                                                 <div className={styles.itemTypeRow}>
                                                     <span className={`${styles.itemTypeBadge} ${item.currency === 'points' ? styles.itemTypeBadgePoints : ''}`}>{t(`assetDetails.${typeLabel}`)}</span>
-                                                    {item.currency === 'diamonds' && item.validityType ? (
-                                                        <span className={`${styles.itemValidityBadge} ${item.validityType === 'limited' ? styles.itemValidityBadgeLimited : ''}`}>
-                                                            {item.eventStatus === 'expired'
-                                                                ? '已过期'
-                                                                : item.validityType === 'limited' ? '限时币' : '永久币'}
-                                                        </span>
-                                                    ) : null}
                                                     <h2 className={styles.itemTitle}>{item.title}</h2>
                                                 </div>
                                                 {item.subtitle ? <p className={styles.itemSubtitle}>{item.subtitle}</p> : null}
-                                                <p className={styles.itemTime}>{formatActivityTime(displayTime)}</p>
                                             </div>
                                             {hasMembershipDiscount ? (
                                                 <div className={styles.itemAmountStack}>
@@ -678,6 +727,10 @@ const AssetDetails: React.FC = () => {
                                                     {formatKk(displayValue)}
                                                 </div>
                                             )}
+                                            <p className={styles.itemTime}>
+                                                <span>{formatActivityTime(displayTime)}</span>
+                                                {validityText ? <span>（{validityText}）</span> : null}
+                                            </p>
                                         </article>
                                     );
                                 })}
@@ -704,6 +757,15 @@ const AssetDetails: React.FC = () => {
                 </section>
             </main>
             <MobileBottomNav hidden />
+            <RechargeModal
+                isOpen={isRechargeModalOpen}
+                onClose={() => {
+                    setIsRechargeModalOpen(false);
+                    void loadActivities(1, false);
+                }}
+                onRecharge={handleRecharge}
+                fixedTab="diamonds"
+            />
         </div>
     );
 };

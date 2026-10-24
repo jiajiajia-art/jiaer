@@ -600,6 +600,73 @@
   box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.12);
 }
 
+.apiKeyInputWrap {
+  position: relative;
+  width: 100%;
+}
+
+.fieldInputWithToggle {
+  padding-right: 48px;
+}
+
+.fieldInputWithToggle::-ms-reveal,
+.fieldInputWithToggle::-ms-clear {
+  display: none;
+}
+
+.apiKeyToggle {
+  position: absolute;
+  top: 50%;
+  right: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--mc-muted);
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: color 0.16s ease, background-color 0.16s ease;
+}
+
+.apiKeyToggle:hover:not(:disabled) {
+  color: var(--mc-coral);
+  background: var(--mc-coral-soft);
+}
+
+.apiKeyToggle:focus-visible {
+  outline: 2px solid rgba(224, 61, 75, 0.5);
+  outline-offset: 1px;
+}
+
+.apiKeyToggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.apiKeyToggle[aria-busy='true'] {
+  cursor: wait;
+}
+
+.apiKeySpinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: apiKeySpin 0.7s linear infinite;
+}
+
+@keyframes apiKeySpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .fieldHint {
   margin: 8px 0 0;
   font-size: 12px;

@@ -28,6 +28,10 @@ export interface AdminImageGenModelsData {
   count: number;
 }
 
+export interface AdminImageGenApiKeyData {
+  openaiApiKey: string;
+}
+
 export interface SaveImageGenConfigPayload {
   openaiBaseUrl?: string;
   openaiApiKey?: string;
@@ -38,6 +42,9 @@ const adminImageGenConfigApi = {
   /** 功能注释：读取各模块当前生图模型 + 独立网关 */
   getConfig: () =>
     api.get<ApiResponse<AdminImageGenConfigData>>('/admin/image-gen-config'),
+
+  getApiKey: () =>
+    api.get<ApiResponse<AdminImageGenApiKeyData>>('/admin/image-gen-config/api-key'),
 
   saveConfig: (payload: SaveImageGenConfigPayload) =>
     api.put<ApiResponse<AdminImageGenConfigData>>('/admin/image-gen-config', payload),

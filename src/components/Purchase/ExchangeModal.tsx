@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import { auth } from '../../api/account/authApi';
 import { useAuthStore } from '../../store/useAuthStore';
 import { getApiErrorMessage } from '../../utils/error';
-import { getExchangeDiscountForPlan } from '../../lib/galgame/playBilling';
 import CurrencyIcon from '../CurrencyIcon';
 import styles from './ExchangeModal.module.css';
 
@@ -33,11 +32,10 @@ const ExchangeModal: React.FC<ExchangeModalProps> = ({ isOpen, onClose, onSucces
     const [pointsInput, setPointsInput] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const currentDiamonds = user?.user?.diamonds ?? 0;
+    const currentDiamonds = user?.user?.kkBalance?.permanent ?? user?.user?.diamonds ?? 0;
     const currentPoints = user?.user?.points ?? 0;
     const pointsToExchange = Number.parseInt(pointsInput, 10) || 0;
-    const memberDiscount = getExchangeDiscountForPlan(user?.user?.memberPlan);
-    const estimatedDiamondsCost = Math.ceil(pointsToExchange * memberDiscount);
+    const estimatedDiamondsCost = pointsToExchange;
 
     const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
@@ -174,11 +172,6 @@ const ExchangeModal: React.FC<ExchangeModalProps> = ({ isOpen, onClose, onSucces
                     <div className={styles.previewCard}>
                         <span className={styles.previewLabel}>{t('exchangeModal.willSpend')}</span>
                         <span className={styles.previewValue}>
-                        {memberDiscount < 1 && (
-                            <span className={styles.previewDiamondOrig}>
-                                -{pointsToExchange}
-                            </span>
-                        )}
                             <span className={styles.previewDiamond}>
                                 -{estimatedDiamondsCost} {t('exchangeModal.diamonds')}
                             </span>

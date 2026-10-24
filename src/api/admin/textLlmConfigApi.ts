@@ -26,6 +26,10 @@ export interface AdminTextLlmModelsData {
   count: number;
 }
 
+export interface AdminTextLlmApiKeyData {
+  openaiApiKey: string;
+}
+
 export interface SaveTextLlmConfigPayload {
   openaiBaseUrl?: string;
   openaiApiKey?: string;
@@ -35,6 +39,11 @@ export interface SaveTextLlmConfigPayload {
 const adminTextLlmConfigApi = {
   getConfig: () =>
     api.get<ApiResponse<AdminTextLlmConfigData>>('/admin/text-llm-config'),
+
+  getApiKey: (openaiBaseUrl?: string) =>
+    api.get<ApiResponse<AdminTextLlmApiKeyData>>('/admin/text-llm-config/api-key', {
+      params: openaiBaseUrl ? { openaiBaseUrl } : undefined,
+    }),
 
   saveConfig: (payload: SaveTextLlmConfigPayload) =>
     api.put<ApiResponse<AdminTextLlmConfigData>>('/admin/text-llm-config', payload),

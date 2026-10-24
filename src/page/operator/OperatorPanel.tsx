@@ -24,8 +24,9 @@ import adminStyles from '../AdminPanel.module.css';
 import styles from './OperatorPanel.module.css';
 import gamePublishAppealsApi from '../../api/gamePublishAppeals/gamePublishAppealsApi';
 import AiModelCenter from '../../components/AiModelCenter';
+import PlatformBenefitsManager from '../../components/PlatformBenefitsManager';
 
-type OperatorTab = 'stats' | 'reports' | 'promotions' | 'recruitment' | 'specialAuthors' | 'platformWorks' | 'promoters' | 'dailyTasks' | 'withdraw' | 'aiModelCenter';
+type OperatorTab = 'stats' | 'reports' | 'promotions' | 'recruitment' | 'specialAuthors' | 'platformWorks' | 'promoters' | 'dailyTasks' | 'withdraw' | 'aiModelCenter' | 'platformBenefits';
 type WorksSortField = 'playCount' | 'pv' | 'shareCount';
 type SortDirection = 'asc' | 'desc';
 
@@ -46,6 +47,7 @@ const resolveOperatorTab = (pathname: string): OperatorTab => {
   if (pathname.startsWith('/operator/daily-tasks')) return 'dailyTasks';
   if (pathname.startsWith('/operator/withdraw')) return 'withdraw';
   if (pathname.startsWith('/operator/ai-model-center')) return 'aiModelCenter';
+  if (pathname.startsWith('/operator/platform-benefits')) return 'platformBenefits';
   return 'stats';
 };
 
@@ -79,6 +81,7 @@ const OperatorPanel: React.FC = () => {
     { id: 'promotions', label: t('operator.tabs.promotions'), path: '/operator/promotion' },
     { id: 'recruitment', label: t('operator.tabs.recruitment'), path: '/operator/recruitment' },
     { id: 'aiModelCenter', label: 'AI 模型中心', path: '/operator/ai-model-center' },
+    { id: 'platformBenefits', label: t('operator.tabs.platformBenefits'), path: '/operator/platform-benefits' },
     ...(isAdmin ? [
       { id: 'specialAuthors' as const, label: t('operator.tabs.specialAuthors'), path: '/operator/special-authors' },
       { id: 'platformWorks' as const, label: t('operator.tabs.platformWorks'), path: '/operator/platform-works' },
@@ -444,6 +447,7 @@ const OperatorPanel: React.FC = () => {
             {activeTab === 'promoters' ? <CreatorIncentiveAdminManager /> : null}
             {activeTab === 'dailyTasks' ? renderDailyTasks() : null}
             {activeTab === 'aiModelCenter' ? <AiModelCenter isAdmin={false} /> : null}
+            {activeTab === 'platformBenefits' ? <PlatformBenefitsManager /> : null}
           </section>
         </div>
       </div>

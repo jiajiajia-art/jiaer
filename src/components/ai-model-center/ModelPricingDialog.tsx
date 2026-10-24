@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FiPlus, FiTrash2, FiX } from 'react-icons/fi';
+import { FiEye, FiEyeOff, FiPlus, FiTrash2, FiX } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+import adminImageGenConfigApi from '../../api/admin/imageGenConfigApi';
+import adminTextLlmConfigApi from '../../api/admin/textLlmConfigApi';
 import aiModelCenterApi, {
   type AiModelPricingLifecycle,
   type AiModelPricingVersion,
@@ -53,9 +55,10 @@ interface Props {
   model: AiModelCatalogCard;
   onClose: () => void;
   onChanged: () => Promise<void> | void;
+  showGatewayCredentials?: boolean;
 }
 
-const ModelPricingDialog: React.FC<Props> = ({ model, onClose, onChanged }) => {
+const ModelPricingDialog: React.FC<Props> = ({ model, onClose, onChanged, showGatewayCredentials = false }) => {
   const [lifecycle, setLifecycle] = useState<AiModelPricingLifecycle | null>(null);
   const [textForm, setTextForm] = useState(blankText);
   const [imageForm, setImageForm] = useState(blankImage);
@@ -63,6 +66,11 @@ const ModelPricingDialog: React.FC<Props> = ({ model, onClose, onChanged }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [apiKey, setApiKey] = useState('');
+  const [apiKeyLoaded, setApiKeyLoaded] = useState(false);
+  const [apiKeyVisible, setApiKeyVisible] = useState(false);
+  const [apiKeyLoading, setApiKeyLoading] = useState(false);
+  const [apiKeyError, setApiKeyError] = useState('');
 
   const load = async () => {
     setLoading(true); setError('');
@@ -79,7 +87,39 @@ const ModelPricingDialog: React.FC<Props> = ({ model, onClose, onChanged }) => {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { void load(); }, [model.id]);
+  useEffect(() => {
+    setApiKey('');
+    setApiKeyLoaded(false);
+    setApiKeyVisible(false);
+    setApiKeyError('');
+    void load();
+  }, [model.id]);
+
+  const toggleApiKey = async () => {
+    if (apiKeyVisible) {
+      setApiKeyVisible(false);
+      return;
+    }
+    if (apiKeyLoaded) {
+      setApiKeyVisible(true);
+      return;
+    }
+
+    setApiKeyLoading(true);
+    setApiKeyError('');
+    try {
+      const response = model.capability === 'text'
+        ? await adminTextLlmConfigApi.getApiKey(model.sourceBaseUrl)
+        : await adminImageGenConfigApi.getApiKey();
+      setApiKey(String(response.data.data?.openaiApiKey || ''));
+      setApiKeyLoaded(true);
+      setApiKeyVisible(true);
+    } catch (requestError) {
+      setApiKeyError(getApiErrorMessage(requestError, 'API Key 读取失败'));
+    } finally {
+      setApiKeyLoading(false);
+    }
+  };
 
   const saveDraft = async () => {
     setSaving(true); setError('');
@@ -143,6 +183,28 @@ const ModelPricingDialog: React.FC<Props> = ({ model, onClose, onChanged }) => {
             <div><span>渠道</span><strong>{model.sourceGatewayLabel}</strong></div>
             <div><span>模型 ID</span><code>{model.modelId}</code></div>
           </div>
+          {showGatewayCredentials ? (
+            <div className={styles.readonly}>
+              <div><span>渠道 URL</span><code>{model.sourceBaseUrl || '未设置'}</code></div>
+              <div>
+                <span>API Key</span>
+                <div className={styles.credentialValue}>
+                  <code>{apiKeyVisible ? (apiKey || '未保存') : '••••••••••••'}</code>
+                  <button
+                    type="button"
+                    className={`${styles.iconButton} ${styles.secretButton}`}
+                    aria-label={apiKeyVisible ? '隐藏 API Key' : '显示 API Key'}
+                    aria-busy={apiKeyLoading}
+                    disabled={apiKeyLoading}
+                    onClick={() => void toggleApiKey()}
+                  >
+                    {apiKeyVisible ? <FiEyeOff aria-hidden /> : <FiEye aria-hidden />}
+                  </button>
+                </div>
+                {apiKeyError ? <small className={styles.credentialError}>{apiKeyError}</small> : null}
+              </div>
+            </div>
+          ) : null}
           {loading ? <p>加载中…</p> : null}
           {error ? <div className={styles.error} role="alert">{error}</div> : null}
           {!loading && model.capability === 'text' ? (

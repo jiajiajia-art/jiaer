@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { IoChevronDown } from 'react-icons/io5';
-import { MdContentCopy, MdOutlineEdit } from 'react-icons/md';
+import { MdContentCopy, MdOutlineEdit, MdOutlineTaskAlt } from 'react-icons/md';
+import { RiAccountCircleLine } from 'react-icons/ri';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -9,12 +10,10 @@ import Navbar from '../components/Layout/Navbar';
 import FooterArea from '../components/Layout/FooterArea';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import RechargeModal from '../components/Purchase/RechargeModal';
-import ExchangeModal from '../components/Purchase/ExchangeModal';
 import CreatorWorksPanel from '../components/Create/CreatorWorksPanel';
 import ProfileFunctionPanel from '../components/Profile/ProfileFunctionPanel';
 import VipStatusModal from '../components/Profile/VipStatusModal';
 import InviteCampaignCard from '../components/Profile/InviteCampaignCard';
-import TodayEarnPointsPanel from '../components/Profile/TodayEarnPointsPanel';
 import ProfilePreferenceModal from '../components/ProfilePreferenceModal';
 import { useAuthStore } from '../store/useAuthStore';
 import statisticsApi from '../api/statistics/statisticsApi';
@@ -71,7 +70,6 @@ const Create: React.FC = () => {
     const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
     const [isMembershipRechargeModalOpen, setIsMembershipRechargeModalOpen] = useState(false);
     const [isVipStatusModalOpen, setIsVipStatusModalOpen] = useState(false);
-    const [isExchangeModalOpen, setIsExchangeModalOpen] = useState(false);
     const [streakDays, setStreakDays] = useState(0);
     const [isStatsExpanded, setIsStatsExpanded] = useState(false);
     const [isEditNicknameOpen, setIsEditNicknameOpen] = useState(false);
@@ -463,13 +461,24 @@ const Create: React.FC = () => {
 
                             <div className={styles.creatorHeroStats}>
                                 <div className={styles.primaryStatsBar}>
-                                    <div className={styles.primaryStatItem}>
-                                        <div className={styles.primaryStatValue}>{stats.totalCreated}</div>
-                                        <div className={styles.primaryStatLabel}>{t('create.totalCreated')}</div>
-                                    </div>
-                                    <div className={styles.primaryStatItem}>
-                                        <div className={styles.primaryStatValue}>{creatorStats?.likeCount ?? 0}</div>
-                                        <div className={styles.primaryStatLabel}>{t('creatorStats.totalLikes')}</div>
+                                    <div
+                                        className={`${styles.primaryStatItem} ${styles.primaryStatItemClickable}`}
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={() => navigate('/asset/details')}
+                                        onKeyDown={(event) => {
+                                            if (event.key === 'Enter' || event.key === ' ') {
+                                                event.preventDefault();
+                                                navigate('/asset/details');
+                                            }
+                                        }}
+                                    >
+                                        <div className={styles.primaryStatValue}>
+                                            {formatKk(user?.user?.kkBalance?.total ?? user?.user?.diamonds ?? 0)}
+                                        </div>
+                                        <div className={styles.primaryStatLabel}>
+                                            KK币（含{formatKk(user?.user?.kkBalance?.limited ?? 0)}限时KK币）
+                                        </div>
                                     </div>
                                     <div
                                         className={`${styles.primaryStatItem} ${styles.primaryStatItemClickable}`}
@@ -486,25 +495,13 @@ const Create: React.FC = () => {
                                         <div className={styles.primaryStatValue}>{user?.user?.points ?? 0}</div>
                                         <div className={styles.primaryStatLabel}>{t('create.pointsStat')}</div>
                                     </div>
-                                    <div
-                                        className={`${styles.primaryStatItem} ${styles.primaryStatItemClickable}`}
-                                        role="button"
-                                        tabIndex={0}
-                                        onClick={() => navigate('/asset/details')}
-                                        onKeyDown={(event) => {
-                                            if (event.key === 'Enter' || event.key === ' ') {
-                                                event.preventDefault();
-                                                navigate('/asset/details');
-                                            }
-                                        }}
-                                    >
-                                        <div className={`${styles.primaryStatValue} ${styles.primaryStatValueWithHint}`}>
-                                            <span>{formatKk(user?.user?.kkBalance?.total ?? user?.user?.diamonds ?? 0)}</span>
-                                            <span className={styles.primaryStatValueHint}>
-                                                （含{formatKk(user?.user?.kkBalance?.limited ?? 0)}限时币）
-                                            </span>
-                                        </div>
-                                        <div className={styles.primaryStatLabel}>KK币</div>
+                                    <div className={styles.primaryStatItem}>
+                                        <div className={styles.primaryStatValue}>{stats.totalCreated}</div>
+                                        <div className={styles.primaryStatLabel}>{t('create.totalCreated')}</div>
+                                    </div>
+                                    <div className={styles.primaryStatItem}>
+                                        <div className={styles.primaryStatValue}>{creatorStats?.likeCount ?? 0}</div>
+                                        <div className={styles.primaryStatLabel}>{t('creatorStats.totalLikes')}</div>
                                     </div>
                                 </div>
 
@@ -587,22 +584,22 @@ const Create: React.FC = () => {
                                 <button
                                     type="button"
                                     className={styles.accountActionItem}
-                                    onClick={() => setIsMembershipRechargeModalOpen(true)}
+                                    onClick={() => navigate('/asset/details')}
                                 >
                                     <span className={styles.accountActionIcon}>
-                                        <img src={`${import.meta.env.BASE_URL}data/assetsv2/personal/member.svg`} alt="" />
+                                        <RiAccountCircleLine aria-hidden="true" />
                                     </span>
-                                    <span className={styles.accountActionLabel}>{t('create.accountMembership')}</span>
+                                    <span className={styles.accountActionLabel}>{t('create.accountDetails')}</span>
                                 </button>
                                 <button
                                     type="button"
                                     className={styles.accountActionItem}
-                                    onClick={() => setIsExchangeModalOpen(true)}
+                                    onClick={() => navigate('/points/earn')}
                                 >
                                     <span className={styles.accountActionIcon}>
-                                        <img src={`${import.meta.env.BASE_URL}data/assetsv2/personal/mall.svg`} alt="" />
+                                        <MdOutlineTaskAlt aria-hidden="true" />
                                     </span>
-                                    <span className={styles.accountActionLabel}>{t('create.accountPointsMall')}</span>
+                                    <span className={styles.accountActionLabel}>{t('create.accountEarnPoints')}</span>
                                 </button>
                                 <button
                                     type="button"
@@ -617,7 +614,6 @@ const Create: React.FC = () => {
                             </div>
                         </div>
                         <InviteCampaignCard />
-                        <TodayEarnPointsPanel />
                         <ProfileFunctionPanel />
                     </div>
 
@@ -651,13 +647,6 @@ const Create: React.FC = () => {
                 onClose={() => setIsMembershipRechargeModalOpen(false)}
                 onRecharge={handleRecharge}
                 fixedTab="membership"
-            />
-            <ExchangeModal
-                isOpen={isExchangeModalOpen}
-                onClose={() => setIsExchangeModalOpen(false)}
-                onSuccess={() => {
-                    void getUserInfo();
-                }}
             />
             {isEditNicknameOpen && (
                 <div className={styles.editNicknameOverlay} onClick={closeEditNickname}>

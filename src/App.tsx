@@ -54,6 +54,7 @@ import PromotionCenter from './page/PromotionCenter';
 import Messages from './page/Messages';
 import AssetDetails from './page/AssetDetails';
 import PointsDetails from './page/PointsDetails';
+import EarnPoints from './page/EarnPoints';
 import Document from './page/Document';
 import DeveloperExternalGames from './page/external/DeveloperExternalGames';
 import DeveloperCliAuthorize from './page/external/DeveloperCliAuthorize';
@@ -189,8 +190,10 @@ function App() {
           <Route path="/operator/daily-tasks" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/withdraw" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/ai-model-center" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/platform-benefits" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/works/:fileId/stats" element={<OperatorRoute><OperatorWorkStats /></OperatorRoute>} />
           <Route path="/points/details" element={<PointsDetails />} />
+          <Route path="/points/earn" element={<EarnPoints />} />
           <Route path="/createGame" element={<CreateGame />} />
           <Route path="/warehouse" element={<WarehouseHub />}>
             <Route index element={<Navigate to="persona" replace />} />
