@@ -1,5 +1,5 @@
 import React from 'react';
-import CommentAdminManager from '../components/Admin/CommentAdminManager.tsx';
+import CommentAdminManager from '../components/admin/CommentAdminManager.tsx';
 import styles from '../page/AdminPanel.module.css';
 
 const CommentAdminPage: React.FC = () => {

@@ -155,6 +155,12 @@ const protectAllowedInlineTags = (text: string, transform: (value: string) => st
     return transform(protectedText).replace(/\u0000(\d+)\u0000/g, (_match, index) => placeholders[Number(index)] || '');
 };
 
+/** 功能注释：剥掉漏进正文的 NPC 内部 id，如 fan_shengmei: */
+const stripLeakedSpeakerIdPrefix = (text: string): string => String(text || '').replace(
+    /(^|[\s，。！？、；：])([A-Za-z][A-Za-z0-9]*(?:_[A-Za-z0-9]+)+)\s*[:：]\s*/g,
+    '$1',
+);
+
 const stripOrphanLowercaseEnglishNoise = (text: string): string => {
     if (!CHINESE_DISPLAY_TEXT_REGEX.test(text)) return text;
     let changed = false;
@@ -230,6 +236,7 @@ export const sanitizeVisualDisplayText = (text: string): string => {
     if (!value) return '';
     value = stripVisualProtocolFragmentResidue(value, true).trim();
     if (!value) return '';
+    value = stripLeakedSpeakerIdPrefix(value);
     value = stripInvalidAngleBrackets(value);
     value = removeUnbalancedQuoteResidue(value);
     value = stripOrphanLowercaseEnglishNoise(value);

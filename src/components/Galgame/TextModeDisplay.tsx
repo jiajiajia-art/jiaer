@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, memo } from 'react';
-import { extractPlainText } from '../../utils/textUtils';
+import { extractPlainText, sanitizeVisualDisplayText } from '../../utils/textUtils';
 import ColoredMarkdownText from './ColoredMarkdownText';
 import styles from './TextModeDisplay.module.css';
 import { useTranslation } from 'react-i18next';
@@ -91,10 +91,10 @@ const MessageItem = memo<MessageItemProps>(({
         // 当前步骤处于打字中：始终使用打字中的文本（即使刚开始还是空串）
         // 这样可以避免“先整段闪一下再开始打字”的问题
         if (isCurrentStep && isTyping) {
-            return currentDisplayText || '';
+            return sanitizeVisualDisplayText(currentDisplayText || '');
         }
         // 其它情况：显示完整内容（包括打字结束后的当前步骤，以及历史步骤）
-        return step.content || '';
+        return sanitizeVisualDisplayText(step.content || '');
     };
 
     if (step.type === 'narration' || step.type === 'transition') {
