@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FiEye, FiEyeOff, FiPlus, FiTrash2, FiX } from 'react-icons/fi';
+import { FiChevronDown, FiEye, FiEyeOff, FiPlus, FiTrash2, FiX } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import adminImageGenConfigApi from '../../api/admin/imageGenConfigApi';
 import adminTextLlmConfigApi from '../../api/admin/textLlmConfigApi';
@@ -17,6 +17,7 @@ import {
   type TextPricingDraftForm,
 } from '../../lib/aiModelCatalog';
 import { getApiErrorMessage } from '../../utils/error';
+import TextPricingPreview from './TextPricingPreview';
 import styles from './modelCatalog.module.css';
 
 const blankText = (): TextPricingDraftForm => ({
@@ -173,7 +174,7 @@ const ModelPricingDialog: React.FC<Props> = ({ model, onClose, onChanged, showGa
 
   return (
     <div className={styles.overlay} role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <section className={styles.dialog} role="dialog" aria-modal="true" aria-labelledby="pricing-dialog-title">
+      <section className={`${styles.dialog} ${model.capability === 'text' ? styles.pricingDialogWide : ''}`} role="dialog" aria-modal="true" aria-labelledby="pricing-dialog-title">
         <header className={styles.dialogHeader}>
           <div><h3 id="pricing-dialog-title">{model.displayName} · 计费配置</h3><p>计费版本独立发布，不影响其他模型。</p></div>
           <button type="button" className={styles.iconButton} aria-label="关闭计费配置" onClick={onClose}><FiX aria-hidden /></button>
@@ -214,9 +215,11 @@ const ModelPricingDialog: React.FC<Props> = ({ model, onClose, onChanged, showGa
                 <label className={styles.field}>输入真实成本（元 / 百万 Token）<input value={textForm.inputPrice} inputMode="decimal" onChange={(e) => setTextForm({ ...textForm, inputPrice: e.target.value })} /></label>
                 <label className={styles.field}>输出真实成本（元 / 百万 Token）<input value={textForm.outputPrice} inputMode="decimal" onChange={(e) => setTextForm({ ...textForm, outputPrice: e.target.value })} /></label>
                 <label className={styles.field}>缓存命中成本（元 / 百万 Token）<input value={textForm.cachedInputPrice} inputMode="decimal" onChange={(e) => setTextForm({ ...textForm, cachedInputPrice: e.target.value })} /></label>
-                <label className={styles.field}>用户价格倍率<input value={textForm.multiplier} inputMode="decimal" onChange={(e) => setTextForm({ ...textForm, multiplier: e.target.value })} /><span className={styles.helper}>1 表示不加价，权益折扣在动态价之后应用。</span></label>
+                <label className={styles.field}>用户价格倍率（x1 表示不加价，权益折扣在动态价之后应用）<input value={textForm.multiplier} inputMode="decimal" onChange={(e) => setTextForm({ ...textForm, multiplier: e.target.value })} /></label>
               </div>
-              <label className={styles.field}>版本备注<textarea value={textForm.remark} onChange={(e) => setTextForm({ ...textForm, remark: e.target.value })} /></label>
+              {lifecycle?.previewContext ? (
+                <TextPricingPreview pricing={textForm} context={lifecycle.previewContext} />
+              ) : null}
             </>
           ) : null}
           {!loading && model.capability === 'image' ? (
@@ -231,13 +234,30 @@ const ModelPricingDialog: React.FC<Props> = ({ model, onClose, onChanged, showGa
                   <button type="button" className={styles.iconButton} aria-label={`删除比例档位 ${index + 1}`} onClick={() => setImageForm({ ...imageForm, tiers: imageForm.tiers.filter((_, i) => i !== index) })}><FiTrash2 aria-hidden /></button>
                 </div>
               ))}</div>
-              <label className={styles.field}>版本备注<textarea value={imageForm.remark} onChange={(e) => setImageForm({ ...imageForm, remark: e.target.value })} /></label>
             </>
           ) : null}
           <div className={styles.fieldGrid}>
             <label className={styles.field}>未来生效时间（可选）<input type="datetime-local" value={effectiveAt} onChange={(e) => setEffectiveAt(e.target.value)} /></label>
           </div>
-          {history.length ? <div><strong>发布记录</strong><ul className={styles.history}>{history.map((version) => <li key={version.id}><code>{version.versionCode}</code><span>{version.effectiveAt ? new Date(version.effectiveAt).toLocaleString() : '未设置'}</span></li>)}</ul></div> : null}
+          {!loading ? (
+            <label className={styles.field}>
+              版本备注（备注内容为发布记录留存显示文本）
+              {model.capability === 'text' ? (
+                <textarea value={textForm.remark} onChange={(e) => setTextForm({ ...textForm, remark: e.target.value })} />
+              ) : (
+                <textarea value={imageForm.remark} onChange={(e) => setImageForm({ ...imageForm, remark: e.target.value })} />
+              )}
+            </label>
+          ) : null}
+          {history.length ? (
+            <details className={styles.historyDisclosure}>
+              <summary className={styles.historySummary}>
+                <span>发布记录</span>
+                <span className={styles.historySummaryMeta}>{history.length} 条 <FiChevronDown aria-hidden /></span>
+              </summary>
+              <ul className={styles.history}>{history.map((version) => <li key={version.id}><code>{version.versionCode}</code><span>{version.effectiveAt ? new Date(version.effectiveAt).toLocaleString() : '未设置'}</span></li>)}</ul>
+            </details>
+          ) : null}
           <div className={styles.dialogActions}><button type="button" className={styles.secondary} onClick={onClose}>关闭</button><div className={styles.cardActions}><button type="button" className={styles.secondary} disabled={saving || loading} onClick={() => void saveDraft()}>{saving ? '处理中…' : '保存草稿'}</button><button type="button" className={styles.primary} disabled={saving || loading || !lifecycle?.draft} onClick={() => void publish()}>发布版本</button></div></div>
         </div>
       </section>

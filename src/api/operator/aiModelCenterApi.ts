@@ -5,6 +5,12 @@ import type {
   AiModelCapability,
   AiModelPricingStatus,
 } from '../../lib/aiModelCatalog';
+export interface AiTextPricingPreviewContext {
+  textUserBasePricePer1kX10000: number;
+  memberChargePercent: number;
+  kkPerYuan: number;
+  kkMinorScale: number;
+}
 
 export interface ImageBillingTier {
   id?: number;
@@ -190,6 +196,7 @@ export interface AiModelPricingLifecycle {
   scheduled: AiModelPricingVersion | null;
   active: AiModelPricingVersion | null;
   history: AiModelPricingVersion[];
+  previewContext: AiTextPricingPreviewContext | null;
 }
 
 export type ModelPricingDraftPayload = {
