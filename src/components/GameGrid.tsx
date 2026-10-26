@@ -182,6 +182,7 @@ const GameGrid: React.FC<GameGridProps> = ({
                 const isUnpublished = Number(meta.is_public) !== 1;
                 const moderationStatus = String(meta.moderationStatus || meta.moderation_status || 'none');
                 const isTakenDown = moderationStatus === 'taken_down';
+                const isPendingReview = moderationStatus === 'pending_review';
                 const selectableId = getSelectableId(meta);
                 const isSelected = selectableId ? selectedIds.includes(selectableId) : false;
                 const body = resolveGameCardBody(meta);
@@ -275,7 +276,7 @@ const GameGrid: React.FC<GameGridProps> = ({
                                 </div>
                             )}
 
-                            {showUnpublishedBadge && isUnpublished && !isTakenDown && (
+                            {showUnpublishedBadge && isUnpublished && !isTakenDown && !isPendingReview && (
                                 <div className={styles.unpublishedTag} title={t('favorites.unpublished')}>
                                     {t('favorites.unpublished')}
                                 </div>
@@ -284,6 +285,12 @@ const GameGrid: React.FC<GameGridProps> = ({
                             {showTakenDownBadge && isTakenDown && (
                                 <div className={styles.takenDownTag} title={t('report.takenDownBadge')}>
                                     {t('report.takenDownBadge')}
+                                </div>
+                            )}
+
+                            {showTakenDownBadge && isPendingReview && (
+                                <div className={styles.pendingReviewTag} title={t('report.pendingReviewBadge')}>
+                                    {t('report.pendingReviewBadge')}
                                 </div>
                             )}
 

@@ -85,6 +85,7 @@ const PUNISHMENT_ERROR_KEYS: Record<string, string> = {
     creator_frozen: 'apiErrors.creatorFrozen',
     publish_need_review: 'apiErrors.publishNeedReview',
     login_banned: 'apiErrors.loginBanned',
+    ban_login_forbidden: 'apiErrors.banLoginForbidden',
     appeal_window_expired: 'apiErrors.appealWindowExpired',
     duplicate_appeal: 'apiErrors.duplicateAppeal',
     already_revoked: 'apiErrors.alreadyRevoked',
@@ -92,8 +93,23 @@ const PUNISHMENT_ERROR_KEYS: Record<string, string> = {
     admin_required: 'apiErrors.adminRequired',
 };
 
+/** 功能注释：举报码优先本地文案（对象级 pending 互斥等），覆盖后端旧「仅本人」message */
+const REPORT_ERROR_KEYS: Record<string, string> = {
+    duplicate_pending: 'apiErrors.duplicatePending',
+    already_upheld: 'apiErrors.alreadyUpheld',
+    report_cooldown: 'apiErrors.reportCooldown',
+    cannot_report_self: 'apiErrors.cannotReportSelf',
+    target_not_found: 'apiErrors.targetNotFound',
+    invalid_reason: 'apiErrors.invalidReason',
+};
+
+const API_ERROR_KEYS: Record<string, string> = {
+    ...PUNISHMENT_ERROR_KEYS,
+    ...REPORT_ERROR_KEYS,
+};
+
 export function messageForApiCode(code?: string | null): string | null {
-    const key = code ? PUNISHMENT_ERROR_KEYS[code] : '';
+    const key = code ? API_ERROR_KEYS[code] : '';
     if (!key) return null;
     return i18n.t(key);
 }
@@ -112,6 +128,11 @@ export const getApiErrorMessage = (
             return fallback;
         }
         const code = typeof data?.code === 'string' ? data.code : '';
+        // 功能注释：举报业务码用前端文案，不依赖后端是否已改对象互斥文案
+        if (code && REPORT_ERROR_KEYS[code]) {
+            const coded = messageForApiCode(code);
+            if (coded) return coded;
+        }
         const raw = data?.message || data?.error || '';
         if (raw) {
             return sanitizeUpstreamLlmErrorMessage(String(raw), fallback);

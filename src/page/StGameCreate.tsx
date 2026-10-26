@@ -18,6 +18,7 @@ import PublishSettingsModal, { type PublishSubmitPayload } from '../components/C
 import GameAction from '../api/rpgGame/gameAction';
 import toast from 'react-hot-toast';
 import { getApiErrorMessage } from '../utils/error';
+import { isPublishPendingReview } from '../lib/publishReview';
 
 const emptyConfig: StConfig = {
   regex: [],
@@ -743,6 +744,15 @@ const StGameCreate: React.FC = () => {
         const errorMessage = response.data.message || t('stGameCreate.publishFailed');
         toast.error(errorMessage);
         return;
+      }
+
+      if (isPublishPendingReview(response.data)) {
+        toast.success(
+          response.data.message?.trim()
+          || t('report.publishPendingReviewSuccess'),
+        );
+      } else {
+        toast.success(response.data.message?.trim() || t('createGame.publishSuccess'));
       }
 
       setShowPublishModal(false);

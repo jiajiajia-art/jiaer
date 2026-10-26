@@ -94,8 +94,12 @@ export interface MessageModerationNotification {
     /** 功能注释：短违规原因（列表卡片用）；缺省时前端降级用 body */
     reason?: string | null;
     recordType?: string;
+    /** 功能注释：如 game；发布审核透传，便于详情/跳转 */
+    sourceType?: string | null;
     level?: number | null;
     status?: string;
+    /** 功能注释：publish_review 恒为 false；处罚类按后端窗口计算 */
+    canAppeal?: boolean;
     relatedGameId?: string | null;
     createdAt: string | null;
     publishedAt?: string | null;

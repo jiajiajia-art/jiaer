@@ -13,12 +13,12 @@ import adminReportApi, {
 } from '../../api/admin/adminReportApi';
 import type { AdminAppealDetail } from '../../api/appeal/appeal.type';
 import ConfirmModal from '../CommonModal/ConfirmModal';
-import { useAuthStore } from '../../store/useAuthStore';
-import { isAdminRole } from '../../utils/userRoles';
 import { getApiErrorMessage } from '../../utils/error';
 import reportApi from '../../api/report/reportApi';
 import type { ReportReasonItem } from '../../api/report/report.type';
 import { resolveEvidenceImageUrl } from '../../utils/evidenceImageUrl';
+import { useAuthStore } from '../../store/useAuthStore';
+import { isAdminRole } from '../../utils/userRoles';
 import styles from './CommentAdminManager.module.css';
 import local from './ContentReportAdminManager.module.css';
 
@@ -42,6 +42,7 @@ const RECORD_TYPE_LABEL: Record<string, string> = {
   warning: '警告',
   penalty: '处罚',
   appeal: '申诉',
+  publish_review: '发布审核',
 };
 
 const HISTORY_STATUS_LABEL: Record<string, string> = {
@@ -55,6 +56,15 @@ const HISTORY_STATUS_LABEL: Record<string, string> = {
 };
 
 const LEVEL_LABEL = ['', '一', '二', '三', '四'];
+const ALL_PENALTY_LEVELS = [1, 2, 3, 4] as const;
+
+/** 功能注释：直达处罚只能选高于当前生效等级的档位 */
+const selectablePenaltyLevels = (
+  activeLevel?: number | null,
+): Array<1 | 2 | 3 | 4> => {
+  const current = Number(activeLevel) || 0;
+  return ALL_PENALTY_LEVELS.filter((level) => level > current);
+};
 
 const formatHistoryTitle = (recordType: string, level?: number | null): string => {
   const name = RECORD_TYPE_LABEL[recordType] || recordType;
@@ -106,8 +116,8 @@ const listObjectLabel = (row: AdminReportListItem): string => {
 };
 
 const ContentReportAdminManager: React.FC = () => {
-  const role = useAuthStore((s) => s.user?.user?.role);
-  const isAdmin = isAdminRole(role);
+  const viewerRole = useAuthStore((s) => s.user?.user?.role);
+  const canBanLogin = isAdminRole(viewerRole);
 
   const [innerTab, setInnerTab] = useState<InnerTab>('reports');
 
@@ -131,9 +141,12 @@ const ContentReportAdminManager: React.FC = () => {
   const [resetAvatar, setResetAvatar] = useState(false);
   const [resetNickname, setResetNickname] = useState(false);
   const [resetBio, setResetBio] = useState(false);
-  /** P0.5：严重直达，跳过凑满 3 次警告 */
+  /** P0.5：勾选严重直达（未满 2 次有效警告时才显示） */
   const [severeMode, setSevereMode] = useState(false);
   const [penaltyLevel, setPenaltyLevel] = useState<1 | 2 | 3 | 4>(1);
+  /** 仅 admin：四级成立时可勾禁登录 */
+  const [banLogin, setBanLogin] = useState(false);
+  const [punishmentActionBusy, setPunishmentActionBusy] = useState(false);
 
   const [confirmDecision, setConfirmDecision] = useState<'reject' | 'uphold' | null>(null);
   const [reviewing, setReviewing] = useState(false);
@@ -213,6 +226,16 @@ const ContentReportAdminManager: React.FC = () => {
     if (innerTab === 'penalties') void loadPenalties();
   }, [innerTab, loadPenalties]);
 
+  // 功能注释：当前处罚变化后，直达等级不得低于/等于已生效档
+  useEffect(() => {
+    if (!detail) return;
+    const levels = selectablePenaltyLevels(detail.ownerPunishment?.activePenaltyLevel);
+    if (levels.length === 0) return;
+    if (!levels.includes(penaltyLevel)) {
+      setPenaltyLevel(levels[0]);
+    }
+  }, [detail, penaltyLevel]);
+
   const openDetail = async (id: number) => {
     setDetailLoading(true);
     setHistoryPreview(null);
@@ -222,6 +245,7 @@ const ContentReportAdminManager: React.FC = () => {
     setResetBio(false);
     setSevereMode(false);
     setPenaltyLevel(1);
+    setBanLogin(false);
     try {
       const response = await adminReportApi.getReport(id);
       if (!response.data.success || !response.data.data) {
@@ -229,6 +253,10 @@ const ContentReportAdminManager: React.FC = () => {
       }
       const next = response.data.data;
       setDetail(next);
+      const nextLevels = selectablePenaltyLevels(next.ownerPunishment?.activePenaltyLevel);
+      if (nextLevels.length > 0) {
+        setPenaltyLevel(nextLevels[0]);
+      }
       if (next?.targetType && next.reasonCode && !reasonByCode[next.reasonCode]) {
         try {
           const reasons = await reportApi.getReasons(next.targetType);
@@ -260,6 +288,7 @@ const ContentReportAdminManager: React.FC = () => {
     setConfirmDecision(null);
     setSevereMode(false);
     setPenaltyLevel(1);
+    setBanLogin(false);
   };
 
   const applyPersonFilter = (role: PersonFilter['role'], userId: string, name: string) => {
@@ -315,11 +344,6 @@ const ContentReportAdminManager: React.FC = () => {
 
   const handleConfirmReview = async () => {
     if (!detail || !confirmDecision) return;
-    if (confirmDecision === 'uphold' && severeMode && penaltyLevel === 4 && !isAdmin) {
-      toast.error('四级处罚仅管理员可施加');
-      setConfirmDecision(null);
-      return;
-    }
     setReviewing(true);
     try {
       const resetFields: Array<'avatar' | 'nickname' | 'bio'> = [];
@@ -329,15 +353,21 @@ const ContentReportAdminManager: React.FC = () => {
         if (resetBio) resetFields.push('bio');
       }
 
+      // 功能注释：有效警告≥2 时与严重直达相同——只写处罚、不记警告
+      const directPenalty = (detail.ownerWarningCount ?? 0) >= 2 || severeMode;
+
       const actions: string[] = [];
       if (confirmDecision === 'uphold') {
-        if (severeMode) {
-          // 功能注释：严重直达只写处罚，不带 uphold_warn，避免叠警告通知
+        if (directPenalty) {
+          // 功能注释：直达处罚不带 uphold_warn，避免叠警告通知
           if (detail.targetType === 'game' || detail.targetType === 'post') {
             actions.push('uphold_takedown');
           }
           if (resetFields.length > 0) {
             actions.push('uphold_reset_profile');
+          }
+          if (canBanLogin && banLogin && penaltyLevel === 4) {
+            actions.push('uphold_ban_login');
           }
         } else if (resetFields.length > 0) {
           actions.push('uphold_warn', 'uphold_reset_profile');
@@ -347,7 +377,7 @@ const ContentReportAdminManager: React.FC = () => {
       const payload = {
         decision: confirmDecision,
         reviewNote: reviewNote.trim() || undefined,
-        ...(confirmDecision === 'uphold' && severeMode
+        ...(confirmDecision === 'uphold' && directPenalty
           ? { penaltyLevel }
           : {}),
         ...(confirmDecision === 'uphold' && actions.length > 0
@@ -367,6 +397,7 @@ const ContentReportAdminManager: React.FC = () => {
       setDetail(null);
       setSevereMode(false);
       setPenaltyLevel(1);
+      setBanLogin(false);
       void loadReports();
     } catch (error) {
       toast.error(getApiErrorMessage(error, '审核失败'));
@@ -893,11 +924,50 @@ const ContentReportAdminManager: React.FC = () => {
                     <div>
                       <span className={local.factLabel}>当前处罚</span>
                       {detail.ownerPunishment ? (
-                        <p className={local.factValue}>
-                          禁发至 {formatTime(detail.ownerPunishment.publishBanUntil)}
-                          ，等级 {detail.ownerPunishment.activePenaltyLevel ?? 0}
-                          {detail.ownerPunishment.homepageHidden ? '，主页已隐藏' : ''}
-                        </p>
+                        <>
+                          <p className={local.factValue}>
+                            禁发至 {formatTime(detail.ownerPunishment.publishBanUntil)}
+                            ，等级 {detail.ownerPunishment.activePenaltyLevel ?? 0}
+                            {detail.ownerPunishment.homepageHidden ? '，主页已隐藏' : ''}
+                            {detail.ownerPunishment.creatorFrozen ? '，创作者已冻结' : ''}
+                            {detail.ownerPunishment.publishNeedReview ? '，先审后发' : ''}
+                            {detail.ownerPunishment.loginBanned ? '，已禁登录' : ''}
+                            {detail.ownerPunishment.observationUntil
+                              ? `，观察期至 ${formatTime(detail.ownerPunishment.observationUntil)}`
+                              : ''}
+                          </p>
+                          {canBanLogin && detail.ownerPunishment.loginBanned ? (
+                            <div className={local.decisionRow} style={{ marginTop: 8 }}>
+                              <button
+                                type="button"
+                                className={`${local.decisionBtn} ${local.decisionReject}`}
+                                disabled={punishmentActionBusy || !detail.targetOwnerUserId}
+                                onClick={() => {
+                                  void (async () => {
+                                    if (!detail.targetOwnerUserId) return;
+                                    setPunishmentActionBusy(true);
+                                    try {
+                                      const response = await adminReportApi.clearLoginBan(
+                                        detail.targetOwnerUserId,
+                                      );
+                                      toast.success(response.data.message || '已解除禁登录');
+                                      const refreshed = await adminReportApi.getReport(detail.id);
+                                      if (refreshed.data.success && refreshed.data.data) {
+                                        setDetail(refreshed.data.data);
+                                      }
+                                    } catch (error) {
+                                      toast.error(getApiErrorMessage(error, '解禁登录失败'));
+                                    } finally {
+                                      setPunishmentActionBusy(false);
+                                    }
+                                  })();
+                                }}
+                              >
+                                解除禁登录
+                              </button>
+                            </div>
+                          ) : null}
+                        </>
                       ) : (
                         <p className={local.factValue}>无</p>
                       )}
@@ -981,44 +1051,87 @@ const ContentReportAdminManager: React.FC = () => {
                       </div>
                     ) : (
                       <p className={styles.cardDesc} style={{ margin: 0 }}>
-                        {severeMode
+                        {(detail.ownerWarningCount ?? 0) >= 2 || severeMode
                           ? '游戏成立后会下架，并直接按所选等级处罚（不记警告）。'
                           : '游戏成立后会下架，并记一次警告。'}
                       </p>
                     )}
 
-                    <label className={local.check}>
-                      <input
-                        type="checkbox"
-                        checked={severeMode}
-                        onChange={(e) => {
-                          const on = e.target.checked;
-                          setSevereMode(on);
-                          if (on && penaltyLevel === 4 && !isAdmin) setPenaltyLevel(1);
-                        }}
-                      />
-                      <span>严重直达，跳过凑满 3 次警告</span>
-                    </label>
-                    {severeMode ? (
-                      <>
-                        <label className={local.field}>
-                          <span className={local.fieldLabel}>处罚等级</span>
-                          <select
-                            className={local.control}
-                            value={penaltyLevel}
-                            onChange={(e) => setPenaltyLevel(Number(e.target.value) as 1 | 2 | 3 | 4)}
-                          >
-                            <option value={1}>一级</option>
-                            <option value={2}>二级</option>
-                            <option value={3}>三级</option>
-                            {isAdmin ? <option value={4}>四级（仅管理员）</option> : null}
-                          </select>
-                        </label>
-                        <p className={styles.cardDesc} style={{ margin: 0 }}>
-                          成立后直接按这个等级处罚。
-                          {!isAdmin ? '四级仅管理员可选。' : ''}
-                        </p>
-                      </>
+                    {/* 功能注释：即将满 3 次 → 只出示等级；否则保留「严重直达」勾选 */}
+                    {(detail.ownerWarningCount ?? 0) >= 2 ? (
+                      <p className={styles.cardDesc} style={{ margin: 0, fontSize: 12 }}>
+                        {(detail.ownerPunishment?.activePenaltyLevel ?? 0) >= 1
+                          ? '请直接选择处罚等级（不记警告）'
+                          : `有效警告已 ${detail.ownerWarningCount} 次，请直接选择处罚等级（不记警告）`}
+                      </p>
+                    ) : (
+                      <label className={local.check}>
+                        <input
+                          type="checkbox"
+                          checked={severeMode}
+                          onChange={(e) => {
+                            const on = e.target.checked;
+                            setSevereMode(on);
+                            if (on) {
+                              const levels = selectablePenaltyLevels(
+                                detail.ownerPunishment?.activePenaltyLevel,
+                              );
+                              if (levels.length > 0) setPenaltyLevel(levels[0]);
+                            }
+                          }}
+                        />
+                        <span>严重直达，跳过凑满 3 次警告</span>
+                      </label>
+                    )}
+                    {(detail.ownerWarningCount ?? 0) >= 2 || severeMode ? (
+                      (() => {
+                        const levels = selectablePenaltyLevels(
+                          detail.ownerPunishment?.activePenaltyLevel,
+                        );
+                        return (
+                          <>
+                            <label className={local.field}>
+                              <span className={local.fieldLabel}>处罚等级</span>
+                              {levels.length > 0 ? (
+                                <select
+                                  className={local.control}
+                                  value={penaltyLevel}
+                                  onChange={(e) => {
+                                    const next = Number(e.target.value) as 1 | 2 | 3 | 4;
+                                    setPenaltyLevel(next);
+                                    if (next !== 4) setBanLogin(false);
+                                  }}
+                                >
+                                  {levels.map((level) => (
+                                    <option key={level} value={level}>
+                                      {LEVEL_LABEL[level]}级
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <p className={styles.cardDesc} style={{ margin: 0, fontSize: 12 }}>
+                                  已是最高档处罚，无法再升档
+                                </p>
+                              )}
+                            </label>
+                            {levels.length > 0 ? (
+                              <p className={styles.cardDesc} style={{ margin: 0 }}>
+                                成立后直接按这个等级处罚。
+                              </p>
+                            ) : null}
+                            {canBanLogin && levels.includes(4) && penaltyLevel === 4 ? (
+                              <label className={local.check}>
+                                <input
+                                  type="checkbox"
+                                  checked={banLogin}
+                                  onChange={(e) => setBanLogin(e.target.checked)}
+                                />
+                                <span>同时禁登录（仅 admin，不可逆请谨慎）</span>
+                              </label>
+                            ) : null}
+                          </>
+                        );
+                      })()
                     ) : null}
 
                     <div className={local.decisionRow}>
@@ -1033,7 +1146,13 @@ const ContentReportAdminManager: React.FC = () => {
                       <button
                         type="button"
                         className={`${local.decisionBtn} ${local.decisionApprove}`}
-                        disabled={reviewing}
+                        disabled={
+                          reviewing
+                          || (
+                            ((detail.ownerWarningCount ?? 0) >= 2 || severeMode)
+                            && selectablePenaltyLevels(detail.ownerPunishment?.activePenaltyLevel).length === 0
+                          )
+                        }
                         onClick={() => setConfirmDecision('uphold')}
                       >
                         成立
@@ -1122,10 +1241,12 @@ const ContentReportAdminManager: React.FC = () => {
                     <span className={local.factLabel}>举报理由</span>
                     <p className={local.factValue}>{historyExtra.data.reasonTitle?.trim() || '—'}</p>
                   </div>
-                  <div>
-                    <span className={local.factLabel}>举报说明</span>
-                    <p className={local.factValue}>{historyExtra.data.reportDetail?.trim() || '—'}</p>
-                  </div>
+                  {historyExtra.data.reportDetail?.trim() ? (
+                    <div>
+                      <span className={local.factLabel}>审核备注</span>
+                      <p className={local.factValue}>{historyExtra.data.reportDetail.trim()}</p>
+                    </div>
+                  ) : null}
                   <div>
                     <span className={local.factLabel}>通知正文</span>
                     <p className={local.factValue}>{historyExtra.data.notifyBody?.trim() || '—'}</p>
@@ -1178,8 +1299,12 @@ const ContentReportAdminManager: React.FC = () => {
         title={confirmDecision === 'uphold' ? '确认成立该举报？' : '确认驳回该举报？'}
         message={
           confirmDecision === 'uphold'
-            ? (severeMode
-              ? `严重直达：将直接施加 ${penaltyLevel} 级处罚，不记警告。${penaltyLevel === 4 ? '四级可能导致禁登录。' : ''}`
+            ? (((detail?.ownerWarningCount ?? 0) >= 2 || severeMode)
+              ? `将直接施加 ${penaltyLevel} 级处罚，不记警告。${
+                canBanLogin && banLogin && penaltyLevel === 4
+                  ? '并禁登录该账号。'
+                  : ''
+              }`
               : '将按默认处置执行（游戏：下架+警告；账号：警告）。满 3 次有效警告会自动触发一级处罚。')
             : '驳回后举报人需等待 7 天冷却才可再报同一对象。'
         }

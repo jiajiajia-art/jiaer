@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { MdArrowBack, MdCheck, MdClose, MdContentCopy, MdDownload, MdEdit, MdPlayArrow, MdRefresh, MdSave } from 'react-icons/md';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import Navbar from '../components/Layout/Navbar';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
@@ -33,6 +34,7 @@ import {
 import { resolveCreatorEngine } from '../utils/miniProgram';
 import { flattenThemeTags, useLocalizedThemeTags, type FlatThemeTag } from '../utils/themeTags';
 import { getApiErrorMessage, messageForApiCode } from '../utils/error';
+import { isPublishPendingReview } from '../lib/publishReview';
 import styles from './InteractiveVideoEdit.module.css';
 
 const THEME_TAG_MIN = 1;
@@ -297,6 +299,7 @@ const getVideoEditErrorMessage = async (error: unknown, fallback: string) => {
 };
 
 const InteractiveVideoEdit: React.FC = () => {
+    const { t } = useTranslation();
     const { fileId = '' } = useParams<{ fileId: string }>();
     const navigate = useNavigate();
     const location = useLocation();
@@ -824,6 +827,7 @@ const InteractiveVideoEdit: React.FC = () => {
             }
             if (response.data.data) {
                 const published = response.data.data;
+                const pending = isPublishPendingReview(response.data);
                 setGameDetail((current) => current ? {
                     ...current,
                     is_public: Number(published.is_public),
@@ -833,11 +837,18 @@ const InteractiveVideoEdit: React.FC = () => {
                     price_amount: published.price_amount ?? current.price_amount,
                     special_price_amount: published.special_price_amount ?? current.special_price_amount,
                     updated_at: published.updated_at ?? current.updated_at,
+                    moderationStatus: pending
+                        ? 'pending_review'
+                        : (published.moderationStatus || published.moderation_status || current.moderationStatus),
                 } : current);
             }
             setShowPublishModal(false);
             navigate('/profile');
-            toast.success('互动影游已发布');
+            toast.success(
+                isPublishPendingReview(response.data)
+                    ? (response.data.message?.trim() || t('report.publishPendingReviewSuccess'))
+                    : (response.data.message?.trim() || t('createGame.publishSuccess')),
+            );
         } catch (error) {
             console.error('发布互动影游失败:', error);
             toast.error(await getVideoEditErrorMessage(error, '发布失败，请稍后重试。'));

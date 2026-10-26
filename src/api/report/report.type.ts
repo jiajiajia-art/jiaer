@@ -39,7 +39,11 @@ export type ContentBlockPayload = {
   targetId: string;
 };
 
-/** 举报提交业务错误码（R10 / R11） */
+/**
+ * 举报提交业务错误码（R10 / R11）
+ * - duplicate_pending：同一 (targetType, targetId) 已有任意用户的 pending（对象级互斥）
+ * - already_upheld / report_cooldown：仍按「同举报人 × 同对象」
+ */
 export type ReportErrorCode =
   | 'invalid_reason'
   | 'duplicate_pending'

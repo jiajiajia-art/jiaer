@@ -31,9 +31,13 @@
     "takenDownBadge": "Taken down",
     "publishLockedHint": "Public access requires appeal approval or staff restore",
     "publishBannedHint": "Publishing is restricted on this account",
+    "publishNeedReviewHint": "This account requires pre-review: submissions stay private until approved",
+    "publishPendingReviewSuccess": "Submitted for review. It will go public after approval.",
+    "pendingReviewBadge": "In review",
     "homeHiddenBanner": "Not visible to others",
     "homepageUnavailableDefault": "Temporarily unavailable due to a policy violation",
-    "createBannedHint": "Publishing is restricted; you cannot create new works right now"
+    "createBannedHint": "Publishing is restricted; you cannot create new works right now",
+    "creatorFrozenHint": "Creator features are frozen; you cannot create or publish right now"
   },
   "appeal": {
     "title": "Appeal",
@@ -99,16 +103,20 @@
   },
   "moderationAudit": {
     "pageTitle": "Account review",
+    "publishReviewPageTitle": "Publish review",
     "back": "Back",
     "accountId": "ID: {{code}}",
     "penaltySection": "Action",
+    "publishReviewSection": "Review result",
     "penaltyCount": "{{n}} item(s)",
     "effectiveLabel": "Effective",
+    "noticeTimeLabel": "Notified",
     "expired": "Expired",
     "permanent": "Permanent",
     "active": "In effect",
     "revoked": "Revoked",
     "problemSection": "Issue",
+    "reviewNoteSection": "Reviewer note",
     "appeal": "Appeal",
     "loadFailed": "Failed to load review details",
     "notFound": "Record not found"
@@ -117,12 +125,19 @@
     "publishBlocked": "Publishing is restricted on this account",
     "creatorFrozen": "Creator features are frozen",
     "publishNeedReview": "This work must pass review before it can be public",
+    "banLoginForbidden": "Only admins can ban login",
     "loginBanned": "This account is banned from signing in",
     "appealWindowExpired": "The 7-day appeal window has passed",
     "duplicateAppeal": "This record has already been appealed",
     "alreadyRevoked": "This action was already revoked",
     "invalidEvidence": "Upload a valid evidence image",
-    "adminRequired": "This action requires an admin"
+    "adminRequired": "This action requires an admin",
+    "duplicatePending": "This content already has a report under review. Please try again later.",
+    "alreadyUpheld": "This content has already been actioned. No need to report again.",
+    "reportCooldown": "Your recent report on this content was handled. Please wait 7 days.",
+    "cannotReportSelf": "You cannot report yourself or your own content",
+    "targetNotFound": "This content was not found or has been removed",
+    "invalidReason": "Please choose a valid report reason"
   },
   "common": {
     "points": "Points",
@@ -347,9 +362,12 @@
     "reportResolvedRejectedBody": "We have received your report and will continue to monitor. Thank you for helping keep the community safe.",
     "moderationTitle": "Moderation notice",
     "violationNoticeTitle": "Account violation notice",
+    "publishReviewNoticeTitle": "Publish review notice",
     "appealResultNoticeTitle": "Appeal result",
     "violationReasonLabel": "Reason: ",
+    "publishReviewSummaryLabel": "Summary: ",
     "actionTimeLabel": "Action time: ",
+    "noticeTimeLabel": "Notified: ",
     "endTimeLabel": "Ends: ",
     "appealTimeLabel": "Appealed at: ",
     "appealResultLabel": "Result: ",
@@ -1270,6 +1288,7 @@
     "gameNotPublic": "Game is not public yet",
     "deleteFailed": "Delete failed, please try again later",
     "publishFailed": "Publish failed",
+    "publishSuccess": "Published",
     "unpublishFailed": "Unpublish failed",
     "priceUpdateFailed": "Price update failed, please try again later",
     "priceUpdateSuccess": "Price updated successfully",
@@ -2725,7 +2744,8 @@
       "dailyTasks": "Daily Task Management",
       "withdraw": "Withdrawals",
       "contentReports": "Content Reports",
-      "appeals": "Appeal Review"
+      "appeals": "Appeal Review",
+      "publishQueue": "Publish Approval"
     },
     "reports": {
       "title": "Reports",

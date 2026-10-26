@@ -80,8 +80,7 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     const [favoritesTotal, setFavoritesTotal] = useState(0);
     const [isLoadingFavorites, setIsLoadingFavorites] = useState(false);
     const [favoritesLoaded, setFavoritesLoaded] = useState(false);
-    const [homepageUnavailable, setHomepageUnavailable] = useState(false);
-    const [unavailableReason, setUnavailableReason] = useState('');
+    const [homeHidden, setHomeHidden] = useState(false);
 
     const isPreview = mode === 'preview';
     const isVisitor = access === 'visitor';
@@ -146,8 +145,7 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
             }
 
             setIsLoadingMyGames(true);
-            setHomepageUnavailable(false);
-            setUnavailableReason('');
+            setHomeHidden(false);
             try {
                 const response = await accountSocialApi.getWorks(code, {
                     limit: WORKS_FETCH_LIMIT,
@@ -155,12 +153,8 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                 });
                 if (response.data.success && response.data.data) {
                     const page = response.data.data;
-                    if (page.homepageUnavailable) {
-                        setHomepageUnavailable(true);
-                        setUnavailableReason(
-                            page.unavailableReason?.trim()
-                            || t('report.homepageUnavailableDefault'),
-                        );
+                    if (page.homeHidden) {
+                        setHomeHidden(true);
                         setFileMetas([]);
                     } else {
                         setFileMetas(page.list || []);
@@ -173,20 +167,14 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                     response?: {
                         data?: {
                             data?: {
-                                homepageUnavailable?: boolean;
-                                unavailableReason?: string | null;
+                                homeHidden?: boolean;
                             };
                             message?: string;
                         };
                     };
                 })?.response?.data;
-                if (axiosData?.data?.homepageUnavailable) {
-                    setHomepageUnavailable(true);
-                    setUnavailableReason(
-                        axiosData.data.unavailableReason?.trim()
-                        || axiosData.message
-                        || t('report.homepageUnavailableDefault'),
-                    );
+                if (axiosData?.data?.homeHidden) {
+                    setHomeHidden(true);
                     setFileMetas([]);
                 } else {
                     if (getApiErrorCode(error) !== 'USER_BLOCKED') {
@@ -540,9 +528,9 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                 {worksTab === 'published' && (
                     isLoadingMyGames ? (
                         <GameGridSkeleton count={skeletonCount} layoutVariant="works" />
-                    ) : homepageUnavailable ? (
+                    ) : homeHidden ? (
                         <div className={styles.worksEmpty}>
-                            {unavailableReason || t('report.homepageUnavailableDefault')}
+                            {t('report.homepageUnavailableDefault')}
                         </div>
                     ) : publishedGames.length === 0 ? (
                         <div className={styles.worksEmpty}>{t('create.noPublishedGames')}</div>

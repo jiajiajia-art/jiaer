@@ -16,6 +16,7 @@ import toast from 'react-hot-toast';
 import PriceAdjustmentModal from '../components/CreateGame/PriceAdjustmentModal';
 import { getImageUrl } from '../utils/constants';
 import { getApiErrorMessage } from '../utils/error';
+import { isPublishPendingReview } from '../lib/publishReview';
 import { resolveGameCoverUrl } from '../utils/displayCoverUrl';
 import MobileTipModal from '../components/CreateGame/MobileTipModal';
 import {
@@ -194,6 +195,14 @@ const CreateGame: React.FC = () => {
 
             if (response.data.success) {
                 setShowPublishModal(false);
+                if (isPublishPendingReview(response.data)) {
+                    toast.success(
+                        response.data.message?.trim()
+                        || t('report.publishPendingReviewSuccess'),
+                    );
+                } else {
+                    toast.success(response.data.message?.trim() || t('createGame.publishSuccess'));
+                }
                 navigate('/profile');
             } else {
                 console.error('发布游戏失败:', response.data);

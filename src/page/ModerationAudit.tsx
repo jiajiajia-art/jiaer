@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import adminReportApi, { type AdminModerationDetail } from '../api/admin/adminReportApi';
 import { useAuthStore } from '../store/useAuthStore';
 import { parseExternalModerationId } from '../lib/externalModerationId';
+import { isPublishReviewModeration } from '../lib/moderationNotice';
 import { GAME_CARD_DEFAULT_AVATAR_PATH } from '../lib/gameCardAuthor';
 import { getImageUrl } from '../utils/constants';
 import { getApiErrorMessage } from '../utils/error';
@@ -21,6 +22,13 @@ const resolveEffectLabel = (
   }
   if (!detail.endsAt) return t('moderationAudit.permanent');
   return t('moderationAudit.active');
+};
+
+const formatDateTime = (value: string | null | undefined): string => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('zh-CN', { hour12: false });
 };
 
 const ModerationAudit: React.FC = () => {
@@ -67,10 +75,17 @@ const ModerationAudit: React.FC = () => {
 
   const notifyBody = (detail?.notifyBody || '').trim();
   const reasonTitle = (detail?.reasonTitle || detail?.reasonCode || '').trim();
+  // 功能注释：reportDetail = 审核备注；null/空不渲染；与标题相同则不再重复
   const reportDetail = (detail?.reportDetail || '').trim();
   const showReportDetail = Boolean(reportDetail) && reportDetail !== reasonTitle;
-  const penaltyCount = notifyBody ? 1 : 0;
+  const isPublishReview = detail
+    ? isPublishReviewModeration({ recordType: detail.recordType })
+    : false;
+  const showProblemCard = Boolean(reasonTitle) || showReportDetail;
+  const penaltyCount = notifyBody || reasonTitle || reportDetail ? 1 : 0;
   const canAppeal = detail?.canAppeal === true;
+  const noticeTime = formatDateTime(detail?.createdAt || detail?.startsAt);
+  const showEffectChip = Boolean(detail) && !isPublishReview;
 
   return (
     <div className={styles.pageRoot}>
@@ -86,7 +101,11 @@ const ModerationAudit: React.FC = () => {
               <path d="M15 6L9 12L15 18" />
             </svg>
           </button>
-          <h1 className={styles.title}>{t('moderationAudit.pageTitle')}</h1>
+          <h1 className={styles.title}>
+            {isPublishReview
+              ? t('moderationAudit.publishReviewPageTitle')
+              : t('moderationAudit.pageTitle')}
+          </h1>
         </header>
 
         <section className={styles.profileCard}>
@@ -106,30 +125,52 @@ const ModerationAudit: React.FC = () => {
           <>
             <section className={styles.card}>
               <div className={styles.cardHead}>
-                <h2 className={styles.cardTitle}>{t('moderationAudit.penaltySection')}</h2>
+                <h2 className={styles.cardTitle}>
+                  {isPublishReview
+                    ? t('moderationAudit.publishReviewSection')
+                    : t('moderationAudit.penaltySection')}
+                </h2>
                 <span className={styles.cardCount}>
                   {t('moderationAudit.penaltyCount', { n: penaltyCount })}
                 </span>
               </div>
               {notifyBody ? <p className={styles.bodyText}>{notifyBody}</p> : <p className={styles.bodyText}>—</p>}
-              <div className={styles.statusChip}>
-                <span>{t('moderationAudit.effectiveLabel')}</span>
-                <span className={styles.statusValue}>{resolveEffectLabel(detail, t)}</span>
-              </div>
+              {isPublishReview ? (
+                noticeTime ? (
+                  <div className={styles.statusChip}>
+                    <span>{t('moderationAudit.noticeTimeLabel')}</span>
+                    <span className={styles.statusValue}>{noticeTime}</span>
+                  </div>
+                ) : null
+              ) : showEffectChip ? (
+                <div className={styles.statusChip}>
+                  <span>{t('moderationAudit.effectiveLabel')}</span>
+                  <span className={styles.statusValue}>{resolveEffectLabel(detail, t)}</span>
+                </div>
+              ) : null}
             </section>
 
-            <section className={styles.card}>
-              <div className={styles.cardHead}>
-                <h2 className={styles.cardTitle}>{t('moderationAudit.problemSection')}</h2>
-              </div>
-              <p className={styles.bodyText}>{reasonTitle || '—'}</p>
-              {showReportDetail ? <p className={styles.subText}>{reportDetail}</p> : null}
-            </section>
+            {/* 功能注释：无 reasonTitle/备注时不渲染空「存在问题」卡，避免发布驳回只剩 — */}
+            {showProblemCard ? (
+              <section className={styles.card}>
+                <div className={styles.cardHead}>
+                  <h2 className={styles.cardTitle}>
+                    {reasonTitle
+                      ? t('moderationAudit.problemSection')
+                      : t('moderationAudit.reviewNoteSection')}
+                  </h2>
+                </div>
+                {reasonTitle ? <p className={styles.bodyText}>{reasonTitle}</p> : null}
+                {showReportDetail ? (
+                  <p className={reasonTitle ? styles.subText : styles.bodyText}>{reportDetail}</p>
+                ) : null}
+              </section>
+            ) : null}
           </>
         ) : null}
       </div>
 
-      {!loading && detail ? (
+      {!loading && detail && !isPublishReview ? (
         <div className={styles.footer}>
           <button
             type="button"

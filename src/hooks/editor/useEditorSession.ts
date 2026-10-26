@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import GameAction from '../../api/rpgGame/gameAction';
 import createGalgameSessionApi from '../../api/galgame/createGalgameSession';
@@ -8,6 +9,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { useGameStore } from '../../store/gameStore';
 import type { Currency } from '../../api/common/currency';
 import { getApiErrorMessage } from '../../utils/error';
+import { isPublishPendingReview } from '../../lib/publishReview';
 
 interface UseEditorSessionOptions {
     fileId: string | null;
@@ -26,6 +28,7 @@ interface UseEditorSessionReturn {
 }
 
 export const useEditorSession = ({ fileId, mode }: UseEditorSessionOptions): UseEditorSessionReturn => {
+    const { t } = useTranslation();
     const { user } = useAuthStore();
     const { setFileId, setSessionId, setIsPreset } = useGameStore();
     const navigate = useNavigate();
@@ -93,6 +96,14 @@ export const useEditorSession = ({ fileId, mode }: UseEditorSessionOptions): Use
             });
 
             if (response.data.success) {
+                if (isPublishPendingReview(response.data)) {
+                    toast.success(
+                        response.data.message?.trim()
+                        || t('report.publishPendingReviewSuccess'),
+                    );
+                } else {
+                    toast.success(response.data.message?.trim() || t('createGame.publishSuccess'));
+                }
                 navigate('/profile');
                 return;
             }
@@ -103,7 +114,7 @@ export const useEditorSession = ({ fileId, mode }: UseEditorSessionOptions): Use
             console.error('发布游戏失败:', error);
             throw new Error(getApiErrorMessage(error, '发布游戏失败'));
         }
-    }, [fileId, navigate]);
+    }, [fileId, navigate, t]);
 
     return {
         createGalgameSession,

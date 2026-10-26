@@ -23,9 +23,8 @@ export interface AccountProfile {
   followersListPublic: boolean;
   canViewFollowingList: boolean;
   canViewFollowersList: boolean;
-  /** 访客：处罚导致主页对外不可见（勿当 404） */
-  homepageUnavailable?: boolean;
-  unavailableReason?: string | null;
+  /** 访客/本人：处罚导致主页对外隐藏（与 /auth/user/info 同字段） */
+  homeHidden?: boolean;
 }
 
 export interface AccountPrivacy {
@@ -103,9 +102,8 @@ export interface AccountWorksPage {
   limit: number;
   offset: number;
   list: UserGameData[];
-  /** 访客：处罚导致主页作品不可见（勿当 404） */
-  homepageUnavailable?: boolean;
-  unavailableReason?: string | null;
+  /** 访客：处罚导致主页作品对外隐藏（与 profile.homeHidden 同字段） */
+  homeHidden?: boolean;
 }
 
 export interface AccountWorksParams {

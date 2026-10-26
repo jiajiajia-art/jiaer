@@ -72,15 +72,7 @@ const AccountHomepage: React.FC = () => {
                     throw new Error(response.data.message || t('common.error'));
                 }
                 const next = response.data.data;
-                if (next.homepageUnavailable && !next.isSelf) {
-                    setProfile({
-                        ...next,
-                        unavailableReason:
-                            next.unavailableReason?.trim()
-                            || t('report.homepageUnavailableDefault'),
-                    });
-                    return;
-                }
+                // 功能注释：homeHidden 访客空态；勿当 404
                 setProfile(next);
             } catch (error: unknown) {
                 if (cancelled) return;
@@ -93,8 +85,8 @@ const AccountHomepage: React.FC = () => {
                     };
                 })?.response?.data;
                 const flagged = axiosData?.data;
-                // 功能注释：主页隐藏勿当 404，展示 unavailableReason 空态
-                if (flagged?.homepageUnavailable === true) {
+                // 功能注释：主页隐藏勿当 404，展示空态
+                if (flagged?.homeHidden === true) {
                     setProfile({
                         userCode: code,
                         nickname: flagged.nickname || '',
@@ -111,11 +103,7 @@ const AccountHomepage: React.FC = () => {
                         followersListPublic: false,
                         canViewFollowingList: false,
                         canViewFollowersList: false,
-                        homepageUnavailable: true,
-                        unavailableReason:
-                            flagged.unavailableReason
-                            || axiosData?.message
-                            || t('report.homepageUnavailableDefault'),
+                        homeHidden: true,
                     });
                     return;
                 }
@@ -249,11 +237,8 @@ const AccountHomepage: React.FC = () => {
 
     const isBlockedBy = Boolean(profile?.isBlockedBy);
     const isBlocked = Boolean(profile?.isBlocked);
-    const homepageUnavailable = Boolean(profile?.homepageUnavailable) && !isOwner;
-    const unavailableReason =
-        profile?.unavailableReason?.trim()
-        || t('report.homepageUnavailableDefault');
-    const showSocialAndWorks = !isBlockedBy && !homepageUnavailable;
+    const homepageHiddenForVisitor = isHomeHidden(profile?.homeHidden) && !isOwner;
+    const showSocialAndWorks = !isBlockedBy && !homepageHiddenForVisitor;
     const displayName = profile?.nickname
         || (isOwner ? (user?.user?.nickname || user?.user?.name) : '')
         || t('create.userNameDefault');
@@ -379,9 +364,11 @@ const AccountHomepage: React.FC = () => {
                     </div>
                 </section>
 
-                {homepageUnavailable ? (
+                {homepageHiddenForVisitor ? (
                     <div className={styles.unavailableState} role="status">
-                        <p className={styles.unavailableReason}>{unavailableReason}</p>
+                        <p className={styles.unavailableReason}>
+                            {t('report.homepageUnavailableDefault')}
+                        </p>
                     </div>
                 ) : null}
 

@@ -26,7 +26,7 @@ export interface UserGameData {
     is_public: number;
     /** 风控态：taken_down 时创作者可见「违规下架」，对外不可公开 */
     moderation_status?: 'none' | 'taken_down' | string | null;
-    moderationStatus?: 'none' | 'taken_down' | string | null;
+    moderationStatus?: 'none' | 'taken_down' | 'pending_review' | string | null;
     like_count: number;
     dislike_count: number;
     /** 收藏数（详情/列表均可选返回，缺省时展示 0） */

@@ -18,6 +18,7 @@ const RECORD_TYPE_LABEL: Record<string, string> = {
   warning: '警告',
   penalty: '处罚',
   appeal: '申诉',
+  publish_review: '发布审核',
 };
 
 const STATUS_WORD: Record<string, string> = {

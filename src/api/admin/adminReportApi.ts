@@ -43,6 +43,10 @@ export type AdminPunishmentSnapshot = {
   homepageHidden?: boolean;
   activePenaltyLevel?: number | null;
   observationUntil?: string | null;
+  /** 禁登录（仅 admin 可设；有则详情展示） */
+  loginBanned?: boolean;
+  creatorFrozen?: boolean;
+  publishNeedReview?: boolean;
 };
 
 export type AdminModerationHistoryItem = {
@@ -125,6 +129,7 @@ export type AdminModerationDetail = {
   reportId?: number | null;
   reasonCode?: string | null;
   reasonTitle?: string | null;
+  /** 功能注释：取自 user_report.review_note；无备注为 null，勿当举报人 detail */
   reportDetail?: string | null;
   sourceType?: string | null;
   sourceId?: string | null;
@@ -135,6 +140,30 @@ export type AdminModerationDetail = {
   hasAppealed?: boolean;
   canAppeal?: boolean;
   appealId?: string | null;
+};
+
+export type AdminPublishQueueItem = {
+  fileId: string;
+  title?: string | null;
+  coverUrl?: string | null;
+  creatorUserId: string;
+  creatorNickname?: string | null;
+  creatorUserCode?: string | null;
+  authorName?: string | null;
+  priceAmount?: number | null;
+  shareType?: string | null;
+  gameTags?: string | null;
+  moderationStatus?: string | null;
+  submittedAt?: string | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+};
+
+export type AdminPublishQueueData = {
+  list: AdminPublishQueueItem[];
+  total: number;
+  page: number;
+  pageSize: number;
 };
 
 const adminReportApi = {
@@ -157,6 +186,33 @@ const adminReportApi = {
     api.post<ApiResponse<{ fileId: string; moderationStatus: string }>>(
       '/admin/moderation/restore-game',
       { fileId },
+    ),
+
+  listPublishQueue: (params?: { page?: number; pageSize?: number; keyword?: string }) =>
+    api.get<ApiResponse<AdminPublishQueueData>>('/admin/moderation/publish-queue', { params }),
+
+  approvePublishQueue: (fileId: string) =>
+    api.post<ApiResponse<{ fileId: string; moderationStatus?: string }>>(
+      '/admin/moderation/publish-queue/approve',
+      { fileId },
+    ),
+
+  rejectPublishQueue: (fileId: string, reviewNote?: string) =>
+    api.post<ApiResponse<{ fileId: string; moderationStatus?: string }>>(
+      '/admin/moderation/publish-queue/reject',
+      { fileId, reviewNote: reviewNote?.trim() || undefined },
+    ),
+
+  clearPublishNeedReview: (userId: string) =>
+    api.post<ApiResponse<{ userId: string; publishNeedReview?: boolean }>>(
+      '/admin/moderation/clear-publish-need-review',
+      { userId },
+    ),
+
+  clearLoginBan: (userId: string) =>
+    api.post<ApiResponse<{ userId: string; loginBanned?: boolean }>>(
+      '/admin/moderation/clear-login-ban',
+      { userId },
     ),
 };
 

@@ -32,7 +32,11 @@ import {
 import { stripReplayMarkerFromTitle } from '../../utils/novelGame';
 import SimpleRichTextEditor from '../Common/SimpleRichTextEditor';
 import { CURRENCY_OPTIONS, type Currency } from '../../api/common/currency';
-import { isPublishBanned as checkPublishBanned } from '../../lib/userPunishment';
+import {
+    isCreatorFrozen as checkCreatorFrozen,
+    isPublishBanned as checkPublishBanned,
+    isPublishNeedReview as checkPublishNeedReview,
+} from '../../lib/userPunishment';
 
 export type PublishModalMode = 'publish' | 'novel-edit';
 
@@ -132,9 +136,19 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     const navigate = useNavigate();
     const updateUser = useAuthStore((s) => s.updateUser);
     const publishBanUntil = useAuthStore((s) => s.user?.user?.publishBanUntil);
+    const publishNeedReviewFlag = useAuthStore((s) => s.user?.user?.publishNeedReview);
+    const creatorFrozenFlag = useAuthStore((s) => s.user?.user?.creatorFrozen);
     const isPublishBanned = useMemo(
         () => checkPublishBanned(publishBanUntil),
         [publishBanUntil],
+    );
+    const isCreatorFrozen = useMemo(
+        () => checkCreatorFrozen(creatorFrozenFlag),
+        [creatorFrozenFlag],
+    );
+    const needsPublishReview = useMemo(
+        () => checkPublishNeedReview(publishNeedReviewFlag) && !isPublishBanned && !isCreatorFrozen,
+        [publishNeedReviewFlag, isPublishBanned, isCreatorFrozen],
     );
 
     useEffect(() => {
@@ -408,6 +422,11 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
             return;
         }
 
+        if (!isNovelEditMode && isCreatorFrozen) {
+            toast.error(t('report.creatorFrozenHint'));
+            return;
+        }
+
         if (!isNovelEditMode && isPublishBanned) {
             toast.error(t('report.publishBannedHint'));
             return;
@@ -660,10 +679,14 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                 </div>
                 </div>
 
-                {!isNovelEditMode && (isPublishBanned || isTakenDown) ? (
+                {!isNovelEditMode && (isCreatorFrozen || isPublishBanned || isTakenDown) ? (
                     <p className={styles.publishLockHint}>
-                        {isPublishBanned ? t('report.publishBannedHint') : t('report.publishLockedHint')}
-                        {isTakenDown && !isPublishBanned ? (
+                        {isCreatorFrozen
+                            ? t('report.creatorFrozenHint')
+                            : isPublishBanned
+                                ? t('report.publishBannedHint')
+                                : t('report.publishLockedHint')}
+                        {isTakenDown && !isPublishBanned && !isCreatorFrozen ? (
                             <>
                                 {' '}
                                 <button
@@ -678,6 +701,11 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                                 </button>
                             </>
                         ) : null}
+                    </p>
+                ) : null}
+                {!isNovelEditMode && needsPublishReview ? (
+                    <p className={styles.publishLockHint}>
+                        {t('report.publishNeedReviewHint')}
                     </p>
                 ) : null}
 
@@ -698,7 +726,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                             publishing
                             || saving
                             || generatingDescription
-                            || (!isNovelEditMode && (isPublishBanned || isTakenDown))
+                            || (!isNovelEditMode && (isCreatorFrozen || isPublishBanned || isTakenDown))
                         }
                     >
                         {submitLabel}

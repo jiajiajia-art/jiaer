@@ -31,9 +31,13 @@
     "takenDownBadge": "违规下架",
     "publishLockedHint": "需申诉通过或运营恢复后才能公开",
     "publishBannedHint": "账号处于发布限制中",
+    "publishNeedReviewHint": "当前账号为先审后发：提交后需审核通过才会公开",
+    "publishPendingReviewSuccess": "已提交审核，通过后才会公开",
+    "pendingReviewBadge": "审核中",
     "homeHiddenBanner": "对外暂不可见",
     "homepageUnavailableDefault": "因违规暂不可见",
-    "createBannedHint": "账号处于发布限制中，暂时无法创建新作品"
+    "createBannedHint": "账号处于发布限制中，暂时无法创建新作品",
+    "creatorFrozenHint": "创作者功能已被冻结，暂时无法创建或发布"
   },
   "appeal": {
     "title": "申诉",
@@ -99,16 +103,20 @@
   },
   "moderationAudit": {
     "pageTitle": "账号审核详情",
+    "publishReviewPageTitle": "发布审核详情",
     "back": "返回",
     "accountId": "ID：{{code}}",
     "penaltySection": "处置结果",
+    "publishReviewSection": "审核结果",
     "penaltyCount": "共 {{n}} 项",
     "effectiveLabel": "生效时间",
+    "noticeTimeLabel": "通知时间",
     "expired": "处置已过期",
     "permanent": "永久生效",
     "active": "生效中",
     "revoked": "已撤销",
     "problemSection": "存在问题",
+    "reviewNoteSection": "审核备注",
     "appeal": "申诉",
     "loadFailed": "加载审核详情失败",
     "notFound": "记录不存在"
@@ -117,12 +125,19 @@
     "publishBlocked": "账号处于发布限制中",
     "creatorFrozen": "创作者功能已被冻结",
     "publishNeedReview": "作品需审核通过后才能公开",
+    "banLoginForbidden": "仅管理员可执行禁登录",
     "loginBanned": "账号已被禁止登录",
     "appealWindowExpired": "已超过 7 天申诉期限",
     "duplicateAppeal": "该记录已申诉过",
     "alreadyRevoked": "该处罚已撤销，无需申诉",
     "invalidEvidence": "请上传有效的证据图片",
-    "adminRequired": "该操作需要管理员权限"
+    "adminRequired": "该操作需要管理员权限",
+    "duplicatePending": "该内容已有举报正在处理中，请稍后再试",
+    "alreadyUpheld": "该内容已被处理，无需重复举报",
+    "reportCooldown": "你对该内容的举报近期已处理，请 7 天后再试",
+    "cannotReportSelf": "不能举报自己或自己的内容",
+    "targetNotFound": "举报对象不存在或已删除",
+    "invalidReason": "请选择有效的举报理由"
   },
   "common": {
     "points": "积分",
@@ -348,9 +363,12 @@
     "reportResolvedRejectedBody": "你的举报已收到，平台将持续关注，一经核实将进行相应处理，感谢你对社区美好氛围做出的贡献。",
     "moderationTitle": "违规处理通知",
     "violationNoticeTitle": "账号违规提示",
+    "publishReviewNoticeTitle": "发布审核通知",
     "appealResultNoticeTitle": "账号申诉结果反馈",
     "violationReasonLabel": "违规原因：",
+    "publishReviewSummaryLabel": "审核说明：",
     "actionTimeLabel": "处置时间：",
+    "noticeTimeLabel": "通知时间：",
     "endTimeLabel": "结束时间：",
     "appealTimeLabel": "申诉时间：",
     "appealResultLabel": "申诉结果：",
@@ -1270,6 +1288,7 @@
     "gameNotPublic": "游戏尚未公开",
     "deleteFailed": "删除失败，请稍后重试",
     "publishFailed": "发布游戏失败",
+    "publishSuccess": "发布成功",
     "unpublishFailed": "下架游戏失败",
     "priceUpdateFailed": "价格更新失败，请稍后重试",
     "priceUpdateSuccess": "价格更新成功",
@@ -2725,7 +2744,8 @@
       "dailyTasks": "每日任务管理",
       "withdraw": "提现管理",
       "contentReports": "内容举报",
-      "appeals": "申诉复核"
+      "appeals": "申诉复核",
+      "publishQueue": "发布审核"
     },
     "reports": {
       "title": "数据报表",

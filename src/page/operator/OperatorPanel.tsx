@@ -18,6 +18,7 @@ import OperatorReports from './OperatorReports';
 import WithdrawAdminManager from '../../components/WithdrawAdminManager';
 import ContentReportAdminManager from '../../components/Admin/ContentReportAdminManager';
 import ContentAppealAdminManager from '../../components/Admin/ContentAppealAdminManager';
+import PublishReviewAdminManager from '../../components/Admin/PublishReviewAdminManager';
 import adminStyles from '../AdminPanel.module.css';
 import styles from './OperatorPanel.module.css';
 
@@ -29,7 +30,8 @@ type OperatorTab =
   | 'dailyTasks'
   | 'withdraw'
   | 'contentReports'
-  | 'appeals';
+  | 'appeals'
+  | 'publishQueue';
 type WorksSortField = 'playCount' | 'pv' | 'shareCount';
 type SortDirection = 'asc' | 'desc';
 
@@ -48,6 +50,7 @@ const resolveOperatorTab = (pathname: string): OperatorTab => {
   if (pathname.startsWith('/operator/withdraw')) return 'withdraw';
   if (pathname.startsWith('/operator/content-reports')) return 'contentReports';
   if (pathname.startsWith('/operator/appeals')) return 'appeals';
+  if (pathname.startsWith('/operator/publish-queue')) return 'publishQueue';
   return 'stats';
 };
 
@@ -82,6 +85,7 @@ const OperatorPanel: React.FC = () => {
     { id: 'withdraw', label: t('operator.tabs.withdraw'), path: '/operator/withdraw' },
     { id: 'contentReports', label: t('operator.tabs.contentReports'), path: '/operator/content-reports' },
     { id: 'appeals', label: t('operator.tabs.appeals'), path: '/operator/appeals' },
+    { id: 'publishQueue', label: t('operator.tabs.publishQueue'), path: '/operator/publish-queue' },
   ]), [t]);
 
   const sortedWorks = useMemo(() => {
@@ -409,6 +413,7 @@ const OperatorPanel: React.FC = () => {
             {activeTab === 'dailyTasks' ? renderDailyTasks() : null}
             {activeTab === 'contentReports' ? <ContentReportAdminManager /> : null}
             {activeTab === 'appeals' ? <ContentAppealAdminManager /> : null}
+            {activeTab === 'publishQueue' ? <PublishReviewAdminManager /> : null}
           </section>
         </div>
       </div>

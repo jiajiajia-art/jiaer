@@ -32,6 +32,7 @@ import {
     truncateMessagePreview,
     type MessageListSectionKey,
 } from '../lib/messageCenterView';
+import { isPublishReviewModeration } from '../lib/moderationNotice';
 import ConfirmModal from '../components/CommonModal/ConfirmModal';
 import styles from './Messages.module.css';
 
@@ -529,16 +530,31 @@ const Messages: React.FC = () => {
                         onOpen: () => { void handleOpenModeration(item); },
                     });
                 } else {
-                    const actionTime = formatMessageDateTime(item.startsAt || item.createdAt);
-                    const endTime = formatMessageDateTime(item.endsAt);
-                    const reasonText = (item.reason || '').trim() || '—';
+                    const publishReview = isPublishReviewModeration({
+                        recordType: item.recordType,
+                    });
+                    const actionTime = formatMessageDateTime(
+                        publishReview
+                            ? (item.createdAt || item.startsAt)
+                            : (item.startsAt || item.createdAt),
+                    );
+                    const endTime = publishReview ? '' : formatMessageDateTime(item.endsAt);
+                    const reasonRaw = (item.reason || '').trim();
+                    const bodyRaw = (item.body || '').trim();
+                    const reasonText = reasonRaw
+                        || (publishReview ? truncateMessagePreview(bodyRaw) : '')
+                        || '—';
                     const fields: SafetyNoticeField[] = [
                         {
-                            label: t('messages.violationReasonLabel'),
+                            label: publishReview
+                                ? t('messages.publishReviewSummaryLabel')
+                                : t('messages.violationReasonLabel'),
                             value: reasonText,
                         },
                         {
-                            label: t('messages.actionTimeLabel'),
+                            label: publishReview
+                                ? t('messages.noticeTimeLabel')
+                                : t('messages.actionTimeLabel'),
                             value: actionTime || '—',
                         },
                     ];
@@ -551,7 +567,9 @@ const Messages: React.FC = () => {
                     buckets[section].push({
                         key: `moderation-${item.sourceId}`,
                         variant: 'safetyNotice',
-                        title: t('messages.violationNoticeTitle'),
+                        title: publishReview
+                            ? t('messages.publishReviewNoticeTitle')
+                            : t('messages.violationNoticeTitle'),
                         dateLabel: formatMessageDateYmd(item.createdAt || item.publishedAt || item.startsAt),
                         fields,
                         actionLabel: t('messages.viewDetails'),

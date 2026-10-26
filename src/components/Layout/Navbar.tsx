@@ -22,7 +22,7 @@ import {
 import UserAvatar from '../UserAvatar';
 import LanguageSelectModal from './LanguageSelectModal';
 import toast from 'react-hot-toast';
-import { isPublishBanned } from '../../lib/userPunishment';
+import { isCreatorFrozen, isPublishBanned } from '../../lib/userPunishment';
 
 /** 功能注释：暗色 funloom 导航图标基路径（assetsv2/home） */
 const HOME_ICON_BASE = `${import.meta.env.BASE_URL}data/assetsv2/home`;
@@ -73,6 +73,8 @@ const Navbar: React.FC<NavbarProps> = ({
     const { unreadCount, refreshUnreadCount, clearUnreadCount } = useMessageStore();
     useMessageRealtime();
     const publishBanned = isPublishBanned(user?.user?.publishBanUntil);
+    const creatorFrozen = isCreatorFrozen(user?.user?.creatorFrozen);
+    const createBlocked = publishBanned || creatorFrozen;
     const avatarContainerRef = useRef<HTMLDivElement | null>(null);
     const searchBoxRef = useRef<HTMLFormElement | null>(null);
     const searchRequestIdRef = useRef(0);
@@ -296,9 +298,13 @@ const Navbar: React.FC<NavbarProps> = ({
                         {t('nav.categories')}
                     </div>
                     <div
-                        className={`${styles.navLink} ${activeNav === 'create' ? styles.navLinkActive : ''} ${publishBanned ? styles.navLinkDisabled : ''}`}
+                        className={`${styles.navLink} ${activeNav === 'create' ? styles.navLinkActive : ''} ${createBlocked ? styles.navLinkDisabled : ''}`}
                         onClick={() => {
                             if (!requireAuth()) return;
+                            if (creatorFrozen) {
+                                toast.error(t('report.creatorFrozenHint'));
+                                return;
+                            }
                             if (publishBanned) {
                                 toast.error(t('report.createBannedHint'));
                                 return;
