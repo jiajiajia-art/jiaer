@@ -143,48 +143,6 @@
     border-color: rgba(40, 167, 69, 1);
 }
 
-.unpublishedTag {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    background: rgba(142, 33, 53, 0.95);
-    color: #fff;
-    border: 1px solid rgba(168, 40, 60, 1);
-    border-radius: 999px;
-    padding: 4px 10px;
-    font-size: 12px;
-    font-weight: 600;
-    z-index: 4;
-}
-
-.takenDownTag {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    background: rgba(183, 28, 28, 0.95);
-    color: #fff;
-    border: 1px solid rgba(198, 40, 40, 1);
-    border-radius: 999px;
-    padding: 4px 10px;
-    font-size: 12px;
-    font-weight: 600;
-    z-index: 4;
-}
-
-.pendingReviewTag {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    background: rgba(165, 96, 47, 0.95);
-    color: #fffdfb;
-    border: 1px solid rgba(141, 79, 36, 0.9);
-    border-radius: 999px;
-    padding: 4px 10px;
-    font-size: 12px;
-    font-weight: 600;
-    z-index: 4;
-}
-
 .goodsTypeTag {
     position: absolute;
     top: 10px;

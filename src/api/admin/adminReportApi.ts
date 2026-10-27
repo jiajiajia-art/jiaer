@@ -209,6 +209,7 @@ const adminReportApi = {
       { userId },
     ),
 
+  /** 功能注释：解禁登录；权限 admin/operator（与申诉通过一致）；施加禁登录仍仅 admin */
   clearLoginBan: (userId: string) =>
     api.post<ApiResponse<{ userId: string; loginBanned?: boolean }>>(
       '/admin/moderation/clear-login-ban',

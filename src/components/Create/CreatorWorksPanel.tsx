@@ -540,7 +540,6 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                             layoutVariant="works"
                             primaryStat="pv"
                             showIncentiveUI={showIncentiveUI}
-                            showTakenDownBadge={!isVisitor}
                             onGameClick={(game) => {
                                 const gameId = game.file_id || game.id;
                                 if (!gameId) return;
@@ -606,7 +605,6 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                         <GameGrid
                             games={displayedFavoriteGames}
                             layoutVariant="works"
-                            showUnpublishedBadge
                             onGameClick={handleFavoriteGameClick}
                         />
                     )

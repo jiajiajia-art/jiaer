@@ -34,9 +34,6 @@ interface GameGridProps {
     isSelectionMode?: boolean;
     layoutVariant?: GameGridLayoutVariant;
     emptyText?: string;
-    showUnpublishedBadge?: boolean;
-    /** 创作者列表：违规下架标签 */
-    showTakenDownBadge?: boolean;
     /** 首页推荐：长按 / 右键出屏蔽·举报菜单 */
     enableContentMenu?: boolean;
     onContentMenu?: (game: UserGameData, point: { x: number; y: number }) => void;
@@ -55,8 +52,6 @@ const GameGrid: React.FC<GameGridProps> = ({
     isSelectionMode = false,
     layoutVariant = 'default',
     emptyText,
-    showUnpublishedBadge = false,
-    showTakenDownBadge = false,
     enableContentMenu = false,
     onContentMenu,
 }) => {
@@ -179,10 +174,6 @@ const GameGrid: React.FC<GameGridProps> = ({
                     : (primaryStat === 'uv' ? (meta.total_uv_count ?? 0) : (meta.total_pv_count ?? 0));
                 const typeLabel = getTypeLabel(meta);
                 const typeToneStyle = resolveGameTypeToneStyle(getGameTypeToneFromMeta(meta));
-                const isUnpublished = Number(meta.is_public) !== 1;
-                const moderationStatus = String(meta.moderationStatus || meta.moderation_status || 'none');
-                const isTakenDown = moderationStatus === 'taken_down';
-                const isPendingReview = moderationStatus === 'pending_review';
                 const selectableId = getSelectableId(meta);
                 const isSelected = selectableId ? selectedIds.includes(selectableId) : false;
                 const body = resolveGameCardBody(meta);
@@ -273,24 +264,6 @@ const GameGrid: React.FC<GameGridProps> = ({
                                     title={status === 'finished' ? t('profile.incentiveSettled') : t('profile.incentivePlan')}
                                 >
                                     {status === 'finished' ? t('profile.incentiveSettled') : t('profile.incentivePlan')}
-                                </div>
-                            )}
-
-                            {showUnpublishedBadge && isUnpublished && !isTakenDown && !isPendingReview && (
-                                <div className={styles.unpublishedTag} title={t('favorites.unpublished')}>
-                                    {t('favorites.unpublished')}
-                                </div>
-                            )}
-
-                            {showTakenDownBadge && isTakenDown && (
-                                <div className={styles.takenDownTag} title={t('report.takenDownBadge')}>
-                                    {t('report.takenDownBadge')}
-                                </div>
-                            )}
-
-                            {showTakenDownBadge && isPendingReview && (
-                                <div className={styles.pendingReviewTag} title={t('report.pendingReviewBadge')}>
-                                    {t('report.pendingReviewBadge')}
                                 </div>
                             )}
 

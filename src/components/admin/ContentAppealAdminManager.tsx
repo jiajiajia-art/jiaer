@@ -7,8 +7,6 @@ import type {
   AdminAppealStatus,
 } from '../../api/appeal/appeal.type';
 import ConfirmModal from '../CommonModal/ConfirmModal';
-import { useAuthStore } from '../../store/useAuthStore';
-import { isAdminRole } from '../../utils/userRoles';
 import { getApiErrorMessage } from '../../utils/error';
 import { resolveEvidenceImageUrl } from '../../utils/evidenceImageUrl';
 import styles from './CommentAdminManager.module.css';
@@ -61,9 +59,6 @@ const truncate = (value: string | null | undefined, max = 40): string => {
 };
 
 const ContentAppealAdminManager: React.FC = () => {
-  const role = useAuthStore((s) => s.user?.user?.role);
-  const isAdmin = isAdminRole(role);
-
   const [status, setStatus] = useState<AdminAppealStatus | ''>('pending');
   const [list, setList] = useState<AdminAppealListItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -159,7 +154,7 @@ const ContentAppealAdminManager: React.FC = () => {
           <span className={styles.sectionBadge}>内容安全</span>
           <h2 className={styles.heroTitle}>申诉复核</h2>
           <p className={styles.heroDesc}>
-            通过将撤销目标警告/处罚、清理处罚热状态，并在适用时解锁游戏下架。四级解除仅 admin。
+            通过将撤销目标警告/处罚、清理处罚热状态，并在适用时解锁游戏下架。
           </p>
         </div>
         <div className={styles.heroMetric}>
@@ -349,42 +344,26 @@ const ContentAppealAdminManager: React.FC = () => {
                       />
                     </label>
                     <p className={styles.cardDesc} style={{ margin: 0 }}>
-                      通过后会撤销这条警告或处罚。四级处罚只有管理员能通过。
+                      通过后会撤销这条警告或处罚（含解除禁登录效果）。
                     </p>
-                    {(() => {
-                      const targetLevel = detail.target?.level ?? detail.targetLevel ?? null;
-                      const isLevel4 = Number(targetLevel) === 4;
-                      const canApprove = isAdmin || !isLevel4;
-                      return (
-                        <>
-                          {isLevel4 && !isAdmin ? (
-                            <p className={styles.cardDesc} style={{ margin: 0, color: '#b73a3a' }}>
-                              这是四级处罚，只有管理员能通过。你可以驳回。
-                            </p>
-                          ) : null}
-                          <div className={local.decisionRow}>
-                            <button
-                              type="button"
-                              className={styles.rejectButton}
-                              disabled={reviewing}
-                              onClick={() => setConfirmDecision('reject')}
-                            >
-                              驳回
-                            </button>
-                            {canApprove ? (
-                              <button
-                                type="button"
-                                className={styles.approveButton}
-                                disabled={reviewing}
-                                onClick={() => setConfirmDecision('approve')}
-                              >
-                                通过
-                              </button>
-                            ) : null}
-                          </div>
-                        </>
-                      );
-                    })()}
+                    <div className={local.decisionRow}>
+                      <button
+                        type="button"
+                        className={styles.rejectButton}
+                        disabled={reviewing}
+                        onClick={() => setConfirmDecision('reject')}
+                      >
+                        驳回
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.approveButton}
+                        disabled={reviewing}
+                        onClick={() => setConfirmDecision('approve')}
+                      >
+                        通过
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className={local.factGrid}>
@@ -410,7 +389,7 @@ const ContentAppealAdminManager: React.FC = () => {
         title={confirmDecision === 'approve' ? '确认通过该申诉？' : '确认驳回该申诉？'}
         message={
           confirmDecision === 'approve'
-            ? '将撤销目标处罚/警告并清理热状态；若为游戏下架会解锁。四级解除需要 admin。'
+            ? '将撤销目标处罚/警告并清理热状态；若为游戏下架会解锁；若含禁登录一并解除。'
             : '驳回后用户将收到申诉结果通知。'
         }
         confirmButtonText={reviewing ? '处理中…' : '确认'}

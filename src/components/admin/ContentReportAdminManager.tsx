@@ -936,7 +936,8 @@ const ContentReportAdminManager: React.FC = () => {
                               ? `，观察期至 ${formatTime(detail.ownerPunishment.observationUntil)}`
                               : ''}
                           </p>
-                          {canBanLogin && detail.ownerPunishment.loginBanned ? (
+                          {/* 功能注释：解禁入口对 admin/operator 开放；施加禁登录仍仅 admin */}
+                          {detail.ownerPunishment.loginBanned ? (
                             <div className={local.decisionRow} style={{ marginTop: 8 }}>
                               <button
                                 type="button"

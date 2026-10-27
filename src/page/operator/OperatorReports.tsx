@@ -31,8 +31,8 @@ import operatorReportsApi, {
   type ReportPlatform,
 } from '../../api/stats/operatorReportsApi';
 import MetricTitleTip from '../../components/stats/MetricTitleTip';
-import metricStyles from '../../components/admin/MetricSummary.module.css';
-import PageSectionHeader from '../../components/admin/PageSectionHeader';
+import metricStyles from '../../components/Admin/MetricSummary.module.css';
+import PageSectionHeader from '../../components/Admin/PageSectionHeader';
 import styles from './OperatorReports.module.css';
 import {
   buildPresetRange,
