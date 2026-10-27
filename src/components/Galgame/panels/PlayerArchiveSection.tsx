@@ -36,6 +36,12 @@ import {
   compressImageFileToWebpUnderMaxBytes,
 } from '../../../lib/galgame/compressImageToWebp';
 import { refreshAuthUserPoints } from '../../../lib/auth/refreshUserPoints';
+import {
+  formatSessionProfileCharge,
+  getSessionProfileBillingPreview,
+  resolveSessionProfileBalancePatch,
+  sessionProfileCurrencyLabel,
+} from '../../../lib/sessionProfileBilling';
 import TrimmedTransparentImg from '../../TrimmedTransparentImg';
 import GameConfirmModal from '../GameConfirmModal';
 import {
@@ -98,15 +104,28 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
   playerAvatarAbOnChange = false,
   onPlayerAvatarAbChange,
 }) => {
+  const { sessionId } = useGameStore();
   const {
+    data: sessionAvatarPricing,
     estimatedPoints: sessionAvatarPrice,
     priceUnavailable: sessionAvatarPriceUnavailable,
     error: sessionAvatarPriceError,
-  } = useImageBusinessPrice('session_avatar_control');
+  } = useImageBusinessPrice('session_avatar_control', undefined, sessionId);
   const sessionAvatarCost = sessionAvatarPrice ?? 0;
+  const billingSearch = typeof window === 'undefined' ? '' : window.location.search;
+  const avatarBillingPreview = getSessionProfileBillingPreview(
+    billingSearch,
+    sessionAvatarCost,
+    sessionAvatarPricing,
+  );
+  const textBillingPreview = getSessionProfileBillingPreview(
+    billingSearch,
+    NPC_PROFILE_FIELD_GENERATION_COST,
+  );
+  const avatarChargeText = formatSessionProfileCharge(avatarBillingPreview);
+  const textChargeText = formatSessionProfileCharge(textBillingPreview);
   const authUser = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
-  const { sessionId } = useGameStore();
   const [saving, setSaving] = useState(false);
   const [personaAiBusy, setPersonaAiBusy] = useState(false);
   const [personaAiConfirmOpen, setPersonaAiConfirmOpen] = useState(false);
@@ -235,7 +254,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
         }
         if (playerAvatarAbOnChange || res.data?.ab?.generateOnChange) {
           if (saved.avatarNeedsRegen || !saved.avatarUrl) {
-            toast('实验组：请为新身份生成头像（将扣除织梦豆）');
+            toast(`实验组：请为新身份生成头像（将扣除${sessionProfileCurrencyLabel(avatarBillingPreview.currency)}）`);
           }
         }
         return;
@@ -283,10 +302,12 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
       toast.error(sessionAvatarPriceError || 'Price unavailable');
       return;
     }
-    const latestPoints = await refreshAuthUserPoints();
-    if (typeof latestPoints === 'number' && latestPoints < sessionAvatarCost) {
-      toast.error(`织梦豆不足（需要 ${sessionAvatarCost}，当前 ${latestPoints}）`);
-      return;
+    if (avatarBillingPreview.currency === 'points') {
+      const latestPoints = await refreshAuthUserPoints();
+      if (typeof latestPoints === 'number' && latestPoints < avatarBillingPreview.chargedUnits) {
+        toast.error(`织梦豆不足（需要 ${avatarBillingPreview.chargedUnits}，当前 ${latestPoints}）`);
+        return;
+      }
     }
     setAvatarStyleId(DEFAULT_AVATAR_STYLE);
     setAvatarPromptOpen(true);
@@ -383,7 +404,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
       message={(
         <div className={styles.confirmMsgStack}>
           <p className={styles.confirmMsgText}>
-            {`将扣除 ${sessionAvatarPrice ?? '—'} 织梦豆生成 AI 头像，是否继续？`}
+            {`将扣除 ${sessionAvatarPrice == null ? '—' : avatarChargeText} 生成 AI 头像，是否继续？`}
           </p>
           <button
             type="button"
@@ -474,15 +495,17 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
     }
     if (personaAiBusy || saving) return;
     // 功能注释：后台改分后本地 store 可能仍是旧值，先拉最新再预检
-    const latestPoints = await refreshAuthUserPoints();
-    if (
-      typeof latestPoints === 'number'
-      && latestPoints < NPC_PROFILE_FIELD_GENERATION_COST
-    ) {
-      toast.error(
-        `织梦豆不足（需要 ${NPC_PROFILE_FIELD_GENERATION_COST}，当前 ${latestPoints}）`,
-      );
-      return;
+    if (textBillingPreview.currency === 'points') {
+      const latestPoints = await refreshAuthUserPoints();
+      if (
+        typeof latestPoints === 'number'
+        && latestPoints < textBillingPreview.chargedUnits
+      ) {
+        toast.error(
+          `织梦豆不足（需要 ${textBillingPreview.chargedUnits}，当前 ${latestPoints}）`,
+        );
+        return;
+      }
     }
     setPersonaAiConfirmOpen(true);
   };
@@ -506,11 +529,16 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
         ...d,
         persona: String(res.data!.text).slice(0, PLAYER_CARD_LIMITS.persona.max),
       }));
-      if (typeof res.data.remainingPoints === 'number') {
+      const balancePatch = resolveSessionProfileBalancePatch(res.data.billing);
+      if (balancePatch) {
+        updateUser(balancePatch);
+      } else if (typeof res.data.remainingPoints === 'number') {
         updateUser({ points: res.data.remainingPoints });
       }
       toast.success(
-        `人设已生成（-${res.data.pointsDeducted ?? NPC_PROFILE_FIELD_GENERATION_COST} 织梦豆）`,
+        `人设已生成（-${res.data.billing
+          ? formatSessionProfileCharge(res.data.billing)
+          : textChargeText}）`,
       );
     } catch (e) {
       toast.error((e as Error)?.message || '人设生成失败');
@@ -601,7 +629,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
         (playerAvatarAbOnChange || (res.data as { ab?: { generateOnChange?: boolean } })?.ab?.generateOnChange)
         && (merged.avatarNeedsRegen || !merged.avatarUrl)
       ) {
-        toast('实验组：请为新角色生成头像（将扣除织梦豆）');
+        toast(`实验组：请为新角色生成头像（将扣除${sessionProfileCurrencyLabel(avatarBillingPreview.currency)}）`);
       }
     } finally {
       setSaving(false);
@@ -681,7 +709,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
                 >
                   {avatarAiBusy
                     ? '后台生成中…'
-                    : `${needsAvatar ? '生成头像' : '重新生成'} · ${sessionAvatarPrice ?? '—'} 织梦豆`}
+                    : `${needsAvatar ? '生成头像' : '重新生成'} · ${sessionAvatarPrice == null ? '—' : avatarChargeText}`}
                 </button>
                 <button
                   type="button"
@@ -745,7 +773,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
                 >
                   {personaAiBusy
                     ? '生成中…'
-                    : `AI生成 · ${NPC_PROFILE_FIELD_GENERATION_COST}`}
+                    : `AI生成 · ${textChargeText}`}
                 </button>
               </span>
               <span className={styles.counter}>
@@ -788,7 +816,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
           isOpen={personaAiConfirmOpen}
           variant="dossier"
           title="确认生成人设"
-          message={`将扣除 ${NPC_PROFILE_FIELD_GENERATION_COST} 织梦豆生成「人设」，是否继续？`}
+          message={`将扣除 ${textChargeText} 生成「人设」，是否继续？`}
           confirmText="确认生成"
           cancelText="取消"
           overlayZIndex={3600}
@@ -1039,7 +1067,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
               >
                 {avatarAiBusy
                   ? '后台生成中…'
-                  : `${needsAvatar ? '生成头像' : '重新生成'} · ${sessionAvatarPrice ?? '—'} 织梦豆`}
+                  : `${needsAvatar ? '生成头像' : '重新生成'} · ${sessionAvatarPrice == null ? '—' : avatarChargeText}`}
               </button>
               <button
                 type="button"

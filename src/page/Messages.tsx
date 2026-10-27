@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
+import { Modal } from 'antd';
 import Navbar from '../components/Layout/Navbar';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import AnnouncementModal from '../components/AnnouncementModal';
@@ -11,6 +12,7 @@ import { getApiErrorMessage } from '../utils/error';
 import type {
     MessageAnnouncement,
     MessageCenterData,
+    MessageCreatorEarningWithdrawalNotification,
     MessageFavoriteGameUpdateNotification,
     MessageGameModerationNotification,
     MessageGamePublishAppeal,
@@ -25,6 +27,7 @@ import { openConfiguredLink, resolvePromotionAdLink } from '../utils/promotionNa
 import { useExternalLinkCopyModal } from '../hooks/useExternalLinkCopyModal';
 import { GAME_CARD_DEFAULT_AVATAR_PATH } from '../lib/gameCardAuthor';
 import {
+    buildCreatorEarningWithdrawalMessageView,
     formatMessageListTime,
     resolveMessageListSection,
     truncateMessagePreview,
@@ -42,7 +45,8 @@ type MessageFeedItem =
     | (MessagePromotionSubmissionNotification & { itemType: 'promotion_submission_status'; sortTime: string | null })
     | (MessageFavoriteGameUpdateNotification & { itemType: 'favorite_game_updated'; sortTime: string | null })
     | (MessageGameModerationNotification & { itemType: 'game_moderation'; sortTime: string | null })
-    | (MessageGamePublishAppeal & { itemType: 'game_publish_appeal'; sortTime: string | null });
+    | (MessageGamePublishAppeal & { itemType: 'game_publish_appeal'; sortTime: string | null })
+    | (MessageCreatorEarningWithdrawalNotification & { itemType: 'creator_earning_withdrawal'; sortTime: string | null });
 
 const getAnnouncementSortTime = (item: Pick<MessageAnnouncement, 'publishedAt' | 'updatedAt' | 'createdAt'>) =>
     item.publishedAt || item.updatedAt || item.createdAt || null;
@@ -114,6 +118,7 @@ const Messages: React.FC = () => {
     const [isMarkingAllRead, setIsMarkingAllRead] = useState(false);
     const [selectedAnnouncement, setSelectedAnnouncement] = useState<MessageAnnouncement | null>(null);
     const [selectedFavoriteGameUpdate, setSelectedFavoriteGameUpdate] = useState<MessageFavoriteGameUpdateNotification | null>(null);
+    const [selectedCreatorEarningWithdrawal, setSelectedCreatorEarningWithdrawal] = useState<MessageCreatorEarningWithdrawalNotification | null>(null);
 
     const loadMessages = useCallback(async () => {
         try {
@@ -178,7 +183,13 @@ const Messages: React.FC = () => {
             sortTime: item.updatedAt || item.createdAt || null,
         }));
 
-        return [...announcements, ...promotions, ...promotionSubmissionNotifications, ...favoriteGameUpdateNotifications, ...gameModerationNotifications, ...gamePublishAppeals].sort((left, right) => {
+        const creatorEarningWithdrawalNotifications = (messageCenter?.creatorEarningWithdrawalNotifications || []).map((item) => ({
+            ...item,
+            itemType: 'creator_earning_withdrawal' as const,
+            sortTime: item.createdAt || null,
+        }));
+
+        return [...announcements, ...promotions, ...promotionSubmissionNotifications, ...favoriteGameUpdateNotifications, ...gameModerationNotifications, ...gamePublishAppeals, ...creatorEarningWithdrawalNotifications].sort((left, right) => {
             const leftTime = new Date(left.sortTime || 0).getTime();
             const rightTime = new Date(right.sortTime || 0).getTime();
             return rightTime - leftTime;
@@ -225,6 +236,12 @@ const Messages: React.FC = () => {
                     : item
             ));
 
+            const creatorEarningWithdrawalNotifications = (prev.creatorEarningWithdrawalNotifications || []).map((item) => (
+                messageType === 'creator_earning_withdrawal' && item.sourceId === sourceId
+                    ? { ...item, isRead: true }
+                    : item
+            ));
+
             return {
                 ...prev,
                 unreadCount: nextUnreadCount,
@@ -234,6 +251,7 @@ const Messages: React.FC = () => {
                 favoriteGameUpdateNotifications,
                 gameModerationNotifications,
                 gamePublishAppeals,
+                creatorEarningWithdrawalNotifications,
             };
         });
     }, []);
@@ -251,6 +269,7 @@ const Messages: React.FC = () => {
                 favoriteGameUpdateNotifications: markCollectionAsRead(prev.favoriteGameUpdateNotifications || []),
                 gameModerationNotifications: markCollectionAsRead(prev.gameModerationNotifications || []),
                 gamePublishAppeals: markCollectionAsRead(prev.gamePublishAppeals || []),
+                creatorEarningWithdrawalNotifications: markCollectionAsRead(prev.creatorEarningWithdrawalNotifications || []),
             };
         });
     }, []);
@@ -332,6 +351,11 @@ const Messages: React.FC = () => {
         await markMessageAsRead('game_publish_appeal', appeal.sourceId, appeal.isRead);
         navigate(`/game-publish-appeals/${encodeURIComponent(appeal.fileId)}`);
     }, [markMessageAsRead, navigate]);
+
+    const handleOpenCreatorEarningWithdrawal = useCallback(async (notification: MessageCreatorEarningWithdrawalNotification) => {
+        await markMessageAsRead('creator_earning_withdrawal', notification.sourceId, notification.isRead);
+        setSelectedCreatorEarningWithdrawal({ ...notification, isRead: true });
+    }, [markMessageAsRead]);
 
     const sectionRows = useMemo(() => {
         const buckets: Record<MessageListSectionKey, RowView[]> = {
@@ -419,6 +443,19 @@ const Messages: React.FC = () => {
                 continue;
             }
 
+            if (item.itemType === 'creator_earning_withdrawal') {
+                const view = buildCreatorEarningWithdrawalMessageView(item);
+                buckets[section].push({
+                    key: `creator-earning-withdrawal-${item.sourceId}`,
+                    title: view.title,
+                    preview: truncateMessagePreview(view.preview),
+                    time,
+                    isRead: item.isRead,
+                    onOpen: () => { void handleOpenCreatorEarningWithdrawal(item); },
+                });
+                continue;
+            }
+
             buckets[section].push({
                 key: `promotion-submission-${item.sourceId}`,
                 title: getSubmissionMessageTitle(item, t),
@@ -439,6 +476,7 @@ const Messages: React.FC = () => {
         handleOpenFavoriteGameUpdateNotification,
         handleOpenGameModerationNotification,
         handleOpenGamePublishAppeal,
+        handleOpenCreatorEarningWithdrawal,
         handleOpenPromotion,
         handleOpenPromotionSubmissionNotification,
         messageFeed,
@@ -534,6 +572,22 @@ const Messages: React.FC = () => {
                 onClose={() => setSelectedFavoriteGameUpdate(null)}
                 badgeText={t('messages.favoriteGameUpdate')}
             />
+            <Modal
+                open={Boolean(selectedCreatorEarningWithdrawal)}
+                title={selectedCreatorEarningWithdrawal
+                    ? buildCreatorEarningWithdrawalMessageView(selectedCreatorEarningWithdrawal).title
+                    : ''}
+                okText="我知道了"
+                cancelButtonProps={{ style: { display: 'none' } }}
+                onOk={() => setSelectedCreatorEarningWithdrawal(null)}
+                onCancel={() => setSelectedCreatorEarningWithdrawal(null)}
+            >
+                <p>
+                    {selectedCreatorEarningWithdrawal
+                        ? buildCreatorEarningWithdrawalMessageView(selectedCreatorEarningWithdrawal).detail
+                        : ''}
+                </p>
+            </Modal>
             <MobileBottomNav />
             {externalLinkCopyModal}
         </div>

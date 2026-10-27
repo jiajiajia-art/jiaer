@@ -5,32 +5,29 @@ import {
   IoChevronDown,
   IoChevronForward,
   IoChevronUp,
-  IoClose,
   IoHelpCircleOutline,
   IoRefresh,
 } from 'react-icons/io5';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Navbar from '../components/Layout/Navbar';
+import CreatorBenefitRulesModal from '../components/CreatorBenefits/CreatorBenefitRulesModal';
 import creatorBenefitsApi from '../api/creatorBenefits/creatorBenefitsApi';
 import type {
   CreatorBenefitSummary,
   CreatorBenefitWork,
   CreatorBenefitWorksResult,
 } from '../api/creatorBenefits/creatorBenefits.type';
+import {
+  creatorLevelProgress,
+  formatCreatorQuarterRange,
+  metricLabel,
+} from '../lib/creatorLevelView';
 import styles from './CreatorBenefits.module.css';
 
 const formatRatio = (value: number) => `${Math.round((Number(value) || 0) * 100)}%`;
 const formatNumber = (value: number) => (Number(value) || 0).toLocaleString('zh-CN');
 const INCLUDED_WORKS_PER_PAGE = 10;
-const CREATOR_BENEFIT_LEVELS = [
-  { levelKey: 'guideLevel1', threshold: 0, editorRatio: '10%', customRatio: '55%' },
-  { levelKey: 'guideLevel2', threshold: 5000, editorRatio: '15%', customRatio: '60%' },
-  { levelKey: 'guideLevel3', threshold: 10000, editorRatio: '20%', customRatio: '65%' },
-  { levelKey: 'guideLevel4', threshold: 50000, editorRatio: '25%', customRatio: '70%' },
-  { levelKey: 'guideLevel5', threshold: 100000, editorRatio: '30%', customRatio: '75%' },
-  { levelKey: 'guideSpecial', threshold: null, editorRatio: '40%-50%', customRatio: '80%-90%' },
-] as const;
 
 const CreatorBenefits: React.FC = () => {
   const { t } = useTranslation();
@@ -84,19 +81,7 @@ const CreatorBenefits: React.FC = () => {
     window.setTimeout(() => benefitGuideTriggerRef.current?.focus(), 0);
   }, []);
 
-  useEffect(() => {
-    if (!isBenefitGuideOpen) return undefined;
-    const previousOverflow = document.body.style.overflow;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') closeBenefitGuide();
-    };
-    document.body.style.overflow = 'hidden';
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [closeBenefitGuide, isBenefitGuideOpen]);
+  const levelProgress = summary ? creatorLevelProgress(summary) : null;
 
   const renderWorkRows = (items: CreatorBenefitWork[]) => {
     if (items.length === 0) return <div className={styles.emptyState}>{t('creatorBenefits.noWorks')}</div>;
@@ -111,7 +96,9 @@ const CreatorBenefits: React.FC = () => {
             </div>
             <div className={styles.workMetrics}>
               <span className={styles.statusTag}>{t(`creatorBenefits.status.${work.status}`)}</span>
-              <strong>{t('creatorBenefits.playCount', { count: formatNumber(work.pv) })}</strong>
+              <strong>
+                {metricLabel(work)} {formatNumber(work.quarterMetricCount)}
+              </strong>
             </div>
           </div>
         ))}
@@ -150,14 +137,52 @@ const CreatorBenefits: React.FC = () => {
               <div className={styles.levelBlock}>
                 <span id="creator-benefit-level" className={styles.levelBadge}>{summary.label}</span>
                 <div>
-                  <h2>{summary.isSpecialAuthor ? t('creatorBenefits.specialTitle') : t('creatorBenefits.levelTitle', { level: summary.level })}</h2>
-                  <p>{summary.isSpecialAuthor ? t('creatorBenefits.specialHint') : t('creatorBenefits.levelHint')}</p>
+                  <h2>
+                    {summary.isSpecialAuthor
+                      ? t('creatorBenefits.specialTitle')
+                      : summary.isContractedAuthor
+                        ? t('creatorBenefits.contractedTitle', { level: summary.level })
+                        : summary.unranked
+                          ? t('creatorBenefits.unrankedTitle')
+                          : t('creatorBenefits.levelTitle', { level: summary.level })}
+                  </h2>
+                  <p>
+                    {summary.isSpecialAuthor
+                      ? t('creatorBenefits.specialHint')
+                      : summary.isContractedAuthor
+                        ? t('creatorBenefits.contractedHint')
+                        : summary.unranked
+                          ? t('creatorBenefits.unrankedHint')
+                          : t('creatorBenefits.levelHint')}
+                  </p>
                 </div>
               </div>
               <div className={styles.totalPv}>
-                <span>{t('creatorBenefits.totalPv')}</span>
-                <strong>{formatNumber(summary.totalPv)}</strong>
+                <span>{t('creatorBenefits.effectiveCount')}</span>
+                <strong>{formatNumber(summary.effectiveCount)}</strong>
               </div>
+            </section>
+
+            <section className={styles.quarterSection} aria-labelledby="creator-benefit-quarter">
+              <div className={styles.sectionHeading}>
+                <h2 id="creator-benefit-quarter">{t('creatorBenefits.quarterTitle', { quarter: summary.quarterKey })}</h2>
+                <p>{formatCreatorQuarterRange(summary.effectiveStart, summary.periodEnd)}</p>
+              </div>
+              <div className={styles.quarterGrid}>
+                <div>
+                  <span>{t('creatorBenefits.txtPlayRounds')}</span>
+                  <strong>{formatNumber(summary.txtPlayRounds)}</strong>
+                </div>
+                <div>
+                  <span>{t('creatorBenefits.otherModePv')}</span>
+                  <strong>{formatNumber(summary.otherModePv)}</strong>
+                </div>
+                <div>
+                  <span>{t('creatorBenefits.effectiveCount')}</span>
+                  <strong>{formatNumber(summary.effectiveCount)}</strong>
+                </div>
+              </div>
+              <p className={styles.quarterNote}>{t('creatorBenefits.quarterHint')}</p>
             </section>
 
             <section className={styles.ratioSection} aria-labelledby="creator-benefit-ratios">
@@ -196,16 +221,16 @@ const CreatorBenefits: React.FC = () => {
               </div>
             </section>
 
-            {!summary.isSpecialAuthor && summary.nextLevelPv ? (
+            {!summary.isSpecialAuthor && summary.nextLevel && levelProgress?.target ? (
               <section className={styles.progressSection} aria-labelledby="creator-benefit-progress">
                 <div className={styles.progressCopy}>
                   <div>
                     <h2 id="creator-benefit-progress">{t('creatorBenefits.nextLevel', { level: summary.nextLevel })}</h2>
-                    <p>{t('creatorBenefits.progressHint', { current: formatNumber(summary.totalPv), target: formatNumber(summary.nextLevelPv) })}</p>
+                    <p>{t('creatorBenefits.progressHint', { current: formatNumber(levelProgress.current), target: formatNumber(levelProgress.target) })}</p>
                   </div>
-                  <strong>{summary.progressPercent}%</strong>
+                  <strong>{levelProgress.percent}%</strong>
                 </div>
-                <progress max={100} value={summary.progressPercent} aria-label={t('creatorBenefits.progressLabel')} />
+                <progress max={100} value={levelProgress.percent} aria-label={t('creatorBenefits.progressLabel')} />
               </section>
             ) : null}
 
@@ -278,74 +303,12 @@ const CreatorBenefits: React.FC = () => {
           </>
         ) : null}
       </main>
-      {isBenefitGuideOpen ? (
-        <div
-          className={styles.modalOverlay}
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) closeBenefitGuide();
-          }}
-        >
-          <div
-            className={styles.benefitModal}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="creator-benefit-guide-title"
-            aria-describedby="creator-benefit-guide-description"
-          >
-            <header className={styles.modalHeader}>
-              <div>
-                <h2 id="creator-benefit-guide-title">{t('creatorBenefits.guideTitle')}</h2>
-                <p id="creator-benefit-guide-description">{t('creatorBenefits.guideDescription')}</p>
-              </div>
-              <button
-                type="button"
-                className={styles.modalCloseButton}
-                onClick={closeBenefitGuide}
-                aria-label={t('creatorBenefits.guideClose')}
-                title={t('creatorBenefits.guideClose')}
-                autoFocus
-              >
-                <IoClose aria-hidden="true" />
-              </button>
-            </header>
-            <div className={styles.tableScroller}>
-              <table>
-                <thead>
-                  <tr>
-                    <th scope="col">{t('creatorBenefits.guideLevel')}</th>
-                    {CREATOR_BENEFIT_LEVELS.map((item) => (
-                      <th key={item.levelKey} scope="col">{t(`creatorBenefits.${item.levelKey}`)}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <th scope="row">{t('creatorBenefits.guideUpgradeCondition')}</th>
-                    {CREATOR_BENEFIT_LEVELS.map((item) => (
-                      <td key={item.levelKey}>
-                        {item.threshold === 0
-                          ? t('creatorBenefits.guideInitial')
-                          : item.threshold === null
-                            ? t('creatorBenefits.guideNotApplicable')
-                            : t('creatorBenefits.guidePlayThreshold', { count: formatNumber(item.threshold) })}
-                      </td>
-                    ))}
-                  </tr>
-                  <tr>
-                    <th scope="row">{t('creatorBenefits.guideEditorRatio')}</th>
-                    {CREATOR_BENEFIT_LEVELS.map((item) => <td key={item.levelKey}>{item.editorRatio}</td>)}
-                  </tr>
-                  <tr>
-                    <th scope="row">{t('creatorBenefits.guideCustomRatio')}</th>
-                    {CREATOR_BENEFIT_LEVELS.map((item) => <td key={item.levelKey}>{item.customRatio}</td>)}
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <p className={styles.modalNote}>{t('creatorBenefits.guideSpecialNote')}</p>
-          </div>
-        </div>
-      ) : null}
+      <CreatorBenefitRulesModal
+        open={isBenefitGuideOpen}
+        currentLevel={summary?.level}
+        isSpecialAuthor={summary?.isSpecialAuthor}
+        onClose={closeBenefitGuide}
+      />
     </div>
   );
 };

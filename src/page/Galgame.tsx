@@ -38,6 +38,11 @@ import {
 } from "../lib/galgame/npcAvatarMerge";
 import { subscribeNpcAvatarGenComplete } from "../lib/galgame/npcAvatarBackgroundJob";
 import { useImageBusinessPrice } from '../hooks/useImageBusinessPrice';
+import {
+    formatSessionProfileCharge,
+    getSessionProfileBillingPreview,
+    resolveSessionProfileBalancePatch,
+} from '../lib/sessionProfileBilling';
 import { ensureMinPlayChoiceOptions } from "../lib/galgame/playChoiceOptions";
 import type { SystemsConfigPatch } from "../components/Galgame/panels/SystemsPanel";
 import type { PlayerEditableNpc } from "../lib/galgame/characterProfile";
@@ -129,12 +134,20 @@ import type { PayOrderRequest } from "../api/pay/pay.type";
 import { auth } from "../api/account/authApi";
 
 const Galgame = () => {
-    const { estimatedPoints: sessionAvatarPrice } = useImageBusinessPrice('session_avatar_control');
     const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
     const { user, updateUser } = useAuthStore();
     const { fileId, sessionId } = useGameStore();
+    const {
+        data: sessionAvatarPricing,
+        estimatedPoints: sessionAvatarPrice,
+    } = useImageBusinessPrice('session_avatar_control', undefined, sessionId);
+    const sessionAvatarBillingPreview = getSessionProfileBillingPreview(
+        location.search,
+        sessionAvatarPrice ?? 0,
+        sessionAvatarPricing,
+    );
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isExportNovelOpen, setIsExportNovelOpen] = useState(false);
     const [isReplayControlsOpen, setIsReplayControlsOpen] = useState(false);
@@ -778,14 +791,19 @@ const Galgame = () => {
         return subscribePlayerAvatarGenComplete((sid, result) => {
             if (sid !== sessionId) return;
             setSessionPlayerProfile((prev) => mergePlayerAvatarIntoProfile(prev, result));
-            if (typeof result.remainingPoints === 'number') {
+            const balancePatch = resolveSessionProfileBalancePatch(result.billing);
+            if (balancePatch) {
+                useAuthStore.getState().updateUser(balancePatch);
+            } else if (typeof result.remainingPoints === 'number') {
                 useAuthStore.getState().updateUser({ points: result.remainingPoints });
             }
             toast.success(
-                `头像已生成并保存（-${result.pointsDeducted ?? sessionAvatarPrice ?? 0} 织梦豆）`,
+                `头像已生成并保存（-${formatSessionProfileCharge(
+                    result.billing || sessionAvatarBillingPreview,
+                )}）`,
             );
         });
-    }, [sessionId]);
+    }, [location.search, sessionAvatarPrice, sessionId]);
 
     // 功能注释：角色头像后台生成完成后写回列表；未保存的新角色先挂 pending
     useEffect(() => {
@@ -799,14 +817,19 @@ const Galgame = () => {
                 else delete pendingNpcAvatarsRef.current[result.npcId];
                 return merged;
             });
-            if (typeof result.remainingPoints === 'number') {
+            const balancePatch = resolveSessionProfileBalancePatch(result.billing);
+            if (balancePatch) {
+                useAuthStore.getState().updateUser(balancePatch);
+            } else if (typeof result.remainingPoints === 'number') {
                 useAuthStore.getState().updateUser({ points: result.remainingPoints });
             }
             toast.success(
-                `角色头像已生成（-${result.pointsDeducted ?? sessionAvatarPrice ?? 0} 织梦豆）`,
+                `角色头像已生成（-${formatSessionProfileCharge(
+                    result.billing || sessionAvatarBillingPreview,
+                )}）`,
             );
         });
-    }, [sessionId]);
+    }, [location.search, sessionAvatarPrice, sessionId]);
 
     const applyPendingNpcAvatars = useCallback((profiles: PlayerEditableNpc[]) => {
         let next = profiles;

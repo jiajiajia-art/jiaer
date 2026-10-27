@@ -15,6 +15,7 @@ export interface ImageBusinessResolutionPrice {
   aspectRatio: string;
   userChargeMicro: number;
   estimatedPoints: number;
+  estimatedUnits?: number;
 }
 
 export interface ImageBusinessPrice {
@@ -33,14 +34,22 @@ export interface ImageBusinessPrice {
   resolutions: ImageBusinessResolutionPrice[];
   estimatedPoints: number;
   maxRequiredPoints: number;
+  currency?: 'kk' | 'points';
+  estimatedUnits?: number;
+  maxRequiredUnits?: number;
 }
 
 const imageBusinessPricingApi = {
-  list: (params?: { scenarioKey?: ImageBusinessScenarioKey; fileId?: string | null }) =>
+  list: (params?: {
+    scenarioKey?: ImageBusinessScenarioKey;
+    fileId?: string | null;
+    sessionId?: string | null;
+  }) =>
     api.get<ApiResponse<{ items: ImageBusinessPrice[] }>>('/ai-image/business-prices', {
       params: {
         scenarioKey: params?.scenarioKey,
         fileId: params?.fileId || undefined,
+        sessionId: params?.sessionId || undefined,
       },
     }),
 };

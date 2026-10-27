@@ -4,6 +4,7 @@
  */
 
 import { sessionPlayerProfileApi } from '../../api/galgame/playerCharacterCards';
+import type { SessionProfileBilling } from '../sessionProfileBilling';
 import { sanitizeUpstreamLlmErrorMessage } from '../../utils/error';
 
 export type NpcAvatarGenPayload = {
@@ -24,6 +25,7 @@ export type NpcAvatarGenResult = {
   npcId: string;
   avatarUrl: string;
   avatarThumbUrl?: string;
+  billing?: SessionProfileBilling;
   pointsDeducted?: number;
   remainingPoints?: number;
 };
@@ -217,6 +219,7 @@ export function startNpcAvatarBackgroundGen(opts: {
         npcId: id,
         avatarUrl: res.data.avatarUrl,
         avatarThumbUrl: res.data.avatarThumbUrl || '',
+        billing: res.data.billing,
         pointsDeducted: res.data.pointsDeducted,
         remainingPoints: res.data.remainingPoints,
       };

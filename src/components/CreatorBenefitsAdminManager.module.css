@@ -50,7 +50,7 @@
 }
 
 .segmented button {
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 14px;
   border: 0;
   border-radius: 6px;
@@ -79,7 +79,7 @@
 
 .managementTabs button {
   position: relative;
-  min-height: 42px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -181,7 +181,7 @@
 .dangerButton,
 .closeButton,
 .pagination button {
-  min-height: 40px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -407,6 +407,65 @@
   padding: 18px;
 }
 
+.authorTypeField {
+  display: grid;
+  gap: 7px;
+  color: var(--cb-muted);
+  font-size: 12px;
+}
+
+.authorTypeField select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--cb-border);
+  border-radius: 7px;
+  background: var(--cb-surface);
+  color: var(--cb-text);
+  box-sizing: border-box;
+  font: inherit;
+}
+
+.authorSnapshot {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.authorSnapshot > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px;
+  border: 1px solid var(--cb-border);
+  border-radius: 7px;
+  background: var(--cb-soft);
+}
+
+.authorSnapshot span,
+.authorQuarter,
+.authorTypeHint {
+  color: var(--cb-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.authorSnapshot strong {
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+
+.authorQuarter,
+.authorTypeHint {
+  margin: 0;
+}
+
+.authorTypeHint {
+  padding: 11px 12px;
+  border-left: 3px solid var(--cb-accent);
+  background: var(--cb-soft);
+}
+
 .formGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -597,6 +656,10 @@
   }
 
   .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .authorSnapshot {
     grid-template-columns: 1fr;
   }
 

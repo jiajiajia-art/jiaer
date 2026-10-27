@@ -23,6 +23,13 @@ import { NPC_PROFILE_FIELD_GENERATION_COST, getImageUrl } from '../../../utils/c
 import { useImageBusinessPrice } from '../../../hooks/useImageBusinessPrice';
 import { getApiErrorMessage } from '../../../utils/error';
 import { refreshAuthUserPoints } from '../../../lib/auth/refreshUserPoints';
+import {
+  formatSessionProfileCharge,
+  getSessionProfileBillingPreview,
+  resolveSessionProfileBalancePatch,
+  sessionProfileCurrencyLabel,
+  type SessionProfileBillingPreview,
+} from '../../../lib/sessionProfileBilling';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { useGameStore } from '../../../store/gameStore';
 import GameConfirmModal from '../GameConfirmModal';
@@ -146,6 +153,7 @@ function reqLabel(text: string, required = false) {
 
 function fieldLabelWithAi(opts: {
   text: string;
+  chargeText: string;
   required?: boolean;
   busy: boolean;
   disabled: boolean;
@@ -160,7 +168,7 @@ function fieldLabelWithAi(opts: {
         disabled={opts.disabled || opts.busy}
         onClick={opts.onAi}
       >
-        {opts.busy ? '生成中…' : `AI生成 · ${NPC_PROFILE_FIELD_GENERATION_COST}`}
+        {opts.busy ? '生成中…' : `AI生成 · ${opts.chargeText}`}
       </button>
     </div>
   );
@@ -176,15 +184,28 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
   onCancel,
   onSubmit,
 }) => {
+  const { sessionId } = useGameStore();
   const {
+    data: sessionAvatarPricing,
     estimatedPoints: sessionAvatarPrice,
     priceUnavailable: sessionAvatarPriceUnavailable,
     error: sessionAvatarPriceError,
-  } = useImageBusinessPrice('session_avatar_control');
+  } = useImageBusinessPrice('session_avatar_control', undefined, sessionId);
   const sessionAvatarCost = sessionAvatarPrice ?? 0;
+  const billingSearch = typeof window === 'undefined' ? '' : window.location.search;
+  const avatarBillingPreview = getSessionProfileBillingPreview(
+    billingSearch,
+    sessionAvatarCost,
+    sessionAvatarPricing,
+  );
+  const textBillingPreview = getSessionProfileBillingPreview(
+    billingSearch,
+    NPC_PROFILE_FIELD_GENERATION_COST,
+  );
+  const avatarChargeText = formatSessionProfileCharge(avatarBillingPreview);
+  const textChargeText = formatSessionProfileCharge(textBillingPreview);
   const token = useAuthStore((s) => s.user?.token);
   const updateUser = useAuthStore((s) => s.updateUser);
-  const { sessionId } = useGameStore();
   const draftId = useMemo(() => String(initial?.id || newDraftId()), [initial?.id]);
   const [values, setValues] = useState<CharacterProfileFormValues>(() => profileToValues(initial));
   const [saving, setSaving] = useState(false);
@@ -228,7 +249,10 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
         avatarUrl: result.avatarUrl,
         avatarThumbUrl: result.avatarThumbUrl || '',
       }));
-      if (typeof result.remainingPoints === 'number') {
+      const balancePatch = resolveSessionProfileBalancePatch(result.billing);
+      if (balancePatch) {
+        updateUser(balancePatch);
+      } else if (typeof result.remainingPoints === 'number') {
         updateUser({ points: result.remainingPoints });
       }
     });
@@ -313,11 +337,13 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
     return true;
   };
 
-  /** 仅积分不足时提示当前余额；够用则不展示「当前积分」。先刷新服务端积分，避免后台改分后本地缓存误拦。 */
-  const ensureEnoughPointsForAi = async (cost: number) => {
+  const ensureEnoughForAi = async (preview: SessionProfileBillingPreview) => {
+    if (preview.currency === 'kk') return true;
     const latestPoints = await refreshAuthUserPoints();
-    if (typeof latestPoints === 'number' && latestPoints < cost) {
-      toast.error(`织梦豆不足（需要 ${cost}，当前 ${latestPoints}）`);
+    if (typeof latestPoints === 'number' && latestPoints < preview.chargedUnits) {
+      toast.error(
+        `${sessionProfileCurrencyLabel(preview.currency)}不足（需要 ${preview.chargedUnits}，当前 ${latestPoints}）`,
+      );
       return false;
     }
     return true;
@@ -329,7 +355,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
       toast.error(sessionAvatarPriceError || 'Price unavailable');
       return;
     }
-    if (!(await ensureEnoughPointsForAi(sessionAvatarCost))) return;
+    if (!(await ensureEnoughForAi(avatarBillingPreview))) return;
     if (isAiBusy('avatar') || avatarUploading) return;
     setAvatarStyleId(DEFAULT_AVATAR_STYLE);
     setAvatarPromptSupplement('');
@@ -396,7 +422,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
 
   const requestGenerateField = async (field: ProfileTextField) => {
     if (!ensureReadyForAi()) return;
-    if (!(await ensureEnoughPointsForAi(NPC_PROFILE_FIELD_GENERATION_COST))) return;
+    if (!(await ensureEnoughForAi(textBillingPreview))) return;
     if (isAiBusy(field)) return;
     setConfirmKind(field);
   };
@@ -458,11 +484,16 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
         return;
       }
       setField(field, res.data.text);
-      if (typeof res.data.remainingPoints === 'number') {
+      const balancePatch = resolveSessionProfileBalancePatch(res.data.billing);
+      if (balancePatch) {
+        updateUser(balancePatch);
+      } else if (typeof res.data.remainingPoints === 'number') {
         updateUser({ points: res.data.remainingPoints });
       }
       toast.success(
-        `${PROFILE_FIELD_LABEL[field]}已生成（-${res.data.pointsDeducted ?? NPC_PROFILE_FIELD_GENERATION_COST} 织梦豆）`,
+        `${PROFILE_FIELD_LABEL[field]}已生成（-${res.data.billing
+          ? formatSessionProfileCharge(res.data.billing)
+          : textChargeText}）`,
       );
     } catch (e) {
       toast.error(getApiErrorMessage(e, `${PROFILE_FIELD_LABEL[field]}生成失败`));
@@ -574,7 +605,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
                   void requestGenerateAvatar();
                 }}
               >
-                {isAiBusy('avatar') ? '生成中…' : `AI 生成头像 · ${sessionAvatarPrice ?? '—'} 织梦豆`}
+                {isAiBusy('avatar') ? '生成中…' : `AI 生成头像 · ${sessionAvatarPrice == null ? '—' : avatarChargeText}`}
               </button>
               <button
                 type="button"
@@ -635,6 +666,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
           <div className={styles.field}>
             {fieldLabelWithAi({
               text: `关系（≤${CHARACTER_PROFILE_LIMITS.relationship.max}）`,
+              chargeText: textChargeText,
               required: true,
               busy: isAiBusy('relationship'),
               disabled: formLocked,
@@ -654,6 +686,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
           <div className={styles.field}>
             {fieldLabelWithAi({
               text: `简介（≤${CHARACTER_PROFILE_LIMITS.summary.max}）`,
+              chargeText: textChargeText,
               required: true,
               busy: isAiBusy('summary'),
               disabled: formLocked,
@@ -674,6 +707,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
           <div className={styles.field}>
             {fieldLabelWithAi({
               text: `对你的态度（≤${CHARACTER_PROFILE_LIMITS.attitudeToPlayer.max}）`,
+              chargeText: textChargeText,
               required: true,
               busy: isAiBusy('attitudeToPlayer'),
               disabled: formLocked,
@@ -715,6 +749,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
             <div className={styles.field}>
               {fieldLabelWithAi({
                 text: `详细简介（≤${CHARACTER_PROFILE_LIMITS.detailedBio.max}）`,
+                chargeText: textChargeText,
                 busy: isAiBusy('detailedBio'),
                 disabled: formLocked,
                 onAi: () => {
@@ -785,7 +820,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
         message={confirmKind === 'avatar' ? (
           <div className={styles.confirmMsgStack}>
             <p className={styles.confirmMsgText}>
-              {`将扣除 ${sessionAvatarPrice ?? '—'} 织梦豆生成 AI 头像，是否继续？`}
+              {`将扣除 ${sessionAvatarPrice == null ? '—' : avatarChargeText}生成 AI 头像，是否继续？`}
             </p>
             <button
               type="button"
@@ -800,7 +835,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
             </button>
           </div>
         ) : (
-          `将扣除 ${NPC_PROFILE_FIELD_GENERATION_COST} 织梦豆生成「${confirmKind ? PROFILE_FIELD_LABEL[confirmKind] : ''}」，是否继续？`
+          `将扣除 ${textChargeText}生成「${confirmKind ? PROFILE_FIELD_LABEL[confirmKind] : ''}」，是否继续？`
         )}
         confirmText="确认生成"
         cancelText="取消"

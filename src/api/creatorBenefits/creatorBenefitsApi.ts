@@ -6,6 +6,7 @@ import type {
   CreatorBenefitSummary,
   CreatorBenefitWorksResult,
   SpecialAuthorPayload,
+  UpdateAuthorPayload,
 } from './creatorBenefits.type';
 
 const creatorBenefitsApi = {
@@ -21,6 +22,12 @@ const creatorBenefitsApi = {
   updateSpecialAuthor: (userId: string, payload: SpecialAuthorPayload) =>
     api.put<ApiResponse<CreatorBenefitSummary>>(
       `/admin/creator-benefits/users/${encodeURIComponent(userId)}/special`,
+      payload,
+    ),
+
+  updateAuthor: (userId: string, payload: UpdateAuthorPayload) =>
+    api.put<ApiResponse<CreatorBenefitSummary>>(
+      `/admin/creator-benefits/users/${encodeURIComponent(userId)}/author`,
       payload,
     ),
 

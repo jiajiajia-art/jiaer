@@ -13,14 +13,18 @@
     color: #ffffff;
 }
 
+.desktopChrome {
+    display: contents;
+}
+
 .mainContent {
     width: 100%;
     box-sizing: border-box;
-    padding: calc(var(--app-desktop-navbar-height, 64px) + 22px) 24px 144px;
+    padding: calc(var(--app-desktop-navbar-height, 64px) + 22px) 24px 96px;
 }
 
 .dashboard {
-    width: min(1180px, 100%);
+    width: min(1040px, 100%);
     margin: 0 auto;
     display: flex;
     flex-direction: column;
@@ -28,11 +32,15 @@
 }
 
 .pageHeader {
-    min-height: 52px;
+    min-height: 72px;
     display: flex;
     align-items: center;
-    gap: 14px;
-    padding: 2px 0 4px;
+    gap: 8px;
+    padding: 0 16px;
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    background: #030303;
+    box-sizing: border-box;
 }
 
 .backButton,
@@ -48,17 +56,15 @@
 }
 
 .backButton {
-    min-width: 44px;
+    width: 44px;
     min-height: 44px;
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 7px;
-    padding: 0 12px;
-    border: 1px solid var(--border);
-    border-radius: 11px;
-    background: rgba(255, 255, 255, 0.035);
+    padding: 0;
+    border: 0;
+    background: transparent;
     color: #ffffff;
     font-size: 13px;
     cursor: pointer;
@@ -66,7 +72,7 @@
 
 .backButton svg {
     flex: 0 0 auto;
-    font-size: 18px;
+    font-size: 25px;
 }
 
 .headerCopy {
@@ -79,7 +85,7 @@
 .headerCopy h1 {
     margin: 0;
     flex: 0 0 auto;
-    font-size: clamp(24px, 3vw, 30px);
+    font-size: clamp(24px, 3vw, 29px);
     line-height: 1.2;
 }
 
@@ -712,9 +718,13 @@
     }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
+    .desktopChrome {
+        display: none;
+    }
+
     .mainContent {
-        padding: calc(var(--app-mobile-navbar-height, 56px) + 12px) 12px calc(104px + env(safe-area-inset-bottom));
+        padding: 14px 12px calc(36px + env(safe-area-inset-bottom));
     }
 
     .dashboard {
@@ -722,9 +732,25 @@
     }
 
     .pageHeader {
-        min-height: 44px;
+        min-height: 68px;
+        padding: 0 12px;
+        border-radius: 14px;
+    }
+}
+
+@media (max-width: 640px) {
+    .mainContent {
+        padding: 12px 12px calc(32px + env(safe-area-inset-bottom));
+    }
+
+    .dashboard {
+        gap: 12px;
+    }
+
+    .pageHeader {
+        min-height: 68px;
         gap: 10px;
-        padding: 0;
+        padding: 0 10px;
     }
 
     .backButton {
@@ -732,7 +758,6 @@
         padding: 0;
     }
 
-    .backButton span,
     .headerCopy p {
         display: none;
     }

@@ -15,7 +15,9 @@ import type {
   AdminCreatorBenefitUser,
   AdminManagedGame,
   AdminManagedGameResult,
+  CreatorAuthorType,
 } from '../api/creatorBenefits/creatorBenefits.type';
+import { authorTypeLabel, formatCreatorQuarterRange } from '../lib/creatorLevelView';
 import { getApiErrorMessage } from '../utils/error';
 import gamePublishAppealsApi from '../api/gamePublishAppeals/gamePublishAppealsApi';
 import type {
@@ -64,14 +66,14 @@ const CreatorBenefitsAdminManager: React.FC<CreatorBenefitsAdminManagerProps> = 
   const [users, setUsers] = useState<AdminCreatorBenefitUser[]>([]);
   const [isSearchingUsers, setIsSearchingUsers] = useState(false);
   const [editingUser, setEditingUser] = useState<AdminCreatorBenefitUser | null>(null);
-  const [specialDraft, setSpecialDraft] = useState({
-    enabled: false,
-    editorPercent: 45,
-    customPercent: 85,
+  const [authorDraft, setAuthorDraft] = useState({
+    authorType: 'regular' as CreatorAuthorType,
+    editorPercent: 22,
+    customPercent: 80,
     freeTxtCreation: false,
     note: '',
   });
-  const [isSavingSpecial, setIsSavingSpecial] = useState(false);
+  const [isSavingAuthor, setIsSavingAuthor] = useState(false);
 
   const [gameKeyword, setGameKeyword] = useState('');
   const [gameStatus, setGameStatus] = useState('published');
@@ -179,39 +181,45 @@ const CreatorBenefitsAdminManager: React.FC<CreatorBenefitsAdminManagerProps> = 
     }
   };
 
-  const openSpecialEditor = (user: AdminCreatorBenefitUser) => {
+  const openAuthorEditor = (user: AdminCreatorBenefitUser) => {
     setEditingUser(user);
-    setSpecialDraft({
-      enabled: user.benefits.isSpecialAuthor,
-      editorPercent: Math.round(user.benefits.editorShareRatio * 100),
-      customPercent: Math.round(user.benefits.customShareRatio * 100),
+    setAuthorDraft({
+      authorType: user.benefits.authorType,
+      editorPercent: user.benefits.isSpecialAuthor
+        ? Math.round(user.benefits.editorShareRatio * 100)
+        : 22,
+      customPercent: user.benefits.isSpecialAuthor
+        ? Math.round(user.benefits.customShareRatio * 100)
+        : 80,
       freeTxtCreation: user.benefits.freeTxtCreation,
-      note: user.benefits.specialNote || '',
+      note: user.benefits.authorNote || user.benefits.specialNote || '',
     });
   };
 
-  const handleSaveSpecial = async () => {
+  const handleSaveAuthor = async () => {
     if (!editingUser) return;
     if (
-      specialDraft.enabled
-      && (!Number.isFinite(specialDraft.editorPercent)
-        || !Number.isFinite(specialDraft.customPercent)
-        || specialDraft.editorPercent < 0
-        || specialDraft.editorPercent > 100
-        || specialDraft.customPercent < 0
-        || specialDraft.customPercent > 100)
+      authorDraft.authorType === 'special'
+      && (!Number.isFinite(authorDraft.editorPercent)
+        || !Number.isFinite(authorDraft.customPercent)
+        || authorDraft.editorPercent < 0
+        || authorDraft.editorPercent > 100
+        || authorDraft.customPercent < 0
+        || authorDraft.customPercent > 100)
     ) {
       toast.error(t('creatorBenefitsAdmin.ratioInvalid'));
       return;
     }
-    setIsSavingSpecial(true);
+    setIsSavingAuthor(true);
     try {
-      const response = await creatorBenefitsApi.updateSpecialAuthor(editingUser.userId, {
-        enabled: specialDraft.enabled,
-        editorShareRatio: specialDraft.editorPercent / 100,
-        customShareRatio: specialDraft.customPercent / 100,
-        freeTxtCreation: specialDraft.freeTxtCreation,
-        note: specialDraft.note.trim(),
+      const response = await creatorBenefitsApi.updateAuthor(editingUser.userId, {
+        authorType: authorDraft.authorType,
+        ...(authorDraft.authorType === 'special' ? {
+          editorShareRatio: authorDraft.editorPercent / 100,
+          customShareRatio: authorDraft.customPercent / 100,
+          freeTxtCreation: authorDraft.freeTxtCreation,
+        } : {}),
+        note: authorDraft.note.trim(),
       });
       const benefits = response.data.data;
       if (benefits) {
@@ -220,11 +228,11 @@ const CreatorBenefitsAdminManager: React.FC<CreatorBenefitsAdminManagerProps> = 
         )));
       }
       setEditingUser(null);
-      toast.success(t('creatorBenefitsAdmin.specialSaved'));
+      toast.success(t('creatorBenefitsAdmin.authorSaved'));
     } catch (error) {
-      toast.error(getApiErrorMessage(error, t('creatorBenefitsAdmin.specialSaveFailed')));
+      toast.error(getApiErrorMessage(error, t('creatorBenefitsAdmin.authorSaveFailed')));
     } finally {
-      setIsSavingSpecial(false);
+      setIsSavingAuthor(false);
     }
   };
 
@@ -363,7 +371,7 @@ const CreatorBenefitsAdminManager: React.FC<CreatorBenefitsAdminManagerProps> = 
                   <span>{t('creatorBenefitsAdmin.editorShort')} {formatPercent(user.benefits.editorShareRatio)}</span>
                   <span>{t('creatorBenefitsAdmin.customShort')} {formatPercent(user.benefits.customShareRatio)}</span>
                 </div>
-                <button type="button" className={styles.secondaryButton} onClick={() => openSpecialEditor(user)}>
+                <button type="button" className={styles.secondaryButton} onClick={() => openAuthorEditor(user)}>
                   <IoSettingsOutline aria-hidden="true" />
                   {t('creatorBenefitsAdmin.configure')}
                 </button>
@@ -574,46 +582,84 @@ const CreatorBenefitsAdminManager: React.FC<CreatorBenefitsAdminManagerProps> = 
       )}
 
       {editingUser ? (
-        <div className={styles.modalOverlay} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !isSavingSpecial) setEditingUser(null); }}>
-          <div className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="special-author-title">
+        <div className={styles.modalOverlay} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !isSavingAuthor) setEditingUser(null); }}>
+          <div className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="author-editor-title">
             <header>
               <div>
                 <span>{editingUser.userCode}</span>
-                <h3 id="special-author-title">{t('creatorBenefitsAdmin.specialEditorTitle')}</h3>
+                <h3 id="author-editor-title">{t('creatorBenefitsAdmin.authorEditorTitle')}</h3>
               </div>
               <button type="button" className={styles.closeButton} onClick={() => setEditingUser(null)} aria-label={t('creatorBenefitsAdmin.close')}>×</button>
             </header>
             <div className={styles.formBody}>
-              <label className={styles.switchField}>
-                <input type="checkbox" checked={specialDraft.enabled} onChange={(event) => setSpecialDraft((draft) => ({ ...draft, enabled: event.target.checked }))} />
-                <span>{t('creatorBenefitsAdmin.enableSpecial')}</span>
+              <label className={styles.authorTypeField}>
+                <span>{t('creatorBenefitsAdmin.authorType')}</span>
+                <select
+                  value={authorDraft.authorType}
+                  onChange={(event) => setAuthorDraft((draft) => ({
+                    ...draft,
+                    authorType: event.target.value as CreatorAuthorType,
+                  }))}
+                  disabled={isSavingAuthor}
+                >
+                  <option value="regular">{authorTypeLabel('regular')}</option>
+                  <option value="contracted">{authorTypeLabel('contracted')}</option>
+                  <option value="special">{authorTypeLabel('special')}</option>
+                </select>
               </label>
-              <div className={styles.formGrid}>
-                <label>
-                  <span>{t('creatorBenefitsAdmin.editorPercent')}</span>
-                  <input type="number" min="0" max="100" step="0.1" value={specialDraft.editorPercent} onChange={(event) => setSpecialDraft((draft) => ({ ...draft, editorPercent: Number(event.target.value) }))} disabled={!specialDraft.enabled} />
-                  <small>{t('creatorBenefitsAdmin.editorRecommended')}</small>
-                </label>
-                <label>
-                  <span>{t('creatorBenefitsAdmin.customPercent')}</span>
-                  <input type="number" min="0" max="100" step="0.1" value={specialDraft.customPercent} onChange={(event) => setSpecialDraft((draft) => ({ ...draft, customPercent: Number(event.target.value) }))} disabled={!specialDraft.enabled} />
-                  <small>{t('creatorBenefitsAdmin.customRecommended')}</small>
-                </label>
+              <div className={styles.authorSnapshot}>
+                <div>
+                  <span>{t('creatorBenefitsAdmin.currentLevel')}</span>
+                  <strong>{editingUser.benefits.label}</strong>
+                </div>
+                <div>
+                  <span>{t('creatorBenefitsAdmin.permanentLevel')}</span>
+                  <strong>Lv.{editingUser.benefits.permanentLevel || 0}</strong>
+                </div>
+                <div>
+                  <span>{t('creatorBenefitsAdmin.quarterEffectiveCount')}</span>
+                  <strong>{editingUser.benefits.effectiveCount.toLocaleString('zh-CN')}</strong>
+                </div>
               </div>
-              <label className={styles.switchField}>
-                <input type="checkbox" checked={specialDraft.freeTxtCreation} onChange={(event) => setSpecialDraft((draft) => ({ ...draft, freeTxtCreation: event.target.checked }))} disabled={!specialDraft.enabled} />
-                <span>{t('creatorBenefitsAdmin.freeTxtCreation')}</span>
-              </label>
+              <p className={styles.authorQuarter}>
+                {editingUser.benefits.quarterKey} · {formatCreatorQuarterRange(editingUser.benefits.effectiveStart, editingUser.benefits.periodEnd)}
+              </p>
+              {authorDraft.authorType === 'special' ? (
+                <>
+                  <div className={styles.formGrid}>
+                    <label>
+                      <span>{t('creatorBenefitsAdmin.editorPercent')}</span>
+                      <input type="number" min="0" max="100" step="0.1" value={authorDraft.editorPercent} onChange={(event) => setAuthorDraft((draft) => ({ ...draft, editorPercent: Number(event.target.value) }))} disabled={isSavingAuthor} />
+                      <small>{t('creatorBenefitsAdmin.editorRecommended')}</small>
+                    </label>
+                    <label>
+                      <span>{t('creatorBenefitsAdmin.customPercent')}</span>
+                      <input type="number" min="0" max="100" step="0.1" value={authorDraft.customPercent} onChange={(event) => setAuthorDraft((draft) => ({ ...draft, customPercent: Number(event.target.value) }))} disabled={isSavingAuthor} />
+                      <small>{t('creatorBenefitsAdmin.customRecommended')}</small>
+                    </label>
+                  </div>
+                  <label className={styles.switchField}>
+                    <input type="checkbox" checked={authorDraft.freeTxtCreation} onChange={(event) => setAuthorDraft((draft) => ({ ...draft, freeTxtCreation: event.target.checked }))} disabled={isSavingAuthor} />
+                    <span>{t('creatorBenefitsAdmin.freeTxtCreation')}</span>
+                  </label>
+                </>
+              ) : (
+                <p className={styles.authorTypeHint}>
+                  {t(authorDraft.authorType === 'contracted'
+                    ? 'creatorBenefitsAdmin.contractedTypeHint'
+                    : 'creatorBenefitsAdmin.regularTypeHint')}
+                </p>
+              )}
               <label className={styles.textareaField}>
                 <span>{t('creatorBenefitsAdmin.note')}</span>
-                <textarea maxLength={500} value={specialDraft.note} onChange={(event) => setSpecialDraft((draft) => ({ ...draft, note: event.target.value }))} />
+                <textarea maxLength={500} value={authorDraft.note} onChange={(event) => setAuthorDraft((draft) => ({ ...draft, note: event.target.value }))} disabled={isSavingAuthor} />
               </label>
             </div>
             <footer>
-              <button type="button" className={styles.secondaryButton} onClick={() => setEditingUser(null)} disabled={isSavingSpecial}>{t('creatorBenefitsAdmin.cancel')}</button>
-              <button type="button" className={styles.primaryButton} onClick={() => void handleSaveSpecial()} disabled={isSavingSpecial}>
+              <button type="button" className={styles.secondaryButton} onClick={() => setEditingUser(null)} disabled={isSavingAuthor}>{t('creatorBenefitsAdmin.cancel')}</button>
+              <button type="button" className={styles.primaryButton} onClick={() => void handleSaveAuthor()} disabled={isSavingAuthor}>
                 <IoCheckmarkCircle aria-hidden="true" />
-                {isSavingSpecial ? t('creatorBenefitsAdmin.saving') : t('creatorBenefitsAdmin.save')}
+                {isSavingAuthor ? t('creatorBenefitsAdmin.saving') : t('creatorBenefitsAdmin.save')}
               </button>
             </footer>
           </div>

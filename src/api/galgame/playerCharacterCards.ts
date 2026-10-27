@@ -3,6 +3,7 @@
  */
 import { HOST_ADDRESS } from '../../config';
 import type { SessionPlayerProfile } from '../../lib/galgame/playerCharacterCard';
+import type { SessionProfileBilling } from '../../lib/sessionProfileBilling';
 
 async function parseJson(res: Response) {
   const text = await res.text();
@@ -264,8 +265,9 @@ export const sessionPlayerProfileApi = {
         avatarUrl: string;
         avatarThumbUrl?: string;
         profile?: SessionPlayerProfile;
-        pointsDeducted: number;
-        remainingPoints: number;
+        billing: SessionProfileBilling;
+        pointsDeducted?: number;
+        remainingPoints?: number;
       };
     }>;
   },
@@ -328,8 +330,9 @@ export const sessionPlayerProfileApi = {
       code?: string;
       data?: {
         text: string;
-        pointsDeducted: number;
-        remainingPoints: number;
+        billing: SessionProfileBilling;
+        pointsDeducted?: number;
+        remainingPoints?: number;
       };
     }>;
   },
@@ -354,8 +357,9 @@ export const sessionPlayerProfileApi = {
       data?: {
         field: 'traits' | 'secret';
         text: string;
-        pointsDeducted: number;
-        remainingPoints: number;
+        billing: SessionProfileBilling;
+        pointsDeducted?: number;
+        remainingPoints?: number;
       };
     }>;
   },
@@ -394,8 +398,9 @@ export const sessionPlayerProfileApi = {
         avatarUrl: string;
         avatarThumbUrl?: string;
         npcId: string;
-        pointsDeducted: number;
-        remainingPoints: number;
+        billing: SessionProfileBilling;
+        pointsDeducted?: number;
+        remainingPoints?: number;
       };
     }>;
   },
@@ -478,8 +483,9 @@ export const sessionPlayerProfileApi = {
       data?: {
         field: 'relationship' | 'summary' | 'attitudeToPlayer' | 'detailedBio';
         text: string;
-        pointsDeducted: number;
-        remainingPoints: number;
+        billing: SessionProfileBilling;
+        pointsDeducted?: number;
+        remainingPoints?: number;
       };
     }>;
   },

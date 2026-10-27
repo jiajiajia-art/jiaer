@@ -16,6 +16,7 @@ interface ImageBusinessPriceState {
 export function useImageBusinessPrice(
   scenarioKey: ImageBusinessScenarioKey | null,
   fileId?: string | null,
+  sessionId?: string | null,
 ): ImageBusinessPriceState {
   const [state, setState] = useState<ImageBusinessPriceState>({
     data: null,
@@ -40,7 +41,7 @@ export function useImageBusinessPrice(
       return () => { cancelled = true; };
     }
     setState((current) => ({ ...current, loading: true, priceUnavailable: false, error: '' }));
-    void imageBusinessPricingApi.list({ scenarioKey, fileId }).then((response) => {
+    void imageBusinessPricingApi.list({ scenarioKey, fileId, sessionId }).then((response) => {
       if (cancelled) return;
       const item = response.data.data?.items?.[0] || null;
       if (!item) {
@@ -74,7 +75,7 @@ export function useImageBusinessPrice(
       });
     });
     return () => { cancelled = true; };
-  }, [scenarioKey, fileId]);
+  }, [scenarioKey, fileId, sessionId]);
 
   return state;
 }

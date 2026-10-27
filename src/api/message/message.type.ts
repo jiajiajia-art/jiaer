@@ -1,7 +1,7 @@
 import type { AnnouncementRecord } from '../announcement/announcement.type';
 import type { PromotionActivity, PromotionReviewStatus } from '../promotion/promotion.type';
 
-export type MessageType = 'announcement' | 'promotion' | 'promotion_submission_status' | 'favorite_game_updated' | 'game_moderation' | 'game_publish_appeal';
+export type MessageType = 'announcement' | 'promotion' | 'promotion_submission_status' | 'favorite_game_updated' | 'game_moderation' | 'game_publish_appeal' | 'creator_earning_withdrawal';
 
 export interface MessageAnnouncement extends AnnouncementRecord {
     messageType: 'announcement';
@@ -77,6 +77,21 @@ export interface MessageGamePublishAppeal {
     isRead: boolean;
 }
 
+export interface MessageCreatorEarningWithdrawalNotification {
+    id: number;
+    creatorUserId: string;
+    withdrawRequestId: number;
+    notificationType: 'paid' | 'rejected';
+    grossCents: number;
+    payoutCents: number;
+    rejectionReason: string | null;
+    createdAt: string | null;
+    readAt: string | null;
+    messageType: 'creator_earning_withdrawal';
+    sourceId: number;
+    isRead: boolean;
+}
+
 export interface MessageCenterData {
     unreadCount: number;
     announcements: MessageAnnouncement[];
@@ -85,6 +100,7 @@ export interface MessageCenterData {
     favoriteGameUpdateNotifications: MessageFavoriteGameUpdateNotification[];
     gameModerationNotifications: MessageGameModerationNotification[];
     gamePublishAppeals: MessageGamePublishAppeal[];
+    creatorEarningWithdrawalNotifications: MessageCreatorEarningWithdrawalNotification[];
 }
 
 export interface MessageUnreadCountData {

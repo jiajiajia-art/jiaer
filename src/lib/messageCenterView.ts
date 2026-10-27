@@ -4,6 +4,13 @@
 
 export type MessageListSectionKey = 'system' | 'activity' | 'interaction';
 
+export type CreatorEarningWithdrawalMessageInput = {
+  notificationType: 'paid' | 'rejected';
+  grossCents: number;
+  payoutCents: number;
+  rejectionReason?: string | null;
+};
+
 const WEEKDAY_LABELS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'] as const;
 
 function startOfLocalDay(date: Date): number {
@@ -41,9 +48,40 @@ export function truncateMessagePreview(text: string, maxLen = 36): string {
 
 /** 功能注释：把消息类型归到效果图三个分区 */
 export function resolveMessageListSection(
-  itemType: 'announcement' | 'promotion' | 'promotion_submission_status' | 'favorite_game_updated' | 'game_moderation' | 'game_publish_appeal',
+  itemType: 'announcement' | 'promotion' | 'promotion_submission_status' | 'favorite_game_updated' | 'game_moderation' | 'game_publish_appeal' | 'creator_earning_withdrawal',
 ): MessageListSectionKey {
-  if (itemType === 'announcement' || itemType === 'game_moderation' || itemType === 'game_publish_appeal') return 'system';
+  if (
+    itemType === 'announcement'
+    || itemType === 'game_moderation'
+    || itemType === 'game_publish_appeal'
+    || itemType === 'creator_earning_withdrawal'
+  ) return 'system';
   if (itemType === 'favorite_game_updated') return 'interaction';
   return 'activity';
+}
+
+function formatYuanFromCents(cents: number): string {
+  const safeCents = Number.isFinite(cents) ? Math.max(0, Math.trunc(cents)) : 0;
+  return `¥${(safeCents / 100).toFixed(2)}`;
+}
+
+export function buildCreatorEarningWithdrawalMessageView(
+  notification: CreatorEarningWithdrawalMessageInput,
+): { title: string; preview: string; detail: string } {
+  const gross = formatYuanFromCents(notification.grossCents);
+  if (notification.notificationType === 'paid') {
+    const payout = formatYuanFromCents(notification.payoutCents);
+    return {
+      title: '创作者收益已打款',
+      preview: `税前金额 ${gross}，实际到账 ${payout}`,
+      detail: `本次提现税前金额 ${gross}，扣除个人所得税后实际到账 ${payout}。`,
+    };
+  }
+
+  const reason = String(notification.rejectionReason || '').trim() || '未填写驳回原因';
+  return {
+    title: '创作者收益提现已驳回',
+    preview: `税前金额 ${gross}，原因：${reason}`,
+    detail: `本次提现税前金额 ${gross}。驳回原因：${reason}`,
+  };
 }

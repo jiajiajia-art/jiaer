@@ -695,6 +695,7 @@ export const useGalgameStep = ({
 
             try {
                 const requestId = ++currentRequestId.current;
+                const regenerateRequestId = `visual-regenerate-${sessionId}-${crypto.randomUUID()}`;
 
                 setCurrentStep(null);
                 setStepQueue([]);
@@ -710,7 +711,7 @@ export const useGalgameStep = ({
                     {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ historyIndex: messageIndex }),
+                        body: JSON.stringify({ historyIndex: messageIndex, requestId: regenerateRequestId }),
                     }
                 );
 
