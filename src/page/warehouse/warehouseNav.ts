@@ -11,6 +11,7 @@ export type WarehouseNavItem = {
 export const WAREHOUSE_NAV: WarehouseNavItem[] = [
   { id: 'persona', path: '/warehouse/persona', label: '玩家人设卡', group: 'mine' },
   { id: 'characters', path: '/warehouse/characters', label: '我的角色卡', group: 'mine' },
+  { id: 'avatars', path: '/warehouse/avatars', label: '头像库', group: 'mine' },
   { id: 'worldbooks', path: '/warehouse/worldbooks', label: '我的世界书', group: 'mine' },
   { id: 'plugins', path: '/warehouse/plugins', label: '我的插件', group: 'mine' },
   { id: 'public-cards', path: '/warehouse/public/cards', label: '公共卡库', group: 'public' },

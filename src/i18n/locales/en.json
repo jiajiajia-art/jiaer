@@ -1086,6 +1086,8 @@
     "locked": "Locked",
     "cancel": "Cancel",
     "txtMode": "AI Fiction",
+    "romanceMode": "Create Game",
+    "romanceHint": "Fill in the premise, let AI build the world, then refine in the editor",
     "avgBeta": "Tavern Card (Beta)",
     "interactiveVideo": "Interactive Video",
     "ivgToolTitle": "Interactive Video Creation Tool",

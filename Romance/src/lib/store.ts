@@ -1,11 +1,17 @@
+import { loadGlobal, saveGlobal } from "./saveScope";
+import { randomName, type NameGender, type NameStyle } from "../game/names";
 /* ————— 本地持久化（localdb）+ 默认值 + 随机生成 ————— */
 import type { AIConfig, GameState, Npc, Player, SignedContract } from "./types";
-import { createGame, type Character as SimChar } from "../game/logic";
-import { ensureRelations } from "../game/relations";
+import type { CoverCgOpts } from "../mods/types";
+import { canRomance, createGame, startDateLabel, type Character as SimChar } from "../game/logic";
+import { blankRel, ensureRelations } from "../game/relations";
+import { romanticCapOf } from "../worlds/star2005/content";
 import { FAMILY_NPC_IDS, familyNpcs } from "../game/family";
-import { STAT_ORDER } from "../game/data";
-import { PEOPLE } from "../worlds/star2005/content";
-import { ALL_ROOMS } from "../game/mud";
+import { emptyPhone } from "../game/phone";
+import { STAT_ORDER, ALL_STAT_KEYS, startWeather, creationCopy } from "../game/data";
+import { allRooms, locOf } from "../game/mud";
+import { drawAvatar } from "../game/avatarPools";
+import { LIVE_PEOPLE as PEOPLE, getWorld, getWorldEndings, getWorldFixedEvents, getWorldGradeDims, getWorldStartRoom, getWorldTimeLimit } from "../mods/registry";
 
 // 轻量配置（AI 配置、界面主题）继续用原生 localStorage；
 // 大容量游戏存档 / 对话记录 / 角色属性走 storage.ts 的 gameSaveDB（IndexedDB）。
@@ -23,32 +29,142 @@ export const defaultConfig: AIConfig = {
 };
 
 export function loadConfig(): AIConfig {
-  try {
-    const raw = localStorage.getItem(K_CONFIG);
-    if (raw) return { ...defaultConfig, ...JSON.parse(raw) };
-  } catch {
-    /* ignore */
-  }
-  return { ...defaultConfig };
+  return { ...defaultConfig, ...(loadGlobal<Partial<AIConfig>>(K_CONFIG, {}) || {}) };
 }
 export function saveConfig(c: AIConfig) {
-  localStorage.setItem(K_CONFIG, JSON.stringify(c));
+  saveGlobal(K_CONFIG, c);
 }
 
 /* —— 主题 —— */
-export type ThemePref = { mode: "auto" | "light" | "dark"; accent: "jade" | "plum" | "ink"; skin?: "paper" | "glass" | "cute" | "dream" | "bloody" | "pixel"; font?: "song" | "round" | "elegant" | "brush"; orient?: "portrait" | "landscape" };
-export const defaultTheme: ThemePref = { mode: "auto", accent: "plum", skin: "dream", font: "song" };
+export type ThemePref = {
+  mode: "auto" | "light" | "dark";
+  accent: "plum" | "fuchsia" | "jade" | "gold" | "cyan" | "rose" | "coral" | "ink";
+  skin?: "paper" | "glass" | "cute" | "dream" | "bloody";
+  topbar?: "gradient" | "aurora" | "plain"; // 顶栏美化风格
+  topbarText?: string; // 顶栏中部标语（留空不显示）
+  font?: "song" | "hei" | "round" | "elegant" | "brush" | "hand" | "cursive" | "pixel";
+  orient?: "portrait" | "landscape";
+  orientLock?: boolean; // 锁定屏幕方向：锁定后菜单里无法切换横竖屏
+  dialogStyle?: "soft" | "avg" | "letter" | "glass" | "minimal"; // 对话·叙事 面板样式
+  dialogRadius?: number; // 面板圆角 px
+  dialogHeight?: "low" | "std" | "high"; // 面板高度
+  bubbleStyle?: "frost" | "solid" | "outline" | "comic" | "plain"; // 台词气泡
+  avatarShape?: "rounded" | "circle" | "hidden"; // 对话头像形状
+  avatarFrame?: "white" | "accent" | "glow" | "none"; // 头像描边
+  sceneBg?: string; // 自定义场景背景（URL / dataURL），留空用地点原图
+  sceneDim?: number; // 场景遮罩浓度 0-90（%）
+  sceneBlur?: number; // 场景模糊 px
+  sceneTone?: "none" | "warm" | "cool" | "mono" | "vintage" | "dusk"; // 场景滤镜
+  portrait?: "off" | "side" | "stage"; // 对话显示：off = 纯文字模式，其余 = 立绘模式（"stage" 为旧存档兼容值）
+  dialogDiy?: import("./freeStyle").DialogDiy; // 对话框 DIY
+  navActive?: NavActiveStyle; // 底栏选中态 DIY
+  free?: import("./freeStyle").FreeStyle; // 自由美化：自定义颜色 / 字体 / 贴图
+  lookRules?: import("./plotLook").LookRule[]; // 玩家自己的剧情美化规则
+  plotLook?: boolean; // 是否接受世界作者设定的剧情美化（缺省 是）
+  icons?: IconDiy; // 图标与按钮 DIY（底栏图标另见 navActive）
+  cover?: CoverDiy; // 开局封面 DIY（玩家自己的封面，优先于世界作者的封面；留空项沿用）
+  gameFrame?: import("../components/FrameDiy").FrameDiy; // 游玩界面边框
+  topbarDiy?: import("./topbarDiy").TopbarDiy; // 顶栏自由组合 DIY + 样式正则 + 自定义模板
+};
+/* 封面画布自由元素：文字标签 / 印章 / 竖排诗句 / 贴纸立绘 / 几何画框光晕，支持在封面上自由拖拽、缩放、旋转 */
+export type CoverCanvasItem = {
+  id: string;
+  kind: "text" | "sticker" | "shape";
+  x: number; // 画布横向位置 0~100 (%)
+  y: number; // 画布纵向位置 0~100 (%)
+  scale?: number; // 缩放 0.3~3（缺省 1）
+  rotate?: number; // 旋转角度 -180~180（缺省 0）
+  opacity?: number; // 透明度 10~100（缺省 100）
+  z?: number; // 图层：0 = 主标题底层，1 = 顶层装饰（缺省 1）
+  // 文字元素
+  text?: string;
+  font?: "default" | NonNullable<ThemePref["font"]>;
+  color?: string;
+  bg?: string;
+  textStyle?: "plain" | "pill" | "seal" | "outline" | "glass" | "glow";
+  vertical?: boolean; // 竖排文字
+  // 贴纸 / 徽章 / 自定义图片
+  sticker?: string; // 内置贴纸 id 或图片 URL / dataURL
+  // 几何 / 画框 / 光晕
+  shape?: "circle" | "ring" | "arch" | "frame" | "diamond" | "glow" | "line" | "polaroid";
+  w?: number; // 宽度 px
+  h?: number; // 高度 px
+};
+
+/* 开局封面 DIY：背景 / 文字 / 版式 / 按钮 / 画布自由编排 / 氛围特效。所有项留空 = 沿用世界封面或默认封面 */
+export type CoverDiy = CoverCgOpts & {
+  on?: boolean; // 缺省开启；关闭后完全使用世界封面
+  image?: string; video?: string; // 固定 CG / 背景视频（背景类型见 cgMode；轮播 CG 见 cgs）
+  bgPreset?: "starlight" | "dawn" | "noir" | "inkwash" | "cyber" | "minimal"; // 无背景图时的艺术画布底景
+  bgGrad?: [string, string, number?]; // 自定义双色渐变底景 [色1, 色2, 角度]
+  bgPattern?: "none" | "grid" | "dots" | "lines" | "frame" | "astrolabe"; // 画布纹理叠层
+  dim?: number; blur?: number; // 压暗 0~80 · 模糊 px
+  tint?: "night" | "rose" | "ocean" | "gold" | "none" | "custom"; tintColor?: string; // 叠色
+  kicker?: string; title?: string; subtitle?: string; intro?: string;
+  hideTitle?: boolean; hideIntro?: boolean; hideKicker?: boolean; hideSubtitle?: boolean;
+  logo?: string; // 标题图（替代文字标题）
+  titleFont?: "default" | NonNullable<ThemePref["font"]>;
+  titleColor?: "white" | "gold" | "pink" | "accent" | "custom"; titleCustom?: string;
+  titleSize?: "s" | "m" | "l" | "xl";
+  titleDir?: "horizontal" | "vertical"; // 标题方向：横排 / 竖排
+  titleEffect?: "none" | "glow" | "stroke" | "gold3d" | "retro"; // 标题艺术字效
+  titleTracking?: "tight" | "normal" | "wide" | "ultra"; // 标题字间距
+  kickerStyle?: "plain" | "pill" | "line" | "bracket"; // 顶部小字装饰样式
+  divider?: "line" | "star" | "floral" | "double" | "none"; // 装饰分割线
+  align?: "left" | "center" | "right";
+  vpos?: "top" | "center" | "bottom";
+  panel?: "none" | "glass" | "dark" | "paper" | "editorial" | "jade"; // 文字区底板
+  panelPos?: { x: number; y: number }; // 标题文字区自由拖拽坐标 (%)
+  btnsPos?: { x: number; y: number }; // 按钮组自由拖拽坐标 (%)
+  canvasItems?: CoverCanvasItem[]; // 画布自由 DIY 元素列表
+  btnStyle?: "dream" | "rose" | "gold" | "jade" | "solid" | "glass" | "outline" | "paper" | "text";
+  btnShape?: "pill" | "rounded" | "square" | "gem";
+  btnLayout?: "grid" | "stack" | "row";
+  btnWidth?: "full" | "compact";
+  btnColor?: string;
+  btnTextColor?: string;
+  labels?: Partial<Record<"start" | "continue" | "config", string>>;
+  hide?: Partial<Record<"continue" | "config", boolean>>;
+  fx?: "none" | "stars" | "petals" | "snow" | "fireflies" | "hearts" | "bubbles" | "ginkgo";
+  spotlight?: "none" | "top" | "center" | "vignette"; // 氛围聚光 / 暗角
+  frame?: import("../components/FrameDiy").FrameDiy; // 封面边框
+  css?: string; // 封面专属 CSS（自动收进 .cover-root，只影响封面）；AI 对话生成或手写
+};
+/* 图标与按钮 DIY：任意图标位换图片 / 换内置图标；全局图标颜色、线宽、大小；圆按钮外形；场景点位样式 */
+export type IconDiy = {
+  imgs?: Record<string, string>; // 图标位 id → 图片
+  glyphs?: Record<string, string>; // 图标位 id → 内置图标名（见 iconGlyphs.GLYPHS）
+  color?: string; // 图标颜色（缺省跟随皮肤）
+  stroke?: number; // 线条粗细 1~3
+  scale?: number; // 图标大小 %（70~150）
+  btnShape?: "rounded" | "circle" | "square" | "petal";
+  btnFill?: "glass" | "gradient" | "solid" | "outline";
+  btnColor?: string; // 按钮底色（solid / outline 用；缺省主色）
+  spot?: "glint" | "dot" | "glow" | "ring" | "star" | "heart" | "diamond" | "sparkle" | "flower" | "img";
+  spotImg?: string;
+  spotColor?: string; // 点位颜色（缺省按类型着色）
+  spotSize?: number; // 点位大小 px（8~28）
+  spotLabel?: "dark" | "light" | "accent" | "outline" | "hidden";
+};
+/* 底栏选中态：底衬形状 / 填充 / 颜色 / 动效 / 底衬贴图 / 各牌位自定义图标（素材库图片） */
+export type NavActiveStyle = {
+  shape?: "pill" | "circle" | "square" | "underline" | "dot" | "none";
+  fill?: "gradient" | "solid" | "outline" | "glass";
+  color?: string; // 底衬色（缺省 主色→辅色）
+  iconColor?: string; // 选中图标色（缺省 水晶渐变）
+  labelColor?: string; // 选中文字色
+  anim?: "pop" | "bounce" | "float" | "glow" | "none";
+  ripple?: boolean; // 点击光晕（缺省开）
+  bgImg?: string; // 底衬贴图
+  icons?: Record<string, { on?: string; off?: string }>; // 牌位 id → 选中 / 未选中图标
+  iconSize?: number; // 图标尺寸 px
+};
+export const defaultTheme: ThemePref = { mode: "auto", accent: "plum", skin: "cute", font: "song" };
 export function loadTheme(): ThemePref {
-  try {
-    const raw = localStorage.getItem(K_THEME);
-    if (raw) return { ...defaultTheme, ...JSON.parse(raw) };
-  } catch {
-    /* ignore */
-  }
-  return { ...defaultTheme };
+  return { ...defaultTheme, ...(loadGlobal<Partial<ThemePref>>(K_THEME, {}) || {}) };
 }
 export function saveTheme(t: ThemePref) {
-  localStorage.setItem(K_THEME, JSON.stringify(t));
+  saveGlobal(K_THEME, t);
 }
 
 /* —— 存档槽已迁移至 storage.ts（gameSaveDB / IndexedDB，大容量、异步）——
@@ -69,49 +185,45 @@ export {
   writeAutosave,
   autosaveDebounced,
   flushAutosave,
+  cancelAutosave,
   migrateLegacySaves,
 } from "./storage";
 
 /* —— 是否开启自动存档（轻量开关，走原生 localStorage）—— */
 const K_AUTOSAVE = "xh_autosave";
 export function loadAutosaveOn(): boolean {
-  try {
-    return localStorage.getItem(K_AUTOSAVE) !== "0";
-  } catch {
-    return true;
-  }
+  return String(loadGlobal<string | number>(K_AUTOSAVE, "1")) !== "0";
 }
 export function saveAutosaveOn(on: boolean) {
-  try {
-    localStorage.setItem(K_AUTOSAVE, on ? "1" : "0");
-  } catch {
-    /* ignore */
+  {
+    saveGlobal(K_AUTOSAVE, on ? "1" : "0");
   }
 }
 
 /* —— 随机人物生成 —— */
-const SURNAMES = "沈林苏顾陆江宋温周许梁陈叶白秋商裴谢卫云简".split("");
-const GIVEN_F = ["星桥", "见月", "知夏", "以澄", "念棠", "初晴", "疏影", "南乔", "宛卿", "听澜", "予安", "语迟"];
-const IDENTITIES = ["练习生", "新人演员", "选秀出身歌手", "模特转型艺人", "音乐剧演员", "网络小生", "综艺新面孔"];
-const BACKGROUNDS = ["单亲家庭长大", "小城书香门第", "梨园世家", "普通工薪家庭", "海外归国", "隐姓埋名的旧贵族"];
-const KLASS = ["草根逆袭", "中产", "殷实之家", "落魄名门"];
+/* 身份 / 家世 / 阶层随机池来自模组槽 creation；未声明 → 通用兜底 */
+const pool = (a: string[] | undefined, fb: string[]) => (a?.length ? a : fb);
 
 const rndOf = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
 export const uid = () => Math.random().toString(36).slice(2, 10);
 
-export function randomPlayerSeed(): Partial<Player> {
-  const name = rndOf(SURNAMES) + rndOf(GIVEN_F);
+export function randomPlayerSeed(gender?: string, style: NameStyle = "any"): Partial<Player> {
+  const g = gender ?? (Math.random() < 0.82 ? "女" : "男");
+  const name = randomName(g as NameGender, style);
+  // 只用创作者配置的选项池 / 模板；没配就留空让玩家填，不塞内置示例
+  const cc = creationCopy();
   return {
     name,
     age: String(17 + Math.floor(Math.random() * 8)),
-    gender: Math.random() < 0.82 ? "女" : "男",
-    identity: rndOf(IDENTITIES),
-    background: rndOf(BACKGROUNDS),
-    klass: rndOf(KLASS),
-    description: `${name}，出道倒计时的这一年，带着一身不肯认输的倔强站上舞台。`,
+    gender: g,
+    identity: rndOf(pool(cc.identityOpts, [""])),
+    background: rndOf(pool(cc.backgroundOpts, [""])),
+    klass: rndOf(pool(cc.klassOpts, [""])),
+    description: (cc.seedDescription ?? "").replace(/\{name\}/g, name),
   };
 }
 
+export { syncNameInDescription, syncPlayerNameChange } from "./syncPlayerName";
 export const DEFAULT_ATTRS = [
   { key: "fame", label: "名气", value: 15, max: 1000, icon: "spark" },
   { key: "yanji", label: "演技", value: 40, max: 999, icon: "book" },
@@ -123,14 +235,13 @@ export const DEFAULT_ATTRS = [
   { key: "stress", label: "压力", value: 20, max: 100, icon: "flask" },
 ];
 
-/* 建角时的确定性引擎选择（外形/身份/家庭/方向/特质），缺省给全能新人 */
+/* 建角时的确定性引擎选择（外形/身份/家庭/方向），缺省给全能新人 */
 export const defaultSimChar: SimChar = {
   name: "无名",
   styleId: "sweet",
   identityId: "sr",
   backgroundId: "normal",
   directionId: "all",
-  traitIds: [],
 };
 
 export function newGame(player: Player, simChar?: SimChar, contract?: SignedContract & { signBonus?: number; trust?: number; reputation?: number }): GameState {
@@ -138,8 +249,8 @@ export function newGame(player: Player, simChar?: SimChar, contract?: SignedCont
   const base = createGame({ ...defaultSimChar, ...simChar, name: player.name });
   // 开局全城地点即已知晓（无战争迷雾）：所有房间登记为已探索
   const known = {
-    visited: [...ALL_ROOMS],
-    discoveredAt: Object.fromEntries(ALL_ROOMS.map((r) => [r, 0])) as Record<string, number>,
+    visited: [...allRooms()],
+    discoveredAt: Object.fromEntries(allRooms().map((r) => [r, 0])) as Record<string, number>,
   };
   // 合约签署奖励落到开局数值（引擎只读参数，中文条款留在快照里）
   const sim = contract
@@ -166,14 +277,17 @@ export function newGame(player: Player, simChar?: SimChar, contract?: SignedCont
     : undefined;
   // 双亲与其他 NPC 统一：作为固定花名册条目并直接标记为已结识
   const family = familyNpcs(player);
-  const simWithFamily = { ...sim, metPeople: [...sim.metPeople, ...FAMILY_NPC_IDS] };
+  // 开局微信好友：父母（世界观可关）+ 编辑器里勾了「开局在微信」的人物；加了微信自然也算已结识
+  const wxStart = [...(getWorld().content.familyWx === false ? [] : FAMILY_NPC_IDS), ...PEOPLE.filter((p) => p.wxStart).map((p) => p.id)];
+  const simWithFamily = { ...sim, metPeople: Array.from(new Set([...sim.metPeople, ...FAMILY_NPC_IDS, ...wxStart])) };
+  const worldNav = getWorld().content;
   const g: GameState = {
     id: uid(),
     player,
     npcs: [...family, ...seedNpcs()],
     story: [],
     options: [],
-    world: { time: "第 1 周 · 2005.01.03", location: "天光公寓", weather: "微雨" },
+    world: { time: `第 1 周 · ${startDateLabel()}`, location: locOf(getWorldStartRoom())?.name ?? "天光公寓", weather: startWeather() },
     memory: "",
     turnCount: 0,
     ended: false,
@@ -181,7 +295,26 @@ export function newGame(player: Player, simChar?: SimChar, contract?: SignedCont
     createdAt: now,
     updatedAt: now,
     sim: simWithFamily,
+    phone: { ...emptyPhone(), contacts: wxStart },
     contract: signed,
+    worldId: getWorld().worldId,
+    addons: [...getWorld().addonIds],
+    entSplit: true,
+    // 功能注释：开局带入模组底栏顺序 / 显隐 / 格数（玩家仍可在设置里再改）
+    ...(worldNav.navTabs?.length ? { navTabs: worldNav.navTabs.map((t) => ({ ...t })) } : {}),
+    ...(worldNav.navSize ? { navSize: worldNav.navSize } : {}),
+    ...(() => {
+      const fe = getWorldFixedEvents();
+      const en = getWorldEndings();
+      const tl = getWorldTimeLimit();
+      const gd = getWorldGradeDims();
+      return {
+        ...(fe.length ? { fixedEvents: fe.map((e) => ({ ...e })) } : {}),
+        ...(en.length ? { customEndings: en.map((e) => ({ ...e })) } : {}),
+        ...(tl ? { timeLimit: { ...tl } } : {}),
+        ...(gd?.length ? { gradeDims: gd.map((d) => ({ ...d, src: { ...d.src } })) } : {}),
+      };
+    })(),
   };
   return syncSimToPlayer(g);
 }
@@ -231,6 +364,8 @@ export function ensureSim(state: GameState): GameState {
         lastMeetDay: s.lastMeetDay ?? {},
         // 战争迷雾：老档把已到访房间视为首日即发现
         discoveredAt: s.discoveredAt ?? Object.fromEntries((s.visited ?? ["apartment"]).map((r) => [r, 0])),
+        room: s.room === "tianguang" ? "apartment" : s.room,
+        visited: (s.visited ?? []).map((r: string) => (r === "tianguang" ? "apartment" : r)),
         bag: s.bag ?? [],
         cars: s.cars ?? [],
         activeCar: s.activeCar ?? null,
@@ -288,12 +423,35 @@ export function ensureFamily(state: GameState): GameState {
   return { ...state, npcs: [...missing, ...npcs], sim };
 }
 
+/* 老存档兼容：早期主线把「爱慕」记在 npc.dims 自由轴（界面与提示词都不读，等于丢失），
+ * 与关系轴 sim.relations[pid].romantic 错位。现一律并入关系轴：取两者较大值、按角色上限钳制，
+ * 家人不计；并入后删掉自由轴里的「爱慕 / 心动」项，只留一份真相（幂等）。 */
+const LEGACY_LOVE = new Set(["爱慕", "心动"]);
+export function ensureLoveAxis(state: GameState): GameState {
+  const sim = state.sim;
+  if (!sim || !state.npcs.some((n) => n.dims?.some((d) => LEGACY_LOVE.has(d.label)))) return state;
+  let relations = ensureRelations(sim.relations);
+  const npcs = state.npcs.map((n) => {
+    const legacy = (n.dims ?? []).filter((d) => LEGACY_LOVE.has(d.label));
+    if (!legacy.length) return n;
+    const v = Math.round(Math.max(...legacy.map((d) => Number(d.value) || 0)));
+    if (v > 0 && canRomance(sim, n.id)) {
+      const r = relations[n.id] ?? blankRel();
+      const romantic = Math.min(romanticCapOf(n.id), Math.max(r.romantic, v));
+      if (romantic !== r.romantic) relations = { ...relations, [n.id]: { ...r, romantic } };
+    }
+    return { ...n, dims: n.dims.filter((d) => !LEGACY_LOVE.has(d.label)) };
+  });
+  return { ...state, npcs, sim: { ...sim, relations } };
+}
+
 /* 把确定性引擎的数值同步到人物档案面板（保持单一真相） */
-const SIM_ATTR_KEYS = new Set(["fame", "reputation", "stress", ...STAT_ORDER]);
+const SIM_ATTR_KEYS = new Set<string>(["fame", "reputation", "stress", ...ALL_STAT_KEYS]);
 export function syncSimToPlayer(g: GameState): GameState {
   const s = g.sim;
   if (!s) return g;
   const attrs = g.player.attrs.map((a) => {
+    if (s.cattrs && a.key in s.cattrs) return { ...a, value: s.cattrs[a.key] };
     if (!SIM_ATTR_KEYS.has(a.key)) return a;
     let v = a.value;
     if (a.key === "fame") v = s.fame;
@@ -322,13 +480,13 @@ export function seedNpcs(): Npc[] {
     age: "",
     identity: p.role,
     relation: p.relation ?? "",
-    avatar: "",
+    // 人物填了 avatarVariant：开局从本剧已开放的同名头像池抽一张（找不到同名池则留空，不乱抽）
+    ...(p.avatarVariant ? { avatar: drawAvatar(p.id, p.avatarVariant, true).url, avatarVariant: p.avatarVariant } : { avatar: "" }),
     bio: p.bio,
     mood: "平静",
     affinity: 0, // 初值由 syncSimToPlayer 从引擎 s.rel 镜像（newGame 末尾统一回灌）
     dims: [
       { label: "信任", value: 0 },
-      { label: "爱慕", value: 0 },
       { label: "友善", value: 0 },
       { label: "敌意", value: 0 },
     ],

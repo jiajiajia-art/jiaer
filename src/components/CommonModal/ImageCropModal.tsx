@@ -10,6 +10,13 @@ import {
 } from '../../utils/uploadImageCrop';
 import styles from './ImageCropModal.module.css';
 
+export type ImageCropPixelMeta = {
+    sx: number;
+    sy: number;
+    sourceWidth: number;
+    sourceHeight: number;
+};
+
 interface ImageCropModalProps {
     isOpen: boolean;
     imageSrc: string;
@@ -19,8 +26,18 @@ interface ImageCropModalProps {
     aspectLabel: string;
     defaultCropScale: number;
     mimeType?: string;
+    /**
+     * 功能注释：GIF 等需保留动画时跳过 canvas 导出，只回传原图像素裁剪框。
+     */
+    exportCropMetaOnly?: boolean;
+    /**
+     * 功能注释：为 false 时禁止关闭（遮罩/×/取消均不可用），用于批量「非 1:1 必须裁切」。
+     * 默认 true。
+     */
+    allowClose?: boolean;
     onClose: () => void;
     onCropComplete: (croppedBlob: Blob) => void | Promise<void>;
+    onCropMetaComplete?: (meta: ImageCropPixelMeta) => void | Promise<void>;
 }
 
 type CropMetrics = {
@@ -40,8 +57,11 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
     aspectLabel,
     defaultCropScale,
     mimeType = 'image/jpeg',
+    exportCropMetaOnly = false,
+    allowClose = true,
     onClose,
     onCropComplete,
+    onCropMetaComplete,
 }) => {
     const { t } = useTranslation();
     const [crop, setCrop] = useState<Crop>();
@@ -96,8 +116,15 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
             return null;
         }
 
-        const scaleX = image.naturalWidth / image.width;
-        const scaleY = image.naturalHeight / image.height;
+        // 功能注释：用渲染宽高换算到 natural；优先 client 尺寸，避免 layout 未完成时 width=0
+        const displayW = image.clientWidth || image.width || image.getBoundingClientRect().width;
+        const displayH = image.clientHeight || image.height || image.getBoundingClientRect().height;
+        if (!displayW || !displayH || !image.naturalWidth || !image.naturalHeight) {
+            return null;
+        }
+
+        const scaleX = image.naturalWidth / displayW;
+        const scaleY = image.naturalHeight / displayH;
 
         return {
             image,
@@ -171,6 +198,20 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
         setIsExporting(true);
         setExportError('');
         try {
+            if (exportCropMetaOnly) {
+                const metrics = getCropMetrics();
+                if (!metrics || !onCropMetaComplete) {
+                    setExportError(t('common.imageCrop.exportError'));
+                    return;
+                }
+                await onCropMetaComplete({
+                    sx: metrics.sx,
+                    sy: metrics.sy,
+                    sourceWidth: metrics.sourceWidth,
+                    sourceHeight: metrics.sourceHeight,
+                });
+                return;
+            }
             const blob = await getCroppedImage();
             if (blob) {
                 await onCropComplete(blob);
@@ -181,7 +222,7 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
         } finally {
             setIsExporting(false);
         }
-    }, [getCroppedImage, onCropComplete, t]);
+    }, [exportCropMetaOnly, getCropMetrics, getCroppedImage, onCropComplete, onCropMetaComplete, t]);
 
     if (!isOpen || typeof document === 'undefined') return null;
 
@@ -189,7 +230,7 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
         <div
             className={styles.overlay}
             onClick={() => {
-                if (!isExporting) {
+                if (allowClose && !isExporting) {
                     onClose();
                 }
             }}
@@ -197,15 +238,19 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
             <div className={styles.modal} onClick={(event) => event.stopPropagation()}>
                 <div className={styles.header}>
                     <h3>{title}</h3>
-                    <button
-                        type="button"
-                        className={styles.closeBtn}
-                        onClick={onClose}
-                        disabled={isExporting}
-                        aria-label={t('common.close')}
-                    >
-                        ×
-                    </button>
+                    {allowClose ? (
+                        <button
+                            type="button"
+                            className={styles.closeBtn}
+                            onClick={onClose}
+                            disabled={isExporting}
+                            aria-label={t('common.close')}
+                        >
+                            ×
+                        </button>
+                    ) : (
+                        <span className={styles.closeBtnPlaceholder} aria-hidden="true" />
+                    )}
                 </div>
 
                 <div className={styles.body}>
@@ -239,9 +284,13 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
                 </div>
 
                 <div className={styles.footer}>
-                    <button type="button" className={styles.cancelBtn} onClick={onClose} disabled={isExporting}>
-                        {t('common.imageCrop.cancel')}
-                    </button>
+                    {allowClose ? (
+                        <button type="button" className={styles.cancelBtn} onClick={onClose} disabled={isExporting}>
+                            {t('common.imageCrop.cancel')}
+                        </button>
+                    ) : (
+                        <p className={styles.forceCropHint}>非 1:1 须完成裁切后才能继续</p>
+                    )}
                     <button
                         type="button"
                         className={styles.confirmBtn}

@@ -14,6 +14,7 @@ import WarehouseCharacterCards from './page/warehouse/WarehouseCharacterCards';
 import WarehousePublicCards from './page/warehouse/WarehousePublicCards';
 import WarehousePlayHistory from './page/warehouse/WarehousePlayHistory';
 import WarehouseResourceLibrary from './page/warehouse/WarehouseResourceLibrary';
+import WarehouseAvatarLibrary from './page/warehouse/WarehouseAvatarLibrary';
 import Profile from './page/Profile';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import CreateGame from './page/CreateGame';
@@ -168,6 +169,9 @@ function App() {
           <Route path="/operator/recruitment" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/daily-tasks" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/withdraw" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/avatars" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/components" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/play-mods" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/works/:fileId/stats" element={<OperatorRoute><OperatorWorkStats /></OperatorRoute>} />
           <Route path="/points/details" element={<PointsDetails />} />
           <Route path="/createGame" element={<CreateGame />} />
@@ -175,6 +179,7 @@ function App() {
             <Route index element={<Navigate to="persona" replace />} />
             <Route path="persona" element={<WarehousePersonaCards />} />
             <Route path="characters" element={<WarehouseCharacterCards />} />
+            <Route path="avatars" element={<WarehouseAvatarLibrary />} />
             <Route path="worldbooks" element={<WarehouseResourceLibrary resourceType="worldbook" mode="mine" />} />
             <Route path="plugins" element={<WarehouseResourceLibrary resourceType="plugin" mode="mine" />} />
             <Route path="public/cards" element={<WarehousePublicCards />} />
@@ -203,6 +208,9 @@ function App() {
           <Route path="/admin/image-gen" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/text-llm" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/lottery" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/avatars" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/components" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/play-mods" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/comments" element={<AdminRoute><CommentAdminPage /></AdminRoute>} />
           <Route path="/galgame" element={<Galgame />} />
           <Route path="/galgameMap" element={<GalgameMap />} />

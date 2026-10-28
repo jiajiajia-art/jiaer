@@ -1,10 +1,18 @@
 /* App Store 可下载的实用小组件：番茄钟 / 闹钟时钟 / 计算器 / 备忘录 / 天气。全部真实可用，纯本地。 */
+import { loadData, saveData } from "../../lib/saveScope";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useGame } from "../../store/gameCtx";
+import { useGameNow } from "./Widgets";
 import { weekdayName, dayParts } from "../../game/logic";
-import { IconPlus, IconClose, IconClock, IconSun, IconSearch, IconStar } from "./icons";
+import { IconPlus, IconClose, IconClock, IconSun, IconSearch } from "./icons";
+import { IconChevronDown, IconChevronUp } from "../../lib/icons";
+import { liveTerm as T } from "../../mods/live";
+import SlimePet from "./studio/Slime";
+import Studio, { PlayerApps } from "./studio/Studio";
+import { takeStudioRequest } from "./studio/review";
+import { setStudioOpen, usePetMode } from "./studio/pet";
 
-export type StoreItem = { id: string; label: string; tagline: string; desc: string; icon: ReactNode; cat: string; rating: number; size: string; cover: string; kicker: string; story: string; kind?: "app" | "widget" };
+export type StoreItem = { id: string; label: string; tagline: string; desc: string; icon: ReactNode; cat: string; rating: number; size: string; cover: string; kicker: string; story: string; kind?: "app" | "widget"; core?: boolean };
 
 export type IconApp = { id: string; label: string; node: ReactNode };
 
@@ -25,14 +33,29 @@ function IconsTabGlyph() {
 }
 
 /* —— 应用商店：仿 Apple App Store（今天 / App / 图标 / 搜索 四 Tab + 底部标签栏） —— */
-export function AppStoreApp({ onBack, catalog, reinstallable, installed, onInstall, onOpen, iconApps, iconOverrides, onSetIcon }: {
-  onBack: () => void; catalog: StoreItem[]; reinstallable: StoreItem[]; installed: Set<string>;
+export function AppStoreApp({ onBack, catalog, installed, onInstall, onOpen, iconApps, iconOverrides, onSetIcon }: {
+  onBack: () => void; catalog: StoreItem[]; installed: Set<string>;
   onInstall: (id: string) => void; onOpen: (id: string) => void;
   iconApps: IconApp[]; iconOverrides: Record<string, string>; onSetIcon: (id: string, url: string | null) => void;
 }) {
+  const storeNow = useGameNow();
   const [downloading, setDownloading] = useState<Record<string, number>>({});
-  const [tab, setTab] = useState<"today" | "apps" | "icons" | "search">("today");
+  const [tab, setTab] = useState<StoreTab>("today");
   const [q, setQ] = useState("");
+  const [detail, setDetail] = useState<StoreItem | null>(null);
+  const [jump] = useState(takeStudioRequest);
+  const [studio, setStudio] = useState(!!jump);
+  const [studioInit, setStudioInit] = useState(jump ?? undefined);
+  const petMode = usePetMode();
+  useEffect(() => { setStudioOpen(studio); return () => setStudioOpen(false); }, [studio]);
+  // 常驻桌宠在商店里被点「打开开发者工坊」，或其它页面请求跳转
+  useEffect(() => {
+    const h = () => { const r = takeStudioRequest(); setStudioInit(r ?? undefined); setStudio(true); };
+    window.addEventListener("studio:open", h);
+    return () => window.removeEventListener("studio:open", h);
+  }, []);
+  const [slimeSay, setSlimeSay] = useState<string>();
+  const { game } = useGame();
 
   const pickIcon = (id: string, f: File | undefined) => {
     if (!f) return;
@@ -58,7 +81,7 @@ export function AppStoreApp({ onBack, catalog, reinstallable, installed, onInsta
 
   const Pill = ({ id, kind }: { id: string; kind?: "app" | "widget" }) => {
     const dl = downloading[id];
-    const cls = "rounded-full bg-[#e9e9ef] px-6 py-1.5 text-[13px] font-bold text-[#0a84ff]";
+    const cls = "shrink-0 whitespace-nowrap rounded-full bg-[#e9e9ef] px-5 py-1.5 text-[13px] font-bold text-[#0a84ff]";
     if (installed.has(id)) return <button onClick={(e) => { e.stopPropagation(); onOpen(id); }} className={cls}>{kind === "widget" ? "已添加" : "打开"}</button>;
     if (dl != null) return (
       <span className="relative flex h-8 w-8 items-center justify-center">
@@ -71,38 +94,38 @@ export function AppStoreApp({ onBack, catalog, reinstallable, installed, onInsta
 
   /* App 列表行 */
   const Row = ({ item }: { item: StoreItem }) => (
-    <div className="flex items-center gap-3 py-2.5">
+    <div role="button" tabIndex={0} onClick={() => setDetail(item)} className="flex cursor-pointer items-center gap-3 py-2.5 transition active:opacity-60">
       <span className="ios-icon block h-[58px] w-[58px] shrink-0 overflow-hidden">{item.icon}</span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-[15px] font-semibold text-ink">{item.label}</p>
         <p className="truncate text-[12.5px] text-ink-soft">{item.tagline}</p>
-        <p className="mt-0.5 flex items-center gap-1 text-[11px] text-ink-soft/80"><IconStar size={11} filled /> {item.rating.toFixed(1)} · {item.cat} · {item.size}</p>
+        <p className="mt-0.5 flex items-center gap-1 text-[11px] text-ink-soft/80">{item.cat} · {item.size}</p>
       </div>
-      <Pill id={item.id} kind={item.kind} />
+      <span className="shrink-0"><Pill id={item.id} kind={item.kind} /></span>
     </div>
   );
 
   const results = catalog.filter((c) => !q || c.label.includes(q) || c.tagline.includes(q) || c.cat.includes(q));
 
+  /* App 详情页：仿真 iOS App Store 产品页 */
+  if (detail) {
+    return <AppDetail item={detail} catalog={catalog} pill={<Pill id={detail.id} kind={detail.kind} />} onBack={() => setDetail(null)} onPick={setDetail} backLabel={tab === "today" ? "今天" : tab === "search" ? "搜索" : "App"} />;
+  }
+
   return (
-    <div className="flex h-full flex-col bg-white">
+    <div className="relative flex h-full flex-col bg-white">
       {/* 内容区 */}
-      <div className="flex-1 overflow-y-auto pb-16">
+      <div className="flex-1 overflow-y-auto pb-20">
         {tab === "today" && (
           <div>
-            <div className="flex items-end justify-between px-4 pb-1 pt-3">
-              <div>
-                <p className="text-[13px] font-bold uppercase tracking-wide text-ink-soft">{new Date().toLocaleDateString("zh-CN", { month: "long", day: "numeric", weekday: "long" })}</p>
-                <h1 className="text-[30px] font-extrabold tracking-tight text-ink">今天</h1>
-              </div>
-              <button onClick={onBack} className="h-9 w-9 overflow-hidden rounded-full bg-[#e9e9ef] text-[15px] font-bold text-ink-soft">✕</button>
-            </div>
+            <StoreHeader title="今天" kicker={storeNow.toLocaleDateString("zh-CN", { month: "long", day: "numeric", weekday: "long" })} onClose={onBack} />
             {/* 编辑精选大卡 */}
             <div className="space-y-4 px-4 pt-2">
+              <PlayerApps variant="today" />
               {catalog.map((item) => (
-                <div key={item.id} className="overflow-hidden rounded-[18px] bg-white shadow-[0_2px_20px_rgba(0,0,0,0.1)] ring-1 ring-black/[0.04]">
+                <div key={item.id} role="button" tabIndex={0} onClick={() => setDetail(item)} className="cursor-pointer transition active:scale-[0.98] overflow-hidden rounded-[18px] bg-white shadow-[0_2px_20px_rgba(0,0,0,0.1)] ring-1 ring-black/[0.04]">
                   <div className="relative h-52">
-                    <img src={item.cover} alt={item.label} className="h-full w-full object-cover" loading="lazy" />
+                    <img src={(item.cover) || undefined} alt={item.label} className="h-full w-full object-cover" loading="lazy" />
                     <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-transparent to-transparent" />
                     <div className="absolute left-4 top-3 text-white drop-shadow">
                       <p className="text-[12px] font-bold uppercase tracking-widest text-white/85">{item.kicker}</p>
@@ -126,41 +149,37 @@ export function AppStoreApp({ onBack, catalog, reinstallable, installed, onInsta
 
         {tab === "apps" && (
           <div>
-            <h1 className="px-4 pb-1 pt-3 text-[30px] font-extrabold tracking-tight text-ink">App</h1>
-            <p className="px-4 pb-1 text-[13px] text-ink-soft">为你的小手机添加实用与美化组件</p>
-            {reinstallable.length > 0 && (
-              <>
-                <p className="px-4 pb-0 pt-3 text-[18px] font-bold text-ink">恢复手机自带应用</p>
-                <p className="px-4 text-[12.5px] text-ink-soft">被你删掉的自带应用，随时可以装回来</p>
-                <div className="mx-4 divide-y divide-black/[0.06]">
-                  {reinstallable.map((item) => <Row key={item.id} item={item} />)}
-                </div>
-              </>
-            )}
-            <p className="px-4 pb-0 pt-3 text-[18px] font-bold text-ink">效率与实用工具</p>
+            <StoreHeader title="App" kicker="为你的小手机添加实用与美化组件" onClose={onBack} />
+            <p className="px-4 pb-0 pt-3 text-[18px] font-bold text-ink">手机自带应用</p>
+            <p className="px-4 text-[12.5px] text-ink-soft">删掉后随时可以在这里装回来</p>
             <div className="mx-4 divide-y divide-black/[0.06]">
-              {catalog.filter((c) => c.kind !== "widget").map((item) => <Row key={item.id} item={item} />)}
+              {catalog.filter((c) => c.core).map((item) => <Row key={item.id} item={item} />)}
+            </div>
+            <p className="px-4 pb-0 pt-4 text-[18px] font-bold text-ink">效率与实用工具</p>
+            <div className="mx-4 divide-y divide-black/[0.06]">
+              {catalog.filter((c) => !c.core && c.kind !== "widget").map((item) => <Row key={item.id} item={item} />)}
             </div>
             <p className="px-4 pb-0 pt-4 text-[18px] font-bold text-ink">桌面美化小组件</p>
             <p className="px-4 text-[12.5px] text-ink-soft">添加后出现在主屏首页顶部，可放照片、便签、时钟、音乐</p>
             <div className="mx-4 divide-y divide-black/[0.06]">
               {catalog.filter((c) => c.kind === "widget").map((item) => <Row key={item.id} item={item} />)}
             </div>
+            <PlayerApps variant="list" />
             <p className="px-4 pt-5 text-center text-[11.5px] text-ink-soft/70">STAR Store · 全部组件均为本机内置演示</p>
           </div>
         )}
 
         {tab === "icons" && (
           <div>
-            <h1 className="px-4 pb-1 pt-3 text-[30px] font-extrabold tracking-tight text-ink">图标</h1>
-            <p className="px-4 pb-2 text-[13px] text-ink-soft">上传你自己的图片，替换任意主屏图标。也可随时还原为默认。</p>
+            <StoreHeader title="图标" kicker="上传图片替换主屏图标，可随时还原" onClose={onBack} />
             <div className="mx-4 divide-y divide-black/[0.06]">
+              {iconApps.length === 0 && <p className="py-10 text-center text-[13px] text-ink-soft">还没有已安装的应用</p>}
               {iconApps.map((a) => {
                 const custom = iconOverrides[a.id];
                 return (
                   <div key={a.id} className="flex items-center gap-3 py-2.5">
                     <span className="ios-icon block h-[54px] w-[54px] shrink-0 overflow-hidden">
-                      {custom ? <img src={custom} alt={a.label} className="h-full w-full object-cover" /> : a.node}
+                      {custom ? <img src={(custom) || undefined} alt={a.label} className="h-full w-full object-cover" /> : a.node}
                     </span>
                     <span className="flex-1 text-[15px] font-medium text-ink">{a.label}</span>
                     {custom && <button onClick={() => onSetIcon(a.id, null)} className="rounded-full bg-[#e9e9ef] px-3.5 py-1.5 text-[12.5px] font-semibold text-ink-soft">还原</button>}
@@ -177,7 +196,7 @@ export function AppStoreApp({ onBack, catalog, reinstallable, installed, onInsta
 
         {tab === "search" && (
           <div>
-            <h1 className="px-4 pb-2 pt-3 text-[30px] font-extrabold tracking-tight text-ink">搜索</h1>
+            <StoreHeader title="搜索" onClose={onBack} />
             <div className="px-4">
               <div className="flex items-center gap-1.5 rounded-[10px] bg-black/[0.06] px-2.5 py-2 text-[15px] text-ink-soft">
                 <IconSearch size={17} /><input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="游戏、App 及更多内容" className="w-full bg-transparent outline-none placeholder:text-ink-soft/70" />
@@ -185,62 +204,110 @@ export function AppStoreApp({ onBack, catalog, reinstallable, installed, onInsta
               </div>
             </div>
             <div className="mx-4 mt-2 divide-y divide-black/[0.06]">
-              {results.length === 0 && <p className="py-10 text-center text-[13px] text-ink-soft">没有找到「{q}」相关组件</p>}
+              {results.length === 0 && <p className="py-10 text-center text-[13px] text-ink-soft">没有找到「{q}」相关内容</p>}
               {results.map((item) => <Row key={item.id} item={item} />)}
             </div>
           </div>
         )}
       </div>
 
-      {/* 底部标签栏 */}
-      <div className="absolute inset-x-0 bottom-0 flex items-stretch border-t border-black/[0.08] bg-[#f7f7f9]/95 backdrop-blur">
-        {([
-          { id: "today", label: "今天", icon: <IconSun size={22} /> },
-          { id: "apps", label: "App", icon: <AppsTabGlyph /> },
-          { id: "icons", label: "图标", icon: <IconsTabGlyph /> },
-          { id: "search", label: "搜索", icon: <IconSearch size={22} /> },
-        ] as const).map((t) => (
-          <button key={t.id} onClick={() => setTab(t.id)} className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${tab === t.id ? "text-[#0a84ff]" : "text-ink-soft/70"}`}>
-            {t.icon}<span>{t.label}</span>
-          </button>
-        ))}
-      </div>
+      <StoreTabBar active={tab} onChange={setTab} />
+      {/* 悬浮小珠：只活在应用商店里，退出商店即消失 */}
+      {!studio && petMode === "store" && <SlimePet onOpen={() => { setStudioInit(undefined); setStudio(true); }} say={slimeSay} />}
+      {studio && <Studio key={studioInit?.id ?? "list"} initial={studioInit} onClose={() => setStudio(false)} developer={game?.player.name ?? ""} onSlime={setSlimeSay} />}
     </div>
   );
 }
+/* —— 应用商店顶部：大标题 + 灰色副标 + 右侧圆形关闭（四个 Tab 共用同一版式） —— */
+function StoreHeader({ title, kicker, onClose }: { title: string; kicker?: string; onClose: () => void }) {
+  return (
+    <header className="flex items-end justify-between gap-3 px-4 pb-2 pt-4">
+      <div className="min-w-0">
+        {kicker && <p className="truncate text-[12px] font-semibold uppercase tracking-wide text-ink-soft/70">{kicker}</p>}
+        <h1 className="text-[32px] font-bold leading-[1.1] tracking-tight text-ink">{title}</h1>
+      </div>
+      <button onClick={onClose} aria-label="关闭应用商店" className="mb-1 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-black/[0.06] text-ink-soft transition active:scale-90">
+        <IconClose size={15} />
+      </button>
+    </header>
+  );
+}
+
+/* —— 应用商店底部标签栏：毛玻璃底 + 选中蓝色，独立封装便于复用 —— */
+type StoreTab = "today" | "apps" | "icons" | "search";
+const STORE_TABS: { id: StoreTab; label: string; icon: ReactNode }[] = [
+  { id: "today", label: "今天", icon: <IconSun size={22} /> },
+  { id: "apps", label: "App", icon: <AppsTabGlyph /> },
+  { id: "icons", label: "图标", icon: <IconsTabGlyph /> },
+  { id: "search", label: "搜索", icon: <IconSearch size={22} /> },
+];
+function StoreTabBar({ active, onChange }: { active: StoreTab; onChange: (t: StoreTab) => void }) {
+  return (
+    <nav className="absolute inset-x-0 bottom-0 z-20 flex items-stretch border-t border-black/[0.08] bg-[#f9f9f9]/90 pb-[max(0.25rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
+      {STORE_TABS.map((t) => {
+        const on = active === t.id;
+        return (
+          <button key={t.id} onClick={() => onChange(t.id)} aria-current={on ? "page" : undefined} className={`flex flex-1 flex-col items-center gap-0.5 pb-1 pt-1.5 text-[10px] font-medium transition-colors ${on ? "text-[#0a84ff]" : "text-[#8e8e93]"}`}>
+            <span className="grid h-6 place-items-center">{t.icon}</span>
+            <span>{t.label}</span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
 function Head({ title, onBack, tint = "#111", light }: { title: string; onBack: () => void; tint?: string; light?: boolean }) {
   return (
-    <div className={`flex items-center px-3 py-2.5 ${light ? "text-white" : "text-ink"}`} style={{ background: light ? "transparent" : "transparent" }}>
-      <button onClick={onBack} className="w-16 text-left text-[15px]" style={{ color: light ? "rgba(255,255,255,.85)" : tint }}>‹ 主屏</button>
+    <div className={`flex items-center px-3 py-2.5 ${light ? "text-white" : "text-ink"}`} >
+      <button onClick={onBack} className="flex w-16 items-center text-[15px]" style={{ color: light ? "rgba(255,255,255,.85)" : tint }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m15 5-7 7 7 7" /></svg>主屏
+      </button>
       <span className="flex-1 text-center text-[16px] font-semibold">{title}</span>
       <span className="w-16" />
     </div>
   );
 }
 
+/* —— 番茄钟状态：持久化到 localStorage，按 Date.now() 推算剩余，离开 App 仍计时 —— */
+const POMO_KEY = "star2005.phone.pomodoro";
+const POMO_WORK = 25 * 60, POMO_BREAK = 5 * 60;
+type PomoState = { mode: "work" | "break"; running: boolean; endsAt: number | null; left: number; rounds: number };
+const pomoDur = (m: "work" | "break") => (m === "work" ? POMO_WORK : POMO_BREAK);
+function loadPomo(): PomoState {
+  return loadData<PomoState>(POMO_KEY, { mode: "work", running: false, endsAt: null, left: POMO_WORK, rounds: 0 });
+}
+function savePomo(p: PomoState) { saveData(POMO_KEY, p); }
+/** 若已到点则推进阶段（专注完成 → 轮数+1、切到休息）。返回 [新状态, 完成的阶段或 null] */
+function settlePomo(p: PomoState): [PomoState, "work" | "break" | null] {
+  if (!p.running || p.endsAt == null || Date.now() < p.endsAt) return [p, null];
+  const next: "work" | "break" = p.mode === "work" ? "break" : "work";
+  return [{ mode: next, running: false, endsAt: null, left: pomoDur(next), rounds: p.rounds + (p.mode === "work" ? 1 : 0) }, p.mode];
+}
+const pomoLeft = (p: PomoState) => (p.running && p.endsAt != null ? Math.max(0, Math.ceil((p.endsAt - Date.now()) / 1000)) : p.left);
+
 /* —— 番茄钟：25/5 循环，圆环进度，开始/暂停/重置 —— */
 export function PomodoroApp({ onBack }: { onBack: () => void }) {
-  const WORK = 25 * 60, BREAK = 5 * 60;
-  const [mode, setMode] = useState<"work" | "break">("work");
-  const [left, setLeft] = useState(WORK);
-  const [running, setRunning] = useState(false);
-  const [rounds, setRounds] = useState(0);
+  const WORK = POMO_WORK, BREAK = POMO_BREAK;
+  const [st, setSt] = useState<PomoState>(() => { const [p, done] = settlePomo(loadPomo()); if (done) savePomo(p); return p; });
+  const [, tick] = useState(0);
+  const update = (p: PomoState) => { savePomo(p); setSt(p); };
+  const { mode, running, rounds } = st;
+  const left = pomoLeft(st);
   const total = mode === "work" ? WORK : BREAK;
 
   useEffect(() => {
     if (!running) return;
-    const t = setInterval(() => setLeft((s) => Math.max(0, s - 1)), 1000);
+    const t = setInterval(() => {
+      const [p, done] = settlePomo(loadPomo());
+      if (done) update(p); else tick((n) => n + 1);
+    }, 500);
     return () => clearInterval(t);
-  }, [running]);
+  }, [running]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    if (left > 0) return;
-    if (mode === "work") { setRounds((r) => r + 1); setMode("break"); setLeft(BREAK); }
-    else { setMode("work"); setLeft(WORK); }
-    setRunning(false);
-  }, [left]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const reset = () => { setRunning(false); setLeft(total); };
+  const setMode = (m: "work" | "break") => update({ ...st, mode: m, running: false, endsAt: null, left: pomoDur(m) });
+  const toggle = () => update(running ? { ...st, running: false, endsAt: null, left } : { ...st, running: true, endsAt: Date.now() + left * 1000 });
+  const reset = () => update({ ...st, running: false, endsAt: null, left: total });
   const mm = String(Math.floor(left / 60)).padStart(2, "0");
   const ss = String(left % 60).padStart(2, "0");
   const pct = 1 - left / total;
@@ -253,7 +320,7 @@ export function PomodoroApp({ onBack }: { onBack: () => void }) {
       <div className="flex flex-1 flex-col items-center justify-center gap-6 text-white">
         <div className="flex gap-2">
           {(["work", "break"] as const).map((m) => (
-            <button key={m} onClick={() => { setMode(m); setLeft(m === "work" ? WORK : BREAK); setRunning(false); }}
+            <button key={m} onClick={() => setMode(m)}
               className={`rounded-full px-4 py-1 text-[13px] ${mode === m ? "font-semibold text-white" : "text-white/50"}`}
               style={mode === m ? { background: accent } : { background: "rgba(255,255,255,.08)" }}>
               {m === "work" ? "专注 25:00" : "休息 05:00"}
@@ -273,42 +340,29 @@ export function PomodoroApp({ onBack }: { onBack: () => void }) {
         </div>
         <div className="flex items-center gap-4">
           <button onClick={reset} className="h-12 w-12 rounded-full bg-white/10 text-[13px]">重置</button>
-          <button onClick={() => setRunning((r) => !r)} className="h-16 w-16 rounded-full text-[15px] font-semibold text-white shadow-lg" style={{ background: accent }}>
+          <button onClick={toggle} className="h-16 w-16 rounded-full text-[15px] font-semibold text-white shadow-lg" style={{ background: accent }}>
             {running ? "暂停" : "开始"}
           </button>
-          <button onClick={() => { setMode("work"); setLeft(WORK); setRunning(false); setRounds(0); }} className="h-12 w-12 rounded-full bg-white/10 text-[12px]">清零</button>
+          <button onClick={() => update({ mode: "work", running: false, endsAt: null, left: WORK, rounds: 0 })} className="h-12 w-12 rounded-full bg-white/10 text-[12px]">清零</button>
         </div>
       </div>
     </div>
   );
 }
 
-/* —— 时钟 / 闹钟：真实走时 + 可增删闹钟（本地留存） —— */
+/* —— 时钟 / 闹钟：游戏内走时 + 可增删闹钟（本地留存） —— */
 type Alarm = { id: string; h: number; m: number; on: boolean; label: string };
 const ALARM_KEY = "star2005.phone.alarms";
 export function ClockApp({ onBack }: { onBack: () => void }) {
-  const [now, setNow] = useState(new Date());
+  const now = useGameNow(); // 游戏内时间：闹钟按星城钟点响
   const [tab, setTab] = useState<"clock" | "alarm">("clock");
   const [alarms, setAlarms] = useState<Alarm[]>(() => {
-    try { const r = localStorage.getItem(ALARM_KEY); if (r) return JSON.parse(r); } catch { /* ignore */ }
-    return [{ id: "a1", h: 7, m: 30, on: true, label: "早通告" }, { id: "a2", h: 23, m: 0, on: false, label: "休息" }];
+    return loadData<Alarm[]>(ALARM_KEY, [{ id: "a1", h: 7, m: 30, on: true, label: `早${T("gig")}` }, { id: "a2", h: 23, m: 0, on: false, label: "休息" }]);
   });
   const [draft, setDraft] = useState({ h: 8, m: 0 });
   const [adding, setAdding] = useState(false);
-  const [ring, setRing] = useState<string | null>(null);
-  const firedRef = useRef<Set<string>>(new Set());
 
-  useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
-  useEffect(() => { try { localStorage.setItem(ALARM_KEY, JSON.stringify(alarms)); } catch { /* ignore */ } }, [alarms]);
-  useEffect(() => {
-    const hm = `${now.getHours()}:${now.getMinutes()}`;
-    for (const a of alarms) {
-      const key = `${a.id}@${hm}`;
-      if (a.on && a.h === now.getHours() && a.m === now.getMinutes() && now.getSeconds() === 0 && !firedRef.current.has(key)) {
-        firedRef.current.add(key); setRing(a.label || "闹钟");
-      }
-    }
-  }, [now, alarms]);
+  useEffect(() => { saveData(ALARM_KEY, alarms); }, [alarms]);
 
   const hh = String(now.getHours()).padStart(2, "0");
   const mm = String(now.getMinutes()).padStart(2, "0");
@@ -382,24 +436,15 @@ export function ClockApp({ onBack }: { onBack: () => void }) {
         </div>
       )}
 
-      {/* 响铃提示 */}
-      {ring && (
-        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 bg-black/70">
-          <IconClock size={64} className="text-orange-400" />
-          <p className="text-[22px] font-semibold">{ring}</p>
-          <p className="text-[15px] tabular-nums text-white/70">{hh}:{mm}</p>
-          <button onClick={() => setRing(null)} className="mt-2 rounded-full bg-orange-500 px-8 py-2.5 text-[15px] font-semibold">停止</button>
-        </div>
-      )}
     </div>
   );
 }
 function Stepper({ value, max, onChange }: { value: number; max: number; onChange: (v: number) => void }) {
   return (
     <div className="flex flex-col items-center">
-      <button onClick={() => onChange((value + 1) % (max + 1))} className="text-[16px] text-white/50">▲</button>
+      <button onClick={() => onChange((value + 1) % (max + 1))} className="flex h-11 w-[70px] items-center justify-center rounded-lg text-white/50 active:bg-white/10" aria-label="增加"><IconChevronUp size={16} /></button>
       <span className="w-[70px] text-center">{String(value).padStart(2, "0")}</span>
-      <button onClick={() => onChange((value - 1 + (max + 1)) % (max + 1))} className="text-[16px] text-white/50">▼</button>
+      <button onClick={() => onChange((value - 1 + (max + 1)) % (max + 1))} className="flex h-11 w-[70px] items-center justify-center rounded-lg text-white/50 active:bg-white/10" aria-label="减少"><IconChevronDown size={16} /></button>
     </div>
   );
 }
@@ -420,7 +465,7 @@ export function CalculatorApp({ onBack }: { onBack: () => void }) {
     setDisplay(display.length < 12 ? display + d : display);
   };
   const chooseOp = (o: string) => {
-    const cur = parseFloat(display);
+    const cur = Number.isFinite(parseFloat(display)) ? parseFloat(display) : 0;
     if (acc !== null && op && !fresh) { const r = compute(acc, cur, op); setAcc(r); setDisplay(String(+r.toPrecision(12))); }
     else setAcc(cur);
     setOp(o); setFresh(true);
@@ -433,13 +478,13 @@ export function CalculatorApp({ onBack }: { onBack: () => void }) {
   };
   const clear = () => { setDisplay("0"); setAcc(null); setOp(null); setFresh(true); };
   const sign = () => setDisplay((d) => (d.startsWith("-") ? d.slice(1) : d === "0" ? d : "-" + d));
-  const percent = () => setDisplay((d) => String(parseFloat(d) / 100));
+  const percent = () => setDisplay((d) => (Number.isFinite(parseFloat(d)) ? String(+(parseFloat(d) / 100).toPrecision(12)) : "0"));
 
   const Btn = ({ label, onClick, kind }: { label: string; onClick: () => void; kind?: "op" | "fn" | "num" }) => (
     <button onClick={onClick}
-      className={`flex h-[68px] items-center justify-center rounded-full text-[26px] transition active:brightness-125 ${
+      className={`flex aspect-square max-h-[72px] w-full items-center justify-center rounded-full text-[26px] transition active:brightness-125 ${
         kind === "op" ? "text-white" : kind === "fn" ? "bg-[#a5a5a5] text-black" : "bg-[#333] text-white"
-      } ${label === "0" ? "col-span-2 justify-start pl-7" : ""}`}
+      } ${label === "0" ? "col-span-2 aspect-auto justify-start pl-7" : ""}`}
       style={kind === "op" ? { background: op === label ? "#fff" : "#ff9f0a", color: op === label ? "#ff9f0a" : "#fff" } : undefined}>
       {label}
     </button>
@@ -449,7 +494,7 @@ export function CalculatorApp({ onBack }: { onBack: () => void }) {
     <div className="flex h-full flex-col bg-black text-white">
       <Head title="计算器" onBack={onBack} light />
       <div className="flex flex-1 flex-col justify-end px-4 pb-5">
-        <p className="mb-3 truncate text-right text-[64px] font-thin tabular-nums leading-none">{display}</p>
+        <p className={`mb-3 truncate text-right ${display.length > 7 ? "text-[44px]" : "text-[64px]"} font-thin tabular-nums leading-none`}>{display}</p>
         <div className="grid grid-cols-4 gap-2.5">
           <Btn label={acc === null && display === "0" ? "AC" : "C"} onClick={clear} kind="fn" />
           <Btn label="±" onClick={sign} kind="fn" />
@@ -477,14 +522,13 @@ const MEMO_KEY = "star2005.phone.memos";
 const MOODS = ["😊", "🥰", "😌", "😎", "😢", "😤", "😴", "🤩"];
 export function NotesApp({ onBack }: { onBack: () => void }) {
   const [list, setList] = useState<Memo[]>(() => {
-    try { const r = localStorage.getItem(MEMO_KEY); if (r) return JSON.parse(r); } catch { /* ignore */ }
-    return [
+    return loadData<Memo[]>(MEMO_KEY, [
       { id: "m1", text: "试镜清单\n· 提前一周背台词\n· 准备两套定妆造型\n· 早睡，别熬夜", ts: Date.now() },
-      { id: "m2", text: "第一次进组\n今天第一次走进摄影棚，灯光亮得睁不开眼。导演说我眼睛里有故事。\n哪怕只是个小角色，也告诉自己——总有一天，今夜她是主角。", ts: Date.now() - 86400000, mood: "🤩" },
-    ];
+      { id: "m2", text: "第一次进组\n今天第一次走进摄影棚，灯光亮得睁不开眼。导演说我眼睛里有故事。\n哪怕只是个小角色，也告诉自己——总有一天，今夜她是主角。", ts: Date.now() - 86400000 },
+    ]);
   });
   const [open, setOpen] = useState<string | null>(null);
-  useEffect(() => { try { localStorage.setItem(MEMO_KEY, JSON.stringify(list)); } catch { /* ignore */ } }, [list]);
+  useEffect(() => { saveData(MEMO_KEY, list); }, [list]);
 
   const cur = list.find((m) => m.id === open);
   if (cur) {
@@ -492,7 +536,7 @@ export function NotesApp({ onBack }: { onBack: () => void }) {
     return (
       <div className="flex h-full flex-col bg-[#1c1c1e] text-white">
         <div className="flex items-center px-3 py-2.5">
-          <button onClick={() => setOpen(null)} className="text-[15px] text-orange-400">‹ 备忘录</button>
+          <button onClick={() => { const t = cur.text.trim(); if (!t) setList((l) => l.filter((m) => m.id !== cur.id)); setOpen(null); }} className="text-[15px] text-orange-400">‹ 备忘录</button>
           <span className="flex-1" />
           <button onClick={() => { setList((l) => l.filter((m) => m.id !== cur.id)); setOpen(null); }} className="text-[13px] text-white/60">删除</button>
         </div>
@@ -516,9 +560,10 @@ export function NotesApp({ onBack }: { onBack: () => void }) {
     );
   }
   return (
-    <div className="flex h-full flex-col bg-[#1c1c1e] text-white">
+    <div className="relative flex h-full flex-col bg-[#1c1c1e] text-white">
       <Head title="备忘录 · 日记" onBack={onBack} light tint="#ff9f0a" />
-      <div className="flex-1 overflow-y-auto px-3">
+      <div className="flex-1 overflow-y-auto px-3 pb-20">
+        {list.length === 0 && <p className="py-16 text-center text-[13px] text-white/45">还没有备忘录，点右下角「＋」写一条。</p>}
         {list.map((m) => {
           const [first, ...rest] = m.text.split("\n");
           return (
@@ -561,12 +606,14 @@ export function WeatherApp({ onBack }: { onBack: () => void }) {
     });
   }, [today, w.weather]);
   const hi = forecast[0].hi, lo = forecast[0].lo;
+  const wMin = Math.min(...forecast.map((f) => f.lo)), wMax = Math.max(...forecast.map((f) => f.hi));
+  const span = Math.max(1, wMax - wMin);
 
   return (
-    <div className="flex h-full flex-col text-white" style={{ background: "linear-gradient(170deg,#2b5876,#4e4376)" }}>
+    <div className="flex h-full flex-col overflow-y-auto pb-4 text-white" style={{ background: "linear-gradient(170deg,#2b5876,#4e4376)" }}>
       <Head title="天气" onBack={onBack} light />
       <div className="flex flex-col items-center pt-4 text-center">
-        <p className="text-[22px] font-medium">{w.location || "星城"}</p>
+        <p className="text-[22px] font-medium">{w.location || `${T("city")}`}</p>
         <p className="mt-1 text-[68px] font-thin leading-none tabular-nums">{hi}°</p>
         <p className="mt-1 flex items-center gap-1.5 text-[15px]"><IconSun size={16} /> {w.weather || "晴"}</p>
         <p className="text-[13px] text-white/70">最高 {hi}° 最低 {lo}°</p>
@@ -576,15 +623,205 @@ export function WeatherApp({ onBack }: { onBack: () => void }) {
         {forecast.map((f, i) => (
           <div key={i} className="flex items-center gap-3 py-2 text-[15px]">
             <span className="w-12">{f.d}</span>
-            <span className="flex-1 text-white/80">{f.k}</span>
-            <span className="w-10 text-right text-white/60 tabular-nums">{f.lo}°</span>
-            <div className="h-1 w-16 overflow-hidden rounded-full bg-white/15">
-              <div className="h-full rounded-full bg-gradient-to-r from-sky-300 to-amber-300" style={{ width: `${((f.hi - 15) / 20) * 100}%` }} />
+            <span className="min-w-0 flex-1 truncate text-white/80">{f.k}</span>
+            <span className="w-8 text-right text-white/60 tabular-nums">{f.lo}°</span>
+            <div className="relative h-1 w-16 shrink-0 overflow-hidden rounded-full bg-white/15">
+              <div className="absolute inset-y-0 rounded-full bg-gradient-to-r from-sky-300 to-amber-300" style={{ left: `${((f.lo - wMin) / span) * 100}%`, width: `${((f.hi - f.lo) / span) * 100}%` }} />
             </div>
             <span className="w-8 text-right tabular-nums">{f.hi}°</span>
           </div>
         ))}
       </div>
     </div>
+  );
+}
+
+/* —— 仿真 App Store 产品页（导航栏吸顶小图标 / 信息横条 / 新功能 / 预览 / 评分评论 / 隐私 / 信息 / 相关推荐） —— */
+function AppDetail({ item: d, catalog, pill, onBack, onPick, backLabel }: { item: StoreItem; catalog: StoreItem[]; pill: ReactNode; onBack: () => void; onPick: (i: StoreItem) => void; backLabel: string }) {
+  const [scrolled, setScrolled] = useState(false);
+  const [more, setMore] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => { ref.current?.scrollTo({ top: 0 }); setMore(false); setScrolled(false); }, [d.id]);
+  const related = catalog.filter((c) => c.id !== d.id).slice(0, 6);
+  const shots = [
+    { img: d.cover, title: d.desc, kicker: d.kicker, pos: "object-center" },
+    { img: d.cover, title: d.tagline, kicker: d.cat, pos: "object-left" },
+    { img: d.cover, title: "轻点一下，即刻开始", kicker: d.label, pos: "object-right" },
+  ];
+  const strip = [
+    { k: "年龄", v: "4+", sub: "岁" },
+    { k: "类别", v: d.cat.slice(0, 2), sub: d.cat },
+    { k: "开发者", v: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" /></svg>, sub: "STAR Studio" },
+    { k: "语言", v: "ZH", sub: "+ 1 种语言" },
+    { k: "大小", v: d.size.replace(/\s*MB/i, ""), sub: "MB" },
+  ];
+  const H = ({ t, link }: { t: string; link?: string }) => (
+    <div className="flex items-baseline justify-between px-4 pb-2 pt-5">
+      <p className="text-[21px] font-bold tracking-tight text-ink">{t}</p>
+      {link && <span className="text-[16px] text-[#0a84ff]">{link}</span>}
+    </div>
+  );
+  const Sep = () => <div className="mx-4 h-px bg-black/[0.1]" />;
+
+  return (
+    <div className="relative flex h-full flex-col bg-white">
+      {/* 导航栏：滚过头部后显示居中小图标 + 右侧获取 */}
+      <div className={`z-10 flex h-11 shrink-0 items-center justify-between px-2 transition-colors ${scrolled ? "border-b border-black/[0.08] bg-[#f9f9f9]/90 backdrop-blur" : "bg-white"}`}>
+        <button onClick={onBack} className="flex items-center text-[17px] text-[#0a84ff]">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="m15 5-7 7 7 7" /></svg>
+          {backLabel}
+        </button>
+        <span className={`ios-icon block h-7 w-7 overflow-hidden transition-all duration-200 ${scrolled ? "opacity-100" : "translate-y-2 opacity-0"}`}>{d.icon}</span>
+        <div className={`min-w-[64px] text-right transition-opacity duration-200 ${scrolled ? "opacity-100" : "pointer-events-none opacity-0"}`}>{pill}</div>
+      </div>
+
+      <div ref={ref} onScroll={(e) => setScrolled(e.currentTarget.scrollTop > 120)} className="flex-1 overflow-y-auto pb-10">
+        {/* 头部 */}
+        <div className="flex gap-4 px-4 pt-1">
+          <span className="ios-icon block h-[100px] w-[100px] shrink-0 overflow-hidden rounded-[26px] ring-1 ring-black/[0.06]">{d.icon}</span>
+          <div className="flex min-w-0 flex-1 flex-col">
+            <p className="text-[21px] font-semibold leading-tight tracking-tight text-ink">{d.label}</p>
+            <p className="mt-0.5 line-clamp-2 text-[14px] leading-snug text-ink-soft">{d.tagline}</p>
+            <div className="mt-auto flex items-center justify-between">
+              <div className="flex flex-col items-start gap-0.5">
+                {pill}
+                <span className="pl-1 text-[9px] text-ink-soft/70">免费 · 无 App 内购买</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 信息横条 */}
+        <div className="mt-5 border-y border-black/[0.08]">
+          <div className="flex overflow-x-auto py-3 [scrollbar-width:none]">
+            {strip.map((x, i) => (
+              <div key={i} className={`flex w-[104px] shrink-0 flex-col items-center gap-1 px-2 text-center ${i ? "border-l border-black/[0.1]" : ""}`}>
+                <p className="w-full truncate text-[10px] font-semibold uppercase tracking-wide text-ink-soft/60">{x.k}</p>
+                <div className="flex h-6 items-center text-[20px] font-bold text-ink-soft/80">{x.v}</div>
+                <div className="w-full truncate text-[11px] text-ink-soft/60">{x.sub}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 预览：竖版 iPhone 截图 */}
+        <H t="预览" />
+        <div className="flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-4 [scrollbar-width:none]">
+          {shots.map((sh, i) => (
+            <div key={i} className="relative aspect-[9/19.5] w-[58%] shrink-0 snap-start overflow-hidden rounded-[22px] bg-[#f2f2f7] ring-1 ring-black/[0.08]">
+              <div className="absolute inset-x-0 top-0 z-10 px-4 pt-5 text-center">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink-soft">{sh.kicker}</p>
+                <p className="mt-1 text-[16px] font-extrabold leading-snug text-ink">{sh.title}</p>
+              </div>
+              <div className="absolute inset-x-4 bottom-0 top-[28%] overflow-hidden rounded-t-[18px] border-[5px] border-b-0 border-[#1c1c1e] shadow-[0_10px_30px_-10px_rgba(0,0,0,0.5)]">
+                <img src={(sh.img) || undefined} alt="" className={`h-full w-full object-cover ${sh.pos}`} />
+                <span className="absolute left-1/2 top-1.5 h-3 w-12 -translate-x-1/2 rounded-full bg-[#1c1c1e]" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="flex items-center gap-1.5 px-4 pt-3 text-[13px] text-ink-soft/70">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="7" y="2" width="10" height="20" rx="2.5" /></svg>
+          iPhone
+        </p>
+        <Sep />
+
+        {/* 简介 */}
+        <div className="px-4 pt-4">
+          <p className={`whitespace-pre-line text-[14px] leading-relaxed text-ink ${more ? "" : "line-clamp-3"}`}>{`${d.story}\n\n${d.desc}——${d.tagline}。\n\n· 轻巧：安装包仅 ${d.size}\n· 安心：所有数据仅存于本机\n· 免费：没有任何 App 内购买`}</p>
+          {!more && <button onClick={() => setMore(true)} className="text-[14px] text-[#0a84ff]">更多</button>}
+          <div className="mt-3 flex items-center justify-between">
+            <div><p className="text-[14px] text-[#0a84ff]">STAR Studio</p><p className="text-[12px] text-ink-soft/70">开发者</p></div>
+          </div>
+        </div>
+
+        {/* App 隐私 */}
+        <H t="App 隐私" />
+        <p className="px-4 text-[14px] leading-relaxed text-ink">开发者「STAR Studio」表示此 App 的隐私规范可能包括下述数据处理方式。</p>
+        <div className="mx-4 mt-3 flex flex-col items-center rounded-[14px] bg-[#f2f2f7] px-4 py-5 text-center">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#0a84ff" strokeWidth="1.8"><circle cx="12" cy="12" r="9" /><path d="m8.5 12.5 2.5 2.5 4.5-5" /></svg>
+          <p className="mt-2 text-[16px] font-semibold text-ink">未收集数据</p>
+          <p className="mt-0.5 text-[13px] text-ink-soft">开发者不会从此 App 中收集任何数据。</p>
+        </div>
+
+        {/* 信息 */}
+        <H t="信息" />
+        <div className="mx-4 divide-y divide-black/[0.08] text-[14px]">
+          {[["供应商", "STAR Studio"], ["大小", d.size], ["类别", d.cat], ["兼容性", "iPhone"], ["语言", "简体中文和英语"], ["年龄分级", "4+"], ["版权", `© ${T("city")} STAR Studio`], ["价格", "免费"]].map(([k, v]) => (
+            <div key={k} className="flex justify-between gap-4 py-2.5"><span className="shrink-0 text-ink-soft/70">{k}</span><span className="truncate text-ink">{v}</span></div>
+          ))}
+        </div>
+
+        {/* 你可能也喜欢 */}
+        {related.length > 0 && (
+          <>
+            <H t="你可能也喜欢" />
+            <div className="grid snap-x auto-cols-[82%] grid-flow-col grid-rows-3 gap-x-4 overflow-x-auto px-4 [scrollbar-width:none]">
+              {related.map((r) => (
+                <button key={r.id} onClick={() => onPick(r)} className="flex snap-start items-center gap-3 border-b border-black/[0.08] py-2 text-left">
+                  <span className="ios-icon block h-12 w-12 shrink-0 overflow-hidden">{r.icon}</span>
+                  <span className="min-w-0 flex-1"><span className="block truncate text-[15px] text-ink">{r.label}</span><span className="block truncate text-[12.5px] text-ink-soft">{r.tagline}</span></span>
+                  <span className="rounded-full bg-[#e9e9ef] px-4 py-1 text-[13px] font-bold text-[#0a84ff]">查看</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* —— 全局提醒：闹钟/番茄钟在手机任意界面响铃（挂在 Phone 外壳） —— */
+function beep() {
+  try {
+    const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const ctx = new Ctx();
+    [0, 0.35, 0.7].forEach((t) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.value = 880; o.connect(g); g.connect(ctx.destination);
+      g.gain.setValueAtTime(0.15, ctx.currentTime + t); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.3);
+      o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + 0.3);
+    });
+    setTimeout(() => ctx.close(), 1500);
+  } catch { /* ignore */ }
+}
+export function GlobalPhoneAlerts({ dnd = false }: { dnd?: boolean }) {
+  const now = useGameNow();
+  const [ring, setRing] = useState<string | null>(null);
+  const [banner, setBanner] = useState<string | null>(null);
+  const firedRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const alarms: Alarm[] = loadData<Alarm[]>(ALARM_KEY, []);
+    const hm = `${now.getHours()}:${now.getMinutes()}`;
+    for (const a of alarms) {
+      const key = `${a.id}@${hm}`;
+      if (a.on && a.h === now.getHours() && a.m === now.getMinutes() && !firedRef.current.has(key)) {
+        firedRef.current.add(key); setRing(a.label || "闹钟"); beep();
+      }
+    }
+    const [p, done] = settlePomo(loadPomo());
+    // 勿扰模式：番茄钟提醒静默（不弹横幅、不响铃）；闹钟与 iOS 一致仍会响
+    if (done) { savePomo(p); if (!dnd) { setBanner(done === "work" ? "专注完成，休息一下吧" : "休息结束，开始下一个番茄"); beep(); } }
+  }, [now, dnd]);
+
+  useEffect(() => { if (!banner) return; const t = setTimeout(() => setBanner(null), 4000); return () => clearTimeout(t); }, [banner]);
+
+  const hh = String(now.getHours()).padStart(2, "0"), mm = String(now.getMinutes()).padStart(2, "0");
+  return (
+    <>
+      {banner && (
+        <div className="absolute inset-x-3 top-10 z-[48] rounded-2xl bg-black/85 px-4 py-3 text-[13.5px] text-white shadow-lg" onClick={() => setBanner(null)}>{banner}</div>
+      )}
+      {ring && (
+        <div className="absolute inset-0 z-[48] flex flex-col items-center justify-center gap-4 bg-black/70 text-white">
+          <IconClock size={64} className="text-orange-400" />
+          <p className="text-[22px] font-semibold">{ring}</p>
+          <p className="text-[15px] tabular-nums text-white/70">{hh}:{mm}</p>
+          <button onClick={() => setRing(null)} className="mt-2 rounded-full bg-orange-500 px-8 py-2.5 text-[15px] font-semibold">停止</button>
+        </div>
+      )}
+    </>
   );
 }

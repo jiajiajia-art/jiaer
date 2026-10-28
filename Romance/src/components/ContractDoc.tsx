@@ -1,7 +1,9 @@
+import { IconStar } from "../lib/icons";
 /* 经纪合约·全文档（点开背包里的合约后以「正式合约文书」形式全屏展开）
  * 数据取自签署时固化的 game.contract 快照，纯只读展示；版式为一纸 2005 年份的经纪合约。 */
 import { useGame } from "../store/gameCtx";
 import type { SignedContract } from "../lib/types";
+import { liveTerm as T } from "../mods/live";
 
 /* 合约是一纸固定米色文书，文字颜色写死为深墨色（不随界面皮肤/暗色变化），
  * 否则「梦幻」皮肤下的浅紫文字会在米黄纸上糊成一片、看不清。 */
@@ -24,7 +26,7 @@ export default function ContractDoc({ contract, onClose }: { contract: SignedCon
   const artist = game!.player.name;
 
   return (
-    <div className="fixed inset-0 z-[80] flex flex-col bg-black/55" onClick={onClose}>
+    <div className="fixed inset-0 z-[80] flex flex-col animate-fade backdrop-blur-sm" style={{ background: "var(--overlay-bg-heavy, rgba(0, 0, 0, 0.55))" }} onClick={onClose}>
       {/* 顶栏 */}
       <div className="flex items-center px-3 py-2.5 text-white" onClick={(e) => e.stopPropagation()}>
         <button onClick={onClose} className="text-[14px] text-white/85">‹ 收起</button>
@@ -81,7 +83,7 @@ export default function ContractDoc({ contract, onClose }: { contract: SignedCon
                 {contract.exclusive}。合约存续期间，乙方不得与任何第三方另行签订经纪或代理协议。
               </Clause>
               <Clause n={4} title="考核与回本">
-                甲方对乙方设季度考核，须完成约定之通告与营收指标以回收投入。连续未达标者，甲方有权调整资源配置或依约处置。
+                甲方对乙方设季度考核，须完成约定之{T("gig")}与营收指标以回收投入。连续未达标者，甲方有权调整资源配置或依约处置。
               </Clause>
               <Clause n={5} title="违约责任">
                 任何一方擅自解约或违反本约主要义务，须向对方支付违约金 <b>¥{contract.penalty.toLocaleString()}</b>，并赔偿由此造成之实际损失。
@@ -101,11 +103,11 @@ export default function ContractDoc({ contract, onClose }: { contract: SignedCon
                 <div className="flex h-full w-full items-center justify-center rounded-full border-[3px] border-[#b0342d] text-center text-[10px] font-bold leading-tight text-[#b0342d] opacity-85">
                   <span className="px-2">{contract.company}<br />经纪专用章</span>
                 </div>
-                <span className="absolute text-[26px] text-[#b0342d] opacity-70">★</span>
+                <span className="absolute text-[#b0342d] opacity-70"><IconStar size={26} /></span>
               </div>
             </div>
 
-            <p className={`mt-6 text-center text-[11px] tracking-widest ${INK_SOFT}`}>— 二〇〇五年 · 于星城 —</p>
+            <p className={`mt-6 text-center text-[11px] tracking-widest ${INK_SOFT}`}>— 二〇〇五年 · 于{T("city")} —</p>
           </div>
         </div>
       </div>

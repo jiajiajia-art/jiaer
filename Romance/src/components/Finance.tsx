@@ -1,12 +1,14 @@
+import { wallet } from "../game/wallet";
 import { useGame } from "../store/gameCtx";
+import { weekLocalDate } from "../game/logic";
 import { Modal } from "./ui";
 import Check from "./Check";
 import Bill from "./Bill";
+import { liveTerm as T } from "../mods/live";
 
 /* 第 N 周的周日日期（第 1 周周一 = 2005.01.03） */
 function sundayDate(week: number): string {
-  const base = new Date(2005, 0, 3); // 第 1 周周一
-  const d = new Date(base.getTime() + ((week - 1) * 7 + 6) * 86400000);
+  const d = weekLocalDate(week, 6);
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
 }
 
@@ -22,7 +24,7 @@ export default function Finance({ onClose }: { onClose: () => void }) {
     <Modal title="财务 · 支票与账单" onClose={onClose}>
       <div className="mb-3 flex items-baseline justify-between border-b border-dashed border-line pb-2">
         <span className="text-[12.5px] text-ink-soft">当前资金</span>
-        <span className={`text-[16px] font-bold tabular-nums ${s.money < 0 ? "text-danger" : "text-jade"}`}>¥{s.money.toLocaleString("zh-CN")}</span>
+        <span className={`text-[16px] font-bold tabular-nums ${wallet.balance(s) < 0 ? "text-danger" : "text-jade"}`}>{wallet.fmt(wallet.balance(s))}</span>
       </div>
       <div className="space-y-3">
         {(s.checks ?? []).length > 0 ? (
@@ -46,7 +48,7 @@ export default function Finance({ onClose }: { onClose: () => void }) {
           ))
         ) : (
           <p className="rounded-sm border border-dashed border-line px-3 py-2.5 text-[12.5px] text-ink-soft">
-            暂无通告支票。接取通告后，开机前的周日会收到「签约定金」，按时拍完则于杀青周日收到「拍毕尾款」。
+            暂无{T("gig")}支票。接取{T("gig")}后，开机前的周日会收到「签约定金」，按时拍完则于杀青周日收到「拍毕尾款」。
           </p>
         )}
         {s.lastBill ? (

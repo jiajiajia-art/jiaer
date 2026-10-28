@@ -4,7 +4,8 @@
  * 这是一套轻量的"关键词 + 简单向量"检索：先按 keywords 精确子串命中加权，
  * 再用查询与词条文本的 2-gram 集合余弦相似度做模糊排序，取 Top-K 注入提示词。
  */
-import { HELP_DOCS, HELP_INTRO } from "../worlds/star2005/content";
+import { helpNow, helpIntro } from "../worlds/star2005/content";
+import { memoBy } from "../mods/live";
 
 export type KbHit = { id: string; title: string; body: string; score: number };
 
@@ -33,10 +34,11 @@ function cosine(a: Set<string>, b: Set<string>): number {
 }
 
 /* 预计算每个词条的 bigram 集合（模块级缓存，词条为静态内容池数据） */
-const DOC_INDEX = HELP_DOCS.map((d) => ({
+/* 按当前世界的资料库缓存（模组切换时自动重建） */
+const docIndex = memoBy(() => helpNow(), (h) => (h.docs ?? []).map((d) => ({
   doc: d,
   grams: bigrams(`${d.title}${(d.keywords ?? []).join("")}${d.body}`),
-}));
+})));
 
 /* 检索：返回相关词条（分数降序）。keywordWeight 控制精确命中相对模糊相似的权重。 */
 export function retrieve(query: string, k = 3, minScore = 0.08): KbHit[] {
@@ -44,7 +46,7 @@ export function retrieve(query: string, k = 3, minScore = 0.08): KbHit[] {
   if (!q) return [];
   const qGrams = bigrams(query);
   const hits: KbHit[] = [];
-  for (const { doc, grams } of DOC_INDEX) {
+  for (const { doc, grams } of docIndex()) {
     let kw = 0;
     for (const key of doc.keywords ?? []) {
       const nk = normalize(key);
@@ -63,5 +65,5 @@ export function knowledgeBlock(query: string, k = 3): string {
   const hits = retrieve(query, k);
   if (!hits.length) return "";
   const body = hits.map((h) => `◆ ${h.title}\n${h.body}`).join("\n\n");
-  return `【游戏资料库】${HELP_INTRO}\n\n${body}`;
+  return `【游戏资料库】${helpIntro()}\n\n${body}`;
 }

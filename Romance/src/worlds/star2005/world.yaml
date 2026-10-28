@@ -32,6 +32,14 @@ travel:
   energyPerHop: 6              # 每段路程消耗的行动力（点；跑得越远越累，形成资源闭环）
   dayStartMinute: 480          # 每天从 08:00 开始活动（当日时刻起点）
   dayEndMinute: 1380           # 到 23:00 天色已晚，宜歇息「度日」翻页
+  carShop: fours               # 买车的地点（出行面板提示去这里买车）
+  defaultMode: subway
+  modes:                       # 交通方式（不声明则不启用交通系统，只显示「前往」）
+    - { id: walk, label: 步行, fareMul: 0, timeMul: 2.4, note: "免费 · 最慢，顺便散散心" }
+    - { id: bus, label: 公交, fareMul: 0.4, timeMul: 1.5, note: "便宜，但要等要挤" }
+    - { id: subway, label: 地铁, fareMul: 0.7, timeMul: 0.9, note: "准点，性价比高" }
+    - { id: taxi, label: 打车, fareMul: 1.8, timeMul: 0.7, note: "最快，也最贵" }
+    - { id: drive, label: 自己开车, fareMul: 0, timeMul: 0.7, note: "开自己的车 · 免费又自在", ownCar: true }
 
 # —— 指标显示名（生成门槛提示用；引擎不写中文）——
 metricLabels:
@@ -64,33 +72,26 @@ roomStatus:
 #           tint(背景色调键 jade|coral|gold|ink|plum) · access(通行门槛 {requires,note})
 rooms:
   apartment:
-    exits: { s: tianguang }
+    exits: { s: street, w: park }
     tint: jade
-    desc: 天光公寓的小屋朝南，虽算不上宽敞，却被你收拾得干干净净。窗台上一盆绿萝正抽新芽。这里是你一个人的地方，出门往南便是楼下的天光小区。
+    desc: 天光小区的小屋朝南，虽算不上宽敞，却被你收拾得干干净净。窗台上一盆绿萝正抽新芽。这里是你一个人的地方。楼下中庭梧桐成荫，街坊常在长椅上晒太阳；往南出小区门便是星桥商业街，往西是滨江公园。
     items:
       - { id: schedulebook, name: 日程本, icon: "", desc: 封皮磨得发白的横线日程本，密密麻麻记着这一周要跑的通告与试镜。翻开它就想起离出道还有多少天。 }
       - { id: greentea, name: 一盒枸杞茶, icon: "", desc: 母亲塞进行李的枸杞茶，说熬夜拍戏要养身子。喝一口，心里稍微踏实些。 }
+      - { id: noticeboard, name: 小区公告栏, icon: "", desc: 贴着水电通知与寻猫启事的公告栏，边角压着几张琴行招生的传单。市井的暖意，都在这些琐碎里。 }
     # —— 居家活动：在家可点选的日常小事（增益/消耗全在此登记，引擎只按数值增减）——
     # 可选字段：energy/stress/fame(数值增减) · stat/statDelta(某项属性±) · requiresItem(需先拥有某物) · lockedMsg(缺物提示)
     activities:
       - { id: watchtv, name: 看电视, icon: "", energy: -4, stress: -10, fame: 1, desc: 窝在沙发里看一档娱乐节目，顺便瞄一眼同行都在忙些什么。, msg: 你窝在沙发里看了会儿电视，紧绷的神经松了松（压力 -10、行动力 -4、名气 +1）。 }
-      - { id: rest, name: 好好休息, icon: "", energy: 40, stress: -12, desc: 拉上窗帘，什么也不想，踏踏实实睡一觉、发一会儿呆。, msg: 你在天光公寓好好歇了一场，行动力与压力都缓了过来（行动力 +40、压力 -12）。 }
+      - { id: rest, name: 好好休息, icon: "", energy: 40, stress: -12, desc: 拉上窗帘，什么也不想，踏踏实实睡一觉、发一会儿呆。, msg: 你在天光小区好好歇了一场，行动力与压力都缓了过来（行动力 +40、压力 -12）。 }
       - { id: readbook, name: 看书, icon: "", energy: -8, stress: 3, stat: caizhi, statDelta: 6, requiresItem: actingbook, lockedMsg: 你手边没有可读的书——先去星桥商业街的墨痕书店买一本吧。, desc: 就着台灯翻一本表演理论的书，字字都得琢磨，读完脑子涨涨的，却踏实。, msg: 你就着台灯读完一章表演理论，笔记记了满满一页（才智 +6、行动力 -8、压力 +3）。 }
-  tianguang:
-    exits: { n: apartment, s: street }
-    tint: jade
-    intro: 天光小区的院子不大，几株香樟撑开一片阴凉，长椅上晒着太阳的老人和追逐的孩子把日子过得慢悠悠。你拎着行李站在楼下，忽然觉得——再漂泊的人，也总要有个能喊出名字的邻里。
-    desc: 天光小区的中庭，梧桐、长椅与晾在阳台上的被单。街坊邻里常在这儿晒太阳、唠家常。往北上楼是你的小屋，往南出小区门便是星桥商业街。
-    items:
-      - { id: noticeboard, name: 小区公告栏, icon: "", desc: 贴着水电通知与寻猫启事的公告栏，边角压着几张琴行招生的传单。市井的暖意，都在这些琐碎里。 }
-    activities:
       - { id: courtyardsit, name: 长椅上坐坐, icon: "", energy: 4, stress: -8, desc: 在中庭的长椅上坐一会儿，看孩子追跑、老人下棋，让脚步慢下来。, msg: 你在小区长椅上坐了会儿，晒着太阳看邻里家常，心里松快了些（压力 -8、行动力 +4）。 }
       - { id: chatneighbor, name: 和街坊唠家常, icon: "", energy: -3, stress: -5, stat: koucai, statDelta: 2, desc: 跟晾被单的阿姨、遛弯的大爷搭两句，市井的人情也是一种功课。, msg: 你和小区街坊唠了两句家常，嘴皮子和人缘都热络了些（口才 +2、压力 -5、行动力 -3）。 }
   street:
-    exits: { n: tianguang, e: cafe, w: gym, s: agency, ne: redcarpet, nw: bookstore, se: wardrobe, sw: academy }
+    exits: { n: apartment, e: cafe, w: gym, s: agency, ne: redcarpet, nw: bookstore, se: wardrobe, sw: academy }
     tint: gold
     intro: 你第一次真正站在星桥商业街的中央——霓虹漫过头顶，人流像一条不肯停的河。你忽然意识到，这座城不会为任何人放慢脚步，包括你。
-    desc: 星桥商业街人来人往，霓虹与灯箱在暮色里次第亮起。这里是星城的十字路口——北回天光公寓，东去咖啡馆，西往练习馆，南抵事务所，东北那栋气派的楼便是红毯会客厅。
+    desc: 星桥商业街人来人往，霓虹与灯箱在暮色里次第亮起。这里是星城的十字路口——北回天光小区，东去咖啡馆，西往练习馆，南抵事务所，东北那栋气派的楼便是红毯会客厅。
     items:
       - { id: streetposter, name: 街边海报栏, icon: "", desc: 贴满新片与代言的巨幅海报，边角已被雨水泡皱。榜上有名的那几张脸，你还只能仰望。 }
     activities:
@@ -161,7 +162,7 @@ rooms:
       - { id: readboard, name: 抄录通告条子, icon: "", energy: -5, stat: caizhi, statDelta: 3, desc: 站在公告栏前把新贴的招募条子一条条抄进本子，摸清行情该往哪儿使劲。, msg: 你把公告栏上新贴的条子抄了满满一页，行情心里有了数（才智 +3、行动力 -5）。 }
       - { id: frontdeskchat, name: 和前台唠两句, icon: "", energy: -4, stress: -5, stat: koucai, statDelta: 2, desc: 赖在前台边上跟老员工套近乎，八卦里往往藏着最新的风声。, msg: 你和前台老员工唠了两句，套出些圈里的新风声（口才 +2、压力 -5、行动力 -4）。 }
   redcarpet:
-    exits: { sw: street, e: lounge }
+    exits: { sw: street, e: lounge, n: nightbar }
     tint: coral
     hours: 晚宴时段（受邀开放）
     access:
@@ -173,7 +174,7 @@ rooms:
     activities:
       - { id: mingle, name: 端着酒杯周旋, icon: "", energy: -8, stress: 4, fame: 3, stat: koucai, statDelta: 3, desc: 端一杯香槟在人群里穿梭，一句"久仰"接一句"改天约"，社交场就是没有硝烟的战场。, msg: 你端着酒杯在名流间周旋了一晚，脸熟攒了、话术也练了，只是身心俱疲（口才 +3、名气 +3、压力 +4、行动力 -8）。 }
   fuguang:
-    exits: { w: agency, n: yuntai }
+    exits: { w: agency, n: yuntai, e: outdoorset, s: makeup }
     tint: plum
     hours: 08:00–22:00（拍摄日程为准）
     intro: 浮光影视基地的大棚一座连一座，轨道车在黑暗里滑过，一束追光突然打亮了远处的实景街道。你站在片场边缘，看着灯组、场记、群演各就各位——原来一部戏是被这么多双手一寸寸搭起来的。
@@ -197,7 +198,7 @@ rooms:
       - { id: studylookbook, name: 研读样片册, icon: "", energy: -6, stat: yitai, statDelta: 3, desc: 一页页拆解品牌大片的姿态、光影与情绪，揣摩镜头到底想要什么。, msg: 你把样片册研读了一遍，对镜头前的姿态更有感觉了（仪态 +3、行动力 -6）。 }
       - { id: trymakeup, name: 试妆造体验, icon: "", energy: -8, money: -50, stat: zixin, statDelta: 3, desc: 央化妆间的师傅给你上个当季妆造，第一次看清"被精修"的自己。, msg: 你体验了一次专业妆造，镜子里的自己让你多了几分底气（自信 +3、行动力 -8、¥-50）。 }
   yuntai:
-    exits: { n: cafe, s: fuguang }
+    exits: { n: cafe, s: fuguang, e: tvstage }
     tint: coral
     hours: 录制日程为准
     intro: 云台传媒城的演播厅第一次向你敞开，录制红灯高悬，观众席的欢呼被隔音门闷成一片嗡响。你站在侧台，看着主持人在镜头前收放自如——综艺是能把素人一夜捧红的舞台，也是会把每句失言无限放大的照妖镜。
@@ -230,7 +231,7 @@ rooms:
       - { id: auditclass, name: 回母校旁听, icon: "", energy: -6, stress: -4, stat: caizhi, statDelta: 3, desc: 溜进熟悉的排练厅蹭一节表演课，看学弟学妹排戏，也把自己荒疏的基本功捡回来。, msg: 你回母校蹭了一节表演课，久违的踏实感回来了（才智 +3、压力 -4、行动力 -6）。 }
       - { id: visitmentor, name: 探望恩师, icon: "", energy: -5, stress: -6, stat: yanji, statDelta: 3, desc: 提两盒点心去系办公室看当年的老师，听一句"戏比天大"的叮嘱，心里就定了。, msg: 你去看了当年的恩师，一席话让你对表演又多了几分敬畏（演技 +3、压力 -6、行动力 -5）。 }
   airport:
-    exits: { n: academy }
+    exits: { n: academy, e: hotel }
     tint: gold
     hours: 全天
     intro: 京畿国际机场的候机大厅高旷明亮，广播一遍遍念着起飞的城市。拖着行李箱站在这里，你第一次真切感到——这座城之外，还有更大的舞台在等你去闯。
@@ -256,7 +257,7 @@ rooms:
       - { id: skincare, name: 做一次深层护理, icon: "", energy: -4, stress: -6, money: -300, stat: yitai, statDelta: 5, desc: 躺上护理床交给专业师傅，从皮肤到轮廓一处处打理，起身时连气色都不一样了。, msg: 你做了一次深层护理，气色与状态肉眼可见地提亮（仪态 +5、压力 -6、行动力 -4、¥-300）。 }
       - { id: consultimg, name: 咨询形象方案, icon: "", energy: -5, stat: caizhi, statDelta: 3, desc: 和形象顾问坐下来聊风格定位与镜头适配，把"该长成什么样"想明白。, msg: 你和形象顾问细聊了一轮定位，对镜头里的自己更有规划了（才智 +3、行动力 -5）。 }
   theater:
-    exits: { n: agency }
+    exits: { n: agency, s: fanbase }
     tint: plum
     hours: 演出日程为准
     access:
@@ -286,6 +287,91 @@ rooms:
     activities:
       - { id: dealtalk, name: 加入一桌资本局, icon: "", energy: -8, stress: 5, stat: koucai, statDelta: 4, desc: 在低声谈笑的牌桌边坐下，听懂弦外之音、接住每一句试探，人脉与资源都在这几杯酒里流转。, msg: 你在资本局里周旋了一晚，听懂了不少弦外之音，也被人记住了脸（口才 +4、压力 +5、行动力 -8）。 }
       - { id: nightview, name: 独自凭窗看夜景, icon: "", energy: 4, stress: -10, stat: zixin, statDelta: 2, desc: 避开人群走到落地窗边，把整座城的灯火看进眼里，也把野心与倦意一起理一理。, msg: 你独自凭窗看了很久夜景，野心与疲惫都沉淀了下来（自信 +2、压力 -10、行动力 +4）。 }
+
+  # —— 大世界扩展：更多娱乐圈场景（每处有常驻人物，走动的人也会路过）——
+  park:
+    name: 滨江公园
+    exits: { e: apartment }
+    tint: jade
+    intro: 滨江公园的步道沿着江水铺开，晨跑的人、遛狗的人、练嗓的大爷各占一段。你第一次在这里停下，忽然觉得这座城也有不赶时间的角落。
+    desc: 滨江公园的塑胶步道沿江蜿蜒，晨昏都有人跑步、练嗓、背台词。偶尔能撞见戴着帽子口罩的熟面孔。往东可回天光小区。
+    items:
+      - { id: parkbench, name: 江边长椅, icon: "", desc: 椅背上刻着不知谁留下的名字缩写。坐在这里看江，很多事就没那么急了。 }
+    activities:
+      - { id: jog, name: 沿江晨跑, icon: "", energy: -6, stress: -10, stat: donggan, statDelta: 2, desc: 沿着江边跑上几公里，出一身汗，把心里的乱麻甩在身后。, msg: 你沿江跑了一大圈，汗水带走了不少烦心事（动感 +2、压力 -10、行动力 -6）。 }
+      - { id: voicepark, name: 对江开嗓, icon: "", energy: -4, stat: koucai, statDelta: 2, desc: 学着练嗓的大爷对着江面放开嗓子，台词和气息都顺了。, msg: 你对着江面练了会儿嗓，气息稳了不少（口才 +2、行动力 -4）。 }
+  outdoorset:
+    name: 浮光古装外景街
+    exits: { w: fuguang }
+    tint: plum
+    hours: 拍摄日 06:00–24:00
+    intro: 穿过浮光基地的后门，青石板路一下子把你带回了几百年前。酒旗、牌坊、挑着担子的群演——还有一台摇臂正从屋檐上方缓缓探出来。
+    desc: 浮光基地东侧的古装外景街，牌坊、酒肆与青石板路一应俱全，几个剧组常年在这里轮番开机。群演们蹲在墙根等戏，消息比谁都灵通。往西回摄影棚。
+    items:
+      - { id: callsheet, name: 一张通告单, icon: "", desc: 场务贴在墙上的明日通告单，写着几点集合、拍哪场、要多少群演。看懂它，就看懂一个剧组的节奏。 }
+    activities:
+      - { id: extrawork, name: 跑一天群演, icon: "", energy: -12, stress: 4, money: 120, stat: yanji, statDelta: 3, desc: 换上戏服跟着群演头跑一天龙套，站位、走位、抢镜的门道都在这里。, msg: 你跑了一整天群演，腿酸脚麻，却实打实偷学了几招（演技 +3、压力 +4、行动力 -12、¥+120）。 }
+      - { id: setgossip, name: 墙根听群演闲聊, icon: "", energy: -3, stress: -3, stat: caizhi, statDelta: 1, desc: 蹲到墙根和等戏的群演唠两句，哪个剧组缺人、哪个导演脾气差，一清二楚。, msg: 你在墙根听了一耳朵剧组八卦，对圈里的门道更清楚了（才智 +1、压力 -3、行动力 -3）。 }
+  makeup:
+    name: 浮光化妆间
+    exits: { n: fuguang }
+    tint: coral
+    hours: 05:00–23:00
+    intro: 化妆间里镜前灯一圈圈亮着，粉扑、发胶和咖啡的味道混在一起。有人闭着眼补觉，有人对着镜子念词——每张上镜的脸，都是在这里被一点点「画」出来的。
+    desc: 浮光基地的公共化妆间，一排镜前灯从早亮到晚。主演、配角、群演在这里轮流上妆，也在这里交换消息。往北回摄影棚。
+    items:
+      - { id: mirrorlight, name: 镜前灯, icon: "", desc: 一圈暖黄的灯泡把脸上每一处瑕疵都照得清清楚楚。镜头会比它更挑剔。 }
+    activities:
+      - { id: learnmakeup, name: 跟化妆师学上镜妆, icon: "", energy: -5, stat: yitai, statDelta: 3, desc: 坐到化妆师旁边看她怎么修轮廓、压光、补妆，学会让镜头更喜欢你的脸。, msg: 你跟着化妆师学了一套上镜妆的门道（仪态 +3、行动力 -5）。 }
+      - { id: napchair, name: 化妆椅上眯一会儿, icon: "", energy: 8, stress: -4, desc: 趁没人用，靠在化妆椅里闭眼歇十分钟。, msg: 你在化妆椅上眯了一会儿，精神回来了些（行动力 +8、压力 -4）。 }
+  tvstage:
+    name: 云台一号演播厅
+    exits: { w: yuntai }
+    tint: gold
+    hours: 录制日程为准
+    intro: 演播厅的大门一开，几百盏灯同时打亮，观众席的呼声像潮水一样涌过来。你站在侧幕，听见导播在耳返里倒数——原来热搜上那些名场面，都是在这一方舞台上一秒秒录出来的。
+    desc: 云台传媒城最大的演播厅，王牌综艺与晚会都在这里录制。侧幕边站满了等候上场的艺人和经纪人。往西回传媒城大堂。
+    items:
+      - { id: cuecard, name: 一沓提词卡, icon: "", desc: 主持人留在侧台的提词卡，上面圈圈画画都是临场改的梗。 }
+    activities:
+      - { id: audienceseat, name: 坐观众席看录制, icon: "", energy: -5, stat: koucai, statDelta: 2, stress: -2, desc: 混进观众席看一整期录制，看嘉宾怎么接梗、怎么抢镜头。, msg: 你看完一整期录制，对综艺的节奏更有感觉了（口才 +2、压力 -2、行动力 -5）。 }
+      - { id: rehearsalstage, name: 帮忙走台, icon: "", energy: -8, fame: 2, stat: donggan, statDelta: 2, desc: 节目组缺人走台，你自告奋勇上去替嘉宾站位。, msg: 你替嘉宾走了一遍台，被导播记住了名字（名气 +2、动感 +2、行动力 -8）。 }
+  nightbar:
+    name: 夜色酒吧
+    exits: { s: redcarpet }
+    tint: plum
+    hours: 20:00–04:00
+    intro: 夜色酒吧的门藏在红毯会客厅背后的小巷里，推开门是低低的爵士和一屋子不想被认出来的人。你忽然明白，晚宴散场后真正的消息，都在这里交换。
+    desc: 红毯会客厅背后的小酒吧，灯光昏暗、驻唱慵懒。散场后的艺人、经纪人和记者常在吧台边坐一会儿，酒保什么都听见过，却从不多嘴。往南回红毯会客厅。
+    items:
+      - { id: barnapkin, name: 写着号码的纸巾, icon: "", desc: 吧台上不知谁留下的一张纸巾，写着一串电话号码和一个字母。 }
+    activities:
+      - { id: barchat, name: 吧台边坐一会儿, icon: "", energy: -4, stress: -8, money: -60, stat: koucai, statDelta: 2, desc: 点一杯，在吧台边坐下，听身边的人说些酒后才肯说的话。, msg: 你在吧台边坐了一会儿，听来不少散场后的真心话（口才 +2、压力 -8、行动力 -4、¥-60）。 }
+      - { id: opensing, name: 上台唱一首, icon: "", energy: -6, fame: 2, stat: geyi, statDelta: 3, desc: 驻唱歇场时借把吉他上台唱一首，台下都是行家。, msg: 你上台唱了一首，台下有人举杯致意（歌艺 +3、名气 +2、行动力 -6）。 }
+  fanbase:
+    name: 星光后援会小站
+    exits: { n: theater }
+    tint: coral
+    hours: 10:00–22:00
+    intro: 剧场后巷的小铺子贴满了海报和手幅，几个姑娘正埋头剪应援物料。看见你进门，有人认了出来，手里的剪刀停在半空。
+    desc: 星光剧场后巷的一间小铺，是各家后援会做物料、开会、交换周边的据点。粉丝们的消息往往比通稿还快。往北回星光剧场。
+    items:
+      - { id: fanletter, name: 一封粉丝信, icon: "", desc: 塞在留言箱里的一封信，字迹工整，写满了一个陌生人对你的期待。 }
+    activities:
+      - { id: readletters, name: 读粉丝来信, icon: "", energy: -2, stress: -10, stat: zixin, statDelta: 3, desc: 坐下来一封封读粉丝写给你的信，有鼓励也有批评。, msg: 你读完一叠粉丝来信，眼眶有点热，心里也更有底了（自信 +3、压力 -10、行动力 -2）。 }
+      - { id: signmerch, name: 给应援物签名, icon: "", energy: -5, fame: 3, desc: 帮后援会在一摞应援物上签名，和粉丝们聊聊近况。, msg: 你签了一摞应援物，粉丝们高兴坏了（名气 +3、行动力 -5）。 }
+  hotel:
+    name: 星城大酒店
+    exits: { w: airport }
+    tint: gold
+    hours: 全天
+    intro: 星城大酒店的旋转门把机场的嘈杂挡在身后，大堂里水晶灯垂得很低。前台边站着一排举着牌子接机的助理——外地来的剧组、品牌方和明星，大多在这里落脚。
+    desc: 机场旁的五星酒店，剧组驻地、发布会和品牌活动常设于此。大堂吧里随时有人在谈合作，电梯口偶尔会被粉丝堵住。往西回机场。
+    items:
+      - { id: pressboard, name: 发布会指示牌, icon: "", desc: 大堂里的指示牌写着今天几号宴会厅有什么发布会。 }
+    activities:
+      - { id: lobbycoffee, name: 大堂吧喝杯咖啡, icon: "", energy: 4, stress: -5, money: -45, desc: 在大堂吧坐下，一边喝咖啡一边看各路人马进进出出。, msg: 你在大堂吧坐了一会儿，看了一出出迎来送往（压力 -5、行动力 +4、¥-45）。 }
+      - { id: crashpress, name: 旁听发布会, icon: "", energy: -6, stat: caizhi, statDelta: 2, desc: 混进宴会厅后排旁听一场发布会，看主创怎么应对记者。, msg: 你旁听了一场发布会，学到不少应对媒体的分寸（才智 +2、行动力 -6）。 }
 
 # —— 人物 (mob)：履历 + 据点/轨迹 + 通告资源 + 结识门槛 ——
 # kind: staff=常驻岗位不走动、随时可谈；roam=有活动轨迹、需满足 requires 才可谈
@@ -467,7 +553,7 @@ people:
     tags: [闺蜜, 直率]
     kind: roam
     home: cafe
-    roam: [cafe, gym, street]
+    roam: [cafe, gym, street, apartment, park]
     bio: 与你同期出道的元气女孩，笑起来有两颗虎牙。没什么心机，是这圈子里难得能交心的朋友。
     family:
       parents: [{ name: 苏建军, note: 父亲 · 汽修厂师傅 }, { name: 周桂芳, note: 母亲 · 小学老师 }]
@@ -518,7 +604,7 @@ people:
     tags: [顶流, 宿敌]
     kind: roam
     home: yuntai
-    roam: [yuntai, redcarpet, cafe, street]
+    roam: [yuntai, redcarpet, cafe, street, tvstage, nightbar]
     bio: 出道即顶流的天之骄子，排行榜上永远压你一头。看似高傲，却总在你以为放弃时出现在赛道对面。
     works: [逆风少年, 光年之外, 顶峰对决]
     stats: { yanji: 420, geyi: 480, koucai: 400, yitai: 520, donggan: 500, tineng: 460, caizhi: 380, zixin: 540 }
@@ -547,7 +633,7 @@ people:
     tags: [影后, 前辈]
     kind: roam
     home: fuguang
-    roam: [fuguang, yuntai]
+    roam: [fuguang, yuntai, outdoorset, makeup, tvstage]
     bio: 拿遍奖杯的影后前辈，眼神能看穿一场戏的真假。极少提携新人，除非她在你眼里看见当年的自己。
     works: [长夜有灯, 春日迟迟, 一江烟雨, 旧年花事]
     stats: { yanji: 720, geyi: 300, koucai: 560, yitai: 640, donggan: 340, tineng: 380, caizhi: 620, zixin: 660 }
@@ -602,7 +688,7 @@ people:
     tags: [天王, 清冷]
     kind: roam
     home: redcarpet
-    roam: [redcarpet, lounge]
+    roam: [redcarpet, lounge, nightbar]
     bio: 神坛之上的国民天王，绯闻绝缘、私生活成谜。传闻里冷漠疏离，唯独对认真的人卸下防备。
     family:
       parents: [{ name: 顾长河, note: 父亲 · 小镇中学教师 · 已故 }, { name: 陈素云, note: 母亲 · 镇上裁缝 }]
@@ -656,9 +742,9 @@ people:
     age: 25
     tags: [音乐, 邻家]
     kind: roam
-    home: tianguang
-    roam: [tianguang, street, cafe]
-    bio: 住在天光公寓隔壁的温柔男孩，会在你深夜收工时留一盏灯、一碗热汤。平凡，却是最稳的港湾。
+    home: apartment
+    roam: [apartment, street, cafe, park]
+    bio: 住在天光小区隔壁的温柔男孩，会在你深夜收工时留一盏灯、一碗热汤。平凡，却是最稳的港湾。
     family:
       parents: [{ name: 江建国, note: 父亲 · 退休公交司机 }, { name: 许秀兰, note: 母亲 · 社区诊所护士 }]
     resume:
@@ -702,7 +788,7 @@ people:
     tags: [谢家, 掌权者, 深不可测]
     kind: roam
     home: agency
-    roam: [agency, fuguang]
+    roam: [agency, fuguang, makeup, outdoorset]
     bio: 二十三岁执掌谢家的年轻家主。这座城的水面之下，向来是谢、慕容、九三家分踞——谢家坐拥娱乐与传媒帝国，慕容家执金融资本之牛耳，九家则是最古老隐秘的政军望族。他名下产业盘根错节，你所属的启星娱乐（连同启星事务所）不过是这座冰山浮出水面的一角。年少夺权，手腕与城府一样出名；待人温雅有礼，却没人敢真把那份礼数当成软弱。
     family:
       parents: [{ name: 谢远山, note: 父亲 · 谢家上任家主 · 退居幕后 }, { name: 慕容霜, note: 母亲 · 慕容家嫡长女 }]
@@ -720,3 +806,78 @@ people:
       - { metric: fame, op: gte, value: 220, hint: 名气≥220 }
       - { metric: reputation, op: gte, value: 65, hint: 口碑≥65 }
       - { metric: works, op: gte, value: 3, hint: 作品≥3 }
+  - id: laoliu
+    name: 老刘
+    role: 群演头
+    relation: 外景街的群演头
+    gender: 男
+    age: 52
+    tags: [群演, 消息灵通]
+    kind: staff
+    home: outdoorset
+    roam: [outdoorset]
+    bio: 在浮光外景街带了二十年群演，哪个剧组缺人、哪个导演好说话，门儿清。嘴碎心热，见新人就想多叮嘱两句。
+    intel:
+      - { id: laoliu_tip, topic: 这里有什么门道, text: "「想演戏？先从站好位置学起。镜头扫过来别躲，也别抢——导演记住你，从来不是因为你戏多，是因为你靠谱。」" }
+    presentHint: 常驻外景街，随时能搭话
+    requires: []
+  - id: amei
+    name: 阿May
+    role: 首席化妆师
+    relation: 浮光化妆间的化妆师
+    gender: 女
+    age: 33
+    tags: [化妆师, 毒舌]
+    kind: staff
+    home: makeup
+    roam: [makeup]
+    bio: 给半个圈子的当红脸化过妆，手稳嘴毒。谁昨晚熬了夜、谁最近心情差，她一上手就知道。
+    intel:
+      - { id: amei_tip, topic: 这里有什么门道, text: "「皮肤是演员的第二张脸。熬夜拍戏可以，第二天别让我给你遮黑眼圈遮到怀疑人生。」" }
+    presentHint: 常驻化妆间
+    requires: []
+  - id: daobo
+    name: 周导播
+    role: 演播厅导播
+    relation: 云台一号演播厅的导播
+    gender: 男
+    age: 40
+    tags: [导播, 严谨]
+    kind: staff
+    home: tvstage
+    roam: [tvstage]
+    bio: 在云台演播厅切了十几年镜头，最清楚哪个嘉宾有镜头感。说话简短，耳返里一句「好」就是最高评价。
+    intel:
+      - { id: daobo_tip, topic: 这里有什么门道, text: "「综艺不是比谁话多，是比谁接得住。别人抛的梗你接住了，镜头自然给你。」" }
+    presentHint: 常驻演播厅，录制间隙可谈
+    requires: []
+  - id: aken
+    name: 阿Ken
+    role: 酒保
+    relation: 夜色酒吧的酒保
+    gender: 男
+    age: 29
+    tags: [酒保, 守口如瓶]
+    kind: staff
+    home: nightbar
+    roam: [nightbar]
+    bio: 调酒手艺一流，记性更好。圈里多少秘密在他吧台上说出口，他从不往外传——但偶尔会给信得过的人提个醒。
+    intel:
+      - { id: aken_tip, topic: 这里有什么门道, text: "「在这儿说的话，出了门就当没说过。不过——今晚那桌人，你最好别凑过去。」" }
+    presentHint: 常驻吧台，夜里都在
+    requires: []
+  - id: xiaolu
+    name: 小鹿
+    role: 后援会会长
+    relation: 星光后援会的会长
+    gender: 女
+    age: 22
+    tags: [粉丝, 热情]
+    kind: staff
+    home: fanbase
+    roam: [fanbase]
+    bio: 大学生，兼职打理好几个后援会。做物料、控评、组织接机样样在行，是粉丝圈里说得上话的人。
+    intel:
+      - { id: xiaolu_tip, topic: 这里有什么门道, text: "「粉丝不是数字，是一群愿意为你熬夜的人。对他们真诚一点，他们会记很久很久。」" }
+    presentHint: 常驻后援会小站
+    requires: []

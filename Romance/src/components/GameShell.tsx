@@ -1,30 +1,85 @@
-import EditorPanel from "./EditorPanel";
-import IndustryPageHeader from "./IndustryPageHeader";
-import { NpcFieldSettings } from "./NpcProfile";
-import { useEffect, useState, type ReactNode } from "react";
+import { wallet } from "../game/wallet";
+import { lazyPanel } from "../lib/lazyPanel";
+import DiaryCard from "./DiaryCard";
+import DiyIcon from "./DiyIcon";
+import WeekReportCard from "./WeekReportCard";
+import { tierOf } from "../game/data";
+import { FONTS } from "../lib/skins";
+import BgmPanel, { hookWorldBgm } from "./BgmPanel";
+import { enterScene, setWorkVolume, switchBgm } from "../game/audioEngine";
+import { setAuthorAudio } from "../game/audioLib";
+import { roomBgmOf } from "../game/mud";
+const CustomCssPanel = lazyPanel(() => import("./CustomCssPanel"));
+const ThemePackPanel = lazyPanel(() => import("./ThemePackPanel"));
+const ScenePanel = lazyPanel(() => import("./ScenePanel"));
+import { AssetLibrary, FreeColors, FreeFont, SlotImage, SubTitle } from "./FreeStylePanel";
+import { loadAssets } from "../lib/freeStyle";
+const NavStylePanel = lazyPanel(() => import("./NavStylePanel"));
+const IconDiyPanel = lazyPanel(() => import("./IconDiyPanel"));
+const CoverDiyPanel = lazyPanel(() => import("./CoverDiyPanel"));
+import DialogDiyPanel, { DialogPreview } from "./DialogDiyPanel";
+import { PlotLookPanel } from "./LookRulesEditor";
+import { Suspense, lazy, useCallback, useEffect, useRef, useState, type ReactElement, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useGame } from "../store/gameCtx";
+import { rulesOf } from "../game/engineRules";
 import HomeTab from "./HomeTab";
 import NpcTab from "./NpcTab";
 import ActionsTab from "./ActionsTab";
 import SimTab from "./SimTab";
-import ImageTab from "./ImageTab";
-import Phone from "./Phone";
-import Finance from "./Finance";
-import Works from "./Works";
+import AttrValueEdit from "./AttrValueEdit";
+const ImageTab = lazyPanel(() => import("./ImageTab"));
+const Phone = lazyPanel(() => import("./Phone"));
+const Finance = lazyPanel(() => import("./Finance"));
+const Works = lazyPanel(() => import("./Works"));
 import BreachDialog from "./BreachDialog";
-import AIConfigPanel from "./AIConfigPanel";
-import WorldRulesPanel from "./WorldRulesPanel";
-import WorldBookPanel from "./WorldBookPanel";
-import MapEditorPanel from "./MapEditorPanel";
-import StoryQuestPanel from "./StoryQuestPanel";
-import MudChrome, { MENU, BOTTOM_TAB_IDS, type MudTab } from "./MudChrome";
+const AIConfigPanel = lazyPanel(() => import("./AIConfigPanel"));
+const WorldRulesPanel = lazyPanel(() => import("./WorldRulesPanel"));
+const WorldBookPanel = lazyPanel(() => import("./WorldBookPanel"));
+// 编辑器体积大、只有打开时才需要：按需加载，缩短首屏加载
+const MapEditorPanel = lazy(() => import("./MapEditorPanel"));
+const ModManagerPanel = lazy(() => import("./ModManagerPanel"));
+const FixedEventsPanel = lazy(() => import("./FixedEventsPanel"));
+const PanelLoading = () => <p className="py-10 text-center text-[12px] text-ink-soft">加载中…</p>;
+const NpcKbPanel = lazyPanel(() => import("./NpcKbPanel"));
+import EditorHub from "./EditorHub";
+import PlayPrefsPicker from "./PlayPrefsPicker";
+import { playPrefsOf } from "../lib/ai";
+import { LIVE_LOCATIONS } from "../mods/registry";
+import AllowanceWatcher from "./AllowanceWatcher";
+import { feature, useMods } from "../mods/registry";
+import { EDITOR_HUB_MENUS } from "../lib/editorHubMenus";
+const EndingsPanel = lazyPanel(() => import("./EndingsPanel"));
+const FactionsPanel = lazyPanel(() => import("./FactionsPanel"));
+const EngineRulesPanel = lazyPanel(() => import("./EngineRulesPanel"));
+const TimelinePanel = lazyPanel(() => import("./TimelinePanel"));
+const FixedPersonPanel = lazyPanel(() => import("./FixedPersonPanel"));
+import { PathUnlockPanel } from "./ModPathsEditor";
+import { creationCopy } from "../game/data";
+const StoryQuestPanel = lazyPanel(() => import("./StoryQuestPanel"));
+import MudChrome, { menuItems, NavTabsEditor, type MudTab } from "./MudChrome";
 import ScheduleBoard from "./ScheduleBoard";
-import { Avatar, Chip, Modal } from "./ui";
-import { IconCamera, IconClock, IconFlag, IconHeart, IconMoon, IconPin, IconSave, IconScroll, IconSettings, IconSparkle, IconSun, IconUser, IconWallet } from "../lib/icons";
-import { Segments } from "./StoryTab";
+import { Chip, Modal, toneColor } from "./ui";
+import { useConfirm } from "./EditorKit";
+import { IconBook, IconCamera, IconFlag, IconHeart, IconMenu, IconMoon, IconMusic, IconPin, IconPlay, IconSave, IconScroll, IconSettings, IconSpark, IconSparkle, IconStar, IconSun, IconUser, IconWallet, IconClock } from "../lib/icons";
+import { Segments, CastRow } from "./StoryTab";
+import NewcomerCards from "./NewcomerCards";
+import BranchSheet from "./BranchSheet";
+import TopbarView, { topbarDataOf } from "./TopbarView";
+const TopbarDiyPanel = lazyPanel(() => import("./TopbarDiyPanel"));
+import FrameEditor, { FrameOverlay } from "./FrameDiy";
+import { topbarSummary } from "../lib/topbarDiy";
 import { defaultWorldBook } from "../game/worldbook";
 import { EntityProvider } from "./EntityText";
-import { listManualSaves, saveToSlot, deleteSlot, renameSlot, getSlot, MAX_SLOTS, AUTO_SLOT_ID, type SaveSlot } from "../lib/store";
+import { listManualSaves, saveToSlot, deleteSlot, renameSlot, getSlot, MAX_SLOTS, AUTO_SLOT_ID, type SaveSlot, defaultTheme } from "../lib/store";
+
+import IndustryPageHeader from "./IndustryPageHeader";
+const CgPanel = lazyPanel(() => import("./CgPanel"));
+const AudioLibraryPanel = lazyPanel(() => import("./AudioLibraryPanel"));
+import { CgGallery } from "./DiaryCg";
+import { newlyUnlockedCgs } from "../lib/ai";
+import { liveTerm as T } from "../mods/live";
+const GameTour = lazyPanel(() => import("./GameTour"));
 
 type Tab = MudTab;
 
@@ -33,6 +88,473 @@ const ROMAJI: Record<string, string> = {
   home: "SHIJIE", sim: "RENWU", image: "XINGXIANG", npc: "RENMAI", actions: "YULEQUAN", phone: "SHOUJI",
   works: "ZUOPIN", bag: "XINGNANG", finance: "CAIWU", theme: "MODE",
 };
+
+/* 设置里的「小分支」：一行摘要，点开才展开选项 */
+function SettingBranch({ title, en, desc, current, swatch, children, defaultOpen = false }: { title: string; en: string; desc: string; current: string; swatch?: ReactNode; children: ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="overflow-hidden rounded-2xl border border-line bg-paper">
+      <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-paper-2">
+        <div className="min-w-0 flex-1">
+          <span className="flex items-baseline gap-1.5">
+            <span className="text-[14px] font-bold tracking-[0.06em] text-ink">{title}</span>
+          </span>
+          <span className="block truncate text-[11px] text-ink-soft">{desc}</span>
+        </div>
+        <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-paper-2 px-2.5 py-1 text-[11.5px] font-semibold text-ink">
+          {swatch}{current}
+        </span>
+        <span className={`shrink-0 text-[18px] leading-none text-ink-soft transition-transform ${open ? "rotate-90" : ""}`}>›</span>
+      </button>
+      {open && <div className="border-t border-line bg-paper-2/40 p-3">{children}</div>}
+    </div>
+  );
+}
+
+/** 功能注释：皮肤名 + 线性图标（禁止再用装饰字符当 swatch） */
+const SKIN_LABEL: Record<string, [string, ReactElement]> = {
+  dream: ["梦幻星紫", <IconSpark key="d" size={16} />],
+  bloody: ["血腥玛丽", <IconHeart key="b" size={16} />],
+  cute: ["可爱奢华", <IconSparkle key="c" size={16} />],
+  glass: ["毛玻璃", <IconStar key="g" size={16} />],
+  paper: ["古朴宣纸", <IconScroll key="p" size={16} />],
+};
+const ACCENT_LABEL: Record<string, [string, string]> = { fuchsia: ["璀璨星紫", "bg-purple-600"], plum: ["玫瑰酒红", "bg-rose-800"], rose: ["胭脂蜜桃", "bg-rose-500"], gold: ["琥珀流金", "bg-amber-600"], cyan: ["赛博海蓝", "bg-sky-600"], jade: ["唱片墨绿", "bg-emerald-800"], coral: ["珊瑚朱红", "bg-amber-500"], ink: ["沉稳黛黑", "bg-slate-700"] };
+
+const FONT_LABEL: Record<string, string> = Object.fromEntries(FONTS.map((f) => [f.id, f.label]));
+
+/* 分支内的分页切换（对话框：样式预设 / 气泡与头像 / 细节 DIY） */
+function SubTabs({ tabs }: { tabs: [string, ReactNode][] }) {
+  const [i, setI] = useState(0);
+  return (
+    <div>
+      <div role="tablist" className="mb-3 flex gap-1 rounded-full border border-line bg-paper-2 p-1">
+        {tabs.map(([t], k) => (
+          <button key={t} role="tab" aria-selected={i === k} onClick={() => setI(k)}
+            className={`flex-1 rounded-full px-2 py-1.5 text-[12px] font-semibold transition ${i === k ? "bg-paper text-jade shadow-sm" : "text-ink-soft hover:text-ink"}`}>{t}</button>
+        ))}
+      </div>
+      {tabs[i][1]}
+    </div>
+  );
+}
+
+/* 美化页分组标题：编号 + 中英标题 + 一句说明 */
+function BeautyGroup({ no, title, en, desc }: { no: string; title: string; en: string; desc: string }) {
+  return (
+    <div className="flex items-end gap-3 px-1 pt-4 first:pt-0">
+      <span className="font-serif text-[26px] font-black leading-none text-jade/30 tabular-nums">{no}</span>
+      <div className="min-w-0 flex-1 border-b border-line pb-1.5">
+        <p className="flex items-baseline gap-2"><span className="text-[15px] font-bold tracking-[0.08em] text-ink">{title}</span><span className="text-[9.5px] font-bold tracking-[0.25em] text-ink-soft/70">{en}</span></p>
+        <p className="mt-0.5 text-[11px] text-ink-soft">{desc}</p>
+      </div>
+    </div>
+  );
+}
+
+/* 美化页分组导航：吸顶胶囊条，点一组只看这一组（分支自动展开），「全部」回到总览 */
+const BEAUTY_GROUPS = [
+  ["all", "全部"], ["preset", "主题包"], ["global", "全局风格"], ["dialog", "对话框"], ["scene", "场景"],
+  ["chrome", "栏与图标"], ["cover", "封面"], ["plot", "剧情美化"], ["assets", "素材与代码"],
+] as const;
+type BeautyKey = (typeof BEAUTY_GROUPS)[number][0];
+function BeautyNav({ cur, onPick }: { cur: BeautyKey; onPick: (k: BeautyKey) => void }) {
+  const i = BEAUTY_GROUPS.findIndex(([k]) => k === cur);
+  return (
+    <div className="sticky top-0 z-20 -mx-4 border-b border-line bg-paper-2/90 px-4 py-2 backdrop-blur-md">
+      <div role="tablist" aria-label="美化分组" className="flex gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]">
+        {BEAUTY_GROUPS.map(([k, l], n) => (
+          <button key={k} role="tab" aria-selected={cur === k} onClick={() => onPick(k)}
+            className={`flex shrink-0 items-center gap-1 rounded-full border px-3 py-1 text-[12px] font-bold transition ${cur === k ? "border-jade bg-jade text-white shadow-[0_6px_14px_-8px_var(--jade)]" : "border-line bg-paper text-ink-soft hover:border-jade hover:text-jade"}`}>
+            {n > 0 && <span className={`font-serif text-[10px] tabular-nums ${cur === k ? "text-white/75" : "text-jade/50"}`}>{String(n).padStart(2, "0")}</span>}{l}
+          </button>
+        ))}
+      </div>
+      {cur !== "all" && (
+        <div className="mt-1.5 flex items-center justify-between text-[11px]">
+          <button onClick={() => onPick("all")} className="text-ink-soft hover:text-jade">‹ 返回全部</button>
+          {i < BEAUTY_GROUPS.length - 1 && <button onClick={() => onPick(BEAUTY_GROUPS[i + 1][0])} className="font-semibold text-jade hover:underline">下一组：{BEAUTY_GROUPS[i + 1][1]} ›</button>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* 美化页顶部：当前外观一览 + 恢复默认（仅外观字段；屏幕方向、深浅模式、自定义 CSS 不动） */
+function BeautySummary() {
+  const { theme, setTheme, activeLooks } = useGame();
+  const [confirm, confirmEl] = useConfirm();
+  const tags = [
+    (SKIN_LABEL[theme.skin ?? "cute"] ?? SKIN_LABEL.cute)[0],
+    (ACCENT_LABEL[theme.accent ?? "plum"] ?? ACCENT_LABEL.plum)[0],
+    FONT_LABEL[theme.font ?? "song"],
+    theme.free?.colors && Object.keys(theme.free.colors).length ? "自定义配色" : "",
+    theme.free?.font?.url ? "自定义字体" : "",
+    theme.free?.imgs && Object.keys(theme.free.imgs).length ? `贴图 ${Object.keys(theme.free.imgs).length} 处` : "",
+    theme.dialogDiy && theme.dialogDiy.on !== false ? "对话框已微调" : "",
+    theme.navActive ? "底栏自定" : "",
+    theme.topbarDiy && theme.topbarDiy.on !== false ? `顶栏 ${topbarSummary(theme.topbarDiy)}` : "",
+    theme.icons ? "图标自定" : "",
+    theme.cover && theme.cover.on !== false ? "封面自定" : "",
+    theme.sceneBg ? "自定义场景" : "",
+    (theme.lookRules?.length ?? 0) > 0 ? `剧情美化 ${theme.lookRules!.length} 条` : "",
+  ].filter(Boolean);
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-line bg-gradient-to-r from-jade/10 via-paper to-coral/10 px-4 py-3">
+      {confirmEl}
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-bold tracking-[0.2em] text-ink-soft">当前外观</p>
+        <div className="mt-1 flex flex-wrap gap-1">
+          {tags.map((t) => <span key={t} className="rounded-full border border-line bg-paper px-2 py-0.5 text-[11px] text-ink">{t}</span>)}
+        </div>
+        {activeLooks.length > 0 && (
+          <p className="mt-1.5 text-[11px] text-jade">剧情美化生效中：{activeLooks.map((a) => a.rule.name || "未命名").join("、")} · 部分外观暂时被覆盖，条件不满足后恢复</p>
+        )}
+      </div>
+      <button className="shrink-0 rounded-full border border-line bg-paper px-3 py-1 text-[11.5px] font-semibold text-ink-soft transition hover:border-danger hover:text-danger"
+        onClick={async () => { if (await confirm("把外观恢复为默认？\n屏幕方向、深浅模式与自定义 CSS 保留；建议先在「一键套用」里收藏当前外观。", { ok: "恢复默认" })) setTheme({ ...defaultTheme, mode: theme.mode, orient: theme.orient, orientLock: theme.orientLock }); }}>
+        恢复默认
+      </button>
+    </div>
+  );
+}
+
+/* 设置页面板：界面皮肤 / 字体风格 / 版式方向（作为常驻页签内容，与其他页面同级） */
+function SettingsPanel({ bare = false, section = "general", onBeauty }: { bare?: boolean; section?: "general" | "beauty"; onBeauty?: () => void }) {
+  const beauty = section === "beauty";
+  const { theme, setTheme, activeLooks, game, patchGame } = useGame();
+  // 美化分组导航：全部 / 单组；单组时只渲染该组，分支默认展开
+  const [beautyGroup, setBeautyGroup] = useState<BeautyKey>("all");
+  const bg = (k: BeautyKey) => beautyGroup === "all" || beautyGroup === k;
+  return (
+    <div className="settings-fixed w-full pb-6">
+      {!bare && (
+        <IndustryPageHeader
+          title={beauty ? "美化" : "设置"}
+          subtitle={beauty ? "主题包 · 风格 · 对话 · 场景 · 图标 · 封面" : "偏好与设定"}
+          eyebrow="STAR CITY"
+          icon={
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+            </svg>
+          }
+        />
+      )}
+      <div className="mx-auto max-w-3xl px-4 py-5 space-y-4">
+        {/* 设置页只留通用项；所有外观相关都在「编辑器 · 美化」里 */}
+        {!beauty && onBeauty && (
+          <button onClick={onBeauty} className="flex w-full items-center gap-3 rounded-2xl border border-line bg-gradient-to-r from-jade/10 to-coral/10 px-4 py-3 text-left transition hover:border-jade">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--jade)] to-[var(--coral)] text-white">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.8 1.6-1.6 0-1.3-1-1.5-1-2.6 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5C21 6.4 17 3 12 3Z" /><circle cx="7.5" cy="11" r="1" /><circle cx="10" cy="7" r="1" /><circle cx="15" cy="7.5" r="1" /></svg>
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[14px] font-bold text-ink">美化</span>
+              <span className="block truncate text-[11px] text-ink-soft">主题包 · 全局风格 · 对话框 · 场景 · 栏与图标 · 封面 · 剧情美化 · 素材与代码</span>
+            </span>
+            <span className="text-ink-soft">›</span>
+          </button>
+        )}
+        {beauty && (<>
+        <BeautySummary />
+        <BeautyNav cur={beautyGroup} onPick={setBeautyGroup} />
+        {bg("preset") && (<>
+        <BeautyGroup no="01" title="一键套用" en="PRESET" desc="整套外观打包成主题包：收藏、分享，或导入别人的主题" />
+        <SettingBranch defaultOpen={beautyGroup !== "all"} title="美化主题包" en="THEME PACK" desc="一键打包当前全部外观，导入他人分享的主题即刻套用" current="导入导出" swatch={<IconSave size={16} />}>
+          <ThemePackPanel />
+        </SettingBranch>
+        </>)}
+        {bg("global") && (<>
+        <BeautyGroup no="02" title="全局风格" en="GLOBAL" desc="作用于整个游戏界面" />
+        <SettingBranch title="皮肤" en="SKIN STYLE" desc="整体视觉基调，切换即全局生效" current={(SKIN_LABEL[theme.skin ?? "cute"] ?? SKIN_LABEL.dream)[0]} swatch={<span>{(SKIN_LABEL[theme.skin ?? "cute"] ?? SKIN_LABEL.dream)[1]}</span>}>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {([
+              { id: "dream", label: "梦幻星紫", glyph: <IconSpark size={20} />, desc: "薰衣草糖霜 · 梦幻质感" },
+              { id: "bloody", label: "血腥玛丽", glyph: <IconHeart size={20} />, desc: "甜美红×白天鹅 · 浓郁复古" },
+              { id: "cute", label: "可爱奢华", glyph: <IconSparkle size={20} />, desc: "蜜桃玫瑰金 · 少女千金" },
+              { id: "glass", label: "毛玻璃", glyph: <IconStar size={20} />, desc: "半透磨砂 · 现代精致" },
+              { id: "paper", label: "古朴宣纸", glyph: <IconScroll size={20} />, desc: "暖调柔和 · 沉浸典雅" },
+            ] as const).map((sk) => {
+              const cur = (theme.skin ?? "cute") === sk.id;
+              return (
+                <button
+                  key={sk.id}
+                  onClick={() => setTheme({ ...theme, skin: sk.id })}
+                  aria-pressed={cur}
+                  className={`flex items-center gap-2.5 rounded-xl border p-2.5 text-left transition ${
+                    cur
+                      ? "border-white/80 bg-gradient-to-br from-[var(--jade)] to-[var(--coral)] text-white shadow-lg ring-2 ring-fuchsia-300/50"
+                      : "border-line bg-paper text-ink-soft hover:border-jade/60 hover:bg-paper-2"
+                  }`}
+                >
+                  <span className="shrink-0 leading-none">{sk.glyph}</span>
+                  <div className="flex flex-col min-w-0">
+                    <span className={`text-[12.5px] font-bold ${cur ? "text-white" : "text-ink"}`}>{sk.label}</span>
+                    <span className={`truncate text-[10px] ${cur ? "text-white/85" : "text-ink-soft"}`}>{sk.desc}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </SettingBranch>
+        <SettingBranch title="配色" en="ACCENT COLOR" desc="预设主色一键切换，也可逐色自定义" current={(ACCENT_LABEL[theme.accent ?? "plum"] ?? ACCENT_LABEL.plum)[0]} swatch={<span className={`h-3 w-3 rounded-full ${(ACCENT_LABEL[theme.accent ?? "plum"] ?? ACCENT_LABEL.plum)[1]}`} />}>
+          <SubTitle t="预设主色" />
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {[
+              { id: "fuchsia", label: "璀璨星紫", bg: "bg-purple-600" },
+              { id: "plum", label: "玫瑰酒红", bg: "bg-rose-800" },
+              { id: "rose", label: "胭脂蜜桃", bg: "bg-rose-500" },
+              { id: "gold", label: "琥珀流金", bg: "bg-amber-600" },
+              { id: "cyan", label: "赛博海蓝", bg: "bg-sky-600" },
+              { id: "jade", label: "唱片墨绿", bg: "bg-emerald-800" },
+              { id: "coral", label: "珊瑚朱红", bg: "bg-amber-500" },
+              { id: "ink", label: "沉稳黛黑", bg: "bg-slate-700" },
+            ].map((c) => {
+              const cur = (theme.accent ?? "plum") === c.id;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => setTheme({ ...theme, accent: c.id as any })}
+                  className={`flex items-center gap-2 rounded-xl border p-2 text-left transition ${
+                    cur
+                      ? "border-jade bg-jade/15 ring-2 ring-jade/40 font-bold text-ink"
+                      : "border-line bg-paper text-ink-soft hover:border-jade/50 hover:bg-paper-2"
+                  }`}
+                >
+                  <span className={`h-4 w-4 shrink-0 rounded-full border border-white/50 shadow-sm ${c.bg}`} />
+                  <span className="text-[12px] truncate">{c.label}</span>
+                </button>
+              );
+            })}
+          </div>
+          <SubTitle t="自定义取色" d="覆盖皮肤与主色，留空跟随" />
+          <FreeColors />
+        </SettingBranch>
+        <SettingBranch title="字体" en="FONT" desc="预设 8 款游戏字体，或上传自定义字体文件（TTF / OTF / WOFF2）" current={theme.free?.font?.url ? "自定义字体" : (FONT_LABEL[theme.font ?? "song"] ?? "典雅宋体")} swatch={<span className="font-serif text-[12px]">字</span>}>
+          <SubTitle t="预设字体（8 款可选）" />
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+            {FONTS.map((ft) => {
+              const cur = (theme.font ?? "song") === ft.id && !theme.free?.font?.url;
+              return (
+                <button
+                  key={ft.id}
+                  onClick={() => setTheme({ ...theme, font: ft.id as any })}
+                  aria-pressed={cur}
+                  className={`flex flex-col items-center gap-0.5 rounded-xl border px-2 py-2.5 text-center transition ${cur ? "border-white/70 bg-gradient-to-br from-[var(--jade)] to-[var(--coral)] text-white shadow-[0_6px_16px_-8px_rgba(150,110,220,0.7)]" : "border-line bg-paper text-ink-soft hover:border-jade/60"}`}
+                >
+                  <span className="text-[18px] leading-snug" style={{ fontFamily: ft.family }}>{ft.sample ?? "星"}</span>
+                  <span className="text-[12px] font-semibold">{ft.label}</span>
+                  <span className={`text-[10px] ${cur ? "text-white/80" : "opacity-70"}`}>{ft.desc}</span>
+                </button>
+              );
+            })}
+          </div>
+          <SubTitle t="自定义字体文件" />
+          <FreeFont />
+        </SettingBranch>
+        <SettingBranch title="全局背景图" en="BACKGROUND" desc="整个游戏界面的底图" current={theme.free?.imgs?.page ? "已设置" : "无"} swatch={<span className="h-3 w-5 rounded-[3px] bg-gradient-to-br from-jade/50 to-coral/50" />}>
+          <SlotImage slot="page" />
+        </SettingBranch>
+        </>)}
+        {bg("dialog") && (<>
+        <BeautyGroup no="03" title="对话框" en="DIALOGUE" desc="看剧情时的对话·叙事面板；上方预览实时反映三个分页的设置" />
+        <SettingBranch defaultOpen={beautyGroup !== "all"} title="对话框" en="DIALOGUE" desc="样式预设 · 气泡与头像 · 细节 DIY" current={({ soft: "柔光卡片", avg: "AVG 对话条", letter: "信笺", glass: "磨砂玻璃", minimal: "极简" } as const)[theme.dialogStyle ?? "soft"] + (theme.dialogDiy && theme.dialogDiy.on !== false ? " · 已微调" : "")} swatch={<span className="h-3 w-6 rounded-[3px] border border-line bg-paper-2" />}>
+          <div className="mb-3"><DialogPreview /></div>
+          <SubTabs tabs={[
+            ["样式预设", <>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {([["soft", "柔光卡片", "柔和光晕 · 默认"], ["avg", "AVG 对话条", "深色半透 · 视觉小说"], ["letter", "信笺", "横线信纸 · 虚线边"], ["glass", "磨砂玻璃", "半透模糊 · 透出场景"], ["minimal", "极简", "无底色 · 一条描边"]] as const).map(([id, label, desc]) => {
+              const cur = (theme.dialogStyle ?? "soft") === id;
+              return (
+                <button key={id} onClick={() => setTheme({ ...theme, dialogStyle: id })} aria-pressed={cur}
+                  className={`overflow-hidden rounded-[8px] border text-left transition ${cur ? "border-jade ring-2 ring-jade/30" : "border-line hover:border-jade/60"}`}>
+                  {/* 缩略预览：与真实面板同一套 CSS */}
+                  <span data-dstyle={id} className="dialogue-panel relative block h-14 overflow-hidden border-b border-line px-2.5 py-2" style={{ borderRadius: 0 }}>
+                    <span className="block h-1.5 w-10 rounded-full bg-ink/60" />
+                    <span className="mt-1.5 block h-1 w-[85%] rounded-full bg-ink-soft/50" />
+                    <span className="mt-1 block h-1 w-[60%] rounded-full bg-ink-soft/50" />
+                  </span>
+                  <span className="block bg-paper px-2.5 py-1.5">
+                    <span className={`block text-[12.5px] font-bold ${cur ? "text-jade" : "text-ink"}`}>{label}</span>
+                    <span className="block truncate text-[10px] text-ink-soft">{desc}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="mb-1 mt-3 text-[12px] font-bold text-ink">圆角</p>
+          <div className="flex gap-1.5">
+            {([[2, "方角"], [8, "微圆"], [16, "圆润"], [24, "大圆角"]] as const).map(([v, l]) => {
+              const cur = (theme.dialogRadius ?? 8) === v;
+              return <button key={v} onClick={() => setTheme({ ...theme, dialogRadius: v })} className={`flex-1 border py-1.5 text-[12px] transition ${cur ? "border-jade bg-jade/10 font-bold text-jade" : "border-line bg-paper text-ink"}`} style={{ borderRadius: Math.min(v, 12) }}>{l}</button>;
+            })}
+          </div>
+          <p className="mb-1 mt-3 text-[12px] font-bold text-ink">面板高度</p>
+          <div className="flex gap-1.5">
+            {([["low", "矮 · 多看场景"], ["std", "标准"], ["high", "高 · 多看剧情"]] as const).map(([v, l]) => {
+              const cur = (theme.dialogHeight ?? "std") === v;
+              return <button key={v} onClick={() => setTheme({ ...theme, dialogHeight: v })} className={`flex-1 rounded-[6px] border py-1.5 text-[12px] transition ${cur ? "border-jade bg-jade/10 font-bold text-jade" : "border-line bg-paper text-ink"}`}>{l}</button>;
+            })}
+          </div>
+            </>],
+            ["气泡与头像", <>
+          <p className="mb-1 text-[12px] font-bold text-ink">气泡形态</p>
+          <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-5">
+            {([["frost", "磨砂"], ["solid", "实色"], ["outline", "描边"], ["comic", "漫画"], ["plain", "无框"]] as const).map(([v, l]) => {
+              const cur = (theme.bubbleStyle ?? "frost") === v;
+              return <button key={v} onClick={() => setTheme({ ...theme, bubbleStyle: v })} aria-pressed={cur} className={`rounded-[6px] border py-1.5 text-[12px] transition ${cur ? "border-jade bg-jade/10 font-bold text-jade" : "border-line bg-paper text-ink"}`}>{l}</button>;
+            })}
+          </div>
+          <p className="mb-1 mt-3 text-[12px] font-bold text-ink">头像形状</p>
+          <div className="flex gap-1.5">
+            {([["rounded", "圆角方"], ["circle", "圆形"], ["hidden", "不显示"]] as const).map(([v, l]) => {
+              const cur = (theme.avatarShape ?? "rounded") === v;
+              return <button key={v} onClick={() => setTheme({ ...theme, avatarShape: v })} aria-pressed={cur} className={`flex-1 rounded-[6px] border py-1.5 text-[12px] transition ${cur ? "border-jade bg-jade/10 font-bold text-jade" : "border-line bg-paper text-ink"}`}>{l}</button>;
+            })}
+          </div>
+          <p className="mb-1 mt-3 text-[12px] font-bold text-ink">头像描边</p>
+          <div className="flex gap-1.5">
+            {([["white", "白边"], ["accent", "主色"], ["glow", "光晕"], ["none", "无"]] as const).map(([v, l]) => {
+              const cur = (theme.avatarFrame ?? "white") === v;
+              return <button key={v} onClick={() => setTheme({ ...theme, avatarFrame: v })} aria-pressed={cur} disabled={theme.avatarShape === "hidden"} className={`flex-1 rounded-[6px] border py-1.5 text-[12px] transition disabled:opacity-40 ${cur ? "border-jade bg-jade/10 font-bold text-jade" : "border-line bg-paper text-ink"}`}>{l}</button>;
+            })}
+          </div>
+            </>],
+            ["细节 DIY", <DialogDiyPanel />],
+          ]} />
+        </SettingBranch>
+        </>)}
+        {bg("scene") && (<>
+        <BeautyGroup no="04" title="场景" en="SCENE" desc="主界面上半部分的地点实景与对话立绘" />
+        <SettingBranch defaultOpen={beautyGroup !== "all"} title="场景背景与立绘" en="SCENE & PORTRAIT" desc="自定义场景背景、遮罩、模糊与滤镜，以及对话时的人物立绘" current={theme.sceneBg ? "自定义" : "地点原图"} swatch={<span className="h-3 w-5 rounded-[3px] bg-gradient-to-br from-jade to-black/70" />}>
+          <ScenePanel />
+        </SettingBranch>
+        </>)}
+        {bg("chrome") && (<>
+        <BeautyGroup no="05" title="顶栏、底栏与图标" en="CHROME & ICONS" desc="顶部状态栏、底部导航，以及界面上每一个图标与按钮" />
+        <SettingBranch title="顶栏" en="TOP BAR" desc="自由组合版式、名牌头像、状态栏模块与配色；上传样式文件、HTML 模板与样式正则" current={topbarSummary(theme.topbarDiy)} swatch={<span className="h-3 w-6 rounded-full bg-gradient-to-r from-jade to-coral" />}>
+          <TopbarDiyPanel />
+        </SettingBranch>
+        <SettingBranch title="画面边框" en="FRAME" desc="给游玩界面加一圈装饰边框：细线、双线、四角等，可调颜色、粗细、圆角" current={theme.gameFrame ? "已自定" : "无"} swatch={<span className="h-3 w-5 rounded-[3px] border-2 border-jade" />}>
+          <FrameEditor value={theme.gameFrame} onChange={(gameFrame) => setTheme({ ...theme, gameFrame })} />
+        </SettingBranch>
+        <SettingBranch title="底栏选中态" en="NAV STYLE" desc="选中按钮的底衬形状、填充、颜色、动效，以及每个按钮的自定义图标" current={theme.navActive ? "已自定" : "默认"} swatch={<span className="h-3 w-6 rounded-full bg-gradient-to-r from-jade/40 to-coral/40" />}>
+          <NavStylePanel />
+        </SettingBranch>
+        <SettingBranch title="图标与按钮" en="ICON DIY" desc="图标颜色、粗细、大小，圆按钮外形，场景点位样式；每个图标都能换成内置图标或你的图片" current={theme.icons ? "已自定" : "默认"} swatch={<span className="flex gap-0.5 text-jade"><span className="h-3 w-3 rounded-full bg-gradient-to-br from-jade to-coral" /><span className="h-3 w-3 rounded-[3px] border border-jade" /></span>}>
+          <IconDiyPanel />
+        </SettingBranch>
+        </>)}
+        {bg("cover") && (<>
+        <BeautyGroup no="06" title="封面" en="COVER" desc="玩家侧叠在作者封面上的 DIY：背景、标题、按钮、氛围特效；作者封面请到模组编辑器「① 基础 → 开局封面」" />
+        <SettingBranch title="封面 DIY" en="COVER DIY" desc="背景图 / 视频 · 标题字与标题图 · 版式 · 按钮 · 星光花瓣特效" current={theme.cover ? (theme.cover.on === false ? "已关闭" : "已自定") : "世界封面"} swatch={<span className="h-4 w-3 rounded-[3px] bg-gradient-to-b from-[#2b1d47] to-[#e2a6d6]" />} defaultOpen={beautyGroup !== "all"}>
+          <CoverDiyPanel />
+        </SettingBranch>
+        </>)}
+        {bg("plot") && (<>
+        <BeautyGroup no="07" title="随剧情变化" en="PLOT LOOK" desc="条件满足时自动换装：深夜转暗、压力爆表变灰、成名后换上流金" />
+        <SettingBranch defaultOpen={beautyGroup !== "all"} title="剧情美化" en="CONDITIONAL" desc="按属性、关系、地点、时段、规则变量等条件临时切换外观" current={activeLooks.length ? `生效 ${activeLooks.length}` : `${theme.lookRules?.length ?? 0} 条`} swatch={<span className="h-3 w-6 rounded-full bg-gradient-to-r from-jade via-ink-soft to-gold" />}>
+          <PlotLookPanel />
+        </SettingBranch>
+        </>)}
+        {bg("assets") && (<>
+        <BeautyGroup no="08" title="素材与代码" en="ASSETS" desc="所有图片位共用素材库；CSS 优先级最高，可覆盖以上一切" />
+        <SettingBranch title="素材库与图床" en="ASSETS" desc="批量上传图片、配置图床；任意图片位都能直接选用" current={`${loadAssets().length} 张`} swatch={<span className="h-3 w-5 rounded-[3px] border border-dashed border-jade/70" />}>
+          <AssetLibrary />
+        </SettingBranch>
+        <SettingBranch title="CSS 代码" en="CUSTOM CSS" desc="皮肤定基调，CSS 改细节：配色、圆角、字号、背景图都能写" current="代码" swatch={<span className="font-mono text-[11px]">{"{ }"}</span>}>
+          <CustomCssPanel />
+        </SettingBranch>
+        </>)}
+        </>)}
+
+        {/* 游戏字体：常规设置页也能直接切换 8 款预设字体或上传字体文件 */}
+        {!beauty && (
+        <SettingBranch title="游戏字体" en="GAME FONT" desc="切换全站剧情、对话与界面的字体风格，或上传本地字体文件" current={theme.free?.font?.url ? "自定义字体" : (FONT_LABEL[theme.font ?? "song"] ?? "典雅宋体")} swatch={<span className="font-serif text-[12px]">字</span>}>
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+            {FONTS.map((ft) => {
+              const cur = (theme.font ?? "song") === ft.id && !theme.free?.font?.url;
+              return (
+                <button
+                  key={ft.id}
+                  onClick={() => setTheme({ ...theme, font: ft.id as any })}
+                  aria-pressed={cur}
+                  className={`flex flex-col items-center gap-0.5 rounded-xl border px-2 py-2.5 text-center transition ${cur ? "border-white/70 bg-gradient-to-br from-[var(--jade)] to-[var(--coral)] text-white shadow-[0_6px_16px_-8px_rgba(150,110,220,0.7)]" : "border-line bg-paper text-ink-soft hover:border-jade/60"}`}
+                >
+                  <span className="text-[18px] leading-snug" style={{ fontFamily: ft.family }}>{ft.sample ?? "星"}</span>
+                  <span className="text-[12px] font-semibold">{ft.label}</span>
+                  <span className={`text-[10px] ${cur ? "text-white/80" : "opacity-70"}`}>{ft.desc}</span>
+                </button>
+              );
+            })}
+          </div>
+          <SubTitle t="自定义字体文件" />
+          <FreeFont />
+        </SettingBranch>
+        )}
+
+        {/* 背景音乐：上传 / 点播 */}
+        {!beauty && (
+        <SettingBranch title="背景音乐" en="MUSIC" desc="上传本地音乐，点歌单即可播放；切换页面不中断" current="歌单" swatch={<IconMusic size={16} />}>
+          <BgmPanel />
+        </SettingBranch>
+        )}
+
+        {/* 版式方向：竖屏 / 横屏（橙光式） */}
+        {!beauty && (
+        <div>
+          <span className="flex items-center gap-1.5">
+            <span className="text-[14px] font-bold leading-tight tracking-[0.06em] text-ink">屏幕方向</span>
+            {/* 锁定开关：锁定后两个方向按钮不可点，避免误触切换 */}
+            <button type="button" role="switch" aria-checked={!!theme.orientLock}
+              onClick={() => setTheme({ ...theme, orient: theme.orient ?? "portrait", orientLock: !theme.orientLock })}
+              className={`ml-auto flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold transition ${theme.orientLock ? "border-jade/60 bg-jade/12 text-jade" : "border-line bg-paper text-ink-soft hover:border-jade/60"}`}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <rect x="4" y="11" width="16" height="10" rx="2" />
+                <path d={theme.orientLock ? "M8 11V7a4 4 0 0 1 8 0v4" : "M8 11V7a4 4 0 0 1 7.5-2"} />
+              </svg>
+              {theme.orientLock ? "已锁定" : "锁定"}
+            </button>
+          </span>
+          <span className="mb-2 block text-[11px] text-ink-soft">{theme.orientLock ? `已锁定为${(theme.orient ?? "portrait") === "landscape" ? "横屏" : "竖屏"}，解锁后才能切换` : "横屏 16:9 · 竖屏 9:16"}</span>
+          <div className="grid grid-cols-2 gap-1.5">
+            {([
+              { id: "landscape", label: "横屏", box: "h-4 w-7", desc: "16:9 等宽屏比例游戏" },
+              { id: "portrait", label: "竖屏", box: "h-7 w-4", desc: "9:16 等竖向比例游戏" },
+            ] as const).map((op) => {
+              const cur = (theme.orient ?? "portrait") === op.id;
+              return (
+                <button
+                  key={op.id}
+                  onClick={() => { if (!theme.orientLock) setTheme({ ...theme, orient: op.id }); }}
+                  disabled={!!theme.orientLock && !cur}
+                  aria-pressed={cur}
+                  className={`flex flex-col items-center gap-0.5 rounded-xl border px-1 py-2 text-center transition disabled:cursor-not-allowed disabled:opacity-40 ${cur ? "border-white/70 bg-gradient-to-br from-[var(--jade)] to-[var(--coral)] text-white shadow-[0_6px_16px_-8px_rgba(150,110,220,0.7)]" : "border-line bg-paper text-ink-soft hover:border-jade/60 disabled:hover:border-line"}`}
+                >
+                  <span className={`rounded-[3px] border-2 border-current ${op.box}`} aria-hidden />
+                  <span className="text-[12px] font-semibold">{op.label}</span>
+                  <span className={`text-[10px] ${cur ? "text-white/80" : "opacity-70"}`}>{op.desc}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        )}
+
+        {/* 本局游玩偏好：开局时按世界观默认 / 建角所选，之后随时可改，下一回合起生效 */}
+        {!beauty && game && (
+        <div>
+          <span className="flex items-baseline gap-1.5">
+            <span className="text-[14px] font-bold leading-tight tracking-[0.06em] text-ink">游玩偏好</span>
+          </span>
+          <span className="mb-2 block text-[11px] text-ink-soft">只影响本局，下一回合起生效</span>
+          <PlayPrefsPicker value={playPrefsOf(game)} onChange={(playPrefs) => patchGame((g) => ({ ...g, playPrefs }))} />
+        </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 /* 梦幻淡紫菜单行：左侧图标胶囊 + 中英标签 + 右侧徽标（选中态渐变高亮） */
 function MenuRow({
@@ -67,7 +589,7 @@ function MenuRow({
           active ? "bg-white/25 text-white" : "bg-gradient-to-br from-jade/20 to-coral/20 text-jade-deep group-hover:from-jade/30 group-hover:to-coral/30"
         }`}
       >
-        <Icon width={19} height={19} />
+        <DiyIcon slot={`menu:${label}`} size={19}><Icon width={19} height={19} /></DiyIcon>
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex items-baseline gap-1.5">
@@ -85,9 +607,49 @@ function MenuRow({
 
 // 合并「养成/人物」后，本文件不再引用 CharacterTab（触发一次全量重转译，清除旧 HMR 残留）。
 export default function GameShell() {
-  const { game, cfg, theme, setTheme, saveNow, loadState, endManually, popup, setPopup, busy, autosaveOn, setAutosaveOn } = useGame();
+  useEffect(() => { hookWorldBgm(); }, []);
+  const { game, cfg, theme, look, setTheme, saveNow, loadState, endManually, popup, setPopup, retryPopup, busy, autosaveOn, setAutosaveOn, commitGame } = useGame();
+  // 进入设了 BGM 的地点（含任意一层子地点）自动切歌；没设的地点不打断当前音乐
+  const curRoom = game?.sim.room;
+  // 地点 / RP 房间 BGM：进入自动播放；离开到没设 BGM 的地方，停止由场景开的那首
+  useEffect(() => { enterScene(curRoom ? roomBgmOf(curRoom) : undefined); }, [curRoom]);
+  // 音频库：作者音频与作品音量同步给播放器（MOD 注入的随 MOD 启用自动合并）
+  useEffect(() => { setAuthorAudio(game?.audio); }, [game?.audio]);
+  useEffect(() => { setWorkVolume(game?.audioVolume ?? 1); }, [game?.audioVolume]);
+  // 皮肤联动 BGM
+  const skinBgm = look.skin ? game?.skinBgm?.[look.skin] : undefined;
+  useEffect(() => { if (skinBgm) void switchBgm(skinBgm); }, [skinBgm]);
   const [tab, setTab] = useState<Tab>("home");
+  // 剧情输出期间统一锁定：不能切去其他功能 / 手机聊天，看完这一段再行动
+  const busyRef = useRef(busy);
+  busyRef.current = busy;
+  const [lockTip, setLockTip] = useState(false);
+  const lockTimer = useRef<number | undefined>(undefined);
+  const flashLock = useCallback(() => {
+    setLockTip(true);
+    window.clearTimeout(lockTimer.current);
+    lockTimer.current = window.setTimeout(() => setLockTip(false), 1800);
+  }, []);
+  // 剧情开始书写时，若停在其他页签则收回剧情页，保证玩家看到正在发生的故事
+  useEffect(() => { if (busy) { setTab((t) => (t === "home" ? t : "home")); setPanelOpen(false); } }, [busy]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [setOpen, setSetOpen] = useState(false); // 设置弹窗
+  const [cgOpen, setCgOpen] = useState(false); // 玩家 CG 图鉴
+  const [cgEditOpen, setCgEditOpen] = useState(false); // 编辑器 · CG 编排
+  const [audioOpen, setAudioOpen] = useState(false); // 编辑器 · 音频库
+  // CG 解锁：任何数值变化后（剧情、日程、行动）统一判定，满足即入图鉴并弹窗提示
+  useEffect(() => {
+    if (!game || busy) return;
+    const ids = newlyUnlockedCgs(game);
+    if (!ids.length) return;
+    const time = game.world?.time ?? "";
+    commitGame({ ...game, cgUnlocked: { ...(game.cgUnlocked ?? {}), ...Object.fromEntries(ids.map((id) => [id, time])) } });
+    const names = ids.map((id) => `《${game.cgs?.find((c) => c.id === id)?.title || "未命名"}》`).join("、");
+    setPopup({ title: "解锁 CG", segments: [{ kind: "system", text: `收入图鉴：${names}。可在菜单「CG 图鉴」查看。` }], changes: [] });
+  }, [game, busy, commitGame, setPopup]);
   const landscape = theme.orient === "landscape";
+  // 横屏（橙光式）：侧栏面板开合
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [navEditOpen, setNavEditOpen] = useState(false);
   // 页签懒挂载：只有访问过的页签才真正挂载，之后常驻以保留状态。
   // 避免开局就把六个页签（含手机里每秒走动的时钟）一起挂起来空转。
   const [seen, setSeen] = useState<Set<Tab>>(() => new Set<Tab>(["home"]));
@@ -98,13 +660,21 @@ export default function GameShell() {
   useEffect(() => {
     const onNav = (e: Event) => {
       const dest = (e as CustomEvent<Tab>).detail;
-      // 「人物」以档案弹窗呈现；其余功能切到对应整屏界面
+      if (busyRef.current && dest !== "home") { flashLock(); return; }
+      // 「人物」以档案弹窗呈现；其余功能切到对应整屏界面（横屏则展开侧栏浮层）
       if (dest === "sim") { setSimOpen(true); return; }
       setTab(dest);
       setSeen((p) => (p.has(dest) ? p : new Set(p).add(dest)));
+      if (landscape) setPanelOpen(true);
     };
     window.addEventListener("star:navtab", onNav as EventListener);
     return () => window.removeEventListener("star:navtab", onNav as EventListener);
+  }, [landscape]);
+  // 当面玩手机被打断：收起手机，回到剧情页（回合由 GameContext 推进）
+  useEffect(() => {
+    const h = () => { setTab("home"); if (landscape) setPanelOpen(false); };
+    window.addEventListener("phone:interrupt", h);
+    return () => window.removeEventListener("phone:interrupt", h);
   }, [landscape]);
   const [saveMsg, setSaveMsg] = useState<"ok" | "fail" | null>(null);
   const [endOpen, setEndOpen] = useState(false);
@@ -114,10 +684,34 @@ export default function GameShell() {
   const [worksOpen, setWorksOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [bookOpen, setBookOpen] = useState(false); // 世界书（设定片段编辑）
-  const [mapEditOpen, setMapEditOpen] = useState(false); // 地图编辑器（点位/背景/物件）
-  const [storyOpen, setStoryOpen] = useState(false); // 剧情志（支线剧情 / 收藏 / 导出）
-  const [npcFieldsOpen, setNpcFieldsOpen] = useState(false);
-  const [setOpen, setSetOpen] = useState(false); // 游戏设置（皮肤 / 字体 / 版式）
+  const [mapEditOpen, setMapEditOpen] = useState(false);
+  const [modsOpen, setModsOpen] = useState(false); // 模组 / 世界观管理
+  const { world: modWorld } = useMods(); // 地图编辑器（点位/背景/物件）
+  const [fixedOpen, setFixedOpen] = useState(false);
+  const [questOpen, setQuestOpen] = useState(false); // 剧情志弹窗
+  const [lockPick, setLockPick] = useState(true); // 首次选择屏幕方向时：选完即锁定（默认勾选）
+  const [personTab, setPersonTab] = useState<"persona" | "memory">("persona"); // 固定人物：人设 / 记忆
+  const [beautyOpen, setBeautyOpen] = useState(false); // 编辑器 · 美化
+  const [editorOpen, setEditorOpen] = useState(false); // 编辑器总入口（六个创作工具）
+  const [endingsOpen, setEndingsOpen] = useState(false); // 结局设定编辑器
+  const [factionOpen, setFactionOpen] = useState(false); // 阵营派系
+  const [engineOpen, setEngineOpen] = useState(false); // 底层世界规则
+  // 底层规则 · 预加载：空闲时把尚未解锁的 CG 先拉进浏览器缓存，解锁弹出时不再等图
+  const preload = !!game && rulesOf(game).media.preload;
+  const cgKey = (game?.cgs ?? []).filter((c) => c.enabled !== false && c.image && !game?.cgUnlocked?.[c.id]).map((c) => c.image).slice(0, 24).join("\n");
+  useEffect(() => {
+    if (!preload || !cgKey) return;
+    const t = window.setTimeout(() => { for (const src of cgKey.split("\n")) new Image().src = src; }, 1500);
+    return () => window.clearTimeout(t);
+  }, [preload, cgKey]);
+  const [timelineOpen, setTimelineOpen] = useState(false); // 主线复盘时间线
+  const [personOpen, setPersonOpen] = useState(false); // 固定人物编辑器（性别/人设/口吻） // 固定事件编辑器（创作者预设剧本）
+  // 从编辑器入口打开的面板，关闭后回到入口，方便连续改多项；直接在入口点 × 才真正退出
+  const [hubReturn, setHubReturn] = useState(false);
+  const hubChildOpen = personOpen || mapEditOpen || rulesOpen || beautyOpen || navEditOpen || bookOpen || fixedOpen || cgEditOpen || endingsOpen || factionOpen || timelineOpen || engineOpen;
+  useEffect(() => {
+    if (hubReturn && !hubChildOpen && !editorOpen && !modsOpen) { setHubReturn(false); setEditorOpen(true); }
+  }, [hubReturn, hubChildOpen, editorOpen, modsOpen]);
   const [savesOpen, setSavesOpen] = useState(false); // 存档管理
   const [saves, setSaves] = useState<SaveSlot[]>([]); // 六个手动槽的当前内容
   const [autoSlot, setAutoSlot] = useState<SaveSlot | null>(null); // 自动存档
@@ -130,7 +724,9 @@ export default function GameShell() {
   useEffect(() => {
     const onSched = () => setSchedOpen(true);
     window.addEventListener("star:navschedule", onSched);
-    return () => window.removeEventListener("star:navschedule", onSched);
+    const onAi = () => setCfgOpen(true);
+    window.addEventListener("star:openaicfg", onAi);
+    return () => { window.removeEventListener("star:navschedule", onSched); window.removeEventListener("star:openaicfg", onAi); };
   }, []);
   if (!game) return null;
 
@@ -174,302 +770,162 @@ export default function GameShell() {
   const isDark = theme.mode === "dark" || (theme.mode === "auto" && typeof matchMedia !== "undefined" && matchMedia("(prefers-color-scheme: dark)").matches);
 
   const tabNode = (t: Tab): ReactNode =>
-    t === "home" ? <HomeTab /> : t === "sim" ? <SimTab /> : t === "image" ? <ImageTab />
+    t === "home" ? <HomeTab /> : t === "sim" ? <SimTab /> : t === "image" ? (feature("imageCrisis") ? <ImageTab /> : null)
     : t === "npc" ? <NpcTab /> : t === "actions" ? <ActionsTab />
-    : t === "quest" ? <div className="mx-auto max-w-2xl p-4"><StoryQuestPanel /></div> : t === "settings" ? <div className="mx-auto max-w-2xl p-4">{settingsContent}</div> : <Phone />;
+    : t === "quest" ? <div className="mx-auto max-w-3xl px-4 py-5"><StoryQuestPanel /></div>
+    : t === "settings" ? <SettingsPanel bare onBeauty={() => setBeautyOpen(true)} /> : <Phone />;
 
-  /* 功能入口统一切换主内容，保留底部导航。 */
+  /* 统一功能入口：世界 / 手机为常驻底页，其余（人物 / 形象 / 人脉 / 娱乐圈）一律封装为浮层弹窗。
+   * 横屏沿用右侧侧栏浮层，竖屏改以居中弹窗呈现，菜单 / 底栏 / 跨页跳转皆走此分发。 */
   const openFeature = (t: Tab) => {
+    if (busy && t !== "home") { flashLock(); return; }
     if (t === "sim") { setSimOpen(true); return; }
     setTab(t);
     setSeen((p) => (p.has(t) ? p : new Set(p).add(t)));
+    if (landscape && t !== "home") setPanelOpen(true);
   };
-
-  const settingsContent = (
-          <div className="space-y-4">
-            <button onClick={() => setNpcFieldsOpen(true)} className="w-full rounded-lg border border-line p-3 text-left text-sm text-jade">编辑器 · NPC / 职业 / 世界 / 地图</button>
-            {/* 皮肤选择：纸质 / 毛玻璃 / 可爱奢华 / 梦幻星紫 */}
-            <div>
-              <span className="flex items-baseline gap-1.5">
-                <span className="text-[14px] font-bold leading-tight tracking-[0.06em] text-ink">界面皮肤</span>
-                <span className="text-[9.5px] font-semibold tracking-[0.2em] text-ink-soft">SKIN</span>
-              </span>
-              <span className="mb-2 block text-[11px] text-ink-soft">整体视觉换肤，不改动布局</span>
-              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-                {([
-                  { id: "dream", label: "梦幻星紫", glyph: "✦", desc: "薰衣草糖霜" },
-                  { id: "cute", label: "可爱奢华", glyph: "✿", desc: "蜜桃玫瑰金" },
-                  { id: "glass", label: "毛玻璃", glyph: "❖", desc: "半透磨砂" },
-                  { id: "paper", label: "纸质", glyph: "▤", desc: "古朴宣纸" },
-                ] as const).map((sk) => {
-                  const cur = (theme.skin ?? "dream") === sk.id;
-                  return (
-                    <button
-                      key={sk.id}
-                      onClick={() => setTheme({ ...theme, skin: sk.id })}
-                      aria-pressed={cur}
-                      className={`flex flex-col items-center gap-0.5 rounded-xl border px-1 py-2 text-center transition ${cur ? "border-white/70 bg-gradient-to-br from-[var(--jade)] to-[var(--coral)] text-white shadow-[0_6px_16px_-8px_rgba(150,110,220,0.7)]" : "border-line bg-paper text-ink-soft hover:border-jade/60"}`}
-                    >
-                      <span className="text-[17px] leading-none">{sk.glyph}</span>
-                      <span className="text-[12px] font-semibold">{sk.label}</span>
-                      <span className={`text-[10px] ${cur ? "text-white/80" : "opacity-70"}`}>{sk.desc}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* 字体选择：宋体 / 圆体 / 雅致 / 手写 */}
-            <div>
-              <span className="flex items-baseline gap-1.5">
-                <span className="text-[14px] font-bold leading-tight tracking-[0.06em] text-ink">字体风格</span>
-                <span className="text-[9.5px] font-semibold tracking-[0.2em] text-ink-soft">FONT</span>
-              </span>
-              <span className="mb-2 block text-[11px] text-ink-soft">整体换字，不改动排版</span>
-              {/* 功能注释：预览字族用系统字体，避免依赖 fonts.googleapis.com */}
-              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-                {([
-                  { id: "song", label: "典雅宋体", family: "'Songti SC', 'STSong', serif", desc: "沉稳端庄" },
-                  { id: "round", label: "圆润可爱", family: "'PingFang SC', 'Hiragino Sans GB', sans-serif", desc: "软萌活泼" },
-                  { id: "elegant", label: "清瘦雅致", family: "'Kaiti SC', 'STKaiti', serif", desc: "秀气文艺" },
-                  { id: "brush", label: "手写毛笔", family: "'Kaiti SC', 'STKaiti', serif", desc: "洒脱写意" },
-                ] as const).map((ft) => {
-                  const cur = (theme.font ?? "song") === ft.id;
-                  return (
-                    <button
-                      key={ft.id}
-                      onClick={() => setTheme({ ...theme, font: ft.id })}
-                      aria-pressed={cur}
-                      className={`flex flex-col items-center gap-0.5 rounded-xl border px-1 py-2 text-center transition ${cur ? "border-white/70 bg-gradient-to-br from-[var(--jade)] to-[var(--coral)] text-white shadow-[0_6px_16px_-8px_rgba(150,110,220,0.7)]" : "border-line bg-paper text-ink-soft hover:border-jade/60"}`}
-                    >
-                      <span className="text-[19px] leading-none" style={{ fontFamily: ft.family }}>星</span>
-                      <span className="text-[12px] font-semibold">{ft.label}</span>
-                      <span className={`text-[10px] ${cur ? "text-white/80" : "opacity-70"}`}>{ft.desc}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* 版式方向：竖屏 / 横屏（橙光式） */}
-            <div>
-              <span className="flex items-baseline gap-1.5">
-                <span className="text-[14px] font-bold leading-tight tracking-[0.06em] text-ink">版式方向</span>
-                <span className="text-[9.5px] font-semibold tracking-[0.2em] text-ink-soft">LAYOUT</span>
-              </span>
-              <span className="mb-2 block text-[11px] text-ink-soft">竖屏专注阅读 · 横屏橙光式场景</span>
-              <div className="grid grid-cols-2 gap-1.5">
-                {([
-                  { id: "portrait", label: "竖屏", glyph: "▯", desc: "手机竖版" },
-                  { id: "landscape", label: "横屏", glyph: "▭", desc: "橙光场景版" },
-                ] as const).map((op) => {
-                  const cur = (theme.orient ?? "portrait") === op.id;
-                  return (
-                    <button
-                      key={op.id}
-                      onClick={() => setTheme({ ...theme, orient: op.id })}
-                      aria-pressed={cur}
-                      className={`flex flex-col items-center gap-0.5 rounded-xl border px-1 py-2 text-center transition ${cur ? "border-white/70 bg-gradient-to-br from-[var(--jade)] to-[var(--coral)] text-white shadow-[0_6px_16px_-8px_rgba(150,110,220,0.7)]" : "border-line bg-paper text-ink-soft hover:border-jade/60"}`}
-                    >
-                      <span className="text-[17px] leading-none">{op.glyph}</span>
-                      <span className="text-[12px] font-semibold">{op.label}</span>
-                      <span className={`text-[10px] ${cur ? "text-white/80" : "opacity-70"}`}>{op.desc}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-  );
-
-  const activeMenu = MENU.find(m => m.id === tab);
-  const PageIcon = activeMenu?.icon ?? IconScroll;
-  const pageHeader = tab !== "home" && tab !== "phone" ? <IndustryPageHeader
-    title={activeMenu?.label ?? "项目"}
-    subtitle={({ actions: "星榜风云", npc: "圈中往来", quest: "支线与收藏", settings: "偏好与设定", phone: "掌上生活", image: "人设与舆情", sim: "人物资料" } as Record<string, string>)[tab] ?? ""}
-    eyebrow={`STAR CITY WEEKLY · 第 ${game.sim.week} 周`}
-    icon={<PageIcon width={22} height={22} />} flush={false} /> : null;
 
   const orientChosen = theme.orient === "portrait" || theme.orient === "landscape";
 
   return (
     <EntityProvider>
     {/* 首次进入 · 选择版式方向（之后可在菜单里随时改） */}
-    {!orientChosen && (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#1a1226]/80 px-5 backdrop-blur-md" role="dialog" aria-modal="true">
-        <div className="w-full max-w-md animate-pop rounded-[26px] border border-white/50 bg-gradient-to-b from-[#f3edff] to-[#f8ecf6] p-6 shadow-2xl">
-          <p className="text-center text-[11px] font-bold tracking-[0.3em] text-ink-soft">LAYOUT · 选择你的观看方式</p>
+    {!orientChosen && createPortal(
+      <div className="ui-overlay ui-overlay-heavy z-[60] px-5" role="dialog" aria-modal="true" aria-label="选择屏幕方向">
+        <div className="ui-sheet w-full max-w-md animate-pop p-6">
+          <p className="text-center text-[11px] font-bold tracking-[0.3em] text-ink-soft">屏幕方向</p>
           <h2 className="mt-1 text-center text-[19px] font-black text-ink">竖屏，还是横屏？</h2>
-          <p className="mt-2 text-center text-[12.5px] leading-relaxed text-ink-soft">这决定她的故事如何在你眼前展开。之后可在「☰ 菜单 → 版式方向」里随时切换。</p>
+          <p className="mt-2 text-center text-[12.5px] leading-relaxed text-ink-soft">选择适合你设备的游戏画面方向。之后可在「菜单 → 屏幕方向」里随时切换。</p>
           <div className="mt-5 grid grid-cols-2 gap-3">
             {([
-              { id: "portrait", glyph: "▯", label: "竖屏", desc: "手机竖版 · 专注阅读叙事", ratio: "h-24 w-14", locked: false },
-              { id: "landscape", glyph: "▭", label: "横屏", desc: "横屏版本暂未开放", ratio: "h-14 w-24", locked: true },
+              { id: "landscape", box: "h-6 w-10", label: "横屏", desc: "16:9 等宽屏比例游戏", ratio: "h-14 w-24" },
+              { id: "portrait", box: "h-10 w-6", label: "竖屏", desc: "9:16 等竖向比例游戏", ratio: "h-24 w-14" },
             ] as const).map((op) => (
               <button
                 key={op.id}
-                onClick={() => !op.locked && setTheme({ ...theme, orient: op.id })}
-                disabled={op.locked}
-                aria-disabled={op.locked}
-                className={`group relative flex flex-col items-center gap-2 rounded-2xl border p-4 text-center transition ${op.locked ? "cursor-not-allowed border-line/70 bg-slate-100/70 opacity-55 grayscale" : "border-line bg-white/70 hover:-translate-y-0.5 hover:border-jade hover:shadow-[0_12px_28px_-14px_rgba(150,110,220,0.7)]"}`}
+                onClick={() => setTheme({ ...theme, orient: op.id, orientLock: lockPick })}
+                className="group flex flex-col items-center gap-2 rounded-2xl border border-line bg-paper p-4 text-center transition hover:border-jade hover:shadow-md"
               >
-                {op.locked && <span className="absolute right-2 top-2 rounded-full bg-ink/10 px-1.5 py-0.5 text-[10px] font-bold text-ink-soft">锁定</span>}
-                <span className={`flex ${op.ratio} items-center justify-center rounded-xl border-2 border-line bg-gradient-to-br from-jade/15 to-coral/15 text-[22px] text-jade transition ${!op.locked ? "group-hover:border-jade" : ""}`}>{op.glyph}</span>
+                <span className={`flex ${op.ratio} items-center justify-center rounded-xl border-2 border-line bg-jade/10 text-jade transition group-hover:border-jade`}>
+                  <span className={`rounded-[3px] border-2 border-current ${op.box}`} aria-hidden />
+                </span>
                 <span className="text-[15px] font-bold text-ink">{op.label}</span>
                 <span className="text-[11px] leading-snug text-ink-soft">{op.desc}</span>
               </button>
             ))}
           </div>
+          {/* 选完即锁定：避免开局后误触切换横竖屏 */}
+          <button type="button" role="switch" aria-checked={lockPick} onClick={() => setLockPick((v) => !v)}
+            className="mx-auto mt-4 flex items-center gap-2 rounded-full border border-line bg-white/60 px-3.5 py-1.5 text-[12px] font-semibold text-ink transition hover:border-jade/60">
+            <span className={`relative h-4 w-7 rounded-full transition ${lockPick ? "bg-gradient-to-r from-[var(--jade)] to-[var(--coral)]" : "bg-ink-soft/25"}`}>
+              <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-all ${lockPick ? "left-3.5" : "left-0.5"}`} />
+            </span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={lockPick ? "text-jade" : "text-ink-soft"}>
+              <rect x="4" y="11" width="16" height="10" rx="2" />
+              <path d={lockPick ? "M8 11V7a4 4 0 0 1 8 0v4" : "M8 11V7a4 4 0 0 1 7.5-2"} />
+            </svg>
+            选好后锁定方向
+          </button>
         </div>
       </div>
-    )}
+    , document.body)}
     {landscape && (
       /* ═══════════ 横屏 · 橙光式版式 ═══════════
          直接以真正的「世界」页（HomeTab）作为顶天立地的主场景，
-         叠一层轻量悬浮操作栏，其余页签在主内容区切换。
+         叠一层轻量悬浮操作栏，其余页签(人物/形象/…)以侧栏浮层打开。
          此壳覆盖在竖屏外壳之上；菜单(z-40)与弹窗(z-50)仍渲染其上，得以共用。 */
       <div className="mud-shell fixed inset-0 z-30 flex flex-col overflow-hidden bg-paper landscape-world">
-        {/* 顶部柔光压暗：让悬浮 HUD 无论场景明暗都读得清（乙游惯用手法） */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-28 bg-gradient-to-b from-black/45 via-black/15 to-transparent" aria-hidden />
-        {/* 悬浮顶栏：精致乙游式 HUD——名牌 + 世界状态 + 菜单，悬浮不占版面 */}
-        {tab === "home" && <header className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start gap-2.5 px-4 py-3">
-          {game.player && (
-            <button onClick={() => setSimOpen(true)} aria-label="打开人物档案" className="pointer-events-auto group flex shrink-0 items-center gap-2.5 rounded-full border border-white/20 bg-black/30 py-1 pl-1 pr-4 shadow-lg backdrop-blur-md transition hover:border-gold/60 hover:bg-black/40">
-              <span className="relative block">
-                <span className="absolute -inset-[3px] rounded-xl bg-gradient-to-br from-gold via-[var(--coral)] to-[var(--jade)] opacity-90 blur-[2px]" aria-hidden />
-                <span className="relative block rounded-xl bg-gradient-to-br from-gold to-[var(--coral)] p-[2px]">
-                  <span className="block rounded-xl bg-paper-2 p-[1.5px]"><Avatar src={game.player.avatar} name={game.player.name} size={30} editable={false} /></span>
-                </span>
-              </span>
-              <span className="text-left leading-tight">
-                <span className="block font-serif text-[14px] font-black text-white drop-shadow">{game.player.name}</span>
-                <span className="block text-[8.5px] font-bold uppercase tracking-[0.3em] text-gold/90">查看档案 ›</span>
-              </span>
-            </button>
-          )}
-          <div onClick={() => setSimOpen(true)} role="button" tabIndex={0} aria-label="打开人物档案" className="pointer-events-auto flex min-w-0 flex-1 cursor-pointer items-center gap-3 self-center rounded-full border border-white/18 bg-black/30 px-4 py-1.5 text-[12.5px] text-white/90 shadow-lg backdrop-blur-md transition hover:border-gold/60">
-            <span className="flex items-center gap-1.5 font-medium"><IconClock width={14} height={14} className="text-gold" />{game.world.time}</span>
-            <span className="h-3 w-px shrink-0 bg-white/25" aria-hidden />
-            <span className="flex items-center gap-1.5"><IconPin width={14} height={14} className="text-coral" />{game.world.location}</span>
-            {game.world.weather && <><span className="hidden h-3 w-px shrink-0 bg-white/25 sm:block" aria-hidden /><span className="hidden items-center gap-1.5 text-white/75 sm:flex"><IconSparkle width={13} height={13} className="text-gold" />{game.world.weather}</span></>}
-            {game.sim && <span className={`ml-auto flex items-center gap-1 pl-2 font-semibold tabular-nums ${game.sim.money < 0 ? "text-danger" : "text-gold"}`}><span className="text-[11px] leading-none">¥</span>{(game.sim.money / 10000).toFixed(1)}万</span>}
-          </div>
-          <div className="pointer-events-auto flex items-center gap-1.5 self-center">
-            <button onClick={() => setEndOpen(true)} aria-label="结束" className="rounded-full border border-white/18 bg-black/30 p-2 text-white/85 shadow-lg backdrop-blur-md transition hover:border-danger/60 hover:text-danger"><IconFlag width={16} height={16} /></button>
-            <button onClick={() => setMenuOpen((v) => !v)} aria-label="菜单" className="flex items-center gap-1.5 rounded-full border border-white/18 bg-black/30 px-3 py-2 text-[13px] font-semibold text-white shadow-lg backdrop-blur-md transition hover:border-gold/60 hover:text-gold"><span className="text-[15px] leading-none">☰</span>菜单</button>
-          </div>
-        </header>}
-        {pageHeader}
+        <FrameOverlay f={theme.gameFrame} />
+        {/* 顶栏：名牌 + 世界状态 + 菜单，随设置里的皮肤 / 主色调换色 */}
+        <TopbarView
+          compact
+          data={topbarDataOf(game, modWorld.chain[0].name)}
+          diy={look.topbarDiy}
+          topbar={look.topbar}
+          topbarText={look.topbarText}
+          menuOpen={menuOpen}
+          onProfile={() => setSimOpen(true)}
+          onMenu={() => setMenuOpen((v) => !v)}
+          onEnd={() => setEndOpen(true)}
+        />
 
-        <main className="relative min-h-0 flex-1">
-          {Array.from(seen).map((id) => (
-            <div key={id} className={`absolute inset-0 overflow-y-auto ${id === tab ? "" : "hidden"}`}>
-              {tabNode(id)}
+        {/* 主场景：真正的「世界」页顶天立地铺满 */}
+        <div className="min-h-0 flex-1">{seen.has("home") && <HomeTab />}</div>
+        {landscape && <GameTour active />}
+
+        {/* 功能页以菜单选中后的浮层呈现。 */}
+        {panelOpen && createPortal(
+          <div className="fixed inset-0 z-30 flex items-stretch justify-end" role="dialog" aria-modal="true">
+            <button aria-label="关闭面板" onClick={() => setPanelOpen(false)} className="absolute inset-0 bg-[#2b2247]/45 backdrop-blur-[3px]" />
+            <div className="relative m-2 flex w-full max-w-2xl animate-pop flex-col overflow-hidden rounded-[22px] border border-white/50 bg-paper shadow-2xl sm:m-3">
+              <div className="flex shrink-0 items-center justify-between border-b border-line bg-paper-2/90 px-4 py-2.5">
+                <span className="text-[14px] font-bold text-ink">{menuItems().find((m) => m.id === tab)?.label ?? (tab === "quest" ? "任务" : tab === "settings" ? "设置" : "面板")}</span>
+                <button onClick={() => setPanelOpen(false)} aria-label="关闭" className="rounded-full border border-line px-2.5 py-1 text-[13px] text-ink-soft transition hover:bg-line/40">收起 ›</button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto">{tabNode(tab)}</div>
             </div>
-          ))}
-        </main>
-        <MudChrome tab={tab} setTab={openFeature} />
+          </div>
+        , document.body)}
       </div>
     )}
-    <div className="mud-shell dream-game-shell paper-grain mx-auto flex h-screen h-[100dvh] w-full max-w-[560px] flex-col" aria-hidden={landscape}>
-      {/* 顶部世界动态栏：点顶栏任意处即唤出人物档案（菜单/结束按钮各自保留原动作）。
-          人脉 / 娱乐圈 / 手机 三个整屏页签下隐藏顶栏，把纵向空间全部让给内容，避免遮挡视线。 */}
-      {tab === "home" && (
-      <header
-        onClick={() => setSimOpen(true)}
-        className="dream-topbar relative z-20 shrink-0 cursor-pointer border-b border-line bg-gradient-to-b from-paper-2/90 via-paper-2/85 to-paper-2/90 shadow-[0_6px_18px_-14px_rgba(120,90,200,0.6)] backdrop-blur-xl"
+    <div className="app-root flex h-screen h-[100dvh] w-full flex-col bg-paper text-ink p-0 m-0 overflow-hidden" aria-hidden={landscape}>
+      {/* 顶部世界动态栏：跟随全局界面皮肤 */}
+      {!["npc", "actions", "phone"].includes(tab) && (
+      <TopbarView
+        data={topbarDataOf(game, modWorld.chain[0].name)}
+        diy={look.topbarDiy}
+        topbar={look.topbar}
+        topbarText={look.topbarText}
+        menuOpen={menuOpen}
+        onProfile={() => setSimOpen(true)}
+        onMenu={() => setMenuOpen((v) => !v)}
+        onEnd={() => setEndOpen(true)}
       >
-        {/* 柔光装饰 */}
-        <div className="pointer-events-none absolute -left-8 -top-10 h-24 w-24 rounded-full bg-jade/30 blur-3xl" aria-hidden />
-        <div className="pointer-events-none absolute -right-6 -top-8 h-20 w-20 rounded-full bg-coral/30 blur-3xl" aria-hidden />
-        {/* 底部渐变金线 */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-line to-transparent" aria-hidden />
-        <div className="relative w-full">
-          {/* 统一控制台面板：上区 身份 + 操作，下区 世界状态终端读出栅格 */}
-          {(() => {
-            const parts = (game.world.time ?? "").split(" · ");
-            const weekTxt = parts[0] ?? "";        // 「第 1 周」
-            const weekNum = (weekTxt.match(/\d+/)?.[0] ?? "").padStart(2, "0"); // 「01」
-            const dateTxt = parts.slice(1).join(" · ") || weekTxt; // 「2005.01.03 周一」
-            return (
-              <div className="overflow-hidden bg-paper-2/55 font-sans text-ink backdrop-blur-sm">
-                {/* 上区：身份 + 操作 */}
-                <div className="flex items-center gap-2.5 px-2.5 py-2">
-                  {game.player && (
-                    <button onClick={() => setSimOpen(true)} aria-label="打开人物档案" className="group flex min-w-0 shrink items-center gap-2 rounded-xl py-0.5 pl-0.5 pr-1.5 text-left transition hover:bg-paper-2/70">
-                      <div className="relative shrink-0">
-                        <div className="advance-halo absolute -inset-1 rounded-xl bg-gradient-to-br from-[var(--jade)] to-[var(--coral)] blur-[6px] opacity-60" aria-hidden />
-                        <div className="relative rounded-xl bg-gradient-to-br from-[var(--jade)] to-[var(--coral)] p-[2px] shadow-[0_4px_12px_-4px_rgba(150,110,220,0.7)] transition group-hover:shadow-[0_6px_16px_-6px_rgba(150,110,220,0.85)]">
-                          <div className="rounded-xl bg-paper-2 p-[1.5px]">
-                            <Avatar src={game.player.avatar} name={game.player.name} size={36} editable={false} />
-                          </div>
-                        </div>
-                      </div>
-                      <div className="min-w-0 leading-tight">
-                        <p className="flex items-baseline gap-1.5 truncate">
-                          <span className="font-serif text-[15px] font-black tracking-wide text-jade-deep">{game.player.name}</span>
-                          {game.player.age && <span className="rounded bg-jade/12 px-1.5 py-px text-[10px] font-bold tabular-nums text-jade">{game.player.age}</span>}
-                        </p>
-                        <p className="mt-0.5 flex items-center gap-1 text-[9px] font-bold uppercase tracking-[0.22em] text-ink-soft transition group-hover:text-jade">
-                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-gradient-to-br from-[var(--jade)] to-[var(--coral)]" />
-                          查看档案 ›
-                        </p>
-                      </div>
-                    </button>
-                  )}
-
-                  <div className="ml-auto flex shrink-0 items-center gap-1.5">
-                    <button onClick={(e) => { e.stopPropagation(); setEndOpen(true); }} aria-label="结束游戏" className="rounded-lg border border-line bg-paper-2/70 p-1.5 text-ink-soft transition hover:border-danger/60 hover:text-danger">
-                      <IconFlag width={15} height={15} />
-                    </button>
-                    <button onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v); }} aria-label="牌坊菜单" aria-expanded={menuOpen} className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[12px] font-bold transition ${menuOpen ? "border-transparent bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] text-white" : "border-line bg-paper-2/70 text-jade-deep hover:bg-paper-2"}`}>
-                      <span className="text-[14px] leading-none">☰</span>
-                      <span className="hidden uppercase tracking-[0.2em] sm:inline">菜单</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* 下区：世界状态终端读出栅格（WK · DATE · LOC · WX · FUND） */}
-                <div className="flex items-stretch border-t border-line bg-paper/35 font-[inherit]">
-                  {weekNum && (
-                    <span className="flex shrink-0 flex-col justify-center bg-gradient-to-br from-[var(--jade)] to-[var(--coral)] px-3 py-1.5 text-white">
-                      <span className="text-[8.5px] font-bold uppercase leading-none tracking-[0.2em] text-white/75">周</span>
-                      <span className="mt-1 text-[15px] font-bold leading-none tabular-nums">{weekNum}</span>
-                    </span>
-                  )}
-                  <span className="flex min-w-0 flex-[1.4] flex-col justify-center border-l border-line/60 px-3 py-1.5">
-                    <span className="text-[8.5px] font-bold uppercase leading-none tracking-[0.25em] text-jade/80">日期</span>
-                    <span className="mt-1 truncate text-[12px] leading-none tabular-nums tracking-tight text-ink">{dateTxt}</span>
-                  </span>
-                  <span className="flex min-w-0 flex-1 flex-col justify-center border-l border-line/60 px-3 py-1.5">
-                    <span className="text-[8.5px] font-bold uppercase leading-none tracking-[0.25em] text-coral/80">地点</span>
-                    <span className="mt-1 truncate text-[12px] leading-none text-ink">{game.world.location}</span>
-                  </span>
-                  {game.world.weather && (
-                    <span className="flex shrink-0 flex-col justify-center border-l border-line/60 px-3 py-1.5">
-                      <span className="text-[8.5px] font-bold uppercase leading-none tracking-[0.25em] text-gold/80">天气</span>
-                      <span className="mt-1 truncate text-[12px] leading-none text-ink-soft">{game.world.weather}</span>
-                    </span>
-                  )}
-                  {game.sim && (
-                    <span className={`ml-auto flex shrink-0 flex-col justify-center border-l border-line/60 px-3 py-1.5 ${game.sim.money < 0 ? "bg-danger/10" : "bg-jade/[0.07]"}`}>
-                      <span className={`text-[8.5px] font-bold uppercase leading-none tracking-[0.25em] ${game.sim.money < 0 ? "text-danger/80" : "text-jade/80"}`}>资产</span>
-                      <span className={`mt-1 text-[12px] font-bold leading-none tabular-nums ${game.sim.money < 0 ? "text-danger" : "text-jade"}`}>¥{(game.sim.money / 10000).toFixed(1)}万</span>
-                    </span>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
-        </div>
-        {game.world.note && <p className="border-t border-line/60 bg-paper/50 px-4 py-1 text-center text-[11px] text-ink-soft">{game.world.note}</p>}
+        {(game.attrDefs ?? []).some((d) => d.pin) && (
+          <div className="flex gap-1.5 overflow-x-auto px-4 pb-1.5 [scrollbar-width:none]">
+            {game.attrDefs!.filter((d) => d.pin).map((d) => {
+              const v = game.player.attrs.find((a) => a.key === d.id)?.value ?? d.init;
+              const t = (d.display ?? "both") !== "num" ? tierOf(v, d.tiers) : undefined;
+              return (
+                <span key={d.id} className="flex shrink-0 items-center gap-1 rounded-full border border-line bg-paper/90 px-2.5 py-0.5 text-[11px] text-ink shadow-sm">
+                  {d.icon && <span>{d.icon}</span>}<span className="text-ink-soft">{d.label}</span>
+                  {t && <b style={{ color: toneColor(d.color ?? "coral") }}>{t}</b>}
+                  {(!t || d.display === "both" || !d.display) && <AttrValueEdit def={d} className="text-[11px]" />}
+                </span>
+              );
+            })}
+          </div>
+        )}
+        {game.world.note && <p className="topbar-note border-t border-line/60 bg-paper/50 px-4 py-1 text-center text-[11px] text-ink-soft">{game.world.note}</p>}
         {saveMsg === "ok" && <p className="bg-jade/12 px-4 py-1 text-center text-[11px] text-jade">已保存到本地存档</p>}
         {saveMsg === "fail" && <p className="bg-danger/12 px-4 py-1 text-center text-[11px] text-danger">保存失败：本地存储不可用，请检查浏览器权限或空间</p>}
-      </header>
+      </TopbarView>
+      )}
+
+      {lockTip && (
+        <div role="status" className="pointer-events-none fixed left-1/2 top-16 z-[90] -translate-x-1/2 animate-pop rounded-full bg-ink/90 px-4 py-2 text-[12.5px] font-medium text-paper shadow-lg">
+          剧情正在上演，看完这一段再行动
+        </div>
+      )}
+      {/* 线下剧情触发的来电：不在手机页时，顶部弹出提醒，点按去接听 */}
+      {game.phone?.ringing && tab !== "phone" && (
+        <button
+          onClick={() => { if (busy) { flashLock(); return; } setTab("phone"); setSeen((p) => (p.has("phone") ? p : new Set(p).add("phone"))); if (landscape) setPanelOpen(true); }}
+          className="fixed left-1/2 top-3 z-[45] flex w-[min(22rem,calc(100vw-1.5rem))] -translate-x-1/2 animate-pop items-center gap-3 rounded-[22px] bg-[#1c2430]/92 px-3.5 py-2.5 text-left text-white shadow-[0_16px_40px_-12px_rgba(0,0,0,0.55)] ring-1 ring-white/10 backdrop-blur-xl"
+        >
+          <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#34c759]">
+            <span aria-hidden className="absolute inset-0 animate-ping rounded-full bg-[#34c759]/50" />
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden className="relative"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z" /></svg>
+          </span>
+          <span className="min-w-0 flex-1">
+            <b className="block truncate text-[14px]">{game.phone.ringing.name}</b>
+            <span className="block truncate text-[12px] text-white/70">{game.phone.ringing.video ? "视频" : "语音"}来电 · 点按去手机接听</span>
+          </span>
+        </button>
       )}
 
       {/* 牌坊菜单：右上角下拉，收纳全部牌位 */}
-      {menuOpen && (
+      {menuOpen && createPortal(
         <div className="fixed inset-0 z-40" role="dialog" aria-modal="true">
           <button aria-label="关闭菜单" onClick={() => setMenuOpen(false)} className="absolute inset-0 bg-[#2b2247]/40 backdrop-blur-[3px]" />
           <div className="absolute right-3 top-14 max-h-[calc(100dvh-5rem)] w-[min(21rem,calc(100vw-1.5rem))] animate-pop overflow-hidden rounded-[26px] border border-line bg-gradient-to-b from-paper-2/95 via-paper-2/92 to-paper-2/95 shadow-[0_28px_70px_-18px_rgba(120,90,200,0.65)] backdrop-blur-2xl">
@@ -480,16 +936,16 @@ export default function GameShell() {
             <div className="relative max-h-[calc(100dvh-5rem)] overflow-y-auto px-3.5 py-3.5">
               {/* 标题 */}
               <div className="mb-2.5 flex items-center gap-2 px-1">
-                <span className="text-[15px] text-coral">✿</span>
+                <IconMenu size={16} className="text-coral" />
                 <span className="text-[13px] font-black tracking-[0.18em] text-jade-deep">菜单</span>
                 <span className="text-[10.5px] font-semibold tracking-[0.22em] text-ink-soft">MENU</span>
-                <span className="ml-auto text-[12px] text-coral">❀</span>
+                <IconSpark size={14} className="ml-auto text-coral" />
               </div>
 
               {/* 主牌位 */}
               <div className="grid grid-cols-1 gap-1.5">
-                {/* 底部已有的页面不在菜单重复展示。 */}
-                {MENU.filter((m) => !BOTTOM_TAB_IDS.includes(m.id)).map((m) => (
+                {/* 世界为当前主场景，其余功能统一收纳在菜单中。 */}
+                {menuItems().filter((m) => !["home", "npc", "actions", "phone"].includes(m.id)).map((m) => (
                   <MenuRow
                     key={m.id}
                     icon={m.icon}
@@ -510,24 +966,40 @@ export default function GameShell() {
               </div>
               <div className="grid grid-cols-1 gap-1.5">
                 <MenuRow
+                  icon={IconSparkle} label="玩法引导" romaji="GUIDE" hint="重新看一遍：光点、选项、行动点和推进分别怎么用"
+                  onClick={() => { setMenuOpen(false); setTab("home"); window.setTimeout(() => window.dispatchEvent(new Event("star:tour")), 350); }}
+                />
+                <MenuRow
                   icon={IconSave} label="存档管理" romaji="SAVE" hint="立即存档 · 读取 / 删除历史存档"
                   onClick={() => { openSaves(); setMenuOpen(false); }}
                   badge={`${game.turnCount} 回合`} badgeTone="jade"
                 />
                 <MenuRow
-                  icon={IconScroll} label="我的作品" romaji={ROMAJI.works} hint="通告履历 · 作品库 · 出演角色"
+                  icon={IconFlag} label="结束游戏" romaji="FIN" hint="手动结束并生成后记与人生评级；不结束则等 AI 判定结局"
+                  onClick={() => { setEndOpen(true); setMenuOpen(false); }}
+                />
+                {feature("career") && <MenuRow
+                  icon={IconScroll} label="我的作品" romaji={ROMAJI.works} hint={`${T("gig")}履历 · 作品库 · 出演角色`}
                   onClick={() => { setWorksOpen(true); setMenuOpen(false); }}
                   badge={`${game.sim.works} 部 · ${game.sim.awards} 奖`} badgeTone="jade"
+                />}
+                <MenuRow
+                  icon={IconSparkle} label="CG 图鉴" romaji="" hint="好感与剧情达成后解锁的剧情插图"
+                  onClick={() => { setCgOpen(true); setMenuOpen(false); }}
+                  badge={`${Object.keys(game.cgUnlocked ?? {}).length}/${(game.cgs ?? []).filter((c) => c.enabled !== false).length}`} badgeTone="gold"
                 />
-                
+                <MenuRow
+                  icon={IconFlag} label="剧情志" romaji="STORY" hint="支线剧情 · 收藏留存 · 一键导出"
+                  onClick={() => { setQuestOpen(true); setMenuOpen(false); }}
+                  badge={`${(game.journal ?? []).length} 篇`} badgeTone="gold"
+                />
                 <MenuRow
                   icon={IconWallet} label="财务 · 支票账单" romaji={ROMAJI.finance} hint="周日结算 · 演艺进账与开销"
                   onClick={() => { setFinOpen(true); setMenuOpen(false); }}
-                  badge={`¥${(game.sim.money / 10000).toFixed(1)}万`} badgeTone={game.sim.money < 0 ? "danger" : "jade"}
+                  badge={wallet.short(wallet.balance(game), game)} badgeTone={wallet.balance(game) < 0 ? "danger" : "jade"}
                 />
               </div>
 
-              <MenuRow icon={IconUser} label="编辑器" romaji="EDITOR" hint="NPC 属性与资料 · 职业库 · 世界规则 · 地图" onClick={() => { setNpcFieldsOpen(true); setMenuOpen(false); }} />
               {/* 设置 · 外观 */}
               <div className="my-3 flex items-center gap-2 px-1">
                 <span className="h-px flex-1 bg-gradient-to-r from-transparent to-line" />
@@ -540,42 +1012,81 @@ export default function GameShell() {
                   onClick={toggleTheme}
                   badge={isDark ? "已开启" : "已关闭"} badgeTone={isDark ? "jade" : "muted"}
                 />
-
-
-
+                <MenuRow
+                  icon={IconBook} label="编辑器" romaji="EDITOR" hint="世界规则 · 世界书 · 地图 · 固定事件 · 结局 · 固定人物"
+                  onClick={() => { setEditorOpen(true); setMenuOpen(false); }}
+                />
                 <MenuRow
                   icon={IconSettings} label="AI 配置" romaji="MODEL" hint="接入模型 · API Key · 叙事引擎设置"
                   onClick={() => { setCfgOpen(true); setMenuOpen(false); }}
                   badge={cfg?.apiKey ? "已接入" : "未配置"} badgeTone={cfg?.apiKey ? "jade" : "muted"}
                 />
-                
+                <MenuRow
+                  icon={IconSparkle} label="游戏设置" romaji="OPTIONS" hint="界面皮肤 · 背景音乐 · 字体风格 · 屏幕方向"
+                  onClick={() => { setSetOpen(true); setMenuOpen(false); }}
+                />
               </div>
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
 
-      {pageHeader}
       {/* 内容区：各功能封装为独立整屏界面，常驻挂载、切换保留状态 */}
       <main className="relative min-h-0 flex-1">
         <div className={`absolute inset-0 ${tab === "home" ? "" : "hidden"}`}>{seen.has("home") && <HomeTab />}</div>
-        <div className={`absolute inset-0 overflow-y-auto ${tab === "image" ? "" : "hidden"}`}>{seen.has("image") && <ImageTab />}</div>
+        <div className={`absolute inset-0 overflow-y-auto ${tab === "image" ? "" : "hidden"}`}>{seen.has("image") && feature("imageCrisis") && <ImageTab />}</div>
         <div className={`absolute inset-0 overflow-y-auto ${tab === "npc" ? "" : "hidden"}`}>{seen.has("npc") && <NpcTab />}</div>
-        <div className={`absolute inset-0 overflow-y-auto ${tab === "actions" ? "" : "hidden"}`}>{seen.has("actions") && <ActionsTab />}</div>
-        <div className={`absolute inset-0 overflow-y-auto ${tab === "phone" ? "" : "hidden"}`}>{seen.has("phone") && <Phone />}</div>
-        <div className={`absolute inset-0 overflow-y-auto ${tab === "quest" ? "" : "hidden"}`}>{seen.has("quest") && <div className="mx-auto max-w-2xl p-4"><StoryQuestPanel /></div>}</div>
-        <div className={`absolute inset-0 overflow-y-auto ${tab === "settings" ? "" : "hidden"}`}>{seen.has("settings") && <div className="mx-auto max-w-2xl p-4">{settingsContent}</div>}</div>
+        <div className={`absolute inset-0 overflow-y-auto ${tab === "actions" ? "" : "hidden"}`}>{seen.has("actions") && feature("industryTab") && <ActionsTab />}</div>
+        <div className={`absolute inset-0 overflow-hidden ${tab === "phone" ? "" : "hidden"}`}>{seen.has("phone") && <Phone />}</div>
+
+        {/* 任务（剧情志）· 常驻页签，与「世界 / 娱乐圈」同级 */}
+        <div className={`absolute inset-0 overflow-y-auto ${tab === "quest" ? "" : "hidden"}`}>
+          {seen.has("quest") && <StoryQuestPanel />}
+        </div>
+
+        {/* 设置 · 常驻页签（皮肤 / 字体 / 版式） */}
+        <div className={`absolute inset-0 overflow-y-auto ${tab === "settings" ? "" : "hidden"}`}>
+          {seen.has("settings") && <SettingsPanel onBeauty={() => setBeautyOpen(true)} />}
+        </div>
       </main>
 
       {/* 底部时辰盘 · 石牌导航 */}
-      <MudChrome tab={tab} setTab={openFeature}  />
+      <MudChrome tab={tab} setTab={openFeature} />
+      {!landscape && <GameTour active={tab === "home"} />}
 
-      {npcFieldsOpen && <Modal title="编辑器" onClose={() => setNpcFieldsOpen(false)} wide><EditorPanel /></Modal>}
+      {/* 支线剧场：点事件进入扣行程点，支线内行动不再扣 */}
+      <BranchSheet />
+
       {/* 通用行动结果弹窗 */}
       {popup && (
-        <Modal title={popup.title} onClose={() => setPopup(null)}>
-          <Segments segments={popup.segments} npcs={game.npcs} playerAvatar={game.player.avatar} playerName={game.player.name} />
-          {popup.changes.length > 0 && (
+        <Modal title={popup.scene && !popup.report ? "场景" : popup.title} onClose={() => setPopup(null)}>
+          {popup.diary && !popup.report && <DiaryCard d={popup.diary} />}
+          {popup.report ? (
+            <WeekReportCard report={popup.report} changes={popup.changes} diary={popup.diary} bill={popup.report.span ? null : game?.sim.lastBill} earned={game?.sim.lastCheck?.amount} onNext={() => setPopup(null)} />
+          ) : popup.scene ? (
+            <article className="scene-sheet -mx-1 overflow-hidden rounded-[22px] border border-line bg-paper shadow-[0_10px_30px_-20px_var(--jade)]">
+              <header className="relative bg-gradient-to-br from-jade/20 via-paper-2 to-coral/20 px-4 pb-3 pt-4">
+                <h3 className="font-serif text-[19px] font-bold text-ink">{popup.title}</h3>
+                <p className="mt-1 flex flex-wrap gap-1.5 text-[11px] text-ink-soft">
+                  {popup.scene.location && <span className="inline-flex items-center gap-1 rounded-full bg-paper/80 px-2 py-0.5"><IconPin size={12} /> {popup.scene.location}</span>}
+                  {popup.scene.time && <span className="inline-flex items-center gap-1 rounded-full bg-paper/80 px-2 py-0.5"><IconClock size={12} /> {popup.scene.time}</span>}
+                </p>
+              </header>
+              <div className="px-4 py-3.5">
+                <Segments segments={popup.segments} npcs={game.npcs} playerAvatar={game.player.avatar} playerName={game.player.name} />
+              </div>
+            </article>
+          ) : popup.diary ? null : (
+            <Segments segments={popup.segments} npcs={game.npcs} playerAvatar={game.player.avatar} playerName={game.player.name} />
+          )}
+          {!popup.report && <CastRow segments={popup.segments} changes={popup.changes} npcs={game.npcs} onOpen={() => setPopup(null)} />}
+          {!popup.report && <NewcomerCards ids={popup.newcomers} />}
+          {popup.retry && (
+            <button type="button" disabled={busy} onClick={retryPopup} className="mt-4 w-full rounded-full border border-[var(--danger)]/40 bg-[var(--danger)]/5 py-2 text-[13px] font-semibold text-[var(--danger)] transition hover:bg-[var(--danger)]/10 disabled:opacity-50">
+              ↻ 重新触发
+            </button>
+          )}
+          {!popup.report && !popup.diary && popup.changes.length > 0 && (
             <div className="mt-4 flex flex-wrap gap-2 border-t border-line pt-3">
               {popup.changes.map((c, i) => (
                 <Chip key={i} tone={/(-|敌意|压力)/.test(c) ? "danger" : "jade"}>{c}</Chip>
@@ -585,13 +1096,19 @@ export default function GameShell() {
         </Modal>
       )}
 
+      {navEditOpen && (
+        <Modal title="底部栏" onClose={() => setNavEditOpen(false)}>
+          <NavTabsEditor />
+        </Modal>
+      )}
+
       {/* 本周日程板：全局弹窗，从「世界」页入口直接唤出 */}
       <ScheduleBoard open={schedOpen} onClose={() => setSchedOpen(false)} />
 
       {/* 人物档案：点左上角头像唤出（原「人物」页内容，现以弹窗呈现） */}
       {simOpen && (
         <Modal title="人物档案" onClose={() => setSimOpen(false)} wide>
-          <SimTab />
+          <SimTab embedded />
         </Modal>
       )}
 
@@ -621,14 +1138,124 @@ export default function GameShell() {
       {/* 地图编辑器 · 点位 / 背景 / 物件 */}
       {mapEditOpen && (
         <Modal title="地图编辑器 · 点位与物件" onClose={() => setMapEditOpen(false)} wide>
-          <MapEditorPanel />
+          <Suspense fallback={<PanelLoading />}><MapEditorPanel /></Suspense>
         </Modal>
       )}
 
-      {/* 剧情志 · 支线剧情 / 收藏 / 导出 */}
-      {storyOpen && (
-        <Modal title="剧情志 · 支线与收藏" onClose={() => setStoryOpen(false)} wide>
-          <StoryQuestPanel />
+      {/* 模组 / 世界观管理 */}
+      {modsOpen && (
+        <Modal title="创意工坊" onClose={() => setModsOpen(false)} xl>
+          <Suspense fallback={<PanelLoading />}><ModManagerPanel /></Suspense>
+        </Modal>
+      )}
+
+      <AllowanceWatcher />
+      {questOpen && (
+        <Modal title="剧情志" onClose={() => setQuestOpen(false)} wide>
+          <StoryQuestPanel onNavigate={() => setQuestOpen(false)} />
+        </Modal>
+      )}
+
+      {editorOpen && (() => {
+        const go = (f: (v: boolean) => void, back = true) => () => { f(true); setEditorOpen(false); setHubReturn(back); };
+        const n = (x: number, u: string) => `${x} ${u}`;
+        const fixedN = (game.fixedEvents ?? []).length, endN = (game.customEndings ?? []).length;
+        const bookN = (game.worldBook ?? defaultWorldBook()).filter((e) => e.enabled).length;
+        const mapN = Object.keys(game.mapEdits ?? {}).length, kbN = Object.keys(game.npcKb ?? {}).length;
+        const personaN = game.npcs.filter((x) => x.persona?.gender || x.persona?.text?.trim() || x.persona?.voice?.trim() || x.edited?.length || x.home).length;
+        const allPaths = creationCopy().paths ?? [];
+        const lockedPathN = allPaths.filter((p) => !p.open).length;
+        return (
+          <Modal title="编辑器" onClose={() => setEditorOpen(false)} wide>
+            {(() => {
+              // 功能注释：菜单文案与 editorHubMenus 同源，创作向导第 2 步据此全量迁移，禁止再手写 label
+              const hub = (id: string) => EDITOR_HUB_MENUS.find((m) => m.id === id)!;
+              return (
+            <EditorHub
+              project={modWorld.chain[0].name}
+              stats={[{ k: "地点", v: LIVE_LOCATIONS.length }, { k: "人物", v: game.npcs.length }, { k: "事件", v: fixedN }, { k: "结局", v: endN }]}
+              groups={[
+                { id: "now", title: "本局修订", scope: "即改即生效", tools: [
+                  { id: "person", label: hub("person").label, en: "", hint: hub("person").hint, icon: IconUser, stat: personaN || kbN ? n(personaN, "位已改") : "原貌", done: personaN > 0 || kbN > 0, onOpen: go(setPersonOpen), panel: () => <FixedPersonPanel /> },
+                  { id: "map", label: hub("map").label, en: "", hint: hub("map").hint, icon: IconPin, stat: mapN ? n(mapN, "处已改") : "原貌", done: mapN > 0, onOpen: go(setMapEditOpen), panel: () => <MapEditorPanel /> },
+                  { id: "rules", label: hub("rules").label, en: "", hint: hub("rules").hint, icon: IconScroll, stat: game.worldRules?.enabled ? "已启用" : "循现实", done: !!game.worldRules?.enabled, onOpen: go(setRulesOpen), panel: () => <WorldRulesPanel /> },
+                  { id: "engine", label: hub("engine").label, en: "", hint: hub("engine").hint, icon: IconScroll, stat: game.engineRules ? "已自定" : "默认", done: !!game.engineRules, onOpen: go(setEngineOpen), panel: () => <EngineRulesPanel /> },
+                  { id: "beauty", label: hub("beauty").label, en: "", hint: hub("beauty").hint, icon: IconSparkle, stat: "外观", done: true, onOpen: go(setBeautyOpen), panel: () => <SettingsPanel bare section="beauty" /> },
+                  { id: "nav", label: hub("nav").label, en: "", hint: hub("nav").hint, icon: IconSparkle, stat: game.navTabs?.length ? "已自定" : "默认", done: !!game.navTabs?.length, onOpen: go(setNavEditOpen), panel: () => <NavTabsEditor /> },
+                  { id: "book", label: hub("book").label, en: "", hint: hub("book").hint, icon: IconScroll, stat: n(bookN, "条"), done: bookN > 0, onOpen: go(setBookOpen), panel: () => <WorldBookPanel /> },
+                ] },
+                { id: "story", title: "剧情编排", scope: "条件达成即上演", tools: [
+                  { id: "fixed", label: hub("fixed").label, en: "", hint: hub("fixed").hint, icon: IconFlag, stat: fixedN ? n(fixedN, "段") : "暂无", done: fixedN > 0, onOpen: go(setFixedOpen), panel: () => <FixedEventsPanel /> },
+                  { id: "cg", label: hub("cg").label, en: "", hint: hub("cg").hint, icon: IconSparkle, stat: (game.cgs ?? []).length ? n((game.cgs ?? []).length, "张") : "暂无", done: (game.cgs ?? []).length > 0, onOpen: go(setCgEditOpen), panel: () => <CgPanel /> },
+                  { id: "audio", label: hub("audio").label, en: "", hint: hub("audio").hint, icon: IconSparkle, stat: (game.audio ?? []).length ? n((game.audio ?? []).length, "条") : "暂无", done: (game.audio ?? []).length > 0, onOpen: go(setAudioOpen), panel: () => <AudioLibraryPanel /> },
+                  { id: "faction", label: hub("faction").label, en: "", hint: hub("faction").hint, icon: IconUser, stat: (game.factions ?? []).length ? n((game.factions ?? []).length, "个") : "暂无", done: (game.factions ?? []).length > 0, onOpen: go(setFactionOpen), panel: () => <FactionsPanel /> },
+                  { id: "timeline", label: hub("timeline").label, en: "", hint: hub("timeline").hint, icon: IconScroll, stat: (game.timeline ?? []).length ? n((game.timeline ?? []).length, "条") : "暂无", done: (game.timeline ?? []).length > 0, onOpen: go(setTimelineOpen), panel: () => <TimelinePanel onLeave={() => setEditorOpen(false)} /> },
+                  { id: "end", label: hub("end").label, en: "", hint: hub("end").hint, icon: IconFlag, stat: endN ? n(endN, "个") : "暂无", done: endN > 0, onOpen: go(setEndingsOpen), panel: () => <EndingsPanel /> },
+                ] },
+                { id: "mod", title: "世界观", scope: "新局生效 · 可导出分享", tools: [
+                  { id: "paths", label: hub("paths").label, en: "", hint: hub("paths").hint, icon: IconFlag, stat: lockedPathN ? `${lockedPathN} 未解锁` : `${allPaths.length} 已解锁`, done: lockedPathN > 0, onOpen: go(setModsOpen, false), panel: () => <PathUnlockPanel /> },
+                  { id: "mods", label: hub("mods").label, en: "", hint: hub("mods").hint, icon: IconSparkle, stat: modWorld.chain[0].name.split(" ")[0], done: true, onOpen: go(setModsOpen, false), panel: () => <ModManagerPanel /> },
+                ] },
+              ]}
+            />
+              );
+            })()}
+          </Modal>
+        );
+      })()}
+
+
+      {/* 固定事件 · 创作者预设剧本（满足条件后代码判定触发） */}
+      {fixedOpen && (
+        <Modal title="固定事件 · 剧本编排" onClose={() => setFixedOpen(false)} wide>
+          <Suspense fallback={<PanelLoading />}><FixedEventsPanel /></Suspense>
+        </Modal>
+      )}
+
+      {setOpen && <Modal title="设置" wide onClose={() => setSetOpen(false)}><SettingsPanel bare onBeauty={() => { setSetOpen(false); setBeautyOpen(true); }} /></Modal>}
+      {beautyOpen && <Modal title="美化" wide onClose={() => setBeautyOpen(false)}><SettingsPanel bare section="beauty" /></Modal>}
+      {cgOpen && (
+        <Modal title="CG 图鉴" onClose={() => setCgOpen(false)} wide>
+          <CgGallery />
+        </Modal>
+      )}
+      {audioOpen && (
+        <Modal title="音频库 · BGM & 音效" onClose={() => setAudioOpen(false)} wide>
+          <AudioLibraryPanel />
+        </Modal>
+      )}
+      {cgEditOpen && (
+        <Modal title="CG 图鉴编排" onClose={() => setCgEditOpen(false)} wide>
+          <CgPanel />
+        </Modal>
+      )}
+
+      {engineOpen && (
+        <Modal title="底层世界规则" onClose={() => setEngineOpen(false)} wide>
+          <EngineRulesPanel />
+        </Modal>
+      )}
+      {factionOpen && (
+        <Modal title="阵营派系" onClose={() => setFactionOpen(false)} wide>
+          <FactionsPanel />
+        </Modal>
+      )}
+      {timelineOpen && (
+        <Modal title="主线复盘 · 时间线" onClose={() => setTimelineOpen(false)} wide>
+          <TimelinePanel onLeave={() => setTimelineOpen(false)} />
+        </Modal>
+      )}
+
+      {endingsOpen && (
+        <Modal title="结局设定 · 多结局编排" onClose={() => setEndingsOpen(false)} wide>
+          <EndingsPanel />
+        </Modal>
+      )}
+
+      {/* 固定人物 · 新增 / 基础资料与常驻地点 / 性别 / 人设 / 说话口吻 */}
+      {personOpen && (
+        <Modal title="人物" onClose={() => setPersonOpen(false)} wide>
+<FixedPersonPanel />
         </Modal>
       )}
 
@@ -693,7 +1320,7 @@ export default function GameShell() {
                 <div key={id} className={`rounded-xl border p-3 ${cur ? "border-jade/60 bg-jade/[0.06]" : "border-line bg-paper"}`}>
                   <div className="flex items-center gap-3">
                     <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[12px] font-bold ${cur ? "bg-jade text-paper-2" : "bg-paper-2 text-ink-soft"}`}>
-                      {cur ? "▶" : i + 1}
+                      {cur ? <IconPlay size={12} /> : i + 1}
                     </span>
                     <div className="min-w-0 flex-1">
                       {editId === id ? (
@@ -746,28 +1373,13 @@ export default function GameShell() {
         </Modal>
       )}
 
-      {/* 游戏设置：界面皮肤 / 字体风格 / 版式方向 */}
-      {setOpen && (
-        <Modal title="游戏设置" onClose={() => setSetOpen(false)} wide>
-          {settingsContent}
-          <div className="mt-4 border-t border-line pt-4">
-            <h3 className="mb-2 text-sm font-bold text-ink">存档与世界设定</h3>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <button onClick={() => { setSetOpen(false); openSaves(); }} className="rounded-lg border border-line bg-paper px-3 py-2 text-left text-sm text-ink hover:border-jade"><span className="block font-semibold">存档管理</span><span className="text-[11px] text-ink-soft">自动存档、手动存档、读取与删除</span></button>
-              <button onClick={() => { setSetOpen(false); setBookOpen(true); }} className="rounded-lg border border-line bg-paper px-3 py-2 text-left text-sm text-ink hover:border-jade"><span className="block font-semibold">自定义世界书</span><span className="text-[11px] text-ink-soft">添加规则片段、关键词和背景设定</span></button>
-              <button onClick={() => { setSetOpen(false); setRulesOpen(true); }} className="rounded-lg border border-line bg-paper px-3 py-2 text-left text-sm text-ink hover:border-jade"><span className="block font-semibold">世界规则与重复惩罚</span><span className="text-[11px] text-ink-soft">调整社会规则、行为后果和重复行为惩罚</span></button>
-              <button onClick={() => { setSetOpen(false); setMapEditOpen(true); }} className="rounded-lg border border-line bg-paper px-3 py-2 text-left text-sm text-ink hover:border-jade"><span className="block font-semibold">地图与场景</span><span className="text-[11px] text-ink-soft">编辑地点、背景图、物件和剧情事件</span></button>
-            </div>
-          </div>
-        </Modal>
-      )}
-
       {/* 结束游戏 */}
       {endOpen && (
         <Modal title="要在这里落幕吗？" onClose={() => (busy ? undefined : setEndOpen(false))}>
           <p className="story-prose text-[14px] text-ink/90">
             每一段星路都会有谢幕的时刻。如果你觉得她的故事已经圆满，可以在此刻温柔地合上这本书——我会为她写下完整的生平后记。<br /><br />
-            当然，你也可以继续走下去，把结局交给时间与命运去判定。
+            当然，你也可以继续走下去，把结局交给时间与命运——由 AI 判定结局。<br /><br />
+            无论哪种方式，都会生成一篇<b>不少于 1000 字</b>的生平记事与后传，并给出评价这一生的<b>人生评级</b>（S+ ~ D）。
           </p>
           <div className="mt-5 flex gap-3">
             <button onClick={() => setEndOpen(false)} disabled={busy} className="flex-1 rounded-lg border border-line py-2.5 text-sm font-medium text-ink transition hover:bg-line/40 disabled:opacity-50">

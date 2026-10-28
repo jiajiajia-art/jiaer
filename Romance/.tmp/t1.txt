@@ -1,0 +1,89 @@
+./components/CharacterCreate.tsx:406:          ...(TRAITS.length ? ["初始特质（1 个）"] : []),
+./components/CharacterCreate.tsx:548:  /* ② 人设 · 天赋形象：人物线路摘要 · 初始特质 · 外形风格 · 人物描述 */
+./components/CharacterCreate.tsx:564:        <Card title="初始特质" desc="只能选 1 个，开局即生效">
+./worlds/star2005/content.ts:86: * needTrait 校验你的初始特质（性格）；minRel 校验你与 TA 的关系状态（双方状态）。once 为一次性。
+./imports/pasted_text/pasted-attachment-1.txt:264:### 3.6 初始特质
+./imports/pasted_text/pasted-attachment-1.txt:270:| 天籁嗓音 | 歌艺 +20，唱片歌艺成长 +15% |
+./imports/pasted_text/pasted-attachment-2.txt:264:### 3.6 初始特质
+./imports/pasted_text/pasted-attachment-2.txt:270:| 天籁嗓音 | 歌艺 +20，唱片歌艺成长 +15% |
+./imports/pasted_text/pasted-attachment-3.txt:264:### 3.6 初始特质
+./imports/pasted_text/pasted-attachment-3.txt:270:| 天籁嗓音 | 歌艺 +20，唱片歌艺成长 +15% |
+./imports/pasted_text/pasted-attachment.txt:264:### 3.6 初始特质
+./imports/pasted_text/pasted-attachment.txt:270:| 天籁嗓音 | 歌艺 +20，唱片歌艺成长 +15% |
+./game/data.ts:202:// 3.6 初始特质
+./game/data.ts:204:  { id: "voice", name: "天籁嗓音", tag: "成长", desc: "歌艺 +20，唱片歌艺成长 +15%", stats: { geyi: 20 } },
+./game/data.ts:824:      choose: ["姓名 / 性别 / 头像", "出生月日 → 星座与专属加成", "父亲职业 / 母亲职业", "家庭背景 / 出身阶层 / 家�
+./game/data.ts:838:      choose: ["姓名 / 性别 / 头像", "出生月日 → 星座与专属加成", "父亲职业 / 母亲职业", "家庭背景 / 出身阶层 / 家�
+./game/data.ts:851:      choose: ["姓名 / 性别 / 头像", "出生月日 → 星座与专属加成", "父亲职业 / 母亲职业", "家庭背景 / 出身阶层 / 家�
+./game/data.ts:863:      choose: ["姓名 / 性别 / 头像", "出生月日 → 星座与专属加成", "父亲职业 / 母亲职业", "家庭背景 / 出身阶层 / 家�
+./lib/ai.ts:498:${pathBackground(state)}特质：${p.traits.map((t) => t.name).join("、") || "暂无"}
+./lib/ai.ts:860:      if (!next.player.traits.some((x) => x.name === t.name)) {
+./lib/ai.ts:861:        next.player.traits.push(t);
+./lib/types.ts:31:export type Trait = {
+./lib/types.ts:54:  traits: Trait[];
+./lib/types.ts:725:    traits_add?: Trait[];
+./lib/store.ts:244:  traitIds: [],
+./components/CharacterCreate.tsx:13:import { STYLES, IDENTITIES, BACKGROUNDS, DIRECTIONS, TRAITS, PARENT_JOBS, schoolName, creationCopy, savePathLock, zodiacOf, defaultWo
+./components/CharacterCreate.tsx:186:  const [traitIds, setTraitIds] = useState<string[]>(TRAITS[0] ? [TRAITS[0].id] : []);
+./components/CharacterCreate.tsx:216:    setTraitIds(TRAITS[0] ? [TRAITS[0].id] : []);
+./components/CharacterCreate.tsx:242:        if (TRAITS.length) setTraitIds([rand(TRAITS).id]);
+./components/CharacterCreate.tsx:251:  const toggleTrait = (id: string) =>
+./components/CharacterCreate.tsx:270:    const traitDefs = TRAITS.filter((t) => traitIds.includes(t.id));
+./components/CharacterCreate.tsx:290:      { name: player.name, styleId: form.styleId, identityId, backgroundId: form.backgroundId, directionId: "", traitIds, zodiacId: z
+./components/CharacterCreate.tsx:406:          ...(TRAITS.length ? ["初始特质（1 个）"] : []),
+./components/CharacterCreate.tsx:550:  const traitDesc = TRAITS.find((t) => traitIds.includes(t.id))?.desc;
+./components/CharacterCreate.tsx:563:      {TRAITS.length > 0 && (
+./components/CharacterCreate.tsx:568:              {TRAITS.map((t) => {
+./components/CharacterCreate.tsx:569:                const on = traitIds.includes(t.id);
+./components/CharacterCreate.tsx:571:                  <button key={t.id} type="button" onClick={() => toggleTrait(t.id)} title={t.desc} aria-pressed={on}
+./components/ModEditorPanel.tsx:119:      [c.styles, c.identities, c.backgrounds, c.directions, c.school, c.parentJobs].some(has), has(c.traits), has(c.avatars), has(c.np
+./components/ModEditorPanel.tsx:205:  const traits = c.traits ?? [];
+./components/ModEditorPanel.tsx:207:  const dupTrait = new Set(traits.map((t) => t.id).filter((id, i, a) => a.indexOf(id) !== i));
+./components/ModEditorPanel.tsx:240:  const setTrait = (i: number, p: Partial<Option>) => setC({ traits: traits.map((t, j) => (j === i ? { ...t, ...p } : t)) });
+./components/ModEditorPanel.tsx:257:      dupNpc.size ? `人物 id 重复：${[...dupNpc].join("、")}` : "", dupTrait.size ? `特质 id 重复：${[...dupTrait].join("�
+./components/ModEditorPanel.tsx:560:      <Section g="role" title="特质" on={has(c.traits)} hint="建角可选的性格 / 天赋" count={traits.length}>
+./components/ModEditorPanel.tsx:565:              <input className={`${inp} w-24 shrink-0 font-mono`} value={t.id} placeholder="id" onChange={(e) => setTrait(i, { id: slu
+./components/ModEditorPanel.tsx:566:              <input className={inp} value={t.name} placeholder="名称" onChange={(e) => setTrait(i, { name: e.target.value })} />
+./components/ModEditorPanel.tsx:567:              <input className={`${inp} w-16 shrink-0`} value={t.tag} placeholder="标签" onChange={(e) => setTrait(i, { tag: e.targe
+./components/ModEditorPanel.tsx:570:            <input className={inp} value={t.desc} placeholder="说明" onChange={(e) => setTrait(i, { desc: e.target.value })} />
+./components/ModEditorPanel.tsx:571:            <FieldErr>{!t.id ? "id 必填" : dupTrait.has(t.id) ? "id 重复" : ""}</FieldErr>
+./components/ModEditorPanel.tsx:574:        <button className={btn} onClick={() => setC({ traits: [...traits, { id: shortId("t_"), name: "", desc: "", tag: "" }] })}>＋ 
+./components/ModManagerPanel.tsx:53:    n(c.traits) && `特质 ${n(c.traits)}`, n(c.fixedEvents) + n(c.events) && `事件 ${n(c.fixedEvents) + n(c.events)}`,
+./components/EntityText.tsx:5:import { TRAITS } from "../game/data";
+./components/EntityText.tsx:10: * 名录取自内容池（LOCATIONS / 各房间物品 / TRAITS）与当前存档人物（game.npcs）。 */
+./components/EntityText.tsx:26:const traitEntries = () => TRAITS.filter((t) => t.name.length >= 2).map((t) => ({ name: t.name, type: "trait" as const, id: t.id }));
+./components/EntityText.tsx:73:  const t = TRAITS.find((x) => x.id === refr.id);
+./components/phone/ForumApp.tsx:146:  const extra = `主角人设：${game.player.description || "（未填写）"}；特质：${(game.player.traits ?? []).map((t) => t.n
+./components/phone/BossZhipinApp.tsx:389:  const [tab, setTab] = useState<"posts" | "talent" | "me">("posts");
+./components/phone/BossZhipinApp.tsx:452:      {tab === "talent" && (
+./components/phone/BossZhipinApp.tsx:507:        {(["posts", "talent", "me"] as const).map((id) => (
+./components/phone/BossZhipinApp.tsx:509:            {id === "posts" ? "职位管理" : id === "talent" ? "找人才" : "我的"}
+./components/SimTab.tsx:7:import type { Trait } from "../lib/types";
+./components/SimTab.tsx:195:  const [trait, setTrait] = useState<Trait | null>(null); // 点开查看的特质详情
+./components/SimTab.tsx:330:              {p.traits.length > 0 && (
+./components/SimTab.tsx:332:                  {p.traits.map((t) => (
+./components/SimTab.tsx:336:                      onClick={() => setTrait(t)}
+./components/SimTab.tsx:535:        <Modal title="特质与天赋" onClose={() => setTrait(null)} heavyBackdrop>
+./components/FixedPersonPanel.tsx:25:const TRAITS = ["嘴硬心软", "占有欲强", "外冷内热", "很黏我", "爱吃醋", "事业狂", "护短", "表面玩世不恭"
+./components/FixedPersonPanel.tsx:178:  const addTrait = (t: string) => {
+./components/FixedPersonPanel.tsx:245:            {TRAITS.map((t) => (
+./components/FixedPersonPanel.tsx:246:              <button key={t} onClick={() => addTrait(t)} disabled={text.includes(t)}
+./components/ScheduleBoard.tsx:49:    const thrift = s.char.traitIds.includes("save") ? 0.85 : 1;
+./components/ScheduleBoard.tsx:93:  const thrift = s.char.traitIds.includes("save") ? 0.85 : 1;
+./components/ScenePanel.tsx:9:const PORTRAITS: [NonNullable<ThemePref["portrait"]>, string, string][] = [["side", "立绘模式", "逐句播放 · 立绘在人物资料�
+./components/ScenePanel.tsx:45:        {PORTRAITS.map(([v, l, d]) => {
+./worlds/star2005/content.ts:86: * needTrait 校验你的初始特质（性格）；minRel 校验你与 TA 的关系状态（双方状态）。once 为一次性。
+./worlds/star2005/content.ts:95:  needTrait?: string;
+./worlds/star2005/content.ts:135:    needTrait: "voice",
+./mods/balance.ts:86:  const bonus = maxStartBonus([ent.identities, ent.styles, ent.traits, ent.backgrounds, ent.directions, ent.zodiacs]);
+./mods/balance.ts:110:  const pools: [string, BonusSrc[] | undefined][] = [["出道身份", c.identities], ["外形风格", c.styles], ["特质", c.traits], ["家庭背�
+./mods/ent/index.ts:14:  GIG_POOL, LOCATIONS, WORLD_RULE_DIMS, RAW_STAT_LABELS, RAW_STATS_BASE, RAW_STAT_ORDER, RAW_TRAITS, RAW_TRAININGS, RAW_SIDE_JOBS, RAW_ZODIACS,
+./mods/ent/index.ts:59:  get traits() { return RAW_TRAITS; },
+./game/logic.ts:33:  TRAITS,
+./game/logic.ts:63:  traitIds: string[];
+./game/logic.ts:370:    ...char.traitIds.map((t) => findOpt(TRAITS, t)),
+./game/logic.ts:710:  const traits = n.char.traitIds;
+./game/logic.ts:820:  const traits = s.char.traitIds;
+./game/data.ts:203:export const RAW_TRAITS: Option[] = [
+./game/data.ts:216:export const TRAITS: Option[] = liveArray(() => slot("traits", () => RAW_TRAITS));
+./game/mud.ts:406:  if (e.needTrait && !(s.char.traitIds ?? []).includes(e.needTrait)) return false;

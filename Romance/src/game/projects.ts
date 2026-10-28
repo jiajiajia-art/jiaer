@@ -1,3 +1,5 @@
+import { wallet } from "./wallet";
+import { orderMods } from "./worldRules";
 /* ————— 星光2005 · 项目/通告全生命周期引擎（纯规则层）—————
  * 明星养成式通告状态机：open→applied→pending_result→offered→signed→
  * in_progress→completed→released（或 failed/breached/expired）。
@@ -12,8 +14,11 @@ import {
   evalRequires,
   type ProjectTemplate,
 } from "../worlds/star2005/content";
-import { dayDateLabel } from "./logic";
+import { dayDateLabel, dowOf } from "./logic";
+import { clampStat, type StatKey } from "./data";
+import { liveArray } from "../mods/live";
 import type { GameState } from "./logic";
+import { liveTerm as T } from "../mods/live";
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
@@ -88,7 +93,7 @@ export const statusLabel = (st: ProjectStatus) => POOL.statusLabels[st] ?? st;
 export const categoryLabel = (c: string) => POOL.categoryLabels[c] ?? c;
 export const roleLabel = (r: string) => POOL.roleTypeLabels[r] ?? r;
 export const tplOf = (id: string): ProjectTemplate | undefined => PROJECT_TPL_BY_ID[id];
-export const STRATEGIES = POOL.workStrategies;
+export const STRATEGIES = liveArray(() => POOL.workStrategies);
 
 /* ═══════════════ 通用运算 ═══════════════ */
 function mainReqValue(tpl: ProjectTemplate): number {
@@ -291,7 +296,7 @@ function nextWorkDays(s: GameState, list: ProjectInstance[], count: number): num
   let day = s.day + 1;
   let guard = 0;
   while (out.length < count && guard++ < 400) {
-    if (day % 7 < 5 && !busy.has(day)) out.push(day);
+    if (dowOf(day) < 5 && !busy.has(day)) out.push(day);
     day++;
   }
   return out.length === count ? out : null;
@@ -337,7 +342,7 @@ export function negotiateOffer(s: GameState, id: string): ActResult {
   const after = Math.round(base * (1 + bonus));
   p.history.push(`第${s.week}周·协商报酬：${note}${bonus ? `（+${Math.round(bonus * 100)}%）` : ""}`);
   const msg = bonus
-    ? `${note}：总报酬 ¥${(base / 10000).toFixed(1)}万 → ¥${(after / 10000).toFixed(1)}万（+${Math.round(bonus * 100)}%）。前往签约锁定。`
+    ? `${note}：总报酬 ${wallet.short(base)} → ${wallet.short(after)}（+${Math.round(bonus * 100)}%）。前往签约锁定。`
     : `${note}。可直接按原报价签约。`;
   return { next: withProjects(s, list), ok: true, msg };
 }
@@ -360,11 +365,11 @@ export function signContract(s: GameState, id: string): ActResult {
     breachYuan: Math.round(total * tpl.breachRate), workDays, signedDay: s.day,
   };
   p.status = "signed";
-  p.history.push(`第${s.week}周·签约：预付 ¥${(advance / 10000).toFixed(1)}万，锁定 ${workDays.length} 个工作日`);
+  p.history.push(`第${s.week}周·签约：预付 ${wallet.short(advance)}，锁定 ${workDays.length} 个工作日`);
   return {
-    next: withProjects(s, list, { money: s.money + advance }),
+    next: wallet.add(withProjects(s, list), advance),
     ok: true,
-    msg: `已签约《${tpl.title}》：预付款 ¥${(advance / 10000).toFixed(1)}万到账，档期锁定。到工作日前往「进行中」拍摄。`,
+    msg: `已签约《${tpl.title}》：预付款 ${wallet.short(advance)}到账，档期锁定。到工作日前往「进行中」拍摄。`,
   };
 }
 
@@ -414,7 +419,7 @@ export function doWorkday(s: GameState, id: string, strategyId: string): ActResu
     const out = passed ? ev.pass : ev.fail;
     perf += out.perf;
     stress = clamp(stress + out.stress, 0, 100);
-    reputation = clamp(reputation + out.rep, 0, 100);
+    reputation = clamp(reputation + (out.rep < 0 ? Math.round(out.rep * orderMods().scandal) : out.rep), 0, 100); // 世界规则·社会秩序
     eventMsg = `\n现场事件「${ev.label}」：${out.note}（表现 ${out.perf >= 0 ? "+" : ""}${out.perf}）`;
     p.history.push(`第${s.week}周·现场事件「${ev.label}」${passed ? "过关" : "失手"}`);
   }
@@ -468,8 +473,8 @@ export function completeProject(s: GameState, id: string): ActResult {
   const gMain = Math.round((POOL.growthMain[String(tpl.starLevel)] ?? 8) * tier.growthMul);
   const gSub = Math.round((POOL.growthSub[String(tpl.starLevel)] ?? 4) * tier.growthMul);
   const stats = { ...s.stats } as Record<string, number>;
-  stats[tpl.mainStat] = clamp(stats[tpl.mainStat] + gMain, 0, 999);
-  stats[tpl.subStat] = clamp(stats[tpl.subStat] + gSub, 0, 999);
+  stats[tpl.mainStat] = clampStat(tpl.mainStat as StatKey, stats[tpl.mainStat] + gMain);
+  stats[tpl.subStat] = clampStat(tpl.subStat as StatKey, stats[tpl.subStat] + gSub);
 
   // 待发行作品：仅非失败的合法完成才入库
   const portfolio = (s.portfolio ?? []).map((w) => ({ ...w }));
@@ -483,22 +488,21 @@ export function completeProject(s: GameState, id: string): ActResult {
     });
     releaseNote = `作品进入后期，将于 ${tpl.releaseDelayDays} 天后（第 ${Math.floor(releaseDay / 7) + 1} 周）发行。`;
   } else {
-    releaseNote = "项目失败，不发行，仅保留通告履历。";
+    releaseNote = `项目失败，不发行，仅保留${T("gig")}履历。`;
   }
 
-  p.history.push(`第${s.week}周·杀青：${tier.label}（Q=${p.quality}），尾款 ¥${(finalPay / 10000).toFixed(1)}万`);
+  p.history.push(`第${s.week}周·杀青：${tier.label}（Q=${p.quality}），尾款 ${wallet.short(finalPay)}`);
 
   const next: GameState = {
-    ...s,
+    ...wallet.add(s, finalPay),
     projects: list,
     portfolio,
     stats: stats as GameState["stats"],
-    money: s.money + finalPay,
     reputation: clamp(s.reputation + tier.rep, 0, 100),
     trust: clamp(s.trust + tier.trust, 0, 100),
     defaults: s.defaults,
   };
-  const msg = `《${tpl.title}》杀青 · ${tier.label}（Q=${p.quality}）：尾款 ¥${(finalPay / 10000).toFixed(1)}万，${tpl.mainStat} +${gMain}、${tpl.subStat} +${gSub}。${releaseNote}`;
+  const msg = `《${tpl.title}》杀青 · ${tier.label}（Q=${p.quality}）：尾款 ${wallet.short(finalPay)}，${tpl.mainStat} +${gMain}、${tpl.subStat} +${gSub}。${releaseNote}`;
   return { next, ok: true, msg };
 }
 
@@ -509,19 +513,18 @@ export function promoteWork(s: GameState, projectId: string): ActResult {
   const w = portfolio.find((x) => x.projectId === projectId && !x.released);
   if (!w) return { next: s, ok: false, msg: "没有可宣传的待发行作品。" };
   if (w.publicityUses >= PB.maxUses) return { next: s, ok: false, msg: `${PB.labels.maxed}` };
-  if (s.money < PB.costYuan) return { next: s, ok: false, msg: `${PB.labels.lowMoney}` };
+  if (!wallet.can(s, PB.costYuan)) return { next: s, ok: false, msg: `${PB.labels.lowMoney}` };
   w.publicityUses += 1;
   w.publicityIndex += PB.indexPer;
   const next: GameState = {
-    ...s,
+    ...wallet.add(s, -PB.costYuan),
     portfolio,
-    money: s.money - PB.costYuan,
     stress: clamp(s.stress + PB.stress, 0, 100),
   };
   return {
     next,
     ok: true,
-    msg: `《${w.title}》${PB.labels.done}：宣传费 -¥${PB.costYuan}，压力 +${PB.stress}，宣传指数 +${PB.indexPer}（累计 ${w.publicityIndex}，第 ${w.publicityUses}/${PB.maxUses} 次）。`,
+    msg: `《${w.title}》${PB.labels.done}：宣传费 -${wallet.fmt(PB.costYuan)}，压力 +${PB.stress}，宣传指数 +${PB.indexPer}（累计 ${w.publicityIndex}，第 ${w.publicityUses}/${PB.maxUses} 次）。`,
   };
 }
 

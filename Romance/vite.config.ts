@@ -3,7 +3,14 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'node:path'
 
-import siteConfiguration from './.figma/make/site.json'
+// 站点设置直接写在这里，不依赖 .figma 文件夹（删掉 .figma 后仍可正常运行与打包）
+const siteConfiguration: FigmaSiteConfiguration = {
+  title: '今夜她是主角',
+  description: '女性向沉浸式文字模拟游戏 · 可接入 AI · 支持自定义模组',
+  language: 'zh-CN',
+  robots: { index: false },
+  accessibility: { addBypassLinks: false },
+}
 
 // Vite config — https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -268,7 +275,9 @@ function figmaErrorOverlayReplay(): Plugin {
  * the old tree mounted until the page is reloaded.
  */
 function figmaReactRefreshBoundaryFallback(): Plugin {
+  type ModuleNode = import('vite').ModuleNode
   const hadRefreshBoundary = new Map<string, boolean>()
+  const lostRefreshBoundaries = new Set<string>()
   let sendFullReload: (() => void) | null = null
 
   return {
@@ -278,6 +287,29 @@ function figmaReactRefreshBoundaryFallback(): Plugin {
     configureServer(server) {
       sendFullReload = () => server.ws.send({ type: 'full-reload', path: '*' })
     },
+    handleHotUpdate({ modules, server, timestamp }) {
+      if (lostRefreshBoundaries.size === 0) return
+
+      const visited = new Set<ModuleNode>()
+      const pending = [...modules]
+      while (pending.length > 0) {
+        const current = pending.pop()
+        if (!current || visited.has(current)) continue
+        visited.add(current)
+
+        const moduleId = current.id?.split('?')[0]
+        if (moduleId && lostRefreshBoundaries.has(moduleId)) {
+          const invalidated = new Set<ModuleNode>()
+          for (const updatedModule of modules) {
+            server.moduleGraph.invalidateModule(updatedModule, invalidated, timestamp, true)
+          }
+          sendFullReload?.()
+          return []
+        }
+
+        pending.push(...current.importers)
+      }
+    },
     transform(code, id) {
       if (!/\.[jt]sx?(?:\?|$)/.test(id) || id.includes('/node_modules/')) return null
 
@@ -286,7 +318,9 @@ function figmaReactRefreshBoundaryFallback(): Plugin {
       const previousHadRefreshBoundary = hadRefreshBoundary.get(moduleId)
       hadRefreshBoundary.set(moduleId, hasRefreshBoundary)
 
+      if (hasRefreshBoundary) lostRefreshBoundaries.delete(moduleId)
       if (previousHadRefreshBoundary && !hasRefreshBoundary) {
+        lostRefreshBoundaries.add(moduleId)
         queueMicrotask(() => sendFullReload?.())
       }
 

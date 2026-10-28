@@ -59,6 +59,21 @@
     letter-spacing: -0.02em;
 }
 
+.closeBtnPlaceholder {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+}
+
+.forceCropHint {
+    margin: 0;
+    flex: 1;
+    font-size: 13px;
+    line-height: 1.4;
+    color: rgba(255, 255, 255, 0.65);
+    align-self: center;
+}
+
 .closeBtn {
     width: 32px;
     height: 32px;

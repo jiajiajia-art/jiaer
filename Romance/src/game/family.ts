@@ -1,6 +1,8 @@
 /* 双亲档案：由玩家设定（姓名 / 父母职业 / 阶层 / 家世）确定性推导出父母的完整档案。
  * 仅用于展示与开局叙事，不参与数值结算；同一存档每次生成结果一致。 */
 import type { Npc, Player } from "../lib/types";
+import { ruleOf } from "./worldRules";
+import { liveTerm as T } from "../mods/live";
 
 export type ParentProfile = {
   relation: "父亲" | "母亲";
@@ -60,7 +62,7 @@ function attitudeOf(relation: "父亲" | "母亲", klass: string, job: string, s
   }
   if (scholarly) {
     return relation === "父亲"
-      ? "担心娱乐圈浮沉无根、糟蹂了你的前程，总念叨「一技傍身才踏实」——却在你第一次上电视那晚，红着眼守到了最后一秒。"
+      ? `担心${T("industry")}浮沉无根、糟蹂了你的前程，总念叨「一技傍身才踏实」——却在你第一次上电视那晚，红着眼守到了最后一秒。`
       : "怕这条路太苦、太不由人，劝你「读书才是正道」；但你每回失落，她又是第一个说「不行就回家，妈养你」的人。";
   }
   // 草根 / 工薪 / 清贫
@@ -84,10 +86,15 @@ export function familyProfiles(player: Player): ParentProfile[] {
 
   const fs = hash(`${player.name}|父|${fatherJob}`);
   const ms = hash(`${player.name}|母|${motherJob}`);
+  // 世界规则·冠姓权：决定父母谁与你同姓
+  const other = (seed: number) => { const all = MOTHER_SUR.filter((x) => x !== surname); return pick(all.length ? all : MOTHER_SUR, seed); };
+  const rule = ruleOf("surname");
+  const fatherSur = rule === "father" ? surname : other(fs >> 4);
+  const motherSur = rule === "mother" ? surname : other(ms);
 
   const father: ParentProfile = {
     relation: "父亲",
-    name: `${surname}${pick(FATHER_GIVEN, fs)}`,
+    name: `${fatherSur}${pick(FATHER_GIVEN, fs)}`,
     age: baseAge + 24 + (fs % 9),
     job: fatherJob,
     personality: pick(FATHER_PERSONA, fs >> 3),
@@ -98,7 +105,7 @@ export function familyProfiles(player: Player): ParentProfile[] {
   };
   const mother: ParentProfile = {
     relation: "母亲",
-    name: `${pick(MOTHER_SUR, ms)}${pick(MOTHER_GIVEN, ms >> 2)}`,
+    name: `${motherSur}${pick(MOTHER_GIVEN, ms >> 2)}`,
     age: baseAge + 22 + (ms % 8),
     job: motherJob,
     personality: pick(MOTHER_PERSONA, ms >> 3),
@@ -129,7 +136,6 @@ export function familyNpcs(player: Player): Npc[] {
     affinity: 90,
     dims: [
       { label: "信任", value: 95 },
-      { label: "爱慕", value: 0 },
       { label: "友善", value: 80 },
       { label: "敌意", value: 0 },
     ],

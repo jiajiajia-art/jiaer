@@ -3,6 +3,7 @@
  * 依据 npc.identity / relation / tags 归类到人设，再从对应文案池确定性取一条（按 id 播种，稳定不变）。 */
 
 export type Persona = "performer" | "musician" | "crew" | "mogul" | "family" | "civilian";
+import { liveTerm as T } from "../../mods/live";
 
 type PersonaInput = { identity?: string; relation?: string; tags?: string[]; name?: string };
 
@@ -122,7 +123,7 @@ const XHS: Record<Persona, { title: string; body: string }[]> = {
 const DOUYIN: Record<Persona, { caption: string; music: string }[]> = {
   performer: [
     { caption: "新戏杀青花絮来啦！这段 NG 了 8 次哈哈哈 #剧组日常", music: "影视原声 · 重逢" },
-    { caption: "红毯路透，这个造型你们打几分？ #红毯造型", music: "原声 · 星城之夜" },
+    { caption: "红毯路透，这个造型你们打几分？ #红毯造型", get music() { return `原声 · ${T("city")}之夜`; } },
     { caption: "和搭档的对手戏太上头了，等正片！#期待", music: "影视原声 · 千灯之城" },
     { caption: "凌晨四点的片场，追梦的人不觉得累 #努力", music: "钢琴曲 · 夜曲" },
   ],
@@ -136,7 +137,7 @@ const DOUYIN: Record<Persona, { caption: string; music: string }[]> = {
     { caption: "新戏开机大吉！这次的阵容我很有信心 #开机", music: "轻快 · Summer" },
     { caption: "带训现场，基本功没有捷径 #台风训练", music: "节奏 · 心动" },
     { caption: "选角桌前的一天，眼里有没有戏一看便知 #幕后", music: "轻音乐 · 追光者" },
-    { caption: "一场大秀的最后一次彩排 #幕后花絮", music: "电子 · 星城之夜" },
+    { caption: "一场大秀的最后一次彩排 #幕后花絮", get music() { return `电子 · ${T("city")}之夜`; } },
   ],
   mogul: [
     { caption: "行程间隙，随手记录一下城市夜景 #出差日常", music: "钢琴曲 · 夜曲" },

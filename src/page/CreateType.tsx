@@ -8,6 +8,7 @@ import {
   MdAutoStories,
   MdOutlineMovie,
   MdSportsEsports,
+  MdOutlineAutoAwesome,
 } from 'react-icons/md';
 import { IoChevronForward } from 'react-icons/io5';
 import toast from 'react-hot-toast';
@@ -171,6 +172,19 @@ const CreateType: React.FC = () => {
               icon={MdAutoStories}
               thumbClass={styles.createTypeOptionThumbTxt}
               onClick={() => void handleSelectGameType('txt')}
+            />
+            {/* 功能注释：Romance 游戏编辑器入口；进 /romance/?createWorld=1 打开「生成世界」向导 */}
+            <TypeOptionRow
+              title={t('createGame.romanceMode')}
+              badge="new"
+              badgeText={t('createGame.new')}
+              hint={t('createGame.romanceHint')}
+              icon={MdOutlineAutoAwesome}
+              thumbClass={styles.createTypeOptionThumbRomance}
+              onClick={() => {
+                clearAll();
+                navigate('/romance/?createWorld=1');
+              }}
             />
             <TypeOptionRow
               title={t('createGame.avgBeta')}

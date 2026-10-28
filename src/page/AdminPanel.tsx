@@ -34,6 +34,8 @@ import DailyTasksAdminManager from '../components/DailyTasksAdminManager';
 import CommentAdminManager from '../components/admin/CommentAdminManager.tsx';
 import WithdrawAdminManager from '../components/WithdrawAdminManager';
 import LotteryAdminManager from '../components/LotteryAdminManager';
+import AdminPublicAvatarManager from '../components/admin/AdminPublicAvatarManager';
+import AdminPlayModManager from '../components/admin/AdminPlayModManager';
 import ModelConfigHub from '../components/ModelConfigHub';
 import announcementApi from '../api/announcement/announcementApi';
 import documentApi from '../api/document/documentApi';
@@ -57,7 +59,7 @@ import { useMessageStore } from '../store/useMessageStore';
 import { useAuthStore } from '../store/useAuthStore';
 
 type EditorMode = 'new' | 'draft' | 'published';
-type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points' | 'creatorIncentives' | 'subscriptions' | 'documents' | 'shareRatio' | 'dailyTasks' | 'users' | 'comments' | 'withdraw' | 'imageGen' | 'lottery';
+type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points' | 'creatorIncentives' | 'subscriptions' | 'documents' | 'shareRatio' | 'dailyTasks' | 'users' | 'comments' | 'withdraw' | 'imageGen' | 'lottery' | 'avatars' | 'components';
 type SortModalMode = 'featured' | 'all' | null;
 
 interface SortDraftItem {
@@ -92,6 +94,8 @@ const resolveAdminTab = (pathname: string, search: string): AdminTab => {
     if (pathname.startsWith('/admin/withdraw')) return 'withdraw';
     if (pathname.startsWith('/admin/image-gen') || pathname.startsWith('/admin/text-llm')) return 'imageGen';
     if (pathname.startsWith('/admin/lottery')) return 'lottery';
+    if (pathname.startsWith('/admin/avatars')) return 'avatars';
+    if (pathname.startsWith('/admin/components') || pathname.startsWith('/admin/play-mods')) return 'components';
     const tabParam = new URLSearchParams(search).get('tab');
     if (tabParam === 'announcements' || tabParam === 'banners' || tabParam === 'themes' || tabParam === 'comments') return tabParam;
     return 'announcements';
@@ -1024,6 +1028,14 @@ const AdminPanel: React.FC = () => {
             navigate('/admin/lottery');
             return;
         }
+        if (tab === 'avatars') {
+            navigate('/admin/avatars');
+            return;
+        }
+        if (tab === 'components') {
+            navigate('/admin/components');
+            return;
+        }
 
         const nextSearch = tab === 'announcements' ? '' : `?tab=${tab}`;
         const nextUrl = `/admin${nextSearch}`;
@@ -1562,6 +1574,20 @@ const AdminPanel: React.FC = () => {
                             </button>
                             <button
                                 type="button"
+                                className={`${styles.navItem} ${activeTab === 'avatars' ? styles.navItemActive : ''}`}
+                                onClick={() => handleTabChange('avatars')}
+                            >
+                                <span className={styles.navTitle}>公共头像</span>
+                            </button>
+                            <button
+                                type="button"
+                                className={`${styles.navItem} ${activeTab === 'components' ? styles.navItemActive : ''}`}
+                                onClick={() => handleTabChange('components')}
+                            >
+                                <span className={styles.navTitle}>组件管理</span>
+                            </button>
+                            <button
+                                type="button"
                                 className={`${styles.navItem} ${activeTab === 'comments' ? styles.navItemActive : ''}`}
                                 onClick={() => handleTabChange('comments')}
                             >
@@ -1938,6 +1964,8 @@ const AdminPanel: React.FC = () => {
                         {activeTab === 'imageGen' && <ModelConfigHub />}
 
                         {activeTab === 'lottery' && <LotteryAdminManager />}
+                        {activeTab === 'avatars' && <AdminPublicAvatarManager />}
+                        {activeTab === 'components' && <AdminPlayModManager />}
 
                         {activeTab === 'subscriptions' && <SubscriptionAdminManager />}
 

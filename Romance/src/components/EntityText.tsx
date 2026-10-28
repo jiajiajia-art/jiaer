@@ -1,30 +1,26 @@
-import NpcProfile from "./NpcProfile";
+import PersonProfile from "./PersonProfile";
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import { useGame } from "../store/gameCtx";
-import { Modal, Chip, affinityLevel } from "./ui";
-import { LOCATIONS, TRAITS } from "../game/data";
-import { ALL_ROOMS, locOf, roomStatus } from "../game/mud";
-import { itemsOfRoom, type RoomItem } from "../worlds/star2005/content";
+import { Modal, Chip } from "./ui";
+import { exitsOf, locOf, mobsHere, roomStatus } from "../game/mud";
+import { getWorldItems, getWorldLocations, getWorldMap, worldItemById } from "../mods/registry";
 
-/* ═══ 纪事实体高亮：人物靛 / 地点青 / 物品金 / 特质朱，皆可点选（只读详情，不自动移动/对话） ═══
- * 名录取自内容池（LOCATIONS / 各房间物品 / TRAITS）与当前存档人物（game.npcs）。 */
+/* ═══ 纪事实体高亮：人物靛 / 地点青 / 物品金，皆可点选（只读详情，不自动移动/对话） ═══
+ * 名录取自内容池（LOCATIONS / 各房间物品 ）与当前存档人物（game.npcs）。 */
 
-type EntityType = "person" | "loc" | "item" | "trait";
+type EntityType = "person" | "loc" | "item";
 type EntityRef = { type: EntityType; id: string };
 
 const TYPE_STYLE: Record<EntityType, { color: string }> = {
   person: { color: "var(--char)" },
   loc: { color: "var(--jade)" },
   item: { color: "var(--gold)" },
-  trait: { color: "var(--coral)" },
 };
 
-/* 静态名录（地点/物品/特质在内容池里恒定） */
-const LOC_ENTRIES = LOCATIONS.filter((l) => l.name.length >= 2).map((l) => ({ name: l.name, type: "loc" as const, id: l.id }));
-const ITEM_MAP = new Map<string, RoomItem>();
-for (const r of ALL_ROOMS) for (const it of itemsOfRoom(r)) if (!ITEM_MAP.has(it.id)) ITEM_MAP.set(it.id, it);
-const ITEM_ENTRIES = [...ITEM_MAP.values()].filter((it) => it.name.length >= 2).map((it) => ({ name: it.name, type: "item" as const, id: it.id }));
-const TRAIT_ENTRIES = TRAITS.filter((t) => t.name.length >= 2).map((t) => ({ name: t.name, type: "trait" as const, id: t.id }));
+/* 静态名录（地点/物品在内容池里恒定） */
+/* 地点 / 物品随生效世界变化：按需读取，不在模块加载期求值 */
+const locEntries = () => getWorldLocations().filter((l) => l.name.length >= 2).map((l) => ({ name: l.name, type: "loc" as const, id: l.id }));
+const itemEntries = () => getWorldItems().filter((it) => it.name.length >= 2).map((it) => ({ name: it.name, type: "item" as const, id: it.id }));
 
 function escapeRe(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -51,28 +47,19 @@ function EntityDetail({ refr, onClose }: { refr: EntityRef; onClose: () => void 
   const s = game.sim;
 
   if (refr.type === "person") {
-    return <NpcProfile pid={refr.id} onClose={onClose} />;
-  }
-  if (refr.type === "loc") {
-    const loc = locOf(refr.id);
-    if (!loc) return null;
-    const rs = s ? roomStatus(s, refr.id) : null;
-    const lit = (s?.visited ?? []).includes(refr.id);
+    const n = game.npcs.find((x) => x.id === refr.id);
+    if (!n) return null;
+    const known = (s?.metPeople ?? []).includes(n.id) || n.affinity !== 0;
     return (
-      <Modal title={loc.name} onClose={onClose}>
-        <div className="space-y-2.5">
-          {rs && <Chip tone={rs.kind === "open" ? "jade" : rs.kind === "event" ? "coral" : "gold"}>{rs.label}</Chip>}
-          <p className="text-[13px] leading-relaxed text-ink/85">{loc.func}</p>
-          <p className="text-[12px] text-jade">今日可做 · {loc.action}</p>
-          <p className="text-[11px] text-ink-soft">
-            {lit ? "此地已在你舆图上点亮，可从「出口」规划前往。" : "尚未探索——需先循出口走到才会点亮。"}
-          </p>
-        </div>
+      <Modal title="人物档案" onClose={onClose}>
+        <PersonProfile pid={n.id} known={known} />
+        <p className="mt-4 border-t border-line pt-3 text-[11px] text-ink-soft">{n.identity}{n.relation ? ` · ${n.relation}` : ""} · 点选人物只查看档案；要交谈或经营关系，请到 TA 所在地点当面进行。</p>
       </Modal>
     );
   }
+  if (refr.type === "loc") return <LocDetail id={refr.id} onClose={onClose} />;
   if (refr.type === "item") {
-    const it = ITEM_MAP.get(refr.id);
+    const it = worldItemById(refr.id);
     if (!it) return null;
     return (
       <Modal title={it.name} onClose={onClose}>
@@ -80,13 +67,115 @@ function EntityDetail({ refr, onClose }: { refr: EntityRef; onClose: () => void 
       </Modal>
     );
   }
-  const t = TRAITS.find((x) => x.id === refr.id);
-  if (!t) return null;
+  return null;
+}
+
+/* 地点详情：实景横幅 + 状态 · 功能标签 · 今日可做（行动名 + 效果拆成胶囊）· 此刻在场 · 关键人物线索 · 相邻出口 · 舆图点亮状态 */
+function LocDetail({ id, onClose }: { id: string; onClose: () => void }) {
+  const { game } = useGame();
+  const open = useOpenEntity();
+  const loc = locOf(id);
+  if (!loc || !game) return null;
+  const s = game.sim;
+  const rs = s ? roomStatus(s, id) : null;
+  const lit = (s?.visited ?? []).includes(id);
+  const here = s?.room === id;
+  const map = getWorldMap();
+  const photo = map.photos?.[id] ?? map.defaultPhoto;
+  const funcs = (loc.func ?? "").split(/\s*[·・|/]\s*/).map((x) => x.trim()).filter(Boolean);
+  // 「深度休息：行动力 +40、压力 -12」→ 行动名 + 效果列表
+  const [actName, actFx] = (() => {
+    const a = (loc.action ?? "").trim();
+    const i = a.search(/[：:]/);
+    return i < 0 ? [a, [] as string[]] : [a.slice(0, i).trim(), a.slice(i + 1).split(/[、，,；;]/).map((x) => x.trim()).filter(Boolean)];
+  })();
+  const present = lit && s ? mobsHere(s, id, game.npcs).filter((p) => p.present) : [];
+  const exits = exitsOf(id);
+  const tone = rs?.kind === "open" ? "var(--jade)" : rs?.kind === "event" ? "var(--coral)" : "var(--gold)";
   return (
-    <Modal title={t.name} onClose={onClose}>
-      <div className="space-y-2">
-        <Chip tone="coral">{t.tag}</Chip>
-        <p className="text-[13px] leading-relaxed text-ink/85">{t.desc}</p>
+    <Modal title={loc.name} onClose={onClose}>
+      <div className="space-y-3">
+        {/* 实景横幅：有照片用照片，没有用柔和渐变；状态与「你在这里」浮在左下 */}
+        <div className="relative h-32 overflow-hidden rounded-2xl border border-line/60 bg-gradient-to-br from-[var(--jade)]/25 via-[var(--gold)]/10 to-[var(--coral)]/20">
+          {photo && <img src={photo} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.display = "none"; }} className={`absolute inset-0 h-full w-full object-cover ${lit ? "" : "grayscale"}`} />}
+          <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+          <div className="absolute inset-x-3 bottom-2.5 flex flex-wrap items-center gap-1.5">
+            {rs && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-md">
+                <span className="h-1.5 w-1.5 rounded-full" style={{ background: tone }} />{rs.label}
+              </span>
+            )}
+            {here && <span className="rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-bold text-ink">你在这里</span>}
+          </div>
+        </div>
+
+        {funcs.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {funcs.map((f) => <span key={f} className="rounded-full border border-line bg-paper px-2.5 py-0.5 text-[11.5px] text-ink-soft">{f}</span>)}
+          </div>
+        )}
+
+        {actName && (
+          <section className="rounded-2xl border border-jade/30 bg-jade/[0.06] px-3.5 py-3">
+            <p className="text-[10.5px] font-bold tracking-[0.16em] text-jade">今日可做</p>
+            <p className="mt-1 text-[15px] font-black text-ink">{actName}</p>
+            {actFx.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {actFx.map((f) => {
+                  const m = f.match(/^(.*?)\s*([+-]\s*\d+%?)$/);
+                  return (
+                    <span key={f} className="inline-flex items-center gap-1 rounded-lg bg-paper px-2 py-1 text-[12px] text-ink shadow-sm">
+                      {m ? <>{m[1]}<b className="font-bold tabular-nums text-jade">{m[2].replace(/\s+/g, "")}</b></> : f}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
+
+        {present.length > 0 && (
+          <section>
+            <p className="mb-1.5 text-[11.5px] font-bold text-ink">此刻在场</p>
+            <div className="flex flex-wrap gap-1.5">
+              {present.map((p) => (
+                <button key={p.id} type="button" onClick={() => open({ type: "person", id: p.id })}
+                  className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[12px] font-semibold transition hover:brightness-110"
+                  style={{ color: "var(--char)", borderColor: "color-mix(in srgb, var(--char) 35%, transparent)", background: "color-mix(in srgb, var(--char) 8%, transparent)" }}>
+                  {p.name}{p.role && <span className="font-normal opacity-70">· {p.role}</span>}
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {loc.hint && (
+          <p className="rounded-xl bg-gold/[0.08] px-3 py-2 text-[12px] leading-relaxed text-ink/80">
+            <span className="mr-1 font-bold text-gold">人物线索</span>{loc.hint}
+          </p>
+        )}
+
+        {exits.length > 0 && (
+          <section>
+            <p className="mb-1.5 text-[11.5px] font-bold text-ink">相邻出口</p>
+            <div className="flex flex-wrap gap-1.5">
+              {exits.map((e) => {
+                const known = (s?.visited ?? []).includes(e.to);
+                return (
+                  <button key={e.to} type="button" onClick={() => open({ type: "loc", id: e.to })}
+                    className={`rounded-full border px-2.5 py-0.5 text-[11.5px] transition hover:border-jade hover:text-jade ${known ? "border-line bg-paper text-ink" : "border-dashed border-line text-ink-soft"}`}>
+                    {e.name}{!known && " ·未到访"}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        <p className={`flex items-center gap-2 border-t border-line/60 pt-2.5 text-[11.5px] ${lit ? "text-ink-soft" : "text-gold"}`}>
+          <span aria-hidden className={`h-2 w-2 shrink-0 rounded-full ${lit ? "bg-jade shadow-[0_0_6px_var(--jade)]" : "border border-gold"}`} />
+          {lit ? "已在舆图上点亮，可从舆图规划前往。" : "尚未探索：沿出口走到这里，才会在舆图上点亮。"}
+        </p>
       </div>
     </Modal>
   );
@@ -103,7 +192,7 @@ export function EntityText({ text, className }: { text: string; className?: stri
 
   const { re, lookup } = useMemo(() => {
     const people = (game?.npcs ?? []).filter((n) => n.name.length >= 2).map((n) => ({ name: n.name, type: "person" as const, id: n.id }));
-    const all = [...people, ...LOC_ENTRIES, ...ITEM_ENTRIES, ...TRAIT_ENTRIES];
+    const all = [...people, ...locEntries(), ...itemEntries()];
     // 同名去重（人物优先），并按长度降序，保证最长匹配优先
     const map = new Map<string, EntityRef>();
     for (const e of all) if (!map.has(e.name)) map.set(e.name, { type: e.type, id: e.id });
@@ -129,8 +218,8 @@ export function EntityText({ text, className }: { text: string; className?: stri
         <button
           key={key++}
           onClick={() => open(ref)}
-          className="font-medium underline decoration-dotted underline-offset-2 transition hover:brightness-110"
-          style={{ color: style.color, minHeight: 0, padding: 0, lineHeight: "inherit", verticalAlign: "baseline" }}
+          className="inline appearance-none border-0 bg-transparent p-0 font-medium no-underline outline-none transition hover:brightness-110"
+          style={{ color: style.color }}
         >
           {name}
         </button>,

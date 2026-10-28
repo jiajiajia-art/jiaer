@@ -1,3 +1,4 @@
+import { loadData, saveData, loadGlobal, saveGlobal } from "../lib/saveScope";
 import { useEffect, useRef, useState, type DragEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { useGame } from "../store/gameCtx";
 import { ensurePhone, gameTimeLabel } from "../game/phone";
@@ -6,59 +7,106 @@ import SmsApp from "./phone/SmsApp";
 import CallApp from "./phone/CallApp";
 import WeiboApp from "./phone/WeiboApp";
 import XhsApp from "./phone/XhsApp";
-import DouyinApp from "./phone/DouyinApp";
 import TicketApp from "./phone/TicketApp";
 import SettingsApp from "./phone/SettingsApp";
-import { AppStoreApp, PomodoroApp, ClockApp, CalculatorApp, NotesApp, WeatherApp, type StoreItem, type IconApp } from "./phone/UtilApps";
+import { AppStoreApp, PomodoroApp, ClockApp, CalculatorApp, NotesApp, GlobalPhoneAlerts, WeatherApp, type StoreItem, type IconApp } from "./phone/UtilApps";
 import MusicApp from "./phone/MusicApp";
 import BossZhipinApp from "./phone/BossZhipinApp";
 import XianyuApp from "./phone/XianyuApp";
+import PeekApp from "./phone/PeekApp";
+import CoupleApp from "./phone/CoupleApp";
+import { useCouple } from "./phone/couple/store";
+import { runSync, useSyncState, loadFeed } from "./phone/worldSync";
+import { useProactiveMessages } from "./phone/wxFeatures";
 import ForumApp from "./phone/ForumApp";
-import { renderWidget, isWidget, DEFAULT_WIDGET_SIZE, SHAPE_RADIUS, SHAPE_LABEL, nextShape, nextSize, type WidgetSize, type WidgetShape } from "./phone/Widgets";
+import { requestWallet } from "./phone/WalletBinder";
+import MailApp from "./phone/MailApp";
+import ReadApp from "./phone/ReadApp";
+import VideoApp from "./phone/VideoApp";
+import IncomingCall from "./phone/IncomingCall";
+import { logAppOpen, mailUnread } from "../game/phoneLink";
+import { useGameNow, renderWidget, isWidget, DEFAULT_WIDGET_SIZE, SHAPE_RADIUS, SHAPE_LABEL, nextShape, nextSize, type WidgetSize, type WidgetShape } from "./phone/Widgets";
 import { APP_ICON } from "./phone/appIcons";
+import { phoneAppAllowed, worldPhoneAppsCfg } from "../mods/registry";
+import { phoneAppLabel, preinstallIds, resolvePhoneApps } from "../lib/phoneAppsConfig";
 import { resolveWallpaper } from "./phone/wallpapers";
+import { liveTerm as T } from "../mods/live";
+import SlimePet from "./phone/studio/Slime";
+import { usePetMode, useStudioOpen } from "./phone/studio/pet";
+import { requestStudio } from "./phone/studio/review";
 
 /* 仿真手机外壳：状态栏 + 主屏应用网格 + 应用路由。
  * 各应用各自封装在 src/components/phone/<App>.tsx 里，此处只负责编排。 */
 
 type AppId =
-  | "wechat" | "sms" | "call" | "weibo" | "xhs" | "douyin" | "ticket" | "settings" | "appstore"
-  | "clock" | "pomodoro" | "calculator" | "notes" | "weather" | "cloudmusic" | "bosspin" | "xianyu" | "forum";
+  | "wechat" | "sms" | "call" | "weibo" | "xhs" | "ticket" | "settings" | "appstore"
+  | "clock" | "pomodoro" | "calculator" | "notes" | "weather" | "cloudmusic" | "bosspin" | "xianyu" | "forum" | "peek" | "couple" | "mail" | "read" | "video";
 
 type AppMeta = { id: AppId; label: string };
 /* 预装应用（含应用商店） */
 const CORE: AppMeta[] = [
-  { id: "wechat", label: "绿信" }, { id: "sms", label: "信息" }, { id: "call", label: "电话" },
-  { id: "weibo", label: "冲浪" }, { id: "xhs", label: "小粉书" }, { id: "douyin", label: "云抖" },
-  { id: "ticket", label: "票团团" }, { id: "cloudmusic", label: "云音乐" },
-  { id: "bosspin", label: "老板直聘" }, { id: "xianyu", label: "咸鱼" },
+  { id: "wechat", label: "绿信" }, { id: "sms", label: "信息" }, { id: "call", label: "电话" }, { id: "mail", label: "邮箱" },
+  { id: "weibo", label: "冲浪" }, { id: "xhs", label: "小粉书" },
+  { id: "ticket", label: "票团团" }, { id: "cloudmusic", label: "云音乐" }, { id: "read", label: "阅读" }, { id: "video", label: "视频" },
+  { id: "bosspin", label: "老板直聘" }, { id: "xianyu", label: "咸鱼" }, { id: "peek", label: "视监" }, { id: "couple", label: "情侣空间" },
   { id: "appstore", label: "应用商店" }, { id: "settings", label: "设置" },
 ];
 /* 应用商店可下载组件 */
 const SC = (id: string) => `https://images.unsplash.com/photo-${id}?w=680&h=440&fit=crop&auto=format&q=75`;
 const STORE: StoreItem[] = [
   { id: "pomodoro", label: "番茄钟", tagline: "专注 25 分钟，科学休息", desc: "把拖延，切成一颗颗番茄", kicker: "本日 App", story: "开机前先定一颗番茄：25 分钟只做一件事，铃响就起身走走。片场等戏的碎片时间，也能背完一段台词。", icon: APP_ICON.pomodoro, cat: "效率", rating: 4.9, size: "3.2 MB", cover: SC("1516414447565-b14be0adf13e") },
-  { id: "clock", label: "时钟闹钟", tagline: "走时表盘 + 通告闹钟", desc: "别再睡过头错过早班通告", kicker: "我们喜爱的 App", story: "指针表盘走时到秒，多组闹钟随手开关。给明早六点的定妆通告设一个，铃响时它真的会响。", icon: APP_ICON.clock, cat: "实用工具", rating: 4.8, size: "2.1 MB", cover: SC("1495364141860-b0d03eccd065") },
+  { id: "clock", label: "时钟闹钟", get tagline() { return `走时表盘 + ${T("gig")}闹钟`; }, get desc() { return `别再睡过头错过早班${T("gig")}`; }, kicker: "我们喜爱的 App", get story() { return `指针表盘走时到秒，多组闹钟随手开关。给明早六点的定妆${T("gig")}设一个，铃响时它真的会响。`; }, icon: APP_ICON.clock, cat: "实用工具", rating: 4.8, size: "2.1 MB", cover: SC("1495364141860-b0d03eccd065") },
   { id: "notes", label: "备忘录", tagline: "台词、灵感、待办随手记", desc: "灵感来时，立刻记下", kicker: "编辑精选", story: "深夜想到的角色小传、明天要带的证件、导演随口的一句要求——打开即写，本地留存，不怕忘。", icon: APP_ICON.notes, cat: "效率", rating: 4.8, size: "1.9 MB", cover: SC("1517842645767-c639042777db") },
-  { id: "calculator", label: "计算器", tagline: "片酬分成随手算", desc: "经典键位，随手就算", kicker: "实用工具", story: "经纪抽成、通告费、打车报销……四则运算一步到位，键位手感一如熟悉的那台。", icon: APP_ICON.calculator, cat: "实用工具", rating: 4.7, size: "1.4 MB", cover: SC("1554224155-6726b3ff858f") },
-  { id: "weather", label: "天气", tagline: "星城天气与一周预报", desc: "出门通告，先看天", kicker: "生活方式", story: "外景在即，先看星城这一周的阴晴。今日实时天气与一周走势，一屏尽览。", icon: APP_ICON.weather, cat: "生活", rating: 4.6, size: "2.6 MB", cover: SC("1504608524841-42fe6f032b4b") },
+  { id: "calculator", label: "计算器", tagline: "片酬分成随手算", desc: "经典键位，随手就算", kicker: "实用工具", get story() { return `经纪抽成、${T("gig")}费、打车报销……四则运算一步到位，键位手感一如熟悉的那台。`; }, icon: APP_ICON.calculator, cat: "实用工具", rating: 4.7, size: "1.4 MB", cover: SC("1554224155-6726b3ff858f") },
+  { id: "weather", label: "天气", get tagline() { return `${T("city")}天气与一周预报`; }, get desc() { return `出门${T("gig")}，先看天`; }, kicker: "生活方式", get story() { return `外景在即，先看${T("city")}这一周的阴晴。今日实时天气与一周走势，一屏尽览。`; }, icon: APP_ICON.weather, cat: "生活", rating: 4.6, size: "2.6 MB", cover: SC("1504608524841-42fe6f032b4b") },
   { id: "forum", label: "星潮", tagline: "追星饭圈发帖楼中楼", desc: "一层一层，看她怎么被夸上天", kicker: "社区精选", story: "路人、CP 粉、代拍、还有几个嘴硬的黑子——一条帖子一百多层楼，谁也别想安静吃瓜。多语种自带翻译，正主偶尔会亲自下场。", icon: APP_ICON.forum, cat: "社交", rating: 4.9, size: "5.4 MB", cover: SC("1522202176988-66273c2fd55f") },
   // 桌面美化小组件
   { id: "w-hero-clock", kind: "widget", label: "大字号时钟横幅", tagline: "整行大字号日期与时间", desc: "把时间放在你想要的位置", kicker: "桌面美化", story: "谁说时间一定在最顶端？这是你的手机。大字号日期时钟横幅，随手拖到任意位置，或干脆收起来。", icon: APP_ICON.clock, cat: "美化", rating: 4.9, size: "0.4 MB", cover: SC("1501139083538-0139583c060f") },
   { id: "w-photo", kind: "widget", label: "照片卡片", tagline: "上传照片，点亮桌面", desc: "把你的高光时刻放上桌面", kicker: "桌面美化", story: "上传一张自己的照片或喜欢的海报，桌面立刻不一样。点按卡片随时更换，配一句专属文案。", icon: APP_ICON.moments, cat: "美化", rating: 4.9, size: "0.8 MB", cover: SC("1524504388940-b1c1722653e1") },
-  { id: "w-note", kind: "widget", label: "便签卡片", tagline: "桌面速记待办清单", desc: "把今日行程贴在桌面", kicker: "桌面美化", story: "暖黄色的便签卡，写下今天的通告与心情，回到桌面一眼就能看到。", icon: APP_ICON.notes, cat: "美化", rating: 4.7, size: "0.6 MB", cover: SC("1517842645767-c639042777db") },
-  { id: "w-clock", kind: "widget", label: "时钟卡片", tagline: "桌面大字号时钟", desc: "时间，一眼即见", kicker: "桌面美化", story: "深色大时钟卡，日期与秒数一并呈现，赶通告时抬眼就知道还剩多久。", icon: APP_ICON.clock, cat: "美化", rating: 4.6, size: "0.5 MB", cover: SC("1495364141860-b0d03eccd065") },
+  { id: "w-note", kind: "widget", label: "便签卡片", tagline: "桌面速记待办清单", desc: "把今日行程贴在桌面", kicker: "桌面美化", get story() { return `暖黄色的便签卡，写下今天的${T("gig")}与心情，回到桌面一眼就能看到。`; }, icon: APP_ICON.notes, cat: "美化", rating: 4.7, size: "0.6 MB", cover: SC("1517842645767-c639042777db") },
+  { id: "w-clock", kind: "widget", label: "时钟卡片", tagline: "桌面大字号时钟", desc: "时间，一眼即见", kicker: "桌面美化", get story() { return `深色大时钟卡，日期与秒数一并呈现，赶${T("gig")}时抬眼就知道还剩多久。`; }, icon: APP_ICON.clock, cat: "美化", rating: 4.6, size: "0.5 MB", cover: SC("1495364141860-b0d03eccd065") },
   { id: "w-music", kind: "widget", label: "音乐卡片", tagline: "桌面迷你播放器", desc: "在桌面控制云音乐", kicker: "桌面美化", story: "无需打开 App，在桌面就能看到正在播放的曲目并暂停 / 切歌，与云音乐实时同步。", icon: APP_ICON.cloudmusic, cat: "美化", rating: 4.8, size: "0.7 MB", cover: SC("1470225620780-dba8ba36b745") },
+  { id: "w-wallet", kind: "widget", label: "钱包卡片", tagline: "余额一眼可见", desc: "绑定世界里的货币", kicker: "桌面美化", story: "金币、灵石还是微信零钱？点按卡片就能把钱包绑到世界观里的任意货币属性，购物、打赏、红包、转账都自动记账。", icon: APP_ICON.wechat, cat: "美化", rating: 4.8, size: "0.3 MB", cover: SC("1579758258316-57081bac8ea8") },
 ];
+/* 点按组件 → 打开对应 App（照片卡片自带点按换图，不跳转） */
+const WIDGET_TARGET: Record<string, AppId> = { "w-hero-clock": "clock" as AppId, "w-clock": "clock" as AppId, "w-note": "notes" as AppId, "w-music": "cloudmusic" as AppId, "w-wallet": "wechat" as AppId };
 const WIDGET_IDS = new Set(STORE.filter((s) => s.kind === "widget").map((s) => s.id));
-const LABEL: Record<string, string> = Object.fromEntries([...CORE.map((c) => [c.id, c.label]), ...STORE.map((s) => [s.id, s.label])]);
+const BUILTIN_LABEL: Record<string, string> = Object.fromEntries([...CORE.map((c) => [c.id, c.label]), ...STORE.map((s) => [s.id, s.label])]);
+/** 功能注释：显示名优先模组 phoneAppsCfg，再回退内置名 */
+const appLabel = (id: string) => phoneAppLabel(id, worldPhoneAppsCfg(), BUILTIN_LABEL[id] ?? id);
+/* 兼容旧引用：LABEL 仍导出内置表；运行时请用 appLabel() */
+const LABEL = BUILTIN_LABEL;
 /* 不可删除项：应用商店（唯一能装回其它应用的入口）+ 原始时间横幅（只能移动位置，不能删） */
 const PROTECTED = new Set(["appstore", "w-hero-clock"]);
 const APP_IDS = new Set([...CORE.map((c) => c.id), ...STORE.filter((s) => s.kind !== "widget").map((s) => s.id)]);
-/* 自带应用的商店条目（供删除后重新安装） */
-const CORE_STORE: StoreItem[] = CORE.filter((c) => c.id !== "appstore").map((c) => ({
-  id: c.id, label: c.label, tagline: "手机自带应用", desc: c.label, kicker: "自带", story: "", icon: APP_ICON[c.id], cat: "自带", rating: 5, size: "—", cover: "",
-}));
+/** 模组自定义图标（编辑器上传）；玩家 iconOverrides 优先 */
+const modAppIcon = (id: string) => resolvePhoneApps(worldPhoneAppsCfg()).find((a) => a.id === id)?.icon;
+/* 自带应用的商店条目：与下载应用一起完整展示在应用商店，删掉后可在此重新安装 */
+const CORE_META: Record<string, [tagline: string, desc: string, cat: string, story: string, cover: string]> = {
+  wechat: ["聊天、朋友圈、钱包", "和圈内人保持联络", "社交", "私聊、群聊与朋友圈都在这里。谁先回你消息，谁的朋友圈又暗戳戳在说什么，一刷就知道。", SC("1611162617213-7d7a39e9b1d7")],
+  get sms(): [string, string, string, string, string] { return ["短信与通知", `${T("gig")}、快递与那条没署名的短信`, "通讯", `经纪公司的${T("gig")}、剧组的集合时间、银行的入账提醒，还有熟人发来的短信，都汇到这里。`, SC("1512941937669-90a1b58e7e9c")]; },
+  call: ["通话记录与拨号", "未接来电，往往最要紧", "通讯", "拨给想见的人，翻看未接来电和留言。每通电话都记在通话记录里。", SC("1523966211575-eb4a01e7dd51")],
+  weibo: ["热搜、话题与博文", "今天，谁又上了热搜", "社交", "冲浪热榜随剧情实时更新。点进话题，看媒体、路人和圈内人怎么说你。", SC("1611162616475-46b635cb6868")],
+  xhs: ["种草笔记与穿搭", "红毯造型，先来这里抄作业", "生活", "造型、探店、试镜心得，一页页翻下去，也许会看到关于你的那篇。", SC("1483985988355-763728e1935b")],
+  ticket: ["演出、首映与展览购票", "首映礼的票，抢到了吗", "生活", "演唱会、话剧、电影首映、展览，选好场次和票档就能下单，票会收进票夹。", SC("1501281668745-f7f57925c3b4")],
+  cloudmusic: ["音乐、歌词与榜单", "片尾曲一响，就想起那场戏", "音乐", "能播放的歌单、滚动歌词和热评。剧里的插曲、她唱的 OST，都在榜上。", SC("1470225620780-dba8ba36b745")],
+  get bosspin(): [string, string, string, string, string] { return [`试镜、${T("gig")}与招募`, "下一个角色，在这里等你", "事业", "剧组选角、品牌代言、综艺招募。投递之后，和对方 HR 直接聊。", SC("1521737604893-d14cc237f11d")]; },
+  xianyu: ["二手闲置交易", "旧礼服，也有人在等", "购物", "卖掉闲置的礼服和道具，也能逛集市，淘到和剧情有关的小东西。", SC("1556742049-0cfed4f6a45d")],
+  peek: ["偷看 TA 的手机", "TA 的手机里，藏着什么", "社交", "选一个人，看看 TA 的聊天、搜索记录、备忘录和相册。TA 对你的真实态度，可能就写在里面。", SC("1512428559087-560fa5ceab42")],
+  read: ["小说、随笔与连载", "圈内人的书，也在这里", "阅读", "书城随剧情上新：圈内人物的随笔自传、以你为原型的同人连载。读到喜欢的章节，可以直接打赏作者，余额走手机钱包。", SC("1512820790803-83ca734da794")],
+  video: ["视频、弹幕与直播", "今天的名场面，有人剪好了", "娱乐", "刷推荐流、发弹幕、给喜欢的 UP 主充电；直播间也在这里，打赏同样从手机钱包扣款。", SC("1611162616475-46b635cb6868")],
+  mail: ["来信、通知与回信", "有些话，适合写成一封信", "通讯", "角色的来信、平台通知与合作邀约都寄到这里。写给 TA 的信，TA 会在之后的剧情里择机回复。", SC("1634562876572-5abe57afcceb")],
+  settings: ["壁纸、机身与通用", "把小手机调成你喜欢的样子", "工具", "更换壁纸、机身外壳配色，查看储存空间与游戏内时间。", SC("1511707171634-5f897ff02aa9")],
+};
+const CORE_STORE: StoreItem[] = CORE.filter((c) => c.id !== "appstore").map((c) => {
+  // 文案惰性读取（含世界术语），避免模块求值期取值
+  const meta = (): [string, string, string, string, string] => CORE_META[c.id] ?? ["手机自带应用", c.label, "自带", "", ""];
+  return {
+    id: c.id, label: c.label, get tagline() { return meta()[0]; }, get desc() { return meta()[1]; }, kicker: "手机自带",
+    get story() { return meta()[3]; }, icon: APP_ICON[c.id], get cat() { return meta()[2]; }, rating: 4.9, size: "系统内置", get cover() { return meta()[4]; }, core: true,
+  };
+});
+const CATALOG: StoreItem[] = [...CORE_STORE, ...STORE];
 
 /* 仿真手机中框配色：可在「设置 · 机身外壳」自选。frame=中框渐变，btn=侧键渐变。 */
 export type FrameId = "titanium" | "graphite" | "silver" | "gold" | "rose" | "purple" | "blue";
@@ -74,34 +122,112 @@ export const PHONE_FRAMES: { id: FrameId; label: string; swatch: string; frame: 
 export const frameById = (id?: string) => PHONE_FRAMES.find((f) => f.id === id) ?? PHONE_FRAMES[0];
 
 export type PhonePrefs = { wallpaper: string; customWallpaper?: string; brightness: number; dark: boolean; dnd: boolean; haptics: boolean; frameColor: FrameId; showFrame: boolean; installed: string[]; widgets: string[]; layout: string[]; widgetSizes: Record<string, WidgetSize>; widgetShapes: Record<string, WidgetShape>; iconOverrides: Record<string, string> };
+/** 外观偏好：全局 UI（壁纸 / 机身等） */
 const PREFS_KEY = "star2005.phone.prefs";
+/** 已装应用 / 布局：存档私有，刷新与读档保持一致 */
+const APPS_KEY = "star2005.phone.apps";
 const DEFAULT_LAYOUT = ["w-hero-clock", ...CORE.map((c) => c.id)];
+const defaultInstalled = () => preinstallIds(worldPhoneAppsCfg()).filter((id) => APP_IDS.has(id));
 const DEFAULT_PREFS: PhonePrefs = {
-  wallpaper: "ocean", brightness: 1, dark: true, dnd: false, haptics: true, frameColor: "titanium", showFrame: false,
-  installed: CORE.map((c) => c.id), widgets: ["w-hero-clock"], layout: DEFAULT_LAYOUT, widgetSizes: {}, widgetShapes: {}, iconOverrides: {},
+  wallpaper: "ocean", brightness: 1, dark: false, dnd: false, haptics: false, frameColor: "titanium", showFrame: true,
+  installed: CORE.map((c) => c.id).filter((id) => id !== "xianyu"),
+  widgets: ["w-hero-clock"], layout: DEFAULT_LAYOUT, widgetSizes: {}, widgetShapes: {}, iconOverrides: {},
 };
+
+type AppsSlice = Pick<PhonePrefs, "installed" | "widgets" | "layout" | "widgetSizes" | "widgetShapes">;
+type LookSlice = Pick<PhonePrefs, "wallpaper" | "customWallpaper" | "brightness" | "dark" | "dnd" | "haptics" | "frameColor" | "showFrame" | "iconOverrides"> & { lookV2?: boolean };
+
+function normalizeApps(raw: Partial<AppsSlice> & { order?: string[] }): AppsSlice {
+  const installed = Array.from(new Set([...(Array.isArray(raw.installed) ? raw.installed : defaultInstalled()), "appstore"])).filter((id) => APP_IDS.has(id));
+  const widgets = Array.from(new Set([...(Array.isArray(raw.widgets) ? raw.widgets : []).filter((id) => WIDGET_IDS.has(id)), "w-hero-clock"])).filter((id) => id !== "w-today");
+  const legacy = Array.isArray(raw.order) ? [...widgets, ...raw.order] : [];
+  const baseLayout = (Array.isArray(raw.layout) && raw.layout.length ? raw.layout : (legacy.length ? legacy : DEFAULT_LAYOUT)).filter((id) => id !== "w-today");
+  const present = new Set([...installed, ...widgets]);
+  const layout = Array.from(new Set([...baseLayout.filter((id) => present.has(id)), ...installed, ...widgets]));
+  return {
+    installed,
+    widgets,
+    layout,
+    widgetSizes: (raw.widgetSizes && typeof raw.widgetSizes === "object") ? raw.widgetSizes : {},
+    widgetShapes: (raw.widgetShapes && typeof raw.widgetShapes === "object") ? raw.widgetShapes : {},
+  };
+}
+
+function loadLook(): LookSlice {
+  const parsed = loadGlobal<any>(PREFS_KEY, null);
+  const base: LookSlice = {
+    wallpaper: DEFAULT_PREFS.wallpaper,
+    brightness: DEFAULT_PREFS.brightness,
+    dark: DEFAULT_PREFS.dark,
+    dnd: false,
+    haptics: false,
+    frameColor: DEFAULT_PREFS.frameColor,
+    showFrame: DEFAULT_PREFS.showFrame,
+    iconOverrides: {},
+  };
+  if (!parsed) return base;
+  const look: LookSlice = {
+    ...base,
+    wallpaper: parsed.wallpaper ?? base.wallpaper,
+    customWallpaper: parsed.customWallpaper,
+    brightness: parsed.brightness ?? base.brightness,
+    dark: parsed.dark ?? base.dark,
+    frameColor: parsed.frameColor ?? base.frameColor,
+    showFrame: parsed.showFrame ?? base.showFrame,
+    iconOverrides: (parsed.iconOverrides && typeof parsed.iconOverrides === "object") ? parsed.iconOverrides : {},
+    lookV2: parsed.lookV2,
+  };
+  if (!parsed.lookV2) { look.showFrame = true; look.dark = false; look.lookV2 = true; }
+  return look;
+}
+
+/** 功能注释：已装列表按存档隔离；无存档键时从全局旧 prefs 迁一次，否则按模组预装播种。 */
+function loadApps(): AppsSlice {
+  const scoped = loadData<any>(APPS_KEY, null);
+  if (scoped && Array.isArray(scoped.installed)) return normalizeApps(scoped);
+  const global = loadGlobal<any>(PREFS_KEY, null);
+  if (global && Array.isArray(global.installed)) {
+    let installed = [...global.installed];
+    if (!global.peekV1) installed.push("peek");
+    if (!global.coupleV1) installed.push("couple");
+    if (!global.mailV1) installed.push("mail");
+    if (!global.readVideoV1) installed.push("read", "video");
+    const apps = normalizeApps({ ...global, installed });
+    saveData(APPS_KEY, apps);
+    return apps;
+  }
+  return normalizeApps({ installed: defaultInstalled(), widgets: ["w-hero-clock"], layout: DEFAULT_LAYOUT });
+}
+
 function loadPrefs(): PhonePrefs {
   try {
-    const raw = localStorage.getItem(PREFS_KEY);
-    const parsed = raw ? JSON.parse(raw) : null;
-    const p = parsed ? { ...DEFAULT_PREFS, ...parsed } : DEFAULT_PREFS;
-    // 旧版存档没有 widgets 字段时，默认给一张大字号时钟横幅
-    if (parsed && !("widgets" in parsed)) p.widgets = ["w-hero-clock"];
-    // 应用商店永远预装（唯一不可删的）
-    const installed = Array.from(new Set([...(Array.isArray(p.installed) ? p.installed : DEFAULT_PREFS.installed), "appstore"])).filter((id) => APP_IDS.has(id));
-    // 原始时间横幅始终存在（只可移动、不可删除）
-    const widgets = Array.from(new Set([...(Array.isArray(p.widgets) ? p.widgets : []).filter((id: string) => WIDGET_IDS.has(id)), "w-hero-clock"]));
-    // 统一布局：应用与组件混排。旧存档用 order+widgets 迁移
-    const legacy = Array.isArray(p.order) ? [...(Array.isArray(p.widgets) ? p.widgets : []), ...p.order] : [];
-    const baseLayout = Array.isArray(p.layout) && p.layout.length ? p.layout : (legacy.length ? legacy : DEFAULT_LAYOUT);
-    const present = new Set([...installed, ...widgets]);
-    // 过滤到已存在项，并把遗漏的已装项补到末尾
-    const layout = Array.from(new Set([...baseLayout.filter((id: string) => present.has(id)), ...installed, ...widgets]));
-    const widgetSizes = (p.widgetSizes && typeof p.widgetSizes === "object") ? p.widgetSizes : {};
-    const widgetShapes = (p.widgetShapes && typeof p.widgetShapes === "object") ? p.widgetShapes : {};
-    const iconOverrides = (p.iconOverrides && typeof p.iconOverrides === "object") ? p.iconOverrides : {};
-    return { ...p, installed, widgets, layout, widgetSizes, widgetShapes, iconOverrides };
-  } catch { return DEFAULT_PREFS; }
+    return { ...loadLook(), ...loadApps(), dnd: false, haptics: false };
+  } catch {
+    return { ...DEFAULT_PREFS, installed: defaultInstalled() };
+  }
+}
+
+function persistPrefs(next: PhonePrefs) {
+  const look: LookSlice = {
+    wallpaper: next.wallpaper,
+    customWallpaper: next.customWallpaper,
+    brightness: next.brightness,
+    dark: next.dark,
+    dnd: next.dnd,
+    haptics: next.haptics,
+    frameColor: next.frameColor,
+    showFrame: next.showFrame,
+    iconOverrides: next.iconOverrides,
+    lookV2: true,
+  };
+  saveGlobal(PREFS_KEY, look);
+  saveData(APPS_KEY, {
+    installed: next.installed,
+    widgets: next.widgets,
+    layout: next.layout,
+    widgetSizes: next.widgetSizes,
+    widgetShapes: next.widgetShapes,
+  });
 }
 /* 各应用的顶/底“系统色”：应用打开时，状态栏条与底部 Home 指示条改用应用自身的
  * 页首 / 页脚底色，避免露出主屏壁纸（dark=true 时状态栏文字用白色，否则用深色）。 */
@@ -112,7 +238,6 @@ const APP_CHROME: Record<AppId, Chrome> = {
   call: { top: "#ffffff", bottom: "#f7f8fa", dark: false },
   weibo: { top: "#ff8140", bottom: "#ffffff", dark: true },
   xhs: { top: "#ffffff", bottom: "#ffffff", dark: false },
-  douyin: { top: "#000000", bottom: "#000000", dark: true },
   ticket: { top: "#ff2d55", bottom: "#ffffff", dark: true },
   settings: { top: "#f2f2f7", bottom: "#f2f2f7", dark: false },
   appstore: { top: "#ffffff", bottom: "#f7f7f9", dark: false },
@@ -124,14 +249,35 @@ const APP_CHROME: Record<AppId, Chrome> = {
   cloudmusic: { top: "#241c33", bottom: "#241c33", dark: true },
   bosspin: { top: "#ffffff", bottom: "#ffffff", dark: false },
   xianyu: { top: "#1a9b98", bottom: "#f5f6f7", dark: true },
+  peek: { top: "#0d0f12", bottom: "#f2f2f7", dark: true },
   forum: { top: "#fff1f2", bottom: "#fff1f2", dark: false },
+  couple: { top: "#fdf2f6", bottom: "#fbf4f6", dark: false },
+  mail: { top: "#f2f2f7", bottom: "#f2f2f7", dark: false },
+  read: { top: "#f6f1e7", bottom: "#f6f1e7", dark: false },
+  video: { top: "#ffffff", bottom: "#ffffff", dark: false },
 };
 
 const sizeOf = (sizes: Record<string, WidgetSize>, id: string): WidgetSize => sizes[id] ?? DEFAULT_WIDGET_SIZE[id] ?? "sm";
 const shapeOf = (shapes: Record<string, WidgetShape>, id: string): WidgetShape => shapes[id] ?? "rounded";
 
+/* 手机内固定 iOS 字体与配色，不随游戏主题（深色 / 纸张风）变化 */
+const IOS_VARS = {
+  "--ink": "#181818",
+  "--ink-soft": "#8a8a8e",
+  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Helvetica Neue", "Microsoft YaHei", sans-serif',
+  colorScheme: "light",
+  WebkitFontSmoothing: "antialiased",
+} as React.CSSProperties;
+
 export default function Phone() {
   const { game } = useGame();
+  // 先判空再进入内部组件，保证内部 Hook 调用顺序恒定
+  if (!game) return null;
+  return <PhoneInner />;
+}
+
+function PhoneInner() {
+  const { game, patchGame } = useGame();
   const [app, setApp] = useState<AppId | null>(null);
   const [locked, setLocked] = useState(true);
   const [prefs, setPrefs] = useState<PhonePrefs>(loadPrefs);
@@ -139,14 +285,60 @@ export default function Phone() {
   const ph = ensurePhone(game).phone!;
   const time = gameTimeLabel(game).split(" ").pop() ?? "08:00";
   const unreadTotal = ph.threads.reduce((a, t) => a + t.unread, 0);
+  // 各应用真实未读角标：绿信=会话未读；信息=服务号短信未读；电话=上次打开电话后的未接来电
+  const svcFeed = loadFeed<{ unread?: number }[]>("sms");
+  const smsUnread = Array.isArray(svcFeed) ? svcFeed.reduce((a, t) => a + (Number(t?.unread) || 0), 0) : 0;
+  const callSeen = Number(loadData<number>(CALL_SEEN_KEY, 0)) || 0;
+  const missedCalls = (ph.calls ?? []).filter((c) => c.outcome === "missed" && c.ts > callSeen).length;
+  // 情侣空间：TA 寄来的未读信件
+  const [couple] = useCouple(game.id);
+  const coupleUnread = couple ? couple.bindings.reduce((n, id) => n + (couple.spaces[id]?.letters.filter((l) => l.from === "char" && !l.read).length ?? 0), 0) : 0;
+  const badges: Record<string, number> = { wechat: unreadTotal, sms: smsUnread, call: missedCalls, couple: coupleUnread, mail: mailUnread(game) };
+  const openApp = (a: AppId) => {
+    if (a === "call") saveData(CALL_SEEN_KEY, Date.now());
+    // 线上联动：刷了哪个 App 记入手机流水，并消耗线下时间
+    patchGame((g) => logAppOpen(g, a, appLabel(a)));
+    setApp(a);
+  };
   const back = () => setApp(null);
+  const petMode = usePetMode();
+  const studioOpen = useStudioOpen();
+  // 其它应用请求跳转（如「设置 · 审核中心」→ 应用商店里的开发者工坊）
+  useEffect(() => {
+    const h = (e: Event) => { const id = (e as CustomEvent<string>).detail; if (id) setApp(id as AppId); };
+    window.addEventListener("phone:open-app", h);
+    return () => window.removeEventListener("phone:open-app", h);
+  }, []);
   const wp = resolveWallpaper(prefs.wallpaper, prefs.customWallpaper);
   // 应用打开时，顶/底系统条改用应用自身底色，避免露出主屏壁纸
   const chrome = app ? APP_CHROME[app] : null;
+  const sync = useSyncState(app);
+  useProactiveMessages(); // 好友主动来消息：整部手机在线即生效，不必停在绿信里
+  const [syncTip, setSyncTip] = useState("");
+  // 真实手机式通知：未读会话逐条预览（锁屏）+ 新消息顶部横幅
+  const previews = ph.threads.filter((t) => t.unread > 0).sort((a, b) => b.lastTs - a.lastTs).slice(0, 4)
+    .map((t) => ({ id: t.id, title: t.title, n: t.unread, text: [...t.msgs].reverse().find((m) => m.role !== "me")?.text ?? "", ts: t.lastTs }));
+  const [banner, setBanner] = useState<(typeof previews)[number] | null>(null);
+  const lastSeenTs = useRef(previews[0]?.ts ?? 0);
+  const topPrev = previews[0];
+  useEffect(() => {
+    if (!topPrev || topPrev.ts <= lastSeenTs.current) return;
+    lastSeenTs.current = topPrev.ts;
+    if (app === "wechat" || prefs.dnd) return;
+    setBanner(topPrev);
+    if (prefs.haptics && "vibrate" in navigator) navigator.vibrate?.(20);
+    const t = setTimeout(() => setBanner(null), 4500);
+    return () => clearTimeout(t);
+  }, [topPrev?.ts]); // eslint-disable-line react-hooks/exhaustive-deps
+  const doSync = async () => {
+    if (!app || sync.busy) return;
+    const tip = await runSync(app);
+    if (tip) { setSyncTip(tip); setTimeout(() => setSyncTip(""), 2000); }
+  };
   const frame = frameById(prefs.frameColor);
   const updatePrefs = (p: Partial<PhonePrefs>) => setPrefs((cur) => {
     const next = { ...cur, ...p };
-    try { localStorage.setItem(PREFS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+    persistPrefs(next);
     return next;
   });
 
@@ -170,25 +362,26 @@ export default function Phone() {
     }
   };
   // 供「图标」个性化页使用（已安装的应用及其默认图标）
-  const iconApps: IconApp[] = prefs.installed.map((id) => ({ id, label: LABEL[id] ?? id, node: APP_ICON[id] ?? null }));
+  const iconApps: IconApp[] = prefs.installed.map((id) => ({ id, label: appLabel(id), node: APP_ICON[id] ?? null }));
   const setIcon = (id: string, url: string | null) => {
     const next = { ...prefs.iconOverrides };
     if (url) next[id] = url; else delete next[id];
     updatePrefs({ iconOverrides: next });
   };
   // 恢复手机自带应用：列出被删掉的自带应用
-  const reinstallable = CORE_STORE.filter((c) => !prefs.installed.includes(c.id));
 
   // 是否显示仿真机身边框：默认关闭（整屏沉浸），玩家可在「设置 · 显示与亮度」里打开
-  const framed = prefs.showFrame;
-  const screenRadius = framed ? "rounded-[2.4rem]" : "rounded-none";
+  // 窄屏（真机）本身就是手机：整屏使用；宽屏才显示仿真机身
+  const wide = useWide();
+  const framed = wide && prefs.showFrame;
+  const screenRadius = framed ? "rounded-[2.95rem]" : "rounded-none";
   const screen = (
         <div
-          className={`relative isolate flex flex-col overflow-hidden ring-1 ring-white/5 ${framed ? "h-[min(88vh,860px)] rounded-[2.4rem]" : "h-full min-h-[520px]"}`}
+          className={`phone-os relative isolate flex flex-col overflow-hidden ring-1 ring-white/5 ${framed ? "h-full w-full rounded-[2.95rem]" : "h-full"}`}
           style={{ background: chrome ? chrome.bottom : wp.css }}
         >
           <div
-            className={`relative flex items-center justify-between px-7 pt-3.5 pb-1 text-[13px] font-semibold ${chrome && !chrome.dark ? "text-black/80" : "text-white"}`}
+            className={`relative flex shrink-0 items-center justify-between px-8 pt-3.5 pb-1 text-[14.5px] font-semibold tracking-[-0.01em] ${chrome && !chrome.dark ? "text-black/80" : "text-white"}`}
             style={chrome ? { background: chrome.top } : undefined}
           >
             <span className="flex items-center gap-1.5 tabular-nums tracking-tight">
@@ -205,17 +398,25 @@ export default function Phone() {
               title="点按锁屏"
               className="dynamic-island absolute left-1/2 top-2.5 h-[26px] w-[92px] -translate-x-1/2" />
             <div className="flex items-center gap-1.5">
+              {sync.available && (
+                <button onClick={doSync} disabled={sync.busy} aria-label="联动世界剧情刷新" title="联动世界剧情刷新"
+                  className={`-my-1 mr-0.5 grid h-6 w-6 place-items-center rounded-full ${chrome && !chrome.dark ? "bg-black/[0.07] active:bg-black/15" : "bg-white/15 active:bg-white/30"}`}>
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className={sync.busy ? "animate-spin" : ""}>
+                    <path d="M20 11a8 8 0 1 0-2.3 5.7" /><path d="M20 4v7h-7" />
+                  </svg>
+                </button>
+              )}
               <SignalBars />
               <WifiGlyph />
               <BatteryGlyph />
             </div>
           </div>
 
-          <div className="relative flex-1 overflow-hidden">
+          <div id="phone-app-root" className="relative min-h-0 flex-1 overflow-hidden">
             {app === null && (
               <HomeGrid
-                layout={prefs.layout} installed={prefs.installed} widgets={prefs.widgets} widgetSizes={prefs.widgetSizes} widgetShapes={prefs.widgetShapes}
-                iconOverrides={prefs.iconOverrides} onOpen={setApp} unread={unreadTotal}
+                layout={prefs.layout} installed={prefs.installed.filter(phoneAppAllowed)} widgets={prefs.widgets} widgetSizes={prefs.widgetSizes} widgetShapes={prefs.widgetShapes}
+                iconOverrides={prefs.iconOverrides} onOpen={openApp} badges={badges}
                 onReorder={(layout) => updatePrefs({ layout })}
                 onRemove={removeItem}
                 onResize={(id) => updatePrefs({ widgetSizes: { ...prefs.widgetSizes, [id]: nextSize(sizeOf(prefs.widgetSizes, id)) } })}
@@ -230,10 +431,9 @@ export default function Phone() {
                 {app === "call" && <CallApp onBack={back} />}
                 {app === "weibo" && <WeiboApp onBack={back} />}
                 {app === "xhs" && <XhsApp onBack={back} />}
-                {app === "douyin" && <DouyinApp onBack={back} />}
                 {app === "ticket" && <TicketApp onBack={back} />}
                 {app === "settings" && <SettingsApp onBack={back} prefs={prefs} onChange={updatePrefs} />}
-                {app === "appstore" && <AppStoreApp onBack={back} catalog={STORE} reinstallable={reinstallable} installed={installedSet} onInstall={install} onOpen={(id) => (WIDGET_IDS.has(id) ? setApp(null) : setApp(id as AppId))} iconApps={iconApps} iconOverrides={prefs.iconOverrides} onSetIcon={setIcon} />}
+                {app === "appstore" && <AppStoreApp onBack={back} catalog={CATALOG.filter((c) => phoneAppAllowed(c.id)).map((c) => ({ ...c, label: appLabel(c.id) }))} installed={installedSet} onInstall={install} onOpen={(id) => (WIDGET_IDS.has(id) ? setApp(null) : openApp(id as AppId))} iconApps={iconApps} iconOverrides={prefs.iconOverrides} onSetIcon={setIcon} />}
                 {app === "pomodoro" && <PomodoroApp onBack={back} />}
                 {app === "clock" && <ClockApp onBack={back} />}
                 {app === "calculator" && <CalculatorApp onBack={back} />}
@@ -243,24 +443,40 @@ export default function Phone() {
                 {app === "bosspin" && <BossZhipinApp onBack={back} />}
                 {app === "xianyu" && <XianyuApp onBack={back} />}
                 {app === "forum" && <ForumApp onBack={back} />}
+                {app === "peek" && <PeekApp onBack={back} />}
+                {app === "couple" && <CoupleApp onBack={back} />}
+                {app === "mail" && <MailApp onBack={back} />}
+                {app === "read" && <ReadApp onBack={back} />}
+                {app === "video" && <VideoApp onBack={back} />}
               </div>
             )}
           </div>
 
-          <button
-            onClick={back}
-            disabled={app === null}
-            className="group mx-auto flex h-7 w-32 shrink-0 items-center justify-center disabled:opacity-30"
-            style={{ minHeight: 28 }}
-            aria-label="回到主屏"
-          >
-            <span aria-hidden className={`h-1 w-24 rounded-full transition ${
-              chrome && !chrome.dark ? "bg-black/30 group-enabled:group-hover:bg-black/55" : "bg-white/45 group-enabled:group-hover:bg-white/80"
-            }`}
-            />
-          </button>
+          {/* 常驻桌宠：主屏与各应用里都在；工坊打开或锁屏时暂时隐藏 */}
+          {petMode === "pinned" && !studioOpen && !locked && (
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 top-10 z-[45]"><SlimePet onOpen={() => requestStudio()} /></div>
+          )}
 
-          {locked && <LockScreen unread={unreadTotal} wallpaper={wp.css} radius={screenRadius} onUnlock={() => setLocked(false)} />}
+          <HomeIndicator active={app !== null} light={!!chrome && !chrome.dark} onHome={back} />
+
+          {syncTip && <div className="pointer-events-none absolute inset-x-0 top-12 z-40 flex justify-center"><span className="rounded-full bg-black/80 px-4 py-1.5 text-[12.5px] text-white shadow-lg">{syncTip}</span></div>}
+
+          <GlobalPhoneAlerts dnd={prefs.dnd} />
+
+          {/* 线下剧情触发的来电：锁屏 / 任意应用里都会弹出 */}
+          <IncomingCall />
+
+          {banner && !locked && (
+            <button onClick={() => { setBanner(null); openApp("wechat" as AppId); }}
+              className="absolute inset-x-2.5 top-11 z-[60] flex items-center gap-2.5 rounded-[22px] bg-white/75 px-3.5 py-3 text-left text-black shadow-[0_10px_34px_-6px_rgba(0,0,0,0.3)] ring-1 ring-inset ring-white/50 backdrop-blur-2xl backdrop-saturate-150 animate-[phoneBanner_.35s_cubic-bezier(.22,1,.36,1)]">
+              <span className="ios-icon block h-[34px] w-[34px] shrink-0 overflow-hidden rounded-[8px]">{APP_ICON.wechat}</span>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-baseline justify-between gap-2"><b className="truncate text-[13px]">{banner.title}</b><span className="shrink-0 text-[11px] text-black/45">现在</span></span>
+                <span className="block truncate text-[12.5px] text-black/75">{banner.n > 1 ? `[${banner.n}条] ` : ""}{banner.text || "发来一条消息"}</span>
+              </span>
+            </button>
+          )}
+          {locked && <LockScreen previews={previews} onOpenChat={() => { setLocked(false); openApp("wechat" as AppId); }} dnd={prefs.dnd} notices={[["wechat", "绿信", unreadTotal, "条新消息"], ["sms", "信息", smsUnread, "条未读短信"], ["call", "电话", missedCalls, "个未接来电"]]} wallpaper={wp.css} radius={screenRadius} onUnlock={() => setLocked(false)} />}
 
           {(prefs.brightness < 1 || prefs.dark) && (
             <div
@@ -283,21 +499,34 @@ export default function Phone() {
   );
 
   return (
-    <div className={framed ? "mx-auto flex min-h-full w-full max-w-[min(440px,96vw)] flex-col justify-center px-2 py-2" : "flex h-full w-full flex-col"}>
+    <div className={framed ? "flex h-full w-full items-center justify-center px-2 py-3" : "flex h-full w-full flex-col"} style={IOS_VARS}>
       {framed ? (
         /* 机身：钛金属中框 + 侧键 + 内屏 */
-        <div className="phone-frame relative rounded-[3.2rem] p-[5px]" style={{ background: frame.frame }}>
+        /* 机身按可用高度等比缩放（9:19.5，最高 780px），永远完整落在页面内、不被底部导航压住 */
+        <div className="phone-frame relative aspect-[9/19.5] h-full max-h-[780px] max-w-full rounded-[3.2rem] p-[5px]" style={{ background: frame.frame }}>
           <span className="phone-btn absolute -left-[3px] top-[15%] h-8 w-[3px] rounded-l" style={{ background: frame.btn }} />
           <span className="phone-btn absolute -left-[3px] top-[23%] h-14 w-[3px] rounded-l" style={{ background: frame.btn }} />
           <span className="phone-btn absolute -left-[3px] top-[33%] h-14 w-[3px] rounded-l" style={{ background: frame.btn }} />
           <span className="phone-btn absolute -right-[3px] top-[27%] h-20 w-[3px] rounded-r" style={{ background: frame.btn }} />
-          <div className="rounded-[2.9rem] bg-black p-[9px]">{screen}</div>
+          <div className="h-full overflow-hidden rounded-[2.95rem]">{screen}</div>
         </div>
       ) : (
         screen
       )}
     </div>
   );
+}
+
+export function useWide() {
+  const q = "(min-width: 640px)";
+  const [wide, setWide] = useState(() => typeof window !== "undefined" && window.matchMedia(q).matches);
+  useEffect(() => {
+    const m = window.matchMedia(q);
+    const on = () => setWide(m.matches);
+    m.addEventListener("change", on);
+    return () => m.removeEventListener("change", on);
+  }, []);
+  return wide;
 }
 
 /* —— 状态栏图标（纯 SVG，随缩放清晰） —— */
@@ -330,11 +559,39 @@ function BatteryGlyph() {
 }
 
 /* 每格权重：应用 1；组件 小(2×2)=4、大(整行 4×2)=8。用于按页容量分页（每页 4×5=20 格）。 */
-const cellWeight = (id: string, size: WidgetSize) => (isWidget(id) ? (size === "lg" ? 16 : size === "md" ? 8 : 4) : 1);
+// 每项占用的格数（4 列 × 行），须与 WidgetTile 实际的 col/row-span 一致
+const cellWeight = (id: string, size: WidgetSize) =>
+  id === "w-hero-clock" ? (size === "sm" ? 4 : 8)
+  : isWidget(id) ? (size === "lg" ? 16 : size === "md" ? 8 : 4) : 1;
 
-function HomeGrid({ layout, installed, widgets, widgetSizes, widgetShapes, iconOverrides, onOpen, unread, onReorder, onRemove, onResize, onReshape, onSetIcon }: {
+const DOCK_APPS = ["call", "sms", "wechat", "settings"];
+const CALL_SEEN_KEY = "star2005.phone.callSeen";
+
+/* 底部 Home 指示条：上滑（或点按）回到主屏，跟手上移 */
+function HomeIndicator({ active, light, onHome }: { active: boolean; light: boolean; onHome: () => void }) {
+  const start = useRef<number | null>(null);
+  const [dy, setDy] = useState(0);
+  const end = () => { if (start.current != null && dy < -24) onHome(); start.current = null; setDy(0); };
+  return (
+    <div
+      role="button" aria-label="上滑回到主屏" aria-disabled={!active}
+      onPointerDown={(e) => { if (!active) return; start.current = e.clientY; (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId); }}
+      onPointerMove={(e) => { if (start.current != null) setDy(Math.max(-60, Math.min(0, e.clientY - start.current))); }}
+      onPointerUp={() => { if (start.current != null && dy > -4) onHome(); end(); }}
+      onPointerCancel={end}
+      className={`relative z-30 flex h-6 shrink-0 touch-none items-center justify-center ${active ? "cursor-grab" : ""}`}
+    >
+      <span
+        className={`block h-[5px] w-32 rounded-full transition-opacity ${light ? "bg-black/70" : "bg-white/80"} ${active ? "" : "opacity-40"}`}
+        style={{ transform: `translateY(${dy / 3}px) scaleX(${1 - dy / 400})`, transition: start.current == null ? "transform .25s" : "none" }}
+      />
+    </div>
+  );
+}
+
+function HomeGrid({ layout, installed, widgets, widgetSizes, widgetShapes, iconOverrides, onOpen, badges, onReorder, onRemove, onResize, onReshape, onSetIcon }: {
   layout: string[]; installed: string[]; widgets: string[]; widgetSizes: Record<string, WidgetSize>; widgetShapes: Record<string, WidgetShape>;
-  iconOverrides: Record<string, string>; onOpen: (a: AppId) => void; unread: number;
+  iconOverrides: Record<string, string>; onOpen: (a: AppId) => void; badges: Record<string, number>;
   onReorder: (layout: string[]) => void; onRemove: (id: string) => void; onResize: (id: string) => void;
   onReshape: (id: string) => void; onSetIcon: (id: string, url: string | null) => void;
 }) {
@@ -342,7 +599,9 @@ function HomeGrid({ layout, installed, widgets, widgetSizes, widgetShapes, iconO
   const [iconEditing, setIconEditing] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const present = new Set([...installed, ...widgets]);
-  const external = layout.filter((id) => present.has(id));
+  // 底部 Dock：固定四个常用应用（已安装才显示），不再出现在主屏网格里
+  const dock = DOCK_APPS.filter((id) => installed.includes(id));
+  const external = layout.filter((id) => present.has(id) && !dock.includes(id));
   const [order, setOrder] = useState<string[]>(external);
   const drag = useRef<string | null>(null);
   const moved = useRef(false);
@@ -361,16 +620,26 @@ function HomeGrid({ layout, installed, widgets, widgetSizes, widgetShapes, iconO
   };
   const endDrag = () => { drag.current = null; onReorder(order); };
 
-  // 按格权重分页（每页 20 格），横向滑动翻页
-  const PAGE_CAP = 20;
+  // 按格权重分页：每页容量按屏幕实际可容纳的行数计算（行高 84 + 行距 16），排满才翻页
+  const scroller = useRef<HTMLDivElement | null>(null);
+  const [rows, setRows] = useState(6);
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    const measure = () => setRows(Math.max(3, Math.floor((el.clientHeight - 24 + 16) / (84 + 16))));
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const PAGE_CAP = rows * 4;
   const pages: string[][] = [[]];
   let used = 0;
-  for (const id of order) {
+  for (const id of order.filter((x) => isWidget(x) || APP_IDS.has(x))) {
     const w = cellWeight(id, sizeOf(widgetSizes, id));
     if (used + w > PAGE_CAP && pages[pages.length - 1].length) { pages.push([]); used = 0; }
     pages[pages.length - 1].push(id); used += w;
   }
-  const scroller = useRef<HTMLDivElement | null>(null);
   const [page, setPage] = useState(0);
   const onScroll = () => { const el = scroller.current; if (el) setPage(Math.round(el.scrollLeft / el.clientWidth)); };
 
@@ -391,25 +660,28 @@ function HomeGrid({ layout, installed, widgets, widgetSizes, widgetShapes, iconO
       className="absolute -left-1.5 -top-1.5 z-10 flex h-[20px] w-[20px] items-center justify-center rounded-full bg-black/70 text-[13px] font-bold text-white shadow ring-1 ring-white/20">−</span>
   );
 
-  const AppTile = ({ id, i }: { id: string; i: number }) => {
-    const label = LABEL[id] ?? id;
+  const AppTile = ({ id, i, inDock }: { id: string; i: number; inDock?: boolean }) => {
+    const label = appLabel(id);
+    const customIcon = iconOverrides?.[id] || modAppIcon(id);
     return (
       <button
         {...dragProps(id)} {...holdProps}
         onClick={(e) => { if (edit) { e.stopPropagation(); if (!moved.current) setIconEditing(id); return; } if (!moved.current) onOpen(id as AppId); }}
-        className={`phone-icon-in group relative flex flex-col items-center gap-1.5 ${edit ? "phone-jiggle" : ""}`}
-        style={{ animationDelay: edit ? undefined : `${i * 40}ms` }}
+        className={`phone-icon-in group relative flex flex-col items-center gap-1.5 bg-transparent ${edit ? "phone-jiggle" : ""}`}
+        style={{ animationDelay: edit ? undefined : `${Math.min(i, 12) * 12}ms` }}
       >
-        <span className="ios-icon relative block h-[58px] w-[58px] overflow-hidden rounded-[14px] shadow-sm">
-          {iconOverrides?.[id]
-            ? <img src={iconOverrides[id]} alt={label} className="h-full w-full scale-[1.14] object-cover" />
+        <span className="relative block">
+        <span className="ios-icon relative block h-[56px] w-[56px] overflow-hidden rounded-[15px] shadow-[0_4px_12px_-4px_rgba(0,0,0,0.35)] ring-1 ring-inset ring-white/10 transition-transform duration-150 group-active:scale-90 group-active:brightness-90">
+          {customIcon
+            ? <img src={customIcon} alt={label} className="h-full w-full scale-[1.14] object-cover" />
             : (APP_ICON[id] ?? <span className="flex h-full w-full items-center justify-center bg-[#232323] text-white font-medium">{label[0]}</span>)}
-          {id === "wechat" && unread > 0 && (
-            <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow ring-2 ring-black/10">{unread}</span>
-          )}
-          {edit && canRemove(id) && <RemoveBtn id={id} />}
         </span>
-        <span className="max-w-[74px] truncate text-center text-[12px] font-medium tracking-tight text-white drop-shadow-sm">{label}</span>
+        {edit && canRemove(id) && <RemoveBtn id={id} />}
+        {!edit && (badges[id] ?? 0) > 0 && (
+          <span className="pointer-events-none absolute -right-1.5 -top-1.5 z-10 flex h-[20px] min-w-[20px] items-center justify-center rounded-full bg-[#ff3b30] px-[5px] text-[12px] font-medium tabular-nums leading-none text-white">{badges[id] > 99 ? "99+" : badges[id]}</span>
+        )}
+        </span>
+        {!inDock && <span className="max-w-[70px] truncate text-center text-[11px] font-medium tracking-tight text-white/95 [text-shadow:0_1px_4px_rgba(0,0,0,0.55)]">{label}</span>}
       </button>
     );
   };
@@ -417,15 +689,15 @@ function HomeGrid({ layout, installed, widgets, widgetSizes, widgetShapes, iconO
   const WidgetTile = ({ id }: { id: string }) => {
     const size = sizeOf(widgetSizes, id);
     const shape = shapeOf(widgetShapes, id);
-    // 大字号时钟横幅是纯文字横幅：始终整行，但高度按内容收窄，避免留出一大块空框
     // 大字号时钟横幅是纯文字横幅：整行，高度贴合内容（最多 2 行），不留大空框
     const span = id === "w-hero-clock"
       ? (size === "sm" ? "col-span-4 row-span-1" : "col-span-4 row-span-2")
       : size === "lg" ? "col-span-4 row-span-4" : size === "md" ? "col-span-4 row-span-2" : "col-span-2 row-span-2";
     const sizeLabel = size === "sm" ? "小" : size === "md" ? "中" : "大";
     return (
-      <div {...dragProps(id)} {...holdProps} onClick={(e) => edit && e.stopPropagation()}
-        className={`relative ${span} ${edit ? "phone-jiggle" : ""}`}>
+      <div {...dragProps(id)} {...holdProps}
+        onClick={(e) => { if (edit) { e.stopPropagation(); return; } const to = WIDGET_TARGET[id]; if (id === "w-wallet") requestWallet(); if (to) onOpen(to); }}
+        className={`relative h-full w-full justify-self-stretch ${span} ${edit ? "phone-jiggle" : WIDGET_TARGET[id] ? "cursor-pointer transition active:scale-[0.97]" : ""}`}>
         <div className="h-full w-full overflow-hidden" style={{ borderRadius: SHAPE_RADIUS[shape] }}>
           {renderWidget(id)}
         </div>
@@ -449,7 +721,10 @@ function HomeGrid({ layout, installed, widgets, widgetSizes, widgetShapes, iconO
   };
 
   return (
-    <div className="flex h-full flex-col" onClick={() => edit && setEdit(false)}>
+    <div className="relative flex h-full flex-col" onClick={() => edit && setEdit(false)}>
+      {/* 柔光遮罩：顶部与底部轻微压暗，保证任意壁纸下文字与 Dock 清晰 */}
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/15 to-transparent" />
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/15 to-transparent" />
       {edit && (
         <div className="px-6 pb-2 pt-6 text-center text-white drop-shadow">
           <p className="text-[12px] font-medium text-white/85">拖动排序 · 点应用改图标 · 组件调大小 / 形状 · 点角标删除 · 左右翻页 · 空白处完成</p>
@@ -458,22 +733,36 @@ function HomeGrid({ layout, installed, widgets, widgetSizes, widgetShapes, iconO
 
       {/* 横向翻页容器 */}
       <div ref={scroller} onScroll={onScroll}
-        className="phone-pages flex flex-1 snap-x snap-mandatory overflow-x-auto overflow-y-hidden">
+        className="phone-pages relative flex flex-1 snap-x snap-mandatory overflow-x-auto overflow-y-hidden">
         {pages.map((ids, pi) => (
-          <div key={pi} className="phone-pages h-full w-full shrink-0 snap-center overflow-y-auto px-6 pt-4">
-            <div className="grid grid-cols-4 gap-x-3 gap-y-5 pb-4 pt-1 [grid-auto-flow:row_dense] [grid-auto-rows:84px]">
+          <div key={pi} className="phone-pages h-full w-full shrink-0 snap-center overflow-y-auto px-[22px] pt-4">
+            <div className="grid grid-cols-4 justify-items-center gap-x-3 gap-y-[18px] pb-4 [grid-auto-flow:row_dense] [grid-auto-rows:82px]">
               {ids.map((id, i) => isWidget(id) ? <WidgetTile key={id} id={id} /> : <AppTile key={id} id={id} i={i} />)}
             </div>
           </div>
         ))}
       </div>
 
-      {/* 页码圆点 */}
-      {pages.length > 1 && (
-        <div className="flex items-center justify-center gap-1.5 pb-1">
-          {pages.map((_, pi) => (
-            <span key={pi} className={`h-1.5 w-1.5 rounded-full transition ${pi === page ? "bg-white" : "bg-white/35"}`} />
-          ))}
+      {/* 页码：iOS 式「搜索」胶囊，多页时改为毛玻璃圆点条 */}
+      <div className="relative flex justify-center pb-2.5 pt-1">
+        {pages.length > 1 ? (
+          <div className="flex items-center gap-[7px] rounded-full bg-white/18 px-2.5 py-[7px] backdrop-blur-xl">
+            {pages.map((_, pi) => (
+              <span key={pi} className={`h-[6px] w-[6px] rounded-full transition ${pi === page ? "bg-white" : "bg-white/40"}`} />
+            ))}
+          </div>
+        ) : (
+          <span className="flex items-center gap-1 rounded-full bg-white/20 px-3.5 py-[5px] text-[12px] font-medium text-white backdrop-blur-xl backdrop-saturate-150 ring-1 ring-inset ring-white/10">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+            搜索
+          </span>
+        )}
+      </div>
+
+      {/* Dock：毛玻璃托盘 + 四个常用应用，无文字标签 */}
+      {dock.length > 0 && (
+        <div className="relative mx-[10px] mb-1.5 flex items-center justify-around rounded-[34px] bg-white/[0.18] px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_10px_30px_-12px_rgba(0,0,0,0.35)] ring-1 ring-inset ring-white/15 backdrop-blur-[30px] backdrop-saturate-[1.8]">
+          {dock.map((id, i) => <AppTile key={id} id={id} i={i} inDock />)}
         </div>
       )}
 
@@ -484,12 +773,12 @@ function HomeGrid({ layout, installed, widgets, widgetSizes, widgetShapes, iconO
             <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-white/25" />
             <div className="flex items-center gap-3">
               <span className="ios-icon relative block h-[52px] w-[52px] overflow-hidden">
-                {iconOverrides?.[iconEditing]
-                  ? <img src={iconOverrides[iconEditing]} alt="" className="h-full w-full scale-[1.14] object-cover" />
-                  : (APP_ICON[iconEditing] ?? <span className="flex h-full w-full items-center justify-center bg-zinc-600">{(LABEL[iconEditing] ?? iconEditing)[0]}</span>)}
+                {iconOverrides?.[iconEditing] || modAppIcon(iconEditing)
+                  ? <img src={(iconOverrides?.[iconEditing] || modAppIcon(iconEditing)) || undefined} alt="" className="h-full w-full scale-[1.14] object-cover" />
+                  : (APP_ICON[iconEditing] ?? <span className="flex h-full w-full items-center justify-center bg-zinc-600">{appLabel(iconEditing)[0]}</span>)}
               </span>
               <div>
-                <p className="text-[15px] font-semibold">{LABEL[iconEditing] ?? iconEditing}</p>
+                <p className="text-[15px] font-semibold">{appLabel(iconEditing)}</p>
                 <p className="text-[12px] text-white/55">自定义主屏图标</p>
               </div>
             </div>
@@ -520,10 +809,9 @@ function HomeGrid({ layout, installed, widgets, widgetSizes, widgetShapes, iconO
   );
 }
 
-/* 锁屏：大字号时钟 + 日期，上滑 / 轻触解锁（时间走真实时钟，秒级更新） */
-function LockScreen({ unread, wallpaper, radius = "rounded-[2.4rem]", onUnlock }: { unread: number; wallpaper: string; radius?: string; onUnlock: () => void }) {
-  const [now, setNow] = useState(new Date());
-  useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
+/* 锁屏：大字号时钟 + 日期，上滑 / 轻触解锁（与状态栏同为游戏内时间） */
+function LockScreen({ previews = [], onOpenChat, dnd = false, notices, wallpaper, radius = "rounded-[2.4rem]", onUnlock }: { previews?: { id: string; title: string; n: number; text: string }[]; onOpenChat?: () => void; dnd?: boolean; notices: [id: string, label: string, n: number, unit: string][]; wallpaper: string; radius?: string; onUnlock: () => void }) {
+  const now = useGameNow();
   const [dragY, setDragY] = useState(0);
   const startY = useRef<number | null>(null);
 
@@ -546,32 +834,60 @@ function LockScreen({ unread, wallpaper, radius = "rounded-[2.4rem]", onUnlock }
       {/* 锁屏自带壁纸底层：不透明，遮住背后的主屏 */}
       <div className={`pointer-events-none absolute inset-0 ${radius}`} style={{ background: wallpaper }} />
       {/* 顶部压暗，让白色时间在任意壁纸上都清晰 */}
-      <div className={`pointer-events-none absolute inset-0 bg-gradient-to-b from-black/45 via-black/10 to-black/55 ${radius}`} />
+      <div className={`pointer-events-none absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/40 ${radius}`} />
 
-      <div className="relative z-10 mt-[26%] flex flex-col items-center">
+      <div className="relative z-10 mt-[14%] flex w-full flex-1 flex-col items-center">
         {/* 小锁 */}
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="mb-4 opacity-90 drop-shadow">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="mb-2 opacity-90 drop-shadow">
           <rect x="5" y="10.5" width="14" height="9.5" rx="2.2" fill="currentColor" />
           <path d="M7.6 10.5V8a4.4 4.4 0 0 1 8.8 0v2.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
         </svg>
-        <p className="text-[15px] font-medium tracking-wide text-white/85 drop-shadow">{dateLine}</p>
-        <p className="mt-1 text-[86px] font-thin leading-none tabular-nums tracking-tight drop-shadow-[0_2px_16px_rgba(0,0,0,0.35)]">{hh}:{mm}</p>
+        <p className="text-[16px] font-semibold tracking-[0.04em] text-white/90 drop-shadow">{dateLine}</p>
+        <p className="mt-0.5 text-[92px] font-semibold leading-[0.95] tabular-nums tracking-[-0.04em] text-white/95 drop-shadow-[0_2px_16px_rgba(0,0,0,0.3)]">{hh}:{mm}</p>
 
-        {unread > 0 && (
-          <div className="mt-8 flex items-center gap-2.5 rounded-2xl bg-white/12 px-4 py-2.5 backdrop-blur-md">
-            <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-[#07c160] text-[15px]">💬</span>
-            <div className="text-left">
-              <p className="text-[13px] font-semibold leading-tight">微信</p>
-              <p className="text-[11.5px] text-white/80">你有 {unread} 条新消息</p>
+        <div className="mt-auto mb-4 flex w-[calc(100%-24px)] max-w-[340px] flex-col gap-2">
+          {dnd && notices.some(([id, , n]) => n > 0 && phoneAppAllowed(id)) && (
+            <div className="flex items-center justify-center gap-1.5 rounded-full bg-black/30 px-3 py-1.5 text-[12px] text-white/85 backdrop-blur-xl">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+              勿扰模式中 · 通知已静默
             </div>
-          </div>
-        )}
+          )}
+          {!dnd && phoneAppAllowed("wechat") && previews.map((p) => (
+            <button key={p.id} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onOpenChat?.(); }}
+              className="flex items-center gap-2.5 rounded-[20px] bg-white/25 px-3.5 py-3 text-left shadow-[0_6px_20px_-10px_rgba(0,0,0,0.4)] backdrop-blur-2xl backdrop-saturate-150 active:bg-white/35">
+              <span className="ios-icon block h-[34px] w-[34px] shrink-0 overflow-hidden rounded-[8px]">{APP_ICON.wechat}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[13px] font-semibold leading-tight">{p.title}</span>
+                <span className="block truncate text-[12px] text-white/85">{p.n > 1 ? `[${p.n}条] ` : ""}{p.text || "发来一条消息"}</span>
+              </span>
+              <span className="self-start text-[11px] text-white/60">现在</span>
+            </button>
+          ))}
+          {!dnd && notices.filter(([id, , n]) => n > 0 && phoneAppAllowed(id) && !(id === "wechat" && previews.length)).map(([id, label, n, unit]) => (
+            <div key={id} className="flex items-center gap-2.5 rounded-[20px] bg-white/25 px-3.5 py-3 shadow-[0_6px_20px_-10px_rgba(0,0,0,0.4)] backdrop-blur-2xl backdrop-saturate-150">
+              <span className="ios-icon block h-[34px] w-[34px] shrink-0 overflow-hidden rounded-[8px]">{APP_ICON[id]}</span>
+              <div className="min-w-0 flex-1 text-left">
+                <p className="text-[13px] font-semibold leading-tight">{label}</p>
+                <p className="truncate text-[12px] text-white/85">你有 {n} {unit}</p>
+              </div>
+              <span className="self-start text-[11px] text-white/60">现在</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* 底部上滑提示 */}
-      <div className="relative z-10 mt-auto flex flex-col items-center pb-6">
-        <p className="text-[12.5px] text-white/70 drop-shadow" style={{ opacity: Math.max(0, 1 - lift / 60) }}>轻触或上滑解锁</p>
-        <div className="mt-3 h-1 w-32 rounded-full bg-white/70" />
+      <div className="relative z-10 flex w-full items-end justify-between px-9 pb-3">
+        <span className="grid h-[50px] w-[50px] place-items-center rounded-full bg-black/30 backdrop-blur-xl" aria-hidden>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"><path d="M8 2h8v4l-2 4v11a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V10L8 6Z" /><path d="M12 13v2" strokeLinecap="round" /></svg>
+        </span>
+        <div className="flex flex-col items-center pb-1">
+          <p className="text-[12px] font-medium text-white/75 drop-shadow" style={{ opacity: Math.max(0, 1 - lift / 60) }}>上滑解锁</p>
+          <div className="mt-2.5 h-[5px] w-[134px] rounded-full bg-white/85" />
+        </div>
+        <span className="grid h-[50px] w-[50px] place-items-center rounded-full bg-black/30 backdrop-blur-xl" aria-hidden>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2.5l1.5-2h6l1.5 2H19a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /><circle cx="12" cy="13" r="3.5" /></svg>
+        </span>
       </div>
     </div>
   );

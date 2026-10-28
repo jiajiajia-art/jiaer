@@ -1,10 +1,15 @@
+import { isConfigured } from "../../lib/ai";
 /* 票务：仿真演出票务 App（大麦/猫眼式）——首页轮播 + 分类 + 海报卡；详情选座下单（余票/概率/扣款）；电子票夹（含二维码卡） */
 import { useEffect, useMemo, useState } from "react";
 import { useGame } from "../../store/gameCtx";
-import { PERSON_BY_ID } from "../../worlds/star2005/content";
 import { addTicket } from "../../game/phone";
 import type { HeldTicket } from "../../game/phone";
+import { useWorldSync, syncJson, loadFeed, saveFeed } from "./worldSync";
+import { LoadMoreButton, seenOf } from "./shared";
 import { IconSearch, IconClock, IconPin, IconTicket, IconStar, IconFire, IconChevron, IconFolder } from "./icons";
+import { liveTerm as T } from "../../mods/live";
+import { wallet } from "../../game/wallet";
+import { logAct } from "../../game/phoneLink";
 
 const ACCENT = "#ff2d55";
 const IMG = (id: string, w = 480, h = 640) => `https://images.unsplash.com/photo-${id}?w=${w}&h=${h}&fit=crop&auto=format&q=75`;
@@ -45,7 +50,8 @@ const seatOf = (tier: string, i: number) => {
 };
 
 export default function TicketApp({ onBack }: { onBack: () => void }) {
-  const { game, commitGame } = useGame();
+  const { game, cfg, commitGame } = useGame();
+  const [extra, setExtra] = useState<Show[]>(() => loadFeed<Show[]>("ticket") ?? []);
   const [tab, setTab] = useState<"home" | "mine">("home");
   const [cat, setCat] = useState<Cat>("全部");
   const [detail, setDetail] = useState<string | null>(null);
@@ -55,31 +61,61 @@ export default function TicketApp({ onBack }: { onBack: () => void }) {
 
   const flash = (t: string) => { setToast(t); setTimeout(() => setToast(""), 2400); };
 
-  const shows = useMemo<Show[]>(() => {
-    const n = game!.npcs;
-    const nm = (i: number) => n[i % Math.max(1, n.length)]?.name ?? "神秘嘉宾";
-    const film = PERSON_BY_ID[n[1]?.id ?? ""]?.works?.[0] ?? "银河来信";
-    return [
-      { id: "e1", name: `${nm(0)} 世界巡回演唱会「星火 STARFIRE」`, category: "演唱会", artist: nm(0), poster: IMG(POSTERS[0]), when: "本周六 19:30", date: "周六 · 今晚开抢", venue: "星城体育中心 · 主馆", city: "星城", rating: 9.6, wanted: 128000, hot: true,
-        tiers: [{ label: "内场 VIP", price: 1880, stock: 2 }, { label: "看台 A", price: 1280, stock: 6 }, { label: "看台 B", price: 680, stock: 12 }],
-        desc: "阔别两年重返舞台，全新舞美与乐队编制，两小时二十首金曲连唱。今夜，只为与你重逢。" },
-      { id: "e2", name: "跨年群星盛典 2005", category: "演唱会", artist: `${nm(0)}、${nm(2)} 等`, poster: IMG(POSTERS[2]), when: "12.31 20:00", date: "12 月 31 日", venue: "云津大剧院", city: "星城", rating: 9.1, wanted: 86000, hot: true,
-        tiers: [{ label: "钻石座", price: 1580, stock: 3 }, { label: "贵宾座", price: 980, stock: 8 }, { label: "普通座", price: 480, stock: 20 }],
-        desc: "二十组人气艺人同台跨年，零点钟声与漫天焰火，陪你告别旧年、迎接新岁。" },
-      { id: "e3", name: `电影《${film}》全球首映礼`, category: "电影首映", artist: nm(1), poster: IMG(POSTERS[4]), when: "下周三 18:00", date: "下周三", venue: "星光 IMAX 剧场", city: "星城", rating: 8.8, wanted: 42000, hot: false,
-        tiers: [{ label: "红毯 + 观影", price: 800, stock: 2 }, { label: "首映观影", price: 380, stock: 10 }],
-        desc: "主创集体亮相红毯，映后见面会与签名环节，抢先看到年度最受期待的大银幕之作。" },
-      { id: "e4", name: "仲夏音乐节 · 复古之夜", category: "音乐节", artist: "多组乐队 / DJ", poster: IMG(POSTERS[5]), when: "下月 05 14:00", date: "下月 5 日", venue: "城郊阳光草坪", city: "星城", rating: 9.0, wanted: 51000, hot: true,
-        tiers: [{ label: "两日通票", price: 980, stock: 30 }, { label: "单日票", price: 580, stock: 60 }],
-        desc: "十小时不间断演出，草地、市集与落日舞台。带上朋友，来一场夏夜的自由狂欢。" },
-      { id: "e5", name: `音乐剧《不眠之城》${nm(3)} 主演`, category: "话剧音乐剧", artist: nm(3), poster: IMG(POSTERS[3]), when: "本月 20-25 19:15", date: "本月 20 日起", venue: "大都会歌剧院", city: "星城", rating: 9.3, wanted: 33000, hot: false,
-        tiers: [{ label: "池座前区", price: 780, stock: 5 }, { label: "楼座", price: 380, stock: 15 }],
-        desc: "百老汇原版授权中文制作，十二人现场乐队伴奏。一座城的欲望与救赎，六场限定。" },
-      { id: "e6", name: `${nm(4)} Livehouse 巡演 · 星城站`, category: "Livehouse", artist: nm(4), poster: IMG(POSTERS[1]), when: "本周五 20:30", date: "本周五", venue: "MAO Livehouse", city: "星城", rating: 8.9, wanted: 18000, hot: false,
-        tiers: [{ label: "前排站票", price: 380, stock: 8 }, { label: "普通站票", price: 260, stock: 40 }],
-        desc: "小场地、大能量，与偶像零距离。限量站票，先到先得，唱到嗓子哑也不肯散场。" },
-    ];
-  }, [game]);
+  /* 已购张数从库存中扣除，避免"无限余票" */
+  const [more, setMore] = useState<Show[]>(() => loadFeed<Show[]>("ticket.more") ?? []);
+  const shows = useMemo(() => [...extra, ...more].map((s) => ({
+    ...s,
+    tiers: s.tiers.map((t) => ({ ...t, stock: Math.max(0, t.stock - held.filter((h) => h.name === s.name && h.tier === t.label).length) })),
+  })), [extra, more, held]);
+  const [q, setQ] = useState("");
+
+  const parseShows = (raw: unknown, pfx: string): Show[] => {
+    const CATS_OK = ["演唱会", "音乐节", "话剧音乐剧", "电影首映", "Livehouse"];
+    const str = (v: unknown, d: string, n = 60) => (typeof v === "string" && v.trim() ? v.trim().slice(0, n) : d);
+    const num = (v: unknown, d: number, lo: number, hi: number) => { const x = Number(v); return Number.isFinite(x) ? Math.min(hi, Math.max(lo, x)) : d; };
+    const arr = Array.isArray(raw) ? raw : [];
+    const now = Date.now();
+    return arr.slice(0, 6).filter((x): x is Record<string, unknown> => !!x && typeof x === "object").map((x, i) => {
+      const tiersRaw = Array.isArray(x.tiers) ? x.tiers : [];
+      const tiers: Tier[] = tiersRaw.slice(0, 4).filter((t): t is Record<string, unknown> => !!t && typeof t === "object")
+        .map((t) => ({ label: str(t.label, "普通票", 12), price: Math.round(num(t.price, 380, 20, 20000)), stock: Math.round(num(t.stock, 10, 1, 99)) }));
+      const when = str(x.when, "近期", 20);
+      return {
+        id: `${pfx}${now}${i}`, name: str(x.name, "", 40),
+        category: (CATS_OK.includes(x.category as string) ? x.category : "演唱会") as Show["category"],
+        artist: str(x.artist, "多位艺人", 30), poster: IMG(POSTERS[(now + i) % POSTERS.length]), when, date: when,
+        venue: str(x.venue, `${T("city")}体育中心`, 24), city: `${T("city")}`, rating: Math.round(num(x.rating, 9, 5, 10) * 10) / 10,
+        wanted: Math.round(num(x.wanted, 10000, 100, 999999)), hot: x.hot !== false,
+        tiers: tiers.length ? tiers : [{ label: "普通票", price: 380, stock: 20 }], desc: str(x.desc, "", 120),
+      };
+    }).filter((x) => x.name);
+  };
+  // 底部「查看更多」：结合剧情再生成一批演出，接在列表末尾（持久化）
+  const [moreLoading, setMoreLoading] = useState(false);
+  const loadMore = async () => {
+    if (moreLoading) return;
+    setMoreLoading(true);
+    try {
+      const seen = seenOf(shows.map((x) => x.name));
+      const r = await syncJson<{ shows?: unknown }>(cfg, game!, "ticket", "票团团", `再生成 4 个演出/活动/首映${cat === "全部" ? "" : `（类别均为${cat}）`}，可涉及最近剧情中的人物、作品、事件，也可是其他艺人的常规演出；不要与这些已有演出重复：${seen}。返回 {"shows":[{"name":"演出名","category":"演唱会|音乐节|话剧音乐剧|电影首映|Livehouse","artist":"艺人","when":"时间如 本周六 19:30","venue":"场馆","rating":9.0,"wanted":20000,"hot":true,"tiers":[{"label":"票档","price":680,"stock":10}],"desc":"60字内简介"}]}`);
+      if (!r) { flash("未配置 AI，暂无更多"); return; }
+      const fresh = parseShows(r.shows, "aim").map((x) => ({ ...x, hot: false }));
+      if (!fresh.length) { flash("生成失败，请重试"); return; }
+      const next = [...more, ...fresh].slice(-60);
+      setMore(next); saveFeed("ticket.more", next);
+      flash(`新加载 ${fresh.length} 场`);
+    } catch { flash("加载失败，请重试"); } finally { setMoreLoading(false); }
+  };
+
+  useWorldSync("ticket", async () => {
+    const r = await syncJson<{ shows?: unknown }>(cfg, game!, "ticket", "票团团", `生成 3 个紧扣当前世界剧情的新演出/活动/首映（可涉及剧情中的人物、作品、事件）。返回 {"shows":[{"name":"演出名","category":"演唱会|音乐节|话剧音乐剧|电影首映|Livehouse","artist":"艺人","when":"时间如 本周六 19:30","venue":"场馆","rating":9.0,"wanted":20000,"hot":true,"tiers":[{"label":"票档","price":680,"stock":10}],"desc":"60字内简介"}]}`);
+    if (!r) return "未配置 AI，无法联动剧情";
+    const fresh = parseShows(r.shows, "ai").slice(0, 4);
+    if (!fresh.length) return "这次没有生成新演出，请稍后再试";
+    const next = [...fresh, ...extra].slice(0, 12);
+    setExtra(next); saveFeed("ticket", next); setBanner(0);
+    return `上新 ${fresh.length} 场剧情相关演出`;
+  });
 
   useEffect(() => {
     const hot = shows.filter((s) => s.hot);
@@ -88,32 +124,37 @@ export default function TicketApp({ onBack }: { onBack: () => void }) {
   }, [shows]);
 
   const fmt = (n: number) => (n >= 10000 ? `${(n / 10000).toFixed(1)}万` : `${n}`);
-  const money = game!.sim.money;
+  const money = wallet.balance(game!);
+  const balLabel = wallet.fmt(money, game!, (n) => `¥${fmt(n)}`);
 
   // 一次性买 qty 张：单次落账（扣总价 + 入夹 qty 张），避免同一渲染内多次 commit 相互覆盖
   const buy = (s: Show, tier: Tier, qty: number): number => {
     const want = Math.max(1, Math.min(qty, tier.stock));
-    if (money < tier.price * want) { flash("余额不足，付款失败"); return 0; }
+    if (money < tier.price * want) { flash(`${wallet.name(game!, "零钱")}余额不足，付款失败`); return 0; }
     const ok = Math.random() < Math.min(0.9, tier.stock / 8 + 0.3);
     if (!ok) { flash("手慢了，该票档已被抢空"); return 0; }
-    let next = { ...game!, sim: { ...game!.sim, money: money - tier.price * want } };
+    let next = wallet.add(game!, -tier.price * want);
     for (let i = 0; i < want; i++) {
       const ticket: HeldTicket = { id: `t${Date.now()}${i}${Math.floor(Math.random() * 1000)}`, name: s.name, poster: s.poster, when: s.when, venue: s.venue, tier: tier.label, price: tier.price, seat: seatOf(tier.label, held.length + i + s.name.length), ts: Date.now() };
       next = addTicket(next, ticket);
     }
+    next = logAct(next, { app: "票团团", text: `买了 ${want} 张「${s.name}」${tier.label}（${s.when} · ${s.venue}）`, min: 5 });
     commitGame(next);
-    flash(`出票成功！${tier.label} × ${want} · 已支付 ¥${tier.price * want}`);
+    flash(`出票成功！${tier.label} × ${want} · 已支付 ${wallet.fmt(tier.price * want, game!)}`);
     return want;
   };
 
   /* —— 演出详情 —— */
   if (detail) {
     const s = shows.find((x) => x.id === detail);
-    if (s) return <ShowDetail show={s} money={money} onBuy={buy} onBack={() => setDetail(null)} toBook={() => setTab("mine")} held={held} fmt={fmt} />;
+    if (s) return <ShowDetail key={s.id} show={s} money={money} balLabel={balLabel} onBuy={buy} onBack={() => setDetail(null)} toBook={() => { setDetail(null); setTab("mine"); }} held={held} fmt={fmt} />;
   }
 
   const hotShows = shows.filter((x) => x.hot);
-  const list = cat === "全部" ? shows : shows.filter((s) => s.category === cat);
+  const kw = q.trim().toLowerCase();
+  const list = (cat === "全部" ? shows : shows.filter((s) => s.category === cat))
+    .filter((s) => !kw || `${s.name}${s.artist}${s.venue}`.toLowerCase().includes(kw));
+  const bi = hotShows.length ? banner % hotShows.length : 0;
 
   return (
     <div className="flex h-full flex-col bg-[#f5f6f8]">
@@ -126,30 +167,32 @@ export default function TicketApp({ onBack }: { onBack: () => void }) {
           <p className="flex items-center gap-1.5 text-[16px] font-black tracking-wide drop-shadow-sm">
             <IconTicket size={17} className="-rotate-12 opacity-95" />星票
           </p>
-          <span className="flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-1 text-[12px] font-medium backdrop-blur-sm"><IconPin size={12} /> 星城</span>
+          <span className="flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-1 text-[12px] font-medium backdrop-blur-sm"><IconPin size={12} /> {T("city")}</span>
         </div>
         <p className="relative mt-1.5 text-center text-[10.5px] font-medium tracking-[0.32em] text-white/75">现场娱乐 · 票团团</p>
         <div className="relative mt-2.5 flex items-center gap-2 rounded-full bg-white/95 px-3.5 py-2 text-ink-soft shadow-[0_6px_16px_-8px_rgba(255,45,85,0.6)]">
-          <IconSearch size={16} style={{ color: ACCENT }} /><span className="text-[13px]">搜索演唱会 · 艺人 · 场馆</span>
+          <IconSearch size={16} style={{ color: ACCENT }} />
+          <input value={q} onChange={(e) => { setQ(e.target.value); setTab("home"); }} placeholder="搜索演唱会 · 艺人 · 场馆" className="min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-ink-soft" />
+          {q && <button onClick={() => setQ("")} aria-label="清除" className="text-[13px] text-ink-soft"></button>}
         </div>
       </div>
 
       {tab === "home" ? (
         <div className="flex-1 overflow-y-auto pb-4">
           {/* 轮播 banner */}
-          {hotShows.length > 0 && (
+          {hotShows.length > 0 && !kw && (
             <div className="px-4 pt-3">
-              <button onClick={() => setDetail(hotShows[banner].id)} className="relative block h-36 w-full overflow-hidden rounded-2xl bg-black text-left shadow-sm">
-                <img src={hotShows[banner].poster} alt={hotShows[banner].name} className="h-full w-full object-cover opacity-85" />
+              <button onClick={() => setDetail(hotShows[bi].id)} className="relative block h-36 w-full overflow-hidden rounded-2xl bg-black text-left shadow-sm">
+                <img src={(hotShows[bi].poster) || undefined} alt={hotShows[bi].name} className="h-full w-full object-cover opacity-85" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                 <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-bold text-rose-600">热销 HOT</span>
                 <div className="absolute inset-x-3 bottom-3 text-white">
-                  <p className="line-clamp-1 text-[15px] font-bold drop-shadow">{hotShows[banner].name}</p>
-                  <p className="mt-0.5 text-[11.5px] text-white/85">{hotShows[banner].date} · {hotShows[banner].venue}</p>
+                  <p className="line-clamp-1 text-[15px] font-bold drop-shadow">{hotShows[bi].name}</p>
+                  <p className="mt-0.5 text-[11.5px] text-white/85">{hotShows[bi].date} · {hotShows[bi].venue}</p>
                 </div>
               </button>
               <div className="mt-2 flex justify-center gap-1.5">
-                {hotShows.map((_, i) => <span key={i} className={`h-1.5 rounded-full transition-all ${i === banner ? "w-4 bg-rose-500" : "w-1.5 bg-black/15"}`} />)}
+                {hotShows.map((_, i) => <span key={i} className={`h-1.5 rounded-full transition-all ${i === bi ? "w-4 bg-rose-500" : "w-1.5 bg-black/15"}`} />)}
               </div>
             </div>
           )}
@@ -163,13 +206,19 @@ export default function TicketApp({ onBack }: { onBack: () => void }) {
 
           <p className="px-4 pb-1 pt-1 text-[13px] font-bold text-ink">{cat === "全部" ? "正在热卖" : cat}</p>
           <div className="px-4">
+            {list.length === 0 && (
+              <div className="flex flex-col items-center py-14 text-center text-ink-soft">
+                <IconSearch size={32} className="opacity-30" />
+                <p className="mt-2 text-[13px]">{kw ? `没有找到与「${q.trim()}」相关的演出` : shows.length ? "该分类暂无演出" : isConfigured(cfg) ? "正在按当前世界上新演出…" : "还没有演出，接入 AI 后会按当前世界上新"}</p>
+              </div>
+            )}
             {list.map((s) => {
               const from = Math.min(...s.tiers.map((t) => t.price));
               const left = s.tiers.reduce((a, t) => a + t.stock, 0);
               return (
                 <button key={s.id} onClick={() => setDetail(s.id)} className="mb-2.5 flex w-full gap-3 rounded-2xl bg-white p-2.5 text-left shadow-sm ring-1 ring-black/[0.04]">
                   <div className="relative h-[104px] w-[78px] shrink-0 overflow-hidden rounded-xl bg-black/5">
-                    <img src={s.poster} alt={s.name} className="h-full w-full object-cover" />
+                    <img src={(s.poster) || undefined} alt={s.name} className="h-full w-full object-cover" />
                     {s.hot && <span className="absolute left-1 top-1 flex items-center gap-0.5 rounded bg-rose-500 px-1 py-0.5 text-[9px] font-bold text-white"><IconFire size={9} />热</span>}
                   </div>
                   <div className="flex min-w-0 flex-1 flex-col">
@@ -185,6 +234,7 @@ export default function TicketApp({ onBack }: { onBack: () => void }) {
                 </button>
               );
             })}
+            {!kw && <LoadMoreButton loading={moreLoading} onClick={loadMore} color={ACCENT} dark />}
           </div>
         </div>
       ) : (
@@ -221,10 +271,10 @@ export default function TicketApp({ onBack }: { onBack: () => void }) {
 }
 
 /* —— 演出详情 + 下单 —— */
-function ShowDetail({ show, money, onBuy, onBack, toBook, held, fmt }: {
-  show: Show; money: number; onBuy: (s: Show, t: Tier, qty: number) => number; onBack: () => void; toBook: () => void; held: Held[]; fmt: (n: number) => string;
+function ShowDetail({ show, money, balLabel, onBuy, onBack, toBook, held, fmt }: {
+  show: Show; money: number; balLabel: string; onBuy: (s: Show, t: Tier, qty: number) => number; onBack: () => void; toBook: () => void; held: Held[]; fmt: (n: number) => string;
 }) {
-  const [sel, setSel] = useState(0);
+  const [sel, setSel] = useState(() => Math.max(0, show.tiers.findIndex((t) => t.stock > 0)));
   const [sheet, setSheet] = useState(false);
   const [qty, setQty] = useState(1);
   const tier = show.tiers[sel];
@@ -233,10 +283,10 @@ function ShowDetail({ show, money, onBuy, onBack, toBook, held, fmt }: {
   return (
     <div className="relative flex h-full flex-col bg-[#f5f6f8]">
       {/* 海报头图与详情同处一个滚动容器，整体可上下滑动、不会被固定头图遮挡 */}
-      <div className="flex-1 overflow-y-auto pb-28">
+      <div className="min-h-0 flex-1 overflow-y-auto pb-4">
         {/* 海报头图 */}
         <div className="relative h-56 bg-black">
-          <img src={show.poster} alt={show.name} className="h-full w-full object-cover opacity-80" />
+          <img src={(show.poster) || undefined} alt={show.name} className="h-full w-full object-cover opacity-80" />
           <div className="absolute inset-0 bg-gradient-to-t from-[#f5f6f8] via-black/20 to-black/40" />
           <span className="absolute right-3 top-3 rounded-full bg-black/45 px-2.5 py-1 text-[11px] text-white">{show.category}</span>
         </div>
@@ -286,13 +336,13 @@ function ShowDetail({ show, money, onBuy, onBack, toBook, held, fmt }: {
       {/* 悬浮返回按钮：始终可点，不随头图滚走 */}
       <button onClick={onBack} className="absolute left-3 top-3 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur"><IconChevron size={18} className="rotate-180" /></button>
 
-      {/* 底部购买栏 */}
-      <div className="absolute inset-x-0 bottom-0 flex items-center gap-3 border-t border-black/5 bg-white px-4 py-3">
+      {/* 底部购买栏：占据自身一行（不再悬浮），永远不会被详情卡片盖住 */}
+      <div className="relative z-20 flex shrink-0 items-center gap-3 border-t border-black/5 bg-white px-4 py-3 pb-[max(12px,env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(0,0,0,0.04)]">
         <div className="flex-1">
-          <p className="text-[11px] text-ink-soft">{tier.label} · 余额 ¥{fmt(money)}</p>
+          <p className="text-[11px] text-ink-soft">{tier.label} · 余额 {balLabel}</p>
           <p className="text-[18px] font-bold leading-tight" style={{ color: ACCENT }}>¥{tier.price}</p>
         </div>
-        <button onClick={() => setSheet(true)} disabled={tier.stock <= 0}
+        <button onClick={() => { setQty(1); setSheet(true); }} disabled={tier.stock <= 0}
           className="rounded-full px-8 py-3 text-[15px] font-bold text-white shadow disabled:bg-black/25" style={tier.stock > 0 ? { background: ACCENT } : undefined}>
           {tier.stock > 0 ? "立即购买" : "已售罄"}
         </button>
@@ -305,7 +355,7 @@ function ShowDetail({ show, money, onBuy, onBack, toBook, held, fmt }: {
             <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-black/15" />
             <p className="text-[15px] font-bold text-ink">确认订单</p>
             <div className="mt-3 flex gap-3">
-              <img src={show.poster} alt="" className="h-16 w-12 shrink-0 rounded-lg object-cover" />
+              <img src={(show.poster) || undefined} alt="" className="h-16 w-12 shrink-0 rounded-lg object-cover" />
               <div className="min-w-0">
                 <p className="line-clamp-2 text-[13.5px] font-semibold text-ink">{show.name}</p>
                 <p className="mt-0.5 text-[11.5px] text-ink-soft">{show.when} · {tier.label}</p>
@@ -348,7 +398,7 @@ function TicketCard({ t }: { t: Held }) {
   return (
     <div className="mb-3 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/[0.04]">
       <div className="flex gap-3 p-3">
-        <img src={t.poster} alt="" className="h-20 w-16 shrink-0 rounded-lg object-cover" />
+        <img src={(t.poster) || undefined} alt="" className="h-20 w-16 shrink-0 rounded-lg object-cover" />
         <div className="min-w-0 flex-1">
           <p className="line-clamp-2 text-[14px] font-semibold leading-snug text-ink">{t.name}</p>
           <p className="mt-1 flex items-center gap-1 text-[11.5px] text-ink-soft"><IconClock size={11} /> {t.when}</p>

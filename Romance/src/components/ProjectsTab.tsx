@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useGame } from "../store/gameCtx";
 import { Chip } from "./ui";
-import { IconScroll } from "../lib/icons";
+import { IconScroll, StarRating, IconCheck } from "../lib/icons";
 import { dayDateLabel, weekdayName } from "../game/logic";
 import {
   STRATEGIES,
@@ -15,10 +15,11 @@ import {
   type ProjectInstance,
 } from "../game/projects";
 import { discoveredProjectIds, knows } from "../game/producer";
+import { liveTerm as T } from "../mods/live";
 
 type View = "hall" | "applications" | "contracts" | "ongoing" | "history";
 const VIEWS: { id: View; label: string }[] = [
-  { id: "hall", label: "通告资料" },
+  { id: "hall", get label() { return `${T("gig")}资料`; } },
   { id: "applications", label: "我的申请" },
   { id: "contracts", label: "合同/档期" },
   { id: "ongoing", label: "进行中" },
@@ -61,7 +62,7 @@ export default function ProjectsTab({ embedded = false }: { embedded?: boolean }
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <p className="flex flex-wrap items-center gap-1.5 font-semibold text-ink">
-              {"★".repeat(tpl.starLevel)} {tpl.title}
+              <><StarRating n={tpl.starLevel} /> {tpl.title}</>
             </p>
             <p className="mt-0.5 text-[12px] text-ink-soft">
               {categoryLabel(tpl.category)} · {roleLabel(p.roleType)} · {tpl.workDayCount}个工作日 · 预计报酬 ¥{(Math.round(tpl.feeYuan * p.rewardMultiplier) / 10000).toFixed(1)}万
@@ -84,11 +85,11 @@ export default function ProjectsTab({ embedded = false }: { embedded?: boolean }
     <div className={embedded ? "" : "mx-auto max-w-2xl px-4 py-5"}>
       {!embedded && (
         <h2 className="mb-1 flex items-center gap-2 font-serif text-xl font-bold text-ink">
-          <IconScroll width={20} height={20} className="text-coral" /> 通告 · 职业履历
+          <IconScroll width={20} height={20} className="text-coral" /> {T("gig")} · 职业履历
         </h2>
       )}
       <p className="mb-3 text-[13px] text-ink-soft">
-        找制作人洽谈→逐项解锁通告→争取角色→提交申请→等通知→查看结果→确认合同→锁定档期。本页只整理你已从制作人处了解到的通告资料，投递与争取请到「世界」去对应公司当面找制作人洽谈。
+        找制作人洽谈→逐项解锁{T("gig")}→争取角色→提交申请→等通知→查看结果→确认合同→锁定档期。本页只整理你已从制作人处了解到的{T("gig")}资料，投递与争取请到「世界」去对应公司当面找制作人洽谈。
       </p>
 
       {/* 五页状态切换 */}
@@ -122,7 +123,7 @@ export default function ProjectsTab({ embedded = false }: { embedded?: boolean }
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {tpl.roleSlot.requirements.map((r, i) => (
                     <Chip key={i} tone={metricNow(r.metric) >= r.value ? "jade" : "danger"}>
-                      {r.hint}{metricNow(r.metric) >= r.value ? " ✓" : `（差 ${Math.max(0, Math.ceil(r.value - metricNow(r.metric)))}）`}
+                      {r.hint}{metricNow(r.metric) >= r.value ? " " : `（差 ${Math.max(0, Math.ceil(r.value - metricNow(r.metric)))}）`}
                     </Chip>
                   ))}
                 </div>
@@ -132,7 +133,7 @@ export default function ProjectsTab({ embedded = false }: { embedded?: boolean }
               </p>
             </Card>
           );
-          }) : <Empty text="还没有通告资料。去「世界」到对应公司当面找制作人洽谈，问到的通告会整理在这里。" />;
+          }) : <Empty text={`还没有${T("gig")}资料。去「世界」到对应公司当面找制作人洽谈，问到的${T("gig")}会整理在这里。`} />;
         })()}
 
         {/* 我的申请 */}
@@ -144,7 +145,7 @@ export default function ProjectsTab({ embedded = false }: { embedded?: boolean }
             <Timeline p={p} />
             {p.status === "pending_result" && (
               <div className="mt-2.5 rounded-lg border border-gold/40 bg-gold/5 px-3 py-2 text-[12px] text-ink-soft">
-                资料已投递，制作方评审中。{p.resultDay != null ? `试镜结果将于 ${dayDateLabel(p.resultDay)} 公布——点击推进即可等到结果。` : "结果公布后将在此提示。"}
+                资料已投递，制作方评审中。{p.resultDay != null ? `试镜结果将于 ${dayDateLabel(p.resultDay)} 公布——推进日程即可等到结果。` : "结果公布后将在此提示。"}
               </div>
             )}
             {p.status === "offered" && (

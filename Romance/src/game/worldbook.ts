@@ -7,6 +7,7 @@
  *  回退空数组，玩家可完全靠世界书编辑器自建题材。 */
 import type { WorldBookEntry } from "../lib/types";
 import { WORLD_BOOK_SEED } from "../worlds/star2005/worldbook";
+import { getWorldBookSeed } from "../mods/registry";
 
 /* 取当前世界的种子世界书（副本，避免调用方误改模块级常量）。
  * worldId 目前恒为 star2005；未知世界返回空数组（纯沙盒）。 */
@@ -16,4 +17,5 @@ export function seedWorldBook(worldId = "star2005"): WorldBookEntry[] {
 }
 
 /* 兼容旧调用点的别名：未初始化存档展示 / 注入时的默认世界书。 */
-export const defaultWorldBook = (): WorldBookEntry[] => seedWorldBook();
+/* 模组化后：默认世界书 = 当前生效世界观（含叠加包）合并后的种子 */
+export const defaultWorldBook = (): WorldBookEntry[] => getWorldBookSeed();

@@ -1086,6 +1086,8 @@
     "locked": "待解锁",
     "cancel": "取消",
     "txtMode": "AI文游",
+    "romanceMode": "创作游戏",
+    "romanceHint": "填写设定，AI 搭建世界，再进编辑器细调",
     "avgBeta": "酒馆卡（内测中）",
     "interactiveVideo": "互动影游",
     "ivgToolTitle": "互动影游创作工具",

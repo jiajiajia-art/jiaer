@@ -1,31 +1,40 @@
 /* 桌面美化小组件：大字号时钟横幅 / 照片（可上传） / 便签 / 时钟 / 音乐迷你播放。
  * 组件与应用图标混排在主屏网格中，可拖动到任意位置，尺寸可在 小(2×2) / 大(整行) 间切换。 */
+import { loadData, saveData } from "../../lib/saveScope";
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { TRACKS, getPlayerState, subscribePlayer, togglePlay, nextTrack } from "./music";
 import { IconPlay, IconImage, IconMusic } from "./icons";
+import { IconSkipForward } from "../../lib/icons";
+import { useGame } from "../../store/gameCtx";
+import { gameNow } from "../../game/phone";
+import { liveTerm as T } from "../../mods/live";
+import { WalletWidget } from "./WalletBinder";
 
+/* 游戏内「现在」：随游戏时间推进而变化（无游戏时退回现实时间） */
+export function useGameNow(): Date {
+  const { game } = useGame();
+  return game ? gameNow(game) : new Date();
+}
+
+/* 统一的 iOS 毛玻璃小组件底板 */
+const GLASS = "bg-white/16 ring-1 ring-inset ring-white/20 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.45)] backdrop-blur-2xl backdrop-saturate-150";
+
+// 桌面小组件里的照片 / 便签是玩家在这一局写下的内容 → 存档私有
 const ls = {
-  get(k: string, d: string) { try { return localStorage.getItem(k) ?? d; } catch { return d; } },
-  set(k: string, v: string) { try { localStorage.setItem(k, v); } catch { /* ignore */ } },
+  get(k: string, d: string) { return loadData<string>(k, d); },
+  set(k: string, v: string) { saveData(k, v); },
 };
 
 /* 大字号日期时钟横幅 —— 从固定顶栏解放出来，玩家可随意移动 / 移除 */
 function HeroClockWidget() {
-  const [now, setNow] = useState(new Date());
-  // 只显示到分钟：每 15 秒探一次，分钟没变就返回原对象让 React 跳过重渲染。
-  useEffect(() => {
-    const t = setInterval(() => setNow((n) => {
-      const d = new Date();
-      return d.getMinutes() === n.getMinutes() && d.getHours() === n.getHours() ? n : d;
-    }), 15000);
-    return () => clearInterval(t);
-  }, []);
+  const now = useGameNow();
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center rounded-2xl px-1 text-center text-white drop-shadow">
-      <p className="text-[15px] font-medium tracking-widest text-white/80">
+    /* 功能注释：只用一层深色投影；避免 text-white/95 + 多层 shadow 在深壁纸上叠出「重影/白边字」 */
+    <div className="[container-type:size] flex h-full w-full flex-col items-center justify-center overflow-hidden rounded-2xl px-1 text-center text-white">
+      <p className="text-[min(15px,13cqh)] leading-tight font-semibold tracking-[0.12em] text-white [text-shadow:0_1px_8px_rgba(0,0,0,0.45)]">
         {now.toLocaleDateString("zh-CN", { month: "long", day: "numeric", weekday: "long" })}
       </p>
-      <p className="mt-0.5 text-7xl font-thin leading-none tabular-nums tracking-tight">
+      <p className="mt-[2cqh] text-[min(78px,58cqh,24cqw)] font-semibold leading-none tabular-nums tracking-[-0.03em] text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.4)]">
         {String(now.getHours()).padStart(2, "0")}:{String(now.getMinutes()).padStart(2, "0")}
       </p>
     </div>
@@ -43,11 +52,11 @@ function PhotoWidget() {
     r.readAsDataURL(f);
   };
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-2xl bg-[#232323] shadow-md">
+    <div className={`relative h-full w-full overflow-hidden rounded-2xl ${GLASS}`}>
       <label className="block h-full w-full cursor-pointer">
         <input type="file" accept="image/*" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
         {img ? (
-          <img src={img} alt={cap} className="h-full w-full object-cover" />
+          <img src={(img) || undefined} alt={cap} className="h-full w-full object-cover" />
         ) : (
           <span className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-white/80">
             <IconImage size={26} /><span className="text-[11px]">点按上传照片</span>
@@ -64,25 +73,24 @@ function PhotoWidget() {
 
 /* 便签小组件 */
 function NoteWidget() {
-  const [text, setText] = useState(() => ls.get("star2005.widget.note", "今天也要闪闪发光 ✷\n· 09:00 定妆\n· 14:00 剧本围读"));
+  const [text, setText] = useState(() => ls.get("star2005.widget.note", "今天也要闪闪发光\n· 09:00 定妆\n· 14:00 剧本围读"));
   return (
-    <div className="h-full w-full overflow-hidden rounded-2xl bg-[#232323] p-3 shadow-md">
-      <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-white/80">便签</p>
+    <div className="h-full w-full overflow-hidden rounded-2xl bg-[#fff6d6]/92 p-3 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+      <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-[#c98a00]">便签</p>
       <textarea value={text} onChange={(e) => { setText(e.target.value); ls.set("star2005.widget.note", e.target.value); }}
-        className="h-[calc(100%-1.2rem)] w-full resize-none bg-transparent text-[12.5px] leading-snug text-white outline-none placeholder:text-white/40" />
+        className="h-[calc(100%-1.2rem)] w-full resize-none bg-transparent text-[12.5px] leading-snug text-[#3a2f12] outline-none placeholder:text-black/30" />
     </div>
   );
 }
 
 /* 时钟小组件 */
 function ClockWidget() {
-  const [now, setNow] = useState(new Date());
-  useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
+  const now = useGameNow();
   return (
-    <div className="flex h-full w-full flex-col justify-between rounded-2xl bg-[#232323] p-3 text-white shadow-md">
+    <div className={`flex h-full w-full flex-col justify-between rounded-2xl p-3 text-white ${GLASS}`}>
       <p className="text-[11px] font-medium text-white/60">{now.toLocaleDateString("zh-CN", { month: "long", day: "numeric", weekday: "short" })}</p>
       <p className="text-[40px] font-thin tabular-nums leading-none">{String(now.getHours()).padStart(2, "0")}:{String(now.getMinutes()).padStart(2, "0")}</p>
-      <p className="text-[11px] tabular-nums text-white/50">星城 · {String(now.getSeconds()).padStart(2, "0")} 秒</p>
+      <p className="text-[11px] tabular-nums text-white/50">{T("city")}时间</p>
     </div>
   );
 }
@@ -92,8 +100,9 @@ function MusicWidget() {
   const { idx, playing } = useSyncExternalStore(subscribePlayer, getPlayerState, getPlayerState);
   const t = TRACKS[idx];
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-2xl bg-[#232323] text-white shadow-md">
-      <img src={t.cover} alt="" className="absolute right-0 top-0 h-full w-full object-cover opacity-25" />
+    <div className="relative h-full w-full overflow-hidden rounded-2xl bg-black text-white shadow-[0_8px_24px_-12px_rgba(0,0,0,0.5)]">
+      <img src={(t.cover) || undefined} alt="" className="absolute inset-0 h-full w-full scale-125 object-cover opacity-70 blur-xl" />
+      <div className="absolute inset-0 bg-black/25" />
       <div className="relative flex h-full flex-col justify-between p-3">
         <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-white/80"><IconMusic size={12} /> 正在播放</div>
         <div>
@@ -102,7 +111,7 @@ function MusicWidget() {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={togglePlay} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-black">{playing ? <span className="flex gap-0.5"><i className="block h-3 w-1 rounded-sm bg-black" /><i className="block h-3 w-1 rounded-sm bg-black" /></span> : <IconPlay size={16} />}</button>
-          <button onClick={nextTrack} className="text-white/85 text-[18px]">⏭</button>
+          <button onClick={nextTrack} className="text-white/85" aria-label="下一首"><IconSkipForward size={18} /></button>
         </div>
       </div>
     </div>
@@ -110,7 +119,7 @@ function MusicWidget() {
 }
 
 const WIDGETS: Record<string, () => ReactNode> = {
-  "w-hero-clock": HeroClockWidget, "w-photo": PhotoWidget, "w-note": NoteWidget, "w-clock": ClockWidget, "w-music": MusicWidget,
+  "w-hero-clock": HeroClockWidget, "w-photo": PhotoWidget, "w-note": NoteWidget, "w-clock": ClockWidget, "w-music": MusicWidget, "w-wallet": WalletWidget,
 };
 
 export type WidgetSize = "sm" | "md" | "lg";

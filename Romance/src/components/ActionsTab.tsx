@@ -1,13 +1,17 @@
+import { feature } from "../mods/registry";
 import { useEffect, useState } from "react";
 import { useGame } from "../store/gameCtx";
-import { IconPin, IconSparkle } from "../lib/icons";
+import { IconChevronDown, IconChevronUp, IconPin, IconSparkle, StarRating } from "../lib/icons";
 import { industryBoards, leaderboard, gigCategory, type GigCat } from "../game/logic";
 import { GIG_POOL, STAT_LABELS, type StatKey } from "../game/data";
 import { AD_BRANDS, MOVIE_TITLES, companyMeta, industryAwards, renderStarBuzz } from "../worlds/star2005/content";
 import { complete, isConfigured } from "../lib/ai";
 import { Chip, Modal } from "./ui";
 import { CompanyModal, StarModal } from "./IndustryModals";
+import { openPerson } from "./NpcTab";
 import WeeklyPaper from "./WeeklyPaper";
+import IndustryPageHeader from "./IndustryPageHeader";
+import { liveTerm as T } from "../mods/live";
 
 function fmtWan(v: number) {
   return v >= 10000 ? `${(v / 10000).toFixed(1)} 亿` : `${v.toLocaleString()} 万`;
@@ -15,30 +19,35 @@ function fmtWan(v: number) {
 
 function BoardHead({ code, cn, note }: { code: string; cn: string; note?: string }) {
   return (
-    <div className="mb-2 flex items-center gap-2">
-      <span className="text-jade">▌</span>
-      <span className="text-[11px] font-bold tracking-[0.25em] text-jade">{code}</span>
-      <span className="text-[13px] font-bold text-ink">{cn}</span>
-      {note && <span className="text-[11px] text-ink-soft">{note}</span>}
-      <span className="h-px flex-1 border-t border-dashed border-line" />
+    <div className="mb-3 flex items-center gap-2">
+      <span className="h-4 w-1 rounded-full bg-gradient-to-b from-jade to-coral" data-code={code} />
+      <span className="text-[14.5px] font-bold tracking-wide text-ink">{cn}</span>
+      <span className="h-px flex-1 bg-gradient-to-r from-line to-transparent" />
+      {note && <span className="shrink-0 rounded-full bg-jade/10 px-2 py-0.5 text-[11px] font-medium text-jade">{note}</span>}
     </div>
   );
 }
 
 const BOARD_TABS = [
-  { id: "paper", code: "BUZZ", label: "圈内动态" },
-  { id: "award", code: "AWARD", label: "年度奖项" },
-  { id: "fame", code: "FAME", label: "人气榜" },
-  { id: "box", code: "BOX", label: "票房榜" },
-  { id: "ad", code: "AD", label: "代言榜" },
-  { id: "co", code: "CO", label: "经纪公司" },
-  { id: "gig", code: "GIG", label: "通告库" },
+  { id: "paper", label: "周报" },
+  { id: "rank", label: "榜单" },
+  { id: "co", label: "公司" },
+  { id: "gig", get label() { return T("gig"); } },
 ] as const;
+const RANK_TABS = [
+  { id: "fame", label: "人气" },
+  { id: "box", label: "票房" },
+  { id: "ad", label: "代言" },
+  { id: "award", label: "奖项" },
+] as const;
+type RankView = (typeof RANK_TABS)[number]["id"];
 type BoardView = (typeof BOARD_TABS)[number]["id"];
 
 export default function ActionsTab() {
-  const { game, cfg, simNegotiate } = useGame();
-  const [view, setView] = useState<BoardView>("paper");
+  const { game, cfg, simNegotiate, busy } = useGame();
+  const [tab, setTab] = useState<BoardView>("paper");
+  const [rank, setRank] = useState<RankView>("fame");
+  const view: string = tab === "rank" ? rank : tab;
   const [selStar, setSelStar] = useState<string | null>(null);
   const [selCompany, setSelCompany] = useState<string | null>(null);
   const [movie, setMovie] = useState<{ title: string; starName: string; company: string; value: number } | null>(null);
@@ -54,7 +63,8 @@ export default function ActionsTab() {
   const star = selStar ? s.npcs.find((n) => n.id === selStar) ?? null : null;
   const starById = (id: string) => s.npcs.find((n) => n.id === id) ?? null;
   const starByName = (name: string) => s.npcs.find((n) => n.name === name) ?? null;
-  const openStar = (id: string) => { setSelCompany(null); setSelStar(id); };
+  // 艺人即 NPC：统一跳到「人脉」里的人物详情
+  const openStar = (id: string) => { setSelCompany(null); setSelStar(null); openPerson(id); };
   const rosterOf = (companyId: string) => s.npcs.filter((n) => n.companyId === companyId).sort((a, b) => b.fame - a.fame);
 
   const NameBtn = ({ name, className = "" }: { name: string; className?: string }) => {
@@ -69,32 +79,48 @@ export default function ActionsTab() {
 
   return (
     <div className="w-full pb-5">
+      <IndustryPageHeader
+        eyebrow={`第 ${s.week} 周`}
+        title={`${T("industry")}`}
+        subtitle="星榜风云"
+        icon={<IconSparkle width={16} height={16} />}
+      />
 
-      <div className="mx-auto max-w-2xl px-4">
-      {/* 子页面切换：顶部横向标签栏 */}
-      <div className="sticky top-0 z-10 -mx-4 mb-5 flex gap-1 overflow-x-auto border-b border-line bg-paper/95 px-4 py-2 backdrop-blur [scrollbar-width:none]">
+      <div className="mx-auto max-w-2xl px-4 pt-3">
+        {/* 子页面切换：顶部横向标签栏 */}
+        <div className="sticky top-0 z-10 -mx-4 mb-4 grid grid-cols-4 gap-1 border-b border-line/60 bg-paper/90 px-4 py-2.5 backdrop-blur-md [scrollbar-width:none]">
         {BOARD_TABS.map((t) => {
-          const active = view === t.id;
-          const note = t.id === "fame" ? ` · 第${myRank}名` : "";
+          const active = tab === t.id;
+          const note = t.id === "rank" && myRank ? `${myRank}` : "";
           return (
             <button
               key={t.id}
-              onClick={() => setView(t.id)}
+              onClick={() => setTab(t.id)}
               aria-current={active}
-              className={`shrink-0 rounded-sm border px-3 py-1.5 text-[12.5px] font-bold tracking-[0.08em] transition ${
-                active ? "border-solid border-jade bg-jade/10 text-jade" : "border-dashed border-line text-ink-soft hover:border-jade/60 hover:text-jade"
+              className={`truncate rounded-full px-1 py-2 text-[12.5px] font-bold tracking-[0.06em] transition ${
+                active ? "bg-gradient-to-r from-jade to-coral text-paper shadow-[0_6px_16px_-8px_var(--color-jade)]" : "bg-paper-2/70 text-ink-soft hover:text-jade"
               }`}
             >
-              {t.label}{note}
+              {t.label}{note && <sup className={`ml-0.5 text-[9.5px] font-black ${active ? "text-paper/85" : "text-coral"}`}>#{note}</sup>}
             </button>
           );
         })}
       </div>
 
+      {tab === "rank" && (
+        <div className="mb-4 flex gap-1 rounded-full border border-line bg-paper-2/60 p-1">
+          {RANK_TABS.map((r) => (
+            <button key={r.id} onClick={() => setRank(r.id)} aria-current={rank === r.id}
+              className={`flex-1 rounded-full py-1.5 text-[12px] font-bold transition ${rank === r.id ? "bg-paper text-jade shadow-sm" : "text-ink-soft hover:text-jade"}`}>
+              {r.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* 圈内动态 · 每周报纸 */}
-      {view === "paper" && (
+      {view === "paper" && feature("weeklyPaper") && (
       <section className="mb-6">
-        <BoardHead code="BUZZ" cn="圈内动态" note="每周一出报" />
         <WeeklyPaper
           week={s.week}
           buzz={buzz}
@@ -112,7 +138,7 @@ export default function ActionsTab() {
         <BoardHead code="AWARD" cn="年度奖项 · 当前得主" />
         <div className="grid gap-1.5 sm:grid-cols-2">
           {awards.map((a) => (
-            <div key={a.ceremony + a.category} className="flex items-center justify-between gap-2 rounded-sm border border-dashed border-line px-3 py-2">
+            <div key={a.ceremony + a.category} className="flex items-center justify-between gap-2 rounded-2xl border border-line bg-paper/70 shadow-[0_2px_10px_-6px_rgba(0,0,0,0.12)] px-3 py-2">
               <div className="min-w-0">
                 <p className="truncate text-[12px] text-ink-soft">{a.ceremony}</p>
                 <p className="truncate text-[13px] font-semibold text-ink">{a.category}</p>
@@ -129,12 +155,12 @@ export default function ActionsTab() {
       {view === "fame" && (
       <section className="mb-6">
         <BoardHead code="FAME" cn="艺人人气榜" note={`你排第 ${myRank} 名`} />
-        <div className="rounded-sm border border-dashed border-line p-3">
-          <div className="space-y-1">
+        <div className="rounded-2xl border border-line bg-paper/70 shadow-[0_2px_10px_-6px_rgba(0,0,0,0.12)] p-3">
+          <div className="space-y-0.5">
             {(fameAll ? board : board.slice(0, 10)).map((r, i) => (
-              <div key={r.name} className={`flex items-center justify-between text-[13px] ${r.isPlayer ? "font-bold text-jade" : "text-ink"}`}>
+              <div key={r.name} className={`flex items-center justify-between rounded-xl px-2 py-1.5 text-[13px] ${r.isPlayer ? "bg-jade/10 font-bold text-jade" : i % 2 ? "text-ink" : "bg-paper-2/40 text-ink"}`}>
                 <span className="min-w-0 truncate">
-                  <span className={`mr-1.5 inline-block w-5 text-right font-mono ${i < 3 ? "text-gold" : "text-ink-soft"}`}>{i + 1}</span>
+                  <span className={`mr-2 inline-grid h-5 w-5 place-items-center rounded-full align-middle font-mono text-[11px] font-bold ${i === 0 ? "bg-gold text-paper" : i === 1 ? "bg-ink-soft/70 text-paper" : i === 2 ? "bg-coral/80 text-paper" : "bg-paper-2 text-ink-soft"}`}>{i + 1}</span>
                   {r.isPlayer ? r.name : <NameBtn name={r.name} />} <span className="text-[11px] font-normal text-ink-soft">{r.tag}</span>
                 </span>
                 <span className="font-mono">{r.fame}</span>
@@ -144,9 +170,9 @@ export default function ActionsTab() {
           {board.length > 10 && (
             <button
               onClick={() => setFameAll((v) => !v)}
-              className="mt-2 w-full rounded-sm border border-dashed border-line py-1.5 text-[12px] font-medium text-jade transition hover:border-jade hover:bg-jade/5"
+              className="mt-2 w-full rounded-2xl border border-line bg-paper/70 shadow-[0_2px_10px_-6px_rgba(0,0,0,0.12)] py-1.5 text-[12px] font-medium text-jade transition hover:border-jade hover:bg-jade/5"
             >
-              {fameAll ? "收起 ▲" : `查看全部 ${board.length} 位 ▾`}
+              {fameAll ? <span className="inline-flex items-center justify-center gap-1">收起 <IconChevronUp size={12} /></span> : <span className="inline-flex items-center justify-center gap-1">查看全部 {board.length} 位 <IconChevronDown size={12} /></span>}
             </button>
           )}
         </div>
@@ -168,7 +194,7 @@ export default function ActionsTab() {
                 tabIndex={0}
                 onClick={() => setMovie({ title, starName: m.starName, company, value: m.value })}
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setMovie({ title, starName: m.starName, company, value: m.value }); } }}
-                className="flex w-full cursor-pointer items-center gap-3 rounded-sm border border-dashed border-line px-3 py-2 text-left transition hover:border-coral hover:bg-coral/5"
+                className="flex w-full cursor-pointer items-center gap-3 rounded-2xl border border-line bg-paper/70 shadow-[0_2px_10px_-6px_rgba(0,0,0,0.12)] px-3 py-2 text-left transition hover:border-coral hover:bg-coral/5"
               >
                 <span className={`w-5 text-right font-mono text-[13px] ${i < 3 ? "text-gold" : "text-ink-soft"}`}>{i + 1}</span>
                 <div className="min-w-0 flex-1">
@@ -189,7 +215,7 @@ export default function ActionsTab() {
         <BoardHead code="AD" cn="当红代言榜" note="身价·年" />
         <div className="grid gap-1.5 sm:grid-cols-2">
           {ads.map((a) => (
-            <div key={a.starId} className="flex items-center gap-2.5 rounded-sm border border-dashed border-line px-3 py-2">
+            <div key={a.starId} className="flex items-center gap-2.5 rounded-2xl border border-line bg-paper/70 shadow-[0_2px_10px_-6px_rgba(0,0,0,0.12)] px-3 py-2">
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[13px] font-semibold text-ink">{AD_BRANDS[a.titleIndex % AD_BRANDS.length]}</p>
                 <p className="truncate text-[11px] text-ink-soft">代言人 <NameBtn name={a.starName} className="text-ink-soft" /></p>
@@ -213,7 +239,7 @@ export default function ActionsTab() {
               <button
                 key={c.id}
                 onClick={() => { setSelStar(null); setSelCompany(c.id); }}
-                className="rounded-sm border border-dashed border-line p-3 text-left transition hover:border-jade hover:bg-jade/5"
+                className="rounded-2xl border border-line bg-paper/70 shadow-[0_2px_10px_-6px_rgba(0,0,0,0.12)] p-3 text-left transition hover:border-jade hover:bg-jade/5"
               >
                 <div className="flex items-center justify-between gap-2">
                   <p className="truncate text-[13.5px] font-bold text-ink">{meta.name}</p>
@@ -241,9 +267,9 @@ export default function ActionsTab() {
         const doneCount = catList.filter((g) => used.has(g.id)).length;
         return (
         <section className="mb-6">
-          <BoardHead code="GIG" cn="通告库 · 全部通告" note={`共 ${GIG_POOL.length} 档 · 已拍过的不再出现`} />
+          <BoardHead code="GIG" cn={`${T("gig")}库 · 全部${T("gig")}`} note={`共 ${GIG_POOL.length} 档 · 已拍过的不再出现`} />
           <p className="mb-3 text-[12px] leading-relaxed text-ink-soft">
-            星城经纪圈流通的通告全表，分<span className="text-jade">广告 · 电视剧 · 电影 · 唱片</span>四类，每类 100 档。影视类标注题材与男女主/男女配角阵容；接下并结算后即计入<span className="text-coral">「已拍」</span>，之后不会再被派到你名下。此处仅供<span className="text-jade">浏览全表</span>——真正接单要<span className="text-coral">踩地图</span>去对应公司找负责人「接洽通告」当面交涉。
+            {T("city")}经纪圈流通的{T("gig")}全表，分<span className="text-jade">广告 · 电视剧 · 电影 · 唱片</span>四类，每类 100 档。影视类标注题材与男女主/男女配角阵容；接下并结算后即计入<span className="text-coral">「已拍」</span>，之后不会再被派到你名下。此处仅供<span className="text-jade">浏览全表</span>——真正接单要<span className="text-coral">踩地图</span>去对应公司找负责人「接洽{T("gig")}」当面交涉。
           </p>
 
           {/* 分类切换 */}
@@ -255,7 +281,7 @@ export default function ActionsTab() {
                 <button
                   key={c.id}
                   onClick={() => setGigCat(c.id)}
-                  className={`flex-1 rounded-sm border px-2 py-1.5 text-[12.5px] font-bold transition ${active ? "border-solid border-jade bg-jade/10 text-jade" : "border-dashed border-line text-ink-soft hover:border-jade/60"}`}
+                  className={`flex-1 rounded-full border px-2 py-1.5 text-[12.5px] font-bold transition ${active ? "border-jade bg-jade/10 text-jade" : "border-line text-ink-soft hover:border-jade/60"}`}
                 >
                   {c.label}<span className="ml-1 text-[10px] font-normal text-ink-soft">{n}</span>
                 </button>
@@ -271,9 +297,9 @@ export default function ActionsTab() {
               return (
                 <div key={tier}>
                   <p className="mb-1.5 text-[11.5px] font-bold tracking-[0.15em] text-gold">
-                    {"★".repeat(tier)}<span className="text-ink-soft/60">{"☆".repeat(5 - tier)}</span>
+                    <StarRating n={tier} />
                     <span className="ml-2 font-normal text-ink-soft">
-                      {tier === 1 ? "起步通告" : tier === 2 ? "崭露头角" : tier === 3 ? "小有名气" : tier === 4 ? "当红一线" : "顶流大咖"}
+                      {tier === 1 ? `起步${T("gig")}` : tier === 2 ? "崭露头角" : tier === 3 ? "小有名气" : tier === 4 ? "当红一线" : "顶流大咖"}
                     </span>
                   </p>
                   <div className="grid gap-1.5">
@@ -282,7 +308,7 @@ export default function ActionsTab() {
                       const isActive = g.id === s.activeGigId;
                       const onOffer = (s.offers ?? []).includes(g.id);
                       return (
-                      <div key={g.id} className={`rounded-sm border border-dashed px-3 py-2.5 ${isUsed ? "border-line/60 bg-black/[0.02] opacity-55" : isActive ? "border-coral bg-coral/5" : "border-line"}`}>
+                      <div key={g.id} className={`rounded-2xl border bg-paper/70 px-3 py-2.5 ${isUsed ? "border-line/60 bg-black/[0.02] opacity-55" : isActive ? "border-coral bg-coral/5" : "border-line"}`}>
                         <div className="flex items-baseline justify-between gap-2">
                           <p className={`min-w-0 flex-1 truncate text-[13.5px] font-bold ${isUsed ? "text-ink-soft line-through" : "text-ink"}`}>{g.name}</p>
                           {isUsed ? <Chip>已拍</Chip> : isActive ? <Chip tone="coral">在拍</Chip> : onOffer ? <Chip tone="coral">本周可交涉</Chip> : <Chip tone="jade">{g.genre ?? g.type}</Chip>}
@@ -312,10 +338,10 @@ export default function ActionsTab() {
                         {onOffer && !isUsed && !isActive && (
                           <button
                             onClick={() => simNegotiate(g.id)}
-                            disabled={!!s.activeGigId}
-                            className="mt-2 w-full rounded-sm border border-solid border-coral bg-coral/10 py-1.5 text-[12px] font-bold text-coral transition hover:bg-coral/20 disabled:cursor-not-allowed disabled:opacity-40"
+                            disabled={!!s.activeGigId || busy}
+                            className="mt-2 w-full rounded-full border border-coral bg-coral/10 py-1.5 text-[12px] font-bold text-coral transition hover:bg-coral/20 disabled:cursor-not-allowed disabled:opacity-40"
                           >
-                            {s.activeGigId ? "已有通告在身 · 档期冲突" : "交涉接单（争取出演）"}
+                            {s.activeGigId ? `已有${T("gig")}在身 · 档期冲突` : "交涉接单（争取出演）"}
                           </button>
                         )}
                       </div>
@@ -330,9 +356,6 @@ export default function ActionsTab() {
         );
       })()}
 
-      <p className="mt-8 flex items-center justify-center gap-1.5 text-center text-[12px] text-ink-soft">
-        <IconPin width={13} height={13} /> 想推动剧情，回「世界」页在场景里行动，或到「故事」页与她一同书写。
-      </p>
 
       {star && <StarModal star={star} onOpenStar={openStar} onClose={() => setSelStar(null)} />}
       {selCompany && (
@@ -401,7 +424,7 @@ function MovieModal({ title, starName, company, value, cfg, onClose }: { title: 
       {comments.length ? (
         <ul className="space-y-1.5">
           {comments.map((c, i) => (
-            <li key={i} className="rounded-sm border border-dashed border-line px-3 py-2 text-[13px] text-ink">“{c}”</li>
+            <li key={i} className="rounded-2xl border border-line bg-paper/70 shadow-[0_2px_10px_-6px_rgba(0,0,0,0.12)] px-3 py-2 text-[13px] text-ink">“{c}”</li>
           ))}
         </ul>
       ) : (

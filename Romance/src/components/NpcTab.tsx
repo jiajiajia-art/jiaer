@@ -1,46 +1,38 @@
-import NpcProfile from "./NpcProfile";
-import { useMemo, useState, type ReactNode } from "react";
+import { ProfileTabs } from "./personFields";
+import { ageLabel, birthdayLabel, ownField } from "../lib/npcIdentity";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useGame } from "../store/gameCtx";
-import { affinityLevel, Avatar, Chip, Modal, SectionHead } from "./ui";
-import { IconHeart } from "../lib/icons";
+import { datingBlocked, divorceBlocked, weddingBlocked, weddingCost, weddingMinAffinity } from "../game/logic";
+import { wallet } from "../game/wallet";
+import { bridgeEnabled, bridgeModes, bridgePerDay, type BridgeMode } from "../game/bridge";
+import { divorceMode, maxSpouses } from "../game/worldRules";
+import type { Npc } from "../lib/types";
+import { HeartMeter, affinityLevel, Avatar, Chip, Modal, SectionHead } from "./ui";
+import { IconCheck, IconCoffee, IconExternal, IconHeart, IconScroll, IconSend, IconUsers } from "../lib/icons";
+import { ActionTile } from "./personFields";
 import { canConfess, relOf } from "../game/relations";
-import { ROMANCE_ARCS, arcView } from "../game/logic";
-import { creditsOf, profileOf, resumeOf, romanticCapOf, type FamilyRef, type ResumeEvent } from "../worlds/star2005/content";
+import { ROMANCE_ARCS, arcView, canRomance, hasPartner, romanceFixedOff, isFamilyNpc } from "../game/logic";
+import { RELATIONS, MOVIE_TITLES, companyMeta, creditsOf, resumeOf, romanticCapOf, type FamilyRef, type ResumeEvent } from "../worlds/star2005/content";
+import { worldPersonById as profileOf } from "../mods/registry";
 import { locOf } from "../game/mud";
-import { isManager } from "../game/producer";
+import { homePlaceOf } from "../game/homeSpot";
+import { contactsCfg, contactsTitle, groupsOf, metricKey, orgOf, stageOf, type ContactIcon as ContactIconKind, type ContactSrc } from "../game/contacts";
+import ContactIcon from "./ContactIcon";
 import { FAMILY_NPC_IDS } from "../game/family";
-import { CreditsList, StatBars, WorksChips } from "./personFields";
+import PortraitUpload from "./PortraitUpload";
+import { CreditsList, StatBars, WorksChips, ProfileBasics, ProfileRelations, ProfileGroup, ProfileHero, RelTag, ResumeTimeline, StatEditor, ProfileBio, ProfilePlaces, ProfileMemory, affiliationOf, relationRefsOf } from "./personFields";
+import IndustryPageHeader from "./IndustryPageHeader";
+import CustomPersonModal from "./CustomPersonModal";
+import { NpcDiary, NpcCgStrip } from "./DiaryCg";
+import { onClearPlayerMemory } from "../lib/saveScope";
 
 /* 关系维度 → 语义色 */
 const DIM_TONE: Record<string, string> = { 信任: "jade", 爱慕: "coral", 友善: "gold", 敌意: "danger", 好感: "jade", 心动: "coral", 私人信任: "jade", 近况心情: "gold" };
-const TONE_VAR: Record<string, string> = { jade: "var(--jade)", coral: "var(--coral)", gold: "var(--gold)", danger: "var(--danger)", "ink-soft": "var(--ink-soft)" };
+const TONE_VAR: Record<string, string> = { jade: "var(--jade)", coral: "var(--coral)", gold: "var(--gold)", danger: "var(--danger)", "ink-soft": "var(--ink-soft)", ink: "var(--ink-soft)" };
 const UNKNOWN = "尚未得知";
-
-/* 情感值可调行：− / 滑杆 / + ，实时写回引擎或情感印象轴 */
-function StatEditor({ label, hint, tone, value, min, max, step = 5, onChange }: { label: string; hint?: string; tone: string; value: number; min: number; max: number; step?: number; onChange: (v: number) => void }) {
-  const accent = TONE_VAR[tone] ?? "var(--coral)";
-  const clamp = (v: number) => Math.max(min, Math.min(max, v));
-  const btn = "flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-line text-[15px] leading-none text-ink-soft transition hover:border-jade hover:text-jade active:scale-95 disabled:opacity-40";
-  return (
-    <div title={hint} className="flex items-center gap-2 py-0.5 text-[12.5px]">
-      <span className="w-16 shrink-0 text-ink-soft">{label}</span>
-      <button type="button" aria-label={`${label} 减`} className={btn} disabled={value <= min} onClick={() => onChange(clamp(value - step))}>−</button>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        aria-label={label}
-        onChange={(e) => onChange(clamp(Number(e.target.value)))}
-        className="min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-line/60"
-        style={{ color: accent, accentColor: accent, height: "6px" }}
-      />
-      <button type="button" aria-label={`${label} 加`} className={btn} disabled={value >= max} onClick={() => onChange(clamp(value + step))}>+</button>
-      <span className="w-14 shrink-0 text-right font-medium tabular-nums" style={{ color: accent }}>{value}{max > 100 ? `/${max}` : ""}</span>
-    </div>
-  );
-}
+/* 情感线在人物页只显示进度与提示；这一段的经历和确认关系都在线下见面时进行（地图上见到 TA、点 TA） */
+const arcHint = (today: boolean) => today ? "今天你们已经经历过一段了，留点余味，改天再见。" : "时机到了。这一段要当面经历——去 TA 常在的地方，见到 TA 时点 TA 就能展开。";
+const DATING_HINT = "火候到了。这句话要当面说——见到 TA 时点 TA，就能确认关系。";
 
 /* 统一字段行：标签 + 值（缺省显示「尚未得知」，不泄露后台真相） */
 function Field({ label, children }: { label: string; children?: ReactNode }) {
@@ -63,43 +55,306 @@ function Section({ title, code, children }: { title: string; code?: string; chil
   );
 }
 
+/* 极简人物行：头像 + 名字 / 阶段词 + 一行身份 · 所属；右侧是作者在「人脉页面配置」里选的两项数值（图标自选） */
+export type CardMetric = { key: string; icon: ContactIconKind; value: number; tone?: string };
+function PersonCard({ onClick, name, avatar, chip, sub, metrics, dead, dating }: { onClick: () => void; name: string; avatar?: string; chip: ReactNode; sub: string; metrics: CardMetric[]; dead?: boolean; dating?: boolean }) {
+  return (
+    <button onClick={onClick} className="group flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-paper-2 active:bg-paper-2">
+      <div className={`relative shrink-0 ${dead ? "opacity-50 grayscale" : ""}`}>
+        <Avatar src={avatar} name={name} size={40} editable={false} />
+        {dating && (
+          <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-coral text-white ring-2 ring-paper-2">
+            <IconHeart width={9} height={9} />
+          </span>
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <p className="truncate text-[14px] font-bold text-ink">{name}</p>
+          {chip}
+        </div>
+        <p className="mt-0.5 truncate text-[11.5px] text-ink-soft">{sub}</p>
+      </div>
+      {metrics.map((m) => (
+        <span key={m.key} className="flex shrink-0 items-center gap-1 text-[12px] font-semibold tabular-nums"
+          style={{ color: m.value < 0 ? "var(--danger)" : TONE_VAR[m.tone ?? "jade"] ?? "var(--ink-soft)" }}>
+          <ContactIcon kind={m.icon} />{m.value}
+        </span>
+      ))}
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="shrink-0 text-ink-soft/35"><path d="m9 18 6-6-6-6" /></svg>
+    </button>
+  );
+}
+const LIST = "ui-list";
+const GroupHead = ({ label, count }: { label: string; count: number }) => (
+  <p className="ui-label mb-1.5 px-1">{label}<span className="ml-1.5 font-medium tabular-nums text-ink-soft/60">{count}</span></p>
+);
+
+/* 从别处（如娱乐圈页）直接打开某人的人物详情：记下目标并切到「人脉」 */
+let pendingPerson: string | null = null;
+onClearPlayerMemory(() => { pendingPerson = null; }); // 切档：丢弃指向上一局人物的跳转
+export function openPerson(id: string) {
+  pendingPerson = id;
+  window.dispatchEvent(new CustomEvent("star:openperson", { detail: id }));
+  window.dispatchEvent(new CustomEvent("star:navtab", { detail: "npc" }));
+}
+
+/* 婚礼入口：已交往 → 举办婚礼；已婚 → 夫妻标记 */
+function Wedding({ pid, name }: { pid: string; name: string }) {
+  const { game, busy, simWedding, simDivorce } = useGame();
+  const [ask, setAsk] = useState(false);
+  if (!game) return null;
+  const s = game.sim;
+  if (s.spouses?.includes(pid)) {
+    const no = divorceBlocked(s, pid);
+    const forbid = divorceMode() === "forbid";
+    return (
+      <div className="space-y-2">
+        <p className="rounded-xl border border-coral/40 bg-coral/10 py-2.5 text-center text-[13.5px] font-bold text-coral">你与{name}已结为夫妻</p>
+        {!forbid && (ask ? (
+          <div className="flex gap-2">
+            <button onClick={() => { setAsk(false); simDivorce(pid); }} disabled={busy || !!no} className="flex-1 rounded-xl border border-danger/50 py-2 text-[12.5px] font-bold text-danger disabled:opacity-50">确认离婚</button>
+            <button onClick={() => setAsk(false)} className="flex-1 rounded-xl border border-line py-2 text-[12.5px] text-ink-soft">再想想</button>
+          </div>
+        ) : (
+          <button onClick={() => setAsk(true)} disabled={busy || !!no} className="w-full text-center text-[11.5px] text-ink-soft transition hover:text-danger disabled:cursor-not-allowed disabled:hover:text-ink-soft">
+            {no || (divorceMode() === "unilateral" ? "提出离婚（单方可离 · 伤感情）" : "协议离婚（对方已同意）")}
+          </button>
+        ))}
+      </div>
+    );
+  }
+  const cost = weddingCost(), minAff = weddingMinAffinity();
+  const funds = wallet.balance(game);
+  const fmt = (n: number) => wallet.fmt(n, game, (x) => `¥${Math.max(0, x).toLocaleString("zh-CN")}`);
+  const why = weddingBlocked(s, pid, s.rel?.[pid] ?? 0, funds, fmt);
+  const max = maxSpouses();
+  const aff = s.rel?.[pid] ?? 0;
+  const checks: [string, boolean][] = max
+    ? [
+        ["已确认恋爱关系", true],
+        [`好感 ≥ ${minAff}（当前 ${aff}）`, aff >= minAff],
+        [max === 1 ? "你目前没有配偶" : `配偶未满 ${max} 位（已有 ${s.spouses?.length ?? 0}）`, (s.spouses?.length ?? 0) < max],
+        [`婚礼费用 ${fmt(cost)}（现有 ${fmt(funds)}）`, funds >= cost],
+      ]
+    : [];
+  // 其余拦截（如同性婚恋禁止）不在清单里，单独提示
+  const extra = why && checks.every(([, ok]) => ok) ? why : "";
+  return (
+    <div className="rounded-2xl border border-coral/25 bg-gradient-to-br from-coral/[0.07] to-gold/[0.05] p-3.5">
+      <div className="mb-2.5 flex items-center gap-2">
+        <span className="grid h-8 w-8 place-items-center rounded-full bg-coral/15 text-coral"><IconHeart width={15} height={15} aria-hidden /></span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[13.5px] font-bold text-ink">你与{name}正在交往</span>
+          <span className="block text-[11px] text-ink-soft">{max ? "条件齐了，就可以谈婚论嫁" : "这个世界没有婚姻制度，你们以伴侣相守"}</span>
+        </span>
+      </div>
+      {checks.length > 0 && (
+        <ul className="mb-3 space-y-1">
+          {checks.map(([t, ok]) => (
+            <li key={t} className={`flex items-center gap-2 text-[12px] ${ok ? "text-ink" : "text-ink-soft"}`}>
+              <span className={`grid h-4 w-4 shrink-0 place-items-center rounded-full ${ok ? "bg-jade text-white" : "border border-line"}`}>{ok && <IconCheck width={10} height={10} aria-hidden />}</span>
+              {t}
+            </li>
+          ))}
+        </ul>
+      )}
+      {extra && <p className="mb-2 text-[11.5px] text-danger">{extra}</p>}
+      {max > 0 && (
+        <button onClick={() => simWedding(pid)} disabled={busy || !!why}
+          className="w-full rounded-xl bg-gradient-to-r from-[var(--coral)] to-[var(--gold)] py-2.5 text-[13.5px] font-bold text-white shadow-md transition active:scale-[0.99] disabled:cursor-not-allowed disabled:from-transparent disabled:to-transparent disabled:bg-paper disabled:text-ink-soft disabled:shadow-none disabled:ring-1 disabled:ring-line">
+          {why ? "条件未满足" : `举办婚礼 · ${fmt(cost)}`}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* 表白卡：好感与心动两条进度，达标才可表白；被世界规则拦截时说明原因 */
+function Confess({ pid, name }: { pid: string; name: string }) {
+  const { game, busy, simConfess } = useGame();
+  if (!game?.sim) return null;
+  const s = game.sim;
+  const F = RELATIONS.confess;
+  const chk = canConfess(s, pid);
+  const f = s.rel?.[pid] ?? 0, r = relOf(s, pid).romantic;
+  const blocked = chk.reason === "rule" ? datingBlocked(s, pid) : "";
+  const bar = (label: string, v: number, need: number, tone: string) => (
+    <div>
+      <div className="mb-0.5 flex justify-between text-[11px]"><span className="text-ink-soft">{label}</span><span className={`tabular-nums font-semibold ${v >= need ? "text-jade" : "text-ink"}`}>{Math.max(0, v)} / {need}</span></div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-ink/[0.06]"><div className={`h-full rounded-full ${tone}`} style={{ width: `${Math.max(0, Math.min(100, (v / need) * 100))}%` }} /></div>
+    </div>
+  );
+  return (
+    <div className="rounded-2xl border border-line bg-paper p-3.5">
+      <p className="mb-2.5 text-[13px] font-bold text-ink">{chk.ok ? `时机成熟了，向${name}说出心意吧` : "表白之前"}</p>
+      <div className="mb-3 grid grid-cols-2 gap-3">
+        {bar("好感", f, F.friendshipMin, "bg-jade")}
+        {bar("心动", r, F.romanticMin, "bg-coral")}
+      </div>
+      {blocked && <p className="mb-2 text-[11.5px] leading-relaxed text-danger">{blocked}</p>}
+      <button onClick={() => simConfess(pid, name)} disabled={!chk.ok || busy}
+        className="w-full rounded-xl bg-gradient-to-r from-[var(--coral)] to-[var(--jade)] py-2.5 text-[13.5px] font-bold text-white shadow-md transition hover:brightness-105 active:scale-[0.99] disabled:cursor-not-allowed disabled:from-transparent disabled:to-transparent disabled:bg-paper-2 disabled:text-ink-soft disabled:shadow-none">
+        {chk.ok ? F.labels.button : blocked ? "当前规则下无法表白" : "多相处，把好感与心动养起来"}
+      </button>
+    </div>
+  );
+}
+
+/* 牵线：主角促成当前人物与另一位人物之间的往来 */
+function NpcBridge({ pid, name }: { pid: string; name: string }) {
+  const { game, busy, simBridge } = useGame();
+  const [other, setOther] = useState("");
+  const [mode, setMode] = useState<BridgeMode>("intro");
+  const [msg, setMsg] = useState("");
+  if (!game?.sim) return null;
+  const s = game.sim;
+  const list = game.npcs.filter((n) => n.id !== pid && profileOf(n.id)?.status !== "dead");
+  const modes = bridgeModes(), order = Object.keys(modes);
+  if (!list.length || !bridgeEnabled()) return null;
+  const cur = modes[mode] ? mode : order[0];
+  const spec = modes[cur];
+  const perDay = bridgePerDay();
+  const ra = s.rel?.[pid] ?? 0, rb = other ? s.rel?.[other] ?? 0 : 0;
+  const used = s.flags?.[`bridge_d${s.day}`] ?? 0;
+  const otherName = list.find((n) => n.id === other)?.name ?? "";
+  const lack = !other ? "先选一位人物" : Math.min(ra, rb) < spec.need ? `需与两人好感都 ≥ ${spec.need}` : used >= perDay ? "今天的牵线次数用完了" : "";
+  const fmt = (d: number) => `${d >= 0 ? "+" : ""}${d}`;
+  return (
+    <div className="rounded-2xl border border-line bg-paper p-3.5">
+      <div className="mb-2.5 flex items-baseline gap-2">
+        <p className="text-[13px] font-bold text-ink">牵线</p>
+        <p className="min-w-0 flex-1 truncate text-[11px] text-ink-soft">让{name}与别人产生交集</p>
+        <span className="shrink-0 text-[11px] tabular-nums text-ink-soft">今日 {used}/{perDay}</span>
+      </div>
+      <select aria-label="另一位人物" value={other} onChange={(e) => { setOther(e.target.value); setMsg(""); }} className="ui-input mb-2.5 w-full">
+        <option value="">选择另一位人物…</option>
+        {list.map((n) => <option key={n.id} value={n.id}>{n.name}{n.identity ? ` · ${n.identity.slice(0, 12)}` : ""}（好感 {s.rel?.[n.id] ?? 0}）</option>)}
+      </select>
+      <div role="radiogroup" aria-label="方式" className="mb-2 flex flex-wrap gap-1.5">
+        {order.map((k) => {
+          const on = k === cur, m = modes[k];
+          return (
+            <button key={k} type="button" role="radio" aria-checked={on} onClick={() => { setMode(k); setMsg(""); }}
+              className={`rounded-full border px-3 py-1 text-[12px] font-semibold transition ${on ? (m.tone === "coral" ? "border-coral bg-coral/10 text-coral" : m.tone === "jade" ? "border-jade bg-jade/10 text-jade" : "border-ink bg-ink text-paper") : "border-line text-ink-soft hover:text-ink"}`}>
+              {m.label}
+            </button>
+          );
+        })}
+      </div>
+      <p className="mb-3 text-[11.5px] leading-relaxed text-ink-soft">
+        {spec.desc} · 门槛好感 {spec.need} · 你与{name} {fmt(spec.fx[0])}{otherName ? `，与${otherName} ${fmt(spec.fx[1])}` : `，与对方 ${fmt(spec.fx[1])}`}
+      </p>
+      {msg && <p className="mb-2 text-[11.5px] text-danger">{msg}</p>}
+      <button type="button" disabled={busy || !!lack} onClick={() => setMsg(simBridge(pid, other, cur))}
+        className="w-full rounded-xl bg-ink py-2.5 text-[13px] font-bold text-paper transition active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-paper-2 disabled:text-ink-soft">
+        {lack || `${spec.label} · ${name} × ${otherName}`}
+      </button>
+    </div>
+  );
+}
+
+/* 可攻略开关（「关系经营」首行）：默认开启；关闭后 TA 的爱慕冻结，不能表白、推进情感线或确认交往，好感与信任照常发展。
+ * 家人 / 子女恒不可攻略，只展示锁定状态；已确认关系的人不能关。 */
+function RomanceSwitch({ pid, arc }: { pid: string; arc: boolean }) {
+  const { game, setRomanceable } = useGame();
+  const [why, setWhy] = useState("");
+  if (!game?.sim) return null;
+  const s = game.sim;
+  const family = isFamilyNpc(pid);
+  const fixed = romanceFixedOff(s, pid) && !family; // 只有子女锁死；家人可手动开启
+  const on = canRomance(s, pid);
+  const bound = hasPartner(s, pid) || !!s.spouses?.includes(pid);
+  const hint = fixed
+    ? "子女之间只有亲情，恒不可攻略"
+    : family && !on
+      ? "TA 是你的家人，默认只有亲情；打开后可发展恋爱线"
+      : !on
+      ? `TA 不会对你心动${arc ? "，情感线停在当前进度" : ""}；好感与信任照常发展`
+      : bound
+        ? "你们已确认关系，不能关闭"
+        : arc
+          ? "可推进专属情感线；关闭后 TA 不会再对你心动"
+          : "TA 可能对你心动，好感与心动够了就能表白";
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-line bg-paper px-3 py-2.5">
+      <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${on ? "bg-coral/15 text-coral" : "bg-line/60 text-ink-soft"}`}>
+        <IconHeart width={16} height={16} aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-bold text-ink">可攻略</span>
+        <span className="mt-0.5 block text-xs leading-snug text-ink-soft">{why || hint}</span>
+      </span>
+      {fixed ? (
+        <Chip>恒不可攻略</Chip>
+      ) : (
+        <button
+          type="button"
+          role="switch"
+          aria-checked={on}
+          aria-label="可攻略"
+          disabled={on && bound}
+          onClick={() => setWhy(setRomanceable(pid, !on))}
+          className={`relative h-6 w-11 shrink-0 rounded-full transition disabled:cursor-not-allowed disabled:opacity-50 ${on ? "bg-coral" : "bg-line"}`}
+        >
+          <span className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${on ? "translate-x-5" : ""}`} />
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function NpcTab() {
-  const { game, commitGame, setNpcAvatar, setRelValue, setNpcDim, simConfess, simChooseArc, simConfirmDating, phoneExchange } = useGame();
-  const [sel, setSel] = useState<string | null>(null);
+  const { game, setNpcAvatar, setNpcPortrait, setRelValue, simContact, simConfess, phoneExchange, busy } = useGame();
+  const [sel, setSel] = useState<string | null>(() => { const p = pendingPerson; pendingPerson = null; return p; });
+  useEffect(() => {
+    const on = (e: Event) => { setSel((e as CustomEvent<string>).detail); pendingPerson = null; };
+    window.addEventListener("star:openperson", on);
+    return () => window.removeEventListener("star:openperson", on);
+  }, []);
   const [resumeOpen, setResumeOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const [exchange, setExchange] = useState<null | "ok" | "no">(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [openGroups, setOpenGroups] = useState<string[]>([]);
   if (!game) return null;
   const s = game.sim;
   const hasContact = (pid: string) => (game.phone?.contacts ?? []).includes(pid);
-  const npc = game.npcs.find((n) => n.id === sel);
+  // 艺人即 NPC：圈内艺人没有人脉条目时，就地合成一个，走同一套人物详情界面
+  const starOf = (id?: string | null) => (id ? (s.npcs ?? []).find((x) => x.id === id) : undefined);
+  const asNpc = (st: NonNullable<ReturnType<typeof starOf>>): Npc => ({
+    id: st.id, name: st.name, age: "", identity: `艺人 · ${st.dir}`, relation: "同行", avatar: "", bio: "", mood: "",
+    affinity: s.rel?.[st.id] ?? 0, dims: [], tags: [], attrs: [], affinityHistory: [], interactions: [],
+  });
+  const npc = game.npcs.find((n) => n.id === sel) ?? (starOf(sel) ? asNpc(starOf(sel)!) : undefined);
 
-  let profileModal: ReactNode = null;
   if (npc) {
     const pid = npc.id;
-    const romanceEnabled = s.romanceEnabled?.[pid] !== false;
     const profile = profileOf(pid);
-    const dead = profile?.status === "dead" || !!s.npcLives?.[pid]?.dead;
+    const star = starOf(pid);
+    const dead = profile?.status === "dead";
     const lv = affinityLevel(npc.affinity, FAMILY_NPC_IDS.includes(pid as (typeof FAMILY_NPC_IDS)[number]));
     const rx = relOf(s, pid);
     const isDating = s.dating === pid;
     const arc = ROMANCE_ARCS[pid];
     const view = arc ? arcView(s, pid) : null;
     const confess = canConfess(s, pid);
-    // 常驻地点：内容池覆盖优先，否则由据点推导；未知则「尚未得知」
-    const fam = profile?.family;
+    const romanceOn = canRomance(s, pid); // 可攻略开关；家人 / 子女恒为 false
+    const romanceFixed = romanceFixedOff(s, pid);
+    // 常驻地点：编辑器里选定的优先，其次内容池覆盖 / 由据点推导；未知则「尚未得知」
+    const home = homePlaceOf(game, npc, profile);
+    const places = home ? [home] : [];
 
-    // 性别：读内容池存的确定性数据；家人（无 profile）按父/母称谓落定，均无则留白
+    // 性别：编辑器「人设」里明确选过的优先，其次内容池存的确定性数据；家人（无 profile）按父/母称谓落定，均无则留白
     const genderText: string | undefined =
-      profile?.gender ?? (npc.relation === "父亲" ? "男" : npc.relation === "母亲" ? "女" : undefined);
-    // 年龄：内容池存的数字优先，其次家人档案里的 age 字段，缺则不展示该行
-    const ageDigits = String(npc.age ?? "").replace(/[^\d]/g, "");
-    const ageText: string | undefined = profile?.age ? `${profile.age} 岁` : ageDigits ? `${ageDigits} 岁` : undefined;
+      npc.persona?.gender ?? profile?.gender ?? star?.gender ?? (npc.relation === "父亲" ? "男" : npc.relation === "母亲" ? "女" : undefined);
+    // 年龄：编辑器里改过的存档值优先，其次内容池存的数字，再次存档 / 家人档案里的 age；纯数字显示为「N 岁」，自由文本原样，缺则不展示该行
+    const ageText = ageLabel(ownField(npc, "age", profile?.age ? String(profile.age) : undefined));
+    const bioText = ownField(npc, "bio", profile?.bio);
 
-    // 双亲：内容池没有其档案，故就地推导亲属关系——配偶=另一位家长，子女=玩家本人
     const isFamily = FAMILY_NPC_IDS.includes(pid as (typeof FAMILY_NPC_IDS)[number]);
-    const otherParent = isFamily ? game.npcs.find((n) => n.id !== pid && FAMILY_NPC_IDS.includes(n.id as (typeof FAMILY_NPC_IDS)[number])) : undefined;
-    const spouseRefs: FamilyRef[] | undefined = otherParent ? [{ id: otherParent.id, name: otherParent.name, note: npc.relation === "父亲" ? "妻子" : "丈夫" }] : fam?.spouse ? (Array.isArray(fam.spouse) ? fam.spouse : [fam.spouse]) : undefined;
-    const childRefs: FamilyRef[] | undefined = isFamily ? [{ id: "__player__", name: game.player.name, note: "你" }] : fam?.children ? (Array.isArray(fam.children) ? fam.children : [fam.children]) : undefined;
+    // 情感关系：统一取自人物关系网（只列明确设定的人物），不设结识门槛
+    const rels = relationRefsOf(game, pid);
 
     // 亲属引用渲染：命中花名册者可点击跳转，否则纯文本；带备注附注
     const refList = (refs?: FamilyRef[] | FamilyRef | null): ReactNode => {
@@ -117,18 +372,18 @@ export default function NpcTab() {
                   onClick={() => window.dispatchEvent(new CustomEvent("star:navtab", { detail: "sim" }))}
                   className="rounded-sm border border-dashed border-jade/50 px-2 py-0.5 text-[12px] text-jade transition hover:bg-jade/10"
                 >
-                  {label} ↗
+                  {label} <IconExternal size={10} />
                 </button>
               );
             }
-            const target = r.id ? game.npcs.find((n) => n.id === r.id) : undefined;
+            const target = r.id ? game.npcs.find((n) => n.id === r.id) ?? starOf(r.id) : undefined;
             return target ? (
               <button
                 key={i}
-                onClick={() => { setSel(target.id); setResumeOpen(false); }}
+                onClick={() => { setSel(target.id); setResumeOpen(false); setProfileOpen(false); }}
                 className="rounded-sm border border-dashed border-jade/50 px-2 py-0.5 text-[12px] text-jade transition hover:bg-jade/10"
               >
-                {label} ↗
+                {label} <IconExternal size={10} />
               </button>
             ) : (
               <span key={i} className="rounded-sm border border-dashed border-line px-2 py-0.5 text-[12px] text-ink-soft">{label}</span>
@@ -138,100 +393,281 @@ export default function NpcTab() {
       );
     };
 
-    // 情感关系各行预渲染：无数据者返回 undefined，用于条件隐藏，避免整屏「尚未得知」
-    const spouseRefsNode = refList(spouseRefs);
-    const exNode = refList(profile?.ex);
-    const parentsNode = refList(fam?.parents);
-    const childRefsNode = refList(childRefs);
+    // 情感关系各行预渲染：确无记录者返回 undefined，格子淡显「暂无记录」
+    const spouseRefsNode = refList(rels.现任);
+    const exNode = refList(rels.前任);
+    const parentsNode = refList(rels.父母);
+    const childRefsNode = refList(rels.子女);
+    const otherNode = refList(rels.其他);
 
     // 头像右侧速调只用到 友善（自由轴，缺失以 0 兜底）
-    const dimVal = (label: string) => npc.dims.find((x) => x.label === label)?.value ?? 0;
 
-    profileModal = (
-      <NpcProfile pid={pid} onClose={() => { setSel(null); setResumeOpen(false); setExchange(null); }}>
-      <div className="mx-auto max-w-2xl">
+    // ═══ 人物详情：高定星光人物画卷卡 + 下方一体化人物资料与互动分页 ═══
+    const affinityPct = Math.round(((npc.affinity + 100) / 200) * 100);
+    const cap = romanticCapOf(pid) || 100;
+    const romPct = Math.max(0, Math.min(100, (rx.romantic / cap) * 100));
+    const lvBadge = affinityLevel(npc.affinity, isFamily);
+    const heroImg = npc.portrait || npc.avatar;
+    const affil = isFamily ? "家人" : star ? companyMeta(star.companyId).name : affiliationOf(npc.identity);
+    const quickFacts = [genderText, ageText, birthdayLabel(npc), affil].filter(Boolean);
 
-        {/* ═══ 关系经营（仅在世；接通告改到「世界」当面洽谈） ═══ */}
-        {dead ? (
-          <Section code="BOND" title="关系经营">
-            <p className="text-[13px] text-ink-soft">斯人已逝，档案就此封存。你只能在回忆与履历里与 TA 重逢。</p>
-          </Section>
-        ) : (
-          <>
-            <Section code="BOND" title="关系经营">
-              {arc && <p className="mb-2 text-[11.5px] text-gold">固定角色 · 需长线经营</p>}
-              {/* 交互联系方式：交换成功后开通「手机」私聊通道 */}
-              {hasContact(pid) ? (
-                <p className="mt-2 rounded-sm border border-dashed border-jade/50 bg-jade/5 py-2 text-center text-[12.5px] text-jade">
-                  已交换联系方式 · 去「手机」微信/短信/电话找 TA
-                </p>
-              ) : (
-                <button
-                  onClick={() => setExchange(phoneExchange(pid) ? "ok" : "no")}
-                  className="mt-2 w-full rounded-sm border border-dashed border-jade/60 py-2 text-[13px] font-medium text-jade transition hover:bg-jade/10"
-                >
-                  [ 交互联系方式 · 交换微信/电话 ]
-                </button>
-              )}
-
-              {romanceEnabled && arc && view && (
+    const profileTabsNode = (
+      <ProfileTabs tabs={[
+        { id: "info", label: "资料 · 能力", body: <div>
+          <ProfileBio bio={bioText} />
+          <ProfilePlaces places={places} />
+          {/* 代表作只在有作品时出现（非娱乐圈模组、素人 NPC 没有作品，不留空栏） */}
+          {(() => {
+            const works = profile?.works?.map((x) => x.trim()).filter(Boolean) ?? (star ? [...new Set((star.works ?? []).map((w) => MOVIE_TITLES[w % MOVIE_TITLES.length]))] : []);
+            if (!creditsOf(pid).length && !works.length) return null;
+            return (
+              <ProfileGroup title={profile?.worksLabel?.trim() || "代表作"}>
+                <div className="py-2">
+                  {creditsOf(pid).length > 0 ? (
+                    <CreditsList
+                      credits={creditsOf(pid)}
+                      onOpenPerson={(id) => { if (game.npcs.some((n) => n.id === id)) { setSel(id); setResumeOpen(false); } }}
+                    />
+                  ) : (
+                    <WorksChips works={works} plain={profile?.worksPlain} />
+                  )}
+                </div>
+              </ProfileGroup>
+            );
+          })()}
+          <ProfileGroup title="个人能力">
+            <div className="py-2"><StatBars stats={(profile?.stats ?? star?.stats) as Record<string, number> | undefined} /></div>
+          </ProfileGroup>
+          <NpcDiary pid={pid} />
+          <NpcCgStrip pid={pid} />
+          <ProfileGroup title="专属立绘">
+            <PortraitUpload name={npc.name} src={npc.portrait} onChange={(u) => setNpcPortrait(npc.id, u)} />
+          </ProfileGroup>
+        </div> },
+        { id: "heart", label: "情感 · 互动", body: <div>
+          <ProfileRelations values={{ 现任: spouseRefsNode, 前任: exNode, 父母: parentsNode, 子女: childRefsNode, 其他: otherNode }} noParents={rels.noParents} />
+          {dead ? (
+            <ProfileGroup title="关系经营"><div className="space-y-2 py-2.5">
+              <p className="text-[13px] text-ink-soft">斯人已逝，档案就此封存。你只能在回忆与履历里与 TA 重逢。</p>
+            </div></ProfileGroup>
+          ) : (
+            <ProfileGroup title="关系经营"><div className="space-y-2.5 py-2.5">
+              <RomanceSwitch key={pid} pid={pid} arc={!!arc} />
+              {arc && romanceOn && <p className="mb-1 text-[11.5px] font-semibold text-gold">固定角色 · 专属情感长线</p>}
+              <div className="grid grid-cols-2 gap-2">
+                <ActionTile icon={IconSend} tone="coral" title={busy ? "生成中…" : "私下联系"} sub="约 TA 单独见面聊聊" onClick={() => simContact(pid, npc.name)} disabled={busy} />
+                {hasContact(pid)
+                  ? <ActionTile icon={IconCheck} tone="jade" title="已有联系方式" sub="可在手机里找到 TA" />
+                  : <ActionTile icon={IconUsers} tone="jade" title="交换联系方式" sub="好感够了 TA 才会给" onClick={() => setExchange(phoneExchange(pid) ? "ok" : "no")} />}
+                <ActionTile icon={IconScroll} title="履历与互动" sub={`生平与 ${npc.interactions.length} 条往来`} onClick={() => setResumeOpen(true)} />
+                <ProfileMemory pid={pid} button />
+              </div>
+              {game.npcs.some((n) => n.id === pid) && <NpcBridge pid={pid} name={npc.name} />}
+              {arc && view && romanceOn && (
                 <div className="mt-3 border-t border-dashed border-line pt-3">
                   <p className="mb-2 text-[12px] text-ink-soft">专属状态「{view.buff}」· 需长线经营，火候到了自会水到渠成。</p>
                   {view.stage ? (
                     <div>
                       <p className="mb-1.5 text-[14px] font-bold text-ink">第 {view.stage.id} 段 · {view.stage.name}</p>
                       {view.locked ? (
-                        <p className="rounded-sm border border-dashed border-danger/40 px-3 py-2 text-[13px] text-ink-soft">时机未到，你们的缘分还需要沉淀——继续经营名声与彼此的默契。</p>
+                        <p className="rounded-xl border border-dashed border-danger/40 bg-danger/[0.04] px-3 py-2 text-[13px] text-ink-soft">时机未到，你们的缘分还需要沉淀——继续经营名声与彼此的默契。</p>
                       ) : (
-                        <div className="space-y-2">
-                          {view.stage.choices.map((c, i) => (
-                            <button key={i} onClick={() => simChooseArc(pid, i)} className="block w-full rounded-sm border border-dashed border-line p-3 text-left transition hover:border-coral hover:bg-coral/5">
-                              <p className="text-[14px] font-medium text-ink">{c.label}</p>
-                              <p className="mt-0.5 text-[12px] text-ink-soft">→ {c.result}</p>
-                            </button>
-                          ))}
-                        </div>
+                        <p className="rounded-xl border border-dashed border-coral/40 bg-coral/[0.04] px-3 py-2 text-[13px] text-ink-soft">{arcHint(view.today)}</p>
                       )}
                     </div>
                   ) : isDating ? (
-                    <p className="rounded-sm border border-dashed border-coral/50 px-3 py-3 text-center text-[14px] font-semibold text-coral">你与{npc.name}已确认关系 · 状态「{view.buff}」生效中</p>
+                    <div className="space-y-2"><p className="text-center text-[12px] text-coral">状态「{view.buff}」生效中</p><Wedding pid={pid} name={npc.name} /></div>
                   ) : view.datingReady ? (
-                    <button onClick={() => simConfirmDating(pid)} className="w-full rounded-sm border border-dashed border-coral bg-coral/10 py-3 text-sm font-semibold text-coral transition hover:bg-coral/20">[ 七段圆满 · 确认交往 ]</button>
+                    <p className="rounded-xl border border-dashed border-coral bg-coral/10 px-3 py-3 text-center text-[13px] text-coral">{DATING_HINT}</p>
                   ) : (
                     <p className="px-3 py-3 text-center text-[13px] text-ink-soft">剧情已推进完，但你们之间还差一点火候——再沉淀些名声与代表作，缘分自会成熟。</p>
                   )}
                 </div>
               )}
-
-              {romanceEnabled && !arc && (
+              {!arc && romanceOn && (
                 <div className="mt-3 border-t border-dashed border-line pt-3">
-                  {isDating ? (
-                    <p className="rounded-sm border border-dashed border-coral/50 px-3 py-2.5 text-center text-[13.5px] font-semibold text-coral">你与{npc.name}已确认关系 </p>
-                  ) : (
-                    <button
-                      onClick={() => simConfess(pid, npc.name)}
-                      disabled={!confess.ok}
-                      className="w-full rounded-sm border border-dashed border-coral py-2.5 text-[13.5px] font-semibold text-coral transition hover:bg-coral/10 disabled:cursor-not-allowed disabled:border-line disabled:text-ink-soft disabled:opacity-60"
-                    >
-                      {confess.ok ? "[ 向 TA 表白心意 ]" : "表白：好感与心动需先到 60"}
-                    </button>
-                  )}
+                  {isDating ? <Wedding pid={pid} name={npc.name} /> : <Confess pid={pid} name={npc.name} />}
                 </div>
               )}
-            </Section>
-          </>
-        )}
+            </div></ProfileGroup>
+          )}
+        </div> },
+      ]} />
+    );
 
-        {/* ═══ 履历（默认不展开，点击打开弹窗） ═══ */}
-        <button
-          onClick={() => setResumeOpen(true)}
-          className="mt-5 flex w-full items-center justify-between rounded-sm border border-dashed border-line px-4 py-3 text-left transition hover:border-jade"
-        >
-          <span className="text-[13px] font-bold text-ink">履历与互动记录</span>
-          <span className="text-[12px] text-jade">查看 →</span>
-        </button>
+    const card = (
+      <div className="mx-auto max-w-2xl px-4 pb-8 pt-3 space-y-4">
+        {/* 顶栏：返回人脉 · 私下联系（资料已在本页展开，不再另开重复的弹窗） */}
+        <div className="flex items-center justify-between gap-2">
+          <button
+            onClick={() => setSel(null)}
+            className="inline-flex items-center gap-1.5 rounded-full border border-line/80 bg-paper/90 px-3.5 py-1.5 text-[12.5px] font-bold text-ink shadow-sm backdrop-blur-md transition hover:border-jade hover:text-jade"
+          >
+            <span>←</span>
+            <span>返回人脉</span>
+          </button>
+          <div className="flex items-center gap-2">
+            {!dead && (
+              <button
+                onClick={() => simContact(pid, npc.name)}
+                disabled={busy}
+                className="inline-flex items-center gap-1 rounded-full border border-coral/40 bg-coral/10 px-3.5 py-1.5 text-[12px] font-bold text-coral shadow-sm transition hover:bg-coral/20 disabled:opacity-50"
+              >
+                <IconCoffee size={14} />
+                <span>{busy ? "联系中…" : "私下联系"}</span>
+              </button>
+            )}
+          </div>
+        </div>
 
-        {resumeOpen && <ResumeModal name={npc.name} pid={pid} onClose={() => setResumeOpen(false)} npc={npc} />}
+        {/* ═══ 主视觉：星光角色名片画卷卡 ═══ */}
+        <section className="relative overflow-hidden rounded-[24px] border border-line/80 bg-paper shadow-[0_18px_42px_-22px_rgba(120,90,200,0.38)]">
+          {/* 背景光晕与星芒暗纹（取代原先突兀的黑底遮罩） */}
+          <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[var(--jade)]/18 via-paper-2/90 to-[var(--coral)]/20" />
+          <div aria-hidden className="pointer-events-none absolute -right-8 -top-10 h-44 w-44 rounded-full bg-coral/20 blur-3xl" />
+          <div aria-hidden className="pointer-events-none absolute -left-10 -bottom-10 h-44 w-44 rounded-full bg-jade/20 blur-3xl" />
+          <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-28 opacity-35 [background-image:radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.8)_1px,transparent_0)] [background-size:14px_14px] [mask-image:linear-gradient(to_bottom,#000,transparent)]" />
+          {/* 右侧书法首字水印 */}
+          <span aria-hidden className="pointer-events-none absolute -bottom-4 right-3 select-none font-serif text-[130px] font-black leading-none text-jade/[0.06]">
+            {npc.name.charAt(0)}
+          </span>
+
+          {/* 若上传了立绘大图，在顶部展开剧照横幅 */}
+          {heroImg && (
+            <div className="relative h-56 w-full overflow-hidden border-b border-line/50 sm:h-64">
+              <img src={heroImg} alt={npc.name} className={`h-full w-full object-cover object-top ${dead ? "grayscale" : ""}`} />
+              <div aria-hidden className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-paper via-paper/60 to-transparent" />
+            </div>
+          )}
+
+          <div className={`relative px-4 pb-4 pt-5 sm:px-5 ${heroImg ? "-mt-10" : ""}`}>
+            {/* 头像 + 姓名 + 身份金章 + 关系标签 */}
+            <div className="flex items-start gap-3.5 sm:gap-4">
+              <div className={`relative shrink-0 ${dead ? "opacity-60 grayscale" : ""}`}>
+                <span aria-hidden className="absolute -inset-1 rounded-[22px] bg-gradient-to-br from-[var(--coral)] via-[var(--gold)] to-[var(--jade)] opacity-60 blur-[6px]" />
+                <div className="relative rounded-[20px] bg-gradient-to-br from-[var(--coral)] via-[var(--gold)] to-[var(--jade)] p-[2px] shadow-[0_10px_24px_-10px_rgba(200,80,130,0.5)]">
+                  <div className="rounded-[18px] bg-paper p-[2px]">
+                    <Avatar src={npc.avatar} name={npc.name} size={78} square onPick={dead ? undefined : (d) => setNpcAvatar(npc.id, d)} editable={!dead} />
+                  </div>
+                </div>
+                {!dead && isDating && (
+                  <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-coral text-white shadow ring-2 ring-paper">
+                    <IconHeart size={12} className="text-white" />
+                  </span>
+                )}
+              </div>
+
+              <div className="min-w-0 flex-1 pt-0.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="font-serif text-[26px] font-black leading-none tracking-wide text-ink sm:text-[28px]">{npc.name}</h2>
+                  {dead ? (
+                    <Chip tone="danger">已故</Chip>
+                  ) : (
+                    <Chip tone={lvBadge.tone}>{lvBadge.text}</Chip>
+                  )}
+                  {!dead && isDating && <Chip tone="coral">恋人</Chip>}
+                  {!dead && arc && romanceOn && <Chip tone="gold">情感线 · {view ? `${view.done}/${view.total} 段` : arc.confirm.buff}</Chip>}
+                  {!dead && !romanceOn && !romanceFixed && <Chip>不可攻略</Chip>}
+                </div>
+
+                {/* 身份金章与关系 */}
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-gold/45 bg-gradient-to-r from-gold/15 via-coral/10 to-gold/15 px-3 py-0.5 text-[12px] font-bold text-ink shadow-sm">
+                    <span className="text-gold"></span>
+                    <span>{npc.identity || UNKNOWN}</span>
+                  </span>
+                  {npc.relation && (
+                    <span className="rounded-full border border-jade/35 bg-jade/10 px-2.5 py-0.5 text-[11.5px] font-semibold text-jade-deep">
+                      与你 · {npc.relation}
+                    </span>
+                  )}
+                </div>
+
+                {/* 基础标签：性别 · 年龄 · 生辰 · 所属 */}
+                {quickFacts.length > 0 && (
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    {quickFacts.map((f, idx) => (
+                      <span key={idx} className="rounded-full border border-line/70 bg-paper/80 px-2.5 py-0.5 text-[11px] font-medium text-ink-soft">
+                        {f}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ═══ 爱慕 & 好感 双栏磨砂心形仪表盘（支持心形展示 + 直接滑动微调） ═══ */}
+            {!dead && (
+              <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                {/* 爱慕卡（不可攻略时换成说明卡，冻结的爱慕值不展示） */}
+                {romanceOn ? (
+                <div className="rounded-2xl border border-coral/35 bg-gradient-to-br from-coral/[0.09] via-paper/90 to-paper/80 p-3 shadow-sm backdrop-blur-md">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="grid h-6 w-6 place-items-center rounded-full bg-coral/15 text-coral"><IconHeart size={14} /></span>
+                      <span className="font-serif text-[14px] font-bold text-ink">爱慕</span>
+                      <span className="text-[10.5px] text-ink-soft">· 私下悸动</span>
+                    </div>
+                    <span className="font-serif text-[22px] font-black leading-none tabular-nums text-coral">{rx.romantic}</span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <HeartMeter pct={romPct} color="#ff5f96" track="rgba(240,120,160,0.22)" size={15} />
+                    <span className="text-[10px] font-medium text-ink-soft">上限 {cap}</span>
+                  </div>
+                  <div className="mt-1.5">
+                    <StatEditor label="微调" hint="拖动调整爱慕值" tone="coral" value={rx.romantic} min={0} max={cap} onChange={(v) => setRelValue(pid, "romantic", v)} />
+                  </div>
+                </div>
+                ) : (
+                <div className="rounded-2xl border border-dashed border-line bg-paper/80 p-3 shadow-sm backdrop-blur-md">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="grid h-6 w-6 place-items-center rounded-full bg-line/60 text-ink-soft"><IconHeart size={14} /></span>
+                      <span className="font-serif text-[14px] font-bold text-ink">爱慕</span>
+                      <span className="text-[10.5px] text-ink-soft">· {romanceFixed ? "亲情" : "已关闭"}</span>
+                    </div>
+                    <Chip>{romanceFixed ? "家人" : "不可攻略"}</Chip>
+                  </div>
+                  <p className="mt-2.5 text-[12px] leading-relaxed text-ink-soft">
+                    {romanceFixed ? (isFamilyNpc(pid) ? "TA 是你的家人，目前只有亲情。想发展恋爱线，可在「情感 · 互动」里把 TA 设为「可攻略」。" : "子女之间只有亲情，不涉及恋爱。") : "TA 不会对你心动，好感与信任照常发展。可在「情感 · 互动」里重新开启。"}
+                  </p>
+                </div>
+                )}
+
+                {/* 好感卡 */}
+                <div className="rounded-2xl border border-jade/35 bg-gradient-to-br from-jade/[0.09] via-paper/90 to-paper/80 p-3 shadow-sm backdrop-blur-md">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="grid h-6 w-6 place-items-center rounded-full bg-jade/15 text-[12px] text-jade"></span>
+                      <span className="font-serif text-[14px] font-bold text-ink">好感</span>
+                      <span className="text-[10.5px] text-ink-soft">· 日常亲疏</span>
+                    </div>
+                    <span className="font-serif text-[22px] font-black leading-none tabular-nums text-jade-deep">{npc.affinity}</span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <HeartMeter pct={affinityPct} color="#d977a6" track="rgba(160,130,200,0.22)" size={15} />
+                    <span className="text-[10px] font-medium text-ink-soft">{lvBadge.text}</span>
+                  </div>
+                  <div className="mt-1.5">
+                    <StatEditor label="微调" hint="拖动调整好感值" tone="jade" value={s.rel?.[pid] ?? npc.affinity} min={-100} max={100} onChange={(v) => setRelValue(pid, "friendship", v)} />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ═══ 下方直接展开：资料 · 能力 · 立绘 · 情感 · 记忆 ═══ */}
+        <div className="rounded-[22px] border border-line/75 bg-paper/90 p-4 shadow-[0_10px_28px_-18px_rgba(120,90,200,0.3)]">
+          {profileTabsNode}
+        </div>
+      </div>
+    );
+
+    return (
+      <>
+      {card}
+        {resumeOpen && <ResumeModal name={npc.name} pid={pid} onClose={() => setResumeOpen(false)} npc={npc} extra={star ? starResume(star) : undefined} />}
         {exchange && (
           <Modal title="交换联系方式" onClose={() => setExchange(null)}>
             {exchange === "ok" ? (
@@ -245,120 +681,101 @@ export default function NpcTab() {
             )}
           </Modal>
         )}
-      </div>
-      </NpcProfile>
+      </>
     );
   }
 
-  // 人脉同时展示已登场与未登场人物；未登场人物只展示公开的地点与解锁提示。
-  const roster = game.npcs;
-  const known = roster.filter((n) => s.metPeople.includes(n.id));
-  const unknown = roster.filter((n) => !s.metPeople.includes(n.id));
+  // 列表：只展示真正打过交道（已结识）的人——没交互过的绝不出现在人脉里
+  const known = game.npcs.filter((n) => s.metPeople.includes(n.id));
 
-  // 分类：制作人 / 圈内艺人 / 其他（依据 isManager 与身份关键词，皆来自内容池，前端只做归类）
-  const ENTERTAINER = /演员|歌手|艺人|明星|偶像|模特|主持|练习生|新人/;
-  const bucketOf = (n: (typeof roster)[number]): "family" | "producer" | "star" | "other" => {
-    if (FAMILY_NPC_IDS.includes(n.id as (typeof FAMILY_NPC_IDS)[number])) return "family";
-    if (isManager(n.id)) return "producer";
-    const tags = (profileOf(n.id)?.tags ?? []).join(" ");
-    if (ENTERTAINER.test(`${n.identity} ${n.relation} ${tags}`)) return "star";
-    return "other";
-  };
-  const CATS: { key: "family" | "producer" | "star" | "other"; label: string }[] = [
-    { key: "family", label: "家人 · 双亲" },
-    { key: "producer", label: "制作人 · 片场负责人" },
-    { key: "star", label: "圈内艺人" },
-    { key: "other", label: "其他往来" },
-  ];
-  const grouped = CATS.map((c) => ({
-    ...c,
-    people: known.filter((n) => bucketOf(n) === c.key).sort((a, b) => b.affinity - a.affinity),
+  // 分组、阶段词、卡片数值、所属组织全部取自「人脉页面配置」（contacts 槽）；界面只负责排版
+  const cfg = contactsCfg();
+  type Entry = { id: string; name: string; avatar?: string; sub: string; groups: string[]; rel: number; vals: (src: ContactSrc) => number | undefined; dead?: boolean; dating?: boolean };
+  const npcEntries: Entry[] = known.map((n) => {
+    const prof = profileOf(n.id);
+    const groups = groupsOf(cfg, { id: n.id, text: `${n.identity} ${n.relation} ${(prof?.tags ?? []).join(" ")}`, explicit: prof?.groups });
+    const org = orgOf(cfg, n.id, prof?.org);
+    return {
+      id: n.id, name: n.name, avatar: n.avatar, groups, rel: n.affinity,
+      sub: [n.identity || "—", org ?? (n.relation || "—")].join(" · "),
+      vals: (src) => src.kind === "rel" ? n.affinity
+        : n.attrs.find((a) => a.key === src.key || a.label === src.label)?.value ?? n.dims.find((d) => d.label === src.label)?.value,
+      dead: prof?.status === "dead", dating: s.dating === n.id,
+    };
+  });
+  // 世界自动生成的人物池（如娱乐圈的随机艺人）：并入同一套分组，不再单独成区
+  const poolEntries: Entry[] = (s.npcs ?? []).map((n) => {
+    const rel = s.rel?.[n.id] ?? 0;
+    const org = orgOf(cfg, n.id) ?? companyMeta(n.companyId).name;
+    return {
+      id: n.id, name: n.name, groups: groupsOf(cfg, { id: n.id, text: n.dir, pool: true }), rel,
+      sub: [n.dir, org].filter(Boolean).join(" · "),
+      vals: (src) => src.kind === "rel" ? rel : src.key === "fame" ? n.fame : src.kind === "stat" ? (n.stats as Record<string, number>)[src.key] : undefined,
+    };
+  });
+  const entries = [...npcEntries, ...poolEntries];
+  const primary = cfg.metrics[0];
+  const sortVal = (e: Entry) => (primary ? e.vals(primary.src) : e.rel) ?? -Infinity;
+  const grouped = cfg.groups.map((g) => ({
+    ...g,
+    people: entries.filter((e) => e.groups.includes(g.id)).sort((x, y) => sortVal(y) - sortVal(x)),
   })).filter((g) => g.people.length > 0);
 
-  const Card = ({ n, locked = false }: { n: (typeof roster)[number]; locked?: boolean }) => {
-    const isFam = FAMILY_NPC_IDS.includes(n.id as (typeof FAMILY_NPC_IDS)[number]);
-    const lv = affinityLevel(n.affinity, isFam);
-    const dead = profileOf(n.id)?.status === "dead";
-    const dating = s.dating === n.id;
-    const pct = Math.max(0, Math.min(100, n.affinity));
-    const person = profileOf(n.id);
-    const place = person?.whereabouts ?? locOf(person?.home ?? "")?.name ?? "地点未公开";
-    const unlock = person?.requires?.length ? person.requires.map((r: any) => r.hint ?? r.note ?? "满足指定条件").join(" · ") : "前往对应地点即可初遇";
-    // 好感度着色：随亲疏由珊瑚过渡到暖金
+  const Card = ({ e }: { e: Entry }) => {
+    const st = stageOf(cfg, e.rel, e.groups);
+    const metrics: CardMetric[] = cfg.metrics.flatMap((m) => {
+      const v = e.vals(m.src);
+      return v === undefined || Number.isNaN(v) ? [] : [{ key: metricKey(m.src), icon: m.icon, value: Math.round(v), tone: m.tone }];
+    });
     return (
-      <button
-        onClick={() => !locked && setSel(n.id)}
-        className={`group relative flex items-center gap-3 overflow-hidden rounded-2xl border p-3 text-left shadow-sm backdrop-blur-sm transition-all duration-200 ${locked ? "cursor-default border-dashed border-line/70 bg-paper/35" : "border-line bg-paper-2/55 hover:-translate-y-0.5 hover:border-jade/60 hover:bg-paper-2/80 hover:shadow-[0_10px_24px_-14px_var(--dream-glow,rgba(0,0,0,0.35))]"}`}
-      >
-        {/* 简洁圆角头像；已故人物灰化。 */}
-        <div className="relative shrink-0">
-          <div className={`${dead || locked ? "opacity-45 grayscale" : ""} [&>div]:bg-none [&>div]:bg-jade/5 [&>div]:shadow-none [&>div]:ring-0`}>
-            <Avatar src={locked ? "" : n.avatar} name={locked ? "?" : n.name} size={46} editable={false} />
-          </div>
-          {dating && (
-            <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-coral text-white shadow ring-2 ring-paper-2">
-              <IconHeart width={9} height={9} />
-            </span>
-          )}
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <p className="truncate text-[14.5px] font-bold text-ink">{locked ? "未登场人物" : n.name}</p>
-            {locked ? <Chip>未登场</Chip> : dead ? <Chip tone="danger">已故</Chip> : <Chip tone={lv.tone}>{lv.text}</Chip>}
-          </div>
-          <p className="mt-0.5 mb-1 truncate text-[11.5px] text-ink-soft">{locked ? `${place} · 初遇条件未满足` : `${n.identity || "—"} · ${n.relation || "—"}`}</p>
-          {locked && <p className="mb-2 line-clamp-1 text-[10.5px] text-gold">{unlock}</p>}
-          {/* 好感度：细圆角进度条 + 数值 */}
-          {!locked && <div className="flex items-center gap-2">
-            <IconHeart width={12} height={12} className="shrink-0 text-coral" />
-            <span className="relative h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-ink-soft/15">
-              <span
-                className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${n.affinity < 0 ? "bg-danger/70" : "bg-gradient-to-r from-coral to-gold"}`}
-                style={{ width: `${n.affinity < 0 ? 100 : pct}%` }}
-              />
-            </span>
-            <span className="w-7 shrink-0 text-right text-[11px] font-medium tabular-nums text-ink-soft">{n.affinity}</span>
-          </div>}
-        </div>
-
-        {/* 右侧微光箭头 */}
-        {!locked && <span className="shrink-0 self-center text-ink-soft/40 transition group-hover:translate-x-0.5 group-hover:text-jade">›</span>}
-      </button>
+      <PersonCard
+        onClick={() => { setSel(e.id); setProfileOpen(false); }}
+        name={e.name} avatar={e.avatar} dead={e.dead} dating={e.dating}
+        chip={e.dead ? <Chip tone="danger">已故</Chip> : st ? <Chip tone={st.tone}>{st.label}</Chip> : null}
+        sub={e.sub}
+        metrics={metrics}
+      />
     );
   };
 
-  // 分类配色：家人金、制作人主色、艺人珊瑚、其他中性
-  const CAT_TONE: Record<string, string> = { family: "text-gold", producer: "text-jade", star: "text-coral", other: "text-ink-soft" };
-
   return (
     <div className="w-full pb-5">
-      {profileModal}
+      <IndustryPageHeader
+        title={contactsTitle()}
+        subtitle={cfg.subtitle ?? ""}
+        action={<button onClick={() => setAddOpen(true)} aria-label="添加人物" className="flex h-8 items-center gap-1 rounded-[8px] border border-coral/40 bg-paper/80 px-2.5 text-[12px] font-bold text-coral transition hover:bg-coral/10"><span className="text-[15px] leading-none">＋</span>添加</button>}
+      />
+      {addOpen && <CustomPersonModal onClose={() => setAddOpen(false)} />}
 
       <div className="mx-auto max-w-2xl px-4 pt-3">
-      {known.length === 0 ? (
+
+      {entries.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-line bg-paper-2/40 px-4 py-10 text-center">
-          <span className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-ink-soft/10 text-ink-soft/60"><IconHeart width={22} height={22} /></span>
-          <p className="text-[13px] text-ink-soft">还没结识任何人。<br />到各处走走、与人搭话，认识的人才会记入人脉。</p>
+          <span className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-ink-soft/10 text-ink-soft/60"><IconUsers width={22} height={22} /></span>
+          <p className="text-[13px] text-ink-soft">还没结识任何人。<br />到各处走走、与人搭话，认识的人才会记入{contactsTitle()}。</p>
         </div>
       ) : (
-        <div className="space-y-5">
-          {grouped.map((g) => (
-            <section key={g.key}>
-              <div className="mb-2.5 flex items-center gap-2">
-                <span className={CAT_TONE[g.key] ?? "text-jade"}>▌</span>
-                <span className="text-[13px] font-bold text-ink">{g.label}</span>
-                <span className={`rounded-full bg-ink-soft/10 px-1.5 py-px text-[10.5px] font-semibold tabular-nums ${CAT_TONE[g.key] ?? "text-ink-soft"}`}>{g.people.length}</span>
-                <span className="h-px flex-1 bg-gradient-to-r from-line to-transparent" />
-              </div>
-              <div className="grid gap-2.5 sm:grid-cols-2">
-                {g.people.map((n) => <Card key={n.id} n={n} />)}
-              </div>
-            </section>
-          ))}
+        <div className="space-y-4">
+          {grouped.map((g) => {
+            const open = openGroups.includes(g.id);
+            const fold = g.fold && g.fold > 0 ? g.fold : 0;
+            const shown = fold && !open ? g.people.slice(0, fold) : g.people;
+            return (
+              <section key={g.id}>
+                <GroupHead label={g.label} count={g.people.length} />
+                <div className={LIST}>
+                  {shown.map((e) => <Card key={e.id} e={e} />)}
+                </div>
+                {fold > 0 && g.people.length > fold && (
+                  <button onClick={() => setOpenGroups((l) => open ? l.filter((x) => x !== g.id) : [...l, g.id])} className="mt-2.5 w-full rounded-full border border-dashed border-line py-1.5 text-[12px] text-ink-soft transition hover:border-jade hover:text-jade">
+                    {open ? "收起" : `展开全部 ${g.people.length} 位`}
+                  </button>
+                )}
+              </section>
+            );
+          })}
         </div>
       )}
-      {unknown.length > 0 && <section className="mt-6"><div className="mb-2.5 flex items-center gap-2"><span className="text-ink-soft">▌</span><span className="text-[13px] font-bold text-ink">未登场人物</span><span className="rounded-full bg-ink-soft/10 px-1.5 py-px text-[10.5px] font-semibold text-ink-soft">{unknown.length}</span><span className="h-px flex-1 bg-gradient-to-r from-line to-transparent" /></div><div className="grid gap-2.5 sm:grid-cols-2">{unknown.map((n) => <Card key={n.id} n={n} locked />)}</div></section>}
       </div>
     </div>
   );
@@ -366,8 +783,18 @@ export default function NpcTab() {
 
 /* ═══════════════ 履历弹窗：静态生平（可筛选）+ 游戏内互动记录 ═══════════════
  * 生平履历取自内容池，只读、确定性——筛选只做前端过滤，不产生任何新事件、不调用 AI。 */
-function ResumeModal({ name, pid, onClose, npc }: { name: string; pid: string; onClose: () => void; npc: { affinityHistory: { turn: number; delta: number; reason: string }[]; interactions: { turn: number; time: string; text: string }[] } }) {
-  const all = resumeOf(pid);
+/* 艺人履历：出道 + 代表作按年份铺开（确定性派生） */
+function starResume(st: { dir: string; companyId: string; debutYear?: number; works?: number[] }): ResumeEvent[] {
+  const debut = st.debutYear ?? 2005;
+  const works = [...new Set((st.works ?? []).map((w) => MOVIE_TITLES[w % MOVIE_TITLES.length]))];
+  return [
+    { year: debut, type: "出道", title: `以${st.dir}身份出道，签约${companyMeta(st.companyId).name}` },
+    ...works.map((t, i) => ({ year: Math.min(2005, debut + i + 1), type: "作品", title: `主演《${t}》` })),
+  ];
+}
+
+function ResumeModal({ name, pid, onClose, npc, extra }: { name: string; pid: string; onClose: () => void; extra?: ResumeEvent[]; npc: { affinityHistory: { turn: number; delta: number; reason: string }[]; interactions: { turn: number; time: string; text: string }[] } }) {
+  const all = [...resumeOf(pid), ...(extra ?? [])];
   const known = all.filter((e) => !e.hidden); // hidden=后台存在但玩家尚未得知
   const hiddenCount = all.length - known.length;
   const [year, setYear] = useState<string>("all");
@@ -392,89 +819,50 @@ function ResumeModal({ name, pid, onClose, npc }: { name: string; pid: string; o
   const selCls = "rounded-sm border border-dashed border-line bg-paper px-2 py-1 text-[12px] text-ink transition hover:border-jade/60";
 
   return (
-    <Modal title={`${name} · 履历`} onClose={onClose} wide>
-      {/* 生平履历 */}
-      <SectionHead code="RESUME" cn="生平履历" right={<span className="text-[11px] tabular-nums text-ink-soft">{filtered.length} 条</span>} />
-      {all.length === 0 ? (
-        <p className="border-l border-line px-3 py-2.5 text-[13px] text-ink-soft/70">{UNKNOWN}</p>
-      ) : (
-        <>
-          <div className="mb-3 flex flex-wrap gap-2">
-            <select value={year} onChange={(e) => setYear(e.target.value)} className={selCls} aria-label="按年份筛选">
-              <option value="all">全部年份</option>
-              {years.map((y) => <option key={y} value={y}>{y} 年</option>)}
-            </select>
-            <select value={month} onChange={(e) => setMonth(e.target.value)} className={selCls} aria-label="按月份筛选">
-              <option value="all">全部月份</option>
-              {months.map((m) => <option key={m} value={m}>{m} 月</option>)}
-            </select>
-            <select value={type} onChange={(e) => setType(e.target.value)} className={selCls} aria-label="按类型筛选">
-              <option value="all">全部类型</option>
-              {types.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
-          </div>
-          {filtered.length === 0 ? (
-            <p className="border-l border-line px-3 py-2.5 text-[13px] text-ink-soft">该筛选下没有记录。</p>
-          ) : (
-            <ol className="relative space-y-3 border-l border-line pl-4">
-              {filtered.map((e, i) => (
-                <ResumeRow key={i} e={e} />
-              ))}
-            </ol>
-          )}
-          {hiddenCount > 0 && !filtering && (
-            <p className="mt-3 border-l border-dashed border-line px-3 py-2 text-[12.5px] text-ink-soft/70">
-              尚未得知 · 还有 {hiddenCount} 段往事，等你与 TA 相知更深后揭晓。
-            </p>
-          )}
-        </>
-      )}
+    <Modal title={`${name} · 履历与互动`} onClose={onClose} wide>
+      <ProfileGroup title={`生平履历 · ${filtered.length} 条`}>
+        {all.length === 0 ? <ResumeTimeline items={[]} /> : (
+          <>
+            <div className="flex flex-wrap gap-2 pt-2">
+              <select value={year} onChange={(e) => setYear(e.target.value)} className={selCls} aria-label="按年份筛选">
+                <option value="all">全部年份</option>
+                {years.map((y) => <option key={y} value={y}>{y} 年</option>)}
+              </select>
+              <select value={month} onChange={(e) => setMonth(e.target.value)} className={selCls} aria-label="按月份筛选">
+                <option value="all">全部月份</option>
+                {months.map((m) => <option key={m} value={m}>{m} 月</option>)}
+              </select>
+              <select value={type} onChange={(e) => setType(e.target.value)} className={selCls} aria-label="按类型筛选">
+                <option value="all">全部类型</option>
+                {types.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <ResumeTimeline
+              items={filtered.map((e) => ({ year: `${e.year}${e.month ? `.${e.month}` : ""}`, title: `${e.title}${e.type ? ` · ${e.type}` : ""}`, detail: e.detail }))}
+              empty="该筛选下没有记录。"
+            />
+            {hiddenCount > 0 && !filtering && (
+              <p className="border-t border-dashed border-line/60 py-2 text-[11.5px] text-ink-soft/70">尚未得知 · 还有 {hiddenCount} 段往事，等你与 TA 相知更深后揭晓。</p>
+            )}
+          </>
+        )}
+      </ProfileGroup>
 
-      {/* 游戏内互动记录（确定性存档，非 AI 现编） */}
-      <SectionHead code="LOG" cn="互动记录" right={<span className="text-[11px] tabular-nums text-ink-soft">{npc.interactions.length} 条</span>} />
-      {npc.interactions.length ? (
-        <ol className="relative space-y-2.5 border-l border-line pl-4">
-          {[...npc.interactions].reverse().map((it, i) => (
-            <li key={i} className="relative">
-              <span className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-coral" />
-              <p className="text-[11px] tabular-nums text-ink-soft">{it.time} · 第 {it.turn} 回合</p>
-              <p className="text-[13.5px] text-ink">{it.text}</p>
-            </li>
-          ))}
-        </ol>
-      ) : (
-        <p className="border-l border-line px-3 py-2.5 text-[13px] text-ink-soft">尚无互动。</p>
-      )}
+      <ProfileGroup title={`互动记录 · ${npc.interactions.length} 条`}>
+        <ResumeTimeline items={[...npc.interactions].reverse().map((it) => ({ year: it.time, title: it.text }))} empty="尚无互动。" />
+      </ProfileGroup>
 
       {npc.affinityHistory.length > 0 && (
-        <>
-          <SectionHead code="AFFINITY" cn="好感变动" />
-          <div className="space-y-1.5">
-            {[...npc.affinityHistory].reverse().map((h, i) => (
-              <div key={i} className="flex items-center gap-2 border-l border-dashed border-line px-3 py-1.5 text-[12.5px]">
-                <span className={`font-bold tabular-nums ${h.delta > 0 ? "text-jade" : "text-danger"}`}>{h.delta > 0 ? "+" : ""}{h.delta}</span>
-                <span className="shrink-0 tabular-nums text-ink-soft">第 {h.turn} 回合</span>
-                <span className="truncate text-ink">{h.reason}</span>
-              </div>
-            ))}
-          </div>
-        </>
+        <ProfileGroup title="好感变动">
+          {[...npc.affinityHistory].reverse().map((h, i) => (
+            <div key={i} className="flex items-center gap-2 border-b border-dashed border-line/60 py-2 text-[12.5px] last:border-b-0">
+              <span className={`w-9 shrink-0 font-bold tabular-nums ${h.delta > 0 ? "text-jade" : "text-danger"}`}>{h.delta > 0 ? "+" : ""}{h.delta}</span>
+              <span className="min-w-0 flex-1 truncate text-ink">{h.reason}</span>
+              <span className="shrink-0 text-[11px] tabular-nums text-ink-soft">第 {h.turn} 回合</span>
+            </div>
+          ))}
+        </ProfileGroup>
       )}
     </Modal>
   );
 }
-
-function ResumeRow({ e }: { e: ResumeEvent }) {
-  return (
-    <li className="relative">
-      <span className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-jade" />
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[11.5px] text-ink-soft">{e.year} 年{e.month ? ` · ${e.month} 月` : ""}</span>
-        <Chip tone="jade">{e.type}</Chip>
-      </div>
-      <p className="mt-0.5 text-[14px] font-medium text-ink">{e.title}</p>
-      {e.detail && <p className="mt-0.5 text-[12.5px] leading-relaxed text-ink-soft">{e.detail}</p>}
-    </li>
-  );
-}
-

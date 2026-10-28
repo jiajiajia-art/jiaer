@@ -63,3 +63,40 @@ trust:
   init: 10
   min: 0
   max: 100
+
+# 伴侣加成：与某人确认恋爱关系后获得的加成（各世界观可改写 / 置空）
+#   一、工作 / 通告类结算（不填 loc）：
+#   rate: 通告完成率 +%   minStar: 仅限通告星级 ≥ 此值   gigType: 仅限通告类型（正则）
+#   bizMult: 商业价值成长倍率   payBonus: 顺利完成时额外片酬比例
+partnerPerks:
+  - { pid: guchen, label: 天王恋人线, rate: 8, minStar: 5 }
+  - { pid: songshixu, label: 资本同盟, rate: 5, gigType: "广告|投资|品牌" }
+  - { pid: songshixu, label: 资本同盟, payBonus: 0.05 }
+  - { pid: zhouyan, label: 并肩而立, bizMult: 1.12 }
+  # 二、地点触发（填 loc = 地点 id，可写正则）：到访该地点、且与该人是恋人时生效
+  #   fx: 数值增减列表 [{ key, delta }]
+  #   when.req: 条件列表 [{ key, op: ">=" | "<=", value }]，全部满足才触发
+  #   key（所有世界观通用）：stat:<能力id> 本世界观能力 / attr:<属性id> 自定义属性 / affinity 与该恋人好感
+  #       / stress 压力 / energy 行动力 / week 当前周（仅条件）
+  #       / fame 名气、reputation 口碑、blackFans 黑粉、looks 容貌（仅条件）——引擎内置的娱乐圈项，别的世界观可不用
+  #   when.chance 触发概率 0~100 / maxTimes 整局最多几次 / cooldownDays 间隔天数 / perWeek 每周最多几次
+  #   msgMode: append 接在地点原文后（缺省）/ replace 整段替换原文
+  #   msg: 剧情要点——接入 AI 时交给 AI 演绎（数值由系统先结算并锁定）；未接 AI 时直接显示
+  - pid: jiangxu
+    label: 隔壁的灯
+    loc: apartment
+    msgMode: replace
+    fx: [{ key: stress, delta: -8 }]
+    msg: 隔壁常亮的灯还亮着，江叙白留了热汤——压力额外 -8。
+  - pid: wenyuan
+    label: 长夜灯火
+    loc: redcarpet
+    fx: [{ key: reputation, delta: 2 }, { key: affinity, delta: 1 }]
+    msg: 闻予安陪你走完公益晚宴，口碑 +2，好感 +1。
+    when:
+      req:
+        - { key: week, op: ">=", value: 13 }
+        - { key: looks, op: ">=", value: 700 }
+        - { key: fame, op: ">=", value: 180 }
+        - { key: reputation, op: ">=", value: 75 }
+        - { key: blackFans, op: "<=", value: 8 }

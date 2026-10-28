@@ -2,6 +2,8 @@
  * 图标本体铺满整个画布、四周不留白；圆角与裁切交由外层容器（.ios-icon overflow-hidden rounded）处理，
  * 故此处不画圆角底、不画白色描边 / 底座 / 投影，边缘干净无白边。 */
 import type { ReactNode } from "react";
+import sheet from "../../assets/app-icons.webp";
+import sheet2 from "../../assets/app-icons-2.webp";
 
 // 每块贴图各自一个渐变，需保证 id 唯一（模块初始化时递增即可）
 let gseq = 0;
@@ -26,6 +28,28 @@ function Tile({ children, from = "#3a3a3c", to = "#161617" }: { from?: string; t
 }
 
 export const APP_ICON: Record<string, ReactNode> = {
+  read: (
+    <Tile from="#ffb37a" to="#e0662f" angle={150}>
+      {/* 摊开的书 + 书签，寓意「阅读」 */}
+      <path d="M29 19c-4-2.6-9-3.4-15-3v24c6-.4 11 .4 15 3 4-2.6 9-3.4 15-3V16c-6-.4-11 .4-15 3Z" fill="#fff" />
+      <path d="M29 19v24" stroke="#f0a070" strokeWidth="1.6" />
+      <path d="M35 16.6V26l2.6-2 2.6 2v-9.6" fill="#e0662f" />
+    </Tile>
+  ),
+  video: (
+    <Tile from="#ff9db8" to="#fb5c8a" angle={150}>
+      {/* 小电视 + 播放键，寓意「视频」 */}
+      <path d="m22 14 5 5m9-5-5 5" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" />
+      <rect x="11" y="19" width="36" height="25" rx="6" fill="#fff" />
+      <path d="M26 26.5v10l8.5-5Z" fill="#fb5c8a" />
+    </Tile>
+  ),
+  mail: (
+    <Tile from="#6fd3ff" to="#0a7cff" angle={160}>
+      <rect x="12" y="17" width="34" height="24" rx="4" fill="#fff" />
+      <path d="M13.5 19.5 29 31l15.5-11.5" fill="none" stroke="#1a8cff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+    </Tile>
+  ),
   xianyu: (
     <Tile from="#4fd6d0" to="#1a9b98" angle={135}>
       {/* 一条侧身小鱼 + 气泡，寓意「咸鱼二手」 */}
@@ -34,6 +58,22 @@ export const APP_ICON: Record<string, ReactNode> = {
       <path d="M17 29h9" stroke="#7fe0dc" strokeWidth="1.4" strokeLinecap="round" />
       <circle cx="41" cy="16" r="2.1" fill="#eafffe" opacity="0.9" />
       <circle cx="45.5" cy="20.5" r="1.3" fill="#eafffe" opacity="0.8" />
+    </Tile>
+  ),
+  couple: (
+    <Tile from="#ffd9e4" to="#e88aa6" angle={150}>
+      {/* 两颗交叠的心 + 一道细线，寓意「情侣空间」 */}
+      <path d="M22 41s-10-6-10-13.5c0-3.4 2.6-6 5.8-6 1.9 0 3.3 1 4.2 2.3.9-1.3 2.3-2.3 4.2-2.3 3.2 0 5.8 2.6 5.8 6C32 35 22 41 22 41Z" fill="#fff" />
+      <path d="M37 37s-8.4-5-8.4-11.3c0-2.9 2.2-5 4.9-5 1.6 0 2.8.8 3.5 1.9.7-1.1 1.9-1.9 3.5-1.9 2.7 0 4.9 2.1 4.9 5C45.4 32 37 37 37 37Z" fill="#fff" opacity="0.72" stroke="#e88aa6" strokeWidth="1" />
+      <path d="M13 46h32" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" opacity="0.7" />
+    </Tile>
+  ),
+  peek: (
+    <Tile from="#3a3f4a" to="#0d0f12" angle={150}>
+      {/* 一只半睁的眼，瞳孔里一点冷光，寓意「偷看」 */}
+      <path d="M10 29c5-8 12-12 19-12s14 4 19 12c-5 8-12 12-19 12s-14-4-19-12Z" fill="#fff" />
+      <circle cx="29" cy="29" r="7" fill="#0d0f12" />
+      <circle cx="31.5" cy="26.5" r="2" fill="#7fd1ff" />
     </Tile>
   ),
   forum: (
@@ -197,3 +237,47 @@ export const APP_ICON: Record<string, ReactNode> = {
     </Tile>
   ),
 };
+
+/* 用户提供的 3×3 萌系图标图集：按格裁切（CSS 雪碧图），向内多裁一圈，避免露出原图圆角外的底色 */
+const SHEETS = {
+  a: { src: sheet, size: "427% 427%", xs: [8.4, 50, 91.6], ys: [4.8, 46.4, 88.3] },
+  b: { src: sheet2, size: "394% 394%", xs: [7.6, 50, 92.3], ys: [5.5, 47.6, 89.5] },
+};
+function Sprite({ col, row, set = "a" }: { col: number; row: number; set?: keyof typeof SHEETS }) {
+  const { src, size, xs, ys } = SHEETS[set];
+  return (
+    <span
+      aria-hidden
+      className="block h-full w-full bg-transparent"
+      style={{
+        /* 功能注释：雪碧图 WebP 须带 alpha；背景色必须透明，否则透明像素会显示成白底 */
+        backgroundColor: "transparent",
+        backgroundImage: `url(${src})`,
+        backgroundSize: size,
+        backgroundPosition: `${xs[col]}% ${ys[row]}%`,
+        backgroundRepeat: "no-repeat",
+      }}
+    />
+  );
+}
+Object.assign(APP_ICON, {
+  wechat: <Sprite col={0} row={0} />,
+  campus: <Sprite col={1} row={0} />,
+  meituan: <Sprite col={2} row={0} />,
+  forum: <Sprite col={0} row={1} />,
+  douyin: <Sprite col={1} row={1} />,
+  taobao: <Sprite col={2} row={1} />,
+  xianyu: <Sprite col={2} row={1} />,
+  cloudmusic: <Sprite col={0} row={2} />,
+  map: <Sprite col={1} row={2} />,
+  settings: <Sprite col={2} row={2} />,
+  peek: <Sprite set="b" col={0} row={0} />,
+  ticket: <Sprite set="b" col={1} row={0} />,
+  appstore: <Sprite set="b" col={2} row={0} />,
+  weibo: <Sprite set="b" col={0} row={1} />,
+  xhs: <Sprite set="b" col={1} row={1} />,
+  bosspin: <Sprite set="b" col={2} row={1} />,
+  pomodoro: <Sprite set="b" col={0} row={2} />,
+  notes: <Sprite set="b" col={1} row={2} />,
+  tv: <Sprite set="b" col={2} row={2} />,
+});

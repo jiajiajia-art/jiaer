@@ -1,3 +1,4 @@
+import { affinityCapOf } from "../worlds/star2005/content";
 /* ————— 星光2005 · 娱乐圈关系引擎（纯规则层）—————
  * 在既有「好感(s.rel)」单轴之外，维护多维私人关系：心情/心动/私人信任 +「联系冷落」衰减。
  * 契约：数值推进、边界钳制、冷落衰减、联系冷却与幂等都在此；所有中文维度名、提示、
@@ -5,8 +6,10 @@
  */
 import { RELATIONS, REL_DIM_BY_ID, romanticCapOf } from "../worlds/star2005/content";
 import { PEOPLE } from "./data";
-import { ROMANCE_ARCS } from "./logic";
+import { liveArray } from "../mods/live";
+import { ROMANCE_ARCS, hasPartner, datingBlocked, withPartner, canRomance } from "./logic";
 import type { GameState } from "./logic";
+import { engineRules } from "./engineRules";
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
@@ -15,10 +18,11 @@ export type RelExt = {
   romantic: number; // 心动 0~cap（顾沉/宋时序可达 1000）
   trust: number; // 私人信任 0~100
   lastContactDay: number; // 上次联系日（用于冷落衰减）
+  chatLove?: { day: number; gain: number }; // 当日经聊天 / 当面交谈累计涨的爱慕（每日封顶，防闲聊刷爱慕）
 };
 
 export const relDimLabel = (id: string): string => REL_DIM_BY_ID[id]?.label ?? id;
-export const REL_DIMENSIONS = RELATIONS.dimensions;
+export const REL_DIMENSIONS = liveArray(() => RELATIONS.dimensions);
 
 /* 单人默认关系（读内容池初值，引擎不写死数字） */
 export function blankRel(): RelExt {
@@ -41,11 +45,14 @@ export function relOf(s: GameState, pid: string): RelExt {
 export function decayRelations(s: GameState): Record<string, RelExt> {
   const M = RELATIONS.mood;
   const src = ensureRelations(s.relations);
+  // 底层规则：全局衰减开关 + 速率倍数；noDecay 里的角色单独关闭衰减（角色层覆盖全局）
+  const A = engineRules().affinity;
+  if (!A.decay || A.decayRate <= 0) return src;
   const out: Record<string, RelExt> = {};
   for (const [pid, r] of Object.entries(src)) {
     const idle = s.day - r.lastContactDay;
-    if (idle > M.coldDays && r.mood > M.warmFloor) {
-      out[pid] = { ...r, mood: clamp(r.mood - M.decayPerDay, M.warmFloor, M.max) };
+    if (!A.noDecay.includes(pid) && idle > M.coldDays && r.mood > M.warmFloor) {
+      out[pid] = { ...r, mood: clamp(r.mood - M.decayPerDay * A.decayRate, M.warmFloor, M.max) };
     } else {
       out[pid] = r;
     }
@@ -53,11 +60,31 @@ export function decayRelations(s: GameState): Record<string, RelExt> {
   return out;
 }
 
+/* 冷落衰减的状态变化播报：每段冷落只在「开始变冷」与「降到冷淡底线」两个跨越点各报一次，不逐日刷屏。
+ * noted 记录已播报「开始变冷」时对应的 lastContactDay（再次联系后重置）。仅对已结识的人物播报。 */
+export function relDecayNotes(
+  s: GameState, before: Record<string, RelExt> | undefined, after: Record<string, RelExt>, noted: Record<string, number> = {},
+): { notes: string[]; noted: Record<string, number> } {
+  const M = RELATIONS.mood;
+  const met = new Set(s.metPeople ?? []);
+  const out: string[] = [];
+  const nextNoted = { ...noted };
+  for (const [pid, r] of Object.entries(after)) {
+    if (!met.has(pid)) continue;
+    const prev = before?.[pid];
+    if (!prev || r.mood >= prev.mood) continue; // 本次没有衰减
+    const name = displayName(pid);
+    if (r.mood <= M.warmFloor && prev.mood > M.warmFloor) { out.push(`【关系】你和${name}已经很久没联系，关系冷淡了下来。`); nextNoted[pid] = r.lastContactDay; }
+    else if (nextNoted[pid] !== r.lastContactDay) { out.push(`【关系】${name}有段时间没收到你的消息了，心情开始低落。`); nextNoted[pid] = r.lastContactDay; }
+  }
+  return { notes: out, noted: nextNoted };
+}
+
 export type RelResult = { next: GameState; ok: boolean; msg: string };
 
 /* 好感（沿用既有 s.rel 主轴；天王/资本线上限 1000，其余 100） */
 function bumpFriendship(rel: Record<string, number>, pid: string, d: number): Record<string, number> {
-  const cap = pid === "guchen" || pid === "songshixu" ? 1000 : 100;
+  const cap = affinityCapOf(pid);
   return { ...rel, [pid]: clamp((rel[pid] ?? 0) + d, 0, cap) };
 }
 
@@ -71,7 +98,6 @@ function displayName(pid: string, name?: string): string {
 
 /* 动作：主动私下联系（问候/约见）——回暖心情、推进好感/信任/心动。任何人都可攻略。 */
 export function contactPerson(s: GameState, pid: string, name?: string): RelResult {
-  if (s.npcLives?.[pid]?.dead) return { next:s, ok:false, msg:"该人物已故。" };
   const C = RELATIONS.contact;
   const relations = ensureRelations(s.relations);
   const r = relations[pid] ?? blankRel();
@@ -79,8 +105,9 @@ export function contactPerson(s: GameState, pid: string, name?: string): RelResu
     return { next: s, ok: false, msg: `⏳ ${C.labels.cooldown}` };
   }
   const cap = romanticCapOf(pid);
-  const isDating = s.dating === pid;
-  const romanticGain = s.romanceEnabled?.[pid] === false ? 0 : C.romanticCasual + (isDating ? C.romanticIfDating : 0);
+  const isDating = hasPartner(s, pid);
+  // 不可攻略（玩家关闭 / 家人 / 子女）：只涨好感、信任与心情，心动不动
+  const romanticGain = canRomance(s, pid) ? C.romanticCasual + (isDating ? C.romanticIfDating : 0) : 0;
   const relief = C.stressRelief + (isDating ? C.stressReliefDating : 0);
   const next: RelExt = {
     mood: clamp(r.mood + C.moodLift, RELATIONS.mood.min, RELATIONS.mood.max),
@@ -98,15 +125,15 @@ export function contactPerson(s: GameState, pid: string, name?: string): RelResu
   return {
     next: nextState,
     ok: true,
-    msg: `${done}：好感 +${C.friendship}、私人信任 +${C.trust}、心情 +${C.moodLift}、心动 +${romanticGain}、压力 -${relief}${isDating ? "（恋人陪伴）" : ""}。`,
+    msg: `${done}：好感 +${C.friendship}、私人信任 +${C.trust}、心情 +${C.moodLift}${romanticGain ? `、心动 +${romanticGain}` : ""}、压力 -${relief}${isDating ? "（恋人陪伴）" : ""}。`,
   };
 }
 
 /* 表白门槛（普通 NPC）：好感与心动同时达标；固定角色走七段线不在此判定 */
-export function canConfess(s: GameState, pid: string): { ok: boolean; reason: "disabled" | "arc" | "dating" | "low" | "ready" } {
-  if (s.npcLives?.[pid]?.dead || s.romanceEnabled?.[pid] === false) return { ok: false, reason: "disabled" };
+export function canConfess(s: GameState, pid: string): { ok: boolean; reason: "arc" | "dating" | "low" | "ready" | "rule" } {
   if (hasArc(pid)) return { ok: false, reason: "arc" };
-  if (s.dating === pid) return { ok: false, reason: "dating" };
+  if (hasPartner(s, pid)) return { ok: false, reason: "dating" };
+  if (datingBlocked(s, pid)) return { ok: false, reason: "rule" };
   const F = RELATIONS.confess;
   const friendship = s.rel?.[pid] ?? 0;
   const romantic = relOf(s, pid).romantic;
@@ -120,9 +147,10 @@ export function confessTo(s: GameState, pid: string, name?: string): RelResult {
   const who = displayName(pid, name);
   const chk = canConfess(s, pid);
   if (!chk.ok) {
-    const msg = chk.reason === "disabled" ? "该人物已设为不可攻略。" : chk.reason === "arc" ? `${L.hardLocked}` : chk.reason === "dating" ? `${L.alreadyDating}` : `${L.locked}`;
+    if (chk.reason === "rule") return { next: s, ok: false, msg: datingBlocked(s, pid) };
+    const msg = chk.reason === "arc" ? `${L.hardLocked}` : chk.reason === "dating" ? `${L.alreadyDating}` : `${L.locked}`;
     return { next: s, ok: false, msg };
   }
-  const nextState: GameState = { ...s, dating: pid };
+  const nextState: GameState = withPartner(s, pid);
   return { next: nextState, ok: true, msg: `${L.done.replace("{name}", who)}。` };
 }

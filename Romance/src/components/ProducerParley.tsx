@@ -1,9 +1,11 @@
+import { StarRating, IconCheck, StatusMark } from "../lib/icons";
 import type React from "react";
 import { useGame } from "../store/gameCtx";
 import { Chip } from "./ui";
 import { PRODUCER } from "../worlds/star2005/content";
 import { canPursue, knows, metToday, producerProjects, questionState } from "../game/producer";
 import { categoryLabel, roleLabel } from "../game/projects";
+import { liveTerm as T } from "../mods/live";
 
 /* 制作人洽谈（明星志愿式）：登门洽谈 → 逐项追问解锁 → 争取角色进入申请流程。
  * 只在对应公司地点、当事人在场时出现（由世界 Tab 场景决定何时挂载）。 */
@@ -42,7 +44,7 @@ export default function ProducerParley({ pid, name }: { pid: string; name: strin
           );
           return (
             <div key={tpl.id} className="rounded-xl border border-line bg-paper p-3">
-              <p className="mb-2 font-serif text-[15px] font-bold text-ink">{knows(s, tpl.id, "starLevel") ? "★".repeat(tpl.starLevel) + " " : ""}{tpl.title}</p>
+              <p className="mb-2 font-serif text-[15px] font-bold text-ink">{knows(s, tpl.id, "starLevel") ? <><StarRating n={tpl.starLevel} className="mr-1 inline-flex" /> </> : null}{tpl.title}</p>
               <div className="space-y-1">
                 {row("类别", knows(s, tpl.id, "category"), categoryLabel(tpl.category), "starLevel")}
                 {row("拍期", knows(s, tpl.id, "deadline"), `开拍第 ${tpl.openWeek} 周 · 报名截止第 ${tpl.deadlineWeek} 周`, "deadline")}
@@ -52,7 +54,7 @@ export default function ProducerParley({ pid, name }: { pid: string; name: strin
                 {row("要求", knows(s, tpl.id, "requirements"), (
                   <span className="flex flex-wrap gap-1">
                     {tpl.roleSlot.requirements.map((r, i) => (
-                      <Chip key={i} tone={metricNow(r.metric) >= r.value ? "jade" : "danger"}>{r.hint}{metricNow(r.metric) >= r.value ? " ✓" : `（差 ${Math.max(0, Math.ceil(r.value - metricNow(r.metric)))}）`}</Chip>
+                      <Chip key={i} tone={metricNow(r.metric) >= r.value ? "jade" : "danger"}>{r.hint}{metricNow(r.metric) >= r.value ? <IconCheck size={12} className="ml-0.5 inline" /> : `（差 ${Math.max(0, Math.ceil(r.value - metricNow(r.metric)))}）`}</Chip>
                     ))}
                   </span>
                 ), "requirements")}
@@ -68,7 +70,7 @@ export default function ProducerParley({ pid, name }: { pid: string; name: strin
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {PRODUCER.questions.map((q) => {
                   const st = questionState(s, tpl.id, q);
-                  if (st === "asked") return <span key={q.id} className="rounded-md bg-jade/10 px-2 py-1 text-[11.5px] text-jade">✓ {q.label}</span>;
+                  if (st === "asked") return <span key={q.id} className="rounded-md bg-jade/10 px-2 py-1 text-[11.5px] text-jade"><StatusMark kind="ok">{q.label}</StatusMark></span>;
                   return (
                     <button
                       key={q.id}
@@ -84,7 +86,7 @@ export default function ProducerParley({ pid, name }: { pid: string; name: strin
 
               {/* 争取角色：问到「要求」后开放，进入正式申请流程 */}
               {inst && !["open"].includes(inst.status) ? (
-                <p className="mt-3 rounded-lg bg-paper-2 px-3 py-2 text-center text-[12px] text-ink-soft">已进入申请流程 · 详见「通告」Tab</p>
+                <p className="mt-3 rounded-lg bg-paper-2 px-3 py-2 text-center text-[12px] text-ink-soft">已进入申请流程 · 详见「{T("gig")}」Tab</p>
               ) : (
                 <button
                   disabled={!canPursue(s, tpl.id)}

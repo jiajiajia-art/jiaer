@@ -1,3 +1,4 @@
+import { wallet } from "../game/wallet";
 import { useEffect, useRef, useState } from "react";
 import { useGame } from "../store/gameCtx";
 import { Modal } from "./ui";
@@ -95,8 +96,8 @@ export default function BreachDialog() {
   // 态度对最终违约金的折算：诚恳最多减 20%，顶撞最多加 20%
   const feeMul = Math.max(0.8, Math.min(1.2, 1 - attitude * 0.05));
   const finalFee = b ? Math.round(b.fee * feeMul) : 0;
-  const feeText = `¥${finalFee.toLocaleString("zh-CN")}`;
-  const baseFeeText = b ? `¥${b.fee.toLocaleString("zh-CN")}` : "";
+  const feeText = `${wallet.fmt(finalFee)}`;
+  const baseFeeText = b ? `${wallet.fmt(b.fee)}` : "";
 
   // 场景设定 —— 供 AI 扮演该负责人（带其专属人设）；本地脚本作后备
   const sys = (): string =>

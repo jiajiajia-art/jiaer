@@ -115,6 +115,13 @@
     color: #f5d0a9;
 }
 
+/* 功能注释：创作游戏（Romance）入口色调，介于文游酒红与酒馆卡暖棕之间 */
+.createTypeOptionThumbRomance {
+    background: linear-gradient(145deg, rgba(90, 140, 120, 0.5) 0%, rgba(36, 64, 56, 0.98) 100%);
+    border-color: rgba(160, 220, 190, 0.28);
+    color: #c8f0dc;
+}
+
 .createTypeOptionThumbIvg {
     background: linear-gradient(145deg, rgba(70, 88, 120, 0.5) 0%, rgba(32, 40, 58, 0.98) 100%);
     border-color: rgba(170, 190, 230, 0.22);

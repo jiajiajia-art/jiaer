@@ -2,6 +2,7 @@
  * 金额为引擎确定性结算，本组件只做呈现（含人民币大写转换，纯前端格式化）。 */
 
 const D = "零壹贰叁肆伍陆柒捌玖";
+import { liveTerm as T } from "../mods/live";
 const U = ["", "拾", "佰", "仟"];
 const G = ["", "万", "亿", "兆"];
 
@@ -60,7 +61,7 @@ export default function Check({
       {/* 抬头 */}
       <div className="flex items-center justify-between border-b border-dashed border-jade/40 px-4 py-2">
         <div className="flex items-baseline gap-2">
-          <span className="text-[15px] font-black tracking-[0.15em] text-jade-deep">星城银行</span>
+          <span className="text-[15px] font-black tracking-[0.15em] text-jade-deep">{T("city")}银行</span>
           <span className="text-[10px] uppercase tracking-[0.3em] text-ink-soft">Transfer Cheque</span>
         </div>
         <span className="font-mono text-[11px] text-ink-soft">No. {serial}</span>

@@ -32,3 +32,5 @@
 可选：`cn-test` | `cn-prod` | `cn-gogo` | `cn-neo` | `cn-qqq` | `cf-test2` | `local`。保存后重启 `npm run dev`。
 
 仓库外总览：`gameWork/项目启动文档.md`。
+
+Romance 同仓嵌入（`/romance`、同构建同部署）：见 `docs/romance-embed-plan.md`。

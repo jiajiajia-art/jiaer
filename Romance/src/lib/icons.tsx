@@ -1,85 +1,358 @@
-/* 线性风格 SVG 图标集（统一 stroke，随字色 currentColor） */
-import type { SVGProps } from "react";
+/**
+ * 功能注释：Romance 统一线性图标入口。
+ * 全站优先 Lucide React；默认线宽 1.75、常规 16px，颜色继承 currentColor。
+ * 禁止在 UI 再塞 Emoji / 颜文字 / 装饰性字符当图标。
+ */
+import type { ComponentType, CSSProperties, ReactNode, SVGProps } from "react";
+import {
+  AlertTriangle,
+  ArrowUp,
+  Badge,
+  Ban,
+  BarChart3,
+  BookOpen,
+  Brain,
+  Briefcase,
+  Cake,
+  CalendarDays,
+  Camera,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  CloudRain,
+  Clock,
+  Coffee,
+  Crosshair,
+  Dice5,
+  Droplets,
+  ExternalLink,
+  Eye,
+  Flag,
+  Flame,
+  FlaskConical,
+  Flower2,
+  Frown,
+  Gem,
+  Gift,
+  Globe,
+  Heart,
+  HeartHandshake,
+  HelpCircle,
+  Home,
+  IdCard,
+  Image,
+  Info,
+  LayoutGrid,
+  Leaf,
+  Lock,
+  Mail,
+  MapPin,
+  Maximize2,
+  Meh,
+  Menu,
+  MessageCircle,
+  Mic,
+  Minimize2,
+  Monitor,
+  Moon,
+  Music,
+  Pause,
+  Pencil,
+  Play,
+  Plus,
+  RefreshCw,
+  RotateCcw,
+  RotateCw,
+  Save,
+  ScrollText,
+  Search,
+  Send,
+  Settings,
+  Share2,
+  ShoppingBag,
+  Shuffle,
+  SkipBack,
+  SkipForward,
+  Smartphone,
+  Smile,
+  Sparkles,
+  Square,
+  Star,
+  Sun,
+  User,
+  Users,
+  Wallet,
+  X,
+  Zap,
+  type LucideIcon,
+  type LucideProps,
+} from "lucide-react";
+import type { EmotionId } from "../game/phone";
+import { EMOTIONS } from "../game/phone";
+import type { SkinIconKey } from "./skins";
 
-type P = SVGProps<SVGSVGElement>;
-const base = (props: P) => ({
-  width: 20,
-  height: 20,
-  viewBox: "0 0 24 24",
-  fill: "none",
-  stroke: "currentColor",
-  strokeWidth: 1.6,
-  strokeLinecap: "round" as const,
-  strokeLinejoin: "round" as const,
-  ...props,
-});
+export type IconSize = "sm" | "md" | "lg" | "nav" | number;
 
-export const IconBook = (p: P) => (
-  <svg {...base(p)}><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H12v16H5.5A1.5 1.5 0 0 1 4 18.5z" /><path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H12v16h6.5A1.5 1.5 0 0 0 20 18.5z" /></svg>
-);
-export const IconUser = (p: P) => (
-  <svg {...base(p)}><circle cx="12" cy="8" r="3.5" /><path d="M5 20a7 7 0 0 1 14 0" /></svg>
-);
-export const IconUsers = (p: P) => (
-  <svg {...base(p)}><circle cx="9" cy="8" r="3" /><path d="M3 19a6 6 0 0 1 12 0" /><path d="M16 5.5a3 3 0 0 1 0 5.8M21 19a6 6 0 0 0-4-5.6" /></svg>
-);
-export const IconSpark = (p: P) => (
-  <svg {...base(p)}><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18" /></svg>
-);
-export const IconClock = (p: P) => (
-  <svg {...base(p)}><circle cx="12" cy="12" r="8" /><path d="M12 8v4l2.5 1.5" /></svg>
-);
-export const IconPin = (p: P) => (
-  <svg {...base(p)}><path d="M12 21s-6-5.3-6-10a6 6 0 0 1 12 0c0 4.7-6 10-6 10z" /><circle cx="12" cy="11" r="2.2" /></svg>
-);
-export const IconHeart = (p: P) => (
-  <svg {...base(p)}><path d="M12 20s-7-4.5-9-9.2C1.6 7 3.6 4 6.8 4 9 4 12 6 12 6s3-2 5.2-2C20.4 4 22.4 7 21 10.8 19 15.5 12 20 12 20z" /></svg>
-);
-export const IconBackpack = (p: P) => (
-  <svg {...base(p)}><path d="M6 10a6 6 0 0 1 12 0v9a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1z" /><path d="M9 10V7a3 3 0 0 1 6 0v3" /><path d="M9 14h6a2 2 0 0 1 2 2v4H7v-4a2 2 0 0 1 2-2z" /><path d="M10.5 14v-1.5h3V14" /></svg>
-);
-export const IconWallet = (p: P) => (
-  <svg {...base(p)}><path d="M4 7a2 2 0 0 1 2-2h11a1 1 0 0 1 1 1v2" /><path d="M4 7v10a2 2 0 0 0 2 2h13a1 1 0 0 0 1-1v-3M4 7v0" /><path d="M20 10h-4a2 2 0 0 0 0 4h4a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1z" /><circle cx="16.5" cy="12" r=".6" fill="currentColor" stroke="none" /></svg>
-);
-export const IconSettings = (p: P) => (
-  <svg {...base(p)}><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1" /></svg>
-);
-export const IconSave = (p: P) => (
-  <svg {...base(p)}><path d="M5 4h11l3 3v13H5z" /><path d="M8 4v5h7V4M8 20v-6h8v6" /></svg>
-);
-export const IconMoon = (p: P) => (
-  <svg {...base(p)}><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z" /></svg>
-);
-export const IconSun = (p: P) => (
-  <svg {...base(p)}><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9 6.3 6.3M17.7 17.7 19.1 19.1M19.1 4.9 17.7 6.3M6.3 17.7 4.9 19.1" /></svg>
-);
-export const IconSend = (p: P) => (
-  <svg {...base(p)}><path d="M4 12l16-8-5 16-4-6-7-2z" /></svg>
-);
-export const IconSparkle = (p: P) => (
-  <svg {...base(p)}><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" /></svg>
-);
-export const IconFlask = (p: P) => (
-  <svg {...base(p)}><path d="M9 3h6M10 3v6l-5 8.5A2 2 0 0 0 6.8 21h10.4a2 2 0 0 0 1.8-3.5L14 9V3" /><path d="M7.5 15h9" /></svg>
-);
-export const IconScroll = (p: P) => (
-  <svg {...base(p)}><path d="M6 4h11a2 2 0 0 1 2 2v11a3 3 0 0 1-3 3H7" /><path d="M6 4a2 2 0 0 0-2 2v1h4M8 20a3 3 0 0 1-3-3v-1" /><path d="M10 9h6M10 13h6" /></svg>
-);
-export const IconClose = (p: P) => (
-  <svg {...base(p)}><path d="M6 6l12 12M18 6 6 18" /></svg>
-);
-export const IconCamera = (p: P) => (
-  <svg {...base(p)}><path d="M4 8h3l1.5-2h7L17 8h3v11H4z" /><circle cx="12" cy="13" r="3.2" /></svg>
-);
-export const IconDice = (p: P) => (
-  <svg {...base(p)}><rect x="4" y="4" width="16" height="16" rx="3" /><circle cx="9" cy="9" r="1" fill="currentColor" /><circle cx="15" cy="9" r="1" fill="currentColor" /><circle cx="12" cy="12" r="1" fill="currentColor" /><circle cx="9" cy="15" r="1" fill="currentColor" /><circle cx="15" cy="15" r="1" fill="currentColor" /></svg>
-);
-export const IconFlag = (p: P) => (
-  <svg {...base(p)}><path d="M6 21V4M6 4h11l-2 3.5L17 11H6" /></svg>
-);
-export const IconPlay = (p: P) => (
-  <svg {...base(p)}><path d="M7 5l12 7-12 7z" /></svg>
-);
-export const IconRefresh = (p: P) => (
-  <svg {...base(p)}><path d="M4 12a8 8 0 0 1 13.7-5.6L20 8M20 4v4h-4M20 12a8 8 0 0 1-13.7 5.6L4 16M4 20v-4h4" /></svg>
-);
+const SIZE_PX: Record<"sm" | "md" | "lg" | "nav", number> = {
+  sm: 16,
+  md: 18,
+  lg: 20,
+  nav: 22,
+};
+
+export type RomanceIconProps = Omit<LucideProps, "size" | "strokeWidth"> & {
+  /** 常规 16 / 按钮 18 / 导航 20–22；或直接传像素 */
+  size?: IconSize;
+  strokeWidth?: number;
+  className?: string;
+  style?: CSSProperties;
+};
+
+/** 功能注释：把 Lucide 图标套上 Romance 默认线宽与尺寸，颜色走 currentColor。 */
+export function lucideIcon(Icon: LucideIcon, defaults?: { size?: IconSize }) {
+  const Wrapped = ({ size = defaults?.size ?? "sm", strokeWidth = 1.75, ...rest }: RomanceIconProps) => {
+    const px = typeof size === "number" ? size : SIZE_PX[size];
+    return <Icon size={px} strokeWidth={strokeWidth} absoluteStrokeWidth={false} aria-hidden {...rest} />;
+  };
+  Wrapped.displayName = `Romance(${Icon.displayName || Icon.name || "Icon"})`;
+  return Wrapped;
+}
+
+/** 兼容旧 `SVGProps` 调用：把 width/height 映射到 Lucide size */
+type LegacyP = SVGProps<SVGSVGElement> & { size?: IconSize };
+function adapt(Icon: LucideIcon) {
+  const Comp = lucideIcon(Icon);
+  return (p: LegacyP) => {
+    const { width, height, size, strokeWidth, className, style, ...rest } = p;
+    const n =
+      size ??
+      (typeof width === "number" ? width : typeof height === "number" ? height : undefined) ??
+      "sm";
+    return (
+      <Comp
+        size={n as IconSize}
+        strokeWidth={typeof strokeWidth === "number" ? strokeWidth : 1.75}
+        className={className}
+        style={style}
+        {...(rest as LucideProps)}
+      />
+    );
+  };
+}
+
+export const IconBook = adapt(BookOpen);
+export const IconUser = adapt(User);
+export const IconUsers = adapt(Users);
+export const IconSpark = adapt(Sparkles);
+export const IconSparkle = adapt(Sparkles);
+export const IconClock = adapt(Clock);
+export const IconPin = adapt(MapPin);
+export const IconHeart = adapt(Heart);
+export const IconWallet = adapt(Wallet);
+export const IconSettings = adapt(Settings);
+export const IconSave = adapt(Save);
+export const IconMoon = adapt(Moon);
+export const IconSun = adapt(Sun);
+export const IconSend = adapt(Send);
+export const IconFlask = adapt(FlaskConical);
+export const IconScroll = adapt(ScrollText);
+export const IconClose = adapt(X);
+export const IconMaximize = adapt(Maximize2);
+export const IconMinimize = adapt(Minimize2);
+export const IconCamera = adapt(Camera);
+export const IconDice = adapt(Dice5);
+export const IconFlag = adapt(Flag);
+export const IconPlay = adapt(Play);
+export const IconRefresh = adapt(RefreshCw);
+export const IconArrowUp = adapt(ArrowUp);
+export const IconStop = adapt(Square);
+export const IconPlus = adapt(Plus);
+export const IconChevronDown = adapt(ChevronDown);
+export const IconChevronUp = adapt(ChevronUp);
+export const IconUndo = adapt(RotateCcw);
+export const IconRedo = adapt(RotateCw);
+export const IconCheck = adapt(Check);
+export const IconShare = adapt(Share2);
+export const IconLock = adapt(Lock);
+export const IconAlert = adapt(AlertTriangle);
+export const IconStar = adapt(Star);
+export const IconMenu = adapt(Menu);
+export const IconMusic = adapt(Music);
+export const IconThought = adapt(Brain);
+export const IconMessage = adapt(MessageCircle);
+export const IconEye = adapt(Eye);
+export const IconFlower = adapt(Flower2);
+export const IconHome = adapt(Home);
+export const IconGem = adapt(Gem);
+export const IconImage = adapt(Image);
+export const IconGrid = adapt(LayoutGrid);
+export const IconCrosshair = adapt(Crosshair);
+export const IconBan = adapt(Ban);
+export const IconShop = adapt(ShoppingBag);
+export const IconPencil = adapt(Pencil);
+export const IconCake = adapt(Cake);
+export const IconBadge = adapt(Badge);
+export const IconIdCard = adapt(IdCard);
+export const IconCalendar = adapt(CalendarDays);
+export const IconUserRound = adapt(User);
+export const IconPhone = adapt(Smartphone);
+export const IconBriefcase = adapt(Briefcase);
+export const IconMonitor = adapt(Monitor);
+export const IconMic = adapt(Mic);
+export const IconGlobe = adapt(Globe);
+export const IconChart = adapt(BarChart3);
+export const IconGift = adapt(Gift);
+export const IconFlame = adapt(Flame);
+export const IconCoffee = adapt(Coffee);
+export const IconSearch = adapt(Search);
+export const IconInfo = adapt(Info);
+export const IconMail = adapt(Mail);
+export const IconPause = adapt(Pause);
+export const IconSkipBack = adapt(SkipBack);
+export const IconSkipForward = adapt(SkipForward);
+export const IconShuffle = adapt(Shuffle);
+export const IconExternal = adapt(ExternalLink);
+
+const SKIN_ICON: Record<SkinIconKey, ReturnType<typeof adapt>> = {
+  spark: IconSpark,
+  heart: IconHeart,
+  sparkle: IconSparkle,
+  star: IconStar,
+  scroll: IconScroll,
+};
+
+/** 功能注释：皮肤选项线性图标，配合 lib/skins 的 icon 键。 */
+export function SkinIcon({ id, size = "md", className }: { id: SkinIconKey; size?: IconSize; className?: string }) {
+  const I = SKIN_ICON[id] ?? IconSpark;
+  return <I size={size} className={className} />;
+}
+
+/** 功能注释：行囊线性图标（与 Lucide 线宽一致的手写路径）。 */
+export const IconBackpack = (p: RomanceIconProps & LegacyP) => {
+  const size = p.size ?? (typeof p.width === "number" ? p.width : "sm");
+  const px = typeof size === "number" ? size : SIZE_PX[size];
+  return (
+    <svg
+      width={px}
+      height={px}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={typeof p.strokeWidth === "number" ? p.strokeWidth : 1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={p.className}
+      style={p.style}
+      aria-hidden
+    >
+      <path d="M6 10a6 6 0 0 1 12 0v9a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1z" />
+      <path d="M9 10V7a3 3 0 0 1 6 0v3" />
+      <path d="M9 14h6a2 2 0 0 1 2 2v4H7v-4a2 2 0 0 1 2-2z" />
+    </svg>
+  );
+};
+
+/** 功能注释：内心 OS 统一组件 —— 线性 SVG +「内心 OS」文案，禁止再写 💭。 */
+export function InnerOsLabel({
+  text,
+  colon = true,
+  className = "",
+  iconClassName = "",
+}: {
+  text?: ReactNode;
+  colon?: boolean;
+  className?: string;
+  iconClassName?: string;
+}) {
+  return (
+    <span className={`inline-flex items-start gap-1 ${className}`}>
+      <IconThought size="sm" className={`mt-[2px] shrink-0 ${iconClassName}`} />
+      <span>
+        <span className="font-semibold">内心 OS{colon ? "：" : ""}</span>
+        {text}
+      </span>
+    </span>
+  );
+}
+
+/** 功能注释：状态/结果小标签 —— 线性勾/叉/警告 + 文字，替代 ✓ ✕ ⚠。 */
+export function StatusMark({
+  kind,
+  children,
+  className = "",
+}: {
+  kind: "ok" | "warn" | "err" | "lock" | "star" | "heart" | "spark";
+  children?: ReactNode;
+  className?: string;
+}) {
+  const map: Record<typeof kind, ComponentType<RomanceIconProps>> = {
+    ok: IconCheck,
+    warn: IconAlert,
+    err: IconClose,
+    lock: IconLock,
+    star: IconStar,
+    heart: IconHeart,
+    spark: IconSpark,
+  };
+  const I = map[kind];
+  return (
+    <span className={`inline-flex items-center gap-1 ${className}`}>
+      <I size="sm" />
+      {children}
+    </span>
+  );
+}
+
+/** 功能注释：星级展示 —— N 个线性星，替代 ★.repeat。 */
+export function StarRating({ n, className = "" }: { n: number; className?: string }) {
+  const count = Math.max(0, Math.min(5, Math.round(n)));
+  return (
+    <span className={`inline-flex items-center gap-0.5 ${className}`} aria-label={`${count} 星`}>
+      {Array.from({ length: count }, (_, i) => (
+        <IconStar key={i} size={14} />
+      ))}
+    </span>
+  );
+}
+
+const EMOTION_ICON: Record<(typeof EMOTIONS)[EmotionId]["icon"], LucideIcon> = {
+  flame: Flame,
+  frown: Frown,
+  blush: Heart,
+  meh: Meh,
+  heart: Heart,
+  spark: Sparkles,
+  smile: Smile,
+  cloud: CloudRain,
+  droplet: Droplets,
+  leaf: Leaf,
+  zap: Zap,
+  help: HelpCircle,
+  search: Search,
+  heartHandshake: HeartHandshake,
+};
+
+/** 功能注释：情绪标签 —— 线性图标 + 中文名，替代彩色 Emoji。 */
+export function EmotionBadge({
+  id,
+  bpm,
+  className = "",
+}: {
+  id: EmotionId;
+  bpm?: number;
+  className?: string;
+}) {
+  const meta = EMOTIONS[id];
+  const I = lucideIcon(EMOTION_ICON[meta.icon]);
+  return (
+    <span className={`inline-flex items-center gap-1 ${className}`}>
+      <I size={14} />
+      <span>{meta.label}</span>
+      {typeof bpm === "number" && (
+        <span className="inline-flex items-center gap-0.5 text-[#fa5151]">
+          <IconHeart size={12} /> {bpm} BPM
+        </span>
+      )}
+    </span>
+  );
+}

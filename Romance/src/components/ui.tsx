@@ -1,5 +1,8 @@
-import { useRef, type ReactNode } from "react";
-import { IconCamera, IconClose } from "../lib/icons";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { IconCamera, IconClose, IconSpark } from "../lib/icons";
+import AvatarLibraryPicker from "./AvatarLibraryPicker";
+import LocalAvatarCropFlow from "./LocalAvatarCropFlow";
 
 /* —— 终端平铺分节标题：▌CODE 中文 ······ —— */
 export function SectionHead({ code, cn, hint, right }: { code?: string; cn: string; hint?: string; right?: ReactNode }) {
@@ -15,55 +18,99 @@ export function SectionHead({ code, cn, hint, right }: { code?: string; cn: stri
   );
 }
 
-/* —— 模态弹窗 —— */
-export function Modal({ title, onClose, children, wide, heavyBackdrop }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean; heavyBackdrop?: boolean }) {
-  return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 ${heavyBackdrop ? "bg-black/75 backdrop-blur-md" : "bg-black/40 backdrop-blur-sm"}`} onClick={onClose}>
+/* —— 模态弹窗：遮罩 / 面板 / 标题栏 / 关闭钮全部取 index.css 的全局 ui-* 类（自绘弹窗也用同一套） —— */
+const ModalDepth = createContext(0);
+
+export function Modal({ title, onClose, children, wide, xl, heavyBackdrop }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean; /** 超宽面板：最小 / 最大 1200（模组编辑器） */ xl?: boolean; heavyBackdrop?: boolean }) {
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  // 嵌套弹窗：子弹窗先挂到 body（React 先提交子节点），按层级抬高 z-index 保证它在上层
+  const depth = useContext(ModalDepth);
+  // Esc 关闭最上层弹窗；打开期间锁住页面滚动（嵌套弹窗按计数恢复）
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      const all = document.querySelectorAll(".modal-sheet");
+      if (all[all.length - 1] !== sheetRef.current) return;
+      e.stopPropagation();
+      // 游戏全屏中：Esc 先退出全屏；再按一次才关闭弹窗
+      closeRef.current();
+    };
+    window.addEventListener("keydown", onKey);
+    const b = document.body;
+    const n = Number(b.dataset.modals ?? 0) + 1;
+    b.dataset.modals = String(n);
+    if (n === 1) b.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      const m = Number(b.dataset.modals ?? 1) - 1;
+      b.dataset.modals = String(m);
+      if (m <= 0) b.style.overflow = "";
+    };
+  }, []);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  // 功能注释：嵌入 funloom 时挂到 .romance-host，避免主站 #root 黑底叠层把遮罩「看穿」；独立运行仍回退 body
+  const portalRoot =
+    (typeof document !== "undefined" && document.querySelector(".romance-host"))
+    || (typeof document !== "undefined" ? document.body : null);
+  if (!portalRoot) return null;
+  return createPortal(
+    <ModalDepth.Provider value={depth + 1}>
+    <div className={`ui-overlay ui-overlay-modal z-50 ${heavyBackdrop ? "ui-overlay-heavy" : ""}`} style={{ zIndex: 50 + depth * 10 }} onClick={onClose}>
       <div
-        className={`animate-pop max-h-[calc(100dvh-1rem)] w-full overflow-y-auto rounded-[20px] border border-line bg-paper-2 pb-2 shadow-2xl ring-1 ring-inset ring-white/40 ${wide ? "max-w-2xl" : "max-w-lg"}`}
+        ref={sheetRef}
+        className={`ui-sheet modal-sheet max-h-[92dvh] sm:max-h-[88dvh] overflow-x-auto overflow-y-auto overscroll-contain ${
+          xl ? "w-[min(1200px,96vw)] min-w-[min(1200px,96vw)] max-w-[1200px]" : wide ? "max-w-2xl" : "max-w-lg"
+        }`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label={title}
       >
-        <div className="sticky top-0 z-10 border-b border-line bg-paper-2/95 backdrop-blur">
-          <div className="flex items-center justify-between px-5 py-3">
-            <h3 className="flex items-center gap-2 font-serif text-lg font-bold text-ink">
-              <span className="h-4 w-[3px] rounded-full bg-gradient-to-b from-[var(--jade)] to-[var(--coral)]" aria-hidden />
+        <div className="ui-sheet-head-bar sticky top-0 z-10 rounded-t-[var(--radius-ui-lg)]">
+          <div className="flex items-center justify-between gap-2 px-4 pb-2 pt-3.5 sm:px-5">
+            <h3 className="ui-title flex min-w-0 items-center gap-2 truncate sm:text-[17px]">
+              <IconSpark size="md" className="shrink-0 text-coral" />
               {title}
             </h3>
-            <button onClick={onClose} aria-label="关闭" className="rounded-full p-1 text-ink-soft transition hover:bg-line/50 hover:text-ink">
-              <IconClose />
-            </button>
+            <div className="flex shrink-0 items-center gap-1">
+              <button onClick={onClose} aria-label="关闭" className="ui-icon-btn">
+                <IconClose />
+              </button>
+            </div>
           </div>
-          <span className="block h-px bg-gradient-to-r from-transparent via-[var(--coral)]/40 to-transparent" aria-hidden />
         </div>
-        <div className="px-4 pb-5 pt-4 sm:p-5">{children}</div>
+        <div className={`px-4 pb-5 pt-1 sm:px-5`}>{children}</div>
       </div>
     </div>
+    </ModalDepth.Provider>,
+    portalRoot,
   );
 }
 
-/* —— 头像上传（点击即可上传） —— */
-export function Avatar({ src, name, size = 48, onPick, editable = true, shape = "rounded" }: { src?: string; name: string; size?: number; onPick?: (dataUrl: string) => void; editable?: boolean; shape?: "circle" | "rounded" }) {
+/* —— 头像（点击打开头像选择：本地上传 / 创作者头像库 / 系统头像库） —— */
+export function Avatar({ src, name, size = 48, onPick, editable = true, square = true, avatarSlot }: { src?: string; name: string; size?: number; onPick?: (dataUrl: string) => void; editable?: boolean; square?: boolean; avatarSlot?: import("../lib/types").AvatarSlot | null }) {
   const ref = useRef<HTMLInputElement>(null);
+  const [lib, setLib] = useState(false);
+  /** 功能注释：本地上传先进裁切+预览，确认后再写入 onPick */
+  const [localFile, setLocalFile] = useState<File | null>(null);
   const pick = (f?: File) => {
     if (!f || !onPick) return;
-    const r = new FileReader();
-    r.onload = () => onPick(String(r.result));
-    r.readAsDataURL(f);
+    setLocalFile(f);
   };
-  const initial = name?.trim()?.[0] ?? "★";
+  // 功能注释：name 偶发非字符串（脏 NPC），禁止 name?.trim() 崩页
+  const initial = String(name ?? "").trim()[0] || "?";
   const Tag = editable ? "button" : "span";
   return (
+    <>
     <Tag
-      {...(editable ? { type: "button" as const, onClick: () => ref.current?.click() } : {})}
-      className={`group relative flex shrink-0 overflow-hidden ${shape === "rounded" ? "rounded-[8px]" : "rounded-full"} border border-line bg-gradient-to-br from-jade/25 to-coral/15 shadow-sm ring-1 ring-inset ring-white/40 ${editable ? "cursor-pointer" : "cursor-default"}`}
-      style={{ width: size, height: size }}
-      aria-label={editable ? `上传${name}头像` : name}
+      {...(editable ? { type: "button" as const, onClick: () => (onPick ? setLib(true) : ref.current?.click()) } : {})}
+      className={`group relative flex shrink-0 overflow-hidden ${square ? "" : "rounded-full"} border border-line bg-gradient-to-br from-jade/25 to-coral/15 ${editable ? "cursor-pointer" : "cursor-default"}`}
+      style={{ width: size, height: size, ...(square ? { borderRadius: Math.max(6, Math.round(size * 0.18)) } : {}) }}
+      aria-label={editable ? `更换${name}的头像` : name}
     >
       {src ? (
-        <img src={src} alt={name} className="h-full w-full object-cover" />
+        <img src={(src) || undefined} alt={name} className={`h-full w-full object-cover ${square ? "object-center" : ""}`} />
       ) : (
         <span className="flex h-full w-full items-center justify-center font-serif font-bold text-jade" style={{ fontSize: size * 0.42 }}>
           {initial}
@@ -74,8 +121,41 @@ export function Avatar({ src, name, size = 48, onPick, editable = true, shape = 
           <IconCamera width={size * 0.4} height={size * 0.4} />
         </span>
       )}
-      <input ref={ref} type="file" accept="image/*" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
     </Tag>
+    {editable && (
+      <input
+        ref={ref}
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/gif,image/*"
+        className="hidden"
+        onChange={(e) => {
+          pick(e.target.files?.[0]);
+          e.target.value = "";
+        }}
+      />
+    )}
+    {/* 弹窗经 portal 渲染，但 React 事件仍沿组件树冒泡：拦住，免得点遮罩又触发外层按钮 */}
+    {lib && onPick && (
+      <span className="contents" onClick={(e) => e.stopPropagation()}>
+        <AvatarLibraryPicker name={name} current={src} slot={avatarSlot}
+          onPick={(url) => { onPick(url); setLib(false); }}
+          onUpload={() => { setLib(false); ref.current?.click(); }}
+          onClose={() => setLib(false)} />
+      </span>
+    )}
+    {localFile && onPick ? (
+      <span className="contents" onClick={(e) => e.stopPropagation()}>
+        <LocalAvatarCropFlow
+          file={localFile}
+          onDone={(dataUrl) => {
+            onPick(dataUrl);
+            setLocalFile(null);
+          }}
+          onCancel={() => setLocalFile(null)}
+        />
+      </span>
+    ) : null}
+    </>
   );
 }
 
@@ -100,14 +180,28 @@ export function Meter({ value, max, tone = "jade", height = 8 }: { value: number
   );
 }
 
-/* —— 纯文本方块条：标签 [▮▮▮▯] 数值（终端读出） —— */
-const BAR_TONE: Record<string, string> = { jade: "text-jade", coral: "text-coral", gold: "text-gold", danger: "text-danger" };
-export function BlockBar({ value, max, tone = "jade", cells = 12 }: { value: number; max: number; tone?: string; cells?: number }) {
-  const filled = Math.max(0, Math.min(cells, Math.round((value / (max || 1)) * cells)));
+/* —— 能力进度条：圆角轨道 + 主题色填充 + 顶部高光（替代旧的 [▮▮▯] 文本条） —— */
+const BAR_FILL: Record<string, string> = {
+  jade: "from-[var(--jade)] to-[var(--jade-deep)]",
+  coral: "from-[var(--coral)] to-[var(--jade)]",
+  gold: "from-[var(--gold)] to-[var(--coral)]",
+  danger: "from-[var(--danger)] to-[var(--coral)]",
+};
+/** 属性色：主题色名（jade/coral/gold/danger）→ CSS 变量；#hex 为创作者自定义色 */
+export const toneColor = (tone?: string) => (!tone ? "var(--jade)" : tone.startsWith("#") ? tone : `var(--${tone})`);
+/** 档位徽章样式（随属性色） */
+export const toneChip = (tone?: string) => { const c = toneColor(tone); return { color: c, borderColor: `color-mix(in srgb, ${c} 40%, transparent)`, background: `color-mix(in srgb, ${c} 10%, transparent)` }; };
+export function BlockBar({ value, max, min = 0, tone = "jade" }: { value: number; max: number; min?: number; tone?: string; cells?: number }) {
+  const pct = Math.max(0, Math.min(100, ((value - min) / (max - min || 1)) * 100));
+  const custom = tone.startsWith("#");
   return (
-    <span className="min-w-0 flex-1 truncate font-mono text-[12px] tracking-tight text-ink-soft">
-      [<span className={BAR_TONE[tone] ?? "text-jade"}>{"▮".repeat(filled)}</span>
-      <span className="text-line">{"▯".repeat(cells - filled)}</span>]
+    <span role="progressbar" aria-valuenow={value} aria-valuemax={max} className="relative block h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-ink-soft/15 ring-1 ring-inset ring-line/60">
+      <span
+        className={`absolute inset-y-0 left-0 rounded-full bg-gradient-to-r ${custom ? "" : BAR_FILL[tone] ?? BAR_FILL.jade} transition-[width] duration-700 ease-out`}
+        style={{ width: `${pct}%`, ...(custom ? { background: `linear-gradient(to right, ${tone}, color-mix(in srgb, ${tone} 70%, black))` } : {}) }}
+      >
+        <span aria-hidden className="absolute inset-x-0 top-0 h-1/2 rounded-full bg-white/35" />
+      </span>
     </span>
   );
 }
@@ -145,11 +239,36 @@ export function affinityLevel(a: number, isFamily = false): { text: string; tone
 }
 
 export function Chip({ children, tone = "line" }: { children: ReactNode; tone?: string }) {
-  const cls =
-    tone === "jade" ? "border-jade/40 bg-jade/10 text-jade"
-    : tone === "coral" ? "border-coral/40 bg-coral/10 text-coral"
-    : tone === "gold" ? "border-gold/40 bg-gold/10 text-gold"
-    : tone === "danger" ? "border-danger/40 bg-danger/10 text-danger"
-    : "border-line bg-paper text-ink-soft";
-  return <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium tracking-wide shadow-[0_1px_2px_-1px_rgba(0,0,0,0.12)] ring-1 ring-inset ring-white/30 ${cls}`}>{children}</span>;
+  const cls = ["jade", "coral", "gold", "danger"].includes(tone) ? `tone-${tone}` : "";
+  return <span className={`ui-chip text-[11px] ${cls}`}>{children}</span>;
+}
+
+/** 心形计量：5 颗心按百分比填充（支持部分填充）。color 为填充色，track 为空心底色。 */
+export function HeartMeter({ pct, color = "var(--coral)", track = "color-mix(in srgb, var(--ink-soft) 22%, transparent)", size = 14 }: { pct: number; color?: string; track?: string; size?: number }) {
+  const p = Math.max(0, Math.min(100, pct));
+  const d = "M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.6h2c.7-1.4 2.2-2.6 4.3-2.6 3.7 0 5.8 3.9 4.3 7.3C19.5 16.4 12 21 12 21z";
+  return (
+    <span role="meter" aria-valuenow={Math.round(p)} aria-valuemin={0} aria-valuemax={100} className="inline-flex items-center gap-[3px]">
+      {Array.from({ length: 5 }, (_, i) => {
+        const f = Math.max(0, Math.min(1, p / 20 - i));
+        return (
+          <svg key={i} width={size} height={size} viewBox="0 0 24 24" aria-hidden className="shrink-0">
+            <path d={d} fill={track} />
+            <path d={d} fill={color} style={{ clipPath: `inset(0 ${(1 - f) * 100}% 0 0)` }} />
+          </svg>
+        );
+      })}
+    </span>
+  );
+}
+
+/* 「本回合动向」：展示 AI 经 tabs 分发给该 Tab 的一句话摘要（只在当前回合显示，过期即隐藏） */
+export function TabDigest({ digest, turn }: { digest?: { text: string; turn: number }; turn: number }) {
+  if (!digest || digest.turn !== turn) return null;
+  return (
+    <p className="mb-3 flex items-start gap-2 rounded-xl border border-jade/25 bg-jade/[0.06] px-3 py-2 text-[12px] leading-relaxed text-ink">
+      <span className="mt-[3px] shrink-0 rounded-[4px] bg-jade/15 px-1.5 text-[10px] font-bold leading-[16px] text-jade">本回合</span>
+      <span className="min-w-0">{digest.text}</span>
+    </p>
+  );
 }

@@ -4,7 +4,9 @@
  * 这里只做「读数据 + 通用比较」，符合「内容在池、规则在引擎、参数不入引擎」的契约。
  */
 import { parse } from "yaml";
-import { computeLooks, type GameState as SimState } from "../../game/logic";
+import { slot, liveArray, liveRecord, liveById, memoBy } from "../../mods/live";
+import type { GameState as SimState } from "../../game/logic";
+import { computeLooks } from "../../game/looks";
 import raw from "./world.yaml?raw";
 import contractsRaw from "./entertainment-contracts.yaml?raw";
 import projectsRaw from "./projects.yaml?raw";
@@ -22,7 +24,7 @@ export type OfferSpec = { cats: string[]; maxStar?: number; label: string };
 /* 人物「只知道自己相关」的可打听情报（结识后一次性解锁；requires 为更深话题的门槛） */
 export type PersonIntel = { id: string; topic: string; text: string; requires?: Requirement[] };
 
-/* 亲属引用：id 命中花名册且已结识时可点击跳转，否则以 name 显示；缺省则前端渲染「尚未得知」 */
+/* 亲属引用：一律直接展示（不设结识门槛）；id 命中花名册且已结识时可点击跳转，否则以 name 显示；确无记录则前端显示「暂无记录」 */
 export type FamilyRef = { name: string; id?: string; note?: string };
 /* 作品履历：区分幕后（导演/制片/监制）与台前（主演）——制作人挂执导/制作作品，艺人挂主演作品。
  * lead/costars 可引用花名册 id 联动跳转（也可为已退圈的传奇，仅留名字与备注）。确定性静态数据。 */
@@ -48,9 +50,16 @@ export type PersonContent = {
   home: string;
   roam: string[];
   bio: string;
+  init?: number; // 初始好感（模组世界用）
+  ttsVoice?: string; // 专属音色（语音模型的 voice 名）；留空按性别用设置里的默认音色
+  wxStart?: boolean; // 开局即是微信好友（并视为已结识），如家人、经纪人
   relation?: string; // 与玩家的关系（档案「与你」栏；缺省则显示「尚未得知」）
   gender?: string; // 性别（档案确定性数据，非推断）
+  groups?: string[]; // 人脉分组 id（人脉页面配置里的分组；可多选，缺省按分组规则自动归类）
+  org?: string; // 所属组织 id（人脉页面配置里的组织库）
+  avatarVariant?: string; // 头像池名（须与「我的头像池」或公共分类名完全一致）；开局从该池抽一张做头像
   age?: number; // 年龄（档案确定性数据，非推断）
+  birthday?: { m: number; d: number }; // 生日（选填；留空时系统按人物自动分配）
   tags?: string[]; // 人物标签（背景故事下的小标签）
   presentHint?: string;
   offers?: OfferSpec;
@@ -63,7 +72,10 @@ export type PersonContent = {
   family?: FamilyContent;
   ex?: FamilyRef | FamilyRef[] | null; // 前任（情感关系栏「前任」）
   resume?: ResumeEvent[];
-  works?: string[]; // 代表作（片名，取自内容池；credits 缺省时的简版回退）
+  timeline?: import("../../lib/types").NpcTimelineEntry[]; // 人物时间线（作者预设；玩家可在固定人物里覆盖）
+  works?: string[]; // 作品栏条目（模组可编辑；credits 缺省时的简版回退）
+  worksLabel?: string; // 作品栏标题（缺省「代表作」；如经纪人可写「带过的艺人」、家人写「近况」）
+  worksPlain?: boolean; // 条目不加书名号《》（非影视作品时勾选，如人名、事件）
   credits?: Credit[]; // 详版代表作（含角色分工/剧情/主演联动）
   stats?: Partial<Record<string, number>>; // 八维能力（缺省字段前端显示「尚未得知」）
 };
@@ -71,7 +83,7 @@ export type PersonContent = {
 /* ═══ 条件邂逅事件 ═══
  * 仿「进入地点触发 NPC 特殊事件」的逻辑：须与该人物同处一地（前端只在在场人物的行动条里给出），
  * 且满足下列条件——requires 复用通用门槛（week 生涯周数≈阅历/年岁、fame/reputation/stats.* 等）；
- * needTrait 校验你的初始特质（性格）；minRel 校验你与 TA 的关系状态（双方状态）。once 为一次性。
+ * minRel 校验你与 TA 的关系状态（双方状态）。once 为一次性。
  * effects 为纯数值增减；seed 为触发后落入对话框、交给 AI 叙事的种子（AI 只在资源库设定内演绎）。 */
 export type Encounter = {
   id: string;
@@ -80,12 +92,11 @@ export type Encounter = {
   seed: string;
   once?: boolean;
   requires?: Requirement[];
-  needTrait?: string;
   minRel?: number;
   effects?: { rel?: number; stress?: number; energy?: number; fame?: number; reputation?: number };
 };
 
-export const ENCOUNTERS: Encounter[] = [
+export const RAW_ENCOUNTERS: Encounter[] = [
   {
     id: "enc_suqing_latecall",
     personId: "suqing",
@@ -120,7 +131,6 @@ export const ENCOUNTERS: Encounter[] = [
     label: "即兴合唱",
     seed: "录音棚里林知夏起了个调子，回头看你，示意你接下去。你们就这样即兴合了一整首。请描写这段默契的即兴合唱。",
     once: true,
-    needTrait: "voice",
     minRel: 20,
     requires: [{ metric: "stats.geyi", op: "gte", value: 200, hint: "歌艺≥200" }],
     effects: { rel: 5, energy: -6, fame: 3 },
@@ -147,13 +157,16 @@ export const ENCOUNTERS: Encounter[] = [
   },
 ];
 
-const ENC_BY_PERSON: Record<string, Encounter[]> = ENCOUNTERS.reduce((acc, e) => {
-  (acc[e.personId] ??= []).push(e);
-  return acc;
-}, {} as Record<string, Encounter[]>);
+/* 当前世界的邂逅事件（模组槽 encounters；非娱乐圈世界未声明=无） */
+export const ENCOUNTERS: Encounter[] = liveArray(() => slot("encounters", () => RAW_ENCOUNTERS, () => []));
+const encByPerson = memoBy(() => slot<Encounter[]>("encounters", () => RAW_ENCOUNTERS, () => []), (list) =>
+  list.reduce((acc, e) => {
+    (acc[e.personId] ??= []).push(e);
+    return acc;
+  }, {} as Record<string, Encounter[]>));
 
 export function encountersOf(personId: string): Encounter[] {
-  return ENC_BY_PERSON[personId] ?? [];
+  return encByPerson()[personId] ?? [];
 }
 
 /* —— 试镜/项目相关支线（纯内容/事件数据）——
@@ -167,11 +180,32 @@ export type SideQuest = {
   scene: string[];       // 场景叙述 + 对白（逐段）
   continuationKind: "自由续接" | "任务" | "续接";
   continuation: string;  // 续接指引与硬约束
+  keywords?: string[];   // 关键词触发：玩家行动/台词里提到即自动展开
+  conds?: import("../../lib/types").FixedCond[]; // 条件触发：全部满足即自动展开
 };
 
-export const SIDEQUESTS: SideQuest[] = [
+/* 支线人物表：每段桥段里出场的角色定位。演绎时按定位从你的人脉里选出真实 NPC
+ * （名字 / 身份 / 好感 / 记忆一并交给叙事层）；人脉里暂无合适的人，则以陌生配角登场。 */
+export type QuestRole = { role: string; match: RegExp | string; stranger: string }; // 模组 JSON 中 match 写正则源字符串
+const R_AGENT: QuestRole = { role: "经纪人", match: "经纪", stranger: "临时对接的经纪助理" };
+const R_CASTING: QuestRole = { role: "选角负责人", match: "选角|副导|导演", stranger: "片方选角负责人" };
+const R_PRODUCER: QuestRole = { role: "制片方", match: "制片|监制|出品|投资", stranger: "片方制片" };
+export const RAW_SIDEQUEST_CAST: Record<string, QuestRole[]> = {
+  sq01_toolate: [R_CASTING, R_AGENT],
+  sq02_sixpm: [R_CASTING, R_AGENT],
+  sq03_dontfold: [R_AGENT, R_CASTING],
+  sq04_askfeedback: [R_CASTING, R_AGENT],
+  sq05_dateset: [R_PRODUCER, R_AGENT],
+  sq06_nosign: [R_PRODUCER, R_AGENT],
+  sq07_wrapcall: [R_PRODUCER, R_AGENT],
+  sq08_reshoot: [R_PRODUCER, R_CASTING],
+  sq09_settle: [R_PRODUCER, R_AGENT],
+};
+
+export const RAW_SIDEQUESTS: SideQuest[] = [
   {
     id: "sq01_toolate",
+    keywords: ["加时间", "来不及", "延长试镜"],
     code: "支线01",
     title: "今天真的来不及",
     condition: "请求追加时间遭拒，试镜窗口实际结束；仍可留资料。",
@@ -192,6 +226,7 @@ export const SIDEQUESTS: SideQuest[] = [
   },
   {
     id: "sq02_sixpm",
+    keywords: ["补交", "录像", "补录"],
     code: "支线02",
     title: "给她留到六点",
     condition:
@@ -210,6 +245,7 @@ export const SIDEQUESTS: SideQuest[] = [
   },
   {
     id: "sq03_dontfold",
+    keywords: ["等结果", "还没回复", "等通知"],
     code: "支线03",
     title: "先别替自己落选",
     condition: "评审仍待定，已过预计答复时间但正式截止未到。",
@@ -229,6 +265,7 @@ export const SIDEQUESTS: SideQuest[] = [
   },
   {
     id: "sq04_askfeedback",
+    keywords: ["落选", "没选上", "反馈"],
     code: "支线04",
     title: "没选上，还问不问",
     condition: "正式落选，尚未获得评审反馈。",
@@ -248,6 +285,7 @@ export const SIDEQUESTS: SideQuest[] = [
   },
   {
     id: "sq05_dateset",
+    keywords: ["机动日", "待命", "档期"],
     code: "支线05",
     title: "钱没加，日期定了",
     condition: "女主提出改善机动日条件；对方无法加预算，但有权缩小待命范围，并已给出确定书面方案。",
@@ -265,6 +303,7 @@ export const SIDEQUESTS: SideQuest[] = [
   },
   {
     id: "sq06_nosign",
+    keywords: ["不签", "没签", "报价"],
     code: "支线06",
     title: "没签，也是真的没了",
     condition: "合同未签成且报价关闭；女主不承担未签合同的违约。",
@@ -283,6 +322,7 @@ export const SIDEQUESTS: SideQuest[] = [
   },
   {
     id: "sq07_wrapcall",
+    keywords: ["杀青", "拍完了", "收工"],
     code: "支线07",
     title: "杀青以后，还有一通电话",
     condition: "实际完成本次拍摄；合同与流程确有资料核对环节，作品尚未发行。",
@@ -303,6 +343,7 @@ export const SIDEQUESTS: SideQuest[] = [
   },
   {
     id: "sq08_reshoot",
+    keywords: ["补拍", "重拍"],
     code: "支线08",
     title: "能补，但不是现在",
     condition: "工作未完成，项目仍有合同内的合法补拍余量；不是单纯 AI 生成失败。",
@@ -320,6 +361,7 @@ export const SIDEQUESTS: SideQuest[] = [
   },
   {
     id: "sq09_settle",
+    keywords: ["合作结束", "解约", "散伙"],
     code: "支线09",
     title: "这场没过，她还得把账问完",
     condition: "项目正式确认本次合作失败或结束；具体责任尚需按实际合同核对。",
@@ -339,11 +381,11 @@ export const SIDEQUESTS: SideQuest[] = [
   },
 ];
 
-export const SIDEQUEST_BY_ID: Record<string, SideQuest> = Object.fromEntries(
-  SIDEQUESTS.map((q) => [q.id, q]),
-);
+export const SIDEQUEST_CAST: Record<string, QuestRole[]> = liveRecord(() => slot("sideQuestCast", () => RAW_SIDEQUEST_CAST, () => ({})));
+export const SIDEQUESTS: SideQuest[] = liveArray(() => slot("sideQuests", () => RAW_SIDEQUESTS, () => []));
+export const SIDEQUEST_BY_ID: Record<string, SideQuest> = liveById(() => slot("sideQuests", () => RAW_SIDEQUESTS, () => []));
 
-export type RoomItem = { id: string; name: string; icon: string; desc: string; linksProjects?: boolean; price?: number };
+export type RoomItem = { id: string; name: string; icon: string; desc: string; linksProjects?: boolean; price?: number; use?: { msg?: string } };
 /* 居家/在场活动：可点选的日常小事，增益全为纯数值增减（引擎不认识具体活动语义） */
 export type RoomActivity = {
   id: string;
@@ -363,6 +405,7 @@ export type RoomActivity = {
 /* 通行条件：requires 由通用求值器判定，note 为未达标时的解释文案 */
 export type RoomAccess = { requires?: Requirement[]; note: string };
 export type RoomContent = {
+  name?: string; // 显示名（模组世界用；娱乐圈取 game/data LOCATIONS）
   exits: Partial<Record<Dir, string>>;
   desc: string;
   intro?: string;
@@ -372,8 +415,34 @@ export type RoomContent = {
   openDays?: number[]; // 开放的星期（1=周一 … 7=周日）；缺省=每日开放
   tint?: string; // 地点背景图色调键（jade|coral|gold|ink|plum）
   access?: RoomAccess; // 通行门槛（缺省=无门槛）
+  // —— 多级嵌套子地点（地点树）——
+  parent?: string; // 父地点 id（空 = 顶层地点）；层级不限
+  order?: number; // 在父地点「子地点入口」里的排序
+  bg?: string; // 此地背景图（优先于舆图照片）
+  bgm?: string; // 进入此地自动切换的背景音乐（模组内置音乐的 id）
+  upLabel?: string; // 返回上层的文案，如「走出禅房，回到后院」
+  hidden?: boolean; // 隐藏：不在上层入口里出现（到访过 / 已解锁后才显示）
+  locked?: boolean; // 上锁：需写入规则变量 unlock:<地点id> ≥ 1 才能进入（解锁父地点不会连带解锁它）
+  lockNote?: string; // 上锁时的提示文案
+  noNpcVisit?: boolean; // 不允许 NPC 自主走进来
+  inheritEvents?: boolean; // 沿用父地点的在场活动（缺省=各层独立）
 };
-export type TravelContent = { minutesPerHop: number; feePerHop: number; energyPerHop: number; dayStartMinute?: number; dayEndMinute?: number };
+/* 交通方式：fareMul 乘基础车费（hops×feePerHop），timeMul 乘基础耗时；ownCar=需自有座驾 */
+export type TransportMode = { id: string; label: string; fareMul: number; timeMul: number; note: string; fee?: number /* 作者配置：公共交通每趟票价（优先于 fareMul；自有座驾不收） */; ownCar?: boolean; icon?: string };
+export type TravelContent = {
+  minutesPerHop: number; feePerHop: number; energyPerHop: number; apPerTurn?: number; apPerMove?: number; dayStartMinute?: number; dayEndMinute?: number;
+  advanceDays?: number; // 每次「推进」前进的天数（缺省 1；推进单位为「日」时生效）
+  advanceUnit?: "day" | "week" | "month" | "year"; // 推进单位（缺省 日）
+  advanceCount?: number; // 周/月/年模式下每次推进几个单位（1~12，缺省 1）
+  advanceStory?: boolean; // 推进后是否由 AI 生成日程叙事（缺省开启）
+  advanceWords?: number; // 推进叙事字数（缺省 500）
+  modes?: TransportMode[]; // 本世界的出行方式（缺省=不启用交通系统，只显示「前往」）
+  defaultMode?: string; // 默认选中的方式 id
+  carShop?: string; // 买车的地点 id（出行面板提示「去哪买车」；缺省=无提示）
+  pickTitle?: string; // 出行面板选择区标题（缺省「怎么去」）
+  currency?: string; // 车费货币符号（缺省「¥」）
+  freeLabel?: string; // 不收费时的文案（缺省「免费」）
+};
 
 export type CalendarContent = {
   eraName: string;
@@ -385,7 +454,7 @@ export type CalendarContent = {
   dayLabel: string;
 };
 
-type WorldContent = {
+export type WorldContent = {
   calendar: CalendarContent;
   directions: Record<Dir, string>;
   travel: TravelContent;
@@ -397,10 +466,16 @@ type WorldContent = {
 
 export const WORLD = parse(raw) as WorldContent;
 
-export const CALENDAR = WORLD.calendar;
+/* 日历 / 出行参数：模组未声明时沿用引擎默认（即娱乐圈原值） */
+const calendarNow = memoBy(() => slot<CalendarContent>("calendar", () => WORLD.calendar), (c) => c);
+export const CALENDAR: CalendarContent = liveRecord(() => {
+  const c = calendarNow();
+  const sd = slot<string | undefined>("startDate", () => undefined); // 简写：「2005.01.03」或「2005-01-03」
+  return sd ? { ...c, startDate: sd.replace(/[./]/g, "-") } : c;
+});
 export const DIR_LABEL = WORLD.directions;
 export const ROOMS = WORLD.rooms;
-export const TRAVEL = WORLD.travel;
+export const TRAVEL: TravelContent = liveRecord(() => slot("travel", () => WORLD.travel));
 export const ROOM_STATUS_LABELS = WORLD.roomStatus;
 export const itemsOfRoom = (roomId: string): RoomItem[] => WORLD.rooms[roomId]?.items ?? [];
 /* 全局物品索引（跨房间），供背包/行囊按 id 还原物品信息 */
@@ -433,6 +508,7 @@ export type NegotiationContent = {
 /* 开局候选经纪合约（三份；建角最后一步签署，参数落到开局数值） */
 export type SigningContract = {
   id: string;
+  factionId?: string; // 绑定的开局阵营：签下即加入该阵营
   company: string;
   companyStyle: string;
   focusLabel: string;
@@ -446,20 +522,27 @@ export type SigningContract = {
   trust: number;
   reputation: number;
   blurb: string;
+  /* 由世界观经纪公司生成时附带：公司声望与掌舵人 */
+  prestige?: number;
+  boss?: CompanyBoss;
 };
-type ContractsContent = {
+/* 开局合约方向规则：公司简介命中 match（正则）即判为该方向；世界观可在 contracts.focusRules 自定义 */
+export type FocusRule = { match: string; label: string; tone?: string; exclusive?: string };
+export type ContractsContent = {
+  focusRules?: FocusRule[];
   natures: NatureContent[];
   meta: Record<string, ContractMeta>;
   negotiation: NegotiationContent;
   signing: SigningContract[];
 };
 
-export const CONTRACTS = parse(contractsRaw) as ContractsContent;
-export const SIGNING_CONTRACTS: SigningContract[] = CONTRACTS.signing;
-export const NATURE_BY_ID: Record<string, NatureContent> = Object.fromEntries(
-  CONTRACTS.natures.map((n) => [n.id, n]),
-);
-export const NEGOTIATION = CONTRACTS.negotiation;
+export const RAW_CONTRACTS = parse(contractsRaw) as ContractsContent;
+/* 模组槽 contracts：未声明=无开局经纪合约 / 无通告性质说明（议价参数沿用引擎默认） */
+const contractsNow = () => slot<ContractsContent>("contracts", () => RAW_CONTRACTS, () => ({ natures: [], meta: {}, negotiation: RAW_CONTRACTS.negotiation, signing: [] }));
+export const CONTRACTS: ContractsContent = liveRecord(contractsNow);
+export const SIGNING_CONTRACTS: SigningContract[] = liveArray(() => contractsNow().signing ?? []);
+export const NATURE_BY_ID: Record<string, NatureContent> = liveById(() => contractsNow().natures ?? []);
+export const NEGOTIATION: NegotiationContent = liveRecord(() => contractsNow().negotiation ?? RAW_CONTRACTS.negotiation);
 
 /* —— 人设与危机内容池 —— */
 export type PersonaContent = { id: string; label: string; icon: string; audience: string; desc: string };
@@ -487,32 +570,43 @@ export type ImageCrisisContent = {
     timingFastDays: number; goodAt: number; badBelow: number;
   };
 };
-export const IMAGE_CRISIS = parse(imageRaw) as ImageCrisisContent;
-export const PERSONAS = IMAGE_CRISIS.personas;
-export const PUBLIC_ACTS = IMAGE_CRISIS.publicActs;
-export const CRISES = IMAGE_CRISIS.crises;
-export const CRISIS_RESPONSES = IMAGE_CRISIS.responses;
-export const PERSONA_BY_ID: Record<string, PersonaContent> = Object.fromEntries(PERSONAS.map((p) => [p.id, p]));
-export const CRISIS_BY_ID: Record<string, CrisisContent> = Object.fromEntries(CRISES.map((c) => [c.id, c]));
+export const RAW_IMAGE_CRISIS = parse(imageRaw) as ImageCrisisContent;
+/* 模组槽 imageCrisis：未声明=无人设 / 公开行动 / 危机（参数沿用引擎默认，界面隐藏） */
+const imageNow = () => slot<ImageCrisisContent>("imageCrisis", () => RAW_IMAGE_CRISIS, () => ({ ...RAW_IMAGE_CRISIS, personas: [], publicActs: [], crises: [], responses: [] }));
+export const IMAGE_CRISIS: ImageCrisisContent = liveRecord(imageNow);
+export const PERSONAS: PersonaContent[] = liveArray(() => imageNow().personas);
+export const PUBLIC_ACTS: PublicActContent[] = liveArray(() => imageNow().publicActs);
+export const CRISES: CrisisContent[] = liveArray(() => imageNow().crises);
+export const CRISIS_RESPONSES: ResponseContent[] = liveArray(() => imageNow().responses);
+export const PERSONA_BY_ID: Record<string, PersonaContent> = liveById(() => imageNow().personas);
+export const CRISIS_BY_ID: Record<string, CrisisContent> = liveById(() => imageNow().crises);
 
 /* —— 游戏资料库（help 文档，供知识库检索）—— */
 export type HelpDoc = { id: string; title: string; keywords: string[]; body: string };
-type HelpContent = { intro: string; era: string; docs: HelpDoc[] };
-const HELP = parse(helpRaw) as HelpContent;
-export const HELP_DOCS: HelpDoc[] = HELP.docs;
-export const HELP_INTRO: string = HELP.intro;
+export type HelpContent = { intro: string; era?: string; docs: HelpDoc[] };
+export const RAW_HELP = parse(helpRaw) as HelpContent;
+/* 模组槽 help：未声明=资料库为空 */
+export const helpNow = () => slot<HelpContent>("help", () => RAW_HELP, () => ({ intro: "", era: "", docs: [] }));
+export const HELP_DOCS: HelpDoc[] = liveArray(() => helpNow().docs ?? []);
+export const helpIntro = (): string => helpNow().intro ?? "";
 
 /* —— 娱乐圈生态（公司名号 / 剧目 / 代言品牌）—— 引擎按序号取用，中文只在此 —— */
 export type CompanyBoss = { name: string; title: string; age: number; style: string; quote: string; bio: string };
-export type CompanyContent = { name: string; prestige: number; blurb: string; boss?: CompanyBoss };
+export type CompanyContent = { name: string; prestige: number; blurb: string; boss?: CompanyBoss; focus?: string; exclusive?: string; tone?: string };
 export type AwardSpec = { ceremony: string; category: string; gender: string; metric: string };
-type IndustryContent = { companies: CompanyContent[]; movies: string[]; ads: string[]; awards: AwardSpec[]; starEvents: Record<string, string[]> };
-const INDUSTRY = parse(industryRaw) as IndustryContent;
-export const COMPANIES: CompanyContent[] = INDUSTRY.companies;
-export const MOVIE_TITLES: string[] = INDUSTRY.movies;
-export const AD_BRANDS: string[] = INDUSTRY.ads;
-export const AWARDS: AwardSpec[] = INDUSTRY.awards;
-export const STAR_EVENTS: Record<string, string[]> = INDUSTRY.starEvents ?? {};
+/* 圈内生成参数（全部可选，缺省=引擎默认） */
+export type IndustryGen = { npcCount?: number; minPerCompany?: number; fameMin?: number; fameMax?: number; statMin?: number; statMax?: number; debutBaseYear?: number; debutSpan?: number; coupleRate?: number };
+export type IndustryContent = { companies: CompanyContent[]; movies: string[]; ads: string[]; awards: AwardSpec[]; starEvents?: Record<string, string[]>; gen?: IndustryGen };
+export const RAW_INDUSTRY = parse(industryRaw) as IndustryContent;
+/* 模组槽 industry：未声明=无公司 / 奖项 / 圈内动态（片名与品牌给中性占位，取模不崩） */
+const industryNow = () => slot<IndustryContent>("industry", () => RAW_INDUSTRY, () => ({ companies: [], movies: ["作品"], ads: ["品牌"], awards: [], starEvents: {} }));
+const nonEmpty = (a: string[] | undefined, fb: string) => (a && a.length ? a : [fb]);
+export const COMPANIES: CompanyContent[] = liveArray(() => industryNow().companies ?? []);
+export const MOVIE_TITLES: string[] = liveArray(() => nonEmpty(industryNow().movies, "作品"));
+export const AD_BRANDS: string[] = liveArray(() => nonEmpty(industryNow().ads, "品牌"));
+export const AWARDS: AwardSpec[] = liveArray(() => industryNow().awards ?? []);
+export const industryGen = (): IndustryGen => industryNow().gen ?? {};
+export const STAR_EVENTS: Record<string, string[]> = liveRecord(() => industryNow().starEvents ?? {});
 /* 引擎公司 id（co_N）→ 展示名/简介；越界时回退，绝不崩 */
 export function companyMeta(companyId?: string): CompanyContent {
   const i = Number(String(companyId ?? "").replace(/^co_/, ""));
@@ -585,8 +679,21 @@ function worldMetrics(s: SimState): Record<string, number> {
     stress: s.stress,
   };
   for (const k of Object.keys(s.stats)) m["stats." + k] = s.stats[k as keyof typeof s.stats];
+  // 自定义属性与八维平级：门槛可写 metric = "c:<属性id>"（通告 / 邂逅 / 地点 / 情报通用）
+  for (const [k, v] of Object.entries(s.cattrs ?? {})) m["c:" + k] = v;
+  // 规则变量与所在位置：flag:<变量>；at:<地点id> = 正好在这里；in:<地点id> = 在这一枝（含子地点）里
+  for (const [k, v] of Object.entries(s.flags ?? {})) m["flag:" + k] = v;
+  for (const id of roomPathProvider(s.room)) m["in:" + id] = 1;
+  if (s.room) m["at:" + s.room] = 1;
   return m;
 }
+
+/* 地点路径由地图层注入（本文件不直接依赖注册表，避免循环引用） */
+// 循环引用下 mud.ts 可能在本文件求值完之前就调用 setRoomPathProvider：用函数声明（随提升即初始化）承载注入值，避免 let 的暂时性死区
+function roomPathProvider(id?: string): string[] { return roomPathProvider.f ? roomPathProvider.f(id) : id ? [id] : []; }
+// eslint-disable-next-line @typescript-eslint/no-namespace
+declare namespace roomPathProvider { let f: ((id?: string) => string[]) | undefined; }
+export function setRoomPathProvider(f: (id?: string) => string[]) { roomPathProvider.f = f; }
 
 /* 通用门槛求值：全部满足则 ok；hint 拼接每条要求（gte 未达标附上差值） */
 export function evalRequires(reqs: Requirement[], s: SimState): { ok: boolean; hint: string } {
@@ -638,7 +745,7 @@ export type ProjectTemplate = {
 };
 export type QualityTier = { id: string; min: number; label: string; payMul: number; growthMul: number; trust: number; rep: number };
 export type WorkStrategy = { id: string; label: string; energy: number; stress: number; floor: number; ceil: number; desc: string };
-type ProjectsContent = {
+export type ProjectsContent = {
   statusLabels: Record<string, string>;
   categoryLabels: Record<string, string>;
   roleTypeLabels: Record<string, string>;
@@ -679,16 +786,48 @@ export type ProducerContent = {
   questions: ProducerQuestion[];
 };
 
-export const PROJECTS_POOL = parse(projectsRaw) as ProjectsContent;
-export const PROJECT_TEMPLATES = PROJECTS_POOL.projects;
-export const PROJECT_TPL_BY_ID: Record<string, ProjectTemplate> = Object.fromEntries(
-  PROJECT_TEMPLATES.map((p) => [p.id, p]),
-);
-export const PRODUCER = PROJECTS_POOL.producer;
-export const NEGOTIATE = PROJECTS_POOL.negotiate;
+export const RAW_PROJECTS = parse(projectsRaw) as ProjectsContent;
+/* 模组槽 projects：未声明=无项目模板 / 制片人（规则参数沿用引擎默认） */
+const projectsNow = () => slot<ProjectsContent>("projects", () => RAW_PROJECTS, () => ({ ...RAW_PROJECTS, projects: [] }));
+export const PROJECTS_POOL: ProjectsContent = liveRecord(projectsNow);
+export const PROJECT_TEMPLATES: ProjectTemplate[] = liveArray(() => projectsNow().projects ?? []);
+export const PROJECT_TPL_BY_ID: Record<string, ProjectTemplate> = liveById(() => projectsNow().projects ?? []);
+export const PRODUCER: ProducerContent = liveRecord(() => projectsNow().producer ?? RAW_PROJECTS.producer);
+export const NEGOTIATE: NegotiateContent = liveRecord(() => projectsNow().negotiate ?? RAW_PROJECTS.negotiate);
 
 /* ═══════════════ 娱乐圈关系内容池 (relations) ═══════════════ */
 export type RelDimension = { id: string; label: string; hint: string };
+export type PartnerPerk = {
+  pid: string; label?: string;
+  /* 工作玩法规则（引擎内置，只对有工作委托系统的世界观生效；其他世界观留空，改用下面通用的 fx） */
+  rate?: number; minStar?: number; gigType?: string; bizMult?: number; payBonus?: number;
+  /* 地点触发：填了 loc 的条目只在到访该地点时生效（地点 id，可用正则如 "apartment|home"），不参与工作结算 */
+  id?: string; // 可选稳定 id（用于记录触发次数；不填按 恋人@地点@名称）
+  msgMode?: "append" | "replace"; // 剧情要点：接在地点原文后（缺省）/ 整段替换原文
+  loc?: string; msg?: string;
+  /* 数值增减（通用，两种触发方式都可用；工作结算时在工作成功后生效）：key 见 PerkKey 说明；delta 可正可负 */
+  fx?: { key: string; delta: number }[];
+  /** @deprecated 旧写法，仍兼容：等同 fx 里的 stress / reputation / fame / affinity */
+  stress?: number; reputation?: number; fame?: number; affinity?: number;
+  /* 附加条件（两种触发方式通用；全部可选，不填 = 不限制；同时满足才触发） */
+  when?: PerkWhen;
+};
+/** 伴侣加成触发条件：各世界观通用的主角状态门槛 */
+/* 属性键（所有世界观通用）：
+ *   stat:<能力id>  本世界观的能力（叫法 / 停用按「角色属性」配置）   attr:<属性id>  自定义属性
+ *   affinity 与该恋人的好感   week 当前周（只用于条件）   stress 压力   energy 行动力
+ *   fame / reputation / blackFans / looks：引擎内置项（娱乐圈默认；looks 只读，只用于条件） */
+export type PerkReq = { key: string; op: ">=" | "<="; value: number };
+export type PerkWhen = {
+  req?: PerkReq[]; // 通用条件：属性 ≥ / ≤ 某值，全部满足
+  /** @deprecated 旧写法，仍兼容 */
+  minWeek?: number; minFame?: number; minReputation?: number; minLooks?: number;
+  maxBlackFans?: number; minAffinity?: number; maxStress?: number;
+  chance?: number; // 触发概率 0~100（缺省 100）
+  maxTimes?: number; // 整局最多触发几次（缺省不限）
+  cooldownDays?: number; // 两次触发至少间隔几天
+  perWeek?: number; // 每周最多触发几次
+};
 export type RelationsContent = {
   dimensions: RelDimension[];
   mood: { init: number; min: number; max: number; coldDays: number; decayPerDay: number; warmFloor: number };
@@ -703,12 +842,116 @@ export type RelationsContent = {
     labels: { button: string; locked: string; done: string; alreadyDating: string; hardLocked: string };
   };
   romanticCap: { default: number; byPerson: Record<string, number> };
+  partnerPerks?: PartnerPerk[]; // 伴侣加成（工作 / 通告类结算；没有该玩法的世界观留空即可）
+  affinityCap?: { default?: number; byPerson?: Record<string, number> }; // 好感上限；缺省与心动上限相同
   trust: { init: number; min: number; max: number };
+  /* 以下可选，缺省 = 引擎默认（所有世界观通用） */
+  bridge?: import("../../game/bridge").BridgeSlot; // 牵线玩法：次数 / 关闭 / 改写或新增方式
+  wedding?: { cost?: number; minAffinity?: number }; // 婚礼费用（按当前钱包货币）与好感门槛，默认 30000 / 80
 };
 
-export const RELATIONS = parse(relationsRaw) as RelationsContent;
-export const REL_DIM_BY_ID: Record<string, RelDimension> = Object.fromEntries(
-  RELATIONS.dimensions.map((d) => [d.id, d]),
-);
+export const RAW_RELATIONS = parse(relationsRaw) as RelationsContent;
+/* 模组槽 relations：未声明时沿用引擎默认参数 */
+/* 模组只写部分字段（如只配婚礼 / 牵线）时，其余沿用默认，避免缺 confess / dimensions 而失效 */
+export const RELATIONS: RelationsContent = liveRecord(() => {
+  const v = slot("relations", () => RAW_RELATIONS);
+  return v === RAW_RELATIONS ? v : { ...RAW_RELATIONS, ...v, confess: { ...RAW_RELATIONS.confess, ...v?.confess } };
+});
+export const REL_DIM_BY_ID: Record<string, RelDimension> = liveById(() => RELATIONS.dimensions);
 export const romanticCapOf = (pid: string): number =>
   RELATIONS.romanticCap.byPerson[pid] ?? RELATIONS.romanticCap.default;
+/** 好感（s.rel）上限：relations.affinityCap 可单独配置，缺省沿用心动上限（各世界观通用，不写死角色 id） */
+/** 当前恋人带来的通告加成（按 relations.partnerPerks；不写死角色） */
+export function partnerPerksFor(isPartner: (pid: string) => boolean, gig: { star: number; type: string }): PartnerPerk[] {
+  return (RELATIONS.partnerPerks ?? []).filter((p) => {
+    if (!p?.pid || p.loc || !isPartner(p.pid)) return false;
+    if (p.minStar != null && gig.star < p.minStar) return false;
+    if (p.gigType) { try { if (!new RegExp(p.gigType).test(gig.type)) return false; } catch { return false; } }
+    return true;
+  });
+}
+/** 到访某地点时，当前恋人带来的加成（relations.partnerPerks 中填了 loc 的条目；不写死角色） */
+export function partnerLocPerksFor(isPartner: (pid: string) => boolean, locId: string): PartnerPerk[] {
+  return (RELATIONS.partnerPerks ?? []).filter((p) => {
+    if (!p?.pid || !p.loc || !isPartner(p.pid)) return false;
+    try { return new RegExp(`^(?:${p.loc})$`).test(locId); } catch { return p.loc === locId; }
+  });
+}
+export const affinityCapOf = (pid: string): number =>
+  RELATIONS.affinityCap?.byPerson?.[pid] ?? RELATIONS.affinityCap?.default ?? romanticCapOf(pid);
+
+/* 开局经纪合约：从本世界观「行业生态」里真实存在的经纪公司生成，条款按公司声望推算。
+ * 高声望 = 保底高、分成低、违约金高、管得严；低声望 = 保底薄、分成高、更自由。
+ * 合约槽里同名公司的手写条款优先（作者可精调）；世界观没有公司时退回合约槽的 signing。 */
+const DEFAULT_FOCUS: FocusRule[] = [
+  { match: "电影|影视|银幕|戏", label: "影视向", tone: "coral", exclusive: "影视资源优先；戏约须经公司报备" },
+  { match: "音乐|唱片|歌", label: "音乐向", tone: "jade", exclusive: "音乐作品独家发行；影视商务较自由" },
+  { match: "代言|商业|红毯|品牌", label: "商业向", tone: "gold", exclusive: "商务代言独家；接戏须避开代言竞品" },
+  { match: "综艺|话题|风口", label: "综艺向", tone: "gold", exclusive: "综艺与话题营销由公司统一安排" },
+  { match: "偶像|练习生|团体|粉丝", label: "偶像向", tone: "coral", exclusive: "团体活动优先；恋爱须向公司报备" },
+];
+const safeRe = (src: string) => { try { return new RegExp(src); } catch { return null; } };
+function focusOf(c: CompanyContent, p: number): { label: string; tone: string; exclusive: string } {
+  const rules = contractsNow().focusRules?.length ? contractsNow().focusRules! : DEFAULT_FOCUS;
+  const hit = c.focus ? rules.find((r) => r.label === c.focus) : rules.find((r) => safeRe(r.match)?.test(c.blurb));
+  return {
+    label: c.focus ?? hit?.label ?? "综合向",
+    tone: c.tone ?? hit?.tone ?? "jade",
+    exclusive: c.exclusive ?? hit?.exclusive ?? (p > 0.6 ? "全约独家；季度有回本考核" : "经纪约独家；个人发展较自由"),
+  };
+}
+const round = (n: number, step: number) => Math.max(step, Math.round(n / step) * step);
+function offerOf(c: CompanyContent, i: number): SigningContract {
+  const p = Math.max(0, Math.min(100, c.prestige)) / 100;
+  const f = focusOf(c, p);
+  const jitter = () => 0.9 + Math.random() * 0.2;
+  const style = c.boss?.style ? `${c.boss.title ?? "老板"}·${c.boss.name} · ${c.boss.style}` : `业内声望 ${c.prestige}`;
+  return {
+    id: `co_${i}`,
+    company: c.name,
+    companyStyle: style,
+    focusLabel: f.label,
+    tone: f.tone,
+    icon: "",
+    baseSalary: round((3000 + p * 7000) * jitter(), 500),
+    revenueShare: Math.round(50 - p * 28),
+    penalty: round((40000 + p * 200000) * jitter(), 10000),
+    exclusive: f.exclusive,
+    signBonus: round((5000 + p * 40000) * jitter(), 1000),
+    trust: Math.round(8 + p * 12),
+    reputation: Math.round(p * 6 - 1),
+    blurb: c.blurb,
+    prestige: c.prestige,
+    boss: c.boss,
+  };
+}
+/* 开局合约绑定阵营：创作者配置了开局势力时，递合约的就是这些势力本身（签哪家 = 加入哪个阵营）。
+ * 与公司表同名的沿用该公司的声望 / 手写条款，否则按势力初始声望生成条款。 */
+export type FactionOfferSrc = { id: string; name: string; desc?: string; rep?: number };
+export function factionSigningOffers(factions: FactionOfferSrc[]): SigningContract[] {
+  const hand = new Map(SIGNING_CONTRACTS.map((x) => [x.company, x]));
+  return factions.map((f) => {
+    const i = COMPANIES.findIndex((c) => c.name === f.name);
+    const co: CompanyContent = i >= 0 ? COMPANIES[i] : { name: f.name, prestige: Math.max(10, Math.min(90, (f.rep ?? 20) + 30)), blurb: f.desc ?? "" };
+    const h = hand.get(co.name);
+    const base = h ? { ...h, prestige: co.prestige, boss: co.boss } : offerOf(co, i >= 0 ? i : 0);
+    return { ...base, id: i >= 0 ? `co_${i}` : `fac_${f.id}`, blurb: base.blurb || f.desc || "", factionId: f.id };
+  });
+}
+
+/* 抽 count 份：声望高/中/低各取一家，保证选择有取舍 */
+export function rollSigningOffers(count = 3): SigningContract[] {
+  const cos = COMPANIES.map((c, i) => ({ c, i }));
+  if (!cos.length) return [...SIGNING_CONTRACTS];
+  const hand = new Map(SIGNING_CONTRACTS.map((x) => [x.company, x]));
+  const sorted = [...cos].sort((a, b) => b.c.prestige - a.c.prestige);
+  const n = Math.min(count, sorted.length);
+  const picks = Array.from({ length: n }, (_, k) => {
+    const lo = Math.floor((k * sorted.length) / n), hi = Math.floor(((k + 1) * sorted.length) / n);
+    return sorted[lo + Math.floor(Math.random() * Math.max(1, hi - lo))];
+  });
+  return picks.map(({ c, i }) => {
+    const h = hand.get(c.name);
+    return h ? { ...h, id: `co_${i}`, prestige: c.prestige, boss: c.boss } : offerOf(c, i);
+  });
+}

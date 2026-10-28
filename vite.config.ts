@@ -100,8 +100,14 @@ export default defineConfig(({ mode }) => {
       ...(mode === 'development' ? [logDevApiPreset(preset)] : []),
     ],
     resolve: {
+      // 功能注释：Romance 自带 node_modules/react（与主站版本/realpath 不同）时会打出双实例，
+      // 运行时报 Cannot read properties of null (reading 'useState')。强制共用主站 React。
+      dedupe: ['react', 'react-dom'],
       alias: {
-        // 功能注释：Romance 子应用源码仍放在仓库 Romance/，经别名嵌入 funloom 打包
+        react: resolve(__dirname, 'node_modules/react'),
+        'react-dom': resolve(__dirname, 'node_modules/react-dom'),
+        // 功能注释：Romance 源码用 `@/`；主站 src 不用该别名，故安全指向 Romance/src
+        '@': resolve(__dirname, 'Romance/src'),
         '@romance': resolve(__dirname, 'Romance/src'),
       },
     },

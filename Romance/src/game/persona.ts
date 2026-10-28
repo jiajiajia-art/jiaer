@@ -1,3 +1,4 @@
+import { wallet } from "./wallet";
 /* ————— 人设与危机：确定性引擎 —————
  * 只读 image-crisis 内容池的参数，按「证据 / 回应时机 / 诚信(口碑) / 舆情阈值」
  * 做裁决。不写死中文标签、不制造热搜事实。AI 只在此之外负责公开范围的描写，
@@ -66,7 +67,8 @@ export function triggerCrisis(s: GameState, forceId?: string): { s: GameState; l
   const def = forceId ? CRISIS_BY_ID[forceId] : CRISES[s.personaSwings % CRISES.length];
   if (!def) return { s, lines: [] };
   const crisis: CrisisState = { id: def.id, day: s.day, severity: def.severity, evidence: deriveEvidence(s, def.baseEvidence) };
-  return { s: { ...s, crisis }, lines: [`危机爆发：${def.label}——${def.desc}`] };
+  const line = `危机爆发：${def.label}——${def.desc}`;
+  return { s: { ...s, crisis, log: [...s.log, `【第 ${s.week} 周 · 危机】${line}`].slice(-40) }, lines: [line] };
 }
 
 /* 安排一条公开内容：与当前人设比对，一致/中性/反转，确定性结算。 */
@@ -145,7 +147,7 @@ export function resolveCrisis(s: GameState, responseId: string): { s: GameState;
   const d: CrisisDiff = r.tiers[tier];
 
   const next: GameState = {
-    ...s,
+    ...wallet.add(s, -(r.costMoney ?? 0)),
     crisis: null,
     crisesResolved: s.crisesResolved + 1,
     reputation: clamp(s.reputation + d.rep, 0, 100),
@@ -155,17 +157,36 @@ export function resolveCrisis(s: GameState, responseId: string): { s: GameState;
     trust: clamp(s.trust + d.trust, 0, 100),
     brandMatch: clamp(s.brandMatch + d.brandMatch, 0, 100),
     audience: clamp(s.audience + d.audience, 0, 100),
-    money: s.money - (r.costMoney ?? 0),
   };
   const lines = [
     `${r.icon} 面对「${def.label}」，你选择了${r.label}——结算为「${TIER_LABEL[tier]}」。`,
-    `舆情 ${d.controversy >= 0 ? "+" : ""}${d.controversy} · 口碑 ${d.rep >= 0 ? "+" : ""}${d.rep} · 目标受众认可 ${d.audience >= 0 ? "+" : ""}${d.audience}${r.costMoney ? ` · 公关花费 ¥${r.costMoney.toLocaleString()}` : ""}`,
+    `舆情 ${d.controversy >= 0 ? "+" : ""}${d.controversy} · 口碑 ${d.rep >= 0 ? "+" : ""}${d.rep} · 目标受众认可 ${d.audience >= 0 ? "+" : ""}${d.audience}${r.costMoney ? ` · 公关花费 ${wallet.fmt(r.costMoney)}` : ""}`,
   ];
+  next.log = [...s.log, `【第 ${s.week} 周 · 危机公关】${lines[0]}`].slice(-40);
   return { s: next, lines, tier };
 }
 
 /* 周结算里的自然冷却：舆情随时间回落，无危机且高匹配度时目标受众缓慢沉淀。 */
 export function personaWeekly(s: GameState): GameState {
+  // 危机悬而未决：舆情不降反升、口碑与受众持续流失；拖满 3 周则舆论自行定性（按「下策」收场），不再无限挂起
+  if (s.crisis) {
+    const def = CRISIS_BY_ID[s.crisis.id];
+    const days = s.day - s.crisis.day;
+    if (days >= 21) {
+      const lines = [`【第 ${s.week} 周 · 危机】「${def?.label ?? "舆论危机"}」拖了三周无人回应，舆论已自行定性：口碑 -8 · 黑粉 +40 · 目标受众认可 -6`];
+      return {
+        ...s, crisis: null, crisesResolved: s.crisesResolved + 1,
+        reputation: clamp(s.reputation - 8, 0, 100), blackFans: clamp(s.blackFans + 40, 0, 999),
+        audience: clamp(s.audience - 6, 0, 100), controversy: clamp(s.controversy - 10, 0, 100),
+        log: [...s.log, ...lines].slice(-40),
+      };
+    }
+    return {
+      ...s, reputation: clamp(s.reputation - 2, 0, 100), blackFans: clamp(s.blackFans + 10, 0, 999),
+      audience: clamp(s.audience - 1, 0, 100), controversy: clamp(s.controversy + 2, 0, 100),
+      log: [...s.log, `【第 ${s.week} 周 · 危机】「${def?.label ?? "舆论危机"}」仍在发酵（口碑 -2 · 黑粉 +10），再拖 ${Math.max(0, 21 - days)} 天将被舆论定性`].slice(-40),
+    };
+  }
   let controversy = clamp(s.controversy - 6, 0, 100);
   let audience = s.audience;
   if (!s.crisis && s.persona && s.brandMatch >= 60) audience = clamp(audience + 2, 0, 100);

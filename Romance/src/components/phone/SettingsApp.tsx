@@ -1,11 +1,25 @@
-/* 设置：仿 iOS 分组列表（壁纸切换 / 显示与亮度 / 声音 / 勿扰 / 关于本机），公共交互惯例、无品牌素材 */
+/* 设置：仿 iOS 分组列表（墙纸 / 显示与亮度 / 通用），公共交互惯例、无品牌素材 */
 import { useRef, useState, type ReactNode } from "react";
 import { useGame } from "../../store/gameCtx";
 import { gameTimeLabel } from "../../game/phone";
 import { dayDateLabel, weekdayName, clockLabel } from "../../game/logic";
 import { WALLPAPERS, wallpaperById, resolveWallpaper, customWallpaperCss, CUSTOM_WALLPAPER_ID, type WallpaperKind } from "./wallpapers";
-import { IconChevron, IconSearch, IconGear, IconSun, IconMusic, IconClock, IconUser } from "./icons";
-import { PHONE_FRAMES, frameById, type FrameId } from "../Phone";
+import { IconChevron, IconGear, IconSun, IconMusic, IconClock, IconUser } from "./icons";
+import { PHONE_FRAMES, frameById, useWide, type FrameId } from "../Phone";
+import type { ThemePref } from "../../lib/store";
+import { liveTerm as T } from "../../mods/live";
+import { ReviewCenter } from "./studio/Studio";
+
+/* 界面主题风格（全站皮肤）：切换 <html> 上的 skin class。 */
+type SkinId = NonNullable<ThemePref["skin"]>;
+const SKINS: { id: SkinId; label: string; desc: string; paper: string; ink: string; accent: string }[] = [
+  { id: "dream", label: "梦幻星紫", desc: "薰衣草糖霜 · 圆润柔光", paper: "#f1ecfd", ink: "#47376f", accent: "#8b6fe0" },
+  { id: "paper", label: "宣纸年代", desc: "奶油纸白 · 旧报复古", paper: "#f3e9d6", ink: "#4a3f2f", accent: "#b06a4f" },
+  { id: "glass", label: "毛玻璃", desc: "通透磨砂 · 冷调现代", paper: "#eef1f6", ink: "#26303f", accent: "#4a7bd0" },
+  { id: "cute", label: "可爱奢华", desc: "甜粉描金 · 少女心", paper: "#fdeef4", ink: "#6b3a52", accent: "#e77aa6" },
+  { id: "bloody", label: "血腥玛丽", desc: "玛丽红 × 奶油白", paper: "#fbf1ec", ink: "#5a2b2b", accent: "#d4425a" },
+];
+const skinLabel = (id?: SkinId) => SKINS.find((s) => s.id === (id ?? "cute"))?.label ?? "梦幻星紫";
 
 type Prefs = {
   wallpaper: string;
@@ -28,10 +42,10 @@ function Row({ icon, tint, label, right, onClick, last }: { icon: ReactNode; tin
       role={onClick ? "button" : undefined}
       className={`flex w-full items-center gap-3 bg-white px-3.5 py-2 text-left ${onClick ? "cursor-pointer transition active:bg-black/[0.03]" : ""}`}
     >
-      <span className="flex h-[26px] w-[26px] items-center justify-center rounded-[7px] text-white" style={{ background: tint }}>{icon}</span>
+      <span className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-[7px] text-white" style={{ background: tint }}>{icon}</span>
       <span className={`flex flex-1 items-center gap-2 py-1.5 text-[15.5px] text-ink ${last ? "" : "border-b border-black/[0.06]"}`}>
-        {label}
-        <span className="ml-auto flex items-center gap-1.5 text-[14px] text-ink-soft">{right}{onClick && <IconChevron size={14} />}</span>
+        <span className="shrink-0">{label}</span>
+        <span className="ml-auto flex min-w-0 items-center justify-end gap-1.5 truncate text-[14px] text-ink-soft">{right}{onClick && <IconChevron size={14} />}</span>
       </span>
     </div>
   );
@@ -40,7 +54,7 @@ function Row({ icon, tint, label, right, onClick, last }: { icon: ReactNode; tin
 /* iOS 拨动开关 */
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
-    <button onClick={() => onChange(!on)} className={`relative h-[26px] w-[42px] rounded-full transition-colors ${on ? "bg-[#34c759]" : "bg-black/15"}`} aria-pressed={on}>
+    <button onClick={(e) => { e.stopPropagation(); onChange(!on); }} className={`relative h-[26px] w-[42px] shrink-0 rounded-full transition-colors ${on ? "bg-[#34c759]" : "bg-black/15"}`} aria-pressed={on}>
       <span className={`absolute top-[2px] h-[22px] w-[22px] rounded-full bg-white shadow transition-all ${on ? "left-[18px]" : "left-[2px]"}`} />
     </button>
   );
@@ -237,150 +251,79 @@ function FramePage({ onBack, current, wpCss, onPick }: { onBack: () => void; cur
   );
 }
 
-/* 界面主题风格：全站皮肤选择（像素复古 / 现代排版等），带迷你排版预览 */
-function ThemeStylePage({ onBack }: { onBack: () => void }) {
+/* 界面主题风格：全站皮肤选择，带迷你排版预览 */
+function ThemeStylePage({ onBack, current, onPick }: { onBack: () => void; current?: SkinId; onPick: (id: SkinId) => void }) {
+  const cur = current ?? "cute";
   return (
     <div className="flex h-full flex-col bg-[#f2f2f7]">
       <SubHeader title="界面主题风格" onBack={onBack} />
       <div className="flex-1 overflow-y-auto py-4">
         <p className="px-6 pb-2 text-[12px] uppercase text-ink-soft">选择排版风格</p>
         <div className="mx-4 grid grid-cols-2 gap-3.5">
-          <p className="col-span-2 px-2 text-[12px] leading-relaxed text-ink-soft">手机只负责通讯与生活功能，游戏主题风格请在主界面的设置中调整。</p>
+          {SKINS.map((sk) => {
+            const active = cur === sk.id;
+            return (
+              <button key={sk.id} onClick={() => onPick(sk.id)} className="text-left">
+                {/* 迷你排版预览：标题条 + 正文行 + 一枚按钮 */}
+                <span
+                  className="relative block h-[92px] w-full overflow-hidden rounded-xl ring-1 ring-black/10 shadow-sm"
+                  style={{ background: sk.paper }}
+                >
+                  <span className="absolute inset-x-2.5 top-2.5 h-3.5 rounded-md" style={{ background: sk.accent }} />
+                  <span className="absolute left-2.5 top-9 h-1.5 w-12 rounded" style={{ background: sk.ink, opacity: 0.65 }} />
+                  <span className="absolute left-2.5 top-[46px] h-1.5 w-16 rounded" style={{ background: sk.ink, opacity: 0.35 }} />
+                  <span
+                    className="absolute bottom-2.5 left-2.5 flex h-6 w-14 items-center justify-center text-[8px] font-bold text-white rounded-md"
+                    style={{ background: sk.accent }}
+                  >
+                    Aa
+                  </span>
+                  {active && CHECK}
+                </span>
+                <span className={`mt-1.5 block text-[13.5px] ${active ? "font-bold text-ink" : "font-medium text-ink"}`}>{sk.label}</span>
+                <span className="block text-[11px] leading-tight text-ink-soft">{sk.desc}</span>
+              </button>
+            );
+          })}
         </div>
-      </div>
-    </div>
-  );
-}
-
-/* 关于本机：设备信息只读列表 */
-function AboutPage({ onBack, week }: { onBack: () => void; week: number }) {
-  const rows: [string, string][] = [
-    ["名称", "星辰的手机"],
-    ["软件版本", "STARLIGHT OS 2005.1"],
-    ["型号名称", "Starlight X"],
-    ["型号", "A2005-CN"],
-    ["序列号", "SXC05" + String(week).padStart(3, "0") + "ZH"],
-    ["无线局域网地址", "88:05:20:0" + (week % 10) + ":C5:A1"],
-    ["容量", "64 GB"],
-    ["可用", `${Math.max(6, 64 - 12 - (week % 20))} GB`],
-    ["运营商", "星城移动 05.1"],
-  ];
-  return (
-    <div className="flex h-full flex-col bg-[#f2f2f7]">
-      <SubHeader title="关于本机" onBack={onBack} />
-      <div className="flex-1 overflow-y-auto py-4">
-        <div className="mx-4 overflow-hidden rounded-xl border border-black/5 bg-white">
-          {rows.map(([k, v], i) => (
-            <div key={k} className="flex items-center gap-3 bg-white px-3.5 py-2.5">
-              <span className={`flex flex-1 items-center justify-between py-1 text-[15px] text-ink ${i < rows.length - 1 ? "border-b border-black/[0.06]" : ""}`}>
-                {k}<span className="text-[14px] text-ink-soft">{v}</span>
-              </span>
-            </div>
-          ))}
-        </div>
+        <p className="px-6 pt-4 text-[11.5px] leading-relaxed text-ink-soft">
+          主题风格作用于整个游戏界面，不同皮肤拥有独立调配的色彩、材质与质感。随时可切回。
+        </p>
       </div>
     </div>
   );
 }
 
 /* 通用：软件更新 / 储存空间 / 日期与时间 / 键盘 / 还原 */
-function GeneralPage({ onBack, week, dateLabel, onAbout }: { onBack: () => void; week: number; dateLabel: string; onAbout: () => void }) {
-  const [toast, setToast] = useState("");
-  const flash = (t: string) => { setToast(t); setTimeout(() => setToast(""), 1800); };
+function GeneralPage({ onBack, week, dateLabel }: { onBack: () => void; week: number; dateLabel: string }) {
   const usedGB = 12 + (week % 20);
   return (
     <div className="relative flex h-full flex-col bg-[#f2f2f7]">
       <SubHeader title="通用" onBack={onBack} />
       <div className="flex-1 overflow-y-auto py-4">
         <div className="mx-4 overflow-hidden rounded-xl border border-black/5 bg-white">
-          <Row icon={<IconGear size={16} />} tint="#8e8e93" label="关于本机" onClick={onAbout} />
-          <Row icon={<span className="text-[12px] font-bold">↻</span>} tint="#34c759" label="软件更新" right="已是最新" onClick={() => flash("STARLIGHT OS 已是最新版本")} last />
-        </div>
-        <div className="mx-4 mt-4 overflow-hidden rounded-xl border border-black/5 bg-white">
           <div className="bg-white px-3.5 py-3">
             <div className="flex items-center justify-between text-[15px] text-ink"><span>iPhone 储存空间</span><span className="text-[13px] text-ink-soft">{usedGB} / 64 GB</span></div>
             <div className="mt-2 h-2 overflow-hidden rounded-full bg-black/10">
               <div className="h-full rounded-full bg-[#0a84ff]" style={{ width: `${(usedGB / 64) * 100}%` }} />
             </div>
-            <div className="mt-1.5 flex gap-3 text-[11px] text-ink-soft">
+            <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-ink-soft">
               <span>· 应用 {Math.round(usedGB * 0.5)} GB</span><span>· 照片 {Math.round(usedGB * 0.3)} GB</span><span>· 系统 {Math.round(usedGB * 0.2)} GB</span>
             </div>
           </div>
         </div>
         <div className="mx-4 mt-4 overflow-hidden rounded-xl border border-black/5 bg-white">
-          <Row icon={<IconClock size={16} />} tint="#f5a623" label="日期与时间" right={`第 ${week} 周 · ${dateLabel}`} onClick={() => flash(`当前游戏内时间：第 ${week} 周 ${dateLabel}`)} />
-          <Row icon={<span className="text-[12px]">⌨</span>} tint="#5856d6" label="键盘" right="简体拼音" onClick={() => flash("已启用：简体拼音 · 手写 · 五笔")} last />
+          <Row icon={<IconClock size={16} />} tint="#f5a623" label="日期与时间" right={`第 ${week} 周 · ${dateLabel}`} last />
         </div>
-        <div className="mx-4 mt-4 overflow-hidden rounded-xl border border-black/5 bg-white">
-          <Row icon={<span className="text-[12px]">⟲</span>} tint="#ff3b30" label="还原" onClick={() => flash("如需重来，请到主菜单开启新存档")} last />
-        </div>
-      </div>
-      {toast && <div className="pointer-events-none absolute inset-x-0 bottom-8 flex justify-center"><span className="rounded-full bg-black/80 px-4 py-1.5 text-[12.5px] text-white shadow-lg">{toast}</span></div>}
-    </div>
-  );
-}
-
-/* 无线局域网：开关 + 可选网络列表 */
-const WIFI_NETS = ["STAR-2005", "启星事务所-5G", "浮光影视基地", "云台传媒城-VIP", "CMCC-星城"];
-function WifiPage({ onBack }: { onBack: () => void }) {
-  const [on, setOn] = useState(true);
-  const [joined, setJoined] = useState("STAR-2005");
-  return (
-    <div className="flex h-full flex-col bg-[#f2f2f7]">
-      <SubHeader title="无线局域网" onBack={onBack} />
-      <div className="flex-1 overflow-y-auto py-4">
-        <div className="mx-4 overflow-hidden rounded-xl border border-black/5 bg-white">
-          <Row icon={<IconGear size={16} />} tint="#0a84ff" label="无线局域网" right={<Toggle on={on} onChange={setOn} />} last />
-        </div>
-        {on && (
-          <>
-            <p className="px-6 pb-1 pt-4 text-[12px] uppercase text-ink-soft">选取网络</p>
-            <div className="mx-4 overflow-hidden rounded-xl border border-black/5 bg-white">
-              {WIFI_NETS.map((n, i) => (
-                <div key={n} onClick={() => setJoined(n)} role="button" className="flex cursor-pointer items-center gap-3 bg-white px-3.5 py-2 transition active:bg-black/[0.03]">
-                  <span className={`flex flex-1 items-center gap-2 py-1.5 text-[15.5px] text-ink ${i < WIFI_NETS.length - 1 ? "border-b border-black/[0.06]" : ""}`}>
-                    {joined === n && <span className="text-[#0a84ff]">✓</span>}
-                    {n}
-                    <span className="ml-auto flex items-center gap-1.5 text-ink-soft">🔒 <span className="text-[12px]">📶</span></span>
-                  </span>
-                </div>
-              ))}
-            </div>
-            <p className="px-6 pt-2 text-[12px] text-ink-soft">已连接「{joined}」。</p>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* 蜂窝网络：数据开关 + 用量 */
-function CellularPage({ onBack }: { onBack: () => void }) {
-  const [data, setData] = useState(true);
-  const [roam, setRoam] = useState(false);
-  return (
-    <div className="flex h-full flex-col bg-[#f2f2f7]">
-      <SubHeader title="蜂窝网络" onBack={onBack} />
-      <div className="flex-1 overflow-y-auto py-4">
-        <div className="mx-4 overflow-hidden rounded-xl border border-black/5 bg-white">
-          <Row icon={<span className="text-[11px] font-bold">5G</span>} tint="#34c759" label="蜂窝数据" right={<Toggle on={data} onChange={setData} />} />
-          <Row icon={<IconGear size={16} />} tint="#0a84ff" label="数据漫游" right={<Toggle on={roam} onChange={setRoam} />} last />
-        </div>
-        <p className="px-6 pb-1 pt-4 text-[12px] uppercase text-ink-soft">当前周期用量</p>
-        <div className="mx-4 overflow-hidden rounded-xl border border-black/5 bg-white">
-          <Row icon={<span className="text-[12px]">📶</span>} tint="#8e8e93" label="运营商" right="星城移动" />
-          <Row icon={<span className="text-[12px]">↑↓</span>} tint="#8e8e93" label="已用流量" right={data ? "3.2 GB" : "已关闭"} last />
-        </div>
-        <p className="px-6 pt-2 text-[12px] text-ink-soft">{data ? "蜂窝数据已开启，可在无 Wi-Fi 时上网。" : "蜂窝数据已关闭，仅在无线局域网下联网。"}</p>
       </div>
     </div>
   );
 }
 
 export default function SettingsApp({ onBack, prefs, onChange }: { onBack: () => void; prefs: Prefs; onChange: (p: Partial<Prefs>) => void }) {
-  const { game } = useGame();
-  const [page, setPage] = useState<"root" | "wallpaper" | "frame" | "general" | "about" | "wifi" | "cellular">("root");
-  const [airplane, setAirplane] = useState(false);
+  const wide = useWide();
+  const { game, theme, setTheme } = useGame();
+  const [page, setPage] = useState<"root" | "wallpaper" | "frame" | "general" | "theme" | "review">("root");
   const wp = resolveWallpaper(prefs.wallpaper, prefs.customWallpaper);
   const week = game!.sim.week ?? 1;
   const dateLabel = gameTimeLabel(game!).split(" ")[0] ?? "";
@@ -397,50 +340,38 @@ export default function SettingsApp({ onBack, prefs, onChange }: { onBack: () =>
     );
   }
   if (page === "frame") return <FramePage current={prefs.frameColor} wpCss={wp.css} onPick={(id) => onChange({ frameColor: id })} onBack={() => setPage("root")} />;
-  if (page === "about") return <AboutPage week={week} onBack={() => setPage("root")} />;
-  if (page === "general") return <GeneralPage week={week} dateLabel={dateLabel} onBack={() => setPage("root")} onAbout={() => setPage("about")} />;
-  if (page === "wifi") return <WifiPage onBack={() => setPage("root")} />;
-  if (page === "cellular") return <CellularPage onBack={() => setPage("root")} />;
+  if (page === "theme") return <ThemeStylePage current={theme.skin} onPick={(skin) => setTheme({ ...theme, skin })} onBack={() => setPage("root")} />;
+  if (page === "review") return (
+    <div className="flex h-full flex-col bg-[#f2f2f7]"><SubHeader title="审核中心" onBack={() => setPage("root")} /><div className="relative min-h-0 flex-1 overflow-y-auto"><ReviewCenter /></div></div>
+  );
+  if (page === "general") return <GeneralPage week={week} dateLabel={dateLabel} onBack={() => setPage("root")}  />;
 
   return (
     <div className="flex h-full flex-col bg-[#f2f2f7]">
       <div className="flex items-center bg-[#f7f7f9] px-3 py-2.5">
-        <button onClick={onBack} className="w-16 text-left text-[15px] text-[#0a84ff]">‹ 主屏</button>
+        <button onClick={onBack} className="flex w-16 items-center text-[15px] text-[#0a84ff]"><IconChevron size={16} className="rotate-180" /> 主屏</button>
         <span className="flex-1 text-center text-[16px] font-semibold text-ink">设置</span>
         <span className="w-16" />
       </div>
 
       <div className="flex-1 overflow-y-auto pb-4">
-        {/* 搜索框（装饰） */}
-        <div className="px-4 py-2">
-          <div className="flex items-center gap-1.5 rounded-[10px] bg-black/[0.06] px-2.5 py-1.5 text-[15px] text-ink-soft">
-            <IconSearch size={16} /> 搜索
-          </div>
-        </div>
-
         {/* Apple ID 卡：玩家资料 */}
-        <button onClick={() => {}} disabled className="mx-4 flex w-[calc(100%-2rem)] items-center gap-3 rounded-xl bg-white px-3.5 py-3 text-left">
-          <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-black/10 text-[20px] font-semibold text-ink-soft ring-1 ring-black/10">
+        <div className="mx-4 mt-3 flex items-center gap-3 rounded-xl bg-white px-3.5 py-3 text-left">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-black/10 text-[20px] font-semibold text-ink-soft ring-1 ring-black/10">
             {game!.player.avatar
-              ? <img src={game!.player.avatar} alt={game!.player.name} className="h-14 w-14 object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+              ? <img src={(game!.player.avatar) || undefined} alt={game!.player.name} className="h-14 w-14 object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
               : game!.player.name?.[0]}
           </div>
           <div className="min-w-0">
             <p className="truncate text-[18px] font-semibold text-ink">{game!.player.name}</p>
-            <p className="mt-0.5 text-[12.5px] text-ink-soft">星辰账户 · iCloud · 星城</p>
+            <p className="mt-0.5 text-[12.5px] text-ink-soft">星辰账户 · iCloud · {T("city")}</p>
           </div>
-        </button>
-
-        {/* 无线 / 蜂窝（只读信息） */}
-        <div className="mt-4 overflow-hidden rounded-xl border border-black/5 bg-white mx-4">
-          <Row icon={<span className="text-[13px]">✈︎</span>} tint="#f5a623" label="飞行模式" right={<Toggle on={airplane} onChange={setAirplane} />} />
-          <Row icon={<IconGear size={16} />} tint="#0a84ff" label="无线局域网" right={airplane ? "已关闭" : "STAR-2005"} onClick={() => setPage("wifi")} />
-          <Row icon={<span className="text-[12px] font-bold">5G</span>} tint="#34c759" label="蜂窝网络" right={airplane ? "无服务" : "星城移动"} onClick={() => setPage("cellular")} last />
         </div>
+
 
         {/* 显示与亮度 + 墙纸 + 声音 */}
         <div className="mt-4 overflow-hidden rounded-xl border border-black/5 bg-white mx-4">
-          <Row icon={<IconSun size={16} />} tint="#0a84ff" label="显示与亮度" right={prefs.dark ? "深色" : "浅色"} onClick={() => onChange({ dark: !prefs.dark })} />
+          <Row icon={<IconSun size={16} />} tint="#0a84ff" label="深色模式" right={<Toggle on={prefs.dark} onChange={(v) => onChange({ dark: v })} />} />
           <div className="flex items-center gap-3 bg-white px-3.5 py-2.5">
             <span className="text-ink-soft"><IconSun size={16} /></span>
             <input
@@ -451,35 +382,36 @@ export default function SettingsApp({ onBack, prefs, onChange }: { onBack: () =>
             />
             <span className="w-9 text-right text-[12px] tabular-nums text-ink-soft">{Math.round(prefs.brightness * 100)}%</span>
           </div>
-          <Row icon={<IconGear size={16} />} tint="#5856d6" label="墙纸" right={wp.label} onClick={() => setPage("wallpaper")} />
-          <Row
-            icon={<span className="text-[13px]">▭</span>}
-            tint="#111114" label="显示手机边框" right={<Toggle on={prefs.showFrame} onChange={(v) => onChange({ showFrame: v })} />}
-            last={!prefs.showFrame}
-          />
-          {prefs.showFrame && (
-            <Row
-              icon={<span className="block h-3.5 w-3.5 rounded-full ring-1 ring-white/40" style={{ background: frameById(prefs.frameColor).swatch }} />}
-              tint="#5b5b60" label="机身外壳" right={frameById(prefs.frameColor).label} onClick={() => setPage("frame")} last
-            />
-          )}
+          <Row icon={<IconGear size={16} />} tint="#5856d6" label="墙纸" right={wp.label} onClick={() => setPage("wallpaper")} last={!wide} />
+          {wide ? (
+            <>
+              <Row
+                icon={<span className="block h-2.5 w-4 rounded-[2px] border-2 border-current" aria-hidden />}
+                tint="#111114" label="显示手机边框" right={<Toggle on={prefs.showFrame} onChange={(v) => onChange({ showFrame: v })} />}
+                last={!prefs.showFrame}
+              />
+              {prefs.showFrame && (
+                <Row
+                  icon={<span className="block h-3.5 w-3.5 rounded-full ring-1 ring-white/40" style={{ background: frameById(prefs.frameColor).swatch }} />}
+                  tint="#5b5b60" label="机身外壳" right={frameById(prefs.frameColor).label} onClick={() => setPage("frame")} last
+                />
+              )}
+            </>
+          ) : null}
         </div>
-        <p className="px-6 pt-1.5 text-[11.5px] leading-relaxed text-ink-soft/70">
-          {prefs.showFrame ? "已显示仿真机身，屏幕四周带钛金中框。" : "当前为整屏沉浸模式，无机身边框；打开开关可显示仿真手机外壳。"}
-        </p>
+        {wide && (
+          <p className="px-6 pt-1.5 text-[11.5px] leading-relaxed text-ink-soft/70">
+            {prefs.showFrame ? "已显示仿真机身，屏幕四周带钛金中框。" : "当前为整屏沉浸模式，无机身边框；打开开关可显示仿真手机外壳。"}
+          </p>
+        )}
 
+        {/* 通用 */}
         <div className="mt-4 overflow-hidden rounded-xl border border-black/5 bg-white mx-4">
-          <Row icon={<IconMusic size={16} />} tint="#ff2d55" label="声音与触感" right={<Toggle on={prefs.haptics} onChange={(v) => onChange({ haptics: v })} />} />
-          <Row icon={<IconClock size={16} />} tint="#5856d6" label="专注 · 勿扰模式" right={<Toggle on={prefs.dnd} onChange={(v) => onChange({ dnd: v })} />} last />
+          <Row icon={<IconGear size={16} />} tint="#3fb68b" label="审核中心" right="开发者工坊" onClick={() => setPage("review")} />
+          <Row icon={<IconGear size={16} />} tint="#8e8e93" label="通用" onClick={() => setPage("general")} last />
         </div>
 
-        {/* 通用 / 关于本机 */}
-        <div className="mt-4 overflow-hidden rounded-xl border border-black/5 bg-white mx-4">
-          <Row icon={<IconGear size={16} />} tint="#8e8e93" label="通用" onClick={() => setPage("general")} />
-          <Row icon={<IconUser size={16} />} tint="#34c759" label="关于本机" right={`星城 · 第 ${week} 周`} onClick={() => setPage("about")} last />
-        </div>
-
-        <p className="px-6 py-4 text-center text-[11.5px] text-ink-soft/70">STARLIGHT OS · 版本 2005.1{prefs.dnd ? " · 勿扰开启" : ""}</p>
+        <p className="px-6 py-4 text-center text-[11.5px] text-ink-soft/70">STARLIGHT OS · 版本 2005.1</p>
       </div>
     </div>
   );

@@ -63,11 +63,20 @@ function starOf(i: number): number {
   return 5;
 }
 
-const FAME_REQ = [0, 45, 120, 230, 410];
-const PAY_BASE = [32000, 85000, 175000, 340000, 820000];
-const FAME_REW = [10, 20, 34, 68, 140];
-const DAYS = [1, 2, 2, 3, 4];
-const ENERGY = [9, 11, 13, 16, 22];
+/* 价目表（按星级 1~5）：每个世界可经模组槽 gigPrices 覆盖；缺省 = 娱乐圈原价 */
+export type GigPriceTable = { fameReq?: number[]; payBase?: number[]; fameReward?: number[]; days?: number[]; energy?: number[] };
+export const DEFAULT_GIG_PRICES: Required<GigPriceTable> = {
+  fameReq: [0, 45, 120, 230, 410],
+  payBase: [32000, 85000, 175000, 340000, 820000],
+  fameReward: [10, 20, 34, 68, 140],
+  days: [1, 2, 2, 3, 4],
+  energy: [9, 11, 13, 16, 22],
+};
+let FAME_REQ = DEFAULT_GIG_PRICES.fameReq;
+let PAY_BASE = DEFAULT_GIG_PRICES.payBase;
+let FAME_REW = DEFAULT_GIG_PRICES.fameReward;
+let DAYS = DEFAULT_GIG_PRICES.days;
+let ENERGY = DEFAULT_GIG_PRICES.energy;
 const STAT_PRIMARY = [55, 115, 185, 255, 335];
 const GROW_PRIMARY = [6, 12, 16, 22, 30];
 
@@ -230,4 +239,27 @@ function build(): Gig[] {
   return out;
 }
 
+function buildWith(t: GigPriceTable): Gig[] {
+  const ok = (a: number[] | undefined, d: number[]) => (Array.isArray(a) && a.length >= 5 && a.every((x) => Number.isFinite(x)) ? a : d);
+  FAME_REQ = ok(t.fameReq, DEFAULT_GIG_PRICES.fameReq);
+  PAY_BASE = ok(t.payBase, DEFAULT_GIG_PRICES.payBase);
+  FAME_REW = ok(t.fameReward, DEFAULT_GIG_PRICES.fameReward);
+  DAYS = ok(t.days, DEFAULT_GIG_PRICES.days);
+  ENERGY = ok(t.energy, DEFAULT_GIG_PRICES.energy);
+  try { return build(); } finally {
+    FAME_REQ = DEFAULT_GIG_PRICES.fameReq; PAY_BASE = DEFAULT_GIG_PRICES.payBase; FAME_REW = DEFAULT_GIG_PRICES.fameReward;
+    DAYS = DEFAULT_GIG_PRICES.days; ENERGY = DEFAULT_GIG_PRICES.energy;
+  }
+}
+
 export const GENERATED_GIGS: Gig[] = build();
+const GENERATED_IDS = new Set(GENERATED_GIGS.map((g) => g.id));
+
+/* 按世界价目表重算通告库：只替换库内生成的通告（同 id），其余手写通告原样保留 */
+const priced = new WeakMap<GigPriceTable, Map<string, Gig>>();
+export function applyGigPrices(gigs: Gig[], table: GigPriceTable | undefined): Gig[] {
+  if (!table || table === DEFAULT_GIG_PRICES) return gigs;
+  let m = priced.get(table);
+  if (!m) { m = new Map(buildWith(table).map((g) => [g.id, g])); priced.set(table, m); }
+  return gigs.map((g) => (GENERATED_IDS.has(g.id) ? m!.get(g.id) ?? g : g));
+}

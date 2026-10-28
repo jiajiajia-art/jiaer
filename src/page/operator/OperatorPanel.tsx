@@ -16,10 +16,12 @@ import operatorStatsApi, {
 import type { CreatorWorkItem, StatsOverview } from '../../api/stats/creatorStatsApi';
 import OperatorReports from './OperatorReports';
 import WithdrawAdminManager from '../../components/WithdrawAdminManager';
+import AdminPublicAvatarManager from '../../components/admin/AdminPublicAvatarManager';
+import AdminPlayModManager from '../../components/admin/AdminPlayModManager';
 import adminStyles from '../AdminPanel.module.css';
 import styles from './OperatorPanel.module.css';
 
-type OperatorTab = 'stats' | 'reports' | 'promotions' | 'recruitment' | 'dailyTasks' | 'withdraw';
+type OperatorTab = 'stats' | 'reports' | 'promotions' | 'recruitment' | 'dailyTasks' | 'withdraw' | 'avatars' | 'components';
 type WorksSortField = 'playCount' | 'pv' | 'shareCount';
 type SortDirection = 'asc' | 'desc';
 
@@ -36,6 +38,8 @@ const resolveOperatorTab = (pathname: string): OperatorTab => {
   if (pathname.startsWith('/operator/recruitment')) return 'recruitment';
   if (pathname.startsWith('/operator/daily-tasks')) return 'dailyTasks';
   if (pathname.startsWith('/operator/withdraw')) return 'withdraw';
+  if (pathname.startsWith('/operator/avatars')) return 'avatars';
+  if (pathname.startsWith('/operator/components') || pathname.startsWith('/operator/play-mods')) return 'components';
   return 'stats';
 };
 
@@ -68,6 +72,8 @@ const OperatorPanel: React.FC = () => {
     { id: 'recruitment', label: t('operator.tabs.recruitment'), path: '/operator/recruitment' },
     { id: 'dailyTasks', label: t('operator.tabs.dailyTasks'), path: '/operator/daily-tasks' },
     { id: 'withdraw', label: t('operator.tabs.withdraw'), path: '/operator/withdraw' },
+    { id: 'avatars', label: '公共头像', path: '/operator/avatars' },
+    { id: 'components', label: '组件管理', path: '/operator/components' },
   ]), [t]);
 
   const sortedWorks = useMemo(() => {
@@ -388,6 +394,8 @@ const OperatorPanel: React.FC = () => {
             {!isLoading && activeTab === 'stats' ? renderStats() : null}
             {!isLoading && activeTab === 'reports' ? <OperatorReports /> : null}
             {activeTab === 'withdraw' ? <WithdrawAdminManager /> : null}
+            {activeTab === 'avatars' ? <AdminPublicAvatarManager /> : null}
+            {activeTab === 'components' ? <AdminPlayModManager /> : null}
             {!isLoading && activeTab === 'promotions' ? (
               <PromotionAdminManager pendingReviewCount={0} onRefreshCounts={async () => {}} />
             ) : null}

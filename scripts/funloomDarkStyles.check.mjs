@@ -375,7 +375,8 @@ test('Rankings_排行榜应对齐奶油台面与酒红榜单卡', () => {
 
 test('CreateGameModals_创作类型弹窗应对齐暗色卡片列表', () => {
   const css = read('src/components/CreateGame/CreateGameModals.module.css');
-  const tsx = read('src/components/CreateGame/CreateGameModals.tsx');
+  /* 功能注释：类型列表已迁到 CreateType 页，样式仍复用 CreateGameModals.module.css */
+  const tsx = read('src/page/CreateType.tsx');
   const zh = read('src/i18n/locales/zh.json');
   assert.match(css, /\.createTypeModal\s*\{[\s\S]*?--type-primary:\s*#A8283C/);
   assert.match(css, /\.createTypeModal\s*\{[\s\S]*?background-color:\s*var\(--type-surface\)/);
@@ -393,16 +394,17 @@ test('CreateGameModals_创作类型弹窗应对齐暗色卡片列表', () => {
 
 test('CreateGameModals_类型行应有区分色调的模式图标', () => {
   const css = read('src/components/CreateGame/CreateGameModals.module.css');
-  const tsx = read('src/components/CreateGame/CreateGameModals.tsx');
-  /* 功能注释：禁止空 thumb；五种模式各有图标 + 色调 class */
+  const tsx = read('src/page/CreateType.tsx');
+  /* 功能注释：禁止空 thumb；含创作游戏（Romance）共六种模式各有图标 + 色调 class */
   assert.match(tsx, /icon=\{MdAutoStories\}/);
+  assert.match(tsx, /icon=\{MdOutlineAutoAwesome\}/);
   assert.match(tsx, /icon=\{HiOutlineUserGroup\}/);
   assert.match(tsx, /icon=\{MdOutlineMovie\}/);
   assert.match(tsx, /icon=\{HiOutlinePuzzle\}/);
   assert.match(tsx, /icon=\{MdSportsEsports\}/);
-  assert.match(tsx, /tone="txt"/);
   assert.match(tsx, /createTypeOptionIcon/);
   assert.match(css, /\.createTypeOptionThumbTxt/);
+  assert.match(css, /\.createTypeOptionThumbRomance/);
   assert.match(css, /\.createTypeOptionThumbAvg/);
   assert.match(css, /\.createTypeOptionThumbIvg/);
   assert.match(css, /\.createTypeOptionThumbCustom/);

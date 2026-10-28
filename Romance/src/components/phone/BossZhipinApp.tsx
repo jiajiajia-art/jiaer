@@ -1,12 +1,17 @@
 /* 老板直聘 —— 仿真招聘 App。进入先选身份：我要找工作（求职者）/ 我要招人（企业）。
  * 视觉自绘、内容全部虚构。求职端职位来自游戏内 8 家经纪公司（签约艺人 + 幕后/运营真实岗位）；
  * 企业端你以「工作室」身份发布职位、翻牌候选艺人。薪资/门槛按公司声望确定性推导，不结算真实数值。 */
-import { useMemo, useState } from "react";
+import { loadData, saveData, removeData } from "../../lib/saveScope";
+import { useEffect, useMemo, useState } from "react";
+import { useWorldSync, syncJson, loadFeed, saveFeed } from "./worldSync";
+import { LoadMoreButton, seenOf } from "./shared";
 import { useGame } from "../../store/gameCtx";
 import { COMPANIES, companyMeta } from "../../worlds/star2005/content";
 import { STAT_LABELS, STAT_ORDER } from "../../game/data";
 import { Avatar } from "../ui";
 import { IconSearch, IconChevron } from "./icons";
+import { liveTerm as T } from "../../mods/live";
+import { IconBriefcase, IconCheck, IconUser } from "../../lib/icons";
 
 const ACCENT = "#0f9e94";
 const ROLE_KEY = "bosspin.role";
@@ -32,24 +37,9 @@ type Job = {
   reqs: string[];
 };
 
-const AREAS = ["星城·云台区", "星城·滨江新区", "星城·老城厢", "星城·影视基地", "星城·文创园"];
+const AREA_NAMES = ["云台区", "滨江新区", "老城厢", "影视基地", "文创园"];
+const areaAt = (i: number) => `${T("city")}·${AREA_NAMES[i % AREA_NAMES.length]}`;
 const fallbackBoss: Boss = { name: "招聘负责人", title: "HR", age: 38, style: "务实", quote: "先聊聊，看合不合适。", bio: "" };
-
-type CrewTpl = { key: string; title: string; cat: "幕后" | "运营"; salary: string; exp: string; edu: string; tags: string[]; duties: string[]; reqs: string[] };
-const CREW: CrewTpl[] = [
-  { key: "assist", title: "艺人私人助理", cat: "运营", salary: "3-5千/月", exp: "经验不限", edu: "大专", tags: ["包食宿", "五险", "跟组"], duties: ["安排艺人日常行程与通告接送", "对接剧组、化妆、宣传等各方", "处理证件、机票、酒店等事务"], reqs: ["细心负责、抗压能力强", "能适应不规律作息与出差", "会开车者优先"] },
-  { key: "pr", title: "宣传企划专员", cat: "运营", salary: "4-7千/月", exp: "1-3年", edu: "本科", tags: ["双休", "五险一金", "带项目"], duties: ["策划艺人及作品的宣传物料与话题", "维护媒体、平台与合作方关系", "撰写通稿、跟进热搜与投放"], reqs: ["文案功底扎实、熟悉娱乐生态", "有媒体或公关资源者优先", "反应快、执行力强"] },
-  { key: "makeup", title: "妆发造型师", cat: "幕后", salary: "5-9千/月", exp: "2年以上", edu: "不限", tags: ["跟组", "作品分成", "包住"], duties: ["负责艺人妆容与发型设计", "配合造型总监完成整体风格", "现场随时补妆、保持状态"], reqs: ["精通影视/舞台妆", "有代表作或艺人合作经历", "审美在线、手速快"] },
-  { key: "photo", title: "摄影摄像", cat: "幕后", salary: "6千-1万/月", exp: "2-4年", edu: "不限", tags: ["器材齐全", "项目奖金"], duties: ["拍摄写真、物料、幕后花絮", "配合宣传节奏产出成片", "基础调色与素材整理"], reqs: ["熟练使用专业相机与灯光", "有人像/时尚拍摄经验", "有个人作品集"] },
-  { key: "editor", title: "后期剪辑", cat: "幕后", salary: "5-8千/月", exp: "1-3年", edu: "大专", tags: ["弹性工时", "五险"], duties: ["剪辑物料、预告与短视频", "配合宣传产出适配各平台内容", "基础包装与字幕"], reqs: ["精通 Premiere / AE", "节奏感与叙事感俱佳", "能扛短周期交付"] },
-  { key: "writer", title: "编剧 / 编审", cat: "幕后", salary: "8千-1.5万/月", exp: "3年以上", edu: "本科", tags: ["署名", "版权分成"], duties: ["剧本创作、改稿与围读", "把控人物与剧情逻辑", "配合导演与制片调整"], reqs: ["有已播出/上映作品", "文字功底与结构能力强", "耐得住长线创作"] },
-  { key: "vocal", title: "声乐老师", cat: "幕后", salary: "6千-1万/月", exp: "3年以上", edu: "本科（音乐类）", tags: ["课时费", "带练习生"], duties: ["为练习生/艺人做声乐训练", "制定阶段性教学计划", "配合团体出道备赛"], reqs: ["科班出身、教学经验丰富", "能因材施教、有耐心", "有学员成材案例优先"] },
-  { key: "dance", title: "舞蹈老师", cat: "幕后", salary: "6千-1万/月", exp: "2年以上", edu: "不限", tags: ["课时费", "编舞奖金"], duties: ["编舞与舞蹈基本功教学", "配合舞台与 MV 排练", "把控团体队形与整齐度"], reqs: ["舞种功底扎实、能编能教", "有舞台或团体经验", "体能好、示范能力强"] },
-  { key: "manager", title: "经纪人助理", cat: "运营", salary: "5-8千/月", exp: "1-3年", edu: "本科", tags: ["五险一金", "晋升快"], duties: ["协助经纪人对接资源与谈判", "维护艺人档期与合同事务", "跟进项目落地"], reqs: ["沟通谈判能力强、情商高", "熟悉行业规则", "能扛事、守得住秘密"] },
-  { key: "social", title: "新媒体运营", cat: "运营", salary: "4-7千/月", exp: "经验不限", edu: "大专", tags: ["双休", "内容奖金"], duties: ["运营艺人官方账号矩阵", "策划日常内容与互动", "监测数据、优化涨粉"], reqs: ["熟悉各大内容平台玩法", "有账号从 0 做起的经验优先", "网感好、会追热点"] },
-  { key: "fans", title: "粉丝运营", cat: "运营", salary: "4-6千/月", exp: "经验不限", edu: "大专", tags: ["带团队", "活动奖金"], duties: ["维护官方后援会与粉丝社群", "组织应援、生日会等活动", "引导粉丝氛围、处理舆情"], reqs: ["熟悉饭圈文化、共情力强", "组织协调能力好", "情绪稳定、有分寸"] },
-  { key: "event", title: "活动执行", cat: "运营", salary: "4-7千/月", exp: "1-3年", edu: "大专", tags: ["项目制", "出差补贴"], duties: ["统筹发布会、红毯、见面会执行", "对接场地、供应商与流程", "现场把控与应急处理"], reqs: ["细致、抗压、擅长多线程", "有大型活动执行经验", "能接受不定时加班"] },
-];
 
 function artistTitle(prestige: number): string {
   return prestige >= 72 ? "签约当红艺人 · 一线咖位"
@@ -67,28 +57,15 @@ function makeArtistJob(companyId: string, prestige: number, i: number): Job {
     kind: "artist", cat: "艺人",
     companyId, company: meta.name, boss,
     title: artistTitle(prestige),
-    salary: prestige >= 56 ? `保底 ${low}万/月 · 项目分成` : `保底 ${low}-${high}千/月 · 通告分成`,
-    area: AREAS[i % AREAS.length],
+    salary: prestige >= 56 ? `保底 ${low}万/月 · 项目分成` : `保底 ${low}-${high}千/月 · ${T("gig")}分成`,
+    area: areaAt(i),
     exp: "新人可投", edu: "形象气质佳",
     tags: [prestige >= 60 ? "重点捧" : "长线培养", "艺人经纪", `声望${prestige}`],
     fameReq,
-    duties: ["按公司规划参与影视/音乐/综艺等项目", "配合宣传、通告与商务活动", "持续打磨专业能力与舞台表现"],
+    duties: ["按公司规划参与影视/音乐/综艺等项目", `配合宣传、${T("gig")}与商务活动`, "持续打磨专业能力与舞台表现"],
     reqs: [`名气达到 ${fameReq} 以上者优先`, "肯吃苦、可塑性强、无不良记录", "认同公司培养方向与合约条款"],
   };
 }
-function makeCrewJob(tpl: CrewTpl, companyId: string, i: number): Job {
-  const meta = companyMeta(companyId);
-  const boss = meta.boss ?? fallbackBoss;
-  return {
-    id: `crew_${tpl.key}`,
-    kind: "crew", cat: tpl.cat,
-    companyId, company: meta.name, boss,
-    title: tpl.title, salary: tpl.salary, area: AREAS[i % AREAS.length],
-    exp: tpl.exp, edu: tpl.edu, tags: tpl.tags, fameReq: 0,
-    duties: tpl.duties, reqs: tpl.reqs,
-  };
-}
-
 /* ───────────────── 老板回复（求职端）───────────────── */
 const GREETS = ["您好，我对这个职位很感兴趣～", "我的条件符合要求吗？", "方便介绍下具体工作/培养吗？"];
 function bossReply(job: Job, greet: string, fame: number): string {
@@ -128,13 +105,17 @@ function candidateReply(fame: number, personality: string, greet: string, studio
 
 /* ───────────────── 通用聊天视图 ───────────────── */
 type Msg = { from: "peer" | "me"; text: string };
-function ChatView({ peerName, peerSub, peerAvatarName, meName, meAvatar, opener, greets, reply, actionLabel, onAction, onBack }: {
-  peerName: string; peerSub: string; peerAvatarName: string; meName: string; meAvatar: string;
+/* 会话记录按对象缓存：返回列表再进入时延续之前的聊天，而不是重新开场 */
+const CHAT_CACHE = new Map<string, { msgs: Msg[]; used: string[]; done: boolean }>();
+function ChatView({ cacheKey, peerName, peerSub, peerAvatarName, meName, meAvatar, opener, greets, reply, actionLabel, onAction, onBack }: {
+  cacheKey: string; peerName: string; peerSub: string; peerAvatarName: string; meName: string; meAvatar: string;
   opener: string; greets: string[]; reply: (g: string) => string; actionLabel: string; onAction: () => string; onBack: () => void;
 }) {
-  const [msgs, setMsgs] = useState<Msg[]>([{ from: "peer", text: opener }]);
-  const [used, setUsed] = useState<string[]>([]);
-  const [done, setDone] = useState(false);
+  const cached = CHAT_CACHE.get(cacheKey);
+  const [msgs, setMsgs] = useState<Msg[]>(cached?.msgs ?? [{ from: "peer", text: opener }]);
+  const [used, setUsed] = useState<string[]>(cached?.used ?? []);
+  const [done, setDone] = useState(cached?.done ?? false);
+  useEffect(() => { CHAT_CACHE.set(cacheKey, { msgs, used, done }); }, [cacheKey, msgs, used, done]);
   const send = (g: string) => {
     setUsed((u) => [...u, g]);
     setMsgs((m) => [...m, { from: "me", text: g }]);
@@ -152,9 +133,9 @@ function ChatView({ peerName, peerSub, peerAvatarName, meName, meAvatar, opener,
     <div className="flex h-full flex-col bg-[#f2f3f5]">
       <div className="flex items-center border-b border-black/5 bg-white px-3 py-2.5">
         <button onClick={onBack} className="flex items-center text-[14px] text-ink-soft"><IconChevron size={16} className="rotate-180" /></button>
-        <div className="flex-1 text-center">
-          <p className="text-[15px] font-semibold text-ink">{peerName}</p>
-          <p className="text-[11px] text-ink-soft">{peerSub} · 在线</p>
+        <div className="min-w-0 flex-1 text-center">
+          <p className="truncate text-[15px] font-semibold text-ink">{peerName}</p>
+          <p className="truncate text-[11px] text-ink-soft">{peerSub} · 在线</p>
         </div>
         <span className="w-6" />
       </div>
@@ -192,12 +173,12 @@ function RoleChooser({ onBack, onPick }: { onBack: () => void; onPick: (r: Role)
         <p className="mt-1 text-[13.5px] text-white/85">找工作 / 招人，都来直接谈</p>
         <p className="mt-8 text-[13px] font-medium text-white/90">请选择你的身份</p>
         <button onClick={() => onPick("seeker")} className="mt-3 flex items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-lg">
-          <span className="flex h-11 w-11 items-center justify-center rounded-full text-[20px]" style={{ background: "#e3f6f2" }}>🙋‍♀️</span>
+          <span className="flex h-11 w-11 items-center justify-center rounded-full" style={{ background: "#e3f6f2", color: ACCENT }}><IconUser size={22} /></span>
           <div className="flex-1"><p className="text-[16px] font-bold text-ink">我要找工作</p><p className="text-[12px] text-ink-soft">浏览岗位，直接和老板聊</p></div>
           <IconChevron size={18} />
         </button>
         <button onClick={() => onPick("employer")} className="mt-3 flex items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-lg">
-          <span className="flex h-11 w-11 items-center justify-center rounded-full text-[20px]" style={{ background: "#fdf0d9" }}>💼</span>
+          <span className="flex h-11 w-11 items-center justify-center rounded-full" style={{ background: "#fdf0d9", color: "#c47a12" }}><IconBriefcase size={22} /></span>
           <div className="flex-1"><p className="text-[16px] font-bold text-ink">我要招人</p><p className="text-[12px] text-ink-soft">发布职位，翻牌心仪的候选人</p></div>
           <IconChevron size={18} />
         </button>
@@ -213,7 +194,7 @@ function JobCard({ job, fame, onOpen }: { job: Job; fame: number; onOpen: () => 
   return (
     <button onClick={onOpen} className="mx-3 mb-2.5 block w-[calc(100%-1.5rem)] rounded-2xl bg-white p-3.5 text-left shadow-sm ring-1 ring-black/5">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[15.5px] font-semibold text-ink">{job.title}</p>
+        <p className="min-w-0 text-[15.5px] font-semibold text-ink">{job.title}</p>
         <span className="shrink-0 text-[13.5px] font-bold" style={{ color: ACCENT }}>{job.salary.split(" · ")[0]}</span>
       </div>
       <p className="mt-1 text-[11.5px] text-ink-soft">{job.area} · {job.exp} · {job.edu}</p>
@@ -221,7 +202,7 @@ function JobCard({ job, fame, onOpen }: { job: Job; fame: number; onOpen: () => 
         {job.tags.map((t) => <span key={t} className="rounded-md bg-black/[0.05] px-1.5 py-0.5 text-[11px] text-ink-soft">{t}</span>)}
         {job.kind === "artist" && (
           <span className="rounded-md px-1.5 py-0.5 text-[11px] font-medium" style={{ background: artistOk ? "#dcf5ee" : "#fdeaea", color: artistOk ? "#0a7d5f" : "#e5484d" }}>
-            {artistOk ? "名气达标 ✓" : `名气门槛 ${job.fameReq}`}
+            {artistOk ? "名气达标 " : `名气门槛 ${job.fameReq}`}
           </span>
         )}
       </div>
@@ -243,9 +224,9 @@ function JobDetail({ job, fame, onChat, onBack }: { job: Job; fame: number; onCh
       </div>
       <div className="flex-1 overflow-y-auto pb-4">
         <div className="bg-white px-4 py-4">
-          <div className="flex items-start justify-between">
-            <p className="text-[18px] font-bold text-ink">{job.title}</p>
-            <span className="text-[16px] font-bold" style={{ color: ACCENT }}>{job.salary.split(" · ")[0]}</span>
+          <div className="flex items-start justify-between gap-3">
+            <p className="min-w-0 text-[18px] font-bold text-ink">{job.title}</p>
+            <span className="shrink-0 text-[16px] font-bold" style={{ color: ACCENT }}>{job.salary.split(" · ")[0]}</span>
           </div>
           <p className="mt-1 text-[12px] text-ink-soft">{job.area} · {job.exp} · {job.edu}</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
@@ -279,19 +260,22 @@ function JobDetail({ job, fame, onChat, onBack }: { job: Job; fame: number; onCh
 }
 
 /* ───────────────── 求职端 ───────────────── */
-function SeekerApp({ jobs, fame, playerName, playerAvatar, desc, stats, onBack, onSwitch }: {
-  jobs: Job[]; fame: number; playerName: string; playerAvatar: string; desc: string; stats: Record<string, number>; onBack: () => void; onSwitch: () => void;
+function SeekerApp({ jobs, fame, playerName, playerAvatar, desc, stats, moreLoading, onLoadMore, onBack, onSwitch }: {
+  jobs: Job[]; fame: number; playerName: string; playerAvatar: string; desc: string; stats: Record<string, number>; moreLoading: boolean; onLoadMore: () => Promise<string>; onBack: () => void; onSwitch: () => void;
 }) {
+  const [toast, setToast] = useState("");
+  const flash = (t: string) => { if (!t) return; setToast(t); setTimeout(() => setToast(""), 1800); };
   const [tab, setTab] = useState<"jobs" | "msg" | "me">("jobs");
   const [cat, setCat] = useState<"推荐" | "艺人" | "幕后" | "运营">("推荐");
   const [detail, setDetail] = useState<string | null>(null);
   const [chat, setChat] = useState<string | null>(null);
   const [visited, setVisited] = useState<string[]>([]);
+  const [q, setQ] = useState("");
 
   const job = (id: string | null) => jobs.find((j) => j.id === id);
   if (chat) {
     const j = job(chat);
-    if (j) return <ChatView
+    if (j) return <ChatView cacheKey={`seek_${j.id}`}
       peerName={j.boss.name} peerSub={`${j.company} · ${j.title}`} peerAvatarName={j.boss.name}
       meName={playerName} meAvatar={playerAvatar}
       opener={`我是${j.company}的${j.boss.name}。${j.kind === "artist" ? j.boss.quote : `「${j.title}」还在招，你的情况方便说说吗？`}`}
@@ -305,19 +289,22 @@ function SeekerApp({ jobs, fame, playerName, playerAvatar, desc, stats, onBack, 
     if (j) return <JobDetail job={j} fame={fame} onBack={() => setDetail(null)} onChat={() => { setVisited((v) => v.includes(j.id) ? v : [...v, j.id]); setChat(j.id); setDetail(null); }} />;
   }
 
-  const shown = jobs.filter((j) => cat === "推荐" ? true : j.cat === cat);
+  const kw = q.trim().toLowerCase();
+  const shown = jobs.filter((j) => (cat === "推荐" ? true : j.cat === cat) && (!kw || `${j.title}${j.company}${j.tags.join("")}`.toLowerCase().includes(kw)));
   const top = [...STAT_ORDER].sort((a, b) => (stats[b] ?? 0) - (stats[a] ?? 0)).slice(0, 4);
 
   return (
-    <div className="flex h-full flex-col bg-[#f2f3f5]">
+    <div className="relative flex h-full flex-col bg-[#f2f3f5]">
       <div className="bg-white px-4 pb-2.5 pt-3">
         <div className="flex items-center justify-between">
           <button onClick={onBack} className="text-[14px] text-ink-soft">‹ 主屏</button>
           <p className="text-[15px] font-bold" style={{ color: ACCENT }}>老板直聘 · 求职</p>
-          <span className="text-[13px] text-ink-soft">星城 ▾</span>
+          <span className="text-[13px] text-ink-soft">{T("city")}</span>
         </div>
         <div className="mt-2.5 flex items-center gap-2 rounded-full bg-black/[0.05] px-3.5 py-2 text-ink-soft">
-          <IconSearch size={16} /><span className="text-[13px]">搜索职位 · 经纪公司</span>
+          <IconSearch size={16} />
+          <input value={q} onChange={(e) => { setQ(e.target.value); setTab("jobs"); }} placeholder="搜索职位 · 经纪公司" className="min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-ink-soft" />
+          {q && <button onClick={() => setQ("")} aria-label="清除" className="text-[13px]"></button>}
         </div>
       </div>
 
@@ -329,8 +316,11 @@ function SeekerApp({ jobs, fame, playerName, playerAvatar, desc, stats, onBack, 
             ))}
           </div>
           <div className="flex-1 overflow-y-auto py-2.5">
+            {shown.length === 0 && <p className="px-6 py-16 text-center text-[13px] text-ink-soft">{kw ? `没有找到与「${q.trim()}」相关的职位` : "该分类暂时没有职位"}</p>}
             {shown.map((j) => <JobCard key={j.id} job={j} fame={fame} onOpen={() => setDetail(j.id)} />)}
+            {!kw && <LoadMoreButton loading={moreLoading} onClick={() => void onLoadMore().then(flash)} color={ACCENT} dark />}
           </div>
+          {toast && <div className="pointer-events-none absolute left-1/2 top-24 z-40 -translate-x-1/2 rounded-lg bg-black/75 px-3 py-1.5 text-[12.5px] text-white">{toast}</div>}
         </>
       )}
 
@@ -338,7 +328,7 @@ function SeekerApp({ jobs, fame, playerName, playerAvatar, desc, stats, onBack, 
         <div className="flex-1 overflow-y-auto py-1">
           {visited.length === 0
             ? <p className="px-6 py-16 text-center text-[13px] text-ink-soft">还没有沟通记录，去「职位」页找老板聊聊吧。</p>
-            : visited.map((id) => { const j = job(id)!; return (
+            : visited.filter((id) => job(id)).map((id) => { const j = job(id)!; return (
                 <button key={id} onClick={() => setChat(id)} className="flex w-full items-center gap-3 border-b border-black/[0.05] bg-white px-4 py-3 text-left">
                   <Avatar src="" name={j.boss.name} size={44} editable={false} />
                   <div className="min-w-0 flex-1"><p className="text-[14px] font-medium text-ink">{j.boss.name} · {j.boss.title}</p><p className="truncate text-[12px] text-ink-soft">{j.company} · {j.title}</p></div>
@@ -357,7 +347,7 @@ function SeekerApp({ jobs, fame, playerName, playerAvatar, desc, stats, onBack, 
             <div className="mt-4 flex gap-6">
               <div><p className="text-[19px] font-bold">{fame}</p><p className="text-[11px] text-white/80">当前名气</p></div>
               <div><p className="text-[19px] font-bold">在找</p><p className="text-[11px] text-white/80">求职状态</p></div>
-              <div><p className="text-[19px] font-bold">星城</p><p className="text-[11px] text-white/80">意向城市</p></div>
+              <div><p className="text-[19px] font-bold">{T("city")}</p><p className="text-[11px] text-white/80">意向城市</p></div>
             </div>
           </div>
           <div className="mx-3 mt-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
@@ -373,7 +363,7 @@ function SeekerApp({ jobs, fame, playerName, playerAvatar, desc, stats, onBack, 
           </div>
           <div className="mx-3 mt-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
             <p className="text-[13.5px] font-semibold text-ink">自我介绍</p>
-            <p className="mt-2 text-[13px] leading-relaxed text-ink-soft">{desc || "怀揣着成为主角的梦想，正在星城寻找愿意栽培的经纪公司。台前幕后都肯学，能吃苦，等一个被看见的机会。"}</p>
+            <p className="mt-2 text-[13px] leading-relaxed text-ink-soft">{desc || `怀揣着成为主角的梦想，正在${T("city")}寻找愿意栽培的经纪公司。台前幕后都肯学，能吃苦，等一个被看见的机会。`}</p>
           </div>
           <button onClick={onSwitch} className="mx-3 mt-3 w-[calc(100%-1.5rem)] rounded-2xl border py-2.5 text-[13.5px] font-medium" style={{ borderColor: ACCENT, color: ACCENT }}>切换为「我要招人」</button>
         </div>
@@ -392,18 +382,13 @@ function SeekerApp({ jobs, fame, playerName, playerAvatar, desc, stats, onBack, 
 
 /* ───────────────── 企业端 ───────────────── */
 type Posting = { id: string; title: string; salary: string; on: boolean; desc: string };
-const DEFAULT_POSTINGS: Posting[] = [
-  { id: "p1", title: "私人助理", salary: "3-5千/月", on: true, desc: "安排行程、对接各方、处理杂务，细心抗压能出差。" },
-  { id: "p2", title: "宣传统筹", salary: "5-8千/月", on: true, desc: "策划话题与物料，维护媒体资源，网感与执行力强。" },
-  { id: "p3", title: "妆发造型师", salary: "5-9千/月", on: false, desc: "负责妆容造型，跟组随场补妆，有作品集优先。" },
-];
 
 function EmployerApp({ candidates, studio, myFame, playerName, playerAvatar, companyName, onBack, onSwitch }: {
   candidates: { id: string; name: string; fame: number; personality: string; company: string; topStat: string }[];
   studio: string; myFame: number; playerName: string; playerAvatar: string; companyName: string; onBack: () => void; onSwitch: () => void;
 }) {
   const [tab, setTab] = useState<"posts" | "talent" | "me">("posts");
-  const [postings, setPostings] = useState<Posting[]>(DEFAULT_POSTINGS);
+  const [postings, setPostings] = useState<Posting[]>([]) /* 职位只来自玩家自己发布 */;
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ title: "", salary: "", desc: "" });
   const [chat, setChat] = useState<string | null>(null);
@@ -411,7 +396,7 @@ function EmployerApp({ candidates, studio, myFame, playerName, playerAvatar, com
 
   if (chat) {
     const c = candidates.find((x) => x.id === chat);
-    if (c) return <ChatView
+    if (c) return <ChatView cacheKey={`emp_${c.id}`}
       peerName={c.name} peerSub={`名气 ${c.fame} · 擅长${c.topStat}`} peerAvatarName={c.name}
       meName={playerName} meAvatar={playerAvatar}
       opener={`你好，我是${studio}的负责人。冒昧打扰——留意你挺久了。`}
@@ -433,7 +418,7 @@ function EmployerApp({ candidates, studio, myFame, playerName, playerAvatar, com
         <div className="flex items-center justify-between">
           <button onClick={onBack} className="text-[14px] text-ink-soft">‹ 主屏</button>
           <p className="text-[15px] font-bold" style={{ color: ACCENT }}>老板直聘 · 招聘</p>
-          <span className="text-[13px] text-ink-soft">星城 ▾</span>
+          <span className="text-[13px] text-ink-soft">{T("city")}</span>
         </div>
       </div>
 
@@ -443,18 +428,22 @@ function EmployerApp({ candidates, studio, myFame, playerName, playerAvatar, com
             <p className="text-[13px] font-semibold text-ink">我发布的职位</p>
             <button onClick={() => setAdding(true)} className="rounded-full px-3 py-1 text-[12px] font-semibold text-white" style={{ background: ACCENT }}>+ 发布职位</button>
           </div>
+          {postings.length === 0 && <p className="px-6 py-16 text-center text-[13px] text-ink-soft">还没有发布职位，点右上角「发布职位」开始招人。</p>}
           {postings.map((p) => (
             <div key={p.id} className="mx-3 mb-2.5 rounded-2xl bg-white p-3.5 shadow-sm ring-1 ring-black/5">
-              <div className="flex items-start justify-between">
-                <p className="text-[15px] font-semibold text-ink">{p.title}</p>
-                <span className="text-[13.5px] font-bold" style={{ color: ACCENT }}>{p.salary}</span>
+              <div className="flex items-start justify-between gap-3">
+                <p className="min-w-0 break-all text-[15px] font-semibold text-ink">{p.title}</p>
+                <span className="shrink-0 text-[13.5px] font-bold" style={{ color: ACCENT }}>{p.salary}</span>
               </div>
               <p className="mt-1 text-[12.5px] leading-snug text-ink-soft">{p.desc}</p>
               <div className="mt-2.5 flex items-center justify-between border-t border-black/[0.06] pt-2.5">
                 <span className={`text-[11.5px] font-medium ${p.on ? "text-emerald-600" : "text-ink-soft"}`}>{p.on ? "● 招聘中" : "○ 已暂停"}</span>
-                <button onClick={() => setPostings((ps) => ps.map((x) => x.id === p.id ? { ...x, on: !x.on } : x))} className="text-[12px] font-medium" style={{ color: ACCENT }}>
-                  {p.on ? "暂停招聘" : "开启招聘"}
-                </button>
+                <span className="flex items-center gap-4">
+                  <button onClick={() => setPostings((ps) => ps.filter((x) => x.id !== p.id))} className="text-[12px] text-ink-soft">删除</button>
+                  <button onClick={() => setPostings((ps) => ps.map((x) => x.id === p.id ? { ...x, on: !x.on } : x))} className="text-[12px] font-medium" style={{ color: ACCENT }}>
+                    {p.on ? "暂停招聘" : "开启招聘"}
+                  </button>
+                </span>
               </div>
             </div>
           ))}
@@ -463,7 +452,8 @@ function EmployerApp({ candidates, studio, myFame, playerName, playerAvatar, com
 
       {tab === "talent" && (
         <div className="flex-1 overflow-y-auto py-2">
-          <p className="px-4 pb-1 text-[12px] text-ink-soft">为你推荐 · 星城在圈艺人</p>
+          <p className="px-4 pb-1 text-[12px] text-ink-soft">为你推荐 · {T("city")}在圈艺人</p>
+          {candidates.length === 0 && <p className="px-6 py-16 text-center text-[13px] text-ink-soft">暂时没有可推荐的人才，过几天再来看看。</p>}
           {candidates.map((c) => (
             <div key={c.id} className="mx-3 mb-2 flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-black/5">
               <Avatar src="" name={c.name} size={42} editable={false} />
@@ -527,27 +517,75 @@ function EmployerApp({ candidates, studio, myFame, playerName, playerAvatar, com
 
 /* ───────────────── 入口 ───────────────── */
 export default function BossZhipinApp({ onBack }: { onBack: () => void }) {
-  const { game } = useGame();
+  const { game, cfg } = useGame();
   const sim = game!.sim;
+  const [aiJobs, setAiJobs] = useState<Job[]>(() => loadFeed<Job[]>("bosspin") ?? []);
+
+  const parseJobs = (raw: unknown, pfx: string): Job[] => {
+    const str = (v: unknown, d: string, n: number) => (typeof v === "string" && v.trim() ? v.trim().slice(0, n) : d);
+    const list = (v: unknown, n: number) => (Array.isArray(v) ? v : []).filter((x): x is string => typeof x === "string" && !!x.trim()).slice(0, n).map((x) => x.trim().slice(0, 40));
+    const now = Date.now();
+    return (Array.isArray(raw) ? raw : []).filter((x): x is Record<string, unknown> => !!x && typeof x === "object").slice(0, 8).map((x, i) => {
+      const kind: Job["kind"] = x.kind === "crew" ? "crew" : "artist";
+      const cat: Job["cat"] = kind === "artist" ? "艺人" : x.cat === "幕后" ? "幕后" : "运营";
+      const fr = Number(x.fameReq);
+      const bossName = str(x.bossName, "招聘负责人", 12);
+      return {
+        id: `${pfx}_${now}_${i}`, kind, cat, companyId: "", company: str(x.company, `${T("city")}某剧组`, 20),
+        boss: { ...fallbackBoss, name: bossName, title: str(x.bossTitle, "HR", 12), quote: str(x.quote, fallbackBoss.quote, 50) },
+        title: str(x.title, "", 24), salary: str(x.salary, "面议", 20), area: areaAt(now + i),
+        exp: str(x.exp, "经验不限", 12), edu: "不限", tags: ["剧情新岗", ...list(x.tags, 3)],
+        fameReq: kind === "artist" && Number.isFinite(fr) ? Math.max(0, Math.min(100, Math.round(fr))) : 0,
+        duties: list(x.duties, 4).length ? list(x.duties, 4) : ["按项目安排开展工作"], reqs: list(x.reqs, 4).length ? list(x.reqs, 4) : ["认真负责"],
+      };
+    }).filter((j) => j.title);
+  };
+  // 底部「查看更多」：结合剧情再生成一批岗位，接在列表末尾（持久化）
+  const [moreJobs, setMoreJobs] = useState<Job[]>(() => loadFeed<Job[]>("bosspin.more") ?? []);
+  const [moreLoading, setMoreLoading] = useState(false);
+  const loadMore = async (seenTitles: string[]): Promise<string> => {
+    if (moreLoading) return "";
+    setMoreLoading(true);
+    try {
+      const seen = seenOf(seenTitles);
+      const r = await syncJson<{ jobs?: unknown }>(cfg, game!, "bosspin", "老板直聘", `主角当前名气 ${sim.fame ?? 0}。再生成 5 条符合主角职业阶段的招聘/试镜/选角/${T("gig")}岗位，可紧扣最近剧情，也可是行业日常岗位；不要与这些已有岗位重复：${seen}。返回 {"jobs":[{"kind":"artist(艺人试镜/签约)|crew(幕后运营)","cat":"艺人|幕后|运营","company":"公司/剧组","bossName":"招聘人","bossTitle":"职位","quote":"招聘人一句话","title":"岗位名","salary":"薪资","exp":"经验要求","tags":["≤3个"],"fameReq":30,"duties":["2-3条"],"reqs":["2-3条"]}]}`);
+      if (!r) return "未配置 AI，暂无更多";
+      const fresh = parseJobs(r.jobs, "aim");
+      if (!fresh.length) return "生成失败，请重试";
+      const next = [...moreJobs, ...fresh].slice(-60);
+      setMoreJobs(next); saveFeed("bosspin.more", next);
+      return `新加载 ${fresh.length} 个岗位`;
+    } catch { return "加载失败，请重试"; } finally { setMoreLoading(false); }
+  };
+
+  useWorldSync("bosspin", async () => {
+    const r = await syncJson<{ jobs?: unknown }>(cfg, game!, "bosspin", "老板直聘", `主角当前名气 ${sim.fame ?? 0}。生成 4 条紧扣当前世界剧情、符合主角职业阶段的新招聘/试镜/选角/${T("gig")}岗位（可来自剧情中出现的公司、剧组、导演、节目）。返回 {"jobs":[{"kind":"artist(艺人试镜/签约)|crew(幕后运营)","cat":"艺人|幕后|运营","company":"公司/剧组","bossName":"招聘人","bossTitle":"职位","quote":"招聘人一句话","title":"岗位名","salary":"薪资","exp":"经验要求","tags":["≤3个"],"fameReq":30,"duties":["2-3条"],"reqs":["2-3条"]}]}`);
+    if (!r) return "未配置 AI，无法联动剧情";
+    const fresh = parseJobs(r.jobs, "ai").slice(0, 6);
+    if (!fresh.length) return "这次没有新岗位，请稍后再试";
+    const next = [...fresh, ...aiJobs].slice(0, 16);
+    setAiJobs(next); saveFeed("bosspin", next);
+    return `新增 ${fresh.length} 个剧情相关岗位`;
+  });
   const fame = sim.fame ?? 0;
   const playerName = game!.player.name || sim.char.name || "我";
   const playerAvatar = game!.player.avatar || "";
 
   const [role, setRole] = useState<Role | null>(() => {
-    try { const v = localStorage.getItem(ROLE_KEY); return v === "seeker" || v === "employer" ? v : null; } catch { return null; }
+    const v = loadData<string | null>(ROLE_KEY, null); return v === "seeker" || v === "employer" ? v : null;
   });
   const setPersistRole = (r: Role | null) => {
     setRole(r);
-    try { if (r) localStorage.setItem(ROLE_KEY, r); else localStorage.removeItem(ROLE_KEY); } catch { /* 无痕模式忽略 */ }
+    if (r) saveData(ROLE_KEY, r); else removeData(ROLE_KEY);
   };
 
   const jobs = useMemo<Job[]>(() => {
     const cos = (sim.companies ?? []).length ? sim.companies : COMPANIES.map((c, i) => ({ id: `co_${i}`, prestige: c.prestige }));
     const sorted = [...cos].sort((a, b) => b.prestige - a.prestige);
     const artist = sorted.map((c, i) => makeArtistJob(c.id, c.prestige, i));
-    const crew = CREW.map((tpl, k) => makeCrewJob(tpl, sorted[k % sorted.length].id, k));
-    return [...artist, ...crew];
-  }, [sim.companies]);
+    // 艺人岗来自世界里真实的公司；幕后 / 运营岗只由 AI 按当前剧情生成，不再用模板岗位
+    return [...aiJobs, ...artist, ...moreJobs];
+  }, [sim.companies, aiJobs, moreJobs]);
 
   const candidates = useMemo(() => {
     return (sim.npcs ?? [])
@@ -565,6 +603,6 @@ export default function BossZhipinApp({ onBack }: { onBack: () => void }) {
 
   if (!role) return <RoleChooser onBack={onBack} onPick={setPersistRole} />;
   if (role === "seeker")
-    return <SeekerApp jobs={jobs} fame={fame} playerName={playerName} playerAvatar={playerAvatar} desc={game!.player.description} stats={sim.stats} onBack={onBack} onSwitch={() => setPersistRole("employer")} />;
+    return <SeekerApp jobs={jobs} fame={fame} playerName={playerName} playerAvatar={playerAvatar} desc={game!.player.description} stats={sim.stats} moreLoading={moreLoading} onLoadMore={() => loadMore(jobs.map((j) => j.title))} onBack={onBack} onSwitch={() => setPersistRole("employer")} />;
   return <EmployerApp candidates={candidates} studio={studio} myFame={fame} playerName={playerName} playerAvatar={playerAvatar} companyName={companyName} onBack={onBack} onSwitch={() => setPersistRole("seeker")} />;
 }

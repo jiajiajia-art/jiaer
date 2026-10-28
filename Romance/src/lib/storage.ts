@@ -16,6 +16,8 @@
  * ════════════════════════════════════════════════════════════════════ */
 import localforage from "localforage";
 import type { GameState } from "./types";
+import { exportSaveData, loadGlobal, removeGlobal, purgeSaveData, getCurrentSaveId } from "./saveScope";
+import { AUTHOR_PREVIEW_AUTO_SLOT, isAuthorPreview } from "./authorPreview";
 
 /* ───────────── 顶部统一配置区（改这里即可） ───────────── */
 export const DB_NAME = "gameSaveDB"; // 独立数据库实例名
@@ -68,14 +70,14 @@ export type SaveSlot = {
 
 const slotKey = (id: string) => `slot:${id}`;
 
-/* 列出全部存档：自动存档置顶，其余按更新时间倒序 */
+/* 列出全部存档：自动存档置顶，其余按更新时间倒序；作者测试槽不出现在正式列表 */
 export async function listSaves(): Promise<SaveSlot[]> {
   return guard(
     "listSaves",
     async () => {
       const out: SaveSlot[] = [];
       await gameSaveDB.iterate<SaveSlot, void>((v) => {
-        if (v && v.id) out.push(v);
+        if (v && v.id && v.id !== AUTHOR_PREVIEW_AUTO_SLOT && !String(v.id).startsWith("__author_preview")) out.push(v);
       });
       out.sort((a, b) => {
         if (a.auto && !b.auto) return -1;
@@ -105,27 +107,40 @@ export async function writeSlot(slot: SaveSlot): Promise<boolean> {
   );
 }
 
-/* 写入自动存档（固定槽位，持续覆盖） */
+/* 写入自动存档（固定槽位，持续覆盖）；作者预览写入独立测试槽，不覆盖正式自动存档 */
 export async function writeAutosave(state: GameState): Promise<boolean> {
+  const preview = isAuthorPreview();
   return writeSlot({
-    id: AUTO_SLOT_ID,
-    name: `自动存档 · ${state.player?.name ?? "未命名"}`,
+    id: preview ? AUTHOR_PREVIEW_AUTO_SLOT : AUTO_SLOT_ID,
+    name: preview
+      ? `作者测试 · ${state.player?.name ?? "未命名"}`
+      : `自动存档 · ${state.player?.name ?? "未命名"}`,
     updatedAt: Date.now(),
     auto: true,
-    state,
+    state: withPrivate(state),
   });
+}
+
+/** 功能注释：清空作者预览测试存档（槽位 + 私有键），不影响正式玩家存档 */
+export async function clearAuthorPreviewSave(gameId: string): Promise<void> {
+  await deleteSlot(AUTHOR_PREVIEW_AUTO_SLOT);
+  purgeSaveData(gameId);
 }
 
 /* 存入 / 覆盖一个手动槽（受 MAX_SLOTS 约束由 UI 层控制） */
 export async function saveToSlot(id: string, state: GameState, name?: string): Promise<boolean> {
-  const prev = await getSlot(id);
+  // 作者预览禁止写入正式手动槽，一律落测试自动档
+  if (isAuthorPreview()) return writeAutosave(state);
+  // 覆盖：整槽替换（名称随新进度刷新，除非显式传入）
   return writeSlot({
     id,
-    name: name ?? prev?.name ?? `${state.player?.name ?? "存档"} · ${state.world?.time || "序章"}`,
+    name: name ?? `${state.player?.name ?? "存档"} · ${state.world?.time || "序章"}`,
     updatedAt: Date.now(),
-    state,
+    state: withPrivate(state),
   });
 }
+/* 随档附上该存档的私有数据快照（购买记录、App 缓存等），读档时恢复 */
+const withPrivate = (state: GameState): GameState => ({ ...state, privateData: exportSaveData(state.id) });
 
 /* 读取单个槽 */
 export async function getSlot(id: string): Promise<SaveSlot | null> {
@@ -137,7 +152,10 @@ export async function deleteSlot(id: string): Promise<boolean> {
   return guard(
     "deleteSlot",
     async () => {
+      const gone = (await gameSaveDB.getItem<SaveSlot>(slotKey(id)))?.state?.id;
       await gameSaveDB.removeItem(slotKey(id));
+      // 该局已无任何存档位（含自动存档）且不在游玩中 → 清理它残留的私有数据，释放本地空间
+      if (gone && gone !== getCurrentSaveId() && !(await listSaves()).some((x) => x.state?.id === gone)) purgeSaveData(gone);
       return true;
     },
     false,
@@ -168,6 +186,13 @@ export function autosaveDebounced(state: GameState): void {
   }, SAVE_DEBOUNCE_MS);
 }
 
+/** 丢弃尚未落库的防抖自动存档（读档 / 开新局时，避免旧局状态覆盖新进度）。 */
+export function cancelAutosave(): void {
+  if (debounceTimer) clearTimeout(debounceTimer);
+  debounceTimer = null;
+  pendingState = null;
+}
+
 /** 立即把待写入的自动存档刷盘（如退出前 / 手动存档时调用）。 */
 export async function flushAutosave(): Promise<boolean> {
   if (debounceTimer) {
@@ -186,16 +211,15 @@ export async function migrateLegacySaves(): Promise<void> {
   if (migrated) return;
   migrated = true;
   try {
-    const raw = localStorage.getItem(LEGACY_KEY);
-    if (!raw) return;
-    const old = JSON.parse(raw) as SaveSlot[];
+    const old = loadGlobal<SaveSlot[] | null>(LEGACY_KEY, null); // 存档列表 = 全局公共数据
+    if (!old) return;
     if (!Array.isArray(old) || old.length === 0) return;
     const existing = await listSaves();
     const have = new Set(existing.map((s) => s.id));
     for (const s of old) {
       if (s && s.id && !have.has(s.id)) await writeSlot({ ...s, updatedAt: s.updatedAt ?? Date.now() });
     }
-    localStorage.removeItem(LEGACY_KEY); // 迁移完成即清理，避免重复导入
+    removeGlobal(LEGACY_KEY); // 迁移完成即清理，避免重复导入
   } catch (e) {
     console.warn("[storage] 旧存档迁移跳过：", e);
   }
@@ -216,3 +240,28 @@ export async function migrateLegacySaves(): Promise<void> {
  * // 自动存档（防抖，玩家每次行动后调用，UI 不卡顿）：
  * autosaveDebounced(gameState);
  * ═══════════════════════════════════════════════════════════ */
+
+/* ───────────── 时间线检查点（主线复盘 / 平行分支） ─────────────
+ * 键 cp:<saveId>:<cpId>，值不带顶层 id 字段，不会混进存档列表。每个存档只保留最近 CHECKPOINT_MAX 个。 */
+export const CHECKPOINT_MAX = 40;
+type Checkpoint = { sid: string; cid: string; ts: number; state: GameState };
+const cpKey = (sid: string, cid: string) => `cp:${sid}:${cid}`;
+export async function writeCheckpoint(cid: string, state: GameState): Promise<boolean> {
+  return guard("writeCheckpoint", async () => {
+    await gameSaveDB.setItem<Checkpoint>(cpKey(state.id, cid), { sid: state.id, cid, ts: Date.now(), state: withPrivate(state) });
+    const mine = (await gameSaveDB.keys()).filter((k) => k.startsWith(`cp:${state.id}:`));
+    if (mine.length > CHECKPOINT_MAX) {
+      const metas: { k: string; ts: number }[] = [];
+      for (const k of mine) { const v = await gameSaveDB.getItem<Checkpoint>(k); metas.push({ k, ts: v?.ts ?? 0 }); }
+      metas.sort((a, b) => a.ts - b.ts);
+      for (const m of metas.slice(0, metas.length - CHECKPOINT_MAX)) await gameSaveDB.removeItem(m.k);
+    }
+    return true;
+  }, false);
+}
+export async function getCheckpoint(sid: string, cid: string): Promise<GameState | null> {
+  return guard("getCheckpoint", async () => (await gameSaveDB.getItem<Checkpoint>(cpKey(sid, cid)))?.state ?? null, null);
+}
+export async function listCheckpointIds(sid: string): Promise<Set<string>> {
+  return guard("listCheckpointIds", async () => new Set((await gameSaveDB.keys()).filter((k) => k.startsWith(`cp:${sid}:`)).map((k) => k.slice(`cp:${sid}:`.length))), new Set<string>());
+}

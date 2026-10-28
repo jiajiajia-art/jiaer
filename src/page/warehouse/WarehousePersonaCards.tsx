@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../../store/useAuthStore';
 import { playerCharacterCardsApi } from '../../api/galgame/playerCharacterCards';
+import { avatarLibraryApi } from '../../api/galgame/avatarLibrary';
 import {
   PLAYER_CARD_GENDERS,
   PLAYER_CARD_LIMITS,
@@ -10,6 +11,7 @@ import {
   type PlayerCharacterCard,
   validatePlayerCharacterCardInput,
 } from '../../lib/galgame/playerCharacterCard';
+import { useAvatarTagOptions } from '../../hooks/useAvatarTagOptions';
 import { refreshAuthUserPoints } from '../../lib/auth/refreshUserPoints';
 import ConfirmModal from '../../components/CommonModal/ConfirmModal';
 import TrimmedTransparentImg from '../../components/TrimmedTransparentImg';
@@ -38,6 +40,9 @@ type Draft = {
   tagsText: string;
   isDefault: boolean;
   avatarUrl: string;
+  ageGroup: string;
+  backgroundType: string;
+  avatarLocked: boolean;
 };
 
 const emptyDraft = (): Draft => ({
@@ -47,10 +52,14 @@ const emptyDraft = (): Draft => ({
   tagsText: '',
   isDefault: false,
   avatarUrl: '',
+  ageGroup: 'adult',
+  backgroundType: 'modern',
+  avatarLocked: false,
 });
 
 const WarehousePersonaCards: React.FC = () => {
   const token = useAuthStore((s) => s.user?.token);
+  const { ageOptions, backgroundOptions } = useAvatarTagOptions(token);
   const updateUser = useAuthStore((s) => s.updateUser);
   const [cards, setCards] = useState<PlayerCharacterCard[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,7 +106,7 @@ const WarehousePersonaCards: React.FC = () => {
       }
       const openKey = warehouseCardAvatarJobKey('player', editingIdRef.current);
       if (formOpenRef.current && openKey === result.key) {
-        setDraft((d) => ({ ...d, avatarUrl: result.avatarUrl }));
+        setDraft((d) => ({ ...d, avatarUrl: result.avatarUrl, avatarLocked: true }));
       }
     });
   }, [updateUser]);
@@ -164,9 +173,32 @@ const WarehousePersonaCards: React.FC = () => {
       tagsText: (card.tags || []).join(','),
       isDefault: !!card.isDefault,
       avatarUrl: card.avatarUrl || '',
+      ageGroup: card.ageGroup || 'adult',
+      backgroundType: card.backgroundType || 'modern',
+      avatarLocked: !!card.avatarLocked,
     });
     setFormOpen(true);
   };
+
+  /** 功能注释：未锁定时按三维精确匹配头像库（私库 > 公库） */
+  const tryAutoMatchAvatar = useCallback(async (next: Draft) => {
+    if (!token || next.avatarLocked) return;
+    if (next.gender !== 'male' && next.gender !== 'female') return;
+    if (!next.ageGroup || !next.backgroundType) return;
+    try {
+      const res = await avatarLibraryApi.match(token, {
+        gender: next.gender,
+        ageGroup: next.ageGroup,
+        backgroundType: next.backgroundType,
+      });
+      const url = res.data?.avatar?.imageUrl;
+      if (res.success && url) {
+        setDraft((d) => (d.avatarLocked ? d : { ...d, avatarUrl: url }));
+      }
+    } catch {
+      /* 匹配失败静默，保留当前头像 */
+    }
+  }, [token]);
 
   const requestGenerateAvatar = async () => {
     if (!draft.name.trim()) {
@@ -282,6 +314,9 @@ const WarehousePersonaCards: React.FC = () => {
       tags,
       isDefault: draft.isDefault,
       avatarUrl: draft.avatarUrl || '',
+      ageGroup: draft.ageGroup || '',
+      backgroundType: draft.backgroundType || '',
+      avatarLocked: draft.avatarLocked,
     };
     setSaving(true);
     try {
@@ -622,7 +657,7 @@ const WarehousePersonaCards: React.FC = () => {
                   disabled={saving}
                   cardId={editingId}
                   onGenerate={() => void requestGenerateAvatar()}
-                  onAvatarUrl={(url) => setDraft((d) => ({ ...d, avatarUrl: url }))}
+                  onAvatarUrl={(url) => setDraft((d) => ({ ...d, avatarUrl: url, avatarLocked: true }))}
                 >
                   <div className={panel.field}>
                     <label htmlFor="wh-persona-name">姓名</label>
@@ -646,7 +681,11 @@ const WarehousePersonaCards: React.FC = () => {
                           role="radio"
                           aria-checked={draft.gender === g}
                           className={draft.gender === g ? panel.segActive : panel.seg}
-                          onClick={() => setDraft((d) => ({ ...d, gender: g }))}
+                          onClick={() => {
+                            const next = { ...draft, gender: g };
+                            setDraft(next);
+                            void tryAutoMatchAvatar(next);
+                          }}
                         >
                           {draft.gender === g ? (
                             <MdCheck className={panel.segActiveIcon} aria-hidden />
@@ -656,6 +695,43 @@ const WarehousePersonaCards: React.FC = () => {
                       ))}
                     </div>
                   </div>
+
+                  <div className={panel.field}>
+                    <label htmlFor="wh-persona-age">年龄段（头像匹配）</label>
+                    <select
+                      id="wh-persona-age"
+                      value={draft.ageGroup}
+                      onChange={(e) => {
+                        const next = { ...draft, ageGroup: e.target.value };
+                        setDraft(next);
+                        void tryAutoMatchAvatar(next);
+                      }}
+                    >
+                      {ageOptions.map((g) => (
+                        <option key={g.id} value={g.id}>{g.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className={panel.field}>
+                    <label htmlFor="wh-persona-bg">背景（头像匹配）</label>
+                    <select
+                      id="wh-persona-bg"
+                      value={draft.backgroundType}
+                      onChange={(e) => {
+                        const next = { ...draft, backgroundType: e.target.value };
+                        setDraft(next);
+                        void tryAutoMatchAvatar(next);
+                      }}
+                    >
+                      {backgroundOptions.map((g) => (
+                        <option key={g.id} value={g.id}>{g.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {draft.avatarLocked ? (
+                    <p className={panel.sub} style={{ margin: 0 }}>已手动选定头像，自动匹配已锁定</p>
+                  ) : null}
                 </WarehouseCardAvatarField>
 
                 <div className={panel.field}>

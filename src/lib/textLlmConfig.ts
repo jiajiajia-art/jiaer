@@ -78,6 +78,11 @@ export const TEXT_LLM_USAGE_CATALOG: readonly TextLlmUsageRow[] = [
     label: '故事结构生成',
     description: 'storyGenerationConsumer / storyGeneration',
   },
+  {
+    key: 'romance_world_gen',
+    label: 'Romance 生成世界（模组补全）',
+    description: 'world-gen/complete · 与后台文案模型同一套，不强制豆包',
+  },
 ];
 
 export function isTextLlmPresetModel(value: unknown): value is TextLlmPresetModel {

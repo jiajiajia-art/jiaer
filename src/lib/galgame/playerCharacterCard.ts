@@ -22,6 +22,12 @@ export type PlayerCharacterCard = {
   avatarUrl?: string;
   authorName?: string;
   sourceCardId?: string | null;
+  /** 头像库匹配：年龄段 child|adult|elder */
+  ageGroup?: string;
+  /** 头像库匹配：背景 ancient|modern|fantasy */
+  backgroundType?: string;
+  /** 手动选定/上传后锁定，禁止自动匹配覆盖 */
+  avatarLocked?: boolean;
   createdAt: string;
   updatedAt: string;
 };

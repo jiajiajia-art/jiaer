@@ -1,15 +1,18 @@
+import { useState } from "react";
 /* 《星城娱乐週報》——「圈内动态」以每周报纸的形式呈现。
- * 精致的仿 2005 年小报排版：报头 + 头条导语 + 花边八卦 + 本週封賞 + 票房速报。
+ * 精致的仿 2005 年小报排版：报头 + 头条导语 + 花边八卦 + 奖季呼声 + 票房速报。
  * 全为确定性派生数据（buzz/awards/榜单），不调用 AI，不参与任何数值结算。 */
+import { weekLocalDate } from "../game/logic";
+import { getWorldSlot, getWorldId } from "../mods/registry";
 import type { AwardResult, StarBuzzView } from "../worlds/star2005/content";
+import { liveTerm as T } from "../mods/live";
 
 type TopStar = { name: string; fame: number; tag: string; isPlayer: boolean };
 type BoxItem = { title: string; starName: string; value: number };
 
 function weekToDate(week: number) {
   // 第 1 周 = 2005.01.03（周一），每周 +7 天，落成「YYYY 年 M 月 D 日」
-  const base = new Date(2005, 0, 3);
-  const d = new Date(base.getTime() + (week - 1) * 7 * 86400000);
+  const d = weekLocalDate(week);
   return `${d.getFullYear()} 年 ${d.getMonth() + 1} 月 ${d.getDate()} 日`;
 }
 
@@ -30,12 +33,16 @@ export default function WeeklyPaper({
   movies: BoxItem[];
   onOpenName: (name: string) => void;
 }) {
+  const masthead = getWorldSlot("weeklyPaper")?.masthead ?? "週報";
+  const isEnt = getWorldId() === "ent"; // 奖季 / 票房 / 月榜等栏目只属于娱乐圈
   const dateStr = weekToDate(week);
   const weekday = WEEKDAYS[new Date(2005, 0, 3 + (week - 1) * 7).getDay()];
-  const lead = buzz[0];
-  const rest = buzz.slice(1, 7);
-  const highlightAwards = awards.filter((a) => a.work).slice(0, 3);
-  const box = movies.slice(0, 3);
+  // 同一条见闻不重复见报；票房按数额从高到低排名；同片名只留一条
+  const uniqBuzz = buzz.filter((b, i) => buzz.findIndex((x) => x.text === b.text) === i);
+  const lead = uniqBuzz[0];
+  const rest = uniqBuzz.slice(1, 7);
+  const highlightAwards = awards.filter((a, i) => a.work && awards.findIndex((x) => x.winnerName === a.winnerName) === i).slice(0, 3);
+  const box = movies.filter((m, i) => movies.findIndex((x) => x.title === m.title) === i).sort((a, b) => b.value - a.value).slice(0, 3);
 
   // 头条正文里把人名做成可点链接（跳到艺人资料卡）
   const Linkify = ({ text }: { text: string }) => {
@@ -47,7 +54,7 @@ export default function WeeklyPaper({
       <>
         {parts.map((p, i) =>
           names.includes(p) ? (
-            <button key={i} onClick={() => onOpenName(p)} className="font-semibold text-ink underline decoration-dotted underline-offset-2 hover:text-coral">
+            <button key={i} onClick={() => onOpenName(p)} className="font-black text-coral hover:brightness-110">
               {p}
             </button>
           ) : (
@@ -58,101 +65,165 @@ export default function WeeklyPaper({
     );
   };
 
+  const [page, setPage] = useState(0);
+  const pages = isEnt ? 2 : 1;
+  const maxBox = Math.max(1, ...box.map((m) => m.value));
+  const fmtBox = (v: number) => (v >= 10000 ? `${(v / 10000).toFixed(1)}亿` : `${v}万`);
+  const issue = week <= 1 ? "创刊号" : `总第 ${week} 期`;
+  const Kicker = ({ children, en }: { children: string; en?: string }) => (
+    <div className="mb-2.5 flex items-end gap-2 border-b border-ink/70 pb-1">
+      <span className="text-[14px] font-black tracking-[0.35em] text-ink">{children}</span>
+      {en && <span className="pb-px text-[10px] tracking-[0.2em] text-ink-soft">{en}</span>}
+      <span className="ml-auto mb-[3px] h-[3px] w-6 bg-coral" />
+    </div>
+  );
+
   return (
-    <div className="overflow-hidden rounded-sm border-2 border-double border-ink bg-paper font-serif text-ink shadow-[0_1px_0_var(--line),0_2px_12px_-6px_rgba(0,0,0,0.35)]">
-      {/* 报头 */}
-      <div className="border-b border-ink px-4 pb-2 pt-3 sm:px-6">
-        <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-ink-soft">
-          <span>创刊号 · 星城</span>
-          <span>逢周一出报</span>
+    <article className="relative overflow-hidden rounded-[4px] bg-[color-mix(in_srgb,var(--gold)_9%,var(--paper))] font-serif text-ink shadow-[0_18px_36px_-22px_rgba(40,20,60,0.55),0_1px_0_var(--line)] ring-1 ring-ink/20">
+      {/* 纸纹与暗角 */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 [background-image:radial-gradient(120%_80%_at_50%_0%,rgba(255,255,255,0.55),transparent_60%),radial-gradient(140%_100%_at_50%_120%,rgba(90,60,30,0.10),transparent_55%),repeating-linear-gradient(0deg,transparent_0_3px,rgba(60,40,20,0.022)_3px_4px)]" />
+
+      <div className="relative px-4 pt-3.5 sm:px-6">
+        {/* 报眉 */}
+        <div className="flex items-center justify-between text-[10.5px] tracking-[0.14em] text-ink-soft">
+          <span className="rounded-sm bg-coral px-1.5 py-px font-bold tracking-[0.2em] text-paper">{issue}</span>
+          <span>{T("city")}　每周一出版</span>
+          <span>零售价 ¥1.00</span>
         </div>
-        <h2 className="my-1 text-center text-[30px] font-black leading-none tracking-[0.12em] sm:text-[40px]">星城娱樂週報</h2>
-        <div className="flex items-center justify-center gap-3 text-[11px] text-ink-soft">
-          <span className="h-px w-8 bg-ink/40" />
-          <span>{dateStr} · 星期{weekday}</span>
-          <span className="text-gold">★</span>
-          <span>第 {week} 期</span>
-          <span className="h-px w-8 bg-ink/40" />
+
+        {/* 报头 */}
+        <div className="mt-2.5 border-y-[3px] border-double border-ink/80 py-2.5 text-center">
+          <h2 className="text-[clamp(30px,9vw,46px)] font-black leading-none tracking-[0.14em]">{masthead}</h2>
+          <p className="mt-1.5 text-[10.5px] tracking-[0.5em] text-ink-soft">星光之下　皆是新闻</p>
+        </div>
+        <div className="grid grid-cols-3 items-center border-b border-ink/60 py-1.5 text-[11px] tracking-[0.08em] text-ink-soft">
+          <span>{dateStr}</span>
+          <span className="text-center font-bold text-ink">第 {week} 周</span>
+          <span className="text-right">星期{weekday}</span>
         </div>
       </div>
 
-      {/* 双栏正文 */}
-      <div className="grid gap-0 sm:grid-cols-3">
-        {/* 头条 + 花边（跨两栏） */}
-        <div className="border-line px-4 py-3 sm:col-span-2 sm:border-r sm:px-6">
-          <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.3em] text-coral">头 条</p>
+      <div className="relative">
+        {page === 0 && <section className="px-4 pb-5 pt-4 sm:px-6">
+          <Kicker en="本期头条">头条</Kicker>
           {lead ? (
             <>
-              <h3 className="mb-2 text-[20px] font-black leading-snug sm:text-[23px]">
-                <Linkify text={lead.text} />
-              </h3>
-              <p className="text-[10px] text-ink-soft">— 本报讯 · 第 {lead.week} 周星城见闻</p>
+              <h3 className="text-[23px] font-black leading-[1.3] sm:text-[27px]"><Linkify text={lead.text} /></h3>
+              <p className="mt-2 text-[10.5px] tracking-[0.12em] text-ink-soft">本报讯　第 {lead.week} 周 · {T("city")}</p>
             </>
           ) : (
-            <h3 className="text-[19px] font-black leading-snug text-ink-soft">圈子风平浪静，且待下期分晓</h3>
+            <div className="relative py-1">
+              <h3 className="text-[23px] font-black leading-[1.35] text-ink/85 sm:text-[27px]">{isEnt ? "圈子风平浪静，" : "本周风平浪静，"}<br />且待下期分晓</h3>
+              <p className="mt-2 text-[10.5px] tracking-[0.12em] text-ink-soft">本报讯　{T("city")}</p>
+            </div>
           )}
 
-          <div className="mt-3 border-t border-dashed border-line pt-3">
-            <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.3em] text-jade">花 边</p>
+          <div className="mt-5">
+            <Kicker en="坊间逸闻">花边</Kicker>
             {rest.length ? (
-              <ul className="columns-1 gap-5 sm:columns-2 [&>li]:break-inside-avoid">
+              <ul className="columns-1 gap-6 sm:columns-2 [column-rule:1px_solid_color-mix(in_srgb,var(--ink)_15%,transparent)]">
                 {rest.map((b, i) => (
-                  <li key={i} className="mb-2 border-l-2 border-line pl-2.5 text-[12.5px] leading-relaxed text-ink/90">
-                    <span className="mr-1 font-mono text-[10px] text-ink-soft">W{b.week}</span>
+                  <li key={i} className="mb-3 break-inside-avoid text-[13px] leading-[1.8] text-ink/90 first-letter:float-left first-letter:mr-1.5 first-letter:text-[2em] first-letter:font-black first-letter:leading-[1] first-letter:text-coral">
                     <Linkify text={b.text} />
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-[12.5px] text-ink-soft">尚无花边逸闻。度过几周，同行间的恩怨情仇、合作绯闻便会陆续见报。</p>
+              <p className="border-l-2 border-ink/20 pl-3 text-[13px] leading-[1.8] text-ink-soft">{isEnt ? "尚无花边逸闻。度过几周，同行间的恩怨情仇、合作绯闻便会陆续见报。" : "尚无花边逸闻。度过几周，身边的新鲜事便会陆续见报。"}</p>
             )}
           </div>
-        </div>
+        </section>}
 
-        {/* 侧栏：封賞 + 票房 */}
-        <aside className="bg-paper-2/40 px-4 py-3 sm:px-4">
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.3em] text-gold">本週封賞</p>
-          {highlightAwards.length ? (
-            <ul className="mb-4 space-y-2">
-              {highlightAwards.map((a) => (
-                <li key={a.ceremony + a.category} className="border-b border-dashed border-line pb-2 last:border-0">
-                  <p className="text-[10px] text-ink-soft">{a.ceremony} · {a.category}</p>
-                  <p className="text-[14px] font-bold">
-                    <button onClick={() => onOpenName(a.winnerName)} className="underline decoration-dotted underline-offset-2 hover:text-coral">{a.winnerName}</button>
-                  </p>
-                  {a.work && <p className="text-[11px] italic text-ink-soft">凭《{a.work}》封赏</p>}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mb-4 text-[12px] text-ink-soft">奖季未启，敬请期待。</p>
-          )}
+        {isEnt && page === 1 && (
+          <aside className="px-4 pb-5 pt-4 sm:px-6">
+            <Kicker en="提名风向">奖季呼声</Kicker>
+            {highlightAwards.length ? (
+              <div className="mb-6">
+                {/* 头名：大幅奖项特写 */}
+                {(() => {
+                  const a = highlightAwards[0];
+                  return (
+                    <div className="relative overflow-hidden border border-ink/70 p-[3px]">
+                      <div className="relative border border-ink/30 bg-[color-mix(in_srgb,var(--gold)_12%,transparent)] px-4 pb-4 pt-3 text-center">
+                        <div className="flex items-center justify-center gap-2 text-[10px] tracking-[0.3em] text-ink-soft">
+                          <span className="h-px w-6 bg-ink/40" />呼声第一<span className="h-px w-6 bg-ink/40" />
+                        </div>
+                        <p className="mt-2 text-[11px] font-bold tracking-[0.2em] text-coral">{a.ceremony} · {a.category}</p>
+                        <button onClick={() => onOpenName(a.winnerName)} className="mt-1.5 text-[30px] font-black leading-none tracking-[0.12em] transition hover:text-coral">{a.winnerName}</button>
+                        {a.work && <p className="mt-2 text-[12px] tracking-[0.08em] text-ink-soft">凭《<span className="font-bold text-ink">{a.work}</span>》领跑</p>}
+                        <span className="absolute right-2.5 top-2.5 flex h-9 w-9 rotate-12 items-center justify-center rounded-full border-2 border-coral/70 text-[10px] font-black leading-[1.05] tracking-wider text-coral">独家<br />预测</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+                {/* 其余：双栏短讯 */}
+                {highlightAwards.length > 1 && (
+                  <div className="mt-3 grid grid-cols-2 divide-x divide-ink/20 border-y border-ink/30">
+                    {highlightAwards.slice(1).map((a, i) => (
+                      <div key={a.ceremony + a.category} className="px-3 py-2.5 first:pl-0 last:pr-0">
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-[18px] font-black italic leading-none text-ink/30">{i + 2}</span>
+                          <p className="min-w-0 truncate text-[10px] tracking-[0.08em] text-coral">{a.category}</p>
+                        </div>
+                        <button onClick={() => onOpenName(a.winnerName)} className="mt-1 block text-[17px] font-black leading-tight transition hover:text-coral">{a.winnerName}</button>
+                        {a.work && <p className="mt-0.5 truncate text-[11px] text-ink-soft">《{a.work}》</p>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="mb-6 text-[12.5px] text-ink-soft">奖季未启，敬请期待。</p>
+            )}
 
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.3em] text-coral">票房速报</p>
-          {box.length ? (
-            <ol className="space-y-1.5">
-              {box.map((m, i) => (
-                <li key={m.title} className="flex items-baseline justify-between gap-2 text-[12.5px]">
-                  <span className="min-w-0 truncate">
-                    <span className={`mr-1 font-mono ${i === 0 ? "text-gold" : "text-ink-soft"}`}>{i + 1}</span>
-                    《{m.title}》
-                  </span>
-                  <span className="shrink-0 font-mono text-[11px] text-ink-soft">
-                    {m.value >= 10000 ? `${(m.value / 10000).toFixed(1)}亿` : `${m.value}万`}
-                  </span>
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <p className="text-[12px] text-ink-soft">院线待映。</p>
-          )}
-        </aside>
+            <Kicker en="本周院线">票房速报</Kicker>
+            {box.length ? (
+              <ol className="space-y-2">
+                {box.map((m, i) => (
+                  <li key={m.title} className={`relative flex items-stretch overflow-hidden border ${i === 0 ? "border-ink/70 bg-[color-mix(in_srgb,var(--gold)_14%,transparent)]" : "border-ink/25"}`}>
+                    {/* 票根 */}
+                    <div className={`flex w-11 shrink-0 flex-col items-center justify-center border-r border-dashed ${i === 0 ? "border-ink/50 bg-ink text-paper" : "border-ink/30 text-ink/45"}`}>
+                      <span className="text-[8px] tracking-[0.2em]">NO.</span>
+                      <span className="text-[20px] font-black leading-none">{i + 1}</span>
+                    </div>
+                    <div className="min-w-0 flex-1 px-3 py-2">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="min-w-0 truncate text-[14px] font-black">《{m.title}》</span>
+                        <span className={`shrink-0 text-[15px] font-black tabular-nums ${i === 0 ? "text-coral" : ""}`}>{fmtBox(m.value)}</span>
+                      </div>
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <div className="h-[4px] flex-1 bg-ink/10">
+                          <div className={`h-full ${i === 0 ? "bg-coral" : "bg-ink/35"}`} style={{ width: `${Math.max(8, (m.value / maxBox) * 100)}%` }} />
+                        </div>
+                        {m.starName && <button onClick={() => onOpenName(m.starName)} className="shrink-0 text-[10.5px] text-ink-soft transition hover:text-coral">{m.starName} 主演</button>}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="text-[12.5px] text-ink-soft">院线待映。</p>
+            )}
+            <p className="mt-4 text-center text-[10px] tracking-[0.3em] text-ink-soft/70">— 数据为本报估算　仅供参考 —</p>
+          </aside>
+        )}
       </div>
 
       {/* 报脚 */}
-      <div className="border-t border-ink px-4 py-1.5 text-center text-[10px] tracking-[0.15em] text-ink-soft sm:px-6">
-        星城娱樂週報社 · 本期见闻由确定性引擎结算 · 花边逸闻仅供观赏
+      <div className="relative mx-4 flex items-center justify-between border-t-[3px] border-double border-ink/70 py-2 text-[10px] tracking-[0.16em] text-ink-soft sm:mx-6">
+        {pages > 1 ? (
+          <>
+            <button type="button" disabled={page === 0} onClick={() => setPage(0)} className="px-1 py-1 font-bold text-ink transition hover:text-coral disabled:opacity-30">‹ 上一版</button>
+            <span className="tabular-nums">第 {page + 1} 版 / 共 {pages} 版</span>
+            <button type="button" disabled={page === pages - 1} onClick={() => setPage(1)} className="px-1 py-1 font-bold text-ink transition hover:text-coral disabled:opacity-30">下一版 ›</button>
+          </>
+        ) : (
+          <>
+            <span>{masthead}社 出品</span>
+            <span>花边逸闻　仅供观赏</span>
+          </>
+        )}
       </div>
-    </div>
+    </article>
   );
 }

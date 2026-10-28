@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useGame } from "../store/gameCtx";
 import { Chip, Meter, SectionHead } from "./ui";
-import { IconCamera } from "../lib/icons";
+import { IconCamera, StarRating } from "../lib/icons";
 import { PERSONAS, PUBLIC_ACTS, CRISIS_BY_ID, CRISIS_RESPONSES, IMAGE_CRISIS } from "../worlds/star2005/content";
 import { personaUnlocked, fanBreakdown } from "../game/persona";
+import IndustryPageHeader from "./IndustryPageHeader";
 
 const EVIDENCE_LABEL: Record<string, { text: string; tone: string }> = {
   clear: { text: "握有实锤", tone: "jade" },
@@ -41,7 +42,14 @@ export default function ImageTab() {
   const crisisDef = s.crisis ? CRISIS_BY_ID[s.crisis.id] : undefined;
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-5">
+    <div className="w-full pb-5">
+      <IndustryPageHeader
+        title="形象"
+        subtitle="公开人设与舆情"
+        eyebrow="STAR CITY"
+        icon={<IconCamera width={20} height={20} />}
+      />
+      <div className="mx-auto max-w-2xl px-4 pt-3 space-y-4">
       {/* 舆情仪表 */}
       <div className="grid grid-cols-3 gap-2.5">
         {([
@@ -82,7 +90,7 @@ export default function ImageTab() {
             <div className="mb-1 flex items-center gap-2">
               <span className="font-serif text-lg font-bold text-ink">{crisisDef.label}</span>
               <Chip tone={EVIDENCE_LABEL[s.crisis.evidence].tone}>{EVIDENCE_LABEL[s.crisis.evidence].text}</Chip>
-              <span className="ml-auto text-[11px] text-ink-soft">严重度 {"★".repeat(s.crisis.severity)}</span>
+              <span className="ml-auto text-[11px] text-ink-soft">严重度 <StarRating n={s.crisis.severity} /></span>
             </div>
             <p className="mb-3 text-[13px] leading-relaxed text-ink-soft">{crisisDef.desc}</p>
             <div className="mb-3 grid grid-cols-2 gap-2">
@@ -170,6 +178,7 @@ export default function ImageTab() {
           </div>
         </>
       )}
+      </div>
     </div>
   );
 }

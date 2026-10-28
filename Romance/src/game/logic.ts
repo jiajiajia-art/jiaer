@@ -1,34 +1,64 @@
+import { affinityCapOf, partnerLocPerksFor, partnerPerksFor } from "../worlds/star2005/content";
+import { apMax } from "./mud";
+import { shopPrice } from "./factions";
+import { randomName } from "./names";
+import { looksTiers } from "./data";
+import { activeGender } from "./worldRules";
+import { rollFertility, tickPregnancy, type Pregnancy, type Child } from "./pregnancy";
+import { FAMILY_NPC_IDS } from "./family";
+import { orderMods, allowsMultiPartner, maxSpouses, sameSexBlocked, divorceMode, DIVORCE_AGREE_MAX, npcGenderOf } from "./worldRules";
 import {
   BACKGROUNDS,
   DIRECTIONS,
-  GIG_POOL,
   Gig,
   IDENTITIES,
   NPC_DIRECTIONS,
   NPC_NAME_POOL,
   NPC_PERSONALITIES,
+  NPC_PREFS,
+  billsFor,
+  mealOf,
+  MEALS,
+  unlockLock,
   Option,
-  PEOPLE,
+  PEOPLE as ROMANCE_PEOPLE,
   STATS_BASE,
+  clampStat,
   TITLES,
   STAT_LABELS,
   STAT_ORDER,
   STYLES,
   StatKey,
   TRAININGS,
-  TRAITS,
   WEEKEND_ACTS,
   ZODIACS,
-  LESSON_GRADES,
+  gradesOf,
+  tuning,
+  gigRules,
+  RAW_CRASH_MODS,
+  RAW_GIG_REPAIRS,
+  RAW_GIG_MANAGERS,
+  RAW_GIG_MANAGER_DEFAULT,
+  typeHit,
+  RAW_FAIL_FX,
+  economy,
+  bankruptLineFor,
+  reqValue,
+  RAW_GRADE_ODDS,
   SIDE_JOBS,
+  startMoney,
   GRADE_LABEL,
   GRADE_MUL,
   type DayGrade,
 } from "./data";
-import { activitiesOfRoom, CALENDAR, itemsOfRoom, NEGOTIATION, RELATIONS, TRAVEL } from "../worlds/star2005/content";
+import { CALENDAR, NEGOTIATION, RELATIONS, TRAVEL, COMPANIES, MOVIE_TITLES, industryGen } from "../worlds/star2005/content";
+import { applyIncome, applyGameRules, applyStorylines } from "./fixedEvents";
+import { getWorldSlot, LIVE_GIGS, LIVE_PEOPLE, getWorldIncome, getWorldGameRules, getWorldStorylines, getWorldId, feature, getWorldStartMet, getWorldStartRoom, worldActivitiesOfRoom as activitiesOfRoom, worldItemsOfRoom as itemsOfRoom } from "../mods/registry";
 import type { ProjectInstance, WorkPiece } from "./projects";
 import type { RelExt } from "./relations";
 import type { XianyuListing } from "./xianyu";
+import { liveTerm as T, slot } from "../mods/live";
+import { attrCap, wallet } from "./wallet";
 
 export type Character = {
   name: string;
@@ -36,11 +66,15 @@ export type Character = {
   identityId: string;
   backgroundId: string;
   directionId: string;
-  traitIds: string[];
+  traitIds?: string[]; // 旧存档遗留，已不再使用
   zodiacId?: string; // 星座（由出生月日推算，附带加成）
 };
 
+export type EventSnap = { room: string; bag: string[]; rel: Record<string, number>; turn: number; story: number };
 export type GameState = {
+  actUses?: Record<string, { week: number; n: number }>; // 自定义地点行动本周已执行次数（键 = 行动 id）
+  cattrs?: Record<string, number>; // 自定义角色属性当前值（键=AttrDef.id）
+  trainCounts?: Record<string, number>; // 课程各等级完成次数（键 = "课程id:等级id"），用于等级解锁
   char: Character;
   week: number; // 生涯第几周（恒 = careerWeekOf(day)，随日推进派生同步）
   day: number; // 生涯第几天（0 基，day 0 = calendar.startDate 周一）
@@ -48,6 +82,7 @@ export type GameState = {
   daySeg: number; // 保留字段（旧时段模型遗留，恒 0）；日程已改回周一~周日整周制
   stats: Record<StatKey, number>;
   styling: number; // 造型值 → 容貌构成
+  looksBonus?: number; // 容貌永久加成（开局选项 fx.metrics.looks）
   fame: number;
   reputation: number; // 口碑 0-100
   stress: number; // 0-100
@@ -55,6 +90,7 @@ export type GameState = {
   pr: number; // 公司公关
   money: number; // 元
   energy: number; // 行动力 0-100
+  ap?: number; // 本回合剩余行动点（每次推进回满；缺省视为满）
   works: number;
   awards: number;
   activeGigId: string | null;
@@ -66,11 +102,13 @@ export type GameState = {
   standby: Record<string, number>; // 候补资格：通告 id → 下次交涉成功率加成
   offersViewedWeek: number; // 本周是否已进入发布场所查看通告（公关 +5，每周一次）
   schedule: (string | null)[]; // 本周 7 天（周一~周日）各安排的一件事：index = day % 7
+  meal?: string | null; // 饮食生活：玩家选定的每周伙食 id（生活开销包；沿用到改为止，未选=默认档）
   offers: string[]; // gig ids on offer
   usedGigs: string[]; // 已接取/拍过的通告 id：结算后记入，之后不再出现在通告库与打听结果中
   rel: Record<string, number>; // 人物关系值（好感主轴）
   relations: Record<string, RelExt>; // 多维私人关系：心情/心动/私人信任 + 冷落衰减
   metPeople: string[]; // 已结识人物
+  hero?: string; // 人物线路选中的预设主角（固定人物 id）：本局由玩家操控，不再作为 NPC 出现
   npcs: NPC[]; // 随机娱乐圈艺人
   companies: Company[]; // 经纪公司生态（开局生成，含声望数值）
   titles: string[]; // 已获得头衔 id
@@ -80,10 +118,12 @@ export type GameState = {
   defaults: number; // 违约记录累计
   bizValue: number; // 商业价值 0~999（品牌/商业线）
   arcStage: Record<string, number>; // 各攻略线已完成段数
-  lifeRules?: import("./lifecycle").LifeRules;
-  npcLives?: Record<string, { age: number | null; health: number; dead: boolean; lastDay: number; deathDay?: number }>;
-  romanceEnabled?: Record<string, boolean>; // 玩家设定的可攻略状态，未设置沿用原规则
-  dating: string | null; // 已确认交往对象 id
+  arcDay?: Record<string, number>; // 各攻略线最近一段发生在第几天（同一人一天只推进一段）
+  dating: string | null; // 已确认交往对象 id（主恋人）
+  spouses?: string[]; // 已举办婚礼的配偶 id
+  partners?: string[]; // 世界规则允许多伴侣时，其余已确认关系的对象
+  noRomance?: string[]; // 玩家在人物页设为「不可攻略」的人物 id（缺省 = 人人可攻略）
+  familyRomance?: string[]; // 玩家手动设为「可攻略」的家人 id（家人缺省为亲情线）
   room: string; // MUD 当前所在房间（地图位置 id）
   visited: string[]; // 已探索过的房间 id
   discoveredAt: Record<string, number>; // 战争迷雾：房间 id → 首次抵达的生涯天数（登记后地点解锁资料）
@@ -94,6 +134,19 @@ export type GameState = {
   mobs: Record<string, string>; // MUD 人物「心跳」实时位置：人物 id → 房间 id
   tick: number; // 世界心跳计数（每次移动 +1，驱动 NPC 走动与环境事件）
   eventsFired: string[]; // 已触发过的一次性条件事件 id（避免重复触发）
+  perkFired?: Record<string, { n: number; last: number; wk: number; wn: number }>; // 地点伴侣加成触发记录：总次数 / 上次天 / 所在周 / 本周次数
+  eventsAt?: Record<string, string>; // 周期事件：上次上演所在的周期（同一周期只上演一次）
+  eventsUnlocked?: string[]; // 已被前置固定事件「激活」的后续事件 id（供 locked 事件解锁）
+  eventsActive?: string[]; // 进行中的事件 id：其设定每回合发给 AI，直到出现结束关键词（无结束词的只发当回合）
+  flags?: Record<string, number>; // 规则变量：玩法规则 / 事件写入，供条件读取（未写过 = 0）
+  modData?: Record<string, Record<string, number>>; // 功能 MOD 私有数据域：按 MOD id 分表，与 flags / 好感 / 原生状态隔离
+  modAuth?: Record<string, "allow" | "deny">; // 本工程（存档）的 MOD 间授权记录；键见 mods/comm.ts authKey。不随 MOD 包走
+  modSubPrio?: Record<string, number>; // 本工程调整过的订阅优先级（订阅键 → 数值，越小越先收到）
+  audioQ?: import("../lib/types").AudioCmd[]; audioSeq?: number; // 待播放器执行的音频指令（按序号去重，不会重放）
+  modEvents?: { mod: string; event: string; args?: Record<string, import("../mods/types").ModArg> }[]; // 本轮 MOD 广播、待原生触发器（modEvent）消费的事件
+  evSnap?: EventSnap; // 事件触发快照：上次检查时的地点 / 物品 / 关系 / 回合，用来判定「进入、获得、变化、轮次」类触发
+  evQueue?: string[]; // 已被触发、等待上演的事件 id（一次只上演一桩，其余排队）
+  rulesFired?: Record<string, number>; // 玩法规则触发记录：规则 id → 最近触发的生涯天数
   projects: ProjectInstance[]; // 通告/项目全生命周期实例
   portfolio: WorkPiece[]; // 待发行 / 已发行作品库
   knownFacts: Record<string, string[]>; // 制作人对话解锁的项目字段：projectId → 已知字段名
@@ -107,13 +160,18 @@ export type GameState = {
   personaStreak: number; // 连续一致的公开内容次数
   personaSwings: number; // 累计人设反转次数
   crisis: CrisisState | null; // 当前进行中的危机
+  relColdNoted?: Record<string, number>; // 冷落播报去重：人物 id → 已播报时的 lastContactDay
   crisesResolved: number; // 已处理危机数
   starBuzz: StarBuzz[]; // 圈内动态：同行之间每周演化的事件（引擎只存抽象类别+参与者+抽签，文案在内容池）
   lastCheck: WeekCheck | null; // 最近一次周日进账支票
   lastBill: WeekBill | null; // 最近一次账单明细（供「人物」页查看）
   gigDepositPaid: boolean; // 当前通告是否已发放签约定金（避免重复入账）
   checks: GigCheck[]; // 通告签约定金 / 拍毕尾款支票凭证（近期若干张，供「财务」查看）
+  breachQueue?: BreachEvent[]; // 排队待了结的后续违约（breach 了结后依次顶上）
   breach: BreachEvent | null; // 逾期违约：制片人上门追责的对话事件（未了结前挂起）
+  fertility?: number; // 隐藏世界数值「生育率」0~100（开局随机，常规界面不展示）
+  pregnancy?: Pregnancy | null; // 孕期状态（known=false 时主角尚不知情）
+  children?: Child[]; // 子女
   log: string[];
 };
 
@@ -150,40 +208,48 @@ export type Company = { id: string; prestige: number };
 
 const rng = (a: number, b: number) => a + Math.floor(Math.random() * (b - a + 1));
 
-const NPC_PREFS = ["抢影视资源", "抢音乐舞台", "刷综艺曝光", "冲商业代言", "红毯高奢", "话题营销"];
 
 // 生成 5~8 家公司 + 至少 count 名艺人，每家至少 minPerCompany 人；公司声望在基线上下浮动
 function generateIndustry(count = 30, minPerCompany = 4): { companies: Company[]; npcs: NPC[] } {
-  const companyCount = rng(5, 8);
+  const g = industryGen();
+  count = Math.max(1, Math.round(g.npcCount ?? count));
+  minPerCompany = Math.max(0, Math.round(g.minPerCompany ?? minPerCompany));
+  // 公司数量与内容池对齐（避免序号越界显示成「自由艺人」）；内容池为空时退回随机 5~8 家
+  const companyCount = COMPANIES.length > 0 ? COMPANIES.length : rng(5, 8);
   const companies: Company[] = Array.from({ length: companyCount }, (_, i) => ({
     id: `co_${i}`,
-    prestige: clamp(rng(30, 88) - i * 3, 15, 95),
+    prestige: COMPANIES[i]?.prestige != null ? clamp(COMPANIES[i].prestige + rng(-6, 6), 5, 99) : clamp(rng(30, 88) - i * 3, 15, 95),
   }));
   const total = Math.max(count, companyCount * minPerCompany);
   const names = [...NPC_NAME_POOL].sort(() => Math.random() - 0.5);
+  const usedNames = new Set<string>();
   // 先按最小配额铺满每家公司，其余随机分配
   const assign: string[] = [];
   for (const c of companies) for (let k = 0; k < minPerCompany; k++) assign.push(c.id);
   for (let k = assign.length; k < total; k++) assign.push(companies[rng(0, companyCount - 1)].id);
   assign.sort(() => Math.random() - 0.5);
 
-  const MOVIE_COUNT = 24; // 代表作序号上界（与内容池 movies 长度对齐；越界 UI 会取模兜底）
+  const MOVIE_COUNT = Math.max(1, MOVIE_TITLES.length);
+  const startYear = Number(/^(\d{4})/.exec(String(CALENDAR.startDate ?? ""))?.[1]) || 2005;
+  const baseYear = g.debutBaseYear ?? startYear;
+  const span = Math.max(0, g.debutSpan ?? 8);
+  const [sMin, sMax] = [g.statMin ?? 80, g.statMax ?? 520];
+  const [fMin, fMax] = [g.fameMin ?? 20, g.fameMax ?? 180];
   const npcs: NPC[] = Array.from({ length: total }, (_, i) => {
     const stats = {} as Record<StatKey, number>;
-    for (const k of STAT_ORDER) stats[k] = rng(80, 520);
+    for (const k of STAT_ORDER) stats[k] = rng(sMin, Math.max(sMin, sMax));
     const co = companies.find((c) => c.id === assign[i])!;
-    const debutYear = 2005 - rng(0, 8);
+    const debutYear = baseYear - rng(0, span);
     const workN = rng(1, 3);
     const works = Array.from({ length: workN }, () => rng(0, MOVIE_COUNT - 1));
-    return {
+  return {
       id: `npc_${i}`,
-      name: names[i % names.length] + (i >= names.length ? `·${Math.floor(i / names.length) + 1}` : ""),
-      gender: Math.random() < 0.7 ? "女" : "男",
+      ...npcNameGender(names, usedNames),
       dir: NPC_DIRECTIONS[rng(0, NPC_DIRECTIONS.length - 1)],
       personality: NPC_PERSONALITIES[rng(0, NPC_PERSONALITIES.length - 1)],
       pref: NPC_PREFS[rng(0, NPC_PREFS.length - 1)],
       // 声望越高的公司，艺人起点名气越高
-      fame: clamp(rng(20, 180) + Math.round(co.prestige * 0.8), 10, 320),
+      fame: clamp(rng(fMin, Math.max(fMin, fMax)) + Math.round(co.prestige * 0.8), 10, 320),
       stats,
       companyId: co.id,
       debutYear,
@@ -198,7 +264,7 @@ function generateIndustry(count = 30, minPerCompany = 4): { companies: Company[]
   const taken = new Set<string>();
   for (const a of pool) {
     if (taken.has(a.id)) continue;
-    if (Math.random() > 0.42) continue;
+    if (Math.random() > (g.coupleRate ?? 0.42)) continue;
     const b = pool.find((x) => x.id !== a.id && !taken.has(x.id) && x.gender !== a.gender && !a.partnerId);
     if (!b) continue;
     a.partnerId = b.id; b.partnerId = a.id;
@@ -246,21 +312,26 @@ export function industryBoards(s: GameState, movieSlots = 6, adSlots = 5): { mov
   return { movies, ads };
 }
 
+/* NPC 性别先定，再按性别取名：女性优先用世界观精选名池，用尽或男性则走分性别字库 */
+function npcNameGender(curated: string[], used: Set<string>): { name: string; gender: string } {
+  const gender = Math.random() < 0.7 ? "女" : "男";
+  if (gender === "女") {
+    const n = curated.find((x) => !used.has(x));
+    if (n) { used.add(n); return { name: n, gender }; }
+  }
+  return { name: randomName(gender, "modern", used), gender };
+}
+
 function findOpt(list: Option[], id: string) {
   return list.find((o) => o.id === id);
 }
 
-export function computeLooks(s: { stats: Record<StatKey, number>; styling: number; stress: number }) {
-  const raw = s.stats.yitai * 0.55 + s.stats.zixin * 0.25 + s.styling * 0.2;
-  const penalty = s.stress >= 75 ? 0.9 : 1;
-  return Math.round(Math.min(999, raw * penalty));
-}
+import { computeLooks } from "./looks";
+export { computeLooks }; // 纯函数已拆到无依赖的叶子模块，避免 content ↔ logic 运行时循环引用
 
 export function looksTier(v: number) {
-  if (v >= 700) return "顶级神颜";
-  if (v >= 500) return "高端脸孔";
-  if (v >= 300) return "镜头上镜";
-  return "新人清秀";
+  const t = [...looksTiers()].sort((a, b) => a.min - b.min);
+  return ([...t].reverse().find((x) => v >= x.min) ?? t[0]).label;
 }
 
 /* 容貌（NPC）：由已知八维中的仪态/自信派生一条统一的容貌数值，供人物档案展示。
@@ -289,36 +360,18 @@ export function createGame(char: Character): GameState {
   let fame = 15;
   let reputation = 35;
   let stress = 20;
-  let money = 5000; // 科班出身开局：初始资金固定 5000 元（不随出身/星座浮动）
-  const pr = 100;
-  const blackFans = 1;
+  let money = startMoney(); // 开局资金固定（模组槽 startMoney，娱乐圈=5000），不随出身/星座浮动
+  let pr = 100;
+  let blackFans = 1;
 
-  const opts = [
-    findOpt(STYLES, char.styleId),
-    findOpt(IDENTITIES, char.identityId),
-    findOpt(BACKGROUNDS, char.backgroundId),
-    findOpt(DIRECTIONS, char.directionId),
-    ...char.traitIds.map((t) => findOpt(TRAITS, t)),
-    char.zodiacId ? ZODIACS.find((z) => z.id === char.zodiacId) : undefined,
-  ];
-
-  for (const o of opts) {
-    if (!o) continue;
-    if (o.stats) for (const k of STAT_ORDER) if (o.stats[k]) stats[k] += o.stats[k]!;
-    if (o.looksBonus) styling += o.looksBonus;
-    // 初始资金固定 5000，出身/星座的资金加成不再计入开局现金
-    if (o.fame) fame += o.fame;
-    if (o.reputation) reputation += o.reputation;
-    if (o.stress) stress += o.stress;
-  }
-
-  for (const k of STAT_ORDER) stats[k] = Math.max(0, Math.min(999, stats[k]));
+  // 建角选项（外形 / 身份 / 家庭 / 方向 / 星座）只是文字设定；开局数值由作者在选项 fx 里配置，经 StartOpts.fx 统一结算
+  for (const k of STAT_ORDER) stats[k] = clampStat(k, stats[k]);
 
   return {
     char,
-    week: 1,
+    week: careerWeekOf(0),
     day: 0,
-    clockMin: 8 * 60,
+    clockMin: startClockMin(),
     daySeg: 0,
     stats,
     styling: Math.min(999, styling),
@@ -342,10 +395,10 @@ export function createGame(char: Character): GameState {
     schedule: [null, null, null, null, null, null, null],
     offers: [],
     usedGigs: [],
-    rel: Object.fromEntries(PEOPLE.map((p) => [p.id, p.init])),
-    relations: Object.fromEntries(PEOPLE.map((p) => [p.id, { mood: RELATIONS.mood.init, romantic: 0, trust: RELATIONS.trust.init, lastContactDay: 0 }])),
-    // 开局只认识自己的经纪人林宜；其余人的 init 只是潜在好感底子，得真正碰面结识后才进人脉
-    metPeople: ["linyi"],
+    rel: Object.fromEntries(relRoster().map((p) => [p.id, p.init])),
+    relations: Object.fromEntries(relRoster().map((p) => [p.id, { mood: RELATIONS.mood.init, romantic: 0, trust: RELATIONS.trust.init, lastContactDay: 0 }])),
+    // 开局只认识自己的经纪人林宜（娱乐圈）；其余人的 init 只是潜在好感底子，得真正碰面结识后才进人脉
+    metPeople: [...getWorldStartMet()],
     ...(() => { const g = generateIndustry(30, 4); return { npcs: g.npcs, companies: g.companies }; })(),
     titles: [],
     equippedTitle: null,
@@ -355,9 +408,9 @@ export function createGame(char: Character): GameState {
     bizValue: 40,
     arcStage: {},
     dating: null,
-    room: "apartment",
-    visited: ["apartment"],
-    discoveredAt: { apartment: 0 },
+    room: getWorldStartRoom(),
+    visited: [getWorldStartRoom()],
+    discoveredAt: { [getWorldStartRoom()]: 0 },
     bag: [],
     cars: [],
     activeCar: null,
@@ -384,7 +437,10 @@ export function createGame(char: Character): GameState {
     gigDepositPaid: false,
     checks: [],
     breach: null,
-    log: ["第 1 周 · 你搬进了天光公寓，出道倒计时 104 周正式开始。"],
+    fertility: rollFertility(),
+    pregnancy: null,
+    children: [],
+    log: ["第 1 周 · 你搬进了天光小区，出道倒计时 104 周正式开始。"],
   };
 }
 
@@ -440,7 +496,7 @@ function catPublishesOn(cat: GigCat, week: number): boolean {
 // 找对应制作人/制片人「打听」到的通告：按其掌管的类别 + 本周发布节奏 + 名气门槛筛选
 export function offersFrom(s: GameState, cats: GigCat[], maxStar?: number): string[] {
   const used = new Set(s.usedGigs ?? []);
-  return GIG_POOL.filter(
+  return LIVE_GIGS.filter(
     (g) =>
       !used.has(g.id) &&
       g.id !== s.activeGigId &&
@@ -457,7 +513,7 @@ export function offersFrom(s: GameState, cats: GigCat[], maxStar?: number): stri
 
 export function refreshOffers(fame: number, week = 1): string[] {
   // 按类别发布节奏刷新：本周只展示“本周发布 + 常驻”的通告，制造档期取舍
-  const pool = GIG_POOL.filter(
+  const pool = LIVE_GIGS.filter(
     (g) => g.fameReq <= fame + 120 && catPublishesOn(gigCategory(g), week),
   );
   return pool.slice(0, 5).map((g) => g.id);
@@ -468,13 +524,10 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
 
 // 9. 资源负责人：通告类型 → 负责人与地点
 export function gigManager(g: Gig): { name: string; loc: string } {
-  const t = g.type;
-  if (/广告|品牌|代言/.test(t)) return { name: "孟晚乔", loc: "璀璨广告中心" };
-  if (/电影/.test(t)) return { name: "许砚清", loc: "浮光影视基地" };
-  if (/电视剧|剧/.test(t)) return { name: "方知远", loc: "浮光影视基地" };
-  if (/综艺|采访|直播/.test(t)) return { name: "秦砚舟", loc: "云台传媒城" };
-  if (/唱片|音乐|舞台|单曲|演唱会/.test(t)) return { name: "梁怀音", loc: "迭音音乐工坊" };
-  return { name: "林宜", loc: "启星事务所" };
+  // 对接表由世界观 tuning.gigRules.managers 配置；缺省 = 娱乐圈原表
+  const gr = gigRules();
+  const m = (gr.managers ?? RAW_GIG_MANAGERS).find((x) => typeHit(g.type, x.types));
+  return m ? { name: m.name, loc: m.loc } : (gr.managerDefault ?? RAW_GIG_MANAGER_DEFAULT);
 }
 
 // 9.1 通告交涉成功率（先找负责人再交涉；违约/压力降低，好感/名气/口碑/头衔提高）
@@ -486,7 +539,8 @@ export function negotiateRate(g: Gig, s: GameState): number {
   const repMod = g.star >= 4 ? Math.floor(s.reputation / 10) * 2 : Math.floor(s.reputation / 15); // 高级通告更看口碑
   const trustMod = Math.floor(s.trust / 20) * 3; // 负责人好感
   const stressMod = Math.floor(s.stress / 10) * 2;
-  const breachMod = s.defaults * (/广告|品牌|电影/.test(g.type) ? 14 : 8); // 违约对广告/品牌/高级影视影响更大
+  const br = gigRules();
+  const breachMod = s.defaults * (typeHit(g.type, br.breachHiTypes ?? "广告|品牌|电影") ? (br.breachHi ?? 14) : (br.breachBase ?? 8)); // 违约惩罚由 tuning.gigRules 配置；缺省 广告/品牌/电影 14，其余 8
   const titleMod = Math.min(6, s.titles.length * 2); // 拥有头衔提升该类型通告成功率
   const standbyMod = s.standby?.[g.id] ?? 0; // 候补资格：上次交涉留下的加成
   const rate = 55 + margin * 0.12 + fameMod + repMod + trustMod + titleMod + standbyMod - stressMod - breachMod;
@@ -495,9 +549,10 @@ export function negotiateRate(g: Gig, s: GameState): number {
 
 // 9.1 与负责人交涉：成功锁定档期，失败损失体力/压力/好感，先到先得可能被 NPC 抢走
 export function negotiateGig(s: GameState, gigId: string): { next: GameState; ok: boolean; msg: string } {
-  const g = GIG_POOL.find((x) => x.id === gigId);
+  if (!feature("career")) return { next: s, ok: false, msg: `本局未启用「演艺事业包」，没有${T("gig")}可接。` };
+  const g = LIVE_GIGS.find((x) => x.id === gigId);
   if (!g) return { next: s, ok: false, msg: "" };
-  if (s.activeGigId) return { next: s, ok: false, msg: "你已有通告在身，档期冲突。" };
+  if (s.activeGigId) return { next: s, ok: false, msg: `你已有${T("gig")}在身，档期冲突。` };
   if (!gigEligible(g, s)) return { next: s, ok: false, msg: "硬性门槛未达标，负责人不会与你交涉。" };
   const mgr = gigManager(g);
   const N = NEGOTIATION;
@@ -554,7 +609,7 @@ export function negotiateGig(s: GameState, gigId: string): { next: GameState; ok
   n.trust = clamp(n.trust - 3, 0, 100);
   const o = N.outcomes.reject;
   let msg = `${mgr.name}：${o.label}（成功率 ${rate}%）——体力 -6、压力 +5、负责人好感 -3。`;
-  if (Math.random() < N.snatchChance) { n.offers = n.offers.filter((x) => x !== g.id); msg += " 该通告被同期艺人抢走了。"; }
+  if (Math.random() < N.snatchChance) { n.offers = n.offers.filter((x) => x !== g.id); msg += ` 该${T("gig")}被同期艺人抢走了。`; }
   return finish(false, msg);
 }
 
@@ -607,11 +662,17 @@ export function parseAct(act: string | null): { kind: "gig" | "rest" | "weekend"
 
 /* 推进结果档位掷骰：受自信（利好）与压力（不利）牵引。 */
 export function rollGrade(s: GameState): DayGrade {
-  let r = Math.random() * 100 - (s.stats.zixin / 40 - s.stress / 3);
-  if (r < 8) return "perfect";
-  if (r < 30) return "great";
-  if (r < 78) return "success";
-  if (r < 93) return "fail";
+  const tu = tuning();
+  const odds = { ...RAW_GRADE_ODDS, ...(tu.gradeOdds ?? {}) };
+  const order: DayGrade[] = ["perfect", "great", "success", "fail", "bad"];
+  const total = order.reduce((a, k) => a + Math.max(0, odds[k]), 0) || 100;
+  const luckDiv = tu.luckDiv ?? 40, stressDiv = tu.stressDiv ?? 3;
+  const luck = luckDiv > 0 ? reqValue(s, tu.luckStat ?? "stat:zixin") / luckDiv : 0;
+  const drag = stressDiv > 0 ? s.stress / stressDiv : 0;
+  // 掷 0~100：属性越高越靠前（好评级），压力越大越靠后
+  const r = Math.random() * 100 - (luck - drag);
+  let acc = 0;
+  for (const k of order) { acc += (Math.max(0, odds[k]) / total) * 100; if (r < acc) return k; }
   return "bad";
 }
 
@@ -619,33 +680,45 @@ export type ActResult = { grade: DayGrade | null; actLabel: string; gains: strin
 
 // 单件日程活动的即时结算：推进「一天」时对当天安排的一件事应用效果，并掷出完美/大成功/成功/失败/糟糕。
 // 休息/外出社交为确定性效果（不掷档位，grade=null）；训练/打工/拍摄按掷出的档位调整收益。
+// 无通告体系的世界观（如校园）：名气/口碑没有通告来源，改由日常表现出彩时小幅积累，保证头衔与结局可达
+function noGigFame(n: GameState, grade: DayGrade, gains: string[]) {
+  if (LIVE_GIGS.length > 0) return;
+  // 主要名气来源交给模组内容（校园社团活动 / 学年大事），这里只是日常出彩的小幅积累
+  if (grade === "perfect") { n.fame += 2; n.reputation = clamp(n.reputation + 1, 0, 100); gains.push(`表现亮眼 · ${T("fame", "名气")} +2 · 口碑 +1`); }
+  else if (grade === "great") { n.fame += 1; gains.push(`小有表现 · ${T("fame", "名气")} +1`); }
+}
+
 export function applyAct(n: GameState, act: string | null, deltas: string[]): ActResult {
-  const traits = n.char.traitIds;
-  const thrift = traits.includes("save") ? 0.85 : 1;
   const p = parseAct(act);
 
   if (p.kind === "rest") {
-    n.stress = clamp(n.stress - 8, 0, 100);
-    return { grade: null, actLabel: "休息", gains: ["压力 -8"] };
+    const rs = tuning().restStress ?? 8;
+    n.stress = clamp(n.stress - rs, 0, 100);
+    return { grade: null, actLabel: "休息", gains: [`压力 ${rs >= 0 ? "-" : "+"}${Math.abs(rs)}`] };
   }
 
   if (p.kind === "weekend") {
     const w = WEEKEND_ACTS.find((x) => x.id === p.weekendId)!;
-    n.money -= Math.round(w.cost * thrift);
+    bumpCount(n, `wk:${w.id}`);
+    const wc = w.cost;
+    if (!canPay(n, wc)) return { grade: null, actLabel: w.name, gains: [shortOf(n, wc, w.name)] };
+    wallet.addIn(n, -(wc));
     n.stress = clamp(n.stress + w.stress, 0, 100);
     if (w.trust) n.trust = clamp(n.trust + w.trust, 0, 100);
     if (w.fame) n.fame += w.fame;
     if (w.reputation) n.reputation = clamp(n.reputation + w.reputation, 0, 100);
-    return { grade: null, actLabel: w.name, gains: [w.effect] };
+    const wg = [w.effect];
+    applyCgain(n, w.cgain, 1, wg);
+    return { grade: null, actLabel: w.name, gains: wg };
   }
 
   if (p.kind === "gig") {
-    if (!n.activeGigId || n.gigDaysLeft <= 0 || n.gigMisses >= 3) return { grade: null, actLabel: "拍摄通告", gains: ["今日无可拍摄的通告"] };
+    if (!n.activeGigId || n.gigDaysLeft <= 0 || n.gigMisses >= 3) return { grade: null, actLabel: `拍摄${T("gig")}`, gains: [`今日无可拍摄的${T("gig")}`] };
     // 未到开机周（重点通告档期锁死）：不能提前开拍
     if (n.gigStartWeek > 0 && n.week < n.gigStartWeek) {
-      return { grade: null, actLabel: "拍摄通告", gains: [`该通告第 ${n.gigStartWeek} 周才开机，尚未进组`] };
+      return { grade: null, actLabel: `拍摄${T("gig")}`, gains: [`该${T("gig")}第 ${n.gigStartWeek} 周才开机，尚未进组`] };
     }
-    const g = GIG_POOL.find((x) => x.id === n.activeGigId)!;
+    const g = LIVE_GIGS.find((x) => x.id === n.activeGigId)!;
     n.stress = clamp(n.stress + rand(2, 6), 0, 100);
     n.gigDaysLeft -= 1;
     const grade = rollGrade(n);
@@ -664,22 +737,29 @@ export function applyAct(n: GameState, act: string | null, deltas: string[]): Ac
   if (p.kind === "work") {
     const j = SIDE_JOBS.find((x) => x.id === p.jobId);
     if (!j) return { grade: null, actLabel: "打工", gains: [] };
+    bumpCount(n, `work:${j.id}`);
     const grade = rollGrade(n);
-    const pay = Math.max(0, Math.round(j.pay * GRADE_MUL[grade]));
-    n.money += pay;
+    const pay = Math.max(0, Math.round(j.pay * GRADE_MUL[grade] * (tuning().jobPayMul ?? 1)));
+    wallet.addIn(n, pay);
     n.stress = clamp(n.stress + j.stress + (grade === "fail" || grade === "bad" ? 3 : 0), 0, 100);
-    const gains = pay > 0 ? [`进账 ¥${pay}`] : ["白忙一场，没挣到钱"];
+    const gains = pay > 0 ? [`进账 ${wallet.fmt(pay)}`] : ["白忙一场，没挣到钱"];
+    noGigFame(n, grade, gains);
+    applyCgain(n, j.cgain, GRADE_MUL[grade], gains);
     return { grade, actLabel: j.label, gains };
   }
 
   if (p.kind === "train") {
     const t = TRAININGS.find((x) => x.id === p.trainId);
-    const gr = LESSON_GRADES.find((x) => x.id === p.gradeId) ?? LESSON_GRADES[0];
     if (!t) return { grade: null, actLabel: "才艺课程", gains: [] };
-    n.money -= Math.round(t.cost * gr.costMul * thrift);
+    const grs = gradesOf(t);
+    const gr = grs.find((x) => x.id === p.gradeId) ?? grs[0];
+    const fee = Math.round(t.cost * gr.costMul * (tuning().trainFeeMul ?? 1));
+    if (!canPay(n, fee)) return { grade: null, actLabel: `${t.name}·${gr.label}`, gains: [shortOf(n, fee, "学费")] };
+    bumpCount(n, `${t.id}:${gr.id}`);
+    wallet.addIn(n, -(fee));
     const grade = rollGrade(n);
     n.stress = clamp(n.stress + t.stress + gr.stressAdd, 0, 100);
-    const mul = GRADE_MUL[grade];
+    const mul = GRADE_MUL[grade] * (tuning().trainGainMul ?? 1);
     const gains: string[] = [];
     if (mul <= 0) {
       return { grade, actLabel: `${t.name}·${gr.label}`, gains: ["状态糟糕，这堂课几乎没学进去"] };
@@ -691,9 +771,15 @@ export function applyAct(n: GameState, act: string | null, deltas: string[]): Ac
       // 越接近该级课程上限收益越低，越过上限几乎无收益（须升更高级课程）
       const factor = cur >= gr.cap ? 0.12 : clamp(0.4 + 0.6 * (gr.cap - cur) / gr.cap, 0.12, 1);
       const gain = Math.round(rand(r[0], r[1]) * gr.gainMul * mul * factor);
-      if (gain > 0) { n.stats[k] = clamp(cur + gain, 0, 999); gains.push(`${STAT_LABELS[k]} +${gain}`); }
+      if (gain > 0) { n.stats[k] = clampStat(k, cur + gain); gains.push(`${STAT_LABELS[k]} +${gain}`); }
       else gains.push(`${STAT_LABELS[k]} 已近${gr.label}瓶颈`);
     }
+    // 自定义属性收益：与八维同样受课程档位 / 状态倍率影响，按属性自身上下限截断
+    applyCgain(n, t.cgain, gr.gainMul * mul, gains);
+    // 模组可为课程/活动声明名气、口碑收益（如校园社团活动）：完美档位额外 +1
+    if (t.fame) { const f = t.fame + (grade === "perfect" ? 1 : 0); n.fame += f; gains.push(`${T("fame", "名气")} +${f}`); }
+    if (t.reputation) { const r = t.reputation; n.reputation = clamp(n.reputation + r, 0, 100); gains.push(`口碑 +${r}`); }
+    noGigFame(n, grade, gains);
     return { grade, actLabel: `${t.name}·${gr.label}`, gains };
   }
 
@@ -701,7 +787,8 @@ export function applyAct(n: GameState, act: string | null, deltas: string[]): Ac
 }
 
 // 周结算：跨过周日翻页时触发的经济/通告/生态结算（日程活动已在各时段逐段落地，这里不再重排日程）。
-export function settleWeek(s: GameState): WeekResult {
+// customTimeLimit：若玩家/模组自定义了主线时限（如 3 年 = 1095 天），则不再按默认 104 周（2 年）提前强制落幕，交由 advanceDay 的 limitDay 判定。
+export function settleWeek(s: GameState, customTimeLimit = false): WeekResult {
   const n: GameState = {
     ...s,
     stats: { ...s.stats },
@@ -710,16 +797,15 @@ export function settleWeek(s: GameState): WeekResult {
     log: [...s.log],
   };
   const deltas: string[] = [];
-  const traits = s.char.traitIds;
   let earned = 0; // 本周演艺进账（gig 报酬合计，用于周日支票）
 
   // 周日：为下周一开机、尚未支付定金的通告发放签约定金支票（片酬 30%）
   if (n.activeGigId && !n.gigDepositPaid && n.gigStartWeek === n.week + 1) {
-    const dg = GIG_POOL.find((x) => x.id === n.activeGigId);
+    const dg = LIVE_GIGS.find((x) => x.id === n.activeGigId);
     if (dg) {
       const mgr = gigManager(dg);
       const deposit = Math.round(dg.pay * 0.3 * (n.activeGigMods?.payMul ?? 1));
-      n.money += deposit;
+      wallet.addIn(n, deposit);
       n.gigDepositPaid = true;
       n.checks = pushCheck(n.checks, {
         kind: "deposit",
@@ -730,7 +816,7 @@ export function settleWeek(s: GameState): WeekResult {
         memo: `《${dg.name}》签约定金（30%）`,
         drawer: mgr.loc,
       });
-      deltas.push(`收到《${dg.name}》签约定金支票 ¥${deposit.toLocaleString("zh-CN")}（下周一开机，须于第 ${n.gigDeadlineWeek} 周前拍完）`);
+      deltas.push(`收到《${dg.name}》签约定金支票 ${wallet.fmt(deposit)}（下周一开机，须于第 ${n.gigDeadlineWeek} 周前拍完）`);
     }
   }
 
@@ -739,7 +825,7 @@ export function settleWeek(s: GameState): WeekResult {
   const expired = !!n.activeGigId && n.gigDaysLeft > 0 && n.gigDeadlineWeek > 0 && n.week >= n.gigDeadlineWeek;
   // 通告完成判定
   if (n.activeGigId && (n.gigDaysLeft <= 0 || terminated || expired)) {
-    const g = GIG_POOL.find((x) => x.id === n.activeGigId)!;
+    const g = LIVE_GIGS.find((x) => x.id === n.activeGigId)!;
     // 成功率公式（2.1 通告成功率公式）：以拍摄结束时的能力结算
     let margin = 0; // 能力超出幅度（各要求项之和）
     let severe = false; // 任一能力 ≤ 要求值 50%
@@ -770,17 +856,21 @@ export function settleWeek(s: GameState): WeekResult {
     if (n.gigMisses === 0) rate += 12; // 零失误：+12%，作品质量 +1 档倾向
     else if (n.gigMisses === 1) rate -= 8; // 轻微失误
     else if (n.gigMisses === 2) rate -= 22; // 多次失误，报酬上限下调
-    if (n.dating === "guchen" && g.star >= 5) rate += 8; // 天王恋人线：高级影视资源成功率提升
-    if (n.dating === "songshixu" && /广告|投资|品牌/.test(g.type)) rate += 5; // 资本同盟：商务资源成功率提升
+    const perks = partnerPerksFor((pid) => hasPartner(n, pid), g).filter((p) => perkWhenOk(s, p)); // 恋人加成（世界观 relations.partnerPerks 配置；when 条件与地点加成同一套）
+    for (const p of perks) rate += p.rate ?? 0;
+    rate += orderMods().rate; // 世界规则·社会秩序
     rate = clamp(rate, 5, 98);
 
-    // 崩溃判定：压力≥90 时，高强度拍摄有概率状态失控
+    // 崩溃判定：规则由世界观 tuning.gigRules 配置（缺省 = 压力≥90 时 20%，体能≥500 / 苏晴好感≥60 各 -5%，最低 5%）
+    const gr = gigRules();
     let crashChance = 0;
-    if (n.stress >= 90) {
-      crashChance = 20;
-      if (n.stats.tineng >= 500) crashChance -= 5;
-      if ((n.rel["suqing"] ?? 0) >= 60) crashChance -= 5; // 苏晴挚友
-      crashChance = Math.max(5, crashChance);
+    if (gr.crashOn !== false && n.stress >= (gr.crashStress ?? 90)) {
+      crashChance = gr.crashBase ?? 20;
+      for (const m of gr.crashMods ?? RAW_CRASH_MODS) {
+        const v = perkRead(n, m.key, m.pid ?? "");
+        if (m.op === "<=" ? v <= m.value : v >= m.value) crashChance += m.delta;
+      }
+      crashChance = Math.max(gr.crashMin ?? 5, crashChance);
     }
     const crashed = crashChance > 0 && Math.random() * 100 < crashChance;
 
@@ -788,7 +878,7 @@ export function settleWeek(s: GameState): WeekResult {
     // 交涉结果修正（低价出演压报酬、角色降级压名气）——正式接取时均为 1
     const negPayMul = n.activeGigMods?.payMul ?? 1;
     const negFameMul = n.activeGigMods?.fameMul ?? 1;
-    const fameMul = (traits.includes("topic") ? 1.15 : 1) * negFameMul;
+    const fameMul = negFameMul;
     const payCap = (n.gigMisses >= 2 ? 0.8 : 1) * negPayMul; // 多次失误：报酬上限 -20%
     // 四档完成状态（撤换直接失败）
     let finalPay = 0; // 拍毕入账的尾款（定金已在开机前发放，这里为剩余部分）
@@ -801,67 +891,83 @@ export function settleWeek(s: GameState): WeekResult {
     if (status === "perfect") {
       const gain = Math.round(g.fame * 1.3 * fameMul);
       const pay = Math.round(g.pay * 1.2 * payCap);
-      n.money += pay; earned += pay; finalPay = pay;
+      wallet.addIn(n, pay); earned += pay; finalPay = pay;
       n.fame += gain;
       n.reputation += rand(2, 6);
       n.trust = clamp(n.trust + 8, 0, 100);
       n.works += 1;
       if (g.star >= 4) { n.awards += 1; deltas.push(`《${g.name}》斩获一项大奖`); }
-      for (const k of STAT_ORDER) if (g.grow[k]) n.stats[k] = clamp(n.stats[k] + Math.round(g.grow[k]! * 1.2), 0, 999);
-      deltas.push(`完美完成《${g.name}》：名气 +${gain}，报酬 ¥${(g.pay * 1.2 / 10000).toFixed(1)}万，负责人信任 +8`);
+      for (const k of STAT_ORDER) if (g.grow[k]) n.stats[k] = clampStat(k, n.stats[k] + Math.round(g.grow[k]! * 1.2));
+      deltas.push(`完美完成《${g.name}》：名气 +${gain}，报酬 ${wallet.short(g.pay * 1.2)}，负责人信任 +8`);
     } else if (status === "smooth") {
       const gain = Math.round(g.fame * fameMul);
       const pay = Math.round(g.pay * payCap);
-      n.money += pay; earned += pay; finalPay = pay;
+      wallet.addIn(n, pay); earned += pay; finalPay = pay;
       n.fame += gain;
       n.reputation += rand(0, 3);
       n.trust = clamp(n.trust + 4, 0, 100);
       n.works += 1;
-      for (const k of STAT_ORDER) if (g.grow[k]) n.stats[k] = clamp(n.stats[k] + g.grow[k]!, 0, 999);
-      deltas.push(`顺利完成《${g.name}》：名气 +${gain}，报酬 ¥${(g.pay / 10000).toFixed(1)}万`);
+      for (const k of STAT_ORDER) if (g.grow[k]) n.stats[k] = clampStat(k, n.stats[k] + g.grow[k]!);
+      deltas.push(`顺利完成《${g.name}》：名气 +${gain}，报酬 ${wallet.short(g.pay)}`);
     } else if (status === "barely") {
       const gain = Math.round(g.fame * 0.5 * fameMul);
       const pay = Math.round(g.pay * 0.6 * payCap);
-      n.money += pay; earned += pay; finalPay = pay;
+      wallet.addIn(n, pay); earned += pay; finalPay = pay;
       n.fame += gain;
       n.reputation -= rand(1, 2);
       n.trust = clamp(n.trust - 3, 0, 100);
       n.stress += 6;
       n.works += 1;
-      for (const k of STAT_ORDER) if (g.grow[k]) n.stats[k] = clamp(n.stats[k] + Math.round(g.grow[k]! * 0.5), 0, 999);
+      for (const k of STAT_ORDER) if (g.grow[k]) n.stats[k] = clampStat(k, n.stats[k] + Math.round(g.grow[k]! * 0.5));
       deltas.push(`勉强完成《${g.name}》：作品扑街，报酬 60%，负责人信任 -3`);
     } else {
-      const pay = Math.round(g.pay * (rand(0, 30) / 100));
-      n.money += pay; earned += pay;
-      n.fame = Math.max(0, n.fame - rand(5, 40));
-      n.reputation -= rand(3, 8);
-      n.trust = clamp(n.trust - 10, 0, 100);
-      n.defaults += 1;
-      n.stress += 6;
-      n.blackFans += rand(1, 3);
-      for (const k of STAT_ORDER) if (g.grow[k]) n.stats[k] = clamp(n.stats[k] - rand(1, 4), 0, 999);
-      deltas.push(`${expired ? "超过截止日未拍完被撤换，" : terminated ? "累计失误被撤换，" : crashed ? "状态失控，" : ""}《${g.name}》拍摄失败：无作品，负责人信任 -10，违约 +1`);
+      // 失败惩罚由 tuning.gigRules 配置；缺省 = 名气 -5~40、口碑 -3~8、信任 -10、违约 +1、压力 +6、黑粉 +1~3、相关能力 -1~4
+      const pay = Math.round(g.pay * (rand(0, Math.max(0, gr.failPayMax ?? 30)) / 100));
+      wallet.addIn(n, pay); earned += pay;
+      const failNotes: string[] = [];
+      for (const x of gr.failFx ?? RAW_FAIL_FX) {
+        const d = rand(Math.min(x.min, x.max), Math.max(x.min, x.max));
+        if (!d) continue;
+        if (x.key === "money") wallet.addIn(n, d); else perkWrite(n, x.key, "", d);
+        failNotes.push(`${perkFxName(x.key)} ${d > 0 ? "+" : ""}${d}`);
+      }
+      const [sl0, sl1] = gr.failStatLoss ?? [1, 4];
+      for (const k of STAT_ORDER) if (g.grow[k]) { const d = rand(Math.min(sl0, sl1), Math.max(sl0, sl1)); if (d) n.stats[k] = clampStat(k, n.stats[k] - d); }
+      deltas.push(`${expired ? "超过截止日未拍完被撤换，" : terminated ? "累计失误被撤换，" : crashed ? "状态失控，" : ""}《${g.name}》拍摄失败：无作品${failNotes.length ? `，${failNotes.join("，")}` : ""}`);
       // 失败修复与反转机会（同周一次，随机 1 项）
-      const repairs: { name: string; apply: () => void }[] = [];
-      if (g.star <= 3) repairs.push({ name: "临时替补", apply: () => { n.fame = Math.min(1000, n.fame + 8); } });
-      if (n.trust >= 40) repairs.push({ name: "导演复试", apply: () => { n.trust = clamp(n.trust + 3, 0, 100); } });
-      if ((n.rel["suqing"] ?? 0) >= 40 || (n.rel["linzhixia"] ?? 0) >= 40) repairs.push({ name: "朋友陪伴", apply: () => { n.stress = clamp(n.stress - 12, 0, 100); } });
-      if (n.pr >= 150) repairs.push({ name: "公关补救", apply: () => { n.money -= rand(30000, 120000); n.blackFans = Math.max(0, n.blackFans - rand(1, 3)); } });
-      if (n.stats.caizhi >= 300 || n.stats.yanji >= 300) repairs.push({ name: "自费短片", apply: () => { n.money -= 80000; n.reputation = clamp(n.reputation + rand(3, 8), 0, 100); } });
+      // 补救方案由 tuning.gigRules.repairs 配置；缺省 = 引擎原 5 项
+      const condOk = (c: { key: string; pid?: string; op: string; value: number }) => { const v = perkRead(n, c.key, c.pid ?? ""); return c.op === "<=" ? v <= c.value : v >= c.value; };
+      const repairs = (gr.repairs ?? RAW_GIG_REPAIRS)
+        .filter((r) => (r.maxStar == null || g.star <= r.maxStar) && (!r.conds?.length || (r.any ? r.conds.some(condOk) : r.conds.every(condOk))))
+        .map((r) => ({ name: r.name, apply: () => { for (const x of r.fx) { const lo = Math.min(x.min, x.max), hi = Math.max(x.min, x.max); const d = rand(lo, hi); if (!d) continue; if (x.key === "money") wallet.addIn(n, d); else perkWrite(n, x.key, "", d); } } }));
       if (repairs.length) {
         const r = repairs[rand(0, repairs.length - 1)];
         r.apply();
         deltas.push(`触发修复机会「${r.name}」，帮你稳住了局面`);
       }
     }
-    // 商业价值成长（广告/综艺/品牌类成功通告） + 恋人加成
-    if (/广告|综艺|品牌/.test(g.type) && (status === "perfect" || status === "smooth")) {
-      let bg = rand(4, 9);
-      if (n.dating === "zhouyan") bg = Math.round(bg * 1.12); // 并肩而立：商业价值 +12%
-      n.bizValue = clamp(n.bizValue + bg, 0, 999);
+    // 商业价值成长（缺省 广告/综艺/品牌类成功通告，规则由 tuning.gigRules 配置） + 恋人加成
+    if (gr.bizOn !== false && typeHit(g.type, gr.bizTypes ?? "广告|综艺|品牌") && (status === "perfect" || status === "smooth")) {
+      const lo = gr.bizMin ?? 4, hi = Math.max(lo, gr.bizMax ?? 9);
+      let bg = rand(lo, hi);
+      for (const p of perks) if (p.bizMult) bg = Math.round(bg * p.bizMult);
+      const key = gr.bizKey || "bizValue";
+      if (key === "bizValue") n.bizValue = clamp(n.bizValue + bg, 0, 999);
+      else perkWrite(n, key, "", bg);
     }
     // 资本同盟：结算额外资金加成
-    if (n.dating === "songshixu" && (status === "perfect" || status === "smooth")) { const b = Math.round(g.pay * 0.05); n.money += b; earned += b; }
+    if (status === "perfect" || status === "smooth") for (const p of perks) if (p.payBonus) { const b = Math.round(g.pay * p.payBonus); wallet.addIn(n, b); earned += b; }
+    // 恋人加成 · 通用数值增减（fx：本世界观任意属性），工作成功才生效
+    if (status !== "fail") for (const p of perks) {
+      const fx = perkFxList(p);
+      if (!fx.length) continue;
+      for (const x of fx) perkWrite(n, x.key, p.pid, x.delta);
+      const k = perkKey(p), r = n.perkFired?.[k];
+      n.perkFired = { ...n.perkFired, [k]: { n: (r?.n ?? 0) + 1, last: n.day, wk: n.week, wn: r && r.wk === n.week ? r.wn + 1 : 1 } };
+      deltas.push(`${p.label || "恋人加成"}：${fx.map((x) => `${perkFxName(x.key)} ${x.delta > 0 ? "+" : ""}${x.delta}`).join("，")}`);
+    }
+    // 世界规则·社会秩序：片酬修正
+    { const om = orderMods().pay; if (om && finalPay > 0) { const b = Math.round(finalPay * om); wallet.addIn(n, b); earned += b; } }
     const mgr = gigManager(g);
     // 按时完成：拍毕尾款支票入账凭证（定金已于开机前发放）
     if (finalPay > 0) {
@@ -878,8 +984,10 @@ export function settleWeek(s: GameState): WeekResult {
     // 逾期/被撤换：责任人上门追责，挂起违约对话（了结时扣违约金）
     if (expired || terminated) {
       const fee = Math.round(g.pay * 0.4 * (n.activeGigMods?.payMul ?? 1));
-      n.breach = { gigName: g.name, producer: mgr.name, loc: mgr.loc, gigType: g.type, fee };
-      deltas.push(`《${g.name}》${expired ? "逾期未拍完" : "累计失误被撤换"}——${mgr.name}要上门追责了（违约金约 ¥${fee.toLocaleString("zh-CN")}）`);
+      const be: BreachEvent = { gigName: g.name, producer: mgr.name, loc: mgr.loc, gigType: g.type, fee };
+      if (n.breach) n.breachQueue = [...(n.breachQueue ?? []), be];
+      else n.breach = be;
+      deltas.push(`《${g.name}》${expired ? "逾期未拍完" : "累计失误被撤换"}——${mgr.name}要上门追责了（违约金约 ${wallet.fmt(fee)}）`);
     }
     // 该通告已用尽：记入 usedGigs，之后不再出现（无论成败，剧组/品牌都已换人或播出）
     if (n.activeGigId && !n.usedGigs.includes(n.activeGigId)) n.usedGigs = [...n.usedGigs, n.activeGigId];
@@ -891,24 +999,44 @@ export function settleWeek(s: GameState): WeekResult {
     n.gigDeadlineWeek = 0;
     n.gigDepositPaid = false;
     n.activeGigMods = null;
-  } else if (!n.activeGigId && n.fame > 0) {
+  } else if (!n.activeGigId && n.fame > 0 && LIVE_GIGS.length > 0) {
     n.fame = Math.max(0, n.fame - rand(0, 3));
+  }
+
+  // 截止前预警：下周即截止仍未拍完，提前告知（避免逾期违约毫无征兆）
+  if (n.activeGigId && n.gigDaysLeft > 0 && n.gigDeadlineWeek > 0 && n.week + 1 === n.gigDeadlineWeek) {
+    const wg = LIVE_GIGS.find((x) => x.id === n.activeGigId);
+    deltas.push(`⚠《${wg?.name ?? `当前${T("gig")}`}》下周（第 ${n.gigDeadlineWeek} 周）截止，还差 ${n.gigDaysLeft} 天拍摄——请在日程里排满「拍摄」，否则将被追责违约`);
   }
 
   // 固定收支（本周明细逐项列账，供「账单」HTML 呈现）
   const monthEnd = n.week % 4 === 0;
-  const living = 12000; // 生活起居
-  const food = 6000; // 餐饮美食
-  let cost = living + food;
+  // 账单条目来自模组槽 bills，按本周名气取档（娱乐圈：新人普通开销 → 越红开销越高）
+  const bills = billsFor(n.fame);
   const billLines: { label: string; amount: number }[] = [
-    { label: "生活起居", amount: living },
-    { label: "餐饮美食", amount: food },
+    ...(bills.weekly ?? []).map((b) => ({ label: b.label, amount: b.amount })),
+    ...(monthEnd ? (bills.monthly ?? []).map((b) => ({ label: b.label, amount: b.amount })) : []),
   ];
-  if (monthEnd) {
-    cost += 35000 + 15000; // 月末租金 + 宣传
-    billLines.push({ label: "公寓房租", amount: 35000 }, { label: "形象宣传", amount: 15000 });
+  // 本周伙食（生活开销包）：钱不够或已不满足门槛 → 当周降到付得起的最便宜一档；效果随伙食结算
+  let meal = mealOf(n.meal);
+  if (meal) {
+    const ok = (m: typeof meal) => !!m && !unlockLock(n, m.reqs, (x) => x);
+    if (!ok(meal) || !wallet.can(n, meal.cost)) {
+      const fallback = [...MEALS].filter((m) => ok(m) && m.cost <= Math.max(0, wallet.balance(n))).sort((a, b) => b.cost - a.cost)[0]
+        ?? [...MEALS].filter((m) => ok(m)).sort((a, b) => a.cost - b.cost)[0];
+      if (fallback && fallback.id !== meal.id) deltas.push(`钱不够吃「${meal.name}」，这周只能改吃「${fallback.name}」`);
+      meal = fallback ?? meal;
+    }
+    billLines.push({ label: `伙食 · ${meal.name}`, amount: meal.cost });
+    if (meal.stress) n.stress = clamp(n.stress + meal.stress, 0, 100);
+    for (const [k, v] of Object.entries(meal.gain ?? {})) if (v && k in n.stats) n.stats[k as StatKey] = clampStat(k as StatKey, n.stats[k as StatKey] + v);
+    if (meal.styling) n.styling = clamp(n.styling + meal.styling, 0, 999);
   }
-  n.money -= cost;
+  const eco = economy();
+  const grace = (eco.graceWeeks ?? 0) > 0 && n.week <= (eco.graceWeeks ?? 0);
+  if (grace) { const mul = eco.graceBillMul ?? 0.5; for (const l of billLines) l.amount = Math.round(l.amount * mul); }
+  const cost = billLines.reduce((a, b) => a + b.amount, 0);
+  wallet.addIn(n, -(cost)); // 被动扣费：允许透支
   const check = { amount: earned };
   const bill = { lines: billLines, total: cost, monthEnd, week: n.week };
   n.lastCheck = check;
@@ -921,7 +1049,7 @@ export function settleWeek(s: GameState): WeekResult {
   n.fame = Math.max(0, Math.round(n.fame));
 
   // 新人保底（第 1~8 周，只出现一次）
-  if (!n.safetyNetUsed && n.week <= 8 && n.fame < 30) {
+  if (getWorldId() === "ent" && feature("career") && !n.safetyNetUsed && n.week <= 8 && n.fame < 30) {
     n.fame = 35;
     n.safetyNetUsed = true;
     deltas.push("启星事务所安排了一次「临时替补」，名气保底提升至 35");
@@ -931,10 +1059,19 @@ export function settleWeek(s: GameState): WeekResult {
   n.pr = clamp(n.pr, 0, 500);
   n.blackFans = clamp(n.blackFans, 0, 999);
 
-  // 破产
-  if (n.money < -500000) {
-    n.log.push(`【第 ${s.week} 周】资金跌破 -50 万，制作方与场地方发来催款函……`);
+  // 破产：阈值按本世界周开销（住行 + 伙食）缩放（娱乐圈 ≈ -50 万；校园等小额世界相应收紧），负债期间每周预警
+  // 没有任何生活开销的世界按每周 ¥1,000 折算（≈ ¥2.8 万），只有违约金 / 事件扣费会让人透支
+  const weeklyBase = Math.max(0, (bills.weekly ?? []).reduce((a, b) => a + b.amount, 0) + (meal?.cost ?? 0)) || 1000;
+  const bankruptLine = bankruptLineFor(weeklyBase, eco);
+  const moneyWord = "资金";
+  if (eco.bankrupt !== false && wallet.balance(n) < bankruptLine) {
+    n.log.push(`【第 ${s.week} 周】${moneyWord}透支超过 ${wallet.fmt(-bankruptLine)}，债主找上门来……`);
     return { next: n, ended: "bankrupt", headline: "破产危机", check, bill };
+  }
+  if (wallet.balance(n) < 0) {
+    const os = eco.overdraftStress ?? 4;
+    n.stress = clamp(n.stress + os, 0, 100);
+    deltas.push(`⚠ ${moneyWord}已透支 ${wallet.fmt(-wallet.balance(n))}（压力 +${os}）${eco.bankrupt !== false ? `，透支超过 ${wallet.fmt(-bankruptLine)} 即告破产` : ""}——多安排打工/接活回血`);
   }
 
   // NPC 生态：竞争者持续成长——八维缓慢精进，并靠接取通告涨名气
@@ -945,7 +1082,7 @@ export function settleWeek(s: GameState): WeekResult {
     const took = Math.random() < (rivalsHungry ? 0.55 : 0.35); // 接到通告
     npc.fame = clamp(npc.fame + rand(-2, 5) + (took ? rand(2, 10) : 0), 0, 1000);
   }
-  if (rivalsHungry) deltas.push("你本周没盯通告，几个同行把资源接走了");
+  if (rivalsHungry && feature("career")) deltas.push(`你本周没盯${T("gig")}，几个同行把资源接走了`);
 
   // 圈内动态：同行彼此之间每周演化出的事件（引擎只挑抽象类别与参与者 + 抽签，中文文案在内容池按 kind 渲染）
   {
@@ -990,17 +1127,24 @@ export function settleWeek(s: GameState): WeekResult {
 
   // 月榜结算（每 4 周）
   if (s.week % 4 === 0) {
-    const rank = leaderboard(n).findIndex((r) => r.isPlayer) + 1;
-    if (rank === 1) { n.fame += 30; deltas.push(`月榜第 1 名，名气 +30`); }
+    // 月榜只属于有行业榜单的世界观（娱乐圈）；其他世界观不出现「月榜第 N 名」
+    const rank = feature("industryTab") ? leaderboard(n).findIndex((r) => r.isPlayer) + 1 : 0;
+    if (!rank) { /* 非演艺世界观：无月榜 */ }
+    else if (rank === 1) { n.fame += 30; deltas.push(`月榜第 1 名，名气 +30`); }
     else if (rank <= 3) { n.fame += 15; deltas.push(`月榜第 ${rank} 名，名气 +15`); }
     else if (rank <= 10) { n.fame += 5; deltas.push(`月榜第 ${rank} 名，名气 +5`); }
     else deltas.push(`月榜第 ${rank} 名，需要更多曝光`);
 
     // 逐年成长：随生涯阅历推进，几项「靠时间沉淀」的能力每月自然小幅精进
     const mature: StatKey[] = ["tineng", "caizhi", "yitai", "zixin"];
-    for (const k of mature) n.stats[k] = clamp(n.stats[k] + rand(1, 3), 0, 999);
-    deltas.push("阅历渐长：体能·才智·仪态·自信各有沉淀");
+    for (const k of mature) n.stats[k] = clampStat(k, n.stats[k] + rand(1, 3));
+    deltas.push(`阅历渐长：${mature.map((k) => STAT_LABELS[k]).join("·")}各有沉淀`);
   }
+
+  // 周期收入（模组「周期收入」规则）：每周结算发放
+  { const inc = applyIncome(n, getWorldIncome()); Object.assign(n, inc.next); deltas.push(...inc.changes); }
+  // 玩法规则（模组「玩法规则」· 每周结算）
+  { const gr = applyGameRules(n, "week", getWorldGameRules()); Object.assign(n, gr.next); deltas.push(...gr.changes); }
 
   n.fame = clamp(Math.round(n.fame), 0, 1000); // 名气上限 1000
 
@@ -1013,20 +1157,84 @@ export function settleWeek(s: GameState): WeekResult {
   n.log.push(`【第 ${s.week} 周结算】${summary}`);
   if (n.log.length > 40) n.log = n.log.slice(-40);
 
-  if (n.week > 104) {
-    return { next: n, ended: "finish", headline: "两年生涯落幕", check, bill };
+  const maxWeeks = CALENDAR.careerWeeks || 104;
+  if (!customTimeLimit && maxWeeks > 0 && n.week > maxWeeks) {
+    return { next: n, ended: "finish", headline: "生涯期满落幕", check, bill };
   }
   return { next: n, ended: null, headline: summary, check, bill };
 }
 
 // 地图踩点：推进关系与线索
-export function visitLocation(s: GameState, locId: string): { next: GameState; msg: string } {
+/** 地点触发的伴侣加成：数值已由引擎结算，effects 是可读的结算明细，seed 交给 AI 演绎（未接 AI 时并入 msg） */
+/** 伴侣加成的附加条件（relations.partnerPerks[].when，编辑器可配；不填的项不限制） */
+function perkWhenOk(s: GameState, p: { id?: string; pid: string; loc?: string; label?: string; when?: import("../worlds/star2005/content").PerkWhen }): boolean {
+  const w = p.when;
+  if (!w) return true;
+  for (const r of w.req ?? []) {
+    if (!r?.key) continue;
+    const v = perkRead(s, r.key, p.pid);
+    if (r.op === "<=" ? v > r.value : v < r.value) return false;
+  }
+  if (w.minWeek != null && s.week < w.minWeek) return false;
+  if (w.minFame != null && s.fame < w.minFame) return false;
+  if (w.minReputation != null && s.reputation < w.minReputation) return false;
+  if (w.minLooks != null && computeLooks(s) < w.minLooks) return false;
+  if (w.maxBlackFans != null && (s.blackFans ?? 0) > w.maxBlackFans) return false;
+  if (w.minAffinity != null && (s.rel?.[p.pid] ?? 0) < w.minAffinity) return false;
+  if (w.maxStress != null && s.stress > w.maxStress) return false;
+  // 次数类限制：读存档里的触发记录
+  const rec = s.perkFired?.[perkKey(p)];
+  if (w.maxTimes != null && (rec?.n ?? 0) >= w.maxTimes) return false;
+  if (w.cooldownDays != null && rec && s.day - rec.last < w.cooldownDays) return false;
+  if (w.perWeek != null && rec && rec.wk === s.week && rec.wn >= w.perWeek) return false;
+  if (w.chance != null && Math.random() * 100 >= w.chance) return false;
+  return true;
+}
+/** 读取通用属性键（见 content.ts PerkReq 说明） */
+export function perkRead(s: GameState, key: string, pid: string): number {
+  if (key.startsWith("stat:")) return (s.stats as Record<string, number>)[key.slice(5)] ?? 0;
+  if (key.startsWith("attr:")) return s.cattrs?.[key.slice(5)] ?? 0;
+  switch (key) {
+    case "affinity": return s.rel?.[pid] ?? 0;
+    case "looks": return computeLooks(s);
+    case "week": return s.week;
+    default: { const v = (s as unknown as Record<string, unknown>)[key]; return typeof v === "number" ? v : 0; }
+  }
+}
+/** 写入通用属性键（就地修改 n；n 须是本次结算的新副本） */
+function perkWrite(n: GameState, key: string, pid: string, delta: number) {
+  if (key.startsWith("stat:")) { const k = key.slice(5) as StatKey; if (k in n.stats) n.stats = { ...n.stats, [k]: clampStat(k, n.stats[k] + delta) }; return; }
+  if (key.startsWith("attr:")) { const k = key.slice(5); n.cattrs = { ...n.cattrs, [k]: Math.max(0, (n.cattrs?.[k] ?? 0) + delta) }; return; }
+  if (key === "affinity") { n.rel = { ...n.rel, [pid]: clamp((n.rel?.[pid] ?? 0) + delta, 0, affinityCapOf(pid)) }; return; }
+  if (key === "looks" || key === "week") return; // 派生 / 只读
+  const o = n as unknown as Record<string, unknown>;
+  if (typeof o[key] !== "number") return;
+  const pct = key === "stress" || key === "reputation" || key === "trust"; // 百分制项
+  o[key] = pct ? clamp((o[key] as number) + delta, 0, 100) : Math.max(0, (o[key] as number) + delta);
+}
+/** 一条加成的全部数值增减：新写法 fx + 旧字段兼容 */
+export function perkFxList(p: { fx?: { key: string; delta: number }[]; stress?: number; reputation?: number; fame?: number; affinity?: number }) {
+  const out = (p.fx ?? []).filter((x) => x?.key && x.delta);
+  for (const k of ["stress", "reputation", "fame", "affinity"] as const) if (p[k] && !out.some((x) => x.key === k)) out.push({ key: k, delta: p[k]! });
+  return out;
+}
+/** 属性键的显示名（引擎内用；编辑器 / AI 说明用 perkKeys.ts） */
+function perkFxName(key: string): string {
+  if (key.startsWith("stat:")) return (STAT_LABELS as Record<string, string>)[key.slice(5)] ?? key.slice(5);
+  if (key.startsWith("attr:")) { const id = key.slice(5); return (getWorldSlot("customAttrs") ?? []).find((a) => a.id === id)?.label ?? id; }
+  const base: Record<string, string> = { affinity: "好感", stress: "压力", energy: "行动力", fame: T("fame", "名气"), reputation: T("reputation", "口碑"), blackFans: "黑粉", trust: "负责人信任", defaults: "违约", money: "资金", pr: "公关值", bizValue: "商业价值" };
+  return base[key] ?? key;
+}
+/** 加成的稳定键：优先用作者填的 id，否则由 恋人@地点@名称 组成 */
+export const perkKey = (p: { id?: string; pid: string; loc?: string; label?: string }) => p.id || `${p.pid}@${p.loc ?? ""}@${p.label ?? ""}`;
+export type VisitPerk = { pid: string; label?: string; fx: { key: string; delta: number }[]; seed?: string };
+export function visitLocation(s: GameState, locId: string): { next: GameState; msg: string; perks: VisitPerk[] } {
   const looks = computeLooks(s);
   const n: GameState = { ...s, rel: { ...s.rel }, metPeople: [...s.metPeople], stats: { ...s.stats } };
 
   const meet = (pid: string, delta: number, extra: string) => {
     if (!n.metPeople.includes(pid)) n.metPeople.push(pid);
-    n.rel[pid] = clamp((n.rel[pid] ?? 0) + delta, 0, pid === "guchen" || pid === "songshixu" ? 1000 : 100);
+    n.rel[pid] = clamp((n.rel[pid] ?? 0) + delta, 0, affinityCapOf(pid));
     return extra;
   };
 
@@ -1034,12 +1242,7 @@ export function visitLocation(s: GameState, locId: string): { next: GameState; m
   switch (locId) {
     case "apartment":
       n.stress = clamp(n.stress - 12, 0, 100);
-      if (n.dating === "jiangxu") {
-        n.stress = clamp(n.stress - 8, 0, 100);
-        msg = "隔壁常亮的灯还亮着，江叙白留了热汤——压力额外 -8。";
-      } else {
-        msg = "在天光公寓深度休息：紧绷的神经缓了过来。";
-      }
+      msg = "在天光小区深度休息：紧绷的神经缓了过来。";
       break;
     case "cafe":
       n.stress = clamp(n.stress - 8, 0, 100);
@@ -1049,15 +1252,15 @@ export function visitLocation(s: GameState, locId: string): { next: GameState; m
     case "fuguang":
       // 结识条件总表：第 7 周后 · 演技≥240 · 口碑≥45
       if (s.week >= 7 && s.stats.yanji >= 240 && s.reputation >= 45) msg = "" + meet("shenman", 4, "沈曼在片场指点了你，前辈关系 +4。");
-      else { n.stats.yanji = clamp(n.stats.yanji + 3, 0, 999); msg = "在片场角落翻阅剧本库，揣摩前辈的走位与念白，演技 +3。"; }
+      else { n.stats.yanji = clampStat("yanji", n.stats.yanji + 3); msg = "在片场角落翻阅剧本库，揣摩前辈的走位与念白，演技 +3。"; }
       break;
     case "dieyin":
       if (s.stats.geyi >= 160) msg = "" + meet("linzhixia", 4, "林知夏和你聊了新歌，合作关系 +4。");
-      else { n.stats.geyi = clamp(n.stats.geyi + 3, 0, 999); msg = "在录音棚反复试唱同一段副歌，直到气息稳了下来，歌艺 +3。"; }
+      else { n.stats.geyi = clampStat("geyi", n.stats.geyi + 3); msg = "在录音棚反复试唱同一段副歌，直到气息稳了下来，歌艺 +3。"; }
       break;
     case "cancan":
       n.styling = Math.min(999, n.styling + 40);
-      if (s.week >= 18 && s.fame >= 160 && s.reputation >= 60 && s.works >= 2 && s.money >= 80000 && s.defaults === 0 && !n.metPeople.includes("zhouyan"))
+      if (s.week >= 18 && s.fame >= 160 && s.reputation >= 60 && s.works >= 2 && wallet.balance(s) >= 80000 && s.defaults === 0 && !n.metPeople.includes("zhouyan"))
         msg = "" + meet("zhouyan", 5, "品牌共创会上结识「序岸」创始人周砚川，成熟事业线开启，关系 +5。当周造型值 +40。");
       // 6.1 金主线：容貌≥600（硬性）· 名气≥70 · 口碑≥50 · 仪态≥60 或 口才≥70
       else if (looks >= 600 && s.fame >= 70 && s.reputation >= 50 && (s.stats.yitai >= 60 || s.stats.koucai >= 70))
@@ -1070,7 +1273,7 @@ export function visitLocation(s: GameState, locId: string): { next: GameState; m
       if (s.week >= 40 && s.fame >= 80 && s.stats.yanji >= 55 && s.reputation >= 40 && Math.random() < 0.4)
         msg = "" + meet("guchen", 4, "录制间隙偶遇国民天王顾沉，他淡淡颔首，天王线悄然开启，好感 +4。");
       else if (s.fame >= 150) msg = "" + meet("luyao", 3, "和陆曜同台录制，暗自较劲，关系 +3。");
-      else { n.stats.koucai = clamp(n.stats.koucai + 3, 0, 999); msg = "对着云台的镜头试录了几遍开场白，越说越顺，口才 +3。"; }
+      else { n.stats.koucai = clampStat("koucai", n.stats.koucai + 3); msg = "对着云台的镜头试录了几遍开场白，越说越顺，口才 +3。"; }
       break;
     case "agency":
       n.pr += 5;
@@ -1079,9 +1282,7 @@ export function visitLocation(s: GameState, locId: string): { next: GameState; m
     case "redcarpet":
       // 结识条件总表：闻予安本人需 容貌≥700 · 名气≥180 · 口碑≥75 · 黑粉≤8（第13周后公益晚宴开放）
       if (s.week >= 13 && looks >= 700 && s.fame >= 180 && s.reputation >= 75 && s.blackFans <= 8) {
-        const gain = n.dating === "wenyuan" ? 5 : 4; // 长夜灯火：公益/正向活动收益 +30%
-        msg = "" + meet("wenyuan", gain, `云岸公益晚宴上与闻予安正式相识，世家线好感 +${gain}。`);
-        if (n.dating === "wenyuan") n.reputation = clamp(n.reputation + 2, 0, 100);
+        msg = "" + meet("wenyuan", 4, "云岸公益晚宴上与闻予安正式相识，世家线好感 +4。");
       } else if (s.week >= 13 && s.reputation >= 50) {
         n.pr += 4;
         msg = "公益晚宴上结识了几位公益人脉，交换了联络方式（公司公关 +4）。";
@@ -1098,9 +1299,20 @@ export function visitLocation(s: GameState, locId: string): { next: GameState; m
       break;
   }
   n.fame = clamp(Math.round(n.fame), 0, 1000);
+  // 伴侣加成 · 地点触发（relations.partnerPerks 里填了 loc 的条目，各世界观自行配置）
+  const perks: VisitPerk[] = [];
+  for (const p of partnerLocPerksFor((pid) => hasPartner(n, pid), locId)) {
+    if (!perkWhenOk(s, p)) continue;
+    const fx = perkFxList(p);
+    for (const x of fx) perkWrite(n, x.key, p.pid, x.delta);
+    if (p.msg) msg = p.msgMode === "replace" ? p.msg : `${msg}${p.msg}`;
+    const k = perkKey(p), r = n.perkFired?.[k];
+    n.perkFired = { ...n.perkFired, [k]: { n: (r?.n ?? 0) + 1, last: n.day, wk: n.week, wn: r && r.wk === n.week ? r.wn + 1 : 1 } };
+    perks.push({ pid: p.pid, label: p.label, fx, seed: p.msg });
+  }
   n.log = [...s.log, `【第 ${s.week} 周 · 踩点】${msg}`];
   if (n.log.length > 40) n.log = n.log.slice(-40);
-  return { next: n, msg };
+  return { next: n, msg, perks };
 }
 
 // 居家/在场活动：通用增益应用器。活动语义与数值全在内容池，引擎只按字段增减并夹取边界。
@@ -1111,16 +1323,16 @@ export function doActivity(s: GameState, roomId: string, actId: string): { next:
   if (act.requiresItem && !(s.bag ?? []).includes(act.requiresItem)) {
     return { next: s, msg: act.lockedMsg ?? "还差点什么才能做这件事。", ok: false };
   }
-  if ((act.money ?? 0) < 0 && s.money + (act.money ?? 0) < 0) {
-    return { next: s, msg: `现金不足，这件事得花 ¥${-(act.money ?? 0)}。`, ok: false };
+  if ((act.money ?? 0) < 0 && wallet.balance(s) + (act.money ?? 0) < 0) {
+    return { next: s, msg: `现金不足，这件事得花 ${wallet.fmt(-(act.money ?? 0))}。`, ok: false };
   }
   const n: GameState = { ...s, stats: { ...s.stats } };
   if (act.stress) n.stress = clamp(n.stress + act.stress, 0, 100);
   if (act.fame) n.fame = clamp(Math.round(n.fame + act.fame), 0, 1000);
-  if (act.money) n.money = n.money + act.money;
+  if (act.money) wallet.addIn(n, act.money);
   if (act.stat && act.statDelta) {
     const key = act.stat as StatKey;
-    n.stats[key] = clamp((n.stats[key] ?? 0) + act.statDelta, 0, 999);
+    n.stats[key] = clampStat(key, (n.stats[key] ?? 0) + act.statDelta);
   }
   n.log = [...s.log, `【第 ${s.week} 周 · 居家】${act.msg}`];
   if (n.log.length > 40) n.log = n.log.slice(-40);
@@ -1132,11 +1344,12 @@ export function buyItem(s: GameState, roomId: string, itemId: string): { next: G
   const it = itemsOfRoom(roomId).find((x) => x.id === itemId);
   if (!it || !it.price) return { next: s, msg: "这件东西不卖。", ok: false };
   if ((s.bag ?? []).includes(itemId)) return { next: s, msg: `${it.name}你已经买过了。`, ok: false };
-  if (s.money < it.price) return { next: s, msg: `现金不足，${it.name}要 ¥${it.price}。`, ok: false };
-  const n: GameState = { ...s, money: s.money - it.price, bag: [...(s.bag ?? []), itemId] };
-  n.log = [...s.log, `【第 ${s.week} 周 · 购物】花 ¥${it.price} 买下${it.name}。`];
+  const price = shopPrice({ ...s, room: roomId }, it.price); // 店铺所属阵营的声望会调价
+  if (!wallet.can(s, price)) return { next: s, msg: `${wallet.name()}不足，${it.name}要 ${wallet.fmt(price)}。`, ok: false };
+  const n: GameState = { ...wallet.add(s, -price), bag: [...(s.bag ?? []), itemId] };
+  n.log = [...s.log, `【第 ${s.week} 周 · 购物】花 ${wallet.fmt(price)} 买下${it.name}。`];
   if (n.log.length > 40) n.log = n.log.slice(-40);
-  return { next: n, msg: `你花 ¥${it.price} 买下了${it.name}，收进行囊。`, ok: true };
+  return { next: n, msg: `你花 ${wallet.fmt(price)} 买下了${it.name}，收进行囊。${price !== it.price ? `（原价 ${wallet.fmt(it.price)}，按阵营声望调价）` : ""}`, ok: true };
 }
 
 // 地点动态状态：今日是否有关键人物/事件（策划案 8. 按目标选点，而非挨个碰运气）
@@ -1152,7 +1365,7 @@ export function locationStatus(s: GameState, locId: string): { ready: boolean; n
       if (s.week >= 40 && s.fame >= 80 && s.stats.yanji >= 55 && s.reputation >= 40) return { ready: true, note: "天王线开启中 · 有概率偶遇顾沉" };
       return s.fame >= 150 ? { ready: true, note: "今日可遇 · 陆曜（同台较劲）" } : { ready: false, note: `陆曜需名气≥150 ${gap(Math.round(s.fame), 150)}` };
     case "cancan":
-      if (s.week >= 18 && s.fame >= 160 && s.reputation >= 60 && s.works >= 2 && s.money >= 80000 && s.defaults === 0 && !s.metPeople.includes("zhouyan")) return { ready: true, note: "品牌共创会 · 可结识周砚川" };
+      if (s.week >= 18 && s.fame >= 160 && s.reputation >= 60 && s.works >= 2 && wallet.balance(s) >= 80000 && s.defaults === 0 && !s.metPeople.includes("zhouyan")) return { ready: true, note: "品牌共创会 · 可结识周砚川" };
       if (looks >= 600 && s.fame >= 70 && s.reputation >= 50 && (s.stats.yitai >= 60 || s.stats.koucai >= 70)) return { ready: true, note: "品牌晚宴 · 可结识宋时序" };
       return { ready: false, note: looks < 600 ? `宋时序需容貌≥600 ${gap(looks, 600)}` : "宋时序还需名气≥70 · 口碑≥50" };
     case "redcarpet":
@@ -1168,7 +1381,7 @@ export function locationStatus(s: GameState, locId: string): { ready: boolean; n
     case "gym":
       return { ready: true, note: "训练导师在 · 回日程安排收益更高" };
     case "apartment":
-      return { ready: true, note: s.dating ? `深度休息 · 恋人「${PEOPLE.find((p) => p.id === s.dating)?.name}」私密事件` : "深度休息 · 排日程与私密事件" };
+      return { ready: true, note: s.dating ? `深度休息 · 恋人「${rosterFind((p) => p.id === s.dating)?.name}」私密事件` : "深度休息 · 排日程与私密事件" };
     default:
       return { ready: false, note: "今日无关键安排" };
   }
@@ -1178,18 +1391,41 @@ export function locationStatus(s: GameState, locId: string): { ready: boolean; n
 // 历法设定（起始日/周数/星期名）全部来自 ContentPool.calendar，引擎只做日期运算。
 // 惰性求值：content.ts 与本模块存在循环依赖，若在模块初始化时读取 CALENDAR，
 // 当 content.ts 先被求值会命中 TDZ（Cannot access 'CALENDAR' before initialization）。
-let _startMs: number | null = null;
+// 按起始日期字符串缓存：切换世界观（模组槽 calendar / startDate）后自动重算
+let _startKey = "";
+let _startMs = 0;
 const startMs = (): number => {
-  if (_startMs === null) {
-    const [y, m, d] = CALENDAR.startDate.split("-").map(Number);
+  const key = CALENDAR.startDate;
+  if (key !== _startKey) {
+    const [y, m, d] = key.split("-").map(Number);
+    _startKey = key;
     _startMs = Date.UTC(y, m - 1, d);
   }
   return _startMs;
 };
+/* 开局日期展示：「2005.01.03」 */
+export function startDateLabel(): string {
+  const { y, m, d } = dayParts(0);
+  return `${y}.${String(m).padStart(2, "0")}.${String(d).padStart(2, "0")}`;
+}
+/* 第 N 周第 k 天（0=周一）对应的本地 Date（展示用） */
+export function weekLocalDate(week: number, k = 0): Date {
+  const { y, m, d } = dayParts((week - 1) * 7 + k - startDow());
+  return new Date(y, m - 1, d);
+}
 
 // 当日时刻：从内容池 travel.dayStartMinute 起算（缺省 08:00）。移动/活动推动 clockMin 流动。
-export const dayStartMin = (): number => TRAVEL.dayStartMinute ?? 480;
-export const dayEndMin = (): number => TRAVEL.dayEndMinute ?? 1380;
+/* 「HH:MM」→ 当日分钟数；格式不对返回 undefined（允许 24:00 以后表示次日凌晨，如 26:00） */
+const hhmm = (v?: string): number | undefined => {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(v?.trim() ?? "");
+  return m && Number(m[2]) < 60 ? Number(m[1]) * 60 + Number(m[2]) : undefined;
+};
+const slotTime = (k: "startTime" | "dayStart" | "dayEnd") => hhmm(slot<string | undefined>(k, () => undefined));
+// 每日起止：模组槽 dayStart / dayEnd（「HH:MM」）优先，其次 travel.dayStartMinute / dayEndMinute
+export const dayStartMin = (): number => slotTime("dayStart") ?? TRAVEL.dayStartMinute ?? 480;
+export const dayEndMin = (): number => slotTime("dayEnd") ?? TRAVEL.dayEndMinute ?? 1380;
+/* 开局时刻：模组槽 startTime；缺省 = 每日起始时刻 */
+export const startClockMin = (): number => Math.min(47 * 60, slotTime("startTime") ?? dayStartMin());
 // 把当日分钟数格式化为 时段 HH:MM（跨过 24:00 后按「次日」显示，语义上就是该歇了）
 export function clockLabel(min: number): string {
   const total = Math.max(0, Math.round(min));
@@ -1201,13 +1437,17 @@ export function clockLabel(min: number): string {
   return `${period} ${hhmm}`;
 }
 
-// day：0 基的「生涯第几天」，day 0 = startDate（周一）。week 恒等于 careerWeekOf(day)。
-export const careerWeekOf = (day: number): number => Math.floor(day / 7) + 1;
-export const weekdayName = (day: number): string => CALENDAR.weekdayNames[((day % 7) + 7) % 7];
+// day：0 基的「生涯第几天」，day 0 = startDate（可以是一周中任意一天）。week 恒等于 careerWeekOf(day)。
+/* 开局日期是星期几（0=周一 … 6=周日）；日历按自然周排，第 1 周从开局日所在周的周一算起 */
+export const startDow = (): number => (new Date(startMs()).getUTCDay() + 6) % 7;
+/* 第 day 天是星期几（0=周一 … 6=周日）——日程表下标、周末判定、周结算都用它 */
+export const dowOf = (day: number): number => (((day + startDow()) % 7) + 7) % 7;
+export const careerWeekOf = (day: number): number => Math.floor((day + startDow()) / 7) + 1;
+export const weekdayName = (day: number): string => CALENDAR.weekdayNames[dowOf(day)];
 
 export function dayParts(day: number): { y: number; m: number; d: number; dow: number } {
   const dt = new Date(startMs() + day * 86400000);
-  return { y: dt.getUTCFullYear(), m: dt.getUTCMonth() + 1, d: dt.getUTCDate(), dow: ((day % 7) + 7) % 7 };
+  return { y: dt.getUTCFullYear(), m: dt.getUTCMonth() + 1, d: dt.getUTCDate(), dow: dowOf(day) };
 }
 
 export function dayDateLabel(day: number): string {
@@ -1216,7 +1456,7 @@ export function dayDateLabel(day: number): string {
 }
 
 export function weekDate(week: number): string {
-  return dayDateLabel((week - 1) * 7);
+  return dayDateLabel(Math.max(0, (week - 1) * 7 - startDow())); // 第 1 周从开局当天起显示
 }
 
 export type DayResult = WeekResult & {
@@ -1231,27 +1471,47 @@ export type DayResult = WeekResult & {
 
 // 推进「一天」：结算当天（day % 7）安排的一件事，掷出结果档位，翻页到次日。
 // 跨过周日（dow=6）翻页时额外触发本周经济/通告/生态结算，并清空日程供规划下一周。
-export function advanceDay(s: GameState): DayResult {
-  const dow = s.day % 7; // 0=周一 … 6=周日
+// limitDay：主线时限（游戏天数上限，0=不限）。在翻页这一层判定，任何推进入口都不会漏判。
+export function advanceDay(s: GameState, limitDay = 0): DayResult {
+  const raw = advanceDayRaw(s, limitDay > 0);
+  const r0 = { ...raw, next: { ...raw.next, ap: apMax() } }; // 新回合：行动点回满
+  if (limitDay > 0 && !r0.ended && (r0.next.day ?? 0) >= limitDay) {
+    return { ...r0, ended: "finish", headline: "主线时限已到", dayText: `${r0.dayText}\n主线时限已到，故事在此落幕。` };
+  }
+  return r0;
+}
+function advanceDayRaw(s: GameState, customTimeLimit = false): DayResult {
+  const dow = dowOf(s.day); // 0=周一 … 6=周日
   const n: GameState = { ...s, stats: { ...s.stats }, schedule: [...(s.schedule ?? [])], log: [...s.log] };
   const deltas: string[] = [];
   const actId = n.schedule[dow] ?? null;
   const r = applyAct(n, actId, deltas);
+  // 玩法规则（模组「玩法规则」· 每天结束）：结果并入当日旁白
+  { const gr = applyGameRules(n, "day", getWorldGameRules()); Object.assign(n, gr.next); deltas.push(...gr.changes); }
+  // 主线与目标：每天结束判定节点完成 / 失败
+  { const sr = applyStorylines(n, getWorldStorylines()); Object.assign(n, sr.next); deltas.push(...sr.changes); }
   const gradeLabel = r.grade ? GRADE_LABEL[r.grade] : "";
   const doneNote = deltas.length ? "：" + deltas.join("；") : "";
 
   const nextDay = s.day + 1;
-  const rollToNext = (base: GameState, fresh: boolean): GameState => ({
+  const pgNotes: string[] = [];
+  const rollToNext = (base0: GameState, fresh: boolean): GameState => {
+    // 孕期每日推进：征兆知晓 / 行动力上限 / 分娩
+    const pg = tickPregnancy({ ...base0, day: nextDay }, base0.char.name, activeGender());
+    const base = { ...pg.next, day: base0.day, log: pg.notes.length ? [...pg.next.log, ...pg.notes] : pg.next.log };
+    if (pg.notes.length) pgNotes.push(...pg.notes); // 孕期状态变化：写入日志一次，并在当天旁白里播报
+    return {
     ...base,
     day: nextDay,
     week: careerWeekOf(nextDay),
     daySeg: 0,
-    clockMin: 8 * 60,
+    clockMin: dayStartMin(),
     schedule: fresh ? [null, null, null, null, null, null, null] : base.schedule,
-  });
+  };
+  };
 
   if (dow === 6) {
-    const wr = settleWeek(n); // 经济/通告/生态结算、week 推进、生涯终局判定
+    const wr = settleWeek(n, customTimeLimit); // 经济/通告/生态结算、week 推进、生涯终局判定
     const next = rollToNext(wr.next, true); // 新的一周：清空日程重排
     return {
       ...wr, next, settled: true, rolledWeek: true, grade: r.grade, gradeLabel, actLabel: r.actLabel, gains: r.gains,
@@ -1263,7 +1523,7 @@ export function advanceDay(s: GameState): DayResult {
   return {
     next, ended: null, headline: `${gradeLabel || r.actLabel} · ${weekdayName(s.day)}`, settled: false, rolledWeek: false,
     grade: r.grade, gradeLabel, actLabel: r.actLabel, gains: r.gains,
-    dayText: `${weekdayName(s.day)}·${r.actLabel}${gradeLabel ? `——${gradeLabel}` : ""}${doneNote}，来到 ${label}。`,
+    dayText: `${weekdayName(s.day)}·${r.actLabel}${gradeLabel ? `——${gradeLabel}` : ""}${doneNote}，来到 ${label}。${pgNotes.length ? "\n" + pgNotes.join("\n") : ""}`,
   };
 }
 
@@ -1279,18 +1539,32 @@ export function phaseOf(week: number): string {
 // 破产独立结局（依据名气/口碑/人脉）
 export function bankruptEnding(s: GameState): { title: string; body: string } {
   const bonds = Object.values(s.rel).filter((v) => v >= 40).length;
+  if (getWorldId() !== "ent") {
+    if (bonds >= 2) return { title: "《有人替你留了一盏灯》", body: "朋友们凑钱帮你渡过难关，你学会了量入为出。" };
+    return { title: "《入不敷出》", body: "账单越堆越高，你不得不中止这段生活，回到原点重新开始。" };
+  }
   if (s.fame >= 200 && s.reputation >= 60)
     return { title: "《从欠款开始的第二次出道》", body: "暂别聚光灯，靠一部低成本作品，你还能翻身。" };
   if (bonds >= 2)
     return { title: "《有人替你留了一盏灯》", body: "联系人帮你还清了部分欠款，保留少量重开加成。" };
-  return { title: "《最后一班末班车》", body: "合同终止，搬离天光公寓，成为普通人的遗憾结局。" };
+  return { title: "《最后一班末班车》", body: "合同终止，搬离天光小区，成为普通人的遗憾结局。" };
 }
 
 export function endingText(s: GameState): { title: string; body: string } {
+  if (getWorldId() !== "ent") {
+    // 非演艺世界观：按「知名度/口碑/羁绊」通用分档，避免出现女星/行业措辞
+    const fameW = T("fame", "名气");
+    const bonds = Object.values(s.rel).filter((v) => v >= 60).length;
+    if (s.fame >= 300 && s.reputation >= 70) return { title: "众望所归 · 圆满结局", body: `${fameW}与口碑兼得，这段日子你活成了大家口中的传说。` };
+    if (s.reputation >= 80) return { title: "口碑之选 · 温暖结局", body: "也许不是最耀眼的那个，却是最被信赖的那个。" };
+    if (bonds >= 2) return { title: "羁绊满满 · 友情结局", body: "回头看，最珍贵的是身边那几个一直陪着你的人。" };
+    if (s.fame >= 150) return { title: "崭露头角 · 未完待续", body: "你已经被很多人记住，故事还在继续。" };
+    return { title: "平凡而认真 · 日常结局", body: "没有轰轰烈烈，但每一天都认真地活过。" };
+  }
   if (s.fame >= 750 && s.awards >= 1)
     return { title: "国民级女星 · 巅峰结局", body: "聚光灯为你亮起，你站上了这个行业的顶点。" };
   if (s.fame >= 500)
-    return { title: "一线女星 · 荣耀结局", body: "你已是华语娱乐圈举足轻重的名字。" };
+    return { title: "一线女星 · 荣耀结局", body: `你已是华语${T("industry")}举足轻重的名字。` };
   if (s.reputation >= 80)
     return { title: "口碑之选 · 长红结局", body: "也许不是最红，但你是最被尊重的那一个。" };
   if (s.fame >= 150)
@@ -1309,7 +1583,7 @@ export type RomanceArc = {
 
 const rel = (s: GameState, pid: string) => s.rel[pid] ?? 0;
 const bumpRel = (n: GameState, pid: string, d: number) => { n.rel[pid] = clamp((n.rel[pid] ?? 0) + d, 0, 100); };
-const bumpStat = (n: GameState, k: StatKey, d: number) => { n.stats[k] = clamp((n.stats[k] ?? 0) + d, 0, 999); };
+const bumpStat = (n: GameState, k: StatKey, d: number) => { n.stats[k] = clampStat(k, (n.stats[k] ?? 0) + d); };
 
 export const ROMANCE_ARCS: Record<string, RomanceArc> = {
   // 6.2 市长之子 · 世家线（门槛最高）
@@ -1384,7 +1658,7 @@ export const ROMANCE_ARCS: Record<string, RomanceArc> = {
     personId: "jiangxu",
     stages: [
       {
-        id: 1, name: "隔壁的灯", unlock: "入住天光公寓（第 1 周）",
+        id: 1, name: "隔壁的灯", unlock: "入住天光小区（第 1 周）",
         cond: (s) => s.week >= 1,
         choices: [
           { label: "向他借工具", result: "关系 +4", apply: (n) => bumpRel(n, "jiangxu", 4) },
@@ -1420,7 +1694,7 @@ export const ROMANCE_ARCS: Record<string, RomanceArc> = {
         cond: (s) => (s.stats.caizhi >= 260 || s.works >= 2) && rel(s, "jiangxu") >= 55,
         choices: [
           { label: "认真听他的创业方案", result: "关系 +10，才智 +5", apply: (n) => { bumpRel(n, "jiangxu", 10); bumpStat(n, "caizhi", 5); } },
-          { label: "只索取场地资源", result: "资金 +2 万，关系 -12", apply: (n) => { n.money += 20000; bumpRel(n, "jiangxu", -12); } },
+          { label: "只索取场地资源", result: "资金 +2 万，关系 -12", apply: (n) => { wallet.addIn(n, 20000); bumpRel(n, "jiangxu", -12); } },
         ],
       },
       {
@@ -1443,7 +1717,7 @@ export const ROMANCE_ARCS: Record<string, RomanceArc> = {
       cond: (s) => rel(s, "jiangxu") >= 85,
       req: "关系≥85 · 七段剧情全部完成",
       buff: "隔壁常亮的灯",
-      buffDesc: "每周首次在天光公寓休息压力额外 -8 · 体能恢复 +5 · 过劳时提醒休整",
+      buffDesc: "每周首次在天光小区休息压力额外 -8 · 体能恢复 +5 · 过劳时提醒休整",
     },
   },
   // 6.4 离婚创一代 · 成熟事业线
@@ -1452,7 +1726,7 @@ export const ROMANCE_ARCS: Record<string, RomanceArc> = {
     stages: [
       {
         id: 1, name: "共创会迟到五分钟", unlock: "名气≥160 · 口碑≥60 · 2 次付费通告 · 资金≥8 万 · 无违约",
-        cond: (s) => s.fame >= 160 && s.reputation >= 60 && s.works >= 2 && s.money >= 80000 && s.defaults === 0,
+        cond: (s) => s.fame >= 160 && s.reputation >= 60 && s.works >= 2 && wallet.balance(s) >= 80000 && s.defaults === 0,
         choices: [
           { label: "先谈项目再寒暄", result: "关系 +8", apply: (n) => bumpRel(n, "zhouyan", 8) },
           { label: "只谈私人八卦", result: "关系 -6，黑粉 +1", apply: (n) => { bumpRel(n, "zhouyan", -6); n.blackFans += 1; } },
@@ -1479,7 +1753,7 @@ export const ROMANCE_ARCS: Record<string, RomanceArc> = {
         cond: (s) => s.fame >= 260 && s.awards >= 1,
         choices: [
           { label: "公开承担项目责任", result: "口碑 +5，关系 +12", apply: (n) => { n.reputation = clamp(n.reputation + 5, 0, 100); bumpRel(n, "zhouyan", 12); } },
-          { label: "让他单独背锅", result: "资金 +5 万，关系 -20", apply: (n) => { n.money += 50000; bumpRel(n, "zhouyan", -20); } },
+          { label: "让他单独背锅", result: "资金 +5 万，关系 -20", apply: (n) => { wallet.addIn(n, 50000); bumpRel(n, "zhouyan", -20); } },
         ],
       },
       {
@@ -1545,6 +1819,7 @@ export type ArcView = {
   reason: string; // 未达成时的提示
   datingReady: boolean; // 七段完成、可确认交往
   isDating: boolean;
+  today: boolean; // 今天已和 TA 经历过一段，下一段改天再说
   confirmReq: string;
   buff: string;
 };
@@ -1555,28 +1830,30 @@ export function arcView(s: GameState, pid: string): ArcView | null {
   const total = arc.stages.length;
   const done = s.arcStage?.[pid] ?? 0;
   const isDating = s.dating === pid;
+  const today = s.arcDay?.[pid] === s.day;
   if (done >= total) {
-    return { done, total, stage: null, locked: false, reason: "", datingReady: !isDating && arc.confirm.cond(s), isDating, confirmReq: arc.confirm.req, buff: arc.confirm.buff };
+    return { done, total, stage: null, locked: false, reason: "", datingReady: !isDating && arc.confirm.cond(s), isDating, today, confirmReq: arc.confirm.req, buff: arc.confirm.buff };
   }
   const stage = arc.stages[done];
   const ok = stage.cond(s);
-  return { done, total, stage, locked: !ok, reason: ok ? "" : stage.unlock, datingReady: false, isDating, confirmReq: arc.confirm.req, buff: arc.confirm.buff };
+  return { done, total, stage, locked: !ok, reason: ok ? "" : stage.unlock, datingReady: false, isDating, today, confirmReq: arc.confirm.req, buff: arc.confirm.buff };
 }
 
 export function chooseArc(s: GameState, pid: string, choiceIdx: number): { next: GameState; msg: string } {
-  if (s.npcLives?.[pid]?.dead || s.romanceEnabled?.[pid] === false) return { next: s, msg: "该人物已设为不可攻略。" };
   const arc = ROMANCE_ARCS[pid];
   const done = s.arcStage?.[pid] ?? 0;
   if (!arc || done >= arc.stages.length) return { next: s, msg: "" };
+  if (!canRomance(s, pid)) return { next: s, msg: "TA 已设为「不可攻略」，情感线暂停；重新开启后从当前进度继续。" };
   const stage = arc.stages[done];
   if (!stage.cond(s)) return { next: s, msg: `还差一点：${stage.unlock}` };
+  if (s.arcDay?.[pid] === s.day) return { next: s, msg: "今天你们已经经历过一段了，留点余味，改天再说。" };
   const c = stage.choices[choiceIdx];
   if (!c) return { next: s, msg: "" };
-  const n: GameState = { ...s, rel: { ...s.rel }, stats: { ...s.stats }, arcStage: { ...s.arcStage } };
+  const n: GameState = { ...s, rel: { ...s.rel }, stats: { ...s.stats }, arcStage: { ...s.arcStage }, arcDay: { ...s.arcDay, [pid]: s.day } };
   c.apply(n);
   n.arcStage[pid] = done + 1;
   n.fame = clamp(Math.round(n.fame), 0, 1000);
-  const who = PEOPLE.find((p) => p.id === pid)?.name ?? "";
+  const who = rosterFind((p) => p.id === pid)?.name ?? "";
   const msg = `【${who}·${stage.name}】${c.label} → ${c.result}`;
   n.log = [...s.log, `【第 ${s.week} 周 · 剧情】${msg}`];
   if (n.log.length > 40) n.log = n.log.slice(-40);
@@ -1584,17 +1861,197 @@ export function chooseArc(s: GameState, pid: string, choiceIdx: number): { next:
 }
 
 export function confirmDating(s: GameState, pid: string): { next: GameState; msg: string } {
-  if (s.npcLives?.[pid]?.dead || s.romanceEnabled?.[pid] === false) return { next: s, msg: "该人物已设为不可攻略。" };
   const arc = ROMANCE_ARCS[pid];
   const view = arcView(s, pid);
   if (!arc || !view?.datingReady) return { next: s, msg: "尚未满足确认交往的全部条件。" };
-  const n: GameState = { ...s, dating: pid };
-  const who = PEOPLE.find((p) => p.id === pid)?.name ?? "";
+  const blocked = datingBlocked(s, pid);
+  if (blocked) return { next: s, msg: blocked };
+  const n: GameState = withPartner(s, pid);
+  const who = rosterFind((p) => p.id === pid)?.name ?? "";
   const msg = `你和${who}确认了关系，获得状态「${arc.confirm.buff}」。`;
   n.log = [...s.log, `【第 ${s.week} 周 · 定情】${msg}`];
   if (n.log.length > 40) n.log = n.log.slice(-40);
   return { next: n, msg };
 }
 
-export const _statLabel = STAT_LABELS;
 
+/* 世界规则·婚姻制度：恋人判定 / 是否允许新恋情 / 写入伴侣 */
+export function hasPartner(s: GameState, pid: string): boolean {
+  return s.dating === pid || !!s.partners?.includes(pid);
+}
+/* 可攻略开关：默认人人可攻略，玩家可在人物页逐人关闭（s.noRomance）。
+ * 家人缺省为亲情线（不可攻略），玩家可在人物页手动开启（s.familyRomance）；子女恒不可攻略。
+ * 不可攻略 = 爱慕冻结不涨、不能表白 / 推进情感线 / 确认交往；好感、信任、心情照常发展。 */
+export function isFamilyNpc(pid: string): boolean {
+  return (FAMILY_NPC_IDS as readonly string[]).includes(pid);
+}
+export function romanceFixedOff(s: GameState, pid: string): boolean {
+  return (isFamilyNpc(pid) && !s.familyRomance?.includes(pid)) || !!s.children?.some((k) => k.id === pid);
+}
+export function canRomance(s: GameState, pid: string): boolean {
+  return !romanceFixedOff(s, pid) && !s.noRomance?.includes(pid);
+}
+const personGender = (pid: string): string | undefined =>
+  npcGenderOf(pid) ?? (rosterFind((p) => p.id === pid) as { gender?: string } | undefined)?.gender ?? LIVE_PEOPLE.find((p) => p.id === pid)?.gender;
+export function datingBlocked(s: GameState, pid: string): string {
+  if (!canRomance(s, pid) && !hasPartner(s, pid)) return romanceFixedOff(s, pid) ? (isFamilyNpc(pid) ? "TA 是你的家人，目前是亲情线；可在人物页把 TA 设为「可攻略」。" : "子女之间只有亲情，没有恋爱线。") : "TA 已设为「不可攻略」，你们之间不会发展恋爱关系。";
+  const ss = sameSexBlocked(personGender(pid));
+  if (ss && !hasPartner(s, pid)) return ss;
+  if (!s.dating || hasPartner(s, pid) || allowsMultiPartner()) return "";
+  const cur = rosterFind((p) => p.id === s.dating)?.name ?? "现任";
+  return `恋爱模式「专一」：你已与${cur}确认关系，不能再同时与别人交往。`;
+}
+export function withPartner(s: GameState, pid: string): GameState {
+  if (!s.dating) return { ...s, dating: pid };
+  if (hasPartner(s, pid)) return s;
+  // 海王代价：开始新恋情时，现有恋人都会吃醋
+  const rel = { ...(s.rel ?? {}) };
+  for (const id of [s.dating, ...(s.partners ?? [])]) if (id) rel[id] = Math.max(0, (rel[id] ?? 0) - 8);
+  return { ...s, rel, partners: [...(s.partners ?? []), pid] };
+}
+/** 婚礼条件：返回空串表示可以成婚，否则为原因 */
+/* 婚礼参数：世界观「关系设定」槽 relations.wedding 可覆盖，缺省 30000 / 80 */
+export const weddingCost = (): number => Math.max(0, Math.round(RELATIONS.wedding?.cost ?? 30000));
+export const weddingMinAffinity = (): number => RELATIONS.wedding?.minAffinity ?? 80;
+/** funds：当前钱包余额（绑定自定义货币时由调用方传入）；fmt：金额文案 */
+export function weddingBlocked(s: GameState, pid: string, affinity: number, funds: number = wallet.balance(s), fmt: (n: number) => string = (n) => wallet.fmt(n)): string {
+  const max = maxSpouses();
+  if (!max) return "这个世界没有婚姻制度（自由伴侣），无法举办婚礼。";
+  if (s.spouses?.includes(pid)) return "你们已经是夫妻了。";
+  if (!hasPartner(s, pid)) return "需要先确认恋爱关系，才能谈婚论嫁。";
+  { const ss = sameSexBlocked(personGender(pid)); if (ss) return ss; }
+  if ((s.spouses?.length ?? 0) >= max) return max === 1 ? "婚姻制度为单偶制，你已有配偶。" : `你的配偶已达上限（${max} 位）。`;
+  if (affinity < weddingMinAffinity()) return `好感需达到 ${weddingMinAffinity()} 才能求婚（当前 ${affinity}）。`;
+  if (funds < weddingCost()) return `婚礼需要 ${fmt(weddingCost())}，余额不足。`;
+  return "";
+}
+
+
+/** 离婚：按「离婚权限」判定；返回空串表示可以离 */
+export function divorceBlocked(s: GameState, pid: string): string {
+  if (!s.spouses?.includes(pid)) return "你们不是夫妻。";
+  const m = divorceMode();
+  if (m === "forbid") return "离婚权限「禁止离异」：婚姻一经缔结不可解除。";
+  const aff = s.rel?.[pid] ?? 0;
+  if (m === "mutual" && aff > DIVORCE_AGREE_MAX) return `离婚需双方同意：对方还不愿分开（好感 ${aff}，需 ≤ ${DIVORCE_AGREE_MAX}）。`;
+  return "";
+}
+export function divorce(s: GameState, pid: string): { next: GameState; msg: string } {
+  const why = divorceBlocked(s, pid);
+  if (why) return { next: s, msg: why };
+  const hard = divorceMode() === "unilateral";
+  const rel = { ...(s.rel ?? {}), [pid]: Math.max(0, (s.rel?.[pid] ?? 0) - (hard ? 30 : 15)) };
+  const partners = (s.partners ?? []).filter((x) => x !== pid);
+  const dating = s.dating === pid ? (partners.shift() ?? null) : s.dating;
+  const who = rosterFind((p) => p.id === pid)?.name ?? "对方";
+  const msg = hard ? `你单方面提出离婚，与${who}的婚姻就此解除。（好感 -30，压力 +10）` : `你与${who}协议离婚，和平分开。（好感 -15，压力 +6）`;
+  const n: GameState = { ...s, rel, partners, dating, spouses: s.spouses!.filter((x) => x !== pid), stress: clamp(s.stress + (hard ? 10 : 6), 0, 100), log: [...s.log, `【第 ${s.week} 周 · 婚姻】${msg}`].slice(-40) };
+  return { next: n, msg };
+}
+
+/* ============ 统一扣费规则 ============
+ * 主动消费（课程 / 社交 / 出行 / 购物 / 场景行动 / 购车 / 婚礼）：余额不足即拒绝，不会把钱扣成负数。
+ * 被动扣费（周账单 / 违约金 / 事件后果）：照常扣除，允许透支，透支按经济规则计压力与破产。 */
+export const canPay = (s: GameState, cost: number): boolean => wallet.can(s, cost);
+export const shortOf = (s: { money: number }, cost: number, what: string): string =>
+  `现金不足：${what}需 ${wallet.fmt(cost)}，现有 ${wallet.fmt(Math.max(0, wallet.balance(s)))}，没有扣费`;
+
+/* ============ 待办 / 悬而未决的事件（供主页「待办」条呈现，确保每条事件线都有可见的后续入口） ============
+ * 只列已经找上门、必须了结的事。情感线不在这里催：什么时候去找 TA、推不推进由玩家自己决定（人物页「关系经营」） */
+export type PendingTodo = { id: string; tone: "danger" | "gold" | "jade"; text: string };
+export function pendingTodos(s: GameState): PendingTodo[] {
+  const out: PendingTodo[] = [];
+  const career = feature("career"); // 非演艺世界（如校园）不出现通告/违约类待办
+  if (career && s.breach) {
+    const more = (s.breachQueue ?? []).length;
+    out.push({ id: "breach", tone: "danger", text: `${s.breach.producer}登门追责《${s.breach.gigName}》违约，待了结${more ? `（另有 ${more} 起排队，共 ${more + 1} 起）` : ""}` });
+  }
+  if (feature("imageCrisis") && s.crisis) out.push({ id: "crisis", tone: "danger", text: `舆论危机进行中（已 ${Math.max(0, s.day - s.crisis.day)} 天）——到「形象」页选择应对，拖延会持续掉口碑` });
+  if (career && s.activeGigId && s.gigDaysLeft > 0) {
+    const g = LIVE_GIGS.find((x) => x.id === s.activeGigId);
+    const wk = s.gigDeadlineWeek ? `，须在第 ${s.gigDeadlineWeek} 周前拍完` : "";
+    out.push({ id: "gig", tone: s.gigDeadlineWeek && s.gigDeadlineWeek - s.week <= 1 ? "danger" : "gold", text: `《${g?.name ?? T("gig")}》还差 ${s.gigDaysLeft} 天拍摄${wk}` });
+  }
+  // 透支兜底：只给出路建议，不改动余额
+  if (wallet.balance(s) < 0) {
+    if (feature("career") && !s.activeGigId) {
+      const pick = LIVE_GIGS
+        .filter((g) => g.star <= 2 && !(s.usedGigs ?? []).includes(g.id) && gigEligible(g, s))
+        .sort((a, b) => b.pay - a.pay)[0];
+      const where = pick ? gigManager(pick) : null;
+      out.push({
+        id: "overdraft", tone: "danger",
+        text: pick && where
+          ? `账户透支 ${wallet.fmt(-wallet.balance(s))}——经纪公司可为你争取低星${T("gig")}《${pick.name}》（约 ${wallet.fmt(pick.pay)}），到${where.loc}找${where.name}洽谈；只靠打工很难填平房租`
+          : `账户透支 ${wallet.fmt(-wallet.balance(s))}——只靠打工很难填平房租，去经纪公司问问保底的低星${T("gig")}，或减少付费课程`,
+      });
+    } else if (getWorldId() !== "ent") {
+      const job = [...SIDE_JOBS].filter((j) => j.fameReq <= s.fame).sort((a, b) => b.pay - a.pay)[0];
+      out.push({ id: "overdraft", tone: "danger", text: `${T("money", "资金")}透支 ${wallet.fmt(-wallet.balance(s))}——${job ? `可以在日程里安排「${job.label}」补贴，` : ""}少安排付费活动` });
+    }
+  }
+  if (s.pregnancy?.known) {
+    const d = Math.max(0, s.day - s.pregnancy.startDay);
+    out.push({ id: "preg", tone: "gold", text: `孕期第 ${Math.floor(d / 7) + 1} 周（${s.pregnancy.fatherName}）——注意休息，避免高强度${career ? T("gig") : "活动"}` });
+  }
+  return out;
+}
+
+/* 好感名册：娱乐圈沿用 data.PEOPLE（核心人物 + 可攻略角色）；其它世界取模组 NPC（init 缺省 0） */
+function relRoster(): { id: string; init: number }[] {
+  if (getWorldId() === "ent") return ROMANCE_PEOPLE;
+  return LIVE_PEOPLE.map((p) => ({ id: p.id, init: p.init ?? 0 }));
+}
+const rosterFind = (pred: (p: { id: string; name: string }) => boolean) =>
+  getWorldId() === "ent" ? ROMANCE_PEOPLE.find(pred) : LIVE_PEOPLE.find(pred);
+
+/* 日程项完成次数（键见 unlockLock），用于等级 / 前置解锁 */
+function bumpCount(n: GameState, key: string) {
+  n.trainCounts = { ...(n.trainCounts ?? {}), [key]: (n.trainCounts?.[key] ?? 0) + 1 };
+}
+/* 自定义属性收益：区间随机 × 倍率，按属性自身上下限截断，并写入收益说明 */
+function applyCgain(n: GameState, cgain: Record<string, [number, number]> | undefined, mul: number, gains: string[]) {
+  if (!cgain) return;
+  const defs = getWorldSlot("customAttrs") ?? [];
+  for (const [id, r] of Object.entries(cgain)) {
+    const d = defs.find((x) => x.id === id);
+    if (!d || !r) continue;
+    const cur = n.cattrs?.[id] ?? d.init;
+    const gain = Math.round(rand(r[0], r[1]) * mul);
+    if (!gain) continue;
+    n.cattrs = { ...(n.cattrs ?? {}), [id]: Math.max(d.min ?? 0, Math.min(attrCap(d.max), cur + gain)) };
+    gains.push(`${d.label} ${gain > 0 ? "+" : ""}${gain}`);
+  }
+}
+
+/** 本周周日账单预估（只读，镜像周结算的固定开销 + 伙食 + 前期减免），供日程面板提前展示扣款明细 */
+export function previewWeekBill(s: GameState): WeekBill {
+  const monthEnd = s.week % 4 === 0;
+  const bills = billsFor(s.fame);
+  const lines: { label: string; amount: number }[] = [
+    ...(bills.weekly ?? []).map((b) => ({ label: b.label, amount: b.amount })),
+    ...(monthEnd ? (bills.monthly ?? []).map((b) => ({ label: `${b.label}（月末）`, amount: b.amount })) : []),
+  ];
+  const meal = mealOf(s.meal);
+  if (meal) lines.push({ label: `伙食 · ${meal.name}`, amount: meal.cost });
+  const eco = economy();
+  if ((eco.graceWeeks ?? 0) > 0 && s.week <= (eco.graceWeeks ?? 0)) {
+    const mul = eco.graceBillMul ?? 0.5;
+    for (const l of lines) l.amount = Math.round(l.amount * mul);
+  }
+  return { lines, total: lines.reduce((a, b) => a + b.amount, 0), monthEnd, week: s.week };
+}
+
+/** 主线「下一步」：按当前状态给出一条具体、可执行的指引（首页常驻 + 任务日志「本章目标」） */
+export function nextStep(s: GameState): { title: string; hint: string } {
+  const urgent = pendingTodos(s).find((t) => t.tone === "danger");
+  if (urgent) return { title: "先处理紧急事项", hint: urgent.text };
+  const career = feature("career");
+  const today = dowOf(s.day ?? 0);
+  const planned = (s.schedule ?? []).slice(today).filter(Boolean).length;
+  if (career && s.activeGigId && s.gigDaysLeft > 0 && !(s.schedule ?? []).slice(today).includes("gig"))
+    return { title: `把「拍摄」排进日程`, hint: `在拍${T("gig")}还差 ${s.gigDaysLeft} 天，打开「本周日程」排上拍摄，完工领片酬。` };
+  if (planned === 0) return { title: "排好本周日程", hint: "打开「本周日程」，给剩下的每一天安排上课、打工或休息，再推进时间。" };
+  if (career && !s.activeGigId) return { title: `争取第一份${T("gig")}`, hint: `去经纪公司或片场看看有哪些${T("gig")}可接——接到活才有收入和名气。` };
+  return { title: "推进日子", hint: "日程已排好，推进时间看看这一周会发生什么；也可以四处走走结识人脉。" };
+}

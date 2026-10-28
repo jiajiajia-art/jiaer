@@ -10,6 +10,7 @@ type Beat = [number, number]; // [频率, 拍数]
 export type Track = {
   id: string; title: string; artist: string; album: string; cover: string;
   color: string; color2: string; spb: number; lead: Beat[]; bass: Beat[]; lyric: string[];
+  plot?: boolean; hot?: string; // 剧情联动新歌 / 热评
 };
 
 const CV = (id: string) => `https://images.unsplash.com/photo-${id}?w=400&h=400&fit=crop&auto=format&q=75`;
@@ -44,6 +45,32 @@ export const TRACKS: Track[] = [
     lyric: ["我是追着光的人", "哪怕影子被拉得很长", "总有一天站上舞台", "成为别人的光"],
   },
 ];
+
+/* —— 剧情联动新歌：旋律由基础曲目确定性变奏而来（保证可播放），文字信息来自 AI —— */
+export type PlotSong = { title: string; artist: string; album: string; lyric: string[]; hot?: string };
+const BASE_N = TRACKS.length;
+const PALETTE: [string, string][] = [["#1f1446", "#7a5cff"], ["#3b0d1c", "#ff5a7a"], ["#0d2b2b", "#29b3a0"], ["#2b1a05", "#f2a93b"]];
+const COVERS = ["1514525253161-7a46d19cd819", "1459749411175-04bf5292ceea", "1506157786151-b8491531f063", "1508700115892-45ecd05ae2ad"];
+export function setPlotTracks(songs: PlotSong[]) {
+  const cur = TRACKS[state.idx]?.id;
+  TRACKS.splice(BASE_N);
+  songs.forEach((sg, i) => {
+    let h = 0; for (const ch of sg.title) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    const base = TRACKS[h % BASE_N];
+    const ratio = [1, 1.1225, 0.8909, 1.0595][(h >> 3) % 4];
+    const rot = (h >> 5) % base.lead.length;
+    const lead = [...base.lead.slice(rot), ...base.lead.slice(0, rot)].map(([f, b]) => [f * ratio, b] as Beat);
+    const bass = base.bass.map(([f, b]) => [f * ratio, b] as Beat);
+    const [color, color2] = PALETTE[h % PALETTE.length];
+    TRACKS.push({ id: `ai_${h.toString(36)}_${i}`, title: sg.title, artist: sg.artist, album: sg.album, cover: CV(COVERS[(h >> 2) % COVERS.length]),
+      color, color2, spb: Math.max(0.26, Math.min(0.4, base.spb + (((h >> 7) % 5) - 2) * 0.02)), lead, bass, lyric: sg.lyric.length ? sg.lyric : base.lyric, plot: true, hot: sg.hot });
+  });
+  const ni = TRACKS.findIndex((t) => t.id === cur);
+  /* 正在播的剧情曲被替换掉：停掉旧旋律，避免"歌名与声音对不上" */
+  if (ni < 0 && state.playing) { _synth?.stop(); state = { ...state, playing: false }; }
+  state = { ...state, idx: ni >= 0 ? ni : 0 };
+  emit();
+}
 
 /* —— 榜单（纯函数、与游戏无关）：调用方传入每首曲子的署名艺人，按名气排名 —— */
 export type TrackArtist = { name: string; avatar?: string; fame: number; isPlayer?: boolean };
@@ -128,7 +155,7 @@ export function playIdx(i: number) { getSynth().play(TRACKS[i]); state = { idx: 
 export function togglePlay() {
   const s = getSynth();
   if (state.playing) { s.pause(); state = { ...state, playing: false }; }
-  else { if (s.elapsed() > 0 && s.duration > 0) s.resume(); else s.play(TRACKS[state.idx]); state = { ...state, playing: true }; }
+  else { if (s.elapsed() > 0 && s.duration > 0 && s.elapsed() < s.duration - 0.05) s.resume(); else s.play(TRACKS[state.idx]); state = { ...state, playing: true }; }
   emit();
 }
 export function nextTrack() { playIdx((state.idx + 1) % TRACKS.length); }
