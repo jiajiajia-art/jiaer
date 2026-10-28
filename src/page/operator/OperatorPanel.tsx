@@ -7,7 +7,7 @@ import PromotionAdminManager from '../../components/PromotionAdminManager';
 import DailyTasksAdminManager from '../../components/DailyTasksAdminManager';
 import StatsOverviewSection from '../../components/stats/StatsOverviewSection';
 import MetricTitleTip from '../../components/stats/MetricTitleTip';
-import metricStyles from '../../components/admin/MetricSummary.module.css';
+import metricStyles from '../../components/Admin/MetricSummary.module.css';
 import ListPaginationBar, { buildListPagination, type ListPaginationState } from '../../components/ListPaginationBar';
 import operatorStatsApi, {
   type RecruitmentOverview,

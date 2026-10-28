@@ -22,7 +22,9 @@
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+    /* 功能注释：目录与 import 统一用 Admin（大写）；禁止再混用 admin 导致 macOS 上 TS1261 */
+    "forceConsistentCasingInFileNames": true
   },
   "include": ["src"]
 }
