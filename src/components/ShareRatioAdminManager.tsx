@@ -347,7 +347,7 @@ const ShareRatioAdminManager: React.FC<ShareRatioAdminManagerProps> = () => {
                 onConfirm={() => void handleSaveRatio()}
                 title="确认修改分成比例"
                 message={editingGame
-                    ? `确认将《${editingGame.title || '-'}》的作品分成比例从 ${editingGame.effectiveShareRatioDisplay} 调整为 ${Number(editRatio).toFixed(1)}%？当前未结算及后续收益将按新比例计算。`
+                    ? `确认将《${editingGame.title || '-'}》的作品分成比例从 ${editingGame.effectiveShareRatioDisplay} 调整为 ${Number(editRatio).toFixed(1)}%？后续新产生的收益将按新比例计算，历史流水不追溯调整。`
                     : ''}
                 confirmButtonText="确认修改"
                 cancelButtonText="取消"

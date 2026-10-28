@@ -111,7 +111,6 @@ const CreatorBenefitRulesModal: React.FC<CreatorBenefitRulesModalProps> = ({
                         </tbody>
                     </table>
                 </div>
-                <p className={styles.note}>{t('creatorBenefits.guideSpecialNote')}</p>
             </section>
         </div>
     );

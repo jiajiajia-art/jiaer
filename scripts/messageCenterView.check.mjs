@@ -59,3 +59,14 @@ test('Messages_应对齐效果图会话列表结构', () => {
   assert.match(zh, /"markAllRead":\s*"全部已读"/);
   assert.match(zh, /"sectionSystem":\s*"系统消息"/);
 });
+
+test('Messages_移动端隐藏全局顶部栏与底部导航并释放占位', () => {
+  const tsx = read('src/page/Messages.tsx');
+  const css = read('src/page/Messages.module.css');
+
+  assert.match(tsx, /className=\{styles\.desktopChrome\}><Navbar\s*\/>/);
+  assert.match(tsx, /className=\{styles\.desktopChrome\}><MobileBottomNav\s*\/>/);
+  assert.match(css, /\.desktopChrome\s*\{[\s\S]*?display:\s*contents/);
+  assert.match(css, /@media\s*\(max-width:\s*768px\)[\s\S]*?\.desktopChrome\s*\{[\s\S]*?display:\s*none/);
+  assert.match(css, /@media\s*\(max-width:\s*768px\)[\s\S]*?\.pageBody\s*\{[\s\S]*?padding-top:\s*calc\([^;]*safe-area-inset-top[^;]*\)[\s\S]*?padding-bottom:\s*calc\([^;]*safe-area-inset-bottom[^;]*\)/);
+});

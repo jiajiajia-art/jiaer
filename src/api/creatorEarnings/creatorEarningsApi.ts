@@ -78,37 +78,24 @@ export interface CreatorWorkEarningAccount {
     lossCarryYuan: string;
     chargedKkMinorTotal: string;
     chargedKkTotal: string;
+    qualifiedKkMinorTotal: string;
+    qualifiedKkTotal: string;
+    unqualifiedKkMinorTotal: string;
+    unqualifiedKkTotal: string;
+    qualifiedRevenueMicroYuanTotal: string;
+    qualifiedRevenueYuanTotal: string;
+    platformCostMicroYuanTotal: string;
+    platformCostYuanTotal: string;
+    creatorShareCostMicroYuanTotal: string;
+    creatorShareCostYuanTotal: string;
     lastSettledAt: string | null;
     updatedAt: string;
 }
 
 export interface CreatorEarningLedgerItem {
-    id: number;
     fileId: string;
-    workType: string;
-    eventType: string;
-    chargedKkMinor: number;
-    qualifiedKkMinor: number;
-    qualifiedRevenueYuan: string;
-    platformCostMicroYuan: string;
-    platformCostYuan: string;
-    creatorShareCostMicroYuan: string;
-    creatorShareCostYuan: string;
-    channelFeeYuan: string;
-    orderTaxYuan: string;
-    distributableNetYuan: string;
-    shareRatioX10000: number;
-    creatorEarningYuan: string;
-    lossBeforeYuan: string;
-    lossAfterYuan: string;
-    aiUsage: {
-        inputTokens: number;
-        outputTokens: number;
-        cachedInputTokens: number;
-        imageCount: number;
-        imageAspectRatio?: string | null;
-    } | null;
-    createdAt: string;
+    rechargeKkMinorTotal: number;
+    tokenCostKkMinorTotal: number;
 }
 
 export interface CreatorEarningLedgerPage {

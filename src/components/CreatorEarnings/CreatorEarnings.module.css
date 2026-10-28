@@ -374,6 +374,12 @@
     font-size: 12px;
 }
 
+.workMeta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px 12px;
+}
+
 .workRevenue {
     min-width: 92px;
     text-align: right;
@@ -811,6 +817,64 @@
     text-align: left;
 }
 
+.ledgerList {
+    display: grid;
+    gap: 12px;
+}
+
+.ledgerCard {
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 14px;
+    background: #242126;
+}
+
+.ledgerSummary {
+    padding: 16px;
+}
+
+.ledgerSummary > div {
+    display: grid;
+    gap: 5px;
+}
+
+.ledgerSummary span {
+    color: #969099;
+    font-size: 12px;
+}
+
+.ledgerSummary strong {
+    color: #f5f1f6;
+    font-size: 15px;
+}
+
+.ledgerAmounts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ledgerAmounts > div {
+    display: grid;
+    gap: 6px;
+    padding: 14px 16px 16px;
+}
+
+.ledgerAmounts > div + div {
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ledgerAmounts span {
+    color: #99929d;
+    font-size: 12px;
+}
+
+.ledgerAmounts strong {
+    color: #ff8ca5;
+    font-size: 17px;
+    font-variant-numeric: tabular-nums;
+}
+
 .tableWrap {
     overflow-x: auto;
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -911,6 +975,8 @@
     .rulesButton {
         gap: 5px;
         font-size: 12px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
     }
 
     .overviewHero {
@@ -976,10 +1042,6 @@
         display: grid;
         gap: 10px;
         margin: 14px 0 8px;
-    }
-
-    .granularityControl {
-        width: max-content;
     }
 
     .periodControl {
@@ -1071,6 +1133,15 @@
 
     .tableWrap {
         margin-inline: -4px;
+    }
+
+    .ledgerSummary {
+        align-items: flex-start;
+        padding: 14px;
+    }
+
+    .ledgerAmounts > div {
+        padding-inline: 14px;
     }
 }
 

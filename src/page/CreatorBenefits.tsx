@@ -1,6 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  IoArrowBack,
   IoChevronBack,
   IoChevronDown,
   IoChevronForward,
@@ -11,6 +10,8 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Navbar from '../components/Layout/Navbar';
+import CenteredPageHeader from '../components/Layout/CenteredPageHeader';
+import CreatorBenefitModeFilter from '../components/CreatorBenefits/CreatorBenefitModeFilter';
 import CreatorBenefitRulesModal from '../components/CreatorBenefits/CreatorBenefitRulesModal';
 import creatorBenefitsApi from '../api/creatorBenefits/creatorBenefitsApi';
 import type {
@@ -19,15 +20,19 @@ import type {
   CreatorBenefitWorksResult,
 } from '../api/creatorBenefits/creatorBenefits.type';
 import {
+  filterCreatorBenefitWorksByMode,
+  formatCreatorProgressPercent,
   creatorLevelProgress,
-  formatCreatorQuarterRange,
   metricLabel,
+  sortCreatorBenefitWorksByContribution,
+  type CreatorBenefitMode,
 } from '../lib/creatorLevelView';
 import styles from './CreatorBenefits.module.css';
 
 const formatRatio = (value: number) => `${Math.round((Number(value) || 0) * 100)}%`;
 const formatNumber = (value: number) => (Number(value) || 0).toLocaleString('zh-CN');
-const INCLUDED_WORKS_PER_PAGE = 10;
+const INCLUDED_WORKS_PER_PAGE = 5;
+const EXCLUDED_WORKS_PER_PAGE = 10;
 
 const CreatorBenefits: React.FC = () => {
   const { t } = useTranslation();
@@ -35,6 +40,8 @@ const CreatorBenefits: React.FC = () => {
   const [summary, setSummary] = useState<CreatorBenefitSummary | null>(null);
   const [works, setWorks] = useState<CreatorBenefitWorksResult>({ included: [], excluded: [] });
   const [includedPage, setIncludedPage] = useState(1);
+  const [excludedPage, setExcludedPage] = useState(1);
+  const [includedMode, setIncludedMode] = useState<CreatorBenefitMode>('all');
   const [isExcludedExpanded, setIsExcludedExpanded] = useState(false);
   const [isBenefitGuideOpen, setIsBenefitGuideOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -65,16 +72,38 @@ const CreatorBenefits: React.FC = () => {
     void loadBenefits();
   }, [loadBenefits]);
 
-  const includedPageCount = Math.max(1, Math.ceil(works.included.length / INCLUDED_WORKS_PER_PAGE));
+  const sortedIncludedWorks = useMemo(
+    () => sortCreatorBenefitWorksByContribution(works.included),
+    [works.included],
+  );
+  const filteredIncludedWorks = useMemo(
+    () => filterCreatorBenefitWorksByMode(sortedIncludedWorks, includedMode),
+    [includedMode, sortedIncludedWorks],
+  );
+  const sortedExcludedWorks = useMemo(
+    () => sortCreatorBenefitWorksByContribution(works.excluded),
+    [works.excluded],
+  );
+  const includedPageCount = Math.max(1, Math.ceil(filteredIncludedWorks.length / INCLUDED_WORKS_PER_PAGE));
   const includedPageStart = (includedPage - 1) * INCLUDED_WORKS_PER_PAGE;
-  const paginatedIncludedWorks = works.included.slice(
+  const paginatedIncludedWorks = filteredIncludedWorks.slice(
     includedPageStart,
     includedPageStart + INCLUDED_WORKS_PER_PAGE,
+  );
+  const excludedPageCount = Math.max(1, Math.ceil(sortedExcludedWorks.length / EXCLUDED_WORKS_PER_PAGE));
+  const excludedPageStart = (excludedPage - 1) * EXCLUDED_WORKS_PER_PAGE;
+  const paginatedExcludedWorks = sortedExcludedWorks.slice(
+    excludedPageStart,
+    excludedPageStart + EXCLUDED_WORKS_PER_PAGE,
   );
 
   useEffect(() => {
     setIncludedPage((page) => Math.min(page, includedPageCount));
   }, [includedPageCount]);
+
+  useEffect(() => {
+    setExcludedPage((page) => Math.min(page, excludedPageCount));
+  }, [excludedPageCount]);
 
   const closeBenefitGuide = useCallback(() => {
     setIsBenefitGuideOpen(false);
@@ -89,17 +118,17 @@ const CreatorBenefits: React.FC = () => {
       <div className={styles.workList}>
         {items.map((work) => (
           <div key={work.fileId} className={styles.workRow}>
-            <div className={styles.workMain}>
-              <strong>{work.title}</strong>
-              <span>{work.engine || t('creatorBenefits.unknownType')} · {work.fileId}</span>
-              {work.takedownReason ? <small>{work.takedownReason}</small> : null}
+            <div className={styles.workIdentity}>
+              <div className={styles.workTitle}>
+                <span className={styles.modeTag}>{work.engine || t('creatorBenefits.unknownType')}</span>
+                <strong>{work.title}</strong>
+              </div>
+              {work.takedownReason ? <small className={styles.workReason}>{work.takedownReason}</small> : null}
             </div>
-            <div className={styles.workMetrics}>
-              <span className={styles.statusTag}>{t(`creatorBenefits.status.${work.status}`)}</span>
-              <strong>
-                {metricLabel(work)} {formatNumber(work.quarterMetricCount)}
-              </strong>
-            </div>
+            <span className={styles.statusTag}>{t(`creatorBenefits.status.${work.status}`)}</span>
+            <strong className={styles.workMetric}>
+              {metricLabel(work)} {formatNumber(work.quarterMetricCount)}
+            </strong>
           </div>
         ))}
       </div>
@@ -108,84 +137,39 @@ const CreatorBenefits: React.FC = () => {
 
   return (
     <div className={styles.pageRoot}>
-      <Navbar />
+      <div className={styles.desktopChrome}><Navbar /></div>
       <main className={styles.mainContent}>
-        <header className={styles.pageHeader}>
-          <button type="button" className={styles.backButton} onClick={() => navigate('/create')} aria-label={t('creatorBenefits.back')}>
-            <IoArrowBack aria-hidden="true" />
-          </button>
-          <div>
-            <h1>{t('creatorBenefits.title')}</h1>
-            <p>{t('creatorBenefits.subtitle')}</p>
-          </div>
-        </header>
+        <div className={styles.dashboard}>
+          <CenteredPageHeader
+            title={t('creatorBenefits.title')}
+            backLabel={t('creatorBenefits.back')}
+            onBack={() => navigate('/create')}
+          />
 
-        {isLoading ? <div className={styles.stateBox}>{t('creatorBenefits.loading')}</div> : null}
-        {!isLoading && error ? (
-          <div className={styles.stateBox} role="alert">
-            <span>{error}</span>
-            <button type="button" onClick={() => void loadBenefits()}>
-              <IoRefresh aria-hidden="true" />
-              {t('creatorBenefits.retry')}
-            </button>
-          </div>
-        ) : null}
+          {isLoading ? <div className={`${styles.panel} ${styles.stateBox}`}>{t('creatorBenefits.loading')}</div> : null}
+          {!isLoading && error ? (
+            <div className={`${styles.panel} ${styles.stateBox}`} role="alert">
+              <span>{error}</span>
+              <button type="button" onClick={() => void loadBenefits()}>
+                <IoRefresh aria-hidden="true" />
+                {t('creatorBenefits.retry')}
+              </button>
+            </div>
+          ) : null}
 
-        {!isLoading && summary ? (
-          <>
-            <section className={styles.summaryBand} aria-labelledby="creator-benefit-level">
+          {!isLoading && summary ? (
+            <>
+              <section className={`${styles.panel} ${styles.summaryBand}`} aria-labelledby="creator-benefit-level">
               <div className={styles.levelBlock}>
                 <span id="creator-benefit-level" className={styles.levelBadge}>{summary.label}</span>
-                <div>
-                  <h2>
-                    {summary.isSpecialAuthor
-                      ? t('creatorBenefits.specialTitle')
-                      : summary.isContractedAuthor
-                        ? t('creatorBenefits.contractedTitle', { level: summary.level })
-                        : summary.unranked
-                          ? t('creatorBenefits.unrankedTitle')
-                          : t('creatorBenefits.levelTitle', { level: summary.level })}
-                  </h2>
-                  <p>
-                    {summary.isSpecialAuthor
-                      ? t('creatorBenefits.specialHint')
-                      : summary.isContractedAuthor
-                        ? t('creatorBenefits.contractedHint')
-                        : summary.unranked
-                          ? t('creatorBenefits.unrankedHint')
-                          : t('creatorBenefits.levelHint')}
-                  </p>
-                </div>
               </div>
               <div className={styles.totalPv}>
-                <span>{t('creatorBenefits.effectiveCount')}</span>
+                <span>{t('creatorBenefits.growthValue')}</span>
                 <strong>{formatNumber(summary.effectiveCount)}</strong>
               </div>
             </section>
 
-            <section className={styles.quarterSection} aria-labelledby="creator-benefit-quarter">
-              <div className={styles.sectionHeading}>
-                <h2 id="creator-benefit-quarter">{t('creatorBenefits.quarterTitle', { quarter: summary.quarterKey })}</h2>
-                <p>{formatCreatorQuarterRange(summary.effectiveStart, summary.periodEnd)}</p>
-              </div>
-              <div className={styles.quarterGrid}>
-                <div>
-                  <span>{t('creatorBenefits.txtPlayRounds')}</span>
-                  <strong>{formatNumber(summary.txtPlayRounds)}</strong>
-                </div>
-                <div>
-                  <span>{t('creatorBenefits.otherModePv')}</span>
-                  <strong>{formatNumber(summary.otherModePv)}</strong>
-                </div>
-                <div>
-                  <span>{t('creatorBenefits.effectiveCount')}</span>
-                  <strong>{formatNumber(summary.effectiveCount)}</strong>
-                </div>
-              </div>
-              <p className={styles.quarterNote}>{t('creatorBenefits.quarterHint')}</p>
-            </section>
-
-            <section className={styles.ratioSection} aria-labelledby="creator-benefit-ratios">
+              <section className={`${styles.panel} ${styles.ratioSection}`} aria-labelledby="creator-benefit-ratios">
               <div className={styles.sectionHeading}>
                 <div className={styles.sectionTitleRow}>
                   <h2 id="creator-benefit-ratios">{t('creatorBenefits.ratioTitle')}</h2>
@@ -200,44 +184,49 @@ const CreatorBenefits: React.FC = () => {
                     <IoHelpCircleOutline aria-hidden="true" />
                   </button>
                 </div>
-                <p>{t('creatorBenefits.ratioHint')}</p>
               </div>
               <div className={styles.ratioGrid}>
                 <div className={styles.ratioItem}>
                   <span>{t('creatorBenefits.editorRatio')}</span>
                   <strong>{formatRatio(summary.editorShareRatio)}</strong>
-                  <small>{t('creatorBenefits.editorRatioHint')}</small>
                 </div>
                 <div className={styles.ratioItem}>
                   <span>{t('creatorBenefits.customRatio')}</span>
                   <strong>{formatRatio(summary.customShareRatio)}</strong>
-                  <small>{t('creatorBenefits.customRatioHint')}</small>
                 </div>
                 <div className={styles.ratioItem}>
                   <span>{t('creatorBenefits.freeCreation')}</span>
                   <strong>{summary.freeTxtCreation ? t('creatorBenefits.enabled') : t('creatorBenefits.disabled')}</strong>
-                  <small>{t('creatorBenefits.freeCreationHint')}</small>
                 </div>
               </div>
             </section>
 
             {!summary.isSpecialAuthor && summary.nextLevel && levelProgress?.target ? (
-              <section className={styles.progressSection} aria-labelledby="creator-benefit-progress">
+              <section className={`${styles.panel} ${styles.progressSection}`} aria-labelledby="creator-benefit-progress">
                 <div className={styles.progressCopy}>
                   <div>
                     <h2 id="creator-benefit-progress">{t('creatorBenefits.nextLevel', { level: summary.nextLevel })}</h2>
                     <p>{t('creatorBenefits.progressHint', { current: formatNumber(levelProgress.current), target: formatNumber(levelProgress.target) })}</p>
                   </div>
-                  <strong>{levelProgress.percent}%</strong>
+                  <strong>{formatCreatorProgressPercent(levelProgress.percent)}</strong>
                 </div>
                 <progress max={100} value={levelProgress.percent} aria-label={t('creatorBenefits.progressLabel')} />
               </section>
             ) : null}
 
-            <section className={styles.worksSection}>
-              <div className={styles.sectionHeading}>
-                <h2>{t('creatorBenefits.includedWorks')}</h2>
-                <p>{t('creatorBenefits.includedWorksHint')}</p>
+              <section className={`${styles.panel} ${styles.worksSection}`}>
+              <div className={`${styles.sectionHeading} ${styles.worksHeading}`}>
+                <div>
+                  <h2>{t('creatorBenefits.includedWorks')}</h2>
+                  <p>{t('creatorBenefits.includedWorksHint')}</p>
+                </div>
+                <CreatorBenefitModeFilter
+                  value={includedMode}
+                  onChange={(mode) => {
+                    setIncludedMode(mode);
+                    setIncludedPage(1);
+                  }}
+                />
               </div>
               {renderWorkRows(paginatedIncludedWorks)}
               {includedPageCount > 1 ? (
@@ -265,7 +254,7 @@ const CreatorBenefits: React.FC = () => {
               ) : null}
             </section>
 
-            <section className={styles.worksSection}>
+              <section className={`${styles.panel} ${styles.worksSection}`}>
               <div className={styles.sectionHeading}>
                 <h2>
                   <button
@@ -288,7 +277,30 @@ const CreatorBenefits: React.FC = () => {
               </div>
               {isExcludedExpanded ? (
                 <div id="excluded-creator-works">
-                  {renderWorkRows(works.excluded)}
+                      {renderWorkRows(paginatedExcludedWorks)}
+                      {excludedPageCount > 1 ? (
+                        <nav className={styles.pagination} aria-label={t('creatorBenefits.paginationLabel')}>
+                          <button
+                            type="button"
+                            onClick={() => setExcludedPage((page) => Math.max(1, page - 1))}
+                            disabled={excludedPage === 1}
+                            aria-label={t('creatorBenefits.previousPage')}
+                            title={t('creatorBenefits.previousPage')}
+                          >
+                            <IoChevronBack aria-hidden="true" />
+                          </button>
+                          <span>{t('creatorBenefits.pageStatus', { current: excludedPage, total: excludedPageCount })}</span>
+                          <button
+                            type="button"
+                            onClick={() => setExcludedPage((page) => Math.min(excludedPageCount, page + 1))}
+                            disabled={excludedPage === excludedPageCount}
+                            aria-label={t('creatorBenefits.nextPage')}
+                            title={t('creatorBenefits.nextPage')}
+                          >
+                            <IoChevronForward aria-hidden="true" />
+                          </button>
+                        </nav>
+                      ) : null}
                   <button
                     type="button"
                     className={styles.collapseFooterButton}
@@ -300,8 +312,9 @@ const CreatorBenefits: React.FC = () => {
                 </div>
               ) : null}
             </section>
-          </>
-        ) : null}
+            </>
+          ) : null}
+        </div>
       </main>
       <CreatorBenefitRulesModal
         open={isBenefitGuideOpen}

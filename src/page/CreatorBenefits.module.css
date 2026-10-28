@@ -1,11 +1,12 @@
 .pageRoot {
   --benefit-surface: #171719;
   --benefit-raised: #202023;
+  --benefit-soft: #141416;
   --benefit-border: rgba(255, 255, 255, 0.11);
-  --benefit-muted: #aaaab0;
+  --benefit-muted: #a8a8ad;
   --benefit-accent: #d93c5b;
-  --benefit-heading: #ffb3c1;
-  --benefit-copy: #e6e6ea;
+  --benefit-heading: #f7f7f8;
+  --benefit-copy: #f1f1f3;
   min-height: 100vh;
   min-height: 100dvh;
   overflow-x: clip;
@@ -14,38 +15,40 @@
 }
 
 .mainContent {
-  width: min(1040px, 100%);
-  margin: 0 auto;
-  padding: calc(var(--app-desktop-navbar-height, 64px) + 24px) 24px 80px;
+  width: 100%;
+  padding: calc(var(--app-desktop-navbar-height, 64px) + 22px) 24px 96px;
   box-sizing: border-box;
 }
 
-.pageHeader {
+.dashboard {
+  width: min(1040px, 100%);
+  margin: 0 auto;
   display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 24px;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.pageHeader h1,
-.pageHeader p,
+.desktopChrome {
+  display: contents;
+}
+
+.panel {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--benefit-border);
+  border-radius: 16px;
+  background: var(--benefit-surface);
+  box-sizing: border-box;
+}
+
 .sectionHeading h2,
 .sectionHeading p,
-.levelBlock h2,
-.levelBlock p,
 .progressCopy h2,
 .progressCopy p {
   margin: 0;
 }
 
-.pageHeader h1 {
-  font-size: 28px;
-  line-height: 1.25;
-}
-
-.pageHeader p,
 .sectionHeading p,
-.levelBlock p,
 .progressCopy p {
   margin-top: 4px;
   color: var(--benefit-muted);
@@ -53,7 +56,6 @@
   line-height: 1.55;
 }
 
-.backButton,
 .stateBox button {
   min-width: 44px;
   min-height: 44px;
@@ -61,9 +63,9 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border: 1px solid var(--benefit-border);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
   color: #ffffff;
   cursor: pointer;
 }
@@ -73,8 +75,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 24px 0;
-  border-block: 1px solid var(--benefit-border);
+  background:
+    radial-gradient(circle at 96% -28%, rgba(217, 60, 91, 0.2), transparent 34%),
+    var(--benefit-surface);
 }
 
 .levelBlock {
@@ -92,7 +95,7 @@
   justify-content: center;
   padding: 0 14px;
   border: 1px solid rgba(255, 135, 158, 0.42);
-  border-radius: 8px;
+  border-radius: 11px;
   background: rgba(217, 60, 91, 0.18);
   color: #ffc1ce;
   font-size: 16px;
@@ -100,7 +103,6 @@
   white-space: nowrap;
 }
 
-.levelBlock h2,
 .progressCopy h2,
 .sectionHeading h2 {
   color: var(--benefit-heading);
@@ -154,45 +156,9 @@
 }
 
 .ratioSection,
-.quarterSection,
 .progressSection,
 .worksSection {
-  padding: 22px 0;
-  border-bottom: 1px solid var(--benefit-border);
-}
-
-.quarterGrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.quarterGrid > div {
   min-width: 0;
-  display: grid;
-  gap: 5px;
-  padding: 14px;
-  border: 1px solid var(--benefit-border);
-  border-radius: 8px;
-  background: var(--benefit-surface);
-}
-
-.quarterGrid span,
-.quarterNote {
-  color: var(--benefit-muted);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.quarterGrid strong {
-  color: #ffffff;
-  font-size: 22px;
-  font-variant-numeric: tabular-nums;
-}
-
-.quarterNote {
-  margin: 10px 0 0;
 }
 
 .ratioGrid {
@@ -205,22 +171,17 @@
 .ratioItem {
   min-width: 0;
   display: flex;
-  flex-direction: column;
-  gap: 7px;
-  padding: 14px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px;
   border: 1px solid var(--benefit-border);
-  border-radius: 8px;
-  background: var(--benefit-surface);
+  border-radius: 12px;
+  background: var(--benefit-raised);
 }
 
 .ratioItem span {
   color: var(--benefit-copy);
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.ratioItem small {
-  color: var(--benefit-muted);
   font-size: 12px;
   line-height: 1.45;
 }
@@ -265,54 +226,90 @@
 
 .workList {
   margin-top: 14px;
-  border-top: 1px solid var(--benefit-border);
+  overflow: hidden;
+  border: 1px solid var(--benefit-border);
+  border-radius: 12px;
+  background: var(--benefit-soft);
 }
 
 .workRow {
   min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 15px 4px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "identity status"
+    "identity metric";
+  align-items: start;
+  column-gap: 20px;
+  row-gap: 8px;
+  padding: 15px 16px;
   border-bottom: 1px solid var(--benefit-border);
 }
 
-.workMain {
-  min-width: 0;
-  display: grid;
-  gap: 4px;
+.workRow:last-child {
+  border-bottom: 0;
 }
 
-.workMain strong {
+.workIdentity {
+  grid-area: identity;
+  min-width: 0;
+  align-self: center;
+  display: grid;
+  gap: 6px;
+}
+
+.workTitle {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.workTitle strong {
+  min-width: 0;
   color: var(--benefit-copy);
   overflow-wrap: anywhere;
-  font-size: 14px;
+  font-size: 16px;
 }
 
-.workMain span,
-.workMain small {
+.modeTag {
+  flex: 0 0 auto;
+  padding: 4px 9px;
+  border: 1px solid rgba(217, 60, 91, 0.46);
+  border-radius: 999px;
+  background: rgba(217, 60, 91, 0.16);
+  color: #ffb3c1;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.workReason {
+  min-width: 0;
+  margin: 0;
   color: var(--benefit-muted);
   font-size: 12px;
   line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
-.workMetrics {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.workMetric {
+  grid-area: metric;
+  align-self: end;
+  justify-self: end;
   font-variant-numeric: tabular-nums;
-}
-
-.workMetrics strong {
   white-space: nowrap;
 }
 
 .statusTag {
+  grid-area: status;
+  align-self: start;
+  justify-self: end;
   padding: 3px 7px;
   border: 1px solid var(--benefit-border);
-  border-radius: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.035);
   color: #d0d0d4;
   font-size: 11px;
   white-space: nowrap;
@@ -324,6 +321,17 @@
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
+}
+
+.worksHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.worksHeading > div {
+  min-width: 0;
 }
 
 .collapsibleTrigger {
@@ -592,21 +600,25 @@
 }
 
 @media (max-width: 720px) {
+  .desktopChrome {
+    display: none;
+  }
+
   .mainContent {
-    padding: calc(var(--app-mobile-navbar-height, 56px) + 18px) 16px 52px;
+    padding: calc(14px + env(safe-area-inset-top)) 12px 52px;
   }
 
-  .pageHeader {
-    align-items: flex-start;
+  .dashboard {
+    gap: 12px;
   }
 
-  .pageHeader > div,
+  .panel {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
   .sectionHeading {
     min-width: 0;
-  }
-
-  .pageHeader h1 {
-    font-size: 23px;
   }
 
   .summaryBand,
@@ -615,16 +627,15 @@
   }
 
   .summaryBand {
-    flex-direction: column;
+    gap: 12px;
   }
 
   .levelBlock {
-    width: 100%;
-    align-items: flex-start;
+    width: auto;
   }
 
   .totalPv {
-    justify-items: start;
+    justify-items: end;
   }
 
   .ratioGrid {
@@ -636,32 +647,12 @@
     background: var(--benefit-surface);
   }
 
-  .quarterGrid {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-
-  .quarterGrid > div {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 11px 13px;
-  }
-
-  .quarterGrid strong {
-    font-size: 20px;
-  }
-
   .ratioItem {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      "label value"
-      "hint hint";
     align-items: center;
-    gap: 4px 12px;
-    padding: 11px 13px;
+    gap: 12px;
+    padding: 13px;
     border: 0;
     border-bottom: 1px solid var(--benefit-border);
     border-radius: 0;
@@ -672,37 +663,30 @@
     border-bottom: 0;
   }
 
-  .ratioItem > span {
-    grid-area: label;
-  }
-
   .ratioItem > strong {
-    grid-area: value;
     font-size: 20px;
     line-height: 1.2;
     overflow-wrap: anywhere;
   }
 
-  .ratioItem > small {
-    grid-area: hint;
-    font-size: 11px;
-  }
-
   .ratioSection,
-  .quarterSection,
   .progressSection,
   .worksSection {
-    padding: 19px 0;
+    padding: 16px;
+  }
+
+  .worksHeading {
+    flex-direction: column;
   }
 
   .workRow {
-    flex-direction: column;
-    gap: 10px;
+    column-gap: 12px;
+    row-gap: 8px;
+    padding: 14px 12px;
   }
 
-  .workMetrics {
-    width: 100%;
-    justify-content: space-between;
+  .workTitle {
+    gap: 6px;
   }
 
   .modalOverlay {

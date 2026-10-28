@@ -11,11 +11,15 @@ import {
     YAxis,
 } from 'recharts';
 import type {
-    CreatorEarningGranularity,
     CreatorEarningPeriod,
     CreatorEarningTrendPoint,
 } from '../../api/creatorEarnings/creatorEarningsApi';
-import { visibleTrendSeries } from '../../lib/creatorEarningsView';
+import {
+    buildCreatorTrendTicks,
+    formatCreatorTrendAxisDate,
+    formatCreatorTrendTooltipDate,
+    visibleTrendSeries,
+} from '../../lib/creatorEarningsView';
 import CreatorWorkSelectModal from './CreatorWorkSelectModal';
 import styles from './CreatorEarnings.module.css';
 
@@ -25,11 +29,9 @@ interface Props {
     loading: boolean;
     error: boolean;
     period: CreatorEarningPeriod;
-    granularity: CreatorEarningGranularity;
     fileId: string;
     works: WorkOption[];
     onPeriodChange: (value: CreatorEarningPeriod) => void;
-    onGranularityChange: (value: CreatorEarningGranularity) => void;
     onFileChange: (value: string) => void;
     onRetry: () => void;
 }
@@ -41,10 +43,11 @@ const SERIES = {
 } as const;
 
 const CreatorEarningsTrend: React.FC<Props> = ({
-    data, loading, error, period, granularity, fileId, works,
-    onPeriodChange, onGranularityChange, onFileChange, onRetry,
+    data, loading, error, period, fileId, works,
+    onPeriodChange, onFileChange, onRetry,
 }) => {
     const visible = visibleTrendSeries(data);
+    const ticks = buildCreatorTrendTicks(data.map((row) => row.bucket), period);
     const [workSelectOpen, setWorkSelectOpen] = useState(false);
     const selectedWorkTitle = fileId ? works.find((work) => work.fileId === fileId)?.title || fileId : '全部作品';
     return (
@@ -60,10 +63,6 @@ const CreatorEarningsTrend: React.FC<Props> = ({
                 <strong>{selectedWorkTitle}<IoChevronDown aria-hidden="true" /></strong>
             </button>
             <div className={styles.trendControls}>
-                <div className={`${styles.segmented} ${styles.granularityControl}`} aria-label="统计粒度">
-                    <button type="button" className={granularity === 'daily' ? styles.active : ''} onClick={() => onGranularityChange('daily')}>每日</button>
-                    <button type="button" className={granularity === 'monthly' ? styles.active : ''} onClick={() => onGranularityChange('monthly')}>每月</button>
-                </div>
                 <div className={`${styles.segmented} ${styles.periodControl}`} aria-label="时间范围">
                     {(['7d', '30d', '1y', 'all'] as const).map((value) => <button type="button" key={value} className={period === value ? styles.active : ''} onClick={() => onPeriodChange(value)}>{value === '7d' ? '近7日' : value === '30d' ? '近30日' : value === '1y' ? '近1年' : '累计'}</button>)}
                 </div>
@@ -81,9 +80,9 @@ const CreatorEarningsTrend: React.FC<Props> = ({
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={data} margin={{ top: 12, right: 12, bottom: 4, left: 0 }}>
                             <CartesianGrid stroke="rgba(255,255,255,.08)" vertical={false} />
-                            <XAxis dataKey="bucket" stroke="#9b98aa" tickLine={false} axisLine={false} />
+                            <XAxis dataKey="bucket" ticks={ticks} tickFormatter={(value) => formatCreatorTrendAxisDate(String(value), period)} stroke="#9b98aa" tickLine={false} axisLine={false} />
                             <YAxis stroke="#9b98aa" tickLine={false} axisLine={false} width={48} />
-                            <Tooltip contentStyle={{ background: '#24202b', border: '1px solid #514959', borderRadius: 10 }} formatter={(value) => [`¥${Number(value).toFixed(2)}`, '']} />
+                            <Tooltip labelFormatter={(value) => formatCreatorTrendTooltipDate(String(value))} contentStyle={{ background: '#24202b', border: '1px solid #514959', borderRadius: 10 }} formatter={(value) => [`¥${Number(value).toFixed(2)}`, '']} />
                             <Legend />
                             {visible.map((key) => <Line key={key} type="monotone" dataKey={SERIES[key].dataKey} name={SERIES[key].name} stroke={SERIES[key].color} strokeWidth={3} dot={false} activeDot={{ r: 5 }} />)}
                         </LineChart>

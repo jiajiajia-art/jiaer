@@ -36,8 +36,7 @@
 }
 
 .header h2,
-.header p,
-.note {
+.header p {
     margin: 0;
 }
 
@@ -46,8 +45,7 @@
     line-height: 1.35;
 }
 
-.header p,
-.note {
+.header p {
     margin-top: 5px;
     color: #a7a7ac;
     font-size: 13px;
@@ -122,10 +120,6 @@
     color: #ffb4c2;
 }
 
-.note {
-    margin-top: 14px;
-}
-
 .header button:hover {
     background: rgba(255, 255, 255, 0.1);
 }
@@ -156,8 +150,7 @@
         font-size: 18px;
     }
 
-    .header p,
-    .note {
+    .header p {
         font-size: 11px;
         line-height: 1.4;
     }
@@ -178,8 +171,5 @@
         width: 72px;
     }
 
-    .note {
-        margin-top: 9px;
-    }
 }
 

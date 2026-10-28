@@ -19,6 +19,7 @@ import payApi from '../api/pay/payApi';
 import type { PayOrderRequest } from '../api/pay/pay.type';
 import { useTranslation } from 'react-i18next';
 import CurrencyIcon from '../components/CurrencyIcon';
+import CenteredPageHeader from '../components/Layout/CenteredPageHeader';
 import styles from './AssetDetails.module.css';
 import { formatKk } from '../utils/kkMoney';
 
@@ -331,20 +332,13 @@ const AssetDetails: React.FC = () => {
         <div className={styles.pageRoot}>
             <main className={styles.main}>
                 <section className={styles.shell}>
-                    <header className={styles.header}>
-                        <button
-                            type="button"
-                            className={styles.backButton}
-                            aria-label={t('common.back')}
-                            onClick={() => navigate(-1)}
-                        >
-                            <svg viewBox="0 0 24 24" aria-hidden="true" className={styles.backIcon}>
-                                <path d="M14.5 5.5L8 12l6.5 6.5" />
-                            </svg>
-                        </button>
-                        <h1 className={styles.headerTitle}>{t('assetDetails.title')}</h1>
-                        <div className={styles.headerSpacer} aria-hidden="true" />
-                    </header>
+                    <div className={styles.headerDock}>
+                        <CenteredPageHeader
+                            title={t('assetDetails.title')}
+                            backLabel={t('common.back')}
+                            onBack={() => navigate(-1)}
+                        />
+                    </div>
 
                     <section className={styles.balanceSection}>
                         <div className={styles.balanceRow}>

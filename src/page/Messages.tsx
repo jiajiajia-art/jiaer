@@ -516,7 +516,7 @@ const Messages: React.FC = () => {
 
     return (
         <div className={styles.pageRoot}>
-            <Navbar />
+                <div className={styles.desktopChrome}><Navbar /></div>
 
             <div className={styles.pageBody}>
                 <header className={styles.pageHeader}>
@@ -588,7 +588,7 @@ const Messages: React.FC = () => {
                         : ''}
                 </p>
             </Modal>
-            <MobileBottomNav />
+                <div className={styles.desktopChrome}><MobileBottomNav /></div>
             {externalLinkCopyModal}
         </div>
     );

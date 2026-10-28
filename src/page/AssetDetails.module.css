@@ -25,61 +25,14 @@
     background: var(--ad-bg);
 }
 
-.header {
+.headerDock {
     position: sticky;
     top: 0;
     z-index: 20;
-    display: grid;
-    grid-template-columns: 44px minmax(0, 1fr) 44px;
-    align-items: center;
-    gap: 12px;
-    min-height: 56px;
-    padding: calc(env(safe-area-inset-top, 0px) + 8px) 16px 8px;
+    padding: calc(env(safe-area-inset-top, 0px) + 8px) 12px 8px;
     background: rgba(0, 0, 0, 0.92);
-    border-bottom: 1px solid var(--ad-border);
     box-sizing: border-box;
     backdrop-filter: blur(8px);
-}
-
-.backButton,
-.headerSpacer {
-    width: 44px;
-    height: 44px;
-}
-
-.backButton {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: none;
-    background: transparent;
-    padding: 0;
-    cursor: pointer;
-    transition: opacity 0.15s ease;
-}
-
-.backButton:hover {
-    opacity: 0.75;
-}
-
-.backIcon {
-    width: 22px;
-    height: 22px;
-    stroke: var(--ad-value);
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    fill: none;
-}
-
-.headerTitle {
-    margin: 0;
-    text-align: center;
-    font-size: 17px;
-    line-height: 1.2;
-    font-weight: 600;
-    color: var(--ad-value);
-    letter-spacing: 0.01em;
 }
 
 .balanceSection {
@@ -849,7 +802,7 @@
         width: min(100%, 820px);
     }
 
-    .header {
+    .headerDock {
         padding-left: 24px;
         padding-right: 24px;
     }

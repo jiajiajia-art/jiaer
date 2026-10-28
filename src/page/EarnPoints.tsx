@@ -6,6 +6,7 @@ import { RiCopperCoinLine } from 'react-icons/ri';
 import CheckInModal from '../components/CheckInModal';
 import DailyTasksModal from '../components/Profile/DailyTasksModal';
 import ExchangeModal from '../components/Purchase/ExchangeModal';
+import CenteredPageHeader from '../components/Layout/CenteredPageHeader';
 import { auth } from '../api/account/authApi';
 import { useAuthStore } from '../store/useAuthStore';
 import { useDailyTaskStore } from '../store/dailyTaskStore';
@@ -43,21 +44,11 @@ const EarnPoints: React.FC = () => {
         <div className={styles.pageRoot}>
             <main className={styles.main}>
                 <section className={styles.shell}>
-                    <header className={styles.pageHeader}>
-                        <button
-                            type="button"
-                            className={styles.backButton}
-                            onClick={() => navigate(-1)}
-                            aria-label={t('earnPoints.back')}
-                        >
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                                <path d="M14.5 5.5L8 12l6.5 6.5" />
-                            </svg>
-                            <span>{t('earnPoints.back')}</span>
-                        </button>
-                        <h1>{t('earnPoints.title')}</h1>
-                        <div className={styles.headerSpacer} aria-hidden="true" />
-                    </header>
+                    <CenteredPageHeader
+                        title={t('earnPoints.title')}
+                        backLabel={t('earnPoints.back')}
+                        onBack={() => navigate(-1)}
+                    />
 
                     <section className={styles.balanceCard} aria-label={t('earnPoints.balanceLabel')}>
                         <span>{t('earnPoints.balanceLabel')}</span>

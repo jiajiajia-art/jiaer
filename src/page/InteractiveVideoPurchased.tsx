@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { MdPlayArrow, MdRefresh, MdShoppingBag } from 'react-icons/md';
+import { IoRefresh } from 'react-icons/io5';
+import { MdPlayArrow, MdShoppingBag } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
+import CenteredPageHeader from '../components/Layout/CenteredPageHeader';
 import {
     getPurchasedInteractiveVideoGames,
     toBackendAssetUrl,
@@ -74,28 +76,19 @@ const InteractiveVideoPurchased: React.FC = () => {
         <div className={styles.pageRoot}>
             <main className={styles.main}>
                 <section className={styles.shell}>
-                    <header className={styles.header}>
-                        <button
-                            type="button"
-                            className={styles.backButton}
-                            aria-label={t('interactiveVideoPurchased.back')}
-                            onClick={handleBack}
-                        >
-                            <svg viewBox="0 0 24 24" aria-hidden="true" className={styles.backIcon}>
-                                <path d="M14.5 5.5L8 12l6.5 6.5" />
-                            </svg>
-                        </button>
-                        <h1 className={styles.headerTitle}>{t('interactiveVideoPurchased.title')}</h1>
-                        <button
-                            type="button"
-                            className={styles.refreshButton}
-                            aria-label={t('interactiveVideoPurchased.refresh')}
-                            onClick={() => void loadPurchasedGames()}
-                            disabled={isLoading}
-                        >
-                            <MdRefresh />
-                        </button>
-                    </header>
+                    <div className={styles.headerDock}>
+                        <CenteredPageHeader
+                            title={t('interactiveVideoPurchased.title')}
+                            backLabel={t('interactiveVideoPurchased.back')}
+                            onBack={handleBack}
+                            rightAction={{
+                                label: t('interactiveVideoPurchased.refresh'),
+                                icon: <IoRefresh aria-hidden="true" />,
+                                onClick: () => void loadPurchasedGames(),
+                                disabled: isLoading,
+                            }}
+                        />
+                    </div>
 
                     <section className={styles.summarySection}>
                         <p className={styles.summaryDesc}>{t('interactiveVideoPurchased.description')}</p>
@@ -124,7 +117,7 @@ const InteractiveVideoPurchased: React.FC = () => {
                             <h2>{t('interactiveVideoPurchased.loadFailedTitle')}</h2>
                             <p>{errorMessage}</p>
                             <button type="button" className={styles.primaryButton} onClick={() => void loadPurchasedGames()}>
-                                <MdRefresh />
+                                <IoRefresh />
                                 {t('interactiveVideoPurchased.retry')}
                             </button>
                         </section>

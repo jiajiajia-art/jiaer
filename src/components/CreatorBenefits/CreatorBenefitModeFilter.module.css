@@ -1,0 +1,129 @@
+.root {
+    position: relative;
+    z-index: 4;
+    flex: 0 0 auto;
+}
+
+.trigger {
+    min-width: 190px;
+    min-height: 44px;
+    display: grid;
+    grid-template-columns: auto minmax(72px, 1fr) auto;
+    align-items: center;
+    gap: 9px;
+    padding: 0 12px;
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    border-radius: 10px;
+    background: #09090a;
+    color: #ffffff;
+    cursor: pointer;
+    font-size: 12px;
+    text-align: left;
+}
+
+.trigger > span {
+    color: #a8a8ad;
+}
+
+.trigger strong {
+    overflow: hidden;
+    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.trigger svg {
+    width: 17px;
+    height: 17px;
+    color: #a8a8ad;
+    transition: transform 180ms ease;
+}
+
+.trigger .chevronOpen {
+    transform: rotate(180deg);
+}
+
+.trigger:hover {
+    border-color: rgba(255, 142, 165, 0.52);
+    background: #111113;
+}
+
+.trigger:focus-visible,
+.option:focus-visible,
+.optionActive:focus-visible {
+    outline: 3px solid rgba(255, 123, 153, 0.58);
+    outline-offset: 2px;
+}
+
+.menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: max(100%, 220px);
+    display: grid;
+    gap: 3px;
+    padding: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    border-radius: 12px;
+    background: #202023;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5);
+    box-sizing: border-box;
+}
+
+.option,
+.optionActive {
+    width: 100%;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #dddddf;
+    cursor: pointer;
+    font-size: 14px;
+    text-align: left;
+}
+
+.option:hover {
+    background: rgba(255, 255, 255, 0.07);
+    color: #ffffff;
+}
+
+.optionActive {
+    background: rgba(217, 60, 91, 0.18);
+    color: #ffb3c1;
+    font-weight: 700;
+}
+
+.optionActive svg {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+}
+
+@media (max-width: 720px) {
+    .root,
+    .trigger {
+        width: 100%;
+    }
+
+    .trigger {
+        grid-template-columns: auto 1fr auto;
+    }
+
+    .menu {
+        left: 0;
+        right: auto;
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .trigger svg {
+        transition: none;
+    }
+}

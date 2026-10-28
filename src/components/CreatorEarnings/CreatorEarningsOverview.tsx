@@ -1,7 +1,7 @@
 import React from 'react';
 import { IoChevronForward, IoHelpCircle } from 'react-icons/io5';
 import type { CreatorEarningOverview } from '../../api/creatorEarnings/creatorEarningsApi';
-import { formatYuan } from '../../lib/creatorEarningsView';
+import { formatCreatorShareRatio, formatYuan } from '../../lib/creatorEarningsView';
 import styles from './CreatorEarnings.module.css';
 
 interface Props {
@@ -10,6 +10,8 @@ interface Props {
     error: boolean;
     profileComplete: boolean;
     benefitLabel: string;
+    editorShareRatio?: number;
+    customShareRatio?: number;
     onRetry: () => void;
     onWithdraw: () => void;
     onProfile: () => void;
@@ -23,6 +25,8 @@ const CreatorEarningsOverview: React.FC<Props> = ({
     error,
     profileComplete,
     benefitLabel,
+    editorShareRatio,
+    customShareRatio,
     onRetry,
     onWithdraw,
     onProfile,
@@ -39,7 +43,7 @@ const CreatorEarningsOverview: React.FC<Props> = ({
     const available = Number(summary.availableGrossYuan);
     const reached = available >= Number(summary.minimumWithdrawYuan);
     const metrics = [
-        { label: '待结算（税前）', value: summary.pendingGrossYuan },
+        { label: '今日待结算（税前）', value: summary.pendingGrossYuan },
         { label: '提现处理中（税前）', value: summary.frozenGrossYuan },
         { label: '已到账（实收）', value: summary.paidNetYuan },
         { label: '昨日', value: summary.yesterdayGrossYuan },
@@ -52,7 +56,11 @@ const CreatorEarningsOverview: React.FC<Props> = ({
             <div className={styles.overviewHeading}>
                 <h2 id="creator-earnings-overview-title">收益总览</h2>
                 <button type="button" className={styles.rulesButton} onClick={onRules}>
-                    <span>{benefitLabel}</span><i aria-hidden="true">·</i><span>分成规则</span><IoHelpCircle aria-hidden="true" />
+                    <span>{benefitLabel}</span>
+                    {editorShareRatio !== undefined && customShareRatio !== undefined && (
+                        <><i aria-hidden="true">·</i><span>TXT {formatCreatorShareRatio(editorShareRatio)} / 自定义 {formatCreatorShareRatio(customShareRatio)}</span></>
+                    )}
+                    <i aria-hidden="true">·</i><span>分成规则</span><IoHelpCircle aria-hidden="true" />
                 </button>
             </div>
             {error && <button type="button" className={styles.textButton} onClick={onRetry}>刷新失败，点击重试</button>}

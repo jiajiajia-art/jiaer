@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { IoArrowBack } from 'react-icons/io5';
 import type { CreatorProfileData, CreatorProfileFormData } from '../components/CreatorProfile';
 import CreatorEarningsOverview from '../components/CreatorEarnings/CreatorEarningsOverview';
 import CreatorEarningsTrend from '../components/CreatorEarnings/CreatorEarningsTrend';
@@ -11,10 +10,10 @@ import CreatorEarningsRecordsModal from '../components/CreatorEarnings/CreatorEa
 import CreatorProfileModal from '../components/CreatorEarnings/CreatorProfileModal';
 import CreatorBenefitRulesModal from '../components/CreatorBenefits/CreatorBenefitRulesModal';
 import Navbar from '../components/Layout/Navbar';
+import CenteredPageHeader from '../components/Layout/CenteredPageHeader';
 import FooterArea from '../components/Layout/FooterArea';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import creatorEarningsApi, {
-    type CreatorEarningGranularity,
     type CreatorEarningOverview,
     type CreatorEarningPeriod,
     type CreatorWorkEarningAccount,
@@ -59,7 +58,6 @@ const CreatorIncentive: React.FC = () => {
     const [overview, setOverview] = useState<CreatorEarningOverview | null>(null);
     const [overviewStatus, setOverviewStatus] = useState<LoadStatus>('loading');
     const [period, setPeriod] = useState<CreatorEarningPeriod>('30d');
-    const [granularity, setGranularity] = useState<CreatorEarningGranularity>('daily');
     const [trendFileId, setTrendFileId] = useState('');
     const [earningAccounts, setEarningAccounts] = useState<CreatorWorkEarningAccount[]>([]);
     const [works, setWorks] = useState<UserGameData[]>([]);
@@ -81,7 +79,6 @@ const CreatorIncentive: React.FC = () => {
         try {
             setOverview(await creatorEarningsApi.getOverview({
                 period,
-                granularity,
                 fileId: trendFileId || undefined,
             }));
             setOverviewStatus('success');
@@ -89,7 +86,7 @@ const CreatorIncentive: React.FC = () => {
             console.error('Load creator earning overview failed:', error);
             setOverviewStatus('error');
         }
-    }, [granularity, period, trendFileId, userId]);
+    }, [period, trendFileId, userId]);
 
     const loadWorks = useCallback(async () => {
         if (!userId) return;
@@ -181,10 +178,7 @@ const CreatorIncentive: React.FC = () => {
         : benefitSummary?.level ? `Lv.${benefitSummary.level}` : '等级—';
     const formatValue = (value: number) => (Number(value) || 0).toLocaleString('zh-CN');
 
-    const handlePeriodChange = (value: CreatorEarningPeriod) => {
-        setPeriod(value);
-        if (value === '1y' || value === 'all') setGranularity('monthly');
-    };
+    const handlePeriodChange = (value: CreatorEarningPeriod) => setPeriod(value);
     const handleRecords = (fileId = '') => { setRecordsFileId(fileId); setRecordsOpen(true); };
     const refreshEarnings = async () => { await Promise.all([loadOverview(), loadWorks(), refreshAccount()]); };
 
@@ -193,13 +187,14 @@ const CreatorIncentive: React.FC = () => {
             <div className={styles.desktopChrome}><Navbar /></div>
             <main className={styles.mainContent}>
                 <div className={styles.dashboard}>
-                    <header className={styles.pageHeader}>
-                        <button type="button" className={styles.backButton} onClick={() => navigate('/create')} aria-label={t('create.incentiveBack')}><IoArrowBack aria-hidden="true" /></button>
-                        <div className={styles.headerCopy}><h1>创作者中心</h1></div>
-                    </header>
+                    <CenteredPageHeader
+                        title="创作者中心"
+                        backLabel={t('create.incentiveBack')}
+                        onBack={() => navigate('/create')}
+                    />
 
-                    <CreatorEarningsOverview data={overview} loading={overviewStatus === 'loading'} error={overviewStatus === 'error'} profileComplete={profileComplete} benefitLabel={benefitLabel} onRetry={() => void loadOverview()} onWithdraw={() => setWithdrawOpen(true)} onProfile={() => setProfileOpen(true)} onRecords={() => handleRecords()} onRules={() => setRulesOpen(true)} />
-                    <CreatorEarningsTrend data={overview?.trend || []} loading={overviewStatus === 'loading'} error={overviewStatus === 'error'} period={period} granularity={granularity} fileId={trendFileId} works={trendWorks} onPeriodChange={handlePeriodChange} onGranularityChange={setGranularity} onFileChange={setTrendFileId} onRetry={() => void loadOverview()} />
+                    <CreatorEarningsOverview data={overview} loading={overviewStatus === 'loading'} error={overviewStatus === 'error'} profileComplete={profileComplete} benefitLabel={benefitLabel} editorShareRatio={benefitSummary?.editorShareRatio} customShareRatio={benefitSummary?.customShareRatio} onRetry={() => void loadOverview()} onWithdraw={() => setWithdrawOpen(true)} onProfile={() => setProfileOpen(true)} onRecords={() => handleRecords()} onRules={() => setRulesOpen(true)} />
+                    <CreatorEarningsTrend data={overview?.trend || []} loading={overviewStatus === 'loading'} error={overviewStatus === 'error'} period={period} fileId={trendFileId} works={trendWorks} onPeriodChange={handlePeriodChange} onFileChange={setTrendFileId} onRetry={() => void loadOverview()} />
                     <CreatorWorkEarnings data={workViews} loading={worksStatus === 'loading'} error={worksStatus === 'error'} onRetry={() => void loadWorks()} onDetails={handleRecords} />
 
                     <section className={`${styles.panel} ${styles.promotionPanel}`} aria-labelledby="promotion-incentive-title">
@@ -229,7 +224,7 @@ const CreatorIncentive: React.FC = () => {
                 onOpenProfile={() => { setWithdrawOpen(false); setProfileOpen(true); }}
                 onSuccess={refreshEarnings}
             />
-            <CreatorEarningsRecordsModal open={recordsOpen} initialFileId={recordsFileId} workTitles={workTitles} onClose={() => setRecordsOpen(false)} />
+            {recordsOpen && <CreatorEarningsRecordsModal open initialFileId={recordsFileId} workTitles={workTitles} onClose={() => setRecordsOpen(false)} />}
             <CreatorProfileModal open={profileOpen} data={profile} loading={profileStatus === 'loading'} error={profileStatus === 'error'} onRetry={() => void loadProfile()} onClose={() => setProfileOpen(false)} onSave={async (data: CreatorProfileFormData) => { const saved = await saveCreatorProfile(data); setProfile({ ...data, ...saved }); setProfileStatus('success'); }} />
             <CreatorBenefitRulesModal open={rulesOpen} currentLevel={benefitSummary?.level} isSpecialAuthor={benefitSummary?.isSpecialAuthor} onClose={() => setRulesOpen(false)} />
         </div>

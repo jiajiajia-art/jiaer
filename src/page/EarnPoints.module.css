@@ -28,44 +28,6 @@
     min-width: 0;
 }
 
-.pageHeader {
-    display: grid;
-    grid-template-columns: minmax(120px, 1fr) auto minmax(120px, 1fr);
-    align-items: center;
-    min-height: 48px;
-}
-
-.pageHeader h1 {
-    margin: 0;
-    font-size: 22px;
-    line-height: 1.2;
-    text-align: center;
-}
-
-.backButton {
-    width: fit-content;
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    border: none;
-    background: transparent;
-    color: var(--earn-text);
-    font-size: 15px;
-    cursor: pointer;
-}
-
-.backButton svg {
-    width: 22px;
-    height: 22px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
-
-.backButton:focus-visible,
 .taskRow:focus-visible,
 .exchangeCard button:focus-visible {
     outline: 2px solid #ff5a78;
@@ -289,24 +251,6 @@ button.taskRow:hover {
         gap: 14px;
     }
 
-    .pageHeader {
-        grid-template-columns: minmax(72px, 1fr) minmax(0, auto) minmax(72px, 1fr);
-        min-height: 52px;
-        padding: 0 4px;
-    }
-
-    .pageHeader h1 {
-        font-size: 20px;
-        white-space: nowrap;
-    }
-
-    .backButton {
-        min-width: 72px;
-        min-height: 44px;
-        padding: 0;
-        font-size: 14px;
-    }
-
     .balanceCard,
     .tasksSection,
     .exchangeCard {
@@ -354,14 +298,6 @@ button.taskRow:hover {
     .main {
         padding-right: 6px;
         padding-left: 6px;
-    }
-
-    .pageHeader {
-        grid-template-columns: 72px minmax(0, 1fr) 72px;
-    }
-
-    .pageHeader h1 {
-        font-size: 18px;
     }
 
     .balanceCard,
