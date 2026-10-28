@@ -37,8 +37,8 @@ export interface CreatorWorkItem {
   ratingCount: number;
   createdAt: string;
   updatedAt: string;
-  /** 内容审核：none | taken_down；列表角标依赖此字段 */
-  moderationStatus?: 'none' | 'taken_down' | string | null;
+  /** 内容审核：none | taken_down | pending_review；勿用申诉 status 推断上架 */
+  moderationStatus?: 'none' | 'taken_down' | 'pending_review' | string | null;
   metrics: WorkMetrics;
 }
 

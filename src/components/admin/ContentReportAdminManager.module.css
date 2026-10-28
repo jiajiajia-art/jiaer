@@ -619,6 +619,16 @@
     border-top: 1px solid rgba(222, 191, 166, 0.7);
 }
 
+.revokeConfirmBody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.revokeConfirmBody p {
+    margin: 0;
+}
+
 .note {
     width: 100%;
     min-height: 88px;

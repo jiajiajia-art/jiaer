@@ -1,7 +1,7 @@
 /** 申诉 P1 — 对齐 API-申诉.md / §15 16 位 moderation_id */
 
 export type AppealRecordType = 'warning' | 'penalty' | 'appeal';
-export type AppealStatus = 'pending' | 'approved' | 'rejected' | 'revoked' | 'active' | string;
+export type AppealStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | string;
 
 /** 功能注释：对外 16 位数字字符串（moderation_id / appeal_id），勿 Number() */
 export type ExternalModerationId = string;
@@ -144,7 +144,17 @@ export type AdminAppealReviewPayload = {
   reviewNote?: string;
 };
 
+export type AdminAppealReviewEffects = {
+  revokedWarning?: boolean;
+  revokedPenalty?: boolean;
+  restoredGame?: boolean;
+  gameHeldByOtherModeration?: boolean;
+  clearedPunishment?: boolean;
+};
+
 export type AdminAppealReviewResult = {
   appealId: string;
   status: AdminAppealStatus;
+  /** reject 时为 null；approve 时用于 toast 分支 */
+  effects?: AdminAppealReviewEffects | null;
 };

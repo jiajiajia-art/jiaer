@@ -84,6 +84,7 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
 
     const isPreview = mode === 'preview';
     const isVisitor = access === 'visitor';
+    // 功能注释：下架只认 moderationStatus（兼容 moderation_status），勿用申诉 approved 推断已上架
     const hasTakenDownWork = useMemo(
         () => !isVisitor && fileMetas.some((game) => {
             const status = String(game.moderationStatus || game.moderation_status || 'none');

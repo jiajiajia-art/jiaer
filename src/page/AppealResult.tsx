@@ -52,13 +52,17 @@ const AppealResult: React.FC = () => {
   }, [loadDetail]);
 
   const statusKey = String(detail?.status || '').toLowerCase();
+  const isApproved = statusKey === 'approved';
   const isRejected = statusKey === 'rejected';
-  const isApproved = statusKey === 'approved' || statusKey === 'revoked';
+  // 运营撤原处理时 BE 将 pending 申诉标为 cancelled（非申诉通过）
+  const isClosedByRevoke = statusKey === 'cancelled';
   const statusText = isApproved
     ? t('messages.appealResultApproved')
     : isRejected
       ? t('messages.appealResultRejected')
-      : t('messages.appealResultPending');
+      : isClosedByRevoke
+        ? t('messages.appealResultClosedByRevoke')
+        : t('messages.appealResultPending');
 
   const statusIconClass = isApproved
     ? styles.statusIconApproved
@@ -76,7 +80,9 @@ const AppealResult: React.FC = () => {
   }, [detail, t]);
 
   const reasonText = (detail?.reason || '').trim();
+  // 功能注释：成功/驳回说明一律用服务端 notifyBody，勿写死「已恢复上架」
   const notifyBody = (detail?.notifyBody || '').trim();
+  const reviewNote = (detail?.reviewNote || '').trim();
   const canCollapseDesc = reasonText.length > DESC_COLLAPSE_LEN;
   const evidenceUrls = detail?.evidenceUrls || [];
 
@@ -232,6 +238,13 @@ const AppealResult: React.FC = () => {
                     {formatMessageDateTime(detail.createdAt) || '—'}
                   </dd>
                 </div>
+
+                {reviewNote ? (
+                  <div className={styles.row}>
+                    <dt className={styles.rowLabel}>{t('appeal.reviewNoteLabel')}</dt>
+                    <dd className={styles.rowValue}>{reviewNote}</dd>
+                  </div>
+                ) : null}
               </dl>
             </section>
           </>

@@ -101,6 +101,9 @@ const Appeals: React.FC = () => {
     if (status === 'pending') return t('appeal.statusPending');
     if (status === 'approved') return t('appeal.statusApproved');
     if (status === 'rejected') return t('appeal.statusRejected');
+    if (status === 'cancelled' || status === 'canceled' || status === 'closed' || status === 'revoked') {
+      return t('messages.appealResultClosedByRevoke');
+    }
     return status;
   };
 

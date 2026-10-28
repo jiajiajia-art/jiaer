@@ -5,3 +5,10 @@ export function isPublishReviewModeration(input: {
 }): boolean {
   return String(input.recordType || '').toLowerCase() === 'publish_review';
 }
+
+/** 功能注释：运营撤销后的站内信；勿当可申诉处罚 / 申诉结果 */
+export function isModerationRevokeNotice(input: {
+  recordType?: string | null;
+}): boolean {
+  return String(input.recordType || '').toLowerCase() === 'moderation_revoke';
+}

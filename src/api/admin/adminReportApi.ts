@@ -55,10 +55,27 @@ export type AdminModerationHistoryItem = {
   recordType: string;
   level?: number | null;
   status?: string | null;
+  /** 功能注释：警告是否已计入升档（1/true 则不可再撤警告） */
+  consumed?: boolean | number | null;
   body?: string | null;
   createdAt?: string | null;
   startsAt?: string | null;
   endsAt?: string | null;
+};
+
+export type AdminRevokeModerationPayload = {
+  reviewNote?: string;
+};
+
+export type AdminRevokeModerationResult = {
+  moderationId: string;
+  recordType?: string;
+  status: 'revoked' | string;
+  revokedWarning?: boolean;
+  revokedPenalty?: boolean;
+  clearedPunishment?: boolean;
+  restoredGame?: boolean;
+  cancelledAppealId?: string | null;
 };
 
 export type AdminReportDetail = AdminReportListItem & {
@@ -85,17 +102,24 @@ export type AdminReportReviewResult = {
   penaltyLevelApplied: number | null;
 };
 
+export type AdminPenaltyRecordType = 'warning' | 'penalty';
+
 export type AdminPenaltyListItem = {
   /** 16 位 moderation_id */
   id: string;
   userId: string;
-  recordType: string;
+  /** 功能注释：默认列表含 warning + penalty；用此字段区分 */
+  recordType?: AdminPenaltyRecordType | string | null;
   level: number | null;
   status: string | null;
+  /** 功能注释：警告已用于升档时 true，撤销会 409 warning_already_consumed */
+  consumed?: boolean | number | null;
   notifyBody?: string | null;
   startsAt?: string | null;
   endsAt?: string | null;
   observationUntil?: string | null;
+  sourceType?: string | null;
+  sourceId?: string | null;
   createdAt?: string | null;
 };
 
@@ -179,8 +203,23 @@ const adminReportApi = {
   reviewReport: (id: number, payload: AdminReportReviewPayload) =>
     api.post<ApiResponse<AdminReportReviewResult>>(`/admin/reports/${id}/review`, payload),
 
-  listPenalties: (params?: { page?: number; pageSize?: number; userId?: string }) =>
+  listPenalties: (params?: {
+    page?: number;
+    pageSize?: number;
+    userId?: string;
+    /** 功能注释：缺省返回警告+处罚；warning | penalty 可筛 */
+    recordType?: AdminPenaltyRecordType | '';
+  }) =>
     api.get<ApiResponse<AdminPenaltyListData>>('/admin/penalties', { params }),
+
+  /** 功能注释：撤销警告/当前处罚；operator∪admin；路径为 16 位 moderationId */
+  revokeModeration: (moderationId: string, payload?: AdminRevokeModerationPayload) =>
+    api.post<ApiResponse<AdminRevokeModerationResult>>(
+      `/admin/moderation/${encodeURIComponent(moderationId)}/revoke`,
+      payload?.reviewNote?.trim()
+        ? { reviewNote: payload.reviewNote.trim() }
+        : {},
+    ),
 
   restoreGame: (fileId: string) =>
     api.post<ApiResponse<{ fileId: string; moderationStatus: string }>>(

@@ -6,6 +6,7 @@ import adminReportApi, {
   type AdminModerationDetail,
   type AdminModerationHistoryItem,
   type AdminPenaltyListItem,
+  type AdminPenaltyRecordType,
   type AdminReportDetail,
   type AdminReportListItem,
   type AdminReportStatus,
@@ -19,6 +20,11 @@ import type { ReportReasonItem } from '../../api/report/report.type';
 import { resolveEvidenceImageUrl } from '../../utils/evidenceImageUrl';
 import { useAuthStore } from '../../store/useAuthStore';
 import { isAdminRole } from '../../utils/userRoles';
+import {
+  canShowModerationRevoke,
+  resolveRevokeRecordKind,
+  type RevokeRecordKind,
+} from '../../lib/moderationRevoke';
 import styles from './CommentAdminManager.module.css';
 import local from './ContentReportAdminManager.module.css';
 
@@ -43,6 +49,7 @@ const RECORD_TYPE_LABEL: Record<string, string> = {
   penalty: '处罚',
   appeal: '申诉',
   publish_review: '发布审核',
+  moderation_revoke: '处理撤销',
 };
 
 const HISTORY_STATUS_LABEL: Record<string, string> = {
@@ -50,6 +57,9 @@ const HISTORY_STATUS_LABEL: Record<string, string> = {
   approved: '已通过',
   rejected: '已驳回',
   revoked: '已撤销',
+  cancelled: '已关闭（原处理已由运营撤销）',
+  canceled: '已关闭（原处理已由运营撤销）',
+  closed: '已关闭（原处理已由运营撤销）',
   active: '有效',
   consumed: '已计入处罚',
   finished: '已结束',
@@ -76,7 +86,8 @@ const formatHistoryTitle = (recordType: string, level?: number | null): string =
 
 const formatHistoryStatus = (status?: string | null): string => {
   if (!status) return '';
-  return HISTORY_STATUS_LABEL[status] || status;
+  const key = String(status).toLowerCase();
+  return HISTORY_STATUS_LABEL[key] || status;
 };
 
 const formatTime = (value: string | null | undefined): string => {
@@ -150,10 +161,17 @@ const ContentReportAdminManager: React.FC = () => {
 
   const [confirmDecision, setConfirmDecision] = useState<'reject' | 'uphold' | null>(null);
   const [reviewing, setReviewing] = useState(false);
+  const [revokeTarget, setRevokeTarget] = useState<{
+    id: string;
+    kind: RevokeRecordKind;
+  } | null>(null);
+  const [revokeNote, setRevokeNote] = useState('');
+  const [revoking, setRevoking] = useState(false);
 
   const [penalties, setPenalties] = useState<AdminPenaltyListItem[]>([]);
   const [penaltyTotal, setPenaltyTotal] = useState(0);
   const [penaltyPage, setPenaltyPage] = useState(1);
+  const [penaltyRecordType, setPenaltyRecordType] = useState<AdminPenaltyRecordType | ''>('');
   const [penaltyLoading, setPenaltyLoading] = useState(false);
 
   const [restoreFileId, setRestoreFileId] = useState('');
@@ -207,6 +225,7 @@ const ContentReportAdminManager: React.FC = () => {
       const response = await adminReportApi.listPenalties({
         page: penaltyPage,
         pageSize: PAGE_SIZE,
+        recordType: penaltyRecordType || undefined,
       });
       const data = response.data.data;
       setPenalties(data?.list || []);
@@ -216,7 +235,7 @@ const ContentReportAdminManager: React.FC = () => {
     } finally {
       setPenaltyLoading(false);
     }
-  }, [penaltyPage]);
+  }, [penaltyPage, penaltyRecordType]);
 
   useEffect(() => {
     if (innerTab === 'reports') void loadReports();
@@ -342,6 +361,43 @@ const ContentReportAdminManager: React.FC = () => {
     }
   };
 
+  const refreshReportDetail = async (reportId: number) => {
+    const refreshed = await adminReportApi.getReport(reportId);
+    if (refreshed.data.success && refreshed.data.data) {
+      setDetail(refreshed.data.data);
+    }
+  };
+
+  const askRevoke = (id: string, kind: RevokeRecordKind) => {
+    setRevokeNote('');
+    setRevokeTarget({ id, kind });
+  };
+
+  const handleConfirmRevoke = async () => {
+    if (!revokeTarget || revoking) return;
+    setRevoking(true);
+    try {
+      const response = await adminReportApi.revokeModeration(revokeTarget.id, {
+        reviewNote: revokeNote.trim() || undefined,
+      });
+      toast.success(response.data.message || '已撤销该处理');
+      setRevokeTarget(null);
+      setRevokeNote('');
+      setHistoryPreview(null);
+      setHistoryExtra(null);
+      if (detail?.id) {
+        await refreshReportDetail(detail.id);
+      }
+      if (innerTab === 'penalties') {
+        await loadPenalties();
+      }
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, '操作失败，请稍后重试'));
+    } finally {
+      setRevoking(false);
+    }
+  };
+
   const handleConfirmReview = async () => {
     if (!detail || !confirmDecision) return;
     setReviewing(true);
@@ -428,12 +484,12 @@ const ContentReportAdminManager: React.FC = () => {
           <span className={styles.sectionBadge}>内容安全</span>
           <h2 className={styles.heroTitle}>内容举报</h2>
           <p className={styles.heroDesc}>
-            审核用户举报；成立时游戏默认下架+警告，账号默认记警告。处罚记录只读。
+            审核用户举报；成立时游戏默认下架+警告，账号默认记警告。处罚记录含警告与处罚。
           </p>
         </div>
         <div className={styles.heroMetric}>
           <span className={styles.heroMetricLabel}>
-            {innerTab === 'reports' ? '举报总数' : '处罚条数'}
+            {innerTab === 'reports' ? '举报总数' : '记录条数'}
           </span>
           <span className={styles.heroMetricValue}>
             {innerTab === 'reports' ? total : penaltyTotal}
@@ -717,7 +773,25 @@ const ContentReportAdminManager: React.FC = () => {
           </div>
         </>
       ) : (
-        <div className={styles.card}>
+        <>
+          <div className={`${styles.card} ${local.filterCard}`}>
+            <label className={local.field}>
+              <span className={local.fieldLabel}>类型</span>
+              <select
+                className={local.control}
+                value={penaltyRecordType}
+                onChange={(e) => {
+                  setPenaltyPage(1);
+                  setPenaltyRecordType(e.target.value as AdminPenaltyRecordType | '');
+                }}
+              >
+                <option value="">全部（警告+处罚）</option>
+                <option value="warning">仅警告</option>
+                <option value="penalty">仅处罚</option>
+              </select>
+            </label>
+          </div>
+          <div className={styles.card}>
           {penaltyLoading ? (
             <p className={styles.emptyState}>加载中…</p>
           ) : penalties.length === 0 ? (
@@ -734,24 +808,72 @@ const ContentReportAdminManager: React.FC = () => {
                     <th>状态</th>
                     <th>起止</th>
                     <th>说明</th>
+                    <th>操作</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {penalties.map((row) => (
-                    <tr key={row.id}>
-                      <td>{row.id}</td>
-                      <td title={row.userId}>{truncate(row.userId, 12)}</td>
-                      <td>{row.recordType}</td>
-                      <td>{row.level ?? '—'}</td>
-                      <td>{row.status ?? '—'}</td>
-                      <td>
-                        {formatTime(row.startsAt)} ~ {formatTime(row.endsAt)}
-                      </td>
-                      <td title={row.notifyBody || ''}>
-                        {truncate(row.notifyBody, 28)}
-                      </td>
-                    </tr>
-                  ))}
+                  {penalties.map((row) => {
+                    const kind = resolveRevokeRecordKind({
+                      recordType: row.recordType,
+                      level: row.level,
+                    });
+                    const consumed = row.consumed === true
+                      || row.consumed === 1
+                      || String(row.consumed) === '1';
+                    const showRevoke = Boolean(
+                      kind
+                      && canShowModerationRevoke({
+                        id: row.id,
+                        recordType: row.recordType || (kind === 'penalty' ? 'penalty' : 'warning'),
+                        level: row.level,
+                        status: row.status,
+                        consumed: row.consumed,
+                      }),
+                    );
+                    const statusText = (kind === 'warning' && consumed)
+                      ? formatHistoryStatus('consumed')
+                      : (formatHistoryStatus(row.status) || '—');
+                    return (
+                      <tr key={row.id}>
+                        <td>{row.id}</td>
+                        <td title={row.userId}>{truncate(row.userId, 12)}</td>
+                        <td>
+                          {formatHistoryTitle(
+                            String(row.recordType || kind || ''),
+                            row.level,
+                          ) || '—'}
+                        </td>
+                        <td>
+                          {kind === 'warning' || row.level == null || Number(row.level) < 1
+                            ? '—'
+                            : row.level}
+                        </td>
+                        <td>{statusText}</td>
+                        <td>
+                          {kind === 'warning'
+                            ? '—'
+                            : `${formatTime(row.startsAt)} ~ ${formatTime(row.endsAt)}`}
+                        </td>
+                        <td title={row.notifyBody || ''}>
+                          {truncate(row.notifyBody, 28)}
+                        </td>
+                        <td>
+                          {showRevoke && kind ? (
+                            <button
+                              type="button"
+                              className={`${local.decisionBtn} ${local.decisionReject}`}
+                              disabled={revoking}
+                              onClick={() => askRevoke(row.id, kind)}
+                            >
+                              撤销
+                            </button>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -778,6 +900,7 @@ const ContentReportAdminManager: React.FC = () => {
             </button>
           </div>
         </div>
+        </>
       )}
 
       {(detail || detailLoading) && (
@@ -1289,6 +1412,43 @@ const ContentReportAdminManager: React.FC = () => {
                   <p className={local.factValue}>{historyPreview.body?.trim() || '—'}</p>
                 </div>
               )}
+              {(() => {
+                const source = historyExtra?.kind === 'moderation'
+                  ? {
+                    id: historyExtra.data.id,
+                    recordType: historyExtra.data.recordType,
+                    level: historyExtra.data.level,
+                    status: historyExtra.data.status,
+                  }
+                  : {
+                    id: historyPreview.id,
+                    recordType: historyPreview.recordType,
+                    level: historyPreview.level,
+                    status: historyPreview.status,
+                    consumed: historyPreview.consumed,
+                  };
+                const kind = resolveRevokeRecordKind(source);
+                const showRevoke = Boolean(
+                  kind
+                  && canShowModerationRevoke({
+                    ...source,
+                    activePenaltyLevel: detail?.ownerPunishment?.activePenaltyLevel,
+                  }),
+                );
+                if (!showRevoke || !kind || !source.id) return null;
+                return (
+                  <div className={local.decisionRow} style={{ marginTop: 12 }}>
+                    <button
+                      type="button"
+                      className={`${local.decisionBtn} ${local.decisionReject}`}
+                      disabled={revoking || historyLoading}
+                      onClick={() => askRevoke(String(source.id), kind)}
+                    >
+                      撤销
+                    </button>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>
@@ -1316,6 +1476,48 @@ const ContentReportAdminManager: React.FC = () => {
         }}
         onConfirm={() => {
           void handleConfirmReview();
+        }}
+      />
+
+      <ConfirmModal
+        isOpen={Boolean(revokeTarget)}
+        tone="admin"
+        title={
+          revokeTarget?.kind === 'warning'
+            ? '确认撤销该警告？'
+            : '确认撤销当前处罚？'
+        }
+        message={(
+          <div className={local.revokeConfirmBody}>
+            <p>
+              {revokeTarget?.kind === 'warning'
+                ? '撤销后该警告将立即失效，不再计入有效警告。历史记录仍会保留并显示为「已撤销」。'
+                : '将解除本条处罚产生的限制（含禁发、主页隐藏、冻结、先审、禁登录等，以实际生效项为准）。相关作品若无其他有效下架原因将恢复上架。历史记录保留为「已撤销」。'}
+            </p>
+            <label className={local.field}>
+              <span className={local.fieldLabel}>备注（可选）</span>
+              <textarea
+                className={local.note}
+                value={revokeNote}
+                onChange={(e) => setRevokeNote(e.target.value)}
+                rows={3}
+                maxLength={500}
+                disabled={revoking}
+                placeholder="不填则使用默认文案"
+              />
+            </label>
+          </div>
+        )}
+        confirmButtonText={revoking ? '处理中…' : '确认撤销'}
+        cancelButtonText="取消"
+        onCancel={() => {
+          if (!revoking) {
+            setRevokeTarget(null);
+            setRevokeNote('');
+          }
+        }}
+        onConfirm={() => {
+          void handleConfirmRevoke();
         }}
       />
     </div>

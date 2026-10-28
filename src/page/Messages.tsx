@@ -32,7 +32,10 @@ import {
     truncateMessagePreview,
     type MessageListSectionKey,
 } from '../lib/messageCenterView';
-import { isPublishReviewModeration } from '../lib/moderationNotice';
+import {
+    isModerationRevokeNotice,
+    isPublishReviewModeration,
+} from '../lib/moderationNotice';
 import ConfirmModal from '../components/CommonModal/ConfirmModal';
 import styles from './Messages.module.css';
 
@@ -53,6 +56,8 @@ type SafetyDetail = {
     title: string;
     body: string;
     relatedGameId?: string | null;
+    /** 功能注释：撤销通知对照原警告/处罚详情 */
+    relatedModerationId?: string | null;
 };
 
 const getAnnouncementSortTime = (item: Pick<MessageAnnouncement, 'publishedAt' | 'updatedAt' | 'createdAt'>) =>
@@ -127,12 +132,13 @@ type RowView = {
 const isAppealResultNotification = (notification: MessageModerationNotification): boolean =>
     String(notification.recordType || '').toLowerCase() === 'appeal';
 
+/** 功能注释：消息中心申诉结果只有 approved / rejected（cancelled 不会进 inbox） */
 const getAppealResultLabel = (
     status: string | undefined,
     t: (key: string, options?: Record<string, unknown>) => string,
 ): string => {
     const normalized = String(status || '').toLowerCase();
-    if (normalized === 'approved' || normalized === 'revoked') {
+    if (normalized === 'approved') {
         return t('messages.appealResultApproved');
     }
     if (normalized === 'rejected') {
@@ -413,7 +419,7 @@ const Messages: React.FC = () => {
 
     const handleOpenModeration = useCallback(async (notification: MessageModerationNotification) => {
         await markMessageAsRead('moderation', notification.sourceId, notification.isRead);
-        // 功能注释：申诉结果进结果页；违规通知进账号审核详情
+        // 功能注释：申诉结果进结果页；撤销通知只看正文，可再跳原处理；其余进审核详情
         if (isAppealResultNotification(notification)) {
             const appealId = String(notification.appealId || '').trim();
             if (appealId) {
@@ -421,11 +427,20 @@ const Messages: React.FC = () => {
             }
             return;
         }
+        if (isModerationRevokeNotice({ recordType: notification.recordType })) {
+            const moderationId = String(notification.moderationId || '').trim();
+            setSafetyDetail({
+                title: notification.title?.trim() || t('messages.revokeNoticeTitle'),
+                body: (notification.body || '').trim() || t('messages.revokeNoticeDefaultBody'),
+                relatedModerationId: moderationId || null,
+            });
+            return;
+        }
         const moderationId = String(notification.moderationId || '').trim();
         if (moderationId) {
             navigate(`/moderation/${encodeURIComponent(moderationId)}`);
         }
-    }, [markMessageAsRead, navigate]);
+    }, [markMessageAsRead, navigate, t]);
 
     const sectionRows = useMemo(() => {
         const buckets: Record<MessageListSectionKey, RowView[]> = {
@@ -510,19 +525,50 @@ const Messages: React.FC = () => {
             if (item.itemType === 'moderation') {
                 if (isAppealResultNotification(item)) {
                     const appealTime = formatMessageDateTime(item.appealedAt || item.createdAt);
+                    // 功能注释：正文用服务端 body（notify_body），勿前端拼「已恢复上架」
+                    const bodyRaw = (item.body || '').trim();
+                    const fields: SafetyNoticeField[] = [
+                        {
+                            label: t('messages.appealResultLabel'),
+                            value: getAppealResultLabel(item.status, t),
+                        },
+                    ];
+                    if (bodyRaw) {
+                        fields.push({
+                            label: t('messages.appealResultBodyLabel'),
+                            value: truncateMessagePreview(bodyRaw),
+                        });
+                    }
+                    fields.push({
+                        label: t('messages.appealTimeLabel'),
+                        value: appealTime || '—',
+                    });
                     buckets[section].push({
                         key: `moderation-${item.sourceId}`,
                         variant: 'safetyNotice',
-                        title: t('messages.appealResultNoticeTitle'),
+                        title: item.title?.trim() || t('messages.appealResultNoticeTitle'),
+                        dateLabel: formatMessageDateYmd(item.createdAt || item.publishedAt),
+                        fields,
+                        actionLabel: t('messages.viewDetails'),
+                        isRead: item.isRead,
+                        onOpen: () => { void handleOpenModeration(item); },
+                    });
+                } else if (isModerationRevokeNotice({ recordType: item.recordType })) {
+                    const noticeTime = formatMessageDateTime(item.createdAt || item.publishedAt);
+                    const bodyRaw = (item.body || '').trim() || t('messages.revokeNoticeDefaultBody');
+                    buckets[section].push({
+                        key: `moderation-${item.sourceId}`,
+                        variant: 'safetyNotice',
+                        title: item.title?.trim() || t('messages.revokeNoticeTitle'),
                         dateLabel: formatMessageDateYmd(item.createdAt || item.publishedAt),
                         fields: [
                             {
-                                label: t('messages.appealTimeLabel'),
-                                value: appealTime || '—',
+                                label: t('messages.revokeSummaryLabel'),
+                                value: truncateMessagePreview(bodyRaw) || '—',
                             },
                             {
-                                label: t('messages.appealResultLabel'),
-                                value: getAppealResultLabel(item.status, t),
+                                label: t('messages.noticeTimeLabel'),
+                                value: noticeTime || '—',
                             },
                         ],
                         actionLabel: t('messages.viewDetails'),
@@ -778,6 +824,25 @@ const Messages: React.FC = () => {
                                     }}
                                 >
                                     {t('messages.viewReportedGame')}
+                                </button>
+                            </>
+                        ) : null}
+                        {safetyDetail?.relatedModerationId ? (
+                            <>
+                                <br />
+                                <br />
+                                <button
+                                    type="button"
+                                    className={styles.safetyAction}
+                                    onClick={() => {
+                                        const moderationId = safetyDetail.relatedModerationId;
+                                        setSafetyDetail(null);
+                                        if (moderationId) {
+                                            navigate(`/moderation/${encodeURIComponent(moderationId)}`);
+                                        }
+                                    }}
+                                >
+                                    {t('messages.viewRevokedModeration')}
                                 </button>
                             </>
                         ) : null}

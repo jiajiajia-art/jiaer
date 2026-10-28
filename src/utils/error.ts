@@ -103,9 +103,18 @@ const REPORT_ERROR_KEYS: Record<string, string> = {
     invalid_reason: 'apiErrors.invalidReason',
 };
 
+/** 功能注释：撤销 409 业务码优先本地文案，勿当表单校验失败 */
+const REVOKE_ERROR_KEYS: Record<string, string> = {
+    already_revoked: 'apiErrors.moderationAlreadyRevoked',
+    not_current_penalty: 'apiErrors.notCurrentPenalty',
+    warning_already_consumed: 'apiErrors.warningAlreadyConsumed',
+    invalid_record_type: 'apiErrors.invalidRecordType',
+};
+
 const API_ERROR_KEYS: Record<string, string> = {
     ...PUNISHMENT_ERROR_KEYS,
     ...REPORT_ERROR_KEYS,
+    ...REVOKE_ERROR_KEYS,
 };
 
 export function messageForApiCode(code?: string | null): string | null {
@@ -128,8 +137,8 @@ export const getApiErrorMessage = (
             return fallback;
         }
         const code = typeof data?.code === 'string' ? data.code : '';
-        // 功能注释：举报业务码用前端文案，不依赖后端是否已改对象互斥文案
-        if (code && REPORT_ERROR_KEYS[code]) {
+        // 功能注释：举报 / 撤销业务码用前端文案（409 撤销勿当表单错）
+        if (code && (REPORT_ERROR_KEYS[code] || REVOKE_ERROR_KEYS[code])) {
             const coded = messageForApiCode(code);
             if (coded) return coded;
         }

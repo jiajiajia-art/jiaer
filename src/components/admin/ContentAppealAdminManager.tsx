@@ -17,6 +17,7 @@ const RECORD_TYPE_LABEL: Record<string, string> = {
   penalty: '处罚',
   appeal: '申诉',
   publish_review: '发布审核',
+  moderation_revoke: '处理撤销',
 };
 
 const STATUS_WORD: Record<string, string> = {
@@ -24,6 +25,9 @@ const STATUS_WORD: Record<string, string> = {
   approved: '已通过',
   rejected: '已驳回',
   revoked: '已撤销',
+  cancelled: '已关闭（原处理已由运营撤销）',
+  canceled: '已关闭（原处理已由运营撤销）',
+  closed: '已关闭（原处理已由运营撤销）',
   active: '生效中',
   consumed: '已计入处罚',
   finished: '已结束',
@@ -45,6 +49,9 @@ const statusLabel: Record<string, string> = {
   pending: '待复核',
   approved: '已通过',
   rejected: '已驳回',
+  cancelled: '已关闭（原处理已由运营撤销）',
+  canceled: '已关闭（原处理已由运营撤销）',
+  closed: '已关闭（原处理已由运营撤销）',
 };
 
 const formatTime = (value: string | null | undefined): string => {
@@ -133,10 +140,19 @@ const ContentAppealAdminManager: React.FC = () => {
       if (!response.data.success) {
         throw new Error(response.data.message || '复核失败');
       }
-      toast.success(
-        response.data.message
-          || (confirmDecision === 'approve' ? '已通过申诉' : '已驳回申诉'),
-      );
+      // 功能注释：按 effects 分支提示上架结果，勿仅凭申诉通过推断已上架
+      if (confirmDecision === 'reject') {
+        toast.success(response.data.message || '已驳回申诉');
+      } else {
+        const effects = response.data.data?.effects;
+        if (effects?.restoredGame) {
+          toast.success('已通过申诉，相关作品已恢复上架');
+        } else if (effects?.gameHeldByOtherModeration) {
+          toast.success('已通过申诉：本条已撤销，作品因其它记录仍下架');
+        } else {
+          toast.success(response.data.message || '已通过申诉，相关处理已撤销');
+        }
+      }
       setConfirmDecision(null);
       setDetail(null);
       void loadList();

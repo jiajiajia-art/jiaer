@@ -83,7 +83,8 @@ const ModerationAudit: React.FC = () => {
     : false;
   const showProblemCard = Boolean(reasonTitle) || showReportDetail;
   const penaltyCount = notifyBody || reasonTitle || reportDetail ? 1 : 0;
-  const canAppeal = detail?.canAppeal === true;
+  const isRevoked = String(detail?.status || '').toLowerCase() === 'revoked';
+  const canAppeal = detail?.canAppeal === true && !isRevoked && !isPublishReview;
   const noticeTime = formatDateTime(detail?.createdAt || detail?.startsAt);
   const showEffectChip = Boolean(detail) && !isPublishReview;
 
@@ -172,17 +173,30 @@ const ModerationAudit: React.FC = () => {
 
       {!loading && detail && !isPublishReview ? (
         <div className={styles.footer}>
-          <button
-            type="button"
-            className={styles.appealBtn}
-            disabled={!canAppeal}
-            onClick={() => {
-              if (!detail?.id) return;
-              navigate(`/appeal/submit?relatedModerationId=${encodeURIComponent(detail.id)}`);
-            }}
-          >
-            {t('moderationAudit.appeal')}
-          </button>
+          {isRevoked ? (
+            <p className={styles.footerHintMuted}>
+              {t('moderationAudit.cannotAppealRevoked')}
+            </p>
+          ) : (
+            <div className={styles.footerActions}>
+              {canAppeal ? (
+                <p className={styles.appealWindowHint}>
+                  {t('moderationAudit.appealWindowHint')}
+                </p>
+              ) : null}
+              <button
+                type="button"
+                className={styles.appealBtn}
+                disabled={!canAppeal}
+                onClick={() => {
+                  if (!detail?.id || !canAppeal) return;
+                  navigate(`/appeal/submit?relatedModerationId=${encodeURIComponent(detail.id)}`);
+                }}
+              >
+                {t('moderationAudit.appeal')}
+              </button>
+            </div>
+          )}
         </div>
       ) : null}
     </div>
