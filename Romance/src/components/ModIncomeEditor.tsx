@@ -17,7 +17,7 @@ const uid = () => `inc_${Math.random().toString(36).slice(2, 8)}`;
 const num = (v: string) => Number(v) || 0;
 
 export default function ModIncomeEditor({ value, onChange }: { value?: IncomeRule[]; onChange: (v?: IncomeRule[]) => void }) {
-  const list = value ?? [];
+  const list = Array.isArray(value) ? value : [];
   const commit = (next: IncomeRule[]) => onChange(next.length ? next : undefined);
   const set = (id: string, p: Partial<IncomeRule>) => commit(list.map((r) => (r.id === id ? { ...r, ...p } : r)));
   const conds = (r: IncomeRule) => (r.conds ?? []).filter((c): c is NumCond => c.kind === "stat" || c.kind === "metric");
@@ -29,11 +29,16 @@ export default function ModIncomeEditor({ value, onChange }: { value?: IncomeRul
       <button className={btn} onClick={() => commit([...list, { id: uid(), label: "生活费", target: { kind: "metric", key: "money" }, min: 150, max: 150 }])}>＋ 添加规则</button>
       {!list.length && <p className="rounded-lg border border-dashed border-line px-3 py-4 text-center text-[12px] text-ink-soft">未启用周期收入 · 如「口碑 ≥ 50 → 现金 80~120」</p>}
 
-      {list.map((r) => (
+      {list.map((r) => {
+        // 功能注释：AI 规则可能没有 target，缺省发到资金，避免 target.kind 崩页
+        const target = r.target?.kind && r.target?.key ? r.target : { kind: "metric" as const, key: "money" };
+        const min = typeof r.min === "number" ? r.min : 0;
+        const max = typeof r.max === "number" ? r.max : min;
+        return (
         <div key={r.id} className={`space-y-1.5 rounded-lg border border-line bg-paper p-2.5 ${r.enabled === false ? "opacity-60" : ""}`}>
           <div className="flex items-center gap-2">
             <input type="checkbox" className="accent-jade" checked={r.enabled !== false} onChange={(e) => set(r.id, { enabled: e.target.checked })} aria-label="启用" />
-            <input className={inp} value={r.label} onChange={(e) => set(r.id, { label: e.target.value })} placeholder="规则名" />
+            <input className={inp} value={String(r.label ?? "")} onChange={(e) => set(r.id, { label: e.target.value })} placeholder="规则名" />
             <button className="text-[12px] text-ink-soft hover:text-coral" onClick={() => commit(list.filter((x) => x.id !== r.id))} aria-label="删除"><IconClose size={14} /></button>          </div>
 
           {conds(r).map((c, i) => (
@@ -52,18 +57,18 @@ export default function ModIncomeEditor({ value, onChange }: { value?: IncomeRul
 
           <div className="flex items-center gap-1 text-[11.5px] text-ink-soft">
             <span className="shrink-0">→</span>
-            <select className={inp} value={`${r.target.kind}:${r.target.key}`} onChange={(e) => set(r.id, { target: parse(e.target.value) })}>
+            <select className={inp} value={`${target.kind}:${target.key}`} onChange={(e) => set(r.id, { target: parse(e.target.value) })}>
               {targets().map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}
             </select>
-            <input type="number" className={`${inp} w-20 shrink-0`} value={r.min} onChange={(e) => set(r.id, { min: num(e.target.value) })} aria-label="最少" />
+            <input type="number" className={`${inp} w-20 shrink-0`} value={min} onChange={(e) => set(r.id, { min: num(e.target.value) })} aria-label="最少" />
             <span>~</span>
-            <input type="number" className={`${inp} w-20 shrink-0`} value={r.max} onChange={(e) => set(r.id, { max: num(e.target.value) })} aria-label="最多" />
+            <input type="number" className={`${inp} w-20 shrink-0`} value={max} onChange={(e) => set(r.id, { max: num(e.target.value) })} aria-label="最多" />
           </div>
           <p className="text-right text-[10.5px] text-ink-soft">
-            预览：{conds(r).length ? conds(r).map((c) => `${label(c.kind, c.key)}${c.op === "gte" ? "≥" : "≤"}${c.value}`).join(" 且 ") : "每周"} → {label(r.target.kind, r.target.key)} {r.min === r.max ? r.min : `${Math.min(r.min, r.max)}~${Math.max(r.min, r.max)}`}
+            预览：{conds(r).length ? conds(r).map((c) => `${label(c.kind, c.key)}${c.op === "gte" ? "≥" : "≤"}${c.value}`).join(" 且 ") : "每周"} → {label(target.kind, target.key)} {min === max ? min : `${Math.min(min, max)}~${Math.max(min, max)}`}
           </p>
         </div>
-      ))}
+      );})}
     </div>
   );
 }

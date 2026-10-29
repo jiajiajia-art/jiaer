@@ -57,4 +57,6 @@ test('romance_系统头像库_对接平台API与分组', async () => {
   assert.ok(grouped.some((g) => g.name === '未分类' && g.images.length === 1));
   assert.equal(lib.PLATFORM_AVATAR_GROUPS.length >= 4, true);
   assert.match(String(lib.resolvePlatformAvatarUrl('/public/x.webp')), /\/public\/x\.webp$/);
+  assert.equal(typeof lib.readFunloomAuthorLabel, 'function');
+  assert.equal(typeof lib.readFunloomAuthorLabel(), 'string');
 });

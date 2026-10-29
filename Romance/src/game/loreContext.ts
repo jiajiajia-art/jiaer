@@ -5,6 +5,7 @@
  *  - 节日：平时只发名称与日期；临近或正值节日、或剧情提到关键词时发完整设定。
  *  - 事件：关键词触发；带结束关键词的事件每回合持续发送，直到 AI 正文出现结束词。 */
 import type { FixedEvent, Festival, GameState, LoreChar, LoreNode, LoreRegion } from "../lib/types";
+import { asTrimmedString } from "../lib/asTrimmedString";
 import { slot } from "../mods/live";
 import { dayParts } from "./logic";
 import { applyFixedEffects, applyHiddenBranches, fixedEligible } from "./fixedEvents";
@@ -17,7 +18,10 @@ const SCAN_TURNS = 2; // 提及 / 关键词检索最近几回合
 export const loreRegions = (): LoreRegion[] => slot<LoreRegion[]>("lore", () => [], () => []) ?? [];
 export const worldFestivals = (): Festival[] => slot<Festival[]>("festivals", () => [], () => []) ?? [];
 
-const clip = (t: string, n: number) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
+const clip = (t: unknown, n: number) => { const s = loreText(t); return s.length > n ? `${s.slice(0, n - 1)}…` : s; };
+/** 功能注释：地区/势力/角色常缺 detail；直接 .trim() 会在「详细设定」预览崩成 reading 'trim' */
+const loreText = (raw: unknown) => asTrimmedString(raw);
+const loreKeys = (raw: unknown) => (Array.isArray(raw) ? raw : []).map((k) => loreText(k)).filter(Boolean);
 /** 检索文本：本回合输入 + 最近几回合正文 */
 export function recentHay(state: GameState, input: string, turns = SCAN_TURNS): string {
   const recent = state.story.filter((t) => !t.error).slice(-turns)
@@ -25,7 +29,7 @@ export function recentHay(state: GameState, input: string, turns = SCAN_TURNS): 
   return `${input} ${recent}`.toLowerCase();
 }
 /* 名称 + 关键词；单字名容易误命中，至少 2 字才参与提及判定 */
-const namesOf = (n: LoreNode) => [n.name, ...(n.keywords ?? [])].map((k) => k.trim()).filter((k) => k.length >= 2);
+const namesOf = (n: LoreNode) => [loreText(n.name), ...loreKeys(n.keywords)].filter((k) => k.length >= 2);
 const hit = (n: LoreNode, hay: string) => namesOf(n).some((k) => hay.includes(k.toLowerCase()));
 
 /** 主角此刻所在的地区：地点归属 → 地名包含地区名 / 关键词 → 只有一个地区时默认它 */
@@ -45,13 +49,13 @@ function pushWithin(out: string[], block: string, used: { n: number }, budget: n
   used.n += block.length;
   return true;
 }
-const charLine = (c: LoreChar, owner: string) => `· 角色「${c.name}」${owner ? `（${owner}）` : ""}：${c.detail.trim() || c.brief}`;
+const charLine = (c: LoreChar, owner: string) => `· 角色「${loreText(c.name)}」${owner ? `（${owner}）` : ""}：${loreText(c.detail) || loreText(c.brief)}`;
 
 /** 某地区作为「当前地区」时发送的完整设定（含下属势力与角色） */
 export function regionFull(r: LoreRegion): string {
-  const lines = [`◆ 地区「${r.name}」\n${r.detail.trim() || r.brief}`];
+  const lines = [`◆ 地区「${loreText(r.name)}」\n${loreText(r.detail) || loreText(r.brief)}`];
   for (const f of r.factions ?? []) {
-    lines.push(`▸ 势力「${f.name}」：${f.detail.trim() || f.brief}`);
+    lines.push(`▸ 势力「${loreText(f.name)}」：${loreText(f.detail) || loreText(f.brief)}`);
     for (const c of f.chars ?? []) lines.push(charLine(c, f.name));
   }
   for (const c of r.chars ?? []) lines.push(charLine(c, ""));
@@ -59,17 +63,17 @@ export function regionFull(r: LoreRegion): string {
 }
 /** 速查表里的一个地区：名称 + 简介，势力与角色也只列名称 + 简介 */
 export function regionIndex(r: LoreRegion): string {
-  const lines = [`◇ ${r.name}：${clip(r.brief || r.detail, 60)}`];
-  const fs = (r.factions ?? []).map((f) => `${f.name}（${clip(f.brief || f.detail, 24)}）`);
+  const lines = [`◇ ${loreText(r.name)}：${clip(loreText(r.brief) || loreText(r.detail), 60)}`];
+  const fs = (r.factions ?? []).map((f) => `${loreText(f.name)}（${clip(loreText(f.brief) || loreText(f.detail), 24)}）`);
   if (fs.length) lines.push(`  势力：${fs.join("；")}`);
-  const cs = [...(r.factions ?? []).flatMap((f) => f.chars ?? []), ...(r.chars ?? [])].map((c) => `${c.name}（${clip(c.brief || c.detail, 20)}）`);
+  const cs = [...(r.factions ?? []).flatMap((f) => f.chars ?? []), ...(r.chars ?? [])].map((c) => `${loreText(c.name)}（${clip(loreText(c.brief) || loreText(c.detail), 20)}）`);
   if (cs.length) lines.push(`  角色：${cs.join("；")}`);
   return lines.join("\n");
 }
 
 /** 详细设定块：当前地区完整 + 其他地区速查 + 被提及条目单独补发 */
 export function loreBlock(state: GameState, input: string): string {
-  const regions = loreRegions().filter((r) => r.name?.trim());
+  const regions = loreRegions().filter((r) => loreText(r.name));
   if (!regions.length) return "";
   const here = currentRegions(state, regions);
   const hereIds = new Set(here.map((r) => r.id));
@@ -91,12 +95,12 @@ export function loreBlock(state: GameState, input: string): string {
   // 剧情提及：别处的地区 / 势力 / 角色，各自单独补发完整设定
   const mentions: string[] = [], used = { n: 0 };
   for (const r of others) {
-    if (hit(r, hay) && r.detail.trim()) pushWithin(mentions, `◆ 地区「${r.name}」\n${r.detail.trim()}`, used, LORE_MENTION_BUDGET);
+    if (hit(r, hay) && loreText(r.detail)) pushWithin(mentions, `◆ 地区「${loreText(r.name)}」\n${loreText(r.detail)}`, used, LORE_MENTION_BUDGET);
     for (const f of r.factions ?? []) {
-      if (hit(f, hay) && f.detail.trim()) pushWithin(mentions, `◆ 势力「${f.name}」（${r.name}）\n${f.detail.trim()}`, used, LORE_MENTION_BUDGET);
-      for (const c of f.chars ?? []) if (hit(c, hay) && c.detail.trim()) pushWithin(mentions, `◆ 角色「${c.name}」（${r.name} · ${f.name}）\n${c.detail.trim()}`, used, LORE_MENTION_BUDGET);
+      if (hit(f, hay) && loreText(f.detail)) pushWithin(mentions, `◆ 势力「${loreText(f.name)}」（${loreText(r.name)}）\n${loreText(f.detail)}`, used, LORE_MENTION_BUDGET);
+      for (const c of f.chars ?? []) if (hit(c, hay) && loreText(c.detail)) pushWithin(mentions, `◆ 角色「${loreText(c.name)}」（${loreText(r.name)} · ${loreText(f.name)}）\n${loreText(c.detail)}`, used, LORE_MENTION_BUDGET);
     }
-    for (const c of r.chars ?? []) if (hit(c, hay) && c.detail.trim()) pushWithin(mentions, `◆ 角色「${c.name}」（${r.name}）\n${c.detail.trim()}`, used, LORE_MENTION_BUDGET);
+    for (const c of r.chars ?? []) if (hit(c, hay) && loreText(c.detail)) pushWithin(mentions, `◆ 角色「${loreText(c.name)}」（${loreText(r.name)}）\n${loreText(c.detail)}`, used, LORE_MENTION_BUDGET);
   }
   if (mentions.length) parts.push(`【补充设定 · 剧情提及】（主角不在这些地方，但剧情提到了，须与以下设定一致）\n${mentions.join("\n\n")}`);
   return parts.join("\n\n");
@@ -107,7 +111,7 @@ const DAY = 86400000;
 export type FestivalState = { f: Festival; status: string } | null;
 /** 节日相对今天的状态：正值 / N 天后（在提前窗口内）；不在窗口内返回 null */
 export function festivalStatus(f: Festival, day: number): string | null {
-  const m = /^(\d{1,2})-(\d{1,2})$/.exec(f.date?.trim() ?? "");
+  const m = /^(\d{1,2})-(\d{1,2})$/.exec(loreText(f.date));
   if (!m) return null;
   const { y, m: mo, d } = dayParts(day);
   const today = Date.UTC(y, mo - 1, d);
@@ -121,23 +125,23 @@ export function festivalStatus(f: Festival, day: number): string | null {
   return null;
 }
 export function festivalBlock(state: GameState, input: string): string {
-  const list = worldFestivals().filter((f) => f.name?.trim());
+  const list = worldFestivals().filter((f) => loreText(f.name));
   if (!list.length) return "";
   const day = state.sim?.day ?? 0;
   const hay = recentHay(state, input);
   const details: string[] = [];
   for (const f of list) {
     const st = festivalStatus(f, day);
-    const kw = [f.name, ...(f.keywords ?? [])].map((k) => k.trim().toLowerCase()).filter((k) => k.length >= 2).some((k) => hay.includes(k));
-    if ((st || kw) && f.detail.trim()) details.push(`◆ ${f.name}（${f.date}${(f.days ?? 1) > 1 ? `，持续 ${f.days} 天` : ""}）${st ? ` · ${st}` : " · 剧情提及"}\n${f.detail.trim()}`);
+    const kw = [f.name, ...loreKeys(f.keywords)].map((k) => loreText(k).toLowerCase()).filter((k) => k.length >= 2).some((k) => hay.includes(k));
+    if ((st || kw) && loreText(f.detail)) details.push(`◆ ${loreText(f.name)}（${loreText(f.date)}${(f.days ?? 1) > 1 ? `，持续 ${f.days} 天` : ""}）${st ? ` · ${st}` : " · 剧情提及"}\n${loreText(f.detail)}`);
   }
   const index = `【节日速查】${list.map((f) => `${f.name}（${f.date}）`).join("、")}`;
   return details.length ? `${index}\n【节日设定】（临近或剧情提到的节日，须据此演绎习俗与氛围）\n${details.join("\n\n")}` : index;
 }
 
 /* —— 事件：关键词触发 / 进行中 / 结束关键词 —— */
-export const isKeywordEvent = (ev: FixedEvent) => !!ev.keywords?.some((k) => k.trim());
-const kwHit = (keys: string[] | undefined, hay: string) => (keys ?? []).map((k) => k.trim().toLowerCase()).filter(Boolean).some((k) => hay.includes(k));
+export const isKeywordEvent = (ev: FixedEvent) => loreKeys(ev.keywords).length > 0;
+const kwHit = (keys: string[] | undefined, hay: string) => loreKeys(keys).map((k) => k.toLowerCase()).some((k) => hay.includes(k));
 
 /** 本回合被关键词触发的事件（仍需满足时间、条件、一次性 / 前置激活） */
 export function keywordEventHits(state: GameState, input: string): FixedEvent[] {
@@ -154,17 +158,17 @@ export function activateEvents(state: GameState, evs: FixedEvent[]): GameState {
 }
 /** 固定事件以剧情幕上演后：带结束关键词的转为进行中，继续每回合发送 */
 export function keepIfOngoing(state: GameState, ev: FixedEvent): GameState {
-  if (!ev.endKeywords?.some((k) => k.trim())) return state;
+  if (!loreKeys(ev.endKeywords).length) return state;
   return { ...state, sim: { ...state.sim, eventsActive: Array.from(new Set([...(state.sim.eventsActive ?? []), ev.id])) } };
 }
 export function activeEventsBlock(state: GameState): string {
   const ids = state.sim?.eventsActive ?? [];
   if (!ids.length) return "";
-  const evs = ids.map((id) => (state.fixedEvents ?? []).find((e) => e.id === id)).filter((e): e is FixedEvent => !!e && !!e.prompt?.trim());
+  const evs = ids.map((id) => (state.fixedEvents ?? []).find((e) => e.id === id)).filter((e): e is FixedEvent => !!e && !!loreText(e.prompt));
   if (!evs.length) return "";
   return `【进行中的事件】（以下事件正在发生，本回合须据此推进剧情）\n${evs.map((ev) => {
-    const ends = (ev.endKeywords ?? []).map((k) => k.trim()).filter(Boolean);
-    return `◆ ${ev.name || "事件"}\n${ev.prompt.trim()}${ends.length ? `\n（结束标志：当此事件在剧情中自然收束时，正文里写出「${ends[0]}」${ends.length > 1 ? `（或${ends.slice(1).map((k) => `「${k}」`).join("、")}）` : ""}；还没结束就不要写。）` : ""}`;
+    const ends = loreKeys(ev.endKeywords);
+    return `◆ ${loreText(ev.name) || "事件"}\n${loreText(ev.prompt)}${ends.length ? `\n（结束标志：当此事件在剧情中自然收束时，正文里写出「${ends[0]}」${ends.length > 1 ? `（或${ends.slice(1).map((k) => `「${k}」`).join("、")}）` : ""}；还没结束就不要写。）` : ""}`;
   }).join("\n\n")}`;
 }
 /** AI 回复落地后：出现结束关键词的事件结束；没有结束词的事件只发一回合 */
@@ -175,7 +179,7 @@ export function settleActiveEvents(state: GameState, aiText: string): GameState 
   const keep = ids.filter((id) => {
     const ev = (state.fixedEvents ?? []).find((e) => e.id === id);
     if (!ev) return false;
-    const ends = (ev.endKeywords ?? []).map((k) => k.trim()).filter(Boolean);
+    const ends = loreKeys(ev.endKeywords);
     return ends.length > 0 && !kwHit(ends, text);
   });
   if (keep.length === ids.length) return state;

@@ -2,6 +2,8 @@ import { IconClose } from "../lib/icons";
 import { useRef, useState } from "react";
 import type { WorldBookEntry } from "../lib/types";
 import { modeOf } from "../game/worldbookPick";
+import { asTrimmedString } from "../lib/asTrimmedString";
+import { keywordTexts } from "../lib/worldBookKeywords";
 import WorldBookRules, { WorldBookModePills, wbBadges } from "./WorldBookRules";
 import { AuditBadge, AuditBar, AuditList, auditDomId } from "./EditorKit";
 import { auditStory, issuesAt } from "../game/refAudit";
@@ -46,7 +48,7 @@ export default function ModWorldBookEditor({ value, onChange, npcs = [], rooms =
   const [err, setErr] = useState("");
   const file = useRef<HTMLInputElement>(null);
   const audit = auditStory({ worldBook: list, npcIds: npcs.map((n) => n.id), roomIds: rooms.map((r) => r.id), skip: [...(npcs.length ? [] : (["npc"] as const)), ...(rooms.length ? [] : (["location"] as const))] });
-  const groups = Array.from(new Set(list.map((e) => e.group?.trim()).filter((g): g is string => !!g)));
+  const groups = Array.from(new Set(list.map((e) => asTrimmedString(e.group)).filter(Boolean)));
   const commit = (next: WorldBookEntry[]) => onChange(next.length ? next : undefined);
   const set = (id: string, p: Partial<WorldBookEntry>) => commit(list.map((e) => (e.id === id ? { ...e, ...p } : e)));
 
@@ -82,13 +84,16 @@ export default function ModWorldBookEditor({ value, onChange, npcs = [], rooms =
 
       {list.map((e) => {
         const isOpen = open === e.id;
+        const title = asTrimmedString(e.title);
+        const keys = keywordTexts(e.keywords);
+        const body = asTrimmedString(e.content);
         return (
           <div key={e.id} id={auditDomId(`wb:${e.id}`)} className={`scroll-mt-3 rounded-lg border ${e.enabled ? "border-line" : "border-line/50 opacity-60"} bg-paper`}>
             <div className="flex items-center gap-2 px-2.5 py-2">
               <input type="checkbox" checked={e.enabled} onChange={(x) => set(e.id, { enabled: x.target.checked })} className="accent-jade" aria-label="启用" />
               <button className="min-w-0 flex-1 text-left" onClick={() => setOpen(isOpen ? null : e.id)}>
-                <p className="truncate text-[12.5px] font-bold">{e.title || "未命名"}</p>
-                <p className="truncate text-[10.5px] text-ink-soft">{modeOf(e) === "constant" ? "每轮注入" : e.keywords.length ? e.keywords.join(" · ") : modeOf(e) === "once" ? "下一轮注入一次" : "无关键词，不会触发"}</p>
+                <p className="truncate text-[12.5px] font-bold">{title || "未命名"}</p>
+                <p className="truncate text-[10.5px] text-ink-soft">{modeOf(e) === "constant" ? "每轮注入" : keys.length ? keys.join(" · ") : modeOf(e) === "once" ? "下一轮注入一次" : "无关键词，不会触发"}</p>
               </button>
               <AuditBadge issues={issuesAt(audit, `wb:${e.id}`)} />
               <span className="flex shrink-0 flex-wrap justify-end gap-1">{wbBadges(e).map((b) => <span key={b} className="rounded-full bg-jade/10 px-1.5 py-0.5 text-[10px] font-bold text-jade">{b}</span>)}</span>
@@ -96,18 +101,18 @@ export default function ModWorldBookEditor({ value, onChange, npcs = [], rooms =
             {isOpen && (
               <div className="space-y-1.5 border-t border-line px-2.5 py-2">
                 <AuditList issues={issuesAt(audit, `wb:${e.id}`)} />
-                <input className={inp} value={e.title} onChange={(x) => set(e.id, { title: x.target.value })} placeholder="条目名" />
+                <input className={inp} value={title} onChange={(x) => set(e.id, { title: x.target.value })} placeholder="条目名" />
                 <WorldBookModePills e={e} onChange={(p) => set(e.id, p)} />
-                <input className={inp} value={e.keywords.join("，")} disabled={modeOf(e) === "constant"}
+                <input className={inp} value={keys.join("，")} disabled={modeOf(e) === "constant"}
                   onChange={(x) => set(e.id, { keywords: x.target.value.split(/[,，、]/).map((s) => s.trim()).filter(Boolean) })}
                   placeholder="关键词，用逗号分隔（原文会出现的词）" />
-                <textarea className={inp} rows={4} value={e.content} onChange={(x) => set(e.id, { content: x.target.value })} placeholder="设定正文" />
+                <textarea className={inp} rows={4} value={body} onChange={(x) => set(e.id, { content: x.target.value })} placeholder="设定正文" />
                 <div className="grid grid-cols-2 gap-1.5 text-[11px] text-ink-soft">
                   <label>顺序<input type="number" className={inp} value={e.order ?? 100} onChange={(x) => set(e.id, { order: Number(x.target.value) || 0 })} /></label>
                   <label>概率%<input type="number" min={0} max={100} className={inp} value={e.probability ?? 100} onChange={(x) => set(e.id, { probability: Math.min(100, Math.max(0, Number(x.target.value) || 0)) })} /></label>
                 </div>
                 <WorldBookRules e={e} onChange={(p) => set(e.id, p)} npcs={npcs} rooms={rooms} groups={groups} />
-                <p className="text-right text-[10.5px] text-ink-soft">{e.content.length} 字</p>
+                <p className="text-right text-[10.5px] text-ink-soft">{body.length} 字</p>
               </div>
             )}
           </div>

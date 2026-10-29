@@ -5,6 +5,8 @@
  * 离开时清掉 Romance 主题 class，并恢复进页前主站 class。
  */
 import { Suspense, lazy, useEffect, type ComponentType } from 'react';
+import AuthModal from '../components/AuthModal';
+import { authModalStore } from '../store/useAuthStore';
 
 import 'virtual:romance-css';
 
@@ -39,6 +41,13 @@ function clearRomanceHtmlClasses() {
 }
 
 export default function RomanceHost() {
+  const { isAuthModalOpen, setIsAuthModalOpen } = authModalStore();
+  useEffect(() => {
+    // 功能注释：生成世界「知道了」通过该事件拉起平台登录；本页没有顶栏，须在宿主挂 AuthModal
+    const openAuth = () => setIsAuthModalOpen(true);
+    window.addEventListener('funloom:open-auth', openAuth);
+    return () => window.removeEventListener('funloom:open-auth', openAuth);
+  }, [setIsAuthModalOpen]);
   useEffect(() => {
     const root = document.documentElement;
     // 功能注释：先记下主站主题 class，再摘掉，避免与 Romance 同名 dark/accent 抢 CSS 变量
@@ -70,6 +79,7 @@ export default function RomanceHost() {
       >
         <RomanceApp />
       </Suspense>
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </div>
   );
 }

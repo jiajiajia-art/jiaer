@@ -14,8 +14,10 @@ test('ModEditorPanel_应取消开局设定区块与开场一级分类', () => {
   assert.doesNotMatch(panel, /title="开局设定"/);
   assert.doesNotMatch(panel, /label: "⑥ 开场"/);
   assert.doesNotMatch(panel, /k: "look"/);
-  assert.match(panel, /label: "⑤ 剧情"/);
-  assert.match(panel, /label: "⑥ 玩法 Mod"/);
+  assert.match(panel, /label: "④ 剧情"/);
+  assert.match(panel, /label: "⑤ 玩法 Mod"/);
+  assert.doesNotMatch(panel, /label: "④ 世界"/);
+  assert.doesNotMatch(panel, /\{ k: "world", label:/);
   assert.doesNotMatch(panel, /label: "⑦ 功能扩展"/);
   assert.doesNotMatch(panel, /ModExtEditor/);
   assert.doesNotMatch(panel, /exports\.actions|JsonField|私有变量/);
@@ -41,17 +43,18 @@ test('ModEditorPanel_字段应按系统归入唯一入口', () => {
   assert.match(growMoney, /开局资金/);
   assert.match(growMoney, /g="grow"/);
 
-  // 开局天气已从④世界移除；起始地点仅地点树；出行迁至玩法 Mod（showPlay）
+  // 地点并入①基础；开局天气已删；出行迁至玩法 Mod（showPlay）
   assert.doesNotMatch(panel, /title="开局天气"/);
+  assert.match(panel, /<Section g="base" title="地点"/);
   assert.match(panel, /ModRoomTreeEditor/);
   assert.match(panel, /startRoom=\{c\.startRoom\}/);
   assert.doesNotMatch(panel, />起始地点</);
   assert.match(panel, /showPlay\("travel"\)[\s\S]{0,500}title="出行与交通"/);
-  assert.doesNotMatch(panel, /<Section g="world" title="出行与交通"/);
+  assert.doesNotMatch(panel, /<Section g="world"/);
 
   // 开局封面（画布布局）→ ① 基础；开场白 → 剧情；固定事件含首次
   assert.match(panel, /title="开局封面"/);
-  const coverSec = panel.slice(panel.indexOf('title="开局封面"'), panel.indexOf('title="功能开关"'));
+  const coverSec = panel.slice(panel.indexOf('title="开局封面"'), panel.indexOf('title="地点"'));
   assert.match(coverSec, /g="base"/);
   assert.match(coverSec, /ModCoverEditor/);
   assert.match(panel, /title="开场剧情"/);
@@ -59,6 +62,13 @@ test('ModEditorPanel_字段应按系统归入唯一入口', () => {
   assert.doesNotMatch(openingSec, /ModCoverEditor/);
   assert.match(panel, /title="固定事件"/);
   assert.match(panel, /首次事件/);
+});
+
+test('ModEditorPanel_保存入口仅在顶栏_无底栏保存条', () => {
+  assert.match(panel, /保存入口只放顶栏/);
+  assert.match(panel, /dirty \|\| !persisted \? "保存并返回" : "返回"/);
+  assert.match(panel, /onClick=\{openPreview\}/);
+  assert.doesNotMatch(panel, /sticky bottom-0/);
 });
 
 test('ModEditorPanel_开局资金与开场白不得有第二处写入', () => {

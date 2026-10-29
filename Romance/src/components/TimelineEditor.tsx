@@ -11,8 +11,29 @@ const STATUS: Record<TimelineStatus, { l: string; c: string }> = {
 };
 const uid = () => `tl_${Date.now().toString(36).slice(-5)}${Math.random().toString(36).slice(2, 4)}`;
 
+/** 功能注释：角色页会渲染每条人物时间线；非数组直接 .map 会崩成 s.map is not a function，缺 when 再崩 trim */
+function timelineRows(value: unknown): NpcTimelineEntry[] {
+  let raw: unknown = value;
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    const o = raw as Record<string, unknown>;
+    const nested = ["entries", "items", "list", "events", "rows"].map((k) => o[k]).find(Array.isArray);
+    raw = nested ?? (("when" in o || "text" in o || "place" in o) ? [o] : []);
+  } else if (typeof raw === "string" || typeof raw === "number") {
+    const text = String(raw).trim();
+    raw = text ? [{ text }] : [];
+  }
+  if (!Array.isArray(raw)) return [];
+  return raw.map((row, i) => {
+    if (typeof row === "string" || typeof row === "number") return { id: `tl_${i}`, when: "", text: String(row).trim() };
+    if (!row || typeof row !== "object") return { id: `tl_${i}`, when: "", text: "" };
+    const e = row as Partial<NpcTimelineEntry>;
+    const place = e.place != null ? String(e.place).trim() : "";
+    return { id: String(e.id ?? `tl_${i}`), when: String(e.when ?? ""), text: String(e.text ?? ""), ...(place ? { place } : {}) };
+  });
+}
+
 export default function TimelineEditor({ value, onChange, today, compact }: { value?: NpcTimelineEntry[]; onChange: (v?: NpcTimelineEntry[]) => void; today?: string; compact?: boolean }) {
-  const list = value ?? [];
+  const list = timelineRows(value);
   const commit = (n: NpcTimelineEntry[]) => onChange(n.length ? n : undefined);
   const set = (id: string, p: Partial<NpcTimelineEntry>) => commit(list.map((e) => (e.id === id ? { ...e, ...p } : e)));
   const inp = `w-full min-w-0 rounded-lg border border-line bg-paper px-2 ${compact ? "py-1 text-[12px]" : "py-1.5 text-[13px]"} text-ink outline-none placeholder:text-ink-soft/60 focus:border-jade`;
@@ -22,12 +43,13 @@ export default function TimelineEditor({ value, onChange, today, compact }: { va
     <div className="space-y-1.5">
       {list.length === 0 && <p className="text-[11.5px] leading-relaxed text-ink-soft">还没有时间线。写下 TA 过去的经历（会写进 TA 的记忆，扮演 TA 时 AI 会记得），也可以写带日期的未来安排：到了当天写进剧情，7 天内作为伏笔，更远的先不透露。</p>}
       {list.map((e) => {
-        const st = today && isDated(e.when) ? statusOf(e, today) : null;
-        const bad = !!e.when.trim() && /^\d{4}[.\-/]\d{1,2}[.\-/]\d{1,2}$/.test(e.when.trim()) && !isDated(e.when);
+        const when = String(e.when ?? "");
+        const st = today && isDated(when) ? statusOf({ ...e, when }, today) : null;
+        const bad = !!when.trim() && /^\d{4}[.\-/]\d{1,2}[.\-/]\d{1,2}$/.test(when.trim()) && !isDated(when);
         return (
           <div key={e.id} className="space-y-1 rounded-xl border border-line bg-paper-2/60 p-2">
             <div className="flex items-center gap-1.5">
-              <input className={`${inp} w-32 shrink-0 font-mono ${bad ? "!border-danger" : ""}`} value={e.when} placeholder="2003年 / 2005.03.14"
+              <input className={`${inp} w-32 shrink-0 font-mono ${bad ? "!border-danger" : ""}`} value={when} placeholder="2003年 / 2005.03.14"
                 onChange={(x) => set(e.id, { when: x.target.value })}
                 onBlur={(x) => { const m = /^(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})$/.exec(x.target.value.trim()); if (m) set(e.id, { when: `${m[1]}.${m[2].padStart(2, "0")}.${m[3].padStart(2, "0")}` }); }} />
               <input className={inp} value={e.place ?? ""} placeholder="地点（可选）" onChange={(x) => set(e.id, { place: x.target.value || undefined })} />

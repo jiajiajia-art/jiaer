@@ -52,17 +52,17 @@ function NodeCard({ n, idx, total, events, quests, onChange, onMove, onDelete }:
 
       <div className="flex items-center gap-2 pt-0.5">
         <p className="text-[11px] font-bold text-ink-soft">完成条件</p>
-        {n.conds.length > 1 && (
+        {(n.conds ?? []).length > 1 && (
           <select className={sel} value={n.match ?? "all"} onChange={(e) => onChange({ ...n, match: e.target.value as "all" | "any" })}>
             <option value="all">全部满足</option><option value="any">任一满足</option>
           </select>
         )}
       </div>
-      {n.conds.map((c, i) => (
-        <CondRow key={i} c={c} events={events} selfId="" quests={quests} onChange={(x) => onChange({ ...n, conds: n.conds.map((y, j) => (j === i ? x : y)) })} onDelete={() => onChange({ ...n, conds: n.conds.filter((_, j) => j !== i) })} />
+      {(n.conds ?? []).map((c, i) => (
+        <CondRow key={i} c={c} events={events} selfId="" quests={quests} onChange={(x) => onChange({ ...n, conds: (n.conds ?? []).map((y, j) => (j === i ? x : y)) })} onDelete={() => onChange({ ...n, conds: (n.conds ?? []).filter((_, j) => j !== i) })} />
       ))}
-      <button className={link} onClick={() => onChange({ ...n, conds: [...n.conds, defaultCond("metric")] })}>＋ 完成条件</button>
-      {!n.conds.length && <p className="text-[11px] text-danger">没有完成条件的节点不会自动完成</p>}
+      <button className={link} onClick={() => onChange({ ...n, conds: [...(n.conds ?? []), defaultCond("metric")] })}>＋ 完成条件</button>
+      {!(n.conds ?? []).length && <p className="text-[11px] text-danger">没有完成条件的节点不会自动完成</p>}
 
       <p className="pt-0.5 text-[11px] font-bold text-ink-soft">失败条件（任一满足即失败，可留空）</p>
       {(n.failConds ?? []).map((c, i) => (
@@ -102,21 +102,21 @@ export default function StorylinesEditor({ value, events = [], onChange }: { val
       {list.map((l) => (
         <div key={l.id} id={auditDomId(`quest:${l.id}`)} className={`scroll-mt-3 space-y-2 rounded-2xl border border-line bg-paper-2/60 p-2.5 ${l.enabled === false ? "opacity-60" : ""}`}>
           <div className="flex items-center gap-2">
-            <input className={`${inp} !text-[13px] font-bold`} value={l.name} maxLength={24} placeholder="主线名称" onChange={(e) => set(l.id, { name: e.target.value })} />
+            <input className={`${inp} !text-[13px] font-bold`} value={String(l.name ?? "")} maxLength={24} placeholder="主线名称" onChange={(e) => set(l.id, { name: e.target.value })} />
             <label className="flex shrink-0 items-center gap-1 text-[11px] text-ink-soft">
               <input type="checkbox" checked={l.enabled !== false} onChange={(e) => set(l.id, { enabled: e.target.checked ? undefined : false })} />启用
             </label>
             <button className="shrink-0 text-[12px] text-ink-soft hover:text-danger" onClick={() => commit(list.filter((x) => x.id !== l.id))} aria-label="删除主线"><IconClose size={14} /></button>          </div>
           <AuditList issues={issuesAt(audit, `quest:${l.id}`)} />
           <input className={inp} value={l.desc ?? ""} maxLength={120} placeholder="主线简介（可留空）" onChange={(e) => set(l.id, { desc: e.target.value || undefined })} />
-          <p className="text-[10.5px] text-ink-soft">ID：{l.id} · {l.nodes.filter((n) => !n.optional).length} 个必做节点 · {l.nodes.filter((n) => n.optional).length} 个可选目标</p>
-          {l.nodes.map((n, i) => (
-            <NodeCard key={n.id} n={n} idx={i} total={l.nodes.length} events={events} quests={quests}
-              onChange={(x) => setNodes(l, l.nodes.map((y) => (y.id === n.id ? x : y)))}
-              onMove={(d) => { const a = [...l.nodes]; [a[i], a[i + d]] = [a[i + d], a[i]]; setNodes(l, a); }}
-              onDelete={() => setNodes(l, l.nodes.filter((y) => y.id !== n.id))} />
+          <p className="text-[10.5px] text-ink-soft">ID：{l.id} · {(l.nodes ?? []).filter((n) => !n.optional).length} 个必做节点 · {(l.nodes ?? []).filter((n) => n.optional).length} 个可选目标</p>
+          {(l.nodes ?? []).map((n, i) => (
+            <NodeCard key={n.id} n={n} idx={i} total={(l.nodes ?? []).length} events={events} quests={quests}
+              onChange={(x) => setNodes(l, (l.nodes ?? []).map((y) => (y.id === n.id ? x : y)))}
+              onMove={(d) => { const a = [...(l.nodes ?? [])]; [a[i], a[i + d]] = [a[i + d], a[i]]; setNodes(l, a); }}
+              onDelete={() => setNodes(l, (l.nodes ?? []).filter((y) => y.id !== n.id))} />
           ))}
-          <button className={link} onClick={() => setNodes(l, [...l.nodes, newNode()])}>＋ 添加节点</button>
+          <button className={link} onClick={() => setNodes(l, [...(l.nodes ?? []), newNode()])}>＋ 添加节点</button>
         </div>
       ))}
     </div>

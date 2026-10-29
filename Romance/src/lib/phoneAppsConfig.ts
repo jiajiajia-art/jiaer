@@ -1,8 +1,14 @@
 /**
- * 手机应用配置契约：模组声明每个应用的名称 / 图标 / 顺序 / 可用状态。
+ * 手机应用配置契约：模组声明每个应用的名称 / 图标 / 顺序 / 是否开局预装。
  * 与 features.phoneApps 白名单并存——旧模组只写白名单仍可读；新配置优先。
+ *
+ * 作者侧只有二元：开局预装 ↔ 商店可下。locked/hidden/disabled 仅兼容旧 JSON，
+ * 读取时归一为 store（不预装、商店可下），不再提供独立编辑入口。
  */
 export type PhoneAppAvail = "preinstall" | "store" | "locked" | "hidden" | "disabled";
+
+/** 功能注释：运行时 / 编辑器只认预装与商店；旧状态一律落到商店可下 */
+export type PhoneAppAvailSimple = "preinstall" | "store";
 
 export type PhoneAppDef = {
   id: string;
@@ -13,21 +19,26 @@ export type PhoneAppDef = {
   /** 桌面排序（越小越靠前）；缺省按内置顺序 */
   order?: number;
   /**
-   * preinstall=开局已装 · store=商店可下载 · locked=条件解锁（商店可见不可装）
-   * · hidden=对玩家隐藏 · disabled=禁用（不进商店也不进桌面）
+   * preinstall=新开局桌面已装；其它（含旧 locked/hidden/disabled）= 开局不装、商店可下。
+   * 只影响新开局默认已装列表，不卸载已有存档里已安装的应用。
    */
   avail?: PhoneAppAvail;
-  /** 条件解锁说明（给作者 / 商店灰态提示）；正式条件表达式后续接规则引擎 */
+  /** 旧「条件解锁」文案；新 UI 不再编辑，读取时保留以免丢字段 */
   unlockHint?: string;
 };
+
+/** 功能注释：把旧五态收成预装 / 商店，供解析与写入 */
+export function normalizePhoneAppAvail(avail?: PhoneAppAvail | null): PhoneAppAvailSimple {
+  return avail === "preinstall" ? "preinstall" : "store";
+}
 
 /** 引擎内置应用目录（与 Phone.tsx CORE+STORE 对齐的可配置子集；不含纯小组件） */
 export type PhoneAppCatalogItem = {
   id: string;
   label: string;
   kind: "core" | "store";
-  /** 未写 avail 时的默认：core 预装（个别除外），store 可下载 */
-  defaultAvail: PhoneAppAvail;
+  /** 未写 avail 时的默认：core 预装（个别除外），store 商店可下 */
+  defaultAvail: PhoneAppAvailSimple;
   blurb: string;
   emptyHint: string;
   entries: string[];
@@ -69,27 +80,41 @@ export type ResolvedPhoneApp = {
   label: string;
   icon?: string;
   order: number;
-  avail: PhoneAppAvail;
+  /** 归一后仅 preinstall | store */
+  avail: PhoneAppAvailSimple;
   unlockHint: string;
 };
 
-/** 合并模组覆盖与目录默认，得到完整可编辑列表（含 hidden/disabled，供编辑器展示） */
+/** 合并模组覆盖与目录默认；旧 avail 在此归一，编辑器只看到预装 / 商店 */
+/** 功能注释：AI 可能把 phoneAppsCfg 写成 {apps:[]}；非数组时按空覆盖，禁止 (x ?? []).map 崩页 */
+function asPhoneOverrides(raw: unknown): PhoneAppDef[] {
+  if (Array.isArray(raw)) return raw as PhoneAppDef[];
+  if (raw && typeof raw === "object") {
+    const bag = raw as Record<string, unknown>;
+    for (const k of ["apps", "items", "list", "overrides"]) {
+      if (Array.isArray(bag[k])) return bag[k] as PhoneAppDef[];
+    }
+  }
+  return [];
+}
+
 export function resolvePhoneApps(overrides?: PhoneAppDef[] | null): ResolvedPhoneApp[] {
-  const map = new Map((overrides ?? []).map((o) => [o.id, o]));
+  const map = new Map(asPhoneOverrides(overrides).map((o) => [o.id, o]));
   return PHONE_APP_CATALOG.map((c, i) => {
     const o = map.get(c.id);
+    const rawAvail = o?.avail ?? c.defaultAvail;
     return {
       id: c.id,
       label: (typeof o?.label === "string" ? o.label.trim() : "") || c.label,
       icon: o?.icon,
       order: o?.order ?? i,
-      avail: o?.avail ?? c.defaultAvail,
+      avail: normalizePhoneAppAvail(rawAvail),
       unlockHint: o?.unlockHint ?? "",
     };
   }).sort((a, b) => a.order - b.order);
 }
 
-/** 开局应预装的应用 id（含强制保留的应用商店） */
+/** 开局应预装的应用 id（含强制保留的应用商店）；仅影响新开局，不改已有存档 installed */
 export function preinstallIds(overrides?: PhoneAppDef[] | null): string[] {
   const ids = resolvePhoneApps(overrides)
     .filter((a) => a.avail === "preinstall" && a.id !== "appstore")
@@ -97,18 +122,17 @@ export function preinstallIds(overrides?: PhoneAppDef[] | null): string[] {
   return Array.from(new Set(["appstore", ...ids]));
 }
 
-/** 商店可见：可下载 / 条件解锁 / 已预装（便于重装） */
+/** 商店可见：预装（便于重装）+ 未预装均可下载 */
 export function storeVisibleIds(overrides?: PhoneAppDef[] | null): string[] {
-  return resolvePhoneApps(overrides)
-    .filter((a) => a.avail === "store" || a.avail === "locked" || a.avail === "preinstall")
-    .map((a) => a.id);
+  return resolvePhoneApps(overrides).map((a) => a.id);
 }
 
-/** 玩家侧是否允许出现该应用（桌面或商店）；hidden/disabled 均否 */
-export function phoneAppVisible(id: string, overrides?: PhoneAppDef[] | null): boolean {
-  const a = resolvePhoneApps(overrides).find((x) => x.id === id);
-  if (!a) return true; // 未知 id（小组件等）保持旧行为
-  return a.avail !== "hidden" && a.avail !== "disabled";
+/**
+ * 玩家侧是否允许出现该应用（桌面或商店）。
+ * 功能注释：旧 hidden/disabled 已归一为商店可下，目录内与未知 id 一律可见（不因配置藏应用）。
+ */
+export function phoneAppVisible(_id: string, _overrides?: PhoneAppDef[] | null): boolean {
+  return true;
 }
 
 export function phoneAppLabel(id: string, overrides?: PhoneAppDef[] | null, fallback?: string): string {
@@ -130,18 +154,13 @@ export function compactPhoneApps(list: PhoneAppDef[]): PhoneAppDef[] | undefined
     if (label && label !== c.label) patch.label = label;
     if (a.icon) patch.icon = a.icon;
     if (typeof a.order === "number" && a.order !== PHONE_APP_CATALOG.findIndex((x) => x.id === a.id)) patch.order = a.order;
-    if (a.avail && a.avail !== c.defaultAvail) patch.avail = a.avail;
+    // 功能注释：只写出归一后的预装/商店；旧 locked 等经 resolve 后不会再写回五态
+    const avail = normalizePhoneAppAvail(a.avail ?? c.defaultAvail);
+    if (avail !== c.defaultAvail) patch.avail = avail;
+    // 功能注释：保留旧 unlockHint，避免打开即丢字段；新 UI 不再新增
     const unlockHint = typeof a.unlockHint === "string" ? a.unlockHint.trim() : "";
     if (unlockHint) patch.unlockHint = unlockHint;
     if (Object.keys(patch).length > 1) out.push(patch);
   }
   return out.length ? out : undefined;
 }
-
-export const AVAIL_OPTIONS: { v: PhoneAppAvail; l: string; d: string }[] = [
-  { v: "preinstall", l: "开局预装", d: "进游戏桌面已有" },
-  { v: "store", l: "可下载", d: "出现在应用商店" },
-  { v: "locked", l: "条件解锁", d: "商店可见，需满足条件" },
-  { v: "hidden", l: "隐藏", d: "玩家看不到" },
-  { v: "disabled", l: "禁用", d: "完全关闭" },
-];

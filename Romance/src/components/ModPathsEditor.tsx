@@ -71,8 +71,9 @@ export default function ModPathsEditor({ creation, identities, world, worldName,
   const [focusEl, setFocusEl] = useState<{ el: HTMLInputElement | HTMLTextAreaElement; apply: (v: string) => void } | null>(null);
   const [err, setErr] = useState("");
   const cc = creation ?? {};
-  const paths = cc.paths ?? [];
-  const ids = identities ?? [];
+  const paths = Array.isArray(cc.paths) ? cc.paths : [];
+  const ids = Array.isArray(identities) ? identities : [];
+  const startFactions = Array.isArray(cc.startFactions) ? cc.startFactions : [];
   const idOf = (id: string): Option => ids.find((o) => o.id === id) ?? { id, name: "", desc: "", tag: "" };
   const commit = (np: CreationPath[], ni: Option[], extra: Partial<CreationCopy> = {}) => onChange({ creation: { ...cc, ...extra, paths: np }, identities: ni });
   const setPath = (i: number, p: Partial<CreationPath>) => commit(paths.map((x, j) => (j === i ? { ...x, ...p } : x)), ids);
@@ -174,14 +175,15 @@ export default function ModPathsEditor({ creation, identities, world, worldName,
 
       {/* 开局势力：玩家在建角「开局」页勾选加入；开局时全部装入阵营系统（声望 / 好感波及 / 调价 / 世界书关键词） */}
       <div className="space-y-2 rounded-xl border border-line bg-paper-2/50 p-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="text-[12.5px] font-bold text-ink">开局势力（玩家勾选加入）</p>
-          <label className="ml-auto flex items-center gap-1 text-[11.5px] text-ink-soft">最多可选
-            <input type="number" min={0} className={`${inp} w-14`} value={cc.factionPickMax ?? ""} placeholder="不限"
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+          <p className="min-w-0 text-[12.5px] font-bold text-ink">开局势力（玩家勾选加入）</p>
+          <label className="flex shrink-0 items-center gap-2 rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink-soft">
+            <span className="whitespace-nowrap">最多可选</span>
+            <input type="number" min={0} aria-label="最多可选" className={`${inp} !w-16 shrink-0 text-center`} value={cc.factionPickMax ?? ""} placeholder="不限"
               onChange={(e) => { const n = Math.max(0, Math.round(Number(e.target.value))); commit(paths, ids, { factionPickMax: e.target.value && n ? n : undefined }); }} />
           </label>
         </div>
-        {(cc.startFactions ?? []).map((f, i, all) => {
+        {startFactions.map((f, i, all) => {
           const put = (p: Partial<typeof f>) => commit(paths, ids, { startFactions: all.map((x, j) => (j === i ? { ...x, ...p } : x)) });
           return (
             <div key={f.id} className="grid gap-1.5 rounded-lg border border-line/70 bg-paper p-2">
@@ -193,11 +195,11 @@ export default function ModPathsEditor({ creation, identities, world, worldName,
                 <button className={btn} onClick={() => commit(paths, ids, { startFactions: all.filter((_, j) => j !== i) })}>删除</button>
               </div>
               <textarea rows={2} className={inp} value={f.desc ?? ""} placeholder="势力设定（建角页展示，也作为世界书正文注入剧情）" onChange={(e) => put({ desc: e.target.value || undefined })} />
-              <input className={inp} key={(f.tags ?? []).join("、")} defaultValue={(f.tags ?? []).join("、")} placeholder="标签 / 别称，用顿号分隔（剧情里提到即触发）" onBlur={(e) => put({ tags: e.target.value.split(/[、,，]/).map((t) => t.trim()).filter(Boolean) })} />
+              <input className={inp} key={Array.isArray(f.tags) ? f.tags.join("、") : ""} defaultValue={Array.isArray(f.tags) ? f.tags.join("、") : ""} placeholder="标签 / 别称，用顿号分隔（剧情里提到即触发）" onBlur={(e) => put({ tags: e.target.value.split(/[、,，]/).map((t) => t.trim()).filter(Boolean) })} />
             </div>
           );
         })}
-        <button className={btn} onClick={() => commit(paths, ids, { startFactions: [...(cc.startFactions ?? []), { id: `sf_${Date.now().toString(36)}`, name: "", rep: 20 }] })}>＋ 新增势力</button>
+        <button className={btn} onClick={() => commit(paths, ids, { startFactions: [...startFactions, { id: `sf_${Date.now().toString(36)}`, name: "", rep: 20 }] })}>＋ 新增势力</button>
       </div>
 
       {paths.length === 0 && (
@@ -213,7 +215,7 @@ export default function ModPathsEditor({ creation, identities, world, worldName,
           <div key={p.id + i} className="space-y-1.5 rounded-xl border border-line bg-paper-2 p-2">
             <div className="flex items-center gap-1.5">
               <input className={`${inp} ${String(p.name ?? "").trim() ? "" : "!border-danger"}`} value={String(p.name ?? "")} placeholder="路径名（如：科班出道）" onChange={(e) => { const name = e.target.value; commit(paths.map((x, j) => (j === i ? { ...x, name } : x)), ids.some((o) => o.id === p.id) ? ids.map((o) => (o.id === p.id ? { ...o, name } : o)) : [...ids, { ...b, name }]); }} />
-              <input className={`${inp} !w-28 shrink-0`} value={p.tag} placeholder="标签" onChange={(e) => setPath(i, { tag: e.target.value })} />
+              <input className={`${inp} !w-28 shrink-0`} value={String(p.tag ?? "")} placeholder="标签" onChange={(e) => setPath(i, { tag: e.target.value })} />
               <button
                 type="button"
                 className={`${btn} shrink-0 ${p.open ? "!border-jade bg-jade/10 !text-jade" : "!border-coral/50 bg-coral/10 !text-coral"}`}
@@ -245,14 +247,14 @@ export default function ModPathsEditor({ creation, identities, world, worldName,
                 </label>
               </div>
             )}
-            <textarea rows={2} className={inp} value={p.blurb} placeholder="线路简介（卡片上显示，自由书写）" onChange={(e) => setPath(i, { blurb: e.target.value })} />
-            <textarea rows={3} className={inp} value={p.about} placeholder="展开详情：开局处境（第二人称「你」）" onChange={(e) => setPath(i, { about: e.target.value })} />
+            <textarea rows={2} className={inp} value={String(p.blurb ?? "")} placeholder="线路简介（卡片上显示，自由书写）" onChange={(e) => setPath(i, { blurb: e.target.value })} />
+            <textarea rows={3} className={inp} value={String(p.about ?? "")} placeholder="展开详情：开局处境（第二人称「你」）" onChange={(e) => setPath(i, { about: e.target.value })} />
             <div className="grid grid-cols-2 gap-1.5">
               <label className="text-[11px] text-ink-soft">玩家可自由决定（每行一项，可留空）
-                <textarea rows={3} className={`${inp} mt-0.5`} value={p.choose.join("\n")} onChange={(e) => setPath(i, { choose: lines(e.target.value) })} />
+                <textarea rows={3} className={`${inp} mt-0.5`} value={(Array.isArray(p.choose) ? p.choose : []).join("\n")} onChange={(e) => setPath(i, { choose: lines(e.target.value) })} />
               </label>
               <label className="text-[11px] text-ink-soft">固定不可改（每行一项，可留空）
-                <textarea rows={3} className={`${inp} mt-0.5`} value={p.fixed.join("\n")} onChange={(e) => setPath(i, { fixed: lines(e.target.value) })} />
+                <textarea rows={3} className={`${inp} mt-0.5`} value={(Array.isArray(p.fixed) ? p.fixed : []).join("\n")} onChange={(e) => setPath(i, { fixed: lines(e.target.value) })} />
               </label>
             </div>
             <RouteFxEditor pool={pool} label={p.perksLabel} onLabel={(perksLabel) => setPath(i, { perksLabel })} value={p.fx} npcs={npcs} relationOf={(t) => { const rel = p.npcs?.find((n) => npcs.find((x) => x.id === n.id)?.name === t)?.relation; return typeof rel === "string" ? rel.trim() : ""; }}
@@ -285,7 +287,7 @@ export default function ModPathsEditor({ creation, identities, world, worldName,
               </label>
               <EventPick value={p.eventId} events={events} onChange={(eventId) => setPath(i, { eventId })} />
             </div>
-            <PathNpcsEditor value={p.npcs ?? []} npcs={npcs} onChange={(v) => setPath(i, { npcs: v.length ? v : undefined })} />
+            <PathNpcsEditor value={Array.isArray(p.npcs) ? p.npcs : []} npcs={npcs} onChange={(v) => setPath(i, { npcs: v.length ? v : undefined })} />
             {hasLegacy(b) && (
               <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-gold/50 bg-gold/5 px-2 py-1.5 text-[11px] text-ink-soft">
                 <span className="min-w-0 flex-1">这条线路还有旧版固定加成（{legacyText(b)}），开局仍会生效。</span>
@@ -379,7 +381,11 @@ function RouteFxEditor({ label, onLabel, value, npcs, relationOf, onChange, pool
     onChange(keep.attr!.length || keep.favor!.length || keep.reputation!.length || keep.note || keep.text ? keep : undefined, routeFxText(clean, relationOf));
   };
   const preview = routeFxText(normRouteFx(fx), relationOf);
-  const newAttr = (n: string) => (n.trim() && !known.has(n.trim()) ? `本世界还没有「${n.trim()}」，开局时会自动新建为自定义属性` : null);
+  // 功能注释：线路数值行常缺 name，渲染时 warn 回调直接 n.trim() 会在角色页崩成 reading 'trim'
+  const newAttr = (n: string) => {
+    const s = String(n ?? "").trim();
+    return s && !known.has(s) ? `本世界还没有「${s}」，开局时会自动新建为自定义属性` : null;
+  };
   return (
     <div className="space-y-2 rounded-lg border border-line/70 bg-paper p-2">
       <p className="text-[11px] text-ink-soft"><b className="font-semibold text-ink">开局数值</b> · 名称取自全局属性池或自由新建（与人脉卡片、结局评定共用），数值为整数，可正可负</p>
@@ -397,12 +403,15 @@ function RouteFxEditor({ label, onLabel, value, npcs, relationOf, onChange, pool
           <input className={`${inp} mt-0.5`} value={fx.favorWord ?? "好感"} placeholder="留空 = 只写人名" onChange={(e) => commitFx({ favorWord: e.target.value })} />
         </label>
       </div>
-      <NumRows title="属性" hint="主角能力" rows={fx.attr ?? []} nameOf={(r) => r.name} setName={(r, name) => ({ ...r, name })} placeholder="属性名称（从属性池选或新建）" list={poolId} warn={newAttr} onChange={(attr) => commitFx({ attr })} />
+      <NumRows title="属性" hint="主角能力" rows={Array.isArray(fx.attr) ? fx.attr : []} nameOf={(r) => String(r?.name ?? "")} setName={(r, name) => ({ ...r, name })} placeholder="属性名称（从属性池选或新建）" list={poolId} warn={newAttr} onChange={(attr) => commitFx({ attr })} />
       <datalist id={poolId}>{poolNames.map((n) => <option key={n} value={n} />)}</datalist>
       <datalist id={listId}>{npcs.map((n) => <option key={n.id} value={n.name} />)}</datalist>
-      <NumRows title="好感" hint="目标角色对主角的好感变化" rows={fx.favor ?? []} nameOf={(r) => r.target} setName={(r, target) => ({ ...r, target })} placeholder="目标角色（从角色库选或手填）" list={listId}
-        warn={(t) => (t.trim() && !npcs.some((n) => n.name === t.trim() || n.id === t.trim()) ? `角色库里没有「${t.trim()}」，开局时这一行不会生效` : null)} onChange={(favor) => commitFx({ favor })} />
-      <NumRows title="声望 / 词条" hint="口碑、名气、气运、声望……" rows={fx.reputation ?? []} nameOf={(r) => r.name} setName={(r, name) => ({ ...r, name })} placeholder="词条名称（从属性池选或新建）" list={poolId} warn={newAttr} onChange={(reputation) => commitFx({ reputation })} />
+      <NumRows title="好感" hint="目标角色对主角的好感变化" rows={Array.isArray(fx.favor) ? fx.favor : []} nameOf={(r) => String(r?.target ?? "")} setName={(r, target) => ({ ...r, target })} placeholder="目标角色（从角色库选或手填）" list={listId}
+        warn={(t) => {
+          const s = String(t ?? "").trim();
+          return s && !npcs.some((n) => n.name === s || n.id === s) ? `角色库里没有「${s}」，开局时这一行不会生效` : null;
+        }} onChange={(favor) => commitFx({ favor })} />
+      <NumRows title="声望 / 词条" hint="口碑、名气、气运、声望……" rows={Array.isArray(fx.reputation) ? fx.reputation : []} nameOf={(r) => String(r?.name ?? "")} setName={(r, name) => ({ ...r, name })} placeholder="词条名称（从属性池选或新建）" list={poolId} warn={newAttr} onChange={(reputation) => commitFx({ reputation })} />
       {fx.mode === "free" && (
         <label className="block text-[11px] text-ink-soft">自由描述（卡片上原样显示，不自动拼接数值；上方数值仍在开局生效）
           <textarea rows={2} className={`${inp} mt-0.5`} value={fx.text ?? ""} placeholder="如：灵力尚浅，悟性奇高，师尊另眼相看" onChange={(e) => commitFx({ text: e.target.value })} />

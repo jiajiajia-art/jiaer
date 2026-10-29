@@ -1,6 +1,7 @@
 /* 世界书条目 · 细化设定（模组编辑器与游戏内世界书共用）：
  * 注入模式 · 有效期 · 绑定范围 · 互斥组 · 检索权重。规则实现见 game/worldbookPick。 */
 import type { WorldBookEntry, WorldBookMode } from "../lib/types";
+import { keywordTexts } from "../lib/worldBookKeywords";
 import { modeOf } from "../game/worldbookPick";
 
 type Opt = { id: string; name: string };
@@ -22,7 +23,7 @@ export function WorldBookModePills({ e, onChange }: { e: WorldBookEntry; onChang
             className={`rounded-full px-3 py-1 text-[11.5px] font-bold transition ${m === x.k ? "bg-ink text-paper-2" : "text-ink-soft hover:text-ink"}`}>{x.t}</button>
         ))}
       </div>
-      <p className="text-[10.5px] text-ink-soft">{MODES.find((x) => x.k === m)?.d}{m === "once" && !e.keywords.length ? "；未填关键词时下一轮直接注入" : ""}</p>
+      <p className="text-[10.5px] text-ink-soft">{MODES.find((x) => x.k === m)?.d}{m === "once" && keywordTexts(e.keywords).length === 0 ? "；未填关键词时下一轮直接注入" : ""}</p>
     </div>
   );
 }

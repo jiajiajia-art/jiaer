@@ -460,10 +460,14 @@ function customAttrLine(state: GameState): string {
   return `自定义属性：${rows.join("｜")}（剧情使其变化时，在 player_changes.attrs 里用对应 key 写 delta）${money}\n`;
 }
 
-/* 游玩偏好：本局设定 > 世界观默认；视角不填 = 跟随世界观叙事口吻 */
+/* 游玩偏好：本局设定 > 世界观默认；视角不填 = 跟随世界观叙事口吻；方向仅本局（设备偏好，不跟世界观） */
 export function playPrefsOf(state: Pick<GameState, "playPrefs">): import("./types").PlayPrefs {
   const d = getWorldSlot("play");
-  return { mode: state.playPrefs?.mode ?? d?.mode ?? "game", pov: state.playPrefs?.pov ?? d?.pov };
+  return {
+    mode: state.playPrefs?.mode ?? d?.mode ?? "game",
+    pov: state.playPrefs?.pov ?? d?.pov,
+    orient: state.playPrefs?.orient ?? "portrait",
+  };
 }
 const POV_RULE: Record<import("./types").Pov, string> = {
   "1": "第一人称：旁白一律以「我」指代主角，可直接写主角的所思所感；其他人物用名字或他 / 她",

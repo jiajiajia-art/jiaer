@@ -172,11 +172,13 @@ export default function CharacterCreate() {
   const fxOf = (f: CreationField): OptFx | undefined => (f.type === "select" ? f.optFx?.[cv(f)] : undefined);
   const attrName = (id: string) => selectedSlot("customAttrs")?.find((a) => a.id === id)?.label;
   const npcName = (id: string) => getSelectedWorld().chain.flatMap((m) => m.content.npcs ?? []).find((p) => p.id === id)?.name;
-  /* 开局游玩偏好：世界观默认预选，玩家可改；切换世界观时跟着换默认 */
+  /* 开局游玩偏好：世界观默认预选模式/视角；屏幕方向默认竖屏，换世界观时保留玩家已选方向 */
   const playSlot = selectedSlot("play");
   const playKey = JSON.stringify(playSlot ?? {});
-  const [prefs, setPrefs] = useState<PlayPrefs>(() => ({ mode: playSlot?.mode, pov: playSlot?.pov }));
-  useEffect(() => { setPrefs({ mode: playSlot?.mode, pov: playSlot?.pov }); }, [playKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [prefs, setPrefs] = useState<PlayPrefs>(() => ({ mode: playSlot?.mode, pov: playSlot?.pov, orient: "portrait" }));
+  useEffect(() => {
+    setPrefs((p) => ({ mode: playSlot?.mode, pov: playSlot?.pov, orient: p.orient ?? "portrait" }));
+  }, [playKey]); // eslint-disable-line react-hooks/exhaustive-deps
   /* 读者自选开局日期（世界观在「时间与推进」里开放后才显示） */
   const worldStart = (selectedSlot("startDate") ?? selectedSlot("calendar")?.startDate ?? "2005.01.03").replace(/[./]/g, "-");
   const [pickDate, setPickDate] = useState("");
@@ -327,7 +329,8 @@ export default function CharacterCreate() {
       worldRules,
       {
         fx,
-        playPrefs: prefs.mode || prefs.pov ? prefs : undefined,
+        // 功能注释：始终带上游玩偏好（含屏幕方向），开局写入 theme.orient，不再弹首次方向窗
+        playPrefs: { ...prefs, orient: prefs.orient ?? "portrait" },
         startDate: playSlot?.pickStartDate && pickDate ? clampDate(pickDate).replace(/-/g, ".") : undefined,
         pathNpcs: (PATHS.find((p) => p.id === pathId) ?? PATHS.find((p) => p.open))?.npcs,
         route: PATHS.find((p) => p.id === pathId) ?? PATHS.find((p) => p.open),
@@ -725,7 +728,7 @@ export default function CharacterCreate() {
   const stepSetup = (
     <>
       <Card title="游玩偏好" desc="开局后在设置里仍可修改">
-        <PlayPrefsPicker value={prefs} onChange={setPrefs} />
+        <PlayPrefsPicker value={prefs} onChange={setPrefs} showOrient />
         {playSlot?.pickStartDate && (
           <label className="block">
             <span className="mb-1.5 block text-[12.5px] font-bold text-ink">开局日期</span>

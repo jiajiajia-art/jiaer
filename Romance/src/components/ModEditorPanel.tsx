@@ -43,12 +43,19 @@ import ModBalancePanel from "./ModBalancePanel";
 import ModHealthPanel from "./ModHealthPanel";
 import { balanceCheck, priorFor } from "../mods/balance";
 import TimelineEditor from "./TimelineEditor";
+import { worksMarkPreview } from "../lib/worksChip";
 import ModPathsEditor from "./ModPathsEditor";
 import ModCreationFieldsEditor from "./ModCreationFieldsEditor";
 import ModPromptEditor from "./ModPromptEditor";
 import ModThemeEditor from "./ModThemeEditor";
 import AddPlayModModal from "./AddPlayModModal";
 import { sanitizeModStrings } from "../lib/sanitizeModStrings";
+import { readFunloomAuthorLabel } from "../lib/platformAvatarLibrary";
+import {
+  orphanedAutoPlayDeps,
+  playModsDependingOn,
+  summarizePlayModDeps,
+} from "../lib/playModDepsSummary";
 import {
   catalogBySlug,
   makeInstallFromCatalog,
@@ -101,15 +108,14 @@ export function blankMod(kind: ModKind): Mod {
   return { id: "", name: "", version: "0.1.0", author: "", description: "", kind, dependencies: kind === "addon" ? ["ent"] : [], content: {} };
 }
 
-/* 编辑器分组：按所属系统归类（不按「发生在开局」集中），取消原「⑥ 开场」一级分类 */
+/* 编辑器分组：按所属系统归类；原「④ 世界」已并入①基础（地点）；取消原「⑥ 开场」一级分类 */
 const GROUPS = [
   { k: "all", label: "全部", hint: "所有设置一览（按创作顺序排列）" },
-  { k: "base", label: "① 基础", hint: "模组名称与类型、时间与推进、开局封面、头像库与匹配优先级、功能开关、底栏页签与手机应用、主题外观与音乐" },
+  { k: "base", label: "① 基础", hint: "名称与简介、时间与推进、开局封面、地点、头像库、功能开关、底栏页签与手机应用、主题与音乐" },
   { k: "role", label: "② 角色", hint: "玩家的能力属性、建角页（人物线路 / 字段 / 选项池）、世界里的人物与时间线" },
   { k: "grow", label: "③ 养成", hint: "开局资金与初始资源、日程玩法、名气分档与头衔、账单与收支、玩法规则、引擎结算规则" },
-  { k: "world", label: "④ 世界", hint: "地点与出口（含起始地点）" },
-  { k: "story", label: "⑤ 剧情", hint: "世界观提示词、世界书、开场剧情（开场白 / 开场页）、固定 / 首次事件、主线与结局、剧情美化" },
-  { k: "play", label: "⑥ 玩法 Mod", hint: "用卡片添加 / 启用 / 关闭玩法与手机应用；详细配置用开关和表单，无需写代码" },
+  { k: "story", label: "④ 剧情", hint: "世界观提示词、世界书、开场剧情（开场白 / 开场页）、固定 / 首次事件、主线与结局、剧情美化" },
+  { k: "play", label: "⑤ 玩法 Mod", hint: "用卡片添加 / 启用 / 关闭玩法与手机应用；详细配置用开关和表单，无需写代码" },
   { k: "pack", label: "本包内容", hint: "只列出这个叠加包里实际写了内容的区块；要加别的内容，去其他分组找" },
 ] as const;
 const STEPS = GROUPS.filter((x) => x.k !== "all" && x.k !== "pack");
@@ -124,6 +130,7 @@ function groupFilled(c: Mod["content"]): Record<Exclude<GroupKey, "all" | "pack"
     base: n(
       [c.startDate, c.startTime, c.dayStart, c.dayEnd].some(has) || has(c.play) || has(c.travel?.apPerTurn) || has(c.travel?.advanceUnit),
       has(c.cover),
+      has(c.startRoom) || has(c.rooms),
       has(c.features),
       has(c.phoneAppsCfg) || has(c.navTabs) || NAV_TAB_TERMS.some(({ k }) => !!c.terms?.[k]),
       has(c.theme),
@@ -132,7 +139,6 @@ function groupFilled(c: Mod["content"]): Record<Exclude<GroupKey, "all" | "pack"
     role: n(has(c.customAttrs) || has(c.stats), has(c.creation?.paths), has(c.creation?.fields) || has(c.creation?.builtin),
       [c.styles, c.identities, c.backgrounds, c.directions, c.school, c.parentJobs].some(has), has(c.avatars), has(c.npcs)),
     grow: n(has(c.startMoney), has(c.trainings), has(c.sideJobs) || has(c.weekendActs), has(c.fameTiers) || has(c.titles) || has(c.bills), has(c.income), has(c.gameRules), has(c.tuning)),
-    world: n(has(c.startRoom), has(c.rooms)),
     story: n(has(c.prompt), has(c.lore), has(c.worldBook), has(c.festivals), has(c.opening), has(c.fixedEvents) || has(c.events), has(c.storylines), has(c.lookRules)),
     play: n(
       has(c.playModInstalls),
@@ -191,11 +197,37 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
   fluid?: boolean;
 }) {
   const { mods } = useMods();
-  // 功能注释：会话/AI 脏字段进编辑器前先收成字符串，避免刷新仍炸 .trim
-  const [baseline, setBaseline] = useState(() => JSON.stringify(sanitizeModStrings(initial)));
-  const [m, setMRaw] = useState<Mod>(() => sanitizeModStrings(structuredClone(initial)));
+  /**
+   * 功能注释：fluid = 生成世界 / 作者态。精简基本信息入口（藏版本/作者/图标/类型/底座依赖），
+   * 模组库高级入口仍用完整表单。底层字段一律保留，不因隐藏而清空。
+   */
+  const authorSimplify = !!fluid;
+  /**
+   * 功能注释：仅新建作品绑当前账号作者、补全空 id / 版本；编辑旧作绝不覆盖原作者与原 id。
+   * 用 ref 保证 baseline 与首屏 m 同一份，避免进页即 dirty。
+   */
+  const bootModRef = useRef<Mod | null>(null);
+  if (!bootModRef.current) {
+    let boot = sanitizeModStrings(structuredClone(initial));
+    if (isNew) {
+      if (!String(boot.author ?? "").trim()) {
+        const label = readFunloomAuthorLabel();
+        if (label) boot = { ...boot, author: label };
+      }
+      if (!String(boot.id ?? "").trim()) {
+        boot = { ...boot, id: `ai-${Date.now().toString(36)}` };
+      }
+      if (!VER_RE.test(String(boot.version ?? ""))) {
+        boot = { ...boot, version: "0.1.0" };
+      }
+    }
+    bootModRef.current = boot;
+  }
+  const [baseline, setBaseline] = useState(() => JSON.stringify(bootModRef.current!));
+  const [m, setMRaw] = useState<Mod>(() => bootModRef.current!);
   // 保存后留在编辑器：persisted = 已写入过模组库（id 从此锁定）；savedName 用于返回时提示
   const [persisted, setPersisted] = useState(!isNew);
+  const [showModDepsAdvanced, setShowModDepsAdvanced] = useState(false);
   const [savedName, setSavedName] = useState<string>();
   const [savedId, setSavedId] = useState<string>();
   const [savedTip, setSavedTip] = useState(false);
@@ -219,8 +251,11 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
   const rootRef = useRef<HTMLDivElement>(null);
   // 叠加包（尤其是内置玩法包的副本）默认只看「本包内容」，免得在几十个区块里找；刷新时可强制还原分区
   const [group, setGroup] = useState<GroupKey>(() => {
-    // 功能注释：旧会话若停在已移除的「功能扩展」页签，落到玩法 Mod
-    const boot = initialGroup === "ext" ? "play" : initialGroup;
+    // 功能注释：旧会话「功能扩展→玩法」「世界→基础」兼容，避免刷新落在已删页签
+    const boot =
+      initialGroup === "ext" ? "play"
+      : initialGroup === "world" ? "base"
+      : initialGroup;
     if (boot && GROUP_KEYS.has(boot)) return boot as GroupKey;
     return initial.kind === "addon" && Object.keys(initial.content ?? {}).length ? "pack" : "base";
   });
@@ -279,7 +314,43 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
     let next = [...cur];
     for (const row of chain) {
       if (next.some((x) => x.slug === row.slug)) continue;
-      next = [...next, makeInstallFromCatalog(row, next.length)];
+      const rowInst = {
+        ...makeInstallFromCatalog(row, next.length),
+        ...(row.slug !== item.slug ? { autoInstalled: true as const } : {}),
+      };
+      next = [...next, rowInst];
+    }
+    setC({ playModInstalls: next });
+  };
+  /**
+   * 功能注释：从作品移除玩法。若仍被其它玩法依赖则强提示；
+   * 移除后对「系统自动装入且无人再需要」的依赖二次确认，手动装入的绝不静默删。
+   */
+  const removePlayInstall = async (slug: string) => {
+    const cur = c.playModInstalls ?? [];
+    const target = cur.find((x) => x.slug === slug);
+    if (!target) return;
+    const name = catalogBySlug(slug)?.name || slug;
+    const blockers = playModsDependingOn(slug, cur);
+    if (blockers.length) {
+      if (!(await confirm(
+        `「${name}」仍被「${blockers.map((b) => b.name).join("、")}」依赖。移除后它们可能无法正常使用。仍要移除？`,
+        { ok: "仍要移除" },
+      ))) return;
+    } else if (!(await confirm(`从本作品移除「${name}」？已填配置会一并删除。`, { ok: "移除" }))) {
+      return;
+    }
+    let next = cur.filter((x) => x.slug !== slug);
+    const orphans = orphanedAutoPlayDeps(next);
+    if (orphans.length) {
+      const names = orphans.map((o) => catalogBySlug(o.slug)?.name || o.slug).join("、");
+      if (await confirm(
+        `以下依赖由系统自动添加，且已不再被其它玩法需要：${names}。是否一并移除？（点取消则保留这些依赖）`,
+        { ok: "一并移除" },
+      )) {
+        const drop = new Set(orphans.map((o) => o.slug));
+        next = next.filter((x) => !drop.has(x.slug));
+      }
     }
     setC({ playModInstalls: next });
   };
@@ -467,15 +538,29 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
             {persisted ? `编辑「${m.name || initial.name}」` : "新建模组"}
           </span>
           <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
+            {/* 功能注释：保存入口只放顶栏；原底栏「保存并返回 / 放弃」并入此处，避免双入口 */}
             <button
               type="button"
               onClick={() => save(true)}
               disabled={persisted && !dirty}
-              title="保存当前全部修改（Ctrl/⌘+S）"
+              title="保存当前全部修改（Ctrl/⌘+S），留在编辑器"
               className="rounded-full bg-jade px-2.5 py-1.5 text-[12px] font-bold text-white transition disabled:opacity-40 sm:px-3.5 sm:text-[12.5px]"
             >
               保存
             </button>
+            <button
+              type="button"
+              onClick={() => (dirty || !persisted ? save(false) : onClose(savedName))}
+              title={dirty || !persisted ? "保存并退出编辑器" : "返回上一页"}
+              className="rounded-full border border-jade px-2.5 py-1.5 text-[12px] font-bold text-jade transition hover:bg-jade/10 sm:px-3 sm:text-[12.5px]"
+            >
+              {dirty || !persisted ? "保存并返回" : "返回"}
+            </button>
+            {dirty ? (
+              <button type="button" className={`${btn} !text-ink-soft`} onClick={() => void cancel()} title="放弃未保存修改">
+                放弃
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={openPreview}
@@ -494,10 +579,19 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
             <span className="text-[10.5px] font-bold text-jade">{savedLabel}</span>
           ) : null}
           {savedTip && savedLabel ? (
-            <span className="text-[10.5px] font-bold text-jade">已写入模组库 · 下次开新局生效</span>
+            <span className="text-[10.5px] font-bold text-jade"><StatusMark kind="ok">{savedLabel} · 下次开新局生效</StatusMark></span>
           ) : null}
           <Dirty on={dirty} />
         </div>
+        {errors.length > 0 && (
+          <div role="alert" className="max-h-32 overflow-y-auto rounded-xl border border-danger/50 bg-danger/10 px-3 py-2 text-[12px] text-danger">
+            <div className="flex items-center justify-between gap-2">
+              <b>还有 {errors.length} 处需要修改才能保存：</b>
+              <button type="button" onClick={() => setErrors([])} aria-label="关闭提示" className="px-1 text-[14px] leading-none hover:text-ink">×</button>
+            </div>
+            <ul className="mt-1 space-y-0.5">{errors.map((e, i) => <li key={i}>· {e}</li>)}</ul>
+          </div>
+        )}
       </div>
       {previewFatal.length > 0 && (
         <div role="alert" className="rounded-xl border border-danger/50 bg-danger/10 px-3 py-2 text-[12px] text-danger">
@@ -533,7 +627,9 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
           </div>
         </div>
       )}
-      <ScopeBanner scope="newgame">模组编辑保存后，在下次「开新局」时生效；当前存档继续使用开局时的内容。想改当前存档，请用世界书 / 地图编辑器等面板。</ScopeBanner>
+      {!authorSimplify && (
+        <ScopeBanner scope="newgame">模组编辑保存后，在下次「开新局」时生效；当前存档继续使用开局时的内容。想改当前存档，请用世界书 / 地图编辑器等面板。</ScopeBanner>
+      )}
 
       {onAiChat && (
         <button type="button" onClick={() => onAiChat(structuredClone(m))}
@@ -578,69 +674,98 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
       <GroupCtx.Provider value={{ cur: group, q, expand }}>
       <div key={rev} className="space-y-2.5 [&:not(:has(>details))>.sec-empty]:block">
       <div className="sec-empty hidden"><EmptyState>没有找到「{String(q ?? "").trim()}」相关的设置项，换个词试试，比如「金钱」可以搜「资金」「收入」「账单」。</EmptyState></div>
-      <Section g="base" title="基本信息" on={true} hint="名称 · id · 类型 · 依赖" defaultOpen>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <label><span className={lbl}>名称 *</span>
-            <input className={inp} value={m.name} placeholder="如：修仙宗门" onChange={(e) => setM({ ...m, name: e.target.value, id: !persisted && (!m.id || m.id === slug(m.name)) ? slug(e.target.value) || m.id : m.id })} />
-            <FieldErr>{nameErr}</FieldErr>
-          </label>
-          <label><span className={lbl}>id *</span>
-            <input className={`${inp} font-mono`} value={m.id} placeholder="my-world" disabled={persisted} onChange={(e) => setM({ ...m, id: e.target.value.toLowerCase() })} />
-            {!persisted ? <FieldErr>{idErr}</FieldErr> : <Help>已保存的模组 id 不可修改（存档按 id 关联）。</Help>}
-          </label>
-          <label><span className={lbl}>版本号</span>
-            <input className={`${inp} font-mono`} value={m.version} onChange={(e) => setM({ ...m, version: e.target.value })} />
-            <FieldErr>{verErr}</FieldErr>
-          </label>
-          <label><span className={lbl}>作者</span><input className={inp} value={m.author ?? ""} onChange={(e) => setM({ ...m, author: e.target.value })} /></label>
-        </div>
-        <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-start">
-          <div className="shrink-0"><span className={lbl}>图标</span>
-            <ImagePicker value={m.icon} label="模组图标" max={256} thumb="h-14 w-14" onChange={(icon) => setM({ ...m, icon: icon || undefined })} />
-          </div>
-          <label className="block min-w-0 flex-1"><span className={lbl}>简介</span>
-            <textarea className={inp} rows={2} value={m.description ?? ""} placeholder="一句话介绍这个世界 / 叠加包（给自己或玩卡的人看）" onChange={(e) => setM({ ...m, description: e.target.value })} />
-          </label>
-        </div>
-        <div>
-          <span className={lbl}>类型</span>
-          <div className="inline-flex max-w-full flex-wrap rounded-lg border border-line bg-paper-2 p-0.5 text-[12px] font-bold">
-            {(["world", "addon"] as const).map((k) => (
-              <button key={k} onClick={() => setM({ ...m, kind: k })} className={`rounded-md px-2.5 py-1 sm:px-3 ${m.kind === k ? "bg-jade/15 text-jade-deep" : "text-ink-soft"}`}>
-                {k === "world" ? "世界观（单选）" : "叠加包（可多选）"}
-              </button>
-            ))}
-          </div>
-          <Help>世界观是一局的底座；叠加包在世界观之上覆盖 / 追加内容。</Help>
-        </div>
-        {m.kind === "addon" && (
-          <div>
-            <span className={lbl}>列表内容合并方式</span>
-            <div className="inline-flex rounded-lg border border-line bg-paper-2 p-0.5 text-[12px] font-bold">
-              {([["merge", "追加合并（推荐）"], ["replace", "整体替换"]] as const).map(([k, l]) => (
-                <button key={k} onClick={() => setM({ ...m, slotMerge: k })} className={`rounded-md px-3 py-1 ${(m.slotMerge ?? "replace") === k ? "bg-jade/15 text-jade-deep" : "text-ink-soft"}`}>{l}</button>
-              ))}
+      <Section
+        g="base"
+        title="基本信息"
+        on={true}
+        hint={authorSimplify ? "名称 · 简介 · 作品 ID" : "名称 · id · 类型 · 依赖"}
+        defaultOpen
+      >
+        {authorSimplify ? (
+          <>
+            {/* 功能注释：作者态只保留名称/简介主入口；版本/作者/图标/类型/底座依赖仍写入底层字段但不在此编辑 */}
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <label className="sm:col-span-2"><span className={lbl}>名称 *</span>
+                <input className={inp} value={m.name} placeholder="如：雾色旅馆" onChange={(e) => setM({ ...m, name: e.target.value })} />
+                <FieldErr>{nameErr}</FieldErr>
+              </label>
+              <label className="sm:col-span-2"><span className={lbl}>简介</span>
+                <textarea className={inp} rows={3} value={m.description ?? ""} placeholder="一句话介绍这个世界（列表与开局页展示）" onChange={(e) => setM({ ...m, description: e.target.value })} />
+              </label>
+              <div className="sm:col-span-2">
+                <span className={lbl}>作品 ID</span>
+                <p className={`${inp} font-mono text-ink-soft`}>{m.id || "（保存时自动生成）"}</p>
+                <Help>由系统自动生成，已有作品不可更改，避免引用失效。</Help>
+                {!persisted && idErr ? <FieldErr>{idErr}</FieldErr> : null}
+              </div>
             </div>
-            <Help>头衔、课程、打工、周末活动、建角选项等列表：追加合并 = 只加新条目 / 覆盖同 id 条目，世界观原有的保留；整体替换 = 只用本包写的。</Help>
-          </div>
-        )}
-        <div>
-          <span className={lbl}>依赖</span>
-          {otherMods.length === 0 ? <p className="text-[11.5px] text-ink-soft">没有其他模组可依赖。</p> : (
-            <div className="flex flex-wrap gap-1.5">
-              {otherMods.map((x) => {
-                const on = deps.includes(x.id);
-                return (
-                  <button key={x.id} onClick={() => setM({ ...m, dependencies: on ? deps.filter((d) => d !== x.id) : [...deps, x.id] })}
-                    className={`rounded-full border px-2.5 py-0.5 text-[11.5px] ${on ? "border-jade bg-jade/15 text-jade-deep" : "border-line text-ink-soft"}`}>
-                    {on ? <IconCheck size={12} className="mr-0.5 inline" /> : null}{x.name}
+          </>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <label><span className={lbl}>名称 *</span>
+                <input className={inp} value={m.name} placeholder="如：修仙宗门" onChange={(e) => setM({ ...m, name: e.target.value, id: !persisted && (!m.id || m.id === slug(m.name)) ? slug(e.target.value) || m.id : m.id })} />
+                <FieldErr>{nameErr}</FieldErr>
+              </label>
+              <label><span className={lbl}>id *</span>
+                <input className={`${inp} font-mono`} value={m.id} placeholder="my-world" disabled={persisted} onChange={(e) => setM({ ...m, id: e.target.value.toLowerCase() })} />
+                {!persisted ? <FieldErr>{idErr}</FieldErr> : <Help>已保存的模组 id 不可修改（存档按 id 关联）。</Help>}
+              </label>
+              <label><span className={lbl}>版本号</span>
+                <input className={`${inp} font-mono`} value={m.version} onChange={(e) => setM({ ...m, version: e.target.value })} />
+                <FieldErr>{verErr}</FieldErr>
+              </label>
+              <label><span className={lbl}>作者</span><input className={inp} value={m.author ?? ""} onChange={(e) => setM({ ...m, author: e.target.value })} /></label>
+            </div>
+            <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-start">
+              <div className="shrink-0"><span className={lbl}>图标</span>
+                <ImagePicker value={m.icon} label="模组图标" max={256} thumb="h-14 w-14" onChange={(icon) => setM({ ...m, icon: icon || undefined })} />
+              </div>
+              <label className="block min-w-0 flex-1"><span className={lbl}>简介</span>
+                <textarea className={inp} rows={2} value={m.description ?? ""} placeholder="一句话介绍这个世界 / 叠加包（给自己或玩卡的人看）" onChange={(e) => setM({ ...m, description: e.target.value })} />
+              </label>
+            </div>
+            <div>
+              <span className={lbl}>类型</span>
+              <div className="inline-flex max-w-full flex-wrap rounded-lg border border-line bg-paper-2 p-0.5 text-[12px] font-bold">
+                {(["world", "addon"] as const).map((k) => (
+                  <button key={k} onClick={() => setM({ ...m, kind: k })} className={`rounded-md px-2.5 py-1 sm:px-3 ${m.kind === k ? "bg-jade/15 text-jade-deep" : "text-ink-soft"}`}>
+                    {k === "world" ? "世界观（单选）" : "叠加包（可多选）"}
                   </button>
-                );
-              })}
+                ))}
+              </div>
+              <Help>世界观是一局的底座；叠加包在世界观之上覆盖 / 追加内容。</Help>
             </div>
-          )}
-          <Help>叠加包通常依赖某个世界观；缺少依赖时该包会被跳过。</Help>
-        </div>
+            {m.kind === "addon" && (
+              <div>
+                <span className={lbl}>列表内容合并方式</span>
+                <div className="inline-flex rounded-lg border border-line bg-paper-2 p-0.5 text-[12px] font-bold">
+                  {([["merge", "追加合并（推荐）"], ["replace", "整体替换"]] as const).map(([k, l]) => (
+                    <button key={k} onClick={() => setM({ ...m, slotMerge: k })} className={`rounded-md px-3 py-1 ${(m.slotMerge ?? "replace") === k ? "bg-jade/15 text-jade-deep" : "text-ink-soft"}`}>{l}</button>
+                  ))}
+                </div>
+                <Help>头衔、课程、打工、周末活动、建角选项等列表：追加合并 = 只加新条目 / 覆盖同 id 条目，世界观原有的保留；整体替换 = 只用本包写的。</Help>
+              </div>
+            )}
+            <div>
+              <span className={lbl}>依赖</span>
+              {otherMods.length === 0 ? <p className="text-[11.5px] text-ink-soft">没有其他模组可依赖。</p> : (
+                <div className="flex flex-wrap gap-1.5">
+                  {otherMods.map((x) => {
+                    const on = deps.includes(x.id);
+                    return (
+                      <button key={x.id} onClick={() => setM({ ...m, dependencies: on ? deps.filter((d) => d !== x.id) : [...deps, x.id] })}
+                        className={`rounded-full border px-2.5 py-0.5 text-[11.5px] ${on ? "border-jade bg-jade/15 text-jade-deep" : "border-line text-ink-soft"}`}>
+                        {on ? <IconCheck size={12} className="mr-0.5 inline" /> : null}{x.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              <Help>叠加包通常依赖某个世界观；缺少依赖时该包会被跳过。</Help>
+            </div>
+          </>
+        )}
       </Section>
 
       <Section
@@ -650,7 +775,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
         hint="开局日期 / 时刻 · 每日作息 · 行动点 · 推进节奏 · 年龄随日历"
         count={[c.startDate, c.startTime, c.dayStart, c.dayEnd, c.travel?.apPerTurn, c.travel?.advanceUnit, c.travel?.advanceDays, c.play?.ageAuto, c.play?.pickStartDate].filter((x) => x !== undefined && x !== "").length || undefined}
       >
-        <p className="text-[11px] leading-relaxed text-ink-soft">本引擎用真实日历 + 每日时钟：主线推进前进日历并回满行动点；换地点、进支线扣行动点但不推进日历。开局封面在下方「开局封面」、资金在「③ 养成」、起点在「④ 世界」、出行方式在「⑥ 玩法 Mod」添加后配置、开场白在「⑤ 剧情」——此处只编时间系统。</p>
+        <p className="text-[11px] leading-relaxed text-ink-soft">本引擎用真实日历 + 每日时钟：主线推进前进日历并回满行动点；换地点、进支线扣行动点但不推进日历。开局封面与起点在本页「开局封面 / 地点」、资金在「③ 养成」、出行在「⑤ 玩法 Mod」添加后配置、开场白在「④ 剧情」——此处只编时间系统。</p>
         <div className="grid grid-cols-2 gap-2">
           <label><span className={lbl}>开局日期</span>
             <input className={`${inp} font-mono`} value={c.startDate ?? ""} placeholder="2005.01.03" onChange={(e) => setC({ startDate: e.target.value || undefined })} />
@@ -699,7 +824,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
             </div>
           )}
         </div>
-        <Help>想要「每隔几天 / 每周 / 每月 / 每年某天」重复上演的剧情，在「⑤ 剧情 → 固定事件」的触发时间里选「周期触发」。</Help>
+        <Help>想要「每隔几天 / 每周 / 每月 / 每年某天」重复上演的剧情，在「④ 剧情 → 固定事件」的触发时间里选「周期触发」。</Help>
       </Section>
 
       {/* 功能注释：作者开局封面（画布布局 / 装扮）唯一编辑入口在①基础；游戏封面页不再放入口，⑤剧情只编开场白 */}
@@ -712,6 +837,14 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
       >
         <ModCoverEditor value={c.cover} modId={m.id} onChange={(cover) => setC({ ...c, cover })} />
         <Help>玩家侧若要叠自己的封面，在游戏「美化 → 封面」；预览时封面右上角不再出现「装扮封面」按钮。</Help>
+      </Section>
+
+      {/* 功能注释：原「④ 世界」仅地点，已并入①基础，紧跟开局封面 */}
+      <Section g="base" title="地点" on={has(c.rooms) || has(c.startRoom)} hint="多级子地点 · 树状预览 · 准入 · 出口 · 开局地点" count={roomIds.length}>
+        <Help>起始地点请在地点树里点选「设为开局地点」。出行方式请到「⑤ 玩法 Mod」添加「出行与交通」后配置。</Help>
+        <ModRoomTreeEditor rooms={rooms} startRoom={c.startRoom} tracks={[...(c.bgm ?? []).map((t) => ({ id: t.id, name: t.name })), ...(c.audio ?? []).filter((x) => x.kind === "bgm").map((x) => ({ id: x.id, name: x.name })), ...(c.audioRefs ?? []).map((id) => ({ id, name: `${audioLabel(id)}（引用）` }))]}
+          emptyHint={m.kind === "world" ? "世界观至少需要一个地点才能行走。" : "叠加包可不定义地点（沿用世界观地图）。"}
+          onChange={(next, startRoom) => setC({ rooms: next, startRoom })} onDelete={delRoom} onRename={renameRoom} />
       </Section>
 
       <Section g="base" title="功能开关" on={has(c.features)} hint="关闭后界面自动隐藏对应玩法">
@@ -752,7 +885,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
         g="base"
         title="手机应用配置"
         on={has(c.phoneAppsCfg) || showPlay("phoneApp")}
-        hint="名称 · 图标 · 顺序 · 预装/商店；应用本体请在「⑥ 玩法 Mod」添加"
+        hint="名称 · 图标 · 顺序 · 开局预装；应用本体请在「⑤ 玩法 Mod」添加"
         count={c.phoneAppsCfg?.length || undefined}
       >
         <Help>论坛 / 直播 / 商城等请到「玩法 Mod」添加；此处只调显示名与小手机试玩。</Help>
@@ -829,11 +962,11 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
         </div>
         {npcs.length === 0 && <EmptyState>还没有人物。</EmptyState>}
         {npcs.map((n, i) => !matches(npcQ, n.name, n.role, n.id) ? null : (
-          <div key={i} className="space-y-1.5 rounded-xl border border-line bg-paper-2 p-2">
-            <div className="flex gap-1.5">
-              <input className={`${inp} ${String(n.name ?? "").trim() ? "" : "!border-danger"}`} value={String(n.name ?? "")} placeholder="名字 *" onChange={(e) => setNpc(i, { name: e.target.value })} />
-              <input className={inp} value={n.role} placeholder="身份，如：掌门" onChange={(e) => setNpc(i, { role: e.target.value })} />
-              <button className={`${btn} shrink-0`} onClick={async () => { if (await confirm(`删除人物「${n.name || n.id}」？`)) setC({ npcs: npcs.filter((_, j) => j !== i) }); }} aria-label="删除人物">×</button>
+          <div key={i} className="min-w-0 space-y-1.5 overflow-x-hidden rounded-xl border border-line bg-paper px-2.5 py-2">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <input className={`${inp} !w-auto min-w-0 flex-1 font-medium ${String(n.name ?? "").trim() ? "" : "!border-danger"}`} value={String(n.name ?? "")} placeholder="名字 *" onChange={(e) => setNpc(i, { name: e.target.value })} />
+              <input className={`${inp} !w-auto min-w-0 flex-1`} value={n.role} placeholder="身份，如：掌门" onChange={(e) => setNpc(i, { role: e.target.value })} />
+              <button className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[15px] leading-none text-ink-soft hover:bg-coral/10 hover:text-coral" onClick={async () => { if (await confirm(`删除人物「${n.name || n.id}」？`)) setC({ npcs: npcs.filter((_, j) => j !== i) }); }} aria-label="删除人物">×</button>
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
               <input type="number" min={0} className={`${inp} !w-20 ${typeof n.age === "number" ? "" : "!border-danger"}`} value={n.age ?? ""} placeholder="年龄 *" aria-label="年龄（必填）"
@@ -863,27 +996,37 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
             <input className={inp} value={(n.tags ?? []).join("、")} placeholder="人物标签，用顿号或逗号分隔，如：毒舌、护短、工作狂" aria-label="人物标签"
               onChange={(e) => { const t = e.target.value.split(/[、,，]/).map((x) => x.trim()); setNpc(i, { tags: t.some(Boolean) ? t : undefined }); }}
               onBlur={() => n.tags && setNpc(i, { tags: n.tags.filter(Boolean).length ? n.tags.filter(Boolean) : undefined })} />
-            <div className="flex gap-1.5">
-              <select className={inp} value={n.home} onChange={(e) => setNpc(i, { home: e.target.value })}>
+            <div className="flex min-w-0 items-center gap-1.5">
+              <select className={`${inp} !w-auto min-w-0 flex-1`} value={n.home} aria-label="所在地点" onChange={(e) => setNpc(i, { home: e.target.value })}>
                 {!roomIds.includes(n.home) && <option value={n.home}>{n.home ? `${n.home}（依赖模组的地点）` : "（未选择）"}</option>}
                 {roomIds.map((x) => <option key={x} value={x}>{rooms[x].name || x}</option>)}
               </select>
-              <select className={`${inp} w-24 shrink-0`} value={n.kind} onChange={(e) => setNpc(i, { kind: e.target.value as PersonContent["kind"] })}>
-                <option value="roam">会走动</option>
-                <option value="staff">驻守</option>
-              </select>
+              <button
+                type="button"
+                aria-pressed={n.kind !== "staff"}
+                className={`shrink-0 rounded-full border px-2.5 py-1 text-[11.5px] font-semibold ${n.kind === "staff" ? "border-line text-ink-soft" : "border-jade/50 bg-jade/15 text-jade"}`}
+                onClick={() => setNpc(i, { kind: n.kind === "staff" ? "roam" : "staff" })}
+              >
+                {n.kind === "staff" ? "驻守" : "会走动"}
+              </button>
             </div>
-            <textarea className={inp} rows={2} value={n.bio} placeholder="人物小传（供 AI 演绎）" onChange={(e) => setNpc(i, { bio: e.target.value })} />
+            <textarea className={`${inp} max-w-full resize-y`} rows={2} value={n.bio} placeholder="人物小传（供 AI 演绎）" onChange={(e) => setNpc(i, { bio: e.target.value })} />
             {/* 作品栏：标题、条目、是否加书名号全部由模组配置，不写死在代码里 */}
-            <div className="space-y-1 rounded-lg border border-line bg-paper-2 p-2">
-              <div className="flex items-center gap-1.5">
-                <input className={`${inp} w-32 shrink-0`} value={n.worksLabel ?? ""} placeholder="栏目名：代表作" onChange={(e) => setNpc(i, { worksLabel: e.target.value || undefined })} />
-                <label className="flex shrink-0 cursor-pointer items-center gap-1 text-[11.5px] text-ink-soft">
-                  <input type="checkbox" className="accent-jade" checked={!n.worksPlain} onChange={(e) => setNpc(i, { worksPlain: e.target.checked ? undefined : true })} />加书名号《》
-                </label>
+            <div className="min-w-0 space-y-1.5 rounded-lg border border-line bg-paper-2 p-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                <input className={`${inp} !w-auto min-w-0 flex-1 basis-32`} value={n.worksLabel ?? ""} placeholder="栏目名：代表作" onChange={(e) => setNpc(i, { worksLabel: e.target.value || undefined })} />
+                <button
+                  type="button"
+                  aria-pressed={!n.worksPlain}
+                  className={`shrink-0 rounded-full border px-2.5 py-1 text-[11.5px] font-semibold transition ${!n.worksPlain ? "border-jade/50 bg-jade/15 text-jade" : "border-line bg-paper text-ink-soft hover:border-jade/40 hover:text-ink"}`}
+                  onClick={() => setNpc(i, { worksPlain: n.worksPlain ? undefined : true })}
+                >
+                  {!n.worksPlain ? "《书名号》" : "纯文字"}
+                </button>
               </div>
-              <textarea className={inp} rows={2} value={(n.works ?? []).join("\n")} placeholder={"每行一条，如：\n风起南巷\n半城烟雨\n（留空 = 资料卡不显示这一栏）"}
+              <textarea className={`${inp} max-w-full resize-y`} rows={2} value={(n.works ?? []).join("\n")} placeholder={"每行一条，如：\n风起南巷\n半城烟雨\n（留空 = 资料卡不显示这一栏）"}
                 onChange={(e) => { const w = e.target.value.split(/\n/).map((x) => x.replace(/^《|》$/g, "")); setNpc(i, { works: w.some((x) => x.trim()) ? w : undefined }); }} />
+              <p className="truncate text-[10.5px] text-ink-soft">资料卡：{(n.worksLabel ?? "").trim() || "代表作"} · {worksMarkPreview(n.works, n.worksPlain)}</p>
             </div>
             <details className="rounded-lg border border-line bg-paper-2 p-2">
               <summary className="cursor-pointer text-[12px] font-bold text-ink">时间线 <span className="font-normal text-ink-soft">· {n.timeline?.length ? `${n.timeline.length} 条` : "过去经历与未来安排，随游戏日期推进"}</span></summary>
@@ -969,13 +1112,6 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
         <ModTuningEditor value={c.tuning} stats={c.stats} attrs={c.customAttrs} npcs={(npcs.length ? npcs : LIVE_PEOPLE).map((p) => ({ id: p.id, name: p.name }))} onChange={(tuning) => setC({ tuning })} />
       </Section>
 
-      <Section g="world" title="地点" on={has(c.rooms) || has(c.startRoom)} hint="多级子地点 · 树状预览 · 准入 · 出口 · 开局地点" count={roomIds.length}>
-        <Help>起始地点请在地点树里点选「设为开局地点」。出行方式请到「⑥ 玩法 Mod」添加「出行与交通」后配置。</Help>
-        <ModRoomTreeEditor rooms={rooms} startRoom={c.startRoom} tracks={[...(c.bgm ?? []).map((t) => ({ id: t.id, name: t.name })), ...(c.audio ?? []).filter((x) => x.kind === "bgm").map((x) => ({ id: x.id, name: x.name })), ...(c.audioRefs ?? []).map((id) => ({ id, name: `${audioLabel(id)}（引用）` }))]}
-          emptyHint={m.kind === "world" ? "世界观至少需要一个地点才能行走。" : "叠加包可不定义地点（沿用世界观地图）。"}
-          onChange={(next, startRoom) => setC({ rooms: next, startRoom })} onDelete={delRoom} onRename={renameRoom} />
-      </Section>
-
       <Section g="story" title="世界观提示词" on={has(c.prompt)} hint="即系统提示词 · 可视化编辑 · 支持预览" count={PROMPTS.filter(({ k }) => !!String(c.prompt?.[k] ?? "").trim()).length}>
         <ModPromptEditor value={c.prompt} onChange={(prompt) => setC({ prompt })} />
       </Section>
@@ -1056,6 +1192,59 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
           <button type="button" className="rounded-full bg-jade px-3 py-1.5 text-[12px] font-semibold text-paper" onClick={() => setAddPlayOpen(true)}>添加玩法</button>
           <Help>基础世界不含扩展玩法。点添加后才会出现对应配置；关掉「启用」不会删除已填内容。</Help>
         </div>
+        {/* 功能注释：玩法组件依赖（playModInstalls.dependsOn）≠ 模组底座 dependencies；统一在玩法页展示摘要 */}
+        {(() => {
+          const edges = summarizePlayModDeps(c.playModInstalls);
+          if (!edges.length) return null;
+          return (
+            <div className="rounded-xl border border-line bg-paper-2 px-3 py-2.5">
+              <p className="text-[12px] font-bold text-ink">玩法依赖摘要</p>
+              <p className="mt-0.5 text-[11px] text-ink-soft">由玩法目录自动维护；缺依赖时添加玩法会提示一并安装。</p>
+              <ul className="mt-2 space-y-1.5">
+                {edges.map((e) => (
+                  <li key={e.slug} className="text-[12px] text-ink">
+                    <span className="font-semibold">{e.name}</span>
+                    <span className="text-ink-soft"> → </span>
+                    {e.needs.map((n, i) => (
+                      <span key={n.slug}>
+                        {i > 0 ? "、" : null}
+                        <span className={n.installed ? "text-jade" : "text-danger"}>{n.name}{n.installed ? "" : "（未安装）"}</span>
+                      </span>
+                    ))}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })()}
+        {authorSimplify && (
+          <div className="rounded-xl border border-line/70 bg-paper px-3 py-2">
+            <button type="button" className="text-[12px] font-bold text-jade hover:underline" onClick={() => setShowModDepsAdvanced((v) => !v)}>
+              {showModDepsAdvanced ? "收起 · 高级：模组底座依赖" : "高级设置 · 模组底座依赖"}
+            </button>
+            {showModDepsAdvanced && (
+              <div className="mt-2 space-y-1.5">
+                <Help>这是世界观 / 叠加包之间的底座依赖（Mod.dependencies），与上方「玩法组件依赖」不是同一份数据。普通作品一般无需改动。</Help>
+                {otherMods.length === 0 ? <p className="text-[11.5px] text-ink-soft">没有其他模组可依赖。</p> : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {otherMods.map((x) => {
+                      const on = deps.includes(x.id);
+                      return (
+                        <button key={x.id} type="button" onClick={() => setM({ ...m, dependencies: on ? deps.filter((d) => d !== x.id) : [...deps, x.id] })}
+                          className={`rounded-full border px-2.5 py-0.5 text-[11.5px] ${on ? "border-jade bg-jade/15 text-jade-deep" : "border-line text-ink-soft"}`}>
+                          {on ? <IconCheck size={12} className="mr-0.5 inline" /> : null}{x.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {!!deps.length && (
+                  <p className="text-[11px] text-ink-soft">当前底座依赖：{deps.join("、")}</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
         {playModRecs.length > 0 && (
           <div className="rounded-xl border border-jade/30 bg-jade/5 px-3 py-2.5">
             <p className="text-[12px] font-bold text-ink">按当前题材推荐</p>
@@ -1109,19 +1298,28 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
                     </div>
                     {!!cat?.description && <p className="mt-0.5 text-[11.5px] leading-relaxed text-ink-soft">{cat.description}</p>}
                   </div>
-                  <button
-                    type="button"
-                    aria-pressed={enabled}
-                    onClick={() => {
-                      const list = [...(c.playModInstalls ?? [])];
-                      list[i] = { ...inst, ...pickPlayModOpenConfig({ enabled: !enabled }) };
-                      setC({ playModInstalls: list });
-                    }}
-                    className={`relative h-6 w-11 shrink-0 rounded-full transition ${enabled ? "bg-jade" : "bg-line"}`}
-                    title={enabled ? "点击关闭此玩法" : "点击启用此玩法"}
-                  >
-                    <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${enabled ? "left-[22px]" : "left-0.5"}`} />
-                  </button>
+                  <div className="flex shrink-0 flex-col items-end gap-1.5">
+                    <button
+                      type="button"
+                      aria-pressed={enabled}
+                      onClick={() => {
+                        const list = [...(c.playModInstalls ?? [])];
+                        list[i] = { ...inst, ...pickPlayModOpenConfig({ enabled: !enabled }) };
+                        setC({ playModInstalls: list });
+                      }}
+                      className={`relative h-6 w-11 rounded-full transition ${enabled ? "bg-jade" : "bg-line"}`}
+                      title={enabled ? "点击关闭此玩法" : "点击启用此玩法"}
+                    >
+                      <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${enabled ? "left-[22px]" : "left-0.5"}`} />
+                    </button>
+                    <button
+                      type="button"
+                      className="text-[11px] font-semibold text-ink-soft hover:text-danger"
+                      onClick={() => void removePlayInstall(inst.slug)}
+                    >
+                      移除
+                    </button>
+                  </div>
                 </div>
                 {enabled && (
                   <div className="grid gap-2 border-t border-line/60 pt-2 sm:grid-cols-2">
@@ -1267,32 +1465,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
           )}
         </div>
       )}
-      <p className="text-[11px] text-ink-soft">未在当前页展示的内容会原样保留；也可用上方「用对话修改这个模组」让 AI 协助调整。</p>
-
-      <div className="sticky bottom-0 z-10 -mx-1 space-y-2 border-t border-line bg-paper-2/95 px-1 py-2 backdrop-blur">
-        {/* 保存失败的原因贴在保存栏上方，不用滚到页尾找 */}
-        {errors.length > 0 && (
-          <div role="alert" className="max-h-32 overflow-y-auto rounded-xl border border-danger/50 bg-danger/10 px-3 py-2 text-[12px] text-danger">
-            <div className="flex items-center justify-between gap-2">
-              <b>还有 {errors.length} 处需要修改才能保存：</b>
-              <button onClick={() => setErrors([])} aria-label="关闭提示" className="px-1 text-[14px] leading-none hover:text-ink">×</button>
-            </div>
-            <ul className="mt-1 space-y-0.5">{errors.map((e, i) => <li key={i}>· {e}</li>)}</ul>
-          </div>
-        )}
-        <div className="flex flex-wrap items-center gap-2">
-          <button className={btn} onClick={() => (dirty || !persisted ? save(false) : onClose(savedName))}>{dirty || !persisted ? "保存并返回" : "返回"}</button>
-          {dirty && <button className={`${btn} !text-ink-soft`} onClick={cancel}>放弃修改</button>}
-          <span className="ml-auto flex items-center gap-2 text-[10.5px] text-ink-soft">
-            {savedTip && savedLabel ? (
-              <span className="font-bold text-jade"><StatusMark kind="ok">{savedLabel} · 下次开新局生效</StatusMark></span>
-            ) : (
-              <span className="hidden sm:inline">顶部「保存」或 Ctrl/⌘+S</span>
-            )}
-            <Dirty on={dirty} />
-          </span>
-        </div>
-      </div>
+      <p className="text-[11px] text-ink-soft">未在当前页展示的内容会原样保留；保存请用顶部「保存 / 保存并返回」（Ctrl/⌘+S）。</p>
     </div>
   );
 }

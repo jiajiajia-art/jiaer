@@ -5,13 +5,11 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import type { PhoneAppDef } from "../mods/types";
 import {
-  AVAIL_OPTIONS,
   catalogItem,
   compactPhoneApps,
   phoneAppLabel,
   resolvePhoneApps,
   storeVisibleIds,
-  type PhoneAppAvail,
 } from "../lib/phoneAppsConfig";
 import { APP_ICON } from "./phone/appIcons";
 import { IconCheck } from "../lib/icons";
@@ -26,14 +24,6 @@ type Props = {
 
 /** 与 Phone.tsx HomeGrid 底栏一致：已安装才进 Dock */
 const DOCK_APPS = ["call", "sms", "wechat", "settings"] as const;
-
-const AVAIL_SHORT: Record<PhoneAppAvail, string> = {
-  preinstall: "预装",
-  store: "商店",
-  locked: "解锁",
-  hidden: "隐藏",
-  disabled: "禁用",
-};
 
 /** 与局内 Phone 相同的 iOS 变量，避免吃到编辑器主题色 */
 const IOS_VARS: CSSProperties = {
@@ -133,12 +123,10 @@ export default function PhoneAppsEditor({ value, onChange }: Props) {
   });
 
   useEffect(() => {
+    // 功能注释：预览以当前预装为底座；商店试装保留，不因改预装而清掉预览里已「下载」的
     const pre = apps.filter((a) => a.avail === "preinstall").map((a) => a.id);
-    const allowed = new Set(apps.filter((a) => a.avail !== "hidden" && a.avail !== "disabled").map((a) => a.id));
-    setPreviewInstalled((prev) => {
-      const kept = prev.filter((id) => allowed.has(id) && apps.find((a) => a.id === id)?.avail !== "disabled");
-      return Array.from(new Set([...pre, ...kept]));
-    });
+    const allowed = new Set(apps.map((a) => a.id));
+    setPreviewInstalled((prev) => Array.from(new Set([...pre, ...prev.filter((id) => allowed.has(id))])));
   }, [apps]);
 
   const patch = (id: string, p: Partial<PhoneAppDef>) => {
@@ -162,8 +150,6 @@ export default function PhoneAppsEditor({ value, onChange }: Props) {
   const dockSet = new Set<string>(dock);
   const homeApps = apps.filter(
     (a) =>
-      a.avail !== "hidden" &&
-      a.avail !== "disabled" &&
       !dockSet.has(a.id as (typeof DOCK_APPS)[number]) &&
       (previewInstalled.includes(a.id) || a.id === "appstore"),
   );
@@ -298,7 +284,6 @@ export default function PhoneAppsEditor({ value, onChange }: Props) {
                           const meta = apps.find((a) => a.id === id)!;
                           const cat = catalogItem(id);
                           const installed = previewInstalled.includes(id);
-                          const locked = meta.avail === "locked";
                           const busy = installing === id;
                           return (
                             <li key={id} className="flex items-center gap-2 rounded-xl bg-white p-2 shadow-sm">
@@ -310,9 +295,6 @@ export default function PhoneAppsEditor({ value, onChange }: Props) {
                                   <div className="mt-1 h-1 overflow-hidden rounded-full bg-black/10">
                                     <div className="h-full bg-[#007aff] transition-all" style={{ width: `${progress}%` }} />
                                   </div>
-                                ) : null}
-                                {locked && meta.unlockHint ? (
-                                  <p className="mt-0.5 text-[9.5px] text-amber-700">{meta.unlockHint}</p>
                                 ) : null}
                               </div>
                               {installed ? (
@@ -330,8 +312,6 @@ export default function PhoneAppsEditor({ value, onChange }: Props) {
                                     </button>
                                   ) : null}
                                 </div>
-                              ) : locked ? (
-                                <span className="shrink-0 rounded-full bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-800">未解锁</span>
                               ) : (
                                 <button
                                   type="button"
@@ -413,7 +393,7 @@ export default function PhoneAppsEditor({ value, onChange }: Props) {
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[12.5px] font-bold text-ink">{a.label}</span>
                     <span className="block text-[10.5px] text-ink-soft">
-                      {AVAIL_SHORT[a.avail]} · {catalogItem(a.id)?.blurb}
+                      {a.avail === "preinstall" ? "开局预装" : "商店可下"} · {catalogItem(a.id)?.blurb}
                     </span>
                   </span>
                   <span className="flex shrink-0 flex-col gap-0.5">
@@ -482,40 +462,28 @@ export default function PhoneAppsEditor({ value, onChange }: Props) {
                 </button>
               ) : null}
             </div>
-            <div>
-              <span className="mb-1 block text-[10.5px] font-bold tracking-[0.12em] text-ink-soft">状态</span>
-              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
-                {AVAIL_OPTIONS.map((o) => {
-                  const on = selected.avail === o.v;
-                  const lockedStore = selected.id === "appstore" && o.v !== "preinstall";
-                  return (
-                    <button
-                      key={o.v}
-                      type="button"
-                      disabled={lockedStore}
-                      onClick={() => patch(selected.id, { avail: o.v })}
-                      className={`rounded-lg border px-2 py-1.5 text-left transition disabled:opacity-40 ${
-                        on ? "border-jade bg-jade/10" : "border-line bg-paper-2 hover:border-jade/50"
-                      }`}
-                    >
-                      <span className={`block text-[12px] font-bold ${on ? "text-jade" : "text-ink"}`}>{o.l}</span>
-                      <span className="block text-[10px] text-ink-soft">{o.d}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            {selected.avail === "locked" ? (
-              <label className="block">
-                <span className="mb-0.5 block text-[10.5px] font-bold tracking-[0.12em] text-ink-soft">解锁条件说明</span>
-                <input
-                  className="w-full rounded-lg border border-line bg-paper-2 px-2.5 py-1.5 text-[12.5px] text-ink focus:border-jade focus:outline-none"
-                  placeholder="例如：名气 ≥ 120 后解锁"
-                  value={selected.unlockHint ?? ""}
-                  onChange={(e) => patch(selected.id, { unlockHint: e.target.value })}
-                />
-              </label>
-            ) : null}
+            {/* 功能注释：仅「开局预装」；不勾选 = 开局不装、商店仍可下。应用商店强制预装。 */}
+            <label
+              className={`flex items-start gap-2.5 rounded-lg border px-2.5 py-2 ${
+                selected.id === "appstore" ? "border-line bg-paper-2 opacity-70" : "border-line bg-paper-2"
+              }`}
+            >
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 accent-[var(--jade,#A8283C)]"
+                checked={selected.avail === "preinstall"}
+                disabled={selected.id === "appstore"}
+                onChange={(e) => patch(selected.id, { avail: e.target.checked ? "preinstall" : "store" })}
+              />
+              <span className="min-w-0">
+                <span className="block text-[12.5px] font-bold text-ink">开局预装</span>
+                <span className="block text-[10.5px] leading-snug text-ink-soft">
+                  {selected.id === "appstore"
+                    ? "应用商店始终预装，不可关闭"
+                    : "勾选后新开局桌面自动安装；不勾选则开局不装，仍可从应用商店下载。只影响新开局，不改已有存档。"}
+                </span>
+              </span>
+            </label>
           </div>
         ) : null}
       </div>

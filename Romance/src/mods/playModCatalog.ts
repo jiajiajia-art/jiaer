@@ -32,6 +32,11 @@ export type PlayModInstallConfig = {
   componentKind?: ComponentKind;
   phoneAppId?: string;
   dependsOn?: string[];
+  /**
+   * 功能注释：因其它玩法依赖链由系统一并装入。
+   * 取消主玩法时可提示卸掉无人再需要的自动依赖；无此标记视为作者手动装入，禁止静默删除。
+   */
+  autoInstalled?: boolean;
 };
 
 export type LocalPlayModCatalogItem = {
@@ -203,9 +208,11 @@ export const LOCAL_PLAY_MOD_CATALOG: LocalPlayModCatalogItem[] = [
 /** 功能注释：汇总已安装且启用的编辑面板；未装任何玩法 Mod 时不展示硬编码玩法块 */
 export function resolveInstalledEditorPanels(installs: PlayModInstallConfig[] | undefined): Set<PlayModEditorPanelId> {
   const set = new Set<PlayModEditorPanelId>();
-  for (const inst of installs || []) {
-    if (inst.enabled === false) continue;
-    for (const p of inst.editorPanels || []) set.add(p);
+  const list = Array.isArray(installs) ? installs : [];
+  for (const inst of list) {
+    if (!inst || typeof inst !== "object" || inst.enabled === false) continue;
+    const panels = Array.isArray(inst.editorPanels) ? inst.editorPanels : [];
+    for (const p of panels) set.add(p);
   }
   return set;
 }
@@ -219,7 +226,8 @@ export function recommendPlayModsFromSetting(
   installs: PlayModInstallConfig[] | undefined = [],
 ): LocalPlayModCatalogItem[] {
   const text = String(setting || "");
-  const installed = new Set((installs || []).flatMap((x) => [x.slug, x.modId].filter(Boolean)));
+  const list = Array.isArray(installs) ? installs : [];
+  const installed = new Set(list.flatMap((x) => [x.slug, x.modId].filter(Boolean)));
   const hits: LocalPlayModCatalogItem[] = [];
   const add = (slug: string) => {
     const item = LOCAL_PLAY_MOD_CATALOG.find((x) => x.slug === slug);

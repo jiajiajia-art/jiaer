@@ -41,8 +41,8 @@ export const goodAsAct = (it: ShopGood): CustomSpotAct => ({
 
 /* 某点位的玩家自定义行动 + 商店商品（已过滤空条目） */
 export const customActsOf = (g: Pick<GameState, "mapEdits">, roomId: string): CustomSpotAct[] => [
-  ...(spotOf(g, roomId)?.acts ?? []).filter((a) => a.label.trim()),
-  ...(spotOf(g, roomId)?.shop ?? []).filter((it) => it.name.trim()).map(goodAsAct),
+  ...(spotOf(g, roomId)?.acts ?? []).filter((a) => typeof a.label === "string" && !!a.label.trim()),
+  ...(spotOf(g, roomId)?.shop ?? []).filter((it) => typeof it.name === "string" && !!it.name.trim()).map(goodAsAct),
 ];
 
 /* 跨所有点位按 id 查一个玩家自定义行动 */

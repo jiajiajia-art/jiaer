@@ -277,7 +277,7 @@ export type ModContent = ContentSlots & {
   navTabs?: { id: string; label?: string; on?: boolean }[];
   /** 底栏格数（不含中央「日程」；2 的倍数，至少 4） */
   navSize?: 4 | 6 | 8;
-  /** 手机各应用：名称 / 图标 / 顺序 / 开局预装·可下载·解锁·隐藏·禁用 */
+  /** 手机各应用：名称 / 图标 / 顺序 / 开局预装（旧 locked/hidden/disabled 读取时归一为商店可下） */
   phoneAppsCfg?: PhoneAppDef[];
   features?: FeatureFlags;
   bgm?: ModTrack[]; // 内置背景音乐（旧版；启用时同样并入音频库）

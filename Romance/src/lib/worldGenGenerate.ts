@@ -130,7 +130,7 @@ export function worldGenEtaDisplaySeconds(opts: {
 }
 
 /**
- * 功能注释：把剩余秒拆成「分 + 秒」供 UI 分栏展示（不足 1 分时分为 0）。
+ * 功能注释：把剩余秒拆成「分 + 秒」供 UI 分栏展示（不足 1 分时分为 0，UI 只显示秒）。
  */
 export function formatWorldGenEtaParts(totalSec: number): { minutes: number; seconds: number } {
   const safe = Math.max(0, Math.floor(Number(totalSec) || 0));
@@ -138,6 +138,14 @@ export function formatWorldGenEtaParts(totalSec: number): { minutes: number; sec
     minutes: Math.floor(safe / 60),
     seconds: safe % 60,
   };
+}
+
+/** 功能注释：预计耗时文案；0 分时只显示秒（如「25秒」），有分时「5分05秒」。 */
+export function formatWorldGenEtaLabel(parts: { minutes: number; seconds: number }): string {
+  const m = Math.max(0, Math.floor(Number(parts.minutes) || 0));
+  const s = Math.max(0, Math.floor(Number(parts.seconds) || 0));
+  if (m <= 0) return `${s}秒`;
+  return `${m}分${String(s).padStart(2, "0")}秒`;
 }
 
 /**

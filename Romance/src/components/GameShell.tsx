@@ -212,7 +212,7 @@ function BeautySummary() {
         )}
       </div>
       <button className="shrink-0 rounded-full border border-line bg-paper px-3 py-1 text-[11.5px] font-semibold text-ink-soft transition hover:border-danger hover:text-danger"
-        onClick={async () => { if (await confirm("把外观恢复为默认？\n屏幕方向、深浅模式与自定义 CSS 保留；建议先在「一键套用」里收藏当前外观。", { ok: "恢复默认" })) setTheme({ ...defaultTheme, mode: theme.mode, orient: theme.orient, orientLock: theme.orientLock }); }}>
+        onClick={async () => { if (await confirm("把外观恢复为默认？\n屏幕方向、深浅模式与自定义 CSS 保留；建议先在「一键套用」里收藏当前外观。", { ok: "恢复默认" })) setTheme({ ...defaultTheme, mode: theme.mode, orient: theme.orient }); }}>
         恢复默认
       </button>
     </div>
@@ -500,23 +500,11 @@ function SettingsPanel({ bare = false, section = "general", onBeauty }: { bare?:
         </SettingBranch>
         )}
 
-        {/* 版式方向：竖屏 / 横屏（橙光式） */}
+        {/* 版式方向：竖屏 / 横屏；建角已选则直接生效，此处可随时切换，无需解锁 */}
         {!beauty && (
         <div>
-          <span className="flex items-center gap-1.5">
-            <span className="text-[14px] font-bold leading-tight tracking-[0.06em] text-ink">屏幕方向</span>
-            {/* 锁定开关：锁定后两个方向按钮不可点，避免误触切换 */}
-            <button type="button" role="switch" aria-checked={!!theme.orientLock}
-              onClick={() => setTheme({ ...theme, orient: theme.orient ?? "portrait", orientLock: !theme.orientLock })}
-              className={`ml-auto flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold transition ${theme.orientLock ? "border-jade/60 bg-jade/12 text-jade" : "border-line bg-paper text-ink-soft hover:border-jade/60"}`}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <rect x="4" y="11" width="16" height="10" rx="2" />
-                <path d={theme.orientLock ? "M8 11V7a4 4 0 0 1 8 0v4" : "M8 11V7a4 4 0 0 1 7.5-2"} />
-              </svg>
-              {theme.orientLock ? "已锁定" : "锁定"}
-            </button>
-          </span>
-          <span className="mb-2 block text-[11px] text-ink-soft">{theme.orientLock ? `已锁定为${(theme.orient ?? "portrait") === "landscape" ? "横屏" : "竖屏"}，解锁后才能切换` : "横屏 16:9 · 竖屏 9:16"}</span>
+          <span className="text-[14px] font-bold leading-tight tracking-[0.06em] text-ink">屏幕方向</span>
+          <span className="mb-2 mt-0.5 block text-[11px] text-ink-soft">横屏 16:9 · 竖屏 9:16 · 随时可改</span>
           <div className="grid grid-cols-2 gap-1.5">
             {([
               { id: "landscape", label: "横屏", box: "h-4 w-7", desc: "16:9 等宽屏比例游戏" },
@@ -526,10 +514,14 @@ function SettingsPanel({ bare = false, section = "general", onBeauty }: { bare?:
               return (
                 <button
                   key={op.id}
-                  onClick={() => { if (!theme.orientLock) setTheme({ ...theme, orient: op.id }); }}
-                  disabled={!!theme.orientLock && !cur}
+                  type="button"
+                  onClick={() => {
+                    setTheme({ ...theme, orient: op.id });
+                    // 功能注释：设置里改方向时同步本局 playPrefs，与建角所选保持一致
+                    if (game) patchGame((g) => ({ ...g, playPrefs: { ...g.playPrefs, orient: op.id } }));
+                  }}
                   aria-pressed={cur}
-                  className={`flex flex-col items-center gap-0.5 rounded-xl border px-1 py-2 text-center transition disabled:cursor-not-allowed disabled:opacity-40 ${cur ? "border-white/70 bg-gradient-to-br from-[var(--jade)] to-[var(--coral)] text-white shadow-[0_6px_16px_-8px_rgba(150,110,220,0.7)]" : "border-line bg-paper text-ink-soft hover:border-jade/60 disabled:hover:border-line"}`}
+                  className={`flex flex-col items-center gap-0.5 rounded-xl border px-1 py-2 text-center transition ${cur ? "border-white/70 bg-gradient-to-br from-[var(--jade)] to-[var(--coral)] text-white shadow-[0_6px_16px_-8px_rgba(150,110,220,0.7)]" : "border-line bg-paper text-ink-soft hover:border-jade/60"}`}
                 >
                   <span className={`rounded-[3px] border-2 border-current ${op.box}`} aria-hidden />
                   <span className="text-[12px] font-semibold">{op.label}</span>
@@ -689,7 +681,6 @@ export default function GameShell() {
   const { world: modWorld } = useMods(); // 地图编辑器（点位/背景/物件）
   const [fixedOpen, setFixedOpen] = useState(false);
   const [questOpen, setQuestOpen] = useState(false); // 剧情志弹窗
-  const [lockPick, setLockPick] = useState(true); // 首次选择屏幕方向时：选完即锁定（默认勾选）
   const [personTab, setPersonTab] = useState<"persona" | "memory">("persona"); // 固定人物：人设 / 记忆
   const [beautyOpen, setBeautyOpen] = useState(false); // 编辑器 · 美化
   const [editorOpen, setEditorOpen] = useState(false); // 编辑器总入口（六个创作工具）
@@ -785,50 +776,8 @@ export default function GameShell() {
     if (landscape && t !== "home") setPanelOpen(true);
   };
 
-  const orientChosen = theme.orient === "portrait" || theme.orient === "landscape";
-
   return (
     <EntityProvider>
-    {/* 首次进入 · 选择版式方向（之后可在菜单里随时改） */}
-    {!orientChosen && createPortal(
-      <div className="ui-overlay ui-overlay-heavy z-[60] px-5" role="dialog" aria-modal="true" aria-label="选择屏幕方向">
-        <div className="ui-sheet w-full max-w-md animate-pop p-6">
-          <p className="text-center text-[11px] font-bold tracking-[0.3em] text-ink-soft">屏幕方向</p>
-          <h2 className="mt-1 text-center text-[19px] font-black text-ink">竖屏，还是横屏？</h2>
-          <p className="mt-2 text-center text-[12.5px] leading-relaxed text-ink-soft">选择适合你设备的游戏画面方向。之后可在「菜单 → 屏幕方向」里随时切换。</p>
-          <div className="mt-5 grid grid-cols-2 gap-3">
-            {([
-              { id: "landscape", box: "h-6 w-10", label: "横屏", desc: "16:9 等宽屏比例游戏", ratio: "h-14 w-24" },
-              { id: "portrait", box: "h-10 w-6", label: "竖屏", desc: "9:16 等竖向比例游戏", ratio: "h-24 w-14" },
-            ] as const).map((op) => (
-              <button
-                key={op.id}
-                onClick={() => setTheme({ ...theme, orient: op.id, orientLock: lockPick })}
-                className="group flex flex-col items-center gap-2 rounded-2xl border border-line bg-paper p-4 text-center transition hover:border-jade hover:shadow-md"
-              >
-                <span className={`flex ${op.ratio} items-center justify-center rounded-xl border-2 border-line bg-jade/10 text-jade transition group-hover:border-jade`}>
-                  <span className={`rounded-[3px] border-2 border-current ${op.box}`} aria-hidden />
-                </span>
-                <span className="text-[15px] font-bold text-ink">{op.label}</span>
-                <span className="text-[11px] leading-snug text-ink-soft">{op.desc}</span>
-              </button>
-            ))}
-          </div>
-          {/* 选完即锁定：避免开局后误触切换横竖屏 */}
-          <button type="button" role="switch" aria-checked={lockPick} onClick={() => setLockPick((v) => !v)}
-            className="mx-auto mt-4 flex items-center gap-2 rounded-full border border-line bg-white/60 px-3.5 py-1.5 text-[12px] font-semibold text-ink transition hover:border-jade/60">
-            <span className={`relative h-4 w-7 rounded-full transition ${lockPick ? "bg-gradient-to-r from-[var(--jade)] to-[var(--coral)]" : "bg-ink-soft/25"}`}>
-              <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-all ${lockPick ? "left-3.5" : "left-0.5"}`} />
-            </span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={lockPick ? "text-jade" : "text-ink-soft"}>
-              <rect x="4" y="11" width="16" height="10" rx="2" />
-              <path d={lockPick ? "M8 11V7a4 4 0 0 1 8 0v4" : "M8 11V7a4 4 0 0 1 7.5-2"} />
-            </svg>
-            选好后锁定方向
-          </button>
-        </div>
-      </div>
-    , document.body)}
     {landscape && (
       /* ═══════════ 横屏 · 橙光式版式 ═══════════
          直接以真正的「世界」页（HomeTab）作为顶天立地的主场景，

@@ -73,7 +73,9 @@ test('Romance_App_应识别createWorld查询并挂载WorldGenWizard', () => {
   assert.match(wiz, /estimateWorldGenEtaSeconds|预计耗时/);
   assert.match(wiz, /worldGenEtaDisplaySeconds|worldGenEtaDeadlineMs|syncEtaDeadline/);
   assert.match(wiz, /formatWorldGenEtaParts/);
-  assert.match(wiz, />分<|>秒</);
+  assert.match(wiz, /world-gen-eta-unit/);
+  assert.match(wiz, /etaParts\.minutes > 0/);
+  assert.match(wiz, />秒</);
   assert.match(wiz, /scrollIntoView|pickWorldGenScrollTargetId/);
   assert.match(css, /\.world-gen-mod-row\.is-running/);
   assert.match(wiz, /setInterval\(\(\) => setEtaTick/);
@@ -179,10 +181,12 @@ test('worldGenWizard_校验与内容映射编辑器模块', async () => {
   assert.ok(openSteps.includes('hub:beauty'));
   assert.ok(openSteps.includes('hub:audio'));
   assert.ok(openSteps.includes('hub:nav'));
-  // 取消「⑥ 开场」一级分类后，开场相关落在「⑤ 剧情」或「① 基础」
+  // 取消「⑥ 开场」「④ 世界」后：开场剧情在④剧情，封面/地点在①基础
   const openMeta = mod.WORLD_GEN_EDITOR_STEPS.filter((s) => openSteps.includes(s.id));
   assert.ok(openMeta.every((s) => s.group !== '⑥ 开场'));
-  assert.ok(openMeta.some((s) => s.id === 'opening' && s.group === '⑤ 剧情'));
+  assert.ok(openMeta.every((s) => s.group !== '④ 世界'));
+  assert.ok(openMeta.some((s) => s.id === 'opening' && s.group === '④ 剧情'));
+  assert.ok(mod.WORLD_GEN_EDITOR_STEPS.some((s) => s.id === 'rooms' && s.group === '① 基础'));
 
   const charSteps = mod.defaultEditorStepsFromContent(['characters']);
   assert.ok(charSteps.includes('npcs'));

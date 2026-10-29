@@ -387,9 +387,15 @@ test('worldGenGenerate_预计耗时须拆成分秒', async () => {
   assert.deepEqual(gen.formatWorldGenEtaParts(60), { minutes: 1, seconds: 0 });
   assert.deepEqual(gen.formatWorldGenEtaParts(0), { minutes: 0, seconds: 0 });
   assert.deepEqual(gen.formatWorldGenEtaParts(-3), { minutes: 0, seconds: 0 });
+  // 0 分只显示秒，禁止「0分」
+  assert.equal(gen.formatWorldGenEtaLabel({ minutes: 0, seconds: 25 }), '25秒');
+  assert.equal(gen.formatWorldGenEtaLabel({ minutes: 0, seconds: 0 }), '0秒');
+  assert.equal(gen.formatWorldGenEtaLabel({ minutes: 1, seconds: 5 }), '1分05秒');
+  assert.equal(gen.formatWorldGenEtaLabel({ minutes: 5, seconds: 20 }), '5分20秒');
   const wiz = readFileSync(join(romance, 'components/WorldGenWizard.tsx'), 'utf8');
   assert.match(wiz, /formatWorldGenEtaParts/);
-  assert.match(wiz, /world-gen-eta-unit[\s\S]*分[\s\S]*秒|分[\s\S]*秒/);
+  assert.match(wiz, /etaParts\.minutes > 0/);
+  assert.doesNotMatch(wiz, /aria-label=\{`预计耗时 \$\{etaParts\.minutes\} 分/);
 });
 
 test('worldGenGenerate_进行中列表应滚到首个running', async () => {

@@ -156,7 +156,7 @@ export function balanceCheck(mod: Mod, baseWorld?: Mod): Finding[] {
   if (bw > 0 && c.startMoney !== undefined) {
     if (c.startMoney >= bw * 52) out.push({ level: "info", area: "开局资金", text: `开局资金 ${num(c.startMoney)} 够付约 ${Math.floor(c.startMoney / bw)} 周账单，前期几乎没有经济压力。` });
   }
-  const passive = (c.income ?? []).filter((r) => r.enabled !== false && !(r.conds ?? []).length && r.target.kind === "metric" && r.target.key === "money");
+  const passive = (Array.isArray(c.income) ? c.income : []).filter((r) => r && r.enabled !== false && !(r.conds ?? []).length && r.target?.kind === "metric" && r.target?.key === "money");
   const pw = passive.reduce((a, r) => a + (r.min + r.max) / 2, 0);
   if (bw > 0 && pw > bw * 1.5) out.push({ level: "warn", area: "周期收入", text: `无条件收入每周约 ${num(pw)}，是每周账单（约 ${num(bw)}）的 ${(pw / bw).toFixed(1)} 倍，不打工也稳赚。` });
 

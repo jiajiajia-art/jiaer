@@ -24,10 +24,10 @@ test('romanceAuthorPreview_编辑器顶栏保存预览_底栏无重复保存', (
   assert.match(editor, />\s*预览\s*</);
   assert.match(editor, /requestAuthorPreview/);
   assert.match(editor, /保存并返回/);
-  assert.match(editor, /放弃修改/);
+  assert.match(editor, /放弃/);
   // 顶栏保存/预览须 shrink-0 固定在右侧，避免窄屏被标题挤没（手机端 gap 略紧）
   assert.match(editor, /flex shrink-0 items-center gap-1(?:\.5| sm:gap-1\.5)/);
-  assert.match(editor, /顶栏固定「保存 \/ 预览」/);
+  assert.match(editor, /保存入口只放顶栏|顶栏固定「保存 \/ 预览」/);
   assert.match(editor, /保存当前全部修改/);
   assert.match(editor, /启动完整游戏测试/);
   // 桌面模组库仍锁 1200；生成世界传 fluid 随手机视口
@@ -36,11 +36,10 @@ test('romanceAuthorPreview_编辑器顶栏保存预览_底栏无重复保存', (
   assert.match(editor, /fluid\s*\?/);
   assert.match(wizard, /fluid/);
   assert.match(wizard, /overflow-x-hidden/);
-  // 底栏不应再有独立「保存」主按钮（只留保存并返回 / 放弃）
-  const footer = editor.slice(editor.lastIndexOf('sticky bottom-0'));
-  assert.doesNotMatch(footer, /rounded-full bg-jade[^>]*>\s*保存\s*</);
-  assert.match(footer, /保存并返回/);
-  assert.doesNotMatch(footer, />\s*预览\s*</);
+  // 底栏保存条已移除，保存并返回 / 放弃并入顶栏
+  assert.doesNotMatch(editor, /sticky bottom-0/);
+  assert.match(editor, /保存入口只放顶栏/);
+  assert.match(editor, /dirty \|\| !persisted \? "保存并返回" : "返回"/);
 
   assert.match(preview, /AUTHOR_PREVIEW_GAME_ID/);
   assert.match(preview, /assessAuthorPreview/);

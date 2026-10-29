@@ -227,7 +227,7 @@ export type GameState = {
   worldId?: string; // 模组：本局世界观 id（老存档缺省 = "ent"）
   advancePref?: { unit: "day" | "week" | "month" | "year"; count: number }; // 玩家自选的推进单位（缺省 = 模组设定）
   playerAgedYear?: number; // 主角年龄随日历：上次长岁所在的年份（每年只长一次）
-  playPrefs?: PlayPrefs; // 本局游玩偏好：游玩模式 / 叙事视角（开局按模组默认，设置里可改）
+  playPrefs?: PlayPrefs; // 本局游玩偏好：游玩模式 / 叙事视角 / 屏幕方向（开局按模组默认+建角所选，设置里可改）
   startDate?: string; // 本局开局日期（建角时玩家自选；缺省 = 世界观设定）
   addons?: string[]; // 模组：本局启用的叠加包 id（按优先级顺序）
   entSplit?: boolean; // 娱乐圈拆包后创建 / 已迁移的存档（缺省 = 老存档，读档时补上原版玩法扩展包）
@@ -458,7 +458,9 @@ export type GameRule = {
 /* 游玩偏好：game=游戏模式（正文适中、重选项）；novel=小说模式（长篇连续叙事）。pov 为叙事人称 */
 export type PlayMode = "game" | "novel";
 export type Pov = "1" | "2" | "3";
-export type PlayPrefs = { mode?: PlayMode; pov?: Pov }; // 不填 = 游戏模式 / 跟随世界观的叙事口吻
+/** 屏幕方向：建角游玩偏好选定；局内主题 theme.orient 同步生效，设置里可随时改（无锁定） */
+export type ScreenOrient = "portrait" | "landscape";
+export type PlayPrefs = { mode?: PlayMode; pov?: Pov; orient?: ScreenOrient }; // 不填 mode/pov = 游戏模式 / 跟随世界观；orient 缺省按竖屏
 /* 头像池开关（按剧本）：pools 以「我的头像池」池名为键；publicRandom = 参与随机抽图的公共分类名 */
 export type AvatarPoolToggle = { pick?: boolean; random?: boolean };
 /** 剧本级头像匹配优先级：私人/创作者库 vs 公共库；通用性别兜底。手动锁定始终最高，系统库始终最后。 */

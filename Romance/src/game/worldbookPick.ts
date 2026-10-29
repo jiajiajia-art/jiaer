@@ -6,6 +6,8 @@
  * 5. 检索权重：得分 = 命中的最长关键词长度 × 权重；短词若只出现在更长的已命中关键词内部（如「庵」在「梅花庵」里），不算命中
  * 纯函数：本文件只「选」，不改存档；主剧情回合成功后由 commitWorldBook 记账。 */
 import type { GameState, WorldBookEntry, WorldBookMem, WorldBookMode } from "../lib/types";
+import { asTrimmedString } from "../lib/asTrimmedString";
+import { keywordTexts } from "../lib/worldBookKeywords";
 import { getWorldRooms } from "../mods/registry";
 import { pathOf } from "./roomTree";
 
@@ -13,7 +15,7 @@ export type WorldBookCtx = { npcIds?: string[] };
 export type WorldBookPick = { entries: WorldBookEntry[]; fired: string[]; round: number };
 
 export const modeOf = (e: WorldBookEntry): WorldBookMode =>
-  e.mode ?? (e.constant || !e.keywords.some((k) => k.trim()) ? "constant" : "keyword");
+  e.mode ?? (e.constant || keywordTexts(e.keywords).length === 0 ? "constant" : "keyword");
 
 /* 当前轮次：已成功落地的 AI 回合数 */
 export const wbRound = (g: GameState) => g.story.filter((t) => t.role === "ai" && !t.error).length;
@@ -45,12 +47,12 @@ export function pickWorldBook(g: GameState, book: WorldBookEntry[], hayRaw: stri
   const mem: WorldBookMem = g.wbMem ?? {};
   const used = new Set(mem.used ?? []);
   const hay = hayRaw.toLowerCase();
-  const live = book.filter((e) => e.enabled && e.content.trim() && inScope(e, g, ctx));
+  const live = book.filter((e) => e.enabled && asTrimmedString(e.content) && inScope(e, g, ctx));
 
   // 所有关键词的命中区间（用于「长词优先」：被更长命中词完全覆盖的短词出现不算数）
   const spans: { e: string; k: string; s: number; t: number }[] = [];
-  for (const e of live) for (const k0 of e.keywords) {
-    const k = k0.trim().toLowerCase();
+  for (const e of live) for (const k0 of keywordTexts(e.keywords)) {
+    const k = k0.toLowerCase();
     for (const [s, t] of occurrences(hay, k)) spans.push({ e: e.id, k, s, t });
   }
   const shadowed = (x: { k: string; s: number; t: number }) => spans.some((y) => y.k.length > x.k.length && y.s <= x.s && y.t >= x.t);
@@ -69,7 +71,7 @@ export function pickWorldBook(g: GameState, book: WorldBookEntry[], hayRaw: stri
     if (m === "constant") { cands.push({ e, score: 1e6, active: false, fresh: true }); continue; }
     const score = scoreOf(e);
     // 一次性条目没写关键词 = 下一轮直接注入一次
-    const hit = score > 0 || (m === "once" && !e.keywords.some((k) => k.trim()));
+    const hit = score > 0 || (m === "once" && keywordTexts(e.keywords).length === 0);
     if (!hit) continue;
     const prob = e.probability ?? 100;
     if (prob < 100 && rnd() * 100 >= prob) continue;

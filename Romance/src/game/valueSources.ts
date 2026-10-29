@@ -14,23 +14,37 @@ export const GROUP_ROUTE = "人物线路词条";
 export const GROUP_ATTR = "本作品属性";
 export const GROUP_BUILTIN = "引擎内置（兜底）";
 
+/** 功能注释：AI 常漏写 label/name，直接 .trim() 会在角色页 map 里崩成 reading 'trim' */
+function cellText(raw: unknown): string {
+  if (typeof raw === "string") return raw.trim();
+  if (raw == null) return "";
+  if (typeof raw === "number" || typeof raw === "boolean") return String(raw).trim();
+  return "";
+}
+
+function rowList(raw: unknown): unknown[] {
+  return Array.isArray(raw) ? raw : [];
+}
+
 export function valueSources(opts: { stats?: StatsSlot; attrs?: AttrDef[]; paths?: CreationPath[] }): ValueSrc[] {
-  const { stats, attrs = [], paths = [] } = opts;
-  const hidden = new Set(stats?.hidden ?? []);
-  const order = [...(stats?.order ?? []), ...RAW_STAT_ORDER].filter((k, i, a) => a.indexOf(k) === i && !hidden.has(k));
+  const { stats } = opts;
+  const attrs = Array.isArray(opts.attrs) ? opts.attrs : [];
+  const paths = Array.isArray(opts.paths) ? opts.paths : [];
+  const hidden = new Set(Array.isArray(stats?.hidden) ? stats.hidden : []);
+  const order = [...(Array.isArray(stats?.order) ? stats.order : []), ...RAW_STAT_ORDER].filter((k, i, a) => a.indexOf(k) === i && !hidden.has(k));
   const meta = stats?.metaLabels ?? {};
   const builtin: ValueSrc[] = [
-    ...order.map((k) => ({ kind: "stat" as const, key: k, label: stats?.labels?.[k]?.trim() || RAW_STAT_LABELS[k], group: GROUP_BUILTIN })),
+    ...order.map((k) => ({ kind: "stat" as const, key: k, label: cellText(stats?.labels?.[k]) || RAW_STAT_LABELS[k], group: GROUP_BUILTIN })),
     ...BASE_METRICS.filter((m) => m.key !== "week").map((m) => ({
       kind: "metric" as const, key: m.key, group: GROUP_BUILTIN,
-      label: (m.key === "fame" && meta.fame?.trim()) || (m.key === "stress" && meta.stress?.trim()) || m.label,
+      label: (m.key === "fame" && cellText(meta.fame)) || (m.key === "stress" && cellText(meta.stress)) || m.label,
     })),
   ];
-  const custom: ValueSrc[] = attrs.map((d) => ({ kind: "metric", key: `c:${d.id}`, label: d.label.trim() || d.id, group: GROUP_ATTR }));
+  const custom: ValueSrc[] = attrs.map((d) => ({ kind: "metric", key: `c:${d.id}`, label: cellText(d?.label) || d?.id || "属性", group: GROUP_ATTR }));
   const all = [...builtin, ...custom];
 
   // 线路里写过的名字：解析到已有键并提到最前；解析不到的按开局规则生成线路属性键
-  const routeNames = [...new Set(paths.flatMap((p) => [...(p.fx?.attr ?? []), ...(p.fx?.reputation ?? [])].map((r) => r.name.trim())).filter(Boolean))];
+  const routeNames = [...new Set(paths.flatMap((p) => [...rowList(p?.fx?.attr), ...rowList(p?.fx?.reputation)].map((r) => cellText((r as { name?: unknown } | null)?.name))).filter(Boolean))];
   const route: ValueSrc[] = routeNames.map((n) => {
     const hit = all.find((x) => x.label === n);
     return hit ? { ...hit, group: GROUP_ROUTE } : { kind: "metric", key: `c:${routeAttrId(n)}`, label: n, group: GROUP_ROUTE };
@@ -41,7 +55,8 @@ export function valueSources(opts: { stats?: StatsSlot; attrs?: AttrDef[]; paths
 
 /* 好感对象：人物线路好感行里出现过的角色排前，其余按角色库顺序 */
 export function favorTargets(people: { id: string; name: string }[], paths: CreationPath[] = []) {
-  const used = new Set(paths.flatMap((p) => (p.fx?.favor ?? []).map((f) => f.target.trim())));
+  const list = Array.isArray(paths) ? paths : [];
+  const used = new Set(list.flatMap((p) => rowList(p?.fx?.favor).map((f) => cellText((f as { target?: unknown } | null)?.target))));
   const hit = (p: { id: string; name: string }) => used.has(p.name) || used.has(p.id);
   return [...people.filter(hit).map((p) => ({ ...p, fromRoute: true })), ...people.filter((p) => !hit(p)).map((p) => ({ ...p, fromRoute: false }))];
 }

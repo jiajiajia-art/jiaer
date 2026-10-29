@@ -28,6 +28,7 @@ import {
 } from "../lib/worldGenWizard";
 import {
   estimateWorldGenEtaSeconds,
+  formatWorldGenEtaLabel,
   formatWorldGenEtaParts,
   makeInitialProgress,
   pickWorldGenScrollTargetId,
@@ -188,7 +189,10 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
 
   /** 功能注释：把向导进度写入会话；刷新后 App 凭此重开向导而非游戏 */
   const persistNow = useCallback(() => {
-    if (isWorldGenPersistBlocked() || isWorldGenTrimRecovering()) return;
+    // 功能注释：恢复期禁止写回 step2/脏 mod；但必须允许落盘纯 step1，否则 1.5s 清 recover 标记后磁盘仍是脏编辑器，一刷新又崩
+    if (isWorldGenPersistBlocked() || isWorldGenTrimRecovering()) {
+      if (step !== 1 || modRef.current || draftRef.current) return;
+    }
     saveWorldGenSession({
       step,
       s1,
@@ -214,11 +218,23 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
 
   // 功能注释：恢复态只留在第 1 步；稳定 1.5s 后再解挡板，禁止首屏又把脏 mod 写回
   useEffect(() => {
-    if (boot.step === 2 && boot.mod) {
+    // 功能注释：parse 在 recover 标记下只「读成」step1，磁盘可能仍是脏 step2；进页立刻重写 step1，避免清标记后刷新再崩
+    if (isWorldGenTrimRecovering() || isWorldGenPersistBlocked()) {
+      demoteWorldGenSessionToStep1(boot.s1);
+      modRef.current = null;
+      draftRef.current = null;
+      setMod(null);
+      setDraft(null);
+      setStep(1);
+    } else if (boot.step === 2 && boot.mod) {
       modRef.current = boot.mod;
       persistNow();
     }
     const t = window.setTimeout(() => {
+      // 功能注释：解挡前再落一次纯 step1，防止定时器窗口内磁盘仍脏
+      if (isWorldGenTrimRecovering() || isWorldGenPersistBlocked()) {
+        demoteWorldGenSessionToStep1(boot.s1);
+      }
       clearWorldGenPersistBlock();
       clearWorldGenTrimRecover();
       try {
@@ -643,6 +659,15 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
     }
   };
 
+  /** 功能注释：未登录时「知道了」要拉起平台登录，不能只关掉提示 */
+  const dismissErr = () => {
+    const needLogin = /请先登录平台账号/.test(err);
+    setErr("");
+    if (needLogin && typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("funloom:open-auth"));
+    }
+  };
+
   /** 功能注释：校验失败用居中弹窗，避免底栏旁小字条被挡住、难发现。 */
   const errModal = err ? (
     <Modal title="还差一步" onClose={() => setErr("")} heavyBackdrop>
@@ -653,7 +678,7 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
         <button
           type="button"
           autoFocus
-          onClick={() => setErr("")}
+          onClick={dismissErr}
           className="rounded-full bg-ink px-5 py-2 text-[13.5px] font-bold text-paper transition hover:brightness-110"
         >
           知道了
@@ -695,16 +720,23 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
               <div
                 className="world-gen-eta"
                 aria-live="polite"
-                aria-label={`预计耗时 ${etaParts.minutes} 分 ${etaParts.seconds} 秒`}
+                /* 功能注释：不足 1 分只报秒，避免「0分 25秒」 */
+                aria-label={`预计耗时 ${formatWorldGenEtaLabel(etaParts)}`}
                 title="按已完成速度与并行度估算，仅供参考"
               >
                 <p className="world-gen-eta-label">预计耗时</p>
                 <p className="world-gen-eta-value">
-                  <span className="world-gen-eta-num">{etaParts.minutes}</span>
-                  <span className="world-gen-eta-unit">分</span>
-                  <span className="world-gen-eta-num">
-                    {String(etaParts.seconds).padStart(2, "0")}
-                  </span>
+                  {etaParts.minutes > 0 ? (
+                    <>
+                      <span className="world-gen-eta-num">{etaParts.minutes}</span>
+                      <span className="world-gen-eta-unit">分</span>
+                      <span className="world-gen-eta-num">
+                        {String(etaParts.seconds).padStart(2, "0")}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="world-gen-eta-num">{etaParts.seconds}</span>
+                  )}
                   <span className="world-gen-eta-unit">秒</span>
                 </p>
               </div>

@@ -34,7 +34,7 @@ export default function ModBalancePanel({ c, kind, onChange }: { c: C; kind: Mod
   const billOf = (w: number) => Math.round((weekly + (w % 4 === 0 ? monthly : 0)) * (graceW > 0 && w <= graceW ? graceMul : 1));
   const monthBills = weekly * 4 + monthly;
   const entry = jobs.filter((j) => j.fameReq <= 0).sort((a, b) => b.pay - a.pay)[0];
-  const income = (c.income ?? []).filter((r) => r.enabled !== false && r.target.kind === "metric" && r.target.key === "money" && !(r.conds ?? []).length);
+  const income = (Array.isArray(c.income) ? c.income : []).filter((r) => r?.enabled !== false && r?.target?.kind === "metric" && r?.target?.key === "money" && !(r.conds ?? []).length);
   const incomeMonth = income.reduce((a, r) => a + ((r.min + r.max) / 2) * 4, 0);
   const tiers = c.allowance?.tiers ?? [];
   const every = c.allowance?.everyWeeks ?? 4;

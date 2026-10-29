@@ -1,3 +1,4 @@
+import { normalizeRuleBranches } from "../lib/gameRuleShape";
 import { IconClose } from "../lib/icons";
 import { CondRow, EffectRow, defaultCond, defaultEffect } from "./FixedEventsPanel";
 import { condsBrief, effectBrief } from "./ruleText";
@@ -31,13 +32,15 @@ const TEMPLATES: { name: string; desc: string; make: () => Omit<GameRule, "id"> 
 ];
 
 function BranchCard({ b, idx, total, events, onChange, onDelete }: { b: RuleBranch; idx: number; total: number; events: FixedEvent[]; onChange: (b: RuleBranch) => void; onDelete?: () => void }) {
-  const isElse = idx > 0 && !b.conds.length;
-  const head = idx === 0 ? (b.conds.length ? "如果" : "总是") : isElse ? "否则" : "否则如果";
+  const conds = Array.isArray(b.conds) ? b.conds : [];
+  const effects = Array.isArray(b.effects) ? b.effects : [];
+  const isElse = idx > 0 && !conds.length;
+  const head = idx === 0 ? (conds.length ? "如果" : "总是") : isElse ? "否则" : "否则如果";
   return (
     <div className={`relative space-y-1.5 rounded-xl border-l-[3px] bg-paper/60 py-2 pl-3 pr-2 ${isElse ? "border-gold/70" : "border-jade/70"}`}>
       <div className="flex items-center gap-2">
         <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-black tracking-[0.1em] ${isElse ? "bg-gold/15 text-gold" : "bg-jade/15 text-jade"}`}>{head}</span>
-        {b.conds.length > 1 && (
+        {conds.length > 1 && (
           <select className="rounded-md border border-line bg-paper-2 px-1.5 py-0.5 text-[11.5px]" value={b.match ?? "all"} onChange={(e) => onChange({ ...b, match: e.target.value as "all" | "any" })}>
             <option value="all">全部满足</option><option value="any">任一满足</option>
           </select>
@@ -45,26 +48,26 @@ function BranchCard({ b, idx, total, events, onChange, onDelete }: { b: RuleBran
         <span className="ml-auto text-[10.5px] text-ink-soft">分支 {idx + 1}/{total}</span>
         {onDelete && <button className="text-[12px] text-ink-soft hover:text-danger" onClick={onDelete} aria-label="删除分支"><IconClose size={14} /></button>}
       </div>
-      {b.conds.map((c, i) => (
-        <CondRow key={i} c={c} events={events} selfId="" onChange={(x) => onChange({ ...b, conds: b.conds.map((y, j) => (j === i ? x : y)) })} onDelete={() => onChange({ ...b, conds: b.conds.filter((_, j) => j !== i) })} />
+      {conds.map((c, i) => (
+        <CondRow key={i} c={c} events={events} selfId="" onChange={(x) => onChange({ ...b, conds: conds.map((y, j) => (j === i ? x : y)) })} onDelete={() => onChange({ ...b, conds: conds.filter((_, j) => j !== i) })} />
       ))}
-      <button className={link} onClick={() => onChange({ ...b, conds: [...b.conds, defaultCond("metric")] })}>＋ 条件{!b.conds.length && idx > 0 ? "（不加 = 「否则」兜底）" : ""}</button>
+      <button className={link} onClick={() => onChange({ ...b, conds: [...conds, defaultCond("metric")] })}>＋ 条件{!conds.length && idx > 0 ? "（不加 = 「否则」兜底）" : ""}</button>
       <p className="pt-0.5 text-[11px] font-bold text-ink-soft">则</p>
-      {b.effects.map((f, i) => (
-        <EffectRow key={i} ef={f} onChange={(x: FixedEffect) => onChange({ ...b, effects: b.effects.map((y, j) => (j === i ? x : y)) })} onDelete={() => onChange({ ...b, effects: b.effects.filter((_, j) => j !== i) })} />
+      {effects.map((f, i) => (
+        <EffectRow key={i} ef={f} onChange={(x: FixedEffect) => onChange({ ...b, effects: effects.map((y, j) => (j === i ? x : y)) })} onDelete={() => onChange({ ...b, effects: effects.filter((_, j) => j !== i) })} />
       ))}
-      <button className={link} onClick={() => onChange({ ...b, effects: [...b.effects, defaultEffect("metric")] })}>＋ 效果</button>
+      <button className={link} onClick={() => onChange({ ...b, effects: [...effects, defaultEffect("metric")] })}>＋ 效果</button>
       <input className={inp} value={b.notice ?? ""} maxLength={60} placeholder="给玩家的提示（可留空；写进当天 / 本周结算）" onChange={(e) => onChange({ ...b, notice: e.target.value || undefined })} />
     </div>
   );
 }
 
 export default function GameRulesEditor({ value, events = [], onChange }: { value?: GameRule[]; events?: FixedEvent[]; onChange: (v?: GameRule[]) => void }) {
-  const list = value ?? [];
+  const list = Array.isArray(value) ? value : [];
   const commit = (n: GameRule[]) => onChange(n.length ? n : undefined);
   const set = (id: string, p: Partial<GameRule>) => commit(list.map((r) => (r.id === id ? { ...r, ...p } : r)));
   const setBranches = (r: GameRule, branches: RuleBranch[]) => set(r.id, { branches });
-  const hasElse = (r: GameRule) => r.branches.length > 1 && !r.branches[r.branches.length - 1].conds.length;
+  const hasElse = (branches: RuleBranch[]) => branches.length > 1 && !branches[branches.length - 1].conds.length;
 
   return (
     <div className="space-y-2.5">
@@ -80,7 +83,10 @@ export default function GameRulesEditor({ value, events = [], onChange }: { valu
       </div>
       {!list.length && <p className="rounded-xl border border-dashed border-line px-3 py-4 text-center text-[12px] text-ink-soft">还没有玩法规则 · 点上方模板快速开始，例如「名气分段流动」</p>}
 
-      {list.map((r) => (
+      {list.map((raw) => {
+        const branches = normalizeRuleBranches(raw.branches) as RuleBranch[];
+        const r: GameRule = { ...raw, branches };
+        return (
         <div key={r.id} className={`space-y-2 rounded-2xl border border-line bg-paper-2 p-2.5 ${r.enabled === false ? "opacity-60" : ""}`}>
           <div className="flex items-center gap-2">
             <input type="checkbox" className="h-4 w-4 shrink-0 accent-[var(--jade)]" checked={r.enabled !== false} onChange={(e) => set(r.id, { enabled: e.target.checked ? undefined : false })} aria-label="启用" />
@@ -104,27 +110,28 @@ export default function GameRulesEditor({ value, events = [], onChange }: { valu
           </div>
 
           <div className="space-y-1.5">
-            {r.branches.map((b, i) => (
-              <BranchCard key={i} b={b} idx={i} total={r.branches.length} events={events}
-                onChange={(x) => setBranches(r, r.branches.map((y, j) => (j === i ? x : y)))}
-                onDelete={r.branches.length > 1 ? () => setBranches(r, r.branches.filter((_, j) => j !== i)) : undefined} />
+            {branches.map((b, i) => (
+              <BranchCard key={i} b={b} idx={i} total={branches.length} events={events}
+                onChange={(x) => setBranches(r, branches.map((y, j) => (j === i ? x : y)))}
+                onDelete={branches.length > 1 ? () => setBranches(r, branches.filter((_, j) => j !== i)) : undefined} />
             ))}
           </div>
           <div className="flex flex-wrap gap-1.5">
             <button className={btn} onClick={() => {
               const nb: RuleBranch = { conds: [defaultCond("metric")], effects: [defaultEffect("metric")] };
               // 已有「否则」时插在它前面，保持兜底在最后
-              setBranches(r, hasElse(r) ? [...r.branches.slice(0, -1), nb, r.branches[r.branches.length - 1]] : [...r.branches, nb]);
+              setBranches(r, hasElse(branches) ? [...branches.slice(0, -1), nb, branches[branches.length - 1]] : [...branches, nb]);
             }}>＋ 否则如果</button>
-            <button className={btn} disabled={hasElse(r)} onClick={() => setBranches(r, [...r.branches, { conds: [], effects: [defaultEffect("metric")] }])}>＋ 否则</button>
+            <button className={btn} disabled={hasElse(branches)} onClick={() => setBranches(r, [...branches, { conds: [], effects: [defaultEffect("metric")] }])}>＋ 否则</button>
           </div>
           <p className="rounded-lg bg-paper/70 px-2 py-1.5 text-[11px] leading-relaxed text-ink-soft">
-            <b className="text-ink">{WHEN[r.when]}</b>{r.chance != null && r.chance < 100 ? `（${r.chance}% 概率）` : ""}：
-            {r.branches.map((b, i) => `${i === 0 ? (b.conds.length ? "如果" : "总是") : b.conds.length ? "；否则如果" : "；否则"}${b.conds.length ? ` ${condsBrief(b.conds, b.match, events)}` : ""} → ${b.effects.map(effectBrief).join("、") || "（无效果）"}`).join("")}
+            <b className="text-ink">{WHEN[r.when] ?? "每周结算"}</b>{r.chance != null && r.chance < 100 ? `（${r.chance}% 概率）` : ""}：
+            {branches.map((b, i) => `${i === 0 ? (b.conds.length ? "如果" : "总是") : b.conds.length ? "；否则如果" : "；否则"}${b.conds.length ? ` ${condsBrief(b.conds, b.match, events)}` : ""} → ${b.effects.map(effectBrief).join("、") || "（无效果）"}`).join("")}
             {r.once ? "；一局一次" : r.cooldown ? `；冷却 ${r.cooldown} 天` : ""}
           </p>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

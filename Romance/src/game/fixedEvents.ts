@@ -476,7 +476,7 @@ const CHOICE_RE = /^⟦选项:([^:⟧]+):([^⟧]+)⟧/;
 export const choiceValue = (ev: FixedEvent, c: EventChoice) => `⟦选项:${ev.id}:${c.id}⟧${c.label}`;
 /** 此刻可见的选项（按出现条件过滤）→ 玩家选项按钮 */
 export const eventChoiceOptions = (ev: FixedEvent, s: SimState) =>
-  (ev.choices ?? []).filter((c) => !c.hidden && c.label.trim() && fullCondsMet(c, s)).slice(0, 3).map((c) => ({ label: c.label, value: choiceValue(ev, c) }));
+  (ev.choices ?? []).filter((c) => !c.hidden && typeof c.label === "string" && c.label.trim() && fullCondsMet(c, s)).slice(0, 3).map((c) => ({ label: c.label, value: choiceValue(ev, c) }));
 /** 解析玩家输入里的选项标记；找不到对应事件 / 选项返回 null */
 export function parseChoice(input: string, events: FixedEvent[]): { ev: FixedEvent; choice: EventChoice } | null {
   const m = CHOICE_RE.exec(input);

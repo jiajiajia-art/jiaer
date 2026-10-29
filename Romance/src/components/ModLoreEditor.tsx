@@ -97,14 +97,19 @@ function FactionList({ list, onChange, npcs }: { list?: LoreFaction[]; onChange:
 }
 
 export default function ModLoreEditor({ value, onChange, rooms, npcs }: { value?: LoreRegion[]; onChange: (v?: LoreRegion[]) => void; rooms: Ref[]; npcs: Ref[] }) {
-  const list = value ?? [];
+  // 功能注释：AI 常把 lore 写成 {regions:[]}；非数组时展开，禁止 forEach 崩页
+  const list = Array.isArray(value)
+    ? value
+    : value && typeof value === "object" && Array.isArray((value as { regions?: unknown }).regions)
+      ? ((value as { regions: LoreRegion[] }).regions)
+      : [];
   const [open, setOpen] = useState<string | null>(list[0]?.id ?? null);
   const put = (v: LoreRegion[]) => onChange(v.length ? v : undefined);
   const set = (id: string, p: Partial<LoreRegion>) => put(list.map((r) => (r.id === id ? { ...r, ...p } : r)));
   const move = (i: number, d: -1 | 1) => { const v = [...list]; [v[i], v[i + d]] = [v[i + d], v[i]]; put(v); };
   // 一个地点只归属一个地区：点选时从其他地区移走
   const owner = new Map<string, string>();
-  list.forEach((r) => (r.rooms ?? []).forEach((id) => owner.set(id, r.id)));
+  list.forEach((r) => (Array.isArray(r?.rooms) ? r.rooms : []).forEach((id) => owner.set(id, r.id)));
   const toggleRoom = (rid: string, roomId: string, on: boolean) => put(list.map((x) => {
     const rest = (x.rooms ?? []).filter((y) => y !== roomId);
     const rs = x.id === rid && !on ? [...rest, roomId] : rest;

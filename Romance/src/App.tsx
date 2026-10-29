@@ -3,11 +3,13 @@ import { applyLookCss } from "./lib/plotLook";
 import { loadGlobal, saveGlobal } from "./lib/saveScope";
 import { clearWorldGenQuery, shouldOpenWorldGenWizard } from "./lib/worldGenWizard";
 import {
+  blockWorldGenPersist,
   clearWorldGenSession,
   demoteWorldGenSessionToStep1,
   ensureWorldGenQuery,
   isWorldGenTrimRecovering,
   loadWorldGenSession,
+  markWorldGenTrimRecover,
   shouldResumeWorldGenSession,
 } from "./lib/worldGenSession";
 import { getAuthorPreviewSession, isAuthorPreview, subscribeAuthorPreview } from "./lib/authorPreview";
@@ -34,7 +36,7 @@ function isStaleChunkLoadError(error: unknown): boolean {
 /** 功能注释：AI 脏会话导致 .trim 崩页；重试前须清世界生成会话并硬刷新，否则会循环报错 */
 function isDirtyWorldGenTrimError(error: unknown): boolean {
   const msg = String((error as { message?: string })?.message || error || "");
-  return /\.trim is not a function|trim is not a function/i.test(msg);
+  return /\.trim is not a function|trim is not a function|\.map is not a function|is not iterable|Objects are not valid as a React child|reading 'startsWith'|reading 'join'|forEach is not a function|reading 'kind'/i.test(msg);
 }
 
 function hardReloadWithCacheBust(): void {
@@ -46,10 +48,17 @@ function hardReloadWithCacheBust(): void {
 }
 
 /** 功能注释：trim 崩页 → 强制 step1（保留设定）并硬刷新；禁止再进脏编辑器 */
-function recoverDirtyWorldGenTrim(): void {
+function recoverDirtyWorldGenTrim(forceWipe = false): void {
+  // 功能注释：先挡住 beforeunload 把编辑器会话写回去，否则切分区崩页会被立刻刷回原页，看起来像按钮没反应
+  markWorldGenTrimRecover();
+  blockWorldGenPersist();
   try {
-    const s1 = loadWorldGenSession()?.s1;
-    demoteWorldGenSessionToStep1(s1);
+    if (forceWipe) {
+      clearWorldGenSession();
+    } else {
+      const s1 = loadWorldGenSession()?.s1;
+      demoteWorldGenSessionToStep1(s1);
+    }
   } catch {
     try {
       clearWorldGenSession();
@@ -65,16 +74,19 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
   static getDerivedStateFromError(error: Error) {
     return { error };
   }
-  /** 功能注释：不等人点重试；退回第 1 步并硬刷新。若本轮已在恢复中则停自动跳，避免闪屏循环 */
+  /**
+   * 功能注释：trim 崩页自动恢复。
+   * 若已在恢复中仍再次崩（旧缓存/半残标记），禁止空 return 卡死在报错页，改为清空会话再刷。
+   */
   componentDidCatch(error: Error) {
     if (!isDirtyWorldGenTrimError(error) || typeof window === "undefined") return;
-    if (isWorldGenTrimRecovering()) return;
-    recoverDirtyWorldGenTrim();
+    recoverDirtyWorldGenTrim(isWorldGenTrimRecovering());
   }
   private retry = () => {
     const err = this.state.error;
     if (isDirtyWorldGenTrimError(err)) {
-      recoverDirtyWorldGenTrim();
+      // 功能注释：用户点重试时一律强清，避免 recover 标记把人钉在报错页
+      recoverDirtyWorldGenTrim(true);
       return;
     }
     if (isStaleChunkLoadError(err)) {

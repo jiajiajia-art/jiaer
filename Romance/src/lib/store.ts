@@ -44,7 +44,8 @@ export type ThemePref = {
   topbarText?: string; // 顶栏中部标语（留空不显示）
   font?: "song" | "hei" | "round" | "elegant" | "brush" | "hand" | "cursive" | "pixel";
   orient?: "portrait" | "landscape";
-  orientLock?: boolean; // 锁定屏幕方向：锁定后菜单里无法切换横竖屏
+  /** @deprecated 已取消方向锁定；读写时一律清为 false，保留字段仅兼容旧本地主题 */
+  orientLock?: boolean;
   dialogStyle?: "soft" | "avg" | "letter" | "glass" | "minimal"; // 对话·叙事 面板样式
   dialogRadius?: number; // 面板圆角 px
   dialogHeight?: "low" | "std" | "high"; // 面板高度

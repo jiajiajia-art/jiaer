@@ -8,7 +8,11 @@ const EMBED_MB = 1; // 模组存 localStorage（约 5MB 配额），内嵌只收
 const sid = () => `t${Date.now().toString(36).slice(-4)}${Math.random().toString(36).slice(2, 4)}`;
 const inp = "min-w-0 w-full rounded-lg border border-line bg-paper px-2 py-1 text-[12.5px] text-ink outline-none focus:border-jade";
 const btn = "rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40";
-const kindOf = (src: string) => (src.startsWith("data:") ? "内嵌" : src.startsWith("local:") ? "本机" : "链接");
+/** 功能注释：脏曲目可能没有 src，禁止 undefined.startsWith 崩整页 */
+const kindOf = (src: unknown) => {
+  const s = typeof src === "string" ? src : "";
+  return s.startsWith("data:") ? "内嵌" : s.startsWith("local:") ? "本机" : "链接";
+};
 
 export default function ModBgmEditor({ list, onChange }: { list: ModTrack[]; onChange: (l: ModTrack[]) => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -44,7 +48,8 @@ export default function ModBgmEditor({ list, onChange }: { list: ModTrack[]; onC
   const preview = (t: ModTrack) => {
     if (trying === t.id) { audio.current?.pause(); setTrying(null); return; }
     audio.current?.pause();
-    let src = t.src;
+    const src = typeof t.src === "string" ? t.src : "";
+    if (!src) { setMsg("这首没有音频地址"); return; }
     if (src.startsWith("local:")) { setMsg("本机音乐请到「游戏设置 · 背景音乐」试听"); return; }
     const a = new Audio(src); audio.current = a; a.onended = () => setTrying(null);
     a.play().then(() => setTrying(t.id)).catch(() => setMsg(`「${t.name}」无法播放，检查链接或格式`));

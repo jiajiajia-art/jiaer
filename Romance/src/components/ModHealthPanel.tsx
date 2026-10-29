@@ -23,7 +23,9 @@ export function ImpactRow({ i }: { i: Impact }) {
 
 export default function ModHealthPanel({ mod }: { mod: Mod }) {
   const prior = useMemo(() => priorFor(mod), [mod]);
-  const findings = useMemo(() => balanceCheck(mod, prior[0]), [mod, prior]);
+  const findings = useMemo(() => {
+    try { return balanceCheck(mod, prior[0]); } catch { return []; }
+  }, [mod, prior]);
   const inherited = useMemo(() => inheritedSlots(mod), [mod]);
   const impacts = useMemo(() => (mod.kind === "addon" ? addonImpact(mod, prior) : []), [mod, prior]);
   const shadows = useMemo(() => (mod.kind === "addon" ? chainShadows([...prior, mod])[mod.id] ?? [] : []), [mod, prior]);

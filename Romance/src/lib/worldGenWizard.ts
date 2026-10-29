@@ -4,6 +4,7 @@
  * 供 WorldGenWizard UI 与单测共用；不依赖 React。
  */
 import { EDITOR_HUB_MENUS } from "./editorHubMenus.ts";
+import { readFunloomAuthorLabel } from "./platformAvatarLibrary.ts";
 import type { PlayPrefs, PlaySlot } from "./types.ts";
 
 export const WORLD_TITLE_MAX = 20;
@@ -162,7 +163,7 @@ const MOD_STEPS: WorldGenEditorStep[] = [
   { id: "travelTime", group: "① 基础", name: "时间与推进", desc: "开局日期 / 时刻 · 每日作息 · 行动点 · 推进节奏 · 年龄随日历", contentIds: ["world"], source: "mod" },
   { id: "features", group: "① 基础", name: "功能开关", desc: "关闭后界面自动隐藏对应玩法", contentIds: ["world"], source: "mod" },
   { id: "navTabs", group: "① 基础", name: "底栏页签", desc: "游戏底部导航显示名", contentIds: ["world"], source: "mod" },
-  { id: "phoneAppsCfg", group: "① 基础", name: "手机应用配置", desc: "名称 · 图标 · 顺序 · 预装 / 商店 · 小手机试玩", contentIds: ["world", "opening"], source: "mod" },
+  { id: "phoneAppsCfg", group: "① 基础", name: "手机应用配置", desc: "名称 · 图标 · 顺序 · 开局预装 · 小手机试玩", contentIds: ["world", "opening"], source: "mod" },
   { id: "theme", group: "① 基础", name: "主题外观", desc: "皮肤 · 主题色 · 字体 · 深浅色", contentIds: ["opening"], source: "mod" },
   { id: "bgm", group: "① 基础", name: "内置音乐", desc: "上传 · 链接 · 开局自动播放", contentIds: ["opening"], source: "mod" },
   { id: "audioRefs", group: "① 基础", name: "引用音频库", desc: "只引用作品音频库里已有的 id，不打包文件", contentIds: ["opening"], source: "mod" },
@@ -186,32 +187,32 @@ const MOD_STEPS: WorldGenEditorStep[] = [
   { id: "economy", group: "③ 养成", name: "数值平衡", desc: "扣费依据 · 现金流估算 · 透支 / 破产 / 新手缓冲", contentIds: ["world"], source: "mod" },
   { id: "tuning", group: "③ 养成", name: "引擎规则（数值）", desc: "表现评级概率 / 倍率 · 休息减压 · 课程与打工倍率（不同于「底层规则」）", contentIds: ["world"], source: "mod" },
 
-  // ④ 世界（仅地点等世界设定；出行属玩法 Mod）
-  { id: "rooms", group: "④ 世界", name: "地点（模组库）", desc: "多级子地点 · 树状预览 · 准入 · 出口 · 开局地点", contentIds: ["locations"], source: "mod" },
+  // 地点已并入①基础（取消独立「④ 世界」页签）；出行属玩法 Mod
+  { id: "rooms", group: "① 基础", name: "地点（模组库）", desc: "多级子地点 · 树状预览 · 准入 · 出口 · 开局地点", contentIds: ["locations"], source: "mod" },
 
-  // ⑤ 剧情（含原「开场」：开场剧情 / 封面 / 美化；已取消「⑥ 开场」一级分类）
-  { id: "prompt", group: "⑤ 剧情", name: "世界观提示词", desc: "即系统提示词 · 可视化编辑 · 支持预览", contentIds: ["world"], source: "mod" },
-  { id: "lore", group: "⑤ 剧情", name: "详细设定", desc: "地区 · 势力 · 角色 · 只发主角所在地区的完整设定", contentIds: ["world", "locations"], source: "mod" },
-  { id: "festivals", group: "⑤ 剧情", name: "节日", desc: "平时只发名称 · 临近或提到时发完整设定", contentIds: ["world", "sideEvents"], source: "mod" },
+  // ④ 剧情（含原开场：开场剧情 / 美化；封面仍在①基础）
+  { id: "prompt", group: "④ 剧情", name: "世界观提示词", desc: "即系统提示词 · 可视化编辑 · 支持预览", contentIds: ["world"], source: "mod" },
+  { id: "lore", group: "④ 剧情", name: "详细设定", desc: "地区 · 势力 · 角色 · 只发主角所在地区的完整设定", contentIds: ["world", "locations"], source: "mod" },
+  { id: "festivals", group: "④ 剧情", name: "节日", desc: "平时只发名称 · 临近或提到时发完整设定", contentIds: ["world", "sideEvents"], source: "mod" },
   { id: "cover", group: "① 基础", name: "开局封面", desc: "画布布局 · AI 对话生成 · 自由搭配 · 自定义 HTML（唯一入口）", contentIds: ["opening"], source: "mod" },
-  { id: "opening", group: "⑤ 剧情", name: "开场剧情", desc: "开场页外观 · 开场白 · 头图 / 视频", contentIds: ["opening"], source: "mod" },
-  { id: "fixedEvents", group: "⑤ 剧情", name: "固定事件（模组库）", desc: "首次事件 · 预设剧本 · 时间 / 条件触发 · 事件链", contentIds: ["mainPlot", "sideEvents", "opening"], source: "mod" },
-  { id: "storylines", group: "⑤ 剧情", name: "主线与目标", desc: "有序节点 · 完成 / 失败条件 · 奖励 · 失败分支", contentIds: ["mainPlot"], source: "mod" },
-  { id: "endings", group: "⑤ 剧情", name: "结局与时限", desc: "主线时限 · 自定义固定结局 · 结局插图与评级 · 评定维度", contentIds: ["mainPlot"], source: "mod" },
-  { id: "lookRules", group: "⑤ 剧情", name: "剧情美化", desc: "条件满足时自动切换外观 · 玩家可在美化里关闭", contentIds: ["opening", "mainPlot"], source: "mod" },
+  { id: "opening", group: "④ 剧情", name: "开场剧情", desc: "开场页外观 · 开场白 · 头图 / 视频", contentIds: ["opening"], source: "mod" },
+  { id: "fixedEvents", group: "④ 剧情", name: "固定事件（模组库）", desc: "首次事件 · 预设剧本 · 时间 / 条件触发 · 事件链", contentIds: ["mainPlot", "sideEvents", "opening"], source: "mod" },
+  { id: "storylines", group: "④ 剧情", name: "主线与目标", desc: "有序节点 · 完成 / 失败条件 · 奖励 · 失败分支", contentIds: ["mainPlot"], source: "mod" },
+  { id: "endings", group: "④ 剧情", name: "结局与时限", desc: "主线时限 · 自定义固定结局 · 结局插图与评级 · 评定维度", contentIds: ["mainPlot"], source: "mod" },
+  { id: "lookRules", group: "④ 剧情", name: "剧情美化", desc: "条件满足时自动切换外观 · 玩家可在美化里关闭", contentIds: ["opening", "mainPlot"], source: "mod" },
 
-  // ⑥ 玩法 Mod（可视化卡片；按已添加动态出配置表单）
-  { id: "playModInstalls", group: "⑥ 玩法 Mod", name: "已添加的玩法", desc: "推荐 · 确认添加 · 启用开关 · 底栏名 · 显隐", contentIds: ["world", "mainPlot"], source: "mod" },
-  { id: "travel", group: "⑥ 玩法 Mod", name: "出行与交通", desc: "须添加玩法后自定义：选择区标题 · 货币 · 出行方式 · 花费", contentIds: ["locations", "world"], source: "mod" },
-  { id: "cars", group: "⑥ 玩法 Mod", name: "座驾", desc: "须添加座驾包后配置购车与切换（建议先加出行与交通）", contentIds: ["locations", "world"], source: "mod" },
-  { id: "gigs", group: "⑥ 玩法 Mod", name: "通告库", desc: "通告门槛 · 酬劳 · 名气 · 成长 · 星级价目表", contentIds: ["mainPlot", "world"], source: "mod" },
-  { id: "contracts", group: "⑥ 玩法 Mod", name: "经纪合约", desc: "开局候选合约 · 通告性质 · 议价规则", contentIds: ["characters", "mainPlot"], source: "mod" },
-  { id: "projects", group: "⑥ 玩法 Mod", name: "影视项目", desc: "项目模板 · 试镜 · 片场事件 · 质量与上映", contentIds: ["mainPlot"], source: "mod" },
-  { id: "industry", group: "⑥ 玩法 Mod", name: "行业生态", desc: "经纪公司 · 片名库 · 代言品牌 · 奖项 · 圈内动态", contentIds: ["world", "characters"], source: "mod" },
-  { id: "imageCrisis", group: "⑥ 玩法 Mod", name: "舆情人设", desc: "人设 · 公开行动 · 危机 · 公关应对 · 判定权重", contentIds: ["characters", "sideEvents"], source: "mod" },
-  { id: "weeklyPaper", group: "⑥ 玩法 Mod", name: "娱乐周报", desc: "报头 · 副标题", contentIds: ["world"], source: "mod" },
-  { id: "meals", group: "⑥ 玩法 Mod", name: "每周吃什么", desc: "伙食档位 · 每周花费 · 压力 / 能力 / 气色", contentIds: ["world"], source: "mod" },
-  { id: "pregnancy", group: "⑥ 玩法 Mod", name: "孕育", desc: "开关 · 孕期 · 受孕率 · 察觉时间 · 孩子名字池", contentIds: ["characters", "world"], source: "mod" },
+  // ⑤ 玩法 Mod（可视化卡片；按已添加动态出配置表单）
+  { id: "playModInstalls", group: "⑤ 玩法 Mod", name: "已添加的玩法", desc: "推荐 · 确认添加 · 启用开关 · 底栏名 · 显隐", contentIds: ["world", "mainPlot"], source: "mod" },
+  { id: "travel", group: "⑤ 玩法 Mod", name: "出行与交通", desc: "须添加玩法后自定义：选择区标题 · 货币 · 出行方式 · 花费", contentIds: ["locations", "world"], source: "mod" },
+  { id: "cars", group: "⑤ 玩法 Mod", name: "座驾", desc: "须添加座驾包后配置购车与切换（建议先加出行与交通）", contentIds: ["locations", "world"], source: "mod" },
+  { id: "gigs", group: "⑤ 玩法 Mod", name: "通告库", desc: "通告门槛 · 酬劳 · 名气 · 成长 · 星级价目表", contentIds: ["mainPlot", "world"], source: "mod" },
+  { id: "contracts", group: "⑤ 玩法 Mod", name: "经纪合约", desc: "开局候选合约 · 通告性质 · 议价规则", contentIds: ["characters", "mainPlot"], source: "mod" },
+  { id: "projects", group: "⑤ 玩法 Mod", name: "影视项目", desc: "项目模板 · 试镜 · 片场事件 · 质量与上映", contentIds: ["mainPlot"], source: "mod" },
+  { id: "industry", group: "⑤ 玩法 Mod", name: "行业生态", desc: "经纪公司 · 片名库 · 代言品牌 · 奖项 · 圈内动态", contentIds: ["world", "characters"], source: "mod" },
+  { id: "imageCrisis", group: "⑤ 玩法 Mod", name: "舆情人设", desc: "人设 · 公开行动 · 危机 · 公关应对 · 判定权重", contentIds: ["characters", "sideEvents"], source: "mod" },
+  { id: "weeklyPaper", group: "⑤ 玩法 Mod", name: "娱乐周报", desc: "报头 · 副标题", contentIds: ["world"], source: "mod" },
+  { id: "meals", group: "⑤ 玩法 Mod", name: "每周吃什么", desc: "伙食档位 · 每周花费 · 压力 / 能力 / 气色", contentIds: ["world"], source: "mod" },
+  { id: "pregnancy", group: "⑤ 玩法 Mod", name: "孕育", desc: "开关 · 孕期 · 受孕率 · 察觉时间 · 孩子名字池", contentIds: ["characters", "world"], source: "mod" },
 ];
 
 export const WORLD_GEN_EDITOR_GROUP_ORDER = [
@@ -221,9 +222,8 @@ export const WORLD_GEN_EDITOR_GROUP_ORDER = [
   "① 基础",
   "② 角色",
   "③ 养成",
-  "④ 世界",
-  "⑤ 剧情",
-  "⑥ 玩法 Mod",
+  "④ 剧情",
+  "⑤ 玩法 Mod",
 ] as const;
 
 export const WORLD_GEN_EDITOR_STEPS: readonly WorldGenEditorStep[] = Object.freeze([
@@ -438,11 +438,12 @@ export function draftModFromWorldGen(d: WorldGenDraft): {
   const title = String(d.title ?? "").trim();
   const setting = String(d.setting ?? "").trim();
   const play = playSlotFromPrefs(d.playPrefs);
+  // 功能注释：新作品作者绑当前账号；旧作品打开时不会走本函数，避免覆盖原作者
   return {
     id,
     name: title,
     version: "0.1.0",
-    author: "",
+    author: readFunloomAuthorLabel(),
     description: setting.slice(0, 200),
     kind: "world",
     dependencies: [],

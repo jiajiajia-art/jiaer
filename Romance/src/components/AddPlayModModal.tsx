@@ -66,7 +66,12 @@ export default function AddPlayModModal({ installs, onChange, onClose, onConfirm
     let next = [...installs];
     for (const row of chain) {
       if (next.some((x) => x.slug === row.slug)) continue;
-      next = [...next, makeInstallFromCatalog(row, next.length)];
+      // 功能注释：依赖链里非目标项标 autoInstalled，取消主玩法时可提示卸掉无人再需要的自动依赖
+      const rowInst = {
+        ...makeInstallFromCatalog(row, next.length),
+        ...(row.slug !== item.slug ? { autoInstalled: true as const } : {}),
+      };
+      next = [...next, rowInst];
     }
     onChange(next);
     const names = chain.map((x) => x.name).join("、");

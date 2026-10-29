@@ -25,6 +25,13 @@ test('RomanceHost_应经virtual模块嵌入并清理html主题class', () => {
   // 功能注释：进页须剥离主站 dark，否则 Romance 浅色纸面被主站深色壳盖成深紫底
   assert.match(host, /hostThemeClasses/);
   assert.match(host, /setAttribute\(\s*['"]data-romance['"]/);
+  // 功能注释：生成世界未登录点「知道了」须在本页拉起平台 AuthModal
+  assert.match(host, /funloom:open-auth/);
+  assert.match(host, /AuthModal/);
+  assert.match(host, /setIsAuthModalOpen\(true\)/);
+  const wiz = read('Romance/src/components/WorldGenWizard.tsx');
+  assert.match(wiz, /funloom:open-auth/);
+  assert.match(wiz, /请先登录平台账号/);
 });
 
 test('Romance_css_主题令牌应限制在data-romance避免污染主站', () => {

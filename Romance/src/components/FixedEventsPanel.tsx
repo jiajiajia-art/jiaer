@@ -175,7 +175,7 @@ export default function FixedEventsPanel({ value, onChange }: { value?: FixedEve
       case "date": return `日期${c.op === "lte" ? "不晚于" : "不早于"} ${c.date || "（未填）"}`;
       case "flag": return `变量「${c.key || "未命名"}」${cmpSym(c.op)} ${c.value}`;
       case "clock": return `时段 ${c.from}~${c.to}`;
-      case "quest": return `「${questOpts().find((q) => q.id === c.key)?.label.trim() || c.key || "未选"}」${QUEST_STATE_LABEL[c.state]}`;
+      case "quest": return `「${String(questOpts().find((q) => q.id === c.key)?.label ?? "").trim() || c.key || "未选"}」${QUEST_STATE_LABEL[c.state]}`;
       default: return condBrief(c, events);
     }
   };
@@ -385,7 +385,7 @@ export default function FixedEventsPanel({ value, onChange }: { value?: FixedEve
                   <span className="mt-0.5 block truncate text-[11px] text-ink-soft">
                     {e.random && <span className="mr-1 inline-flex items-center gap-0.5 font-bold text-coral"><IconDice size={12} /> 随机</span>}
                     {e.trigger && e.trigger.kind !== "auto" && <span className="mr-1 font-bold text-jade">{TRIGGER_LABEL[e.trigger.kind]} ·</span>}
-                    {e.chain?.trim() && <span className="mr-1 font-bold text-gold">链「{e.chain.trim()}」·</span>}
+                    {String(e.chain ?? "").trim() && <span className="mr-1 font-bold text-gold">链「{String(e.chain ?? "").trim()}」·</span>}
                     {e.keywords?.length ? <span className="mr-1 font-bold text-jade">关键词：{e.keywords.slice(0, 3).join("、")}{e.keywords.length > 3 ? "…" : ""} ·</span> : null}{timeText(e.time)}
                     {(e.conds?.length ?? 0) > 0 ? ` · ${e.conds!.length} 项条件` : " · 无条件"}
                     {e.endKeywords?.length ? ` · 持续至「${e.endKeywords[0]}」` : ""}
@@ -399,9 +399,9 @@ export default function FixedEventsPanel({ value, onChange }: { value?: FixedEve
                   <AuditList issues={issuesAt(audit, `event:${e.id}`)} />
                   {/* 名称 */}
                   <Field label="事件名称">
-                    <input value={e.name} onChange={(ev) => patch(e.id, { name: ev.target.value })}
-                      placeholder="如：第一次试镜" className={`w-full rounded-lg border bg-paper-2 px-2.5 py-1.5 text-[13px] text-ink ${e.name.trim() ? "border-line" : "border-danger"}`} />
-                    {!e.name.trim() && <p className="mt-0.5 text-[11px] text-danger">必填：事件名称。</p>}
+                    <input value={String(e.name ?? "")} onChange={(ev) => patch(e.id, { name: ev.target.value })}
+                      placeholder="如：第一次试镜" className={`w-full rounded-lg border bg-paper-2 px-2.5 py-1.5 text-[13px] text-ink ${String(e.name ?? "").trim() ? "border-line" : "border-danger"}`} />
+                    {!String(e.name ?? "").trim() && <p className="mt-0.5 text-[11px] text-danger">必填：事件名称。</p>}
                   </Field>
 
                   <Field label="触发方式">
@@ -497,10 +497,10 @@ export default function FixedEventsPanel({ value, onChange }: { value?: FixedEve
 
                   {/* 事件提示词 */}
                   <Field label="事件提示词（交 AI 演绎）">
-                    <textarea value={e.prompt} onChange={(ev) => patch(e.id, { prompt: ev.target.value })} rows={3}
+                    <textarea value={String(e.prompt ?? "")} onChange={(ev) => patch(e.id, { prompt: ev.target.value })} rows={3}
                       placeholder="描述这一幕的情境、要发生什么。AI 只负责剧情描写与人物对白，不决定是否触发。"
-                      className={`w-full resize-y rounded-lg border bg-paper-2 px-2.5 py-1.5 text-[13px] leading-relaxed text-ink ${e.prompt.trim() ? "border-line" : "border-danger"}`} />
-                    {!e.prompt.trim() && <p className="mt-0.5 text-[11px] text-danger">必填：没有提示词时 AI 无从演绎。</p>}
+                      className={`w-full resize-y rounded-lg border bg-paper-2 px-2.5 py-1.5 text-[13px] leading-relaxed text-ink ${String(e.prompt ?? "").trim() ? "border-line" : "border-danger"}`} />
+                    {!String(e.prompt ?? "").trim() && <p className="mt-0.5 text-[11px] text-danger">必填：没有提示词时 AI 无从演绎。</p>}
                   </Field>
 
                   {/* 触发后果 */}
@@ -583,7 +583,7 @@ export default function FixedEventsPanel({ value, onChange }: { value?: FixedEve
                     </span>
                     <span className="flex flex-wrap justify-end gap-1.5">
                     <button onClick={() => { setTpls(saveTemplate(e)); flash(`已存为模板「${e.name || "未命名事件"}」`); }} className="rounded-lg border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink transition hover:border-jade hover:text-jade">存为模板</button>
-                    {!modMode && <button onClick={() => toWorldBook(e)} disabled={!e.prompt.trim()} className="rounded-lg border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40">写入世界书</button>}
+                    {!modMode && <button onClick={() => toWorldBook(e)} disabled={!String(e.prompt ?? "").trim()} className="rounded-lg border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40">写入世界书</button>}
                     <button onClick={() => remove(e.id)} className="rounded-lg border border-danger/50 px-3 py-1.5 text-[12.5px] font-bold text-danger transition hover:bg-danger/10">
                       删除事件
                     </button>
@@ -996,7 +996,7 @@ function ChoicesEditor({ ev, events, onChange }: { ev: FixedEvent; events: Fixed
         <div key={c.id} className="space-y-1.5 rounded-xl border-l-[3px] border-jade/70 bg-paper/60 py-2 pl-3 pr-2">
           <div className="flex items-center gap-2">
             <span className="shrink-0 rounded-md bg-jade/15 px-1.5 py-0.5 text-[11px] font-black text-jade">选项 {idx + 1}</span>
-            <input className={`${box} ${c.label.trim() ? "" : "!border-danger"}`} value={c.label} maxLength={30} placeholder="玩家看到的文案，如：接下这部戏" onChange={(x) => set(c.id, { label: x.target.value })} />
+            <input className={`${box} ${String(c.label ?? "").trim() ? "" : "!border-danger"}`} value={String(c.label ?? "")} maxLength={30} placeholder="玩家看到的文案，如：接下这部戏" onChange={(x) => set(c.id, { label: x.target.value })} />
             <button className="shrink-0 text-[12px] text-ink-soft hover:text-danger" aria-label="删除选项" onClick={() => { const n = list.filter((y) => y.id !== c.id); onChange(n.length ? n : undefined); }}><IconClose size={14} /></button>          </div>
           <input className={box} value={c.prompt ?? ""} maxLength={200} placeholder="选中后交给 AI 的续写指引（可留空）" onChange={(x) => set(c.id, { prompt: x.target.value || undefined })} />
           {(c.conds ?? []).map((k, i) => (

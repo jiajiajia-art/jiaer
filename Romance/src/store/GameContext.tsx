@@ -268,9 +268,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const themeRef = useRef(theme);
   themeRef.current = theme;
   const setTheme = useCallback((t: ThemePref) => {
-    // 屏幕方向已锁定：除非本次就是在切换锁本身，否则任何外观套用（主题包 / 预设）都不能改方向
-    const prev = themeRef.current;
-    const next = prev.orientLock && !!t.orientLock === !!prev.orientLock ? { ...t, orient: prev.orient } : t;
+    // 功能注释：方向可随时切换，不再尊重历史 orientLock（建角选定后局内设置直接改）
+    const next = { ...t, orientLock: false };
     themeRef.current = next;
     setThemeState(next);
     saveTheme(next);
@@ -666,7 +665,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
         g = { ...g, id: AUTHOR_PREVIEW_GAME_ID, worldId: getWorldId() };
       }
       if (startDate) g.startDate = startDate;
-      if (opts?.playPrefs) g.playPrefs = opts.playPrefs;
+      if (opts?.playPrefs) {
+        g.playPrefs = opts.playPrefs;
+        // 功能注释：建角游玩偏好的屏幕方向写入主题，开局即生效、不再弹首次方向窗
+        const orient = opts.playPrefs.orient === "landscape" ? "landscape" : "portrait";
+        setTheme({ ...themeRef.current, orient, orientLock: false });
+      }
       g = tickPlayerAge(g, 0).g; // 年龄随日历：开局当天定基准年，免得第一次推进恰好跨过生日时漏长一岁
       if (worldRules) g.worldRules = worldRules;
       // 自定义角色属性：拷进本局，并按初值写入人物档案（AI 读写同一份）

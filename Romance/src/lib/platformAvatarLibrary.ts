@@ -67,6 +67,25 @@ export function readFunloomAuthToken(): string {
   }
 }
 
+/**
+ * 功能注释：新作品作者名优先用主站账号昵称 / 用户名；读不到则空串（不伪造）。
+ * 仅用于新建绑定；编辑旧作品不得用此覆盖原作者。
+ */
+export function readFunloomAuthorLabel(): string {
+  try {
+    const raw = localStorage.getItem('auth-storage');
+    if (!raw) return '';
+    const parsed = JSON.parse(raw) as {
+      state?: { user?: { user?: { nickname?: string; name?: string; userCode?: string } } };
+    };
+    const u = parsed?.state?.user?.user;
+    const label = String(u?.nickname || u?.name || u?.userCode || '').trim();
+    return label;
+  } catch {
+    return '';
+  }
+}
+
 export function resolvePlatformAvatarUrl(path: string | null | undefined): string {
   const p = String(path || '').trim();
   if (!p) return '';

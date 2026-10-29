@@ -3,9 +3,14 @@ import { affinityCapOf } from "../worlds/star2005/content";
  * 找出引用了不存在对象的条目、只读不写的标记、永远不会触发的设置，以及事件之间的循环依赖。只供编辑器调用。
  * 每条问题带 at（如 event:<id>），编辑器据此把提示挂到对应条目上。 */
 import type { CgDef, CustomEnding, EngineRules, Faction, FixedCond, FixedEffect, FixedEvent, GameState, Storyline, WorldBookEntry } from "../lib/types";
+import { asTrimmedString } from "../lib/asTrimmedString";
 import { LIVE_ITEMS, LIVE_LOCATIONS, LIVE_PEOPLE, getWorldGameRules, getWorldRooms, getWorldStorylines } from "../mods/registry";
 import { resolveRules, rulesOf } from "./engineRules";
+import { keywordTexts } from "../lib/worldBookKeywords";
 import { modeOf } from "./worldbookPick";
+
+/** 功能注释：审计文案字段；AI 脏对象禁止 ?.trim()（会炸 trim is not a function） */
+const txt = (v: unknown) => asTrimmedString(v);
 
 export type RefKind = "npc" | "item" | "location" | "event" | "faction" | "quest" | "flag";
 export type RefHit = { kind: RefKind; id: string; from: string; at?: string }; // from = 来源说明；at = 所属条目
@@ -157,7 +162,7 @@ export function auditStory(inp: AuditInput): AuditReport {
     if (t?.kind === "choice") refs.push({ kind: "event", id: t.event, from: `${from}·触发`, at });
     for (const c of e.choices ?? []) {
       const cf = `${from}·选项「${c.label || c.id}」`;
-      if (!c.label?.trim()) issues.push({ level: "warn", text: "有一个选项没有写文字，玩家看到的是空按钮", from: cf, at });
+      if (!txt(c.label)) issues.push({ level: "warn", text: "有一个选项没有写文字，玩家看到的是空按钮", from: cf, at });
       condRefs(c.conds, cf, at, refs);
       for (const gr of c.condGroups ?? []) condRefs(gr.conds, cf, at, refs);
       condRefs(c.check?.conds, `${cf}·判定`, at, refs);
@@ -175,29 +180,29 @@ export function auditStory(inp: AuditInput): AuditReport {
     if (tm?.kind === "date" && !DATE_RE.test(tm.date ?? "")) sane("触发时间")("error", `日期「${tm.date || "（空）"}」格式不对，应写成 2005.03.01`);
     if (tm?.kind === "every" && !(tm.days >= 1)) sane("触发时间")("error", "「每隔几天」至少要填 1");
     if (tm?.kind === "weekly" && !(tm.dow >= 0 && tm.dow <= 6)) sane("触发时间")("error", "「每周几」没选");
-    if (t?.kind === "action" && !t.text?.trim()) sane("触发方式")("error", "「行动完成」没填要匹配的文字，永远不会触发");
+    if (t?.kind === "action" && !txt(t.text)) sane("触发方式")("error", "「行动完成」没填要匹配的文字，永远不会触发");
     if (t?.kind === "rel" && !t.delta) sane("触发方式")("error", "「好感变化」的阈值是 0，填正数表示上升、负数表示下降");
     if (t?.kind === "round" && !(t.every! > 0) && !(t.at! > 0)) sane("触发方式")("error", "「轮次」没填第几轮或每几轮");
     if (t?.kind === "choice" && t.event && !events.find((x) => x.id === t.event)?.choices?.some((c) => c.id === t.choice)) {
       if (events.some((x) => x.id === t.event)) sane("触发方式")("error", "选中的那个选项已经不存在于目标事件里，永远不会触发");
     }
-    if (e.keywords && e.keywords.length && !e.keywords.some((k) => k.trim())) sane("")("warn", "关键词全是空的");
+    if (Array.isArray(e.keywords) && e.keywords.length && keywordTexts(e.keywords).length === 0) sane("")("warn", "关键词全是空的");
     if (e.once && e.cooldown) sane("")("warn", "已设为只触发一次，冷却天数不会起作用");
     const ch = e.choices ?? [];
     if (ch.length > 3) sane("")("warn", `有 ${ch.length} 个选项，最多只会显示 3 个`);
     if (ch.length && ch.every((c) => c.hidden)) sane("")("warn", "选项全是隐藏分支，玩家没有可点的选项");
-    const labels = ch.map((c) => c.label?.trim()).filter(Boolean);
+    const labels = ch.map((c) => txt(c.label)).filter(Boolean);
     if (new Set(labels).size < labels.length) sane("")("warn", "有两个选项文字完全相同，玩家分不清");
     for (const c of ch) {
-      const cs = sane(`选项「${c.label || c.id}」`);
+      const cs = sane(`选项「${txt(c.label) || c.id}」`);
       condSanity(c.conds, c.condMatch, cs, nameOf);
       for (const gr of c.condGroups ?? []) condSanity(gr.conds, gr.match, cs, nameOf);
       if (c.check) { if (!c.check.conds.length) cs("warn", "开启了成功判定但没有条件，永远算成功"); condSanity(c.check.conds, c.check.match, cs, nameOf); }
       effectSanity(c.effects, cs);
       effectSanity(c.failEffects, cs);
     }
-    if (!e.name?.trim()) issues.push({ level: "warn", text: "事件没有名称，列表与日志里难以辨认", from, at });
-    if (!e.prompt?.trim()) issues.push({ level: "warn", text: "没有写事件提示词，上演时 AI 无从演绎", from, at });
+    if (!txt(e.name)) issues.push({ level: "warn", text: "事件没有名称，列表与日志里难以辨认", from, at });
+    if (!txt(e.prompt)) issues.push({ level: "warn", text: "没有写事件提示词，上演时 AI 无从演绎", from, at });
   }
 
   // 结局：按列表顺序判定，第一个满足的生效
@@ -208,7 +213,7 @@ export function auditStory(inp: AuditInput): AuditReport {
     condRefs(en.conds, from, at, refs);
     for (const gr of en.condGroups ?? []) condRefs(gr.conds, from, at, refs);
     if (en.sceneId) refs.push({ kind: "event", id: en.sceneId, from: `${from}·收尾场景`, at });
-    if (!en.title?.trim()) issues.push({ level: "warn", text: "结局没有标题", from, at });
+    if (!txt(en.title)) issues.push({ level: "warn", text: "结局没有标题", from, at });
     const es: Push = (level, text) => issues.push({ level, text, from, at });
     condSanity(en.conds, en.match, es, nameOf);
     for (const gr of en.condGroups ?? []) condSanity(gr.conds, gr.match, es, nameOf);
@@ -251,7 +256,7 @@ export function auditStory(inp: AuditInput): AuditReport {
       condSanity(n.conds, n.match, ns, nameOf);
       condSanity(n.failConds, "any", ns, nameOf);
       effectSanity(n.rewards, ns);
-      if (!n.conds.length && !n.optional) issues.push({ level: "warn", text: `节点「${n.name || n.id}」没有完成条件，一开始判定就会直接完成`, from, at });
+      if (!(n.conds ?? []).length && !n.optional) issues.push({ level: "warn", text: `节点「${n.name || n.id}」没有完成条件，一开始判定就会直接完成`, from, at });
     }
   }
 
@@ -265,18 +270,18 @@ export function auditStory(inp: AuditInput): AuditReport {
   for (const w of inp.worldBook ?? []) {
     const at = `wb:${w.id}`;
     const from = `世界书·${w.title || w.id}`;
-    const t = w.title?.trim();
+    const t = txt(w.title);
     if (t) titles.set(t, (titles.get(t) ?? 0) + 1);
     if (!w.enabled) continue;
-    if (!w.content?.trim()) issues.push({ level: "warn", text: "正文为空，注入了也没有内容", from, at });
-    if (modeOf(w) === "keyword" && !w.keywords.some((k) => k.trim())) issues.push({ level: "error", text: "设为关键词触发，但没有填关键词，永远不会注入", from, at });
+    if (!txt(w.content)) issues.push({ level: "warn", text: "正文为空，注入了也没有内容", from, at });
+    if (modeOf(w) === "keyword" && keywordTexts(w.keywords).length === 0) issues.push({ level: "error", text: "设为关键词触发，但没有填关键词，永远不会注入", from, at });
     if (w.probability === 0) issues.push({ level: "warn", text: "触发概率为 0，永远不会注入", from, at });
     if ((w.scope === "npc" && !inp.skip?.includes("npc")) || (w.scope === "room" && !inp.skip?.includes("location"))) {
       if (!w.scopeId) issues.push({ level: "error", text: `绑定范围是${w.scope === "npc" ? "角色" : "地点"}，但还没选择具体对象`, from, at });
       else if (w.scope === "npc" ? !npcIds.has(w.scopeId) : !rooms.has(w.scopeId)) issues.push({ level: "error", text: `绑定的${w.scope === "npc" ? "角色" : "地点"}「${w.scopeId}」已不存在，条目不会再注入`, from, at });
     }
   }
-  for (const w of inp.worldBook ?? []) { const t = w.title?.trim(); if (t && (titles.get(t) ?? 0) > 1) issues.push({ level: "warn", text: `与其他条目同名「${t}」，AI 可能分不清`, from: `世界书·${t}`, at: `wb:${w.id}` }); }
+  for (const w of inp.worldBook ?? []) { const t = txt(w.title); if (t && (titles.get(t) ?? 0) > 1) issues.push({ level: "warn", text: `与其他条目同名「${t}」，AI 可能分不清`, from: `世界书·${t}`, at: `wb:${w.id}` }); }
 
   // 存在性校验：空引用与已失效的 id
   const exists: Record<Exclude<RefKind, "flag">, Set<string>> = {
