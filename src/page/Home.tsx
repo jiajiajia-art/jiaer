@@ -11,6 +11,12 @@ import type { UserGameData } from '../api/home/getGameData.type';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import promotionApi from '../api/promotion/promotionApi';
 import { authModalStore, useAuthStore } from '../store/useAuthStore';
+import reportApi from '../api/report/reportApi';
+import ReportSheet from '../components/Report/ReportSheet';
+import ContentActionMenu from '../components/Report/ContentActionMenu';
+import ConfirmModal from '../components/CommonModal/ConfirmModal';
+import toast from 'react-hot-toast';
+import { getApiErrorMessage } from '../utils/error';
 import FooterArea from '../components/Layout/FooterArea';
 import GameGridSkeleton from '../components/Skeleton/GameGridSkeleton';
 import CheckInModal from '../components/CheckInModal';
@@ -56,7 +62,7 @@ const JOIN_GROUP_ICON = `${import.meta.env.BASE_URL}data/assetsv2/home/icon_comm
 type CarouselItem = UserGameData | BannerItem;
 
 const isBannerCarouselItem = (item: CarouselItem): item is BannerItem => 'image_url' in item;
-const PROTECTED_PATH_PREFIXES = ['/analytics', '/create', '/createGame', '/warehouse', '/profile', '/promotions', '/admin', '/galgame', '/galgameMap', '/customif', '/interactive-video'];
+const PROTECTED_PATH_PREFIXES = ['/analytics', '/create', '/createGame', '/warehouse', '/profile', '/account', '/promotions', '/admin', '/galgame', '/galgameMap', '/customif', '/interactive-video'];
 const DESKTOP_CAROUSEL_BREAKPOINT = 768;
 const MOBILE_NAVBAR_HEIGHT = 60;
 const DESKTOP_CAROUSEL_RATIO = 9 / 5;
@@ -135,6 +141,14 @@ const Home: React.FC = () => {
     const [specialPage, setSpecialPage] = useState(0);
     const [allPage, setAllPage] = useState(0);
     const [allGamesFilters, setAllGamesFilters] = useState<HomeListFilters>(HOME_PAGE_DEFAULT_FILTERS);
+    const [contentMenu, setContentMenu] = useState<{
+        game: UserGameData;
+        x: number;
+        y: number;
+    } | null>(null);
+    const [blockTarget, setBlockTarget] = useState<UserGameData | null>(null);
+    const [reportTargetId, setReportTargetId] = useState<string | null>(null);
+    const [blockBusy, setBlockBusy] = useState(false);
     const [currentSlide, setCurrentSlide] = useState(1);
     const [desktopCurrentSlide, setDesktopCurrentSlide] = useState(0);
     const [isTransitionEnabled, setIsTransitionEnabled] = useState(true);
@@ -1022,6 +1036,40 @@ const Home: React.FC = () => {
             return getHomeListFilterKey(prev) === getHomeListFilterKey(next) ? prev : next;
         });
     }, []);
+
+    const ensureLoggedInForContentAction = useCallback(() => {
+        if (isAuthenticated) return true;
+        setIsAuthModalOpen(true);
+        return false;
+    }, [isAuthenticated, setIsAuthModalOpen]);
+
+    const handleContentMenu = useCallback((game: UserGameData, point: { x: number; y: number }) => {
+        setContentMenu({ game, x: point.x, y: point.y });
+    }, []);
+
+    const handleConfirmBlock = useCallback(async () => {
+        if (!blockTarget || blockBusy) return;
+        const targetId = String(blockTarget.file_id || blockTarget.id || '').trim();
+        if (!targetId) {
+            setBlockTarget(null);
+            return;
+        }
+        setBlockBusy(true);
+        try {
+            const res = await reportApi.blockContent({ targetType: 'game', targetId });
+            if (!res.data.success) {
+                throw new Error(res.data.message || t('report.blockFailed'));
+            }
+            setAllGames((prev) => prev.filter((g) => String(g.file_id || g.id) !== targetId));
+            toast.success(res.data.message || t('report.blockSuccess'));
+            setBlockTarget(null);
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, t('report.blockFailed')));
+        } finally {
+            setBlockBusy(false);
+        }
+    }, [blockBusy, blockTarget, t]);
+
     const loadLibraryData = useCallback(() => undefined, []);
 
     // 鍔犺浇鏇村闄愭椂浼樻儬
@@ -2361,6 +2409,8 @@ const Home: React.FC = () => {
                                         games={allGames}
                                         layoutVariant="homeWide"
                                         emptyText={allGamesEmptyText}
+                                        enableContentMenu={allGamesFilters.sort === 'recommended'}
+                                        onContentMenu={handleContentMenu}
                                     />
                                     {isLoadingMoreAll && (
                                         <div className={styles.loadMoreSkeleton}>
@@ -2401,6 +2451,44 @@ const Home: React.FC = () => {
                 onClose={handleCloseAnnouncementModal}
                 onNavigateLink={handleAnnouncementLinkNavigate}
             />
+            <ContentActionMenu
+                open={Boolean(contentMenu)}
+                x={contentMenu?.x ?? 0}
+                y={contentMenu?.y ?? 0}
+                onClose={() => setContentMenu(null)}
+                onBlock={() => {
+                    if (!contentMenu) return;
+                    if (!ensureLoggedInForContentAction()) return;
+                    setBlockTarget(contentMenu.game);
+                }}
+                onReport={() => {
+                    if (!contentMenu) return;
+                    if (!ensureLoggedInForContentAction()) return;
+                    const id = String(contentMenu.game.file_id || contentMenu.game.id || '').trim();
+                    if (id) setReportTargetId(id);
+                }}
+            />
+            <ConfirmModal
+                isOpen={Boolean(blockTarget)}
+                title={t('report.blockConfirmTitle')}
+                message={t('report.blockConfirmMessage')}
+                confirmButtonText={t('report.blockGame')}
+                cancelButtonText={t('common.cancel')}
+                onCancel={() => {
+                    if (!blockBusy) setBlockTarget(null);
+                }}
+                onConfirm={() => {
+                    void handleConfirmBlock();
+                }}
+            />
+            {reportTargetId ? (
+                <ReportSheet
+                    isOpen
+                    onClose={() => setReportTargetId(null)}
+                    targetType="game"
+                    targetId={reportTargetId}
+                />
+            ) : null}
             <MobileBottomNav />
             {externalLinkCopyModal}
         </div>

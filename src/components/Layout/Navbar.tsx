@@ -21,6 +21,8 @@ import {
 } from '../../utils/appLanguage';
 import UserAvatar from '../UserAvatar';
 import LanguageSelectModal from './LanguageSelectModal';
+import toast from 'react-hot-toast';
+import { isCreatorFrozen, isPublishBanned } from '../../lib/userPunishment';
 
 /** 功能注释：暗色 funloom 导航图标基路径（assetsv2/home） */
 const HOME_ICON_BASE = `${import.meta.env.BASE_URL}data/assetsv2/home`;
@@ -70,6 +72,9 @@ const Navbar: React.FC<NavbarProps> = ({
     const { isAuthModalOpen, setIsAuthModalOpen } = authModalStore();
     const { unreadCount, refreshUnreadCount, clearUnreadCount } = useMessageStore();
     useMessageRealtime();
+    const publishBanned = isPublishBanned(user?.user?.publishBanUntil);
+    const creatorFrozen = isCreatorFrozen(user?.user?.creatorFrozen);
+    const createBlocked = publishBanned || creatorFrozen;
     const avatarContainerRef = useRef<HTMLDivElement | null>(null);
     const searchBoxRef = useRef<HTMLFormElement | null>(null);
     const searchRequestIdRef = useRef(0);
@@ -189,7 +194,7 @@ const Navbar: React.FC<NavbarProps> = ({
         if (path === '/home' || path === '/') return 'home';
         if (path.startsWith('/categories')) return 'categories';
         // /create 已合并为「我的」统一页，顶栏创作仅在编辑器相关路由高亮
-        if (path === '/create' || path.startsWith('/create/withdraw-records')) return '';
+        if (path === '/profile' || path.startsWith('/create/withdraw-records')) return '';
         if (path.startsWith('/create') || isCreatorRoutePath(path)) return 'create';
         if (path.startsWith('/warehouse')) return 'warehouse';
         if (path.startsWith('/rank')) return 'rank';
@@ -294,9 +299,17 @@ const Navbar: React.FC<NavbarProps> = ({
                         {t('nav.categories')}
                     </div>
                     <div
-                        className={`${styles.navLink} ${activeNav === 'create' ? styles.navLinkActive : ''}`}
+                        className={`${styles.navLink} ${activeNav === 'create' ? styles.navLinkActive : ''} ${createBlocked ? styles.navLinkDisabled : ''}`}
                         onClick={() => {
                             if (!requireAuth()) return;
+                            if (creatorFrozen) {
+                                toast.error(t('report.creatorFrozenHint'));
+                                return;
+                            }
+                            if (publishBanned) {
+                                toast.error(t('report.createBannedHint'));
+                                return;
+                            }
                             runLeaveAction(() => navigate('/create/new'));
                         }}
                     >
@@ -416,6 +429,7 @@ const Navbar: React.FC<NavbarProps> = ({
                                         className={styles.avatarInner}
                                     >
                                         <img
+                                            key={user?.user?.avatarUrl || 'default-avatar'}
                                             src={(() => {
                                                 const baseUrl = getImageUrl(user?.user?.avatarUrl) || `${import.meta.env.BASE_URL}data/assets/default_avatar.png`;
                                                 // 功能注释：用户头像统一请求 webp 格式；后端按 USER_AVATAR_WEBP_AB_PERCENT 决定返回 webp 或原图。
@@ -435,7 +449,7 @@ const Navbar: React.FC<NavbarProps> = ({
                                                 className={styles.menuBtn}
                                                 onClick={() => {
                                                     runLeaveAction(() => {
-                                                        navigate('/create');
+                                                        navigate('/profile');
                                                         setShowUserMenu(false);
                                                     });
                                                 }}

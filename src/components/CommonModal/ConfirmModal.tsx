@@ -12,8 +12,8 @@ interface ConfirmModalProps {
     cancelButtonText?: string;
     /** alert：仅确认按钮，用于系统提示（替代原生 alert） */
     variant?: 'confirm' | 'alert';
-    /** dark：对齐个人中心 / 提现弹窗的墨黑酒红风格 */
-    tone?: 'default' | 'dark';
+    /** dark：个人中心墨黑酒红；glass：磨砂深色提示；admin：管理后台暖色 */
+    tone?: 'default' | 'dark' | 'glass' | 'admin';
 }
 
 const ConfirmModal: React.FC<ConfirmModalProps> = ({
@@ -31,6 +31,9 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
     const isAlert = variant === 'alert';
     const isDark = tone === 'dark';
+    const isGlass = tone === 'glass';
+    const isAdmin = tone === 'admin';
+    const usesOwnLayout = isGlass || isAdmin;
 
     const modalContent = (
         <div className={styles.modalOverlay} onClick={onCancel}>
@@ -38,11 +41,77 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 <div
                     className={[
                         styles.deleteModal,
-                        isAlert ? styles.alertModal : '',
+                        isAlert && !usesOwnLayout ? styles.alertModal : '',
                         isDark ? styles.darkModal : '',
+                        isGlass ? styles.glassModal : '',
+                        isAdmin ? styles.adminModal : '',
                     ].filter(Boolean).join(' ')}
+                    role={usesOwnLayout ? 'dialog' : undefined}
+                    aria-modal={usesOwnLayout ? true : undefined}
+                    aria-labelledby={isGlass ? 'confirm-glass-title' : isAdmin ? 'confirm-admin-title' : undefined}
                 >
-                    {isDark ? (
+                    {isAdmin ? (
+                        <>
+                            <button
+                                className={styles.adminClose}
+                                onClick={onCancel}
+                                type="button"
+                                aria-label="close"
+                            >
+                                ×
+                            </button>
+                            <div className={styles.adminHeader}>
+                                <h1 id="confirm-admin-title" className={styles.adminTitle}>{title}</h1>
+                            </div>
+                            <div className={styles.adminBody}>
+                                <div className={styles.adminMessage}>{message}</div>
+                            </div>
+                            <div className={styles.adminFooter}>
+                                {!isAlert ? (
+                                    <button
+                                        className={styles.adminCancel}
+                                        onClick={onCancel}
+                                        type="button"
+                                    >
+                                        {cancelButtonText}
+                                    </button>
+                                ) : null}
+                                <button
+                                    className={styles.adminConfirm}
+                                    onClick={onConfirm}
+                                    type="button"
+                                >
+                                    {confirmButtonText}
+                                </button>
+                            </div>
+                        </>
+                    ) : isGlass ? (
+                        <>
+                            <button
+                                className={styles.glassClose}
+                                onClick={onCancel}
+                                type="button"
+                                aria-label="close"
+                            >
+                                ×
+                            </button>
+                            <div className={styles.glassHeader}>
+                                <h1 id="confirm-glass-title" className={styles.glassTitle}>{title}</h1>
+                            </div>
+                            <div className={styles.glassBody}>
+                                <div className={styles.glassMessage}>{message}</div>
+                            </div>
+                            <div className={styles.glassFooter}>
+                                <button
+                                    className={styles.glassConfirm}
+                                    onClick={onConfirm}
+                                    type="button"
+                                >
+                                    {confirmButtonText}
+                                </button>
+                            </div>
+                        </>
+                    ) : isDark ? (
                         <div className={styles.darkHeader}>
                             <button
                                 className={styles.darkCloseButton}
@@ -75,6 +144,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
                         </div>
                     )}
 
+                    {!usesOwnLayout ? (
                     <div className={`${styles.modalBody} ${isDark ? styles.darkBody : ''}`}>
                         <div className={`${styles.messageWrapper} ${isDark ? styles.darkMessageWrapper : ''}`}>
                             <p className={`${styles.message} ${isDark ? styles.darkMessage : ''}`}>{message}</p>
@@ -105,6 +175,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
                             ) : null}
                         </div>
                     </div>
+                    ) : null}
                 </div>
             </div>
         </div>

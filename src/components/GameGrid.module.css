@@ -143,20 +143,6 @@
     border-color: rgba(40, 167, 69, 1);
 }
 
-.unpublishedTag {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    background: rgba(142, 33, 53, 0.95);
-    color: #fff;
-    border: 1px solid rgba(168, 40, 60, 1);
-    border-radius: 999px;
-    padding: 4px 10px;
-    font-size: 12px;
-    font-weight: 600;
-    z-index: 4;
-}
-
 .goodsTypeTag {
     position: absolute;
     top: 10px;

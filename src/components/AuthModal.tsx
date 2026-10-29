@@ -32,6 +32,7 @@ import {
     normalizeVerificationCode,
     validateRegistrationFields,
 } from '../lib/registrationForm';
+import { getApiErrorMessage } from '../utils/error';
 
 interface AuthModalProps {
     isOpen: boolean;
@@ -655,8 +656,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                 setSubmitError(t('auth.registrationTimeout'));
                 return;
             }
-            const errorMessage = error.response?.data?.message || error.message || t('common.error');
-            const errorCode = error.response?.data?.code;
+            const errorMessage = getApiErrorMessage(error, t('common.error'));
+            const errorCode = error?.response?.data?.code;
             if (mode === 'login' && handleAgreementRequestError(errorCode)) {
                 return;
             } else if (mode === 'login' && errorCode === 'INVALID_LOGIN_CREDENTIALS') {

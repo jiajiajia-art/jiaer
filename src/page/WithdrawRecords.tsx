@@ -88,7 +88,7 @@ const WithdrawRecords: React.FC = () => {
                 <button
                   type="button"
                   className={`${createStyles.draftManageButton} ${styles.backToCreateButton}`}
-                  onClick={() => navigate('/create')}
+                  onClick={() => navigate('/profile')}
                 >
                   <IoArrowBack aria-hidden />
                   {t('create.withdrawRecordsBackToCreate')}

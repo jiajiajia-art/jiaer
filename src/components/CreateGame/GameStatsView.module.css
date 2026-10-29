@@ -10,8 +10,59 @@
     background: #000000;
     color: #FFFFFF;
     min-height: 100vh;
-    padding-bottom: calc(96px + env(safe-area-inset-bottom));
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
     box-sizing: border-box;
+}
+
+/* 功能注释：固定在站点顶栏左下 */
+.topBar {
+    position: fixed;
+    top: calc(var(--app-desktop-navbar-height) + 10px);
+    left: 0;
+    right: 0;
+    z-index: 900;
+    padding: 0;
+    pointer-events: none;
+}
+
+.topBarContent {
+    width: 100%;
+    margin: 0;
+    padding: 0 4px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.backIconButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 999px;
+    color: #ffffff;
+    cursor: pointer;
+    flex-shrink: 0;
+    pointer-events: auto;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.backIconButton svg {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.75)) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
 }
 
 .heroBanner {
@@ -344,7 +395,11 @@
 @media (max-width: 768px) {
     .statsModeWrapper {
         width: 100%;
-        padding-bottom: calc(108px + env(safe-area-inset-bottom));
+        padding-bottom: calc(24px + env(safe-area-inset-bottom));
+    }
+
+    .topBarContent {
+        padding: 0 4px;
     }
 
     .heroBanner {
@@ -355,7 +410,7 @@
 
     .heroContent {
         width: 100%;
-        padding: calc(var(--app-desktop-navbar-height) + 12px) 16px 22px;
+        padding: 56px 16px 22px;
     }
 
     .heroTitle {

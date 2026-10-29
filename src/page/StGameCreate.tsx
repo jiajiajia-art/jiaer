@@ -23,6 +23,8 @@ import {
   resolveGamePublishAppealBlock,
   type GamePublishAppealBlock,
 } from '../utils/gamePublishAppeal';
+import { getApiErrorMessage } from '../utils/error';
+import { isPublishPendingReview } from '../lib/publishReview';
 
 const emptyConfig: StConfig = {
   regex: [],
@@ -755,6 +757,15 @@ const StGameCreate: React.FC = () => {
         return;
       }
 
+      if (isPublishPendingReview(response.data)) {
+        toast.success(
+          response.data.message?.trim()
+          || t('report.publishPendingReviewSuccess'),
+        );
+      } else {
+        toast.success(response.data.message?.trim() || t('createGame.publishSuccess'));
+      }
+
       setShowPublishModal(false);
       nav(`/createGame?mode=stats&gameId=${encodeURIComponent(fileId)}`);
     } catch (error: any) {
@@ -763,8 +774,7 @@ const StGameCreate: React.FC = () => {
         setAppealBlock(resolveGamePublishAppealBlock(error, fileId));
         return;
       }
-      const errorMessage = error?.response?.data?.message || error?.message || t('stGameCreate.publishFailed');
-      toast.error(errorMessage);
+      toast.error(getApiErrorMessage(error, t('stGameCreate.publishFailed')));
     } finally {
       setPublishing(false);
     }

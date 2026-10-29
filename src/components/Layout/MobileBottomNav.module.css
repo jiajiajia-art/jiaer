@@ -46,6 +46,10 @@
         color: #ff3b61;
     }
 
+    .navItemDisabled {
+        opacity: 0.42;
+    }
+
     .navItem:not(.navItemActive) .icon {
         /* 未选中：统一压成白色剪影 */
         filter: brightness(0) invert(1);

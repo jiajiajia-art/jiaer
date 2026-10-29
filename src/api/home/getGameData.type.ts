@@ -20,7 +20,13 @@ export interface UserGameData {
     created_at: string;
     updated_at: string;
     author_name: string;
+    userCode?: string | null;
+    author_user_code?: string | null;
+    creator_user_code?: string | null;
     is_public: number;
+    /** 风控态：taken_down 时创作者可见「违规下架」，对外不可公开 */
+    moderation_status?: 'none' | 'taken_down' | string | null;
+    moderationStatus?: 'none' | 'taken_down' | 'pending_review' | string | null;
     like_count: number;
     dislike_count: number;
     /** 收藏数（详情/列表均可选返回，缺省时展示 0） */
@@ -72,6 +78,13 @@ export interface UserGameData {
     groupNo?: string;
     /** 当前用户是否已收藏该游戏 */
     isFavorited?: boolean;
+    /** 详情页创作者关系态（GET /auth/games/info；未登录/缺省按 false） */
+    isCreatorSelf?: boolean;
+    isFollowingCreator?: boolean;
+    /** 我是否屏蔽了创作者 */
+    isCreatorBlocked?: boolean;
+    /** 创作者是否屏蔽了我 */
+    isCreatorBlockedBy?: boolean;
     /** 首页推荐增量字段 */
     recommend_reason?: string;
     campaign_id?: number | null;

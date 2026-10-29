@@ -69,7 +69,7 @@ const InteractiveVideoPurchased: React.FC = () => {
             navigate(-1);
             return;
         }
-        navigate('/create');
+        navigate('/profile');
     };
 
     return (

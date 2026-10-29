@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { MdArrowBack, MdCheck, MdClose, MdContentCopy, MdDownload, MdEdit, MdPlayArrow, MdRefresh, MdSave } from 'react-icons/md';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import Navbar from '../components/Layout/Navbar';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
@@ -33,6 +34,8 @@ import {
 import { resolveCreatorEngine } from '../utils/miniProgram';
 import { copyTextToClipboard } from '../utils/clipboard';
 import { flattenThemeTags, useLocalizedThemeTags, type FlatThemeTag } from '../utils/themeTags';
+import { getApiErrorMessage, messageForApiCode } from '../utils/error';
+import { isPublishPendingReview } from '../lib/publishReview';
 import styles from './InteractiveVideoEdit.module.css';
 import GamePublishAppealPrompt from '../components/GamePublishAppealPrompt';
 import {
@@ -271,19 +274,18 @@ const getVideoEditErrorMessage = async (error: unknown, fallback: string) => {
     const data = maybeError?.response?.data;
     if (data instanceof Blob) {
         try {
-            const parsed = JSON.parse(await data.text()) as { message?: string };
-            return parsed.message || fallback;
+            const parsed = JSON.parse(await data.text()) as { message?: string; code?: string };
+            if (parsed.message) return parsed.message;
+            return messageForApiCode(parsed.code) || fallback;
         } catch {
             return fallback;
         }
     }
-    if (data && typeof data === 'object' && 'message' in data) {
-        return String((data as { message?: unknown }).message || fallback);
-    }
-    return maybeError?.message || fallback;
+    return getApiErrorMessage(error, fallback);
 };
 
 const InteractiveVideoEdit: React.FC = () => {
+    const { t } = useTranslation();
     const { fileId = '' } = useParams<{ fileId: string }>();
     const navigate = useNavigate();
     const location = useLocation();
@@ -816,6 +818,7 @@ const InteractiveVideoEdit: React.FC = () => {
             }
             if (response.data.data) {
                 const published = response.data.data;
+                const pending = isPublishPendingReview(response.data);
                 setGameDetail((current) => current ? {
                     ...current,
                     is_public: Number(published.is_public),
@@ -825,11 +828,18 @@ const InteractiveVideoEdit: React.FC = () => {
                     price_amount: published.price_amount ?? current.price_amount,
                     special_price_amount: published.special_price_amount ?? current.special_price_amount,
                     updated_at: published.updated_at ?? current.updated_at,
+                    moderationStatus: pending
+                        ? 'pending_review'
+                        : (published.moderationStatus || published.moderation_status || current.moderationStatus),
                 } : current);
             }
             setShowPublishModal(false);
-            navigate('/create');
-            toast.success('互动影游已发布');
+            navigate('/profile');
+            toast.success(
+                isPublishPendingReview(response.data)
+                    ? (response.data.message?.trim() || t('report.publishPendingReviewSuccess'))
+                    : (response.data.message?.trim() || t('createGame.publishSuccess')),
+            );
         } catch (error: any) {
             console.error('发布互动影游失败:', error);
             if ((error?.response?.data?.code || error?.code) === GAME_ADMIN_TAKEDOWN) {
@@ -1296,7 +1306,7 @@ const InteractiveVideoEdit: React.FC = () => {
             <Navbar />
             <main className={styles.editorShell}>
                 <div className={styles.toolbar}>
-                    <button type="button" className={styles.iconTextButton} onClick={() => navigate('/create')}>
+                    <button type="button" className={styles.iconTextButton} onClick={() => navigate('/profile')}>
                         <MdArrowBack />
                         返回创作中心
                     </button>

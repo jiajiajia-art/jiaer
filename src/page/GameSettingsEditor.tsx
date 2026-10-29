@@ -45,6 +45,7 @@ import { runIdeaFullWorkAssets, isIdeaFullWorkAssetsInflight } from '../lib/galg
 import { shouldResumeIdeaFullWorkOrchestration } from '../lib/galgame/ideaFullWorkResume';
 import { createInitialIdeaAssetProgress, peekIdeaAssetProgress, publishIdeaAssetProgress, IDEA_ASSET_PROGRESS_EVENT } from '../lib/galgame/ideaFullWorkProgress';
 import toast from 'react-hot-toast';
+import { getApiErrorMessage } from '../utils/error';
 import FullPageLoading from '../components/Skeleton/FullPageLoading';
 import EditorApi from '../api/galgame/EditorData';
 import worldEditor from '../api/worldInteraction/worldEditor';
@@ -660,13 +661,15 @@ const GameSettingsEditor = () => {
                 payload.audienceType,
             );
             setShowPublishModal(false);
-        } catch (error: any) {
-            if ((error?.response?.data?.code || error?.code) === GAME_ADMIN_TAKEDOWN) {
+        } catch (error: unknown) {
+            if ((error as any)?.response?.data?.code === GAME_ADMIN_TAKEDOWN || (error as any)?.code === GAME_ADMIN_TAKEDOWN) {
                 setShowPublishModal(false);
                 setAppealBlock(resolveGamePublishAppealBlock(error, fileId));
                 return;
             }
-            setNoticeMessage(error?.message || t('createGame.publishFailed'));
+            const message = getApiErrorMessage(error, t('createGame.publishFailed'));
+            setNoticeMessage(message);
+            toast.error(message);
         }
     }, [fileId, handlePublishGame, t]);
 
@@ -780,7 +783,7 @@ const GameSettingsEditor = () => {
                         <button
                             type="button"
                             className={styles.txtCreateBack}
-                            onClick={() => navigate('/create')}
+                            onClick={() => navigate('/profile')}
                             aria-label={t('createGame.txtCreatePageTitle')}
                         >
                             ‹

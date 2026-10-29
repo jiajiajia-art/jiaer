@@ -205,6 +205,16 @@ export interface User {
   memberPlan?: MembershipPlanId | null;
   memberEndAt?: string | null;
   stackedPlans?: StackedPlan[];
+  /** 禁发截止（P0；来自 user_punishment.publish_blocked_until） */
+  publishBanUntil?: string | null;
+  /** 主页对外隐藏（P0.5） */
+  homeHidden?: boolean;
+  /** 新作先审后发（P0.5；来自 publish_need_review） */
+  publishNeedReview?: boolean;
+  /** 创作者身份冻结（P0.5；来自 creator_frozen） */
+  creatorFrozen?: boolean;
+  /** 观察期截止（P0.5；用户侧可选展示） */
+  observationUntil?: string | null;
 }
 
 // 注册请求

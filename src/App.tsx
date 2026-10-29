@@ -17,7 +17,11 @@ import WarehouseCharacterCards from './page/warehouse/WarehouseCharacterCards';
 import WarehousePublicCards from './page/warehouse/WarehousePublicCards';
 import WarehousePlayHistory from './page/warehouse/WarehousePlayHistory';
 import WarehouseResourceLibrary from './page/warehouse/WarehouseResourceLibrary';
-import Profile from './page/Profile';
+import AccountHomepage from './page/account/AccountHomepage';
+import AccountSocialList from './page/account/AccountSocialList';
+import AccountSettings from './page/account/AccountSettings';
+import PrivacySettings from './page/account/PrivacySettings';
+import { PrivacyFindMe, PrivacyMuted } from './page/account/PrivacyStubList';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import CreateGame from './page/CreateGame';
 import Library from './page/Library';
@@ -43,6 +47,10 @@ import { usePlatformDurationTracking } from './hooks/usePlatformDurationTracking
 import AdminPanel from './page/AdminPanel';
 import { AdminRoute } from './components/AdminRoute';
 import CommentAdminPage from './page/CommentAdminPage';
+import Appeals from './page/Appeals';
+import AppealResult from './page/AppealResult';
+import AppealSubmit from './page/AppealSubmit';
+import ModerationAudit from './page/ModerationAudit';
 import OperatorWorkStats from './page/operator/OperatorWorkStats';
 import CreatorWorkStats from './page/creator/CreatorWorkStats';
 import OperatorPanel from './page/operator/OperatorPanel';
@@ -178,6 +186,12 @@ function App() {
           <Route path="/creator" element={<Navigate to="/create" replace />} />
           <Route path="/creator-benefits" element={<CreatorBenefits />} />
           <Route path="/game-publish-appeals/:fileId" element={<GamePublishAppeal />} />
+          <Route path="/account/settings" element={<AccountSettings />} />
+          <Route path="/account/privacy" element={<PrivacySettings />} />
+          <Route path="/account/privacy/find-me" element={<PrivacyFindMe />} />
+          <Route path="/account/privacy/muted" element={<PrivacyMuted />} />
+          <Route path="/account/:userCode/social" element={<AccountSocialList />} />
+          <Route path="/account/:userCode" element={<AccountHomepage />} />
           <Route path="/creator/works/:fileId/stats" element={<CreatorRoute><CreatorWorkStats /></CreatorRoute>} />
           <Route path="/operator" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/reports" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
@@ -191,6 +205,9 @@ function App() {
           <Route path="/operator/withdraw" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/ai-model-center" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/platform-benefits" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/content-reports" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/appeals" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/publish-queue" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/works/:fileId/stats" element={<OperatorRoute><OperatorWorkStats /></OperatorRoute>} />
           <Route path="/points/details" element={<PointsDetails />} />
           <Route path="/points/earn" element={<EarnPoints />} />
@@ -210,9 +227,14 @@ function App() {
           <Route path="/warehouse-legacy" element={<WareHouse />} />
           <Route path="/favorites" element={<Favorites />} />
           <Route path="/gameSettingsEditor" element={<GameSettingsEditor />} />
-          <Route path="/profile" element={<Profile />} />
+          <Route path="/profile" element={<Create />} />
           <Route path="/promotions" element={<PromotionCenter />} />
           <Route path="/messages" element={<Messages />} />
+          <Route path="/appeals" element={<Appeals />} />
+          {/* 功能注释：发起申诉勿挂在 /appeals/:id 下，否则 submit 会被当成 appealId */}
+          <Route path="/appeal/submit" element={<AppealSubmit />} />
+          <Route path="/appeals/:appealId" element={<AppealResult />} />
+          <Route path="/moderation/:moderationId" element={<ModerationAudit />} />
           <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/promotions" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/promotions/:promotionView" element={<AdminRoute><AdminPanel /></AdminRoute>} />
@@ -232,6 +254,9 @@ function App() {
           <Route path="/admin/ai-model-center" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/lottery" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/comments" element={<AdminRoute><CommentAdminPage /></AdminRoute>} />
+          {/* 功能注释：内容举报/申诉复核已迁到运营中心；旧路径兼容跳转 */}
+          <Route path="/admin/content-reports" element={<Navigate to="/operator/content-reports" replace />} />
+          <Route path="/admin/appeals" element={<Navigate to="/operator/appeals" replace />} />
           <Route path="/galgame" element={<Galgame />} />
           <Route path="/galgameMap" element={<GalgameMap />} />
           <Route path="/customif/create" element={<CustomIFCreate />} />

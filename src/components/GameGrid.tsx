@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styles from './GameGrid.module.css';
@@ -34,8 +34,12 @@ interface GameGridProps {
     isSelectionMode?: boolean;
     layoutVariant?: GameGridLayoutVariant;
     emptyText?: string;
-    showUnpublishedBadge?: boolean;
+    /** 首页推荐：长按 / 右键出屏蔽·举报菜单 */
+    enableContentMenu?: boolean;
+    onContentMenu?: (game: UserGameData, point: { x: number; y: number }) => void;
 }
+
+const LONG_PRESS_MS = 480;
 
 const GameGrid: React.FC<GameGridProps> = ({
     games,
@@ -48,11 +52,31 @@ const GameGrid: React.FC<GameGridProps> = ({
     isSelectionMode = false,
     layoutVariant = 'default',
     emptyText,
-    showUnpublishedBadge = false,
+    enableContentMenu = false,
+    onContentMenu,
 }) => {
     const navigate = useNavigate();
     const { t } = useTranslation();
+    const longPressTimerRef = useRef<number | null>(null);
+    const longPressTriggeredRef = useRef(false);
     const isWorksLayout = layoutVariant === 'works';
+
+    const clearLongPress = () => {
+        if (longPressTimerRef.current != null) {
+            window.clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+        }
+    };
+
+    const startLongPress = (game: UserGameData, clientX: number, clientY: number) => {
+        if (!enableContentMenu || !onContentMenu || isSelectionMode) return;
+        longPressTriggeredRef.current = false;
+        clearLongPress();
+        longPressTimerRef.current = window.setTimeout(() => {
+            longPressTriggeredRef.current = true;
+            onContentMenu(game, { x: clientX, y: clientY });
+        }, LONG_PRESS_MS);
+    };
     const gridClassName = [
         styles.grid4,
         layoutVariant === 'homeWide' ? styles.gridHomeWide : '',
@@ -131,7 +155,6 @@ const GameGrid: React.FC<GameGridProps> = ({
                     : (meta.total_pv_count ?? 0);
                 const typeLabel = getTypeLabel(meta);
                 const typeToneStyle = resolveGameTypeToneStyle(getGameTypeToneFromMeta(meta));
-                const isUnpublished = Number(meta.is_public) !== 1;
                 const selectableId = getSelectableId(meta);
                 const isSelected = selectableId ? selectedIds.includes(selectableId) : false;
                 const body = resolveGameCardBody(meta);
@@ -146,7 +169,25 @@ const GameGrid: React.FC<GameGridProps> = ({
                     <div
                         className={cardClassName(isSelected)}
                         key={meta.file_id || meta.id || String(idx)}
-                        onClick={() => handleCardClick(meta)}
+                        onClick={() => {
+                            if (longPressTriggeredRef.current) {
+                                longPressTriggeredRef.current = false;
+                                return;
+                            }
+                            handleCardClick(meta);
+                        }}
+                        onContextMenu={(event) => {
+                            if (!enableContentMenu || !onContentMenu || isSelectionMode) return;
+                            event.preventDefault();
+                            onContentMenu(meta, { x: event.clientX, y: event.clientY });
+                        }}
+                        onPointerDown={(event) => {
+                            if (event.pointerType === 'mouse' && event.button !== 0) return;
+                            startLongPress(meta, event.clientX, event.clientY);
+                        }}
+                        onPointerUp={clearLongPress}
+                        onPointerLeave={clearLongPress}
+                        onPointerCancel={clearLongPress}
                     >
                         <div className={styles.goodsImg}>
                             {(() => {
@@ -204,12 +245,6 @@ const GameGrid: React.FC<GameGridProps> = ({
                                     title={status === 'finished' ? t('profile.incentiveSettled') : t('profile.incentivePlan')}
                                 >
                                     {status === 'finished' ? t('profile.incentiveSettled') : t('profile.incentivePlan')}
-                                </div>
-                            )}
-
-                            {showUnpublishedBadge && isUnpublished && (
-                                <div className={styles.unpublishedTag} title={t('favorites.unpublished')}>
-                                    {t('favorites.unpublished')}
                                 </div>
                             )}
 

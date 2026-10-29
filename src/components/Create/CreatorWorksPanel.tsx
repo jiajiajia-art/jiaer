@@ -10,8 +10,10 @@ import GameGridSkeleton from '../Skeleton/GameGridSkeleton';
 import { useAuthStore } from '../../store/useAuthStore';
 import getGameDataApi from '../../api/home/getGameData';
 import type { UserGameData } from '../../api/home/getGameData.type';
+import accountSocialApi from '../../api/account/accountSocialApi';
 import GameAction from '../../api/rpgGame/gameAction';
 import favoriteApi from '../../api/favorite/favoriteApi';
+import { getApiErrorCode } from '../../utils/error';
 import { partitionCreatorGames } from '../../utils/novelGame';
 import {
     DRAFT_BOX_FILTER_ORDER,
@@ -30,6 +32,8 @@ import {
 
 export type WorksTabKey = 'published' | 'drafts' | 'favorites';
 
+const WORKS_FETCH_LIMIT = 50;
+
 export { WORKS_PAGE_SIZE };
 
 const paginateItems = <T,>(items: T[], page: number, pageSize: number): T[] => {
@@ -45,12 +49,18 @@ export type CreatorWorksPanelProps = {
     mode: 'preview' | 'full';
     initialTab?: WorksTabKey;
     showIncentiveUI?: boolean;
+    /** owner：自己看自己；visitor：仅已发布 Tab，按 ownerUserCode 拉公开作品 */
+    access?: 'owner' | 'visitor';
+    /** visitor 必填：主页主人的 userCode */
+    ownerUserCode?: string;
 };
 
 const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     mode,
     initialTab = 'published',
     showIncentiveUI = false,
+    access = 'owner',
+    ownerUserCode = '',
 }) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
@@ -70,13 +80,23 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     const [favoritesTotal, setFavoritesTotal] = useState(0);
     const [isLoadingFavorites, setIsLoadingFavorites] = useState(false);
     const [favoritesLoaded, setFavoritesLoaded] = useState(false);
+    const [homeHidden, setHomeHidden] = useState(false);
 
     const isPreview = mode === 'preview';
+    const isVisitor = access === 'visitor';
+    // 功能注释：下架只认 moderationStatus（兼容 moderation_status），勿用申诉 approved 推断已上架
+    const hasTakenDownWork = useMemo(
+        () => !isVisitor && fileMetas.some((game) => {
+            const status = String(game.moderationStatus || game.moderation_status || 'none');
+            return status === 'taken_down';
+        }),
+        [fileMetas, isVisitor],
+    );
     const [isMobileViewport, setIsMobileViewport] = useState(() => (
         typeof window !== 'undefined' ? window.matchMedia(WORKS_MOBILE_MEDIA).matches : false
     ));
     const listPageSize = resolveWorksListLimit({ mode, isMobile: isMobileViewport });
-    const showWorksViewAll = shouldShowWorksViewAll({ mode, isMobile: isMobileViewport });
+    const showWorksViewAll = !isVisitor && shouldShowWorksViewAll({ mode, isMobile: isMobileViewport });
 
     const { publishedGames, draftGames } = useMemo(
         () => partitionCreatorGames(fileMetas),
@@ -117,6 +137,58 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
         && filteredDraftGames.every((game) => selectedDraftIds.includes(getGameManageId(game)));
 
     const loadMyGames = async () => {
+        if (isVisitor) {
+            const code = ownerUserCode.trim();
+            if (!code) {
+                setFileMetas([]);
+                setIsLoadingMyGames(false);
+                return;
+            }
+
+            setIsLoadingMyGames(true);
+            setHomeHidden(false);
+            try {
+                const response = await accountSocialApi.getWorks(code, {
+                    limit: WORKS_FETCH_LIMIT,
+                    offset: 0,
+                });
+                if (response.data.success && response.data.data) {
+                    const page = response.data.data;
+                    if (page.homeHidden) {
+                        setHomeHidden(true);
+                        setFileMetas([]);
+                    } else {
+                        setFileMetas(page.list || []);
+                    }
+                } else {
+                    setFileMetas([]);
+                }
+            } catch (error) {
+                const axiosData = (error as {
+                    response?: {
+                        data?: {
+                            data?: {
+                                homeHidden?: boolean;
+                            };
+                            message?: string;
+                        };
+                    };
+                })?.response?.data;
+                if (axiosData?.data?.homeHidden) {
+                    setHomeHidden(true);
+                    setFileMetas([]);
+                } else {
+                    if (getApiErrorCode(error) !== 'USER_BLOCKED') {
+                        console.error('获取主页已发布作品错误:', error);
+                    }
+                    setFileMetas([]);
+                }
+            } finally {
+                setIsLoadingMyGames(false);
+            }
+            return;
+        }
+
         if (!user?.user?.id) {
             setFileMetas([]);
             setIsLoadingMyGames(false);
@@ -140,6 +212,14 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     };
 
     const loadFavoriteGames = async (page = 1) => {
+        if (isVisitor) {
+            setFavoriteGames([]);
+            setFavoritesTotal(0);
+            setFavoritesLoaded(true);
+            setIsLoadingFavorites(false);
+            return;
+        }
+
         setIsLoadingFavorites(true);
         try {
             const favoritePageSize = resolveWorksListLimit({ mode, isMobile: isMobileViewport });
@@ -167,7 +247,15 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
 
     useEffect(() => {
         void loadMyGames();
-    }, [user?.user?.id]);
+    }, [user?.user?.id, isVisitor, ownerUserCode]);
+
+    useEffect(() => {
+        if (!isVisitor) return;
+        setWorksTab('published');
+        setWorksPage(1);
+        setIsDraftManageMode(false);
+        setSelectedDraftIds([]);
+    }, [isVisitor]);
 
     useEffect(() => {
         const mediaQuery = window.matchMedia(WORKS_MOBILE_MEDIA);
@@ -239,6 +327,7 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     };
 
     const handleWorksTabChange = (nextTab: WorksTabKey) => {
+        if (isVisitor && nextTab !== 'published') return;
         setWorksTab(nextTab);
         setWorksPage(1);
         if (nextTab !== 'drafts') {
@@ -348,15 +437,17 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                             {t('create.publishedWorksTab', { count: publishedGames.length })}
                         </button>
                     )}
-                    <button
-                        type="button"
-                        className={`${styles.worksTab} ${worksTab === 'drafts' ? styles.worksTabActive : ''}`}
-                        onClick={() => handleWorksTabChange('drafts')}
-                    >
-                        {t('create.draftBox')}
-                        {draftGames.length > 0 ? ` (${draftGames.length})` : ''}
-                    </button>
-                    {!isDraftManageMode && (
+                    {!isVisitor && (
+                        <button
+                            type="button"
+                            className={`${styles.worksTab} ${worksTab === 'drafts' ? styles.worksTabActive : ''}`}
+                            onClick={() => handleWorksTabChange('drafts')}
+                        >
+                            {t('create.draftBox')}
+                            {draftGames.length > 0 ? ` (${draftGames.length})` : ''}
+                        </button>
+                    )}
+                    {!isVisitor && !isDraftManageMode && (
                         <button
                             type="button"
                             className={`${styles.worksTab} ${worksTab === 'favorites' ? styles.worksTabActive : ''}`}
@@ -421,10 +512,27 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                 )}
             </div>
 
+            {hasTakenDownWork ? (
+                <div className={styles.appealBanner}>
+                    <span>{t('appeal.takenDownHint')}</span>
+                    <button
+                        type="button"
+                        className={styles.appealBannerBtn}
+                        onClick={() => navigate('/appeals')}
+                    >
+                        {t('appeal.goAppeal')}
+                    </button>
+                </div>
+            ) : null}
+
             <div className={styles.worksTabPanel}>
                 {worksTab === 'published' && (
                     isLoadingMyGames ? (
                         <GameGridSkeleton count={skeletonCount} layoutVariant="works" />
+                    ) : homeHidden ? (
+                        <div className={styles.worksEmpty}>
+                            {t('report.homepageUnavailableDefault')}
+                        </div>
                     ) : publishedGames.length === 0 ? (
                         <div className={styles.worksEmpty}>{t('create.noPublishedGames')}</div>
                     ) : (
@@ -436,6 +544,10 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                             onGameClick={(game) => {
                                 const gameId = game.file_id || game.id;
                                 if (!gameId) return;
+                                if (isVisitor) {
+                                    navigate(`/game/${gameId}`);
+                                    return;
+                                }
                                 navigate(`/createGame?mode=stats&gameId=${gameId}`);
                             }}
                         />
@@ -494,7 +606,6 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                         <GameGrid
                             games={displayedFavoriteGames}
                             layoutVariant="works"
-                            showUnpublishedBadge
                             onGameClick={handleFavoriteGameClick}
                         />
                     )

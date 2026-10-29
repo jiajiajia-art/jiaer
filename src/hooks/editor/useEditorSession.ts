@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import GameAction from '../../api/rpgGame/gameAction';
 import createGalgameSessionApi from '../../api/galgame/createGalgameSession';
@@ -7,6 +8,8 @@ import createWorldSessionApi from '../../api/worldInteraction/createWorldSession
 import { useAuthStore } from '../../store/useAuthStore';
 import { useGameStore } from '../../store/gameStore';
 import { attachPublishErrorData } from '../../utils/gamePublishAppeal';
+import { getApiErrorMessage } from '../../utils/error';
+import { isPublishPendingReview } from '../../lib/publishReview';
 
 interface UseEditorSessionOptions {
     fileId: string | null;
@@ -24,6 +27,7 @@ interface UseEditorSessionReturn {
 }
 
 export const useEditorSession = ({ fileId, mode }: UseEditorSessionOptions): UseEditorSessionReturn => {
+    const { t } = useTranslation();
     const { user } = useAuthStore();
     const { setFileId, setSessionId, setIsPreset } = useGameStore();
     const navigate = useNavigate();
@@ -89,19 +93,26 @@ export const useEditorSession = ({ fileId, mode }: UseEditorSessionOptions): Use
             });
 
             if (response.data.success) {
-                navigate('/create');
+                if (isPublishPendingReview(response.data)) {
+                    toast.success(
+                        response.data.message?.trim()
+                        || t('report.publishPendingReviewSuccess'),
+                    );
+                } else {
+                    toast.success(response.data.message?.trim() || t('createGame.publishSuccess'));
+                }
+                navigate('/profile');
                 return;
             }
 
             console.error('发布游戏失败:', response.data);
             throw attachPublishErrorData(response.data.message || '发布游戏失败', response.data);
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('发布游戏失败:', error);
-            const errorMessage =
-                error?.response?.data?.message || error?.message || '发布游戏失败';
-            throw attachPublishErrorData(errorMessage, error?.response?.data || error);
+            const errorMessage = getApiErrorMessage(error, '发布游戏失败');
+            throw error instanceof Error ? error : attachPublishErrorData(errorMessage);
         }
-    }, [fileId, navigate]);
+    }, [fileId, navigate, t]);
 
     return {
         createGalgameSession,

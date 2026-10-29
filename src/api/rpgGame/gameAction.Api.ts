@@ -28,6 +28,9 @@ export interface PublishGameResponse {
     updated_at: string;
     author_name: string | null;
     is_public: number;
+    /** 先审提交成功时为 pending_review */
+    moderation_status?: string | null;
+    moderationStatus?: string | null;
 }
 
 export interface GameStatsResponse {

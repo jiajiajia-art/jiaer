@@ -16,8 +16,11 @@ import type {
     MessageFavoriteGameUpdateNotification,
     MessageGameModerationNotification,
     MessageGamePublishAppeal,
+    MessageModerationNotification,
     MessagePromotion,
     MessagePromotionSubmissionNotification,
+    MessageReportReceivedNotification,
+    MessageReportResolvedNotification,
     MessageType,
 } from '../api/message/message.type';
 import type { PromotionReviewStatus } from '../api/promotion/promotion.type';
@@ -28,11 +31,18 @@ import { useExternalLinkCopyModal } from '../hooks/useExternalLinkCopyModal';
 import { GAME_CARD_DEFAULT_AVATAR_PATH } from '../lib/gameCardAuthor';
 import {
     buildCreatorEarningWithdrawalMessageView,
+    formatMessageDateTime,
+    formatMessageDateYmd,
     formatMessageListTime,
     resolveMessageListSection,
     truncateMessagePreview,
     type MessageListSectionKey,
 } from '../lib/messageCenterView';
+import {
+    isModerationRevokeNotice,
+    isPublishReviewModeration,
+} from '../lib/moderationNotice';
+import ConfirmModal from '../components/CommonModal/ConfirmModal';
 import styles from './Messages.module.css';
 
 /** 功能注释：消息页「全部已读」图标对齐效果图 */
@@ -46,7 +56,18 @@ type MessageFeedItem =
     | (MessageFavoriteGameUpdateNotification & { itemType: 'favorite_game_updated'; sortTime: string | null })
     | (MessageGameModerationNotification & { itemType: 'game_moderation'; sortTime: string | null })
     | (MessageGamePublishAppeal & { itemType: 'game_publish_appeal'; sortTime: string | null })
-    | (MessageCreatorEarningWithdrawalNotification & { itemType: 'creator_earning_withdrawal'; sortTime: string | null });
+    | (MessageCreatorEarningWithdrawalNotification & { itemType: 'creator_earning_withdrawal'; sortTime: string | null })
+    | (MessageReportReceivedNotification & { itemType: 'report_received'; sortTime: string | null })
+    | (MessageReportResolvedNotification & { itemType: 'report_resolved'; sortTime: string | null })
+    | (MessageModerationNotification & { itemType: 'moderation'; sortTime: string | null });
+
+type SafetyDetail = {
+    title: string;
+    body: string;
+    relatedGameId?: string | null;
+    /** 功能注释：撤销通知对照原警告/处罚详情 */
+    relatedModerationId?: string | null;
+};
 
 const getAnnouncementSortTime = (item: Pick<MessageAnnouncement, 'publishedAt' | 'updatedAt' | 'createdAt'>) =>
     item.publishedAt || item.updatedAt || item.createdAt || null;
@@ -99,13 +120,43 @@ const getSubmissionMessageText = (notification: MessagePromotionSubmissionNotifi
     }
 };
 
+type SafetyNoticeField = {
+    label: string;
+    value: string;
+};
+
 type RowView = {
     key: string;
+    variant?: 'default' | 'safetyNotice';
     title: string;
-    preview: string;
-    time: string;
+    preview?: string;
+    time?: string;
+    dateLabel?: string;
+    fields?: SafetyNoticeField[];
+    actionLabel?: string;
     isRead: boolean;
     onOpen: () => void;
+};
+
+const isAppealResultNotification = (notification: MessageModerationNotification): boolean =>
+    String(notification.recordType || '').toLowerCase() === 'appeal';
+
+/** 功能注释：消息中心申诉结果只有 approved / rejected（cancelled 不会进 inbox） */
+const getAppealResultLabel = (
+    status: string | undefined,
+    t: (key: string, options?: Record<string, unknown>) => string,
+): string => {
+    const normalized = String(status || '').toLowerCase();
+    if (normalized === 'approved') {
+        return t('messages.appealResultApproved');
+    }
+    if (normalized === 'rejected') {
+        return t('messages.appealResultRejected');
+    }
+    if (normalized === 'pending') {
+        return t('messages.appealResultPending');
+    }
+    return status?.trim() || '—';
 };
 
 const Messages: React.FC = () => {
@@ -119,6 +170,7 @@ const Messages: React.FC = () => {
     const [selectedAnnouncement, setSelectedAnnouncement] = useState<MessageAnnouncement | null>(null);
     const [selectedFavoriteGameUpdate, setSelectedFavoriteGameUpdate] = useState<MessageFavoriteGameUpdateNotification | null>(null);
     const [selectedCreatorEarningWithdrawal, setSelectedCreatorEarningWithdrawal] = useState<MessageCreatorEarningWithdrawalNotification | null>(null);
+    const [safetyDetail, setSafetyDetail] = useState<SafetyDetail | null>(null);
 
     const loadMessages = useCallback(async () => {
         try {
@@ -189,7 +241,36 @@ const Messages: React.FC = () => {
             sortTime: item.createdAt || null,
         }));
 
-        return [...announcements, ...promotions, ...promotionSubmissionNotifications, ...favoriteGameUpdateNotifications, ...gameModerationNotifications, ...gamePublishAppeals, ...creatorEarningWithdrawalNotifications].sort((left, right) => {
+        const reportReceivedNotifications = (messageCenter?.reportReceivedNotifications || []).map((item) => ({
+            ...item,
+            itemType: 'report_received' as const,
+            sortTime: item.publishedAt || item.createdAt || null,
+        }));
+
+        const reportResolvedNotifications = (messageCenter?.reportResolvedNotifications || []).map((item) => ({
+            ...item,
+            itemType: 'report_resolved' as const,
+            sortTime: item.reviewedAt || item.publishedAt || item.createdAt || null,
+        }));
+
+        const moderationNotifications = (messageCenter?.moderationNotifications || []).map((item) => ({
+            ...item,
+            itemType: 'moderation' as const,
+            sortTime: item.publishedAt || item.createdAt || null,
+        }));
+
+        return [
+            ...announcements,
+            ...promotions,
+            ...promotionSubmissionNotifications,
+            ...favoriteGameUpdateNotifications,
+            ...gameModerationNotifications,
+            ...gamePublishAppeals,
+            ...creatorEarningWithdrawalNotifications,
+            ...reportReceivedNotifications,
+            ...reportResolvedNotifications,
+            ...moderationNotifications,
+        ].sort((left, right) => {
             const leftTime = new Date(left.sortTime || 0).getTime();
             const rightTime = new Date(right.sortTime || 0).getTime();
             return rightTime - leftTime;
@@ -242,6 +323,24 @@ const Messages: React.FC = () => {
                     : item
             ));
 
+            const reportReceivedNotifications = (prev.reportReceivedNotifications || []).map((item) => (
+                messageType === 'report_received' && item.sourceId === sourceId
+                    ? { ...item, isRead: true }
+                    : item
+            ));
+
+            const reportResolvedNotifications = (prev.reportResolvedNotifications || []).map((item) => (
+                messageType === 'report_resolved' && item.sourceId === sourceId
+                    ? { ...item, isRead: true }
+                    : item
+            ));
+
+            const moderationNotifications = (prev.moderationNotifications || []).map((item) => (
+                messageType === 'moderation' && item.sourceId === sourceId
+                    ? { ...item, isRead: true }
+                    : item
+            ));
+
             return {
                 ...prev,
                 unreadCount: nextUnreadCount,
@@ -252,6 +351,9 @@ const Messages: React.FC = () => {
                 gameModerationNotifications,
                 gamePublishAppeals,
                 creatorEarningWithdrawalNotifications,
+                reportReceivedNotifications,
+                reportResolvedNotifications,
+                moderationNotifications,
             };
         });
     }, []);
@@ -270,6 +372,9 @@ const Messages: React.FC = () => {
                 gameModerationNotifications: markCollectionAsRead(prev.gameModerationNotifications || []),
                 gamePublishAppeals: markCollectionAsRead(prev.gamePublishAppeals || []),
                 creatorEarningWithdrawalNotifications: markCollectionAsRead(prev.creatorEarningWithdrawalNotifications || []),
+                reportReceivedNotifications: markCollectionAsRead(prev.reportReceivedNotifications || []),
+                reportResolvedNotifications: markCollectionAsRead(prev.reportResolvedNotifications || []),
+                moderationNotifications: markCollectionAsRead(prev.moderationNotifications || []),
             };
         });
     }, []);
@@ -357,11 +462,62 @@ const Messages: React.FC = () => {
         setSelectedCreatorEarningWithdrawal({ ...notification, isRead: true });
     }, [markMessageAsRead]);
 
+    const resolveReportResolvedBody = useCallback((notification: MessageReportResolvedNotification) => {
+        const fromApi = (notification.body || '').trim();
+        if (fromApi) return fromApi;
+        const status = String(notification.status || '').toLowerCase();
+        if (status === 'upheld') return t('messages.reportResolvedUpheldBody');
+        if (status === 'rejected') return t('messages.reportResolvedRejectedBody');
+        return t('messages.reportResolvedUpheldBody');
+    }, [t]);
+
+    const handleOpenReportReceived = useCallback(async (notification: MessageReportReceivedNotification) => {
+        await markMessageAsRead('report_received', notification.sourceId, notification.isRead);
+        setSafetyDetail({
+            title: notification.title?.trim() || t('messages.reportReceivedTitle'),
+            body: notification.body || t('messages.reportReceivedBody'),
+        });
+    }, [markMessageAsRead, t]);
+
+    const handleOpenReportResolved = useCallback(async (notification: MessageReportResolvedNotification) => {
+        await markMessageAsRead('report_resolved', notification.sourceId, notification.isRead);
+        setSafetyDetail({
+            title: notification.title?.trim() || t('messages.reportResolvedTitle'),
+            body: resolveReportResolvedBody(notification),
+        });
+    }, [markMessageAsRead, resolveReportResolvedBody, t]);
+
+    const handleOpenModeration = useCallback(async (notification: MessageModerationNotification) => {
+        await markMessageAsRead('moderation', notification.sourceId, notification.isRead);
+        // 功能注释：申诉结果进结果页；撤销通知只看正文，可再跳原处理；其余进审核详情
+        if (isAppealResultNotification(notification)) {
+            const appealId = String(notification.appealId || '').trim();
+            if (appealId) {
+                navigate(`/appeals/${appealId}`);
+            }
+            return;
+        }
+        if (isModerationRevokeNotice({ recordType: notification.recordType })) {
+            const moderationId = String(notification.moderationId || '').trim();
+            setSafetyDetail({
+                title: notification.title?.trim() || t('messages.revokeNoticeTitle'),
+                body: (notification.body || '').trim() || t('messages.revokeNoticeDefaultBody'),
+                relatedModerationId: moderationId || null,
+            });
+            return;
+        }
+        const moderationId = String(notification.moderationId || '').trim();
+        if (moderationId) {
+            navigate(`/moderation/${encodeURIComponent(moderationId)}`);
+        }
+    }, [markMessageAsRead, navigate, t]);
+
     const sectionRows = useMemo(() => {
         const buckets: Record<MessageListSectionKey, RowView[]> = {
             system: [],
             activity: [],
             interaction: [],
+            safety: [],
         };
 
         for (const item of messageFeed) {
@@ -422,6 +578,18 @@ const Messages: React.FC = () => {
                 continue;
             }
 
+            if (item.itemType === 'report_received') {
+                buckets[section].push({
+                    key: `report-received-${item.sourceId}`,
+                    title: item.title?.trim() || t('messages.reportReceivedTitle'),
+                    preview: truncateMessagePreview(item.body || t('messages.reportReceivedBody')),
+                    time,
+                    isRead: item.isRead,
+                    onOpen: () => { void handleOpenReportReceived(item); },
+                });
+                continue;
+            }
+
             if (item.itemType === 'game_publish_appeal') {
                 const titleKey = item.status === 'approved'
                     ? 'messages.gameAppealApprovedTitle'
@@ -443,6 +611,22 @@ const Messages: React.FC = () => {
                 continue;
             }
 
+            if (item.itemType === 'report_resolved') {
+                const resolvedBody = (item.body || '').trim()
+                    || (String(item.status || '').toLowerCase() === 'rejected'
+                        ? t('messages.reportResolvedRejectedBody')
+                        : t('messages.reportResolvedUpheldBody'));
+                buckets[section].push({
+                    key: `report-resolved-${item.sourceId}`,
+                    title: item.title?.trim() || t('messages.reportResolvedTitle'),
+                    preview: truncateMessagePreview(resolvedBody),
+                    time,
+                    isRead: item.isRead,
+                    onOpen: () => { void handleOpenReportResolved(item); },
+                });
+                continue;
+            }
+
             if (item.itemType === 'creator_earning_withdrawal') {
                 const view = buildCreatorEarningWithdrawalMessageView(item);
                 buckets[section].push({
@@ -453,6 +637,110 @@ const Messages: React.FC = () => {
                     isRead: item.isRead,
                     onOpen: () => { void handleOpenCreatorEarningWithdrawal(item); },
                 });
+                continue;
+            }
+
+            if (item.itemType === 'moderation') {
+                if (isAppealResultNotification(item)) {
+                    const appealTime = formatMessageDateTime(item.appealedAt || item.createdAt);
+                    // 功能注释：正文用服务端 body（notify_body），勿前端拼「已恢复上架」
+                    const bodyRaw = (item.body || '').trim();
+                    const fields: SafetyNoticeField[] = [
+                        {
+                            label: t('messages.appealResultLabel'),
+                            value: getAppealResultLabel(item.status, t),
+                        },
+                    ];
+                    if (bodyRaw) {
+                        fields.push({
+                            label: t('messages.appealResultBodyLabel'),
+                            value: truncateMessagePreview(bodyRaw),
+                        });
+                    }
+                    fields.push({
+                        label: t('messages.appealTimeLabel'),
+                        value: appealTime || '—',
+                    });
+                    buckets[section].push({
+                        key: `moderation-${item.sourceId}`,
+                        variant: 'safetyNotice',
+                        title: item.title?.trim() || t('messages.appealResultNoticeTitle'),
+                        dateLabel: formatMessageDateYmd(item.createdAt || item.publishedAt),
+                        fields,
+                        actionLabel: t('messages.viewDetails'),
+                        isRead: item.isRead,
+                        onOpen: () => { void handleOpenModeration(item); },
+                    });
+                } else if (isModerationRevokeNotice({ recordType: item.recordType })) {
+                    const noticeTime = formatMessageDateTime(item.createdAt || item.publishedAt);
+                    const bodyRaw = (item.body || '').trim() || t('messages.revokeNoticeDefaultBody');
+                    buckets[section].push({
+                        key: `moderation-${item.sourceId}`,
+                        variant: 'safetyNotice',
+                        title: item.title?.trim() || t('messages.revokeNoticeTitle'),
+                        dateLabel: formatMessageDateYmd(item.createdAt || item.publishedAt),
+                        fields: [
+                            {
+                                label: t('messages.revokeSummaryLabel'),
+                                value: truncateMessagePreview(bodyRaw) || '—',
+                            },
+                            {
+                                label: t('messages.noticeTimeLabel'),
+                                value: noticeTime || '—',
+                            },
+                        ],
+                        actionLabel: t('messages.viewDetails'),
+                        isRead: item.isRead,
+                        onOpen: () => { void handleOpenModeration(item); },
+                    });
+                } else {
+                    const publishReview = isPublishReviewModeration({
+                        recordType: item.recordType,
+                    });
+                    const actionTime = formatMessageDateTime(
+                        publishReview
+                            ? (item.createdAt || item.startsAt)
+                            : (item.startsAt || item.createdAt),
+                    );
+                    const endTime = publishReview ? '' : formatMessageDateTime(item.endsAt);
+                    const reasonRaw = (item.reason || '').trim();
+                    const bodyRaw = (item.body || '').trim();
+                    const reasonText = reasonRaw
+                        || (publishReview ? truncateMessagePreview(bodyRaw) : '')
+                        || '—';
+                    const fields: SafetyNoticeField[] = [
+                        {
+                            label: publishReview
+                                ? t('messages.publishReviewSummaryLabel')
+                                : t('messages.violationReasonLabel'),
+                            value: reasonText,
+                        },
+                        {
+                            label: publishReview
+                                ? t('messages.noticeTimeLabel')
+                                : t('messages.actionTimeLabel'),
+                            value: actionTime || '—',
+                        },
+                    ];
+                    if (endTime) {
+                        fields.push({
+                            label: t('messages.endTimeLabel'),
+                            value: endTime,
+                        });
+                    }
+                    buckets[section].push({
+                        key: `moderation-${item.sourceId}`,
+                        variant: 'safetyNotice',
+                        title: publishReview
+                            ? t('messages.publishReviewNoticeTitle')
+                            : t('messages.violationNoticeTitle'),
+                        dateLabel: formatMessageDateYmd(item.createdAt || item.publishedAt || item.startsAt),
+                        fields,
+                        actionLabel: t('messages.viewDetails'),
+                        isRead: item.isRead,
+                        onOpen: () => { void handleOpenModeration(item); },
+                    });
+                }
                 continue;
             }
 
@@ -477,8 +765,11 @@ const Messages: React.FC = () => {
         handleOpenGameModerationNotification,
         handleOpenGamePublishAppeal,
         handleOpenCreatorEarningWithdrawal,
+        handleOpenModeration,
         handleOpenPromotion,
         handleOpenPromotionSubmissionNotification,
+        handleOpenReportReceived,
+        handleOpenReportResolved,
         messageFeed,
         t,
     ]);
@@ -487,13 +778,13 @@ const Messages: React.FC = () => {
         { key: 'system', title: t('messages.sectionSystem'), rows: sectionRows.system },
         { key: 'activity', title: t('messages.sectionActivity'), rows: sectionRows.activity },
         { key: 'interaction', title: t('messages.sectionInteraction'), rows: sectionRows.interaction },
+        { key: 'safety', title: t('messages.sectionSafety'), rows: sectionRows.safety },
     ];
 
     const hasAnyRow = sections.some((section) => section.rows.length > 0);
 
-    const renderRow = (row: RowView) => (
+    const renderDefaultRow = (row: RowView) => (
         <button
-            key={row.key}
             type="button"
             className={styles.messageRow}
             onClick={row.onOpen}
@@ -512,6 +803,49 @@ const Messages: React.FC = () => {
                 {row.preview ? <p className={styles.rowPreview}>{row.preview}</p> : null}
             </div>
         </button>
+    );
+
+    const renderSafetyNotice = (row: RowView) => (
+        <button
+            key={row.key}
+            type="button"
+            className={styles.safetyNoticeCard}
+            onClick={row.onOpen}
+        >
+            {!row.isRead ? <span className={styles.safetyUnreadDot} aria-hidden="true" /> : null}
+            <div className={styles.safetyNoticeHead}>
+                <h3 className={styles.safetyNoticeTitle}>{row.title}</h3>
+                {row.dateLabel ? <p className={styles.safetyNoticeDate}>{row.dateLabel}</p> : null}
+            </div>
+            {row.fields?.length ? (
+                <dl className={styles.safetyNoticeFields}>
+                    {row.fields.map((field) => (
+                        <div key={`${row.key}-${field.label}`} className={styles.safetyNoticeField}>
+                            <dt className={styles.safetyNoticeLabel}>{field.label}</dt>
+                            <dd className={styles.safetyNoticeValue}>{field.value}</dd>
+                        </div>
+                    ))}
+                </dl>
+            ) : null}
+            <div className={styles.safetyNoticeFoot}>
+                <span className={styles.safetyNoticeAction}>{row.actionLabel || t('messages.viewDetails')}</span>
+                <span className={styles.safetyNoticeChevron} aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M9 6L15 12L9 18" />
+                    </svg>
+                </span>
+            </div>
+        </button>
+    );
+
+    const renderRow = (row: RowView) => (
+        row.variant === 'safetyNotice'
+            ? renderSafetyNotice(row)
+            : (
+                <React.Fragment key={row.key}>
+                    {renderDefaultRow(row)}
+                </React.Fragment>
+            )
     );
 
     return (
@@ -551,9 +885,23 @@ const Messages: React.FC = () => {
                     section.rows.length === 0 ? null : (
                         <section key={section.key} className={styles.sectionBlock}>
                             <h2 className={styles.sectionTitle}>{section.title}</h2>
-                            <div className={styles.sectionCard}>
-                                {section.rows.map(renderRow)}
-                            </div>
+                            {section.key === 'safety' ? (
+                                <div className={styles.sectionList}>
+                                    {section.rows.map((row) => (
+                                        row.variant === 'safetyNotice'
+                                            ? renderSafetyNotice(row)
+                                            : (
+                                                <div key={row.key} className={styles.messageRowCard}>
+                                                    {renderDefaultRow(row)}
+                                                </div>
+                                            )
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className={styles.sectionCard}>
+                                    {section.rows.map(renderRow)}
+                                </div>
+                            )}
                         </section>
                     )
                 ))}
@@ -588,7 +936,60 @@ const Messages: React.FC = () => {
                         : ''}
                 </p>
             </Modal>
-                <div className={styles.desktopChrome}><MobileBottomNav /></div>
+            <ConfirmModal
+                isOpen={Boolean(safetyDetail)}
+                variant="alert"
+                tone="glass"
+                title={safetyDetail?.title || t('messages.sectionSafety')}
+                message={(
+                    <span>
+                        {safetyDetail?.body}
+                        {safetyDetail?.relatedGameId ? (
+                            <>
+                                <br />
+                                <br />
+                                <button
+                                    type="button"
+                                    className={styles.safetyAction}
+                                    onClick={() => {
+                                        const gameId = safetyDetail.relatedGameId;
+                                        setSafetyDetail(null);
+                                        // 功能注释：违规下架后公开详情不可开，创作者进作品数据页
+                                        if (gameId) {
+                                            navigate(`/createGame?mode=stats&gameId=${encodeURIComponent(gameId)}`);
+                                        }
+                                    }}
+                                >
+                                    {t('messages.viewReportedGame')}
+                                </button>
+                            </>
+                        ) : null}
+                        {safetyDetail?.relatedModerationId ? (
+                            <>
+                                <br />
+                                <br />
+                                <button
+                                    type="button"
+                                    className={styles.safetyAction}
+                                    onClick={() => {
+                                        const moderationId = safetyDetail.relatedModerationId;
+                                        setSafetyDetail(null);
+                                        if (moderationId) {
+                                            navigate(`/moderation/${encodeURIComponent(moderationId)}`);
+                                        }
+                                    }}
+                                >
+                                    {t('messages.viewRevokedModeration')}
+                                </button>
+                            </>
+                        ) : null}
+                    </span>
+                )}
+                confirmButtonText={t('common.confirm')}
+                onConfirm={() => setSafetyDetail(null)}
+                onCancel={() => setSafetyDetail(null)}
+            />
+            <div className={styles.desktopChrome}><MobileBottomNav /></div>
             {externalLinkCopyModal}
         </div>
     );

@@ -1,4 +1,4 @@
-import { ASSET_HOST_ADDRESS, HOST_ADDRESS } from "../config";
+import { ASSET_HOST_ADDRESS, HOST_ADDRESS, resolveImageHostAddress } from "../config";
 export {
   toDisplayCoverUrl,
   resolveGameCoverUrl,
@@ -65,8 +65,8 @@ export const getImageUrl = (imagePath: string | null | undefined): string => {
   const normalizedPath = displayPath.startsWith("/")
     ? displayPath
     : `/${displayPath}`;
-  // 功能注释：用 ASSET_HOST（去 cn-test-api），避免测试环境图片打到未反代的 /cn-test-api/public
-  return `${ASSET_HOST_ADDRESS}${normalizedPath}`;
+  // 功能注释：封面走 ASSET_HOST；用户头像走 API 主机，见 resolveImageHostAddress
+  return `${resolveImageHostAddress(normalizedPath, HOST_ADDRESS)}${normalizedPath}`;
 };
 
 export const getPlayerImageUrl = (player: any, defaultImage?: string): string => {

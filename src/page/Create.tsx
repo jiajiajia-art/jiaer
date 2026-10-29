@@ -1,9 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { IoChevronDown } from 'react-icons/io5';
+import { IoChevronDown, IoEyeOutline } from 'react-icons/io5';
 import { MdContentCopy, MdOutlineEdit, MdOutlineTaskAlt } from 'react-icons/md';
+import ExchangeModal from '../components/Purchase/ExchangeModal';
+import ConfirmModal from '../components/CommonModal/ConfirmModal';
+import confirmModalStyles from '../components/CommonModal/ConfirmModal.module.css';
+import WithdrawFlowModal from '../components/Create/WithdrawFlowModal';
+import TodayEarnPointsPanel from '../components/Profile/TodayEarnPointsPanel';
 import { RiAccountCircleLine } from 'react-icons/ri';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import styles from './Create.module.css';
 import Navbar from '../components/Layout/Navbar';
@@ -16,6 +21,7 @@ import VipStatusModal from '../components/Profile/VipStatusModal';
 import InviteCampaignCard from '../components/Profile/InviteCampaignCard';
 import ProfilePreferenceModal from '../components/ProfilePreferenceModal';
 import { useAuthStore } from '../store/useAuthStore';
+import { useProfileIdentityEdit } from '../hooks/useProfileIdentityEdit';
 import statisticsApi from '../api/statistics/statisticsApi';
 import creatorStatsApi, { type StatsOverview } from '../api/stats/creatorStatsApi';
 import creatorBenefitsApi from '../api/creatorBenefits/creatorBenefitsApi';
@@ -33,9 +39,7 @@ import {
     parseOverseasPayReturnSearch,
     resolveOverseasPayReturnStatus,
 } from '../lib/overseasPayReturn';
-
-const NICKNAME_MAX_LENGTH = 20;
-const AVATAR_MAX_SIZE_BYTES = 5 * 1024 * 1024;
+import accountSocialApi from '../api/account/accountSocialApi';
 
 type CreatorStatsIncentiveType = 'none' | 'incentive' | 'game_incentive' | 'code_incentive' | 'all_incentive';
 
@@ -52,6 +56,14 @@ const Create: React.FC = () => {
     const { user, updateUser } = useAuthStore();
     const navigate = useNavigate();
     const location = useLocation();
+    const {
+        isUploadingAvatar,
+        avatarInputRef,
+        openAvatarPicker,
+        handleAvatarFileChange,
+        openEditNickname,
+        identityEditModal,
+    } = useProfileIdentityEdit();
 
     const [stats, setStats] = useState({
         totalCreated: 0,
@@ -72,12 +84,15 @@ const Create: React.FC = () => {
     const [isVipStatusModalOpen, setIsVipStatusModalOpen] = useState(false);
     const [streakDays, setStreakDays] = useState(0);
     const [isStatsExpanded, setIsStatsExpanded] = useState(false);
-    const [isEditNicknameOpen, setIsEditNicknameOpen] = useState(false);
+    const [isExchangeModalOpen, setIsExchangeModalOpen] = useState(false);
+    const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
+    const [isSettleDiamondsModalOpen, setIsSettleDiamondsModalOpen] = useState(false);
+    const [isSettling, setIsSettling] = useState(false);
+    const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
+    const [isEarningsModalOpen, setIsEarningsModalOpen] = useState(false);
     const [isProfilePreferenceOpen, setIsProfilePreferenceOpen] = useState(false);
-    const [nicknameDraft, setNicknameDraft] = useState('');
-    const [isSavingNickname, setIsSavingNickname] = useState(false);
-    const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-    const avatarInputRef = useRef<HTMLInputElement>(null);
+    const [followingCount, setFollowingCount] = useState(0);
+    const [followersCount, setFollowersCount] = useState(0);
     const overseasPayReturnHandledRef = useRef(false);
 
     const userName = user?.user?.nickname || user?.user?.name || t('create.userNameDefault');
@@ -90,82 +105,15 @@ const Create: React.FC = () => {
     const membership = user?.user?.membership;
     const isVipActive = hasActiveVip(membership);
     const isPromotionPartner = Boolean(user?.user?.userSegment && user.user.userSegment !== 'normal');
+    const isMember = Boolean(user?.user?.isMember);
+    const isSignedAuthor = Boolean(user?.user?.userSegment && user.user.userSegment !== 'normal');
     const isWorkIncentive = stats.incentiveType === 'incentive' || stats.incentiveType === 'game_incentive' || stats.incentiveType === 'all_incentive';
+    const isCodeIncentive = stats.incentiveType === 'code_incentive' || stats.incentiveType === 'all_incentive';
+    const hasExtraEarnings = isWorkIncentive || isCodeIncentive;
 
-    const openEditNickname = () => {
-        setNicknameDraft(user?.user?.nickname || user?.user?.name || '');
-        setIsEditNicknameOpen(true);
-    };
+    const handleWithdrawClick = () => setIsWithdrawModalOpen(true);
 
-    const closeEditNickname = () => {
-        if (isSavingNickname) return;
-        setIsEditNicknameOpen(false);
-    };
-
-    const handleConfirmEditNickname = async () => {
-        const nextName = nicknameDraft.trim();
-        if (!nextName) {
-            toast.error(t('profile.enterNewNickname'));
-            return;
-        }
-        if (nextName.length > NICKNAME_MAX_LENGTH) {
-            toast.error(t('profile.nicknameTip'));
-            return;
-        }
-        if (nextName === (user?.user?.nickname || '').trim()) {
-            setIsEditNicknameOpen(false);
-            return;
-        }
-
-        setIsSavingNickname(true);
-        try {
-            const response = await auth.updateUserInfo(nextName);
-            if (!response.data.success || !response.data.data) {
-                throw new Error(response.data.message || t('common.error'));
-            }
-            updateUser(response.data.data);
-            toast.success(t('common.success'));
-            setIsEditNicknameOpen(false);
-        } catch (error: unknown) {
-            toast.error(getApiErrorMessage(error, t('common.error')));
-        } finally {
-            setIsSavingNickname(false);
-        }
-    };
-
-    const openAvatarPicker = () => {
-        if (isUploadingAvatar) return;
-        avatarInputRef.current?.click();
-    };
-
-    const handleAvatarFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        event.target.value = '';
-        if (!file) return;
-
-        if (!file.type.startsWith('image/')) {
-            toast.error(t('profile.selectImageFile'));
-            return;
-        }
-        if (file.size > AVATAR_MAX_SIZE_BYTES) {
-            toast.error(t('profile.imageTooLarge'));
-            return;
-        }
-
-        setIsUploadingAvatar(true);
-        try {
-            const response = await auth.updateUserAvatar(file);
-            if (!response.data.success || !response.data.data?.avatarUrl) {
-                throw new Error(response.data.message || t('common.error'));
-            }
-            updateUser({ avatarUrl: response.data.data.avatarUrl });
-            toast.success(t('profile.avatarUpdated'));
-        } catch (error: unknown) {
-            toast.error(getApiErrorMessage(error, t('common.error')));
-        } finally {
-            setIsUploadingAvatar(false);
-        }
-    };
+    const formatEarningsValue = (value: number) => (Number(value) || 0).toLocaleString('zh-CN');
 
     const getGameTotalStats = async () => {
         if (!user?.user?.id) {
@@ -258,6 +206,28 @@ const Create: React.FC = () => {
         getSignInStreak();
     }, [user?.user?.id]);
 
+    useEffect(() => {
+        if (!userCode) {
+            setFollowingCount(0);
+            setFollowersCount(0);
+            return;
+        }
+        let cancelled = false;
+        void (async () => {
+            try {
+                const response = await accountSocialApi.getProfile(userCode);
+                if (cancelled || !response.data.success || !response.data.data) return;
+                setFollowingCount(response.data.data.followingCount ?? 0);
+                setFollowersCount(response.data.data.followersCount ?? 0);
+            } catch {
+                /* keep following/followers at 0 */
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [userCode]);
+
     // 功能注释：海外收银台回站后查单并 Toast，不再只打开空白充值弹窗
     useEffect(() => {
         const parsed = parseOverseasPayReturnSearch(location.search);
@@ -287,6 +257,22 @@ const Create: React.FC = () => {
             toast(t('rechargeModal.overseasPayPending'));
         })();
     }, [location.pathname, location.search, navigate, t]);
+
+    const handlePreviewHomepage = () => {
+        if (!userCode) {
+            toast.error(t('create.previewHomepageNoCode'));
+            return;
+        }
+        navigate(`/account/${encodeURIComponent(userCode)}`);
+    };
+
+    const handleOpenSocialList = (tab: 'following' | 'followers') => {
+        if (!userCode) {
+            toast.error(t('create.previewHomepageNoCode'));
+            return;
+        }
+        navigate(`/account/${encodeURIComponent(userCode)}/social?tab=${tab}`);
+    };
 
     const handleCopyUserCode = async () => {
         if (!userCode) return;
@@ -326,6 +312,56 @@ const Create: React.FC = () => {
         return null;
     };
 
+    const handleSettle = async () => {
+        if (isSettling) return;
+        setIsSettling(true);
+        try {
+            const response = await auth.settlePoints('points');
+            if (!response.data.success || !response.data.data) {
+                toast.error(response.data.message || t('create.settleFailed'));
+                return;
+            }
+            const pointsAmount = response.data.data.pointsSettled || 0;
+            const diamondsAmount = response.data.data.diamondsSettled || 0;
+            const successMsg = pointsAmount > 0 && diamondsAmount > 0
+                ? t('create.settleSuccessDual', { points: pointsAmount, diamonds: diamondsAmount })
+                : pointsAmount > 0
+                    ? t('create.settleSuccess', { amount: pointsAmount })
+                    : diamondsAmount > 0
+                        ? t('create.settleSuccessDiamonds', { amount: diamondsAmount })
+                        : t('create.settleSuccessZero');
+            toast.success(successMsg);
+            await Promise.all([getGameTotalStats(), getCreatorOverviewStats(), getUserInfo()]);
+            setIsSettleModalOpen(false);
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, t('create.settleFailed')));
+        } finally {
+            setIsSettling(false);
+        }
+    };
+
+    const handleSettleDiamonds = async () => {
+        if (isSettling) return;
+        setIsSettling(true);
+        try {
+            const response = await auth.settlePoints('diamonds');
+            if (!response.data.success || !response.data.data) {
+                toast.error(response.data.message || t('create.settleFailed'));
+                return;
+            }
+            const amount = response.data.data.diamondsSettled || 0;
+            toast.success(amount > 0
+                ? t('create.settleSuccessDiamonds', { amount })
+                : t('create.settleSuccessZero'));
+            await Promise.all([getGameTotalStats(), getUserInfo()]);
+            setIsSettleDiamondsModalOpen(false);
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, t('create.settleFailed')));
+        } finally {
+            setIsSettling(false);
+        }
+    };
+
     return (
         <div className={styles.pageRoot}>
             <Navbar />
@@ -344,6 +380,7 @@ const Create: React.FC = () => {
                                         aria-label={t('profile.changeAvatar')}
                                     >
                                         <img
+                                            key={userAvatar}
                                             className={styles.creatorHeroAvatar}
                                             src={userAvatar}
                                             alt={userName}
@@ -392,6 +429,12 @@ const Create: React.FC = () => {
                                             </span>
                                         )}
                                     </div>
+                                    {(isMember || isSignedAuthor) && (
+                                        <div className={styles.creatorHeroBadgeRow}>
+                                            {isMember && <span className={styles.creatorRoleBadge}>{t('create.memberBadge')}</span>}
+                                            {isSignedAuthor && <span className={styles.creatorRoleBadge}>{t('create.signedAuthorBadge')}</span>}
+                                        </div>
+                                    )}
                                     <div className={styles.creatorHeroMetaRow}>
                                         <div className={styles.creatorHeroIdGroup}>
                                             <span className={styles.creatorHeroId}>
@@ -431,11 +474,6 @@ const Create: React.FC = () => {
                                                         VIP
                                                     </button>
                                                 )}
-                                                {isPromotionPartner && (
-                                                    <span className={styles.creatorRoleBadge}>
-                                                        {t('create.signedAuthorBadge')}
-                                                    </span>
-                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -455,6 +493,36 @@ const Create: React.FC = () => {
                                                 <MdContentCopy aria-hidden="true" />
                                             </button>
                                         )}
+                                    </div>
+                                    <div className={styles.creatorSocialRow}>
+                                        <div className={styles.creatorSocialStats}>
+                                            <button
+                                                type="button"
+                                                className={styles.creatorSocialItem}
+                                                onClick={() => handleOpenSocialList('following')}
+                                            >
+                                                <span className={styles.creatorSocialLabel}>{t('create.followingLabel')}</span>
+                                                <span className={styles.creatorSocialValue}>{followingCount}</span>
+                                            </button>
+                                            <span className={styles.creatorSocialDivider} aria-hidden="true" />
+                                            <button
+                                                type="button"
+                                                className={styles.creatorSocialItem}
+                                                onClick={() => handleOpenSocialList('followers')}
+                                            >
+                                                <span className={styles.creatorSocialLabel}>{t('create.followersLabel')}</span>
+                                                <span className={styles.creatorSocialValue}>{followersCount}</span>
+                                            </button>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            className={styles.creatorPreviewHomeBtn}
+                                            onClick={handlePreviewHomepage}
+                                            aria-label={t('create.previewHomepage')}
+                                        >
+                                            <IoEyeOutline className={styles.creatorPreviewHomeIcon} aria-hidden="true" />
+                                            <span>{t('create.previewHomepage')}</span>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -478,6 +546,18 @@ const Create: React.FC = () => {
                                         </div>
                                         <div className={styles.primaryStatLabel}>
                                             KK币（含{formatKk(user?.user?.kkBalance?.limited ?? 0)}限时KK币）
+                                            {isPromotionPartner && (
+                                                <button
+                                                    type="button"
+                                                    className={styles.creatorWithdrawLink}
+                                                    onClick={(event) => {
+                                                        event.stopPropagation();
+                                                        handleWithdrawClick();
+                                                    }}
+                                                >
+                                                    {t('create.withdraw')}
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                     <div
@@ -614,6 +694,7 @@ const Create: React.FC = () => {
                             </div>
                         </div>
                         <InviteCampaignCard />
+                        <TodayEarnPointsPanel />
                         <ProfileFunctionPanel />
                     </div>
 
@@ -648,54 +729,141 @@ const Create: React.FC = () => {
                 onRecharge={handleRecharge}
                 fixedTab="membership"
             />
-            {isEditNicknameOpen && (
-                <div className={styles.editNicknameOverlay} onClick={closeEditNickname}>
+            <ExchangeModal
+                isOpen={isExchangeModalOpen}
+                onClose={() => setIsExchangeModalOpen(false)}
+                onSuccess={() => {
+                    void getUserInfo();
+                }}
+            />
+            <WithdrawFlowModal
+                open={isWithdrawModalOpen}
+                onClose={() => setIsWithdrawModalOpen(false)}
+            />
+
+            {isEarningsModalOpen && (
+                <div
+                    className={styles.earningsModalOverlay}
+                    onClick={() => setIsEarningsModalOpen(false)}
+                >
                     <div
-                        className={styles.editNicknameModal}
+                        className={styles.earningsModal}
                         role="dialog"
                         aria-modal="true"
-                        aria-label={t('profile.editNickname')}
+                        aria-label={t('create.accountRewardSettlement')}
                         onClick={(event) => event.stopPropagation()}
                     >
                         <button
                             type="button"
-                            className={styles.editNicknameCloseBtn}
-                            onClick={closeEditNickname}
-                            disabled={isSavingNickname}
+                            className={styles.earningsModalCloseBtn}
+                            onClick={() => setIsEarningsModalOpen(false)}
                             aria-label={t('common.close')}
                         >
-                            <span className={styles.editNicknameCloseIcon} aria-hidden="true" />
+                            <span className={styles.earningsModalCloseIcon} aria-hidden="true" />
                         </button>
-                        <h3 className={styles.editNicknameTitle}>{t('profile.editNickname')}</h3>
-                        <div className={styles.editNicknameBody}>
-                            <input
-                                className={styles.editNicknameInput}
-                                value={nicknameDraft}
-                                onChange={(event) => setNicknameDraft(event.target.value.slice(0, NICKNAME_MAX_LENGTH))}
-                                placeholder={t('profile.enterNewNickname')}
-                                maxLength={NICKNAME_MAX_LENGTH}
-                                autoFocus
-                                disabled={isSavingNickname}
-                                onKeyDown={(event) => {
-                                    if (event.key === 'Enter') {
-                                        event.preventDefault();
-                                        void handleConfirmEditNickname();
-                                    }
-                                }}
-                            />
-                            <p className={styles.editNicknameTip}>{t('profile.nicknameTip')}</p>
+                        <h3 className={styles.earningsModalTitle}>{t('create.accountRewardSettlement')}</h3>
+                        <div className={styles.earningsModalBody}>
+                            <div className={styles.earningsModalPrimary}>
+                                <div className={styles.earningsPanelItem}>
+                                    <div className={styles.earningsPanelLabel}>{t('create.pendingRewardPoints')}</div>
+                                    <div className={styles.earningsPanelValueRow}>
+                                        <div className={styles.earningsPanelValue}>{formatEarningsValue(stats.totalAmount)}</div>
+                                        {stats.totalAmount > 0 && (
+                                            <button
+                                                type="button"
+                                                className={styles.earningsInlineSettleButton}
+                                                onClick={() => setIsSettleModalOpen(true)}
+                                                disabled={isSettling}
+                                            >
+                                                {t('create.settle')}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className={styles.earningsPanelItem}>
+                                    <div className={styles.earningsPanelLabel}>{t('create.pendingRewardDiamonds')}</div>
+                                    <div className={styles.earningsPanelValueRow}>
+                                        <div className={styles.earningsPanelValue}>{formatEarningsValue(stats.totalDiamondsAmount)}</div>
+                                        {stats.totalDiamondsAmount > 0 && (
+                                            <button
+                                                type="button"
+                                                className={styles.earningsInlineSettleButton}
+                                                onClick={() => setIsSettleDiamondsModalOpen(true)}
+                                                disabled={isSettling}
+                                            >
+                                                {t('create.settle')}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                            {hasExtraEarnings && (
+                                <div className={styles.earningsModalExtra}>
+                                    {isWorkIncentive && (
+                                        <div className={styles.earningsExtraItem}>
+                                            <div className={styles.earningsExtraLabel}>{t('create.totalIncentiveEarnings')}</div>
+                                            <div className={styles.earningsExtraValue}>{stats.totalIncentiveAmount}</div>
+                                        </div>
+                                    )}
+                                    {isWorkIncentive && (
+                                        <div className={styles.earningsExtraItem}>
+                                            <div className={styles.earningsExtraLabel}>{t('create.pendingIncentiveEarnings')}</div>
+                                            <div className={styles.earningsExtraValue}>{stats.pendingIncome}</div>
+                                        </div>
+                                    )}
+                                    {isCodeIncentive && (
+                                        <div className={styles.earningsExtraItem}>
+                                            <div className={styles.earningsExtraLabel}>{t('create.inviteCodeTotalEarnings')}</div>
+                                            <div className={styles.earningsExtraValue}>{stats.inviteTotalAmount}</div>
+                                        </div>
+                                    )}
+                                    {isCodeIncentive && (
+                                        <div className={styles.earningsExtraItem}>
+                                            <div className={styles.earningsExtraLabel}>{t('create.inviteCodePendingEarnings')}</div>
+                                            <div className={styles.earningsExtraValue}>{stats.invitePendingIncome}</div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
-                        <button
-                            type="button"
-                            className={styles.editNicknameConfirm}
-                            onClick={() => void handleConfirmEditNickname()}
-                            disabled={isSavingNickname}
-                        >
-                            {isSavingNickname ? t('profile.saving') : t('profile.confirm')}
-                        </button>
                     </div>
                 </div>
             )}
+
+            {identityEditModal}
+
+            <ConfirmModal
+                isOpen={isSettleModalOpen}
+                onConfirm={handleSettle}
+                onCancel={() => setIsSettleModalOpen(false)}
+                title={t('create.confirmSettle')}
+                message={(
+                    <Trans
+                        i18nKey="create.settleConfirmMessage"
+                        values={{ amount: stats.totalAmount }}
+                        components={{ hl: <strong className={confirmModalStyles.amountHighlight} /> }}
+                    />
+                )}
+                confirmButtonText={isSettling ? t('create.settling') : t('create.confirmSettleBtn')}
+                cancelButtonText={t('create.cancel')}
+                tone="dark"
+            />
+            <ConfirmModal
+                isOpen={isSettleDiamondsModalOpen}
+                onConfirm={handleSettleDiamonds}
+                onCancel={() => setIsSettleDiamondsModalOpen(false)}
+                title={t('create.confirmSettleDiamonds')}
+                message={(
+                    <Trans
+                        i18nKey="create.settleConfirmDiamondsMessage"
+                        values={{ amount: stats.totalDiamondsAmount }}
+                        components={{ hl: <strong className={confirmModalStyles.amountHighlight} /> }}
+                    />
+                )}
+                confirmButtonText={isSettling ? t('create.settling') : t('create.confirmSettleBtn')}
+                cancelButtonText={t('create.cancel')}
+                tone="dark"
+            />
 
             <ProfilePreferenceModal
                 isOpen={isProfilePreferenceOpen}

@@ -26,6 +26,7 @@ import AuthModal from '../components/AuthModal';
 import LoadSaveListModal from '../components/CreateGame/LoadSaveListModal';
 import SavePreviewModal from '../components/CreateGame/SavePreviewModal';
 import ShareModal from '../components/CommonModal/ShareModal';
+import ReportSheet from '../components/Report/ReportSheet';
 import QRCodeModal from '../components/CommonModal/QRCodeModal';
 import { savesApi, type SaveSummaryItem } from '../api/galgame/saves';
 import novelApi, { type DerivedNovelSummary } from '../api/galgame/novel';
@@ -42,6 +43,8 @@ import { buildNovelReadPath, buildSourceGameDetailPath } from '../utils/novelGam
 import { prefetchGalgameDocument } from '../lib/galgame/galgameDocumentCache';
 
 import { DetailHeartIcon, DetailShareIcon, DetailStarIcon } from '../components/GameDetailStatIcons';
+import accountSocialApi from '../api/account/accountSocialApi';
+import { getApiErrorMessage } from '../utils/error';
 
 /** 功能注释：详情页操作图标；返回改用分类页同款描边箭头，浅色封面上更清晰 */
 const HOME_ICON_BASE = `${import.meta.env.BASE_URL}data/assetsv2/home`;
@@ -58,7 +61,7 @@ import {
     formatDetailStatCount,
     resolveGameDetailTags,
 } from '../lib/gameDetailView';
-import { resolveGameCardAuthor } from '../lib/gameCardAuthor';
+import { resolveCreatorUserCode, resolveGameCardAuthor } from '../lib/gameCardAuthor';
 import {
     getInteractiveVideoAccess,
     unlockInteractiveVideoContent,
@@ -208,7 +211,7 @@ const GameDetail: React.FC = () => {
     const location = useLocation();
 
     // Hooks
-    const { user } = useAuthStore();
+    const { user, isAuthenticated } = useAuthStore();
     const { isAuthModalOpen, setIsAuthModalOpen } = authModalStore();
     const { setGameDetail: setGameDetailToStore } = useGameStore();
     const { setStartedAt } = useTrackingStore();
@@ -235,6 +238,7 @@ const GameDetail: React.FC = () => {
     const [derivedNovels, setDerivedNovels] = useState<DerivedNovelSummary[]>([]);
     const [derivedNovelsLoading, setDerivedNovelsLoading] = useState(false);
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+    const [isReportSheetOpen, setIsReportSheetOpen] = useState(false);
     const [isQRCodeModalOpen, setIsQRCodeModalOpen] = useState(false);
     const [activeSection, setActiveSection] = useState<'introduction' | 'reviews'>('introduction');
     /** 功能注释：剧情简介折叠，对齐效果图「阅读更多」 */
@@ -246,6 +250,10 @@ const GameDetail: React.FC = () => {
         config: InteractiveVideoPricingConfig;
         access: InteractiveVideoAccess;
     } | null>(null);
+    /** 功能注释：关注写操作忙碌态；关系态来自详情 info 字段 */
+    const [followBusy, setFollowBusy] = useState(false);
+    /** 功能注释：列表预览无关注态，等详情接口落地后再展示按钮，避免先闪「关注」 */
+    const [creatorRelationReady, setCreatorRelationReady] = useState(false);
 
     // Refs
     const likeDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -253,9 +261,12 @@ const GameDetail: React.FC = () => {
     const hasRecordedViewRef = useRef(false);
     
     const lastTrackedLocationKeyRef = useRef<string | null>(null);
+    const relationSyncSeqRef = useRef(0);
 
     // 计算值
     const userId = useMemo(() => user?.user?.id, [user?.user?.id]);
+    /** 与首次渲染的 userId 对齐，避免已登录冷启动再补拉一次 */
+    const prevDetailUserIdRef = useRef(userId);
     const fileId = useMemo(() => fileIdParam || game?.file_id || game?.id, [fileIdParam, game]);
     const isStartButtonLoading = isLoading || isPlayStatusLoading || isInteractiveVideoAccessLoading || isInteractiveVideoBuyoutUnlocking;
     const normalizedGameMode = useMemo(
@@ -322,6 +333,30 @@ const GameDetail: React.FC = () => {
             || `${import.meta.env.BASE_URL}${DEFAULT_AVATAR_PATH}`
         );
     }, [game, t]);
+    const creatorUserCode = useMemo(() => resolveCreatorUserCode(game), [game]);
+    /** 功能注释：创作者关系态优先用详情 info；列表预览缺字段时本地兜底本人判断 */
+    const isCreatorSelf = Boolean(
+        game?.isCreatorSelf
+        || (user?.user?.userCode && creatorUserCode && user.user.userCode === creatorUserCode)
+        || (userId != null && game?.creator_user_id != null && String(userId) === String(game.creator_user_id)),
+    );
+    const isFollowingCreator = Boolean(game?.isFollowingCreator);
+    const isCreatorBlocked = Boolean(game?.isCreatorBlocked);
+    const isCreatorBlockedBy = Boolean(game?.isCreatorBlockedBy);
+    const canShowCreatorFollowSlot = Boolean(heroMetaLine && creatorUserCode && !isCreatorSelf);
+    const showCreatorFollowBtn = canShowCreatorFollowSlot && creatorRelationReady;
+    const creatorFollowActionable = showCreatorFollowBtn && !isCreatorBlocked && !isCreatorBlockedBy;
+
+    const handleOpenCreatorHomepage = () => {
+        // 功能注释：未登录先弹登录
+        if (!checkAuth()) return;
+        if (!creatorUserCode) {
+            toast.error(t('create.previewHomepageNoCode'));
+            return;
+        }
+        navigate(`/account/${encodeURIComponent(creatorUserCode)}`);
+    };
+
     const shareCountDisplay = useMemo(
         () => formatDetailStatCount(game?.share_count),
         [game?.share_count],
@@ -437,6 +472,36 @@ const GameDetail: React.FC = () => {
         return true;
     };
 
+    const handleToggleCreatorFollow = async () => {
+        if (!checkAuth() || !creatorUserCode || followBusy || !creatorFollowActionable) return;
+
+        const wasFollowing = isFollowingCreator;
+        setFollowBusy(true);
+        try {
+            const response = wasFollowing
+                ? await accountSocialApi.unfollowOrRemove(creatorUserCode, 'unfollow')
+                : await accountSocialApi.follow(creatorUserCode);
+            if (!response.data.success || !response.data.data) {
+                throw new Error(response.data.message || t('common.error'));
+            }
+            const { isFollowing } = response.data.data;
+            setGame((prev) => (
+                prev
+                    ? { ...prev, isFollowingCreator: isFollowing }
+                    : prev
+            ));
+            toast.success(
+                isFollowing
+                    ? t('create.socialFollowSuccess')
+                    : t('create.socialUnfollowSuccess'),
+            );
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, t('common.error')));
+        } finally {
+            setFollowBusy(false);
+        }
+    };
+
     // 加载游戏详情：有首页/列表缓存则先出内容，再后台补点赞/收藏等
     useEffect(() => {
         if (!fileIdParam) {
@@ -458,6 +523,8 @@ const GameDetail: React.FC = () => {
             setLikeCount(gameData.like_count || 0);
             setGameDetailToStore(gameData);
         };
+
+        setCreatorRelationReady(false);
 
         if (preview) {
             applyGameData(preview);
@@ -496,6 +563,7 @@ const GameDetail: React.FC = () => {
             } finally {
                 if (!cancelled) {
                     setIsLoading(false);
+                    setCreatorRelationReady(true);
                 }
             }
         };
@@ -506,6 +574,46 @@ const GameDetail: React.FC = () => {
             cancelled = true;
         };
     }, [fileIdParam, location.key, location.state, navigate, setGameDetailToStore, t]);
+
+    // 仅「本页从游客变为登录 / 切换账号」时补拉关系态；冷启动已登录只靠主加载一次
+    useEffect(() => {
+        const prevUserId = prevDetailUserIdRef.current;
+        prevDetailUserIdRef.current = userId;
+
+        if (!fileIdParam || !userId) return;
+        if (prevUserId === userId) return;
+
+        const seq = ++relationSyncSeqRef.current;
+        let cancelled = false;
+        const syncCreatorRelation = async () => {
+            try {
+                const response = await getGameDataApi.getGameDetail({ fileId: fileIdParam });
+                if (cancelled || seq !== relationSyncSeqRef.current || !response.data?.data) return;
+                const data = response.data.data;
+                setGame((prev) => (
+                    prev
+                        ? {
+                            ...prev,
+                            isCreatorSelf: data.isCreatorSelf,
+                            isFollowingCreator: data.isFollowingCreator,
+                            isCreatorBlocked: data.isCreatorBlocked,
+                            isCreatorBlockedBy: data.isCreatorBlockedBy,
+                            isFavorited: data.isFavorited,
+                            reaction: data.reaction,
+                        }
+                        : data
+                ));
+                setIsLiked(checkIsLiked(data.reaction));
+                setIsFavorited(Boolean(data.isFavorited));
+            } catch (error) {
+                console.warn('[GameDetail] sync creator relation failed:', error);
+            }
+        };
+        void syncCreatorRelation();
+        return () => {
+            cancelled = true;
+        };
+    }, [fileIdParam, userId]);
 
     // 浏览统计：详情加载完成且已登录后只记一次
     useEffect(() => {
@@ -1301,15 +1409,48 @@ const GameDetail: React.FC = () => {
                         </span>
                     </div>
                     {heroMetaLine ? (
-                        <div className={styles.heroMetaRow}>
-                            <img
-                                className={styles.heroAuthorAvatar}
-                                src={heroAuthorAvatarSrc}
-                                alt=""
-                                loading="lazy"
-                                decoding="async"
-                            />
-                            <p className={styles.heroMeta}>{heroMetaLine}</p>
+                        <div className={styles.heroMetaActions}>
+                            <button
+                                type="button"
+                                className={`${styles.heroMetaRow} ${styles.heroMetaRowClickable}`}
+                                onClick={handleOpenCreatorHomepage}
+                                aria-label={t('gameDetail.openCreatorHomepage')}
+                            >
+                                <img
+                                    className={styles.heroAuthorAvatar}
+                                    src={heroAuthorAvatarSrc}
+                                    alt=""
+                                    loading="lazy"
+                                    decoding="async"
+                                />
+                                <p className={styles.heroMeta}>{heroMetaLine}</p>
+                            </button>
+                            {canShowCreatorFollowSlot ? (
+                                showCreatorFollowBtn ? (
+                                    <button
+                                        type="button"
+                                        className={`${styles.followBtn} ${
+                                            isCreatorBlocked || isCreatorBlockedBy
+                                                ? styles.followBtnMuted
+                                                : isFollowingCreator
+                                                    ? styles.followBtnActive
+                                                    : styles.followBtnIdle
+                                        }`}
+                                        disabled={followBusy || !creatorFollowActionable}
+                                        onClick={() => void handleToggleCreatorFollow()}
+                                    >
+                                        {isCreatorBlocked
+                                            ? t('create.socialBlockedBtn')
+                                            : isCreatorBlockedBy
+                                                ? t('create.socialCannotFollowBtn')
+                                                : isFollowingCreator
+                                                    ? t('create.socialFollowingBtn')
+                                                    : t('create.socialFollowBtn')}
+                                    </button>
+                                ) : (
+                                    <span className={styles.followBtnPlaceholder} aria-hidden="true" />
+                                )
+                            ) : null}
                         </div>
                     ) : null}
                 </div>
@@ -1618,7 +1759,27 @@ const GameDetail: React.FC = () => {
                 onClose={() => setIsShareModalOpen(false)}
                 onCopyLink={handleCopyLink}
                 onShowQRCode={handleShowQRCode}
+                onReport={
+                    !isCreatorSelf && fileId
+                        ? () => {
+                            if (!isAuthenticated) {
+                                setIsAuthModalOpen(true);
+                                return;
+                            }
+                            setIsReportSheetOpen(true);
+                        }
+                        : undefined
+                }
             />
+            {fileId ? (
+                <ReportSheet
+                    isOpen={isReportSheetOpen}
+                    onClose={() => setIsReportSheetOpen(false)}
+                    targetType="game"
+                    targetId={String(fileId)}
+                    showPolicyHint
+                />
+            ) : null}
             <QRCodeModal
                 isOpen={isQRCodeModalOpen}
                 onClose={() => setIsQRCodeModalOpen(false)}

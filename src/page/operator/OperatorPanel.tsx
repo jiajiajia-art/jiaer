@@ -20,13 +20,30 @@ import OperatorReports from './OperatorReports';
 import WithdrawAdminManager from '../../components/WithdrawAdminManager';
 import { useAuthStore } from '../../store/useAuthStore';
 import { isAdminRole } from '../../utils/userRoles';
+import ContentReportAdminManager from '../../components/Admin/ContentReportAdminManager';
+import ContentAppealAdminManager from '../../components/Admin/ContentAppealAdminManager';
+import PublishReviewAdminManager from '../../components/Admin/PublishReviewAdminManager';
 import adminStyles from '../AdminPanel.module.css';
 import styles from './OperatorPanel.module.css';
 import gamePublishAppealsApi from '../../api/gamePublishAppeals/gamePublishAppealsApi';
 import AiModelCenter from '../../components/AiModelCenter';
 import PlatformBenefitsManager from '../../components/PlatformBenefitsManager';
 
-type OperatorTab = 'stats' | 'reports' | 'promotions' | 'recruitment' | 'specialAuthors' | 'platformWorks' | 'promoters' | 'dailyTasks' | 'withdraw' | 'aiModelCenter' | 'platformBenefits';
+type OperatorTab =
+  | 'stats'
+  | 'reports'
+  | 'promotions'
+  | 'recruitment'
+  | 'specialAuthors'
+  | 'platformWorks'
+  | 'promoters'
+  | 'dailyTasks'
+  | 'withdraw'
+  | 'aiModelCenter'
+  | 'platformBenefits'
+  | 'contentReports'
+  | 'appeals'
+  | 'publishQueue';
 type WorksSortField = 'playCount' | 'pv' | 'shareCount';
 type SortDirection = 'asc' | 'desc';
 
@@ -48,6 +65,9 @@ const resolveOperatorTab = (pathname: string): OperatorTab => {
   if (pathname.startsWith('/operator/withdraw')) return 'withdraw';
   if (pathname.startsWith('/operator/ai-model-center')) return 'aiModelCenter';
   if (pathname.startsWith('/operator/platform-benefits')) return 'platformBenefits';
+  if (pathname.startsWith('/operator/content-reports')) return 'contentReports';
+  if (pathname.startsWith('/operator/appeals')) return 'appeals';
+  if (pathname.startsWith('/operator/publish-queue')) return 'publishQueue';
   return 'stats';
 };
 
@@ -89,6 +109,9 @@ const OperatorPanel: React.FC = () => {
     ] : []),
     { id: 'dailyTasks', label: t('operator.tabs.dailyTasks'), path: '/operator/daily-tasks' },
     { id: 'withdraw', label: t('operator.tabs.withdraw'), path: '/operator/withdraw' },
+    { id: 'contentReports', label: t('operator.tabs.contentReports'), path: '/operator/content-reports' },
+    { id: 'appeals', label: t('operator.tabs.appeals'), path: '/operator/appeals' },
+    { id: 'publishQueue', label: t('operator.tabs.publishQueue'), path: '/operator/publish-queue' },
   ]), [isAdmin, t]);
 
   const sortedWorks = useMemo(() => {
@@ -448,6 +471,9 @@ const OperatorPanel: React.FC = () => {
             {activeTab === 'dailyTasks' ? renderDailyTasks() : null}
             {activeTab === 'aiModelCenter' ? <AiModelCenter isAdmin={false} /> : null}
             {activeTab === 'platformBenefits' ? <PlatformBenefitsManager /> : null}
+            {activeTab === 'contentReports' ? <ContentReportAdminManager /> : null}
+            {activeTab === 'appeals' ? <ContentAppealAdminManager /> : null}
+            {activeTab === 'publishQueue' ? <PublishReviewAdminManager /> : null}
           </section>
         </div>
       </div>

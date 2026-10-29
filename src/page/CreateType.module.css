@@ -153,6 +153,18 @@
     margin-bottom: 16px;
 }
 
+.banHint {
+    margin: 0 0 14px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: rgba(184, 50, 72, 0.18);
+    border: 1px solid rgba(184, 50, 72, 0.35);
+    color: rgba(255, 210, 216, 0.95);
+    font-size: 13px;
+    line-height: 1.45;
+    text-align: center;
+}
+
 .title {
     display: inline-flex;
     align-items: center;
