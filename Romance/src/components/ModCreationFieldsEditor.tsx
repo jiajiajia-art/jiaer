@@ -1,7 +1,7 @@
 import { IconChevronDown, IconClose, IconLock } from "../lib/icons";
 import { useState } from "react";
 import {
-  RAW_BACKGROUNDS, RAW_CREATION, RAW_PARENT_JOBS, RAW_STAT_LABELS, RAW_STAT_ORDER,
+  RAW_BACKGROUNDS, RAW_STAT_LABELS, RAW_STAT_ORDER,
   type BuiltinFieldCfg, type BuiltinFieldKey, type CreationCopy, type CreationField, type CreationFieldType, type CreationOptCat, type OptFx, type Option, type StatKey,
 } from "../game/data";
 import type { AttrDef } from "../lib/types";
@@ -56,25 +56,6 @@ function Toggle({ on, onClick, children }: { on: boolean; onClick: () => void; c
       {children}
     </button>
   );
-}
-
-/* 把旧版 pathOpts / bgLinks 换算成逐选项联动 */
-function toOptLinks(cc: CreationCopy, jobs: string[]): NonNullable<CreationCopy["optLinks"]> {
-  const out: NonNullable<CreationCopy["optLinks"]> = {};
-  const cats: CreationOptCat[] = ["identityOpts", "backgroundOpts", "klassOpts", "parentJobs"];
-  for (const cat of cats) {
-    const pool = cat === "parentJobs" ? jobs : cc[cat] ?? [];
-    const m: Record<string, { paths?: string[]; bgs?: string[] }> = {};
-    for (const o of pool) {
-      const pEntries = Object.entries(cc.pathOpts ?? {}).filter(([, v]) => v[cat]?.length);
-      const bEntries = Object.entries(cc.bgLinks ?? {}).filter(([, v]) => v[cat as keyof typeof v]?.length);
-      const paths = pEntries.length ? [...pEntries.filter(([, v]) => v[cat]!.includes(o)).map(([k]) => k), ...(cc.paths ?? []).map((p) => p.id).filter((id) => !cc.pathOpts?.[id]?.[cat]?.length)] : [];
-      const bgs = bEntries.length ? [...bEntries.filter(([, v]) => (v[cat as keyof typeof v] as string[]).includes(o)).map(([k]) => k), ...RAW_BACKGROUNDS.map((b) => b.id).filter((id) => !(cc.bgLinks?.[id]?.[cat as keyof NonNullable<CreationCopy["bgLinks"]>[string]] as string[] | undefined)?.length)] : [];
-      if (paths.length || bgs.length) m[o] = { ...(paths.length ? { paths } : {}), ...(bgs.length ? { bgs } : {}) };
-    }
-    if (Object.keys(m).length) out[cat] = m;
-  }
-  return out;
 }
 
 /* 下拉选项 → 开局效果：能力 / 资金等指标 / 自定义属性 / NPC 好感 的增减 + 写进档案的设定 + 改开局日期 */
@@ -190,11 +171,6 @@ export default function ModCreationFieldsEditor({ creation, parentJobs, backgrou
   const fields = cc.fields ?? [];
   const setFields = (l: CreationField[]) => commit({ fields: l.length ? l : undefined });
   const setField = (id: string, p: Partial<CreationField>) => setFields(fields.map((f) => (f.id === id ? { ...f, ...p } : f)));
-  const loadDefault = () => {
-    const base = { ...cc, identityOpts: RAW_CREATION.identityOpts, backgroundOpts: RAW_CREATION.backgroundOpts, klassOpts: RAW_CREATION.klassOpts, paths: cc.paths ?? RAW_CREATION.paths };
-    const ol = toOptLinks({ ...base, pathOpts: RAW_CREATION.pathOpts, bgLinks: RAW_CREATION.bgLinks }, RAW_PARENT_JOBS);
-    onChange({ creation: { ...base, pathOpts: undefined, bgLinks: undefined, optLinks: ol }, parentJobs: [...RAW_PARENT_JOBS] });
-  };
 
   const row = (key: string, id: string, title: string, type: string, badges: React.ReactNode, children: React.ReactNode) => {
     const isOpen = open === id;
@@ -245,9 +221,6 @@ export default function ModCreationFieldsEditor({ creation, parentJobs, backgrou
       <p className="text-[11px] leading-relaxed text-ink-soft">
         建角页显示哪些字段、叫什么、能不能改都在这里配。<b className="text-ink">锁定</b> = 玩家不可修改，固定为你填的值；选项可限定只在某些人物线路 / 家庭背景下出现（建角页自动过滤，避免矛盾组合）。
       </p>
-      <div className="flex flex-wrap gap-1.5">
-        <button type="button" className={btn} onClick={loadDefault}>载入娱乐圈默认选项与联动</button>
-      </div>
 
       {BUILTINS.map((b) => {
         const c = cfg(b.k);

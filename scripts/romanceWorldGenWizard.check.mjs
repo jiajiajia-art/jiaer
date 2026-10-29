@@ -42,8 +42,11 @@ test('Romance_App_应识别createWorld查询并挂载WorldGenWizard', () => {
   assert.doesNotMatch(app, /platformOnly[\s\S]*classList\.add\("accent-plum"/);
   assert.doesNotMatch(app, /platformOnly[\s\S]*classList\.add\("accent-jade"/);
   assert.match(css, /\.romance-platform\s*\{/);
-  assert.match(css, /\.romance-platform\s*\{[^}]*--paper:\s*#0A0A0A/);
-  assert.match(css, /\.romance-platform\s*\{[^}]*--jade:\s*#A8283C/);
+  assert.match(css, /\.romance-platform\s*\{[^}]*--fl-surface:\s*#0A0A0A/);
+  assert.match(css, /\.romance-platform\s*\{[^}]*--fl-wine:\s*#A8283C/);
+  assert.match(css, /\.romance-platform\s*\{[^}]*--paper:\s*var\(--fl-surface\)/);
+  assert.match(css, /\.romance-platform\s*\{[^}]*--jade:\s*var\(--fl-wine\)/);
+  assert.match(css, /\.romance-platform\s*\{[^}]*--sheet-solid:\s*var\(--fl-sheet\)/);
   assert.doesNotMatch(css, /\.romance-platform\s*\{[^}]*--paper:\s*#f3e9d6/);
   assert.match(wiz, /生成世界/);
   // 向导不再包含游玩偏好选择页（建角页 / 局内设置已有）
@@ -71,7 +74,7 @@ test('Romance_App_应识别createWorld查询并挂载WorldGenWizard', () => {
   // 禁止假进度：不得用本地模板灌数冒充生成；setInterval 仅允许刷新预计耗时秒数
   assert.doesNotMatch(wiz, /假进度|mockProgress|fakeProgress/);
   assert.match(wiz, /estimateWorldGenEtaSeconds|预计耗时/);
-  assert.match(wiz, /worldGenEtaDisplaySeconds|worldGenEtaDeadlineMs|syncEtaDeadline/);
+  assert.match(wiz, /worldGenEtaDisplaySeconds|worldGenEtaDeadlineMs|syncEtaDeadline|worldGenEtaNeedsRecalibrate/);
   assert.match(wiz, /formatWorldGenEtaParts/);
   assert.match(wiz, /world-gen-eta-unit/);
   assert.match(wiz, /etaParts\.minutes > 0/);
@@ -91,8 +94,8 @@ test('Romance_App_应识别createWorld查询并挂载WorldGenWizard', () => {
   assert.match(css, /\.world-gen-editor/);
   assert.match(css, /\.romance-host:has\(\[data-platform-ui="1"\]\)/);
   // 功能注释：平台壳须同步 --color-jade 酒红；禁止再退回宣纸墨绿浅底
-  assert.match(css, /\.romance-platform\s*\{[^}]*--color-jade:\s*#A8283C/);
-  assert.match(css, /\.world-gen-shell\s*\{[^}]*--wg-bg:\s*#000000/);
+  assert.match(css, /\.romance-platform\s*\{[^}]*--color-jade:\s*var\(--fl-wine\)/);
+  assert.match(css, /\.world-gen-shell\s*\{[^}]*--wg-bg:\s*var\(--fl-bg/);
   assert.doesNotMatch(css, /\.world-gen-shell\s*\{[^}]*--wg-bg:\s*#f3e9d6/);
   assert.match(css, /\.world-gen-editor span\[class\*="rounded-full"\]\[class\*="bg-jade"\]/);
   // 功能注释：手机 100% 设备宽 + PC 最大 1200；禁止再整页横滑锁死最小 1200
@@ -181,11 +184,11 @@ test('worldGenWizard_校验与内容映射编辑器模块', async () => {
   assert.ok(openSteps.includes('hub:beauty'));
   assert.ok(openSteps.includes('hub:audio'));
   assert.ok(openSteps.includes('hub:nav'));
-  // 取消「⑥ 开场」「④ 世界」后：开场剧情在④剧情，封面/地点在①基础
+  // 取消「⑥ 开场」「④ 世界」后：开场剧情在⑥美化，地点仍在①基础
   const openMeta = mod.WORLD_GEN_EDITOR_STEPS.filter((s) => openSteps.includes(s.id));
   assert.ok(openMeta.every((s) => s.group !== '⑥ 开场'));
   assert.ok(openMeta.every((s) => s.group !== '④ 世界'));
-  assert.ok(openMeta.some((s) => s.id === 'opening' && s.group === '④ 剧情'));
+  assert.ok(openMeta.some((s) => s.id === 'opening' && s.group === '⑥ 美化'));
   assert.ok(mod.WORLD_GEN_EDITOR_STEPS.some((s) => s.id === 'rooms' && s.group === '① 基础'));
 
   const charSteps = mod.defaultEditorStepsFromContent(['characters']);

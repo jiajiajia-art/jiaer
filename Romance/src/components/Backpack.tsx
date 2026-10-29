@@ -1,4 +1,5 @@
 import { createPortal } from "react-dom";
+import { romancePortalRoot } from "../lib/romancePortalRoot";
 import { useState } from "react";
 import { useGame } from "../store/gameCtx";
 import { Modal } from "./ui";
@@ -131,7 +132,7 @@ export default function Backpack({ onClose, embedded = false }: { onClose?: () =
       })()}
       {openContract && game.contract && <ContractDoc contract={game.contract} onClose={() => setOpenContract(false)} />}
     </>,
-    document.body,
+    romancePortalRoot()!,
   );
 
   if (embedded) return <section>{content}{overlays}</section>;

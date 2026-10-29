@@ -18,8 +18,9 @@ test('Cover_游戏内不得再出现装扮封面按钮', () => {
   assert.doesNotMatch(cover, /["']diy["']/);
 });
 
-test('ModEditorPanel_开局封面唯一入口在①基础', () => {
-  assert.match(panel, /title="开局封面"/);
+test('ModEditorPanel_开局封面唯一入口在⑥美化', () => {
+  assert.match(panel, /g="look"[\s\S]{0,80}title="开局封面"/);
+  assert.doesNotMatch(panel, /g="base"[\s\S]{0,40}title="开局封面"/);
   assert.match(panel, /画布布局/);
   const mounts = [...panel.matchAll(/<ModCoverEditor\b/g)];
   assert.equal(mounts.length, 1, 'ModCoverEditor 只能挂一处 JSX');

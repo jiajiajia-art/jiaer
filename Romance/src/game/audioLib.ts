@@ -1,12 +1,13 @@
 /* ═══════════════ 音频库（原生资源层）═══════════════
- * 一个库：作者上传的音频（存档 game.audio）+ 已启用 MOD 注入的音频（content.audio / 旧版 content.bgm）。
- * 不区分来源，id 唯一；MOD 关闭 / 卸载后它注入的条目立刻从库里消失。
+ * 一个库：作者上传的音频（存档 game.audio）+ 已启用 MOD 注入的音频（content.audio / content.bgm）+ 平台曲库。
+ * 不区分来源，id 唯一；MOD 关闭 / 卸载后它注入的内嵌和链接消失。作品引用不归模组，平台曲不带 _mod，都不跟着删。
  * 冲突规则：作者音频优先；导入时选了「覆盖」的 MOD 条目在启用期间覆盖同 id；MOD 之间按加载顺序先到先得。 */
 import { useSyncExternalStore } from "react";
 import type { AudioAsset, AudioKind } from "../lib/types";
 import type { Mod } from "../mods/types";
 import { allMods, getWorld, subscribeMods } from "../mods/registry";
 import { modLog } from "../mods/ext";
+import { overlayPlatformAudio } from "./platformAudio";
 
 export const AUDIO_KIND_LABEL: Record<AudioKind, string> = { bgm: "背景音乐", sfx: "短音效", amb: "环境氛围音" };
 export const AUDIO_EXT = /\.(mp3|ogg|wav)$/i;
@@ -33,7 +34,11 @@ export const useAudioLib = () => { useSyncExternalStore((f) => { subs.add(f); re
 export function modAudio(m: Mod): AudioAsset[] {
   const own = (m.content?.audio ?? []).map((a) => ({ ...a, _mod: m.id }));
   const legacy = (m.content?.bgm ?? []).filter((t) => !own.some((a) => a.id === t.id)).map<AudioAsset>((t) => ({ id: t.id, name: t.name, kind: "bgm", src: t.src, loop: true, _mod: m.id }));
+  // 作品引用和平台曲目不随模组注入：引用属于作品库，平台曲始终在库里且不带 _mod
   return [...own, ...legacy];
+}
+export function authorTracks(): { id: string; name: string; src: string }[] {
+  return author.filter((a) => a?.id).map((a) => ({ id: a.id, name: a.name, src: a.src }));
 }
 export const activeModIds = (): string[] => getWorld().chain.map((m) => m.id); // 世界 + 已启用扩展（按加载顺序）
 export const isAudioOwnerOn = (mod?: string) => !mod || activeModIds().includes(mod);
@@ -53,6 +58,7 @@ export function audioLibrary(): Map<string, AudioAsset> {
       else if (cur._mod && cur._mod !== a._mod) modLog(mod.id, "warn", `音频 id「${a.id}」已被「${cur._mod}」注册，已跳过`);
     }
   }
+  overlayPlatformAudio(m);
   cache = m;
   return m;
 }
@@ -65,7 +71,13 @@ export function audioOptions(kind?: AudioKind): { a: AudioAsset; on: boolean; mo
   for (const m of allMods()) for (const a of modAudio(m)) if (lib.get(a.id) !== a && !lib.has(a.id) && !out.some((o) => o.a.id === a.id)) out.push({ a, on: false, modName: m.name });
   return kind ? out.filter((o) => o.a.kind === kind) : out;
 }
-export const audioLabel = (id?: string) => { if (!id) return "（未选）"; const o = audioOptions().find((x) => x.a.id === id); return o ? `${o.a.name}${o.on ? "" : "（MOD 未启用）"}` : `已失效：${id}`; };
+export const audioLabel = (id?: string) => {
+  if (!id) return "（未选）";
+  const o = audioOptions().find((x) => x.a.id === id);
+  if (!o) return `已失效：${id}`;
+  const plat = o.a.id.startsWith("platform:") ? "（平台）" : "";
+  return `${o.a.name}${plat}${o.on ? "" : "（MOD 未启用）"}`;
+};
 
 /* —— 导入 MOD 时的 id 冲突：自动重命名 / 跳过 / 覆盖 —— */
 export type AudioResolve = "rename" | "skip" | "overwrite";

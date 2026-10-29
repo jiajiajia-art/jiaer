@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { IconCamera, IconClose, IconSpark } from "../lib/icons";
+import { romancePortalRoot } from "../lib/romancePortalRoot";
 import AvatarLibraryPicker from "./AvatarLibraryPicker";
 import LocalAvatarCropFlow from "./LocalAvatarCropFlow";
 
@@ -21,18 +22,22 @@ export function SectionHead({ code, cn, hint, right }: { code?: string; cn: stri
 /* —— 模态弹窗：遮罩 / 面板 / 标题栏 / 关闭钮全部取 index.css 的全局 ui-* 类（自绘弹窗也用同一套） —— */
 const ModalDepth = createContext(0);
 
-export function Modal({ title, onClose, children, wide, xl, heavyBackdrop }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean; /** 超宽面板：最小 / 最大 1200（模组编辑器） */ xl?: boolean; heavyBackdrop?: boolean }) {
+export function Modal({ title, onClose, children, wide, xl, heavyBackdrop, locked = false }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean; /** 超宽面板：最小 / 最大 1200（模组编辑器） */ xl?: boolean; heavyBackdrop?: boolean; /** 必须点内容里的按钮才能离开：遮罩、Esc、关闭钮都不收起 */ locked?: boolean }) {
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
+  const lockedRef = useRef(locked);
+  lockedRef.current = locked;
   // 嵌套弹窗：子弹窗先挂到 body（React 先提交子节点），按层级抬高 z-index 保证它在上层
   const depth = useContext(ModalDepth);
-  // Esc 关闭最上层弹窗；打开期间锁住页面滚动（嵌套弹窗按计数恢复）
+  // Esc 关闭最上层弹窗；打开期间锁住页面滚动（嵌套弹窗按计数恢复）。locked 时 Esc 只拦住，不调用 onClose。
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       const all = document.querySelectorAll(".modal-sheet");
       if (all[all.length - 1] !== sheetRef.current) return;
+      e.preventDefault();
       e.stopPropagation();
+      if (lockedRef.current) return;
       // 游戏全屏中：Esc 先退出全屏；再按一次才关闭弹窗
       closeRef.current();
     };
@@ -49,21 +54,19 @@ export function Modal({ title, onClose, children, wide, xl, heavyBackdrop }: { t
     };
   }, []);
   const sheetRef = useRef<HTMLDivElement>(null);
-  // 功能注释：嵌入 funloom 时挂到 .romance-host，避免主站 #root 黑底叠层把遮罩「看穿」；独立运行仍回退 body
-  const portalRoot =
-    (typeof document !== "undefined" && document.querySelector(".romance-host"))
-    || (typeof document !== "undefined" ? document.body : null);
+  // 功能注释：优先挂到平台暗红壳，再回退 romance-host / body，保证弹窗继承当前皮肤 token
+  const portalRoot = romancePortalRoot();
   if (!portalRoot) return null;
   return createPortal(
     <ModalDepth.Provider value={depth + 1}>
-    <div className={`ui-overlay ui-overlay-modal z-50 ${heavyBackdrop ? "ui-overlay-heavy" : ""}`} style={{ zIndex: 50 + depth * 10 }} onClick={onClose}>
+    <div className={`ui-overlay ui-overlay-modal z-50 ${heavyBackdrop ? "ui-overlay-heavy" : ""}`} style={{ zIndex: 50 + depth * 10 }} onClick={locked ? undefined : onClose}>
       <div
         ref={sheetRef}
         className={`ui-sheet modal-sheet max-h-[92dvh] sm:max-h-[88dvh] overflow-x-auto overflow-y-auto overscroll-contain ${
           xl ? "w-[min(1200px,96vw)] min-w-[min(1200px,96vw)] max-w-[1200px]" : wide ? "max-w-2xl" : "max-w-lg"
         }`}
         onClick={(e) => e.stopPropagation()}
-        role="dialog"
+        role={locked ? "alertdialog" : "dialog"}
         aria-modal="true"
         aria-label={title}
       >
@@ -73,11 +76,13 @@ export function Modal({ title, onClose, children, wide, xl, heavyBackdrop }: { t
               <IconSpark size="md" className="shrink-0 text-coral" />
               {title}
             </h3>
-            <div className="flex shrink-0 items-center gap-1">
-              <button onClick={onClose} aria-label="关闭" className="ui-icon-btn">
-                <IconClose />
-              </button>
-            </div>
+            {locked ? null : (
+              <div className="flex shrink-0 items-center gap-1">
+                <button onClick={onClose} aria-label="关闭" className="ui-icon-btn">
+                  <IconClose />
+                </button>
+              </div>
+            )}
           </div>
         </div>
         <div className={`px-4 pb-5 pt-1 sm:px-5`}>{children}</div>

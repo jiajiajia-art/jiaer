@@ -1,10 +1,9 @@
-/* 功能扩展编辑器：MOD 元数据 + 声明式注册项 + 皮肤 / 动画 DIY（实时预览，样式限定在本 MOD 容器内） */
+/* 功能扩展编辑器：MOD 元数据 + 声明式注册项（皮肤美化已迁到⑥美化，此处不再编辑） */
 import { useState } from "react";
-import type { AnimPreset, Mod, ModCategory, ModComponentDef, ModExt, ModSkin } from "../mods/types";
+import type { Mod, ModCategory, ModComponentDef, ModExt } from "../mods/types";
 import { NATIVE_DEPS } from "../mods/types";
 import { useMods } from "../mods/registry";
-import { ANIM_LABEL, CATEGORY_LABEL, cssProblems, modHealth } from "../mods/nmod";
-import { ModFeaturePanels } from "./ModCenter";
+import { CATEGORY_LABEL, modHealth } from "../mods/nmod";
 import { StatusMark } from "../lib/icons";
 
 const inp = "w-full rounded-lg border border-line bg-paper px-2 py-1 text-[12px] text-ink outline-none focus:border-jade";
@@ -45,10 +44,7 @@ export default function ModExtEditor({ m, setM }: { m: Mod; setM: (m: Mod) => vo
   const e: ModExt = m.ext ?? {};
   const setE = (p: Partial<ModExt>) => setM({ ...m, ext: { ...e, ...p } });
   const setX = (p: Partial<NonNullable<ModExt["exports"]>>) => setE({ exports: { ...(e.exports ?? {}), ...p } });
-  const skin: ModSkin = e.skin ?? {};
-  const setSkin = (p: Partial<ModSkin>) => setE({ skin: { ...skin, ...p } });
   const others = mods.filter((x) => x.id !== m.id);
-  const cssErr = skin.css ? cssProblems(skin.css) : [];
   const [health, setHealth] = useState<ReturnType<typeof modHealth> | null>(null);
   const deps = m.deps ?? [];
   return (
@@ -151,30 +147,6 @@ export default function ModExtEditor({ m, setM }: { m: Mod; setM: (m: Mod) => vo
         <JsonField key={`a${m.id}`} label="触发器动作 actions" hint='[{ "id", "label", "branches": [{ "conds": [], "effects": [] }] }]' value={e.actions} onChange={(actions) => setE({ actions })} />
         <JsonField key={`c${m.id}`} label="条件算子 conds" hint='[{ "id", "label", "match": "all", "conds": [] }]' value={e.conds} onChange={(conds) => setE({ conds })} />
         <JsonField key={`t${m.id}`} label="数据表 tables" hint='[{ "id", "label", "columns": [], "rows": [] }]' value={e.tables} onChange={(tables) => setE({ tables })} />
-      </section>
-
-      <section className="space-y-1.5">
-        <p className="font-bold">皮肤与动画 DIY <span className="font-normal text-ink-soft">只作用于本 MOD 的面板，不会影响编辑器或其他 MOD</span></p>
-        <div className="grid gap-1.5 sm:grid-cols-4">
-          {([["bg", "底色"], ["fg", "文字"], ["accent", "强调"], ["border", "描边"]] as const).map(([k, t]) => (
-            <label key={k} className={lab}>{t}
-              <span className="mt-0.5 flex gap-1"><input type="color" value={/^#[0-9a-f]{6}$/i.test(skin[k] ?? "") ? skin[k] : "#888888"} onChange={(x) => setSkin({ [k]: x.target.value })} className="h-7 w-8 shrink-0 rounded border border-line" />
-                <input className={inp} value={skin[k] ?? ""} placeholder="默认" onChange={(x) => setSkin({ [k]: x.target.value || undefined })} /></span>
-            </label>
-          ))}
-          <label className={lab}>圆角 {skin.radius ?? 16}px<input type="range" min={0} max={32} value={skin.radius ?? 16} onChange={(x) => setSkin({ radius: Number(x.target.value) })} className="mt-1 w-full accent-[var(--jade)]" /></label>
-          <label className={lab}>字体<select className={`${inp} mt-0.5`} value={skin.font ?? "inherit"} onChange={(x) => setSkin({ font: x.target.value as ModSkin["font"] })}><option value="inherit">跟随</option><option value="serif">衬线</option><option value="sans">无衬线</option><option value="round">圆体</option><option value="mono">等宽</option></select></label>
-          <label className={lab}>阴影<select className={`${inp} mt-0.5`} value={skin.shadow ?? "soft"} onChange={(x) => setSkin({ shadow: x.target.value as ModSkin["shadow"] })}><option value="none">无</option><option value="soft">柔和</option><option value="lift">悬浮</option><option value="neon">霓虹</option></select></label>
-          <label className={lab}>底纹<select className={`${inp} mt-0.5`} value={skin.pattern ?? "none"} onChange={(x) => setSkin({ pattern: x.target.value as ModSkin["pattern"] })}><option value="none">无</option><option value="dots">波点</option><option value="grid">网格</option><option value="stripes">斜纹</option><option value="paper">纸感</option></select></label>
-          <label className={lab}>面板动画<select className={`${inp} mt-0.5`} value={skin.panelAnim ?? "none"} onChange={(x) => setSkin({ panelAnim: x.target.value as AnimPreset })}>{Object.entries(ANIM_LABEL).map(([k, t]) => <option key={k} value={k}>{t}</option>)}</select></label>
-          <label className={lab}>组件动画<select className={`${inp} mt-0.5`} value={skin.componentAnim ?? "none"} onChange={(x) => setSkin({ componentAnim: x.target.value as AnimPreset })}>{Object.entries(ANIM_LABEL).map(([k, t]) => <option key={k} value={k}>{t}</option>)}</select></label>
-          <label className={`${lab} sm:col-span-2`}>动画时长 {skin.duration ?? 520}ms<input type="range" min={100} max={4000} step={20} value={skin.duration ?? 520} onChange={(x) => setSkin({ duration: Number(x.target.value) })} className="mt-1 w-full accent-[var(--jade)]" /></label>
-        </div>
-        <label className={lab}>自定义 CSS<span className="ml-1 opacity-70">自动加本 MOD 前缀隔离；禁止 @import / url() 外链 / expression</span>
-          <textarea rows={3} spellCheck={false} value={skin.css ?? ""} onChange={(x) => setSkin({ css: x.target.value || undefined })} className={`${inp} mt-0.5 font-mono text-[11px]`} placeholder=".nm-panel { letter-spacing: .02em }" />
-        </label>
-        {cssErr.map((t, i) => <p key={i} className="text-[11px] text-danger">· {t}</p>)}
-        {!!e.panels?.length && <div><p className={lab}>实时预览</p><div className="mt-1"><ModFeaturePanels previewMod={m} /></div></div>}
       </section>
 
       <section className="space-y-1">

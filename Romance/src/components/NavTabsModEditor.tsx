@@ -333,7 +333,7 @@ export default function NavTabsModEditor({ terms, features, navTabs, navSize, on
       </button>
 
       <p className="text-[10.5px] leading-relaxed text-ink-soft">
-        货币、名气、通告、作品等叫法请分别在「角色属性 / 通告库 / 成长规则 / 作品系统」里配置；旧模组术语字段仍会读取。
+        货币、名气、通告、作品等叫法请分别在「建角 / 通告库 / 成长规则 / 作品系统」里配置；旧模组术语字段仍会读取。
       </p>
     </div>
   );

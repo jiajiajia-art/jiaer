@@ -55,7 +55,7 @@ export default function AudioLibraryPanel() {
   const author = game?.audio ?? [];
   const folders = game?.audioFolders ?? [];
   const rows: Row[] = useMemo(() => {
-    const all = audioOptions();
+    const all = audioOptions().filter((o) => !o.a.id.startsWith("platform:"));
     // 作者音频始终全量列出（即使被启用中的 MOD 以「覆盖」暂时顶替）
     for (const a of author) if (!all.some((o) => o.a === a)) all.push({ a, on: !all.some((o) => o.a.id === a.id), modName: undefined });
     return all;

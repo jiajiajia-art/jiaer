@@ -7,6 +7,9 @@ import { NATIVE_DEPS } from "./types";
 import { allMods, cmpVer, getSelection, modById, selectedFeature, upsertUserMod, validateMod } from "./registry";
 import { buildRegistry, hasExt, modCategory, modLog } from "./ext";
 import { auditStory } from "../game/refAudit";
+import { authorTracks } from "../game/audioLib";
+import { PLATFORM_AUDIO } from "../game/platformAudio";
+import { musicHealthWarnings } from "../lib/modMusic";
 import { commProblems } from "./comm";
 
 export const NMOD_FORMAT = "nmod";
@@ -436,6 +439,7 @@ export function modHealth(m: Mod): HealthItem[] {
   const c = m.content ?? {};
   const a = auditStory({ events: [...(c.fixedEvents ?? []), ...(c.events ?? [])], endings: c.endings, storylines: c.storylines, worldBook: c.worldBook, cgs: c.cgs, factions: c.factions, npcIds: c.npcs?.length ? c.npcs.map((n) => n.id) : undefined, roomIds: c.rooms ? Object.keys(c.rooms) : undefined, skip: ["item", "location", "quest", "flag", ...(c.npcs?.length ? [] : ["npc" as const])] });
   for (const i of a.issues.slice(0, 60)) out.push({ level: i.level, text: `${i.from ? i.from + "：" : ""}${i.text}` });
+  for (const text of musicHealthWarnings(c, { author: authorTracks(), platform: PLATFORM_AUDIO })) warn(text);
   if (!hasExt(m) && modCategory(m) === "feature") warn("标记为功能玩法 MOD，但没有注册任何扩展能力");
   if (!out.length) out.push({ level: "ok", text: "体检通过：没有发现逻辑错误、冲突或无效注册" });
   return out;

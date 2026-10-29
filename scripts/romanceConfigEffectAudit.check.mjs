@@ -11,18 +11,23 @@ import test from 'node:test';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const romance = join(root, 'Romance/src');
 
-test('审计_作者预览只改applied不改selection_建角会commitSelection覆盖', () => {
+test('审计_作者预览须同步selection且commitSelection不得盖掉草稿', () => {
   const reg = readFileSync(join(romance, 'mods/registry.ts'), 'utf8');
-  const create = readFileSync(join(romance, 'components/CharacterCreate.tsx'), 'utf8');
   const begin = reg.slice(reg.indexOf('export function beginAuthorPreviewMod'), reg.indexOf('export function endAuthorPreviewMod'));
-  // 预览只写 applied + authorPreviewMod，不调用 selectWorld / 不改 selection
+  const end = reg.slice(reg.indexOf('export function endAuthorPreviewMod'), reg.indexOf('export function missingDeps'));
+  const commit = reg.slice(reg.indexOf('export function commitSelection'), reg.indexOf('export function saveAddons'));
+  const activate = reg.slice(reg.indexOf('export function activateWorld'), reg.indexOf('export const selectionPending'));
+  // 预览同时对齐 applied + selection（封面/建角读 selectedSlot）
   assert.match(begin, /authorPreviewMod\s*=\s*mod/);
   assert.match(begin, /applied\s*=/);
-  assert.doesNotMatch(begin, /selectWorld|selection\s*=/);
-  // 建角页无条件 commitSelection → 会把 applied 打回当前 selection（常为 ent）
-  assert.match(create, /useEffect\(\(\)\s*=>\s*\{\s*commitSelection\(\);\s*\},\s*\[modSel\.world/);
-  assert.match(create, /commitSelection\(\);\s*\/\/\s*所选世界观/);
-  assert.doesNotMatch(create, /isAuthorPreview/);
+  assert.match(begin, /selection\s*=\s*\{\s*world:\s*mod\.id/);
+  assert.doesNotMatch(begin, /write\(K_SEL|write\(K_APPLIED/);
+  // 退出须还原 selection 并写回磁盘
+  assert.match(end, /selection\s*=\s*authorPreviewRestore\.selection/);
+  assert.match(end, /write\(K_SEL/);
+  // 建角 commitSelection / 读档 activateWorld 在预览期不得打回 ent
+  assert.match(commit, /if \(authorPreviewMod\)/);
+  assert.match(activate, /if \(authorPreviewMod\?\.kind === "world"\)/);
 });
 
 test('审计_编辑器保存只写userMods不自动选中世界观', () => {

@@ -3,7 +3,10 @@ import { useState } from "react";
 import { firedOf } from "../game/mapedits";
 import { useGame } from "../store/gameCtx";
 import { SIDEQUESTS } from "../worlds/star2005/content";
-import { ROMANCE_ARCS, arcView, nextStep, startDateLabel } from "../game/logic";
+import { dayDateLabel, ROMANCE_ARCS, arcView, startDateLabel } from "../game/logic";
+import { homeMainQuest } from "../lib/homeMainQuest";
+import { storylineBrief } from "../game/fixedEvents";
+import { getWorldStorylines } from "../mods/registry";
 import { limitDays } from "../lib/types";
 import { Avatar, Modal } from "./ui";
 import { openPerson } from "./NpcTab";
@@ -115,11 +118,20 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
               </span>
               <div className="min-w-0">
                 <p className="text-[10.5px] font-bold tracking-[0.2em] text-coral">本章目标</p>
-                {(() => { const n = nextStep(s); return (<>
-                  <p className="mt-0.5 text-[14px] font-bold leading-snug text-ink">下一步：{n.title}</p>
-                  <p className="mt-0.5 text-[12px] leading-relaxed text-ink-soft">{n.hint}</p>
-                  <p className="mt-1 text-[11px] text-ink-soft/80">长线：站稳脚跟，提升名气与口碑，走向属于你的结局。</p>
-                </>); })()}
+                {(() => {
+                  // 功能注释：任务页也只展示创作者主线，不再塞引擎日程/通告占位提醒
+                  const q = homeMainQuest(s, getWorldStorylines(), dayDateLabel(s.day ?? 0));
+                  if (q) {
+                    return (<>
+                      <p className="mt-0.5 text-[14px] font-bold leading-snug text-ink">{q.lineName} · {q.stepName}</p>
+                      {q.waitLabel ? <p className="mt-0.5 text-[12px] leading-relaxed text-ink-soft">{q.waitLabel}</p> : null}
+                      {q.stepDesc ? <p className="mt-0.5 text-[12px] leading-relaxed text-ink-soft">{q.stepDesc}</p> : null}
+                    </>);
+                  }
+                  const brief = storylineBrief(s).trim();
+                  if (brief) return <p className="mt-0.5 whitespace-pre-line text-[12px] leading-relaxed text-ink-soft">{brief}</p>;
+                  return <p className="mt-0.5 text-[12px] leading-relaxed text-ink-soft">创作者尚未配置主线目标。</p>;
+                })()}
               </div>
             </div>
 

@@ -419,7 +419,7 @@ export type RoomContent = {
   parent?: string; // 父地点 id（空 = 顶层地点）；层级不限
   order?: number; // 在父地点「子地点入口」里的排序
   bg?: string; // 此地背景图（优先于舆图照片）
-  bgm?: string; // 进入此地自动切换的背景音乐（模组内置音乐的 id）
+  bgm?: string; // 进入此地自动切换的背景音乐（模组曲目 id，或 platform: 平台曲目 id）
   upLabel?: string; // 返回上层的文案，如「走出禅房，回到后院」
   hidden?: boolean; // 隐藏：不在上层入口里出现（到访过 / 已解锁后才显示）
   locked?: boolean; // 上锁：需写入规则变量 unlock:<地点id> ≥ 1 才能进入（解锁父地点不会连带解锁它）

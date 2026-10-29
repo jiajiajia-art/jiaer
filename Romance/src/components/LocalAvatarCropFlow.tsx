@@ -4,6 +4,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { romancePortalRoot } from "../lib/romancePortalRoot";
 import {
   assertMinSide,
   exportSquareDataUrl,
@@ -127,7 +128,8 @@ export default function LocalAvatarCropFlow({ file, onDone, onCancel }: Props) {
     onCancel();
   };
 
-  const portalRoot = typeof document !== "undefined" ? document.body : null;
+  // 功能注释：与 Modal 同挂载点，平台创作壳内裁切弹窗也吃暗红 token
+  const portalRoot = romancePortalRoot();
   if (!portalRoot) return null;
 
   return createPortal(

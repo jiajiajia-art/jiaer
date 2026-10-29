@@ -1,12 +1,13 @@
-import { GRADE_LABEL, RAW_GRADE_MUL, RAW_GRADE_ODDS, RAW_LESSON_GRADES, RAW_STAT_LABELS, RAW_STAT_ORDER, type DayGrade, type LessonGrade, type StatsSlot, type TuningSlot, type GigRules, type GigCond, type GigRepair, type GigManager, RAW_CRASH_MODS, RAW_GIG_REPAIRS, RAW_GIG_MANAGERS, RAW_GIG_MANAGER_DEFAULT, RAW_FAIL_FX } from "../game/data";
+import { GRADE_LABEL, type DayGrade, type LessonGrade, type StatsSlot, type TuningSlot, type GigRules, type GigCond, type GigRepair, type GigManager, RAW_STAT_LABELS, RAW_STAT_ORDER } from "../game/data";
 import type { AttrDef } from "../lib/types";
 
-/* 模组编辑器 · 引擎规则：原本写死在结算里的数值。留空 = 引擎原值（输入框里灰字显示）。 */
+/* 模组编辑器 · 引擎规则：作者没写就空着；游戏里未写字段不套用娱乐圈原值。 */
 const inp = "w-full min-w-0 rounded-lg border border-line bg-paper-2 px-2 py-1 text-[12px] text-ink placeholder:text-ink-soft/60 focus:border-jade focus:outline-none";
 const btn = "rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40";
 const head = "text-[12px] font-bold text-ink";
 const ORDER: DayGrade[] = ["perfect", "great", "success", "fail", "bad"];
 const opt = (v: string) => (v === "" ? undefined : Number(v) || 0);
+const emptyHint = "还没写，开局不会生效";
 
 export default function ModTuningEditor({ value, stats, attrs, npcs, onChange }: { value?: TuningSlot; stats?: StatsSlot; attrs?: AttrDef[]; npcs?: { id: string; name: string }[]; onChange: (v?: TuningSlot) => void }) {
   const t = value ?? {};
@@ -19,10 +20,11 @@ export default function ModTuningEditor({ value, stats, attrs, npcs, onChange }:
     const rec = { ...(t[k] ?? {}) };
     const n = opt(v);
     if (n === undefined) delete rec[g]; else rec[g] = n;
-    commit({ [k]: rec });
+    commit({ [k]: Object.keys(rec).length ? rec : undefined });
   };
-  const odds = { ...RAW_GRADE_ODDS, ...(t.gradeOdds ?? {}) };
-  const total = ORDER.reduce((a, g) => a + Math.max(0, odds[g]), 0) || 1;
+  const hasGradeOdds = !!(t.gradeOdds && Object.keys(t.gradeOdds).length);
+  const odds = t.gradeOdds ?? {};
+  const total = ORDER.reduce((a, g) => a + Math.max(0, odds[g] ?? 0), 0) || 1;
   const hidden = new Set(stats?.hidden ?? []);
   const luckOpts = [
     ...RAW_STAT_ORDER.filter((k) => !hidden.has(k)).map((k) => ({ v: `stat:${k}`, l: (typeof stats?.labels?.[k] === "string" ? stats.labels![k]!.trim() : "") || RAW_STAT_LABELS[k] })),
@@ -34,18 +36,22 @@ export default function ModTuningEditor({ value, stats, attrs, npcs, onChange }:
     for (const k of Object.keys(next)) if (next[k] === undefined) delete next[k];
     commit({ gigRules: Object.keys(next).length ? (next as GigRules) : undefined });
   };
-  const grNum = (k: "crashStress" | "crashBase" | "crashMin" | "bizMin" | "bizMax" | "breachBase" | "breachHi", label: string, def: number) => (
+  const crashTouched = gr.crashOn !== undefined || gr.crashMods !== undefined || gr.crashStress != null || gr.crashBase != null || gr.crashMin != null;
+  const crashOn = crashTouched ? gr.crashOn !== false : false;
+  const bizTouched = gr.bizOn !== undefined || gr.bizTypes != null || gr.bizMin != null || gr.bizMax != null || gr.bizKey != null;
+  const bizOn = bizTouched ? gr.bizOn !== false : false;
+  const grNum = (k: "crashStress" | "crashBase" | "crashMin" | "bizMin" | "bizMax" | "breachBase" | "breachHi", label: string) => (
     <label className="block text-[10.5px] text-ink-soft">{label}
-      <input type="number" className={`${inp} mt-0.5`} value={gr[k] ?? ""} placeholder={String(def)} onChange={(e) => setGr({ [k]: opt(e.target.value) })} />
+      <input type="number" className={`${inp} mt-0.5`} value={gr[k] ?? ""} placeholder={emptyHint} onChange={(e) => setGr({ [k]: opt(e.target.value) })} />
     </label>
   );
-  const grNum2 = (k: "failPayMax", label: string, def: number) => (
+  const grNum2 = (k: "failPayMax", label: string) => (
     <label className="block text-[10.5px] text-ink-soft">{label}
-      <input type="number" className={`${inp} mt-0.5 !w-20`} value={gr[k] ?? ""} placeholder={String(def)} onChange={(e) => setGr({ [k]: opt(e.target.value) })} />
+      <input type="number" className={`${inp} mt-0.5 !w-20`} value={gr[k] ?? ""} placeholder={emptyHint} onChange={(e) => setGr({ [k]: opt(e.target.value) })} />
     </label>
   );
-  const mods = gr.crashMods ?? RAW_CRASH_MODS;
-  const setMods = (m: GigCond[]) => setGr({ crashMods: m });
+  const mods = gr.crashMods ?? [];
+  const setMods = (m: GigCond[]) => setGr({ crashMods: m.length ? m : undefined });
   const condOpts = [
     ...RAW_STAT_ORDER.filter((k) => !hidden.has(k)).map((k) => ({ v: `stat:${k}`, l: (typeof stats?.labels?.[k] === "string" ? stats.labels![k]!.trim() : "") || RAW_STAT_LABELS[k] })),
     ...(attrs ?? []).map((a) => ({ v: `attr:${a.id}`, l: `${a.label || a.id}（自定义）` })),
@@ -54,14 +60,14 @@ export default function ModTuningEditor({ value, stats, attrs, npcs, onChange }:
     { v: "trust", l: "负责人信任" }, { v: "pr", l: "公关值" }, { v: "blackFans", l: "黑粉" }, { v: "defaults", l: "违约次数" },
   ];
   const fxOpts = [...condOpts.filter((o) => o.v !== "affinity"), { v: "money", l: "资金" }];
-  const repairs = gr.repairs ?? RAW_GIG_REPAIRS;
-  const setRepairs = (v: GigRepair[]) => setGr({ repairs: v });
+  const repairs = gr.repairs ?? [];
+  const setRepairs = (v: GigRepair[]) => setGr({ repairs: v.length ? v : undefined });
   const upRepair = (i: number, p: Partial<GigRepair>) => setRepairs(repairs.map((x, j) => (j === i ? { ...x, ...p } : x)));
-  const managers = gr.managers ?? RAW_GIG_MANAGERS;
-  const failFx = gr.failFx ?? RAW_FAIL_FX;
-  const setFailFx = (v: NonNullable<GigRules["failFx"]>) => setGr({ failFx: v });
-  const loss = gr.failStatLoss ?? [1, 4];
-  const setManagers = (v: GigManager[]) => setGr({ managers: v });
+  const managers = gr.managers ?? [];
+  const failFx = gr.failFx ?? [];
+  const setFailFx = (v: NonNullable<GigRules["failFx"]>) => setGr({ failFx: v.length ? v : undefined });
+  const loss = gr.failStatLoss;
+  const setManagers = (v: GigManager[]) => setGr({ managers: v.length ? v : undefined });
   const keySel = (v: string, opts: { v: string; l: string }[], on: (v: string) => void) => (
     <select className={`${inp} !w-auto`} value={v} onChange={(e) => on(e.target.value)}>
       {!opts.some((o) => o.v === v) && <option value={v}>{v}</option>}
@@ -77,9 +83,9 @@ export default function ModTuningEditor({ value, stats, attrs, npcs, onChange }:
   );
   const grades = t.lessonGrades ?? [];
   const setGrades = (g: LessonGrade[]) => commit({ lessonGrades: g.length ? g : undefined });
-  const num = (k: keyof TuningSlot, label: string, def: number, step = 1) => (
+  const num = (k: keyof TuningSlot, label: string) => (
     <label className="block text-[10.5px] text-ink-soft">{label}
-      <input type="number" step={step} className={`${inp} mt-0.5`} value={(t[k] as number | undefined) ?? ""} placeholder={String(def)} onChange={(e) => commit({ [k]: opt(e.target.value) })} />
+      <input type="number" step={1} className={`${inp} mt-0.5`} value={(t[k] as number | undefined) ?? ""} placeholder={emptyHint} onChange={(e) => commit({ [k]: opt(e.target.value) })} />
     </label>
   );
 
@@ -87,40 +93,42 @@ export default function ModTuningEditor({ value, stats, attrs, npcs, onChange }:
     <div className="space-y-4">
       <div className="space-y-1.5">
         <p className={head}>每日表现评级 <span className="font-normal text-ink-soft">· 上课 / 打工 / 拍摄时掷出，决定收益倍率</span></p>
+        {!hasGradeOdds && !t.gradeMul && <p className="text-[11px] text-ink-soft">{emptyHint}</p>}
         <div className="grid grid-cols-[auto_1fr_1fr_auto] items-center gap-x-1.5 gap-y-1 text-[11px]">
           <span /> <span className="text-ink-soft">基础概率 %</span> <span className="text-ink-soft">收益倍率</span> <span className="text-ink-soft">实际</span>
           {ORDER.map((g) => (
             <div key={g} className="contents">
               <span className="font-semibold text-ink">{GRADE_LABEL[g]}</span>
-              <input type="number" min={0} className={inp} value={t.gradeOdds?.[g] ?? ""} placeholder={String(RAW_GRADE_ODDS[g])} onChange={(e) => setRec("gradeOdds", g, e.target.value)} />
-              <input type="number" step={0.1} className={inp} value={t.gradeMul?.[g] ?? ""} placeholder={String(RAW_GRADE_MUL[g])} onChange={(e) => setRec("gradeMul", g, e.target.value)} />
-              <span className="w-10 text-right text-ink-soft">{Math.round((Math.max(0, odds[g]) / total) * 100)}%</span>
+              <input type="number" min={0} className={inp} value={t.gradeOdds?.[g] ?? ""} placeholder={emptyHint} onChange={(e) => setRec("gradeOdds", g, e.target.value)} />
+              <input type="number" step={0.1} className={inp} value={t.gradeMul?.[g] ?? ""} placeholder={emptyHint} onChange={(e) => setRec("gradeMul", g, e.target.value)} />
+              <span className="w-10 text-right text-ink-soft">{hasGradeOdds ? `${Math.round((Math.max(0, odds[g] ?? 0) / total) * 100)}%` : "—"}</span>
             </div>
           ))}
         </div>
         <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
           <label className="block text-[10.5px] text-ink-soft">提升表现的属性
             <select className={`${inp} mt-0.5`} value={t.luckStat ?? ""} onChange={(e) => commit({ luckStat: e.target.value || undefined })}>
-              <option value="">默认（{(typeof stats?.labels?.zixin === "string" ? stats.labels.zixin.trim() : "") || RAW_STAT_LABELS.zixin}）</option>
+              <option value="">还没写</option>
               {luckOpts.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
             </select>
           </label>
-          {num("luckDiv", "每多少点 +1%（0=不影响）", 40)}
-          {num("stressDiv", "压力每多少点 -1%（0=不影响）", 3)}
+          {num("luckDiv", "每多少点 +1%（0=不影响）")}
+          {num("stressDiv", "压力每多少点 -1%（0=不影响）")}
         </div>
       </div>
 
       <div className="space-y-1.5">
-        <p className={head}>工作结算规则 <span className="font-normal text-ink-soft">· 留空 = 引擎原规则</span></p>
-        <label className="flex items-center gap-1.5 text-[11.5px] text-ink"><input type="checkbox" checked={gr.crashOn !== false} onChange={(e) => setGr({ crashOn: e.target.checked ? undefined : false })} />压力过高时工作可能崩溃（直接失败）</label>
-        {gr.crashOn !== false && (
+        <p className={head}>工作结算规则 <span className="font-normal text-ink-soft">· 没写的项开局不会生效</span></p>
+        <label className="flex items-center gap-1.5 text-[11.5px] text-ink"><input type="checkbox" checked={crashOn} onChange={(e) => setGr({ crashOn: e.target.checked ? true : false })} />压力过高时工作可能崩溃（直接失败）</label>
+        {crashOn && (
           <>
             <div className="grid grid-cols-3 gap-1.5">
-              {grNum("crashStress", "压力达到", 90)}
-              {grNum("crashBase", "基础概率 %", 20)}
-              {grNum("crashMin", "最低概率 %", 5)}
+              {grNum("crashStress", "压力达到")}
+              {grNum("crashBase", "基础概率 %")}
+              {grNum("crashMin", "最低概率 %")}
             </div>
             <p className="text-[10.5px] text-ink-soft">概率修正：满足条件则加减概率（负数为降低）</p>
+            {!mods.length && <p className="text-[11px] text-ink-soft">{emptyHint}</p>}
             {mods.map((m, i) => {
               const up = (p: Partial<GigCond>) => setMods(mods.map((x, j) => (j === i ? { ...x, ...p } : x)));
               return (
@@ -147,21 +155,20 @@ export default function ModTuningEditor({ value, stats, attrs, npcs, onChange }:
             })}
             <div className="flex gap-1.5">
               <button className={btn} onClick={() => setMods([...mods, { key: condOpts[0]?.v ?? "stress", op: ">=", value: 0, delta: -5 }])}>+ 条件</button>
-              {gr.crashMods && <button className={btn} onClick={() => setGr({ crashMods: undefined })}>恢复默认条件</button>}
             </div>
           </>
         )}
-        <label className="flex items-center gap-1.5 text-[11.5px] text-ink"><input type="checkbox" checked={gr.bizOn !== false} onChange={(e) => setGr({ bizOn: e.target.checked ? undefined : false })} />特定类型工作成功后涨商业价值</label>
-        {gr.bizOn !== false && (
+        <label className="flex items-center gap-1.5 text-[11.5px] text-ink"><input type="checkbox" checked={bizOn} onChange={(e) => setGr({ bizOn: e.target.checked ? true : false })} />特定类型工作成功后涨商业价值</label>
+        {bizOn && (
           <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
             <label className="col-span-2 block text-[10.5px] text-ink-soft">工作类型（类型名包含其一，用 | 分隔）
-              <input className={`${inp} mt-0.5`} value={gr.bizTypes ?? ""} placeholder="广告|综艺|品牌" onChange={(e) => setGr({ bizTypes: e.target.value || undefined })} />
+              <input className={`${inp} mt-0.5`} value={gr.bizTypes ?? ""} placeholder={emptyHint} onChange={(e) => setGr({ bizTypes: e.target.value || undefined })} />
             </label>
-            {grNum("bizMin", "每次涨 最少", 4)}
-            {grNum("bizMax", "每次涨 最多", 9)}
+            {grNum("bizMin", "每次涨 最少")}
+            {grNum("bizMax", "每次涨 最多")}
             <label className="col-span-2 block text-[10.5px] text-ink-soft">涨到哪个属性
               <select className={`${inp} mt-0.5`} value={gr.bizKey ?? ""} onChange={(e) => setGr({ bizKey: e.target.value || undefined })}>
-                <option value="">商业价值（默认）</option>
+                <option value="">还没写</option>
                 {condOpts.filter((o) => o.v !== "affinity" && o.v !== "stress").map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
               </select>
             </label>
@@ -169,6 +176,7 @@ export default function ModTuningEditor({ value, stats, attrs, npcs, onChange }:
         )}
 
         <p className="pt-1 text-[11.5px] font-semibold text-ink">工作失败的惩罚 <span className="font-normal text-ink-soft">· 每项在两个数之间随机，负数为扣除</span></p>
+        {!failFx.length && <p className="text-[11px] text-ink-soft">{emptyHint}</p>}
         {failFx.map((x, k) => {
           const upF = (p: Partial<typeof x>) => setFailFx(failFx.map((y, j) => (j === k ? { ...y, ...p } : y)));
           return (
@@ -183,18 +191,18 @@ export default function ModTuningEditor({ value, stats, attrs, npcs, onChange }:
         })}
         <div className="flex flex-wrap items-end gap-1.5 text-[11px]">
           <button className={btn} onClick={() => setFailFx([...failFx, { key: "stress", min: 5, max: 5 }])}>+ 惩罚</button>
-          {gr.failFx && <button className={btn} onClick={() => setGr({ failFx: undefined })}>恢复默认惩罚</button>}
-          {grNum2("failPayMax", "失败仍得报酬 最多 %", 30)}
+          {grNum2("failPayMax", "失败仍得报酬 最多 %")}
           <label className="block text-[10.5px] text-ink-soft">相关能力各降
             <span className="mt-0.5 flex items-center gap-1">
-              <input type="number" className={`${inp} !w-14`} value={loss[0]} onChange={(e) => setGr({ failStatLoss: [Number(e.target.value) || 0, loss[1]] })} />
+              <input type="number" className={`${inp} !w-14`} value={loss?.[0] ?? ""} placeholder="—" onChange={(e) => setGr({ failStatLoss: e.target.value === "" && (loss?.[1] == null) ? undefined : [Number(e.target.value) || 0, loss?.[1] ?? 0] })} />
               <span>至</span>
-              <input type="number" className={`${inp} !w-14`} value={loss[1]} onChange={(e) => setGr({ failStatLoss: [loss[0], Number(e.target.value) || 0] })} />
+              <input type="number" className={`${inp} !w-14`} value={loss?.[1] ?? ""} placeholder="—" onChange={(e) => setGr({ failStatLoss: (loss?.[0] == null) && e.target.value === "" ? undefined : [loss?.[0] ?? 0, Number(e.target.value) || 0] })} />
             </span>
           </label>
         </div>
 
         <p className="pt-1 text-[11.5px] font-semibold text-ink">失败后的补救方案 <span className="font-normal text-ink-soft">· 工作失败时，从满足条件的方案里随机触发 1 项</span></p>
+        {!repairs.length && <p className="text-[11px] text-ink-soft">{emptyHint}</p>}
         {repairs.map((rp, i) => {
           const conds = rp.conds ?? [];
           const setConds = (c: Omit<GigCond, "delta">[]) => upRepair(i, { conds: c.length ? c : undefined });
@@ -246,19 +254,19 @@ export default function ModTuningEditor({ value, stats, attrs, npcs, onChange }:
         })}
         <div className="flex flex-wrap gap-1.5">
           <button className={btn} onClick={() => setRepairs([...repairs, { name: `补救方案 ${repairs.length + 1}`, fx: [{ key: "stress", min: -5, max: -5 }] }])}>+ 补救方案</button>
-          {gr.repairs && <button className={btn} onClick={() => setGr({ repairs: undefined })}>恢复默认方案</button>}
         </div>
 
         <p className="pt-1 text-[11.5px] font-semibold text-ink">违约惩罚 <span className="font-normal text-ink-soft">· 每次违约让后续交涉成功率降低</span></p>
         <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-          {grNum("breachBase", "每次违约 -%", 8)}
-          {grNum("breachHi", "重点类型每次 -%", 14)}
+          {grNum("breachBase", "每次违约 -%")}
+          {grNum("breachHi", "重点类型每次 -%")}
           <label className="col-span-2 block text-[10.5px] text-ink-soft">重点类型（| 分隔）
-            <input className={`${inp} mt-0.5`} value={gr.breachHiTypes ?? ""} placeholder="广告|品牌|电影" onChange={(e) => setGr({ breachHiTypes: e.target.value || undefined })} />
+            <input className={`${inp} mt-0.5`} value={gr.breachHiTypes ?? ""} placeholder={emptyHint} onChange={(e) => setGr({ breachHiTypes: e.target.value || undefined })} />
           </label>
         </div>
 
         <p className="pt-1 text-[11.5px] font-semibold text-ink">工作对接负责人 <span className="font-normal text-ink-soft">· 按工作类型从上往下匹配第一条</span></p>
+        {!managers.length && !gr.managerDefault && <p className="text-[11px] text-ink-soft">{emptyHint}</p>}
         {managers.map((m, i) => {
           const upM = (p: Partial<GigManager>) => setManagers(managers.map((x, j) => (j === i ? { ...x, ...p } : x)));
           return (
@@ -272,29 +280,28 @@ export default function ModTuningEditor({ value, stats, attrs, npcs, onChange }:
         })}
         <div className="grid grid-cols-[1.3fr_1fr_1fr_auto] items-center gap-1">
           <span className="text-[11px] text-ink-soft">其余类型</span>
-          <input className={inp} value={gr.managerDefault?.name ?? ""} placeholder={RAW_GIG_MANAGER_DEFAULT.name} onChange={(e) => { const d = { ...(gr.managerDefault ?? RAW_GIG_MANAGER_DEFAULT), name: e.target.value }; setGr({ managerDefault: d.name || d.loc ? d : undefined }); }} />
-          <input className={inp} value={gr.managerDefault?.loc ?? ""} placeholder={RAW_GIG_MANAGER_DEFAULT.loc} onChange={(e) => { const d = { ...(gr.managerDefault ?? RAW_GIG_MANAGER_DEFAULT), loc: e.target.value }; setGr({ managerDefault: d.name || d.loc ? d : undefined }); }} />
+          <input className={inp} value={gr.managerDefault?.name ?? ""} placeholder={emptyHint} onChange={(e) => { const d = { ...(gr.managerDefault ?? { name: "", loc: "" }), name: e.target.value }; setGr({ managerDefault: d.name || d.loc ? d : undefined }); }} />
+          <input className={inp} value={gr.managerDefault?.loc ?? ""} placeholder={emptyHint} onChange={(e) => { const d = { ...(gr.managerDefault ?? { name: "", loc: "" }), loc: e.target.value }; setGr({ managerDefault: d.name || d.loc ? d : undefined }); }} />
           <span />
         </div>
         <div className="flex gap-1.5">
           <button className={btn} onClick={() => setManagers([...managers, { types: "", name: "", loc: "" }])}>+ 对接</button>
-          {gr.managers && <button className={btn} onClick={() => setGr({ managers: undefined })}>恢复默认对接表</button>}
         </div>
       </div>
 
       <div className="space-y-1.5">
         <p className={head}>收支与恢复</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-          {num("restStress", "休息减压", 8)}
-          {num("trainGainMul", "课程收益×", 1, 0.1)}
-          {num("trainFeeMul", "学费×", 1, 0.1)}
-          {num("jobPayMul", "打工收入×", 1, 0.1)}
+          {num("restStress", "休息减压")}
+          {num("trainGainMul", "课程收益×")}
+          {num("trainFeeMul", "学费×")}
+          {num("jobPayMul", "打工收入×")}
         </div>
       </div>
 
       <div className="space-y-1.5">
         <p className={head}>通用课程等级 <span className="font-normal text-ink-soft">· 课程没有单独设等级时使用</span></p>
-        {!grades.length && <button className={btn} onClick={() => setGrades(RAW_LESSON_GRADES.map((g) => ({ ...g })))}>以默认 4 级为起点自定义</button>}
+        {!grades.length && <p className="text-[11px] text-ink-soft">{emptyHint}</p>}
         {grades.map((g, i) => (
           <div key={g.id} className="grid grid-cols-[1fr_1fr_auto] items-end gap-1 rounded-lg bg-paper-2/60 p-1.5 sm:grid-cols-[1.4fr_repeat(4,1fr)_auto] sm:bg-transparent sm:p-0">
             <label className="block text-[10px] text-ink-soft">名称<input className={`${inp} mt-0.5`} value={g.label} onChange={(e) => setGrades(grades.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))} /></label>
@@ -306,14 +313,11 @@ export default function ModTuningEditor({ value, stats, attrs, npcs, onChange }:
             <button className={btn} onClick={() => setGrades(grades.filter((_, j) => j !== i))} aria-label="删除等级">×</button>
           </div>
         ))}
-        {grades.length > 0 && (
-          <div className="flex gap-1.5">
-            <button className={btn} onClick={() => { const l = grades[grades.length - 1]; setGrades([...grades, { id: `g_${Date.now().toString(36).slice(-5)}`, label: `Lv${grades.length + 1}`, costMul: (l?.costMul ?? 1) * 2, gainMul: Math.max(0.1, (l?.gainMul ?? 1) * 0.75), cap: (l?.cap ?? 250) + 250, stressAdd: (l?.stressAdd ?? 0) + 1 }]); }}>＋ 添加等级</button>
-            <button className={btn} onClick={() => setGrades([])}>恢复默认</button>
-          </div>
-        )}
+        <div className="flex gap-1.5">
+          <button className={btn} onClick={() => { const l = grades[grades.length - 1]; setGrades([...grades, { id: `g_${Date.now().toString(36).slice(-5)}`, label: `Lv${grades.length + 1}`, costMul: (l?.costMul ?? 1) * 2, gainMul: Math.max(0.1, (l?.gainMul ?? 1) * 0.75), cap: (l?.cap ?? 250) + 250, stressAdd: (l?.stressAdd ?? 0) + 1 }]); }}>＋ 添加等级</button>
+        </div>
       </div>
-      {value && <button className={btn} onClick={() => onChange(undefined)}>全部恢复引擎原值</button>}
+      {value && <button className={btn} onClick={() => onChange(undefined)}>清空全部引擎规则</button>}
     </div>
   );
 }

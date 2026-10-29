@@ -8,7 +8,7 @@ const STRING_FIELD_KEYS = new Set([
   "id", "name", "label", "title", "desc", "bio", "role", "gender", "relation",
   "content", "brief", "detail", "src", "prompt", "memory", "event", "note",
   "subject", "body", "text", "hint", "icon", "version", "author", "description",
-  "startDate", "startTime", "dayStart", "dayEnd", "startRoom", "weather",
+  "startDate", "startTime", "dayStart", "dayEnd", "startRoom", "weather", "platformAutoplay",
   "pickTitle", "currency", "freeLabel", "perksLabel", "unlockHint", "group",
   "replyPrompt", "badge", "city", "placeholder", "tag", "blurb", "about",
   "genre", "type", "avatarVariant", "html", "page", "image", "video",
@@ -32,7 +32,7 @@ function coerceStringMap(raw: unknown): Record<string, string> | undefined {
 const ARRAY_FIELD_KEYS = new Set([
   "npcs", "items", "gigs", "events", "fixedEvents", "endings", "gradeDims",
   "worldBook", "income", "gameRules", "storylines", "lookRules", "playModInstalls",
-  "worldRules", "navTabs", "phoneAppsCfg", "bgm", "audio", "audioRefs", "cgs",
+  "worldRules", "navTabs", "phoneAppsCfg", "bgm", "audio", "audioRefs", "platformAudioRefs", "musicOrder", "cgs",
   "factions", "locations", "styles", "identities", "backgrounds", "directions",
   "zodiacs", "parentJobs", "identityOpts", "backgroundOpts", "klassOpts", "trainings", "sideJobs", "bills", "customAttrs",
   "paths", "fields", "choices", "keywords", "tags", "paragraphs", "nodes",
@@ -144,7 +144,7 @@ function deepCoerceContent(value: unknown, keyHint = ""): unknown {
     }
     if (ARRAY_FIELD_KEYS.has(k)) {
       const arr = coerceArray(v);
-      const stringLists = new Set(["keywords", "tags", "roam", "works", "childNames", "options", "paragraphs", "publicRandom", "audioRefs", "parentJobs", "identityOpts", "backgroundOpts", "klassOpts"]);
+      const stringLists = new Set(["keywords", "tags", "roam", "works", "childNames", "options", "paragraphs", "publicRandom", "audioRefs", "platformAudioRefs", "musicOrder", "parentJobs", "identityOpts", "backgroundOpts", "klassOpts"]);
       out[k] = stringLists.has(k)
         ? (coerceStringList(arr) ?? [])
         : arr.map((row) => deepCoerceContent(row));
@@ -193,6 +193,49 @@ function deepCoerceContent(value: unknown, keyHint = ""): unknown {
 }
 
 /**
+ * 功能注释：AI 常写 startRoom / NPC.home 指向不存在的房间 id（如 kid_bedroom）。
+ * 就地纠偏到有效地点，返回人类可读修复说明；无 rooms 时清除无效 startRoom。
+ */
+export function healModRoomRefs(content: ModContent): string[] {
+  const fixes: string[] = [];
+  const rooms = content.rooms;
+  if (!rooms || typeof rooms !== "object") {
+    if (content.startRoom) {
+      fixes.push(`已清除无效 startRoom「${content.startRoom}」（尚无地点表）`);
+      delete content.startRoom;
+    }
+    return fixes;
+  }
+  const ids = Object.keys(rooms);
+  if (!ids.length) {
+    if (content.startRoom) {
+      fixes.push(`已清除无效 startRoom「${content.startRoom}」（地点表为空）`);
+      delete content.startRoom;
+    }
+    return fixes;
+  }
+  const prefer = ["apartment", "start", "home", "dorm", "inn"];
+  const fallback = prefer.find((id) => id in rooms) ?? ids[0]!;
+  const cur = typeof content.startRoom === "string" ? content.startRoom.trim() : "";
+  if (!cur || !(cur in rooms)) {
+    if (cur) fixes.push(`开局地点「${cur}」不在地点表，已改为「${fallback}」`);
+    content.startRoom = fallback;
+  }
+  if (Array.isArray(content.npcs)) {
+    for (const n of content.npcs) {
+      if (!n || typeof n !== "object") continue;
+      const home = typeof n.home === "string" ? n.home.trim() : "";
+      if (home && !(home in rooms)) {
+        const label = (typeof n.name === "string" && n.name.trim()) || n.id || "?";
+        fixes.push(`人物「${label}」的 home「${home}」不在地点表，已改为「${content.startRoom}」`);
+        n.home = content.startRoom;
+      }
+    }
+  }
+  return fixes;
+}
+
+/**
  * 功能注释：会话/AI 脏模组进编辑器前统一清洗。
  * 刷新会从 localStorage 恢复未清洗的旧 mod；必须深度覆盖 travel/avatars/stats 等。
  */
@@ -219,6 +262,8 @@ export function sanitizeModStrings(mod: Mod): Mod {
         if (typeof r.desc !== "string") r.desc = "";
       }
     }
+    // 功能注释：纠偏悬空 startRoom / NPC.home，避免预览被「不在 rooms 中」拦住
+    healModRoomRefs(m.content);
     // 功能注释：底栏项 label 被洗成空时回落 id，避免编辑器再对脏 label 做假定
     const tabs = m.content.navTabs;
     if (Array.isArray(tabs)) {

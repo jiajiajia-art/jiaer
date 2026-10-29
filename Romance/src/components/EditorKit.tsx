@@ -21,10 +21,11 @@ export function useConfirm(): [(message: string, opts?: ConfirmOpts) => Promise<
     <Modal title={p.title ?? "请确认"} onClose={() => close(false)} heavyBackdrop>
       <p className="whitespace-pre-line text-[13.5px] leading-relaxed text-ink">{p.message}</p>
       <div className="mt-5 flex justify-end gap-2">
-        <button autoFocus onClick={() => close(false)} className="rounded-full border border-line bg-paper px-4 py-1.5 text-[13px] font-semibold text-ink-soft hover:text-ink">取消</button>
+        <button type="button" autoFocus onClick={() => close(false)} className="ui-btn ui-btn-sm">取消</button>
         <button
+          type="button"
           onClick={() => close(true)}
-          className={`rounded-full px-4 py-1.5 text-[13px] font-bold text-white ${p.danger ? "bg-danger" : "bg-jade"}`}
+          className={`ui-btn ui-btn-sm ui-btn-primary ${p.danger ? "tone-danger" : ""}`}
         >
           {p.ok ?? (p.danger ? "删除" : "确定")}
         </button>

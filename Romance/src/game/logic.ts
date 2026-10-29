@@ -522,12 +522,17 @@ export function refreshOffers(fame: number, week = 1): string[] {
 const rand = (a: number, b: number) => a + Math.floor(Math.random() * (b - a + 1));
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
+/** 内置娱乐圈世界才回落引擎原表；其它作品未写则不套用娱乐圈人名/地点 */
+const entGigFallback = <T,>(authored: T | undefined, raw: T): T => (getWorldId() === "ent" ? (authored ?? raw) : (authored ?? ([] as unknown as T)));
+
 // 9. 资源负责人：通告类型 → 负责人与地点
 export function gigManager(g: Gig): { name: string; loc: string } {
-  // 对接表由世界观 tuning.gigRules.managers 配置；缺省 = 娱乐圈原表
+  // 对接表由世界观 tuning.gigRules.managers 配置；非娱乐圈且未写 = 通用占位
   const gr = gigRules();
-  const m = (gr.managers ?? RAW_GIG_MANAGERS).find((x) => typeHit(g.type, x.types));
-  return m ? { name: m.name, loc: m.loc } : (gr.managerDefault ?? RAW_GIG_MANAGER_DEFAULT);
+  const table = entGigFallback(gr.managers, RAW_GIG_MANAGERS);
+  const m = (Array.isArray(table) ? table : []).find((x) => typeHit(g.type, x.types));
+  const def = getWorldId() === "ent" ? (gr.managerDefault ?? RAW_GIG_MANAGER_DEFAULT) : (gr.managerDefault ?? { name: "对接人", loc: "约定地点" });
+  return m ? { name: m.name, loc: m.loc } : def;
 }
 
 // 9.1 通告交涉成功率（先找负责人再交涉；违约/压力降低，好感/名气/口碑/头衔提高）
@@ -660,13 +665,15 @@ export function parseAct(act: string | null): { kind: "gig" | "rest" | "weekend"
   return { kind: "none" };
 }
 
-/* 推进结果档位掷骰：受自信（利好）与压力（不利）牵引。 */
+/* 推进结果档位掷骰：受自信（利好）与压力（不利）牵引。非娱乐圈且未写概率 = 固定「成功」。 */
 export function rollGrade(s: GameState): DayGrade {
   const tu = tuning();
+  if (getWorldId() !== "ent" && !tu.gradeOdds) return "success";
   const odds = { ...RAW_GRADE_ODDS, ...(tu.gradeOdds ?? {}) };
   const order: DayGrade[] = ["perfect", "great", "success", "fail", "bad"];
   const total = order.reduce((a, k) => a + Math.max(0, odds[k]), 0) || 100;
-  const luckDiv = tu.luckDiv ?? 40, stressDiv = tu.stressDiv ?? 3;
+  const luckDiv = tu.luckDiv ?? (getWorldId() === "ent" ? 40 : 0);
+  const stressDiv = tu.stressDiv ?? (getWorldId() === "ent" ? 3 : 0);
   const luck = luckDiv > 0 ? reqValue(s, tu.luckStat ?? "stat:zixin") / luckDiv : 0;
   const drag = stressDiv > 0 ? s.stress / stressDiv : 0;
   // 掷 0~100：属性越高越靠前（好评级），压力越大越靠后
@@ -861,16 +868,18 @@ export function settleWeek(s: GameState, customTimeLimit = false): WeekResult {
     rate += orderMods().rate; // 世界规则·社会秩序
     rate = clamp(rate, 5, 98);
 
-    // 崩溃判定：规则由世界观 tuning.gigRules 配置（缺省 = 压力≥90 时 20%，体能≥500 / 苏晴好感≥60 各 -5%，最低 5%）
+    // 崩溃判定：规则由世界观 tuning.gigRules 配置；非娱乐圈未写则不崩溃
     const gr = gigRules();
+    const ent = getWorldId() === "ent";
+    const crashOn = ent ? gr.crashOn !== false : gr.crashOn === true;
     let crashChance = 0;
-    if (gr.crashOn !== false && n.stress >= (gr.crashStress ?? 90)) {
-      crashChance = gr.crashBase ?? 20;
-      for (const m of gr.crashMods ?? RAW_CRASH_MODS) {
+    if (crashOn && n.stress >= (gr.crashStress ?? (ent ? 90 : Number.POSITIVE_INFINITY))) {
+      crashChance = gr.crashBase ?? (ent ? 20 : 0);
+      for (const m of (gr.crashMods ?? (ent ? RAW_CRASH_MODS : []))) {
         const v = perkRead(n, m.key, m.pid ?? "");
         if (m.op === "<=" ? v <= m.value : v >= m.value) crashChance += m.delta;
       }
-      crashChance = Math.max(gr.crashMin ?? 5, crashChance);
+      crashChance = Math.max(gr.crashMin ?? (ent ? 5 : 0), crashChance);
     }
     const crashed = crashChance > 0 && Math.random() * 100 < crashChance;
 
@@ -925,19 +934,21 @@ export function settleWeek(s: GameState, customTimeLimit = false): WeekResult {
       const pay = Math.round(g.pay * (rand(0, Math.max(0, gr.failPayMax ?? 30)) / 100));
       wallet.addIn(n, pay); earned += pay;
       const failNotes: string[] = [];
-      for (const x of gr.failFx ?? RAW_FAIL_FX) {
+      for (const x of (gr.failFx ?? (ent ? RAW_FAIL_FX : []))) {
         const d = rand(Math.min(x.min, x.max), Math.max(x.min, x.max));
         if (!d) continue;
         if (x.key === "money") wallet.addIn(n, d); else perkWrite(n, x.key, "", d);
         failNotes.push(`${perkFxName(x.key)} ${d > 0 ? "+" : ""}${d}`);
       }
-      const [sl0, sl1] = gr.failStatLoss ?? [1, 4];
-      for (const k of STAT_ORDER) if (g.grow[k]) { const d = rand(Math.min(sl0, sl1), Math.max(sl0, sl1)); if (d) n.stats[k] = clampStat(k, n.stats[k] - d); }
+      const lossPair = gr.failStatLoss ?? (ent ? [1, 4] as const : null);
+      if (lossPair) {
+        const [sl0, sl1] = lossPair;
+        for (const k of STAT_ORDER) if (g.grow[k]) { const d = rand(Math.min(sl0, sl1), Math.max(sl0, sl1)); if (d) n.stats[k] = clampStat(k, n.stats[k] - d); }
+      }
       deltas.push(`${expired ? "超过截止日未拍完被撤换，" : terminated ? "累计失误被撤换，" : crashed ? "状态失控，" : ""}《${g.name}》拍摄失败：无作品${failNotes.length ? `，${failNotes.join("，")}` : ""}`);
-      // 失败修复与反转机会（同周一次，随机 1 项）
-      // 补救方案由 tuning.gigRules.repairs 配置；缺省 = 引擎原 5 项
+      // 失败修复与反转机会（同周一次，随机 1 项）；非娱乐圈未写补救 = 不触发
       const condOk = (c: { key: string; pid?: string; op: string; value: number }) => { const v = perkRead(n, c.key, c.pid ?? ""); return c.op === "<=" ? v <= c.value : v >= c.value; };
-      const repairs = (gr.repairs ?? RAW_GIG_REPAIRS)
+      const repairs = (gr.repairs ?? (ent ? RAW_GIG_REPAIRS : []))
         .filter((r) => (r.maxStar == null || g.star <= r.maxStar) && (!r.conds?.length || (r.any ? r.conds.some(condOk) : r.conds.every(condOk))))
         .map((r) => ({ name: r.name, apply: () => { for (const x of r.fx) { const lo = Math.min(x.min, x.max), hi = Math.max(x.min, x.max); const d = rand(lo, hi); if (!d) continue; if (x.key === "money") wallet.addIn(n, d); else perkWrite(n, x.key, "", d); } } }));
       if (repairs.length) {
@@ -946,8 +957,9 @@ export function settleWeek(s: GameState, customTimeLimit = false): WeekResult {
         deltas.push(`触发修复机会「${r.name}」，帮你稳住了局面`);
       }
     }
-    // 商业价值成长（缺省 广告/综艺/品牌类成功通告，规则由 tuning.gigRules 配置） + 恋人加成
-    if (gr.bizOn !== false && typeHit(g.type, gr.bizTypes ?? "广告|综艺|品牌") && (status === "perfect" || status === "smooth")) {
+    // 商业价值成长：非娱乐圈须显式开启；娱乐圈缺省广告/综艺/品牌
+    const bizOn = ent ? gr.bizOn !== false : gr.bizOn === true;
+    if (bizOn && typeHit(g.type, gr.bizTypes ?? (ent ? "广告|综艺|品牌" : "")) && (status === "perfect" || status === "smooth")) {
       const lo = gr.bizMin ?? 4, hi = Math.max(lo, gr.bizMax ?? 9);
       let bg = rand(lo, hi);
       for (const p of perks) if (p.bizMult) bg = Math.round(bg * p.bizMult);

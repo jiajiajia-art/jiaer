@@ -3,6 +3,7 @@ import { loadGlobal, saveGlobal } from "../lib/saveScope";
 import { engineRules, mediaCheck } from "../game/engineRules";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { getWorld, subscribeMods } from "../mods/registry";
+import { platformTrack } from "../game/platformAudio";
 import type { ModTrack } from "../mods/types";
 import { setExternalPause, yieldBgm } from "../game/audioEngine";
 import { IconMusic, IconPause, IconPlay, IconSkipBack, IconSkipForward, StatusMark } from "../lib/icons";
@@ -62,7 +63,13 @@ async function load() {
 /* 模组内置音乐：随当前生效世界刷新；带 autoplay 的在未播放时自动开播 */
 function syncWorld() {
   const w = getWorld();
-  const world = w.chain.flatMap((m) => (m.content.bgm ?? []).map((t) => ({ ...t, id: `w:${m.id}:${t.id}` })));
+  const world = w.chain.flatMap((m) => {
+    const tracks = (m.content.bgm ?? []).map((t) => ({ ...t, id: `w:${m.id}:${t.id}` }));
+    const pid = m.content.platformAutoplay;
+    const p = typeof pid === "string" ? platformTrack(pid) : undefined;
+    if (p && !tracks.some((t) => t.autoplay)) tracks.push({ id: `w:${m.id}:${p.id}`, name: p.name, src: p.src, autoplay: true });
+    return tracks;
+  });
   if (JSON.stringify(world) === JSON.stringify(state.world)) return;
   set({ world, worldName: w.chain[0]?.name ?? "" });
   const auto = world.find((t) => t.autoplay);
@@ -77,6 +84,11 @@ export function hookWorldBgm() {
 }
 /** 本机音乐库（供编辑器「从我的音乐」选择） */
 export async function localTracks() { await load(); return state.tracks.map(({ id, name, size }) => ({ id, name, size })); }
+/** 功能注释：编辑器试听本机曲时取出文件，不把 blob 写进模组 */
+export async function localTrackBlob(id: string): Promise<Blob | null> {
+  await load();
+  return state.tracks.find((t) => t.id === id)?.blob ?? null;
+}
 export { load as loadBgm, add as addBgm };
 /** 地点 BGM：按模组内置音乐的原始 id 切歌（已在放同一首则不打断） */
 export function playWorldTrack(rawId: string) {

@@ -1757,37 +1757,103 @@ html[data-romance].skin-dream.dark, html[data-romance].skin-bloody.dark, html[da
  * ═══════════════════════════════════════════════════════════════ */
 .romance-platform {
   min-height: 100%;
-  color: #ffffff;
-  background: #000000;
+  /* 功能注释：平台暗红创作壳唯一色板；弹窗 / toast / 表单一律吃这些变量，禁止再写死白绿 */
+  --fl-bg: #000000;
+  --fl-surface: #0A0A0A;
+  --fl-raised: #141416;
+  --fl-sheet: #1C1C1E;
+  --fl-input: #121214;
+  --fl-ink: #ffffff;
+  --fl-muted: rgba(255, 255, 255, 0.55);
+  --fl-faint: rgba(255, 255, 255, 0.12);
+  --fl-line: rgba(255, 255, 255, 0.16);
+  --fl-wine: #A8283C;
+  --fl-wine-deep: #8E2135;
+  --fl-rose: #FF8A9A;
+  --fl-gold: #C9A227;
+  --fl-danger: #FF6B7A;
+  --fl-glow: rgba(168, 40, 60, 0.35);
+  color: var(--fl-ink);
+  background: var(--fl-bg);
   /* 功能注释：覆写 Romance token；须同时写 --color-*，否则 Tailwind bg-jade/bg-line 仍吃 :root 浅色 */
-  --paper: #0A0A0A;
-  --paper-2: #141416;
-  --ink: #ffffff;
-  --ink-soft: rgba(255, 255, 255, 0.55);
-  --line: rgba(255, 255, 255, 0.16);
-  --jade: #A8283C;
-  --jade-deep: #8E2135;
-  --coral: #FF8A9A;
-  --gold: #C9A227;
-  --danger: #FF6B7A;
+  --paper: var(--fl-surface);
+  --paper-2: var(--fl-raised);
+  --ink: var(--fl-ink);
+  --ink-soft: var(--fl-muted);
+  --line: var(--fl-line);
+  --jade: var(--fl-wine);
+  --jade-deep: var(--fl-wine-deep);
+  --coral: var(--fl-rose);
+  --gold: var(--fl-gold);
+  --danger: var(--fl-danger);
   --cute-glow: rgba(168, 40, 60, 0.28);
   --dream-glow: rgba(168, 40, 60, 0.22);
-  --color-paper: #0A0A0A;
-  --color-paper-2: #141416;
-  --color-ink: #ffffff;
-  --color-ink-soft: rgba(255, 255, 255, 0.55);
-  --color-line: rgba(255, 255, 255, 0.16);
-  --color-jade: #A8283C;
-  --color-jade-deep: #8E2135;
-  --color-coral: #FF8A9A;
-  --color-gold: #C9A227;
-  --color-danger: #FF6B7A;
+  --color-paper: var(--fl-surface);
+  --color-paper-2: var(--fl-raised);
+  --color-ink: var(--fl-ink);
+  --color-ink-soft: var(--fl-muted);
+  --color-line: var(--fl-line);
+  --color-jade: var(--fl-wine);
+  --color-jade-deep: var(--fl-wine-deep);
+  --color-coral: var(--fl-rose);
+  --color-gold: var(--fl-gold);
+  --color-danger: var(--fl-danger);
+  /* 功能注释：ui-sheet / 遮罩跟平台壳，避免 portal 弹窗仍是奶油白面 */
+  --sheet-solid: var(--fl-sheet);
+  --sheet-bg: linear-gradient(180deg, var(--fl-sheet), color-mix(in srgb, var(--fl-wine) 8%, var(--fl-sheet)));
+  --sheet-border: var(--fl-line);
+  --sheet-hi: rgba(255, 255, 255, 0.06);
+  --sheet-shadow: 0 28px 64px -24px rgba(0, 0, 0, 0.72), 0 0 0 1px color-mix(in srgb, var(--fl-wine) 22%, transparent);
+  --overlay-bg: color-mix(in srgb, var(--fl-bg) 72%, transparent);
+  --overlay-bg-heavy: color-mix(in srgb, var(--fl-bg) 82%, transparent);
+}
+
+/* 功能注释：平台壳内弹窗表单/主按钮统一走 token，覆盖宣纸默认浅色 */
+.romance-platform .ui-sheet input,
+.romance-platform .ui-sheet textarea,
+.romance-platform .ui-sheet select {
+  background-color: var(--fl-input);
+  color: var(--ink);
+  border-color: var(--line);
+}
+.romance-platform .ui-btn-primary {
+  background: var(--jade);
+  color: var(--fl-ink);
+  box-shadow: 0 6px 16px -10px var(--fl-glow);
+}
+.romance-platform .ui-btn-primary.tone-danger {
+  background: var(--danger);
 }
 
 /* 功能注释：平台生成世界时宿主也压成黑底，避免四周露奶油纸 */
 .romance-host:has([data-platform-ui="1"]) {
-  background: #000000 !important;
-  color: #ffffff !important;
+  background: var(--fl-bg, #000000) !important;
+  color: var(--fl-ink, #ffffff) !important;
+}
+
+/*
+ * 功能注释：平台壳打开时，主站 Toaster 仍挂在 body；用 :has 把 toast 收成暗红账本，
+ * 禁止再露出白底绿成功条。色值走 --fl-*（无平台壳时不生效）。
+ */
+html:has([data-platform-ui="1"]) .funloom-toast {
+  --funloom-toast-accent: var(--fl-wine, #A8283C);
+  border-color: color-mix(in srgb, var(--fl-wine, #A8283C) 28%, transparent) !important;
+  background:
+    linear-gradient(180deg, var(--fl-sheet, #1C1C1E) 0%, var(--fl-raised, #141416) 100%) padding-box,
+    linear-gradient(135deg, color-mix(in srgb, var(--fl-wine, #A8283C) 55%, transparent), color-mix(in srgb, var(--fl-rose, #FF8A9A) 25%, transparent)) border-box !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255, 255, 255, 0.06) inset !important;
+  color: var(--fl-ink, #ffffff) !important;
+}
+html:has([data-platform-ui="1"]) .funloom-toast-success {
+  --funloom-toast-accent: var(--fl-wine, #A8283C);
+  border-color: color-mix(in srgb, var(--fl-wine, #A8283C) 32%, transparent) !important;
+}
+html:has([data-platform-ui="1"]) .funloom-toast-error {
+  --funloom-toast-accent: var(--fl-danger, #FF6B7A);
+}
+html:has([data-platform-ui="1"]) .funloom-toast-blank,
+html:has([data-platform-ui="1"]) .funloom-toast-loading {
+  --funloom-toast-accent: var(--fl-gold, #C9A227);
 }
 
 /*
@@ -1795,7 +1861,7 @@ html[data-romance].skin-dream.dark, html[data-romance].skin-bloody.dark, html[da
  * 不改局内其它入口的 ModEditorPanel。
  */
 .world-gen-editor {
-  color: #ffffff;
+  color: var(--ink);
   /* 功能注释：手机端禁止被子树 min-width 撑出横向滚动 */
   overflow-x: hidden;
   width: 100%;
@@ -1817,12 +1883,12 @@ html[data-romance].skin-dream.dark, html[data-romance].skin-bloody.dark, html[da
 .world-gen-editor .mod-editor-chrome {
   /* 功能注释：刘海屏顶栏避开状态栏 */
   top: env(safe-area-inset-top, 0px);
-  background-color: rgba(10, 10, 10, 0.94) !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
+  background-color: color-mix(in srgb, var(--paper) 94%, transparent) !important;
+  border-color: var(--fl-faint, var(--line)) !important;
 }
 .world-gen-editor .sticky {
-  background-color: rgba(10, 10, 10, 0.94) !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
+  background-color: color-mix(in srgb, var(--paper) 94%, transparent) !important;
+  border-color: var(--fl-faint, var(--line)) !important;
 }
 @media (max-width: 640px) {
   /* 功能注释：窄屏壳层贴边，内容区真正占满设备宽 */
@@ -1843,39 +1909,40 @@ html[data-romance].skin-dream.dark, html[data-romance].skin-bloody.dark, html[da
   }
 }
 .world-gen-editor [class*="bg-paper-2"] {
-  background-color: #141416 !important;
+  background-color: var(--paper-2) !important;
   background-image: none !important;
 }
 .world-gen-editor [class*="bg-paper"]:not([class*="bg-paper-2"]):not([class*="bg-paper/"]) {
-  background-color: #0A0A0A !important;
+  background-color: var(--paper) !important;
   background-image: none !important;
 }
 .world-gen-editor [class*="bg-paper/"] {
-  background-color: rgba(20, 20, 22, 0.92) !important;
+  background-color: color-mix(in srgb, var(--paper-2) 92%, transparent) !important;
 }
-.world-gen-editor [class*="text-ink-soft"] { color: rgba(255, 255, 255, 0.55) !important; }
-.world-gen-editor [class*="text-ink"]:not([class*="text-ink-soft"]) { color: #ffffff !important; }
-.world-gen-editor [class*="border-line"] { border-color: rgba(255, 255, 255, 0.14) !important; }
+.world-gen-editor [class*="text-ink-soft"] { color: var(--ink-soft) !important; }
+.world-gen-editor [class*="text-ink"]:not([class*="text-ink-soft"]) { color: var(--ink) !important; }
+.world-gen-editor [class*="border-line"] { border-color: color-mix(in srgb, var(--line) 88%, transparent) !important; }
 .world-gen-editor input,
 .world-gen-editor textarea,
 .world-gen-editor select {
-  background-color: #121214 !important;
-  color: #ffffff !important;
-  border-color: rgba(255, 255, 255, 0.16) !important;
+  background-color: var(--fl-input, var(--paper-2)) !important;
+  color: var(--ink) !important;
+  border-color: var(--line) !important;
 }
-.world-gen-editor button[class*="bg-jade"]:not([class*="bg-jade/"]) {
-  background-color: #A8283C !important;
+.world-gen-editor button[class*="bg-jade"]:not([class*="bg-jade/"]),
+.world-gen-editor .ui-btn-primary {
+  background-color: var(--jade) !important;
   background-image: none !important;
-  color: #ffffff !important;
+  color: var(--ink) !important;
   border-color: transparent !important;
 }
 .world-gen-editor button[class*="border-jade"] {
-  border-color: rgba(168, 40, 60, 0.55) !important;
-  color: #FF8A9A !important;
+  border-color: color-mix(in srgb, var(--jade) 55%, transparent) !important;
+  color: var(--coral) !important;
 }
 .world-gen-editor [class*="bg-jade/"] {
-  background-color: rgba(168, 40, 60, 0.22) !important;
-  color: #FF8A9A !important;
+  background-color: color-mix(in srgb, var(--jade) 22%, transparent) !important;
+  color: var(--coral) !important;
 }
 
 /*
@@ -1884,19 +1951,24 @@ html[data-romance].skin-dream.dark, html[data-romance].skin-bloody.dark, html[da
  */
 .world-gen-editor span[class*="rounded-full"][class*="bg-jade"],
 .world-gen-editor button[role="switch"][class*="bg-jade"] {
-  background-color: #A8283C !important;
+  background-color: var(--jade) !important;
   background-image: none !important;
-  box-shadow: 0 0 0 1px rgba(168, 40, 60, 0.35), 0 6px 14px -8px rgba(168, 40, 60, 0.55);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--jade) 35%, transparent), 0 6px 14px -8px var(--fl-glow, rgba(168, 40, 60, 0.55));
 }
 .world-gen-editor span[class*="rounded-full"][class*="bg-line"],
 .world-gen-editor button[role="switch"][class*="bg-line"] {
-  background-color: rgba(255, 255, 255, 0.14) !important;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  background-color: color-mix(in srgb, var(--ink) 14%, transparent) !important;
+  box-shadow: inset 0 0 0 1px var(--line);
 }
-.world-gen-editor span[class*="rounded-full"][class*="bg-white"],
-.world-gen-editor span[class*="rounded-full"][class*="bg-paper"]:not([class*="bg-paper-2"]) {
-  background-color: #f5f5f7 !important;
+.world-gen-editor span[class*="rounded-full"][class*="bg-white"]:not(.wg-tab-count),
+.world-gen-editor span[class*="rounded-full"][class*="bg-paper"]:not([class*="bg-paper-2"]):not(.wg-tab-count) {
+  background-color: color-mix(in srgb, var(--ink) 92%, var(--paper)) !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+/* 功能注释：选中页签的已填数量。开关滑块规则会把带 bg-white 的圆角 span 刷成白底，数字若仍是白色就看不见。 */
+.world-gen-editor button[aria-pressed="true"] .wg-tab-count.is-on {
+  background-color: var(--ink) !important;
+  color: var(--jade-deep) !important;
 }
 
 /* Codex 风格（封面助手）：中性黑白灰，去掉主题色与渐变，只作用于 .codex-ui 内部 */
@@ -1934,17 +2006,18 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
    记忆点：酒红序号章 + 预计耗时胶囊 + 流光进度带
    ═══════════════════════════════════════════════════════════════ */
 .world-gen-shell {
-  --wg-bg: #000000;
-  --wg-panel: #0A0A0A;
-  --wg-sheet: #1C1C1E;
+  /* 功能注释：向导壳色板对齐 .romance-platform，避免两套硬编码分叉 */
+  --wg-bg: var(--fl-bg, #000000);
+  --wg-panel: var(--fl-surface, #0A0A0A);
+  --wg-sheet: var(--fl-sheet, #1C1C1E);
   --wg-sheet-2: #222226;
-  --wg-ink: #ffffff;
-  --wg-muted: rgba(255, 255, 255, 0.55);
-  --wg-faint: rgba(255, 255, 255, 0.12);
-  --wg-wine: #A8283C;
-  --wg-wine-deep: #8E2135;
-  --wg-rose: #FF8A9A;
-  --wg-glow: rgba(168, 40, 60, 0.35);
+  --wg-ink: var(--fl-ink, #ffffff);
+  --wg-muted: var(--fl-muted, rgba(255, 255, 255, 0.55));
+  --wg-faint: var(--fl-faint, rgba(255, 255, 255, 0.12));
+  --wg-wine: var(--fl-wine, #A8283C);
+  --wg-wine-deep: var(--fl-wine-deep, #8E2135);
+  --wg-rose: var(--fl-rose, #FF8A9A);
+  --wg-glow: var(--fl-glow, rgba(168, 40, 60, 0.35));
   position: relative;
   isolation: isolate;
   min-height: 100vh;

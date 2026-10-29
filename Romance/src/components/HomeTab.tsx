@@ -14,7 +14,7 @@ import { autoPos } from "../game/mapPos";
 import { MAIN_SHEET, jumpOf, mapSheets, sheetOf } from "../game/mapSheets";
 import { homePlaceOf } from "../game/homeSpot";
 import { ProfileRelations, ProfileHero, RelTag, ProfileBasics, ProfileBio, ProfilePlaces, ProfileMemory, affiliationOf, PLAYER_REF, relationRefsOf } from "./personFields";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useGame } from "../store/gameCtx";
 import TalkPanel from "./TalkPanel";
 import { pregWeeks } from "../game/pregnancy";
@@ -61,7 +61,9 @@ import type { FamilyRef } from "../worlds/star2005/content";
 import { LIVE_PEOPLE as PEOPLE, LIVE_PERSON_BY_ID as PERSON_BY_ID, feature, getWorldMap, getWorldRooms, getWorldStartRoom, worldActivitiesOfRoom as activitiesOfRoom } from "../mods/registry";
 import { factsOf, isManager, knows, producerProjects } from "../game/producer";
 import { categoryLabel, roleLabel } from "../game/projects";
-import { dowOf, nextStep, pendingTodos, startDateLabel, type GameState as SimState } from "../game/logic";
+import { dayDateLabel, dowOf, pendingTodos, startDateLabel, type GameState as SimState } from "../game/logic";
+import { homeMainQuest } from "../lib/homeMainQuest";
+import { getWorldStorylines } from "../mods/registry";
 import { liveTerm as T } from "../mods/live";
 
 
@@ -569,21 +571,19 @@ function TreeNav({ s, onGo }: { s: SimState; onGo: (id: string) => void }) {
   );
 }
 
-function LocationHero({ s, spots, activeKey, onOpenMap, onGo, overlay, fill, grow, narration, novelKey, bg: bgProp, name }: { novelKey?: string; onGo?: (id: string) => void; grow?: boolean; s: SimState; spots: Spot[]; activeKey: string | null; onOpenMap: () => void; overlay?: ReactNode; fill?: boolean; narration?: ReactNode; bg?: string; name?: string }) {
-  const { look: theme } = useGame(); // 实际生效外观（含剧情美化）
-  // 剧情指定的背景优先；其次是玩家在「场景背景与立绘」里设的自定义背景
+/**
+ * 地点实景：按图片竖版比例完整显示、左右贴边，不裁封面、不进圆角卡。
+ * 图上只留右上角「外出」；正文由外层放在图下方，不再盖毛玻璃。
+ */
+function LocationHero({ s, spots, activeKey, onOpenMap, onGo, fill, bg: bgProp, name }: {
+  onGo?: (id: string) => void; s: SimState; spots: Spot[]; activeKey: string | null; onOpenMap: () => void;
+  fill?: boolean; bg?: string; name?: string;
+}) {
+  const { look: theme } = useGame();
   const room = s.room ?? getWorldStartRoom();
-  // 剧情背景 > 本地点（含子地点）自己的背景图 > 玩家自定义背景
   const bg = bgProp || roomBgOf(room) || theme.sceneBg || undefined;
-  const loc = locOf(room);
-  const rs = roomStatus(s, room);
-  const title = name ?? loc?.name;
-  // 叙事卡默认收起，只留地名条，不挡实景与点位；换地点时重新收起
-  const [open, setOpen] = useState(false);
-  // 剧情模式：每段新剧情到来时自动展开场景卡，直接读 AI 写的进场剧情
-  useEffect(() => { if (novelKey) setOpen(true); }, [novelKey]);
-  useEffect(() => { setOpen(false); }, [room]);
-  // 「外出」：独立按钮打开舆图（不嵌进地名条的展开按钮里，避免 button 套 button）
+  const src = bg || roomImage(room) || undefined;
+  const title = name ?? locOf(room)?.name;
   const mapBtn = (
     <button
       type="button"
@@ -600,84 +600,37 @@ function LocationHero({ s, spots, activeKey, onOpenMap, onGo, overlay, fill, gro
       <span>外出</span>
     </button>
   );
+  // 功能注释：横屏沉浸仍可吃满高度；竖屏按图片固有比例撑开，object-contain 保证上下都看得到
   return (
-    <div className={`relative overflow-hidden bg-jade-deep/80 shadow-inner ${fill ? "min-h-[360px] flex-1 rounded-2xl border border-white/15 shadow-2xl" : grow ? "min-h-[220px] flex-1 rounded-sm border border-line/70" : "rounded-sm border border-line/70"}`}>
-      {(bg || roomImage(room)) ? <img
-        src={(bg || roomImage(room)) || undefined}
-        alt={title ?? "所在地"}
-        loading="lazy"
-        className="scene-img absolute inset-0 h-full w-full object-cover object-center"
-      /> : <div className="absolute inset-0" aria-hidden />}
-      <div className="scene-dim pointer-events-none absolute inset-0 bg-black" aria-hidden />
-      <div className={`scene-shade pointer-events-none absolute inset-0 bg-gradient-to-b ${narration ? "from-black/10 via-transparent" : "from-black/55 via-black/10"} to-black/80`} aria-hidden />
-      {/* 前景层：地名 → 描述 → 点位自由区 → 底部卡片，纵向排布互不遮挡 */}
-      <div className={`z-10 flex flex-col ${fill || grow ? "absolute inset-0" : "relative min-h-[312px] sm:min-h-[340px]"}`}>
-        {narration ? (
-          /* 毛玻璃折叠卡：默认只显示地名条，点开看场景叙事（限高、卡内滚动），不盖住整张实景；右侧并排「外出」 */
-          <div className="mx-3 mt-3 flex shrink-0 items-start gap-2">
-          <div data-tour="loc" className="ui-glass min-w-0 flex-1 overflow-hidden">
-            <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-label={open ? "收起场景描述" : "展开场景描述"} className="flex w-full items-center gap-2 px-3.5 py-2 text-left">
-              <span className="shrink-0 text-ink"><DiyIcon slot="scene.loc" size={18}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
-              </svg>
-              </DiyIcon></span>
-              {/* 地名优先完整显示；营业时段放到地名下方小字，不再挤掉地名 */}
-              <span className="min-w-0 flex-1">
-                <span className="block truncate font-serif text-[17px] font-black leading-tight tracking-wide">{title}</span>
-                {rs.label.includes(" · ") && <span className="mt-0.5 block truncate text-[10.5px] text-ink-soft">{rs.label.split(" · ").slice(1).join(" · ")}</span>}
-              </span>
-              <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-ink/[0.06] px-2.5 py-1 text-[10.5px] text-ink-soft">
-                <span className={`inline-block h-1.5 w-1.5 rounded-full ${rs.open ? "bg-emerald-500" : "bg-amber-500"}`} />
-                {rs.label.split(" · ")[0]}
-              </span>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={`shrink-0 text-ink transition-transform duration-300 ${open ? "" : "rotate-180"}`}><path d="m6 15 6-6 6 6" /></svg>
-            </button>
-            <div className={`grid transition-[grid-template-rows] duration-300 ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
-              <div className="min-h-0 overflow-hidden">
-                <div className={`${novelKey ? "max-h-[min(55vh,26rem)]" : "max-h-[min(28vh,9.5rem)]"} overflow-y-auto px-4 pb-3 [scrollbar-width:thin]`}>
-                  <p className="story-prose whitespace-pre-line text-[13.5px] leading-[1.85] tracking-[0.02em] text-ink/80 [text-indent:2em]">{narration}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          {mapBtn}
-          </div>
+    <div className={`relative w-full bg-ink/5 ${fill ? "flex min-h-[360px] flex-1 flex-col" : ""}`}>
+      <div className={`relative w-full ${fill ? "min-h-0 flex-1" : ""}`}>
+        {src ? (
+          <img
+            src={src}
+            alt={title ?? "所在地"}
+            loading="lazy"
+            className={`scene-img block w-full ${fill ? "h-full object-contain object-center" : "h-auto object-contain"}`}
+          />
         ) : (
-          <div className="flex items-center justify-between gap-2 px-3 pt-3">
-            <p className="min-w-0 truncate px-1 py-1 font-serif text-[17px] font-black leading-tight text-white [text-shadow:0_1px_8px_rgba(0,0,0,0.7),0_0_14px_rgba(245,205,120,0.5)]">{title}</p>
-            <div className="flex shrink-0 items-center gap-2">
-              <p className="flex shrink-0 items-center gap-1.5 rounded-full border border-white/20 bg-black/45 px-2.5 py-1 text-[10.5px] text-white/85 backdrop-blur-md">
-                <span className={`inline-block h-1.5 w-1.5 rounded-full ${rs.open ? "bg-emerald-400" : "bg-amber-400"}`} />
-                {rs.label}
-              </p>
-              {mapBtn}
-            </div>
-          </div>
+          <div className={`w-full bg-gradient-to-b from-jade-deep/40 to-ink/30 ${fill ? "h-full min-h-[360px]" : "aspect-[3/4]"}`} aria-hidden />
         )}
-        {onGo && <TreeNav s={s} onGo={onGo} />}
-        {/* 场景点位：只在剩余空间里排布 */}
-        {fill || grow ? (
-          <div data-tour="spots" className="flex min-h-0 flex-1 flex-wrap content-center items-center justify-center gap-x-4 gap-y-3 overflow-y-auto px-4 py-3">
-            {spots.map((sp, i) => <SceneSpot key={sp.key} spot={sp} active={activeKey === sp.key} index={i} />)}
-          </div>
-        ) : (
-          /* 竖屏实景：点位自然换行、错落散布在画面里（按序号做固定偏移，不随渲染跳动）；放不下时纵向滚动 */
-          <div data-tour="spots" className="flex min-h-0 flex-1 flex-wrap content-center items-center justify-center gap-x-4 gap-y-5 overflow-y-auto px-4 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="pointer-events-none absolute inset-0 scene-dim bg-black/0" aria-hidden />
+        {/* 图上只留外出；点位叠在画面中部，不盖成说明框 */}
+        <div className="absolute right-3 top-3 z-20">{mapBtn}</div>
+        {!!spots.length && (
+          <div data-tour="spots" className="pointer-events-none absolute inset-0 z-10 flex flex-wrap content-center items-center justify-center gap-x-4 gap-y-5 px-4 py-12">
             {spots.map((sp, i) => {
-              // 轻微错落：只做上下小偏移（小于行距一半），保证标签彼此不压
               const dy = [0, 6, -4, 8, -2, 5, -6][i % 7];
-              const dx = 0;
               return (
-                <span key={sp.key} style={{ transform: `translate(${dx}px, ${dy}px)` }}>
+                <span key={sp.key} className="pointer-events-auto" style={{ transform: `translate(0, ${dy}px)` }}>
                   <SceneSpot spot={sp} active={activeKey === sp.key} index={i} />
                 </span>
               );
             })}
           </div>
         )}
-        {overlay && <div className="pointer-events-none shrink-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-4 pt-6">{overlay}</div>}
       </div>
+      {onGo && <TreeNav s={s} onGo={onGo} />}
     </div>
   );
 }
@@ -1002,18 +955,19 @@ export default function HomeTab() {
           {/* ═══ 当前场景（纯文字 MUD 控制台，直接铺在纸面上） ═══ */}
           <section className="flex min-h-0 flex-1 flex-col">
             {/* 待办：悬而未决的事件线（违约追责 / 危机 / 通告截止 / 透支 / 孕期），保证每条线都有可见的后续；情感线由玩家自己去推进，不在这里催 */}
-            {/* 主线「下一步」：进入游戏即可见，紧急事项优先 */}
-            {!showMap && !busy && (() => {
-              const n = nextStep(s);
+            {/* 状态栏下：创作者当前主线（左「主线」右目标）；点开主线/支线面板；没配则整条不出现 */}
+            {!showMap && (() => {
+              const q = homeMainQuest(s, getWorldStorylines(), dayDateLabel(s.day ?? 0));
+              if (!q) return null;
               return (
-                <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("star:navtab", { detail: "quest" }))}
-                  className="mb-2 flex w-full items-start gap-2.5 rounded-2xl border border-coral/25 bg-paper/80 px-3 py-2 text-left shadow-[0_4px_16px_-8px_rgba(0,0,0,0.25)] backdrop-blur-md transition hover:border-coral/50">
-                  <span className="mt-0.5 shrink-0 rounded-full bg-coral px-2 py-0.5 text-[10px] font-black tracking-[0.14em] text-white">主线</span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[13px] font-bold leading-snug text-ink">{n.title}</span>
-                    <span className="block text-[11.5px] leading-snug text-ink-soft">{n.hint}</span>
-                  </span>
-                  <span aria-hidden className="self-center text-[12px] text-ink-soft">›</span>
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent("star:navtab", { detail: "quest" }))}
+                  className="mb-2 flex w-full items-center gap-2 rounded-xl border border-line/70 bg-paper/90 px-3 py-2 text-left shadow-sm transition hover:border-coral/40"
+                >
+                  <span className="shrink-0 rounded-full bg-coral px-2 py-0.5 text-[10px] font-black tracking-[0.14em] text-white">主线</span>
+                  <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">{q.stepName}</span>
+                  <span aria-hidden className="shrink-0 text-[12px] text-ink-soft">›</span>
                 </button>
               );
             })()}
@@ -1048,11 +1002,7 @@ export default function HomeTab() {
                 </div>
               );
             })()}
-            {/* 地点名已在顶部栏呈现，此处不再重复，直接以场景描述开篇；横屏沉浸态让实景铺满，描述改为图内旁白 */}
-            <p className={`story-prose text-[13.5px] leading-relaxed text-ink/90 hidden`} style={{ textIndent: "2em" }}>
-              {descText}
-            </p>
-            <div className={landscape && !showMap ? "flex min-h-0 flex-1 flex-col" : showMap ? "-mx-4 -mt-3 -mb-3 flex min-h-0 flex-1 flex-col sm:-mx-6" : descText ? "flex min-h-0 flex-1 flex-col" : "mt-4 flex min-h-0 flex-1 flex-col"}>
+            <div className={landscape && !showMap ? "flex min-h-0 flex-1 flex-col" : showMap ? "-mx-4 -mt-3 -mb-3 flex min-h-0 flex-1 flex-col sm:-mx-6" : "flex min-h-0 flex-col"}>
               {showMap ? (
                 <div data-tour="map" className="relative flex min-h-0 w-full flex-1 flex-col">
                   <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line bg-paper-2 px-4 py-2.5">
@@ -1081,19 +1031,31 @@ export default function HomeTab() {
                   <CityMap s={s} wide={landscape} onPick={(id) => (id === room ? setShowMap(false) : setPending(id))} />
                 </div>
               ) : (
-                <LocationHero
-                  s={s}
-                  spots={spots}
-                  activeKey={openId}
-                  onOpenMap={() => setShowMap(true)}
-                  onGo={goLocal}
-                  fill={landscape && !showMap}
-                  bg={bgOverride}
-                  name={nameOverride}
-                  narration={novelProse || descText}
-                  novelKey={novelProse ? lastAi?.id : undefined}
-                  overlay={peopleStrip(true)}
-                />
+                <>
+                  {/* 功能注释：场景图左右贴边（冲破内容区 padding），按竖版比例完整显示；图上只留外出 */}
+                  <div className={landscape ? "min-h-0 flex-1" : "-mx-4 w-[calc(100%+2rem)]"}>
+                    <LocationHero
+                      s={s}
+                      spots={spots}
+                      activeKey={openId}
+                      onOpenMap={() => setShowMap(true)}
+                      onGo={goLocal}
+                      fill={landscape && !showMap}
+                      bg={bgOverride}
+                      name={nameOverride}
+                    />
+                  </div>
+                  {/* 正文在图下方，随页滚动；不再盖毛玻璃 */}
+                  {(novelProse || descText) && (
+                    <div className="mt-3 px-0.5">
+                      <p className="story-prose whitespace-pre-line text-[13.5px] leading-[1.85] tracking-[0.02em] text-ink/90 [text-indent:2em]">
+                        {novelProse || descText}
+                      </p>
+                    </div>
+                  )}
+                  {/* 在场人物改到图下，不再叠在场景图底部 */}
+                  {peopleStrip(false)}
+                </>
               )}
             </div>
 

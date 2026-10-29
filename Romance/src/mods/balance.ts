@@ -1,11 +1,10 @@
 /* ═══════════════ 模组数值体检 / 叠加影响 ═══════════════
  * 纯计算，不改任何数据，只给出提醒：
- *  - balanceCheck：模组自己写的数值和娱乐圈原版比（按各自的能力上限折算），偏离太多就提醒
- *  - inheritedSlots：世界观没写、会悄悄沿用娱乐圈的数值槽
+ *  - balanceCheck：只检查模组自己写的数值（绝对阈值），不和娱乐圈原版比
  *  - addonImpact / chainShadows：叠加包会替换 / 合并 / 追加哪些内容，以及被后面的包覆盖的部分 */
 import { optFx } from "../game/data";
 import type { FixedEffect } from "../lib/types";
-import { GENERIC_BILLS, RAW_STAT_LABELS, type BillsSlot, type StatKey, type Training } from "../game/data";
+import { RAW_STAT_LABELS, type BillsSlot, type StatKey, type Training } from "../game/data";
 import entMod from "./ent";
 import { SLOT_KEYS, type Mod, type ModContent } from "./types";
 import { getSelection, modById } from "./registry";
@@ -35,13 +34,8 @@ const SLOT_INFO: Record<string, { label: string; numeric?: boolean }> = {
 const LIST_KEYS = ["locations", "npcs", "items", "gigs", "events", "fixedEvents", "endings", "worldBook", "income", "gameRules", "lookRules", "worldRules"] as const;
 export const slotLabel = (k: string) => SLOT_INFO[k]?.label ?? k;
 
-/* 世界观没写时沿用娱乐圈原值的槽（其余槽缺省 = 关闭或通用兜底）。见各处 slot(key, entDefault) 无 off 的调用 */
-const ENT_FALLBACK = ["trainings", "sideJobs", "zodiacs", "startMoney", "relations", "contracts", "creation", "school"] as const;
-
-const ent = entMod.content;
 const STAT_KEYS = Object.keys(RAW_STAT_LABELS) as StatKey[];
 const isStat = (k: string): k is StatKey => (STAT_KEYS as string[]).includes(k);
-const has = (c: ModContent, k: string) => (c as Record<string, unknown>)[k] !== undefined;
 const num = (v: number) => (Math.abs(v) >= 10000 ? `${+(v / 10000).toFixed(1)}万` : String(Math.round(v * 10) / 10));
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 
@@ -81,15 +75,7 @@ function effectsIn(v: unknown, out: FixedEffect[] = [], depth = 0): FixedEffect[
 }
 const billWeek = (b: BillsSlot) => (b.weekly ?? []).reduce((a, x) => a + x.amount, 0) + (b.monthly ?? []).reduce((a, x) => a + x.amount, 0) / 4;
 
-/* 娱乐圈原版基准（按 999 上限折算成比例） */
-const BASE = (() => {
-  const span = (k: StatKey) => spanOf(ent, k);
-  const bonus = maxStartBonus([ent.identities, ent.styles, ent.backgrounds, ent.directions, ent.zodiacs]);
-  const course = fastestCourse(ent.trainings, span, 1);
-  return { bonusRatio: bonus ? Math.abs(bonus.v) / span(bonus.stat) : 0.08, courseN: course?.n ?? 250 };
-})();
-
-/** 数值体检。世界观：查自己写的数值；叠加包：只查本包写的数值，上限 / 账单等语境取所叠加的世界观。 */
+/** 数值体检。世界观：查自己写的数值；叠加包：只查本包写的数值。不与娱乐圈对比。 */
 export function balanceCheck(mod: Mod, baseWorld?: Mod): Finding[] {
   const c = mod.content;
   const ctx: ModContent = mod.kind === "addon" && baseWorld ? { ...baseWorld.content, ...c, stats: c.stats ?? baseWorld.content.stats } : c;
@@ -107,14 +93,14 @@ export function balanceCheck(mod: Mod, baseWorld?: Mod): Finding[] {
     if (typeof b === "number" && (b < r.min || b > r.max)) out.push({ level: "warn", area: "能力设定", text: `「${L(k)}」初始值 ${b} 超出范围 ${r.min}~${r.max}，开局就会被截断。` });
   }
 
-  // —— 建角加成：单项加成占上限的比例 vs 原版 ——
+  // —— 建角加成：单项加成占上限比例过大 ——
   const pools: [string, BonusSrc[] | undefined][] = [["出道身份", c.identities], ["外形风格", c.styles], ["家庭背景", c.backgrounds], ["职业方向", c.directions], ["星座", c.zodiacs]];
   for (const [area, pool] of pools) {
     const b = maxStartBonus([pool]);
     if (!b) continue;
     const ratio = Math.abs(b.v) / span(b.stat);
-    if (ratio > Math.max(0.2, BASE.bonusRatio * 3))
-      out.push({ level: "warn", area, text: `「${b.who}」${L(b.stat)} ${b.v > 0 ? "+" : ""}${b.v}，占上限 ${pct(ratio)}（原版最大约 ${pct(BASE.bonusRatio)}），开局差距会很大。` });
+    if (ratio > 0.2)
+      out.push({ level: "warn", area, text: `「${b.who}」${L(b.stat)} ${b.v > 0 ? "+" : ""}${b.v}，占上限 ${pct(ratio)}，开局差距会很大。` });
   }
 
   // —— 人物线路没有对应的开局加成 ——
@@ -122,13 +108,14 @@ export function balanceCheck(mod: Mod, baseWorld?: Mod): Finding[] {
   for (const p of c.creation?.paths ?? []) if (p.open && !ids.has(p.id))
     out.push({ level: "info", area: "人物线路", text: `路径「${p.name}」没有同 id（${p.id}）的出道身份，选它开局不会有数值加成。` });
 
-  // —— 课程：最快几次课练满 ——
+  // —— 课程：最快几次课练满（只用本作品课程，不回落娱乐圈） ——
   if (c.trainings?.length || t.trainGainMul !== undefined) {
-    const f = fastestCourse(c.trainings ?? (mod.kind === "addon" ? baseWorld?.content.trainings : ent.trainings), span, gainMul);
-    if (f && f.n < BASE.courseN / 5)
-      out.push({ level: "warn", area: "培训课程", text: `「${f.who}」约 ${Math.ceil(f.n)} 次课就能把${L(f.stat)}练满（原版约 ${Math.round(BASE.courseN)} 次），养成会很快到顶。` });
-    if (f && f.n > BASE.courseN * 5)
-      out.push({ level: "info", area: "培训课程", text: `最快的课也要约 ${Math.round(f.n)} 次才能练满${L(f.stat)}（原版约 ${Math.round(BASE.courseN)} 次），成长可能偏慢。` });
+    const list = c.trainings ?? (mod.kind === "addon" ? baseWorld?.content.trainings : undefined);
+    const f = fastestCourse(list, span, gainMul);
+    if (f && f.n < 50)
+      out.push({ level: "warn", area: "培训课程", text: `「${f.who}」约 ${Math.ceil(f.n)} 次课就能把${L(f.stat)}练满，养成会很快到顶。` });
+    if (f && f.n > 1250)
+      out.push({ level: "info", area: "培训课程", text: `最快的课也要约 ${Math.round(f.n)} 次才能练满${L(f.stat)}，成长可能偏慢。` });
   }
   for (const tr of c.trainings ?? []) {
     if (!Object.values(tr.gain ?? {}).some((r) => r && r[1] > 0) && !Object.keys(tr.cgain ?? {}).length && !tr.fame && !tr.reputation)
@@ -141,24 +128,28 @@ export function balanceCheck(mod: Mod, baseWorld?: Mod): Finding[] {
   for (let i = 1; i < jobs.length; i++) if (jobs[i].pay < jobs[i - 1].pay && jobs[i].fameReq > jobs[i - 1].fameReq)
     out.push({ level: "info", area: "打工", text: `「${jobs[i].label}」门槛更高，收入（${num(jobs[i].pay)}）却低于「${jobs[i - 1].label}」（${num(jobs[i - 1].pay)}）。` });
 
-  // —— 引擎倍率 ——
+  // —— 引擎倍率（绝对阈值，不提原版） ——
   const mul = (v: number | undefined, name: string, hi: number, lo: number) => {
     if (v === undefined) return;
-    if (v > hi) out.push({ level: "warn", area: "引擎规则", text: `${name} ×${v}，是原版的 ${v} 倍。` });
-    else if (v < lo) out.push({ level: "info", area: "引擎规则", text: `${name} ×${v}，只有原版的 ${pct(v)}。` });
+    if (v > hi) out.push({ level: "warn", area: "引擎规则", text: `${name} ×${v}，偏高。` });
+    else if (v < lo) out.push({ level: "info", area: "引擎规则", text: `${name} ×${v}，偏低。` });
   };
   mul(t.trainGainMul, "课程收益倍率", 2, 0.3); mul(t.jobPayMul, "打工收入倍率", 2, 0.3); mul(t.trainFeeMul, "学费倍率", 3, 0.3);
   for (const [g, v] of Object.entries(t.gradeMul ?? {})) if (typeof v === "number" && v > 3) out.push({ level: "warn", area: "引擎规则", text: `评级「${g}」收益倍率 ×${v}，一次好评级就能拉开很大差距。` });
 
-  // —— 经济：开局资金 / 被动收入 vs 每周账单 ——
-  const bills = ctx.bills ?? (mod.kind === "world" ? GENERIC_BILLS : ent.bills ?? GENERIC_BILLS);
-  const bw = billWeek(bills);
-  if (bw > 0 && c.startMoney !== undefined) {
-    if (c.startMoney >= bw * 52) out.push({ level: "info", area: "开局资金", text: `开局资金 ${num(c.startMoney)} 够付约 ${Math.floor(c.startMoney / bw)} 周账单，前期几乎没有经济压力。` });
+  // —— 经济：只用本作品已写账单 ——
+  if (c.bills || (mod.kind === "addon" && ctx.bills && baseWorld?.content.bills)) {
+    const bills = c.bills ?? ctx.bills;
+    if (bills) {
+      const bw = billWeek(bills);
+      if (bw > 0 && c.startMoney !== undefined) {
+        if (c.startMoney >= bw * 52) out.push({ level: "info", area: "开局资金", text: `开局资金 ${num(c.startMoney)} 够付约 ${Math.floor(c.startMoney / bw)} 周账单，前期几乎没有经济压力。` });
+      }
+      const passive = (Array.isArray(c.income) ? c.income : []).filter((r) => r && r.enabled !== false && !(r.conds ?? []).length && r.target?.kind === "metric" && r.target?.key === "money");
+      const pw = passive.reduce((a, r) => a + (r.min + r.max) / 2, 0);
+      if (bw > 0 && pw > bw * 1.5) out.push({ level: "warn", area: "周期收入", text: `无条件收入每周约 ${num(pw)}，是每周账单（约 ${num(bw)}）的 ${(pw / bw).toFixed(1)} 倍，不打工也稳赚。` });
+    }
   }
-  const passive = (Array.isArray(c.income) ? c.income : []).filter((r) => r && r.enabled !== false && !(r.conds ?? []).length && r.target?.kind === "metric" && r.target?.key === "money");
-  const pw = passive.reduce((a, r) => a + (r.min + r.max) / 2, 0);
-  if (bw > 0 && pw > bw * 1.5) out.push({ level: "warn", area: "周期收入", text: `无条件收入每周约 ${num(pw)}，是每周账单（约 ${num(bw)}）的 ${(pw / bw).toFixed(1)} 倍，不打工也稳赚。` });
 
   // —— 事件 / 规则：单次属性变化占上限 ——
   type Ev = { name?: string; title?: string; id: string; when?: unknown; chance?: number };
@@ -182,17 +173,15 @@ export function balanceCheck(mod: Mod, baseWorld?: Mod): Finding[] {
   return out.filter((f) => !seen.has(f.text) && !!seen.add(f.text)).sort((a, b) => (a.level === b.level ? 0 : a.level === "warn" ? -1 : 1));
 }
 
-/** 世界观没写、会沿用娱乐圈原值的槽（娱乐圈本身除外） */
-export function inheritedSlots(mod: Mod): { key: string; label: string; numeric: boolean }[] {
-  if (mod.kind !== "world" || mod.id === entMod.id) return [];
-  // 关闭了演艺事业的世界用不到签约
-  return ENT_FALLBACK.filter((k) => !has(mod.content, k) && !(k === "contracts" && mod.content.features?.career === false)).map((k) => ({ key: k, label: slotLabel(k), numeric: !!SLOT_INFO[k]?.numeric }));
+/** @deprecated 编辑器已不再展示「沿用娱乐圈」；保留空实现以免旧引用报错 */
+export function inheritedSlots(_mod: Mod): { key: string; label: string; numeric: boolean }[] {
+  return [];
 }
 
-/* 某槽在 prior 链里最终的值（缺省 = 引擎默认，取娱乐圈原值近似） */
+/* 某槽在 prior 链里最终的值（缺省不回落娱乐圈，避免叠加体检误报） */
 function priorValue(prior: Mod[], k: string): unknown {
   for (let i = prior.length - 1; i >= 0; i--) { const v = (prior[i].content as Record<string, unknown>)[k]; if (v !== undefined) return v; }
-  return (ENT_FALLBACK as readonly string[]).includes(k) ? (ent as Record<string, unknown>)[k] : undefined;
+  return undefined;
 }
 const idsOf = (v: unknown) => new Set(Array.isArray(v) ? v.map((x) => (x as { id?: string })?.id).filter(Boolean) as string[] : []);
 const idList = (v: unknown) => (Array.isArray(v) ? v : []) as { id?: string; name?: string; label?: string }[];

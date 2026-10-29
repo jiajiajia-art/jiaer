@@ -19,7 +19,6 @@ import { homePlaceOf } from "../game/homeSpot";
 import { contactsCfg, contactsTitle, groupsOf, metricKey, orgOf, stageOf, type ContactIcon as ContactIconKind, type ContactSrc } from "../game/contacts";
 import ContactIcon from "./ContactIcon";
 import { FAMILY_NPC_IDS } from "../game/family";
-import PortraitUpload from "./PortraitUpload";
 import { CreditsList, StatBars, WorksChips, ProfileBasics, ProfileRelations, ProfileGroup, ProfileHero, RelTag, ResumeTimeline, StatEditor, ProfileBio, ProfilePlaces, ProfileMemory, affiliationOf, relationRefsOf } from "./personFields";
 import IndustryPageHeader from "./IndustryPageHeader";
 import CustomPersonModal from "./CustomPersonModal";
@@ -305,7 +304,7 @@ function RomanceSwitch({ pid, arc }: { pid: string; arc: boolean }) {
 }
 
 export default function NpcTab() {
-  const { game, setNpcAvatar, setNpcPortrait, setRelValue, simContact, simConfess, phoneExchange, busy } = useGame();
+  const { game, setNpcAvatar, setRelValue, simContact, simConfess, phoneExchange, busy } = useGame();
   const [sel, setSel] = useState<string | null>(() => { const p = pendingPerson; pendingPerson = null; return p; });
   useEffect(() => {
     const on = (e: Event) => { setSel((e as CustomEvent<string>).detail); pendingPerson = null; };
@@ -440,9 +439,6 @@ export default function NpcTab() {
           </ProfileGroup>
           <NpcDiary pid={pid} />
           <NpcCgStrip pid={pid} />
-          <ProfileGroup title="专属立绘">
-            <PortraitUpload name={npc.name} src={npc.portrait} onChange={(u) => setNpcPortrait(npc.id, u)} />
-          </ProfileGroup>
         </div> },
         { id: "heart", label: "情感 · 互动", body: <div>
           <ProfileRelations values={{ 现任: spouseRefsNode, 前任: exNode, 父母: parentsNode, 子女: childRefsNode, 其他: otherNode }} noParents={rels.noParents} />
@@ -657,7 +653,7 @@ export default function NpcTab() {
           </div>
         </section>
 
-        {/* ═══ 下方直接展开：资料 · 能力 · 立绘 · 情感 · 记忆 ═══ */}
+        {/* ═══ 下方直接展开：资料 · 能力 · 情感 · 记忆 ═══ */}
         <div className="rounded-[22px] border border-line/75 bg-paper/90 p-4 shadow-[0_10px_28px_-18px_rgba(120,90,200,0.3)]">
           {profileTabsNode}
         </div>

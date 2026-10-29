@@ -6,6 +6,7 @@ import {
   useState,
 } from "react"
 import { createPortal } from "react-dom"
+import { romancePortalRoot } from "../lib/romancePortalRoot"
 import { loadGlobal, saveGlobal } from "../lib/saveScope"
 
 /* 首次游玩引导：依次高亮世界页上的关键位置，每处一句话讲清用途。
@@ -251,6 +252,6 @@ export default function GameTour({ active }: { active: boolean }) {
         </div>
       </div>
     </div>,
-    document.body,
+    romancePortalRoot()!,
   )
 }

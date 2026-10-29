@@ -12,7 +12,7 @@ import StatsTunePanel from "./StatsTunePanel";
 import ModEditorPanel, { blankMod } from "./ModEditorPanel";
 import ModWorkshop from "./ModWorkshop";
 import { EmptyState, ScopeBanner, SearchBox, matches, useConfirm } from "./EditorKit";
-import { addonImpact, chainShadows, inheritedSlots, priorFor } from "../mods/balance";
+import { addonImpact, chainShadows, priorFor } from "../mods/balance";
 import { parseNmod, previewImport, sampleFeatureMod, modDependents, type ImportPreview } from "../mods/nmod";
 import { CategoryChip, ModConflicts, ModFeaturePanels, ModCommPanel, ModLogView, ModTools, NmodImportReview, ReversePack, SourceChip, exportNmod } from "./ModCenter";
 import { IconPencil, IconSpark, StatusMark } from "../lib/icons";
@@ -275,9 +275,6 @@ export default function ModManagerPanel({ inGame = true }: { inGame?: boolean })
               {toolsEl(m, "pl-6")}
               {m.description && <p className="mt-1 pl-6 text-[11.5px] text-ink-soft">{m.description}</p>}
               <p className="mt-0.5 pl-6 text-[10.5px] text-ink-soft">{m.author ? `作者 ${m.author} · ` : ""}{summary(m)}</p>
-              {(() => { const inh = inheritedSlots(m).filter((x) => x.numeric); return inh.length > 0 && (
-                <p className="mt-0.5 pl-6 text-[10.5px] text-gold">沿用娱乐圈数值：{inh.map((x) => x.label).join("、")}</p>
-              ); })()}
             </div>
           );
         })}

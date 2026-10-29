@@ -1,6 +1,6 @@
 import { StarRating } from "../lib/icons";
 import { useMemo, useState } from "react";
-import { RAW_MEALS, STAT_LABELS, type Gig, type MealPlan, type PregnancySlot } from "../game/data";
+import { STAT_LABELS, type Gig, type MealPlan, type PregnancySlot } from "../game/data";
 import { DEFAULT_GIG_PRICES, type GigPriceTable } from "../game/gigLibrary";
 import { FIXED_METRICS } from "../game/fixedEvents";
 import { BonusRow } from "./ModCarsEditor";
@@ -34,9 +34,8 @@ export function ModMealsEditor({ value, onChange }: { value?: MealPlan[]; onChan
   if (!value) {
     return (
       <div className="rounded-xl border border-dashed border-line p-3 text-center text-[11.5px] text-ink-soft">
-        本模组没有「每周吃什么」玩法。
-        <button className={`${btn} ml-2 !border-jade/50 !text-jade`} onClick={() => onChange(structuredClone(RAW_MEALS))}>载入默认 6 档伙食</button>
-        <button className={`${btn} ml-1`} onClick={() => onChange([{ id: sid("meal_"), name: "", cost: 1000, default: true }])}>从空白开始</button>
+            本模组还没写「每周吃什么」。还没写，开局不会生效。
+            <button className={`${btn} ml-2`} onClick={() => onChange([{ id: sid("meal_"), name: "", cost: 1000, default: true }])}>从空白开始</button>
       </div>
     );
   }
@@ -80,7 +79,6 @@ export function ModMealsEditor({ value, onChange }: { value?: MealPlan[]; onChan
       ))}
       <div className="flex flex-wrap gap-1.5">
         <button className={btn} onClick={() => onChange([...list, { id: sid("meal_"), name: "", cost: 1000 }])}>＋ 添加伙食</button>
-        <button className={btn} onClick={() => onChange(structuredClone(RAW_MEALS))}>恢复默认</button>
         <button className={`${btn} hover:!border-danger hover:!text-danger`} onClick={() => onChange(undefined)}>移除此玩法</button>
       </div>
     </div>
@@ -89,8 +87,10 @@ export function ModMealsEditor({ value, onChange }: { value?: MealPlan[]; onChan
 
 /* —— 通告库：搜索 / 星级与类型筛选 / 分页；每条可改门槛、收益、成长 —— */
 const PAGE = 15;
-export function ModGigsEditor({ value, prices, defaults, onChange, onPrices }: {
-  value?: Gig[]; prices?: GigPriceTable; defaults: () => Gig[];
+export function ModGigsEditor({ value, prices, onChange, onPrices }: {
+  value?: Gig[]; prices?: GigPriceTable;
+  /** @deprecated 已无用 */
+  defaults?: () => Gig[];
   onChange: (v?: Gig[]) => void; onPrices: (v?: GigPriceTable) => void;
 }) {
   const list = value ?? [];
@@ -142,9 +142,8 @@ export function ModGigsEditor({ value, prices, defaults, onChange, onPrices }: {
 
       {!value ? (
         <div className="rounded-xl border border-dashed border-line p-3 text-center text-[11.5px] text-ink-soft">
-          本模组没有自带通告。
-          <button className={`${btn} ml-2 !border-jade/50 !text-jade`} onClick={() => onChange(structuredClone(defaults()))}>载入娱乐圈通告库（{defaults().length} 条）</button>
-          <button className={`${btn} ml-1`} onClick={() => onChange([])}>从空白开始</button>
+          本模组还没写通告。还没写，开局不会生效。
+          <button className={`${btn} ml-2`} onClick={() => onChange([])}>从空白开始</button>
         </div>
       ) : (<>
         <div className="flex flex-wrap items-center gap-1.5">
@@ -201,7 +200,6 @@ export function ModGigsEditor({ value, prices, defaults, onChange, onPrices }: {
         <datalist id="gig-types">{types.map((t) => <option key={t} value={t} />)}</datalist>
         <div className="flex flex-wrap items-center gap-1.5">
           <button className={btn} onClick={add}>＋ 新增通告</button>
-          <button className={btn} onClick={() => onChange(structuredClone(defaults()))}>恢复默认</button>
           <button className={`${btn} hover:!border-danger hover:!text-danger`} onClick={() => onChange(undefined)}>移除</button>
           {pages > 1 && <>
             <span className="ml-auto text-[10.5px] tabular-nums text-ink-soft">第 {pg + 1} / {pages} 页 · {shown.length} 条</span>

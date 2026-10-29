@@ -25,7 +25,7 @@ function dirtySession() {
     kind: 'world',
     dependencies: [],
     content: {
-      rooms: { inn: { name: { n: '旅店' } } },
+      rooms: { inn: { name: { n: '旅店' }, desc: '海边旅店', bg: '暖光客厅，沙发靠窗' } },
       startRoom: 'inn',
       customAttrs: [{ id: 'ling', init: 10 }],
       creation: {
@@ -98,6 +98,19 @@ test('脏模组连点下一步_停在玩法且无TypeError', { timeout: 60_000 }
     await page.goto(PAGE, { waitUntil: 'domcontentloaded', timeout: 45_000 });
     const next = page.getByRole('button', { name: /下一步：/ });
     await next.waitFor({ timeout: 20_000 });
+    const tabCount = page.locator('button[aria-pressed="true"] .wg-tab-count');
+    await tabCount.waitFor({ timeout: 15_000 });
+    const tabColors = await tabCount.evaluate((el) => {
+      const style = getComputedStyle(el);
+      return { color: style.color, bg: style.backgroundColor };
+    });
+    assert.notEqual(tabColors.color, 'rgb(255, 255, 255)', `选中页签数量白字看不清：${JSON.stringify(tabColors)}`);
+    const thumb = page.getByRole('button', { name: '上传背景图' });
+    await thumb.waitFor({ timeout: 15_000 });
+    const broken = await thumb.locator('img').evaluateAll((imgs) => imgs
+      .filter((img) => img.complete && img.naturalWidth === 0)
+      .map((img) => img.getAttribute('src') || ''));
+    assert.deepEqual(broken, [], `场景背景图缩略图裂开：${broken.join(', ')}`);
     for (let i = 0; i < 4; i++) {
       const label = await next.innerText();
       await next.click();

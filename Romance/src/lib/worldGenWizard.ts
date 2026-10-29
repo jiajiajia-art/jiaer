@@ -108,9 +108,8 @@ export const DEFAULT_WORLD_GEN_EDITOR_STEP_IDS: readonly string[] = Object.freez
   // 开局时间 · 资源（出行 / 天气属玩法扩展，不进默认基础世界）
   "travelTime",
   "startResources",
-  // 建角与人物
-  "stats",
-  "creationFields",
+  // 建角与人物（旧 stats / creationFields 在 normalize 时并入 creation）
+  "creation",
   "creationPools",
   "npcs",
   "relations",
@@ -161,17 +160,10 @@ const HUB_STEPS: WorldGenEditorStep[] = EDITOR_HUB_MENUS.map((m) => ({
 const MOD_STEPS: WorldGenEditorStep[] = [
   // ① 基础（已取消「开局设定」聚合；时间字段并入时间与推进）
   { id: "travelTime", group: "① 基础", name: "时间与推进", desc: "开局日期 / 时刻 · 每日作息 · 行动点 · 推进节奏 · 年龄随日历", contentIds: ["world"], source: "mod" },
-  { id: "features", group: "① 基础", name: "功能开关", desc: "关闭后界面自动隐藏对应玩法", contentIds: ["world"], source: "mod" },
-  { id: "navTabs", group: "① 基础", name: "底栏页签", desc: "游戏底部导航显示名", contentIds: ["world"], source: "mod" },
-  { id: "phoneAppsCfg", group: "① 基础", name: "手机应用配置", desc: "名称 · 图标 · 顺序 · 开局预装 · 小手机试玩", contentIds: ["world", "opening"], source: "mod" },
-  { id: "theme", group: "① 基础", name: "主题外观", desc: "皮肤 · 主题色 · 字体 · 深浅色", contentIds: ["opening"], source: "mod" },
-  { id: "bgm", group: "① 基础", name: "内置音乐", desc: "上传 · 链接 · 开局自动播放", contentIds: ["opening"], source: "mod" },
-  { id: "audioRefs", group: "① 基础", name: "引用音频库", desc: "只引用作品音频库里已有的 id，不打包文件", contentIds: ["opening"], source: "mod" },
-  { id: "avatars", group: "① 基础", name: "头像库与匹配优先级", desc: "我的头像池 · 平台公共分类 · 私人/公共库优先 · 通用兜底（随本剧保存）", contentIds: ["characters"], source: "mod" },
 
-  // ② 角色（「人物」「人物线路」已在 Hub）
-  { id: "stats", group: "② 角色", name: "角色属性", desc: "八维叫法 / 停用 / 上下限 · 自定义属性 · 分档显示", contentIds: ["characters", "world"], source: "mod" },
-  { id: "creationFields", group: "② 角色", name: "建角字段", desc: "字段改名 · 锁定 · 选项联动 · 自定义字段", contentIds: ["characters"], source: "mod" },
+  // ② 角色（「人物」「人物线路」已在 Hub；头像库是人物素材）
+  { id: "avatars", group: "② 角色", name: "头像库与匹配优先级", desc: "我的头像池 · 平台公共分类 · 私人/公共库优先 · 通用兜底（随本剧保存）", contentIds: ["characters"], source: "mod" },
+  { id: "creation", group: "② 角色", name: "建角", desc: "创作者属性 · 建角字段改名 / 锁定 / 选项联动（开局页只显示这里配过的）", contentIds: ["characters", "world"], source: "mod" },
   { id: "creationPools", group: "② 角色", name: "建角选项池", desc: "外形 · 身份 · 家世 · 方向 · 星座 · 母校 · 父母职业", contentIds: ["characters"], source: "mod" },
   { id: "npcs", group: "② 角色", name: "人物（模组库）", desc: "写入模组的 NPC 表：名字 · 身份 · 地点 · 头像池 · 时间线 · 音色", contentIds: ["characters"], source: "mod" },
   { id: "relations", group: "② 角色", name: "关系玩法", desc: "表白门槛 · 婚礼费用与好感 · NPC 牵线 · 伴侣加成", contentIds: ["characters"], source: "mod" },
@@ -190,18 +182,16 @@ const MOD_STEPS: WorldGenEditorStep[] = [
   // 地点已并入①基础（取消独立「④ 世界」页签）；出行属玩法 Mod
   { id: "rooms", group: "① 基础", name: "地点（模组库）", desc: "多级子地点 · 树状预览 · 准入 · 出口 · 开局地点", contentIds: ["locations"], source: "mod" },
 
-  // ④ 剧情（含原开场：开场剧情 / 美化；封面仍在①基础）
-  { id: "prompt", group: "④ 剧情", name: "世界观提示词", desc: "即系统提示词 · 可视化编辑 · 支持预览", contentIds: ["world"], source: "mod" },
+  // ④ 剧情（开场页与剧情美化在⑥美化；结局插图仍随结局留在这里）
+  { id: "prompt", group: "① 基础", name: "剧本基调", desc: "写给模型的整段基调（原 GM / 世界观 / 口吻合并）", contentIds: ["world"], source: "mod" },
   { id: "lore", group: "④ 剧情", name: "详细设定", desc: "地区 · 势力 · 角色 · 只发主角所在地区的完整设定", contentIds: ["world", "locations"], source: "mod" },
   { id: "festivals", group: "④ 剧情", name: "节日", desc: "平时只发名称 · 临近或提到时发完整设定", contentIds: ["world", "sideEvents"], source: "mod" },
-  { id: "cover", group: "① 基础", name: "开局封面", desc: "画布布局 · AI 对话生成 · 自由搭配 · 自定义 HTML（唯一入口）", contentIds: ["opening"], source: "mod" },
-  { id: "opening", group: "④ 剧情", name: "开场剧情", desc: "开场页外观 · 开场白 · 头图 / 视频", contentIds: ["opening"], source: "mod" },
   { id: "fixedEvents", group: "④ 剧情", name: "固定事件（模组库）", desc: "首次事件 · 预设剧本 · 时间 / 条件触发 · 事件链", contentIds: ["mainPlot", "sideEvents", "opening"], source: "mod" },
   { id: "storylines", group: "④ 剧情", name: "主线与目标", desc: "有序节点 · 完成 / 失败条件 · 奖励 · 失败分支", contentIds: ["mainPlot"], source: "mod" },
   { id: "endings", group: "④ 剧情", name: "结局与时限", desc: "主线时限 · 自定义固定结局 · 结局插图与评级 · 评定维度", contentIds: ["mainPlot"], source: "mod" },
-  { id: "lookRules", group: "④ 剧情", name: "剧情美化", desc: "条件满足时自动切换外观 · 玩家可在美化里关闭", contentIds: ["opening", "mainPlot"], source: "mod" },
 
-  // ⑤ 玩法 Mod（可视化卡片；按已添加动态出配置表单）
+  // ⑤ 玩法 Mod（功能开关与玩法本体；手机外观与底栏样子在⑥）
+  { id: "features", group: "⑤ 玩法 Mod", name: "功能开关", desc: "关闭后界面自动隐藏对应玩法", contentIds: ["world"], source: "mod" },
   { id: "playModInstalls", group: "⑤ 玩法 Mod", name: "已添加的玩法", desc: "推荐 · 确认添加 · 启用开关 · 底栏名 · 显隐", contentIds: ["world", "mainPlot"], source: "mod" },
   { id: "travel", group: "⑤ 玩法 Mod", name: "出行与交通", desc: "须添加玩法后自定义：选择区标题 · 货币 · 出行方式 · 花费", contentIds: ["locations", "world"], source: "mod" },
   { id: "cars", group: "⑤ 玩法 Mod", name: "座驾", desc: "须添加座驾包后配置购车与切换（建议先加出行与交通）", contentIds: ["locations", "world"], source: "mod" },
@@ -212,7 +202,17 @@ const MOD_STEPS: WorldGenEditorStep[] = [
   { id: "imageCrisis", group: "⑤ 玩法 Mod", name: "舆情人设", desc: "人设 · 公开行动 · 危机 · 公关应对 · 判定权重", contentIds: ["characters", "sideEvents"], source: "mod" },
   { id: "weeklyPaper", group: "⑤ 玩法 Mod", name: "娱乐周报", desc: "报头 · 副标题", contentIds: ["world"], source: "mod" },
   { id: "meals", group: "⑤ 玩法 Mod", name: "每周吃什么", desc: "伙食档位 · 每周花费 · 压力 / 能力 / 气色", contentIds: ["world"], source: "mod" },
-  { id: "pregnancy", group: "⑤ 玩法 Mod", name: "孕育", desc: "开关 · 孕期 · 受孕率 · 察觉时间 · 孩子名字池", contentIds: ["characters", "world"], source: "mod" },
+  { id: "pregnancy", group: "⑤ 玩法 Mod", name: "孕育", desc: "孕期 · 受孕率 · 察觉时间 · 孩子名字池", contentIds: ["characters", "world"], source: "mod" },
+
+  // ⑥ 美化（原「⑥ 开场」并入；不收玩法数据与世界设定）
+  { id: "cover", group: "⑥ 美化", name: "开局封面", desc: "画布布局 · AI 对话生成 · 自由搭配 · 自定义 HTML（唯一入口）", contentIds: ["opening"], source: "mod" },
+  { id: "phoneAppsCfg", group: "⑥ 美化", name: "手机应用配置", desc: "显示名 · 图标 · 主屏顺序 · 开局预装 · 小手机试玩", contentIds: ["world", "opening"], source: "mod" },
+  { id: "theme", group: "⑥ 美化", name: "皮肤美化", desc: "皮肤 · 主题色 · 字体 · 深浅色 · 底色描边 · 阴影动画 · 自定义 CSS", contentIds: ["opening"], source: "mod" },
+  { id: "bgm", group: "⑥ 美化", name: "音乐", desc: "内嵌 / 本机 / 链接 · 开局自动播放 · 平台曲目只记 id", contentIds: ["opening"], source: "mod" },
+  { id: "audioRefs", group: "⑥ 美化", name: "作品音频引用", desc: "只引用作品音频库里已有的 id，不打包文件", contentIds: ["opening"], source: "mod" },
+  { id: "opening", group: "⑥ 美化", name: "开场剧情", desc: "开场页外观 · AI 对话 / 粘贴 HTML", contentIds: ["opening"], source: "mod" },
+  { id: "lookRules", group: "⑥ 美化", name: "剧情美化", desc: "条件满足时自动切换外观 · 玩家可在美化里关闭", contentIds: ["opening", "mainPlot"], source: "mod" },
+  { id: "navTabs", group: "⑥ 美化", name: "底栏页签", desc: "图标 · 顺序 · 选中态 · 显示名", contentIds: ["world"], source: "mod" },
 ];
 
 export const WORLD_GEN_EDITOR_GROUP_ORDER = [
@@ -224,6 +224,7 @@ export const WORLD_GEN_EDITOR_GROUP_ORDER = [
   "③ 养成",
   "④ 剧情",
   "⑤ 玩法 Mod",
+  "⑥ 美化",
 ] as const;
 
 export const WORLD_GEN_EDITOR_STEPS: readonly WorldGenEditorStep[] = Object.freeze([
@@ -310,7 +311,11 @@ export function defaultWorldGenStep1(): WorldGenStep1 {
  */
 export function normalizeWorldGenStep1(s1: WorldGenStep1): WorldGenStep1 {
   const known = new Set(ALL_WORLD_GEN_EDITOR_STEP_IDS);
-  let ids = (s1.editorStepIds ?? []).filter((id) => known.has(id));
+  // 功能注释：旧草稿把「角色属性 / 建角字段」拆成两步；合成「建角」后把二者映射为 creation
+  const raw = (s1.editorStepIds ?? []).flatMap((id) =>
+    id === "stats" || id === "creationFields" ? ["creation"] : [id],
+  );
+  let ids = [...new Set(raw.filter((id) => known.has(id)))];
   const ver = s1.scopeVersion ?? 1;
   const extendedSelected = EXTENDED_WORLD_GEN_EDITOR_STEP_IDS.filter((id) => ids.includes(id)).length;
   const looksLikeLegacyFullSelect =

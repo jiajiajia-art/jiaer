@@ -18,6 +18,7 @@ import { applyGigPrices } from "../game/gigLibrary";
 import type { PersonContent, RoomActivity, RoomContent, RoomItem } from "../worlds/star2005/content";
 import { phoneAppVisible, resolvePhoneApps } from "../lib/phoneAppsConfig";
 import { normalizeStartMetList } from "../lib/normalizeStartMet";
+import { readScriptTone } from "../lib/scriptTone";
 
 const K_USER = "star:mods:user";
 const K_SEL = "star:mods:selection";
@@ -55,7 +56,8 @@ let cache: ResolvedWorld | null = null;
 let version = 0;
 /** 作者预览：内存中的草稿模组，不写入用户模组库 */
 let authorPreviewMod: Mod | null = null;
-let authorPreviewRestore: ModSelection | null = null;
+/** 功能注释：预览前同时记下 applied + selection，退出时一并还原（含磁盘） */
+let authorPreviewRestore: { applied: ModSelection; selection: ModSelection } | null = null;
 
 /* 监听器用函数声明懒建：函数声明会被提升，模块循环引用时（如 ext.ts / audioLib.ts 在本模块
  * 尚未执行完时就 subscribeMods）也不会触发 TDZ「Cannot access before initialization」 */
@@ -186,7 +188,9 @@ export const getApplied = () => applied;
 export const isAuthorPreviewModActive = () => !!authorPreviewMod;
 
 /**
- * 功能注释：用编辑器草稿临时覆盖「生效」组合；退出时还原，绝不写 K_APPLIED / 用户模组库。
+ * 功能注释：用编辑器草稿临时覆盖「生效」与「选择」。
+ * 封面 / 建角读的是 selection（selectedSlot），只改 applied 会导致预览仍显示库里旧世界；
+ * 内存同步 selection，不写 K_SEL / K_APPLIED，退出时还原。
  */
 export function beginAuthorPreviewMod(draft: Mod): { ok: true } | { ok: false; errors: string[] } {
   try {
@@ -197,19 +201,23 @@ export function beginAuthorPreviewMod(draft: Mod): { ok: true } | { ok: false; e
     };
     if (!mod.id?.trim()) return { ok: false, errors: ["缺少模组 id"] };
     if (mod.kind !== "world" && mod.kind !== "addon") mod.kind = "world";
-    authorPreviewRestore = { world: applied.world, addons: [...applied.addons] };
+    authorPreviewRestore = {
+      applied: { world: applied.world, addons: [...applied.addons] },
+      selection: { world: selection.world, addons: [...selection.addons] },
+    };
     authorPreviewMod = mod;
     if (mod.kind === "world") {
-      applied = {
-        world: mod.id,
-        addons: (mod.dependencies ?? []).filter((id) => {
-          const d = id === mod.id ? null : (builtins().find((b) => b.id === id) || userMods.find((u) => u.id === id));
-          return d?.kind === "addon";
-        }),
-      };
+      const addons = (mod.dependencies ?? []).filter((id) => {
+        const d = id === mod.id ? null : (builtins().find((b) => b.id === id) || userMods.find((u) => u.id === id));
+        return d?.kind === "addon";
+      });
+      applied = { world: mod.id, addons };
+      // 功能注释：封面 Cover / 建角 CharacterCreate 走 selectedSlot，必须与草稿 id 对齐
+      selection = { world: mod.id, addons };
     } else {
       const addons = [...applied.addons.filter((id) => id !== mod.id), mod.id];
       applied = { world: applied.world || DEFAULT_WORLD, addons };
+      selection = { ...selection, addons };
     }
     emit();
     return { ok: true };
@@ -220,11 +228,14 @@ export function beginAuthorPreviewMod(draft: Mod): { ok: true } | { ok: false; e
   }
 }
 
-/** 功能注释：结束作者预览，还原进入前的生效模组组合（不触碰玩家在管理面板的「选择」） */
+/** 功能注释：结束作者预览，还原进入前的 applied + selection（并写回磁盘，防止预览期被 commit 污染） */
 export function endAuthorPreviewMod() {
   authorPreviewMod = null;
   if (authorPreviewRestore) {
-    applied = authorPreviewRestore;
+    applied = authorPreviewRestore.applied;
+    selection = authorPreviewRestore.selection;
+    write(K_APPLIED, applied);
+    write(K_SEL, selection);
     authorPreviewRestore = null;
   }
   emit();
@@ -349,10 +360,11 @@ function resolve(sel: ModSelection): ResolvedWorld {
     content.storylines = mergeById(content.storylines, c.storylines);
     content.lookRules = mergeById(content.lookRules, c.lookRules);
     content.worldRules = mergeById(content.worldRules, c.worldRules);
-    // 提示片段：worldIntro / terminology 叠加追加，其余覆盖
+    // 提示片段：剧本基调 / 旧三字段 / terminology 叠加追加，其余覆盖
     const p = c.prompt ?? {};
     content.prompt = {
       ...content.prompt, ...p,
+      scriptTone: [content.prompt.scriptTone, p.scriptTone].filter(Boolean).join("\n\n") || undefined,
       worldIntro: [content.prompt.worldIntro, p.worldIntro].filter(Boolean).join("\n") || undefined,
       terminology: [content.prompt.terminology, p.terminology].filter(Boolean).join("\n") || undefined,
     };
@@ -483,6 +495,22 @@ export function moveAddon(id: string, delta: -1 | 1) {
 }
 /* 把「选择」提交为「生效」：仅在开新局时调用 */
 export function commitSelection() {
+  // 功能注释：作者预览中 selection 已指向草稿；禁止写盘，也禁止用库内旧选择盖掉草稿
+  if (authorPreviewMod) {
+    const addons =
+      authorPreviewMod.kind === "world"
+        ? (authorPreviewMod.dependencies ?? []).filter((id) => {
+            const d = id === authorPreviewMod!.id ? null : (builtins().find((b) => b.id === id) || userMods.find((u) => u.id === id));
+            return d?.kind === "addon";
+          })
+        : [...selection.addons];
+    applied = {
+      world: authorPreviewMod.kind === "world" ? authorPreviewMod.id : (applied.world || DEFAULT_WORLD),
+      addons,
+    };
+    emit();
+    return;
+  }
   applied = { world: selection.world, addons: [...selection.addons] };
   write(K_APPLIED, applied);
   emit();
@@ -495,6 +523,20 @@ export function saveAddons(s: { worldId?: string; addons?: string[]; entSplit?: 
   return [...ENT_PACK_IDS.filter((id) => !a.includes(id)), ...a];
 }
 export function activateWorld(worldId: string | undefined, addons: string[] | undefined) {
+  // 功能注释：预览期草稿叠加层优先，读档/切局不得把 applied 打回娱乐圈等旧世界
+  if (authorPreviewMod?.kind === "world") {
+    if (applied.world !== authorPreviewMod.id) {
+      applied = {
+        world: authorPreviewMod.id,
+        addons: (authorPreviewMod.dependencies ?? []).filter((id) => {
+          const d = id === authorPreviewMod!.id ? null : (builtins().find((b) => b.id === id) || userMods.find((u) => u.id === id));
+          return d?.kind === "addon";
+        }),
+      };
+      emit();
+    }
+    return;
+  }
   const w = worldId && modById(worldId)?.kind === "world" ? worldId : DEFAULT_WORLD;
   const next = { world: w, addons: (addons ?? []).filter((id) => modById(id)?.kind === "addon") };
   if (next.world === applied.world && next.addons.join("|") === applied.addons.join("|")) return;
@@ -842,9 +884,9 @@ export const LIVE_ITEMS: RoomItem[] = liveArray(() => getWorldItems());
 export const LIVE_GIGS: Gig[] = liveArray(() => getWorldGigs());
 export const LIVE_LOCATIONS: MapLocation[] = liveArray(() => getWorldLocations());
 
-/* AI 提示：开篇 GM 段（娱乐圈下与原文逐字一致）+ 世界观 / 文风 / 术语附加段 */
+/* AI 提示：剧本基调整段作开篇（旧模组仍由 gmIntro / worldIntro / 口吻并入） */
 export function getWorldPromptHeader(fallback = ""): string {
-  return getWorld().content.prompt.gmIntro ?? fallback;
+  return readScriptTone(getWorld().content.prompt) || fallback;
 }
 /* 取提示片段（未声明 → fallback） */
 export function promptFrag<K extends keyof PromptFragments>(k: K, fallback: NonNullable<PromptFragments[K]>): NonNullable<PromptFragments[K]> {
@@ -852,9 +894,8 @@ export function promptFrag<K extends keyof PromptFragments>(k: K, fallback: NonN
 }
 export function getWorldPromptFragment(): string {
   const p = getWorld().content.prompt;
+  // 功能注释：基调（含旧三字段并入）已在 header；此处只追加仍独立的术语 / 补充规则
   const parts = [
-    p.worldIntro && `【世界观】\n${p.worldIntro}`,
-    p.narratorPersona && `【叙事口吻】\n${p.narratorPersona}`,
     p.terminology && `【术语】\n${p.terminology}`,
     p.extraRules && `【补充规则】\n${p.extraRules}`,
   ].filter(Boolean);

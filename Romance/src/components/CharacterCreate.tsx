@@ -2,7 +2,8 @@ import { lazyPanel } from "../lib/lazyPanel";
 const WorldRuleCards = lazyPanel(() => import("./WorldRulesPanel").then((m) => ({ default: m.WorldRuleCards })));
 import { useState, useEffect, useRef, type ReactNode } from "react";
 import { useGame } from "../store/gameCtx";
-import { DEFAULT_ATTRS, randomPlayerSeed } from "../lib/store";
+import { randomPlayerSeed } from "../lib/store";
+import { openingSelectFieldOn } from "../lib/creationOpening";
 import { syncPlayerNameChange } from "../lib/syncPlayerName";
 import { randomName, type NameGender, type NameStyle } from "../game/names";
 import type { PlayPrefs, Player } from "../lib/types";
@@ -154,6 +155,11 @@ export default function CharacterCreate() {
   const bf = (k: BuiltinFieldKey): BuiltinFieldCfg => cc.builtin?.[k] ?? {};
   const bl = (k: BuiltinFieldKey, fb: string) => bf(k).label || fb;
   const shown = (k: BuiltinFieldKey) => !bf(k).hidden;
+  /* 功能注释：出道身份 / 出身阶层 / 家世叙述——创作者没配选项也没锁定时，开局页不自补 */
+  const showIdentity = openingSelectFieldOn(bf("identity"), IDENTITY_OPTS.length);
+  const showKlass = openingSelectFieldOn(bf("klass"), KLASS_OPTS.length);
+  const showBackground = openingSelectFieldOn(bf("background"), BG_OPTS.length);
+  const creatorAttrs = selectedSlot("customAttrs") ?? [];
   const fixedKey = JSON.stringify(cc.builtin ?? {});
   useEffect(() => {
     const keys: BuiltinFieldKey[] = ["name", "gender", "identity", "description", "klass", "background", "fatherJob", "motherJob"];
@@ -317,7 +323,8 @@ export default function CharacterCreate() {
       klass: form.klass,
       description: form.description,
       avatar: form.avatar,
-      attrs: DEFAULT_ATTRS.map((a) => ({ ...a })),
+      // 功能注释：不预填演技/歌艺等八维；创作者属性由开局 GameContext 按 customAttrs 写入（只掷一次）
+      attrs: [],
       history: [],
       extra,
     };
@@ -446,7 +453,10 @@ export default function CharacterCreate() {
         const choose = hide.choose ? [] : [
           ...free("name", "姓名"), ...free("gender", "性别"), "头像", "出生月日 → 星座",
           ...free("fatherJob", "父亲职业"), ...free("motherJob", "母亲职业"),
-          ...(BACKGROUNDS.length && shown("family") ? [bl("family", "家庭背景")] : []), ...(KLASS_OPTS.length ? free("klass", "出身阶层") : []), ...free("background", "家世叙述"),
+          ...(BACKGROUNDS.length && shown("family") ? [bl("family", "家庭背景")] : []),
+          ...(showKlass ? free("klass", "出身阶层") : []),
+          ...(showBackground ? free("background", "家世叙述") : []),
+          ...(showIdentity ? free("identity", cc.identityLabel ?? "身份") : []),
           ...(STYLES.length ? ["外形风格"] : []), ...free("description", "人设描述"),
           ...(career ? ["签约经纪公司"] : []),
           ...pFields.filter((f) => !f.locked).map((f) => f.label),
@@ -572,22 +582,38 @@ export default function CharacterCreate() {
             <span className="ml-auto min-w-0 truncate text-right text-[12px] font-medium text-gold">{optNote({ ...zodiac, desc: zodiac.bonus })}</span>
           </div>}
         </div>
-        {shown("identity") && (IDENTITY_OPTS.length ? (
+        {showIdentity && (
           <fieldset disabled={bf("identity").locked} className="min-w-0">
             <Head k="identity" text={bl("identity", cc.identityLabel ?? "身份")} hint={PICKABLE && path ? `「${path.name}」路线下的细分身份，登记进履历` : "登记进履历，AI 不会擅改"} />
-            <select className={selectField} value={form.identity} onChange={(e) => upd({ identity: e.target.value })}>
-              {IDENTITY_OPTS.map((o) => <option key={o}>{o}</option>)}
-            </select>
+            {IDENTITY_OPTS.length ? (
+              <select className={selectField} value={form.identity} onChange={(e) => upd({ identity: e.target.value })}>
+                {IDENTITY_OPTS.map((o) => <option key={o}>{o}</option>)}
+              </select>
+            ) : (
+              <input disabled className={field} value={form.identity} readOnly />
+            )}
           </fieldset>
-        ) : (
-          <div>
-            <div className="mb-1.5 flex items-center gap-2"><span className="text-[12.5px] font-bold text-ink">{bl("identity", "身份")}</span><span className="text-[10.5px] text-ink-soft">登记进履历，AI 不会擅改</span></div>
-            <input disabled={bf("identity").locked} className={field} value={form.identity} onChange={(e) => upd({ identity: e.target.value })} placeholder="例如：高二（3）班转学生" />
-          </div>
-        ))}
+        )}
       </Card>
     </>
   );
+
+  /* 功能注释：开局属性区只列创作者「建角」里加过的项；没有就不渲染整块 */
+  const stepAttrs = creatorAttrs.length > 0 ? (
+    <Card title="属性" desc="按创作者配置的顺序；开局后写入档案，此处只预览">
+      <ul className="space-y-2">
+        {creatorAttrs.map((a) => (
+          <li key={a.id} className="flex items-center gap-2 rounded-xl border border-line/70 bg-paper px-3 py-2">
+            <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">{a.label || "未命名"}</span>
+            <span className="shrink-0 text-[12px] text-ink-soft">
+              {a.initMode === "dice" ? `开局掷 1d${a.dice ?? "?"}` : `开局 ${a.init}`}
+              {a.max != null && a.max > 0 ? ` · 上限 ${a.max}` : ""}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  ) : null;
 
   /* ② 人设 · 天赋形象：外形风格 · 人物描述（线路已在上一步选定，自设页不再重复展示「人物线路选择」） */
   const stepTalent = (
@@ -624,7 +650,7 @@ export default function CharacterCreate() {
   /* ② 人设 · 家世：家庭背景 · 阶层 · 家世叙述 · 双亲 · 更多设定 */
   const stepFamily = (
     <>
-      {((BACKGROUNDS.length > 0 && shown("family")) || (KLASS_OPTS.length > 0 && shown("klass")) || shown("background")) && (
+      {((BACKGROUNDS.length > 0 && shown("family")) || showKlass || showBackground) && (
         <Card title="家庭出身" desc={BACKGROUNDS.some((o) => optFx(o)) ? "影响开局资源与剧情底色" : "决定人物的剧情底色"}>
           {BACKGROUNDS.length > 0 && shown("family") && (
             <div>
@@ -636,7 +662,7 @@ export default function CharacterCreate() {
             </div>
           )}
           <div className="grid gap-3 sm:grid-cols-2">
-            {KLASS_OPTS.length > 0 && shown("klass") && (
+            {showKlass && (
               <fieldset disabled={bf("klass").locked} className="min-w-0">
                 <Head k="klass" text={bl("klass", "出身阶层")} hint="叙事底色" />
                 <select className={selectField} value={form.klass} onChange={(e) => upd({ klass: e.target.value })}>
@@ -644,16 +670,18 @@ export default function CharacterCreate() {
                 </select>
               </fieldset>
             )}
-            {shown("background") && <fieldset disabled={bf("background").locked} className="min-w-0">
-              <Head k="background" text={bl("background", "家世叙述")} />
-              {BG_OPTS.length ? (
-                <select className={selectField} value={form.background} onChange={(e) => upd({ background: e.target.value })}>
-                  {BG_OPTS.map((o) => <option key={o}>{o}</option>)}
-                </select>
-              ) : (
-                <input className={field} value={form.background} onChange={(e) => upd({ background: e.target.value })} placeholder="例如：普通工薪家庭" />
-              )}
-            </fieldset>}
+            {showBackground && (
+              <fieldset disabled={bf("background").locked} className="min-w-0">
+                <Head k="background" text={bl("background", "家世叙述")} />
+                {BG_OPTS.length ? (
+                  <select className={selectField} value={form.background} onChange={(e) => upd({ background: e.target.value })}>
+                    {BG_OPTS.map((o) => <option key={o}>{o}</option>)}
+                  </select>
+                ) : (
+                  <input disabled className={field} value={form.background} readOnly />
+                )}
+              </fieldset>
+            )}
           </div>
         </Card>
       )}
@@ -815,7 +843,7 @@ export default function CharacterCreate() {
   // 人设一页填完（「重掷」只动这一页）；开局页合约在上，偏好与规则在下
   const body: Record<string, ReactNode> = {
     path: stepPath,
-    who: <div className="space-y-3">{stepWho}{stepTalent}{stepFamily}</div>,
+    who: <div className="space-y-3">{stepWho}{stepAttrs}{stepTalent}{stepFamily}</div>,
     setup: <div className="space-y-3">{career && stepSign}{stepFactions}{stepSetup}</div>,
   };
 

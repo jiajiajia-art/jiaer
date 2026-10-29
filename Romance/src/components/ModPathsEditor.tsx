@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
 import {
-  RAW_CREATION, RAW_IDENTITIES, STAT_LABELS, creationCopy, loadPathLocks, savePathLock, clearPathLocks,
+  STAT_LABELS, creationCopy, loadPathLocks, savePathLock, clearPathLocks,
   type CreationCopy, type CreationPath, type Option, type PathCardPart, type PathNpc,
 } from "../game/data";
 import { complete, isConfigured } from "../lib/ai";
 import { loadConfig } from "../lib/store";
-import { CREATION_VARS, fillText, varsFrom } from "../game/creationText";
 import { LIVE_LOCATIONS, LIVE_PEOPLE } from "../mods/registry";
 import { FIXED_METRICS } from "../game/fixedEvents";
 import IntInput from "./IntInput";
@@ -37,38 +36,24 @@ const btn = "rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] 
 const lines = (s: string) => s.split("\n").map((x) => x.trim()).filter(Boolean);
 const num = (v: unknown) => Math.round(Number(v) || 0);
 
-/* 页面文案：带占位符插入与实时预览 */
-function CopyField({ label, value, placeholder, vars, onChange, onFocus, area }: { label: string; value?: string; placeholder: string; vars: Record<string, string>; onChange: (v: string) => void; onFocus: (el: HTMLInputElement | HTMLTextAreaElement) => void; area?: boolean }) {
-  const shown = fillText(value || placeholder, vars);
-  const props = { className: `${inp} mt-0.5`, value: value ?? "", placeholder, onChange: (e: { target: { value: string } }) => onChange(e.target.value), onFocus: (e: { currentTarget: HTMLInputElement | HTMLTextAreaElement }) => onFocus(e.currentTarget) };
-  return (
-    <label className="block text-[11px] text-ink-soft">{label}
-      {area ? <textarea rows={2} {...props} /> : <input {...props} />}
-      <span className="mt-0.5 block truncate text-[10.5px] text-ink-soft/80">预览：<span className="text-ink">{shown || "（空）"}</span>{!value && " · 默认"}</span>
-    </label>
-  );
-}
-
 /* 弹窗卡片里可以对玩家隐藏的内容块 */
 const CARD_PARTS: { k: PathCardPart; label: string }[] = [
   { k: "about", label: "开局处境" }, { k: "choose", label: "可自由决定" }, { k: "fixed", label: "固定不可改" },
   { k: "perks", label: "开局数值" }, { k: "npcs", label: "开局人际" }, { k: "soon", label: "未解锁路径" },
 ];
 
-export default function ModPathsEditor({ creation, identities, world, worldName, city, startDate, school, npcs = [], rooms = [], events = [], statsValue, attrsValue, onChange }: {
+export default function ModPathsEditor({ creation, identities, world, npcs = [], rooms = [], events = [], statsValue, attrsValue, onChange }: {
   creation?: CreationCopy; identities?: Option[]; world: string;
   npcs?: { id: string; name: string }[]; // 可配开局人际 / 预设主角的固定人物
   rooms?: { id: string; name: string }[]; // 可选的开局地点
   events?: { id: string; name: string }[]; // 事件库（绑定开局事件）
   statsValue?: import("../game/data").StatsSlot; attrsValue?: import("../lib/types").AttrDef[]; // 全局属性池来源（正在编辑的模组）
-  worldName?: string; city?: string; startDate?: string; school?: string; // 文案预览用：取正在编辑的模组
   onChange: (p: { creation: CreationCopy; identities: Option[] }) => void;
 }) {
   events = events.length ? events : liveEvents();
   const pool = statsValue || attrsValue ? [...new Set(valueSources({ stats: statsValue, attrs: attrsValue, paths: creation?.paths }).map((s) => s.label))] : undefined;
   rooms = rooms.length ? rooms : LIVE_LOCATIONS.map((l) => ({ id: l.id, name: l.name })); // 模组没自建地点时用依赖世界的地图
   const [busy, setBusy] = useState(false);
-  const [focusEl, setFocusEl] = useState<{ el: HTMLInputElement | HTMLTextAreaElement; apply: (v: string) => void } | null>(null);
   const [err, setErr] = useState("");
   const cc = creation ?? {};
   const paths = Array.isArray(cc.paths) ? cc.paths : [];
@@ -77,14 +62,11 @@ export default function ModPathsEditor({ creation, identities, world, worldName,
   const idOf = (id: string): Option => ids.find((o) => o.id === id) ?? { id, name: "", desc: "", tag: "" };
   const commit = (np: CreationPath[], ni: Option[], extra: Partial<CreationCopy> = {}) => onChange({ creation: { ...cc, ...extra, paths: np }, identities: ni });
   const setPath = (i: number, p: Partial<CreationPath>) => commit(paths.map((x, j) => (j === i ? { ...x, ...p } : x)), ids);
-  // 预览占位值：按正在编辑的模组（城市术语 / 开局日期 / 母校 / 路径）
-  const pvars = varsFrom({ world: worldName, path: paths.find((p) => p.open)?.name, city, date: startDate, school, paths });
   const remove = (i: number) => { const id = paths[i].id; commit(paths.filter((_, j) => j !== i), ids.filter((o) => o.id !== id)); };
   const add = () => {
     const id = `path${Date.now().toString(36).slice(-4)}`;
     commit([...paths, { id, name: "", tag: "", blurb: "", open: true, about: "", fixed: [], choose: [], perks: "" }], [...ids, { id, name: "", desc: "", tag: "" }]);
   };
-  const loadDefault = () => commit(structuredClone(RAW_CREATION.paths ?? []), structuredClone(RAW_IDENTITIES), { pathTitle: RAW_CREATION.pathTitle, pathIntro: RAW_CREATION.pathIntro });
 
   const aiGen = async () => {
     const cfg = loadConfig();
@@ -93,10 +75,9 @@ export default function ModPathsEditor({ creation, identities, world, worldName,
     try {
       const raw = await complete(cfg, [
         { role: "system", content: "你是女性向模拟游戏的剧情与数值策划。只输出 JSON，不要任何解释或代码块标记。" },
-        { role: "user", content: `为下面的世界观设计「人物线路」（建角第一步，决定玩家的人生开局）。\n世界观：${world}\n本世界已有的属性 / 词条名（优先沿用，也可按题材新起名字）：${[...Object.values(STAT_LABELS), ...FIXED_METRICS.filter((m) => m.key !== "week").map((m) => m.label)].join("、")}\n输出格式：{"pathTitle":"页面标题","pathIntro":"一句引导语","paths":[{"id":"英文id","name":"四字左右的路径名","tag":"短标签","blurb":"一句话卖点","about":"80~150字的开局处境，用第二人称「你」","fixed":["该路径锁定的设定"],"choose":["玩家仍可自由决定的项"],"fx":{"attr":[{"name":"属性名","val":整数}],"favor":[{"target":"人物名","val":整数}],"reputation":[{"name":"声望词条名","val":整数}],"note":"一句概括，如：专业底子厚，但还没名气"},"hero":"预设主角的人物 id 或空串","room":"开局地点 id 或空串","memory":"30~80字的专属前置记忆","event":"一句序章里必定发生的开局小事件"}]}\n要求：3~5 条差异明显的路径，各有优劣；属性单项 -20~80，好感 -20~30，声望词条 -15~45，全部为整数，数值克制且与 note 一致；favor 的 target 只能用下面列出的人物名。\n可选预设主角（id=名字，适合当主角的才绑定，每人最多绑定一条线路，不合适就留空）：${npcs.map((n) => `${n.id}=${n.name}`).join("，") || "无"}\n可选开局地点（id=名字）：${rooms.map((r) => `${r.id}=${r.name}`).join("，") || "无"}` },
+        { role: "user", content: `为下面的世界观设计「人物线路」（建角第一步，决定玩家的人生开局）。\n世界观：${world}\n本世界已有的属性 / 词条名（优先沿用，也可按题材新起名字）：${[...Object.values(STAT_LABELS), ...FIXED_METRICS.filter((m) => m.key !== "week").map((m) => m.label)].join("、")}\n输出格式：{"paths":[{"id":"英文id","name":"四字左右的路径名","tag":"短标签","blurb":"一句话卖点","about":"80~150字的开局处境，用第二人称「你」","fixed":["该路径锁定的设定"],"choose":["玩家仍可自由决定的项"],"fx":{"attr":[{"name":"属性名","val":整数}],"favor":[{"target":"人物名","val":整数}],"reputation":[{"name":"声望词条名","val":整数}],"note":"一句概括，如：专业底子厚，但还没名气"},"hero":"预设主角的人物 id 或空串","room":"开局地点 id 或空串","memory":"30~80字的专属前置记忆","event":"一句序章里必定发生的开局小事件"}]}\n要求：3~5 条差异明显的路径，各有优劣；不要写页面标题、引导语、身份字段名或人物描述初始值。属性单项 -20~80，好感 -20~30，声望词条 -15~45，全部为整数，数值克制且与 note 一致；favor 的 target 只能用下面列出的人物名。\n可选预设主角（id=名字，适合当主角的才绑定，每人最多绑定一条线路，不合适就留空）：${npcs.map((n) => `${n.id}=${n.name}`).join("，") || "无"}\n可选开局地点（id=名字）：${rooms.map((r) => `${r.id}=${r.name}`).join("，") || "无"}` },
       ]);
       const j = JSON.parse(raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1)) as {
-        pathTitle?: string; pathIntro?: string;
         paths?: (Partial<CreationPath> & { fx?: unknown })[];
       };
       const list = (j.paths ?? []).filter((p) => p?.name);
@@ -111,7 +92,8 @@ export default function ModPathsEditor({ creation, identities, world, worldName,
         ...(typeof p.event === "string" && p.event.trim() ? { event: p.event.trim() } : {}),
       }));
       const ni: Option[] = np.map((p) => ({ id: p.id, name: p.name, tag: p.tag, desc: p.perks })); // 数值全在线路 fx 里，身份表只留名称
-      commit(np, ni, { pathTitle: j.pathTitle || cc.pathTitle, pathIntro: j.pathIntro || cc.pathIntro });
+      // 功能注释：建角页标题和引导语不再由这里改写。AI 只换路径；已经保存的旧句子原样留在 creation 上。
+      commit(np, ni);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "生成失败，请稍后再试。");
     } finally { setBusy(false); }
@@ -145,34 +127,6 @@ export default function ModPathsEditor({ creation, identities, world, worldName,
         {cc.pathPicker === "off" && <p className="text-[10.5px] leading-snug text-ink-soft">玩家看不到路径弹窗；开局加成、开局人际等仍按第一条「已开放」路径生效。</p>}
       </div>
 
-      <div className="space-y-2 rounded-xl border border-line bg-paper p-2.5">
-        <p className="text-[12px] font-bold text-ink">页面文案 <span className="font-normal text-ink-soft">· 用占位符写，换世界观自动替换；留空用默认</span></p>
-        <div className="flex flex-wrap items-center gap-1">
-          <span className="text-[10.5px] text-ink-soft">{focusEl ? "点击插入到光标处：" : "先点一个文案框，再点插入："}</span>
-          {CREATION_VARS.map((v) => (
-            <button key={v.k} type="button" disabled={!focusEl} title={v.label} onMouseDown={(e) => e.preventDefault()}
-              onClick={() => { if (!focusEl) return; const { el, apply } = focusEl; const a = el.selectionStart ?? el.value.length, b = el.selectionEnd ?? a; const t = `{${v.k}}`; apply(el.value.slice(0, a) + t + el.value.slice(b)); requestAnimationFrame(() => { el.focus(); el.setSelectionRange(a + t.length, a + t.length); }); }}
-              className="rounded-md border border-line bg-paper-2 px-1.5 py-0.5 font-mono text-[10.5px] text-jade transition hover:border-jade disabled:opacity-50">{`{${v.k}}`}<span className="ml-0.5 font-sans text-ink-soft">{v.label}</span></button>
-          ))}
-        </div>
-        <div className="grid gap-2 sm:grid-cols-2">
-          <CopyField label="路径页 · 标题" value={cc.pathTitle} placeholder="人物线路选择" vars={pvars} onChange={(v) => commit(paths, ids, { pathTitle: v || undefined })} onFocus={(el) => setFocusEl({ el, apply: (v) => commit(paths, ids, { pathTitle: v || undefined }) })} />
-          <CopyField label="自设页 · 标题" value={cc.formTitle} placeholder="{path} · 自设" vars={pvars} onChange={(v) => commit(paths, ids, { formTitle: v || undefined })} onFocus={(el) => setFocusEl({ el, apply: (v) => commit(paths, ids, { formTitle: v || undefined }) })} />
-        </div>
-        <CopyField area label="路径页 · 引导语" value={cc.pathIntro} placeholder="{city} · {year} {season}。每条路都是一种截然不同的人生开局。目前开放：{openPaths}。" vars={pvars} onChange={(v) => commit(paths, ids, { pathIntro: v || undefined })} onFocus={(el) => setFocusEl({ el, apply: (v) => commit(paths, ids, { pathIntro: v || undefined }) })} />
-        <CopyField area label="自设页 · 引导语（各路径可单独覆盖）" value={cc.formIntro} placeholder="{city} · {year} {season}。一页定型——锁住满意的（{lock}），其余随时重掷。" vars={pvars} onChange={(v) => commit(paths, ids, { formIntro: v || undefined })} onFocus={(el) => setFocusEl({ el, apply: (v) => commit(paths, ids, { formIntro: v || undefined }) })} />
-        {/* 自设页的其余可配文案 / 随机初值：留空即不显示 / 不预填（不再用内置示例） */}
-        <div className="grid gap-2 sm:grid-cols-2">
-          <CopyField label="身份字段 · 名称" value={cc.identityLabel} placeholder="身份" vars={pvars} onChange={(v) => commit(paths, ids, { identityLabel: v || undefined })} onFocus={(el) => setFocusEl({ el, apply: (v) => commit(paths, ids, { identityLabel: v || undefined }) })} />
-          <label className="block"><span className="text-[11px] font-bold text-ink-soft">固定年龄（留空 = 玩家可改 / 随机）</span>
-            <input type="number" min={1} className={`${inp} mt-1 w-full`} value={cc.fixedAge ?? ""} placeholder="不固定"
-              onChange={(e) => { const n = Math.round(Number(e.target.value)); commit(paths, ids, { fixedAge: e.target.value && n > 0 ? String(n) : undefined }); }} />
-          </label>
-        </div>
-        <CopyField area label="双亲卡 · 说明（留空不显示）" value={cc.parentNote} placeholder="父母的职业会如何影响开局？" vars={pvars} onChange={(v) => commit(paths, ids, { parentNote: v || undefined })} onFocus={(el) => setFocusEl({ el, apply: (v) => commit(paths, ids, { parentNote: v || undefined }) })} />
-        <CopyField area label="人物描述 · 初始值（{name} = 姓名；留空则让玩家自己写）" value={cc.seedDescription} placeholder="{name}，……" vars={pvars} onChange={(v) => commit(paths, ids, { seedDescription: v || undefined })} onFocus={(el) => setFocusEl({ el, apply: (v) => commit(paths, ids, { seedDescription: v || undefined }) })} />
-      </div>
-
       {/* 开局势力：玩家在建角「开局」页勾选加入；开局时全部装入阵营系统（声望 / 好感波及 / 调价 / 世界书关键词） */}
       <div className="space-y-2 rounded-xl border border-line bg-paper-2/50 p-3">
         <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
@@ -204,8 +158,7 @@ export default function ModPathsEditor({ creation, identities, world, worldName,
 
       {paths.length === 0 && (
         <div className="rounded-xl border border-dashed border-line p-3 text-center text-[11.5px] text-ink-soft">
-          未配置路径，将沿用依赖模组的默认路径。
-          <button className={`${btn} ml-2`} onClick={loadDefault}>载入娱乐圈默认路径</button>
+          还没有路径。用上面的 AI 生成，或在下面添加路径。
         </div>
       )}
 
@@ -259,8 +212,6 @@ export default function ModPathsEditor({ creation, identities, world, worldName,
             </div>
             <RouteFxEditor pool={pool} label={p.perksLabel} onLabel={(perksLabel) => setPath(i, { perksLabel })} value={p.fx} npcs={npcs} relationOf={(t) => { const rel = p.npcs?.find((n) => npcs.find((x) => x.id === n.id)?.name === t)?.relation; return typeof rel === "string" ? rel.trim() : ""; }}
               onChange={(fx, text) => setPath(i, { fx, perks: text })} />
-            <CopyField area label="选这条路径后的自设页引导语（留空用上方通用引导语）" value={p.formIntro} placeholder={cc.formIntro || "{city} · {year} {season}。一页定型——锁住满意的（{lock}），其余随时重掷。"} vars={{ ...pvars, path: p.name }}
-              onChange={(v) => setPath(i, { formIntro: v || undefined })} onFocus={(el) => setFocusEl({ el, apply: (v) => setPath(i, { formIntro: v || undefined }) })} />
             <div className="space-y-1.5 rounded-lg border border-line/70 bg-paper p-2">
               <p className="text-[11px] text-ink-soft"><b className="font-semibold text-ink">开局状态</b> · 选这条线路时专属的主角与开局；没被选中的预设主角照常作为 NPC 生活</p>
               <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">

@@ -1,6 +1,7 @@
 import { moodLine } from "@/lib/npcIdentity";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { romancePortalRoot } from "../lib/romancePortalRoot";
 import { useGame } from "../store/gameCtx";
 import { Avatar } from "./ui";
 import { IconClose, IconSend } from "../lib/icons";
@@ -382,7 +383,7 @@ export default function TalkPanel({ pid, name, role, onClose }: { pid: string; n
         </footer>
       </div>
     </div>,
-    document.body,
+    romancePortalRoot()!,
   );
 }
 

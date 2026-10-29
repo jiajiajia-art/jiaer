@@ -124,7 +124,7 @@ export default function StatsTunePanel() {
   return (
     <div className="space-y-3 text-ink">
       <SectionHead code="STATS" cn="数值调校" hint={`作用于「${world?.name ?? selection.world}」`} right={<Dirty on={dirty} />} />
-      <p className="text-[12px] leading-relaxed text-ink-soft">能力项数量不限：内置最多八个槽，可停用不需要的（点「启用」切换），可改叫法、初值、顺序；还想要更多就在「角色属性」里自定义添加，以及名气 / 容貌的分档。保存后生成叠加包「{tuneId}」并自动启用，可在上方开关或导出分享。</p>
+      <p className="text-[12px] leading-relaxed text-ink-soft">能力项数量不限：内置最多八个槽，可停用不需要的（点「启用」切换），可改叫法、初值、顺序；还想要更多就在「建角」里自定义添加，以及名气 / 容貌的分档。保存后生成叠加包「{tuneId}」并自动启用，可在上方开关或导出分享。</p>
 
       <div className="space-y-1.5">
         <div className="flex gap-1.5 text-[10.5px] text-ink-soft"><span className="w-14 shrink-0">内部键</span><span className="flex-1">显示叫法</span><span className="w-16">开局初值</span><span className="w-[60px]">顺序</span><span className="w-12">启用</span></div>

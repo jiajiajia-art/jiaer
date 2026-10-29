@@ -83,10 +83,15 @@ export type ModExt = {
 
 /* AI 提示片段：引擎拼系统提示词时按需取用 */
 export type PromptFragments = {
-  gmIntro?: string; // 开篇「你是……的 GM」整段
-  worldIntro?: string; // 世界观简介（追加注入）
-  narratorPersona?: string; // 叙事者口吻 / 文风
-  terminology?: string; // 术语表说明（供模型统一用词）
+  /** 剧本基调（作者只改这一处，整段发给模型）。旧模组无此字段时由 gmIntro+worldIntro+narratorPersona 并入 */
+  scriptTone?: string;
+  /** @deprecated 已并入 scriptTone；读档仍兼容 */
+  gmIntro?: string;
+  /** @deprecated 已并入 scriptTone；读档仍兼容 */
+  worldIntro?: string;
+  /** @deprecated 已并入 scriptTone；读档仍兼容 */
+  narratorPersona?: string;
+  terminology?: string; // 术语表说明（供模型统一用词；编辑器已下架）
   extraRules?: string; // 创作者自由补充的系统提示（原样追加）
   openingDirective?: string; // 开局序章的导演指令
   npcExample?: { id: string; name: string }; // 输出规范 JSON 示例里的 NPC（缺省=本世界第一个 NPC）
@@ -280,9 +285,12 @@ export type ModContent = ContentSlots & {
   /** 手机各应用：名称 / 图标 / 顺序 / 开局预装（旧 locked/hidden/disabled 读取时归一为商店可下） */
   phoneAppsCfg?: PhoneAppDef[];
   features?: FeatureFlags;
-  bgm?: ModTrack[]; // 内置背景音乐（旧版；启用时同样并入音频库）
+  bgm?: ModTrack[]; // 内嵌 / 本机 / 链接。启用时并入音频库，关闭或卸载后消失
   audio?: import("../lib/types").AudioAsset[]; // 方式 A：MOD 自带音频，启用时并入全局音频库，关闭 / 卸载即移除
-  audioRefs?: string[]; // 方式 B：只引用库里已有的音频 id，不带素材（体检时校验是否存在）
+  audioRefs?: string[]; // 作品音频库引用：只记 id，不打包文件（体检时校验是否存在）
+  platformAudioRefs?: string[]; // 平台曲库引用：只记 platform: 前缀 id，不写入 bgm，也不进 audioRefs
+  platformAutoplay?: string; // 开局自动播放的平台曲目 id，与 bgm[].autoplay 互斥
+  musicOrder?: string[]; // 音乐列表的显示顺序键（b: / a: / platform:），不合并曲目本体
   cgs?: CgDef[]; // 模板库 MOD：装入存档的 CG
   factions?: Faction[]; // 模板库 MOD：装入存档的阵营
 };

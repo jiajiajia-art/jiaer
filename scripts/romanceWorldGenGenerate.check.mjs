@@ -196,11 +196,11 @@ test('worldGenGenerate_无依赖同波并发上限应为6到8', async () => {
   assert.ok(gen.WORLD_GEN_PARALLEL_LIMIT >= 6 && gen.WORLD_GEN_PARALLEL_LIMIT <= 8);
   assert.ok(gen.WORLD_GEN_MODULE_MAX_RETRIES >= 2);
 
-  // 同波 8 个无依赖项（第一波骨架）应能同时拉满并行
-  const ids = ['prompt', 'hub:rules', 'hub:book', 'travelTime', 'startResources', 'stats', 'creationFields', 'creationPools'];
+  // 同波无依赖项（第一波骨架；建角已合成一步）应能同时拉满并行
+  const ids = ['prompt', 'hub:rules', 'hub:book', 'travelTime', 'startResources', 'creation', 'creationPools'];
   const waves = gen.partitionWorldGenWaves(ids);
   assert.equal(waves.length, 1, '所选 id 应同属第一波');
-  assert.equal(waves[0].length, 8);
+  assert.equal(waves[0].length, 7);
 
   let inflight = 0;
   let maxInflight = 0;
@@ -333,7 +333,7 @@ test('worldGenGenerate_预计耗时秒数_无样本用并行fallback_有样本�
     gen.estimateWorldGenEtaSeconds({ total: 10, finished: 10, elapsedMs: 5000, parallelLimit: 3 }),
     0,
   );
-  // 3 完成耗时 90s → 每项 30s；剩 7 → ceil(210)=210
+  // 3 完成耗时 90s → 每项 30s；剩 7 → byRate 210 > byFallback 120 → 210
   assert.equal(
     gen.estimateWorldGenEtaSeconds({
       total: 10,
@@ -342,6 +342,16 @@ test('worldGenGenerate_预计耗时秒数_无样本用并行fallback_有样本�
       parallelLimit: 3,
     }),
     210,
+  );
+  // 前期快完成拉低均值时，须不低于 fallback 批次（18 完成 60s、剩 4、并行 8 → rate≈14，fallback=40）
+  assert.equal(
+    gen.estimateWorldGenEtaSeconds({
+      total: 22,
+      finished: 18,
+      elapsedMs: 60_000,
+      parallelLimit: 8,
+    }),
+    40,
   );
   // 非法输入兜底
   assert.equal(gen.estimateWorldGenEtaSeconds({ total: -1, finished: 5, elapsedMs: 0 }), 0);
@@ -360,6 +370,7 @@ test('worldGenGenerate_预计耗时须按deadline每秒递减且可按进度重�
     gen.worldGenEtaDisplaySeconds({ deadlineMs: deadline, nowMs: t0 + 5_000, remainingModules: 22 }),
     315,
   );
+  // 瞬时底层仍可返回 1；UI 须在 overdue 时重标定（见 NeedsRecalibrate）
   assert.equal(
     gen.worldGenEtaDisplaySeconds({ deadlineMs: deadline, nowMs: t0 + 400_000, remainingModules: 22 }),
     1,
@@ -378,6 +389,54 @@ test('worldGenGenerate_预计耗时须按deadline每秒递减且可按进度重�
     }),
     90,
   );
+});
+
+test('worldGenGenerate_截止已过仍有剩余须重标定', async () => {
+  const gen = await import(pathToFileURL(join(romance, 'lib/worldGenGenerate.ts')).href);
+  const t0 = 1_700_000_000_000;
+  const deadline = gen.worldGenEtaDeadlineMs(25, t0);
+  assert.equal(
+    gen.worldGenEtaNeedsRecalibrate({
+      deadlineMs: deadline,
+      nowMs: t0 + 30_000,
+      remainingModules: 4,
+      finishedChanged: false,
+      hasDeadline: true,
+    }),
+    true,
+  );
+  assert.equal(
+    gen.worldGenEtaNeedsRecalibrate({
+      deadlineMs: deadline,
+      nowMs: t0 + 10_000,
+      remainingModules: 4,
+      finishedChanged: false,
+      hasDeadline: true,
+    }),
+    false,
+  );
+  assert.equal(
+    gen.worldGenEtaNeedsRecalibrate({
+      deadlineMs: deadline,
+      nowMs: t0 + 10_000,
+      remainingModules: 4,
+      finishedChanged: true,
+      hasDeadline: true,
+    }),
+    true,
+  );
+  assert.equal(
+    gen.worldGenEtaNeedsRecalibrate({
+      deadlineMs: 0,
+      nowMs: t0,
+      remainingModules: 4,
+      finishedChanged: false,
+      hasDeadline: false,
+    }),
+    true,
+  );
+  const wiz = readFileSync(join(romance, 'components/WorldGenWizard.tsx'), 'utf8');
+  assert.match(wiz, /worldGenEtaNeedsRecalibrate/);
 });
 
 test('worldGenGenerate_预计耗时须拆成分秒', async () => {

@@ -16,6 +16,7 @@ import {
 } from "./worldGenWizard.ts";
 import { normalizeStartMetList } from "./normalizeStartMet.ts";
 import { asNonEmptyTrimmed, asTrimmedString } from "./asTrimmedString.ts";
+import { healModRoomRefs } from "./sanitizeModStrings.ts";
 import { completeViaPlatform } from "./platformWorldGenAi.ts";
 
 /**
@@ -83,8 +84,8 @@ export async function withWorldGenRetries<T>(
 
 /**
  * 功能注释：按已完成进度与并行度估算「此刻」剩余墙钟秒数（取整）。
- * 用于进度变化时重标定倒计时终点；finished=0 用并行批次×fallback；
- * 有样本后用 elapsed/finished × remaining。逐秒递减由 UI 对 deadline 倒计完成。
+ * finished=0：并行批次 × fallback；有样本后取「平均速率 × 剩余」与「fallback 批次」较大值，
+ * 避免前期快模组拉低均值、后期重模组（固定事件等）把倒计时提前耗尽后一直显示 1 秒。
  */
 export function estimateWorldGenEtaSeconds(opts: {
   total: number;
@@ -99,11 +100,13 @@ export function estimateWorldGenEtaSeconds(opts: {
   if (remaining === 0) return 0;
   const parallel = Math.max(1, Math.floor(opts.parallelLimit ?? WORLD_GEN_PARALLEL_LIMIT));
   const fallback = Math.max(5, Math.floor(opts.fallbackSecPerModule ?? WORLD_GEN_ETA_FALLBACK_SEC_PER_MODULE));
+  const byFallback = Math.ceil(remaining / parallel) * fallback;
   if (finished <= 0 || !(opts.elapsedMs > 400)) {
-    return Math.ceil(Math.ceil(remaining / parallel) * fallback);
+    return byFallback;
   }
   const secPerFinish = opts.elapsedMs / 1000 / finished;
-  return Math.max(1, Math.ceil(remaining * secPerFinish));
+  const byRate = Math.max(1, Math.ceil(remaining * secPerFinish));
+  return Math.max(byRate, byFallback);
 }
 
 /**
@@ -115,7 +118,26 @@ export function worldGenEtaDeadlineMs(remainingSec: number, nowMs = Date.now()):
 }
 
 /**
+ * 功能注释：截止时间已过且仍有未完成模组 → 须重估（否则展示会卡在 1 秒）。
+ */
+export function worldGenEtaNeedsRecalibrate(opts: {
+  deadlineMs: number;
+  nowMs?: number;
+  remainingModules: number;
+  finishedChanged: boolean;
+  hasDeadline: boolean;
+}): boolean {
+  const remainingModules = Math.max(0, Math.floor(Number(opts.remainingModules) || 0));
+  if (remainingModules <= 0) return false;
+  if (opts.finishedChanged || !opts.hasDeadline) return true;
+  const now = Number.isFinite(opts.nowMs) ? Number(opts.nowMs) : Date.now();
+  return Number(opts.deadlineMs) > 0 && now >= Number(opts.deadlineMs);
+}
+
+/**
  * 功能注释：由截止时间算出展示秒数；生成中至少显示 1，全部完成后为 0。
+ * 注意：到期后若仍未完成，调用方须重标定 deadline（见 worldGenEtaNeedsRecalibrate），
+ * 否则会长期停在 1——那是「已超时、等待重估」的瞬时值，不是真实只需 1 秒。
  */
 export function worldGenEtaDisplaySeconds(opts: {
   deadlineMs: number;
@@ -183,8 +205,7 @@ export const WORLD_GEN_DEPENDENCY_WAVES: readonly (readonly string[])[] = Object
     "hub:book",
     "travelTime",
     "startResources",
-    "stats",
-    "creationFields",
+    "creation",
     "creationPools",
     "opening",
   ]),
@@ -486,25 +507,25 @@ const MODULE_FIELD_HINT: Record<string, string> = {
   "hub:engine": "tuning、stats、features",
   "hub:beauty": "lookRules[]、theme、cover",
   "hub:nav": "navTabs[]、navSize、terms（仅 tab* 键）",
-  "hub:book": "worldBook[]、prompt（worldIntro/narratorPersona）",
+  "hub:book": "worldBook[]、prompt（scriptTone）",
   "hub:fixed": "fixedEvents[]、events[]、encounters[]",
   "hub:cg": "（CG 图鉴多为素材引用；可写 opening / cover 相关文案占位，勿捏造外链大图）",
-  "hub:audio": "bgm[]、audioRefs[]",
+  "hub:audio": "bgm[]、audioRefs[]、platformAudioRefs[]（平台曲只写 platform: 前缀 id，勿编造，勿写入 bgm 或 audioRefs）",
   "hub:faction": "lore[]（地区→势力→角色）",
   "hub:timeline": "storylines[]、npcs[].timeline",
   "hub:end": "endings[]、timeLimit、gradeDims[]",
-  "hub:paths": "creation.paths[]、identities[]、creation 文案字段",
+  "hub:paths": "creation.paths[]、identities[]（不要写 pathTitle、pathIntro、formTitle、formIntro、identityLabel、fixedAge、parentNote、seedDescription 或 paths[].formIntro；这些留空，建角页用游戏默认句）",
   "hub:mods": "playModInstalls[]（仅合理默认占位，勿编造不存在的组件 id）",
   travelTime: "startDate、startTime、dayStart、dayEnd、travel（节奏相关）、play.ageAuto/pickStartDate",
   features: "features{}",
   navTabs: "navTabs[]、navSize",
   phoneAppsCfg: "phoneAppsCfg[]",
   theme: "theme{}",
-  bgm: "bgm[]",
-  audioRefs: "audioRefs[]（可空数组，勿编造不存在的音频 id）",
+  bgm: "bgm[]（内嵌 data: / 本机 local: / 链接；不要把作品引用或平台曲写成 bgm）",
+  audioRefs: "audioRefs[]（只写作品音频库已有 id，可空，勿编造）",
+  platformAudioRefs: "platformAudioRefs[]（只写 platform: 前缀的平台曲目 id，可空，勿编造；不要写入 bgm 或 audioRefs）",
   avatars: "avatars{pools?,publicRandom?,match?}",
-  stats: "stats{}、customAttrs[]",
-  creationFields: "creation.fields / creation.builtin",
+  creation: "customAttrs[]、creation.fields / creation.builtin（建角：属性 + 字段；勿预填演技等八维）",
   creationPools: "styles[]、identities[]、backgrounds[]、directions[]、school、parentJobs[]、zodiacs[]",
   npcs: "npcs[]、startMet、familyWx、familyVoices",
   relations: "relations{}",
@@ -520,7 +541,7 @@ const MODULE_FIELD_HINT: Record<string, string> = {
   startWeather: "weather",
   rooms: "rooms{}、startRoom、locations[]",
   travel: "travel{}、cars[]",
-  prompt: "prompt{gmIntro,worldIntro,narratorPersona}",
+  prompt: "prompt{scriptTone}（整段剧本基调；旧 gmIntro/worldIntro/narratorPersona 可读并入）",
   lore: "lore[]",
   festivals: "festivals[]",
   cover: "cover{}",
@@ -571,7 +592,10 @@ export function mergeModContent(base: ModContent, patch: Record<string, unknown>
       out[k] = v;
     }
   }
-  return out as ModContent;
+  const merged = out as ModContent;
+  // 功能注释：分模组生成易出现 startRoom 与 rooms 不同步，合并后立即纠偏
+  healModRoomRefs(merged);
+  return merged;
 }
 
 function parseJsonObject(raw: unknown): Record<string, unknown> {
@@ -615,9 +639,9 @@ export function buildGeneratedContext(mod: Mod, max = 4500): string {
     mod.description ? `简介：${mod.description.slice(0, 200)}` : "",
   ];
   if (c.prompt && typeof c.prompt === "object") {
-    const p = c.prompt as Record<string, string>;
-    if (p.worldIntro) bits.push(`世界观设定：${String(p.worldIntro).slice(0, 400)}`);
-    if (p.narratorPersona) bits.push(`叙事口吻：${String(p.narratorPersona).slice(0, 200)}`);
+    const p = c.prompt as { scriptTone?: string; gmIntro?: string; worldIntro?: string; narratorPersona?: string };
+    const tone = [p.scriptTone, p.gmIntro, p.worldIntro, p.narratorPersona].map((x) => (typeof x === "string" ? x.trim() : "")).filter(Boolean).join("\n\n");
+    if (tone) bits.push(`剧本基调：${tone.slice(0, 600)}`);
   }
   if (c.rooms && typeof c.rooms === "object") {
     bits.push(`地点：${Object.entries(c.rooms as Record<string, { name?: string }>).map(([id, r]) => `${id}=${r?.name || id}`).join("、") || "（无）"}`);

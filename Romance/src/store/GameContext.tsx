@@ -129,6 +129,7 @@ import type { Character as SimChar } from "../game/logic";
 export const BRANCH_POINTS = 0; // 地点内的事件 / 拾取 / 活动都不扣行动点（只有换地点扣）
 import { GameCtx, LiveCtx, type Ctx, type Screen, type Popup, type WeekReport, type Diary } from "./gameCtx";
 import { attrCap, setWalletSource, wallet, walletDef, setCustomAttr, customAttrValue } from "../game/wallet";
+import { playerAttrsFromCreatorDefs } from "../lib/creationOpening";
 import { clampStat } from "../game/data";
 import { applyPhoneStep, markActsSent, pendingActs, type PhoneInterrupt } from "../game/phoneLink";
 import { addIncomingReq } from "../components/phone/wxFeatures";
@@ -313,6 +314,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
         game: gameRef.current,
         saveId: getCurrentSaveId(),
       };
+      // 功能注释：每次预览清掉上次测试档，避免「继续游戏」读到旧世界内容；用当前草稿重新开局
+      void clearAuthorPreviewSave(AUTHOR_PREVIEW_GAME_ID);
+      purgeSaveData(AUTHOR_PREVIEW_GAME_ID);
       switchSave(AUTHOR_PREVIEW_GAME_ID, {
         flushCurrent: flushAutosave,
         render: () => {
@@ -673,13 +677,19 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
       g = tickPlayerAge(g, 0).g; // 年龄随日历：开局当天定基准年，免得第一次推进恰好跨过生日时漏长一岁
       if (worldRules) g.worldRules = worldRules;
-      // 自定义角色属性：拷进本局，并按初值写入人物档案（AI 读写同一份）
+      // 自定义角色属性：只来自创作者「建角」列表；开局值固定或代码掷骰（只掷一次，不交给 AI）；不预填八维
       const defs = getWorldSlot("customAttrs") ?? [];
       if (defs.length) {
         g.attrDefs = defs.map((d) => ({ ...d }));
-        const have = new Set(g.player.attrs.map((a) => a.key));
-        g.sim = { ...g.sim, cattrs: Object.fromEntries(defs.map((d) => [d.id, Math.min(attrCap(d.max), d.init)])) };
-        g.player = { ...g.player, attrs: [...g.player.attrs, ...defs.filter((d) => !have.has(d.id)).map((d) => ({ key: d.id, label: d.label, value: Math.min(attrCap(d.max), d.init), max: d.max ?? 0, icon: d.icon }))] };
+        const fromCreator = playerAttrsFromCreatorDefs(defs);
+        const starts = Object.fromEntries(fromCreator.map((a) => [a.key, a.value]));
+        const creatorKeys = new Set(fromCreator.map((a) => a.key));
+        g.sim = { ...g.sim, cattrs: starts };
+        // 功能注释：创作者列表在前并覆盖同 key；其它非建角 attrs 仍保留在后
+        g.player = {
+          ...g.player,
+          attrs: [...fromCreator, ...g.player.attrs.filter((a) => !creatorKeys.has(a.key))],
+        };
       }
       // 建角选项的开局效果：能力 / 资金等指标 / 自定义属性 / NPC 初始好感（文本设定已在建角页写进档案）
       for (const fx of opts?.fx ?? []) {

@@ -40,6 +40,7 @@ import {
   runWorldGenModules,
   worldGenEtaDeadlineMs,
   worldGenEtaDisplaySeconds,
+  worldGenEtaNeedsRecalibrate,
   WORLD_GEN_PARALLEL_LIMIT,
   type WorldGenProgress,
 } from "../lib/worldGenGenerate";
@@ -335,7 +336,7 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
     setEtaTick(0);
   };
 
-  /** 功能注释：完成数变化时重估剩余并写入 deadline；同进度下仅靠墙钟倒计时 */
+  /** 功能注释：完成数变化或倒计时耗尽时重估剩余并写入 deadline，避免卡在「1秒」 */
   const syncEtaDeadline = (total: number, finished: number) => {
     const now = Date.now();
     const elapsedMs = genStartedAtRef.current ? now - genStartedAtRef.current : 0;
@@ -694,15 +695,24 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
       : 0;
     const running = generating && !progress.cancelled;
     const finished = progress.doneCount + progress.failedCount;
-    // etaTick：每秒刷新展示；完成数变化时重标定截止时间
+    const remainingMods = Math.max(0, progress.total - finished);
+    // etaTick：每秒刷新；完成数变化或截止已过仍有剩余时重标定（否则会长期显示 1 秒）
     void etaTick;
-    if (running && (etaFinishedRef.current !== finished || !etaDeadlineRef.current)) {
+    if (
+      running &&
+      worldGenEtaNeedsRecalibrate({
+        deadlineMs: etaDeadlineRef.current,
+        remainingModules: remainingMods,
+        finishedChanged: etaFinishedRef.current !== finished,
+        hasDeadline: !!etaDeadlineRef.current,
+      })
+    ) {
       syncEtaDeadline(progress.total, finished);
     }
     const etaSec = running
       ? worldGenEtaDisplaySeconds({
           deadlineMs: etaDeadlineRef.current,
-          remainingModules: Math.max(0, progress.total - finished),
+          remainingModules: remainingMods,
         })
       : 0;
     const etaParts = formatWorldGenEtaParts(etaSec);
@@ -722,7 +732,7 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
                 aria-live="polite"
                 /* 功能注释：不足 1 分只报秒，避免「0分 25秒」 */
                 aria-label={`预计耗时 ${formatWorldGenEtaLabel(etaParts)}`}
-                title="按已完成速度与并行度估算，仅供参考"
+                title="按已完成速度与并行度估算；慢模组超时会自动重估，仅供参考"
               >
                 <p className="world-gen-eta-label">预计耗时</p>
                 <p className="world-gen-eta-value">

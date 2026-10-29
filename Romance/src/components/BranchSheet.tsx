@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { romancePortalRoot } from "../lib/romancePortalRoot";
 import { useGame, useLive } from "../store/gameCtx";
 import { Segments } from "./StoryTab";
 import NewcomerCards from "./NewcomerCards";
@@ -32,7 +33,7 @@ export default function BranchSheet() {
         支线进行中 · {b.title.slice(0, 10)}
         <span className="text-coral">继续 ›</span>
       </button>,
-      document.body,
+      romancePortalRoot()!,
     );
 
   return createPortal(
@@ -116,6 +117,6 @@ export default function BranchSheet() {
         </footer>
       </section>
     </div>,
-    document.body,
+    romancePortalRoot()!,
   );
 }

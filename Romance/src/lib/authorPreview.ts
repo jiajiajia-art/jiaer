@@ -106,7 +106,8 @@ export function assessAuthorPreview(mod: Mod): { fatal: string[]; warnings: stri
     if (!c.rooms || !Object.keys(c.rooms).length) {
       warnings.push("未配置地点 rooms（开局可能落在默认点）");
     } else if (c.startRoom && !(c.startRoom in c.rooms)) {
-      fatal.push(`开局地点 startRoom「${c.startRoom}」不在 rooms 中`);
+      // 功能注释：不再致命阻断——运行时 getWorldStartRoom / healModRoomRefs 会回落到合法地点
+      warnings.push(`开局地点 startRoom「${c.startRoom}」不在 rooms 中（预览将回落到已有地点）`);
     }
   }
   const npcs = Array.isArray(c.npcs) ? c.npcs : [];

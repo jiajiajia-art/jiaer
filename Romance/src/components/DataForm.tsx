@@ -189,16 +189,17 @@ export function ObjList({ v, onChange, labels, depth = 0, addLabel = "＋ 新增
   );
 }
 
-/* 整个内容槽的入口：未填写时提供「载入默认」，填写后可「恢复默认」/「移除」 */
-export default function SlotDataEditor<T>({ value, defaults, onChange, labels, emptyText, note }: {
-  value: T | undefined; defaults: () => T; onChange: (v: T | undefined) => void;
+/* 整个内容槽的入口：未填写只提示；填写后可移除。不预填、不提供娱乐圈一键载入。 */
+export default function SlotDataEditor<T>({ value, onChange, labels, emptyText, note }: {
+  value: T | undefined; onChange: (v: T | undefined) => void;
   labels?: Record<string, string>; emptyText: string; note?: ReactNode;
+  /** @deprecated 已不再预填内置数据；保留以免旧调用方类型报错 */
+  defaults?: () => T;
 }) {
   if (value === undefined) {
     return (
       <div className="rounded-xl border border-dashed border-line p-3 text-center text-[11.5px] text-ink-soft">
         {emptyText}
-        <button type="button" className={`${btn} ml-2 !border-jade/50 !text-jade`} onClick={() => onChange(structuredClone(defaults()))}>载入娱乐圈默认，再改</button>
       </div>
     );
   }
@@ -209,7 +210,6 @@ export default function SlotDataEditor<T>({ value, defaults, onChange, labels, e
         : Array.isArray(value) ? <ObjList v={value as Obj[]} labels={labels} onChange={(n) => onChange(n as T)} />
         : null}
       <div className="flex flex-wrap gap-1.5 border-t border-line/50 pt-2">
-        <button type="button" className={btn} onClick={() => onChange(structuredClone(defaults()))}>恢复娱乐圈默认</button>
         <button type="button" className={`${btn} hover:!border-danger hover:!text-danger`} onClick={() => onChange(undefined)}>移除此项（不再由本模组提供）</button>
       </div>
     </div>

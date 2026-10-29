@@ -1,4 +1,4 @@
-import { RAW_STAT_LABELS, type StatsSlot, RAW_ZODIACS, type Zodiac, RAW_BACKGROUNDS, RAW_DIRECTIONS, RAW_IDENTITIES, RAW_PARENT_JOBS, RAW_STYLES, type Option, optFx } from "../game/data";
+import { RAW_STAT_LABELS, type StatsSlot, RAW_ZODIACS, type Zodiac, type Option, optFx } from "../game/data";
 import { asTrimmedString } from "../lib/asTrimmedString";
 
 import type { AttrDef } from "../lib/types";
@@ -21,10 +21,10 @@ function jobLines(raw: unknown): string {
 }
 const btn = "rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40";
 const POOLS = [
-  { k: "styles", l: "外形风格", raw: RAW_STYLES },
-  { k: "identities", l: "出道身份", raw: RAW_IDENTITIES },
-  { k: "backgrounds", l: "家庭背景", raw: RAW_BACKGROUNDS },
-  { k: "directions", l: "职业方向", raw: RAW_DIRECTIONS },
+  { k: "styles", l: "外形风格" },
+  { k: "identities", l: "出道身份" },
+  { k: "backgrounds", l: "家庭背景" },
+  { k: "directions", l: "职业方向" },
 ] as const;
 
 type K = (typeof POOLS)[number]["k"];
@@ -69,15 +69,15 @@ export default function ModPoolsEditor({ value, stats, attrs = [], npcs = [], on
   const setZ = (i: number, p: Partial<Zodiac>) => onChange({ zodiacs: zod.map((z, j) => (j === i ? { ...z, ...p } : z)) });
   return (
     <div className="space-y-4">
-      {POOLS.map(({ k, l, raw }) => {
+      {POOLS.map(({ k, l }) => {
         const list = Array.isArray(value[k]) ? value[k] : [];
         const commit = (n: Option[]) => onChange({ [k]: n.length ? n : undefined });
         const set = (i: number, p: Partial<Option>) => commit(list.map((o, j) => (j === i ? { ...o, ...p } : o)));
         const withFx = list.filter((o) => optFx(o)).length;
         return (
           <div key={k} className="space-y-1.5">
-            <p className="border-l-2 border-gold/80 pl-2 text-[13px] font-bold text-ink">{l} <span className="font-normal text-ink-soft">· {list.length ? `${list.length} 项${withFx ? ` · ${withFx} 项有开局加成` : ""}` : "沿用默认（只有文字）"}</span></p>
-            {!list.length && <button className={btn} onClick={() => commit(raw.map((o) => ({ ...o })))}>以默认选项为起点自定义</button>}
+            <p className="border-l-2 border-gold/80 pl-2 text-[13px] font-bold text-ink">{l} <span className="font-normal text-ink-soft">· {list.length ? `${list.length} 项${withFx ? ` · ${withFx} 项有开局加成` : ""}` : "还没写，开局不会生效"}</span></p>
+            {!list.length && <button className={btn} onClick={() => commit([{ id: `o_${Date.now().toString(36).slice(-5)}`, name: "", desc: "", tag: "" }])}>＋ 添加{l}</button>}
             {list.map((o, i) => (
               <div key={o.id} className="rounded-xl border border-line bg-paper px-2.5 py-2">
                 <div className="flex min-w-0 items-center gap-1.5">
@@ -97,8 +97,8 @@ export default function ModPoolsEditor({ value, stats, attrs = [], npcs = [], on
         );
       })}
       <div className="space-y-1.5">
-        <p className="border-l-2 border-gold/80 pl-2 text-[13px] font-bold text-ink">星座 <span className="font-normal text-ink-soft">· 由出生日期推算 · {zod.length ? `${zod.length} 项` : "沿用默认（只有性格描述）"}</span></p>
-        {!zod.length && <button className={btn} onClick={() => onChange({ zodiacs: RAW_ZODIACS.map((z) => ({ ...z })) })}>以默认星座为起点自定义</button>}
+        <p className="border-l-2 border-gold/80 pl-2 text-[13px] font-bold text-ink">星座 <span className="font-normal text-ink-soft">· 由出生日期推算 · {zod.length ? `${zod.length} 项` : "还没写，开局不会生效"}</span></p>
+        {!zod.length && <p className="text-[11px] text-ink-soft">还没写，开局不会生效。用下方添加，或从其它作品导入后再改。</p>}
         {zod.map((z, i) => {
           const fb = RAW_ZODIACS.find((x) => x.id === z.id);
           const from = Array.isArray(z.from) ? z.from : fb?.from;
@@ -123,7 +123,7 @@ export default function ModPoolsEditor({ value, stats, attrs = [], npcs = [], on
         <input className={`${inp} mt-1 font-normal`} value={schoolText(value.school)} placeholder="留空 = 沿用默认" onChange={(e) => onChange({ school: e.target.value || undefined })} />
       </label>
       <label className="block text-[12px] font-bold text-ink">父母职业池 <span className="font-normal text-ink-soft">· 一行一个，建角时随机抽取</span>
-        <textarea rows={4} className={`${inp} mt-1 font-normal`} value={jobLines(value.parentJobs)} placeholder={RAW_PARENT_JOBS.slice(0, 4).join("\n") + "\n……（留空 = 沿用默认）"}
+        <textarea rows={4} className={`${inp} mt-1 font-normal`} value={jobLines(value.parentJobs)} placeholder={"公务员\n医生\n教师\n……（留空 = 还没写）"}
           onChange={(e) => { const a = e.target.value.split("\n"); onChange({ parentJobs: a.some((x) => x.trim()) ? a : undefined }); }}
           onBlur={(e) => { const a = e.target.value.split("\n").map((x) => x.trim()).filter(Boolean); onChange({ parentJobs: a.length ? a : undefined }); }} />
       </label>

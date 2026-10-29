@@ -923,7 +923,7 @@ export const RAW_CREATION: CreationCopy = {
     },
   ],
   pathTitle: "人物线路选择",
-  pathIntro: "", // 缺省不显示引导语；创作者可在「人物线路」编辑器 → 路径页 · 引导语 里自定义
+  pathIntro: "", // 缺省不显示引导语。已保存的 pathIntro 仍会显示，编辑器不再提供填写
   formIntro: "{city} · {year} {season}。一页定型——锁住满意的（{lock}），其余随时重掷。",
   identityLabel: "具体身份", // 路线（科班 / 偶像…）之下的细分身份，避免和出道路线重名
   identityOpts: ["练习生", "新人演员", "选秀出身歌手", "模特转型艺人", "音乐剧演员", "网络小生", "综艺新面孔"],

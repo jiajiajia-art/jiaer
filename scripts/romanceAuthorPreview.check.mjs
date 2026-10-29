@@ -57,8 +57,17 @@ test('romanceAuthorPreview_编辑器顶栏保存预览_底栏无重复保存', (
   assert.match(storage, /isAuthorPreview/);
   assert.match(registry, /beginAuthorPreviewMod/);
   assert.match(registry, /endAuthorPreviewMod/);
+  // 功能注释：预览须把 selection 也指到草稿，否则封面/建角仍读库内旧世界
+  assert.match(registry, /selection = \{ world: mod\.id/);
+  assert.match(registry, /if \(authorPreviewMod\)/);
   assert.match(app, /AuthorPreviewChrome/);
   assert.match(app, /subscribeAuthorPreview|getAuthorPreviewSession/);
+  const panel = readFileSync(join(romance, 'components/ModEditorPanel.tsx'), 'utf8');
+  assert.match(panel, /requestAuthorPreview\(out/);
+  assert.match(panel, /backToWizard/);
+  assert.match(panel, /有未保存的修改/);
+  const ctx = readFileSync(join(romance, 'store/GameContext.tsx'), 'utf8');
+  assert.match(ctx, /clearAuthorPreviewSave\(AUTHOR_PREVIEW_GAME_ID\)/);
 });
 
 test('romanceAuthorPreview_assess_缺名可进_致命阻断', async () => {
@@ -73,12 +82,14 @@ test('romanceAuthorPreview_assess_缺名可进_致命阻断', async () => {
   assert.equal(soft.fatal.length, 0);
   assert.ok(soft.warnings.some((w) => /名称/.test(w)));
 
-  const hard = mod.assessAuthorPreview({
+  // 悬空 startRoom：仅警告，不阻断预览（clean/sanitize 会纠偏；运行时也会回落）
+  const softRoom = mod.assessAuthorPreview({
     id: 'demo-world',
     name: '雾色',
     version: '0.1.0',
     kind: 'world',
     content: { rooms: { start: { name: '家', desc: '家', exits: {} } }, startRoom: 'nowhere' },
   });
-  assert.ok(hard.fatal.some((e) => /startRoom/.test(e)));
+  assert.equal(softRoom.fatal.length, 0);
+  assert.ok(softRoom.warnings.some((e) => /startRoom/.test(e)));
 });

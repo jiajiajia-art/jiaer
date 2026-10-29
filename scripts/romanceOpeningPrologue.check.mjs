@@ -1,5 +1,5 @@
 /**
- * 开幕页 = 编辑器开场白；与 AI 开局剧情分离；开幕期间不挂载 GameShell。
+ * 开幕页：自定义 page 优先，否则内置排版读旧 opening 字段；与 AI 开局剧情分离。
  */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -20,6 +20,9 @@ test('Opening_只渲染编辑器开场白_禁止手记时间地点与AI正文', 
   assert.doesNotMatch(opening, /firstAi/);
   assert.doesNotMatch(opening, /opening-note/);
   assert.match(opening, /copy\.paragraphs/);
+  // 功能注释：无自定义页时仍走内置排版字段
+  assert.match(opening, /copy\.page/);
+  assert.match(opening, /旧模组字段仍由此处读取/);
 });
 
 test('App_开幕期间不得挂载GameShell', () => {
@@ -44,9 +47,15 @@ test('GameContext_开局剧情应延后到进入game', () => {
   assert.doesNotMatch(startBlock, /void runTurn\(/);
 });
 
-test('ModOpeningEditor_不再提供开幕AI正文来源开关', () => {
+test('ModEditorPanel_开场只留外观工作室_禁止开场白表单', () => {
+  const panel = readFileSync(join(romance, 'components/ModEditorPanel.tsx'), 'utf8');
+  assert.match(panel, /OpeningStyleStudio/);
+  assert.doesNotMatch(panel, /<ModOpeningEditor/);
+  assert.doesNotMatch(panel, /ui-label border-t[\s\S]{0,80}开场白/);
+  // 改 page 时须展开保留旧 opening 字段
+  assert.match(panel, /\.\.\.\(c\.opening \?\? \{\}\),\s*page/);
+  // ModOpeningEditor 文件可留作 Cover 导出，但面板不得再挂整套输入
   const ed = readFileSync(join(romance, 'components/ModOpeningEditor.tsx'), 'utf8');
+  assert.match(ed, /export default function ModOpeningEditor/);
   assert.doesNotMatch(ed, /开幕正文来源/);
-  assert.doesNotMatch(ed, /\["ai", "AI 生成"/);
-  assert.match(ed, /正式开局剧情/);
 });

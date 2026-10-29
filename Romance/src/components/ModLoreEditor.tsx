@@ -124,7 +124,7 @@ export default function ModLoreEditor({ value, onChange, rooms, npcs }: { value?
         <p>没勾选所属地点的地区，按「当前地名里含地区名或关键词」判断；只有一个地区时始终视为身处其中。</p>
       </div>
       <button type="button" className={btn} onClick={() => { const r: LoreRegion = blankNode("lr", `地区 ${list.length + 1}`); put([...list, r]); setOpen(r.id); }}>＋ 添加地区</button>
-      {!list.length && <p className="rounded-lg border border-dashed border-line px-3 py-4 text-center text-[12px] text-ink-soft">暂无地区 · 设定量少的世界观，直接写进「世界观提示词 · 世界观简介」即可</p>}
+      {!list.length && <p className="rounded-lg border border-dashed border-line px-3 py-4 text-center text-[12px] text-ink-soft">暂无地区 · 设定量少的世界观，直接写进①基础「剧本基调」即可</p>}
 
       {list.map((r, i) => {
         const isOpen = open === r.id;

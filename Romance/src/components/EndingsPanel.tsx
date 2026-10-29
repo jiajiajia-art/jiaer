@@ -486,7 +486,7 @@ export default function EndingsPanel({
           {dims.length >= GRADE_DIM_MAX ? `已达上限 ${GRADE_DIM_MAX} 条` : "＋ 添加评级维度"}
         </button>
         {srcs.every((x) => x.group === GROUP_BUILTIN) && (
-          <p className="text-[11px] text-ink-soft">本作品还没有自定义属性或人物线路词条，下拉里只有引擎内置数值。可先在「角色属性」或「人物线路」里建好再来选。</p>
+          <p className="text-[11px] text-ink-soft">本作品还没有自定义属性或人物线路词条，下拉里只有引擎内置数值。可先在「建角」或「人物线路」里建好再来选。</p>
         )}
       </Area>
     </div>

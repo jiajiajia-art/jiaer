@@ -1,5 +1,6 @@
 import ModRoomTreeEditor from "./ModRoomTreeEditor";
 import { useDraft, fmtDraftTime } from "../lib/useDraft";
+import { Modal } from "./ui";
 import { loadConfig } from "../lib/store";
 import { synthSpeech } from "./phone/screenShare";
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -8,17 +9,16 @@ import { AUTHOR_PREVIEW_END, assessAuthorPreview, requestAuthorPreview, type Aut
 import type { FeatureFlags, Mod, ModKind, PromptFragments, TermKey } from "../mods/types";
 import type { Option } from "../game/data";
 import type { Dir, PersonContent, RoomContent } from "../worlds/star2005/content";
-import AudioPicker from "./AudioPicker";
-import { audioLabel } from "../game/audioLib";
 import ModBgmEditor from "./ModBgmEditor";
+import { locationBgmOptions } from "../lib/modMusic";
+import { PLATFORM_AUDIO } from "../game/platformAudio";
+import { useGame } from "../store/gameCtx";
 import ModTravelEditor from "./ModTravelEditor";
 import ModAvatarPoolsEditor from "./ModAvatarPoolsEditor";
 import { variantNames } from "../game/avatarPools";
 import ModCarsEditor from "./ModCarsEditor";
 import SlotDataEditor from "./DataForm";
 import { ModGigsEditor, ModMealsEditor, ModPregnancyEditor } from "./ModPackEditors";
-import { GIG_POOL } from "../game/data";
-import { RAW_CONTRACTS, RAW_IMAGE_CRISIS, RAW_INDUSTRY, RAW_PROJECTS } from "../worlds/star2005/content";
 import { STAT_LABELS, RAW_STAT_LABELS, ALL_STAT_KEYS } from "../game/data";
 import { perkKeyOptions } from "../game/perkKeys";
 import ModWorldBookEditor from "./ModWorldBookEditor";
@@ -31,7 +31,7 @@ import FixedEventsPanel from "./FixedEventsPanel";
 import ContactsPanel from "./ContactsPanel";
 import EndingsPanel from "./EndingsPanel";
 import ModIncomeEditor from "./ModIncomeEditor";
-import ModOpeningEditor, { ModCoverEditor } from "./ModOpeningEditor";
+import { ModCoverEditor } from "./ModOpeningEditor";
 import OpeningStyleStudio from "./OpeningStyleStudio";
 import ModAttrsEditor from "./ModAttrsEditor";
 import ModTrainingsEditor from "./ModTrainingsEditor";
@@ -46,10 +46,10 @@ import TimelineEditor from "./TimelineEditor";
 import { worksMarkPreview } from "../lib/worksChip";
 import ModPathsEditor from "./ModPathsEditor";
 import ModCreationFieldsEditor from "./ModCreationFieldsEditor";
-import ModPromptEditor from "./ModPromptEditor";
 import ModThemeEditor from "./ModThemeEditor";
 import AddPlayModModal from "./AddPlayModModal";
-import { sanitizeModStrings } from "../lib/sanitizeModStrings";
+import { healModRoomRefs, sanitizeModStrings } from "../lib/sanitizeModStrings";
+import { applyScriptTone, consolidateScriptTone, readScriptTone } from "../lib/scriptTone";
 import { readFunloomAuthorLabel } from "../lib/platformAvatarLibrary";
 import {
   orphanedAutoPlayDeps,
@@ -70,6 +70,7 @@ import GameRulesEditor from "./GameRulesEditor";
 import StorylinesEditor from "./StorylinesEditor";
 import LookRulesEditor from "./LookRulesEditor";
 import PhoneAppsEditor from "./PhoneAppsEditor";
+import ModSkinEditor from "./ModSkinEditor";
 import NavTabsModEditor from "./NavTabsModEditor";
 import type { PlaySlot } from "../lib/types";
 import { Dirty, EmptyState, FieldErr, Help, ScopeBanner, SearchBox, matches, useConfirm } from "./EditorKit";
@@ -92,12 +93,6 @@ const FEATURES: { k: Exclude<keyof FeatureFlags, "phoneApps" | "phoneAppsExtra">
   { k: "career", label: "通告 / 作品 / 项目" }, { k: "imageCrisis", label: "形象 · 舆情危机" }, { k: "phone", label: "手机页签" },
   { k: "pregnancy", label: "怀孕" }, { k: "transport", label: "交通系统（出行方式 / 车费）" }, { k: "cars", label: "座驾" },
 ];
-/** 功能注释：与 ModPromptEditor 可见字段对齐（仅 gmIntro / worldIntro / narratorPersona） */
-const PROMPTS: { k: "gmIntro" | "worldIntro" | "narratorPersona"; label: string; help: string }[] = [
-  { k: "gmIntro", label: "GM 开场白", help: "替换系统提示开头「你是……的 GM」整段。" },
-  { k: "worldIntro", label: "世界观设定", help: "追加注入，概括时代、地点、基调。" },
-  { k: "narratorPersona", label: "叙事口吻", help: "文风、人称、节奏等要求。" },
-];
 const inp = "w-full min-w-0 rounded-lg border border-line bg-paper-2 px-2.5 py-1.5 text-[12.5px] text-ink placeholder:text-ink-soft/70 focus:border-jade focus:outline-none";
 const btn = "rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40";
 const lbl = "mb-0.5 block text-[10.5px] font-bold tracking-[0.12em] text-ink-soft";
@@ -108,40 +103,38 @@ export function blankMod(kind: ModKind): Mod {
   return { id: "", name: "", version: "0.1.0", author: "", description: "", kind, dependencies: kind === "addon" ? ["ent"] : [], content: {} };
 }
 
-/* 编辑器分组：按所属系统归类；原「④ 世界」已并入①基础（地点）；取消原「⑥ 开场」一级分类 */
+/* 编辑器分组：外观归「⑥ 美化」（原「⑥ 开场」并入此处，不再单列开场）。玩法开关与世界设定不进美化。
+ * 功能注释：不再提供「全部」页签；默认停在「① 基础」。搜索关键词仍可跨分组命中区块。 */
 const GROUPS = [
-  { k: "all", label: "全部", hint: "所有设置一览（按创作顺序排列）" },
-  { k: "base", label: "① 基础", hint: "名称与简介、时间与推进、开局封面、地点、头像库、功能开关、底栏页签与手机应用、主题与音乐" },
-  { k: "role", label: "② 角色", hint: "玩家的能力属性、建角页（人物线路 / 字段 / 选项池）、世界里的人物与时间线" },
+  { k: "base", label: "① 基础", hint: "名称与简介、剧本基调、时间与推进、地点" },
+  { k: "role", label: "② 角色", hint: "头像库、建角（属性 + 字段）、人物线路、选项池、世界里的人物与时间线" },
   { k: "grow", label: "③ 养成", hint: "开局资金与初始资源、日程玩法、名气分档与头衔、账单与收支、玩法规则、引擎结算规则" },
-  { k: "story", label: "④ 剧情", hint: "世界观提示词、世界书、开场剧情（开场白 / 开场页）、固定 / 首次事件、主线与结局、剧情美化" },
-  { k: "play", label: "⑤ 玩法 Mod", hint: "用卡片添加 / 启用 / 关闭玩法与手机应用；详细配置用开关和表单，无需写代码" },
+  { k: "story", label: "④ 剧情", hint: "世界书、固定 / 首次事件、主线与结局" },
+  { k: "play", label: "⑤ 玩法 Mod", hint: "功能开关、通告 / 出行 / 孕育等配置；用卡片添加玩法与手机应用" },
+  { k: "look", label: "⑥ 美化", hint: "开局封面、手机外观、皮肤美化、音乐、开场页外观、剧情美化、底栏样式" },
   { k: "pack", label: "本包内容", hint: "只列出这个叠加包里实际写了内容的区块；要加别的内容，去其他分组找" },
 ] as const;
-const STEPS = GROUPS.filter((x) => x.k !== "all" && x.k !== "pack");
+const STEPS = GROUPS.filter((x) => x.k !== "pack");
 type GroupKey = (typeof GROUPS)[number]["k"];
-const GroupCtx = createContext<{ cur: GroupKey; q: string; expand: boolean | null }>({ cur: "all", q: "", expand: null });
+const GroupCtx = createContext<{ cur: GroupKey; q: string }>({ cur: "base", q: "" });
 
 /* 各分组里「已填写内容」的区块数，显示在分组页签上，一眼看出哪里还没动过 */
 const has = (x: unknown) => Array.isArray(x) ? x.length > 0 : x && typeof x === "object" ? Object.keys(x).length > 0 : x !== undefined && x !== "";
-function groupFilled(c: Mod["content"]): Record<Exclude<GroupKey, "all" | "pack">, number> {
+function groupFilled(c: Mod["content"], skinOn = false): Record<Exclude<GroupKey, "pack">, number> {
   const n = (...xs: boolean[]) => xs.filter(Boolean).length;
   return {
     base: n(
+      !!readScriptTone(c.prompt),
       [c.startDate, c.startTime, c.dayStart, c.dayEnd].some(has) || has(c.play) || has(c.travel?.apPerTurn) || has(c.travel?.advanceUnit),
-      has(c.cover),
       has(c.startRoom) || has(c.rooms),
-      has(c.features),
-      has(c.phoneAppsCfg) || has(c.navTabs) || NAV_TAB_TERMS.some(({ k }) => !!c.terms?.[k]),
-      has(c.theme),
-      has(c.bgm) || has(c.audioRefs),
     ),
-    role: n(has(c.customAttrs) || has(c.stats), has(c.creation?.paths), has(c.creation?.fields) || has(c.creation?.builtin),
+    role: n(has(c.customAttrs) || has(c.creation?.fields) || has(c.creation?.builtin), has(c.creation?.paths),
       [c.styles, c.identities, c.backgrounds, c.directions, c.school, c.parentJobs].some(has), has(c.avatars), has(c.npcs)),
     grow: n(has(c.startMoney), has(c.trainings), has(c.sideJobs) || has(c.weekendActs), has(c.fameTiers) || has(c.titles) || has(c.bills), has(c.income), has(c.gameRules), has(c.tuning)),
-    story: n(has(c.prompt), has(c.lore), has(c.worldBook), has(c.festivals), has(c.opening), has(c.fixedEvents) || has(c.events), has(c.storylines), has(c.lookRules)),
+    story: n(has(c.lore), has(c.worldBook), has(c.festivals), has(c.fixedEvents) || has(c.events), has(c.storylines)),
     play: n(
       has(c.playModInstalls),
+      has(c.features),
       has(c.travel) || has(c.cars),
       has(c.gigs) || has(c.gigPrices),
       has(c.contracts),
@@ -152,18 +145,30 @@ function groupFilled(c: Mod["content"]): Record<Exclude<GroupKey, "all" | "pack"
       has(c.meals),
       has(c.pregnancy),
     ),
+    look: n(
+      has(c.cover),
+      has(c.phoneAppsCfg),
+      has(c.theme),
+      has(c.bgm) || has(c.audioRefs) || has(c.platformAudioRefs),
+      has(c.opening),
+      has(c.lookRules),
+      has(c.navTabs) || has(c.navSize) || NAV_TAB_TERMS.some(({ k }) => !!c.terms?.[k]),
+      skinOn,
+    ),
   };
 }
 const isTextField = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || (t.tagName === "INPUT" && !["checkbox", "radio", "button", "range", "color", "file"].includes((t as HTMLInputElement).type)));
 
 /* on：本区块在这个模组里写了内容（「本包内容」视图只列这些） */
-function Section({ g, title, hint, count, children, defaultOpen, on }: { g: Exclude<GroupKey, "all" | "pack">; title: string; hint?: string; count?: number; children: ReactNode; defaultOpen?: boolean; on?: boolean }) {
-  const { cur, q, expand } = useContext(GroupCtx);
+function Section({ g, title, hint, count, children, defaultOpen, on }: { g: Exclude<GroupKey, "pack">; title: string; hint?: string; count?: number; children: ReactNode; defaultOpen?: boolean; on?: boolean }) {
+  const { cur, q } = useContext(GroupCtx);
   const s = String(q ?? "").trim().toLowerCase();
-  if (s ? !(title + (hint ?? "")).toLowerCase().includes(s) : cur === "pack" ? !on : cur !== "all" && cur !== g) return null;
-  const open = expand ?? (defaultOpen || !!s || cur !== "all");
+  // 功能注释：有搜索词时跨分组展示命中项；无搜索时只显示当前分组（本包内容另按 on）
+  if (s ? !(title + (hint ?? "")).toLowerCase().includes(s) : cur === "pack" ? !on : cur !== g) return null;
+  // 功能注释：当前分组 / 搜索命中 / 本包内容一览时默认展开，避免叠包作者还要逐块点开
+  const open = defaultOpen || !!s || cur === g || cur === "pack";
   return (
-    <details key={String(expand)} open={open || undefined} className="group rounded-2xl border border-line bg-paper/50">
+    <details open={open || undefined} className="group rounded-2xl border border-line bg-paper/50">
       <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5">
         <span className="text-[13px] font-bold text-ink">{title}</span>
         {!!count && <span className="rounded-full bg-jade/15 px-1.5 text-[10.5px] font-semibold text-jade">{count}</span>}
@@ -197,6 +202,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
   fluid?: boolean;
 }) {
   const { mods } = useMods();
+  const { game } = useGame();
   /**
    * 功能注释：fluid = 生成世界 / 作者态。精简基本信息入口（藏版本/作者/图标/类型/底座依赖），
    * 模组库高级入口仍用完整表单。底层字段一律保留，不因隐藏而清空。
@@ -251,16 +257,15 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
   const rootRef = useRef<HTMLDivElement>(null);
   // 叠加包（尤其是内置玩法包的副本）默认只看「本包内容」，免得在几十个区块里找；刷新时可强制还原分区
   const [group, setGroup] = useState<GroupKey>(() => {
-    // 功能注释：旧会话「功能扩展→玩法」「世界→基础」兼容，避免刷新落在已删页签
+    // 功能注释：旧会话「功能扩展→玩法」「世界→基础」「全部→基础」兼容，避免刷新落在已删页签
     const boot =
       initialGroup === "ext" ? "play"
-      : initialGroup === "world" ? "base"
+      : initialGroup === "world" || initialGroup === "all" ? "base"
       : initialGroup;
     if (boot && GROUP_KEYS.has(boot)) return boot as GroupKey;
     return initial.kind === "addon" && Object.keys(initial.content ?? {}).length ? "pack" : "base";
   });
-  const [expand, setExpand] = useState<boolean | null>(null);
-  const goGroup = (k: GroupKey) => { setGroup(k); setQ(""); setExpand(null); rootRef.current?.scrollIntoView({ block: "start", behavior: "smooth" }); };
+  const goGroup = (k: GroupKey) => { setGroup(k); setQ(""); rootRef.current?.scrollIntoView({ block: "start", behavior: "smooth" }); };
   const chromeCb = useRef(onChromeChange);
   chromeCb.current = onChromeChange;
   useEffect(() => {
@@ -275,13 +280,13 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
       return 0;
     }
   }, [m]);
-  const filled = useMemo(() => groupFilled(m.content), [m.content]);
+  const filled = useMemo(() => groupFilled(m.content, has(m.ext?.skin)), [m.content, m.ext?.skin]);
   const [q, setQ] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
   const [npcQ, setNpcQ] = useState("");
   const [confirm, confirmEl] = useConfirm();
   const dirty = JSON.stringify(m) !== baseline;
-  // 本机草稿：编辑中自动缓存；再次打开时若与已保存版本不一致，提示选择要加载的版本
+  // 本机草稿：编辑中自动缓存。刚进入且与已保存版本不一致时，由对话框问一次；编辑器本身先显示已保存版本。
   const draft = useDraft<Mod>(`mod.${persisted ? m.id : "new"}`, m, baseline, dirty);
   const c = m.content;
   const setC = (p: Partial<Mod["content"]>) => setM({ ...m, content: { ...m.content, ...p } });
@@ -297,9 +302,9 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
   const showPlay = (panel: PlayModEditorPanelId) => playPanels.has(panel);
   /** 功能注释：按故事设定推荐玩法 mod，须作者点「安装」才写入；绝不自动添加 */
   const playModRecs = useMemo(() => {
-    const seed = [m.description, c.prompt?.worldIntro].filter(Boolean).join("\n");
+    const seed = [m.description, readScriptTone(c.prompt)].filter(Boolean).join("\n");
     return recommendPlayModsFromSetting(seed, c.playModInstalls);
-  }, [m.description, c.prompt?.worldIntro, c.playModInstalls]);
+  }, [m.description, c.prompt, c.playModInstalls]);
   const installRecommended = async (slug: string) => {
     const item = catalogBySlug(slug);
     if (!item) return;
@@ -421,11 +426,21 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
     }
     if (ct.navTabs && !ct.navTabs.length) delete ct.navTabs;
     if (!ct.navSize) delete ct.navSize;
-    if (ct.prompt) { for (const k of Object.keys(ct.prompt) as (keyof PromptFragments)[]) { const v = ct.prompt[k]; if (typeof v === "string" && !v.trim()) delete ct.prompt[k]; } if (!Object.keys(ct.prompt).length) delete ct.prompt; }
+    // 功能注释：保存时把旧三字段并进 scriptTone，作者只维护一处
+    if (ct.prompt) {
+      ct.prompt = consolidateScriptTone(ct.prompt) ?? {};
+      for (const k of Object.keys(ct.prompt) as (keyof PromptFragments)[]) {
+        const v = ct.prompt[k];
+        if (typeof v === "string" && !v.trim()) delete ct.prompt[k];
+      }
+      if (!Object.keys(ct.prompt).length) delete ct.prompt;
+    }
     if (ct.features && !Object.keys(ct.features).length) delete ct.features;
     if (!ct.startDate) delete ct.startDate;
     if (!ct.weather) delete ct.weather;
     if (ct.rooms && !Object.keys(ct.rooms).length) { delete ct.rooms; delete ct.startRoom; }
+    // 功能注释：预览/保存前纠偏悬空 startRoom（AI 常写 kid_bedroom 等不在表内的 id）
+    healModRoomRefs(ct);
     delete out.builtin;
     return out;
   };
@@ -453,8 +468,21 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
   };
   const cancel = async () => { if (!dirty || (await confirm("放弃未保存的修改？本机草稿也会一并删除。", { ok: "放弃" }))) { draft.clear(); onClose(savedName, savedId); } };
 
+  /** 功能注释：返回设定向导前，有未保存修改须确认，避免表单白填 */
+  const backToWizard = async () => {
+    if (!onBackToWizard) return;
+    if (dirty && !(await confirm("有未保存的修改，确定返回设定页？本机草稿仍会保留，可稍后恢复。", { ok: "返回设定" }))) return;
+    onBackToWizard();
+  };
+
   const openPreview = () => {
+    // 功能注释：预览必须用当前表单 m（clean 后），不读已保存的 userMods；保存与否都走同一路径
     const out = clean();
+    // 功能注释：把纠偏后的地点写回编辑器，避免下次仍显示悬空 startRoom
+    if (JSON.stringify(out.content?.startRoom) !== JSON.stringify(m.content?.startRoom)
+      || JSON.stringify(out.content?.npcs) !== JSON.stringify(m.content?.npcs)) {
+      setM(out);
+    }
     const { fatal, warnings } = assessAuthorPreview(out);
     if (fatal.length) {
       setPreviewFatal(fatal);
@@ -484,12 +512,13 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
     };
   }, []);
   // 快捷键：Ctrl/⌘+S 保存（留在编辑器）；不在输入框里时 Ctrl/⌘+Z 撤销、Ctrl/⌘+Shift+Z 或 Ctrl+Y 重做
-  const keyRef = useRef({ save, undo, redo });
-  keyRef.current = { save, undo, redo };
+  const keyRef = useRef({ save, undo, redo, block: false });
+  keyRef.current = { save, undo, redo, block: !!draft.pending };
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
       const k = e.key.toLowerCase();
+      if (keyRef.current.block) { e.preventDefault(); return; }
       if (k === "s") { e.preventDefault(); keyRef.current.save(true); return; }
       if (isTextField(e.target)) return;
       if (k === "z" && !e.shiftKey) { e.preventDefault(); keyRef.current.undo(); }
@@ -501,10 +530,9 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
 
   const otherMods = mods.filter((x) => x.id !== m.id);
   const deps = m.dependencies ?? [];
-  const gi = GROUPS.findIndex((x) => x.k === group);
   const si = STEPS.findIndex((x) => x.k === group);
   const prevG = si <= 0 ? null : STEPS[si - 1];
-  const nextG = group === "pack" || si === STEPS.length - 1 ? null : STEPS[group === "all" ? 0 : si + 1];
+  const nextG = group === "pack" || si < 0 || si === STEPS.length - 1 ? null : STEPS[si + 1];
   const canUndo = hist.current.past.length > 0, canRedo = hist.current.future.length > 0;
 
   const savedLabel = savedAt
@@ -515,6 +543,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
     /* 功能注释：非 fluid 锁 1200 最小宽；fluid 由 .world-gen-editor CSS 管：手机 100% / PC≤1200 */
     <div
       ref={rootRef}
+      inert={draft.pending ? true : undefined}
       className={`mod-editor-root mx-auto w-full scroll-mt-2 space-y-2.5 text-ink ${
         fluid ? "min-w-0 max-w-[1200px]" : "min-w-[1200px] max-w-[1200px]"
       }`}
@@ -531,11 +560,11 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
       {/* 功能注释：顶栏固定「保存 / 预览」在右侧且 shrink-0，避免窄屏被标题挤出可视区 */}
       <div className="mod-editor-chrome sticky top-0 z-20 -mx-1 space-y-1 border-b border-line bg-paper-2/95 px-1 py-2 backdrop-blur">
         <div className="flex items-center gap-1.5 sm:gap-2">
-          <button type="button" className={`${btn} shrink-0 !px-2 sm:!px-2.5`} onClick={() => (onBackToWizard ? onBackToWizard() : void cancel())}>
+          <button type="button" className={`${btn} shrink-0 !px-2 sm:!px-2.5`} onClick={() => (onBackToWizard ? void backToWizard() : void cancel())}>
             ‹ 返回
           </button>
           <span className="min-w-0 flex-1 truncate text-[13px] font-bold sm:text-[14px]">
-            {persisted ? `编辑「${m.name || initial.name}」` : "新建模组"}
+            {persisted ? `编辑「${m.name || initial.name}」` : "创建世界"}
           </span>
           <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
             {/* 功能注释：保存入口只放顶栏；原底栏「保存并返回 / 放弃」并入此处，避免双入口 */}
@@ -603,29 +632,21 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
         </div>
       )}
       {onBackToWizard ? (
-        <button type="button" className="text-[12px] font-semibold text-jade hover:underline" onClick={onBackToWizard}>
+        <button type="button" className="text-[12px] font-semibold text-jade hover:underline" onClick={() => void backToWizard()}>
           ← 返回修改设定
         </button>
       ) : null}
       {draft.pending && (
-        <div role="alertdialog" aria-label="发现本机未保存草稿" className="rounded-2xl border border-gold/50 bg-gold/10 p-3.5">
-          <div className="flex items-start gap-2.5">
-            <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gold/20 text-gold">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><path d="M14 3v6h6M12 13v4M12 11h.01" /></svg>
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[13.5px] font-bold text-ink">发现本机未保存的草稿</p>
-              <p className="mt-1 text-[12px] leading-relaxed text-ink-soft">
-                这个模组在浏览器里有一份自动保存的草稿（{fmtDraftTime(draft.pending.at)}），与已保存的版本不一致。请选择要加载的版本。
-                {draft.stale && <b className="mt-1 block font-semibold text-danger">注意：草稿生成之后，已保存的版本又被修改过，恢复草稿会覆盖那些修改。</b>}
-              </p>
-              <div className="mt-2.5 flex flex-wrap gap-2">
-                <button onClick={() => { const v = draft.restore(); if (v) { setM(lockId(structuredClone(v))); setRev((r) => r + 1); } }} className="rounded-full bg-jade px-3.5 py-1.5 text-[12px] font-bold text-white">恢复草稿</button>
-                <button onClick={draft.discard} className={btn}>使用已保存版本</button>
-              </div>
-            </div>
+        <Modal title="发现本机未保存的草稿" locked onClose={() => { /* 只能点两个按钮，遮罩 / Esc / 关闭都不选版本 */ }}>
+          <p className="text-[13px] leading-relaxed text-ink-soft">
+            这个模组在浏览器里有一份自动保存的草稿（{fmtDraftTime(draft.pending.at)}），与已保存的版本不一致。请选择要加载的版本。
+            {draft.stale && <b className="mt-1 block font-semibold text-danger">注意：草稿生成之后，已保存的版本又被修改过，恢复草稿会覆盖那些修改。</b>}
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button type="button" autoFocus onClick={() => { const v = draft.restore(); if (v) { setM(lockId(structuredClone(v))); setRev((r) => r + 1); } }} className="ui-btn ui-btn-primary ui-btn-sm">恢复草稿</button>
+            <button type="button" onClick={draft.discard} className="ui-btn ui-btn-sm">使用已保存版本</button>
           </div>
-        </div>
+        </Modal>
       )}
       {!authorSimplify && (
         <ScopeBanner scope="newgame">模组编辑保存后，在下次「开新局」时生效；当前存档继续使用开局时的内容。想改当前存档，请用世界书 / 地图编辑器等面板。</ScopeBanner>
@@ -645,13 +666,13 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
         <div className="flex gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]">
           {GROUPS.filter((x) => x.k !== "pack" || m.kind === "addon").map((x) => {
             const on = group === x.k && !q;
-            const n = x.k === "all" || x.k === "pack" ? 0 : filled[x.k];
+            const n = x.k === "pack" ? 0 : filled[x.k];
             const warn = x.k === "grow" && healthWarn > 0;
             return (
               <button key={x.k} type="button" onClick={() => goGroup(x.k)} title={x.hint} aria-pressed={on}
                 className={`relative flex shrink-0 items-center gap-1 rounded-full border px-3 py-1 text-[12px] font-bold transition ${on ? "border-jade bg-jade text-white" : "border-line bg-paper text-ink-soft hover:border-jade hover:text-jade"}`}>
                 {x.label}
-                {n > 0 && <span className={`rounded-full px-1.5 text-[10px] tabular-nums ${on ? "bg-white/25 text-white" : "bg-jade/12 text-jade"}`}>{n}</span>}
+                {n > 0 && <span className={`wg-tab-count rounded-full px-1.5 text-[10px] font-bold tabular-nums leading-none ${on ? "is-on" : "bg-jade/12 text-jade"}`}>{n}</span>}
                 {warn && <span aria-label="数值体检有提醒" className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-gold ring-2 ring-paper-2" />}
               </button>
             );
@@ -663,15 +684,10 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
           <button className={`${btn} shrink-0`} onClick={redo} disabled={!canRedo} title="重做（Ctrl/⌘+Shift+Z）" aria-label="重做"><IconRedo size={14} /></button>
         </div>
         {!String(q ?? "").trim() && (
-          <div className="flex items-start gap-2">
-            <p className="min-w-0 flex-1 text-[11px] leading-snug text-ink-soft">{GROUPS.find((x) => x.k === group)?.hint}</p>
-            {group === "all" && (
-              <button type="button" onClick={() => setExpand((v) => !v)} className="shrink-0 text-[11px] font-bold text-jade hover:underline">{expand ? "全部收起" : "全部展开"}</button>
-            )}
-          </div>
+          <p className="text-[11px] leading-snug text-ink-soft">{GROUPS.find((x) => x.k === group)?.hint}</p>
         )}
       </div>
-      <GroupCtx.Provider value={{ cur: group, q, expand }}>
+      <GroupCtx.Provider value={{ cur: group, q }}>
       <div key={rev} className="space-y-2.5 [&:not(:has(>details))>.sec-empty]:block">
       <div className="sec-empty hidden"><EmptyState>没有找到「{String(q ?? "").trim()}」相关的设置项，换个词试试，比如「金钱」可以搜「资金」「收入」「账单」。</EmptyState></div>
       <Section
@@ -691,6 +707,11 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
               </label>
               <label className="sm:col-span-2"><span className={lbl}>简介</span>
                 <textarea className={inp} rows={3} value={m.description ?? ""} placeholder="一句话介绍这个世界（列表与开局页展示）" onChange={(e) => setM({ ...m, description: e.target.value })} />
+              </label>
+              <label className="sm:col-span-2"><span className={lbl}>剧本基调</span>
+                <textarea className={inp} rows={8} value={readScriptTone(c.prompt)} placeholder="写给模型的整段基调：你是谁、世界是什么、叙事口吻……开局与每回合都会注入"
+                  onChange={(e) => setC({ prompt: applyScriptTone(c.prompt, e.target.value) })} />
+                <Help>由原「GM 开场白 / 世界观设定 / 叙事口吻」合并；旧字按此顺序接上。游戏发给模型仍是这段，只在此处改。</Help>
               </label>
               <div className="sm:col-span-2">
                 <span className={lbl}>作品 ID</span>
@@ -725,6 +746,11 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
                 <textarea className={inp} rows={2} value={m.description ?? ""} placeholder="一句话介绍这个世界 / 叠加包（给自己或玩卡的人看）" onChange={(e) => setM({ ...m, description: e.target.value })} />
               </label>
             </div>
+            <label className="block"><span className={lbl}>剧本基调</span>
+              <textarea className={inp} rows={8} value={readScriptTone(c.prompt)} placeholder="写给模型的整段基调：你是谁、世界是什么、叙事口吻……开局与每回合都会注入"
+                onChange={(e) => setC({ prompt: applyScriptTone(c.prompt, e.target.value) })} />
+              <Help>由原「GM 开场白 / 世界观设定 / 叙事口吻」合并；旧字按此顺序接上。游戏发给模型仍是这段，只在此处改。</Help>
+            </label>
             <div>
               <span className={lbl}>类型</span>
               <div className="inline-flex max-w-full flex-wrap rounded-lg border border-line bg-paper-2 p-0.5 text-[12px] font-bold">
@@ -775,7 +801,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
         hint="开局日期 / 时刻 · 每日作息 · 行动点 · 推进节奏 · 年龄随日历"
         count={[c.startDate, c.startTime, c.dayStart, c.dayEnd, c.travel?.apPerTurn, c.travel?.advanceUnit, c.travel?.advanceDays, c.play?.ageAuto, c.play?.pickStartDate].filter((x) => x !== undefined && x !== "").length || undefined}
       >
-        <p className="text-[11px] leading-relaxed text-ink-soft">本引擎用真实日历 + 每日时钟：主线推进前进日历并回满行动点；换地点、进支线扣行动点但不推进日历。开局封面与起点在本页「开局封面 / 地点」、资金在「③ 养成」、出行在「⑤ 玩法 Mod」添加后配置、开场白在「④ 剧情」——此处只编时间系统。</p>
+        <p className="text-[11px] leading-relaxed text-ink-soft">本引擎用真实日历 + 每日时钟：主线推进前进日历并回满行动点；换地点、进支线扣行动点但不推进日历。起点在本页「地点」、开局封面与开场页在「⑥ 美化」、资金在「③ 养成」、出行在「⑤ 玩法 Mod」添加后配置——此处只编时间系统。</p>
         <div className="grid grid-cols-2 gap-2">
           <label><span className={lbl}>开局日期</span>
             <input className={`${inp} font-mono`} value={c.startDate ?? ""} placeholder="2005.01.03" onChange={(e) => setC({ startDate: e.target.value || undefined })} />
@@ -827,94 +853,17 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
         <Help>想要「每隔几天 / 每周 / 每月 / 每年某天」重复上演的剧情，在「④ 剧情 → 固定事件」的触发时间里选「周期触发」。</Help>
       </Section>
 
-      {/* 功能注释：作者开局封面（画布布局 / 装扮）唯一编辑入口在①基础；游戏封面页不再放入口，⑤剧情只编开场白 */}
-      <Section
-        g="base"
-        title="开局封面"
-        on={has(c.cover)}
-        hint="画布布局 · 背景 / 标题 / 按钮 · AI 搭配 · 自定义 HTML（唯一编辑入口）"
-        count={Object.keys(c.cover ?? {}).length || undefined}
-      >
-        <ModCoverEditor value={c.cover} modId={m.id} onChange={(cover) => setC({ ...c, cover })} />
-        <Help>玩家侧若要叠自己的封面，在游戏「美化 → 封面」；预览时封面右上角不再出现「装扮封面」按钮。</Help>
-      </Section>
-
-      {/* 功能注释：原「④ 世界」仅地点，已并入①基础，紧跟开局封面 */}
+      {/* 功能注释：地点名字与出口留在①基础；开局封面在⑥美化 */}
       <Section g="base" title="地点" on={has(c.rooms) || has(c.startRoom)} hint="多级子地点 · 树状预览 · 准入 · 出口 · 开局地点" count={roomIds.length}>
         <Help>起始地点请在地点树里点选「设为开局地点」。出行方式请到「⑤ 玩法 Mod」添加「出行与交通」后配置。</Help>
-        <ModRoomTreeEditor rooms={rooms} startRoom={c.startRoom} tracks={[...(c.bgm ?? []).map((t) => ({ id: t.id, name: t.name })), ...(c.audio ?? []).filter((x) => x.kind === "bgm").map((x) => ({ id: x.id, name: x.name })), ...(c.audioRefs ?? []).map((id) => ({ id, name: `${audioLabel(id)}（引用）` }))]}
+        <ModRoomTreeEditor rooms={rooms} startRoom={c.startRoom} tracks={locationBgmOptions(c, { author: game?.audio ?? [], platform: PLATFORM_AUDIO })}
           emptyHint={m.kind === "world" ? "世界观至少需要一个地点才能行走。" : "叠加包可不定义地点（沿用世界观地图）。"}
           onChange={(next, startRoom) => setC({ rooms: next, startRoom })} onDelete={delRoom} onRename={renameRoom} />
       </Section>
 
-      <Section g="base" title="功能开关" on={has(c.features)} hint="关闭后界面自动隐藏对应玩法">
-        {FEATURES.map(({ k, label }) => {
-          // 怀孕为「显式开启」项（未写 = 关闭，也可叠加「孕育包」）；其余项未写 = 开启
-          const optIn = k === "pregnancy";
-          const on = optIn ? c.features?.[k] === true : c.features?.[k] !== false;
-          return (
-            <button key={k} onClick={() => { const f = { ...c.features }; if (optIn) { if (on) delete f[k]; else f[k] = true; } else if (on) f[k] = false; else delete f[k]; setC({ features: f }); }}
-              className="flex w-full items-center justify-between gap-2 text-left text-[12.5px]">
-              <span>{label}</span>
-              <span className={`relative h-4 w-8 shrink-0 rounded-full transition ${on ? "bg-jade" : "bg-line"}`}>
-                <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-all ${on ? "left-[18px]" : "left-0.5"}`} />
-              </span>
-            </button>
-          );
-        })}
-        <Help>除「怀孕」外默认开启，只有关闭的项会写入模组；「怀孕」默认关闭，需在这里打开或叠加「孕育包」。</Help>
-      </Section>
-
+      {/* 功能注释：头像库是人物素材，归②角色；随模组保存/导入导出，不写平台全局 */}
       <Section
-        g="base"
-        title="底栏页签"
-        on={has(c.navTabs) || has(c.navSize) || NAV_TAB_TERMS.some(({ k }) => !!c.terms?.[k])}
-        hint="底部导航显示名 · 顺序 · 显隐 · 实时预览（与玩家底栏一致）"
-        count={c.navTabs?.filter((t) => t.on !== false).length || NAV_TAB_TERMS.filter(({ k }) => !!String(c.terms?.[k] ?? "").trim()).length || undefined}
-      >
-        <NavTabsModEditor
-          terms={c.terms}
-          features={c.features}
-          navTabs={c.navTabs}
-          navSize={c.navSize}
-          onChange={(p) => setC(p)}
-        />
-      </Section>
-
-      <Section
-        g="base"
-        title="手机应用配置"
-        on={has(c.phoneAppsCfg) || showPlay("phoneApp")}
-        hint="名称 · 图标 · 顺序 · 开局预装；应用本体请在「⑤ 玩法 Mod」添加"
-        count={c.phoneAppsCfg?.length || undefined}
-      >
-        <Help>论坛 / 直播 / 商城等请到「玩法 Mod」添加；此处只调显示名与小手机试玩。</Help>
-        <PhoneAppsEditor value={c.phoneAppsCfg} onChange={(phoneAppsCfg) => setC({ phoneAppsCfg })} />
-      </Section>
-
-      <Section g="base" title="主题外观" on={has(c.theme)} hint="皮肤 · 主题色 · 字体 · 深浅色（界面系统，非开场剧情）" count={Object.keys(c.theme ?? {}).length || undefined}>
-        <ModThemeEditor value={c.theme} onChange={(theme) => setC({ theme })} />
-      </Section>
-
-      <Section g="base" title="内置音乐" on={has(c.bgm)} hint="上传 · 链接 · 开局自动播放" count={(c.bgm ?? []).length}>
-        <ModBgmEditor list={c.bgm ?? []} onChange={(bgm) => setC({ bgm: bgm.length ? bgm : undefined })} />
-      </Section>
-      <Section g="base" title="引用音频库" on={has(c.audioRefs)} hint="方式 B · 只引用作品音频库里已有的 id，不打包文件" count={c.audioRefs?.length}>
-        <p className="text-[11px] leading-relaxed text-ink-soft">方式 A 是上方「内置音乐」（音频随 MOD 打包）。方式 B 只记下音频 id：体积小，但目标作品须有同 id 音频。</p>
-        <AudioPicker value="" empty="＋ 选择要引用的音频…" onChange={(id) => { if (id && !(c.audioRefs ?? []).includes(id)) setC({ audioRefs: [...(c.audioRefs ?? []), id] }); }} />
-        <ul className="mt-1.5 space-y-1">
-          {(c.audioRefs ?? []).map((id) => (
-            <li key={id} className="flex items-center gap-2 rounded-lg border border-line px-2 py-1 text-[12px]">
-              <span className="min-w-0 flex-1 truncate">{audioLabel(id)} <span className="font-mono text-[10.5px] text-ink-soft">{id}</span></span>
-              <button className="text-[11px] text-ink-soft hover:text-danger" onClick={() => { const r = (c.audioRefs ?? []).filter((x) => x !== id); setC({ audioRefs: r.length ? r : undefined }); }}>移除</button>
-            </li>
-          ))}
-        </ul>
-      </Section>
-
-      {/* 功能注释：头像库配置 + 匹配优先级绑定本剧，入口在①基础；随模组保存/导入导出，不写平台全局 */}
-      <Section
-        g="base"
+        g="role"
         title="头像库与匹配优先级"
         on={has(c.avatars)}
         hint="我的头像池 · 平台公共分类 · 私人/公共库优先 · 通用兜底（随本剧保存）"
@@ -924,24 +873,35 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
         <ModAvatarPoolsEditor value={c.avatars} onChange={(avatars) => setC({ avatars })} confirm={confirm} />
       </Section>
 
-      <Section g="role" title="角色属性" on={has(c.customAttrs) || has(c.stats)} hint="八维叫法 / 停用 / 上下限 · 自定义属性 · 分档显示" count={c.customAttrs?.length || undefined}>
-        <ModAttrsEditor attrs={c.customAttrs} onAttrs={(customAttrs) => setC({ customAttrs })} stats={c.stats} onStats={(stats) => setC({ stats })} />
+      {/* 功能注释：属性 + 建角字段合成「建角」；人物线路不再夹在中间，挪到本块下方 */}
+      <Section
+        g="role"
+        title="建角"
+        on={has(c.customAttrs) || has(c.creation?.fields) || has(c.creation?.builtin)}
+        hint="创作者属性 · 建角字段改名 / 锁定 / 选项联动 · 开局页只显示这里配过的"
+        count={(c.customAttrs?.length ?? 0) + (c.creation?.fields?.length ?? 0) + Object.keys(c.creation?.builtin ?? {}).length || undefined}
+      >
+        <div className="space-y-4">
+          <div>
+            <p className="mb-2 text-[12px] font-bold text-ink">属性</p>
+            <ModAttrsEditor attrs={c.customAttrs} onAttrs={(customAttrs) => setC({ customAttrs })} />
+          </div>
+          <div className="border-t border-line pt-3">
+            <p className="mb-2 text-[12px] font-bold text-ink">字段</p>
+            <ModCreationFieldsEditor creation={c.creation} parentJobs={c.parentJobs} backgrounds={c.backgrounds}
+              attrs={c.customAttrs} statLabels={c.stats?.labels} npcs={(npcs.length ? npcs : LIVE_PEOPLE).map((p) => ({ id: p.id, name: p.name }))}
+              onChange={({ creation, parentJobs }) => setC({ creation, parentJobs })} />
+          </div>
+        </div>
       </Section>
 
       <Section g="role" title="人物线路" on={has(c.creation?.paths)} hint="建角第一步 · 路径卡片 · 开局加成 · 支持 AI 生成" count={c.creation?.paths?.length || undefined}>
         <ModPathsEditor creation={c.creation} identities={c.identities} world={`${m.name}${m.description ? `：${m.description}` : ""}`}
-          worldName={m.name} city={c.terms?.city} startDate={c.startDate} school={c.school}
           npcs={(npcs.length ? npcs : LIVE_PEOPLE).map((p) => ({ id: p.id, name: p.name }))}
           rooms={Object.entries(c.rooms ?? {}).map(([id, r]) => ({ id, name: r.name || id }))}
           events={(c.fixedEvents ?? []).map((e) => ({ id: e.id, name: e.name }))}
           statsValue={c.stats} attrsValue={c.customAttrs}
           onChange={({ creation, identities }) => setC({ creation, identities })} />
-      </Section>
-
-      <Section g="role" title="建角字段" on={has(c.creation?.fields) || has(c.creation?.builtin)} hint="字段改名 · 锁定 · 选项联动 · 自定义字段" count={(c.creation?.fields?.length ?? 0) + Object.keys(c.creation?.builtin ?? {}).length || undefined}>
-        <ModCreationFieldsEditor creation={c.creation} parentJobs={c.parentJobs} backgrounds={c.backgrounds}
-          attrs={c.customAttrs} statLabels={c.stats?.labels} npcs={(npcs.length ? npcs : LIVE_PEOPLE).map((p) => ({ id: p.id, name: p.name }))}
-          onChange={({ creation, parentJobs }) => setC({ creation, parentJobs })} />
       </Section>
 
       <Section g="role" title="建角选项池" on={[c.styles, c.identities, c.backgrounds, c.directions, c.school, c.parentJobs].some(has)} hint="外形 · 身份 · 家世 · 方向 · 星座 · 母校 · 父母职业（文字设定，开局加成自行配置）" count={(c.styles?.length ?? 0) + (c.identities?.length ?? 0) + (c.backgrounds?.length ?? 0) + (c.directions?.length ?? 0) || undefined}>
@@ -1100,7 +1060,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
         <GameRulesEditor value={c.gameRules} events={c.fixedEvents} onChange={(gameRules) => setC({ gameRules })} />
       </Section>
 
-      <Section g="grow" title="数值体检" hint="和娱乐圈原版比 · 偏离太多就提醒 · 叠加后会改动哪些数值" count={healthWarn || undefined}>
+      <Section g="grow" title="数值体检" hint="只检查本作品已写内容 · 偏离太多就提醒 · 叠加后会改动哪些数值" count={healthWarn || undefined}>
         <ModHealthPanel mod={m} />
       </Section>
 
@@ -1110,10 +1070,6 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
 
       <Section g="grow" title="引擎规则" on={has(c.tuning)} hint="表现评级概率 / 倍率 · 休息减压 · 课程与打工倍率 · 通用课程等级" count={Object.keys(c.tuning ?? {}).length || undefined}>
         <ModTuningEditor value={c.tuning} stats={c.stats} attrs={c.customAttrs} npcs={(npcs.length ? npcs : LIVE_PEOPLE).map((p) => ({ id: p.id, name: p.name }))} onChange={(tuning) => setC({ tuning })} />
-      </Section>
-
-      <Section g="story" title="世界观提示词" on={has(c.prompt)} hint="即系统提示词 · 可视化编辑 · 支持预览" count={PROMPTS.filter(({ k }) => !!String(c.prompt?.[k] ?? "").trim()).length}>
-        <ModPromptEditor value={c.prompt} onChange={(prompt) => setC({ prompt })} />
       </Section>
 
       <Section g="story" title="详细设定" on={has(c.lore)} hint="地区 · 势力 · 角色 · 只发主角所在地区的完整设定，节省 token" count={c.lore?.length}>
@@ -1128,16 +1084,6 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
 
       <Section g="story" title="节日" on={has(c.festivals)} hint="平时只发名称 · 临近或提到时发完整设定" count={c.festivals?.length}>
         <ModFestivalEditor value={c.festivals} onChange={(festivals) => setC({ festivals })} />
-      </Section>
-
-      <Section g="story" title="开场剧情" on={has(c.opening)} hint="开场页外观 · 开场白 · 头图 / 视频（封面画布在①基础）" count={Object.keys(c.opening ?? {}).length || undefined}>
-        <Help>开局封面（画布布局 / 装扮）请到「① 基础 → 开局封面」编辑，此处不重复保存 cover。</Help>
-        <p className="ui-label">开场页外观</p>
-        <OpeningStyleStudio value={c.opening} modId={m.id} modName={m.name}
-          onPage={(page) => { const o = { ...c.opening, page }; if (!page) delete o.page; setC({ ...c, opening: Object.keys(o).length ? o : undefined }); }} />
-        <p className="ui-label border-t border-line/60 pt-3">开场白</p>
-        <ModOpeningEditor value={c.opening} onChange={(opening) => setC({ ...c, opening })} />
-        <Help>首次 / 开局可触发事件在下方「固定事件」。</Help>
       </Section>
 
       <Section g="story" title="固定事件" on={has(c.fixedEvents) || has(c.events)} hint="首次事件 · 预设剧本 · 时间 / 条件触发 · 事件链 · 可 AI 帮写 · 开新局写入" count={c.fixedEvents?.length}>
@@ -1182,9 +1128,22 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
         />
       </Section>
 
-      <Section g="story" title="剧情美化" on={has(c.lookRules)} hint="条件满足时自动切换外观 · 玩家可在美化里关闭" count={c.lookRules?.length}>
-        <p className="text-[11px] leading-relaxed text-ink-soft">给这个世界设计「会随剧情变化的外观」：深夜转暗、压力爆表变灰、成名后换上流金……条件与固定事件同一套，也能读取玩法规则里的规则变量。玩家自己的剧情美化优先于此处。</p>
-        <LookRulesEditor value={c.lookRules} events={c.fixedEvents} onChange={(lookRules) => setC({ lookRules })} />
+      <Section g="play" title="功能开关" on={has(c.features)} hint="关闭后界面自动隐藏对应玩法">
+        {FEATURES.map(({ k, label }) => {
+          // 怀孕为「显式开启」项（未写 = 关闭，也可叠加「孕育包」）；其余项未写 = 开启
+          const optIn = k === "pregnancy";
+          const on = optIn ? c.features?.[k] === true : c.features?.[k] !== false;
+          return (
+            <button key={k} onClick={() => { const f = { ...c.features }; if (optIn) { if (on) delete f[k]; else f[k] = true; } else if (on) f[k] = false; else delete f[k]; setC({ features: f }); }}
+              className="flex w-full items-center justify-between gap-2 text-left text-[12.5px]">
+              <span>{label}</span>
+              <span className={`relative h-4 w-8 shrink-0 rounded-full transition ${on ? "bg-jade" : "bg-line"}`}>
+                <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-all ${on ? "left-[18px]" : "left-0.5"}`} />
+              </span>
+            </button>
+          );
+        })}
+        <Help>除「怀孕」外默认开启，只有关闭的项会写入模组；「怀孕」默认关闭，需在这里打开或叠加「孕育包」。</Help>
       </Section>
 
       <Section g="play" title="已添加的玩法" on={has(c.playModInstalls) || m.kind === "world" || playModRecs.length > 0} hint="卡片添加 · 开关启用 · 表单配置；未添加不显示空面板" count={c.playModInstalls?.length || undefined} defaultOpen>
@@ -1408,27 +1367,27 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
 
       {showPlay("gigs") && <Section g="play" title="通告库" hint="通告门槛 · 酬劳 · 名气 · 成长 · 星级价目表" count={c.gigs?.length || undefined} on={has(c.gigs) || has(c.gigPrices)}>
         <Help>由已安装「演艺事业包」提供。叠加包通告按 id 追加 / 覆盖。</Help>
-        <ModGigsEditor value={c.gigs} prices={c.gigPrices} defaults={() => GIG_POOL} onChange={(gigs) => setC({ gigs })} onPrices={(gigPrices) => setC({ gigPrices })} />
+        <ModGigsEditor value={c.gigs} prices={c.gigPrices} onChange={(gigs) => setC({ gigs })} onPrices={(gigPrices) => setC({ gigPrices })} />
       </Section>}
 
       {showPlay("contracts") && <Section g="play" title="经纪合约" hint="开局候选合约 · 通告性质 · 议价规则" count={c.contracts?.signing?.length || undefined} on={has(c.contracts)}>
-        <SlotDataEditor value={c.contracts} defaults={() => RAW_CONTRACTS} onChange={(contracts) => setC({ contracts })}
-          emptyText="本模组没有写经纪合约（沿用世界观设置）。" note="「开局候选合约」在建角最后一步让玩家签；「通告档位参数」和「议价规则」决定接通告时怎么谈价、会不会被抢。" />
+        <SlotDataEditor value={c.contracts} onChange={(contracts) => setC({ contracts })}
+          emptyText="还没写经纪合约，开局不会生效。" note="「开局候选合约」在建角最后一步让玩家签；「通告档位参数」和「议价规则」决定接通告时怎么谈价、会不会被抢。" />
       </Section>}
 
       {showPlay("projects") && <Section g="play" title="影视项目" hint="项目模板 · 试镜 · 片场事件 · 质量与上映 · 制片人" count={c.projects?.projects?.length || undefined} on={has(c.projects)}>
-        <SlotDataEditor value={c.projects} defaults={() => RAW_PROJECTS} onChange={(projects) => setC({ projects })}
-          emptyText="本模组没有写影视项目（沿用世界观设置）。" note="「项目模板」是玩家能接的剧 / 电影 / 综艺；其余是试镜、拍摄、上映的结算参数，不确定就别动。" />
+        <SlotDataEditor value={c.projects} onChange={(projects) => setC({ projects })}
+          emptyText="还没写影视项目，开局不会生效。" note="「项目模板」是玩家能接的剧 / 电影 / 综艺；其余是试镜、拍摄、上映的结算参数，不确定就别动。" />
       </Section>}
 
       {showPlay("industry") && <Section g="play" title="行业生态" hint="经纪公司 · 片名库 · 代言品牌 · 奖项 · 圈内动态" count={c.industry?.companies?.length || undefined} on={has(c.industry)}>
-        <SlotDataEditor value={c.industry} defaults={() => RAW_INDUSTRY} onChange={(industry) => setC({ industry })}
-          emptyText="本模组没有写行业生态（沿用世界观设置）。" note="人气榜、周报和圈内新闻从这里取公司、片名、品牌与奖项。" />
+        <SlotDataEditor value={c.industry} onChange={(industry) => setC({ industry })}
+          emptyText="还没写行业生态，开局不会生效。" note="人气榜、周报和圈内新闻从这里取公司、片名、品牌与奖项。" />
       </Section>}
 
       {showPlay("imageCrisis") && <Section g="play" title="舆情人设" hint="人设 · 公开行动 · 危机 · 公关应对 · 判定权重" count={c.imageCrisis?.crises?.length || undefined} on={has(c.imageCrisis)}>
-        <SlotDataEditor value={c.imageCrisis} defaults={() => RAW_IMAGE_CRISIS} onChange={(imageCrisis) => setC({ imageCrisis })}
-          emptyText="本模组没有写舆情人设（沿用世界观设置）。" note="需要已安装「舆情人设包」。" />
+        <SlotDataEditor value={c.imageCrisis} onChange={(imageCrisis) => setC({ imageCrisis })}
+          emptyText="还没写舆情人设，开局不会生效。" note="需要已安装「舆情人设包」。" />
       </Section>}
 
       {showPlay("weeklyPaper") && <Section g="play" title="娱乐周报" hint="报头 · 副标题" on={has(c.weeklyPaper)}>
@@ -1443,13 +1402,87 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
         <ModMealsEditor value={c.meals} onChange={(meals) => setC({ meals })} />
       </Section>}
 
-      {showPlay("pregnancy") && <Section g="play" title="孕育" hint="开关 · 孕期 · 受孕率 · 察觉时间 · 孩子名字池" on={has(c.pregnancy) || c.features?.pregnancy === true}>
-        <label className="flex items-center justify-between gap-2 rounded-xl border border-line bg-paper px-3 py-2 text-[12.5px] text-ink">
-          <span>开启孕育<span className="ml-1 text-[11px] text-ink-soft">亲密关系可能带来怀孕，征兆、孕期与分娩随日程推进</span></span>
-          <input type="checkbox" checked={c.features?.pregnancy === true} onChange={(e) => { const f = { ...c.features }; if (e.target.checked) f.pregnancy = true; else delete f.pregnancy; setC({ features: f }); }} className="h-4 w-4 accent-[var(--jade)]" />
-        </label>
+      {showPlay("pregnancy") && <Section g="play" title="孕育" hint="孕期 · 受孕率 · 察觉时间 · 孩子名字池" on={has(c.pregnancy) || c.features?.pregnancy === true}>
+        <Help>开关在上方「功能开关 · 怀孕」，与这里改的是同一项；此处只调孕期参数。</Help>
         <ModPregnancyEditor value={c.pregnancy} onChange={(pregnancy) => setC({ pregnancy })} />
       </Section>}
+
+      {/* 功能注释：进游戏第一屏整块在⑥美化，不拆回基础 */}
+      <Section
+        g="look"
+        title="开局封面"
+        on={has(c.cover)}
+        hint="画布布局 · 背景 / 标题 / 按钮 · AI 搭配 · 自定义 HTML（唯一编辑入口）"
+        count={Object.keys(c.cover ?? {}).length || undefined}
+      >
+        <ModCoverEditor value={c.cover} modId={m.id} onChange={(cover) => setC({ ...c, cover })} />
+        <Help>玩家侧若要叠自己的封面，在游戏「美化 → 封面」；预览时封面右上角不再出现「装扮封面」按钮。</Help>
+      </Section>
+
+      <Section
+        g="look"
+        title="手机应用配置"
+        on={has(c.phoneAppsCfg) || showPlay("phoneApp")}
+        hint="显示名 · 图标 · 主屏顺序 · Dock · 开局预装 · 壁纸与机身预览"
+        count={c.phoneAppsCfg?.length || undefined}
+      >
+        <Help>论坛 / 直播 / 商城等应用本体在「⑤ 玩法 Mod」添加；「手机页签」开关也在玩法。此处只调外观和小手机预览。</Help>
+        <PhoneAppsEditor value={c.phoneAppsCfg} onChange={(phoneAppsCfg) => setC({ phoneAppsCfg })} />
+      </Section>
+
+      {/* 功能注释：主题外观 + 面板皮肤/动画合成一块，仍分别写 content.theme 与 ext.skin，不丢已配内容 */}
+      <Section
+        g="look"
+        title="皮肤美化"
+        on={has(c.theme) || has(m.ext?.skin)}
+        hint="皮肤 · 主题色 · 字体 · 深浅色 · 底色描边圆角 · 阴影底纹 · 面板动画 · 自定义 CSS"
+        count={(Object.keys(c.theme ?? {}).length || 0) + (Object.keys(m.ext?.skin ?? {}).length || 0) || undefined}
+      >
+        <ModThemeEditor value={c.theme} onChange={(theme) => setC({ theme })} />
+        <div className="my-3 border-t border-line/70" />
+        <p className="mb-1.5 text-[10.5px] font-bold tracking-[0.16em] text-ink-soft">面板皮肤与动画</p>
+        <ModSkinEditor m={m} setM={setM} />
+      </Section>
+
+      <Section g="look" title="音乐" on={has(c.bgm) || has(c.audioRefs) || has(c.platformAudioRefs)} hint="上传 · 链接 · 本机库 · 作品引用 · 平台曲库" count={(c.bgm?.length ?? 0) + (c.audioRefs?.length ?? 0) + (c.platformAudioRefs?.length ?? 0)}>
+        <ModBgmEditor bgm={c.bgm} audioRefs={c.audioRefs} platformAudioRefs={c.platformAudioRefs} platformAutoplay={c.platformAutoplay} musicOrder={c.musicOrder} onChange={(patch) => setC(patch)} />
+      </Section>
+
+      <Section g="look" title="开场剧情" on={has(c.opening)} hint="开场页外观 · AI 对话 / 粘贴 HTML · 实时预览" count={Object.keys(c.opening ?? {}).length || undefined}>
+        {/* 功能注释：只留开场页外观；旧模组 title/paragraphs 等字段仍保留在 content.opening，运行时用内置排版播放，编辑器不再二次填写 */}
+        <Help>开局封面（画布布局）在本页上方「开局封面」。自定义开场页用 AI 对话或粘贴 HTML；不做自定义时，游戏按内置排版播已有开场文案（旧数据不会被保存清掉）。</Help>
+        <p className="ui-label">开场页外观</p>
+        <OpeningStyleStudio value={c.opening} modId={m.id} modName={m.name}
+          onPage={(page) => {
+            // 功能注释：只改 page，展开保留旧 kicker/title/paragraphs 等，禁止因改版式而抹掉内置开场白
+            const o = { ...(c.opening ?? {}), page };
+            if (!page) delete o.page;
+            setC({ ...c, opening: Object.keys(o).length ? o : undefined });
+          }} />
+        <Help>首次 / 开局可触发事件在「④ 剧情 → 固定事件」。</Help>
+      </Section>
+
+      <Section g="look" title="剧情美化" on={has(c.lookRules)} hint="条件满足时自动切换外观 · 玩家可在美化里关闭" count={c.lookRules?.length}>
+        <p className="text-[11px] leading-relaxed text-ink-soft">给这个世界设计「会随剧情变化的外观」：深夜转暗、压力爆表变灰、成名后换上流金……条件与固定事件同一套，也能读取玩法规则里的规则变量。玩家自己的剧情美化优先于此处。</p>
+        <LookRulesEditor value={c.lookRules} events={c.fixedEvents} onChange={(lookRules) => setC({ lookRules })} />
+      </Section>
+
+      <Section
+        g="look"
+        title="底栏页签"
+        on={has(c.navTabs) || has(c.navSize) || NAV_TAB_TERMS.some(({ k }) => !!c.terms?.[k])}
+        hint="图标 · 顺序 · 选中态 · 显示名 · 实时预览"
+        count={c.navTabs?.filter((t) => t.on !== false).length || NAV_TAB_TERMS.filter(({ k }) => !!String(c.terms?.[k] ?? "").trim()).length || undefined}
+      >
+        <Help>某个玩法页签开不开，在「⑤ 玩法 Mod → 功能开关」。这里调底栏的样子。</Help>
+        <NavTabsModEditor
+          terms={c.terms}
+          features={c.features}
+          navTabs={c.navTabs}
+          navSize={c.navSize}
+          onChange={(p) => setC(p)}
+        />
+      </Section>
 
       </div>
       </GroupCtx.Provider>

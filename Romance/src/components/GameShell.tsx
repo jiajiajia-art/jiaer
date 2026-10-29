@@ -21,6 +21,7 @@ import DialogDiyPanel, { DialogPreview } from "./DialogDiyPanel";
 import { PlotLookPanel } from "./LookRulesEditor";
 import { Suspense, lazy, useCallback, useEffect, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { romancePortalRoot } from "../lib/romancePortalRoot";
 import { useGame } from "../store/gameCtx";
 import { rulesOf } from "../game/engineRules";
 import HomeTab from "./HomeTab";
@@ -814,7 +815,7 @@ export default function GameShell() {
               <div className="min-h-0 flex-1 overflow-y-auto">{tabNode(tab)}</div>
             </div>
           </div>
-        , document.body)}
+        , romancePortalRoot()!)}
       </div>
     )}
     <div className="app-root flex h-screen h-[100dvh] w-full flex-col bg-paper text-ink p-0 m-0 overflow-hidden" aria-hidden={landscape}>
@@ -978,7 +979,7 @@ export default function GameShell() {
             </div>
           </div>
         </div>
-      , document.body)}
+      , romancePortalRoot()!)}
 
       {/* 内容区：各功能封装为独立整屏界面，常驻挂载、切换保留状态 */}
       <main className="relative min-h-0 flex-1">

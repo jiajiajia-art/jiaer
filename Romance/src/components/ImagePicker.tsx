@@ -1,5 +1,6 @@
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { loadAssets, uploadImage } from "../lib/freeStyle"
+import { displayableImageSrc } from "../lib/displayableImageSrc"
 import { mediaCheck } from "../game/engineRules"
 
 /* 通用图片选择器：点缩略图或「上传」直接选本地图片（有图床走图床，否则本地压缩，并收进素材库）；
@@ -15,7 +16,7 @@ export default function ImagePicker({
   thumb = "h-12 w-12",
   hint,
 }: {
-  value?: string
+  value?: unknown
   onChange: (url?: string) => void
   label?: string
   max?: number
@@ -27,6 +28,10 @@ export default function ImagePicker({
   const [link, setLink] = useState("")
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState("")
+  const src = displayableImageSrc(value)
+  const [broken, setBroken] = useState(false)
+  useEffect(() => { setBroken(false) }, [src])
+  const show = Boolean(src) && !broken
   const assets = mode === "lib" ? loadAssets() : []
 
   const pickFile = async (f?: File) => {
@@ -60,8 +65,8 @@ export default function ImagePicker({
           }}
           className={`${thumb} group relative shrink-0 overflow-hidden rounded-lg border border-dashed border-line bg-paper-2 transition hover:border-jade`}
         >
-          {value ? (
-            <img src={value} alt="" className="h-full w-full object-cover" />
+          {show ? (
+            <img src={src} alt="" className="h-full w-full object-cover" onError={() => setBroken(true)} />
           ) : (
             <span
               className="grid h-full w-full place-items-center text-[18px] leading-none text-ink-soft/70 group-hover:text-jade"

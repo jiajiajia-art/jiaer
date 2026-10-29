@@ -133,3 +133,38 @@ test('sanitizeModStrings_母校与父母职业对象须显示成名称', async (
   assert.doesNotMatch(pools, /value\.parentJobs\.join/);
   assert.doesNotMatch(pools, /value=\{value\.school \?\? ""\}/);
 });
+
+test('healModRoomRefs_悬空startRoom与npc_home须纠偏', async () => {
+  const { healModRoomRefs, sanitizeModStrings } = await import(
+    pathToFileURL(join(romance, 'lib/sanitizeModStrings.ts')).href
+  );
+  const content = {
+    rooms: {
+      living_room: { name: '客厅', desc: '宽敞', exits: {} },
+      kitchen: { name: '厨房', desc: '灶台', exits: {} },
+    },
+    startRoom: 'kid_bedroom',
+    npcs: [{ id: 'mom', name: '妈妈', home: 'kid_bedroom' }],
+  };
+  const fixes = healModRoomRefs(content);
+  assert.equal(content.startRoom, 'living_room');
+  assert.equal(content.npcs[0].home, 'living_room');
+  assert.ok(fixes.some((f) => /kid_bedroom/.test(f)));
+
+  const sanitized = sanitizeModStrings({
+    id: 'w1',
+    name: '家',
+    version: '1.0.0',
+    kind: 'world',
+    content: {
+      rooms: { start: { name: '起点', desc: '', exits: {} } },
+      startRoom: 'nowhere',
+    },
+  });
+  assert.equal(sanitized.content.startRoom, 'start');
+
+  const panel = readFileSync(join(romance, 'components/ModEditorPanel.tsx'), 'utf8');
+  assert.match(panel, /healModRoomRefs/);
+  const gen = readFileSync(join(romance, 'lib/worldGenGenerate.ts'), 'utf8');
+  assert.match(gen, /healModRoomRefs/);
+});

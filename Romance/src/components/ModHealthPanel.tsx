@@ -1,10 +1,10 @@
 import { useMemo } from "react";
 import { Chip } from "./ui";
 import type { Mod } from "../mods/types";
-import { addonImpact, balanceCheck, chainShadows, inheritedSlots, priorFor, type Impact } from "../mods/balance";
+import { addonImpact, balanceCheck, chainShadows, priorFor, type Impact } from "../mods/balance";
 import { StatusMark } from "../lib/icons";
 
-/* 模组编辑器 · 数值体检：只提醒、不拦截保存 */
+/* 模组编辑器 · 数值体检：只提醒、不拦截保存；只看本作品已写内容，不和娱乐圈比 */
 const OP: Record<Impact["op"], { label: string; tone: string }> = {
   replace: { label: "整组替换", tone: "coral" },
   merge: { label: "覆盖", tone: "gold" },
@@ -26,7 +26,6 @@ export default function ModHealthPanel({ mod }: { mod: Mod }) {
   const findings = useMemo(() => {
     try { return balanceCheck(mod, prior[0]); } catch { return []; }
   }, [mod, prior]);
-  const inherited = useMemo(() => inheritedSlots(mod), [mod]);
   const impacts = useMemo(() => (mod.kind === "addon" ? addonImpact(mod, prior) : []), [mod, prior]);
   const shadows = useMemo(() => (mod.kind === "addon" ? chainShadows([...prior, mod])[mod.id] ?? [] : []), [mod, prior]);
   const warn = findings.filter((f) => f.level === "warn").length;
@@ -35,7 +34,7 @@ export default function ModHealthPanel({ mod }: { mod: Mod }) {
   return (
     <div className="space-y-3">
       <p className="text-[11.5px] leading-relaxed text-ink-soft">
-        只提醒，不拦截保存。对比基准是娱乐圈原版数值，按本模组自己的能力上限折算，所以上限改成 100 也能比较。
+        只提醒，不拦截保存。只检查本作品已经写过的数值；没写的槽不会沿用娱乐圈来对比。
         {mod.kind === "addon" && "叠加包只检查本包自己写的数值。"}
       </p>
 
@@ -54,16 +53,6 @@ export default function ModHealthPanel({ mod }: { mod: Mod }) {
           </ul>
         )}
       </div>
-
-      {inherited.length > 0 && (
-        <div className="rounded-xl border border-line bg-paper p-3">
-          <p className="text-[12px] font-bold text-ink">沿用娱乐圈的内容</p>
-          <p className="mt-0.5 text-[11px] text-ink-soft">本世界观没写这些，开局时会直接用娱乐圈原版。数值本身是平衡过的，但不一定贴合你的世界观。在对应区块填写即可替换。</p>
-          <div className="mt-1.5 flex flex-wrap gap-1">
-            {inherited.map((s) => <Chip key={s.key} tone={s.numeric ? "gold" : undefined}>{s.label}</Chip>)}
-          </div>
-        </div>
-      )}
 
       {mod.kind === "addon" && (
         <div className="rounded-xl border border-line bg-paper p-3">

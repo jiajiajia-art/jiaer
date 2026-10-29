@@ -60,7 +60,7 @@ const PLAY_STEPS = [
 ];
 
 /* 玩法字段说明：玩法 Mod 与世界观对话修改共用 */
-const PLAY_FIELDS = `- customAttrs[{id,label,init,min,max,color?:"jade|coral|gold|danger",tiers?:[{min,label}],display?:"num|tier|both",pin?:true}] 自定义属性
+const PLAY_FIELDS = `- customAttrs[{id,label,init,initMode?:"fixed|dice",dice?:正整数面数,min,max,color?:"jade|coral|gold|danger",tiers?:[{min,label}],display?:"num|tier|both",pin?:true}] 自定义属性（开局固定值或掷骰二选一，不要拆成两种属性）
 - titles[{id,name,tier:"青铜|白银|黄金|钻石",req:{键:阈值},desc}] 头衔；req 键可为 fame/reputation/works/awards、"stat:<yanji|geyi|koucai|yitai|donggan|tineng|caizhi|zixin>"、"c:<自定义属性id>"
 - trainings[{id,name,effect,gain:{八维键:[min,max]},cgain:{自定义属性id:[min,max]},cost,energy,stress,grades?:[{id,label,costMul,gainMul,cap,stressAdd,needPrev?:上一级需完成次数,reqs?:[{metric,min}]}]}] 课程；metric 写法同上（八维用 "stat:键"，自定义用 "c:id"，其余 fame/reputation/money/stress）
 - sideJobs[{id,label,pay,stress,fameReq,note,cgain?,reqs?,needPrev?}] 打工（按顺序成档）；weekendActs[{id,name,effect,icon:"",cost,energy,stress,fame?,reputation?,cgain?,reqs?}]
@@ -91,7 +91,7 @@ ${draftContext(draft)}
 const SYS = (draft: Mod) => `你是文字模拟游戏编辑器的模组设计师，帮助创作者用对话做「世界观模组」。
 模组是纯 JSON 数据，引擎读取它来替换题材。结构参考模板（字段均可省略）：
 ${modTemplate("world")}
-常用内容：rooms{id:{name,desc,exits:{方向:房间id}}}、startRoom、npcs[{id,name,role,kind,home,roam,bio,gender,age}]、startMet、worldBook[{id,title,keywords,content,enabled,constant}]、prompt{gmIntro,worldIntro,narratorPersona}、terms、features(开关)、events/fixedEvents、encounters、endings[{id,title,desc}]、creation、identities、backgrounds、styles、opening、cover。
+常用内容：rooms{id:{name,desc,exits:{方向:房间id}}}、startRoom、npcs[{id,name,role,kind,home,roam,bio,gender,age}]、startMet、worldBook[{id,title,keywords,content,enabled,constant}]、prompt{scriptTone}（旧 gmIntro/worldIntro/narratorPersona 会并入）、terms、features(开关)、events/fixedEvents、encounters、endings[{id,title,desc}]、creation、identities、backgrounds、styles、opening、cover。
 玩法与数值字段（同样可写进世界观）：
 ${PLAY_FIELDS}
 当前草稿（已有内容，修改时只输出变化的部分）：

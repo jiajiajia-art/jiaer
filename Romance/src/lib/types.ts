@@ -17,7 +17,11 @@ export type AttrDef = {
   id: string;
   label: string;
   icon?: string; // emoji
-  init: number;
+  init: number; // 固定开局值；initMode 为 dice 时开局改掷骰，仍保留以便切回固定
+  /** 开局取值方式：同一属性二选一。缺省 / fixed = 用 init；dice = 开局由代码掷一次 */
+  initMode?: "fixed" | "dice";
+  /** 骰子面数（正整数）。仅 initMode=dice 时生效；1…dice 均匀取整后再夹到 min/max */
+  dice?: number;
   min?: number; // 下限（缺省 0）
   max?: number; // 上限（不填 = 无上限，适合货币）
   color?: string; // 进度条颜色：jade/coral/gold/danger 或 #hex
