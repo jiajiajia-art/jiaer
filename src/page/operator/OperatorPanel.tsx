@@ -16,9 +16,9 @@ import operatorStatsApi, {
 import type { CreatorWorkItem, StatsOverview } from '../../api/stats/creatorStatsApi';
 import OperatorReports from './OperatorReports';
 import WithdrawAdminManager from '../../components/WithdrawAdminManager';
-import ContentReportAdminManager from '../../components/Admin/ContentReportAdminManager';
-import ContentAppealAdminManager from '../../components/Admin/ContentAppealAdminManager';
-import PublishReviewAdminManager from '../../components/Admin/PublishReviewAdminManager';
+import ContentReportAdminManager from '../../components/admin/ContentReportAdminManager';
+import ContentAppealAdminManager from '../../components/admin/ContentAppealAdminManager';
+import PublishReviewAdminManager from '../../components/admin/PublishReviewAdminManager';
 import adminStyles from '../AdminPanel.module.css';
 import styles from './OperatorPanel.module.css';
 

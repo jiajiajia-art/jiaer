@@ -428,6 +428,7 @@ const Navbar: React.FC<NavbarProps> = ({
                                         className={styles.avatarInner}
                                     >
                                         <img
+                                            key={user?.user?.avatarUrl || 'default-avatar'}
                                             src={(() => {
                                                 const baseUrl = getImageUrl(user?.user?.avatarUrl) || `${import.meta.env.BASE_URL}data/assets/default_avatar.png`;
                                                 // 功能注释：用户头像统一请求 webp 格式；后端按 USER_AVATAR_WEBP_AB_PERCENT 决定返回 webp 或原图。
