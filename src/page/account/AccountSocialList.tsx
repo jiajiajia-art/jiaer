@@ -31,8 +31,12 @@ const readIsDesktop = (): boolean => (
 const isRelationTab = (value: string | null): value is Exclude<SocialTab, 'recommend'> =>
     value === 'following' || value === 'followers' || value === 'mutual';
 
-const isSocialTab = (value: string | null, allowRecommend: boolean): value is SocialTab =>
-    isRelationTab(value) || (allowRecommend && value === 'recommend');
+/** 功能注释：互关 / 推荐仅本人可见；访客只允许关注与粉丝 */
+const isSocialTab = (value: string | null, isOwner: boolean): value is SocialTab => {
+    if (value === 'following' || value === 'followers') return true;
+    if (value === 'mutual' || value === 'recommend') return isOwner;
+    return false;
+};
 
 const isSort = (value: string | null): value is FollowListSort =>
     value === 'recent' || value === 'earliest';
@@ -78,34 +82,12 @@ const AccountSocialList: React.FC = () => {
     const [removeTarget, setRemoveTarget] = useState<SocialListUser | null>(null);
     /** 功能注释：PC 用按钮旁下拉；手机用底部面板 */
     const [isDesktop, setIsDesktop] = useState(readIsDesktop);
-    /** 访客态：我是否已关注名单主人（自己出现在对方名单时用来展示「互相关注」） */
-    const [followingListOwner, setFollowingListOwner] = useState(false);
 
     useEffect(() => {
         if (!userCode.trim()) {
             navigate('/profile', { replace: true });
         }
     }, [userCode, navigate]);
-
-    useEffect(() => {
-        if (isOwner || !userCode.trim() || !selfCode) {
-            setFollowingListOwner(false);
-            return;
-        }
-        let cancelled = false;
-        void (async () => {
-            try {
-                const response = await accountSocialApi.getProfile(userCode.trim());
-                if (cancelled || !response.data.success || !response.data.data) return;
-                setFollowingListOwner(Boolean(response.data.data.isFollowing));
-            } catch {
-                if (!cancelled) setFollowingListOwner(false);
-            }
-        })();
-        return () => {
-            cancelled = true;
-        };
-    }, [isOwner, userCode, selfCode]);
 
     useEffect(() => {
         if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
@@ -138,8 +120,8 @@ const AccountSocialList: React.FC = () => {
     }, [removeTarget, isDesktop]);
 
     useEffect(() => {
-        // 非本人访问时不允许停留在推荐 Tab
-        if (!isOwner && tabParam === 'recommend') {
+        // 非本人访问时不允许停留在互关 / 推荐 Tab
+        if (!isOwner && (tabParam === 'recommend' || tabParam === 'mutual')) {
             setSearchParams({ tab: 'following', sort: 'recent' }, { replace: true });
             return;
         }
@@ -152,11 +134,11 @@ const AccountSocialList: React.FC = () => {
         }
 
         const next: Record<string, string> = {};
-        if (!isRelationTab(tabParam)) next.tab = 'following';
+        if (!isSocialTab(tabParam, isOwner)) next.tab = 'following';
         else next.tab = tabParam;
         if (!isSort(sortParam)) next.sort = 'recent';
         else next.sort = sortParam;
-        if (!isRelationTab(tabParam) || !isSort(sortParam)) {
+        if (!isSocialTab(tabParam, isOwner) || !isSort(sortParam)) {
             setSearchParams(next, { replace: true });
         }
     }, [tabParam, sortParam, isOwner, setSearchParams]);
@@ -427,7 +409,7 @@ const AccountSocialList: React.FC = () => {
                 <nav className={styles.nav} role="tablist" aria-label={t('create.socialFriendsTitle')}>
                     {renderNavTab('following', t('create.followingLabel'))}
                     {renderNavTab('followers', t('create.followersLabel'))}
-                    {renderNavTab('mutual', t('create.mutualLabel'))}
+                    {isOwner ? renderNavTab('mutual', t('create.mutualLabel')) : null}
                     {isOwner ? renderNavTab('recommend', t('create.socialRecommendLabel')) : null}
                 </nav>
 
@@ -512,17 +494,9 @@ const AccountSocialList: React.FC = () => {
                                                     </div>
                                                 )}
                                             </button>
-                                            <div className={styles.actions}>
-                                                {isSelfRow ? (
-                                                    // 别人名单里的「我」：不可点；与主人互关时展示互相关注
-                                                    <span
-                                                        className={`${styles.followBtn} ${styles.followBtnActive} ${styles.followBtnSelf}`}
-                                                    >
-                                                        {followingListOwner
-                                                            ? t('create.socialMutualBtn')
-                                                            : t('create.socialMeBtn')}
-                                                    </span>
-                                                ) : (
+                                            {/* 别人名单里的「我」：不展示关注操作 */}
+                                            {!isSelfRow ? (
+                                                <div className={styles.actions}>
                                                     <button
                                                         type="button"
                                                         className={`${styles.followBtn} ${item.isFollowing ? styles.followBtnActive : styles.followBtnIdle}`}
@@ -531,45 +505,45 @@ const AccountSocialList: React.FC = () => {
                                                     >
                                                         {followLabel}
                                                     </button>
-                                                )}
-                                                {isOwner && activeTab === 'followers' && !isSelfRow && (
-                                                    <div className={styles.moreWrap}>
-                                                        <button
-                                                            type="button"
-                                                            className={styles.moreBtn}
-                                                            disabled={busyUserCode === item.userCode}
-                                                            aria-label={t('create.socialMoreActions')}
-                                                            aria-expanded={removeTarget?.userCode === item.userCode}
-                                                            aria-haspopup="menu"
-                                                            onClick={() => openRemoveMenu(item as SocialListUser)}
-                                                        >
-                                                            <img
-                                                                className={styles.moreIcon}
-                                                                src={`${import.meta.env.BASE_URL}data/assetsv2/personal/more.svg`}
-                                                                alt=""
-                                                                aria-hidden="true"
-                                                            />
-                                                        </button>
-                                                        {isDesktop && removeTarget?.userCode === item.userCode ? (
-                                                            <div
-                                                                className={styles.moreMenu}
-                                                                role="menu"
+                                                    {isOwner && activeTab === 'followers' ? (
+                                                        <div className={styles.moreWrap}>
+                                                            <button
+                                                                type="button"
+                                                                className={styles.moreBtn}
+                                                                disabled={busyUserCode === item.userCode}
                                                                 aria-label={t('create.socialMoreActions')}
+                                                                aria-expanded={removeTarget?.userCode === item.userCode}
+                                                                aria-haspopup="menu"
+                                                                onClick={() => openRemoveMenu(item as SocialListUser)}
                                                             >
-                                                                <button
-                                                                    type="button"
-                                                                    role="menuitem"
-                                                                    className={styles.moreMenuItem}
-                                                                    disabled={busyUserCode === item.userCode}
-                                                                    onClick={() => void handleRemoveFollower()}
+                                                                <img
+                                                                    className={styles.moreIcon}
+                                                                    src={`${import.meta.env.BASE_URL}data/assetsv2/personal/more.svg`}
+                                                                    alt=""
+                                                                    aria-hidden="true"
+                                                                />
+                                                            </button>
+                                                            {isDesktop && removeTarget?.userCode === item.userCode ? (
+                                                                <div
+                                                                    className={styles.moreMenu}
+                                                                    role="menu"
+                                                                    aria-label={t('create.socialMoreActions')}
                                                                 >
-                                                                    {t('create.socialRemoveFollower')}
-                                                                </button>
-                                                            </div>
-                                                        ) : null}
-                                                    </div>
-                                                )}
-                                            </div>
+                                                                    <button
+                                                                        type="button"
+                                                                        role="menuitem"
+                                                                        className={styles.moreMenuItem}
+                                                                        disabled={busyUserCode === item.userCode}
+                                                                        onClick={() => void handleRemoveFollower()}
+                                                                    >
+                                                                        {t('create.socialRemoveFollower')}
+                                                                    </button>
+                                                                </div>
+                                                            ) : null}
+                                                        </div>
+                                                    ) : null}
+                                                </div>
+                                            ) : null}
                                         </div>
                                     </li>
                                 );

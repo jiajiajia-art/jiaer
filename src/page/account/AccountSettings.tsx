@@ -359,6 +359,7 @@ const AccountSettings: React.FC = () => {
                                     aria-label={t('profile.changeAvatar')}
                                 >
                                     <img
+                                        key={avatarPreview}
                                         className={styles.avatar}
                                         src={avatarPreview}
                                         alt={displayName}

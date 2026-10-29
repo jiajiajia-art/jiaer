@@ -378,6 +378,7 @@ const Create: React.FC = () => {
                                         aria-label={t('profile.changeAvatar')}
                                     >
                                         <img
+                                            key={userAvatar}
                                             className={styles.creatorHeroAvatar}
                                             src={userAvatar}
                                             alt={userName}

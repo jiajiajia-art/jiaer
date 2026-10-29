@@ -1,14 +1,15 @@
 # 内容举报 / 内容屏蔽 / 创作者处罚 — 计划书（v1.2）
 
 > **日期**：2026-10-14  
-> **最后修订**：2026-10-24（**举报人结果通知**：管理端成立/驳回后举报人收 `report_resolved`；见 R12b、§2.9；**严重直达**见 R33）  
+> **最后修订**：2026-10-27（**运营撤销**警告/当前处罚：见 §2.7b R41–R48；不退档、不删历史）  
+> **此前修订**：2026-10-26（**解禁登录**：`clear-login-ban` 与申诉通过同权，admin/operator；**施加**禁登录仍仅 admin）；2026-10-24（严重直达 R33）  
 > **前端落点细则**：`.cursor/doc/前端交互.md`（与本文冲突时，**入口/过滤/契约字段以本文 + 前端交互为准**）  
 > **入口**：  
 > - 游戏详情页「分享」菜单 → **举报**（P0 展示说明文案）  
 > - **仅首页推荐**：移动端长按 / 桌面端右键 → **屏蔽 / 举报**（搜索、榜单、作者主页作品卡不做）  
 > - 他人个人主页右上角 **「⋯」** → **举报**（本人主页/自己作品入口直接隐藏）  
 > - 帖子侧入口本版不做 UI（仅保留 `targetType=post` 类型与理由字典）  
-> - 管理端：P0「举报审核」+「处罚记录（只读）」；P0.5 严重直达等；申诉 P1（`admin`/`operator` 可审；禁登录仅 admin）  
+> - 管理端：P0「举报审核」+「处罚记录（只读）」；P0.5 严重直达等；申诉 P1（`admin`/`operator` 可审；**施加**禁登录仅 admin，**解禁登录** admin/operator，与申诉通过一致）  
 > **角色**：登录用户（举报/屏蔽）；创作者（收通知、申诉）；`admin` / `operator`（审核与处罚）  
 > **关联已有能力**：`user_block`（人）、`games.is_public`、消息中心、`GET /auth/user/info`、`genRandomNickname` / `DEFAULT_AVATAR_URL`（注册默认）、评论审核 UI、提现审核权限  
 > **前置依赖**：账号社交屏蔽（人）已上线；推荐流可读 `user_content_block`  
@@ -17,8 +18,8 @@
 > **不改**：站外分享重做；帖子举报/屏蔽 UI；物理删作品；人级屏蔽语义；**本版不做「暂停收益/停结算」**；P0 **不做**取消屏蔽 UI  
 > **可复用**：`user_block`、`games.is_public`、消息中心 `message_type`、注册默认昵称/头像生成、R2、`admin`+`operator`  
 
-**文档版本**：v1.3  
-**最后更新**：2026-10-24（举报人 `report_resolved`） 
+**文档版本**：v1.2  
+**最后更新**：2026-10-26  
 **风格参照**：`创作者钻石提现-计划书` / `推荐关注列表-计划书`  
 **关联整改纪要**：`.cursor/doc/举报申诉功能/后端整改-Admin举报详情.md`（历史过程；现行约定以本文为准）
 
@@ -36,7 +37,7 @@
 | **严重违规升级** | 运营可选跳过普通警告，直接施处罚等级（**P0.5** UI） |
 | **处罚阶梯** | 一级 7 天禁发→观察7天；二级 30 天禁发+主页不展示→观察7天；三级 90 天+冻结等→观察30天；观察期内再违规升级；四级永久（**不做停结算**）；P0 先落地自动一级 |
 | **运营面板** | 列表筛选、详情、通过/驳回、选处理动作、写审核备注；P0 含处罚记录只读；留下完整审计字段 |
-| **通知** | 举报人：提交后 toast + 站内「已受理」；**审核成立/驳回后再发一条结果通知**（§2.9）；创作者：处罚/警告文案；`moderation` 可带 `relatedGameId`；**不开放审核进度页** |
+| **通知** | 举报人：提交后 toast + 站内「已受理」；创作者：处罚/警告文案（§2.9）；`moderation` 可带 `relatedGameId`；**不开放审核进度页** |
 
 **非目标（本版）**：
 
@@ -63,7 +64,7 @@
   → GET  /api/report/reasons?targetType=game|user|post
   → POST /api/report                 （写 user_report + 可选证据）
         → 前端 toast「已提交…」
-        → 消息中心写给举报人：已受理（report_received）
+        → 消息中心写给举报人：已受理（无进度）
   → （可选）POST /api/content/block  （仅屏蔽，不进审核）
 
 运营：Admin「内容举报」
@@ -72,10 +73,8 @@
   → POST /api/admin/reports/:id/review
         → 驳回 | 成立(标准) | 成立(严重)
         → 副作用：下架/清资料/记警告/触发处罚/通知创作者
-        → **同时**消息中心写给举报人：处理结果（report_resolved）
 
-创作者：消息中心看到处罚/警告通知（moderation）
-举报人：消息中心可回看「已受理」+「处理结果」两条
+创作者：消息中心看到处罚通知
   →（P1）申诉 → 运营复核 → 撤销或维持
 ```
 
@@ -87,7 +86,7 @@
 | 内容屏蔽 | **无** | 新建 `user_content_block`（game / 预留 post） |
 | 内容举报 | **无**（`operator/reports` 是运营数据报表） | 新建举报表 + 审核 API |
 | 作品可见 | `games.is_public` | 下架 = `is_public=0` + **`moderation_status='taken_down'`**，防止创作者自行再公开 |
-| 消息中心 | `announcement` / `promotion` / `favorite_game_updated` 等 | 扩展 `message_type`：`report_received` + **`report_resolved`**（举报人）+ `moderation`（创作者）；**不新建通知表** |
+| 消息中心 | `announcement` / `promotion` / `favorite_game_updated` 等 | 扩展 `message_type`：`report_received`（举报人）+ `moderation`（创作者）；**不新建通知表** |
 | 创作者禁发 | **无**统一开关 | `user_punishment`（当前态）+ `creator_moderation`（流水） |
 | 帖子 | **无表** | 仅枚举占位；审核侧若收到 `post` 暂标「未接入」 |
 | 管理端审核 UI | 评论 `CommentAdminManager`、提现审核 | 新 Tab，交互对齐评论/提现 |
@@ -112,7 +111,7 @@
 | FE | `AccountHomepage` 分享菜单 | 账号举报 |
 | FE | 举报流程页/弹层 | 选理由、补充说明、证据 |
 | FE | `AdminPanel` 新 Tab | 审核列表+详情+动作 |
-| FE | 消息中心 | 展示 `report_received` / `report_resolved` / moderation 通知 |
+| FE | 消息中心 | 展示 moderation 通知 |
 
 ### 1.4 与其它模块
 
@@ -153,8 +152,7 @@
 | R9 | 证据**仅图片**，可选，最多 **3** 张，单张 ≤ **5MB**，jpg/png/webp；视频不做；链接可写补充说明 | ✅ |
 | R10 | 同一用户对同一 `(targetType, targetId)` 仅允许 **1 条 pending**；已有 pending 再提 → 400 `duplicate_pending` | ✅ |
 | R11 | 曾「成立」→ 400 `already_upheld`；驳回未满 **7** 天 → 400 `report_cooldown`；前端 P0 **不预检入口**，提交失败 toast | ✅ |
-| R12 | 提交成功：**页面 toast**「已提交，我们会尽快处理」+ **消息中心**给举报人一条受理回执（`report_received`）；**不**提供审核进度/结果页 | ✅ |
-| R12b | 管理端 **成立或驳回** 后：再给举报人一条 **处理结果** 站内信（`report_resolved`，与受理分条、已读互不覆盖）。成立正文：`你的举报已处理经核查已采取措施，感谢你对社区美好氛围做出的贡献。`；驳回正文：`你的举报已收到，平台将持续关注，一经核实将进行相应处理，感谢你对社区美好氛围做出的贡献。` 标题建议「举报处理结果」。**仍不**做结果详情页 | ✅ |
+| R12 | 提交成功：**页面 toast**「已提交，我们会尽快处理」+ **消息中心**给举报人一条受理回执；**不**提供审核进度/结果页 | ✅ |
 
 ### 2.3 举报成立 — 作品（game）
 
@@ -236,12 +234,34 @@
 | R39 | 对外只用 16 位 `moderation_id` / `appeal_id`；提交体字段为 `relatedModerationId`，不用库内自增 id | ✅ |
 | R40 | 用户底栏：`canAppeal=true` 可点「申诉」；已申过或不可申则灰掉，**不做**「再次申诉」 | ✅ |
 
+### 2.7b 运营主动撤销警告 / 处罚（误操作纠错，非申诉）
+
+> **目的**：运营误触警告或当前处罚时，可主动撤销；与「用户申诉通过」分流。  
+> **原则**：只终止**当前这条**产生的限制；**不**自动退回上一档；**不**删改其他历史流水。第一版用户侧列表**仍显示「已撤销」**，不可再申诉。
+
+| # | 规则 | 状态 |
+|---|------|------|
+| R41 | **处罚**：只能撤销**当前生效档**（与 `user_punishment.active_penalty_level` 对应的那条）；历史已结束的更低档 **不能**撤 | ✅ 产品锁定 2026-10-27 |
+| R42 | 撤销当前处罚后：该条立即 `revoked` 并清除**本条造成的**热限制（含禁发/主页隐藏/冻结/先审/观察期/**禁登录**）；**不**把已 `finished` 的上一档重新激活 | ✅ |
+| R43 | 「不修改其他处罚/警告/历史」= 不改写、不删除其他流水行；若确有其他**仍独立生效**的限制则继续执行（现网多为单份热快照，撤当前档通常等同清空该用户热状态） | ✅ |
+| R44 | **警告**：仅当**未被消耗**（`consumed=0` 且未因本警告链触发升档）时可**单独**撤销；已用于「满 3 次升一级」的警告 **不能单撤**，要处理则撤销**整次升档处罚** | ✅ |
+| R45 | **作品下架**：撤销本条关联的下架时，仅当该作品**没有其他未撤销的有效下架原因**（如另一次举报仍使 `taken_down`）才恢复上架；否则暂不恢复 | ✅ |
+| R46 | 目标上若有**处理中申诉**（`pending`），仍允许运营撤销；申诉自动关闭为 **`cancelled`（取消）**，**不要**记成 `approved`/`rejected`（避免文案打脸）；撤销站内信已说明结果，申诉侧可不另发成功/失败模板 | ✅ |
+| R47 | 权限：`operator` ∪ `admin`；入口：运营**举报详情 / 处罚详情**历史与当前处罚区。**不做**发布审核（`publish_review`）撤销 | ✅ |
+| R48 | 撤销后发站内信（`record_type=moderation_revoke`，通用文案一条）；用户侧违规列表**仍展示**该条并标「已撤销」，`canAppeal=false` | ✅ |
+
+**通用撤销站内信文案**：
+
+> 您此前收到的账号违规警告/处罚已撤销，相关限制及处罚记录已解除。本次撤销不会对账号后续使用产生影响。给您带来的不便，我们深表歉意。
+
+**接口（拟）**：`POST /api/admin/moderation/:moderationId/revoke`（`:moderationId` 为 16 位；可选 body `reviewNote`）。副作用复用申诉通过中的撤流水 / 清热状态 / `restoreTakenDownGame`（无其他有效下架时），再写 `moderation_revoke` 通知行。
+
 ### 2.8 运营权限与可执行动作
 
 | 角色 | 能力 |
 |------|------|
-| `operator` / `admin` | 入口：`AdminPanel` 新 Tab「内容举报」；看列表/详情、通过/驳回、选处置、手工警告/处罚、撤销下架、看申诉（P1） |
-| 仅 `admin` | 四级永久封禁登录、注销创作者身份、改风控名单开关 |
+| `operator` / `admin` | 入口：`AdminPanel` 新 Tab「内容举报」；看列表/详情、通过/驳回、选处置、手工警告/处罚、撤销下架、**撤销当前警告/当前生效处罚**（§2.7b）、看申诉（P1） |
+| 仅 `admin` | **施加**四级永久封禁登录、注销创作者身份、改风控名单开关（**解禁登录**见动作表：admin/operator） |
 
 **审核通过时可选处理包（UI 勾选，后端校验组合合法）**：
 
@@ -255,28 +275,27 @@
 | `uphold_penalty_l1`…`l4` | 直接套处罚等级 | 严重 |
 | `uphold_hide_homepage` | 主页不可展示 | user |
 | `uphold_freeze_creator` | 冻结创作者身份 | user |
-| `uphold_ban_login` | 禁登录 | admin |
+| `uphold_ban_login` | **施加**禁登录（审核成立 / L4 勾选） | **仅 admin**（operator 提交 → 403） |
+| （独立接口）`POST /api/admin/moderation/clear-login-ban` | **解除**禁登录 | **admin / operator**（与「申诉通过」一致；运营不能封禁，但可解禁） |
+| （独立接口）`POST /api/admin/moderation/:moderationId/revoke` | **运营撤销**当前警告 / 当前生效处罚（§2.7b） | **admin / operator**；非当前档 / 已消耗警告 → 4xx |
 
 ### 2.9 通知（消息中心 + toast）
 
 **实现方式**：只扩展现有消息中心允许的 `message_type`，**不**建 `moderation_notifications` 表。  
-类型：`report_received` / **`report_resolved`**（给举报人）、`moderation`（给被处理创作者）。读写复用 `user_message_reads`。
+建议类型：`report_received`（给举报人）、`moderation`（给被处理创作者）。读写复用 `user_message_reads`。
 
 | 对象 | 时机 | 形态 | 文案 |
 |------|------|------|------|
 | 举报人 | 提交成功当下 | **Toast**（页面顶部/底部短暂提示，几秒消失） | `已提交，我们会尽快处理` |
-| 举报人 | 提交成功后 | **消息中心** `report_received` | 标题「举报已受理」；正文 `我们已收到你的举报，将尽快处理。` |
-| 举报人 | 管理端**成立** | **消息中心** `report_resolved` | 标题「举报处理结果」；正文 `你的举报已处理经核查已采取措施，感谢你对社区美好氛围做出的贡献。` |
-| 举报人 | 管理端**驳回** | **消息中心** `report_resolved` | 标题「举报处理结果」；正文 `你的举报已收到，平台将持续关注，一经核实将进行相应处理，感谢你对社区美好氛围做出的贡献。` |
+| 举报人 | 提交成功后 | **消息中心**一条（可回看） | `我们已收到你的举报，将尽快处理。`（不展示进度/结果） |
 | 创作者 | 作品成立 | 消息中心 | 你的作品因违反平台规范已被下架，并记为一次警告。请查看违规原因并避免再次违规。 |
 | 创作者 | 帖子成立 | 消息中心 | 你的帖子因违反平台规范已被删除，并记为一次警告。请查看违规原因并避免再次违规。 |
 | 创作者 | 账号成立 | 消息中心 | 你的账号信息或行为因违反平台规范已被处理，并记为一次警告。请及时修改相关内容。 |
 | 创作者 | 一级处罚（凑满 3 次警告自动触发，或严重直达选一级） | 消息中心 | 由于你在警告有效期内累计达到 3 次警告，平台将限制你 7 天内发布作品和帖子。处罚结束后，账号将进入 7 天观察期。（严重直达一级可用等价处罚语气，**不再另发**「记为一次警告」那条） |
 | 创作者 | 严重直达二～四级 | 消息中心 | 仅 **一条** 对应等级处罚通知；**不得**再附带同单警告通知 |
+| 创作者 | 运营主动撤销警告/处罚（§2.7b） | 消息中心 | `recordType=moderation_revoke`；标题建议「违规处理撤销通知」；正文用 §2.7b 通用文案；**不可申诉** |
 
-（二～四级文案同语气补全。消息数字 `sourceId` **只用于标已读**；跳转违规页用 16 位 `moderationId`，跳转申诉结果用 16 位 `appealId`。）
-
-**举报人通知（锁定）**：受理与结果 **分两条**（`report_received` vs `report_resolved`），`sourceId` 均可为 `user_report.id`；已读键为 `(messageType, sourceId)`，互不覆盖。列表只展开正文，**不**跳业务页。驳回文案偏安抚「持续关注」，不向举报人透露内部审核细节。
+（二～四级文案同语气补全。消息数字 `sourceId` **只用于标已读**；跳转违规页用 16 位 `moderationId`，跳转申诉结果用 16 位 `appealId`；撤销通知用 `recordType=moderation_revoke` 识别。）
 
 **通知互斥（锁定）**：同一次 `uphold` 对创作者可见结果取**最高处置档**。有 `penaltyLevel` 时最高档即该处罚，源头只产处罚记录与一条通知，**禁止**先写警告再写处罚再双推。
 
@@ -287,17 +306,16 @@
 | Q1 | 警告滚动 365 天 + 触发一级后 consumed（§2.6.1） |
 | Q2 | 二级后观察期 **7** 天；三级后观察期 **30** 天；观察期内再违规则处罚升级 |
 | Q3 | 重置昵称 = `genRandomNickname()`；头像 = `DEFAULT_AVATAR_URL`；简介清空（R20） |
-| Q4 | 举报人：toast + 受理站内信 + **审核后结果站内信**（R12b）；仍无进度/结果页 |
+| Q4 | 举报人：toast + 受理站内信；无进度/结果页 |
 | Q5 | 二级主页隐藏：本人可进可编辑 + 顶栏「对外暂不可见」；访客「因违规暂不可见」（P0.5） |
 | Q6 | 暂停收益/停结算：**本版不做** |
-| Q7 | 管理入口：内容安全分组；P0 举报审核 + 处罚记录只读；`admin`+`operator` 可审；禁登录仅 admin 可见 |
+| Q7 | 管理入口：内容安全分组；P0 举报审核 + 处罚记录只读；`admin`+`operator` 可审；**施加**禁登录仅 admin；**解禁登录** admin/operator |
 | Q8 | 证据本版**仅图片**（≤3，单张 ≤5MB）；仅上传成功计入名额 |
 | Q9 | 屏蔽只滤推荐；搜索/作者主页不滤；只屏蔽不解 |
 | Q10 | 用户信息下发：`publishBanUntil`（P0）/ `homeHidden`（P0.5）挂 `GET /auth/user/info` |
 | Q11 | R11 错误码：`already_upheld` / `report_cooldown`（及已有 `duplicate_pending`） |
 | Q12 | `moderation` 消息可选 `relatedGameId`；消息中心新建分区「安全 / 违规」 |
 | Q13 | **严重直达**：`penaltyLevel` 有值时只记处罚、不记警告、只发一条处罚通知（见 R33、§5.2.1）；前端直达请求不带 `uphold_warn` |
-| Q14 | **举报人结果通知**：成立/驳回固定文案见 R12b / §2.9；`message_type=report_resolved` |
 
 ---
 
@@ -442,14 +460,12 @@ none ──takedown──► taken_down ──(appeal_ok|admin_restore)──►
 
 | message_type | 消息源 | 已读 `sourceId` | 跳转与额外字段 |
 |--------------|--------|------------------|----------------|
-| `report_received` | `user_report`（举报人=当前用户；**提交后即可见**） | `user_report.id`（数字） | 只展开正文（受理文案） |
-| `report_resolved` | `user_report`（举报人=当前用户；**仅 status=upheld\|rejected**） | `user_report.id`（数字） | 只展开正文（结果文案）；列表时间用 `reviewed_at` |
+| `report_received` | `user_report`（举报人=当前用户） | `user_report.id`（数字） | 只展开正文 |
 | `moderation` | `creator_moderation`（**warning / penalty / appeal**，user_id=当前用户） | 消息数字 `id`（**只用于 mark-read**） | 见下表 |
 
-正文：举报人受理固定文案；举报人结果按成立/驳回锁定文案（R12b）；创作者侧读 `notify_body`。  
+正文：举报人侧固定「已受理」文案；创作者侧读 `notify_body`。  
 前端列表分区：**「安全 / 违规」**（与系统/活动/互动并列）。  
-`MessageCenterService` 需聚合 `report_received` / `report_resolved` / `moderation`；**仍不建** `moderation_notifications`。  
-审核 `review` 成功后必须写入举报人结果可见性（终态 + 固化结果正文，或聚合时按 status 选模板）；**禁止**只通知创作者、漏推举报人。
+`MessageCenterService` 需扩展聚合这两路；**仍不建** `moderation_notifications`。
 
 | `recordType` | 跳转 | 「查看作品」 | 列表卡额外字段 |
 |--------------|------|--------------|----------------|
@@ -666,7 +682,7 @@ GET /api/appeals/:appealId
 
 ### 5.2 管理端 / 运营端
 
-路径风格对齐现网：写操作与列表仍走 `/api/admin/...`，鉴权 `admin` **或** `operator`（四级禁登录仅 admin）。**不提供** `/api/operator` 别名。详情类 GET 与用户侧共用资源路径（见 §5.1.4 / §5.1.6）。
+路径风格对齐现网：写操作与列表仍走 `/api/admin/...`，鉴权 `admin` **或** `operator`（**施加**禁登录仅 admin；**解禁** `POST /api/admin/moderation/clear-login-ban` 与申诉通过同权）。**不提供** `/api/operator` 别名。详情类 GET 与用户侧共用资源路径（见 §5.1.4 / §5.1.6）。
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
@@ -675,6 +691,8 @@ GET /api/appeals/:appealId
 | POST | `/api/admin/reports/:id/review` | 审核 |
 | POST | `/api/admin/moderation/warn` | 巡查手工警告 |
 | POST | `/api/admin/moderation/penalty` | 手工开处罚 |
+| POST | `/api/admin/moderation/clear-login-ban` | **解除禁登录**（body: `{ userId }`；**admin / operator**；与申诉通过同权） |
+| POST | `/api/admin/moderation/:moderationId/revoke` | **运营撤销**当前警告 / 当前生效处罚（§2.7b；16 位 id；可选 `reviewNote`） |
 | POST | `/api/admin/moderation/restore-game` | 撤销下架 |
 | GET | `/api/admin/penalties` | 处罚列表；`id` 为 16 位 `moderation_id` |
 | GET | `/api/moderation/:moderationId` | 警告/处罚详情（与用户同一条） |
@@ -745,7 +763,7 @@ POST /api/admin/reports/:id/review
 | 发布作品/帖子 | `publish_blocked_until > now` 时 403，文案「账号处于发布限制中」 |
 | `GET /auth/user/info`（及登录 user） | 增加 `publishBanUntil`（P0）、`homeHidden`（P0.5）；见 §4.5 |
 | 个人主页 GET | `homepage_hidden=1`：本人与管理员正常进（本人可出顶栏提示）；其它访客空态「因违规暂不可见」 |
-| 消息中心 | 允许 `report_received`、`report_resolved`、`moderation`；可选 `relatedGameId`；违规跳转带 `moderationId`，申诉结果带 `appealId`；`sourceId` 只用于已读；前端分区「安全 / 违规」 |
+| 消息中心 | 允许 `report_received`、`moderation`；可选 `relatedGameId`；违规跳转带 `moderationId`，申诉结果带 `appealId`；`sourceId` 只用于已读；前端分区「安全 / 违规」 |
 
 ---
 
@@ -806,19 +824,25 @@ POST /api/admin/reports/:id/review
 
 - **严重直达**入口：手选 L1～L4，跳过凑满 3 次警告；成立后**只记该级处罚**（见 R33）  
 - 前端提交：带 `penaltyLevel`；`actions` **不要**带 `uphold_warn`（重置资料只用 `uphold_reset_profile` 等）  
-- 禁登录：**仅 admin 可见**（operator 不展示）  
+- **施加**禁登录：**仅 admin 可见/可勾选**（operator 不展示）；**解禁登录**：admin/operator 均可（详情「解除禁登录」→ `clear-login-ban`，与申诉通过同权）  
 - 主页隐藏等升档副作用的运营可见性  
+
+**运营纠错（§2.7b，可与 P0.5 同迭代或紧随）**
+
+- 举报详情 / 处罚详情：可撤项出「撤销」+ 二次确认 → `POST /api/admin/moderation/:moderationId/revoke`  
+- 处罚：仅当前生效档可撤；警告：仅未消耗可单撤；有 pending 申诉也可撤（申诉 → `cancelled`）  
+- 用户侧：列表仍显示「已撤销」，无申诉按钮；**不做**发布审核撤销  
 
 **不改**：现有评论审核、提现 Tab。
 
 ### 6.5 消息中心
 
-- 新建分区：**「安全 / 违规」**（`report_received` / `report_resolved` / `moderation`）  
-- `report_received`：受理回执，只展开正文，不跳业务页  
-- `report_resolved`：成立/驳回结果，只展开正文，不跳业务页；标题「举报处理结果」  
+- 新建分区：**「安全 / 违规」**（`report_received` / `moderation`）  
+- `report_received`：只展开正文，不跳业务页  
 - 违规通知：进 `/moderation/{moderationId}`（16 位）；有 `relatedGameId` → **「查看作品」**进 stats  
 - 申诉结果：进 `/appeals/{appealId}`；**不出**「去申诉」  
-- 标已读仍用数字 `sourceId`（与 `messageType` 组合）  
+- 运营撤销通知：`recordType=moderation_revoke`；展示撤销文案；**不出**申诉  
+- 标已读仍用数字 `sourceId`  
 
 ### 6.6 处罚副作用（用户侧 FE）
 
@@ -836,7 +860,7 @@ POST /api/admin/reports/:id/review
 - 问题类型：`GET /report/reasons?targetType=appeal`；描述 + 证据图（≤3）  
 - 结果页 `/appeals/:appealId`：违规对象 / `reasonTitle` / 描述 / 证据  
 - 审核详情 `/moderation/:moderationId`：底栏看 `canAppeal`；可申诉则带 `relatedModerationId` 进提交页  
-- Admin 申诉复核：详情调 `GET /api/appeals/:appealId`；审核仍 `POST /api/admin/appeals/:id/review`；目标 L4 时非 admin 隐藏「通过」  
+- Admin 申诉复核：详情调 `GET /api/appeals/:appealId`；审核仍 `POST /api/admin/appeals/:id/review`（**admin / operator** 均可「通过」，与解禁登录同权；**施加**禁登录仍仅 admin）  
 
 ---
 
@@ -848,12 +872,13 @@ POST /api/admin/reports/:id/review
 | S1 | `reportReasonService` + GET reasons | |
 | S2 | 证据上传 R2 + `userReportService.create` + 举报人 `report_received` 消息 | |
 | S3 | `userContentBlockService`：**仅推荐**滤 block；搜索/作者主页/详情不因 block 藏 | |
-| S4 | `creatorModerationService.review`：下架、warning/自动一级 penalty、upsert `user_punishment`、通知创作者（含 `relatedGameId`）+ **推送举报人 `report_resolved`**；R11 错误码 | |
+| S4 | `creatorModerationService.review`：下架、warning/自动一级 penalty、upsert `user_punishment`、通知（含 `relatedGameId`）；R11 错误码 | |
 | S4b | 将 `genRandomNickname` / `DEFAULT_AVATAR_URL` 抽到公共模块，注册改 import | |
 | S5 | 发布/公开/主页 + **`/auth/user/info` 下发 `publishBanUntil`**；owner 列表带 `moderationStatus` | |
 | S6 | Admin list/detail/review + 昵称/`gameTitle`/按人筛 + **penalties 只读列表**（16 位 id） | |
-| S7 | 消息中心 ALLOWED 扩展 `report_received` / **`report_resolved`** / `moderation` + `relatedGameId` + `moderationId` / `appealId` | |
+| S7 | 消息中心 ALLOWED 扩展 `report_received` / `moderation` + `relatedGameId` + `moderationId` / `appealId` | |
 | S5b |（P0.5）二～四级升档、`homeHidden` 下发、严重直达、先审后发、冻创作者、禁登录 | |
+| S5c |（运营纠错）`POST .../moderation/:id/revoke`：§2.7b；复用申诉通过副作用 + `moderation_revoke` 通知；pending 申诉 → `cancelled` | |
 | S8 |（P1）申诉：同表 `record_type=appeal`；`appeal_id` / `moderation_id`；统一 GET `/appeals/:appealId`、`/moderation/:id`；`relatedModerationId` 提交 | |
 
 ## 8. 前端实施任务
@@ -865,10 +890,11 @@ POST /api/admin/reports/:id/review
 | F2 | **首页推荐**长按/右键：屏蔽+举报 | |
 | F3 | AccountHomepage「⋯」账号举报；自己入口隐藏 | |
 | F4 | Admin 举报审核 + 处罚记录只读（P0）；严重 UI（P0.5） | |
-| F5 | 消息中心「安全/违规」+ `report_received` / **`report_resolved`** + `moderationId` / `appealId` 跳转 + `relatedGameId`「查看作品」→ **stats** | |
+| F5 | 消息中心「安全/违规」+ `moderationId` / `appealId` 跳转 + `relatedGameId`「查看作品」→ **stats** | |
 | F5b | `publishBanUntil` 灰发布；`taken_down` 标签/锁公开；`homeHidden` 顶栏（P0.5 用户侧） | |
-| F6 |（P1）`/appeal/submit`、`/moderation/:id`、`/appeals/:appealId` + Admin 申诉复核；L4 非 admin 隐藏「通过」 | |
-| F4b |（P0.5 Admin 下一轮）严重直达 L1–L4、先审后发、冻创作者、禁登录（仅 admin） | |
+| F6 |（P1）`/appeal/submit`、`/moderation/:id`、`/appeals/:appealId` + Admin 申诉复核（通过：admin/operator；施加禁登录仍仅 admin） | |
+| F4b |（P0.5 Admin 下一轮）严重直达 L1–L4、先审后发、冻创作者；**施加**禁登录仅 admin，**解禁** admin/operator | |
+| F4c |（运营纠错）Admin 详情「撤销」→ `.../revoke`；用户侧列表显示「已撤销」+ 撤销站内信；不做发布审核撤销 | |
 | F7 | **不做**分享渠道大改、帖子入口、取消屏蔽 UI | |
 
 ---
@@ -878,7 +904,8 @@ POST /api/admin/reports/:id/review
 | 阶段 | 内容 | 预估 | 依赖 |
 |------|------|------|------|
 | **P0** | 理由字典 + 游戏/账号举报 + 屏蔽（只滤推荐）+ 审核默认下架/警告 + **满 3 次自动一级** + 通知（含 `relatedGameId`）+ Admin 举报审核 + **处罚记录只读** + `publishBanUntil` 灰按钮 + R11 错误码 + 创作者「违规下架」展示 | BE 5～7d / FE 4～6d | — |
-| **P0.5** | 二～四级自动升档、主页隐藏（`homeHidden` + 访客空态 + 本人顶栏；**用户侧已接**）、严重直达 UI / 先审后发 / 冻创作者 / 禁登录（**Admin 下一轮**；不含停结算） | BE 3～4d / FE 1～2d | P0 |
+| **P0.5** | 二～四级自动升档、主页隐藏（`homeHidden` + 访客空态 + 本人顶栏；**用户侧已接**）、严重直达 UI / 先审后发 / 冻创作者 / 禁登录（**施加仅 admin，解禁 admin/operator**；Admin 下一轮；不含停结算） | BE 3～4d / FE 1～2d | P0 |
+| **P0.5+** | 运营主动撤销警告/当前处罚（§2.7b / S5c / F4c；不退档、不删历史；撤销站内信） | BE 0.5～1d / FE 0.5～1d | P0.5 或与收尾同迭代 |
 | **P1** | 申诉全流程 + 运营申诉复核（**FE 已对接**；16 位对外 id + 统一详情 GET） | BE 2～3d / FE 2～3d | P0.5 |
 | **P2** | 帖子举报/屏蔽真实联动（待帖子模型） | 另估 | 帖子模块 |
 | **另开** | 分享到粉丝/QQ/朋友圈 | — | 产品单独 PRD |
@@ -896,7 +923,8 @@ POST /api/admin/reports/:id/review
 | 帖子类型过早承诺 | UI 不做；审核对 post 明确未接入 |
 | 分享菜单过载 | 本版只加举报一行，不扩分享渠道 |
 | 处罚状态与定时不一致 | cron 每日扫 `ends_at` 切 finished + 写 observation_until |
-| 运营误点四级 | Admin 二次确认 + 仅 admin 可禁登录 |
+| 运营误点四级 | Admin 二次确认 + **仅 admin 可施加**禁登录；解禁 admin/operator |
+| 运营误点警告/处罚 | §2.7b 主动撤销（仅当前档 / 未消耗警告）；不退档；发撤销站内信 |
 
 ---
 
@@ -918,10 +946,12 @@ POST /api/admin/reports/:id/review
 - [ ] `GET /api/moderation/:id`、`GET /api/appeals/:appealId` 无 `/admin`、`/operator` 别名；`canAppeal=false` 时底栏申诉为灰，不做「再次申诉」  
 - [ ] 申诉通过的警告（`status=revoked`）不计入 `ownerWarningCount`  
 - [ ] 举报人 toast +「已受理」站内信；点开不跳进度页  
-- [ ] 管理端成立后举报人收到「举报处理结果」：采取措施文案；驳回后收到持续关注文案；与受理分条、可分别已读  
 - [ ] P0 Admin：举报审核 + 处罚记录只读；成立默认下架+警告  
-- [ ] P1 Admin：申诉复核；目标 L4 时非 admin 不可见「通过」  
+- [ ] P1 Admin：申诉复核；admin/operator 均可「通过」（含解除禁登录效果）；**施加**禁登录仍仅 admin  
 - [ ] P0.5：严重直达可跳过三次警告；同单只记一条处罚、玩家只收到一条处罚通知（无同单警告通知）；主页隐藏访客空态 + 本人顶栏（用户侧）  
+- [ ] 运营撤销：仅当前生效处罚可撤；撤后不退上一档；禁登录一并解除；未消耗警告可单撤；已升档警告不可单撤  
+- [ ] 撤销后用户侧列表仍显示「已撤销」、不可申诉；收到 `moderation_revoke` 站内信（通用文案）  
+- [ ] 撤销时若有 pending 申诉 → 申诉 `cancelled`；作品仅在无其他有效下架原因时恢复上架  
 - [ ] 本版结算/收益逻辑**未被**处罚改动  
 - [ ] 账号举报可重置资料并记警告  
 - [ ] 帖子 UI 不出现；reasons?targetType=post 可返回种子  
@@ -946,7 +976,7 @@ POST /api/admin/reports/:id/review
 | 观察期 | 一级后 7 天；二级后 **7** 天；三级后 **30** 天；期内再违规则处罚升级 |
 | 违规重置资料 | 昵称复用 `genRandomNickname()`；头像 `DEFAULT_AVATAR_URL`；简介清空 |
 | 二级主页隐藏 | 本人可进可编辑 + 顶栏提示；访客不可见（P0.5） |
-| 管理入口 | 举报审核 + 处罚记录（P0 只读）；严重 UI P0.5；admin+operator；禁登录仅 admin |
+| 管理入口 | 举报审核 + 处罚记录（P0 只读）；严重 UI P0.5；admin+operator；**施加**禁登录仅 admin，**解禁** admin/operator |
 | 证据 | 仅图片 ≤3；上传成功才占名额 |
 | 屏蔽过滤 | 只挡推荐；搜索/作者主页/详情不滤；只屏蔽不解 |
 | 用户处罚字段 | `publishBanUntil` / `homeHidden` 挂 `/auth/user/info` |
@@ -956,9 +986,10 @@ POST /api/admin/reports/:id/review
 | 详情 GET | 警告/处罚 `GET /api/moderation/:moderationId`；申诉 `GET /api/appeals/:appealId`（用户与 staff 同一条）；无 `/admin`、`/operator` 详情别名 |
 | 有效警告 | `consumed=0` 且 `status <> revoked`；申诉通过的那次不计 |
 | Admin 展示 | 当前昵称 / `userCode` / `gameTitle`；可按 `targetOwnerUserId`、`reporterUserId` 精确筛 |
-| 四级申诉通过 | 仅 admin；前端对非 admin 隐藏「通过」 |
+| 四级申诉通过 / 解禁登录 | **admin / operator**（与 `clear-login-ban` 同权）；**施加**禁登录仍仅 admin |
 | 他人主页入口 | 「⋯」；长按仅首页推荐 + 桌面右键 |
 | 严重直达 vs 警告 | `penaltyLevel` 有值 → 只记处罚、不记警告、只发一条处罚通知；FE 直达不带 `uphold_warn`（2026-10-24） |
+| 运营主动撤销 | 仅当前生效处罚；不退档；不删其他历史；未消耗警告可单撤；已升档警告不单撤；无其他有效下架才恢复作品；pending 申诉 → `cancelled`；禁登录一并解除；权限 operator+admin；用户侧显示已撤销；通用撤销文案；不做发布审核撤销（2026-10-27） |
 
 ---
 

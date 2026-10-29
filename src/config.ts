@@ -34,6 +34,18 @@ export function resolveAssetHostAddress(apiBase: string = HOST_ADDRESS): string 
 
 export const ASSET_HOST_ADDRESS = resolveAssetHostAddress();
 
+/**
+ * 功能注释：用户头像留在 API 主机（cn-test 保留 /cn-test-api），封面等其它图去掉该前缀。
+ * 测试环境头像若打到正式 API，正式库里的旧 avatarUrl 会盖住刚上传的新图。
+ */
+export function resolveImageHostAddress(imagePath: string, apiBase: string = HOST_ADDRESS): string {
+  const path = String(imagePath || '');
+  if (path.includes('/interactive-fiction-game-avatar/')) {
+    return String(apiBase || '').trim().replace(/\/+$/, '');
+  }
+  return resolveAssetHostAddress(apiBase);
+}
+
 // 本地联调后端：改 devApiPresets.ts 的 ACTIVE_DEV_API
 // 构建部署：用 deploy profile 的 VITE_API_BASE_URL（勿在此硬编码）
 

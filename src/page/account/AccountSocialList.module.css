@@ -521,12 +521,6 @@
     opacity: 0.9;
 }
 
-.followBtnSelf {
-    cursor: default;
-    pointer-events: none;
-    opacity: 0.9;
-}
-
 @media (min-width: 768px) {
     .pageRoot {
         max-width: 1080px;
