@@ -142,7 +142,7 @@ const CreatorEarningsWithdrawalModal: React.FC<Props> = ({
                 <div className={styles.statusHero} role="status">
                     <IoTimeOutline aria-hidden="true" />
                     <div>
-                        <h3>已受理，尚未到账</h3>
+                        <h3>已受理</h3>
                         <p>{active.status === 'approved' ? '运营审核已通过，正在等待打款。' : '运营审核通过后，T+3 个工作日打款。'}</p>
                     </div>
                 </div>

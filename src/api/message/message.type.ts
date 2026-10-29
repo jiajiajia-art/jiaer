@@ -81,7 +81,7 @@ export interface MessageCreatorEarningWithdrawalNotification {
     id: number;
     creatorUserId: string;
     withdrawRequestId: number;
-    notificationType: 'paid' | 'rejected';
+    notificationType: 'approved' | 'paid' | 'rejected';
     grossCents: number;
     payoutCents: number;
     rejectionReason: string | null;

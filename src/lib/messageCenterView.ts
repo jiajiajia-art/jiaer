@@ -5,7 +5,7 @@
 export type MessageListSectionKey = 'system' | 'activity' | 'interaction';
 
 export type CreatorEarningWithdrawalMessageInput = {
-  notificationType: 'paid' | 'rejected';
+  notificationType: 'approved' | 'paid' | 'rejected';
   grossCents: number;
   payoutCents: number;
   rejectionReason?: string | null;
@@ -69,6 +69,13 @@ export function buildCreatorEarningWithdrawalMessageView(
   notification: CreatorEarningWithdrawalMessageInput,
 ): { title: string; preview: string; detail: string } {
   const gross = formatYuanFromCents(notification.grossCents);
+  if (notification.notificationType === 'approved') {
+    return {
+      title: '创作者收益提现审核通过',
+      preview: `税前金额 ${gross}，等待打款`,
+      detail: `本次提现申请税前金额 ${gross}，审核已通过，款项将在完成打款后到账。`,
+    };
+  }
   if (notification.notificationType === 'paid') {
     const payout = formatYuanFromCents(notification.payoutCents);
     return {

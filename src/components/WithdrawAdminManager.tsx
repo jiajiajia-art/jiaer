@@ -5,6 +5,11 @@ import adminWithdrawApi, {
   type CreatorVerifyItem,
   type DiamondTimelineItem,
 } from '../api/withdraw/adminWithdrawApi';
+import operatorCreatorEarningsApi, {
+  type CreatorEarningOperatorWithdrawal,
+  type CreatorEarningOperatorWithdrawalDetail,
+  type CreatorEarningWithdrawalStatus,
+} from '../api/creatorEarnings/operatorCreatorEarningsApi';
 import { getApiErrorMessage } from '../utils/error';
 import {
   formatDiamondTimelineLog,
@@ -13,11 +18,12 @@ import {
 import MetricTitleTip from './stats/MetricTitleTip';
 import styles from './WithdrawAdminManager.module.css';
 
-type TabKey = 'withdraw' | 'verify';
+type TabKey = 'withdraw' | 'verify' | 'creatorEarnings';
 
 const statusLabel = (status: string) => {
   if (status === 'pending') return '待审核';
   if (status === 'approved') return '已通过';
+  if (status === 'paid') return '已打款';
   if (status === 'rejected') return '已驳回';
   return status;
 };
@@ -25,7 +31,7 @@ const statusLabel = (status: string) => {
 /** 列表/详情按审核状态着色，便于一眼区分通过/驳回/待审 */
 const statusClassName = (status: string) => {
   if (status === 'pending') return styles.statusPending;
-  if (status === 'approved') return styles.statusApproved;
+  if (status === 'approved' || status === 'paid') return styles.statusApproved;
   if (status === 'rejected') return styles.statusRejected;
   return '';
 };
@@ -41,8 +47,11 @@ const WithdrawAdminManager: React.FC = () => {
   const [withdrawTotal, setWithdrawTotal] = useState(0);
   const [verifyList, setVerifyList] = useState<CreatorVerifyItem[]>([]);
   const [verifyTotal, setVerifyTotal] = useState(0);
+  const [creatorEarningsList, setCreatorEarningsList] = useState<CreatorEarningOperatorWithdrawal[]>([]);
+  const [creatorEarningsHasNext, setCreatorEarningsHasNext] = useState(false);
 
   const [detail, setDetail] = useState<AdminWithdrawItem | null>(null);
+  const [creatorEarningsDetail, setCreatorEarningsDetail] = useState<CreatorEarningOperatorWithdrawalDetail | null>(null);
   const [timeline, setTimeline] = useState<DiamondTimelineItem[]>([]);
   const [rejectRemark, setRejectRemark] = useState('');
   const [actionId, setActionId] = useState<number | null>(null);
@@ -50,6 +59,7 @@ const WithdrawAdminManager: React.FC = () => {
   const [verifyRejectId, setVerifyRejectId] = useState<number | null>(null);
   const [verifyRejectRemark, setVerifyRejectRemark] = useState('');
   const [verifyRejectSubmitting, setVerifyRejectSubmitting] = useState(false);
+  const [creatorEarningsActionId, setCreatorEarningsActionId] = useState<number | null>(null);
 
   const loadWithdraw = useCallback(async () => {
     setLoading(true);
@@ -91,10 +101,73 @@ const WithdrawAdminManager: React.FC = () => {
     }
   }, [keyword, page, pageSize, status]);
 
+  const loadCreatorEarnings = useCallback(async () => {
+    setLoading(true);
+    try {
+      const resp = await operatorCreatorEarningsApi.listWithdrawals({
+        status: (status || undefined) as CreatorEarningWithdrawalStatus | undefined,
+        limit: pageSize,
+        offset: (page - 1) * pageSize,
+      });
+      const rows = resp.data.data || [];
+      setCreatorEarningsList(rows);
+      setCreatorEarningsHasNext(rows.length === pageSize);
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, '加载创作者分成提现失败'));
+    } finally {
+      setLoading(false);
+    }
+  }, [page, pageSize, status]);
+
   useEffect(() => {
     if (tab === 'withdraw') void loadWithdraw();
-    else void loadVerify();
-  }, [tab, loadWithdraw, loadVerify]);
+    else if (tab === 'verify') void loadVerify();
+    else void loadCreatorEarnings();
+  }, [tab, loadCreatorEarnings, loadVerify, loadWithdraw]);
+
+  const openCreatorEarningsDetail = async (id: number) => {
+    try {
+      const resp = await operatorCreatorEarningsApi.getWithdrawal(id);
+      if (!resp.data.success || !resp.data.data) {
+        toast.error(resp.data.message || '加载详情失败');
+        return;
+      }
+      setCreatorEarningsDetail(resp.data.data);
+      setRejectRemark('');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, '加载详情失败'));
+    }
+  };
+
+  const submitCreatorEarningsAction = async (kind: 'approve' | 'reject' | 'paid') => {
+    if (!creatorEarningsDetail || creatorEarningsActionId !== null) return;
+    const id = creatorEarningsDetail.id;
+    const remark = rejectRemark.trim();
+    if (kind === 'reject' && !remark) {
+      toast.error('驳回原因必填');
+      return;
+    }
+    setCreatorEarningsActionId(id);
+    try {
+      const response = kind === 'approve'
+        ? await operatorCreatorEarningsApi.approveWithdrawal(id, remark)
+        : kind === 'reject'
+          ? await operatorCreatorEarningsApi.rejectWithdrawal(id, remark)
+          : await operatorCreatorEarningsApi.markWithdrawalPaid(id, remark);
+      if (!response.data.success) {
+        toast.error(response.data.message || '操作失败');
+        return;
+      }
+      toast.success(kind === 'approve' ? '审核通过' : kind === 'reject' ? '已驳回' : '已标记打款');
+      await loadCreatorEarnings();
+      if (kind === 'reject' || kind === 'paid') setCreatorEarningsDetail(null);
+      else await openCreatorEarningsDetail(id);
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, '操作失败'));
+    } finally {
+      setCreatorEarningsActionId(null);
+    }
+  };
 
   const openDetail = async (id: number) => {
     try {
@@ -225,7 +298,9 @@ const WithdrawAdminManager: React.FC = () => {
     }
   };
 
-  const totalPages = Math.max(1, Math.ceil((tab === 'withdraw' ? withdrawTotal : verifyTotal) / pageSize));
+  const totalPages = tab === 'creatorEarnings'
+    ? (creatorEarningsHasNext ? page + 1 : page)
+    : Math.max(1, Math.ceil((tab === 'withdraw' ? withdrawTotal : verifyTotal) / pageSize));
 
   return (
     <div className={styles.panel}>
@@ -261,33 +336,35 @@ const WithdrawAdminManager: React.FC = () => {
         >
           认证升级
         </button>
-      </div>
-
-      <div className={styles.toolbar}>
-        <input
-          className={styles.input}
-          placeholder="搜索用户名 / 手机号 / 单号"
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
-        />
-        <select className={styles.select} value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}>
-          <option value="">全部状态</option>
-          <option value="pending">待审核</option>
-          <option value="approved">已通过</option>
-          <option value="rejected">已驳回</option>
-        </select>
         <button
           type="button"
-          className={styles.primaryButton}
-          onClick={() => {
-            setPage(1);
-            if (tab === 'withdraw') void loadWithdraw();
-            else void loadVerify();
-          }}
+          className={`${styles.tab} ${tab === 'creatorEarnings' ? styles.tabActive : ''}`}
+          onClick={() => { setTab('creatorEarnings'); setStatus(''); setPage(1); setDetail(null); setCreatorEarningsDetail(null); }}
         >
-          搜索
+          创作者分成提现
         </button>
       </div>
+
+      {tab === 'creatorEarnings' ? (
+        <div className={styles.toolbar}>
+          <select className={styles.select} value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}>
+            <option value="">全部状态</option>
+            <option value="pending">待审核</option>
+            <option value="approved">待打款</option>
+            <option value="paid">已打款</option>
+            <option value="rejected">已驳回</option>
+          </select>
+          <button type="button" className={styles.primaryButton} onClick={() => { if (page === 1) void loadCreatorEarnings(); else setPage(1); }}>搜索</button>
+        </div>
+      ) : (
+        <div className={styles.toolbar}>
+          <input className={styles.input} placeholder="搜索用户名 / 手机号 / 单号" value={keyword} onChange={(e) => setKeyword(e.target.value)} />
+          <select className={styles.select} value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}>
+            <option value="">全部状态</option><option value="pending">待审核</option><option value="approved">已通过</option><option value="rejected">已驳回</option>
+          </select>
+          <button type="button" className={styles.primaryButton} onClick={() => { setPage(1); if (tab === 'withdraw') void loadWithdraw(); else void loadVerify(); }}>搜索</button>
+        </div>
+      )}
 
       {loading ? <div className={styles.empty}>加载中...</div> : null}
 
@@ -356,6 +433,26 @@ const WithdrawAdminManager: React.FC = () => {
         </div>
       ) : null}
 
+      {!loading && tab === 'creatorEarnings' ? (
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead><tr><th>申请单号</th><th>用户名（Kuran号）</th><th>税前金额</th><th>个税</th><th>实付金额</th><th>开户行 / 卡号</th><th>状态</th><th>申请时间</th><th>操作</th></tr></thead>
+            <tbody>
+              {creatorEarningsList.length === 0 ? <tr><td colSpan={9} className={styles.empty}>暂无数据</td></tr> : creatorEarningsList.map((row) => (
+                <tr key={row.id}>
+                  <td><span className={styles.requestNo} title={row.requestNo}>{row.requestNo || '—'}</span><button type="button" className={styles.copyButton} title="复制申请单号" aria-label="复制申请单号" onClick={() => { void navigator.clipboard.writeText(row.requestNo).then(() => toast.success('申请单号已复制')).catch(() => toast.error('复制失败')); }}>复制</button></td><td>{row.creatorNickname || '未设置昵称'}（{row.creatorUserCode || '—'}）</td>
+                  <td>¥{row.grossYuan}</td><td>¥{row.incomeTaxYuan}</td><td>¥{row.payoutYuan}</td>
+                  <td>{row.bankBranch || '—'} / {row.bankCardNumber || '—'}</td>
+                  <td><span className={`${styles.statusText} ${statusClassName(row.status)}`}>{row.status === 'pending' ? '待审核' : row.status === 'approved' ? '待打款' : statusLabel(row.status)}</span></td>
+                  <td>{row.createdAt ? new Date(row.createdAt).toLocaleString() : '—'}</td>
+                  <td><button type="button" className={styles.linkButton} onClick={() => void openCreatorEarningsDetail(row.id)}>详情</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+
       {!loading && tab === 'verify' ? (
         <div className={styles.tableWrap}>
           <table className={styles.table}>
@@ -409,6 +506,31 @@ const WithdrawAdminManager: React.FC = () => {
         <span>{page} / {totalPages}</span>
         <button type="button" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>下一页</button>
       </div>
+
+      {creatorEarningsDetail ? (
+        <div className={styles.drawerOverlay} onClick={() => { if (creatorEarningsActionId === null) setCreatorEarningsDetail(null); }}>
+          <section className={`${styles.drawer} ${styles.creatorDrawer}`} role="dialog" aria-modal="true" aria-labelledby="creator-withdrawal-title" onClick={(e) => e.stopPropagation()}>
+            <header className={styles.creatorDrawerHeader}>
+              <div className={styles.creatorDrawerHeading}>
+                <span className={styles.drawerEyebrow}>创作者收益 · 提现审核</span>
+                <h3 id="creator-withdrawal-title">提现申请详情</h3>
+                <div className={styles.drawerRequestNo} title={creatorEarningsDetail.requestNo}>{creatorEarningsDetail.requestNo}</div>
+              </div>
+              <button type="button" className={styles.close} aria-label="关闭详情" onClick={() => { if (creatorEarningsActionId === null) setCreatorEarningsDetail(null); }}>×</button>
+            </header>
+            <div className={styles.creatorDrawerBody}>
+              <div className={styles.creatorStatusLine}><span className={`${styles.statusDot} ${statusClassName(creatorEarningsDetail.status)}`} /><span className={`${styles.statusText} ${statusClassName(creatorEarningsDetail.status)}`}>{creatorEarningsDetail.status === 'approved' ? '待打款' : statusLabel(creatorEarningsDetail.status)}</span><span className={styles.creatorApplyTime}>申请于 {creatorEarningsDetail.createdAt ? new Date(creatorEarningsDetail.createdAt).toLocaleString() : '—'}</span></div>
+              <section className={styles.payoutSummary} aria-label="提现金额摘要"><div className={styles.payoutMain}><span>实付金额</span><strong>¥{creatorEarningsDetail.payoutYuan}</strong></div><div className={styles.payoutBreakdown}><div><span>税前金额</span><strong>¥{creatorEarningsDetail.grossYuan}</strong></div><div><span>代扣个税</span><strong>¥{creatorEarningsDetail.incomeTaxYuan}</strong></div></div></section>
+              <section className={styles.drawerSection}><h4 className={styles.sectionTitle}>创作者信息</h4><div className={styles.detailGrid}><div><span>用户名（Kuran号）</span><strong>{creatorEarningsDetail.creatorNickname || '未设置昵称'}（{creatorEarningsDetail.creatorUserCode || '—'}）</strong></div><div><span>手机号</span><strong>{creatorEarningsDetail.phoneNumber || '—'}</strong></div><div><span>真实姓名</span><strong>{creatorEarningsDetail.realName || '—'}</strong></div><div><span>身份证</span><strong>{creatorEarningsDetail.idCard || '—'}</strong></div></div></section>
+              <section className={styles.drawerSection}><h4 className={styles.sectionTitle}>收款账户</h4><div className={styles.detailGrid}><div><span>开户行</span><strong>{creatorEarningsDetail.bankBranch || '—'}</strong></div><div><span>银行卡号</span><strong>{creatorEarningsDetail.bankCardNumber || '—'}</strong></div></div></section>
+              {creatorEarningsDetail.rejectionReason ? <section className={styles.rejectionNotice}><span>驳回原因</span><p>{creatorEarningsDetail.rejectionReason}</p></section> : null}
+              <section className={styles.drawerSection}><div className={styles.sectionHeading}><h4 className={styles.sectionTitle}>收益来源</h4><span>{creatorEarningsDetail.items?.length || 0} 个作品</span></div><div className={styles.creatorItemsHeader}><span>类型</span><span>游戏名称</span><span>金额</span></div><div className={styles.creatorWithdrawalItems}>{creatorEarningsDetail.items?.map((item) => <div key={item.fileId} className={styles.creatorWithdrawalItem} title={`fileId: ${item.fileId}`}><span className={styles.creatorGameType}>{item.gameType || '—'}</span><span className={styles.creatorGameTitle}>{item.gameTitle || '未找到游戏'}</span><strong className={styles.creatorGameAmount}>¥{item.grossYuan}</strong></div>)}{!creatorEarningsDetail.items?.length ? <div className={styles.creatorItemsEmpty}>暂无作品明细</div> : null}</div></section>
+              {creatorEarningsDetail.remark ? <section className={styles.drawerSection}><h4 className={styles.sectionTitle}>审核备注</h4><p className={styles.drawerRemark}>{creatorEarningsDetail.remark}</p></section> : null}
+            </div>
+            {creatorEarningsDetail.status === 'pending' || creatorEarningsDetail.status === 'approved' ? <footer className={styles.creatorActionFooter}><textarea className={styles.textarea} placeholder={creatorEarningsDetail.status === 'pending' ? '填写审核备注（驳回时必填）' : '填写打款备注（可选）'} value={rejectRemark} onChange={(e) => setRejectRemark(e.target.value)} rows={2} disabled={creatorEarningsActionId !== null} /><div className={styles.actionRow}>{creatorEarningsDetail.status === 'pending' ? <><button type="button" className={styles.dangerButton} onClick={() => void submitCreatorEarningsAction('reject')} disabled={creatorEarningsActionId !== null}>驳回申请</button><button type="button" className={styles.primaryButton} onClick={() => void submitCreatorEarningsAction('approve')} disabled={creatorEarningsActionId !== null}>审核通过</button></> : <button type="button" className={styles.primaryButton} onClick={() => void submitCreatorEarningsAction('paid')} disabled={creatorEarningsActionId !== null}>标记已打款</button>}</div></footer> : null}
+          </section>
+        </div>
+      ) : null}
 
       {detail ? (
         <div className={styles.drawerOverlay} onClick={() => setDetail(null)}>
