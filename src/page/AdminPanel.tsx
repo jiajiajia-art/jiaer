@@ -31,11 +31,11 @@ import CreatorIncentiveAdminManager from '../components/CreatorIncentiveAdminMan
 import ShareRatioAdminManager from '../components/ShareRatioAdminManager';
 import AdminUsersManager from '../components/AdminUsersManager';
 import DailyTasksAdminManager from '../components/DailyTasksAdminManager';
-import CommentAdminManager from '../components/admin/CommentAdminManager.tsx';
+import CommentAdminManager from '../components/Admin/CommentAdminManager.tsx';
 import WithdrawAdminManager from '../components/WithdrawAdminManager';
 import LotteryAdminManager from '../components/LotteryAdminManager';
-import AdminPublicAvatarManager from '../components/admin/AdminPublicAvatarManager';
-import AdminPlayModManager from '../components/admin/AdminPlayModManager';
+import AdminPublicAvatarManager from '../components/Admin/AdminPublicAvatarManager';
+import AdminPlayModManager from '../components/Admin/AdminPlayModManager';
 import ModelConfigHub from '../components/ModelConfigHub';
 import announcementApi from '../api/announcement/announcementApi';
 import documentApi from '../api/document/documentApi';

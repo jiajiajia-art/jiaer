@@ -254,12 +254,37 @@
     font-weight: 700;
 }
 
-/* 功能注释：作者头像 + 制作信息同一行，对齐效果图箭头位置 */
+/* 功能注释：作者头像 + 制作信息 + 关注，同一行 */
+.heroMetaActions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    max-width: 100%;
+    flex-wrap: wrap;
+}
+
 .heroMetaRow {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    font: inherit;
+    max-width: 100%;
+}
+
+.heroMetaRowClickable {
+    cursor: pointer;
+}
+
+.heroMetaRowClickable:hover .heroMeta {
+    color: rgba(255, 255, 255, 0.92);
 }
 
 .heroAuthorAvatar {
@@ -281,6 +306,84 @@
     color: rgba(255, 255, 255, 0.72);
     line-height: 1.4;
     min-width: 0;
+}
+
+/*
+ * 功能注释：关注按钮定稿 = 描边胶囊外形 + 半透明酒红填充。
+ * 比主页关注按钮更小一号，仍保持可发现性。
+ */
+.followBtn {
+    flex-shrink: 0;
+    height: 1.5625rem;
+    min-width: 0;
+    padding: 0 0.72rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    line-height: 1;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+/* 功能注释：等详情关系态落地时占位，避免先闪错误态再把布局撑开 */
+.followBtnPlaceholder {
+    flex-shrink: 0;
+    height: 1.5625rem;
+    width: 3.8rem;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.followBtnIdle {
+    background: rgba(142, 33, 53, 0.72);
+    color: #ffffff;
+}
+
+.followBtnIdle:hover {
+    background: rgba(142, 33, 53, 0.88);
+    border-color: rgba(255, 255, 255, 0.32);
+}
+
+.followBtnActive {
+    background: rgba(44, 44, 46, 0.72);
+    color: rgba(255, 255, 255, 0.78);
+    border-color: rgba(255, 255, 255, 0.16);
+}
+
+.followBtnActive:hover {
+    background: rgba(44, 44, 46, 0.88);
+    color: #ffffff;
+}
+
+/* 功能注释：已屏蔽 / 无法关注 — 只读态，弱化对比 */
+.followBtnMuted {
+    background: rgba(0, 0, 0, 0.28);
+    color: rgba(255, 255, 255, 0.58);
+    border-color: rgba(255, 255, 255, 0.14);
+}
+
+.followBtn:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.45);
+    outline-offset: 2px;
+}
+
+.followBtn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.followBtnMuted:disabled {
+    opacity: 0.85;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .followBtn {
+        transition: none;
+    }
 }
 
 /* ==================== 内容区域 ==================== */

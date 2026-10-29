@@ -7,7 +7,7 @@ import PromotionAdminManager from '../../components/PromotionAdminManager';
 import DailyTasksAdminManager from '../../components/DailyTasksAdminManager';
 import StatsOverviewSection from '../../components/stats/StatsOverviewSection';
 import MetricTitleTip from '../../components/stats/MetricTitleTip';
-import metricStyles from '../../components/admin/MetricSummary.module.css';
+import metricStyles from '../../components/Admin/MetricSummary.module.css';
 import ListPaginationBar, { buildListPagination, type ListPaginationState } from '../../components/ListPaginationBar';
 import operatorStatsApi, {
   type RecruitmentOverview,
@@ -16,12 +16,26 @@ import operatorStatsApi, {
 import type { CreatorWorkItem, StatsOverview } from '../../api/stats/creatorStatsApi';
 import OperatorReports from './OperatorReports';
 import WithdrawAdminManager from '../../components/WithdrawAdminManager';
-import AdminPublicAvatarManager from '../../components/admin/AdminPublicAvatarManager';
-import AdminPlayModManager from '../../components/admin/AdminPlayModManager';
+import AdminPublicAvatarManager from '../../components/Admin/AdminPublicAvatarManager';
+import AdminPlayModManager from '../../components/Admin/AdminPlayModManager';
+import ContentReportAdminManager from '../../components/Admin/ContentReportAdminManager';
+import ContentAppealAdminManager from '../../components/Admin/ContentAppealAdminManager';
+import PublishReviewAdminManager from '../../components/Admin/PublishReviewAdminManager';
 import adminStyles from '../AdminPanel.module.css';
 import styles from './OperatorPanel.module.css';
 
-type OperatorTab = 'stats' | 'reports' | 'promotions' | 'recruitment' | 'dailyTasks' | 'withdraw' | 'avatars' | 'components';
+type OperatorTab =
+  | 'stats'
+  | 'reports'
+  | 'promotions'
+  | 'recruitment'
+  | 'dailyTasks'
+  | 'withdraw'
+  | 'avatars'
+  | 'components'
+  | 'contentReports'
+  | 'appeals'
+  | 'publishQueue';
 type WorksSortField = 'playCount' | 'pv' | 'shareCount';
 type SortDirection = 'asc' | 'desc';
 
@@ -40,6 +54,9 @@ const resolveOperatorTab = (pathname: string): OperatorTab => {
   if (pathname.startsWith('/operator/withdraw')) return 'withdraw';
   if (pathname.startsWith('/operator/avatars')) return 'avatars';
   if (pathname.startsWith('/operator/components') || pathname.startsWith('/operator/play-mods')) return 'components';
+  if (pathname.startsWith('/operator/content-reports')) return 'contentReports';
+  if (pathname.startsWith('/operator/appeals')) return 'appeals';
+  if (pathname.startsWith('/operator/publish-queue')) return 'publishQueue';
   return 'stats';
 };
 
@@ -74,6 +91,9 @@ const OperatorPanel: React.FC = () => {
     { id: 'withdraw', label: t('operator.tabs.withdraw'), path: '/operator/withdraw' },
     { id: 'avatars', label: '公共头像', path: '/operator/avatars' },
     { id: 'components', label: '组件管理', path: '/operator/components' },
+    { id: 'contentReports', label: t('operator.tabs.contentReports'), path: '/operator/content-reports' },
+    { id: 'appeals', label: t('operator.tabs.appeals'), path: '/operator/appeals' },
+    { id: 'publishQueue', label: t('operator.tabs.publishQueue'), path: '/operator/publish-queue' },
   ]), [t]);
 
   const sortedWorks = useMemo(() => {
@@ -401,6 +421,9 @@ const OperatorPanel: React.FC = () => {
             ) : null}
             {!isLoading && activeTab === 'recruitment' ? renderRecruitment() : null}
             {activeTab === 'dailyTasks' ? renderDailyTasks() : null}
+            {activeTab === 'contentReports' ? <ContentReportAdminManager /> : null}
+            {activeTab === 'appeals' ? <ContentAppealAdminManager /> : null}
+            {activeTab === 'publishQueue' ? <PublishReviewAdminManager /> : null}
           </section>
         </div>
       </div>

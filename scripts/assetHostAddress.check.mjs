@@ -19,17 +19,34 @@ test('resolveAssetHostAddress_应去掉cn-test-api后缀', async () => {
   assert.match(src, /ASSET_HOST_ADDRESS/);
 
   const constants = readFileSync(join(root, 'src/utils/constants.ts'), 'utf8');
-  assert.match(constants, /ASSET_HOST_ADDRESS/);
+  assert.match(constants, /resolveImageHostAddress/);
   assert.doesNotMatch(
     constants,
     /return `\$\{HOST_ADDRESS\}\$\{normalizedPath\}`/,
   );
+  assert.match(src, /export function resolveImageHostAddress/);
+  assert.match(src, /interactive-fiction-game-avatar/);
 
   const strip = (apiBase) =>
     String(apiBase || '')
       .trim()
       .replace(/\/+$/, '')
       .replace(/\/cn-test-api$/i, '');
+
+  const imageHost = (imagePath, apiBase) => {
+    const path = String(imagePath || '');
+    const api = String(apiBase || '').trim().replace(/\/+$/, '');
+    if (path.includes('/interactive-fiction-game-avatar/')) return api;
+    return strip(apiBase);
+  };
+  assert.equal(
+    imageHost('/interactive-fiction-game-avatar/u/a.jpg', 'https://kurangames.cn/cn-test-api'),
+    'https://kurangames.cn/cn-test-api',
+  );
+  assert.equal(
+    imageHost('/public/cover.jpg', 'https://kurangames.cn/cn-test-api'),
+    'https://kurangames.cn',
+  );
 
   assert.equal(
     strip('https://kurangames.cn/cn-test-api'),

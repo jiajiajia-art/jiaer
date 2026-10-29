@@ -372,8 +372,31 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
         void loadWorkStats();
     }, [gameDetail.file_id, gameDetail.id]);
 
+    const handleBack = () => {
+        if (window.history.length > 1) {
+            navigate(-1);
+            return;
+        }
+        navigate('/create');
+    };
+
     return (
         <div className={styles.statsModeWrapper}>
+            <div className={styles.topBar}>
+                <div className={styles.topBarContent}>
+                    <button
+                        type="button"
+                        className={styles.backIconButton}
+                        onClick={handleBack}
+                        aria-label={t('gameDetail.back')}
+                    >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M15 6L9 12L15 18" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
             <div
                 className={styles.heroBanner}
                 style={{ backgroundImage: `url(${addImageTimestamp(getImageUrl(heroBackground))})` }}

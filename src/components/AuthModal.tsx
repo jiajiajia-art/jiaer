@@ -10,6 +10,7 @@ import { getOrCreatePromoAnonId } from '../utils/promoAnonId';
 import { useAuthStore } from '../store/useAuthStore';
 import { useGoogleAuth } from '../hooks/useGoogleAuth';
 import { isPrivacyAgreementAccepted, resolvePrivacyPolicyUrl } from '../lib/privacyPolicy';
+import { getApiErrorMessage } from '../utils/error';
 
 interface AuthModalProps {
     isOpen: boolean;
@@ -407,10 +408,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                     throw new Error(t('common.error'));
                 }
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Operation failed:', error);
-            const errorMessage = error.response?.data?.message || error.message || t('common.error');
-            setSubmitError(errorMessage);
+            setSubmitError(getApiErrorMessage(error, t('common.error')));
         } finally {
             setIsLoading(false);
         }

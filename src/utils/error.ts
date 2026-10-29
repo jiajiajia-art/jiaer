@@ -1,3 +1,5 @@
+import i18n from '../i18n';
+
 /**
  * Handles axios error responses, standard Error objects, and unknown errors.
  * 并清洗上游 LLM/生图网关脏文案（JSON、美元额度等），避免直接弹给玩家。
@@ -77,25 +79,85 @@ export async function getAxiosErrorMessageAsync(
   return fallback;
 }
 
+/** 功能注释：处罚/风控/申诉业务码；有 message 优先，否则按当前语言取短文案 */
+const PUNISHMENT_ERROR_KEYS: Record<string, string> = {
+    publish_blocked: 'apiErrors.publishBlocked',
+    creator_frozen: 'apiErrors.creatorFrozen',
+    publish_need_review: 'apiErrors.publishNeedReview',
+    login_banned: 'apiErrors.loginBanned',
+    ban_login_forbidden: 'apiErrors.banLoginForbidden',
+    appeal_window_expired: 'apiErrors.appealWindowExpired',
+    duplicate_appeal: 'apiErrors.duplicateAppeal',
+    already_revoked: 'apiErrors.alreadyRevoked',
+    invalid_evidence: 'apiErrors.invalidEvidence',
+    admin_required: 'apiErrors.adminRequired',
+};
+
+/** 功能注释：举报码优先本地文案（对象级 pending 互斥等），覆盖后端旧「仅本人」message */
+const REPORT_ERROR_KEYS: Record<string, string> = {
+    duplicate_pending: 'apiErrors.duplicatePending',
+    already_upheld: 'apiErrors.alreadyUpheld',
+    report_cooldown: 'apiErrors.reportCooldown',
+    cannot_report_self: 'apiErrors.cannotReportSelf',
+    target_not_found: 'apiErrors.targetNotFound',
+    invalid_reason: 'apiErrors.invalidReason',
+};
+
+/** 功能注释：撤销 409 业务码优先本地文案，勿当表单校验失败 */
+const REVOKE_ERROR_KEYS: Record<string, string> = {
+    already_revoked: 'apiErrors.moderationAlreadyRevoked',
+    not_current_penalty: 'apiErrors.notCurrentPenalty',
+    warning_already_consumed: 'apiErrors.warningAlreadyConsumed',
+    invalid_record_type: 'apiErrors.invalidRecordType',
+};
+
+const API_ERROR_KEYS: Record<string, string> = {
+    ...PUNISHMENT_ERROR_KEYS,
+    ...REPORT_ERROR_KEYS,
+    ...REVOKE_ERROR_KEYS,
+};
+
+export function messageForApiCode(code?: string | null): string | null {
+    const key = code ? API_ERROR_KEYS[code] : '';
+    if (!key) return null;
+    return i18n.t(key);
+}
+
 export const getApiErrorMessage = (
     error: unknown,
     fallback: string
 ): string => {
     if (error && typeof error === 'object' && 'response' in error) {
-        const axiosError = error as { response?: { data?: { message?: string; error?: string } } };
+        const axiosError = error as {
+            response?: { data?: { message?: string; error?: string; code?: string } };
+        };
         const data = axiosError.response?.data;
         // 功能注释：同步路径遇 Blob 无法 await，回落 fallback，避免再读出 [object Blob]
         if (typeof Blob !== 'undefined' && data instanceof Blob) {
             return fallback;
         }
-        const raw =
-            data?.message ||
-            data?.error ||
-            fallback;
-        return sanitizeUpstreamLlmErrorMessage(String(raw), fallback);
+        const code = typeof data?.code === 'string' ? data.code : '';
+        // 功能注释：举报 / 撤销业务码用前端文案（409 撤销勿当表单错）
+        if (code && (REPORT_ERROR_KEYS[code] || REVOKE_ERROR_KEYS[code])) {
+            const coded = messageForApiCode(code);
+            if (coded) return coded;
+        }
+        const raw = data?.message || data?.error || '';
+        if (raw) {
+            return sanitizeUpstreamLlmErrorMessage(String(raw), fallback);
+        }
+        const coded = messageForApiCode(code);
+        if (coded) return coded;
+        return fallback;
     }
     if (error instanceof Error && error.message) {
         return sanitizeUpstreamLlmErrorMessage(error.message, fallback);
     }
     return fallback;
+};
+
+export const getApiErrorCode = (error: unknown): string | null => {
+    if (!error || typeof error !== 'object' || !('response' in error)) return null;
+    const data = (error as { response?: { data?: { code?: string } } }).response?.data;
+    return typeof data?.code === 'string' ? data.code : null;
 };

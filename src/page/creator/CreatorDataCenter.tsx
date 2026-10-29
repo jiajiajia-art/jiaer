@@ -65,7 +65,7 @@ const CreatorDataCenter: React.FC = () => {
               </h1>
               <p className={styles.heroDesc}>{t('creatorStats.pageDesc')}</p>
             </div>
-            <button type="button" className={styles.linkButton} onClick={() => navigate('/create')}>
+            <button type="button" className={styles.linkButton} onClick={() => navigate('/profile')}>
               {t('creatorStats.backToStudio')}
             </button>
           </section>

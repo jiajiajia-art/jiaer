@@ -527,3 +527,284 @@
         font-size: 14px;
     }
 }
+
+/* 功能注释：磨砂深色单按钮提示，默认确认框不走这套 */
+.glassModal {
+    --notice-accent: #ff7a93;
+    --notice-accent-deep: #a8283c;
+    width: min(400px, calc(100vw - 32px));
+    max-width: 400px;
+    min-width: 0;
+    min-height: 0;
+    height: auto;
+    border-radius: 14px;
+    border: 0.68px solid transparent;
+    background:
+        linear-gradient(0deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15)),
+        linear-gradient(180deg, #343434 0%, rgba(52, 52, 52, 0.78) 100%);
+    backdrop-filter: blur(47px);
+    -webkit-backdrop-filter: blur(47px);
+    box-shadow: none;
+    color: #ffffff;
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+}
+
+.glassModal::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 14px;
+    padding: 0.68px;
+    background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.55) 0%,
+        rgba(255, 255, 255, 0.18) 60%,
+        rgba(255, 255, 255, 0) 90%
+    );
+    -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 3;
+}
+
+.glassClose {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 4;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+}
+
+.glassClose:hover {
+    color: #ffffff;
+}
+
+.glassHeader {
+    position: relative;
+    z-index: 1;
+    padding: 20px 48px 14px 20px;
+    text-align: left;
+}
+
+.glassHeader::after {
+    content: '';
+    display: block;
+    margin-top: 14px;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.16),
+        rgba(255, 255, 255, 0.04),
+        transparent
+    );
+}
+
+.glassTitle {
+    margin: 0;
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.35;
+    text-align: left;
+}
+
+.glassBody {
+    position: relative;
+    z-index: 1;
+    padding: 4px 20px 8px;
+    background: transparent;
+    display: block;
+}
+
+.glassMessage {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.7;
+    text-align: left;
+    white-space: pre-line;
+}
+
+.glassFooter {
+    position: relative;
+    z-index: 1;
+    padding: 12px 20px 18px;
+}
+
+.glassConfirm {
+    width: 100%;
+    min-height: 42px;
+    border: none;
+    border-radius: 999px;
+    background: var(--notice-accent-deep);
+    background-image: none;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.glassConfirm:hover {
+    background: #8e2135;
+    background-image: none;
+    color: #ffffff;
+}
+
+.glassClose:focus-visible,
+.glassConfirm:focus-visible {
+    outline: 2px solid rgba(255, 59, 97, 0.45);
+    outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+    .glassModal {
+        width: min(400px, calc(100vw - 32px));
+        max-width: 400px;
+        min-width: 0;
+        min-height: 0;
+        border-radius: 14px;
+    }
+}
+
+/* 功能注释：管理后台暖色确认框，对齐评论 / 举报审核卡片 */
+.adminModal {
+    width: min(420px, calc(100vw - 32px));
+    max-width: 420px;
+    min-width: 0;
+    min-height: 0;
+    height: auto;
+    border-radius: 18px;
+    border: 1px solid rgba(222, 191, 166, 0.55);
+    background: rgba(255, 250, 245, 0.98);
+    box-shadow: 0 18px 40px rgba(181, 135, 92, 0.18);
+    color: #2e241d;
+    position: relative;
+    overflow: hidden;
+}
+
+.adminClose {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 2;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    color: #7c593f;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+}
+
+.adminClose:hover {
+    color: #2e241d;
+}
+
+.adminHeader {
+    padding: 22px 48px 12px 22px;
+}
+
+.adminTitle {
+    margin: 0;
+    color: #2e241d;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.35;
+    text-align: left;
+}
+
+.adminBody {
+    padding: 0 22px 8px;
+}
+
+.adminMessage {
+    margin: 0;
+    color: #705b4b;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.7;
+    text-align: left;
+    white-space: pre-line;
+}
+
+.adminFooter {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    padding: 14px 22px 20px;
+}
+
+.adminCancel,
+.adminConfirm {
+    min-height: 40px;
+    min-width: 88px;
+    padding: 0 18px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    background-image: none;
+}
+
+.adminCancel {
+    border: 1px solid rgba(181, 135, 92, 0.55);
+    background: rgba(255, 253, 250, 0.96);
+    color: #5e3f2a;
+}
+
+.adminCancel:hover {
+    background: rgba(181, 135, 92, 0.12);
+    color: #2e241d;
+}
+
+.adminConfirm {
+    border: none;
+    background: #a5602f;
+    color: #ffffff;
+}
+
+.adminConfirm:hover {
+    background: #8e4f24;
+    color: #ffffff;
+    background-image: none;
+}
+
+.adminClose:focus-visible,
+.adminCancel:focus-visible,
+.adminConfirm:focus-visible {
+    outline: 2px solid rgba(165, 96, 47, 0.45);
+    outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+    .adminModal {
+        width: min(420px, calc(100vw - 32px));
+        max-width: 420px;
+        border-radius: 16px;
+    }
+
+    .adminFooter {
+        flex-direction: column-reverse;
+    }
+
+    .adminCancel,
+    .adminConfirm {
+        width: 100%;
+    }
+}

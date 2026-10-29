@@ -45,6 +45,7 @@ import { runIdeaFullWorkAssets, isIdeaFullWorkAssetsInflight } from '../lib/galg
 import { shouldResumeIdeaFullWorkOrchestration } from '../lib/galgame/ideaFullWorkResume';
 import { createInitialIdeaAssetProgress, peekIdeaAssetProgress, publishIdeaAssetProgress, IDEA_ASSET_PROGRESS_EVENT } from '../lib/galgame/ideaFullWorkProgress';
 import toast from 'react-hot-toast';
+import { getApiErrorMessage } from '../utils/error';
 import FullPageLoading from '../components/Skeleton/FullPageLoading';
 import EditorApi from '../api/galgame/EditorData';
 import worldEditor from '../api/worldInteraction/worldEditor';
@@ -654,8 +655,10 @@ const GameSettingsEditor = () => {
                 payload.audienceType,
             );
             setShowPublishModal(false);
-        } catch (error: any) {
-            setNoticeMessage(error?.message || t('createGame.publishFailed'));
+        } catch (error: unknown) {
+            const message = getApiErrorMessage(error, t('createGame.publishFailed'));
+            setNoticeMessage(message);
+            toast.error(message);
         }
     }, [handlePublishGame, t]);
 
@@ -769,7 +772,7 @@ const GameSettingsEditor = () => {
                         <button
                             type="button"
                             className={styles.txtCreateBack}
-                            onClick={() => navigate('/create')}
+                            onClick={() => navigate('/profile')}
                             aria-label={t('createGame.txtCreatePageTitle')}
                         >
                             ‹

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { IoChevronDown } from 'react-icons/io5';
+import { IoChevronDown, IoEyeOutline } from 'react-icons/io5';
 import { MdContentCopy, MdOutlineEdit } from 'react-icons/md';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Trans, useTranslation } from 'react-i18next';
@@ -19,6 +19,7 @@ import InviteCampaignCard from '../components/Profile/InviteCampaignCard';
 import TodayEarnPointsPanel from '../components/Profile/TodayEarnPointsPanel';
 import ProfilePreferenceModal from '../components/ProfilePreferenceModal';
 import { useAuthStore } from '../store/useAuthStore';
+import { useProfileIdentityEdit } from '../hooks/useProfileIdentityEdit';
 import statisticsApi from '../api/statistics/statisticsApi';
 import creatorStatsApi, { type StatsOverview } from '../api/stats/creatorStatsApi';
 import payApi from '../api/pay/payApi';
@@ -31,9 +32,7 @@ import {
     parseOverseasPayReturnSearch,
     resolveOverseasPayReturnStatus,
 } from '../lib/overseasPayReturn';
-
-const NICKNAME_MAX_LENGTH = 20;
-const AVATAR_MAX_SIZE_BYTES = 5 * 1024 * 1024;
+import accountSocialApi from '../api/account/accountSocialApi';
 
 type CreatorStatsIncentiveType = 'none' | 'incentive' | 'game_incentive' | 'code_incentive' | 'all_incentive';
 
@@ -50,6 +49,14 @@ const Create: React.FC = () => {
     const { user, updateUser } = useAuthStore();
     const navigate = useNavigate();
     const location = useLocation();
+    const {
+        isUploadingAvatar,
+        avatarInputRef,
+        openAvatarPicker,
+        handleAvatarFileChange,
+        openEditNickname,
+        identityEditModal,
+    } = useProfileIdentityEdit();
 
     const [stats, setStats] = useState({
         totalCreated: 0,
@@ -74,12 +81,9 @@ const Create: React.FC = () => {
     const [streakDays, setStreakDays] = useState(0);
     const [isStatsExpanded, setIsStatsExpanded] = useState(false);
     const [isEarningsModalOpen, setIsEarningsModalOpen] = useState(false);
-    const [isEditNicknameOpen, setIsEditNicknameOpen] = useState(false);
     const [isProfilePreferenceOpen, setIsProfilePreferenceOpen] = useState(false);
-    const [nicknameDraft, setNicknameDraft] = useState('');
-    const [isSavingNickname, setIsSavingNickname] = useState(false);
-    const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-    const avatarInputRef = useRef<HTMLInputElement>(null);
+    const [followingCount, setFollowingCount] = useState(0);
+    const [followersCount, setFollowersCount] = useState(0);
     const overseasPayReturnHandledRef = useRef(false);
 
     const userName = user?.user?.nickname || user?.user?.name || t('create.userNameDefault');
@@ -97,81 +101,6 @@ const Create: React.FC = () => {
 
     const handleWithdrawClick = () => {
         setIsWithdrawModalOpen(true);
-    };
-
-    const openEditNickname = () => {
-        setNicknameDraft(user?.user?.nickname || user?.user?.name || '');
-        setIsEditNicknameOpen(true);
-    };
-
-    const closeEditNickname = () => {
-        if (isSavingNickname) return;
-        setIsEditNicknameOpen(false);
-    };
-
-    const handleConfirmEditNickname = async () => {
-        const nextName = nicknameDraft.trim();
-        if (!nextName) {
-            toast.error(t('profile.enterNewNickname'));
-            return;
-        }
-        if (nextName.length > NICKNAME_MAX_LENGTH) {
-            toast.error(t('profile.nicknameTip'));
-            return;
-        }
-        if (nextName === (user?.user?.nickname || '').trim()) {
-            setIsEditNicknameOpen(false);
-            return;
-        }
-
-        setIsSavingNickname(true);
-        try {
-            const response = await auth.updateUserInfo(nextName);
-            if (!response.data.success || !response.data.data) {
-                throw new Error(response.data.message || t('common.error'));
-            }
-            updateUser(response.data.data);
-            toast.success(t('common.success'));
-            setIsEditNicknameOpen(false);
-        } catch (error: unknown) {
-            toast.error(getApiErrorMessage(error, t('common.error')));
-        } finally {
-            setIsSavingNickname(false);
-        }
-    };
-
-    const openAvatarPicker = () => {
-        if (isUploadingAvatar) return;
-        avatarInputRef.current?.click();
-    };
-
-    const handleAvatarFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        event.target.value = '';
-        if (!file) return;
-
-        if (!file.type.startsWith('image/')) {
-            toast.error(t('profile.selectImageFile'));
-            return;
-        }
-        if (file.size > AVATAR_MAX_SIZE_BYTES) {
-            toast.error(t('profile.imageTooLarge'));
-            return;
-        }
-
-        setIsUploadingAvatar(true);
-        try {
-            const response = await auth.updateUserAvatar(file);
-            if (!response.data.success || !response.data.data?.avatarUrl) {
-                throw new Error(response.data.message || t('common.error'));
-            }
-            updateUser({ avatarUrl: response.data.data.avatarUrl });
-            toast.success(t('profile.avatarUpdated'));
-        } catch (error: unknown) {
-            toast.error(getApiErrorMessage(error, t('common.error')));
-        } finally {
-            setIsUploadingAvatar(false);
-        }
     };
 
     const getGameTotalStats = async () => {
@@ -252,6 +181,28 @@ const Create: React.FC = () => {
         getSignInStreak();
     }, [user?.user?.id]);
 
+    useEffect(() => {
+        if (!userCode) {
+            setFollowingCount(0);
+            setFollowersCount(0);
+            return;
+        }
+        let cancelled = false;
+        void (async () => {
+            try {
+                const response = await accountSocialApi.getProfile(userCode);
+                if (cancelled || !response.data.success || !response.data.data) return;
+                setFollowingCount(response.data.data.followingCount ?? 0);
+                setFollowersCount(response.data.data.followersCount ?? 0);
+            } catch {
+                /* keep following/followers at 0 */
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [userCode]);
+
     // 功能注释：海外收银台回站后查单并 Toast，不再只打开空白充值弹窗
     useEffect(() => {
         const parsed = parseOverseasPayReturnSearch(location.search);
@@ -281,6 +232,22 @@ const Create: React.FC = () => {
             toast(t('rechargeModal.overseasPayPending'));
         })();
     }, [location.pathname, location.search, navigate, t]);
+
+    const handlePreviewHomepage = () => {
+        if (!userCode) {
+            toast.error(t('create.previewHomepageNoCode'));
+            return;
+        }
+        navigate(`/account/${encodeURIComponent(userCode)}`);
+    };
+
+    const handleOpenSocialList = (tab: 'following' | 'followers') => {
+        if (!userCode) {
+            toast.error(t('create.previewHomepageNoCode'));
+            return;
+        }
+        navigate(`/account/${encodeURIComponent(userCode)}/social?tab=${tab}`);
+    };
 
     const handleCopyUserCode = async () => {
         if (!userCode) return;
@@ -411,6 +378,7 @@ const Create: React.FC = () => {
                                         aria-label={t('profile.changeAvatar')}
                                     >
                                         <img
+                                            key={userAvatar}
                                             className={styles.creatorHeroAvatar}
                                             src={userAvatar}
                                             alt={userName}
@@ -459,6 +427,20 @@ const Create: React.FC = () => {
                                             </span>
                                         )}
                                     </div>
+                                    {(isMember || isSignedAuthor) && (
+                                        <div className={styles.creatorHeroBadgeRow}>
+                                            {isMember && (
+                                                <span className={styles.creatorRoleBadge}>
+                                                    {t('create.memberBadge')}
+                                                </span>
+                                            )}
+                                            {isSignedAuthor && (
+                                                <span className={styles.creatorRoleBadge}>
+                                                    {t('create.signedAuthorBadge')}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
                                     <div className={styles.creatorHeroMetaRow}>
                                         <span className={styles.creatorHeroId}>
                                             {t('create.idPrefix')}{userCode || '--'}
@@ -474,22 +456,6 @@ const Create: React.FC = () => {
                                                 <MdContentCopy aria-hidden="true" />
                                             </button>
                                         )}
-                                        {(isMember || isSignedAuthor) && (
-                                            <div className={styles.creatorHeroBadgeRow}>
-                                                {isMember && (
-                                                    <span className={styles.creatorRoleBadge}>
-                                                        {t('create.memberBadge')}
-                                                    </span>
-                                                )}
-                                                {isSignedAuthor && (
-                                                    <span className={styles.creatorRoleBadge}>
-                                                        {t('create.signedAuthorBadge')}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className={styles.creatorHeroTokenRow}>
                                         <span className={styles.creatorHeroTokenLabel}>Token:</span>
                                         <span className={styles.creatorHeroTokenValue}>
                                             {truncatedDebugToken || '--'}
@@ -505,6 +471,36 @@ const Create: React.FC = () => {
                                                 <MdContentCopy aria-hidden="true" />
                                             </button>
                                         )}
+                                    </div>
+                                    <div className={styles.creatorSocialRow}>
+                                        <div className={styles.creatorSocialStats}>
+                                            <button
+                                                type="button"
+                                                className={styles.creatorSocialItem}
+                                                onClick={() => handleOpenSocialList('following')}
+                                            >
+                                                <span className={styles.creatorSocialLabel}>{t('create.followingLabel')}</span>
+                                                <span className={styles.creatorSocialValue}>{followingCount}</span>
+                                            </button>
+                                            <span className={styles.creatorSocialDivider} aria-hidden="true" />
+                                            <button
+                                                type="button"
+                                                className={styles.creatorSocialItem}
+                                                onClick={() => handleOpenSocialList('followers')}
+                                            >
+                                                <span className={styles.creatorSocialLabel}>{t('create.followersLabel')}</span>
+                                                <span className={styles.creatorSocialValue}>{followersCount}</span>
+                                            </button>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            className={styles.creatorPreviewHomeBtn}
+                                            onClick={handlePreviewHomepage}
+                                            aria-label={t('create.previewHomepage')}
+                                        >
+                                            <IoEyeOutline className={styles.creatorPreviewHomeIcon} aria-hidden="true" />
+                                            <span>{t('create.previewHomepage')}</span>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -803,54 +799,7 @@ const Create: React.FC = () => {
                 </div>
             )}
 
-            {isEditNicknameOpen && (
-                <div className={styles.editNicknameOverlay} onClick={closeEditNickname}>
-                    <div
-                        className={styles.editNicknameModal}
-                        role="dialog"
-                        aria-modal="true"
-                        aria-label={t('profile.editNickname')}
-                        onClick={(event) => event.stopPropagation()}
-                    >
-                        <button
-                            type="button"
-                            className={styles.editNicknameCloseBtn}
-                            onClick={closeEditNickname}
-                            disabled={isSavingNickname}
-                            aria-label={t('common.close')}
-                        >
-                            <span className={styles.editNicknameCloseIcon} aria-hidden="true" />
-                        </button>
-                        <h3 className={styles.editNicknameTitle}>{t('profile.editNickname')}</h3>
-                        <div className={styles.editNicknameBody}>
-                            <input
-                                className={styles.editNicknameInput}
-                                value={nicknameDraft}
-                                onChange={(event) => setNicknameDraft(event.target.value.slice(0, NICKNAME_MAX_LENGTH))}
-                                placeholder={t('profile.enterNewNickname')}
-                                maxLength={NICKNAME_MAX_LENGTH}
-                                autoFocus
-                                disabled={isSavingNickname}
-                                onKeyDown={(event) => {
-                                    if (event.key === 'Enter') {
-                                        event.preventDefault();
-                                        void handleConfirmEditNickname();
-                                    }
-                                }}
-                            />
-                            <p className={styles.editNicknameTip}>{t('profile.nicknameTip')}</p>
-                        </div>
-                        <button
-                            type="button"
-                            className={styles.editNicknameConfirm}
-                            onClick={() => void handleConfirmEditNickname()}
-                            disabled={isSavingNickname}
-                        >
-                            {isSavingNickname ? t('profile.saving') : t('profile.confirm')}
-                        </button>
-                    </div>
-                </div>
-            )}
+            {identityEditModal}
 
             <ConfirmModal
                 isOpen={isSettleModalOpen}

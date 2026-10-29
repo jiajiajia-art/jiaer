@@ -1,4 +1,5 @@
 import React, { useRef, useCallback, useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { BsChevronDown } from 'react-icons/bs';
 import { toast } from 'react-hot-toast';
@@ -7,6 +8,8 @@ import EditorApi from '../../api/galgame/EditorData';
 import getGameDataApi from '../../api/home/getGameData';
 import gameTagsApi from '../../api/gameTags/gameTagsApi';
 import novelMetaApi from '../../api/novel/novelMetaApi';
+import { useAuthStore } from '../../store/useAuthStore';
+import { auth } from '../../api/account/authApi';
 import { flattenThemeTags, useLocalizedThemeTags, type FlatThemeTag } from '../../utils/themeTags';
 import {
     NOVEL_DESCRIPTION_MAX_LENGTH,
@@ -29,6 +32,11 @@ import {
 import { stripReplayMarkerFromTitle } from '../../utils/novelGame';
 import SimpleRichTextEditor from '../Common/SimpleRichTextEditor';
 import { CURRENCY_OPTIONS, type Currency } from '../../api/common/currency';
+import {
+    isCreatorFrozen as checkCreatorFrozen,
+    isPublishBanned as checkPublishBanned,
+    isPublishNeedReview as checkPublishNeedReview,
+} from '../../lib/userPunishment';
 
 export type PublishModalMode = 'publish' | 'novel-edit';
 
@@ -125,6 +133,35 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     engine,
 }) => {
     const { t } = useTranslation();
+    const navigate = useNavigate();
+    const updateUser = useAuthStore((s) => s.updateUser);
+    const publishBanUntil = useAuthStore((s) => s.user?.user?.publishBanUntil);
+    const publishNeedReviewFlag = useAuthStore((s) => s.user?.user?.publishNeedReview);
+    const creatorFrozenFlag = useAuthStore((s) => s.user?.user?.creatorFrozen);
+    const isPublishBanned = useMemo(
+        () => checkPublishBanned(publishBanUntil),
+        [publishBanUntil],
+    );
+    const isCreatorFrozen = useMemo(
+        () => checkCreatorFrozen(creatorFrozenFlag),
+        [creatorFrozenFlag],
+    );
+    const needsPublishReview = useMemo(
+        () => checkPublishNeedReview(publishNeedReviewFlag) && !isPublishBanned && !isCreatorFrozen,
+        [publishNeedReviewFlag, isPublishBanned, isCreatorFrozen],
+    );
+
+    useEffect(() => {
+        if (!isOpen) return;
+        // 功能注释：打开发布弹窗时刷新处罚字段，避免 store 过期
+        void auth.getUserInfo().then((response) => {
+            if (response.data.success && response.data.data) {
+                updateUser(response.data.data);
+            }
+        }).catch(() => {
+            /* 忽略：仍用 store 现有值 */
+        });
+    }, [isOpen, updateUser]);
     const VERSION_NOTES_MAX_LENGTH = 500;
     const isNovelEditMode = mode === 'novel-edit';
     // 后端 publish 对所有作品校验题材；发布弹窗必须可选，不能只给小说展示
@@ -134,6 +171,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     const requiresShareType = !isTxtMode;
 
     const [landscapePreview, setLandscapePreview] = useState<string | null>(coverUrl || null);
+    const [isTakenDown, setIsTakenDown] = useState(false);
     const [portraitPreview, setPortraitPreview] = useState<string | null>(portraitCoverUrl || null);
     const [title, setTitle] = useState<string>('');
     const [description, setDescription] = useState<string>('');
@@ -182,6 +220,8 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                     setSelectedThemeTagIds(tagIds.map((id) => Number(id)));
                     setSelectedAudienceType(isValidContentAudience(detail.audience_type) ? detail.audience_type : null);
                     setAudienceError('');
+                    const moderation = String(detail.moderationStatus || detail.moderation_status || 'none');
+                    setIsTakenDown(moderation === 'taken_down');
                 }
             } catch (error) {
                 console.error('Failed to fetch publish details:', error);
@@ -379,6 +419,21 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
         event?.preventDefault();
         event?.stopPropagation();
         if (publishing || saving) {
+            return;
+        }
+
+        if (!isNovelEditMode && isCreatorFrozen) {
+            toast.error(t('report.creatorFrozenHint'));
+            return;
+        }
+
+        if (!isNovelEditMode && isPublishBanned) {
+            toast.error(t('report.publishBannedHint'));
+            return;
+        }
+
+        if (!isNovelEditMode && isTakenDown) {
+            toast.error(t('report.publishLockedHint'));
             return;
         }
 
@@ -624,6 +679,36 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                 </div>
                 </div>
 
+                {!isNovelEditMode && (isCreatorFrozen || isPublishBanned || isTakenDown) ? (
+                    <p className={styles.publishLockHint}>
+                        {isCreatorFrozen
+                            ? t('report.creatorFrozenHint')
+                            : isPublishBanned
+                                ? t('report.publishBannedHint')
+                                : t('report.publishLockedHint')}
+                        {isTakenDown && !isPublishBanned && !isCreatorFrozen ? (
+                            <>
+                                {' '}
+                                <button
+                                    type="button"
+                                    className={styles.appealLinkBtn}
+                                    onClick={() => {
+                                        onClose();
+                                        navigate('/appeals');
+                                    }}
+                                >
+                                    {t('appeal.goAppeal')}
+                                </button>
+                            </>
+                        ) : null}
+                    </p>
+                ) : null}
+                {!isNovelEditMode && needsPublishReview ? (
+                    <p className={styles.publishLockHint}>
+                        {t('report.publishNeedReviewHint')}
+                    </p>
+                ) : null}
+
                 <div className={styles.footerBar}>
                     <button
                         type="button"
@@ -637,7 +722,12 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                         type="button"
                         className={styles.publishBtn}
                         onClick={handleSubmit}
-                        disabled={publishing || saving || generatingDescription}
+                        disabled={
+                            publishing
+                            || saving
+                            || generatingDescription
+                            || (!isNovelEditMode && (isCreatorFrozen || isPublishBanned || isTakenDown))
+                        }
                     >
                         {submitLabel}
                     </button>

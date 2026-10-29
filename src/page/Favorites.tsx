@@ -152,7 +152,7 @@ const Favorites: React.FC = () => {
             <div className={styles.emptyState}>{t('favorites.empty')}</div>
           ) : (
             <>
-              <GameGrid games={games} showUnpublishedBadge onGameClick={handleFavoriteGameClick} />
+              <GameGrid games={games} onGameClick={handleFavoriteGameClick} />
               {isLoadingMore && (
                 <div className={styles.loadingMore}>
                   <GameGridSkeleton count={4} />

@@ -183,6 +183,27 @@
     accent-color: var(--pub-accent);
 }
 
+.publishLockHint {
+    margin: 8px 0 10px;
+    padding: 0 4px;
+    font-size: 13px;
+    line-height: 1.45;
+    color: #ff8a80;
+    text-align: center;
+}
+
+.appealLinkBtn {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: #fb4655;
+    font-size: inherit;
+    font-weight: 650;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0;
+}
+
 .footerBar {
     flex-shrink: 0;
     display: flex;

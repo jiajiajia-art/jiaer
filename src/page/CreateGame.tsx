@@ -15,6 +15,8 @@ import FooterArea from '../components/Layout/FooterArea';
 import toast from 'react-hot-toast';
 import PriceAdjustmentModal from '../components/CreateGame/PriceAdjustmentModal';
 import { getImageUrl } from '../utils/constants';
+import { getApiErrorMessage } from '../utils/error';
+import { isPublishPendingReview } from '../lib/publishReview';
 import { resolveGameCoverUrl } from '../utils/displayCoverUrl';
 import MobileTipModal from '../components/CreateGame/MobileTipModal';
 import {
@@ -168,7 +170,7 @@ const CreateGame: React.FC = () => {
             setIsDeleting(true);
             await GameAction.deleteGame(gameId);
             setShowDeleteModal(false);
-            navigate('/create');
+            navigate('/profile');
         } catch (error) {
             console.error('删除游戏失败:', error);
             toast.error(t('createGame.deleteFailed'));
@@ -193,16 +195,25 @@ const CreateGame: React.FC = () => {
 
             if (response.data.success) {
                 setShowPublishModal(false);
-                navigate('/create');
+                if (isPublishPendingReview(response.data)) {
+                    toast.success(
+                        response.data.message?.trim()
+                        || t('report.publishPendingReviewSuccess'),
+                    );
+                } else {
+                    toast.success(response.data.message?.trim() || t('createGame.publishSuccess'));
+                }
+                navigate('/profile');
             } else {
                 console.error('发布游戏失败:', response.data);
                 const errorMessage = response.data.message || t('createGame.publishFailed');
                 setNoticeMessage(errorMessage);
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('发布游戏失败:', error);
-            const errorMessage = error.response?.data?.message || error.message || t('createGame.publishFailed');
+            const errorMessage = getApiErrorMessage(error, t('createGame.publishFailed'));
             setNoticeMessage(errorMessage);
+            toast.error(errorMessage);
         }
     };
     // 下架游戏
@@ -211,7 +222,7 @@ const CreateGame: React.FC = () => {
         try {
             const response = await GameAction.unpublishGame({ fileId: fileId });
             if (response.data.success) {
-                navigate('/create');
+                navigate('/profile');
             } else {
                 toast.error(response.data.message || t('createGame.unpublishFailed'));
             }
@@ -403,7 +414,7 @@ const CreateGame: React.FC = () => {
                     </>
                 )}
             </div>
-            <MobileBottomNav />
+            {!isStatsMode ? <MobileBottomNav /> : null}
 
             {gameDetail && (
                 <PublishSettingsModal

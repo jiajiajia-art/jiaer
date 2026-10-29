@@ -1,39 +1,188 @@
-.modalOverlay {
+.overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(5px);
+    inset: 0;
+    z-index: 3200;
     display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.62);
+    animation: fadeIn 0.2s ease-out;
+}
+
+.sheet {
+    width: 100%;
+    max-width: 520px;
+    background: #1c1c1e;
+    border-radius: 16px 16px 0 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    animation: rise 0.24s ease-out;
+}
+
+.head {
+    display: none;
+    justify-content: flex-end;
+    padding: 8px 8px 0;
+}
+
+.close {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    z-index: 3200;
-    animation: fadeIn 0.3s ease-out;
+    padding: 0;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: #ffffff;
+    cursor: pointer;
+}
+
+.close svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.75;
+    stroke-linecap: round;
+}
+
+.close:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.close:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+}
+
+.actions {
+    display: flex;
+    align-items: flex-start;
+    padding: 22px 8px 18px;
+}
+
+.action {
+    appearance: none;
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.88);
+    cursor: pointer;
+}
+
+.tile {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    background: #2c2c2e;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #f2f2f2;
+}
+
+.action:hover .tile,
+.action:focus-visible .tile {
+    background: #3a3a3c;
+}
+
+.action:focus-visible {
+    outline: 2px solid #6ea8ff;
+    outline-offset: 2px;
+    border-radius: 8px;
+}
+
+.action:active .tile {
+    transform: scale(0.96);
+}
+
+.label {
+    font-size: 12px;
+    line-height: 1.3;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.reportIcon {
+    width: 26px;
+    height: 26px;
+    display: block;
+}
+
+.cancel {
+    appearance: none;
+    width: 100%;
+    margin: 0;
+    padding: 16px 16px 18px;
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    background: #1c1c1e;
+    color: #ffffff;
+    font-size: 17px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.cancel:hover {
+    background: #242426;
+}
+
+.cancel:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: -4px;
 }
 
 @keyframes fadeIn {
-    from {
-        opacity: 0;
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes rise {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+
+@media (min-width: 640px) {
+    .overlay {
+        align-items: center;
+        padding: 24px;
     }
-    to {
-        opacity: 1;
+
+    .sheet {
+        width: min(420px, 100%);
+        border-radius: 16px;
+        padding-bottom: 0;
+        animation-name: popIn;
+    }
+
+    .head {
+        display: flex;
+        align-items: center;
+        min-height: 56px;
+        padding: 0 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .actions {
+        padding: 18px 8px 22px;
+    }
+
+    .cancel {
+        display: none;
     }
 }
 
-.modalWrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    animation: slideUp 0.3s ease-out;
-}
-
-@keyframes slideUp {
+@keyframes popIn {
     from {
         opacity: 0;
-        transform: translateY(30px);
+        transform: translateY(12px);
     }
     to {
         opacity: 1;
@@ -41,151 +190,9 @@
     }
 }
 
-.modal {
-    width: 340px;
-    background: #ffffff;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
-
-.header {
-    background: linear-gradient(135deg, #FB4655 0%, #e63946 100%);
-    padding: 16px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.title {
-    font-size: 20px;
-    font-weight: 600;
-    color: #ffffff;
-    margin: 0;
-}
-
-.closeButton {
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    background: transparent;
-    border: none;
-    padding: 0;
-}
-
-.closeButton img {
-    width: 36px;
-    height: 36px;
-    filter: brightness(0) invert(1);
-}
-
-.closeButton:active {
-    transform: scale(0.95);
-}
-
-.body {
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.shareOption {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 16px;
-    background: #f8f8f8;
-    border: 2px solid transparent;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    text-align: left;
-    width: 100%;
-}
-
-.shareOption:hover {
-    border-color: #FB4655;
-    background: #fff5f5;
-}
-
-.shareOption:active {
-    transform: scale(0.98);
-}
-
-.iconWrapper {
-    width: 56px;
-    height: 56px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #FB4655 0%, #e63946 100%);
-    border-radius: 12px;
-    color: #ffffff;
-    flex-shrink: 0;
-}
-
-.optionText {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.optionTitle {
-    font-size: 16px;
-    font-weight: 600;
-    color: #333333;
-}
-
-.optionDesc {
-    font-size: 13px;
-    color: #888888;
-}
-
-/* 移动端适配 */
-@media (max-width: 480px) {
-    .modal {
-        width: 90vw;
-        max-width: 320px;
-    }
-
-    .header {
-        padding: 14px 16px;
-    }
-
-    .title {
-        font-size: 18px;
-    }
-
-    .body {
-        padding: 16px;
-    }
-
-    .shareOption {
-        padding: 14px;
-        gap: 12px;
-    }
-
-    .iconWrapper {
-        width: 48px;
-        height: 48px;
-        border-radius: 10px;
-    }
-
-    .iconWrapper svg {
-        width: 26px;
-        height: 26px;
-    }
-
-    .optionTitle {
-        font-size: 15px;
-    }
-
-    .optionDesc {
-        font-size: 12px;
+@media (prefers-reduced-motion: reduce) {
+    .overlay,
+    .sheet {
+        animation: none;
     }
 }
