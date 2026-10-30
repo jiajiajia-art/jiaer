@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import type { CreatorProfileData, CreatorProfileFormData } from '../components/CreatorProfile';
 import CreatorEarningsOverview from '../components/CreatorEarnings/CreatorEarningsOverview';
 import CreatorEarningsTrend from '../components/CreatorEarnings/CreatorEarningsTrend';
@@ -48,9 +48,15 @@ const EMPTY_PROMOTION: PromotionStats = {
     incentiveType: 'none',
 };
 
+const resolveCreatorCenterReturnPath = (state: unknown): '/profile' | '/create' => {
+    const returnTo = (state as { returnTo?: unknown } | null)?.returnTo;
+    return returnTo === '/profile' ? '/profile' : '/create';
+};
+
 const CreatorIncentive: React.FC = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
+    const location = useLocation();
     const { user, updateUser } = useAuthStore();
     const userId = user?.user?.id;
     const isCreator = user?.user?.userSegment !== 'normal';
@@ -190,7 +196,7 @@ const CreatorIncentive: React.FC = () => {
                     <CenteredPageHeader
                         title="创作者中心"
                         backLabel={t('create.incentiveBack')}
-                        onBack={() => navigate('/create')}
+                        onBack={() => navigate(resolveCreatorCenterReturnPath(location.state))}
                     />
 
                     <CreatorEarningsOverview data={overview} loading={overviewStatus === 'loading'} error={overviewStatus === 'error'} profileComplete={profileComplete} benefitLabel={benefitLabel} editorShareRatio={benefitSummary?.editorShareRatio} customShareRatio={benefitSummary?.customShareRatio} onRetry={() => void loadOverview()} onWithdraw={() => setWithdrawOpen(true)} onProfile={() => setProfileOpen(true)} onRecords={() => handleRecords()} onRules={() => setRulesOpen(true)} />

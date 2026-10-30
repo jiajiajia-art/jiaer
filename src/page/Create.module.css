@@ -573,6 +573,9 @@
 
 .creatorHeroId {
     min-width: 0;
+    min-height: 28px;
+    display: inline-flex;
+    align-items: center;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -621,12 +624,18 @@
     white-space: nowrap;
 }
 
+.creatorRoleBadge,
+.creatorVipBadge,
+.creatorLevelBadge {
+    min-height: 28px;
+    box-sizing: border-box;
+}
+
 .creatorVipBadge {
     appearance: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 24px;
     padding: 2px 9px;
     border: 1px solid rgba(255, 196, 207, 0.48);
     border-radius: 6px;
@@ -639,6 +648,19 @@
     cursor: pointer;
 }
 
+.creatorVipBadgeInactive {
+    border-color: #9a9a9a;
+    background: #777777;
+    color: #e5e5e5;
+}
+
+.creatorVipBadgeInactive:hover,
+.creatorVipBadgeInactive:focus-visible {
+    border-color: #b0b0b0;
+    background: #888888;
+    color: #ffffff;
+}
+
 .creatorVipBadge:hover,
 .creatorVipBadge:focus-visible {
     border-color: rgba(255, 224, 230, 0.86);
@@ -647,7 +669,6 @@
 }
 
 .creatorLevelBadge {
-    min-height: 28px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1564,7 +1585,7 @@
     }
 
     .creatorHeroBadgeRow {
-        flex-basis: 100%;
+        flex-basis: auto;
         margin-left: 0;
     }
 

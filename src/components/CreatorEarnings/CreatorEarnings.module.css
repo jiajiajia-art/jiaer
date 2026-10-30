@@ -334,7 +334,7 @@
 .workColumns,
 .workItem {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(130px, 0.42fr) auto;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 0.8fr) auto;
     align-items: center;
     gap: 16px;
 }
@@ -346,8 +346,7 @@
 }
 
 .workColumns span:last-child {
-    grid-column: 2 / 4;
-    text-align: center;
+    grid-column: 2 / 3;
 }
 
 .workItem {
@@ -380,12 +379,35 @@
     gap: 5px 12px;
 }
 
-.workRevenue {
-    min-width: 92px;
-    text-align: right;
-    font-size: 17px;
+.workRevenueMetrics {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.workRevenueMetric {
+    min-width: 0;
+    display: grid;
+    gap: 5px;
+}
+
+.workRevenueMetric span {
+    color: #89898e;
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+.workRevenueMetric strong {
+    color: #f5f5f6;
+    font-size: 14px;
+    line-height: 1.25;
     font-variant-numeric: tabular-nums;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
+}
+
+.workRevenueMetric:first-child strong {
+    font-size: 16px;
 }
 
 .workDetailsButton {
@@ -1058,9 +1080,19 @@
         height: 300px;
     }
 
-    .workColumns,
+    .workColumns {
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+    }
+
+    .workColumns span:last-child {
+        grid-column: 2;
+        text-align: right;
+    }
+
     .workItem {
         grid-template-columns: minmax(0, 1fr) auto auto;
+        align-items: start;
         gap: 8px;
     }
 
@@ -1069,16 +1101,38 @@
     }
 
     .workItem {
-        min-height: 82px;
+        min-height: 100px;
         padding: 12px 0;
+    }
+
+    .workTitle {
+        grid-column: 1;
+        grid-row: 1;
     }
 
     .workTitle strong {
         font-size: 14px;
     }
 
-    .workRevenue {
-        font-size: 14px;
+    .workRevenueMetrics {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        gap: 6px;
+    }
+
+    .workRevenueMetric span {
+        font-size: 10px;
+    }
+
+    .workRevenueMetric strong,
+    .workRevenueMetric:first-child strong {
+        font-size: 13px;
+    }
+
+    .workDetailsButton {
+        grid-column: 3;
+        grid-row: 1;
+        align-self: start;
     }
 
     .workDetailsButton {

@@ -25,7 +25,7 @@ const CreatorWorkEarnings: React.FC<Props> = ({ data, loading, error, onRetry, o
         {!loading && !error && data.length === 0 && <div className={styles.state}>暂无作品收益记录</div>}
         {!loading && !error && data.length > 0 && (
             <div className={styles.workList}>
-                <div className={styles.workColumns} aria-hidden="true"><span>作品</span><span>累计收益（税前）</span></div>
+                <div className={styles.workColumns} aria-hidden="true"><span>作品</span><span>收益明细（税前）</span></div>
                 {data.map((work) => (
                     <article className={styles.workItem} key={work.fileId}>
                         <div className={styles.workTitle}>
@@ -35,7 +35,20 @@ const CreatorWorkEarnings: React.FC<Props> = ({ data, loading, error, onRetry, o
                                 <span>参与分成 {work.qualifiedKkTotal} KK币</span>
                             </div>
                         </div>
-                        <strong className={styles.workRevenue}>{formatYuan(work.cumulativeYuan)}</strong>
+                        <div className={styles.workRevenueMetrics}>
+                            <div className={styles.workRevenueMetric}>
+                                <span>累计收益</span>
+                                <strong>{formatYuan(work.cumulativeYuan)}</strong>
+                            </div>
+                            <div className={styles.workRevenueMetric}>
+                                <span>已提收益</span>
+                                <strong>{formatYuan(work.paidYuan)}</strong>
+                            </div>
+                            <div className={styles.workRevenueMetric}>
+                                <span>可提收益</span>
+                                <strong>{formatYuan(work.availableYuan)}</strong>
+                            </div>
+                        </div>
                         <button type="button" className={styles.workDetailsButton} onClick={() => onDetails(work.fileId)}>查看明细<IoChevronForward aria-hidden="true" /></button>
                     </article>
                 ))}

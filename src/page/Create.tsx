@@ -4,8 +4,6 @@ import { MdContentCopy, MdOutlineEdit, MdOutlineTaskAlt } from 'react-icons/md';
 import ExchangeModal from '../components/Purchase/ExchangeModal';
 import ConfirmModal from '../components/CommonModal/ConfirmModal';
 import confirmModalStyles from '../components/CommonModal/ConfirmModal.module.css';
-import WithdrawFlowModal from '../components/Create/WithdrawFlowModal';
-import TodayEarnPointsPanel from '../components/Profile/TodayEarnPointsPanel';
 import { RiAccountCircleLine } from 'react-icons/ri';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Trans, useTranslation } from 'react-i18next';
@@ -88,7 +86,6 @@ const Create: React.FC = () => {
     const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
     const [isSettleDiamondsModalOpen, setIsSettleDiamondsModalOpen] = useState(false);
     const [isSettling, setIsSettling] = useState(false);
-    const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
     const [isEarningsModalOpen, setIsEarningsModalOpen] = useState(false);
     const [isProfilePreferenceOpen, setIsProfilePreferenceOpen] = useState(false);
     const [followingCount, setFollowingCount] = useState(0);
@@ -105,13 +102,9 @@ const Create: React.FC = () => {
     const membership = user?.user?.membership;
     const isVipActive = hasActiveVip(membership);
     const isPromotionPartner = Boolean(user?.user?.userSegment && user.user.userSegment !== 'normal');
-    const isMember = Boolean(user?.user?.isMember);
-    const isSignedAuthor = Boolean(user?.user?.userSegment && user.user.userSegment !== 'normal');
     const isWorkIncentive = stats.incentiveType === 'incentive' || stats.incentiveType === 'game_incentive' || stats.incentiveType === 'all_incentive';
     const isCodeIncentive = stats.incentiveType === 'code_incentive' || stats.incentiveType === 'all_incentive';
     const hasExtraEarnings = isWorkIncentive || isCodeIncentive;
-
-    const handleWithdrawClick = () => setIsWithdrawModalOpen(true);
 
     const formatEarningsValue = (value: number) => (Number(value) || 0).toLocaleString('zh-CN');
 
@@ -429,12 +422,6 @@ const Create: React.FC = () => {
                                             </span>
                                         )}
                                     </div>
-                                    {(isMember || isSignedAuthor) && (
-                                        <div className={styles.creatorHeroBadgeRow}>
-                                            {isMember && <span className={styles.creatorRoleBadge}>{t('create.memberBadge')}</span>}
-                                            {isSignedAuthor && <span className={styles.creatorRoleBadge}>{t('create.signedAuthorBadge')}</span>}
-                                        </div>
-                                    )}
                                     <div className={styles.creatorHeroMetaRow}>
                                         <div className={styles.creatorHeroIdGroup}>
                                             <span className={styles.creatorHeroId}>
@@ -452,30 +439,29 @@ const Create: React.FC = () => {
                                                 </button>
                                             )}
                                         </div>
-                                        {(isVipActive || isPromotionPartner || creatorBenefits) && (
-                                            <div className={styles.creatorHeroBadgeRow}>
-                                                {creatorBenefits && (
-                                                    <button
-                                                        type="button"
-                                                        className={styles.creatorLevelBadge}
-                                                        onClick={() => navigate('/creator-benefits')}
-                                                    >
-                                                        {creatorBenefits.label}
-                                                    </button>
-                                                )}
-                                                {isVipActive && (
-                                                    <button
-                                                        type="button"
-                                                        className={styles.creatorVipBadge}
-                                                        onClick={() => setIsVipStatusModalOpen(true)}
-                                                        aria-label="查看VIP会员状态与福利"
-                                                        title="查看VIP会员状态与福利"
-                                                    >
-                                                        VIP
-                                                    </button>
-                                                )}
-                                            </div>
-                                        )}
+                                        <div className={styles.creatorHeroBadgeRow}>
+                                            {creatorBenefits?.level != null && (
+                                                <button
+                                                    type="button"
+                                                    className={styles.creatorLevelBadge}
+                                                    onClick={() => navigate('/creator-benefits')}
+                                                >
+                                                    Lv{creatorBenefits.level}
+                                                </button>
+                                            )}
+                                            <button
+                                                type="button"
+                                                className={`${styles.creatorVipBadge} ${!isVipActive ? styles.creatorVipBadgeInactive : ''}`}
+                                                onClick={() => setIsVipStatusModalOpen(true)}
+                                                aria-label="查看VIP会员状态与福利"
+                                                title="查看VIP会员状态与福利"
+                                            >
+                                                VIP
+                                            </button>
+                                            {isPromotionPartner && (
+                                                <span className={styles.creatorRoleBadge}>推广者</span>
+                                            )}
+                                        </div>
                                     </div>
                                     <div className={styles.creatorHeroTokenRow}>
                                         <span className={styles.creatorHeroTokenLabel}>Token:</span>
@@ -546,18 +532,6 @@ const Create: React.FC = () => {
                                         </div>
                                         <div className={styles.primaryStatLabel}>
                                             KK币（含{formatKk(user?.user?.kkBalance?.limited ?? 0)}限时KK币）
-                                            {isPromotionPartner && (
-                                                <button
-                                                    type="button"
-                                                    className={styles.creatorWithdrawLink}
-                                                    onClick={(event) => {
-                                                        event.stopPropagation();
-                                                        handleWithdrawClick();
-                                                    }}
-                                                >
-                                                    {t('create.withdraw')}
-                                                </button>
-                                            )}
                                         </div>
                                     </div>
                                     <div
@@ -684,7 +658,7 @@ const Create: React.FC = () => {
                                 <button
                                     type="button"
                                     className={styles.accountActionItem}
-                                    onClick={() => navigate('/create/incentives')}
+                                    onClick={() => navigate('/create/incentives', { state: { returnTo: location.pathname } })}
                                 >
                                     <span className={styles.accountActionIcon}>
                                         <img src={`${import.meta.env.BASE_URL}data/assetsv2/personal/exchange.svg`} alt="" />
@@ -694,7 +668,6 @@ const Create: React.FC = () => {
                             </div>
                         </div>
                         <InviteCampaignCard />
-                        <TodayEarnPointsPanel />
                         <ProfileFunctionPanel />
                     </div>
 
@@ -736,11 +709,6 @@ const Create: React.FC = () => {
                     void getUserInfo();
                 }}
             />
-            <WithdrawFlowModal
-                open={isWithdrawModalOpen}
-                onClose={() => setIsWithdrawModalOpen(false)}
-            />
-
             {isEarningsModalOpen && (
                 <div
                     className={styles.earningsModalOverlay}
