@@ -255,6 +255,87 @@
   white-space: nowrap;
 }
 
+.authorTable {
+  border-top: 1px solid var(--cb-border);
+}
+
+.authorHeader,
+.authorRow {
+  display: grid;
+  grid-template-columns: minmax(145px, 1.3fr) minmax(94px, 0.7fr) minmax(145px, 1.1fr) minmax(135px, 1fr) minmax(130px, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.authorHeader {
+  min-height: 42px;
+  color: var(--cb-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.authorRow {
+  min-height: 74px;
+  padding: 12px 0;
+  border-top: 1px solid var(--cb-border);
+  font-size: 12px;
+}
+
+.authorTypeBadge {
+  width: fit-content;
+  max-width: 100%;
+  padding: 4px 8px;
+  border: 1px solid rgba(47, 133, 98, 0.3);
+  border-radius: 5px;
+  background: rgba(47, 133, 98, 0.08);
+  color: #26754f;
+  font-size: 11px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.authorMetrics,
+.authorShares {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  overflow-wrap: anywhere;
+}
+
+.authorMetrics span,
+.authorShares span {
+  color: var(--cb-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.authorNote {
+  min-width: 0;
+  color: var(--cb-muted);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.addUserSearchRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.addUserList {
+  border-top: 1px solid var(--cb-border);
+}
+
+.addUserRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(90px, auto) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--cb-border);
+}
+
 .gameTable {
   border-top: 1px solid var(--cb-border);
 }
@@ -633,6 +714,30 @@
   }
 
   .userRow {
+    grid-template-columns: 1fr;
+  }
+
+  .authorHeader {
+    display: none;
+  }
+
+  .authorRow {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 15px 0;
+  }
+
+  .authorRow > [data-label]::before {
+    display: block;
+    margin-bottom: 3px;
+    color: var(--cb-muted);
+    content: attr(data-label);
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  .addUserSearchRow,
+  .addUserRow {
     grid-template-columns: 1fr;
   }
 

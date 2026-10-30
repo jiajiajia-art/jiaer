@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  IoAdd,
   IoAlertCircleOutline,
   IoCheckmarkCircle,
   IoDocumentTextOutline,
@@ -13,11 +14,13 @@ import ConfirmModal from './CommonModal/ConfirmModal';
 import creatorBenefitsApi from '../api/creatorBenefits/creatorBenefitsApi';
 import type {
   AdminCreatorBenefitUser,
+  AdminCreatorBenefitUserResult,
   AdminManagedGame,
   AdminManagedGameResult,
   CreatorAuthorType,
 } from '../api/creatorBenefits/creatorBenefits.type';
 import { authorTypeLabel, formatCreatorQuarterRange } from '../lib/creatorLevelView';
+import { clampAuthorPage, isExistingSpecialAuthor } from '../lib/specialAuthorAdminView';
 import { getApiErrorMessage } from '../utils/error';
 import gamePublishAppealsApi from '../api/gamePublishAppeals/gamePublishAppealsApi';
 import type {
@@ -49,6 +52,11 @@ const EMPTY_APPEALS: AdminGamePublishAppealResult = {
   pendingCount: 0,
 };
 
+const EMPTY_AUTHORS: AdminCreatorBenefitUserResult = {
+  list: [],
+  pagination: { page: 1, pageSize: 20, total: 0, totalPages: 1 },
+};
+
 const formatPercent = (ratio: number) => `${Math.round((Number(ratio) || 0) * 100)}%`;
 const formatDateTime = (value?: string | null) => {
   if (!value) return '-';
@@ -62,9 +70,20 @@ const CreatorBenefitsAdminManager: React.FC<CreatorBenefitsAdminManagerProps> = 
   onAppealPendingCountChange,
 }) => {
   const { t } = useTranslation();
-  const [userKeyword, setUserKeyword] = useState('');
-  const [users, setUsers] = useState<AdminCreatorBenefitUser[]>([]);
+  const [authorKeyword, setAuthorKeyword] = useState('');
+  const [authorSearchKeyword, setAuthorSearchKeyword] = useState('');
+  const [authorTypeFilter, setAuthorTypeFilter] = useState<'' | 'contracted' | 'special'>('');
+  const [authorPage, setAuthorPage] = useState(1);
+  const [authors, setAuthors] = useState<AdminCreatorBenefitUserResult>(EMPTY_AUTHORS);
+  const [isLoadingAuthors, setIsLoadingAuthors] = useState(false);
+  const authorLoadVersion = useRef(0);
+  const [isAddAuthorOpen, setIsAddAuthorOpen] = useState(false);
+  const [addUserKeyword, setAddUserKeyword] = useState('');
+  const [addUserPage, setAddUserPage] = useState(1);
+  const [addUsers, setAddUsers] = useState<AdminCreatorBenefitUserResult>(EMPTY_AUTHORS);
+  const [hasSearchedAddUsers, setHasSearchedAddUsers] = useState(false);
   const [isSearchingUsers, setIsSearchingUsers] = useState(false);
+  const [isAddingAuthor, setIsAddingAuthor] = useState(false);
   const [editingUser, setEditingUser] = useState<AdminCreatorBenefitUser | null>(null);
   const [authorDraft, setAuthorDraft] = useState({
     authorType: 'regular' as CreatorAuthorType,
@@ -164,16 +183,56 @@ const CreatorBenefitsAdminManager: React.FC<CreatorBenefitsAdminManagerProps> = 
     };
   }, [onAppealPendingCountChange, view]);
 
-  const handleSearchUsers = async () => {
-    const keyword = userKeyword.trim();
+  const loadAuthors = useCallback(async (page = authorPage) => {
+    const requestVersion = ++authorLoadVersion.current;
+    setIsLoadingAuthors(true);
+    try {
+      const response = await creatorBenefitsApi.listAuthors({
+        keyword: authorSearchKeyword || undefined,
+        authorType: authorTypeFilter,
+        page,
+        pageSize: 20,
+      });
+      if (requestVersion !== authorLoadVersion.current) return;
+      const result = response.data.data || EMPTY_AUTHORS;
+      setAuthors(result);
+      const validPage = clampAuthorPage(page, result.pagination.totalPages);
+      if (validPage !== page) setAuthorPage(validPage);
+    } catch (error) {
+      if (requestVersion === authorLoadVersion.current) {
+        toast.error(getApiErrorMessage(error, t('creatorBenefitsAdmin.authorsLoadFailed')));
+      }
+    } finally {
+      if (requestVersion === authorLoadVersion.current) setIsLoadingAuthors(false);
+    }
+  }, [authorPage, authorSearchKeyword, authorTypeFilter, t]);
+
+  useEffect(() => {
+    if (view === 'benefits') void loadAuthors(authorPage);
+  }, [authorPage, loadAuthors, view]);
+
+  const handleSearchAuthors = () => {
+    const keyword = authorKeyword.trim();
+    if (keyword === authorSearchKeyword && authorPage === 1) {
+      void loadAuthors(1);
+      return;
+    }
+    setAuthorSearchKeyword(keyword);
+    setAuthorPage(1);
+  };
+
+  const handleSearchUsers = async (page = 1) => {
+    const keyword = addUserKeyword.trim();
     if (!keyword) {
       toast.error(t('creatorBenefitsAdmin.keywordRequired'));
       return;
     }
     setIsSearchingUsers(true);
     try {
-      const response = await creatorBenefitsApi.searchUsers(keyword);
-      setUsers(response.data.data?.list || []);
+      const response = await creatorBenefitsApi.searchUsers({ keyword, page, pageSize: 20 });
+      setAddUsers(response.data.data || EMPTY_AUTHORS);
+      setAddUserPage(page);
+      setHasSearchedAddUsers(true);
     } catch (error) {
       toast.error(getApiErrorMessage(error, t('creatorBenefitsAdmin.userSearchFailed')));
     } finally {
@@ -181,10 +240,11 @@ const CreatorBenefitsAdminManager: React.FC<CreatorBenefitsAdminManagerProps> = 
     }
   };
 
-  const openAuthorEditor = (user: AdminCreatorBenefitUser) => {
+  const openAuthorEditor = (user: AdminCreatorBenefitUser, adding = false) => {
+    setIsAddingAuthor(adding);
     setEditingUser(user);
     setAuthorDraft({
-      authorType: user.benefits.authorType,
+      authorType: adding ? 'contracted' : user.benefits.authorType,
       editorPercent: user.benefits.isSpecialAuthor
         ? Math.round(user.benefits.editorShareRatio * 100)
         : 22,
@@ -194,6 +254,11 @@ const CreatorBenefitsAdminManager: React.FC<CreatorBenefitsAdminManagerProps> = 
       freeTxtCreation: user.benefits.freeTxtCreation,
       note: user.benefits.authorNote || user.benefits.specialNote || '',
     });
+  };
+
+  const closeAuthorEditor = () => {
+    setEditingUser(null);
+    setIsAddingAuthor(false);
   };
 
   const handleSaveAuthor = async () => {
@@ -212,7 +277,7 @@ const CreatorBenefitsAdminManager: React.FC<CreatorBenefitsAdminManagerProps> = 
     }
     setIsSavingAuthor(true);
     try {
-      const response = await creatorBenefitsApi.updateAuthor(editingUser.userId, {
+      await creatorBenefitsApi.updateAuthor(editingUser.userId, {
         authorType: authorDraft.authorType,
         ...(authorDraft.authorType === 'special' ? {
           editorShareRatio: authorDraft.editorPercent / 100,
@@ -221,14 +286,13 @@ const CreatorBenefitsAdminManager: React.FC<CreatorBenefitsAdminManagerProps> = 
         } : {}),
         note: authorDraft.note.trim(),
       });
-      const benefits = response.data.data;
-      if (benefits) {
-        setUsers((current) => current.map((user) => (
-          user.userId === editingUser.userId ? { ...user, benefits } : user
-        )));
-      }
       setEditingUser(null);
+      if (isAddingAuthor) {
+        setIsAddAuthorOpen(false);
+        setIsAddingAuthor(false);
+      }
       toast.success(t('creatorBenefitsAdmin.authorSaved'));
+      await loadAuthors(authorPage);
     } catch (error) {
       toast.error(getApiErrorMessage(error, t('creatorBenefitsAdmin.authorSaveFailed')));
     } finally {
@@ -351,32 +415,78 @@ const CreatorBenefitsAdminManager: React.FC<CreatorBenefitsAdminManagerProps> = 
           <div className={styles.toolbar}>
             <label className={styles.searchField}>
               <span>{t('creatorBenefitsAdmin.userKeyword')}</span>
-              <input value={userKeyword} onChange={(event) => setUserKeyword(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') void handleSearchUsers(); }} />
+              <input value={authorKeyword} onChange={(event) => setAuthorKeyword(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') handleSearchAuthors(); }} />
             </label>
-            <button type="button" className={styles.primaryButton} onClick={() => void handleSearchUsers()} disabled={isSearchingUsers}>
+            <button type="button" className={styles.secondaryButton} onClick={handleSearchAuthors} disabled={isLoadingAuthors}>
               <IoSearch aria-hidden="true" />
-              {isSearchingUsers ? t('creatorBenefitsAdmin.searching') : t('creatorBenefitsAdmin.search')}
+              {t('creatorBenefitsAdmin.search')}
+            </button>
+            <label className={styles.selectField}>
+              <span>{t('creatorBenefitsAdmin.authorTypeFilter')}</span>
+              <select value={authorTypeFilter} onChange={(event) => { setAuthorTypeFilter(event.target.value as '' | 'contracted' | 'special'); setAuthorPage(1); }}>
+                <option value="">{t('creatorBenefitsAdmin.allAuthorTypes')}</option>
+                <option value="contracted">{authorTypeLabel('contracted')}</option>
+                <option value="special">{authorTypeLabel('special')}</option>
+              </select>
+            </label>
+            <button type="button" className={styles.secondaryButton} onClick={() => void loadAuthors(authorPage)} disabled={isLoadingAuthors} title={t('creatorBenefitsAdmin.authorsRefresh')} aria-label={t('creatorBenefitsAdmin.authorsRefresh')}>
+              <IoRefresh aria-hidden="true" />
+            </button>
+            <button type="button" className={styles.primaryButton} onClick={() => { setIsAddAuthorOpen(true); setAddUserKeyword(''); setAddUsers(EMPTY_AUTHORS); setAddUserPage(1); setHasSearchedAddUsers(false); }}>
+              <IoAdd aria-hidden="true" />
+              {t('creatorBenefitsAdmin.addAuthor')}
             </button>
           </div>
 
-          <div className={styles.userList}>
-            {users.length === 0 ? <div className={styles.empty}>{t('creatorBenefitsAdmin.searchUserEmpty')}</div> : users.map((user) => (
-              <div key={user.userId} className={styles.userRow}>
-                <div className={styles.userIdentity}>
+          <div className={styles.authorTable} role="table" aria-label={t('creatorBenefitsAdmin.specialTitle')}>
+            <div className={styles.authorHeader} role="row">
+              <span>{t('creatorBenefitsAdmin.authorIdentity')}</span>
+              <span>{t('creatorBenefitsAdmin.authorTypeDetail')}</span>
+              <span>{t('creatorBenefitsAdmin.authorLevelDetail')}</span>
+              <span>{t('creatorBenefitsAdmin.authorShareDetail')}</span>
+              <span>{t('creatorBenefitsAdmin.note')}</span>
+              <span>{t('creatorBenefitsAdmin.actions')}</span>
+            </div>
+            {isLoadingAuthors && authors.list.length === 0 ? <div className={styles.empty}>{t('creatorBenefitsAdmin.authorsLoading')}</div> : null}
+            {!isLoadingAuthors && authors.list.length === 0 ? <div className={styles.empty}>{t('creatorBenefitsAdmin.noAuthors')}</div> : null}
+            {authors.list.map((user) => (
+              <div key={user.userId} className={styles.authorRow} role="row">
+                <div data-label={t('creatorBenefitsAdmin.authorIdentity')} className={styles.userIdentity}>
                   <strong>{user.nickname || user.userCode}</strong>
                   <span>{user.userCode} · {user.phoneNumber || '-'}</span>
                 </div>
-                <div className={styles.userBenefits}>
-                  <span>{user.benefits.label}</span>
+                <div data-label={t('creatorBenefitsAdmin.authorTypeDetail')}>
+                  <span className={styles.authorTypeBadge}>{authorTypeLabel(user.benefits.authorType)}</span>
+                </div>
+                <div data-label={t('creatorBenefitsAdmin.authorLevelDetail')} className={styles.authorMetrics}>
+                  <strong>{user.benefits.label}</strong>
+                  <span>Lv.{user.benefits.permanentLevel || 0} · {t('creatorBenefitsAdmin.authorEffectiveCount')} {user.benefits.effectiveCount.toLocaleString('zh-CN')}</span>
+                </div>
+                <div data-label={t('creatorBenefitsAdmin.authorShareDetail')} className={styles.authorShares}>
                   <span>{t('creatorBenefitsAdmin.editorShort')} {formatPercent(user.benefits.editorShareRatio)}</span>
                   <span>{t('creatorBenefitsAdmin.customShort')} {formatPercent(user.benefits.customShareRatio)}</span>
+                  {user.benefits.authorType === 'special' ? (
+                    <span>{user.benefits.freeTxtCreation ? t('creatorBenefitsAdmin.authorTxtFree') : t('creatorBenefitsAdmin.authorTxtPaid')}</span>
+                  ) : null}
                 </div>
-                <button type="button" className={styles.secondaryButton} onClick={() => openAuthorEditor(user)}>
-                  <IoSettingsOutline aria-hidden="true" />
-                  {t('creatorBenefitsAdmin.configure')}
-                </button>
+                <div data-label={t('creatorBenefitsAdmin.note')} className={styles.authorNote}>
+                  {user.benefits.authorNote || t('creatorBenefitsAdmin.notSet')}
+                </div>
+                <div data-label={t('creatorBenefitsAdmin.actions')}>
+                  <button type="button" className={styles.secondaryButton} onClick={() => openAuthorEditor(user)}>
+                    <IoSettingsOutline aria-hidden="true" />
+                    {t('creatorBenefitsAdmin.configure')}
+                  </button>
+                </div>
               </div>
             ))}
+          </div>
+          <div className={styles.pagination}>
+            <span>{t('creatorBenefitsAdmin.pageSummary', { page: authors.pagination.page, totalPages: authors.pagination.totalPages, total: authors.pagination.total })}</span>
+            <div>
+              <button type="button" onClick={() => setAuthorPage((page) => Math.max(1, page - 1))} disabled={authorPage <= 1 || isLoadingAuthors}>{t('creatorBenefitsAdmin.previous')}</button>
+              <button type="button" onClick={() => setAuthorPage((page) => Math.min(authors.pagination.totalPages, page + 1))} disabled={authorPage >= authors.pagination.totalPages || isLoadingAuthors}>{t('creatorBenefitsAdmin.next')}</button>
+            </div>
           </div>
         </section>
       ) : (
@@ -581,15 +691,71 @@ const CreatorBenefitsAdminManager: React.FC<CreatorBenefitsAdminManagerProps> = 
         </section>
       )}
 
+      {isAddAuthorOpen && !editingUser ? (
+        <div className={styles.modalOverlay} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !isSearchingUsers) setIsAddAuthorOpen(false); }}>
+          <div className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="add-author-title">
+            <header>
+              <div>
+                <span>{t('creatorBenefitsAdmin.addAuthorSubtitle')}</span>
+                <h3 id="add-author-title">{t('creatorBenefitsAdmin.addAuthorTitle')}</h3>
+              </div>
+              <button type="button" className={styles.closeButton} onClick={() => setIsAddAuthorOpen(false)} aria-label={t('creatorBenefitsAdmin.close')}>×</button>
+            </header>
+            <div className={styles.formBody}>
+              <div className={styles.addUserSearchRow}>
+                <label className={styles.searchField}>
+                  <span>{t('creatorBenefitsAdmin.userKeyword')}</span>
+                  <input value={addUserKeyword} onChange={(event) => { setAddUserKeyword(event.target.value); setHasSearchedAddUsers(false); setAddUsers(EMPTY_AUTHORS); setAddUserPage(1); }} onKeyDown={(event) => { if (event.key === 'Enter') void handleSearchUsers(); }} disabled={isSearchingUsers} />
+                </label>
+                <button type="button" className={styles.primaryButton} onClick={() => void handleSearchUsers()} disabled={isSearchingUsers}>
+                  <IoSearch aria-hidden="true" />
+                  {isSearchingUsers ? t('creatorBenefitsAdmin.searching') : t('creatorBenefitsAdmin.addAuthorSearch')}
+                </button>
+              </div>
+              {!hasSearchedAddUsers ? <div className={styles.empty}>{t('creatorBenefitsAdmin.addAuthorSubtitle')}</div> : null}
+              {hasSearchedAddUsers && addUsers.list.length === 0 ? <div className={styles.empty}>{t('creatorBenefitsAdmin.addAuthorSearchEmpty')}</div> : null}
+              {hasSearchedAddUsers && addUsers.list.length > 0 ? (
+                <div className={styles.addUserList}>
+                  {addUsers.list.map((user) => {
+                    const alreadyConfigured = isExistingSpecialAuthor(user);
+                    return (
+                      <div key={user.userId} className={styles.addUserRow}>
+                        <div className={styles.userIdentity}>
+                          <strong>{user.nickname || user.userCode}</strong>
+                          <span>{user.userCode} · {user.phoneNumber || '-'}</span>
+                        </div>
+                        <span className={styles.authorTypeBadge}>{alreadyConfigured ? authorTypeLabel(user.benefits.authorType) : authorTypeLabel('regular')}</span>
+                        <button type="button" className={styles.secondaryButton} onClick={() => openAuthorEditor(user, true)} disabled={alreadyConfigured || isAddingAuthor}>
+                          {alreadyConfigured ? t('creatorBenefitsAdmin.addAuthorAlreadyConfigured') : t('creatorBenefitsAdmin.addAuthorSelect')}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+              {hasSearchedAddUsers ? (
+                <div className={styles.pagination}>
+                  <span>{t('creatorBenefitsAdmin.pageSummary', { page: addUsers.pagination.page, totalPages: addUsers.pagination.totalPages, total: addUsers.pagination.total })}</span>
+                  <div>
+                    <button type="button" onClick={() => void handleSearchUsers(Math.max(1, addUserPage - 1))} disabled={addUserPage <= 1 || isSearchingUsers}>{t('creatorBenefitsAdmin.previous')}</button>
+                    <button type="button" onClick={() => void handleSearchUsers(Math.min(addUsers.pagination.totalPages, addUserPage + 1))} disabled={addUserPage >= addUsers.pagination.totalPages || isSearchingUsers}>{t('creatorBenefitsAdmin.next')}</button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {editingUser ? (
-        <div className={styles.modalOverlay} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !isSavingAuthor) setEditingUser(null); }}>
+        <div className={styles.modalOverlay} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !isSavingAuthor) closeAuthorEditor(); }}>
           <div className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="author-editor-title">
             <header>
               <div>
-                <span>{editingUser.userCode}</span>
-                <h3 id="author-editor-title">{t('creatorBenefitsAdmin.authorEditorTitle')}</h3>
+                <span>{editingUser.nickname || editingUser.userCode} · {editingUser.userCode} · {editingUser.phoneNumber || '-'}</span>
+                <h3 id="author-editor-title">{t(isAddingAuthor ? 'creatorBenefitsAdmin.addAuthorTitle' : 'creatorBenefitsAdmin.authorEditorTitle')}</h3>
               </div>
-              <button type="button" className={styles.closeButton} onClick={() => setEditingUser(null)} aria-label={t('creatorBenefitsAdmin.close')}>×</button>
+              <button type="button" className={styles.closeButton} onClick={closeAuthorEditor} disabled={isSavingAuthor} aria-label={t('creatorBenefitsAdmin.close')}>×</button>
             </header>
             <div className={styles.formBody}>
               <label className={styles.authorTypeField}>
@@ -602,7 +768,7 @@ const CreatorBenefitsAdminManager: React.FC<CreatorBenefitsAdminManagerProps> = 
                   }))}
                   disabled={isSavingAuthor}
                 >
-                  <option value="regular">{authorTypeLabel('regular')}</option>
+                  {!isAddingAuthor ? <option value="regular">{authorTypeLabel('regular')}</option> : null}
                   <option value="contracted">{authorTypeLabel('contracted')}</option>
                   <option value="special">{authorTypeLabel('special')}</option>
                 </select>
@@ -656,7 +822,7 @@ const CreatorBenefitsAdminManager: React.FC<CreatorBenefitsAdminManagerProps> = 
               </label>
             </div>
             <footer>
-              <button type="button" className={styles.secondaryButton} onClick={() => setEditingUser(null)} disabled={isSavingAuthor}>{t('creatorBenefitsAdmin.cancel')}</button>
+              <button type="button" className={styles.secondaryButton} onClick={closeAuthorEditor} disabled={isSavingAuthor}>{t('creatorBenefitsAdmin.cancel')}</button>
               <button type="button" className={styles.primaryButton} onClick={() => void handleSaveAuthor()} disabled={isSavingAuthor}>
                 <IoCheckmarkCircle aria-hidden="true" />
                 {isSavingAuthor ? t('creatorBenefitsAdmin.saving') : t('creatorBenefitsAdmin.save')}

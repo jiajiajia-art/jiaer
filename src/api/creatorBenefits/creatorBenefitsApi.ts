@@ -1,7 +1,7 @@
 import type { ApiResponse } from '../api.types';
 import { api } from '../base';
 import type {
-  AdminCreatorBenefitUser,
+  AdminCreatorBenefitUserResult,
   AdminManagedGameResult,
   CreatorBenefitSummary,
   CreatorBenefitWorksResult,
@@ -14,9 +14,19 @@ const creatorBenefitsApi = {
 
   getWorks: () => api.get<ApiResponse<CreatorBenefitWorksResult>>('/auth/creator-benefits/works'),
 
-  searchUsers: (keyword: string) => api.get<ApiResponse<{ list: AdminCreatorBenefitUser[] }>>(
+  searchUsers: (params: { keyword: string; page?: number; pageSize?: number }) => api.get<ApiResponse<AdminCreatorBenefitUserResult>>(
     '/admin/creator-benefits/users',
-    { params: { keyword } },
+    { params },
+  ),
+
+  listAuthors: (params: {
+    keyword?: string;
+    authorType?: 'contracted' | 'special' | '';
+    page?: number;
+    pageSize?: number;
+  }) => api.get<ApiResponse<AdminCreatorBenefitUserResult>>(
+    '/admin/creator-benefits/authors',
+    { params },
   ),
 
   updateSpecialAuthor: (userId: string, payload: SpecialAuthorPayload) =>

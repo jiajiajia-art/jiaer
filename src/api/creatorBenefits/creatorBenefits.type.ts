@@ -66,6 +66,18 @@ export interface AdminCreatorBenefitUser {
   benefits: CreatorBenefitSummary;
 }
 
+export interface AdminPagination {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface AdminCreatorBenefitUserResult {
+  list: AdminCreatorBenefitUser[];
+  pagination: AdminPagination;
+}
+
 export interface AdminManagedGame {
   fileId: string;
   creatorUserId: string;
