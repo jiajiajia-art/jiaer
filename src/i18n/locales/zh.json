@@ -2899,8 +2899,8 @@
     "guideLevel5": "5级",
     "guideSpecial": "特邀作者",
     "guideUpgradeCondition": "升级条件",
-    "guideInitial": "初始",
-    "guidePlayThreshold": "游玩量 {{count}}",
+    "guideInitial": "首次发布作品",
+    "guidePlayThreshold": "作品被游玩{{count}}轮",
     "guideContracted": "签约作者",
     "guideConfigured": "官方邀请",
     "guideNotApplicable": "--",
@@ -3073,6 +3073,19 @@
     "appealReviewFailed": "申诉处理失败"
   },
   "operator": {
+    "workStats": {
+      "eyebrow": "作品数据",
+      "public": "公开中",
+      "private": "未公开",
+      "fileId": "作品 ID：{{fileId}}",
+      "createdAt": "创建于 {{time}}",
+      "backToWorks": "返回作品列表",
+      "metricsTitle": "运营表现",
+      "metricsHint": "作品累计浏览、互动和游玩数据",
+      "ratingTitle": "作品评分",
+      "ratingHint": "来自作品详情的评分统计",
+      "peakHour": "高峰 {{hour}}:00"
+    },
     "pageTitle": "运营中心",
     "pageDesc": "全站公开作品统计、推广与拉新总览",
     "statsOverviewLoading": "汇总中…",

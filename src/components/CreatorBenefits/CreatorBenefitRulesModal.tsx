@@ -15,7 +15,7 @@ const CREATOR_BENEFIT_LEVELS = [
     { levelKey: 'guideLevel2', threshold: 5000, conditionKey: null, editorRatio: '12%', customRatio: '60%', level: 2 },
     { levelKey: 'guideLevel3', threshold: 10000, conditionKey: null, editorRatio: '15%', customRatio: '65%', level: 3 },
     { levelKey: 'guideLevel4', threshold: null, conditionKey: 'guideContracted', editorRatio: '20%', customRatio: '70%', level: 4 },
-    { levelKey: 'guideLevel5', threshold: 100000, conditionKey: null, editorRatio: '20%', customRatio: '75%', level: 5 },
+    { levelKey: 'guideLevel5', threshold: null, conditionKey: 'guideContracted', editorRatio: '20%', customRatio: '75%', level: 5 },
     { levelKey: 'guideSpecial', threshold: null, conditionKey: 'guideConfigured', editorRatio: '20%-25%', customRatio: '70%-85%', level: null },
 ] as const;
 

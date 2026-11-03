@@ -659,31 +659,33 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                             </button>
                         );
                     })}
+                    <div className={`${styles.customAmount} ${styles.customAmountTile} ${amountError ? styles.inputError : ''}`}>
+                        <div className={styles.customLabel}>{t('rechargeModal.customAmount')}</div>
+                        <div className={styles.customInputWrapper}>
+                            <span className={styles.currencySymbol}>{currencySymbol}</span>
+                            <input
+                                type="text"
+                                className={`${styles.customInput} ${inputShake ? styles.shake : ''}`}
+                                placeholder={t('rechargeModal.enterAmount')}
+                                value={amountText}
+                                onChange={handleCustomAmountChange}
+                                onCompositionStart={() => {
+                                    isComposingRef.current = true;
+                                }}
+                                onCompositionEnd={() => {
+                                    isComposingRef.current = false;
+                                }}
+                                maxLength={10}
+                                ref={amountInputRef}
+                            />
+                            <span className={styles.currencyUnit}>{currencyName}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <div className={styles.customAmount}>
-                <div className={styles.customLabel}>{t('rechargeModal.customAmount')}</div>
-                <div className={`${styles.customAmountPanel} ${amountError ? styles.inputError : ''}`}>
-                    <div className={styles.customInputWrapper}>
-                        <span className={styles.currencySymbol}>{currencySymbol}</span>
-                        <input
-                            type="text"
-                            className={`${styles.customInput} ${inputShake ? styles.shake : ''}`}
-                            placeholder={t('rechargeModal.enterAmount')}
-                            value={amountText}
-                            onChange={handleCustomAmountChange}
-                            onCompositionStart={() => {
-                                isComposingRef.current = true;
-                            }}
-                            onCompositionEnd={() => {
-                                isComposingRef.current = false;
-                            }}
-                            maxLength={10}
-                            ref={amountInputRef}
-                        />
-                        <span className={styles.currencyUnit}>{currencyName}</span>
-                    </div>
+                <div className={styles.customAmountPanel}>
                     <div className={styles.customReceiveHint}>
                         <span>预计获得</span>
                         <strong>{currentAmount != null ? `${estimatedDiamonds} KK币` : '— KK币'}</strong>

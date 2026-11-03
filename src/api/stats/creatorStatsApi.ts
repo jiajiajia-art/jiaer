@@ -50,6 +50,9 @@ export interface CreatorWorkDetail extends WorkMetrics {
   creatorUserId: string | null;
   ratingAvg: number | null;
   ratingCount: number;
+  shareUv: number;
+  playUv: number;
+  createdAt: string | null;
   activeHours: Array<{ hour: number; count: number }>;
   comments: Array<{
     ratingId: string;

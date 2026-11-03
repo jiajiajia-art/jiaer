@@ -440,13 +440,13 @@ const Create: React.FC = () => {
                                             )}
                                         </div>
                                         <div className={styles.creatorHeroBadgeRow}>
-                                            {creatorBenefits?.level != null && (
+                                            {creatorBenefits && (creatorBenefits.level != null || creatorBenefits.unranked) && (
                                                 <button
                                                     type="button"
                                                     className={styles.creatorLevelBadge}
                                                     onClick={() => navigate('/creator-benefits')}
                                                 >
-                                                    Lv{creatorBenefits.level}
+                                                    Lv{creatorBenefits.level ?? 0}
                                                 </button>
                                             )}
                                             <button

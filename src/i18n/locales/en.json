@@ -2894,8 +2894,9 @@
     "guideLevel5": "Level 5",
     "guideSpecial": "Invited Creator",
     "guideUpgradeCondition": "Upgrade Requirement",
-    "guideInitial": "Initial",
-    "guidePlayThreshold": "{{count}} plays",
+    "guideInitial": "Publish your first work",
+    "guidePlayThreshold": "Work played {{count}} rounds",
+    "guideContracted": "Contracted creator",
     "guideNotApplicable": "--",
     "guideEditorRatio": "Editor Work Share",
     "guideCustomRatio": "Custom Work Share",
@@ -3061,6 +3062,19 @@
     "appealReviewFailed": "Failed to review appeal"
   },
   "operator": {
+    "workStats": {
+      "eyebrow": "WORK DATA",
+      "public": "Public",
+      "private": "Private",
+      "fileId": "Work ID: {{fileId}}",
+      "createdAt": "Created {{time}}",
+      "backToWorks": "Back to works",
+      "metricsTitle": "Performance",
+      "metricsHint": "Cumulative views, engagement, and play activity",
+      "ratingTitle": "Work rating",
+      "ratingHint": "Rating summary from the work record",
+      "peakHour": "Peak {{hour}}:00"
+    },
     "pageTitle": "Operator Center",
     "pageDesc": "Site-wide public work stats, promotions and recruitment",
     "statsOverviewLoading": "Aggregating…",

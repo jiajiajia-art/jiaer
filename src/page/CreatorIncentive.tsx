@@ -113,7 +113,11 @@ const CreatorIncentive: React.FC = () => {
     }, [userId]);
 
     const loadProfile = useCallback(async () => {
-        if (!isCreator) return;
+        if (!isCreator) {
+            setProfile({ phoneNumber: user?.user?.phoneNumber || '' });
+            setProfileStatus('success');
+            return;
+        }
         setProfileStatus('loading');
         try {
             const data = await getCreatorProfile();
