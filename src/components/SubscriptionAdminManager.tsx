@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { MdContentCopy, MdLock, MdLockOpen } from 'react-icons/md';
@@ -89,7 +90,13 @@ const toIsoDateTime = (value: string) => {
 
 const SubscriptionAdminManager: React.FC = () => {
     const { t } = useTranslation();
-    const [activeTab, setActiveTab] = useState<AdminMembershipTab>('membershipRecords');
+    const location = useLocation();
+    const navigate = useNavigate();
+    const activeTab: AdminMembershipTab = location.pathname.endsWith('/key-generation')
+        ? 'keyGeneration'
+        : location.pathname.endsWith('/key-records')
+            ? 'keyRecords'
+            : 'membershipRecords';
     const [planId, setPlanId] = useState<SubscriptionPlanId>('month_v2');
     const [count, setCount] = useState('1');
     const [expireAt, setExpireAt] = useState('');
@@ -217,33 +224,6 @@ const SubscriptionAdminManager: React.FC = () => {
 
     return (
         <div className={styles.panelStack}>
-            <section className={styles.heroCard}>
-                <div>
-                    <div className={styles.sectionBadge}>会员管理</div>
-                    <h2 className={styles.heroTitle}>会员管理中心</h2>
-                    <p className={styles.heroDesc}>查询会员状态，生成会员兑换卡，并追踪兑换卡的使用与冻结情况。</p>
-                </div>
-            </section>
-
-            <div className={styles.adminTabs} role="tablist" aria-label="会员管理功能">
-                {([
-                    ['membershipRecords', '会员状态记录'],
-                    ['keyGeneration', '会员兑换卡密钥生成'],
-                    ['keyRecords', '会员兑换卡使用记录'],
-                ] as const).map(([tab, label]) => (
-                    <button
-                        key={tab}
-                        type="button"
-                        role="tab"
-                        aria-selected={activeTab === tab}
-                        className={activeTab === tab ? styles.adminTabActive : styles.adminTab}
-                        onClick={() => setActiveTab(tab)}
-                    >
-                        {label}
-                    </button>
-                ))}
-            </div>
-
             {activeTab === 'membershipRecords' ? <MembershipRecordsPanel /> : null}
 
             {activeTab === 'keyGeneration' ? <section className={styles.card}>
@@ -306,7 +286,7 @@ const SubscriptionAdminManager: React.FC = () => {
                     <div className={styles.generatedPanel}>
                         <div className={styles.generatedPanelHeader}>
                             <strong>本次生成结果</strong>
-                            <button type="button" className={styles.ghostButton} onClick={() => setActiveTab('keyRecords')}>查看使用记录</button>
+                            <button type="button" className={styles.ghostButton} onClick={() => navigate('/admin/subscriptions/key-records')}>查看使用记录</button>
                         </div>
                         <div className={styles.generatedList}>
                             {createdKeys.map((item) => (

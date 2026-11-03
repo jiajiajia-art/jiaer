@@ -27,9 +27,7 @@
   padding: 28px 30px;
   border: 1px solid rgba(201, 139, 92, 0.24);
   border-radius: 24px;
-  background:
-    radial-gradient(circle at 92% 8%, rgba(201, 115, 63, 0.16), transparent 34%),
-    linear-gradient(135deg, rgba(255, 251, 246, 0.98), rgba(247, 232, 214, 0.95));
+  background: #fff;
   box-shadow: 0 20px 56px rgba(98, 59, 33, 0.1);
 }
 
@@ -864,7 +862,7 @@
   padding: 27px;
   border: 1px solid rgba(173, 78, 61, 0.2);
   border-radius: 20px;
-  background: #fffaf5;
+  background: #fff;
   box-shadow: 0 28px 80px rgba(38, 27, 20, 0.3);
   box-sizing: border-box;
   text-align: center;

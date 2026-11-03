@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import bannerApi from '../api/banner/bannerApi';
 import type {
@@ -520,11 +521,7 @@ const AdminHomeBannerManager: React.FC = () => {
 
     return (
         <div className={styles.panelStack}>
-            <section className={styles.heroCard}>
-                <div>
-                    <div className={styles.sectionBadge}>轮播图管理</div>
-                    <h2 className={styles.heroTitle}>管理首页轮播图展现</h2>
-                </div>
+            <section className={styles.toolbar}>
                 <button
                     type="button"
                     className={styles.primaryGhostButton}
@@ -836,30 +833,11 @@ const AdminHomeBannerManager: React.FC = () => {
 };
 
 const AdminBannerManager: React.FC = () => {
-    const [activeSection, setActiveSection] = useState<'home' | 'activity'>('home');
+    const location = useLocation();
+    const activeSection = location.pathname === '/admin/banners/activity' ? 'activity' : 'home';
 
     return (
         <div className={styles.managerStack}>
-            <div className={styles.placementTabs} role="tablist" aria-label="轮播图发布位置">
-                <button
-                    type="button"
-                    role="tab"
-                    aria-selected={activeSection === 'home'}
-                    className={`${styles.placementTab} ${activeSection === 'home' ? styles.placementTabActive : ''}`}
-                    onClick={() => setActiveSection('home')}
-                >
-                    首页轮播图
-                </button>
-                <button
-                    type="button"
-                    role="tab"
-                    aria-selected={activeSection === 'activity'}
-                    className={`${styles.placementTab} ${activeSection === 'activity' ? styles.placementTabActive : ''}`}
-                    onClick={() => setActiveSection('activity')}
-                >
-                    活动轮播图
-                </button>
-            </div>
             <div hidden={activeSection !== 'home'}>
                 <AdminHomeBannerManager />
             </div>

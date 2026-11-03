@@ -4,7 +4,6 @@ import toast from 'react-hot-toast';
 import adminUsersApi, { type AdminUserItem } from '../api/admin/adminUsersApi';
 import { normalizeUserRole } from '../utils/userRoles';
 import Pagination from './Pagination';
-import PageSectionHeader from './Admin/PageSectionHeader';
 import workbenchStyles from './Admin/MetricSummary.module.css';
 import styles from './AdminUsersManager.module.css';
 
@@ -100,11 +99,6 @@ const AdminUsersManager: React.FC = () => {
 
   return (
     <section className={styles.root}>
-      <PageSectionHeader
-        title={t('adminUsers.title')}
-        description={t('adminUsers.desc')}
-      />
-
       <div className={workbenchStyles.toolbar}>
         <input
           className={styles.input}

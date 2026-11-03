@@ -32,7 +32,6 @@ import operatorReportsApi, {
 } from '../../api/stats/operatorReportsApi';
 import MetricTitleTip from '../../components/stats/MetricTitleTip';
 import metricStyles from '../../components/Admin/MetricSummary.module.css';
-import PageSectionHeader from '../../components/Admin/PageSectionHeader';
 import styles from './OperatorReports.module.css';
 import {
   buildPresetRange,
@@ -815,12 +814,6 @@ const OperatorReports: React.FC = () => {
 
   return (
     <div>
-      <PageSectionHeader
-        headingLevel="h1"
-        title={t('operator.reports.title')}
-        description={t('operator.reports.desc')}
-      />
-
       <div className={styles.dataSourceSwitch} role="group" aria-label={t('operator.reports.dataSource')}>
         {DATA_SOURCE_OPTIONS.map((option) => (
           <button

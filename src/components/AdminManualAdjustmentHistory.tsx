@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Alert, Button, Card, Pagination, Table, Typography } from 'antd';
+import type { TableColumnsType } from 'antd';
 import adminManualAdjustmentsApi, {
   ADMIN_MANUAL_ADJUSTMENT_PAGE_SIZE,
 } from '../api/admin/adminManualAdjustmentsApi';
@@ -70,85 +72,84 @@ const AdminManualAdjustmentHistory: React.FC<AdminManualAdjustmentHistoryProps> 
     void loadPage(1);
   }, [loadPage, refreshKey]);
 
-  const totalPages = Math.max(data.totalPages, 1);
-  const canGoPrevious = requestedPage > 1 && !isLoading;
-  const canGoNext = requestedPage < data.totalPages && !isLoading;
+  const columns: TableColumnsType<AdminManualAdjustmentHistoryItem> = [
+    {
+      title: '操作人',
+      key: 'operator',
+      render: (_, item) => formatAccount(item.operator),
+    },
+    {
+      title: '变更用户',
+      key: 'targetUser',
+      render: (_, item) => formatAccount(item.targetUser),
+    },
+    {
+      title: '变更情况',
+      key: 'change',
+      render: (_, item) => (
+        <Typography.Text type={item.changeType === 'increment' ? 'success' : 'danger'} strong>
+          {item.changeType === 'increment' ? '增加' : '扣减'} {item.amount} {currencyLabel}
+        </Typography.Text>
+      ),
+    },
+    {
+      title: '备注',
+      dataIndex: 'remark',
+      key: 'remark',
+      render: (remark: string | null) => remark || '-',
+    },
+    {
+      title: '操作时间',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      render: formatTime,
+    },
+  ];
 
   return (
-    <section className={styles.historyCard}>
-      <div className={styles.headerRow}>
-        <div>
-          <h3 className={styles.title}>特殊{currencyLabel}变更记录</h3>
-          <p className={styles.description}>展示全平台由管理员执行的特殊{currencyLabel}变更，每页 10 条。</p>
-        </div>
-        <div className={styles.totalCount}>共 {data.total} 条</div>
-      </div>
+    <Card
+      title={`特殊${currencyLabel}变更记录`}
+      extra={<Typography.Text type="secondary">共 {data.total} 条</Typography.Text>}
+      className={styles.historyCard}
+    >
+      <Typography.Paragraph type="secondary" className={styles.description}>
+        展示全平台由管理员执行的特殊{currencyLabel}变更，每页 10 条。
+      </Typography.Paragraph>
 
-      {isLoading && data.items.length === 0 ? (
-        <div className={styles.stateBox} aria-live="polite">正在加载变更记录...</div>
-      ) : errorMessage ? (
-        <div className={styles.stateBox} role="alert">
-          <span>{errorMessage}</span>
-          <button type="button" className={styles.retryButton} onClick={() => void loadPage(requestedPage)}>
-            重新加载
-          </button>
-        </div>
-      ) : data.items.length === 0 ? (
-        <div className={styles.stateBox}>暂无特殊{currencyLabel}变更记录。</div>
+      {errorMessage ? (
+        <Alert
+          type="error"
+          showIcon
+          message={errorMessage}
+          action={<Button size="small" onClick={() => void loadPage(requestedPage)}>重新加载</Button>}
+        />
       ) : (
-        <div className={styles.tableWrapper} aria-busy={isLoading}>
-          <table className={styles.historyTable}>
-            <thead>
-              <tr>
-                <th>操作人</th>
-                <th>变更用户</th>
-                <th>变更情况</th>
-                <th>备注</th>
-                <th>操作时间</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.items.map((item) => {
-                const action = item.changeType === 'increment' ? '增加' : '扣减';
-                return (
-                  <tr key={item.id}>
-                    <td>{formatAccount(item.operator)}</td>
-                    <td>{formatAccount(item.targetUser)}</td>
-                    <td className={item.changeType === 'increment' ? styles.increase : styles.decrease}>
-                      {action} {item.amount} {currencyLabel}
-                    </td>
-                    <td className={styles.remarkCell}>{item.remark || '-'}</td>
-                    <td className={styles.timeCell}>{formatTime(item.createdAt)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <Table<AdminManualAdjustmentHistoryItem>
+          rowKey="id"
+          columns={columns}
+          dataSource={data.items}
+          loading={isLoading}
+          pagination={false}
+          locale={{ emptyText: '暂无特殊变更记录' }}
+          scroll={{ x: 760 }}
+          size="middle"
+        />
       )}
 
-      <div className={styles.paginationRow}>
-        <span>第 {requestedPage} 页，共 {totalPages} 页</span>
-        <div className={styles.paginationActions}>
-          <button
-            type="button"
-            className={styles.pageButton}
-            disabled={!canGoPrevious}
-            onClick={() => void loadPage(requestedPage - 1)}
-          >
-            上一页
-          </button>
-          <button
-            type="button"
-            className={styles.pageButton}
-            disabled={!canGoNext}
-            onClick={() => void loadPage(requestedPage + 1)}
-          >
-            下一页
-          </button>
+      {data.total > 0 && (
+        <div className={styles.paginationRow}>
+          <Pagination
+            current={requestedPage}
+            pageSize={ADMIN_MANUAL_ADJUSTMENT_PAGE_SIZE}
+            total={data.total}
+            showSizeChanger={false}
+            showTotal={(total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`}
+            onChange={(page) => void loadPage(page)}
+            disabled={isLoading}
+          />
         </div>
-      </div>
-    </section>
+      )}
+    </Card>
   );
 };
 

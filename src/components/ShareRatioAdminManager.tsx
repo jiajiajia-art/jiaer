@@ -139,14 +139,6 @@ const ShareRatioAdminManager: React.FC<ShareRatioAdminManagerProps> = () => {
 
     return (
         <div className={styles.panelStack}>
-            <section className={styles.heroCard}>
-                <div>
-                    <div className={styles.sectionBadge}>分成比例管理</div>
-                    <h2 className={styles.heroTitle}>管理创作者作品分成比例</h2>
-                    <p className={styles.heroDesc}>TXT 与自定义作品展示当前创作者权益比例；其他模式可单独设置作品分成比例。</p>
-                </div>
-            </section>
-
             <section className={styles.card}>
                 <div className={styles.cardHeader}>
                     <div>

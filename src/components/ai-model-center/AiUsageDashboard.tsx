@@ -11,7 +11,6 @@ import {
   Row,
   Segmented,
   Select,
-  Space,
   Spin,
   Statistic,
   Table,
@@ -52,6 +51,8 @@ type PeriodPreset = UsagePreset | 'custom';
 type PageSize = 20 | 50 | 100;
 type BilledToUserFilter = '' | NonNullable<AiBillingUsageFilters['billedToUser']>;
 type CurrencyTypeFilter = '' | NonNullable<AiBillingUsageFilters['currencyType']>;
+type AggregateSortBy = 'calls' | 'charge' | 'cost';
+type AggregateSortOrder = 'ascend' | 'descend';
 
 const PAGE_SIZE_OPTIONS: PageSize[] = [20, 50, 100];
 const DEFAULT_FILTERS = resolveUsagePresetRange('7d');
@@ -71,6 +72,7 @@ const EMPTY_SUMMARY: AiBillingUsageSummary = {
   trend: [],
   modelRanking: [],
   items: [],
+  aggregatePagination: { page: 1, pageSize: 10, total: 0, totalPages: 0 },
 };
 
 const statusLabels: Record<string, string> = {
@@ -108,13 +110,22 @@ const AiUsageDashboard: React.FC = () => {
   const [status, setStatus] = useState('');
   const [billedToUser, setBilledToUser] = useState<BilledToUserFilter>('');
   const [currencyType, setCurrencyType] = useState<CurrencyTypeFilter>('');
+  const [aggregatePeriod, setAggregatePeriod] = useState<PeriodPreset>('7d');
+  const [aggregateCustomRange, setAggregateCustomRange] = useState<{ from: string; to: string } | null>(null);
+  const [aggregateGameKeyword, setAggregateGameKeyword] = useState('');
+  const [aggregatePage, setAggregatePage] = useState(1);
+  const [aggregatePageSize, setAggregatePageSize] = useState<10>(10);
+  const [aggregateSortBy, setAggregateSortBy] = useState<AggregateSortBy>('calls');
+  const [aggregateSortOrder, setAggregateSortOrder] = useState<AggregateSortOrder>('descend');
   const [appliedFilters, setAppliedFilters] = useState<AiBillingUsageFilters>(DEFAULT_FILTERS);
   const [summary, setSummary] = useState<AiBillingUsageSummary>(EMPTY_SUMMARY);
   const [attempts, setAttempts] = useState<AiBillingUsageAttempt[]>([]);
   const [pagination, setPagination] = useState({ page: 1, pageSize: 20 as PageSize, total: 0 });
   const [summaryLoading, setSummaryLoading] = useState(false);
+  const [aggregateLoading, setAggregateLoading] = useState(false);
   const [attemptLoading, setAttemptLoading] = useState(false);
   const [summaryError, setSummaryError] = useState('');
+  const [aggregateError, setAggregateError] = useState('');
   const [attemptError, setAttemptError] = useState('');
 
   const loadSummary = useCallback(async (filters: AiBillingUsageFilters) => {
@@ -154,7 +165,13 @@ const AiUsageDashboard: React.FC = () => {
   }, []);
 
   React.useEffect(() => {
-    void loadSummary(DEFAULT_FILTERS);
+    void loadSummary({
+      ...DEFAULT_FILTERS,
+      aggregateFrom: DEFAULT_FILTERS.from,
+      aggregateTo: DEFAULT_FILTERS.to,
+      aggregatePage: 1,
+      aggregatePageSize: 10,
+    });
     void loadAttempts(DEFAULT_FILTERS, 1, 20);
   }, [loadAttempts, loadSummary]);
 
@@ -171,6 +188,42 @@ const AiUsageDashboard: React.FC = () => {
       currencyType: currencyType || undefined,
     };
   }, [billedToUser, currencyType, customRange, gameKeyword, modelId, period, status, userKeyword]);
+
+  const resolveAggregateFilters = useCallback((page = aggregatePage, pageSize = aggregatePageSize, sortBy = aggregateSortBy, sortOrder = aggregateSortOrder): AiBillingUsageFilters | null => {
+    const timeRange = aggregatePeriod === 'custom'
+      ? aggregateCustomRange
+      : resolveUsagePresetRange(aggregatePeriod);
+    if (!timeRange) return null;
+    return {
+      ...DEFAULT_FILTERS,
+      aggregateFrom: timeRange.from,
+      aggregateTo: timeRange.to,
+      aggregateGameKeyword: aggregateGameKeyword.trim() || undefined,
+      aggregatePage: page,
+      aggregatePageSize: pageSize,
+      aggregateSortBy: sortBy,
+      aggregateSortOrder: sortOrder,
+    };
+  }, [aggregateCustomRange, aggregateGameKeyword, aggregatePage, aggregatePageSize, aggregatePeriod, aggregateSortBy, aggregateSortOrder]);
+
+  const queryAggregate = useCallback((page = 1, pageSize = aggregatePageSize, sortBy = aggregateSortBy, sortOrder = aggregateSortOrder) => {
+    const filters = resolveAggregateFilters(page, pageSize, sortBy, sortOrder);
+    if (!filters || aggregateLoading) return;
+    setAggregatePage(page);
+    setAggregatePageSize(pageSize);
+    setAggregateLoading(true);
+    setAggregateError('');
+    void aiModelCenterApi.listUsage(filters).then((response) => {
+      const data = response.data.data;
+      setSummary((current) => ({
+        ...current,
+        items: data?.items || [],
+        aggregatePagination: data?.aggregatePagination || EMPTY_SUMMARY.aggregatePagination,
+      }));
+    }).catch((requestError) => {
+      setAggregateError(getApiErrorMessage(requestError, '聚合统计加载失败'));
+    }).finally(() => setAggregateLoading(false));
+  }, [aggregateLoading, aggregatePageSize, aggregateSortBy, aggregateSortOrder, resolveAggregateFilters]);
 
   const query = useCallback(() => {
     const filters = resolveDraftFilters();
@@ -221,7 +274,7 @@ const AiUsageDashboard: React.FC = () => {
   ].filter(Boolean))).sort().map((value) => ({ label: value, value })), [modelId, summary.modelRanking]);
 
   const aggregateColumns: ColumnsType<AiBillingUsageRow> = [
-    { title: '作品', dataIndex: 'fileId', key: 'fileId', render: (value) => value || '—' },
+    { title: '作品', dataIndex: 'gameTitle', key: 'gameTitle', render: (value) => value || '未关联作品' },
     {
       title: '来源 / 模型',
       key: 'model',
@@ -230,7 +283,19 @@ const AiUsageDashboard: React.FC = () => {
     {
       title: '状态 / 调用',
       key: 'status',
-      render: (_, row) => <Space><StatusTag status={row.status} /><strong>{formatPoints(row.callCount)}</strong></Space>,
+      sorter: true,
+      sortDirections: ['descend', 'ascend'],
+      sortOrder: aggregateSortBy === 'calls' ? aggregateSortOrder : null,
+      render: (_, row) => <div className={styles.cellStack}>
+        <strong>{formatPoints(row.callCount)} 次调用</strong>
+        <span>{[
+          row.statusCounts?.succeeded ? `成功 ${formatPoints(row.statusCounts.succeeded)}` : null,
+          row.statusCounts?.failed ? `失败 ${formatPoints(row.statusCounts.failed)}` : null,
+          row.statusCounts?.incomplete ? `未完整交付 ${formatPoints(row.statusCounts.incomplete)}` : null,
+          row.statusCounts?.cancelled ? `已取消 ${formatPoints(row.statusCounts.cancelled)}` : null,
+          row.statusCounts?.started ? `进行中 ${formatPoints(row.statusCounts.started)}` : null,
+        ].filter(Boolean).join(' · ') || '暂无调用'}</span>
+      </div>,
     },
     {
       title: 'Token',
@@ -241,12 +306,20 @@ const AiUsageDashboard: React.FC = () => {
       title: '平台成本',
       dataIndex: 'platformCostMicroYuan',
       key: 'platformCostMicroYuan',
+      sorter: true,
+      sortDirections: ['descend', 'ascend'],
+      sortOrder: aggregateSortBy === 'cost' ? aggregateSortOrder : null,
       render: (value) => `¥ ${formatMicroYuan(value)}`,
     },
     {
       title: '用户实际扣费',
       key: 'billedUnits',
-      render: (_, row) => chargeText(row.currencyType, row.billedUnits),
+      sorter: true,
+      sortDirections: ['descend', 'ascend'],
+      sortOrder: aggregateSortBy === 'charge' ? aggregateSortOrder : null,
+      render: (_, row) => <div className={styles.cellStack}>
+        <span>{chargeText(row.currencyType, row.billedUnits)}</span>
+      </div>,
     },
   ];
 
@@ -257,10 +330,7 @@ const AiUsageDashboard: React.FC = () => {
       width: 190,
       render: (_, row) => <div className={styles.cellStack}>
         <strong>{row.userNickname || row.userCode || row.userId || '未知用户'}</strong>
-        <span>{[
-          row.userCode && row.userCode !== row.userNickname ? row.userCode : null,
-          row.userId ? `ID ${row.userId}` : null,
-        ].filter(Boolean).join(' · ') || '未关联账号'}</span>
+        <span>{row.userCode && row.userCode !== row.userNickname ? row.userCode : '未关联账号'}</span>
       </div>,
     },
     {
@@ -268,8 +338,7 @@ const AiUsageDashboard: React.FC = () => {
       key: 'game',
       width: 190,
       render: (_, row) => <div className={styles.cellStack}>
-        <strong>{row.gameTitle || row.fileId || '未关联游戏'}</strong>
-        <span>{row.fileId ? `fileId ${row.fileId}` : '无 fileId'}</span>
+        <strong>{row.gameTitle || '未关联游戏'}</strong>
       </div>,
     },
     {
@@ -282,57 +351,43 @@ const AiUsageDashboard: React.FC = () => {
       </div>,
     },
     {
-      title: '模型单价',
-      key: 'modelPrice',
-      width: 220,
+      title: '模型单价 / 消耗',
+      key: 'modelUsage',
+      width: 300,
       render: (_, row) => row.imageCount > 0
         ? <div className={styles.cellStack}>
           <strong>{row.imageAspectRatio || '未记录比例'} 档位</strong>
-          <span>平台成本（元 / 张） {formatModelPriceX10000(row.imageUpstreamCostYuanX10000)}</span>
-          <span>用户基础价（KK币 / 张） {formatModelPriceX10000(row.imageUserBasePriceKkX10000)}</span>
+          <span>成本 {formatModelPriceX10000(row.imageUpstreamCostYuanX10000)} 元 / 张 · 基础价 {formatModelPriceX10000(row.imageUserBasePriceKkX10000)} KK币 / 张</span>
+          <span>消耗 {formatPoints(row.imageCount)} 张</span>
         </div>
         : <div className={styles.cellStack}>
           <strong>Token 单价（元 / 百万 Token）</strong>
-          <span>输入 {formatModelPriceX10000(row.inputPriceX10000)}</span>
-          <span>输出 {formatModelPriceX10000(row.outputPriceX10000)}</span>
-          <span>缓存 {formatModelPriceX10000(row.cachedInputPriceX10000)}</span>
+          <span>输入 {formatModelPriceX10000(row.inputPriceX10000)} · 输出 {formatModelPriceX10000(row.outputPriceX10000)} · 缓存 {formatModelPriceX10000(row.cachedInputPriceX10000)}</span>
+          <span>消耗：输入 {formatPoints(row.inputTokens)} · 输出 {formatPoints(row.outputTokens)} · 缓存 {formatPoints(row.cachedInputTokens)}</span>
         </div>,
     },
     {
       title: '消耗的 KK币/织梦豆',
       key: 'userCharge',
-      width: 140,
+      width: 150,
       render: (_, row) => row.billedToUser
         ? <strong>{chargeText(row.currencyType, row.allocatedUnits)}</strong>
         : <span className={styles.muted}>未实际扣费</span>,
     },
     {
-      title: '模型消耗',
-      key: 'usage',
-      width: 220,
-      render: (_, row) => row.imageCount > 0
-        ? <div className={styles.cellStack}>
-          <span>图片数量 {formatPoints(row.imageCount)} 张</span>
-          <span>图片比例 {row.imageAspectRatio || '未记录'}</span>
-        </div>
-        : <div className={styles.cellStack}>
-          <span>输入 {formatPoints(row.inputTokens)} · 输出 {formatPoints(row.outputTokens)}</span>
-          <span>缓存 {formatPoints(row.cachedInputTokens)}</span>
-        </div>,
-    },
-    {
       title: '平台成本',
       dataIndex: 'platformCostMicroYuan',
       key: 'platformCostMicroYuan',
+      width: 140,
       render: (value) => `¥ ${formatMicroYuan(value)}`,
     },
     {
       title: '状态',
       key: 'status',
-      width: 170,
-      render: (_, row) => <div className={styles.cellStack}>
+      width: 110,
+      render: (_, row) => <div className={`${styles.cellStack} ${styles.statusStack}`}>
         <StatusTag status={row.status} />
-        {row.failureCode ? <span>{row.failureCode} · {row.failureMessage || '无失败详情'}</span> : null}
+        {row.failureCode ? <span className={styles.statusDetail} title={`${row.failureCode} · ${row.failureMessage || '无失败详情'}`}>{row.failureCode} · {row.failureMessage || '无失败详情'}</span> : null}
       </div>,
     },
     {
@@ -417,12 +472,77 @@ const AiUsageDashboard: React.FC = () => {
           </Card>
         </section>
 
+        <Card title="聚合筛选" className={`${styles.filterCard} ${styles.aggregateFilterCard}`}>
+          <div className={`${styles.filters} ${styles.aggregateFilters}`}>
+            <label className={`${styles.field} ${styles.timeField}`}><span>聚合时间</span><Segmented<PeriodPreset>
+              block
+              size="middle"
+              value={aggregatePeriod}
+              onChange={(value) => setAggregatePeriod(value)}
+              options={[
+                { label: '今日', value: 'today' },
+                { label: '近 7 天', value: '7d' },
+                { label: '近 30 天', value: '30d' },
+                { label: '自定义', value: 'custom' },
+              ]}
+            /></label>
+            {aggregatePeriod === 'custom' ? <label className={`${styles.field} ${styles.timeField}`}><span>自定义范围</span><DatePicker.RangePicker
+              size="middle"
+              showTime
+              allowClear
+              onChange={(dates) => setAggregateCustomRange(dates?.[0] && dates?.[1] ? {
+                from: dates[0].toISOString(),
+                to: dates[1].toISOString(),
+              } : null)}
+            /></label> : null}
+            <label className={styles.field}><span>作品</span><Input
+              size="middle"
+              allowClear
+              value={aggregateGameKeyword}
+              onChange={(event) => setAggregateGameKeyword(event.target.value)}
+              onPressEnter={() => queryAggregate(1)}
+              placeholder="输入作品名"
+            /></label>
+            <Button
+              type="primary"
+              size="middle"
+              className={styles.queryButton}
+              onClick={() => queryAggregate(1)}
+              loading={aggregateLoading}
+              disabled={aggregatePeriod === 'custom' && !aggregateCustomRange}
+            >查询聚合</Button>
+          </div>
+        </Card>
+
         <Card title="聚合统计" className={styles.tableCard}>
+          {aggregateError ? <Alert type="error" showIcon message={aggregateError} action={<Button onClick={() => queryAggregate(aggregatePage)}>重试聚合</Button>} /> : null}
           <Table<AiBillingUsageRow>
-            rowKey={(row) => `${row.fileId || 'none'}-${row.platformSource}-${row.gatewayRoute}-${row.modelId}-${row.status}-${row.currencyType}`}
+            rowKey={(row) => `${row.fileId || 'none'}-${row.platformSource}-${row.gatewayRoute}-${row.modelId}-${row.currencyType}`}
             columns={aggregateColumns}
             dataSource={summary.items}
-            pagination={false}
+            loading={aggregateLoading}
+            pagination={{
+              current: summary.aggregatePagination.page,
+              pageSize: summary.aggregatePagination.pageSize,
+              total: summary.aggregatePagination.total,
+              showSizeChanger: false,
+              showQuickJumper: true,
+              showTotal: (total) => `共 ${total} 条`,
+            }}
+            onChange={(paginationState, _filters, sorter) => {
+              const size = 10;
+              const activeSorter = Array.isArray(sorter) ? sorter[0] : sorter;
+              const sortBy: AggregateSortBy = activeSorter?.columnKey === 'platformCostMicroYuan'
+                ? 'cost'
+                : activeSorter?.columnKey === 'billedUnits'
+                  ? 'charge'
+                  : 'calls';
+              const sortOrder: AggregateSortOrder = activeSorter?.order === 'ascend' ? 'ascend' : 'descend';
+              const sortChanged = sortBy !== aggregateSortBy || sortOrder !== aggregateSortOrder;
+              setAggregateSortBy(sortBy);
+              setAggregateSortOrder(sortOrder);
+              queryAggregate(sortChanged ? 1 : paginationState.current || 1, size, sortBy, sortOrder);
+            }}
             scroll={{ x: 980 }}
             locale={{ emptyText: <Empty description="暂无符合条件的聚合数据" /> }}
           />
@@ -432,12 +552,12 @@ const AiUsageDashboard: React.FC = () => {
       <Card className={styles.filterCard} bordered={false}>
         <div className={styles.sectionHead}>
           <div><h3>明细筛选</h3><p>仅影响下方单条调用明细；总览、趋势、排行和聚合统计保持默认近 7 天范围。</p></div>
-          <Button size="large" onClick={refresh} loading={attemptLoading}>刷新明细</Button>
+          <Button onClick={refresh} loading={attemptLoading}>刷新明细</Button>
         </div>
         <div className={styles.filters}>
           <label className={`${styles.field} ${styles.timeField}`}><span>调用时间</span><Segmented<PeriodPreset>
             block
-            size="large"
+            size="middle"
             value={period}
             onChange={setPeriod}
             options={[
@@ -448,7 +568,7 @@ const AiUsageDashboard: React.FC = () => {
             ]}
           /></label>
           {period === 'custom' ? <label className={`${styles.field} ${styles.timeField}`}><span>自定义范围</span><DatePicker.RangePicker
-            size="large"
+            size="middle"
             showTime
             allowClear
             onChange={(dates) => setCustomRange(dates?.[0] && dates?.[1] ? {
@@ -456,10 +576,10 @@ const AiUsageDashboard: React.FC = () => {
               to: dates[1].toISOString(),
             } : null)}
           /></label> : null}
-          <label className={styles.field}><span>用户</span><Input size="large" allowClear value={userKeyword} onChange={(event) => setUserKeyword(event.target.value)} placeholder="昵称 / userCode / userId" /></label>
-          <label className={styles.field}><span>游戏</span><Input size="large" allowClear value={gameKeyword} onChange={(event) => setGameKeyword(event.target.value)} placeholder="游戏名 / fileId" /></label>
-          <label className={styles.field}><span>模型</span><Select
-            size="large"
+          <label className={styles.field}><span>用户</span><Input size="middle" allowClear value={userKeyword} onChange={(event) => setUserKeyword(event.target.value)} placeholder="昵称 / userCode / userId" /></label>
+          <label className={styles.field}><span>游戏</span><Input size="middle" allowClear value={gameKeyword} onChange={(event) => setGameKeyword(event.target.value)} placeholder="游戏名 / fileId" /></label>
+          <label className={`${styles.field} ${styles.modelFilterField}`}><span>模型</span><Select
+            size="middle"
             allowClear
             showSearch
             optionFilterProp="label"
@@ -468,7 +588,7 @@ const AiUsageDashboard: React.FC = () => {
             options={modelOptions}
             placeholder="全部模型"
           /></label>
-          <label className={styles.field}><span>状态</span><Select size="large" value={status} onChange={setStatus} options={[
+          <label className={`${styles.field} ${styles.statusFilterField}`}><span>状态</span><Select size="middle" value={status} onChange={setStatus} options={[
             { label: '全部状态', value: '' },
             { label: '进行中', value: 'started' },
             { label: '成功', value: 'succeeded' },
@@ -476,17 +596,17 @@ const AiUsageDashboard: React.FC = () => {
             { label: '未完整交付', value: 'incomplete' },
             { label: '已取消', value: 'cancelled' },
           ]} /></label>
-          <label className={styles.field}><span>是否实际扣费</span><Select<BilledToUserFilter> size="large" value={billedToUser} onChange={setBilledToUser} options={[
+          <label className={`${styles.field} ${styles.billedFilterField}`}><span>是否实际扣费</span><Select<BilledToUserFilter> size="middle" value={billedToUser} onChange={setBilledToUser} options={[
             { label: '全部', value: '' },
             { label: '已实际扣费', value: 'true' },
             { label: '未实际扣费', value: 'false' },
           ]} /></label>
-          <label className={styles.field}><span>币种</span><Select<CurrencyTypeFilter> size="large" value={currencyType} onChange={setCurrencyType} options={[
+          <label className={`${styles.field} ${styles.currencyFilterField}`}><span>币种</span><Select<CurrencyTypeFilter> size="middle" value={currencyType} onChange={setCurrencyType} options={[
             { label: '全部币种', value: '' },
             { label: 'KK币', value: 'kk' },
             { label: '织梦豆', value: 'points' },
           ]} /></label>
-          <Button type="primary" size="large" className={styles.queryButton} onClick={query} loading={attemptLoading} disabled={period === 'custom' && !customRange}>查询</Button>
+          <Button type="primary" className={`${styles.queryButton} ${styles.detailQueryButton}`} onClick={query} loading={attemptLoading} disabled={period === 'custom' && !customRange}>查询</Button>
         </div>
       </Card>
 
@@ -497,7 +617,7 @@ const AiUsageDashboard: React.FC = () => {
           columns={attemptColumns}
           dataSource={attempts}
           loading={attemptLoading}
-          scroll={{ x: 1660 }}
+          scroll={{ x: 1720 }}
           locale={{ emptyText: <Empty description="暂无符合条件的调用明细" /> }}
           pagination={{
             current: pagination.page,

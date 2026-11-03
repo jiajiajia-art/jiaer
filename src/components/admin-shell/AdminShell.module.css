@@ -1,0 +1,435 @@
+.shell {
+  --admin-accent: #1677ff;
+  --admin-accent-strong: #0958d9;
+  --admin-accent-soft: #e6f4ff;
+  --admin-border: #d9d9d9;
+  --admin-border-soft: #f0f0f0;
+  --admin-surface: #ffffff;
+  --admin-surface-soft: #fafcff;
+  --admin-text: #262626;
+  --admin-text-soft: #595959;
+  --admin-muted: #8c8c8c;
+  min-height: 100vh;
+  background: #f5f8ff;
+  color: var(--admin-text);
+}
+
+.layout {
+  min-height: 100vh;
+  background: #f5f8ff;
+}
+
+.header {
+  position: sticky;
+  z-index: 10;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  padding: 0 28px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(31, 56, 88, 0.04);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 232px;
+}
+
+.brandMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: #e6f4ff;
+  color: #1677ff;
+  font-size: 16px;
+}
+
+.brandName {
+  color: #262626;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.homeButton {
+  color: #595959;
+  font-weight: 500;
+}
+
+.homeButton:hover {
+  color: #1677ff !important;
+}
+
+.avatarButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px 2px 2px;
+  border: 0;
+  border-radius: 20px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.avatarButton:hover {
+  background: #f5f5f5;
+}
+
+.sider {
+  position: sticky !important;
+  top: 64px;
+  height: calc(100vh - 64px);
+  overflow: auto;
+  border-right: 1px solid #f0f0f0;
+  background: #fff !important;
+}
+
+.siderInner {
+  padding: 18px 12px 24px;
+}
+
+.menu {
+  border-inline-end: 0 !important;
+  background: transparent !important;
+}
+
+.menuItemLabel {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: auto;
+  min-width: 0;
+}
+
+.menuItemLabelWithSubmenu {
+  padding-inline-end: 24px;
+}
+
+.menuBadge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: #ff4d4f;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  text-align: center;
+}
+
+.content {
+  min-width: 0;
+  min-height: calc(100vh - 64px);
+  padding: 28px 32px 48px;
+  background: #f5f8ff;
+}
+
+.content :global(input:not([type='checkbox']):not([type='radio']):not([type='file'])),
+.content :global(select),
+.content :global(textarea) {
+  min-height: 36px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  background: #fff;
+  color: #262626;
+  font: inherit;
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.content :global(input:not([type='checkbox']):not([type='radio']):not([type='file']):focus),
+.content :global(select:focus),
+.content :global(textarea:focus) {
+  border-color: #1677ff;
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.14);
+}
+
+.content :global(button) {
+  border-radius: 8px;
+  font-family: inherit;
+}
+
+.content :global(button:focus-visible),
+.content :global(a:focus-visible) {
+  outline: 2px solid rgba(22, 119, 255, 0.48);
+  outline-offset: 2px;
+}
+
+.content :global(table) {
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #fff;
+}
+
+.content :global(th) {
+  background: #fafcff;
+  color: #595959;
+  font-weight: 600;
+}
+
+.content :global(th),
+.content :global(td) {
+  border-bottom-color: #f0f0f0;
+}
+
+.content :global(tbody tr:hover td) {
+  background: #f5faff;
+}
+
+.content :global([class*='panelStack']) {
+  gap: 16px;
+}
+
+.content :global([class*='heroCard']) {
+  padding: 16px 20px;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.content :global([class*='_card_']) {
+  border-color: #f0f0f0;
+  border-radius: 8px;
+  background-color: #fff;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.content :global(h1) {
+  color: #262626;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.content :global(h2) {
+  color: #262626;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.content :global(h3) {
+  color: #262626;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.content :global([class*='heroTitle']),
+.content :global([class*='heroDesc']),
+.content :global([class*='heroDescription']),
+.content :global([class*='sectionBadge']) {
+  display: none;
+}
+
+.content :global([class*='heroCard']:not(:has(button, input, [class*='heroMetric'], [class*='heroStats']))) {
+  display: none;
+}
+
+/* Keep legacy manager pages inside the shared shell visually consistent. */
+.content :global([class*='_heroCard_']),
+.content :global([class*='_card_']),
+.content :global([class*='_Card_']),
+.content :global([class*='_header_']),
+.content :global([class*='_panel_']),
+.content :global([class*='_section_']),
+.content :global([class*='_panelSection_']),
+.content :global([class*='_fieldCard_']),
+.content :global([class*='_statusCard_']),
+.content :global([class*='_itemCard_']) {
+  border: 1px solid #f0f0f0 !important;
+  border-radius: 8px !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+.content :global([class*='_heroCard_']) {
+  padding: 16px 20px !important;
+  justify-content: flex-end;
+}
+
+.content :global([class*='_card_']),
+.content :global([class*='_panel_']),
+.content :global([class*='_section_']) {
+  padding: 20px !important;
+}
+
+.content :global([class*='_tableWrap_']),
+.content :global([class*='_reviewTableWrapper_']) {
+  border: 1px solid #f0f0f0 !important;
+  border-radius: 8px !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+.content :global([class*='_tabs_']) {
+  border: 1px solid #f0f0f0 !important;
+  border-radius: 8px !important;
+  background: #fafcff !important;
+}
+
+.content :global([class*='_table_'] th),
+.content :global([class*='_reviewTable_'] th) {
+  border-bottom: 1px solid #f0f0f0 !important;
+  background: #fafcff !important;
+  color: #595959 !important;
+  font-weight: 600 !important;
+}
+
+.content :global([class*='_table_'] td),
+.content :global([class*='_reviewTable_'] td) {
+  border-bottom-color: #f0f0f0 !important;
+  color: #262626;
+}
+
+.content :global([class*='_table_'] tbody tr:hover td),
+.content :global([class*='_reviewTable_'] tbody tr:hover td) {
+  background: #f5faff !important;
+}
+
+.content :global([class*='_card_'] [class*='_Card_']),
+.content :global([class*='_card_'] [class*='_itemCard_']),
+.content :global([class*='_card_'] [class*='_statusCard_']) {
+  border-color: transparent !important;
+  background: #fafcff !important;
+  box-shadow: none !important;
+}
+
+.content :global([class*='_heroTitle_']),
+.content :global([class*='_heroDesc_']),
+.content :global([class*='_heroDescription_']),
+.content :global([class*='_sectionBadge_']) {
+  display: none !important;
+}
+
+.content :global(input:not([type='checkbox']):not([type='radio']):not([type='file'])),
+.content :global(select),
+.content :global(textarea) {
+  border-radius: 8px !important;
+  background: #fff !important;
+  color: #262626 !important;
+}
+
+.content :global(label[class*='_fieldLabel_']),
+.content :global(label[class*='_field_']),
+.content :global([class*='_fieldTitle_']) {
+  color: #262626 !important;
+}
+
+.content :global([class*='_fieldHint_']),
+.content :global([class*='_sectionHint_']),
+.content :global([class*='_cardHint_']) {
+  color: #8c8c8c !important;
+}
+
+.content :global(button[class*='Button_']) {
+  border-radius: 8px !important;
+  box-shadow: none;
+  transform: none;
+}
+
+.content :global(button[class*='_primaryButton_']),
+.content :global(button[class*='_primary_']),
+.content :global(button[class*='_publishButton_']),
+.content :global(button[class*='_decisionApprove_']),
+.content :global(button[class*='_approveButton_']) {
+  border: 1px solid #1677ff !important;
+  border-radius: 8px !important;
+  background: #1677ff !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+
+.content :global(button[class*='_secondaryButton_']),
+.content :global(button[class*='_secondary_']),
+.content :global(button[class*='_primaryGhostButton_']),
+.content :global(button[class*='_actionButton_']),
+.content :global(button[class*='_toolbarBtn_']),
+.content :global(button[class*='_decisionReject_']) {
+  border: 1px solid #d9d9d9 !important;
+  border-radius: 8px !important;
+  background: #fff !important;
+  color: #262626 !important;
+  box-shadow: none !important;
+}
+
+.content :global(button[class*='_dangerButton_']),
+.content :global(button[class*='_rejectButton_']) {
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+
+.content :global(button[class*='Active_']) {
+  border-color: #91caff !important;
+  background: #e6f4ff !important;
+  color: #1677ff !important;
+}
+
+.content :global([class*='_status_']),
+.content :global([class*='_statusTag_']),
+.content :global([class*='_actionBadge_']) {
+  border-radius: 6px !important;
+  box-shadow: none !important;
+}
+
+.content :global([class*='_emptyState_']) {
+  border: 1px dashed #d9d9d9;
+  border-radius: 8px;
+  background: #fafcff;
+  color: #8c8c8c;
+}
+
+/* Secondary pages should use the shell's scroll area instead of a nested card scroll. */
+.content :global([class*='_activityListPage_']) {
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.content :global([class*='_activityListPage_'] [class*='_list_']) {
+  max-height: none !important;
+  overflow-y: visible !important;
+  padding-right: 0 !important;
+}
+
+@media (max-width: 900px) {
+  .header {
+    padding: 0 16px;
+  }
+
+  .brand {
+    min-width: auto;
+  }
+
+  .brandName {
+    display: none;
+  }
+
+  .content {
+    padding: 20px 16px 36px;
+  }
+}

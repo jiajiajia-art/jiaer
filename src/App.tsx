@@ -1,5 +1,5 @@
 import './App.css'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import './styles/funloomToast.css';
 import Home from './page/Home';
@@ -76,6 +76,13 @@ import { getAppBasePath } from './lib/appBasePath';
 
 const FunloomLotteryPage = lazy(() => import('./activities/funloom-lottery-20260731'));
 const RomanceHost = lazy(() => import('./page/RomanceHost'));
+
+const LegacyPromotionRedirect = () => {
+  const { promotionView } = useParams<{ promotionView?: string }>();
+  const allowedViews = ['create', 'list', 'ticker', 'reviews'];
+  const targetView = allowedViews.includes(promotionView || '') ? promotionView : 'list';
+  return <Navigate to={`/operator/promotion/${targetView}`} replace />;
+};
 
 function App() {
   usePlatformDurationTracking();
@@ -195,17 +202,26 @@ function App() {
           <Route path="/creator/works/:fileId/stats" element={<CreatorRoute><CreatorWorkStats /></CreatorRoute>} />
           <Route path="/operator" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/reports" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
-          <Route path="/operator/promotion" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/promotion" element={<Navigate to="/operator/promotion/list" replace />} />
           <Route path="/operator/promotion/:promotionView" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/recruitment" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/special-authors" element={<AdminRoute><OperatorRoute><OperatorPanel /></OperatorRoute></AdminRoute>} />
-          <Route path="/operator/platform-works" element={<AdminRoute><OperatorRoute><OperatorPanel /></OperatorRoute></AdminRoute>} />
+          <Route path="/operator/platform-works" element={<Navigate to="/operator/platform-works/works" replace />} />
+          <Route path="/operator/platform-works/works" element={<AdminRoute><OperatorRoute><OperatorPanel /></OperatorRoute></AdminRoute>} />
+          <Route path="/operator/platform-works/appeals" element={<AdminRoute><OperatorRoute><OperatorPanel /></OperatorRoute></AdminRoute>} />
           <Route path="/operator/promoters" element={<AdminRoute><OperatorRoute><OperatorPanel /></OperatorRoute></AdminRoute>} />
           <Route path="/operator/daily-tasks" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
-          <Route path="/operator/withdraw" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
-          <Route path="/operator/ai-model-center" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/withdraw" element={<Navigate to="/operator/withdraw/applications" replace />} />
+          <Route path="/operator/withdraw/applications" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/withdraw/verify" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/withdraw/creator-earnings" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/ai-model-center" element={<Navigate to="/operator/ai-model-center/models" replace />} />
+          <Route path="/operator/ai-model-center/models" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/ai-model-center/usage" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/platform-benefits" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
-          <Route path="/operator/content-reports" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/content-reports" element={<Navigate to="/operator/content-reports/reports" replace />} />
+          <Route path="/operator/content-reports/reports" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/content-reports/penalties" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/appeals" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/publish-queue" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/works/:fileId/stats" element={<OperatorRoute><OperatorWorkStats /></OperatorRoute>} />
@@ -236,22 +252,39 @@ function App() {
           <Route path="/appeals/:appealId" element={<AppealResult />} />
           <Route path="/moderation/:moderationId" element={<ModerationAudit />} />
           <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
-          <Route path="/admin/promotions" element={<AdminRoute><AdminPanel /></AdminRoute>} />
-          <Route path="/admin/promotions/:promotionView" element={<AdminRoute><AdminPanel /></AdminRoute>} />
-          <Route path="/admin/points" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/banners" element={<AdminRoute><Navigate to="/admin/banners/home" replace /></AdminRoute>} />
+          <Route path="/admin/themes" element={<AdminRoute><Navigate to="/admin/themes/all" replace /></AdminRoute>} />
+          <Route path="/admin/promotions" element={<Navigate to="/operator/promotion/list" replace />} />
+          <Route path="/admin/promotions/:promotionView" element={<LegacyPromotionRedirect />} />
+          <Route path="/admin/points" element={<AdminRoute><Navigate to="/admin/points/activity" replace /></AdminRoute>} />
+          <Route path="/admin/points/activity" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/points/special" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/diamonds" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/creator-incentives" element={<AdminRoute><Navigate to="/operator/promoters" replace /></AdminRoute>} />
           <Route path="/admin/creator-benefits" element={<AdminRoute><Navigate to="/operator/special-authors" replace /></AdminRoute>} />
-          <Route path="/admin/subscriptions" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/subscriptions" element={<AdminRoute><Navigate to="/admin/subscriptions/records" replace /></AdminRoute>} />
+          <Route path="/admin/subscriptions/records" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/subscriptions/key-generation" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/subscriptions/key-records" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/documents" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/share-ratio" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/daily-tasks" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/users" element={<AdminRoute><AdminPanel /></AdminRoute>} />
-          <Route path="/admin/withdraw" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/withdraw" element={<AdminRoute><Navigate to="/admin/withdraw/applications" replace /></AdminRoute>} />
+          <Route path="/admin/withdraw/applications" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/withdraw/verify" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/withdraw/creator-earnings" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/image-gen" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/text-llm" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/ai-model-pricing" element={<AdminRoute><AdminPanel /></AdminRoute>} />
-          <Route path="/admin/ai-model-center" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/ai-model-center" element={<AdminRoute><Navigate to="/admin/ai-model-center/models" replace /></AdminRoute>} />
+          <Route path="/admin/ai-model-center/models" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/ai-model-center/usage" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/ai-model-center/runtime" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/banners/home" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/banners/activity" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/themes/all" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/themes/featured" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/lottery" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/comments" element={<AdminRoute><CommentAdminPage /></AdminRoute>} />
           {/* 功能注释：内容举报/申诉复核已迁到运营中心；旧路径兼容跳转 */}

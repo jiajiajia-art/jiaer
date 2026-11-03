@@ -39,6 +39,7 @@ test('validates positive amounts with at most two decimals and prevents negative
 test('admin panel exposes a dedicated KK coin route and manager', () => {
   const app = readFileSync(join(root, 'src/App.tsx'), 'utf8');
   const panel = readFileSync(join(root, 'src/page/AdminPanel.tsx'), 'utf8');
+  const navigation = readFileSync(join(root, 'src/components/admin-shell/adminNavigation.tsx'), 'utf8');
   let manager = '';
   try {
     manager = readFileSync(join(root, 'src/components/DiamondAdminManager.tsx'), 'utf8');
@@ -47,8 +48,8 @@ test('admin panel exposes a dedicated KK coin route and manager', () => {
   }
 
   assert.match(app, /path="\/admin\/diamonds"/);
-  assert.match(panel, /DiamondAdminManager/);
-  assert.match(panel, />KK币管理</);
+  assert.match(navigation, /key: 'diamonds', label: 'KK币管理', path: '\/admin\/diamonds'/);
+  assert.match(panel, /activeTab === 'diamonds' && <DiamondAdminManager \/>/);
   assert.match(manager, /role="dialog"/);
   assert.match(manager, /当前KK币/);
   assert.match(manager, /crypto\.randomUUID/);

@@ -21,6 +21,11 @@
   background: linear-gradient(135deg, #ffffff 0%, #faf9ff 100%);
 }
 
+.aggregateFilterCard {
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
 .sectionHead,
 .sectionTitle {
   display: flex;
@@ -53,9 +58,47 @@
 
 .filters {
   display: grid;
-  grid-template-columns: repeat(4, minmax(180px, 1fr)) auto;
+  grid-template-columns: minmax(0, 1.5fr) minmax(150px, 1fr) minmax(190px, 1.2fr) minmax(190px, 1.2fr) minmax(180px, 1fr);
   gap: 16px;
   align-items: end;
+}
+
+.filters > :nth-child(1) {
+  grid-column: span 2;
+}
+
+.modelFilterField {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.statusFilterField {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.billedFilterField {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.currencyFilterField {
+  grid-column: 4;
+  grid-row: 2;
+  max-width: 220px;
+}
+
+.detailQueryButton {
+  grid-column: 5;
+  grid-row: 2;
+}
+
+.aggregateFilters {
+  grid-template-columns: minmax(300px, 1.2fr) minmax(220px, .8fr) auto;
+}
+
+.aggregateFilters .timeField {
+  grid-column: auto;
 }
 
 .timeField {
@@ -73,7 +116,9 @@
 }
 
 .queryButton {
-  min-width: 96px;
+  min-width: 88px;
+  width: fit-content;
+  padding-inline: 24px;
 }
 
 .section {
@@ -120,6 +165,17 @@
   line-height: 1.45;
 }
 
+.statusStack {
+  min-width: 0;
+}
+
+.statusDetail {
+  overflow: hidden;
+  max-width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .tableCard :global(.ant-table-cell),
 .metric :global(.ant-statistic-content) {
   font-variant-numeric: tabular-nums;
@@ -138,6 +194,27 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .filters > :nth-child(1) {
+    grid-column: 1 / -1;
+  }
+
+  .modelFilterField {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .statusFilterField,
+  .billedFilterField,
+  .currencyFilterField,
+  .detailQueryButton {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .aggregateFilters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .chartGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -148,10 +225,6 @@
 }
 
 @media (max-width: 720px) {
-  .root {
-    gap: 14px;
-  }
-
   .sectionHead,
   .sectionTitle {
     align-items: stretch;
@@ -160,6 +233,29 @@
 
   .filters,
   .chartGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .filters > :nth-child(1),
+  .modelFilterField,
+  .statusFilterField,
+  .billedFilterField,
+  .currencyFilterField,
+  .detailQueryButton {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .filters > :nth-child(6),
+  .filters > :nth-child(7) {
+    max-width: none;
+  }
+
+  .queryButton {
+    width: 100%;
+  }
+
+  .aggregateFilters {
     grid-template-columns: 1fr;
   }
 

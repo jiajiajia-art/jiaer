@@ -48,3 +48,9 @@ signing/
 
 # local
 devApiPresets.ts
+
+# Local verification and build caches
+.playwright-cli/
+tmp/esbuild-temp/
+tmp/node-compile-cache/
+tmp/vite-build-temp/

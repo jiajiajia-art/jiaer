@@ -1,9 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   IoAdd,
-  IoAlertCircleOutline,
   IoCheckmarkCircle,
-  IoDocumentTextOutline,
   IoRefresh,
   IoSearch,
   IoSettingsOutline,
@@ -37,7 +36,6 @@ type AppealReviewAction = { decision: 'approved' | 'rejected'; appeal: GamePubli
 
 interface CreatorBenefitsAdminManagerProps {
   view: CreatorBenefitsAdminView;
-  appealPendingCount?: number;
   onAppealPendingCountChange?: (count: number) => void;
 }
 
@@ -66,9 +64,9 @@ const formatDateTime = (value?: string | null) => {
 
 const CreatorBenefitsAdminManager: React.FC<CreatorBenefitsAdminManagerProps> = ({
   view,
-  appealPendingCount = 0,
   onAppealPendingCountChange,
 }) => {
+  const location = useLocation();
   const { t } = useTranslation();
   const [authorKeyword, setAuthorKeyword] = useState('');
   const [authorSearchKeyword, setAuthorSearchKeyword] = useState('');
@@ -106,7 +104,7 @@ const CreatorBenefitsAdminManager: React.FC<CreatorBenefitsAdminManagerProps> = 
   const [isFinalConfirmOpen, setIsFinalConfirmOpen] = useState(false);
   const [contributionTarget, setContributionTarget] = useState<AdminManagedGame | null>(null);
   const [isSavingGame, setIsSavingGame] = useState(false);
-  const [gamesSection, setGamesSection] = useState<GamesSection>('works');
+  const gamesSection: GamesSection = location.pathname.endsWith('/appeals') ? 'appeals' : 'works';
   const [appealKeyword, setAppealKeyword] = useState('');
   const [appealStatus, setAppealStatus] = useState<GamePublishAppealStatus | ''>('pending');
   const [appealPage, setAppealPage] = useState(1);
@@ -116,7 +114,6 @@ const CreatorBenefitsAdminManager: React.FC<CreatorBenefitsAdminManagerProps> = 
   const [appealReviewRemark, setAppealReviewRemark] = useState('');
   const [isAppealConfirmOpen, setIsAppealConfirmOpen] = useState(false);
   const [isReviewingAppeal, setIsReviewingAppeal] = useState(false);
-  const displayedAppealPendingCount = appeals.pendingCount || appealPendingCount;
 
   const loadGames = useCallback(async () => {
     setIsLoadingGames(true);
@@ -402,14 +399,6 @@ const CreatorBenefitsAdminManager: React.FC<CreatorBenefitsAdminManagerProps> = 
 
   return (
     <div className={styles.root}>
-      <header className={styles.header}>
-        <div>
-          <span>{t('creatorBenefitsAdmin.eyebrow')}</span>
-          <h2>{t(view === 'benefits' ? 'creatorBenefitsAdmin.specialTitle' : 'creatorBenefitsAdmin.gamesTitle')}</h2>
-          <p>{t(view === 'benefits' ? 'creatorBenefitsAdmin.specialSubtitle' : 'creatorBenefitsAdmin.gamesSubtitle')}</p>
-        </div>
-      </header>
-
       {view === 'benefits' ? (
         <section className={styles.section}>
           <div className={styles.toolbar}>
@@ -491,32 +480,6 @@ const CreatorBenefitsAdminManager: React.FC<CreatorBenefitsAdminManagerProps> = 
         </section>
       ) : (
         <section className={styles.section}>
-          <div className={styles.managementTabs} role="tablist" aria-label={t('creatorBenefitsAdmin.gamesManagementTabs')}>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={gamesSection === 'works'}
-              className={gamesSection === 'works' ? styles.managementTabActive : ''}
-              onClick={() => setGamesSection('works')}
-            >
-              <IoDocumentTextOutline aria-hidden="true" />
-              {t('creatorBenefitsAdmin.worksSection')}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={gamesSection === 'appeals'}
-              className={gamesSection === 'appeals' ? styles.managementTabActive : ''}
-              onClick={() => setGamesSection('appeals')}
-            >
-              <IoAlertCircleOutline aria-hidden="true" />
-              {t('creatorBenefitsAdmin.appealsSection')}
-              {displayedAppealPendingCount > 0 ? (
-                <span className={styles.pendingBadge}>{displayedAppealPendingCount > 99 ? '99+' : displayedAppealPendingCount}</span>
-              ) : null}
-            </button>
-          </div>
-
           {gamesSection === 'works' ? (
             <>
               <div className={styles.toolbar}>

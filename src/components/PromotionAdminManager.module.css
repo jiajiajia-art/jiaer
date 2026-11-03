@@ -4,6 +4,13 @@
     gap: 22px;
 }
 
+.toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
 .grid {
     display: grid;
     grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
@@ -15,8 +22,12 @@
     padding: 24px;
     border-radius: 24px;
     border: 1px solid var(--admin-border, rgba(201, 139, 92, 0.22));
-    background: var(--admin-surface, rgba(255, 251, 246, 0.92));
+    background: #fff;
     box-shadow: 0 20px 56px var(--admin-shadow, rgba(98, 59, 33, 0.1));
+}
+
+.activityListPage {
+    min-width: 0;
 }
 
 .heroCard {
@@ -27,7 +38,7 @@
     padding: 28px 30px;
     border-radius: 24px;
     border: 1px solid var(--admin-border, rgba(201, 139, 92, 0.22));
-    background: var(--admin-panel, linear-gradient(135deg, rgba(255, 250, 244, 0.96) 0%, rgba(249, 239, 227, 0.96) 100%));
+    background: #fff;
     box-shadow: 0 20px 56px var(--admin-shadow, rgba(98, 59, 33, 0.1));
 }
 
@@ -65,7 +76,7 @@
     display: inline-flex;
     padding: 7px 14px;
     border-radius: 999px;
-    background: var(--admin-accent-soft, rgba(201, 115, 63, 0.12));
+    background: var(--admin-accent-soft, #e6f4ff);
     color: var(--admin-accent-strong, #aa5a2d);
     font-size: 12px;
     font-weight: 700;
@@ -108,7 +119,7 @@
     padding: 16px;
     border-radius: 16px;
     border: 1px solid rgba(205, 157, 120, 0.22);
-    background: var(--admin-surface-strong, linear-gradient(180deg, rgba(255, 252, 248, 0.98) 0%, rgba(250, 241, 232, 0.96) 100%));
+    background: #fff;
 }
 
 .reviewCard {
@@ -118,6 +129,10 @@
 .itemCardActive {
     border-color: var(--admin-border-strong, rgba(201, 115, 63, 0.34));
     box-shadow: 0 16px 34px rgba(201, 115, 63, 0.14);
+}
+
+.itemCard .actionRow {
+    justify-content: flex-end;
 }
 
 .itemHeader,
@@ -159,10 +174,15 @@
 }
 
 .reviewTableWrapper {
-    overflow-x: auto;
+    max-height: 560px;
+    overflow: auto;
     border-radius: 16px;
     border: 1px solid rgba(205, 157, 120, 0.22);
-    background: rgba(255, 252, 248, 0.98);
+    background: #fff;
+}
+
+.reviewResultsCard {
+    min-width: 0;
 }
 
 .reviewTable {
@@ -206,10 +226,13 @@
 }
 
 .reviewTable th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
     color: var(--admin-text-soft, #6f5a49);
     font-size: 12px;
     font-weight: 700;
-    background: rgba(246, 236, 224, 0.72);
+    background: #fff;
     white-space: nowrap;
 }
 
@@ -219,11 +242,11 @@
 }
 
 .reviewTableRow {
-    background: rgba(255, 252, 248, 0.98);
+    background: #fff;
 }
 
 .reviewTable tbody tr:hover {
-    background: rgba(250, 241, 232, 0.48);
+    background: #f5faff;
 }
 
 .reviewTable tbody tr:last-child td {
@@ -278,10 +301,15 @@
 
 .reviewFilterBar {
     display: flex;
+    grid-column: 1 / -1;
     align-items: flex-end;
     justify-content: space-between;
     gap: 14px;
     flex-wrap: wrap;
+}
+
+.reviewFilterBar .filterGrid {
+    flex: 1 1 720px;
 }
 
 .filterActions {
@@ -315,12 +343,30 @@
 }
 
 .formArea {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 20px;
+    align-items: start;
 }
 
-.formArea > div.fieldLabel,
+.formArea > .fieldLabel {
+    min-width: 0;
+}
+
+.tickerFormArea > .fieldLabel {
+    grid-column: 1 / -1;
+}
+
+.fieldFull,
+.formArea > .configSection,
+.formArea > .actionRow {
+    grid-column: 1 / -1;
+}
+
+.fieldHalf {
+    grid-column: span 1;
+}
+
 .formArea > div.fieldLabel + .actionRow {
     display: none;
 }
@@ -329,12 +375,43 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+    min-width: 0;
 }
 
 .configList {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.radioGroup {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.radioLabel {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 0 14px;
+    border: 1px solid rgba(205, 157, 120, 0.28);
+    border-radius: 12px;
+    background: #fff;
+    font-weight: 600;
+}
+
+.timeField {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
+}
+
+.timeFieldTitle {
+    color: var(--admin-text, #2f241d);
+    font-size: 14px;
+    font-weight: 700;
 }
 
 .configItem {
@@ -345,7 +422,7 @@
     padding: 14px 16px;
     border-radius: 18px;
     border: 1px solid rgba(205, 157, 120, 0.22);
-    background: rgba(255, 252, 248, 0.98);
+    background: #fff;
 }
 
 .configItemTitle {
@@ -361,59 +438,11 @@
     line-height: 1.6;
 }
 
-.tickerPreview {
+.tickerNotes {
     display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 16px;
-    border-radius: 16px;
-    border: 1px solid rgba(205, 157, 120, 0.22);
-    background: linear-gradient(180deg, rgba(255, 252, 248, 0.98) 0%, rgba(250, 241, 232, 0.92) 100%);
-}
-
-.tickerPreviewLabel {
-    color: var(--admin-text-soft, #6f5a49);
-    font-size: 12px;
-    font-weight: 700;
-}
-
-.tickerPreviewBar {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 14px;
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.88);
-    border: 1px solid rgba(205, 157, 120, 0.22);
-}
-
-.tickerPreviewIcon {
-    width: 36px;
-    height: 36px;
-    flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 999px;
-    background: rgba(201, 115, 63, 0.12);
-    color: var(--admin-accent-strong, #aa5a2d);
-}
-
-.tickerPreviewIcon svg {
-    width: 18px;
-    height: 18px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.8;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
-
-.tickerPreviewText {
-    color: var(--admin-text, #2f241d);
-    font-size: 14px;
-    font-weight: 600;
-    line-height: 1.6;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 16px;
 }
 
 .tickerMeta {
@@ -429,7 +458,7 @@
     padding: 12px 14px;
     border-radius: 16px;
     border: 1px solid rgba(205, 157, 120, 0.34);
-    background: rgba(255, 252, 248, 0.96);
+    background: #fff;
     color: var(--admin-text, #2f241d);
     font-size: 14px;
     box-sizing: border-box;
@@ -460,19 +489,19 @@
 .primaryButton {
     border: none;
     color: #fff;
-    background: linear-gradient(135deg, var(--admin-accent, #c9733f) 0%, #e08a4f 100%);
+    background: #1677ff;
 }
 
 .secondaryButton {
     border: 1px solid rgba(205, 157, 120, 0.34);
-    background: rgba(255, 252, 248, 0.96);
+    background: #fff;
     color: var(--admin-text, #2f241d);
 }
 
 .secondaryButtonActive {
-    border-color: transparent;
-    background: linear-gradient(135deg, var(--admin-accent, #c9733f) 0%, #e08a4f 100%);
-    color: #fff;
+    border-color: #91caff;
+    background: #e6f4ff;
+    color: #0958d9;
 }
 
 .dangerButton {
@@ -493,8 +522,8 @@
     align-items: center;
     padding: 5px 11px;
     border-radius: 999px;
-    background: rgba(201, 115, 63, 0.12);
-    color: var(--admin-accent-strong, #aa5a2d);
+    background: #e6f4ff;
+    color: #0958d9;
     font-size: 12px;
     font-weight: 700;
 }
@@ -514,7 +543,7 @@
     max-height: 220px;
     border-radius: 16px;
     object-fit: cover;
-    background: rgba(205, 157, 120, 0.16);
+    background: #fff;
 }
 
 .switchLabel {
@@ -523,7 +552,7 @@
     gap: 8px;
     padding: 8px 12px;
     border-radius: 14px;
-    background: rgba(201, 115, 63, 0.08);
+    background: #e6f4ff;
     color: var(--admin-text, #2f241d);
 }
 
@@ -571,7 +600,7 @@
     padding: 24px;
     border-radius: 24px;
     border: 1px solid var(--admin-border, rgba(201, 139, 92, 0.22));
-    background: var(--admin-surface, rgba(255, 251, 246, 0.98));
+    background: #fff;
     box-shadow: 0 20px 56px var(--admin-shadow, rgba(98, 59, 33, 0.1));
 }
 
@@ -588,7 +617,7 @@
     padding: 18px;
     border-radius: 16px;
     border: 1px solid rgba(205, 157, 120, 0.22);
-    background: var(--admin-surface-strong, linear-gradient(180deg, rgba(255, 252, 248, 0.98) 0%, rgba(250, 241, 232, 0.96) 100%));
+    background: #fff;
 }
 
 .detailSectionTitle {
@@ -664,7 +693,7 @@
 .detailVideo {
     width: 100%;
     border-radius: 18px;
-    background: rgba(205, 157, 120, 0.16);
+    background: #fff;
 }
 
 .detailImage {
@@ -679,7 +708,7 @@
 .emptyState {
     padding: 16px;
     border-radius: 18px;
-    background: var(--admin-surface-soft, rgba(250, 242, 234, 0.92));
+    background: #fff;
     color: var(--admin-text-soft, #6f5a49);
     line-height: 1.8;
 }
@@ -722,9 +751,24 @@
         grid-template-columns: 1fr;
     }
 
+    .formArea {
+        grid-template-columns: 1fr;
+    }
+
+    .fieldHalf,
+    .fieldFull,
+    .formArea > .configSection,
+    .formArea > .actionRow {
+        grid-column: 1;
+    }
+
     .configItem {
         flex-direction: column;
         align-items: flex-start;
+    }
+
+    .configList {
+        grid-template-columns: 1fr;
     }
 
     .reviewTable {
@@ -766,16 +810,4 @@
         border-radius: 20px;
     }
 
-    .tickerPreview {
-        padding: 14px;
-    }
-
-    .tickerPreviewBar {
-        align-items: flex-start;
-    }
-
-    .tickerPreviewIcon {
-        width: 32px;
-        height: 32px;
-    }
 }

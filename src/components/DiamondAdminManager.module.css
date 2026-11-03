@@ -7,7 +7,7 @@
 .heroCard,
 .card {
   border: 1px solid var(--admin-border, rgba(222, 191, 166, 0.45));
-  background: var(--admin-panel, rgba(255, 250, 245, 0.94));
+  background: #fff;
   box-shadow: 0 18px 40px var(--admin-shadow, rgba(181, 135, 92, 0.14));
 }
 
@@ -26,7 +26,7 @@
   align-items: center;
   padding: 8px 16px;
   border-radius: 999px;
-  background: var(--admin-accent-soft, rgba(209, 147, 99, 0.14));
+  background: var(--admin-accent-soft, #e6f4ff);
   color: var(--admin-accent-strong, #a5602f);
   font-size: 14px;
   font-weight: 700;
@@ -88,7 +88,7 @@
   box-sizing: border-box;
   border: 1px solid var(--admin-border-strong, rgba(220, 195, 175, 0.88));
   border-radius: 16px;
-  background: rgba(255, 253, 250, 0.98);
+  background: #fff;
   color: var(--admin-text, #34281f);
   font: inherit;
   transition: border-color 180ms ease, box-shadow 180ms ease;
@@ -141,7 +141,7 @@
   padding: 20px;
   border: 1px solid var(--admin-border, rgba(228, 205, 187, 0.7));
   border-radius: 18px;
-  background: rgba(255, 252, 249, 0.96);
+  background: #fff;
 }
 
 .userName {
@@ -159,7 +159,7 @@
   min-width: 116px;
   padding: 14px 16px;
   border-radius: 16px;
-  background: var(--admin-accent-soft, rgba(209, 147, 99, 0.14));
+  background: var(--admin-accent-soft, #e6f4ff);
   color: var(--admin-accent-strong, #a5602f);
   text-align: right;
 }
@@ -193,19 +193,19 @@
 
 .primaryButton {
   border: none;
-  background: linear-gradient(135deg, var(--admin-accent, #b56f3b), #d79c68);
+  background: #1677ff;
   color: #fffaf4;
 }
 
 .secondaryButton {
   border: 1px solid var(--admin-border-strong, rgba(220, 195, 175, 0.88));
-  background: rgba(255, 253, 250, 0.98);
+  background: #fff;
   color: var(--admin-text, #4c3d31);
 }
 
 .dangerButton {
   border: none;
-  background: linear-gradient(135deg, #ae4141, #d26352);
+  background: #cf1322;
   color: #fff;
 }
 
@@ -219,7 +219,7 @@
 .emptyState {
   padding: 18px;
   border-radius: 16px;
-  background: rgba(250, 242, 234, 0.92);
+  background: #fff;
 }
 
 .confirmOverlay {
@@ -241,7 +241,7 @@
   padding: 28px;
   border: 1px solid var(--admin-border, rgba(222, 191, 166, 0.45));
   border-radius: 24px;
-  background: var(--admin-panel, #fffaf5);
+  background: #fff;
   box-shadow: 0 24px 64px rgba(65, 39, 23, 0.24);
 }
 

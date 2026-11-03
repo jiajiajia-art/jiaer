@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import Navbar from '../../components/Layout/Navbar';
+import AdminShell from '../../components/admin-shell/AdminShell';
 import PromotionAdminManager from '../../components/PromotionAdminManager';
 import CreatorIncentiveAdminManager from '../../components/CreatorIncentiveAdminManager';
 import CreatorBenefitsAdminManager from '../../components/CreatorBenefitsAdminManager';
@@ -15,6 +15,7 @@ import operatorStatsApi, {
   type RecruitmentOverview,
   type RecruitmentUserItem,
 } from '../../api/stats/operatorStatsApi';
+import promotionApi from '../../api/promotion/promotionApi';
 import type { CreatorWorkItem, StatsOverview } from '../../api/stats/creatorStatsApi';
 import OperatorReports from './OperatorReports';
 import WithdrawAdminManager from '../../components/WithdrawAdminManager';
@@ -94,25 +95,7 @@ const OperatorPanel: React.FC = () => {
   const [worksSortField, setWorksSortField] = useState<WorksSortField | null>(null);
   const [worksSortDir, setWorksSortDir] = useState<SortDirection>('desc');
   const [appealPendingCount, setAppealPendingCount] = useState(0);
-
-  const tabs: Array<{ id: OperatorTab; label: string; path: string }> = useMemo(() => ([
-    { id: 'stats', label: t('operator.tabs.stats'), path: '/operator' },
-    { id: 'reports', label: t('operator.tabs.reports'), path: '/operator/reports' },
-    { id: 'promotions', label: t('operator.tabs.promotions'), path: '/operator/promotion' },
-    { id: 'recruitment', label: t('operator.tabs.recruitment'), path: '/operator/recruitment' },
-    { id: 'aiModelCenter', label: 'AI 模型中心', path: '/operator/ai-model-center' },
-    { id: 'platformBenefits', label: t('operator.tabs.platformBenefits'), path: '/operator/platform-benefits' },
-    ...(isAdmin ? [
-      { id: 'specialAuthors' as const, label: t('operator.tabs.specialAuthors'), path: '/operator/special-authors' },
-      { id: 'platformWorks' as const, label: t('operator.tabs.platformWorks'), path: '/operator/platform-works' },
-      { id: 'promoters' as const, label: t('operator.tabs.promoters'), path: '/operator/promoters' },
-    ] : []),
-    { id: 'dailyTasks', label: t('operator.tabs.dailyTasks'), path: '/operator/daily-tasks' },
-    { id: 'withdraw', label: t('operator.tabs.withdraw'), path: '/operator/withdraw' },
-    { id: 'contentReports', label: t('operator.tabs.contentReports'), path: '/operator/content-reports' },
-    { id: 'appeals', label: t('operator.tabs.appeals'), path: '/operator/appeals' },
-    { id: 'publishQueue', label: t('operator.tabs.publishQueue'), path: '/operator/publish-queue' },
-  ]), [isAdmin, t]);
+  const [promotionPendingReviewCount, setPromotionPendingReviewCount] = useState(0);
 
   const sortedWorks = useMemo(() => {
     if (!worksSortField) return works;
@@ -269,6 +252,19 @@ const OperatorPanel: React.FC = () => {
     };
   }, [activeTab, isAdmin]);
 
+  const refreshPromotionPendingReviewCount = useCallback(async () => {
+    try {
+      const response = await promotionApi.adminSubmissions({ reviewStatus: 'pending_review', page: 1 });
+      setPromotionPendingReviewCount(Number(response.data.data?.pagination?.total || 0));
+    } catch {
+      // 待处理角标失败不阻断运营中心其他功能。
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshPromotionPendingReviewCount();
+  }, [refreshPromotionPendingReviewCount]);
+
   const handleWorksPageSizeChange = (nextPageSize: number) => {
     setWorksPageSize(nextPageSize);
     setWorksPage(1);
@@ -284,6 +280,7 @@ const OperatorPanel: React.FC = () => {
       <StatsOverviewSection
         stats={overview}
         updatedAt={overview ? new Date().toLocaleString() : undefined}
+        variant="admin"
         loading={overviewLoading}
         loadFailed={overviewLoadFailed}
         onRetry={() => { void loadOverview(); }}
@@ -424,38 +421,17 @@ const OperatorPanel: React.FC = () => {
   const renderDailyTasks = () => <DailyTasksAdminManager />;
 
   return (
+    <AdminShell mode="operator" activeKey={activeTab} badges={{ platformWorks: appealPendingCount, promotions: promotionPendingReviewCount }}>
     <div className={adminStyles.pageRoot}>
-      <Navbar />
       <div className={adminStyles.pageBody}>
         <div className={adminStyles.workspace}>
-          <aside className={adminStyles.sidebar}>
-            <div className={adminStyles.sidebarHeader}>
-              <div className={adminStyles.sidebarTitle}>{t('operator.pageTitle')}</div>
-              <div className={adminStyles.sidebarDivider} />
-            </div>
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                className={`${adminStyles.navItem} ${activeTab === tab.id ? adminStyles.navItemActive : ''}`}
-                onClick={() => navigate(tab.path)}
-              >
-                {tab.id === 'platformWorks' && appealPendingCount > 0 ? (
-                  <span className={adminStyles.navCounter} aria-label={t('operator.pendingAppeals', { count: appealPendingCount })}>
-                    {appealPendingCount > 99 ? '99+' : appealPendingCount}
-                  </span>
-                ) : null}
-                <span className={adminStyles.navTitle}>{tab.label}</span>
-              </button>
-            ))}
-          </aside>
           <section className={adminStyles.contentArea}>
             {isLoading ? <div className={styles.emptyState}>{t('creatorStats.loading')}</div> : null}
             {!isLoading && activeTab === 'stats' ? renderStats() : null}
             {!isLoading && activeTab === 'reports' ? <OperatorReports /> : null}
             {activeTab === 'withdraw' ? <WithdrawAdminManager /> : null}
             {!isLoading && activeTab === 'promotions' ? (
-              <PromotionAdminManager pendingReviewCount={0} onRefreshCounts={async () => {}} />
+              <PromotionAdminManager onRefreshCounts={refreshPromotionPendingReviewCount} />
             ) : null}
             {!isLoading && activeTab === 'recruitment' ? renderRecruitment() : null}
             {activeTab === 'specialAuthors' ? <CreatorBenefitsAdminManager key="special-authors" view="benefits" /> : null}
@@ -463,7 +439,6 @@ const OperatorPanel: React.FC = () => {
               <CreatorBenefitsAdminManager
                 key="platform-works"
                 view="games"
-                appealPendingCount={appealPendingCount}
                 onAppealPendingCountChange={setAppealPendingCount}
               />
             ) : null}
@@ -478,6 +453,7 @@ const OperatorPanel: React.FC = () => {
         </div>
       </div>
     </div>
+    </AdminShell>
   );
 };
 

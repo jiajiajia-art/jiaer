@@ -224,7 +224,6 @@ const LotteryAdminManager: React.FC = () => {
   return (
     <div className={styles.wrap}>
       <div className={styles.toolbar}>
-        <h2>Funloom 限定抽奖 · 活动配置与名单</h2>
         <p className={styles.linkHint}>活动链接：/funloom/activity/{LOTTERY_SLUG}</p>
 
         <div className={styles.configCard}>

@@ -1,7 +1,19 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { Alert, Button, Card, Col, Row, Statistic } from 'antd';
+import {
+  ClockCircleOutlined,
+  DollarCircleOutlined,
+  EyeOutlined,
+  HeartFilled,
+  MessageOutlined,
+  PlayCircleOutlined,
+  ShareAltOutlined,
+  TeamOutlined,
+} from '@ant-design/icons';
 import type { StatsOverview } from '../../api/stats/creatorStatsApi';
 import createStyles from '../../page/Create.module.css';
+import styles from './StatsOverviewSection.module.css';
 
 /** 功能注释：数据概览图标对齐已发布作品效果图（assetsv2/home） */
 const HOME_ICON_BASE = `${import.meta.env.BASE_URL}data/assetsv2/home`;
@@ -10,6 +22,7 @@ const statsIcon = (name: string) => `${HOME_ICON_BASE}/${name}`;
 interface StatsOverviewSectionProps {
   stats: StatsOverview | null;
   updatedAt?: string;
+  variant?: 'legacy' | 'admin';
   /** 功能注释：汇总接口较慢；loading 时不应展示 0 误导运营 */
   loading?: boolean;
   loadFailed?: boolean;
@@ -27,6 +40,7 @@ const formatDuration = (seconds: number) => {
 const StatsOverviewSection: React.FC<StatsOverviewSectionProps> = ({
   stats,
   updatedAt,
+  variant = 'legacy',
   loading = false,
   loadFailed = false,
   onRetry,
@@ -34,14 +48,14 @@ const StatsOverviewSection: React.FC<StatsOverviewSectionProps> = ({
   const { t } = useTranslation();
 
   const items = [
-    { key: 'pv', label: t('creatorStats.totalViews'), value: stats?.pv ?? 0, icon: statsIcon('stats_view.webp') },
-    { key: 'uv', label: t('creatorStats.totalVisitors'), value: stats?.uv ?? 0, icon: statsIcon('icon_users.webp') },
-    { key: 'likes', label: t('creatorStats.totalLikes'), value: stats?.likeCount ?? 0, icon: statsIcon('icon_heart.webp') },
-    { key: 'plays', label: t('creatorStats.playCount'), value: stats?.playCount ?? 0, icon: statsIcon('stats_play.webp') },
-    { key: 'duration', label: t('creatorStats.playDuration'), value: formatDuration(stats?.playDurationSeconds ?? 0), icon: statsIcon('icon_history.webp') },
-    { key: 'shares', label: t('creatorStats.shareCount'), value: stats?.shareCount ?? 0, icon: statsIcon('stats_share.webp') },
-    { key: 'comments', label: t('creatorStats.commentCount'), value: stats?.commentCount ?? 0, icon: statsIcon('icon_comment.webp') },
-    { key: 'spend', label: t('creatorStats.spendPoints'), value: stats?.spendPoints ?? 0, icon: statsIcon('stats_income.webp') },
+    { key: 'pv', label: t('creatorStats.totalViews'), value: stats?.pv ?? 0, icon: statsIcon('stats_view.webp'), adminIcon: <EyeOutlined /> },
+    { key: 'uv', label: t('creatorStats.totalVisitors'), value: stats?.uv ?? 0, icon: statsIcon('icon_users.webp'), adminIcon: <TeamOutlined /> },
+    { key: 'likes', label: t('creatorStats.totalLikes'), value: stats?.likeCount ?? 0, icon: statsIcon('icon_heart.webp'), adminIcon: <HeartFilled /> },
+    { key: 'plays', label: t('creatorStats.playCount'), value: stats?.playCount ?? 0, icon: statsIcon('stats_play.webp'), adminIcon: <PlayCircleOutlined /> },
+    { key: 'duration', label: t('creatorStats.playDuration'), value: formatDuration(stats?.playDurationSeconds ?? 0), icon: statsIcon('icon_history.webp'), adminIcon: <ClockCircleOutlined /> },
+    { key: 'shares', label: t('creatorStats.shareCount'), value: stats?.shareCount ?? 0, icon: statsIcon('stats_share.webp'), adminIcon: <ShareAltOutlined /> },
+    { key: 'comments', label: t('creatorStats.commentCount'), value: stats?.commentCount ?? 0, icon: statsIcon('icon_comment.webp'), adminIcon: <MessageOutlined /> },
+    { key: 'spend', label: t('creatorStats.spendPoints'), value: stats?.spendPoints ?? 0, icon: statsIcon('stats_income.webp'), adminIcon: <DollarCircleOutlined /> },
   ];
 
   const renderValue = (item: typeof items[number]) => {
@@ -49,6 +63,37 @@ const StatsOverviewSection: React.FC<StatsOverviewSectionProps> = ({
     if (typeof item.value === 'string') return item.value;
     return item.value;
   };
+
+  if (variant === 'admin') {
+    return (
+      <section className={styles.adminStatsSection}>
+        <div className={styles.adminStatsHeader}>
+          {updatedAt ? <span className={styles.adminStatsUpdateTime}>{t('create.statsUpdateTime', { time: updatedAt })}</span> : null}
+        </div>
+        {loadFailed && !loading ? (
+          <Alert
+            type="error"
+            showIcon
+            message={t('operator.statsOverviewLoadFailed')}
+            action={onRetry ? <Button size="small" onClick={onRetry}>{t('operator.statsOverviewRetry')}</Button> : null}
+          />
+        ) : (
+          <Row gutter={[16, 16]}>
+            {items.map((item) => (
+              <Col key={item.key} xs={24} sm={12} lg={8} xl={6}>
+                <Card className={styles.adminStatCard} size="small" loading={loading}>
+                  <Statistic
+                    title={<span className={styles.adminStatTitle}><span className={styles.adminStatIcon}>{item.adminIcon}</span>{item.label}</span>}
+                    value={renderValue(item)}
+                  />
+                </Card>
+              </Col>
+            ))}
+          </Row>
+        )}
+      </section>
+    );
+  }
 
   return (
     <section className={createStyles.statsSection}>

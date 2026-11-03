@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import adminWithdrawApi, {
   type AdminWithdrawItem,
@@ -10,12 +11,12 @@ import operatorCreatorEarningsApi, {
   type CreatorEarningOperatorWithdrawalDetail,
   type CreatorEarningWithdrawalStatus,
 } from '../api/creatorEarnings/operatorCreatorEarningsApi';
+import { buildCreatorEarningsCsv } from '../lib/creatorEarningsCsv';
 import { getApiErrorMessage } from '../utils/error';
 import {
   formatDiamondTimelineLog,
   formatDiamondTimelineTime,
 } from '../utils/diamondTimelineLog';
-import MetricTitleTip from './stats/MetricTitleTip';
 import styles from './WithdrawAdminManager.module.css';
 
 type TabKey = 'withdraw' | 'verify' | 'creatorEarnings';
@@ -37,7 +38,12 @@ const statusClassName = (status: string) => {
 };
 
 const WithdrawAdminManager: React.FC = () => {
-  const [tab, setTab] = useState<TabKey>('withdraw');
+  const location = useLocation();
+  const tab: TabKey = location.pathname.endsWith('/verify')
+    ? 'verify'
+    : location.pathname.endsWith('/creator-earnings')
+      ? 'creatorEarnings'
+      : 'withdraw';
   const [keyword, setKeyword] = useState('');
   const [status, setStatus] = useState('');
   const [page, setPage] = useState(1);
@@ -49,6 +55,7 @@ const WithdrawAdminManager: React.FC = () => {
   const [verifyTotal, setVerifyTotal] = useState(0);
   const [creatorEarningsList, setCreatorEarningsList] = useState<CreatorEarningOperatorWithdrawal[]>([]);
   const [creatorEarningsHasNext, setCreatorEarningsHasNext] = useState(false);
+  const [exportingCreatorEarnings, setExportingCreatorEarnings] = useState(false);
 
   const [detail, setDetail] = useState<AdminWithdrawItem | null>(null);
   const [creatorEarningsDetail, setCreatorEarningsDetail] = useState<CreatorEarningOperatorWithdrawalDetail | null>(null);
@@ -249,6 +256,54 @@ const WithdrawAdminManager: React.FC = () => {
     }
   };
 
+  const handleExportCreatorEarnings = async () => {
+    if (exportingCreatorEarnings) return;
+    setExportingCreatorEarnings(true);
+    try {
+      const rows: CreatorEarningOperatorWithdrawal[] = [];
+      const limit = 100;
+      let offset = 0;
+      while (true) {
+        const response = await operatorCreatorEarningsApi.listWithdrawals({
+          status: (status || undefined) as CreatorEarningWithdrawalStatus | undefined,
+          limit,
+          offset,
+        });
+        if (!response.data.success || !response.data.data) {
+          throw new Error(response.data.message || '创作者收益提现列表加载失败');
+        }
+        const batch = response.data.data;
+        rows.push(...batch);
+        if (batch.length < limit) break;
+        offset += batch.length;
+      }
+
+      if (rows.length === 0) {
+        toast('当前状态下没有可导出的记录');
+        return;
+      }
+
+      const today = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Shanghai',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(new Date());
+      const blob = new Blob([buildCreatorEarningsCsv(rows)], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Funloom创作者收益提现_${today}.csv`;
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 0);
+      toast.success(`已导出 ${rows.length} 条创作者收益提现记录`);
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, '创作者收益提现导出失败'));
+    } finally {
+      setExportingCreatorEarnings(false);
+    }
+  };
+
   const handleApproveVerify = async (id: number) => {
     try {
       const resp = await adminWithdrawApi.approveVerify(id);
@@ -304,47 +359,6 @@ const WithdrawAdminManager: React.FC = () => {
 
   return (
     <div className={styles.panel}>
-      <div className={styles.header}>
-        <div>
-          <MetricTitleTip
-            className={styles.titleTip}
-            title={<h2 className={styles.title}>提现管理</h2>}
-            tip="审核KK币提现与创作者官方认证升级；导出含明文收款信息用于打款。"
-          />
-        </div>
-        <div className={styles.headerActions}>
-          {tab === 'withdraw' ? (
-            <button type="button" className={styles.secondaryButton} onClick={() => void handleExport()}>
-              导出已通过(CSV)
-            </button>
-          ) : null}
-        </div>
-      </div>
-
-      <div className={styles.tabs}>
-        <button
-          type="button"
-          className={`${styles.tab} ${tab === 'withdraw' ? styles.tabActive : ''}`}
-          onClick={() => { setTab('withdraw'); setPage(1); }}
-        >
-          提现申请
-        </button>
-        <button
-          type="button"
-          className={`${styles.tab} ${tab === 'verify' ? styles.tabActive : ''}`}
-          onClick={() => { setTab('verify'); setPage(1); }}
-        >
-          认证升级
-        </button>
-        <button
-          type="button"
-          className={`${styles.tab} ${tab === 'creatorEarnings' ? styles.tabActive : ''}`}
-          onClick={() => { setTab('creatorEarnings'); setStatus(''); setPage(1); setDetail(null); setCreatorEarningsDetail(null); }}
-        >
-          创作者分成提现
-        </button>
-      </div>
-
       {tab === 'creatorEarnings' ? (
         <div className={styles.toolbar}>
           <select className={styles.select} value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}>
@@ -355,6 +369,9 @@ const WithdrawAdminManager: React.FC = () => {
             <option value="rejected">已驳回</option>
           </select>
           <button type="button" className={styles.primaryButton} onClick={() => { if (page === 1) void loadCreatorEarnings(); else setPage(1); }}>搜索</button>
+          <button type="button" className={styles.secondaryButton} onClick={() => void handleExportCreatorEarnings()} disabled={exportingCreatorEarnings}>
+            {exportingCreatorEarnings ? '导出中…' : '导出数据表(CSV)'}
+          </button>
         </div>
       ) : (
         <div className={styles.toolbar}>
@@ -363,6 +380,11 @@ const WithdrawAdminManager: React.FC = () => {
             <option value="">全部状态</option><option value="pending">待审核</option><option value="approved">已通过</option><option value="rejected">已驳回</option>
           </select>
           <button type="button" className={styles.primaryButton} onClick={() => { setPage(1); if (tab === 'withdraw') void loadWithdraw(); else void loadVerify(); }}>搜索</button>
+          {tab === 'withdraw' ? (
+            <button type="button" className={styles.secondaryButton} onClick={() => void handleExport()}>
+              导出已通过(CSV)
+            </button>
+          ) : null}
         </div>
       )}
 

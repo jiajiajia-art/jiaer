@@ -47,10 +47,12 @@ export interface AiBillingVersion {
 
 export interface AiBillingUsageRow {
   fileId: string | null;
+  gameTitle: string | null;
   platformSource: string;
   gatewayRoute: string;
   modelId: string;
   status: string;
+  statusCounts: Record<'started' | 'succeeded' | 'failed' | 'incomplete' | 'cancelled', number>;
   currencyType: 'points' | 'kk';
   callCount: number;
   inputTokens: number;
@@ -58,6 +60,8 @@ export interface AiBillingUsageRow {
   cachedInputTokens: number;
   platformCostMicroYuan: number;
   billedUnits: number;
+  billedPoints: number;
+  billedKkMinor: number;
 }
 
 export interface AiBillingUsageOverview {
@@ -92,6 +96,14 @@ export interface AiBillingUsageSummary {
   trend: AiBillingUsageTrendRow[];
   modelRanking: AiBillingModelRankingRow[];
   items: AiBillingUsageRow[];
+  aggregatePagination: AiBillingAggregatePagination;
+}
+
+export interface AiBillingAggregatePagination {
+  page: number;
+  pageSize: 10 | 20 | 50 | 100;
+  total: number;
+  totalPages: number;
 }
 
 export interface AiBillingUsageAttempt {
@@ -155,6 +167,13 @@ export type AiBillingUsageFilters = {
   gameKeyword?: string;
   billedToUser?: 'true' | 'false';
   currencyType?: 'kk' | 'points';
+  aggregateFrom?: string;
+  aggregateTo?: string;
+  aggregateGameKeyword?: string;
+  aggregatePage?: number;
+  aggregatePageSize?: 10 | 20 | 50 | 100;
+  aggregateSortBy?: 'calls' | 'charge' | 'cost';
+  aggregateSortOrder?: 'ascend' | 'descend';
 };
 
 export interface AiBillingModelCatalogRow {

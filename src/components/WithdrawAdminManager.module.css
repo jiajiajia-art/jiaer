@@ -4,37 +4,6 @@
   gap: 16px;
 }
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 22px 24px;
-  border-radius: 18px;
-  border: 1px solid rgba(201, 139, 92, 0.22);
-  background: rgba(255, 251, 246, 0.96);
-  /* tip 气泡向下展开，避免被裁切 */
-  overflow: visible;
-}
-
-.titleTip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.title {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 700;
-  color: #3b2a1d;
-}
-
-.headerActions {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-}
-
 .tabs {
   display: flex;
   gap: 8px;
@@ -42,7 +11,7 @@
 
 .tab {
   border: 1px solid rgba(205, 157, 120, 0.42);
-  background: rgba(255, 252, 248, 0.94);
+  background: #fff;
   border-radius: 8px;
   padding: 8px 16px;
   cursor: pointer;
@@ -54,7 +23,7 @@
 .tabActive {
   border-color: var(--admin-accent, #c9733f);
   color: var(--admin-accent-strong, #aa5a2d);
-  background: var(--admin-accent-soft, rgba(201, 115, 63, 0.12));
+  background: #e6f4ff;
 }
 
 .toolbar {
@@ -120,7 +89,7 @@
 
 /* 暖陶土主按钮：贴合 AdminPanel 色板，避免高饱和红块 */
 .primaryButton {
-  background: linear-gradient(135deg, var(--admin-accent, #c9733f) 0%, #e08a4f 100%);
+  background: #1677ff;
   color: #fff;
   box-shadow: 0 8px 18px rgba(201, 115, 63, 0.22);
 }
@@ -136,7 +105,7 @@
 }
 
 .secondaryButton {
-  background: rgba(255, 252, 248, 0.94);
+  background: #fff;
   border: 1px solid rgba(205, 157, 120, 0.42);
   color: #3b2a1d;
 }
@@ -209,7 +178,7 @@
 }
 
 .table th {
-  background: #f3eadf;
+  background: #fff;
   color: #3b2a1d;
   font-weight: 700;
 }
@@ -328,7 +297,7 @@
   border-radius: 16px;
   border: 1px solid rgba(201, 139, 92, 0.3);
   background:
-    linear-gradient(180deg, rgba(255, 250, 244, 0.98) 0%, #ffffff 55%);
+    #fff;
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.7) inset,
     0 24px 48px rgba(59, 42, 29, 0.2);
@@ -379,7 +348,7 @@
   width: min(520px, 100%);
   height: 100%;
   overflow: auto;
-  background: #fffdf9;
+  background: #fff;
   color: #2f241e;
   padding: 20px;
   box-shadow: -12px 0 40px rgba(59, 42, 29, 0.18);
@@ -718,7 +687,7 @@
 
 .close:hover {
   border-color: #8f5c38;
-  background: #f3eadf;
+  background: #e6f4ff;
   color: #2f241e;
 }
 
@@ -786,7 +755,7 @@
   padding: 11px 13px;
   border: 1px solid #eadfd3;
   border-radius: 8px;
-  background: #f7efe6;
+  background: #fff;
   color: #2f241e;
 }
 
@@ -822,7 +791,7 @@
   padding: 12px 14px;
   border: 1px solid #eadfd3;
   border-radius: 10px;
-  background: #f7efe6;
+  background: #fff;
   color: #2f241e;
 }
 

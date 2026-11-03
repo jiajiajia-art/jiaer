@@ -1,17 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import Navbar from '../../components/Layout/Navbar';
+import { useParams } from 'react-router-dom';
+import AdminShell from '../../components/admin-shell/AdminShell';
 import StatsOverviewSection from '../../components/stats/StatsOverviewSection';
 import type { CreatorWorkDetail } from '../../api/stats/creatorStatsApi';
 import operatorStatsApi from '../../api/stats/operatorStatsApi';
 import adminStyles from '../AdminPanel.module.css';
-import styles from '../operator/OperatorPanel.module.css';
 
 const OperatorWorkStats: React.FC = () => {
   const { fileId = '' } = useParams();
-  const { t } = useTranslation();
-  const navigate = useNavigate();
   const [detail, setDetail] = useState<CreatorWorkDetail | null>(null);
 
   useEffect(() => {
@@ -36,18 +32,15 @@ const OperatorWorkStats: React.FC = () => {
   } : null;
 
   return (
+    <AdminShell mode="operator" activeKey="stats">
     <div className={adminStyles.pageRoot}>
-      <Navbar />
       <div className={adminStyles.pageBody}>
         <div className={adminStyles.contentArea}>
-          <button type="button" className={styles.linkLikeButton} onClick={() => navigate('/operator')}>
-            {t('creatorStats.backToOverview')}
-          </button>
-          <h1>{detail?.title || t('creatorStats.workStatsTitle')}</h1>
           <StatsOverviewSection stats={overview} updatedAt={new Date().toLocaleString()} />
         </div>
       </div>
     </div>
+    </AdminShell>
   );
 };
 

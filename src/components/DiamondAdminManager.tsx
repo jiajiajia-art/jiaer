@@ -209,12 +209,6 @@ const DiamondAdminManager: React.FC = () => {
 
   return (
     <div className={styles.panelStack}>
-      <section className={styles.heroCard}>
-        <div className={styles.sectionBadge}>KK币管理</div>
-        <h2 className={styles.heroTitle}>特殊 KK 币管理</h2>
-        <p className={styles.heroDesc}>按 Kuran 号定位账号，安全地增加或扣减 KK 币。</p>
-      </section>
-
       <div className={styles.managementGrid}>
         <section className={styles.card}>
           <div className={styles.cardHeader}>

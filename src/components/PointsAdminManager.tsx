@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import promotionApi from '../api/promotion/promotionApi';
@@ -31,16 +32,15 @@ const getRewardTaskStatusLabel = (status: PromotionRewardTask['status']) => {
 };
 
 const getRewardTaskDisplayName = (task: PromotionRewardTask) => task.nickname || task.userCode || task.phoneNumber || '-';
-const formatBadgeCount = (count: number) => (count > 99 ? '99+' : String(count));
 
 type PointsAdminManagerProps = {
-    pendingRewardCount: number;
     onRefreshCounts: () => Promise<void>;
 };
 
-const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCount, onRefreshCounts }) => {
+const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ onRefreshCounts }) => {
     const { t } = useTranslation();
-    const [activeTab, setActiveTab] = useState<PointsTab>('activity');
+    const location = useLocation();
+    const activeTab: PointsTab = location.pathname === '/admin/points/special' ? 'special' : 'activity';
     const [rewardTasks, setRewardTasks] = useState<PromotionRewardTask[]>([]);
     const [rewardTaskPagination, setRewardTaskPagination] = useState<AdminPromotionRewardTaskPagination>(emptyRewardTaskPagination);
     const [isLoadingRewardTasks, setIsLoadingRewardTasks] = useState(true);
@@ -508,34 +508,6 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
     return (
         <>
             <div className={styles.panelStack}>
-                <section className={styles.heroCard}>
-                    <div>
-                        <div className={styles.sectionBadge}>织梦豆管理</div>
-                        <h2 className={styles.heroTitle}>统一处理活动织梦豆发放与特殊织梦豆变更</h2>
-                        <p className={styles.heroDesc}>{t('admin.pointsManagerDesc')}</p>
-                    </div>
-                </section>
-
-                <div className={styles.tabRow}>
-                    <div className={styles.tabButtonWrap}>
-                        <button
-                            type="button"
-                            className={`${styles.tabButton} ${activeTab === 'activity' ? styles.tabButtonActive : ''}`}
-                            onClick={() => setActiveTab('activity')}
-                        >
-                            活动织梦豆管理
-                        </button>
-                        {pendingRewardCount > 0 ? <span className={styles.actionBadge}>{formatBadgeCount(pendingRewardCount)}</span> : null}
-                    </div>
-                    <button
-                        type="button"
-                        className={`${styles.tabButton} ${activeTab === 'special' ? styles.tabButtonActive : ''}`}
-                        onClick={() => setActiveTab('special')}
-                    >
-                        特殊织梦豆管理
-                    </button>
-                </div>
-
                 {activeTab === 'activity' ? renderActivityTable() : renderSpecialPanel()}
             </div>
 

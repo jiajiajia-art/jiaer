@@ -50,11 +50,11 @@
 }
 
 .sortableHeader:hover {
-  color: var(--admin-accent-strong, #aa5a2d);
+  color: var(--admin-accent-strong, #0958d9);
 }
 
 .sortableHeaderActive {
-  color: var(--admin-accent-strong, #aa5a2d);
+  color: var(--admin-accent-strong, #0958d9);
 }
 
 .sortIconMuted {
@@ -64,7 +64,7 @@
 }
 
 .sortIconActive {
-  color: var(--admin-accent-strong, #aa5a2d);
+  color: var(--admin-accent-strong, #0958d9);
   font-size: 18px;
   line-height: 1;
   font-weight: 700;
@@ -73,7 +73,7 @@
 .linkLikeButton {
   border: none;
   background: transparent;
-  color: var(--admin-accent, #c9733f);
+  color: var(--admin-accent, #1677ff);
   cursor: pointer;
   padding: 0;
 }

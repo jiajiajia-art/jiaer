@@ -112,10 +112,6 @@ const PlatformBenefitsManager: React.FC = () => {
   return (
     <section className={styles.manager}>
       <header className={styles.header}>
-        <div>
-          <h1>{t('operator.platformBenefits.title')}</h1>
-          <p>{t('operator.platformBenefits.description')}</p>
-        </div>
         <span className={styles.status}>{t('operator.platformBenefits.published')}</span>
       </header>
 
