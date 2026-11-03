@@ -128,22 +128,18 @@ test('GameGrid_封面应为竖版圆角且标题白色', () => {
   assert.doesNotMatch(grid, /welcome\.png/);
 });
 
-test('Create_草稿区应对齐新版文字标题与暗色筛选条', () => {
+test('Create_不再重复显示作品栏_作品栏样式保留给书架', () => {
   const tsx = read('src/page/Create.tsx');
+  const panel = read('src/components/Create/CreatorWorksPanel.tsx');
   const css = read('src/page/Create.module.css');
   const zh = read('src/i18n/locales/zh.json');
-  assert.match(tsx, /styles\.sectionHeading/);
-  assert.match(tsx, /styles\.sectionRule/);
-  assert.match(tsx, /styles\.draftFilterBar/);
-  assert.match(tsx, /create\.draftBox/);
-  assert.match(tsx, /create\.myData/);
+  assert.doesNotMatch(tsx, /CreatorWorksPanel/);
+  assert.match(panel, /create\.draftBox/);
+  assert.match(panel, /draftFilterChip/);
   assert.doesNotMatch(tsx, /create\.images\.draftBox|create\.images\.myData|create\.images\.publishWorks/);
   assert.doesNotMatch(tsx, /分界线\.png|分界线移动端\.png/);
-  assert.match(css, /\.sectionHeading\s*\{/);
-  assert.match(css, /\.draftFilterBar\s*\{[^}]*background:\s*#1A1A1A/);
   assert.match(css, /\.draftFilterChipActive\s*\{[^}]*background:\s*#8E2135/);
-  assert.match(zh, /"draftBox":\s*"草稿"/);
-  assert.match(zh, /"myData":\s*"我的数据"/);
+  assert.match(zh, /"draftBox":\s*"草稿箱"/);
 });
 
 test('GameGrid_角标应使用下载白火焰白心且禁止download切图', () => {

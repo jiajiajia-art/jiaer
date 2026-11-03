@@ -19,6 +19,7 @@ import {
   resolveGameCardAuthor,
 } from '../lib/gameCardAuthor';
 import { CardCoinIcon, CardFlameIcon, CardHeartIcon } from './GameCardStatIcons';
+import { creatorWorkStatusLabel, resolveCreatorWorkStatus } from '../utils/creatorWorkLifecycle';
 
 type GameGridLayoutVariant = 'default' | 'homeWide' | 'works';
 
@@ -37,6 +38,8 @@ interface GameGridProps {
     /** 首页推荐：长按 / 右键出屏蔽·举报菜单 */
     enableContentMenu?: boolean;
     onContentMenu?: (game: UserGameData, point: { x: number; y: number }) => void;
+    /** 创作者书架显示草稿/审核/发布生命周期标签。 */
+    showWorkStatus?: boolean;
 }
 
 const LONG_PRESS_MS = 480;
@@ -54,6 +57,7 @@ const GameGrid: React.FC<GameGridProps> = ({
     emptyText,
     enableContentMenu = false,
     onContentMenu,
+    showWorkStatus = false,
 }) => {
     const navigate = useNavigate();
     const { t } = useTranslation();
@@ -209,6 +213,11 @@ const GameGrid: React.FC<GameGridProps> = ({
                         onPointerCancel={clearLongPress}
                     >
                         <div className={styles.goodsImg}>
+                            {showWorkStatus ? (
+                                <span className={styles.workStatusTag}>
+                                    {creatorWorkStatusLabel(resolveCreatorWorkStatus(meta))}
+                                </span>
+                            ) : null}
                             {(() => {
                                 // 功能注释：列表封面统一走 display-cover；无封面时用暗色占位，避免 welcome 白底破暗色
                                 const displayCoverPath = resolveGameListCoverUrl({

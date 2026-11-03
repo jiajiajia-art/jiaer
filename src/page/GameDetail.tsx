@@ -20,7 +20,7 @@ import {
     resolveOriginalCoverUrl,
     coverUrlAfterDisplayCoverError,
 } from '../utils/constants';
-import { readGameDetailPreview } from '../utils/gameDetailNavigation';
+import { consumeShelfResumeOnce, readGameDetailPreview, readShelfResume } from '../utils/gameDetailNavigation';
 import { MdContentCopy } from 'react-icons/md';
 import AuthModal from '../components/AuthModal';
 import LoadSaveListModal from '../components/CreateGame/LoadSaveListModal';
@@ -44,6 +44,8 @@ import { prefetchGalgameDocument } from '../lib/galgame/galgameDocumentCache';
 import { DetailHeartIcon, DetailShareIcon, DetailStarIcon } from '../components/GameDetailStatIcons';
 import accountSocialApi from '../api/account/accountSocialApi';
 import { getApiErrorMessage } from '../utils/error';
+import { resolvePublicListingState } from '../utils/gameListingAccess';
+
 
 /** 功能注释：详情页操作图标；返回改用分类页同款描边箭头，浅色封面上更清晰 */
 const HOME_ICON_BASE = `${import.meta.env.BASE_URL}data/assetsv2/home`;
@@ -272,6 +274,7 @@ const GameDetail: React.FC = () => {
         () => normalizeGameMode(game?.engine, game?.game_tags),
         [game?.engine, game?.game_tags],
     );
+    const listingState = useMemo(() => resolvePublicListingState(game), [game]);
     const isGalgame = normalizedGameMode === 'TXT';
     const isNovel = normalizedGameMode === 'NOVEL';
     const isInteractiveVideo = normalizedGameMode === 'interactive-video';
@@ -904,6 +907,10 @@ const GameDetail: React.FC = () => {
 
     // 处理开始游戏（检查是否需要显示更新提示）
     const handleStartGame = async () => {
+        if (!listingState.canEnter) {
+            toast.error(listingState.message || '作品未上架');
+            return;
+        }
         if (!checkAuth()) return;
 
         // 如果游戏已更新，先显示提示模态框
@@ -1335,9 +1342,10 @@ const GameDetail: React.FC = () => {
         }
     };
 
-    const handleLoadSave = async (saveId: string) => {
+    /** 读档进入游戏；返回是否成功。silent 时失败不弹通用 toast，由调用方给出具体原因（书架续玩） */
+    const handleLoadSave = async (saveId: string, opts: { silent?: boolean } = {}): Promise<boolean> => {
         try {
-            if (!fileId) return;
+            if (!fileId) return false;
             setIsLoading(true);
             // 进入游戏前清理运行时（保留详情，便于分享/RouteReporter）
             useGameStore.getState().clearPlayRuntime();
@@ -1349,18 +1357,44 @@ const GameDetail: React.FC = () => {
                 useGameStore.getState().setFileId(fileId);
                 useGameStore.getState().setSessionId(sessionId);
                 navigate('/galgame', { state: { saveEntry: 'load' } });
-                return;
+                return true;
             }
-            toast.error(resp.data.message || t('galgame.requestError'));
+            if (!opts.silent) toast.error(resp.data.message || t('galgame.requestError'));
         } catch (e) {
             console.error('加载存档失败:', e);
-            toast.error(t('galgame.requestError'));
+            if (!opts.silent) toast.error(t('galgame.requestError'));
         } finally {
             setIsLoading(false);
             setIsLoadSaveOpen(false);
             setPreviewItem(null);
         }
+        return false;
     };
+
+    // 书架「继续游玩」：详情加载完成后自动续玩 / 读档一次（走详情页同一套登录、更新提示、付费校验）；
+    // 读档失败时打开存档列表让玩家改选，不自动清档重开
+    useEffect(() => {
+        const intent = readShelfResume(location.state, fileIdParam);
+        if (!intent || !game || isLoading) return;
+        if (!consumeShelfResumeOnce(location.key)) return;
+        void (async () => {
+            if (!checkAuth()) return;
+            if (intent.saveId) {
+                const ok = await handleLoadSave(intent.saveId, { silent: true });
+                if (!ok) {
+                    toast.error('该存档读取失败（可能已损坏或版本不兼容），请选择其他存档');
+                    setIsLoadSaveOpen(true);
+                }
+                return;
+            }
+            if (isNovel || isInteractiveVideo) {
+                await handleOpenStartOptions();
+                return;
+            }
+            await handleStartGame();
+        })();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [game, isLoading, location.key, location.state, fileIdParam]);
 
     if (isLoading) {
         return (
@@ -1386,6 +1420,31 @@ const GameDetail: React.FC = () => {
         );
     }
 
+    // 功能注释：草稿/待审/驳回/下架 — 公开链接只显示说明，不进入作品
+    if (!listingState.canEnter) {
+        return (
+            <div className={styles.pageContainer} data-listing-gate={listingState.code}>
+                <div className={styles.topBar}>
+                    <div className={styles.topBarContent}>
+                        <button className={styles.backIconButton} onClick={handleBack} aria-label={t('gameDetail.back')}>
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M15 6L9 12L15 18" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div className={styles.errorContainer}>
+                    <p style={{ fontSize: '1.25rem', fontWeight: 700 }}>{listingState.message || '未上架'}</p>
+                    <p style={{ opacity: 0.75, marginTop: 8 }}>
+                        {game.title ? `「${game.title}」` : ''}请从「全部作品」进入已上架作品。
+                    </p>
+                    <button onClick={() => navigate('/home')} className={styles.backButton}>
+                        {t('gameDetail.backToHome')}
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className={styles.pageContainer}>

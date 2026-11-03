@@ -1,12 +1,31 @@
 import { useEffect, useRef, useState } from "react"
-import { loadAssets, uploadImage } from "../lib/freeStyle"
+import { loadAssets, saveAssets, uploadImage } from "../lib/freeStyle"
 import { displayableImageSrc } from "../lib/displayableImageSrc"
 import { mediaCheck } from "../game/engineRules"
+import {
+  SCENE_PORTRAIT_GEN_SIZE,
+  SCENE_PORTRAIT_HINT,
+  fileToScenePortraitDataUrl,
+  rasterToScenePortraitDataUrl,
+} from "../lib/scenePortrait"
+import { Modal } from "./ui"
+import AiImageGen from "./AiImageGen"
 
 /* 通用图片选择器：点缩略图或「上传」直接选本地图片（有图床走图床，否则本地压缩，并收进素材库）；
- * 也可从素材库挑选、粘贴链接、清除。所有美化里需要图片的地方共用。 */
+ * 也可从素材库挑选、粘贴链接、清除。所有美化里需要图片的地方共用。
+ * scenePortrait：地点场景图专用，上传/素材库/生图一律裁成 9:16 / 1080×1920；「链接」改为「生图」。
+ * aiGen：在「上传」旁出「生图」按钮，弹窗内填提示词；走平台既有生图入口，不在页内铺输入框。 */
 const btn =
   "rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40"
+
+export type ImagePickerAiGen = {
+  /** 功能注释：弹窗 textarea 占位，描述期望画面 */
+  placeholder?: string
+  /** 功能注释：传给平台生图的尺寸，如 1024x1792 / 1080x1920 */
+  size?: string
+  /** 功能注释：打开弹窗时预填提示词（如当前场景描述） */
+  initialPrompt?: string
+}
 
 export default function ImagePicker({
   value,
@@ -15,6 +34,8 @@ export default function ImagePicker({
   max = 1600,
   thumb = "h-12 w-12",
   hint,
+  scenePortrait = false,
+  aiGen,
 }: {
   value?: unknown
   onChange: (url?: string) => void
@@ -22,17 +43,56 @@ export default function ImagePicker({
   max?: number
   thumb?: string
   hint?: string
+  /** 功能注释：地点场景图裁成 1080×1920 竖图，并用生图替代链接。 */
+  scenePortrait?: boolean
+  /** 功能注释：开启后在上传旁显示「生图」，弹窗调用平台生图，不内联铺输入框。 */
+  aiGen?: ImagePickerAiGen
 }) {
   const ref = useRef<HTMLInputElement>(null)
   const [mode, setMode] = useState<"" | "lib" | "link">("")
   const [link, setLink] = useState("")
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState("")
+  const [genOpen, setGenOpen] = useState(false)
   const src = displayableImageSrc(value)
   const [broken, setBroken] = useState(false)
   useEffect(() => { setBroken(false) }, [src])
   const show = Boolean(src) && !broken
   const assets = mode === "lib" ? loadAssets() : []
+  const portraitHint = scenePortrait ? SCENE_PORTRAIT_HINT : hint
+  // 功能注释：地点场景用「生图」替换「链接」；封面等仍可同时有生图+链接
+  const genOpts: ImagePickerAiGen | undefined = aiGen
+    ?? (scenePortrait
+      ? { size: SCENE_PORTRAIT_GEN_SIZE, placeholder: "按场景描述生成 9:16 竖图…" }
+      : undefined)
+  const showGen = Boolean(genOpts)
+  const showLink = !scenePortrait
+
+  const rememberAsset = (url: string, name = label) => {
+    const a = loadAssets()
+    if (!a.some((x) => x.url === url)) {
+      saveAssets([{ id: Math.random().toString(36).slice(2, 9), name: name.slice(0, 24) || "图片", url, at: Date.now() }, ...a])
+      window.dispatchEvent(new Event("star:assets"))
+    }
+  }
+
+  const applyUrl = async (url: string) => {
+    setBusy(true)
+    setErr("")
+    try {
+      if (scenePortrait) {
+        const fitted = await rasterToScenePortraitDataUrl(url)
+        onChange(fitted)
+        rememberAsset(fitted)
+      } else {
+        onChange(url)
+      }
+      setMode("")
+    } catch (e) {
+      setErr(`应用失败：${(e as Error).message}`)
+    }
+    setBusy(false)
+  }
 
   const pickFile = async (f?: File) => {
     if (!f) return
@@ -42,8 +102,16 @@ export default function ImagePicker({
     setBusy(true)
     setErr("")
     try {
-      onChange((await uploadImage(f, max)).url)
-      setMode("")
+      if (scenePortrait) {
+        // 功能注释：任意本地图 cover 裁成 1080×1920 后写入预览，避免尺寸不合规时「点了没反应」
+        const fitted = await fileToScenePortraitDataUrl(f)
+        onChange(fitted)
+        rememberAsset(fitted, f.name.replace(/\.[^.]+$/, ""))
+        setMode("")
+      } else {
+        onChange((await uploadImage(f, max)).url)
+        setMode("")
+      }
     } catch (e) {
       setErr(`上传失败：${(e as Error).message}`)
     }
@@ -90,6 +158,17 @@ export default function ImagePicker({
           >
             上传
           </button>
+          {/* 功能注释：生图与上传并列；点开走 Modal，页内不铺提示词输入框 */}
+          {showGen && (
+            <button
+              type="button"
+              className={btn}
+              disabled={busy}
+              onClick={() => setGenOpen(true)}
+            >
+              生图
+            </button>
+          )}
           <button
             type="button"
             className={btn}
@@ -98,15 +177,17 @@ export default function ImagePicker({
           >
             素材库
           </button>
-          <button
-            type="button"
-            className={btn}
-            aria-pressed={mode === "link"}
-            onClick={() => setMode(mode === "link" ? "" : "link")}
-          >
-            链接
-          </button>
-          {value && (
+          {showLink && (
+            <button
+              type="button"
+              className={btn}
+              aria-pressed={mode === "link"}
+              onClick={() => setMode(mode === "link" ? "" : "link")}
+            >
+              链接
+            </button>
+          )}
+          {Boolean(value) && (
             <button
               type="button"
               className={`${btn} hover:!border-danger hover:!text-danger`}
@@ -117,11 +198,11 @@ export default function ImagePicker({
           )}
         </div>
       </div>
-      {hint && !err && (
-        <p className="mt-1 text-[10.5px] text-ink-soft">{hint}</p>
+      {portraitHint && !err && (
+        <p className="mt-1 text-[10.5px] text-ink-soft">{portraitHint}</p>
       )}
       {err && <p className="mt-1 text-[11px] text-danger">{err}</p>}
-      {mode === "link" && (
+      {showLink && mode === "link" && (
         <div className="mt-2 flex gap-1.5">
           <input
             value={link}
@@ -130,9 +211,7 @@ export default function ImagePicker({
             autoFocus
             onKeyDown={(e) => {
               if (e.key === "Enter" && /^https?:\/\//.test(link.trim())) {
-                onChange(link.trim())
-                setLink("")
-                setMode("")
+                void applyUrl(link.trim()).then(() => setLink(""))
               }
             }}
             className="min-w-0 flex-1 rounded-xl border border-line bg-paper px-3 py-1.5 text-[12.5px] text-ink outline-none focus:border-jade"
@@ -140,11 +219,9 @@ export default function ImagePicker({
           <button
             type="button"
             className={btn}
-            disabled={!/^https?:\/\//.test(link.trim())}
+            disabled={!/^https?:\/\//.test(link.trim()) || busy}
             onClick={() => {
-              onChange(link.trim())
-              setLink("")
-              setMode("")
+              void applyUrl(link.trim()).then(() => setLink(""))
             }}
           >
             应用
@@ -159,10 +236,8 @@ export default function ImagePicker({
                 type="button"
                 key={a.id}
                 title={a.name}
-                onClick={() => {
-                  onChange(a.url)
-                  setMode("")
-                }}
+                disabled={busy}
+                onClick={() => { void applyUrl(a.url) }}
                 className={`aspect-square overflow-hidden rounded-md border ${
                   a.url === value
                     ? "border-jade ring-2 ring-jade/40"
@@ -193,6 +268,20 @@ export default function ImagePicker({
           e.target.value = ""
         }}
       />
+      {/* 功能注释：生图弹窗复用 AiImageGen → platformImageGen，采用后写回 onChange 并关闭 */}
+      {genOpen && genOpts && (
+        <Modal title="生图" onClose={() => setGenOpen(false)}>
+          <AiImageGen
+            bare
+            size={genOpts.size ?? (scenePortrait ? SCENE_PORTRAIT_GEN_SIZE : undefined)}
+            placeholder={genOpts.placeholder}
+            initialPrompt={genOpts.initialPrompt}
+            onPick={(url) => {
+              void applyUrl(url).then(() => setGenOpen(false))
+            }}
+          />
+        </Modal>
+      )}
     </div>
   )
 }

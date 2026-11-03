@@ -12,7 +12,7 @@ import { StatBars, WorksChips, ProfileBasics, ProfileRelations, ProfileGroup, Pr
 export function CompanyModal({ companyId, roster, onOpenStar, onClose }: { companyId: string; roster: NPC[]; onOpenStar: (id: string) => void; onClose: () => void }) {
   const meta = companyMeta(companyId);
   return (
-    <Modal title={meta.name} onClose={onClose} wide>
+    <Modal title={meta.name} onClose={onClose}>
       <div className="mb-3 flex items-center gap-2">
         <Chip tone="gold">声望 {meta.prestige}</Chip>
         <span className="text-[12px] text-ink-soft">旗下 {roster.length} 位艺人</span>
@@ -90,7 +90,7 @@ export function StarModal({ star, onOpenStar, onClose }: { star: NPC; onOpenStar
   const hasContact = (game?.phone?.contacts ?? []).includes(star.id);
   const tile = "flex flex-col items-start gap-0.5 rounded-xl px-3 py-2.5 text-left transition active:scale-[0.98]";
   return (
-    <Modal title={`${star.name} · 人物资料`} onClose={onClose} wide>
+    <Modal title={`${star.name} · 人物资料`} onClose={onClose}>
       <ProfileHero
         name={star.name}
         sub={`艺人 · ${star.dir}`}

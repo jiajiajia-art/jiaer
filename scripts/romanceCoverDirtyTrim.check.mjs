@@ -29,11 +29,14 @@ test('sanitizeModStrings_须丢掉对象型cover.css并收成可预览封面', a
     },
   };
   const clean = sanitizeModStrings(dirty);
-  assert.equal(clean.content.cover.css, undefined); // 对象 css 丢弃
+  // 功能注释：css 必须是字符串；对象禁止解包成 "red"（会污染 DIY 样式）
+  assert.equal(clean.content.cover.css, undefined);
   assert.equal(clean.content.cover.kicker, '1'); // 数字收成字符串，CoverView 可 .trim
-  assert.equal(clean.content.cover.cta, undefined); // 对象丢弃
-  assert.equal(clean.content.cover.bgPrompt, undefined);
-  assert.equal(clean.content.cover.title, '');
+  // 功能注释：文案包装字段（t/s/p…）按 asTrimmedString 解出，避免必填被洗空
+  assert.equal(clean.content.cover.cta, '开始');
+  assert.equal(clean.content.cover.bgPrompt, '雨夜');
+  assert.equal(clean.content.cover.title, '封');
+  assert.equal(clean.content.cover.subtitle, '副');
   assert.equal(clean.content.cover.style?.css, undefined);
   assert.equal(clean.content.cover.style?.titleColor, 'gold');
 });

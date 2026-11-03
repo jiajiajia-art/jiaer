@@ -64,8 +64,8 @@ const resolveInitialThemeTagIds = (
             : (data as { theme_tag_ids?: number[] } | undefined)?.theme_tag_ids,
     );
     if (detailTagIds.length > 0) {
-        const validThemeTagIds = new Set(themeTags.map((tag) => tag.id));
-        return detailTagIds.filter((id) => validThemeTagIds.has(id));
+        // 功能注释：已停用题材仍回显（单选取第一个），便于标「已停用」
+        return detailTagIds.slice(0, 1);
     }
 
     const themeNames = Array.isArray((data?.worldSetting as { Theme?: string[] } | undefined)?.Theme)
@@ -133,6 +133,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
     const [availableThemeTags, setAvailableThemeTags] = useState<FlatThemeTag[]>([]);
     const [selectedThemeTagIds, setSelectedThemeTagIds] = useState<number[]>([]);
     const [persistedThemeTagIds, setPersistedThemeTagIds] = useState<number[]>([]);
+    const [persistedThemeTagNames, setPersistedThemeTagNames] = useState<string[]>([]);
     const [themeTagError, setThemeTagError] = useState<string>('');
     const [selectedAudienceType, setSelectedAudienceType] = useState<ContentAudience | null>(null);
     const [persistedAudienceType, setPersistedAudienceType] = useState<ContentAudience | null>(null);
@@ -153,10 +154,24 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
 
     const currentFileId = gameData?.fileId || fileId;
     const isWorldInteractionMode = mode === 'worldInteraction';
-    const displayThemeTags = React.useMemo(
-        // 实现 Step2 展示全部可选末级标签
-        () => availableThemeTags,
+    const displayThemeTags = React.useMemo(() => {
+        // 功能注释：启用树 + 本作品已绑但已停用的题材（只展示，不可新选）
+        const enabledIds = new Set(availableThemeTags.map((tag) => tag.id));
+        const extras: FlatThemeTag[] = [];
+        persistedThemeTagIds.forEach((id, index) => {
+            if (enabledIds.has(id)) return;
+            const name = persistedThemeTagNames[index] || `题材#${id}`;
+            extras.push({ id, name, parentName: '', pathLabel: name, isLeaf: true });
+        });
+        return [...availableThemeTags, ...extras];
+    }, [availableThemeTags, persistedThemeTagIds, persistedThemeTagNames]);
+    const enabledThemeTagIdSet = React.useMemo(
+        () => new Set(availableThemeTags.map((tag) => tag.id)),
         [availableThemeTags],
+    );
+    const disabledSelectedThemeTagIds = React.useMemo(
+        () => selectedThemeTagIds.filter((id) => !enabledThemeTagIdSet.has(id)),
+        [selectedThemeTagIds, enabledThemeTagIdSet],
     );
 
     const {
@@ -224,6 +239,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         const fetchSelectedThemeTags = async () => {
             if (!currentFileId) {
                 setPersistedThemeTagIds([]);
+                setPersistedThemeTagNames([]);
                 setPersistedAudienceType(null);
                 return;
             }
@@ -232,8 +248,13 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                 const resp = await getGameDataApi.getGameDetail({ fileId: currentFileId });
                 if (!resp.data?.success || cancelled) return;
                 const nextThemeTagIds = normalizeThemeTagIds(resp.data.data?.theme_tag_ids);
-                // 实现编辑页作品标签回显
+                // 实现编辑页作品标签回显（含已停用）
                 setPersistedThemeTagIds(nextThemeTagIds);
+                setPersistedThemeTagNames(
+                    Array.isArray(resp.data.data?.theme_tag_names)
+                        ? resp.data.data.theme_tag_names.map((n: string) => String(n || ''))
+                        : [],
+                );
                 const nextAudience = isValidContentAudience(resp.data.data?.audience_type)
                     ? resp.data.data.audience_type
                     : null;
@@ -357,22 +378,16 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
 
     const handleThemeTagToggle = useCallback((tagId: number) => {
         hasTouchedThemeTagsRef.current = true;
+        if (!enabledThemeTagIdSet.has(tagId)) {
+            showWorldPanelErrorToast(t('createGame.themeTagDisabled'));
+            return;
+        }
         setSelectedThemeTagIds((prev) => {
-            if (prev.includes(tagId)) {
-                const next = prev.filter((id) => id !== tagId);
-                if (next.length > 0) {
-                    setThemeTagError('');
-                }
-                return next;
-            }
-            if (prev.length >= 2) {
-                showWorldPanelErrorToast(t('createGame.themeTagMax2'));
-                return prev;
-            }
+            if (prev.includes(tagId)) return [];
             setThemeTagError('');
-            return [...prev, tagId];
+            return [tagId];
         });
-    }, [showWorldPanelErrorToast, t]);
+    }, [enabledThemeTagIdSet, showWorldPanelErrorToast, t]);
 
     const handleAudienceTypeChange = useCallback((next: ContentAudience) => {
         hasTouchedAudienceRef.current = true;
@@ -708,10 +723,15 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         }
         setAudienceError('');
 
-        // 实现题材标签保存校验
-        if (selectedThemeTagIds.length < 1 || selectedThemeTagIds.length > 2) {
+        // 功能注释：题材单选；挂着已停用题材时须改选启用项
+        if (selectedThemeTagIds.length !== 1) {
             setThemeTagError(t('createGame.themeTagRequired'));
             showWorldPanelErrorToast(t('createGame.themeTagRequiredMax2'));
+            return false;
+        }
+        if (selectedThemeTagIds.some((id) => !enabledThemeTagIdSet.has(id))) {
+            setThemeTagError(t('createGame.themeTagDisabled'));
+            showWorldPanelErrorToast(t('createGame.themeTagDisabled'));
             return false;
         }
         setThemeTagError('');
@@ -724,7 +744,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         }
         setStorylineError('');
         return true;
-    }, [isWorldInteractionMode, opening, openingPlot, selectedAudienceType, selectedThemeTagIds.length, showWorldPanelErrorToast, storylines.length, t]);
+    }, [enabledThemeTagIdSet, isWorldInteractionMode, opening, openingPlot, selectedAudienceType, selectedThemeTagIds, showWorldPanelErrorToast, storylines.length, t]);
 
     const saveWorldSettingChanges = useCallback(async () => {
         if (!handleSubmit) {
@@ -881,6 +901,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                         openingPlot={openingPlot}
                         themeTags={displayThemeTags}
                         selectedThemeTagIds={selectedThemeTagIds}
+                        disabledSelectedThemeTagIds={disabledSelectedThemeTagIds}
                         audienceType={selectedAudienceType}
                         targetOutputLength={targetOutputLength}
                         minOutputLength={minOutputLength}

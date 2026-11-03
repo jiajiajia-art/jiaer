@@ -9,23 +9,27 @@ import { condBrief, effectBrief } from "./ruleText";
 import { TriggerEditor, CondLogic, ChainEditor, ChoiceAdvanced } from "./EventAdvanced";
 import { TRIGGER_LABEL, eventToWorldBook } from "../game/eventTriggers";
 import { loadTemplates, saveTemplate, removeTemplate, fromTemplate, type EventTemplate } from "../game/eventTemplates";
-import type { EventChoice, FixedEvent, FixedCond, FixedEffect, FixedEventTime, QuestState, Storyline } from "../lib/types";
+import type { EventChoice, FixedEvent, FixedCond, FixedEffect, FixedEventTime, QuestState, Sideline, SideState, Storyline } from "../lib/types";
 import { PERIODIC_TIME } from "../lib/types";
 import { STAT_ORDER, STAT_LABELS, type StatKey } from "../game/data";
 import type { ValueSrc } from "../game/valueSources";
-import { LIVE_LOCATIONS as LOCATIONS, getWorldEvents, getWorldEventGroups, getWorldStorylines } from "../mods/registry";
+import { LIVE_LOCATIONS as LOCATIONS, getWorldEvents, getWorldEventGroups, getWorldSidelines, getWorldStorylines } from "../mods/registry";
+import { SIDE_STATE_LABEL } from "../lib/sidelines";
 import { LIVE_PEOPLE as PEOPLE, LIVE_ITEMS as ALL_ITEMS, allMods } from "../mods/registry";
 import { FIXED_METRICS, RANDOM_CHANCE, randomGroupIds, QUEST_STATE_LABEL } from "../game/fixedEvents";
-import { LIBRARY_KINDS, type LibraryKind } from "../game/eventLibrary";
+import { LIBRARY_KINDS, type LibraryGroup, type LibraryKind } from "../game/eventLibrary";
+import { resolveModEventLibrary } from "../game/resolveEventLibrary";
 import { EmptyState, ScopeBanner, SearchBox, matches, useConfirm } from "./EditorKit";
 import { AuditBadge, AuditBar, AuditList, auditDomId } from "./EditorKit";
 import { auditGame, auditStory, issuesAt } from "../game/refAudit";
 import AudioPicker from "./AudioPicker";
 import ModExportPicker, { ArgsEditor, exportOptions, firstExport } from "./ModExportPicker";
+import { buildQuestOpts, type QuestOpt } from "../lib/questOpts";
 
 /* 固定事件编辑器：创作者预设剧本桥段。满足条件后由代码判定触发，再交 AI 演绎。
  * 只有「编辑」「预览」两种模式：编辑可见全部事件；预览只见玩家已实际触发的事件。
- * 未触发的事件对玩家与 AI 完全隐藏——不进任务列表、不上地图、不入记忆、不写剧情志。 */
+ * 未触发的事件对玩家与 AI 完全隐藏——不进任务列表、不上地图、不入记忆、不写剧情志。
+ * 功能注释：模组编辑的「事件库」只认本作品 content.events / eventGroups，禁止回退到当前生效世界（娱乐圈 123 条）。 */
 
 const uid = () => `fx_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 const newEvent = (): FixedEvent => ({ id: uid(), name: "", prompt: "", once: true });
@@ -46,6 +50,7 @@ export function defaultCond(kind: FixedCond["kind"]): FixedCond {
     case "flag": return { kind: "flag", key: "", op: "gte", value: 1 };
     case "clock": return { kind: "clock", from: "22:00", to: "06:00" };
     case "quest": return { kind: "quest", key: getWorldStorylines()?.[0]?.id ?? "", state: "done" };
+    case "side": return { kind: "side", key: getWorldSidelines()?.[0]?.id ?? "", state: "done" };
     case "faction": return { kind: "faction", key: liveFactions()[0]?.id ?? "", op: "gte", value: 25 };
     case "visited": return { kind: "visited", key: LOCATIONS[0]?.id ?? "" };
     case "relSet": return { kind: "relSet", keys: PEOPLE.slice(0, 2).map((p) => p.id), op: "gte", value: 50 };
@@ -59,9 +64,13 @@ export function defaultCond(kind: FixedCond["kind"]): FixedCond {
 }
 
 /* 主线条件可选项：主线本身 + 各节点（可选目标单独标注） */
-export type QuestOpt = { id: string; label: string };
+export type { QuestOpt };
+/** 功能注释：AI/脏稿常缺 nodes；经 buildQuestOpts 防御，避免创建世界编辑器 reading 'map' */
 export const questOpts = (lines: Storyline[] | undefined = getWorldStorylines()): QuestOpt[] =>
-  (lines ?? []).flatMap((l) => [{ id: l.id, label: `主线·${l.name || l.id}` }, ...l.nodes.map((n, i) => ({ id: n.id, label: `　${i + 1}. ${n.optional ? "（可选）" : ""}${n.name || n.id}` }))]);
+  buildQuestOpts(lines);
+/* 支线条件可选项：每条支线一项 */
+export const sideOpts = (lines: Sideline[] | undefined = getWorldSidelines()): QuestOpt[] =>
+  (lines ?? []).map((l) => ({ id: l.id, label: `支线·${l.name || l.id}` }));
 export function defaultEffect(kind: FixedEffect["kind"]): FixedEffect {
   switch (kind) {
     case "stat": return { kind: "stat", key: STAT_ORDER[0], delta: 10 };
@@ -104,8 +113,16 @@ function ModRefPicker({ mod, value, list, onChange }: { mod: string; value: stri
 const selCls = "rounded-lg border border-line bg-paper-2 px-2 py-1 text-[12.5px] text-ink";
 const numCls = "w-16 rounded-lg border border-line bg-paper-2 px-2 py-1 text-[12.5px] tabular-nums text-ink";
 
-/* value/onChange 传入时为「模组编辑器」模式：编辑模组预设剧本（开新局写入），不碰当前存档 */
-export default function FixedEventsPanel({ value, onChange }: { value?: FixedEvent[]; onChange?: (v: FixedEvent[]) => void } = {}) {
+/* value/onChange 传入时为「模组编辑器」模式：编辑模组预设剧本（开新局写入），不碰当前存档。
+ * libraryEvents / libraryGroups：本作品事件库；模组模式禁止回退 getWorldEvents（娱乐圈预设）。 */
+export default function FixedEventsPanel({ value, storylines, sidelines, libraryEvents, libraryGroups, onChange }: {
+  value?: FixedEvent[];
+  storylines?: Storyline[];
+  sidelines?: Sideline[];
+  libraryEvents?: FixedEvent[];
+  libraryGroups?: LibraryGroup[];
+  onChange?: (v: FixedEvent[]) => void;
+} = {}) {
   const modMode = !!onChange;
   const { game, setFixedEvents, setRandomGroups, setWorldBook } = useGame();
   const [tpls, setTpls] = useState<EventTemplate[]>(() => loadTemplates());
@@ -119,9 +136,16 @@ export default function FixedEventsPanel({ value, onChange }: { value?: FixedEve
   if (!game && !modMode) return null;
 
   const events = (modMode ? value : game?.fixedEvents) ?? [];
+  // 功能注释：模组模式只用本作品库（可空）；游玩态才读当前世界，避免新建作品带回娱乐圈预设
+  const lib = modMode
+    ? resolveModEventLibrary(libraryEvents, libraryGroups)
+    : { events: getWorldEvents(), groups: getWorldEventGroups() };
+  /* 模组编辑器必须用当前草稿的剧情线选项，避免条件误引用正在游玩的世界。 */
+  const quests = questOpts(modMode ? (storylines ?? []) : storylines);
+  const sides = sideOpts(modMode ? (sidelines ?? []) : sidelines);
   const fired = new Set(modMode ? [] : game?.sim.eventsFired ?? []);
   // 填错就提示：失效引用 / 死循环 / 无人激活 / 空提示词
-  const audit = modMode || !game ? auditStory({ events, skip: ["item", "location", "quest", "npc", "flag"] }) : auditGame(game, { events });
+  const audit = modMode || !game ? auditStory({ events, storylines: storylines ?? [], sidelines: sidelines ?? [], skip: ["item", "location", "npc", "flag"] }) : auditGame(game, { events });
   const evIssues = audit.issues.filter((x) => x.at?.startsWith("event:"));
   const personName = (id: string) => PEOPLE.find((p) => p.id === id)?.name ?? id;
   const itemName = (id: string) => ALL_ITEMS.find((i) => i.id === id)?.name ?? id;
@@ -176,6 +200,7 @@ export default function FixedEventsPanel({ value, onChange }: { value?: FixedEve
       case "flag": return `变量「${c.key || "未命名"}」${cmpSym(c.op)} ${c.value}`;
       case "clock": return `时段 ${c.from}~${c.to}`;
       case "quest": return `「${String(questOpts().find((q) => q.id === c.key)?.label ?? "").trim() || c.key || "未选"}」${QUEST_STATE_LABEL[c.state]}`;
+      case "side": return `「${sideOpts().find((q) => q.id === c.key)?.label || c.key || "未选"}」${SIDE_STATE_LABEL[c.state]}`;
       default: return condBrief(c, events);
     }
   };
@@ -193,112 +218,123 @@ export default function FixedEventsPanel({ value, onChange }: { value?: FixedEve
       default: return effectBrief(f);
     }
   };
-  const libName = (id: string) => getWorldEvents().find((e) => e.id === id)?.name ?? events.find((e) => e.id === id)?.name ?? id;
+  const libName = (id: string) => lib.events.find((e) => e.id === id)?.name ?? events.find((e) => e.id === id)?.name ?? id;
 
-  /* ——— 事件库：策划案预设事件，可单条加入或整组 / 全部导入（按 id 去重） ——— */
+  /* ——— 事件库：仅本作品 / 当前世界自带的事件；新建作品为空，不带娱乐圈 123 条预设 ——— */
   if (mode === "library") {
     const have = new Set(events.map((e) => e.id));
     const importList = (list: FixedEvent[]) => {
       // NPC 之间的事件导入后默认「随机触发」
-      const npcIds = new Set(getWorldEventGroups().filter((g) => g.kind === "npc").flatMap((g) => g.events.map((e) => e.id)));
+      const npcIds = new Set(lib.groups.filter((g) => g.kind === "npc").flatMap((g) => (Array.isArray(g.events) ? g.events : []).map((e) => e.id)));
       const fresh = list.filter((e) => !have.has(e.id)).map((e) => ({ ...structuredClone(e), random: e.random ?? npcIds.has(e.id) }));
       if (fresh.length) save([...events, ...fresh]);
     };
-    const missingAll = getWorldEvents().filter((e) => !have.has(e.id)).length;
+    const missingAll = lib.events.filter((e) => !have.has(e.id)).length;
+    const emptyLib = lib.groups.length === 0;
     return (
       <div className="space-y-4">
         <ModeSwitch mode={mode} setMode={setMode} />
         {!modMode && <ScopeBanner scope="save">导入的事件写入当前存档。事件库内容来自当前世界观模组。</ScopeBanner>}
-        <SearchBox value={q} onChange={setQ} placeholder="搜索事件名 / 提示词" />
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-paper-2/60 px-4 py-3">
-          <p className="text-[12.5px] leading-relaxed text-ink-soft">
-            共 <strong className="text-ink">{getWorldEvents().length}</strong> 个预设事件，已加入 {getWorldEvents().length - missingAll} 个。导入后可在「编辑」中逐条修改；人物链的后续节点默认「需激活」，由前一节点触发后解锁。
-          </p>
-          <button disabled={!missingAll} onClick={() => importList(getWorldEvents())}
-            className="shrink-0 rounded-full bg-gradient-to-r from-jade to-coral px-4 py-1.5 text-[12.5px] font-bold text-white shadow transition disabled:opacity-40">
-            {missingAll ? `全部导入（${missingAll}）` : "已全部导入"}
-          </button>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {([{ id: "all", label: "全部" }, ...LIBRARY_KINDS] as { id: LibraryKind | "all"; label: string }[]).map((k) => {
-            const n = (k.id === "all" ? getWorldEventGroups() : getWorldEventGroups().filter((g) => g.kind === k.id)).reduce((t, g) => t + g.events.length, 0);
-            return (
-              <button key={k.id} onClick={() => setLibKind(k.id)}
-                className={`rounded-full px-3 py-1 text-[12px] font-bold transition ${libKind === k.id ? "bg-jade text-white shadow" : "bg-paper-2 text-ink-soft ring-1 ring-line hover:text-ink"}`}>
-                {k.label} <span className="opacity-70">{n}</span>
+        {emptyLib ? (
+          <EmptyState>
+            {modMode
+              ? "这部作品还没有事件库。请到「编辑」里新建事件，或用「我的模板」套用；不会预置娱乐圈事件，也不会出现「全部导入」。"
+              : "当前世界观没有提供事件库。"}
+          </EmptyState>
+        ) : (
+          <>
+            <SearchBox value={q} onChange={setQ} placeholder="搜索事件名 / 提示词" />
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-paper-2/60 px-4 py-3">
+              <p className="text-[12.5px] leading-relaxed text-ink-soft">
+                共 <strong className="text-ink">{lib.events.length}</strong> 个事件，已加入 {lib.events.length - missingAll} 个。导入后可在「编辑」中逐条修改；人物链的后续节点默认「需激活」，由前一节点触发后解锁。
+              </p>
+              <button disabled={!missingAll} onClick={() => importList(lib.events)}
+                className="shrink-0 rounded-full bg-gradient-to-r from-jade to-coral px-4 py-1.5 text-[12.5px] font-bold text-white shadow transition disabled:opacity-40">
+                {missingAll ? `全部导入（${missingAll}）` : "已全部导入"}
               </button>
-            );
-          })}
-        </div>
-        {getWorldEventGroups().length === 0 && <EmptyState>当前世界观没有提供事件库。</EmptyState>}
-        {q && !getWorldEvents().some((e) => matches(q, e.name, e.prompt)) && <EmptyState>没有匹配「{q}」的预设事件。</EmptyState>}
-        {getWorldEventGroups().filter((g) => libKind === "all" || g.kind === libKind).map((g) => {
-          if (q && !g.events.some((e) => matches(q, e.name, e.prompt))) return null;
-          const left = g.events.filter((e) => !have.has(e.id)).length;
-          return (
-            <section key={g.id} className="overflow-hidden rounded-2xl border border-line bg-paper-2/40">
-              <header className="flex items-center gap-3 border-b border-line/70 px-4 py-2.5">
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[14px] font-bold text-ink">{g.title}</span>
-                  <span className="block truncate text-[11px] text-ink-soft">{g.desc}</span>
-                </span>
-                {!modMode && game && (() => {
-                  const ids = randomGroupIds(getWorldEventGroups(), game.randomGroups);
-                  const on = ids.includes(g.id);
-                  return (
-                    <button onClick={() => setRandomGroups(on ? ids.filter((x) => x !== g.id) : [...ids, g.id])} aria-pressed={on}
-                      title={`无需导入：满足条件时每回合约 ${Math.round(RANDOM_CHANCE * 100)}% 概率随机上演一桩`}
-                      className={`shrink-0 rounded-full border px-2.5 py-1 text-[11.5px] font-bold transition ${on ? "border-coral bg-coral/10 text-coral" : "border-line text-ink-soft hover:border-coral/50"}`}>
-                      <span className="inline-flex items-center gap-1"><IconDice size={12} /> 随机{on ? "开" : "关"}</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {([{ id: "all", label: "全部" }, ...LIBRARY_KINDS] as { id: LibraryKind | "all"; label: string }[]).map((k) => {
+                const n = (k.id === "all" ? lib.groups : lib.groups.filter((g) => g.kind === k.id)).reduce((t, g) => t + g.events.length, 0);
+                if (k.id !== "all" && n === 0) return null;
+                return (
+                  <button key={k.id} onClick={() => setLibKind(k.id)}
+                    className={`rounded-full px-3 py-1 text-[12px] font-bold transition ${libKind === k.id ? "bg-jade text-white shadow" : "bg-paper-2 text-ink-soft ring-1 ring-line hover:text-ink"}`}>
+                    {k.label} <span className="opacity-70">{n}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {q && !lib.events.some((e) => matches(q, e.name, e.prompt)) && <EmptyState>没有匹配「{q}」的事件。</EmptyState>}
+            {lib.groups.filter((g) => libKind === "all" || g.kind === libKind).map((g) => {
+              if (q && !g.events.some((e) => matches(q, e.name, e.prompt))) return null;
+              const left = g.events.filter((e) => !have.has(e.id)).length;
+              return (
+                <section key={g.id} className="overflow-hidden rounded-2xl border border-line bg-paper-2/40">
+                  <header className="flex items-center gap-3 border-b border-line/70 px-4 py-2.5">
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[14px] font-bold text-ink">{g.title}</span>
+                      <span className="block truncate text-[11px] text-ink-soft">{g.desc}</span>
+                    </span>
+                    {!modMode && game && (() => {
+                      const ids = randomGroupIds(lib.groups, game.randomGroups);
+                      const on = ids.includes(g.id);
+                      return (
+                        <button onClick={() => setRandomGroups(on ? ids.filter((x) => x !== g.id) : [...ids, g.id])} aria-pressed={on}
+                          title={`无需导入：满足条件时每回合约 ${Math.round(RANDOM_CHANCE * 100)}% 概率随机上演一桩`}
+                          className={`shrink-0 rounded-full border px-2.5 py-1 text-[11.5px] font-bold transition ${on ? "border-coral bg-coral/10 text-coral" : "border-line text-ink-soft hover:border-coral/50"}`}>
+                          <span className="inline-flex items-center gap-1"><IconDice size={12} /> 随机{on ? "开" : "关"}</span>
+                        </button>
+                      );
+                    })()}
+                    <button disabled={!left} onClick={() => importList(g.events)}
+                      className="shrink-0 rounded-full border border-jade/40 px-3 py-1 text-[11.5px] font-bold text-jade transition hover:bg-jade/10 disabled:border-line disabled:text-ink-soft/60">
+                      {left ? `导入本组（${left}）` : "已导入"}
                     </button>
-                  );
-                })()}
-                <button disabled={!left} onClick={() => importList(g.events)}
-                  className="shrink-0 rounded-full border border-jade/40 px-3 py-1 text-[11.5px] font-bold text-jade transition hover:bg-jade/10 disabled:border-line disabled:text-ink-soft/60">
-                  {left ? `导入本组（${left}）` : "已导入"}
-                </button>
-              </header>
-              <ul className="divide-y divide-line/60">
-                {g.events.filter((e) => matches(q, e.name, e.prompt)).map((e) => {
-                  const added = have.has(e.id);
-                  return (
-                    <li key={e.id} className="px-4 py-2.5">
-                     <div className="flex items-start gap-3">
-                      <button onClick={() => setLibOpen(libOpen === e.id ? null : e.id)} aria-expanded={libOpen === e.id} className="min-w-0 flex-1 text-left">
-                        <span className="flex items-center gap-2">
-                          <span className="truncate text-[13px] font-semibold text-ink">{e.name}</span>
-                          {e.locked && <span className="shrink-0 rounded bg-coral/12 px-1.5 py-px text-[10px] font-bold text-coral">需激活</span>}
-                        </span>
-                        <span className="mt-0.5 block text-[11px] text-ink-soft">
-                          {g.kind === "npc" && <span className="mr-1 inline-flex items-center gap-0.5 font-bold text-coral"><IconDice size={12} /> 随机</span>}{timeText(e.time)}{(e.conds ?? []).map((c) => ` · ${condText(c)}`).join("")}
-                        </span>
-                        <span className="mt-0.5 inline-flex items-center gap-0.5 text-[10.5px] font-bold text-jade/80">{libOpen === e.id ? <>收起详情 <IconChevronUp size={10} /></> : <>查看详情 <IconChevronDown size={10} /></>}</span>
-                      </button>
-                      <button disabled={added} onClick={() => importList([e])}
-                        className="shrink-0 rounded-full bg-paper px-3 py-1 text-[11.5px] font-bold text-jade ring-1 ring-line transition hover:ring-jade/50 disabled:text-ink-soft/60">
-                        {added ? "已加入" : "＋ 加入"}
-                      </button>
-                     </div>
-                      {libOpen === e.id && (
-                        <div className="mt-2.5 space-y-2.5 rounded-xl border border-line/70 bg-paper/70 p-3 text-[12px]">
-                          <div className="flex flex-wrap gap-1.5">
-                            <span className="rounded bg-jade/12 px-1.5 py-px text-[10px] font-bold text-jade">{e.once ? "一次性" : "可重复"}</span>
-                            <span className={`rounded px-1.5 py-px text-[10px] font-bold ${e.locked ? "bg-coral/12 text-coral" : "bg-ink-soft/10 text-ink-soft"}`}>{e.locked ? "需前置事件激活" : "开局即可触发"}</span>
-                            <span className="rounded bg-ink-soft/10 px-1.5 py-px text-[10px] font-bold text-ink-soft">{timeText(e.time)}</span>
-                          </div>
-                          <DetailRow label="触发条件">{e.conds?.length ? e.conds.map(condText).join("　·　") : "无（同时满足以上时间即可）"}</DetailRow>
-                          <DetailRow label="属性变化">{e.effects?.length ? e.effects.map(effectText).join("　·　") : "无"}</DetailRow>
-                          {e.nextIds?.length ? <DetailRow label="后续事件">{e.nextIds.map(libName).join("、")}</DetailRow> : null}
-                          <DetailRow label="事件提示词"><span className="whitespace-pre-line leading-relaxed text-ink">{e.prompt}</span></DetailRow>
-                        </div>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          );
-        })}
+                  </header>
+                  <ul className="divide-y divide-line/60">
+                    {g.events.filter((e) => matches(q, e.name, e.prompt)).map((e) => {
+                      const added = have.has(e.id);
+                      return (
+                        <li key={e.id} className="px-4 py-2.5">
+                         <div className="flex items-start gap-3">
+                          <button onClick={() => setLibOpen(libOpen === e.id ? null : e.id)} aria-expanded={libOpen === e.id} className="min-w-0 flex-1 text-left">
+                            <span className="flex items-center gap-2">
+                              <span className="truncate text-[13px] font-semibold text-ink">{e.name}</span>
+                              {e.locked && <span className="shrink-0 rounded bg-coral/12 px-1.5 py-px text-[10px] font-bold text-coral">需激活</span>}
+                            </span>
+                            <span className="mt-0.5 block text-[11px] text-ink-soft">
+                              {g.kind === "npc" && <span className="mr-1 inline-flex items-center gap-0.5 font-bold text-coral"><IconDice size={12} /> 随机</span>}{timeText(e.time)}{(e.conds ?? []).map((c) => ` · ${condText(c)}`).join("")}
+                            </span>
+                            <span className="mt-0.5 inline-flex items-center gap-0.5 text-[10.5px] font-bold text-jade/80">{libOpen === e.id ? <>收起详情 <IconChevronUp size={10} /></> : <>查看详情 <IconChevronDown size={10} /></>}</span>
+                          </button>
+                          <button disabled={added} onClick={() => importList([e])}
+                            className="shrink-0 rounded-full bg-paper px-3 py-1 text-[11.5px] font-bold text-jade ring-1 ring-line transition hover:ring-jade/50 disabled:text-ink-soft/60">
+                            {added ? "已加入" : "＋ 加入"}
+                          </button>
+                         </div>
+                          {libOpen === e.id && (
+                            <div className="mt-2.5 space-y-2.5 rounded-xl border border-line/70 bg-paper/70 p-3 text-[12px]">
+                              <div className="flex flex-wrap gap-1.5">
+                                <span className="rounded bg-jade/12 px-1.5 py-px text-[10px] font-bold text-jade">{e.once ? "一次性" : "可重复"}</span>
+                                <span className={`rounded px-1.5 py-px text-[10px] font-bold ${e.locked ? "bg-coral/12 text-coral" : "bg-ink-soft/10 text-ink-soft"}`}>{e.locked ? "需前置事件激活" : "开局即可触发"}</span>
+                                <span className="rounded bg-ink-soft/10 px-1.5 py-px text-[10px] font-bold text-ink-soft">{timeText(e.time)}</span>
+                              </div>
+                              <DetailRow label="触发条件">{e.conds?.length ? e.conds.map(condText).join("　·　") : "无（同时满足以上时间即可）"}</DetailRow>
+                              <DetailRow label="属性变化">{e.effects?.length ? e.effects.map(effectText).join("　·　") : "无"}</DetailRow>
+                              {e.nextIds?.length ? <DetailRow label="后续事件">{e.nextIds.map(libName).join("、")}</DetailRow> : null}
+                              <DetailRow label="事件提示词"><span className="whitespace-pre-line leading-relaxed text-ink">{e.prompt}</span></DetailRow>
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              );
+            })}
+          </>
+        )}
       </div>
     );
   }
@@ -475,7 +511,7 @@ export default function FixedEventsPanel({ value, onChange }: { value?: FixedEve
                   <Field label="属性条件（可不填 · 默认全部满足）">
                     <div className="space-y-2">
                       {(e.conds ?? []).map((c, i) => (
-                        <CondRow key={i} c={c} events={events} selfId={e.id}
+                        <CondRow key={i} c={c} events={events} selfId={e.id} quests={quests} sides={sides}
                           onChange={(nc) => patch(e.id, { conds: (e.conds ?? []).map((x, j) => (j === i ? nc : x)) })}
                           onDelete={() => patch(e.id, { conds: (e.conds ?? []).filter((_, j) => j !== i) })} />
                       ))}
@@ -490,8 +526,9 @@ export default function FixedEventsPanel({ value, onChange }: { value?: FixedEve
                         <option value="event">已触发事件</option>
                         <option value="flag">规则变量（含事件链状态）</option>
                         <option value="quest">主线节点</option>
+                        <option value="side">支线进度</option>
                       </select>
-                      <CondLogic x={e} events={events} selfId={e.id} onChange={(p) => patch(e.id, p)} />
+                      <CondLogic x={e} events={events} selfId={e.id} quests={quests} sides={sides} onChange={(p) => patch(e.id, p)} />
                     </div>
                   </Field>
 
@@ -543,7 +580,7 @@ export default function FixedEventsPanel({ value, onChange }: { value?: FixedEve
 
                   {/* 事件选项 */}
                   <Field label="事件选项（可不填 · 最多 3 个 · 选中由代码结算）">
-                    <ChoicesEditor ev={e} events={events} onChange={(choices) => patch(e.id, { choices })} />
+                    <ChoicesEditor ev={e} events={events} quests={quests} sides={sides} onChange={(choices) => patch(e.id, { choices })} />
                   </Field>
 
                   <Field label="事件链（可不填）">
@@ -649,8 +686,10 @@ function Toggle({ checked, label, onChange }: { checked: boolean; label: string;
 }
 
 /* srcs / people：调用方（如结局编辑器）传入「正在编辑的作品」的数值来源与人物；不传则用当前世界 */
-export function CondRow({ c, events, selfId, onChange, onDelete, srcs, people, quests }: { c: FixedCond; events: FixedEvent[]; selfId: string; onChange: (c: FixedCond) => void; onDelete: () => void; srcs?: ValueSrc[]; people?: { id: string; name: string }[]; quests?: QuestOpt[] }) {
+/* sides：剧情线编辑器传入「正在编辑的作品」的支线；不传则用当前世界 */
+export function CondRow({ c, events, selfId, onChange, onDelete, srcs, people, quests, sides }: { c: FixedCond; events: FixedEvent[]; selfId: string; onChange: (c: FixedCond) => void; onDelete: () => void; srcs?: ValueSrc[]; people?: { id: string; name: string }[]; quests?: QuestOpt[]; sides?: QuestOpt[] }) {
   const qOpts = quests ?? questOpts();
+  const sOpts = sides ?? sideOpts();
   const statOpts = srcs ? srcs.filter((x) => x.kind === "stat").map((x) => ({ v: x.key, l: x.label })) : STAT_ORDER.map((k) => ({ v: k as string, l: STAT_LABELS[k] }));
   const metricOpts = srcs ? srcs.filter((x) => x.kind === "metric").map((x) => ({ v: x.key, l: x.label })) : FIXED_METRICS.map((m) => ({ v: m.key, l: m.label }));
   const peopleOpts = (people ?? PEOPLE).map((p) => ({ v: p.id, l: p.name }));
@@ -676,6 +715,7 @@ export function CondRow({ c, events, selfId, onChange, onDelete, srcs, people, q
         <option value="clock">当日时段</option>
         <option value="flag">规则变量</option>
         <option value="quest">主线进度</option>
+        <option value="side">支线进度</option>
         <option value="faction">阵营声望</option>
         <option value="visited">去过的地点</option>
         <option value="relSet">多人好感</option>
@@ -715,14 +755,15 @@ export function CondRow({ c, events, selfId, onChange, onDelete, srcs, people, q
               <option value="all">以下全部满足（且）</option>
               <option value="any">以下任一满足（或）</option>
             </select>
-            <button type="button" onClick={() => onChange({ ...c, conds: [...c.conds, defaultCond("flag")] })} className="rounded-lg border border-line px-2 py-1 text-[12px] text-ink-soft hover:text-ink">+ 条件</button>
-            <button type="button" onClick={() => onChange({ ...c, conds: [...c.conds, defaultCond("group")] })} className="rounded-lg border border-line px-2 py-1 text-[12px] text-ink-soft hover:text-ink">+ 子组</button>
+            <button type="button" onClick={() => onChange({ ...c, conds: [...(c.conds ?? []), defaultCond("flag")] })} className="rounded-lg border border-line px-2 py-1 text-[12px] text-ink-soft hover:text-ink">+ 条件</button>
+            <button type="button" onClick={() => onChange({ ...c, conds: [...(c.conds ?? []), defaultCond("group")] })} className="rounded-lg border border-line px-2 py-1 text-[12px] text-ink-soft hover:text-ink">+ 子组</button>
           </div>
-          {!c.conds.length && <p className="text-[11.5px] text-ink-soft">空组视为成立。</p>}
-          {c.conds.map((x, i) => (
-            <CondRow key={i} c={x} events={events} selfId={selfId} srcs={srcs} people={people} quests={quests}
-              onChange={(nx) => onChange({ ...c, conds: c.conds.map((y, j) => (j === i ? nx : y)) })}
-              onDelete={() => onChange({ ...c, conds: c.conds.filter((_, j) => j !== i) })} />
+          {/* 功能注释：脏稿/AI 条件组常缺 conds；兜底空数组，避免④剧情展开条件行时 .length 崩页 */}
+          {!(c.conds ?? []).length && <p className="text-[11.5px] text-ink-soft">空组视为成立。</p>}
+          {(c.conds ?? []).map((x, i) => (
+            <CondRow key={i} c={x} events={events} selfId={selfId} srcs={srcs} people={people} quests={quests} sides={sides}
+              onChange={(nx) => onChange({ ...c, conds: (c.conds ?? []).map((y, j) => (j === i ? nx : y)) })}
+              onDelete={() => onChange({ ...c, conds: (c.conds ?? []).filter((_, j) => j !== i) })} />
           ))}
         </div>
       )}
@@ -785,11 +826,22 @@ export function CondRow({ c, events, selfId, onChange, onDelete, srcs, people, q
       {c.kind === "quest" && (
         <>
           <select className={selCls} value={c.key} onChange={(e) => onChange({ ...c, key: e.target.value })}>
-            {!qOpts.some((q) => q.id === c.key) && <option value={c.key}>{c.key ? `已失效：${c.key}` : "（请先在「主线与目标」添加）"}</option>}
+            {!qOpts.some((q) => q.id === c.key) && <option value={c.key}>{c.key ? `已失效：${c.key}` : "（请先在「剧情线 · 主线」添加）"}</option>}
             {qOpts.map((q) => <option key={q.id} value={q.id}>{q.label}</option>)}
           </select>
           <select className={selCls} value={c.state} onChange={(e) => onChange({ ...c, state: e.target.value as QuestState })}>
             {(Object.keys(QUEST_STATE_LABEL) as QuestState[]).map((k) => <option key={k} value={k}>{QUEST_STATE_LABEL[k]}</option>)}
+          </select>
+        </>
+      )}
+      {c.kind === "side" && (
+        <>
+          <select className={selCls} value={c.key} onChange={(e) => onChange({ ...c, key: e.target.value })}>
+            {!sOpts.some((q) => q.id === c.key) && <option value={c.key}>{c.key ? `已失效：${c.key}` : "（请先在「剧情线 · 支线」添加）"}</option>}
+            {sOpts.map((q) => <option key={q.id} value={q.id}>{q.label}</option>)}
+          </select>
+          <select className={selCls} value={c.state} onChange={(e) => onChange({ ...c, state: e.target.value as SideState })}>
+            {(Object.keys(SIDE_STATE_LABEL) as SideState[]).map((k) => <option key={k} value={k}>{SIDE_STATE_LABEL[k]}</option>)}
           </select>
         </>
       )}
@@ -984,7 +1036,7 @@ export function EffectRow({ ef, onChange, onDelete }: { ef: FixedEffect; onChang
 }
 
 /* 事件选项编辑：文案 + 续写指引 + 出现条件 + 效果 + 分支后续事件 */
-function ChoicesEditor({ ev, events, onChange }: { ev: FixedEvent; events: FixedEvent[]; onChange: (v?: EventChoice[]) => void }) {
+function ChoicesEditor({ ev, events, quests, sides, onChange }: { ev: FixedEvent; events: FixedEvent[]; quests: QuestOpt[]; sides: QuestOpt[]; onChange: (v?: EventChoice[]) => void }) {
   const list = ev.choices ?? [];
   const set = (id: string, p: Partial<EventChoice>) => onChange(list.map((c) => (c.id === id ? { ...c, ...p } : c)));
   const others = events.filter((o) => o.id !== ev.id);
@@ -1000,7 +1052,7 @@ function ChoicesEditor({ ev, events, onChange }: { ev: FixedEvent; events: Fixed
             <button className="shrink-0 text-[12px] text-ink-soft hover:text-danger" aria-label="删除选项" onClick={() => { const n = list.filter((y) => y.id !== c.id); onChange(n.length ? n : undefined); }}><IconClose size={14} /></button>          </div>
           <input className={box} value={c.prompt ?? ""} maxLength={200} placeholder="选中后交给 AI 的续写指引（可留空）" onChange={(x) => set(c.id, { prompt: x.target.value || undefined })} />
           {(c.conds ?? []).map((k, i) => (
-            <CondRow key={i} c={k} events={events} selfId={ev.id} onChange={(x) => set(c.id, { conds: c.conds!.map((y, j) => (j === i ? x : y)) })} onDelete={() => { const n = c.conds!.filter((_, j) => j !== i); set(c.id, { conds: n.length ? n : undefined }); }} />
+            <CondRow key={i} c={k} events={events} selfId={ev.id} quests={quests} sides={sides} onChange={(x) => set(c.id, { conds: c.conds!.map((y, j) => (j === i ? x : y)) })} onDelete={() => { const n = c.conds!.filter((_, j) => j !== i); set(c.id, { conds: n.length ? n : undefined }); }} />
           ))}
           {(c.effects ?? []).map((f, i) => (
             <EffectRow key={i} ef={f} onChange={(x) => set(c.id, { effects: c.effects!.map((y, j) => (j === i ? x : y)) })} onDelete={() => { const n = c.effects!.filter((_, j) => j !== i); set(c.id, { effects: n.length ? n : undefined }); }} />

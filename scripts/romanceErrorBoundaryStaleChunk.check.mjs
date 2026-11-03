@@ -11,13 +11,22 @@ const romance = join(dirname(fileURLToPath(import.meta.url)), '../Romance/src');
 
 test('Romance_ErrorBoundary_动态模块失败须location重载', () => {
   const app = readFileSync(join(romance, 'App.tsx'), 'utf8');
-  assert.match(app, /isStaleChunkLoadError|Failed to fetch dynamically imported module/);
-  assert.match(app, /location\.replace|location\.reload/);
-  assert.match(app, /_r/);
+  assert.match(app, /isStaleChunkLoadError|Failed to fetch dynamically imported module|isStaleChunkLoadErrorMessage/);
+  assert.match(app, /location\.replace|location\.reload|reloadOnceForStaleChunk/);
+  assert.match(app, /_r|reloadOnceForStaleChunk/);
+  // 功能注释：componentDidCatch 须自动硬刷，禁止只停在红屏等用户点「重试」
+  assert.match(app, /componentDidCatch[\s\S]*reloadOnceForStaleChunk|isStaleChunkLoadError/);
   assert.doesNotMatch(
     app,
     /onClick=\{\(\) => this\.setState\(\{ error: null \}\)\}/,
   );
+});
+
+test('WorldGenWizard_继续填写草稿须先安全加载ModEditorPanel', () => {
+  const wiz = readFileSync(join(romance, 'components/WorldGenWizard.tsx'), 'utf8');
+  assert.match(wiz, /importWithStaleChunkReload/);
+  assert.match(wiz, /lazy\(\(\) => importWithStaleChunkReload\(\(\) => import\("\.\/ModEditorPanel"\)\)\)/);
+  assert.match(wiz, /acceptEntranceDraft[\s\S]*importWithStaleChunkReload\(\(\) => import\("\.\/ModEditorPanel"\)\)/);
 });
 
 test('Romance_ErrorBoundary_trim脏会话须清世界生成会话并硬刷新', () => {

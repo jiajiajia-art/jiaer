@@ -162,6 +162,7 @@ function App() {
           )}
         />
         <Route element={<ProtectedRoute />}>
+          <Route path="/bookshelf" element={<CreateWorks />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/create/new" element={<CreateType />} />
           <Route path="/create/works" element={<CreateWorks />} />
@@ -183,6 +184,7 @@ function App() {
           <Route path="/operator/daily-tasks" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/withdraw" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/avatars" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/locations" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/components" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/play-mods" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/content-reports" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />

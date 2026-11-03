@@ -173,7 +173,16 @@ const PublishReviewAdminManager: React.FC = () => {
                             />
                           ) : null}
                           <div>
-                            <div>{row.title?.trim() || '未命名作品'}</div>
+                            <div>
+                              {row.title?.trim() || '未命名作品'}
+                              {' '}
+                              <strong>{row.reviewKind === 'update' ? '【更新】' : '【新作品】'}</strong>
+                            </div>
+                            {row.reviewKind === 'update' ? (
+                              <div className={styles.cardDesc} style={{ margin: 0, fontSize: 12 }}>
+                                当前公开版本 v{row.publishedVersion || 1}
+                              </div>
+                            ) : null}
                           </div>
                         </div>
                       </td>

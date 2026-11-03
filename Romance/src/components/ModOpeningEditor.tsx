@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { CoverCopy, OpeningCopy } from "../mods/types";
 import { CoverDiyEditor } from "./CoverDiyPanel";
 import { coverMode, fromDiy, toDiy } from "../lib/coverAi";
 
-/* 模组编辑器 · 开局封面（自由搭配 / AI 对话 / 自定义 HTML）/ 序章：文案 + 图片/视频（上传或直链），留空项沿用默认 */
+/* 模组编辑器 · 作品封面（仅背景，供列表/详情/书架）/ 序章文案 */
 const inp = "min-w-0 w-full rounded-lg border border-line bg-paper px-2 py-1 text-[12.5px] text-ink outline-none focus:border-jade";
-const btn = "rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40";
 const clean = <T extends object>(o: T) => {
   const n = Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined && v !== "" && !(Array.isArray(v) && !v.length)));
   return Object.keys(n).length ? (n as T) : undefined;
@@ -15,7 +14,6 @@ const clean = <T extends object>(o: T) => {
 const toParas = (s: string) => s.split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean);
 
 function Media({ kind, value, onChange }: { kind: "image" | "video"; value?: string; onChange: (v?: string) => void }) {
-  const file = useRef<HTMLInputElement>(null);
   const [msg, setMsg] = useState("");
   const pick = (f?: File) => {
     if (!f) return;
@@ -31,9 +29,11 @@ function Media({ kind, value, onChange }: { kind: "image" | "video"; value?: str
   return (
     <div className="space-y-1.5">
       <div className="flex gap-1.5">
-        <button type="button" className={btn} onClick={() => file.current?.click()}>上传{name}</button>
-        {v && <button type="button" className={`${btn} hover:!text-coral`} onClick={() => { onChange(undefined); setMsg(""); }}>清除</button>}
-        <input ref={file} type="file" accept={`${kind}/*`} hidden onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
+        <label className="rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink transition hover:border-jade hover:text-jade">
+          上传{name}
+          <input type="file" accept={`${kind}/*`} hidden onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
+        </label>
+        {v && <button type="button" className="rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink transition hover:border-jade hover:text-coral" onClick={() => { onChange(undefined); setMsg(""); }}>清除</button>}
       </div>
       <input className={`${inp} font-mono text-[11.5px]`} value={v.startsWith("data:") ? "" : v} onChange={(e) => onChange(e.target.value || undefined)}
         placeholder={v.startsWith("data:") ? `已上传本地${name}（可改贴直链）` : `或粘贴${name}直链 https://…`} />
@@ -51,59 +51,27 @@ const Row = ({ label, children }: { label: string; children: React.ReactNode }) 
 
 export { coverMode }; // 兼容旧引用；实现在 lib/coverAi
 
-const HTML_TIP = `<!-- 在按钮上调用 parent.postMessage("start", "*") 即可开始游戏；可用指令：start / continue / config -->`;
-
-function HtmlCover({ c, set }: { c: CoverCopy; set: (p: Partial<CoverCopy>) => void }) {
-  const file = useRef<HTMLInputElement>(null);
-  const [msg, setMsg] = useState("");
-  const pick = (f?: File) => {
-    if (!f) return;
-    if (f.size > 5 * 1048576) return setMsg("HTML 超过 5MB，请把大图改成直链");
-    setMsg("");
-    const r = new FileReader();
-    r.onload = () => set({ html: String(r.result) });
-    r.readAsText(f);
-  };
-  return (
-    <div className="space-y-2">
-      <div className="flex gap-1.5">
-        <button type="button" className={btn} onClick={() => file.current?.click()}>上传 .html 文件</button>
-        {c.html && <button type="button" className={`${btn} hover:!text-coral`} onClick={() => set({ html: undefined })}>清除</button>}
-        <input ref={file} type="file" accept=".html,.htm,text/html" hidden onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
-      </div>
-      <textarea className={`${inp} font-mono text-[11px]`} rows={6} value={c.html ?? ""} onChange={(e) => set({ html: e.target.value })} placeholder={`或直接粘贴 HTML 代码\n${HTML_TIP}`} />
-      {msg && <p className="text-[10.5px] text-coral">{msg}</p>}
-      <p className="text-[10.5px] leading-relaxed text-ink-soft">HTML 在沙箱中全屏运行（可用脚本与外链资源）。按钮调用 <code className="font-mono">parent.postMessage("start", "*")</code> 可开始游戏，另支持 continue / config。</p>
-      <label className="flex items-center gap-2 text-[12px] text-ink">
-        <input type="checkbox" className="accent-jade" checked={c.htmlUI !== false} onChange={(e) => set({ htmlUI: e.target.checked ? undefined : false })} />
-        在 HTML 上叠加内置按钮（开始 / 继续 / 配置）
-      </label>
-      {c.html && <iframe title="封面预览" sandbox="allow-scripts" srcDoc={c.html} className="h-56 w-full rounded-lg border border-line bg-white" />}
-    </div>
-  );
-}
-
+/**
+ * 功能注释：作品展示封面——只配背景（固定/轮播/视频）；作者态不提供整页自定义与文字/按钮等页签。
+ * 列表/详情/书架用；开局进游戏菜单不再套用这张图。
+ */
 export function ModCoverEditor({ value, onChange, modId }: { value?: CoverCopy; onChange: (v?: CoverCopy) => void; modId: string }) {
   const c = value ?? {};
-  const set = (p: Partial<CoverCopy>) => onChange(clean({ ...c, ...p }));
-  const html = coverMode(c) === "html";
   return (
     <div className="space-y-2.5">
-      <p className="text-[11px] leading-relaxed text-ink-soft">进入游戏的第一屏，选中此世界观即生效。可以和 AI 对话生成，也能逐项自由搭配（画布布局唯一入口在「① 基础 → 开局封面」）；玩家若在「美化 → 封面」自定，会叠在你的封面上。</p>
-      <Row label="封面做法">
-        <div className="grid grid-cols-2 gap-1.5">
-          {([[false, "自由搭配 · AI 对话", "实时预览里手动搭配，AI 对话里聊着改"], [true, "自定义 HTML", "整页自己写，沙箱全屏运行"]] as const).map(([h, l, d]) => (
-            <button key={l} type="button" onClick={() => set({ mode: h ? "html" : undefined })}
-              className={`rounded-xl border px-3 py-2 text-left transition ${html === h ? "border-jade bg-jade/10" : "border-line bg-paper hover:border-jade/50"}`}>
-              <span className={`block text-[12.5px] font-bold ${html === h ? "text-jade" : "text-ink"}`}>{l}</span>
-              <span className="mt-0.5 block text-[10.5px] leading-snug text-ink-soft">{d}</span>
-            </button>
-          ))}
-        </div>
-      </Row>
-      {html
-        ? <HtmlCover c={c} set={set} />
-        : <CoverDiyEditor mode="switch" author chatKey={`mod.${modId}`} value={toDiy(c)} onChange={(v) => onChange(clean(fromDiy(c, v)))} cvText={{}} previewCv={fromDiy(c, toDiy(c))} />}
+      <p className="text-[11px] leading-relaxed text-ink-soft">
+        作品展示封面：列表、详情、书架卡片会显示。开局进游戏不会再出现这张图。只配置背景即可。
+      </p>
+      <CoverDiyEditor
+        mode="live"
+        author
+        bgOnly
+        chatKey={`mod.${modId}`}
+        value={toDiy(c)}
+        onChange={(v) => onChange(clean(fromDiy({ ...c, mode: undefined, html: undefined, htmlUI: undefined }, v)))}
+        cvText={{}}
+        previewCv={fromDiy(c, toDiy(c))}
+      />
     </div>
   );
 }

@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import Navbar from '../components/Layout/Navbar';
 import FooterArea from '../components/Layout/FooterArea';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
@@ -9,20 +8,18 @@ import createStyles from './Create.module.css';
 import styles from './CreateWorks.module.css';
 
 const isWorksTabKey = (value: string | null): value is WorksTabKey => (
-    value === 'published' || value === 'drafts' || value === 'favorites'
+    value === 'all' || value === 'published' || value === 'drafts' || value === 'favorites'
 );
 
 /**
- * 创作中心「全部」作品独立页：完整列表 + 每页 10 条分页。
+ * 书架统一承载全部作品、已发布、草稿箱与收藏，同类列表只保留一处。
  */
 const CreateWorks: React.FC = () => {
-    const { t } = useTranslation();
-    const navigate = useNavigate();
     const [searchParams] = useSearchParams();
 
     const initialTab = useMemo<WorksTabKey>(() => {
         const tab = searchParams.get('tab');
-        return isWorksTabKey(tab) ? tab : 'published';
+        return isWorksTabKey(tab) ? tab : 'all';
     }, [searchParams]);
 
     return (
@@ -31,19 +28,6 @@ const CreateWorks: React.FC = () => {
 
             <div className={`${createStyles.mainContent} ${styles.mainContent}`}>
                 <div className={createStyles.main}>
-                    <section className={`${createStyles.creatorHeroSection} ${styles.heroSection}`}>
-                        <div className={`${createStyles.creatorHeroCard} ${styles.heroCard}`}>
-                            <button
-                                type="button"
-                                className={styles.backToCreateButton}
-                                onClick={() => navigate('/profile')}
-                            >
-                                <span className={styles.backChevron} aria-hidden="true" />
-                                {t('create.worksBackToProfile')}
-                            </button>
-                        </div>
-                    </section>
-
                     <CreatorWorksPanel mode="full" initialTab={initialTab} />
                 </div>
             </div>

@@ -6,7 +6,7 @@ import {
 import { isValidContentAudience, type ContentAudience } from './contentAudience.ts';
 
 export { NOVEL_DESCRIPTION_MAX_LENGTH };
-export const THEME_TAG_MAX = 2;
+export const THEME_TAG_MAX = 1;
 export const THEME_TAG_MIN_DRAFT = 0;
 export const THEME_TAG_MIN_PUBLISH = 1;
 
@@ -17,6 +17,7 @@ export type NovelEditValidationError =
   | 'COVER_REQUIRED'
   | 'THEME_TAG_MIN'
   | 'THEME_TAG_MAX'
+  | 'THEME_TAG_DISABLED'
   | 'AUDIENCE_REQUIRED';
 
 export type NovelEditFormInput = {
@@ -41,11 +42,35 @@ export function toggleThemeTagSelection(
     return { next: selected.filter((id) => id !== normalizedId), atMax: false };
   }
 
+  // 功能注释：作品题材单选 — 点新项直接替换，不再叠到上限后拒绝
+  if (max <= 1) {
+    return { next: [normalizedId], atMax: false };
+  }
+
   if (selected.length >= max) {
     return { next: selected, atMax: true };
   }
 
   return { next: [...selected, normalizedId], atMax: false };
+}
+
+/** 提交前：必须恰好 1 个且属于当前启用题材 */
+export function validateEnabledThemeTagSelection(
+  selectedIds: number[],
+  enabledIds: Iterable<number>,
+): { valid: boolean; error?: 'THEME_TAG_MIN' | 'THEME_TAG_DISABLED' } {
+  const enabled = new Set(Array.from(enabledIds).map(Number));
+  const ids = (selectedIds || []).map(Number).filter((id) => Number.isFinite(id) && id > 0);
+  if (ids.length < THEME_TAG_MIN_PUBLISH) {
+    return { valid: false, error: 'THEME_TAG_MIN' };
+  }
+  if (ids.length > THEME_TAG_MAX) {
+    return { valid: false, error: 'THEME_TAG_MIN' };
+  }
+  if (ids.some((id) => !enabled.has(id))) {
+    return { valid: false, error: 'THEME_TAG_DISABLED' };
+  }
+  return { valid: true };
 }
 
 export function validateNovelDraftSave(input: NovelEditFormInput): {
@@ -114,6 +139,8 @@ export function mapNovelEditErrorToI18nKey(error?: NovelEditValidationError): st
     case 'THEME_TAG_MIN':
     case 'THEME_TAG_MAX':
       return 'createGame.themeTagRequired';
+    case 'THEME_TAG_DISABLED':
+      return 'createGame.themeTagDisabled';
     case 'AUDIENCE_REQUIRED':
       return 'createGame.contentAudienceRequired';
     default:

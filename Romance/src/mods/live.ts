@@ -7,6 +7,12 @@ type SlotReader = (key: string) => { has: boolean; value: unknown; worldId: stri
 let reader: SlotReader | null = null;
 export function setSlotReader(r: SlotReader) { reader = r; }
 
+/** 功能注释：当前激活世界观 id；未注册 reader 时按娱乐圈处理，供引擎规则缺省回落。 */
+export function currentWorldId(): string {
+  if (!reader) return "ent";
+  return reader("tuning").worldId || "ent";
+}
+
 /* 取槽：当前世界声明了 → 用之；未声明 → off()（功能关闭的空值）或 ent 默认。
  * registry 尚未注册（极早期调用）时一律回退 ent 默认，保证娱乐圈行为不变。 */
 export function slot<T>(key: string, entDefault: () => T, off?: () => T): T {

@@ -144,7 +144,7 @@ export const hopEnergy = () => Math.max(1, Math.round(TRAVEL.energyPerHop || 1))
 /* 行动点：每回合（推进一次）回满到作者设定值，换地点踩点扣固定点数，进入支线按事件设定扣 */
 export const apMax = () => Math.max(1, Math.round(TRAVEL.apPerTurn ?? 10));
 export const apPerMove = () => Math.max(0, Math.round(TRAVEL.apPerMove ?? 1));
-/* 推进节奏：每次推进几天、是否生成 AI 日程叙事、叙事字数（创作台「出行与交通」配置） */
+/* 推进节奏：每次推进几天；日程叙事内置开启，字数走 travel.advanceWords 缺省 500（创作者界面不再配置） */
 export const advanceDays = () => Math.max(1, Math.min(30, Math.round(TRAVEL.advanceDays ?? 1)));
 export type AdvanceUnit = "day" | "week" | "month" | "year";
 /** 推进单位（缺省：日）；日模式下次数沿用 advanceDays */
@@ -152,7 +152,8 @@ export type AdvancePref = { unit: AdvanceUnit; count: number };
 export const advanceUnit = (p?: AdvancePref): AdvanceUnit => p?.unit ?? ((["day", "week", "month", "year"] as const).includes(TRAVEL.advanceUnit as AdvanceUnit) ? (TRAVEL.advanceUnit as AdvanceUnit) : "day");
 export const advanceCount = (p?: AdvancePref) => p ? Math.max(1, Math.min(p.unit === "day" ? 30 : 12, Math.round(p.count))) : advanceUnit() === "day" ? advanceDays() : Math.max(1, Math.min(12, Math.round(TRAVEL.advanceCount ?? 1)));
 export const advanceLabel = (p?: AdvancePref) => { const u = advanceUnit(p), n = advanceCount(p); const U = { day: "天", week: "周", month: "个月", year: "年" }[u]; return n === 1 ? `一${U === "个月" ? "个月" : U}` : `${n} ${U}`; };
-export const advanceStoryOn = () => TRAVEL.advanceStory !== false;
+/** 功能注释：推进后 AI 日程叙事内置开启，创作者界面不再暴露开关 */
+export const advanceStoryOn = () => true;
 export const advanceWords = () => Math.max(100, Math.min(2000, Math.round(TRAVEL.advanceWords ?? 500)));
 export const tripPoints = (s: { ap?: number }) => Math.max(0, s.ap ?? apMax());
 export const tripPointsMax = apMax;

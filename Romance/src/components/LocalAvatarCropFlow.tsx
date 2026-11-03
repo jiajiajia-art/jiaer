@@ -139,7 +139,7 @@ export default function LocalAvatarCropFlow({ file, onDone, onCancel }: Props) {
       onClick={tryClose}
     >
       <div
-        className="w-full max-w-[360px] overflow-hidden rounded-2xl border border-line bg-paper shadow-xl"
+        className="ui-dialog rounded-2xl border border-line bg-paper shadow-xl"
         role="dialog"
         aria-modal="true"
         aria-labelledby="local-avatar-crop-title"
@@ -158,7 +158,7 @@ export default function LocalAvatarCropFlow({ file, onDone, onCancel }: Props) {
           )}
         </header>
 
-        <div className="space-y-3 px-4 py-4">
+        <div className="ui-dialog-body space-y-3 px-4 py-4">
           {error ? (
             <p className="rounded-xl border border-dashed border-coral/40 bg-coral/5 px-3 py-6 text-center text-[12.5px] text-coral">
               {error}

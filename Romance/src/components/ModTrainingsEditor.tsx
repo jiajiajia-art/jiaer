@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LESSON_GRADES, RAW_STAT_LABELS, RAW_STAT_ORDER, type CourseGrade, type StatKey, type StatsSlot, type Training } from "../game/data";
+import { RAW_STAT_LABELS, RAW_STAT_ORDER, type CourseGrade, type StatKey, type StatsSlot, type Training } from "../game/data";
 import { FIXED_METRICS } from "../game/fixedEvents";
 import type { AttrDef } from "../lib/types";
 
@@ -38,7 +38,7 @@ export default function ModTrainingsEditor({ value, stats, attrs, onChange }: { 
 
   return (
     <div className="space-y-2">
-      {!list.length && <p className="text-[11.5px] text-ink-soft">未配置课程 = 沿用引擎默认课程表。添加后，本模组只使用这里的课程。</p>}
+      {!list.length && <p className="text-[11.5px] text-ink-soft">还没有课程；点下方添加。开局不会套用娱乐圈表情/发声课表。</p>}
       {list.map((t, i) => {
         const rows = rowsOf(t);
         const used = new Set(rows.map((x) => x.k));
@@ -101,13 +101,14 @@ function GradesEditor({ value, reqOpts, onChange }: { value?: CourseGrade[]; req
   return (
     <div className="rounded-lg border border-dashed border-line px-2 py-1.5">
       <button type="button" className="flex w-full items-center justify-between text-[11.5px] font-semibold text-ink" onClick={() => setOpen(!open)}>
-        <span>等级与解锁 <span className="font-normal text-ink-soft">· {custom ? `${list.length} 级（自定义）` : "沿用通用 4 级"}</span></span>
+        <span>等级与解锁 <span className="font-normal text-ink-soft">· {custom ? `${list.length} 级（自定义）` : "未设专属（用引擎通用等级）"}</span></span>
         <span className="text-ink-soft">{open ? "收起" : "展开"}</span>
       </button>
       {open && (
         <div className="mt-1.5 space-y-1.5">
           {!custom && (
-            <button className={btn} onClick={() => commit(LESSON_GRADES.map((g) => ({ ...g })))}>改为自定义等级（以通用 4 级为起点）</button>
+            // 功能注释：从空白等级起填，不复制某一打工剧本的 4 级学费曲线。
+            <button className={btn} onClick={() => commit([{ id: `g_${Date.now().toString(36).slice(-5)}`, label: "", costMul: 0, gainMul: 0, cap: 0, stressAdd: 0 }])}>添加自定义等级（空白）</button>
           )}
           {list.map((g, i) => (
             <div key={g.id} className="space-y-1 rounded-lg bg-paper-2 p-1.5">

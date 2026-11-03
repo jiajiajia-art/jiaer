@@ -25,6 +25,9 @@ const emptyForm = (): Partial<PlayModRecord> => ({
   name: '',
   slug: '',
   description: '',
+  detailMd: '',
+  previewImages: [],
+  authorDisplayName: '',
   category: 'gameplay',
   iconSvg: '',
   version: '1.0.0',
@@ -81,9 +84,29 @@ const AdminPlayModManager: React.FC = () => {
       toast.error('请填写名称');
       return;
     }
+    // 功能注释：上架/保存为 listed 时，前端先拦住缺说明/预览图（与后端契约一致）
+    const previewImages = Array.isArray(form.previewImages)
+      ? form.previewImages
+      : String(form.previewImages || '')
+          .split(/\n/)
+          .map((x) => x.trim())
+          .filter(Boolean);
+    const detailText = String(form.detailMd || form.description || '').trim();
+    if (form.status === 'listed') {
+      if (detailText.length < 8) {
+        toast.error('上架须填写玩法说明（至少 8 字）');
+        return;
+      }
+      if (!previewImages.length) {
+        toast.error('上架须至少 1 张预览图');
+        return;
+      }
+    }
     const body = {
       ...form,
       id: editingId || form.id,
+      previewImages,
+      detailMd: form.detailMd || form.description || '',
       editorPanels: typeof form.editorPanels === 'string'
         ? String(form.editorPanels).split(/[,，\s]+/).filter(Boolean)
         : form.editorPanels,
@@ -166,13 +189,26 @@ const AdminPlayModManager: React.FC = () => {
           <label>Slug<input value={form.slug || ''} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))} placeholder="pack-career" /></label>
           <label>分类<input value={form.category || ''} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} /></label>
           <label>版本<input value={form.version || ''} onChange={(e) => setForm((f) => ({ ...f, version: e.target.value }))} /></label>
-          <label>KK 币价格<input type="number" min={0} value={form.priceKk ?? 0} onChange={(e) => setForm((f) => ({ ...f, priceKk: Number(e.target.value) || 0 }))} /></label>
+          <label>KK 币价格（0=免费）<input type="number" min={0} value={form.priceKk ?? 0} onChange={(e) => setForm((f) => ({ ...f, priceKk: Number(e.target.value) || 0 }))} /></label>
+          <label>作者展示名<input value={form.authorDisplayName || ''} onChange={(e) => setForm((f) => ({ ...f, authorDisplayName: e.target.value }))} placeholder="官方 / 创作者昵称" /></label>
           <label>默认底栏名<input value={form.defaultNavLabel || ''} onChange={(e) => setForm((f) => ({ ...f, defaultNavLabel: e.target.value }))} /></label>
           <label className={styles.check}>
             <input type="checkbox" checked={!!form.needsNavEntry} onChange={(e) => setForm((f) => ({ ...f, needsNavEntry: e.target.checked }))} />
             需要底栏入口
           </label>
-          <label className={styles.full}>说明<textarea rows={2} value={form.description || ''} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} /></label>
+          <label className={styles.full}>列表短说明<textarea rows={2} value={form.description || ''} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} /></label>
+          <label className={styles.full}>玩法详细说明（上架必填）<textarea rows={3} value={form.detailMd || ''} onChange={(e) => setForm((f) => ({ ...f, detailMd: e.target.value }))} placeholder="详情页完整说明，至少 8 字" /></label>
+          <label className={styles.full}>预览图 URL（每行一张，上架至少 1 张）
+            <textarea
+              rows={3}
+              value={Array.isArray(form.previewImages) ? form.previewImages.join('\n') : String(form.previewImages || '')}
+              onChange={(e) => setForm((f) => ({
+                ...f,
+                previewImages: e.target.value.split(/\n/).map((x) => x.trim()).filter(Boolean),
+              }))}
+              placeholder={'https://...\n或 local:slug-1'}
+            />
+          </label>
           <label className={styles.full}>线性 SVG 图标<textarea rows={2} value={form.iconSvg || ''} onChange={(e) => setForm((f) => ({ ...f, iconSvg: e.target.value }))} placeholder="<svg>...</svg>" /></label>
           <label className={styles.full}>编辑器面板（逗号分隔）
             <input

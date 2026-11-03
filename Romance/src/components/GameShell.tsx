@@ -62,7 +62,7 @@ import MudChrome, { menuItems, NavTabsEditor, type MudTab } from "./MudChrome";
 import ScheduleBoard from "./ScheduleBoard";
 import { Chip, Modal, toneColor } from "./ui";
 import { useConfirm } from "./EditorKit";
-import { IconBook, IconCamera, IconFlag, IconHeart, IconMenu, IconMoon, IconMusic, IconPin, IconPlay, IconSave, IconScroll, IconSettings, IconSpark, IconSparkle, IconStar, IconSun, IconUser, IconWallet, IconClock } from "../lib/icons";
+import { IconBook, IconCamera, IconClose, IconFlag, IconHeart, IconMenu, IconMoon, IconMusic, IconPin, IconPlay, IconSave, IconScroll, IconSettings, IconSpark, IconSparkle, IconStar, IconSun, IconUser, IconWallet, IconClock } from "../lib/icons";
 import { Segments, CastRow } from "./StoryTab";
 import NewcomerCards from "./NewcomerCards";
 import BranchSheet from "./BranchSheet";
@@ -79,6 +79,9 @@ const CgPanel = lazyPanel(() => import("./CgPanel"));
 const AudioLibraryPanel = lazyPanel(() => import("./AudioLibraryPanel"));
 import { CgGallery } from "./DiaryCg";
 import { newlyUnlockedCgs } from "../lib/ai";
+import CgUnlockReveal from "./CgUnlockReveal";
+import { resolveCgImageFile } from "../game/cgImageStore";
+import { applyCgUnlocks, cgRevealBatch, hasCgMenu, latestCgDialogue } from "../lib/cgGallery";
 import { liveTerm as T } from "../mods/live";
 const GameTour = lazyPanel(() => import("./GameTour"));
 
@@ -447,7 +450,7 @@ function SettingsPanel({ bare = false, section = "general", onBeauty }: { bare?:
         </SettingBranch>
         </>)}
         {bg("cover") && (<>
-        <BeautyGroup no="06" title="封面" en="COVER" desc="玩家侧叠在作者封面上的 DIY：背景、标题、按钮、氛围特效；作者封面请到模组编辑器「① 基础 → 开局封面」" />
+        <BeautyGroup no="06" title="封面" en="COVER" desc="玩家侧开局菜单 DIY：背景、标题、按钮、氛围特效；作品展示封面请到模组编辑器「① 基础 → 基本信息」名称上方" />
         <SettingBranch title="封面 DIY" en="COVER DIY" desc="背景图 / 视频 · 标题字与标题图 · 版式 · 按钮 · 星光花瓣特效" current={theme.cover ? (theme.cover.on === false ? "已关闭" : "已自定") : "世界封面"} swatch={<span className="h-4 w-3 rounded-[3px] bg-gradient-to-b from-[#2b1d47] to-[#e2a6d6]" />} defaultOpen={beautyGroup !== "all"}>
           <CoverDiyPanel />
         </SettingBranch>
@@ -629,16 +632,29 @@ export default function GameShell() {
   const [cgOpen, setCgOpen] = useState(false); // 玩家 CG 图鉴
   const [cgEditOpen, setCgEditOpen] = useState(false); // 编辑器 · CG 编排
   const [audioOpen, setAudioOpen] = useState(false); // 编辑器 · 音频库
-  // CG 解锁：任何数值变化后（剧情、日程、行动）统一判定，满足即入图鉴并弹窗提示
+  const [cgReveal, setCgReveal] = useState<{ id: string; extra: number } | null>(null);
+  const knownCgUnlocks = useRef<Set<string> | null>(null);
+  const knownCgSave = useRef("");
+  // 功能注释：剧情写完（busy=false）后统一判定；同批仅首张演出，其余合并为一句。
   useEffect(() => {
-    if (!game || busy) return;
+    if (!game) return;
+    if (knownCgSave.current !== game.id) {
+      knownCgSave.current = game.id;
+      knownCgUnlocks.current = new Set(Object.keys(game.cgUnlocked ?? {}));
+    }
+    if (busy) return;
     const ids = newlyUnlockedCgs(game);
-    if (!ids.length) return;
-    const time = game.world?.time ?? "";
-    commitGame({ ...game, cgUnlocked: { ...(game.cgUnlocked ?? {}), ...Object.fromEntries(ids.map((id) => [id, time])) } });
-    const names = ids.map((id) => `《${game.cgs?.find((c) => c.id === id)?.title || "未命名"}》`).join("、");
-    setPopup({ title: "解锁 CG", segments: [{ kind: "system", text: `收入图鉴：${names}。可在菜单「CG 图鉴」查看。` }], changes: [] });
-  }, [game, busy, commitGame, setPopup]);
+    if (ids.length) {
+      const time = game.world?.time ?? "";
+      commitGame(applyCgUnlocks(game, ids, time, latestCgDialogue(game.story)));
+      return;
+    }
+    const unlocked = Object.keys(game.cgUnlocked ?? {});
+    const fresh = unlocked.filter((id) => !knownCgUnlocks.current?.has(id));
+    knownCgUnlocks.current = new Set(unlocked);
+    const reveal = cgRevealBatch(fresh);
+    if (reveal) setCgReveal(reveal);
+  }, [game, busy, commitGame]);
   const landscape = theme.orient === "landscape";
   // 横屏（橙光式）：侧栏面板开合
   const [panelOpen, setPanelOpen] = useState(false);
@@ -690,10 +706,15 @@ export default function GameShell() {
   const [engineOpen, setEngineOpen] = useState(false); // 底层世界规则
   // 底层规则 · 预加载：空闲时把尚未解锁的 CG 先拉进浏览器缓存，解锁弹出时不再等图
   const preload = !!game && rulesOf(game).media.preload;
-  const cgKey = (game?.cgs ?? []).filter((c) => c.enabled !== false && c.image && !game?.cgUnlocked?.[c.id]).map((c) => c.image).slice(0, 24).join("\n");
+  const cgKey = (game?.cgs ?? []).filter((c) => c.enabled !== false && (c.imageFileId || c.image) && !game?.cgUnlocked?.[c.id]).map((c) => `${c.imageFileId ?? ""}|${c.image ?? ""}`).slice(0, 24).join("\n");
   useEffect(() => {
     if (!preload || !cgKey) return;
-    const t = window.setTimeout(() => { for (const src of cgKey.split("\n")) new Image().src = src; }, 1500);
+    const t = window.setTimeout(() => {
+      for (const item of cgKey.split("\n")) {
+        const [fileId, legacy] = item.split("|");
+        void resolveCgImageFile(fileId).then((src) => { const image = src ?? legacy; if (image) new Image().src = image; });
+      }
+    }, 1500);
     return () => window.clearTimeout(t);
   }, [preload, cgKey]);
   const [timelineOpen, setTimelineOpen] = useState(false); // 主线复盘时间线
@@ -805,14 +826,13 @@ export default function GameShell() {
 
         {/* 功能页以菜单选中后的浮层呈现。 */}
         {panelOpen && createPortal(
-          <div className="fixed inset-0 z-30 flex items-stretch justify-end" role="dialog" aria-modal="true">
-            <button aria-label="关闭面板" onClick={() => setPanelOpen(false)} className="absolute inset-0 bg-[#2b2247]/45 backdrop-blur-[3px]" />
-            <div className="relative m-2 flex w-full max-w-2xl animate-pop flex-col overflow-hidden rounded-[22px] border border-white/50 bg-paper shadow-2xl sm:m-3">
-              <div className="flex shrink-0 items-center justify-between border-b border-line bg-paper-2/90 px-4 py-2.5">
+          <div className="ui-overlay z-30" role="dialog" aria-modal="true" onClick={() => setPanelOpen(false)}>
+            <div className="ui-sheet ui-dialog animate-pop" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between border-b border-line bg-paper-2/90 px-4 py-2.5">
                 <span className="text-[14px] font-bold text-ink">{menuItems().find((m) => m.id === tab)?.label ?? (tab === "quest" ? "任务" : tab === "settings" ? "设置" : "面板")}</span>
-                <button onClick={() => setPanelOpen(false)} aria-label="关闭" className="rounded-full border border-line px-2.5 py-1 text-[13px] text-ink-soft transition hover:bg-line/40">收起 ›</button>
+                <button onClick={() => setPanelOpen(false)} aria-label="关闭" className="ui-icon-btn"><IconClose /></button>
               </div>
-              <div className="min-h-0 flex-1 overflow-y-auto">{tabNode(tab)}</div>
+              <div className="ui-dialog-body relative">{tabNode(tab)}</div>
             </div>
           </div>
         , romancePortalRoot()!)}
@@ -933,11 +953,11 @@ export default function GameShell() {
                   onClick={() => { setWorksOpen(true); setMenuOpen(false); }}
                   badge={`${game.sim.works} 部 · ${game.sim.awards} 奖`} badgeTone="jade"
                 />}
-                <MenuRow
+                {hasCgMenu(game.cgs) && <MenuRow
                   icon={IconSparkle} label="CG 图鉴" romaji="" hint="好感与剧情达成后解锁的剧情插图"
                   onClick={() => { setCgOpen(true); setMenuOpen(false); }}
                   badge={`${Object.keys(game.cgUnlocked ?? {}).length}/${(game.cgs ?? []).filter((c) => c.enabled !== false).length}`} badgeTone="gold"
-                />
+                />}
                 <MenuRow
                   icon={IconFlag} label="剧情志" romaji="STORY" hint="支线剧情 · 收藏留存 · 一键导出"
                   onClick={() => { setQuestOpen(true); setMenuOpen(false); }}
@@ -1057,7 +1077,7 @@ export default function GameShell() {
 
       {/* 人物档案：点左上角头像唤出（原「人物」页内容，现以弹窗呈现） */}
       {simOpen && (
-        <Modal title="人物档案" onClose={() => setSimOpen(false)} wide>
+        <Modal title="人物档案" onClose={() => setSimOpen(false)}>
           <SimTab embedded />
         </Modal>
       )}
@@ -1073,35 +1093,35 @@ export default function GameShell() {
 
       {/* 世界规则 · 社会规则设定 */}
       {rulesOpen && (
-        <Modal title="世界规则 · 社会规则" onClose={() => setRulesOpen(false)} wide>
+        <Modal title="世界规则 · 社会规则" onClose={() => setRulesOpen(false)}>
           <WorldRulesPanel />
         </Modal>
       )}
 
       {/* 世界书 · 设定片段 */}
       {bookOpen && (
-        <Modal title="世界书 · 设定片段" onClose={() => setBookOpen(false)} wide>
+        <Modal title="世界书 · 设定片段" onClose={() => setBookOpen(false)}>
           <WorldBookPanel />
         </Modal>
       )}
 
       {/* 地图编辑器 · 点位 / 背景 / 物件 */}
       {mapEditOpen && (
-        <Modal title="地图编辑器 · 点位与物件" onClose={() => setMapEditOpen(false)} wide>
+        <Modal title="地图编辑器 · 点位与物件" onClose={() => setMapEditOpen(false)}>
           <Suspense fallback={<PanelLoading />}><MapEditorPanel /></Suspense>
         </Modal>
       )}
 
       {/* 模组 / 世界观管理 */}
       {modsOpen && (
-        <Modal title="创意工坊" onClose={() => setModsOpen(false)} xl>
+        <Modal title="创意工坊" onClose={() => setModsOpen(false)}>
           <Suspense fallback={<PanelLoading />}><ModManagerPanel /></Suspense>
         </Modal>
       )}
 
       <AllowanceWatcher />
       {questOpen && (
-        <Modal title="剧情志" onClose={() => setQuestOpen(false)} wide>
+        <Modal title="剧情志" onClose={() => setQuestOpen(false)}>
           <StoryQuestPanel onNavigate={() => setQuestOpen(false)} />
         </Modal>
       )}
@@ -1116,7 +1136,7 @@ export default function GameShell() {
         const allPaths = creationCopy().paths ?? [];
         const lockedPathN = allPaths.filter((p) => !p.open).length;
         return (
-          <Modal title="编辑器" onClose={() => setEditorOpen(false)} wide>
+          <Modal title="编辑器" onClose={() => setEditorOpen(false)}>
             {(() => {
               // 功能注释：菜单文案与 editorHubMenus 同源，创作向导第 2 步据此全量迁移，禁止再手写 label
               const hub = (id: string) => EDITOR_HUB_MENUS.find((m) => m.id === id)!;
@@ -1134,7 +1154,7 @@ export default function GameShell() {
                   { id: "nav", label: hub("nav").label, en: "", hint: hub("nav").hint, icon: IconSparkle, stat: game.navTabs?.length ? "已自定" : "默认", done: !!game.navTabs?.length, onOpen: go(setNavEditOpen), panel: () => <NavTabsEditor /> },
                   { id: "book", label: hub("book").label, en: "", hint: hub("book").hint, icon: IconScroll, stat: n(bookN, "条"), done: bookN > 0, onOpen: go(setBookOpen), panel: () => <WorldBookPanel /> },
                 ] },
-                { id: "story", title: "剧情编排", scope: "条件达成即上演", tools: [
+                { id: "story", title: "剧情", scope: "条件达成即上演", tools: [
                   { id: "fixed", label: hub("fixed").label, en: "", hint: hub("fixed").hint, icon: IconFlag, stat: fixedN ? n(fixedN, "段") : "暂无", done: fixedN > 0, onOpen: go(setFixedOpen), panel: () => <FixedEventsPanel /> },
                   { id: "cg", label: hub("cg").label, en: "", hint: hub("cg").hint, icon: IconSparkle, stat: (game.cgs ?? []).length ? n((game.cgs ?? []).length, "张") : "暂无", done: (game.cgs ?? []).length > 0, onOpen: go(setCgEditOpen), panel: () => <CgPanel /> },
                   { id: "audio", label: hub("audio").label, en: "", hint: hub("audio").hint, icon: IconSparkle, stat: (game.audio ?? []).length ? n((game.audio ?? []).length, "条") : "暂无", done: (game.audio ?? []).length > 0, onOpen: go(setAudioOpen), panel: () => <AudioLibraryPanel /> },
@@ -1157,68 +1177,83 @@ export default function GameShell() {
 
       {/* 固定事件 · 创作者预设剧本（满足条件后代码判定触发） */}
       {fixedOpen && (
-        <Modal title="固定事件 · 剧本编排" onClose={() => setFixedOpen(false)} wide>
+        <Modal title="固定事件 · 剧本编排" onClose={() => setFixedOpen(false)}>
           <Suspense fallback={<PanelLoading />}><FixedEventsPanel /></Suspense>
         </Modal>
       )}
 
-      {setOpen && <Modal title="设置" wide onClose={() => setSetOpen(false)}><SettingsPanel bare onBeauty={() => { setSetOpen(false); setBeautyOpen(true); }} /></Modal>}
-      {beautyOpen && <Modal title="美化" wide onClose={() => setBeautyOpen(false)}><SettingsPanel bare section="beauty" /></Modal>}
+      {setOpen && <Modal title="设置" onClose={() => setSetOpen(false)}><SettingsPanel bare onBeauty={() => { setSetOpen(false); setBeautyOpen(true); }} /></Modal>}
+      {beautyOpen && <Modal title="美化" onClose={() => setBeautyOpen(false)}><SettingsPanel bare section="beauty" /></Modal>}
       {cgOpen && (
-        <Modal title="CG 图鉴" onClose={() => setCgOpen(false)} wide>
+        <Modal title="CG 图鉴" onClose={() => {
+          setCgOpen(false);
+          if (game.cgNew?.length) commitGame({ ...game, cgNew: [] });
+        }}>
           <CgGallery />
         </Modal>
       )}
+      {cgReveal && (() => {
+        const cg = game.cgs?.find((item) => item.id === cgReveal.id);
+        if (!cg) return null;
+        return (
+          <CgUnlockReveal
+            cg={cg}
+            extraCount={cgReveal.extra}
+            reduced={typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches}
+            onClose={() => setCgReveal(null)}
+          />
+        );
+      })()}
       {audioOpen && (
-        <Modal title="音频库 · BGM & 音效" onClose={() => setAudioOpen(false)} wide>
+        <Modal title="音频库 · BGM & 音效" onClose={() => setAudioOpen(false)}>
           <AudioLibraryPanel />
         </Modal>
       )}
       {cgEditOpen && (
-        <Modal title="CG 图鉴编排" onClose={() => setCgEditOpen(false)} wide>
+        <Modal title="CG 图鉴编排" onClose={() => setCgEditOpen(false)}>
           <CgPanel />
         </Modal>
       )}
 
       {engineOpen && (
-        <Modal title="底层世界规则" onClose={() => setEngineOpen(false)} wide>
+        <Modal title="底层世界规则" onClose={() => setEngineOpen(false)}>
           <EngineRulesPanel />
         </Modal>
       )}
       {factionOpen && (
-        <Modal title="阵营派系" onClose={() => setFactionOpen(false)} wide>
+        <Modal title="阵营派系" onClose={() => setFactionOpen(false)}>
           <FactionsPanel />
         </Modal>
       )}
       {timelineOpen && (
-        <Modal title="主线复盘 · 时间线" onClose={() => setTimelineOpen(false)} wide>
+        <Modal title="主线复盘 · 时间线" onClose={() => setTimelineOpen(false)}>
           <TimelinePanel onLeave={() => setTimelineOpen(false)} />
         </Modal>
       )}
 
       {endingsOpen && (
-        <Modal title="结局设定 · 多结局编排" onClose={() => setEndingsOpen(false)} wide>
+        <Modal title="结局设定 · 多结局编排" onClose={() => setEndingsOpen(false)}>
           <EndingsPanel />
         </Modal>
       )}
 
       {/* 固定人物 · 新增 / 基础资料与常驻地点 / 性别 / 人设 / 说话口吻 */}
       {personOpen && (
-        <Modal title="人物" onClose={() => setPersonOpen(false)} wide>
+        <Modal title="人物" onClose={() => setPersonOpen(false)}>
 <FixedPersonPanel />
         </Modal>
       )}
 
       {/* AI 配置 */}
       {cfgOpen && (
-        <Modal title="AI 配置" onClose={() => setCfgOpen(false)} wide>
+        <Modal title="AI 配置" onClose={() => setCfgOpen(false)}>
           <AIConfigPanel />
         </Modal>
       )}
 
       {/* 存档管理：6 个手动存档位 + 自动存档 + 立即存档 */}
       {savesOpen && (
-        <Modal title="存档管理" onClose={() => setSavesOpen(false)} wide>
+        <Modal title="存档管理" onClose={() => setSavesOpen(false)}>
           {/* 当前进度 + 立即存档（写入自动存档槽） */}
           <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-dashed border-jade/50 bg-jade/[0.05] p-3.5">
             <div className="min-w-0">

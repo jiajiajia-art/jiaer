@@ -21,7 +21,7 @@ interface UseEditorSessionReturn {
     handlePublishGame: (
         description?: string,
         shareType?: Currency,
-        versionNotes?: string,
+        versionNotes?: string | null,
         notifyFavoritedUsers?: boolean,
         audienceType?: 'male' | 'female' | 'all',
     ) => Promise<void>;
@@ -49,7 +49,8 @@ export const useEditorSession = ({ fileId, mode }: UseEditorSessionOptions): Use
                     navigate(`/galgameMap`);
                     return sessionId;
                 } else {
-                    toast.error((sessionResponse.data as any)?.message || '创建世界交互游戏失败，请重试');
+                    const message = (sessionResponse.data as { message?: string }).message;
+                    toast.error(message || '创建世界交互游戏失败，请重试');
                     return null;
                 }
             } else {
@@ -66,9 +67,16 @@ export const useEditorSession = ({ fileId, mode }: UseEditorSessionOptions): Use
                     return null;
                 }
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('❌ Session 创建错误:', error);
-            const errorMessage = error?.response?.data?.message || error?.response?.data?.error || error.message || '创建游戏失败，请稍后重试';
+            const typedError = error as {
+                response?: { data?: { message?: string; error?: string } };
+                message?: string;
+            };
+            const errorMessage = typedError.response?.data?.message
+                || typedError.response?.data?.error
+                || typedError.message
+                || '创建游戏失败，请稍后重试';
             toast.error(errorMessage);
             return null;
         }
@@ -78,7 +86,7 @@ export const useEditorSession = ({ fileId, mode }: UseEditorSessionOptions): Use
     const handlePublishGame = useCallback(async (
         description?: string,
         shareType?: Currency,
-        versionNotes?: string,
+        versionNotes?: string | null,
         notifyFavoritedUsers?: boolean,
         audienceType?: 'male' | 'female' | 'all',
     ): Promise<void> => {

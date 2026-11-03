@@ -1,25 +1,31 @@
 /**
  * 模组编辑器 · 手机应用配置 + 可操作小手机预览。
- * 预览机身 / 状态栏 / 图标格 / Dock 与局内 Phone.tsx 实机一致；下载 / 卸载仅内存，不写存档。
+ * 「编辑 / 预览」贴在手机屏幕顶部；点列表行弹窗改属性；应用商店弹窗改开局预装（只写作品配置）。
  */
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import type { PhoneAppDef } from "../mods/types";
 import {
   catalogItem,
   compactPhoneApps,
   phoneAppLabel,
+  preinstallIds,
   resolvePhoneApps,
   storeVisibleIds,
+  type ResolvedPhoneApp,
 } from "../lib/phoneAppsConfig";
 import { APP_ICON } from "./phone/appIcons";
 import { IconCheck } from "../lib/icons";
 import { frameById } from "./Phone";
-import { resolveWallpaper } from "./phone/wallpapers";
+import { DEFAULT_WALLPAPER, customWallpaperCss, resolveEffectiveHomeWallpaper } from "./phone/wallpapers";
 import LivePhoneAppPreview from "./phone/LivePhoneAppPreview";
+import { Modal } from "./ui";
 
 type Props = {
   value?: PhoneAppDef[];
+  /** 作品默认桌面背景（data URL） */
+  wallpaper?: string;
   onChange: (next: PhoneAppDef[] | undefined) => void;
+  onWallpaperChange: (next: string | undefined) => void;
 };
 
 /** 与 Phone.tsx HomeGrid 底栏一致：已安装才进 Dock */
@@ -82,56 +88,37 @@ function BatteryGlyph() {
   );
 }
 
-/** 功能注释：预览态商店安装进度条（纯装饰，约 0.9s 走完）。 */
-function useFakeProgress(active: boolean, onDone: () => void) {
-  const [pct, setPct] = useState(0);
-  useEffect(() => {
-    if (!active) {
-      setPct(0);
-      return;
-    }
-    setPct(8);
-    const t0 = Date.now();
-    const iv = setInterval(() => {
-      const p = Math.min(100, Math.round(((Date.now() - t0) / 900) * 100));
-      setPct(p);
-      if (p >= 100) {
-        clearInterval(iv);
-        onDone();
-      }
-    }, 40);
-    return () => clearInterval(iv);
-  }, [active]); // eslint-disable-line react-hooks/exhaustive-deps
-  return pct;
+/** 功能注释：把某一应用的预装开关写回作品配置；应用商店始终预装。 */
+function withAvail(list: ResolvedPhoneApp[], id: string, preinstall: boolean): PhoneAppDef[] {
+  return list.map((a) => ({
+    id: a.id,
+    label: a.label,
+    icon: a.icon,
+    order: a.order,
+    avail: id === "appstore" ? "preinstall" : a.id === id ? (preinstall ? "preinstall" : "store") : a.avail,
+    unlockHint: a.unlockHint || undefined,
+  }));
 }
 
-export default function PhoneAppsEditor({ value, onChange }: Props) {
+export default function PhoneAppsEditor({ value, wallpaper, onChange, onWallpaperChange }: Props) {
   const apps = useMemo(() => resolvePhoneApps(value), [value]);
-  const [sel, setSel] = useState(apps[0]?.id ?? "wechat");
-  const selected = apps.find((a) => a.id === sel) ?? apps[0];
-
-  const [previewInstalled, setPreviewInstalled] = useState<string[]>(() =>
-    apps.filter((a) => a.avail === "preinstall").map((a) => a.id),
-  );
-  const [screen, setScreen] = useState<"home" | "store" | "app">("home");
+  const installed = useMemo(() => preinstallIds(value), [value]);
+  const [mode, setMode] = useState<"edit" | "preview">("preview");
+  const [editId, setEditId] = useState<string | null>(null);
+  const [storeOpen, setStoreOpen] = useState(false);
+  const [screen, setScreen] = useState<"home" | "app">("home");
   const [openId, setOpenId] = useState<string | null>(null);
-  const [installing, setInstalling] = useState<string | null>(null);
-  const progress = useFakeProgress(!!installing, () => {
-    if (!installing) return;
-    setPreviewInstalled((prev) => Array.from(new Set([...prev, installing])));
-    setInstalling(null);
-  });
 
-  useEffect(() => {
-    // 功能注释：预览以当前预装为底座；商店试装保留，不因改预装而清掉预览里已「下载」的
-    const pre = apps.filter((a) => a.avail === "preinstall").map((a) => a.id);
-    const allowed = new Set(apps.map((a) => a.id));
-    setPreviewInstalled((prev) => Array.from(new Set([...pre, ...prev.filter((id) => allowed.has(id))])));
-  }, [apps]);
+  const editing = apps.find((a) => a.id === editId) ?? null;
 
   const patch = (id: string, p: Partial<PhoneAppDef>) => {
     const next = apps.map((a) => (a.id === id ? { ...a, ...p } : a));
     onChange(compactPhoneApps(next));
+  };
+
+  const setPreinstall = (id: string, on: boolean) => {
+    if (id === "appstore" && !on) return;
+    onChange(compactPhoneApps(withAvail(apps, id, on)));
   };
 
   const move = (id: string, dir: -1 | 1) => {
@@ -145,22 +132,29 @@ export default function PhoneAppsEditor({ value, onChange }: Props) {
     onChange(compactPhoneApps(next.map((a, i) => ({ ...a, order: i }))));
   };
 
-  // 功能注释：Dock 仅展示已安装的固定四件套，主屏网格不再重复它们（对齐实机 HomeGrid）
-  const dock = DOCK_APPS.filter((id) => previewInstalled.includes(id));
+  // 功能注释：Dock / 主屏只反映作品开局预装，商店勾选即时同步到桌面
+  const dock = DOCK_APPS.filter((id) => installed.includes(id));
   const dockSet = new Set<string>(dock);
   const homeApps = apps.filter(
     (a) =>
       !dockSet.has(a.id as (typeof DOCK_APPS)[number]) &&
-      (previewInstalled.includes(a.id) || a.id === "appstore"),
+      (installed.includes(a.id) || a.id === "appstore"),
   );
   const storeIds = storeVisibleIds(value);
   const frame = frameById("titanium");
-  const wp = resolveWallpaper("ocean");
+  const wp = resolveEffectiveHomeWallpaper(wallpaper, { wallpaper: DEFAULT_WALLPAPER });
 
   const openApp = (id: string) => {
+    if (mode === "edit") {
+      if (id === "appstore") {
+        setStoreOpen(true);
+        return;
+      }
+      setEditId(id);
+      return;
+    }
     if (id === "appstore") {
-      setScreen("store");
-      setOpenId(null);
+      setStoreOpen(true);
       return;
     }
     setOpenId(id);
@@ -179,6 +173,20 @@ export default function PhoneAppsEditor({ value, onChange }: Props) {
     }
     const reader = new FileReader();
     reader.onload = () => patch(id, { icon: String(reader.result || "") || undefined });
+    reader.readAsDataURL(file);
+  };
+
+  const onWallpaperFile = (file: File | null) => {
+    if (!file) {
+      onWallpaperChange(undefined);
+      return;
+    }
+    if (!file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const raw = String(reader.result || "");
+      onWallpaperChange(raw || undefined);
+    };
     reader.readAsDataURL(file);
   };
 
@@ -201,19 +209,24 @@ export default function PhoneAppsEditor({ value, onChange }: Props) {
     );
   };
 
-  return (
-    <div className="flex flex-col gap-3" data-phone-apps-editor="v2-top-preview">
-      {/* 功能注释：预览必须排在清单之前（DOM 首块）；勿再放到表单下方 */}
-      <p className="order-1 text-[11.5px] leading-relaxed text-ink-soft">
-        小手机实时预览（置顶 · 与局内实机同机身 / 壁纸 / Dock）。可试玩下载 · 安装 · 打开 · 卸载（仅预览，不写存档）。
-      </p>
+  const showHome = mode === "edit" || screen === "home" || !openId;
 
-      {/* —— 顶部：与实机一致的仿真机身预览 —— */}
-      <div className="order-2 flex flex-col items-center gap-2 rounded-2xl border border-jade/30 bg-paper-2/60 px-2 py-3">
-        <p className="text-[10.5px] font-bold tracking-[0.14em] text-jade">实时预览 · 与游戏实机一致</p>
-        <div className="w-full max-w-[280px]" style={IOS_VARS}>
+  // 功能注释：点背景条始终展示当前生效壁纸（作品自定义或引擎默认），上传后同步手机预览
+  const wallpaperPreviewCss = wallpaper
+    ? /url\(/i.test(wallpaper)
+      ? wallpaper
+      : customWallpaperCss(wallpaper)
+    : wp.css;
+
+  return (
+    <div className="flex flex-col" data-phone-apps-editor="v3-inphone-tabs" data-phone-apps-compact="1">
+      {/* 功能注释：预览 / 点背景 / 应用清单收成连续一块，不插说明文案与大间距 */}
+      <div className="flex flex-col gap-2 rounded-2xl border border-jade/30 bg-paper-2/60 px-2 py-2.5">
+        {/* —— 仿真机身；编辑/预览切换贴在屏幕内顶部 —— */}
+        <div className="flex flex-col items-center gap-1.5">
+          <div className="w-full max-w-[240px]" style={IOS_VARS}>
           <div
-            className="phone-frame relative mx-auto aspect-[9/19.5] w-full max-h-[560px] rounded-[3.2rem] p-[5px]"
+            className="phone-frame relative mx-auto aspect-[9/19.5] w-full max-h-[420px] rounded-[3.2rem] p-[5px]"
             style={{ background: frame.frame }}
           >
             <span className="phone-btn absolute -left-[3px] top-[15%] h-8 w-[3px] rounded-l" style={{ background: frame.btn }} />
@@ -223,12 +236,11 @@ export default function PhoneAppsEditor({ value, onChange }: Props) {
             <div className="relative h-full overflow-hidden rounded-[2.95rem]">
               <div
                 className="phone-os relative isolate flex h-full flex-col overflow-hidden ring-1 ring-white/5"
-                style={{ background: screen === "home" ? wp.css : "#f2f2f7" }}
+                style={{ background: showHome ? wp.css : "#f2f2f7" }}
               >
-                {/* 状态栏：对齐实机（时间 · Dynamic Island · 信号/电量） */}
                 <div
                   className={`relative flex shrink-0 items-center justify-between px-6 pb-1 pt-3 text-[12px] font-semibold tracking-[-0.01em] ${
-                    screen === "home" ? "text-white" : "text-black/80"
+                    showHome ? "text-white" : "text-black/80"
                   }`}
                 >
                   <span className="tabular-nums tracking-tight">9:41</span>
@@ -243,8 +255,35 @@ export default function PhoneAppsEditor({ value, onChange }: Props) {
                   </div>
                 </div>
 
+                {/* 功能注释：编辑/预览贴在手机屏幕顶部（不再放在机身外面） */}
+                <div className="relative z-20 mx-3 mt-1 flex shrink-0 rounded-full bg-black/35 p-0.5 backdrop-blur-md ring-1 ring-white/20" role="tablist" aria-label="手机配置模式">
+                  {([
+                    ["edit", "编辑"],
+                    ["preview", "预览"],
+                  ] as const).map(([k, label]) => {
+                    const on = mode === k;
+                    return (
+                      <button
+                        key={k}
+                        type="button"
+                        role="tab"
+                        aria-selected={on}
+                        onClick={() => {
+                          setMode(k);
+                          if (k === "edit") goHome();
+                        }}
+                        className={`flex-1 rounded-full py-1 text-[11px] font-bold transition ${
+                          on ? "bg-white text-[#181818] shadow-sm" : "text-white/85 hover:text-white"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+
                 <div className="relative min-h-0 flex-1 overflow-hidden">
-                  {screen === "home" ? (
+                  {showHome ? (
                     <div className="relative flex h-full flex-col">
                       <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/15 to-transparent" />
                       <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/15 to-transparent" />
@@ -271,85 +310,24 @@ export default function PhoneAppsEditor({ value, onChange }: Props) {
                     </div>
                   ) : null}
 
-                  {screen === "store" ? (
-                    <div className="flex h-full flex-col bg-[#f7f7f9] text-[#181818]">
-                      <div className="flex items-center gap-2 border-b border-black/5 px-3 py-2">
-                        <button type="button" className="text-[12px] font-semibold text-[#007aff]" onClick={goHome}>
-                          ‹ 桌面
-                        </button>
-                        <span className="text-[13px] font-bold">应用商店</span>
-                      </div>
-                      <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto p-2">
-                        {storeIds.map((id) => {
-                          const meta = apps.find((a) => a.id === id)!;
-                          const cat = catalogItem(id);
-                          const installed = previewInstalled.includes(id);
-                          const busy = installing === id;
-                          return (
-                            <li key={id} className="flex items-center gap-2 rounded-xl bg-white p-2 shadow-sm">
-                              <AppIcon id={id} custom={meta.icon} size={44} />
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate text-[12px] font-bold">{meta.label}</p>
-                                <p className="truncate text-[10px] text-[#8a8a8e]">{cat?.blurb}</p>
-                                {busy ? (
-                                  <div className="mt-1 h-1 overflow-hidden rounded-full bg-black/10">
-                                    <div className="h-full bg-[#007aff] transition-all" style={{ width: `${progress}%` }} />
-                                  </div>
-                                ) : null}
-                              </div>
-                              {installed ? (
-                                <div className="flex shrink-0 flex-col gap-1">
-                                  <button type="button" className="rounded-full bg-[#e8e8ed] px-2.5 py-1 text-[10px] font-bold" onClick={() => openApp(id)}>
-                                    打开
-                                  </button>
-                                  {id !== "appstore" ? (
-                                    <button
-                                      type="button"
-                                      className="text-[9.5px] font-semibold text-[#ff3b30]"
-                                      onClick={() => setPreviewInstalled((p) => p.filter((x) => x !== id))}
-                                    >
-                                      卸载
-                                    </button>
-                                  ) : null}
-                                </div>
-                              ) : (
-                                <button
-                                  type="button"
-                                  disabled={!!installing}
-                                  className="shrink-0 rounded-full bg-[#007aff] px-2.5 py-1 text-[10px] font-bold text-white disabled:opacity-50"
-                                  onClick={() => setInstalling(id)}
-                                >
-                                  获取
-                                </button>
-                              )}
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-                  ) : null}
-
-                  {screen === "app" && openId ? (
-                    /* 功能注释：与局内 Phone 同一套应用组件，禁止示意页冒充实机 */
-                    <div className="phone-app-in h-full">
+                  {mode === "preview" && screen === "app" && openId ? (
+                    <div className="phone-app-in absolute inset-0 z-10 h-full">
                       <LivePhoneAppPreview id={openId} onBack={goHome} />
                     </div>
                   ) : null}
                 </div>
 
-                {/* Home Indicator：对齐实机 */}
                 <div className="flex shrink-0 justify-center pb-2 pt-1">
                   <button
                     type="button"
                     aria-label="回桌面"
                     onClick={goHome}
                     className={`h-[5px] w-[120px] rounded-full transition ${
-                      screen === "home" ? "bg-white/55" : "bg-black/35"
+                      showHome ? "bg-white/55" : "bg-black/35"
                     }`}
                   />
                 </div>
 
-                {/* 玻璃反光：与带边框实机一致 */}
                 <div
                   className="pointer-events-none absolute inset-0 z-[60] rounded-[2.4rem]"
                   style={{ background: "linear-gradient(125deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.04) 14%, transparent 34%)" }}
@@ -358,53 +336,76 @@ export default function PhoneAppsEditor({ value, onChange }: Props) {
             </div>
           </div>
         </div>
-        <p className="max-w-sm text-center text-[10.5px] leading-relaxed text-ink-soft">
-          预览下载 / 卸载不会写入正式存档。玩家局内安装的应用随当前存档保存。
-        </p>
         <button
           type="button"
-          className="flex items-center justify-center gap-1 rounded-xl border border-line px-3 py-1.5 text-[11.5px] font-semibold text-ink-soft hover:border-jade hover:text-jade"
-          onClick={() => {
-            setPreviewInstalled(apps.filter((a) => a.avail === "preinstall").map((a) => a.id));
-            goHome();
-            setInstalling(null);
-          }}
+          className="flex items-center justify-center gap-1 rounded-xl border border-jade/40 bg-jade/10 px-3 py-1.5 text-[11.5px] font-semibold text-jade hover:bg-jade/15"
+          onClick={() => setStoreOpen(true)}
         >
-          <IconCheck size={12} /> 重置预览安装状态
+          打开应用商店
         </button>
-      </div>
+        </div>
 
-      {/* —— 下方：应用清单与属性（order-3，永远在预览之后） —— */}
-      <div className="order-3 space-y-2">
-        <p className="text-[10.5px] font-bold tracking-[0.12em] text-ink-soft">应用清单与属性</p>
-        <ul className="max-h-[360px] space-y-1 overflow-y-auto rounded-xl border border-line bg-paper-2 p-1.5">
-          {apps.map((a, i) => {
-            const on = a.id === selected?.id;
-            return (
+        {/* —— 点背景：一条小预览 + 旁侧上传/清除 —— */}
+        <div
+          className="flex items-center gap-2 rounded-xl border border-line bg-paper px-2.5 py-1.5"
+          data-phone-wallpaper-strip="1"
+        >
+          <span className="shrink-0 text-[10.5px] font-bold tracking-[0.12em] text-ink-soft">手机桌面背景</span>
+          <div
+            className="h-7 min-w-0 flex-1 rounded-md border border-line bg-cover bg-center"
+            style={{ background: wallpaperPreviewCss }}
+            aria-label="桌面背景预览"
+          />
+          <label className="inline-flex shrink-0 cursor-pointer items-center rounded-lg border border-line bg-paper-2 px-2 py-1 text-[11.5px] font-semibold text-ink-soft hover:border-jade hover:text-jade">
+            上传
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                onWallpaperFile(e.target.files?.[0] ?? null);
+                e.target.value = "";
+              }}
+            />
+          </label>
+          {wallpaper ? (
+            <button
+              type="button"
+              className="shrink-0 text-[11px] font-semibold text-danger"
+              onClick={() => onWallpaperChange(undefined)}
+            >
+              清除
+            </button>
+          ) : null}
+        </div>
+
+        {/* —— 应用清单：点行弹窗，不在行内展开 —— */}
+        <div className="space-y-1.5">
+          <p className="text-[10.5px] font-bold tracking-[0.12em] text-ink-soft">应用清单与属性</p>
+          <ul className="max-h-[280px] space-y-1 overflow-y-auto rounded-xl border border-line bg-paper p-1.5">
+            {apps.map((a, i) => (
               <li key={a.id}>
-                <button
-                  type="button"
-                  onClick={() => setSel(a.id)}
-                  className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition ${
-                    on ? "bg-jade/15 ring-1 ring-jade/40" : "hover:bg-paper"
-                  }`}
-                >
-                  <AppIcon id={a.id} custom={a.icon} size={32} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[12.5px] font-bold text-ink">{a.label}</span>
-                    <span className="block text-[10.5px] text-ink-soft">
-                      {a.avail === "preinstall" ? "开局预装" : "商店可下"} · {catalogItem(a.id)?.blurb}
+                <div className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 transition hover:bg-paper-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditId(a.id)}
+                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                  >
+                    <AppIcon id={a.id} custom={a.icon} size={32} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[12.5px] font-bold text-ink">{a.label}</span>
+                      <span className="block text-[10.5px] text-ink-soft">
+                        {a.avail === "preinstall" ? "开局预装" : "商店可下"} · {catalogItem(a.id)?.blurb}
+                      </span>
                     </span>
-                  </span>
+                    <span className="text-[12px] text-ink-soft" aria-hidden>›</span>
+                  </button>
                   <span className="flex shrink-0 flex-col gap-0.5">
                     <button
                       type="button"
                       aria-label="上移"
                       disabled={i === 0}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        move(a.id, -1);
-                      }}
+                      onClick={() => move(a.id, -1)}
                       className="rounded px-1 text-[10px] text-ink-soft disabled:opacity-30"
                     >
                       ↑
@@ -413,29 +414,28 @@ export default function PhoneAppsEditor({ value, onChange }: Props) {
                       type="button"
                       aria-label="下移"
                       disabled={i >= apps.length - 1}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        move(a.id, 1);
-                      }}
+                      onClick={() => move(a.id, 1)}
                       className="rounded px-1 text-[10px] text-ink-soft disabled:opacity-30"
                     >
                       ↓
                     </button>
                   </span>
-                </button>
+                </div>
               </li>
-            );
-          })}
-        </ul>
+            ))}
+          </ul>
+        </div>
+      </div>
 
-        {selected ? (
-          <div className="space-y-2.5 rounded-xl border border-line bg-paper px-3 py-2.5">
+      {editing ? (
+        <Modal title={`编辑 · ${editing.label}`} onClose={() => setEditId(null)}>
+          <div className="space-y-2.5">
             <label className="block">
               <span className="mb-0.5 block text-[10.5px] font-bold tracking-[0.12em] text-ink-soft">应用名称</span>
               <input
                 className="w-full rounded-lg border border-line bg-paper-2 px-2.5 py-1.5 text-[12.5px] text-ink focus:border-jade focus:outline-none"
-                value={selected.label}
-                onChange={(e) => patch(selected.id, { label: e.target.value })}
+                value={editing.label}
+                onChange={(e) => patch(editing.id, { label: e.target.value })}
               />
             </label>
             <div>
@@ -447,46 +447,109 @@ export default function PhoneAppsEditor({ value, onChange }: Props) {
                   accept="image/*"
                   className="hidden"
                   onChange={(e) => {
-                    onIconFile(selected.id, e.target.files?.[0] ?? null);
+                    onIconFile(editing.id, e.target.files?.[0] ?? null);
                     e.target.value = "";
                   }}
                 />
               </label>
-              {selected.icon ? (
+              {editing.icon ? (
                 <button
                   type="button"
                   className="ml-2 text-[11px] font-semibold text-danger"
-                  onClick={() => patch(selected.id, { icon: undefined })}
+                  onClick={() => patch(editing.id, { icon: undefined })}
                 >
                   清除
                 </button>
               ) : null}
             </div>
-            {/* 功能注释：仅「开局预装」；不勾选 = 开局不装、商店仍可下。应用商店强制预装。 */}
             <label
               className={`flex items-start gap-2.5 rounded-lg border px-2.5 py-2 ${
-                selected.id === "appstore" ? "border-line bg-paper-2 opacity-70" : "border-line bg-paper-2"
+                editing.id === "appstore" ? "border-line bg-paper-2 opacity-70" : "border-line bg-paper-2"
               }`}
             >
               <input
                 type="checkbox"
                 className="mt-0.5 h-4 w-4 accent-[var(--jade,#A8283C)]"
-                checked={selected.avail === "preinstall"}
-                disabled={selected.id === "appstore"}
-                onChange={(e) => patch(selected.id, { avail: e.target.checked ? "preinstall" : "store" })}
+                checked={editing.avail === "preinstall"}
+                disabled={editing.id === "appstore"}
+                onChange={(e) => setPreinstall(editing.id, e.target.checked)}
               />
               <span className="min-w-0">
                 <span className="block text-[12.5px] font-bold text-ink">开局预装</span>
                 <span className="block text-[10.5px] leading-snug text-ink-soft">
-                  {selected.id === "appstore"
+                  {editing.id === "appstore"
                     ? "应用商店始终预装，不可关闭"
-                    : "勾选后新开局桌面自动安装；不勾选则开局不装，仍可从应用商店下载。只影响新开局，不改已有存档。"}
+                    : "勾选后新开局桌面自动安装；桌面预览立刻同步。只影响作品配置，不改已有玩家存档。"}
                 </span>
               </span>
             </label>
+            <button
+              type="button"
+              className="w-full rounded-full bg-jade py-2 text-[13px] font-bold text-white"
+              onClick={() => setEditId(null)}
+            >
+              完成
+            </button>
           </div>
-        ) : null}
-      </div>
+        </Modal>
+      ) : null}
+
+      {storeOpen ? (
+        <Modal title="应用商店" onClose={() => setStoreOpen(false)} heavyBackdrop>
+          <p className="mb-2 text-[11.5px] leading-relaxed text-ink-soft">
+            勾选或「获取」记为本作品开局预装，桌面预览同步出现图标；取消 / 卸载则从开局预装拿掉。不写玩家正式存档。
+          </p>
+          <ul className="max-h-[55vh] space-y-2 overflow-y-auto">
+            {storeIds.map((id) => {
+              const meta = apps.find((a) => a.id === id)!;
+              const cat = catalogItem(id);
+              const on = meta.avail === "preinstall";
+              return (
+                <li key={id} className="flex items-center gap-2 rounded-xl border border-line bg-paper-2 p-2">
+                  <AppIcon id={id} custom={meta.icon} size={44} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[12.5px] font-bold text-ink">{meta.label}</p>
+                    <p className="truncate text-[10.5px] text-ink-soft">{cat?.blurb}</p>
+                  </div>
+                  <label className="flex shrink-0 items-center gap-1.5 text-[11px] font-semibold text-ink">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 accent-[var(--jade,#A8283C)]"
+                      checked={on}
+                      disabled={id === "appstore"}
+                      onChange={(e) => setPreinstall(id, e.target.checked)}
+                    />
+                    预装
+                  </label>
+                  {id !== "appstore" ? (
+                    on ? (
+                      <button
+                        type="button"
+                        className="shrink-0 rounded-full bg-[#e8e8ed] px-2.5 py-1 text-[10px] font-bold text-[#ff3b30]"
+                        onClick={() => setPreinstall(id, false)}
+                      >
+                        卸载
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="shrink-0 rounded-full bg-[#007aff] px-2.5 py-1 text-[10px] font-bold text-white"
+                        onClick={() => setPreinstall(id, true)}
+                      >
+                        获取
+                      </button>
+                    )
+                  ) : (
+                    <span className="flex items-center gap-0.5 text-[10px] font-bold text-jade">
+                      <IconCheck size={12} /> 必装
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </Modal>
+      ) : null}
     </div>
   );
 }

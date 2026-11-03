@@ -4,12 +4,11 @@ import type { PerkKeyOption } from "../game/perkKeys";
 import type { ReactNode } from "react";
 import type { BridgeSlot } from "../game/bridge";
 
-/* 模组编辑器 · 关系玩法：表白门槛、婚礼费用 / 好感、NPC 牵线（次数与各方式开关）。
- * 只写改动的字段，其余沿用引擎默认；所有世界观通用。 */
+/* ②角色 · 关系配置（内置，非独立玩法包）：表白门槛、婚礼费用 / 好感、NPC 牵线开关与每日次数、伴侣加成。
+ * 不预置固定牵线方式；需要牵线时请自加触发 / 事件。只写改动的字段，其余沿用引擎默认。 */
 type Rel = Partial<RelationsContent>;
 const inp = "min-w-0 w-full rounded-lg border border-line bg-paper px-2 py-1 text-[12.5px] text-ink outline-none focus:border-jade";
 const lbl = "block text-[10.5px] font-bold text-ink-soft";
-const BUILTIN: [string, string][] = [["intro", "介绍认识"], ["hangout", "三人同行"], ["match", "撮合"], ["reconcile", "劝和"], ["provoke", "挑拨"]];
 const numOr = (v: string) => (v.trim() === "" || !Number.isFinite(+v) ? undefined : Math.round(+v));
 
 function Num({ label, value, ph, onChange }: { label: string; value?: number; ph: number; onChange: (v?: number) => void }) {
@@ -66,15 +65,8 @@ export default function ModRelationsEditor({ value, onChange, npcs = [], keyOpti
   const confess = (v.confess ?? {}) as Partial<RelationsContent["confess"]>;
   const wed = v.wedding ?? {};
   const br: BridgeSlot = v.bridge ?? {};
+  // 功能注释：只保留开放开关与每日次数；固定牵线方式预置与 modes 编辑已下线
   const setBr = (p: BridgeSlot) => put({ bridge: prune({ ...br, ...p }) as BridgeSlot | undefined });
-  const modeOff = (id: string) => !!br.modes?.[id]?.off;
-  const toggleMode = (id: string) => {
-    const modes = { ...(br.modes ?? {}) };
-    const cur = { ...(modes[id] ?? {}) };
-    if (cur.off) delete cur.off; else cur.off = true;
-    if (Object.keys(cur).length) modes[id] = cur; else delete modes[id];
-    setBr({ modes: Object.keys(modes).length ? modes : undefined });
-  };
 
   const perks: PartnerPerk[] = v.partnerPerks ?? [];
   const putPerks = (l: PartnerPerk[]) => put({ partnerPerks: l });
@@ -82,7 +74,7 @@ export default function ModRelationsEditor({ value, onChange, npcs = [], keyOpti
 
   return (
     <div className="space-y-3">
-      <p className="text-[11px] leading-relaxed text-ink-soft">留空 = 用引擎默认。改动只影响本模组，人物页的表白、婚礼与牵线会按这里的数值判定与显示。</p>
+      <p className="text-[11px] leading-relaxed text-ink-soft">留空 = 用引擎默认。内置于②角色，人物页的表白、婚礼按这里的数值判定与显示。</p>
 
       <div className="rounded-xl border border-line bg-paper p-2.5">
         <p className="mb-1.5 text-[12px] font-bold text-ink">表白</p>
@@ -110,14 +102,7 @@ export default function ModRelationsEditor({ value, onChange, npcs = [], keyOpti
         {!br.off && (
           <>
             <div className="mb-2 w-1/2"><Num label="每天次数" value={br.perDay} ph={2} onChange={(perDay) => setBr({ perDay })} /></div>
-            <p className={lbl}>可用方式（点按开关）</p>
-            <div className="mt-1 flex flex-wrap gap-1.5">
-              {BUILTIN.map(([id, name]) => (
-                <button key={id} type="button" onClick={() => toggleMode(id)}
-                  className={`rounded-full border px-2.5 py-1 text-[11.5px] font-semibold transition ${modeOff(id) ? "border-line text-ink-soft line-through" : "border-jade bg-jade/10 text-jade"}`}>{name}</button>
-              ))}
-            </div>
-            <p className="mt-1.5 text-[10.5px] text-ink-soft">如需自定义门槛、好感变化或新增方式，可在模组 JSON 的 relations.bridge.modes 里填写。</p>
+            <p className="text-[10.5px] leading-relaxed text-ink-soft">此处不预置牵线方式。需要牵线时，请在「④ 剧情」里自行添加触发与事件。</p>
           </>
         )}
       </div>

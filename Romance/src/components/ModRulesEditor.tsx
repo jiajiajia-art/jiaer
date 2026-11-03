@@ -1,8 +1,9 @@
 import { FIXED_METRICS } from "../game/fixedEvents";
 import type { AttrDef } from "../lib/types";
-import { RAW_BILLS, RAW_STAT_LABELS, RAW_STAT_ORDER, type StatsSlot, RAW_FAME_TIERS, RAW_TITLES, type BillLine, type BillsSlot, type FameTier, type TitleDef, type TitleReq, type TitleTier } from "../game/data";
+import { RAW_STAT_LABELS, RAW_STAT_ORDER, type StatsSlot, type BillLine, type BillsSlot, type TitleDef, type TitleReq, type TitleTier } from "../game/data";
 
-/* 模组编辑器 · 养成规则：名气分档、头衔（达成条件）、固定账单。留空 = 沿用默认。 */
+/* 模组编辑器 · 头衔与固定账单可按块显示；从空白自填，不预灌娱乐圈默认。
+ * 功能注释：指标档位已迁到建角数值属性的「分档」；本组件不再提供固定指标分档编辑。 */
 const inp = "w-full min-w-0 rounded-lg border border-line bg-paper-2 px-2 py-1 text-[12px] text-ink placeholder:text-ink-soft/70 focus:border-jade focus:outline-none";
 const btn = "rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40";
 const head = "text-[12px] font-bold text-ink";
@@ -11,8 +12,11 @@ const TIERS: TitleTier[] = ["青铜", "白银", "黄金", "钻石"];
 const REQ_KEYS: [keyof TitleReq, string][] = [["fame", "名气"], ["reputation", "口碑"], ["works", "作品数"], ["awards", "奖项数"]];
 const del = (on: () => void) => <button className={`${btn} shrink-0`} onClick={on} aria-label="删除">×</button>;
 
-type V = { fameTiers?: FameTier[]; titles?: TitleDef[]; bills?: BillsSlot };
-export default function ModRulesEditor({ value, stats, attrs, onChange }: { value: V; stats?: StatsSlot; attrs?: AttrDef[]; onChange: (p: V) => void }) {
+type V = { titles?: TitleDef[]; bills?: BillsSlot };
+export default function ModRulesEditor({ value, stats, attrs, onChange, showTitles = true, showBills = true }: {
+  value: V; stats?: StatsSlot; attrs?: AttrDef[]; onChange: (p: V) => void;
+  showTitles?: boolean; showBills?: boolean;
+}) {
   // 头衔「其他条件」可选：八维（模组叫法）、其余指标、自定义属性
   const hidden = new Set(stats?.hidden ?? []);
   const fixed = new Set(REQ_KEYS.map(([k]) => k as string));
@@ -21,32 +25,16 @@ export default function ModRulesEditor({ value, stats, attrs, onChange }: { valu
     ...FIXED_METRICS.filter((m) => !m.key.startsWith("c:") && m.key !== "week" && !fixed.has(m.key)).map((m) => ({ v: m.key, l: m.label })),
     ...(attrs ?? []).map((a) => ({ v: `c:${a.id}`, l: `${a.label || a.id}（自定义）` })),
   ];
-  const tiers = value.fameTiers ?? [];
   const titles = value.titles ?? [];
   const bills = value.bills;
-  const setTiers = (n: FameTier[]) => onChange({ fameTiers: n.length ? [...n].sort((a, b) => a.min - b.min) : undefined });
   const setTitles = (n: TitleDef[]) => onChange({ titles: n.length ? n : undefined });
   const setBills = (k: keyof BillsSlot, n: BillLine[]) => onChange({ bills: { ...(bills ?? {}), [k]: n } });
 
   return (
     <div className="space-y-4">
-      <div className="space-y-1.5">
-        <p className={head}>名气分档 <span className="font-normal text-ink-soft">· 名气达到下限即进入该档</span></p>
-        {!tiers.length && <button className={btn} onClick={() => setTiers(RAW_FAME_TIERS.map((t) => ({ ...t })))}>以默认分档为起点自定义</button>}
-        {tiers.map((t, i) => (
-          <div key={i} className="flex items-center gap-1.5">
-            <input type="number" className={`${inp} w-16 shrink-0`} value={t.min} aria-label="下限" onBlur={() => setTiers(tiers)} onChange={(e) => onChange({ fameTiers: tiers.map((x, j) => (j === i ? { ...x, min: num(e.target.value) } : x)) })} />
-            <input className={`${inp} w-28 shrink-0`} value={t.label} placeholder="档名" onChange={(e) => setTiers(tiers.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))} />
-            <input className={inp} value={t.desc} placeholder="说明" onChange={(e) => setTiers(tiers.map((x, j) => (j === i ? { ...x, desc: e.target.value } : x)))} />
-            {del(() => setTiers(tiers.filter((_, j) => j !== i)))}
-          </div>
-        ))}
-        {tiers.length > 0 && <button className={btn} onClick={() => setTiers([...tiers, { min: (tiers[tiers.length - 1]?.min ?? 0) + 100, label: "新分档", desc: "" }])}>＋ 添加分档</button>}
-      </div>
-
-      <div className="space-y-1.5">
-        <p className={head}>头衔 <span className="font-normal text-ink-soft">· 条件全部满足即自动获得</span></p>
-        {!titles.length && <button className={btn} onClick={() => setTitles(RAW_TITLES.map((t) => ({ ...t, req: { ...t.req } })))}>以默认头衔为起点自定义</button>}
+      {showTitles && <div className="space-y-1.5">
+        <p className={head}>头衔 <span className="font-normal text-ink-soft">· 条件全部满足即自动获得 · 从空白自填</span></p>
+        {!titles.length && <p className="text-[11px] text-ink-soft">还没写，开局没有头衔表。</p>}
         {titles.map((t, i) => {
           const set = (p: Partial<TitleDef>) => setTitles(titles.map((x, j) => (j === i ? { ...x, ...p } : x)));
           return (
@@ -81,12 +69,13 @@ export default function ModRulesEditor({ value, stats, attrs, onChange }: { valu
             </div>
           );
         })}
-        {titles.length > 0 && <button className={btn} onClick={() => setTitles([...titles, { id: `t_${Date.now().toString(36).slice(-5)}`, name: "新头衔", tier: "青铜", req: { fame: 50 }, desc: "" }])}>＋ 添加头衔</button>}
-      </div>
+        <button className={btn} onClick={() => setTitles([...titles, { id: `t_${Date.now().toString(36).slice(-5)}`, name: "", tier: "青铜", req: {}, desc: "" }])}>＋ 添加头衔</button>
+      </div>}
 
-      <div className="space-y-1.5">
-        <p className={head}>固定账单 <span className="font-normal text-ink-soft">· 每周 / 每 4 周自动扣款</span></p>
-        {!bills && <button className={btn} onClick={() => onChange({ bills: JSON.parse(JSON.stringify(RAW_BILLS)) })}>以默认账单为起点自定义</button>}
+      {showBills && <div className="space-y-1.5">
+        {/* 功能注释：账单从空白自填，禁止一键灌入娱乐圈默认房租/形象宣传等；没有的项就不要加 */}
+        <p className={head}>固定账单 <span className="font-normal text-ink-soft">· 每周 / 每 4 周自动扣款 · 只写本作品有的项</span></p>
+        {!bills && <button className={btn} onClick={() => onChange({ bills: { weekly: [{ label: "", amount: 0 }], monthly: [] } })}>＋ 添加固定账单</button>}
         {bills && (["weekly", "monthly"] as const).map((k) => {
           const lines = bills[k] ?? [];
           return (
@@ -94,17 +83,17 @@ export default function ModRulesEditor({ value, stats, attrs, onChange }: { valu
               <p className="text-[11px] text-ink-soft">{k === "weekly" ? "每周" : "每 4 周"}</p>
               {lines.map((b, i) => (
                 <div key={i} className="flex items-center gap-1.5">
-                  <input className={inp} value={b.label} placeholder="项目" onChange={(e) => setBills(k, lines.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))} />
+                  <input className={inp} value={b.label} placeholder="项目（如房租、伙食）" onChange={(e) => setBills(k, lines.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))} />
                   <input type="number" className={`${inp} w-24 shrink-0`} value={b.amount} onChange={(e) => setBills(k, lines.map((x, j) => (j === i ? { ...x, amount: num(e.target.value) } : x)))} />
                   {del(() => setBills(k, lines.filter((_, j) => j !== i)))}
                 </div>
               ))}
-              <button className={btn} onClick={() => setBills(k, [...lines, { label: "", amount: 1000 }])}>＋ 添加</button>
+              <button className={btn} onClick={() => setBills(k, [...lines, { label: "", amount: 0 }])}>＋ 添加</button>
             </div>
           );
         })}
-        {bills && <button className={btn} onClick={() => onChange({ bills: undefined })}>恢复默认账单</button>}
-      </div>
+        {bills && <button className={btn} onClick={() => onChange({ bills: undefined })}>清空账单</button>}
+      </div>}
     </div>
   );
 }

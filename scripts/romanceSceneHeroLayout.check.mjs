@@ -1,5 +1,5 @@
 /**
- * 场景图布局：竖版比例完整显示、左右贴边；正文在图下；图上无毛玻璃旁白框，只留「外出」。
+ * 场景图布局：固定 9:16 竖框 object-cover 铺满；正文在图下累积；图上只留「外出」与可点位置。
  */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -17,15 +17,14 @@ function locationHeroSrc() {
   return m[0];
 }
 
-test('LocationHero_图按比例完整显示_不用object-cover裁封面', () => {
+test('LocationHero_9比16框object-cover铺满_不成横条', () => {
   const hero = locationHeroSrc();
-  assert.match(hero, /object-contain/);
-  assert.doesNotMatch(hero, /object-cover/);
+  assert.match(hero, /aspect-\[9\/16\]/);
+  assert.match(hero, /object-cover/);
+  assert.doesNotMatch(hero, /object-contain/);
   assert.match(hero, /scene-img/);
   assert.match(hero, /外出/);
-  // 外层容器不得再包圆角卡裁切场景图
-  assert.match(hero, /relative w-full bg-ink\/5/);
-  assert.doesNotMatch(hero, /overflow-hidden rounded/);
+  assert.match(hero, /overflow-hidden/);
 });
 
 test('LocationHero_无毛玻璃旁白框_无narration入参', () => {
@@ -35,10 +34,11 @@ test('LocationHero_无毛玻璃旁白框_无narration入参', () => {
   assert.doesNotMatch(hero, /\bnovelKey\b/);
 });
 
-test('HomeTab_正文在图下_图上不传overlay人物条', () => {
-  assert.match(home, /正文在图下方/);
-  assert.match(home, /novelProse \|\| descText/);
+test('HomeTab_正文在图下累积留屏_图上不传overlay人物条', () => {
+  assert.match(home, /data-tour="scene-prose"/);
+  assert.match(home, /正文在图下累积/);
   assert.doesNotMatch(home, /overlay=\{peopleStrip/);
   assert.match(home, /peopleStrip\(false\)/);
   assert.match(home, /-mx-4 w-\[calc\(100%\+2rem\)\]/);
+  assert.doesNotMatch(home, /function GalPlayer/);
 });

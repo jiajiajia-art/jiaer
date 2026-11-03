@@ -92,8 +92,8 @@ export default function AvatarLibraryPicker({ name, current, onPick, onUpload, o
     [tab, pools, genderFilter, ageFilter],
   );
   const tabs: { k: Tab; l: string; n: number }[] = [
-    { k: "creator", l: "创作者头像库", n: creator.reduce((a, p) => a + p.images.length, 0) },
-    { k: "system", l: "系统头像库", n: system.reduce((a, p) => a + p.images.length, 0) },
+    { k: "creator", l: "创作者头像库", n: creator.reduce((a, p) => a + (p.images?.length ?? 0), 0) },
+    { k: "system", l: "系统头像库", n: system.reduce((a, p) => a + (p.images?.length ?? 0), 0) },
   ];
 
   const save = () => {
@@ -102,7 +102,7 @@ export default function AvatarLibraryPicker({ name, current, onPick, onUpload, o
   };
 
   return (
-    <Modal title={`选择${name}的头像`} onClose={onClose} wide>
+    <Modal title={`选择${name}的头像`} onClose={onClose}>
       <div className="flex flex-wrap items-center gap-1.5">
         <div className="flex rounded-full bg-paper p-0.5 ring-1 ring-line">
           {tabs.map((t) => (
@@ -177,7 +177,7 @@ export default function AvatarLibraryPicker({ name, current, onPick, onUpload, o
       ) : (
         <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6">
           {filteredPools.flatMap((p) =>
-            p.images.map((url, i) => (
+            (Array.isArray(p.images) ? p.images : []).map((url, i) => (
               <button
                 key={`${p.source}:${p.name}:${url}:${i}`}
                 type="button"

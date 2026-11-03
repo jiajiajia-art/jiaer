@@ -1,9 +1,9 @@
 import type { ModTheme } from "../mods/types";
 import { ACCENTS, FONTS, MODES, SKINS } from "../lib/skins";
 import { SkinIcon } from "../lib/icons";
-import { useGame } from "../store/gameCtx";
 
-/* 模组编辑器 · 界面风格：进入本世界时自动套用；每项可留「不指定」沿用玩家设置 */
+/* 模组编辑器 · 界面风格：进入本世界时自动套用；每项可留「不指定」沿用玩家设置。
+ * 功能注释：不再提供本页即时预览条；面板级皮肤 DIY 入口已从美化页移除。 */
 const chip = (on: boolean) =>
   `rounded-xl border p-2 text-left transition ${on ? "border-jade bg-jade/15 ring-2 ring-jade/30" : "border-line bg-paper hover:border-jade/60"}`;
 
@@ -17,7 +17,6 @@ function Row({ title, children }: { title: string; children: React.ReactNode }) 
 }
 
 export default function ModThemeEditor({ value, onChange }: { value?: ModTheme; onChange: (v?: ModTheme) => void }) {
-  const { theme, setTheme } = useGame();
   const v = value ?? {};
   const set = <K extends keyof ModTheme>(k: K, x: ModTheme[K]) => {
     const next = { ...v, [k]: v[k] === x ? undefined : x }; // 再点一次 = 取消指定
@@ -30,7 +29,7 @@ export default function ModThemeEditor({ value, onChange }: { value?: ModTheme; 
 
   return (
     <div className="space-y-3.5">
-      <p className="text-[11px] leading-relaxed text-ink-soft">玩家进入本世界时自动套用（每个世界只套一次，之后玩家在设置里改了以玩家为准）。「不指定」的项沿用玩家当前设置；再点一次已选项即取消。</p>
+      <p className="text-[11px] leading-relaxed text-ink-soft">玩家第一次进入本世界时套用这套外观；之后以玩家在设置里的选择为准。不指定则不改玩家外观。</p>
 
       <Row title="皮肤">
         <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
@@ -47,42 +46,41 @@ export default function ModThemeEditor({ value, onChange }: { value?: ModTheme; 
         </div>
       </Row>
 
-      <Row title="主题色">
-        <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-5">
-          <Off k="accent" />
-          {ACCENTS.map((a) => (
-            <button key={a.id} type="button" onClick={() => set("accent", a.id)} className={`${chip(v.accent === a.id)} flex items-center gap-1.5 text-[11.5px] text-ink`}>
-              <span className={`h-3.5 w-3.5 shrink-0 rounded-full ${a.bg}`} />{a.label}
-            </button>
-          ))}
-        </div>
-      </Row>
+      <details className="rounded-xl border border-line bg-paper/40">
+        <summary className="cursor-pointer px-3 py-2 text-[12px] font-bold text-ink">自定义</summary>
+        <div className="space-y-3.5 border-t border-line/70 p-3">
+          <Row title="主题色">
+            <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-5">
+              <Off k="accent" />
+              {ACCENTS.map((a) => (
+                <button key={a.id} type="button" onClick={() => set("accent", a.id)} className={`${chip(v.accent === a.id)} flex items-center gap-1.5 text-[11.5px] text-ink`}>
+                  <span className={`h-3.5 w-3.5 shrink-0 rounded-full ${a.bg}`} />{a.label}
+                </button>
+              ))}
+            </div>
+          </Row>
 
-      <Row title="字体">
-        <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-5">
-          <Off k="font" />
-          {FONTS.map((f) => (
-            <button key={f.id} type="button" onClick={() => set("font", f.id)} className={`${chip(v.font === f.id)} flex items-center gap-1.5 text-[11.5px] text-ink`}>
-              <span className="text-[17px] leading-none" style={{ fontFamily: f.family }}>星</span>{f.label}
-            </button>
-          ))}
-        </div>
-      </Row>
+          <Row title="字体">
+            <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-5">
+              <Off k="font" />
+              {FONTS.map((f) => (
+                <button key={f.id} type="button" onClick={() => set("font", f.id)} className={`${chip(v.font === f.id)} flex items-center gap-1.5 text-[11.5px] text-ink`}>
+                  <span className="text-[17px] leading-none" style={{ fontFamily: f.family }}>星</span>{f.label}
+                </button>
+              ))}
+            </div>
+          </Row>
 
-      <Row title="深浅色">
-        <div className="grid grid-cols-4 gap-1.5">
-          <Off k="mode" />
-          {MODES.map((m) => (
-            <button key={m.id} type="button" onClick={() => set("mode", m.id)} className={`${chip(v.mode === m.id)} text-center text-[11.5px] text-ink`}>{m.label}</button>
-          ))}
+          <Row title="深浅色">
+            <div className="grid grid-cols-4 gap-1.5">
+              <Off k="mode" />
+              {MODES.map((m) => (
+                <button key={m.id} type="button" onClick={() => set("mode", m.id)} className={`${chip(v.mode === m.id)} text-center text-[11.5px] text-ink`}>{m.label}</button>
+              ))}
+            </div>
+          </Row>
         </div>
-      </Row>
-
-      <div className="flex items-center justify-between gap-2 rounded-xl border border-dashed border-line px-3 py-2">
-        <span className="text-[11px] text-ink-soft">想先看看效果？</span>
-        <button type="button" disabled={!value} onClick={() => setTheme({ ...theme, ...v })}
-          className="rounded-full bg-jade px-3 py-1 text-[11.5px] font-bold text-paper disabled:opacity-40">立即试用</button>
-      </div>
+      </details>
     </div>
   );
 }

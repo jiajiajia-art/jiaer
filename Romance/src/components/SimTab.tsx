@@ -115,7 +115,7 @@ export default function SimTab({ embedded = false }: { embedded?: boolean }) {
   return (
     <div className={embedded ? "w-full" : "w-full pb-5"}>
       {openImage && (
-        <Modal title={term("tabImage", "形象")} wide onClose={() => setOpenImage(false)}>
+        <Modal title={term("tabImage", "形象")} onClose={() => setOpenImage(false)}>
           <ImageTab />
         </Modal>
       )}

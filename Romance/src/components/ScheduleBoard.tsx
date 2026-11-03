@@ -131,7 +131,7 @@ export default function ScheduleBoard({ open, onClose }: { open: boolean; onClos
   const chooseMeal = (id: string) => patchGame((g) => ({ ...g, sim: { ...g.sim, meal: id } }));
 
   return (
-    <Modal title={`本周日程 · 第 ${s.week} 周`} onClose={() => { onClose(); setPickSeg(null); }} wide>
+    <Modal title={`本周日程 · 第 ${s.week} 周`} onClose={() => { onClose(); setPickSeg(null); }}>
       <div className="mb-3 flex items-center justify-between">
         <p className="text-[11px] leading-snug text-ink-soft">排满周一到周日各一件事，「推进一天」逐日结算并掷出结果；跨过周日自动结算并翻入新一周。</p>
         <div className="ml-3 flex shrink-0 gap-2 text-[11.5px]">

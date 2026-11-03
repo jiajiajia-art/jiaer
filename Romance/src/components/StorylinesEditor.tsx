@@ -1,10 +1,10 @@
 import { IconClose } from "../lib/icons";
-import { CondRow, EffectRow, defaultCond, defaultEffect, questOpts } from "./FixedEventsPanel";
-import type { FixedEvent, QuestNode, Storyline } from "../lib/types";
+import { CondRow, EffectRow, defaultCond, defaultEffect, questOpts, sideOpts } from "./FixedEventsPanel";
+import type { FixedEvent, QuestNode, Sideline, Storyline } from "../lib/types";
 import { AuditBadge, AuditBar, AuditList, auditDomId } from "./EditorKit";
 import { auditStory, issuesAt } from "../game/refAudit";
 
-/* 模组编辑器 · 主线与目标：有序节点，每天结束由代码判定完成 / 失败。
+/* 模组编辑器 · 剧情线 · 主线：有序节点，每天结束由代码判定完成 / 失败。
  * 节点完成 → 发奖励、激活事件；失败 → 走失败分支（激活失败事件）。进度供事件、结局与 AI 读取。 */
 const inp = "min-w-0 w-full rounded-lg border border-line bg-paper-2 px-2 py-1 text-[12.5px] text-ink outline-none focus:border-jade";
 const sel = "rounded-md border border-line bg-paper-2 px-1.5 py-0.5 text-[11.5px]";
@@ -13,7 +13,7 @@ const link = "text-[11.5px] font-semibold text-jade hover:underline";
 const uid = (p: string) => `${p}_${Date.now().toString(36).slice(-4)}${Math.random().toString(36).slice(2, 5)}`;
 const newNode = (): QuestNode => ({ id: uid("qn"), name: "新节点", conds: [defaultCond("metric")] });
 
-function EventPicks({ label, ids, events, onChange }: { label: string; ids?: string[]; events: FixedEvent[]; onChange: (v?: string[]) => void }) {
+export function EventPicks({ label, ids, events, onChange }: { label: string; ids?: string[]; events: FixedEvent[]; onChange: (v?: string[]) => void }) {
   const list = ids ?? [];
   const name = (id: string) => events.find((e) => e.id === id)?.name || `已失效：${id}`;
   return (
@@ -32,8 +32,8 @@ function EventPicks({ label, ids, events, onChange }: { label: string; ids?: str
   );
 }
 
-function NodeCard({ n, idx, total, events, quests, onChange, onMove, onDelete }: {
-  n: QuestNode; idx: number; total: number; events: FixedEvent[]; quests: ReturnType<typeof questOpts>;
+function NodeCard({ n, idx, total, events, quests, sides, onChange, onMove, onDelete }: {
+  n: QuestNode; idx: number; total: number; events: FixedEvent[]; quests: ReturnType<typeof questOpts>; sides: ReturnType<typeof sideOpts>;
   onChange: (n: QuestNode) => void; onMove: (d: -1 | 1) => void; onDelete: () => void;
 }) {
   return (
@@ -59,14 +59,14 @@ function NodeCard({ n, idx, total, events, quests, onChange, onMove, onDelete }:
         )}
       </div>
       {(n.conds ?? []).map((c, i) => (
-        <CondRow key={i} c={c} events={events} selfId="" quests={quests} onChange={(x) => onChange({ ...n, conds: (n.conds ?? []).map((y, j) => (j === i ? x : y)) })} onDelete={() => onChange({ ...n, conds: (n.conds ?? []).filter((_, j) => j !== i) })} />
+        <CondRow key={i} c={c} events={events} selfId="" quests={quests} sides={sides} onChange={(x) => onChange({ ...n, conds: (n.conds ?? []).map((y, j) => (j === i ? x : y)) })} onDelete={() => onChange({ ...n, conds: (n.conds ?? []).filter((_, j) => j !== i) })} />
       ))}
       <button className={link} onClick={() => onChange({ ...n, conds: [...(n.conds ?? []), defaultCond("metric")] })}>＋ 完成条件</button>
       {!(n.conds ?? []).length && <p className="text-[11px] text-danger">没有完成条件的节点不会自动完成</p>}
 
       <p className="pt-0.5 text-[11px] font-bold text-ink-soft">失败条件（任一满足即失败，可留空）</p>
       {(n.failConds ?? []).map((c, i) => (
-        <CondRow key={i} c={c} events={events} selfId="" quests={quests} onChange={(x) => onChange({ ...n, failConds: n.failConds!.map((y, j) => (j === i ? x : y)) })} onDelete={() => { const f = n.failConds!.filter((_, j) => j !== i); onChange({ ...n, failConds: f.length ? f : undefined }); }} />
+        <CondRow key={i} c={c} events={events} selfId="" quests={quests} sides={sides} onChange={(x) => onChange({ ...n, failConds: n.failConds!.map((y, j) => (j === i ? x : y)) })} onDelete={() => { const f = n.failConds!.filter((_, j) => j !== i); onChange({ ...n, failConds: f.length ? f : undefined }); }} />
       ))}
       <button className={link} onClick={() => onChange({ ...n, failConds: [...(n.failConds ?? []), defaultCond("time")] })}>＋ 失败条件</button>
 
@@ -82,10 +82,11 @@ function NodeCard({ n, idx, total, events, quests, onChange, onMove, onDelete }:
   );
 }
 
-export default function StorylinesEditor({ value, events = [], onChange }: { value?: Storyline[]; events?: FixedEvent[]; onChange: (v?: Storyline[]) => void }) {
+export default function StorylinesEditor({ value, sidelines, events = [], onChange }: { value?: Storyline[]; sidelines?: Sideline[]; events?: FixedEvent[]; onChange: (v?: Storyline[]) => void }) {
   const list = value ?? [];
   const quests = questOpts(list);
-  const audit = auditStory({ storylines: list, events, skip: ["item", "location", "npc", "flag"] });
+  const sides = sideOpts(sidelines ?? []);
+  const audit = auditStory({ storylines: list, sidelines: sidelines ?? [], events, skip: ["item", "location", "npc", "flag"] });
   const commit = (n: Storyline[]) => onChange(n.length ? n : undefined);
   const set = (id: string, p: Partial<Storyline>) => commit(list.map((l) => (l.id === id ? { ...l, ...p } : l)));
   const setNodes = (l: Storyline, nodes: QuestNode[]) => set(l.id, { nodes });
@@ -111,7 +112,7 @@ export default function StorylinesEditor({ value, events = [], onChange }: { val
           <input className={inp} value={l.desc ?? ""} maxLength={120} placeholder="主线简介（可留空）" onChange={(e) => set(l.id, { desc: e.target.value || undefined })} />
           <p className="text-[10.5px] text-ink-soft">ID：{l.id} · {(l.nodes ?? []).filter((n) => !n.optional).length} 个必做节点 · {(l.nodes ?? []).filter((n) => n.optional).length} 个可选目标</p>
           {(l.nodes ?? []).map((n, i) => (
-            <NodeCard key={n.id} n={n} idx={i} total={(l.nodes ?? []).length} events={events} quests={quests}
+            <NodeCard key={n.id} n={n} idx={i} total={(l.nodes ?? []).length} events={events} quests={quests} sides={sides}
               onChange={(x) => setNodes(l, (l.nodes ?? []).map((y) => (y.id === n.id ? x : y)))}
               onMove={(d) => { const a = [...(l.nodes ?? [])]; [a[i], a[i + d]] = [a[i + d], a[i]]; setNodes(l, a); }}
               onDelete={() => setNodes(l, (l.nodes ?? []).filter((y) => y.id !== n.id))} />

@@ -2,7 +2,7 @@
  * 作者预览顶栏 · Studio Tally 美学：贴顶全宽控制条 + REC 指示灯，避免浮层卡片感。
  * 不写正式存档；退出 / 重开 / 清档走 authorPreview 事件。
  */
-import { useEffect, useState, useSyncExternalStore, type CSSProperties } from "react";
+import { useEffect, useSyncExternalStore, type CSSProperties } from "react";
 import {
   getAuthorPreviewSession,
   requestAuthorPreviewClearSave,
@@ -13,9 +13,7 @@ import {
 
 export default function AuthorPreviewChrome() {
   const session = useSyncExternalStore(subscribeAuthorPreview, getAuthorPreviewSession, () => null);
-  const [warnOpen, setWarnOpen] = useState(true);
-  const incomplete = !!session && session.warnings.length > 0;
-  const barH = incomplete && warnOpen ? "88px" : "48px";
+  const barH = "48px";
 
   // 功能注释：把顶栏高度写到 :root，供下方 PlayScreens 的 padding-top 对齐（fixed 条本身不占文档流）
   useEffect(() => {
@@ -32,8 +30,6 @@ export default function AuthorPreviewChrome() {
   if (!session) return null;
 
   const title = (session.mod.name || session.mod.id || "未命名模组").trim();
-  const warnPreview = session.warnings.slice(0, 4);
-  const warnMore = session.warnings.length - warnPreview.length;
 
   return (
     <>
@@ -100,21 +96,9 @@ export default function AuthorPreviewChrome() {
               </p>
               <p className="truncate text-[10px] tracking-[0.08em]" style={{ color: "var(--apc-mute)" }}>
                 STUDIO PREVIEW · 独立测试存档
-                {incomplete ? (
-                  <button
-                    type="button"
-                    onClick={() => setWarnOpen((v) => !v)}
-                    className="ml-2 font-bold underline-offset-2 hover:underline"
-                    style={{ color: "var(--apc-warn)" }}
-                  >
-                    配置不完整 · {session.warnings.length}
-                    <span className="ml-1 inline-block text-[9px]">{warnOpen ? "收起" : "展开"}</span>
-                  </button>
-                ) : (
-                  <span className="ml-2" style={{ color: "#6dbf8a" }}>
-                    · 配置可玩
-                  </span>
-                )}
+                <span className="ml-2" style={{ color: "#6dbf8a" }}>
+                  · 配置可玩
+                </span>
               </p>
             </div>
 
@@ -125,26 +109,6 @@ export default function AuthorPreviewChrome() {
             </div>
           </div>
 
-          {incomplete && warnOpen ? (
-            <div
-              className="mx-auto flex max-h-[40px] w-full max-w-[1200px] items-start gap-2 overflow-y-auto border-t px-3 py-1.5 sm:px-4"
-              style={{
-                borderColor: "var(--apc-line)",
-                background: "linear-gradient(90deg, rgba(232,184,74,0.12), transparent 55%)",
-              }}
-            >
-              <span
-                aria-hidden
-                className="mt-0.5 h-3 w-1 shrink-0 rounded-full"
-                style={{ background: "var(--apc-warn)" }}
-              />
-              <p className="min-w-0 flex-1 text-[10.5px] leading-relaxed" style={{ color: "var(--apc-mute)" }}>
-                <b style={{ color: "var(--apc-warn)" }}>测试配置不完整</b>
-                {warnPreview.map((w) => ` · ${w}`).join("")}
-                {warnMore > 0 ? ` · 另有 ${warnMore} 条` : ""}
-              </p>
-            </div>
-          ) : null}
         </div>
       </div>
     </>

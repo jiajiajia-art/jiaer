@@ -38,3 +38,13 @@ export function consolidateScriptTone(p?: PromptFragments | null): PromptFragmen
   const next = applyScriptTone(p, joined);
   return next;
 }
+
+/**
+ * 功能注释：世界观与叠加包合并时，先分别读取新旧基调，再按加载顺序拼接，
+ * 避免一个包已有 scriptTone 时吞掉另一个旧包的三段提示词。
+ */
+export function mergeScriptToneFragments(base?: PromptFragments | null, incoming?: PromptFragments | null): PromptFragments {
+  const merged: PromptFragments = { ...(base ?? {}), ...(incoming ?? {}) };
+  const tone = [readScriptTone(base), readScriptTone(incoming)].filter(Boolean).join("\n\n");
+  return applyScriptTone(merged, tone);
+}

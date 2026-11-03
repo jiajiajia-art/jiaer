@@ -20,21 +20,25 @@ export default function ModTravelEditor({ value, rooms, onChange, part }: { valu
   const pace = part !== "transport", transport = part !== "pace";
   const t = { ...BASE, ...value };
   const modes = t.modes ?? [];
-  const set = (p: Partial<TravelContent>) => onChange({ ...t, ...p });
+  // 功能注释：换地点 AP、推进叙事字数、叙事开关均内置；写入时剥掉字段，创作者界面不再配置
+  const set = (p: Partial<TravelContent>) => {
+    const next = { ...t, ...p };
+    delete next.advanceStory;
+    delete next.apPerMove;
+    delete next.advanceWords;
+    onChange(next);
+  };
   const setMode = (i: number, p: Partial<TransportMode>) => set({ modes: modes.map((m, j) => (j === i ? { ...m, ...p } : m)) });
   const num = (v: string, min = 0) => Math.max(min, Number(v) || 0);
   const sample = modes.length ? modes : PRESET;
 
   return (
     <div className="space-y-3">
-      {pace && <div className="grid grid-cols-2 gap-1.5">
+      {pace && <div className="space-y-1.5">
         <label className="block text-[11px] text-ink-soft">每回合行动点（支线体力）
-          <input type="number" min={1} max={99} value={t.apPerTurn ?? 10} onChange={(e) => set({ apPerTurn: num(e.target.value, 1) })} className={`${inp} mt-0.5`} />
+          <input type="number" min={1} max={99} value={t.apPerTurn ?? 10} onChange={(e) => set({ apPerTurn: num(e.target.value, 1) })} className={`${inp} mt-0.5 max-w-[12rem]`} />
         </label>
-        <label className="block text-[11px] text-ink-soft">换一次地点扣
-          <input type="number" min={0} max={99} value={t.apPerMove ?? 1} onChange={(e) => set({ apPerMove: num(e.target.value) })} className={`${inp} mt-0.5`} />
-        </label>
-        <p className="col-span-2 text-[10.5px] text-ink-soft">主线：每次「推进」进入新回合、行动点回满；支线：换地点按固定点数扣，进入事件支线按各事件设定扣点，不推进日历。行动点用完就得回主线推进时间。</p>
+        <p className="text-[10.5px] text-ink-soft">主线：每次「推进」进入新回合、行动点回满；支线：换地点默认扣行动点，进入事件支线按各事件设定扣点，不推进日历。行动点用完就得回主线推进时间。</p>
       </div>}
 
       {/* 出行面板文案：模组自定义（如古风世界改成「如何前往 / 文 / 不费分文」） */}
@@ -75,19 +79,12 @@ export default function ModTravelEditor({ value, rooms, onChange, part }: { valu
               <input type="number" min={1} max={12} value={t.advanceCount ?? 1} onChange={(e) => set({ advanceCount: Math.min(12, num(e.target.value, 1)) })} className={`${inp} mt-0.5`} />
             </label>
           )}
-          <label className="block text-[11px] text-ink-soft">日程叙事字数
-            <input type="number" min={100} max={2000} step={50} disabled={t.advanceStory === false} value={t.advanceWords ?? 500} onChange={(e) => set({ advanceWords: Math.min(2000, num(e.target.value, 100)) })} className={`${inp} mt-0.5 disabled:opacity-40`} />
-          </label>
         </div>
         <p className="rounded-[6px] bg-paper px-2 py-1.5 text-[11px] text-ink">
           玩家每点一次推进：<b className="text-jade">{(t.advanceUnit ?? "day") === "day" ? `${t.advanceDays ?? 1} 天` : `${t.advanceCount ?? 1} ${({ day: "天", week: "周", month: "个月", year: "年" } as const)[t.advanceUnit ?? "day"]}`}</b>
           {(t.advanceUnit ?? "day") === "day" ? "，逐日结算当天日程，遇到周结算 / 结局即停。" : "，系统逐日结算、每周照常周结算，结束后弹出一张汇总报告；遇到结局即停。"}
+          {" "}推进后由 AI 生成日程叙事（未接入 AI 时只显示结算）。
         </p>
-        <label className="flex items-center gap-1.5 text-[11.5px] text-ink">
-          <input type="checkbox" className="accent-[var(--jade)]" checked={t.advanceStory !== false} onChange={(e) => set({ advanceStory: e.target.checked ? undefined : false })} />
-          推进后由 AI 生成日程叙事（结合时间、天气与之前的记忆）
-        </label>
-        <p className="text-[10.5px] text-ink-soft">未接入 AI 时只显示结算，不生成叙事；跨度很长时 AI 只参考最近两周的日程来写。</p>
       </div>}
 
       {transport && <>

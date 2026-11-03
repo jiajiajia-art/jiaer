@@ -16,7 +16,7 @@ import { RELATIONS, MOVIE_TITLES, companyMeta, creditsOf, resumeOf, romanticCapO
 import { worldPersonById as profileOf } from "../mods/registry";
 import { locOf } from "../game/mud";
 import { homePlaceOf } from "../game/homeSpot";
-import { contactsCfg, contactsTitle, groupsOf, metricKey, orgOf, stageOf, type ContactIcon as ContactIconKind, type ContactSrc } from "../game/contacts";
+import { contactsCfg, contactsTitle, groupContactsByStage, metricKey, visibleContactMetrics, type ContactIcon as ContactIconKind, type ContactSrc, type ContactStage } from "../game/contacts";
 import ContactIcon from "./ContactIcon";
 import { FAMILY_NPC_IDS } from "../game/family";
 import { CreditsList, StatBars, WorksChips, ProfileBasics, ProfileRelations, ProfileGroup, ProfileHero, RelTag, ResumeTimeline, StatEditor, ProfileBio, ProfilePlaces, ProfileMemory, affiliationOf, relationRefsOf } from "./personFields";
@@ -54,7 +54,7 @@ function Section({ title, code, children }: { title: string; code?: string; chil
   );
 }
 
-/* 极简人物行：头像 + 名字 / 阶段词 + 一行身份 · 所属；右侧是作者在「人脉页面配置」里选的两项数值（图标自选） */
+/* 极简人物行：头像 + 名字 / 阶段词 + 一行身份 · 所属；右侧是作者在人物上方配的卡片数值（条数不限、可隐藏） */
 export type CardMetric = { key: string; icon: ContactIconKind; value: number; tone?: string };
 function PersonCard({ onClick, name, avatar, chip, sub, metrics, dead, dating }: { onClick: () => void; name: string; avatar?: string; chip: ReactNode; sub: string; metrics: CardMetric[]; dead?: boolean; dating?: boolean }) {
   return (
@@ -204,13 +204,14 @@ function Confess({ pid, name }: { pid: string; name: string }) {
 function NpcBridge({ pid, name }: { pid: string; name: string }) {
   const { game, busy, simBridge } = useGame();
   const [other, setOther] = useState("");
-  const [mode, setMode] = useState<BridgeMode>("intro");
+  const [mode, setMode] = useState<BridgeMode>("");
   const [msg, setMsg] = useState("");
   if (!game?.sim) return null;
   const s = game.sim;
   const list = game.npcs.filter((n) => n.id !== pid && profileOf(n.id)?.status !== "dead");
   const modes = bridgeModes(), order = Object.keys(modes);
-  if (!list.length || !bridgeEnabled()) return null;
+  // 功能注释：无创作者配置的牵线方式时不展示（引擎不再预置五种固定方式）
+  if (!list.length || !bridgeEnabled() || !order.length) return null;
   const cur = modes[mode] ? mode : order[0];
   const spec = modes[cur];
   const perDay = bridgePerDay();
@@ -315,7 +316,6 @@ export default function NpcTab() {
   const [addOpen, setAddOpen] = useState(false);
   const [exchange, setExchange] = useState<null | "ok" | "no">(null);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [openGroups, setOpenGroups] = useState<string[]>([]);
   if (!game) return null;
   const s = game.sim;
   const hasContact = (pid: string) => (game.phone?.contacts ?? []).includes(pid);
@@ -684,16 +684,15 @@ export default function NpcTab() {
   // 列表：只展示真正打过交道（已结识）的人——没交互过的绝不出现在人脉里
   const known = game.npcs.filter((n) => s.metPeople.includes(n.id));
 
-  // 分组、阶段词、卡片数值、所属组织全部取自「人脉页面配置」（contacts 槽）；界面只负责排版
+  // 功能注释：玩家列表只按当前关系阶段分组；组织仅作为卡片资料展示，绝不参与归组。
   const cfg = contactsCfg();
-  type Entry = { id: string; name: string; avatar?: string; sub: string; groups: string[]; rel: number; vals: (src: ContactSrc) => number | undefined; dead?: boolean; dating?: boolean };
+  type Entry = { id: string; name: string; avatar?: string; sub: string; rel: number; vals: (src: ContactSrc) => number | undefined; dead?: boolean; dating?: boolean };
   const npcEntries: Entry[] = known.map((n) => {
     const prof = profileOf(n.id);
-    const groups = groupsOf(cfg, { id: n.id, text: `${n.identity} ${n.relation} ${(prof?.tags ?? []).join(" ")}`, explicit: prof?.groups });
-    const org = orgOf(cfg, n.id, prof?.org);
+    const org = prof?.org?.trim() || affiliationOf(n.identity);
     return {
-      id: n.id, name: n.name, avatar: n.avatar, groups, rel: n.affinity,
-      sub: [n.identity || "—", org ?? (n.relation || "—")].join(" · "),
+      id: n.id, name: n.name, avatar: n.avatar, rel: n.affinity,
+      sub: [n.identity || "—", org].filter(Boolean).join(" · "),
       vals: (src) => src.kind === "rel" ? n.affinity
         : n.attrs.find((a) => a.key === src.key || a.label === src.label)?.value ?? n.dims.find((d) => d.label === src.label)?.value,
       dead: prof?.status === "dead", dating: s.dating === n.id,
@@ -702,24 +701,22 @@ export default function NpcTab() {
   // 世界自动生成的人物池（如娱乐圈的随机艺人）：并入同一套分组，不再单独成区
   const poolEntries: Entry[] = (s.npcs ?? []).map((n) => {
     const rel = s.rel?.[n.id] ?? 0;
-    const org = orgOf(cfg, n.id) ?? companyMeta(n.companyId).name;
+    const org = companyMeta(n.companyId).name;
     return {
-      id: n.id, name: n.name, groups: groupsOf(cfg, { id: n.id, text: n.dir, pool: true }), rel,
+      id: n.id, name: n.name, rel,
       sub: [n.dir, org].filter(Boolean).join(" · "),
       vals: (src) => src.kind === "rel" ? rel : src.key === "fame" ? n.fame : src.kind === "stat" ? (n.stats as Record<string, number>)[src.key] : undefined,
     };
   });
   const entries = [...npcEntries, ...poolEntries];
-  const primary = cfg.metrics[0];
+  const shownMetrics = visibleContactMetrics(cfg);
+  const primary = shownMetrics[0];
   const sortVal = (e: Entry) => (primary ? e.vals(primary.src) : e.rel) ?? -Infinity;
-  const grouped = cfg.groups.map((g) => ({
-    ...g,
-    people: entries.filter((e) => e.groups.includes(g.id)).sort((x, y) => sortVal(y) - sortVal(x)),
-  })).filter((g) => g.people.length > 0);
+  const grouped = groupContactsByStage(cfg, entries, (entry) => entry.rel)
+    .map((group) => ({ ...group, people: [...group.people].sort((a, b) => sortVal(b) - sortVal(a)) }));
 
-  const Card = ({ e }: { e: Entry }) => {
-    const st = stageOf(cfg, e.rel, e.groups);
-    const metrics: CardMetric[] = cfg.metrics.flatMap((m) => {
+  const Card = ({ e, stage }: { e: Entry; stage: ContactStage }) => {
+    const metrics: CardMetric[] = shownMetrics.flatMap((m) => {
       const v = e.vals(m.src);
       return v === undefined || Number.isNaN(v) ? [] : [{ key: metricKey(m.src), icon: m.icon, value: Math.round(v), tone: m.tone }];
     });
@@ -727,7 +724,7 @@ export default function NpcTab() {
       <PersonCard
         onClick={() => { setSel(e.id); setProfileOpen(false); }}
         name={e.name} avatar={e.avatar} dead={e.dead} dating={e.dating}
-        chip={e.dead ? <Chip tone="danger">已故</Chip> : st ? <Chip tone={st.tone}>{st.label}</Chip> : null}
+        chip={e.dead ? <Chip tone="danger">已故</Chip> : <Chip tone={stage.tone}>{stage.label}</Chip>}
         sub={e.sub}
         metrics={metrics}
       />
@@ -753,20 +750,12 @@ export default function NpcTab() {
       ) : (
         <div className="space-y-4">
           {grouped.map((g) => {
-            const open = openGroups.includes(g.id);
-            const fold = g.fold && g.fold > 0 ? g.fold : 0;
-            const shown = fold && !open ? g.people.slice(0, fold) : g.people;
             return (
-              <section key={g.id}>
-                <GroupHead label={g.label} count={g.people.length} />
+              <section key={g.stage.id}>
+                <GroupHead label={g.stage.label} count={g.people.length} />
                 <div className={LIST}>
-                  {shown.map((e) => <Card key={e.id} e={e} />)}
+                  {g.people.map((e) => <Card key={e.id} e={e} stage={g.stage} />)}
                 </div>
-                {fold > 0 && g.people.length > fold && (
-                  <button onClick={() => setOpenGroups((l) => open ? l.filter((x) => x !== g.id) : [...l, g.id])} className="mt-2.5 w-full rounded-full border border-dashed border-line py-1.5 text-[12px] text-ink-soft transition hover:border-jade hover:text-jade">
-                    {open ? "收起" : `展开全部 ${g.people.length} 位`}
-                  </button>
-                )}
               </section>
             );
           })}
@@ -815,7 +804,7 @@ function ResumeModal({ name, pid, onClose, npc, extra }: { name: string; pid: st
   const selCls = "rounded-sm border border-dashed border-line bg-paper px-2 py-1 text-[12px] text-ink transition hover:border-jade/60";
 
   return (
-    <Modal title={`${name} · 履历与互动`} onClose={onClose} wide>
+    <Modal title={`${name} · 履历与互动`} onClose={onClose}>
       <ProfileGroup title={`生平履历 · ${filtered.length} 条`}>
         {all.length === 0 ? <ResumeTimeline items={[]} /> : (
           <>

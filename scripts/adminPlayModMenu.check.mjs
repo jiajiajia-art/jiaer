@@ -39,8 +39,12 @@ test('编辑器_玩法Mod统一安装入口且含手机应用类型', () => {
   assert.match(panel, /已添加的玩法|playModInstalls/);
   assert.match(modal, /手机应用/);
   assert.match(modal, /玩法/);
+  assert.match(modal, /setDetailSlug/);
+  assert.match(modal, /添加（含依赖）/);
   assert.match(catalog, /phone_app/);
   assert.match(catalog, /resolveInstalledPhoneAppIds/);
+  assert.match(catalog, /previewImages/);
+  assert.match(catalog, /detailDescription/);
 });
 
 test('kkmod_SDK只开放受控权限并禁止绕过支付', () => {

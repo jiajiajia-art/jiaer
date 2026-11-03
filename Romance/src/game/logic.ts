@@ -34,6 +34,7 @@ import {
   ZODIACS,
   gradesOf,
   tuning,
+  tuningHasModule,
   gigRules,
   RAW_CRASH_MODS,
   RAW_GIG_REPAIRS,
@@ -52,8 +53,8 @@ import {
   type DayGrade,
 } from "./data";
 import { CALENDAR, NEGOTIATION, RELATIONS, TRAVEL, COMPANIES, MOVIE_TITLES, industryGen } from "../worlds/star2005/content";
-import { applyIncome, applyGameRules, applyStorylines } from "./fixedEvents";
-import { getWorldSlot, LIVE_GIGS, LIVE_PEOPLE, getWorldIncome, getWorldGameRules, getWorldStorylines, getWorldId, feature, getWorldStartMet, getWorldStartRoom, worldActivitiesOfRoom as activitiesOfRoom, worldItemsOfRoom as itemsOfRoom } from "../mods/registry";
+import { applyIncome, applyGameRules, applySidelines, applyStorylines } from "./fixedEvents";
+import { getWorldSlot, LIVE_GIGS, LIVE_PEOPLE, getWorldIncome, getWorldGameRules, getWorldStorylines, getWorldSidelines, getWorldId, feature, getWorldStartMet, getWorldStartRoom, worldActivitiesOfRoom as activitiesOfRoom, worldItemsOfRoom as itemsOfRoom } from "../mods/registry";
 import type { ProjectInstance, WorkPiece } from "./projects";
 import type { RelExt } from "./relations";
 import type { XianyuListing } from "./xianyu";
@@ -545,7 +546,13 @@ export function negotiateRate(g: Gig, s: GameState): number {
   const trustMod = Math.floor(s.trust / 20) * 3; // 负责人好感
   const stressMod = Math.floor(s.stress / 10) * 2;
   const br = gigRules();
-  const breachMod = s.defaults * (typeHit(g.type, br.breachHiTypes ?? "广告|品牌|电影") ? (br.breachHi ?? 14) : (br.breachBase ?? 8)); // 违约惩罚由 tuning.gigRules 配置；缺省 广告/品牌/电影 14，其余 8
+  // 功能注释：违约须勾选并写出；仅娱乐圈未写时回落 8/14，新作品未勾不套用。
+  const entBreach = getWorldId() === "ent";
+  const breachMod = (!entBreach && !tuningHasModule("breach")) ? 0 : s.defaults * (
+    entBreach
+      ? (typeHit(g.type, br.breachHiTypes ?? "广告|品牌|电影") ? (br.breachHi ?? 14) : (br.breachBase ?? 8))
+      : (br.breachHiTypes && typeHit(g.type, br.breachHiTypes) ? (br.breachHi ?? br.breachBase ?? 0) : (br.breachBase ?? 0))
+  );
   const titleMod = Math.min(6, s.titles.length * 2); // 拥有头衔提升该类型通告成功率
   const standbyMod = s.standby?.[g.id] ?? 0; // 候补资格：上次交涉留下的加成
   const rate = 55 + margin * 0.12 + fameMod + repMod + trustMod + titleMod + standbyMod - stressMod - breachMod;
@@ -665,15 +672,16 @@ export function parseAct(act: string | null): { kind: "gig" | "rest" | "weekend"
   return { kind: "none" };
 }
 
-/* 推进结果档位掷骰：受自信（利好）与压力（不利）牵引。非娱乐圈且未写概率 = 固定「成功」。 */
+/* 推进结果档位掷骰：受自信（利好）与压力（不利）牵引。非娱乐圈未勾/未写概率 = 固定「成功」。 */
 export function rollGrade(s: GameState): DayGrade {
   const tu = tuning();
-  if (getWorldId() !== "ent" && !tu.gradeOdds) return "success";
+  const ent = getWorldId() === "ent";
+  if (!ent && (!tuningHasModule("dayGrade") || !tu.gradeOdds)) return "success";
   const odds = { ...RAW_GRADE_ODDS, ...(tu.gradeOdds ?? {}) };
   const order: DayGrade[] = ["perfect", "great", "success", "fail", "bad"];
   const total = order.reduce((a, k) => a + Math.max(0, odds[k]), 0) || 100;
-  const luckDiv = tu.luckDiv ?? (getWorldId() === "ent" ? 40 : 0);
-  const stressDiv = tu.stressDiv ?? (getWorldId() === "ent" ? 3 : 0);
+  const luckDiv = tu.luckDiv ?? (ent ? 40 : 0);
+  const stressDiv = tu.stressDiv ?? (ent ? 3 : 0);
   const luck = luckDiv > 0 ? reqValue(s, tu.luckStat ?? "stat:zixin") / luckDiv : 0;
   const drag = stressDiv > 0 ? s.stress / stressDiv : 0;
   // 掷 0~100：属性越高越靠前（好评级），压力越大越靠后
@@ -699,7 +707,12 @@ export function applyAct(n: GameState, act: string | null, deltas: string[]): Ac
   const p = parseAct(act);
 
   if (p.kind === "rest") {
-    const rs = tuning().restStress ?? 8;
+    // 功能注释：休息减压须勾选并写出；非娱乐圈未勾/未写 = 无效果，不套用娱乐圈默认 8。
+    const tu = tuning();
+    if (getWorldId() !== "ent" && (!tuningHasModule("rest") || tu.restStress == null)) {
+      return { grade: null, actLabel: "休息", gains: ["休息（引擎规则未写减压，无效果）"] };
+    }
+    const rs = tu.restStress ?? 8;
     n.stress = clamp(n.stress - rs, 0, 100);
     return { grade: null, actLabel: "休息", gains: [`压力 ${rs >= 0 ? "-" : "+"}${Math.abs(rs)}`] };
   }
@@ -746,7 +759,9 @@ export function applyAct(n: GameState, act: string | null, deltas: string[]): Ac
     if (!j) return { grade: null, actLabel: "打工", gains: [] };
     bumpCount(n, `work:${j.id}`);
     const grade = rollGrade(n);
-    const pay = Math.max(0, Math.round(j.pay * GRADE_MUL[grade] * (tuning().jobPayMul ?? 1)));
+    // 功能注释：未勾打工倍率模块时按 ×1，不读某一剧本预填值。
+    const jobMul = (!tuningHasModule("jobPay") && getWorldId() !== "ent") ? 1 : (tuning().jobPayMul ?? 1);
+    const pay = Math.max(0, Math.round(j.pay * GRADE_MUL[grade] * jobMul));
     wallet.addIn(n, pay);
     n.stress = clamp(n.stress + j.stress + (grade === "fail" || grade === "bad" ? 3 : 0), 0, 100);
     const gains = pay > 0 ? [`进账 ${wallet.fmt(pay)}`] : ["白忙一场，没挣到钱"];
@@ -760,7 +775,9 @@ export function applyAct(n: GameState, act: string | null, deltas: string[]): Ac
     if (!t) return { grade: null, actLabel: "才艺课程", gains: [] };
     const grs = gradesOf(t);
     const gr = grs.find((x) => x.id === p.gradeId) ?? grs[0];
-    const fee = Math.round(t.cost * gr.costMul * (tuning().trainFeeMul ?? 1));
+    // 功能注释：未勾课程模块时学费倍率按 ×1。
+    const feeMul = (!tuningHasModule("course") && getWorldId() !== "ent") ? 1 : (tuning().trainFeeMul ?? 1);
+    const fee = Math.round(t.cost * gr.costMul * feeMul);
     if (!canPay(n, fee)) return { grade: null, actLabel: `${t.name}·${gr.label}`, gains: [shortOf(n, fee, "学费")] };
     bumpCount(n, `${t.id}:${gr.id}`);
     wallet.addIn(n, -(fee));
@@ -931,7 +948,7 @@ export function settleWeek(s: GameState, customTimeLimit = false): WeekResult {
       deltas.push(`勉强完成《${g.name}》：作品扑街，报酬 60%，负责人信任 -3`);
     } else {
       // 失败惩罚由 tuning.gigRules 配置；缺省 = 名气 -5~40、口碑 -3~8、信任 -10、违约 +1、压力 +6、黑粉 +1~3、相关能力 -1~4
-      const pay = Math.round(g.pay * (rand(0, Math.max(0, gr.failPayMax ?? 30)) / 100));
+      const pay = Math.round(g.pay * (rand(0, Math.max(0, gr.failPayMax ?? (ent ? 30 : 0))) / 100));
       wallet.addIn(n, pay); earned += pay;
       const failNotes: string[] = [];
       for (const x of (gr.failFx ?? (ent ? RAW_FAIL_FX : []))) {
@@ -1427,17 +1444,11 @@ export function weekLocalDate(week: number, k = 0): Date {
 }
 
 // 当日时刻：从内容池 travel.dayStartMinute 起算（缺省 08:00）。移动/活动推动 clockMin 流动。
-/* 「HH:MM」→ 当日分钟数；格式不对返回 undefined（允许 24:00 以后表示次日凌晨，如 26:00） */
-const hhmm = (v?: string): number | undefined => {
-  const m = /^(\d{1,2}):(\d{2})$/.exec(v?.trim() ?? "");
-  return m && Number(m[2]) < 60 ? Number(m[1]) * 60 + Number(m[2]) : undefined;
-};
-const slotTime = (k: "startTime" | "dayStart" | "dayEnd") => hhmm(slot<string | undefined>(k, () => undefined));
-// 每日起止：模组槽 dayStart / dayEnd（「HH:MM」）优先，其次 travel.dayStartMinute / dayEndMinute
-export const dayStartMin = (): number => slotTime("dayStart") ?? TRAVEL.dayStartMinute ?? 480;
-export const dayEndMin = (): number => slotTime("dayEnd") ?? TRAVEL.dayEndMinute ?? 1380;
-/* 开局时刻：模组槽 startTime；缺省 = 每日起始时刻 */
-export const startClockMin = (): number => Math.min(47 * 60, slotTime("startTime") ?? dayStartMin());
+// 功能注释：产品已下线「开局时刻 / 每天几点开始 / 几点算一天结束」作者槽；内部时钟只读引擎 travel 默认，旧稿里残留的 startTime/dayStart/dayEnd 一律忽略
+export const dayStartMin = (): number => TRAVEL.dayStartMinute ?? 480;
+export const dayEndMin = (): number => TRAVEL.dayEndMinute ?? 1380;
+/* 开局时刻：与每日起始对齐（作者不可再配几点几分） */
+export const startClockMin = (): number => Math.min(47 * 60, dayStartMin());
 // 把当日分钟数格式化为 时段 HH:MM（跨过 24:00 后按「次日」显示，语义上就是该歇了）
 export function clockLabel(min: number): string {
   const total = Math.max(0, Math.round(min));
@@ -1502,6 +1513,8 @@ function advanceDayRaw(s: GameState, customTimeLimit = false): DayResult {
   { const gr = applyGameRules(n, "day", getWorldGameRules()); Object.assign(n, gr.next); deltas.push(...gr.changes); }
   // 主线与目标：每天结束判定节点完成 / 失败
   { const sr = applyStorylines(n, getWorldStorylines()); Object.assign(n, sr.next); deltas.push(...sr.changes); }
+  // 支线：主线之后结算，成败只记 side:* 进度，不影响主线完成 / 中断
+  { const sd = applySidelines(n, getWorldSidelines()); Object.assign(n, sd.next); deltas.push(...sd.changes); }
   const gradeLabel = r.grade ? GRADE_LABEL[r.grade] : "";
   const doneNote = deltas.length ? "：" + deltas.join("；") : "";
 

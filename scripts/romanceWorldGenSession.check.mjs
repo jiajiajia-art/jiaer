@@ -36,14 +36,26 @@ test('worldGenSession_parse与过期丢弃_以及App刷新续开', async () => {
       contentIds: ['world'],
       editorStepIds: ['prompt'],
     },
-    draft: null,
+    draft: {
+      title: '雾港来信',
+      setting: '海边旅店',
+      aiPolish: true,
+      engineId: 'balanced',
+      contentIds: ['world'],
+      editorStepIds: ['prompt'],
+    },
     mod: { id: 'w1', name: '雾港来信', version: '0.1.0', author: '', description: '', kind: 'world', dependencies: [], content: {} },
     scrollY: 420,
     editorGroup: 'story',
     updatedAt: Date.now(),
   };
-  assert.equal(sess.parseWorldGenSession(ok)?.scrollY, 420);
-  assert.equal(sess.parseWorldGenSession(ok)?.editorGroup, 'story');
+  // 功能注释：未保存停留位不作为作品会话恢复；step2 有基线须保持 step=2，刷新直达编辑器
+  assert.equal(sess.parseWorldGenSession(ok)?.scrollY, 0);
+  assert.equal(sess.parseWorldGenSession(ok)?.editorGroup, undefined);
+  assert.ok(sess.parseWorldGenSession(ok)?.mod);
+  assert.equal(sess.parseWorldGenSession(ok)?.step, 2);
+  assert.equal(sess.parseWorldGenSession({ ...ok, step: 1 })?.mod?.id, 'w1');
+  assert.equal(sess.parseWorldGenSession({ ...ok, step: 1 })?.step, 1);
 
   assert.ok(sess.saveWorldGenSession(ok));
   assert.equal(sess.shouldResumeWorldGenSession(), true);
@@ -85,8 +97,15 @@ test('App与Wizard_刷新续开会话契约', () => {
 
   assert.match(wiz, /loadWorldGenSession|bootFromSession/);
   assert.match(wiz, /saveWorldGenSession/);
-  assert.match(wiz, /onLiveChange|onChromeChange|initialGroup/);
+  assert.match(wiz, /继续编辑已有内容/);
+  assert.match(wiz, /onCommitted|onEditorCommitted/);
+  assert.match(wiz, /resumeEditor/);
+  assert.match(wiz, /loadWorldGenSessionAsync/);
+  // 功能注释：未保存填写不得经 onLiveChange 写回会话基线；平台书架只 PATCH 同一 draftId
+  assert.match(wiz, /本机草稿仍只走 useDraft/);
+  assert.match(wiz, /scheduleRomancePlatformDraftSync/);
+  assert.doesNotMatch(wiz, /onEditorLiveChange[\s\S]{0,200}saveWorldGenSession/);
   assert.match(panel, /initialGroup/);
-  assert.match(panel, /onLiveChange/);
-  assert.match(panel, /onChromeChange/);
+  assert.match(panel, /onCommitted/);
+  assert.match(panel, /继续填写草稿/);
 });

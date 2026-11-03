@@ -18,6 +18,10 @@ test('Modal与裁切弹窗挂到romancePortalRoot优先平台壳', () => {
   assert.match(portal, /data-platform-ui/);
   assert.match(portal, /\.romance-platform/);
   assert.match(portal, /\.romance-host/);
+  // 功能注释：跳过 hidden / aria-hidden 宿主，避免作者预览把建角弹窗挂进不可见向导壳
+  assert.match(portal, /isUsablePortalHost|classList\.contains\("hidden"\)/);
+  assert.match(portal, /aria-hidden/);
+  assert.match(portal, /querySelectorAll/);
   assert.match(ui, /romancePortalRoot/);
   assert.doesNotMatch(ui, /querySelector\("\.romance-host"\)/);
   assert.match(crop, /romancePortalRoot/);
@@ -29,7 +33,7 @@ test('草稿与确认弹窗主按钮走ui-btn-primary不用硬编码bg-jade白�
   const kit = read('components/EditorKit.tsx');
   assert.match(editor, /发现本机未保存的草稿/);
   assert.match(editor, /ui-btn ui-btn-primary/);
-  assert.doesNotMatch(editor, /恢复草稿[\s\S]{0,80}bg-jade/);
+  assert.doesNotMatch(editor, /继续填写草稿[\s\S]{0,80}bg-jade/);
   assert.match(kit, /ui-btn-primary/);
   assert.doesNotMatch(kit, /close\(true\)[\s\S]{0,200}bg-jade/);
 });

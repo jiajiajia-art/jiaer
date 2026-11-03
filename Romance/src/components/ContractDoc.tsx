@@ -1,5 +1,5 @@
-import { IconStar } from "../lib/icons";
-/* 经纪合约·全文档（点开背包里的合约后以「正式合约文书」形式全屏展开）
+import { IconClose, IconStar } from "../lib/icons";
+/* 经纪合约·全文档（点开背包里的合约后以「正式合约文书」形式在统一弹窗框内展开）
  * 数据取自签署时固化的 game.contract 快照，纯只读展示；版式为一纸 2005 年份的经纪合约。 */
 import { useGame } from "../store/gameCtx";
 import type { SignedContract } from "../lib/types";
@@ -26,16 +26,16 @@ export default function ContractDoc({ contract, onClose }: { contract: SignedCon
   const artist = game!.player.name;
 
   return (
-    <div className="fixed inset-0 z-[80] flex flex-col animate-fade backdrop-blur-sm" style={{ background: "var(--overlay-bg-heavy, rgba(0, 0, 0, 0.55))" }} onClick={onClose}>
+    <div className="ui-overlay ui-overlay-heavy z-[80]" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-label="经纪合约 · 文书" className="ui-sheet ui-dialog animate-pop" onClick={(e) => e.stopPropagation()}>
       {/* 顶栏 */}
-      <div className="flex items-center px-3 py-2.5 text-white" onClick={(e) => e.stopPropagation()}>
-        <button onClick={onClose} className="text-[14px] text-white/85">‹ 收起</button>
-        <span className="flex-1 text-center text-[15px] font-semibold tracking-wide">经纪合约 · 文书</span>
-        <span className="w-12" />
+      <div className="ui-sheet-head">
+        <span className="ui-title min-w-0 flex-1 truncate">经纪合约 · 文书</span>
+        <button onClick={onClose} aria-label="关闭" className="ui-icon-btn"><IconClose /></button>
       </div>
 
       {/* 合约纸 */}
-      <div className="flex-1 overflow-y-auto px-3 pb-8" onClick={(e) => e.stopPropagation()}>
+      <div className="ui-dialog-body px-3 py-3">
         <div className="relative mx-auto max-w-md overflow-hidden rounded-sm bg-[#fbf7ee] shadow-2xl ring-1 ring-black/10">
           {/* 纸张竖纹 + 印油底纹 */}
           <div className="pointer-events-none absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "repeating-linear-gradient(90deg,#000 0 1px,transparent 1px 26px)" }} />
@@ -110,6 +110,7 @@ export default function ContractDoc({ contract, onClose }: { contract: SignedCon
             <p className={`mt-6 text-center text-[11px] tracking-widest ${INK_SOFT}`}>— 二〇〇五年 · 于{T("city")} —</p>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

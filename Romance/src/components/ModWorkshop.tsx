@@ -40,7 +40,7 @@ const parseJson = (t: string) => { try { return JSON.parse(t); } catch { return 
 const btn = "rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40";
 
 const STEPS = [
-  { label: "世界观与提示词", ask: "先帮我写世界观简介、叙事口吻、术语叫法和几条常驻世界书。" },
+  { label: "剧本基调与世界书", ask: "先帮我写一段完整剧本基调（包含世界设定与叙事口吻），再补几条常驻世界书。" },
   { label: "地图地点", ask: "根据世界观设计 6~10 个地点（rooms，含出口连通）和开局地点。" },
   { label: "NPC", ask: "设计 6~8 个性格鲜明、彼此有关系的 NPC，分布在各个地点。" },
   { label: "人物线路 / 建角", ask: "设计建角页：人物线路 creation.paths 与对应 identities、家庭背景、外形风格。" },
@@ -56,24 +56,25 @@ const PLAY_STEPS = [
   { label: "规则与开关", ask: "给出玩法规则：需要关闭的功能（features）、每周收支（income），以及用 gameRules 组合的条件分歧规则（必要时用规则变量 flag 串联）。" },
   { label: "剧情美化", ask: "按这个世界的剧情设计 3~5 条 lookRules：在关键情境（深夜、高压、热恋、成名、破产等）自动切换外观，说明每条的意图。" },
   { label: "结局", ask: "按新玩法设计 3~5 个结局（endings），与新属性挂钩。" },
-  { label: "引擎平衡", ask: "按新玩法调整引擎内置规则：tuning（评级概率与倍率、影响表现的属性、休息减压、课程/打工倍率、通用课程等级），必要时用 stats 改八维叫法或停用不需要的能力。说明每项为什么这样调。" },
+  { label: "引擎平衡", ask: "按新玩法调整引擎规则：先在 tuning.modules 勾选需要的模块（dayGrade/work/breach/course/rest/jobPay），再填对应数值；不要预填用不上的现代打工项。必要时用 stats 改八维叫法。说明每项为什么这样调。" },
 ];
 
 /* 玩法字段说明：玩法 Mod 与世界观对话修改共用 */
-const PLAY_FIELDS = `- customAttrs[{id,label,init,initMode?:"fixed|dice",dice?:正整数面数,min,max,color?:"jade|coral|gold|danger",tiers?:[{min,label}],display?:"num|tier|both",pin?:true}] 自定义属性（开局固定值或掷骰二选一，不要拆成两种属性）
+const PLAY_FIELDS = `- customAttrs[{id,label,init,initMode?:"fixed|random",min,max,color?:"jade|coral|gold|danger",tiers?:[{min,label}],display?:"num|tier|both",pin?:true,desc?}] 自定义属性（开局勾选固定数值，或不勾在 min～max 随机；须写属性说明 desc）
 - titles[{id,name,tier:"青铜|白银|黄金|钻石",req:{键:阈值},desc}] 头衔；req 键可为 fame/reputation/works/awards、"stat:<yanji|geyi|koucai|yitai|donggan|tineng|caizhi|zixin>"、"c:<自定义属性id>"
 - trainings[{id,name,effect,gain:{八维键:[min,max]},cgain:{自定义属性id:[min,max]},cost,energy,stress,grades?:[{id,label,costMul,gainMul,cap,stressAdd,needPrev?:上一级需完成次数,reqs?:[{metric,min}]}]}] 课程；metric 写法同上（八维用 "stat:键"，自定义用 "c:id"，其余 fame/reputation/money/stress）
 - sideJobs[{id,label,pay,stress,fameReq,note,cgain?,reqs?,needPrev?}] 打工（按顺序成档）；weekendActs[{id,name,effect,icon:"",cost,energy,stress,fame?,reputation?,cgain?,reqs?}]
-- fameTiers[{min,label,desc}]；bills{weekly:[{label,amount}],monthly:[...],tiers?:[{minFame,label?,weekly?,monthly?}]}（tiers=按名气分档的生活水准，名气达到 minFame 起改付该档，取已达到的最高一档；未达任何一档用顶层 weekly/monthly）；meals[{id,name,desc,cost:每周伙食费,stress?,gain?:{八维键:每周变化},styling?,reqs?,default?:true}] 饮食生活（玩家每周选吃什么，周日随账单结算）；pregnancy{gestationDays?:孕期天数(默认300),baseChance?:基础受孕率%(25),maxChance?:上限%(50),stressFrom?:压力门槛(50),revealMin?,revealMax?:第几天察觉(14~30),fertilityMin?,fertilityMax?:隐藏生育率区间(20~80),birthStress?,childNames?:[名字不含姓]} 孕育参数（需 features.pregnancy=true）
+- bills{weekly:[{label,amount}],monthly:[...],tiers?:[{minFame,label?,weekly?,monthly?}]}（tiers=按名气门槛的生活水准，取已达到的最高一档；未达任何一档用顶层 weekly/monthly）；meals[{id,name,desc,cost:每周伙食费,stress?,gain?:{八维键:每周变化},styling?,reqs?,default?:true}] 饮食生活（玩家每周选吃什么，周日随账单结算）；pregnancy{gestationDays?:孕期天数(默认300),baseChance?:基础受孕率%(25),maxChance?:上限%(50),stressFrom?:压力门槛(50),revealMin?,revealMax?:第几天察觉(14~30),fertilityMin?,fertilityMax?:隐藏生育率区间(20~80),birthStress?,childNames?:[名字不含姓]} 孕育参数（需 features.pregnancy=true）
+  说明：数值分档写在 customAttrs[].tiers（多少分叫什么），不要单独写 fameTiers；头衔用 titles[]（玩法 Mod），不要与分档混在养成规则里。
 - fixedEvents[{id,name,time?:{kind:"none"}|{kind:"day",day}|{kind:"date",date:"YYYY.MM.DD"},conds?:[{kind:"stat"|"metric",key,op:"gte"|"lte",value}|{kind:"rel",key:npcId,op,value}|{kind:"event",key:事件id}|{kind:"location",key}],prompt:"交给 AI 演绎的事件描述",effects?:[{kind:"stat"|"metric",key,delta}|{kind:"rel",key,delta}],nextIds?:[],once?:true,locked?:true,random?:true}] 事件链；metric 的 key 可为 fame/reputation/stress/energy/money/works 或 "c:自定义属性id"
 - income[{id,label,conds?,target:{kind:"metric",key},min,max}] 每周收支（负数=扣除）
 - gameRules[{id,name,when:"day"|"week",branches:[{conds:[条件],match?:"all"|"any",effects:[效果],notice?:"给玩家的提示"}],chance?:1~100,once?:true,cooldown?:天}] 玩法规则：分支按序比对命中第一个即执行，conds 为空的分支=「否则」；条件可用 {kind:"flag",key:变量名,op,value}、{kind:"clock",from:"HH:MM",to:"HH:MM"}，效果可用 {kind:"flag",key,delta,set?:true} 写规则变量
 - lookRules[{id,name,conds:[条件],match?,look:{mode?:"light|dark",skin?:"dream|bloody|cute|glass|paper",accent?:"fuchsia|plum|rose|gold|cyan|jade|coral|ink",tint?:"#hex",font?:"song|round|elegant|brush",sceneTone?:"none|warm|cool|dusk|vintage|mono",sceneDim?:0~90,sceneBg?:图片URL,dialogStyle?:"soft|avg|letter|glass|minimal",bubbleStyle?:"frost|solid|outline|comic|plain",topbar?:"gradient|aurora|plain",topbarText?,css?}}] 剧情美化：条件满足时临时覆盖外观
 - endings[{id,title,desc}]、worldBook[{id,title,keywords,content,enabled:true,constant?}]
 - features{industryTab,weeklyPaper,career,imageCrisis,phone,pregnancy,cars,transport: true/false}
-- tuning{gradeOdds:{perfect,great,success,fail,bad: 概率%},gradeMul:{同键: 收益倍率},luckStat:"stat:键|c:id",luckDiv,stressDiv,restStress,trainGainMul,trainFeeMul,jobPayMul,lessonGrades:[{id,label,costMul,gainMul,cap,stressAdd}]} 引擎规则（原值：概率 8/22/48/15/7，倍率 1.6/1.3/1/0.4/0，自信每 40 点 +1%，压力每 3 点 -1%，休息减压 8）
+- tuning{modules{dayGrade,work,breach,course,rest,jobPay},gradeOdds,gradeMul,luckStat,luckDiv,stressDiv,restStress,trainGainMul,trainFeeMul,jobPayMul,lessonGrades[],gigRules?} 引擎规则（先勾 modules；没写开局不生效；勿预填某一打工剧本数值）
 - stats{labels:{八维键:"新叫法"},hidden:[停用的八维键],base:{八维键:初值},range:{八维键:{min,max}},metaLabels:{fame,looks,stress}} 内置八维与名气/容貌/压力的叫法（只写要改的键，会与世界观合并）
-- startDate/startTime/dayStart/dayEnd（时间与推进）、startMoney（养成·开局资源）、weather/startRoom（世界·地点树）
+- startDate（时间与推进）、startMoney（基础·建角）、weather/startRoom（世界·地点树）、growModules（养成模块勾选）
 - terms{fame:"名气的叫法",money:"…",reputation:"…"}、gameRules[]`;
 
 const PLAY_SYS = (draft: Mod, base: string) => `你是文字模拟游戏编辑器的玩法设计师，帮助创作者用对话做「玩法 Mod」。

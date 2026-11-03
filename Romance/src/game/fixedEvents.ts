@@ -1,10 +1,12 @@
 import type { GameState as SimState } from "./logic";
 import { careerWeekOf, dayDateLabel, dayParts } from "./logic";
 import { STAT_LABELS, type StatKey } from "./data";
-import { LIVE_LOCATIONS as LOCATIONS, getWorldSlot } from "../mods/registry";
+import { resolveRuleBranchEffects } from "../lib/gameRulePresets";
+import { LIVE_LOCATIONS as LOCATIONS, getWorldEvents, getWorldSlot } from "../mods/registry";
 import { liveArray } from "../mods/live";
 import { LIVE_PERSON_BY_ID as PERSON_BY_ID, worldItemById as itemById } from "../mods/registry";
-import type { ChainBreak, CondGroup, EventChoice, FixedEvent, FixedCond, FixedEffect, FixedEventTime, CustomEnding, IncomeRule, GameRule, Storyline, QuestState } from "../lib/types";
+import type { ChainBreak, CondGroup, EventChoice, FixedEvent, FixedCond, FixedEffect, FixedEventTime, CustomEnding, IncomeRule, GameRule, Storyline, QuestState, Sideline } from "../lib/types";
+import { SIDE_STATE_LABEL, applySidelines as applySidelinesPure, sideState } from "../lib/sidelines";
 import { getWorldStorylines } from "../mods/registry";
 import { PERIODIC_TIME, TIME_UNIT_DAYS, type CmpOp } from "../lib/types";
 import type { LibraryGroup } from "./eventLibrary";
@@ -18,6 +20,7 @@ import { COMM_MAX_DEPTH, bindArgs, checkAccess, filterPass, subscribersOf, trace
 import type { ModArg } from "../mods/types";
 import { resolveAudio, audioLabel } from "./audioLib";
 import type { AudioCmd } from "../lib/types";
+import { asCondList } from "./safeConds.ts";
 
 /* 当前正在结算 / 判定的内容归属（模板库 MOD 装入的资源带 _mod；原生 = undefined），用于跨 MOD 授权 */
 let ctxOwner: string | undefined;
@@ -111,6 +114,8 @@ export function evalFixedCond(c: FixedCond, s: SimState): boolean {
       return inClock(s.clockMin ?? 0, c.from, c.to);
     case "quest":
       return questState(c.key, s) === c.state;
+    case "side":
+      return sideState(c.key, s) === c.state;
     case "faction":
       return cmpNum(repOf(s, c.key), c.op, c.value);
     case "visited": {
@@ -185,7 +190,9 @@ export function applyChainBreaks(s: SimState, events: FixedEvent[]): { next: Sim
   for (const [id, breaks] of byChain) {
     const cur = chainRun(s, id);
     if (cur === "failed" || !breaks.length) continue;
-    const hit = (st: ChainBreak["state"]) => breaks.find((b) => b.state === st && b.group.conds.length && groupMet(b.group, s));
+    // 功能注释：脏稿 chainBreaks.group.conds 常缺；asCondList 后再 length，避免④剧情/局内结算崩页
+    const hit = (st: ChainBreak["state"]) =>
+      breaks.find((b) => b.state === st && asCondList(b.group?.conds).length && groupMet(b.group, s));
     const f = hit("failed"), i = cur === "interrupted" ? undefined : hit("interrupted"), p = hit("paused");
     let v: number | null = null;
     if (f) { v = -2; changes.push(`事件链「${id}」永久失败${f.note ? `：${f.note}` : ""}`); }
@@ -487,7 +494,8 @@ export function parseChoice(input: string, events: FixedEvent[]): { ev: FixedEve
 }
 /** 结算选项：先过成功判定（check），不满足走失败分支；记录 flags["choice:<事件>:<选项>"] = 1 成功 / -1 失败，可作条件引用 */
 export function applyChoice(s: SimState, ev: FixedEvent, c: EventChoice): { next: SimState; changes: string[]; failed: boolean; prompt: string } {
-  const failed = !!c.check?.conds.length && !groupMet(c.check, s);
+  // 功能注释：check 存在但 conds 缺失时，?.conds.length 仍会炸；统一 asCondList
+  const failed = !!asCondList(c.check?.conds).length && !groupMet(c.check, s);
   const { next, changes } = applyEffectList(s, failed ? c.failEffects : c.effects);
   next.flags = { ...(next.flags ?? {}), [`choice:${ev.id}:${c.id}`]: failed ? -1 : 1 };
   const ids = failed ? c.failNextIds : c.nextIds;
@@ -507,10 +515,13 @@ export function applyHiddenBranches(s: SimState, ev: FixedEvent): { next: SimSta
   return { next, changes, prompts };
 }
 
-/* 结局条件组合：all = 全部满足；any = 任一满足（无条件视为满足） */
-export const endingCondsMet = (e: CustomEnding, s: SimState) =>
-  (!e.conds.length || (e.match === "any" ? e.conds.some((c) => evalFixedCond(c, s)) : e.conds.every((c) => evalFixedCond(c, s))))
-  && (e.condGroups ?? []).every((g) => groupMet(g, s));
+/* 结局条件组合：all = 全部满足；any = 任一满足（无条件视为满足）
+ * 功能注释：脏稿缺 conds 时按空数组，避免判定/编辑器读 .length 崩掉 */
+export const endingCondsMet = (e: CustomEnding, s: SimState) => {
+  const conds = e.conds ?? [];
+  return (!conds.length || (e.match === "any" ? conds.some((c) => evalFixedCond(c, s)) : conds.every((c) => evalFixedCond(c, s))))
+    && (e.condGroups ?? []).every((g) => groupMet(g, s));
+};
 
 /** 条件此刻的实际数值（供编辑器展示「当前 xx」），非数值型返回 null */
 export function condCurrent(c: FixedCond, s: SimState): string | null {
@@ -523,6 +534,7 @@ export function condCurrent(c: FixedCond, s: SimState): string | null {
     case "flag": return String(s.flags?.[c.key] ?? 0);
     case "clock": { const m = s.clockMin ?? 0; return `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; }
     case "quest": return QUEST_STATE_LABEL[questState(c.key, s)];
+    case "side": return SIDE_STATE_LABEL[sideState(c.key, s)];
     case "faction": return String(repOf(s, c.key));
     case "relSet": return `${(c.keys ?? []).filter((k) => cmpNum(s.rel?.[k] ?? 0, c.op, c.value)).length}/${(c.keys ?? []).length} 人`;
     default: return null;
@@ -533,7 +545,8 @@ export function condCurrent(c: FixedCond, s: SimState): string | null {
 export function matchCustomEnding(list: CustomEnding[] | undefined, s: SimState, autoOnly = false): CustomEnding | null {
   for (const e of list ?? []) {
     if (e.enabled === false || (autoOnly && !e.auto)) continue;
-    if (autoOnly && !e.conds.length && !e.condGroups?.length && !e.minDay) continue; // 无条件的自动结局会开局即终，跳过
+    const conds = e.conds ?? [];
+    if (autoOnly && !conds.length && !e.condGroups?.length && !e.minDay) continue; // 无条件的自动结局会开局即终，跳过
     if (e.minDay && (s.day ?? 0) < e.minDay) continue;
     if (endingCondsMet(e, s)) return e;
   }
@@ -557,10 +570,16 @@ export function applyIncome(s: SimState, rules: IncomeRule[] | undefined): { nex
 }
 
 /* 玩法规则：按时机（每天结束 / 每周结算）逐条判定；分支依次比对，命中第一个即执行。
- * 一次性 / 冷却 / 概率在命中分支前判定；触发记录写在 rulesFired（规则 id → 触发当天）。 */
-export function applyGameRules(s: SimState, when: GameRule["when"], rules: GameRule[] | undefined): { next: SimState; changes: string[] } {
+ * 命中后先套事件库 eventId 的效果，再叠分支 effects（规则变量等）；一次性 / 冷却 / 概率在命中前判定。 */
+export function applyGameRules(
+  s: SimState,
+  when: GameRule["when"],
+  rules: GameRule[] | undefined,
+  libraryEvents?: FixedEvent[],
+): { next: SimState; changes: string[] } {
   let next = s;
   const changes: string[] = [];
+  const lib = libraryEvents ?? getWorldEvents();
   for (const r of rules ?? []) {
     if (r.enabled === false || (r.when ?? "week") !== when || !r.branches?.length) continue;
     const last = next.rulesFired?.[r.id];
@@ -568,9 +587,10 @@ export function applyGameRules(s: SimState, when: GameRule["when"], rules: GameR
     if (r.chance != null && r.chance < 100 && !rollChance(r.chance, `rule:${r.id}:${next.day ?? 0}`, next.room)) continue;
     const b = r.branches.find((x) => condsMet(x.conds, next, x.match));
     if (!b) continue;
-    const res = applyEffectList(next, b.effects);
+    const resolved = resolveRuleBranchEffects(b, lib);
+    const res = applyEffectList(next, resolved.effects);
     next = { ...res.next, rulesFired: { ...(res.next.rulesFired ?? {}), [r.id]: next.day ?? 0 } };
-    const text = [b.notice?.trim(), res.changes.join("、")].filter(Boolean).join("：");
+    const text = [resolved.notice, res.changes.join("、")].filter(Boolean).join("：");
     if (text) changes.push(text);
   }
   return { next, changes };
@@ -649,6 +669,11 @@ export function applyStorylines(s: SimState, lines: Storyline[] | undefined): { 
     }
   }
   return { next, changes };
+}
+
+/** 每天结束结算支线（在主线之后）：复用同一套条件判定与奖励结算，只写 side:* 进度 */
+export function applySidelines(s: SimState, lines: Sideline[] | undefined): { next: SimState; changes: string[] } {
+  return applySidelinesPure(s, lines, { condsMet, evalCond: evalFixedCond, applyEffects: applyEffectList });
 }
 
 /** 给 AI / 界面的主线进度摘要：每条主线的当前节点与可选目标 */

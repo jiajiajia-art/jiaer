@@ -6,7 +6,8 @@ import { deleteSlot, listSaves, type CoverDiy, type SaveSlot } from "../lib/stor
 import { Modal } from "./ui";
 const AIConfigPanel = lazyPanel(() => import("./AIConfigPanel"));
 import { IconHeart, IconPlay, IconRefresh, IconSettings, IconSpark } from "../lib/icons";
-import { getWorld, selectedSlot } from "../mods/registry";
+import { getWorld } from "../mods/registry";
+import { isAuthorPreview } from "../lib/authorPreview";
 import type { CoverCgOpts, CoverCopy } from "../mods/types";
 import { FONTS } from "../lib/skins";
 import { coverMode, scopeCoverCss, withAuthorStyle } from "../lib/coverAi";
@@ -64,6 +65,15 @@ export function resolveCoverBg(c: CgSrc): CoverBgPlan {
   if (c.image) return { kind: "images", images: [c.image] };
   if (cgs.length) return { kind: "images", images: cgs };
   return c.video ? { kind: "video", video: c.video } : { kind: "none" };
+}
+
+/** 功能注释：作品展示用封面图（列表/详情/书架）；取背景固定图、轮播首张或视频海报 */
+export function coverDisplayUrl(c?: CoverCgOpts & { image?: string; video?: string } | null): string | undefined {
+  if (!c) return undefined;
+  const bg = resolveCoverBg(c);
+  if (bg.kind === "images") return bg.images[0];
+  if (bg.kind === "video") return bg.poster || undefined;
+  return undefined;
 }
 
 const reducedMotion = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -235,11 +245,10 @@ export function CoverView({ cv, d: d0, preview, ...h }: { cv: CoverCopy; d?: Cov
 
 export default function Cover() {
   const { go, loadState, look } = useGame();
-  /* 功能注释：作者封面只在模组编辑器①基础编辑；游戏封面页不再放右上角 DIY 入口（玩家若要自定走美化·封面） */
+  /* 功能注释：作品 content.cover 只给列表/详情/书架展示，开局菜单不再套用该图；玩家可在美化·封面 DIY。 */
   const [modal, setModal] = useState<null | "config" | "continue">(null);
   const [saves, setSaves] = useState<SaveSlot[]>([]);
-  const cv = selectedSlot("cover") ?? {}; // 模组自定义封面，留空项沿用默认
-  const htmlMode = coverMode(cv) === "html" && !!cv.html && !(look.cover?.on !== false && !!look.cover && resolveCoverBg(look.cover).kind !== "none");
+  const cv: CoverCopy = {};
 
   const refresh = async () => setSaves(await listSaves());
   const openContinue = () => {
@@ -251,25 +260,13 @@ export default function Cover() {
     void refresh();
   };
 
-  // HTML 封面通过 postMessage 调用游戏入口
-  useEffect(() => {
-    if (!htmlMode) return;
-    const on = (e: MessageEvent) => {
-      const cmd = typeof e.data === "string" ? e.data : e.data?.type;
-      if (cmd === "start") go("create");
-      else if (cmd === "continue") openContinue();
-      else if (cmd === "config") setModal("config");
-    };
-    window.addEventListener("message", on);
-    return () => window.removeEventListener("message", on);
-  });
-
   return (
     <div className="relative">
-      <CoverView cv={cv} d={look.cover} onStart={() => go("create")} onContinue={openContinue} onConfig={() => setModal("config")} />
+      {/* 功能注释：开局菜单用默认底；作品展示封面不在此屏出现 */}
+      <CoverView cv={cv} d={isAuthorPreview() ? undefined : look.cover} onStart={() => go("create")} onContinue={openContinue} onConfig={() => setModal("config")} />
 
       {modal === "config" && (
-        <Modal title="AI 配置" onClose={() => setModal(null)} wide>
+        <Modal title="AI 配置" onClose={() => setModal(null)}>
           <AIConfigPanel />
         </Modal>
       )}

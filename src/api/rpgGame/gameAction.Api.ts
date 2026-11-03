@@ -6,7 +6,7 @@ export interface PublishGameRequest {
     priceAmount: number;
     description: string;
     shareType?: Currency;
-    versionNotes?: string;
+    versionNotes?: string | null;
     notifyFavoritedUsers?: boolean;
     audienceType?: 'male' | 'female' | 'all';
 }

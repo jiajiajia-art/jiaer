@@ -1,6 +1,6 @@
 import type { ContactIcon as Kind } from "../game/contacts";
 
-/* 人脉卡片数值图标：纯展示，图标与数值语义无绑定，由作者在「人脉页面配置」里自选 */
+/* 人脉卡片数值图标：纯展示，图标与数值语义无绑定，由作者在人物上方的关系配置里自选 */
 const PATHS: Record<Kind, { d: string; fill?: boolean }> = {
   dot: { d: "M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z", fill: true },
   heart: { d: "M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z", fill: true },

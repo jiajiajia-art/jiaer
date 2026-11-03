@@ -6,7 +6,9 @@ import { SIDEQUESTS } from "../worlds/star2005/content";
 import { dayDateLabel, ROMANCE_ARCS, arcView, startDateLabel } from "../game/logic";
 import { homeMainQuest } from "../lib/homeMainQuest";
 import { storylineBrief } from "../game/fixedEvents";
-import { getWorldStorylines } from "../mods/registry";
+import { getWorldSidelines, getWorldStorylines } from "../mods/registry";
+import { SIDE_STATE_LABEL, visibleSidelines } from "../lib/sidelines";
+import type { SideState } from "../lib/types";
 import { limitDays } from "../lib/types";
 import { Avatar, Modal } from "./ui";
 import { openPerson } from "./NpcTab";
@@ -33,6 +35,13 @@ function Status({ k }: { k: "doing" | "done" | "lock" }) {
     </span>
   );
 }
+/* 创作者支线状态徽标：未出现 / 进行中 / 已完成 / 已失败 */
+const SIDE_TONE: Record<SideState, string> = {
+  pending: "bg-paper-2 text-ink-soft/80 ring-line",
+  active: "bg-coral/12 text-coral ring-coral/25",
+  done: "bg-jade/10 text-jade-deep ring-jade/20",
+  failed: "bg-ink-soft/10 text-ink-soft ring-line",
+};
 function Bar({ v, max }: { v: number; max: number }) {
   return <div className="h-1.5 overflow-hidden rounded-full bg-paper-2"><div className="h-full rounded-full bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] transition-[width] duration-500" style={{ width: `${max ? Math.min(100, (v / max) * 100) : 0}%` }} /></div>;
 }
@@ -64,6 +73,10 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
   const bonds = Object.keys(ROMANCE_ARCS).filter((id) => s.metPeople.includes(id)).map((id) => ({ id, npc: game.npcs.find((n) => n.id === id), v: arcView(s, id) })).filter((b) => b.v);
   const triggered = SIDEQUESTS.filter((x) => doneQuests.has(x.id));
   const hiddenCount = SIDEQUESTS.length - triggered.length;
+  // 功能注释：创作者支线——隐藏支线触发前不显示；进行中排最前，未出现的排最后
+  const SIDE_ORDER: Record<SideState, number> = { active: 0, done: 1, failed: 2, pending: 3 };
+  const sides = visibleSidelines(getWorldSidelines(), s).sort((a, b) => SIDE_ORDER[a.state] - SIDE_ORDER[b.state]);
+  const sideCount = triggered.length + sides.filter((x) => x.state !== "pending").length;
   const chapter = Math.max(1, Math.ceil(s.week / 4));
   const recap = game.memory?.trim() ? recapItems(game.memory) : [];
   const recapShown = recapAll ? recap : recap.slice(-4);
@@ -78,7 +91,7 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
       <div className="mx-auto max-w-2xl space-y-4 px-4 pt-3">
       {/* 分类页签 */}
       <div className="grid grid-cols-4 gap-1 rounded-2xl border border-line/60 bg-paper-2/60 p-1">
-        {([["main", "主线", 0], ["bond", "羁绊", bonds.length], ["side", "支线", triggered.length], ["journal", "回顾", journal.length]] as const).map(([id, label, n]) => {
+        {([["main", "主线", 0], ["bond", "羁绊", bonds.length], ["side", "支线", sideCount], ["journal", "回顾", journal.length]] as const).map(([id, label, n]) => {
           const on = view === id;
           return (
             <button key={id} onClick={() => setView(id)} aria-pressed={on}
@@ -219,7 +232,16 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
 
       {view === "side" && (
         <div className="space-y-2">
-          {triggered.length === 0 && (
+          {sides.map(({ line, state }) => (
+            <div key={line.id} className="flex items-center gap-3 rounded-2xl border border-line bg-paper/60 px-3.5 py-3 shadow-sm">
+              <div className="min-w-0 flex-1">
+                <b className="block truncate text-[14px] text-ink">{line.name || line.id}</b>
+                {line.desc ? <p className="mt-0.5 line-clamp-2 text-[11.5px] leading-relaxed text-ink-soft">{line.desc}</p> : null}
+              </div>
+              <span className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10.5px] font-semibold ring-1 ${SIDE_TONE[state]}`}>{SIDE_STATE_LABEL[state]}</span>
+            </div>
+          ))}
+          {triggered.length === 0 && sides.length === 0 && (
             <p className="rounded-2xl border border-line bg-paper/40 px-4 py-8 text-center text-[12.5px] leading-relaxed text-ink-soft">
               还没有触发过支线。<br />满足特定条件，或在行动 / 台词里聊到相关话题时，支线会自动展开。
             </p>

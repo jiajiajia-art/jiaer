@@ -44,7 +44,7 @@ const SEARCH_PAGE_SIZE = 8;
 
 const getSearchResultId = (game: UserGameData): string => String(game.file_id || game.id || '').trim();
 
-type NavKey = 'home' | 'categories' | 'create' | 'warehouse' | 'rank' | '';
+type NavKey = 'home' | 'bookshelf' | 'categories' | 'create' | 'warehouse' | 'rank' | '';
 type NavbarProps = {
     mobileVariant?: 'default' | 'home-overlay';
     mobileOverlayScrolled?: boolean;
@@ -192,6 +192,7 @@ const Navbar: React.FC<NavbarProps> = ({
     const getActiveNav = (): NavKey => {
         const path = location.pathname;
         if (path === '/home' || path === '/') return 'home';
+        if (path.startsWith('/bookshelf')) return 'bookshelf';
         if (path.startsWith('/categories')) return 'categories';
         // /create 已合并为「我的」统一页，顶栏创作仅在编辑器相关路由高亮
         if (path === '/profile' || path.startsWith('/create/withdraw-records')) return '';
@@ -290,6 +291,12 @@ const Navbar: React.FC<NavbarProps> = ({
                         onClick={() => runLeaveAction(() => navigate('/home'))}
                     >
                         {t('nav.home')}
+                    </div>
+                    <div
+                        className={`${styles.navLink} ${activeNav === 'bookshelf' ? styles.navLinkActive : ''}`}
+                        onClick={() => runLeaveAction(() => navigate('/bookshelf'))}
+                    >
+                        {t('nav.bookshelf')}
                     </div>
                     <div
                         className={`${styles.navLink} ${activeNav === 'categories' ? styles.navLinkActive : ''}`}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  STAT_LABELS, creationCopy, loadPathLocks, savePathLock, clearPathLocks,
+  STAT_LABELS, STAT_ORDER, creationCopy, loadPathLocks, savePathLock, clearPathLocks,
   type CreationCopy, type CreationPath, type Option, type PathCardPart, type PathNpc,
 } from "../game/data";
 import { complete, isConfigured } from "../lib/ai";
@@ -12,6 +12,17 @@ import { normRouteFx, routeFxText, type RouteFx, type RouteNum } from "../game/r
 import RoutePerks from "./RoutePerks";
 import { getWorld, getWorldSlot } from "../mods/registry";
 import { valueSources } from "../game/valueSources";
+import {
+  defaultPathLockCond,
+  formatPathLockHint,
+  PATH_LOCK_COND_KINDS,
+  sanitizePathLockConds,
+  type PathDepPools,
+  type PathLockCondKind,
+} from "../lib/pathDeps";
+import { platformNpcTagsPromptLine, normalizeNpcTags } from "../lib/npcTags";
+import type { CmpOp, FixedCond } from "../lib/types";
+import { CMP_OPS } from "../lib/types";
 import { IconCheck, IconChevronDown, IconChevronUp, IconClose, IconLock, IconSpark } from "../lib/icons";
 
 const livePool = () => [...new Set(valueSources({ stats: getWorldSlot("stats"), attrs: getWorldSlot("customAttrs"), paths: creationCopy().paths }).map((s) => s.label))];
@@ -42,23 +53,34 @@ const CARD_PARTS: { k: PathCardPart; label: string }[] = [
   { k: "perks", label: "开局数值" }, { k: "npcs", label: "开局人际" }, { k: "soon", label: "未解锁路径" },
 ];
 
-export default function ModPathsEditor({ creation, identities, world, npcs = [], rooms = [], events = [], statsValue, attrsValue, onChange }: {
+export default function ModPathsEditor({ creation, identities, world, npcs = [], rooms = [], events = [], statsValue, attrsValue, onChange, onMergeNpcs }: {
   creation?: CreationCopy; identities?: Option[]; world: string;
   npcs?: { id: string; name: string }[]; // 可配开局人际 / 预设主角的固定人物
   rooms?: { id: string; name: string }[]; // 可选的开局地点
   events?: { id: string; name: string }[]; // 事件库（绑定开局事件）
   statsValue?: import("../game/data").StatsSlot; attrsValue?: import("../lib/types").AttrDef[]; // 全局属性池来源（正在编辑的模组）
   onChange: (p: { creation: CreationCopy; identities: Option[] }) => void;
+  /** 功能注释：AI 生成线路时一并回写人物资料（姓名/年龄/性别/约 300 字小传） */
+  onMergeNpcs?: (npcs: import("../worlds/star2005/content").PersonContent[]) => void;
 }) {
   events = events.length ? events : liveEvents();
-  const pool = statsValue || attrsValue ? [...new Set(valueSources({ stats: statsValue, attrs: attrsValue, paths: creation?.paths }).map((s) => s.label))] : undefined;
+  const srcList = valueSources({ stats: statsValue, attrs: attrsValue, paths: creation?.paths });
+  const pool = [...new Set(srcList.map((s) => s.label))];
   rooms = rooms.length ? rooms : LIVE_LOCATIONS.map((l) => ({ id: l.id, name: l.name })); // 模组没自建地点时用依赖世界的地图
+  const peopleOpts = npcs.length ? npcs : LIVE_PEOPLE.map((p) => ({ id: p.id, name: p.name }));
+  // 功能注释：线路解锁/开局数值共用依赖池；选项必须来自本作品配置
+  const depPools: PathDepPools = {
+    stats: STAT_ORDER.map((k) => ({ id: k, label: STAT_LABELS[k] || k })),
+    metrics: srcList.filter((s) => s.kind === "metric").map((s) => ({ id: s.key, label: s.label })),
+    people: peopleOpts.map((p) => ({ id: p.id, label: p.name })),
+    rooms: rooms.map((r) => ({ id: r.id, label: r.name })),
+    events: events.map((e) => ({ id: e.id, label: e.name || e.id })),
+  };
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const cc = creation ?? {};
   const paths = Array.isArray(cc.paths) ? cc.paths : [];
   const ids = Array.isArray(identities) ? identities : [];
-  const startFactions = Array.isArray(cc.startFactions) ? cc.startFactions : [];
   const idOf = (id: string): Option => ids.find((o) => o.id === id) ?? { id, name: "", desc: "", tag: "" };
   const commit = (np: CreationPath[], ni: Option[], extra: Partial<CreationCopy> = {}) => onChange({ creation: { ...cc, ...extra, paths: np }, identities: ni });
   const setPath = (i: number, p: Partial<CreationPath>) => commit(paths.map((x, j) => (j === i ? { ...x, ...p } : x)), ids);
@@ -73,27 +95,62 @@ export default function ModPathsEditor({ creation, identities, world, npcs = [],
     if (!isConfigured(cfg)) { setErr("尚未配置 AI，请先在菜单「AI 配置」里接入模型。"); return; }
     setBusy(true); setErr("");
     try {
+      // 功能注释：沿用生成世界写入的「禁止生成」（prompt.extraRules），补全线路时同样遵守
+      const forbidBlock = String(getWorld().content.prompt?.extraRules ?? "").trim();
       const raw = await complete(cfg, [
         { role: "system", content: "你是女性向模拟游戏的剧情与数值策划。只输出 JSON，不要任何解释或代码块标记。" },
-        { role: "user", content: `为下面的世界观设计「人物线路」（建角第一步，决定玩家的人生开局）。\n世界观：${world}\n本世界已有的属性 / 词条名（优先沿用，也可按题材新起名字）：${[...Object.values(STAT_LABELS), ...FIXED_METRICS.filter((m) => m.key !== "week").map((m) => m.label)].join("、")}\n输出格式：{"paths":[{"id":"英文id","name":"四字左右的路径名","tag":"短标签","blurb":"一句话卖点","about":"80~150字的开局处境，用第二人称「你」","fixed":["该路径锁定的设定"],"choose":["玩家仍可自由决定的项"],"fx":{"attr":[{"name":"属性名","val":整数}],"favor":[{"target":"人物名","val":整数}],"reputation":[{"name":"声望词条名","val":整数}],"note":"一句概括，如：专业底子厚，但还没名气"},"hero":"预设主角的人物 id 或空串","room":"开局地点 id 或空串","memory":"30~80字的专属前置记忆","event":"一句序章里必定发生的开局小事件"}]}\n要求：3~5 条差异明显的路径，各有优劣；不要写页面标题、引导语、身份字段名或人物描述初始值。属性单项 -20~80，好感 -20~30，声望词条 -15~45，全部为整数，数值克制且与 note 一致；favor 的 target 只能用下面列出的人物名。\n可选预设主角（id=名字，适合当主角的才绑定，每人最多绑定一条线路，不合适就留空）：${npcs.map((n) => `${n.id}=${n.name}`).join("，") || "无"}\n可选开局地点（id=名字）：${rooms.map((r) => `${r.id}=${r.name}`).join("，") || "无"}` },
+        { role: "user", content: `为下面的世界观设计「人物线路」，并一并生成相关人物完整资料。\n世界观：${world}\n${forbidBlock ? `${forbidBlock}\n以上禁止项不得出现在线路或人物资料中。\n` : ""}本世界已有的属性 / 词条名（fx 的 name 必须从这里选）：${pool.join("、") || "无"}\n${platformNpcTagsPromptLine()}\n输出格式：{"paths":[{"id":"英文id","name":"路径名","tag":"短标签","blurb":"卖点","about":"开局处境","fixed":[],"choose":[],"fx":{"attr":[{"name":"属性名","val":整数}],"favor":[{"target":"人物名","val":整数}],"reputation":[{"name":"词条","val":整数}],"note":"概括"},"hero":"人物id或空","room":"地点id或空","eventId":"事件id或空","memory":"前置记忆"}],"npcs":[{"id":"与hero或favor对应的英文id","name":"姓名","role":"身份","kind":"roam或staff","home":"地点id","roam":[],"gender":"男|女|其他","age":整数,"bio":"约300字活人小传，贴合世界观","tags":["标签"],"relation":"与主角关系","metStart":true}]}\n要求：3~5 条路径；每条涉及的关键人物都必须出现在 npcs 里且 name/gender/age/bio 齐全，bio 约 300 字禁止空着；favor.target 用人物名。\n已有人物（可沿用 id）：${peopleOpts.map((n) => `${n.id}=${n.name}`).join("，") || "无"}\n地点：${rooms.map((r) => `${r.id}=${r.name}`).join("，") || "无"}\n事件：${events.map((e) => `${e.id}=${e.name}`).join("，") || "无"}` },
       ]);
       const j = JSON.parse(raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1)) as {
         paths?: (Partial<CreationPath> & { fx?: unknown })[];
+        npcs?: {
+          id?: string; name?: string; role?: string; kind?: string; home?: string; roam?: string[];
+          gender?: string; age?: number; bio?: string; tags?: string[]; relation?: string; metStart?: boolean; wxStart?: boolean; factionId?: string;
+        }[];
       };
       const list = (j.paths ?? []).filter((p) => p?.name);
       if (!list.length) throw new Error("AI 没有返回可用的路径，请重试。");
+      const generatedPeople = (j.npcs ?? [])
+        .filter((n) => n?.id && String(n.name ?? "").trim())
+        .map((n) => ({
+          id: String(n.id).toLowerCase().replace(/[^a-z0-9_-]+/g, "-"),
+          name: String(n.name).trim(),
+          role: String(n.role ?? "").trim(),
+          kind: (n.kind === "staff" ? "staff" : "roam") as "staff" | "roam",
+          home: (n.home && rooms.some((r) => r.id === n.home) ? n.home : rooms[0]?.id) || "",
+          roam: Array.isArray(n.roam) ? n.roam.map(String) : [],
+          bio: String(n.bio ?? "").trim(),
+          gender: n.gender === "男" || n.gender === "女" || n.gender === "其他" ? n.gender : undefined,
+          age: typeof n.age === "number" && Number.isFinite(n.age) ? Math.max(0, Math.trunc(n.age)) : undefined,
+          tags: normalizeNpcTags(n.tags).length ? normalizeNpcTags(n.tags) : undefined,
+          relation: typeof n.relation === "string" && n.relation.trim() ? n.relation.trim() : undefined,
+          metStart: n.metStart || undefined,
+          wxStart: n.wxStart || undefined,
+          factionId: typeof n.factionId === "string" && n.factionId.trim() ? n.factionId.trim() : undefined,
+          requires: [] as never[],
+        }));
+      const peopleForFx = [...peopleOpts, ...generatedPeople.map((n) => ({ id: n.id, name: n.name }))];
       const np: CreationPath[] = list.map((p, i) => ({
         id: (p.id || `path${i}`).toLowerCase().replace(/[^a-z0-9_-]+/g, "-"), name: p.name!, tag: p.tag ?? "", blurb: p.blurb ?? "", open: true,
         about: p.about ?? "", fixed: Array.isArray(p.fixed) ? p.fixed.map(String) : [], choose: Array.isArray(p.choose) ? p.choose.map(String) : [],
-        ...(() => { const fx = normRouteFx(p.fx); if (fx) fx.favor = fx.favor?.filter((f) => npcs.some((n) => n.name === f.target)); return fx ? { fx, perks: routeFxText(fx) } : { perks: p.perks ?? "" }; })(),
-        ...(p.hero && npcs.some((n) => n.id === p.hero) && !list.slice(0, i).some((q) => q.hero === p.hero) ? { hero: p.hero } : {}),
+        ...(() => {
+          const fx = normRouteFx(p.fx);
+          if (!fx) return { perks: p.perks ?? "" };
+          const known = new Set(pool);
+          fx.attr = fx.attr?.filter((a) => known.has(a.name));
+          fx.reputation = fx.reputation?.filter((a) => known.has(a.name));
+          fx.favor = fx.favor?.filter((f) => peopleForFx.some((n) => n.name === f.target || n.id === f.target));
+          return { fx, perks: routeFxText(fx) };
+        })(),
+        ...(p.hero && peopleForFx.some((n) => n.id === p.hero) && !list.slice(0, i).some((q) => q.hero === p.hero) ? { hero: p.hero } : {}),
         ...(p.room && rooms.some((r) => r.id === p.room) ? { room: p.room } : {}),
         ...(typeof p.memory === "string" && p.memory.trim() ? { memory: p.memory.trim() } : {}),
-        ...(typeof p.event === "string" && p.event.trim() ? { event: p.event.trim() } : {}),
+        ...(p.eventId && events.some((e) => e.id === p.eventId) ? { eventId: p.eventId } : {}),
       }));
       const ni: Option[] = np.map((p) => ({ id: p.id, name: p.name, tag: p.tag, desc: p.perks })); // 数值全在线路 fx 里，身份表只留名称
-      // 功能注释：建角页标题和引导语不再由这里改写。AI 只换路径；已经保存的旧句子原样留在 creation 上。
+      // 功能注释：建角页标题和引导语不再由这里改写。AI 换路径，并回写人物资料。
       commit(np, ni);
+      if (generatedPeople.length && onMergeNpcs) onMergeNpcs(generatedPeople);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "生成失败，请稍后再试。");
     } finally { setBusy(false); }
@@ -102,7 +159,7 @@ export default function ModPathsEditor({ creation, identities, world, npcs = [],
   return (
     <div className="space-y-2.5">
       <div className="flex items-center justify-between gap-2 rounded-xl bg-gradient-to-r from-jade/10 to-coral/10 px-3 py-2">
-        <p className="text-[11.5px] leading-snug text-ink-soft">让 AI 按这个世界观生成一整套人物线路（文案 + 开局数值 + 预设主角 / 地点 / 前置记忆 / 开局事件），生成后仍可逐项修改。</p>
+        <p className="text-[11.5px] leading-snug text-ink-soft">让 AI 按这个世界观生成人物线路，并一并生成相关人物资料（姓名 / 年龄 / 性别 / 约 300 字小传）。势力请到「① 基础 → 势力」配置。</p>
         <button className={`${btn} shrink-0 inline-flex items-center gap-1 !border-transparent bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] !text-white`} disabled={busy} onClick={aiGen}>{busy ? "生成中…" : <><IconSpark size={14} /> AI 生成</>}</button>
       </div>
       {err && <p className="text-[11px] text-danger">{err}</p>}
@@ -125,35 +182,6 @@ export default function ModPathsEditor({ creation, identities, world, npcs = [],
           })}
         </div>
         {cc.pathPicker === "off" && <p className="text-[10.5px] leading-snug text-ink-soft">玩家看不到路径弹窗；开局加成、开局人际等仍按第一条「已开放」路径生效。</p>}
-      </div>
-
-      {/* 开局势力：玩家在建角「开局」页勾选加入；开局时全部装入阵营系统（声望 / 好感波及 / 调价 / 世界书关键词） */}
-      <div className="space-y-2 rounded-xl border border-line bg-paper-2/50 p-3">
-        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-          <p className="min-w-0 text-[12.5px] font-bold text-ink">开局势力（玩家勾选加入）</p>
-          <label className="flex shrink-0 items-center gap-2 rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink-soft">
-            <span className="whitespace-nowrap">最多可选</span>
-            <input type="number" min={0} aria-label="最多可选" className={`${inp} !w-16 shrink-0 text-center`} value={cc.factionPickMax ?? ""} placeholder="不限"
-              onChange={(e) => { const n = Math.max(0, Math.round(Number(e.target.value))); commit(paths, ids, { factionPickMax: e.target.value && n ? n : undefined }); }} />
-          </label>
-        </div>
-        {startFactions.map((f, i, all) => {
-          const put = (p: Partial<typeof f>) => commit(paths, ids, { startFactions: all.map((x, j) => (j === i ? { ...x, ...p } : x)) });
-          return (
-            <div key={f.id} className="grid gap-1.5 rounded-lg border border-line/70 bg-paper p-2">
-              <div className="flex gap-1.5">
-                <input className={inp} value={f.name} placeholder="势力名称" onChange={(e) => put({ name: e.target.value })} />
-                <label className="flex shrink-0 items-center gap-1 text-[11px] text-ink-soft">初始声望
-                  <input type="number" min={-100} max={100} className={`${inp} w-16`} value={f.rep ?? 20} onChange={(e) => put({ rep: Math.max(-100, Math.min(100, Math.round(Number(e.target.value) || 0))) })} />
-                </label>
-                <button className={btn} onClick={() => commit(paths, ids, { startFactions: all.filter((_, j) => j !== i) })}>删除</button>
-              </div>
-              <textarea rows={2} className={inp} value={f.desc ?? ""} placeholder="势力设定（建角页展示，也作为世界书正文注入剧情）" onChange={(e) => put({ desc: e.target.value || undefined })} />
-              <input className={inp} key={Array.isArray(f.tags) ? f.tags.join("、") : ""} defaultValue={Array.isArray(f.tags) ? f.tags.join("、") : ""} placeholder="标签 / 别称，用顿号分隔（剧情里提到即触发）" onBlur={(e) => put({ tags: e.target.value.split(/[、,，]/).map((t) => t.trim()).filter(Boolean) })} />
-            </div>
-          );
-        })}
-        <button className={btn} onClick={() => commit(paths, ids, { startFactions: [...startFactions, { id: `sf_${Date.now().toString(36)}`, name: "", rep: 20 }] })}>＋ 新增势力</button>
       </div>
 
       {paths.length === 0 && (
@@ -179,39 +207,51 @@ export default function ModPathsEditor({ creation, identities, world, npcs = [],
               <button className={`${btn} shrink-0`} onClick={() => remove(i)} aria-label="删除"><IconClose size={14} /></button>
             </div>
             {!p.open && (
-              <div className="grid grid-cols-1 gap-1.5 rounded-lg border border-dashed border-coral/40 bg-coral/[0.04] p-2 sm:grid-cols-[140px_minmax(0,1fr)]">
-                <label className="text-[10.5px] text-ink-soft">
+              <div className="space-y-1.5 rounded-lg border border-dashed border-coral/40 bg-coral/[0.04] p-2">
+                <label className="block text-[10.5px] text-ink-soft">
                   未解锁角标
                   <input
-                    className={`${inp} mt-0.5`}
+                    className={`${inp} mt-0.5 max-w-[10rem]`}
                     value={p.lockTag ?? ""}
                     placeholder="未解锁"
                     onChange={(e) => setPath(i, { lockTag: e.target.value || undefined })}
                   />
                 </label>
-                <label className="text-[10.5px] text-ink-soft">
-                  解锁条件 / 提示语（在建角卡片上显示）
-                  <input
-                    className={`${inp} mt-0.5`}
-                    value={p.lockHint ?? ""}
-                    placeholder="如：达成任意一周目结局后解锁"
-                    onChange={(e) => setPath(i, { lockHint: e.target.value || undefined })}
-                  />
-                </label>
+                <PathLockCondsEditor
+                  value={Array.isArray(p.lockConds) ? p.lockConds : []}
+                  pools={depPools}
+                  onChange={(lockConds) => {
+                    const cleaned = sanitizePathLockConds(lockConds, depPools);
+                    setPath(i, {
+                      lockConds: cleaned.length ? cleaned : undefined,
+                      lockHint: formatPathLockHint(cleaned, depPools) || undefined,
+                    });
+                  }}
+                />
               </div>
             )}
-            <textarea rows={2} className={inp} value={String(p.blurb ?? "")} placeholder="线路简介（卡片上显示，自由书写）" onChange={(e) => setPath(i, { blurb: e.target.value })} />
-            <textarea rows={3} className={inp} value={String(p.about ?? "")} placeholder="展开详情：开局处境（第二人称「你」）" onChange={(e) => setPath(i, { about: e.target.value })} />
+            <textarea rows={2} className={inp} value={String(p.blurb ?? "")} placeholder="线路简介（卡片上显示，仅给玩家看）" onChange={(e) => setPath(i, { blurb: e.target.value })} />
+            <textarea rows={3} className={inp} value={String(p.about ?? "")} placeholder="展开详情：开局处境（第二人称「你」，仅给玩家看）" onChange={(e) => setPath(i, { about: e.target.value })} />
             <div className="grid grid-cols-2 gap-1.5">
-              <label className="text-[11px] text-ink-soft">玩家可自由决定（每行一项，可留空）
+              <label className="text-[11px] text-ink-soft">玩家可自由决定（每行一项，可留空 · 仅展示）
                 <textarea rows={3} className={`${inp} mt-0.5`} value={(Array.isArray(p.choose) ? p.choose : []).join("\n")} onChange={(e) => setPath(i, { choose: lines(e.target.value) })} />
               </label>
-              <label className="text-[11px] text-ink-soft">固定不可改（每行一项，可留空）
+              <label className="text-[11px] text-ink-soft">固定不可改（每行一项，可留空 · 仅展示）
                 <textarea rows={3} className={`${inp} mt-0.5`} value={(Array.isArray(p.fixed) ? p.fixed : []).join("\n")} onChange={(e) => setPath(i, { fixed: lines(e.target.value) })} />
               </label>
             </div>
-            <RouteFxEditor pool={pool} label={p.perksLabel} onLabel={(perksLabel) => setPath(i, { perksLabel })} value={p.fx} npcs={npcs} relationOf={(t) => { const rel = p.npcs?.find((n) => npcs.find((x) => x.id === n.id)?.name === t)?.relation; return typeof rel === "string" ? rel.trim() : ""; }}
-              onChange={(fx, text) => setPath(i, { fx, perks: text })} />
+            <RouteFxEditor
+              pool={pool}
+              label={p.perksLabel}
+              onLabel={(perksLabel) => setPath(i, { perksLabel })}
+              value={p.fx}
+              npcs={peopleOpts}
+              relationOf={(t) => {
+                const rel = p.npcs?.find((n) => peopleOpts.find((x) => x.id === n.id)?.name === t || n.id === t)?.relation;
+                return typeof rel === "string" ? rel.trim() : "";
+              }}
+              onChange={(fx, text) => setPath(i, { fx, perks: text })}
+            />
             <div className="space-y-1.5 rounded-lg border border-line/70 bg-paper p-2">
               <p className="text-[11px] text-ink-soft"><b className="font-semibold text-ink">开局状态</b> · 选这条线路时专属的主角与开局；没被选中的预设主角照常作为 NPC 生活</p>
               <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
@@ -230,13 +270,13 @@ export default function ModPathsEditor({ creation, identities, world, npcs = [],
                   </select>
                 </label>
               </div>
-              <label className="block text-[10.5px] text-ink-soft">专属前置记忆（写进主角档案，AI 可读）
+              <label className="block text-[10.5px] text-ink-soft">专属前置记忆（写进主角档案 · 仅文案，AI 可读）
                 <textarea rows={2} className={`${inp} mt-0.5`} value={p.memory ?? ""} placeholder="如：三年前在雨夜救过一只流浪猫，至今记得那家便利店" onChange={(e) => setPath(i, { memory: e.target.value || undefined })} />
               </label>
-              <label className="block text-[10.5px] text-ink-soft">开局独有小事件（序章里必定发生）
+              <EventPick value={p.eventId} events={events} onChange={(eventId) => setPath(i, { eventId })} />
+              <label className="block text-[10.5px] text-ink-soft">开局小事件旁白（可选 · 仅文案；真正触发请绑定上方事件库）
                 <textarea rows={2} className={`${inp} mt-0.5`} value={p.event ?? ""} placeholder="如：出门时撞见邻居搬家，箱子里掉出一张旧照片" onChange={(e) => setPath(i, { event: e.target.value || undefined })} />
               </label>
-              <EventPick value={p.eventId} events={events} onChange={(eventId) => setPath(i, { eventId })} />
             </div>
             <PathNpcsEditor value={Array.isArray(p.npcs) ? p.npcs : []} npcs={npcs} onChange={(v) => setPath(i, { npcs: v.length ? v : undefined })} />
             {hasLegacy(b) && (
@@ -270,57 +310,150 @@ const mergeLegacy = (fx: RouteFx | undefined, b: Option): RouteFx => {
   return { ...fx, attr: add(fx?.attr, r.attr), reputation: add(fx?.reputation, r.reputation) };
 };
 
-/* 可增删、可拖拽排序的数值行（名称 + 整数）；拖拽之外也给上下移动按钮，方便触屏与键盘 */
-function NumRows<T extends { val: number }>({ title, hint, rows, nameOf, setName, placeholder, list, warn, onChange }: {
-  title: string; hint: string; rows: T[]; nameOf: (r: T) => string; setName: (r: T, v: string) => T; placeholder: string;
-  list?: string; warn?: (name: string) => string | null; onChange: (rows: T[]) => void;
+/** 功能注释：开局数值行——名称只能从已有配置下拉选；没选中的行开局不生效 */
+function DepNumRows<T extends { val: number }>({ title, hint, rows, nameOf, setName, options, emptyLabel, onChange }: {
+  title: string; hint: string; rows: T[]; nameOf: (r: T) => string; setName: (r: T, v: string) => T;
+  options: { id: string; label: string }[]; emptyLabel: string; onChange: (rows: T[]) => void;
 }) {
-  const [drag, setDrag] = useState<number | null>(null);
   const move = (from: number, to: number) => { if (to < 0 || to >= rows.length || from === to) return; const n = rows.slice(); const [x] = n.splice(from, 1); n.splice(to, 0, x); onChange(n); };
   const set = (i: number, r: T) => onChange(rows.map((x, j) => (j === i ? r : x)));
+  const taken = new Set(rows.map((r) => nameOf(r)).filter(Boolean));
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between gap-2">
         <p className="text-[11px] text-ink-soft"><b className="font-semibold text-ink">{title}</b> · {hint}</p>
-        <button type="button" className={`${btn} shrink-0`} onClick={() => onChange([...rows, setName({ val: 0 } as T, "")])}>＋ 添加一行</button>
+        <button type="button" className={`${btn} shrink-0`} disabled={!options.length} onClick={() => onChange([...rows, setName({ val: 0 } as T, "")])}>＋ 添加一行</button>
       </div>
+      {!options.length && <p className="text-[10.5px] text-gold">本作品还没有可选{title}，请先在属性 / 人物里配置。</p>}
       {rows.map((r, i) => {
-        const w = warn?.(nameOf(r));
+        const cur = String(nameOf(r) ?? "");
+        const known = !cur || options.some((o) => o.id === cur || o.label === cur);
         return (
-          <div key={i}
-            onDragOver={(e) => { if (drag !== null) e.preventDefault(); }}
-            onDrop={(e) => { e.preventDefault(); if (drag !== null) move(drag, i); setDrag(null); }}
-            className={`rounded-lg ${drag === i ? "opacity-50" : ""}`}>
-            <div className="flex items-center gap-1">
-              <span draggable onDragStart={(e) => { setDrag(i); e.dataTransfer.effectAllowed = "move"; }} onDragEnd={() => setDrag(null)}
-                className="cursor-grab select-none px-0.5 text-[13px] leading-none text-ink-soft active:cursor-grabbing" title="拖动排序" aria-hidden>⋮⋮</span>
-              <input className={`${inp} ${String(nameOf(r) ?? "").trim() ? "" : "!border-danger/60"}`} value={String(nameOf(r) ?? "")} placeholder={placeholder} list={list} aria-label={`${title}名称`} onChange={(e) => set(i, setName(r, e.target.value))} />
-              <IntInput value={r.val} label={`${title}数值`} onChange={(val) => set(i, { ...r, val })} />
-              <button type="button" className={`${btn} shrink-0 !px-1.5`} disabled={i === 0} onClick={() => move(i, i - 1)} aria-label="上移">↑</button>
-              <button type="button" className={`${btn} shrink-0 !px-1.5`} disabled={i === rows.length - 1} onClick={() => move(i, i + 1)} aria-label="下移">↓</button>
-              <button type="button" className={`${btn} shrink-0 !px-2 hover:!border-danger hover:!text-danger`} onClick={() => onChange(rows.filter((_, j) => j !== i))} aria-label="删除这一行">×</button>
-            </div>
-            {w && <p className="ml-4 mt-0.5 text-[10.5px] text-gold">{w}</p>}
+          <div key={i} className="flex items-center gap-1">
+            <select
+              className={`${inp} ${cur && known ? "" : "!border-danger/60"}`}
+              value={options.some((o) => o.id === cur) ? cur : options.some((o) => o.label === cur) ? options.find((o) => o.label === cur)!.id : cur}
+              aria-label={`${title}依赖`}
+              onChange={(e) => set(i, setName(r, e.target.value))}
+            >
+              <option value="">{emptyLabel}</option>
+              {cur && !known && <option value={cur}>{cur}（已失效 · 不生效）</option>}
+              {options.filter((o) => o.id === cur || o.label === cur || !taken.has(o.id) && !taken.has(o.label)).map((o) => (
+                <option key={o.id} value={o.id}>{o.label}</option>
+              ))}
+            </select>
+            <IntInput value={r.val} label={`${title}数值`} onChange={(val) => set(i, { ...r, val })} />
+            <button type="button" className={`${btn} shrink-0 !px-1.5`} disabled={i === 0} onClick={() => move(i, i - 1)} aria-label="上移">↑</button>
+            <button type="button" className={`${btn} shrink-0 !px-1.5`} disabled={i === rows.length - 1} onClick={() => move(i, i + 1)} aria-label="下移">↓</button>
+            <button type="button" className={`${btn} shrink-0 !px-2 hover:!border-danger hover:!text-danger`} onClick={() => onChange(rows.filter((_, j) => j !== i))} aria-label="删除这一行">×</button>
           </div>
         );
       })}
-      {!rows.length && <p className="text-[10.5px] text-ink-soft/80">（暂无，点「＋ 添加一行」）</p>}
+      {!rows.length && <p className="text-[10.5px] text-ink-soft/80">（暂无，点「＋ 添加一行」并从下拉选择）</p>}
     </div>
   );
 }
 
-/* 人物线路 · 开局数值：动态 JSON（属性 / 好感 / 声望词条全部自定义名称），下方实时预览成玩家看到的「数值倾向」 */
+/** 功能注释：解锁条件编辑——从属性/人物/地点/事件选，填比较或勾选；禁止手打长文 */
+function PathLockCondsEditor({ value, pools, onChange }: {
+  value: FixedCond[]; pools: PathDepPools; onChange: (v: FixedCond[]) => void;
+}) {
+  const set = (i: number, c: FixedCond) => onChange(value.map((x, j) => (j === i ? c : x)));
+  const hint = formatPathLockHint(value, pools);
+  const kindLabel: Record<PathLockCondKind, string> = {
+    stat: "主角属性", metric: "指标/自定义属性", rel: "人物好感", location: "当前地点", event: "已触发事件",
+  };
+  return (
+    <div className="space-y-1.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-[11px] text-ink-soft"><b className="font-semibold text-ink">解锁条件</b> · 从已有配置选择；未选中的不生效</p>
+        <select
+          className={`${inp} !w-auto max-w-[11rem]`}
+          value=""
+          aria-label="添加解锁条件"
+          onChange={(e) => {
+            const kind = e.target.value as PathLockCondKind;
+            if (!kind) return;
+            onChange([...value, defaultPathLockCond(kind, pools)]);
+            e.target.value = "";
+          }}
+        >
+          <option value="">＋ 添加条件…</option>
+          {PATH_LOCK_COND_KINDS.map((k) => <option key={k} value={k}>{kindLabel[k]}</option>)}
+        </select>
+      </div>
+      {value.map((c, i) => {
+        if (!PATH_LOCK_COND_KINDS.includes(c.kind as PathLockCondKind)) return null;
+        const kind = c.kind as PathLockCondKind;
+        const opts = kind === "stat" ? pools.stats : kind === "metric" ? pools.metrics : kind === "rel" ? pools.people : kind === "location" ? pools.rooms : pools.events;
+        const key = "key" in c ? c.key : "";
+        return (
+          <div key={i} className="flex flex-wrap items-center gap-1.5 rounded-lg bg-paper/60 px-2 py-1.5">
+            <span className="text-[11px] font-semibold text-ink-soft">{kindLabel[kind]}</span>
+            <select
+              className={inp}
+              value={key}
+              onChange={(e) => {
+                const nextKey = e.target.value;
+                if (kind === "stat") set(i, { kind: "stat", key: nextKey, op: ("op" in c ? c.op : "gte") as CmpOp, value: "value" in c ? Number(c.value) || 0 : 0 });
+                else if (kind === "metric") set(i, { kind: "metric", key: nextKey, op: ("op" in c ? c.op : "gte") as CmpOp, value: "value" in c ? Number(c.value) || 0 : 0 });
+                else if (kind === "rel") set(i, { kind: "rel", key: nextKey, op: ("op" in c ? c.op : "gte") as CmpOp, value: "value" in c ? Number(c.value) || 0 : 0 });
+                else if (kind === "location") set(i, { kind: "location", key: nextKey });
+                else set(i, { kind: "event", key: nextKey });
+              }}
+            >
+              <option value="">（请选择）</option>
+              {key && !opts.some((o) => o.id === key) && <option value={key}>{key}（已失效）</option>}
+              {opts.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+            </select>
+            {(kind === "stat" || kind === "metric" || kind === "rel") && (
+              <>
+                <select
+                  className={`${inp} !w-16`}
+                  value={"op" in c ? c.op : "gte"}
+                  onChange={(e) => {
+                    if (kind === "stat") set(i, { kind: "stat", key, op: e.target.value as CmpOp, value: "value" in c ? Number(c.value) || 0 : 0 });
+                    else if (kind === "metric") set(i, { kind: "metric", key, op: e.target.value as CmpOp, value: "value" in c ? Number(c.value) || 0 : 0 });
+                    else set(i, { kind: "rel", key, op: e.target.value as CmpOp, value: "value" in c ? Number(c.value) || 0 : 0 });
+                  }}
+                >
+                  {CMP_OPS.map((o) => <option key={o.v} value={o.v}>{o.t}</option>)}
+                </select>
+                <input
+                  type="number"
+                  className={`${inp} !w-20`}
+                  value={"value" in c ? c.value : 0}
+                  onChange={(e) => {
+                    const value = Number(e.target.value) || 0;
+                    const op = ("op" in c ? c.op : "gte") as CmpOp;
+                    if (kind === "stat") set(i, { kind: "stat", key, op, value });
+                    else if (kind === "metric") set(i, { kind: "metric", key, op, value });
+                    else set(i, { kind: "rel", key, op, value });
+                  }}
+                />
+              </>
+            )}
+            <button type="button" className={`${btn} shrink-0`} onClick={() => onChange(value.filter((_, j) => j !== i))} aria-label="删除条件">×</button>
+          </div>
+        );
+      })}
+      {!value.length && <p className="text-[10.5px] text-ink-soft/80">（无条件 = 仅靠手动「已解锁 / 未解锁」开关）</p>}
+      {hint ? <p className="text-[10.5px] text-coral/90">玩家可见提示：{hint}</p> : null}
+    </div>
+  );
+}
+
+/* 人物线路 · 开局数值：属性/好感/声望只从已有配置下拉选；未选中的开局不生效 */
 function RouteFxEditor({ label, onLabel, value, npcs, relationOf, onChange, pool }: {
   label?: string; onLabel: (v: string | undefined) => void;
-  pool?: string[]; // 全局属性池名称（与人脉卡片、结局评定共用）；缺省取当前世界
+  pool?: string[]; // 全局属性池显示名
   value?: RouteFx; npcs: { id: string; name: string }[]; relationOf: (target: string) => string;
   onChange: (fx: RouteFx | undefined, text: string) => void;
 }) {
   const fx = value ?? {};
-  const [listId] = useState(() => `route-npcs-${Math.random().toString(36).slice(2, 8)}`);
   const poolNames = pool ?? livePool();
-  const [poolId] = useState(() => `route-pool-${Math.random().toString(36).slice(2, 8)}`);
-  const known = new Set([...Object.values(STAT_LABELS), ...FIXED_METRICS.map((m) => m.label), ...poolNames]);
+  const attrOpts = poolNames.map((n) => ({ id: n, label: n }));
+  const personOpts = npcs.map((n) => ({ id: n.id, label: n.name }));
   const commitFx = (p: Partial<RouteFx>) => {
     const next = { ...fx, ...p };
     const clean = normRouteFx(next);
@@ -332,14 +465,9 @@ function RouteFxEditor({ label, onLabel, value, npcs, relationOf, onChange, pool
     onChange(keep.attr!.length || keep.favor!.length || keep.reputation!.length || keep.note || keep.text ? keep : undefined, routeFxText(clean, relationOf));
   };
   const preview = routeFxText(normRouteFx(fx), relationOf);
-  // 功能注释：线路数值行常缺 name，渲染时 warn 回调直接 n.trim() 会在角色页崩成 reading 'trim'
-  const newAttr = (n: string) => {
-    const s = String(n ?? "").trim();
-    return s && !known.has(s) ? `本世界还没有「${s}」，开局时会自动新建为自定义属性` : null;
-  };
   return (
     <div className="space-y-2 rounded-lg border border-line/70 bg-paper p-2">
-      <p className="text-[11px] text-ink-soft"><b className="font-semibold text-ink">开局数值</b> · 名称取自全局属性池或自由新建（与人脉卡片、结局评定共用），数值为整数，可正可负</p>
+      <p className="text-[11px] text-ink-soft"><b className="font-semibold text-ink">开局数值</b> · 从本作品属性 / 人物里选择后填数字；没选中的游戏里不生效</p>
       <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
         <label className="text-[10.5px] text-ink-soft">卡片预览方式
           <select className={`${inp} mt-0.5`} value={fx.mode ?? "list"} onChange={(e) => commitFx({ mode: e.target.value === "free" ? "free" : undefined })}>
@@ -354,26 +482,32 @@ function RouteFxEditor({ label, onLabel, value, npcs, relationOf, onChange, pool
           <input className={`${inp} mt-0.5`} value={fx.favorWord ?? "好感"} placeholder="留空 = 只写人名" onChange={(e) => commitFx({ favorWord: e.target.value })} />
         </label>
       </div>
-      <NumRows title="属性" hint="主角能力" rows={Array.isArray(fx.attr) ? fx.attr : []} nameOf={(r) => String(r?.name ?? "")} setName={(r, name) => ({ ...r, name })} placeholder="属性名称（从属性池选或新建）" list={poolId} warn={newAttr} onChange={(attr) => commitFx({ attr })} />
-      <datalist id={poolId}>{poolNames.map((n) => <option key={n} value={n} />)}</datalist>
-      <datalist id={listId}>{npcs.map((n) => <option key={n.id} value={n.name} />)}</datalist>
-      <NumRows title="好感" hint="目标角色对主角的好感变化" rows={Array.isArray(fx.favor) ? fx.favor : []} nameOf={(r) => String(r?.target ?? "")} setName={(r, target) => ({ ...r, target })} placeholder="目标角色（从角色库选或手填）" list={listId}
-        warn={(t) => {
-          const s = String(t ?? "").trim();
-          return s && !npcs.some((n) => n.name === s || n.id === s) ? `角色库里没有「${s}」，开局时这一行不会生效` : null;
-        }} onChange={(favor) => commitFx({ favor })} />
-      <NumRows title="声望 / 词条" hint="口碑、名气、气运、声望……" rows={Array.isArray(fx.reputation) ? fx.reputation : []} nameOf={(r) => String(r?.name ?? "")} setName={(r, name) => ({ ...r, name })} placeholder="词条名称（从属性池选或新建）" list={poolId} warn={newAttr} onChange={(reputation) => commitFx({ reputation })} />
+      <DepNumRows title="属性" hint="主角能力 · 依赖属性字段" rows={Array.isArray(fx.attr) ? fx.attr : []} nameOf={(r) => String(r?.name ?? "")} setName={(r, name) => ({ ...r, name })} options={attrOpts} emptyLabel="选择属性…" onChange={(attr) => commitFx({ attr })} />
+      <DepNumRows
+        title="好感"
+        hint="目标人物 · 依赖角色库"
+        rows={Array.isArray(fx.favor) ? fx.favor : []}
+        nameOf={(r) => {
+          const t = String(r?.target ?? "");
+          return npcs.find((n) => n.id === t || n.name === t)?.id || t;
+        }}
+        setName={(r, id) => ({ ...r, target: npcs.find((n) => n.id === id)?.name || id })}
+        options={personOpts}
+        emptyLabel="选择人物…"
+        onChange={(favor) => commitFx({ favor })}
+      />
+      <DepNumRows title="声望 / 词条" hint="口碑名气等 · 依赖属性字段" rows={Array.isArray(fx.reputation) ? fx.reputation : []} nameOf={(r) => String(r?.name ?? "")} setName={(r, name) => ({ ...r, name })} options={attrOpts} emptyLabel="选择词条…" onChange={(reputation) => commitFx({ reputation })} />
       {fx.mode === "free" && (
-        <label className="block text-[11px] text-ink-soft">自由描述（卡片上原样显示，不自动拼接数值；上方数值仍在开局生效）
+        <label className="block text-[11px] text-ink-soft">自由描述（卡片上原样显示，不自动拼接数值；上方已选数值仍在开局生效）
           <textarea rows={2} className={`${inp} mt-0.5`} value={fx.text ?? ""} placeholder="如：灵力尚浅，悟性奇高，师尊另眼相看" onChange={(e) => commitFx({ text: e.target.value })} />
         </label>
       )}
-      <label className="block text-[11px] text-ink-soft">线路备注短句（显示在括号里，可空）
+      <label className="block text-[11px] text-ink-soft">线路备注短句（显示在括号里，可空 · 仅展示）
         <input className={`${inp} mt-0.5`} value={fx.note ?? ""} placeholder="如：专业底子厚，但还没名气" onChange={(e) => commitFx({ note: e.target.value })} />
       </label>
       <div className="rounded-lg border border-gold/30 bg-gold/5 px-2.5 py-1.5" aria-live="polite">
         <p className="text-[10px] font-semibold tracking-wider text-gold">实时预览 · 玩家在线路卡片上看到</p>
-        {preview ? <RoutePerks className="mt-1 !px-0 !bg-transparent" label={label} text={preview} /> : <p className="mt-0.5 text-[12px] text-ink-soft">（填写上方数值后在这里预览）</p>}
+        {preview ? <RoutePerks className="mt-1 !px-0 !bg-transparent" label={label} text={preview} /> : <p className="mt-0.5 text-[12px] text-ink-soft">（选择上方依赖并填数值后在这里预览）</p>}
       </div>
     </div>
   );
@@ -499,25 +633,41 @@ export function PathUnlockPanel() {
               </div>
 
               {!open && (
-                <div className="mt-3 grid grid-cols-1 gap-2 border-t border-line/60 pt-2.5 sm:grid-cols-[150px_minmax(0,1fr)]">
-                  <label className="text-[11px] text-ink-soft">
+                <div className="mt-3 space-y-2 border-t border-line/60 pt-2.5">
+                  <label className="block text-[11px] text-ink-soft">
                     未解锁角标文字
                     <input
-                      className={`${inp} mt-1`}
+                      className={`${inp} mt-1 max-w-[10rem]`}
                       value={p.lockTag ?? ""}
                       placeholder="未解锁"
                       onChange={(e) => savePathLock(p.id, { open: false, lockTag: e.target.value || undefined })}
                     />
                   </label>
-                  <label className="text-[11px] text-ink-soft">
-                    解锁条件 / 未解锁说明（展示在建角卡片下方）
-                    <input
-                      className={`${inp} mt-1`}
-                      value={p.lockHint ?? ""}
-                      placeholder="如：通关任意一周目结局后解锁"
-                      onChange={(e) => savePathLock(p.id, { open: false, lockHint: e.target.value || undefined })}
-                    />
-                  </label>
+                  <PathLockCondsEditor
+                    value={Array.isArray(p.lockConds) ? p.lockConds : []}
+                    pools={{
+                      stats: STAT_ORDER.map((k) => ({ id: k, label: STAT_LABELS[k] || k })),
+                      metrics: FIXED_METRICS.filter((m) => m.key !== "week").map((m) => ({ id: m.key, label: m.label })),
+                      people: LIVE_PEOPLE.map((x) => ({ id: x.id, label: x.name })),
+                      rooms: LIVE_LOCATIONS.map((x) => ({ id: x.id, label: x.name })),
+                      events: liveEvents().map((e) => ({ id: e.id, label: e.name || e.id })),
+                    }}
+                    onChange={(lockConds) => {
+                      const pools = {
+                        stats: STAT_ORDER.map((k) => ({ id: k, label: STAT_LABELS[k] || k })),
+                        metrics: FIXED_METRICS.filter((m) => m.key !== "week").map((m) => ({ id: m.key, label: m.label })),
+                        people: LIVE_PEOPLE.map((x) => ({ id: x.id, label: x.name })),
+                        rooms: LIVE_LOCATIONS.map((x) => ({ id: x.id, label: x.name })),
+                        events: liveEvents().map((e) => ({ id: e.id, label: e.name || e.id })),
+                      };
+                      const cleaned = sanitizePathLockConds(lockConds, pools);
+                      savePathLock(p.id, {
+                        open: false,
+                        lockConds: cleaned,
+                        lockHint: formatPathLockHint(cleaned, pools) || undefined,
+                      });
+                    }}
+                  />
                 </div>
               )}
               <RouteStateEditor p={p} />

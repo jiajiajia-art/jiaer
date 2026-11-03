@@ -3,7 +3,6 @@ const WorldRuleCards = lazyPanel(() => import("./WorldRulesPanel").then((m) => (
 import { useState, useEffect, useRef, type ReactNode } from "react";
 import { useGame } from "../store/gameCtx";
 import { randomPlayerSeed } from "../lib/store";
-import { openingSelectFieldOn } from "../lib/creationOpening";
 import { syncPlayerNameChange } from "../lib/syncPlayerName";
 import { randomName, type NameGender, type NameStyle } from "../game/names";
 import type { PlayPrefs, Player } from "../lib/types";
@@ -12,14 +11,15 @@ import { fxSummary } from "../game/optFx";
 import type { OptFx } from "../game/data";
 import { Avatar, Chip, Modal } from "./ui";
 import { IconCake, IconCheck, IconDice, IconHeart, IconIdCard, IconLock, IconPlay, IconUser } from "../lib/icons";
-import { STYLES, IDENTITIES, BACKGROUNDS, DIRECTIONS, PARENT_JOBS, schoolName, creationCopy, savePathLock, zodiacOf, optFx, defaultWorldRules, type BuiltinFieldCfg, type BuiltinFieldKey, type CreationField, type CreationOptCat } from "../game/data";
-import { commitSelection, worldPersonById, getSelectedWorld, getWorldRuleDims, selectedFeature, selectedSlot, setStartDateOverride, useMods } from "../mods/registry";
+import { IDENTITIES, creationCopy, savePathLock, zodiacOf, optFx, defaultWorldRules, type BuiltinFieldCfg, type BuiltinFieldKey, type CreationField } from "../game/data";
+import { commitSelection, worldPersonById, getSelectedWorld, selectedFeature, selectedSlot, setStartDateOverride, useMods } from "../mods/registry";
 import NamePicker from "./NamePicker";
-import { ZodiacSign } from "../lib/zodiacIcons";
 import { factionSigningOffers, rollSigningOffers, type SigningContract } from "../worlds/star2005/content";
 import { creationVars, fillParts, fillText } from "../game/creationText";
 import RoutePerks from "./RoutePerks";
 import { cleanPerks } from "../game/routeFx";
+import { normalizeGenderOptions } from "../game/creationSystemFields";
+import { visibleCreatorAttrs } from "../lib/creationItems";
 
 /** 功能注释：锁定图标统一走 Lucide；open=true 时略透明表示「未锁」。 */
 function LockGlyph({ open, className }: { open?: boolean; className?: string }) {
@@ -68,16 +68,12 @@ function Note({ children, tone = "soft" }: { children: ReactNode; tone?: "soft" 
   return <p className={`mt-1.5 rounded-lg px-2.5 py-1.5 text-[11.5px] leading-snug ${c}`}>{children}</p>;
 }
 
-/* 建角池与文案全部来自模组槽（styles / identities / backgrounds / directions / school / parentJobs / creation） */
 // 选项去重：模组里重复的选项只出现一次（也保证下拉 key 唯一）
 const uniq = (a: string[]): string[] => [...new Set(a.map((o) => o.trim()).filter(Boolean))];
-const opts = (a: string[] | undefined): string[] => (a?.length ? uniq(a) : []);
-/* 全部可掷骰字段（「重掷全部」用，锁定的自动跳过） */
-const ALL_KEYS = ["name", "gender", "identity", "styleId", "description", "backgroundId", "klass", "background", "fatherJob", "motherJob", "birthday"];
+/* 功能注释：重掷只动四个系统字段；旧娱乐圈内置字段已下线 */
+const ALL_KEYS = ["name", "gender", "age", "birthday"] as const;
 
-/* 单页自设：无分步，全部字段平铺 */
 const rand = <T,>(a: T[]): T => a[Math.floor(Math.random() * a.length)];
-const pickId = <T extends { id: string }>(a: T[]): string => rand(a)?.id ?? "";
 
 /* 合约配色：内容池 tone → 界面色板 */
 const TONE: Record<string, { text: string; ring: string; soft: string }> = {
@@ -88,8 +84,7 @@ const TONE: Record<string, { text: string; ring: string; soft: string }> = {
 
 export default function CharacterCreate() {
   const { go, startNew } = useGame();
-  const { mods: allMods, selection: modSel } = useMods();
-  const [modsOpen, setModsOpen] = useState(false);
+  const { selection: modSel } = useMods();
   const [, setPathLockTick] = useState(0);
   useEffect(() => {
     const h = () => setPathLockTick((n) => n + 1);
@@ -100,7 +95,6 @@ export default function CharacterCreate() {
   useEffect(() => { commitSelection(); }, [modSel.world, modSel.addons.join("|")]);
   const seed = randomPlayerSeed();
   const cc = creationCopy();
-  const SCHOOL = schoolName();
   const PATHS = cc.paths ?? [];
   // 人物线路：默认选中第一条开放路径；创作者开启「开局弹窗」时进页即弹出让玩家挑，关闭则直接沿用默认
   const pickableOf = (c: typeof cc) => (c.paths ?? []).some((p) => p.open) && c.pathPicker !== "off";
@@ -113,69 +107,31 @@ export default function CharacterCreate() {
   const [openDetail, setOpenDetail] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: seed.name!,
-    age: cc.fixedAge ?? seed.age!, // 世界可固定年龄（娱乐圈 · 科班出道：22 岁）
-    gender: seed.gender!,
-    identity: seed.identity!,
-    background: seed.background!,
-    klass: seed.klass!,
+    age: cc.fixedAge ?? seed.age!,
+    gender: normalizeGenderOptions(cc.builtin?.gender?.options).includes(seed.gender!) ? seed.gender! : "女",
     description: seed.description!,
-    fatherJob: rand(PARENT_JOBS),
-    motherJob: rand(PARENT_JOBS),
     birthMonth: 1 + Math.floor(Math.random() * 12),
     birthDay: 1 + Math.floor(Math.random() * 28),
-    extraKey: "",
-    extraVal: "",
     avatar: "",
-    styleId: STYLES[0]?.id ?? "",
-    identityId: PATHS.find((p) => p.open)?.id ?? IDENTITIES[0]?.id ?? "",
-    backgroundId: BACKGROUNDS[0]?.id ?? "",
-    directionId: DIRECTIONS[0]?.id ?? "",
   });
-  /* 选项联动：人物线路 → 身份/家世/阶层；家庭背景 → 阶层/家世/父母职业。交集为空时退回全集，绝不出现空下拉 */
-  const narrow = (all: string[], ...subs: (string[] | undefined)[]) => {
-    let out = all;
-    for (const sub of subs) if (sub?.length) { const n = out.filter((o) => sub.includes(o)); if (n.length) out = n; }
-    return out;
-  };
-  const pLink = cc.pathOpts?.[pathId ?? form.identityId] ?? {};
-  const bLink = cc.bgLinks?.[form.backgroundId] ?? {};
-  const curPath = pathId ?? form.identityId;
-  // 逐选项联动（编辑器「建角字段」）：限定了路径 / 家庭背景的选项只在匹配时出现
-  const linked = (cat: CreationOptCat, all: string[]) => {
-    const m = cc.optLinks?.[cat];
-    if (!m) return all;
-    const n = all.filter((o) => { const l = m[o]; return !l || ((!l.paths?.length || l.paths.includes(curPath)) && (!l.bgs?.length || l.bgs.includes(form.backgroundId))); });
-    return n.length ? n : all;
-  };
-  const IDENTITY_OPTS = linked("identityOpts", narrow(opts(cc.identityOpts), pLink.identityOpts));
-  const BG_OPTS = linked("backgroundOpts", narrow(opts(cc.backgroundOpts), pLink.backgroundOpts, bLink.backgroundOpts));
-  const KLASS_OPTS = linked("klassOpts", narrow(opts(cc.klassOpts), pLink.klassOpts, bLink.klassOpts));
-  const JOB_OPTS = linked("parentJobs", narrow(uniq(PARENT_JOBS), pLink.parentJobs, bLink.parentJobs));
-  /* 内置字段配置：改名 / 隐藏 / 锁定为固定值 */
+  // 功能注释：自定义字段可按人物线路过滤；系统四项不走线路过滤
+  const curPath = pathId ?? "";
+  /* 系统字段：只读显示名；旧稿 hidden 对系统四项无效 */
   const bf = (k: BuiltinFieldKey): BuiltinFieldCfg => cc.builtin?.[k] ?? {};
   const bl = (k: BuiltinFieldKey, fb: string) => bf(k).label || fb;
-  const shown = (k: BuiltinFieldKey) => !bf(k).hidden;
-  /* 功能注释：出道身份 / 出身阶层 / 家世叙述——创作者没配选项也没锁定时，开局页不自补 */
-  const showIdentity = openingSelectFieldOn(bf("identity"), IDENTITY_OPTS.length);
-  const showKlass = openingSelectFieldOn(bf("klass"), KLASS_OPTS.length);
-  const showBackground = openingSelectFieldOn(bf("background"), BG_OPTS.length);
-  const creatorAttrs = selectedSlot("customAttrs") ?? [];
-  const fixedKey = JSON.stringify(cc.builtin ?? {});
-  useEffect(() => {
-    const keys: BuiltinFieldKey[] = ["name", "gender", "identity", "description", "klass", "background", "fatherJob", "motherJob"];
-    const patch: Record<string, string> = {};
-    for (const k of keys) { const c = bf(k); if (c.locked && c.value) patch[k] = c.value; }
-    if (Object.keys(patch).length) setForm((f) => ({ ...f, ...patch }));
-  }, [fixedKey]);
-  /* 创作者自定义字段：按路径 / 家庭背景条件出现 */
-  const CUSTOM = (cc.fields ?? []).filter((f) => f.label && (!f.paths?.length || f.paths.includes(curPath)) && (!f.bgs?.length || f.bgs.includes(form.backgroundId)));
+  // 功能注释：建角页预览隐藏项不展示；开局仍按完整 customAttrs 写入
+  const creatorAttrs = visibleCreatorAttrs(selectedSlot("customAttrs"));
+  /* 创作者自定义字段：仅按人物线路过滤；系统四项始终显示、不进此列 */
+  const CUSTOM = (cc.fields ?? []).filter((f) => f.label && (!f.paths?.length || f.paths.includes(curPath)));
   const [customVals, setCustomVals] = useState<Record<string, string>>({});
   const cv = (f: CreationField) => (f.locked ? f.init ?? "" : customVals[f.id] ?? f.init ?? "");
-  /* 下拉选项绑定的开局效果（数值 / 文本设定 / NPC 好感 / 开局日期） */
+  /** 自定义单选/下拉：按人物线路收窄选项（家庭背景池已下线，bgs 条件忽略以免误藏） */
+  const customOptions = (f: CreationField) => uniq(f.options ?? []).filter((option) => {
+    const link = f.optionLinks?.[option];
+    return !link || !link.paths?.length || link.paths.includes(curPath);
+  });
   const identityIdOf = () => (pathId && IDENTITIES.some((o) => o.id === pathId) ? pathId : null) ?? PATHS.find((p) => p.open)?.id ?? "";
-  // 玩家可见：选项说明 + 作者配置的开局加成
-  const optNote = (o?: Parameters<typeof optFx>[0] & { desc?: string }) => o ? [o.desc, ...fxSummary(optFx(o), { attr: attrName, npc: npcName })].filter(Boolean).join(" · ") : undefined;
-  const fxOf = (f: CreationField): OptFx | undefined => (f.type === "select" ? f.optFx?.[cv(f)] : undefined);
+  const fxOf = (f: CreationField): OptFx | undefined => (f.type === "select" || f.type === "radio" ? f.optFx?.[cv(f)] : undefined);
   const attrName = (id: string) => selectedSlot("customAttrs")?.find((a) => a.id === id)?.label;
   const npcName = (id: string) => getSelectedWorld().chain.flatMap((m) => m.content.npcs ?? []).find((p) => p.id === id)?.name;
   /* 开局游玩偏好：世界观默认预选模式/视角；屏幕方向默认竖屏，换世界观时保留玩家已选方向 */
@@ -185,25 +141,8 @@ export default function CharacterCreate() {
   useEffect(() => {
     setPrefs((p) => ({ mode: playSlot?.mode, pov: playSlot?.pov, orient: p.orient ?? "portrait" }));
   }, [playKey]); // eslint-disable-line react-hooks/exhaustive-deps
-  /* 读者自选开局日期（世界观在「时间与推进」里开放后才显示） */
-  const worldStart = (selectedSlot("startDate") ?? selectedSlot("calendar")?.startDate ?? "2005.01.03").replace(/[./]/g, "-");
-  const [pickDate, setPickDate] = useState("");
-  // 手动键入的日期可能超出作者给的范围（date 控件只做提示不拦截）：开局时夹回范围内
-  const clampDate = (d: string) => {
-    const lo = playSlot?.startDateMin?.replace(/[./]/g, "-"), hi = playSlot?.startDateMax?.replace(/[./]/g, "-");
-    return !/^\d{4}-\d{2}-\d{2}$/.test(d) ? worldStart : lo && d < lo ? lo : hi && d > hi ? hi : d;
-  };
-  // 建角页按世界观本身的开局日期显示，不沿用上一局玩家自选的日期
+  // 功能注释：开局日期只用创作者填的那天；进入建角时清掉上一局可能残留的玩家日期覆盖
   useEffect(() => { setStartDateOverride(undefined); }, []);
-  // 上游改变后，把已不在可选范围内的下游值换成合法值
-  const linkKey = [IDENTITY_OPTS, BG_OPTS, KLASS_OPTS, JOB_OPTS].map((a) => a.join(",")).join("|");
-  useEffect(() => {
-    setForm((f) => {
-      const fix = (v: string, list: string[]) => (list.length && !list.includes(v) ? rand(list) : v);
-      const n = { ...f, identity: fix(f.identity, IDENTITY_OPTS), background: fix(f.background, BG_OPTS), klass: fix(f.klass, KLASS_OPTS), fatherJob: fix(f.fatherJob, JOB_OPTS), motherJob: fix(f.motherJob, JOB_OPTS) };
-      return (Object.keys(n) as (keyof typeof n)[]).some((k) => n[k] !== f[k]) ? n : f;
-    });
-  }, [linkKey]);
   const [locked, setLocked] = useState<Record<string, boolean>>({});
   const [nameStyle, setNameStyle] = useState<NameStyle>("any");
   const [pickName, setPickName] = useState(false);
@@ -234,52 +173,43 @@ export default function CharacterCreate() {
     setForm((f) => ({
       ...f,
       age: c.fixedAge ?? s0.age!,
-      identity: s0.identity!, background: s0.background!, klass: s0.klass!,
-      fatherJob: rand(PARENT_JOBS), motherJob: rand(PARENT_JOBS),
-      styleId: STYLES[0]?.id ?? "", identityId: first ?? IDENTITIES[0]?.id ?? "",
-      backgroundId: BACKGROUNDS[0]?.id ?? "", directionId: DIRECTIONS[0]?.id ?? "",
+      gender: normalizeGenderOptions(c.builtin?.gender?.options).includes(s0.gender!) ? s0.gender! : "女",
+      description: s0.description!,
+      birthMonth: 1 + Math.floor(Math.random() * 12),
+      birthDay: 1 + Math.floor(Math.random() * 28),
     }));
   }, [modSel.world, modSel.addons.join("|")]);
 
   const upd = (patch: Partial<typeof form>) => setForm((f) => ({ ...f, ...patch }));
   const toggleLock = (k: string) => setLocked((l) => ({ ...l, [k]: !l[k] }));
 
-  /** 功能注释：改名时同步人物描述里的旧姓名（模板重填或全文替换），锁定描述则只改 name。 */
+  /** 功能注释：改名时同步人物描述里的旧姓名（模板重填或全文替换）。 */
   const setPlayerName = (next: string) => {
     setForm((f) =>
       syncPlayerNameChange(f, next, {
-        descLocked: locked.description || bf("description").locked,
+        descLocked: locked.description,
         seedDescription: cc.seedDescription,
       }),
     );
   };
 
-  /* 单字段掷骰（尊重锁定） */
+  /* 单字段掷骰（尊重锁定）；只覆盖系统四项 */
   const rollField = (k: string) => {
-    if (locked[k] || bf(k as BuiltinFieldKey).locked) return;
+    if (locked[k]) return;
     const s = randomPlayerSeed();
     switch (k) {
       case "name": setPlayerName(genName(form.gender)); break;
       case "age": if (!cc.fixedAge) upd({ age: s.age! }); break;
       case "gender": {
-        const g = s.gender!;
+        const opts = normalizeGenderOptions(bf("gender").options);
+        const g = opts.includes(s.gender!) ? s.gender! : (opts[0] ?? "女");
         if (locked.name) upd({ gender: g });
         else setForm((f) => syncPlayerNameChange({ ...f, gender: g }, genName(g), {
-          descLocked: locked.description || bf("description").locked,
+          descLocked: locked.description,
           seedDescription: cc.seedDescription,
         }));
         break;
       }
-      case "identity": if (IDENTITY_OPTS.length) upd({ identity: rand(IDENTITY_OPTS) }); break;
-      case "background": if (BG_OPTS.length) upd({ background: rand(BG_OPTS) }); break;
-      case "klass": if (KLASS_OPTS.length) upd({ klass: rand(KLASS_OPTS) }); break;
-      case "description": upd({ description: s.description! }); break;
-      case "styleId": upd({ styleId: pickId(STYLES) }); break;
-      case "identityId": upd({ identityId: pickId(IDENTITIES) }); break;
-      case "backgroundId": upd({ backgroundId: pickId(BACKGROUNDS) }); break;
-      case "directionId": upd({ directionId: pickId(DIRECTIONS) }); break;
-      case "fatherJob": upd({ fatherJob: rand(JOB_OPTS) }); break;
-      case "motherJob": upd({ motherJob: rand(JOB_OPTS) }); break;
       case "birthday": upd({ birthMonth: 1 + Math.floor(Math.random() * 12), birthDay: 1 + Math.floor(Math.random() * 28) }); break;
     }
   };
@@ -289,15 +219,9 @@ export default function CharacterCreate() {
 
 
   const begin = () => {
-    const zodiac = zodiacOf(form.birthMonth, form.birthDay);
     const extra = [
       ...(selectedFeature("career") && path?.name ? [{ label: "人物线路", value: path.name }] : []),
-      ...(selectedFeature("career") && SCHOOL && (!PICKABLE || pathId === "kban") ? [{ label: "母校", value: SCHOOL }] : []),
-      { label: "生日", value: `${form.birthMonth}月${form.birthDay}日` },
-      ...(shown("zodiac") ? [{ label: bl("zodiac", "星座"), value: zodiac.name }] : []),
-      ...(shown("fatherJob") ? [{ label: bl("fatherJob", "父亲职业"), value: form.fatherJob }] : []),
-      ...(shown("motherJob") ? [{ label: bl("motherJob", "母亲职业"), value: form.motherJob }] : []),
-      ...(shown("extra") && form.extraKey && form.extraVal ? [{ label: form.extraKey, value: form.extraVal }] : []),
+      { label: bl("birthday", "生日"), value: `${form.birthMonth}月${form.birthDay}日` },
       ...CUSTOM.filter((f) => cv(f).trim()).map((f) => {
         const note = fxOf(f)?.note?.trim();
         return { label: f.label, value: [cv(f), note && `（${note}）`, f.desc && `（${f.desc}）`].filter(Boolean).join("") };
@@ -305,12 +229,7 @@ export default function CharacterCreate() {
     ];
     const fx = [
       ...CUSTOM.map(fxOf),
-      // 建角选项自带的开局加成（作者在编辑器里配置；未配置 = 只有文字设定）
-      shown("style") ? optFx(STYLES.find((o) => o.id === form.styleId)) : undefined,
       optFx(IDENTITIES.find((o) => o.id === identityIdOf())),
-      shown("family") ? optFx(BACKGROUNDS.find((o) => o.id === form.backgroundId)) : undefined,
-      shown("direction") ? optFx(DIRECTIONS.find((o) => o.id === form.directionId)) : undefined,
-      shown("zodiac") ? optFx(zodiac) : undefined,
     ].filter((x): x is OptFx => !!x);
     const contract = career ? offers.find((c) => c.id === contractId) : undefined;
     const identityId = identityIdOf();
@@ -318,9 +237,10 @@ export default function CharacterCreate() {
       name: form.name || "无名",
       age: form.age,
       gender: form.gender,
-      identity: form.identity,
-      background: form.background,
-      klass: form.klass,
+      // 功能注释：旧内置身份/家世/阶层不再由系统字段写入；作者可用自定义字段写进 extra
+      identity: "",
+      background: "",
+      klass: "",
       description: form.description,
       avatar: form.avatar,
       // 功能注释：不预填演技/歌艺等八维；创作者属性由开局 GameContext 按 customAttrs 写入（只掷一次）
@@ -331,14 +251,14 @@ export default function CharacterCreate() {
     commitSelection(); // 所选世界观 / 叠加包在开新局时正式生效
     startNew(
       player,
-      { name: player.name, styleId: shown("style") ? form.styleId : "", identityId, backgroundId: shown("family") ? form.backgroundId : "", directionId: shown("direction") && DIRECTIONS.some((o) => o.id === form.directionId) ? form.directionId : "", zodiacId: shown("zodiac") ? zodiac.id : undefined },
+      // 功能注释：外形/家庭/职业方向不再由系统内置字段写入；星座由生日推算
+      { name: player.name, styleId: "", identityId, backgroundId: "", directionId: "", zodiacId: zodiac.id },
       contract,
       worldRules,
       {
         fx,
-        // 功能注释：始终带上游玩偏好（含屏幕方向），开局写入 theme.orient，不再弹首次方向窗
+        // 功能注释：始终带上游玩偏好（含屏幕方向），开局写入 theme.orient，不再弹首次方向窗；开局日期不由玩家覆盖
         playPrefs: { ...prefs, orient: prefs.orient ?? "portrait" },
-        startDate: playSlot?.pickStartDate && pickDate ? clampDate(pickDate).replace(/-/g, ".") : undefined,
         pathNpcs: (PATHS.find((p) => p.id === pathId) ?? PATHS.find((p) => p.open))?.npcs,
         route: PATHS.find((p) => p.id === pathId) ?? PATHS.find((p) => p.open),
         factions: cc.startFactions,
@@ -360,20 +280,16 @@ export default function CharacterCreate() {
         {I && <I size={14} className="shrink-0 text-coral" />}
         <span className="shrink-0 text-[12.5px] font-bold text-ink">{label}</span>
         {hint && <span className="min-w-0 truncate text-[10.5px] text-ink-soft">{hint}</span>}
-        {bf(k as BuiltinFieldKey).locked ? (
-          <span className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-ink/[0.05] px-2 py-0.5 text-[10px] text-ink-soft"><LockGlyph />固定</span>
-        ) : (
-          <div className="ml-auto flex shrink-0 items-center gap-0.5">
-            <button type="button" onClick={() => toggleLock(k)} aria-pressed={!!locked[k]} title={locked[k] ? "已锁定，重掷时保留" : "锁定此项，重掷时保留"} aria-label={locked[k] ? "解锁" : "锁定"}
-              className={`grid h-6 w-6 place-items-center rounded-full transition ${locked[k] ? "bg-jade/12 text-jade" : "text-ink-soft/50 hover:bg-ink/5 hover:text-ink"}`}>
-              <LockGlyph open={!locked[k]} />
-            </button>
-            <button type="button" onClick={() => rollField(k)} disabled={locked[k]} title="单独掷一次" aria-label="单独重掷"
-              className="grid h-6 w-6 place-items-center rounded-full text-ink-soft/50 transition hover:bg-ink/5 hover:text-jade disabled:opacity-30">
-              <IconDice width={13} height={13} />
-            </button>
-          </div>
-        )}
+        <div className="ml-auto flex shrink-0 items-center gap-0.5">
+          <button type="button" onClick={() => toggleLock(k)} aria-pressed={!!locked[k]} title={locked[k] ? "已锁定，重掷时保留" : "锁定此项，重掷时保留"} aria-label={locked[k] ? "解锁" : "锁定"}
+            className={`grid h-6 w-6 place-items-center rounded-full transition ${locked[k] ? "bg-jade/12 text-jade" : "text-ink-soft/50 hover:bg-ink/5 hover:text-ink"}`}>
+            <LockGlyph open={!locked[k]} />
+          </button>
+          <button type="button" onClick={() => rollField(k)} disabled={locked[k]} title="单独掷一次" aria-label="单独重掷"
+            className="grid h-6 w-6 place-items-center rounded-full text-ink-soft/50 transition hover:bg-ink/5 hover:text-jade disabled:opacity-30">
+            <IconDice width={13} height={13} />
+          </button>
+        </div>
       </div>
     );
   };
@@ -381,7 +297,14 @@ export default function CharacterCreate() {
   // 当前所选世界观是否有演艺事业线：没有则走通用建角（无人物线路 / 母校 / 经纪合约）
   const career = selectedFeature("career");
   const selWorld = getSelectedWorld().chain[0];
-  const okToFinish = !career || !!contractId;
+  const systemFieldsComplete = !!form.name.trim() && Number(form.age) > 0 && !!form.gender && form.birthMonth > 0 && form.birthDay > 0;
+  const customFieldsComplete = CUSTOM.every((field) => {
+    if (!field.required) return true;
+    const value = cv(field).trim();
+    return !!value && (!(field.type === "select" || field.type === "radio") || customOptions(field).includes(value));
+  });
+  const whoComplete = systemFieldsComplete && customFieldsComplete;
+  const okToFinish = whoComplete && (!career || !!contractId);
   const path = PATHS.find((p) => p.id === pathId);
   // 人物线路 · 预设主角：选中后用 TA 的档案填好自设页（玩家仍可微调）
   const heroId = path?.hero;
@@ -392,8 +315,7 @@ export default function CharacterCreate() {
       ...f,
       name: h.name || f.name,
       ...(h.age ? { age: String(h.age) } : {}),
-      ...(h.gender === "男" || h.gender === "女" ? { gender: h.gender } : {}),
-      identity: h.role || f.identity,
+      ...(h.gender === "男" || h.gender === "女" || normalizeGenderOptions(bf("gender").options).includes(String(h.gender || "")) ? { gender: String(h.gender) } : {}),
       description: h.bio || f.description,
     }));
   }, [heroId]);
@@ -404,7 +326,7 @@ export default function CharacterCreate() {
   const hide = cc.pathHide ?? {};
   const pathWord = fillText(cc.pathTitle, tv).replace(/^选择/, "") || "开局路径";
   const formTitle = fillText(cc.formTitle || (path ? "{path} · 自设" : "{world} · 自设"), { ...tv, world: tv.world || "角色" });
-  const hasMore = CUSTOM.length > 0 || shown("extra");
+  const hasMore = CUSTOM.length > 0;
 
   /* —— 向导步骤：同类内容放一页，最多三步 —— */
   const STEPS = [
@@ -416,7 +338,7 @@ export default function CharacterCreate() {
   const step = STEPS[si];
   const last = si === STEPS.length - 1;
   const goStep = (k: string) => setStepK(k);
-  useEffect(() => { topRef.current?.closest(".modal-sheet")?.scrollTo({ top: 0 }); }, [stepK, wizOpen]);
+  useEffect(() => { topRef.current?.closest(".ui-dialog-body")?.scrollTo({ top: 0 }); }, [stepK, wizOpen]);
 
   /* ① 路径：卡片里展示哪些内容由创作者决定 */
   const stepPath = (
@@ -439,7 +361,11 @@ export default function CharacterCreate() {
                 </button>
               </div>
               {p.blurb && <p className="mt-1 text-[12.5px] leading-relaxed text-ink-soft">{fillText(p.blurb, pv(p.name))}</p>}
-              {p.lockHint && <p className="mt-1 text-[11.5px] text-coral/90">解锁条件：{fillText(p.lockHint, pv(p.name))}</p>}
+              {(p.lockHint || (Array.isArray(p.lockConds) && p.lockConds.length > 0)) && (
+                <p className="mt-1 text-[11.5px] text-coral/90">
+                  解锁条件：{fillText(p.lockHint || "需满足作者设定的属性 / 人物 / 地点 / 事件条件", pv(p.name))}
+                </p>
+              )}
             </div>
           );
         }
@@ -447,26 +373,16 @@ export default function CharacterCreate() {
         const current = pathId === p.id;
         const rels = hide.npcs ? [] : (p.npcs ?? []).filter((n) => n.id && npcName(n.id));
         // 按建角表单的真实配置生成（隐藏的不列、锁定的归入「固定」），不再用写死的文案
-        const free = (k: BuiltinFieldKey, fb: string) => (shown(k) && !bf(k).locked ? [bl(k, fb)] : []);
-        const lockedRow = (k: BuiltinFieldKey, fb: string) => (shown(k) && bf(k).locked && bf(k).value ? [`${bl(k, fb)}：${bf(k).value}`] : []);
+        // 功能注释：路径卡「可自由决定」只列系统四项 + 本线路自定义字段；不再列出旧娱乐圈内置项
         const pFields = (cc.fields ?? []).filter((f) => f.label && (!f.paths?.length || f.paths.includes(p.id)));
         const choose = hide.choose ? [] : [
-          ...free("name", "姓名"), ...free("gender", "性别"), "头像", "出生月日 → 星座",
-          ...free("fatherJob", "父亲职业"), ...free("motherJob", "母亲职业"),
-          ...(BACKGROUNDS.length && shown("family") ? [bl("family", "家庭背景")] : []),
-          ...(showKlass ? free("klass", "出身阶层") : []),
-          ...(showBackground ? free("background", "家世叙述") : []),
-          ...(showIdentity ? free("identity", cc.identityLabel ?? "身份") : []),
-          ...(STYLES.length ? ["外形风格"] : []), ...free("description", "人设描述"),
+          bl("name", "姓名"), bl("gender", "性别"), bl("age", "年龄"), "头像", bl("birthday", "生日"),
           ...(career ? ["签约经纪公司"] : []),
           ...pFields.filter((f) => !f.locked).map((f) => f.label),
         ];
         const fixed = hide.fixed ? [] : [
           ...(career ? [`人物线路：${p.name}`] : []),
           ...(cc.fixedAge ? [`年龄：固定 ${cc.fixedAge} 岁`] : []),
-          ...(career && SCHOOL && (!PICKABLE || p.id === "kban") ? [`母校：${SCHOOL}`] : []),
-          ...lockedRow("name", "姓名"), ...lockedRow("gender", "性别"), ...lockedRow("identity", "身份"), ...lockedRow("klass", "出身阶层"),
-          ...lockedRow("background", "家世叙述"), ...lockedRow("fatherJob", "父亲职业"), ...lockedRow("motherJob", "母亲职业"),
           ...pFields.filter((f) => f.locked && f.init).map((f) => `${f.label}：${f.init}`),
         ];
         return (
@@ -521,7 +437,7 @@ export default function CharacterCreate() {
     </div>
   );
 
-  /* ② 人设 · 身份：名字 · 年龄性别 · 生日星座 · 登记身份 */
+  /* ② 人设 · 身份：名字 · 年龄性别 · 生日星座 · 登记身份（线路已在上一步选定，自设页不再重复展示「人物线路选择」） */
   const stepWho = (
     <>
       <p className="text-[12px] leading-relaxed text-ink-soft"><Tpl text={path?.formIntro || cc.formIntro || "{city} · {year} {season}。一页定型——锁住满意的（{lock}），其余随时重掷。"} vars={tv} /></p>
@@ -529,7 +445,7 @@ export default function CharacterCreate() {
       <Card title="基本信息">
         <div className="flex items-start gap-3">
           <div className="shrink-0 pt-6"><Avatar src={form.avatar} name={form.name} size={68} onPick={(d) => upd({ avatar: d })} avatarSlot={selectedSlot("avatars") ?? null} /></div>
-          <fieldset disabled={bf("name").locked} className="min-w-0 flex-1">
+          <fieldset className="min-w-0 flex-1">
             <Head k="name" text={bl("name", "姓名")} />
             <input className={field} value={form.name} onChange={(e) => setPlayerName(e.target.value)} placeholder={form.gender === "男" ? "为他取个名字" : "为她取个名字"} />
             <div className="mt-1.5 flex flex-wrap items-center gap-1">
@@ -549,25 +465,22 @@ export default function CharacterCreate() {
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="min-w-0">
-            <div className="mb-1.5 flex items-center gap-2">
-              <span className="text-[12.5px] font-bold text-ink">年龄</span>
-              {cc.fixedAge && <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-ink/[0.05] px-2 py-0.5 text-[10px] text-ink-soft"><LockGlyph />{career && path ? `${path.name}固定` : "固定"}</span>}
-            </div>
-            <div className={`${field} flex items-center bg-jade/[0.05] font-semibold text-jade`}>{form.age} 岁</div>
+            <Head k="age" text={bl("age", "年龄")} />
+            <input type="number" min={1} className={field} value={form.age} onChange={(e) => upd({ age: e.target.value })} />
           </div>
-          {shown("gender") && <fieldset disabled={bf("gender").locked} className="min-w-0">
+          <fieldset className="min-w-0">
             <Head k="gender" text={bl("gender", "性别")} />
-            <div role="radiogroup" className="grid grid-cols-3 gap-1 rounded-xl bg-ink/[0.05] p-1">
-              {["女", "男", "其他"].map((g) => (
+            <div role="radiogroup" className="grid gap-1 rounded-xl bg-ink/[0.05] p-1" style={{ gridTemplateColumns: `repeat(${normalizeGenderOptions(bf("gender").options).length}, minmax(0, 1fr))` }}>
+              {normalizeGenderOptions(bf("gender").options).map((g) => (
                 <button key={g} type="button" role="radio" aria-checked={form.gender === g}
                   onClick={() => upd(!locked.name && autoNames.current.has(form.name) ? { gender: g, name: genName(g) } : { gender: g })}
                   className={`rounded-lg py-1.5 text-[13px] font-bold transition ${form.gender === g ? "bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] text-white shadow-sm" : "text-ink-soft hover:bg-paper"}`}>{g}</button>
               ))}
             </div>
-          </fieldset>}
+          </fieldset>
         </div>
         <div>
-          <Head k="birthday" text="生日" hint={shown("zodiac") ? `决定${stripFieldEmoji(bl("zodiac", "星座"))}` : undefined} />
+          <Head k="birthday" text={bl("birthday", "生日")} />
           <div className="grid grid-cols-2 gap-2">
             <select className={selectField} value={form.birthMonth} onChange={(e) => upd({ birthMonth: Number(e.target.value) })}>
               {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => <option key={m} value={m}>{m} 月</option>)}
@@ -576,24 +489,7 @@ export default function CharacterCreate() {
               {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => <option key={d} value={d}>{d} 日</option>)}
             </select>
           </div>
-          {shown("zodiac") && <div className="mt-2 flex items-center gap-2 rounded-xl border border-gold/40 bg-gold/[0.06] px-3 py-2">
-            <ZodiacSign id={zodiac.id} width={20} height={20} className="shrink-0 text-gold" />
-            <span className="shrink-0 text-[13px] font-bold text-ink">{zodiac.name}</span>
-            <span className="ml-auto min-w-0 truncate text-right text-[12px] font-medium text-gold">{optNote({ ...zodiac, desc: zodiac.bonus })}</span>
-          </div>}
         </div>
-        {showIdentity && (
-          <fieldset disabled={bf("identity").locked} className="min-w-0">
-            <Head k="identity" text={bl("identity", cc.identityLabel ?? "身份")} hint={PICKABLE && path ? `「${path.name}」路线下的细分身份，登记进履历` : "登记进履历，AI 不会擅改"} />
-            {IDENTITY_OPTS.length ? (
-              <select className={selectField} value={form.identity} onChange={(e) => upd({ identity: e.target.value })}>
-                {IDENTITY_OPTS.map((o) => <option key={o}>{o}</option>)}
-              </select>
-            ) : (
-              <input disabled className={field} value={form.identity} readOnly />
-            )}
-          </fieldset>
-        )}
       </Card>
     </>
   );
@@ -615,157 +511,57 @@ export default function CharacterCreate() {
     </Card>
   ) : null;
 
-  /* ② 人设 · 天赋形象：外形风格 · 人物描述（线路已在上一步选定，自设页不再重复展示「人物线路选择」） */
-  const stepTalent = (
-    <>
-      {((STYLES.length > 0 && shown("style")) || (DIRECTIONS.length > 0 && shown("direction")) || shown("description")) && (
-        <Card title="形象气质">
-          {STYLES.length > 0 && shown("style") && (
-            <div>
-              <Head k="styleId" text={bl("style", "外形风格")} />
-              <select className={selectField} value={form.styleId} onChange={(e) => upd({ styleId: e.target.value })}>
-                {STYLES.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-              </select>
-              <Note>{optNote(STYLES.find((o) => o.id === form.styleId))}</Note>
-            </div>
-          )}
-          {DIRECTIONS.length > 0 && shown("direction") && (
-            <div>
-              <Head k="directionId" text={bl("direction", "职业方向")} />
-              <select className={selectField} value={form.directionId} onChange={(e) => upd({ directionId: e.target.value })}>
-                {DIRECTIONS.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-              </select>
-              <Note>{optNote(DIRECTIONS.find((o) => o.id === form.directionId))}</Note>
-            </div>
-          )}
-          {shown("description") && <fieldset disabled={bf("description").locked} className="min-w-0">
-            <Head k="description" text={bl("description", "人物描述")} hint="性格 · 外貌 · 梦想 · 过去" />
-            <textarea className={`${field} h-24 resize-none leading-relaxed`} value={form.description} onChange={(e) => upd({ description: e.target.value })} placeholder="性格、外貌、梦想、隐藏的过去……都会影响 AI 的演绎。" />
-          </fieldset>}
-        </Card>
-      )}
-    </>
-  );
-
-  /* ② 人设 · 家世：家庭背景 · 阶层 · 家世叙述 · 双亲 · 更多设定 */
-  const stepFamily = (
-    <>
-      {((BACKGROUNDS.length > 0 && shown("family")) || showKlass || showBackground) && (
-        <Card title="家庭出身" desc={BACKGROUNDS.some((o) => optFx(o)) ? "影响开局资源与剧情底色" : "决定人物的剧情底色"}>
-          {BACKGROUNDS.length > 0 && shown("family") && (
-            <div>
-              <Head k="backgroundId" text={bl("family", "家庭背景")} hint={BACKGROUNDS.some((o) => optFx(o)) ? "影响开局资源" : undefined} />
-              <select className={selectField} value={form.backgroundId} onChange={(e) => upd({ backgroundId: e.target.value })}>
-                {BACKGROUNDS.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-              </select>
-              <Note tone="gold">{optNote(BACKGROUNDS.find((o) => o.id === form.backgroundId))}</Note>
-            </div>
-          )}
-          <div className="grid gap-3 sm:grid-cols-2">
-            {showKlass && (
-              <fieldset disabled={bf("klass").locked} className="min-w-0">
-                <Head k="klass" text={bl("klass", "出身阶层")} hint="叙事底色" />
-                <select className={selectField} value={form.klass} onChange={(e) => upd({ klass: e.target.value })}>
-                  {KLASS_OPTS.map((o) => <option key={o}>{o}</option>)}
-                </select>
-              </fieldset>
-            )}
-            {showBackground && (
-              <fieldset disabled={bf("background").locked} className="min-w-0">
-                <Head k="background" text={bl("background", "家世叙述")} />
-                {BG_OPTS.length ? (
-                  <select className={selectField} value={form.background} onChange={(e) => upd({ background: e.target.value })}>
-                    {BG_OPTS.map((o) => <option key={o}>{o}</option>)}
-                  </select>
-                ) : (
-                  <input disabled className={field} value={form.background} readOnly />
-                )}
-              </fieldset>
-            )}
-          </div>
-        </Card>
-      )}
-      {(shown("fatherJob") || shown("motherJob")) && (
-        <Card title="双亲" desc={cc.parentNote}>
-          <div className="grid grid-cols-2 gap-3">
-            {shown("fatherJob") && <fieldset disabled={bf("fatherJob").locked} className="min-w-0">
-              <Head k="fatherJob" text={bl("fatherJob", "父亲职业")} />
-              <select className={selectField} value={form.fatherJob} onChange={(e) => upd({ fatherJob: e.target.value })}>
-                {JOB_OPTS.map((o) => <option key={o}>{o}</option>)}
-              </select>
-            </fieldset>}
-            {shown("motherJob") && <fieldset disabled={bf("motherJob").locked} className="min-w-0">
-              <Head k="motherJob" text={bl("motherJob", "母亲职业")} />
-              <select className={selectField} value={form.motherJob} onChange={(e) => upd({ motherJob: e.target.value })}>
-                {JOB_OPTS.map((o) => <option key={o}>{o}</option>)}
-              </select>
-            </fieldset>}
-          </div>
-        </Card>
-      )}
-      {hasMore && (
-        <Card title="更多设定" desc="写进角色档案，AI 会参考">
-          {CUSTOM.length > 0 && (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {CUSTOM.map((f, fi) => {
-                const set = (v: string) => setCustomVals((m) => ({ ...m, [f.id]: v }));
-                const val = cv(f);
-                const fxs = fxSummary(fxOf(f), { attr: attrName, npc: npcName });
-                return (
-                  <fieldset key={`${f.id}-${fi}`} disabled={f.locked} className={`min-w-0 ${f.type === "textarea" ? "sm:col-span-2" : ""}`}>
-                    <div className="mb-1.5 flex items-center gap-2">
-                      <span className="text-[12.5px] font-bold text-ink">{f.label}</span>
-                      {f.locked && <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-ink/[0.05] px-2 py-0.5 text-[10px] text-ink-soft"><LockGlyph />固定</span>}
-                    </div>
-                    {f.type === "select" ? (
-                      <>
-                        <select className={selectField} value={val} onChange={(e) => set(e.target.value)}>
-                          {!val && <option value="">请选择</option>}
-                          {uniq(f.options ?? []).map((o) => <option key={o}>{o}</option>)}
-                        </select>
-                        {fxs.length > 0 && <Note tone="jade">开局：{fxs.join(" · ")}</Note>}
-                      </>
-                    ) : f.type === "textarea" ? (
-                      <textarea className={`${field} h-20 resize-none`} value={val} placeholder={f.placeholder} onChange={(e) => set(e.target.value)} />
-                    ) : f.type === "number" ? (
-                      <input type="number" className={field} value={val} min={f.min} max={f.max} placeholder={f.placeholder}
-                        onChange={(e) => { const n = Number(e.target.value); set(e.target.value === "" ? "" : String(Math.min(f.max ?? Infinity, Math.max(f.min ?? -Infinity, n)))); }} />
-                    ) : (
-                      <input className={field} value={val} placeholder={f.placeholder} onChange={(e) => set(e.target.value)} />
-                    )}
-                  </fieldset>
-                );
-              })}
-            </div>
-          )}
-          {shown("extra") && (
-            <div>
-              <div className="mb-1.5 flex items-center gap-2"><span className="text-[12.5px] font-bold text-ink">{bl("extra", "自定义一条")}</span><span className="text-[10.5px] text-ink-soft">可留空</span></div>
-              <div className="grid grid-cols-[2fr_3fr] gap-2">
-                <input className={field} value={form.extraKey} onChange={(e) => upd({ extraKey: e.target.value })} placeholder="名称，如：座右铭" aria-label="自定义字段名" />
-                <input className={field} value={form.extraVal} onChange={(e) => upd({ extraVal: e.target.value })} placeholder="内容，如：越安静，越锋利" aria-label="自定义字段内容" />
+  /* 自定义字段按作者顺序渲染；系统四项不参与线路/背景过滤。 */
+  const stepCustom = hasMore ? (
+    <Card title="更多设定" desc="创作者为本作品添加的角色信息">
+      <div className="grid gap-3 sm:grid-cols-2">
+        {CUSTOM.map((f, fi) => {
+          const set = (value: string) => setCustomVals((current) => ({ ...current, [f.id]: value }));
+          const val = cv(f);
+          const options = customOptions(f);
+          const fxs = fxSummary(fxOf(f), { attr: attrName, npc: npcName });
+          return (
+            <fieldset key={`${f.id}-${fi}`} className={`min-w-0 ${f.type === "textarea" ? "sm:col-span-2" : ""}`}>
+              <div className="mb-1.5 flex items-center gap-2">
+                <span className="text-[12.5px] font-bold text-ink">{f.label}</span>
+                {f.required && <span className="text-[10.5px] font-semibold text-coral">必填</span>}
               </div>
-            </div>
-          )}
-        </Card>
-      )}
-    </>
-  );
+              {f.type === "select" ? (
+                <>
+                  <select className={selectField} value={val} onChange={(e) => set(e.target.value)}>
+                    {!val && <option value="">请选择</option>}
+                    {options.map((option) => <option key={option}>{option}</option>)}
+                  </select>
+                  {fxs.length > 0 && <Note tone="jade">开局：{fxs.join(" · ")}</Note>}
+                </>
+              ) : f.type === "radio" ? (
+                <div role="radiogroup" className="flex flex-wrap gap-1.5">
+                  {options.map((option) => <button key={option} type="button" role="radio" aria-checked={val === option} onClick={() => set(option)}
+                    className={`rounded-lg border px-3 py-2 text-[12.5px] ${val === option ? "border-jade bg-jade/10 text-jade" : "border-line text-ink-soft"}`}>{option}</button>)}
+                </div>
+              ) : f.type === "textarea" ? (
+                <textarea className={`${field} h-20 resize-none`} value={val} placeholder={f.placeholder} onChange={(e) => set(e.target.value)} />
+              ) : f.type === "number" ? (
+                <input type="number" className={field} value={val} min={f.min} max={f.max} placeholder={f.placeholder}
+                  onChange={(e) => { const n = Number(e.target.value); set(e.target.value === "" ? "" : String(Math.min(f.max ?? Infinity, Math.max(f.min ?? -Infinity, n)))); }} />
+              ) : f.type === "date" ? (
+                /* 功能注释：自定义日期用文本，禁止 type=date（与「建角不可自选开局日期」契约冲突） */
+                <input className={field} value={val} placeholder={f.placeholder || "如：3月15日"} onChange={(e) => set(e.target.value)} />
+              ) : (
+                <input className={field} value={val} placeholder={f.placeholder} onChange={(e) => set(e.target.value)} />
+              )}
+            </fieldset>
+          );
+        })}
+      </div>
+    </Card>
+  ) : null;
 
   /* ③ 开局 · 游玩偏好 · 开局日期 · 世界规则 */
   const stepSetup = (
     <>
       <Card title="游玩偏好" desc="开局后在设置里仍可修改">
         <PlayPrefsPicker value={prefs} onChange={setPrefs} showOrient />
-        {playSlot?.pickStartDate && (
-          <label className="block">
-            <span className="mb-1.5 block text-[12.5px] font-bold text-ink">开局日期</span>
-            <input type="date" className={field} value={pickDate || worldStart}
-              min={playSlot.startDateMin?.replace(/[./]/g, "-")} max={playSlot.startDateMax?.replace(/[./]/g, "-")}
-              onChange={(e) => setPickDate(e.target.value)} />
-            <Note>故事从这一天开始；周结算、节日、固定事件与年龄都会按这一天对齐日历。</Note>
-          </label>
-        )}
       </Card>
       <Card title="世界规则" desc="恋爱、婚姻、继承与社会秩序——决定这个世界怎么看待你">
         <WorldRuleCards rules={worldRules} onChange={setWorldRulesState} female={!/男/.test(form.gender ?? "女")} compact />
@@ -843,7 +639,7 @@ export default function CharacterCreate() {
   // 人设一页填完（「重掷」只动这一页）；开局页合约在上，偏好与规则在下
   const body: Record<string, ReactNode> = {
     path: stepPath,
-    who: <div className="space-y-3">{stepWho}{stepAttrs}{stepTalent}{stepFamily}</div>,
+    who: <div className="space-y-3">{stepWho}{stepAttrs}{stepCustom}</div>,
     setup: <div className="space-y-3">{career && stepSign}{stepFactions}{stepSetup}</div>,
   };
 
@@ -889,7 +685,7 @@ export default function CharacterCreate() {
               <IconPlay width={16} height={16} /><span className="truncate">{cc.cta ?? "开启故事"}</span>
             </button>
           ) : (
-            <button type="button" onClick={() => goStep(STEPS[si + 1].k)} className="ui-btn ui-btn-primary ui-btn-lg min-w-0 flex-1">
+            <button type="button" onClick={() => goStep(STEPS[si + 1].k)} disabled={step.k === "who" && !whoComplete} className="ui-btn ui-btn-primary ui-btn-lg min-w-0 flex-1 disabled:opacity-40">
               <span className="truncate">下一步 · {STEPS[si + 1].label}</span> ›
             </button>
           )}
@@ -910,7 +706,7 @@ export default function CharacterCreate() {
         <p className="text-[11px] font-semibold tracking-[0.2em] text-ink-soft">{selWorld?.name ?? "新的人生"}</p>
         <div className="mx-auto mt-4 w-fit"><Avatar src={form.avatar} name={form.name} size={76} editable={false} /></div>
         <h1 className="mt-3 font-serif text-[22px] font-black tracking-wide text-ink">{form.name || "无名"}</h1>
-        <p className="mt-0.5 text-[12px] text-ink-soft">{[path?.name, form.age && `${form.age} 岁`, form.gender, shown("zodiac") && zodiac.name].filter(Boolean).join(" · ")}</p>
+        <p className="mt-0.5 text-[12px] text-ink-soft">{[path?.name, form.age && `${form.age} 岁`, form.gender, zodiac.name].filter(Boolean).join(" · ")}</p>
         <p className="mt-3 text-[12px] text-ink-soft">角色创建中 · 第 {si + 1} / {STEPS.length} 步「{step.label}」</p>
         <button type="button" onClick={() => setWizOpen(true)} className="ui-btn ui-btn-primary ui-btn-lg mt-4 w-full">继续创建</button>
         <button type="button" onClick={() => go("cover")} className="mt-2 text-[12px] text-ink-soft transition hover:text-ink">← 返回封面</button>

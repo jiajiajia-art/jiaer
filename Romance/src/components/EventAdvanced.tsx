@@ -1,6 +1,6 @@
 /* 事件编辑器的细化设定：触发类型 / 「且 · 或」条件组 / 事件链断点 / 分支的隐藏与失败 */
 import type { ChainBreak, CondGroup, EventChoice, EventTrigger, FixedEvent } from "../lib/types";
-import { CondRow, EffectRow, defaultCond, defaultEffect } from "./FixedEventsPanel";
+import { CondRow, EffectRow, defaultCond, defaultEffect, type QuestOpt } from "./FixedEventsPanel";
 import { LIVE_LOCATIONS as LOCATIONS, LIVE_PEOPLE as PEOPLE, LIVE_ITEMS as ITEMS } from "../mods/registry";
 import { TRIGGER_LABEL } from "../game/eventTriggers";
 import { CHAIN_STATE_LABEL, chainFlag, chainRun } from "../game/fixedEvents";
@@ -25,7 +25,7 @@ function MatchSwitch({ value, onChange }: { value?: "all" | "any"; onChange: (v:
 }
 
 /* 一个条件组 */
-export function GroupEditor({ g, events, selfId, onChange, onDelete, title }: { g: CondGroup; events: FixedEvent[]; selfId: string; onChange: (g: CondGroup) => void; onDelete?: () => void; title?: string }) {
+export function GroupEditor({ g, events, selfId, quests, sides, onChange, onDelete, title }: { g: CondGroup; events: FixedEvent[]; selfId: string; quests?: QuestOpt[]; sides?: QuestOpt[]; onChange: (g: CondGroup) => void; onDelete?: () => void; title?: string }) {
   return (
     <div className="space-y-1.5 rounded-xl border border-dashed border-line p-2">
       <div className="flex flex-wrap items-center gap-2">
@@ -34,7 +34,7 @@ export function GroupEditor({ g, events, selfId, onChange, onDelete, title }: { 
         {onDelete && <button type="button" onClick={onDelete} className="ml-auto text-[11.5px] font-semibold text-danger">删除此组</button>}
       </div>
       {g.conds.map((c, i) => (
-        <CondRow key={i} c={c} events={events} selfId={selfId} onChange={(x) => onChange({ ...g, conds: g.conds.map((y, j) => (j === i ? x : y)) })} onDelete={() => onChange({ ...g, conds: g.conds.filter((_, j) => j !== i) })} />
+        <CondRow key={i} c={c} events={events} selfId={selfId} quests={quests} sides={sides} onChange={(x) => onChange({ ...g, conds: g.conds.map((y, j) => (j === i ? x : y)) })} onDelete={() => onChange({ ...g, conds: g.conds.filter((_, j) => j !== i) })} />
       ))}
       <button type="button" className={link} onClick={() => onChange({ ...g, conds: [...g.conds, defaultCond("metric")] })}>＋ 条件</button>
     </div>
@@ -42,13 +42,13 @@ export function GroupEditor({ g, events, selfId, onChange, onDelete, title }: { 
 }
 
 /* 基础条件的组合方式 + 额外条件组（组与组之间为「且」） */
-export function CondLogic({ x, events, selfId, onChange }: { x: { condMatch?: "all" | "any"; condGroups?: CondGroup[]; conds?: unknown[] }; events: FixedEvent[]; selfId: string; onChange: (p: { condMatch?: "all" | "any"; condGroups?: CondGroup[] }) => void }) {
+export function CondLogic({ x, events, selfId, quests, sides, onChange }: { x: { condMatch?: "all" | "any"; condGroups?: CondGroup[]; conds?: unknown[] }; events: FixedEvent[]; selfId: string; quests?: QuestOpt[]; sides?: QuestOpt[]; onChange: (p: { condMatch?: "all" | "any"; condGroups?: CondGroup[] }) => void }) {
   const groups = x.condGroups ?? [];
   return (
     <div className="space-y-2">
       {(x.conds?.length ?? 0) > 1 && <div className="flex items-center gap-2 text-[11.5px] text-ink-soft">上面的条件之间：<MatchSwitch value={x.condMatch} onChange={(m) => onChange({ condMatch: m === "all" ? undefined : m })} /></div>}
       {groups.map((g, i) => (
-        <GroupEditor key={i} g={g} events={events} selfId={selfId} title={`且 条件组 ${i + 1}`}
+        <GroupEditor key={i} g={g} events={events} selfId={selfId} quests={quests} sides={sides} title={`且 条件组 ${i + 1}`}
           onChange={(ng) => onChange({ condGroups: groups.map((y, j) => (j === i ? ng : y)) })}
           onDelete={() => { const n = groups.filter((_, j) => j !== i); onChange({ condGroups: n.length ? n : undefined }); }} />
       ))}

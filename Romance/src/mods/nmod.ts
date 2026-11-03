@@ -43,7 +43,7 @@ export function contentsLine(m: Mod): string {
   return [
     n(c.fixedEvents) + n(c.events) && `剧情 ${n(c.fixedEvents) + n(c.events)}`, n(c.rooms) && `地点 / RP 房间 ${n(c.rooms)}`, n(c.npcs) && `角色 ${n(c.npcs)}`,
     n(c.items) && `道具 ${n(c.items)}`, n(c.worldBook) + n(c.lore) && `Lore ${n(c.worldBook) + n(c.lore)}`, n(c.gameRules) && `触发器模板 ${n(c.gameRules)}`,
-    n(c.endings) && `结局 ${n(c.endings)}`, n(c.storylines) && `主线 ${n(c.storylines)}`, n(c.cgs) && `CG ${n(c.cgs)}`, n(c.factions) && `阵营 ${n(c.factions)}`,
+    n(c.endings) && `结局 ${n(c.endings)}`, n(c.storylines) && `主线 ${n(c.storylines)}`, n(c.sidelines) && `支线 ${n(c.sidelines)}`, n(c.cgs) && `CG ${n(c.cgs)}`, n(c.factions) && `阵营 ${n(c.factions)}`,
     (c.theme || c.lookRules?.length || e.skin) && "皮肤 / 动画", n(e.actions) && `动作 ${n(e.actions)}`, n(e.conds) && `条件算子 ${n(e.conds)}`,
     n(e.panels) && `面板 ${n(e.panels)}`, n(e.vars) && `私有变量 ${n(e.vars)}`, e.demo && "演示工程",
   ].filter(Boolean).join(" · ") || "空包";
@@ -200,7 +200,7 @@ export function skinCss(modId: string, s: ModSkin | undefined): string {
 }
 
 /* —— 导入预览：依赖 / ID 冲突 / 增量差异 —— */
-export type ResKind = "剧情" | "事件库" | "结局" | "世界书" | "主线" | "角色" | "道具" | "通告" | "地点" | "玩法规则" | "CG" | "阵营" | "动作" | "条件算子" | "组件" | "面板";
+export type ResKind = "剧情" | "事件库" | "结局" | "世界书" | "主线" | "支线" | "角色" | "道具" | "通告" | "地点" | "玩法规则" | "CG" | "阵营" | "动作" | "条件算子" | "组件" | "面板";
 type ResRef = { kind: ResKind; id: string; name: string; data: unknown };
 export function resourcesOf(m: Mod): ResRef[] {
   const c = m.content ?? {}, e = m.ext ?? {};
@@ -208,7 +208,7 @@ export function resourcesOf(m: Mod): ResRef[] {
   const add = (kind: ResKind, list: { id: string; name?: string; title?: string; label?: string }[] | undefined) => {
     for (const x of list ?? []) if (x?.id) out.push({ kind, id: x.id, name: x.name || x.title || x.label || x.id, data: x });
   };
-  add("剧情", c.fixedEvents); add("事件库", c.events); add("结局", c.endings); add("世界书", c.worldBook); add("主线", c.storylines);
+  add("剧情", c.fixedEvents); add("事件库", c.events); add("结局", c.endings); add("世界书", c.worldBook); add("主线", c.storylines); add("支线", c.sidelines);
   add("角色", c.npcs as { id: string; name?: string }[]); add("道具", c.items as { id: string; name?: string }[]); add("通告", c.gigs as { id: string; name?: string }[]);
   for (const [id, r] of Object.entries(c.rooms ?? {})) out.push({ kind: "地点", id, name: (r as { name?: string }).name || id, data: r });
   add("玩法规则", c.gameRules as { id: string; name?: string }[]); add("CG", c.cgs); add("阵营", c.factions);
@@ -268,7 +268,7 @@ function renameRefs<T>(v: T, map: Map<string, string>): T {
   if (v && typeof v === "object") { const o: Record<string, unknown> = {}; for (const [k, x] of Object.entries(v)) o[map.get(k) ?? k] = renameRefs(x, map); return o as T; }
   return v;
 }
-const LISTS: Partial<Record<ResKind, keyof ModContent>> = { 剧情: "fixedEvents", 事件库: "events", 结局: "endings", 世界书: "worldBook", 主线: "storylines", 角色: "npcs", 道具: "items", 通告: "gigs", 玩法规则: "gameRules", CG: "cgs", 阵营: "factions" };
+const LISTS: Partial<Record<ResKind, keyof ModContent>> = { 剧情: "fixedEvents", 事件库: "events", 结局: "endings", 世界书: "worldBook", 主线: "storylines", 支线: "sidelines", 角色: "npcs", 道具: "items", 通告: "gigs", 玩法规则: "gameRules", CG: "cgs", 阵营: "factions" };
 const EXTS: Partial<Record<ResKind, keyof ModExt>> = { 动作: "actions", 条件算子: "conds", 组件: "components", 面板: "panels" };
 function dropRes(m: Mod, kind: ResKind, id: string): Mod {
   const c = { ...m.content } as Record<string, unknown>;
@@ -437,7 +437,7 @@ export function modHealth(m: Mod): HealthItem[] {
   for (const c of buildRegistry(chain).conflicts) if (c.mods.includes(m.id)) warn(`注册冲突：${c.kind}「${c.id}」与 ${c.mods.filter((x) => x !== m.id).map((x) => modById(x)?.name ?? x).join("、")} 重复`);
   // 包内剧情 / 结局 / 主线 / 世界书的引用与逻辑（只检查包内能确定的部分）
   const c = m.content ?? {};
-  const a = auditStory({ events: [...(c.fixedEvents ?? []), ...(c.events ?? [])], endings: c.endings, storylines: c.storylines, worldBook: c.worldBook, cgs: c.cgs, factions: c.factions, npcIds: c.npcs?.length ? c.npcs.map((n) => n.id) : undefined, roomIds: c.rooms ? Object.keys(c.rooms) : undefined, skip: ["item", "location", "quest", "flag", ...(c.npcs?.length ? [] : ["npc" as const])] });
+  const a = auditStory({ events: [...(c.fixedEvents ?? []), ...(c.events ?? [])], endings: c.endings, storylines: c.storylines ?? [], sidelines: c.sidelines ?? [], worldBook: c.worldBook, cgs: c.cgs, factions: c.factions, npcIds: c.npcs?.length ? c.npcs.map((n) => n.id) : undefined, roomIds: c.rooms ? Object.keys(c.rooms) : undefined, skip: ["item", "location", "flag", ...(c.npcs?.length ? [] : ["npc" as const])] });
   for (const i of a.issues.slice(0, 60)) out.push({ level: i.level, text: `${i.from ? i.from + "：" : ""}${i.text}` });
   for (const text of musicHealthWarnings(c, { author: authorTracks(), platform: PLATFORM_AUDIO })) warn(text);
   if (!hasExt(m) && modCategory(m) === "feature") warn("标记为功能玩法 MOD，但没有注册任何扩展能力");

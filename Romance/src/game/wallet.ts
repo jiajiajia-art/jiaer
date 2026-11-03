@@ -3,6 +3,20 @@
  * 收付款都改记在该属性上。AI 主线里的赚钱 / 花钱则用该属性的 key 增减。 */
 import type { AttrDef, GameState } from "../lib/types";
 
+/** 功能注释：建角「开局资金」货币名读取器；由 GameContext 注册，避免 wallet↔live 循环依赖 */
+let moneyLabelSrc: () => string = () => "";
+export function setContentMoneyLabelSource(fn: () => string) {
+  moneyLabelSrc = fn;
+}
+const contentMoneyLabel = (): string => {
+  try {
+    const v = moneyLabelSrc();
+    return typeof v === "string" ? v.trim() : "";
+  } catch {
+    return "";
+  }
+};
+
 /** 自定义属性上限：不填（或 ≤0）= 无上限 */
 export const attrCap = (max?: number) => (typeof max === "number" && max > 0 ? max : Infinity);
 
@@ -92,11 +106,19 @@ export const wallet = {
   },
   fmt(n: number, x?: Holder, yuan: (n: number) => string = yuanFmt): string {
     const d = defOf(x);
-    return d ? `${Math.round(n).toLocaleString("zh-CN")} ${d.label}` : yuan(n);
+    if (d) return `${Math.round(n).toLocaleString("zh-CN")} ${d.label}`;
+    const unit = contentMoneyLabel();
+    if (unit) return `${Math.round(n).toLocaleString("zh-CN")} ${unit}`;
+    return yuan(n);
   },
-  /** 简写：未绑定时「¥1.2万」，绑定自定义货币时同 fmt */
-  short: (n: number, x?: Holder) => (defOf(x) ? wallet.fmt(n, x) : `¥${(n / 10000).toFixed(1)}万`),
-  name: (x?: Holder, fallback = "资金") => defOf(x)?.label ?? fallback,
+  /** 简写：未绑定时「¥1.2万」或「1.2万 灵石」，绑定自定义货币时同 fmt */
+  short: (n: number, x?: Holder) => {
+    if (defOf(x)) return wallet.fmt(n, x);
+    const unit = contentMoneyLabel();
+    if (unit) return `${(n / 10000).toFixed(1)}万 ${unit}`;
+    return `¥${(n / 10000).toFixed(1)}万`;
+  },
+  name: (x?: Holder, fallback = "资金") => defOf(x)?.label ?? (contentMoneyLabel() || fallback),
   bound: (x?: Holder) => !!defOf(x),
 };
 

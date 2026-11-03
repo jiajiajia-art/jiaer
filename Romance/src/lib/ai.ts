@@ -3,7 +3,8 @@ import { clampAffinity, engineRulesBlock, fillPlaceholders, oocText, parseRp, ru
 import { AIHttpError } from "./aiError";
 import { charCardBlock } from "../game/charCard";
 import { evalFixedCond, storylineBrief } from "../game/fixedEvents";
-import { hasWorldGigs, getWorldPromptHeader, getWorldPromptFragment, getWorldNpcs, getWorldRuleDims, promptFrag, term, getWorldSlot, worldItemsOfRoom, worldItemById, worldActivitiesOfRoom, worldRoom, worldLocOf } from "../mods/registry";
+import { sidelineBrief } from "./sidelines";
+import { hasWorldGigs, getWorldPromptHeader, getWorldPromptFragment, getWorldNpcs, getWorldRuleDims, promptFrag, term, getWorldSlot, worldItemsOfRoom, worldItemById, worldActivitiesOfRoom, worldRoom, worldLocOf, getWorldSidelines } from "../mods/registry";
 import { customActsOf, customItemsOf, findCustomItem, firedOf, spotDesc, spotEventsOf, spotName } from "../game/mapedits";
 import { drawAvatar, randomPools } from "../game/avatarPools";
 import { ruleEffects, orderIncome } from "../game/worldRules";
@@ -19,7 +20,7 @@ import { creationVars, fillText } from "../game/creationText";
 import { defaultWorldBook } from "../game/worldbook";
 import { factionLoreEntries } from "../game/factions";
 import { pickWorldBook, type WorldBookCtx, type WorldBookPick } from "../game/worldbookPick";
-import { activeEventsBlock, festivalBlock, loreBlock } from "../game/loreContext";
+import { activeEventsBlock } from "../game/loreContext";
 import { affinityOf, kbBlock, remember, romanceBlock } from "../game/npcKnowledge";
 import { blankRel, ensureRelations, relDimLabel } from "../game/relations";
 import { romanticCapOf } from "../worlds/star2005/content";
@@ -504,7 +505,8 @@ export function buildSystemPrompt(state: GameState): string {
   const npcEx = promptFrag("npcExample", firstNpc ? { id: firstNpc.id, name: firstNpc.name } : { id: "npc1", name: "某人" });
   // 时限天数与结算同口径：存档没有自选开局日期时，从世界观实际开局日（day 0）起算
   const limDays = limitDays(state.timeLimit, state.startDate || startDateLabel());
-  return `${getWorldPromptHeader("你是一款中文沉浸式养成模拟器的游戏主持（GM），文风细腻、有画面感、克制而深情。")}
+  // 功能注释：剧本基调必须来自作品；留空时不注入娱乐圈引擎的默认 GM 话术。
+  return `${getWorldPromptHeader()}
 
 ${engineRulesBlock(rulesOf(state), (id) => state.npcs.find((n) => n.id === id)?.name)}${limDays > 0 ? `【主线时限】整个故事${state.timeLimit?.endDate ? `截止于 ${state.timeLimit.endDate}` : `只有 ${state.timeLimit!.value}${TIME_UNIT_LABEL[state.timeLimit!.unit]}`}（共 ${limDays} 天），当前第 ${(state.sim?.day ?? 0)} 天，剩余 ${Math.max(0, limDays - (state.sim?.day ?? 0))} 天。叙事节奏须与之匹配，不得写超出时限的情节。\n\n` : ""}【主角设定】
 姓名：${p.name}｜年龄：${p.age}｜性别：${p.gender}｜身份：${p.identity}｜家世：${p.background}｜阶层：${p.klass}
@@ -744,12 +746,13 @@ export function buildMessages(state: GameState, userInput: string, wbPick?: Worl
   // 知识库：按玩家输入检索 help 文档，命中则注入，避免模型编造游戏机制/世界设定
   const kb = knowledgeBlock(input);
   if (kb) msgs.push({ role: "system", content: kb });
-  // 世界书：玩家撰写的设定片段，按关键词命中注入
+  // 世界书：唯一设定通道（含原详细设定 / 节日）；地点·人物在场或关键词命中才注入
   const wb = worldBookBlock(state, input, {}, wbPick);
   if (wb) msgs.push({ role: "system", content: wb });
-  // 详细设定：所在地区完整 / 其他地区速查 / 剧情提及单独补发；节日：临近或提及才发详情；进行中的事件：持续到结束关键词
-  const quest = storylineBrief(state as unknown as { flags?: Record<string, number> }); // 运行时存档带 flags（见 game/logic GameState）
-  for (const block of [loreBlock(state, input), festivalBlock(state, input), activeEventsBlock(state), quest && `【主线进度】（由代码判定，剧情须围绕当前目标推进，不得自行宣布完成）\n${quest}`]) if (block) msgs.push({ role: "system", content: block });
+  // 进行中的事件：持续到结束关键词；主线 / 支线进度 flags 在 sim 上
+  const quest = state.sim ? storylineBrief(state.sim) : "";
+  const side = state.sim ? sidelineBrief(getWorldSidelines(), state.sim) : "";
+  for (const block of [activeEventsBlock(state), quest && `【主线进度】（由代码判定，剧情须围绕当前目标推进，不得自行宣布完成）\n${quest}`, side && `【进行中的支线】（额外任务，由代码判定成败，可顺带推进，不得自行宣布完成，也不影响主线）\n${side}`]) if (block) msgs.push({ role: "system", content: block });
   // 地图编辑器：当前点位的玩家自定义（改名/描述/物件），让叙事与所见场景一致
   const ms = mapSpotBlock(state);
   if (ms) msgs.push({ role: "system", content: ms });
@@ -801,7 +804,7 @@ ${transcript.slice(-4000)}`;
 /* 返回当前满足条件、但尚未解锁的 CG id */
 export function newlyUnlockedCgs(state: GameState): string[] {
   if (!state.sim) return [];
-  return (state.cgs ?? []).filter((c) => c.enabled !== false && c.conds.length > 0 && !state.cgUnlocked?.[c.id] && c.conds.every((k) => evalFixedCond(k, state.sim))).map((c) => c.id);
+  return (state.cgs ?? []).filter((c) => c.enabled !== false && !!(c.imageFileId || c.image) && c.conds.length > 0 && !state.cgUnlocked?.[c.id] && c.conds.every((k) => evalFixedCond(k, state.sim))).map((c) => c.id);
 }
 
 export function applyStep(state: GameState, step: AIStep): { next: GameState; changes: string[] } {
@@ -1044,12 +1047,6 @@ export function applyStep(state: GameState, step: AIStep): { next: GameState; ch
     next.diaries = [...(next.diaries ?? []), { id: uid(), npcId: who.id, name: who.name, time, turn, text: t.diary.trim() }];
   }
 
-  // CG 图鉴：条件满足即解锁
-  for (const id of newlyUnlockedCgs(next)) {
-    next.cgUnlocked = { ...(next.cgUnlocked ?? {}), [id]: time };
-    changes.push(`解锁 CG《${next.cgs?.find((c) => c.id === id)?.title || "未命名"}》`);
-  }
-
   next.turnCount = turn;
   next.options = (step.options ?? []).slice(0, 3); // 选项最多 3 个：多了占屏、难选
   if (step.game_end) {
@@ -1058,8 +1055,8 @@ export function applyStep(state: GameState, step: AIStep): { next: GameState; ch
   }
   next.updatedAt = Date.now();
   next.npcs = tickBirthdays(next.npcs, next.sim?.day ?? 0).npcs;
-  // 主角年龄随日历（AI 回合也可能推进日期）
-  if (getWorldSlot("play")?.ageAuto) { const a = tickPlayerAge(next, next.sim?.day ?? 0); next.player = a.g.player; next.playerAgedYear = a.g.playerAgedYear; if (a.note) changes.push(a.note); }
+  // 主角年龄随日历内置开启（AI 回合也可能推进日期）
+  { const a = tickPlayerAge(next, next.sim?.day ?? 0); next.player = a.g.player; next.playerAgedYear = a.g.playerAgedYear; if (a.note) changes.push(a.note); }
   return { next, changes };
 }
 

@@ -218,7 +218,7 @@ export default function TalkPanel({ pid, name, role, onClose }: { pid: string; n
         role="dialog"
         aria-modal="true"
         aria-label={`与${name}对话`}
-        className="ui-sheet animate-pop relative flex h-[100dvh] w-full max-w-3xl flex-col overflow-hidden sm:h-[90dvh] sm:max-h-[860px]"
+        className="ui-sheet ui-dialog animate-pop"
       >
         {/* 顶部人物名片栏 */}
         <header className="relative border-b border-line/60 bg-gradient-to-b from-paper-2/95 to-paper/60 px-4 pb-3 pt-3.5 sm:px-5">
@@ -259,7 +259,7 @@ export default function TalkPanel({ pid, name, role, onClose }: { pid: string; n
         </header>
 
         {/* 对话消息流 */}
-        <div className="dialogue-scroll mx-auto w-full max-w-2xl flex-1 space-y-2.5 overflow-y-auto px-4 py-5 sm:px-6">
+        <div className="ui-dialog-body dialogue-scroll w-full space-y-2.5 px-4 py-5 sm:px-6">
           {lines.length === 0 && !busy && (
             <div className="my-6 rounded-2xl border border-dashed border-line/70 bg-paper/45 px-4 py-5 text-center">
               <p className="text-[13px] leading-relaxed text-ink-soft">
@@ -332,7 +332,7 @@ export default function TalkPanel({ pid, name, role, onClose }: { pid: string; n
         </div>
 
         {/* 底部一体式输入与快捷操作栏（单层胶囊，杜绝双层描边） */}
-        <footer className="border-t border-line/60 bg-paper-2/85 px-4 pb-[max(14px,env(safe-area-inset-bottom))] pt-2.5 sm:px-5">
+        <footer className="border-t border-line/60 bg-paper-2/85 px-4 pb-3.5 pt-2.5 sm:px-5">
           <div className="mb-2 flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5">
               {rel !== "friend" && (

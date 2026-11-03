@@ -4,7 +4,7 @@
  */
 import type { FeatureFlags, Terminology, TermKey } from "../mods/types";
 
-export type NavTabId = "home" | "actions" | "sim" | "npc" | "phone" | "image" | "quest" | "settings";
+export type NavTabId = "home" | "actions" | "npc" | "phone" | "image" | "settings";
 export type NavGlyphName = "world" | "star" | "clipboard" | "people" | "book" | "gear" | "camera" | "flag";
 export type NavTabCfg = { id: string; label?: string; on?: boolean };
 export type NavPoolItem = { id: NavTabId; label: string; glyph: NavGlyphName };
@@ -12,9 +12,18 @@ export type NavPoolItem = { id: NavTabId; label: string; glyph: NavGlyphName };
 /** 底栏标签最长字数（与局内 NavTabsEditor maxLength 一致） */
 export const NAV_MAX_LABEL = 4;
 
-/** 默认补位顺序（世界固定首位后按此填满格数） */
+/**
+ * 功能注释：档案 / 支线是游戏本体入口（头像弹窗 · 菜单剧情志），不进可配置底栏，也不进玩法 Mod。
+ * 旧存档若仍写 sim/quest，解析时一律忽略。
+ */
+export const CORE_EXCLUDED_NAV_IDS = ["sim", "quest"] as const;
+export type CoreExcludedNavId = (typeof CORE_EXCLUDED_NAV_IDS)[number];
+export const isCoreExcludedNavId = (id: string): id is CoreExcludedNavId =>
+  (CORE_EXCLUDED_NAV_IDS as readonly string[]).includes(id);
+
+/** 默认补位顺序（世界固定首位后按此填满格数；不含档案/支线） */
 export const DEFAULT_NAV_ORDER: NavTabId[] = [
-  "home", "actions", "npc", "phone", "sim", "image", "quest", "settings",
+  "home", "actions", "npc", "phone", "image", "settings",
 ];
 
 /** 页签 id → 术语键（写入 terms 以兼容 term() 读取） */
@@ -24,7 +33,6 @@ export const NAV_TAB_TERM: Partial<Record<NavTabId, TermKey>> = {
   npc: "tabNpc",
   phone: "tabPhone",
   image: "tabImage",
-  sim: "tabSim",
 };
 
 type TabDef = {
@@ -37,11 +45,9 @@ type TabDef = {
 const TAB_DEFS: TabDef[] = [
   { id: "home", glyph: "world", defaultLabel: "世界" },
   { id: "actions", glyph: "star", defaultLabel: "娱乐圈", featureKey: "industryTab" },
-  { id: "sim", glyph: "clipboard", defaultLabel: "档案" },
   { id: "npc", glyph: "people", defaultLabel: "人物" },
   { id: "phone", glyph: "book", defaultLabel: "手机", featureKey: "phone" },
   { id: "image", glyph: "camera", defaultLabel: "形象", featureKey: "imageCrisis" },
-  { id: "quest", glyph: "flag", defaultLabel: "支线" },
   { id: "settings", glyph: "gear", defaultLabel: "设置" },
 ];
 
@@ -87,12 +93,14 @@ export function resolveNavSlots(
 ): NavPoolItem[] {
   const sizes = navSizesFor(pool.length);
   const n = sizes.includes(size as 4 | 6 | 8) ? (size as number) : sizes[0] ?? pool.length;
-  const lbl = (id: string) => navText(navTabs?.find((c) => c.id === id)?.label);
+  // 功能注释：旧稿里的档案/支线底栏项一律跳过，本体入口另走头像弹窗 / 菜单剧情志
+  const tabs = (navTabs ?? []).filter((c) => !isCoreExcludedNavId(c.id));
+  const lbl = (id: string) => navText(tabs.find((c) => c.id === id)?.label);
   const picked: string[] = ["home"];
-  for (const c of navTabs ?? []) {
+  for (const c of tabs) {
     if (c.on !== false && !picked.includes(c.id) && pool.some((p) => p.id === c.id)) picked.push(c.id);
   }
-  const hidden = new Set((navTabs ?? []).filter((c) => c.on === false).map((c) => c.id));
+  const hidden = new Set(tabs.filter((c) => c.on === false).map((c) => c.id));
   for (const id of DEFAULT_NAV_ORDER) {
     if (picked.length < n && !picked.includes(id) && !hidden.has(id) && pool.some((p) => p.id === id)) {
       picked.push(id);
@@ -200,19 +208,21 @@ export function compactNavConfig(
   const sizeCustom =
     navSize && sizes.includes(navSize) && navSize !== defaultSize ? navSize : undefined;
   const effectiveSize = sizeCustom ?? defaultSize;
-  if (!navTabs?.length) return { navTabs: undefined, navSize: sizeCustom };
+  // 功能注释：落盘前剔除档案/支线，避免旧配置继续污染底栏
+  const cleaned = (navTabs ?? []).filter((c) => !isCoreExcludedNavId(c.id));
+  if (!cleaned.length) return { navTabs: undefined, navSize: sizeCustom };
 
-  const shown = navTabs.filter((c) => c.on !== false);
+  const shown = cleaned.filter((c) => c.on !== false);
   const defaultShown = DEFAULT_NAV_ORDER.slice(0, effectiveSize);
   const orderMatch =
     shown.length === defaultShown.length && shown.every((c, i) => c.id === defaultShown[i]);
-  const noLabels = navTabs.every((c) => !navText(c.label));
+  const noLabels = cleaned.every((c) => !navText(c.label));
   const pristine = orderMatch && noLabels && !sizeCustom;
 
   if (pristine) return { navTabs: undefined, navSize: undefined };
 
   return {
-    navTabs: navTabs.map((c) => {
+    navTabs: cleaned.map((c) => {
       const label = navText(c.label);
       return {
         id: c.id,

@@ -1,5 +1,5 @@
 /**
- * 脏生成结果从「① 基础」连点「下一步」直到「⑤ 玩法」。
+ * 脏生成结果从「① 基础」连点「下一步」直到「⑤ 美化」。
  * 任何一页抛 TypeError（some / trim / map / join）都算失败。
  * 打的是已部署的 cn-gogo，用来抓住源码字符串断言覆盖不到的渲染崩溃。
  */
@@ -59,7 +59,11 @@ function dirtySession() {
       gameRules: [{ id: 'r1', name: '过劳', when: 'day' }],
       lore: [{ id: 'r1', name: '雾港', factions: [{ id: 'f1', name: '港务局', chars: [{ id: 'c1' }] }] }],
       worldBook: [{ id: 'w1', title: { zh: '雾' }, enabled: true, mode: 'keyword' }],
-      storylines: [{ id: 'sl', name: '主线', nodes: { id: 'n1' } }],
+      // 功能注释：缺 nodes 与单条对象两种脏形都要能进编辑器，禁止 questOpts reading 'map'
+      storylines: [
+        { id: 'sl', name: '主线', nodes: { id: 'n1' } },
+        { id: 'sl-empty', name: '无节点主线' },
+      ],
       income: [{ id: 'i1', name: { n: '房租' } }],
       fixedEvents: [{ id: 'e1', name: '夜', trigger: { kind: 'clock', from: '22:00', to: '06:00' } }],
       phoneAppsCfg: { apps: [] },
@@ -119,7 +123,7 @@ test('脏模组连点下一步_停在玩法且无TypeError', { timeout: 60_000 }
       assert.equal(crashed, undefined, `点「${label}」后崩溃：\n${logs.join('\n')}`);
     }
     const pressed = await page.locator('[aria-pressed="true"]').allInnerTexts();
-    assert.ok(pressed.some((text) => text.includes('⑤ 玩法')), `应停在玩法，实际高亮：${pressed.join(' | ')}`);
+    assert.ok(pressed.some((text) => text.includes('⑤ 美化')), `应停在美化，实际高亮：${pressed.join(' | ')}`);
     assert.equal(logs.length, 0, logs.join('\n'));
   } finally {
     await browser.close();

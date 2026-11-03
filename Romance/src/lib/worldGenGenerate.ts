@@ -1,38 +1,103 @@
 /**
- * 生成世界 · 分模组真实 AI 生成管线。
+ * 生成世界 · 按「大类」真实 AI 生成管线。
  * 禁止用定时器或本地模板冒充生成；默认走平台 /api/romance/world-gen/complete（运营 LLM + 积分），
  * 不读局内「AI 配置」个人 Key。
- * 依赖：软分层（骨架 → 地点人物 → 剧情）；同层最多 WORLD_GEN_PARALLEL_LIMIT 路并行，层间合并上下文。
+ * 同类模组（如人物线路 / 人物 / 关系玩法）并成一次请求；进度按勾选细项展示明细（正在写什么 / 结果摘要）。
+ * 依赖：软分层（骨架 → 地点 → 人物与线路 → 剧情）；同层最多 WORLD_GEN_PARALLEL_LIMIT 个大类并行。
+ * 速度：先出骨架再按需补长文；全选时条数与文长瘦身，禁止项项打满。
  */
 import type { AIConfig } from "./types.ts";
 import type { Mod, ModContent } from "../mods/types.ts";
 import {
+  formatWorldGenForbidBlock,
   isWorldGenCoreStep,
+  summarizeWorldGenDescription,
+  WORLD_DESC_SUMMARY_TARGET,
   WORLD_GEN_EDITOR_STEPS,
   WORLD_GEN_ENGINES,
   type WorldGenDraft,
   type WorldGenEditorStep,
   type WorldGenEngineId,
 } from "./worldGenWizard.ts";
+import { worldGenAiPolishPrompt, worldGenForbidPrompt } from "./worldGenSettingField.ts";
+import { platformNpcTagsPromptLine } from "./npcTags.ts";
 import { normalizeStartMetList } from "./normalizeStartMet.ts";
 import { asNonEmptyTrimmed, asTrimmedString } from "./asTrimmedString.ts";
-import { healModRoomRefs } from "./sanitizeModStrings.ts";
-import { completeViaPlatform } from "./platformWorldGenAi.ts";
+import { ensureRoomSceneDescs, healModRoomRefs } from "./sanitizeModStrings.ts";
+import {
+  completeViaPlatform,
+  refundWorldGenPointsViaPlatform,
+  type PlatformWorldGenCompleteResult,
+} from "./platformWorldGenAi.ts";
+import { applyScriptTone, readScriptTone } from "./scriptTone.ts";
+import { MOD_DESC_MAX, SCRIPT_TONE_MAX } from "./modBasicInfoLimits.ts";
+import { START_DATE_RE } from "./startDateFields.ts";
+import {
+  ensureWorldGenTravelTimeStartDate,
+  normalizeWorldGenPatchStartDate,
+} from "./worldGenStartDate.ts";
+import {
+  ensureWorldGenStartMoney,
+  normalizeWorldGenCustomAttrs,
+  WORLD_GEN_CUSTOM_ATTRS_COUNT,
+} from "./worldGenCreationAttrs.ts";
+import {
+  worldGenBatchNeedsEnrich,
+  worldGenLeanLimits,
+  worldGenLeanPromptBlock,
+  worldGenStepNamesFromPatch,
+  worldGenStepResultSummary,
+  worldGenStepRunningDetail,
+  type WorldGenLeanLimits,
+} from "./worldGenProgressDetail.ts";
+
+export {
+  coerceWorldGenStartDate,
+  ensureWorldGenTravelTimeStartDate,
+  inferWorldGenStartDate,
+  normalizeWorldGenPatchStartDate,
+} from "./worldGenStartDate.ts";
+
+export {
+  defaultAttrDescForLabel,
+  ensureWorldGenStartMoney,
+  inferWorldGenMoneyLabel,
+  normalizeWorldGenCustomAttrs,
+  WORLD_GEN_CUSTOM_ATTRS_COUNT,
+} from "./worldGenCreationAttrs.ts";
 
 /**
- * 功能注释：同层（无硬依赖波次内）并行上限。
- * 创作者期望 6–8 路；取 8，由 mapPool 按本波实际条数再截断。
+ * 功能注释：同层大类并行上限。同类已并入单次请求，这里只限制不同大类的并发。
  */
-export const WORLD_GEN_PARALLEL_LIMIT = 8;
+export const WORLD_GEN_PARALLEL_LIMIT = 3;
 
 /**
- * 功能注释：单模组失败后额外重试次数（不含首次）；合计最多 1+MAX_RETRIES 次。
+ * 功能注释：单次请求失败后额外重试次数（不含首次）；合计最多 1+MAX_RETRIES 次。
  * 鉴权 / 取消 / 积分不足不重试。
  */
 export const WORLD_GEN_MODULE_MAX_RETRIES = 2;
 
-/** 功能注释：尚无完成样本时，单模组串行口径预估秒数（平台 LLM 偏慢） */
-export const WORLD_GEN_ETA_FALLBACK_SEC_PER_MODULE = 40;
+/** 功能注释：固定事件 / 剧情线 / 剧本基调文案长；单模组用 8000；大类合并见 worldGenBatchMaxTokens。 */
+export function worldGenModuleMaxTokens(moduleId: string): number {
+  return moduleId === "fixedEvents" || moduleId === "storylines" || moduleId === "prompt" ? 8000 : 4000;
+}
+
+/**
+ * 功能注释：大类一次请求的 token 上限。人物与线路等多项合并需要更大输出；仍受后端 16000 封顶。
+ */
+export function worldGenBatchMaxTokens(stepIds: readonly string[]): number {
+  const ids = stepIds.map((id) => String(id || "").trim()).filter(Boolean);
+  if (!ids.length) return 4000;
+  if (ids.some((id) => id === "fixedEvents" || id === "storylines")) return 8000;
+  if (ids.length >= 3 || ids.some((id) => id === "npcs" || id === "hub:paths" || id === "hub:book" || id === "prompt")) {
+    return 12000;
+  }
+  if (ids.length >= 2) return 8000;
+  return worldGenModuleMaxTokens(ids[0]!);
+}
+
+/** 功能注释：尚无完成样本时，单次大类请求预估秒数（合并后单次更重） */
+export const WORLD_GEN_ETA_FALLBACK_SEC_PER_MODULE = 55;
 
 /** 功能注释：重试间隔（毫秒），随次数略退避，避免打满网关 */
 function worldGenRetryDelayMs(attempt: number): number {
@@ -195,9 +260,140 @@ export function pickWorldGenScrollTargetId(
 }
 
 /**
- * 功能注释：软依赖分层——硬依赖很少，但后层剧情最好先有地点/人物 id。
- * 同层可并行；未列入的扩展模组落入末波。
+ * 功能注释：生成进度与请求的「大类」。同类编辑器模组并成一次 AI 请求，进度条按大类计。
+ * 例：人物线路 + 人物 + 关系玩法 + 人脉 →「人物与线路」一次请求。
  */
+export type WorldGenBatchCategory = {
+  id: string;
+  name: string;
+  stepIds: readonly string[];
+};
+
+export const WORLD_GEN_BATCH_CATEGORIES: readonly WorldGenBatchCategory[] = Object.freeze([
+  Object.freeze({ id: "worldRules", name: "世界规则", stepIds: Object.freeze(["prompt", "hub:rules", "hub:book"]) }),
+  Object.freeze({ id: "travelTime", name: "时间与推进", stepIds: Object.freeze(["travelTime"]) }),
+  Object.freeze({ id: "creation", name: "建角", stepIds: Object.freeze(["creation", "startResources"]) }),
+  Object.freeze({ id: "rooms", name: "地点", stepIds: Object.freeze(["rooms"]) }),
+  Object.freeze({
+    id: "characters",
+    name: "人物与线路",
+    stepIds: Object.freeze(["hub:paths", "npcs", "relations", "contacts"]),
+  }),
+  Object.freeze({ id: "fixedEvents", name: "固定事件", stepIds: Object.freeze(["fixedEvents"]) }),
+  Object.freeze({ id: "storylines", name: "剧情线", stepIds: Object.freeze(["storylines"]) }),
+  Object.freeze({ id: "opening", name: "开场剧情", stepIds: Object.freeze(["opening"]) }),
+  Object.freeze({ id: "avatars", name: "头像", stepIds: Object.freeze(["avatars"]) }),
+  Object.freeze({
+    id: "training",
+    name: "养成",
+    stepIds: Object.freeze(["trainings", "sideJobs", "income", "gameRules", "tuning"]),
+  }),
+  Object.freeze({
+    id: "playMods",
+    name: "已添加的玩法",
+    stepIds: Object.freeze([
+      "playModInstalls",
+      "travel",
+      "cars",
+      "gigs",
+      "contracts",
+      "projects",
+      "industry",
+      "imageCrisis",
+      "weeklyPaper",
+      "meals",
+      "titles",
+      "pregnancy",
+    ]),
+  }),
+  Object.freeze({
+    id: "beautify",
+    name: "美化",
+    // 功能注释：开局封面 / 手机应用 / 皮肤美化永不进 AI 批次；只保留仍可勾选的音乐与剧情美化等
+    stepIds: Object.freeze(["bgm", "audioRefs", "lookRules", "navTabs"]),
+  }),
+]);
+
+/** 功能注释：AI 补丁一律剥离的美化键（对应 WORLD_GEN_NO_AI_BEAUTIFY_STEP_IDS，默认封面由向导写剧本名） */
+export const WORLD_GEN_NO_AI_CONTENT_KEYS = Object.freeze(["cover", "phoneAppsCfg", "theme"] as const);
+
+/** 功能注释：运行时一批请求：大类 id + 本次实际勾选的细项 */
+export type WorldGenBatch = {
+  id: string;
+  name: string;
+  group: string;
+  stepIds: readonly string[];
+};
+
+/**
+ * 功能注释：把勾选的编辑器模组折叠成大类批次；未归类的细项各自成批（兜底）。
+ */
+export function resolveWorldGenBatches(selectedStepIds: readonly string[]): WorldGenBatch[] {
+  const want = new Set(
+    selectedStepIds.map((id) => String(id || "").trim()).filter(Boolean),
+  );
+  const placed = new Set<string>();
+  const out: WorldGenBatch[] = [];
+  for (const cat of WORLD_GEN_BATCH_CATEGORIES) {
+    const steps = cat.stepIds.filter((id) => want.has(id));
+    if (!steps.length) continue;
+    for (const id of steps) placed.add(id);
+    out.push({
+      id: cat.id,
+      name: cat.name,
+      group: cat.name,
+      stepIds: steps,
+    });
+  }
+  for (const id of want) {
+    if (placed.has(id)) continue;
+    const step = WORLD_GEN_EDITOR_STEPS.find((s) => s.id === id);
+    out.push({
+      id: `solo:${id}`,
+      name: step?.name || id,
+      group: step?.group || "",
+      stepIds: [id],
+    });
+  }
+  return out;
+}
+
+/** 功能注释：大类 id → 与勾选交集的细项；重试单行进度时用 */
+export function stepIdsForWorldGenBatch(
+  batchId: string,
+  selectedStepIds: readonly string[] = [],
+): string[] {
+  const want = new Set(
+    selectedStepIds.map((id) => String(id || "").trim()).filter(Boolean),
+  );
+  const id = String(batchId || "").trim();
+  if (!id) return [];
+  if (id.startsWith("solo:")) {
+    const stepId = id.slice("solo:".length);
+    if (!stepId) return [];
+    if (want.size && !want.has(stepId)) return [];
+    return [stepId];
+  }
+  const cat = WORLD_GEN_BATCH_CATEGORIES.find((c) => c.id === id);
+  if (!cat) return [];
+  const steps = cat.stepIds.filter((stepId) => (want.size ? want.has(stepId) : true));
+  return [...steps];
+}
+
+/**
+ * 功能注释：大类软依赖波次——后层剧情最好先有地点 / 人物。
+ * 同波不同大类可并行；同一大类绝不再拆成多次请求。
+ */
+export const WORLD_GEN_BATCH_WAVES: readonly (readonly string[])[] = Object.freeze([
+  // 功能注释：时间与推进放在世界规则/地点/人物之后，便于 AI 与兜底按题材+人物年龄写 startDate
+  Object.freeze(["worldRules", "creation"]),
+  Object.freeze(["rooms"]),
+  Object.freeze(["characters"]),
+  Object.freeze(["travelTime"]),
+  Object.freeze(["fixedEvents", "storylines", "opening"]),
+]);
+
+/** @deprecated 细项波次仅兼容旧单测；正式管线走 partitionWorldGenBatchWaves */
 export const WORLD_GEN_DEPENDENCY_WAVES: readonly (readonly string[])[] = Object.freeze([
   Object.freeze([
     "prompt",
@@ -206,38 +402,44 @@ export const WORLD_GEN_DEPENDENCY_WAVES: readonly (readonly string[])[] = Object
     "travelTime",
     "startResources",
     "creation",
-    "creationPools",
-    "opening",
   ]),
   Object.freeze([
-    "hub:map",
     "rooms",
-    "hub:person",
     "npcs",
     "relations",
     "contacts",
-    "hub:faction",
     "hub:paths",
-    "lore",
   ]),
-  Object.freeze(["hub:fixed", "fixedEvents", "storylines"]),
+  Object.freeze(["fixedEvents", "storylines", "opening"]),
 ]);
 
 /**
- * 功能注释：把勾选模组按依赖波次分组；同波内顺序保持勾选顺序。
+ * 功能注释：把大类按依赖波次分组；未列入的扩展大类落入末波。
  */
-export function partitionWorldGenWaves(moduleIds: readonly string[]): string[][] {
-  const want = new Set(moduleIds);
+export function partitionWorldGenBatchWaves(batchIds: readonly string[]): string[][] {
+  const want = new Set(batchIds);
   const waves: string[][] = [];
   const placed = new Set<string>();
-  for (const wave of WORLD_GEN_DEPENDENCY_WAVES) {
-    const batch = moduleIds.filter((id) => want.has(id) && (wave as readonly string[]).includes(id));
+  for (const wave of WORLD_GEN_BATCH_WAVES) {
+    const batch = batchIds.filter((id) => want.has(id) && (wave as readonly string[]).includes(id));
     for (const id of batch) placed.add(id);
     if (batch.length) waves.push(batch);
   }
-  const rest = moduleIds.filter((id) => want.has(id) && !placed.has(id));
+  const rest = batchIds.filter((id) => want.has(id) && !placed.has(id));
   if (rest.length) waves.push(rest);
   return waves;
+}
+
+/**
+ * 功能注释：兼容旧「细项波次」调用；内部先折叠大类再展开细项顺序（同大类细项相邻，不再表示多次请求）。
+ */
+export function partitionWorldGenWaves(moduleIds: readonly string[]): string[][] {
+  const batches = resolveWorldGenBatches(moduleIds);
+  const batchWaves = partitionWorldGenBatchWaves(batches.map((b) => b.id));
+  const byId = new Map(batches.map((b) => [b.id, b]));
+  return batchWaves.map((wave) =>
+    wave.flatMap((id) => [...(byId.get(id)?.stepIds ?? [])]),
+  );
 }
 
 /** 功能注释：有限并发池；保持结果下标与入参一致 */
@@ -273,6 +475,7 @@ export const WORLD_GEN_AUTHOR_PROTECTED_KEYS = Object.freeze([
   "imageCrisis",
   "weeklyPaper",
   "meals",
+  "titles",
   "pregnancy",
   "phoneAppsCfg",
   "cars",
@@ -287,31 +490,16 @@ const STEP_OWNED_PROTECTED: Record<string, readonly string[]> = {
   imageCrisis: ["imageCrisis"],
   weeklyPaper: ["weeklyPaper"],
   meals: ["meals"],
+  titles: ["titles"],
   pregnancy: ["pregnancy"],
   phoneAppsCfg: ["phoneAppsCfg"],
 };
 
 /**
- * 功能注释：清洗 AI 补丁——基础模组禁止写入扩展玩法键；扩展模组也只能写本模组字段。
- * 重新生成基础内容时保留作者已安装组件与手动配置。
+ * 功能注释：清洗 AI 补丁的共享字段规整（startMet / prompt / contacts 等），与细项或大类无关。
  */
-export function sanitizeWorldGenAiPatch(
-  stepId: string,
-  patch: Record<string, unknown>,
-): Record<string, unknown> {
+function sanitizeWorldGenPatchShape(patch: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = { ...patch };
-  const allowed = new Set(STEP_OWNED_PROTECTED[stepId] ?? []);
-  for (const k of WORLD_GEN_AUTHOR_PROTECTED_KEYS) {
-    if (!allowed.has(k)) delete out[k];
-  }
-  // 功能注释：基础生成不得把娱乐圈扩展开关偷偷打开
-  if (isWorldGenCoreStep(stepId) && out.features && typeof out.features === "object" && !Array.isArray(out.features)) {
-    const f = { ...(out.features as Record<string, unknown>) };
-    for (const flag of ["industryTab", "career", "weeklyPaper", "imageCrisis", "pregnancy", "cars"] as const) {
-      if (f[flag] === true) f[flag] = false;
-    }
-    out.features = f;
-  }
   // 功能注释：startMet 必须是 id 数组；对象/单字符串会在 registry 展开时炸「is not iterable」
   if ("startMet" in out) {
     const normalized = normalizeStartMetList(out.startMet);
@@ -331,11 +519,73 @@ export function sanitizeWorldGenAiPatch(
   if (out.prompt && typeof out.prompt === "object" && !Array.isArray(out.prompt)) {
     const prompt: Record<string, string> = {};
     for (const [k, v] of Object.entries(out.prompt as Record<string, unknown>)) {
+      // 功能注释：extraRules 承载作者「禁止生成」，AI 补丁不得覆盖
+      if (k === "extraRules") continue;
       const s = asNonEmptyTrimmed(v);
       if (s) prompt[k] = s;
     }
-    if (Object.keys(prompt).length) out.prompt = prompt;
-    else delete out.prompt;
+    // 功能注释：统一写入 scriptTone；旧三字段并入后清掉，开局不要把设定原文留在 worldIntro
+    const joined = readScriptTone(prompt);
+    if (joined) {
+      const capped = joined.length > SCRIPT_TONE_MAX ? joined.slice(0, SCRIPT_TONE_MAX) : joined;
+      out.prompt = applyScriptTone(prompt, capped) as Record<string, string>;
+    } else if (Object.keys(prompt).length) {
+      out.prompt = prompt;
+    } else {
+      delete out.prompt;
+    }
+  }
+  // 功能注释：开局日期统一成 YYYY.MM.DD；兼容 travel/calendar 嵌套与中文年月日
+  {
+    const withDate = normalizeWorldGenPatchStartDate(out);
+    if (withDate.startDate) out.startDate = withDate.startDate;
+    else delete out.startDate;
+    if (withDate.travel) out.travel = withDate.travel;
+  }
+  // 功能注释：开场白只保留文案字段；剥掉 page/html，避免 AI 灌半截自定义页顶替必填 paragraphs
+  if (out.opening && typeof out.opening === "object" && !Array.isArray(out.opening)) {
+    const raw = out.opening as Record<string, unknown>;
+    const opening: Record<string, unknown> = {};
+    for (const key of ["kicker", "title", "subtitle", "waiting", "cta"] as const) {
+      const s = asNonEmptyTrimmed(raw[key]);
+      if (s) opening[key] = s;
+    }
+    if (Array.isArray(raw.paragraphs)) {
+      const paragraphs = raw.paragraphs.map((p) => asTrimmedString(p)).filter(Boolean);
+      if (paragraphs.length) opening.paragraphs = paragraphs;
+    }
+    if (Object.keys(opening).length) out.opening = opening;
+    else delete out.opening;
+  }
+  // 功能注释：换地点扣点 / 日程叙事字数内置，AI 与旧模板不得再写给创作者配
+  if (out.travel && typeof out.travel === "object" && !Array.isArray(out.travel)) {
+    const travel = { ...(out.travel as Record<string, unknown>) };
+    delete travel.advanceStory;
+    delete travel.apPerMove;
+    delete travel.advanceWords;
+    out.travel = travel;
+  }
+  // 功能注释：新建作品引擎规则不要带进工作/违约块；AI 若写出 gigRules 一律剥掉，旧作手写数据不经此路径。
+  if (out.tuning && typeof out.tuning === "object" && !Array.isArray(out.tuning)) {
+    const tuning = { ...(out.tuning as Record<string, unknown>) };
+    delete tuning.gigRules;
+    out.tuning = Object.keys(tuning).length ? tuning : undefined;
+    if (out.tuning === undefined) delete out.tuning;
+  }
+  // 功能注释：人脉页只按关系阶段分组；AI / 旧模板夹带的组织分组与阶段分组限定不得写回。
+  if (out.contacts && typeof out.contacts === "object" && !Array.isArray(out.contacts)) {
+    const contacts = { ...(out.contacts as Record<string, unknown>) };
+    delete contacts.groups;
+    delete contacts.orgs;
+    if (Array.isArray(contacts.stages)) {
+      contacts.stages = contacts.stages.map((row) => {
+        if (!row || typeof row !== "object" || Array.isArray(row)) return row;
+        const stage = { ...(row as Record<string, unknown>) };
+        delete stage.groups;
+        return stage;
+      });
+    }
+    out.contacts = contacts;
   }
   if (Array.isArray(out.npcs)) {
     out.npcs = (out.npcs as unknown[]).map((row) => {
@@ -352,11 +602,84 @@ export function sanitizeWorldGenAiPatch(
       return n;
     });
   }
+  // 功能注释：建角数值属性最多 3 条且必须有名称+说明；丢掉「未命名」空壳，不自动补空字段
+  if ("customAttrs" in out) {
+    const attrs = normalizeWorldGenCustomAttrs(out.customAttrs);
+    if (attrs.length) out.customAttrs = attrs;
+    else delete out.customAttrs;
+  }
+  if ("moneyLabel" in out) {
+    const ml = asTrimmedString(out.moneyLabel);
+    if (ml) out.moneyLabel = ml;
+    else delete out.moneyLabel;
+  }
+  return out;
+}
+
+/**
+ * 功能注释：清洗 AI 补丁——基础模组禁止写入扩展玩法键；扩展模组也只能写本模组字段。
+ * 重新生成基础内容时保留作者已安装组件与手动配置。
+ */
+export function sanitizeWorldGenAiPatch(
+  stepId: string,
+  patch: Record<string, unknown>,
+): Record<string, unknown> {
+  return sanitizeWorldGenBatchPatch([stepId], patch);
+}
+
+/**
+ * 功能注释：大类合并请求的补丁清洗——本批任一细项拥有的扩展键都保留，其它作者保护区仍剥离。
+ */
+export function sanitizeWorldGenBatchPatch(
+  stepIds: readonly string[],
+  patch: Record<string, unknown>,
+): Record<string, unknown> {
+  const ids = stepIds.map((id) => String(id || "").trim()).filter(Boolean);
+  const out = sanitizeWorldGenPatchShape(patch);
+  const allowed = new Set<string>();
+  for (const id of ids) {
+    for (const k of STEP_OWNED_PROTECTED[id] ?? []) allowed.add(k);
+  }
+  for (const k of WORLD_GEN_AUTHOR_PROTECTED_KEYS) {
+    if (!allowed.has(k)) delete out[k];
+  }
+  // 功能注释：开局封面 / 手机应用配置 / 皮肤美化永不交 AI，即使模型顺带写出也整键丢掉
+  for (const k of WORLD_GEN_NO_AI_CONTENT_KEYS) delete out[k];
+  // 功能注释：本批若全是基础模组，不得把娱乐圈扩展开关偷偷打开
+  const allCore = ids.length > 0 && ids.every((id) => isWorldGenCoreStep(id));
+  if (allCore && out.features && typeof out.features === "object" && !Array.isArray(out.features)) {
+    const f = { ...(out.features as Record<string, unknown>) };
+    for (const flag of ["industryTab", "career", "weeklyPaper", "imageCrisis", "pregnancy", "cars"] as const) {
+      if (f[flag] === true) f[flag] = false;
+    }
+    out.features = f;
+  }
   return out;
 }
 
 type ChatMsg = { role: "system" | "user" | "assistant"; content: string };
-type CompleteFn = (cfg: AIConfig, messages: ChatMsg[], timeoutMs?: number) => Promise<string>;
+/** 功能注释：单测可返回纯字符串；平台路径返回 text + 实扣分 */
+export type WorldGenCompleteResult = string | PlatformWorldGenCompleteResult;
+type CompleteFn = (
+  cfg: AIConfig,
+  messages: ChatMsg[],
+  timeoutMs?: number,
+) => Promise<WorldGenCompleteResult>;
+
+/** 功能注释：统一 complete 返回形态，便于累计扣分与失败返还 */
+export function normalizeWorldGenCompleteResult(raw: WorldGenCompleteResult): PlatformWorldGenCompleteResult {
+  if (typeof raw === "string") {
+    return { text: raw, pointsDeducted: 0 };
+  }
+  return {
+    text: String(raw?.text || ""),
+    pointsDeducted: Math.max(0, Math.floor(Number(raw?.pointsDeducted) || 0)),
+    remainingPoints:
+      raw?.remainingPoints == null
+        ? undefined
+        : Math.max(0, Math.floor(Number(raw.remainingPoints) || 0)),
+  };
+}
 
 /** 功能注释：占位 cfg；平台路径不使用个人 AIConfig，仅满足 CompleteFn 签名 */
 const PLATFORM_CFG_STUB: AIConfig = {
@@ -412,12 +735,44 @@ export function isFatalAuthGenError(e: unknown): boolean {
   return false;
 }
 
+/** 功能注释：列表旁短原因（≤约 28 字）；完整说明留给 formatGenError */
+export function shortGenError(e: unknown): string {
+  const err = e as { name?: string; code?: string };
+  if (err?.name === "AbortError") return "已取消";
+  const { status, detail, message } = genErrorBlob(e);
+  const blob = `${detail} ${message} ${err?.code || ""}`.toLowerCase();
+  if (
+    err instanceof SyntaxError ||
+    /expected ['",}\]]|unexpected (?:token|end)|json at position|json.*line \d+ column|json 格式|未返回 json/i.test(
+      `${message} ${detail}`,
+    )
+  ) {
+    return "JSON 不完整";
+  }
+  if (/校验失败/.test(message)) return "字段校验未通过";
+  if (status === 401 || /请先登录|not_logged_in/.test(blob)) return "请先登录";
+  if (/insufficient_points|积分不足/.test(blob)) return "积分不足";
+  if (status === 429) return "接口限流";
+  if (status === 503 || /llm_unavailable|生成服务暂不可用/.test(blob)) return "服务暂不可用";
+  if (status >= 500) return `服务端错误（${status}）`;
+  if (status) return `请求失败（${status}）`;
+  const m = String(message || detail || "生成失败").trim();
+  return m.length > 28 ? `${m.slice(0, 28)}…` : m || "生成失败";
+}
+
 /** 功能注释：轻量错误文案（不依赖 aiError 参数属性，便于 Node strip-types 单测） */
 export function formatGenError(e: unknown): string {
   const err = e as { name?: string; code?: string };
   if (err?.name === "AbortError") return "已取消";
   const { status, detail, message } = genErrorBlob(e);
   const blob = `${detail} ${message} ${err?.code || ""}`.toLowerCase();
+  if (
+    err instanceof SyntaxError ||
+    /expected ['",}\]]|unexpected (?:token|end)|json at position|json.*line \d+ column/i.test(message)
+  ) {
+    // 功能注释：进度行只展示短因；完整句留给弹窗/日志
+    return "JSON 不完整（已自动修复并重试）";
+  }
   if (status === 401 || /请先登录|not_logged_in/.test(blob)) {
     return "请先登录平台账号后再生成世界。";
   }
@@ -445,25 +800,55 @@ export type WorldGenModuleState = {
   group: string;
   status: WorldGenModuleStatus;
   error?: string;
+  /** 功能注释：所属大类请求 id；同类细项共享，ETA 按大类计 */
+  batchId?: string;
+  /** 功能注释：进行中具体产出（如「正在写婚姻 / 姓氏 / 生育」），禁止只写「进行中」 */
+  detail?: string;
+  /** 功能注释：完成后可点开的结果摘要 */
+  summary?: string;
 };
 
 export type WorldGenProgress = {
-  /** 已进入生成队列的模组（仅勾选的） */
+  /** 已进入生成队列的细项（仅勾选的；展示明细用） */
   modules: WorldGenModuleState[];
   /** 当前正在生成的下标（0-based）；全部结束为 -1 */
   currentIndex: number;
-  /** 已成功数 */
+  /** 已成功细项数 */
   doneCount: number;
-  /** 失败数 */
+  /** 失败细项数 */
   failedCount: number;
-  /** 队列总长 */
+  /** 细项队列总长 */
   total: number;
-  /** 温和文案，如「正在生成角色 2/8」 */
+  /** 温和文案，如「正在写婚姻 / 姓氏 / 生育」 */
   label: string;
   cancelled: boolean;
   /** 功能注释：遇密钥/鉴权错误提前停批，后续未再请求 */
   stoppedByAuth?: boolean;
 };
+
+/**
+ * 功能注释：按大类统计完成度，供预计耗时使用（细项进度条仍按勾选项计）。
+ */
+export function worldGenBatchProgressCounts(
+  modules: ReadonlyArray<Pick<WorldGenModuleState, "id" | "batchId" | "status">>,
+): { total: number; finished: number } {
+  const byBatch = new Map<string, Array<"pending" | "running" | "done" | "failed">>();
+  for (const m of modules) {
+    const bid = String(m.batchId || m.id || "").trim();
+    if (!bid) continue;
+    const st = (m.status === "done" || m.status === "failed" || m.status === "running" || m.status === "pending"
+      ? m.status
+      : "pending") as "pending" | "running" | "done" | "failed";
+    const list = byBatch.get(bid) ?? [];
+    list.push(st);
+    byBatch.set(bid, list);
+  }
+  let finished = 0;
+  for (const list of byBatch.values()) {
+    if (list.every((s) => s === "done" || s === "failed")) finished += 1;
+  }
+  return { total: byBatch.size, finished };
+}
 
 export type WorldGenRunResult = {
   mod: Mod;
@@ -493,6 +878,46 @@ export function isStaleChunkLoadErrorMessage(msg: unknown): boolean {
   );
 }
 
+/** 功能注释：同一会话只硬刷一次，避免旧 CDN 死循环；与 WorldGenWizard / App ErrorBoundary 共用 */
+export const STALE_CHUNK_RELOAD_KEY = "star:staleChunkReload";
+
+/**
+ * 功能注释：发版后旧 chunk 404 → 带 `_r` 硬刷新拉新入口。
+ * @returns true 表示已发起刷新（调用方应挂起 Promise / 停止后续逻辑）
+ */
+export function reloadOnceForStaleChunk(error?: unknown): boolean {
+  if (error != null && !isStaleChunkLoadErrorMessage(
+    error instanceof Error ? error.message : error,
+  )) {
+    return false;
+  }
+  if (typeof window === "undefined") return false;
+  try {
+    if (sessionStorage.getItem(STALE_CHUNK_RELOAD_KEY) === "1") return false;
+    sessionStorage.setItem(STALE_CHUNK_RELOAD_KEY, "1");
+    const url = new URL(window.location.href);
+    url.searchParams.set("_r", String(Date.now()));
+    window.location.replace(url.toString());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 功能注释：动态 import 遇旧 hash 时自动硬刷；刷新中挂起 Promise，避免 React 把 404 抛成红屏。
+ */
+export function importWithStaleChunkReload<T>(loader: () => Promise<T>): Promise<T> {
+  return loader().catch((err: unknown) => {
+    if (reloadOnceForStaleChunk(err)) {
+      return new Promise<T>(() => {
+        /* 页面正在 replace，永不 resolve */
+      });
+    }
+    throw err;
+  });
+}
+
 /** 功能注释：进度里任一失败项是旧 chunk 404 */
 export function progressHasStaleChunkFailure(p: WorldGenProgress | null | undefined): boolean {
   if (!p) return false;
@@ -501,23 +926,11 @@ export function progressHasStaleChunkFailure(p: WorldGenProgress | null | undefi
 
 /** 功能注释：各编辑器模组对应的 content 字段提示，供 AI 只产出相关键，避免覆盖未勾选模组 */
 const MODULE_FIELD_HINT: Record<string, string> = {
-  "hub:person": "npcs[]、startMet、familyWx、familyVoices、relations（人物相关）",
-  "hub:map": "rooms{}、startRoom、locations[]、travel、map",
   "hub:rules": "worldRules[]、gameRules[]",
-  "hub:engine": "tuning、stats、features",
-  "hub:beauty": "lookRules[]、theme、cover",
-  "hub:nav": "navTabs[]、navSize、terms（仅 tab* 键）",
-  "hub:book": "worldBook[]、prompt（scriptTone）",
-  "hub:fixed": "fixedEvents[]、events[]、encounters[]",
-  "hub:cg": "（CG 图鉴多为素材引用；可写 opening / cover 相关文案占位，勿捏造外链大图）",
-  "hub:audio": "bgm[]、audioRefs[]、platformAudioRefs[]（平台曲只写 platform: 前缀 id，勿编造，勿写入 bgm 或 audioRefs）",
-  "hub:faction": "lore[]（地区→势力→角色）",
-  "hub:timeline": "storylines[]、npcs[].timeline",
-  "hub:end": "endings[]、timeLimit、gradeDims[]",
-  "hub:paths": "creation.paths[]、identities[]（不要写 pathTitle、pathIntro、formTitle、formIntro、identityLabel、fixedAge、parentNote、seedDescription 或 paths[].formIntro；这些留空，建角页用游戏默认句）",
-  "hub:mods": "playModInstalls[]（仅合理默认占位，勿编造不存在的组件 id）",
-  travelTime: "startDate、startTime、dayStart、dayEnd、travel（节奏相关）、play.ageAuto/pickStartDate",
-  features: "features{}",
+  "hub:book": "worldBook[{id,title,keywords,content,enabled,bindRooms?,bindNpcs?}]：条数见瘦身配额；正文宜短；剧本基调只写在同批 prompt.scriptTone，勿再写 worldIntro",
+  "hub:paths": "creation.paths[]、identities[]：线路条数见瘦身配额；若同批含人物，须与 npcs[] 的 id/姓名对齐（不要写 pathTitle、pathIntro、formTitle、formIntro、identityLabel、fixedAge、parentNote、seedDescription 或 paths[].formIntro；这些留空，建角页用游戏默认句）",
+  travelTime: "startDate（必填，YYYY.MM.DD，须贴合本世界观时代，如现代都市 2019.09.01、民国 1935.03.12；禁止留空）、travel（apPerTurn / advanceUnit / advanceDays；换地点扣点与日程叙事字数内置，勿写 apPerMove / advanceWords / advanceStory / play.ageAuto）",
+  opening: "opening{kicker?,title?,subtitle?,paragraphs:[至少2段开场白],waiting?,cta?}：必须写 paragraphs（每段按瘦身配额，贴合本世界观；可用占位 {name}{school}{money}{parents}）；不要写 page/html 自定义开场页代码；title/waiting/cta 可简短",
   navTabs: "navTabs[]、navSize",
   phoneAppsCfg: "phoneAppsCfg[]",
   theme: "theme{}",
@@ -525,30 +938,27 @@ const MODULE_FIELD_HINT: Record<string, string> = {
   audioRefs: "audioRefs[]（只写作品音频库已有 id，可空，勿编造）",
   platformAudioRefs: "platformAudioRefs[]（只写 platform: 前缀的平台曲目 id，可空，勿编造；不要写入 bgm 或 audioRefs）",
   avatars: "avatars{pools?,publicRandom?,match?}",
-  creation: "customAttrs[]、creation.fields / creation.builtin（建角：属性 + 字段；勿预填演技等八维）",
-  creationPools: "styles[]、identities[]、backgrounds[]、directions[]、school、parentJobs[]、zodiacs[]",
-  npcs: "npcs[]、startMet、familyWx、familyVoices",
-  relations: "relations{}",
-  contacts: "contacts{}",
-  startResources: "startMoney",
+  creation: `customAttrs[]：必须正好 ${WORLD_GEN_CUSTOM_ATTRS_COUNT} 条数值属性，每条必有明确 label（禁止「未命名」/空名）、desc（属性说明，按属性名写一句）、id/min/max/init；可含 tiers[{min,label}]；勿单独生成 fameTiers；不要预填空壳属性。creation.fields / creation.builtin（系统字段固定为姓名/性别/年龄/生日，只能改显示名；creation.fields 仅按作品明确需要生成，禁止预填身份、描述、家世、父母职业、风格、职业、星座或玩家自填占位）`,
+  npcs: "npcs[{id,name,role,kind,home,roam,bio,gender,age,tags?,relation?,metStart?,wxStart?,factionId?}]：人数见瘦身配额；每名必须 name、gender（男/女/其他）、age、bio（按配额短小传，禁止空串）；tags 优先用平台常用短标签；父母/同学/老板等统一建角色；用 relation、metStart、wxStart 配关系；禁止 familyWx/familyVoices 特例；不要写 works/代表作除非设定明确是演艺圈",
+  relations: "relations{confess?,wedding?,bridge?:{off?,perDay?},partnerPerks?}（内置②角色；勿写介绍认识/三人同行/撮合/劝和/挑拨等 bridge.modes 预置）",
+  contacts: "contacts{stages:[{id,label,min,tone?}],metrics:[{src,icon,tone?,hidden?}]}（嵌人物上方；metrics 条数自定可 hidden；禁止写死仅两项、禁止 groups/orgs/stage.groups）",
+  startResources: "startMoney（非负数字）、moneyLabel（货币名称，如 元/灵石/星币，必填，开局页与局内文案共用）",
   trainings: "trainings[]",
   sideJobs: "sideJobs[]、weekendActs[]",
-  growRules: "fameTiers[]、titles[]、bills{}",
-  income: "income[]",
+  income: "income[]、bills{}",
   gameRules: "gameRules[]",
-  economy: "bills{}、startMoney、allowance（如需要）",
-  tuning: "tuning{}",
+  titles: "titles[{id,name,tier,req,desc}]（仅在已添加头衔玩法时生成；勿写 fameTiers）",
+  endings: "endings[]、timeLimit、gradeDims（兼容旧草稿；经济规则改由养成 tuning 步骤生成）",
+  tuning: "tuning{modules?,gradeOdds?,restStress?,jobPayMul?,trainFeeMul?,economy{chargeItems?,bankrupt?,bankruptLine?,overdraftStress?,graceWeeks?,graceBillMul?}…}：只写本作品已勾玩法相关项；勿默认灌娱乐圈通告/违约/课程；扣费依据 chargeItems 须作者向自填风格，可空",
   startWeather: "weather",
-  rooms: "rooms{}、startRoom、locations[]",
+  rooms: "rooms{id:{name,desc必填非空（进入此地时的场景描述，禁止空字符串）,parent?,exits?,bg?,bgm?}}、startRoom、locations[]；每条地点生成时 desc 必须写好",
   travel: "travel{}、cars[]",
-  prompt: "prompt{scriptTone}（整段剧本基调；旧 gmIntro/worldIntro/narratorPersona 可读并入）",
-  lore: "lore[]",
-  festivals: "festivals[]",
+  prompt: "prompt{scriptTone}（系统提示词按瘦身配额，硬上限 4000；须覆盖世界设定/叙事口吻/铁律，禁止留空或只贴创作者原文）；并在同级 manifest.description 写约 100 字玩家可见简介（世界观摘要，禁止照搬故事设定原文）",
+  lore: "worldBook[]（旧详细设定已并入世界书：title/content/keywords/bindRooms/bindNpcs）",
+  festivals: "worldBook[]（旧节日已并入世界书）",
   cover: "cover{}",
-  opening: "opening{}",
   fixedEvents: "fixedEvents[]、events[]",
-  storylines: "storylines[]",
-  endings: "endings[]、timeLimit、gradeDims[]",
+  storylines: "storylines[]、sidelines[]、endings[]、timeLimit、gradeDims（主线、支线、结局；不含扣费与经济规则）",
   lookRules: "lookRules[]",
   playModInstalls: "playModInstalls[]（可空）",
   gigs: "gigs[]、gigPrices{}",
@@ -593,9 +1003,39 @@ export function mergeModContent(base: ModContent, patch: Record<string, unknown>
     }
   }
   const merged = out as ModContent;
-  // 功能注释：分模组生成易出现 startRoom 与 rooms 不同步，合并后立即纠偏
+  // 功能注释：分模组生成易出现 startRoom 与 rooms 不同步，合并后立即纠偏；空场景描述按地名补全
   healModRoomRefs(merged);
+  ensureRoomSceneDescs(merged.rooms);
   return merged;
+}
+
+/**
+ * 功能注释：修复模型常见的轻微 JSON 错误。除尾逗号外，仅在解析器明确报告
+ * “数组元素 / 属性值后缺逗号”的位置插入逗号；不猜测截断内容，避免静默灌入半截事件。
+ */
+export function parseWorldGenJson(rawJson: string): Record<string, unknown> {
+  let candidate = rawJson.replace(/,\s*([}\]])/g, "$1");
+  for (let repairCount = 0; repairCount <= 8; repairCount += 1) {
+    try {
+      const parsed = JSON.parse(candidate) as unknown;
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        throw new Error("AI 未返回 JSON 对象");
+      }
+      return parsed as Record<string, unknown>;
+    } catch (error) {
+      if (!(error instanceof SyntaxError) || repairCount >= 8) throw error;
+      const message = String(error.message || "");
+      const missingSeparator =
+        /expected ',' or '\]' after array element/i.test(message) ||
+        /expected ',' or '\}' after property value/i.test(message);
+      const match = message.match(/position\s+(\d+)/i);
+      if (!missingSeparator || !match) throw error;
+      const position = Number(match[1]);
+      if (!Number.isInteger(position) || position <= 0 || position >= candidate.length) throw error;
+      candidate = `${candidate.slice(0, position)},${candidate.slice(position)}`;
+    }
+  }
+  throw new SyntaxError("JSON 修复次数超限");
 }
 
 function parseJsonObject(raw: unknown): Record<string, unknown> {
@@ -609,11 +1049,7 @@ function parseJsonObject(raw: unknown): Record<string, unknown> {
   const start = body.indexOf("{");
   const end = body.lastIndexOf("}");
   if (start < 0 || end <= start) throw new Error("AI 未返回 JSON 对象");
-  try {
-    return JSON.parse(body.slice(start, end + 1)) as Record<string, unknown>;
-  } catch {
-    return JSON.parse(body.slice(start, end + 1).replace(/,\s*([}\]])/g, "$1")) as Record<string, unknown>;
-  }
+  return parseWorldGenJson(body.slice(start, end + 1));
 }
 
 /** 功能注释：从回复里取出 content 补丁；允许顶层直接是 content 字段，或包在 {content|patch|manifest} 里 */
@@ -631,6 +1067,27 @@ export function extractContentPatch(raw: string): Record<string, unknown> {
   return rest;
 }
 
+/**
+ * 功能注释：世界规则大类可顺带写 manifest.description（约 100 字摘要）；超限压成摘要，禁止原文长贴。
+ */
+export function extractManifestDescription(raw: string): string | undefined {
+  try {
+    const obj = parseJsonObject(raw);
+    const mf = obj.manifest;
+    if (!mf || typeof mf !== "object" || Array.isArray(mf)) return undefined;
+    const d = asNonEmptyTrimmed((mf as { description?: unknown }).description);
+    if (!d) return undefined;
+    if (d.length <= MOD_DESC_MAX) {
+      return d.length > WORLD_DESC_SUMMARY_TARGET + 40
+        ? summarizeWorldGenDescription(d, "", WORLD_DESC_SUMMARY_TARGET)
+        : d;
+    }
+    return summarizeWorldGenDescription(d, "", WORLD_DESC_SUMMARY_TARGET);
+  } catch {
+    return undefined;
+  }
+}
+
 /** 功能注释：已生成内容的精简上下文，保证后续模组设定一致 */
 export function buildGeneratedContext(mod: Mod, max = 4500): string {
   const c = mod.content ?? {};
@@ -646,14 +1103,24 @@ export function buildGeneratedContext(mod: Mod, max = 4500): string {
   if (c.rooms && typeof c.rooms === "object") {
     bits.push(`地点：${Object.entries(c.rooms as Record<string, { name?: string }>).map(([id, r]) => `${id}=${r?.name || id}`).join("、") || "（无）"}`);
   }
+  if (typeof c.startDate === "string" && c.startDate.trim()) {
+    bits.push(`开局日期：${c.startDate.trim()}`);
+  }
   if (Array.isArray(c.npcs) && c.npcs.length) {
-    bits.push(`人物：${(c.npcs as { id?: string; name?: string; role?: string }[]).map((n) => `${n.id}=${n.name}${n.role ? `(${n.role})` : ""}`).join("、")}`);
+    bits.push(
+      `人物：${(c.npcs as { id?: string; name?: string; role?: string; age?: number }[])
+        .map((n) => `${n.id}=${n.name}${n.role ? `(${n.role})` : ""}${typeof n.age === "number" ? `/${n.age}岁` : ""}`)
+        .join("、")}`,
+    );
   }
   if (Array.isArray(c.creation?.paths) && c.creation!.paths!.length) {
     bits.push(`人物线路：${c.creation!.paths!.map((p) => `${p.id}=${p.name}`).join("、")}`);
   }
   if (Array.isArray(c.storylines) && c.storylines.length) {
     bits.push(`主线：${(c.storylines as { id?: string; name?: string; title?: string }[]).map((s) => s.name || s.title || s.id).join("、")}`);
+  }
+  if (Array.isArray(c.sidelines) && c.sidelines.length) {
+    bits.push(`支线：${(c.sidelines as { id?: string; name?: string }[]).map((s) => s.name || s.id).join("、")}`);
   }
   if (Array.isArray(c.endings) && c.endings.length) {
     bits.push(`结局：${(c.endings as { id?: string; title?: string }[]).map((e) => e.title || e.id).join("、")}`);
@@ -666,13 +1133,64 @@ export function buildGeneratedContext(mod: Mod, max = 4500): string {
 }
 
 function softValidatePatch(step: WorldGenEditorStep, patch: Record<string, unknown>): string | null {
+  return softValidateBatchPatch([step.id], patch);
+}
+
+/** 功能注释：大类补丁软校验——只拦空壳；硬校验留给编辑器保存（导出供单测） */
+export function softValidateBatchPatch(stepIds: readonly string[], patch: Record<string, unknown>): string | null {
   if (!patch || typeof patch !== "object" || Array.isArray(patch)) return "补丁不是对象";
   if (!Object.keys(patch).length) return "补丁为空";
-  // 功能注释：硬校验交给 validateMod；此处只拦明显空壳，避免「成功」却什么都没写
-  const hint = MODULE_FIELD_HINT[step.id] || "";
   const keys = Object.keys(patch);
-  if (hint && keys.length === 1 && keys[0] === "features" && step.id !== "features") {
+  const ids = stepIds.map((id) => String(id || "").trim()).filter(Boolean);
+  if (
+    keys.length === 1 &&
+    keys[0] === "features" &&
+    !ids.includes("features")
+  ) {
     return "补丁与模组无关（仅 features）";
+  }
+  // 功能注释：生成人物时姓名/性别/年龄/小传必须齐；瘦身后小传宜短，骨架阶段 ≥40 字即可
+  if (ids.includes("npcs") && Array.isArray(patch.npcs)) {
+    for (const row of patch.npcs) {
+      if (!row || typeof row !== "object" || Array.isArray(row)) continue;
+      const n = row as Record<string, unknown>;
+      const name = typeof n.name === "string" ? n.name.trim() : "";
+      if (!name) return "人物缺少姓名";
+      const gender = typeof n.gender === "string" ? n.gender.trim() : "";
+      if (!gender) return `人物「${name}」缺少性别`;
+      if (typeof n.age !== "number" || !Number.isFinite(n.age)) return `人物「${name}」缺少年龄`;
+      const bio = typeof n.bio === "string" ? n.bio.trim() : "";
+      if (bio.length < 40) return `人物「${name}」小传过短（须写出贴合世界观的简介）`;
+    }
+  }
+  // 功能注释：①基础剧本基调必须由 AI 写进 scriptTone，开局不得空着或只贴设定原文占位
+  if (ids.includes("prompt")) {
+    const tone = readScriptTone(
+      patch.prompt && typeof patch.prompt === "object" && !Array.isArray(patch.prompt)
+        ? (patch.prompt as { scriptTone?: string })
+        : null,
+    );
+    if (!tone) return "缺少剧本基调 scriptTone";
+    if (tone.length > SCRIPT_TONE_MAX) return `剧本基调超过 ${SCRIPT_TONE_MAX} 字`;
+    if (tone.length < 80) return "剧本基调过短（须写出完整系统提示词）";
+  }
+  // 功能注释：时间与推进必须给出合法开局日期，发布清单与日历都依赖它
+  if (ids.includes("travelTime")) {
+    const sd = typeof patch.startDate === "string" ? patch.startDate.trim() : "";
+    if (!START_DATE_RE.test(sd)) return "缺少开局日期 startDate（YYYY.MM.DD）";
+  }
+  // 功能注释：默认生成开场白正文；仅有标题/装饰不算完成（与 authorPreview.hasOpeningCopy 对齐）
+  if (ids.includes("opening")) {
+    const opening =
+      patch.opening && typeof patch.opening === "object" && !Array.isArray(patch.opening)
+        ? (patch.opening as { paragraphs?: unknown })
+        : null;
+    const paragraphs = Array.isArray(opening?.paragraphs)
+      ? opening!.paragraphs.map((p) => String(p ?? "").trim()).filter(Boolean)
+      : [];
+    if (paragraphs.length < 2) return "开场白至少两段 paragraphs";
+    const total = paragraphs.join("").length;
+    if (total < 120) return "开场白过短";
   }
   return null;
 }
@@ -696,19 +1214,42 @@ function progressLabel(
     return done === total && total > 0 ? `全部完成 ${done}/${total}` : "准备生成…";
   }
   if (running.length > 1) {
-    const names = running.slice(0, 3).map((m) => m.name).join("、");
+    const names = running.slice(0, 3).map((m) => m.detail || m.name).join("、");
     const more = running.length > 3 ? `等 ${running.length} 项` : "";
-    return `并行生成 ${names}${more}（已完成 ${done}/${total}）`;
+    return `并行生成中：${names}${more}（已完成 ${done}/${total}）`;
   }
   const cur = modules[currentIndex] || running[0];
-  return cur ? `正在生成${cur.name} ${done + 1}/${total}` : `准备生成 0/${total}`;
+  if (!cur) return `准备生成 0/${total}`;
+  return `${cur.detail || `正在生成「${cur.name}」`}（${done + 1}/${total}）`;
 }
 
+/**
+ * 功能注释：进度行按勾选细项展开，便于展示「正在写什么」；同类仍合并为一次大类请求（见 batchId）。
+ */
 export function makeInitialProgress(moduleIds: readonly string[]): WorldGenProgress {
-  const idSet = new Set(moduleIds);
-  const modules: WorldGenModuleState[] = WORLD_GEN_EDITOR_STEPS
-    .filter((s) => idSet.has(s.id))
-    .map((s) => ({ id: s.id, name: s.name, group: s.group, status: "pending" as const }));
+  const want = [
+    ...new Set(moduleIds.map((id) => String(id || "").trim()).filter(Boolean)),
+  ];
+  const batches = resolveWorldGenBatches(want);
+  const batchIdByStep = new Map<string, string>();
+  for (const b of batches) {
+    for (const sid of b.stepIds) batchIdByStep.set(sid, b.id);
+  }
+  const knownOrder = WORLD_GEN_EDITOR_STEPS.map((s) => s.id);
+  const ordered = [
+    ...knownOrder.filter((id) => want.includes(id)),
+    ...want.filter((id) => !knownOrder.includes(id)),
+  ];
+  const modules: WorldGenModuleState[] = ordered.map((id) => {
+    const step = WORLD_GEN_EDITOR_STEPS.find((s) => s.id === id);
+    return {
+      id,
+      name: step?.name || id,
+      group: step?.group || "",
+      batchId: batchIdByStep.get(id) || `solo:${id}`,
+      status: "pending" as const,
+    };
+  });
   return {
     modules,
     currentIndex: modules.length ? 0 : -1,
@@ -748,77 +1289,290 @@ export type GenerateOneOpts = {
   cfg?: AIConfig;
 };
 
+export type WorldGenBatchProgressEvent = {
+  phase: "skeleton" | "enrich";
+  detailByStep: Record<string, string>;
+  namesByStep?: Record<string, string[]>;
+};
+
+export type GenerateBatchOpts = {
+  batch: WorldGenBatch;
+  draft: WorldGenDraft;
+  mod: Mod;
+  signal?: AbortSignal;
+  completeFn?: CompleteFn;
+  cfg?: AIConfig;
+  /** 功能注释：本次勾选细项总数，用于全选瘦身配额 */
+  selectedStepCount?: number;
+  /** 功能注释：骨架/补文阶段回调，供进度行展示「正在写什么」 */
+  onBatchProgress?: (ev: WorldGenBatchProgressEvent) => void;
+};
+
 /** 功能注释：真实调用一次 AI，生成单个模组补丁并合并；失败抛错，不写假数据 */
 export async function generateOneWorldGenModule(opts: GenerateOneOpts): Promise<{ mod: Mod; patch: Record<string, unknown> }> {
-  const cfg = await resolveCfg(opts.cfg);
-  if (opts.signal?.aborted) throw new DOMException("已取消", "AbortError");
+  return generateWorldGenBatch({
+    batch: {
+      id: opts.step.id,
+      name: opts.step.name,
+      group: opts.step.group,
+      stepIds: [opts.step.id],
+    },
+    draft: opts.draft,
+    mod: opts.mod,
+    signal: opts.signal,
+    completeFn: opts.completeFn,
+    cfg: opts.cfg,
+  });
+}
 
-  let completeFn = opts.completeFn;
-  if (!completeFn) {
-    // 功能注释：静态引入平台 LLM，禁止再拆独立 chunk（发版后旧页动态 import 404 会 22 项全挂）
-    completeFn = async (_c, messages, timeoutMs) =>
-      completeViaPlatform(messages, {
-        engineId: opts.draft.engineId,
-        moduleId: opts.step.id,
-        timeoutMs,
-        signal: opts.signal,
-      });
-  }
-
-  const engineId = opts.draft.engineId;
-  const fields = MODULE_FIELD_HINT[opts.step.id] || `与「${opts.step.name}」相关的 content 字段（${opts.step.desc}）`;
-  const ctx = buildGeneratedContext(opts.mod);
-  const polish = opts.draft.aiPolish
-    ? "若故事设定口语化，请在保留原意前提下整理结构与表达。"
-    : "尽量贴近创作者原文表述，不要过度改写。";
-
-  const messages: ChatMsg[] = [
+function buildWorldGenBatchMessages(opts: {
+  batch: WorldGenBatch;
+  draft: WorldGenDraft;
+  mod: Mod;
+  stepIds: readonly string[];
+  steps: readonly WorldGenEditorStep[];
+  phase: "skeleton" | "enrich";
+  limits: WorldGenLeanLimits;
+  skeletonPatch?: Record<string, unknown>;
+}): ChatMsg[] {
+  const { batch, draft, mod, stepIds, steps, phase, limits, skeletonPatch } = opts;
+  const engineId = draft.engineId;
+  const fieldLines = steps
+    .map((s) => {
+      const fields = MODULE_FIELD_HINT[s.id] || `与「${s.name}」相关的 content 字段（${s.desc}）`;
+      return `- ${s.name}：${fields}`;
+    })
+    .join("\n");
+  const stepNames = steps.map((s) => s.name).join("、");
+  const ctx = buildGeneratedContext(mod);
+  const polish = worldGenAiPolishPrompt(!!draft.aiPolish);
+  const forbidLine = worldGenForbidPrompt(draft.forbidGen);
+  const needPrompt = stepIds.includes("prompt");
+  const leanBlock = worldGenLeanPromptBlock(limits, phase);
+  const phaseTitle = phase === "skeleton" ? "骨架阶段" : "补长文阶段";
+  const skeletonHint =
+    phase === "enrich" && skeletonPatch
+      ? `\n已有骨架（只在其上补长文，禁止大批新增条目）：\n${JSON.stringify(skeletonPatch).slice(0, 3500)}\n`
+      : "";
+  return [
     {
       role: "system",
       content: `你是文字模拟游戏的模组设计师。只输出一个 JSON 对象，不要解释、不要 Markdown 说明。
-JSON 形如：{"content":{ ...本模组相关字段... }}。
-只写本模组需要的字段；数组条目必须带稳定 id（小写英文/数字/-_）；不要输出未要求的大段无关字段。
+JSON 形如：{"content":{ ...本大类相关字段... }${needPrompt ? `,"manifest":{"description":"约${WORLD_DESC_SUMMARY_TARGET}字简介"}` : ""}}。
+当前是「${phaseTitle}」：同类字段合并一次产出；数组条目必须带稳定 id（小写英文/数字/-_）；不要输出未要求的大段无关字段。
 ${engineStyleHint(engineId)}`,
     },
     {
       role: "user",
-      content: `作品名称：${opts.draft.title.trim()}
-故事设定：${opts.draft.setting.trim()}
+      content: `作品名称：${draft.title.trim()}
+故事设定：${draft.setting.trim()}
 创作引擎：${engineLabel(engineId)}（${engineId}）
 ${polish}
-
-当前模组：「${opts.step.group} · ${opts.step.name}」
-说明：${opts.step.desc}
-请主要产出这些字段：${fields}
-
+${forbidLine ? `${forbidLine}\n` : ""}
+当前大类：「${batch.name}」
+包含：${stepNames}
+请在同一次回复里产出这些字段：
+${fieldLines}
+${skeletonHint}
 已生成上下文（须与之一致，勿自相矛盾）：
 ${ctx || "（尚无其它模组）"}
 
-要求：内容须能被编辑器继续手改；地点/人物 id 与上下文已有 id 对齐；不要编造无法访问的外链大图。`,
+${leanBlock}
+
+要求：内容须能被编辑器继续手改；地点/人物 id 与上下文已有 id 对齐；不要编造无法访问的外链大图。
+${needPrompt ? `本批必须：1) content.prompt.scriptTone 按配额写出系统提示词（硬上限 ${SCRIPT_TONE_MAX}，禁止留空、禁止只粘贴上方「故事设定」原文）；2) manifest.description 写约 ${WORLD_DESC_SUMMARY_TARGET} 字玩家可见简介。\n` : ""}${stepIds.includes("travelTime") ? `本批必须写 content.startDate，格式严格 YYYY.MM.DD（例 2024.03.15），按上方故事设定与已生成上下文的时代/人物年龄选取，禁止留空、禁止中文日期、禁止只写 travel 不写 startDate。\n` : ""}${stepIds.includes("creation") ? `本批 customAttrs 必须正好 ${WORLD_GEN_CUSTOM_ATTRS_COUNT} 条：每条有贴合本世界观的中文名称与 desc（属性说明），禁止「未命名」、禁止空 label、禁止只写 id 不写名称、禁止再输出第 4 条空属性。\n` : ""}${stepIds.includes("startResources") ? `本批必须写 content.startMoney（非负）与 content.moneyLabel（货币名，如 元/灵石），禁止只写金额不写货币名。\n` : ""}${stepIds.includes("npcs") ? `${platformNpcTagsPromptLine()}\n人物每条必须含 name、gender、age、bio（按配额），禁止留给创作者手填空资料。` : ""}`,
     },
   ];
+}
 
-  // 功能注释：网络/空结果/解析失败至少再试 2 次；鉴权失败立即上抛
-  return withWorldGenRetries(async () => {
-    const raw = await completeFn!(cfg, messages, 120_000);
-    if (opts.signal?.aborted) throw new DOMException("已取消", "AbortError");
-    if (!String(raw || "").trim()) throw new Error("AI 返回空内容");
+function detailMapForPhase(
+  stepIds: readonly string[],
+  phase: "skeleton" | "enrich",
+  patch?: Record<string, unknown>,
+): { detailByStep: Record<string, string>; namesByStep: Record<string, string[]> } {
+  const detailByStep: Record<string, string> = {};
+  const namesByStep: Record<string, string[]> = {};
+  for (const id of stepIds) {
+    const names = patch ? worldGenStepNamesFromPatch(id, patch) : [];
+    if (names.length) namesByStep[id] = names;
+    detailByStep[id] = worldGenStepRunningDetail(id, { phase, names });
+  }
+  return { detailByStep, namesByStep };
+}
 
-    const rawPatch = extractContentPatch(String(raw));
-    const patch = sanitizeWorldGenAiPatch(opts.step.id, rawPatch);
-    const soft = softValidatePatch(opts.step, patch);
-    if (soft) throw new Error(soft);
+/**
+ * 功能注释：同类细项合并为一次大类请求；先骨架后按需补长文；禁止把同类拆成多次并行请求。
+ */
+export async function generateWorldGenBatch(opts: GenerateBatchOpts): Promise<{ mod: Mod; patch: Record<string, unknown> }> {
+  const cfg = await resolveCfg(opts.cfg);
+  if (opts.signal?.aborted) throw new DOMException("已取消", "AbortError");
 
-    const next: Mod = {
-      ...opts.mod,
-      content: mergeModContent(opts.mod.content, patch),
-    };
-    // 功能注释：整模校验；生成中途允许不完整，但 id/name 等骨架必须仍合法
-    const fatal = softValidateModSkeleton(next);
-    if (fatal.length) throw new Error(`校验失败：${fatal.join("；")}`);
+  const stepIds = opts.batch.stepIds.map((id) => String(id || "").trim()).filter(Boolean);
+  if (!stepIds.length) throw new Error("大类未包含模组");
+  const steps = stepIds
+    .map((id) => WORLD_GEN_EDITOR_STEPS.find((s) => s.id === id))
+    .filter((s): s is WorldGenEditorStep => !!s);
+  if (!steps.length) throw new Error("未知模组");
 
-    return { mod: next, patch };
-  }, { signal: opts.signal, maxRetries: WORLD_GEN_MODULE_MAX_RETRIES });
+  const selectedCount = Math.max(
+    stepIds.length,
+    Math.floor(opts.selectedStepCount ?? opts.draft.editorStepIds?.length ?? stepIds.length),
+  );
+  const limits = worldGenLeanLimits(selectedCount);
+  const doEnrich = limits.enrich && worldGenBatchNeedsEnrich(stepIds);
+
+  let completeFn = opts.completeFn;
+  /** 功能注释：仅平台默认路径在最终失败时走返还；单测注入的 completeFn 不打 refund */
+  const usedPlatformComplete = !completeFn;
+  const makeComplete = (maxTokens: number): CompleteFn => {
+    if (opts.completeFn) return opts.completeFn;
+    return async (_c, messages, timeoutMs) =>
+      completeViaPlatform(messages, {
+        engineId: opts.draft.engineId,
+        moduleId: opts.batch.id,
+        timeoutMs,
+        signal: opts.signal,
+        max_tokens: maxTokens,
+      });
+  };
+  if (!completeFn) completeFn = makeComplete(Math.min(6000, worldGenBatchMaxTokens(stepIds)));
+
+  const engineId = opts.draft.engineId;
+  const needPrompt = stepIds.includes("prompt");
+
+  const runPhase = async (
+    phase: "skeleton" | "enrich",
+    baseMod: Mod,
+    skeletonPatch?: Record<string, unknown>,
+  ): Promise<{ mod: Mod; patch: Record<string, unknown>; rawText: string; points: number }> => {
+    const messages = buildWorldGenBatchMessages({
+      batch: opts.batch,
+      draft: opts.draft,
+      mod: baseMod,
+      stepIds,
+      steps,
+      phase,
+      limits,
+      skeletonPatch,
+    });
+    const maxTokens =
+      phase === "skeleton"
+        ? Math.min(5000, worldGenBatchMaxTokens(stepIds))
+        : Math.min(7000, worldGenBatchMaxTokens(stepIds));
+    const fn = makeComplete(maxTokens);
+    let points = 0;
+    const out = await withWorldGenRetries(async () => {
+      const { text, pointsDeducted } = normalizeWorldGenCompleteResult(
+        await fn(cfg, messages, 180_000),
+      );
+      points += pointsDeducted;
+      if (opts.signal?.aborted) throw new DOMException("已取消", "AbortError");
+      if (!String(text || "").trim()) throw new Error("AI 返回空内容");
+
+      const rawText = String(text);
+      const rawPatch = extractContentPatch(rawText);
+      let patch = sanitizeWorldGenBatchPatch(stepIds, rawPatch);
+      // 功能注释：时间与推进漏写 startDate 时按题材/已有人物年龄补全，避免「缺少开局日期」整项失败
+      if (stepIds.includes("travelTime")) {
+        patch = ensureWorldGenTravelTimeStartDate(patch, opts.draft, baseMod);
+      }
+      // 功能注释：开局资金漏写货币名时按题材补全，避免行上只显示「货币」
+      if (stepIds.includes("startResources") || stepIds.includes("creation")) {
+        patch = ensureWorldGenStartMoney(patch, opts.draft);
+      }
+      const soft = softValidateBatchPatch(stepIds, patch);
+      if (soft) throw new Error(soft);
+
+      const descFromAi = needPrompt ? extractManifestDescription(rawText) : undefined;
+      const next: Mod = {
+        ...baseMod,
+        ...(descFromAi ? { description: descFromAi } : {}),
+        content: applyWorldGenForbidToContent(
+          mergeModContent(baseMod.content, patch),
+          opts.draft.forbidGen,
+        ),
+      };
+      const fatal = softValidateModSkeleton(next);
+      if (fatal.length) throw new Error(`校验失败：${fatal.join("；")}`);
+      return { mod: next, patch, rawText };
+    }, { signal: opts.signal, maxRetries: WORLD_GEN_MODULE_MAX_RETRIES });
+    return { ...out, points };
+  };
+
+  let chargedPoints = 0;
+  try {
+    opts.onBatchProgress?.({
+      phase: "skeleton",
+      ...detailMapForPhase(stepIds, "skeleton"),
+    });
+    const skeleton = await runPhase("skeleton", opts.mod);
+    chargedPoints += skeleton.points;
+    opts.onBatchProgress?.({
+      phase: "skeleton",
+      ...detailMapForPhase(stepIds, "skeleton", skeleton.patch),
+    });
+
+    if (!doEnrich) {
+      return { mod: skeleton.mod, patch: skeleton.patch };
+    }
+
+    opts.onBatchProgress?.({
+      phase: "enrich",
+      ...detailMapForPhase(stepIds, "enrich", skeleton.patch),
+    });
+    try {
+      const enriched = await runPhase("enrich", skeleton.mod, skeleton.patch);
+      chargedPoints += enriched.points;
+      // 功能注释：补文补丁叠在骨架上，保证摘要能看到名称 + 长文；时间与推进仍须保住 startDate
+      let patch = sanitizeWorldGenBatchPatch(
+        stepIds,
+        mergeModContent(
+          skeleton.patch as ModContent,
+          enriched.patch,
+        ) as unknown as Record<string, unknown>,
+      );
+      if (stepIds.includes("travelTime")) {
+        patch = ensureWorldGenTravelTimeStartDate(patch, opts.draft, skeleton.mod);
+      }
+      if (stepIds.includes("startResources") || stepIds.includes("creation")) {
+        patch = ensureWorldGenStartMoney(patch, opts.draft);
+      }
+      opts.onBatchProgress?.({
+        phase: "enrich",
+        ...detailMapForPhase(stepIds, "enrich", patch),
+      });
+      return { mod: enriched.mod, patch };
+    } catch (enrichErr) {
+      // 功能注释：补文失败仍保留骨架，避免全选时长文拖垮已出结果
+      if ((enrichErr as { name?: string })?.name === "AbortError" || opts.signal?.aborted) throw enrichErr;
+      if (isFatalAuthGenError(enrichErr)) throw enrichErr;
+      return { mod: skeleton.mod, patch: skeleton.patch };
+    }
+  } catch (e) {
+    if (usedPlatformComplete && chargedPoints > 0) {
+      await refundWorldGenPointsViaPlatform({
+        engineId,
+        moduleId: opts.batch.id,
+        points: chargedPoints,
+        reason: "module_failed_after_charge",
+        signal: opts.signal,
+      });
+    }
+    throw e;
+  }
+}
+
+/**
+ * 功能注释：每批合并后把作者「禁止生成」写回 prompt.extraRules，避免被其它字段浅合并冲掉。
+ */
+export function applyWorldGenForbidToContent(
+  content: ModContent,
+  forbidGen: string | null | undefined,
+): ModContent {
+  const block = formatWorldGenForbidBlock(forbidGen);
+  if (!block) return content;
+  const prompt = { ...(content.prompt ?? {}), extraRules: block };
+  return { ...content, prompt };
 }
 
 export type RunWorldGenOpts = {
@@ -834,17 +1588,20 @@ export type RunWorldGenOpts = {
 };
 
 /**
- * 功能注释：按依赖波次生成；同波最多 PARALLEL 路并行，波结束后合并再开下一波。
- * 普通失败不阻断同波其它项；鉴权失败停整批；取消保留已完成。
+ * 功能注释：按大类依赖波次生成；同波最多 PARALLEL 个大类并行，波结束后合并再开下一波。
+ * 进度行是勾选细项；同一大类内同类细项只打一次请求。普通失败不阻断同波其它大类；鉴权失败停整批；取消保留已完成。
  */
 export async function runWorldGenModules(opts: RunWorldGenOpts): Promise<WorldGenRunResult> {
   const cfg = await resolveCfg(opts.cfg);
 
+  const batches = resolveWorldGenBatches(opts.moduleIds);
+  const batchById = new Map(batches.map((b) => [b.id, b]));
   const progress = makeInitialProgress(opts.moduleIds);
   let mod = opts.seedMod;
   let stoppedByAuth = false;
   const done = new Set(opts.doneIds ?? []);
   const rowById = new Map(progress.modules.map((m) => [m.id, m]));
+  const selectedStepCount = progress.modules.length;
 
   const emit = (cancelled = false) => {
     const runningIdx = progress.modules.findIndex((m) => m.status === "running");
@@ -860,91 +1617,128 @@ export async function runWorldGenModules(opts: RunWorldGenOpts): Promise<WorldGe
       if (row.status === "failed" && row.error) continue;
       row.status = "failed";
       row.error = `${msg}（未继续请求）`;
+      row.detail = undefined;
     }
+  };
+
+  const stepsOfBatch = (batchId: string) => {
+    const batch = batchById.get(batchId);
+    return batch ? [...batch.stepIds] : progress.modules.filter((m) => m.batchId === batchId).map((m) => m.id);
   };
 
   if (!progress.modules.length) {
     return { mod, progress: emit(), cancelled: false };
   }
 
-  // 功能注释：已成功的先标 done，再按波次跑剩余
+  // 功能注释：已成功的细项先标 done，再按大类波次跑剩余
   for (const row of progress.modules) {
-    if (done.has(row.id)) row.status = "done";
+    if (done.has(row.id)) {
+      row.status = "done";
+      row.detail = undefined;
+    }
   }
   emit();
 
-  const waves = partitionWorldGenWaves(progress.modules.map((m) => m.id));
+  const waves = partitionWorldGenBatchWaves(batches.map((b) => b.id));
 
-  for (const waveIds of waves) {
+  for (const waveBatchIds of waves) {
     if (opts.signal?.aborted) {
       return { mod, progress: emit(true), cancelled: true };
     }
     if (stoppedByAuth) break;
 
-    const batch = waveIds
-      .map((id) => rowById.get(id)!)
-      .filter((row) => row && row.status !== "done" && !done.has(row.id));
-    if (!batch.length) continue;
+    const waveBatches = waveBatchIds
+      .map((id) => batchById.get(id)!)
+      .filter((batch) => {
+        if (!batch) return false;
+        return batch.stepIds.some((sid) => {
+          const row = rowById.get(sid);
+          return row && row.status !== "done" && !done.has(sid);
+        });
+      });
+    if (!waveBatches.length) continue;
 
-    for (const row of batch) {
-      row.status = "running";
-      row.error = undefined;
+    for (const batch of waveBatches) {
+      for (const sid of batch.stepIds) {
+        const row = rowById.get(sid);
+        if (!row || row.status === "done" || done.has(sid)) continue;
+        row.status = "running";
+        row.error = undefined;
+        row.summary = undefined;
+        row.detail = worldGenStepRunningDetail(sid, { phase: "skeleton" });
+      }
     }
     emit();
 
-    // 功能注释：同波共享波开始时的 mod 快照，避免并行写竞态；结束后再顺序合并
     const snapshotMod = mod;
     type OneResult =
       | { id: string; ok: true; patch: Record<string, unknown> }
       | { id: string; ok: false; error: unknown; aborted?: boolean };
 
-    const results = await mapPool(batch, WORLD_GEN_PARALLEL_LIMIT, async (row): Promise<OneResult> => {
+    const results = await mapPool(waveBatches, WORLD_GEN_PARALLEL_LIMIT, async (batch): Promise<OneResult> => {
       if (opts.signal?.aborted || stoppedByAuth) {
-        return { id: row.id, ok: false, error: new DOMException("已取消", "AbortError"), aborted: true };
-      }
-      const step = WORLD_GEN_EDITOR_STEPS.find((s) => s.id === row.id);
-      if (!step) {
-        return { id: row.id, ok: false, error: new Error("未知模组") };
+        return { id: batch.id, ok: false, error: new DOMException("已取消", "AbortError"), aborted: true };
       }
       try {
-        const r = await generateOneWorldGenModule({
-          step,
+        const r = await generateWorldGenBatch({
+          batch,
           draft: opts.draft,
           mod: snapshotMod,
           signal: opts.signal,
           completeFn: opts.completeFn,
           cfg,
+          selectedStepCount,
+          onBatchProgress: (ev) => {
+            for (const sid of batch.stepIds) {
+              const row = rowById.get(sid);
+              if (!row || row.status !== "running") continue;
+              row.detail =
+                ev.detailByStep[sid] ||
+                worldGenStepRunningDetail(sid, {
+                  phase: ev.phase,
+                  names: ev.namesByStep?.[sid],
+                });
+            }
+            emit();
+          },
         });
-        return { id: row.id, ok: true, patch: r.patch };
+        return { id: batch.id, ok: true, patch: r.patch };
       } catch (e) {
         if ((e as { name?: string })?.name === "AbortError" || opts.signal?.aborted) {
-          return { id: row.id, ok: false, error: e, aborted: true };
+          return { id: batch.id, ok: false, error: e, aborted: true };
         }
-        return { id: row.id, ok: false, error: e };
+        return { id: batch.id, ok: false, error: e };
       }
     });
 
     if (opts.signal?.aborted || results.some((r) => !r.ok && r.aborted && !stoppedByAuth)) {
-      for (const row of batch) {
-        if (row.status === "running") row.status = "pending";
+      for (const batch of waveBatches) {
+        for (const sid of batch.stepIds) {
+          const row = rowById.get(sid);
+          if (row?.status === "running") {
+            row.status = "pending";
+            row.detail = undefined;
+          }
+        }
       }
       return { mod, progress: emit(true), cancelled: true };
     }
 
-    // 功能注释：先处理鉴权失败，再合并成功补丁（按波内顺序，稳定可复现）
     for (const r of results) {
-      const row = rowById.get(r.id)!;
       if (r.ok) continue;
-      const msg = formatGenError(r.error);
-      row.status = "failed";
-      row.error = msg;
-      if (isFatalAuthGenError(r.error)) {
-        stoppedByAuth = true;
+      const err = shortGenError(r.error);
+      for (const sid of stepsOfBatch(r.id)) {
+        const row = rowById.get(sid);
+        if (!row || row.status === "done") continue;
+        row.status = "failed";
+        row.error = err;
+        row.detail = undefined;
       }
+      if (isFatalAuthGenError(r.error)) stoppedByAuth = true;
     }
     if (stoppedByAuth) {
       const authMsg =
-        batch.map((b) => b.error).find((e) => e && /登录|积分|密钥|API Key/i.test(e)) ||
+        progress.modules.map((b) => b.error).find((e) => e && /登录|积分|密钥|API Key/i.test(e)) ||
         "请先登录平台账号后再生成世界。";
       failRest(authMsg);
       return { mod, progress: emit(), cancelled: false };
@@ -952,13 +1746,19 @@ export async function runWorldGenModules(opts: RunWorldGenOpts): Promise<WorldGe
 
     for (const r of results) {
       if (!r.ok) continue;
-      const row = rowById.get(r.id)!;
       mod = {
         ...mod,
         content: mergeModContent(mod.content, r.patch),
       };
-      row.status = "done";
-      done.add(row.id);
+      for (const sid of stepsOfBatch(r.id)) {
+        const row = rowById.get(sid);
+        if (!row) continue;
+        row.status = "done";
+        row.error = undefined;
+        row.detail = undefined;
+        row.summary = worldGenStepResultSummary(sid, r.patch);
+        done.add(sid);
+      }
     }
     emit();
   }
@@ -966,7 +1766,7 @@ export async function runWorldGenModules(opts: RunWorldGenOpts): Promise<WorldGe
   return { mod, progress: emit(), cancelled: false };
 }
 
-/** 功能注释：只重试失败项；成功项绝不重跑 */
+/** 功能注释：只重试失败细项；成功项绝不重跑。进度 id 已是细项 id。 */
 export async function retryFailedWorldGenModules(opts: RunWorldGenOpts & {
   previous: WorldGenProgress;
 }): Promise<WorldGenRunResult> {
@@ -974,10 +1774,9 @@ export async function retryFailedWorldGenModules(opts: RunWorldGenOpts & {
   const doneIds = new Set(opts.previous.modules.filter((m) => m.status === "done").map((m) => m.id));
   return runWorldGenModules({
     ...opts,
-    moduleIds: failedIds,
+    moduleIds: failedIds.length ? failedIds : opts.moduleIds,
     doneIds,
   }).then((r) => {
-    // 合并进度：保留原成功项 + 本次结果
     const map = new Map(opts.previous.modules.map((m) => [m.id, { ...m }]));
     for (const m of r.progress.modules) map.set(m.id, m);
     const modules = opts.previous.modules.map((m) => map.get(m.id) || m);
@@ -993,9 +1792,21 @@ export async function retryOneWorldGenModule(opts: RunWorldGenOpts & {
 }): Promise<WorldGenRunResult> {
   const doneIds = new Set(opts.previous.modules.filter((m) => m.status === "done").map((m) => m.id));
   doneIds.delete(opts.moduleId);
+  // 功能注释：若传入大类 id（兼容旧调用），展开为细项；否则按细项重试
+  const selected = opts.draft.editorStepIds?.length ? opts.draft.editorStepIds : opts.moduleIds;
+  const asBatch = stepIdsForWorldGenBatch(opts.moduleId, selected);
+  const stepIds = asBatch.length && (WORLD_GEN_BATCH_CATEGORIES.some((c) => c.id === opts.moduleId) || opts.moduleId.startsWith("solo:"))
+    ? asBatch
+    : [opts.moduleId];
+  // 功能注释：同批其它细项若已成功则保留；重试时把同批失败项一并重跑更稳
+  const batchId = opts.previous.modules.find((m) => m.id === opts.moduleId)?.batchId;
+  const retryIds = batchId
+    ? opts.previous.modules.filter((m) => m.batchId === batchId && m.status !== "done").map((m) => m.id)
+    : stepIds;
+  for (const id of retryIds) doneIds.delete(id);
   return runWorldGenModules({
     ...opts,
-    moduleIds: [opts.moduleId],
+    moduleIds: retryIds.length ? retryIds : stepIds,
     doneIds,
   }).then((r) => {
     const map = new Map(opts.previous.modules.map((m) => [m.id, { ...m }]));

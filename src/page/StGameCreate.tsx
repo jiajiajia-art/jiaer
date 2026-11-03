@@ -73,7 +73,16 @@ const StGameCreate: React.FC = () => {
   const stepKey: StCreateStepKey = isStCreateStepKey(stepParam) ? stepParam : DEFAULT_STEP_KEY;
 
   const [title, setTitle] = useState('');
-  const [appId, setAppId] = useState('');
+  // 功能注释：创建模式复用本机草稿 appId，避免刷新/重挂后 save 再 create-empty 多出一条书架草稿
+  const ST_DRAFT_APP_KEY = 'st_draft_appId';
+  const [appId, setAppId] = useState(() => {
+    if (appIdFromQuery) return '';
+    try {
+      return localStorage.getItem(ST_DRAFT_APP_KEY) || '';
+    } catch {
+      return '';
+    }
+  });
   const [cfg, setCfg] = useState<StConfig>({ ...emptyConfig });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -630,12 +639,17 @@ const StGameCreate: React.FC = () => {
         const r1 = await authFetch(`${HOST_ADDRESS}/api/custom/apps/create-empty`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: title.trim(), engine: 'ST' }),
+          body: JSON.stringify({ title: title.trim() || t('create.defaultAvgGameTitle'), engine: 'ST' }),
         });
         const j1 = await r1.json();
         id = j1?.appId || j1?.data?.appId;
         if (!id) throw new Error(t('stGameCreate.noAppIdReturned'));
         setAppId(id);
+        try {
+          localStorage.setItem(ST_DRAFT_APP_KEY, String(id));
+        } catch {
+          /* ignore */
+        }
       }
 
       // 同步游戏标题到 Custom App 元数据（用于卡片标题/列表展示）

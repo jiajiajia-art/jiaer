@@ -37,14 +37,15 @@ test('人物线路去掉页面文案和娱乐圈默认路径_路径与AI生成�
   assert.match(paths, /commit\(np, ni\)/);
 });
 
-test('建角字段去掉娱乐圈载入_字段改名锁定仍在', () => {
+test('建角字段去掉娱乐圈载入_系统字段只能改名', () => {
   assert.doesNotMatch(fields, /载入娱乐圈默认选项与联动/);
   assert.doesNotMatch(fields, /loadDefault/);
   assert.doesNotMatch(fields, /RAW_CREATION/);
   assert.match(fields, /显示名称/);
-  assert.match(fields, /锁定（玩家不可改）/);
-  assert.match(fields, /在建角页隐藏/);
-  assert.match(fields, /＋ 选项/);
+  assert.match(fields, /系统字段/);
+  assert.match(fields, /始终必填、不可隐藏或删除/);
+  assert.doesNotMatch(fields, /锁定（玩家不可改）/);
+  assert.doesNotMatch(fields, /在建角页隐藏/);
 });
 
 test('建角页仍用默认引导句_不因编辑器收起文案而改玩家看见的句子', () => {

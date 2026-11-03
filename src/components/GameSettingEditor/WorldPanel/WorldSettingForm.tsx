@@ -18,6 +18,8 @@ interface WorldSettingFormProps {
     openingPlot: string;
     themeTags: Array<{ id: number; name: string; parentName: string; pathLabel?: string }>;
     selectedThemeTagIds: number[];
+    /** 当前选中且已停用的题材 id（表单标「已停用」） */
+    disabledSelectedThemeTagIds?: number[];
     audienceType: ContentAudience | null;
     targetOutputLength?: number;
     minOutputLength?: number;
@@ -99,6 +101,7 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
     openingPlot,
     themeTags,
     selectedThemeTagIds,
+    disabledSelectedThemeTagIds = [],
     audienceType,
     targetOutputLength,
     minOutputLength,
@@ -213,16 +216,17 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
                         <div className={`${styles.themeTagsWrap} ${themeTagError ? styles.themeTagsWrapError : ''}`}>
                             {displayThemeTags.map((tag) => {
                                 const selected = selectedThemeTagIds.includes(tag.id);
+                                const disabledSelected = disabledSelectedThemeTagIds.includes(tag.id);
                                 return (
                                     <button
                                         key={tag.id}
                                         type="button"
-                                        className={`${styles.themeTagChip} ${selected ? styles.themeTagChipActive : ''}`}
+                                        className={`${styles.themeTagChip} ${selected ? styles.themeTagChipActive : ''} ${disabledSelected ? styles.themeTagChipDisabled : ''}`}
                                         onClick={() => onThemeTagToggle(tag.id)}
                                         aria-pressed={selected}
-                                        title={tag.pathLabel || tag.name}
+                                        title={disabledSelected ? `${tag.pathLabel || tag.name}（已停用）` : (tag.pathLabel || tag.name)}
                                     >
-                                        {tag.name}
+                                        {tag.name}{disabledSelected ? ' · 已停用' : ''}
                                     </button>
                                 );
                             })}

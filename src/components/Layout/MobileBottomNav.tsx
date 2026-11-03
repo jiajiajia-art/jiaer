@@ -8,7 +8,7 @@ import { isCreatorRoutePath, isMiniProgramEnv } from '../../utils/miniProgram';
 import { isOperatorRole } from '../../utils/userRoles';
 import { isCreatorFrozen, isPublishBanned } from '../../lib/userPunishment';
 
-type BottomNavKey = 'home' | 'create' | 'rankings' | 'profile' | 'admin';
+type BottomNavKey = 'home' | 'bookshelf' | 'create' | 'rankings' | 'profile' | 'admin';
 
 const normalize = (path: string) => {
     const normalized = path.startsWith('/') ? path : `/${path}`;
@@ -44,6 +44,12 @@ const MobileBottomNav: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
                 labelKey: 'common.nav.home',
                 iconInactive: 'data/assetsv2/home/home.svg',
                 iconActive: 'data/assetsv2/home/home.svg',
+            },
+            {
+                key: 'bookshelf',
+                labelKey: 'common.nav.bookshelf',
+                iconInactive: 'data/assetsv2/home/bookshelf.svg',
+                iconActive: 'data/assetsv2/home/bookshelf.svg',
             },
             {
                 key: 'create',
@@ -84,6 +90,7 @@ const MobileBottomNav: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
     const activeKey = useMemo<BottomNavKey>(() => {
         if (isUnifiedProfilePath(currentPath)) return 'profile';
         if (currentPath.startsWith('/home')) return 'home';
+        if (currentPath.startsWith('/bookshelf')) return 'bookshelf';
         if (currentPath === '/create/new' || isCreatorRoutePath(currentPath)) return 'create';
         if (currentPath.startsWith('/rank')) return 'rankings';
         if (currentPath.startsWith('/admin')) return 'admin';
@@ -105,6 +112,10 @@ const MobileBottomNav: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
         switch (key) {
             case 'home':
                 navigate('/home');
+                break;
+            case 'bookshelf':
+                // 未登录也进入书架页，由页面展示登录入口
+                navigate('/bookshelf');
                 break;
             case 'create':
                 if (!ensureAuthenticated()) return;

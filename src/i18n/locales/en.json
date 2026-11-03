@@ -162,7 +162,8 @@
       "create": "Create",
       "profile": "Profile",
       "admin": "Admin",
-      "rankings": "Rankings"
+      "rankings": "Rankings",
+      "bookshelf": "Library"
     },
     "expand": "Expand",
     "minimize": "Minimize",
@@ -314,6 +315,7 @@
     "editorSubmit": {
       "missingData": "Missing required data, cannot submit",
       "themeTagRequired": "Game tags are required, select up to 2",
+    "themeTagDisabled": "This theme is disabled. Pick an enabled theme before submitting.",
       "noChangesToSave": "No changes to save",
       "tagSaveFailed": "Failed to save game tags, please try again",
       "panelNotSupported": "Current panel does not support submission",
@@ -1101,6 +1103,7 @@
   },
   "nav": {
     "home": "Home",
+    "bookshelf": "Library",
     "categories": "Categories",
     "create": "Create",
     "warehouse": "Warehouse",

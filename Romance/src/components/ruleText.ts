@@ -1,5 +1,6 @@
 import { STAT_LABELS, type StatKey } from "../game/data";
 import { FIXED_METRICS, QUEST_STATE_LABEL } from "../game/fixedEvents";
+import { SIDE_STATE_LABEL } from "../lib/sidelines";
 import { LIVE_LOCATIONS as LOCATIONS, LIVE_PEOPLE as PEOPLE, LIVE_ITEMS as ALL_ITEMS, allMods } from "../mods/registry";
 const modName = (id: string) => allMods().find((m) => m.id === id)?.name ?? (id || "未选 MOD");
 import { liveFactions } from "../game/factions";
@@ -27,6 +28,7 @@ export function condBrief(c: FixedCond, events: FixedEvent[] = []): string {
     case "flag": return `「${c.key || "未命名"}」${op(c.op)}${c.value}`;
     case "clock": return `${c.from}~${c.to}`;
     case "quest": return `「${c.key || "未选"}」${QUEST_STATE_LABEL[c.state]}`;
+    case "side": return `支线「${c.key || "未选"}」${SIDE_STATE_LABEL[c.state]}`;
     case "faction": return `${faction(c.key)}声望${op(c.op)}${c.value}`;
     case "visited": return `去过${place(c.key)}`;
     case "relSet": return `${(c.keys ?? []).map(person).join("、") || "（未选人物）"}中${c.need ? `至少 ${c.need} 人` : "全部"}好感${op(c.op)}${c.value}`;

@@ -20,7 +20,7 @@ export const EDITOR_HUB_GROUPS: readonly {
   scope: string;
 }[] = Object.freeze([
   { id: "now", title: "本局修订", scope: "即改即生效" },
-  { id: "story", title: "剧情编排", scope: "条件达成即上演" },
+  { id: "story", title: "剧情", scope: "条件达成即上演" },
   { id: "mod", title: "世界观", scope: "新局生效 · 可导出分享" },
 ]);
 
@@ -80,12 +80,12 @@ export const EDITOR_HUB_MENUS: readonly EditorHubMenu[] = Object.freeze([
     group: "本局修订",
     scope: "即改即生效",
     label: "世界书",
-    hint: "收录世界设定词条，对话中提及关键词时，所有角色都会知晓",
+    hint: "名称 · 正文 · 关键词，挂本作品地点或人物；在地点、人物在场或提到关键词时注入",
   },
   {
     id: "fixed",
     groupId: "story",
-    group: "剧情编排",
+    group: "剧情",
     scope: "条件达成即上演",
     label: "剧情桥段",
     hint: "预先写好想看的剧情桥段或事件链，条件达成时自动上演；可一句话让 AI 帮写",
@@ -93,7 +93,7 @@ export const EDITOR_HUB_MENUS: readonly EditorHubMenu[] = Object.freeze([
   {
     id: "cg",
     groupId: "story",
-    group: "剧情编排",
+    group: "剧情",
     scope: "条件达成即上演",
     label: "CG 图鉴",
     hint: "上传专属插图并设置解锁条件，达成后收入图鉴",
@@ -101,7 +101,7 @@ export const EDITOR_HUB_MENUS: readonly EditorHubMenu[] = Object.freeze([
   {
     id: "audio",
     groupId: "story",
-    group: "剧情编排",
+    group: "剧情",
     scope: "条件达成即上演",
     label: "音频库",
     hint: "BGM、短音效、环境氛围音统一管理；剧情、地点、触发器与皮肤从这里选音频",
@@ -109,7 +109,7 @@ export const EDITOR_HUB_MENUS: readonly EditorHubMenu[] = Object.freeze([
   {
     id: "faction",
     groupId: "story",
-    group: "剧情编排",
+    group: "剧情",
     scope: "条件达成即上演",
     label: "阵营派系",
     hint: "自定义阵营与成员立场；声望影响态度、店铺价格与事件分支",
@@ -117,7 +117,7 @@ export const EDITOR_HUB_MENUS: readonly EditorHubMenu[] = Object.freeze([
   {
     id: "timeline",
     groupId: "story",
-    group: "剧情编排",
+    group: "剧情",
     scope: "条件达成即上演",
     label: "复盘时间线",
     hint: "自动记录时间、地点、好感、属性、事件与目标变动；可回历史点或开平行分支",
@@ -125,7 +125,7 @@ export const EDITOR_HUB_MENUS: readonly EditorHubMenu[] = Object.freeze([
   {
     id: "end",
     groupId: "story",
-    group: "剧情编排",
+    group: "剧情",
     scope: "条件达成即上演",
     label: "结局",
     hint: "设计属于这个世界的结局，以及抵达它的条件",

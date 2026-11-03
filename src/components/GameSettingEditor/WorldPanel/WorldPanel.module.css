@@ -383,6 +383,10 @@
     border-color: #8E2135;
 }
 
+.themeTagChipDisabled {
+    opacity: 0.72;
+    border-style: dashed;
+}
 .themeTagChipActive {
     border-color: #8E2135;
     background: #8E2135;

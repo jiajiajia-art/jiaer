@@ -1,35 +1,33 @@
-import { IconChevronDown, IconClose, IconLock } from "../lib/icons";
-import { useState } from "react";
+import { IconChevronDown, IconClose } from "../lib/icons";
+import { useEffect, useState } from "react";
 import {
-  RAW_BACKGROUNDS, RAW_STAT_LABELS, RAW_STAT_ORDER,
-  type BuiltinFieldCfg, type BuiltinFieldKey, type CreationCopy, type CreationField, type CreationFieldType, type CreationOptCat, type OptFx, type Option, type StatKey,
+  RAW_STAT_LABELS, RAW_STAT_ORDER,
+  type BuiltinFieldCfg, type BuiltinFieldKey, type CreationCopy, type CreationField, type CreationFieldType, type OptFx, type Option, type StatKey,
 } from "../game/data";
+import { normalizeGenderOptions, sanitizeCreationBuiltin, SYSTEM_CREATION_FIELDS } from "../game/creationSystemFields";
 import type { AttrDef } from "../lib/types";
 import { OPT_METRICS, fxSummary } from "../game/optFx";
+import { AttrDefForm } from "./ModAttrsEditor";
+import {
+  CREATION_ITEM_ADD_TYPES,
+  creationAttrKindLabel,
+  newCurrencyAttr,
+  newNumberAttr,
+  type CreationItemAddType,
+} from "../lib/creationItems";
 
-/* 模组编辑器 · 建角字段：内置字段（改名 / 隐藏 / 锁定固定值 / 选项与联动）+ 创作者自定义字段。
- * 选项联动：每个选项可限定「仅在某些人物线路 / 家庭背景下出现」，建角页自动过滤。 */
+/* 模组编辑器 · 建角字段（统一列表）：
+ * 系统四项（姓名/性别/年龄/生日）→ 开局资金（货币）→ 自定义数值/货币/文本/单选/日期。
+ * 对创作者不再拆「属性」「字段」「开局资金」三块；单一「＋ 添加」选类型。 */
 const inp = "min-w-0 w-full rounded-lg border border-line bg-paper px-2 py-1 text-[12.5px] text-ink outline-none focus:border-jade";
 const btn = "rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40";
-const TYPE_LABEL: Record<CreationFieldType | "radio", string> = { text: "文本", textarea: "长文本", select: "下拉", number: "数值", radio: "单选" };
+const TYPE_LABEL: Record<CreationFieldType | "date" | "currency", string> = {
+  text: "文本", textarea: "长文本", select: "下拉", number: "数值", radio: "单选", date: "日期", currency: "货币",
+};
 
-type Builtin = { k: BuiltinFieldKey; label: string; type: CreationFieldType | "radio"; cat?: CreationOptCat; note?: string; pool?: boolean }; // pool：选项池字段，只能改名 / 隐藏
-const BUILTINS: Builtin[] = [
-  { k: "name", label: "姓名", type: "text" },
-  { k: "gender", label: "性别", type: "radio", note: "固定值填：女 / 男 / 其他" },
-  { k: "identity", label: "出道身份", type: "select", cat: "identityOpts" },
-  { k: "description", label: "人物描述 / 气质设定", type: "textarea" },
-  { k: "klass", label: "出身阶层", type: "select", cat: "klassOpts" },
-  { k: "background", label: "家世叙述", type: "select", cat: "backgroundOpts" },
-  { k: "fatherJob", label: "父亲职业", type: "select", cat: "parentJobs", note: "与母亲职业共用选项池" },
-  { k: "motherJob", label: "母亲职业", type: "select", cat: "parentJobs", note: "与父亲职业共用选项池" },
-  { k: "extra", label: "玩家自填字段", type: "text", note: "建角页底部「自定义字段名 / 内容」" },
-  { k: "style", label: "外形风格", type: "select", pool: true, note: "选项与开局加成在「建角选项池」里编辑" },
-  { k: "family", label: "家庭背景", type: "select", pool: true, note: "选项与开局加成在「建角选项池」里编辑" },
-  { k: "direction", label: "职业方向", type: "select", pool: true, note: "选项与开局加成在「建角选项池」里编辑" },
-  { k: "zodiac", label: "星座", type: "select", pool: true, note: "由生日推算；隐藏 = 关闭星座，也不结算星座加成。性格与加成在「建角选项池」里编辑" },
-];
-const uid = () => `f_${Math.random().toString(36).slice(2, 7)}`;
+const BUILTINS = SYSTEM_CREATION_FIELDS.map((field) => ({ ...field, k: field.key as BuiltinFieldKey }));
+const fieldUid = () => `f_${Math.random().toString(36).slice(2, 7)}`;
+const attrUid = () => `attr_${Math.random().toString(36).slice(2, 7)}`;
 
 function Chips({ all, value, onChange }: { all: { id: string; name: string }[]; value?: string[]; onChange: (v?: string[]) => void }) {
   const v = value ?? [];
@@ -124,64 +122,73 @@ export function OptFxEditor({ value, onChange, attrs, npcs, statLabels }: {
   );
 }
 
-export default function ModCreationFieldsEditor({ creation, parentJobs, backgrounds, onChange, attrs = [], npcs = [], statLabels = {} }: {
-  creation?: CreationCopy; parentJobs?: string[]; backgrounds?: Option[];
-  onChange: (p: { creation: CreationCopy; parentJobs?: string[] }) => void;
+export default function ModCreationFieldsEditor({ creation, backgrounds, onChange, attrs = [], npcs = [], statLabels = {}, startMoney, moneyLabel, focusAuthorField, onAttrs, onStartMoney, onMoneyLabel }: {
+  creation?: CreationCopy; backgrounds?: Option[];
+  onChange: (p: { creation: CreationCopy }) => void;
   attrs?: AttrDef[]; npcs?: { id: string; name: string }[]; statLabels?: Partial<Record<StatKey, string>>;
+  /** 功能注释：开局资金并入建角字段列表的货币项，不再单独大栏 */
+  startMoney?: number;
+  /** 功能注释：货币显示名（元 / 灵石…），与金额一并必填 */
+  moneyLabel?: string;
+  /** 功能注释：预览补全弹窗定位时传入 author-field-*，展开并高亮对应行 */
+  focusAuthorField?: string | null;
+  onAttrs?: (v?: AttrDef[]) => void;
+  onStartMoney?: (v: number | undefined) => void;
+  onMoneyLabel?: (v: string | undefined) => void;
 }) {
   const cc = creation ?? {};
-  const jobs = parentJobs ?? [];
   const [open, setOpen] = useState<string | null>(null);
+  const [picking, setPicking] = useState(false);
+  const [flashMoney, setFlashMoney] = useState(false);
+  // 功能注释：补全弹窗点「开局资金」→ 展开该行并短暂高亮，方便直接改金额/货币名
+  useEffect(() => {
+    if (focusAuthorField !== "author-field-start-money") return;
+    setOpen("startMoney");
+    setFlashMoney(true);
+    const t = window.setTimeout(() => setFlashMoney(false), 2600);
+    return () => window.clearTimeout(t);
+  }, [focusAuthorField]);
   const paths = (cc.paths ?? []).map((p) => ({ id: p.id, name: p.name }));
-  const bgs = (backgrounds?.length ? backgrounds : RAW_BACKGROUNDS).map((b) => ({ id: b.id, name: b.name }));
-  const commit = (patch: Partial<CreationCopy>, nj: string[] | undefined = parentJobs) => onChange({ creation: { ...cc, ...patch }, parentJobs: nj });
+  const bgs = (backgrounds ?? []).map((b) => ({ id: b.id, name: b.name }));
+  // 功能注释：每次写入都清洗 builtin，旧稿残留的系统外键当场丢掉
+  const commit = (patch: Partial<CreationCopy>) => {
+    const merged = { ...cc, ...patch };
+    merged.builtin = sanitizeCreationBuiltin(merged.builtin);
+    onChange({ creation: merged });
+  };
   const cfg = (k: BuiltinFieldKey): BuiltinFieldCfg => cc.builtin?.[k] ?? {};
   const setCfg = (k: BuiltinFieldKey, p: Partial<BuiltinFieldCfg>) => {
     const n = { ...cfg(k), ...p };
     (Object.keys(n) as (keyof BuiltinFieldCfg)[]).forEach((x) => { if (n[x] === undefined || n[x] === "" || n[x] === false) delete n[x]; });
     const b = { ...cc.builtin, [k]: n };
     if (!Object.keys(n).length) delete b[k];
-    commit({ builtin: Object.keys(b).length ? b : undefined });
-  };
-  const pool = (cat: CreationOptCat) => (cat === "parentJobs" ? jobs : cc[cat] ?? []);
-  const setPool = (cat: CreationOptCat, list: string[]) => {
-    const clean = list;
-    if (cat === "parentJobs") commit({}, clean.length ? clean : undefined);
-    else commit({ [cat]: clean.length ? clean : undefined });
-  };
-  const links = (cat: CreationOptCat) => cc.optLinks?.[cat] ?? {};
-  const setLink = (cat: CreationOptCat, opt: string, p: { paths?: string[]; bgs?: string[] }) => {
-    const cur = { ...links(cat)[opt], ...p };
-    if (!cur.paths) delete cur.paths;
-    if (!cur.bgs) delete cur.bgs;
-    const m = { ...links(cat), [opt]: cur };
-    if (!Object.keys(cur).length) delete m[opt];
-    commit({ optLinks: { ...cc.optLinks, [cat]: m } });
-  };
-  const renameOpt = (cat: CreationOptCat, i: number, v: string) => {
-    const list = pool(cat);
-    const old = list[i];
-    const l = links(cat);
-    const m = { ...l };
-    if (m[old]) { m[v] = m[old]; delete m[old]; }
-    const nl = list.map((x, j) => (j === i ? v : x));
-    if (cat === "parentJobs") onChange({ creation: { ...cc, optLinks: { ...cc.optLinks, [cat]: m } }, parentJobs: nl });
-    else commit({ [cat]: nl, optLinks: { ...cc.optLinks, [cat]: m } });
+    commit({ builtin: b });
   };
   const fields = cc.fields ?? [];
   const setFields = (l: CreationField[]) => commit({ fields: l.length ? l : undefined });
   const setField = (id: string, p: Partial<CreationField>) => setFields(fields.map((f) => (f.id === id ? { ...f, ...p } : f)));
+  const attrList = attrs ?? [];
+  const setAttrs = (l: AttrDef[]) => onAttrs?.(l.length ? l : undefined);
+  const setAttr = (id: string, p: Partial<AttrDef>) => setAttrs(attrList.map((a) => (a.id === id ? { ...a, ...p } : a)));
 
-  const row = (key: string, id: string, title: string, type: string, badges: React.ReactNode, children: React.ReactNode) => {
+  const row = (key: string, id: string, title: string, type: string, badges: React.ReactNode, children: React.ReactNode, extra?: React.ReactNode, opts?: { authorField?: string; flash?: boolean }) => {
     const isOpen = open === id;
     return (
-      <div key={key} className="rounded-xl border border-line bg-paper">
-        <button type="button" onClick={() => setOpen(isOpen ? null : id)} className="flex w-full items-center gap-2 px-3 py-2.5 text-left">
-          <span className="text-[13px] font-semibold text-ink">{title}</span>
-          <span className="rounded-full bg-paper-2 px-2 py-0.5 text-[10.5px] text-ink-soft">{type}</span>
-          {badges}
-          <span className={`ml-auto text-ink-soft transition ${isOpen ? "rotate-180" : ""}`}><IconChevronDown size={12} /></span>
-        </button>
+      <div
+        key={key}
+        data-author-field={opts?.authorField}
+        tabIndex={opts?.authorField ? -1 : undefined}
+        className={`rounded-xl border bg-paper transition ${opts?.flash ? "border-coral ring-2 ring-coral/45 shadow-[0_0_0_3px_color-mix(in_srgb,var(--coral)_18%,transparent)]" : "border-line"}`}
+      >
+        <div className="flex items-center gap-2 px-3 py-2.5">
+          <button type="button" onClick={() => setOpen(isOpen ? null : id)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+            <span className="text-[13px] font-semibold text-ink">{title}</span>
+            <span className="rounded-full bg-paper-2 px-2 py-0.5 text-[10.5px] text-ink-soft">{type}</span>
+            {badges}
+            <span className={`ml-auto text-ink-soft transition ${isOpen ? "rotate-180" : ""}`}><IconChevronDown size={12} /></span>
+          </button>
+          {extra}
+        </div>
         {isOpen && <div className="space-y-2.5 border-t border-line px-3 py-3">{children}</div>}
       </div>
     );
@@ -191,67 +198,119 @@ export default function ModCreationFieldsEditor({ creation, parentJobs, backgrou
   );
   const lbl = "mb-0.5 block text-[11px] text-ink-soft";
 
-  const optionList = (cat: CreationOptCat) => {
-    const list = pool(cat);
-    const l = links(cat);
-    return (
-      <div className="space-y-1.5">
-        <span className={lbl}>选项（{list.length || "未设置 → 玩家自由输入 / 沿用默认"}）· 点开每项可限定出现条件</span>
-        {list.map((o, i) => (
-          <details key={i} className="rounded-lg border border-line/70 bg-paper-2/50 px-2 py-1.5">
-            <summary className="flex cursor-pointer list-none items-center gap-1.5">
-              <input className={inp} value={o} onClick={(e) => e.stopPropagation()} onChange={(e) => renameOpt(cat, i, e.target.value)} />
-              {(l[o]?.paths || l[o]?.bgs) && <Badge tone="jade">已联动</Badge>}
-              <button type="button" className="shrink-0 px-1 text-ink-soft hover:text-coral" aria-label="删除选项"
-                onClick={(e) => { e.preventDefault(); setPool(cat, list.filter((_, j) => j !== i)); }}></button>
-            </summary>
-            <div className="mt-1.5 space-y-1.5">
-              {paths.length > 0 && <div><span className={lbl}>仅在这些人物线路出现</span><Chips all={paths} value={l[o]?.paths} onChange={(v) => setLink(cat, o, { paths: v })} /></div>}
-              <div><span className={lbl}>仅在这些家庭背景出现</span><Chips all={bgs} value={l[o]?.bgs} onChange={(v) => setLink(cat, o, { bgs: v })} /></div>
-            </div>
-          </details>
-        ))}
-        <button type="button" className={btn} onClick={() => setPool(cat, [...list, `新选项${list.length + 1}`])}>＋ 选项</button>
-      </div>
-    );
+  /** 功能注释：同一「＋ 添加」按类型写入 fields 或 customAttrs，不再分「添加属性 / 添加字段」 */
+  const addItem = (kind: CreationItemAddType) => {
+    setPicking(false);
+    if (kind === "number") {
+      const a = newNumberAttr(attrUid());
+      setAttrs([...attrList, a]);
+      setOpen(a.id);
+      return;
+    }
+    if (kind === "currency") {
+      const a = newCurrencyAttr(attrUid());
+      setAttrs([...attrList, a]);
+      setOpen(a.id);
+      return;
+    }
+    const type: CreationFieldType = kind === "radio" ? "radio" : kind === "date" ? "date" : "text";
+    const f: CreationField = { id: fieldUid(), label: "", type, required: false };
+    setFields([...fields, f]);
+    setOpen(f.id);
   };
 
   return (
     <div className="space-y-2">
-      <p className="text-[11px] leading-relaxed text-ink-soft">
-        建角页显示哪些字段、叫什么、能不能改都在这里配。<b className="text-ink">锁定</b> = 玩家不可修改，固定为你填的值；选项可限定只在某些人物线路 / 家庭背景下出现（建角页自动过滤，避免矛盾组合）。
-      </p>
+      <div className="mb-1">
+        <p className="text-[12px] font-bold text-ink">建角字段</p>
+        <p className="text-[11px] leading-relaxed text-ink-soft">
+          建角要填的项都在这里。姓名、性别、年龄、生日是系统固定项（不能改类型、不能删），排在最前；开局资金是货币项。其余用下方「添加」选类型：文本、单选、数值、日期、货币。数值可配范围、开局值、分档（多少分叫什么）、是否隐藏、是否上状态栏。
+        </p>
+      </div>
 
       {BUILTINS.map((b) => {
         const c = cfg(b.k);
         return (
           row(b.k, b.k, c.label || b.label, TYPE_LABEL[b.type],
-            <>{c.locked && <Badge tone="gold">锁定</Badge>}{c.hidden && <Badge tone="soft">已隐藏</Badge>}<Badge tone="soft">内置</Badge></>, <>
-            <div className="grid grid-cols-2 gap-2">
-              <label><span className={lbl}>显示名称</span><input className={inp} value={c.label ?? ""} placeholder={b.label} onChange={(e) => setCfg(b.k, { label: e.target.value })} /></label>
-              {b.k !== "extra" && !b.pool && <label><span className={lbl}>固定值（锁定时使用）</span><input className={inp} value={c.value ?? ""} placeholder="留空 = 随机生成后锁住" onChange={(e) => setCfg(b.k, { value: e.target.value })} /></label>}
-            </div>
-            <div className="flex flex-wrap gap-4">
-              {!b.pool && <Toggle on={!!c.locked} onClick={() => setCfg(b.k, { locked: !c.locked })}>锁定（玩家不可改）</Toggle>}
-              <Toggle on={!!c.hidden} onClick={() => setCfg(b.k, { hidden: !c.hidden })}>在建角页隐藏</Toggle>
-            </div>
-            {b.note && <p className="text-[10.5px] text-ink-soft">{b.note}</p>}
-            {b.cat && optionList(b.cat)}
+            <><Badge tone="jade">系统字段</Badge><Badge tone="gold">必填</Badge></>, <>
+            <label><span className={lbl}>显示名称</span><input className={inp} value={c.label ?? ""} placeholder={b.label} onChange={(e) => setCfg(b.k, { label: e.target.value })} /></label>
+            <p className="text-[10.5px] text-ink-soft">类型固定为「{TYPE_LABEL[b.type]}」，始终必填、不可隐藏或删除。</p>
+            {b.k === "gender" && (() => {
+              const genderOptions = normalizeGenderOptions(c.options);
+              return <div className="space-y-1.5">
+                <span className={lbl}>性别选项（男 / 女不可删除）</span>
+                {genderOptions.map((option, index) => <div key={`${option}-${index}`} className="flex items-center gap-1.5">
+                  <input className={inp} value={option} disabled={option === "男" || option === "女"}
+                    onChange={(e) => setCfg("gender", { options: normalizeGenderOptions(genderOptions.map((item, i) => i === index ? e.target.value : item)) })} />
+                  {option !== "男" && option !== "女" && <button type="button" className={btn} onClick={() => setCfg("gender", { options: genderOptions.filter((_, i) => i !== index) })}>删除</button>}
+                </div>)}
+                <button type="button" className={btn} onClick={() => setCfg("gender", { options: [...genderOptions, `自定义性别 ${genderOptions.length - 1}`] })}>＋ 添加性别</button>
+              </div>;
+            })()}
           </>)
         );
       })}
 
-      {fields.map((f) => (
-        row(f.id, f.id, f.label || "未命名字段", TYPE_LABEL[f.type],
-          <>{f.locked && <Badge tone="gold">锁定</Badge>}{(f.paths || f.bgs) && <Badge tone="jade">条件出现</Badge>}</>, <>
+      {/* 功能注释：开局资金必填；行上类型位展示可改的货币名称（元/灵石），不再写死「货币」 */}
+      {row("startMoney", "startMoney", "开局资金", (moneyLabel?.trim() || "货币名称"),
+        <Badge tone="gold">必填</Badge>,
+        <>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <label>
+              <span className={lbl}>货币名称 *</span>
+              <input
+                data-author-field-input="author-field-start-money-name"
+                className={`${inp} ${!(moneyLabel?.trim()) ? "!border-danger" : ""}`}
+                value={moneyLabel ?? ""}
+                placeholder="如：元 / 灵石 / 星币"
+                onChange={(e) => onMoneyLabel?.(e.target.value.trim() ? e.target.value : undefined)}
+              />
+            </label>
+            <label>
+              <span className={lbl}>开局金额 *</span>
+              <input
+                data-author-field-input="author-field-start-money-amount"
+                type="number"
+                min={0}
+                className={`${inp} ${typeof startMoney !== "number" ? "!border-danger" : ""}`}
+                value={typeof startMoney === "number" ? startMoney : ""}
+                placeholder="0"
+                onChange={(e) => {
+                  const v = e.target.value;
+                  onStartMoney?.(v === "" ? undefined : Math.max(0, Number(v) || 0));
+                }}
+              />
+            </label>
+          </div>
+          <p className="text-[10.5px] text-ink-soft">默认金额 0（合法）；货币名称会用在开局页与游戏内资金文案。两项都填才算完成。</p>
+        </>,
+        undefined,
+        { authorField: "author-field-start-money", flash: flashMoney })}
+
+      {attrList.map((a, i) => (
+        row(a.id, a.id, a.label || "未命名", creationAttrKindLabel(a),
+          <>{a.pin && <Badge tone="jade">状态栏</Badge>}{a.hidden && <Badge tone="soft">隐藏</Badge>}{(a.tiers?.length ?? 0) > 0 && <Badge tone="soft">{`${a.tiers!.length} 档`}</Badge>}</>,
+          <AttrDefForm a={a} onChange={(p) => setAttr(a.id, p)} />,
+          <>
+            <button type="button" disabled={!i} className={`${btn} !px-1.5`} onClick={() => { const l = [...attrList]; [l[i - 1], l[i]] = [l[i], l[i - 1]]; setAttrs(l); }} aria-label="上移">↑</button>
+            <button type="button" className="px-1 text-ink-soft hover:text-coral" onClick={() => setAttrs(attrList.filter((x) => x.id !== a.id))} aria-label="删除"><IconClose size={14} /></button>
+          </>)
+      ))}
+
+      {fields.map((f, fieldIndex) => (
+        row(f.id, f.id, f.label || "未命名字段", TYPE_LABEL[f.type] ?? f.type,
+          <>{f.required && <Badge tone="gold">必填</Badge>}{(f.paths || f.bgs) && <Badge tone="jade">条件出现</Badge>}</>, <>
           <div className="grid grid-cols-2 gap-2">
             <label><span className={lbl}>字段名</span><input className={inp} value={f.label} onChange={(e) => setField(f.id, { label: e.target.value })} placeholder="如：座右铭" /></label>
             <label><span className={lbl}>类型</span>
               <select className={inp} value={f.type} onChange={(e) => setField(f.id, { type: e.target.value as CreationFieldType })}>
-                {(["text", "textarea", "select", "number"] as const).map((t) => <option key={t} value={t}>{TYPE_LABEL[t]}</option>)}
+                {(["text", "radio", "date"] as const).map((t) => <option key={t} value={t}>{TYPE_LABEL[t]}</option>)}
+                {f.type === "textarea" && <option value="textarea">{TYPE_LABEL.textarea}（旧字段）</option>}
+                {f.type === "select" && <option value="select">{TYPE_LABEL.select}（旧字段）</option>}
+                {f.type === "number" && <option value="number">{TYPE_LABEL.number}（旧字段）</option>}
               </select>
             </label>
-            <label><span className={lbl}>{f.locked ? "固定值" : "默认值"}</span><input className={inp} value={f.init ?? ""} onChange={(e) => setField(f.id, { init: e.target.value || undefined })} /></label>
+            <label><span className={lbl}>默认值</span><input className={inp} value={f.init ?? ""} onChange={(e) => setField(f.id, { init: e.target.value || undefined })} /></label>
             {f.type === "number" ? (
               <div className="grid grid-cols-2 gap-1">
                 <label><span className={lbl}>最小</span><input type="number" className={inp} value={f.min ?? ""} onChange={(e) => setField(f.id, { min: e.target.value === "" ? undefined : Number(e.target.value) })} /></label>
@@ -261,16 +320,17 @@ export default function ModCreationFieldsEditor({ creation, parentJobs, backgrou
               <label><span className={lbl}>占位提示</span><input className={inp} value={f.placeholder ?? ""} onChange={(e) => setField(f.id, { placeholder: e.target.value || undefined })} /></label>
             )}
           </div>
-          {f.type === "select" && (
+          {(f.type === "select" || f.type === "radio") && (
             <label><span className={lbl}>选项（一行一个）</span>
               <textarea className={inp} rows={3} value={(f.options ?? []).join("\n")} onChange={(e) => setField(f.id, { options: e.target.value.split("\n") })} />
             </label>
           )}
-          {f.type === "select" && (f.options ?? []).some((o) => String(o ?? "").trim()) && (
+          {(f.type === "select" || f.type === "radio") && (f.options ?? []).some((o) => String(o ?? "").trim()) && (
             <div className="space-y-1 rounded-lg border border-line/70 bg-paper-2/50 p-2">
-              <span className={lbl}>选项的开局效果 · 玩家选中哪项就结算哪项（可不填）</span>
+              <span className={lbl}>选项条件与开局效果（可不填）</span>
               {[...new Set((f.options ?? []).map((o) => String(o ?? "").trim()).filter(Boolean))].map((o) => {
                 const s = fxSummary(f.optFx?.[o], { attr: (id) => attrs.find((a) => a.id === id)?.label, npc: (id) => npcs.find((n) => n.id === id)?.name });
+                const link = f.optionLinks?.[o];
                 return (
                   <details key={o} className="rounded-md border border-line/60 bg-paper px-2 py-1">
                     <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[12px]">
@@ -278,7 +338,9 @@ export default function ModCreationFieldsEditor({ creation, parentJobs, backgrou
                       <span className={`min-w-0 flex-1 truncate text-[10.5px] ${s.length ? "text-jade" : "text-ink-soft"}`}>{s.length ? s.join(" · ") : "无效果"}</span>
                       <span className="text-[11px] text-ink-soft">›</span>
                     </summary>
-                    <div className="mt-1.5">
+                    <div className="mt-1.5 space-y-2">
+                      {paths.length > 0 && <div><span className={lbl}>仅在这些人物线路出现</span><Chips all={paths} value={link?.paths} onChange={(v) => setField(f.id, { optionLinks: { ...(f.optionLinks ?? {}), [o]: { ...(link ?? {}), paths: v } } })} /></div>}
+                      {bgs.length > 0 && <div><span className={lbl}>仅在这些家庭背景出现</span><Chips all={bgs} value={link?.bgs} onChange={(v) => setField(f.id, { optionLinks: { ...(f.optionLinks ?? {}), [o]: { ...(link ?? {}), bgs: v } } })} /></div>}
                       <OptFxEditor value={f.optFx?.[o]} attrs={attrs} npcs={npcs} statLabels={{ ...RAW_STAT_LABELS, ...statLabels }}
                         onChange={(v) => { const m = { ...(f.optFx ?? {}) }; if (v) m[o] = v; else delete m[o]; setField(f.id, { optFx: Object.keys(m).length ? m : undefined }); }} />
                     </div>
@@ -288,15 +350,36 @@ export default function ModCreationFieldsEditor({ creation, parentJobs, backgrou
             </div>
           )}
           <label><span className={lbl}>给 AI 的说明（可选）</span><input className={inp} value={f.desc ?? ""} placeholder="这个字段代表什么、剧情里怎么体现" onChange={(e) => setField(f.id, { desc: e.target.value || undefined })} /></label>
-          <Toggle on={!!f.locked} onClick={() => setField(f.id, { locked: !f.locked || undefined })}>锁定（玩家不可改）</Toggle>
+          <Toggle on={!!f.required} onClick={() => setField(f.id, { required: !f.required || undefined })}>玩家必填</Toggle>
           {paths.length > 0 && <div><span className={lbl}>仅在这些人物线路出现</span><Chips all={paths} value={f.paths} onChange={(v) => setField(f.id, { paths: v })} /></div>}
-          <div><span className={lbl}>仅在这些家庭背景出现</span><Chips all={bgs} value={f.bgs} onChange={(v) => setField(f.id, { bgs: v })} /></div>
+          {bgs.length > 0 && <div><span className={lbl}>仅在这些家庭背景出现</span><Chips all={bgs} value={f.bgs} onChange={(v) => setField(f.id, { bgs: v })} /></div>}
+          <div className="flex gap-1.5">
+            <button type="button" className={btn} disabled={fieldIndex === 0} onClick={() => {
+              const next = [...fields]; [next[fieldIndex - 1], next[fieldIndex]] = [next[fieldIndex], next[fieldIndex - 1]]; setFields(next);
+            }}>上移</button>
+            <button type="button" className={btn} disabled={fieldIndex === fields.length - 1} onClick={() => {
+              const next = [...fields]; [next[fieldIndex], next[fieldIndex + 1]] = [next[fieldIndex + 1], next[fieldIndex]]; setFields(next);
+            }}>下移</button>
+          </div>
           <button type="button" className={`${btn} hover:!border-coral hover:!text-coral`} onClick={() => setFields(fields.filter((x) => x.id !== f.id))}>删除此字段</button>
-        </>)
+        </>,
+          <button type="button" className="px-1 text-ink-soft hover:text-coral" onClick={() => setFields(fields.filter((x) => x.id !== f.id))} aria-label="删除"><IconClose size={14} /></button>)
       ))}
 
-      <button type="button" onClick={() => { const f: CreationField = { id: uid(), label: "", type: "text" }; setFields([...fields, f]); setOpen(f.id); }}
-        className="w-full rounded-xl border border-dashed border-line py-3 text-[13px] text-ink-soft transition hover:border-jade hover:text-jade">＋ 添加字段</button>
+      {picking ? (
+        <div className="rounded-xl border border-jade/40 bg-jade/5 p-3">
+          <p className="mb-2 text-[12px] font-semibold text-ink">选择类型</p>
+          <div className="flex flex-wrap gap-1.5">
+            {CREATION_ITEM_ADD_TYPES.map((t) => (
+              <button key={t.id} type="button" className={btn} onClick={() => addItem(t.id)}>{t.label}</button>
+            ))}
+            <button type="button" className={`${btn} text-ink-soft`} onClick={() => setPicking(false)}>取消</button>
+          </div>
+        </div>
+      ) : (
+        <button type="button" onClick={() => setPicking(true)}
+          className="w-full rounded-xl border border-dashed border-line py-3 text-[13px] text-ink-soft transition hover:border-jade hover:text-jade">＋ 添加</button>
+      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { LIVE_PERSON_BY_ID, getWorld } from "../../mods/registry";
+import { LIVE_PERSON_BY_ID } from "../../mods/registry";
 import { loadConfig } from "../../lib/store";
 import type { AIConfig } from "../../lib/types";
 import type { EmotionId } from "../../game/phone";
@@ -45,13 +45,10 @@ export function fileToImage(f: File): Promise<string> {
 /* 朗读：配置了语音模型就走 OpenAI 兼容 /audio/speech（同句缓存），失败或未配置时退回浏览器自带 TTS */
 const ttsCache = new Map<string, string>();
 let ttsAudio: HTMLAudioElement | null = null;
-/* 人物专属音色：编辑器里给人物 / 父母配置的 voice；没有则返回 undefined，按性别走默认 */
+/* 人物专属音色：只认角色模块上的 ttsVoice；不再为父母单独开音色特例 */
 export function voiceOf(pid?: string): string | undefined {
   if (!pid) return undefined;
-  const own = LIVE_PERSON_BY_ID[pid]?.ttsVoice?.trim();
-  if (own) return own;
-  const fv = getWorld().content.familyVoices;
-  return (pid === "family-father" ? fv?.father : pid === "family-mother" ? fv?.mother : undefined)?.trim() || undefined;
+  return LIVE_PERSON_BY_ID[pid]?.ttsVoice?.trim() || undefined;
 }
 export async function synthSpeech(cfg: AIConfig, text: string, gender?: string, voiceId?: string): Promise<string> {
   const voice = voiceId || (gender === "男" ? cfg.ttsVoiceMale : cfg.ttsVoiceFemale) || cfg.ttsVoiceFemale || cfg.ttsVoiceMale || "alloy";

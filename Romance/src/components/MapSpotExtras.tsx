@@ -5,6 +5,7 @@ import type { FixedCond, MapArrival, MapSpotEdit } from "../lib/types";
 import { getWorldSlot } from "../mods/registry";
 import { STAT_LABELS, STAT_ORDER } from "../game/data";
 import { FIXED_METRICS } from "../game/fixedEvents";
+import { SCENE_PORTRAIT_HINT, fileToScenePortraitDataUrl } from "../lib/scenePortrait";
 
 /* 地图编辑器 · 地点详情扩展：开局起点 / 按身份开局 / 解锁条件 / 条件抵达 / 图标 / 乙游场景图 */
 const lab = "mb-1 block text-[10.5px] font-bold tracking-[0.16em] text-ink-soft";
@@ -17,13 +18,26 @@ const targets = () => [
 ];
 const uid = () => `arr_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 
-function useUpload(onDone: (url: string) => void) {
+function useUpload(onDone: (url: string) => void, opts?: { scenePortrait?: boolean; onError?: (msg: string) => void }) {
   const ref = useRef<HTMLInputElement>(null);
   const el = (
     <input ref={ref} type="file" accept="image/*" hidden onChange={(e) => {
       const f = e.target.files?.[0]; e.target.value = "";
       if (!f) return;
-      const r = new FileReader(); r.onload = () => onDone(String(r.result)); r.readAsDataURL(f);
+      void (async () => {
+        try {
+          // 功能注释：乙游场景图自动裁成 1080×1920，避免尺寸不合规时点了没反应。
+          if (opts?.scenePortrait) {
+            onDone(await fileToScenePortraitDataUrl(f));
+            return;
+          }
+          const r = new FileReader();
+          r.onload = () => onDone(String(r.result));
+          r.readAsDataURL(f);
+        } catch (err) {
+          opts?.onError?.((err as Error).message || SCENE_PORTRAIT_HINT);
+        }
+      })();
     }} />
   );
   return [() => ref.current?.click(), el] as const;
@@ -37,8 +51,9 @@ export default function MapSpotExtras({ e, name, isStart, patch, setStart }: {
   setStart: (on: boolean) => void;
 }) {
   const [iconColor, setIconColor] = useState(ICON_COLORS[1]);
+  const [bgErr, setBgErr] = useState("");
   const [pickIcon, iconEl] = useUpload((icon) => patch({ icon }));
-  const [pickBg, bgEl] = useUpload((background) => patch({ background }));
+  const [pickBg, bgEl] = useUpload((background) => { setBgErr(""); patch({ background }); }, { scenePortrait: true, onError: setBgErr });
   const opts = [
     ...(getWorldSlot("identities") ?? []).map((o) => ({ ...o, group: "身份" })),
     ...(getWorldSlot("backgrounds") ?? []).map((o) => ({ ...o, group: "出身" })),
@@ -100,14 +115,15 @@ export default function MapSpotExtras({ e, name, isStart, patch, setStart }: {
         </div>
       </div>
 
-      {/* 乙游场景图 */}
+      {/* 乙游场景图：仅 9:16 / 1080×1920 竖图 */}
       <div>
         <label className={lab}>乙游场景图</label>
-        <p className="mb-1.5 text-[10.5px] leading-relaxed text-ink-soft">剧情写到「{name}」时铺这张图。不设则用所在底图，同一底图上的地点看起来会是同一张景。</p>
+        <p className="mb-1.5 text-[10.5px] leading-relaxed text-ink-soft">剧情写到「{name}」时铺这张图。{SCENE_PORTRAIT_HINT}。不设则用所在底图。</p>
         <div className="flex gap-2">
-          <button type="button" onClick={pickBg} className="flex-1 rounded-lg border border-jade/50 bg-jade/10 py-1.5 text-[12px] font-bold text-jade-deep hover:bg-jade/20">上传场景图</button>
-          {e.background && <button type="button" onClick={() => patch({ background: undefined })} className="rounded-lg border border-line px-3 text-[12px] text-ink-soft hover:text-danger">清除</button>}
+          <button type="button" onClick={() => { setBgErr(""); pickBg(); }} className="flex-1 rounded-lg border border-jade/50 bg-jade/10 py-1.5 text-[12px] font-bold text-jade-deep hover:bg-jade/20">上传场景图</button>
+          {e.background && <button type="button" onClick={() => { setBgErr(""); patch({ background: undefined }); }} className="rounded-lg border border-line px-3 text-[12px] text-ink-soft hover:text-danger">清除</button>}
         </div>
+        {bgErr && <p className="mt-1 text-[11px] text-danger">{bgErr}</p>}
       </div>
 
       {/* 解锁条件 */}

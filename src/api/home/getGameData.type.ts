@@ -13,6 +13,8 @@ export interface UserGameData {
     doc_url: string;
     files: string;
     version?: string | number;
+    published_version?: number;
+    review_kind?: 'new' | 'update' | string | null;
     price_amount: number|null;
     special_price_amount: number;
     rating_avg: string|null;

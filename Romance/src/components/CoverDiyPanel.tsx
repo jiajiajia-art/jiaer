@@ -3,7 +3,6 @@ import { Fragment, useRef, useState, type ReactNode } from "react";
 import { useGame } from "../store/gameCtx";
 import type { CoverDiy } from "../lib/store";
 import type { CoverCopy } from "../mods/types";
-import AiImageGen from "./AiImageGen";
 import { FONTS } from "../lib/skins";
 import { selectedSlot } from "../mods/registry";
 import ImagePicker from "./ImagePicker";
@@ -11,24 +10,16 @@ import { CoverView, cgKind } from "./Cover";
 import CoverCgEditor from "./CoverCgEditor";
 import { useConfirm } from "./EditorKit";
 import CoverAiChat from "./CoverAiChat";
-import { ViewSwitch, type GenView } from "./CodexChat";
+import { AiModelBillingBadge, ViewSwitch, type GenView } from "./CodexChat";
 import { COVER_CLASSES, CSS_MAX } from "../lib/coverAi";
 
-/* 美化 · 封面 DIY：AI 对话生成 + 背景 / 文字 / 版式 / 按钮 / 特效 / CSS 自由搭配 + 风格预设 + 实时缩略预览。
+/* 美化 · 封面 DIY：与开场页同一套「实时预览 / AI 对话」切换；预览侧手动搭配，对话侧聊着改。
  * 玩家填写的项优先于世界作者的封面；留空沿用。 */
 const inp = "w-full min-w-0 rounded-lg border border-line bg-paper px-2.5 py-1.5 text-[12.5px] text-ink outline-none placeholder:text-ink-soft/60 focus:border-jade";
 const chip = (on: boolean) => `rounded-[6px] border px-2.5 py-1.5 text-[12px] transition ${on ? "border-jade bg-jade/10 font-bold text-jade" : "border-line bg-paper text-ink hover:border-jade/60"}`;
 const H = ({ t, d }: { t: string; d?: string }) => <p className="mb-1.5 mt-3.5 flex items-baseline gap-2 text-[12.5px] font-bold text-ink first:mt-0">{t}{d && <span className="text-[10.5px] font-normal text-ink-soft">{d}</span>}</p>;
 function Opt<T extends string>({ value, opts, onPick }: { value?: T; opts: readonly (readonly [T, string])[]; onPick: (v: T) => void }) {
   return <div className="flex flex-wrap gap-1.5">{opts.map(([v, l]) => <button key={v} type="button" aria-pressed={value === v} onClick={() => onPick(v)} className={chip(value === v)}>{l}</button>)}</div>;
-}
-function Range({ label, value, min, max, step = 1, unit, onChange }: { label: string; value: number; min: number; max: number; step?: number; unit: string; onChange: (v: number) => void }) {
-  return (
-    <div>
-      <p className="mb-1 mt-3 flex items-center justify-between text-[12px] font-bold text-ink">{label}<span className="tabular-nums text-ink-soft">{value}{unit}</span></p>
-      <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(+e.target.value)} className="w-full accent-[var(--jade)]" aria-label={label} />
-    </div>
-  );
 }
 
 function Preview({ cv, d }: { cv: CoverCopy; d?: CoverDiy }) {
@@ -46,15 +37,22 @@ function Preview({ cv, d }: { cv: CoverCopy; d?: CoverDiy }) {
 }
 
 const TABS = ["AI 对话", "背景", "文字", "版式", "按钮", "边框", "特效", "CSS"] as const;
+/** 功能注释：作品展示封面（作者态）只留背景；玩家装扮封面仍用全部分组 */
+const BG_ONLY_TABS = ["背景"] as const;
 
-/* 通用封面 DIY 编辑器：玩家「装扮封面」与模组编辑器「开局封面」共用。
- * author=true 时编辑的是作者封面（所有玩家默认看到），没有「使用我的封面」开关，文字占位不再引用世界封面。 */
+/* 通用封面 DIY 编辑器：玩家「装扮封面」与模组「作品封面」共用。
+ * author+bgOnly：只配背景，给列表/详情/书架；玩家端保留文字/按钮等全部分组。 */
 export function CoverDiyEditor(props: CoverDiyProps) {
-  // switch：同一页面内用顶部开关在「实时预览 / AI 对话」间切换
+  // 功能注释：凡带 AI 对话的封面入口统一走 ViewSwitch；作品展示封面（bgOnly）只做背景，不开对话
   const [view, setView] = useState<GenView>("preview");
-  if (props.mode !== "switch") return <CoverDiyBody {...props} />;
+  const mode = props.mode ?? "switch";
+  if (props.bgOnly) return <CoverDiyBody {...props} mode="live" />;
+  if (mode === "live" || mode === "chat") return <CoverDiyBody {...props} mode={mode} />;
   return (
     <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <AiModelBillingBadge />
+      </div>
       <ViewSwitch value={view} onChange={setView} />
       <CoverDiyBody key={view} {...props} mode={view === "preview" ? "live" : "chat"} />
     </div>
@@ -62,18 +60,21 @@ export function CoverDiyEditor(props: CoverDiyProps) {
 }
 type CoverDiyProps = {
   value: CoverDiy; onChange: (v?: CoverDiy) => void;
-  cvText: CoverCopy; // 文字 / 压暗的灰色占位来源（玩家端 = 世界封面）
+  cvText: CoverCopy; // 文字灰色占位来源（玩家端 = 世界封面）
   previewCv: CoverCopy; previewD?: CoverDiy; // 预览用的封面与玩家 DIY
   author?: boolean; chatKey: string; cover?: CoverCopy; // cover：AI 对话参考的世界封面
-  mode?: "all" | "live" | "chat" | "switch"; // live：实时预览 + 手动搭配；chat：纯对话；all：两者合一；switch：顶部切换 live / chat
+  /** live / chat 仅内部切分；对外默认与 switch/all 一样走「实时预览 / AI 对话」顶栏切换 */
+  mode?: "all" | "live" | "chat" | "switch";
+  /** 功能注释：作者作品展示封面只留「背景」页签，隐藏文字/按钮/边框/特效/CSS 与自定义 HTML */
+  bgOnly?: boolean;
 };
-function CoverDiyBody({ value, onChange, cvText, previewCv, previewD, author, chatKey, cover, mode = "all" }: CoverDiyProps) {
+function CoverDiyBody({ value, onChange, cvText, previewCv, previewD, author, chatKey, cover, mode = "live", bgOnly }: CoverDiyProps) {
   const { look } = useGame();
   const [confirm, confirmEl] = useConfirm();
   const d = value;
   const cv = cvText;
-  const [tab, setTab] = useState<(typeof TABS)[number]>(mode === "live" ? "背景" : "AI 对话");
-  const tabs = mode === "live" ? TABS.filter((t) => t !== "AI 对话") : TABS;
+  const [tab, setTab] = useState<(typeof TABS)[number]>("背景");
+  const tabs = bgOnly ? [...BG_ONLY_TABS] : mode === "live" ? TABS.filter((t) => t !== "AI 对话") : [...TABS];
   const clean = (n: CoverDiy) => { for (const k of Object.keys(n) as (keyof CoverDiy)[]) if (n[k] === undefined || n[k] === "") delete n[k]; return Object.keys(n).length ? n : undefined; };
   const set = (p: Partial<CoverDiy>) => onChange(clean({ ...d, ...p, on: undefined }));
   const on = true; // 编辑器内封面 DIY 始终生效
@@ -97,13 +98,29 @@ function CoverDiyBody({ value, onChange, cvText, previewCv, previewD, author, ch
         opts={[["fixed", "固定 CG"], ["carousel", "轮播 CG"], ["video", "视频"]] as const} />
       {cgKind(d) === "fixed" && <>
         <H t="固定 CG" d="始终显示这一张" />
-        <ImagePicker value={d.image} label="封面 CG" max={1920} onChange={(u) => set({ image: u })} hint="竖屏建议 9:16，横屏建议 16:9" />
+        {/* 功能注释：生图走 ImagePicker 弹窗，不在背景页内联铺提示词 */}
+        <ImagePicker
+          value={d.image}
+          label="封面 CG"
+          max={1920}
+          onChange={(u) => set({ image: u })}
+          hint="竖屏建议 9:16，横屏建议 16:9"
+          aiGen={{
+            size: "1024x1792",
+            placeholder: `描述封面背景：主体、场景、光线、画风，竖版构图，画面里不要文字${d.title || cv.title ? `（作品名「${d.title || cv.title}」）` : ""}`,
+          }}
+        />
       </>}
-      {cgKind(d) === "carousel" && <div className="mt-3"><CoverCgEditor v={d} set={set} /></div>}
-      {cgKind(d) !== "video" && (
+      {cgKind(d) === "carousel" && (
         <div className="mt-3">
-          <AiImageGen size="1024x1792" onPick={(image) => (cgKind(d) === "carousel" ? set({ cgs: [...(d.cgs ?? []), image].slice(0, 8) }) : set({ image }))}
-            placeholder={`描述封面背景：主体、场景、光线、画风，竖版构图，画面里不要文字${d.title || cv.title ? `（作品名「${d.title || cv.title}」）` : ""}`} />
+          <CoverCgEditor
+            v={d}
+            set={set}
+            aiGen={{
+              size: "1024x1792",
+              placeholder: `描述封面背景：主体、场景、光线、画风，竖版构图，画面里不要文字${d.title || cv.title ? `（作品名「${d.title || cv.title}」）` : ""}`,
+            }}
+          />
         </div>
       )}
       {cgKind(d) === "video" && <>
@@ -117,13 +134,6 @@ function CoverDiyBody({ value, onChange, cvText, previewCv, previewD, author, ch
       <H t="加载封面" d="视频加载出来之前显示的图（可选）" />
       <ImagePicker value={d.image} label="加载封面" max={1920} onChange={(u) => set({ image: u })} />
       </>}
-      <Range label="压暗" value={d.dim ?? cv.dim ?? 40} min={0} max={80} unit="%" onChange={(v) => set({ dim: v })} />
-      <Range label="模糊" value={d.blur ?? 0} min={0} max={16} unit="px" onChange={(v) => set({ blur: v || undefined })} />
-      <H t="压暗颜色" d="压暗背景时叠加的颜色" />
-      <div className="flex flex-wrap items-center gap-1.5">
-        <Opt value={d.tint ?? "night"} onPick={(v) => set({ tint: v === "night" ? undefined : v })} opts={[["night", "紫色"], ["rose", "粉色"], ["ocean", "蓝色"], ["gold", "暖黄"], ["none", "黑色"], ["custom", "自定义"]] as const} />
-        {d.tint === "custom" && <input type="color" value={d.tintColor ?? "#2b1d47"} onChange={(e) => set({ tintColor: e.target.value })} className="h-8 w-9 cursor-pointer rounded border border-line" aria-label="叠色" />}
-      </div>
     </>,
     文字: <>
       <p className="mb-2 text-[11px] text-ink-soft">留空的项不会显示在封面上；标题留空时用当前作品名。</p>
@@ -181,7 +191,6 @@ function CoverDiyBody({ value, onChange, cvText, previewCv, previewD, author, ch
       </div>
     </>,
     边框: <>
-      <p className="mb-2 text-[11px] text-ink-soft">给封面加一圈装饰边框，不影响按钮点击。</p>
       <FrameEditor value={d.frame} onChange={(frame) => set({ frame })} />
     </>,
     特效: <>
@@ -205,10 +214,10 @@ function CoverDiyBody({ value, onChange, cvText, previewCv, previewD, author, ch
     </>,
   };
 
-  const resetBtn = <button type="button" className={`${chip(false)} w-full hover:!border-danger hover:!text-danger`} onClick={async () => { if (await confirm("清空封面的文字、背景与样式，恢复默认封面？", { ok: "恢复默认" })) onChange(undefined); }}>恢复默认封面</button>;
+  const resetBtn = <button type="button" className={`${chip(false)} w-full hover:!border-danger hover:!text-danger`} onClick={async () => { if (await confirm(bgOnly ? "清空作品展示封面背景？" : "清空封面的文字、背景与样式，恢复默认封面？", { ok: "恢复默认" })) onChange(undefined); }}>{bgOnly ? "清空背景" : "恢复默认封面"}</button>;
   const previewEl = <>
     <Preview cv={previewCv} d={previewD} />
-    <p className="mt-1 text-center text-[10.5px] text-ink-soft">实时预览 · {look.orient === "landscape" ? "横屏" : "竖屏"}</p>
+    <p className="mt-1 text-center text-[10.5px] text-ink-soft">实时预览 · {look.orient === "landscape" ? "横屏" : "竖屏"}{bgOnly ? " · 仅作品展示" : ""}</p>
   </>;
 
   // 对话为主：纯对话式界面，不带预览（预览在「实时预览」里看）
@@ -224,22 +233,25 @@ function CoverDiyBody({ value, onChange, cvText, previewCv, previewD, author, ch
       </div>
 
       <div className={`min-w-0 flex-1 ${on || tab === "AI 对话" ? "" : "pointer-events-none opacity-50"}`}>
-        <div role="tablist" aria-label="封面编辑项" className="mb-3 flex flex-wrap gap-1.5">
-          {tabs.map((t) => (
-            <button key={t} role="tab" type="button" aria-selected={tab === t} onClick={() => setTab(t)}
-              className={`rounded-full px-3 py-1 text-[12.5px] font-semibold transition ${tab === t ? "bg-coral text-white shadow-sm" : "bg-paper text-ink-soft ring-1 ring-line hover:text-ink hover:ring-coral/50"}`}>
-              {t}
-            </button>
-          ))}
-        </div>
-        <div role="tabpanel" aria-label={tab} className="rounded-[var(--radius-ui-lg)] border border-line bg-paper/60 p-3 sm:p-4">{page[tab]}</div>
+        {/* 功能注释：作品展示封面只留背景，不渲染其它页签按钮 */}
+        {!bgOnly && (
+          <div role="tablist" aria-label="封面编辑项" className="mb-3 flex flex-wrap gap-1.5">
+            {tabs.map((t) => (
+              <button key={t} role="tab" type="button" aria-selected={tab === t} onClick={() => setTab(t)}
+                className={`rounded-full px-3 py-1 text-[12.5px] font-semibold transition ${tab === t ? "bg-coral text-white shadow-sm" : "bg-paper text-ink-soft ring-1 ring-line hover:text-ink hover:ring-coral/50"}`}>
+                {t}
+              </button>
+            ))}
+          </div>
+        )}
+        <div role="tabpanel" aria-label={bgOnly ? "背景" : tab} className="rounded-[var(--radius-ui-lg)] border border-line bg-paper/60 p-3 sm:p-4">{page[bgOnly ? "背景" : tab]}</div>
       </div>
     </div>
   );
 }
 
 /* 玩家 · 装扮封面：写进外观设置（theme.cover），世界作者的封面打底 */
-export default function CoverDiyPanel({ mode = "all" }: { mode?: CoverDiyProps["mode"] }) {
+export default function CoverDiyPanel({ mode = "switch" }: { mode?: CoverDiyProps["mode"] }) {
   const { theme, setTheme } = useGame();
   // AI 生图是异步的：写回时用最新的 theme，免得覆盖期间的手动修改
   const themeRef = useRef(theme); themeRef.current = theme;

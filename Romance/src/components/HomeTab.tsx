@@ -19,15 +19,14 @@ import { useGame } from "../store/gameCtx";
 import TalkPanel from "./TalkPanel";
 import { pregWeeks } from "../game/pregnancy";
 import { wxResolve } from "../game/phone";
-import { Segments, PacedSegments, LiveNarration, Thoughts, ErrorBanner, SpeakerAvatar, SpeechWithActions } from "./StoryTab";
+import { Segments, LiveNarration, Thoughts, ErrorBanner } from "./StoryTab";
 import NewcomerCards from "./NewcomerCards";
 import { newcomerSlots } from "../game/npcIntro";
 import ProducerParley from "./ProducerParley";
 import GigBoard from "./GigBoard";
 import { HeartMeter, Modal, Chip, Avatar } from "./ui";
 import PersonProfile from "./PersonProfile";
-import { IconCheck, IconChevronDown, IconExternal, IconRefresh, IconSparkle, StarRating } from "../lib/icons";
-import { repairSegments } from "../lib/ai";
+import { IconCheck, IconExternal, IconSparkle, StarRating } from "../lib/icons";
 import {
   roomDesc,
   directionHint,
@@ -75,7 +74,7 @@ function Dealership({ s, onClose }: { s: SimState; onClose: () => void }) {
   const owned = s.cars ?? [];
   const yuan = (n: number) => `¥${n.toLocaleString("zh-CN")}`;
   return (
-    <Modal title={(game && spotName(game, carShopId() ?? "")) || locOf(carShopId() ?? "")?.name || "汽车城"} onClose={onClose} wide>
+    <Modal title={(game && spotName(game, carShopId() ?? "")) || locOf(carShopId() ?? "")?.name || "汽车城"} onClose={onClose}>
       <p className="mb-3 text-[12px] text-ink-soft">
         {wallet.name(undefined, "现金")} <b className="text-ink">{wallet.fmt(wallet.balance(s), undefined, yuan)}</b>。买车后到「主角」页把它选为座驾，出行就能「自己开车」——免费又体面。
       </p>
@@ -572,10 +571,10 @@ function TreeNav({ s, onGo }: { s: SimState; onGo: (id: string) => void }) {
 }
 
 /**
- * 地点实景：按图片竖版比例完整显示、左右贴边，不裁封面、不进圆角卡。
- * 图上只留右上角「外出」；正文由外层放在图下方，不再盖毛玻璃。
+ * 地点实景：固定 9:16 竖框，图片 object-cover 铺满不留白、不成横条。
+ * 图上叠可点位置；右上角「外出」；正文由外层放在图下方累积。
  */
-function LocationHero({ s, spots, activeKey, onOpenMap, onGo, fill, bg: bgProp, name }: {
+function LocationHero({ s, spots, activeKey, onOpenMap, onGo, bg: bgProp, name }: {
   onGo?: (id: string) => void; s: SimState; spots: Spot[]; activeKey: string | null; onOpenMap: () => void;
   fill?: boolean; bg?: string; name?: string;
 }) {
@@ -600,22 +599,21 @@ function LocationHero({ s, spots, activeKey, onOpenMap, onGo, fill, bg: bgProp, 
       <span>外出</span>
     </button>
   );
-  // 功能注释：横屏沉浸仍可吃满高度；竖屏按图片固有比例撑开，object-contain 保证上下都看得到
+  // 功能注释：场景框固定 9:16；object-cover 铺满上下左右，禁止再裁成横条或留白。
   return (
-    <div className={`relative w-full bg-ink/5 ${fill ? "flex min-h-[360px] flex-1 flex-col" : ""}`}>
-      <div className={`relative w-full ${fill ? "min-h-0 flex-1" : ""}`}>
+    <div className="relative mx-auto w-full max-w-md bg-ink/10">
+      <div className="relative aspect-[9/16] w-full overflow-hidden">
         {src ? (
           <img
             src={src}
             alt={title ?? "所在地"}
             loading="lazy"
-            className={`scene-img block w-full ${fill ? "h-full object-contain object-center" : "h-auto object-contain"}`}
+            className="scene-img absolute inset-0 h-full w-full object-cover object-center"
           />
         ) : (
-          <div className={`w-full bg-gradient-to-b from-jade-deep/40 to-ink/30 ${fill ? "h-full min-h-[360px]" : "aspect-[3/4]"}`} aria-hidden />
+          <div className="absolute inset-0 bg-gradient-to-b from-jade-deep/40 to-ink/30" aria-hidden />
         )}
         <div className="pointer-events-none absolute inset-0 scene-dim bg-black/0" aria-hidden />
-        {/* 图上只留外出；点位叠在画面中部，不盖成说明框 */}
         <div className="absolute right-3 top-3 z-20">{mapBtn}</div>
         {!!spots.length && (
           <div data-tour="spots" className="pointer-events-none absolute inset-0 z-10 flex flex-wrap content-center items-center justify-center gap-x-4 gap-y-5 px-4 py-12">
@@ -660,7 +658,7 @@ function PersonDossier({ pid, onClose, onJump }: { pid: string; onClose: () => v
     );
   };
   return (
-    <Modal title={`${name} · 人物资料`} onClose={onClose} wide>
+    <Modal title={`${name} · 人物资料`} onClose={onClose}>
       <ProfileHero name={name} avatarSrc={npc?.avatar || undefined} facts={{ 性别: npc?.persona?.gender ?? p?.gender, 年龄: age, 所属: affiliationOf(ownField(npc, "identity", p?.role)) }} />
       <ProfileBio bio={ownField(npc, "bio", p?.bio)} />
       {home && <ProfilePlaces places={[home]} />}
@@ -712,27 +710,12 @@ export default function HomeTab() {
   const [showMap, setShowMap] = useState(false);
   useEffect(() => { setShowMap(false); }, [game?.id]);
   const [carShopOpen, setCarShopOpen] = useState(false); // 星辉 4S 汽车城以弹窗呈现
-  // 已逐句读完的最新 AI 回合 id：初值设为载入时的最新回合，使既有历史不重新逐句、只有新回合才逐拍显示
-  const [readTurnId, setReadTurnId] = useState<string | null>(() => {
-    const la = [...(game?.story ?? [])].reverse().find((t) => t.role === "ai");
-    return la ? la.id : null;
-  });
-  // 纯文字模式下整段已直接显示：记为已读，切回立绘模式时不重播
-  useEffect(() => {
-    if (theme.portrait !== "off") return;
-    const la = [...(game?.story ?? [])].reverse().find((t) => t.role === "ai");
-    if (la) setReadTurnId(la.id);
-  }, [theme.portrait, game?.story]); // eslint-disable-line react-hooks/exhaustive-deps
   const scrollRef = useRef<HTMLDivElement>(null);
-  // 竖屏：对话面板可收成底部细栏，把空间让给场景；有新剧情 / 开始演绎时自动展开
-  const [dlgFolded, setDlgFolded] = useState(false);
-  useEffect(() => { setDlgFolded(false); }, [game?.story.length]);
-  useEffect(() => { if (busy) setDlgFolded(false); }, [busy]);
-
+  // 功能注释：正文在场景图下累积；有新段落时滚到底，保证最新一段可见。
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [game?.story.length, busy, dlgFolded]);
+  }, [game?.story.length, busy]);
 
   const s = game?.sim;
   const plan = useMemo(() => (s && pending ? travelPlan(s, pending) : null), [s, pending]);
@@ -779,10 +762,8 @@ export default function HomeTab() {
     if (g !== game) { commitGame(g); flash(msgs.join("；")); }
   }, [game?.sim.day]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 新一轮选项真正可选时（逐句读完 / 剧情生成完）直接展开，不必再去点小羽毛；数字键 1~9 随之可用
-  const lastAiId = game ? [...game.story].reverse().find((t) => t.role === "ai")?.id : undefined;
-  const pacingNow = !!game && theme.portrait !== "off" && game.playPrefs?.mode !== "novel" && !!lastAiId && !busy && readTurnId !== lastAiId;
-  const optsReady = !!game && !busy && !pacingNow && game.options.length > 0 && !custom;
+  // 新一轮选项可点时直接展开；场景页不再等逐句读完
+  const optsReady = !!game && !busy && game.options.length > 0 && !custom;
   useEffect(() => { setIdeasOpen(optsReady); }, [optsReady, game?.options]);
   if (!game || !s) return null;
   const room = s.room ?? getWorldStartRoom();
@@ -887,29 +868,9 @@ export default function HomeTab() {
       })),
   ];
 
-  // 立绘模式 = galgame 式逐句显示：最新 AI 回合未读完前，一句一句轻触推进，读完才浮现选项。
-  // 纯文字模式不走逐句对话框，整段剧情直接铺在叙事流里，选项立刻可选。
-  const lastAi = [...game.story].reverse().find((t) => t.role === "ai");
+  // 功能注释：正文固定在场景图下累积留屏，不再进可消失对话框；底部只留输入与行动选项。
   const introSlots = newcomerSlots(game.story); // 初遇名片挂在该人物最近一次登场的回合底部
-  // 剧情模式（小说模式）= AI 文游：不走逐句对话框，最新剧情整段铺进地点描述卡里
-  const novelMode = game.playPrefs?.mode === "novel";
-  const novelProse = novelMode && lastAi && !lastAi.error
-    ? lastAi.segments.map((g) => g.kind === "dialogue" ? `${g.speaker}：“${g.text}”` : g.text).filter(Boolean).join("\n")
-    : "";
-  const galMode = theme.portrait !== "off" && !novelMode;
-  const novelDock = novelMode && !busy; // 小说模式非书写期：底部只留输入栏
-  const paceActive = galMode && !!lastAi && !busy && readTurnId !== lastAi.id;
-  const hasOpts = !busy && !paceActive && game.options.length > 0 && !custom;
-  const folded = dlgFolded && !landscape;
-  // 收起态细栏里显示的「最后一句剧情」
-  const lastLine = (() => {
-    const segs = lastAi && !lastAi.error ? repairSegments(lastAi.segments) : [];
-    const seg = [...segs].reverse().find((x) => x.text?.trim());
-    if (!seg) return { who: "", text: game.story.length ? "剧情已收起" : "故事尚未开始" };
-    const text = seg.text.replace(/\s+/g, " ").trim();
-    return { who: seg.kind === "dialogue" ? seg.speaker : "", text };
-  })();
-  const scrollToEnd = () => { const el = scrollRef.current; if (el) el.scrollTop = el.scrollHeight; };
+  const hasOpts = !busy && game.options.length > 0 && !custom;
 
   const send = (text: string) => {
     if (!text.trim() || busy) return;
@@ -950,7 +911,7 @@ export default function HomeTab() {
     <div className="flex h-full flex-col">
       {/* 上半：场景 + 星城舆图（占据剩余空间，独立滚动） */}
       {/* 看场景时上半只占内容高度，余下空间留给对话框；看地图时地图占满 */}
-      <div className={`story-scene-scroll flex min-h-0 flex-col overflow-y-auto ${showMap || landscape || folded || novelDock ? "flex-1" : "shrink grow-0"}`}>
+      <div className={`story-scene-scroll flex min-h-0 flex-1 flex-col overflow-y-auto`}>
         <div className={`mx-auto flex w-full min-h-0 flex-1 flex-col space-y-5 ${landscape && !showMap ? "max-w-none px-3 py-3" : landscape && showMap ? "max-w-5xl px-4 py-5" : "max-w-2xl px-4 py-3"}`}>
           {/* ═══ 当前场景（纯文字 MUD 控制台，直接铺在纸面上） ═══ */}
           <section className="flex min-h-0 flex-1 flex-col">
@@ -1032,27 +993,43 @@ export default function HomeTab() {
                 </div>
               ) : (
                 <>
-                  {/* 功能注释：场景图左右贴边（冲破内容区 padding），按竖版比例完整显示；图上只留外出 */}
-                  <div className={landscape ? "min-h-0 flex-1" : "-mx-4 w-[calc(100%+2rem)]"}>
+                  {/* 功能注释：固定 9:16 竖框铺满；正文在图下累积留屏，不进可消失对话框 */}
+                  <div className="-mx-4 w-[calc(100%+2rem)]">
                     <LocationHero
                       s={s}
                       spots={spots}
                       activeKey={openId}
                       onOpenMap={() => setShowMap(true)}
                       onGo={goLocal}
-                      fill={landscape && !showMap}
                       bg={bgOverride}
                       name={nameOverride}
                     />
                   </div>
-                  {/* 正文在图下方，随页滚动；不再盖毛玻璃 */}
-                  {(novelProse || descText) && (
-                    <div className="mt-3 px-0.5">
-                      <p className="story-prose whitespace-pre-line text-[13.5px] leading-[1.85] tracking-[0.02em] text-ink/90 [text-indent:2em]">
-                        {novelProse || descText}
+                  <div ref={scrollRef} data-tour="scene-prose" className="mt-3 space-y-3 px-0.5">
+                    {descText && (
+                      <p className="story-prose whitespace-pre-line text-[13.5px] leading-[1.85] tracking-[0.02em] text-ink/80 [text-indent:2em]">
+                        {descText}
                       </p>
-                    </div>
-                  )}
+                    )}
+                    {game.story.map((t) =>
+                      t.role === "player" ? (
+                        <div key={t.id} className="flex justify-end">
+                          <div className="dlg-bubble-me max-w-[85%] rounded-2xl rounded-tr-sm bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] px-3.5 py-2 text-[13.5px] font-medium text-white shadow-sm">
+                            {t.segments.map((seg) => (seg.kind === "narration" ? seg.text : "")).join("")}
+                          </div>
+                        </div>
+                      ) : t.error ? (
+                        <ErrorBanner key={t.id} error={t.error} />
+                      ) : (
+                        <div key={t.id} className="text-[13px] leading-relaxed text-ink">
+                          <Segments segments={t.segments} npcs={game.npcs} playerAvatar={game.player.avatar} playerName={game.player.name} />
+                          <Thoughts thoughts={t.thoughts} npcs={game.npcs} />
+                          <NewcomerCards ids={introSlots.get(t.id)} />
+                        </div>
+                      ),
+                    )}
+                    {busy && <LiveNarration scrollRef={scrollRef} />}
+                  </div>
                   {/* 在场人物改到图下，不再叠在场景图底部 */}
                   {peopleStrip(false)}
                 </>
@@ -1089,76 +1066,9 @@ export default function HomeTab() {
         </div>
       </div>
 
-      {/* ═══ 下半：对话·叙事 面板（完全跟随全局皮肤换肤，高级柔光卡片） ═══ */}
+      {/* ═══ 底部：只留输入框与行动选项；正文已在场景图下累积留屏 ═══ */}
       <div data-tour="story" data-dstyle={theme.dialogStyle ?? "soft"}
-        className={novelDock
-          // 小说模式：正文已整段铺在上方，底部不要对话框，只留一条贴底的输入栏（选项 + 自由输入）
-          ? "relative mx-4 mb-3 mt-2 flex shrink-0 flex-col text-ink sm:mx-auto sm:w-[calc(100%-2rem)] sm:max-w-2xl"
-          : `dialogue-panel mt-2 flex flex-col border border-line/70 text-ink relative overflow-hidden transition-colors duration-300 ${
-          landscape
-            ? "mx-3 mb-3 shrink-0 px-4 py-3"
-            : folded
-              ? "mx-4 mb-4 shrink-0 px-3.5 py-2 sm:mx-auto sm:w-[calc(100%-2rem)] sm:max-w-2xl"
-              : showMap
-                ? "mx-4 mb-4 shrink-0 px-4 pb-3.5 pt-2.5 sm:mx-auto sm:w-[calc(100%-2rem)] sm:max-w-2xl"
-                : "mx-4 mb-4 min-h-0 flex-1 px-4 pb-3.5 pt-2.5 sm:mx-auto sm:w-[calc(100%-2rem)] sm:max-w-2xl"
-        }`}
-        style={novelDock ? undefined : { borderRadius: theme.dialogRadius ?? 20, ...(folded ? {} : (() => {
-          const h = ({ low: { height: "24vh", minHeight: 170, maxHeight: 240 }, std: { height: "31vh", minHeight: 205, maxHeight: 310 }, high: { height: "42vh", minHeight: 265, maxHeight: 440 } } as const)[theme.dialogHeight ?? "std"];
-          // 竖屏看场景：对话框吃掉剩余空间，设定高度作为下限
-          return showMap || landscape ? h : { minHeight: h.minHeight };
-        })()) }}>
-        {!novelDock && <><div className="dlg-glow pointer-events-none absolute -right-14 -bottom-14 h-40 w-40 rounded-full bg-gradient-to-br from-coral/20 to-jade/10 blur-3xl" />
-        <div className="dlg-glow pointer-events-none absolute -left-16 -top-16 h-36 w-36 rounded-full bg-gradient-to-br from-jade/18 to-transparent blur-3xl" /></>}
-
-        {/* 展开态独立顶栏：左状态微标 + 中间独立折叠把手（不遮挡下方文字） */}
-        {!novelDock && !folded && (!landscape || busy) && (
-          <div className="relative z-10 mb-1.5 flex shrink-0 items-center justify-between">
-            <div className="flex min-w-[64px] items-center">
-              {busy ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-jade/12 px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-jade">
-                  <span className="h-1.5 w-1.5 rounded-full bg-jade animate-pulse" />
-                  演绎中…
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 text-[10.5px] font-medium tracking-[0.14em] text-ink-soft/65">
-                  <span className="h-1.5 w-1.5 rounded-full bg-gradient-to-br from-[var(--jade)] to-[var(--coral)] opacity-75" />
-                  剧情纪事
-                </span>
-              )}
-            </div>
-            {!landscape && (
-              <button
-                type="button"
-                onClick={() => setDlgFolded(true)}
-                aria-label="收起剧情面板"
-                aria-expanded
-                className="group flex items-center gap-1 rounded-full px-3 py-0.5 text-[10.5px] text-ink-soft/60 transition hover:bg-jade/10 hover:text-jade"
-              >
-                <span className="h-1 w-6 rounded-full bg-ink-soft/25 transition group-hover:bg-jade/50" />
-                <svg width="11" height="7" viewBox="0 0 14 8" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <path d="m2 2 5 4 5-4" />
-                </svg>
-              </button>
-            )}
-            <div className="min-w-[64px]" />
-          </div>
-        )}
-
-        {folded && (
-          <button type="button" onClick={() => setDlgFolded(false)} aria-label="展开剧情面板" aria-expanded={false}
-            className="relative flex w-full items-center gap-2 py-0.5 text-left">
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-gradient-to-br from-[var(--jade)] to-[var(--coral)]" />
-            <span className="min-w-0 flex-1 truncate text-[12.5px] leading-snug text-ink/85">
-              {lastLine.who && <b className="mr-1 font-bold text-jade">{lastLine.who}</b>}
-              {lastLine.text}
-            </span>
-            <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-jade/10 py-0.5 pl-2.5 pr-1.5 text-[11px] font-semibold text-jade">
-              展开
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m6 15 6-6 6 6" /></svg>
-            </span>
-          </button>
-        )}
+        className="relative mx-4 mb-3 mt-2 flex shrink-0 flex-col text-ink sm:mx-auto sm:w-[calc(100%-2rem)] sm:max-w-2xl">
 
         {/* 点位操作信息（若有） */}
         {(() => {
@@ -1219,51 +1129,7 @@ export default function HomeTab() {
           );
         })()}
 
-        {/* 内部主区：空幕时居中「序幕」邀约，有剧情时胶卷盘 + 内容流 */}
-        {folded || novelDock ? null : novelMode ? (
-          /* 剧情模式：剧情已整段铺在上方地点卡里，这里只留输入框与选项 */
-          <div className="flex min-h-0 flex-1 items-center justify-center">
-            {busy && (
-              <div ref={scrollRef} className="dialogue-scroll max-h-full w-full overflow-y-auto py-1 pr-1">
-                <LiveNarration scrollRef={scrollRef} />
-              </div>
-            )}
-          </div>
-        ) : game.story.length === 0 && !busy ? (
-          <div className="min-h-0 flex-1" />
-        ) : (
-          <div className="relative flex min-h-0 flex-1 items-stretch gap-3">
-            {paceActive && lastAi && !lastAi.error ? (
-              <GalPlayer key={lastAi.id} turn={lastAi} npcs={game.npcs} playerName={game.player.name} playerAvatar={game.player.avatar} introIds={introSlots.get(lastAi.id)} onDone={() => setReadTurnId(lastAi.id)} />
-            ) : (
-            <div ref={scrollRef} className="dialogue-scroll h-full min-h-0 min-w-0 flex-1 overflow-y-auto py-1 pr-1">
-              <div className="space-y-3">
-                {game.story.map((t) =>
-                  t.role === "player" ? (
-                    <div key={t.id} className="flex justify-end">
-                      <div className="dlg-bubble-me max-w-[85%] rounded-2xl rounded-tr-sm bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] px-3.5 py-2 text-[13.5px] text-white shadow-sm font-medium">
-                        {t.segments.map((seg) => (seg.kind === "narration" ? seg.text : "")).join("")}
-                      </div>
-                    </div>
-                  ) : t.error ? (
-                    <ErrorBanner key={t.id} error={t.error} />
-                  ) : (
-                    <div key={t.id} className="text-[13px] text-ink leading-relaxed">
-                      <Segments segments={t.segments} npcs={game.npcs} playerAvatar={game.player.avatar} playerName={game.player.name} />
-                      <Thoughts thoughts={t.thoughts} npcs={game.npcs} />
-                      <NewcomerCards ids={introSlots.get(t.id)} />
-                      {t.id === lastAi?.id && !busy && <TurnTools onReplay={galMode ? () => setReadTurnId(null) : undefined} />}
-                    </div>
-                  )
-                )}
-                {busy && <LiveNarration scrollRef={scrollRef} />}
-              </div>
-            </div>
-            )}
-          </div>
-        )}
-
-        {/* 人物互动：点人物后行动条直接出现在对话框里，结果落入下方叙事 */}
+        {/* 人物互动：点人物后行动条直接出现；结果写入场景图下正文流 */}
             {people.map((p) => {
               if (activePid !== p.id) return null;
               const known = (s.metPeople ?? []).includes(p.id);
@@ -1343,7 +1209,7 @@ export default function HomeTab() {
             })}
 
         {/* ═══ 行动输入区：与对话内容合并进同一张柔光卡片 ═══ */}
-        <div className={`relative mt-2 pt-1 ${folded ? "hidden" : ""}`}>
+        <div className="relative mt-2 pt-1">
           {ideasOpen && (
             <div id="action-ideas" className="mb-2 animate-pop">
               <p className="mb-2 flex items-center justify-between px-0.5 text-[10.5px] font-semibold tracking-[0.18em] text-jade-deep/70">
@@ -1569,143 +1435,6 @@ export default function HomeTab() {
           {toast && <div className="animate-pop rounded-full bg-ink/85 px-4 py-2 text-[13px] text-paper shadow-lg">{toast}</div>}
         </div>
       )}
-    </div>
-  );
-}
-
-/* ═══ galgame 式逐句播放：转场卡 → 旁白 / 台词一句一拍，点击推进 ═══ */
-type Beat = { kind: "scene"; text: string } | { kind: "narration"; text: string } | { kind: "dialogue"; speaker: string; text: string } | { kind: "system"; text: string };
-// 按句末标点切句，再把过短的句子并拢，每拍约一两句
-function sentences(t: string, max = 64): string[] {
-  const parts = t.match(/[^。！？!?…]+[。！？!?…]+[」』”"）)]*|[^。！？!?…]+$/g) ?? [t];
-  const out: string[] = [];
-  for (const p0 of parts) {
-    const p = p0.trim();
-    if (!p) continue;
-    if (out.length && out[out.length - 1].length + p.length <= max && out[out.length - 1].length < 22) out[out.length - 1] += p;
-    else out.push(p);
-  }
-  return out;
-}
-function beatsOf(turn: import("../lib/types").Turn): Beat[] {
-  const b: Beat[] = turn.scene ? [{ kind: "scene", text: turn.scene }] : [];
-  for (const sg of repairSegments(turn.segments)) {
-    if (sg.kind === "dialogue") sentences(sg.text, 80).forEach((t) => b.push({ kind: "dialogue", speaker: sg.speaker, text: t }));
-    else if (sg.kind === "narration") sentences(sg.text).forEach((t) => b.push({ kind: "narration", text: t }));
-    else b.push({ kind: "system", text: sg.text });
-  }
-  return b;
-}
-/* 回合工具：重新生成本回合；逐句模式下可重新逐句播放 */
-function TurnTools({ onReplay }: { onReplay?: () => void }) {
-  const { regenerate, busy } = useGame();
-  // 只放图标：文字说明交给悬停提示与读屏标签，不占对话框空间
-  const btn = "turn-tool-btn grid h-7 w-7 place-items-center rounded-full text-ink-soft/70 transition hover:bg-jade/12 hover:text-jade active:scale-95 disabled:opacity-40";
-  return (
-    <div className="mt-1.5 flex justify-end gap-0.5">
-      {onReplay && (
-        <button type="button" className={btn} onClick={onReplay} title="逐句重播" aria-label="逐句重播">
-          <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor" aria-hidden><path d="M2.5 1.8v8.4L10 6z" /></svg>
-        </button>
-      )}
-      <button type="button" className={btn} disabled={busy} onClick={() => regenerate()} title="重新生成" aria-label="重新生成">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="M21 12a9 9 0 1 1-2.64-6.36" /><path d="M21 3v6h-6" />
-        </svg>
-      </button>
-    </div>
-  );
-}
-
-function GalPlayer({ turn, npcs, playerName, playerAvatar, introIds, onDone }: { turn: import("../lib/types").Turn; npcs: import("../lib/types").Npc[]; playerName: string; playerAvatar: string; introIds?: string[]; onDone: () => void }) {
-  const { regenerate, busy } = useGame();
-  const beats = useMemo(() => beatsOf(turn), [turn]);
-  const [i, setI] = useState(0);
-  const cur = beats[i];
-  const last = i + 1 >= beats.length;
-  const next = () => (last ? onDone() : setI(i + 1));
-  const prev = () => setI((x) => Math.max(0, x - 1));
-  useEffect(() => { if (!beats.length) onDone(); }, [beats.length]); // eslint-disable-line react-hooks/exhaustive-deps
-  // 转场卡自动翻过
-  useEffect(() => {
-    if (cur?.kind !== "scene") return;
-    const t = setTimeout(() => setI((x) => Math.min(beats.length - 1, x + 1)), 1800);
-    return () => clearTimeout(t);
-  }, [cur, beats.length]);
-  if (!cur) return null;
-  const npc = cur.kind === "dialogue" ? npcs.find((n) => n.name === cur.speaker) : undefined;
-  // 立绘只用人物单独上传的抠图（不拿头像顶替）；最近一位有立绘的说话人留在台上，旁白 / 玩家说话时压暗，转场后清场
-  let stage: import("../lib/types").Npc | undefined;
-  for (let k = i; k >= 0 && beats[k].kind !== "scene"; k--) {
-    const b = beats[k];
-    if (b.kind !== "dialogue" || b.speaker === playerName) continue;
-    const n = npcs.find((x) => x.name === b.speaker);
-    if (n?.portrait) stage = n;
-    break; // 最近一位 NPC 说话人没有立绘就清场，不让上一位的立绘顶着别人的台词
-  }
-  const portrait = stage?.portrait ?? "";
-  const speaking = !!stage && stage.id === npc?.id;
-  // 每一拍用与普通对话框相同的 Segments 渲染（头像、名牌、气泡一致）
-  const seg: import("../lib/types").Segment | null = cur.kind === "scene" ? null
-    : cur.kind === "dialogue" ? { kind: "dialogue", speaker: cur.speaker, text: cur.text } as import("../lib/types").Segment
-    : { kind: cur.kind, text: cur.text } as import("../lib/types").Segment;
-  const stop = (e: { stopPropagation: () => void }) => e.stopPropagation();
-  const tool = "transition hover:text-coral disabled:opacity-30 disabled:hover:text-ink-soft";
-  return (
-    <div role="button" tabIndex={0} onClick={next}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " " || e.key === "ArrowRight") { e.preventDefault(); next(); } else if (e.key === "ArrowLeft") { e.preventDefault(); prev(); } }}
-      className={`relative flex h-full min-h-0 min-w-0 flex-1 cursor-pointer select-none flex-col outline-none ${portrait ? "pr-[26%]" : ""}`} style={{ outline: "none" }}>
-      {portrait && (
-        <img key={stage!.id} src={portrait} alt="" aria-hidden
-          className={`portrait-standee pointer-events-none absolute bottom-0 right-0 h-full w-[24%] object-contain object-bottom ${speaking ? "" : "is-idle"}`} />
-      )}
-      {cur.kind === "scene" ? (
-        <div key={i} className="m-auto flex flex-col items-center gap-2 text-center animate-pop">
-          <span className="text-[10.5px] font-bold tracking-[0.5em] text-coral">— 转 场 —</span>
-          <span className="font-serif text-[22px] font-black text-ink">{cur.text}</span>
-          <span className="h-px w-24 bg-gradient-to-r from-transparent via-coral/60 to-transparent" />
-        </div>
-      ) : (
-        <div key={i} className="dialogue-scroll min-h-0 flex-1 overflow-y-auto pr-1 text-[13px] leading-relaxed text-ink animate-pop">
-          {cur.kind === "dialogue" ? (() => {
-            // 视觉小说式对话框：名牌压在框顶，头像在旁，台词占满整框
-            const me = cur.speaker === playerName;
-            const av = me ? playerAvatar : npc?.avatar;
-            return (
-              <div className={`relative mt-3 ${me ? "pr-1" : "pl-1"}`}>
-                <div className={`absolute -top-3 z-10 flex items-center gap-1.5 ${me ? "right-3 flex-row-reverse" : "left-3"}`}>
-                  {av ? <img src={av} alt="" className="dlg-avatar h-7 w-7 rounded-full object-cover object-top ring-2 ring-white shadow" />
-                    : <span className="dlg-avatar grid h-7 w-7 place-items-center rounded-full bg-gradient-to-br from-[var(--jade)] to-[var(--coral)] text-[12px] font-bold text-white ring-2 ring-white shadow">{cur.speaker.slice(0, 1)}</span>}
-                  <span className={`rounded-full px-3 py-0.5 text-[12px] font-bold tracking-wide text-white shadow-sm ${me ? "bg-gradient-to-r from-[var(--coral)] to-[var(--jade)]" : "bg-gradient-to-r from-[var(--jade)] to-[var(--coral)]"}`}>{cur.speaker}</span>
-                </div>
-                <div className="rounded-2xl border border-white/70 bg-white/80 px-4 pb-3 pt-5 text-[14.5px] leading-[1.8] text-ink shadow-[0_6px_18px_-10px_rgba(0,0,0,0.25)] backdrop-blur-sm">
-                  <SpeechWithActions text={cur.text} />
-                </div>
-              </div>
-            );
-          })() : (
-            <Segments segments={[seg!]} npcs={npcs} playerAvatar={playerAvatar} playerName={playerName} />
-          )}
-          {/* 最后一拍：和普通对话框一样附上心事与初遇名片 */}
-          {last && (
-            <div onClick={stop} className="cursor-auto">
-              <Thoughts thoughts={turn.thoughts} npcs={npcs} />
-              <NewcomerCards ids={introIds} />
-            </div>
-          )}
-        </div>
-      )}
-      <div className="mt-1 flex shrink-0 items-center justify-between gap-2 text-[11px] text-ink-soft">
-        <span className="flex items-center gap-3">
-          <span className="tabular-nums">{i + 1} / {beats.length}</span>
-          <button type="button" disabled={i === 0} onClick={(e) => { stop(e); prev(); }} className={tool} aria-label="上一句">‹ 上一句</button>
-        </span>
-        <span className="flex items-center gap-3">
-          <button type="button" disabled={busy} onClick={(e) => { stop(e); regenerate(); }} className={tool}><span className="inline-flex items-center gap-1"><IconRefresh size={12} /> 重新生成</span></button>
-          <button type="button" onClick={(e) => { stop(e); onDone(); }} className={tool} title="跳到末尾，查看完整剧情">跳过 »</button>
-          <span className="animate-pulse text-coral"><IconChevronDown size={12} /></span>
-        </span>
-      </div>
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { romancePortalRoot } from "../lib/romancePortalRoot";
 import { useState } from "react";
 import { useGame } from "../store/gameCtx";
 import { Modal } from "./ui";
-import { IconSpark } from "../lib/icons";
+import { IconClose, IconSpark } from "../lib/icons";
 import ContractDoc from "./ContractDoc";
 import { worldItemById as itemById } from "../mods/registry";
 import { findCustomItem } from "../game/mapedits";
@@ -101,14 +101,20 @@ export default function Backpack({ onClose, embedded = false }: { onClose?: () =
         if (!it) return null;
         return (
           <div className="ui-overlay z-[60]" onClick={() => setOpenItem(null)}>
-            <div onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" className="ui-sheet animate-pop max-w-sm p-5">
-              <div className="flex items-center gap-3"><span className="flex h-12 w-12 items-center justify-center rounded-xl bg-black/[0.04] text-[24px]">{it.icon || <IconSpark size={24} />}</span><div><p className="text-[16px] font-bold text-ink">{it.name}</p>{it.price ? <p className="text-[12px] text-gold">价值 ¥{it.price}</p> : null}</div></div>
-              <p className="mt-3 text-[14px] leading-[1.6] text-ink/85">{it.desc}</p>
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <button onClick={() => useItem(openItem)} className="ui-btn ui-btn-soft ui-btn-lg">使用</button>
-                <button onClick={() => { setGiftItem(openItem); setOpenItem(null); }} className="ui-btn ui-btn-soft ui-btn-lg tone-gold">赠送</button>
+            <div onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={it.name} className="ui-sheet ui-dialog animate-pop">
+              <div className="flex items-center gap-3 px-5 pb-2 pt-5">
+                <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-black/[0.04] text-[24px]">{it.icon || <IconSpark size={24} />}</span>
+                <div className="min-w-0 flex-1"><p className="truncate text-[16px] font-bold text-ink">{it.name}</p>{it.price ? <p className="text-[12px] text-gold">价值 ¥{it.price}</p> : null}</div>
+                <button onClick={() => setOpenItem(null)} aria-label="关闭" className="ui-icon-btn"><IconClose /></button>
               </div>
-              <button onClick={() => setOpenItem(null)} className="ui-btn ui-btn-ghost ui-btn-block mt-2">收好</button>
+              <div className="ui-dialog-body px-5 pb-5">
+                <p className="mt-1 text-[14px] leading-[1.6] text-ink/85">{it.desc}</p>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <button onClick={() => useItem(openItem)} className="ui-btn ui-btn-soft ui-btn-lg">使用</button>
+                  <button onClick={() => { setGiftItem(openItem); setOpenItem(null); }} className="ui-btn ui-btn-soft ui-btn-lg tone-gold">赠送</button>
+                </div>
+                <button onClick={() => setOpenItem(null)} className="ui-btn ui-btn-ghost ui-btn-block mt-2">收好</button>
+              </div>
             </div>
           </div>
         );
@@ -118,14 +124,21 @@ export default function Backpack({ onClose, embedded = false }: { onClose?: () =
         if (!it) return null;
         return (
           <div className="ui-overlay z-[70]" onClick={() => setGiftItem(null)}>
-            <div onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" className="ui-sheet animate-pop max-w-sm p-5">
-              <p className="text-[16px] font-bold text-ink">把「{it.name}」送给谁？</p>
-              <p className="mt-1 text-[12px] text-ink-soft">赠送后物品会离开行囊，对方关系与好感 +5。</p>
-              <div className="mt-4 max-h-60 space-y-2 overflow-y-auto">
+            <div onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={`赠送${it.name}`} className="ui-sheet ui-dialog animate-pop">
+              <div className="flex items-start gap-3 px-5 pb-2 pt-5">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[16px] font-bold text-ink">把「{it.name}」送给谁？</p>
+                  <p className="mt-1 text-[12px] text-ink-soft">赠送后物品会离开行囊，对方关系与好感 +5。</p>
+                </div>
+                <button onClick={() => setGiftItem(null)} aria-label="关闭" className="ui-icon-btn"><IconClose /></button>
+              </div>
+              <div className="ui-dialog-body px-5 pb-5">
+              <div className="mt-2 space-y-2">
                 {contacts.map((person) => <button key={person.id} onClick={() => giftTo(person.id)} className="flex w-full items-center justify-between rounded-xl border border-line bg-paper-2 px-3 py-2.5 text-left transition hover:border-gold hover:bg-gold/5"><span><span className="block text-[14px] font-semibold text-ink">{person.name}</span><span className="block text-[12px] text-ink-soft">{person.identity || person.relation || "联系人"}</span></span><span className="text-gold">赠予 ›</span></button>)}
                 {contacts.length === 0 && <p className="py-4 text-center text-[12px] text-ink-soft">先在地图中认识一位联系人，才能赠礼。</p>}
               </div>
               <button onClick={() => setGiftItem(null)} className="ui-btn ui-btn-ghost ui-btn-block mt-3">取消</button>
+              </div>
             </div>
           </div>
         );

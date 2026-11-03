@@ -19,7 +19,8 @@ test('ModEditorPanel_玩法面板须按 showPlay 动态挂载', () => {
   assert.match(panel, /添加玩法/);
   assert.match(panel, /playModInstalls/);
   assert.match(panel, /AddPlayModModal/);
-  assert.match(panel, /label: "⑤ 玩法 Mod"/);
+  assert.match(panel, /title="已添加的玩法"/);
+  assert.doesNotMatch(panel, /label: "⑤ 玩法 Mod"/);
   assert.doesNotMatch(panel, /label: "⑦ 功能扩展"/);
 });
 

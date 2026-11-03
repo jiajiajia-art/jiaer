@@ -106,16 +106,15 @@ export function menuItems() {
   });
 }
 
-/* 底栏可选牌位（渲染与编辑器共用；按模组功能开关过滤） */
+/* 底栏可选牌位（渲染与编辑器共用；按模组功能开关过滤）。
+ * 功能注释：档案 / 支线是本体入口（头像弹窗 · 菜单剧情志），不进可配置底栏、也不进玩法 Mod。 */
 export function navPool(): { id: MudTab; label: string; glyph: GlyphName }[] {
   return ([
     { id: "home", glyph: "world", label: term("tabWorld", "世界"), on: true },
     { id: "actions", glyph: "star", label: term("tabIndustry", "娱乐圈"), on: feature("industryTab") },
-    { id: "sim", glyph: "clipboard", label: term("tabSim", "档案"), on: true },
     { id: "npc", glyph: "people", label: contactsTitle(), on: true },
     { id: "phone", glyph: "book", label: term("tabPhone", "手机"), on: feature("phone") },
     { id: "image", glyph: "camera", label: term("tabImage", "形象"), on: feature("imageCrisis") },
-    { id: "quest", glyph: "flag", label: "支线", on: true },
     { id: "settings", glyph: "gear", label: "设置", on: true },
   ] as { id: MudTab; glyph: GlyphName; label: string; on: boolean }[]).filter((x) => x.on).map(({ id, label, glyph }) => ({ id, label, glyph }));
 }
@@ -151,7 +150,7 @@ export function NavTabsEditor() {
   const btn = "grid h-8 w-8 place-items-center rounded-lg border border-line bg-paper text-[13px] text-ink-soft transition hover:border-jade hover:text-jade disabled:opacity-30";
   return (
     <div className="space-y-2.5">
-      <p className="rounded-2xl bg-paper-2/70 px-3 py-2 text-[12px] leading-relaxed text-ink-soft">先选底部栏放几格，再勾选要放的功能、调整顺序和名字。中间的「日程」按钮固定不动，左右各分一半。没勾满时会按默认顺序自动补位；隐藏的功能仍可从 菜单进入。</p>
+      <p className="rounded-2xl bg-paper-2/70 px-3 py-2 text-[12px] leading-relaxed text-ink-soft">先选底部栏放几格，再勾选要放的功能、调整顺序和名字。中间的「日程」按钮固定不动，左右各分一半。没勾满时会按默认顺序自动补位。档案（头像）与支线（菜单·剧情志）是本体入口，不进底栏；隐藏的玩法页仍可从菜单进入。</p>
       <div>
         <p className="mb-1.5 px-1 text-[11px] font-bold tracking-[0.12em] text-ink-soft">格数（不含中间「日程」）</p>
         <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${Math.max(1, sizes.length)}, minmax(0, 1fr))` }}>
@@ -276,7 +275,7 @@ export default function MudChrome({ tab, setTab }: { tab: MudTab; setTab: (t: Mu
     </button>
   );
 
-  /* 按模组功能动态排位：关掉的玩法不占格，自动用「档案」补位，左右两组始终平衡 */
+  /* 按模组功能动态排位：关掉的玩法不占格，按默认序补满；档案/支线不在底栏 */
   const slots = resolveNav(game.navTabs, game.navSize);
   const dense = slots.length > 4;
   const half = Math.ceil(slots.length / 2);

@@ -13,9 +13,8 @@ import { auth } from '../../api/account/authApi';
 import { flattenThemeTags, useLocalizedThemeTags, type FlatThemeTag } from '../../utils/themeTags';
 import {
     NOVEL_DESCRIPTION_MAX_LENGTH,
-    THEME_TAG_MAX,
-    THEME_TAG_MIN_PUBLISH,
     toggleThemeTagSelection,
+    validateEnabledThemeTagSelection,
     validateNovelDraftSave,
     validateNovelPublish,
     mapNovelEditErrorToI18nKey,
@@ -44,7 +43,7 @@ export type PublishSubmitPayload = {
     description: string;
     tagIds: number[];
     shareType?: Currency;
-    versionNotes?: string;
+    versionNotes?: string | null;
     notifyFavoritedUsers?: boolean;
     audienceType?: 'male' | 'female' | 'all';
 };
@@ -184,12 +183,15 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     const [saving, setSaving] = useState<boolean>(false);
     const [generatingDescription, setGeneratingDescription] = useState<boolean>(false);
     const [versionNotes, setVersionNotes] = useState<string>('');
+    const [isUpdateSubmission, setIsUpdateSubmission] = useState(false);
+    const [updateLogChoice, setUpdateLogChoice] = useState<'with' | 'without' | null>(null);
     const [notifyFavoritedUsers, setNotifyFavoritedUsers] = useState<boolean>(false);
     const [shareType, setShareType] = useState<Currency>('points');
 
     useEffect(() => {
         if (!isOpen) {
             setNotifyFavoritedUsers(false);
+            setUpdateLogChoice(null);
             return;
         }
         setLandscapePreview(coverUrl || null);
@@ -212,6 +214,11 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                     );
                     setDescription(toEditorHtml(detail.description || ''));
                     setVersionNotes(detail.version_notes || '');
+                    setIsUpdateSubmission(
+                        Number(detail.is_public) === 1
+                        || Number(detail.published_version || 0) > 0,
+                    );
+                    setUpdateLogChoice(null);
                     setLandscapePreview(detail.cover_url || null);
                     setPortraitPreview(detail.portrait_cover_url || null);
                     const tagIds = Array.isArray(detail.theme_tag_ids)
@@ -266,9 +273,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
             return;
         }
         setSelectedThemeTagIds(next);
-        if (themeTagsRequired && next.length >= 1) {
-            setThemeTagError('');
-        } else if (!themeTagsRequired && next.length <= 2) {
+        if (next.length <= 1) {
             setThemeTagError('');
         }
     };
@@ -299,9 +304,11 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
             }
             setDescription(toEditorHtml(nextDescription));
             toast.success(t('common.publishSettings.aiGenerateSuccess'));
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('AI 生成简介失败:', error);
-            toast.error(error?.response?.data?.message || t('common.publishSettings.aiGenerateFailed'));
+            const message = (error as { response?: { data?: { message?: string } } })
+                .response?.data?.message;
+            toast.error(message || t('common.publishSettings.aiGenerateFailed'));
         } finally {
             setGeneratingDescription(false);
         }
@@ -374,13 +381,30 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
             return false;
         }
 
-        if (selectedThemeTagIds.length < THEME_TAG_MIN_PUBLISH || selectedThemeTagIds.length > THEME_TAG_MAX) {
-            setThemeTagError(t('createGame.themeTagRequired'));
-            toast.error(t('createGame.themeTagRequired'));
-            return false;
+        {
+            const themeCheck = validateEnabledThemeTagSelection(
+                selectedThemeTagIds,
+                availableThemeTags.map((tag) => tag.id),
+            );
+            if (!themeCheck.valid) {
+                const key = themeCheck.error === 'THEME_TAG_DISABLED'
+                    ? 'createGame.themeTagDisabled'
+                    : 'createGame.themeTagRequired';
+                setThemeTagError(t(key));
+                toast.error(t(key));
+                return false;
+            }
         }
 
         const trimmedVersionNotes = versionNotes.trim();
+        if (isUpdateSubmission && updateLogChoice === null) {
+            toast.error('请选择是否填写更新日志');
+            return false;
+        }
+        if (isUpdateSubmission && updateLogChoice === 'with' && !trimmedVersionNotes) {
+            toast.error('更新日志不能为空');
+            return false;
+        }
         if (trimmedVersionNotes.length > VERSION_NOTES_MAX_LENGTH) {
             toast.error(t('common.publishSettings.versionNotesTooLong', { max: VERSION_NOTES_MAX_LENGTH }));
             return false;
@@ -480,7 +504,9 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
             description: trimmed,
             tagIds: selectedThemeTagIds,
             shareType: requiresShareType ? shareType : undefined,
-            versionNotes: versionNotes.trim(),
+            versionNotes: isUpdateSubmission
+                ? (updateLogChoice === 'with' ? versionNotes.trim() : null)
+                : versionNotes.trim(),
             notifyFavoritedUsers,
             audienceType: selectedAudienceType || undefined,
         });
@@ -649,19 +675,45 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
 
                     {!isNovelEditMode && (
                         <div className={styles.descriptionFormGroup}>
-                            <label className={styles.label}>{t('common.publishSettings.versionNotes')}</label>
-                            <textarea
-                                className={styles.descriptionInput}
-                                placeholder={t('common.publishSettings.versionNotesPlaceholder', { max: VERSION_NOTES_MAX_LENGTH })}
-                                value={versionNotes}
-                                maxLength={VERSION_NOTES_MAX_LENGTH}
-                                onChange={(e) => setVersionNotes(e.target.value)}
-                            />
-                            <div className={styles.descriptionMetaRow}>
-                                <span className={styles.descriptionCount}>
-                                    {versionNotes.length}/{VERSION_NOTES_MAX_LENGTH}
-                                </span>
-                            </div>
+                            {isUpdateSubmission ? (
+                                <>
+                                    <label className={styles.label}>要填写更新日志吗？</label>
+                                    <div className={styles.themeTagsWrap}>
+                                        <button
+                                            type="button"
+                                            className={`${styles.themeTagChip} ${updateLogChoice === 'with' ? styles.themeTagChipActive : ''}`}
+                                            onClick={() => setUpdateLogChoice('with')}
+                                        >
+                                            填写
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={`${styles.themeTagChip} ${updateLogChoice === 'without' ? styles.themeTagChipActive : ''}`}
+                                            onClick={() => setUpdateLogChoice('without')}
+                                        >
+                                            不填写
+                                        </button>
+                                    </div>
+                                </>
+                            ) : (
+                                <label className={styles.label}>{t('common.publishSettings.versionNotes')}</label>
+                            )}
+                            {(!isUpdateSubmission || updateLogChoice === 'with') ? (
+                                <>
+                                    <textarea
+                                        className={styles.descriptionInput}
+                                        placeholder={t('common.publishSettings.versionNotesPlaceholder', { max: VERSION_NOTES_MAX_LENGTH })}
+                                        value={versionNotes}
+                                        maxLength={VERSION_NOTES_MAX_LENGTH}
+                                        onChange={(e) => setVersionNotes(e.target.value)}
+                                    />
+                                    <div className={styles.descriptionMetaRow}>
+                                        <span className={styles.descriptionCount}>
+                                            {versionNotes.length}/{VERSION_NOTES_MAX_LENGTH}
+                                        </span>
+                                    </div>
+                                </>
+                            ) : null}
                         </div>
                     )}
 

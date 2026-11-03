@@ -1,4 +1,4 @@
-import { RAW_SIDE_JOBS, RAW_STAT_LABELS, RAW_STAT_ORDER, RAW_WEEKEND_ACTS, type GradeReq, type SideJob, type StatsSlot, type WeekendAct } from "../game/data";
+import { RAW_STAT_LABELS, RAW_STAT_ORDER, type GradeReq, type SideJob, type StatsSlot, type WeekendAct } from "../game/data";
 import { FIXED_METRICS } from "../game/fixedEvents";
 import type { AttrDef } from "../lib/types";
 
@@ -77,8 +77,8 @@ export default function ModActsEditor({ jobs, acts, stats, attrs, onChange }: {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <p className="text-[12px] font-bold text-ink">打工 <span className="font-normal text-ink-soft">· 按列表顺序为档位，可要求上一档先做满 N 次</span></p>
-        {!jl.length && <button className={btn} onClick={() => setJobs(RAW_SIDE_JOBS.map((j) => ({ ...j })))}>以默认 4 档为起点自定义</button>}
+        <p className="text-[12px] font-bold text-ink">打工 <span className="font-normal text-ink-soft">· 按列表顺序为档位，从空白自填</span></p>
+        {!jl.length && <p className="text-[11px] text-ink-soft">还没有打工档；点下方添加。开局不会套用娱乐圈便利店/商演表。</p>}
         {jl.map((j, i) => (
           <div key={j.id} className="space-y-1.5 rounded-xl border border-line bg-paper p-2.5">
             <div className="flex items-center gap-1.5">
@@ -104,12 +104,12 @@ export default function ModActsEditor({ jobs, acts, stats, attrs, onChange }: {
             <ReqRows value={j.reqs} opts={opts} onChange={(reqs) => pj(i, { reqs })} />
           </div>
         ))}
-        {jl.length > 0 && <button className={btn} onClick={() => setJobs([...jl, { id: uid("sj"), label: "新打工", pay: 3000, stress: 4, fameReq: 0, note: "", needPrev: jl.length ? 3 : undefined }])}>＋ 添加打工</button>}
+        <button className={btn} onClick={() => setJobs([...jl, { id: uid("sj"), label: "", pay: 0, stress: 0, fameReq: 0, note: "", needPrev: jl.length ? 3 : undefined }])}>＋ 添加打工</button>
       </div>
 
       <div className="space-y-2">
-        <p className="text-[12px] font-bold text-ink">周末活动</p>
-        {!al.length && <button className={btn} onClick={() => setActs(RAW_WEEKEND_ACTS.map((a) => ({ ...a })))}>以默认活动为起点自定义</button>}
+        <p className="text-[12px] font-bold text-ink">周末活动 <span className="font-normal text-ink-soft">· 从空白自填</span></p>
+        {!al.length && <p className="text-[11px] text-ink-soft">还没有周末活动；点下方添加。开局不会套用娱乐圈应酬表。</p>}
         {al.map((a, i) => (
           <div key={a.id} className="space-y-1.5 rounded-xl border border-line bg-paper p-2.5">
             <div className="flex items-center gap-1.5">
@@ -128,7 +128,7 @@ export default function ModActsEditor({ jobs, acts, stats, attrs, onChange }: {
             <ReqRows value={a.reqs} opts={opts} onChange={(reqs) => pa(i, { reqs })} />
           </div>
         ))}
-        {al.length > 0 && <button className={btn} onClick={() => setActs([...al, { id: uid("wk"), name: "新活动", effect: "", icon: "", cost: 0, energy: 0, stress: -4 }])}>＋ 添加活动</button>}
+        <button className={btn} onClick={() => setActs([...al, { id: uid("wk"), name: "", effect: "", icon: "", cost: 0, energy: 0, stress: 0 }])}>＋ 添加活动</button>
       </div>
     </div>
   );

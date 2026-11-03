@@ -2,30 +2,32 @@ import { affinityCapOf } from "../worlds/star2005/content";
 /* 全局引用索引与脏数据校验：扫描剧情桥段 / 选项 / 事件链断点 / 结局 / CG / 阵营 / 主线 / 世界书里的条件与效果，
  * 找出引用了不存在对象的条目、只读不写的标记、永远不会触发的设置，以及事件之间的循环依赖。只供编辑器调用。
  * 每条问题带 at（如 event:<id>），编辑器据此把提示挂到对应条目上。 */
-import type { CgDef, CustomEnding, EngineRules, Faction, FixedCond, FixedEffect, FixedEvent, GameState, Storyline, WorldBookEntry } from "../lib/types";
+import type { CgDef, CustomEnding, EngineRules, Faction, FixedCond, FixedEffect, FixedEvent, GameState, Sideline, Storyline, WorldBookEntry } from "../lib/types";
 import { asTrimmedString } from "../lib/asTrimmedString";
-import { LIVE_ITEMS, LIVE_LOCATIONS, LIVE_PEOPLE, getWorldGameRules, getWorldRooms, getWorldStorylines } from "../mods/registry";
+import { LIVE_ITEMS, LIVE_LOCATIONS, LIVE_PEOPLE, getWorldGameRules, getWorldRooms, getWorldSidelines, getWorldStorylines } from "../mods/registry";
 import { resolveRules, rulesOf } from "./engineRules";
 import { keywordTexts } from "../lib/worldBookKeywords";
 import { modeOf } from "./worldbookPick";
+import { hasCgImage } from "./cgImageStore";
+import { asCondList } from "./safeConds.ts";
 
 /** 功能注释：审计文案字段；AI 脏对象禁止 ?.trim()（会炸 trim is not a function） */
 const txt = (v: unknown) => asTrimmedString(v);
 
-export type RefKind = "npc" | "item" | "location" | "event" | "faction" | "quest" | "flag";
+export type RefKind = "npc" | "item" | "location" | "event" | "faction" | "quest" | "side" | "flag";
 export type RefHit = { kind: RefKind; id: string; from: string; at?: string }; // from = 来源说明；at = 所属条目
 export type AuditIssue = { level: "error" | "warn"; text: string; from?: string; at?: string };
 export type AuditReport = { refs: RefHit[]; issues: AuditIssue[]; cycles: string[][] };
 export type AuditInput = {
-  events?: FixedEvent[]; endings?: CustomEnding[]; cgs?: CgDef[]; factions?: Faction[]; storylines?: Storyline[]; worldBook?: WorldBookEntry[];
+  events?: FixedEvent[]; endings?: CustomEnding[]; cgs?: CgDef[]; factions?: Faction[]; storylines?: Storyline[]; sidelines?: Sideline[]; worldBook?: WorldBookEntry[];
   npcIds?: string[]; roomIds?: string[]; skip?: RefKind[]; flags?: Record<string, number>; rules?: EngineRules;
 };
 
-export const REF_LABEL: Record<RefKind, string> = { npc: "人物", item: "物品", location: "地点", event: "事件", faction: "阵营", quest: "主线", flag: "标记" };
+export const REF_LABEL: Record<RefKind, string> = { npc: "人物", item: "物品", location: "地点", event: "事件", faction: "阵营", quest: "主线", side: "支线", flag: "标记" };
 
 /* 把一组条件里的引用（含嵌套括号子组）展开 */
 function condRefs(conds: FixedCond[] | undefined, from: string, at: string, out: RefHit[]) {
-  for (const c of conds ?? []) {
+  for (const c of asCondList(conds)) {
     switch (c.kind) {
       case "rel": out.push({ kind: "npc", id: c.key, from, at }); break;
       case "relSet": for (const k of c.keys ?? []) out.push({ kind: "npc", id: k, from, at }); break;
@@ -34,6 +36,7 @@ function condRefs(conds: FixedCond[] | undefined, from: string, at: string, out:
       case "event": out.push({ kind: "event", id: c.key, from, at }); break;
       case "faction": out.push({ kind: "faction", id: c.key, from, at }); break;
       case "quest": out.push({ kind: "quest", id: c.key, from, at }); break;
+      case "side": out.push({ kind: "side", id: c.key, from, at }); break;
       case "flag": case "flagSet": out.push({ kind: "flag", id: c.key, from, at }); break;
       case "group": condRefs(c.conds, from, at, out); break;
       default: break;
@@ -54,7 +57,7 @@ function effectRefs(efs: FixedEffect[] | undefined, from: string, at: string, ou
 }
 /* 事件条件里「已触发事件」的直接依赖（含嵌套） */
 function eventDeps(conds: FixedCond[] | undefined, out: Set<string>) {
-  for (const c of conds ?? []) { if (c.kind === "event" && c.key) out.add(c.key); else if (c.kind === "group") eventDeps(c.conds, out); }
+  for (const c of asCondList(conds)) { if (c.kind === "event" && c.key) out.add(c.key); else if (c.kind === "group") eventDeps(c.conds, out); }
 }
 /* ——— 条件自身能不能成立：取值越界、同组互相矛盾、空括号、日期格式 ——— */
 const OP_TXT: Record<string, string> = { gte: "≥", gt: ">", lte: "≤", lt: "<", eq: "=" };
@@ -62,15 +65,17 @@ const DATE_RE = /^\d{4}\.\d{1,2}\.\d{1,2}$/;
 const relCap = affinityCapOf;
 type Push = (level: AuditIssue["level"], text: string) => void;
 function condSanity(conds: FixedCond[] | undefined, match: "all" | "any" | undefined, push: Push, nameOf: (kind: string, key: string) => string) {
-  const list = conds ?? [];
+  const list = asCondList(conds);
   // 同一「且」组里对同一个量的上下界
   const bounds = new Map<string, { lo: number; loStrict: boolean; hi: number; hiStrict: boolean; label: string }>();
   const exists = new Map<string, boolean>();
   let dateLo = "", dateHi = "";
   for (const c of list) {
     if (c.kind === "group") {
-      if (!c.conds.length) push("warn", "有一个空的括号条件组，可以删掉");
-      else condSanity(c.conds, c.not ? (c.match === "all" ? "any" : "all") : c.match, push, nameOf);
+      // 功能注释：脏稿/AI 结局常缺 conds，禁止 .length 直接读 undefined 崩掉④剧情页
+      const nested = asCondList(c.conds);
+      if (!nested.length) push("warn", "有一个空的括号条件组，可以删掉");
+      else condSanity(nested, c.not ? (c.match === "all" ? "any" : "all") : c.match, push, nameOf);
       continue;
     }
     if (c.kind === "date") {
@@ -139,6 +144,7 @@ export function auditStory(inp: AuditInput): AuditReport {
   const writes = new Set<string>();
   const events = inp.events ?? [];
   const storylines = inp.storylines ?? getWorldStorylines() ?? [];
+  const sidelines = inp.sidelines ?? getWorldSidelines() ?? [];
   const rules = inp.rules ?? resolveRules(undefined);
   const evName = (id: string) => events.find((e) => e.id === id)?.name || id;
   const people = new Map<string, string>(LIVE_PEOPLE.map((p) => [p.id, p.name]));
@@ -152,7 +158,7 @@ export function auditStory(inp: AuditInput): AuditReport {
     ids.add(e.id);
     condRefs(e.conds, from, at, refs);
     for (const gr of e.condGroups ?? []) condRefs(gr.conds, from, at, refs);
-    for (const b of e.chainBreaks ?? []) condRefs(b.group.conds, `${from}·断点`, at, refs);
+    for (const b of e.chainBreaks ?? []) condRefs(b.group?.conds, `${from}·断点`, at, refs);
     effectRefs(e.effects, from, at, refs, writes);
     for (const id of e.nextIds ?? []) refs.push({ kind: "event", id, from: `${from}·后续`, at });
     const t = e.trigger;
@@ -173,7 +179,12 @@ export function auditStory(inp: AuditInput): AuditReport {
     // 条件 / 效果 / 时间 / 触发方式自身是否成立
     const sane = (where: string): Push => (level, text) => issues.push({ level, text: where ? `${where}：${text}` : text, from, at });
     condSanity(e.conds, e.condMatch, sane(""), nameOf);
-    for (const gr of e.condGroups ?? []) { if (!gr.conds.length) sane("")("warn", "有一个空的条件组"); condSanity(gr.conds, gr.match, sane("条件组"), nameOf); }
+    // 功能注释：AI/脏稿条件组常缺 conds；禁止 .length 直读 undefined（④剧情·固定事件一挂载就崩回①）
+    for (const gr of e.condGroups ?? []) {
+      const gConds = asCondList(gr.conds);
+      if (!gConds.length) sane("")("warn", "有一个空的条件组");
+      condSanity(gConds, gr.match, sane("条件组"), nameOf);
+    }
     effectSanity(e.effects, sane(""));
     const tm = e.time;
     if (tm?.kind === "day" && tm.day < 0) sane("触发时间")("error", "天数不能是负数");
@@ -197,7 +208,11 @@ export function auditStory(inp: AuditInput): AuditReport {
       const cs = sane(`选项「${txt(c.label) || c.id}」`);
       condSanity(c.conds, c.condMatch, cs, nameOf);
       for (const gr of c.condGroups ?? []) condSanity(gr.conds, gr.match, cs, nameOf);
-      if (c.check) { if (!c.check.conds.length) cs("warn", "开启了成功判定但没有条件，永远算成功"); condSanity(c.check.conds, c.check.match, cs, nameOf); }
+      if (c.check) {
+        const checkConds = asCondList(c.check.conds);
+        if (!checkConds.length) cs("warn", "开启了成功判定但没有条件，永远算成功");
+        condSanity(checkConds, c.check.match, cs, nameOf);
+      }
       effectSanity(c.effects, cs);
       effectSanity(c.failEffects, cs);
     }
@@ -206,29 +221,33 @@ export function auditStory(inp: AuditInput): AuditReport {
   }
 
   // 结局：按列表顺序判定，第一个满足的生效
+  // 功能注释：AI/脏稿常缺 title/body/conds；一律按空数组兜底，禁止④剧情挂载时 .length 崩页跳回①基础
   const endings = inp.endings ?? [];
   endings.forEach((en, i) => {
     const at = `ending:${en.id}`;
     const from = `结局·${en.title || en.id}`;
-    condRefs(en.conds, from, at, refs);
+    const conds = asCondList(en.conds);
+    condRefs(conds, from, at, refs);
     for (const gr of en.condGroups ?? []) condRefs(gr.conds, from, at, refs);
     if (en.sceneId) refs.push({ kind: "event", id: en.sceneId, from: `${from}·收尾场景`, at });
     if (!txt(en.title)) issues.push({ level: "warn", text: "结局没有标题", from, at });
     const es: Push = (level, text) => issues.push({ level, text, from, at });
-    condSanity(en.conds, en.match, es, nameOf);
+    condSanity(conds, en.match, es, nameOf);
     for (const gr of en.condGroups ?? []) condSanity(gr.conds, gr.match, es, nameOf);
-    if (en.enabled !== false && en.auto && !en.conds.length && !(en.condGroups ?? []).length && !en.minDay) es("error", "设为「满足即结算」却没有任何条件：开局第一回合就会直接结束游戏");
-    const free = en.enabled !== false && !en.conds.length && !(en.condGroups ?? []).length && !en.minDay;
+    if (en.enabled !== false && en.auto && !conds.length && !(en.condGroups ?? []).length && !en.minDay) es("error", "设为「满足即结算」却没有任何条件：开局第一回合就会直接结束游戏");
+    const free = en.enabled !== false && !conds.length && !(en.condGroups ?? []).length && !en.minDay;
     const later = endings.slice(i + 1).filter((x) => x.enabled !== false).length;
     if (free && later) issues.push({ level: "warn", text: `这是无条件（保底）结局，却排在第 ${i + 1} 位：后面 ${later} 个结局永远轮不到判定。保底结局请拖到最后`, from, at });
   });
 
   for (const cg of inp.cgs ?? []) {
     const at = `cg:${cg.id}`;
-    condRefs(cg.conds, `CG·${cg.title || cg.id}`, at, refs);
-    condSanity(cg.conds, "all", (level, text) => issues.push({ level, text, from: `CG·${cg.title || cg.id}`, at }), nameOf);
-    if (cg.enabled !== false && !cg.conds.length) issues.push({ level: "warn", text: "没有解锁条件，开局就会直接解锁", from: `CG·${cg.title || cg.id}`, at });
-    if (!cg.image) issues.push({ level: "warn", text: "还没有上传图片，解锁后图鉴里是空的", from: `CG·${cg.title || cg.id}`, at });
+    const from = `CG·${cg.title || cg.id}`;
+    condRefs(cg.conds, from, at, refs);
+    if (cg.npcId) refs.push({ kind: "npc", id: cg.npcId, from: `${from}·关联人物`, at });
+    condSanity(cg.conds, "all", (level, text) => issues.push({ level, text, from, at }), nameOf);
+    if (cg.enabled !== false && !asCondList(cg.conds).length) issues.push({ level: "error", text: "未设解锁条件，玩家看不到", from, at });
+    if (!hasCgImage(cg)) issues.push({ level: "error", text: "还没有上传图片，不能发布", from, at });
   }
   for (const f of inp.factions ?? []) {
     const at = `faction:${f.id}`;
@@ -244,8 +263,9 @@ export function auditStory(inp: AuditInput): AuditReport {
   // 主线：节点条件 / 奖励 / 完成后激活的事件
   for (const l of storylines) {
     const at = `quest:${l.id}`;
-    if (!l.nodes.length) issues.push({ level: "warn", text: "主线还没有节点", from: `主线·${l.name || l.id}`, at });
-    for (const n of l.nodes) {
+    const nodes = Array.isArray(l.nodes) ? l.nodes : [];
+    if (!nodes.length) issues.push({ level: "warn", text: "主线还没有节点", from: `主线·${l.name || l.id}`, at });
+    for (const n of nodes) {
       const from = `主线·${l.name || l.id}·${n.name || n.id}`;
       condRefs(n.conds, from, at, refs);
       condRefs(n.failConds, `${from}·失败`, at, refs);
@@ -258,6 +278,32 @@ export function auditStory(inp: AuditInput): AuditReport {
       effectSanity(n.rewards, ns);
       if (!(n.conds ?? []).length && !n.optional) issues.push({ level: "warn", text: `节点「${n.name || n.id}」没有完成条件，一开始判定就会直接完成`, from, at });
     }
+  }
+
+  // 支线：触发 / 完成 / 失败共享同一套条件，完成与失败奖励共享主线效果。
+  const sideIds = new Set<string>();
+  for (const s of sidelines) {
+    const at = `side:${s.id}`;
+    const from = `支线·${s.name || s.id}`;
+    if (!s.id) issues.push({ level: "error", text: "支线缺少 ID，无法记录存档进度", from, at });
+    else if (sideIds.has(s.id)) issues.push({ level: "error", text: `支线 ID「${s.id}」重复，存档进度会互相覆盖`, from, at });
+    sideIds.add(s.id);
+    if (!txt(s.name)) issues.push({ level: "error", text: "支线没有名称", from, at });
+    condRefs(s.trigger, `${from}·触发`, at, refs);
+    condRefs(s.conds, `${from}·完成`, at, refs);
+    condRefs(s.failConds, `${from}·失败`, at, refs);
+    effectRefs(s.rewards, `${from}·完成奖励`, at, refs, writes);
+    effectRefs(s.failRewards, `${from}·失败奖励`, at, refs, writes);
+    for (const id of s.unlockIds ?? []) refs.push({ kind: "event", id, from: `${from}·激活`, at });
+    for (const id of s.failUnlockIds ?? []) refs.push({ kind: "event", id, from: `${from}·失败激活`, at });
+    const ss: Push = (level, text) => issues.push({ level, text, from, at });
+    condSanity(s.trigger, "all", ss, nameOf);
+    condSanity(s.conds, s.match, ss, nameOf);
+    condSanity(s.failConds, "any", ss, nameOf);
+    effectSanity(s.rewards, ss);
+    effectSanity(s.failRewards, ss);
+    if (s.enabled !== false && !(s.conds ?? []).length) ss("warn", "未设完成条件，触发后会一直挂起");
+    if (s.limitDays !== undefined && !(s.limitDays >= 1)) ss("error", "失败时限至少为 1 天");
   }
 
   for (const k of rules.affinity.noDecay) refs.push({ kind: "npc", id: k, from: "底层规则·不衰减角色", at: "rules" });
@@ -274,11 +320,26 @@ export function auditStory(inp: AuditInput): AuditReport {
     if (t) titles.set(t, (titles.get(t) ?? 0) + 1);
     if (!w.enabled) continue;
     if (!txt(w.content)) issues.push({ level: "warn", text: "正文为空，注入了也没有内容", from, at });
-    if (modeOf(w) === "keyword" && keywordTexts(w.keywords).length === 0) issues.push({ level: "error", text: "设为关键词触发，但没有填关键词，永远不会注入", from, at });
+    if (modeOf(w) === "keyword" && keywordTexts(w.keywords).length === 0 && !(w.bindRooms?.length || w.bindNpcs?.length || (w.scope && w.scope !== "global" && w.scopeId))) {
+      issues.push({ level: "warn", text: "没有关键词也没有挂地点/人物，依赖触发时可能从未注入", from, at });
+    }
     if (w.probability === 0) issues.push({ level: "warn", text: "触发概率为 0，永远不会注入", from, at });
-    if ((w.scope === "npc" && !inp.skip?.includes("npc")) || (w.scope === "room" && !inp.skip?.includes("location"))) {
-      if (!w.scopeId) issues.push({ level: "error", text: `绑定范围是${w.scope === "npc" ? "角色" : "地点"}，但还没选择具体对象`, from, at });
-      else if (w.scope === "npc" ? !npcIds.has(w.scopeId) : !rooms.has(w.scopeId)) issues.push({ level: "error", text: `绑定的${w.scope === "npc" ? "角色" : "地点"}「${w.scopeId}」已不存在，条目不会再注入`, from, at });
+    {
+      const bindRooms = w.bindRooms?.length ? w.bindRooms : w.scope === "room" && w.scopeId ? [w.scopeId] : [];
+      const bindNpcs = w.bindNpcs?.length ? w.bindNpcs : w.scope === "npc" && w.scopeId ? [w.scopeId] : [];
+      if (!bindRooms.length && !bindNpcs.length && modeOf(w) !== "constant") {
+        issues.push({ level: "error", text: "未挂本作品的地点或人物，保存模组前须补挂", from, at });
+      }
+      if (!inp.skip?.includes("location")) {
+        for (const id of bindRooms) {
+          if (!rooms.has(id)) issues.push({ level: "error", text: `绑定的地点「${id}」已不存在，条目不会再注入`, from, at });
+        }
+      }
+      if (!inp.skip?.includes("npc")) {
+        for (const id of bindNpcs) {
+          if (!npcIds.has(id)) issues.push({ level: "error", text: `绑定的角色「${id}」已不存在，条目不会再注入`, from, at });
+        }
+      }
     }
   }
   for (const w of inp.worldBook ?? []) { const t = txt(w.title); if (t && (titles.get(t) ?? 0) > 1) issues.push({ level: "warn", text: `与其他条目同名「${t}」，AI 可能分不清`, from: `世界书·${t}`, at: `wb:${w.id}` }); }
@@ -290,7 +351,8 @@ export function auditStory(inp: AuditInput): AuditReport {
     location: new Set(LIVE_LOCATIONS.map((l) => l.id)),
     event: ids,
     faction: new Set((inp.factions ?? []).map((f) => f.id)),
-    quest: new Set(storylines.flatMap((l) => [l.id, ...l.nodes.map((n) => n.id)])),
+    quest: new Set(storylines.flatMap((l) => [l.id, ...(Array.isArray(l.nodes) ? l.nodes : []).map((n) => n.id)])),
+    side: new Set(sidelines.map((s) => s.id)),
   };
   for (const r of refs) {
     if (r.kind === "flag") continue;
@@ -300,7 +362,7 @@ export function auditStory(inp: AuditInput): AuditReport {
   }
   // 标记：只读不写（系统写入的前缀与压力崩溃标记除外；当前世界的玩法规则也算写入方）
   for (const r of getWorldGameRules() ?? []) for (const b of r.branches ?? []) for (const f of b.effects ?? []) if (f.kind === "flag") writes.add(f.key);
-  const sysFlag = (k: string) => /^(faction:|mem:|quest:|chain:|evday:|溢出:)/.test(k) || k === rules.attrs.stressFlag;
+  const sysFlag = (k: string) => /^(faction:|mem:|quest:|side:|sideDone:|sideAt:|chain:|evday:|溢出:)/.test(k) || k === rules.attrs.stressFlag;
   for (const r of inp.skip?.includes("flag") ? [] : refs.filter((x) => x.kind === "flag")) {
     if (!r.id) issues.push({ level: "error", text: "标记名为空", from: r.from, at: r.at });
     else if (!writes.has(r.id) && !sysFlag(r.id) && !(inp.flags && r.id in inp.flags)) issues.push({ level: "warn", text: `标记「${r.id}」只被读取，没有任何效果写入它`, from: r.from, at: r.at });

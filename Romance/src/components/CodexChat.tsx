@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import {
-  IconArrowUp,
   IconCheck,
   IconChevronDown,
   IconPlus,
+  IconSend,
   IconStop,
   IconUndo,
 } from "../lib/icons"
@@ -546,15 +546,16 @@ export function Composer({
       }`}
     />
   )
+  // 功能注释：发送/停止用独立酒红实心圆，避开 .codex-ui 把 --jade/--coral 洗成灰墨后白底白字的丑钮
   const action = busy ? (
     <button
       type="button"
       onClick={onStop}
       disabled={!canStop}
       aria-label="停止生成"
-      className="ui-btn ui-btn-primary size-8 min-h-0 shrink-0 p-0"
+      className="codex-composer-send size-8 min-h-0 shrink-0"
     >
-      <IconStop width={14} height={14} />
+      <IconStop width={13} height={13} />
     </button>
   ) : (
     <button
@@ -562,9 +563,9 @@ export function Composer({
       onClick={onSend}
       disabled={!can}
       aria-label="发送"
-      className="ui-btn ui-btn-primary size-8 min-h-0 shrink-0 p-0"
+      className="codex-composer-send size-8 min-h-0 shrink-0"
     >
-      <IconArrowUp width={16} height={16} />
+      <IconSend width={15} height={15} />
     </button>
   )
   const shell =
@@ -591,7 +592,7 @@ export function Composer({
   )
 }
 
-/** 「预览 / 对话」分段切换：对话式生成功能统一用它在同一页面内切换两种视图 */
+/** 「预览 / 对话」分段切换：编辑器里凡能 AI 对话的生成位，统一用它在实时预览与对话间切换 */
 export type GenView = "preview" | "chat"
 export function ViewSwitch({
   value,
@@ -619,5 +620,18 @@ export function ViewSwitch({
         </button>
       ))}
     </div>
+  )
+}
+
+/** 功能注释：计费提示须清晰可读；platform = 运营文案模型+积分，personal = 创作者本机 AI 配置。
+ * 用 jade/coral 软底对齐页签与链接触感；避免 bg-paper / 浅金在暗色壳里糊成白胶囊看不清字。 */
+export function AiModelBillingBadge({ mode = "personal", className = "" }: { mode?: "personal" | "platform"; className?: string }) {
+  return (
+    <span
+      role="note"
+      className={`inline-flex items-center rounded-full bg-jade/15 px-2.5 py-1 text-[12.5px] font-bold leading-snug text-coral ring-1 ring-jade/35 ${className}`.trim()}
+    >
+      {mode === "platform" ? "使用平台文案模型 · 按积分计费" : "使用你接入的模型 · 按接口计费"}
+    </span>
   )
 }

@@ -1,8 +1,8 @@
 import { useState, type ReactNode } from "react";
 import { useGame } from "../store/gameCtx";
-import type { AttrDef, CmpOp, CustomEnding, FixedCond, FixedEvent, GradeDim, GradeDimIcon, Storyline, TimeLimit } from "../lib/types";
+import type { AttrDef, CmpOp, CustomEnding, FixedCond, FixedEvent, GradeDim, GradeDimIcon, Sideline, Storyline, TimeLimit } from "../lib/types";
 import { CMP_OPS, GRADE_DIM_ICONS, GRADE_DIM_MAX, limitDays, parseYmdMs } from "../lib/types";
-import { CondRow, defaultCond, questOpts } from "./FixedEventsPanel";
+import { CondRow, defaultCond, questOpts, sideOpts } from "./FixedEventsPanel";
 import { GroupEditor } from "./EventAdvanced";
 import IntInput from "./IntInput";
 import { matchCustomEnding, groupMet, endingCondsMet, evalFixedCond, condCurrent, metricDefaultFull } from "../game/fixedEvents";
@@ -108,7 +108,7 @@ function TriggerRow({ c, srcs, people, onChange, onDelete }: {
 
 export default function EndingsPanel({
   value, onChange, timeLimitValue, onTimeLimitChange, gradeDimsValue, onGradeDimsChange, eventsValue, startDateValue,
-  statsValue, attrsValue, pathsValue, peopleValue, storylinesValue,
+  statsValue, attrsValue, pathsValue, peopleValue, storylinesValue, sidelinesValue,
 }: {
   value?: CustomEnding[];
   onChange?: (v: CustomEnding[]) => void;
@@ -124,6 +124,8 @@ export default function EndingsPanel({
   pathsValue?: CreationPath[];
   peopleValue?: { id: string; name: string }[];
   storylinesValue?: Storyline[];
+  /* 结局条件可主动勾「某支线已完成」；支线本身不是结局 */
+  sidelinesValue?: Sideline[];
 } = {}) {
   const modMode = !!onChange;
   const { game, commitGame, endManually } = useGame();
@@ -132,7 +134,14 @@ export default function EndingsPanel({
   const [confirm, confirmEl] = useConfirm();
   if (!modMode && !game) return null;
 
-  const list = modMode ? (value ?? []) : (game?.customEndings ?? []);
+  /* 功能注释：AI/脏稿常缺 title/body/conds；归一后再渲染与审计，避免④剧情一进就 .length 崩页跳回① */
+  const normalizeEnding = (e: CustomEnding): CustomEnding => ({
+    ...e,
+    title: e.title ?? "",
+    body: e.body ?? "",
+    conds: e.conds ?? [],
+  });
+  const list = (modMode ? (value ?? []) : (game?.customEndings ?? [])).map(normalizeEnding);
   const audit = modMode || !game
     ? auditStory({ endings: list, events: eventsValue, storylines: storylinesValue, npcIds: peopleValue?.map((p) => p.id), skip: ["item", "location", "flag", ...(storylinesValue ? [] : (["quest"] as const)), ...(peopleValue ? [] : (["npc"] as const))] })
     : auditGame(game, { endings: list });
@@ -190,6 +199,7 @@ export default function EndingsPanel({
 
   const eventsList = modMode ? (eventsValue ?? []) : (game?.fixedEvents ?? []);
   const quests = questOpts(modMode ? storylinesValue : undefined);
+  const sides = sideOpts(modMode ? sidelinesValue : undefined);
 
   /* ——— 区域 3：评级维度 ——— */
   const dims = modMode ? (gradeDimsValue ?? []) : (game?.gradeDims ?? []);
@@ -347,7 +357,7 @@ export default function EndingsPanel({
                         <div key={ci}>
                           {NUMERIC.has(c.kind)
                             ? <TriggerRow c={c as Extract<FixedCond, { kind: "stat" | "metric" | "rel" }>} srcs={srcs} people={people} onChange={set} onDelete={rm} />
-                            : <CondRow c={c} events={eventsList} selfId="" srcs={srcs} people={people} quests={quests} onChange={set} onDelete={rm} />}
+                            : <CondRow c={c} events={eventsList} selfId="" srcs={srcs} people={people} quests={quests} sides={sides} onChange={set} onDelete={rm} />}
                           {ok !== null && <p className="px-2 text-[10.5px]" style={{ color: ok ? "var(--jade)" : "var(--coral)" }}>{ok ? "已满足" : "未满足"}{cur != null ? ` · 当前 ${cur}` : ""}</p>}
                         </div>
                       );

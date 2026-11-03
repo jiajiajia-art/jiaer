@@ -24,6 +24,7 @@ const skinLabel = (id?: SkinId) => SKINS.find((s) => s.id === (id ?? "cute"))?.l
 type Prefs = {
   wallpaper: string;
   customWallpaper?: string;
+  wallpaperUserSet?: boolean;
   brightness: number; // 0.55 ~ 1
   dark: boolean;
   dnd: boolean;
@@ -333,8 +334,8 @@ export default function SettingsApp({ onBack, prefs, onChange }: { onBack: () =>
       <WallpaperPicker
         current={prefs.wallpaper}
         customCss={prefs.customWallpaper}
-        onPick={(id) => onChange({ wallpaper: id })}
-        onUpload={(dataUrl) => onChange({ customWallpaper: customWallpaperCss(dataUrl), wallpaper: CUSTOM_WALLPAPER_ID })}
+        onPick={(id) => onChange({ wallpaper: id, wallpaperUserSet: true })}
+        onUpload={(dataUrl) => onChange({ customWallpaper: customWallpaperCss(dataUrl), wallpaper: CUSTOM_WALLPAPER_ID, wallpaperUserSet: true })}
         onBack={() => setPage("root")}
       />
     );

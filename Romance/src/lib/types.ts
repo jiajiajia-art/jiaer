@@ -17,10 +17,10 @@ export type AttrDef = {
   id: string;
   label: string;
   icon?: string; // emoji
-  init: number; // 固定开局值；initMode 为 dice 时开局改掷骰，仍保留以便切回固定
-  /** 开局取值方式：同一属性二选一。缺省 / fixed = 用 init；dice = 开局由代码掷一次 */
-  initMode?: "fixed" | "dice";
-  /** 骰子面数（正整数）。仅 initMode=dice 时生效；1…dice 均匀取整后再夹到 min/max */
+  init: number; // 固定开局值；勾选「固定数值」时用；不勾则开局在 min～max 随机
+  /** 开局取值：缺省 / fixed = 用 init；random = 最小～最大随机；dice 为旧稿，开局按 random 处理 */
+  initMode?: "fixed" | "random" | "dice";
+  /** @deprecated 旧「投骰子」面数；新 UI 已改为范围随机，读档时忽略 */
   dice?: number;
   min?: number; // 下限（缺省 0）
   max?: number; // 上限（不填 = 无上限，适合货币）
@@ -28,6 +28,8 @@ export type AttrDef = {
   tiers?: AttrTier[]; // 分档（按 min 升序）：达到即显示该档名
   display?: "num" | "tier" | "both"; // 只显示数值 / 只显示档位 / 都显示（缺省 both）
   pin?: boolean; // 显示在顶部状态栏
+  /** 功能注释：建角页隐藏（仍写入开局 attrs / 可上状态栏）；创作者在「建角字段」里配 */
+  hidden?: boolean;
   tierEvent?: boolean; // 升到新档位时触发一段 AI 剧情
   desc?: string; // 给 AI 的说明：这个属性代表什么、何时增减
 };
@@ -143,8 +145,20 @@ export type Thought = { name: string; text: string };
 /* NPC 视角日记：由心事延伸出的第一人称日记，按人物归档 */
 export type DiaryEntry = { id: string; npcId: string; name: string; time: string; turn: number; text: string };
 
-/* CG：剧情插图（一幕场景，非人物立绘）。作者配置解锁条件，满足后收入图鉴 */
-export type CgDef = { _mod?: string; id: string; title: string; image: string; desc?: string; npcId?: string; conds: FixedCond[]; enabled?: boolean };
+/* CG：新上传只记录图片文件 id；image 仅兼容旧作品中的 URL/data 图片。 */
+export type CgDef = {
+  _mod?: string;
+  id: string;
+  title: string;
+  imageFileId?: string;
+  /** @deprecated 旧作品图片地址；新上传不得再写 data: 到作品配置。 */
+  image?: string;
+  desc?: string;
+  npcId?: string;
+  conds: FixedCond[];
+  hideBeforeUnlock?: boolean;
+  enabled?: boolean;
+};
 
 export type Option = { label: string; value: string };
 
@@ -242,6 +256,8 @@ export type GameState = {
   audioVolume?: number; // 作品音量 0–1（介于平台全局音量与单条音量之间）
   skinBgm?: Record<string, string>; // 皮肤 id → 切到该皮肤时联动播放的 BGM
   cgUnlocked?: Record<string, string>; // 已解锁 CG id → 解锁时的游戏时间
+  cgNew?: string[]; // 本存档尚未打开图鉴确认过的新解锁 CG
+  cgDialogue?: Record<string, string>; // 当前存档解锁瞬间对应的剧情文字
   relNet?: RelNet; // 人物关系网（人与人之间明确设定的关系；缺省 = 只用内容池里写明对方 id 的默认关系）
   npcIntro?: Record<string, "pending" | "skip">; // 剧情初遇：pending = 名片待决定；skip = 玩家选择暂不结识（结识后移除）
 };
@@ -383,6 +399,7 @@ export type FixedCond =
   | { kind: "flag"; key: string; op: CmpOp; value: number } // 规则变量（由玩法规则 / 事件写入，未写过视为 0）
   | { kind: "clock"; from: string; to: string } // 当日时段「HH:MM」~「HH:MM」，可跨午夜（如 22:00~06:00）
   | { kind: "quest"; key: string; state: QuestState } // 主线 / 目标进度：key = 主线 id 或节点 id
+  | { kind: "side"; key: string; state: SideState } // 支线进度：done = 至少完成过一次
   | { kind: "faction"; key: string; op: CmpOp; value: number } // 阵营声望（flags["faction:<id>"]，-100~100，未写过为 0）
   | { kind: "visited"; key: string } // 去过某地点（含其子地点）
   | { kind: "relSet"; keys: string[]; op: CmpOp; value: number; need?: number } // NPC 好感集合：其中至少 need 人（缺省 = 全部）满足
@@ -410,6 +427,29 @@ export type QuestNode = {
   failUnlockIds?: string[]; // 失败分支：失败后激活的事件 id
 };
 export type Storyline = { _mod?: string; id: string; name: string; desc?: string; enabled?: boolean; nodes: QuestNode[] };
+
+/* 支线：创作者自定义的额外任务，与主线节点、结局互不相干；失败或没接都不打断主线。
+ * 进度存于 flags：side:<id>（0 未出现 / 2 进行中 / 1 已完成 / -1 已失败）、
+ * sideDone:<id>（累计完成次数）、sideAt:<id>（本次出现的游戏日），旧存档无需迁移。 */
+export type SideState = "pending" | "active" | "done" | "failed";
+export type Sideline = {
+  _mod?: string;
+  id: string;
+  name: string;
+  desc?: string; // 给玩家 / AI 看的任务说明
+  enabled?: boolean;
+  trigger?: FixedCond[]; // 出现条件（全部满足才出现；留空 = 开局即出现）
+  repeat?: boolean; // 可重复：完成 / 失败后条件再满足会再次出现；缺省只触发一次
+  hidden?: boolean; // 触发前对玩家隐藏
+  conds?: FixedCond[]; // 完成条件；留空 = 不会自动完成
+  match?: "all" | "any";
+  failConds?: FixedCond[]; // 失败条件（任一满足即失败，可留空）
+  limitDays?: number; // 出现后 N 天内未完成即失败（超时）
+  rewards?: FixedEffect[]; // 完成奖励（与主线节点同一套效果）
+  unlockIds?: string[]; // 完成后激活的事件 id
+  failRewards?: FixedEffect[]; // 失败安慰奖，可留空
+  failUnlockIds?: string[]; // 失败后激活的事件 id
+};
 
 /* 触发后果：所有数值/状态变化由代码结算，AI 不参与判定。 */
 /* 周期收入：每次主线推进时间（周结算）时，满足全部条件即向目标数值发放固定或随机数额 */
@@ -440,18 +480,22 @@ export type FixedEffect =
   | { kind: "audio"; op: AudioOp; id?: string; volume?: number; fade?: number }; // 音频：播放 / 停止 / 停止全部 / 平滑切换 BGM / 调整音量
 
 /* 玩法规则：创作者自由组合的「如果…否则如果…否则」结算规则。
- * 每天结束 / 每周结算时逐条判定；分支按顺序比对，命中第一个即执行其效果，条件为空的分支 = 「否则」兜底。 */
+ * 每天结束 / 每周结算时逐条判定；分支按顺序比对，命中第一个即执行；条件为空的分支 = 「否则」兜底。
+ * 命中后优先调用事件库 eventId 的效果，再叠加本分支 effects（规则变量等）；flag 角色规则只改变量、不挂事件。 */
 export type RuleBranch = {
   conds: FixedCond[];
   match?: "all" | "any"; // 缺省 all
   effects: FixedEffect[];
-  notice?: string; // 命中时给玩家看的一句提示（写进当日 / 本周结算）
+  eventId?: string; // 命中后调用 content.events 里的可复用事件
+  notice?: string; // 命中时给玩家看的一句提示（写进当日 / 本周结算）；缺省可用事件 prompt
 };
+export type GameRuleRole = "event" | "flag"; // event=挂钩事件库；flag=只做规则变量计数
 export type GameRule = {
   id: string;
   name: string;
   enabled?: boolean; // 缺省开启
   when: "day" | "week"; // 每天结束 / 每周结算
+  role?: GameRuleRole; // 缺省 event
   branches: RuleBranch[];
   chance?: number; // 触发概率 1~100（缺省 100）
   once?: boolean; // 一局只触发一次
@@ -502,9 +546,12 @@ export function resolveAvatarMatchPrefs(slot?: AvatarSlot | null): {
 export type PlaySlot = {
   mode?: PlayMode; // 开局默认游玩模式（缺省 游戏模式）
   pov?: Pov; // 开局默认叙事视角（缺省 = 跟随世界观的叙事口吻，不额外要求人称）
-  ageAuto?: boolean; // 主角年龄随日历增长：每到生日 +1 岁（没填生日则在元旦 +1）
-  pickStartDate?: boolean; // 建角时允许玩家自选开局日期（默认 = 世界观开局日期）
-  startDateMin?: string; startDateMax?: string; // 可选范围（YYYY.MM.DD，可不填）
+  /** @deprecated 已内置开启，创作者界面不再配置；读到即忽略，保存时会剥掉 */
+  ageAuto?: boolean;
+  /** @deprecated 已下线：建角不再让玩家自选开局日期；旧稿字段读到即忽略 */
+  pickStartDate?: boolean;
+  /** @deprecated 已随 pickStartDate 下线 */
+  startDateMin?: string; startDateMax?: string;
 };
 
 export type FixedEventTime =
@@ -650,9 +697,9 @@ export type EventChoice = {
   failPrompt?: string; failEffects?: FixedEffect[]; failNextIds?: string[]; // 失败分支
 };
 
-/* 世界书条目：为世界设定写的一段规则/背景片段，按关键词分组，方便模型查阅。
- * 当玩家输入或近况文本命中 keywords 中任一词时，content 会作为参考资料注入提示词。
- * keywords 为空表示常驻注入（始终生效）。 */
+/* 世界书条目：名称 · 正文 · 关键词 · 必须挂本作品地点或人物。
+ * 注入时机：玩家在挂靠地点、挂靠人物在场、或正文提到关键词（OR）。
+ * 旧条目可无依赖（constant / 全局），兼容内置世界；创作者新写必须有 bindRooms / bindNpcs。 */
 export type WorldBookEntry = {
   _mod?: string; // 归属标记：由模板库 MOD 装入（卸载时只删带此标记的资源）
   id: string;
@@ -666,8 +713,10 @@ export type WorldBookEntry = {
   /* —— 细化设定（均可缺省，旧条目行为不变）—— */
   mode?: WorldBookMode; // 注入模式；缺省时按 constant / 关键词为空 推断
   duration?: number; // 有效期：触发后持续注入 N 轮（含触发这一轮），到期自动失效；缺省 / 0 = 只在命中的这一轮
-  scope?: "global" | "npc" | "room"; // 绑定范围：全局 / 单张角色卡（该角色在场或正与之聊天）/ 单个房间（玩家在该地点或其子地点）
+  scope?: "global" | "npc" | "room"; // 旧绑定：全局 / 单角色 / 单房间（新条目请用 bindRooms / bindNpcs）
   scopeId?: string; // scope 为 npc / room 时绑定的人物 id / 地点 id
+  bindRooms?: string[]; // 依赖地点（本作品 rooms id，可多选）
+  bindNpcs?: string[]; // 依赖人物（本作品 npcs id，可多选）
   group?: string; // 互斥组：同组只注入一条（已在有效期内的优先，其次检索得分最高的）
   weight?: number; // 检索权重（缺省 100）：得分 = 命中关键词长度 × 权重 / 100，长词优先
 };

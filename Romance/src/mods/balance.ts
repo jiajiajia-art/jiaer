@@ -14,18 +14,18 @@ export type Impact = { key: string; label: string; op: "replace" | "merge" | "ad
 
 /* 槽位中文名；numeric = 会影响数值平衡 */
 const SLOT_INFO: Record<string, { label: string; numeric?: boolean }> = {
-  play: { label: "开局游玩偏好" }, avatars: { label: "头像库与匹配优先级" }, stats: { label: "能力设定", numeric: true }, customAttrs: { label: "自定义属性", numeric: true }, traits: { label: "特质", numeric: true },
+  play: { label: "开局游玩偏好" }, avatars: { label: "头像" }, stats: { label: "能力设定", numeric: true }, customAttrs: { label: "自定义属性", numeric: true }, traits: { label: "特质", numeric: true },
   trainings: { label: "培训课程", numeric: true }, sideJobs: { label: "打工", numeric: true }, zodiacs: { label: "星座", numeric: true },
-  startMoney: { label: "开局资金", numeric: true }, startDate: { label: "开局日期" }, startTime: { label: "开局时刻" }, dayStart: { label: "每日起始" },
-  dayEnd: { label: "每日结束" }, weather: { label: "天气" }, map: { label: "地图外观" }, encounters: { label: "偶遇" }, sideQuests: { label: "支线" },
+  startMoney: { label: "开局资金", numeric: true }, startDate: { label: "开局日期" },
+  weather: { label: "天气" }, map: { label: "地图外观" }, encounters: { label: "偶遇" }, sideQuests: { label: "支线" },
   sideQuestCast: { label: "支线角色" }, relations: { label: "关系设定", numeric: true }, calendar: { label: "日历" }, travel: { label: "出行", numeric: true },
   contracts: { label: "签约", numeric: true }, projects: { label: "项目", numeric: true }, imageCrisis: { label: "舆情" }, industry: { label: "行业" },
   help: { label: "帮助" }, opening: { label: "序章" }, cover: { label: "封面" }, weeklyPaper: { label: "周报" }, eventGroups: { label: "事件分组" },
   styles: { label: "外形风格", numeric: true }, identities: { label: "出道身份", numeric: true }, backgrounds: { label: "家庭背景", numeric: true },
   directions: { label: "职业方向", numeric: true }, school: { label: "母校" }, parentJobs: { label: "父母职业" }, creation: { label: "建角文案 / 路径" },
   weekendActs: { label: "周末活动", numeric: true }, fameTiers: { label: "名气分档", numeric: true }, titles: { label: "头衔" }, cars: { label: "座驾", numeric: true },
-  npcPool: { label: "NPC 名字池" }, lore: { label: "详细设定" }, festivals: { label: "节日" }, bills: { label: "固定账单", numeric: true }, meals: { label: "饮食生活", numeric: true }, pregnancy: { label: "孕育参数", numeric: true }, gigPrices: { label: "通告价目", numeric: true },
-  allowance: { label: "父母生活费", numeric: true }, tuning: { label: "引擎规则", numeric: true }, contacts: { label: "人脉页面配置" },
+  npcPool: { label: "NPC 名字池" }, lore: { label: "详细设定（已并入世界书）" }, festivals: { label: "节日（已并入世界书）" }, bills: { label: "固定账单", numeric: true }, meals: { label: "饮食生活", numeric: true }, pregnancy: { label: "孕育参数", numeric: true }, gigPrices: { label: "通告价目", numeric: true },
+  allowance: { label: "父母生活费", numeric: true }, tuning: { label: "引擎规则", numeric: true }, contacts: { label: "关系档位与卡片数值" },
   // 列表内容：叠加包总是按 id 追加 / 覆盖
   rooms: { label: "地点" }, locations: { label: "地点名录" }, npcs: { label: "人物" }, items: { label: "物品" }, gigs: { label: "通告", numeric: true },
   events: { label: "随机事件", numeric: true }, fixedEvents: { label: "固定事件", numeric: true }, endings: { label: "结局" }, worldBook: { label: "世界书" },

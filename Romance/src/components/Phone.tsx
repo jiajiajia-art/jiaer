@@ -27,9 +27,9 @@ import IncomingCall from "./phone/IncomingCall";
 import { logAppOpen, mailUnread } from "../game/phoneLink";
 import { useGameNow, renderWidget, isWidget, DEFAULT_WIDGET_SIZE, SHAPE_RADIUS, SHAPE_LABEL, nextShape, nextSize, type WidgetSize, type WidgetShape } from "./phone/Widgets";
 import { APP_ICON } from "./phone/appIcons";
-import { phoneAppAllowed, worldPhoneAppsCfg } from "../mods/registry";
+import { phoneAppAllowed, worldPhoneAppsCfg, worldPhoneHomeWallpaper } from "../mods/registry";
 import { phoneAppLabel, preinstallIds, resolvePhoneApps } from "../lib/phoneAppsConfig";
-import { resolveWallpaper } from "./phone/wallpapers";
+import { resolveEffectiveHomeWallpaper } from "./phone/wallpapers";
 import { liveTerm as T } from "../mods/live";
 import SlimePet from "./phone/studio/Slime";
 import { usePetMode, useStudioOpen } from "./phone/studio/pet";
@@ -121,7 +121,7 @@ export const PHONE_FRAMES: { id: FrameId; label: string; swatch: string; frame: 
 ];
 export const frameById = (id?: string) => PHONE_FRAMES.find((f) => f.id === id) ?? PHONE_FRAMES[0];
 
-export type PhonePrefs = { wallpaper: string; customWallpaper?: string; brightness: number; dark: boolean; dnd: boolean; haptics: boolean; frameColor: FrameId; showFrame: boolean; installed: string[]; widgets: string[]; layout: string[]; widgetSizes: Record<string, WidgetSize>; widgetShapes: Record<string, WidgetShape>; iconOverrides: Record<string, string> };
+export type PhonePrefs = { wallpaper: string; customWallpaper?: string; /** 玩家在设置里主动换过桌面背景 */ wallpaperUserSet?: boolean; brightness: number; dark: boolean; dnd: boolean; haptics: boolean; frameColor: FrameId; showFrame: boolean; installed: string[]; widgets: string[]; layout: string[]; widgetSizes: Record<string, WidgetSize>; widgetShapes: Record<string, WidgetShape>; iconOverrides: Record<string, string> };
 /** 外观偏好：全局 UI（壁纸 / 机身等） */
 const PREFS_KEY = "star2005.phone.prefs";
 /** 已装应用 / 布局：存档私有，刷新与读档保持一致 */
@@ -135,7 +135,7 @@ const DEFAULT_PREFS: PhonePrefs = {
 };
 
 type AppsSlice = Pick<PhonePrefs, "installed" | "widgets" | "layout" | "widgetSizes" | "widgetShapes">;
-type LookSlice = Pick<PhonePrefs, "wallpaper" | "customWallpaper" | "brightness" | "dark" | "dnd" | "haptics" | "frameColor" | "showFrame" | "iconOverrides"> & { lookV2?: boolean };
+type LookSlice = Pick<PhonePrefs, "wallpaper" | "customWallpaper" | "wallpaperUserSet" | "brightness" | "dark" | "dnd" | "haptics" | "frameColor" | "showFrame" | "iconOverrides"> & { lookV2?: boolean };
 
 function normalizeApps(raw: Partial<AppsSlice> & { order?: string[] }): AppsSlice {
   const installed = Array.from(new Set([...(Array.isArray(raw.installed) ? raw.installed : defaultInstalled()), "appstore"])).filter((id) => APP_IDS.has(id));
@@ -170,6 +170,7 @@ function loadLook(): LookSlice {
     ...base,
     wallpaper: parsed.wallpaper ?? base.wallpaper,
     customWallpaper: parsed.customWallpaper,
+    wallpaperUserSet: !!parsed.wallpaperUserSet || (parsed.wallpaper === "custom" && !!parsed.customWallpaper),
     brightness: parsed.brightness ?? base.brightness,
     dark: parsed.dark ?? base.dark,
     frameColor: parsed.frameColor ?? base.frameColor,
@@ -211,6 +212,7 @@ function persistPrefs(next: PhonePrefs) {
   const look: LookSlice = {
     wallpaper: next.wallpaper,
     customWallpaper: next.customWallpaper,
+    wallpaperUserSet: next.wallpaperUserSet,
     brightness: next.brightness,
     dark: next.dark,
     dnd: next.dnd,
@@ -309,7 +311,8 @@ function PhoneInner() {
     window.addEventListener("phone:open-app", h);
     return () => window.removeEventListener("phone:open-app", h);
   }, []);
-  const wp = resolveWallpaper(prefs.wallpaper, prefs.customWallpaper);
+  // 功能注释：未主动换过桌面时用作品默认背景；玩家设置优先。不改场景背景与机身外壳。
+  const wp = resolveEffectiveHomeWallpaper(worldPhoneHomeWallpaper(), prefs);
   // 应用打开时，顶/底系统条改用应用自身底色，避免露出主屏壁纸
   const chrome = app ? APP_CHROME[app] : null;
   const sync = useSyncState(app);

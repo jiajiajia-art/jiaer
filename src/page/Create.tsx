@@ -13,7 +13,6 @@ import ExchangeModal from '../components/Purchase/ExchangeModal';
 import ConfirmModal from '../components/CommonModal/ConfirmModal';
 import confirmModalStyles from '../components/CommonModal/ConfirmModal.module.css';
 import WithdrawFlowModal from '../components/Create/WithdrawFlowModal';
-import CreatorWorksPanel from '../components/Create/CreatorWorksPanel';
 import ProfileFunctionPanel from '../components/Profile/ProfileFunctionPanel';
 import InviteCampaignCard from '../components/Profile/InviteCampaignCard';
 import TodayEarnPointsPanel from '../components/Profile/TodayEarnPointsPanel';
@@ -677,10 +676,6 @@ const Create: React.FC = () => {
                         <ProfileFunctionPanel />
                     </div>
 
-                    <CreatorWorksPanel
-                        mode="preview"
-                        showIncentiveUI={isWorkIncentive}
-                    />
                 </div>
             </div>
 

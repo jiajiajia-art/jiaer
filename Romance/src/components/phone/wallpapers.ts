@@ -27,3 +27,22 @@ export function resolveWallpaper(id: string, customCss?: string): Wallpaper {
   }
   return wallpaperById(id);
 }
+
+/**
+ * 功能注释：作品默认桌面背景 vs 玩家设置覆盖。
+ * 玩家在设置里换过（含上传）→ 用玩家的；否则有作品上传图就用作品的；再否则引擎默认。
+ */
+export function resolveEffectiveHomeWallpaper(
+  worldWallpaper: string | undefined,
+  prefs: { wallpaper: string; customWallpaper?: string; wallpaperUserSet?: boolean },
+): Wallpaper {
+  if (prefs.wallpaperUserSet || (prefs.wallpaper === CUSTOM_WALLPAPER_ID && prefs.customWallpaper)) {
+    return resolveWallpaper(prefs.wallpaper, prefs.customWallpaper);
+  }
+  const world = typeof worldWallpaper === "string" ? worldWallpaper.trim() : "";
+  if (world) {
+    const css = /url\(/i.test(world) ? world : customWallpaperCss(world);
+    return { id: "world-home", label: "作品默认", css, dark: true, kind: "photo" };
+  }
+  return resolveWallpaper(prefs.wallpaper || DEFAULT_WALLPAPER, prefs.customWallpaper);
+}

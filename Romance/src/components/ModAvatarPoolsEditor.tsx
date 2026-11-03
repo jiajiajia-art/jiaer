@@ -7,12 +7,15 @@ import { compressImage, loadHost, uploadToHost } from "../lib/freeStyle";
 /* 头像只存进头像池：有图床走图床，否则本地压成 320px（不顺带收进素材库，免得本地存两份） */
 const toAvatarUrl = (f: File) => { const h = loadHost(); return h.kind === "imgbb" && h.key ? uploadToHost(f, h) : compressImage(f, 320, 0.82); };
 
-/* 模组编辑器 · 头像池
+/* 模组编辑器 · 头像（单块）：私库 / 公库匹配、我的头像池、平台公共分类都在「头像」里配，不拆三个大标题。
  * 我的头像池：账号级（本机）跨剧本共享，本剧逐池勾「玩家可选」（→ 游玩端「创作者头像库」）/「随机池」（→ AI 新增人脉抽图）。
- * 平台公共分类：游玩端「系统头像库」始终实时可选，本剧只需勾「随机池」。池名即 avatarVariant（须完全一致）。 */
+ * 平台公共分类：游玩端「系统头像库」始终实时可选，本剧只需勾「随机池」。
+ * 后台仍用池名与人物 avatarVariant 精确匹配；创作者界面不展示该变量名。 */
 const inp = "w-full min-w-0 rounded-lg border border-line bg-paper-2 px-2 py-1 text-[12px] text-ink placeholder:text-ink-soft/70 focus:border-jade focus:outline-none";
 const btn = "rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40";
 const chk = "flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-semibold ring-1 transition";
+/** 功能注释：块内小标题，刻意低于 Section 级大标题，避免再拆成三块「大标题」 */
+const sub = "text-[11.5px] font-semibold text-ink-soft";
 
 function Toggle({ on, label, onChange }: { on: boolean; label: string; onChange: (v: boolean) => void }) {
   return (
@@ -86,7 +89,7 @@ export default function ModAvatarPoolsEditor({ value, onChange, confirm }: {
     if (n === p.name) return true;
     const e = nameErr(n, p.id);
     if (e) { setMsg(`改名失败：${e}`); return false; }
-    if (!save(lib.map((x) => (x.id === p.id ? { ...x, name: n } : x)), `已改名为「${n}」。其它剧本里按旧名勾的开关、人物写的 avatarVariant 需同步改。`)) return false;
+    if (!save(lib.map((x) => (x.id === p.id ? { ...x, name: n } : x)), `已改名为「${n}」。其它剧本里按旧名勾的开关、人物填的同名头像池需同步改。`)) return false;
     // 本剧的开关跟着新名字走
     if (v.pools?.[p.name]) { const pools = { ...v.pools, [n]: v.pools[p.name] }; delete pools[p.name]; emit({ ...v, pools }); }
     return true;
@@ -113,23 +116,16 @@ export default function ModAvatarPoolsEditor({ value, onChange, confirm }: {
   const pubOn = new Set(v.publicRandom ?? []);
 
   return (
-    <div className="space-y-3">
-      <p className="text-[11.5px] leading-relaxed text-ink-soft">
-        「我的头像池」勾选<b className="text-ink">玩家可选</b>后出现在游玩端「创作者头像库」；平台公共分类始终在「系统头像库」实时可选，只需勾<b className="text-ink">随机池</b>供 AI 新增人脉抽图。
-        账号头像池跨剧本可见，但每个剧本要单独勾选开关，不会把别的剧本的池自动开放给本剧玩家。<b className="text-ink">池名即 avatarVariant</b>（须完全一致）。
-      </p>
-
-      {/* —— 匹配优先级（绑定本剧，随模组保存 / 导入导出；不写平台全局） —— */}
-      <div className="space-y-2.5 rounded-xl border border-line bg-paper-2 p-3">
+    <div className="space-y-4 rounded-xl border border-line bg-paper-2 p-3">
+      {/* 功能注释：私库/公库说明与 avatarVariant 变量名不对创作者展示；池名后台仍作 avatarVariant 匹配 */}
+      {/* —— 匹配：本剧私库/公库先后 + 通用兜底（随模组保存，不写平台全局） —— */}
+      <div className="space-y-2">
         <div className="flex items-baseline gap-2">
-          <span className="text-[13px] font-bold text-ink">匹配优先级</span>
+          <span className={sub}>匹配优先级</span>
           <span className="text-[11px] text-ink-soft">仅对本剧生效</span>
         </div>
-        <p className="text-[11px] leading-relaxed text-ink-soft">
-          手动锁定始终最高；系统默认头像始终最终回退。此处只调整私人库与公共库的先后，以及是否启用「通用」性别兜底。切换剧本会自动读取本剧自己的配置，不会沿用其它剧本。
-        </p>
         <div>
-          <span className="mb-1 block text-[11.5px] font-semibold text-ink-soft">库来源顺序</span>
+          <span className="mb-1 block text-[11px] text-ink-soft">库来源顺序</span>
           <div className="inline-flex rounded-lg border border-line bg-paper p-0.5 text-[12px] font-bold" role="radiogroup" aria-label="库来源顺序">
             {([
               { id: "private" as const, label: "私人库优先" },
@@ -159,11 +155,11 @@ export default function ModAvatarPoolsEditor({ value, onChange, confirm }: {
         </label>
       </div>
 
-      {/* —— 我的头像池 —— */}
-      <div className="rounded-xl border border-line bg-paper-2">
+      {/* —— 私库：本机头像池 + 本剧开关 —— */}
+      <div className="space-y-2 border-t border-line/70 pt-3">
         <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}
-          className="flex w-full items-center gap-2 px-3 py-2.5 text-left">
-          <span className="text-[13px] font-bold text-ink">我的头像池</span>
+          className="flex w-full items-center gap-2 text-left">
+          <span className={sub}>我的头像池</span>
           <span className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${enabled.length ? "bg-jade/12 text-jade" : "bg-paper text-ink-soft ring-1 ring-line"}`}>
             {enabled.length ? `本剧已开放 ${enabled.length} 个` : "未配置"}
           </span>
@@ -171,7 +167,7 @@ export default function ModAvatarPoolsEditor({ value, onChange, confirm }: {
           <span className={`text-[12px] text-ink-soft transition ${open ? "rotate-90" : ""}`} aria-hidden>›</span>
         </button>
         {open && (
-          <div className="space-y-2.5 border-t border-line/70 p-3">
+          <div className="space-y-2.5">
             <div className="flex gap-1.5">
               <input className={inp} value={name} placeholder="新池名，如：古风男配 / 校园女生" onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") create(); }} />
               <button type="button" className={`${btn} shrink-0`} onClick={create} disabled={!name.trim()}>＋ 新建头像池</button>
@@ -189,7 +185,7 @@ export default function ModAvatarPoolsEditor({ value, onChange, confirm }: {
               return (
                 <div key={p.id} className="space-y-2 rounded-xl border border-line bg-paper p-2.5">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <input className={`${inp} !w-44 font-semibold`} defaultValue={p.name} key={p.name} aria-label="池名（即 avatarVariant）"
+                    <input className={`${inp} !w-44 font-semibold`} defaultValue={p.name} key={p.name} aria-label="池名"
                       onBlur={(e) => { if (!rename(p, e.target.value)) e.target.value = p.name; }} onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} />
                     <span className="text-[11px] text-ink-soft">{p.images.length} 张</span>
                     <span className="flex-1" />
@@ -220,10 +216,10 @@ export default function ModAvatarPoolsEditor({ value, onChange, confirm }: {
         )}
       </div>
 
-      {/* —— 平台公共头像分类 —— */}
-      <div className="space-y-2 rounded-xl border border-line bg-paper-2 p-3">
+      {/* —— 公库分类：只勾随机池 —— */}
+      <div className="space-y-2 border-t border-line/70 pt-3">
         <div className="flex items-baseline gap-2">
-          <span className="text-[13px] font-bold text-ink">平台公共头像分类</span>
+          <span className={sub}>平台公共分类</span>
           <span className="text-[11px] text-ink-soft">{pubOn.size ? `${pubOn.size} 个进随机池` : "未进随机池"}</span>
         </div>
         <p className="text-[11px] leading-relaxed text-ink-soft">游玩端「系统头像库」对接平台公共/系统入库头像；勾选「随机池」后参与 AI 新增人脉自动抽图。</p>

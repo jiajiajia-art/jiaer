@@ -109,6 +109,6 @@ export function drawAvatar(seed: string, variant?: string, strict = false, slot?
   const hit = variantPool(variant?.trim(), slot);
   if (hit) return { url: hit.images[hash(seed) % hit.images.length], variant: hit.name };
   if (strict) return { url: "" };
-  const all = randomPools(slot).flatMap((p) => p.images.map((url) => ({ url, variant: p.name })));
+  const all = randomPools(slot).flatMap((p) => (Array.isArray(p.images) ? p.images : []).map((url) => ({ url, variant: p.name })));
   return all.length ? all[hash(seed) % all.length] : { url: "" };
 }

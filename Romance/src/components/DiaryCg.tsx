@@ -3,6 +3,7 @@ import { useGame } from "../store/gameCtx";
 import type { CgDef } from "../lib/types";
 import { Modal } from "./ui";
 import { IconSpark } from "../lib/icons";
+import { useCgImageSrc } from "../game/cgImageStore";
 
 /* TA 的日记：AI 在角色心绪起伏时以第一人称写下的日记，倒序展示，默认只露最新一篇 */
 export function NpcDiary({ pid }: { pid: string }) {
@@ -42,6 +43,12 @@ export function NpcCgStrip({ pid }: { pid: string }) {
   );
 }
 
+function CgPicture({ cg, locked }: { cg: CgDef; locked?: boolean }) {
+  const src = useCgImageSrc(cg);
+  if (!src || locked) return <span className="grid h-full w-full place-items-center bg-gradient-to-br from-ink/10 to-coral/10 text-[12px] font-bold text-ink-soft/60">{locked ? "未解锁" : "暂无图片"}</span>;
+  return <img src={src} alt={cg.title} className="h-full w-full object-cover transition group-hover:scale-105" />;
+}
+
 export function CgGrid({ list }: { list: CgDef[] }) {
   const { game } = useGame();
   const [view, setView] = useState<CgDef | null>(null);
@@ -50,20 +57,26 @@ export function CgGrid({ list }: { list: CgDef[] }) {
       <div className="grid grid-cols-3 gap-2">
         {list.map((c) => {
           const at = game?.cgUnlocked?.[c.id];
+          const isNew = !!game?.cgNew?.includes(c.id);
           return (
-            <button key={c.id} disabled={!at} onClick={() => setView(c)} className="group relative aspect-[3/4] overflow-hidden rounded-xl border border-line bg-paper-2 text-left">
-              {at && c.image
-                ? <img src={(c.image) || undefined} alt={c.title} className="h-full w-full object-cover transition group-hover:scale-105" />
-                : <span className="grid h-full w-full place-items-center bg-gradient-to-br from-ink/10 to-coral/10 text-[22px] text-ink-soft/50">{at ? "" : "?"}</span>}
-              <span className="absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/60 to-transparent px-1.5 pb-1 pt-4 text-[11px] font-bold text-white">{at ? c.title : "未解锁"}</span>
+            <button key={c.id} disabled={!at} onClick={() => setView(c)} className={`group relative aspect-[3/4] overflow-hidden rounded-xl border border-line bg-paper-2 text-left ${!at ? "grayscale" : ""}`}>
+              <CgPicture cg={c} locked={!at} />
+              {!at && c.hideBeforeUnlock && <span className="absolute inset-0 grid place-items-center bg-ink/35 text-[24px] text-white/70">?</span>}
+              {isNew && <span className="absolute right-1.5 top-1.5 rounded-full bg-coral px-2 py-0.5 text-[10px] font-bold text-white">新</span>}
+              <span className="absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/60 to-transparent px-1.5 pb-1 pt-4 text-[11px] font-bold text-white">{at ? c.title : c.hideBeforeUnlock ? "隐藏 CG" : "未解锁"}</span>
             </button>
           );
         })}
       </div>
       {view && (
         <Modal title={view.title || "CG"} onClose={() => setView(null)}>
-          {view.image && <img src={(view.image) || undefined} alt={view.title} className="w-full rounded-xl" />}
+          <div className="aspect-video overflow-hidden rounded-xl bg-paper-2"><CgPicture cg={view} /></div>
           {view.desc && <p className="story-prose mt-3 text-[13.5px] leading-relaxed text-ink/90">{view.desc}</p>}
+          {game?.cgDialogue?.[view.id] && (
+            <blockquote className="story-prose mt-3 whitespace-pre-wrap rounded-xl border border-line bg-paper-2 p-3 text-[13px] leading-relaxed text-ink/85">
+              {game.cgDialogue[view.id]}
+            </blockquote>
+          )}
           <p className="mt-2 text-[11.5px] text-ink-soft">解锁于 {game?.cgUnlocked?.[view.id]}</p>
         </Modal>
       )}

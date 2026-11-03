@@ -1,13 +1,15 @@
 /* ————— 世界书检索（对标 SillyTavern Lore，规则更规整）—————
  * 1. 注入模式：keyword 检索命中（默认）· constant 每轮全局 · once 一次性（注入后标记消耗，不再触发）
  * 2. 有效期：触发后持续 N 轮，到期自动失效（轮 = 已完成的 AI 回合数）
- * 3. 绑定范围：全局 / 单张角色卡（在场或正在私聊）/ 单个房间（玩家所在地点或其任一下级）
- * 4. 互斥组：同组只注入一条——已在有效期内的优先，其次得分最高
- * 5. 检索权重：得分 = 命中的最长关键词长度 × 权重；短词若只出现在更长的已命中关键词内部（如「庵」在「梅花庵」里），不算命中
+ * 3. 依赖（新）：挂本作品地点 / 人物；玩家在该地点、人物在场、或关键词命中 → 注入（OR）
+ * 4. 旧绑定：无 bindRooms/bindNpcs 时仍按 scope 全局 / 单角色 / 单房间 + 模式
+ * 5. 互斥组：同组只注入一条——已在有效期内的优先，其次得分最高
+ * 6. 检索权重：得分 = 命中的最长关键词长度 × 权重；短词若只出现在更长的已命中关键词内部不算命中
  * 纯函数：本文件只「选」，不改存档；主剧情回合成功后由 commitWorldBook 记账。 */
 import type { GameState, WorldBookEntry, WorldBookMem, WorldBookMode } from "../lib/types";
 import { asTrimmedString } from "../lib/asTrimmedString";
 import { keywordTexts } from "../lib/worldBookKeywords";
+import { worldBookDepHit, worldBookHasDeps } from "../lib/worldBookDeps";
 import { getWorldRooms } from "../mods/registry";
 import { pathOf } from "./roomTree";
 
@@ -35,11 +37,23 @@ function occurrences(hay: string, key: string): [number, number][] {
   return out;
 }
 
-function inScope(e: WorldBookEntry, g: GameState, ctx: WorldBookCtx): boolean {
+/** 功能注释：旧 scope——无新依赖时沿用；global / 未选具体对象视为全局 */
+function legacyInScope(e: WorldBookEntry, g: GameState, ctx: WorldBookCtx): boolean {
   if (!e.scope || e.scope === "global" || !e.scopeId) return true;
   if (e.scope === "npc") return !!ctx.npcIds?.includes(e.scopeId);
   const room = g.sim?.room;
-  return !!room && pathOf(getWorldRooms(), room).includes(e.scopeId);
+  return !!room && (room === e.scopeId || pathOf(getWorldRooms(), room).includes(e.scopeId));
+}
+
+/** 功能注释：挂靠地点（当前点或其路径祖先）或挂靠人物在场 */
+export function worldBookDepsMatch(e: WorldBookEntry, g: GameState, ctx: WorldBookCtx = {}): boolean {
+  const room = g.sim?.room;
+  // 功能注释：子地点也算身处挂靠点——把当前点的祖先链交给纯函数判定
+  return worldBookDepHit(e, {
+    room,
+    roomPath: room ? pathOf(getWorldRooms(), room) : [],
+    npcIds: ctx.npcIds,
+  });
 }
 
 export function pickWorldBook(g: GameState, book: WorldBookEntry[], hayRaw: string, ctx: WorldBookCtx = {}, rnd: () => number = Math.random): WorldBookPick {
@@ -47,7 +61,7 @@ export function pickWorldBook(g: GameState, book: WorldBookEntry[], hayRaw: stri
   const mem: WorldBookMem = g.wbMem ?? {};
   const used = new Set(mem.used ?? []);
   const hay = hayRaw.toLowerCase();
-  const live = book.filter((e) => e.enabled && asTrimmedString(e.content) && inScope(e, g, ctx));
+  const live = book.filter((e) => e.enabled && asTrimmedString(e.content));
 
   // 所有关键词的命中区间（用于「长词优先」：被更长命中词完全覆盖的短词出现不算数）
   const spans: { e: string; k: string; s: number; t: number }[] = [];
@@ -68,10 +82,26 @@ export function pickWorldBook(g: GameState, book: WorldBookEntry[], hayRaw: stri
     const active = (mem.until?.[e.id] ?? -1) > round; // 仍在有效期内：不必再命中
     if (active) { cands.push({ e, score: Infinity, active, fresh: false }); continue; }
     if (m === "once" && used.has(e.id)) continue;
-    if (m === "constant") { cands.push({ e, score: 1e6, active: false, fresh: true }); continue; }
+
+    const hasDeps = worldBookHasDeps(e);
     const score = scoreOf(e);
-    // 一次性条目没写关键词 = 下一轮直接注入一次
-    const hit = score > 0 || (m === "once" && keywordTexts(e.keywords).length === 0);
+    const kwHit = score > 0;
+    const onceEmpty = m === "once" && keywordTexts(e.keywords).length === 0;
+
+    if (hasDeps) {
+      // 新规则：地点 / 人物在场 / 关键词（任一）
+      const depHit = worldBookDepsMatch(e, g, ctx);
+      if (!depHit && !kwHit && !onceEmpty) continue;
+      const prob = e.probability ?? 100;
+      if (prob < 100 && rnd() * 100 >= prob) continue;
+      cands.push({ e, score: depHit && !kwHit ? 1e5 : score || 1, active: false, fresh: true });
+      continue;
+    }
+
+    // 旧条目：先过 scope，再按 constant / keyword / once
+    if (!legacyInScope(e, g, ctx)) continue;
+    if (m === "constant") { cands.push({ e, score: 1e6, active: false, fresh: true }); continue; }
+    const hit = kwHit || onceEmpty;
     if (!hit) continue;
     const prob = e.probability ?? 100;
     if (prob < 100 && rnd() * 100 >= prob) continue;

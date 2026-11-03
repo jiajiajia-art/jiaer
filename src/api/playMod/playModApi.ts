@@ -26,6 +26,12 @@ export type PlayModRecord = {
   slug: string;
   name: string;
   description: string;
+  /** 功能注释：商店详情完整说明（上架必填） */
+  detailMd?: string;
+  /** 功能注释：预览图列表（上架至少 1 张） */
+  previewImages?: string[];
+  /** 功能注释：详情页作者展示名 */
+  authorDisplayName?: string;
   category: string;
   iconSvg: string;
   version: string;
@@ -136,6 +142,13 @@ export const playModStoreApi = {
     if (opts.engineVersion) q.set('engineVersion', opts.engineVersion);
     const res = await fetch(`${HOST_ADDRESS}/api/components/shelf?${q}`, {
       headers: authHeaders(opts.token, false),
+    });
+    return parseJson(res);
+  },
+  /** 功能注释：商店详情 — 作者/下载量(stats)/说明/预览图 */
+  getDetail: async (id: string, token?: string | null) => {
+    const res = await fetch(`${HOST_ADDRESS}/api/components/${encodeURIComponent(id)}`, {
+      headers: authHeaders(token, false),
     });
     return parseJson(res);
   },

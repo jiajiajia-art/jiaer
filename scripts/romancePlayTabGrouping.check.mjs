@@ -1,6 +1,6 @@
 /**
- * 模组编辑器：未保存顶栏叫「创建世界」；玩法开关与对应字段只出现在「⑤ 玩法 Mod」。
- * 不改保存格式，也不改开关写入规则。
+ * 模组编辑器：玩法并入①基础；无独立「⑤ 玩法 Mod」页；无「功能开关」整块。
+ * 添加玩法 = 启用；移除 = 停用。
  */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -12,6 +12,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const romance = join(root, 'Romance/src');
 const panel = readFileSync(join(romance, 'components/ModEditorPanel.tsx'), 'utf8');
 const manager = readFileSync(join(romance, 'components/ModManagerPanel.tsx'), 'utf8');
+const catalog = readFileSync(join(romance, 'mods/playModCatalog.ts'), 'utf8');
 
 function sectionOpen(title) {
   const marker = `title="${title}"`;
@@ -26,85 +27,109 @@ test('未保存顶栏为创建世界_已保存仍为编辑名称', () => {
   assert.match(manager, /新建玩法 Mod/);
 });
 
-test('功能开关留在玩法页_外观字段不夹在地点与头像之间', () => {
-  assert.match(sectionOpen('功能开关'), /g="play"/);
-  assert.doesNotMatch(sectionOpen('功能开关'), /g="base"/);
-  for (const title of ['底栏页签', '手机应用配置', '开局封面', '皮肤美化']) {
+test('玩法并入基础_删除功能开关与独立玩法页', () => {
+  assert.doesNotMatch(panel, /title="功能开关"/);
+  assert.doesNotMatch(panel, /label: "⑤ 玩法 Mod"/);
+  assert.doesNotMatch(panel, /k: "play"/);
+  assert.match(panel, /k: "look", label: "⑤ 美化"/);
+  assert.match(sectionOpen('已添加的玩法'), /g="base"/);
+  for (const title of ['底栏页签', '手机应用配置', '皮肤美化']) {
     assert.match(sectionOpen(title), /g="look"/);
     assert.doesNotMatch(sectionOpen(title), /g="base"/);
-    assert.doesNotMatch(sectionOpen(title), /g="play"/);
   }
+  assert.doesNotMatch(panel, /title="开局封面"/);
+  const avatar = panel.indexOf('title="头像"');
+  const create = panel.indexOf('title="建角"');
   const loc = panel.indexOf('title="地点"');
-  const avatar = panel.indexOf('title="头像库与匹配优先级"');
-  const feat = panel.indexOf('title="功能开关"');
-  const travel = panel.indexOf('title="出行与交通"');
-  const cover = panel.indexOf('title="开局封面"');
-  assert.ok(loc >= 0 && loc < avatar && avatar < feat, '地点、头像在功能开关之前');
-  assert.ok(feat < travel && travel < cover, '玩法字段在美化封面之前');
-  const baseBetween = panel.slice(loc, avatar);
-  assert.doesNotMatch(baseBetween, /title="功能开关"|title="底栏页签"|title="手机应用配置"|title="开局封面"|title="皮肤美化"/);
+  const playList = panel.indexOf('title="已添加的玩法"');
+  assert.ok(avatar >= 0 && avatar < create && create < loc && loc < playList, '头像→建角→地点→已添加的玩法');
+  const baseBetween = panel.slice(avatar, loc);
+  assert.doesNotMatch(baseBetween, /title="已添加的玩法"|title="底栏页签"|title="手机应用配置"|title="开局封面"|title="皮肤美化"/);
+  const basic = panel.slice(panel.indexOf('title="基本信息"'), panel.indexOf('title="时间与推进"'));
+  assert.match(basic, /作品封面/);
+  assert.match(basic, /ModCoverEditor/);
   assert.match(panel, /title="时间与推进"[\s\S]{0,2500}ModTravelEditor part="pace"/);
-  assert.match(panel, /除「怀孕」外默认开启，只有关闭的项会写入模组/);
+  assert.doesNotMatch(panel, /除「怀孕」外默认开启/);
+  assert.doesNotMatch(panel, /行业主页签（人气榜 \/ 机遇）/);
 });
 
-test('玩法字段仍在玩法页_时间推进的行动点留在基础', () => {
+test('玩法配置区块在基础页_时间推进的行动点留在基础', () => {
   for (const title of ['出行与交通', '座驾', '通告库', '经纪合约', '影视项目', '行业生态', '舆情人设', '娱乐周报', '每周吃什么', '孕育']) {
-    assert.match(sectionOpen(title), /g="play"/);
+    assert.match(sectionOpen(title), /g="base"/);
   }
   assert.match(sectionOpen('时间与推进'), /g="base"/);
   assert.match(sectionOpen('地点'), /g="base"/);
-  assert.match(sectionOpen('开局封面'), /g="look"/);
+  assert.doesNotMatch(panel, /title="开局封面"/);
   assert.match(sectionOpen('皮肤美化'), /g="look"/);
   assert.match(sectionOpen('开场剧情'), /g="look"/);
   assert.match(sectionOpen('剧情美化'), /g="look"/);
   assert.match(sectionOpen('底栏页签'), /g="look"/);
   assert.match(sectionOpen('手机应用配置'), /g="look"/);
-  assert.doesNotMatch(panel, /title="主题外观"/);
-  assert.doesNotMatch(panel, /title="皮肤与动画"/);
-  assert.match(sectionOpen('头像库与匹配优先级'), /g="role"/);
   const baseCount = panel.slice(panel.indexOf('base: n('), panel.indexOf('role: n('));
   assert.match(baseCount, /apPerTurn/);
-  assert.doesNotMatch(baseCount, /c\.features|phoneAppsCfg|navTabs/);
-  const playCount = panel.slice(panel.indexOf('play: n('), panel.indexOf('look: n('));
-  assert.match(playCount, /c\.features/);
-  assert.doesNotMatch(playCount, /phoneAppsCfg/);
-  assert.doesNotMatch(playCount, /navTabs/);
-  const lookCount = panel.slice(panel.indexOf('look: n('), panel.indexOf('};', panel.indexOf('look: n(')));
-  assert.match(lookCount, /c\.cover/);
-  assert.match(lookCount, /phoneAppsCfg/);
-  assert.match(lookCount, /navTabs/);
-  assert.match(lookCount, /c\.opening/);
-  assert.match(lookCount, /c\.theme/);
+  assert.match(baseCount, /playModInstalls/);
+  assert.doesNotMatch(baseCount, /phoneAppsCfg|navTabs/);
+  assert.doesNotMatch(panel, /play: n\(/);
 });
 
-test('怀孕只留功能开关一处写入_公式不变', () => {
+test('添加玩法即启用_无卡片启用开关与功能开关写入', () => {
+  assert.match(catalog, /syncFeaturesFromPlayModInstalls/);
+  assert.match(catalog, /PLAY_MOD_FEATURE_BY_SLUG/);
+  assert.match(panel, /syncFeaturesFromPlayModInstalls/);
+  assert.doesNotMatch(panel, /title=\{enabled \? "点击关闭此玩法"/);
+  assert.doesNotMatch(panel, /aria-pressed=\{enabled\}/);
+  assert.doesNotMatch(panel, /const optIn = k === "pregnancy"/);
   assert.doesNotMatch(panel, /开启孕育/);
-  assert.doesNotMatch(panel, /f\.pregnancy\s*=/);
-  assert.doesNotMatch(panel, /delete f\.pregnancy/);
-  assert.match(panel, /const optIn = k === "pregnancy"/);
-  assert.match(panel, /if \(optIn\) \{ if \(on\) delete f\[k\]; else f\[k\] = true; \} else if \(on\) f\[k\] = false; else delete f\[k\];/);
   assert.match(panel, /ModPregnancyEditor/);
+  assert.doesNotMatch(panel, /启用内置交通/);
+  assert.doesNotMatch(panel, /features:\s*\{\s*\.\.\.c\.features,\s*transport:/);
 });
 
-test('向导清单与编辑器同一归类_不改变生成内容id', async () => {
+test('向导清单与编辑器同一归类_功能开关下线', async () => {
   const mod = await import(pathToFileURL(join(romance, 'lib/worldGenWizard.ts')).href);
-  for (const id of ['features', 'travel', 'gigs', 'pregnancy', 'meals']) {
+  assert.ok(!mod.WORLD_GEN_EDITOR_STEPS.some((s) => s.id === 'features'));
+  for (const id of ['travel', 'gigs', 'pregnancy', 'meals', 'playModInstalls']) {
     const step = mod.WORLD_GEN_EDITOR_STEPS.find((s) => s.id === id);
-    assert.equal(step?.group, '⑤ 玩法 Mod', id);
+    assert.equal(step?.group, '① 基础', id);
   }
-  for (const id of ['navTabs', 'phoneAppsCfg', 'cover', 'opening', 'theme', 'lookRules']) {
+  // 功能注释：开局封面 / 手机应用 / 皮肤美化不进 AI 勾选；其余美化细项仍归⑤
+  for (const id of ['cover', 'phoneAppsCfg', 'theme']) {
+    assert.ok(!mod.WORLD_GEN_EDITOR_STEPS.some((s) => s.id === id), id);
+  }
+  for (const id of ['navTabs', 'lookRules', 'bgm', 'audioRefs', 'opening']) {
     const step = mod.WORLD_GEN_EDITOR_STEPS.find((s) => s.id === id);
-    assert.equal(step?.group, '⑥ 美化', id);
+    assert.equal(step?.group, '⑤ 美化', id);
   }
-  assert.equal(mod.WORLD_GEN_EDITOR_STEPS.find((s) => s.id === 'avatars')?.group, '② 角色');
+  assert.ok(mod.WORLD_GEN_EDITOR_STEPS.some((s) => s.id === 'opening'));
+  assert.equal(mod.WORLD_GEN_EDITOR_STEPS.find((s) => s.id === 'avatars')?.group, '① 基础');
+  assert.equal(mod.WORLD_GEN_EDITOR_STEPS.find((s) => s.id === 'creation')?.group, '① 基础');
   assert.equal(mod.WORLD_GEN_EDITOR_STEPS.find((s) => s.id === 'travelTime')?.group, '① 基础');
   assert.equal(mod.WORLD_GEN_EDITOR_STEPS.find((s) => s.id === 'rooms')?.group, '① 基础');
   const worldSteps = mod.defaultEditorStepsFromContent(['world']);
-  assert.ok(worldSteps.includes('features'));
+  assert.ok(!worldSteps.includes('features'));
   assert.ok(worldSteps.includes('travelTime'));
+  assert.deepEqual(mod.defaultWorldGenFeatureFlags().transport, false);
 });
 
-test('线上编辑器_创建世界标题且玩法开关只在玩法页', { timeout: 90_000 }, async () => {
+test('syncFeaturesFromPlayModInstalls_添加座驾孕育即开_移除即关', async () => {
+  const cat = await import(pathToFileURL(join(romance, 'mods/playModCatalog.ts')).href);
+  const on = cat.syncFeaturesFromPlayModInstalls([
+    cat.makeInstallFromCatalog(cat.catalogBySlug('pack-pregnancy')),
+    cat.makeInstallFromCatalog(cat.catalogBySlug('pack-transport')),
+    cat.makeInstallFromCatalog(cat.catalogBySlug('pack-cars')),
+  ], { phone: true, career: true });
+  assert.equal(on.pregnancy, true);
+  assert.equal(on.transport, true);
+  assert.equal(on.cars, true);
+  assert.equal(on.career, false);
+  assert.equal(on.phone, true);
+  const off = cat.syncFeaturesFromPlayModInstalls([], on);
+  assert.equal(off.pregnancy, false);
+  assert.equal(off.transport, false);
+  assert.equal(off.cars, false);
+});
+
+test('线上编辑器_创建世界五页签且基础含玩法无功能开关', { timeout: 90_000 }, async () => {
   const { chromium } = await import('playwright');
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1100, height: 900 } });
@@ -130,34 +155,43 @@ test('线上编辑器_创建世界标题且玩法开关只在玩法页', { timeo
     const tab = (name) => page.getByRole('button', { name }).first();
     await tab(/① 基础/).click();
     await page.getByText('时间与推进', { exact: true }).waitFor();
-    assert.equal(await page.getByText('功能开关', { exact: true }).count(), 0);
-    assert.equal(await page.getByText('底栏页签', { exact: true }).count(), 0);
-    assert.equal(await page.getByText('行业主页签（人气榜 / 机遇）', { exact: true }).count(), 0);
-    await tab(/⑤ 玩法 Mod/).click();
-    await page.getByText('功能开关', { exact: true }).waitFor();
-    for (const label of ['行业主页签（人气榜 / 机遇）', '周报小报', '通告 / 作品 / 项目', '形象 · 舆情危机', '手机页签', '怀孕', '交通系统（出行方式 / 车费）', '座驾']) {
-      assert.equal(await page.getByText(label, { exact: true }).count(), 1, label);
+    await page.getByText('已添加的玩法', { exact: true }).waitFor();
+    // 功能注释：作品封面 UI 以源码静态用例为准；线上未部署本改动时不因旧「开局封面」阻断整页签回归
+    const coverDeployed = (await page.getByText('作品封面', { exact: true }).count()) > 0;
+    if (coverDeployed) {
+      await page.getByText('作品封面', { exact: true }).first().waitFor();
+      assert.equal(await page.getByText('开局封面', { exact: true }).count(), 0);
     }
-    assert.match(await page.locator('body').innerText(), /除「怀孕」外默认开启/);
-    assert.equal(await page.getByText('开启孕育', { exact: true }).count(), 0);
-    assert.equal(await page.getByText('时间与推进', { exact: true }).count(), 0);
-    await tab(/⑥ 美化/).click();
-    for (const label of ['开局封面', '手机应用配置', '皮肤美化', '音乐', '开场剧情', '剧情美化', '底栏页签']) {
+    assert.equal(await page.getByText('功能开关', { exact: true }).count(), 0);
+    assert.equal(await page.getByText('行业主页签（人气榜 / 机遇）', { exact: true }).count(), 0);
+    assert.equal(await page.getByRole('button', { name: /⑤ 玩法 Mod/ }).count(), 0);
+    assert.equal(await page.getByText('底栏页签', { exact: true }).count(), 0);
+    await tab(/⑤ 美化/).click();
+    for (const label of ['手机应用配置', '皮肤美化', '音乐', '开场剧情', '剧情美化', '底栏页签']) {
       await page.getByText(label, { exact: true }).first().waitFor();
     }
-    assert.equal(await page.getByText('主题外观', { exact: true }).count(), 0);
-    assert.equal(await page.getByText('皮肤与动画', { exact: true }).count(), 0);
-    assert.equal(await page.getByText('内置音乐', { exact: true }).count(), 0);
-    assert.equal(await page.getByText('引用音频库', { exact: true }).count(), 0);
+    if (coverDeployed) {
+      assert.equal(await page.getByText('开局封面', { exact: true }).count(), 0);
+    }
     assert.equal(await page.getByText('功能开关', { exact: true }).count(), 0);
-    assert.equal(await page.getByText('手机页签', { exact: true }).count(), 0);
     assert.equal(await page.getByText('时间与推进', { exact: true }).count(), 0);
     await tab(/④ 剧情/).click();
+    await page.waitForTimeout(400);
+    // 功能注释：点④必须停在剧情（世界书/固定事件/剧情线），禁止跳回①基础；开场剧情已在⑤美化
+    const pressed = (await page.locator('button[aria-pressed="true"]').allInnerTexts()).join(' ');
+    assert.match(pressed, /④ 剧情/);
+    assert.doesNotMatch(pressed, /① 基础/);
+    await page.getByText('世界书', { exact: true }).first().waitFor({ timeout: 8_000 });
+    await page.getByText('固定事件', { exact: true }).first().waitFor({ timeout: 5_000 });
+    await page.getByText('剧情线', { exact: true }).first().waitFor({ timeout: 5_000 });
     assert.equal(await page.getByText('开场剧情', { exact: true }).count(), 0);
-    assert.equal(await page.getByText('剧情美化', { exact: true }).count(), 0);
-    await tab(/② 角色/).click();
-    await page.getByText('头像库与匹配优先级', { exact: true }).waitFor();
-    // 「全部」页签与跨组搜索契约见 romanceModEditorIa（静态）；线上部署前不再点「全部」
+    assert.equal(await page.getByText('基本信息', { exact: true }).count(), 0);
+    assert.equal(await page.getByText('养成模块', { exact: true }).count(), 0);
+    await tab(/① 基础/).click();
+    await page.getByText('头像', { exact: true }).waitFor();
+    await page.getByText('建角', { exact: true }).waitFor();
+    const body = await page.locator('body').innerText();
+    assert.ok(body.indexOf('头像') < body.indexOf('建角') && body.indexOf('建角') < body.indexOf('地点'), '基础页顺序：头像→建角→地点');
   } finally {
     await browser.close();
   }

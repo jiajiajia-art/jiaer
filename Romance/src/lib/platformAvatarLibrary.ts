@@ -68,6 +68,44 @@ export function readFunloomAuthToken(): string {
 }
 
 /**
+ * 功能注释：当前登录用户 id，供生成世界会话按用户隔离。
+ * 优先 auth-storage 里的 user.userId；读不到再解 JWT 的 userId/sub。
+ */
+export function readFunloomUserId(): string {
+  try {
+    const raw = localStorage.getItem('auth-storage');
+    if (raw) {
+      const parsed = JSON.parse(raw) as {
+        state?: {
+          user?: {
+            userId?: string;
+            user?: { userId?: string; id?: number | string };
+            token?: string;
+          };
+        };
+      };
+      const u = parsed?.state?.user;
+      const fromProfile = String(u?.user?.userId || u?.userId || u?.user?.id || '').trim();
+      if (fromProfile) return fromProfile;
+    }
+  } catch {
+    /* fall through */
+  }
+  const token = readFunloomAuthToken();
+  if (!token) return '';
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return '';
+    const json = JSON.parse(
+      atob(payload.replace(/-/g, '+').replace(/_/g, '/')),
+    ) as { userId?: string; sub?: string };
+    return String(json.userId || json.sub || '').trim();
+  } catch {
+    return '';
+  }
+}
+
+/**
  * 功能注释：新作品作者名优先用主站账号昵称 / 用户名；读不到则空串（不伪造）。
  * 仅用于新建绑定；编辑旧作品不得用此覆盖原作者。
  */

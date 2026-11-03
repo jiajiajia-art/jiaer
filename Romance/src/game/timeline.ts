@@ -38,7 +38,11 @@ function diff(a: GameState, b: GameState): TimelineEntry["items"] {
   for (const id of sb.eventsFired ?? []) if (!was.has(id)) push("event", `触发「${evName(id)}」`);
   const fa = sa.flags ?? {}, fb = sb.flags ?? {};
   const questName = (id: string) => {
-    for (const l of getWorldStorylines() ?? []) { if (l.id === id) return `主线「${l.name}」`; const n = l.nodes.find((x) => x.id === id); if (n) return `「${n.name}」`; }
+    for (const l of getWorldStorylines() ?? []) {
+      if (l.id === id) return `主线「${l.name}」`;
+      const n = (Array.isArray(l.nodes) ? l.nodes : []).find((x) => x.id === id);
+      if (n) return `「${n.name}」`;
+    }
     return `「${id}」`;
   };
   for (const k of Object.keys(fb)) {

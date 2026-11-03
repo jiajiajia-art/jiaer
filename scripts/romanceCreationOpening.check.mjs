@@ -39,31 +39,39 @@ test('playerAttrsFromCreatorDefs_只按创作者列表_不预填八维', () => {
   assert.doesNotMatch(JSON.stringify(out), /演技|歌艺|yanji|geyi/);
 });
 
-test('ModAttrsEditor_去掉能力分档八维预填_空态还没有属性', () => {
+test('ModAttrsEditor_去掉能力分档八维预填_表单由统一建角字段复用', () => {
   assert.doesNotMatch(attrsEd, /能力分档/);
   assert.doesNotMatch(attrsEd, /RAW_STAT_ORDER/);
   assert.doesNotMatch(attrsEd, /onStats|StatsSlot/);
-  assert.match(attrsEd, /还没有属性/);
+  assert.match(attrsEd, /AttrDefForm/);
+  assert.match(attrsEd, /建角页隐藏/);
 });
 
-test('ModEditorPanel_建角合成一块_人物线路在其下', () => {
+test('ModEditorPanel_建角合成一块_在地点之上且人物线路在其后', () => {
   assert.match(panel, /title="建角"/);
   assert.doesNotMatch(panel, /title="角色属性"/);
+  // Section 标题仍是「建角」；列表内文案「建角字段」允许出现在子编辑器
   assert.doesNotMatch(panel, /title="建角字段"/);
   const jian = panel.indexOf('title="建角"');
+  const loc = panel.indexOf('title="地点"');
   const path = panel.indexOf('title="人物线路"');
-  assert.ok(jian > 0 && path > jian, '人物线路须在建角下方');
+  assert.ok(jian > 0 && loc > jian, '建角须在地点之上');
+  assert.ok(path > loc, '人物线路仍在地点之后（②角色）');
+  const createSec = panel.slice(jian, loc);
+  assert.match(createSec, /ModCreationFieldsEditor/);
+  assert.doesNotMatch(createSec, /ModAttrsEditor/);
 });
 
-test('CharacterCreate_开局不预填DEFAULT_ATTRS_选项型字段走openingSelectFieldOn', () => {
-  assert.match(create, /openingSelectFieldOn/);
-  assert.match(create, /showIdentity/);
-  assert.match(create, /showKlass/);
-  assert.match(create, /showBackground/);
+test('CharacterCreate_开局不预填DEFAULT_ATTRS_只渲染系统四项与自定义字段', () => {
+  // 功能注释：旧娱乐圈选项型内置已下线，不再走 openingSelectFieldOn / showIdentity 等
+  assert.doesNotMatch(create, /openingSelectFieldOn|showIdentity|showKlass|showBackground/);
   assert.doesNotMatch(create, /DEFAULT_ATTRS/);
   assert.match(create, /attrs: \[\]/);
   assert.match(create, /creatorAttrs\.length > 0/);
   assert.match(create, /title="属性"/);
+  assert.match(create, /systemFieldsComplete/);
+  assert.match(create, /stepCustom/);
+  assert.doesNotMatch(create, /stepTalent|stepFamily/);
 });
 
 test('worldGenWizard_建角一步取代stats与creationFields', () => {
@@ -71,5 +79,6 @@ test('worldGenWizard_建角一步取代stats与creationFields', () => {
   assert.match(wizard, /name: "建角"/);
   assert.doesNotMatch(wizard, /id: "stats"/);
   assert.doesNotMatch(wizard, /id: "creationFields"/);
-  assert.match(wizard, /id === "stats" \|\| id === "creationFields"/);
+  assert.match(wizard, /stats: \["creation"\]/);
+  assert.match(wizard, /creationFields: \["creation"\]/);
 });

@@ -1,6 +1,7 @@
 import { applyFreeStyle } from "./lib/freeStyle";
 import { applyLookCss } from "./lib/plotLook";
 import { loadGlobal, saveGlobal } from "./lib/saveScope";
+import { resolveSkinTheme } from "./lib/skins";
 import { clearWorldGenQuery, shouldOpenWorldGenWizard } from "./lib/worldGenWizard";
 import {
   blockWorldGenPersist,
@@ -24,12 +25,16 @@ import GameShell from "./components/GameShell";
 import Ending from "./components/Ending";
 import WorldGenWizard from "./components/WorldGenWizard";
 import AuthorPreviewChrome from "./components/AuthorPreviewChrome";
+import AuthorPreviewPlayShell from "./components/AuthorPreviewPlayShell";
+import PlatformShellGate from "./components/PlatformShellGate";
+import { readFunloomStaffFromStorage, shouldGateRomancePlatformShell } from "./lib/platformShellGate";
+
+import { isStaleChunkLoadErrorMessage, reloadOnceForStaleChunk } from "./lib/worldGenGenerate";
 
 /** 功能注释：发版后旧 chunk 404 常表现为动态 import 失败；仅清 error 不够，须整页重载。 */
 function isStaleChunkLoadError(error: unknown): boolean {
-  const msg = String((error as { message?: string })?.message || error || "");
-  return /Failed to fetch dynamically imported module|Loading chunk [\d]+ failed|Importing a module script failed|error loading dynamically imported module/i.test(
-    msg,
+  return isStaleChunkLoadErrorMessage(
+    (error as { message?: string })?.message || error,
   );
 }
 
@@ -79,7 +84,12 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
    * 若已在恢复中仍再次崩（旧缓存/半残标记），禁止空 return 卡死在报错页，改为清空会话再刷。
    */
   componentDidCatch(error: Error) {
-    if (!isDirtyWorldGenTrimError(error) || typeof window === "undefined") return;
+    if (typeof window === "undefined") return;
+    // 功能注释：点「继续填写草稿」等路径上的旧 chunk 404 → 自动硬刷，不必先停在红屏等用户点重试
+    if (isStaleChunkLoadError(error)) {
+      if (reloadOnceForStaleChunk(error)) return;
+    }
+    if (!isDirtyWorldGenTrimError(error)) return;
     recoverDirtyWorldGenTrim(isWorldGenTrimRecovering());
   }
   private retry = () => {
@@ -133,11 +143,37 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
 }
 
 function PlayScreens() {
-  const { screen, saveEpoch } = useGame();
+  const { screen, saveEpoch, game, go } = useGame();
   if (screen === "create") return <CharacterCreate />;
   // 功能注释：开幕只挂 Opening，禁止底层 GameShell/底栏透出；点「开始」后再挂载局内界面
-  if (screen === "opening") return <Opening key={`opening-${saveEpoch}`} />;
-  if (screen === "game") return <GameShell key={`shell-${saveEpoch}`} />;
+  if (screen === "opening") {
+    if (!game) {
+      // 功能注释：无存档却进开幕 → 常见于脏切屏；禁止 Opening return null / GameShell 空挂导致静默空白
+      return (
+        <div className="flex min-h-[70vh] flex-col items-center justify-center px-6 text-center" data-author-preview-empty="opening">
+          <p className="text-sm text-ink-soft">开幕页缺少存档，请从封面重新开始。</p>
+          <button type="button" className="mt-4 rounded-xl bg-jade px-5 py-2.5 text-sm font-semibold text-paper-2" onClick={() => go("cover")}>
+            回到封面
+          </button>
+        </div>
+      );
+    }
+    return <Opening key={`opening-${saveEpoch}`} />;
+  }
+  if (screen === "game") {
+    if (!game) {
+      // 功能注释：GameShell 在 !game 时 return null 会变成静默空白；须可回到封面
+      return (
+        <div className="flex min-h-[70vh] flex-col items-center justify-center px-6 text-center" data-author-preview-empty="game">
+          <p className="text-sm text-ink-soft">局内界面尚未就绪（测试存档为空）。请从封面重新开局。</p>
+          <button type="button" className="mt-4 rounded-xl bg-jade px-5 py-2.5 text-sm font-semibold text-paper-2" onClick={() => go("cover")}>
+            回到封面
+          </button>
+        </div>
+      );
+    }
+    return <GameShell key={`shell-${saveEpoch}`} />;
+  }
   if (screen === "ending") return <Ending />;
   return <Cover />;
 }
@@ -171,7 +207,7 @@ function Root() {
     const key = `${game.worldId ?? "ent"}:${JSON.stringify(mt)}`;
     if (loadGlobal<string>("mod-theme-applied", "") === key) return;
     saveGlobal("mod-theme-applied", key);
-    setTheme({ ...theme, ...mt });
+    setTheme({ ...theme, ...resolveSkinTheme(mt) });
   }, [screen, game?.worldId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 应用主题：深浅色（含 auto 跟随系统）+ 主题色；读「实际生效外观」（含剧情美化）
@@ -251,13 +287,25 @@ function Root() {
     }
   }, [look, lookCss, worldGenOpen, previewing]);
 
+  const gatePlatform = shouldGateRomancePlatformShell({
+    search: typeof window !== 'undefined' ? window.location.search : '',
+    hasWorldGenSession: worldGenOpen || shouldResumeWorldGenSession(),
+    isAuthorPreview: previewing,
+    isStaff: readFunloomStaffFromStorage(),
+  });
+
   // 功能注释：创作向导在预览时保持挂载（隐藏），滚动与草稿不丢；局内进预览则退出后按 takeReopenEditorMod 重开编辑器
+  if (gatePlatform) {
+    return <PlatformShellGate />;
+  }
+
   return (
     <>
       {worldGenOpen ? (
         <div
+          /* 功能注释：预览时向导壳保活但 hidden；去掉 data-platform-ui，避免 Modal 误挂进不可见树 */
           className={previewing ? "hidden" : "romance-platform min-h-screen"}
-          data-platform-ui="1"
+          {...(previewing ? {} : { "data-platform-ui": "1" })}
           aria-hidden={previewing || undefined}
         >
           <WorldGenWizard
@@ -277,9 +325,21 @@ function Root() {
       {previewing ? (
         <>
           <AuthorPreviewChrome />
-          {/* 功能注释：顶栏贴顶全宽，游玩区按 --apc-h 让出 REC 控制条高度 */}
-          <div style={{ paddingTop: "var(--apc-h, 48px)" }}>
-            <PlayScreens key={`preview-${saveEpoch}`} />
+          {/* 功能注释：游玩区自带可见平台壳，建角/封面弹窗有正确挂载点与暗红 token；
+              min-height 用 100vh 写死，避免仅 min-height:100% + 空子节点高度塌成 0 露出淡紫宿主底 */}
+          <div
+            className="romance-platform min-h-screen"
+            data-platform-ui="1"
+            data-author-preview-shell="1"
+            style={{
+              paddingTop: "var(--apc-h, 48px)",
+              minHeight: "100vh",
+              background: "var(--fl-bg, #000000)",
+            }}
+          >
+            <AuthorPreviewPlayShell>
+              <PlayScreens key={`preview-${saveEpoch}`} />
+            </AuthorPreviewPlayShell>
           </div>
         </>
       ) : null}

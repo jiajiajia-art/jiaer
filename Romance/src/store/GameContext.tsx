@@ -14,8 +14,9 @@ import {
 } from "../mods/registry";
 import {
   AUTHOR_PREVIEW_CLEAR, AUTHOR_PREVIEW_END, AUTHOR_PREVIEW_GAME_ID, AUTHOR_PREVIEW_RESTART, AUTHOR_PREVIEW_START,
-  isAuthorPreview, type AuthorPreviewSession,
+  isAuthorPreview, reportAuthorPreviewFatal, type AuthorPreviewSession,
 } from "../lib/authorPreview";
+import { markAuthorPreviewReady, resetAuthorPreviewBoot } from "../lib/authorPreviewBoot.ts";
 import { clearAuthorPreviewSave } from "../lib/storage";
 import { activeLookKey, resolveLook, type LookPatch } from "../lib/plotLook";
 import { pickArrival, resolveStart, startPreset } from "../game/mapStart";
@@ -49,7 +50,6 @@ import {
 import {
   defaultConfig,
   defaultTheme,
-  ensureFamily,
   ensureLoveAxis,
   ensureSim,
   loadConfig,
@@ -109,7 +109,7 @@ import { advanceUnit, advanceCount, advanceStoryOn, advanceWords, hopEnergy, tri
 import { activityApCost, customActsOf, customItemsOf, findCustomItem, findShopGood, findSpotEvent, firedKey, firedOf, withApNote } from "../game/mapedits";
 import { scanTriggers, queueChoiceTriggers, takeQueued } from "../game/eventTriggers";
 import { pickFixedEvent, pickRandomEvent, applyFixedEffects, applyHiddenBranches, applyChainBreaks, eventChoiceOptions, parseChoice, applyChoice, matchCustomEnding, evalFixedCond, applyEffectList, FIXED_METRICS } from "../game/fixedEvents";
-import { normRouteFx, routeAttrId } from "../game/routeFx";
+import { normRouteFx } from "../game/routeFx";
 import { activateEvents, keepIfOngoing, keywordEventHits, settleActiveEvents } from "../game/loreContext";
 import type { FixedEffect, FixedEvent } from "../lib/types";
 import { limitDays } from "../lib/types";
@@ -128,7 +128,8 @@ import type { Character as SimChar } from "../game/logic";
 
 export const BRANCH_POINTS = 0; // 地点内的事件 / 拾取 / 活动都不扣行动点（只有换地点扣）
 import { GameCtx, LiveCtx, type Ctx, type Screen, type Popup, type WeekReport, type Diary } from "./gameCtx";
-import { attrCap, setWalletSource, wallet, walletDef, setCustomAttr, customAttrValue } from "../game/wallet";
+import { attrCap, setWalletSource, setContentMoneyLabelSource, wallet, walletDef, setCustomAttr, customAttrValue } from "../game/wallet";
+import { getWorldSlot } from "../mods/registry";
 import { playerAttrsFromCreatorDefs } from "../lib/creationOpening";
 import { clampStat } from "../game/data";
 import { applyPhoneStep, markActsSent, pendingActs, type PhoneInterrupt } from "../game/phoneLink";
@@ -232,6 +233,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const simLockRef = useRef<SimLock | null>(null);
   // 统一钱包接口：引擎层（只拿得到 sim）也能据此知道当前对局绑定的货币
   setWalletSource(() => gameRef.current);
+  // 功能注释：未绑钱包属性时，局内资金文案用建角配置的货币名称（元 / 灵石…）
+  setContentMoneyLabelSource(() => {
+    const v = getWorldSlot("moneyLabel");
+    return typeof v === "string" ? v : "";
+  });
   gameRef.current = game;
   const screenRef = useRef(screen);
   screenRef.current = screen;
@@ -303,10 +309,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const onStart = (ev: Event) => {
       const detail = (ev as CustomEvent<AuthorPreviewSession>).detail;
-      if (!detail?.mod) return;
+      if (!detail?.mod) {
+        reportAuthorPreviewFatal(["预览数据无效"]);
+        return;
+      }
       const boot = beginAuthorPreviewMod(detail.mod);
       if (!boot.ok) {
-        window.dispatchEvent(new CustomEvent("star:author-preview-fatal", { detail: { errors: boot.errors } }));
+        // 功能注释：失败须在预览壳展示原因；禁止只派事件给已 hidden 的编辑器后静默空屏
+        reportAuthorPreviewFatal(boot.errors);
         return;
       }
       previewStashRef.current = {
@@ -325,11 +335,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
           setGame(null);
           setSaveEpoch((n) => n + 1);
           setScreen("cover");
+          markAuthorPreviewReady();
         },
       });
     };
     const onEnd = () => {
       endAuthorPreviewMod();
+      resetAuthorPreviewBoot();
       const stash = previewStashRef.current;
       previewStashRef.current = null;
       const backId = stash?.saveId || "";
@@ -355,6 +367,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         setGame(null);
         setSaveEpoch((n) => n + 1);
         setScreen("cover");
+        markAuthorPreviewReady();
       }
     };
     const onRestart = () => {
@@ -365,6 +378,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setGame(null);
       setSaveEpoch((n) => n + 1);
       setScreen("cover");
+      markAuthorPreviewReady();
     };
     window.addEventListener(AUTHOR_PREVIEW_START, onStart);
     window.addEventListener(AUTHOR_PREVIEW_END, onEnd);
@@ -396,7 +410,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     activateWorld(s.worldId ?? DEFAULT_WORLD, saveAddons(s));
     const snapshot = s.privateData;
     s = { ...s, worldId: getWorld().worldId, addons: [...getWorld().addonIds], entSplit: true, privateData: undefined };
-    const g = syncSimToPlayer(ensureLoveAxis(ensureFamily(ensureSim(s))));
+    const g = syncSimToPlayer(ensureLoveAxis(ensureSim(s)));
     syncFactions(g);
     syncEngineRules(g);
     // 切档 5 步：① 保存当前档 ② 清内存 ③ 换 saveId ④ 读新档私有数据（快照恢复）⑤ 重渲染
@@ -768,7 +782,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
       const memory = route?.memory?.trim();
       if (memory) g = { ...g, player: { ...g.player, extra: [...g.player.extra, { label: "前置记忆", value: memory }] } };
-      // 人物线路 · 开局数值（动态 JSON）：按名称匹配八维 → 内置指标 → 本局自定义属性；都匹配不上就新建一个自定义属性
+      // 人物线路 · 开局数值：只结算挂到已有属性/人物的依赖行；未选中或野名不生效、不自动新建属性
       const rfx = normRouteFx(route?.fx);
       if (rfx) {
         const statKey = (name: string) => (Object.keys(STAT_LABELS) as (keyof typeof STAT_LABELS)[]).find((k) => STAT_LABELS[k] === name || k === name);
@@ -780,11 +794,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
           const mk = sk ? undefined : metricKey(name);
           if (sk) { effects.push({ kind: "stat", key: sk, delta: val }); continue; }
           if (mk) { effects.push({ kind: "metric", key: mk, delta: val }); continue; }
-          let d = (g.attrDefs ?? []).find((x) => x.label === name || x.id === name);
-          if (!d) {
-            d = { id: routeAttrId(name), label: name, init: 0, min: Math.min(0, val) };
-            g = { ...g, attrDefs: [...(g.attrDefs ?? []), d], sim: { ...g.sim, cattrs: { ...(g.sim.cattrs ?? {}), [d.id]: 0 } } };
-          }
+          const d = (g.attrDefs ?? []).find((x) => x.label === name || x.id === name);
+          // 功能注释：必须命中作品已有自定义属性；禁止再 routeAttrId 自动开洞
+          if (!d) continue;
           g = setCustomAttr(g, d, customAttrValue(g, d) + val);
         }
         for (const { target, val } of rfx.favor ?? []) {
@@ -1159,8 +1171,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (bd.notes.length) {
       narration = [narration, ...bd.notes].filter(Boolean).join("\n");
     }
-    // 主角年龄随日历（世界观「时间与推进」里开启）：过生日 / 元旦 +1 岁
-    const aged = getWorldSlot("play")?.ageAuto ? tickPlayerAge(g, nextSim.day) : { g };
+    // 主角年龄随日历：内置开启（创作者界面不再暴露开关），过生日 / 元旦 +1 岁
+    const aged = tickPlayerAge(g, nextSim.day);
     if (aged.note) narration = [narration, aged.note].filter(Boolean).join("\n");
     const merged = syncSimToPlayer({
       ...g,
@@ -1563,7 +1575,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (msg) setPopup({ title: "表白心意", segments: [{ kind: "system", text: msg }], changes });
   }, [busy, cfg, commitSim, runTurn]);
 
-  // —— 牵线：主角主动促成两位 NPC 之间的往来（介绍 / 撮合 / 劝和 / 挑拨 / 三人同行）——
+  // —— 牵线：主角主动促成两位 NPC 之间的往来（仅创作者配置的方式；无预置）——
   const simBridge = useCallback((aId: string, bId: string, mode: BridgeMode): string => {
     const g = gameRef.current;
     if (!g || busy) return "正忙，稍后再试。";

@@ -18,7 +18,9 @@ import { applyGigPrices } from "../game/gigLibrary";
 import type { PersonContent, RoomActivity, RoomContent, RoomItem } from "../worlds/star2005/content";
 import { phoneAppVisible, resolvePhoneApps } from "../lib/phoneAppsConfig";
 import { normalizeStartMetList } from "../lib/normalizeStartMet";
-import { readScriptTone } from "../lib/scriptTone";
+import { mergeScriptToneFragments, readScriptTone } from "../lib/scriptTone";
+import { normalizeSidelines } from "../lib/sidelines";
+import { foldLoreFestivalsIntoWorldBook } from "../lib/worldBookDeps";
 
 const K_USER = "star:mods:user";
 const K_SEL = "star:mods:selection";
@@ -92,13 +94,13 @@ export function validateMod(raw: unknown): string[] {
   const ct = c as ModContent;
   const arr = (k: keyof ModContent) => { const v = ct[k]; if (v !== undefined && !Array.isArray(v)) errs.push(`content.${k} 须为数组`); };
   const obj = (k: keyof ModContent) => { const v = ct[k]; if (v !== undefined && (typeof v !== "object" || v === null || Array.isArray(v))) errs.push(`content.${k} 须为对象`); };
-  (["npcs", "items", "gigs", "events", "fixedEvents", "endings", "worldBook", "worldRules", "gradeDims"] as const).forEach(arr);
+  (["npcs", "items", "gigs", "events", "fixedEvents", "storylines", "sidelines", "endings", "worldBook", "worldRules", "gradeDims"] as const).forEach(arr);
   (["rooms", "prompt", "terms", "features", "timeLimit"] as const).forEach(obj);
-  const needId = (k: "npcs" | "items" | "gigs" | "events" | "fixedEvents" | "endings" | "worldBook" | "worldRules") =>
+  const needId = (k: "npcs" | "items" | "gigs" | "events" | "fixedEvents" | "storylines" | "sidelines" | "endings" | "worldBook" | "worldRules") =>
     (Array.isArray(ct[k]) ? (ct[k] as { id?: unknown }[]) : []).forEach((e, i) => {
       if (!e || typeof e.id !== "string" || !e.id) errs.push(`content.${k}[${i}] 缺少 id`);
     });
-  (["npcs", "items", "gigs", "events", "fixedEvents", "endings", "worldBook", "worldRules"] as const).forEach(needId);
+  (["npcs", "items", "gigs", "events", "fixedEvents", "storylines", "sidelines", "endings", "worldBook", "worldRules"] as const).forEach(needId);
   // 内容槽：类型校验
   const SLOT_ARR = ["trainings", "sideJobs", "zodiacs", "encounters", "sideQuests", "styles", "identities", "backgrounds", "directions", "weekendActs", "titles", "cars", "meals", "lore", "festivals"] as const;
   const SLOT_OBJ = ["stats", "map", "sideQuestCast", "relations", "calendar", "travel", "contracts", "projects", "imageCrisis", "industry", "help", "opening", "cover", "weeklyPaper", "creation", "npcPool", "bills", "pregnancy", "gigPrices", "allowance", "tuning", "play", "avatars"] as const;
@@ -118,7 +120,7 @@ export function validateMod(raw: unknown): string[] {
   if (ct.startMoney !== undefined && (typeof ct.startMoney !== "number" || !Number.isFinite(ct.startMoney) || ct.startMoney < 0)) errs.push("content.startMoney 须为非负数字");
   if (ct.startDate !== undefined && (typeof ct.startDate !== "string" || !/^\d{4}[-./]\d{2}[-./]\d{2}$/.test(ct.startDate))) errs.push("content.startDate 须形如 2005.01.03");
   if (ct.weather !== undefined && typeof ct.weather !== "string") errs.push("content.weather 须为字符串");
-  for (const k of ["startTime", "dayStart", "dayEnd"] as const) if (ct[k] !== undefined && (typeof ct[k] !== "string" || !/^\d{1,2}:[0-5]\d$/.test(ct[k]!))) errs.push(`content.${k} 须形如 08:00`);
+  // 功能注释：startTime/dayStart/dayEnd 已下线，旧稿残留字段不再校验、也不再作为错误拦截保存
   if (ct.school !== undefined && typeof ct.school !== "string") errs.push("content.school 须为字符串");
   const strArr = (v: unknown) => Array.isArray(v) && v.every((x) => typeof x === "string");
   if (ct.parentJobs !== undefined && !strArr(ct.parentJobs)) errs.push("content.parentJobs 须为字符串数组");
@@ -308,8 +310,6 @@ function resolve(sel: ModSelection): ResolvedWorld {
     startRoom: wc.startRoom,
     locations: [...(wc.locations ?? [])],
     startMet: normalizeStartMetList(wc.startMet),
-    familyWx: wc.familyWx,
-    familyVoices: wc.familyVoices ? { ...wc.familyVoices } : undefined,
     npcs: [...(wc.npcs ?? [])],
     items: [...(wc.items ?? [])],
     gigs: [...(wc.gigs ?? [])],
@@ -318,10 +318,16 @@ function resolve(sel: ModSelection): ResolvedWorld {
     endings: [...(wc.endings ?? [])],
     timeLimit: wc.timeLimit ? { ...wc.timeLimit } : undefined,
     gradeDims: wc.gradeDims?.length ? wc.gradeDims.map((d) => ({ ...d, src: { ...d.src } })) : undefined,
-    worldBook: [...(wc.worldBook ?? [])],
+    // 功能注释：开局种子只认世界书；旧详细设定/节日在此并入，避免与世界书各写一份
+    worldBook: (foldLoreFestivalsIntoWorldBook({
+      worldBook: [...(wc.worldBook ?? [])],
+      lore: wc.lore,
+      festivals: wc.festivals,
+    }).worldBook ?? []),
     income: [...(wc.income ?? [])],
     gameRules: [...(wc.gameRules ?? [])],
     storylines: [...(wc.storylines ?? [])],
+    sidelines: normalizeSidelines(wc.sidelines),
     lookRules: [...(wc.lookRules ?? [])],
     worldRules: [...(wc.worldRules ?? WORLD_RULE_DIMS)],
     prompt: { ...(wc.prompt ?? {}) },
@@ -329,6 +335,7 @@ function resolve(sel: ModSelection): ResolvedWorld {
     navTabs: wc.navTabs ? wc.navTabs.map((t) => ({ ...t })) : undefined,
     navSize: wc.navSize,
     phoneAppsCfg: wc.phoneAppsCfg ? [...wc.phoneAppsCfg] : undefined,
+    phoneHomeWallpaper: wc.phoneHomeWallpaper,
     features: { ...(wc.features ?? {}) },
     theme: { ...(wc.theme ?? {}) },
   };
@@ -343,8 +350,6 @@ function resolve(sel: ModSelection): ResolvedWorld {
         content.startMet = normalizeStartMetList([...(content.startMet ?? []), ...addonMet]);
       }
     }
-    if (c.familyWx != null) content.familyWx = c.familyWx;
-    if (c.familyVoices) content.familyVoices = { ...(content.familyVoices ?? {}), ...c.familyVoices };
     content.locations = mergeById(content.locations, c.locations);
     content.npcs = mergeById(content.npcs, c.npcs);
     content.items = mergeById(content.items, c.items);
@@ -358,16 +363,15 @@ function resolve(sel: ModSelection): ResolvedWorld {
     content.income = mergeById(content.income, c.income);
     content.gameRules = mergeById(content.gameRules, c.gameRules);
     content.storylines = mergeById(content.storylines, c.storylines);
+    content.sidelines = mergeById(content.sidelines, normalizeSidelines(c.sidelines));
     content.lookRules = mergeById(content.lookRules, c.lookRules);
     content.worldRules = mergeById(content.worldRules, c.worldRules);
-    // 提示片段：剧本基调 / 旧三字段 / terminology 叠加追加，其余覆盖
+    // 提示片段：各包的新旧剧本基调按加载顺序追加；terminology 追加，其余后包覆盖
     const p = c.prompt ?? {};
-    content.prompt = {
-      ...content.prompt, ...p,
-      scriptTone: [content.prompt.scriptTone, p.scriptTone].filter(Boolean).join("\n\n") || undefined,
-      worldIntro: [content.prompt.worldIntro, p.worldIntro].filter(Boolean).join("\n") || undefined,
+    content.prompt = mergeScriptToneFragments(content.prompt, {
+      ...p,
       terminology: [content.prompt.terminology, p.terminology].filter(Boolean).join("\n") || undefined,
-    };
+    });
     Object.assign(content.terms, c.terms ?? {});
     // 底栏：后包覆盖前包的顺序 / 显隐 / 格数
     if (c.navTabs?.length) content.navTabs = c.navTabs.map((t) => ({ ...t }));
@@ -378,6 +382,7 @@ function resolve(sel: ModSelection): ResolvedWorld {
       for (const a of c.phoneAppsCfg) map.set(a.id, { ...(map.get(a.id) ?? { id: a.id }), ...a });
       content.phoneAppsCfg = [...map.values()];
     }
+    if (c.phoneHomeWallpaper) content.phoneHomeWallpaper = c.phoneHomeWallpaper;
     const extra = [...(content.features.phoneAppsExtra ?? []), ...(c.features?.phoneAppsExtra ?? [])];
     Object.assign(content.features, c.features ?? {});
     if (extra.length) content.features.phoneAppsExtra = [...new Set(extra)];
@@ -612,8 +617,8 @@ export function modTemplate(kind: "world" | "addon"): string {
     id: kind === "world" ? "my-world" : "my-addon", name: kind === "world" ? "我的世界观" : "我的叠加包", version: "0.1.0", author: "", description: "",
     kind, dependencies: kind === "addon" ? ["ent"] : [],
     content: {
-      worldBook: [{ id: "wb1", title: "设定", keywords: [], content: "在这里写世界设定", enabled: true, constant: true }],
-      prompt: { worldIntro: "" }, terms: {}, features: {},
+      worldBook: [],
+      prompt: {}, terms: {}, features: {},
       ...(kind === "world"
         ? {
             rooms: { start: { name: "起点", desc: "起点", exits: {} } }, startRoom: "start",
@@ -626,15 +631,10 @@ export function modTemplate(kind: "world" | "addon"): string {
             opening: { title: "序章", paragraphs: ["{name}的故事从这里开始，兜里有 {money} 元。"], cta: "开始" },
             help: { intro: "", docs: [] },
             map: { background: "", photos: {}, hotspots: {} },
-            // 建角池
-            styles: [{ id: "s1", name: "风格名", tag: "标签", desc: "说明", stats: {} }],
-            backgrounds: [{ id: "b1", name: "普通家庭", tag: "标签", desc: "说明" }],
-            school: "", parentJobs: ["教师", "医生"],
-            creation: { formIntro: "{city} · {year} {season}。一页定型——锁住满意的（{lock}），其余随时重掷。", identityOpts: ["身份A", "身份B"], backgroundOpts: [], klassOpts: [], cta: "开启故事" },
-            // 养成系统
+            // 建角默认仅有四个系统字段；作品需要的身份、背景等由作者自行添加自定义字段
+            creation: { cta: "开启故事" },
+            // 养成系统（名气分档 → 建角数值属性分档；头衔 → 玩法 Mod pack-titles，此处不预填）
             weekendActs: [{ id: "freeroam", name: "自由活动", effect: "压力 -6", icon: "", cost: 0, energy: 0, stress: -6 }, { id: "recuperate", name: "彻底休整", effect: "压力 -16", icon: "", cost: 0, energy: 34, stress: -16 }],
-            fameTiers: [{ min: 0, label: "无名", desc: "" }, { min: 100, label: "小有名气", desc: "" }],
-            titles: [{ id: "t_fame", name: "头衔名", tier: "青铜", req: { fame: 50 }, desc: "名气 ≥ 50" }],
             cars: [],
             npcPool: { names: ["路人甲", "路人乙"], directions: [], personalities: [], prefs: [] },
             bills: { weekly: [{ label: "生活费", amount: 500 }], monthly: [{ label: "房租", amount: 2000 }] },
@@ -670,6 +670,9 @@ function resolveLiveTerm(w: ResolvedWorld, k: TermKey, fallback?: string): strin
   };
   switch (k) {
     case "money": {
+      // 功能注释：优先用建角「开局资金」货币名称；再回落自定义货币属性名
+      const named = pickSlot((c) => (typeof c.moneyLabel === "string" ? c.moneyLabel.trim() : undefined));
+      if (named) return named;
       const attrs = pickSlot((c) => c.customAttrs);
       const hit = attrs?.find((a) => /money|货币|金币|片酬|灵石|零花|现金/i.test(`${a.id}${a.label}`));
       // 功能注释：customAttrs.label 可能被 AI 写成对象，禁止 ?.trim()
@@ -743,7 +746,7 @@ const FEATURE_NEEDS: Partial<Record<Exclude<keyof FeatureFlags, "phoneApps" | "p
   weeklyPaper: () => hasSlot("industry"),
   industryTab: () => hasSlot("industry"),
   career: (w) => w.content.gigs.length > 0 || hasSlot("projects"),
-  // 孕育没有内容槽可判：须由世界观或「孕育包」显式开启（未声明 = 关闭，避免校园 / 自建世界意外出现怀孕）
+  // 孕育没有内容槽可判：须已添加孕育包 / features.pregnancy（未声明 = 关闭）
   pregnancy: (w) => w.content.features.pregnancy === true,
 };
 export const feature = (k: Exclude<keyof FeatureFlags, "phoneApps" | "phoneAppsExtra">): boolean => {
@@ -767,6 +770,8 @@ export const selectedFeature = (k: Exclude<keyof FeatureFlags, "phoneApps" | "ph
 export const selectedTerm = (k: TermKey, fallback?: string): string => resolveLiveTerm(getSelectedWorld(), k, fallback);
 /** 当前世界手机应用配置（合并后） */
 export const worldPhoneAppsCfg = () => getWorld().content.phoneAppsCfg;
+/** 作品默认手机桌面背景（未声明则玩家/引擎默认） */
+export const worldPhoneHomeWallpaper = () => getWorld().content.phoneHomeWallpaper;
 /** 模组底栏配置：新局写入存档 navTabs / navSize */
 export const worldNavTabs = () => getWorld().content.navTabs;
 export const worldNavSize = () => getWorld().content.navSize;
@@ -821,6 +826,7 @@ export const getWorldEvents = () => getWorld().content.events;
 export const getWorldIncome = () => getWorld().content.income;
 export const getWorldGameRules = () => getWorld().content.gameRules;
 export const getWorldStorylines = () => getWorld().content.storylines;
+export const getWorldSidelines = () => getWorld().content.sidelines;
 export const getWorldLookRules = () => getWorld().content.lookRules;
 export const getWorldFixedEvents = () => getWorld().content.fixedEvents;
 export const getWorldEndings = () => getWorld().content.endings;
@@ -829,12 +835,11 @@ export const getWorldGradeDims = () => getWorld().content.gradeDims;
 export const getWorldId = () => getWorld().worldId;
 export const getWorldLocations = () => overlay().locs;
 export const getWorldStartMet = () => normalizeStartMetList(getWorld().content.startMet) ?? [];
-/* 开局房间：显式 startRoom → 娱乐圈默认 apartment → 第一个房间 */
+/* 功能注释：开局地点只认作品显式配置；禁止回落 apartment 或地点列表第一项。 */
 export function getWorldStartRoom(): string {
   const c = getWorld().content;
   if (c.startRoom && c.startRoom in c.rooms) return c.startRoom;
-  if ("apartment" in c.rooms) return "apartment";
-  return Object.keys(c.rooms)[0] ?? "apartment";
+  return "";
 }
 
 /* —— 派生索引（按生效世界缓存） —— */

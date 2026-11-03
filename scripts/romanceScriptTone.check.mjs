@@ -42,6 +42,18 @@ test('consolidateScriptTone_把分栏旧稿并进scriptTone', () => {
   assert.equal(next.gmIntro, undefined);
 });
 
+test('mergeScriptToneFragments_新基调与旧三框跨包合并也不丢字', () => {
+  const next = lib.mergeScriptToneFragments(
+    { scriptTone: '世界底座', terminology: '旧术语' },
+    { gmIntro: '叠加GM', worldIntro: '叠加世界', narratorPersona: '叠加口吻', terminology: '新术语' },
+  );
+  assert.equal(next.scriptTone, '世界底座\n\n叠加GM\n\n叠加世界\n\n叠加口吻');
+  assert.equal(next.gmIntro, undefined);
+  assert.equal(next.worldIntro, undefined);
+  assert.equal(next.narratorPersona, undefined);
+  assert.equal(next.terminology, '新术语');
+});
+
 test('编辑器_剧本基调在基础作品信息_剧情页不再有三块', () => {
   assert.match(panel, /剧本基调/);
   assert.match(panel, /readScriptTone\(c\.prompt\)/);
@@ -55,6 +67,7 @@ test('编辑器_剧本基调在基础作品信息_剧情页不再有三块', () 
 
 test('运行时_header读剧本基调_fragment不再重复世界观口吻', () => {
   assert.match(registry, /readScriptTone\(getWorld\(\)\.content\.prompt\)/);
+  assert.match(registry, /mergeScriptToneFragments\(content\.prompt/);
   assert.doesNotMatch(registry, /p\.worldIntro && `【世界观】/);
   assert.doesNotMatch(registry, /p\.narratorPersona && `【叙事口吻】/);
 });

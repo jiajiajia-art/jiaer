@@ -59,7 +59,7 @@ test('avatarLibrary_API与导航管理运营页已挂载', () => {
   const page = readFileSync(join(root, 'src/page/warehouse/WarehouseAvatarLibrary.tsx'), 'utf8');
   const admin = readFileSync(join(root, 'src/page/AdminPanel.tsx'), 'utf8');
   const operator = readFileSync(join(root, 'src/page/operator/OperatorPanel.tsx'), 'utf8');
-  const adminMgr = readFileSync(join(root, 'src/components/Admin/AdminPublicAvatarManager.tsx'), 'utf8');
+  const adminMgr = readFileSync(join(root, 'src/components/admin/AdminPublicAvatarManager.tsx'), 'utf8');
   const cropGate = readFileSync(join(root, 'src/components/Avatar/SquareAvatarCropGate.tsx'), 'utf8');
   const frame = readFileSync(join(root, 'src/components/Avatar/AvatarFrame.tsx'), 'utf8');
   const cropModal = readFileSync(join(root, 'src/components/CommonModal/ImageCropModal.tsx'), 'utf8');
@@ -112,7 +112,7 @@ test('avatarLibrary_API与导航管理运营页已挂载', () => {
   assert.doesNotMatch(adminMgr, /window\.prompt|window\.confirm|alert\(/);
   assert.doesNotMatch(adminMgr, /<select[\s>]/);
   // 管理端公共头像须用暖色浅底卡片分区，禁止整页暗色胶囊栈
-  const adminMgrCss = readFileSync(join(root, 'src/components/Admin/AdminPublicAvatarManager.module.css'), 'utf8');
+  const adminMgrCss = readFileSync(join(root, 'src/components/admin/AdminPublicAvatarManager.module.css'), 'utf8');
   assert.match(adminMgrCss, /--av-surface/);
   assert.match(adminMgrCss, /\.panel\s*\{/);
   assert.match(adminMgrCss, /\.uploadForm\s*\{/);

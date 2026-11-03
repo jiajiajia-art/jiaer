@@ -53,7 +53,7 @@ function summary(m: Mod): string {
     n(c.customAttrs) && `属性 ${n(c.customAttrs)}`, n(c.titles) && `头衔 ${n(c.titles)}`,
     n(c.trainings) && `课程 ${n(c.trainings)}`, n(c.sideJobs) && `打工 ${n(c.sideJobs)}`, n(c.weekendActs) && `周末活动 ${n(c.weekendActs)}`,
     n(c.fixedEvents) + n(c.events) && `事件 ${n(c.fixedEvents) + n(c.events)}`,
-    n(c.endings) && `结局 ${n(c.endings)}`, n(c.worldBook) && `世界书 ${n(c.worldBook)}`, n(c.lore) && `地区 ${n(c.lore)}`, n(c.festivals) && `节日 ${n(c.festivals)}`, n(c.income) && `收支 ${n(c.income)}`,
+    n(c.endings) && `结局 ${n(c.endings)}`, n(c.worldBook) && `世界书 ${n(c.worldBook)}`, n(c.income) && `收支 ${n(c.income)}`,
     n(c.meals) && `伙食 ${n(c.meals)} 档`, n(c.bills) && "住行账单", n(c.gigPrices) && "通告价目", n(c.cars) && `座驾 ${n(c.cars)}`,
     c.contracts?.signing?.length && `开局合约 ${c.contracts.signing.length}`, c.projects?.projects?.length && `影视项目 ${c.projects.projects.length}`,
     c.industry?.companies?.length && `经纪公司 ${c.industry.companies.length}`, c.imageCrisis?.crises?.length && `舆情危机 ${c.imageCrisis.crises.length}`,

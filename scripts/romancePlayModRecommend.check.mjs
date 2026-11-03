@@ -60,5 +60,7 @@ test('ModEditorPanel_须含玩法推荐确认安装文案', () => {
   assert.match(panel, /recommendPlayModsFromSetting/);
   assert.match(panel, /确认添加|按当前题材推荐/);
   assert.match(wiz, /DEFAULT_WORLD_GEN_EDITOR_STEP_IDS|全选基础/);
-  assert.match(wiz, /展开扩展玩法/);
+  // 功能注释：扩展玩法不在生成世界勾选，改走编辑器「添加玩法」
+  assert.doesNotMatch(wiz, /展开扩展玩法/);
+  assert.doesNotMatch(wiz, /含扩展全选/);
 });

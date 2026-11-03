@@ -94,8 +94,9 @@ test('valueSources_缺label或缺name时不得reading_trim', () => {
   assert.match(src, /cellText\(d\?\.label\)/);
   assert.match(src, /cellText\(\(r as \{ name\?: unknown \} \| null\)\?\.name\)/);
   const paths = readFileSync(join(romance, 'components/ModPathsEditor.tsx'), 'utf8');
-  assert.match(paths, /const s = String\(n \?\? ""\)\.trim\(\)/);
-  assert.match(paths, /const s = String\(t \?\? ""\)\.trim\(\)/);
+  // 功能注释：线路 AI 回写人物时用 String(...??"").trim，禁止对可能非字符串直接 .trim()
+  assert.match(paths, /String\(n\.name \?\? ""\)\.trim\(\)/);
+  assert.match(paths, /String\(n\.name\)\.trim\(\)/);
   assert.doesNotMatch(paths, /n\.trim\(\) && !known/);
   assert.doesNotMatch(paths, /t\.trim\(\) && !npcs/);
 });

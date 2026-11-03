@@ -6,12 +6,12 @@ import type { CoverCgOpts } from "../mods/types";
 import { canRomance, createGame, startDateLabel, type Character as SimChar } from "../game/logic";
 import { blankRel, ensureRelations } from "../game/relations";
 import { romanticCapOf } from "../worlds/star2005/content";
-import { FAMILY_NPC_IDS, familyNpcs } from "../game/family";
 import { emptyPhone } from "../game/phone";
 import { STAT_ORDER, ALL_STAT_KEYS, startWeather, creationCopy } from "../game/data";
 import { allRooms, locOf } from "../game/mud";
 import { drawAvatar } from "../game/avatarPools";
 import { LIVE_PEOPLE as PEOPLE, getWorld, getWorldEndings, getWorldFixedEvents, getWorldGradeDims, getWorldStartRoom, getWorldTimeLimit } from "../mods/registry";
+import { resolveOpeningCharacterIds } from "./openingCharacters";
 
 // 轻量配置（AI 配置、界面主题）继续用原生 localStorage；
 // 大容量游戏存档 / 对话记录 / 角色属性走 storage.ts 的 gameSaveDB（IndexedDB）。
@@ -276,16 +276,14 @@ export function newGame(player: Player, simChar?: SimChar, contract?: SignedCont
         exclusive: contract.exclusive,
       }
     : undefined;
-  // 双亲与其他 NPC 统一：作为固定花名册条目并直接标记为已结识
-  const family = familyNpcs(player);
-  // 开局微信好友：父母（世界观可关）+ 编辑器里勾了「开局在微信」的人物；加了微信自然也算已结识
-  const wxStart = [...(getWorld().content.familyWx === false ? [] : FAMILY_NPC_IDS), ...PEOPLE.filter((p) => p.wxStart).map((p) => p.id)];
-  const simWithFamily = { ...sim, metPeople: Array.from(new Set([...sim.metPeople, ...FAMILY_NPC_IDS, ...wxStart])) };
+  // 所有人物统一走角色配置：联系人一定已认识；普通「开局已认识」不自动进入联系人。
+  const openingCharacters = resolveOpeningCharacterIds(PEOPLE, sim.metPeople);
+  const simWithPeople = { ...sim, metPeople: openingCharacters.met };
   const worldNav = getWorld().content;
   const g: GameState = {
     id: uid(),
     player,
-    npcs: [...family, ...seedNpcs()],
+    npcs: seedNpcs(),
     story: [],
     options: [],
     world: { time: `第 1 周 · ${startDateLabel()}`, location: locOf(getWorldStartRoom())?.name ?? "天光公寓", weather: startWeather() },
@@ -295,8 +293,8 @@ export function newGame(player: Player, simChar?: SimChar, contract?: SignedCont
     epilogue: "",
     createdAt: now,
     updatedAt: now,
-    sim: simWithFamily,
-    phone: { ...emptyPhone(), contacts: wxStart },
+    sim: simWithPeople,
+    phone: { ...emptyPhone(), contacts: openingCharacters.contacts },
     contract: signed,
     worldId: getWorld().worldId,
     addons: [...getWorld().addonIds],
@@ -394,34 +392,6 @@ export function ensureSim(state: GameState): GameState {
     };
   }
   return state;
-}
-
-/* 老存档兼容：把双亲补进统一花名册（幂等）——早期存档的双亲是 SimTab 独立档案，
- * 迁移后统一走「人脉」详情面板。 */
-export function ensureFamily(state: GameState): GameState {
-  const fresh = familyNpcs(state.player);
-  const freshById = new Map(fresh.map((n) => [n.id, n]));
-  const have = new Set(state.npcs.map((n) => n.id));
-  const missing = fresh.filter((n) => !have.has(n.id));
-
-  // 早期版本因负数种子取模，双亲的推导字段可能落成「沈undefined」等脏值。
-  // 这些字段本就确定性可复原：命中脏值时用新档案重铸展示字段，
-  // 同时保留玩家状态字段（头像 / 好感 / 好感史 / 互动记录）。
-  const corrupt = (v: unknown): boolean => typeof v === "string" && v.includes("undefined");
-  let repaired = false;
-  const npcs = state.npcs.map((n) => {
-    const f = freshById.get(n.id);
-    if (!f) return n;
-    if (!corrupt(n.name) && !corrupt(n.bio) && !n.tags.some(corrupt)) return n;
-    repaired = true;
-    return { ...n, name: f.name, identity: f.identity, age: f.age, bio: f.bio, tags: f.tags };
-  });
-
-  if (missing.length === 0 && !repaired && FAMILY_NPC_IDS.every((id) => state.sim?.metPeople.includes(id))) return state;
-  const sim = state.sim
-    ? { ...state.sim, metPeople: Array.from(new Set([...state.sim.metPeople, ...FAMILY_NPC_IDS])) }
-    : state.sim;
-  return { ...state, npcs: [...missing, ...npcs], sim };
 }
 
 /* 老存档兼容：早期主线把「爱慕」记在 npc.dims 自由轴（界面与提示词都不读，等于丢失），

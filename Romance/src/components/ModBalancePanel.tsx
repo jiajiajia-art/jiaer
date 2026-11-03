@@ -1,60 +1,32 @@
-import { bankruptLineFor, type BillsSlot, type EconomyRules, type SideJob, type TuningSlot } from "../game/data";
+import { type EconomyRules, type TuningSlot } from "../game/data";
+import { enabledChargeItems, type ChargeBasisItem } from "../game/chargeBasis";
 import type { Mod } from "../mods/types";
 
-/* 模组编辑器 · 数值平衡：只算本作品已写收支；没写账单和打工则显示「还没有收支」 */
+/**
+ * 模组编辑器 · ③ 养成 · 经济与收官：只保留「扣费依据」。
+ * 功能注释：透支/破产/新手缓冲改在④剧情 → 结局配置，这里不要再堆收官规则。
+ */
 type C = Mod["content"];
 const inp = "w-full min-w-0 rounded-lg border border-line bg-paper-2 px-2 py-1 text-[12px] text-ink placeholder:text-ink-soft/60 focus:border-jade focus:outline-none";
-const lbl = "mb-0.5 block text-[11px] font-semibold text-ink-soft";
-const yuan = (v: number) => `${v < 0 ? "−" : ""}¥${Math.abs(Math.round(v)).toLocaleString("zh-CN")}`;
-const sum = (l?: { amount: number }[]) => (l ?? []).reduce((a, b) => a + b.amount, 0);
-const opt = (v: string) => (v === "" ? undefined : Number(v) || 0);
+const btn = "rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40";
+const uid = () => `ch_${Date.now().toString(36).slice(-4)}${Math.random().toString(36).slice(2, 5)}`;
 
-function Row({ k, v, tone, note }: { k: string; v: string; tone?: "good" | "bad"; note?: string }) {
-  return (
-    <div className="flex items-baseline justify-between gap-3 py-1 text-[12px]">
-      <span className="text-ink-soft">{k}{note && <span className="ml-1 text-[10.5px] opacity-70">{note}</span>}</span>
-      <span className={`font-mono font-semibold ${tone === "bad" ? "text-coral" : tone === "good" ? "text-jade" : "text-ink"}`}>{v}</span>
-    </div>
-  );
-}
-
-export default function ModBalancePanel({ c, kind: _kind, onChange }: { c: C; kind: Mod["kind"]; onChange: (p: Partial<C>) => void }) {
-  // 功能注释：只引用作者写过的账单 / 打工 / 开局资金，禁止回落内置经济默认值
-  const hasAuthoredEconomy = !!(c.bills || (c.sideJobs && c.sideJobs.length) || c.startMoney !== undefined || c.allowance || (Array.isArray(c.income) && c.income.length));
-  const bills: BillsSlot = c.bills ?? {};
-  const jobs: SideJob[] = c.sideJobs?.length ? c.sideJobs : [];
-  const money0 = c.startMoney ?? 0;
+export default function ModBalancePanel({
+  c,
+  kind: _kind,
+  onChange,
+}: {
+  c: C;
+  kind: Mod["kind"];
+  onChange: (p: Partial<C>) => void;
+}) {
   const t: TuningSlot = c.tuning ?? {};
   const eco: EconomyRules = t.economy ?? {};
-  const jobMul = t.jobPayMul ?? 1;
+  const items = eco.chargeItems ?? [];
+  const shown = enabledChargeItems(eco.chargeItems);
+  const activeLabels = shown.filter((x) => x.mode === "active").map((x) => x.label.trim());
+  const passiveLabels = shown.filter((x) => x.mode === "passive").map((x) => x.label.trim());
 
-  const weekly = sum(bills.weekly);
-  const monthly = sum(bills.monthly);
-  const graceW = eco.graceWeeks ?? 0;
-  const graceMul = eco.graceBillMul ?? 0.5;
-  const billOf = (w: number) => Math.round((weekly + (w % 4 === 0 ? monthly : 0)) * (graceW > 0 && w <= graceW ? graceMul : 1));
-  const monthBills = weekly * 4 + monthly;
-  const entry = jobs.filter((j) => j.fameReq <= 0).sort((a, b) => b.pay - a.pay)[0];
-  const income = (Array.isArray(c.income) ? c.income : []).filter((r) => r?.enabled !== false && r?.target?.kind === "metric" && r?.target?.key === "money" && !(r.conds ?? []).length);
-  const incomeMonth = income.reduce((a, r) => a + ((r.min + r.max) / 2) * 4, 0);
-  const tiers = c.allowance?.tiers ?? [];
-  const every = c.allowance?.everyWeeks ?? 4;
-  const allowMin = tiers.length ? Math.min(...tiers.map((x) => x.base)) * (4 / every) : 0;
-  const allowMax = tiers.length ? Math.max(...tiers.map((x) => x.base)) * (4 / every) : 0;
-  const passiveMonth = incomeMonth + allowMin;
-  const jobDays = 3;
-  const jobMonth = entry ? entry.pay * jobMul * jobDays * 4 : 0;
-  const line = bankruptLineFor(weekly, eco);
-
-  const survive = (withJob: boolean) => {
-    let m = money0;
-    for (let w = 1; w <= 104; w++) {
-      m += passiveMonth / 4 + (withJob ? jobMonth / 4 : 0) - billOf(w);
-      if (eco.bankrupt !== false && m < line) return `第 ${w} 周破产`;
-    }
-    return m >= money0 ? "可持续（两年不降）" : "两年内不会破产";
-  };
-  const week1 = money0 - billOf(1);
   const setEco = (p: Partial<EconomyRules>) => {
     const next: EconomyRules = { ...eco, ...p };
     for (const k of Object.keys(next) as (keyof EconomyRules)[]) if (next[k] === undefined) delete next[k];
@@ -62,65 +34,41 @@ export default function ModBalancePanel({ c, kind: _kind, onChange }: { c: C; ki
     if (!tt.economy) delete tt.economy;
     onChange({ tuning: Object.keys(tt).length ? tt : undefined });
   };
+  const setItems = (next: ChargeBasisItem[]) => setEco({ chargeItems: next.length ? next : undefined });
+  const patchItem = (id: string, p: Partial<ChargeBasisItem>) => setItems(items.map((x) => (x.id === id ? { ...x, ...p } : x)));
 
   return (
     <div className="space-y-3">
       <div className="rounded-xl border border-line bg-paper-2/60 p-3 text-[11.5px] leading-relaxed text-ink-soft">
-        <p className="mb-1 font-bold text-ink">扣费依据</p>
-        <p><b className="text-ink">主动消费</b>：课程学费、周末社交、出行路费、场景购物与行动、购车、婚礼。按标价扣，<b className="text-ink">余额不足直接拒绝</b>，不会扣成负数。</p>
-        <p><b className="text-ink">被动扣费</b>：每周结算时扣「固定账单」（每周一次，每第 4 周再扣月度账单），以及违约金和事件后果。这些<b className="text-ink">允许透支</b>。</p>
-        <p>透支期间每周压力会增加。透支超过破产线时，按下方规则结束游戏。</p>
-      </div>
-
-      {!hasAuthoredEconomy ? (
-        <div className="rounded-xl border border-dashed border-line bg-paper p-4 text-center text-[12px] text-ink-soft">
-          还没有收支
-        </div>
-      ) : (
-        <div className="rounded-xl border border-line bg-paper p-3">
-          <p className="mb-1 text-[12px] font-bold text-ink">每 4 周现金流估算</p>
-          <Row k="开局资金" v={c.startMoney !== undefined ? yuan(money0) : "还没写"} />
-          {(weekly > 0 || monthly > 0)
-            ? <Row k="固定账单" note={`每周 ${yuan(weekly)} × 4 ＋ 月度 ${yuan(monthly)}`} v={yuan(-monthBills)} tone="bad" />
-            : <Row k="固定账单" v="还没写" />}
-          {!!incomeMonth && <Row k="周期收入（无条件部分）" v={yuan(incomeMonth)} tone="good" />}
-          {!!tiers.length && <Row k="父母生活费" note={`${tiers.length} 档`} v={allowMin === allowMax ? yuan(allowMin) : `${yuan(allowMin)} ~ ${yuan(allowMax)}`} tone="good" />}
-          {entry
-            ? <Row k={`入门打工「${entry.label}」`} note={`每周 ${jobDays} 天 · 一般表现`} v={yuan(jobMonth)} tone="good" />
-            : <Row k="打工" v="还没写" />}
-          <div className="my-1 border-t border-dashed border-line" />
-          <Row k="不打工 · 净额" v={yuan(passiveMonth - monthBills)} tone={passiveMonth - monthBills < 0 ? "bad" : "good"} />
-          <Row k="打工 · 净额" v={yuan(passiveMonth + jobMonth - monthBills)} tone={passiveMonth + jobMonth - monthBills < 0 ? "bad" : "good"} />
-          <div className="my-1 border-t border-dashed border-line" />
-          <Row k="第 1 周结算后余额" v={yuan(week1)} tone={week1 < 0 ? "bad" : undefined} />
-          <Row k="破产线" v={eco.bankrupt === false ? "已关闭" : (c.bills ? yuan(line) : "还没写")} />
-          <Row k="不打工能撑多久" v={c.bills || jobs.length ? survive(false) : "还没有收支"} />
-          <Row k="打工能撑多久" v={c.bills || jobs.length ? survive(true) : "还没有收支"} />
-          {week1 < 0 && c.bills && <p className="mt-2 rounded-lg bg-coral/10 px-2 py-1.5 text-[11.5px] text-coral">开局第一周就会透支。可以提高开局资金、降低每周账单，或开启新手缓冲。</p>}
-        </div>
-      )}
-
-      <div className="rounded-xl border border-line bg-paper p-3">
-        <p className="mb-2 text-[12px] font-bold text-ink">经济规则</p>
-        <label className="mb-2 flex items-center gap-2 text-[12px] text-ink">
-          <input type="checkbox" className="h-4 w-4 accent-[var(--jade)]" checked={eco.bankrupt !== false} onChange={(e) => setEco({ bankrupt: e.target.checked ? undefined : false })} />
-          透支超过破产线时结束游戏
-        </label>
-        <div className="grid grid-cols-2 gap-2">
-          <label><span className={lbl}>破产线（透支金额）</span>
-            <input type="number" min={0} className={inp} value={eco.bankruptLine ?? ""} placeholder={c.bills ? `自动 ${(-bankruptLineFor(weekly, {})).toLocaleString("zh-CN")}` : "还没写账单"} onChange={(e) => setEco({ bankruptLine: opt(e.target.value) })} />
-          </label>
-          <label><span className={lbl}>透支每周压力</span>
-            <input type="number" min={0} className={inp} value={eco.overdraftStress ?? ""} placeholder="还没写" onChange={(e) => setEco({ overdraftStress: opt(e.target.value) })} />
-          </label>
-          <label><span className={lbl}>新手缓冲（前 N 周）</span>
-            <input type="number" min={0} className={inp} value={eco.graceWeeks ?? ""} placeholder="0 = 关闭" onChange={(e) => setEco({ graceWeeks: opt(e.target.value) })} />
-          </label>
-          <label><span className={lbl}>缓冲期账单倍率</span>
-            <input type="number" min={0} step={0.1} className={inp} value={eco.graceBillMul ?? ""} placeholder="还没写" onChange={(e) => setEco({ graceBillMul: opt(e.target.value) })} />
-          </label>
-        </div>
-        <p className="mt-2 text-[11px] text-ink-soft">开局资金在「③ 养成 → 开局资源」里改；账单在「养成规则」里改；打工收入在「打工 · 周末活动」里改。此处只引用本作品已写结果估算。</p>
+        <p className="mb-1.5 font-bold text-ink">扣费依据</p>
+        <p className="mb-2">按本作品实际有的开销勾选并填写；没有的项不要添加。主动消费余额不足会拒绝；被动扣费允许透支。破产线与透支收官请到「④ 剧情 → 结局」配置。</p>
+        {!items.length ? (
+          <p className="rounded-lg border border-dashed border-line bg-paper px-2.5 py-2 text-[12px] text-ink-soft">还没有扣费依据。点下方添加；未勾选的项不会出现在说明里。</p>
+        ) : (
+          <ul className="space-y-1.5">
+            {items.map((it) => (
+              <li key={it.id} className="flex flex-wrap items-center gap-1.5">
+                <label className="flex shrink-0 items-center gap-1 text-[12px] text-ink">
+                  <input type="checkbox" className="h-3.5 w-3.5 accent-[var(--jade)]" checked={it.on !== false} onChange={(e) => patchItem(it.id, { on: e.target.checked ? undefined : false })} />
+                  启用
+                </label>
+                <select className={`${inp} !w-auto shrink-0`} value={it.mode} aria-label="扣费类型" onChange={(e) => patchItem(it.id, { mode: e.target.value as ChargeBasisItem["mode"] })}>
+                  <option value="active">主动消费</option>
+                  <option value="passive">被动扣费</option>
+                </select>
+                <input className={`${inp} min-w-[8rem] flex-1`} value={it.label} placeholder="例如：学费、房租、路费…" maxLength={40} onChange={(e) => patchItem(it.id, { label: e.target.value })} />
+                <button type="button" className={`${btn} shrink-0`} aria-label="删除" onClick={() => setItems(items.filter((x) => x.id !== it.id))}>×</button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <button type="button" className={`${btn} mt-2`} onClick={() => setItems([...items, { id: uid(), label: "", mode: "active" }])}>＋ 添加扣费项</button>
+        {shown.length > 0 && (
+          <div className="mt-2 space-y-0.5 border-t border-line/70 pt-2 text-[11.5px]">
+            {!!activeLabels.length && <p><b className="text-ink">主动消费</b>：{activeLabels.join("、")}。按标价扣，余额不足直接拒绝。</p>}
+            {!!passiveLabels.length && <p><b className="text-ink">被动扣费</b>：{passiveLabels.join("、")}。允许透支。</p>}
+          </div>
+        )}
       </div>
     </div>
   );

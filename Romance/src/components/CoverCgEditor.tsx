@@ -1,5 +1,5 @@
 import type { CoverCgOpts } from "../mods/types";
-import ImagePicker from "./ImagePicker";
+import ImagePicker, { type ImagePickerAiGen } from "./ImagePicker";
 
 /* 封面轮播 CG 编辑：缩略图排序 / 删除 / 添加 + 停留时长 · 切换效果 · 随机 · 页码点。
  * 玩家封面 DIY 与模组「开局封面」共用。 */
@@ -8,7 +8,7 @@ const chip = (on: boolean) => `rounded-[6px] border px-2.5 py-1.5 text-[12px] tr
 const mini = "grid h-6 w-6 place-items-center rounded-md bg-black/55 text-[12px] leading-none text-white backdrop-blur-sm transition hover:bg-black/75 disabled:opacity-30";
 const FX = [["fade", "淡入淡出"], ["slide", "左右滑动"], ["zoom", "缓推（电影感）"]] as const;
 
-export default function CoverCgEditor({ v, set }: { v: CoverCgOpts; set: (p: Partial<CoverCgOpts>) => void }) {
+export default function CoverCgEditor({ v, set, aiGen }: { v: CoverCgOpts; set: (p: Partial<CoverCgOpts>) => void; /** 功能注释：透传给添加图的 ImagePicker，弹窗生图而非页内输入框 */ aiGen?: ImagePickerAiGen }) {
   const list = v.cgs ?? [];
   const put = (l: string[]) => set({ cgs: l.length ? l : undefined });
   const move = (i: number, d: -1 | 1) => { const l = [...list]; [l[i], l[i + d]] = [l[i + d], l[i]]; put(l); };
@@ -40,7 +40,8 @@ export default function CoverCgEditor({ v, set }: { v: CoverCgOpts; set: (p: Par
         {list.length < CG_MAX && (
           <div className="mt-2">
             <ImagePicker label="轮播 CG" max={1600} onChange={(u) => u && put([...list, u])}
-              hint={list.length < 2 ? `再添加 ${2 - list.length} 张即可轮播；只有一张时按固定 CG 显示` : "继续添加；悬停缩略图可用 ‹ › 调整顺序"} />
+              hint={list.length < 2 ? `再添加 ${2 - list.length} 张即可轮播；只有一张时按固定 CG 显示` : "继续添加；悬停缩略图可用 ‹ › 调整顺序"}
+              aiGen={aiGen} />
           </div>
         )}
         {list.length >= 6 && <p className="mt-1 text-[10.5px] text-ink-soft">图片较多时会占用较多本地存储；没有图床的话，可以用「链接」添加网络图片。</p>}

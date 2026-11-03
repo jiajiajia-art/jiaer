@@ -36,3 +36,23 @@ export const MODES: { id: ThemePref["mode"]; label: string }[] = [
   { id: "light", label: "浅色" },
   { id: "dark", label: "深色" },
 ];
+
+type SkinId = NonNullable<ThemePref["skin"]>;
+type SkinThemePreset = Pick<ThemePref, "accent" | "font" | "mode">;
+
+/** 功能注释：世界作者只选皮肤时，由皮肤补齐配套主题；显式自定义项始终优先覆盖。 */
+export const SKIN_THEME_PRESETS: Record<SkinId, SkinThemePreset> = {
+  dream: { accent: "fuchsia", font: "elegant", mode: "auto" },
+  bloody: { accent: "plum", font: "song", mode: "dark" },
+  cute: { accent: "rose", font: "round", mode: "light" },
+  glass: { accent: "cyan", font: "hei", mode: "auto" },
+  paper: { accent: "gold", font: "song", mode: "light" },
+};
+
+/** 功能注释：解析世界外观时仅为已选皮肤注入默认搭配，不选皮肤则完全不碰玩家外观。 */
+export function resolveSkinTheme(
+  theme: Partial<Pick<ThemePref, "skin" | "accent" | "font" | "mode">>,
+): Partial<Pick<ThemePref, "skin" | "accent" | "font" | "mode">> {
+  if (!theme.skin) return theme;
+  return { ...SKIN_THEME_PRESETS[theme.skin], ...theme };
+}

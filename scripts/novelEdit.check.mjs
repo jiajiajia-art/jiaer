@@ -8,6 +8,7 @@ import {
   NOVEL_DESCRIPTION_MAX_LENGTH,
   THEME_TAG_MAX,
   toggleThemeTagSelection,
+  validateEnabledThemeTagSelection,
   validateNovelDraftSave,
   validateNovelPublish,
   mapNovelEditErrorToI18nKey,
@@ -26,8 +27,8 @@ const baseInput = {
 
 test('validateNovelDraftSave allows 0 theme tags', () => {
   assert.equal(validateNovelDraftSave(baseInput).valid, true);
-  assert.equal(validateNovelDraftSave({ ...baseInput, themeTagIds: [1, 2] }).valid, true);
-  assert.equal(validateNovelDraftSave({ ...baseInput, themeTagIds: [1, 2, 3] }).valid, false);
+  assert.equal(validateNovelDraftSave({ ...baseInput, themeTagIds: [1] }).valid, true);
+  assert.equal(validateNovelDraftSave({ ...baseInput, themeTagIds: [1, 2] }).valid, false);
 });
 
 test('validateNovelDraftSave requires title, description and cover', () => {
@@ -52,24 +53,19 @@ test('validateNovelPublish requires 1-2 theme tags', () => {
   assert.equal(validateNovelPublish(baseInput).error, 'THEME_TAG_MIN');
   assert.equal(validateNovelPublish({ ...baseInput, themeTagIds: [1] }).error, 'AUDIENCE_REQUIRED');
   assert.equal(validateNovelPublish({ ...baseInput, themeTagIds: [1], audienceType: 'male' }).valid, true);
-  assert.equal(validateNovelPublish({ ...baseInput, themeTagIds: [1, 2], audienceType: 'all' }).valid, true);
-  assert.equal(validateNovelPublish({ ...baseInput, themeTagIds: [1, 2, 3] }).error, 'THEME_TAG_MAX');
+  assert.equal(validateNovelPublish({ ...baseInput, themeTagIds: [1, 2], audienceType: 'all' }).error, 'THEME_TAG_MAX');
 });
 
 test('toggleThemeTagSelection enforces max selection', () => {
+  assert.equal(THEME_TAG_MAX, 1);
   const first = toggleThemeTagSelection([], 1, THEME_TAG_MAX);
   assert.deepEqual(first.next, [1]);
   assert.equal(first.atMax, false);
-
-  const second = toggleThemeTagSelection([1], 2, THEME_TAG_MAX);
-  assert.deepEqual(second.next, [1, 2]);
-
-  const blocked = toggleThemeTagSelection([1, 2], 3, THEME_TAG_MAX);
-  assert.deepEqual(blocked.next, [1, 2]);
-  assert.equal(blocked.atMax, true);
-
-  const removed = toggleThemeTagSelection([1, 2], 1, THEME_TAG_MAX);
-  assert.deepEqual(removed.next, [2]);
+  const replaced = toggleThemeTagSelection([1], 2, THEME_TAG_MAX);
+  assert.deepEqual(replaced.next, [2]);
+  assert.equal(replaced.atMax, false);
+  const removed = toggleThemeTagSelection([2], 2, THEME_TAG_MAX);
+  assert.deepEqual(removed.next, []);
 });
 
 test('mapNovelEditErrorToI18nKey maps validation errors', () => {
@@ -90,4 +86,11 @@ test('创作台「编辑修改」不再打开元信息弹窗，改为续玩（�
   const { shouldContinuePlayOnEdit } = await import('../src/utils/creatorContinuePlay.ts');
   assert.equal(shouldContinuePlayOnEdit('NOVEL', 'NOVEL'), true);
   assert.equal(shouldContinuePlayOnEdit('TXT', 'TXT'), false);
+});
+
+
+test('validateEnabledThemeTagSelection_停用题材不可提交', () => {
+  assert.equal(validateEnabledThemeTagSelection([1], [1, 2]).valid, true);
+  assert.equal(validateEnabledThemeTagSelection([], [1]).error, 'THEME_TAG_MIN');
+  assert.equal(validateEnabledThemeTagSelection([3], [1, 2]).error, 'THEME_TAG_DISABLED');
 });

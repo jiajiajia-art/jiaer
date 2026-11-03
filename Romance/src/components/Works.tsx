@@ -9,7 +9,7 @@ export default function Works({ onClose }: { onClose: () => void }) {
   const s = game.sim;
 
   return (
-    <Modal title="我的作品" onClose={onClose} wide>
+    <Modal title="我的作品" onClose={onClose}>
       {/* 概览：作品数 / 奖项数 */}
       <div className="mb-4 grid grid-cols-2 gap-2">
         <div className="rounded-sm border border-dashed border-line px-3 py-2.5 text-center">

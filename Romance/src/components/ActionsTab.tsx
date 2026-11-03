@@ -401,7 +401,7 @@ function MovieModal({ title, starName, company, value, cfg, onClose }: { title: 
   useEffect(() => { void gen(); /* 打开即生成一次 */ }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <Modal title={`《${title}》`} onClose={onClose} wide>
+    <Modal title={`《${title}》`} onClose={onClose}>
       <div className="mb-3 flex flex-wrap items-center gap-2 text-[13px]">
         <Chip tone="coral">本周票房 {fmtWan(value)}</Chip>
         <span className="text-ink-soft">主演</span><span className="font-bold text-ink">{starName}</span>

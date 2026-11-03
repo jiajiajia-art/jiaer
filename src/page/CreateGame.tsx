@@ -128,10 +128,10 @@ const CreateGame: React.FC = () => {
                 } else {
                     setDetailError(t('createGame.gameNotFound'));
                 }
-            } catch (error: any) {
+            } catch (error: unknown) {
                 console.error('加载游戏详情失败:', error);
                 if (isMounted) {
-                    const status = error?.response?.status;
+                    const status = (error as { response?: { status?: number } }).response?.status;
                     if (status === 403 || status === 401) {
                         toast.error(t('createGame.gameNotPublic'));
                     } else {
@@ -170,7 +170,7 @@ const CreateGame: React.FC = () => {
             setIsDeleting(true);
             await GameAction.deleteGame(gameId);
             setShowDeleteModal(false);
-            navigate('/profile');
+            navigate('/bookshelf?tab=drafts');
         } catch (error) {
             console.error('删除游戏失败:', error);
             toast.error(t('createGame.deleteFailed'));
@@ -203,7 +203,7 @@ const CreateGame: React.FC = () => {
                 } else {
                     toast.success(response.data.message?.trim() || t('createGame.publishSuccess'));
                 }
-                navigate('/profile');
+                navigate('/bookshelf?tab=all');
             } else {
                 console.error('发布游戏失败:', response.data);
                 const errorMessage = response.data.message || t('createGame.publishFailed');
@@ -222,11 +222,11 @@ const CreateGame: React.FC = () => {
         try {
             const response = await GameAction.unpublishGame({ fileId: fileId });
             if (response.data.success) {
-                navigate('/profile');
+                navigate('/bookshelf?tab=all');
             } else {
                 toast.error(response.data.message || t('createGame.unpublishFailed'));
             }
-        } catch (error) {
+        } catch {
             toast.error(t('createGame.unpublishFailed'));
         }
     };
@@ -319,7 +319,7 @@ const CreateGame: React.FC = () => {
         }
 
         if (normalizedEngine === 'ST' || normalizedEngine === 'AVG') {
-            const appId = (gameDetail as any)?.customAppId || gameDetail?.file_id;
+            const appId = gameDetail.customAppId || gameDetail.file_id;
             if (!appId) {
                 toast.error(t('createGame.missingAppId'));
                 return;

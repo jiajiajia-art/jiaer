@@ -26,11 +26,24 @@ test('美化里只有一块音乐_不再叠两个折叠区', () => {
   assert.match(panel, /g="look" title="音乐"/);
   assert.equal(panel.includes('title="内置音乐"'), false);
   assert.equal(panel.includes('title="引用音频库"'), false);
-  assert.match(editor, /音频库还是空的/);
-  assert.match(editor, /PLATFORM_AUDIO\.length > 0/);
+  assert.match(editor, /作品音频库还是空的/);
+  assert.match(editor, /PLATFORM_AUDIO/);
   assert.doesNotMatch(editor, /alert\(/);
-  assert.match(editor, /从本机音乐库选/);
-  assert.match(editor, /从平台曲库选/);
+});
+
+test('上传音乐走弹窗三tab_禁止独立平台曲库按钮', () => {
+  assert.match(editor, /＋ 上传音乐/);
+  assert.match(editor, /setPickerOpen\(true\)/);
+  assert.match(editor, /Modal title="添加音乐"/);
+  assert.match(editor, /本地上传/);
+  assert.match(editor, /平台音乐素材库/);
+  assert.match(editor, /作品音频库/);
+  assert.match(editor, /role="tablist"/);
+  assert.match(editor, /aria-label="添加音乐来源"/);
+  assert.doesNotMatch(editor, /aria-label="从平台曲库选"/);
+  assert.doesNotMatch(editor, /从平台曲库选…/);
+  assert.doesNotMatch(editor, /从本机音乐库选…/);
+  assert.doesNotMatch(editor, /从作品音频库引用…/);
 });
 
 test('旧模组打开后合成一份列表_保存仍写回原字段', () => {

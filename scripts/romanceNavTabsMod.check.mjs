@@ -48,13 +48,14 @@ test('navTabsConfig_解析与警告契约', async () => {
   assert.ok(slots.some((s) => s.id === 'phone' && s.label === '灵犀'));
   assert.ok(!slots.some((s) => s.id === 'actions'));
 
+  assert.ok(!pool.some((p) => p.id === 'sim' || p.id === 'quest'), '档案/支线不得进底栏池');
   const warns = mod.navConfigWarnings(
     [
       { id: 'home', label: '世界', on: true },
       { id: 'phone', label: '超级长名字', on: true },
       { id: 'npc', label: '', on: true },
-      { id: 'sim', label: '', on: true },
       { id: 'image', label: '', on: true },
+      { id: 'settings', label: '', on: true },
     ],
     4,
     pool.length,

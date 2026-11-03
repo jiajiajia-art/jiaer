@@ -19,7 +19,7 @@ import {
 import { dayDateLabel } from "../game/logic";
 import { getWorld } from "../mods/registry";
 import { GLYPHS } from "../lib/iconGlyphs";
-import { IconCamera, IconSave, IconShare, IconHeart } from "../lib/icons";
+import { IconCamera, IconClose, IconSave, IconShare, IconHeart } from "../lib/icons";
 import {
   GRADE_DIM_ICONS,
   TIME_UNIT_LABEL,
@@ -1188,10 +1188,14 @@ export default function Ending({ snap }: { snap?: Snap }) {
           onClick={() => setManual("")}
         >
           <div
-            className="end-panel w-full max-w-sm p-4"
+            className="end-panel ui-dialog"
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="end-round text-[18px] text-[#ef6b9c]">分享文案</p>
+            <div className="flex items-center gap-2 px-4 pb-1 pt-4">
+              <p className="end-round min-w-0 flex-1 text-[18px] text-[#ef6b9c]">分享文案</p>
+              <button type="button" onClick={() => setManual("")} aria-label="关闭" className="ui-icon-btn"><IconClose /></button>
+            </div>
+            <div className="ui-dialog-body px-4 pb-4">
             <p className="mt-1 text-[12px] text-[#a07a8b]">
               当前环境无法直接分享或复制，请全选下方文字后复制。
             </p>
@@ -1208,6 +1212,7 @@ export default function Ending({ snap }: { snap?: Snap }) {
             >
               <span className="end-round text-[16px]">好的</span>
             </button>
+            </div>
           </div>
         </div>
       )}
@@ -1224,12 +1229,16 @@ export default function Ending({ snap }: { snap?: Snap }) {
           }}
         >
           <div
-            className="end-panel flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col p-4"
+            className="end-panel ui-dialog"
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="end-round text-[18px] text-[#ef6b9c]">
-              结局卡片已生成
-            </p>
+            <div className="flex items-center gap-2 px-4 pb-1 pt-4">
+              <p className="end-round min-w-0 flex-1 text-[18px] text-[#ef6b9c]">
+                结局卡片已生成
+              </p>
+              <button type="button" onClick={() => setShotOpen(false)} aria-label="关闭" className="ui-icon-btn"><IconClose /></button>
+            </div>
+            <div className="ui-dialog-body px-4 pb-4">
             <p className="mt-1 text-[12px] leading-relaxed text-[#a07a8b]">
               PNG 图片已开始下载；没有反应的话点「保存图片」重试，手机也可以长按图片存到相册。
             </p>
@@ -1238,7 +1247,7 @@ export default function Ending({ snap }: { snap?: Snap }) {
                 部分图片的来源不允许跨域读取，图里换成了其他素材或默认画框。
               </p>
             )}
-            <div className="mt-3 min-h-0 flex-1 overflow-y-auto rounded-xl border border-[#f5d3e1] bg-white">
+            <div className="mt-3 overflow-hidden rounded-xl border border-[#f5d3e1] bg-white">
               <img
                 src={shot.url}
                 alt={`${d.title} · 结局卡片`}
@@ -1285,6 +1294,7 @@ export default function Ending({ snap }: { snap?: Snap }) {
             >
               关闭
             </button>
+            </div>
           </div>
         </div>
       )}

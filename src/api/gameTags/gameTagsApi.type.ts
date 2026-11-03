@@ -72,4 +72,6 @@ export interface UpdateAdminGameTagRequest {
     name?: string;
     parentId?: number | null;
     sortOrder?: number;
+    /** 停用/重新启用运营题材 */
+    isEnabled?: boolean;
 }

@@ -2,7 +2,20 @@
 
 import { GENERATED_GIGS } from "./gigLibrary";
 import { loadGlobal, saveGlobal, removeGlobal } from "../lib/saveScope";
-import { slot, liveArray, liveRecord, memoBy } from "../mods/live";
+import { slot, liveArray, liveRecord, memoBy, currentWorldId } from "../mods/live";
+import { enabledChargeItems as filterChargeItems, type ChargeBasisItem } from "./chargeBasis";
+import type { TuningModuleId, TuningModulesFlag } from "./tuningModules";
+import { isTuningModuleOn as tuningModuleOn } from "./tuningModules";
+export type { ChargeBasisItem } from "./chargeBasis";
+export type { TuningModuleId, TuningModulesFlag } from "./tuningModules";
+export {
+  TUNING_MODULE_META,
+  authoredTuningModule,
+  isTuningModuleOn,
+  clearTuningModule,
+  enableTuningModule,
+  pruneTuningSlot,
+} from "./tuningModules";
 
 /* 兼容再导出：世界书种子已迁至 game/worldbook.ts（题材无关接口）。
  * 保留此别名，避免热更新残留的旧模块图仍向 data.ts 索取 defaultWorldBook 而报错。 */
@@ -190,7 +203,8 @@ export const STAT_ORDER: StatKey[] = liveArray(() => {
 });
 export const ALL_STAT_KEYS: readonly StatKey[] = ["yanji", "geyi", "koucai", "yitai", "donggan", "tineng", "caizhi", "zixin"];
 /* 开局资金 / 开局天气（开局日期见 content.ts CALENDAR，可用槽 startDate 简写覆盖） */
-export const startMoney = (): number => slot("startMoney", () => 5000);
+/** 功能注释：娱乐圈未写开局资金 = 5000；其它作品未写 = 0，不套娱乐圈默认。 */
+export const startMoney = (): number => slot("startMoney", () => 5000, () => 0);
 export const startWeather = (): string => slot("weather", () => "微雨");
 
 // 3.5 初始职业方向
@@ -229,7 +243,8 @@ export const RAW_TRAININGS: Training[] = [
   { id: "lens", name: "镜头训练", effect: "自信 +2~4 · 仪态 +2~4", gain: { zixin: [2, 4], yitai: [2, 4] }, cost: 4000, energy: 7, stress: 1 },
 ];
 
-export const TRAININGS: Training[] = liveArray(() => slot("trainings", () => RAW_TRAININGS));
+/** 功能注释：非娱乐圈未声明课程 = 空表，不套用表情训练等娱乐圈课表。 */
+export const TRAININGS: Training[] = liveArray(() => slot("trainings", () => RAW_TRAININGS, () => []));
 
 // 周末专属活动（只在周六/周日可排；数值为确定性效果，作用于顶层状态）
 export type WeekendAct = {
@@ -314,7 +329,14 @@ export const RAW_LESSON_GRADES: LessonGrade[] = [
   { id: "g3", label: "高级", costMul: 5, gainMul: 0.52, cap: 760, stressAdd: 2 },
   { id: "g4", label: "专家级", costMul: 10, gainMul: 0.38, cap: 999, stressAdd: 3 },
 ];
-export const LESSON_GRADES: LessonGrade[] = liveArray(() => { const g = tuning().lessonGrades; return g?.length ? g : RAW_LESSON_GRADES; });
+/** 功能注释：非娱乐圈未写通用课程等级时的中性单级，不带某一打工剧本的学费曲线。 */
+export const NEUTRAL_LESSON_GRADE: LessonGrade = { id: "g1", label: "标准", costMul: 1, gainMul: 1, cap: 999, stressAdd: 0 };
+export const LESSON_GRADES: LessonGrade[] = liveArray(() => {
+  const g = tuning().lessonGrades;
+  if (g?.length) return g;
+  // 娱乐圈未写才回落原 4 级；其它作品未勾/未写不套用娱乐圈等级表
+  return currentWorldId() === "ent" ? RAW_LESSON_GRADES : [NEUTRAL_LESSON_GRADE];
+});
 
 /* ═══ 打工（分级零工，靠名气变现）═══
  * 级别越高：单次收入越高、压力越大，且要求名气门槛越高才请得动你。 */
@@ -337,7 +359,8 @@ export const RAW_SIDE_JOBS: SideJob[] = [
   { id: "sj4", label: "专家级打工", pay: 60000, stress: 11, fameReq: 350, note: "私人晚宴助阵 · 高端商务陪场 · 顶流价码" },
 ];
 
-export const SIDE_JOBS: SideJob[] = liveArray(() => slot("sideJobs", () => RAW_SIDE_JOBS));
+/** 功能注释：非娱乐圈未声明打工 = 空表，不套用便利店/商演等默认档。 */
+export const SIDE_JOBS: SideJob[] = liveArray(() => slot("sideJobs", () => RAW_SIDE_JOBS, () => []));
 
 /* ═══ 日程推进结果档位（仿《明星志愿》：完美 / 大成功 / 成功 / 失败 / 糟糕）═══
  * 同一件事，掷出的档位不同，收益倍率也不同。 */
@@ -358,20 +381,22 @@ export const RAW_GRADE_MUL: Record<DayGrade, number> = {
 };
 export const RAW_GRADE_ODDS: Record<DayGrade, number> = { perfect: 8, great: 22, success: 48, fail: 15, bad: 7 };
 
-/* ═══ 引擎规则（模组槽 tuning）：把原本写死在结算里的数值开放给模组；缺省 = 引擎原值 ═══ */
+/* ═══ 引擎规则（模组槽 tuning）：按模块勾选；缺省不预填某一剧本数值，空着开局不生效 ═══ */
 export type TuningSlot = {
+  /** 创作者勾选要用的模块；false = 强制关闭（即使旧数据也清掉） */
+  modules?: TuningModulesFlag;
   gradeOdds?: Partial<Record<DayGrade, number>>; // 每日表现评级的基础概率（%，按比例归一）
   gradeMul?: Partial<Record<DayGrade, number>>; // 各评级的收益倍率
-  luckStat?: string; // 提升表现的属性（"stat:<八维>" / "c:<自定义>"；缺省 自信）
-  luckDiv?: number; // 该属性每多少点 +1% 好评级（缺省 40；0 = 不影响）
-  stressDiv?: number; // 压力每多少点 -1% 好评级（缺省 3；0 = 不影响）
-  restStress?: number; // 「休息」减压量（缺省 8）
-  trainGainMul?: number; // 课程收益总倍率（缺省 1）
-  trainFeeMul?: number; // 学费总倍率（缺省 1）
-  jobPayMul?: number; // 打工收入总倍率（缺省 1）
+  luckStat?: string; // 提升表现的属性（"stat:<八维>" / "c:<自定义>"）
+  luckDiv?: number; // 该属性每多少点 +1% 好评级（0 = 不影响）
+  stressDiv?: number; // 压力每多少点 -1% 好评级（0 = 不影响）
+  restStress?: number; // 「休息」减压量；未写 = 无效果
+  trainGainMul?: number; // 课程收益总倍率；未写 = 1
+  trainFeeMul?: number; // 学费总倍率；未写 = 1
+  jobPayMul?: number; // 打工收入总倍率；未写 = 1
   lessonGrades?: LessonGrade[]; // 通用课程等级表（课程未自定义等级时使用）
   economy?: EconomyRules; // 经济规则：透支 / 破产 / 新手缓冲
-  gigRules?: GigRules; // 工作结算规则：崩溃判定 / 商业价值成长
+  gigRules?: GigRules; // 工作结算 / 违约等；须勾选对应模块才出现
 };
 /* 工作结算规则。条件键与恋人加成相同（stat:<八维> / attr:<自定义> / affinity + pid / stress 等顶层数值） */
 export type GigCond = { key: string; pid?: string; op: ">=" | "<="; value: number; delta: number };
@@ -425,19 +450,33 @@ export const RAW_CRASH_MODS: GigCond[] = [
   { key: "affinity", pid: "suqing", op: ">=", value: 60, delta: -5 },
 ];
 export const gigRules = (): GigRules => tuning().gigRules ?? {};
-/* 经济规则（缺省 = 引擎原值）。统一扣费规则：主动消费余额不足即拒绝，只有被动扣费（账单 / 违约金 / 事件）允许透支 */
+/** 功能注释：仅当作品已写出 gigRules 时视为旧作/自定工作规则；新作品空白不带娱乐圈工作/违约块。 */
+export const hasAuthoredGigRules = (gr?: GigRules | null): boolean => !!(gr && Object.keys(gr).length > 0);
+/** 功能注释：当前 tuning 是否启用某引擎模块（勾选或旧作已写字段）。 */
+export const tuningHasModule = (id: TuningModuleId): boolean => tuningModuleOn(tuning(), id);
+/* 经济规则（缺省 = 引擎原值）。统一扣费规则：主动消费余额不足即拒绝，只有被动扣费（账单 / 事件等）允许透支。
+ * chargeItems：创作者自填的扣费依据；未勾选 / 未写的项不得出现在说明里。 */
 export type EconomyRules = {
   bankrupt?: boolean; // 透支到破产线是否结束游戏（缺省 true）
   bankruptLine?: number; // 破产线（正数，透支超过即破产）；缺省 = 周固定开销 × 28，夹在 500~50 万
   overdraftStress?: number; // 透支期间每周额外压力（缺省 4）
   graceWeeks?: number; // 新手缓冲：前 N 周账单打折（缺省 0）
   graceBillMul?: number; // 缓冲期账单倍率（缺省 0.5）
+  chargeItems?: ChargeBasisItem[];
 };
 export const economy = (): EconomyRules => tuning().economy ?? {};
+/** 功能注释：只返回已勾选且写了名称的扣费项，供说明文案与编辑器预览使用。 */
+export const enabledChargeItems = (e: EconomyRules = economy()): ChargeBasisItem[] =>
+  filterChargeItems(e.chargeItems);
 export const bankruptLineFor = (weeklyBase: number, e: EconomyRules = economy()): number =>
   -(e.bankruptLine && e.bankruptLine > 0 ? e.bankruptLine : Math.min(500000, Math.max(500, weeklyBase * 28)));
 export const tuning = (): TuningSlot => slot<TuningSlot>("tuning", () => ({}), () => ({}));
-export const GRADE_MUL: Record<DayGrade, number> = liveRecord(() => ({ ...RAW_GRADE_MUL, ...(tuning().gradeMul ?? {}) }));
+/** 功能注释：非娱乐圈未写评级倍率时全按 ×1，不套用娱乐圈 1.6/0.4 曲线。 */
+export const GRADE_MUL: Record<DayGrade, number> = liveRecord(() => {
+  const authored = tuning().gradeMul ?? {};
+  if (currentWorldId() === "ent") return { ...RAW_GRADE_MUL, ...authored };
+  return { perfect: 1, great: 1, success: 1, fail: 1, bad: 1, ...authored };
+});
 export const GRADE_TONE: Record<DayGrade, string> = {
   perfect: "gold",
   great: "jade",
@@ -770,10 +809,10 @@ export const STYLES: Option[] = liveArray(() => slot<Option[]>("styles", () => R
 export const IDENTITIES: Option[] = liveArray(() => slot<Option[]>("identities", () => RAW_IDENTITIES, () => []));
 export const BACKGROUNDS: Option[] = liveArray(() => slot<Option[]>("backgrounds", () => RAW_BACKGROUNDS, () => []));
 export const DIRECTIONS: Option[] = liveArray(() => slot<Option[]>("directions", () => RAW_DIRECTIONS, () => []));
-/* 母校（原 SCHOOL 常量）：未声明 → 空串（界面隐藏母校） */
+/* 母校：未声明 → 空串；不再当系统内置选项池，作者要用请走自定义建角字段 */
 export const schoolName = (): string => slot<string>("school", () => RAW_SCHOOL, () => "");
-const GENERIC_PARENT_JOBS = ["教师", "医生", "公务员", "工程师", "个体店主", "公司职员", "工人", "自由职业者"];
-export const PARENT_JOBS: string[] = liveArray(() => { const a = slot<string[]>("parentJobs", () => RAW_PARENT_JOBS, () => GENERIC_PARENT_JOBS); return a.length ? a : GENERIC_PARENT_JOBS; });
+/* 父母职业：仅娱乐圈等已写 parentJobs 的模组才有值；空白世界不预置公务员/医生池 */
+export const PARENT_JOBS: string[] = liveArray(() => slot<string[]>("parentJobs", () => RAW_PARENT_JOBS, () => []));
 
 /* 建角页文案与叙事池（人物线路卡片 / 引导语 / 身份登记 / 家世叙述 / 阶层） */
 export type CreationPath = {
@@ -789,7 +828,10 @@ export type CreationPath = {
   eventId?: string; // 绑定事件库里的固定事件 id：开局序章按该事件演绎（可与 event 同时填写）
   perksLabel?: string; // 开局数值小标题（作者自填，留空 = 不显示标题）
   lockTag?: string; // 未解锁时的角标文字（默认「未解锁」）
-  lockHint?: string; // 未解锁时的解锁条件或提示语
+  /** @deprecated 仅兼容旧草稿展示；新编辑用 lockConds 生成提示 */
+  lockHint?: string;
+  /** 功能注释：结构化解锁条件（属性/人物/地点/事件依赖）；未选中的不生效 */
+  lockConds?: import("../lib/types").FixedCond[];
 };
 /* 人物线路的开局人际：选这条路径开局时，对指定固定人物直接设定 */
 export type PathNpc = {
@@ -801,15 +843,18 @@ export type PathNpc = {
 /* 路径弹窗里可对玩家隐藏的内容块 */
 export type PathCardPart = "about" | "choose" | "fixed" | "perks" | "npcs" | "soon";
 export type CreationOptCat = "identityOpts" | "backgroundOpts" | "klassOpts" | "parentJobs";
-export type BuiltinFieldKey = "name" | "gender" | "identity" | "description" | "klass" | "background" | "fatherJob" | "motherJob" | "extra"
+export type BuiltinFieldKey = "name" | "gender" | "age" | "birthday" | "identity" | "description" | "klass" | "background" | "fatherJob" | "motherJob" | "extra"
   | "style" | "family" | "direction" | "zodiac"; // 后四项是选项池字段：只支持改名 / 隐藏（隐藏 = 不显示也不结算其开局加成）
-export type BuiltinFieldCfg = { label?: string; hidden?: boolean; locked?: boolean; value?: string };
-export type CreationFieldType = "text" | "textarea" | "select" | "number";
+export type BuiltinFieldCfg = { label?: string; hidden?: boolean; locked?: boolean; value?: string; options?: string[] };
+/** 功能注释：建角字段类型；date 供自定义日期项；textarea/select/number 旧稿仍可读 */
+export type CreationFieldType = "text" | "textarea" | "select" | "radio" | "number" | "date";
 export type CreationField = {
   id: string; label: string; type: CreationFieldType;
   options?: string[]; init?: string; min?: number; max?: number; placeholder?: string;
+  required?: boolean;
   locked?: boolean; // 玩家不可改，固定为 init
   paths?: string[]; bgs?: string[]; // 仅在这些人物线路 / 家庭背景下出现（空=全部）
+  optionLinks?: Record<string, { paths?: string[]; bgs?: string[] }>; // 单选/下拉逐选项出现条件
   desc?: string; // 给 AI 的说明
   optFx?: Record<string, OptFx>; // 下拉选项 → 开局效果（选中哪项就结算哪项）
 };
@@ -953,7 +998,7 @@ export const RAW_CREATION: CreationCopy = {
 };
 const PATH_LOCK_KEY = "star_path_locks_v1";
 /* 游戏内编辑器对线路的本地覆盖；hero / room / memory / event 存 "" 表示清空作者设定 */
-export type PathLockOverride = { open?: boolean; lockTag?: string; lockHint?: string; hero?: string; room?: string; memory?: string; event?: string; eventId?: string;
+export type PathLockOverride = { open?: boolean; lockTag?: string; lockHint?: string; lockConds?: import("../lib/types").FixedCond[]; hero?: string; room?: string; memory?: string; event?: string; eventId?: string;
   name?: string; blurb?: string; perksLabel?: string; fx?: import("./routeFx").RouteFx; perks?: string; // 线路管理面板里改写的名称 / 简介 / 开局数值（结构化 JSON；perks 只是由 fx 渲染出的预览）
 };
 export function loadPathLocks(): Record<string, PathLockOverride> {
@@ -987,6 +1032,7 @@ export const creationCopy = (): CreationCopy => {
         open: ov.open !== undefined ? ov.open : p.open,
         lockTag: ov.lockTag !== undefined ? ov.lockTag : p.lockTag,
         lockHint: ov.lockHint !== undefined ? ov.lockHint : p.lockHint,
+        ...(ov.lockConds !== undefined ? { lockConds: ov.lockConds } : {}),
         ...(ov.name?.trim() ? { name: ov.name } : {}),
         ...(ov.blurb !== undefined ? { blurb: ov.blurb } : {}),
         ...("fx" in ov ? { fx: ov.fx, perks: ov.perks ?? "" } : {}),
@@ -996,12 +1042,8 @@ export const creationCopy = (): CreationCopy => {
   };
 };
 
-/* 周末活动：未声明 → 通用「自由活动 / 彻底休整」 */
-const GENERIC_WEEKEND_ACTS: WeekendAct[] = [
-  { id: "freeroam", name: "自由活动", effect: "外出走走 · 可在地图上踩点探索 · 压力 -6", icon: "", cost: 0, energy: 0, stress: -6 },
-  { id: "recuperate", name: "彻底休整", effect: "压力 -16", icon: "", cost: 0, energy: 34, stress: -16 },
-];
-export const WEEKEND_ACTS: WeekendAct[] = liveArray(() => { const a = slot<WeekendAct[]>("weekendActs", () => RAW_WEEKEND_ACTS, () => GENERIC_WEEKEND_ACTS); return a.length ? a : GENERIC_WEEKEND_ACTS; });
+/* 周末活动：娱乐圈未声明 → 原表；其它作品未声明 / 空数组 → 不出现现代周末项 */
+export const WEEKEND_ACTS: WeekendAct[] = liveArray(() => slot<WeekendAct[]>("weekendActs", () => RAW_WEEKEND_ACTS, () => []));
 
 /* 随机 NPC 池（行业名册 / 路人）：未声明 → 通用姓名池 */
 export type NpcPool = {

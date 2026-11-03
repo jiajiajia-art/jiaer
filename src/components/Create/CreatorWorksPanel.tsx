@@ -29,12 +29,16 @@ import {
     resolveWorksListLimit,
     shouldShowWorksViewAll,
 } from '../../utils/creatorWorksPreview';
+import { resolveCreatorWorkStatus } from '../../utils/creatorWorkLifecycle';
+import creatorDraftApi from '../../api/creator/creatorDraftApi';
+import {
+    CREATOR_DRAFT_LIMIT,
+    formatDraftLimitReachedMessage,
+} from '../../utils/creatorDraftCapacity';
 
-export type WorksTabKey = 'published' | 'drafts' | 'favorites';
+export type WorksTabKey = 'all' | 'published' | 'drafts' | 'favorites';
 
 const WORKS_FETCH_LIMIT = 50;
-
-export { WORKS_PAGE_SIZE };
 
 const paginateItems = <T,>(items: T[], page: number, pageSize: number): T[] => {
     const start = (Math.max(1, page) - 1) * pageSize;
@@ -42,7 +46,7 @@ const paginateItems = <T,>(items: T[], page: number, pageSize: number): T[] => {
 };
 
 const isWorksTabKey = (value: string | null | undefined): value is WorksTabKey => (
-    value === 'published' || value === 'drafts' || value === 'favorites'
+    value === 'all' || value === 'published' || value === 'drafts' || value === 'favorites'
 );
 
 export type CreatorWorksPanelProps = {
@@ -57,7 +61,7 @@ export type CreatorWorksPanelProps = {
 
 const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     mode,
-    initialTab = 'published',
+    initialTab = 'all',
     showIncentiveUI = false,
     access = 'owner',
     ownerUserCode = '',
@@ -81,6 +85,7 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     const [isLoadingFavorites, setIsLoadingFavorites] = useState(false);
     const [favoritesLoaded, setFavoritesLoaded] = useState(false);
     const [homeHidden, setHomeHidden] = useState(false);
+    const [draftCapacity, setDraftCapacity] = useState<{ count: number; limit: number; canCreate: boolean } | null>(null);
 
     const isPreview = mode === 'preview';
     const isVisitor = access === 'visitor';
@@ -98,9 +103,14 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     const listPageSize = resolveWorksListLimit({ mode, isMobile: isMobileViewport });
     const showWorksViewAll = !isVisitor && shouldShowWorksViewAll({ mode, isMobile: isMobileViewport });
 
-    const { publishedGames, draftGames } = useMemo(
+    const { allGames, publishedGames, draftGames } = useMemo(
         () => partitionCreatorGames(fileMetas),
         [fileMetas],
+    );
+    const allTotalPages = Math.max(1, Math.ceil(allGames.length / WORKS_PAGE_SIZE));
+    const pagedAllGames = useMemo(
+        () => paginateItems(allGames, isPreview ? 1 : worksPage, listPageSize),
+        [allGames, worksPage, isPreview, listPageSize],
     );
 
     const filteredDraftGames = useMemo(
@@ -125,7 +135,9 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
         [favoriteGames, isPreview, listPageSize],
     );
 
-    const worksTotalPages = worksTab === 'published'
+    const worksTotalPages = worksTab === 'all'
+        ? allTotalPages
+        : worksTab === 'published'
         ? publishedTotalPages
         : worksTab === 'drafts'
             ? draftTotalPages
@@ -197,11 +209,20 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
 
         setIsLoadingMyGames(true);
         try {
-            const response = await getGameDataApi.getUserData({ limit: 100 });
+            // 功能注释：名额按全库草稿计；列表 limit 要盖住已发布+草稿，避免只看到前几条误以为没满
+            const response = await getGameDataApi.getUserData({ limit: 200 });
             if (response.data.success && response.data.data) {
                 setFileMetas(response.data.data);
             } else {
                 setFileMetas([]);
+            }
+            try {
+                const capacityResp = await creatorDraftApi.getCapacity();
+                if (capacityResp.data?.data) {
+                    setDraftCapacity(capacityResp.data.data);
+                }
+            } catch {
+                /* 列表仍可用；创建入口会再拦 */
             }
         } catch (error) {
             console.error('获取我的游戏列表错误:', error);
@@ -367,6 +388,10 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
 
         const gameId = game.file_id || game.id;
         if (!gameId) return;
+        if (String(game.engine || game.game_tags || '').toUpperCase() === 'ROMANCE') {
+            navigate(`/romance/?createWorld=1&draftId=${encodeURIComponent(gameId)}&resume=1`);
+            return;
+        }
         navigate(`/createGame?mode=stats&gameId=${gameId}`);
     };
 
@@ -428,6 +453,15 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
         <div className={styles.worksSection} ref={worksSectionRef}>
             <div className={`${styles.worksTabBar} ${isDraftManageMode ? styles.worksTabBarManaging : ''}`}>
                 <div className={styles.worksTabs}>
+                    {!isDraftManageMode && !isVisitor && (
+                        <button
+                            type="button"
+                            className={`${styles.worksTab} ${worksTab === 'all' ? styles.worksTabActive : ''}`}
+                            onClick={() => handleWorksTabChange('all')}
+                        >
+                            全部 ({allGames.length})
+                        </button>
+                    )}
                     {!isDraftManageMode && (
                         <button
                             type="button"
@@ -444,7 +478,11 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                             onClick={() => handleWorksTabChange('drafts')}
                         >
                             {t('create.draftBox')}
-                            {draftGames.length > 0 ? ` (${draftGames.length})` : ''}
+                            {draftCapacity
+                                ? ` (${draftCapacity.count}/${draftCapacity.limit})`
+                                : draftGames.length > 0
+                                    ? ` (${draftGames.length})`
+                                    : ''}
                         </button>
                     )}
                     {!isVisitor && !isDraftManageMode && (
@@ -512,6 +550,12 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                 )}
             </div>
 
+            {!isVisitor && worksTab === 'drafts' && draftCapacity && !draftCapacity.canCreate && (
+                <p className={styles.draftManageTip} role="status">
+                    {formatDraftLimitReachedMessage(draftCapacity.count, draftCapacity.limit || CREATOR_DRAFT_LIMIT)}
+                </p>
+            )}
+
             {hasTakenDownWork ? (
                 <div className={styles.appealBanner}>
                     <span>{t('appeal.takenDownHint')}</span>
@@ -526,6 +570,29 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
             ) : null}
 
             <div className={styles.worksTabPanel}>
+                {worksTab === 'all' && (
+                    isLoadingMyGames ? (
+                        <GameGridSkeleton count={skeletonCount} layoutVariant="works" />
+                    ) : allGames.length === 0 ? (
+                        <div className={styles.worksEmpty}>还没有作品</div>
+                    ) : (
+                        <GameGrid
+                            games={pagedAllGames}
+                            layoutVariant="works"
+                            showWorkStatus
+                            onGameClick={(game) => {
+                                const status = resolveCreatorWorkStatus(game);
+                                if (status === 'draft' || status === 'rejected') {
+                                    handleDraftCardClick(game);
+                                    return;
+                                }
+                                const gameId = game.file_id || game.id;
+                                if (gameId) navigate(`/createGame?mode=stats&gameId=${gameId}`);
+                            }}
+                        />
+                    )
+                )}
+
                 {worksTab === 'published' && (
                     isLoadingMyGames ? (
                         <GameGridSkeleton count={skeletonCount} layoutVariant="works" />
@@ -540,6 +607,7 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                             games={pagedPublishedGames}
                             layoutVariant="works"
                             primaryStat="pv"
+                            showWorkStatus
                             showIncentiveUI={showIncentiveUI}
                             onGameClick={(game) => {
                                 const gameId = game.file_id || game.id;
@@ -558,7 +626,7 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                     isLoadingMyGames ? (
                         <GameGridSkeleton count={skeletonCount} layoutVariant="works" />
                     ) : draftGames.length === 0 ? (
-                        <div className={styles.worksEmpty}>{t('create.startCreating')}</div>
+                        <div className={styles.worksEmpty}>还没有草稿</div>
                     ) : (
                         <div className={styles.draftSectionBody}>
                             <div className={styles.draftFilterRow}>
@@ -586,6 +654,7 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                                 <GameGrid
                                     games={pagedDraftGames}
                                     layoutVariant="works"
+                                    showWorkStatus
                                     onGameClick={handleDraftCardClick}
                                     selectable={true}
                                     selectedIds={selectedDraftIds}
@@ -606,6 +675,7 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                         <GameGrid
                             games={displayedFavoriteGames}
                             layoutVariant="works"
+                            showWorkStatus
                             onGameClick={handleFavoriteGameClick}
                         />
                     )

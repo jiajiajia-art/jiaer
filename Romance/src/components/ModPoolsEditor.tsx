@@ -1,24 +1,14 @@
 import { RAW_STAT_LABELS, type StatsSlot, RAW_ZODIACS, type Zodiac, type Option, optFx } from "../game/data";
-import { asTrimmedString } from "../lib/asTrimmedString";
 
 import type { AttrDef } from "../lib/types";
 import { fxSummary } from "../game/optFx";
 import { OptFxEditor } from "./ModCreationFieldsEditor";
 import { ZodiacSign } from "../lib/zodiacIcons";
 
-/* 模组编辑器 · 建角选项池：外形风格 / 出道身份 / 家庭背景 / 职业方向 / 星座 + 母校 / 父母职业。
- * 选项本身只是文字设定；开局加成由作者用通用加成（能力 / 自定义属性 / 好感…）自行配置，不配 = 无数值。 */
+/* 模组编辑器 · 可选建角选项池（外形 / 身份 / 家世 / 方向 / 星座）。
+ * 默认空；作者要才加。人生模拟专用字段已从本组件移除。
+ * 开局加成由作者用通用加成自行配置，不配 = 无数值。 */
 const inp = "w-full min-w-0 rounded-lg border border-line bg-paper-2 px-2 py-1 text-[12px] text-ink placeholder:text-ink-soft/70 focus:border-jade focus:outline-none";
-
-/** 功能注释：母校 / 父母职业常被写成 {name} 对象，直接塞进输入框会变成 [object Object] */
-function schoolText(raw: unknown): string {
-  if (Array.isArray(raw)) return raw.map((item) => asTrimmedString(item)).filter(Boolean).join("、");
-  return asTrimmedString(raw);
-}
-function jobLines(raw: unknown): string {
-  const list = Array.isArray(raw) ? raw : raw == null || raw === "" ? [] : [raw];
-  return list.map((item) => asTrimmedString(item)).filter(Boolean).join("\n");
-}
 const btn = "rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40";
 const POOLS = [
   { k: "styles", l: "外形风格" },
@@ -28,12 +18,11 @@ const POOLS = [
 ] as const;
 
 type K = (typeof POOLS)[number]["k"];
-type V = Partial<Record<K, Option[]>> & { school?: string; parentJobs?: string[]; zodiacs?: Zodiac[] };
+type V = Partial<Record<K, Option[]>> & { zodiacs?: Zodiac[] };
 export default function ModPoolsEditor({ value, stats, attrs = [], npcs = [], onChange }: { value: V; stats?: StatsSlot; attrs?: AttrDef[]; npcs?: { id: string; name: string }[]; onChange: (p: V) => void }) {
   const statLabels: Record<string, string> = { ...RAW_STAT_LABELS, ...(stats?.labels ?? {}) };
   const names = { attr: (id: string) => attrs.find((a) => a.id === id)?.label, npc: (id: string) => npcs.find((n) => n.id === id)?.name };
   // 折叠的开局加成编辑：摘要一行，展开后用通用加成编辑器
-  // others：同一池里其他已配加成的选项，可一键套用；desc：玩家在建角页看到的说明文字
   const fxBox = (fx: Option["fx"], set: (v: Option["fx"]) => void, others: { name: string; fx: NonNullable<Option["fx"]> }[] = [], desc?: string) => {
     const sum = fxSummary(fx, names);
     const preview = [typeof desc === "string" ? desc.trim() : "", ...sum].filter(Boolean).join(" · ");
@@ -119,14 +108,6 @@ export default function ModPoolsEditor({ value, stats, attrs = [], npcs = [], on
         })}
         {zod.length > 0 && <button className={btn} onClick={() => onChange({ zodiacs: undefined })}>恢复默认星座</button>}
       </div>
-      <label className="block text-[12px] font-bold text-ink">母校
-        <input className={`${inp} mt-1 font-normal`} value={schoolText(value.school)} placeholder="留空 = 沿用默认" onChange={(e) => onChange({ school: e.target.value || undefined })} />
-      </label>
-      <label className="block text-[12px] font-bold text-ink">父母职业池 <span className="font-normal text-ink-soft">· 一行一个，建角时随机抽取</span>
-        <textarea rows={4} className={`${inp} mt-1 font-normal`} value={jobLines(value.parentJobs)} placeholder={"公务员\n医生\n教师\n……（留空 = 还没写）"}
-          onChange={(e) => { const a = e.target.value.split("\n"); onChange({ parentJobs: a.some((x) => x.trim()) ? a : undefined }); }}
-          onBlur={(e) => { const a = e.target.value.split("\n").map((x) => x.trim()).filter(Boolean); onChange({ parentJobs: a.length ? a : undefined }); }} />
-      </label>
     </div>
   );
 }

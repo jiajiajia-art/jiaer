@@ -1,31 +1,38 @@
-/* 场景地点库 · 多级嵌套子地点编辑器
+/* 场景地点树编辑器
  * 地点 = 树：每条地点记录可设 parent（空 = 顶层），层级不限。左侧树状预览，右侧编辑选中节点：
- * 基本 · 子地点管理（新增 / 拖拽排序 / 跳转编辑 / 复制整枝）· 标记与准入。禁止循环嵌套。 */
-import { useMemo, useState, type DragEvent, type JSX } from "react";
-import type { Dir, RoomContent, Requirement } from "../worlds/star2005/content";
+ * 基本 · 子地点管理（新增 / 拖拽排序 / 跳转编辑 / 复制整枝）· 标记与准入。禁止循环嵌套。
+ * 「从地点库添加」复制运营库 active 条目进本作品；打开编辑器不会自动写入库条目或内置世界地点。 */
+import { useEffect, useMemo, useState, type DragEvent, type JSX } from "react";
+import type { RoomContent, Requirement } from "../worlds/star2005/content";
 import { childrenOf, cloneBranch, pathOf, rootsOf, subtreeOf, wouldCycle } from "../game/roomTree";
 import { EmptyState, Help, SearchBox, matches } from "./EditorKit";
 import ImagePicker from "./ImagePicker";
+import { Modal } from "./ui";
 import { IconChevronDown } from "../lib/icons";
+import { SCENE_PORTRAIT_GEN_SIZE } from "../lib/scenePortrait";
+import {
+  listActivePlatformLocations,
+  resolvePlatformLocationImageUrl,
+  type PlatformLocationItem,
+} from "../lib/platformLocationLibrary";
 
 type Rooms = Record<string, RoomContent>;
 const inp = "w-full rounded-full border border-line bg-paper px-3 py-1.5 text-[12.5px] text-ink outline-none focus:border-jade";
 const area = "w-full rounded-2xl border border-line bg-paper px-3 py-2 text-[12.5px] text-ink outline-none focus:border-jade";
 const pill = "rounded-full border border-line bg-paper px-3 py-1 text-[12px] text-ink transition hover:border-jade hover:text-jade";
 const lbl = "mb-0.5 block text-[11px] text-ink-soft";
-const DIRS: { d: Dir; t: string }[] = [
-  { d: "n", t: "北" }, { d: "s", t: "南" }, { d: "e", t: "东" }, { d: "w", t: "西" },
-  { d: "ne", t: "东北" }, { d: "nw", t: "西北" }, { d: "se", t: "东南" }, { d: "sw", t: "西南" },
-];
 const rid = () => `room_${Math.random().toString(36).slice(2, 8)}`;
+/** 功能注释：地点库 / 手工添加时若缺场景描述，用地名补一句，避免必填框交白卷。 */
+const sceneDescFallback = (name: string) => `你来到了「${name}」。`;
 
-export default function ModRoomTreeEditor({ rooms, startRoom, tracks, emptyHint, onChange, onDelete, onRename }: {
+export default function ModRoomTreeEditor({ rooms, startRoom, tracks, emptyHint, onChange, onDelete, onRename: _onRename }: {
   rooms: Rooms;
   startRoom?: string;
   tracks: { id: string; name: string }[];
   emptyHint: string;
   onChange: (rooms: Rooms, startRoom?: string) => void;
   onDelete: (id: string) => void;
+  /** 功能注释：房间 id 不再在编辑页手改，保留回调以免改动父组件签名。 */
   onRename: (oldId: string, raw: string) => void;
 }) {
   const ids = Object.keys(rooms);
@@ -33,6 +40,11 @@ export default function ModRoomTreeEditor({ rooms, startRoom, tracks, emptyHint,
   const [tab, setTab] = useState<"base" | "kids" | "flags">("base");
   const [q, setQ] = useState("");
   const [drag, setDrag] = useState<string | null>(null);
+  const [libOpen, setLibOpen] = useState(false);
+  const [libQ, setLibQ] = useState("");
+  const [libLoading, setLibLoading] = useState(false);
+  const [libErr, setLibErr] = useState("");
+  const [libItems, setLibItems] = useState<PlatformLocationItem[]>([]);
   const cur = sel && rooms[sel] ? sel : ids[0] ?? null;
   const r = cur ? rooms[cur] : undefined;
   const nm = (id: string) => rooms[id]?.name || id;
@@ -41,9 +53,74 @@ export default function ModRoomTreeEditor({ rooms, startRoom, tracks, emptyHint,
   const add = (parent?: string) => {
     const id = rid();
     const order = parent ? childrenOf(rooms, parent).length : undefined;
-    onChange({ ...rooms, [id]: { name: parent ? "新子地点" : "新地点", desc: "", exits: {}, ...(parent ? { parent, order } : {}) } }, startRoom ?? id);
+    const name = parent ? "新子地点" : "新地点";
+    // 功能注释：新增地点不自动冒充开局地点；场景描述预填一句，作者可改。
+    onChange({ ...rooms, [id]: { name, desc: sceneDescFallback(name), exits: {}, ...(parent ? { parent, order } : {}) } }, startRoom);
     setSel(id); setTab("base");
   };
+  // 功能注释：从运营地点库复制一条顶层地点进本作品；描述/图一并带入，缺描述则按地名补。
+  const addFromLibrary = (item: PlatformLocationItem) => {
+    const id = rid();
+    const name = String(item.name || "地点").trim() || "地点";
+    const desc = String(item.description || "").trim() || sceneDescFallback(name);
+    const bg = resolvePlatformLocationImageUrl(item.imageUrl) || undefined;
+    onChange({
+      ...rooms,
+      [id]: {
+        name,
+        desc,
+        exits: {},
+        ...(bg ? { bg } : {}),
+      },
+    }, startRoom);
+    setSel(id);
+    setTab("base");
+    setLibOpen(false);
+  };
+
+  useEffect(() => {
+    if (!libOpen) return;
+    let cancelled = false;
+    setLibLoading(true);
+    setLibErr("");
+    void listActivePlatformLocations(libQ)
+      .then((rows) => { if (!cancelled) setLibItems(rows); })
+      .catch((e) => { if (!cancelled) { setLibItems([]); setLibErr(e instanceof Error ? e.message : "加载失败"); } })
+      .finally(() => { if (!cancelled) setLibLoading(false); });
+    return () => { cancelled = true; };
+  }, [libOpen, libQ]);
+
+  const libPicker = libOpen ? (
+    <Modal title="从地点库添加" onClose={() => setLibOpen(false)}>
+      <p className="mb-2 text-[12px] leading-relaxed text-ink-soft">
+        选中的条目会复制进这部作品，成为本作品自己的地点（可改文字、加子地点、设为开局）。停用中的库条目不会出现在此列表。
+      </p>
+      <SearchBox value={libQ} onChange={setLibQ} placeholder="搜索地点库" />
+      {libErr ? <p className="mt-2 text-[12px] text-danger">{libErr}</p> : null}
+      {libLoading ? <p className="mt-3 text-[12px] text-ink-soft">加载中…</p> : null}
+      {!libLoading && !libErr && !libItems.length ? <EmptyState>地点库暂无可用条目，请联系运营在后台配置。</EmptyState> : null}
+      <ul className="mt-2 max-h-[22rem] space-y-1.5 overflow-y-auto">
+        {libItems.map((item) => {
+          const img = resolvePlatformLocationImageUrl(item.imageUrl);
+          return (
+            <li key={item.id}>
+              <button
+                type="button"
+                className="flex w-full items-start gap-2 rounded-2xl border border-line bg-paper p-2 text-left transition hover:border-jade"
+                onClick={() => addFromLibrary(item)}
+              >
+                {img ? <img src={img} alt="" className="h-14 w-9 shrink-0 rounded-lg object-cover" /> : <span className="h-14 w-9 shrink-0 rounded-lg bg-paper-2" />}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[13px] font-bold text-ink">{item.name}</span>
+                  <span className="mt-0.5 line-clamp-2 text-[11.5px] text-ink-soft">{item.description || "（无简介）"}</span>
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </Modal>
+  ) : null;
   // 同级排序：把 src 挪到 target 之前，重写这一层的 order
   const reorder = (parent: string | undefined, src: string, target: string) => {
     if (src === target) return;
@@ -97,7 +174,11 @@ export default function ModRoomTreeEditor({ rooms, startRoom, tracks, emptyHint,
   if (!ids.length) return (
     <div className="space-y-2">
       <EmptyState>{emptyHint}</EmptyState>
-      <button className={pill} onClick={() => add()}>＋ 添加顶层地点</button>
+      <div className="flex flex-wrap gap-1.5">
+        <button data-author-field="author-field-rooms" className={pill} onClick={() => add()}>＋ 添加顶层地点</button>
+        <button type="button" className={pill} onClick={() => setLibOpen(true)}>从地点库添加</button>
+      </div>
+      {libPicker}
     </div>
   );
 
@@ -118,7 +199,10 @@ export default function ModRoomTreeEditor({ rooms, startRoom, tracks, emptyHint,
             {sortedRoots.map((x) => tree(x, 0))}
             {orphans.map((x) => tree(x, 0))}
           </ul>
-          <button className={`${pill} mt-1.5 w-full`} onClick={() => add()}>＋ 顶层地点</button>
+          <div className="mt-1.5 grid gap-1">
+            <button className={`${pill} w-full`} onClick={() => add()}>＋ 顶层地点</button>
+            <button type="button" className={`${pill} w-full`} onClick={() => setLibOpen(true)}>从地点库添加</button>
+          </div>
         </div>
 
         {/* 选中节点 */}
@@ -141,9 +225,9 @@ export default function ModRoomTreeEditor({ rooms, startRoom, tracks, emptyHint,
 
             {tab === "base" && (
               <div className="space-y-1.5">
+                {/* 功能注释：房间 id 仅内部使用，编辑页不展示、不手改；连通由地点树自动带出，不配东南西北。 */}
                 <div className="flex gap-1.5">
                   <input className={inp} value={r.name ?? ""} placeholder="地点名，如：禅房" onChange={(e) => set(cur, { name: e.target.value })} />
-                  <input className={`${inp} !w-28 shrink-0 font-mono`} key={cur} defaultValue={cur} title="地点 id（失焦后生效）" onBlur={(e) => { onRename(cur, e.target.value); e.target.value = cur; }} />
                   <button className={`${pill} shrink-0`} onClick={() => onDelete(cur)} aria-label="删除地点">×</button>
                 </div>
                 <label className="block">
@@ -159,8 +243,20 @@ export default function ModRoomTreeEditor({ rooms, startRoom, tracks, emptyHint,
                 </label>
                 <textarea className={`${area} ${String(r.desc ?? "").trim() ? "" : "!border-danger"}`} rows={3} value={String(r.desc ?? "")} placeholder="进入此地时的场景描述（必填）" onChange={(e) => set(cur, { desc: e.target.value })} />
                 <div className="grid gap-1.5 sm:grid-cols-2">
-                  <div className="block"><span className={lbl}>场景背景图（进入此地显示）</span>
-                    <ImagePicker value={r.bg} onChange={(bg) => set(cur, { bg })} label="背景图" max={1920} thumb="h-12 w-20" hint="可上传本地图片、从素材库挑选或粘贴链接" />
+                  <div className="block"><span className={lbl}>场景背景图（进入此地显示 · 9:16 / 1080×1920）</span>
+                    <ImagePicker
+                      value={r.bg}
+                      onChange={(bg) => set(cur, { bg })}
+                      label="场景图"
+                      max={1920}
+                      thumb="aspect-[9/16] h-auto w-14"
+                      scenePortrait
+                      aiGen={{
+                        size: SCENE_PORTRAIT_GEN_SIZE,
+                        placeholder: "按场景描述生成 9:16 竖图…",
+                        initialPrompt: String(r.desc ?? "").trim() || undefined,
+                      }}
+                    />
                   </div>
                   <label className="block"><span className={lbl}>BGM（进入此地自动切换）</span>
                     <select className={inp} value={r.bgm ?? ""} onChange={(e) => set(cur, { bgm: e.target.value || undefined })}>
@@ -170,24 +266,9 @@ export default function ModRoomTreeEditor({ rooms, startRoom, tracks, emptyHint,
                   </label>
                 </div>
                 <label className="flex cursor-pointer items-center gap-2 text-[12px] text-ink">
-                  <input type="radio" className="accent-jade" checked={startRoom === cur} onChange={() => onChange(rooms, cur)} />设为开局地点<span className="text-ink-soft">（可以是任意一层子地点）</span>
+                  <input data-author-field="author-field-start-room" type="radio" className="accent-jade" checked={startRoom === cur} onChange={() => onChange(rooms, cur)} />设为开局地点<span className="text-ink-soft">（可以是任意一层子地点）</span>
                 </label>
-                <details className="rounded-2xl border border-line bg-paper p-2">
-                  <summary className="cursor-pointer text-[12px] font-bold text-ink">方向出口 <span className="font-normal text-ink-soft">· 同级地点之间的东南西北通路（上下层由树自动连通）</span></summary>
-                  <div className="mt-1.5 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-                    {DIRS.map(({ d, t }) => (
-                      <label key={d} className="flex items-center gap-1 text-[11px] text-ink-soft">
-                        <span className="w-5 shrink-0">{t}</span>
-                        <select className={`${inp} !px-2 !py-0.5 text-[11.5px]`} value={r.exits?.[d] ?? ""}
-                          onChange={(e) => { const ex = { ...r.exits }; if (e.target.value) ex[d] = e.target.value; else delete ex[d]; set(cur, { exits: ex }); }}>
-                          <option value="">—</option>
-                          {ids.filter((x) => x !== cur).map((x) => <option key={x} value={x}>{nm(x)}</option>)}
-                        </select>
-                      </label>
-                    ))}
-                  </div>
-                  <Help>出口是单向的：A 的「东」指向 B，记得给 B 的「西」也指回 A。</Help>
-                </details>
+                <Help>上下层与同级进出由地点树自动连通，无需再配东南西北出口。</Help>
               </div>
             )}
 
@@ -258,6 +339,7 @@ export default function ModRoomTreeEditor({ rooms, startRoom, tracks, emptyHint,
           </div>
         )}
       </div>
+      {libPicker}
     </div>
   );
 }

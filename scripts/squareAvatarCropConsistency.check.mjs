@@ -57,7 +57,7 @@ test('resolveLibraryAvatarDisplayUrl_禁止优先头顶thumb', async () => {
 test('头像库展示链路_禁止bust与thumb优先', () => {
   const frame = readFileSync(join(root, 'src/components/Avatar/AvatarFrame.tsx'), 'utf8');
   const page = readFileSync(join(root, 'src/page/warehouse/WarehouseAvatarLibrary.tsx'), 'utf8');
-  const admin = readFileSync(join(root, 'src/components/Admin/AdminPublicAvatarManager.tsx'), 'utf8');
+  const admin = readFileSync(join(root, 'src/components/admin/AdminPublicAvatarManager.tsx'), 'utf8');
   const gate = readFileSync(join(root, 'src/components/Avatar/SquareAvatarCropGate.tsx'), 'utf8');
   const css = readFileSync(join(root, 'src/components/Avatar/AvatarFrame.module.css'), 'utf8');
 

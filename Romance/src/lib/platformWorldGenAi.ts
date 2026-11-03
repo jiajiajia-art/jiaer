@@ -17,6 +17,12 @@ export function worldGenCompleteUrl(apiBase = resolveFunloomApiBase()): string {
   return `${base}/api/romance/world-gen/complete`;
 }
 
+/** 功能注释：模组最终失败后返还已扣织梦豆 */
+export function worldGenRefundUrl(apiBase = resolveFunloomApiBase()): string {
+  const base = String(apiBase || "").trim().replace(/\/$/, "");
+  return `${base}/api/romance/world-gen/refund`;
+}
+
 export type PlatformWorldGenCompleteOpts = {
   engineId?: WorldGenEngineId | string;
   moduleId?: string;
@@ -25,13 +31,14 @@ export type PlatformWorldGenCompleteOpts = {
   max_tokens?: number;
 };
 
-/**
- * 功能注释：用平台 JWT 调后端补全；失败抛带 status/body 的 Error，供 worldGenGenerate 统一文案与 fail-fast。
- */
-export async function completeViaPlatform(
-  messages: PlatformWorldGenChatMsg[],
-  opts: PlatformWorldGenCompleteOpts = {},
-): Promise<string> {
+/** 功能注释：成功补全须带回本次实扣分，供前端解析失败后汇总返还 */
+export type PlatformWorldGenCompleteResult = {
+  text: string;
+  pointsDeducted: number;
+  remainingPoints?: number;
+};
+
+function requireAuthToken(): string {
   const token = readFunloomAuthToken();
   if (!token) {
     const err = Object.assign(new Error("请先登录平台账号后再生成世界。"), {
@@ -40,6 +47,18 @@ export async function completeViaPlatform(
     });
     throw err;
   }
+  return token;
+}
+
+/**
+ * 功能注释：用平台 JWT 调后端补全；失败抛带 status/body 的 Error，供 worldGenGenerate 统一文案与 fail-fast。
+ * 成功返回 text + pointsDeducted（LLM 已扣费；客户端 JSON 校验失败须走 refund）。
+ */
+export async function completeViaPlatform(
+  messages: PlatformWorldGenChatMsg[],
+  opts: PlatformWorldGenCompleteOpts = {},
+): Promise<PlatformWorldGenCompleteResult> {
+  const token = requireAuthToken();
 
   const ctl = opts.timeoutMs && opts.timeoutMs > 0 ? new AbortController() : undefined;
   const dog = ctl ? setTimeout(() => ctl.abort(), opts.timeoutMs) : undefined;
@@ -69,7 +88,7 @@ export async function completeViaPlatform(
     const rawBody = await res.text().catch(() => "");
     let json: {
       success?: boolean;
-      data?: { text?: string };
+      data?: { text?: string; pointsDeducted?: number; remainingPoints?: number };
       message?: string;
       error?: string;
       code?: string;
@@ -95,7 +114,13 @@ export async function completeViaPlatform(
     if (!text) {
       throw Object.assign(new Error("平台返回空内容"), { status: 204, body: rawBody.slice(0, 200) });
     }
-    return text;
+    const pointsDeducted = Math.max(0, Math.floor(Number(json?.data?.pointsDeducted) || 0));
+    const remainingRaw = json?.data?.remainingPoints;
+    const remainingPoints =
+      remainingRaw == null || !Number.isFinite(Number(remainingRaw))
+        ? undefined
+        : Math.max(0, Math.floor(Number(remainingRaw)));
+    return { text, pointsDeducted, remainingPoints };
   } catch (e) {
     if ((e as { name?: string })?.name === "AbortError") {
       throw new DOMException("已取消", "AbortError");
@@ -109,5 +134,59 @@ export async function completeViaPlatform(
     throw e;
   } finally {
     if (dog) clearTimeout(dog);
+  }
+}
+
+export type PlatformWorldGenRefundOpts = {
+  engineId?: WorldGenEngineId | string;
+  moduleId?: string;
+  /** 本次模组累计已扣（含自动重试各次） */
+  points: number;
+  reason?: string;
+  signal?: AbortSignal;
+};
+
+/**
+ * 功能注释：模组最终失败（含 JSON 修完仍挂）时返还已扣织梦豆；成功返回 true，网络/业务失败返回 false（不抛，避免盖住原错误）。
+ */
+export async function refundWorldGenPointsViaPlatform(
+  opts: PlatformWorldGenRefundOpts,
+): Promise<boolean> {
+  const points = Math.max(0, Math.floor(Number(opts.points) || 0));
+  if (points < 1) return true;
+
+  let token: string;
+  try {
+    token = requireAuthToken();
+  } catch {
+    return false;
+  }
+
+  try {
+    const res = await fetch(worldGenRefundUrl(), {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      signal: opts.signal,
+      body: JSON.stringify({
+        engineId: opts.engineId || "balanced",
+        moduleId: opts.moduleId || "",
+        points,
+        reason: opts.reason || "module_failed",
+      }),
+    });
+    const rawBody = await res.text().catch(() => "");
+    let json: { success?: boolean } | null = null;
+    try {
+      json = rawBody ? JSON.parse(rawBody) : null;
+    } catch {
+      json = null;
+    }
+    return !!(res.ok && json?.success);
+  } catch {
+    return false;
   }
 }

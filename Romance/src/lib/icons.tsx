@@ -130,11 +130,11 @@ function adapt(Icon: LucideIcon) {
       "sm";
     return (
       <Comp
+        {...(rest as LucideProps)}
         size={n as IconSize}
         strokeWidth={typeof strokeWidth === "number" ? strokeWidth : 1.75}
         className={className}
         style={style}
-        {...(rest as LucideProps)}
       />
     );
   };
@@ -285,7 +285,7 @@ export function StatusMark({
   children?: ReactNode;
   className?: string;
 }) {
-  const map: Record<typeof kind, ComponentType<RomanceIconProps>> = {
+  const map: Record<typeof kind, ComponentType<LegacyP>> = {
     ok: IconCheck,
     warn: IconAlert,
     err: IconClose,

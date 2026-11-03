@@ -22,7 +22,8 @@ export function SectionHead({ code, cn, hint, right }: { code?: string; cn: stri
 /* —— 模态弹窗：遮罩 / 面板 / 标题栏 / 关闭钮全部取 index.css 的全局 ui-* 类（自绘弹窗也用同一套） —— */
 const ModalDepth = createContext(0);
 
-export function Modal({ title, onClose, children, wide, xl, heavyBackdrop, locked = false }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean; /** 超宽面板：最小 / 最大 1200（模组编辑器） */ xl?: boolean; heavyBackdrop?: boolean; /** 必须点内容里的按钮才能离开：遮罩、Esc、关闭钮都不收起 */ locked?: boolean }) {
+/* 所有弹窗共用 .ui-dialog：宽 86vw，高度随内容，过高才封顶滚动；不再按内容分宽窄档 */
+export function Modal({ title, onClose, children, heavyBackdrop, locked = false }: { title: string; onClose: () => void; children: ReactNode; heavyBackdrop?: boolean; /** 必须点内容里的按钮才能离开：遮罩、Esc、关闭钮都不收起 */ locked?: boolean }) {
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   const lockedRef = useRef(locked);
@@ -62,15 +63,13 @@ export function Modal({ title, onClose, children, wide, xl, heavyBackdrop, locke
     <div className={`ui-overlay ui-overlay-modal z-50 ${heavyBackdrop ? "ui-overlay-heavy" : ""}`} style={{ zIndex: 50 + depth * 10 }} onClick={locked ? undefined : onClose}>
       <div
         ref={sheetRef}
-        className={`ui-sheet modal-sheet max-h-[92dvh] sm:max-h-[88dvh] overflow-x-auto overflow-y-auto overscroll-contain ${
-          xl ? "w-[min(1200px,96vw)] min-w-[min(1200px,96vw)] max-w-[1200px]" : wide ? "max-w-2xl" : "max-w-lg"
-        }`}
+        className="ui-sheet modal-sheet ui-dialog"
         onClick={(e) => e.stopPropagation()}
         role={locked ? "alertdialog" : "dialog"}
         aria-modal="true"
         aria-label={title}
       >
-        <div className="ui-sheet-head-bar sticky top-0 z-10 rounded-t-[var(--radius-ui-lg)]">
+        <div className="ui-sheet-head-bar z-10 rounded-t-[var(--radius-ui-lg)]">
           <div className="flex items-center justify-between gap-2 px-4 pb-2 pt-3.5 sm:px-5">
             <h3 className="ui-title flex min-w-0 items-center gap-2 truncate sm:text-[17px]">
               <IconSpark size="md" className="shrink-0 text-coral" />
@@ -85,7 +84,7 @@ export function Modal({ title, onClose, children, wide, xl, heavyBackdrop, locke
             )}
           </div>
         </div>
-        <div className={`px-4 pb-5 pt-1 sm:px-5`}>{children}</div>
+        <div className="ui-dialog-body px-4 pb-5 pt-1 sm:px-5">{children}</div>
       </div>
     </div>
     </ModalDepth.Provider>,

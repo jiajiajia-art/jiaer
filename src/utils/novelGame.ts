@@ -1,4 +1,5 @@
 import type { UserGameData } from '../api/home/getGameData.type';
+import { isDraftSlotWork } from './creatorWorkLifecycle.ts';
 
 export const NOVEL_ENGINE = 'NOVEL';
 
@@ -78,6 +79,7 @@ export function resolveCreateAsNovelFlag(value?: boolean): boolean {
 }
 
 export type CreatorGameBuckets = {
+  allGames: UserGameData[];
   publishedGames: UserGameData[];
   draftGames: UserGameData[];
   novelGames: UserGameData[];
@@ -99,6 +101,7 @@ export function compareCreatorGamesByRecent(a: UserGameData, b: UserGameData): n
 
 /** 将创作者作品列表拆分为已发布、草稿（含未发布小说） */
 export function partitionCreatorGames(fileMetas: UserGameData[]): CreatorGameBuckets {
+  const allGames = [...fileMetas];
   const publishedGames: UserGameData[] = [];
   const draftGames: UserGameData[] = [];
   const novelGames: UserGameData[] = [];
@@ -112,14 +115,17 @@ export function partitionCreatorGames(fileMetas: UserGameData[]): CreatorGameBuc
       return;
     }
 
-    draftGames.push(game);
+    if (isDraftSlotWork(game)) {
+      draftGames.push(game);
+    }
   });
 
+  allGames.sort(compareCreatorGamesByRecent);
   publishedGames.sort(compareCreatorGamesByRecent);
   draftGames.sort(compareCreatorGamesByRecent);
   novelGames.sort(compareCreatorGamesByRecent);
 
-  return { publishedGames, draftGames, novelGames };
+  return { allGames, publishedGames, draftGames, novelGames };
 }
 
 export function getNovelSourceFileId(game: Pick<UserGameData, 'source_file_id'> & { sourceFileId?: string }): string {

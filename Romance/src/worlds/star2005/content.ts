@@ -52,15 +52,18 @@ export type PersonContent = {
   bio: string;
   init?: number; // 初始好感（模组世界用）
   ttsVoice?: string; // 专属音色（语音模型的 voice 名）；留空按性别用设置里的默认音色
-  wxStart?: boolean; // 开局即是微信好友（并视为已结识），如家人、经纪人
+  metStart?: boolean; // 通用开关：开局已认识，但不一定在联系人里
+  wxStart?: boolean; // 通用开关：开局出现在联系人里，并视为已认识
   relation?: string; // 与玩家的关系（档案「与你」栏；缺省则显示「尚未得知」）
   gender?: string; // 性别（档案确定性数据，非推断）
-  groups?: string[]; // 人脉分组 id（人脉页面配置里的分组；可多选，缺省按分组规则自动归类）
-  org?: string; // 所属组织 id（人脉页面配置里的组织库）
+  groups?: string[]; // 旧数据兼容：人脉页已不读取，玩家列表只按实时关系阶段分组
+  org?: string; // 人物所属组织资料（只显示在卡片上，不参与人脉分组）
   avatarVariant?: string; // 头像池名（须与「我的头像池」或公共分类名完全一致）；开局从该池抽一张做头像
   age?: number; // 年龄（档案确定性数据，非推断）
   birthday?: { m: number; d: number }; // 生日（选填；留空时系统按人物自动分配）
-  tags?: string[]; // 人物标签（背景故事下的小标签）
+  tags?: string[]; // 人物标签（背景故事下的小标签；优先平台内置勾选）
+  /** 功能注释：所属势力 id，对应 creation.startFactions；在①基础统一配势力，人物只选归属 */
+  factionId?: string;
   presentHint?: string;
   offers?: OfferSpec;
   intel?: PersonIntel[];
@@ -434,7 +437,8 @@ export type TravelContent = {
   advanceDays?: number; // 每次「推进」前进的天数（缺省 1；推进单位为「日」时生效）
   advanceUnit?: "day" | "week" | "month" | "year"; // 推进单位（缺省 日）
   advanceCount?: number; // 周/月/年模式下每次推进几个单位（1~12，缺省 1）
-  advanceStory?: boolean; // 推进后是否由 AI 生成日程叙事（缺省开启）
+  /** @deprecated 日程叙事已内置开启，创作者界面不再配置；读到 false 亦忽略 */
+  advanceStory?: boolean;
   advanceWords?: number; // 推进叙事字数（缺省 500）
   modes?: TransportMode[]; // 本世界的出行方式（缺省=不启用交通系统，只显示「前往」）
   defaultMode?: string; // 默认选中的方式 id
@@ -846,7 +850,7 @@ export type RelationsContent = {
   affinityCap?: { default?: number; byPerson?: Record<string, number> }; // 好感上限；缺省与心动上限相同
   trust: { init: number; min: number; max: number };
   /* 以下可选，缺省 = 引擎默认（所有世界观通用） */
-  bridge?: import("../../game/bridge").BridgeSlot; // 牵线玩法：次数 / 关闭 / 改写或新增方式
+  bridge?: import("../../game/bridge").BridgeSlot; // 牵线：开放 / 每日次数；不再预置方式，modes 仅兼容旧稿自定义
   wedding?: { cost?: number; minAffinity?: number }; // 婚礼费用（按当前钱包货币）与好感门槛，默认 30000 / 80
 };
 

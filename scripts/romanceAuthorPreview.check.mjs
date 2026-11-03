@@ -62,6 +62,13 @@ test('romanceAuthorPreview_编辑器顶栏保存预览_底栏无重复保存', (
   assert.match(registry, /if \(authorPreviewMod\)/);
   assert.match(app, /AuthorPreviewChrome/);
   assert.match(app, /subscribeAuthorPreview|getAuthorPreviewSession/);
+  // 功能注释：预览时向导壳 hidden 且不带 data-platform-ui；游玩区另挂可见平台壳，建角 Modal 才能显示
+  assert.match(app, /previewing \? "hidden" : "romance-platform min-h-screen"/);
+  assert.match(app, /\.\.\.\(previewing \? \{\} : \{ ["']data-platform-ui["']: ["']1["'] \}\)/);
+  assert.match(app, /previewing \?[\s\S]{0,600}data-platform-ui="1"[\s\S]{0,400}PlayScreens/);
+  assert.match(app, /className="romance-platform min-h-screen"[\s\S]{0,120}data-platform-ui="1"/);
+  assert.match(app, /AuthorPreviewPlayShell/);
+  assert.match(app, /data-author-preview-shell/);
   const panel = readFileSync(join(romance, 'components/ModEditorPanel.tsx'), 'utf8');
   assert.match(panel, /requestAuthorPreview\(out/);
   assert.match(panel, /backToWizard/);
@@ -70,26 +77,26 @@ test('romanceAuthorPreview_编辑器顶栏保存预览_底栏无重复保存', (
   assert.match(ctx, /clearAuthorPreviewSave\(AUTHOR_PREVIEW_GAME_ID\)/);
 });
 
-test('romanceAuthorPreview_assess_缺名可进_致命阻断', async () => {
+test('romanceAuthorPreview_assess_必填由共享硬门槛拦截_底层只处理启动错误', async () => {
   const mod = await import(join(romance, 'lib/authorPreview.ts'));
-  const soft = mod.assessAuthorPreview({
+  const incomplete = {
     id: 'demo-world',
     name: '',
     version: '0.1.0',
     kind: 'world',
     content: { rooms: { start: { name: '家', desc: '家', exits: {} } }, startRoom: 'start' },
-  });
-  assert.equal(soft.fatal.length, 0);
-  assert.ok(soft.warnings.some((w) => /名称/.test(w)));
+  };
+  assert.ok(mod.assessAuthorRequiredFields(incomplete).some((issue) => issue.field === 'name'));
+  assert.equal(mod.assessAuthorPreview(incomplete).fatal.length, 0);
+  assert.deepEqual(mod.assessAuthorPreview(incomplete).warnings, []);
 
-  // 悬空 startRoom：仅警告，不阻断预览（clean/sanitize 会纠偏；运行时也会回落）
-  const softRoom = mod.assessAuthorPreview({
+  // 悬空 startRoom 必须由共享门槛阻断，不能再由 clean/runtime 回落。
+  const invalidRoom = {
     id: 'demo-world',
     name: '雾色',
     version: '0.1.0',
     kind: 'world',
     content: { rooms: { start: { name: '家', desc: '家', exits: {} } }, startRoom: 'nowhere' },
-  });
-  assert.equal(softRoom.fatal.length, 0);
-  assert.ok(softRoom.warnings.some((e) => /startRoom/.test(e)));
+  };
+  assert.ok(mod.assessAuthorRequiredFields(invalidRoom).some((issue) => issue.field === 'startRoom'));
 });

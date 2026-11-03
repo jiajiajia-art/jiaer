@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { OpeningCopy } from "../mods/types";
-import { isConfigured, streamChat, type ChatMsg } from "../lib/ai";
 import { friendlyAIError } from "../lib/aiError";
-import { loadConfig } from "../lib/store";
 import { loadGlobal, saveGlobal } from "../lib/saveScope";
 import { loadAssets } from "../lib/freeStyle";
 import { SAMPLE_OPENING, extractHtml, openingSrcDoc, postOpening, type OpeningPageData } from "../lib/openingPage";
+import { readFunloomAuthToken } from "../lib/platformAvatarLibrary";
+import { completeViaPlatform, type PlatformWorldGenChatMsg } from "../lib/platformWorldGenAi";
 import { AssetLibrary } from "./FreeStylePanel";
-import { AssistantMsg, ChatThread, Composer, PlusMenu, Suggestions, UserMsg, ViewSwitch, WorkLine, type GenView } from "./CodexChat";
+import { AiModelBillingBadge, AssistantMsg, ChatThread, Composer, PlusMenu, Suggestions, UserMsg, ViewSwitch, WorkLine, type GenView } from "./CodexChat";
 
 /* 模组编辑器 · 自定义开场页样式：对话式让 AI 生成整页 HTML，多轮微调；版本 / 撤销 / 粘贴代码 / 模拟流式预览。
- * 生效的只有 opening.page 一份；对话与历史版本存在本机（按模组 id），不进模组文件。 */
+ * 生效的只有 opening.page 一份；对话与历史版本存在本机（按模组 id），不进模组文件。
+ * 功能注释：AI 走平台文案模型（运营 text-llm / world-gen/complete），禁止读本机「AI 配置」个人 Key。 */
 const btn = "rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40 disabled:hover:border-line disabled:hover:text-ink";
 const PRESETS: [string, string][] = [
   ["电影胶片感", "电影胶片感：黑底、胶片齿孔边框与轻微颗粒噪点，标题像片头字幕淡入，正文以宽银幕字幕的节奏逐段出现，暖黄色调。"],
@@ -21,8 +22,10 @@ const PRESETS: [string, string][] = [
 ];
 type Turn = { role: "user" | "assistant"; text: string; ver?: number; failed?: boolean };
 type Version = { html: string; note: string; at: number };
-type Studio = { turns: Turn[]; versions: Version[]; upgrade?: string; tier?: "std" | "up" };
+type Studio = { turns: Turn[]; versions: Version[] };
 const keyOf = (modId: string) => `star2005.openingStudio.${modId}`;
+/** 功能注释：开场页 HTML 较长，抬高 max_tokens，避免截断缺 </html> */
+const OPENING_STYLE_MAX_TOKENS = 8000;
 
 const SYS = (modName: string, o: OpeningCopy | undefined) => {
   const assets = loadAssets();
@@ -72,12 +75,8 @@ export default function OpeningStyleStudio({ value, onPage, modId, modName }: {
   const abort = useRef<AbortController | null>(null);
   const [started, setStarted] = useState(0);
 
-  const cfg = loadConfig();
-  const ai = isConfigured(cfg);
-  const others = (cfg.models ?? []).filter((m) => m && m !== cfg.model);
-  const upgrade = st.upgrade && others.includes(st.upgrade) ? st.upgrade : others[0];
-  const tier = st.tier === "up" && upgrade ? "up" : "std";
-  const model = tier === "up" ? upgrade! : cfg.model;
+  // 功能注释：平台登录态决定能否调文案模型；不读本机 AI 配置
+  const loggedIn = !!readFunloomAuthToken();
 
   const curIdx = page ? st.versions.findIndex((v) => v.html === page) : -1;
   const apply = (html?: string) => { onPage(html); setReplay((n) => n + 1); };
@@ -92,16 +91,22 @@ export default function OpeningStyleStudio({ value, onPage, modId, modName }: {
   const send = async (text: string) => {
     const t = text.trim();
     if (!t || busy) return;
-    const c = loadConfig();
-    if (!isConfigured(c)) { setErr("需要先在菜单「AI 配置」里接入模型。"); return; }
+    if (!readFunloomAuthToken()) { setErr("请先登录平台账号后再生成开场页。"); return; }
     const hist: Turn[] = [...st.turns, { role: "user", text: t }];
     setSt((s) => ({ ...s, turns: hist })); setInput(""); setBusy(true); setErr(""); setChars(0); setStarted(Date.now());
     const ctl = new AbortController(); abort.current = ctl;
     try {
       // 历史只带文字说明；当前版本代码随本轮要求一起发，省 token 也避免模型改旧版
-      const prior: ChatMsg[] = st.turns.slice(-8).map((x) => ({ role: x.role, content: x.role === "assistant" ? `${x.text}${x.ver ? `（已生成第 ${x.ver} 版）` : ""}` : x.text }));
+      const prior: PlatformWorldGenChatMsg[] = st.turns.slice(-8).map((x) => ({ role: x.role, content: x.role === "assistant" ? `${x.text}${x.ver ? `（已生成第 ${x.ver} 版）` : ""}` : x.text }));
       const ask = page ? `当前开场页代码如下。在此基础上按要求修改，没提到的部分保持不变，输出完整文档：\n\`\`\`html\n${page}\n\`\`\`\n\n修改要求：${t}` : `请设计开场页：${t}`;
-      const full = await streamChat({ ...c, model, temperature: 0.7 }, [{ role: "system", content: SYS(modName, value) }, ...prior, { role: "user", content: ask }], (_d, f) => setChars(f.length), ctl.signal);
+      const messages: PlatformWorldGenChatMsg[] = [{ role: "system", content: SYS(modName, value) }, ...prior, { role: "user", content: ask }];
+      const completed = await completeViaPlatform(messages, {
+        moduleId: "opening-style",
+        max_tokens: OPENING_STYLE_MAX_TOKENS,
+        signal: ctl.signal,
+      });
+      const full = completed.text;
+      setChars(full.length);
       const html = extractHtml(full);
       const note = full.replace(/```[\s\S]*?(```|$)/g, "").replace(/<!doctype[\s\S]*$/i, "").trim().slice(0, 240);
       if (html) {
@@ -109,7 +114,7 @@ export default function OpeningStyleStudio({ value, onPage, modId, modName }: {
         setSt((s) => ({ ...s, turns: [...hist, { role: "assistant", text: note || "已生成新版本。", ver }] }));
       } else {
         setSt((s) => ({ ...s, turns: [...hist, { role: "assistant", text: note || "这次没拿到完整的 HTML。", failed: true }] }));
-        setErr("没解析到完整的 HTML 文档：可能输出被截断。可以说「请重新输出完整代码」，或在 AI 配置里换输出更长的模型。");
+        setErr("没解析到完整的 HTML 文档：可能输出被截断。可以说「请重新输出完整代码」。");
       }
     } catch (e) {
       if (ctl.signal.aborted) setSt((s) => ({ ...s, turns: [...hist, { role: "assistant", text: "已停止生成。", failed: true }] }));
@@ -135,32 +140,16 @@ export default function OpeningStyleStudio({ value, onPage, modId, modName }: {
   const status = busy ? `生成中 · ${chars ? `${(chars / 1000).toFixed(1)}k 字符` : "等待模型"}` : curIdx >= 0 ? `v${curIdx + 1} · 生效中` : page ? "自定义 · 生效中" : "未生成";
 
   const [view, setView] = useState<GenView>("preview");
-  const tierPicker = (
-    <div className="flex min-w-0 items-center gap-1.5">
-      <div className="flex shrink-0 rounded-full bg-paper p-0.5 ring-1 ring-line" role="radiogroup" aria-label="模型档位">
-        {([["std", "标准"], ["up", "升级"]] as const).map(([k, l]) => (
-          <button key={k} type="button" role="radio" aria-checked={tier === k} disabled={k === "up" && !upgrade}
-            title={k === "up" ? (upgrade ? `使用 ${upgrade}` : "在「AI 配置」里拉取模型列表后，可选一个更强的模型做升级档") : `使用 ${cfg.model || "当前模型"}`}
-            onClick={() => setSt((s) => ({ ...s, tier: k }))}
-            className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold transition disabled:opacity-40 ${tier === k ? "bg-ink text-paper" : "text-ink-soft hover:text-ink"}`}>{l}</button>
-        ))}
-      </div>
-      {tier === "up" && others.length > 1 ? (
-        <select value={upgrade} onChange={(e) => setSt((s) => ({ ...s, upgrade: e.target.value }))} aria-label="升级档模型"
-          className="max-w-36 rounded-full border border-line bg-paper px-2 py-0.5 text-[11px] text-ink focus:border-jade focus:outline-none">
-          {others.map((m) => <option key={m} value={m}>{m}</option>)}
-        </select>
-      ) : <span className="min-w-0 truncate text-[10.5px] text-ink-soft">{model || "未配置模型"}</span>}
-    </div>
-  );
 
+  // 功能注释：直接排在「开场剧情」下，不再套一层圆角卡片大框
   return (
-    <div className="space-y-3 rounded-2xl border border-line bg-paper/50 p-3">
+    <div className="space-y-3">
       <div>
         <div className="flex flex-wrap items-center gap-2">
           <h4 className="text-[13.5px] font-black text-ink">自定义开场页样式</h4>
-          <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10.5px] font-semibold text-gold">使用你接入的模型 · 按接口计费</span>
-          <span className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${page ? "bg-jade/12 text-jade" : "bg-paper text-ink-soft ring-1 ring-line"}`}>{status}</span>
+          <AiModelBillingBadge mode="platform" />
+          {/* 功能注释：禁止 span.rounded-full.bg-paper——world-gen 开关规则会刷成近白底，暗色壳里字看不清 */}
+          <span className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ring-1 ${page ? "bg-jade/15 text-coral ring-jade/35" : "bg-ink/10 text-ink-soft ring-line"}`}>{status}</span>
         </div>
         <p className="mt-1 text-[11.5px] leading-relaxed text-ink-soft">
           在「AI 对话」里描述版式与氛围、连续微调，到「实时预览」看效果和切换版本。要用真实图片 / 视频时先打开
@@ -185,9 +174,9 @@ export default function OpeningStyleStudio({ value, onPage, modId, modName }: {
             )}
           </div>
           <ChatThread className="h-[min(56dvh,34rem)]" tick={`${st.turns.length}:${busy}:${chars > 0}`}
-            empty={!st.turns.length && !busy ? (ai
+            empty={!st.turns.length && !busy ? (loggedIn
               ? <Suggestions title="想要什么样的开场页？" hint="点一个风格起步，或直接描述版式、配色、字体与正文出现的方式。" items={PRESETS} onPick={(d) => setInput(page ? `整体改成${d}` : d)} />
-              : <p className="px-1 py-6 text-center text-[12px] text-ink-soft">需要先在菜单「AI 配置」里接入模型；也可以到「实时预览」里直接粘贴 HTML。</p>) : undefined}>
+              : <p className="px-1 py-6 text-center text-[12px] text-ink-soft">请先登录平台账号（使用运营后台「文案配置」模型）；也可以到「实时预览」里直接粘贴 HTML。</p>) : undefined}>
             {st.turns.map((x, i) => x.role === "user" ? <UserMsg key={i} text={x.text} /> : (
               <AssistantMsg key={i} text={x.text} failed={x.failed}>
                 {x.ver && (
@@ -201,13 +190,13 @@ export default function OpeningStyleStudio({ value, onPage, modId, modName }: {
             {busy && <WorkLine running label={chars ? `正在排版 · ${(chars / 1000).toFixed(1)}k 字符` : "正在思考"} start={started} />}
           </ChatThread>
           {err && <p role="alert" className="rounded-[var(--radius-ui-sm)] border border-danger/25 bg-danger/5 px-3 py-2 text-xs leading-relaxed text-danger">{err}</p>}
-          <Composer value={input} onChange={setInput} onSend={() => void send(input)} onStop={() => abort.current?.abort()} busy={busy} disabled={!ai}
+          <Composer value={input} onChange={setInput} onSend={() => void send(input)} onStop={() => abort.current?.abort()} busy={busy} disabled={!loggedIn}
             placeholder={page ? "继续微调：如「标题再大一点」「正文改成竖排」「按钮换成朱砂印章」…" : "描述开场页风格；生成后可多轮连续微调…"}
             tools={<>
               <PlusMenu title="快捷风格" items={PRESETS.map(([l, d]) => [l, page ? `整体改成${d}` : d] as [string, string])} onPick={setInput} disabled={busy} />
-              {tierPicker}
+              <span className="min-w-0 truncate text-[10.5px] text-ink-soft" title="与管理面板「文案配置」同一套模型">平台文案模型</span>
             </>} />
-          <p className="px-1 text-[10.5px] text-ink-soft/80">Enter 发送 · Shift + Enter 换行 · 对话与历史版本只存在本机</p>
+          <p className="px-1 text-[10.5px] text-ink-soft/80">Enter 发送 · Shift + Enter 换行 · 对话与历史版本只存在本机 · 模型走平台文案配置</p>
         </div>
       ) : (
         /* —— 预览：只看效果 + 版本管理 —— */

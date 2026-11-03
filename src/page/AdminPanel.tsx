@@ -31,11 +31,11 @@ import CreatorIncentiveAdminManager from '../components/CreatorIncentiveAdminMan
 import ShareRatioAdminManager from '../components/ShareRatioAdminManager';
 import AdminUsersManager from '../components/AdminUsersManager';
 import DailyTasksAdminManager from '../components/DailyTasksAdminManager';
-import CommentAdminManager from '../components/Admin/CommentAdminManager.tsx';
+import CommentAdminManager from '../components/admin/CommentAdminManager.tsx';
 import WithdrawAdminManager from '../components/WithdrawAdminManager';
 import LotteryAdminManager from '../components/LotteryAdminManager';
-import AdminPublicAvatarManager from '../components/Admin/AdminPublicAvatarManager';
-import AdminPlayModManager from '../components/Admin/AdminPlayModManager';
+import AdminPublicAvatarManager from '../components/admin/AdminPublicAvatarManager';
+import AdminPlayModManager from '../components/admin/AdminPlayModManager';
 import ModelConfigHub from '../components/ModelConfigHub';
 import announcementApi from '../api/announcement/announcementApi';
 import documentApi from '../api/document/documentApi';
@@ -1262,23 +1262,38 @@ const AdminPanel: React.FC = () => {
     };
 
     const handleDeleteThemeTag = async (tag: AdminGameTagRecord) => {
-        const blockedReason = tag.child_count > 0
-            ? '该题材下还有子题材，不能删除'
-            : tag.game_count > 0
-                ? '该题材下已有作品，不能删除'
-                : '';
-        if (blockedReason) {
-            toast.error(blockedReason);
+        if (tag.child_count > 0) {
+            toast.error('该题材下还有子题材，不能删除或停用');
             return;
         }
-        if (!window.confirm(`确认删除题材「${tag.name}」吗？`)) return;
+        // 功能注释：有作品时改为停用（不连带下架）；无作品可硬删
+        const hasGames = Number(tag.game_count) > 0;
+        const ok = window.confirm(
+            hasGames
+                ? `确认停用题材「${tag.name}」吗？已上架/待审作品会保持原题材，不会自动下架；新作与未提交草稿不能再选它。`
+                : `确认删除题材「${tag.name}」吗？`,
+        );
+        if (!ok) return;
         try {
             setIsSavingThemes(true);
-            await gameTagsApi.deleteAdminGameTag(Number(tag.id));
+            const resp = await gameTagsApi.deleteAdminGameTag(Number(tag.id));
             await loadThemeAdminData(themeKeyword);
-            toast.success('题材删除成功');
+            toast.success(String((resp as { data?: { message?: string } })?.data?.message || (hasGames ? '题材已停用' : '题材删除成功')));
         } catch (error) {
-            toast.error(extractErrorMessage(error, '题材删除失败'));
+            toast.error(extractErrorMessage(error, hasGames ? '题材停用失败' : '题材删除失败'));
+        } finally {
+            setIsSavingThemes(false);
+        }
+    };
+
+    const handleEnableThemeTag = async (tag: AdminGameTagRecord) => {
+        try {
+            setIsSavingThemes(true);
+            await gameTagsApi.updateAdminGameTag({ id: Number(tag.id), isEnabled: true });
+            await loadThemeAdminData(themeKeyword);
+            toast.success('题材已重新启用');
+        } catch (error) {
+            toast.error(extractErrorMessage(error, '题材启用失败'));
         } finally {
             setIsSavingThemes(false);
         }
@@ -1890,19 +1905,23 @@ const AdminPanel: React.FC = () => {
                                         {isLoadingThemes ? <div className={styles.emptyState}>题材列表加载中...</div> : null}
                                         {!isLoadingThemes && themeTags.length === 0 ? <div className={styles.emptyState}>暂无题材数据。</div> : null}
                                         {!isLoadingThemes && pagedThemeTags.map((tag) => {
-                                            const deleteDisabled = tag.game_count > 0 || tag.child_count > 0;
+                                            const enabled = Number(tag.is_enabled) !== 0;
+                                            const deleteDisabled = tag.child_count > 0;
                                             return (
                                                 <article key={tag.id} className={`${styles.themeCard} ${styles.themeCardCompact}`}>
                                                     <div className={styles.themeCardMain}>
                                                         <div className={styles.themeCardInfo}>
-                                                            <div className={styles.themeCardTitle}>{tag.name}</div>
+                                                            <div className={styles.themeCardTitle}>
+                                                                {tag.name}
+                                                                {!enabled ? <span className={styles.statusDraft}> 已停用</span> : null}
+                                                            </div>
                                                             <div className={styles.themeCardMeta}>编码：{tag.code || '-'}</div>
                                                         </div>
                                                         <button
                                                             type="button"
                                                             className={featuredThemeIdSet.has(Number(tag.id)) ? styles.primaryButton : styles.secondaryButton}
                                                             onClick={() => handleToggleFeaturedTag(tag)}
-                                                            disabled={tag.child_count > 0}
+                                                            disabled={!enabled || tag.child_count > 0}
                                                         >
                                                             {featuredThemeIdSet.has(Number(tag.id)) ? '已设为热门' : '加入热门'}
                                                         </button>
@@ -1910,16 +1929,28 @@ const AdminPanel: React.FC = () => {
                                                     <div className={styles.themeStats}>
                                                         <span>排序：{tag.sort_order}</span>
                                                         <span>作品数：{tag.game_count}</span>
+                                                        <span>{enabled ? '启用中' : '已停用'}</span>
                                                     </div>
                                                     <div className={styles.themeActions}>
-                                                        <button
-                                                            type="button"
-                                                            className={styles.dangerButton}
-                                                            onClick={() => void handleDeleteThemeTag(tag)}
-                                                            disabled={deleteDisabled || isSavingThemes}
-                                                        >
-                                                            删除
-                                                        </button>
+                                                        {enabled ? (
+                                                            <button
+                                                                type="button"
+                                                                className={styles.dangerButton}
+                                                                onClick={() => void handleDeleteThemeTag(tag)}
+                                                                disabled={deleteDisabled || isSavingThemes}
+                                                            >
+                                                                {Number(tag.game_count) > 0 ? '停用' : '删除'}
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                type="button"
+                                                                className={styles.primaryButton}
+                                                                onClick={() => void handleEnableThemeTag(tag)}
+                                                                disabled={isSavingThemes}
+                                                            >
+                                                                重新启用
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </article>
                                             );

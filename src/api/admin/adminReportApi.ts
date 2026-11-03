@@ -178,6 +178,8 @@ export type AdminPublishQueueItem = {
   shareType?: string | null;
   gameTags?: string | null;
   moderationStatus?: string | null;
+  reviewKind?: 'new' | 'update' | string | null;
+  publishedVersion?: number;
   submittedAt?: string | null;
   updatedAt?: string | null;
   createdAt?: string | null;

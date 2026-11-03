@@ -155,8 +155,8 @@ export type OpeningCopy = {
   page?: string; // 自定义开场页（完整 HTML，沙箱全屏运行；数据经 opening 事件注入，见 lib/openingPage.ts）
 };
 
-/* 开局封面：留空项沿用默认封面 */
-/* 封面背景 CG：固定一张 / 多张轮播 / 视频。世界封面与玩家封面 DIY 共用 */
+/* 作品展示封面：列表 / 详情 / 书架用；开局游戏菜单不再套用此图 */
+/* 封面背景 CG：固定一张 / 多张轮播 / 视频。作品展示与玩家装扮 DIY 共用背景字段 */
 export type CoverCgOpts = {
   cgMode?: "fixed" | "carousel" | "video"; // 缺省：填了视频 = 视频，否则固定 CG
   cgs?: string[]; // 轮播 CG（按顺序播放）
@@ -166,17 +166,20 @@ export type CoverCgOpts = {
   cgHideDots?: boolean; // 隐藏底部页码点
 };
 export type CoverCopy = CoverCgOpts & {
-  kicker?: string; // 标题上方小字
+  kicker?: string; // 标题上方小字（玩家 DIY 仍可用；作者作品封面编辑器不再配）
   title?: string;
   subtitle?: string;
   intro?: string; // 简介段
   image?: string; // 背景图
   video?: string; // 背景视频（静音循环，优先于背景图）
   dim?: number; // 背景压暗 0–80（%），缺省 40
-  mode?: "default" | "media" | "html"; // 封面模式：默认 / 自定义图片视频 / 自定义 HTML；缺省按是否填了图片视频推断
-  html?: string; // 自定义 HTML 封面（沙箱 iframe 全屏渲染）
-  htmlUI?: boolean; // HTML 封面上是否叠加内置按钮，缺省 true
-  style?: import("../lib/store").CoverDiy; // 作者样式层（字体 / 配色 / 版式 / 按钮 / 特效 / 封面 CSS）：所有玩家默认看到，玩家「装扮封面」叠在上面
+  /** @deprecated 作者作品封面已取消自定义 HTML；旧稿残留忽略 */
+  mode?: "default" | "media" | "html";
+  /** @deprecated 作者作品封面已取消自定义 HTML；旧稿残留忽略 */
+  html?: string;
+  /** @deprecated 作者作品封面已取消自定义 HTML；旧稿残留忽略 */
+  htmlUI?: boolean;
+  style?: import("../lib/store").CoverDiy; // 旧作者样式层；玩家「装扮封面」仍可叠 DIY
 };
 
 /* 周报文案 */
@@ -193,10 +196,15 @@ export type ContentSlots = {
   sideJobs?: SideJob[];
   zodiacs?: Zodiac[];
   startMoney?: number;
+  /** 功能注释：开局资金货币名称（元 / 灵石 / 星币…）；开局页与局内文案共用，创作者必填 */
+  moneyLabel?: string;
   startDate?: string; // 「2005.01.03」（可为一周中任意一天；第 1 周从该日所在周的周一算起）
-  startTime?: string; // 开局时刻「HH:MM」（缺省 = 每日起始时刻）
-  dayStart?: string; // 每天几点开始「HH:MM」（缺省 08:00）
-  dayEnd?: string; // 几点算一天结束「HH:MM」，可写 24:00 以后表示次日凌晨（缺省 23:00）
+  /** @deprecated 已下线：不再配置开局时刻；旧稿残留忽略 */
+  startTime?: string;
+  /** @deprecated 已下线：不再配置每天几点开始；旧稿残留忽略 */
+  dayStart?: string;
+  /** @deprecated 已下线：不再配置几点算一天结束；旧稿残留忽略 */
+  dayEnd?: string;
   weather?: string;
   map?: MapVisuals;
   encounters?: Encounter[];
@@ -211,7 +219,7 @@ export type ContentSlots = {
   industry?: IndustryContent;
   help?: HelpContent;
   opening?: OpeningCopy;
-  cover?: CoverCopy; // 开局封面
+  cover?: CoverCopy; // 作品展示封面（列表/详情/书架；开局菜单不用）
   customAttrs?: AttrDef[]; // 自定义角色属性（含分档）
   weeklyPaper?: WeeklyPaperCopy;
   eventGroups?: LibraryGroup[]; // 事件编辑器「事件库」分组；缺省=由 events 自动归为一组
@@ -223,9 +231,9 @@ export type ContentSlots = {
   school?: string; // 母校
   parentJobs?: string[]; // 父母职业池
   creation?: CreationCopy; // 建角页文案 / 路径卡片 / 叙事下拉池
-  // —— 详细设定 / 扩展设定（按需发给 AI，节省 token） ——
-  lore?: import("../lib/types").LoreRegion[]; // 地区 → 势力 → 角色
-  festivals?: import("../lib/types").Festival[]; // 节日
+  // —— 旧详细设定 / 节日（已并入 worldBook；读档时 fold，新编辑勿再写） ——
+  lore?: import("../lib/types").LoreRegion[];
+  festivals?: import("../lib/types").Festival[];
   // —— 养成系统 ——
   weekendActs?: WeekendAct[]; // 周末活动（缺省=自由活动 / 彻底休整）
   fameTiers?: FameTier[]; // 名气分档（缺省=通用分档）
@@ -238,12 +246,12 @@ export type ContentSlots = {
   gigPrices?: GigPriceTable; // 通告库价目表（按星级 1~5）
   allowance?: import("../game/npcKnowledge").AllowanceSlot;
   avatars?: import("../lib/types").AvatarSlot; // 头像库：池开关 + 本剧匹配优先级（私人/公共优先 · 通用兜底）；随模组导入导出
-  play?: import("../lib/types").PlaySlot; // 开局游玩偏好（模式 / 叙事视角）· 年龄随日历 · 建角自选开局日期
-  contacts?: import("../game/contacts").ContactsSlot; // 人脉页面配置：分组 · 卡片双数值 · 关系阶段词 · 所属组织
+  play?: import("../lib/types").PlaySlot; // 开局游玩偏好（模式 / 叙事视角）· 年龄随日历
+  contacts?: import("../game/contacts").ContactsSlot; // 关系档位 + 卡片数值（嵌人物上方；数值条数不限、可隐藏）
   tuning?: import("../game/data").TuningSlot; // 引擎规则：评级概率 / 倍率、休息减压、课程与打工倍率、通用课程等级 // 父母生活费（家境档位 → 金额 / 协商率；未声明=关闭）
 };
 export const SLOT_KEYS = [
-  "stats", "customAttrs", "trainings", "sideJobs", "zodiacs", "startMoney", "startDate", "startTime", "dayStart", "dayEnd", "weather", "map",
+  "stats", "customAttrs", "trainings", "sideJobs", "zodiacs", "startMoney", "moneyLabel", "startDate", "startTime", "dayStart", "dayEnd", "weather", "map",
   "encounters", "sideQuests", "sideQuestCast", "relations", "calendar", "travel", "contracts", "projects",
   "imageCrisis", "industry", "help", "opening", "cover", "weeklyPaper", "eventGroups",
   "styles", "identities", "backgrounds", "directions", "school", "parentJobs", "creation", "lore", "festivals",
@@ -256,8 +264,10 @@ export type ModContent = ContentSlots & {
   startRoom?: string;
   locations?: MapLocation[]; // 地点名录（地图标签 / 功能说明）；缺省由 rooms[].name 推导
   startMet?: string[]; // 开局即已结识的 NPC id
-  familyWx?: boolean; // 父母开局是否已在微信里（缺省 = 是）
-  familyVoices?: { father?: string; mother?: string }; // 父母专属音色
+  /** @deprecated 父母不再开局特例；开局认识/联系人请用人物 metStart / wxStart */
+  familyWx?: boolean;
+  /** @deprecated 父母专属音色已废；请在人物上配 ttsVoice */
+  familyVoices?: { father?: string; mother?: string };
   npcs?: PersonContent[]; // NPC 模板
   items?: RoomItem[]; // 独立物品（房间内物品写在 rooms[].items）
   gigs?: Gig[]; // 通告 / 工作
@@ -269,7 +279,8 @@ export type ModContent = ContentSlots & {
   worldBook?: WorldBookEntry[];
   income?: IncomeRule[]; // 周期收入规则
   gameRules?: GameRule[]; // 玩法规则：如果…否则如果…否则，每天结束 / 每周结算时判定
-  storylines?: Storyline[]; // 主线与目标：有序节点，每天结束判定完成 / 失败
+  storylines?: Storyline[]; // 剧情线 · 主线：有序节点，每天结束判定完成 / 失败
+  sidelines?: import("../lib/types").Sideline[]; // 剧情线 · 支线：额外任务，成败不影响主线
   lookRules?: LookRule[]; // 剧情美化：满足条件时临时改变外观（压力爆表变灰、深夜转深色…）
   /** 本作品已安装的玩法 Mod（按游戏独立；开放配置项可调，底层规则只读引用目录版本） */
   playModInstalls?: import("./playModCatalog").PlayModInstallConfig[];
@@ -284,7 +295,11 @@ export type ModContent = ContentSlots & {
   navSize?: 4 | 6 | 8;
   /** 手机各应用：名称 / 图标 / 顺序 / 开局预装（旧 locked/hidden/disabled 读取时归一为商店可下） */
   phoneAppsCfg?: PhoneAppDef[];
+  /** 作品默认手机桌面背景（图片 data URL 或 background CSS）；玩家设置里换过则用玩家的 */
+  phoneHomeWallpaper?: string;
   features?: FeatureFlags;
+  /** 养成页模块勾选：课程 / 打工 / 账单 / 玩法规则；没勾不显示也不套用娱乐圈默认（分档在建角属性，头衔在玩法 Mod） */
+  growModules?: import("../game/growModules").GrowModulesFlag;
   bgm?: ModTrack[]; // 内嵌 / 本机 / 链接。启用时并入音频库，关闭或卸载后消失
   audio?: import("../lib/types").AudioAsset[]; // 方式 A：MOD 自带音频，启用时并入全局音频库，关闭 / 卸载即移除
   audioRefs?: string[]; // 作品音频库引用：只记 id，不打包文件（体检时校验是否存在）
@@ -308,19 +323,18 @@ export type ResolvedWorld = {
   worldId: string;
   addonIds: string[];
   chain: Mod[]; // 合并顺序：world → addons
-  content: Required<Pick<ModContent, "rooms" | "npcs" | "items" | "gigs" | "events" | "fixedEvents" | "endings" | "worldBook" | "worldRules" | "income" | "gameRules" | "storylines" | "lookRules">> & {
+  content: Required<Pick<ModContent, "rooms" | "npcs" | "items" | "gigs" | "events" | "fixedEvents" | "endings" | "worldBook" | "worldRules" | "income" | "gameRules" | "storylines" | "sidelines" | "lookRules">> & {
     startRoom?: string;
     timeLimit?: import("../lib/types").TimeLimit;
     gradeDims?: import("../lib/types").GradeDim[];
     locations: MapLocation[];
     startMet?: string[];
-    familyWx?: boolean;
-    familyVoices?: { father?: string; mother?: string };
     prompt: PromptFragments;
     terms: Terminology;
     navTabs?: { id: string; label?: string; on?: boolean }[];
     navSize?: 4 | 6 | 8;
     phoneAppsCfg?: PhoneAppDef[];
+    phoneHomeWallpaper?: string;
     features: FeatureFlags;
     theme: ModTheme;
   };

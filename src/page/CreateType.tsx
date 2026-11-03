@@ -25,6 +25,11 @@ import { authFetch } from '../api/base';
 import { auth } from '../api/account/authApi';
 import { getApiErrorMessage } from '../utils/error';
 import { isCreatorFrozen, isPublishBanned } from '../lib/userPunishment';
+import creatorDraftApi from '../api/creator/creatorDraftApi';
+import {
+  CREATOR_DRAFT_LIMIT,
+  formatDraftLimitReachedMessage,
+} from '../utils/creatorDraftCapacity';
 import {
   getMiniProgramCreatorBlockedMessage,
   isMiniProgramCreatorTypeSupported,
@@ -98,6 +103,8 @@ const CreateType: React.FC = () => {
   const [isIvgToolModalOpen, setIsIvgToolModalOpen] = useState(false);
   const [isMobileTipModalOpen, setIsMobileTipModalOpen] = useState(false);
   const [mobileTipMessage, setMobileTipMessage] = useState('');
+  const [draftLimitReached, setDraftLimitReached] = useState(false);
+  const [draftCapacityLabel, setDraftCapacityLabel] = useState('');
 
   useEffect(() => {
     void auth.getUserInfo().then((response) => {
@@ -109,12 +116,38 @@ const CreateType: React.FC = () => {
     });
   }, [updateUser]);
 
+  useEffect(() => {
+    let cancelled = false;
+    void creatorDraftApi.getCapacity().then((response) => {
+      const capacity = response.data.data;
+      if (cancelled || !capacity) return;
+      const fullMsg = formatDraftLimitReachedMessage(capacity.count, capacity.limit);
+      setDraftCapacityLabel(fullMsg);
+      if (capacity.canCreate) return;
+      setDraftLimitReached(true);
+      // 功能注释：带上 count/limit，避免用户只看到首屏两张草稿卡就以为系统误报
+      toast.error(fullMsg);
+      navigate('/bookshelf?tab=drafts', { replace: true });
+    }).catch(() => {
+      /* 服务端创建接口仍会执行硬性上限校验 */
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
+
   const openMiniProgramTypeTip = (type: Extract<CreatorGameType, 'avg' | 'custom' | 'st' | 'ivg'>) => {
     setMobileTipMessage(getMiniProgramCreatorBlockedMessage(type));
     setIsMobileTipModalOpen(true);
   };
 
   const handleSelectGameType = async (type: CreatorGameType) => {
+    if (draftLimitReached) {
+      toast.error(
+        draftCapacityLabel || formatDraftLimitReachedMessage(CREATOR_DRAFT_LIMIT, CREATOR_DRAFT_LIMIT),
+      );
+      return;
+    }
     if (creatorFrozen) {
       toast.error(t('report.creatorFrozenHint'));
       return;
@@ -140,21 +173,27 @@ const CreateType: React.FC = () => {
     } else if (type === 'custom') {
       clearState();
       navigate('/customif/create');
-    } else if (type === 'st') {
-      clearState();
-      navigate('/st/create');
-    } else if (type === 'avg') {
+    } else if (type === 'st' || type === 'avg') {
+      // 功能注释：进编辑器前只 create-empty 一次并带上 appId；后续保存只更新，禁止每次保存再 create
       clearState();
       try {
         const resp = await authFetch(`${HOST_ADDRESS}/api/custom/apps/create-empty`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: t('create.defaultAvgGameTitle'), engine: 'AVG' }),
+          body: JSON.stringify({
+            title: t('create.defaultAvgGameTitle'),
+            engine: type === 'avg' ? 'AVG' : 'ST',
+          }),
         });
         const data = await resp.json();
         const appId = data?.appId || data?.data?.appId;
         if (!resp.ok || !appId) {
           throw new Error(data?.message || t('create.createAvgFailed'));
+        }
+        try {
+          localStorage.setItem('st_draft_appId', String(appId));
+        } catch {
+          /* ignore */
         }
         navigate(`/st/create?appId=${encodeURIComponent(appId)}`);
       } catch (error: unknown) {
@@ -222,9 +261,21 @@ const CreateType: React.FC = () => {
               hint={t('createGame.romanceHint')}
               icon={MdOutlineAutoAwesome}
               thumbClass={styles.createTypeOptionThumbRomance}
+              disabled={createBlocked || draftLimitReached}
               onClick={() => {
-                clearAll();
-                navigate('/romance/?createWorld=1');
+                void (async () => {
+                  clearAll();
+                  try {
+                    const response = await creatorDraftApi.createRomance();
+                    const fileId = response.data.data?.fileId;
+                    if (!response.data.success || !fileId) {
+                      throw new Error(response.data.message || '创建草稿失败');
+                    }
+                    navigate(`/romance/?createWorld=1&draftId=${encodeURIComponent(fileId)}`);
+                  } catch (error: unknown) {
+                    toast.error(getApiErrorMessage(error, '创建草稿失败'));
+                  }
+                })();
               }}
             />
             <TypeOptionRow

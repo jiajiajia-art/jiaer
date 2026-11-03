@@ -152,7 +152,7 @@ export default function NavTabsModEditor({ terms, features, navTabs, navSize, on
   return (
     <div className="space-y-3">
       <p className="text-[11.5px] leading-relaxed text-ink-soft">
-        上方实时预览与玩家底栏同宽、同字体、同线性图标与选中态；改名 / 排序 / 显隐即时同步。此处只预览布局，完整试玩请用编辑器顶部「预览」。
+        上方实时预览与玩家底栏同宽、同字体、同线性图标与选中态；改名 / 排序 / 显隐即时同步。档案与支线是本体入口，不在此列表。此处只预览布局，完整试玩请用编辑器顶部「预览」。
       </p>
 
       {/* —— 顶部：与局内 MudChrome 同结构的底栏预览 —— */}

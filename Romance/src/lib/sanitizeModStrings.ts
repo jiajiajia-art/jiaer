@@ -8,7 +8,7 @@ const STRING_FIELD_KEYS = new Set([
   "id", "name", "label", "title", "desc", "bio", "role", "gender", "relation",
   "content", "brief", "detail", "src", "prompt", "memory", "event", "note",
   "subject", "body", "text", "hint", "icon", "version", "author", "description",
-  "startDate", "startTime", "dayStart", "dayEnd", "startRoom", "weather", "platformAutoplay",
+  "startDate", "startRoom", "weather", "platformAutoplay", "phoneHomeWallpaper",
   "pickTitle", "currency", "freeLabel", "perksLabel", "unlockHint", "group",
   "replyPrompt", "badge", "city", "placeholder", "tag", "blurb", "about",
   "genre", "type", "avatarVariant", "html", "page", "image", "video",
@@ -31,7 +31,7 @@ function coerceStringMap(raw: unknown): Record<string, string> | undefined {
 /** 功能注释：编辑器对列表做 (x ?? []).map；AI 常写成 {apps:[]} 或单条对象，必须收成数组否则整页崩 */
 const ARRAY_FIELD_KEYS = new Set([
   "npcs", "items", "gigs", "events", "fixedEvents", "endings", "gradeDims",
-  "worldBook", "income", "gameRules", "storylines", "lookRules", "playModInstalls",
+  "worldBook", "income", "gameRules", "storylines", "sidelines", "lookRules", "playModInstalls",
   "worldRules", "navTabs", "phoneAppsCfg", "bgm", "audio", "audioRefs", "platformAudioRefs", "musicOrder", "cgs",
   "factions", "locations", "styles", "identities", "backgrounds", "directions",
   "zodiacs", "parentJobs", "identityOpts", "backgroundOpts", "klassOpts", "trainings", "sideJobs", "bills", "customAttrs",
@@ -135,6 +135,17 @@ function deepCoerceContent(value: unknown, keyHint = ""): unknown {
       });
       continue;
     }
+    // 功能注释：主线缺 nodes 时 questOpts / 剧情页会 reading 'map'；对象单条也收成数组
+    if (k === "storylines") {
+      out[k] = coerceArray(v).map((row) => {
+        const item = deepCoerceContent(row);
+        if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+        const line = item as Record<string, unknown>;
+        line.nodes = coerceArray(line.nodes).map((n) => deepCoerceContent(n));
+        return line;
+      });
+      continue;
+    }
     // 功能注释：母校是一段文字；AI 常写成选项对象数组，输入框会显示 [object Object]
     if (k === "school") {
       const parts = (Array.isArray(v) ? v : [v]).map((item) => asTrimmedString(item)).filter(Boolean);
@@ -177,6 +188,8 @@ function deepCoerceContent(value: unknown, keyHint = ""): unknown {
         out[k] = v.map((item) => (item && typeof item === "object" ? deepCoerceContent(item) : item));
         continue;
       }
+      // 功能注释：封面/DIY 的 css 必须是字符串；对象若走 asTrimmedString 单字段兜底会洗成 "red"/"true"，预览 .trim 虽不炸但样式错乱
+      if (k === "css" && v != null && typeof v === "object") continue;
       if (k === "id" || k === "name" || k === "label" || k === "title") {
         out[k] = asTrimmedString(v, typeof v === "number" || typeof v === "boolean" ? String(v) : "");
       } else {
@@ -190,6 +203,20 @@ function deepCoerceContent(value: unknown, keyHint = ""): unknown {
     out[k] = deepCoerceContent(v, k);
   }
   return out;
+}
+
+/**
+ * 功能注释：进入此地场景描述必填；AI / 地点库 / 清洗后若仍空，用地点名补一句，避免编辑器交白卷。
+ */
+export function ensureRoomSceneDescs(rooms: ModContent["rooms"] | Record<string, unknown> | undefined): void {
+  if (!rooms || typeof rooms !== "object") return;
+  for (const [id, room] of Object.entries(rooms)) {
+    if (!room || typeof room !== "object") continue;
+    const r = room as { name?: string; desc?: string };
+    if (String(r.desc ?? "").trim()) continue;
+    const name = String(r.name ?? "").trim() || id;
+    r.desc = `你来到了「${name}」。`;
+  }
 }
 
 /**
@@ -214,12 +241,10 @@ export function healModRoomRefs(content: ModContent): string[] {
     }
     return fixes;
   }
-  const prefer = ["apartment", "start", "home", "dorm", "inn"];
-  const fallback = prefer.find((id) => id in rooms) ?? ids[0]!;
   const cur = typeof content.startRoom === "string" ? content.startRoom.trim() : "";
-  if (!cur || !(cur in rooms)) {
-    if (cur) fixes.push(`开局地点「${cur}」不在地点表，已改为「${fallback}」`);
-    content.startRoom = fallback;
+  if (cur && !(cur in rooms)) {
+    fixes.push(`已清除无效开局地点「${cur}」（不在地点表）`);
+    delete content.startRoom;
   }
   if (Array.isArray(content.npcs)) {
     for (const n of content.npcs) {
@@ -227,8 +252,8 @@ export function healModRoomRefs(content: ModContent): string[] {
       const home = typeof n.home === "string" ? n.home.trim() : "";
       if (home && !(home in rooms)) {
         const label = (typeof n.name === "string" && n.name.trim()) || n.id || "?";
-        fixes.push(`人物「${label}」的 home「${home}」不在地点表，已改为「${content.startRoom}」`);
-        n.home = content.startRoom;
+        fixes.push(`已清除人物「${label}」的无效 home「${home}」`);
+        delete (n as { home?: string }).home;
       }
     }
   }
@@ -252,7 +277,7 @@ export function sanitizeModStrings(mod: Mod): Mod {
 
   if (m.content && typeof m.content === "object") {
     m.content = deepCoerceContent(m.content) as ModContent;
-    // 功能注释：房间 name 空时回落 id，保证地点树可渲染
+    // 功能注释：房间 name 空时回落 id；desc 必填，空则按地名补一句
     const rooms = m.content.rooms;
     if (rooms && typeof rooms === "object") {
       for (const [id, room] of Object.entries(rooms)) {
@@ -261,17 +286,24 @@ export function sanitizeModStrings(mod: Mod): Mod {
         if (!r.name) r.name = id;
         if (typeof r.desc !== "string") r.desc = "";
       }
+      ensureRoomSceneDescs(rooms);
     }
-    // 功能注释：纠偏悬空 startRoom / NPC.home，避免预览被「不在 rooms 中」拦住
+    // 功能注释：只清除悬空引用，不替作者猜开局地点；预览/发布必须由作者显式勾选。
     healModRoomRefs(m.content);
-    // 功能注释：底栏项 label 被洗成空时回落 id，避免编辑器再对脏 label 做假定
+    // 功能注释：剔除档案/支线底栏项（本体入口）；label 被洗成空时回落 id
     const tabs = m.content.navTabs;
     if (Array.isArray(tabs)) {
-      for (const row of tabs) {
+      m.content.navTabs = tabs.filter((row) => {
+        if (!row || typeof row !== "object") return false;
+        const id = String((row as { id?: string }).id ?? "");
+        return id !== "sim" && id !== "quest";
+      });
+      for (const row of m.content.navTabs) {
         if (!row || typeof row !== "object") continue;
         const t = row as { id?: string; label?: string };
         if (!String(t.label ?? "").trim() && t.id) t.label = String(t.id);
       }
+      if (!m.content.navTabs.length) delete m.content.navTabs;
     }
   }
 

@@ -46,4 +46,8 @@ export const entPacks: Mod[] = [
     get meals() { return RAW_MEALS; },
     get bills() { return ENT_BILLS; },
   }),
+  /* 功能注释：头衔玩法包——目录只声明面板；具体头衔写在作品 content.titles，未添加玩法则不出现编辑区 */
+  pack("pack-titles", "头衔包", "达标即获得的头衔表。需要的剧本才添加；数值分档请在建角属性里配。", {
+    titles: [],
+  }),
 ];

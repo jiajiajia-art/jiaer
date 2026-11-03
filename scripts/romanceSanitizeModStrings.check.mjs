@@ -127,14 +127,14 @@ test('sanitizeModStrings_母校与父母职业对象须显示成名称', async (
   assert.equal(clean.content.school, '雾港一中、南岸中学、港务学校');
   assert.deepEqual(clean.content.parentJobs, ['中学语文教师', '港务调度', '渔船船长']);
   assert.deepEqual(clean.content.creation.identityOpts, ['素人', '科班']);
+  // 功能注释：母校 / 父母职业仅作旧稿 sanitize，编辑器不再提供对应输入控件
   const pools = readFileSync(join(romance, 'components/ModPoolsEditor.tsx'), 'utf8');
-  assert.match(pools, /function schoolText/);
-  assert.match(pools, /function jobLines/);
-  assert.doesNotMatch(pools, /value\.parentJobs\.join/);
-  assert.doesNotMatch(pools, /value=\{value\.school \?\? ""\}/);
+  assert.doesNotMatch(pools, /母校/);
+  assert.doesNotMatch(pools, /父母职业池/);
+  assert.doesNotMatch(pools, /parentJobs/);
 });
 
-test('healModRoomRefs_悬空startRoom与npc_home须纠偏', async () => {
+test('healModRoomRefs_悬空引用须清除且不得猜测开局地点', async () => {
   const { healModRoomRefs, sanitizeModStrings } = await import(
     pathToFileURL(join(romance, 'lib/sanitizeModStrings.ts')).href
   );
@@ -147,8 +147,8 @@ test('healModRoomRefs_悬空startRoom与npc_home须纠偏', async () => {
     npcs: [{ id: 'mom', name: '妈妈', home: 'kid_bedroom' }],
   };
   const fixes = healModRoomRefs(content);
-  assert.equal(content.startRoom, 'living_room');
-  assert.equal(content.npcs[0].home, 'living_room');
+  assert.equal(content.startRoom, undefined);
+  assert.equal(content.npcs[0].home, undefined);
   assert.ok(fixes.some((f) => /kid_bedroom/.test(f)));
 
   const sanitized = sanitizeModStrings({
@@ -161,10 +161,10 @@ test('healModRoomRefs_悬空startRoom与npc_home须纠偏', async () => {
       startRoom: 'nowhere',
     },
   });
-  assert.equal(sanitized.content.startRoom, 'start');
+  assert.equal(sanitized.content.startRoom, undefined);
 
   const panel = readFileSync(join(romance, 'components/ModEditorPanel.tsx'), 'utf8');
-  assert.match(panel, /healModRoomRefs/);
+  assert.doesNotMatch(panel, /healModRoomRefs/);
   const gen = readFileSync(join(romance, 'lib/worldGenGenerate.ts'), 'utf8');
   assert.match(gen, /healModRoomRefs/);
 });
