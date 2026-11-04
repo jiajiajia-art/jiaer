@@ -22,8 +22,6 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useProfileIdentityEdit } from '../hooks/useProfileIdentityEdit';
 import statisticsApi from '../api/statistics/statisticsApi';
 import creatorStatsApi, { type StatsOverview } from '../api/stats/creatorStatsApi';
-import creatorBenefitsApi from '../api/creatorBenefits/creatorBenefitsApi';
-import type { CreatorBenefitSummary } from '../api/creatorBenefits/creatorBenefits.type';
 import payApi from '../api/pay/payApi';
 import type { PayOrderRequest } from '../api/pay/pay.type';
 import { auth } from '../api/account/authApi';
@@ -76,7 +74,6 @@ const Create: React.FC = () => {
         incentiveType: 'none' as CreatorStatsIncentiveType,
     });
     const [creatorStats, setCreatorStats] = useState<StatsOverview | null>(null);
-    const [creatorBenefits, setCreatorBenefits] = useState<CreatorBenefitSummary | null>(null);
     const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
     const [isMembershipRechargeModalOpen, setIsMembershipRechargeModalOpen] = useState(false);
     const [isVipStatusModalOpen, setIsVipStatusModalOpen] = useState(false);
@@ -149,18 +146,6 @@ const Create: React.FC = () => {
         }
     };
 
-    const getCreatorBenefits = async () => {
-        if (!user?.user?.id) return;
-        try {
-            const response = await creatorBenefitsApi.getSummary();
-            if (response.data.success && response.data.data) {
-                setCreatorBenefits(response.data.data);
-            }
-        } catch (error) {
-            console.error('Load creator benefits failed:', error);
-        }
-    };
-
     const getUserInfo = async () => {
         try {
             const response = await auth.getUserInfo();
@@ -194,7 +179,6 @@ const Create: React.FC = () => {
     useEffect(() => {
         getGameTotalStats();
         getCreatorOverviewStats();
-        getCreatorBenefits();
         getUserInfo();
         getSignInStreak();
     }, [user?.user?.id]);
@@ -440,15 +424,6 @@ const Create: React.FC = () => {
                                             )}
                                         </div>
                                         <div className={styles.creatorHeroBadgeRow}>
-                                            {creatorBenefits && (creatorBenefits.level != null || creatorBenefits.unranked) && (
-                                                <button
-                                                    type="button"
-                                                    className={styles.creatorLevelBadge}
-                                                    onClick={() => navigate('/creator-benefits')}
-                                                >
-                                                    Lv{creatorBenefits.level ?? 0}
-                                                </button>
-                                            )}
                                             <button
                                                 type="button"
                                                 className={`${styles.creatorVipBadge} ${!isVipActive ? styles.creatorVipBadgeInactive : ''}`}

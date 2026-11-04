@@ -35,6 +35,8 @@ const VipStatusModal: React.FC<VipStatusModalProps> = ({
     onClose,
     onPurchase,
 }) => {
+    const [selectedPlanKey, setSelectedPlanKey] = React.useState<'week' | 'month'>('week');
+
     useEffect(() => {
         if (!isOpen) return undefined;
         const handleKeyDown = (event: KeyboardEvent) => {
@@ -43,8 +45,6 @@ const VipStatusModal: React.FC<VipStatusModalProps> = ({
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, [isOpen, onClose]);
-
-    if (!isOpen) return null;
 
     const now = Date.now();
     const plans: MembershipPlanCardConfig[] = [
@@ -69,6 +69,21 @@ const VipStatusModal: React.FC<VipStatusModalProps> = ({
             ],
         },
     ];
+    const selectedPlan = plans.find((item) => item.key === selectedPlanKey) || plans[0];
+
+    useEffect(() => {
+        if (!isOpen) return;
+        const currentTime = Date.now();
+        if (resolveMembershipPlanStatus(membership?.week, currentTime) === 'active') {
+            setSelectedPlanKey('week');
+            return;
+        }
+        setSelectedPlanKey(
+            resolveMembershipPlanStatus(membership?.month, currentTime) === 'active' ? 'month' : 'week',
+        );
+    }, [isOpen, membership?.month, membership?.week]);
+
+    if (!isOpen) return null;
 
     return createPortal(
         <div className={styles.overlay} onClick={onClose}>
@@ -89,46 +104,55 @@ const VipStatusModal: React.FC<VipStatusModalProps> = ({
                     </button>
                 </header>
 
-                <div className={styles.planGrid}>
-                    {plans.map((item) => {
-                        const status = resolveMembershipPlanStatus(item.plan, now);
-                        return (
-                            <article
-                                key={item.key}
-                                className={`${styles.planCard} ${status === 'active' ? styles.planCardActive : ''}`}
-                            >
-                                <div className={styles.planHeader}>
-                                    <h3>{item.name}</h3>
-                                    <span className={`${styles.statusBadge} ${styles[`status_${status}`]}`}>
-                                        {STATUS_LABELS[status]}
-                                    </span>
-                                </div>
-
-                                <dl className={styles.timeList}>
-                                    <div>
-                                        <dt>生效时间</dt>
-                                        <dd>{formatMembershipDateTime(item.plan?.startAt)}</dd>
-                                    </div>
-                                    <div>
-                                        <dt>到期时间</dt>
-                                        <dd>{formatMembershipDateTime(item.plan?.endAt)}</dd>
-                                    </div>
-                                    <div>
-                                        <dt>剩余时长</dt>
-                                        <dd>{status === 'active' ? formatRemainingMembershipTime(item.plan?.endAt, now) : '—'}</dd>
-                                    </div>
-                                </dl>
-
-                                <div className={styles.benefits}>
-                                    <strong>会员福利</strong>
-                                    <ul>
-                                        {item.rewards.map((reward) => <li key={reward}>{reward}</li>)}
-                                    </ul>
-                                </div>
-                            </article>
-                        );
-                    })}
+                <div className={styles.planTabs} role="group" aria-label="会员卡类型">
+                    {plans.map((item) => (
+                        <button
+                            key={item.key}
+                            type="button"
+                            className={`${styles.planTab} ${selectedPlanKey === item.key ? styles.planTabSelected : ''}`}
+                            aria-pressed={selectedPlanKey === item.key}
+                            onClick={() => setSelectedPlanKey(item.key)}
+                        >
+                            {item.name}
+                        </button>
+                    ))}
                 </div>
+
+                {(() => {
+                    const status = resolveMembershipPlanStatus(selectedPlan.plan, now);
+                    return (
+                        <article className={`${styles.planCard} ${status === 'active' ? styles.planCardActive : ''}`}>
+                            <div className={styles.planHeader}>
+                                <h3>{selectedPlan.name}</h3>
+                                <span className={`${styles.statusBadge} ${styles[`status_${status}`]}`}>
+                                    {STATUS_LABELS[status]}
+                                </span>
+                            </div>
+
+                            <dl className={styles.timeList}>
+                                <div>
+                                    <dt>生效时间</dt>
+                                    <dd>{formatMembershipDateTime(selectedPlan.plan?.startAt)}</dd>
+                                </div>
+                                <div>
+                                    <dt>到期时间</dt>
+                                    <dd>{formatMembershipDateTime(selectedPlan.plan?.endAt)}</dd>
+                                </div>
+                                <div>
+                                    <dt>剩余时长</dt>
+                                    <dd>{status === 'active' ? formatRemainingMembershipTime(selectedPlan.plan?.endAt, now) : '—'}</dd>
+                                </div>
+                            </dl>
+
+                            <div className={styles.benefits}>
+                                <strong>会员福利</strong>
+                                <ul>
+                                    {selectedPlan.rewards.map((reward) => <li key={reward}>{reward}</li>)}
+                                </ul>
+                            </div>
+                        </article>
+                    );
+                })()}
 
                 <p className={styles.sharedNote}>
                     周卡与月卡可同时生效并分别领取奖励；同档位重复购买会顺延有效期。

@@ -31,6 +31,43 @@
     gap: 16px;
 }
 
+.creatorLevelRow {
+    width: 100%;
+    min-height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 0 20px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    color: #ffffff;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.creatorLevelRow:hover {
+    border-color: rgba(255, 196, 207, 0.38);
+    background: #222225;
+}
+
+.creatorLevelRow:focus-visible {
+    outline: 2px solid #ff6f8a;
+    outline-offset: 2px;
+}
+
+.creatorLevelLink {
+    flex: 0 0 auto;
+    color: #ffd4dd;
+    font-size: 14px;
+    font-weight: 500;
+}
+
 .withdrawButton,
 .settleButton,
 .stateBox button,

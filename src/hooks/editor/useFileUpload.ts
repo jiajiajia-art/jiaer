@@ -9,7 +9,7 @@ import { useEditorStore } from '../../store/editorStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { formatIdeaJobStage } from '../../utils/ideaJobStage';
 import { refreshAuthUserPoints } from '../../lib/auth/refreshUserPoints';
-import { TXT_DOC_PARSE_COST, TXT_IDEA_GENERATE_COST } from '../../utils/constants';
+import { TXT_IDEA_GENERATE_COST } from '../../utils/constants';
 import {
     DEFAULT_TEXT_GENERATE_OPTIONS,
     shouldGenerateAssetsAfterIdea,
@@ -72,6 +72,10 @@ interface JobStatusResponseFailed {
     success?: boolean;
     status: 'failed';
     error?: string;
+    errorCode?: string | null;
+    requiredPoints?: number;
+    currentPoints?: number;
+    billingReconciliationRequired?: boolean;
     elapsedSeconds?: number;
     estimatedRemainingSeconds?: number;
     estimatedTotalSeconds?: number;
@@ -157,7 +161,7 @@ const applyVisualDocPointsSuccess = async (
     kind: 'document' | 'idea',
     t: (key: string, options?: Record<string, unknown>) => string,
 ) => {
-    const fallbackCost = kind === 'idea' ? TXT_IDEA_GENERATE_COST : TXT_DOC_PARSE_COST;
+    const fallbackCost = kind === 'idea' ? TXT_IDEA_GENERATE_COST : 0;
     // 功能注释：仅在后端明确返回扣分时 toast；未扣则刷新余额但不假装已扣
     const hasDeductedField = typeof completedData.pointsDeducted === 'number';
     const deducted = hasDeductedField
@@ -370,7 +374,9 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                     }
                 } else if (statusData.status === 'failed') {
                     const failedData = statusData as JobStatusResponseFailed;
-                    const errMsg = failedData.error || t('createGame.parsingFailed');
+                    const errMsg = failedData.errorCode === 'INSUFFICIENT_POINTS'
+                        ? `${failedData.error || '织梦豆不足'}（需要 ${failedData.requiredPoints ?? '-'}，当前 ${failedData.currentPoints ?? '-'}）`
+                        : failedData.error || t('createGame.parsingFailed');
                     updateJob(jobId, {
                         status: 'failed',
                         error: errMsg,
@@ -421,19 +427,6 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                 fileType: file.type,
             });
 
-            // 功能注释：TXT 文档导入需 10 积分，本地先预检再上传
-            if (mode !== 'worldInteraction') {
-                const enough = await ensureEnoughPointsForVisualDoc(TXT_DOC_PARSE_COST, t);
-                if (!enough) {
-                    return {
-                        success: false,
-                        error: t('createGame.insufficientPointsForDoc', {
-                            required: TXT_DOC_PARSE_COST,
-                            current: useAuthStore.getState().user?.user?.points ?? 0,
-                        }),
-                    };
-                }
-            }
 
             const uploadResponse = mode === 'worldInteraction'
                 ? await worldEditor.uploadWorldFile(file)

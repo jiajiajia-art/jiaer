@@ -1825,48 +1825,109 @@
     .modalOverlay {
         align-items: center;
         justify-content: center;
-        padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+        padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
     }
 
     .modalContent {
         width: 100%;
         max-width: 100%;
-        padding: 18px 16px 20px;
+        padding: 10px 12px 12px;
         min-height: auto;
-        max-height: calc(100dvh - 20px - env(safe-area-inset-bottom));
+        max-height: calc(100dvh - 12px - env(safe-area-inset-bottom));
+    }
+
+    .modalContent.rechargeCenter {
+        width: min(520px, calc(100vw - 24px));
+        max-width: 520px;
+        max-height: calc(100dvh - 12px - env(safe-area-inset-bottom));
+        padding: 8px 12px 12px;
+    }
+
+    .modalContent.rechargeCenter .closeBtn {
+        top: 4px;
+        left: 4px;
+        width: 44px;
+        height: 44px;
+    }
+
+    .modalContent.rechargeCenter .dismissBtn {
+        top: 4px;
+        right: 4px;
+        width: 44px;
+        height: 44px;
     }
 
     .title {
-        font-size: 16px;
-        margin-bottom: 16px;
+        font-size: 15px;
+        margin: 0 40px 8px;
+        min-height: 36px;
+    }
+
+    .regionSummary {
+        min-height: 36px;
+        margin-bottom: 8px;
+        padding: 0 10px;
+        font-size: 11px;
+    }
+
+    .regionSummary strong {
+        font-size: 11px;
+    }
+
+    .rechargeTabs {
+        margin-bottom: 8px;
+    }
+
+    .rechargeTabs button {
+        min-height: 44px;
+        font-size: 13px;
+    }
+
+    .form {
+        gap: 6px;
+        padding-bottom: 2px;
+    }
+
+    .sectionHeading {
+        margin-bottom: 6px;
+        font-size: 13px;
     }
 
     .amountsGrid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 8px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+    }
+
+    .modalContentGameViewport .amountsGrid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
     .amountBtn {
-        padding: 10px 6px;
-        min-height: 96px;
+        padding: 6px 3px;
+        min-height: 58px;
         height: auto;
     }
 
     .amountTopSection {
-        gap: 6px;
+        gap: 2px;
         padding: 0;
     }
 
     .amountMainPoints {
-        font-size: 0.98rem;
+        font-size: 0.88rem;
     }
 
     .amountPriceMeta {
-        font-size: 0.74rem;
+        font-size: 0.68rem;
     }
 
     .amountFirstChargePoints {
-        font-size: 0.76rem;
+        font-size: 0.7rem;
+    }
+
+    .firstChargeMeta {
+        margin-top: 0;
+        font-size: 10px;
     }
 
     .firstChargeTag {
@@ -1874,37 +1935,146 @@
     }
 
     .customInput {
-        padding: 12px 0;
-        font-size: 1rem;
+        padding: 6px 0;
+        font-size: 0.9rem;
+    }
+
+    .customAmountTile {
+        min-height: 58px;
+        padding: 4px;
+    }
+
+    .customLabel {
+        margin-bottom: 2px;
+        font-size: 0.72rem;
+    }
+
+    .customAmountTile .customInputWrapper {
+        min-height: 28px;
+    }
+
+    .customAmountTile .customInput {
+        padding: 4px 0;
+        font-size: 0.82rem;
+    }
+
+    .customReceiveHint {
+        min-height: 34px;
+        padding: 0 10px;
+        font-size: 0.75rem;
+    }
+
+    .customAmountNotice {
+        margin-top: 4px;
+        font-size: 10px;
+        line-height: 1.3;
     }
 
     .submitBtn {
-        min-height: 48px;
-        padding: 0 16px;
-        font-size: 15px;
-        margin-top: 12px;
+        min-height: 44px;
+        padding: 0 10px;
+        font-size: 13px;
+        margin-top: 2px;
         max-width: none;
-        border-radius: 10px;
+        border-radius: 8px;
+    }
+
+    .paymentNotice {
+        font-size: 10px;
+        line-height: 1.3;
+    }
+
+    .orderSummary > div {
+        min-height: 30px;
+        gap: 8px;
+        font-size: 11px;
     }
 
     .membershipSubmitBtn {
         max-width: none;
-        min-height: 48px;
-        margin-top: 12px;
+        min-height: 44px;
+        margin-top: 2px;
     }
 
     .planItem {
-        padding: 12px 10px;
+        padding: 8px;
+        gap: 4px;
+    }
+
+    .plansList {
         gap: 6px;
     }
 
     .planItemName {
-        font-size: 14px;
+        font-size: 12px;
         margin-bottom: 0;
     }
 
     .planItemPrice {
-        font-size: 16px;
+        font-size: 14px;
+    }
+
+    .planRewardSummary,
+    .planDiscount {
+        font-size: 10px;
+        line-height: 1.3;
+    }
+
+    .membershipBenefitsHeader {
+        min-height: 34px;
+        margin: 0 8px;
+        gap: 6px;
+    }
+
+    .membershipBenefitsHeader strong {
+        font-size: 12px;
+    }
+
+    .membershipBenefitsHeader span {
+        padding: 3px 6px;
+        font-size: 10px;
+    }
+
+    .membershipBenefitRow {
+        grid-template-columns: 24px minmax(0, 1fr) 14px;
+        gap: 6px;
+        min-height: 36px;
+        margin: 0 8px;
+    }
+
+    .membershipBenefitIcon {
+        width: 22px;
+        height: 22px;
+        font-size: 9px;
+    }
+
+    .membershipBenefitText {
+        gap: 1px;
+    }
+
+    .membershipBenefitText strong {
+        font-size: 11px;
+        line-height: 1.2;
+    }
+
+    .membershipBenefitText small {
+        font-size: 10px;
+        line-height: 1.25;
+    }
+
+    .membershipRulesCard {
+        padding: 8px;
+    }
+
+    .membershipRulesCard > strong {
+        margin-bottom: 4px;
+        font-size: 11px;
+    }
+
+    .membershipRulesCard ul {
+        padding-left: 14px;
+        font-size: 10px;
+        line-height: 1.3;
     }
 
     /* 会员页面移动端适配 */

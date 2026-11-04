@@ -46,6 +46,7 @@ import {
 } from '../../lib/aiUsageFormatting';
 import { getApiErrorMessage } from '../../utils/error';
 import styles from './AiUsageDashboard.module.css';
+import { groupTxtDocParseAttempts, type AiBillingUsageDisplayRow } from '../../lib/groupTxtDocParseAttempts';
 
 type PeriodPreset = UsagePreset | 'custom';
 type PageSize = 10 | 20 | 50 | 100;
@@ -284,6 +285,7 @@ const AiUsageDashboard: React.FC = () => {
       name: row.modelId,
       platformCostYuan: Number(formatMicroYuan(row.platformCostMicroYuan)),
     })), [summary.modelRanking]);
+  const displayAttempts = useMemo(() => groupTxtDocParseAttempts(attempts), [attempts]);
   const modelOptions = useMemo(() => Array.from(new Set([
     ...summary.modelRanking.map((row) => row.modelId),
     modelId,
@@ -339,7 +341,7 @@ const AiUsageDashboard: React.FC = () => {
     },
   ];
 
-  const attemptColumns: ColumnsType<AiBillingUsageAttempt> = [
+  const attemptColumns: ColumnsType<AiBillingUsageDisplayRow> = [
     {
       title: '用户',
       key: 'user',
@@ -363,7 +365,9 @@ const AiUsageDashboard: React.FC = () => {
       width: 210,
       render: (_, row) => <div className={styles.cellStack}>
         <strong>{row.modelId}</strong>
-        <span>{row.platformSource} · {row.gatewayRoute} · 第 {row.attemptNo} 次</span>
+        <span>{row.isTxtDocParseSummary
+          ? `txt_doc_parse · ${row.gatewayRoute} · ${row.attemptCount} 次调用汇总`
+          : `${row.platformSource} · ${row.gatewayRoute} · 第 ${row.attemptNo} 次`}</span>
       </div>,
     },
     {
@@ -567,7 +571,7 @@ const AiUsageDashboard: React.FC = () => {
 
       <Card className={styles.filterCard} bordered={false}>
         <div className={styles.sectionHead}>
-          <div><h3>明细筛选</h3><p>仅影响下方单条调用明细；总览、趋势、排行和聚合统计保持默认近 7 天范围。</p></div>
+          <div><h3>明细筛选</h3><p>仅影响下方调用明细；总览、趋势、排行和聚合统计保持默认近 7 天范围。</p></div>
           <Button onClick={refresh} loading={attemptLoading}>刷新明细</Button>
         </div>
         <div className={styles.filters}>
@@ -627,11 +631,11 @@ const AiUsageDashboard: React.FC = () => {
       </Card>
 
       {attemptError ? <Alert type="error" showIcon message={attemptError} action={<Button onClick={() => void loadAttempts(appliedFilters, pagination.page, pagination.pageSize)}>重试明细</Button>} /> : null}
-      <Card title="单条调用明细" className={styles.tableCard} extra={<span className={styles.tableHint}>每次上游尝试一行 · 时间倒序</span>}>
-        <Table<AiBillingUsageAttempt>
+      <Card title="调用明细" className={styles.tableCard} extra={<span className={styles.tableHint}>TXT 文档解析按任务汇总，其它调用按上游尝试展示 · 时间倒序</span>}>
+        <Table<AiBillingUsageDisplayRow>
           rowKey="id"
           columns={attemptColumns}
-          dataSource={attempts}
+          dataSource={displayAttempts}
           loading={attemptLoading}
           scroll={{ x: 1720 }}
           locale={{ emptyText: <Empty description="暂无符合条件的调用明细" /> }}
@@ -643,7 +647,7 @@ const AiUsageDashboard: React.FC = () => {
             showSizeChanger: true,
             components: { sizeChanger: AttemptPageSizeSelect },
             showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条`,
+            showTotal: (total) => `共 ${total} 条上游记录，TXT 文档解析按任务汇总显示`,
             onChange: changePage,
           }}
         />

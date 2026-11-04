@@ -12,7 +12,7 @@ import GenerateFromIdeaModal, { type IdeaGenerateOptions } from './GenerateFromI
 import type { UploadResult } from '../../../hooks/editor/useFileUpload';
 import { getUploadEtaText } from '../../../utils/etaText';
 import { copyTextToClipboard } from '../../../utils/clipboard';
-import { TXT_DOC_PARSE_COST, TXT_IDEA_GENERATE_COST } from '../../../utils/constants';
+import { TXT_IDEA_GENERATE_COST } from '../../../utils/constants';
 import type { IdeaGenerateMode } from '../../../lib/galgame/ideaFullWorkEstimate';
 
 type CreateMethod = 'document' | 'idea';
@@ -626,9 +626,9 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
 
             <div className={`${styles.twoCol} ${styles.documentMethodPanel}`}>
                 <div className={styles.card}>
-                    <h3>{t('createGame.documentImportWithCost', { points: TXT_DOC_PARSE_COST })}</h3>
+                    <h3>{t('createGame.documentImportWithCost')}</h3>
                     <p className={`${styles.muted} ${styles.hideOnMobile}`}>
-                        {t('createGame.documentUploadTip', { points: TXT_DOC_PARSE_COST })}
+                        {t('createGame.documentUploadTip')}
                     </p>
 
                     {!uploadedFile ? (

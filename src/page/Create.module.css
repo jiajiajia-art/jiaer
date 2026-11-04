@@ -668,28 +668,6 @@
     outline: none;
 }
 
-.creatorLevelBadge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2px 9px;
-    border: 1px solid rgba(255, 196, 207, 0.5);
-    border-radius: 6px;
-    background: rgba(217, 60, 91, 0.18);
-    color: #ffd4dd;
-    font-size: 12px;
-    font-weight: 700;
-    white-space: nowrap;
-    cursor: pointer;
-}
-
-.creatorLevelBadge:hover,
-.creatorLevelBadge:focus-visible {
-    border-color: rgba(255, 216, 224, 0.82);
-    background: rgba(217, 60, 91, 0.3);
-    outline: none;
-}
-
 .creatorHeroLeft {
     display: flex;
     flex-direction: column;

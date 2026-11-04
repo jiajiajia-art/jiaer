@@ -203,6 +203,18 @@ const CreatorIncentive: React.FC = () => {
                         onBack={() => navigate(resolveCreatorCenterReturnPath(location.state))}
                     />
 
+                    {benefitSummary && (
+                        <button
+                            type="button"
+                            className={styles.creatorLevelRow}
+                            onClick={() => navigate('/creator-benefits')}
+                            aria-label={`${benefitSummary.label}，查看详情`}
+                        >
+                            <span>{benefitSummary.label}</span>
+                            <span className={styles.creatorLevelLink}>查看详情 <span aria-hidden="true">›</span></span>
+                        </button>
+                    )}
+
                     <CreatorEarningsOverview data={overview} loading={overviewStatus === 'loading'} error={overviewStatus === 'error'} profileComplete={profileComplete} benefitLabel={benefitLabel} editorShareRatio={benefitSummary?.editorShareRatio} customShareRatio={benefitSummary?.customShareRatio} onRetry={() => void loadOverview()} onWithdraw={() => setWithdrawOpen(true)} onProfile={() => setProfileOpen(true)} onRecords={() => handleRecords()} onRules={() => setRulesOpen(true)} />
                     <CreatorEarningsTrend data={overview?.trend || []} loading={overviewStatus === 'loading'} error={overviewStatus === 'error'} period={period} fileId={trendFileId} works={trendWorks} onPeriodChange={handlePeriodChange} onFileChange={setTrendFileId} onRetry={() => void loadOverview()} />
                     <CreatorWorkEarnings data={workViews} loading={worksStatus === 'loading'} error={worksStatus === 'error'} onRetry={() => void loadWorks()} onDetails={handleRecords} />
