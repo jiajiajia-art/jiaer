@@ -60,9 +60,11 @@ const CreatorEarningsWithdrawalModal: React.FC<Props> = ({
             ? '确认本次提现'
             : action === 'profile'
                 ? '完善创作者资料'
-                : '未达到提现金额';
+                : '创作者分成KK币提取';
     const progress = Math.min(100, Math.max(0, availableCents / 100));
     const preview = overview?.withdrawalPreview;
+    const exchangePreview = overview?.exchangePreview;
+    const creditedKk = (exchangePreview?.creditedKkMinor || 0) / 100;
     const activeBankLabel = useMemo(() => {
         const card = active?.bankCardNumber || '';
         return card ? maskBankAccount(card, active?.bankBranch || '银行卡') : '以创作者资料中的银行卡为准';
@@ -195,8 +197,8 @@ const CreatorEarningsWithdrawalModal: React.FC<Props> = ({
         content = (
             <div className={styles.withdrawContent}>
                 <div className={styles.balanceHero}>
-                    <strong>收益余额 {formatYuan(overview.summary.availableGrossYuan)}</strong>
-                    <p>当前未达到 ¥100 人民币提现门槛，可选择继续累计收益或按规则兑换 KK币。</p>
+                    <strong>创作者分成KK币提取</strong>
+                    <p>本次提取分成 {formatYuan(exchangePreview?.grossYuan || overview.summary.availableGrossYuan)}，预计到账 {creditedKk.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} KK币。未达到 ¥100 人民币提现门槛，可选择继续累计或提取为 KK币。</p>
                     <div className={styles.progressHeading}>
                         <span>当前累计</span>
                         <b>{formatYuan(overview.summary.availableGrossYuan)} / ¥100.00</b>

@@ -721,7 +721,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                         <span className={styles.planRewardSummary}>
                             {plan.durationLabel}累计 {plan.totalReward.toLocaleString()} 永久 KK币
                         </span>
-                        <span className={styles.planDiscount}>游玩正式发布 AI 文游 85 折</span>
+                        <span className={styles.planDiscount}>游玩 AI 文游 85 折</span>
                     </button>
                 ))}
             </div>

@@ -48,13 +48,13 @@ import { getApiErrorMessage } from '../../utils/error';
 import styles from './AiUsageDashboard.module.css';
 
 type PeriodPreset = UsagePreset | 'custom';
-type PageSize = 20 | 50 | 100;
+type PageSize = 10 | 20 | 50 | 100;
 type BilledToUserFilter = '' | NonNullable<AiBillingUsageFilters['billedToUser']>;
 type CurrencyTypeFilter = '' | NonNullable<AiBillingUsageFilters['currencyType']>;
 type AggregateSortBy = 'calls' | 'charge' | 'cost';
 type AggregateSortOrder = 'ascend' | 'descend';
 
-const PAGE_SIZE_OPTIONS: PageSize[] = [20, 50, 100];
+const PAGE_SIZE_OPTIONS: PageSize[] = [10, 20, 50, 100];
 const DEFAULT_FILTERS = resolveUsagePresetRange('7d');
 const EMPTY_SUMMARY: AiBillingUsageSummary = {
   overview: {
@@ -101,6 +101,22 @@ const chargeText = (currencyType: 'points' | 'kk', units: number) => (
     : `${formatKkMinor(units)} KK币`
 );
 
+const AttemptPageSizeSelect: React.FC<{
+  value: number;
+  onChange: (value: number) => void;
+  disabled: boolean;
+  className: string;
+}> = ({ value, onChange, disabled, className }) => (
+  <Select<number>
+    aria-label="每页条数"
+    className={className}
+    value={value}
+    disabled={disabled}
+    options={PAGE_SIZE_OPTIONS.map((size) => ({ label: `${size} 条/页`, value: size }))}
+    onChange={onChange}
+  />
+);
+
 const AiUsageDashboard: React.FC = () => {
   const [period, setPeriod] = useState<PeriodPreset>('7d');
   const [customRange, setCustomRange] = useState<{ from: string; to: string } | null>(null);
@@ -120,7 +136,7 @@ const AiUsageDashboard: React.FC = () => {
   const [appliedFilters, setAppliedFilters] = useState<AiBillingUsageFilters>(DEFAULT_FILTERS);
   const [summary, setSummary] = useState<AiBillingUsageSummary>(EMPTY_SUMMARY);
   const [attempts, setAttempts] = useState<AiBillingUsageAttempt[]>([]);
-  const [pagination, setPagination] = useState({ page: 1, pageSize: 20 as PageSize, total: 0 });
+  const [pagination, setPagination] = useState({ page: 1, pageSize: 10 as PageSize, total: 0 });
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [aggregateLoading, setAggregateLoading] = useState(false);
   const [attemptLoading, setAttemptLoading] = useState(false);
@@ -172,7 +188,7 @@ const AiUsageDashboard: React.FC = () => {
       aggregatePage: 1,
       aggregatePageSize: 10,
     });
-    void loadAttempts(DEFAULT_FILTERS, 1, 20);
+    void loadAttempts(DEFAULT_FILTERS, 1, 10);
   }, [loadAttempts, loadSummary]);
 
   const resolveDraftFilters = useCallback((): AiBillingUsageFilters | null => {
@@ -241,7 +257,7 @@ const AiUsageDashboard: React.FC = () => {
   const changePage = useCallback((page: number, nextPageSize: number) => {
     const pageSize = PAGE_SIZE_OPTIONS.includes(nextPageSize as PageSize)
       ? nextPageSize as PageSize
-      : 20;
+      : 10;
     const nextPage = pageSize === pagination.pageSize ? page : 1;
     setPagination((current) => ({ ...current, page: nextPage, pageSize }));
     void loadAttempts(appliedFilters, nextPage, pageSize);
@@ -625,6 +641,7 @@ const AiUsageDashboard: React.FC = () => {
             total: pagination.total,
             pageSizeOptions: PAGE_SIZE_OPTIONS,
             showSizeChanger: true,
+            components: { sizeChanger: AttemptPageSizeSelect },
             showQuickJumper: true,
             showTotal: (total) => `共 ${total} 条`,
             onChange: changePage,

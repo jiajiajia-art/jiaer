@@ -50,9 +50,34 @@ export interface CreatorEarningWithdrawalPreview {
     items: Array<{ fileId: string; grossYuan: string }>;
 }
 
+export interface CreatorEarningExchangePreview {
+    grossYuan: string;
+    creditedKkMinor: number;
+    roundingDifferenceMicroYuan: number;
+}
+
+export interface CreatorEarningExchangeRecord {
+    id: number;
+    recordId: string;
+    type: 'kk_exchange';
+    exchangeNo: string;
+    status: 'completed';
+    grossMicroYuan: number;
+    grossYuan: string;
+    creditedKkMinor: number;
+    creditedKk: number;
+    createdAt: string;
+}
+
+export type CreatorEarningWithdrawalRecord = (CreatorEarningWithdrawal & {
+    type: 'withdrawal';
+    recordId: string;
+}) | CreatorEarningExchangeRecord;
+
 export interface CreatorEarningOverview {
     summary: CreatorEarningSummary;
     withdrawalPreview: CreatorEarningWithdrawalPreview | null;
+    exchangePreview: CreatorEarningExchangePreview | null;
     activeWithdrawal: CreatorEarningWithdrawal | null;
     period: CreatorEarningPeriod;
     granularity: CreatorEarningGranularity;
@@ -135,7 +160,7 @@ const creatorEarningsApi = {
         unwrap(await api.get<ApiEnvelope<CreatorEarningLedgerPage>>('/auth/creator-earnings/ledger', { params }))
     ),
     listWithdrawals: async (params: { limit?: number; offset?: number } = {}) => (
-        unwrap(await api.get<ApiEnvelope<CreatorEarningWithdrawal[]>>('/auth/creator-earnings/withdrawals', { params }))
+        unwrap(await api.get<ApiEnvelope<CreatorEarningWithdrawalRecord[]>>('/auth/creator-earnings/withdrawals', { params }))
     ),
     createWithdrawal: async (idempotencyKey: string) => (
         unwrap(await api.post<ApiEnvelope<CreatorEarningWithdrawal>>('/auth/creator-earnings/withdraw', { idempotencyKey }))

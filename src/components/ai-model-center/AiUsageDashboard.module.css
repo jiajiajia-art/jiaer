@@ -115,6 +115,41 @@
   font-weight: 600;
 }
 
+/* Prevent the admin shell's generic input border from creating nested Ant Design control frames. */
+.root :global(.ant-input),
+.root :global(.ant-select-input),
+.root :global(.ant-select-selection-search-input),
+.root :global(.ant-picker-input > input) {
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.root :global(.ant-select) :global(input:not([type='checkbox']):not([type='radio']):not([type='file'])) {
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.root :global(.ant-select-content-has-value) {
+  color: var(--usage-text) !important;
+  opacity: 1 !important;
+}
+
+.root :global(.ant-select-content-has-search-value > *:not(.ant-select-input)) {
+  color: var(--usage-text) !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
 .queryButton {
   min-width: 88px;
   width: fit-content;
@@ -187,6 +222,15 @@
 .tableCard :global(.ant-select-selector) {
   min-width: 44px;
   min-height: 44px;
+}
+
+.tableCard :global(.ant-pagination) {
+  flex-wrap: wrap;
+  row-gap: 12px;
+}
+
+.tableCard :global(.ant-pagination-options-size-changer) {
+  width: 116px;
 }
 
 @media (max-width: 1280px) {

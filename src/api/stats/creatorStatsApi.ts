@@ -15,6 +15,11 @@ export interface StatsOverview {
   activeHours: Array<{ hour: number; count: number }>;
   workCount?: number;
   fileIds?: string[];
+  aiCallCount?: number;
+  aiInputTokens?: number;
+  aiOutputTokens?: number;
+  aiCachedInputTokens?: number;
+  billedKkMinor?: number;
 }
 
 export interface WorkMetrics {
@@ -26,6 +31,11 @@ export interface WorkMetrics {
   playDurationSeconds: number;
   commentCount: number;
   spendPoints: number;
+  aiCallCount?: number;
+  aiInputTokens?: number;
+  aiOutputTokens?: number;
+  aiCachedInputTokens?: number;
+  billedKkMinor?: number;
 }
 
 export interface CreatorWorkItem {

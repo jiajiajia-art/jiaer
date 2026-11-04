@@ -261,10 +261,8 @@
 
 .previewCard {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 8px 12px;
+    flex-direction: column;
+    gap: 8px;
     padding: 12px 14px;
     background: var(--ex-elevated);
     border-radius: 10px;
@@ -272,14 +270,18 @@
     margin-bottom: 14px;
 }
 
+.previewRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+}
+
 .previewLabel {
     font-size: 13px;
     color: var(--ex-label);
     font-weight: 500;
-}
-
-.previewGainLabel {
-    margin-left: 4px;
 }
 
 .previewValue {

@@ -147,7 +147,7 @@ export interface AiBillingUsageAttempt {
 
 export interface AiBillingUsagePagination {
   page: number;
-  pageSize: 20 | 50 | 100;
+  pageSize: 10 | 20 | 50 | 100;
   total: number;
   totalPages: number;
 }
@@ -252,7 +252,7 @@ const aiModelCenterApi = {
   listUsage: (params: AiBillingUsageFilters) =>
     api.get<ApiResponse<AiBillingUsageSummary>>(`${root}/usage`, { params }),
   listUsageAttempts: (
-    params: AiBillingUsageFilters & { page: number; pageSize: 20 | 50 | 100 },
+    params: AiBillingUsageFilters & { page: number; pageSize: 10 | 20 | 50 | 100 },
   ) => api.get<ApiResponse<AiBillingUsageAttemptsPage>>(`${root}/usage/attempts`, { params }),
 };
 

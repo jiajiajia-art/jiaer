@@ -57,6 +57,11 @@ const OperatorWorkStats: React.FC = () => {
       playDurationSeconds: detail.playDurationSeconds,
       commentCount: detail.commentCount,
       spendPoints: detail.spendPoints,
+      aiCallCount: detail.aiCallCount,
+      aiInputTokens: detail.aiInputTokens,
+      aiOutputTokens: detail.aiOutputTokens,
+      aiCachedInputTokens: detail.aiCachedInputTokens,
+      billedKkMinor: detail.billedKkMinor,
       activeHours: detail.activeHours,
     };
   }, [detail]);

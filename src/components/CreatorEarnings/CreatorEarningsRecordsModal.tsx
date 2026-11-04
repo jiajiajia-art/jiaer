@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import creatorEarningsApi, {
     type CreatorEarningLedgerItem,
     type CreatorEarningLedgerPage,
-    type CreatorEarningWithdrawal,
+    type CreatorEarningWithdrawalRecord,
 } from '../../api/creatorEarnings/creatorEarningsApi';
 import { formatYuan } from '../../lib/creatorEarningsView';
 import CreatorEarningsModalShell from './CreatorEarningsModalShell';
@@ -16,7 +16,7 @@ interface Props {
     onClose: () => void;
 }
 
-const statusLabel: Record<string, string> = { pending: '审核中', approved: '待打款', paid: '已打款', rejected: '已驳回' };
+const statusLabel: Record<string, string> = { pending: '审核中', approved: '待打款', paid: '已打款', rejected: '已驳回', completed: '已到账' };
 const formatTime = (value?: string | null) => value ? new Date(value).toLocaleString('zh-CN', { hour12: false }) : '—';
 const formatKk = (minor: number) => `${(minor / 100).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} KK`;
 
@@ -39,7 +39,7 @@ const CreatorEarningsRecordsModal: React.FC<Props> = ({ open, initialFileId = ''
     const [fileId, setFileId] = useState(initialFileId);
     const [page, setPage] = useState(1);
     const [ledger, setLedger] = useState<CreatorEarningLedgerPage | null>(null);
-    const [withdrawals, setWithdrawals] = useState<CreatorEarningWithdrawal[]>([]);
+    const [withdrawals, setWithdrawals] = useState<CreatorEarningWithdrawalRecord[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(false);
     const requestVersionRef = useRef(0);
@@ -76,7 +76,7 @@ const CreatorEarningsRecordsModal: React.FC<Props> = ({ open, initialFileId = ''
                 <><div className={styles.ledgerList}>{ledger?.items.map((item) => <CreatorLedgerCard key={item.fileId} item={item} title={workTitles[item.fileId] || item.fileId} />)}</div>{(ledger?.items.length || 0) === 0 && <div className={styles.state}>暂无收益明细</div>}<div className={styles.pagination}><button type="button" disabled={page <= 1} onClick={() => setPage((value) => value - 1)}>上一页</button><span>{page} / {totalPages}</span><button type="button" disabled={page >= totalPages} onClick={() => setPage((value) => value + 1)}>下一页</button></div></>
             )}
             {!loading && !error && tab === 'withdrawals' && (
-                <><div className={styles.tableWrap}><table><thead><tr><th>申请时间</th><th>税前金额</th><th>个税</th><th>实际到账</th><th>状态</th><th>状态时间 / 原因</th></tr></thead><tbody>{withdrawals.map((item) => <tr key={item.id}><td>{formatTime(item.createdAt)}</td><td>{formatYuan(item.grossYuan)}</td><td>{formatYuan(item.incomeTaxYuan)}</td><td>{formatYuan(item.payoutYuan)}</td><td><span className={styles.statusBadge}>{statusLabel[item.status] || item.status}</span></td><td>{item.rejectionReason || formatTime(item.paidAt || item.approvedAt || item.updatedAt)}</td></tr>)}</tbody></table></div>{withdrawals.length === 0 && <div className={styles.state}>暂无提现记录</div>}</>
+                <><div className={styles.tableWrap}><table><thead><tr><th>记录类型</th><th>申请 / 提取时间</th><th>分成金额/KK币</th><th>扣税</th><th>到账金额</th><th>状态</th><th>状态时间 / 原因</th></tr></thead><tbody>{withdrawals.map((item) => item.type === 'kk_exchange' ? (<tr key={item.recordId}><td>KK币提取</td><td>{formatTime(item.createdAt)}</td><td>{formatYuan(item.grossYuan)}</td><td>—</td><td>{formatKk(item.creditedKkMinor)}</td><td><span className={styles.statusBadge}>{statusLabel[item.status]}</span></td><td>{formatTime(item.createdAt)}</td></tr>) : (<tr key={item.recordId}><td>人民币提现</td><td>{formatTime(item.createdAt)}</td><td>{formatYuan(item.grossYuan)}</td><td>{formatYuan(item.incomeTaxYuan)}</td><td>{formatYuan(item.payoutYuan)}</td><td><span className={styles.statusBadge}>{statusLabel[item.status] || item.status}</span></td><td>{item.rejectionReason || formatTime(item.paidAt || item.approvedAt || item.updatedAt)}</td></tr>))}</tbody></table></div>{withdrawals.length === 0 && <div className={styles.state}>暂无提现记录</div>}</>
             )}
         </CreatorEarningsModalShell>
     );

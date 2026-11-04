@@ -170,20 +170,22 @@ const ExchangeModal: React.FC<ExchangeModalProps> = ({ isOpen, onClose, onSucces
 
                 {pointsToExchange > 0 && (
                     <div className={styles.previewCard}>
-                        <span className={styles.previewLabel}>{t('exchangeModal.willSpend')}</span>
-                        <span className={styles.previewValue}>
-                            <span className={styles.previewDiamond}>
-                                -{estimatedDiamondsCost} {t('exchangeModal.diamonds')}
+                        <div className={styles.previewRow}>
+                            <span className={styles.previewLabel}>{t('exchangeModal.willSpend')}</span>
+                            <span className={styles.previewValue}>
+                                <span className={styles.previewDiamond}>
+                                    -{estimatedDiamondsCost} {t('exchangeModal.diamonds')}
+                                </span>
                             </span>
-                        </span>
-                        <span className={`${styles.previewLabel} ${styles.previewGainLabel}`}>
-                            {t('exchangeModal.willGain')}
-                        </span>
-                        <span className={styles.previewValue}>
-                            <span className={styles.previewBadge}>
-                                +{pointsToExchange} {t('exchangeModal.points')}
+                        </div>
+                        <div className={styles.previewRow}>
+                            <span className={styles.previewLabel}>{t('exchangeModal.willGain')}</span>
+                            <span className={styles.previewValue}>
+                                <span className={styles.previewBadge}>
+                                    +{pointsToExchange} {t('exchangeModal.points')}
+                                </span>
                             </span>
-                        </span>
+                        </div>
                     </div>
                 )}
 
