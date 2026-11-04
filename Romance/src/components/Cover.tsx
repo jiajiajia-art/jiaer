@@ -59,7 +59,8 @@ export const cgKind = (c: CgSrc) => c.cgMode ?? (c.video ? "video" : "fixed");
 /** 按背景类型取要显示的内容；该类型没填内容时退回能用的那项（视频 → 固定 CG；轮播 → 固定 CG） */
 export function resolveCoverBg(c: CgSrc): CoverBgPlan {
   const kind = cgKind(c);
-  const cgs = (c.cgs ?? []).filter(Boolean);
+  // 功能注释：AI 封面 cgs 可能是对象；非数组时按空，禁止 .filter/.length 崩开局封面
+  const cgs = (Array.isArray(c.cgs) ? c.cgs : []).filter(Boolean);
   if (kind === "video" && c.video) return { kind: "video", video: c.video, poster: c.image };
   if (kind === "carousel" && cgs.length) return { kind: "images", images: cgs };
   if (c.image) return { kind: "images", images: [c.image] };
@@ -143,8 +144,9 @@ function CoverBg({ images, opts, blur, preview }: { images: string[]; opts: Cove
 
 type CoverHandlers = { onStart: () => void; onContinue: () => void; onConfig: () => void };
 
-/* 封面主体：世界封面（cv）+ 玩家 DIY（d），玩家填写的项优先；preview=编辑器缩略预览（不响应点击） */
-export function CoverView({ cv, d: d0, preview, ...h }: { cv: CoverCopy; d?: CoverDiy; preview?: boolean } & CoverHandlers) {
+/* 封面主体：世界封面（cv）+ 玩家 DIY（d），玩家填写的项优先；preview=编辑器缩略预览（不响应点击）
+ * displayOnly：作品展示封面——只渲染背景图，禁止标题/简介/「开始游戏·继续游戏·配置 AI」（列表/详情/书架用，不是开局菜单） */
+export function CoverView({ cv, d: d0, preview, displayOnly, ...h }: { cv: CoverCopy; d?: CoverDiy; preview?: boolean; displayOnly?: boolean } & CoverHandlers) {
   // 作者样式层（模组 cover.style）打底，玩家 DIY 叠在上面；玩家关掉「我的封面」时只剩作者样式
   const d: CoverDiy = withAuthorStyle(cv.style, d0 && d0.on !== false ? d0 : {});
   // 玩家自己的背景优先；没填则用世界封面（媒体模式）
@@ -152,10 +154,11 @@ export function CoverView({ cv, d: d0, preview, ...h }: { cv: CoverCopy; d?: Cov
   const ownBg = own.kind !== "none";
   const mode = ownBg ? "media" : coverMode(cv);
   const htmlMode = mode === "html" && !!cv.html;
-  const showUI = !htmlMode || cv.htmlUI !== false;
+  // 功能注释：展示封面预览只出背景，连自定义 HTML 开局壳也不渲染
+  const showUI = !displayOnly && (!htmlMode || cv.htmlUI !== false);
   const bg: CoverBgPlan = ownBg ? own : mode === "media" ? resolveCoverBg(cv) : { kind: "none" };
   const cgOpts: CoverCgOpts = ownBg ? d : cv;
-  const dim = Math.max(0, Math.min(80, d.dim ?? cv.dim ?? 40)) / 100;
+  const dim = Math.max(0, Math.min(80, d.dim ?? cv.dim ?? (displayOnly ? 0 : 40))) / 100;
   const blur = d.blur ?? 0;
   const [c1, c2] = d.tint === "custom" && d.tintColor ? [d.tintColor, d.tintColor] : TINT[(d.tint as keyof typeof TINT) ?? "night"] ?? TINT.night;
   const align = d.align ?? "left";
@@ -170,8 +173,8 @@ export function CoverView({ cv, d: d0, preview, ...h }: { cv: CoverCopy; d?: Cov
   const grad = tc === "gold" || tc === "pink" || tc === "accent" ? TITLE_GRAD[tc] : "";
   const panel = d.panel ?? "none";
   const panelCls = panel === "glass" ? "rounded-3xl border border-white/25 bg-white/10 p-6 backdrop-blur-xl" : panel === "dark" ? "rounded-3xl bg-black/45 p-6 backdrop-blur-md" : panel === "paper" ? "rounded-[18px] border border-[#e8dcc6] bg-[#fbf6ec]/92 p-6 shadow-[0_18px_50px_-20px_rgba(0,0,0,0.6)] [text-shadow:none] [&_.cover-intro_p]:!text-[#4a3b2a] [&_.cover-kicker]:!text-[#8a6d4a] [&_.cover-subtitle]:!text-[#9b5d73]" : "";
-  // 封面专属 CSS（AI 对话生成或手写）：自动收进 .cover-root，只影响封面
-  const css = useMemo(() => (typeof d.css === "string" && d.css.trim() ? scopeCoverCss(d.css) : ""), [d.css]);
+  // 封面专属 CSS（AI 对话生成或手写）：自动收进 .cover-root，只影响封面；展示预览不注入，避免 CSS 伪造按钮
+  const css = useMemo(() => (!displayOnly && typeof d.css === "string" && d.css.trim() ? scopeCoverCss(d.css) : ""), [d.css, displayOnly]);
   const vpos = d.vpos ?? "center";
   // 编辑器：文字只来自封面设置；标题兜底用当前作品名，其余留空就不显示
   const kicker = d.kicker || cv.kicker || "";
@@ -187,9 +190,9 @@ export function CoverView({ cv, d: d0, preview, ...h }: { cv: CoverCopy; d?: Cov
   const gridCls = layout === "row" ? "flex flex-wrap gap-2.5 [&>*]:min-w-[7rem] [&>*]:flex-1" : layout === "stack" ? "grid gap-2.5" : "grid gap-2.5 sm:grid-cols-2";
 
   return (
-    <div className={`cover-root relative flex flex-col items-center overflow-hidden px-6 ${preview ? "pointer-events-none h-full py-10" : "min-h-screen py-16"} ${vpos === "top" ? "justify-start pt-20" : vpos === "bottom" ? "justify-end pb-16" : "justify-center"}`}>
+    <div className={`cover-root relative flex flex-col items-center overflow-hidden px-6 ${preview ? "pointer-events-none h-full py-10" : "min-h-screen py-16"} ${displayOnly ? "justify-center" : vpos === "top" ? "justify-start pt-20" : vpos === "bottom" ? "justify-end pb-16" : "justify-center"}`}>
       {css && <style>{css}</style>}
-      {htmlMode ? (
+      {htmlMode && !displayOnly ? (
         <iframe title="封面" sandbox="allow-scripts allow-popups" srcDoc={cv.html} className="absolute inset-0 h-full w-full border-0" />
       ) : bg.kind === "video" ? (
         <video className="cover-bg absolute inset-0 h-full w-full object-cover" style={blur ? { filter: `blur(${blur}px)`, transform: "scale(1.06)" } : undefined} src={bg.video} autoPlay muted loop playsInline poster={bg.poster} aria-hidden />
@@ -197,9 +200,10 @@ export function CoverView({ cv, d: d0, preview, ...h }: { cv: CoverCopy; d?: Cov
         bg.kind === "images" ? <CoverBg images={bg.images} opts={cgOpts} blur={blur} preview={preview} />
           : <div className="cover-bg absolute inset-0 bg-[radial-gradient(120%_80%_at_50%_0%,#3a3550_0%,#1c1a26_55%,#121118_100%)]" aria-hidden />
       )}
-      {!htmlMode && <div className="pointer-events-none absolute inset-0" style={{ opacity: Math.min(1, dim * 1.6), background: `linear-gradient(to bottom, ${c1}, color-mix(in srgb, ${c1} 50%, transparent), ${c2})` }} aria-hidden />}
-      {!htmlMode && d.fx && <CoverFx kind={d.fx} />}
-      {!htmlMode && <FrameOverlay f={d.frame} />}
+      {/* 功能注释：展示封面预览不加色罩/特效/边框，避免看起来像开局菜单 */}
+      {!displayOnly && !htmlMode && <div className="pointer-events-none absolute inset-0" style={{ opacity: Math.min(1, dim * 1.6), background: `linear-gradient(to bottom, ${c1}, color-mix(in srgb, ${c1} 50%, transparent), ${c2})` }} aria-hidden />}
+      {!displayOnly && !htmlMode && d.fx && <CoverFx kind={d.fx} />}
+      {!displayOnly && !htmlMode && <FrameOverlay f={d.frame} />}
 
       {showUI && <div className={`relative w-full max-w-xl ${htmlMode ? "mt-auto pointer-events-auto" : ""}`}><div className={`cover-panel ${tAlign} [text-shadow:0_2px_18px_rgba(20,12,40,0.85)] ${panelCls}`}>
         {!htmlMode && <>
@@ -227,6 +231,7 @@ export function CoverView({ cv, d: d0, preview, ...h }: { cv: CoverCopy; d?: Cov
         <div className="my-6 h-px w-full bg-gradient-to-r from-transparent via-white/35 to-transparent" />
         </>}
 
+        {/* 功能注释：开局菜单三按钮；展示封面 displayOnly 时整段 UI 已关掉，此处仅玩家/开局菜单可达 */}
         <div className={`cover-btns [text-shadow:none] ${gridCls}`}>
           <button onClick={h.onStart} className={`cover-btn cover-btn-main ${btnBase} ${layout === "grid" ? "col-span-full" : ""} py-3.5 text-base tracking-wide ${btn.main}`}>
             {d.btnStyle !== "text" && <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/40 to-transparent transition-transform duration-700 group-hover:translate-x-full" aria-hidden />}

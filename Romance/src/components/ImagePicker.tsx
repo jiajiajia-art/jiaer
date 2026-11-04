@@ -25,6 +25,10 @@ export type ImagePickerAiGen = {
   size?: string
   /** 功能注释：打开弹窗时预填提示词（如当前场景描述） */
   initialPrompt?: string
+  /** 功能注释：有预填词时打开即自动请求生图 */
+  autoRun?: boolean
+  /** 功能注释：生成成功立刻写回预览，无需再点「采用这张」 */
+  autoApply?: boolean
 }
 
 export default function ImagePicker({
@@ -276,6 +280,8 @@ export default function ImagePicker({
             size={genOpts.size ?? (scenePortrait ? SCENE_PORTRAIT_GEN_SIZE : undefined)}
             placeholder={genOpts.placeholder}
             initialPrompt={genOpts.initialPrompt}
+            autoRun={genOpts.autoRun !== false && Boolean(String(genOpts.initialPrompt ?? "").trim())}
+            autoApply={genOpts.autoApply !== false && Boolean(String(genOpts.initialPrompt ?? "").trim())}
             onPick={(url) => {
               void applyUrl(url).then(() => setGenOpen(false))
             }}

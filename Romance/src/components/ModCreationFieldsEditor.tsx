@@ -221,12 +221,8 @@ export default function ModCreationFieldsEditor({ creation, backgrounds, onChang
 
   return (
     <div className="space-y-2">
-      <div className="mb-1">
-        <p className="text-[12px] font-bold text-ink">建角字段</p>
-        <p className="text-[11px] leading-relaxed text-ink-soft">
-          建角要填的项都在这里。姓名、性别、年龄、生日是系统固定项（不能改类型、不能删），排在最前；开局资金是货币项。其余用下方「添加」选类型：文本、单选、数值、日期、货币。数值可配范围、开局值、分档（多少分叫什么）、是否隐藏、是否上状态栏。
-        </p>
-      </div>
+      {/* 功能注释：标题下列表即玩家要填的字段；不写系统规则长说明 */}
+      <p className="mb-1 text-[12px] font-bold text-ink">建角字段</p>
 
       {BUILTINS.map((b) => {
         const c = cfg(b.k);
@@ -234,7 +230,6 @@ export default function ModCreationFieldsEditor({ creation, backgrounds, onChang
           row(b.k, b.k, c.label || b.label, TYPE_LABEL[b.type],
             <><Badge tone="jade">系统字段</Badge><Badge tone="gold">必填</Badge></>, <>
             <label><span className={lbl}>显示名称</span><input className={inp} value={c.label ?? ""} placeholder={b.label} onChange={(e) => setCfg(b.k, { label: e.target.value })} /></label>
-            <p className="text-[10.5px] text-ink-soft">类型固定为「{TYPE_LABEL[b.type]}」，始终必填、不可隐藏或删除。</p>
             {b.k === "gender" && (() => {
               const genderOptions = normalizeGenderOptions(c.options);
               return <div className="space-y-1.5">
@@ -251,8 +246,8 @@ export default function ModCreationFieldsEditor({ creation, backgrounds, onChang
         );
       })}
 
-      {/* 功能注释：开局资金必填；行上类型位展示可改的货币名称（元/灵石），不再写死「货币」 */}
-      {row("startMoney", "startMoney", "开局资金", (moneyLabel?.trim() || "货币名称"),
+      {/* 功能注释：开局资金与系统四项同级必填；类型位=可改货币名；金额默认 0 已算填好 */}
+      {row("startMoney", "startMoney", "开局资金", (moneyLabel?.trim() || "请填货币名"),
         <Badge tone="gold">必填</Badge>,
         <>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -273,16 +268,17 @@ export default function ModCreationFieldsEditor({ creation, backgrounds, onChang
                 type="number"
                 min={0}
                 className={`${inp} ${typeof startMoney !== "number" ? "!border-danger" : ""}`}
-                value={typeof startMoney === "number" ? startMoney : ""}
+                value={typeof startMoney === "number" ? startMoney : 0}
                 placeholder="0"
                 onChange={(e) => {
                   const v = e.target.value;
-                  onStartMoney?.(v === "" ? undefined : Math.max(0, Number(v) || 0));
+                  // 功能注释：清空时仍回落 0，避免「已默认 0」又被当成未填
+                  onStartMoney?.(v === "" ? 0 : Math.max(0, Number(v) || 0));
                 }}
               />
             </label>
           </div>
-          <p className="text-[10.5px] text-ink-soft">默认金额 0（合法）；货币名称会用在开局页与游戏内资金文案。两项都填才算完成。</p>
+          <p className="text-[10.5px] text-ink-soft">金额默认 0（已算填好，不必再填）。货币名称会出现在开局页与游戏内资金文案，请改成「元」「灵石」「星币」等。</p>
         </>,
         undefined,
         { authorField: "author-field-start-money", flash: flashMoney })}

@@ -19,9 +19,10 @@
     color: var(--rank-text);
 }
 
+/* 功能注释：顶栏避让由 AppPageShell 负责，本层不再垫 navbar 高度 */
 .page {
-    min-height: 100vh;
-    padding-top: var(--app-desktop-navbar-height);
+    min-height: 100%;
+    padding-top: 0;
     position: relative;
     background: var(--rank-bg);
 }
@@ -51,7 +52,7 @@
     overscroll-behavior-x: contain;
     user-select: none;
     position: sticky;
-    top: var(--app-desktop-navbar-height, 64px);
+    top: 0;
     z-index: 20;
     background: rgba(0, 0, 0, 0.92);
     backdrop-filter: blur(10px);
@@ -701,14 +702,14 @@
 /* ─── Responsive ─────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
     .pageInner {
-        padding: 0 16px calc(88px + env(safe-area-inset-bottom));
+        padding: 0 16px 24px;
     }
 
     .tabBar {
         margin: 8px -16px 18px;
         padding: 0 8px;
         gap: 2px;
-        top: var(--app-desktop-navbar-height, 64px);
+        top: 0;
         border-bottom: 1px solid var(--rank-divider);
         background: rgba(0, 0, 0, 0.94);
     }

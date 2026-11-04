@@ -1488,6 +1488,12 @@ html.nav-label-c .nav-txt-on { color: var(--nav-label) !important; }
   .ui-dialog > * { flex-shrink: 0; }
   /* 功能注释：body 不 flex-grow，短内容不撑空；父级触顶后由 flex-shrink + overflow 滚动 */
   .ui-dialog > .ui-dialog-body { flex: 0 1 auto; min-height: 0; overflow-y: auto; overflow-x: auto; overscroll-behavior: contain; }
+  /* 功能注释：建角向导固定为屏宽/屏高 85%，底栏在框外滚动区之外，属性可完整滚出 */
+  .ui-dialog.ui-dialog-create {
+    width: 85vw; max-width: 85vw;
+    height: 85dvh; max-height: 85dvh;
+  }
+  .ui-dialog.ui-dialog-create > .ui-dialog-body { flex: 1 1 auto; }
   .ui-sheet-head-bar { background: linear-gradient(to bottom, var(--sheet-solid, var(--paper-2)) 70%, transparent); }
   /* <Modal>：所有屏宽一律居中弹窗（手机上也不再从底部升起） */
   .ui-overlay-modal { align-items: center; padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom)); }

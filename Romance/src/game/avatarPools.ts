@@ -78,7 +78,8 @@ export const systemPools = (): AvatarSource[] => {
 /** AI 新增人脉的抽图范围：本剧勾了「随机池」的我的头像池 + 勾了随机的平台分类；顺序尊重剧本 match.prefer */
 export function randomPools(slot?: AvatarSlot | null): AvatarSource[] {
   const s = cur(slot);
-  const on = new Set(s?.publicRandom ?? []);
+  // 功能注释：publicRandom 常被 AI 写成对象；非数组按空，禁止 new Set(非数组) → is not iterable
+  const on = new Set(Array.isArray(s?.publicRandom) ? s.publicRandom : []);
   const creator = mine(s, (t) => t.random);
   const platform = systemPools().filter((p) => on.has(p.name) && p.images.length);
   const { prefer } = resolveAvatarMatchPrefs(s);

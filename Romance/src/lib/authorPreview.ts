@@ -109,12 +109,8 @@ export function requestAuthorPreviewRestart() {
 export type AuthorRequiredField =
   | "name"
   | "scriptTone"
-  | "startDate"
-  | "startMoney"
   | "rooms"
-  | "startRoom"
-  | "cover"
-  | "opening";
+  | "startRoom";
 
 export type AuthorRequiredIssue = {
   field: AuthorRequiredField;
@@ -124,33 +120,11 @@ export type AuthorRequiredIssue = {
 };
 
 const text = (value: unknown) => typeof value === "string" ? value.trim() : "";
-const START_DATE_RE = /^\d{4}[-./]\d{2}[-./]\d{2}$/;
-
-/** 功能注释：作品展示封面须有背景图/视频；账号皮肤与文字装饰不算完成。 */
-function hasOwnCover(mod: Mod): boolean {
-  if (text(mod.cover)) return true;
-  const cover = mod.content?.cover;
-  if (!cover || typeof cover !== "object") return false;
-  return !!(
-    text(cover.image)
-    || text(cover.video)
-    || (Array.isArray(cover.cgs) && cover.cgs.some(text))
-  );
-}
-
-/** 功能注释：开场只认自定义开场页或作者写的开场白正文，标题/图片等装饰不能单独算完成。 */
-function hasOpeningCopy(mod: Mod): boolean {
-  const opening = mod.content?.opening;
-  if (!opening || typeof opening !== "object") return false;
-  return !!(
-    text(opening.page)
-    || text(opening.html)
-    || (Array.isArray(opening.paragraphs) && opening.paragraphs.some(text))
-  );
-}
 
 /**
- * 功能注释：作者预览与发布共用唯一必填清单；0 元是有效资金，空值和失效引用均阻断。
+ * 功能注释：作者预览与发布共用必填清单。
+ * 开局日期 / 开局资金 / 作品封面 / 开场不拦预览：日期与资金由生成世界观写入（资金默认 0），
+ * 封面用引擎默认，开场默认不要也不生成。
  * 旧三栏只把「世界观设定」视为剧本基调正文，避免 GM/口吻占位误判成已填写。
  */
 export function assessAuthorRequiredFields(mod: Mod): AuthorRequiredIssue[] {
@@ -162,21 +136,12 @@ export function assessAuthorRequiredFields(mod: Mod): AuthorRequiredIssue[] {
   const unifiedTone = text(c.prompt?.scriptTone);
   const legacyWorld = text(c.prompt?.worldIntro);
   if (!unifiedTone && !legacyWorld) add({ field: "scriptTone", label: "剧本基调（或世界观设定）", group: "base", target: "author-field-script-tone" });
-  if (!START_DATE_RE.test(text(c.startDate))) add({ field: "startDate", label: "开局日期", group: "base", target: "author-field-start-date" });
-  // 功能注释：开局资金在①基础·建角；0 合法；货币名称必填；缺金额或缺名称才拦
-  const moneyOk = typeof c.startMoney === "number" && Number.isFinite(c.startMoney) && c.startMoney >= 0;
-  const moneyNameOk = !!text(c.moneyLabel);
-  if (!moneyOk || !moneyNameOk) {
-    add({ field: "startMoney", label: "开局资金", group: "base", target: "author-field-start-money" });
-  }
   const rooms = c.rooms && typeof c.rooms === "object" ? c.rooms : {};
   const roomIds = Object.keys(rooms);
   if (!roomIds.length) add({ field: "rooms", label: "地点（至少一处）", group: "base", target: "author-field-rooms" });
   if (!text(c.startRoom) || !(c.startRoom! in rooms)) {
     add({ field: "startRoom", label: "开局地点（勾选「设为开局地点」）", group: "base", target: "author-field-start-room" });
   }
-  if (!hasOwnCover(mod)) add({ field: "cover", label: "作品封面（列表 / 详情 / 书架）", group: "base", target: "author-field-cover" });
-  if (!hasOpeningCopy(mod)) add({ field: "opening", label: "开场（自定义开场页或开场白）", group: "look", target: "author-field-opening" });
   return issues;
 }
 

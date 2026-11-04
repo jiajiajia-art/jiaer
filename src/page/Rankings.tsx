@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import Navbar from '../components/Layout/Navbar';
+import AppPageShell from '../components/Layout/AppPageShell';
 import FooterArea from '../components/Layout/FooterArea';
-import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import styles from './Rankings.module.css';
 import getRankingsApi from '../api/rankings/getRankings';
 import type { RankingsApiType, RankingsGameItem } from '../api/rankings/getRankings.type';
@@ -455,9 +454,7 @@ const Rankings: React.FC = () => {
     };
 
     return (
-        <div className={styles.pageRoot}>
-            <Navbar />
-            <div className={styles.page}>
+        <AppPageShell shellClassName={styles.pageRoot} mainClassName={styles.page}>
                 <div className={styles.pageInner}>
                 {/* Tab Bar */}
                 <div className={styles.tabBar} role="tablist" aria-label={isZh ? '排行分类' : 'Ranking categories'}>
@@ -587,11 +584,9 @@ const Rankings: React.FC = () => {
                     </>
                 )}
             </div>
-        </div>
 
         {!isMobilePage && <FooterArea />}
-        <MobileBottomNav />
-        </div>
+        </AppPageShell>
     );
 };
 

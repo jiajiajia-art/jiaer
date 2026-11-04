@@ -16,7 +16,7 @@ export default function ModTrainingsEditor({ value, stats, attrs, onChange }: { 
   const hidden = new Set(stats?.hidden ?? []);
   const opts = [
     ...RAW_STAT_ORDER.filter((k) => !hidden.has(k)).map((k) => ({ v: k as string, l: (typeof stats?.labels?.[k] === "string" ? stats.labels![k]!.trim() : "") || RAW_STAT_LABELS[k] })),
-    ...(attrs ?? []).map((a) => ({ v: `c:${a.id}`, l: a.label || a.id })),
+    ...(Array.isArray(attrs) ? attrs : []).map((a) => ({ v: `c:${a.id}`, l: a.label || a.id })),
   ];
   const labelOf = (v: string) => opts.find((o) => o.v === v)?.l ?? v;
   const rowsOf = (t: Training): { k: string; r: Range }[] => [

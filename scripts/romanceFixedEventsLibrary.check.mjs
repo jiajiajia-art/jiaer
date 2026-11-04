@@ -83,3 +83,19 @@ test('FixedEventsPanel_空库不渲染全部导入_模组走resolveModEventLibra
   // 模组模式必须走本作品解析，禁止用 getWorld* 当库源
   assert.match(src, /modMode\s*\n\s*\? resolveModEventLibrary/);
 });
+
+test('FixedEventsPanel_事件编辑去掉选项与结束关键词_保留链与关键词触发', () => {
+  const panel = read('components/FixedEventsPanel.tsx');
+  const advanced = read('components/EventAdvanced.tsx');
+  // 功能注释：编辑器不再露出「事件选项 / 结束关键词」整块；关键词触发与事件链保留
+  assert.doesNotMatch(panel, /label="事件选项/);
+  assert.doesNotMatch(panel, /label="结束关键词/);
+  assert.doesNotMatch(panel, /＋ 添加选项/);
+  assert.doesNotMatch(panel, /ChoicesEditor|ChoiceAdvanced/);
+  assert.doesNotMatch(panel, /placeholder="如：婚礼落幕、宾客散尽"/);
+  assert.doesNotMatch(panel, /每回合持续.*结束词/);
+  assert.match(panel, /label="事件链（可不填）"/);
+  assert.match(panel, /label="关键词触发（可不填）"/);
+  assert.match(panel, /ChainEditor/);
+  assert.doesNotMatch(advanced, /ChoiceAdvanced|隐藏分支/);
+});

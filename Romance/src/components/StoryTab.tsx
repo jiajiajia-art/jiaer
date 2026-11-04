@@ -11,7 +11,8 @@ import { openPerson } from "./NpcTab";
 
 /* 流式实时文本：单独订阅 LiveCtx，AI 逐帧吐字只重渲染这一小块，
  * 并让它自己把滚动容器滚到底，避免整页跟着刷新。 */
-export function LiveNarration({ scrollRef }: { scrollRef: RefObject<HTMLDivElement | null> }) {
+/** 功能注释：叠在场景图上时旁白需半透明底；对白气泡仍走原样式 */
+export function LiveNarration({ scrollRef, overlay }: { scrollRef: RefObject<HTMLDivElement | null>; overlay?: boolean }) {
   const live = useLive();
   const { game } = useGame();
   useEffect(() => {
@@ -24,11 +25,15 @@ export function LiveNarration({ scrollRef }: { scrollRef: RefObject<HTMLDivEleme
   return (
     <div className="animate-pop">
       {segs.length && game ? (
-        <Segments segments={segs} npcs={game.npcs} playerAvatar={game.player.avatar} playerName={game.player.name} />
+        <Segments segments={segs} npcs={game.npcs} playerAvatar={game.player.avatar} playerName={game.player.name} overlay={overlay} />
       ) : live ? (
-        <p className="story-prose border-l-2 border-jade/25 pl-3 text-[14.5px] leading-relaxed text-ink-soft"><EntityText text={live} /></p>
+        <p className={overlay
+          ? "story-prose rounded-xl bg-black/50 px-3 py-2 text-[14.5px] leading-relaxed text-white/95 backdrop-blur-[6px] [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]"
+          : "story-prose border-l-2 border-jade/25 pl-3 text-[14.5px] leading-relaxed text-ink-soft"}>
+          <EntityText text={live} />
+        </p>
       ) : (
-        <p className="flex gap-1 pl-3 text-jade">
+        <p className={`flex gap-1 ${overlay ? "rounded-full bg-black/40 px-3 py-1.5 text-white/90" : "pl-3 text-jade"}`}>
           <span className="typing-dot">●</span>
           <span className="typing-dot" style={{ animationDelay: "0.2s" }}>●</span>
           <span className="typing-dot" style={{ animationDelay: "0.4s" }}>●</span>
@@ -153,9 +158,16 @@ export function SpeechWithActions({ text }: { text: string }) {
   );
 }
 
-function SegmentView({ s, npcs, tightTop, cont, player }: { s: Segment; npcs: Npc[]; tightTop?: boolean; cont?: boolean; player?: { name: string; avatar: string } }) {
+function SegmentView({ s, npcs, tightTop, cont, player, overlay }: {
+  s: Segment; npcs: Npc[]; tightTop?: boolean; cont?: boolean; player?: { name: string; avatar: string }; overlay?: boolean;
+}) {
+  // 功能注释：叠图叙事每段加半透明底，保证从背景里能看清；对白气泡不变
   if (s.kind === "narration")
-    return (
+    return overlay ? (
+      <p className="story-prose rounded-xl bg-black/50 px-3 py-2 text-[14.5px] leading-[1.85] tracking-[0.015em] text-white/95 backdrop-blur-[6px] [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
+        <ProseWithSpeech text={s.text} />
+      </p>
+    ) : (
       <p className="story-prose relative pl-3 text-[14.5px] leading-[1.85] tracking-[0.015em] text-ink/88 before:pointer-events-none before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[2px] before:rounded-full before:bg-gradient-to-b before:from-jade/35 before:via-coral/25 before:to-transparent">
         <ProseWithSpeech text={s.text} />
       </p>
@@ -271,7 +283,9 @@ export function ErrorBanner({ error }: { error: { title: string; text: string } 
 
 export { SpeakerAvatar };
 const sameSpeaker = (a?: Segment, b?: Segment) => a?.kind === "dialogue" && b?.kind === "dialogue" && a.speaker === b.speaker;
-export function Segments({ segments: raw, npcs, playerAvatar, playerName }: { segments: Segment[]; npcs: Npc[]; playerAvatar: string; playerName: string }) {
+export function Segments({ segments: raw, npcs, playerAvatar, playerName, overlay }: {
+  segments: Segment[]; npcs: Npc[]; playerAvatar: string; playerName: string; overlay?: boolean;
+}) {
   const segments = repairSegments(raw);
   // 乱码拦截：把所有文字拼起来判断，命中则整段替换为「重新生成」提示。
   const joined = segments.map((s) => s.text).join("\n");
@@ -279,7 +293,7 @@ export function Segments({ segments: raw, npcs, playerAvatar, playerName }: { se
   return (
     <div className="space-y-3">
       {segments.map((s, i) => (
-        <SegmentView key={i} s={s} npcs={npcs} tightTop={segments[i - 1]?.kind === "system"} cont={sameSpeaker(segments[i - 1], s)} player={{ name: playerName, avatar: playerAvatar }} />
+        <SegmentView key={i} s={s} npcs={npcs} tightTop={segments[i - 1]?.kind === "system"} cont={sameSpeaker(segments[i - 1], s)} player={{ name: playerName, avatar: playerAvatar }} overlay={overlay} />
       ))}
     </div>
   );

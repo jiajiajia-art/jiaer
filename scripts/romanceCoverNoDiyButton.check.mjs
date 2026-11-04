@@ -45,6 +45,9 @@ test('ModCoverEditor_只留背景_无自定义HTML与多余页签入口', () => 
   assert.match(opening, /bgOnly/);
   assert.match(opening, /mode="live"/);
   assert.match(opening, /作品展示封面/);
+  assert.match(opening, /真正开局后不会再显示一次封面/);
+  assert.match(opening, /不做出开始界面|不是开始界面/);
+  assert.match(opening, /previewD=\{toDiy\(c\)\}/);
   assert.doesNotMatch(opening, /HtmlCover|整页自己写|沙箱全屏/);
   assert.doesNotMatch(opening, /自由搭配 · AI 对话/);
   assert.match(diy, /bgOnly/);
@@ -53,6 +56,13 @@ test('ModCoverEditor_只留背景_无自定义HTML与多余页签入口', () => 
   assert.match(diy, /BG_ONLY_TABS = \["背景"\]/);
   assert.match(diy, /if \(props\.bgOnly\) return <CoverDiyBody \{\.\.\.props\} mode="live" \/>/);
   assert.match(diy, /\{!bgOnly && \(/);
+  assert.match(diy, /displayOnly=\{!!bgOnly\}/);
+  assert.match(cover, /displayOnly/);
+  // 功能注释：展示封面 displayOnly 时 showUI=false，整段标题+三按钮都不渲染
+  assert.match(cover, /showUI = !displayOnly/);
+  assert.match(cover, /cover-btns/);
+  assert.match(cover, /只渲染背景图/);
+  assert.doesNotMatch(cover, /!displayOnly && \([\s\S]{0,80}cover-btns/);
   for (const tab of ['文字', '按钮', '边框', '特效', 'CSS']) {
     assert.doesNotMatch(diy, new RegExp(`BG_ONLY_TABS = \\[[^\\]]*${tab}`));
   }

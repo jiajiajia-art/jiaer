@@ -7,6 +7,7 @@ import { parse } from "yaml";
 import { slot, liveArray, liveRecord, liveById, memoBy } from "../../mods/live";
 import type { GameState as SimState } from "../../game/logic";
 import { computeLooks } from "../../game/looks";
+import { asModArray } from "../../lib/asModArray";
 import raw from "./world.yaml?raw";
 import contractsRaw from "./entertainment-contracts.yaml?raw";
 import projectsRaw from "./projects.yaml?raw";
@@ -59,8 +60,12 @@ export type PersonContent = {
   groups?: string[]; // 旧数据兼容：人脉页已不读取，玩家列表只按实时关系阶段分组
   org?: string; // 人物所属组织资料（只显示在卡片上，不参与人脉分组）
   avatarVariant?: string; // 头像池名（须与「我的头像池」或公共分类名完全一致）；开局从该池抽一张做头像
+  /** 功能注释：固定头像（上传 / 生图）；优先于头像池；都没有则游玩端用首字头像 */
+  avatar?: string;
   age?: number; // 年龄（档案确定性数据，非推断）
   birthday?: { m: number; d: number }; // 生日（选填；留空时系统按人物自动分配）
+  /** 功能注释：人物短简介（编辑器「简介」；生图与资料展示用；与小传 bio 分开） */
+  summary?: string;
   tags?: string[]; // 人物标签（背景故事下的小标签；优先平台内置勾选）
   /** 功能注释：所属势力 id，对应 creation.startFactions；在①基础统一配势力，人物只选归属 */
   factionId?: string;
@@ -419,7 +424,8 @@ export type RoomContent = {
   tint?: string; // 地点背景图色调键（jade|coral|gold|ink|plum）
   access?: RoomAccess; // 通行门槛（缺省=无门槛）
   // —— 多级嵌套子地点（地点树）——
-  parent?: string; // 父地点 id（空 = 顶层地点）；层级不限
+  mapId?: string; // 所属大地图 id（作品可有多张大地图；缺省由 ensureWorldMaps 归入主地图）
+  parent?: string; // 父地点 id（空 = 该大地图下的顶层地点）；层级不限
   order?: number; // 在父地点「子地点入口」里的排序
   bg?: string; // 此地背景图（优先于舆图照片）
   bgm?: string; // 进入此地自动切换的背景音乐（模组曲目 id，或 platform: 平台曲目 id）
@@ -473,9 +479,19 @@ export const WORLD = parse(raw) as WorldContent;
 /* 日历 / 出行参数：模组未声明时沿用引擎默认（即娱乐圈原值） */
 const calendarNow = memoBy(() => slot<CalendarContent>("calendar", () => WORLD.calendar), (c) => c);
 export const CALENDAR: CalendarContent = liveRecord(() => {
-  const c = calendarNow();
+  // 功能注释：AI 常只写 calendar.startDate 残缺对象；必须与引擎默认合并，否则 weekdayNames.length 崩预览
+  const raw = calendarNow();
+  const c: CalendarContent = {
+    ...WORLD.calendar,
+    ...(raw && typeof raw === "object" ? raw : {}),
+  };
+  if (!Array.isArray(c.weekdayNames) || !c.weekdayNames.length) c.weekdayNames = WORLD.calendar.weekdayNames;
   const sd = slot<string | undefined>("startDate", () => undefined); // 简写：「2005.01.03」或「2005-01-03」
-  return sd ? { ...c, startDate: sd.replace(/[./]/g, "-") } : c;
+  if (sd && typeof sd === "string") return { ...c, startDate: sd.replace(/[./]/g, "-") };
+  if (typeof c.startDate === "string" && c.startDate) {
+    return { ...c, startDate: c.startDate.replace(/[./]/g, "-") };
+  }
+  return { ...c, startDate: WORLD.calendar.startDate };
 });
 export const DIR_LABEL = WORLD.directions;
 export const ROOMS = WORLD.rooms;
@@ -700,11 +716,15 @@ declare namespace roomPathProvider { let f: ((id?: string) => string[]) | undefi
 export function setRoomPathProvider(f: (id?: string) => string[]) { roomPathProvider.f = f; }
 
 /* 通用门槛求值：全部满足则 ok；hint 拼接每条要求（gte 未达标附上差值） */
-export function evalRequires(reqs: Requirement[], s: SimState): { ok: boolean; hint: string } {
+export function evalRequires(reqs: Requirement[] | unknown, s: SimState): { ok: boolean; hint: string } {
+  // 功能注释：AI 常把 npc/活动 requires 写成单对象；for-of 非数组会炸 is not iterable（预览建角/在场人物 filter 必挂）
+  const list = asModArray<Requirement>(reqs).filter(
+    (r) => r && typeof r === "object" && typeof r.metric === "string" && typeof r.hint === "string",
+  );
   const M = worldMetrics(s);
   let ok = true;
   const parts: string[] = [];
-  for (const r of reqs) {
+  for (const r of list) {
     const have = M[r.metric] ?? 0;
     const pass = r.op === "lte" ? have <= r.value : have >= r.value;
     if (!pass) ok = false;

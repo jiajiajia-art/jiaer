@@ -18,6 +18,27 @@ test("platformRomanceDraft_标题与URL契约", () => {
   assert.equal(mod.readRomancePlatformDraftId("?createWorld=1&draftId=abc123"), "abc123");
   assert.equal(mod.readRomancePlatformDraftId("?createWorld=1"), "");
   assert.match(mod.romanceDraftUpdateUrl("fid1", ""), /\/api\/auth\/games\/drafts\/romance\/fid1$/);
+  assert.match(mod.romanceDraftContentUrl("fid1", ""), /\/api\/auth\/games\/drafts\/romance\/fid1\/content$/);
+});
+
+test("platformRomanceDraft_正文可用性与组装", () => {
+  assert.equal(mod.isUsableRomancePlatformDraftContent(null), false);
+  assert.equal(mod.isUsableRomancePlatformDraftContent({ mod: { id: "m" } }), false);
+  const built = mod.buildRomancePlatformDraftContent({
+    mod: { id: "w1", name: "帝王后宫录", version: "0.1.0", author: "", description: "", kind: "world", dependencies: [], content: {} },
+    draft: {
+      title: "帝王后宫录",
+      setting: "宫廷",
+      forbidGen: "",
+      aiPolish: true,
+      engineId: "balanced",
+      contentIds: ["world"],
+      editorStepIds: ["world"],
+    },
+  });
+  assert.equal(built.version, 1);
+  assert.equal(built.mod.name, "帝王后宫录");
+  assert.ok(mod.isUsableRomancePlatformDraftContent(built));
 });
 
 test("platformRomanceDraft_防抖只更新不create", async () => {
@@ -39,11 +60,14 @@ test("platformRomanceDraft_防抖只更新不create", async () => {
   mod.resetRomancePlatformDraftSyncForTests();
 });
 
-test("WorldGenWizard_保存与自动保存走平台PATCH", () => {
+test("WorldGenWizard_保存走平台正文且resume无存档提示打不开", () => {
   const wiz = read("Romance/src/components/WorldGenWizard.tsx");
-  assert.match(wiz, /commitRomancePlatformDraft/);
+  assert.match(wiz, /commitRomancePlatformDraftWithContent/);
+  assert.match(wiz, /fetchRomancePlatformDraftContent/);
   assert.match(wiz, /scheduleRomancePlatformDraftSync/);
   assert.match(wiz, /readRomancePlatformDraftId/);
+  assert.match(wiz, /打不开这份存档/);
+  assert.match(wiz, /resumeLoad/);
   assert.doesNotMatch(wiz, /createRomance/);
 });
 
@@ -55,9 +79,11 @@ test("CreateType_Romance只在入口create一次", () => {
   assert.match(tsx, /type === 'st' \|\| type === 'avg'/);
 });
 
-test("creatorDraftApi_有updateRomance与dedupe", () => {
+test("creatorDraftApi_有updateRomance_content与dedupe", () => {
   const api = read("src/api/creator/creatorDraftApi.ts");
   assert.match(api, /updateRomance:/);
+  assert.match(api, /getRomanceContent:/);
+  assert.match(api, /putRomanceContent:/);
   assert.match(api, /method:\s*['"]patch['"]|api\.patch/);
   assert.match(api, /dedupe:/);
   assert.doesNotMatch(api, /createRomance[\s\S]*createRomance/);

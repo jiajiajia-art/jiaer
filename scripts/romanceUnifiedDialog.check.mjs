@@ -53,7 +53,9 @@ test('Modal_统一用ui-dialog_不再有wide和xl尺寸档', () => {
   const ui = src('components/ui.tsx');
   const modal = ui.match(/export function Modal\([\s\S]*?\n\}\n/)?.[0];
   assert.ok(modal, '找不到 Modal');
-  assert.match(modal, /className="ui-sheet modal-sheet ui-dialog"/);
+  assert.match(modal, /ui-sheet modal-sheet ui-dialog/);
+  assert.match(modal, /panelClassName/);
+  assert.match(modal, /footer/);
   assert.match(modal, /ui-dialog-body/);
   assert.match(modal, /aria-label="关闭"/);
   assert.doesNotMatch(modal, /\bwide\b|\bxl\b/);

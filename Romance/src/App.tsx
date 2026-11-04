@@ -18,7 +18,6 @@ import { Component, useEffect, useState, useSyncExternalStore, type ReactNode } 
 import { GameProvider } from "./store/GameContext";
 import { useGame } from "./store/gameCtx";
 import { getWorld } from "./mods/registry";
-import Cover from "./components/Cover";
 import CharacterCreate from "./components/CharacterCreate";
 import Opening from "./components/Opening";
 import GameShell from "./components/GameShell";
@@ -144,16 +143,16 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
 
 function PlayScreens() {
   const { screen, saveEpoch, game, go } = useGame();
-  if (screen === "create") return <CharacterCreate />;
+  if (screen === "create" || screen === "cover") return <CharacterCreate />;
   // 功能注释：开幕只挂 Opening，禁止底层 GameShell/底栏透出；点「开始」后再挂载局内界面
   if (screen === "opening") {
     if (!game) {
-      // 功能注释：无存档却进开幕 → 常见于脏切屏；禁止 Opening return null / GameShell 空挂导致静默空白
+      // 功能注释：无存档却进开幕 → 脏切屏；回到建角重开，禁止再进封面开始菜单
       return (
         <div className="flex min-h-[70vh] flex-col items-center justify-center px-6 text-center" data-author-preview-empty="opening">
-          <p className="text-sm text-ink-soft">开幕页缺少存档，请从封面重新开始。</p>
-          <button type="button" className="mt-4 rounded-xl bg-jade px-5 py-2.5 text-sm font-semibold text-paper-2" onClick={() => go("cover")}>
-            回到封面
+          <p className="text-sm text-ink-soft">开幕页缺少存档，请重新建角开局。</p>
+          <button type="button" className="mt-4 rounded-xl bg-jade px-5 py-2.5 text-sm font-semibold text-paper-2" onClick={() => go("create")}>
+            回到建角
           </button>
         </div>
       );
@@ -162,12 +161,12 @@ function PlayScreens() {
   }
   if (screen === "game") {
     if (!game) {
-      // 功能注释：GameShell 在 !game 时 return null 会变成静默空白；须可回到封面
+      // 功能注释：GameShell 在 !game 时 return null 会变成静默空白；须可回到建角
       return (
         <div className="flex min-h-[70vh] flex-col items-center justify-center px-6 text-center" data-author-preview-empty="game">
-          <p className="text-sm text-ink-soft">局内界面尚未就绪（测试存档为空）。请从封面重新开局。</p>
-          <button type="button" className="mt-4 rounded-xl bg-jade px-5 py-2.5 text-sm font-semibold text-paper-2" onClick={() => go("cover")}>
-            回到封面
+          <p className="text-sm text-ink-soft">局内界面尚未就绪（测试存档为空）。请重新建角开局。</p>
+          <button type="button" className="mt-4 rounded-xl bg-jade px-5 py-2.5 text-sm font-semibold text-paper-2" onClick={() => go("create")}>
+            回到建角
           </button>
         </div>
       );
@@ -175,7 +174,8 @@ function PlayScreens() {
     return <GameShell key={`shell-${saveEpoch}`} />;
   }
   if (screen === "ending") return <Ending />;
-  return <Cover />;
+  // 功能注释：默认建角；封面开始菜单（标题+开始/继续/配置 AI）已下线
+  return <CharacterCreate />;
 }
 
 function Root() {
@@ -194,7 +194,14 @@ function Root() {
   }, [worldGenOpen]);
 
   const closeWorldGen = () => {
-    clearWorldGenSession();
+    // 功能注释：挂了平台 draftId 的作品保留本机会话，书架按 ID 续编可先命中本地；无 draftId 的临时向导仍清掉
+    let keepByDraft = false;
+    try {
+      keepByDraft = !!new URLSearchParams(location.search).get("draftId")?.trim();
+    } catch {
+      keepByDraft = false;
+    }
+    if (!keepByDraft) clearWorldGenSession();
     clearWorldGenQuery();
     setWorldGenOpen(false);
   };
@@ -325,16 +332,14 @@ function Root() {
       {previewing ? (
         <>
           <AuthorPreviewChrome />
-          {/* 功能注释：游玩区自带可见平台壳，建角/封面弹窗有正确挂载点与暗红 token；
-              min-height 用 100vh 写死，避免仅 min-height:100% + 空子节点高度塌成 0 露出淡紫宿主底 */}
+          {/* 功能注释：预览游玩区用局内纸色，不进 romance-platform 暗红壳——否则建角弹窗输入框变黑底、整体像后台而不是游戏。
+              data-author-preview-shell 仍作 Modal portal 挂载点；min-height 写死防高度塌成 0 */}
           <div
-            className="romance-platform min-h-screen"
-            data-platform-ui="1"
+            className="author-preview-runtime min-h-screen bg-[var(--paper)] text-[var(--ink)]"
             data-author-preview-shell="1"
             style={{
               paddingTop: "var(--apc-h, 48px)",
               minHeight: "100vh",
-              background: "var(--fl-bg, #000000)",
             }}
           >
             <AuthorPreviewPlayShell>

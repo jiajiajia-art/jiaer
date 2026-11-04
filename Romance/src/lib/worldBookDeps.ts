@@ -1,6 +1,6 @@
 /* 世界书依赖（地点 / 人物）与「详细设定 / 节日 → 世界书」合并。
- * 创作者一条设定只写进 worldBook；必须挂本作品地点或人物才能保存。
- * 运行时：玩家在挂靠地点、挂靠人物在场、或正文提到关键词 → 才注入 AI。 */
+ * 创作者一条设定只写进 worldBook；地点 / 人物为可选挂靠，未挂也能保存。
+ * 运行时：有依赖则地点/人物在场或关键词命中才注入；无依赖则按模式/关键词走旧规则。 */
 import type { Festival, LoreChar, LoreRegion, WorldBookEntry } from "./types.ts";
 import { asTrimmedString } from "./asTrimmedString.ts";
 import { keywordTexts } from "./worldBookKeywords.ts";
@@ -69,17 +69,12 @@ export function withWorldBookDeps(
   return next;
 }
 
-/** 功能注释：保存前校验——启用中的设定条目必须挂本作品地点或人物 */
-export function worldBookMissingDepsErrors(list: WorldBookEntry[] | undefined): string[] {
-  const errs: string[] = [];
-  for (const e of list ?? []) {
-    if (!e.enabled) continue;
-    const title = txt(e.title) || e.id;
-    const body = txt(e.content);
-    if (!body && !txt(e.title)) continue;
-    if (!worldBookHasDeps(e)) errs.push(`世界书「${title}」未挂地点或人物，不能保存`);
-  }
-  return errs;
+/**
+ * 功能注释：地点/人物已改为可选，保存不再因未挂依赖报错。
+ * 保留函数供旧调用方与单测；恒返回空数组。
+ */
+export function worldBookMissingDepsErrors(_list: WorldBookEntry[] | undefined): string[] {
+  return [];
 }
 
 const uid = (p: string) => `${p}_${Math.random().toString(36).slice(2, 8)}`;
@@ -187,7 +182,7 @@ export function foldLoreFestivalsIntoWorldBook<T extends FoldableWorldContent>(c
   return next;
 }
 
-/** 新条目默认壳（尚未挂依赖，编辑器内需补全才能保存） */
+/** 新条目默认壳（地点/人物可选，未挂也能保存） */
 export function blankWorldBookEntry(order = 100): WorldBookEntry {
   return {
     id: uid("wb"),

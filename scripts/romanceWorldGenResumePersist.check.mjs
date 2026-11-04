@@ -139,3 +139,19 @@ test("CreatorWorksPanel_书架续编带resume=1", () => {
   );
   assert.match(panel, /createWorld=1&draftId=.*resume=1/);
 });
+
+test("WorldGenWizard_resume先拉平台正文无则missing", () => {
+  const wiz = read("components/WorldGenWizard.tsx");
+  assert.match(wiz, /fetchRomancePlatformDraftContent/);
+  assert.match(wiz, /wantsResumeEditor\(\)/);
+  assert.match(wiz, /setResumeLoad\("missing"\)/);
+  assert.match(wiz, /打不开这份存档/);
+  // 禁止 resume 无本地时直接当新建空表单
+  assert.match(wiz, /resumeLoad === "loading"/);
+});
+
+test("App_有draftId离开向导不清本机会话", () => {
+  const app = read("App.tsx");
+  assert.match(app, /keepByDraft/);
+  assert.match(app, /if \(!keepByDraft\) clearWorldGenSession/);
+});

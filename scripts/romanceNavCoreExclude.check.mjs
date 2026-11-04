@@ -78,7 +78,10 @@ test('playModCatalog_禁止把档案支线当玩法组件', () => {
   assert.doesNotMatch(cat, /name:\s*"支线"/);
 
   const add = read('components/AddPlayModModal.tsx');
-  assert.match(add, /不是档案、支线/);
+  // 功能注释：添加弹窗只列玩法；档案/支线等本体不进目录（见文件头注释 + gameplay 过滤）
+  assert.match(add, /这里添加本作品要用的玩法/);
+  assert.match(add, /档案不进目录|设定\/建角\/地点\/人物\/事件\/档案不进目录/);
+  assert.match(add, /componentKind === "gameplay"/);
 });
 
 test('sanitizeModStrings_应剔除旧底栏档案支线', () => {

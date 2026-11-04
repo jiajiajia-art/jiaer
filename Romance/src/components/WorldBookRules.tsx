@@ -1,8 +1,8 @@
 /* 世界书条目 · 细化设定（模组编辑器与游戏内世界书共用）：
- * 依赖地点 / 人物（必填）· 有效期 · 互斥组 · 检索权重。规则实现见 game/worldbookPick。 */
+ * 依赖地点 / 人物（可选）· 有效期 · 互斥组 · 检索权重。规则实现见 game/worldbookPick。 */
 import type { WorldBookEntry, WorldBookMode } from "../lib/types";
 import { keywordTexts } from "../lib/worldBookKeywords";
-import { worldBookBindNpcs, worldBookBindRooms, worldBookHasDeps, withWorldBookDeps } from "../lib/worldBookDeps";
+import { worldBookBindNpcs, worldBookBindRooms, withWorldBookDeps } from "../lib/worldBookDeps";
 import { modeOf } from "../game/worldbookPick";
 
 type Opt = { id: string; name: string };
@@ -10,7 +10,7 @@ const field = "w-full min-w-0 rounded-full border border-line bg-paper-2 px-3 py
 const lab = "mb-0.5 block text-[10.5px] font-bold tracking-[0.12em] text-ink-soft";
 const MODES: { k: WorldBookMode; t: string; d: string }[] = [
   { k: "keyword", t: "检索命中", d: "上下文出现关键词才注入（有依赖时：在地点 / 人物在场也会注入）" },
-  { k: "constant", t: "每轮全局", d: "旧条目兼容：无依赖时每轮注入；新条目请挂地点或人物" },
+  { k: "constant", t: "每轮全局", d: "无依赖时每轮注入；也可挂地点或人物收窄范围" },
   { k: "once", t: "一次性", d: "注入一次后标记消耗，不再触发" },
 ];
 
@@ -29,18 +29,18 @@ export function WorldBookModePills({ e, onChange }: { e: WorldBookEntry; onChang
   );
 }
 
-/** 功能注释：只列出本作品地点 / 人物；空列表时提示先去对应栏目添加，绝不回退娱乐圈地点 */
+/** 功能注释：只列出本作品地点 / 人物（可选挂靠）；空列表时提示先去对应栏目添加，绝不回退娱乐圈地点 */
 export function WorldBookDepsPicker({
   e,
   onChange,
   npcs,
   rooms,
-  requireDeps = true,
 }: {
   e: WorldBookEntry;
   onChange: (p: Partial<WorldBookEntry>) => void;
   npcs: Opt[];
   rooms: Opt[];
+  /** @deprecated 地点/人物已可选；保留参数以免旧调用报错，忽略 */
   requireDeps?: boolean;
 }) {
   const roomIds = worldBookBindRooms(e);
@@ -56,7 +56,7 @@ export function WorldBookDepsPicker({
   return (
     <div className="space-y-2 sm:col-span-2">
       <div>
-        <p className={lab}>所属地点 · 主角在这些地点时注入</p>
+        <p className={lab}>所属地点 · 可选 · 主角在这些地点时注入</p>
         {rooms.length === 0 ? (
           <p className="rounded-lg border border-dashed border-line px-2.5 py-2 text-[11.5px] text-ink-soft">还没有地点。请先去「地点」添加，这里只列出本作品自己的地点。</p>
         ) : (
@@ -79,7 +79,7 @@ export function WorldBookDepsPicker({
         ))}
       </div>
       <div>
-        <p className={lab}>所属人物 · 该人物在场时注入</p>
+        <p className={lab}>所属人物 · 可选 · 该人物在场时注入</p>
         {npcs.length === 0 ? (
           <p className="rounded-lg border border-dashed border-line px-2.5 py-2 text-[11.5px] text-ink-soft">还没有人物。请先去「人物」添加，这里只列出本作品自己的人物。</p>
         ) : (
@@ -100,19 +100,17 @@ export function WorldBookDepsPicker({
           </button>
         ))}
       </div>
-      {requireDeps && !worldBookHasDeps(e) && (
-        <p className="text-[11px] text-danger">必须挂至少一个地点或人物，否则不能保存。</p>
-      )}
     </div>
   );
 }
 
-export default function WorldBookRules({ e, onChange, npcs, rooms, groups, requireDeps = true }: {
+export default function WorldBookRules({ e, onChange, npcs, rooms, groups, requireDeps }: {
   e: WorldBookEntry;
   onChange: (p: Partial<WorldBookEntry>) => void;
   npcs: Opt[];
   rooms: Opt[];
   groups: string[];
+  /** @deprecated 地点/人物已可选；保留参数以免旧调用报错，忽略 */
   requireDeps?: boolean;
 }) {
   return (

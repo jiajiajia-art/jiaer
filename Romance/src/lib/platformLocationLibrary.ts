@@ -1,6 +1,6 @@
 /**
  * 对接 funloom 运营地点库（/api/location-library）。
- * 编辑器「从地点库添加」只拉 active 条目；复制进作品后与库脱钩。
+ * 库条目 = 一张大地图；treeJson 为其下地点树。编辑器「从地点库添加」复制整图进作品后与库脱钩。
  */
 import { readFunloomAuthToken, resolveFunloomApiBase, resolvePlatformAvatarUrl } from "./platformAvatarLibrary";
 
@@ -10,6 +10,8 @@ export type PlatformLocationItem = {
   description: string;
   imageUrl: string;
   status?: string;
+  /** 功能注释：大地图下的地点树 JSON；缺省则导入时退化为单地点 */
+  treeJson?: unknown;
 };
 
 function apiBase(): string {
@@ -20,7 +22,7 @@ export function resolvePlatformLocationImageUrl(path: string | null | undefined)
   return resolvePlatformAvatarUrl(path);
 }
 
-/** 功能注释：创作者侧只请求启用中的地点；停用项后端也不会返回给非运营账号 */
+/** 功能注释：创作者侧只请求启用中的大地图；停用项后端也不会返回给非运营账号 */
 export async function listActivePlatformLocations(q = ""): Promise<PlatformLocationItem[]> {
   const token = readFunloomAuthToken();
   if (!token) throw new Error("请先登录后再从地点库添加");
@@ -41,6 +43,5 @@ export async function listActivePlatformLocations(q = ""): Promise<PlatformLocat
   if (!res.ok || !json?.success || !Array.isArray(json.data)) {
     throw new Error(json?.message || "加载地点库失败");
   }
-  // 功能注释：双重过滤，防止运营态误把 disabled 当成可添加
   return json.data.filter((x) => x && String(x.name || "").trim() && String(x.status || "active") !== "disabled");
 }

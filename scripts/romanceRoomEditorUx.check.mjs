@@ -18,7 +18,9 @@ test('ModRoomTreeEditor_不展示房间id且无方向出口表', () => {
   assert.doesNotMatch(src, /地点 id（失焦后生效）/);
   assert.doesNotMatch(src, /font-mono.*defaultValue=\{cur\}|defaultValue=\{cur\}.*font-mono/);
   assert.doesNotMatch(src, /onBlur=\{\(e\) => \{ onRename/);
-  assert.match(src, /地点树自动连通/);
+  assert.doesNotMatch(src, /地点树自动连通/);
+  assert.doesNotMatch(src, /无需再配东南西北出口/);
+  assert.match(src, /大地图/);
   assert.match(src, /scenePortrait/);
   assert.match(src, /aiGen=\{\{/);
   assert.match(src, /initialPrompt/);

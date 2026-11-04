@@ -7,19 +7,19 @@ import { wallet } from "../game/wallet";
 import { bridgeEnabled, bridgeModes, bridgePerDay, type BridgeMode } from "../game/bridge";
 import { divorceMode, maxSpouses } from "../game/worldRules";
 import type { Npc } from "../lib/types";
-import { HeartMeter, affinityLevel, Avatar, Chip, Modal, SectionHead } from "./ui";
-import { IconCheck, IconCoffee, IconExternal, IconHeart, IconScroll, IconSend, IconUsers } from "../lib/icons";
+import { affinityLevel, Avatar, Chip, Modal, SectionHead } from "./ui";
+import { IconCheck, IconExternal, IconHeart, IconScroll, IconSend, IconUsers } from "../lib/icons";
 import { ActionTile } from "./personFields";
 import { canConfess, relOf } from "../game/relations";
 import { ROMANCE_ARCS, arcView, canRomance, hasPartner, romanceFixedOff, isFamilyNpc } from "../game/logic";
-import { RELATIONS, MOVIE_TITLES, companyMeta, creditsOf, resumeOf, romanticCapOf, type FamilyRef, type ResumeEvent } from "../worlds/star2005/content";
+import { RELATIONS, MOVIE_TITLES, COMPANIES, companyMeta, creditsOf, resumeOf, romanticCapOf, type FamilyRef, type ResumeEvent } from "../worlds/star2005/content";
 import { worldPersonById as profileOf } from "../mods/registry";
 import { locOf } from "../game/mud";
 import { homePlaceOf } from "../game/homeSpot";
 import { contactsCfg, contactsTitle, groupContactsByStage, metricKey, visibleContactMetrics, type ContactIcon as ContactIconKind, type ContactSrc, type ContactStage } from "../game/contacts";
 import ContactIcon from "./ContactIcon";
 import { FAMILY_NPC_IDS } from "../game/family";
-import { CreditsList, StatBars, WorksChips, ProfileBasics, ProfileRelations, ProfileGroup, ProfileHero, RelTag, ResumeTimeline, StatEditor, ProfileBio, ProfilePlaces, ProfileMemory, affiliationOf, relationRefsOf } from "./personFields";
+import { CreditsList, StatBars, WorksChips, ProfileRelations, ProfileGroup, ResumeTimeline, BondMeterRow, ProfileBio, ProfilePlaces, ProfileMemory, affiliationOf, relationRefsOf } from "./personFields";
 import IndustryPageHeader from "./IndustryPageHeader";
 import CustomPersonModal from "./CustomPersonModal";
 import { NpcDiary, NpcCgStrip } from "./DiaryCg";
@@ -254,9 +254,9 @@ function NpcBridge({ pid, name }: { pid: string; name: string }) {
   );
 }
 
-/* 可攻略开关（「关系经营」首行）：默认开启；关闭后 TA 的爱慕冻结，不能表白、推进情感线或确认交往，好感与信任照常发展。
- * 家人 / 子女恒不可攻略，只展示锁定状态；已确认关系的人不能关。 */
-function RomanceSwitch({ pid, arc }: { pid: string; arc: boolean }) {
+/* 可攻略开关：默认开启；关闭后爱慕冻结。compact=名字旁一行（人物卡）；完整版带说明。
+ * 家人 / 子女恒不可攻略；已确认关系的人不能关。颜色读皮肤 --coral。 */
+function RomanceSwitch({ pid, arc, compact = false }: { pid: string; arc: boolean; compact?: boolean }) {
   const { game, setRomanceable } = useGame();
   const [why, setWhy] = useState("");
   if (!game?.sim) return null;
@@ -276,8 +276,32 @@ function RomanceSwitch({ pid, arc }: { pid: string; arc: boolean }) {
         : arc
           ? "可推进专属情感线；关闭后 TA 不会再对你心动"
           : "TA 可能对你心动，好感与心动够了就能表白";
+  const sw = fixed ? (
+    <Chip>{family ? "亲情" : "恒不可攻略"}</Chip>
+  ) : (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label="可攻略"
+      disabled={on && bound}
+      onClick={() => setWhy(setRomanceable(pid, !on))}
+      className={`relative h-5 w-9 shrink-0 rounded-full transition disabled:cursor-not-allowed disabled:opacity-50 ${on ? "bg-coral" : "bg-line"}`}
+    >
+      <span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-paper shadow transition-transform ${on ? "translate-x-4" : ""}`} />
+    </button>
+  );
+  if (compact) {
+    return (
+      <span className="inline-flex shrink-0 items-center gap-1.5 text-[11.5px] font-bold text-ink" title={why || hint}>
+        <IconHeart width={13} height={13} className={on ? "text-coral" : "text-ink-soft"} aria-hidden />
+        <span>可攻略</span>
+        {sw}
+      </span>
+    );
+  }
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-line bg-paper px-3 py-2.5">
+    <div className="flex items-center gap-3 rounded-[var(--radius-ui)] border border-line bg-paper px-3 py-2.5">
       <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${on ? "bg-coral/15 text-coral" : "bg-line/60 text-ink-soft"}`}>
         <IconHeart width={16} height={16} aria-hidden />
       </span>
@@ -285,21 +309,7 @@ function RomanceSwitch({ pid, arc }: { pid: string; arc: boolean }) {
         <span className="block text-sm font-bold text-ink">可攻略</span>
         <span className="mt-0.5 block text-xs leading-snug text-ink-soft">{why || hint}</span>
       </span>
-      {fixed ? (
-        <Chip>恒不可攻略</Chip>
-      ) : (
-        <button
-          type="button"
-          role="switch"
-          aria-checked={on}
-          aria-label="可攻略"
-          disabled={on && bound}
-          onClick={() => setWhy(setRomanceable(pid, !on))}
-          className={`relative h-6 w-11 shrink-0 rounded-full transition disabled:cursor-not-allowed disabled:opacity-50 ${on ? "bg-coral" : "bg-line"}`}
-        >
-          <span className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${on ? "translate-x-5" : ""}`} />
-        </button>
-      )}
+      {sw}
     </div>
   );
 }
@@ -332,7 +342,6 @@ export default function NpcTab() {
     const profile = profileOf(pid);
     const star = starOf(pid);
     const dead = profile?.status === "dead";
-    const lv = affinityLevel(npc.affinity, FAMILY_NPC_IDS.includes(pid as (typeof FAMILY_NPC_IDS)[number]));
     const rx = relOf(s, pid);
     const isDating = s.dating === pid;
     const arc = ROMANCE_ARCS[pid];
@@ -394,25 +403,20 @@ export default function NpcTab() {
 
     // 情感关系各行预渲染：确无记录者返回 undefined，格子淡显「暂无记录」
     const spouseRefsNode = refList(rels.现任);
-    const exNode = refList(rels.前任);
     const parentsNode = refList(rels.父母);
     const childRefsNode = refList(rels.子女);
-    const otherNode = refList(rels.其他);
 
-    // 头像右侧速调只用到 友善（自由轴，缺失以 0 兜底）
-
-    // ═══ 人物详情：高定星光人物画卷卡 + 下方一体化人物资料与互动分页 ═══
+    // ═══ 人物详情：上下两块（人物卡 + 资料/情感），样式读皮肤变量 ═══
     const affinityPct = Math.round(((npc.affinity + 100) / 200) * 100);
     const cap = romanticCapOf(pid) || 100;
     const romPct = Math.max(0, Math.min(100, (rx.romantic / cap) * 100));
-    const lvBadge = affinityLevel(npc.affinity, isFamily);
-    const heroImg = npc.portrait || npc.avatar;
     const affil = isFamily ? "家人" : star ? companyMeta(star.companyId).name : affiliationOf(npc.identity);
     const quickFacts = [genderText, ageText, birthdayLabel(npc), affil].filter(Boolean);
 
+    // 功能注释：资料 / 情感 两页签；能力只读作品配置；关系经营固定三卡（私下联系 / 履历 / 表白）
     const profileTabsNode = (
       <ProfileTabs tabs={[
-        { id: "info", label: "资料 · 能力", body: <div>
+        { id: "info", label: "资料", body: <div>
           <ProfileBio bio={bioText} />
           <ProfilePlaces places={places} />
           {/* 代表作只在有作品时出现（非娱乐圈模组、素人 NPC 没有作品，不留空栏） */}
@@ -440,24 +444,39 @@ export default function NpcTab() {
           <NpcDiary pid={pid} />
           <NpcCgStrip pid={pid} />
         </div> },
-        { id: "heart", label: "情感 · 互动", body: <div>
-          <ProfileRelations values={{ 现任: spouseRefsNode, 前任: exNode, 父母: parentsNode, 子女: childRefsNode, 其他: otherNode }} noParents={rels.noParents} />
+        { id: "heart", label: "情感", body: <div>
+          <ProfileRelations values={{ 现任: spouseRefsNode, 父母: parentsNode, 子女: childRefsNode }} noParents={rels.noParents} />
           {dead ? (
             <ProfileGroup title="关系经营"><div className="space-y-2 py-2.5">
               <p className="text-[13px] text-ink-soft">斯人已逝，档案就此封存。你只能在回忆与履历里与 TA 重逢。</p>
             </div></ProfileGroup>
           ) : (
             <ProfileGroup title="关系经营"><div className="space-y-2.5 py-2.5">
-              <RomanceSwitch key={pid} pid={pid} arc={!!arc} />
               {arc && romanceOn && <p className="mb-1 text-[11.5px] font-semibold text-gold">固定角色 · 专属情感长线</p>}
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <ActionTile icon={IconSend} tone="coral" title={busy ? "生成中…" : "私下联系"} sub="约 TA 单独见面聊聊" onClick={() => simContact(pid, npc.name)} disabled={busy} />
-                {hasContact(pid)
-                  ? <ActionTile icon={IconCheck} tone="jade" title="已有联系方式" sub="可在手机里找到 TA" />
-                  : <ActionTile icon={IconUsers} tone="jade" title="交换联系方式" sub="好感够了 TA 才会给" onClick={() => setExchange(phoneExchange(pid) ? "ok" : "no")} />}
-                <ActionTile icon={IconScroll} title="履历与互动" sub={`生平与 ${npc.interactions.length} 条往来`} onClick={() => setResumeOpen(true)} />
-                <ProfileMemory pid={pid} button />
+                <ActionTile icon={IconScroll} title="履历" sub="生平往来" onClick={() => setResumeOpen(true)} />
+                <ActionTile
+                  icon={IconHeart}
+                  tone="coral"
+                  title="表白"
+                  sub="与TA关系更进一步"
+                  onClick={() => { if (confess.ok) simConfess(pid, npc.name); }}
+                  disabled={!confess.ok || busy || !romanceOn || isDating}
+                />
               </div>
+              {hasContact(pid)
+                ? <p className="text-[11.5px] text-ink-soft">已有联系方式 · 可在手机里找到 TA</p>
+                : (
+                  <button
+                    type="button"
+                    onClick={() => setExchange(phoneExchange(pid) ? "ok" : "no")}
+                    className="text-left text-[11.5px] font-semibold text-jade underline decoration-dotted underline-offset-2"
+                  >
+                    尝试交换联系方式
+                  </button>
+                )}
+              <ProfileMemory pid={pid} button />
               {game.npcs.some((n) => n.id === pid) && <NpcBridge pid={pid} name={npc.name} />}
               {arc && view && romanceOn && (
                 <div className="mt-3 border-t border-dashed border-line pt-3">
@@ -480,9 +499,14 @@ export default function NpcTab() {
                   )}
                 </div>
               )}
-              {!arc && romanceOn && (
+              {!arc && romanceOn && isDating && (
                 <div className="mt-3 border-t border-dashed border-line pt-3">
-                  {isDating ? <Wedding pid={pid} name={npc.name} /> : <Confess pid={pid} name={npc.name} />}
+                  <Wedding pid={pid} name={npc.name} />
+                </div>
+              )}
+              {!arc && romanceOn && !isDating && !confess.ok && (
+                <div className="mt-2">
+                  <Confess pid={pid} name={npc.name} />
                 </div>
               )}
             </div></ProfileGroup>
@@ -491,170 +515,79 @@ export default function NpcTab() {
       ]} />
     );
 
+    // 功能注释：上下两块人物档案——上人物卡（头像/名/可攻略/标签/爱慕好感），下资料·情感页签；色与圆角读皮肤变量
     const card = (
-      <div className="mx-auto max-w-2xl px-4 pb-8 pt-3 space-y-4">
-        {/* 顶栏：返回人脉 · 私下联系（资料已在本页展开，不再另开重复的弹窗） */}
+      <div className="mx-auto max-w-2xl space-y-3 px-4 pb-8 pt-3">
         <div className="flex items-center justify-between gap-2">
           <button
             onClick={() => setSel(null)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-line/80 bg-paper/90 px-3.5 py-1.5 text-[12.5px] font-bold text-ink shadow-sm backdrop-blur-md transition hover:border-jade hover:text-jade"
+            className="inline-flex items-center gap-1.5 rounded-full border border-line bg-paper px-3.5 py-1.5 text-[12.5px] font-bold text-ink shadow-[var(--shadow-ui)] transition hover:border-jade hover:text-jade"
           >
             <span>←</span>
             <span>返回人脉</span>
           </button>
-          <div className="flex items-center gap-2">
-            {!dead && (
-              <button
-                onClick={() => simContact(pid, npc.name)}
-                disabled={busy}
-                className="inline-flex items-center gap-1 rounded-full border border-coral/40 bg-coral/10 px-3.5 py-1.5 text-[12px] font-bold text-coral shadow-sm transition hover:bg-coral/20 disabled:opacity-50"
-              >
-                <IconCoffee size={14} />
-                <span>{busy ? "联系中…" : "私下联系"}</span>
-              </button>
-            )}
-          </div>
         </div>
 
-        {/* ═══ 主视觉：星光角色名片画卷卡 ═══ */}
-        <section className="relative overflow-hidden rounded-[24px] border border-line/80 bg-paper shadow-[0_18px_42px_-22px_rgba(120,90,200,0.38)]">
-          {/* 背景光晕与星芒暗纹（取代原先突兀的黑底遮罩） */}
-          <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[var(--jade)]/18 via-paper-2/90 to-[var(--coral)]/20" />
-          <div aria-hidden className="pointer-events-none absolute -right-8 -top-10 h-44 w-44 rounded-full bg-coral/20 blur-3xl" />
-          <div aria-hidden className="pointer-events-none absolute -left-10 -bottom-10 h-44 w-44 rounded-full bg-jade/20 blur-3xl" />
-          <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-28 opacity-35 [background-image:radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.8)_1px,transparent_0)] [background-size:14px_14px] [mask-image:linear-gradient(to_bottom,#000,transparent)]" />
-          {/* 右侧书法首字水印 */}
-          <span aria-hidden className="pointer-events-none absolute -bottom-4 right-3 select-none font-serif text-[130px] font-black leading-none text-jade/[0.06]">
-            {npc.name.charAt(0)}
-          </span>
-
-          {/* 若上传了立绘大图，在顶部展开剧照横幅 */}
-          {heroImg && (
-            <div className="relative h-56 w-full overflow-hidden border-b border-line/50 sm:h-64">
-              <img src={heroImg} alt={npc.name} className={`h-full w-full object-cover object-top ${dead ? "grayscale" : ""}`} />
-              <div aria-hidden className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-paper via-paper/60 to-transparent" />
+        <section className={`rounded-[var(--radius-ui-lg)] border border-line bg-paper p-3.5 shadow-[var(--shadow-ui)] ${dead ? "opacity-80" : ""}`}>
+          <div className="flex items-start gap-3.5">
+            <div className={`shrink-0 ${dead ? "grayscale" : ""}`}>
+              <Avatar src={npc.avatar} name={npc.name} size={72} square onPick={dead ? undefined : (d) => setNpcAvatar(npc.id, d)} editable={!dead} />
             </div>
-          )}
-
-          <div className={`relative px-4 pb-4 pt-5 sm:px-5 ${heroImg ? "-mt-10" : ""}`}>
-            {/* 头像 + 姓名 + 身份金章 + 关系标签 */}
-            <div className="flex items-start gap-3.5 sm:gap-4">
-              <div className={`relative shrink-0 ${dead ? "opacity-60 grayscale" : ""}`}>
-                <span aria-hidden className="absolute -inset-1 rounded-[22px] bg-gradient-to-br from-[var(--coral)] via-[var(--gold)] to-[var(--jade)] opacity-60 blur-[6px]" />
-                <div className="relative rounded-[20px] bg-gradient-to-br from-[var(--coral)] via-[var(--gold)] to-[var(--jade)] p-[2px] shadow-[0_10px_24px_-10px_rgba(200,80,130,0.5)]">
-                  <div className="rounded-[18px] bg-paper p-[2px]">
-                    <Avatar src={npc.avatar} name={npc.name} size={78} square onPick={dead ? undefined : (d) => setNpcAvatar(npc.id, d)} editable={!dead} />
-                  </div>
-                </div>
-                {!dead && isDating && (
-                  <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-coral text-white shadow ring-2 ring-paper">
-                    <IconHeart size={12} className="text-white" />
-                  </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="min-w-0 truncate font-serif text-[22px] font-black leading-tight tracking-wide text-ink">{npc.name}</h2>
+                {dead ? (
+                  <Chip tone="danger">已故</Chip>
+                ) : (
+                  <RomanceSwitch key={pid} pid={pid} arc={!!arc} compact />
                 )}
               </div>
-
-              <div className="min-w-0 flex-1 pt-0.5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="font-serif text-[26px] font-black leading-none tracking-wide text-ink sm:text-[28px]">{npc.name}</h2>
-                  {dead ? (
-                    <Chip tone="danger">已故</Chip>
-                  ) : (
-                    <Chip tone={lvBadge.tone}>{lvBadge.text}</Chip>
+              {(quickFacts.length > 0 || npc.identity) && (
+                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                  {genderText && (
+                    <span className="rounded-full border border-line bg-paper-2 px-2.5 py-0.5 text-[11px] font-medium text-ink-soft">{genderText}</span>
+                  )}
+                  {(affil || npc.identity) && (
+                    <span className="rounded-full border border-line bg-paper-2 px-2.5 py-0.5 text-[11px] font-medium text-ink-soft">{affil || npc.identity}</span>
+                  )}
+                  {ageText && (
+                    <span className="rounded-full border border-line bg-paper-2 px-2.5 py-0.5 text-[11px] font-medium text-ink-soft">{ageText}</span>
                   )}
                   {!dead && isDating && <Chip tone="coral">恋人</Chip>}
-                  {!dead && arc && romanceOn && <Chip tone="gold">情感线 · {view ? `${view.done}/${view.total} 段` : arc.confirm.buff}</Chip>}
-                  {!dead && !romanceOn && !romanceFixed && <Chip>不可攻略</Chip>}
                 </div>
-
-                {/* 身份金章与关系 */}
-                <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                  <span className="inline-flex items-center gap-1 rounded-full border border-gold/45 bg-gradient-to-r from-gold/15 via-coral/10 to-gold/15 px-3 py-0.5 text-[12px] font-bold text-ink shadow-sm">
-                    <span className="text-gold"></span>
-                    <span>{npc.identity || UNKNOWN}</span>
-                  </span>
-                  {npc.relation && (
-                    <span className="rounded-full border border-jade/35 bg-jade/10 px-2.5 py-0.5 text-[11.5px] font-semibold text-jade-deep">
-                      与你 · {npc.relation}
-                    </span>
+              )}
+              {!dead && (
+                <div className="mt-2.5 space-y-0.5 border-t border-line/70 pt-2">
+                  {romanceOn ? (
+                    <BondMeterRow
+                      label="爱慕"
+                      value={rx.romantic}
+                      pct={romPct}
+                      min={0}
+                      max={cap}
+                      onChange={(v) => setRelValue(pid, "romantic", v)}
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2 py-1 text-[12px] text-ink-soft">
+                      <span className="w-8 shrink-0 font-bold text-ink">爱慕</span>
+                      <span>{romanceFixed ? (isFamilyNpc(pid) ? "亲情 · 家人" : "子女亲情") : "不可攻略"}</span>
+                    </div>
                   )}
+                  <BondMeterRow
+                    label="好感"
+                    value={npc.affinity}
+                    pct={affinityPct}
+                    min={-100}
+                    max={100}
+                    onChange={(v) => setRelValue(pid, "friendship", v)}
+                  />
                 </div>
-
-                {/* 基础标签：性别 · 年龄 · 生辰 · 所属 */}
-                {quickFacts.length > 0 && (
-                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                    {quickFacts.map((f, idx) => (
-                      <span key={idx} className="rounded-full border border-line/70 bg-paper/80 px-2.5 py-0.5 text-[11px] font-medium text-ink-soft">
-                        {f}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
+              )}
             </div>
-
-            {/* ═══ 爱慕 & 好感 双栏磨砂心形仪表盘（支持心形展示 + 直接滑动微调） ═══ */}
-            {!dead && (
-              <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                {/* 爱慕卡（不可攻略时换成说明卡，冻结的爱慕值不展示） */}
-                {romanceOn ? (
-                <div className="rounded-2xl border border-coral/35 bg-gradient-to-br from-coral/[0.09] via-paper/90 to-paper/80 p-3 shadow-sm backdrop-blur-md">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5">
-                      <span className="grid h-6 w-6 place-items-center rounded-full bg-coral/15 text-coral"><IconHeart size={14} /></span>
-                      <span className="font-serif text-[14px] font-bold text-ink">爱慕</span>
-                      <span className="text-[10.5px] text-ink-soft">· 私下悸动</span>
-                    </div>
-                    <span className="font-serif text-[22px] font-black leading-none tabular-nums text-coral">{rx.romantic}</span>
-                  </div>
-                  <div className="mt-2 flex items-center justify-between gap-2">
-                    <HeartMeter pct={romPct} color="#ff5f96" track="rgba(240,120,160,0.22)" size={15} />
-                    <span className="text-[10px] font-medium text-ink-soft">上限 {cap}</span>
-                  </div>
-                  <div className="mt-1.5">
-                    <StatEditor label="微调" hint="拖动调整爱慕值" tone="coral" value={rx.romantic} min={0} max={cap} onChange={(v) => setRelValue(pid, "romantic", v)} />
-                  </div>
-                </div>
-                ) : (
-                <div className="rounded-2xl border border-dashed border-line bg-paper/80 p-3 shadow-sm backdrop-blur-md">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5">
-                      <span className="grid h-6 w-6 place-items-center rounded-full bg-line/60 text-ink-soft"><IconHeart size={14} /></span>
-                      <span className="font-serif text-[14px] font-bold text-ink">爱慕</span>
-                      <span className="text-[10.5px] text-ink-soft">· {romanceFixed ? "亲情" : "已关闭"}</span>
-                    </div>
-                    <Chip>{romanceFixed ? "家人" : "不可攻略"}</Chip>
-                  </div>
-                  <p className="mt-2.5 text-[12px] leading-relaxed text-ink-soft">
-                    {romanceFixed ? (isFamilyNpc(pid) ? "TA 是你的家人，目前只有亲情。想发展恋爱线，可在「情感 · 互动」里把 TA 设为「可攻略」。" : "子女之间只有亲情，不涉及恋爱。") : "TA 不会对你心动，好感与信任照常发展。可在「情感 · 互动」里重新开启。"}
-                  </p>
-                </div>
-                )}
-
-                {/* 好感卡 */}
-                <div className="rounded-2xl border border-jade/35 bg-gradient-to-br from-jade/[0.09] via-paper/90 to-paper/80 p-3 shadow-sm backdrop-blur-md">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5">
-                      <span className="grid h-6 w-6 place-items-center rounded-full bg-jade/15 text-[12px] text-jade"></span>
-                      <span className="font-serif text-[14px] font-bold text-ink">好感</span>
-                      <span className="text-[10.5px] text-ink-soft">· 日常亲疏</span>
-                    </div>
-                    <span className="font-serif text-[22px] font-black leading-none tabular-nums text-jade-deep">{npc.affinity}</span>
-                  </div>
-                  <div className="mt-2 flex items-center justify-between gap-2">
-                    <HeartMeter pct={affinityPct} color="#d977a6" track="rgba(160,130,200,0.22)" size={15} />
-                    <span className="text-[10px] font-medium text-ink-soft">{lvBadge.text}</span>
-                  </div>
-                  <div className="mt-1.5">
-                    <StatEditor label="微调" hint="拖动调整好感值" tone="jade" value={s.rel?.[pid] ?? npc.affinity} min={-100} max={100} onChange={(v) => setRelValue(pid, "friendship", v)} />
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </section>
 
-        {/* ═══ 下方直接展开：资料 · 能力 · 情感 · 记忆 ═══ */}
-        <div className="rounded-[22px] border border-line/75 bg-paper/90 p-4 shadow-[0_10px_28px_-18px_rgba(120,90,200,0.3)]">
+        <div className="rounded-[var(--radius-ui-lg)] border border-line bg-paper p-3.5 shadow-[var(--shadow-ui)]">
           {profileTabsNode}
         </div>
       </div>
@@ -698,16 +631,19 @@ export default function NpcTab() {
       dead: prof?.status === "dead", dating: s.dating === n.id,
     };
   });
-  // 世界自动生成的人物池（如娱乐圈的随机艺人）：并入同一套分组，不再单独成区
-  const poolEntries: Entry[] = (s.npcs ?? []).map((n) => {
-    const rel = s.rel?.[n.id] ?? 0;
-    const org = companyMeta(n.companyId).name;
-    return {
-      id: n.id, name: n.name, rel,
-      sub: [n.dir, org].filter(Boolean).join(" · "),
-      vals: (src) => src.kind === "rel" ? rel : src.key === "fame" ? n.fame : src.kind === "stat" ? (n.stats as Record<string, number>)[src.key] : undefined,
-    };
-  });
+  // 功能注释：仅在作品声明了行业公司时并入娱乐圈随机艺人；无 industry 的旅馆等题材绝不塞「新人 · 自由艺人」
+  const knownIds = new Set(npcEntries.map((e) => e.id));
+  const poolEntries: Entry[] = COMPANIES.length > 0
+    ? (s.npcs ?? []).filter((n) => !knownIds.has(n.id)).map((n) => {
+      const rel = s.rel?.[n.id] ?? 0;
+      const org = companyMeta(n.companyId).name;
+      return {
+        id: n.id, name: n.name, rel,
+        sub: [n.dir, org].filter(Boolean).join(" · "),
+        vals: (src) => src.kind === "rel" ? rel : src.key === "fame" ? n.fame : src.kind === "stat" ? (n.stats as Record<string, number>)[src.key] : undefined,
+      };
+    })
+    : [];
   const entries = [...npcEntries, ...poolEntries];
   const shownMetrics = visibleContactMetrics(cfg);
   const primary = shownMetrics[0];

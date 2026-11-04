@@ -7,6 +7,7 @@ import { platformTrack } from "../game/platformAudio";
 import type { ModTrack } from "../mods/types";
 import { setExternalPause, yieldBgm } from "../game/audioEngine";
 import { IconMusic, IconPause, IconPlay, IconSkipBack, IconSkipForward, StatusMark } from "../lib/icons";
+import { asModArray } from "../lib/asModArray";
 const AudioMixer = lazyPanel(() => import("./AudioLibraryPanel").then((m) => ({ default: m.AudioMixer })));
 
 /* 游戏设置 · 背景音乐：本地上传音频（存 IndexedDB，刷新不丢）、歌单点播、
@@ -63,8 +64,9 @@ async function load() {
 /* 模组内置音乐：随当前生效世界刷新；带 autoplay 的在未播放时自动开播 */
 function syncWorld() {
   const w = getWorld();
+  // 功能注释：AI 常把 bgm 写成单对象；asModArray 后再 flatMap，禁止预览 emit 时 is not iterable
   const world = w.chain.flatMap((m) => {
-    const tracks = (m.content.bgm ?? []).map((t) => ({ ...t, id: `w:${m.id}:${t.id}` }));
+    const tracks = asModArray<ModTrack>(m.content.bgm).map((t) => ({ ...t, id: `w:${m.id}:${t.id}` }));
     const pid = m.content.platformAutoplay;
     const p = typeof pid === "string" ? platformTrack(pid) : undefined;
     if (p && !tracks.some((t) => t.autoplay)) tracks.push({ id: `w:${m.id}:${p.id}`, name: p.name, src: p.src, autoplay: true });

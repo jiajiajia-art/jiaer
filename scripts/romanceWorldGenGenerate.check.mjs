@@ -446,6 +446,61 @@ test('worldGenGenerate_时间与推进漏写startDate须补全并标完成', asy
   assert.equal(withAiDate.mod.content.startDate, '1935.03.12');
 });
 
+test('worldGenGenerate_整批结束须固化开局日期与资金且开场不在默认勾选', async () => {
+  const gen = await import(pathToFileURL(join(romance, 'lib/worldGenGenerate.ts')).href);
+  const wiz = await import(pathToFileURL(join(romance, 'lib/worldGenWizard.ts')).href);
+  const { assessAuthorRequiredFields } = await import(pathToFileURL(join(romance, 'lib/authorPreview.ts')).href);
+  assert.ok(!wiz.DEFAULT_WORLD_GEN_EDITOR_STEP_IDS.includes('opening'));
+  assert.match(String(gen.finalizeWorldGenModDefaults), /ensureWorldGenTravelTimeStartDate|ensureWorldGenStartMoney/);
+  assert.match(String(gen.finalizeWorldGenModDefaults), /ensureWorldGenCustomAttrs/);
+  assert.match(String(gen.mergeModContent), /k === "customAttrs"/);
+
+  const draft = {
+    ...wiz.defaultWorldGenStep1(),
+    title: '雾港',
+    setting: '当代海边旅店恋爱。',
+    editorStepIds: ['prompt'],
+    contentIds: wiz.contentIdsFromEditorSteps(['prompt']),
+  };
+  const seed = wiz.draftModFromWorldGen(draft);
+  const { meta: _m, ...seedMod } = seed;
+  void _m;
+  // 功能注释：故意清掉日期与资金，验证 finish 固化
+  delete seedMod.content.startDate;
+  delete seedMod.content.startMoney;
+  delete seedMod.content.moneyLabel;
+
+  const result = await gen.runWorldGenModules({
+    draft,
+    seedMod,
+    moduleIds: ['prompt'],
+    completeFn: async () =>
+      JSON.stringify({
+        manifest: { description: '雾港旅店的雨夜故事。' },
+        content: {
+          prompt: {
+            scriptTone: `${'你是本世界的叙事主持人。'.repeat(8)}请保持口吻一致，遵守世界铁律。`,
+          },
+        },
+      }),
+    cfg: { baseUrl: 'https://example.test/v1', apiKey: 'k', model: 'm' },
+  });
+  assert.match(String(result.mod.content.startDate || ''), /^\d{4}\.\d{2}\.\d{2}$/);
+  assert.equal(result.mod.content.startMoney, 0);
+  assert.ok(String(result.mod.content.moneyLabel || '').trim());
+  const gate = assessAuthorRequiredFields({
+    ...result.mod,
+    content: {
+      ...result.mod.content,
+      rooms: { lobby: { name: '大厅', desc: '雨', exits: {} } },
+      startRoom: 'lobby',
+      cover: {},
+      opening: undefined,
+    },
+  });
+  assert.ok(!gate.some((i) => ['startDate', 'startMoney', 'cover', 'opening'].includes(i.field)));
+});
+
 test('worldGenGenerate_瞬时失败须至少重试2次后成功', async () => {
   const gen = await import(pathToFileURL(join(romance, 'lib/worldGenGenerate.ts')).href);
   let calls = 0;

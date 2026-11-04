@@ -256,20 +256,17 @@ const Navbar: React.FC<NavbarProps> = ({
     const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
-        if (!searchKeyword.trim()) {
+        const q = searchKeyword.trim();
+        if (!q) {
             setIsSearchOpen(false);
             return;
         }
 
-        const firstResult = searchResults[0];
-        if (firstResult) {
-            handleSearchSelect(firstResult);
-            return;
-        }
-
-        if (isSearching || hasSearched) {
-            setIsSearchOpen(true);
-        }
+        // 功能注释：提交后进入结果页（全部/游戏/创作者），不再直接跳第一款游戏
+        setIsSearchOpen(false);
+        runLeaveAction(() => {
+            navigate(`/search?q=${encodeURIComponent(q)}`);
+        });
     };
 
     return (

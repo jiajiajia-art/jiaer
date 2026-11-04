@@ -1,9 +1,5 @@
-.heroSection {
-    margin: 100px 0 16px !important;
-}
-
 .mainContent {
-    margin-bottom: 10px !important;
+    margin-bottom: 0 !important;
 }
 
 .heroCard {
@@ -56,10 +52,6 @@
 }
 
 @media (max-width: 768px) {
-    .heroSection {
-        margin: 72px 0 12px !important;
-    }
-
     .heroCard {
         padding: 12px 16px 4px !important;
     }

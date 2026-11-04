@@ -55,6 +55,8 @@ import {
 import { CALENDAR, NEGOTIATION, RELATIONS, TRAVEL, COMPANIES, MOVIE_TITLES, industryGen } from "../worlds/star2005/content";
 import { applyIncome, applyGameRules, applySidelines, applyStorylines } from "./fixedEvents";
 import { getWorldSlot, LIVE_GIGS, LIVE_PEOPLE, getWorldIncome, getWorldGameRules, getWorldStorylines, getWorldSidelines, getWorldId, feature, getWorldStartMet, getWorldStartRoom, worldActivitiesOfRoom as activitiesOfRoom, worldItemsOfRoom as itemsOfRoom } from "../mods/registry";
+import { asModArray } from "../lib/asModArray";
+import type { AttrDef } from "../lib/types";
 import type { ProjectInstance, WorkPiece } from "./projects";
 import type { RelExt } from "./relations";
 import type { XianyuListing } from "./xianyu";
@@ -210,13 +212,15 @@ export type Company = { id: string; prestige: number };
 const rng = (a: number, b: number) => a + Math.floor(Math.random() * (b - a + 1));
 
 
-// 生成 5~8 家公司 + 至少 count 名艺人，每家至少 minPerCompany 人；公司声望在基线上下浮动
+// 生成行业公司 + 艺人花名册；每家至少 minPerCompany 人；公司声望在基线上下浮动
 function generateIndustry(count = 30, minPerCompany = 4): { companies: Company[]; npcs: NPC[] } {
+  // 功能注释：未声明行业公司时不捏造娱乐圈花名册——旅馆等题材开局/预览人脉只留作品自己的人物
+  if (COMPANIES.length === 0) return { companies: [], npcs: [] };
   const g = industryGen();
   count = Math.max(1, Math.round(g.npcCount ?? count));
   minPerCompany = Math.max(0, Math.round(g.minPerCompany ?? minPerCompany));
-  // 公司数量与内容池对齐（避免序号越界显示成「自由艺人」）；内容池为空时退回随机 5~8 家
-  const companyCount = COMPANIES.length > 0 ? COMPANIES.length : rng(5, 8);
+  // 公司数量与内容池对齐（避免序号越界显示成「自由艺人」）
+  const companyCount = COMPANIES.length;
   const companies: Company[] = Array.from({ length: companyCount }, (_, i) => ({
     id: `co_${i}`,
     prestige: COMPANIES[i]?.prestige != null ? clamp(COMPANIES[i].prestige + rng(-6, 6), 5, 99) : clamp(rng(30, 88) - i * 3, 15, 95),
@@ -1250,7 +1254,8 @@ export function perkFxList(p: { fx?: { key: string; delta: number }[]; stress?: 
 /** 属性键的显示名（引擎内用；编辑器 / AI 说明用 perkKeys.ts） */
 function perkFxName(key: string): string {
   if (key.startsWith("stat:")) return (STAT_LABELS as Record<string, string>)[key.slice(5)] ?? key.slice(5);
-  if (key.startsWith("attr:")) { const id = key.slice(5); return (getWorldSlot("customAttrs") ?? []).find((a) => a.id === id)?.label ?? id; }
+  // 功能注释：customAttrs 可能是脏对象；asModArray 后再 find，禁止 ?? [] 展开炸 is not iterable
+  if (key.startsWith("attr:")) { const id = key.slice(5); return asModArray<AttrDef>(getWorldSlot("customAttrs")).find((a) => a.id === id)?.label ?? id; }
   const base: Record<string, string> = { affinity: "好感", stress: "压力", energy: "行动力", fame: T("fame", "名气"), reputation: T("reputation", "口碑"), blackFans: "黑粉", trust: "负责人信任", defaults: "违约", money: "资金", pr: "公关值", bizValue: "商业价值" };
   return base[key] ?? key;
 }
@@ -2037,7 +2042,7 @@ function bumpCount(n: GameState, key: string) {
 /* 自定义属性收益：区间随机 × 倍率，按属性自身上下限截断，并写入收益说明 */
 function applyCgain(n: GameState, cgain: Record<string, [number, number]> | undefined, mul: number, gains: string[]) {
   if (!cgain) return;
-  const defs = getWorldSlot("customAttrs") ?? [];
+  const defs = asModArray<AttrDef>(getWorldSlot("customAttrs"));
   for (const [id, r] of Object.entries(cgain)) {
     const d = defs.find((x) => x.id === id);
     if (!d || !r) continue;

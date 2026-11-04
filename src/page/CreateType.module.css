@@ -14,9 +14,8 @@
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    padding: 28px 20px 120px;
-    padding-top: calc(var(--app-desktop-navbar-height) + 28px);
-    min-height: calc(100vh - var(--app-desktop-navbar-height));
+    padding: 28px 20px 32px;
+    min-height: 100%;
     box-sizing: border-box;
 }
 
@@ -92,8 +91,7 @@
 
 @media (max-width: 768px) {
     .mainContent {
-        padding: 20px 20px 100px;
-        padding-top: calc(var(--app-desktop-navbar-height) + 20px);
+        padding: 20px 20px 24px;
     }
 
     .content {

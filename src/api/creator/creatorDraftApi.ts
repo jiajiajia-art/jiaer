@@ -27,6 +27,17 @@ const creatorDraftApi = {
       `/auth/games/drafts/romance/${encodeURIComponent(fileId)}`,
       body,
     ),
+  /** 功能注释：书架续编按 fileId 取回编辑器正文。 */
+  getRomanceContent: (fileId: string) =>
+    api.get<{ success: boolean; data?: unknown; code?: string; message?: string }>(
+      `/auth/games/drafts/romance/${encodeURIComponent(fileId)}/content`,
+    ),
+  /** 功能注释：保存/生成完成写入 mod+draft，禁止只改标题。 */
+  putRomanceContent: (fileId: string, body: unknown) =>
+    api.put<{ success: boolean; data?: { fileId: string }; message?: string }>(
+      `/auth/games/drafts/romance/${encodeURIComponent(fileId)}/content`,
+      body,
+    ),
   /** 功能注释：书架重复草稿清理（同引擎同标题只留最新）。 */
   dedupe: () =>
     api.post<{ success: boolean; data?: { removed: number; fileIds: string[] }; message?: string }>(

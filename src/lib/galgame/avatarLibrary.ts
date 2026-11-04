@@ -132,5 +132,5 @@ export function tagOptionsToSeg(
 
 /** 功能注释：前端展示用；真实匹配在服务端 pickAvatarLibraryMatch。库顺序/通用兜底由剧本编辑器①基础配置，平台仅提供默认值 */
 export function describeAvatarMatchPriority(): string {
-  return '手动锁定始终最高；库来源顺序与「通用」兜底按当前剧本配置（缺省=私人库优先并启用通用），系统默认头像始终最终回退';
+  return '手动锁定始终最高；库来源顺序与「通用」兜底按当前剧本配置（缺省=公共库优先并启用通用），系统默认头像始终最终回退';
 }

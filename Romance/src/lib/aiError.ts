@@ -24,8 +24,10 @@ export function friendlyAIError(e: unknown): { title: string; text: string } {
   if (status === 204) return { title: "AI 没有返回正文", text: err?.body || "接口返回了空内容。" };
   if (!status && (err?.name === "TypeError" || /fetch|network|failed/i.test(err?.message || "")))
     return { title: "网络连接失败", text: "连不上 AI 接口，请检查网络或接口地址是否填写正确。" };
-  if (status === 401 || /invalid.*key|api key|unauthorized|incorrect/.test(blob))
-    return { title: "密钥无效", text: "API Key 不正确或已失效，请在设置里重新填写。" + tail };
+  if (status === 401 || /invalid.*key|api key|unauthorized|incorrect|not_logged_in|请先登录/.test(blob))
+    return { title: "密钥无效", text: "API Key 不正确或已失效；若在平台内游玩/预览，请确认已登录账号（使用后台文案配置）。" + tail };
+  if (status === 400 && /insufficient_points|积分不足/.test(blob))
+    return { title: "织梦豆不足", text: detail || "织梦豆不足，请充值后再演绎。" };
   if (status === 402 || /quota|balance|insufficient|credit/.test(blob))
     return { title: "额度不足", text: "账户余额或额度不足，请充值或更换接口。" + tail };
   if (status === 403) return { title: "没有权限", text: "该密钥无权使用这个模型或接口。" + tail };

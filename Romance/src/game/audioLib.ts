@@ -8,6 +8,7 @@ import type { Mod } from "../mods/types";
 import { allMods, getWorld, subscribeMods } from "../mods/registry";
 import { modLog } from "../mods/ext";
 import { overlayPlatformAudio } from "./platformAudio";
+import { asModArray } from "../lib/asModArray";
 
 export const AUDIO_KIND_LABEL: Record<AudioKind, string> = { bgm: "背景音乐", sfx: "短音效", amb: "环境氛围音" };
 export const AUDIO_EXT = /\.(mp3|ogg|wav)$/i;
@@ -32,8 +33,11 @@ export const useAudioLib = () => { useSyncExternalStore((f) => { subs.add(f); re
 
 /* —— MOD 注入 —— */
 export function modAudio(m: Mod): AudioAsset[] {
-  const own = (m.content?.audio ?? []).map((a) => ({ ...a, _mod: m.id }));
-  const legacy = (m.content?.bgm ?? []).filter((t) => !own.some((a) => a.id === t.id)).map<AudioAsset>((t) => ({ id: t.id, name: t.name, kind: "bgm", src: t.src, loop: true, _mod: m.id }));
+  // 功能注释：audio / bgm 常被 AI 写成对象；先 asModArray 再 map，禁止音频库构建炸 is not iterable
+  const own = asModArray<AudioAsset>(m.content?.audio).map((a) => ({ ...a, _mod: m.id }));
+  const legacy = asModArray<{ id: string; name: string; src: string }>(m.content?.bgm)
+    .filter((t) => !own.some((a) => a.id === t.id))
+    .map<AudioAsset>((t) => ({ id: t.id, name: t.name, kind: "bgm", src: t.src, loop: true, _mod: m.id }));
   // 作品引用和平台曲目不随模组注入：引用属于作品库，平台曲始终在库里且不带 _mod
   return [...own, ...legacy];
 }

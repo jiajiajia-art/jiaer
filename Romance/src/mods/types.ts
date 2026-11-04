@@ -261,6 +261,8 @@ export type SlotKey = (typeof SLOT_KEYS)[number];
 
 export type ModContent = ContentSlots & {
   rooms?: Record<string, RoomContent>; // 地图 / 房间
+  /** 功能注释：大地图列表；每张下挂一棵地点树（rooms[].mapId） */
+  worldMaps?: import("../lib/worldMaps").WorldMapDef[];
   startRoom?: string;
   locations?: MapLocation[]; // 地点名录（地图标签 / 功能说明）；缺省由 rooms[].name 推导
   startMet?: string[]; // 开局即已结识的 NPC id
@@ -325,6 +327,7 @@ export type ResolvedWorld = {
   chain: Mod[]; // 合并顺序：world → addons
   content: Required<Pick<ModContent, "rooms" | "npcs" | "items" | "gigs" | "events" | "fixedEvents" | "endings" | "worldBook" | "worldRules" | "income" | "gameRules" | "storylines" | "sidelines" | "lookRules">> & {
     startRoom?: string;
+    worldMaps?: import("../lib/worldMaps").WorldMapDef[];
     timeLimit?: import("../lib/types").TimeLimit;
     gradeDims?: import("../lib/types").GradeDim[];
     locations: MapLocation[];

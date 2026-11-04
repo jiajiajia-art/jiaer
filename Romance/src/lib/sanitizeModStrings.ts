@@ -11,7 +11,7 @@ const STRING_FIELD_KEYS = new Set([
   "startDate", "startRoom", "weather", "platformAutoplay", "phoneHomeWallpaper",
   "pickTitle", "currency", "freeLabel", "perksLabel", "unlockHint", "group",
   "replyPrompt", "badge", "city", "placeholder", "tag", "blurb", "about",
-  "genre", "type", "avatarVariant", "html", "page", "image", "video",
+  "genre", "type", "avatarVariant", "avatar", "summary", "html", "page", "image", "video",
   // 功能注释：开局封面 DIY / CoverView 会对这些字段 .trim()，AI 常写成对象
   "css", "kicker", "subtitle", "cta", "waiting", "intro", "bgPrompt",
   // 功能注释：固定事件链名 / 失败提示词也会被直接 .trim()
@@ -38,6 +38,12 @@ const ARRAY_FIELD_KEYS = new Set([
   "paths", "fields", "choices", "keywords", "tags", "paragraphs", "nodes",
   "modes", "apps", "acts", "shop", "works", "roam", "options", "conds", "effects",
   "members", "chars", "regions", "lore", "choose", "fixed",
+  // 功能注释：门槛 requires 常被 AI 写成单对象；不洗则 evalRequires for-of → is not iterable
+  "requires", "requirements",
+  // 功能注释：分档 / 公共随机池名常被 AI 写成对象；必须进清洗，否则 [...tiers] / new Set(publicRandom) 炸 is not iterable
+  "tiers", "publicRandom", "looksTiers", "fameTiers",
+  // 功能注释：开局势力 / 手机扩展 / 依赖常被 AI 写成对象；必须进清洗，否则预览建角 flatMap/展开仍炸
+  "startFactions", "phoneAppsExtra", "dependencies",
 ]);
 
 function coerceArray(raw: unknown): unknown[] {
@@ -47,7 +53,8 @@ function coerceArray(raw: unknown): unknown[] {
   for (const k of ["apps", "items", "list", "data", "entries", "nodes", "paths", "modes", "rows", "jobs", "tracks", "regions"]) {
     if (Array.isArray(o[k])) return o[k] as unknown[];
   }
-  if ("id" in o || "name" in o || "label" in o) return [o];
+  // 功能注释：单条门槛带 metric（无 id）；须收成 [obj]，与 asModArray 一致
+  if ("id" in o || "name" in o || "label" in o || "metric" in o) return [o];
   const vals = Object.values(o);
   // 功能注释：数组也是 object，不能把 {tracks:[]} 收成「一项是数组」否则下游 .src 为 undefined
   if (vals.length && vals.every((v) => v && typeof v === "object" && !Array.isArray(v))) return vals;
@@ -153,9 +160,21 @@ function deepCoerceContent(value: unknown, keyHint = ""): unknown {
       else if (typeof v === "string") out[k] = v;
       continue;
     }
+    // 功能注释：opening 须为对象；AI 常写成字符串或段落数组，否则 validateMod「opening 须为对象」拦保存
+    if (k === "opening") {
+      if (v && typeof v === "object" && !Array.isArray(v)) {
+        out[k] = deepCoerceContent(v, k);
+      } else if (typeof v === "string" && v.trim()) {
+        out[k] = { paragraphs: [v.trim()] };
+      } else if (Array.isArray(v)) {
+        const paragraphs = v.map((p) => asTrimmedString(p)).filter(Boolean);
+        if (paragraphs.length) out[k] = { paragraphs };
+      }
+      continue;
+    }
     if (ARRAY_FIELD_KEYS.has(k)) {
       const arr = coerceArray(v);
-      const stringLists = new Set(["keywords", "tags", "roam", "works", "childNames", "options", "paragraphs", "publicRandom", "audioRefs", "platformAudioRefs", "musicOrder", "parentJobs", "identityOpts", "backgroundOpts", "klassOpts"]);
+      const stringLists = new Set(["keywords", "tags", "roam", "works", "childNames", "options", "paragraphs", "publicRandom", "audioRefs", "platformAudioRefs", "musicOrder", "parentJobs", "identityOpts", "backgroundOpts", "klassOpts", "phoneAppsExtra", "dependencies"]);
       out[k] = stringLists.has(k)
         ? (coerceStringList(arr) ?? [])
         : arr.map((row) => deepCoerceContent(row));
@@ -271,8 +290,9 @@ export function sanitizeModStrings(mod: Mod): Mod {
   m.version = asTrimmedString(m.version) || "1.0.0";
   if (m.author != null) m.author = asTrimmedString(m.author) || undefined;
   if (m.description != null) m.description = asTrimmedString(m.description) || undefined;
-  if (Array.isArray(m.dependencies)) {
-    m.dependencies = coerceStringList(m.dependencies) ?? [];
+  // 功能注释：dependencies 非数组时也要收成字符串列表，禁止 beginAuthorPreviewMod 里 .filter 崩预览入口
+  if (m.dependencies !== undefined) {
+    m.dependencies = coerceStringList(coerceArray(m.dependencies)) ?? [];
   }
 
   if (m.content && typeof m.content === "object") {

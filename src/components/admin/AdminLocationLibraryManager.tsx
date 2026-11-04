@@ -16,6 +16,8 @@ type FormState = {
   description: string;
   imageUrl: string;
   sortOrder: string;
+  /** 功能注释：大地图地点树 JSON 文本；空 = 导入时退化为单地点 */
+  treeJsonText: string;
 };
 
 const emptyForm = (): FormState => ({
@@ -23,7 +25,15 @@ const emptyForm = (): FormState => ({
   description: '',
   imageUrl: '',
   sortOrder: '0',
+  treeJsonText: '',
 });
+
+const TREE_PLACEHOLDER = `{
+  "rooms": [
+    { "key": "hall", "name": "前厅", "description": "你来到了「前厅」。" },
+    { "key": "din", "name": "前厅餐室", "parentKey": "hall", "description": "你来到了「前厅餐室」。" }
+  ]
+}`;
 
 export default function AdminLocationLibraryManager() {
   const token = useAuthStore((s) => s.user?.token) || '';
@@ -85,12 +95,28 @@ export default function AdminLocationLibraryManager() {
     const name = form.name.trim();
     const imageUrl = form.imageUrl.trim();
     if (!name) {
-      toast.error('请填写地点名称');
+      toast.error('请填写大地图名称');
       return;
     }
     if (!imageUrl) {
-      toast.error('请上传或填写地点图片');
+      toast.error('请上传或填写大地图封面图');
       return;
+    }
+    type TreePayload = { rooms: { key: string; name: string; description?: string; imageUrl?: string; parentKey?: string | null; order?: number }[] };
+    let treeJson: TreePayload | null = null;
+    const treeRaw = form.treeJsonText.trim();
+    if (treeRaw) {
+      try {
+        const parsed: unknown = JSON.parse(treeRaw);
+        if (!parsed || typeof parsed !== 'object' || !Array.isArray((parsed as { rooms?: unknown }).rooms)) {
+          toast.error('地点树须为 { rooms: [...] }');
+          return;
+        }
+        treeJson = parsed as TreePayload;
+      } catch {
+        toast.error('地点树 JSON 格式不对');
+        return;
+      }
     }
     setSaving(true);
     try {
@@ -99,6 +125,7 @@ export default function AdminLocationLibraryManager() {
         description: form.description.trim(),
         imageUrl,
         sortOrder: Number(form.sortOrder) || 0,
+        treeJson,
       };
       const res = form.id
         ? await locationLibraryApi.update(token, form.id, payload)
@@ -134,30 +161,41 @@ export default function AdminLocationLibraryManager() {
   return (
     <div className={styles.root}>
       <div className={styles.header}>
-        <h2 className={styles.title}>地点库</h2>
+        <h2 className={styles.title}>地点库 · 大地图</h2>
         <p className={styles.desc}>
-          运营可在此维护公共地点素材。创作者在编辑器点「从地点库添加」会把选中条目复制进作品（可再改字、加子地点）。
+          库里存的是大地图。创作者点「从地点库添加」会把整张大地图和它下面的地点树一起复制进作品。
           停用后新作品不能再添加；已经加进作品里的地点会留在那部作品中。
         </p>
       </div>
 
       <div className={styles.form}>
-        <strong>{editing ? '编辑地点' : '新增地点'}</strong>
+        <strong>{editing ? '编辑大地图' : '新增大地图'}</strong>
         <div className={styles.formRow}>
-          <span className={styles.label}>名称</span>
-          <input className={styles.input} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="如：咖啡店后门" />
+          <span className={styles.label}>大地图名称</span>
+          <input className={styles.input} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="如：雾色旅馆" />
         </div>
         <div className={styles.formRow}>
           <span className={styles.label}>简介</span>
-          <textarea className={styles.textarea} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="进入此地时的场景说明" />
+          <textarea className={styles.textarea} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="大地图说明（创作者选库时可见）" />
         </div>
         <div className={styles.formRow}>
-          <span className={styles.label}>图片</span>
+          <span className={styles.label}>封面图</span>
           <input className={styles.input} value={form.imageUrl} onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))} placeholder="图片 URL，或下方上传" />
           <input type="file" accept="image/*" disabled={uploading} onChange={(e) => void onUpload(e.target.files?.[0] || null)} />
           {form.imageUrl ? (
             <img className={styles.thumb} src={getImageUrl(form.imageUrl)} alt="预览" />
           ) : null}
+        </div>
+        <div className={styles.formRow}>
+          <span className={styles.label}>地点树 JSON（可选）</span>
+          <textarea
+            className={styles.textarea}
+            style={{ minHeight: 140, fontFamily: 'ui-monospace, monospace', fontSize: 12 }}
+            value={form.treeJsonText}
+            onChange={(e) => setForm((f) => ({ ...f, treeJsonText: e.target.value }))}
+            placeholder={TREE_PLACEHOLDER}
+          />
+          <span className={styles.meta}>留空则导入时只生成一个与大地图同名的顶层地点。rooms[].key 唯一；parentKey 指向父节点 key。</span>
         </div>
         <div className={styles.formRow}>
           <span className={styles.label}>排序（越小越靠前）</span>
@@ -187,7 +225,7 @@ export default function AdminLocationLibraryManager() {
       </div>
 
       {!sorted.length ? (
-        <div className={styles.empty}>{loading ? '加载中…' : '暂无地点，请先新增'}</div>
+        <div className={styles.empty}>{loading ? '加载中…' : '暂无大地图，请先新增'}</div>
       ) : (
         <div className={styles.grid}>
           {sorted.map((item) => (
@@ -203,6 +241,7 @@ export default function AdminLocationLibraryManager() {
                 </span>
                 <h3 className={styles.name}>{item.name}</h3>
                 <p className={styles.meta}>{item.description || '（无简介）'}</p>
+                <p className={styles.meta}>地点 {Array.isArray(item.treeJson?.rooms) ? item.treeJson.rooms.length : 1} 个</p>
                 <div className={styles.actions}>
                   <button
                     type="button"
@@ -213,6 +252,7 @@ export default function AdminLocationLibraryManager() {
                       description: item.description || '',
                       imageUrl: item.imageUrl || '',
                       sortOrder: String(item.sortOrder ?? 0),
+                      treeJsonText: item.treeJson ? JSON.stringify(item.treeJson, null, 2) : '',
                     })}
                   >
                     编辑
@@ -231,7 +271,7 @@ export default function AdminLocationLibraryManager() {
 
       <ConfirmModal
         isOpen={!!confirmOff}
-        title="停用地点？"
+        title="停用大地图？"
         message={confirmOff ? `停用「${confirmOff.name}」后，新作品不能再从地点库添加它；已经加进作品里的地点会保留。` : ''}
         confirmButtonText="停用"
         tone="admin"

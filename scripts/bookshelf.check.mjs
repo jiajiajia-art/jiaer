@@ -186,7 +186,8 @@ test('书架页接线_路由底栏真实接口且无原生弹窗与mock', () => 
   assert.match(page, /setIsAuthModalOpen\(true\)/);
   assert.match(page, /加载失败/);
   assert.match(page, /restoreShelfItems/);
-  assert.match(page, /<MobileBottomNav \/>/);
+  assert.match(page, /AppPageShell/);
+  assert.match(page, /data-app-page-main/);
   // 存档删除只在独立的存档管理里，且先确认
   assert.doesNotMatch(page, /savesApi\.remove/);
   const manager = read('src/components/Bookshelf/ShelfSaveManager.tsx');

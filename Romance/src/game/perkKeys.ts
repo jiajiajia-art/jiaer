@@ -18,7 +18,7 @@ export function perkKeyOptions(src: PerkKeySource): PerkKeyOption[] {
   const world = "本世界观属性";
   const out: PerkKeyOption[] = [
     ...src.statOrder.map((k) => ({ key: `stat:${k}`, label: src.statLabels[k] ?? k, group: world })),
-    ...(src.attrs ?? []).map((d) => ({ key: `attr:${d.id}`, label: d.label || d.id, group: world })),
+    ...(Array.isArray(src.attrs) ? src.attrs : []).map((d) => ({ key: `attr:${d.id}`, label: d.label || d.id, group: world })),
     { key: "affinity", label: "与 TA 的好感", group: "通用" },
     { key: "stress", label: src.metaLabels?.stress ?? "压力", group: "通用" },
     { key: "energy", label: "行动力", group: "通用" },

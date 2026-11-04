@@ -55,16 +55,18 @@ test('homeMainQuest_节点完成后不再显示该步', () => {
   assert.equal(q?.stepName, '第一次通告');
 });
 
-test('HomeTab_主线条点开quest面板_不再折叠也不写地点说明', () => {
+test('HomeTab_主线条点开quest面板_作者预览不重复_也不写地点说明', () => {
   assert.match(home, /homeMainQuest/);
   assert.match(home, /star:navtab[\s\S]*quest|detail:\s*"quest"/);
   assert.match(home, />主线</);
   assert.match(home, /q\.stepName/);
+  assert.match(home, /isAuthorPreview\(\)/);
+  assert.match(home, /!isNovel && !isAuthorPreview\(\)/);
   assert.doesNotMatch(home, /mainQuestOpen/);
   assert.doesNotMatch(home, /收起主线|展开主线/);
   assert.doesNotMatch(home, /nextStep\(/);
   assert.doesNotMatch(home, /排好本周日程/);
-  // 状态栏下不再渲染地点说明条（desc 仅作文图下正文）
+  // 状态栏下不再渲染地点说明条（desc 叠在场景图上）
   assert.doesNotMatch(home, /刚搬进/);
 });
 

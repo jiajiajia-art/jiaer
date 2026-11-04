@@ -1,6 +1,7 @@
 import { affinityCapOf } from "../worlds/star2005/content";
 import { clampAffinity, engineRulesBlock, fillPlaceholders, oocText, parseRp, rulesOf, seqRandom } from "../game/engineRules";
 import { AIHttpError } from "./aiError";
+import { completePlayViaPlatform, hasPlatformPlayAuth } from "./platformPlayAi.ts";
 import { charCardBlock } from "../game/charCard";
 import { evalFixedCond, storylineBrief } from "../game/fixedEvents";
 import { sidelineBrief } from "./sidelines";
@@ -105,7 +106,26 @@ export async function testConnection(cfg: AIConfig): Promise<string> {
   return "连接成功，模型可用。";
 }
 
-export const isConfigured = (cfg: AIConfig) => !!cfg.baseUrl && !!cfg.apiKey && !!cfg.model;
+/** 功能注释：个人 Key 已填，或已登录平台（走运营文案配置）均可演绎 */
+export const isPersonalConfigured = (cfg: AIConfig) => !!cfg.baseUrl && !!cfg.apiKey && !!cfg.model;
+export const isConfigured = (cfg: AIConfig) => hasPlatformPlayAuth() || isPersonalConfigured(cfg);
+
+/** 功能注释：把多模态 content 压成纯文本，供平台 play/complete 使用 */
+function flattenMsgContent(content: ChatMsg["content"]): string {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+  return content
+    .map((p) => (p && typeof p === "object" && p.type === "text" ? String(p.text || "") : ""))
+    .filter(Boolean)
+    .join("\n")
+    .trim();
+}
+
+function toPlatformMessages(messages: ChatMsg[]): { role: "system" | "user" | "assistant"; content: string }[] {
+  return messages
+    .map((m) => ({ role: m.role, content: flattenMsgContent(m.content) }))
+    .filter((m) => m.content);
+}
 
 /* —— SSE 流式对话；onDelta 收到增量文本；返回完整文本 —— */
 /* 默认关闭深度思考：reasoning.effort=none（DeepSeek V4 等）；DeepSeek/火山用 thinking.type，硅基流动/Qwen 用 enable_thinking。
@@ -137,6 +157,27 @@ async function postChat(cfg: AIConfig, body: Record<string, unknown>, signal?: A
   return res;
 }
 
+/**
+ * 功能注释：已登录平台时优先走 /api/romance/play/complete（图2 文案配置），不再直连个人 Key。
+ * 平台为同步补全，完成后一次性 onDelta，调用方节流逻辑仍可用。
+ */
+async function streamChatViaPlatform(
+  messages: ChatMsg[],
+  onDelta: (chunk: string, full: string) => void,
+  signal?: AbortSignal,
+  onStage?: (stage: string) => void,
+): Promise<string> {
+  onStage?.("正在连接平台文案模型");
+  const { text } = await completePlayViaPlatform(toPlatformMessages(messages), {
+    signal,
+    timeoutMs: 120_000,
+    max_tokens: 4000,
+  });
+  if (!text.trim()) throw new AIHttpError(204, "接口返回了空内容");
+  onDelta(text, text);
+  return text;
+}
+
 export async function streamChat(
   cfg: AIConfig,
   messages: ChatMsg[],
@@ -145,6 +186,11 @@ export async function streamChat(
   onThink?: (full: string) => void,
   onStage?: (stage: string) => void,
 ): Promise<string> {
+  // 功能注释：平台 JWT 在场 → 强制运营 text-llm，避免 Studio 预览误用失效的个人 Key
+  if (hasPlatformPlayAuth()) {
+    return streamChatViaPlatform(messages, onDelta, signal, onStage);
+  }
+
   let think = "";
   // 关闭流式：整段请求后一次性回调，调用方无需区分
   if (!cfg.stream) {
@@ -225,6 +271,15 @@ export async function streamChat(
 /* —— 非流式（记忆压缩用） ——
  * timeoutMs：整次请求（含读完响应）的时限，到点中止并抛 408；不传则不设限，其余调用方行为不变 */
 export async function complete(cfg: AIConfig, messages: ChatMsg[], timeoutMs?: number): Promise<string> {
+  // 功能注释：平台登录态优先走运营文案配置（与 streamChat 一致）
+  if (hasPlatformPlayAuth()) {
+    const { text } = await completePlayViaPlatform(toPlatformMessages(messages), {
+      timeoutMs: timeoutMs && timeoutMs > 0 ? timeoutMs : 120_000,
+      max_tokens: 4000,
+    });
+    return text;
+  }
+
   const ctl = timeoutMs && timeoutMs > 0 ? new AbortController() : undefined;
   const dog = ctl ? setTimeout(() => ctl.abort(), timeoutMs) : undefined;
   try {
@@ -250,6 +305,10 @@ export async function completeWithTools(
   tools: ToolDef[],
   timeoutMs?: number,
 ): Promise<{ text: string; calls: ToolCall[]; native: boolean }> {
+  // 功能注释：平台文案链路暂不透传 tools，退回普通 complete（与接口不支持 tools 时一致）
+  if (hasPlatformPlayAuth()) {
+    return { text: await complete(cfg, messages, timeoutMs), calls: [], native: false };
+  }
   const ctl = timeoutMs && timeoutMs > 0 ? new AbortController() : undefined;
   const dog = ctl ? setTimeout(() => ctl.abort(), timeoutMs) : undefined;
   try {

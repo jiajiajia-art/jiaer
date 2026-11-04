@@ -22,9 +22,10 @@ test('worldGenNoAiBeautify_勾选清单与分组不含三项', async () => {
   for (const id of ['cover', 'phoneAppsCfg', 'theme']) {
     assert.ok(!rendered.includes(id), id);
   }
-  // ⑤ 美化：开场剧情（默认生成开场白）+ 音乐 / 剧情美化等；不得再列封面三项
+  // ⑤ 美化：开场剧情仍在步骤表（不进默认生成）+ 音乐 / 剧情美化等；不得再列封面三项
   const look = wiz.WORLD_GEN_EDITOR_STEPS.filter((s) => s.group === '⑤ 美化').map((s) => s.id);
   assert.deepEqual(look, ['opening', 'bgm', 'audioRefs', 'lookRules', 'navTabs']);
+  assert.ok(!wiz.DEFAULT_WORLD_GEN_EDITOR_STEP_IDS.includes('opening'));
 });
 
 test('worldGenNoAiBeautify_草稿封面标题取剧本名_其余美化不预写', async () => {

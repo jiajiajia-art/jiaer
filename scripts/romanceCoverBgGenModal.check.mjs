@@ -56,6 +56,8 @@ test('CoverDiyPanel_背景页去掉内联生图与压暗模糊颜色', () => {
   assert.doesNotMatch(panel, /暖黄/);
   assert.match(panel, /aiGen=\{\{/);
   assert.match(panel, /size:\s*["']1024x1792["']/);
+  assert.match(panel, /buildWorkCoverPrompt/);
+  assert.match(panel, /initialPrompt: buildWorkCoverPrompt/);
   // 功能注释：固定 CG 的 ImagePicker 开生图；轮播经 CoverCgEditor 透传
   assert.match(panel, /CoverCgEditor[\s\S]*aiGen=/);
 });

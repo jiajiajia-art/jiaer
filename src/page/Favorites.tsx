@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import styles from './Favorites.module.css';
-import Navbar from '../components/Layout/Navbar';
-import MobileBottomNav from '../components/Layout/MobileBottomNav';
+import AppPageShell from '../components/Layout/AppPageShell';
 import GameGrid from '../components/GameGrid';
 import FooterArea from '../components/Layout/FooterArea';
 import GameGridSkeleton from '../components/Skeleton/GameGridSkeleton';
@@ -19,7 +18,7 @@ const Favorites: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLElement>(null);
 
   const [games, setGames] = useState<UserGameData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -132,10 +131,11 @@ const Favorites: React.FC = () => {
   }, [navigate, t]);
 
   return (
-    <div className={styles.pageRoot} ref={scrollContainerRef}>
-      <Navbar />
-
-      <div className={styles.mainContent}>
+    <AppPageShell
+      shellClassName={styles.pageRoot}
+      mainClassName={styles.mainContent}
+      mainRef={scrollContainerRef}
+    >
         <div className={styles.main}>
           <div className={styles.pageHeader}>
             <button type="button" className={styles.backButton} onClick={handleBack} aria-label={t('favorites.back')}>
@@ -161,11 +161,8 @@ const Favorites: React.FC = () => {
             </>
           )}
         </div>
-      </div>
-
       <FooterArea />
-      <MobileBottomNav />
-    </div>
+    </AppPageShell>
   );
 };
 

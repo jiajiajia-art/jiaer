@@ -109,12 +109,8 @@ test('脏模组连点下一步_停在玩法且无TypeError', { timeout: 60_000 }
       return { color: style.color, bg: style.backgroundColor };
     });
     assert.notEqual(tabColors.color, 'rgb(255, 255, 255)', `选中页签数量白字看不清：${JSON.stringify(tabColors)}`);
-    const thumb = page.getByRole('button', { name: '上传背景图' });
-    await thumb.waitFor({ timeout: 15_000 });
-    const broken = await thumb.locator('img').evaluateAll((imgs) => imgs
-      .filter((img) => img.complete && img.naturalWidth === 0)
-      .map((img) => img.getAttribute('src') || ''));
-    assert.deepEqual(broken, [], `场景背景图缩略图裂开：${broken.join(', ')}`);
+    // 功能注释：地点「上传背景图」入口已下线；本测只抓脏数据连点页签时的 TypeError（含 reading 'length'）
+    await page.getByText(/地点|建角|人物/).first().waitFor({ timeout: 15_000 });
     for (let i = 0; i < 4; i++) {
       const label = await next.innerText();
       await next.click();

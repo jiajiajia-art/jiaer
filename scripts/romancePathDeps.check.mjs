@@ -76,6 +76,7 @@ test('pathDeps_编辑器禁止解锁与数值纯手打', () => {
   assert.match(paths, /PathLockCondsEditor/);
   assert.match(paths, /DepNumRows/);
   assert.match(paths, /sanitizePathLockConds/);
+  assert.match(paths, /sanitizePathAttrNames/);
   assert.match(paths, /formatPathLockHint/);
   assert.doesNotMatch(paths, /placeholder="如：达成任意一周目结局后解锁"/);
   assert.doesNotMatch(paths, /placeholder="如：通关任意一周目结局后解锁"/);
@@ -91,6 +92,28 @@ test('pathDeps_编辑器禁止解锁与数值纯手打', () => {
   assert.match(paths, /开局地点/);
   assert.match(paths, /预设主角/);
   assert.match(paths, /EventPick/);
+});
+
+test('pathDeps_可变固定只能选本作品属性', async () => {
+  const mod = await import(pathToFileURL(join(romance, 'lib/pathDeps.ts')).href);
+  const opts = [{ id: 'ling', label: '灵根' }, { id: 'qi', label: '气运' }];
+  assert.deepEqual(mod.sanitizePathAttrNames(['灵根', '野属性', 'qi', '气运', '灵根'], opts), ['灵根', '气运']);
+  assert.deepEqual(mod.sanitizePathAttrNames(['手填文案'], opts), []);
+  assert.deepEqual(mod.sanitizePathAttrNames(null, opts), []);
+  const paths = readFileSync(join(romance, 'components/ModPathsEditor.tsx'), 'utf8');
+  assert.match(paths, /AttrNamePick/);
+  assert.match(paths, /可变自由决定/);
+  assert.match(paths, /固定不可改/);
+  assert.doesNotMatch(paths, /玩家可自由决定（每行一项/);
+  assert.doesNotMatch(paths, /开局小事件旁白/);
+  // 主编辑路径卡不再挂开局数值卡片罗列 / 属性能力 / 实时预览
+  const mainEditor = paths.slice(0, paths.indexOf('function RouteFxEditor'));
+  assert.doesNotMatch(mainEditor, /<RouteFxEditor/);
+  assert.doesNotMatch(mainEditor, /卡片预览方式/);
+  assert.doesNotMatch(mainEditor, /实时预览 · 玩家在线路卡片上看到/);
+  assert.doesNotMatch(mainEditor, /声望 \/ 词条/);
+  assert.match(mainEditor, /开局状态/);
+  assert.match(mainEditor, /开局人际/);
 });
 
 test('pathDeps_开局结算禁止自动新建属性', () => {

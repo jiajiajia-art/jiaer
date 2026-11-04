@@ -11,7 +11,6 @@ import AttrValueEdit from "./AttrValueEdit";
 import { feature, term } from "../mods/registry";
 import { IconCamera, IconCheck, IconClose } from "../lib/icons";
 import {
-  dossierAttrCapLabel,
   dossierAttrPct,
   dossierAttrWarn,
   dossierFactLine,
@@ -61,13 +60,18 @@ function Block({ title, meta, children }: { title: string; meta?: ReactNode; chi
   );
 }
 
-/** 功能注释：64×4 进度条；警戒时用危险色 */
+/**
+ * 功能注释：属性进度条——约 6px 高、通栏；深色底轨 + 深色已达段（警戒用危险色）。
+ * 禁止用与粉底同淡的粉色轨，否则 0 值时整行只剩一条看不见的浅线。
+ * 比例按内部上限算，页面不展示满值数字。
+ */
 function AttrBar({ pct, warn }: { pct: number; warn: boolean }) {
+  const w = pct <= 0 ? 0 : Math.max(2, Math.min(100, pct * 100));
   return (
-    <span className="relative h-1 w-16 shrink-0 overflow-hidden rounded-full bg-line/50" aria-hidden>
+    <span className="relative mt-1.5 block h-1.5 w-full overflow-hidden rounded-full bg-ink/20" aria-hidden>
       <span
-        className={`absolute inset-y-0 left-0 rounded-full ${warn ? "bg-danger" : "bg-coral"}`}
-        style={{ width: `${Math.max(2, Math.min(100, pct * 100))}%` }}
+        className={`absolute inset-y-0 left-0 rounded-full ${warn ? "bg-danger" : "bg-ink/70"}`}
+        style={{ width: `${w}%` }}
       />
     </span>
   );
@@ -90,9 +94,6 @@ export default function SimTab({ embedded = false }: { embedded?: boolean }) {
   const s = game.sim;
   const defs = game.attrDefs ?? [];
   const changedLabels = new Set(lastChanges.map((c) => c.replace(/\s*[+-]?\d+$/, "").replace(/好感.*/, "").trim()));
-
-  const focusDef = (focusId && defs.find((d) => d.id === focusId)) || defs[0];
-  const capMeta = defs.length ? dossierAttrCapLabel(focusDef) : "";
 
   const bagCount = (s.bag ?? []).length + (game.contract ? 1 : 0);
   const bagEmpty = bagCount === 0;
@@ -154,33 +155,40 @@ export default function SimTab({ embedded = false }: { embedded?: boolean }) {
           </div>
         </section>
 
-        {/* ═══ 属性：创作者配置的字段与顺序；点行看详情；标题右显示当前项满值 ═══ */}
+        {/* ═══ 属性：每行「深色名 + 深色当前值 + 下方通栏深色进度条」；不展示满值；行底分隔线加深 ═══ */}
         {defs.length > 0 && (
-          <Block title="属性" meta={capMeta || undefined}>
-            <ul className="grid grid-cols-2 gap-x-4 gap-y-2.5">
-              {defs.map((d) => {
+          <Block title="属性">
+            <ul>
+              {defs.map((d, i) => {
                 const v = customAttrValue(game, d);
                 const warn = dossierAttrWarn(d, v);
                 const pct = dossierAttrPct(v, d.max, d.min ?? 0);
-                const on = focusId === d.id || (!focusId && d.id === defs[0]?.id);
+                const on = focusId === d.id;
+                const last = i === defs.length - 1;
                 return (
-                  <li key={d.id}>
+                  <li
+                    key={d.id}
+                    className={last ? undefined : "border-b border-ink/25"}
+                  >
                     <button
                       type="button"
                       onClick={() => openDetail(d)}
-                      className={`flex w-full min-w-0 items-center gap-1.5 rounded-lg px-1 py-1 text-left transition hover:bg-coral/[0.06] ${on ? "bg-coral/[0.05]" : ""}`}
+                      className={`w-full min-w-0 rounded-xl px-1.5 py-2.5 text-left transition hover:bg-ink/[0.04] ${on ? "bg-ink/[0.05]" : ""}`}
                       title={d.desc || `查看${d.label}`}
                     >
-                      <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-ink">{d.label}</span>
+                      <div className="flex items-baseline justify-between gap-3">
+                        {/* 功能注释：名/值一律深色墨字，禁止浅粉 text-coral（可爱皮肤下与粉底糊在一起） */}
+                        <span className="min-w-0 truncate text-[13.5px] font-semibold text-ink">{d.label}</span>
+                        <span
+                          className={`shrink-0 text-[13.5px] font-bold tabular-nums ${warn ? "text-danger" : "text-ink"} ${changedLabels.has(d.label) ? "animate-flash" : ""}`}
+                        >
+                          {v}
+                        </span>
+                      </div>
                       <AttrBar pct={pct} warn={!!warn} />
-                      <span
-                        className={`min-w-[1.75rem] shrink-0 text-right text-[12px] font-bold tabular-nums ${warn ? "text-danger" : "text-coral"} ${changedLabels.has(d.label) ? "animate-flash" : ""}`}
-                      >
-                        {v}
-                      </span>
                     </button>
-                    {warn && on ? (
-                      <p className="mt-0.5 px-1 text-[10.5px] leading-snug text-danger">{warn}</p>
+                    {warn ? (
+                      <p className="mt-1 px-1.5 pb-1.5 text-[11px] leading-snug text-danger">{warn}</p>
                     ) : null}
                   </li>
                 );
@@ -266,14 +274,19 @@ export default function SimTab({ embedded = false }: { embedded?: boolean }) {
           )}
         </Block>
 
-        {/* 属性详情：满值 · 说明 · 可改数值 · 警戒提醒 */}
+        {/* 属性详情：当前值 · 进度条 · 说明 · 警戒提醒（不展示满值） */}
         {detailDef && (
           <Modal title={detailDef.label} onClose={() => setDetailId(null)}>
             <div className="space-y-3">
-              <div className="flex items-center gap-3 rounded-xl border border-line/70 bg-paper-2/50 px-3 py-2.5">
-                <AttrBar pct={dossierAttrPct(customAttrValue(game, detailDef), detailDef.max, detailDef.min ?? 0)} warn={!!dossierAttrWarn(detailDef, customAttrValue(game, detailDef))} />
-                <AttrValueEdit def={detailDef} className="text-[16px] text-coral no-underline" flash={changedLabels.has(detailDef.label)} />
-                <span className="ml-auto text-[12px] text-ink-soft">{dossierAttrCapLabel(detailDef)}</span>
+              <div className="rounded-xl border border-line/70 bg-paper-2/50 px-3 py-2.5">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-[13px] font-semibold text-ink">{detailDef.label}</span>
+                  <AttrValueEdit def={detailDef} className="text-[16px] font-bold text-ink no-underline" flash={changedLabels.has(detailDef.label)} />
+                </div>
+                <AttrBar
+                  pct={dossierAttrPct(customAttrValue(game, detailDef), detailDef.max, detailDef.min ?? 0)}
+                  warn={!!dossierAttrWarn(detailDef, customAttrValue(game, detailDef))}
+                />
               </div>
               {dossierAttrWarn(detailDef, customAttrValue(game, detailDef)) && (
                 <p className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-[12.5px] text-danger">

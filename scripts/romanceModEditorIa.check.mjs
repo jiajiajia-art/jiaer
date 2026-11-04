@@ -102,8 +102,10 @@ test('ModEditorPanel_应去掉全部分组与全部展开_默认基础_搜索仍
 });
 
 test('ModEditorPanel_保存入口仅在顶栏_无底栏保存条', () => {
-  assert.match(panel, /保存入口只放顶栏/);
-  assert.match(panel, /dirty \|\| !persisted \? "保存并返回" : "返回"/);
+  assert.match(panel, /顶栏只留「保存 \/ 放弃 \/ 预览」/);
+  assert.doesNotMatch(panel, /["']保存并返回["']/);
+  assert.doesNotMatch(panel, />\s*保存并返回\s*</);
+  assert.doesNotMatch(panel, /placeholder="搜索设置项/);
   assert.match(panel, /onClick=\{openPreview\}/);
   assert.doesNotMatch(panel, /sticky bottom-0/);
 });

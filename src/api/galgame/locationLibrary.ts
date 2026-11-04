@@ -3,11 +3,22 @@
  */
 import { HOST_ADDRESS } from '../../config';
 
+export type LocationLibraryTreeRoom = {
+  key: string;
+  name: string;
+  description?: string;
+  imageUrl?: string;
+  parentKey?: string | null;
+  order?: number;
+};
+
 export type LocationLibraryItem = {
   id: string;
   name: string;
   description: string;
   imageUrl: string;
+  /** 大地图下的地点树；缺省导入时退化为单地点 */
+  treeJson?: { rooms: LocationLibraryTreeRoom[] } | null;
   status: 'active' | 'disabled';
   sortOrder?: number;
   createdAt?: string;
@@ -47,7 +58,14 @@ export const locationLibraryApi = {
   },
   create: async (
     token: string,
-    body: { name: string; description?: string; imageUrl: string; sortOrder?: number; status?: string },
+    body: {
+      name: string;
+      description?: string;
+      imageUrl: string;
+      sortOrder?: number;
+      status?: string;
+      treeJson?: { rooms: LocationLibraryTreeRoom[] } | string | null;
+    },
   ) => {
     const res = await fetch(`${HOST_ADDRESS}/api/location-library`, {
       method: 'POST',
@@ -59,7 +77,14 @@ export const locationLibraryApi = {
   update: async (
     token: string,
     id: string,
-    body: Partial<{ name: string; description: string; imageUrl: string; sortOrder: number; status: string }>,
+    body: Partial<{
+      name: string;
+      description: string;
+      imageUrl: string;
+      sortOrder: number;
+      status: string;
+      treeJson: { rooms: LocationLibraryTreeRoom[] } | string | null;
+    }>,
   ) => {
     const res = await fetch(`${HOST_ADDRESS}/api/location-library/${encodeURIComponent(id)}`, {
       method: 'PUT',

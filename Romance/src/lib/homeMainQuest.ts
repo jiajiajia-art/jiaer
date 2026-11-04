@@ -10,6 +10,12 @@ export type HomeMainQuest = {
   stepDesc?: string;
   /** 等到时间文案；没有就不显示第二行 */
   waitLabel?: string;
+  /** 功能注释：已完成节点数（进度条分子） */
+  done: number;
+  /** 功能注释：主线总节点数（进度条分母，至少 1） */
+  total: number;
+  /** 功能注释：0~1，供小说模式顶栏进度条使用 */
+  progress: number;
 };
 
 type QuestSrc = { flags?: Record<string, number>; clockMin?: number; day?: number };
@@ -85,6 +91,17 @@ function activeNode(line: Storyline, s: QuestSrc) {
   return null;
 }
 
+/** 功能注释：按节点完成态算主线进度（完成数 / 总节点），给顶栏进度条用 */
+export function questProgressOf(line: Storyline, s: QuestSrc): { done: number; total: number; progress: number } {
+  const nodes = line.nodes ?? [];
+  const total = Math.max(1, nodes.length);
+  let done = 0;
+  for (let i = 0; i < nodes.length; i++) {
+    if (nodeState(line, i, s) === "done") done += 1;
+  }
+  return { done, total, progress: Math.min(1, done / total) };
+}
+
 /**
  * 功能注释：首页主线卡数据。创作者没配主线 → null（整块不出现）。
  * 配了则取第一条仍在进行的主线的当前节点；等待时间有则附带，没有就不带第二行。
@@ -98,12 +115,16 @@ export function homeMainQuest(s: QuestSrc, lines: Storyline[] | undefined, today
     const stepName = str(node.name) || str(line.name) || "主线";
     const stepDesc = str(node.desc) || undefined;
     const waitLabel = waitLabelFromConds(node.conds, s, todayYmd);
+    const prog = questProgressOf(line, s);
     return {
       lineId: line.id,
       lineName: str(line.name) || "主线",
       stepName,
       stepDesc,
       waitLabel,
+      done: prog.done,
+      total: prog.total,
+      progress: prog.progress,
     };
   }
   return null;

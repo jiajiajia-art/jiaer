@@ -35,6 +35,9 @@ test('人物线路去掉页面文案和娱乐圈默认路径_路径与AI生成�
   assert.match(paths, /AI 生成/);
   assert.match(paths, /＋ 添加路径/);
   assert.match(paths, /commit\(np, ni\)/);
+  // 功能注释：开局弹窗/展示块开关已下线，改由路径条数决定
+  assert.doesNotMatch(paths, /开局弹窗 · 玩家自选/);
+  assert.doesNotMatch(paths, />卡片显示</);
 });
 
 test('建角字段去掉娱乐圈载入_系统字段只能改名', () => {
@@ -43,12 +46,17 @@ test('建角字段去掉娱乐圈载入_系统字段只能改名', () => {
   assert.doesNotMatch(fields, /RAW_CREATION/);
   assert.match(fields, /显示名称/);
   assert.match(fields, /系统字段/);
-  assert.match(fields, /始终必填、不可隐藏或删除/);
+  // 功能注释：系统规则长说明不下页面；只留字段名与徽标
+  assert.doesNotMatch(fields, /始终必填、不可隐藏或删除/);
+  assert.doesNotMatch(fields, /建角要填的项都在这里|系统固定项/);
   assert.doesNotMatch(fields, /锁定（玩家不可改）/);
   assert.doesNotMatch(fields, /在建角页隐藏/);
 });
 
-test('建角页仍用默认引导句_不因编辑器收起文案而改玩家看见的句子', () => {
-  assert.match(create, /path\?\.formIntro \|\| cc\.formIntro \|\| "\{city\} · \{year\} \{season\}。一页定型——锁住满意的（\{lock\}），其余随时重掷。"/);
+test('建角人设页不展示formIntro与作品简介_路径标题仍可用', () => {
+  // 功能注释：人设步只留表单；地点/季节引导与生成提示词禁止出现在 who 页
+  assert.doesNotMatch(create, /path\?\.formIntro \|\| cc\.formIntro/);
+  assert.doesNotMatch(create, /一页定型——锁住满意的/);
+  assert.doesNotMatch(create, /selWorld\?\.description &&/);
   assert.match(create, /fillText\(cc\.pathTitle, tv\) \|\| "选择开局"/);
 });

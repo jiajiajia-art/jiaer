@@ -9,9 +9,9 @@ import { EmptyState, ScopeBanner, SearchBox, matches, useConfirm } from "./Edito
 import { AuditBadge, AuditBar, AuditList, auditDomId } from "./EditorKit";
 import { auditGame, issuesAt } from "../game/refAudit";
 import { StatusMark } from "../lib/icons";
-import { blankWorldBookEntry, withWorldBookDeps, worldBookHasDeps, worldBookMissingDepsErrors } from "../lib/worldBookDeps";
+import { blankWorldBookEntry, withWorldBookDeps } from "../lib/worldBookDeps";
 
-/* 世界书（与模组编辑器同一份数据约定）：名称 · 正文 · 关键词，必须挂本作品地点或人物。
+/* 世界书（与模组编辑器同一份数据约定）：名称 · 正文 · 关键词；地点/人物可选挂靠。
  * 玩家在地点 / 人物在场 / 提到关键词时注入。不回退娱乐圈地点表。 */
 const isConstant = (e: WorldBookEntry) => modeOf(e) === "constant";
 
@@ -32,24 +32,9 @@ export default function WorldBookPanel() {
   const audit = auditGame(game, { worldBook: book });
   const wbIssues = audit.issues.filter((x) => x.at?.startsWith("wb:"));
   const groups = Array.from(new Set(raw.map((e) => e.group?.trim()).filter((g): g is string => !!g)));
-  const depErrs = worldBookMissingDepsErrors(book);
-
   const update = (id: string, patch: Partial<WorldBookEntry>) => {
-    const next = book.map((e) => {
-      if (e.id !== id) return e;
-      const merged = { ...e, ...patch };
-      const hasBody = !!(String(merged.title ?? "").trim() || String(merged.content ?? "").trim());
-      // 功能注释：显式开启却无依赖 → 拒绝；编辑中清掉最后依赖 → 自动停用，避免无依赖条目继续注入
-      if (merged.enabled && !worldBookHasDeps(merged) && hasBody) {
-        if (patch.enabled === true) {
-          setMsg({ ok: false, text: `世界书「${merged.title || merged.id}」未挂地点或人物，不能保存` });
-          return e;
-        }
-        return { ...merged, enabled: false };
-      }
-      return merged;
-    });
-    setWorldBook(next);
+    // 功能注释：地点/人物可选；开启条目不再因未挂依赖被拒绝或自动停用
+    setWorldBook(book.map((e) => (e.id === id ? { ...e, ...patch } : e)));
   };
   const remove = async (id: string) => {
     const t = book.find((e) => e.id === id)?.title || "未命名条目";
@@ -97,13 +82,7 @@ export default function WorldBookPanel() {
         }).filter((e) => e.content.trim() || e.title.trim());
         if (!fresh.length) return setMsg({ ok: false, text: "文件中没有可导入的条目。" });
         setWorldBook([...book, ...fresh]);
-        const missing = worldBookMissingDepsErrors(fresh);
-        setMsg({
-          ok: missing.length === 0,
-          text: missing.length
-            ? `已导入 ${fresh.length} 条；${missing[0]}（请补挂本作品地点或人物）`
-            : `已导入 ${fresh.length} 条。`,
-        });
+        setMsg({ ok: true, text: `已导入 ${fresh.length} 条。` });
       } catch {
         setMsg({ ok: false, text: "导入失败：不是有效的 JSON 文件。" });
       }
@@ -111,7 +90,7 @@ export default function WorldBookPanel() {
   };
   const add = () => {
     const maxOrder = book.reduce((m, e) => Math.max(m, e.order ?? 100), 0);
-    // 功能注释：新建先停用，填完地点/人物依赖后再开启，避免无依赖条目直接写入存档
+    // 功能注释：新建默认停用，填好正文后再手动开启；地点/人物可选
     setWorldBook([...book, { ...blankWorldBookEntry(maxOrder + 10), enabled: false }]);
   };
 
@@ -124,15 +103,10 @@ export default function WorldBookPanel() {
       {confirmEl}
       <ScopeBanner scope="save">世界书属于当前存档：修改即时保存、下回合起生效。模组自带的世界书只在新开局时作为初始内容写入；与模组编辑器是同一份字段。</ScopeBanner>
       <p className="text-[12.5px] leading-relaxed text-ink-soft">
-        一条设定只写一遍（名称 · 正文 · 关键词），必须挂本作品地点或人物。
-        玩家在该地点、人物在场或正文提到关键词时才注入。数字越小的条目越靠前。
+        一条设定只写一遍（名称 · 正文 · 关键词）；地点与人物可选手动挂靠。
+        有挂靠时：玩家在该地点、人物在场或正文提到关键词才注入。数字越小的条目越靠前。
         始终生效的铁律请写进剧本基调。
       </p>
-      {depErrs.length > 0 && (
-        <p className="rounded-xl border border-danger/40 bg-danger/5 px-3 py-2 text-[12px] text-danger">
-          <StatusMark kind="warn">{depErrs[0]}{depErrs.length > 1 ? `（另有 ${depErrs.length - 1} 条）` : ""}</StatusMark>
-        </p>
-      )}
 
       {/* 统计条 + 蓝灯护栏 */}
       <div className="flex flex-wrap items-center gap-2 rounded-xl border border-line bg-paper/40 px-3.5 py-2.5">

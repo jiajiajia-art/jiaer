@@ -42,7 +42,8 @@ test('玩法并入基础_删除功能开关与独立玩法页', () => {
   const create = panel.indexOf('title="建角"');
   const loc = panel.indexOf('title="地点"');
   const playList = panel.indexOf('title="已添加的玩法"');
-  assert.ok(avatar >= 0 && avatar < create && create < loc && loc < playList, '头像→建角→地点→已添加的玩法');
+  const pathSec = panel.indexOf('title="人物线路"');
+  assert.ok(avatar >= 0 && avatar < create && create < pathSec && pathSec < loc && loc < playList, '头像→建角→人物线路→地点→已添加的玩法');
   const baseBetween = panel.slice(avatar, loc);
   assert.doesNotMatch(baseBetween, /title="已添加的玩法"|title="底栏页签"|title="手机应用配置"|title="开局封面"|title="皮肤美化"/);
   const basic = panel.slice(panel.indexOf('title="基本信息"'), panel.indexOf('title="时间与推进"'));
@@ -191,6 +192,7 @@ test('线上编辑器_创建世界五页签且基础含玩法无功能开关', {
     await page.getByText('头像', { exact: true }).waitFor();
     await page.getByText('建角', { exact: true }).waitFor();
     const body = await page.locator('body').innerText();
+    // 功能注释：源码静态用例已断言「建角→人物线路→地点」；线上未部署时仍保证头像→建角→地点
     assert.ok(body.indexOf('头像') < body.indexOf('建角') && body.indexOf('建角') < body.indexOf('地点'), '基础页顺序：头像→建角→地点');
   } finally {
     await browser.close();

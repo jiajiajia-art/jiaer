@@ -1,0 +1,28 @@
+/* 功能注释：全站中间内容壳——顶/底栏固定占位，中间单独滚动，高度=视口剩余，含安全区 */
+.shell {
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+  background: #000000;
+  color: #ffffff;
+}
+
+.main {
+  position: absolute;
+  top: var(--app-navbar-offset);
+  bottom: var(--app-bottom-nav-offset);
+  left: 0;
+  right: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  box-sizing: border-box;
+}
+
+/* 无底栏时仍避开底部 Home Indicator */
+.mainNoBottomNav {
+  bottom: env(safe-area-inset-bottom, 0px);
+}

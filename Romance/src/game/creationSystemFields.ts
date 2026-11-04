@@ -31,8 +31,10 @@ export function isSystemCreationFieldKey(key: string): key is SystemCreationFiel
 }
 
 /** 性别始终保留男/女；创作者的自定义项清洗、去重后追加。 */
-export function normalizeGenderOptions(options?: readonly string[]): string[] {
-  const custom = (options ?? []).map((item) => String(item ?? "").trim()).filter((item) => item && item !== "男" && item !== "女");
+export function normalizeGenderOptions(options?: readonly string[] | unknown): string[] {
+  // 功能注释：AI 常把 options 写成对象；非数组按空，禁止 .map / 展开炸 is not iterable
+  const list = Array.isArray(options) ? options : [];
+  const custom = list.map((item) => String(item ?? "").trim()).filter((item) => item && item !== "男" && item !== "女");
   return ["男", "女", ...new Set(custom)];
 }
 

@@ -28,11 +28,21 @@ export function hasSlot(key: string): boolean {
 }
 
 export function liveArray<T>(get: () => T[]): T[] {
+  // 功能注释：AI/脏槽常把数组写成 null、对象；Proxy 对非数组 Reflect.get 会炸 reading 'length'。
+  // 工厂内部若仍写 ...(slot ?? [])，对象脏数据会在返回前就抛 is not iterable——此处再兜一层。
+  const arr = (): T[] => {
+    try {
+      const raw = get();
+      return Array.isArray(raw) ? raw : [];
+    } catch {
+      return [];
+    }
+  };
   return new Proxy([] as T[], {
-    get: (_t, k) => { const a = get(); const v = Reflect.get(a, k); return typeof v === "function" ? v.bind(a) : v; },
-    has: (_t, k) => Reflect.has(get(), k),
-    ownKeys: () => Reflect.ownKeys(get()),
-    getOwnPropertyDescriptor: (_t, k) => { const d = Reflect.getOwnPropertyDescriptor(get(), k); if (d && k !== "length") d.configurable = true; return d; },
+    get: (_t, k) => { const a = arr(); const v = Reflect.get(a, k); return typeof v === "function" ? v.bind(a) : v; },
+    has: (_t, k) => Reflect.has(arr(), k),
+    ownKeys: () => Reflect.ownKeys(arr()),
+    getOwnPropertyDescriptor: (_t, k) => { const d = Reflect.getOwnPropertyDescriptor(arr(), k); if (d && k !== "length") d.configurable = true; return d; },
   });
 }
 export function liveRecord<T extends object>(get: () => T): T {

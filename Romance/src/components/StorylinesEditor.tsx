@@ -1,17 +1,17 @@
 import { IconClose } from "../lib/icons";
-import { CondRow, EffectRow, defaultCond, defaultEffect, questOpts, sideOpts } from "./FixedEventsPanel";
+import { CondRow, defaultCond, questOpts, sideOpts } from "./FixedEventsPanel";
 import type { FixedEvent, QuestNode, Sideline, Storyline } from "../lib/types";
-import { AuditBadge, AuditBar, AuditList, auditDomId } from "./EditorKit";
+import { AuditBar, AuditList, auditDomId } from "./EditorKit";
 import { auditStory, issuesAt } from "../game/refAudit";
 
 /* 模组编辑器 · 剧情线 · 主线：有序节点，每天结束由代码判定完成 / 失败。
- * 节点完成 → 发奖励、激活事件；失败 → 走失败分支（激活失败事件）。进度供事件、结局与 AI 读取。 */
+ * 功能注释：主线节点只配目标说明与完成/失败条件；编辑器不再提供奖励或激活事件入口。 */
 const inp = "min-w-0 w-full rounded-lg border border-line bg-paper-2 px-2 py-1 text-[12.5px] text-ink outline-none focus:border-jade";
 const sel = "rounded-md border border-line bg-paper-2 px-1.5 py-0.5 text-[11.5px]";
 const btn = "rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40";
 const link = "text-[11.5px] font-semibold text-jade hover:underline";
 const uid = (p: string) => `${p}_${Date.now().toString(36).slice(-4)}${Math.random().toString(36).slice(2, 5)}`;
-const newNode = (): QuestNode => ({ id: uid("qn"), name: "新节点", conds: [defaultCond("metric")] });
+const newNode = (): QuestNode => ({ id: uid("qn"), name: "", desc: "", conds: [defaultCond("metric")] });
 
 export function EventPicks({ label, ids, events, onChange }: { label: string; ids?: string[]; events: FixedEvent[]; onChange: (v?: string[]) => void }) {
   const list = ids ?? [];
@@ -40,7 +40,7 @@ function NodeCard({ n, idx, total, events, quests, sides, onChange, onMove, onDe
     <div className={`space-y-1.5 rounded-xl border-l-[3px] bg-paper/60 py-2 pl-3 pr-2 ${n.optional ? "border-gold/70" : "border-jade/70"}`}>
       <div className="flex items-center gap-2">
         <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-black ${n.optional ? "bg-gold/15 text-gold" : "bg-jade/15 text-jade"}`}>{n.optional ? "可选目标" : `第 ${idx + 1} 步`}</span>
-        <input className={inp} value={n.name} maxLength={24} placeholder="节点名称" onChange={(e) => onChange({ ...n, name: e.target.value })} />
+        <input className={inp} value={n.name} maxLength={24} placeholder="节点名称（如：拿下首个主角）" onChange={(e) => onChange({ ...n, name: e.target.value })} />
         <label className="flex shrink-0 items-center gap-1 text-[11px] text-ink-soft">
           <input type="checkbox" checked={!!n.optional} onChange={(e) => onChange({ ...n, optional: e.target.checked || undefined })} />可选
         </label>
@@ -69,15 +69,6 @@ function NodeCard({ n, idx, total, events, quests, sides, onChange, onMove, onDe
         <CondRow key={i} c={c} events={events} selfId="" quests={quests} sides={sides} onChange={(x) => onChange({ ...n, failConds: n.failConds!.map((y, j) => (j === i ? x : y)) })} onDelete={() => { const f = n.failConds!.filter((_, j) => j !== i); onChange({ ...n, failConds: f.length ? f : undefined }); }} />
       ))}
       <button className={link} onClick={() => onChange({ ...n, failConds: [...(n.failConds ?? []), defaultCond("time")] })}>＋ 失败条件</button>
-
-      <p className="pt-0.5 text-[11px] font-bold text-ink-soft">完成奖励</p>
-      {(n.rewards ?? []).map((f, i) => (
-        <EffectRow key={i} ef={f} onChange={(x) => onChange({ ...n, rewards: n.rewards!.map((y, j) => (j === i ? x : y)) })} onDelete={() => { const r = n.rewards!.filter((_, j) => j !== i); onChange({ ...n, rewards: r.length ? r : undefined }); }} />
-      ))}
-      <button className={link} onClick={() => onChange({ ...n, rewards: [...(n.rewards ?? []), defaultEffect("metric")] })}>＋ 奖励</button>
-
-      <EventPicks label="完成后激活事件" ids={n.unlockIds} events={events} onChange={(unlockIds) => onChange({ ...n, unlockIds })} />
-      {!!n.failConds?.length && <EventPicks label="失败分支事件" ids={n.failUnlockIds} events={events} onChange={(failUnlockIds) => onChange({ ...n, failUnlockIds })} />}
     </div>
   );
 }
@@ -94,10 +85,10 @@ export default function StorylinesEditor({ value, sidelines, events = [], onChan
   return (
     <div className="space-y-2.5">
       <p className="text-[11px] leading-relaxed text-ink-soft">
-        主线由有序节点组成：前面的必做节点完成后，下一步才开始判定；可选目标不阻塞主线。每天结束时由代码判定完成 / 失败，完成发奖励并激活事件，失败可走失败分支。
-        固定事件、玩法规则与结局都能用「主线进度」条件读取进度，AI 也会收到当前目标。必做节点全部完成 = 主线完成；任一必做节点失败 = 主线中断。
+        建议只配一条主线：按顺序排好节点，每个节点写清目标说明与完成条件。前面的必做节点完成后，下一步才开始判定；可选目标不阻塞主线。
+        每天结束由代码判定完成 / 失败。必做节点全部完成 = 主线完成；任一必做节点失败 = 主线中断。主线节点不配奖励、不激活事件。
       </p>
-      <button className={btn} onClick={() => commit([...list, { id: uid("sl"), name: "新主线", nodes: [newNode()] }])}>＋ 新建主线</button>
+      <button className={btn} onClick={() => commit([...list, { id: uid("sl"), name: "主线", nodes: [newNode()] }])}>＋ 新建主线</button>
       {list.length > 0 && <AuditBar issues={audit.issues.filter((x) => x.at?.startsWith("quest:"))} onJump={() => undefined} />}
       {!list.length && <p className="rounded-xl border border-dashed border-line px-3 py-4 text-center text-[12px] text-ink-soft">还没有主线 · 新建一条，再按顺序添加节点</p>}
       {list.map((l) => (

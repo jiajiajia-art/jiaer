@@ -34,13 +34,19 @@ test('OperatorPanel_运营中心侧栏须有组件管理', () => {
   assert.match(op, /AdminPlayModManager/);
 });
 
-test('编辑器_玩法Mod统一安装入口且含手机应用类型', () => {
+test('编辑器_玩法Mod统一安装入口_弹窗只列玩法', () => {
   assert.match(panel, /添加玩法/);
   assert.match(panel, /已添加的玩法|playModInstalls/);
-  assert.match(modal, /手机应用/);
   assert.match(modal, /玩法/);
   assert.match(modal, /setDetailSlug/);
   assert.match(modal, /添加（含依赖）/);
+  assert.match(modal, /这里添加本作品要用的玩法/);
+  assert.match(modal, /componentKind === "gameplay"/);
+  // 功能注释：添加弹窗不再有分类切换/搜索；手机应用归应用商店
+  assert.doesNotMatch(modal, /搜索玩法/);
+  assert.doesNotMatch(modal, /\["all", "全部"\]/);
+  assert.doesNotMatch(modal, /\["phone_app", "手机应用"\]/);
+  assert.doesNotMatch(modal, />手机应用</);
   assert.match(catalog, /phone_app/);
   assert.match(catalog, /resolveInstalledPhoneAppIds/);
   assert.match(catalog, /previewImages/);

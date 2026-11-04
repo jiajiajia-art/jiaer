@@ -5,9 +5,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Trans, useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import styles from './Create.module.css';
-import Navbar from '../components/Layout/Navbar';
+import AppPageShell from '../components/Layout/AppPageShell';
 import FooterArea from '../components/Layout/FooterArea';
-import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import RechargeModal from '../components/Purchase/RechargeModal';
 import ExchangeModal from '../components/Purchase/ExchangeModal';
 import ConfirmModal from '../components/CommonModal/ConfirmModal';
@@ -360,10 +359,8 @@ const Create: React.FC = () => {
     };
 
     return (
-        <div className={styles.pageRoot}>
-            <Navbar />
-
-            <div className={styles.mainContent}>
+        <>
+        <AppPageShell shellClassName={styles.pageRoot} mainClassName={styles.mainContent}>
                 <div className={styles.main}>
                     <div className={styles.creatorHeroSection}>
                         <div className={styles.creatorHeroCard}>
@@ -677,10 +674,8 @@ const Create: React.FC = () => {
                     </div>
 
                 </div>
-            </div>
-
-            <MobileBottomNav />
             <FooterArea />
+        </AppPageShell>
 
             <RechargeModal
                 isOpen={isRechargeModalOpen}
@@ -835,7 +830,7 @@ const Create: React.FC = () => {
                 onClose={() => setIsProfilePreferenceOpen(false)}
                 onSaved={() => setIsProfilePreferenceOpen(false)}
             />
-        </div>
+        </>
     );
 };
 

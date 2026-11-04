@@ -62,7 +62,9 @@ test('编辑器_开局资金在建角且养成按勾选展示_无养成规则块
   const fieldsEd = read('components/ModCreationFieldsEditor.tsx');
   assert.match(fieldsEd, /开局资金/);
   assert.match(fieldsEd, /authorField: "author-field-start-money"/);
-  assert.match(fieldsEd, /分档（多少分叫什么）/);
+  // 功能注释：建角字段顶部长说明已删；分档在数值属性展开表单
+  assert.doesNotMatch(fieldsEd, /建角要填的项都在这里|分档（多少分叫什么）/);
+  assert.match(read('components/ModAttrsEditor.tsx'), /分档/);
 });
 
 test('运行时非娱乐圈课程打工周末不回落RAW', () => {

@@ -156,16 +156,29 @@ export const RAW_ZODIACS: Zodiac[] = [
   { id: "pisces", name: "双鱼座", symbol: "♓", from: [2, 19], to: [3, 20], bonus: "浪漫感性，想象力丰富" },
 ];
 
-export const ZODIACS: Zodiac[] = liveArray(() => { const z = slot<Zodiac[]>("zodiacs", () => RAW_ZODIACS); return z.length ? z : RAW_ZODIACS; });
+/** 功能注释：AI 星座常缺 from/to；缺区间的条目不能进活视图，否则建角 zodiacOf 读 .length/.0 崩预览 */
+function zodiacEntryOk(z: unknown): z is Zodiac {
+  if (!z || typeof z !== "object") return false;
+  const row = z as Zodiac;
+  return Array.isArray(row.from) && row.from.length >= 2 && Array.isArray(row.to) && row.to.length >= 2;
+}
+
+export const ZODIACS: Zodiac[] = liveArray(() => {
+  const z = slot<Zodiac[]>("zodiacs", () => RAW_ZODIACS);
+  if (!Array.isArray(z) || !z.length) return RAW_ZODIACS;
+  const ok = z.filter(zodiacEntryOk);
+  return ok.length ? ok : RAW_ZODIACS;
+});
 
 export function zodiacOf(month: number, day: number): Zodiac {
   const val = month * 100 + day;
   for (const z of ZODIACS) {
+    if (!zodiacEntryOk(z)) continue;
     const f = z.from[0] * 100 + z.from[1];
     const t = z.to[0] * 100 + z.to[1];
     if (f <= t ? val >= f && val <= t : val >= f || val <= t) return z;
   }
-  return ZODIACS[0];
+  return ZODIACS[0] ?? RAW_ZODIACS[0];
 }
 
 /* ═══ 模组槽 · 基础数值 ═══
@@ -201,6 +214,19 @@ export const STAT_ORDER: StatKey[] = liveArray(() => {
   const hid = statsSlot().hidden ?? [];
   return full.filter((k) => !hid.includes(k));
 });
+/**
+ * 功能注释：人物档案「个人能力」用的键——只读作品自己的 order / hidden。
+ * 配了 order 就严格按 order（再扣 hidden），绝不把未声明的八维（如演技）补回来；
+ * 未配 order 时才回落全量八维再扣 hidden。引擎养成仍用 STAT_ORDER。
+ */
+export const dossierStatKeys = (): StatKey[] => {
+  const hid = new Set(statsSlot().hidden ?? []);
+  const ordered = (statsSlot().order ?? []).filter(
+    (k, i, a) => k in RAW_STAT_LABELS && a.indexOf(k) === i && !hid.has(k),
+  );
+  if (ordered.length) return ordered;
+  return RAW_STAT_ORDER.filter((k) => !hid.has(k));
+};
 export const ALL_STAT_KEYS: readonly StatKey[] = ["yanji", "geyi", "koucai", "yitai", "donggan", "tineng", "caizhi", "zixin"];
 /* 开局资金 / 开局天气（开局日期见 content.ts CALENDAR，可用槽 startDate 简写覆盖） */
 /** 功能注释：娱乐圈未写开局资金 = 5000；其它作品未写 = 0，不套娱乐圈默认。 */
@@ -565,10 +591,14 @@ const GENERIC_FAME_TIERS: FameTier[] = [
   { min: 500, label: "名满一方", desc: "众人瞩目" },
   { min: 750, label: "家喻户晓", desc: "传奇人物" },
 ];
-export const FAME_TIERS: FameTier[] = liveArray(() => { const t = slot<FameTier[]>("fameTiers", () => RAW_FAME_TIERS, () => GENERIC_FAME_TIERS); return t.length ? t : GENERIC_FAME_TIERS; });
+export const FAME_TIERS: FameTier[] = liveArray(() => {
+  const t = slot<FameTier[]>("fameTiers", () => RAW_FAME_TIERS, () => GENERIC_FAME_TIERS);
+  return Array.isArray(t) && t.length ? t : GENERIC_FAME_TIERS;
+});
 /** 按分档取档名（tiers 无序也可） */
 export function tierOf(v: number, tiers?: { min: number; label: string }[]): string | undefined {
-  if (!tiers?.length) return undefined;
+  // 功能注释：AI 常把 tiers 写成对象；非数组直接视为无分档，禁止 [...tiers] → is not iterable
+  if (!Array.isArray(tiers) || !tiers.length) return undefined;
   const t = [...tiers].sort((a, b) => a.min - b.min);
   return [...t].reverse().find((x) => v >= x.min)?.label ?? t[0].label;
 }
@@ -884,8 +914,10 @@ export function optFx(o?: LegacyFx): OptFx | undefined {
 }
 export type CreationCopy = {
   paths?: CreationPath[]; // 人物线路（career 世界的第一步）；id 对应 identities
-  pathPicker?: "modal" | "off"; // 路径选择：开局弹窗让玩家选（缺省）/ 不显示，直接用第一条开放路径
-  pathHide?: Partial<Record<PathCardPart, boolean>>; // 路径弹窗卡片里不给玩家看的内容块
+  /** @deprecated 开局是否弹窗改由开放路径条数决定（>1 弹窗）；旧稿字段读写忽略 */
+  pathPicker?: "modal" | "off";
+  /** @deprecated 弹窗固定只展示路径名+开局处境；旧稿字段读写忽略 */
+  pathHide?: Partial<Record<PathCardPart, boolean>>;
   /* 文案均支持占位符（见 game/creationText.ts）：{world} {path} {city} {year} {season} {date} {school} {openPaths} {lock} */
   pathTitle?: string; // 「人物线路选择」
   pathIntro?: string; // 路径页引导语
@@ -1021,10 +1053,12 @@ export function clearPathLocks() {
 export const creationCopy = (): CreationCopy => {
   const base = slot<CreationCopy>("creation", () => RAW_CREATION, () => ({}));
   const locks = loadPathLocks();
-  if (!base.paths?.length || !Object.keys(locks).length) return base;
+  // 功能注释：paths 非数组时 length/map 会炸；收成数组再往下走
+  const paths = Array.isArray(base.paths) ? base.paths : [];
+  if (!paths.length || !Object.keys(locks).length) return { ...base, ...(paths.length ? { paths } : { paths: undefined }) };
   return {
     ...base,
-    paths: base.paths.map((p) => {
+    paths: paths.map((p) => {
       const ov = locks[p.id];
       if (!ov) return p;
       return {

@@ -65,7 +65,7 @@ export default function ModActsEditor({ jobs, acts, stats, attrs, onChange }: {
   const opts: Opt[] = [
     ...RAW_STAT_ORDER.filter((k) => !hidden.has(k)).map((k) => ({ v: `stat:${k}`, l: (typeof stats?.labels?.[k] === "string" ? stats.labels![k]!.trim() : "") || RAW_STAT_LABELS[k] })),
     ...FIXED_METRICS.filter((m) => !m.key.startsWith("c:") && m.key !== "week").map((m) => ({ v: m.key, l: m.label })),
-    ...(attrs ?? []).map((a) => ({ v: `c:${a.id}`, l: `${a.label || a.id}（自定义）` })),
+    ...(Array.isArray(attrs) ? attrs : []).map((a) => ({ v: `c:${a.id}`, l: `${a.label || a.id}（自定义）` })),
   ];
   const jl = jobs ?? [];
   const al = acts ?? [];

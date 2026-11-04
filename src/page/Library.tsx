@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import styles from './WareHouse.module.css';
-import Navbar from '../components/Layout/Navbar';
-import MobileBottomNav from '../components/Layout/MobileBottomNav';
+import AppPageShell from '../components/Layout/AppPageShell';
 import GameGrid from '../components/GameGrid';
 import libraryDataApi from '../api/home/getGameData';
 import type { UserGameData } from '../api/home/getGameData.type';
@@ -113,10 +112,7 @@ const Library: React.FC<LibraryProps> = ({ variant = 'all' }) => {
 
     
     return (
-        <div className={styles.pageRoot}>
-            <Navbar />
-
-            <div className={styles.mainContent}>
+        <AppPageShell shellClassName={styles.pageRoot} mainClassName={styles.mainContent}>
                 <div className={styles.main}>
                     {isLoading ? (
                         <GameGridSkeleton count={12} />
@@ -141,12 +137,8 @@ const Library: React.FC<LibraryProps> = ({ variant = 'all' }) => {
                         </>
                     )}
                 </div>
-            </div>
-
             <FooterArea />
-
-            <MobileBottomNav />
-        </div>
+        </AppPageShell>
     );
 
 

@@ -93,7 +93,7 @@ const OperatorPanel: React.FC = () => {
     { id: 'dailyTasks', label: t('operator.tabs.dailyTasks'), path: '/operator/daily-tasks' },
     { id: 'withdraw', label: t('operator.tabs.withdraw'), path: '/operator/withdraw' },
     { id: 'avatars', label: '公共头像', path: '/operator/avatars' },
-    { id: 'locations', label: '地点库', path: '/operator/locations' },
+    { id: 'locations', label: '地点库·大地图', path: '/operator/locations' },
     { id: 'components', label: '组件管理', path: '/operator/components' },
     { id: 'contentReports', label: t('operator.tabs.contentReports'), path: '/operator/content-reports' },
     { id: 'appeals', label: t('operator.tabs.appeals'), path: '/operator/appeals' },

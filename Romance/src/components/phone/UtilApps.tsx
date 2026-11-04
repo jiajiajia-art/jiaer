@@ -12,7 +12,23 @@ import Studio, { PlayerApps } from "./studio/Studio";
 import { takeStudioRequest } from "./studio/review";
 import { setStudioOpen, usePetMode } from "./studio/pet";
 
-export type StoreItem = { id: string; label: string; tagline: string; desc: string; icon: ReactNode; cat: string; rating: number; size: string; cover: string; kicker: string; story: string; kind?: "app" | "widget"; core?: boolean };
+export type StoreItem = {
+  id: string;
+  label: string;
+  tagline: string;
+  desc: string;
+  icon: ReactNode;
+  cat: string;
+  rating: number;
+  size: string;
+  cover: string;
+  kicker: string;
+  story: string;
+  kind?: "app" | "widget";
+  core?: boolean;
+  /** 功能注释：平台应用作者展示名 */
+  authorName?: string;
+};
 
 export type IconApp = { id: string; label: string; node: ReactNode };
 
@@ -99,7 +115,9 @@ export function AppStoreApp({ onBack, catalog, installed, onInstall, onOpen, ico
       <div className="min-w-0 flex-1">
         <p className="truncate text-[15px] font-semibold text-ink">{item.label}</p>
         <p className="truncate text-[12.5px] text-ink-soft">{item.tagline}</p>
-        <p className="mt-0.5 flex items-center gap-1 text-[11px] text-ink-soft/80">{item.cat} · {item.size}</p>
+        <p className="mt-0.5 flex items-center gap-1 text-[11px] text-ink-soft/80">
+          {item.cat} · {item.authorName || item.size}
+        </p>
       </div>
       <span className="shrink-0"><Pill id={item.id} kind={item.kind} /></span>
     </div>
@@ -109,7 +127,7 @@ export function AppStoreApp({ onBack, catalog, installed, onInstall, onOpen, ico
 
   /* App 详情页：仿真 iOS App Store 产品页 */
   if (detail) {
-    return <AppDetail item={detail} catalog={catalog} pill={<Pill id={detail.id} kind={detail.kind} />} onBack={() => setDetail(null)} onPick={setDetail} backLabel={tab === "today" ? "今天" : tab === "search" ? "搜索" : "App"} />;
+    return <AppDetail item={detail} pill={<Pill id={detail.id} kind={detail.kind} />} onBack={() => setDetail(null)} backLabel={tab === "today" ? "今天" : tab === "search" ? "搜索" : "App"} />;
   }
 
   return (
@@ -149,11 +167,21 @@ export function AppStoreApp({ onBack, catalog, installed, onInstall, onOpen, ico
 
         {tab === "apps" && (
           <div>
-            <StoreHeader title="App" kicker="为你的小手机添加实用与美化组件" onClose={onBack} />
-            <p className="px-4 pb-0 pt-3 text-[18px] font-bold text-ink">手机自带应用</p>
-            <p className="px-4 text-[12.5px] text-ink-soft">删掉后随时可以在这里装回来</p>
+            <StoreHeader title="App" kicker="当前作品已装上的应用" onClose={onBack} />
+            {/* 功能注释：App 页只列当前作品已装平台应用，行内显示作者名 */}
+            <p className="px-4 pb-0 pt-3 text-[18px] font-bold text-ink">已安装</p>
             <div className="mx-4 divide-y divide-black/[0.06]">
-              {catalog.filter((c) => c.core).map((item) => <Row key={item.id} item={item} />)}
+              {catalog.filter((c) => c.core && installed.has(c.id)).length === 0 ? (
+                <button
+                  type="button"
+                  className="w-full py-10 text-center text-[14px] font-semibold text-[#0a84ff]"
+                  onClick={() => setTab("today")}
+                >
+                  去应用商店安装
+                </button>
+              ) : (
+                catalog.filter((c) => c.core && installed.has(c.id)).map((item) => <Row key={item.id} item={item} />)
+              )}
             </div>
             <p className="px-4 pb-0 pt-4 text-[18px] font-bold text-ink">效率与实用工具</p>
             <div className="mx-4 divide-y divide-black/[0.06]">
@@ -165,7 +193,6 @@ export function AppStoreApp({ onBack, catalog, installed, onInstall, onOpen, ico
               {catalog.filter((c) => c.kind === "widget").map((item) => <Row key={item.id} item={item} />)}
             </div>
             <PlayerApps variant="list" />
-            <p className="px-4 pt-5 text-center text-[11.5px] text-ink-soft/70">STAR Store · 全部组件均为本机内置演示</p>
           </div>
         )}
 
@@ -637,12 +664,12 @@ export function WeatherApp({ onBack }: { onBack: () => void }) {
 }
 
 /* —— 仿真 App Store 产品页（导航栏吸顶小图标 / 信息横条 / 新功能 / 预览 / 评分评论 / 隐私 / 信息 / 相关推荐） —— */
-function AppDetail({ item: d, catalog, pill, onBack, onPick, backLabel }: { item: StoreItem; catalog: StoreItem[]; pill: ReactNode; onBack: () => void; onPick: (i: StoreItem) => void; backLabel: string }) {
+/** 功能注释：应用详情只留图标、名称、「打开」与真实简介；隐私表 / 信息表 / 推荐列表均为占位，不再渲染 */
+function AppDetail({ item: d, pill, onBack, backLabel }: { item: StoreItem; pill: ReactNode; onBack: () => void; backLabel: string }) {
   const [scrolled, setScrolled] = useState(false);
   const [more, setMore] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => { ref.current?.scrollTo({ top: 0 }); setMore(false); setScrolled(false); }, [d.id]);
-  const related = catalog.filter((c) => c.id !== d.id).slice(0, 6);
   const shots = [
     { img: d.cover, title: d.desc, kicker: d.kicker, pos: "object-center" },
     { img: d.cover, title: d.tagline, kicker: d.cat, pos: "object-left" },
@@ -676,7 +703,7 @@ function AppDetail({ item: d, catalog, pill, onBack, onPick, backLabel }: { item
       </div>
 
       <div ref={ref} onScroll={(e) => setScrolled(e.currentTarget.scrollTop > 120)} className="flex-1 overflow-y-auto pb-10">
-        {/* 头部 */}
+        {/* 头部：图标、名称、「打开」 */}
         <div className="flex gap-4 px-4 pt-1">
           <span className="ios-icon block h-[100px] w-[100px] shrink-0 overflow-hidden rounded-[26px] ring-1 ring-black/[0.06]">{d.icon}</span>
           <div className="flex min-w-0 flex-1 flex-col">
@@ -727,46 +754,13 @@ function AppDetail({ item: d, catalog, pill, onBack, onPick, backLabel }: { item
         <Sep />
 
         {/* 简介 */}
-        <div className="px-4 pt-4">
+        <div className="px-4 pt-4 pb-6">
           <p className={`whitespace-pre-line text-[14px] leading-relaxed text-ink ${more ? "" : "line-clamp-3"}`}>{`${d.story}\n\n${d.desc}——${d.tagline}。\n\n· 轻巧：安装包仅 ${d.size}\n· 安心：所有数据仅存于本机\n· 免费：没有任何 App 内购买`}</p>
           {!more && <button onClick={() => setMore(true)} className="text-[14px] text-[#0a84ff]">更多</button>}
           <div className="mt-3 flex items-center justify-between">
             <div><p className="text-[14px] text-[#0a84ff]">STAR Studio</p><p className="text-[12px] text-ink-soft/70">开发者</p></div>
           </div>
         </div>
-
-        {/* App 隐私 */}
-        <H t="App 隐私" />
-        <p className="px-4 text-[14px] leading-relaxed text-ink">开发者「STAR Studio」表示此 App 的隐私规范可能包括下述数据处理方式。</p>
-        <div className="mx-4 mt-3 flex flex-col items-center rounded-[14px] bg-[#f2f2f7] px-4 py-5 text-center">
-          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#0a84ff" strokeWidth="1.8"><circle cx="12" cy="12" r="9" /><path d="m8.5 12.5 2.5 2.5 4.5-5" /></svg>
-          <p className="mt-2 text-[16px] font-semibold text-ink">未收集数据</p>
-          <p className="mt-0.5 text-[13px] text-ink-soft">开发者不会从此 App 中收集任何数据。</p>
-        </div>
-
-        {/* 信息 */}
-        <H t="信息" />
-        <div className="mx-4 divide-y divide-black/[0.08] text-[14px]">
-          {[["供应商", "STAR Studio"], ["大小", d.size], ["类别", d.cat], ["兼容性", "iPhone"], ["语言", "简体中文和英语"], ["年龄分级", "4+"], ["版权", `© ${T("city")} STAR Studio`], ["价格", "免费"]].map(([k, v]) => (
-            <div key={k} className="flex justify-between gap-4 py-2.5"><span className="shrink-0 text-ink-soft/70">{k}</span><span className="truncate text-ink">{v}</span></div>
-          ))}
-        </div>
-
-        {/* 你可能也喜欢 */}
-        {related.length > 0 && (
-          <>
-            <H t="你可能也喜欢" />
-            <div className="grid snap-x auto-cols-[82%] grid-flow-col grid-rows-3 gap-x-4 overflow-x-auto px-4 [scrollbar-width:none]">
-              {related.map((r) => (
-                <button key={r.id} onClick={() => onPick(r)} className="flex snap-start items-center gap-3 border-b border-black/[0.08] py-2 text-left">
-                  <span className="ios-icon block h-12 w-12 shrink-0 overflow-hidden">{r.icon}</span>
-                  <span className="min-w-0 flex-1"><span className="block truncate text-[15px] text-ink">{r.label}</span><span className="block truncate text-[12.5px] text-ink-soft">{r.tagline}</span></span>
-                  <span className="rounded-full bg-[#e9e9ef] px-4 py-1 text-[13px] font-bold text-[#0a84ff]">查看</span>
-                </button>
-              ))}
-            </div>
-          </>
-        )}
       </div>
     </div>
   );

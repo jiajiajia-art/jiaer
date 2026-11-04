@@ -29,8 +29,9 @@ test('normalizeTextLlmModel_非法回落默认豆包', () => {
   assert.equal(TEXT_LLM_MODELS.length, 7);
   assert.ok(TEXT_LLM_MODELS.includes('deepseek-v4.1-flash'));
   assert.ok(TEXT_LLM_MODELS.every((m) => !/\s/.test(m)));
-  assert.equal(TEXT_LLM_USAGE_CATALOG.length, 6);
+  assert.equal(TEXT_LLM_USAGE_CATALOG.length, 7);
   assert.ok(TEXT_LLM_USAGE_CATALOG.some((row) => row.key === 'romance_world_gen'));
+  assert.ok(TEXT_LLM_USAGE_CATALOG.some((row) => row.key === 'romance_play'));
 });
 
 test('normalizeTextLlmOpenAiBaseUrl_剥completions路径', () => {

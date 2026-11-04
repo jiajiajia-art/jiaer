@@ -12,6 +12,7 @@ import { useConfirm } from "./EditorKit";
 import CoverAiChat from "./CoverAiChat";
 import { AiModelBillingBadge, ViewSwitch, type GenView } from "./CodexChat";
 import { COVER_CLASSES, CSS_MAX } from "../lib/coverAi";
+import { buildWorkCoverPrompt } from "../lib/editorImagePrompts";
 
 /* 美化 · 封面 DIY：与开场页同一套「实时预览 / AI 对话」切换；预览侧手动搭配，对话侧聊着改。
  * 玩家填写的项优先于世界作者的封面；留空沿用。 */
@@ -22,7 +23,7 @@ function Opt<T extends string>({ value, opts, onPick }: { value?: T; opts: reado
   return <div className="flex flex-wrap gap-1.5">{opts.map(([v, l]) => <button key={v} type="button" aria-pressed={value === v} onClick={() => onPick(v)} className={chip(value === v)}>{l}</button>)}</div>;
 }
 
-function Preview({ cv, d }: { cv: CoverCopy; d?: CoverDiy }) {
+function Preview({ cv, d, displayOnly }: { cv: CoverCopy; d?: CoverDiy; displayOnly?: boolean }) {
   const { look } = useGame();
   const land = look.orient === "landscape";
   const [w, h, k] = land ? [1100, 620, 0.34] : [390, 700, 0.42];
@@ -30,7 +31,8 @@ function Preview({ cv, d }: { cv: CoverCopy; d?: CoverDiy }) {
   return (
     <div className="mx-auto overflow-hidden rounded-2xl border border-line shadow-lg" style={{ width: w * k, height: h * k }}>
       <div style={{ width: w, height: h, transform: `scale(${k})`, transformOrigin: "top left" }}>
-        <CoverView cv={cv} d={d} preview onStart={noop} onContinue={noop} onConfig={noop} />
+        {/* 功能注释：作品展示封面预览只看背景，不出现开局菜单三按钮 */}
+        <CoverView cv={cv} d={d} preview displayOnly={displayOnly} onStart={noop} onContinue={noop} onConfig={noop} />
       </div>
     </div>
   );
@@ -67,8 +69,11 @@ type CoverDiyProps = {
   mode?: "all" | "live" | "chat" | "switch";
   /** 功能注释：作者作品展示封面只留「背景」页签，隐藏文字/按钮/边框/特效/CSS 与自定义 HTML */
   bgOnly?: boolean;
+  /** 功能注释：作品名称 / 简介，供背景「生图」预填（列表封面用） */
+  workTitle?: string;
+  workSummary?: string;
 };
-function CoverDiyBody({ value, onChange, cvText, previewCv, previewD, author, chatKey, cover, mode = "live", bgOnly }: CoverDiyProps) {
+function CoverDiyBody({ value, onChange, cvText, previewCv, previewD, author, chatKey, cover, mode = "live", bgOnly, workTitle, workSummary }: CoverDiyProps) {
   const { look } = useGame();
   const [confirm, confirmEl] = useConfirm();
   const d = value;
@@ -98,7 +103,7 @@ function CoverDiyBody({ value, onChange, cvText, previewCv, previewD, author, ch
         opts={[["fixed", "固定 CG"], ["carousel", "轮播 CG"], ["video", "视频"]] as const} />
       {cgKind(d) === "fixed" && <>
         <H t="固定 CG" d="始终显示这一张" />
-        {/* 功能注释：生图走 ImagePicker 弹窗，不在背景页内联铺提示词 */}
+        {/* 功能注释：生图走 ImagePicker 弹窗；用作品名+简介预填，不另起一套网关 */}
         <ImagePicker
           value={d.image}
           label="封面 CG"
@@ -107,7 +112,11 @@ function CoverDiyBody({ value, onChange, cvText, previewCv, previewD, author, ch
           hint="竖屏建议 9:16，横屏建议 16:9"
           aiGen={{
             size: "1024x1792",
-            placeholder: `描述封面背景：主体、场景、光线、画风，竖版构图，画面里不要文字${d.title || cv.title ? `（作品名「${d.title || cv.title}」）` : ""}`,
+            placeholder: `描述封面背景：主体、场景、光线、画风，竖版构图，画面里不要文字${d.title || cv.title || workTitle ? `（作品名「${d.title || cv.title || workTitle}」）` : ""}`,
+            initialPrompt: buildWorkCoverPrompt({
+              title: d.title || cv.title || workTitle,
+              summary: d.intro || cv.intro || workSummary,
+            }) || undefined,
           }}
         />
       </>}
@@ -118,7 +127,11 @@ function CoverDiyBody({ value, onChange, cvText, previewCv, previewD, author, ch
             set={set}
             aiGen={{
               size: "1024x1792",
-              placeholder: `描述封面背景：主体、场景、光线、画风，竖版构图，画面里不要文字${d.title || cv.title ? `（作品名「${d.title || cv.title}」）` : ""}`,
+              placeholder: `描述封面背景：主体、场景、光线、画风，竖版构图，画面里不要文字${d.title || cv.title || workTitle ? `（作品名「${d.title || cv.title || workTitle}」）` : ""}`,
+              initialPrompt: buildWorkCoverPrompt({
+                title: d.title || cv.title || workTitle,
+                summary: d.intro || cv.intro || workSummary,
+              }) || undefined,
             }}
           />
         </div>
@@ -215,9 +228,10 @@ function CoverDiyBody({ value, onChange, cvText, previewCv, previewD, author, ch
   };
 
   const resetBtn = <button type="button" className={`${chip(false)} w-full hover:!border-danger hover:!text-danger`} onClick={async () => { if (await confirm(bgOnly ? "清空作品展示封面背景？" : "清空封面的文字、背景与样式，恢复默认封面？", { ok: "恢复默认" })) onChange(undefined); }}>{bgOnly ? "清空背景" : "恢复默认封面"}</button>;
+  // 功能注释：bgOnly 必须 displayOnly，预览禁止出现开始/继续/配置 AI 与标题壳
   const previewEl = <>
-    <Preview cv={previewCv} d={previewD} />
-    <p className="mt-1 text-center text-[10.5px] text-ink-soft">实时预览 · {look.orient === "landscape" ? "横屏" : "竖屏"}{bgOnly ? " · 仅作品展示" : ""}</p>
+    <Preview cv={previewCv} d={previewD ?? (bgOnly ? value : undefined)} displayOnly={!!bgOnly} />
+    <p className="mt-1 text-center text-[10.5px] text-ink-soft">实时预览 · {look.orient === "landscape" ? "横屏" : "竖屏"}{bgOnly ? " · 仅背景展示" : ""}</p>
   </>;
 
   // 对话为主：纯对话式界面，不带预览（预览在「实时预览」里看）

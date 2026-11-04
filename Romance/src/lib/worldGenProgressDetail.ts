@@ -72,7 +72,7 @@ export function worldGenLeanLimits(selectedStepCount: number): WorldGenLeanLimit
       rooms: 4,
       fixedEvents: 2,
       storylines: 1,
-      sidelines: 1,
+      sidelines: 0,
       endings: 2,
       scriptToneChars: 700,
       npcBioChars: 120,
@@ -87,8 +87,8 @@ export function worldGenLeanLimits(selectedStepCount: number): WorldGenLeanLimit
     paths: 3,
     rooms: 5,
     fixedEvents: 3,
-    storylines: 2,
-    sidelines: 2,
+    storylines: 1,
+    sidelines: 0,
     endings: 3,
     scriptToneChars: 1100,
     npcBioChars: 160,
@@ -315,7 +315,7 @@ export function worldGenLeanPromptBlock(limits: WorldGenLeanLimits, phase: "skel
 - 世界书最多 ${limits.worldBookEntries} 条：先写 id/title/keywords，正文可先空或 ≤${Math.min(40, limits.worldBookBodyChars)} 字
 - 人物最多 ${limits.npcs} 名：必须 name/gender/age，bio 先写约 ${Math.min(80, limits.npcBioChars)} 字提纲
 - 人物线路最多 ${limits.paths} 条：先写 id/name 与关键开局字段
-- 地点最多 ${limits.rooms} 个；固定事件最多 ${limits.fixedEvents} 条；主线 ${limits.storylines} / 支线 ${limits.sidelines} / 结局 ${limits.endings}
+- 地点最多 ${limits.rooms} 个；固定事件最多 ${limits.fixedEvents} 条；主线恰好 ${limits.storylines} 条（节点须有目标说明与完成条件，禁止空「新节点」、禁止节点奖励/激活事件）；支线 ${limits.sidelines} 条（须为 0，勿写 sidelines）；结局最多 ${limits.endings}
 - 剧本基调 scriptTone 先写约 ${Math.min(400, limits.scriptToneChars)} 字骨架（覆盖口吻与铁律要点即可）
 - 开场白每段约 ${Math.min(70, limits.openingParaChars)} 字，至少 2 段
 - 建角 customAttrs 正好 3 条：每条必须有中文名称与 desc（属性说明），禁止「未命名」或空壳

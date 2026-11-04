@@ -217,9 +217,14 @@ function applyLock(next: GameState, settled: GameState, lock: SimLock): GameStat
 export function GameProvider({ children }: { children: ReactNode }) {
   const [cfg, setCfgState] = useState<AIConfig>(defaultConfig);
   const [theme, setThemeState] = useState<ThemePref>(defaultTheme);
-  const [screen, setScreen] = useState<Screen>("cover");
+  // 功能注释：进游戏不再进封面开始菜单；直接建角，完成后进开幕
+  const [screen, setScreen] = useState<Screen>("create");
   const [game, setGame] = useState<GameState | null>(null);
-  const npcGender = useMemo(() => Object.fromEntries((game?.npcs ?? []).flatMap((n) => { const g = n.persona?.gender; return g ? [[n.id, g]] : []; })), [game?.npcs]);
+  // 功能注释：存档 npcs 偶发非数组；先收成数组再 flatMap，禁止建角/预览挂载时 is not iterable
+  const npcGender = useMemo(() => {
+    const list = Array.isArray(game?.npcs) ? game.npcs : [];
+    return Object.fromEntries(list.flatMap((n) => { const g = n.persona?.gender; return g ? [[n.id, g]] : []; }));
+  }, [game?.npcs]);
   syncWorldRules(game?.worldRules, game?.player.gender, npcGender); // 世界规则 → 引擎同步
   const [live, setLive] = useState("");
   const [busy, setBusy] = useState(false);
@@ -295,8 +300,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const pendingOpeningPromptRef = useRef<string | null>(null);
   const flushOpeningPlotRef = useRef<() => void>(() => {});
   const go = useCallback((s: Screen) => {
-    setScreen(s);
-    if (s === "game") queueMicrotask(() => flushOpeningPlotRef.current());
+    // 功能注释：封面开局菜单已下线；旧入口 go("cover") 一律改走建角
+    const next = s === "cover" ? "create" : s;
+    setScreen(next);
+    if (next === "game") queueMicrotask(() => flushOpeningPlotRef.current());
   }, []);
   // 局中世界观固定为存档记录的组合（建角页预览过别的世界观后返回旧局时复原）；作者预览由叠加层接管，勿覆盖
   useEffect(() => {
@@ -334,7 +341,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
           gameRef.current = null;
           setGame(null);
           setSaveEpoch((n) => n + 1);
-          setScreen("cover");
+          setScreen("create");
           markAuthorPreviewReady();
         },
       });
@@ -354,7 +361,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
           gameRef.current = stash?.game ?? null;
           setGame(stash?.game ?? null);
           setSaveEpoch((n) => n + 1);
-          setScreen(stash?.screen ?? "cover");
+          const back = stash?.screen === "cover" ? "create" : (stash?.screen ?? "create");
+          setScreen(back);
         },
       });
     };
@@ -366,7 +374,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         gameRef.current = null;
         setGame(null);
         setSaveEpoch((n) => n + 1);
-        setScreen("cover");
+        setScreen("create");
         markAuthorPreviewReady();
       }
     };
@@ -377,7 +385,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       gameRef.current = null;
       setGame(null);
       setSaveEpoch((n) => n + 1);
-      setScreen("cover");
+      setScreen("create");
       markAuthorPreviewReady();
     };
     window.addEventListener(AUTHOR_PREVIEW_START, onStart);
@@ -465,7 +473,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
           segments: [
             {
               kind: "system",
-              text: `让主持人为你叙写剧情、演绎人物对话，需要先接入一个 AI 模型。点右上角的齿轮填入接口即可。\n\n（地图走动、洽谈${term("gig")}、养成数值这些玩法不依赖 AI，随时都能玩。）`,
+              text: `让主持人为你叙写剧情、演绎人物对话，需要先登录平台账号（使用运营文案模型），或点右上角齿轮填入个人接口。\n\n（地图走动、洽谈${term("gig")}、养成数值这些玩法不依赖 AI，随时都能玩。）`,
             },
           ],
           changes: [],
@@ -675,7 +683,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const startNew = useCallback(
     (player: Player, simChar?: SimChar, contract?: SigningContract, worldRules?: WorldRules, opts?: StartOpts) => {
       // 开局日期：选项效果里改日期的以最后一个为准，其次是玩家自选，再次世界观默认；必须在建档之前生效（日历全靠它推算）
-      const startDate = [...(opts?.fx ?? [])].reverse().find((f) => f.startDate)?.startDate ?? opts?.startDate;
+      // 功能注释：建角 fx 偶发非数组；先收成数组再 reverse，禁止 [...非数组] → is not iterable
+      const startFx = Array.isArray(opts?.fx) ? opts.fx : opts?.fx ? [opts.fx] : [];
+      const startDate = [...startFx].reverse().find((f) => f.startDate)?.startDate ?? opts?.startDate;
       setStartDateOverride(startDate);
       let g = newGame(player, simChar, contract);
       // 功能注释：作者预览强制固定局 id，所有测试进度写入独立槽，不进正式自动存档
@@ -692,7 +702,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
       g = tickPlayerAge(g, 0).g; // 年龄随日历：开局当天定基准年，免得第一次推进恰好跨过生日时漏长一岁
       if (worldRules) g.worldRules = worldRules;
       // 自定义角色属性：只来自创作者「建角」列表；开局值固定或代码掷骰（只掷一次，不交给 AI）；不预填八维
-      const defs = getWorldSlot("customAttrs") ?? [];
+      // 功能注释：customAttrs 槽可能是脏对象；非数组当空，禁止 .map / .length 崩开局
+      const defsRaw = getWorldSlot("customAttrs");
+      const defs = Array.isArray(defsRaw) ? defsRaw : [];
       if (defs.length) {
         g.attrDefs = defs.map((d) => ({ ...d }));
         const fromCreator = playerAttrsFromCreatorDefs(defs);
@@ -706,7 +718,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         };
       }
       // 建角选项的开局效果：能力 / 资金等指标 / 自定义属性 / NPC 初始好感（文本设定已在建角页写进档案）
-      for (const fx of opts?.fx ?? []) {
+      for (const fx of startFx) {
         const sim = { ...g.sim, stats: { ...g.sim.stats }, rel: { ...g.sim.rel } };
         for (const [k, v] of Object.entries(fx.stats ?? {})) if (v) sim.stats[k as keyof typeof sim.stats] = clampStat(k as keyof typeof sim.stats, (sim.stats[k as keyof typeof sim.stats] ?? 0) + v);
         const m = fx.metrics ?? {};
@@ -720,7 +732,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
         for (const [id, v] of Object.entries(fx.attrs ?? {})) { const d = g.attrDefs?.find((x) => x.id === id); if (d && v) g = setCustomAttr(g, d, customAttrValue(g, d) + v); }
       }
       // 人物线路的开局人际：关系写进人物档案，好感直接设值，可设为开局即相识
-      const pn = (opts?.pathNpcs ?? []).filter((n) => n.id);
+      // 功能注释：pathNpcs 可能是 AI 脏对象；非数组按空，禁止 .filter 崩开局
+      const pn = (Array.isArray(opts?.pathNpcs) ? opts.pathNpcs : opts?.pathNpcs ? [opts.pathNpcs] : []).filter((n) => n.id);
       if (pn.length) {
         const rel = { ...g.sim.rel };
         const met = new Set(g.sim.metPeople ?? []);
@@ -735,18 +748,20 @@ export function GameProvider({ children }: { children: ReactNode }) {
           npcs: g.npcs.map((x) => { const r = byId.get(x.id)?.relation?.trim(); return r ? { ...x, relation: r } : x; }),
         };
       }
-      if (opts?.fx?.length || pn.length) g = syncSimToPlayer(g);
+      if (startFx.length || pn.length) g = syncSimToPlayer(g);
       // 开局势力：创作者自设的势力全部装入阵营系统；玩家勾选加入的写入初始声望与「所属势力」档案
-      const sf = (opts?.factions ?? []).filter((f) => f.id && f.name.trim());
+      // 功能注释：AI 脏稿可能把 factions 写成单对象；先收成数组再 filter，禁止非数组 .filter / 展开
+      const sf = (Array.isArray(opts?.factions) ? opts.factions : opts?.factions ? [opts.factions] : []).filter((f) => f.id && f.name.trim());
       if (sf.length) {
-        const joined = new Set(opts?.joined ?? []);
-        const have = new Set((g.factions ?? []).map((f) => f.id));
+        const joined = new Set(Array.isArray(opts?.joined) ? opts.joined : []);
+        const baseFactions = Array.isArray(g.factions) ? g.factions : [];
+        const have = new Set(baseFactions.map((f) => f.id));
         const flags = { ...(g.sim.flags ?? {}) };
         for (const f of sf) if (joined.has(f.id)) flags[factionFlag(f.id)] = Math.max(REP_MIN, Math.min(REP_MAX, Math.round(f.rep ?? 20)));
         const names = sf.filter((f) => joined.has(f.id)).map((f) => f.name.trim());
         g = {
           ...g,
-          factions: [...(g.factions ?? []), ...sf.filter((f) => !have.has(f.id)).map((f) => ({ id: f.id, name: f.name.trim(), desc: f.desc, tags: f.tags }))],
+          factions: [...baseFactions, ...sf.filter((f) => !have.has(f.id)).map((f) => ({ id: f.id, name: f.name.trim(), desc: f.desc, tags: Array.isArray(f.tags) ? f.tags : undefined }))],
           sim: { ...g.sim, flags },
           player: { ...g.player, extra: [...g.player.extra.filter((e) => e.label !== "所属势力"), ...(names.length ? [{ label: "所属势力", value: names.join("、") }] : [])] },
         };

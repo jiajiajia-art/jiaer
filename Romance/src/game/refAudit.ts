@@ -325,11 +325,9 @@ export function auditStory(inp: AuditInput): AuditReport {
     }
     if (w.probability === 0) issues.push({ level: "warn", text: "触发概率为 0，永远不会注入", from, at });
     {
+      // 功能注释：地点/人物可选，未挂不再报「未挂依赖」；已挂的仍校验 id 是否还在本作品
       const bindRooms = w.bindRooms?.length ? w.bindRooms : w.scope === "room" && w.scopeId ? [w.scopeId] : [];
       const bindNpcs = w.bindNpcs?.length ? w.bindNpcs : w.scope === "npc" && w.scopeId ? [w.scopeId] : [];
-      if (!bindRooms.length && !bindNpcs.length && modeOf(w) !== "constant") {
-        issues.push({ level: "error", text: "未挂本作品的地点或人物，保存模组前须补挂", from, at });
-      }
       if (!inp.skip?.includes("location")) {
         for (const id of bindRooms) {
           if (!rooms.has(id)) issues.push({ level: "error", text: `绑定的地点「${id}」已不存在，条目不会再注入`, from, at });

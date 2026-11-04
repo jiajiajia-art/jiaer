@@ -1,5 +1,6 @@
 /**
- * Romance 作者预览/发布必填契约：同一清单硬拦截，允许 0 元，不允许地点/封面/基调默认兜底。
+ * Romance 作者预览/发布必填契约：只拦名称/基调/地点/开局地点。
+ * 开局日期、开局资金、作品封面、开场不进补全弹窗。
  */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -22,23 +23,26 @@ const completeMod = (patch = {}) => {
     ...manifest,
     content: {
       prompt: { scriptTone: '这是一座永远停在雨夜的旅馆。' },
-      startDate: '2026.10.30',
-      startMoney: 0,
-      moneyLabel: '元',
       rooms: { lobby: { name: '大厅', desc: '雨声落在窗外。', exits: {} } },
       startRoom: 'lobby',
-      cover: { image: 'data:image/png;base64,cover', title: '雾色旅馆' },
-      opening: { paragraphs: ['门铃响了一声。'] },
       ...(content ?? {}),
     },
   };
 };
 
-test('authorRequiredFields_完整作品且资金为0_允许预览发布', () => {
-  assert.deepEqual(assessAuthorRequiredFields(completeMod()), []);
+test('authorRequiredFields_完整作品_无封面无开场无日期资金也允许预览', () => {
+  assert.deepEqual(assessAuthorRequiredFields(completeMod({
+    content: {
+      startDate: undefined,
+      startMoney: undefined,
+      moneyLabel: '',
+      cover: {},
+      opening: {},
+    },
+  })), []);
 });
 
-test('authorRequiredFields_空作品_一次返回全部八项并带定位目标', () => {
+test('authorRequiredFields_空作品_只返回名称基调地点开局地点', () => {
   const issues = assessAuthorRequiredFields({
     id: 'empty-world',
     name: ' ',
@@ -48,8 +52,9 @@ test('authorRequiredFields_空作品_一次返回全部八项并带定位目标'
   });
   assert.deepEqual(
     issues.map((issue) => issue.field),
-    ['name', 'scriptTone', 'startDate', 'startMoney', 'rooms', 'startRoom', 'cover', 'opening'],
+    ['name', 'scriptTone', 'rooms', 'startRoom'],
   );
+  assert.ok(!issues.some((i) => ['startDate', 'startMoney', 'cover', 'opening'].includes(i.field)));
   assert.ok(issues.every((issue) => issue.group && issue.target));
 });
 
@@ -67,25 +72,23 @@ test('authorRequiredFields_旧三栏只认世界观正文_悬空开局地点仍�
   assert.ok(issues.some((issue) => issue.field === 'startRoom'));
 });
 
-test('authorRequiredFields_平台默认和账号皮肤不能代替作品封面_标题装饰不能代替开场白', () => {
+test('authorRequiredFields_封面开场日期资金均不进补全清单', () => {
+  const src = read('lib/authorPreview.ts');
+  assert.doesNotMatch(src, /field: "cover"/);
+  assert.doesNotMatch(src, /field: "opening"/);
+  assert.doesNotMatch(src, /field: "startDate"/);
+  assert.doesNotMatch(src, /field: "startMoney"/);
+  assert.doesNotMatch(src, /作品封面（列表/);
+  assert.doesNotMatch(src, /开场（自定义开场页或开场白）/);
   const issues = assessAuthorRequiredFields(completeMod({
     content: {
       cover: {},
-      opening: { title: '序章', image: 'https://example.com/opening.jpg' },
+      opening: { title: '序章' },
+      startMoney: undefined,
+      moneyLabel: '',
     },
   }));
-  assert.ok(issues.some((issue) => issue.field === 'cover'));
-  assert.ok(issues.some((issue) => issue.field === 'opening'));
-  const withBg = assessAuthorRequiredFields(completeMod({
-    content: {
-      cover: { image: 'https://example.com/work-cover.jpg' },
-      opening: { paragraphs: ['开场白一段'] },
-    },
-  }));
-  assert.ok(!withBg.some((issue) => issue.field === 'cover'));
-  const coverIssue = assessAuthorRequiredFields(completeMod({ content: { cover: {} } })).find((i) => i.field === 'cover');
-  assert.equal(coverIssue?.group, 'base');
-  assert.match(coverIssue?.label ?? '', /作品封面/);
+  assert.deepEqual(issues, []);
 });
 
 test('authorGate_预览发布共用弹窗且不再显示测试配置警告', () => {

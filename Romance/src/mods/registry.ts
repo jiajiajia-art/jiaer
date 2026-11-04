@@ -16,11 +16,14 @@ import { entPacks, ENT_PACK_IDS } from "./entPacks";
 import { WORLD_RULE_DIMS, type Gig, type MapLocation } from "../game/data";
 import { applyGigPrices } from "../game/gigLibrary";
 import type { PersonContent, RoomActivity, RoomContent, RoomItem } from "../worlds/star2005/content";
-import { phoneAppVisible, resolvePhoneApps } from "../lib/phoneAppsConfig";
+import { asPhoneOverrides } from "../lib/phoneAppsConfig";
+import { asModArray } from "../lib/asModArray";
 import { normalizeStartMetList } from "../lib/normalizeStartMet";
 import { mergeScriptToneFragments, readScriptTone } from "../lib/scriptTone";
 import { normalizeSidelines } from "../lib/sidelines";
 import { foldLoreFestivalsIntoWorldBook } from "../lib/worldBookDeps";
+import { sanitizeModStrings } from "../lib/sanitizeModStrings";
+import { ensureWorldMaps } from "../lib/worldMaps";
 
 const K_USER = "star:mods:user";
 const K_SEL = "star:mods:selection";
@@ -196,11 +199,12 @@ export const isAuthorPreviewModActive = () => !!authorPreviewMod;
  */
 export function beginAuthorPreviewMod(draft: Mod): { ok: true } | { ok: false; errors: string[] } {
   try {
-    const mod: Mod = {
+    // 功能注释：预览入口再洗一遍脏字符串/数组，避免编辑器 clean() 未 sanitize 时封面/建角读 .length 崩
+    const mod: Mod = sanitizeModStrings({
       ...structuredClone(draft),
       content: draft.content ?? {},
       builtin: false,
-    };
+    });
     if (!mod.id?.trim()) return { ok: false, errors: ["缺少模组 id"] };
     if (mod.kind !== "world" && mod.kind !== "addon") mod.kind = "world";
     authorPreviewRestore = {
@@ -209,7 +213,8 @@ export function beginAuthorPreviewMod(draft: Mod): { ok: true } | { ok: false; e
     };
     authorPreviewMod = mod;
     if (mod.kind === "world") {
-      const addons = (mod.dependencies ?? []).filter((id) => {
+      // 功能注释：dependencies 偶发脏对象；asModArray 后再筛叠加包，禁止 .filter / for-of 炸预览
+      const addons = asModArray<string>(mod.dependencies).filter((id) => {
         const d = id === mod.id ? null : (builtins().find((b) => b.id === id) || userMods.find((u) => u.id === id));
         return d?.kind === "addon";
       });
@@ -217,7 +222,7 @@ export function beginAuthorPreviewMod(draft: Mod): { ok: true } | { ok: false; e
       // 功能注释：封面 Cover / 建角 CharacterCreate 走 selectedSlot，必须与草稿 id 对齐
       selection = { world: mod.id, addons };
     } else {
-      const addons = [...applied.addons.filter((id) => id !== mod.id), mod.id];
+      const addons = [...asModArray<string>(applied.addons).filter((id) => id !== mod.id), mod.id];
       applied = { world: applied.world || DEFAULT_WORLD, addons };
       selection = { ...selection, addons };
     }
@@ -282,10 +287,18 @@ export function selectionProblems(sel: ModSelection = selection): string[] {
 /* —— 合并 —— */
 type WithId = { id: string };
 const mergeById = <T extends WithId>(base: T[], over: T[] | undefined): T[] => {
-  if (!over?.length) return base;
-  const idx = new Map(base.map((e, i) => [e.id, i]));
-  const out = [...base];
-  for (const e of over) { const i = idx.get(e.id); if (i === undefined) { idx.set(e.id, out.length); out.push(e); } else out[i] = e; }
+  // 功能注释：base/over 都可能被 AI 写成非数组；先 asModArray 再合并，禁止 [...over] 炸 is not iterable
+  const safeBase = asModArray<T>(base);
+  const safeOver = asModArray<T>(over);
+  if (!safeOver.length) return safeBase;
+  const idx = new Map(safeBase.map((e, i) => [e.id, i]));
+  const out = [...safeBase];
+  for (const e of safeOver) {
+    if (!e || typeof e !== "object") continue;
+    const i = idx.get(e.id);
+    if (i === undefined) { idx.set(e.id, out.length); out.push(e); }
+    else out[i] = e;
+  }
   return out;
 };
 
@@ -305,36 +318,55 @@ function resolve(sel: ModSelection): ResolvedWorld {
     if (a && a.kind === "addon" && missingDeps(a, { world: world.id, addons: sel.addons }).length === 0) chain.push(a);
   }
   const wc = world.content;
+  // 功能注释：下列字段 AI 常写成单对象；一律 asModArray，禁止预览 getWorld() 时 [...x] → is not iterable
   const content: ResolvedWorld["content"] = {
     rooms: { ...(wc.rooms ?? {}) },
+    worldMaps: Array.isArray(wc.worldMaps) ? wc.worldMaps.map((m) => ({ ...m })) : undefined,
     startRoom: wc.startRoom,
-    locations: [...(wc.locations ?? [])],
+    locations: asModArray(wc.locations),
     startMet: normalizeStartMetList(wc.startMet),
-    npcs: [...(wc.npcs ?? [])],
-    items: [...(wc.items ?? [])],
-    gigs: [...(wc.gigs ?? [])],
-    events: [...(wc.events ?? [])],
-    fixedEvents: [...(wc.fixedEvents ?? [])],
-    endings: [...(wc.endings ?? [])],
+    npcs: asModArray(wc.npcs),
+    items: asModArray(wc.items),
+    gigs: asModArray(wc.gigs),
+    events: asModArray(wc.events),
+    fixedEvents: asModArray(wc.fixedEvents),
+    endings: asModArray(wc.endings),
     timeLimit: wc.timeLimit ? { ...wc.timeLimit } : undefined,
-    gradeDims: wc.gradeDims?.length ? wc.gradeDims.map((d) => ({ ...d, src: { ...d.src } })) : undefined,
+    gradeDims: (() => {
+      const dims = asModArray<{ id?: string; src?: Record<string, unknown> }>(wc.gradeDims);
+      return dims.length ? dims.map((d) => ({ ...d, src: { ...(d.src ?? {}) } })) as NonNullable<ResolvedWorld["content"]["gradeDims"]> : undefined;
+    })(),
     // 功能注释：开局种子只认世界书；旧详细设定/节日在此并入，避免与世界书各写一份
     worldBook: (foldLoreFestivalsIntoWorldBook({
-      worldBook: [...(wc.worldBook ?? [])],
-      lore: wc.lore,
-      festivals: wc.festivals,
+      worldBook: asModArray(wc.worldBook),
+      lore: asModArray(wc.lore),
+      festivals: asModArray(wc.festivals),
     }).worldBook ?? []),
-    income: [...(wc.income ?? [])],
-    gameRules: [...(wc.gameRules ?? [])],
-    storylines: [...(wc.storylines ?? [])],
+    income: asModArray(wc.income),
+    gameRules: asModArray(wc.gameRules),
+    storylines: asModArray(wc.storylines),
     sidelines: normalizeSidelines(wc.sidelines),
-    lookRules: [...(wc.lookRules ?? [])],
-    worldRules: [...(wc.worldRules ?? WORLD_RULE_DIMS)],
+    lookRules: asModArray(wc.lookRules),
+    // 功能注释：缺 options 的世界规则维度会让建角 WorldRuleCards 读 .length 崩；回退引擎默认
+    worldRules: (() => {
+      const raw = asModArray<{ options?: unknown[] }>(wc.worldRules);
+      const ok = raw.filter((d) => d && Array.isArray(d.options) && d.options.length);
+      return ok.length
+        ? ok.map((d) => ({ ...d, options: asModArray<string>(d.options) })) as typeof WORLD_RULE_DIMS
+        : [...WORLD_RULE_DIMS];
+    })(),
     prompt: { ...(wc.prompt ?? {}) },
     terms: { ...entTermsBase(), ...(wc.terms ?? {}) }, // 旧模组术语仍合并读取；页签名可由底栏编辑器同步
-    navTabs: wc.navTabs ? wc.navTabs.map((t) => ({ ...t })) : undefined,
+    navTabs: (() => {
+      const tabs = asModArray<{ id?: string }>(wc.navTabs);
+      return tabs.length ? tabs.map((t) => ({ ...t })) : undefined;
+    })() as ResolvedWorld["content"]["navTabs"],
     navSize: wc.navSize,
-    phoneAppsCfg: wc.phoneAppsCfg ? [...wc.phoneAppsCfg] : undefined,
+    // 功能注释：AI 常写 {apps:[]}；禁止 [...非数组] / ?.length 误判，统一收成覆盖表
+    phoneAppsCfg: (() => {
+      const list = asPhoneOverrides(wc.phoneAppsCfg);
+      return list.length ? list.map((a) => ({ ...a })) : undefined;
+    })(),
     phoneHomeWallpaper: wc.phoneHomeWallpaper,
     features: { ...(wc.features ?? {}) },
     theme: { ...(wc.theme ?? {}) },
@@ -342,6 +374,12 @@ function resolve(sel: ModSelection): ResolvedWorld {
   for (const a of chain.slice(1)) {
     const c = a.content;
     if (c.rooms) Object.assign(content.rooms, c.rooms);
+    if (c.worldMaps?.length) {
+      // 功能注释：叠加包大地图按 id 合并；同 id 以后者为准
+      const byId = new Map((content.worldMaps ?? []).map((m) => [m.id, m]));
+      for (const m of c.worldMaps) if (m?.id) byId.set(m.id, { ...m });
+      content.worldMaps = [...byId.values()];
+    }
     if (c.startRoom) content.startRoom = c.startRoom;
     {
       // 功能注释：AI/脏数据可能把 startMet 写成对象或字符串，规范化后再合并
@@ -358,14 +396,17 @@ function resolve(sel: ModSelection): ResolvedWorld {
     content.fixedEvents = mergeById(content.fixedEvents, c.fixedEvents);
     content.endings = mergeById(content.endings, c.endings);
     if (c.timeLimit) content.timeLimit = { ...c.timeLimit };
-    if (c.gradeDims?.length) content.gradeDims = c.gradeDims.map((d) => ({ ...d, src: { ...d.src } }));
-    content.worldBook = mergeById(content.worldBook, c.worldBook);
-    content.income = mergeById(content.income, c.income);
-    content.gameRules = mergeById(content.gameRules, c.gameRules);
-    content.storylines = mergeById(content.storylines, c.storylines);
+    {
+      const dims = asModArray<{ src?: Record<string, unknown> }>(c.gradeDims);
+      if (dims.length) content.gradeDims = dims.map((d) => ({ ...d, src: { ...(d.src ?? {}) } })) as NonNullable<ResolvedWorld["content"]["gradeDims"]>;
+    }
+    content.worldBook = mergeById(content.worldBook, asModArray(c.worldBook));
+    content.income = mergeById(content.income, asModArray(c.income));
+    content.gameRules = mergeById(content.gameRules, asModArray(c.gameRules));
+    content.storylines = mergeById(content.storylines, asModArray(c.storylines));
     content.sidelines = mergeById(content.sidelines, normalizeSidelines(c.sidelines));
-    content.lookRules = mergeById(content.lookRules, c.lookRules);
-    content.worldRules = mergeById(content.worldRules, c.worldRules);
+    content.lookRules = mergeById(content.lookRules, asModArray(c.lookRules));
+    content.worldRules = mergeById(content.worldRules, asModArray(c.worldRules));
     // 提示片段：各包的新旧剧本基调按加载顺序追加；terminology 追加，其余后包覆盖
     const p = c.prompt ?? {};
     content.prompt = mergeScriptToneFragments(content.prompt, {
@@ -374,16 +415,23 @@ function resolve(sel: ModSelection): ResolvedWorld {
     });
     Object.assign(content.terms, c.terms ?? {});
     // 底栏：后包覆盖前包的顺序 / 显隐 / 格数
-    if (c.navTabs?.length) content.navTabs = c.navTabs.map((t) => ({ ...t }));
+    {
+      const tabs = asModArray(c.navTabs);
+      if (tabs.length) content.navTabs = tabs.map((t) => ({ ...t })) as NonNullable<ResolvedWorld["content"]["navTabs"]>;
+    }
     if (c.navSize) content.navSize = c.navSize;
-    if (c.phoneAppsCfg?.length) {
-      // 按 id 覆盖合并应用配置（后包覆盖前包同 id）
-      const map = new Map((content.phoneAppsCfg ?? []).map((a) => [a.id, a]));
-      for (const a of c.phoneAppsCfg) map.set(a.id, { ...(map.get(a.id) ?? { id: a.id }), ...a });
-      content.phoneAppsCfg = [...map.values()];
+    {
+      const addonApps = asPhoneOverrides(c.phoneAppsCfg);
+      if (addonApps.length) {
+        // 按 id 覆盖合并应用配置（后包覆盖前包同 id）
+        const map = new Map((content.phoneAppsCfg ?? []).map((a) => [a.id, a]));
+        for (const a of addonApps) map.set(a.id, { ...(map.get(a.id) ?? { id: a.id }), ...a });
+        content.phoneAppsCfg = [...map.values()];
+      }
     }
     if (c.phoneHomeWallpaper) content.phoneHomeWallpaper = c.phoneHomeWallpaper;
-    const extra = [...(content.features.phoneAppsExtra ?? []), ...(c.features?.phoneAppsExtra ?? [])];
+    // 功能注释：phoneAppsExtra 常被 AI 写成对象；禁止 [...非数组] → is not iterable
+    const extra = [...asModArray<string>(content.features.phoneAppsExtra), ...asModArray<string>(c.features?.phoneAppsExtra)];
     Object.assign(content.features, c.features ?? {});
     if (extra.length) content.features.phoneAppsExtra = [...new Set(extra)];
     Object.assign(content.theme, c.theme ?? {});
@@ -394,7 +442,17 @@ function resolve(sel: ModSelection): ResolvedWorld {
   // 地点名录缺失的房间：由 rooms[].name 推导（模组世界无需单独维护 LOCATIONS）
   const have = new Set(content.locations.map((l) => l.id));
   for (const [id, r] of Object.entries(content.rooms)) {
-    if (!have.has(id)) content.locations.push({ id, name: r.name ?? id, icon: "", func: r.desc?.slice(0, 18) ?? "", tier: "P1", action: "", hint: "" });
+    if (!have.has(id)) {
+      // 功能注释：AI 地点 desc 可能非字符串；禁止 .slice 炸预览
+      const desc = typeof r.desc === "string" ? r.desc.slice(0, 18) : "";
+      content.locations.push({ id, name: r.name ?? id, icon: "", func: desc, tier: "P1", action: "", hint: "" });
+    }
+  }
+  // 功能注释：保证大地图层存在，并把未挂图的地点归入默认大地图
+  {
+    const ensured = ensureWorldMaps(content.rooms, content.worldMaps);
+    content.rooms = ensured.rooms;
+    content.worldMaps = ensured.worldMaps;
   }
   return { worldId: world.id, addonIds: chain.slice(1).map((m) => m.id), chain, content };
 }
@@ -504,11 +562,11 @@ export function commitSelection() {
   if (authorPreviewMod) {
     const addons =
       authorPreviewMod.kind === "world"
-        ? (authorPreviewMod.dependencies ?? []).filter((id) => {
+        ? asModArray<string>(authorPreviewMod.dependencies).filter((id) => {
             const d = id === authorPreviewMod!.id ? null : (builtins().find((b) => b.id === id) || userMods.find((u) => u.id === id));
             return d?.kind === "addon";
           })
-        : [...selection.addons];
+        : [...asModArray<string>(selection.addons)];
     applied = {
       world: authorPreviewMod.kind === "world" ? authorPreviewMod.id : (applied.world || DEFAULT_WORLD),
       addons,
@@ -533,7 +591,7 @@ export function activateWorld(worldId: string | undefined, addons: string[] | un
     if (applied.world !== authorPreviewMod.id) {
       applied = {
         world: authorPreviewMod.id,
-        addons: (authorPreviewMod.dependencies ?? []).filter((id) => {
+        addons: asModArray<string>(authorPreviewMod.dependencies).filter((id) => {
           const d = id === authorPreviewMod!.id ? null : (builtins().find((b) => b.id === id) || userMods.find((u) => u.id === id));
           return d?.kind === "addon";
         }),
@@ -673,8 +731,9 @@ function resolveLiveTerm(w: ResolvedWorld, k: TermKey, fallback?: string): strin
       // 功能注释：优先用建角「开局资金」货币名称；再回落自定义货币属性名
       const named = pickSlot((c) => (typeof c.moneyLabel === "string" ? c.moneyLabel.trim() : undefined));
       if (named) return named;
-      const attrs = pickSlot((c) => c.customAttrs);
-      const hit = attrs?.find((a) => /money|货币|金币|片酬|灵石|零花|现金/i.test(`${a.id}${a.label}`));
+      // 功能注释：customAttrs 可能是 AI 单对象；asModArray 后再 find，禁止 .find / 展开崩术语解析
+      const attrs = asModArray<{ id?: string; label?: unknown }>(pickSlot((c) => c.customAttrs));
+      const hit = attrs.find((a) => /money|货币|金币|片酬|灵石|零花|现金/i.test(`${a.id ?? ""}${typeof a.label === "string" ? a.label : ""}`));
       // 功能注释：customAttrs.label 可能被 AI 写成对象，禁止 ?.trim()
       const moneyLabel = typeof hit?.label === "string" ? hit.label.trim() : "";
       if (moneyLabel) return moneyLabel;
@@ -776,20 +835,24 @@ export const worldPhoneHomeWallpaper = () => getWorld().content.phoneHomeWallpap
 export const worldNavTabs = () => getWorld().content.navTabs;
 export const worldNavSize = () => getWorld().content.navSize;
 /* 手机应用商店自带的 App：属于手机，不受世界观 / 模组控制，任何世界都可在商店获取 */
-const STORE_APPS = new Set(["xianyu", "mail"]); // 不受世界观手机白名单限制的应用（邮箱是线上线下联动的基础设施）
+const STORE_APPS = new Set(["xianyu", "mail", "appstore", "settings"]);
 export const phoneAppAllowed = (id: string): boolean => {
   const cfg = getWorld().content.phoneAppsCfg;
-  // 新配置优先：hidden/disabled 直接拒绝；其余再叠旧白名单
-  if (cfg?.length && !phoneAppVisible(id, cfg)) return false;
   if (STORE_APPS.has(id)) return true;
   if (id === "bosspin" && !feature("career")) return false;
-  // 若写了 phoneAppsCfg 且该 id 在目录内，以配置为准（不再要求旧白名单）
-  if (cfg?.length && resolvePhoneApps(cfg).some((a) => a.id === id)) return true;
+  // 功能注释：平台应用表驱动后，商店可装任意已上架 appId；作品 cfg 只表示开局预装，不拦截商店
+  if (cfg != null && Array.isArray(cfg)) return true;
+  // 旧白名单：未写 phoneAppsCfg 的模组
   const { phoneApps: list, phoneAppsExtra } = getWorld().content.features;
   return !list || list.includes(id) || !!phoneAppsExtra?.includes(id);
 };
-export const getWorldBookSeed = () => getWorld().content.worldBook.map((e) => ({ ...e, keywords: [...(e.keywords ?? [])] }));
-export const getWorldRuleDims = () => getWorld().content.worldRules;
+export const getWorldBookSeed = () => getWorld().content.worldBook.map((e) => ({ ...e, keywords: asModArray<string>(e.keywords) }));
+export const getWorldRuleDims = () => {
+  const dims = getWorld().content.worldRules;
+  if (!Array.isArray(dims) || !dims.length) return WORLD_RULE_DIMS;
+  const ok = dims.filter((d) => d && Array.isArray(d.options) && d.options.length);
+  return ok.length ? ok : WORLD_RULE_DIMS;
+};
 /* 存档里的「自建地点」（地图编辑器添加 / 文本解析 / 公共地图）：叠加在世界观房间之上，与原地点双向连通 */
 export type RuntimeSpot = { id: string; name: string; desc?: string; link?: string };
 let runtime: { spots: RuntimeSpot[]; world?: ResolvedWorld; rooms?: Record<string, RoomContent>; locs?: MapLocation[] } = { spots: [] };
@@ -820,6 +883,11 @@ export function runtimeLinks(id: string): string[] {
   return out;
 }
 export const getWorldRooms = () => overlay().rooms;
+/** 功能注释：作品大地图列表（含生图/上传的 bg）；缺省时 ensure 出主地图 */
+export const getWorldMaps = () => {
+  const c = getWorld().content;
+  return ensureWorldMaps(c.rooms, c.worldMaps).worldMaps;
+};
 export const getWorldNpcs = () => getWorld().content.npcs;
 export const getWorldGigs = () => getWorld().content.gigs;
 export const getWorldEvents = () => getWorld().content.events;

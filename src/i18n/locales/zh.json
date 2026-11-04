@@ -1124,9 +1124,22 @@
   },
   "search": {
     "placeholder": "查询游戏",
-    "searching": "Searching...",
+    "searching": "搜索中…",
     "notFound": "没有找到游戏",
-    "failed": "搜索失败"
+    "failed": "搜索失败",
+    "resultsTitle": "搜索结果",
+    "tabsLabel": "搜索分类",
+    "tabAll": "全部",
+    "tabGames": "游戏",
+    "tabCreators": "创作者",
+    "relatedCreators": "相关作者",
+    "relatedGames": "相关游戏",
+    "viewMore": "查看更多",
+    "noRelatedContent": "未找到相关内容",
+    "tryOtherKeywords": "请尝试其他关键词",
+    "worksCount": "作品 {{count}}",
+    "fansCount": "粉丝 {{count}}",
+    "followFailed": "关注操作失败"
   },
   "auth": {
     "login": "登录",

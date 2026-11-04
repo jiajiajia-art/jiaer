@@ -38,15 +38,24 @@ test("creationItems_添加类型固定为文本单选数值日期货币", () => 
   assert.equal(items.creationAttrKindLabel(num), "数值");
 });
 
-test("visibleCreatorAttrs_隐藏项不进建角预览列表", () => {
+test("visibleCreatorAttrs_隐藏项与空壳名不进建角预览列表", () => {
   assert.deepEqual(items.visibleCreatorAttrs(undefined), []);
   assert.deepEqual(
     items.visibleCreatorAttrs([
       { id: "a", label: "可见", init: 1 },
       { id: "b", label: "藏", init: 2, hidden: true },
+      { id: "c", label: "未命名", init: 3 },
+      { id: "d", label: "  ", init: 4 },
     ]).map((a) => a.id),
     ["a"],
   );
+});
+
+test("formatCreatorAttrPreview_禁止开局undefined", () => {
+  assert.equal(items.formatCreatorAttrPreview({ id: "x", label: "学力", init: 10, max: 100 }), "开局 10 · 上限 100");
+  assert.equal(items.formatCreatorAttrPreview({ id: "y", label: "运气", init: undefined, max: 100 }), "开局 0 · 上限 100");
+  assert.equal(items.formatCreatorAttrPreview({ id: "z", label: "战力", init: 5, min: 1, max: 20, initMode: "random" }), "开局随机 1~20");
+  assert.doesNotMatch(items.formatCreatorAttrPreview({ id: "w", label: "空", init: undefined }), /undefined/);
 });
 
 test("ModEditorPanel_建角区不再拆属性字段开局资金三块", () => {
@@ -65,7 +74,6 @@ test("ModEditorPanel_建角区不再拆属性字段开局资金三块", () => {
 
 test("ModCreationFieldsEditor_统一添加与系统四项置顶", () => {
   assert.match(editor, /SYSTEM_CREATION_FIELDS/);
-  assert.match(editor, /始终必填、不可隐藏或删除/);
   assert.match(editor, /系统字段/);
   assert.match(editor, /开局资金/);
   assert.match(editor, /authorField: "author-field-start-money"/);
@@ -77,7 +85,12 @@ test("ModCreationFieldsEditor_统一添加与系统四项置顶", () => {
   assert.doesNotMatch(editor, /＋ 添加字段/);
   assert.doesNotMatch(editor, /＋ 添加属性/);
   assert.doesNotMatch(editor, /＋ 添加货币/);
-  assert.match(editor, /分档（多少分叫什么）/);
+  // 功能注释：标题下列表即字段；禁止把系统规则长说明摊在页面上
+  assert.doesNotMatch(editor, /建角要填的项都在这里/);
+  assert.doesNotMatch(editor, /系统固定项/);
+  assert.doesNotMatch(editor, /始终必填、不可隐藏或删除/);
+  // 功能注释：分档在数值属性展开表单，不在建角字段顶部长说明里
+  assert.match(attrsEd, /分档/);
   for (const label of ["文本", "单选", "数值", "日期", "货币"]) {
     assert.match(editor, new RegExp(label));
   }

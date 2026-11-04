@@ -47,17 +47,19 @@ test('ModAttrsEditor_去掉能力分档八维预填_表单由统一建角字段�
   assert.match(attrsEd, /建角页隐藏/);
 });
 
-test('ModEditorPanel_建角合成一块_在地点之上且人物线路在其后', () => {
+test('ModEditorPanel_建角合成一块_人物线路紧挨建角之下', () => {
   assert.match(panel, /title="建角"/);
   assert.doesNotMatch(panel, /title="角色属性"/);
   // Section 标题仍是「建角」；列表内文案「建角字段」允许出现在子编辑器
   assert.doesNotMatch(panel, /title="建角字段"/);
   const jian = panel.indexOf('title="建角"');
-  const loc = panel.indexOf('title="地点"');
   const path = panel.indexOf('title="人物线路"');
-  assert.ok(jian > 0 && loc > jian, '建角须在地点之上');
-  assert.ok(path > loc, '人物线路仍在地点之后（②角色）');
-  const createSec = panel.slice(jian, loc);
+  const loc = panel.indexOf('title="地点"');
+  assert.ok(jian > 0 && path > jian, '人物线路须在建角之下');
+  assert.ok(loc > path, '地点须在人物线路之下');
+  assert.match(panel, /g="base" title="人物线路"/);
+  assert.doesNotMatch(panel, /g="role" title="人物线路"/);
+  const createSec = panel.slice(jian, path);
   assert.match(createSec, /ModCreationFieldsEditor/);
   assert.doesNotMatch(createSec, /ModAttrsEditor/);
 });

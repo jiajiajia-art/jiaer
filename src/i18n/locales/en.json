@@ -1127,7 +1127,20 @@
     "placeholder": "Search games",
     "searching": "Searching...",
     "notFound": "No games found",
-    "failed": "Search failed"
+    "failed": "Search failed",
+    "resultsTitle": "Search results",
+    "tabsLabel": "Search categories",
+    "tabAll": "All",
+    "tabGames": "Games",
+    "tabCreators": "Creators",
+    "relatedCreators": "Related creators",
+    "relatedGames": "Related games",
+    "viewMore": "View more",
+    "noRelatedContent": "No related content found",
+    "tryOtherKeywords": "Please try other keywords",
+    "worksCount": "Works {{count}}",
+    "fansCount": "Fans {{count}}",
+    "followFailed": "Follow action failed"
   },
   "auth": {
     "login": "Login",

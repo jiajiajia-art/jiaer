@@ -1,4 +1,4 @@
-import { IconChevronDown, IconChevronUp, IconClose, IconDice } from "../lib/icons";
+import { IconChevronDown, IconChevronUp, IconDice } from "../lib/icons";
 import { TIME_UNIT_LABEL, CMP_OPS, cmpSym, type CmpOp } from "../lib/types";
 import { useState } from "react";
 import AiEventWriter from "./AiEventWriter";
@@ -6,10 +6,10 @@ import { KwInput } from "./EditorKit";
 import { useGame } from "../store/gameCtx";
 import { liveFactions } from "../game/factions";
 import { condBrief, effectBrief } from "./ruleText";
-import { TriggerEditor, CondLogic, ChainEditor, ChoiceAdvanced } from "./EventAdvanced";
+import { TriggerEditor, CondLogic, ChainEditor } from "./EventAdvanced";
 import { TRIGGER_LABEL, eventToWorldBook } from "../game/eventTriggers";
 import { loadTemplates, saveTemplate, removeTemplate, fromTemplate, type EventTemplate } from "../game/eventTemplates";
-import type { EventChoice, FixedEvent, FixedCond, FixedEffect, FixedEventTime, QuestState, Sideline, SideState, Storyline } from "../lib/types";
+import type { FixedEvent, FixedCond, FixedEffect, FixedEventTime, QuestState, Sideline, SideState, Storyline } from "../lib/types";
 import { PERIODIC_TIME } from "../lib/types";
 import { STAT_ORDER, STAT_LABELS, type StatKey } from "../game/data";
 import type { ValueSrc } from "../game/valueSources";
@@ -424,7 +424,6 @@ export default function FixedEventsPanel({ value, storylines, sidelines, library
                     {String(e.chain ?? "").trim() && <span className="mr-1 font-bold text-gold">链「{String(e.chain ?? "").trim()}」·</span>}
                     {e.keywords?.length ? <span className="mr-1 font-bold text-jade">关键词：{e.keywords.slice(0, 3).join("、")}{e.keywords.length > 3 ? "…" : ""} ·</span> : null}{timeText(e.time)}
                     {(e.conds?.length ?? 0) > 0 ? ` · ${e.conds!.length} 项条件` : " · 无条件"}
-                    {e.endKeywords?.length ? ` · 持续至「${e.endKeywords[0]}」` : ""}
                   </span>
                 </span>
                 <span className="inline-flex shrink-0 items-center gap-0.5 text-[12px] text-ink-soft">{open ? <>收起 <IconChevronUp size={12} /></> : <>展开 <IconChevronDown size={12} /></>}</span>
@@ -578,23 +577,14 @@ export default function FixedEventsPanel({ value, storylines, sidelines, library
                     </div>
                   </Field>
 
-                  {/* 事件选项 */}
-                  <Field label="事件选项（可不填 · 最多 3 个 · 选中由代码结算）">
-                    <ChoicesEditor ev={e} events={events} quests={quests} sides={sides} onChange={(choices) => patch(e.id, { choices })} />
-                  </Field>
-
+                  {/* 功能注释：事件选项 / 结束关键词编辑入口已下线；旧稿字段仍可读，运行时兼容 */}
                   <Field label="事件链（可不填）">
                     <ChainEditor ev={e} events={events} game={modMode ? null : game} onChange={(p) => patch(e.id, p)} />
                   </Field>
 
-                  {/* 关键词触发 / 结束关键词 */}
                   <Field label="关键词触发（可不填）">
                     <KwInput value={e.keywords} onChange={(keywords) => patch(e.id, { keywords })} placeholder="如：婚礼、求婚（用顿号或逗号分隔）" />
                     <p className="mt-0.5 text-[11px] text-ink-soft">填了关键词，事件就不再按顺序自动上演：玩家发言或最近两回合剧情里出现任一词时才触发，且仍需满足上面的时间与条件。</p>
-                  </Field>
-                  <Field label="结束关键词（可不填）">
-                    <KwInput value={e.endKeywords} onChange={(endKeywords) => patch(e.id, { endKeywords })} placeholder="如：婚礼落幕、宾客散尽" />
-                    <p className="mt-0.5 text-[11px] text-ink-soft">填了结束词，事件触发后会<b className="text-ink">每回合持续</b>把提示词发给 AI，直到 AI 正文写出任一结束词才结束；不填则只在触发那一回合发送。</p>
                   </Field>
 
                   {/* 开关 */}
@@ -1035,52 +1025,3 @@ export function EffectRow({ ef, onChange, onDelete }: { ef: FixedEffect; onChang
   );
 }
 
-/* 事件选项编辑：文案 + 续写指引 + 出现条件 + 效果 + 分支后续事件 */
-function ChoicesEditor({ ev, events, quests, sides, onChange }: { ev: FixedEvent; events: FixedEvent[]; quests: QuestOpt[]; sides: QuestOpt[]; onChange: (v?: EventChoice[]) => void }) {
-  const list = ev.choices ?? [];
-  const set = (id: string, p: Partial<EventChoice>) => onChange(list.map((c) => (c.id === id ? { ...c, ...p } : c)));
-  const others = events.filter((o) => o.id !== ev.id);
-  const box = "w-full rounded-lg border border-line bg-paper-2 px-2.5 py-1.5 text-[13px] text-ink";
-  const link = "text-[11.5px] font-semibold text-jade hover:underline";
-  return (
-    <div className="space-y-2">
-      {list.map((c, idx) => (
-        <div key={c.id} className="space-y-1.5 rounded-xl border-l-[3px] border-jade/70 bg-paper/60 py-2 pl-3 pr-2">
-          <div className="flex items-center gap-2">
-            <span className="shrink-0 rounded-md bg-jade/15 px-1.5 py-0.5 text-[11px] font-black text-jade">选项 {idx + 1}</span>
-            <input className={`${box} ${String(c.label ?? "").trim() ? "" : "!border-danger"}`} value={String(c.label ?? "")} maxLength={30} placeholder="玩家看到的文案，如：接下这部戏" onChange={(x) => set(c.id, { label: x.target.value })} />
-            <button className="shrink-0 text-[12px] text-ink-soft hover:text-danger" aria-label="删除选项" onClick={() => { const n = list.filter((y) => y.id !== c.id); onChange(n.length ? n : undefined); }}><IconClose size={14} /></button>          </div>
-          <input className={box} value={c.prompt ?? ""} maxLength={200} placeholder="选中后交给 AI 的续写指引（可留空）" onChange={(x) => set(c.id, { prompt: x.target.value || undefined })} />
-          {(c.conds ?? []).map((k, i) => (
-            <CondRow key={i} c={k} events={events} selfId={ev.id} quests={quests} sides={sides} onChange={(x) => set(c.id, { conds: c.conds!.map((y, j) => (j === i ? x : y)) })} onDelete={() => { const n = c.conds!.filter((_, j) => j !== i); set(c.id, { conds: n.length ? n : undefined }); }} />
-          ))}
-          {(c.effects ?? []).map((f, i) => (
-            <EffectRow key={i} ef={f} onChange={(x) => set(c.id, { effects: c.effects!.map((y, j) => (j === i ? x : y)) })} onDelete={() => { const n = c.effects!.filter((_, j) => j !== i); set(c.id, { effects: n.length ? n : undefined }); }} />
-          ))}
-          <ChoiceAdvanced c={c} ev={ev} events={events} set={(p) => set(c.id, p)} />
-          <div className="flex flex-wrap gap-3">
-            <button className={link} onClick={() => set(c.id, { conds: [...(c.conds ?? []), defaultCond("metric")] })}>＋ 出现条件</button>
-            <button className={link} onClick={() => set(c.id, { effects: [...(c.effects ?? []), defaultEffect("metric")] })}>＋ 效果</button>
-          </div>
-          {others.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[11px] font-bold text-ink-soft">选中后激活</span>
-              {others.map((o) => {
-                const on = (c.nextIds ?? []).includes(o.id);
-                return (
-                  <button key={o.id} onClick={() => { const n = on ? c.nextIds!.filter((x) => x !== o.id) : [...(c.nextIds ?? []), o.id]; set(c.id, { nextIds: n.length ? n : undefined }); }}
-                    className={`rounded-full border px-2 py-0.5 text-[11.5px] transition ${on ? "border-transparent bg-jade text-white" : "border-line bg-paper-2 text-ink-soft"}`}>
-                    {o.name || "（未命名）"}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      ))}
-      <button disabled={list.length >= 5} className="rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40"
-        onClick={() => onChange([...list, { id: `ch_${Math.random().toString(36).slice(2, 7)}`, label: "" }])}>＋ 添加选项</button>
-      <p className="text-[11px] text-ink-soft">事件上演后，这些选项会替换 AI 给出的选项；不满足出现条件的选项不显示，最多显示 3 个。隐藏分支从不显示，条件满足时自动生效。设了成功判定的选项，判定失败记为 -1 并走失败分支。选择结果记为规则变量「choice:{ev.id}:选项ID」，可在后续条件中引用。</p>
-    </div>
-  );
-}

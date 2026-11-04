@@ -9,13 +9,13 @@ import {
   MdOutlineMovie,
   MdSportsEsports,
   MdOutlineAutoAwesome,
+  MdOutlineApps,
 } from 'react-icons/md';
 import { IoChevronForward } from 'react-icons/io5';
 import toast from 'react-hot-toast';
 import styles from '../components/CreateGame/CreateGameModals.module.css';
 import pageStyles from './CreateType.module.css';
-import Navbar from '../components/Layout/Navbar';
-import MobileBottomNav from '../components/Layout/MobileBottomNav';
+import AppPageShell from '../components/Layout/AppPageShell';
 import MobileTipModal from '../components/CreateGame/MobileTipModal';
 import { useEditorStore } from '../store/editorStore';
 import { useGameStore } from '../store/gameStore';
@@ -219,9 +219,8 @@ const CreateType: React.FC = () => {
   };
 
   return (
-    <div className={pageStyles.pageRoot}>
-      <Navbar />
-      <div className={pageStyles.mainContent}>
+    <>
+    <AppPageShell shellClassName={pageStyles.pageRoot} mainClassName={pageStyles.mainContent}>
         <div className={pageStyles.content}>
           <div className={`${styles.createTypeModalHeader} ${pageStyles.header}`}>
             <div className={`${styles.createTypeModalTitle} ${pageStyles.title}`}>
@@ -309,6 +308,19 @@ const CreateType: React.FC = () => {
               onClick={() => void handleSelectGameType('custom')}
             />
             <TypeOptionRow
+              title="创作应用"
+              badge="new"
+              badgeText={t('createGame.new')}
+              hint="填写名称、图标与类型内容，保存草稿后上架，供作品手机安装"
+              icon={MdOutlineApps}
+              thumbClass={styles.createTypeOptionThumbCustom}
+              disabled={createBlocked}
+              onClick={() => {
+                if (createBlocked) return;
+                navigate('/create/app');
+              }}
+            />
+            <TypeOptionRow
               title="RPG"
               badge="locked"
               badgeText={t('createGame.locked')}
@@ -319,8 +331,7 @@ const CreateType: React.FC = () => {
             />
           </div>
         </div>
-      </div>
-      <MobileBottomNav />
+    </AppPageShell>
 
       {isIvgToolModalOpen && (
         <div
@@ -381,7 +392,7 @@ const CreateType: React.FC = () => {
           navigate('/profile?openBrowserLoginAccount=1');
         }}
       />
-    </div>
+    </>
   );
 };
 

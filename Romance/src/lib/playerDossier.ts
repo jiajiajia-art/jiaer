@@ -1,4 +1,4 @@
-/* 玩家端「人物档案」：头像旁事实行、属性满值文案、压力类警戒提醒。字段名与顺序一律来自创作者配置，不硬编码能力名。 */
+/* 玩家端「人物档案」：头像旁事实行、属性进度比例、压力类警戒提醒。字段名与顺序一律来自创作者配置，不硬编码能力名。 */
 import type { AttrDef, Player } from "./types.ts";
 
 /** 功能注释：头像右侧小字「年龄 · 性别 · 生日 · 星座」，缺项跳过，不补占位 */
@@ -12,14 +12,6 @@ export function dossierFactLine(p: Pick<Player, "age" | "gender" | "extra">): st
     ex("星座"),
   ].filter(Boolean);
   return parts.join(" · ");
-}
-
-/** 功能注释：属性区标题右侧「满值 N」；无上限时写「无上限」 */
-export function dossierAttrCapLabel(def: Pick<AttrDef, "max"> | undefined): string {
-  if (!def) return "";
-  const m = def.max;
-  if (typeof m !== "number" || !(m > 0)) return "无上限";
-  return `满值 ${m}`;
 }
 
 /**

@@ -22,7 +22,9 @@ import {
 import { worldGenAiPolishPrompt, worldGenForbidPrompt } from "./worldGenSettingField.ts";
 import { platformNpcTagsPromptLine } from "./npcTags.ts";
 import { normalizeStartMetList } from "./normalizeStartMet.ts";
+import { asModArray } from "./asModArray.ts";
 import { asNonEmptyTrimmed, asTrimmedString } from "./asTrimmedString.ts";
+import { normalizeRuleBranches } from "./gameRuleShape.ts";
 import { ensureRoomSceneDescs, healModRoomRefs } from "./sanitizeModStrings.ts";
 import {
   completeViaPlatform,
@@ -37,10 +39,12 @@ import {
   normalizeWorldGenPatchStartDate,
 } from "./worldGenStartDate.ts";
 import {
+  ensureWorldGenCustomAttrs,
   ensureWorldGenStartMoney,
   normalizeWorldGenCustomAttrs,
   WORLD_GEN_CUSTOM_ATTRS_COUNT,
 } from "./worldGenCreationAttrs.ts";
+import { normalizeWorldGenStorylinesPatch } from "./worldGenStorylines.ts";
 import {
   worldGenBatchNeedsEnrich,
   worldGenLeanLimits,
@@ -60,11 +64,19 @@ export {
 
 export {
   defaultAttrDescForLabel,
+  defaultWorldGenAttrSeeds,
+  ensureWorldGenCustomAttrs,
   ensureWorldGenStartMoney,
+  healCustomAttrsUnnamed,
   inferWorldGenMoneyLabel,
   normalizeWorldGenCustomAttrs,
   WORLD_GEN_CUSTOM_ATTRS_COUNT,
 } from "./worldGenCreationAttrs.ts";
+
+export {
+  normalizeWorldGenQuestNodes,
+  normalizeWorldGenStorylinesPatch,
+} from "./worldGenStorylines.ts";
 
 /**
  * 功能注释：同层大类并行上限。同类已并入单次请求，这里只限制不同大类的并发。
@@ -542,7 +554,16 @@ function sanitizeWorldGenPatchShape(patch: Record<string, unknown>): Record<stri
     else delete out.startDate;
     if (withDate.travel) out.travel = withDate.travel;
   }
-  // 功能注释：开场白只保留文案字段；剥掉 page/html，避免 AI 灌半截自定义页顶替必填 paragraphs
+  // 功能注释：开场白须为对象；字符串/段落数组先收成 { paragraphs }，再剥 page/html
+  if (typeof out.opening === "string") {
+    const text = out.opening.trim();
+    if (text) out.opening = { paragraphs: [text] };
+    else delete out.opening;
+  } else if (Array.isArray(out.opening)) {
+    const paragraphs = (out.opening as unknown[]).map((p) => asTrimmedString(p)).filter(Boolean);
+    if (paragraphs.length) out.opening = { paragraphs };
+    else delete out.opening;
+  }
   if (out.opening && typeof out.opening === "object" && !Array.isArray(out.opening)) {
     const raw = out.opening as Record<string, unknown>;
     const opening: Record<string, unknown> = {};
@@ -556,6 +577,15 @@ function sanitizeWorldGenPatchShape(patch: Record<string, unknown>): Record<stri
     }
     if (Object.keys(opening).length) out.opening = opening;
     else delete out.opening;
+  }
+  // 功能注释：玩法规则缺 branches / 写成单对象时收成数组，避免进编辑器保存被 validateMod 拦下
+  if (Array.isArray(out.gameRules)) {
+    out.gameRules = (out.gameRules as unknown[]).map((row) => {
+      if (!row || typeof row !== "object" || Array.isArray(row)) return row;
+      const rule = { ...(row as Record<string, unknown>) };
+      rule.branches = normalizeRuleBranches(rule.branches);
+      return rule;
+    });
   }
   // 功能注释：换地点扣点 / 日程叙事字数内置，AI 与旧模板不得再写给创作者配
   if (out.travel && typeof out.travel === "object" && !Array.isArray(out.travel)) {
@@ -602,7 +632,7 @@ function sanitizeWorldGenPatchShape(patch: Record<string, unknown>): Record<stri
       return n;
     });
   }
-  // 功能注释：建角数值属性最多 3 条且必须有名称+说明；丢掉「未命名」空壳，不自动补空字段
+  // 功能注释：建角数值属性先丢掉「未命名」空壳；条数收口交给 ensureWorldGenCustomAttrs（生成批）
   if ("customAttrs" in out) {
     const attrs = normalizeWorldGenCustomAttrs(out.customAttrs);
     if (attrs.length) out.customAttrs = attrs;
@@ -612,6 +642,13 @@ function sanitizeWorldGenPatchShape(patch: Record<string, unknown>): Record<stri
     const ml = asTrimmedString(out.moneyLabel);
     if (ml) out.moneyLabel = ml;
     else delete out.moneyLabel;
+  }
+  // 功能注释：剧情线只留一条主线且节点须有说明/条件；剥掉奖励与激活事件；丢掉 AI 写出的支线
+  if ("storylines" in out || "sidelines" in out) {
+    const plot = normalizeWorldGenStorylinesPatch(out);
+    if (plot.storylines) out.storylines = plot.storylines;
+    else delete out.storylines;
+    delete out.sidelines;
   }
   return out;
 }
@@ -958,7 +995,7 @@ const MODULE_FIELD_HINT: Record<string, string> = {
   festivals: "worldBook[]（旧节日已并入世界书）",
   cover: "cover{}",
   fixedEvents: "fixedEvents[]、events[]",
-  storylines: "storylines[]、sidelines[]、endings[]、timeLimit、gradeDims（主线、支线、结局；不含扣费与经济规则）",
+  storylines: "storylines[]（仅 1 条主线，nodes 须有 name/desc/conds，禁止空「新节点」、禁止 rewards/unlockIds）、endings[]、timeLimit、gradeDims；禁止写 sidelines（支线留给创作者手建）",
   lookRules: "lookRules[]",
   playModInstalls: "playModInstalls[]（可空）",
   gigs: "gigs[]、gigPrices{}",
@@ -988,6 +1025,11 @@ export function mergeModContent(base: ModContent, patch: Record<string, unknown>
   for (const [k, v] of Object.entries(patch)) {
     if (v === undefined) continue;
     const cur = out[k];
+    // 功能注释：建角属性必须整表替换（含 AI 写成单对象时先收成数组）。按 id 合并会把旧「未命名」空壳留下来，且对象会让预览 ...(attrs) 炸 is not iterable。
+    if (k === "customAttrs") {
+      out[k] = asModArray(v);
+      continue;
+    }
     if (Array.isArray(v) && Array.isArray(cur) && v.every((x) => x && typeof x === "object" && "id" in (x as object))) {
       const next = [...cur] as { id?: string }[];
       for (const item of v as { id: string }[]) {
@@ -1191,6 +1233,16 @@ export function softValidateBatchPatch(stepIds: readonly string[], patch: Record
     if (paragraphs.length < 2) return "开场白至少两段 paragraphs";
     const total = paragraphs.join("").length;
     if (total < 120) return "开场白过短";
+  }
+  // 功能注释：建角批必须正好 3 条有名称属性；「未命名」/空 label 一律不算过
+  if (ids.includes("creation")) {
+    const attrs = normalizeWorldGenCustomAttrs(patch.customAttrs);
+    if (attrs.length !== WORLD_GEN_CUSTOM_ATTRS_COUNT) {
+      return `建角属性须正好 ${WORLD_GEN_CUSTOM_ATTRS_COUNT} 条有名称的数值属性`;
+    }
+    if (attrs.some((a) => !asTrimmedString(a.desc))) {
+      return "建角属性缺少属性说明 desc";
+    }
   }
   return null;
 }
@@ -1480,6 +1532,10 @@ export async function generateWorldGenBatch(opts: GenerateBatchOpts): Promise<{ 
       if (stepIds.includes("startResources") || stepIds.includes("creation")) {
         patch = ensureWorldGenStartMoney(patch, opts.draft);
       }
+      // 功能注释：建角批收口为正好 3 条有名属性；空壳/未命名丢掉后按题材补齐，不留给编辑器
+      if (stepIds.includes("creation")) {
+        patch = ensureWorldGenCustomAttrs(patch, opts.draft);
+      }
       const soft = softValidateBatchPatch(stepIds, patch);
       if (soft) throw new Error(soft);
 
@@ -1537,6 +1593,9 @@ export async function generateWorldGenBatch(opts: GenerateBatchOpts): Promise<{ 
       if (stepIds.includes("startResources") || stepIds.includes("creation")) {
         patch = ensureWorldGenStartMoney(patch, opts.draft);
       }
+      if (stepIds.includes("creation")) {
+        patch = ensureWorldGenCustomAttrs(patch, opts.draft);
+      }
       opts.onBatchProgress?.({
         phase: "enrich",
         ...detailMapForPhase(stepIds, "enrich", patch),
@@ -1588,6 +1647,19 @@ export type RunWorldGenOpts = {
 };
 
 /**
+ * 功能注释：生成结束（含取消/鉴权停批）后写入开局日期与资金默认，预览清单不再拦这三项相关字段。
+ */
+export function finalizeWorldGenModDefaults(mod: Mod, draft: WorldGenDraft): Mod {
+  let content = ensureWorldGenStartMoney({ ...(mod.content as Record<string, unknown>) }, draft);
+  // 功能注释：仅当稿里已有建角属性（含空壳）时收口为 3 条有名；未跑建角批不硬塞
+  if ("customAttrs" in content) {
+    content = ensureWorldGenCustomAttrs(content, draft);
+  }
+  const withDate = ensureWorldGenTravelTimeStartDate(content, draft, mod);
+  return { ...mod, content: withDate as Mod["content"] };
+}
+
+/**
  * 功能注释：按大类依赖波次生成；同波最多 PARALLEL 个大类并行，波结束后合并再开下一波。
  * 进度行是勾选细项；同一大类内同类细项只打一次请求。普通失败不阻断同波其它大类；鉴权失败停整批；取消保留已完成。
  */
@@ -1602,6 +1674,15 @@ export async function runWorldGenModules(opts: RunWorldGenOpts): Promise<WorldGe
   const done = new Set(opts.doneIds ?? []);
   const rowById = new Map(progress.modules.map((m) => [m.id, m]));
   const selectedStepCount = progress.modules.length;
+
+  const finish = (cancelled = false) => {
+    mod = finalizeWorldGenModDefaults(mod, opts.draft);
+    const runningIdx = progress.modules.findIndex((m) => m.status === "running");
+    const idx = runningIdx >= 0 ? runningIdx : -1;
+    const p = snapshotProgress(progress.modules, idx, cancelled, stoppedByAuth);
+    opts.onProgress?.(p);
+    return { mod, progress: p, cancelled };
+  };
 
   const emit = (cancelled = false) => {
     const runningIdx = progress.modules.findIndex((m) => m.status === "running");
@@ -1627,7 +1708,7 @@ export async function runWorldGenModules(opts: RunWorldGenOpts): Promise<WorldGe
   };
 
   if (!progress.modules.length) {
-    return { mod, progress: emit(), cancelled: false };
+    return finish(false);
   }
 
   // 功能注释：已成功的细项先标 done，再按大类波次跑剩余
@@ -1643,7 +1724,7 @@ export async function runWorldGenModules(opts: RunWorldGenOpts): Promise<WorldGe
 
   for (const waveBatchIds of waves) {
     if (opts.signal?.aborted) {
-      return { mod, progress: emit(true), cancelled: true };
+      return finish(true);
     }
     if (stoppedByAuth) break;
 
@@ -1721,7 +1802,7 @@ export async function runWorldGenModules(opts: RunWorldGenOpts): Promise<WorldGe
           }
         }
       }
-      return { mod, progress: emit(true), cancelled: true };
+      return finish(true);
     }
 
     for (const r of results) {
@@ -1741,7 +1822,7 @@ export async function runWorldGenModules(opts: RunWorldGenOpts): Promise<WorldGe
         progress.modules.map((b) => b.error).find((e) => e && /登录|积分|密钥|API Key/i.test(e)) ||
         "请先登录平台账号后再生成世界。";
       failRest(authMsg);
-      return { mod, progress: emit(), cancelled: false };
+      return finish(false);
     }
 
     for (const r of results) {
@@ -1763,7 +1844,7 @@ export async function runWorldGenModules(opts: RunWorldGenOpts): Promise<WorldGe
     emit();
   }
 
-  return { mod, progress: emit(), cancelled: false };
+  return finish(false);
 }
 
 /** 功能注释：只重试失败细项；成功项绝不重跑。进度 id 已是细项 id。 */

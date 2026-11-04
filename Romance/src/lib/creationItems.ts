@@ -4,6 +4,8 @@
  */
 import type { AttrDef } from "./types.ts";
 import { looksLikeCurrency } from "../game/wallet.ts";
+import { asTrimmedString } from "./asTrimmedString.ts";
+import { asModArray } from "./asModArray.ts";
 
 /** 功能注释：统一「＋ 添加」可选类型（不含长文本/下拉旧项，旧稿仍可编辑） */
 export const CREATION_ITEM_ADD_TYPES = [
@@ -35,7 +37,32 @@ export function newCurrencyAttr(id: string): AttrDef {
   return { id, label: "金币", init: 100, desc: CURRENCY_ATTR_DESC };
 }
 
-/** 功能注释：建角页预览用——隐藏项不出现在「属性」卡，仍参与开局写入 */
-export function visibleCreatorAttrs(defs: AttrDef[] | undefined): AttrDef[] {
-  return (defs ?? []).filter((a) => !a.hidden);
+/** 功能注释：无名称 /「未命名」空壳不进建角预览，避免卡片上出现 undefined */
+function isNamedCreatorAttr(a: AttrDef): boolean {
+  const label = asTrimmedString(a.label);
+  return !!label && label !== "未命名" && label !== "未命名属性";
+}
+
+/** 功能注释：建角页预览用——隐藏项与空壳名不出现在「属性」卡；有名称的仍参与开局写入 */
+export function visibleCreatorAttrs(defs: AttrDef[] | undefined | unknown): AttrDef[] {
+  // 功能注释：customAttrs 被 AI 写成对象时按空列表，禁止 .filter 崩预览
+  return asModArray<AttrDef>(defs).filter((a) => !a.hidden && isNamedCreatorAttr(a));
+}
+
+/** 功能注释：属性预览右侧文案；init 缺失时回落 min/0，禁止拼出「开局 undefined」 */
+export function formatCreatorAttrPreview(a: AttrDef): string {
+  const max = Number(a.max);
+  const maxPart = Number.isFinite(max) && max > 0 ? ` · 上限 ${Math.floor(max)}` : "";
+  if (a.initMode === "random" || a.initMode === "dice") {
+    const lo = Number.isFinite(Number(a.min)) ? Math.floor(Number(a.min)) : 0;
+    const hi = Number.isFinite(max) && max > lo ? Math.floor(max) : Math.max(lo, 100);
+    return `开局随机 ${lo}~${hi}`;
+  }
+  const initRaw = Number(a.init);
+  const init = Number.isFinite(initRaw)
+    ? Math.floor(initRaw)
+    : Number.isFinite(Number(a.min))
+      ? Math.floor(Number(a.min))
+      : 0;
+  return `开局 ${init}${maxPart}`;
 }

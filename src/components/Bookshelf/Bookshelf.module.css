@@ -12,19 +12,20 @@
   overflow-x: hidden;
 }
 
+/* 功能注释：避让交给 AppPageShell；sticky 相对中间滚动区，top 用 0 */
 .main {
   display: flex;
   flex-direction: column;
   width: min(var(--app-desktop-shell-max), calc(100% - 2 * var(--app-desktop-gutter)));
-  margin: var(--app-desktop-navbar-height) auto 0;
-  padding: 12px 20px 120px;
+  margin: 0 auto;
+  padding: 12px 20px 24px;
   box-sizing: border-box;
   gap: 12px;
 }
 
 .header {
   position: sticky;
-  top: var(--app-desktop-navbar-height);
+  top: 0;
   z-index: 5;
   display: flex;
   align-items: center;
@@ -595,12 +596,12 @@
 
 @media (max-width: 768px) {
   .pageRoot {
-    padding-bottom: calc(90px + env(safe-area-inset-bottom));
+    padding-bottom: 0;
   }
 
   .main {
     width: 100%;
-    padding: 4px 12px 24px;
+    padding: 4px 12px 16px;
   }
 
   .grid {

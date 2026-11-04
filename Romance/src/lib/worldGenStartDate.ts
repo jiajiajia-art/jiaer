@@ -45,6 +45,8 @@ export function normalizeWorldGenPatchStartDate(patch: Record<string, unknown>):
   if (!sd && out.calendar && typeof out.calendar === "object" && !Array.isArray(out.calendar)) {
     sd = coerceWorldGenStartDate((out.calendar as { startDate?: unknown }).startDate);
   }
+  // 功能注释：生成补丁里的残缺 calendar 不得写入模组（会覆盖引擎 weekdayNames，预览读 .length 崩溃）
+  delete out.calendar;
   if (sd) out.startDate = sd;
   else delete out.startDate;
   return out;

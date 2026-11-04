@@ -4,6 +4,9 @@
   --app-desktop-gutter: clamp(24px, 2vw, 40px);
   --app-desktop-navbar-height: 80px;
   --app-mobile-navbar-height: 60px;
+  /* 功能注释：内容避让用「栏高 + 安全区」；中间滚动区 top/bottom 读这两个，禁止各页再写死上边距 */
+  --app-navbar-offset: calc(var(--app-desktop-navbar-height) + env(safe-area-inset-top, 0px));
+  --app-bottom-nav-offset: 0px;
   --mobile-content-image-guard-scale: 1.045;
   --mobile-content-image-guard-shift-y: -2.5%;
   --mobile-content-image-guard-height: clamp(38px, 11vw, 84px);
@@ -68,10 +71,12 @@ body { background: #000000; color: #ffffff; overflow: hidden; }
   background: #000000;
 }
 
-/* 与 Navbar.module.css 手机高度 60px 对齐，避免 sticky 顶栏与内容区错位叠层 */
+/* 与 Navbar.module.css 手机高度 60px 对齐；底栏 72px + Home Indicator */
 @media (max-width: 768px) {
   :root {
     --app-desktop-navbar-height: var(--app-mobile-navbar-height);
+    --app-navbar-offset: calc(var(--app-mobile-navbar-height) + env(safe-area-inset-top, 0px));
+    --app-bottom-nav-offset: calc(72px + env(safe-area-inset-bottom, 0px));
   }
 }
 

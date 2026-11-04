@@ -2,8 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import styles from '../components/Bookshelf/Bookshelf.module.css';
-import Navbar from '../components/Layout/Navbar';
-import MobileBottomNav from '../components/Layout/MobileBottomNav';
+import AppPageShell from '../components/Layout/AppPageShell';
 import ShelfSavePicker from '../components/Bookshelf/ShelfSavePicker';
 import ShelfSaveManager from '../components/Bookshelf/ShelfSaveManager';
 import bookshelfApi from '../api/bookshelf/bookshelfApi';
@@ -57,7 +56,9 @@ interface PickerState {
   defaultKey: string;
 }
 
-const getScrollRoot = (): HTMLElement | null => document.getElementById('root');
+/** 功能注释：优先用 AppPageShell 中间滚动区；回退 #root 兼容旧壳 */
+const getScrollRoot = (): HTMLElement | null =>
+  (document.querySelector('[data-app-page-main="1"]') as HTMLElement | null) || document.getElementById('root');
 
 const TAB_LABEL: Record<ShelfTab, string> = { recent: '最近游玩', favorites: '我的收藏' };
 const BATCH_ACTION_LABEL: Record<ShelfTab, string> = { recent: '移出最近游玩', favorites: '取消收藏' };
@@ -423,9 +424,7 @@ const Bookshelf: React.FC = () => {
   };
 
   return (
-    <div className={`${styles.pageRoot} ${managing ? styles.pageRootManaging : ''}`}>
-      <Navbar />
-      <div className={styles.main}>
+    <AppPageShell shellClassName={`${styles.pageRoot} ${managing ? styles.pageRootManaging : ''}`} mainClassName={styles.main}>
         <div className={styles.header}>
           <div className={styles.tabs} role="tablist">
             {(['recent', 'favorites'] as ShelfTab[]).map((key) => (
@@ -468,7 +467,6 @@ const Bookshelf: React.FC = () => {
           )}
         </div>
         {renderBody()}
-      </div>
 
       {managing && (
         <div className={styles.manageBar}>
@@ -504,8 +502,7 @@ const Bookshelf: React.FC = () => {
         }}
       />
       <ShelfSaveManager isOpen={saveManagerOpen} games={saveManageGames} onClose={() => setSaveManagerOpen(false)} />
-      <MobileBottomNav />
-    </div>
+    </AppPageShell>
   );
 };
 

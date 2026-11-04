@@ -106,6 +106,15 @@ export type TopbarData = {
   apLow?: boolean;
   daysLeft?: number;
   world: string;
+  /** 功能注释：当前主线步骤文案（作者预览顶栏只显示这一项） */
+  questStep?: string;
+  /** 功能注释：小说模式主线展开详情 */
+  questLineName?: string;
+  questDesc?: string;
+  questWait?: string;
+  questDone?: number;
+  questTotal?: number;
+  questProgress?: number;
 };
 
 export const SAMPLE_TOPBAR_DATA: TopbarData = {

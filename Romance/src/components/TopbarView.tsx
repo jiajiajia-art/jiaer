@@ -1,5 +1,5 @@
 import { getWorld } from "../mods/registry";
-import { Fragment, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
+import { Fragment, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 import { limitDays, type GameState } from "../lib/types";
 import { walletDef, wallet } from "../game/wallet";
 import { apPerMove, tripPoints, tripPointsMax } from "../game/mud";
@@ -146,6 +146,13 @@ type Props = {
   topbarText?: string;
   compact?: boolean; // 横屏：压成单行
   preview?: boolean; // 美化面板里的预览：不可点击、不挂引导锚点
+  /** 功能注释：作者预览只显示当前主线步骤，隐藏周数/日期/地点/金钱等模块 */
+  questOnly?: boolean;
+  /**
+   * 功能注释：小说模式固定三行排版（名牌 / 状态 / 可展开主线），
+   * 颜色与圆角只读皮肤变量，不跟 mock 色板走。
+   */
+  novelLayout?: boolean;
   menuOpen?: boolean;
   onProfile?: () => void;
   onMenu?: () => void;
@@ -153,8 +160,10 @@ type Props = {
   children?: ReactNode; // 顶栏下方附加行（置顶属性 / 世界提示 / 存档提示）
 };
 
-export default function TopbarView({ data, diy, topbar = "gradient", topbarText, compact = false, preview = false, menuOpen = false, onProfile, onMenu, onEnd, children }: Props) {
+export default function TopbarView({ data, diy, topbar = "gradient", topbarText, compact = false, preview = false, questOnly = false, novelLayout = false, menuOpen = false, onProfile, onMenu, onEnd, children }: Props) {
   const c = resolveTopbarDiy(diy);
+  // 功能注释：小说模式主线行本地展开，不跳剧情志页
+  const [questOpen, setQuestOpen] = useState(false);
   const rules = c.active ? c.regexRules : undefined;
   const rx = (t: TopbarRegexTarget, s: string) => applyTopbarRegex(s, t, rules);
   let layout = c.layout;
@@ -290,19 +299,42 @@ export default function TopbarView({ data, diy, topbar = "gradient", topbarText,
           : null;
     }
   };
-  const mods = c.modules.filter((k) => !c.hidden[k]).map(mv).filter((m): m is ModView => !!m);
+  const mods = questOnly ? [] : c.modules.filter((k) => !c.hidden[k]).map(mv).filter((m): m is ModView => !!m);
   const inRow = layout === "single" || layout === "statusOnly" || layout === "reverse";
+  // 功能注释：状态行（周数/日期/地点/天气/金钱）点开任务主线弹窗，不再跳人物档案
+  const openQuest = () => {
+    if (preview) return;
+    window.dispatchEvent(new CustomEvent("star:quest-open"));
+  };
   const barEvents = preview ? {} : {
-    role: "button" as const, tabIndex: 0, "aria-label": "打开人物档案",
-    onClick: () => onProfile?.(),
-    onKeyDown: (e: KeyboardEvent<HTMLDivElement>) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onProfile?.(); } },
+    role: "button" as const, tabIndex: 0, "aria-label": "打开任务主线",
+    onClick: (e: MouseEvent<HTMLDivElement>) => { e.stopPropagation(); openQuest(); },
+    onKeyDown: (e: KeyboardEvent<HTMLDivElement>) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openQuest(); } },
   };
   const label = (m: ModView) => c.showLabels && !m.noLabel && <span className="shrink-0 text-[0.82em] font-semibold text-ink-soft">{MODULE_LABELS[m.k]}</span>;
   const base = `topbar-status-bar relative cursor-pointer text-[12px] text-ink ${inRow ? "min-w-0 flex-1" : ""}`;
-  const raw = rules?.some((r) => r.enabled && r.target === "rawBar") ? rx("rawBar", rawBarText(data)) : null;
+  const raw = !questOnly && rules?.some((r) => r.enabled && r.target === "rawBar") ? rx("rawBar", rawBarText(data)) : null;
   const style = c.barStyle;
   let bar: ReactNode = null;
-  if (layout !== "profileOnly" && (mods.length || raw?.changed)) {
+  // 功能注释：作者预览状态栏只留当前主线步骤，不展示周数/日期/地点/金钱/倒计时
+  if (questOnly && layout !== "profileOnly") {
+    const step = data.questStep?.trim();
+    bar = step ? (
+      <button
+        type="button"
+        data-tour="topbar-quest"
+        onClick={(e) => {
+          e.stopPropagation();
+          openQuest();
+        }}
+        className={`${base} ${BAR_BOX[style]} flex w-full min-w-0 items-center gap-2 text-left`}
+      >
+        <span className="shrink-0 rounded-full bg-coral px-2 py-0.5 text-[10px] font-black tracking-[0.14em] text-white">主线</span>
+        <span className="min-w-0 flex-1 truncate font-semibold text-ink">{step}</span>
+        <IconFlag width={13} height={13} className="shrink-0 text-coral" aria-hidden />
+      </button>
+    ) : null;
+  } else if (layout !== "profileOnly" && (mods.length || raw?.changed)) {
     if (raw?.changed) {
       bar = <div {...barEvents} className={`${base} ${BAR_BOX[style]} flex items-center overflow-hidden`} dangerouslySetInnerHTML={{ __html: raw.html }} />;
     } else if (style === "grid") {
@@ -358,7 +390,95 @@ export default function TopbarView({ data, diy, topbar = "gradient", topbarText,
   /* —— 版式组合 —— */
   const row = (kids: ReactNode, cls = "") => <div className={`relative flex items-center justify-between gap-2 ${cls}`}>{kids}</div>;
   let body: ReactNode;
-  const tpl = c.active && c.templateOn && c.customHtml?.trim() ? c.customHtml : "";
+  // 功能注释：小说模式固定排版优先于 DIY 模板，保证验收结构一致；色值仍走皮肤 CSS 变量
+  if (novelLayout && !compact && !questOnly) {
+    const weekLabel = `第${String(data.weekNum).padStart(2, "0")}周`;
+    const pct = Math.round(Math.min(1, Math.max(0, data.questProgress ?? 0)) * 100);
+    const hasQuest = !!(data.questStep?.trim());
+    const novelMenu = (
+      <Press preview={preview} label="牌坊菜单" expanded={menuOpen} onPress={onMenu}
+        className={`diy-btn flex h-9 w-9 items-center justify-center rounded-[var(--radius-ui-sm)] border border-line bg-paper text-[16px] font-bold text-ink shadow-[var(--shadow-ui)] transition ${
+          menuOpen ? "bg-jade text-paper-2" : "hover:border-jade hover:text-jade"
+        }`}>
+        <DiyIcon slot="top.menu" size={18}><IconMenu width={17} height={17} /></DiyIcon>
+      </Press>
+    );
+    const novelProfile = (
+      <Press preview={preview} label="打开人物档案" onPress={onProfile}
+        className="topbar-profile-card group relative z-10 flex min-w-0 shrink items-center gap-2.5 text-left">
+        <TopbarAvatar data={data} shape={c.avatarShape === "hidden" ? "circle" : c.avatarShape} frame={c.avatarFrame} size={ava}
+          frameImg={c.active ? c.avatarFrameImg : undefined} frameScale={c.frameScale} />
+        <span className="min-w-0 leading-tight">
+          <span className="flex items-center gap-1.5">
+            <span className="truncate font-serif text-[16px] font-black tracking-wide text-ink"><Rx v={nameRx} /></span>
+            <span className="shrink-0 text-[12px] font-semibold tabular-nums text-ink-soft">{data.age}岁</span>
+          </span>
+          <span className="mt-0.5 block text-[11px] font-medium text-ink-soft group-hover:text-jade">
+            {c.archiveText?.replace(/[›>]\s*$/, "").trim() || "查看档案"}
+            <span aria-hidden className="ml-0.5">›</span>
+          </span>
+        </span>
+      </Press>
+    );
+    body = (
+      <div className="novel-topbar flex flex-col gap-1.5" data-layout="novel">
+        {row(<>{novelProfile}{novelMenu}</>)}
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[12px] text-ink">
+          <span className="rounded-[var(--radius-ui-sm)] bg-jade px-2 py-0.5 text-[11px] font-bold tabular-nums text-paper-2">{weekLabel}</span>
+          <span className="font-semibold tabular-nums text-ink-soft">{data.date}</span>
+          <span className="ml-auto flex items-center gap-3">
+            {data.ap != null && (
+              <span data-tour={preview ? undefined : "ap"} className="tabular-nums text-ink">
+                行动 <b className={data.apLow ? "text-danger" : ""}>{data.ap}</b>
+                <span className="text-ink-soft">/{data.apMax}</span>
+              </span>
+            )}
+            {data.money != null && (
+              <span className={`inline-flex items-center gap-1 font-bold tabular-nums ${data.negative ? "text-danger" : "text-ink"}`}>
+                <IconWallet width={12} height={12} className="shrink-0 text-ink-soft" aria-hidden />
+                {data.money}
+              </span>
+            )}
+          </span>
+        </div>
+        {hasQuest && (
+          <div className="novel-quest">
+            <button
+              type="button"
+              data-tour="topbar-quest"
+              aria-expanded={questOpen}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (preview) return;
+                setQuestOpen((v) => !v);
+              }}
+              className="flex w-full items-center gap-2 rounded-[var(--radius-ui)] border border-line bg-paper/80 px-2.5 py-1.5 text-left shadow-[var(--shadow-ui)] transition hover:border-jade/40"
+            >
+              <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold text-ink">{data.questStep}</span>
+              <span className="relative h-1 w-16 shrink-0 overflow-hidden rounded-full bg-line" aria-hidden>
+                <span className="absolute inset-y-0 left-0 rounded-full bg-jade" style={{ width: `${pct}%` }} />
+              </span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className={`shrink-0 text-ink-soft transition-transform ${questOpen ? "rotate-180" : ""}`} aria-hidden>
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </button>
+            {questOpen && (
+              <div className="mt-1 space-y-1 rounded-[var(--radius-ui)] border border-line bg-paper px-3 py-2 text-[12px] leading-relaxed text-ink-soft shadow-[var(--shadow-ui)]">
+                {data.questLineName && <p className="font-semibold text-ink">{data.questLineName}</p>}
+                {data.questDesc && <p>{data.questDesc}</p>}
+                {data.questWait && <p className="text-jade">{data.questWait}</p>}
+                {data.questTotal != null && (
+                  <p className="tabular-nums text-ink-soft">进度 {data.questDone ?? 0}/{data.questTotal}</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  } else {
+  // 功能注释：questOnly 时禁用自定义 HTML 模板，避免又把周数/金钱渲回来
+  const tpl = !questOnly && c.active && c.templateOn && c.customHtml?.trim() ? c.customHtml : "";
   if (tpl) {
     const vars: Record<string, RxOut | string> = {
       name: nameRx, age: String(data.age), avatar: data.avatar ? AVATAR_TOKEN : "", initial: data.initial,
@@ -403,8 +523,10 @@ export default function TopbarView({ data, diy, topbar = "gradient", topbarText,
   } else {
     body = <>
       {row(<>{profile}{title}{actions}</>)}
-      {bar && <div className="mt-2.5">{bar}</div>}
+      {/* 功能注释：状态行上移，贴紧名牌行，减少与场景图之间的空档 */}
+      {bar && <div className="mt-1">{bar}</div>}
     </>;
+  }
   }
 
   const Tag = preview ? "div" : "header";
@@ -425,7 +547,7 @@ export default function TopbarView({ data, diy, topbar = "gradient", topbarText,
         <div aria-hidden className="pointer-events-none absolute -right-10 -bottom-12 h-32 w-40 rounded-full bg-jade/35 blur-3xl" />
       </>)}
       {topbar !== "plain" && <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-line to-transparent" />}
-      <div className={`topbar-inner relative ${compact ? "px-4 py-2" : "mx-auto max-w-3xl px-3.5 py-2.5 @min-[40rem]:px-5"}`}>{body}</div>
+      <div className={`topbar-inner relative ${compact ? "px-4 py-1.5" : "mx-auto max-w-3xl px-3.5 py-1.5 @min-[40rem]:px-5"}`}>{body}</div>
       {children}
     </Tag>
   );

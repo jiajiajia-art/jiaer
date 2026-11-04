@@ -1,11 +1,10 @@
-import { IconBook, IconExternal, IconThought, IconHeart, IconHome, IconSpark, IconUsers } from "../lib/icons";
+import { IconBook, IconExternal, IconThought } from "../lib/icons";
 /* 人物档案·统一字段块——「人脉」与「艺人」两处详情共用同一套字段，
  * 保证每个人展示的属性集合一致（缺省一律显示占位，不会这人有那人没有）。
  * 纯展示、确定性，不调用 AI。 */
 import { useState, type ReactNode } from "react";
-import { STAT_LABELS, STAT_ORDER } from "../game/data";
-import { looksTier, npcLooksFromStats } from "../game/logic";
-import { BlockBar, Chip, Modal } from "./ui";
+import { STAT_LABELS, dossierStatKeys, statRange, type StatKey } from "../game/data";
+import { Chip, HeartMeter, Modal } from "./ui";
 import { useGame } from "../store/gameCtx";
 import { kbOf, type KbMem } from "../game/npcKnowledge";
 import { gameTimeLabel } from "../game/phone";
@@ -15,20 +14,99 @@ import type { Credit, FamilyRef } from "../worlds/star2005/content";
 
 const UNKNOWN = "尚未得知";
 
-/* 八维能力：有数值则画条，缺省整齐地显示「尚未得知」——字段永远齐全 */
+/**
+ * 功能注释：个人能力两列卡——键与标签一律来自作品 stats 配置（dossierStatKeys），
+ * 不写死容貌/演技/歌艺；无配置时整块提示，不假装娱乐圈八维。
+ * 每张卡：左属性名、右数值、下一条皮肤色进度条。
+ */
 export function StatBars({ stats }: { stats?: Record<string, number> | null }) {
-  const looks = stats ? npcLooksFromStats(stats) : undefined;
-  if (!stats || !Object.keys(stats).length)
-    return <p className="text-[12.5px] text-ink-soft/70">{["容貌", ...STAT_ORDER.map((k) => STAT_LABELS[k])].join(" · ")} —— {UNKNOWN}</p>;
-  const rows: [string, number | undefined][] = [["容貌", looks], ...STAT_ORDER.map((k) => [STAT_LABELS[k], stats?.[k]] as [string, number | undefined])];
+  const keys = dossierStatKeys();
+  if (!keys.length) {
+    return <p className="text-[12.5px] text-[color:var(--ink-soft)]">本作品尚未配置个人能力</p>;
+  }
   return (
-    <div className="grid grid-cols-2 gap-2.5">
-      {rows.map(([label, v]) => (
-        <div key={label} className="flex items-center justify-between rounded-xl border border-line/65 bg-paper px-3 py-1.5 text-[12.5px] shadow-[0_2px_8px_-6px_rgba(0,0,0,0.2)]">
-          <span className="font-medium text-ink-soft">{label}</span>
-          <span className={`font-serif text-[14px] font-extrabold tabular-nums ${v === undefined ? "text-ink-soft/60" : "text-ink"}`}>{v ?? "—"}</span>
+    <div className="grid grid-cols-2 gap-2">
+      {keys.map((k) => {
+        const v = stats?.[k];
+        const { min, max } = statRange(k as StatKey);
+        const pct = typeof v === "number" ? Math.max(0, Math.min(1, (v - min) / Math.max(1, max - min))) : 0;
+        const fill = Math.round(pct * 100);
+        return (
+          <div
+            key={k}
+            className="rounded-[var(--radius-ui-sm)] border border-line bg-paper px-3 py-2 shadow-[var(--shadow-ui)]"
+          >
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="min-w-0 truncate text-[12.5px] font-semibold text-ink">{STAT_LABELS[k]}</span>
+              <span className="shrink-0 font-serif text-[14px] font-extrabold tabular-nums text-ink">
+                {typeof v === "number" ? v : "—"}
+              </span>
+            </div>
+            <span
+              className="relative mt-1.5 block h-1.5 w-full overflow-hidden rounded-full bg-ink/20"
+              role="progressbar"
+              aria-valuenow={typeof v === "number" ? v : 0}
+              aria-valuemin={min}
+              aria-valuemax={max}
+              aria-label={STAT_LABELS[k]}
+            >
+              <span
+                className="absolute inset-y-0 left-0 rounded-full bg-coral"
+                style={{ width: `${fill}%` }}
+              />
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** 功能注释：人物卡内爱慕/好感行——左名称、中心形+进度条、右数值；颜色读皮肤变量 */
+export function BondMeterRow({
+  label,
+  value,
+  pct,
+  onChange,
+  min = 0,
+  max = 100,
+}: {
+  label: string;
+  value: number;
+  pct: number;
+  onChange?: (v: number) => void;
+  min?: number;
+  max?: number;
+}) {
+  const p = Math.max(0, Math.min(100, pct));
+  const clamp = (v: number) => Math.max(min, Math.min(max, v));
+  return (
+    <div className="flex items-center gap-2 py-1">
+      <span className="w-8 shrink-0 text-[12px] font-bold text-ink">{label}</span>
+      <HeartMeter pct={p} color="var(--coral)" track="color-mix(in srgb, var(--line) 80%, transparent)" size={13} />
+      <div className="relative h-4 min-w-0 flex-1">
+        <div className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 overflow-hidden rounded-full bg-ink/15">
+          <div className="h-full rounded-full bg-coral" style={{ width: `${p}%` }} />
         </div>
-      ))}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-paper shadow-[0_0_0_2px_var(--coral)]"
+          style={{ left: `${p}%` }}
+        />
+        {onChange && (
+          <input
+            type="range"
+            min={min}
+            max={max}
+            step={1}
+            value={value}
+            aria-label={label}
+            onChange={(e) => onChange(clamp(Number(e.target.value)))}
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+          />
+        )}
+      </div>
+      <span className="w-7 shrink-0 text-right text-[13px] font-bold tabular-nums text-ink">{value}</span>
     </div>
   );
 }
@@ -137,12 +215,8 @@ export function ProfileRow({ label, children }: { label: string; children?: Reac
 export function ProfileGroup({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="mb-4">
-      <p className="mb-2 flex items-center gap-2 px-0.5 font-serif text-[13.5px] font-bold tracking-[0.12em] text-ink">
-        <span className="grid h-5 w-5 place-items-center rounded-md bg-gradient-to-br from-[var(--jade)] to-[var(--coral)] text-[10px] text-white shadow-sm"></span>
-        {title}
-        <span className="h-px flex-1 bg-gradient-to-r from-line to-transparent" />
-      </p>
-      <div className="rounded-2xl border border-line bg-paper-2/80 px-3.5 py-1.5 shadow-[0_6px_18px_-14px_rgba(80,60,140,0.45)]">{children}</div>
+      <p className="mb-2 px-0.5 text-[13px] font-bold tracking-wide text-ink">{title}</p>
+      <div className="rounded-[var(--radius-ui)] border border-line bg-paper-2/80 px-3 py-1.5 shadow-[var(--shadow-ui)]">{children}</div>
     </section>
   );
 }
@@ -165,33 +239,27 @@ export function ProfileBasics({ values }: { values: Partial<Record<BasicKey, Rea
   );
 }
 
-/* 情感关系：现任 / 前任 / 父母 / 子女 四格固定，「其他」有记录时整行展示；确无记录的格子淡显「暂无记录」——与「属性」同一套小卡样式。
- * 父母分三态：明确设定的人物 / 明确设定没有父母（noParents）/ 未设定（「未知」） */
+/* 情感关系：人物档案固定三列——现任伴侣 / 父母 / 子女；颜色与圆角读皮肤变量。
+ * 父母分三态：明确设定的人物 / 明确设定没有父母（noParents）/ 未设定（「未知」）；其余空列「暂无记录」。 */
 const NO_RELATION = "暂无记录";
-/** 功能注释：关系类型用线性图标区分，禁止装饰字符 */
-const RELATION_ICON: Record<RelationKey, ReactNode> = {
-  现任: <IconHeart size={12} />,
-  前任: <IconHeart size={12} className="opacity-50" />,
-  父母: <IconHome size={12} />,
-  子女: <IconSpark size={12} />,
-  其他: <IconUsers size={12} />,
-};
+const EMOTION_COLS: { key: RelationKey; label: string }[] = [
+  { key: "现任", label: "现任伴侣" },
+  { key: "父母", label: "父母" },
+  { key: "子女", label: "子女" },
+];
 export function ProfileRelations({ values, noParents }: { values: Partial<Record<RelationKey, ReactNode>>; noParents?: boolean }) {
   return (
     <section className="mb-4">
-      <p className="mb-1.5 text-[13px] font-bold text-coral">情感关系</p>
-      <div className="grid grid-cols-2 gap-2">
-        {RELATION_FIELDS.filter((k) => k !== "其他" || !isEmpty(values[k])).map((k) => {
-          const empty = isEmpty(values[k]);
-          const none = k !== "父母" ? NO_RELATION : noParents ? "无（已明确设定）" : "未知";
+      <p className="mb-1.5 text-[13px] font-bold text-ink">情感关系</p>
+      <div className="grid grid-cols-3 gap-2 rounded-[var(--radius-ui)] border border-line bg-paper px-1 py-2.5 shadow-[var(--shadow-ui)]">
+        {EMOTION_COLS.map(({ key, label }) => {
+          const empty = isEmpty(values[key]);
+          const none = key !== "父母" ? NO_RELATION : noParents ? "无（已明确设定）" : "未知";
           return (
-            <div key={k} className={`flex min-h-[56px] flex-col justify-center gap-0.5 rounded-2xl border px-3 py-2 ${k === "其他" ? "col-span-2" : ""} ${empty ? "border-dashed border-line bg-paper-2/50" : "border-coral/30 bg-paper-2"}`}>
-              <span className="flex items-center gap-1 text-[11px] text-ink-soft">
-                <span className={empty ? "text-ink-soft/60" : "text-coral"}>{RELATION_ICON[k]}</span>
-                {k}
-              </span>
-              <span className="min-w-0 break-words text-[13px] font-bold leading-snug text-ink">
-                {empty ? <span className="font-normal text-ink-soft/60">{none}</span> : values[k]}
+            <div key={key} className="flex min-h-[52px] flex-col items-center justify-center gap-1 px-1.5 text-center">
+              <span className="text-[11px] font-semibold text-ink-soft">{label}</span>
+              <span className="min-w-0 break-words text-[12.5px] font-bold leading-snug text-ink">
+                {empty ? <span className="font-normal text-ink-soft">{none}</span> : values[key]}
               </span>
             </div>
           );
@@ -418,20 +486,34 @@ export function StatEditor({ label, hint, tone, value, min, max, step = 5, onCha
 }
 
 
-/* 人物资料分页签：资料 / 情感 / 履历…… */
+/* 人物资料分页签：资料 / 情感……选中色读皮肤 --coral，圆角读 --radius-ui */
 export function ProfileTabs({ tabs }: { tabs: { id: string; label: string; body: ReactNode }[] }) {
   const list = tabs.filter((t) => t.body);
   const [cur, setCur] = useState(list[0]?.id);
   const active = list.find((t) => t.id === cur) ?? list[0];
   return (
     <div>
-      <div className="sticky top-12 z-[5] -mx-1 mb-3 flex gap-1 rounded-full bg-paper-2/90 p-1 ring-1 ring-line/60 backdrop-blur">
-        {list.map((t) => (
-          <button key={t.id} type="button" onClick={() => setCur(t.id)} aria-current={active?.id === t.id}
-            className={`flex-1 rounded-full py-1.5 text-[13px] font-bold tracking-[0.1em] transition ${active?.id === t.id ? "bg-gradient-to-r from-jade to-coral text-white shadow-sm" : "text-ink-soft hover:text-coral"}`}>
-            {t.label}
-          </button>
-        ))}
+      <div
+        role="tablist"
+        className="sticky top-12 z-[5] mb-3 flex gap-1 rounded-[var(--radius-ui)] border border-line bg-paper-2 p-1 shadow-[var(--shadow-ui)]"
+      >
+        {list.map((t) => {
+          const on = active?.id === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={on}
+              onClick={() => setCur(t.id)}
+              className={`flex-1 rounded-[var(--radius-ui-sm)] py-1.5 text-[13px] font-bold tracking-wide transition ${
+                on ? "bg-coral text-paper shadow-sm" : "text-ink hover:bg-ink/[0.04]"
+              }`}
+            >
+              {t.label}
+            </button>
+          );
+        })}
       </div>
       {active?.body}
     </div>

@@ -5,6 +5,7 @@ import './styles/funloomToast.css';
 import Home from './page/Home';
 import Create from './page/Create';
 import CreateType from './page/CreateType';
+import CreatePlatformApp from './page/CreatePlatformApp';
 import CreateWorks from './page/CreateWorks';
 import WithdrawRecords from './page/WithdrawRecords';
 import WareHouse from './page/WareHouse';
@@ -56,6 +57,7 @@ import { CreatorRoute } from './components/CreatorRoute';
 import { OperatorRoute } from './components/OperatorRoute';
 import Categories from './page/Categories';
 import Rankings from './page/Rankings';
+import SearchPage from './page/Search';
 import PromotionCenter from './page/PromotionCenter';
 import Messages from './page/Messages';
 import AssetDetails from './page/AssetDetails';
@@ -135,6 +137,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/home" replace />} />
         <Route path="/home" element={<Home />} />
+        <Route path="/search" element={<SearchPage />} />
         <Route path="/categories" element={<Categories />} />
         <Route path="/rank" element={<Rankings />} />
         <Route path="/library" element={<Library />} />
@@ -165,6 +168,7 @@ function App() {
           <Route path="/bookshelf" element={<CreateWorks />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/create/new" element={<CreateType />} />
+          <Route path="/create/app" element={<CreatePlatformApp />} />
           <Route path="/create/works" element={<CreateWorks />} />
           <Route path="/create/withdraw-records" element={<WithdrawRecords />} />
           <Route path="/asset/details" element={<AssetDetails />} />

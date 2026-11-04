@@ -73,7 +73,8 @@ test('源码接线_审计与固定事件须走asCondList', () => {
   assert.match(fixedSrc, /asCondList\(b\.group\?\.conds\)/);
   assert.match(fixedSrc, /asCondList\(c\.check\?\.conds\)/);
   assert.match(endingsPanel, /normalizeEnding/);
-  assert.match(endingsPanel, /conds:\s*e\.conds\s*\?\?\s*\[\]/);
+  // 功能注释：conds 归一须滤掉 null/缺 kind，禁止只写 e.conds ?? [] 仍让 TriggerRow 读 c.kind 崩
+  assert.match(endingsPanel, /typeof \(c as \{ kind\?: unknown \}\)\.kind === \"string\"/);
   assert.match(fixedPanel, /\(c\.conds \?\? \[\]\)\.length/);
 });
 

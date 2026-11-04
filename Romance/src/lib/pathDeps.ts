@@ -123,6 +123,27 @@ export function makeAttrNameLookup(opts: PathDepOption[]): (name: string) => boo
   return (name: string) => set.has(String(name ?? "").trim());
 }
 
+/**
+ * 功能注释：线路「可变自由决定 / 固定不可改」只能挂本作品已有属性；
+ * 手填野名或失效 id 丢掉，命中 id 时统一写成显示名便于卡片展示。
+ */
+export function sanitizePathAttrNames(raw: unknown, opts: PathDepOption[]): string[] {
+  if (!Array.isArray(raw) || !opts.length) return [];
+  const byId = new Map(opts.map((o) => [o.id, o.label || o.id]));
+  const byLabel = new Map(opts.map((o) => [o.label || o.id, o.label || o.id]));
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const row of raw) {
+    const key = String(row ?? "").trim();
+    if (!key) continue;
+    const label = byId.get(key) ?? byLabel.get(key);
+    if (!label || seen.has(label)) continue;
+    seen.add(label);
+    out.push(label);
+  }
+  return out;
+}
+
 export function makePersonLookup(people: PathDepOption[]): (target: string) => boolean {
   const set = new Set(people.flatMap((o) => [o.id, o.label].filter(Boolean)));
   return (target: string) => set.has(String(target ?? "").trim());

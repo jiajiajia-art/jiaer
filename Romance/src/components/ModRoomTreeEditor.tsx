@@ -1,7 +1,6 @@
 /* 场景地点树编辑器
- * 地点 = 树：每条地点记录可设 parent（空 = 顶层），层级不限。左侧树状预览，右侧编辑选中节点：
- * 基本 · 子地点管理（新增 / 拖拽排序 / 跳转编辑 / 复制整枝）· 标记与准入。禁止循环嵌套。
- * 「从地点库添加」复制运营库 active 条目进本作品；打开编辑器不会自动写入库条目或内置世界地点。 */
+ * 大地图 → 地点树：作品可有多张大地图，每张下挂一棵地点树（parent 空 = 该图顶层）。
+ * 「从地点库添加」复制运营库大地图 + 整棵地点树进本作品；打开编辑器不会自动写入库条目。 */
 import { useEffect, useMemo, useState, type DragEvent, type JSX } from "react";
 import type { RoomContent, Requirement } from "../worlds/star2005/content";
 import { childrenOf, cloneBranch, pathOf, rootsOf, subtreeOf, wouldCycle } from "../game/roomTree";
@@ -10,11 +9,20 @@ import ImagePicker from "./ImagePicker";
 import { Modal } from "./ui";
 import { IconChevronDown } from "../lib/icons";
 import { SCENE_PORTRAIT_GEN_SIZE } from "../lib/scenePortrait";
+import { buildLocationScenePrompt, buildWorldMapPrompt } from "../lib/editorImagePrompts";
 import {
   listActivePlatformLocations,
   resolvePlatformLocationImageUrl,
   type PlatformLocationItem,
 } from "../lib/platformLocationLibrary";
+import {
+  ensureWorldMaps,
+  importLibraryMapTree,
+  newWorldMapId,
+  parseLibraryMapTree,
+  roomsOfMap,
+  type WorldMapDef,
+} from "../lib/worldMaps";
 
 type Rooms = Record<string, RoomContent>;
 const inp = "w-full rounded-full border border-line bg-paper px-3 py-1.5 text-[12.5px] text-ink outline-none focus:border-jade";
@@ -25,17 +33,24 @@ const rid = () => `room_${Math.random().toString(36).slice(2, 8)}`;
 /** 功能注释：地点库 / 手工添加时若缺场景描述，用地名补一句，避免必填框交白卷。 */
 const sceneDescFallback = (name: string) => `你来到了「${name}」。`;
 
-export default function ModRoomTreeEditor({ rooms, startRoom, tracks, emptyHint, onChange, onDelete, onRename: _onRename }: {
+export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks, emptyHint, onChange, onDelete, onRename: _onRename }: {
   rooms: Rooms;
+  worldMaps?: WorldMapDef[];
   startRoom?: string;
   tracks: { id: string; name: string }[];
   emptyHint: string;
-  onChange: (rooms: Rooms, startRoom?: string) => void;
+  onChange: (rooms: Rooms, startRoom?: string, worldMaps?: WorldMapDef[]) => void;
   onDelete: (id: string) => void;
   /** 功能注释：房间 id 不再在编辑页手改，保留回调以免改动父组件签名。 */
   onRename: (oldId: string, raw: string) => void;
 }) {
-  const ids = Object.keys(rooms);
+  const ensured = useMemo(() => ensureWorldMaps(rooms, worldMaps), [rooms, worldMaps]);
+  const maps = ensured.worldMaps;
+  const allRooms = ensured.rooms;
+  const [mapId, setMapId] = useState(maps[0]?.id ?? "");
+  const curMapId = maps.some((m) => m.id === mapId) ? mapId : (maps[0]?.id ?? "");
+  const mapRooms = useMemo(() => roomsOfMap(allRooms, curMapId), [allRooms, curMapId]);
+  const ids = Object.keys(mapRooms);
   const [sel, setSel] = useState<string | null>(ids[0] ?? null);
   const [tab, setTab] = useState<"base" | "kids" | "flags">("base");
   const [q, setQ] = useState("");
@@ -45,36 +60,62 @@ export default function ModRoomTreeEditor({ rooms, startRoom, tracks, emptyHint,
   const [libLoading, setLibLoading] = useState(false);
   const [libErr, setLibErr] = useState("");
   const [libItems, setLibItems] = useState<PlatformLocationItem[]>([]);
-  const cur = sel && rooms[sel] ? sel : ids[0] ?? null;
-  const r = cur ? rooms[cur] : undefined;
-  const nm = (id: string) => rooms[id]?.name || id;
+  const cur = sel && mapRooms[sel] ? sel : ids[0] ?? null;
+  const r = cur ? mapRooms[cur] : undefined;
+  const nm = (id: string) => allRooms[id]?.name || id;
+  const curMap = maps.find((m) => m.id === curMapId);
 
-  const set = (id: string, p: Partial<RoomContent>) => onChange({ ...rooms, [id]: { ...rooms[id], ...p } }, startRoom);
+  const commit = (nextRooms: Rooms, nextStart = startRoom, nextMaps = maps) => {
+    const e = ensureWorldMaps(nextRooms, nextMaps);
+    onChange(e.rooms, nextStart, e.worldMaps);
+  };
+  const set = (id: string, p: Partial<RoomContent>) => commit({ ...allRooms, [id]: { ...allRooms[id], ...p } });
+  const patchMap = (id: string, p: Partial<WorldMapDef>) => {
+    commit(allRooms, startRoom, maps.map((m) => (m.id === id ? { ...m, ...p } : m)));
+  };
+  const addMap = () => {
+    const id = newWorldMapId();
+    const next = [...maps, { id, name: `大地图 ${maps.length + 1}`, order: maps.length }];
+    commit(allRooms, startRoom, next);
+    setMapId(id);
+    setSel(null);
+  };
+  const delMap = (id: string) => {
+    if (maps.length <= 1) return;
+    const rest = maps.filter((m) => m.id !== id);
+    const drop = new Set(Object.keys(roomsOfMap(allRooms, id)));
+    const nextRooms: Rooms = {};
+    for (const [rid2, room] of Object.entries(allRooms)) if (!drop.has(rid2)) nextRooms[rid2] = room;
+    const nextStart = startRoom && drop.has(startRoom) ? undefined : startRoom;
+    commit(nextRooms, nextStart, rest);
+    setMapId(rest[0]?.id ?? "");
+  };
   const add = (parent?: string) => {
+    if (!curMapId) return;
     const id = rid();
-    const order = parent ? childrenOf(rooms, parent).length : undefined;
+    const order = parent ? childrenOf(mapRooms, parent).length : undefined;
     const name = parent ? "新子地点" : "新地点";
-    // 功能注释：新增地点不自动冒充开局地点；场景描述预填一句，作者可改。
-    onChange({ ...rooms, [id]: { name, desc: sceneDescFallback(name), exits: {}, ...(parent ? { parent, order } : {}) } }, startRoom);
+    // 功能注释：新增地点挂在当前大地图；不自动冒充开局；描述预填一句
+    commit({
+      ...allRooms,
+      [id]: { name, desc: sceneDescFallback(name), exits: {}, mapId: curMapId, ...(parent ? { parent, order } : {}) },
+    }, startRoom);
     setSel(id); setTab("base");
   };
-  // 功能注释：从运营地点库复制一条顶层地点进本作品；描述/图一并带入，缺描述则按地名补。
+  // 功能注释：从运营库复制一整张大地图 + 地点树进本作品
   const addFromLibrary = (item: PlatformLocationItem) => {
-    const id = rid();
-    const name = String(item.name || "地点").trim() || "地点";
-    const desc = String(item.description || "").trim() || sceneDescFallback(name);
-    const bg = resolvePlatformLocationImageUrl(item.imageUrl) || undefined;
-    onChange({
-      ...rooms,
-      [id]: {
-        name,
-        desc,
-        exits: {},
-        ...(bg ? { bg } : {}),
-      },
-    }, startRoom);
-    setSel(id);
-    setTab("base");
+    const tree = parseLibraryMapTree(item.treeJson);
+    const { map, rooms: added, rootId } = importLibraryMapTree({
+      mapName: item.name,
+      mapDesc: item.description,
+      mapBg: resolvePlatformLocationImageUrl(item.imageUrl) || undefined,
+      tree,
+      existingRooms: allRooms,
+      newRoomId: rid,
+    });
+    commit({ ...allRooms, ...added }, startRoom, [...maps, map]);
+    setMapId(map.id);
+    if (rootId) { setSel(rootId); setTab("base"); }
     setLibOpen(false);
   };
 
@@ -91,17 +132,19 @@ export default function ModRoomTreeEditor({ rooms, startRoom, tracks, emptyHint,
   }, [libOpen, libQ]);
 
   const libPicker = libOpen ? (
-    <Modal title="从地点库添加" onClose={() => setLibOpen(false)}>
+    <Modal title="从地点库添加大地图" onClose={() => setLibOpen(false)}>
       <p className="mb-2 text-[12px] leading-relaxed text-ink-soft">
-        选中的条目会复制进这部作品，成为本作品自己的地点（可改文字、加子地点、设为开局）。停用中的库条目不会出现在此列表。
+        库里存的是大地图。选中后会把这张大地图和它下面的整棵地点树复制进本作品（可再改字、加子地点）。停用中的库条目不会出现。
       </p>
       <SearchBox value={libQ} onChange={setLibQ} placeholder="搜索地点库" />
       {libErr ? <p className="mt-2 text-[12px] text-danger">{libErr}</p> : null}
       {libLoading ? <p className="mt-3 text-[12px] text-ink-soft">加载中…</p> : null}
-      {!libLoading && !libErr && !libItems.length ? <EmptyState>地点库暂无可用条目，请联系运营在后台配置。</EmptyState> : null}
+      {!libLoading && !libErr && !libItems.length ? <EmptyState>地点库暂无可用大地图，请联系运营在后台配置。</EmptyState> : null}
       <ul className="mt-2 max-h-[22rem] space-y-1.5 overflow-y-auto">
         {libItems.map((item) => {
           const img = resolvePlatformLocationImageUrl(item.imageUrl);
+          const tree = parseLibraryMapTree(item.treeJson);
+          const n = tree?.rooms.length ?? 1;
           return (
             <li key={item.id}>
               <button
@@ -113,6 +156,7 @@ export default function ModRoomTreeEditor({ rooms, startRoom, tracks, emptyHint,
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13px] font-bold text-ink">{item.name}</span>
                   <span className="mt-0.5 line-clamp-2 text-[11.5px] text-ink-soft">{item.description || "（无简介）"}</span>
+                  <span className="mt-0.5 block text-[10.5px] text-ink-soft">含 {n} 个地点</span>
                 </span>
               </button>
             </li>
@@ -121,91 +165,148 @@ export default function ModRoomTreeEditor({ rooms, startRoom, tracks, emptyHint,
       </ul>
     </Modal>
   ) : null;
-  // 同级排序：把 src 挪到 target 之前，重写这一层的 order
+
   const reorder = (parent: string | undefined, src: string, target: string) => {
     if (src === target) return;
-    const sibs = (parent ? childrenOf(rooms, parent) : rootsOf(rooms)).filter((x) => x !== src);
+    const sibs = (parent ? childrenOf(mapRooms, parent) : rootsOf(mapRooms)).filter((x) => x !== src);
     const at = sibs.indexOf(target);
     if (at < 0) return;
     sibs.splice(at, 0, src);
-    const next = { ...rooms };
+    const next = { ...allRooms };
     sibs.forEach((x, i) => { next[x] = { ...next[x], order: i }; });
-    onChange(next, startRoom);
+    commit(next, startRoom);
   };
   const copyBranch = (id: string) => {
-    const { added, rootId } = cloneBranch(rooms, id, () => rid());
-    onChange({ ...rooms, ...added }, startRoom);
+    const { added, rootId } = cloneBranch(mapRooms, id, () => rid());
+    const stamped: Rooms = {};
+    for (const [k, v] of Object.entries(added)) stamped[k] = { ...v, mapId: curMapId };
+    commit({ ...allRooms, ...stamped }, startRoom);
     setSel(rootId);
   };
-  const sortedRoots = useMemo(() => rootsOf(rooms).map((x, i) => [x, rooms[x].order ?? i] as const).sort((a, b) => a[1] - b[1]).map(([x]) => x), [rooms]);
-  // 不在任何根下的（坏数据成环）也要露出来，方便修复
-  const reachable = new Set(sortedRoots.flatMap((x) => subtreeOf(rooms, x)));
+  const sortedRoots = useMemo(() => rootsOf(mapRooms).map((x, i) => [x, mapRooms[x].order ?? i] as const).sort((a, b) => a[1] - b[1]).map(([x]) => x), [mapRooms]);
+  const reachable = new Set(sortedRoots.flatMap((x) => subtreeOf(mapRooms, x)));
   const orphans = ids.filter((x) => !reachable.has(x));
 
   const dragProps = (id: string, parent: string | undefined) => ({
     draggable: true,
     onDragStart: (e: DragEvent) => { setDrag(id); e.dataTransfer.effectAllowed = "move"; },
     onDragEnd: () => setDrag(null),
-    onDragOver: (e: DragEvent) => { if (drag && drag !== id && rooms[drag]?.parent === parent) e.preventDefault(); },
+    onDragOver: (e: DragEvent) => { if (drag && drag !== id && mapRooms[drag]?.parent === parent) e.preventDefault(); },
     onDrop: (e: DragEvent) => { e.preventDefault(); if (drag) reorder(parent, drag, id); setDrag(null); },
   });
 
   const tree = (id: string, depth: number): JSX.Element | null => {
-    const kids = childrenOf(rooms, id);
-    const hit = !String(q ?? "").trim() || subtreeOf(rooms, id).some((x) => matches(q, x, rooms[x].name, rooms[x].desc));
+    const kids = childrenOf(mapRooms, id);
+    const hit = !String(q ?? "").trim() || subtreeOf(mapRooms, id).some((x) => matches(q, x, mapRooms[x].name, mapRooms[x].desc));
     if (!hit) return null;
     const on = id === cur;
     return (
       <li key={id}>
-        <button type="button" {...dragProps(id, rooms[id].parent)} onClick={() => setSel(id)}
+        <button type="button" {...dragProps(id, mapRooms[id].parent)} onClick={() => setSel(id)}
           style={{ paddingLeft: 8 + depth * 14 }}
           className={`flex w-full items-center gap-1.5 rounded-full py-1 pr-2 text-left text-[12.5px] transition ${on ? "bg-jade text-paper-2" : "text-ink hover:bg-jade/10"} ${drag === id ? "opacity-40" : ""}`}>
           <span className={`shrink-0 text-[10px] ${on ? "text-paper-2/80" : "text-ink-soft"}`} aria-hidden>{kids.length ? <IconChevronDown size={10} /> : "•"}</span>
           <span className="min-w-0 flex-1 truncate">{nm(id)}</span>
           {id === startRoom && <span className={`shrink-0 rounded-full px-1.5 text-[9.5px] ${on ? "bg-paper-2/20" : "bg-gold/15 text-gold"}`}>开局</span>}
-          {rooms[id].locked && <span className="shrink-0 text-[10px]" title="上锁">锁</span>}
-          {rooms[id].hidden && <span className="shrink-0 text-[10px]" title="隐藏">隐</span>}
+          {mapRooms[id].locked && <span className="shrink-0 text-[10px]" title="上锁">锁</span>}
+          {mapRooms[id].hidden && <span className="shrink-0 text-[10px]" title="隐藏">隐</span>}
         </button>
         {!!kids.length && <ul>{kids.map((k) => tree(k, depth + 1))}</ul>}
       </li>
     );
   };
 
-  if (!ids.length) return (
-    <div className="space-y-2">
-      <EmptyState>{emptyHint}</EmptyState>
-      <div className="flex flex-wrap gap-1.5">
-        <button data-author-field="author-field-rooms" className={pill} onClick={() => add()}>＋ 添加顶层地点</button>
-        <button type="button" className={pill} onClick={() => setLibOpen(true)}>从地点库添加</button>
+  const mapBar = (
+    <div className="space-y-1.5 rounded-2xl border border-line bg-paper-2 p-2">
+      <p className="px-1 text-[11px] font-bold text-ink-soft">大地图 · 每张下面一棵地点树</p>
+      <div className="flex flex-wrap gap-1">
+        {maps.map((m) => (
+          <button
+            key={m.id}
+            type="button"
+            onClick={() => { setMapId(m.id); setSel(null); }}
+            className={`rounded-full px-3 py-1 text-[12px] font-bold transition ${m.id === curMapId ? "bg-ink text-paper-2" : "bg-paper text-ink-soft hover:text-ink"}`}
+          >
+            {m.name || m.id}
+          </button>
+        ))}
       </div>
-      {libPicker}
+      <div className="flex flex-wrap gap-1.5">
+        <button type="button" className={pill} onClick={addMap}>＋ 大地图</button>
+        <button type="button" className={pill} onClick={() => setLibOpen(true)}>从地点库添加</button>
+        {maps.length > 1 && curMapId ? (
+          <button type="button" className={`${pill} !text-danger`} onClick={() => delMap(curMapId)}>删除当前大地图</button>
+        ) : null}
+      </div>
+      {curMap && (
+        <div className="space-y-1.5">
+          <div className="grid gap-1 sm:grid-cols-2">
+            <label className="block">
+              <span className={lbl}>大地图名称</span>
+              <input className={inp} value={curMap.name} onChange={(e) => patchMap(curMap.id, { name: e.target.value })} placeholder="如：雾色旅馆" />
+            </label>
+            <label className="block">
+              <span className={lbl}>简介（可选）</span>
+              <input className={inp} value={curMap.desc ?? ""} onChange={(e) => patchMap(curMap.id, { desc: e.target.value || undefined })} placeholder="给创作者自己看的备注" />
+            </label>
+          </div>
+          {/* 功能注释：大地图图走统一生图入口；名称+简介预填，生成后显示在本图预览 */}
+          <div className="block">
+            <span className={lbl}>大地图图 · 用名称与简介生图，也可上传替换</span>
+            <ImagePicker
+              value={curMap.bg}
+              onChange={(bg) => patchMap(curMap.id, { bg: bg || undefined })}
+              label={`${curMap.name || "大地图"}图`}
+              max={1600}
+              thumb="h-16 w-28"
+              aiGen={{
+                size: "1792x1024",
+                placeholder: "按大地图名称与简介生成地图插画…",
+                initialPrompt: buildWorldMapPrompt({ name: curMap.name, desc: curMap.desc }) || undefined,
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 
-  const kids = cur ? childrenOf(rooms, cur) : [];
-  const path = cur ? pathOf(rooms, cur) : [];
-  const parentOpts = cur ? ids.filter((x) => !wouldCycle(rooms, cur, x)) : [];
+  if (!Object.keys(allRooms).length && !ids.length) {
+    return (
+      <div className="space-y-2">
+        {mapBar}
+        <EmptyState>{emptyHint}</EmptyState>
+        <div className="flex flex-wrap gap-1.5">
+          <button data-author-field="author-field-rooms" className={pill} onClick={() => add()}>＋ 添加顶层地点</button>
+          <button type="button" className={pill} onClick={() => setLibOpen(true)}>从地点库添加</button>
+        </div>
+        {libPicker}
+      </div>
+    );
+  }
+
+  const kids = cur ? childrenOf(mapRooms, cur) : [];
+  const path = cur ? pathOf(mapRooms, cur) : [];
+  const parentOpts = cur ? ids.filter((x) => !wouldCycle(mapRooms, cur, x)) : [];
   const reqs = r?.access?.requires ?? [];
   const setReqs = (next: Requirement[]) => cur && set(cur, { access: next.length || r?.access?.note ? { note: r?.access?.note ?? "", requires: next.length ? next : undefined } : undefined });
 
   return (
     <div className="space-y-2">
+      {mapBar}
       {ids.length > 6 && <SearchBox value={q} onChange={setQ} placeholder="搜索地点" />}
       <div className="grid gap-2 sm:grid-cols-[minmax(0,13rem)_minmax(0,1fr)]">
-        {/* 树状预览 */}
         <div className="rounded-2xl border border-line bg-paper-2 p-1.5">
-          <p className="px-2 pb-1 text-[11px] font-bold text-ink-soft">地点树 · 拖拽调整同级顺序</p>
+          <p className="px-2 pb-1 text-[11px] font-bold text-ink-soft">地点树 · {curMap?.name || "当前大地图"} · 拖拽同级顺序</p>
           <ul className="max-h-[22rem] space-y-0.5 overflow-y-auto">
             {sortedRoots.map((x) => tree(x, 0))}
             {orphans.map((x) => tree(x, 0))}
           </ul>
           <div className="mt-1.5 grid gap-1">
             <button className={`${pill} w-full`} onClick={() => add()}>＋ 顶层地点</button>
-            <button type="button" className={`${pill} w-full`} onClick={() => setLibOpen(true)}>从地点库添加</button>
           </div>
         </div>
 
-        {/* 选中节点 */}
         {cur && r && (
           <div className="min-w-0 space-y-2 rounded-2xl border border-line bg-paper-2 p-2">
             <nav aria-label="层级" className="flex flex-wrap items-center gap-1 text-[11.5px]">
@@ -225,20 +326,19 @@ export default function ModRoomTreeEditor({ rooms, startRoom, tracks, emptyHint,
 
             {tab === "base" && (
               <div className="space-y-1.5">
-                {/* 功能注释：房间 id 仅内部使用，编辑页不展示、不手改；连通由地点树自动带出，不配东南西北。 */}
                 <div className="flex gap-1.5">
                   <input className={inp} value={r.name ?? ""} placeholder="地点名，如：禅房" onChange={(e) => set(cur, { name: e.target.value })} />
                   <button className={`${pill} shrink-0`} onClick={() => onDelete(cur)} aria-label="删除地点">×</button>
                 </div>
                 <label className="block">
-                  <span className={lbl}>父地点 · 空 = 顶层地点（不能选自己或自己的下级，防止循环嵌套）</span>
+                  <span className={lbl}>父地点 · 空 = 本大地图顶层（不能选自己或自己的下级）</span>
                   <select className={inp} value={r.parent ?? ""} onChange={(e) => {
                     const p = e.target.value || undefined;
-                    if (wouldCycle(rooms, cur, p)) return;
-                    set(cur, { parent: p, order: p ? childrenOf(rooms, p).length : undefined });
+                    if (wouldCycle(mapRooms, cur, p)) return;
+                    set(cur, { parent: p, order: p ? childrenOf(mapRooms, p).length : undefined, mapId: curMapId });
                   }}>
                     <option value="">（顶层地点）</option>
-                    {parentOpts.filter((x) => x !== cur).map((x) => <option key={x} value={x}>{pathOf(rooms, x).map(nm).join(" › ")}</option>)}
+                    {parentOpts.filter((x) => x !== cur).map((x) => <option key={x} value={x}>{pathOf(mapRooms, x).map(nm).join(" › ")}</option>)}
                   </select>
                 </label>
                 <textarea className={`${area} ${String(r.desc ?? "").trim() ? "" : "!border-danger"}`} rows={3} value={String(r.desc ?? "")} placeholder="进入此地时的场景描述（必填）" onChange={(e) => set(cur, { desc: e.target.value })} />
@@ -253,8 +353,8 @@ export default function ModRoomTreeEditor({ rooms, startRoom, tracks, emptyHint,
                       scenePortrait
                       aiGen={{
                         size: SCENE_PORTRAIT_GEN_SIZE,
-                        placeholder: "按场景描述生成 9:16 竖图…",
-                        initialPrompt: String(r.desc ?? "").trim() || undefined,
+                        placeholder: "按地点名与场景描述生成 9:16 竖图…",
+                        initialPrompt: buildLocationScenePrompt({ name: r.name, desc: r.desc }) || undefined,
                       }}
                     />
                   </div>
@@ -266,9 +366,8 @@ export default function ModRoomTreeEditor({ rooms, startRoom, tracks, emptyHint,
                   </label>
                 </div>
                 <label className="flex cursor-pointer items-center gap-2 text-[12px] text-ink">
-                  <input data-author-field="author-field-start-room" type="radio" className="accent-jade" checked={startRoom === cur} onChange={() => onChange(rooms, cur)} />设为开局地点<span className="text-ink-soft">（可以是任意一层子地点）</span>
+                  <input data-author-field="author-field-start-room" type="radio" className="accent-jade" checked={startRoom === cur} onChange={() => commit(allRooms, cur)} />设为开局地点<span className="text-ink-soft">（可以是任意一层子地点）</span>
                 </label>
-                <Help>上下层与同级进出由地点树自动连通，无需再配东南西北出口。</Help>
               </div>
             )}
 
@@ -281,7 +380,7 @@ export default function ModRoomTreeEditor({ rooms, startRoom, tracks, emptyHint,
                       className={`flex items-center gap-1.5 rounded-full border border-line bg-paper py-1 pl-3 pr-1 ${drag === k ? "opacity-40" : ""}`}>
                       <span className="cursor-grab select-none text-ink-soft" aria-hidden title="拖拽排序">⋮⋮</span>
                       <span className="min-w-0 flex-1 truncate text-[12.5px] text-ink">{nm(k)}
-                        {!!childrenOf(rooms, k).length && <span className="ml-1 text-[11px] text-ink-soft">· {subtreeOf(rooms, k).length - 1} 个下级</span>}
+                        {!!childrenOf(mapRooms, k).length && <span className="ml-1 text-[11px] text-ink-soft">· {subtreeOf(mapRooms, k).length - 1} 个下级</span>}
                       </span>
                       <button className={pill} onClick={() => copyBranch(k)} title="连同全部下级复制一份">复制整枝</button>
                       <button className={`${pill} !border-jade/40 !text-jade`} onClick={() => { setSel(k); setTab("base"); }}>编辑 ›</button>
@@ -337,6 +436,9 @@ export default function ModRoomTreeEditor({ rooms, startRoom, tracks, emptyHint,
               </div>
             )}
           </div>
+        )}
+        {!cur && (
+          <EmptyState>当前大地图还没有地点。点左侧「＋ 顶层地点」，或从地点库添加一张带地点树的大地图。</EmptyState>
         )}
       </div>
       {libPicker}

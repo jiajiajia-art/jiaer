@@ -10,8 +10,7 @@
     display: flex;
     margin: 0;
     padding: 0;
-    margin-bottom: 200px;
-    min-height: 100vh;
+    min-height: 100%;
 }
 
 .main {
@@ -19,7 +18,7 @@
     flex-direction: column;
     width: min(var(--app-desktop-shell-max), calc(100% - 2 * var(--app-desktop-gutter)));
     max-width: none;
-    margin: var(--app-desktop-navbar-height) auto 0;
+    margin: 0 auto;
     overflow: visible;
     padding: 20px;
     box-sizing: border-box;
@@ -37,10 +36,10 @@
     .pageRoot {
         width: 100%;
         min-width: auto;
-        min-height: 100vh;
+        min-height: 100%;
         height: auto;
         background-size: cover;
-        padding-bottom: 90px;
+        padding-bottom: 0;
     }
 
     .mainContent {
@@ -50,7 +49,7 @@
     .main {
         width: 100%;
         max-width: 100%;
-        margin-top: 60px;
+        margin-top: 0;
         padding: 10px;
     }
 }

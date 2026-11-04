@@ -451,8 +451,12 @@ export function seedNpcs(): Npc[] {
     age: "",
     identity: p.role,
     relation: p.relation ?? "",
-    // 人物填了 avatarVariant：开局从本剧已开放的同名头像池抽一张（找不到同名池则留空，不乱抽）
-    ...(p.avatarVariant ? { avatar: drawAvatar(p.id, p.avatarVariant, true).url, avatarVariant: p.avatarVariant } : { avatar: "" }),
+    // 功能注释：固定头像（生图/上传）优先；否则按 avatarVariant 抽池；都没有则空串 → UI 首字头像
+    ...(p.avatar
+      ? { avatar: p.avatar, ...(p.avatarVariant ? { avatarVariant: p.avatarVariant } : {}) }
+      : p.avatarVariant
+        ? { avatar: drawAvatar(p.id, p.avatarVariant, true).url, avatarVariant: p.avatarVariant }
+        : { avatar: "" }),
     bio: p.bio,
     mood: "平静",
     affinity: 0, // 初值由 syncSimToPlayer 从引擎 s.rel 镜像（newGame 末尾统一回灌）

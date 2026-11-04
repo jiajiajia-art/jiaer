@@ -55,12 +55,26 @@ export { coverMode }; // 兼容旧引用；实现在 lib/coverAi
  * 功能注释：作品展示封面——只配背景（固定/轮播/视频）；作者态不提供整页自定义与文字/按钮等页签。
  * 列表/详情/书架用；开局进游戏菜单不再套用这张图。
  */
-export function ModCoverEditor({ value, onChange, modId }: { value?: CoverCopy; onChange: (v?: CoverCopy) => void; modId: string }) {
+export function ModCoverEditor({
+  value,
+  onChange,
+  modId,
+  workTitle,
+  workSummary,
+}: {
+  value?: CoverCopy;
+  onChange: (v?: CoverCopy) => void;
+  modId: string;
+  /** 功能注释：作品名称，生图预填提示词 */
+  workTitle?: string;
+  /** 功能注释：作品简介，生图预填提示词 */
+  workSummary?: string;
+}) {
   const c = value ?? {};
   return (
     <div className="space-y-2.5">
       <p className="text-[11px] leading-relaxed text-ink-soft">
-        作品展示封面：列表、详情、书架卡片会显示。开局进游戏不会再出现这张图。只配置背景即可。
+        作品展示封面只用来展示，不做出开始界面。列表、详情、书架卡片会显示这张图；真正开局后不会再显示一次封面。本页只配背景，预览里没有「开始游戏 / 继续游戏 / 配置 AI」。
       </p>
       <CoverDiyEditor
         mode="live"
@@ -69,8 +83,11 @@ export function ModCoverEditor({ value, onChange, modId }: { value?: CoverCopy; 
         chatKey={`mod.${modId}`}
         value={toDiy(c)}
         onChange={(v) => onChange(clean(fromDiy({ ...c, mode: undefined, html: undefined, htmlUI: undefined }, v)))}
-        cvText={{}}
-        previewCv={fromDiy(c, toDiy(c))}
+        cvText={{ title: workTitle, intro: workSummary }}
+        workTitle={workTitle}
+        workSummary={workSummary}
+        previewCv={fromDiy({ ...c, title: undefined, kicker: undefined, subtitle: undefined, intro: undefined }, toDiy(c))}
+        previewD={toDiy(c)}
       />
     </div>
   );

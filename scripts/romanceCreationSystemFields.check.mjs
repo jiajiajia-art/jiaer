@@ -60,7 +60,9 @@ test("sanitizeCreationBuiltin_只保留系统四项并丢掉旧内置键", () =>
 test("字段编辑器_系统四项不可删除且不预置旧内置标签", () => {
   assert.match(editor, /SYSTEM_CREATION_FIELDS/);
   assert.match(editor, /sanitizeCreationBuiltin/);
-  assert.match(editor, /始终必填、不可隐藏或删除/);
+  // 功能注释：页面不写系统规则长说明；系统四项仍用徽标标识
+  assert.doesNotMatch(editor, /始终必填、不可隐藏或删除/);
+  assert.doesNotMatch(editor, /建角要填的项都在这里|系统固定项/);
   assert.match(editor, /系统字段/);
   assert.match(editor, /玩家必填/);
   assert.match(editor, /上移/);

@@ -9,17 +9,19 @@ import type { PlayPrefs, Player } from "../lib/types";
 import PlayPrefsPicker from "./PlayPrefsPicker";
 import { fxSummary } from "../game/optFx";
 import type { OptFx } from "../game/data";
-import { Avatar, Chip, Modal } from "./ui";
-import { IconCake, IconCheck, IconDice, IconHeart, IconIdCard, IconLock, IconPlay, IconUser } from "../lib/icons";
-import { IDENTITIES, creationCopy, savePathLock, zodiacOf, optFx, defaultWorldRules, type BuiltinFieldCfg, type BuiltinFieldKey, type CreationField } from "../game/data";
+import { Avatar, Modal } from "./ui";
+import { IconCake, IconCheck, IconDice, IconIdCard, IconLock, IconPlay, IconUser } from "../lib/icons";
+import { IDENTITIES, creationCopy, zodiacOf, optFx, defaultWorldRules, type BuiltinFieldCfg, type BuiltinFieldKey, type CreationField } from "../game/data";
 import { commitSelection, worldPersonById, getSelectedWorld, selectedFeature, selectedSlot, setStartDateOverride, useMods } from "../mods/registry";
 import NamePicker from "./NamePicker";
 import { factionSigningOffers, rollSigningOffers, type SigningContract } from "../worlds/star2005/content";
 import { creationVars, fillParts, fillText } from "../game/creationText";
-import RoutePerks from "./RoutePerks";
-import { cleanPerks } from "../game/routeFx";
 import { normalizeGenderOptions } from "../game/creationSystemFields";
-import { visibleCreatorAttrs } from "../lib/creationItems";
+import { formatCreatorAttrPreview, visibleCreatorAttrs } from "../lib/creationItems";
+import { shouldShowPathPicker } from "../lib/pathPicker";
+import { isAuthorPreview, requestAuthorPreviewEnd } from "../lib/authorPreview";
+import { deleteSlot, listSaves, type SaveSlot } from "../lib/store";
+import { asModArray } from "../lib/asModArray";
 
 /** 功能注释：锁定图标统一走 Lucide；open=true 时略透明表示「未锁」。 */
 function LockGlyph({ open, className }: { open?: boolean; className?: string }) {
@@ -68,8 +70,8 @@ function Note({ children, tone = "soft" }: { children: ReactNode; tone?: "soft" 
   return <p className={`mt-1.5 rounded-lg px-2.5 py-1.5 text-[11.5px] leading-snug ${c}`}>{children}</p>;
 }
 
-// 选项去重：模组里重复的选项只出现一次（也保证下拉 key 唯一）
-const uniq = (a: string[]): string[] => [...new Set(a.map((o) => o.trim()).filter(Boolean))];
+// 选项去重：模组里重复的选项只出现一次（也保证下拉 key 唯一）；脏非数组按空
+const uniq = (a: unknown): string[] => [...new Set(asModArray<string>(a).map((o) => String(o ?? "").trim()).filter(Boolean))];
 /* 功能注释：重掷只动四个系统字段；旧娱乐圈内置字段已下线 */
 const ALL_KEYS = ["name", "gender", "age", "birthday"] as const;
 
@@ -83,9 +85,17 @@ const TONE: Record<string, { text: string; ring: string; soft: string }> = {
 };
 
 export default function CharacterCreate() {
-  const { go, startNew } = useGame();
+  const { startNew, loadState } = useGame();
   const { selection: modSel } = useMods();
+  const previewing = isAuthorPreview();
+  const [saves, setSaves] = useState<SaveSlot[]>([]);
+  const [continueOpen, setContinueOpen] = useState(false);
   const [, setPathLockTick] = useState(0);
+  // 功能注释：封面菜单下线后，读档入口改挂建角页（作者预览不读正式档）
+  useEffect(() => {
+    if (previewing) return;
+    void listSaves().then(setSaves);
+  }, [previewing]);
   useEffect(() => {
     const h = () => setPathLockTick((n) => n + 1);
     window.addEventListener("star:path-locks", h);
@@ -95,16 +105,15 @@ export default function CharacterCreate() {
   useEffect(() => { commitSelection(); }, [modSel.world, modSel.addons.join("|")]);
   const seed = randomPlayerSeed();
   const cc = creationCopy();
-  const PATHS = cc.paths ?? [];
-  // 人物线路：默认选中第一条开放路径；创作者开启「开局弹窗」时进页即弹出让玩家挑，关闭则直接沿用默认
-  const pickableOf = (c: typeof cc) => (c.paths ?? []).some((p) => p.open) && c.pathPicker !== "off";
-  const PICKABLE = pickableOf(cc);
+  // 功能注释：AI 常把 paths/fields/startFactions 写成单对象；一律 asModArray，禁止 .filter / 展开崩建角
+  const PATHS = asModArray<NonNullable<typeof cc.paths>[number]>(cc.paths);
+  // 功能注释：开放路径 >1 才弹窗自选；仅 1 条直接用，不再看 pathPicker
+  const PICKABLE = shouldShowPathPicker(PATHS);
   const [pathId, setPathId] = useState<string | null>(PATHS.find((p) => p.open)?.id ?? "free");
-  // 建角向导：路径（创作者开启时）→ 人设（身份 · 天赋形象 · 家世一页填完）→ 开局（签约 · 游玩偏好 · 世界规则）；关掉弹窗不丢进度
+  // 建角向导：路径（多路径时）→ 人设 → 开局；关掉弹窗不丢进度
   const [wizOpen, setWizOpen] = useState(true);
   const [stepK, setStepK] = useState<string>(PICKABLE ? "path" : "who");
   const topRef = useRef<HTMLDivElement>(null);
-  const [openDetail, setOpenDetail] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: seed.name!,
     age: cc.fixedAge ?? seed.age!,
@@ -122,18 +131,21 @@ export default function CharacterCreate() {
   // 功能注释：建角页预览隐藏项不展示；开局仍按完整 customAttrs 写入
   const creatorAttrs = visibleCreatorAttrs(selectedSlot("customAttrs"));
   /* 创作者自定义字段：仅按人物线路过滤；系统四项始终显示、不进此列 */
-  const CUSTOM = (cc.fields ?? []).filter((f) => f.label && (!f.paths?.length || f.paths.includes(curPath)));
+  const CUSTOM = asModArray<CreationField>(cc.fields).filter((f) => f.label && (!asModArray(f.paths).length || asModArray<string>(f.paths).includes(curPath)));
   const [customVals, setCustomVals] = useState<Record<string, string>>({});
   const cv = (f: CreationField) => (f.locked ? f.init ?? "" : customVals[f.id] ?? f.init ?? "");
   /** 自定义单选/下拉：按人物线路收窄选项（家庭背景池已下线，bgs 条件忽略以免误藏） */
   const customOptions = (f: CreationField) => uniq(f.options ?? []).filter((option) => {
     const link = f.optionLinks?.[option];
-    return !link || !link.paths?.length || link.paths.includes(curPath);
+    // 功能注释：optionLinks.paths 常被写成对象；asModArray 后再判断，禁止 .includes 崩更多设定
+    const linkPaths = asModArray<string>(link?.paths);
+    return !link || !linkPaths.length || linkPaths.includes(curPath);
   });
   const identityIdOf = () => (pathId && IDENTITIES.some((o) => o.id === pathId) ? pathId : null) ?? PATHS.find((p) => p.open)?.id ?? "";
   const fxOf = (f: CreationField): OptFx | undefined => (f.type === "select" || f.type === "radio" ? f.optFx?.[cv(f)] : undefined);
-  const attrName = (id: string) => selectedSlot("customAttrs")?.find((a) => a.id === id)?.label;
-  const npcName = (id: string) => getSelectedWorld().chain.flatMap((m) => m.content.npcs ?? []).find((p) => p.id === id)?.name;
+  // 功能注释：customAttrs / 合并后的 npcs 都可能是 AI 脏对象；禁止 .find / flatMap 直接啃非数组
+  const attrName = (id: string) => asModArray<{ id?: string; label?: string }>(selectedSlot("customAttrs")).find((a) => a.id === id)?.label;
+  const npcName = (id: string) => asModArray<{ id?: string; name?: string }>(getSelectedWorld().content.npcs).find((p) => p.id === id)?.name;
   /* 开局游玩偏好：世界观默认预选模式/视角；屏幕方向默认竖屏，换世界观时保留玩家已选方向 */
   const playSlot = selectedSlot("play");
   const playKey = JSON.stringify(playSlot ?? {});
@@ -151,7 +163,7 @@ export default function CharacterCreate() {
   const genName = (g: string) => { const n = randomName(g as NameGender, nameStyle); autoNames.current.add(n); return n; };
   if (!autoNames.current.size) autoNames.current.add(form.name);
   // 配置了开局阵营 → 合约来自这些阵营（签约即入阵营）；否则按公司名气随机递合约
-  const factionOffers = () => factionSigningOffers((cc.startFactions ?? []).filter((f) => f.id && f.name.trim()));
+  const factionOffers = () => factionSigningOffers(asModArray<NonNullable<typeof cc.startFactions>[number]>(cc.startFactions).filter((f) => f.id && f.name.trim()));
   const [offers, setOffers] = useState<SigningContract[]>(() => { const fo = factionOffers(); return fo.length ? fo : rollSigningOffers(); });
   const boundToFaction = offers.some((o) => o.factionId);
   const [contractId, setContractId] = useState<string>(() => offers[0]?.id ?? "");
@@ -165,10 +177,11 @@ export default function CharacterCreate() {
   useEffect(() => {
     const c = creationCopy();
     const s0 = randomPlayerSeed();
-    const first = (c.paths ?? []).find((p) => p.open)?.id ?? null;
-    setOpenDetail(null); // 开局先看路线列表，详情由用户点开
+    // 功能注释：切换世界时 paths 仍可能脏；与首屏 PATHS 一样先 asModArray
+    const nextPaths = asModArray<NonNullable<typeof c.paths>[number]>(c.paths);
+    const first = nextPaths.find((p) => p.open)?.id ?? null;
     setPathId(first ?? "free");
-    setStepK(pickableOf(c) ? "path" : "who");
+    setStepK(shouldShowPathPicker(nextPaths) ? "path" : "who");
     setWizOpen(true);
     setForm((f) => ({
       ...f,
@@ -259,9 +272,11 @@ export default function CharacterCreate() {
         fx,
         // 功能注释：始终带上游玩偏好（含屏幕方向），开局写入 theme.orient，不再弹首次方向窗；开局日期不由玩家覆盖
         playPrefs: { ...prefs, orient: prefs.orient ?? "portrait" },
-        pathNpcs: (PATHS.find((p) => p.id === pathId) ?? PATHS.find((p) => p.open))?.npcs,
+        // 功能注释：线路人际 npcs 也可能是脏对象；开局前收成数组
+        pathNpcs: asModArray((PATHS.find((p) => p.id === pathId) ?? PATHS.find((p) => p.open))?.npcs),
         route: PATHS.find((p) => p.id === pathId) ?? PATHS.find((p) => p.open),
-        factions: cc.startFactions,
+        // 功能注释：startFactions 可能是 AI 单对象；开局前收成数组，避免 GameContext 侧再炸
+        factions: asModArray<NonNullable<typeof cc.startFactions>[number]>(cc.startFactions),
         joined,
       },
     );
@@ -323,7 +338,6 @@ export default function CharacterCreate() {
   const tv = creationVars({ world: selWorld?.name, path: path?.name });
   const pv = (name: string) => ({ ...tv, path: name });
   const zodiac = zodiacOf(form.birthMonth, form.birthDay);
-  const hide = cc.pathHide ?? {};
   const pathWord = fillText(cc.pathTitle, tv).replace(/^选择/, "") || "开局路径";
   const formTitle = fillText(cc.formTitle || (path ? "{path} · 自设" : "{world} · 自设"), { ...tv, world: tv.world || "角色" });
   const hasMore = CUSTOM.length > 0;
@@ -340,108 +354,47 @@ export default function CharacterCreate() {
   const goStep = (k: string) => setStepK(k);
   useEffect(() => { topRef.current?.closest(".ui-dialog-body")?.scrollTo({ top: 0 }); }, [stepK, wizOpen]);
 
-  /* ① 路径：卡片里展示哪些内容由创作者决定 */
+  /* ① 路径：多条开放路径时弹窗；卡片只展示路径名 + 开局处境 */
   const stepPath = (
     <div className="space-y-2.5">
       {cc.pathIntro && <p className="text-[12.5px] leading-relaxed text-ink-soft"><Tpl text={cc.pathIntro} vars={tv} /></p>}
-      {PATHS.filter((p) => p.open || !hide.soon).map((p) => {
-        if (!p.open) {
-          return (
-            <div key={p.id} className="rounded-2xl border border-dashed border-line/70 bg-paper/40 px-3.5 py-3 opacity-60">
-              <div className="flex items-center gap-2">
-                <span className="text-[15px] font-bold text-ink">{p.name}</span>
-                <Chip>{p.lockTag || "未解锁"}</Chip>
-                <span className="ml-auto truncate text-[11px] text-ink-soft">{fillText(p.tag, pv(p.name))}</span>
-                <button
-                  type="button"
-                  onClick={() => { savePathLock(p.id, { open: true }); setPathId(p.id); setOpenDetail(p.id); }}
-                  className="shrink-0 rounded-full border border-jade/40 bg-jade/10 px-2 py-0.5 text-[10.5px] font-semibold text-jade transition hover:bg-jade hover:text-white"
-                >
-                  解锁
-                </button>
-              </div>
-              {p.blurb && <p className="mt-1 text-[12.5px] leading-relaxed text-ink-soft">{fillText(p.blurb, pv(p.name))}</p>}
-              {(p.lockHint || (Array.isArray(p.lockConds) && p.lockConds.length > 0)) && (
-                <p className="mt-1 text-[11.5px] text-coral/90">
-                  解锁条件：{fillText(p.lockHint || "需满足作者设定的属性 / 人物 / 地点 / 事件条件", pv(p.name))}
-                </p>
-              )}
-            </div>
-          );
-        }
-        const expanded = openDetail === p.id;
+      {PATHS.filter((p) => p.open).map((p) => {
         const current = pathId === p.id;
-        const rels = hide.npcs ? [] : (p.npcs ?? []).filter((n) => n.id && npcName(n.id));
-        // 按建角表单的真实配置生成（隐藏的不列、锁定的归入「固定」），不再用写死的文案
-        // 功能注释：路径卡「可自由决定」只列系统四项 + 本线路自定义字段；不再列出旧娱乐圈内置项
-        const pFields = (cc.fields ?? []).filter((f) => f.label && (!f.paths?.length || f.paths.includes(p.id)));
-        const choose = hide.choose ? [] : [
-          bl("name", "姓名"), bl("gender", "性别"), bl("age", "年龄"), "头像", bl("birthday", "生日"),
-          ...(career ? ["签约经纪公司"] : []),
-          ...pFields.filter((f) => !f.locked).map((f) => f.label),
-        ];
-        const fixed = hide.fixed ? [] : [
-          ...(career ? [`人物线路：${p.name}`] : []),
-          ...(cc.fixedAge ? [`年龄：固定 ${cc.fixedAge} 岁`] : []),
-          ...pFields.filter((f) => f.locked && f.init).map((f) => `${f.label}：${f.init}`),
-        ];
         return (
-          <div key={p.id} className={`overflow-hidden rounded-2xl border bg-paper-2/70 transition ${current ? "border-jade shadow-[0_0_0_3px_color-mix(in_srgb,var(--jade)_14%,transparent)]" : "border-line"}`}>
-            <button type="button" onClick={() => { setPathId(p.id); setOpenDetail(p.id); }} aria-haspopup="dialog" className="flex w-full items-start gap-2.5 px-3.5 py-3 text-left">
-              <span className={`mt-1 grid h-4 w-4 shrink-0 place-items-center rounded-full border-2 ${current ? "border-jade" : "border-line"}`} aria-hidden>{current && <span className="h-1.5 w-1.5 rounded-full bg-jade" />}</span>
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => {
+              setPathId(p.id);
+              if (STEPS[si + 1]) goStep(STEPS[si + 1].k);
+            }}
+            className={`w-full rounded-2xl border bg-paper-2/70 px-3.5 py-3 text-left transition ${
+              current ? "border-jade shadow-[0_0_0_3px_color-mix(in_srgb,var(--jade)_14%,transparent)]" : "border-line hover:border-jade/40"
+            }`}
+          >
+            <div className="flex items-start gap-2.5">
+              <span className={`mt-1 grid h-4 w-4 shrink-0 place-items-center rounded-full border-2 ${current ? "border-jade" : "border-line"}`} aria-hidden>
+                {current && <span className="h-1.5 w-1.5 rounded-full bg-jade" />}
+              </span>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-[15px] font-bold text-ink">{p.name}</span>
-                  <span className="ml-auto truncate text-[11px] text-ink-soft">{fillText(p.tag, pv(p.name))}</span>
-                </div>
-                {p.blurb && <p className="mt-1 text-[12.5px] leading-relaxed text-ink-soft">{fillText(p.blurb, pv(p.name))}</p>}
+                <span className="text-[15px] font-bold text-ink">{p.name}</span>
+                {p.about ? (
+                  <p className="mt-1 text-[12.5px] leading-relaxed text-ink-soft">{fillText(p.about, pv(p.name))}</p>
+                ) : p.blurb ? (
+                  <p className="mt-1 text-[12.5px] leading-relaxed text-ink-soft">{fillText(p.blurb, pv(p.name))}</p>
+                ) : null}
               </div>
-              <span className="mt-0.5 shrink-0 text-[11px] text-ink-soft">详情 ›</span>
-            </button>
-            {expanded && (
-              <Modal title={p.name} onClose={() => setOpenDetail(null)}>
-              <div className="text-[13px] leading-relaxed">
-                {p.tag && <p className="mb-2 text-[11.5px] text-ink-soft">{fillText(p.tag, pv(p.name))}</p>}
-                {!hide.about && p.about && <p className="text-ink/90">{fillText(p.about, pv(p.name))}</p>}
-                {(choose.length > 0 || fixed.length > 0) && <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  {choose.length > 0 && <div>
-                    <p className="mb-1 text-[11px] font-bold tracking-wide text-jade">▌可自由决定</p>
-                    <ul className="space-y-0.5 text-ink-soft">{choose.map((c, ci) => <li key={`${ci}-${c}`}>· {fillText(c, pv(p.name))}</li>)}</ul>
-                  </div>}
-                  {fixed.length > 0 && <div>
-                    <p className="mb-1 text-[11px] font-bold tracking-wide text-coral">▌固定 · 不可更改</p>
-                    <ul className="space-y-0.5 text-ink-soft">{fixed.map((f, fi) => <li key={`${fi}-${f}`}>· {fillText(f, pv(p.name))}</li>)}</ul>
-                  </div>}
-                </div>}
-                {rels.length > 0 && <div className="mt-3">
-                  <p className="mb-1 text-[11px] font-bold tracking-wide text-gold">▌开局人际</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {rels.map((n) => (
-                      <span key={n.id} className="ui-chip">
-                        <b className="font-semibold text-ink">{npcName(n.id)}</b>
-                        {n.relation && <span className="text-ink-soft">· {n.relation}</span>}
-                        {typeof n.rel === "number" && <span className="inline-flex items-center gap-0.5 text-coral"><IconHeart size={12} />{n.rel}</span>}
-                        {n.met && <span className="text-jade">已相识</span>}
-                      </span>
-                    ))}
-                  </div>
-                </div>}
-                {!hide.perks && <RoutePerks className="mt-3" label={p.perksLabel && fillText(p.perksLabel, pv(p.name))} text={p.perks && fillText(cleanPerks(p.perks), pv(p.name))} />}
-                <button type="button" onClick={() => { setPathId(p.id); setOpenDetail(null); if (STEPS[si + 1]) goStep(STEPS[si + 1].k); }} className="mt-4 w-full rounded-xl bg-jade py-2.5 text-[13.5px] font-bold text-white transition hover:brightness-110 active:scale-[0.99]">选择「{p.name}」并继续 ›</button>
-              </div>
-              </Modal>
-            )}
-          </div>
+            </div>
+          </button>
         );
       })}
     </div>
   );
 
-  /* ② 人设 · 身份：名字 · 年龄性别 · 生日星座 · 登记身份（线路已在上一步选定，自设页不再重复展示「人物线路选择」） */
+  /* ② 人设 · 身份：名字 · 年龄性别 · 生日星座 · 登记身份（线路已在上一步选定，自设页不再重复展示「人物线路选择」）
+   * 功能注释：人设页不展示 formIntro / 作品简介——地点季节与生成提示词只干扰填表 */
   const stepWho = (
     <>
-      <p className="text-[12px] leading-relaxed text-ink-soft"><Tpl text={path?.formIntro || cc.formIntro || "{city} · {year} {season}。一页定型——锁住满意的（{lock}），其余随时重掷。"} vars={tv} /></p>
-      {!career && !cc.formIntro && selWorld?.description && <p className="text-[12px] leading-relaxed text-ink-soft">{selWorld.description}</p>}
       <Card title="基本信息">
         <div className="flex items-start gap-3">
           <div className="shrink-0 pt-6"><Avatar src={form.avatar} name={form.name} size={68} onPick={(d) => upd({ avatar: d })} avatarSlot={selectedSlot("avatars") ?? null} /></div>
@@ -494,17 +447,14 @@ export default function CharacterCreate() {
     </>
   );
 
-  /* 功能注释：开局属性区只列创作者「建角」里加过的项；没有就不渲染整块 */
+  /* 功能注释：开局属性区只列有名称的建角数值；空壳/未命名不渲染，避免「开局 undefined」 */
   const stepAttrs = creatorAttrs.length > 0 ? (
     <Card title="属性" desc="按创作者配置的顺序；开局后写入档案，此处只预览">
       <ul className="space-y-2">
         {creatorAttrs.map((a) => (
-          <li key={a.id} className="flex items-center gap-2 rounded-xl border border-line/70 bg-paper px-3 py-2">
-            <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">{a.label || "未命名"}</span>
-            <span className="shrink-0 text-[12px] text-ink-soft">
-              {a.initMode === "dice" ? `开局掷 1d${a.dice ?? "?"}` : `开局 ${a.init}`}
-              {a.max != null && a.max > 0 ? ` · 上限 ${a.max}` : ""}
-            </span>
+          <li key={a.id} className="flex items-center gap-2 rounded-xl border border-line/70 bg-paper px-3 py-2.5">
+            <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">{a.label}</span>
+            <span className="shrink-0 text-[12px] text-ink-soft">{formatCreatorAttrPreview(a)}</span>
           </li>
         ))}
       </ul>
@@ -570,7 +520,7 @@ export default function CharacterCreate() {
   );
 
   /* ③ 开局 · 势力：创作者在「人物线路」编辑器里自设，可多选（受上限约束）；不选也能开局 */
-  const SF = (cc.startFactions ?? []).filter((f) => f.id && f.name.trim());
+  const SF = asModArray<NonNullable<typeof cc.startFactions>[number]>(cc.startFactions).filter((f) => f.id && f.name.trim());
   const sfMax = cc.factionPickMax && cc.factionPickMax > 0 ? cc.factionPickMax : SF.length;
   const stepFactions = SF.length > 0 && (
     <Card title="加入势力" desc={<>勾选开局就加入的势力{sfMax < SF.length ? `（最多 ${sfMax} 个）` : ""}。加入后获得初始声望，成员态度、店铺价格与剧情都会随之变化；也可以都不选，做个自由人。<span className="mt-1 block text-[11.5px] text-ink-soft">{boundToFaction ? "签约的经纪公司就是你的东家阵营，会自动加入；其余势力可按需再选。" : "势力是你的人脉圈子，与经纪合约互不绑定。"}</span></>}>
@@ -590,7 +540,7 @@ export default function CharacterCreate() {
                   <span className="ml-auto shrink-0 text-[11px] text-jade-deep">初始声望 {f.rep ?? 20}</span>
                 </span>
                 {f.desc && <span className="mt-0.5 block text-[12px] leading-relaxed text-ink-soft">{f.desc}</span>}
-                {!!f.tags?.length && <span className="mt-1 flex flex-wrap gap-1">{f.tags.map((t) => <span key={t} className="rounded-full bg-ink/[0.05] px-1.5 py-px text-[10.5px] text-ink-soft">{t}</span>)}</span>}
+                {!!asModArray<string>(f.tags).length && <span className="mt-1 flex flex-wrap gap-1">{asModArray<string>(f.tags).map((t) => <span key={t} className="rounded-full bg-ink/[0.05] px-1.5 py-px text-[10.5px] text-ink-soft">{t}</span>)}</span>}
               </span>
             </label>
           );
@@ -643,8 +593,39 @@ export default function CharacterCreate() {
     setup: <div className="space-y-3">{career && stepSign}{stepFactions}{stepSetup}</div>,
   };
 
+  // 功能注释：底栏走 Modal.footer，钉在 85% 框底；滚动只发生在 ui-dialog-body，属性不被按钮盖住
+  // 第一步：作者预览可退出；有存档可读取；不再回封面开始菜单
+  const wizardFoot = (
+    <div className="ui-sheet-foot">
+      <div className="flex items-center gap-2">
+        {si > 0 ? (
+          <button type="button" onClick={() => goStep(STEPS[si - 1].k)} className="ui-btn ui-btn-lg shrink-0">‹ 上一步</button>
+        ) : previewing ? (
+          <button type="button" onClick={() => requestAuthorPreviewEnd()} className="ui-btn ui-btn-lg shrink-0">退出预览</button>
+        ) : saves.length > 0 ? (
+          <button type="button" onClick={() => setContinueOpen(true)} className="ui-btn ui-btn-lg shrink-0">读取存档</button>
+        ) : null}
+        {last ? (
+          <button type="button" onClick={begin} disabled={!okToFinish} className="ui-btn ui-btn-primary ui-btn-lg min-w-0 flex-1 disabled:opacity-40">
+            <IconPlay width={16} height={16} /><span className="truncate">{cc.cta ?? "开启故事"}</span>
+          </button>
+        ) : (
+          <button type="button" onClick={() => goStep(STEPS[si + 1].k)} disabled={step.k === "who" && !whoComplete} className="ui-btn ui-btn-primary ui-btn-lg min-w-0 flex-1 disabled:opacity-40">
+            <span className="truncate">下一步 · {STEPS[si + 1].label}</span> ›
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
   const wizard = wizOpen ? (
-    <Modal title={step.k === "path" ? (fillText(cc.pathTitle, tv) || "选择开局") : formTitle} onClose={() => setWizOpen(false)} heavyBackdrop>
+    <Modal
+      title={step.k === "path" ? (fillText(cc.pathTitle, tv) || "选择开局") : formTitle}
+      onClose={() => setWizOpen(false)}
+      heavyBackdrop
+      panelClassName="ui-dialog-create"
+      footer={wizardFoot}
+    >
       <div ref={topRef} />
       {/* 步骤条：可直接点跳到任一步 */}
       <div className="-mx-1 mb-3 flex items-center gap-2">
@@ -672,25 +653,6 @@ export default function CharacterCreate() {
       </div>
 
       {body[step.k]}
-
-      {/* 底部导航：上一步 / 下一步；最后一步开局 */}
-      {/* 功能注释：不用 -mb-5 探出父级 padding——嵌入主站时负 margin 会让「下一步」掉出圆角卡片 */}
-      <div className="sticky bottom-0 z-10 -mx-4 mt-4 border-t border-line/60 bg-paper-2/95 px-4 pb-4 pt-3 backdrop-blur sm:-mx-5 sm:px-5">
-        <div className="flex items-center gap-2">
-          {si > 0
-            ? <button type="button" onClick={() => goStep(STEPS[si - 1].k)} className="ui-btn ui-btn-lg shrink-0">‹ 上一步</button>
-            : <button type="button" onClick={() => go("cover")} className="ui-btn ui-btn-lg shrink-0">返回封面</button>}
-          {last ? (
-            <button type="button" onClick={begin} disabled={!okToFinish} className="ui-btn ui-btn-primary ui-btn-lg min-w-0 flex-1 disabled:opacity-40">
-              <IconPlay width={16} height={16} /><span className="truncate">{cc.cta ?? "开启故事"}</span>
-            </button>
-          ) : (
-            <button type="button" onClick={() => goStep(STEPS[si + 1].k)} disabled={step.k === "who" && !whoComplete} className="ui-btn ui-btn-primary ui-btn-lg min-w-0 flex-1 disabled:opacity-40">
-              <span className="truncate">下一步 · {STEPS[si + 1].label}</span> ›
-            </button>
-          )}
-        </div>
-      </div>
     </Modal>
   ) : null;
 
@@ -698,7 +660,38 @@ export default function CharacterCreate() {
   return (
     <div className="paper-grain bg-paper flex min-h-screen items-center justify-center px-5 py-10">
       {wizard}
-      {/* 功能注释：向导打开时隐藏背后进度卡，避免遮罩半透明时「返回封面」透出来 */}
+      {continueOpen && (
+        <Modal title="继续游戏 · 读取存档" onClose={() => setContinueOpen(false)}>
+          {saves.length === 0 ? (
+            <p className="py-8 text-center text-sm text-ink-soft">暂无存档，先完成建角开一局吧。</p>
+          ) : (
+            <div className="space-y-2">
+              {saves.map((s) => (
+                <div key={s.id} className="flex items-center gap-3 rounded-xl border border-line bg-paper p-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-serif font-bold text-ink">{s.name}</p>
+                    {s.state.saveSummary && <p className="truncate text-[12px] text-ink">{s.state.saveSummary}</p>}
+                    <p className="text-[11px] text-ink-soft">
+                      {s.state.world.time} · {s.state.world.location} · 第 {s.state.turnCount} 回合 · {new Date(s.updatedAt).toLocaleString("zh-CN")}
+                    </p>
+                  </div>
+                  <button type="button" onClick={() => loadState(s.state)} className="rounded-lg bg-jade px-3 py-1.5 text-xs font-medium text-paper-2 transition hover:brightness-110">
+                    读取
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { void deleteSlot(s.id).then(() => listSaves().then(setSaves)); }}
+                    className="rounded-lg border border-line px-2 py-1.5 text-xs text-ink-soft transition hover:border-danger hover:text-danger"
+                  >
+                    删除
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </Modal>
+      )}
+      {/* 功能注释：向导打开时隐藏背后进度卡，避免半透明遮罩透出旧入口 */}
       <div
         className={`w-full max-w-sm rounded-[24px] border border-line/70 bg-paper/85 p-6 text-center shadow-[0_16px_40px_-24px_rgba(0,0,0,0.4)] backdrop-blur ${wizOpen ? "invisible pointer-events-none" : ""}`}
         aria-hidden={wizOpen}
@@ -709,7 +702,12 @@ export default function CharacterCreate() {
         <p className="mt-0.5 text-[12px] text-ink-soft">{[path?.name, form.age && `${form.age} 岁`, form.gender, zodiac.name].filter(Boolean).join(" · ")}</p>
         <p className="mt-3 text-[12px] text-ink-soft">角色创建中 · 第 {si + 1} / {STEPS.length} 步「{step.label}」</p>
         <button type="button" onClick={() => setWizOpen(true)} className="ui-btn ui-btn-primary ui-btn-lg mt-4 w-full">继续创建</button>
-        <button type="button" onClick={() => go("cover")} className="mt-2 text-[12px] text-ink-soft transition hover:text-ink">← 返回封面</button>
+        {!previewing && saves.length > 0 && (
+          <button type="button" onClick={() => setContinueOpen(true)} className="ui-btn ui-btn-lg mt-2 w-full">读取存档</button>
+        )}
+        {previewing && (
+          <button type="button" onClick={() => requestAuthorPreviewEnd()} className="mt-2 text-[12px] text-ink-soft transition hover:text-ink">退出预览</button>
+        )}
       </div>
     </div>
   );

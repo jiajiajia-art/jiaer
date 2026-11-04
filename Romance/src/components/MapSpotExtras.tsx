@@ -6,6 +6,7 @@ import { getWorldSlot } from "../mods/registry";
 import { STAT_LABELS, STAT_ORDER } from "../game/data";
 import { FIXED_METRICS } from "../game/fixedEvents";
 import { SCENE_PORTRAIT_HINT, fileToScenePortraitDataUrl } from "../lib/scenePortrait";
+import { asModArray } from "../lib/asModArray";
 
 /* 地图编辑器 · 地点详情扩展：开局起点 / 按身份开局 / 解锁条件 / 条件抵达 / 图标 / 乙游场景图 */
 const lab = "mb-1 block text-[10.5px] font-bold tracking-[0.16em] text-ink-soft";
@@ -54,12 +55,17 @@ export default function MapSpotExtras({ e, name, isStart, patch, setStart }: {
   const [bgErr, setBgErr] = useState("");
   const [pickIcon, iconEl] = useUpload((icon) => patch({ icon }));
   const [pickBg, bgEl] = useUpload((background) => { setBgErr(""); patch({ background }); }, { scenePortrait: true, onError: setBgErr });
+  // 功能注释：身份/出身槽 AI 常写成单对象；asModArray 后再展开，禁止 ...(slot ?? []) → is not iterable
   const opts = [
-    ...(getWorldSlot("identities") ?? []).map((o) => ({ ...o, group: "身份" })),
-    ...(getWorldSlot("backgrounds") ?? []).map((o) => ({ ...o, group: "出身" })),
+    ...asModArray<{ id?: string; name?: string }>(getWorldSlot("identities"))
+      .filter((o) => typeof o.name === "string" && o.name.trim())
+      .map((o) => ({ id: o.id, name: o.name as string, group: "身份" })),
+    ...asModArray<{ id?: string; name?: string }>(getWorldSlot("backgrounds"))
+      .filter((o) => typeof o.name === "string" && o.name.trim())
+      .map((o) => ({ id: o.id, name: o.name as string, group: "出身" })),
   ];
-  const startFor = e.startFor ?? [];
-  const conds = (e.unlockConds ?? []).filter((c): c is NumCond => c.kind === "stat" || c.kind === "metric");
+  const startFor = asModArray<string>(e.startFor).filter((k) => typeof k === "string" && k.length > 0);
+  const conds = asModArray<FixedCond>(e.unlockConds).filter((c): c is NumCond => c.kind === "stat" || c.kind === "metric");
   const setCond = (i: number, p: Partial<NumCond>) => patch({ unlockConds: conds.map((c, j) => (j === i ? ({ ...c, ...p } as NumCond) : c)) });
   const arrivals = e.arrivals ?? [];
   const setArr = (id: string, p: Partial<MapArrival>) => patch({ arrivals: arrivals.map((a) => (a.id === id ? { ...a, ...p } : a)) });

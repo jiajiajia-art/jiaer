@@ -165,5 +165,18 @@ test('编辑器文案_简介与基调说明对齐图注需求', () => {
   assert.match(panel, /默认是世界观摘要，不是创作者长设定原文/);
   assert.match(panel, /生成世界时由 AI 写出并填入/);
   assert.match(panel, /超出 4000 字标红，不能照常保存/);
-  assert.match(panel, /格式固定为年\.月\.日，只选数字/);
+  // 功能注释：开局日期下灰字已删，只留年/月/日选择
+  assert.doesNotMatch(panel, /格式固定为年\.月\.日，只选数字/);
+  assert.doesNotMatch(panel, /这天是周/);
+});
+
+test('时间与推进_节奏与次数并成一块_数量贴选中单位旁', () => {
+  const travel = read('Romance/src/components/ModTravelEditor.tsx');
+  assert.match(travel, /默认推进节奏/);
+  assert.match(travel, /日\/周\/月\/年与「每次几个」并成一块/);
+  assert.match(travel, /aria-label=\{`每次推进（\$\{unitLabel\}）`\}/);
+  assert.match(travel, /flex flex-wrap items-stretch gap-1/);
+  // 功能注释：禁止再上下拆「单位四格」与「每次推进」两段表单
+  assert.doesNotMatch(travel, /每次推进（天）/);
+  assert.doesNotMatch(travel, /grid grid-cols-4 gap-1[\s\S]{0,400}每次推进（/);
 });

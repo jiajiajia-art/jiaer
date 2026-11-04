@@ -83,7 +83,7 @@ export default function ModTuningEditor({
   const hidden = new Set(stats?.hidden ?? []);
   const luckOpts = [
     ...RAW_STAT_ORDER.filter((k) => !hidden.has(k)).map((k) => ({ v: `stat:${k}`, l: (typeof stats?.labels?.[k] === "string" ? stats.labels![k]!.trim() : "") || RAW_STAT_LABELS[k] })),
-    ...(attrs ?? []).map((a) => ({ v: `c:${a.id}`, l: `${a.label || a.id}（自定义）` })),
+    ...(Array.isArray(attrs) ? attrs : []).map((a) => ({ v: `c:${a.id}`, l: `${a.label || a.id}（自定义）` })),
   ];
   const gr = t.gigRules ?? {};
   const setGr = (p: Partial<GigRules>) => {
@@ -109,7 +109,7 @@ export default function ModTuningEditor({
   const setMods = (m: GigCond[]) => setGr({ crashMods: m.length ? m : undefined });
   const condOpts = [
     ...RAW_STAT_ORDER.filter((k) => !hidden.has(k)).map((k) => ({ v: `stat:${k}`, l: (typeof stats?.labels?.[k] === "string" ? stats.labels![k]!.trim() : "") || RAW_STAT_LABELS[k] })),
-    ...(attrs ?? []).map((a) => ({ v: `attr:${a.id}`, l: `${a.label || a.id}（自定义）` })),
+    ...(Array.isArray(attrs) ? attrs : []).map((a) => ({ v: `attr:${a.id}`, l: `${a.label || a.id}（自定义）` })),
     { v: "affinity", l: "人物好感" },
     { v: "stress", l: "压力" }, { v: "fame", l: "名气" }, { v: "reputation", l: "口碑" },
     { v: "trust", l: "负责人信任" }, { v: "pr", l: "公关值" }, { v: "blackFans", l: "黑粉" }, { v: "defaults", l: "违约次数" },

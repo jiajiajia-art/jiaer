@@ -1,5 +1,6 @@
 /**
- * 场景图布局：固定 9:16 竖框 object-cover 铺满；正文在图下累积；图上只留「外出」与可点位置。
+ * 场景图布局：游戏模式矮横幅（约 16:10）object-cover；小说模式 fill 铺满可视区；
+ * 正文叠在图上；图上留「外出」与可点位置。
  */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -17,28 +18,56 @@ function locationHeroSrc() {
   return m[0];
 }
 
-test('LocationHero_9比16框object-cover铺满_不成横条', () => {
+test('LocationHero_矮横幅object-cover_正文叠图上', () => {
   const hero = locationHeroSrc();
-  assert.match(hero, /aspect-\[9\/16\]/);
+  assert.match(hero, /aspect-\[16\/10\]/);
+  assert.match(hero, /max-h-\[38vh\]/);
   assert.match(hero, /object-cover/);
   assert.doesNotMatch(hero, /object-contain/);
+  assert.doesNotMatch(hero, /aspect-\[9\/16\]/);
   assert.match(hero, /scene-img/);
   assert.match(hero, /外出/);
   assert.match(hero, /overflow-hidden/);
+  assert.match(hero, /data-tour="scene-prose"/);
+  assert.match(hero, /prose/);
+  assert.match(hero, /data-scene-layout="banner"/);
 });
 
-test('LocationHero_无毛玻璃旁白框_无narration入参', () => {
+test('LocationHero_小说fill_竖屏铺满_内容卡用皮肤圆角', () => {
   const hero = locationHeroSrc();
-  assert.doesNotMatch(hero, /backdrop-blur/);
+  assert.match(hero, /data-scene-layout="fill"/);
+  assert.match(hero, /data-novel-card="1"/);
+  assert.match(hero, /novel-read-card/);
+  assert.match(hero, /object-cover/);
+  assert.doesNotMatch(hero, /object-contain/);
+  // 小说内容卡：皮肤变量圆角，不是 mock 粉色矮卡；banner 的 max-w-md 不得进 novelCard 分支
+  const cardBlock = hero.match(/if \(fill && novelCard\) \{[\s\S]*?return \([\s\S]*?\);\s*\}/);
+  assert.ok(cardBlock, '找不到 novelCard 分支');
+  assert.doesNotMatch(cardBlock[0], /max-w-md/);
+  assert.doesNotMatch(cardBlock[0], /aspect-\[16\/10\]/);
+  assert.match(cardBlock[0], /rounded-\[var\(--radius-ui-lg\)\]/);
+  assert.match(cardBlock[0], /bg-paper/);
+  assert.match(cardBlock[0], /\{mapBtn\}/);
+  assert.match(hero, /外出/);
+});
+
+test('LocationHero_无narration入参_无novelKey', () => {
+  const hero = locationHeroSrc();
   assert.doesNotMatch(hero, /\bnarration\b/);
   assert.doesNotMatch(hero, /\bnovelKey\b/);
 });
 
-test('HomeTab_正文在图下累积留屏_图上不传overlay人物条', () => {
+test('HomeTab_小说模式启用fill与内容卡_游戏模式矮横幅', () => {
+  assert.match(home, /playPrefs\.mode === "novel"/);
+  assert.match(home, /isAuthorPreview\(\)/);
+  assert.match(home, /fill=\{novelFill\}/);
+  assert.match(home, /novelCard=\{isNovel\}/);
+  assert.match(home, /novelFill \? "absolute inset-0"/);
   assert.match(home, /data-tour="scene-prose"/);
-  assert.match(home, /正文在图下累积/);
+  assert.match(home, /场景铺满 \+ 内容卡|小说模式铺满|矮场景图 \+ 正文叠在图上/);
   assert.doesNotMatch(home, /overlay=\{peopleStrip/);
   assert.match(home, /peopleStrip\(false\)/);
   assert.match(home, /-mx-4 w-\[calc\(100%\+2rem\)\]/);
   assert.doesNotMatch(home, /function GalPlayer/);
+  assert.doesNotMatch(home, /正文在图下累积/);
 });

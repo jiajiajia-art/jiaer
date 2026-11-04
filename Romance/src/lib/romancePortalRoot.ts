@@ -5,6 +5,7 @@
  *
  * 作者预览时向导壳会 `hidden` 保活草稿，但弹窗绝不能再挂进去——否则建角 Modal
  * 整页 display:none，背后进度卡又 invisible，预览看起来「什么都没有」。
+ * 预览游玩区用 `[data-author-preview-shell]`（局内纸色），优先于暗红平台壳。
  */
 function isUsablePortalHost(el: HTMLElement | null | undefined): el is HTMLElement {
   if (!el) return false;
@@ -21,6 +22,7 @@ function isUsablePortalHost(el: HTMLElement | null | undefined): el is HTMLEleme
 export function romancePortalRoot(): HTMLElement | null {
   if (typeof document === "undefined") return null;
   const prefer = [
+    ...document.querySelectorAll<HTMLElement>("[data-author-preview-shell='1']"),
     ...document.querySelectorAll<HTMLElement>("[data-platform-ui='1']"),
     ...document.querySelectorAll<HTMLElement>(".romance-platform"),
   ];

@@ -514,7 +514,7 @@ export type AvatarPoolToggle = { pick?: boolean; random?: boolean };
 /** 剧本级头像匹配优先级：私人/创作者库 vs 公共库；通用性别兜底。手动锁定始终最高，系统库始终最后。 */
 export type AvatarMatchPrefer = "private" | "public";
 export type AvatarMatchPrefsSlot = {
-  prefer?: AvatarMatchPrefer; // 缺省 = private（平台默认）
+  prefer?: AvatarMatchPrefer; // 缺省 = public（平台默认：玩家未选时公共库优先）
   allowUniversalFallback?: boolean; // 缺省 = true（平台默认）；剧本写过则以剧本为准
 };
 export type AvatarSlot = {
@@ -524,17 +524,21 @@ export type AvatarSlot = {
   match?: AvatarMatchPrefsSlot;
 };
 
-/** 平台默认：私人库优先 + 启用通用兜底（不得覆盖剧本已保存的 match） */
-export const DEFAULT_AVATAR_MATCH_PREFER: AvatarMatchPrefer = "private";
+/** 平台默认：公共库优先 + 启用通用兜底（不得覆盖剧本已保存的 match） */
+export const DEFAULT_AVATAR_MATCH_PREFER: AvatarMatchPrefer = "public";
 export const DEFAULT_AVATAR_ALLOW_UNIVERSAL = true;
 
-/** 功能注释：解析本剧匹配优先级；未配置时回落平台默认，已保存则绝不被平台默认覆盖 */
+/** 功能注释：解析本剧匹配优先级；未配置时回落平台默认（公共库优先），已保存则绝不被平台默认覆盖 */
 export function resolveAvatarMatchPrefs(slot?: AvatarSlot | null): {
   prefer: AvatarMatchPrefer;
   allowUniversalFallback: boolean;
   sourceOrder: Array<"private" | "public" | "system">;
 } {
-  const prefer = slot?.match?.prefer === "public" ? "public" : DEFAULT_AVATAR_MATCH_PREFER;
+  // 功能注释：仅承认显式 private/public；缺省走公共库优先，避免旧「私人优先」默认盖住未配置剧本
+  const prefer =
+    slot?.match?.prefer === "private" || slot?.match?.prefer === "public"
+      ? slot.match.prefer
+      : DEFAULT_AVATAR_MATCH_PREFER;
   // 功能注释：仅当剧本显式写过 allowUniversalFallback 才用其值，否则平台默认 true
   const allowUniversalFallback = slot?.match && Object.prototype.hasOwnProperty.call(slot.match, "allowUniversalFallback")
     ? !!slot.match.allowUniversalFallback

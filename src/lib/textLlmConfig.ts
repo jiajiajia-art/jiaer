@@ -83,6 +83,11 @@ export const TEXT_LLM_USAGE_CATALOG: readonly TextLlmUsageRow[] = [
     label: 'Romance 生成世界（模组补全）',
     description: 'world-gen/complete · 与后台文案模型同一套，不强制豆包',
   },
+  {
+    key: 'romance_play',
+    label: 'Romance 局内叙事 / Studio 预览',
+    description: 'play/complete · 有平台登录时局内回合走同一套文案配置',
+  },
 ];
 
 export function isTextLlmPresetModel(value: unknown): value is TextLlmPresetModel {

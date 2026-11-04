@@ -1,0 +1,147 @@
+/* 功能注释：搜索结果页沿用首页暗色壳与酒红强调，不用金色页签 */
+.pageRoot {
+  --search-accent: #a8283c;
+  --search-label: #8e8e93;
+  --search-text: #ffffff;
+  width: 100%;
+  min-height: 100vh;
+  background: #000000;
+  color: var(--search-text);
+}
+
+/* 功能注释：顶/底栏避让由 AppPageShell 负责，本层只留内容内边距 */
+.main {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 20px 16px 32px;
+  box-sizing: border-box;
+}
+
+.title {
+  margin: 0 0 16px;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.keyword {
+  color: var(--search-accent);
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 20px;
+}
+
+.tab {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--search-label);
+  font-size: 15px;
+  font-weight: 500;
+  padding: 10px 12px 12px;
+  cursor: pointer;
+  position: relative;
+}
+
+.tabActive {
+  color: var(--search-accent);
+  font-weight: 650;
+}
+
+.tabActive::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--search-accent);
+}
+
+.section {
+  margin-bottom: 28px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.viewMore {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--search-label);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  white-space: nowrap;
+}
+
+.viewMore:hover {
+  color: var(--search-text);
+}
+
+.userList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.empty {
+  min-height: 42vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 8px;
+  padding: 40px 16px;
+}
+
+.emptyLine1 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #c7c7cc;
+}
+
+.emptyLine2 {
+  margin: 0;
+  font-size: 13px;
+  color: var(--search-label);
+}
+
+.loading {
+  padding: 40px 0;
+  text-align: center;
+  color: var(--search-label);
+  font-size: 14px;
+}
+
+@media (max-width: 767px) {
+  .main {
+    padding: 16px 16px 24px;
+  }
+
+  .title {
+    font-size: 20px;
+  }
+}

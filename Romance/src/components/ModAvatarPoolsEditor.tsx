@@ -17,9 +17,10 @@ const chk = "flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1 t
 /** 功能注释：块内小标题，刻意低于 Section 级大标题，避免再拆成三块「大标题」 */
 const sub = "text-[11.5px] font-semibold text-ink-soft";
 
+/** 功能注释：开关用深色底+浅字，避免浅粉卡片上浅灰字看不清 */
 function Toggle({ on, label, onChange }: { on: boolean; label: string; onChange: (v: boolean) => void }) {
   return (
-    <label className={`${chk} ${on ? "bg-jade/12 text-jade ring-jade/40" : "bg-paper text-ink-soft ring-line hover:text-ink"}`}>
+    <label className={`${chk} ${on ? "bg-ink text-paper ring-ink" : "bg-ink/75 text-paper/90 ring-ink/40 hover:bg-ink hover:text-paper"}`}>
       <input type="checkbox" className="accent-jade" checked={on} onChange={(e) => onChange(e.target.checked)} />{label}
     </label>
   );
@@ -31,6 +32,8 @@ export default function ModAvatarPoolsEditor({ value, onChange, confirm }: {
 }) {
   const v = value ?? {};
   const [open, setOpen] = useState(false);
+  /** 功能注释：平台公共分类默认收起，点标题才展开青年/成熟/幼年，避免一进编辑器就整屏摊开 */
+  const [publicOpen, setPublicOpen] = useState(false);
   const [lib, setLib] = useState<AvatarPool[]>([]);
   const [name, setName] = useState("");
   const [msg, setMsg] = useState("");
@@ -63,7 +66,11 @@ export default function ModAvatarPoolsEditor({ value, onChange, confirm }: {
   };
 
   const resolved = resolveAvatarMatchPrefs(v);
-  const setMatchPrefer = (prefer: AvatarMatchPrefer) => emit({ ...v, match: { ...v.match, prefer } });
+  /** 功能注释：点「公共库优先」时一并展开平台公共分类，方便立刻勾随机池 */
+  const setMatchPrefer = (prefer: AvatarMatchPrefer) => {
+    if (prefer === "public") setPublicOpen(true);
+    emit({ ...v, match: { ...v.match, prefer } });
+  };
   const setAllowUniversal = (allowUniversalFallback: boolean) => emit({ ...v, match: { ...v.match, allowUniversalFallback } });
   const setToggle = (pool: string, p: Partial<AvatarPoolToggle>) => {
     const t = { ...v.pools?.[pool], ...p };
@@ -113,7 +120,8 @@ export default function ModAvatarPoolsEditor({ value, onChange, confirm }: {
 
   const enabled = Object.keys(v.pools ?? {});
   const missing = open ? enabled.filter((n) => !lib.some((p) => p.name === n)) : [];
-  const pubOn = new Set(v.publicRandom ?? []);
+  // 功能注释：publicRandom 可能是脏对象；非数组按空，禁止 new Set(非数组) → is not iterable
+  const pubOn = new Set(Array.isArray(v.publicRandom) ? v.publicRandom : []);
 
   return (
     <div className="space-y-4 rounded-xl border border-line bg-paper-2 p-3">
@@ -160,7 +168,8 @@ export default function ModAvatarPoolsEditor({ value, onChange, confirm }: {
         <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}
           className="flex w-full items-center gap-2 text-left">
           <span className={sub}>我的头像池</span>
-          <span className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${enabled.length ? "bg-jade/12 text-jade" : "bg-paper text-ink-soft ring-1 ring-line"}`}>
+          {/* 功能注释：深色底状态徽标，替代浅底浅字「未配置」看不清 */}
+          <span className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${enabled.length ? "bg-ink text-paper" : "bg-ink/80 text-paper/95"}`}>
             {enabled.length ? `本剧已开放 ${enabled.length} 个` : "未配置"}
           </span>
           <span className="min-w-0 flex-1 truncate text-right text-[11px] text-ink-soft">{open ? `本机共 ${lib.length} 个池` : "展开后同步跨剧本头像库"}</span>
@@ -216,30 +225,38 @@ export default function ModAvatarPoolsEditor({ value, onChange, confirm }: {
         )}
       </div>
 
-      {/* —— 公库分类：只勾随机池 —— */}
+      {/* —— 公库分类：默认收起，点标题展开后再勾随机池 —— */}
       <div className="space-y-2 border-t border-line/70 pt-3">
-        <div className="flex items-baseline gap-2">
+        <button type="button" onClick={() => setPublicOpen((o) => !o)} aria-expanded={publicOpen}
+          className="flex w-full items-center gap-2 text-left">
           <span className={sub}>平台公共分类</span>
-          <span className="text-[11px] text-ink-soft">{pubOn.size ? `${pubOn.size} 个进随机池` : "未进随机池"}</span>
-        </div>
-        <p className="text-[11px] leading-relaxed text-ink-soft">游玩端「系统头像库」对接平台公共/系统入库头像；勾选「随机池」后参与 AI 新增人脉自动抽图。</p>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {PUBLIC_AVATAR_CATS.map((c) => (
-            <div key={c.id} className="flex items-center gap-2.5 rounded-lg border border-line bg-paper px-2.5 py-2">
-              <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-line bg-paper-2 text-[11px] font-bold text-ink-soft" aria-hidden>
-                {c.name.slice(0, 1)}
+          <span className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${pubOn.size ? "bg-ink text-paper" : "bg-ink/80 text-paper/95"}`}>
+            {pubOn.size ? `${pubOn.size} 个进随机池` : "未进随机池"}
+          </span>
+          <span className="min-w-0 flex-1 truncate text-right text-[11px] text-ink-soft">
+            {publicOpen ? "勾选「随机池」参与 AI 抽图" : "点此展开青年 / 成熟 / 幼年"}
+          </span>
+          <span className={`text-[12px] text-ink-soft transition ${publicOpen ? "rotate-90" : ""}`} aria-hidden>›</span>
+        </button>
+        {publicOpen && (
+          <div className="grid gap-2 sm:grid-cols-2">
+            {PUBLIC_AVATAR_CATS.map((c) => (
+              <div key={c.id} className="flex items-center gap-2.5 rounded-lg border border-line bg-paper px-2.5 py-2">
+                <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-line bg-paper-2 text-[11px] font-bold text-ink-soft" aria-hidden>
+                  {c.name.slice(0, 1)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[12.5px] font-bold text-ink">{c.name}</div>
+                  <div className="truncate text-[10.5px] text-ink-soft">{c.hint} · 图源平台入库</div>
+                </div>
+                <Toggle on={pubOn.has(c.name)} label="随机池" onChange={(x) => {
+                  const s = new Set(pubOn); if (x) s.add(c.name); else s.delete(c.name);
+                  emit({ ...v, publicRandom: PUBLIC_AVATAR_CATS.map((k) => k.name).filter((n) => s.has(n)) });
+                }} />
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-[12.5px] font-bold text-ink">{c.name}</div>
-                <div className="truncate text-[10.5px] text-ink-soft">{c.hint} · 图源平台入库</div>
-              </div>
-              <Toggle on={pubOn.has(c.name)} label="随机池" onChange={(x) => {
-                const s = new Set(pubOn); if (x) s.add(c.name); else s.delete(c.name);
-                emit({ ...v, publicRandom: PUBLIC_AVATAR_CATS.map((k) => k.name).filter((n) => s.has(n)) });
-              }} />
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

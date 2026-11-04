@@ -23,11 +23,13 @@ test('romanceAuthorPreview_编辑器顶栏保存预览_底栏无重复保存', (
   assert.match(editor, />\s*保存\s*</);
   assert.match(editor, />\s*预览\s*</);
   assert.match(editor, /requestAuthorPreview/);
-  assert.match(editor, /保存并返回/);
+  // 功能注释：顶栏只留保存 / 放弃 / 预览；禁止再出现「保存后退出」按钮文案
+  assert.doesNotMatch(editor, /["']保存并返回["']/);
+  assert.doesNotMatch(editor, />\s*保存并返回\s*</);
   assert.match(editor, /放弃/);
   // 顶栏保存/预览须 shrink-0 固定在右侧，避免窄屏被标题挤没（手机端 gap 略紧）
   assert.match(editor, /flex shrink-0 items-center gap-1(?:\.5| sm:gap-1\.5)/);
-  assert.match(editor, /保存入口只放顶栏|顶栏固定「保存 \/ 预览」/);
+  assert.match(editor, /顶栏只留「保存 \/ 放弃 \/ 预览」|顶栏固定「保存 \/ 预览」/);
   assert.match(editor, /保存当前全部修改/);
   assert.match(editor, /启动完整游戏测试/);
   // 桌面模组库仍锁 1200；生成世界传 fluid 随手机视口
@@ -36,10 +38,10 @@ test('romanceAuthorPreview_编辑器顶栏保存预览_底栏无重复保存', (
   assert.match(editor, /fluid\s*\?/);
   assert.match(wizard, /fluid/);
   assert.match(wizard, /overflow-x-hidden/);
-  // 底栏保存条已移除，保存并返回 / 放弃并入顶栏
+  // 底栏保存条已移除；页签下不再放设置项搜索框
   assert.doesNotMatch(editor, /sticky bottom-0/);
-  assert.match(editor, /保存入口只放顶栏/);
-  assert.match(editor, /dirty \|\| !persisted \? "保存并返回" : "返回"/);
+  assert.doesNotMatch(editor, /placeholder="搜索设置项/);
+  assert.doesNotMatch(editor, /dirty \|\| !persisted \? "保存并返回" : "返回"/);
 
   assert.match(preview, /AUTHOR_PREVIEW_GAME_ID/);
   assert.match(preview, /assessAuthorPreview/);
@@ -62,13 +64,15 @@ test('romanceAuthorPreview_编辑器顶栏保存预览_底栏无重复保存', (
   assert.match(registry, /if \(authorPreviewMod\)/);
   assert.match(app, /AuthorPreviewChrome/);
   assert.match(app, /subscribeAuthorPreview|getAuthorPreviewSession/);
-  // 功能注释：预览时向导壳 hidden 且不带 data-platform-ui；游玩区另挂可见平台壳，建角 Modal 才能显示
+  // 功能注释：预览时向导壳 hidden；游玩区用局内纸色壳（非 romance-platform），建角 Modal 挂 data-author-preview-shell
   assert.match(app, /previewing \? "hidden" : "romance-platform min-h-screen"/);
   assert.match(app, /\.\.\.\(previewing \? \{\} : \{ ["']data-platform-ui["']: ["']1["'] \}\)/);
-  assert.match(app, /previewing \?[\s\S]{0,600}data-platform-ui="1"[\s\S]{0,400}PlayScreens/);
-  assert.match(app, /className="romance-platform min-h-screen"[\s\S]{0,120}data-platform-ui="1"/);
+  assert.match(app, /author-preview-runtime/);
+  assert.match(app, /data-author-preview-shell="1"/);
+  assert.doesNotMatch(app, /previewing \?[\s\S]{0,200}className="romance-platform min-h-screen"[\s\S]{0,80}data-platform-ui="1"/);
   assert.match(app, /AuthorPreviewPlayShell/);
-  assert.match(app, /data-author-preview-shell/);
+  const portal = readFileSync(join(romance, 'lib/romancePortalRoot.ts'), 'utf8');
+  assert.match(portal, /data-author-preview-shell='1'/);
   const panel = readFileSync(join(romance, 'components/ModEditorPanel.tsx'), 'utf8');
   assert.match(panel, /requestAuthorPreview\(out/);
   assert.match(panel, /backToWizard/);

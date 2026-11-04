@@ -28,6 +28,11 @@ test('AddPlayModModal_点条目进详情且添加按钮含依赖文案', () => {
   // 列表行用 li+role=button，添加用独立 button + stopPropagation
   assert.match(modal, /role="button"/);
   assert.match(modal, /aria-label=\{`查看「\$\{item\.name\}」详情`\}/);
+  // 功能注释：货架筛选保留；分类切换与搜索去掉
+  assert.match(modal, /推荐.*最新.*最热.*免费.*已购买.*已安装|ShelfTab/);
+  assert.match(modal, /\["推荐", "最新", "最热", "免费", "已购买", "已安装"\]/);
+  assert.doesNotMatch(modal, /placeholder="搜索玩法/);
+  assert.doesNotMatch(modal, /setKind/);
 });
 
 test('playModCatalog_每项须有作者下载量详细说明与预览图', async () => {

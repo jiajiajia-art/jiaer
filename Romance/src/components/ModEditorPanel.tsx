@@ -33,8 +33,14 @@ import { perkKeyOptions } from "../game/perkKeys";
 import ModWorldBookEditor from "./ModWorldBookEditor";
 import ModRelationsEditor from "./ModRelationsEditor";
 import ImagePicker from "./ImagePicker";
+import { buildNpcAvatarPrompt } from "../lib/editorImagePrompts";
 import { LIVE_PEOPLE } from "../mods/registry";
 import { foldLoreFestivalsIntoWorldBook, worldBookMissingDepsErrors } from "../lib/worldBookDeps";
+import {
+  humanizeSaveError,
+  prepareModForSave,
+  resolveSaveErrorJump,
+} from "../lib/modSaveHeal";
 import FixedEventsPanel from "./FixedEventsPanel";
 import ContactsPanel from "./ContactsPanel";
 import EndingsPanel from "./EndingsPanel";
@@ -127,8 +133,8 @@ export function blankMod(kind: ModKind): Mod {
 /* 编辑器分组：玩法并入①基础；外观归「⑤ 美化」。
  * 功能注释：不再提供「全部」页签与独立「玩法 Mod」页；默认停在「① 基础」。搜索关键词仍可跨分组命中区块。 */
 const GROUPS = [
-  { k: "base", label: "① 基础", hint: "作品封面、名称与简介、剧本基调、时间与推进、头像、建角、地点、已添加的玩法" },
-  { k: "role", label: "② 角色", hint: "人物线路、开局人物与关系档位、关系玩法" },
+  { k: "base", label: "① 基础", hint: "作品封面、名称与简介、剧本基调、时间与推进、头像、建角、人物线路、地点、已添加的玩法" },
+  { k: "role", label: "② 角色", hint: "开局人物与关系档位、关系玩法" },
   { k: "grow", label: "③ 养成", hint: "勾选要用的养成模块：课程、打工、账单、玩法规则、引擎结算、扣费依据；分档在建角属性，头衔在玩法 Mod；破产规则在④结局" },
   { k: "story", label: "④ 剧情", hint: "世界书、固定 / 首次事件、剧情线（主线 · 支线 · 结局）" },
   { k: "look", label: "⑤ 美化", hint: "手机外观、皮肤美化、音乐、开场页外观、剧情美化、底栏样式" },
@@ -149,13 +155,14 @@ function groupFilled(c: Mod["content"], skinOn = false): Record<Exclude<GroupKey
       has(c.startDate) || has(c.travel?.apPerTurn) || has(c.travel?.advanceUnit),
       has(c.avatars),
       has(c.customAttrs) || has(c.creation?.fields) || has(c.creation?.builtin) || c.startMoney !== undefined,
+      has(c.creation?.paths),
       has(c.startRoom) || has(c.rooms),
       has(c.playModInstalls),
       has(c.travel) || has(c.cars),
       has(c.gigs) || has(c.gigPrices) || has(c.contracts) || has(c.projects) || has(c.industry),
       has(c.imageCrisis) || has(c.weeklyPaper) || has(c.meals) || has(c.pregnancy) || has(c.titles),
     ),
-    role: n(has(c.creation?.paths), has(c.npcs), has(c.relations), has(c.contacts)),
+    role: n(has(c.npcs), has(c.relations), has(c.contacts)),
     // 功能注释：扣费依据在养成；透支/破产规则在④结局；开局资金已并进①基础·建角
     grow: n(has(c.growModules), has(c.trainings), has(c.sideJobs) || has(c.weekendActs), has(c.bills) || has(c.income), has(c.gameRules), has(c.tuning)),
     story: n(has(c.worldBook), has(c.fixedEvents) || has(c.events), has(c.storylines) || has(c.sidelines) || has(c.endings) || has(c.timeLimit) || has(c.gradeDims)),
@@ -330,6 +337,9 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
   const filled = useMemo(() => groupFilled(m.content, has(m.ext?.skin)), [m.content, m.ext?.skin]);
   const [q, setQ] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
+  const [errorsExpanded, setErrorsExpanded] = useState(false);
+  /** 功能注释：保存自愈说明（补 id / 停用未挂靠世界书），成功后短时展示，不挡保存 */
+  const [healNotes, setHealNotes] = useState<string[]>([]);
   const [npcQ, setNpcQ] = useState("");
   const [confirm, confirmEl] = useConfirm();
   const dirty = JSON.stringify(m) !== baseline;
@@ -347,8 +357,10 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
     if (resumeDraftChoice === "continue") {
       const row = draft.restore();
       if (!row) return;
-      setMRaw(lockId(structuredClone(row.value)));
-      liveCb.current?.(lockId(structuredClone(row.value)));
+      // 功能注释：本机草稿可能早于自愈逻辑；恢复时再 sanitize，避免缺 branches / 脏 opening 拦保存
+      const restored = lockId(sanitizeModStrings(structuredClone(row.value)));
+      setMRaw(restored);
+      liveCb.current?.(structuredClone(restored));
       setRev((r) => r + 1);
       if (row.cursor?.group) setGroup(normalizeGroup(row.cursor.group));
       else if (initialGroup) setGroup(normalizeGroup(initialGroup));
@@ -581,6 +593,28 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
     delete out.builtin;
     return out;
   };
+  /** 功能注释：点保存错误项 → 切到对应页签并滚到区块（对齐必填弹窗定位体验） */
+  const goSaveError = (raw: string) => {
+    const jump = resolveSaveErrorJump(raw);
+    if (!jump) return;
+    setGroup(jump.group);
+    setQ("");
+    window.setTimeout(() => {
+      if (!jump.target) {
+        rootRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+        return;
+      }
+      // 功能注释：优先区块 details，其次 author-field（开局资金等嵌在建角列表里）
+      const section =
+        rootRef.current?.querySelector<HTMLElement>(`[data-author-section="${jump.target}"]`)
+        ?? rootRef.current?.querySelector<HTMLElement>(`[data-author-field="${jump.target}"]`);
+      section?.scrollIntoView({ block: "center", behavior: "smooth" });
+      if (section && section.tagName === "DETAILS" && !(section as HTMLDetailsElement).open) {
+        (section as HTMLDetailsElement).open = true;
+      }
+    }, 60);
+  };
+
   const save = (stay = false) => {
     // 功能注释：留在编辑器的“保存”允许存草稿；离开编辑器视为发布，必须与预览走同一套必填检查。
     if (!stay && blockIfRequiredMissing("发布")) return false;
@@ -594,12 +628,19 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
       npcs.some((n) => !String(n.name ?? "").trim()) ? "有人物未填写名字" : "",
       npcs.some((n) => !(typeof n.age === "number" && n.age >= 0)) ? `人物年龄必填：${npcs.filter((n) => !(typeof n.age === "number" && n.age >= 0)).map((n) => n.name || n.id).join("、")}` : "",
       npcs.some((n) => !String(n.gender ?? "").trim()) ? `人物性别必填：${npcs.filter((n) => !String(n.gender ?? "").trim()).map((n) => n.name || n.id).join("、")}` : "",
-      ...worldBookMissingDepsErrors(c.worldBook)].filter(Boolean) as string[];
-    const out = clean();
+    ].filter(Boolean) as string[];
+    const cleaned = clean();
+    // 功能注释：不可变自愈（含 null 槽）；旧就地写法会跳过 null，validateMod 仍报缺 id
+    const { mod: out, notes: healed } = prepareModForSave(cleaned);
     const errs = [...local, ...worldBookMissingDepsErrors(out.content.worldBook), ...validateMod(out)];
-    if (errs.length) { setErrors([...new Set(errs)]); return false; }
+    if (errs.length) {
+      setHealNotes([]);
+      setErrorsExpanded(false);
+      setErrors([...new Set(errs)]);
+      return false;
+    }
     const r = importModJson(JSON.stringify(out));
-    if (!r.ok) { setErrors(r.errors); return false; }
+    if (!r.ok) { setErrors(r.errors); setHealNotes([]); return false; }
     draft.clear();
     // 功能注释：保存成功才把清洗后的版本交给上层作「已保存」基线；未保存填写不得冒充作品
     onCommitted?.(out);
@@ -609,6 +650,8 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
     writeSavedVersionAt("mod.new", committedAt);
     if (!stay) { onClose(out.name, out.id); return true; }
     setErrors([]);
+    setErrorsExpanded(false);
+    setHealNotes(healed);
     setBaseline(JSON.stringify(out));
     setMRaw(out);
     setPersisted(true);
@@ -747,7 +790,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
             {persisted ? `编辑「${m.name || initial.name}」` : "创建世界"}
           </span>
           <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
-            {/* 功能注释：保存入口只放顶栏；原底栏「保存并返回 / 放弃」并入此处，避免双入口 */}
+            {/* 功能注释：顶栏只留「保存 / 放弃 / 预览」；已去掉「保存后退出」按钮，退出用左侧‹返回 */}
             <button
               type="button"
               onClick={() => save(true)}
@@ -756,14 +799,6 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
               className="rounded-full bg-jade px-2.5 py-1.5 text-[12px] font-bold text-white transition disabled:opacity-40 sm:px-3.5 sm:text-[12.5px]"
             >
               保存
-            </button>
-            <button
-              type="button"
-              onClick={() => (dirty || !persisted ? save(false) : onClose(savedName))}
-              title={dirty || !persisted ? "保存并退出编辑器" : "返回上一页"}
-              className="rounded-full border border-jade px-2.5 py-1.5 text-[12px] font-bold text-jade transition hover:bg-jade/10 sm:px-3 sm:text-[12.5px]"
-            >
-              {dirty || !persisted ? "保存并返回" : "返回"}
             </button>
             {dirty ? (
               <button type="button" className={`${btn} !text-ink-soft`} onClick={() => void cancel()} title="放弃未保存修改">
@@ -792,13 +827,69 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
           ) : null}
           <Dirty on={dirty} />
         </div>
-        {errors.length > 0 && (
-          <div role="alert" className="max-h-32 overflow-y-auto rounded-xl border border-danger/50 bg-danger/10 px-3 py-2 text-[12px] text-danger">
-            <div className="flex items-center justify-between gap-2">
-              <b>还有 {errors.length} 处需要修改才能保存：</b>
-              <button type="button" onClick={() => setErrors([])} aria-label="关闭提示" className="px-1 text-[14px] leading-none hover:text-ink">×</button>
+        {healNotes.length > 0 && errors.length === 0 ? (
+          <div
+            role="status"
+            className="rounded-xl border border-jade/35 bg-jade/10 px-3 py-2 text-[12px] text-jade"
+            data-save-heal-notes="1"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <b className="font-bold">已自动处理好 {healNotes.length} 处，可以继续编辑</b>
+                <ul className="mt-1 space-y-0.5 text-[11.5px] text-jade/90">
+                  {(errorsExpanded ? healNotes : healNotes.slice(0, 3)).map((n, i) => (
+                    <li key={i}>· {n}</li>
+                  ))}
+                </ul>
+                {healNotes.length > 3 ? (
+                  <button
+                    type="button"
+                    className="mt-1 text-[11px] font-semibold underline-offset-2 hover:underline"
+                    onClick={() => setErrorsExpanded((v) => !v)}
+                  >
+                    {errorsExpanded ? "收起" : `展开其余 ${healNotes.length - 3} 条`}
+                  </button>
+                ) : null}
+              </div>
+              <button type="button" onClick={() => setHealNotes([])} aria-label="关闭提示" className="px-1 text-[14px] leading-none hover:text-ink">×</button>
             </div>
-            <ul className="mt-1 space-y-0.5">{errors.map((e, i) => <li key={i}>· {e}</li>)}</ul>
+          </div>
+        ) : null}
+        {errors.length > 0 && (
+          <div
+            role="alert"
+            className="rounded-2xl border border-line bg-paper px-3 py-2.5 shadow-sm"
+            data-save-error-banner="1"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-[12.5px] font-bold text-ink">还差 {errors.length} 处才能保存</p>
+                <p className="mt-0.5 text-[11px] text-ink-soft">点下面条目可跳到对应栏目修改</p>
+              </div>
+              <button type="button" onClick={() => { setErrors([]); setErrorsExpanded(false); }} aria-label="关闭提示" className="rounded-lg px-1.5 text-[14px] leading-none text-ink-soft hover:bg-paper-2 hover:text-ink">×</button>
+            </div>
+            <div className="mt-2 space-y-1.5">
+              {(errorsExpanded ? errors : errors.slice(0, 4)).map((e, i) => (
+                <button
+                  key={`${i}-${e}`}
+                  type="button"
+                  onClick={() => goSaveError(e)}
+                  className="flex w-full items-center justify-between gap-2 rounded-xl border border-line bg-paper-2 px-3 py-2 text-left text-[12.5px] font-semibold text-ink transition hover:border-jade hover:text-jade"
+                >
+                  <span className="min-w-0 flex-1 leading-snug">{humanizeSaveError(e)}</span>
+                  <span aria-hidden className="shrink-0 text-ink-soft">›</span>
+                </button>
+              ))}
+            </div>
+            {errors.length > 4 ? (
+              <button
+                type="button"
+                className="mt-2 text-[11.5px] font-semibold text-jade underline-offset-2 hover:underline"
+                onClick={() => setErrorsExpanded((v) => !v)}
+              >
+                {errorsExpanded ? "收起" : `展开其余 ${errors.length - 4} 条`}
+              </button>
+            ) : null}
           </div>
         )}
       </div>
@@ -836,7 +927,8 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
               onClick={() => {
                 const row = draft.restore();
                 if (!row) return;
-                setM(lockId(structuredClone(row.value)));
+                // 功能注释：本机草稿可能缺 branches / 脏 opening；恢复时 sanitize，避免保存被拦
+                setM(lockId(sanitizeModStrings(structuredClone(row.value))));
                 setRev((r) => r + 1);
                 // 功能注释：只有「继续填写草稿」才回到上次分区/滚动；选完前不得抢跳
                 if (row.cursor?.group) setGroup(normalizeGroup(row.cursor.group));
@@ -879,28 +971,25 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
         </button>
       )}
       {!draft.pending && (
-      <div className="sticky top-0 z-10 -mx-1 space-y-1.5 border-b border-line bg-paper-2/95 px-1 py-2 backdrop-blur">
-        <div className="flex gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]">
-          {GROUPS.filter((x) => x.k !== "pack" || m.kind === "addon").map((x) => {
-            const on = group === x.k && !q;
-            const n = x.k === "pack" ? 0 : filled[x.k];
-            return (
-              <button key={x.k} type="button" onClick={() => goGroup(x.k)} title={x.hint} aria-pressed={on}
-                className={`relative flex shrink-0 items-center gap-1 rounded-full border px-3 py-1 text-[12px] font-bold transition ${on ? "border-jade bg-jade text-white" : "border-line bg-paper text-ink-soft hover:border-jade hover:text-jade"}`}>
-                {x.label}
-                {n > 0 && <span className={`wg-tab-count rounded-full px-1.5 text-[10px] font-bold tabular-nums leading-none ${on ? "is-on" : "bg-jade/12 text-jade"}`}>{n}</span>}
-              </button>
-            );
-          })}
-        </div>
+      <div className="sticky top-0 z-10 -mx-1 border-b border-line bg-paper-2/95 px-1 py-2 backdrop-blur">
+        {/* 功能注释：页签下不再放设置项搜索框；撤销/重做并到页签右侧 */}
         <div className="flex items-center gap-1.5">
-          <div className="min-w-0 flex-1"><SearchBox value={q} onChange={setQ} placeholder="搜索设置项，如「封面」「交通」「属性」…" /></div>
+          <div className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]">
+            {GROUPS.filter((x) => x.k !== "pack" || m.kind === "addon").map((x) => {
+              const on = group === x.k && !q;
+              const n = x.k === "pack" ? 0 : filled[x.k];
+              return (
+                <button key={x.k} type="button" onClick={() => goGroup(x.k)} title={x.hint} aria-pressed={on}
+                  className={`relative flex shrink-0 items-center gap-1 rounded-full border px-3 py-1 text-[12px] font-bold transition ${on ? "border-jade bg-jade text-white" : "border-line bg-paper text-ink-soft hover:border-jade hover:text-jade"}`}>
+                  {x.label}
+                  {n > 0 && <span className={`wg-tab-count rounded-full px-1.5 text-[10px] font-bold tabular-nums leading-none ${on ? "is-on" : "bg-jade/12 text-jade"}`}>{n}</span>}
+                </button>
+              );
+            })}
+          </div>
           <button className={`${btn} shrink-0`} onClick={undo} disabled={!canUndo} title="撤销（Ctrl/⌘+Z）" aria-label="撤销"><IconUndo size={14} /></button>
           <button className={`${btn} shrink-0`} onClick={redo} disabled={!canRedo} title="重做（Ctrl/⌘+Shift+Z）" aria-label="重做"><IconRedo size={14} /></button>
         </div>
-        {!String(q ?? "").trim() && (
-          <p className="text-[11px] leading-snug text-ink-soft">{GROUPS.find((x) => x.k === group)?.hint}</p>
-        )}
       </div>
       )}
       {!draft.pending && (
@@ -921,6 +1010,8 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
           <ModCoverEditor
             value={c.cover}
             modId={m.id}
+            workTitle={m.name}
+            workSummary={m.description}
             onChange={(cover) => {
               // 功能注释：背景写入 content.cover；同步首图到 manifest.cover 供列表/详情/书架
               const url = coverDisplayUrl(cover);
@@ -1091,13 +1182,8 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
             onChange={(startDate) => setC({ startDate })}
           />
           <FieldErr>{dateErr}</FieldErr>
-          {!dateErr && c.startDate && (() => {
-            const [y, mo, d] = c.startDate.split(/[-./]/).map(Number);
-            const dow = (new Date(Date.UTC(y, mo - 1, d)).getUTCDay() + 6) % 7;
-            return <Help>{`这天是周${"一二三四五六日"[dow]}${dow ? `，第 1 周只剩 ${7 - dow} 天（周日结算）` : "，第 1 周完整 7 天"}`}</Help>;
-          })()}
         </div>
-        <Help>格式固定为年.月.日，只选数字。留空 = 沿用引擎或依赖模组默认值；玩家建角时一律使用创作者选的这一天，不可自选。</Help>
+        {/* 功能注释：开局日期下不再挂灰字说明；年/月/日选择本身已够用，建角也不可自选 */}
         <ModTravelEditor part="pace" value={c.travel} rooms={roomIds.map((id) => ({ id, name: rooms[id].name ?? id }))} onChange={(travel) => setC({ travel })} />
       </Section>
 
@@ -1113,11 +1199,12 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
         <ModAvatarPoolsEditor value={c.avatars} onChange={(avatars) => setC({ avatars })} confirm={confirm} />
       </Section>
 
-      {/* 功能注释：建角在①基础、地点之上；属性/开局资金/字段合并为统一「建角字段」列表 */}
+      {/* 功能注释：建角在①基础、地点之上；属性/开局资金/字段合并为统一「建角字段」列表；预览点开局资金可滚到本节 */}
       <Section
         g="base"
         title="建角"
-        on={has(c.customAttrs) || has(c.creation?.fields) || has(c.creation?.builtin) || c.startMoney !== undefined}
+        target="author-field-start-money"
+        on={has(c.customAttrs) || has(c.creation?.fields) || has(c.creation?.builtin) || c.startMoney !== undefined || !!c.moneyLabel}
         hint="建角字段 · 文本/单选/数值/日期/货币 · 开局页只显示这里配过的"
         count={(c.customAttrs?.length ?? 0) + (c.creation?.fields?.length ?? 0) + Object.keys(c.creation?.builtin ?? {}).length + (c.startMoney !== undefined ? 1 : 0) || undefined}
       >
@@ -1131,50 +1218,8 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
           onMoneyLabel={(v) => setC({ moneyLabel: v })} />
       </Section>
 
-      {/* 功能注释：地点名字与出口留在①基础、建角之下；作品展示封面已在基本信息名称上方 */}
-      <Section g="base" title="地点" target="author-field-rooms" on={has(c.rooms) || has(c.startRoom)} hint="多级子地点 · 树状预览 · 准入 · 出口 · 开局地点" count={roomIds.length}>
-        <Help>起始地点请在地点树里点选「设为开局地点」。出行方式请到本页「已添加的玩法」里添加「出行与交通」后配置。</Help>
-        <div data-author-section="author-field-start-room">
-          <ModRoomTreeEditor rooms={rooms} startRoom={c.startRoom} tracks={locationBgmOptions(c, { author: game?.audio ?? [], platform: PLATFORM_AUDIO })}
-            emptyHint={m.kind === "world" ? "世界观至少需要一个地点才能行走。" : "叠加包可不定义地点（沿用世界观地图）。"}
-            onChange={(next, startRoom) => setC({ rooms: next, startRoom })} onDelete={delRoom} onRename={renameRoom} />
-        </div>
-      </Section>
-
-      <Section g="base" title="势力" on={has(c.creation?.startFactions)} hint="①基础统一配置 · 建角可勾选加入 · 人物卡只选所属" count={startFactions.length || undefined}>
-        <p className="mb-2 text-[11px] leading-relaxed text-ink-soft">势力在本页配置；人物编辑里只选择「所属势力」，不要在每个剧本塞娱乐圈专用字段。</p>
-        <div className="space-y-2">
-          {startFactions.map((f, i) => {
-            const put = (p: Partial<StartFaction>) => setStartFactions(startFactions.map((x, j) => (j === i ? { ...x, ...p } : x)));
-            return (
-              <div key={f.id} className="grid gap-1.5 rounded-lg border border-line bg-paper-2/50 p-2">
-                <div className="flex gap-1.5">
-                  <input className={inp} value={f.name} placeholder="势力名称" onChange={(e) => put({ name: e.target.value })} />
-                  <label className="flex shrink-0 items-center gap-1 text-[11px] text-ink-soft">初始声望
-                    <input type="number" min={-100} max={100} className={`${inp} !w-16`} value={f.rep ?? 20}
-                      onChange={(e) => put({ rep: Math.max(-100, Math.min(100, Math.round(Number(e.target.value) || 0))) })} />
-                  </label>
-                  <button type="button" className={btn} onClick={() => setStartFactions(startFactions.filter((_, j) => j !== i))}>删除</button>
-                </div>
-                <textarea rows={2} className={inp} value={f.desc ?? ""} placeholder="势力设定（建角页展示，也作为世界书正文）" onChange={(e) => put({ desc: e.target.value || undefined })} />
-                <input className={inp} key={Array.isArray(f.tags) ? f.tags.join("、") : ""} defaultValue={Array.isArray(f.tags) ? f.tags.join("、") : ""}
-                  placeholder="标签 / 别称，顿号分隔" onBlur={(e) => put({ tags: e.target.value.split(/[、,，]/).map((t) => t.trim()).filter(Boolean) })} />
-              </div>
-            );
-          })}
-          <button type="button" className={btn} onClick={() => setStartFactions([...startFactions, { id: `sf_${Date.now().toString(36)}`, name: "", rep: 20 }])}>＋ 新增势力</button>
-        </div>
-        <label className="mt-2 flex items-center gap-2 text-[11.5px] text-ink-soft">
-          <span className="whitespace-nowrap" aria-label="最多可选">最多可选</span>
-          <input type="number" min={0} className={`${inp} !w-16`} value={c.creation?.factionPickMax ?? ""} placeholder="不限"
-            onChange={(e) => {
-              const n = Math.max(0, Math.round(Number(e.target.value)));
-              setC({ creation: { ...(c.creation ?? {}), factionPickMax: e.target.value && n ? n : undefined } });
-            }} />
-        </label>
-      </Section>
-
-      <Section g="role" title="人物线路" on={has(c.creation?.paths)} hint="建角第一步 · 路径卡片 · 开局加成 · 支持 AI 生成" count={c.creation?.paths?.length || undefined}>
+      {/* 功能注释：人物线路紧挨建角字段下方（①基础），便于先配属性再挂线路依赖 */}
+      <Section g="base" title="人物线路" on={has(c.creation?.paths)} hint="建角第一步 · 路径卡片 · 开局状态 / 地点 / 人际 · 支持 AI 生成" count={c.creation?.paths?.length || undefined}>
         <ModPathsEditor creation={c.creation} identities={c.identities} world={`${m.name}${m.description ? `：${m.description}` : ""}`}
           npcs={(npcs.length ? npcs : LIVE_PEOPLE).map((p) => ({ id: p.id, name: p.name }))}
           rooms={Object.entries(c.rooms ?? {}).map(([id, r]) => ({ id, name: r.name || id }))}
@@ -1223,6 +1268,56 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
         />
       </Section>
 
+      {/* 功能注释：地点名字与出口留在①基础、建角与人物线路之下；作品展示封面已在基本信息名称上方 */}
+      <Section g="base" title="地点" target="author-field-rooms" on={has(c.rooms) || has(c.startRoom) || has(c.worldMaps)} hint="大地图 · 多级地点树 · 准入 · 开局地点" count={roomIds.length}>
+        <Help>起始地点请在地点树里点选「设为开局地点」。出行方式请到本页「已添加的玩法」里添加「出行与交通」后配置。</Help>
+        <div data-author-section="author-field-start-room">
+          <ModRoomTreeEditor
+            rooms={rooms}
+            worldMaps={c.worldMaps}
+            startRoom={c.startRoom}
+            tracks={locationBgmOptions(c, { author: game?.audio ?? [], platform: PLATFORM_AUDIO })}
+            emptyHint={m.kind === "world" ? "世界观至少需要一个地点才能行走。" : "叠加包可不定义地点（沿用世界观地图）。"}
+            onChange={(next, startRoom, nextMaps) => setC({ rooms: next, startRoom, worldMaps: nextMaps })}
+            onDelete={delRoom}
+            onRename={renameRoom}
+          />
+        </div>
+      </Section>
+
+      <Section g="base" title="势力" on={has(c.creation?.startFactions)} hint="①基础统一配置 · 建角可勾选加入 · 人物卡只选所属" count={startFactions.length || undefined}>
+        <p className="mb-2 text-[11px] leading-relaxed text-ink-soft">势力在本页配置；人物编辑里只选择「所属势力」，不要在每个剧本塞娱乐圈专用字段。</p>
+        <div className="space-y-2">
+          {startFactions.map((f, i) => {
+            const put = (p: Partial<StartFaction>) => setStartFactions(startFactions.map((x, j) => (j === i ? { ...x, ...p } : x)));
+            return (
+              <div key={f.id} className="grid gap-1.5 rounded-lg border border-line bg-paper-2/50 p-2">
+                <div className="flex gap-1.5">
+                  <input className={inp} value={f.name} placeholder="势力名称" onChange={(e) => put({ name: e.target.value })} />
+                  <label className="flex shrink-0 items-center gap-1 text-[11px] text-ink-soft">初始声望
+                    <input type="number" min={-100} max={100} className={`${inp} !w-16`} value={f.rep ?? 20}
+                      onChange={(e) => put({ rep: Math.max(-100, Math.min(100, Math.round(Number(e.target.value) || 0))) })} />
+                  </label>
+                  <button type="button" className={btn} onClick={() => setStartFactions(startFactions.filter((_, j) => j !== i))}>删除</button>
+                </div>
+                <textarea rows={2} className={inp} value={f.desc ?? ""} placeholder="势力设定（建角页展示，也作为世界书正文）" onChange={(e) => put({ desc: e.target.value || undefined })} />
+                <input className={inp} key={Array.isArray(f.tags) ? f.tags.join("、") : ""} defaultValue={Array.isArray(f.tags) ? f.tags.join("、") : ""}
+                  placeholder="标签 / 别称，顿号分隔" onBlur={(e) => put({ tags: e.target.value.split(/[、,，]/).map((t) => t.trim()).filter(Boolean) })} />
+              </div>
+            );
+          })}
+          <button type="button" className={btn} onClick={() => setStartFactions([...startFactions, { id: `sf_${Date.now().toString(36)}`, name: "", rep: 20 }])}>＋ 新增势力</button>
+        </div>
+        <label className="mt-2 flex items-center gap-2 text-[11.5px] text-ink-soft">
+          <span className="whitespace-nowrap" aria-label="最多可选">最多可选</span>
+          <input type="number" min={0} className={`${inp} !w-16`} value={c.creation?.factionPickMax ?? ""} placeholder="不限"
+            onChange={(e) => {
+              const n = Math.max(0, Math.round(Number(e.target.value)));
+              setC({ creation: { ...(c.creation ?? {}), factionPickMax: e.target.value && n ? n : undefined } });
+            }} />
+        </label>
+      </Section>
+
       {/* 功能注释：关系档位/卡片数值并在开局人物上方统一配置，不再单独做大人脉页 */}
       <Section g="role" title="人物" on={has(c.npcs) || has(c.contacts)} hint="关系档位 · 卡片数值 · 名字 · 身份 · 标签 · 小传 · 时间线" count={npcs.length || undefined}>
         <datalist id="mod-avatar-variants">{variantNames(c.avatars ?? null).map((x) => <option key={x} value={x} />)}</datalist>
@@ -1261,6 +1356,16 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
               <input type="number" min={-100} max={100} className={`${inp} !w-20`} value={n.init ?? ""} placeholder="0" aria-label="初始好感"
                 onChange={(e) => setNpc(i, { init: e.target.value === "" ? undefined : Math.max(-100, Math.min(100, Math.trunc(Number(e.target.value)))) })} />
             </div>
+            <label className="block">
+              <span className={lbl}>简介 · 一两句人物概要（生图会用到）</span>
+              <input
+                className={inp}
+                value={n.summary ?? ""}
+                placeholder="如：旅馆的老人，对玩家既有敬意也有保留"
+                aria-label="人物简介"
+                onChange={(e) => setNpc(i, { summary: e.target.value || undefined })}
+              />
+            </label>
             <NpcTagsPicker value={n.tags} onChange={(tags) => setNpc(i, { tags })} />
             <div className="flex min-w-0 flex-wrap items-center gap-1.5">
               <select className={`${inp} !w-auto min-w-0 flex-1`} value={n.home} aria-label="所在地点" onChange={(e) => setNpc(i, { home: e.target.value })}>
@@ -1291,7 +1396,10 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
             {!startFactions.length && (
               <p className="text-[10.5px] text-ink-soft">尚未配置势力：请到「① 基础 → 势力」添加后，再为人物选择所属。</p>
             )}
-            <textarea className={`${inp} max-w-full resize-y`} rows={5} value={n.bio} placeholder="人物小传（约 300 字，贴合世界观；供 AI 演绎）" onChange={(e) => setNpc(i, { bio: e.target.value })} />
+            <label className="block">
+              <span className={lbl}>小传 · 贴合世界观（约 300 字；供 AI 演绎与生图）</span>
+              <textarea className={`${inp} max-w-full resize-y`} rows={5} value={n.bio} placeholder="人物小传（约 300 字，贴合世界观；供 AI 演绎）" onChange={(e) => setNpc(i, { bio: e.target.value })} />
+            </label>
             {/* 功能注释：代表作等栏目仅演艺事业玩法显示，避免每个剧本都塞娱乐圈模板 */}
             {showCareerNpcFields && (
               <div className="min-w-0 space-y-1.5 rounded-lg border border-line bg-paper-2 p-2">
@@ -1315,18 +1423,42 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
               <summary className="cursor-pointer text-[12px] font-bold text-ink">时间线 <span className="font-normal text-ink-soft">· {n.timeline?.length ? `${n.timeline.length} 条` : "过去经历与未来安排，随游戏日期推进"}</span></summary>
               <div className="mt-1.5"><TimelineEditor compact value={n.timeline} onChange={(timeline) => setNpc(i, { timeline })} /></div>
             </details>
-            {(() => {
-              const av = n.avatarVariant ?? "";
-              const bad = !!av && !variantNames(c.avatars ?? null).includes(av);
-              return (
-                <label className="block">
-                  <span className={lbl}>头像池 · 开局从同名池抽一张做头像，留空则用首字头像</span>
-                  <input className={`${inp} ${bad ? "!border-danger" : ""}`} list="mod-avatar-variants" value={av} placeholder="如：青年男性"
-                    onChange={(e) => setNpc(i, { avatarVariant: e.target.value || undefined })} />
-                  {bad && <span className="mt-0.5 block text-[10.5px] text-danger">找不到本剧已开放的同名头像池（须完全一致；我的头像池需在上方「头像池」里勾「玩家可选」或「随机池」）</span>}
-                </label>
-              );
-            })()}
+            {/* 功能注释：固定头像走统一 ImagePicker 生图；无图且无池时游玩端仍用首字头像 */}
+            <div className="space-y-1.5">
+              <span className={lbl}>头像 · 生图 / 上传后写入本人物；也可只填头像池名开局抽一张</span>
+              <ImagePicker
+                value={n.avatar}
+                label={`${n.name || "人物"}头像`}
+                max={768}
+                thumb="h-16 w-16"
+                onChange={(avatar) => setNpc(i, { avatar: avatar || undefined })}
+                aiGen={{
+                  size: "1024x1024",
+                  placeholder: "按姓名、性别、年龄、简介与小传生成头像…",
+                  initialPrompt: buildNpcAvatarPrompt({
+                    name: n.name,
+                    gender: n.gender,
+                    age: n.age,
+                    summary: n.summary,
+                    role: n.role,
+                    relation: n.relation,
+                    bio: n.bio,
+                  }) || undefined,
+                }}
+              />
+              {(() => {
+                const av = n.avatarVariant ?? "";
+                const bad = !!av && !variantNames(c.avatars ?? null).includes(av);
+                return (
+                  <label className="block">
+                    <span className={lbl}>头像池 · 无固定头像时开局从同名池抽一张，都没有则用首字头像</span>
+                    <input className={`${inp} ${bad ? "!border-danger" : ""}`} list="mod-avatar-variants" value={av} placeholder="如：青年男性"
+                      onChange={(e) => setNpc(i, { avatarVariant: e.target.value || undefined })} />
+                    {bad && <span className="mt-0.5 block text-[10.5px] text-danger">找不到本剧已开放的同名头像池（须完全一致；我的头像池需在上方「头像池」里勾「玩家可选」或「随机池」）</span>}
+                  </label>
+                );
+              })()}
+            </div>
             <VoiceField label="专属音色" value={n.ttsVoice} gender={n.gender} sample={`我是${n.name || "这个人"}，有事找我？`} onChange={(v) => setNpc(i, { ttsVoice: v || undefined })} />
             <div className="flex flex-wrap gap-x-4 gap-y-1">
               <label className="flex cursor-pointer items-center gap-2 text-[12px] text-ink">
@@ -1439,7 +1571,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
         />
       </Section>
 
-      <Section g="story" title="世界书" on={has(c.worldBook)} hint="名称 · 正文 · 关键词 · 必须挂本作品地点或人物" count={c.worldBook?.length}>
+      <Section g="story" title="世界书" target="world-book" on={has(c.worldBook)} hint="名称 · 正文 · 关键词 · 必须挂本作品地点或人物" count={c.worldBook?.length}>
         <ModWorldBookEditor
           value={c.worldBook}
           onChange={(worldBook) => setC({ worldBook })}
@@ -1448,7 +1580,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
         />
       </Section>
 
-      <Section g="story" title="固定事件" on={has(c.fixedEvents) || has(c.events)} hint="首次事件 · 预设剧本 · 时间 / 条件触发 · 事件链 · 可 AI 帮写 · 开新局写入" count={c.fixedEvents?.length}>
+      <Section g="story" title="固定事件" target="fixed-events" on={has(c.fixedEvents) || has(c.events)} hint="首次事件 · 预设剧本 · 时间 / 条件触发 · 事件链 · 可 AI 帮写 · 开新局写入" count={c.fixedEvents?.length}>
         <Help>「开局即可触发」且无前置锁定的条目即首次事件；勿在其它分组再存一份相同事件表。</Help>
         {/* 功能注释：事件库只传本作品 events/eventGroups；新建为空，禁止回退娱乐圈 123 条预设 */}
         <FixedEventsPanel
@@ -1800,7 +1932,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
         </div>
       )}
       {!draft.pending && (
-        <p className="text-[11px] text-ink-soft">未在当前页展示的内容会原样保留；保存请用顶部「保存 / 保存并返回」（Ctrl/⌘+S）。</p>
+        <p className="text-[11px] text-ink-soft">未在当前页展示的内容会原样保留；保存请用顶部「保存」（Ctrl/⌘+S）。</p>
       )}
     </div>
   );

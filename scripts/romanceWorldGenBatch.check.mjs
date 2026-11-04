@@ -52,7 +52,7 @@ test('worldGenBatch_全部编辑器细项须有大类归属', async () => {
   assert.ok(progress.modules.some((m) => m.id === 'hub:paths' || m.name === '人物线路'));
   assert.ok(progress.modules.some((m) => m.id === 'hub:rules'));
   assert.ok(progress.modules.some((m) => m.id === 'travelTime' || m.name === '时间与推进'));
-  assert.ok(progress.modules.some((m) => m.id === 'opening' || m.name === '开场剧情'));
+  assert.ok(!progress.modules.some((m) => m.id === 'opening'), '开场剧情默认不进生成进度');
   const counts = gen.worldGenBatchProgressCounts(progress.modules);
   assert.equal(counts.total, batchCount);
   assert.equal(counts.finished, 0);

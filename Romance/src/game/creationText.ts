@@ -1,6 +1,7 @@
 import { dayParts } from "./logic";
 import { schoolName, creationCopy } from "./data";
 import { term } from "../mods/registry";
+import { asModArray } from "../lib/asModArray";
 
 /* 建角页文案模板：占位符随世界观自动替换，换世界观无需改写文案。
  * {world} 世界名 · {path} 人物线路 · {city} 城市 · {year} 开局年份 · {season} 季节 · {date} 开局日期
@@ -28,7 +29,8 @@ export function varsFrom(o: { world?: string; path?: string; city?: string; date
     season: m ? SEASON[(m - 1 + 12) % 12] : "",
     date: y ? `${y}.${String(m).padStart(2, "0")}.${String(d).padStart(2, "0")}` : "",
     school: o.school ?? "",
-    openPaths: (o.paths ?? []).filter((p) => p.open && p.name).map((p) => `【${p.name}】`).join("、"),
+    // 功能注释：建角文案占位也读 paths；非数组时按空，禁止 .filter 炸 is not iterable
+    openPaths: asModArray<{ name?: string; open?: boolean }>(o.paths).filter((p) => p.open && p.name).map((p) => `【${p.name}】`).join("、"),
   };
 }
 

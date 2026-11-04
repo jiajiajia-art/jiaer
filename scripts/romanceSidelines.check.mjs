@@ -142,11 +142,12 @@ test('ModEditorPanel_剧情线一页纵向合并_不再拆主线与目标和结�
 
 test('SidelinesEditor_复用条件与奖励组件_空状态文案', () => {
   const ed = read('components/SidelinesEditor.tsx');
-  assert.match(ed, /还没有支线。新建一条，再设定触发、完成和奖励。/);
+  assert.match(ed, /还没有支线。点「新建支线」添加/);
   assert.match(ed, /\bCondRow\b/);
   assert.match(ed, /\bEffectRow\b/);
   assert.match(ed, /\bEventPicks\b/);
   assert.match(ed, /useConfirm/);
+  assert.match(ed, /aria-expanded=\{open\}/);
   assert.doesNotMatch(ed, /window\.confirm|\balert\(/);
 });
 
@@ -192,8 +193,8 @@ test('AI生成向导_主线支线结局合并为单一剧情线步骤_旧结局�
   });
   assert.deepEqual(normalized.editorStepIds, ['storylines']);
   const gen = read('lib/worldGenGenerate.ts');
-  assert.match(gen, /storylines: "storylines\[\]、sidelines\[\]、endings\[\]、timeLimit/);
-  assert.match(gen, /支线：/);
+  assert.match(gen, /禁止写 sidelines/);
+  assert.match(gen, /normalizeWorldGenStorylinesPatch/);
 });
 
 test('引擎接线_日结在主线之后结算支线_条件可读支线_AI读sim进度', () => {

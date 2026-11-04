@@ -120,7 +120,8 @@ export default function AuthorPreviewPlayShell({ children }: { children: ReactNo
   const session = useSyncExternalStore(subscribeAuthorPreview, getAuthorPreviewSession, () => null);
   const boot = useSyncExternalStore(subscribeAuthorPreviewBoot, getAuthorPreviewBoot, () => ({ status: "idle" as const }));
   const missing = session?.mod ? authorPreviewMissingLabels(session.mod) : [];
-  const warnList = [...(session?.warnings ?? [])];
+  // 功能注释：warnings 偶发非数组；先收成数组再展开，禁止预览壳挂载时 is not iterable
+  const warnList = Array.isArray(session?.warnings) ? [...session.warnings] : session?.warnings ? [String(session.warnings)] : [];
 
   const retry = () => requestAuthorPreviewRestart();
   const back = () => requestAuthorPreviewEnd();

@@ -1,6 +1,6 @@
-/* 事件编辑器的细化设定：触发类型 / 「且 · 或」条件组 / 事件链断点 / 分支的隐藏与失败 */
-import type { ChainBreak, CondGroup, EventChoice, EventTrigger, FixedEvent } from "../lib/types";
-import { CondRow, EffectRow, defaultCond, defaultEffect, type QuestOpt } from "./FixedEventsPanel";
+/* 事件编辑器的细化设定：触发类型 / 「且 · 或」条件组 / 事件链断点 */
+import type { ChainBreak, CondGroup, EventTrigger, FixedEvent } from "../lib/types";
+import { CondRow, defaultCond, type QuestOpt } from "./FixedEventsPanel";
 import { LIVE_LOCATIONS as LOCATIONS, LIVE_PEOPLE as PEOPLE, LIVE_ITEMS as ITEMS } from "../mods/registry";
 import { TRIGGER_LABEL } from "../game/eventTriggers";
 import { CHAIN_STATE_LABEL, chainFlag, chainRun } from "../game/fixedEvents";
@@ -182,38 +182,3 @@ export function ChainEditor({ ev, events, game, onChange }: { ev: FixedEvent; ev
   );
 }
 
-/* 选项的细化：隐藏分支 / 条件组 / 成功判定与失败分支 */
-export function ChoiceAdvanced({ c, ev, events, set }: { c: EventChoice; ev: FixedEvent; events: FixedEvent[]; set: (p: Partial<EventChoice>) => void }) {
-  const others = events.filter((o) => o.id !== ev.id);
-  return (
-    <div className="space-y-1.5">
-      <label className="flex items-center gap-1.5 text-[12px] text-ink">
-        <input type="checkbox" className="accent-[var(--jade)]" checked={!!c.hidden} onChange={(e) => set({ hidden: e.target.checked || undefined })} />
-        隐藏分支 <span className="text-[11px] text-ink-soft">不显示选项；事件上演时条件满足就自动走这条</span>
-      </label>
-      <CondLogic x={c} events={events} selfId={ev.id} onChange={(p) => set(p)} />
-      {!c.hidden && (c.check ? (
-        <div className="space-y-1.5 rounded-xl border-l-[3px] border-danger/60 bg-danger/5 py-2 pl-3 pr-2">
-          <GroupEditor g={c.check} events={events} selfId={ev.id} title="成功判定" onChange={(check) => set({ check })} onDelete={() => set({ check: undefined, failPrompt: undefined, failEffects: undefined, failNextIds: undefined })} />
-          <p className="text-[11px] font-bold text-danger">判定不通过 → 失败分支</p>
-          <input className="w-full rounded-lg border border-line bg-paper-2 px-2.5 py-1.5 text-[13px] text-ink" value={c.failPrompt ?? ""} maxLength={200} placeholder="失败时交给 AI 的续写指引，如：被拒之门外" onChange={(x) => set({ failPrompt: x.target.value || undefined })} />
-          {(c.failEffects ?? []).map((f, i) => (
-            <EffectRow key={i} ef={f} onChange={(x) => set({ failEffects: c.failEffects!.map((y, j) => (j === i ? x : y)) })} onDelete={() => { const n = c.failEffects!.filter((_, j) => j !== i); set({ failEffects: n.length ? n : undefined }); }} />
-          ))}
-          <button type="button" className={link} onClick={() => set({ failEffects: [...(c.failEffects ?? []), defaultEffect("metric")] })}>＋ 失败效果</button>
-          {others.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[11px] font-bold text-ink-soft">失败后激活</span>
-              {others.map((o) => { const on = (c.failNextIds ?? []).includes(o.id); return (
-                <button key={o.id} type="button" onClick={() => { const n = on ? c.failNextIds!.filter((x) => x !== o.id) : [...(c.failNextIds ?? []), o.id]; set({ failNextIds: n.length ? n : undefined }); }}
-                  className={`rounded-full border px-2 py-0.5 text-[11.5px] transition ${on ? "border-transparent bg-danger text-white" : "border-line bg-paper-2 text-ink-soft"}`}>{o.name || "（未命名）"}</button>
-              ); })}
-            </div>
-          )}
-        </div>
-      ) : (
-        <button type="button" className={link} onClick={() => set({ check: { match: "all", conds: [defaultCond("stat")] } })}>＋ 成功判定 / 失败分支</button>
-      ))}
-    </div>
-  );
-}

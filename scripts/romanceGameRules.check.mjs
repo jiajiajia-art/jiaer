@@ -19,6 +19,20 @@ test('normalizeRuleBranches_缺分支或单条对象都收成数组', async () =
   assert.equal(normalizeRuleBranches([{ eventId: 'ev_1', effects: [] }])[0].eventId, 'ev_1');
 });
 
+test('sanitizeModStrings_opening字符串或数组须收成对象', async () => {
+  const { sanitizeModStrings } = await import(pathToFileURL(join(romance, 'lib/sanitizeModStrings.ts')).href);
+  const fromStr = sanitizeModStrings({
+    id: 'o1', name: '开场', version: '1.0.0', kind: 'world',
+    content: { opening: '一段开场白' },
+  });
+  assert.deepEqual(fromStr.content.opening, { paragraphs: ['一段开场白'] });
+  const fromArr = sanitizeModStrings({
+    id: 'o2', name: '开场', version: '1.0.0', kind: 'world',
+    content: { opening: ['甲', '乙'] },
+  });
+  assert.deepEqual(fromArr.content.opening, { paragraphs: ['甲', '乙'] });
+});
+
 test('sanitizeModStrings_玩法规则缺branches须补成空数组', async () => {
   const { sanitizeModStrings } = await import(pathToFileURL(join(romance, 'lib/sanitizeModStrings.ts')).href);
   const clean = sanitizeModStrings({

@@ -62,7 +62,10 @@ import { sanitizeModStrings } from "../lib/sanitizeModStrings";
 import { readFunloomAuthToken } from "../lib/platformAvatarLibrary";
 import { discardDraftById, fmtDraftTime, peekDraft, resolveSavedVersionAt, writeSavedVersionAt } from "../lib/useDraft";
 import {
-  commitRomancePlatformDraft,
+  buildRomancePlatformDraftContent,
+  commitRomancePlatformDraftWithContent,
+  fetchRomancePlatformDraftContent,
+  putRomancePlatformDraftContent,
   readRomancePlatformDraftId,
   scheduleRomancePlatformDraftSync,
 } from "../lib/platformRomanceDraft";
@@ -220,6 +223,14 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
     stale: boolean;
   }>(null);
   const [err, setErr] = useState("");
+  /**
+   * 功能注释：书架 resume=1 时先拉本机/平台存档；loading 挡空表单，missing 提示打不开并返回。
+   * 新建（无 resume）直接 idle，允许空第 1 步。
+   */
+  const [resumeLoad, setResumeLoad] = useState<"idle" | "loading" | "missing">(() => {
+    if (!wantsResumeEditor()) return "idle";
+    return boot.resumeMod ? "idle" : "loading";
+  });
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState<WorldGenProgress | null>(null);
   /** 功能注释：已完成项可点开查看生成结果摘要 */
@@ -272,7 +283,7 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
     void importWithStaleChunkReload(() => import("./ModEditorPanel"));
   }, []);
 
-  // 功能注释：trim 恢复仍强制 step1；正常刷新保留 step2 完成态并落盘。IDB 补齐大体积 mod。
+  // 功能注释：trim 恢复仍强制 step1；正常刷新保留 step2 完成态并落盘。IDB / 平台存档补齐大体积 mod。
   useEffect(() => {
     if (isWorldGenTrimRecovering() || isWorldGenPersistBlocked()) {
       demoteWorldGenSessionToStep1(boot.s1);
@@ -281,24 +292,85 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
       setMod(null);
       setDraft(null);
       setStep(1);
+      setResumeLoad("idle");
     } else if (boot.resumeMod && boot.mod && boot.draft) {
       modRef.current = boot.mod;
       draftRef.current = boot.draft;
       // 功能注释：按当前 step 落盘（2=编辑器完成态），禁止再强行写成 step1
       persistNow();
+      setResumeLoad("idle");
     }
     let cancelled = false;
     void (async () => {
-      if (boot.resumeMod && !boot.pendingHeavy) return;
+      // 功能注释：本机已有完整基线则不必再拉平台；仅补 IDB heavy stub
+      if (boot.resumeMod && !boot.pendingHeavy) {
+        setResumeLoad("idle");
+        return;
+      }
       const full = await loadWorldGenSessionAsync();
-      if (cancelled || !full?.mod || !full?.draft) return;
-      const clean = sanitizeModStrings(full.mod);
-      const d = normalizeWorldGenDraft(full.draft);
+      if (cancelled) return;
+      if (full?.mod && full?.draft) {
+        const clean = sanitizeModStrings(full.mod);
+        const d = normalizeWorldGenDraft(full.draft);
+        modRef.current = clean;
+        draftRef.current = d;
+        setMod(clean);
+        setDraft(d);
+        if (full.s1) setS1(normalizeWorldGenStep1(full.s1));
+        if (full.step === 2 || wantsResumeEditor()) setStep(2);
+        setResumeLoad("idle");
+        // 功能注释：本机有存档时后台同步到平台，换设备也能按作品 ID 打开
+        const platformDraftId = readRomancePlatformDraftId();
+        if (platformDraftId) {
+          void putRomancePlatformDraftContent(
+            platformDraftId,
+            buildRomancePlatformDraftContent({
+              mod: clean,
+              draft: d,
+              s1: full.s1 ?? d,
+              updatedAt: full.updatedAt,
+            }),
+          );
+        }
+        return;
+      }
+      // 功能注释：书架 resume 且本机无基线 → 按 draftId 拉平台正文；没有则提示打不开，禁止空新建
+      if (!wantsResumeEditor()) {
+        setResumeLoad("idle");
+        return;
+      }
+      const platformDraftId = readRomancePlatformDraftId();
+      if (!platformDraftId) {
+        setResumeLoad("missing");
+        return;
+      }
+      const remote = await fetchRomancePlatformDraftContent(platformDraftId);
+      if (cancelled) return;
+      if (!remote?.mod || !remote?.draft) {
+        setResumeLoad("missing");
+        return;
+      }
+      const clean = sanitizeModStrings(remote.mod);
+      const d = normalizeWorldGenDraft(remote.draft);
+      const nextS1 = normalizeWorldGenStep1(
+        (remote.s1 as WorldGenStep1) ?? remote.draft,
+      );
       modRef.current = clean;
       draftRef.current = d;
+      setS1(nextS1);
       setMod(clean);
       setDraft(d);
-      if (full.step === 2 || wantsResumeEditor()) setStep(2);
+      setStep(2);
+      saveWorldGenSession({
+        step: 2,
+        s1: nextS1,
+        draft: d,
+        mod: clean,
+        scrollY: 0,
+        editorGroup: undefined,
+        updatedAt: remote.updatedAt || Date.now(),
+      });
+      setResumeLoad("idle");
     })();
     const t = window.setTimeout(() => {
       if (isWorldGenTrimRecovering() || isWorldGenPersistBlocked()) {
@@ -317,7 +389,7 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
       cancelled = true;
       window.clearTimeout(t);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅首屏处理恢复挡板 / IDB 补齐
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅首屏处理恢复挡板 / IDB / 平台补齐
   }, []);
 
   /** 功能注释：编辑器 trim 崩 → 丢弃脏 mod，退回第 1 步并提示重生成 */
@@ -526,6 +598,7 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
     setGenerating(false);
     setProgress(null);
     setStep(2);
+    setResumeLoad("idle");
     // 功能注释：进入编辑器立刻落盘（已保存/已生成基线 + step2）；停留位不写会话
     const at = Date.now();
     writeSavedVersionAt(WORLD_GEN_DRAFT_ID, at);
@@ -538,6 +611,16 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
       editorGroup: undefined,
       updatedAt: at,
     });
+    // 功能注释：生成完成进编辑器就写平台正文，离开向导清本机后书架仍能按 ID 打开
+    const platformDraftId = readRomancePlatformDraftId();
+    if (platformDraftId) {
+      void commitRomancePlatformDraftWithContent(platformDraftId, {
+        title: m.name,
+        mod: m,
+        draft: d,
+        s1,
+      });
+    }
   }, [s1]);
 
   /**
@@ -561,11 +644,18 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
       if (committed.id) writeSavedVersionAt(`mod.${committed.id}`, Date.now());
       schedulePersist();
       const platformDraftId = readRomancePlatformDraftId();
-      if (platformDraftId) {
-        void commitRomancePlatformDraft(platformDraftId, committed.name);
+      const d = draftRef.current;
+      // 功能注释：标题 + 正文一并落平台，书架按 fileId 才能打开这份存档
+      if (platformDraftId && d) {
+        void commitRomancePlatformDraftWithContent(platformDraftId, {
+          title: committed.name,
+          mod: committed,
+          draft: d,
+          s1,
+        });
       }
     },
-    [schedulePersist],
+    [schedulePersist, s1],
   );
 
   /**
@@ -956,6 +1046,30 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
           </div>
         </div>
         {errModal}
+      </div>
+    );
+  }
+
+  // 功能注释：书架续编拉存档中，禁止先露出空「生成世界」表单
+  if (resumeLoad === "loading") {
+    return (
+      <div className="world-gen-shell flex min-h-screen flex-col items-center justify-center px-6 text-center">
+        <p className="text-sm text-ink-soft">正在打开这份作品…</p>
+      </div>
+    );
+  }
+
+  // 功能注释：无本机/平台正文 → 明确打不开，返回书架；禁止当成新建空作品
+  if (resumeLoad === "missing") {
+    return (
+      <div className="world-gen-shell flex min-h-screen flex-col items-center justify-center px-6 text-center">
+        <h1 className="mb-2 font-serif text-xl font-black text-ink">打不开这份存档</h1>
+        <p className="mb-5 max-w-sm text-sm leading-relaxed text-ink-soft">
+          这份草稿还没有保存过可继续编辑的内容，或存档已丢失。请从创作入口重新生成，或换有进度的作品打开。
+        </p>
+        <button type="button" onClick={onBack} className="world-gen-cta">
+          返回书架
+        </button>
       </div>
     );
   }

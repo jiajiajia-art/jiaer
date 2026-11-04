@@ -134,14 +134,32 @@ export default function EndingsPanel({
   const [confirm, confirmEl] = useConfirm();
   if (!modMode && !game) return null;
 
-  /* 功能注释：AI/脏稿常缺 title/body/conds；归一后再渲染与审计，避免④剧情一进就 .length 崩页跳回① */
-  const normalizeEnding = (e: CustomEnding): CustomEnding => ({
-    ...e,
-    title: e.title ?? "",
-    body: e.body ?? "",
-    conds: e.conds ?? [],
-  });
-  const list = (modMode ? (value ?? []) : (game?.customEndings ?? [])).map(normalizeEnding);
+  /* 功能注释：AI/脏稿常缺 title/body/conds，conds 里还会塞 null；归一后再渲染，避免④剧情读 c.kind / .length 崩页 */
+  const normalizeEnding = (e: CustomEnding | null | undefined): CustomEnding | null => {
+    if (!e || typeof e !== "object") return null;
+    const conds = Array.isArray(e.conds) ? e.conds.filter((c): c is NonNullable<typeof c> => !!c && typeof c === "object" && typeof (c as { kind?: unknown }).kind === "string") : [];
+    const condGroups = Array.isArray(e.condGroups)
+      ? e.condGroups
+          .filter((g): g is NonNullable<typeof g> => !!g && typeof g === "object")
+          .map((g) => ({
+            ...g,
+            conds: Array.isArray(g.conds)
+              ? g.conds.filter((c): c is NonNullable<typeof c> => !!c && typeof c === "object" && typeof (c as { kind?: unknown }).kind === "string")
+              : [],
+          }))
+      : undefined;
+    return {
+      ...e,
+      id: typeof e.id === "string" && e.id ? e.id : `end_${Math.random().toString(36).slice(2, 8)}`,
+      title: e.title ?? "",
+      body: e.body ?? "",
+      conds,
+      ...(condGroups?.length ? { condGroups } : { condGroups: undefined }),
+    };
+  };
+  const list = (modMode ? (value ?? []) : (game?.customEndings ?? []))
+    .map(normalizeEnding)
+    .filter((e): e is CustomEnding => !!e);
   const audit = modMode || !game
     ? auditStory({ endings: list, events: eventsValue, storylines: storylinesValue, npcIds: peopleValue?.map((p) => p.id), skip: ["item", "location", "flag", ...(storylinesValue ? [] : (["quest"] as const)), ...(peopleValue ? [] : (["npc"] as const))] })
     : auditGame(game, { endings: list });
@@ -463,6 +481,8 @@ export default function EndingsPanel({
         )}
 
         {dims.map((d) => {
+          // 功能注释：脏评级维度可能缺 src；跳过整行，禁止 d.src.kind 崩④剧情
+          if (!d || !d.src || typeof d.src.kind !== "string") return null;
           const card = dimCards.find((c) => c.id === d.id);
           const known = srcs.some((x) => x.kind === d.src.kind && x.key === d.src.key);
           const nextIcon = DIM_ICON_ORDER[(DIM_ICON_ORDER.indexOf(d.icon) + 1) % DIM_ICON_ORDER.length];

@@ -140,8 +140,8 @@ test('worldGenWizard_校验与内容映射编辑器模块', async () => {
     editorStepIds: ['prompt', 'npcs'],
   };
   assert.equal(mod.validateWorldGenStep1(ok1), null);
-  // 开场剧情已重回基础 AI 勾选，与剧本基调同批勾选须通过
-  assert.equal(mod.validateWorldGenStep1({ ...ok1, editorStepIds: ['prompt', 'opening'] }), null);
+  // 功能注释：开场剧情已移出基础默认；旧勾选 opening 视为扩展玩法不可在此生成
+  assert.equal(mod.validateWorldGenStep1({ ...ok1, editorStepIds: ['prompt', 'opening'] }), '扩展玩法请到编辑器「添加玩法」，不可在此生成');
   // 必须勾选至少一个编辑器模组
   assert.equal(mod.validateWorldGenStep1({ ...ok1, editorStepIds: [] }), '请至少勾选一个模组供 AI 生成');
   assert.equal(mod.validateWorldGenStep1({ ...ok1, title: 'x'.repeat(21) }), '作品名称最多 20 字');
@@ -169,7 +169,7 @@ test('worldGenWizard_校验与内容映射编辑器模块', async () => {
   assert.equal(mod.isWorldGenCoreStep('pregnancy'), false);
   assert.equal(mod.isWorldGenCoreStep('phoneAppsCfg'), false);
   assert.equal(mod.isWorldGenCoreStep('hub:mods'), false);
-  assert.equal(mod.isWorldGenCoreStep('opening'), true);
+  assert.equal(mod.isWorldGenCoreStep('opening'), false);
   assert.equal(mod.ALL_WORLD_GEN_CONTENT_IDS.length, 6);
   const feats = mod.defaultWorldGenFeatureFlags();
   assert.equal(feats.industryTab, false);
@@ -193,7 +193,9 @@ test('worldGenWizard_校验与内容映射编辑器模块', async () => {
   assert.ok(!steps.includes('opening'), 'opening 属开场内容类别，不由 world 内容映射带出');
 
   const openSteps = mod.defaultEditorStepsFromContent(['opening']);
-  assert.ok(openSteps.includes('opening'), '开场剧情须进 AI 勾选');
+  // 功能注释：开场映射仍可带出 opening id，但不进基础默认 / 生成世界勾选
+  assert.ok(openSteps.includes('opening'));
+  assert.ok(!mod.isWorldGenCoreStep('opening'));
   // 开局封面 / 皮肤美化 / 手机应用配置不进 AI 勾选；音乐等仍可映射
   for (const id of ['cover', 'theme', 'phoneAppsCfg']) assert.ok(!openSteps.includes(id), id);
   assert.ok(openSteps.includes('bgm'));
@@ -309,32 +311,34 @@ test('worldGenWizard_第2步须覆盖ModEditorPanel全部可生成Section', asyn
   assert.deepEqual(missing, [], `向导第2步缺少模组编辑器 Section: ${missing.join('、')}`);
 });
 
-test('worldGenWizard_主线支线结局合并剧情线后为36项基础12项', async () => {
+test('worldGenWizard_主线支线结局合并剧情线后为36项基础11项', async () => {
   const mod = await import(pathToFileURL(join(romance, 'lib/worldGenWizard.ts')).href);
   const ids = mod.ALL_WORLD_GEN_EDITOR_STEP_IDS;
   assert.equal(new Set(ids).size, ids.length, '勾选 id 不得重复');
   assert.equal(ids.length, 36);
-  assert.equal(mod.DEFAULT_WORLD_GEN_EDITOR_STEP_IDS.length, 12);
-  assert.equal(mod.EXTENDED_WORLD_GEN_EDITOR_STEP_IDS.length, 24);
+  assert.equal(mod.DEFAULT_WORLD_GEN_EDITOR_STEP_IDS.length, 11);
+  assert.equal(mod.EXTENDED_WORLD_GEN_EDITOR_STEP_IDS.length, 25);
   // 基础默认必须等于分栏里渲染的基础栏
   const tier = mod.groupWorldGenEditorStepsByTier();
   const coreRendered = tier.core.flatMap((g) => g.steps.map((s) => s.id));
   const extRendered = tier.extended.flatMap((g) => g.steps.map((s) => s.id));
   assert.deepEqual([...coreRendered].sort(), [...mod.DEFAULT_WORLD_GEN_EDITOR_STEP_IDS].sort());
   assert.equal(coreRendered.length + extRendered.length, ids.length);
-  // 基础默认 = 基础世界：地点 / 人物 / 世界书 / 建角 / 开局事件 / 开场白等（详细设定·节日已并入 hub:book）
-  for (const id of ['rooms', 'npcs', 'hub:book', 'creation', 'hub:paths', 'fixedEvents', 'prompt', 'opening', 'travelTime']) {
+  // 基础默认 = 基础世界：地点 / 人物 / 世界书 / 建角 / 开局事件等（开场剧情默认不生成）
+  for (const id of ['rooms', 'npcs', 'hub:book', 'creation', 'hub:paths', 'fixedEvents', 'prompt', 'travelTime']) {
     assert.ok(mod.isWorldGenCoreStep(id), id);
   }
+  assert.equal(mod.isWorldGenCoreStep('opening'), false);
   // 玩法组件、孕育、通告、座驾等扩展默认不勾；开局封面等已移出清单
-  for (const id of ['playModInstalls', 'pregnancy', 'gigs', 'cars', 'relations', 'contacts']) {
+  for (const id of ['playModInstalls', 'pregnancy', 'gigs', 'cars', 'relations', 'contacts', 'opening']) {
     assert.equal(mod.isWorldGenCoreStep(id), false, id);
   }
-  // CG、美化默认项与重复 Hub 菜单不得出现在 AI 勾选里；开场剧情已重回基础默认
+  // CG、美化默认项与重复 Hub 菜单不得出现在 AI 勾选里
   for (const id of ['creationPools', 'cover', 'phoneAppsCfg', 'theme', 'hub:cg', 'hub:person', 'hub:map', 'hub:fixed', 'hub:faction', 'hub:beauty', 'hub:nav', 'hub:audio', 'hub:mods', 'hub:engine', 'hub:timeline', 'hub:end']) {
     assert.ok(!ids.includes(id), id);
   }
-  assert.ok(ids.includes('opening'));
+  assert.ok(ids.includes('opening'), '开场剧情仍保留在编辑器步骤表，但不进默认生成');
+  assert.ok(!mod.DEFAULT_WORLD_GEN_EDITOR_STEP_IDS.includes('opening'));
   assert.deepEqual([...mod.WORLD_GEN_NO_AI_BEAUTIFY_STEP_IDS], ['cover', 'phoneAppsCfg', 'theme']);
   assert.ok(!mod.WORLD_GEN_EDITOR_STEPS.some((s) => /开场页外观|粘贴 HTML/.test(s.desc)));
 });
@@ -347,11 +351,11 @@ test('worldGenWizard_旧草稿下架id映射到现行模组_作者勾选不重�
     editorStepIds: ['hub:person', 'npcs', 'hub:map', 'opening', 'hub:cg', 'hub:faction', 'gigs'],
     scopeVersion: 2,
   });
-  // 功能注释：hub 映射保留；opening 为基础默认保留；gigs 属扩展玩法须剥掉
-  assert.deepEqual(n.editorStepIds, ['rooms', 'npcs', 'hub:paths', 'opening']);
-  // 只勾开场剧情时保留 opening，不得被清空成无勾选
+  // 功能注释：hub 映射保留；opening 默认丢弃；gigs 属扩展玩法须剥掉
+  assert.deepEqual(n.editorStepIds, ['rooms', 'npcs', 'hub:paths']);
+  // 只勾开场剧情时回落基础默认（opening 已退休）
   const onlyOpening = mod.normalizeWorldGenStep1({ ...base, editorStepIds: ['opening'], scopeVersion: 2 });
-  assert.deepEqual(onlyOpening.editorStepIds, ['opening']);
+  assert.deepEqual(onlyOpening.editorStepIds, [...mod.DEFAULT_WORLD_GEN_EDITOR_STEP_IDS]);
   // 旧草稿勾过的开局封面 / 手机应用 / 皮肤美化须丢弃；hub:beauty→lookRules 属扩展也剥掉
   const oldBeautify = mod.normalizeWorldGenStep1({
     ...base,

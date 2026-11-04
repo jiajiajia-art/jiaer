@@ -1080,7 +1080,7 @@ export default function Ending({ snap }: { snap?: Snap }) {
             </section>
           </div>
 
-          {/* 返回封面 · 分享给朋友 · 导出图片；导出卡里换成落款 */}
+          {/* 再来一局 · 分享给朋友 · 导出图片；导出卡里换成落款 */}
           {snap ? (
             <p className="mt-8 text-center text-[10px] font-bold tracking-[0.42em] text-[#dba4ba]">
               — THE END —
@@ -1093,7 +1093,7 @@ export default function Ending({ snap }: { snap?: Snap }) {
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  onClick={() => go("cover")}
+                  onClick={() => go("create")}
                   className="end-btn end-btn-pink"
                 >
                   <Glyph
@@ -1105,9 +1105,9 @@ export default function Ending({ snap }: { snap?: Snap }) {
                   />
                   <span className="text-left">
                     <span className="end-round block text-[19px] leading-none sm:text-[22px]">
-                      返回封面
+                      再来一局
                     </span>
-                    <small>BACK TO TITLE</small>
+                    <small>NEW GAME</small>
                   </span>
                 </button>
                 <button

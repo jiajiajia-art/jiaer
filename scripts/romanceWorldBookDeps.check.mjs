@@ -1,5 +1,5 @@
 /**
- * 世界书：必须挂地点/人物；详细设定·节日并入同一份；触发 OR（地点 / 人物 / 关键词）。
+ * 世界书：地点/人物可选；详细设定·节日并入同一份；有依赖时触发 OR（地点 / 人物 / 关键词）。
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -19,9 +19,11 @@ const romance = join(dirname(fileURLToPath(import.meta.url)), '../Romance/src');
 const read = (rel) => readFileSync(join(romance, rel), 'utf8');
 const entNames = /天光小区|启星事务所|浮光影视基地/;
 
-test('worldBookDeps_无依赖不得保存_有依赖通过', () => {
+test('worldBookDeps_无依赖也可保存_有依赖仍可读', () => {
   const bare = { id: 'wb1', title: '雾港', keywords: ['雾'], content: '海边', enabled: true };
-  assert.deepEqual(worldBookMissingDepsErrors([bare]), ['世界书「雾港」未挂地点或人物，不能保存']);
+  // 功能注释：地点/人物已可选，保存校验恒为空
+  assert.deepEqual(worldBookMissingDepsErrors([bare]), []);
+  assert.equal(worldBookHasDeps(bare), false);
   const ok = withWorldBookDeps(bare, ['inn'], []);
   assert.equal(worldBookHasDeps(ok), true);
   assert.deepEqual(worldBookMissingDepsErrors([ok]), []);
@@ -91,18 +93,24 @@ test('WorldBookDepsPicker_空地点提示先去地点添加_不写死娱乐圈�
   const rules = read('components/WorldBookRules.tsx');
   assert.match(rules, /还没有地点。请先去「地点」添加/);
   assert.match(rules, /还没有人物。请先去「人物」添加/);
-  assert.match(rules, /必须挂至少一个地点或人物，否则不能保存/);
+  // 功能注释：地点/人物可选，禁止再写「必须挂…否则不能保存」
+  assert.doesNotMatch(rules, /必须挂至少一个地点或人物，否则不能保存/);
+  assert.match(rules, /所属地点 · 可选/);
+  assert.match(rules, /所属人物 · 可选/);
   assert.doesNotMatch(rules, entNames);
   assert.doesNotMatch(rules, /LIVE_LOCATIONS/);
   const panel = read('components/WorldBookPanel.tsx');
   assert.match(panel, /getWorld\(\)\.content\.rooms/);
-  assert.match(panel, /未挂地点或人物，不能保存/);
+  assert.doesNotMatch(panel, /未挂地点或人物，不能保存/);
+  assert.doesNotMatch(panel, /必须挂本作品地点或人物/);
   assert.doesNotMatch(panel, /LIVE_LOCATIONS/);
   assert.doesNotMatch(panel, entNames);
   const modWb = read('components/ModWorldBookEditor.tsx');
-  assert.match(modWb, /worldBookHasDeps/);
-  assert.match(modWb, /requireDeps/);
+  assert.doesNotMatch(modWb, /未挂依赖 · 不能保存/);
+  assert.doesNotMatch(modWb, /必须挂本作品地点或人物/);
   assert.doesNotMatch(modWb, entNames);
+  const audit = read('game/refAudit.ts');
+  assert.doesNotMatch(audit, /未挂本作品的地点或人物，保存模组前须补挂/);
 });
 
 test('ai_不再单独注入loreBlock与festivalBlock', () => {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   STAT_LABELS, STAT_ORDER, creationCopy, loadPathLocks, savePathLock, clearPathLocks,
-  type CreationCopy, type CreationPath, type Option, type PathCardPart, type PathNpc,
+  type CreationCopy, type CreationPath, type Option, type PathNpc,
 } from "../game/data";
 import { complete, isConfigured } from "../lib/ai";
 import { loadConfig } from "../lib/store";
@@ -16,6 +16,7 @@ import {
   defaultPathLockCond,
   formatPathLockHint,
   PATH_LOCK_COND_KINDS,
+  sanitizePathAttrNames,
   sanitizePathLockConds,
   type PathDepPools,
   type PathLockCondKind,
@@ -40,18 +41,60 @@ function EventPick({ value, events, onChange }: { value?: string; events: { id: 
   );
 }
 
-/* 模组编辑器 · 人物线路：建角第一步的路径卡片（creation.paths）+ 对应的开局数值加成（identities，id 一一对应）。
- * 可手动逐条配置，也可让 AI 按世界观一键生成整套路径。 */
+/**
+ * 功能注释：可变/固定展示项只能从本作品属性里多选，禁止手填；存的是属性显示名。
+ */
+function AttrNamePick({ title, hint, value, options, onChange }: {
+  title: string; hint: string; value: string[]; options: { id: string; label: string }[]; onChange: (v: string[]) => void;
+}) {
+  const cleaned = sanitizePathAttrNames(value, options);
+  const taken = new Set(cleaned);
+  const unused = options.filter((o) => !taken.has(o.label) && !taken.has(o.id));
+  return (
+    <div className="space-y-1">
+      <p className="text-[11px] text-ink-soft"><b className="font-semibold text-ink">{title}</b> · {hint}</p>
+      <select
+        className={inp}
+        value=""
+        aria-label={title}
+        disabled={!unused.length}
+        onChange={(e) => {
+          const next = e.target.value;
+          if (!next) return;
+          onChange(sanitizePathAttrNames([...cleaned, next], options));
+          e.target.value = "";
+        }}
+      >
+        <option value="">{options.length ? "＋ 选择属性…" : "请先在建角字段添加属性"}</option>
+        {unused.map((o) => <option key={o.id} value={o.label}>{o.label}</option>)}
+      </select>
+      {cleaned.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {cleaned.map((name) => (
+            <button
+              key={name}
+              type="button"
+              className="inline-flex items-center gap-1 rounded-full border border-ink/25 bg-ink/5 px-2 py-0.5 text-[10.5px] font-semibold text-ink"
+              onClick={() => onChange(cleaned.filter((x) => x !== name))}
+              aria-label={`移除 ${name}`}
+            >
+              {name}<IconClose size={11} />
+            </button>
+          ))}
+        </div>
+      )}
+      {!options.length && <p className="text-[10.5px] text-gold">本作品还没有属性，请先在上方「建角字段」里添加。</p>}
+      {!!options.length && !cleaned.length && <p className="text-[10.5px] text-ink-soft/80">（可选 · 从下拉选择本作品属性）</p>}
+    </div>
+  );
+}
+
+/* 模组编辑器 · 人物线路：建角第一步的路径卡片（creation.paths）+ 对应的开局加成（identities，id 一一对应）。
+ * 可手动逐条配置，也可让 AI 按世界观一键生成整套路径。
+ * 功能注释：不再提供开局弹窗/展示块开关——多路径开局自动弹窗（只露路径名+开局处境），单路径直接用。 */
 const inp = "min-w-0 w-full rounded-lg border border-line bg-paper px-2 py-1 text-[12.5px] text-ink outline-none focus:border-jade";
 const btn = "rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40";
-const lines = (s: string) => s.split("\n").map((x) => x.trim()).filter(Boolean);
 const num = (v: unknown) => Math.round(Number(v) || 0);
-
-/* 弹窗卡片里可以对玩家隐藏的内容块 */
-const CARD_PARTS: { k: PathCardPart; label: string }[] = [
-  { k: "about", label: "开局处境" }, { k: "choose", label: "可自由决定" }, { k: "fixed", label: "固定不可改" },
-  { k: "perks", label: "开局数值" }, { k: "npcs", label: "开局人际" }, { k: "soon", label: "未解锁路径" },
-];
 
 export default function ModPathsEditor({ creation, identities, world, npcs = [], rooms = [], events = [], statsValue, attrsValue, onChange, onMergeNpcs }: {
   creation?: CreationCopy; identities?: Option[]; world: string;
@@ -68,7 +111,20 @@ export default function ModPathsEditor({ creation, identities, world, npcs = [],
   const pool = [...new Set(srcList.map((s) => s.label))];
   rooms = rooms.length ? rooms : LIVE_LOCATIONS.map((l) => ({ id: l.id, name: l.name })); // 模组没自建地点时用依赖世界的地图
   const peopleOpts = npcs.length ? npcs : LIVE_PEOPLE.map((p) => ({ id: p.id, name: p.name }));
-  // 功能注释：线路解锁/开局数值共用依赖池；选项必须来自本作品配置
+  // 功能注释：可变/固定只能挂建角字段里已有的属性（显示名）；解锁条件另用 depPools
+  const attrOpts = (() => {
+    const out: { id: string; label: string }[] = [];
+    const seen = new Set<string>();
+    for (const a of attrsValue ?? []) {
+      const label = String(a?.label || a?.id || "").trim();
+      const id = String(a?.id || label).trim();
+      if (!label || seen.has(label)) continue;
+      seen.add(label);
+      out.push({ id, label });
+    }
+    return out;
+  })();
+  // 功能注释：线路解锁共用依赖池；选项必须来自本作品配置
   const depPools: PathDepPools = {
     stats: STAT_ORDER.map((k) => ({ id: k, label: STAT_LABELS[k] || k })),
     metrics: srcList.filter((s) => s.kind === "metric").map((s) => ({ id: s.key, label: s.label })),
@@ -99,7 +155,7 @@ export default function ModPathsEditor({ creation, identities, world, npcs = [],
       const forbidBlock = String(getWorld().content.prompt?.extraRules ?? "").trim();
       const raw = await complete(cfg, [
         { role: "system", content: "你是女性向模拟游戏的剧情与数值策划。只输出 JSON，不要任何解释或代码块标记。" },
-        { role: "user", content: `为下面的世界观设计「人物线路」，并一并生成相关人物完整资料。\n世界观：${world}\n${forbidBlock ? `${forbidBlock}\n以上禁止项不得出现在线路或人物资料中。\n` : ""}本世界已有的属性 / 词条名（fx 的 name 必须从这里选）：${pool.join("、") || "无"}\n${platformNpcTagsPromptLine()}\n输出格式：{"paths":[{"id":"英文id","name":"路径名","tag":"短标签","blurb":"卖点","about":"开局处境","fixed":[],"choose":[],"fx":{"attr":[{"name":"属性名","val":整数}],"favor":[{"target":"人物名","val":整数}],"reputation":[{"name":"词条","val":整数}],"note":"概括"},"hero":"人物id或空","room":"地点id或空","eventId":"事件id或空","memory":"前置记忆"}],"npcs":[{"id":"与hero或favor对应的英文id","name":"姓名","role":"身份","kind":"roam或staff","home":"地点id","roam":[],"gender":"男|女|其他","age":整数,"bio":"约300字活人小传，贴合世界观","tags":["标签"],"relation":"与主角关系","metStart":true}]}\n要求：3~5 条路径；每条涉及的关键人物都必须出现在 npcs 里且 name/gender/age/bio 齐全，bio 约 300 字禁止空着；favor.target 用人物名。\n已有人物（可沿用 id）：${peopleOpts.map((n) => `${n.id}=${n.name}`).join("，") || "无"}\n地点：${rooms.map((r) => `${r.id}=${r.name}`).join("，") || "无"}\n事件：${events.map((e) => `${e.id}=${e.name}`).join("，") || "无"}` },
+        { role: "user", content: `为下面的世界观设计「人物线路」，并一并生成相关人物完整资料。\n世界观：${world}\n${forbidBlock ? `${forbidBlock}\n以上禁止项不得出现在线路或人物资料中。\n` : ""}本世界已有的属性名（fixed / choose / fx.attr / fx.reputation 的 name 必须从这里选，禁止手填野名）：${attrOpts.map((a) => a.label).join("、") || pool.join("、") || "无"}\n${platformNpcTagsPromptLine()}\n输出格式：{"paths":[{"id":"英文id","name":"路径名","tag":"短标签","blurb":"卖点","about":"开局处境","fixed":["属性名"],"choose":["属性名"],"fx":{"attr":[{"name":"属性名","val":整数}],"favor":[{"target":"人物名","val":整数}],"reputation":[{"name":"词条","val":整数}],"note":"概括"},"hero":"人物id或空","room":"地点id或空","eventId":"事件id或空","memory":"前置记忆"}],"npcs":[{"id":"与hero或favor对应的英文id","name":"姓名","role":"身份","kind":"roam或staff","home":"地点id","roam":[],"gender":"男|女|其他","age":整数,"bio":"约300字活人小传，贴合世界观","tags":["标签"],"relation":"与主角关系","metStart":true}]}\n要求：3~5 条路径；每条涉及的关键人物都必须出现在 npcs 里且 name/gender/age/bio 齐全，bio 约 300 字禁止空着；favor.target 用人物名；fixed/choose 只能填上方已有属性名。\n已有人物（可沿用 id）：${peopleOpts.map((n) => `${n.id}=${n.name}`).join("，") || "无"}\n地点：${rooms.map((r) => `${r.id}=${r.name}`).join("，") || "无"}\n事件：${events.map((e) => `${e.id}=${e.name}`).join("，") || "无"}` },
       ]);
       const j = JSON.parse(raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1)) as {
         paths?: (Partial<CreationPath> & { fx?: unknown })[];
@@ -132,7 +188,10 @@ export default function ModPathsEditor({ creation, identities, world, npcs = [],
       const peopleForFx = [...peopleOpts, ...generatedPeople.map((n) => ({ id: n.id, name: n.name }))];
       const np: CreationPath[] = list.map((p, i) => ({
         id: (p.id || `path${i}`).toLowerCase().replace(/[^a-z0-9_-]+/g, "-"), name: p.name!, tag: p.tag ?? "", blurb: p.blurb ?? "", open: true,
-        about: p.about ?? "", fixed: Array.isArray(p.fixed) ? p.fixed.map(String) : [], choose: Array.isArray(p.choose) ? p.choose.map(String) : [],
+        about: p.about ?? "",
+        // 功能注释：AI 给的 fixed/choose 也必须落在本作品属性上，野名丢掉
+        fixed: sanitizePathAttrNames(p.fixed, attrOpts),
+        choose: sanitizePathAttrNames(p.choose, attrOpts),
         ...(() => {
           const fx = normRouteFx(p.fx);
           if (!fx) return { perks: p.perks ?? "" };
@@ -159,30 +218,10 @@ export default function ModPathsEditor({ creation, identities, world, npcs = [],
   return (
     <div className="space-y-2.5">
       <div className="flex items-center justify-between gap-2 rounded-xl bg-gradient-to-r from-jade/10 to-coral/10 px-3 py-2">
-        <p className="text-[11.5px] leading-snug text-ink-soft">让 AI 按这个世界观生成人物线路，并一并生成相关人物资料（姓名 / 年龄 / 性别 / 约 300 字小传）。势力请到「① 基础 → 势力」配置。</p>
+        <p className="text-[11.5px] leading-snug text-ink-soft">让 AI 按这个世界观生成人物线路，并一并生成相关人物资料（姓名 / 年龄 / 性别 / 简介）。多条路径开局会让玩家选；只有一条则直接用。</p>
         <button className={`${btn} shrink-0 inline-flex items-center gap-1 !border-transparent bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] !text-white`} disabled={busy} onClick={aiGen}>{busy ? "生成中…" : <><IconSpark size={14} /> AI 生成</>}</button>
       </div>
       {err && <p className="text-[11px] text-danger">{err}</p>}
-
-      <div className="space-y-2 rounded-xl border border-line bg-paper p-2.5">
-        <p className="text-[12px] font-bold text-ink">玩家可见 <span className="font-normal text-ink-soft">· 开局要不要让玩家挑路径、弹窗里给玩家看什么</span></p>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] text-ink-soft">路径选择</span>
-          {([["modal", "开局弹窗 · 玩家自选"], ["off", "不显示 · 直接用第一条开放路径"]] as const).map(([k, t]) => {
-            const on = (cc.pathPicker ?? "modal") === k;
-            return <button key={k} type="button" aria-pressed={on} className={`${btn} ${on ? "!border-jade bg-jade/10 !text-jade" : ""}`} onClick={() => commit(paths, ids, { pathPicker: k === "modal" ? undefined : k })}>{t}</button>;
-          })}
-        </div>
-        <div className={`flex flex-wrap items-center gap-1.5 ${cc.pathPicker === "off" ? "pointer-events-none opacity-40" : ""}`}>
-          <span className="text-[11px] text-ink-soft">卡片显示</span>
-          {CARD_PARTS.map(({ k, label }) => {
-            const on = !cc.pathHide?.[k];
-            return <button key={k} type="button" aria-pressed={on} className={`${btn} ${on ? "!border-jade bg-jade/10 !text-jade" : "line-through"}`}
-              onClick={() => { const h = { ...cc.pathHide, [k]: on || undefined }; if (!on) delete h[k]; commit(paths, ids, { pathHide: Object.keys(h).length ? h : undefined }); }}>{on ? <IconCheck size={12} className="mr-0.5 inline" /> : null}{label}</button>;
-          })}
-        </div>
-        {cc.pathPicker === "off" && <p className="text-[10.5px] leading-snug text-ink-soft">玩家看不到路径弹窗；开局加成、开局人际等仍按第一条「已开放」路径生效。</p>}
-      </div>
 
       {paths.length === 0 && (
         <div className="rounded-xl border border-dashed border-line p-3 text-center text-[11.5px] text-ink-soft">
@@ -232,26 +271,22 @@ export default function ModPathsEditor({ creation, identities, world, npcs = [],
             )}
             <textarea rows={2} className={inp} value={String(p.blurb ?? "")} placeholder="线路简介（卡片上显示，仅给玩家看）" onChange={(e) => setPath(i, { blurb: e.target.value })} />
             <textarea rows={3} className={inp} value={String(p.about ?? "")} placeholder="展开详情：开局处境（第二人称「你」，仅给玩家看）" onChange={(e) => setPath(i, { about: e.target.value })} />
-            <div className="grid grid-cols-2 gap-1.5">
-              <label className="text-[11px] text-ink-soft">玩家可自由决定（每行一项，可留空 · 仅展示）
-                <textarea rows={3} className={`${inp} mt-0.5`} value={(Array.isArray(p.choose) ? p.choose : []).join("\n")} onChange={(e) => setPath(i, { choose: lines(e.target.value) })} />
-              </label>
-              <label className="text-[11px] text-ink-soft">固定不可改（每行一项，可留空 · 仅展示）
-                <textarea rows={3} className={`${inp} mt-0.5`} value={(Array.isArray(p.fixed) ? p.fixed : []).join("\n")} onChange={(e) => setPath(i, { fixed: lines(e.target.value) })} />
-              </label>
+            <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+              <AttrNamePick
+                title="可变自由决定"
+                hint="从本作品属性里选 · 不可手填"
+                value={Array.isArray(p.choose) ? p.choose : []}
+                options={attrOpts}
+                onChange={(choose) => setPath(i, { choose })}
+              />
+              <AttrNamePick
+                title="固定不可改"
+                hint="从本作品属性里选 · 不可手填"
+                value={Array.isArray(p.fixed) ? p.fixed : []}
+                options={attrOpts}
+                onChange={(fixed) => setPath(i, { fixed })}
+              />
             </div>
-            <RouteFxEditor
-              pool={pool}
-              label={p.perksLabel}
-              onLabel={(perksLabel) => setPath(i, { perksLabel })}
-              value={p.fx}
-              npcs={peopleOpts}
-              relationOf={(t) => {
-                const rel = p.npcs?.find((n) => peopleOpts.find((x) => x.id === n.id)?.name === t || n.id === t)?.relation;
-                return typeof rel === "string" ? rel.trim() : "";
-              }}
-              onChange={(fx, text) => setPath(i, { fx, perks: text })}
-            />
             <div className="space-y-1.5 rounded-lg border border-line/70 bg-paper p-2">
               <p className="text-[11px] text-ink-soft"><b className="font-semibold text-ink">开局状态</b> · 选这条线路时专属的主角与开局；没被选中的预设主角照常作为 NPC 生活</p>
               <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
@@ -274,9 +309,6 @@ export default function ModPathsEditor({ creation, identities, world, npcs = [],
                 <textarea rows={2} className={`${inp} mt-0.5`} value={p.memory ?? ""} placeholder="如：三年前在雨夜救过一只流浪猫，至今记得那家便利店" onChange={(e) => setPath(i, { memory: e.target.value || undefined })} />
               </label>
               <EventPick value={p.eventId} events={events} onChange={(eventId) => setPath(i, { eventId })} />
-              <label className="block text-[10.5px] text-ink-soft">开局小事件旁白（可选 · 仅文案；真正触发请绑定上方事件库）
-                <textarea rows={2} className={`${inp} mt-0.5`} value={p.event ?? ""} placeholder="如：出门时撞见邻居搬家，箱子里掉出一张旧照片" onChange={(e) => setPath(i, { event: e.target.value || undefined })} />
-              </label>
             </div>
             <PathNpcsEditor value={Array.isArray(p.npcs) ? p.npcs : []} npcs={npcs} onChange={(v) => setPath(i, { npcs: v.length ? v : undefined })} />
             {hasLegacy(b) && (
@@ -438,7 +470,7 @@ function PathLockCondsEditor({ value, pools, onChange }: {
         );
       })}
       {!value.length && <p className="text-[10.5px] text-ink-soft/80">（无条件 = 仅靠手动「已解锁 / 未解锁」开关）</p>}
-      {hint ? <p className="text-[10.5px] text-coral/90">玩家可见提示：{hint}</p> : null}
+      {hint ? <p className="text-[10.5px] text-coral/90">解锁提示：{hint}</p> : null}
     </div>
   );
 }
@@ -679,7 +711,7 @@ export function PathUnlockPanel() {
   );
 }
 
-/* 游戏内 · 线路开局状态：预设主角 / 开局地点 / 前置记忆 / 开局小事件（本地覆盖，开新局时生效） */
+/* 游戏内 · 线路开局状态：预设主角 / 开局地点 / 前置记忆 / 绑定事件（本地覆盖，开新局时生效） */
 function RouteStateEditor({ p }: { p: CreationPath }) {
   const [open, setOpen] = useState(false);
   const save = (k: "hero" | "room" | "memory" | "event" | "eventId" | "name" | "blurb", v: string) => savePathLock(p.id, { [k]: v });
@@ -726,9 +758,6 @@ function RouteStateEditor({ p }: { p: CreationPath }) {
           </div>
           <label className="block text-[11px] text-ink-soft">专属前置记忆（写进主角档案，AI 可读）
             <textarea rows={2} className={`${inp} mt-1`} value={p.memory ?? ""} placeholder="如：三年前在雨夜救过一只流浪猫" onChange={(e) => save("memory", e.target.value)} />
-          </label>
-          <label className="block text-[11px] text-ink-soft">开局独有小事件（序章里必定发生）
-            <textarea rows={2} className={`${inp} mt-1`} value={p.event ?? ""} placeholder="如：出门时撞见邻居搬家，箱子里掉出一张旧照片" onChange={(e) => save("event", e.target.value)} />
           </label>
           <EventPick value={p.eventId} events={liveEvents()} onChange={(v) => save("eventId", v ?? "")} />
         </div>

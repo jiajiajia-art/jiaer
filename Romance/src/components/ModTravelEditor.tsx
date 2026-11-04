@@ -54,38 +54,52 @@ export default function ModTravelEditor({ value, rooms, onChange, part }: { valu
         </label>
       </div>}
 
-      {pace && <div className="space-y-1.5 rounded-xl border border-line bg-paper-2 p-2.5">
-        <p className="text-[12px] font-bold text-ink">默认推进节奏 <span className="font-normal text-ink-soft">开局默认值 · 玩家可在日程面板里自选</span></p>
-        {/* 推进单位：日 / 周 / 月 / 年 */}
-        <div className="grid grid-cols-4 gap-1">
-          {([["day", "日"], ["week", "周"], ["month", "月"], ["year", "年"]] as const).map(([u, l]) => {
-            const on = (t.advanceUnit ?? "day") === u;
-            return (
-              <button key={u} type="button" onClick={() => set({ advanceUnit: u === "day" ? undefined : u })}
-                className={`rounded-[6px] border py-2 text-center transition ${on ? "border-jade bg-jade/10 text-jade" : "border-line bg-paper text-ink hover:border-jade"}`}>
-                <span className="block font-serif text-[16px] font-black leading-none">{l}</span>
-                <span className="mt-1 block text-[10px] text-ink-soft">按{l}推进</span>
-              </button>
-            );
-          })}
-        </div>
-        <div className="grid grid-cols-2 gap-1.5">
-          {(t.advanceUnit ?? "day") === "day" ? (
-            <label className="block text-[11px] text-ink-soft">每次推进（天）
-              <input type="number" min={1} max={30} value={t.advanceDays ?? 1} onChange={(e) => set({ advanceDays: Math.min(30, num(e.target.value, 1)) })} className={`${inp} mt-0.5`} />
-            </label>
-          ) : (
-            <label className="block text-[11px] text-ink-soft">每次推进（{({ day: "天", week: "周", month: "个月", year: "年" } as const)[t.advanceUnit ?? "day"]}）
-              <input type="number" min={1} max={12} value={t.advanceCount ?? 1} onChange={(e) => set({ advanceCount: Math.min(12, num(e.target.value, 1)) })} className={`${inp} mt-0.5`} />
-            </label>
-          )}
-        </div>
-        <p className="rounded-[6px] bg-paper px-2 py-1.5 text-[11px] text-ink">
-          玩家每点一次推进：<b className="text-jade">{(t.advanceUnit ?? "day") === "day" ? `${t.advanceDays ?? 1} 天` : `${t.advanceCount ?? 1} ${({ day: "天", week: "周", month: "个月", year: "年" } as const)[t.advanceUnit ?? "day"]}`}</b>
-          {(t.advanceUnit ?? "day") === "day" ? "，逐日结算当天日程，遇到周结算 / 结局即停。" : "，系统逐日结算、每周照常周结算，结束后弹出一张汇总报告；遇到结局即停。"}
-          {" "}推进后由 AI 生成日程叙事（未接入 AI 时只显示结算）。
-        </p>
-      </div>}
+      {pace && (() => {
+        // 功能注释：日/周/月/年与「每次几个」并成一块；数量贴在当前选中单位旁，不再上下拆两段
+        const unit = t.advanceUnit ?? "day";
+        const unitLabel = ({ day: "天", week: "周", month: "个月", year: "年" } as const)[unit];
+        const isDay = unit === "day";
+        const amount = isDay ? (t.advanceDays ?? 1) : (t.advanceCount ?? 1);
+        const amountMax = isDay ? 30 : 12;
+        return (
+          <div className="space-y-1.5 rounded-xl border border-line bg-paper-2 p-2.5">
+            <p className="text-[12px] font-bold text-ink">默认推进节奏 <span className="font-normal text-ink-soft">开局默认值 · 玩家可在日程面板里自选</span></p>
+            <div className="flex flex-wrap items-stretch gap-1">
+              {([["day", "日"], ["week", "周"], ["month", "月"], ["year", "年"]] as const).map(([u, l]) => {
+                const on = unit === u;
+                return (
+                  <button key={u} type="button" onClick={() => set({ advanceUnit: u === "day" ? undefined : u })}
+                    className={`min-w-[3.25rem] flex-1 rounded-[6px] border px-1 py-2 text-center transition ${on ? "border-jade bg-jade/10 text-jade" : "border-line bg-paper text-ink hover:border-jade"}`}>
+                    <span className="block font-serif text-[16px] font-black leading-none">{l}</span>
+                    <span className="mt-1 block text-[10px] text-ink-soft">按{l}</span>
+                  </button>
+                );
+              })}
+              <label className="flex min-w-[7.5rem] flex-[1.2] items-center gap-1.5 rounded-[6px] border border-jade/35 bg-jade/5 px-2 py-1.5">
+                <span className="shrink-0 text-[11px] text-ink-soft">每次</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={amountMax}
+                  aria-label={`每次推进（${unitLabel}）`}
+                  value={amount}
+                  onChange={(e) => {
+                    const n = Math.min(amountMax, num(e.target.value, 1));
+                    set(isDay ? { advanceDays: n } : { advanceCount: n });
+                  }}
+                  className={`${inp} !mt-0 max-w-[4.5rem] flex-1 text-center font-semibold`}
+                />
+                <span className="shrink-0 text-[12px] font-semibold text-jade">{unitLabel}</span>
+              </label>
+            </div>
+            <p className="rounded-[6px] bg-paper px-2 py-1.5 text-[11px] text-ink">
+              玩家每点一次推进：<b className="text-jade">{isDay ? `${amount} 天` : `${amount} ${unitLabel}`}</b>
+              {isDay ? "，逐日结算当天日程，遇到周结算 / 结局即停。" : "，系统逐日结算、每周照常周结算，结束后弹出一张汇总报告；遇到结局即停。"}
+              {" "}推进后由 AI 生成日程叙事（未接入 AI 时只显示结算）。
+            </p>
+          </div>
+        );
+      })()}
 
       {transport && <>
       <div className="space-y-1.5">

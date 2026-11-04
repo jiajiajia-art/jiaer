@@ -48,7 +48,7 @@ import PlayPrefsPicker from "./PlayPrefsPicker";
 import { playPrefsOf } from "../lib/ai";
 import { LIVE_LOCATIONS } from "../mods/registry";
 import AllowanceWatcher from "./AllowanceWatcher";
-import { feature, useMods } from "../mods/registry";
+import { feature, getWorldStorylines, useMods } from "../mods/registry";
 import { EDITOR_HUB_MENUS } from "../lib/editorHubMenus";
 const EndingsPanel = lazyPanel(() => import("./EndingsPanel"));
 const FactionsPanel = lazyPanel(() => import("./FactionsPanel"));
@@ -73,6 +73,9 @@ import { topbarSummary } from "../lib/topbarDiy";
 import { defaultWorldBook } from "../game/worldbook";
 import { EntityProvider } from "./EntityText";
 import { listManualSaves, saveToSlot, deleteSlot, renameSlot, getSlot, MAX_SLOTS, AUTO_SLOT_ID, type SaveSlot, defaultTheme } from "../lib/store";
+import { isAuthorPreview } from "../lib/authorPreview";
+import { homeMainQuest } from "../lib/homeMainQuest";
+import { dayDateLabel } from "../game/logic";
 
 import IndustryPageHeader from "./IndustryPageHeader";
 const CgPanel = lazyPanel(() => import("./CgPanel"));
@@ -672,6 +675,8 @@ export default function GameShell() {
       if (busyRef.current && dest !== "home") { flashLock(); return; }
       // 「人物」以档案弹窗呈现；其余功能切到对应整屏界面（横屏则展开侧栏浮层）
       if (dest === "sim") { setSimOpen(true); return; }
+      // 功能注释：顶栏状态行 / 主线条 → 任务主线弹窗，不整页切到剧情志
+      if (dest === "quest") { setQuestOpen(true); return; }
       setTab(dest);
       setSeen((p) => (p.has(dest) ? p : new Set(p).add(dest)));
       if (landscape) setPanelOpen(true);
@@ -679,6 +684,12 @@ export default function GameShell() {
     window.addEventListener("star:navtab", onNav as EventListener);
     return () => window.removeEventListener("star:navtab", onNav as EventListener);
   }, [landscape]);
+  // 功能注释：状态行专发 star:quest-open，与菜单「剧情志」同一弹窗
+  useEffect(() => {
+    const onQuest = () => setQuestOpen(true);
+    window.addEventListener("star:quest-open", onQuest);
+    return () => window.removeEventListener("star:quest-open", onQuest);
+  }, []);
   // 当面玩手机被打断：收起手机，回到剧情页（回合由 GameContext 推进）
   useEffect(() => {
     const h = () => { setTab("home"); if (landscape) setPanelOpen(false); };
@@ -742,6 +753,28 @@ export default function GameShell() {
     return () => { window.removeEventListener("star:navschedule", onSched); window.removeEventListener("star:openaicfg", onAi); };
   }, []);
   if (!game) return null;
+
+  // 功能注释：作者预览顶栏只显示当前主线步骤，去掉周数/日期/地点/金钱等干扰项
+  const authorPreviewing = isAuthorPreview();
+  // 功能注释：小说模式顶栏改用固定三行排版（名牌 / 状态 / 可展开主线）
+  const novelLayout = playPrefsOf(game).mode === "novel" && !authorPreviewing;
+  const mainQuest = game.sim
+    ? homeMainQuest(game.sim, getWorldStorylines(), dayDateLabel(game.sim.day ?? 0))
+    : null;
+  const topbarData = {
+    ...topbarDataOf(game, modWorld.chain[0].name),
+    ...(mainQuest
+      ? {
+          questStep: mainQuest.waitLabel ? `${mainQuest.stepName} · ${mainQuest.waitLabel}` : mainQuest.stepName,
+          questLineName: mainQuest.lineName,
+          questDesc: mainQuest.stepDesc,
+          questWait: mainQuest.waitLabel,
+          questDone: mainQuest.done,
+          questTotal: mainQuest.total,
+          questProgress: mainQuest.progress,
+        }
+      : {}),
+  };
 
   const refreshSaves = async () => {
     const [manual, auto] = await Promise.all([listManualSaves(), getSlot(AUTO_SLOT_ID)]);
@@ -810,10 +843,12 @@ export default function GameShell() {
         {/* 顶栏：名牌 + 世界状态 + 菜单，随设置里的皮肤 / 主色调换色 */}
         <TopbarView
           compact
-          data={topbarDataOf(game, modWorld.chain[0].name)}
+          data={topbarData}
           diy={look.topbarDiy}
           topbar={look.topbar}
           topbarText={look.topbarText}
+          questOnly={authorPreviewing}
+          novelLayout={novelLayout}
           menuOpen={menuOpen}
           onProfile={() => setSimOpen(true)}
           onMenu={() => setMenuOpen((v) => !v)}
@@ -842,10 +877,12 @@ export default function GameShell() {
       {/* 顶部世界动态栏：跟随全局界面皮肤 */}
       {!["npc", "actions", "phone"].includes(tab) && (
       <TopbarView
-        data={topbarDataOf(game, modWorld.chain[0].name)}
+        data={topbarData}
         diy={look.topbarDiy}
         topbar={look.topbar}
         topbarText={look.topbarText}
+        questOnly={authorPreviewing}
+        novelLayout={novelLayout}
         menuOpen={menuOpen}
         onProfile={() => setSimOpen(true)}
         onMenu={() => setMenuOpen((v) => !v)}

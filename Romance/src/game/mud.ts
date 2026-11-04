@@ -389,8 +389,10 @@ export function mobsHere(s: SimState, roomId: string, roster?: readonly MapNpc[]
     const m = w.m;
     // 自定义 / 剧情新增人物：没有门槛与委托，碰上了就能搭话
     if (!m) return { id: w.id, name: w.name, role: w.role, bio: w.bio, present: true, hint: "", resident: w.home === roomId };
-    const g = evalRequires(m.requires, s);
-    const hint = m.requires.length ? g.hint : m.presentHint ?? "";
+    // 功能注释：requires 可能是 AI 脏对象；evalRequires 内已 asModArray，length 也按数组判
+    const reqs = Array.isArray(m.requires) ? m.requires : m.requires ? [m.requires] : [];
+    const g = evalRequires(reqs, s);
+    const hint = reqs.length ? g.hint : m.presentHint ?? "";
     return { id: m.id, name: w.name, role: w.role, bio: m.bio, present: g.ok, hint, offerLabel: m.offers?.label, resident: w.anchored ? w.home === roomId : m.kind !== "roam" || m.home === roomId };
   });
 }

@@ -45,12 +45,14 @@ test('npcEditor_标签选择器与代表作按玩法显示', () => {
 
 test('npcEditor_线路AI须回写人物资料', () => {
   const paths = readFileSync(join(romance, 'components/ModPathsEditor.tsx'), 'utf8');
+  const panel = readFileSync(join(romance, 'components/ModEditorPanel.tsx'), 'utf8');
   assert.match(paths, /onMergeNpcs/);
   assert.match(paths, /约300字/);
   assert.match(paths, /platformNpcTagsPromptLine/);
   assert.match(paths, /"npcs"/);
   assert.doesNotMatch(paths, /开局势力（玩家勾选加入）/);
-  assert.match(paths, /① 基础 → 势力/);
+  // 功能注释：势力引导在人物编辑区（面板），不在线路编辑器正文
+  assert.match(panel, /① 基础 → 势力/);
 });
 
 test('npcEditor_世界生成人物契约含完整资料校验', () => {

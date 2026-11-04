@@ -22,8 +22,9 @@ export function SectionHead({ code, cn, hint, right }: { code?: string; cn: stri
 /* —— 模态弹窗：遮罩 / 面板 / 标题栏 / 关闭钮全部取 index.css 的全局 ui-* 类（自绘弹窗也用同一套） —— */
 const ModalDepth = createContext(0);
 
-/* 所有弹窗共用 .ui-dialog：宽 86vw，高度随内容，过高才封顶滚动；不再按内容分宽窄档 */
-export function Modal({ title, onClose, children, heavyBackdrop, locked = false }: { title: string; onClose: () => void; children: ReactNode; heavyBackdrop?: boolean; /** 必须点内容里的按钮才能离开：遮罩、Esc、关闭钮都不收起 */ locked?: boolean }) {
+/* 所有弹窗共用 .ui-dialog：宽 86vw，高度随内容，过高才封顶滚动；不再按内容分宽窄档
+ * footer：钉在框底、不进滚动区；panelClassName：如建角向导 ui-dialog-create（85vw×85dvh） */
+export function Modal({ title, onClose, children, footer, panelClassName, heavyBackdrop, locked = false }: { title: string; onClose: () => void; children: ReactNode; footer?: ReactNode; panelClassName?: string; heavyBackdrop?: boolean; /** 必须点内容里的按钮才能离开：遮罩、Esc、关闭钮都不收起 */ locked?: boolean }) {
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   const lockedRef = useRef(locked);
@@ -63,7 +64,7 @@ export function Modal({ title, onClose, children, heavyBackdrop, locked = false 
     <div className={`ui-overlay ui-overlay-modal z-50 ${heavyBackdrop ? "ui-overlay-heavy" : ""}`} style={{ zIndex: 50 + depth * 10 }} onClick={locked ? undefined : onClose}>
       <div
         ref={sheetRef}
-        className="ui-sheet modal-sheet ui-dialog"
+        className={`ui-sheet modal-sheet ui-dialog${panelClassName ? ` ${panelClassName}` : ""}`}
         onClick={(e) => e.stopPropagation()}
         role={locked ? "alertdialog" : "dialog"}
         aria-modal="true"
@@ -85,6 +86,7 @@ export function Modal({ title, onClose, children, heavyBackdrop, locked = false 
           </div>
         </div>
         <div className="ui-dialog-body px-4 pb-5 pt-1 sm:px-5">{children}</div>
+        {footer}
       </div>
     </div>
     </ModalDepth.Provider>,

@@ -14,7 +14,9 @@ import { autoPos } from "../game/mapPos";
 import { MAIN_SHEET, jumpOf, mapSheets, sheetOf } from "../game/mapSheets";
 import { homePlaceOf } from "../game/homeSpot";
 import { ProfileRelations, ProfileHero, RelTag, ProfileBasics, ProfileBio, ProfilePlaces, ProfileMemory, affiliationOf, PLAYER_REF, relationRefsOf } from "./personFields";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
+import { isAuthorPreview } from "../lib/authorPreview";
+import { playPrefsOf } from "../lib/ai";
 import { useGame } from "../store/gameCtx";
 import TalkPanel from "./TalkPanel";
 import { pregWeeks } from "../game/pregnancy";
@@ -26,7 +28,7 @@ import ProducerParley from "./ProducerParley";
 import GigBoard from "./GigBoard";
 import { HeartMeter, Modal, Chip, Avatar } from "./ui";
 import PersonProfile from "./PersonProfile";
-import { IconCheck, IconExternal, IconSparkle, StarRating } from "../lib/icons";
+import { IconCheck, IconExternal, IconPin, IconSparkle, StarRating } from "../lib/icons";
 import {
   roomDesc,
   directionHint,
@@ -57,7 +59,7 @@ import { BRANCH_POINTS } from "../store/GameContext";
 import { tripPoints, apPerMove } from "../game/mud";
 import { customActsOf, customItemsOf, firedOf, spotBackground, spotDesc, spotEventsOf, spotName, activityApCost } from "../game/mapedits";
 import type { FamilyRef } from "../worlds/star2005/content";
-import { LIVE_PEOPLE as PEOPLE, LIVE_PERSON_BY_ID as PERSON_BY_ID, feature, getWorldMap, getWorldRooms, getWorldStartRoom, worldActivitiesOfRoom as activitiesOfRoom } from "../mods/registry";
+import { LIVE_PEOPLE as PEOPLE, LIVE_PERSON_BY_ID as PERSON_BY_ID, feature, getWorldMap, getWorldMaps, getWorldRooms, getWorldStartRoom, worldActivitiesOfRoom as activitiesOfRoom } from "../mods/registry";
 import { factsOf, isManager, knows, producerProjects } from "../game/producer";
 import { categoryLabel, roleLabel } from "../game/projects";
 import { dayDateLabel, dowOf, pendingTodos, startDateLabel, type GameState as SimState } from "../game/logic";
@@ -311,8 +313,13 @@ function CityMap({ s, onPick }: { s: SimState; onPick: (id: string) => void; wid
   const sheetIdx = Math.max(0, sheets.findIndex((x) => x.id === sheetId));
   const sheet = sheets[sheetIdx];
   const stepSheet = (d: number) => setSheetId(sheets[(sheetIdx + d + sheets.length) % sheets.length].id);
-  const mapBg = sheet.bgUrl || (sheet.id === MAIN_SHEET ? worldMap.background : undefined);
-  const mapAlt = worldMap.backgroundAlt ?? "地图";
+  // 功能注释：优先手绘底图 → 大地图层 worldMaps.bg（生图/上传）→ 旧 MapVisuals.background
+  const contentMaps = getWorldMaps();
+  const contentMapBg =
+    contentMaps.find((m) => m.id === sheet.id)?.bg
+    || (sheet.id === MAIN_SHEET ? contentMaps[0]?.bg : undefined);
+  const mapBg = sheet.bgUrl || contentMapBg || (sheet.id === MAIN_SHEET ? worldMap.background : undefined);
+  const mapAlt = worldMap.backgroundAlt ?? contentMaps.find((m) => m.id === sheet.id)?.name ?? contentMaps[0]?.name ?? "地图";
   // 娱乐圈沿用手绘点位；其它世界观铺出全部房间（自动排布）
   // 点位跟随模组：当前世界的全部房间都上图；有手绘坐标的用手绘，没有的自动排布（叠加包新增地点也会出现）
   // 舆图只放顶层地点；子地点（正殿、禅房……）在所属地点里逐层进入
@@ -571,18 +578,33 @@ function TreeNav({ s, onGo }: { s: SimState; onGo: (id: string) => void }) {
 }
 
 /**
- * 地点实景：固定 9:16 竖框，图片 object-cover 铺满不留白、不成横条。
- * 图上叠可点位置；右上角「外出」；正文由外层放在图下方累积。
+ * 地点实景：
+ * - 游戏模式（正式游玩）：矮横幅（约 16:10，限高），正文叠图底，少翻屏；
+ * - 小说模式：场景图铺满，中间叠一张内容卡（地点/天气 + 外出 + 正文 + 输入），色与圆角只读皮肤变量；
+ * - Studio 作者预览竖屏 fill：仍铺满，正文叠图（无内容卡），与正式小说排版区分。
+ * 不改任何模拟结算。
  */
-function LocationHero({ s, spots, activeKey, onOpenMap, onGo, bg: bgProp, name }: {
+function LocationHero({ s, spots, activeKey, onOpenMap, onGo, fill, novelCard, bg: bgProp, name, prose, proseRef, footer, belowCard }: {
   onGo?: (id: string) => void; s: SimState; spots: Spot[]; activeKey: string | null; onOpenMap: () => void;
-  fill?: boolean; bg?: string; name?: string;
+  fill?: boolean;
+  /** 功能注释：小说模式内容卡（叠在场景图上） */
+  novelCard?: boolean;
+  bg?: string; name?: string;
+  /** 功能注释：叠在背景图 / 内容卡里的 AI 正文 / 地点说明 */
+  prose?: ReactNode;
+  proseRef?: RefObject<HTMLDivElement | null>;
+  /** 功能注释：小说内容卡底部输入区 */
+  footer?: ReactNode;
+  /** 功能注释：内容卡下方附加（在场人物条等） */
+  belowCard?: ReactNode;
 }) {
-  const { look: theme } = useGame();
+  const { game, look: theme } = useGame();
   const room = s.room ?? getWorldStartRoom();
   const bg = bgProp || roomBgOf(room) || theme.sceneBg || undefined;
   const src = bg || roomImage(room) || undefined;
   const title = name ?? locOf(room)?.name;
+  // 功能注释：天气在局内 world 上，不在 sim；内容卡顶栏左侧展示
+  const weather = game?.world?.weather?.trim() || "";
   const mapBtn = (
     <button
       type="button"
@@ -590,43 +612,123 @@ function LocationHero({ s, spots, activeKey, onOpenMap, onGo, bg: bgProp, name }
       data-tour="map"
       aria-label={`外出：打开${T("city")}舆图，选择要去的地方`}
       title="外出 · 打开舆图"
-      className="flex h-[52px] min-w-[52px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/70 bg-jade px-2 text-[11.5px] font-bold leading-none text-paper-2 shadow-lg shadow-black/30 transition hover:brightness-110 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+      className={novelCard
+        ? "flex h-9 shrink-0 items-center gap-1.5 rounded-[var(--radius-ui-sm)] border border-line bg-paper px-3 text-[12.5px] font-bold text-ink shadow-[var(--shadow-ui)] transition hover:border-jade hover:text-jade active:scale-95"
+        : "flex h-[52px] min-w-[52px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/70 bg-jade px-2 text-[11.5px] font-bold leading-none text-paper-2 shadow-lg shadow-black/30 transition hover:brightness-110 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"}
     >
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <svg width={novelCard ? 15 : 20} height={novelCard ? 15 : 20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
         <path d="M9 4 3 6.5V20l6-2.5 6 2.5 6-2.5V4l-6 2.5L9 4z" />
         <path d="M9 4v13.5M15 6.5V20" />
       </svg>
       <span>外出</span>
     </button>
   );
-  // 功能注释：场景框固定 9:16；object-cover 铺满上下左右，禁止再裁成横条或留白。
-  return (
-    <div className="relative mx-auto w-full max-w-md bg-ink/10">
-      <div className="relative aspect-[9/16] w-full overflow-hidden">
-        {src ? (
-          <img
-            src={src}
-            alt={title ?? "所在地"}
-            loading="lazy"
-            className="scene-img absolute inset-0 h-full w-full object-cover object-center"
-          />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-b from-jade-deep/40 to-ink/30" aria-hidden />
-        )}
-        <div className="pointer-events-none absolute inset-0 scene-dim bg-black/0" aria-hidden />
-        <div className="absolute right-3 top-3 z-20">{mapBtn}</div>
-        {!!spots.length && (
-          <div data-tour="spots" className="pointer-events-none absolute inset-0 z-10 flex flex-wrap content-center items-center justify-center gap-x-4 gap-y-5 px-4 py-12">
-            {spots.map((sp, i) => {
-              const dy = [0, 6, -4, 8, -2, 5, -6][i % 7];
-              return (
-                <span key={sp.key} className="pointer-events-auto" style={{ transform: `translate(0, ${dy}px)` }}>
-                  <SceneSpot spot={sp} active={activeKey === sp.key} index={i} />
-                </span>
-              );
-            })}
+  const bgLayer = (
+    <>
+      {src ? (
+        <img
+          src={src}
+          alt={title ?? "所在地"}
+          loading="lazy"
+          className="scene-img absolute inset-0 h-full w-full object-cover object-center"
+        />
+      ) : (
+        <div className="absolute inset-0 bg-gradient-to-b from-jade-deep/40 to-ink/30" aria-hidden />
+      )}
+      <div className="pointer-events-none absolute inset-0 scene-dim bg-gradient-to-t from-black/75 via-black/25 to-black/5" aria-hidden />
+    </>
+  );
+  const spotLayer = !!spots.length && (
+    <div data-tour="spots" className="pointer-events-none absolute inset-0 z-10 flex flex-wrap content-center items-center justify-center gap-x-4 gap-y-5 px-4 py-10">
+      {spots.map((sp, i) => {
+        const dy = [0, 6, -4, 8, -2, 5, -6][i % 7];
+        return (
+          <span key={sp.key} className="pointer-events-auto" style={{ transform: `translate(0, ${dy}px)` }}>
+            <SceneSpot spot={sp} active={activeKey === sp.key} index={i} />
+          </span>
+        );
+      })}
+    </div>
+  );
+  // 功能注释：小说模式 → 场景铺满 + 内容卡；游戏 fill（作者预览）→ 正文仍直接叠图
+  if (fill && novelCard) {
+    return (
+      <div data-scene-layout="fill" data-novel-card="1" className="relative h-full min-h-0 w-full overflow-hidden bg-ink/20">
+        <div className="absolute inset-0 overflow-hidden">{bgLayer}</div>
+        <div className="absolute inset-0 z-[15] flex min-h-0 flex-col px-3 pb-2 pt-2">
+          <div
+            data-tour="story"
+            data-dstyle={theme.dialogStyle ?? "soft"}
+            className="novel-read-card relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-ui-lg)] border border-line bg-paper/92 text-ink shadow-[var(--shadow-ui-lift)] backdrop-blur-[2px]"
+          >
+            <div className="flex shrink-0 items-start justify-between gap-2 border-b border-line/70 px-3 py-2.5">
+              <div className="min-w-0">
+                <p className="flex items-center gap-1 truncate text-[13.5px] font-bold text-ink">
+                  <IconPin width={13} height={13} className="shrink-0 text-jade" aria-hidden />
+                  <span className="truncate">{title || "所在地"}</span>
+                </p>
+                {weather && (
+                  <p className="mt-0.5 truncate pl-[18px] text-[11.5px] text-ink-soft">{weather}</p>
+                )}
+              </div>
+              {mapBtn}
+            </div>
+            {prose != null && (
+              <div
+                ref={proseRef}
+                data-tour="scene-prose"
+                className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-3.5 py-3 [scrollbar-width:thin]"
+              >
+                {prose}
+              </div>
+            )}
+            {footer != null && (
+              <div className="shrink-0 border-t border-line/70 px-2.5 py-2">{footer}</div>
+            )}
+          </div>
+          {onGo && (
+            <div className="shrink-0 pt-1">
+              <TreeNav s={s} onGo={onGo} />
+            </div>
+          )}
+          {belowCard}
+        </div>
+      </div>
+    );
+  }
+  const layers = (
+    <>
+      {bgLayer}
+      <div className="absolute right-3 top-3 z-20">{mapBtn}</div>
+      {spotLayer}
+      {prose != null && (
+        <div
+          ref={proseRef}
+          data-tour="scene-prose"
+          className={`absolute inset-x-0 bottom-0 z-[15] space-y-2.5 overflow-y-auto px-3.5 pt-10 text-white [scrollbar-width:thin] ${fill ? "max-h-[78%] pb-16" : "max-h-[68%] pb-3.5"}`}
+        >
+          {prose}
+        </div>
+      )}
+    </>
+  );
+  // 功能注释：作者预览等 fill 铺满可视区；游戏模式仍用矮横幅卡片
+  if (fill) {
+    return (
+      <div data-scene-layout="fill" className="relative h-full min-h-0 w-full overflow-hidden bg-ink/20">
+        <div className="absolute inset-0 overflow-hidden">{layers}</div>
+        {onGo && (
+          <div className="absolute inset-x-0 bottom-0 z-[18]">
+            <TreeNav s={s} onGo={onGo} />
           </div>
         )}
+      </div>
+    );
+  }
+  return (
+    <div data-scene-layout="banner" className="relative mx-auto w-full max-w-md overflow-hidden rounded-2xl bg-ink/10">
+      <div className="relative aspect-[16/10] max-h-[38vh] w-full overflow-hidden">
+        {layers}
       </div>
       {onGo && <TreeNav s={s} onGo={onGo} />}
     </div>
@@ -906,25 +1008,133 @@ export default function HomeTab() {
 
   const daysLeft = game.timeLimit ? Math.max(0, limitDays(game.timeLimit, game.startDate || startDateLabel()) - s.day) : null;
   const TONE = { coral: "var(--coral)", gold: "var(--gold)", jade: "var(--jade)" };
+  // 功能注释：小说模式 → 场景铺满 + 内容卡；游戏模式正式游玩仍用矮横幅。
+  // Studio 作者预览：场景资源已统一 9:16，预览时也铺满，避免未改游玩模式时刷新仍见中间矮卡。
+  const playPrefs = playPrefsOf(game);
+  const isNovel = playPrefs.mode === "novel";
+  const novelFill =
+    isNovel ||
+    (isAuthorPreview() && (playPrefs.orient ?? "portrait") !== "landscape");
+
+  // 功能注释：行动输入区；小说模式塞进内容卡底栏，游戏模式仍挂在场景下方
+  const actionInput = (
+        <div className="relative pt-0.5">
+          {ideasOpen && (
+            <div id="action-ideas" className="mb-2 animate-pop">
+              <p className="mb-2 flex items-center justify-between px-0.5 text-[10.5px] font-semibold tracking-[0.18em] text-jade-deep/70">
+                <span className="flex items-center gap-1.5">
+                  <IconSparkle width={11} height={11} />
+                  {hasOpts ? "剧情选项" : "行动灵感"}
+                  <span className="font-normal tracking-normal text-ink-soft/55">{hasOpts ? "点选或按数字键" : "点一下填入"}</span>
+                </span>
+                <button type="button" onClick={() => setIdeasOpen(false)} aria-label="收起选项" className="flex h-6 w-6 items-center justify-center rounded-[var(--radius-ui-sm)] text-ink-soft/60 transition hover:bg-coral/10 hover:text-coral">
+                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden><path d="M2 2l8 8M10 2l-8 8" /></svg>
+                </button>
+              </p>
+              <div className="grid max-h-[36vh] gap-1.5 overflow-y-auto">
+                {(hasOpts ? game.options.slice(0, 3) : IDEAS.map((t) => ({ label: t, value: t }))).map((o, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => { setIdeasOpen(false); if (hasOpts) send(o.value); else { setInput(o.value); inputRef.current?.focus(); } }}
+                    className="option-btn group flex items-center gap-2.5 rounded-[var(--radius-ui)] border border-jade/12 bg-paper/70 py-2 pl-2 pr-3 text-left text-[13px] leading-snug text-ink shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-200 hover:border-jade/35 hover:bg-paper active:scale-[0.99]"
+                  >
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[var(--radius-ui-sm)] bg-jade/10 text-[11px] font-semibold tabular-nums text-jade transition group-hover:bg-jade group-hover:text-paper">
+                      {hasOpts ? <kbd className="font-sans">{i + 1}</kbd> : <IconSparkle width={11} height={11} />}
+                    </span>
+                    <span className="min-w-0 flex-1 leading-snug">{o.label}</span>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="shrink-0 -translate-x-1 text-jade opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100" aria-hidden>
+                      <path d="m9 18 6-6-6-6" />
+                    </svg>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="action-capsule flex items-center gap-2 rounded-[var(--radius-ui)] border border-line bg-paper p-1.5 shadow-[var(--shadow-ui)] transition-all duration-300">
+            <div className="flex flex-1 items-center gap-2 pl-0.5">
+              <div className="relative shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIdeasOpen((v) => !v)}
+                  aria-label={hasOpts ? `展开剧情选项（${Math.min(game.options.length, 3)} 个）` : "灵感提示"}
+                  aria-expanded={ideasOpen}
+                  aria-controls="action-ideas"
+                  className={`flex h-8 items-center justify-center gap-1 rounded-[var(--radius-ui-sm)] transition ${
+                    ideasOpen
+                      ? "bg-jade/15 px-2.5 text-jade-deep ring-1 ring-jade/30"
+                      : hasOpts
+                        ? "bg-coral/12 px-2.5 text-coral hover:bg-coral/18 ring-1 ring-coral/25"
+                        : "w-8 bg-jade/[0.08] text-jade/85 hover:bg-jade/15"
+                  }`}
+                >
+                  <DiyIcon slot="input.pen" size={15}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L3 12.5V21h8.5z" />
+                      <line x1="16" y1="8" x2="2" y2="22" />
+                      <line x1="17.5" y1="15" x2="9" y2="15" />
+                    </svg>
+                  </DiyIcon>
+                  {hasOpts && (
+                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-coral px-1 text-[10px] font-bold leading-none text-white shadow-xs">
+                      {Math.min(game.options.length, 3)}
+                    </span>
+                  )}
+                </button>
+              </div>
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.nativeEvent.isComposing) { e.preventDefault(); send(input); }
+                  else if (e.key === "Escape" && ideasOpen) setIdeasOpen(false);
+                }}
+                ref={inputRef}
+                placeholder="写下你的行动，或说一句台词……"
+                disabled={busy}
+                className="w-full bg-transparent text-[13px] text-ink placeholder:text-ink-soft/55 outline-none"
+              />
+            </div>
+            <button
+              onClick={() => send(input)}
+              disabled={busy || !input.trim()}
+              aria-label="发送"
+              className="send-btn diy-btn flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-ui-sm)] bg-jade text-paper-2 transition-all hover:brightness-110 active:scale-[0.94] disabled:bg-jade/12 disabled:text-jade/40 disabled:shadow-none"
+            >
+              <DiyIcon slot="input.send" size={15}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 1z" />
+                </svg>
+              </DiyIcon>
+            </button>
+          </div>
+        </div>
+  );
 
   return (
     <div className="flex h-full flex-col">
       {/* 上半：场景 + 星城舆图（占据剩余空间，独立滚动） */}
       {/* 看场景时上半只占内容高度，余下空间留给对话框；看地图时地图占满 */}
-      <div className={`story-scene-scroll flex min-h-0 flex-1 flex-col overflow-y-auto`}>
-        <div className={`mx-auto flex w-full min-h-0 flex-1 flex-col space-y-5 ${landscape && !showMap ? "max-w-none px-3 py-3" : landscape && showMap ? "max-w-5xl px-4 py-5" : "max-w-2xl px-4 py-3"}`}>
+      <div className={`story-scene-scroll flex min-h-0 flex-1 flex-col ${novelFill && !showMap ? "overflow-hidden" : "overflow-y-auto"}`}>
+        <div className={novelFill && !showMap
+          ? "relative flex min-h-0 w-full flex-1 flex-col"
+          : `mx-auto flex w-full min-h-0 flex-1 flex-col space-y-5 ${landscape && !showMap ? "max-w-none px-3 py-3" : landscape && showMap ? "max-w-5xl px-4 py-5" : "max-w-2xl px-4 py-3"}`}>
           {/* ═══ 当前场景（纯文字 MUD 控制台，直接铺在纸面上） ═══ */}
-          <section className="flex min-h-0 flex-1 flex-col">
+          <section className="relative flex min-h-0 flex-1 flex-col">
             {/* 待办：悬而未决的事件线（违约追责 / 危机 / 通告截止 / 透支 / 孕期），保证每条线都有可见的后续；情感线由玩家自己去推进，不在这里催 */}
-            {/* 状态栏下：创作者当前主线（左「主线」右目标）；点开主线/支线面板；没配则整条不出现 */}
-            {!showMap && (() => {
+            {/* 状态栏下：创作者当前主线；作者预览已挪到顶栏，这里不再重复 */}
+            {/* 功能注释：小说铺满时主线/待办浮在场景图上方，避免挤出上下留白 */}
+            <div className={novelFill && !showMap ? "pointer-events-none absolute inset-x-0 top-0 z-30 px-3 pt-2" : undefined}>
+            {/* 功能注释：小说模式主线已进顶栏可展开行，这里不再重复 */}
+            {!showMap && !isNovel && !isAuthorPreview() && (() => {
               const q = homeMainQuest(s, getWorldStorylines(), dayDateLabel(s.day ?? 0));
               if (!q) return null;
               return (
                 <button
                   type="button"
                   onClick={() => window.dispatchEvent(new CustomEvent("star:navtab", { detail: "quest" }))}
-                  className="mb-2 flex w-full items-center gap-2 rounded-xl border border-line/70 bg-paper/90 px-3 py-2 text-left shadow-sm transition hover:border-coral/40"
+                  className={`mb-2 flex w-full items-center gap-2 rounded-xl border border-line/70 bg-paper/90 px-3 py-2 text-left shadow-sm transition hover:border-coral/40 ${novelFill ? "pointer-events-auto" : ""}`}
                 >
                   <span className="shrink-0 rounded-full bg-coral px-2 py-0.5 text-[10px] font-black tracking-[0.14em] text-white">主线</span>
                   <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">{q.stepName}</span>
@@ -939,7 +1149,7 @@ export default function HomeTab() {
               const C = { danger: "var(--danger, #c0392b)", gold: "var(--gold)", jade: "var(--jade)" };
               const urgent = todos.some((t) => t.tone === "danger");
               return (
-                <div className="mb-2 flex flex-col items-start">
+                <div className={`mb-2 flex flex-col items-start ${novelFill ? "pointer-events-auto" : ""}`}>
                   <div className="flex items-center gap-1 rounded-full border border-white/40 bg-paper/70 py-1 pl-3 pr-1 shadow-[0_4px_16px_-6px_rgba(0,0,0,0.25)] backdrop-blur-md">
                     <button onClick={() => setTodoOpen((v) => !v)} className="flex items-center gap-2 text-[11px] font-bold tracking-[0.16em] text-ink" aria-expanded={todoOpen}>
                       <span className={`inline-block h-2 w-2 rounded-full ${urgent ? "animate-pulse" : ""}`} style={{ background: C[urgent ? "danger" : todos[0].tone] }} />
@@ -963,7 +1173,8 @@ export default function HomeTab() {
                 </div>
               );
             })()}
-            <div className={landscape && !showMap ? "flex min-h-0 flex-1 flex-col" : showMap ? "-mx-4 -mt-3 -mb-3 flex min-h-0 flex-1 flex-col sm:-mx-6" : "flex min-h-0 flex-col"}>
+            </div>
+            <div className={novelFill && !showMap ? "relative min-h-0 flex-1" : landscape && !showMap ? "flex min-h-0 flex-1 flex-col" : showMap ? "-mx-4 -mt-3 -mb-3 flex min-h-0 flex-1 flex-col sm:-mx-6" : "flex min-h-0 flex-col"}>
               {showMap ? (
                 <div data-tour="map" className="relative flex min-h-0 w-full flex-1 flex-col">
                   <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line bg-paper-2 px-4 py-2.5">
@@ -993,45 +1204,63 @@ export default function HomeTab() {
                 </div>
               ) : (
                 <>
-                  {/* 功能注释：固定 9:16 竖框铺满；正文在图下累积留屏，不进可消失对话框 */}
-                  <div className="-mx-4 w-[calc(100%+2rem)]">
+                  {/* 功能注释：小说模式 = 场景铺满 + 内容卡；游戏模式矮横幅 + 正文叠图 */}
+                  <div className={novelFill ? "absolute inset-0" : "-mx-4 w-[calc(100%+2rem)]"}>
                     <LocationHero
                       s={s}
-                      spots={spots}
+                      spots={isNovel ? [] : spots}
                       activeKey={openId}
                       onOpenMap={() => setShowMap(true)}
                       onGo={goLocal}
+                      fill={novelFill}
+                      novelCard={isNovel}
                       bg={bgOverride}
                       name={nameOverride}
+                      proseRef={scrollRef}
+                      footer={isNovel ? actionInput : undefined}
+                      belowCard={isNovel ? <div className="shrink-0 pt-1">{peopleStrip(true)}</div> : undefined}
+                      prose={
+                        <>
+                          {descText && (
+                            isNovel ? (
+                              <p className="story-prose whitespace-pre-line text-[13.5px] leading-[1.75] tracking-[0.02em] text-ink [text-indent:2em]">
+                                {descText}
+                              </p>
+                            ) : (
+                              <p className="story-prose whitespace-pre-line rounded-xl bg-black/50 px-3 py-2 text-[13.5px] leading-[1.75] tracking-[0.02em] text-white/95 backdrop-blur-[6px] [text-indent:2em] [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
+                                {descText}
+                              </p>
+                            )
+                          )}
+                          {game.story.map((t) =>
+                            t.role === "player" ? (
+                              <div key={t.id} className="flex justify-end">
+                                <div className="dlg-bubble-me max-w-[85%] rounded-[var(--radius-ui)] rounded-tr-sm bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] px-3.5 py-2 text-[13.5px] font-medium text-white shadow-sm">
+                                  {t.segments.map((seg) => (seg.kind === "narration" ? seg.text : "")).join("")}
+                                </div>
+                              </div>
+                            ) : t.error ? (
+                              <ErrorBanner key={t.id} error={t.error} />
+                            ) : (
+                              <div key={t.id} className={`text-[13px] leading-relaxed ${isNovel ? "text-ink" : "text-white/95"}`}>
+                                {/* 功能注释：内容卡内用纸面旁白；叠图模式仍走 overlay 半透明底 */}
+                                <Segments segments={t.segments} npcs={game.npcs} playerAvatar={game.player.avatar} playerName={game.player.name} overlay={!isNovel} />
+                                <Thoughts thoughts={t.thoughts} npcs={game.npcs} />
+                                <NewcomerCards ids={introSlots.get(t.id)} />
+                              </div>
+                            ),
+                          )}
+                          {busy && <LiveNarration scrollRef={scrollRef} overlay={!isNovel} />}
+                        </>
+                      }
                     />
                   </div>
-                  <div ref={scrollRef} data-tour="scene-prose" className="mt-3 space-y-3 px-0.5">
-                    {descText && (
-                      <p className="story-prose whitespace-pre-line text-[13.5px] leading-[1.85] tracking-[0.02em] text-ink/80 [text-indent:2em]">
-                        {descText}
-                      </p>
-                    )}
-                    {game.story.map((t) =>
-                      t.role === "player" ? (
-                        <div key={t.id} className="flex justify-end">
-                          <div className="dlg-bubble-me max-w-[85%] rounded-2xl rounded-tr-sm bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] px-3.5 py-2 text-[13.5px] font-medium text-white shadow-sm">
-                            {t.segments.map((seg) => (seg.kind === "narration" ? seg.text : "")).join("")}
-                          </div>
-                        </div>
-                      ) : t.error ? (
-                        <ErrorBanner key={t.id} error={t.error} />
-                      ) : (
-                        <div key={t.id} className="text-[13px] leading-relaxed text-ink">
-                          <Segments segments={t.segments} npcs={game.npcs} playerAvatar={game.player.avatar} playerName={game.player.name} />
-                          <Thoughts thoughts={t.thoughts} npcs={game.npcs} />
-                          <NewcomerCards ids={introSlots.get(t.id)} />
-                        </div>
-                      ),
-                    )}
-                    {busy && <LiveNarration scrollRef={scrollRef} />}
-                  </div>
-                  {/* 在场人物改到图下，不再叠在场景图底部 */}
-                  {peopleStrip(false)}
+                  {/* 在场人物：游戏模式在图下；作者预览 fill 叠图底；小说模式已放进内容卡下方 */}
+                  {!isNovel && (novelFill ? (
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[19] px-1 pb-1">
+                      <div className="pointer-events-auto">{peopleStrip(true)}</div>
+                    </div>
+                  ) : peopleStrip(false))}
                 </>
               )}
             </div>
@@ -1041,7 +1270,8 @@ export default function HomeTab() {
 
             {/* 居家活动 / 物件的详情与操作已改到下半部分「对话框」里展开（见下方场景点位卡片） */}
 
-            {room === carShopId() && feature("cars") && (
+            {/* 功能注释：小说铺满时不在图下再占一行，避免破坏全屏背景 */}
+            {!novelFill && room === carShopId() && feature("cars") && (
               <div className="mt-3 rounded-sm border border-dashed border-gold/50 bg-gold/[0.04] p-3">
                 <p className="mb-1 text-[11px] font-bold tracking-widest text-gold/80">{locOf(room)?.name}</p>
                 <p className="mb-2.5 text-[12px] text-ink-soft">这里可以购买属于自己的交通工具。要不要进去挑一挑？</p>
@@ -1055,9 +1285,10 @@ export default function HomeTab() {
             )}
             {carShopOpen && room === carShopId() && feature("cars") && <Dealership s={s} onClose={() => setCarShopOpen(false)} />}
 
-            {!showMap && ((daysLeft !== null && !landscape) || s.pregnancy?.known || (s.children?.length ?? 0) > 0) && (
+            {/* 功能注释：作者预览不展示「主线剩 N 天」；孕期/子女仍可提示；小说铺满时不另占行 */}
+            {!novelFill && !showMap && ((daysLeft !== null && !landscape && !isAuthorPreview()) || s.pregnancy?.known || (s.children?.length ?? 0) > 0) && (
               <p className="mt-3 flex flex-wrap gap-x-2 text-[11.5px] text-ink-soft">
-                {daysLeft !== null && !landscape && <span>主线剩 <b className="tabular-nums" style={{ color: "var(--coral)" }}>{daysLeft}</b> 天</span>}
+                {daysLeft !== null && !landscape && !isAuthorPreview() && <span>主线剩 <b className="tabular-nums" style={{ color: "var(--coral)" }}>{daysLeft}</b> 天</span>}
                 {s.pregnancy?.known && <span>· 孕 <b className="tabular-nums" style={{ color: "var(--coral)" }}>{pregWeeks(s)}</b> 周（{s.pregnancy.fatherName}）</span>}
                 {(s.children?.length ?? 0) > 0 && <span>· 子女 {s.children!.map((c) => c.name).join("、")}</span>}
               </p>
@@ -1066,9 +1297,9 @@ export default function HomeTab() {
         </div>
       </div>
 
-      {/* ═══ 底部：只留输入框与行动选项；正文已在场景图下累积留屏 ═══ */}
-      <div data-tour="story" data-dstyle={theme.dialogStyle ?? "soft"}
-        className="relative mx-4 mb-3 mt-2 flex shrink-0 flex-col text-ink sm:mx-auto sm:w-[calc(100%-2rem)] sm:max-w-2xl">
+      {/* ═══ 底部：游戏模式放输入；小说模式输入已进内容卡，这里只挂弹层 ═══ */}
+      <div data-tour={isNovel ? undefined : "story"} data-dstyle={theme.dialogStyle ?? "soft"}
+        className={`relative flex shrink-0 flex-col text-ink ${isNovel ? "mx-0 mb-0 mt-0" : "mx-4 mb-3 mt-2 sm:mx-auto sm:w-[calc(100%-2rem)] sm:max-w-2xl"}`}>
 
         {/* 点位操作信息（若有） */}
         {(() => {
@@ -1208,100 +1439,7 @@ export default function HomeTab() {
               );
             })}
 
-        {/* ═══ 行动输入区：与对话内容合并进同一张柔光卡片 ═══ */}
-        <div className="relative mt-2 pt-1">
-          {ideasOpen && (
-            <div id="action-ideas" className="mb-2 animate-pop">
-              <p className="mb-2 flex items-center justify-between px-0.5 text-[10.5px] font-semibold tracking-[0.18em] text-jade-deep/70">
-                <span className="flex items-center gap-1.5">
-                  <IconSparkle width={11} height={11} />
-                  {hasOpts ? "剧情选项" : "行动灵感"}
-                  <span className="font-normal tracking-normal text-ink-soft/55">{hasOpts ? "点选或按数字键" : "点一下填入"}</span>
-                </span>
-                <button type="button" onClick={() => setIdeasOpen(false)} aria-label="收起选项" className="flex h-6 w-6 items-center justify-center rounded-full text-ink-soft/60 transition hover:bg-coral/10 hover:text-coral">
-                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden><path d="M2 2l8 8M10 2l-8 8" /></svg>
-                </button>
-              </p>
-              <div className="grid max-h-[36vh] gap-1.5 overflow-y-auto">
-                {(hasOpts ? game.options.slice(0, 3) : IDEAS.map((t) => ({ label: t, value: t }))).map((o, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => { setIdeasOpen(false); if (hasOpts) send(o.value); else { setInput(o.value); inputRef.current?.focus(); } }}
-                    className="option-btn group flex items-center gap-2.5 rounded-xl border border-jade/12 bg-paper/70 py-2 pl-2 pr-3 text-left text-[13px] leading-snug text-ink shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-200 hover:border-jade/35 hover:bg-paper active:scale-[0.99]"
-                  >
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-jade/10 text-[11px] font-semibold tabular-nums text-jade transition group-hover:bg-jade group-hover:text-paper">
-                      {hasOpts ? <kbd className="font-sans">{i + 1}</kbd> : <IconSparkle width={11} height={11} />}
-                    </span>
-                    <span className="min-w-0 flex-1 leading-snug">{o.label}</span>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="shrink-0 -translate-x-1 text-jade opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100" aria-hidden>
-                      <path d="m9 18 6-6-6-6" />
-                    </svg>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          <div className="action-capsule flex items-center gap-2 rounded-2xl border border-jade/20 p-1.5 backdrop-blur-xl transition-all duration-300">
-            <div className="flex flex-1 items-center gap-2 pl-0.5">
-              {/* 小羽毛：有剧情选项时展开选项（点选即发送），没有时展开灵感（点选填入输入框） */}
-              <div className="relative shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setIdeasOpen((v) => !v)}
-                  aria-label={hasOpts ? `展开剧情选项（${Math.min(game.options.length, 3)} 个）` : "灵感提示"}
-                  aria-expanded={ideasOpen}
-                  aria-controls="action-ideas"
-                  className={`flex h-8 items-center justify-center gap-1 rounded-xl transition ${
-                    ideasOpen
-                      ? "bg-gradient-to-r from-jade/20 to-coral/20 px-2.5 text-jade-deep ring-1 ring-jade/30"
-                      : hasOpts
-                        ? "bg-gradient-to-r from-coral/14 to-jade/12 px-2.5 text-coral hover:from-coral/22 hover:to-jade/18 ring-1 ring-coral/25"
-                        : "w-8 bg-jade/[0.08] text-jade/85 hover:bg-jade/15"
-                  }`}
-                >
-                  <DiyIcon slot="input.pen" size={15}>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L3 12.5V21h8.5z" />
-                      <line x1="16" y1="8" x2="2" y2="22" />
-                      <line x1="17.5" y1="15" x2="9" y2="15" />
-                    </svg>
-                  </DiyIcon>
-                  {hasOpts && (
-                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-coral px-1 text-[10px] font-bold leading-none text-white shadow-xs">
-                      {Math.min(game.options.length, 3)}
-                    </span>
-                  )}
-                </button>
-              </div>
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.nativeEvent.isComposing) { e.preventDefault(); send(input); }
-                  else if (e.key === "Escape" && ideasOpen) setIdeasOpen(false);
-                }}
-                ref={inputRef}
-                placeholder="写下你的行动，或说一句台词……"
-                disabled={busy}
-                className="w-full bg-transparent text-[13px] text-ink placeholder:text-ink-soft/55 outline-none"
-              />
-            </div>
-            <button
-              onClick={() => send(input)}
-              disabled={busy || !input.trim()}
-              aria-label="发送"
-              className="send-btn diy-btn flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white transition-all hover:brightness-110 active:scale-[0.94] disabled:bg-jade/12 disabled:text-jade/40 disabled:shadow-none"
-            >
-              <DiyIcon slot="input.send" size={15}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 1z" />
-                </svg>
-              </DiyIcon>
-            </button>
-          </div>
-        </div>
+        {!isNovel && actionInput}
       </div>
 
       {/* ═══ 移动确认 ═══ */}

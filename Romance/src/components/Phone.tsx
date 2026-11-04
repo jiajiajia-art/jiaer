@@ -28,19 +28,25 @@ import { logAppOpen, mailUnread } from "../game/phoneLink";
 import { useGameNow, renderWidget, isWidget, DEFAULT_WIDGET_SIZE, SHAPE_RADIUS, SHAPE_LABEL, nextShape, nextSize, type WidgetSize, type WidgetShape } from "./phone/Widgets";
 import { APP_ICON } from "./phone/appIcons";
 import { phoneAppAllowed, worldPhoneAppsCfg, worldPhoneHomeWallpaper } from "../mods/registry";
-import { phoneAppLabel, preinstallIds, resolvePhoneApps } from "../lib/phoneAppsConfig";
+import { phoneAppLabel, preinstallIds } from "../lib/phoneAppsConfig";
 import { resolveEffectiveHomeWallpaper } from "./phone/wallpapers";
 import { liveTerm as T } from "../mods/live";
 import SlimePet from "./phone/studio/Slime";
 import { usePetMode, useStudioOpen } from "./phone/studio/pet";
 import { requestStudio } from "./phone/studio/review";
+import { usePlatformAppsCatalog } from "../lib/usePlatformAppsCatalog";
+import {
+  platformAppLegacyUi,
+  resolvePlatformAppIconUrl,
+  type PlatformApp,
+} from "../lib/platformApps";
+import PlatformTypeApp from "./phone/PlatformTypeApp";
 
 /* 仿真手机外壳：状态栏 + 主屏应用网格 + 应用路由。
  * 各应用各自封装在 src/components/phone/<App>.tsx 里，此处只负责编排。 */
 
-type AppId =
-  | "wechat" | "sms" | "call" | "weibo" | "xhs" | "ticket" | "settings" | "appstore"
-  | "clock" | "pomodoro" | "calculator" | "notes" | "weather" | "cloudmusic" | "bosspin" | "xianyu" | "forum" | "peek" | "couple" | "mail" | "read" | "video";
+/** 功能注释：含平台动态 appId；专用页仍用字面量分支 */
+type AppId = string;
 
 type AppMeta = { id: AppId; label: string };
 /* 预装应用（含应用商店） */
@@ -72,16 +78,17 @@ const STORE: StoreItem[] = [
 const WIDGET_TARGET: Record<string, AppId> = { "w-hero-clock": "clock" as AppId, "w-clock": "clock" as AppId, "w-note": "notes" as AppId, "w-music": "cloudmusic" as AppId, "w-wallet": "wechat" as AppId };
 const WIDGET_IDS = new Set(STORE.filter((s) => s.kind === "widget").map((s) => s.id));
 const BUILTIN_LABEL: Record<string, string> = Object.fromEntries([...CORE.map((c) => [c.id, c.label]), ...STORE.map((s) => [s.id, s.label])]);
-/** 功能注释：显示名优先模组 phoneAppsCfg，再回退内置名 */
-const appLabel = (id: string) => phoneAppLabel(id, worldPhoneAppsCfg(), BUILTIN_LABEL[id] ?? id);
+/** 功能注释：显示名优先平台表，再模组覆盖，再内置名 */
+let platformNameLookup: (id: string) => string | undefined = () => undefined;
+let platformIconLookup: (id: string) => string | undefined = () => undefined;
+const appLabel = (id: string) =>
+  platformNameLookup(id) || phoneAppLabel(id, worldPhoneAppsCfg(), BUILTIN_LABEL[id] ?? id);
 /* 兼容旧引用：LABEL 仍导出内置表；运行时请用 appLabel() */
 const LABEL = BUILTIN_LABEL;
 /* 不可删除项：应用商店（唯一能装回其它应用的入口）+ 原始时间横幅（只能移动位置，不能删） */
 const PROTECTED = new Set(["appstore", "w-hero-clock"]);
 const APP_IDS = new Set([...CORE.map((c) => c.id), ...STORE.filter((s) => s.kind !== "widget").map((s) => s.id)]);
-/** 模组自定义图标（编辑器上传）；玩家 iconOverrides 优先 */
-const modAppIcon = (id: string) => resolvePhoneApps(worldPhoneAppsCfg()).find((a) => a.id === id)?.icon;
-/* 自带应用的商店条目：与下载应用一起完整展示在应用商店，删掉后可在此重新安装 */
+/* 旧官方应用封面回退（图标改由平台表 icon 字段驱动） */
 const CORE_META: Record<string, [tagline: string, desc: string, cat: string, story: string, cover: string]> = {
   wechat: ["聊天、朋友圈、钱包", "和圈内人保持联络", "社交", "私聊、群聊与朋友圈都在这里。谁先回你消息，谁的朋友圈又暗戳戳在说什么，一刷就知道。", SC("1611162617213-7d7a39e9b1d7")],
   get sms(): [string, string, string, string, string] { return ["短信与通知", `${T("gig")}、快递与那条没署名的短信`, "通讯", `经纪公司的${T("gig")}、剧组的集合时间、银行的入账提醒，还有熟人发来的短信，都汇到这里。`, SC("1512941937669-90a1b58e7e9c")]; },
@@ -98,15 +105,36 @@ const CORE_META: Record<string, [tagline: string, desc: string, cat: string, sto
   mail: ["来信、通知与回信", "有些话，适合写成一封信", "通讯", "角色的来信、平台通知与合作邀约都寄到这里。写给 TA 的信，TA 会在之后的剧情里择机回复。", SC("1634562876572-5abe57afcceb")],
   settings: ["壁纸、机身与通用", "把小手机调成你喜欢的样子", "工具", "更换壁纸、机身外壳配色，查看储存空间与游戏内时间。", SC("1511707171634-5f897ff02aa9")],
 };
-const CORE_STORE: StoreItem[] = CORE.filter((c) => c.id !== "appstore").map((c) => {
-  // 文案惰性读取（含世界术语），避免模块求值期取值
-  const meta = (): [string, string, string, string, string] => CORE_META[c.id] ?? ["手机自带应用", c.label, "自带", "", ""];
+/** 功能注释：平台应用 → 商店条目；列表用作者名，不再写内置标签 */
+function platformToStoreItem(app: PlatformApp): StoreItem {
+  const iconUrl = app.icon ? resolvePlatformAppIconUrl(app.icon) : "";
+  const cover = app.previews?.[0] ? resolvePlatformAppIconUrl(app.previews[0]) : (CORE_META[app.appId]?.[4] || SC("1516414447565-b14be0adf13e"));
+  const author = app.authorName || app.authorId || "作者";
   return {
-    id: c.id, label: c.label, get tagline() { return meta()[0]; }, get desc() { return meta()[1]; }, kicker: "手机自带",
-    get story() { return meta()[3]; }, icon: APP_ICON[c.id], get cat() { return meta()[2]; }, rating: 4.9, size: "系统内置", get cover() { return meta()[4]; }, core: true,
+    id: app.appId,
+    label: app.name || app.appId,
+    tagline: app.summary || "暂无说明",
+    desc: app.summary || app.name || app.appId,
+    kicker: author,
+    story: app.summary || "",
+    icon: iconUrl ? <img src={iconUrl} alt="" className="h-full w-full object-cover" /> : (APP_ICON[app.appId] ?? null),
+    cat: app.category || PLATFORM_TYPE_CAT[app.type] || "应用",
+    rating: 4.9,
+    size: author,
+    cover,
+    core: true,
+    authorName: author,
   };
-});
-const CATALOG: StoreItem[] = [...CORE_STORE, ...STORE];
+}
+const PLATFORM_TYPE_CAT: Record<string, string> = {
+  chat: "社交",
+  message: "通讯",
+  browse: "浏览",
+  read: "阅读",
+  video: "娱乐",
+  job: "招聘",
+};
+const UTILITY_CATALOG: StoreItem[] = STORE;
 
 /* 仿真手机中框配色：可在「设置 · 机身外壳」自选。frame=中框渐变，btn=侧键渐变。 */
 export type FrameId = "titanium" | "graphite" | "silver" | "gold" | "rose" | "purple" | "blue";
@@ -138,7 +166,10 @@ type AppsSlice = Pick<PhonePrefs, "installed" | "widgets" | "layout" | "widgetSi
 type LookSlice = Pick<PhonePrefs, "wallpaper" | "customWallpaper" | "wallpaperUserSet" | "brightness" | "dark" | "dnd" | "haptics" | "frameColor" | "showFrame" | "iconOverrides"> & { lookV2?: boolean };
 
 function normalizeApps(raw: Partial<AppsSlice> & { order?: string[] }): AppsSlice {
-  const installed = Array.from(new Set([...(Array.isArray(raw.installed) ? raw.installed : defaultInstalled()), "appstore"])).filter((id) => APP_IDS.has(id));
+  // 功能注释：允许平台表 appId（不限于本地 APP_IDS）；小组件仍校验 WIDGET_IDS
+  const installed = Array.from(
+    new Set([...(Array.isArray(raw.installed) ? raw.installed : defaultInstalled()), "appstore", "settings"]),
+  ).filter((id) => typeof id === "string" && id.trim() && !WIDGET_IDS.has(id));
   const widgets = Array.from(new Set([...(Array.isArray(raw.widgets) ? raw.widgets : []).filter((id) => WIDGET_IDS.has(id)), "w-hero-clock"])).filter((id) => id !== "w-today");
   const legacy = Array.isArray(raw.order) ? [...widgets, ...raw.order] : [];
   const baseLayout = (Array.isArray(raw.layout) && raw.layout.length ? raw.layout : (legacy.length ? legacy : DEFAULT_LAYOUT)).filter((id) => id !== "w-today");
@@ -281,8 +312,20 @@ export default function Phone() {
 function PhoneInner() {
   const { game, patchGame } = useGame();
   const [app, setApp] = useState<AppId | null>(null);
+  const [platformFocus, setPlatformFocus] = useState<PlatformApp | null>(null);
+  const [platformMissing, setPlatformMissing] = useState(false);
   const [locked, setLocked] = useState(true);
   const [prefs, setPrefs] = useState<PhonePrefs>(loadPrefs);
+  // 功能注释：已装里除系统入口/小组件外都按平台表解析
+  const installedPlatformIds = prefs.installed.filter(
+    (id) => id !== "appstore" && id !== "settings" && !WIDGET_IDS.has(id) && !["pomodoro", "clock", "notes", "calculator", "weather", "forum", "xianyu", "peek", "couple"].includes(id),
+  );
+  const { published, byId } = usePlatformAppsCatalog(installedPlatformIds);
+  platformNameLookup = (id) => byId.get(id)?.name;
+  platformIconLookup = (id) => {
+    const icon = byId.get(id)?.icon;
+    return icon ? resolvePlatformAppIconUrl(icon) : undefined;
+  };
   if (!game) return null;
   const ph = ensurePhone(game).phone!;
   const time = gameTimeLabel(game).split(" ").pop() ?? "08:00";
@@ -298,11 +341,57 @@ function PhoneInner() {
   const badges: Record<string, number> = { wechat: unreadTotal, sms: smsUnread, call: missedCalls, couple: coupleUnread, mail: mailUnread(game) };
   const openApp = (a: AppId) => {
     if (a === "call") saveData(CALL_SEEN_KEY, Date.now());
+    const plat = byId.get(a);
+    const legacy = plat ? platformAppLegacyUi(plat.content) : "";
+    const label = plat?.name || appLabel(a);
     // 线上联动：刷了哪个 App 记入手机流水，并消耗线下时间
-    patchGame((g) => logAppOpen(g, a, appLabel(a)));
+    patchGame((g) => logAppOpen(g, a, label));
+    if (plat) {
+      setPlatformFocus(plat);
+      setPlatformMissing(false);
+      // 功能注释：有 legacyUi 走现成专用页；否则按 type 打开通用内容页
+      setApp((legacy || `platform:${plat.type || "browse"}`) as AppId);
+      return;
+    }
+    // 已装但平台记录没了 → 应用不可用
+    if (installedPlatformIds.includes(a) && !APP_IDS.has(a)) {
+      setPlatformFocus(null);
+      setPlatformMissing(true);
+      setApp("platform:missing");
+      return;
+    }
+    setPlatformFocus(null);
+    setPlatformMissing(false);
     setApp(a);
   };
-  const back = () => setApp(null);
+  const back = () => {
+    setApp(null);
+    setPlatformFocus(null);
+    setPlatformMissing(false);
+  };
+
+  const storeCatalog: StoreItem[] = [
+    ...published.map(platformToStoreItem),
+    // 已装但记录缺失：仍占一行，打开时提示不可用
+    ...installedPlatformIds
+      .filter((id) => !byId.has(id))
+      .map((id) => ({
+        id,
+        label: id,
+        tagline: "应用不可用",
+        desc: "应用不可用",
+        kicker: "不可用",
+        story: "",
+        icon: APP_ICON[id] ?? null,
+        cat: "应用",
+        rating: 0,
+        size: "应用不可用",
+        cover: "",
+        core: true,
+        authorName: "应用不可用",
+      })),
+    ...UTILITY_CATALOG,
+  ];
   const petMode = usePetMode();
   const studioOpen = useStudioOpen();
   // 其它应用请求跳转（如「设置 · 审核中心」→ 应用商店里的开发者工坊）
@@ -314,7 +403,8 @@ function PhoneInner() {
   // 功能注释：未主动换过桌面时用作品默认背景；玩家设置优先。不改场景背景与机身外壳。
   const wp = resolveEffectiveHomeWallpaper(worldPhoneHomeWallpaper(), prefs);
   // 应用打开时，顶/底系统条改用应用自身底色，避免露出主屏壁纸
-  const chrome = app ? APP_CHROME[app] : null;
+  const chromeKey = app && platformAppLegacyUi(platformFocus?.content) ? platformAppLegacyUi(platformFocus?.content) : app;
+  const chrome = chromeKey && APP_CHROME[chromeKey as keyof typeof APP_CHROME] ? APP_CHROME[chromeKey as keyof typeof APP_CHROME] : (app?.startsWith("platform:") ? { top: "#ffffff", bottom: "#ffffff", dark: false } : null);
   const sync = useSyncState(app);
   useProactiveMessages(); // 好友主动来消息：整部手机在线即生效，不必停在绿信里
   const [syncTip, setSyncTip] = useState("");
@@ -365,14 +455,20 @@ function PhoneInner() {
     }
   };
   // 供「图标」个性化页使用（已安装的应用及其默认图标）
-  const iconApps: IconApp[] = prefs.installed.map((id) => ({ id, label: appLabel(id), node: APP_ICON[id] ?? null }));
+  const iconApps: IconApp[] = prefs.installed.map((id) => {
+    const plat = byId.get(id);
+    const iconUrl = plat?.icon ? resolvePlatformAppIconUrl(plat.icon) : "";
+    return {
+      id,
+      label: plat?.name || appLabel(id),
+      node: iconUrl ? <img src={iconUrl} alt="" className="h-full w-full object-cover" /> : (APP_ICON[id] ?? null),
+    };
+  });
   const setIcon = (id: string, url: string | null) => {
     const next = { ...prefs.iconOverrides };
     if (url) next[id] = url; else delete next[id];
     updatePrefs({ iconOverrides: next });
   };
-  // 恢复手机自带应用：列出被删掉的自带应用
-
   // 是否显示仿真机身边框：默认关闭（整屏沉浸），玩家可在「设置 · 显示与亮度」里打开
   // 窄屏（真机）本身就是手机：整屏使用；宽屏才显示仿真机身
   const wide = useWide();
@@ -436,7 +532,18 @@ function PhoneInner() {
                 {app === "xhs" && <XhsApp onBack={back} />}
                 {app === "ticket" && <TicketApp onBack={back} />}
                 {app === "settings" && <SettingsApp onBack={back} prefs={prefs} onChange={updatePrefs} />}
-                {app === "appstore" && <AppStoreApp onBack={back} catalog={CATALOG.filter((c) => phoneAppAllowed(c.id)).map((c) => ({ ...c, label: appLabel(c.id) }))} installed={installedSet} onInstall={install} onOpen={(id) => (WIDGET_IDS.has(id) ? setApp(null) : openApp(id as AppId))} iconApps={iconApps} iconOverrides={prefs.iconOverrides} onSetIcon={setIcon} />}
+                {app === "appstore" && (
+                  <AppStoreApp
+                    onBack={back}
+                    catalog={storeCatalog.filter((c) => c.kind === "widget" || phoneAppAllowed(c.id) || c.core)}
+                    installed={installedSet}
+                    onInstall={install}
+                    onOpen={(id) => (WIDGET_IDS.has(id) ? setApp(null) : openApp(id as AppId))}
+                    iconApps={iconApps}
+                    iconOverrides={prefs.iconOverrides}
+                    onSetIcon={setIcon}
+                  />
+                )}
                 {app === "pomodoro" && <PomodoroApp onBack={back} />}
                 {app === "clock" && <ClockApp onBack={back} />}
                 {app === "calculator" && <CalculatorApp onBack={back} />}
@@ -451,6 +558,9 @@ function PhoneInner() {
                 {app === "mail" && <MailApp onBack={back} />}
                 {app === "read" && <ReadApp onBack={back} />}
                 {app === "video" && <VideoApp onBack={back} />}
+                {(app.startsWith("platform:") || platformMissing) && (
+                  <PlatformTypeApp app={platformFocus} unavailable={platformMissing || !platformFocus} onBack={back} />
+                )}
               </div>
             )}
           </div>
@@ -665,7 +775,7 @@ function HomeGrid({ layout, installed, widgets, widgetSizes, widgetShapes, iconO
 
   const AppTile = ({ id, i, inDock }: { id: string; i: number; inDock?: boolean }) => {
     const label = appLabel(id);
-    const customIcon = iconOverrides?.[id] || modAppIcon(id);
+    const customIcon = iconOverrides?.[id] || platformIconLookup(id);
     return (
       <button
         {...dragProps(id)} {...holdProps}
@@ -776,8 +886,8 @@ function HomeGrid({ layout, installed, widgets, widgetSizes, widgetShapes, iconO
             <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-white/25" />
             <div className="flex items-center gap-3">
               <span className="ios-icon relative block h-[52px] w-[52px] overflow-hidden">
-                {iconOverrides?.[iconEditing] || modAppIcon(iconEditing)
-                  ? <img src={(iconOverrides?.[iconEditing] || modAppIcon(iconEditing)) || undefined} alt="" className="h-full w-full scale-[1.14] object-cover" />
+                {iconOverrides?.[iconEditing] || platformIconLookup(iconEditing)
+                  ? <img src={(iconOverrides?.[iconEditing] || platformIconLookup(iconEditing)) || undefined} alt="" className="h-full w-full scale-[1.14] object-cover" />
                   : (APP_ICON[iconEditing] ?? <span className="flex h-full w-full items-center justify-center bg-zinc-600">{appLabel(iconEditing)[0]}</span>)}
               </span>
               <div>

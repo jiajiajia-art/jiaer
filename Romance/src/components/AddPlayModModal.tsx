@@ -2,6 +2,7 @@
  * 编辑器 · 添加玩法 Mod：商店列表 + 详情页。
  * 点条目（非添加按钮）进详情：作者、下载量、详细说明、预览图；有依赖时按钮写「添加（含依赖）」。
  * 玩法 Mod ≠ 本体（设定/建角/地点/人物/事件/档案不进目录）；也不含娱乐圈/校园等世界观骨架。
+ * 功能注释：本弹窗只列玩法；手机应用只在应用商店管理，不在此出现分类/搜索/清单。
  */
 import { useMemo, useState } from "react";
 import toast from "react-hot-toast";
@@ -11,7 +12,6 @@ import {
   makeInstallFromCatalog,
   missingPlayModDepNames,
   resolvePlayModInstallChain,
-  type ComponentKind,
   type LocalPlayModCatalogItem,
   type PlayModInstallConfig,
 } from "../mods/playModCatalog";
@@ -55,17 +55,14 @@ function formatDownloads(n: number) {
 }
 
 export default function AddPlayModModal({ installs, onChange, onClose, onConfirmDeps }: Props) {
-  const [q, setQ] = useState("");
-  const [kind, setKind] = useState<ComponentKind | "all">("all");
   const [tab, setTab] = useState<ShelfTab>("推荐");
   /** 功能注释：点列表项进入详情；null 表示列表态 */
   const [detailSlug, setDetailSlug] = useState<string | null>(null);
   const installed = useMemo(() => new Set(installs.map((x) => x.slug)), [installs]);
 
   const list = useMemo(() => {
-    let rows = LOCAL_PLAY_MOD_CATALOG.filter((x) => kind === "all" || x.componentKind === kind);
-    const s = q.trim().toLowerCase();
-    if (s) rows = rows.filter((x) => `${x.name}${x.description}${x.detailDescription}`.toLowerCase().includes(s));
+    // 功能注释：只展示玩法；phone_app 归应用商店，不进本列表
+    let rows = LOCAL_PLAY_MOD_CATALOG.filter((x) => x.componentKind === "gameplay");
     if (tab === "免费") rows = rows.filter((x) => !x.priceKk);
     if (tab === "已安装") rows = rows.filter((x) => installed.has(x.slug));
     if (tab === "已购买") rows = rows.filter((x) => !x.priceKk || installed.has(x.slug));
@@ -75,7 +72,7 @@ export default function AddPlayModModal({ installs, onChange, onClose, onConfirm
       rows = [...rows].sort((a, b) => a.name.localeCompare(b.name, "zh"));
     }
     return rows;
-  }, [q, kind, tab, installed]);
+  }, [tab, installed]);
 
   const detail = detailSlug ? catalogBySlug(detailSlug) : null;
 
@@ -127,7 +124,7 @@ export default function AddPlayModModal({ installs, onChange, onClose, onConfirm
             <p className="text-[11px] leading-relaxed text-ink-soft">
               {detail
                 ? "玩法详情：作者、下载量、说明与预览图；可直接添加进本作品。"
-                : "本剧可选玩法（通告 / 出行等），不是档案、支线、登录、人脉、设置等本体功能。挑选玩法或手机应用；有依赖时会提示是否一并添加。"}
+                : "这里添加本作品要用的玩法。"}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
@@ -154,9 +151,7 @@ export default function AddPlayModModal({ installs, onChange, onClose, onConfirm
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-[15px] font-bold text-ink">{detail.name}</span>
-                  <span className="rounded-full border border-line px-2 text-[10.5px] text-ink-soft">
-                    {detail.componentKind === "phone_app" ? "手机应用" : "玩法"}
-                  </span>
+                  <span className="rounded-full border border-line px-2 text-[10.5px] text-ink-soft">玩法</span>
                   <span className="rounded-full border border-line px-2 text-[10.5px] text-ink-soft">
                     {detail.priceKk ? `${detail.priceKk} KK` : "免费"}
                   </span>
@@ -198,21 +193,8 @@ export default function AddPlayModModal({ installs, onChange, onClose, onConfirm
           </div>
         ) : (
           <>
-            <div className="space-y-2 border-b border-line px-4 py-2">
-              <div className="flex flex-wrap gap-1.5">
-                {([["all", "全部"], ["gameplay", "玩法"], ["phone_app", "手机应用"]] as const).map(([k, label]) => (
-                  <button
-                    key={k}
-                    type="button"
-                    onClick={() => setKind(k)}
-                    className={`rounded-full px-2.5 py-1 text-[11.5px] font-semibold ${
-                      kind === k ? "bg-jade text-paper" : "border border-line text-ink-soft"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
+            {/* 功能注释：保留货架筛选；去掉「全部/玩法/手机应用」与搜索框 */}
+            <div className="border-b border-line px-4 py-2">
               <div className="flex flex-wrap gap-1.5">
                 {(["推荐", "最新", "最热", "免费", "已购买", "已安装"] as ShelfTab[]).map((t) => (
                   <button
@@ -227,12 +209,6 @@ export default function AddPlayModModal({ installs, onChange, onClose, onConfirm
                   </button>
                 ))}
               </div>
-              <input
-                className="w-full rounded-xl border border-line bg-paper-2 px-3 py-2 text-[13px]"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="搜索玩法…"
-              />
             </div>
             <ul className="ui-dialog-body space-y-2 px-4 py-3">
               {list.map((item) => {
@@ -260,9 +236,7 @@ export default function AddPlayModModal({ installs, onChange, onClose, onConfirm
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-[13px] font-bold text-ink">{item.name}</span>
-                        <span className="rounded-full border border-line px-2 text-[10.5px] text-ink-soft">
-                          {item.componentKind === "phone_app" ? "手机应用" : "玩法"}
-                        </span>
+                        <span className="rounded-full border border-line px-2 text-[10.5px] text-ink-soft">玩法</span>
                         <span className="rounded-full border border-line px-2 text-[10.5px] text-ink-soft">
                           {item.priceKk ? `${item.priceKk} KK` : "免费"}
                         </span>

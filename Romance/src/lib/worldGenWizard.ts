@@ -151,8 +151,7 @@ export const DEFAULT_WORLD_GEN_EDITOR_STEP_IDS: readonly string[] = Object.freez
   // 开局事件与主线
   "fixedEvents",
   "storylines",
-  // 功能注释：默认生成开场白（paragraphs），发布前必填；创作者可再改或换自定义开场页
-  "opening",
+  // 功能注释：开场剧情默认不生成、不进预览必填；创作者可在编辑器⑤美化自行配置
 ]);
 
 export function isWorldGenCoreStep(id: string): boolean {
@@ -216,6 +215,8 @@ const RETIRED_WORLD_GEN_STEP_IDS: Record<string, readonly string[]> = {
   cover: [],
   phoneAppsCfg: [],
   theme: [],
+  // 功能注释：开场默认不要；旧会话勾选开场剧情直接丢弃，改走编辑器手配
+  opening: [],
 };
 
 const HUB_STEPS: WorldGenEditorStep[] = EDITOR_HUB_MENUS.filter((m) => WORLD_GEN_HUB_MENU_IDS.includes(m.id)).map((m) => ({
@@ -253,7 +254,7 @@ const MOD_STEPS: WorldGenEditorStep[] = [
   // ④ 剧情（开场页与剧情美化在⑥美化；结局插图仍随结局留在这里）
   { id: "prompt", group: "① 基础", name: "剧本基调", desc: "写给模型的整段基调（原 GM / 世界观 / 口吻合并）", contentIds: ["world"], source: "mod" },
   { id: "fixedEvents", group: "④ 剧情", name: "固定事件（模组库）", desc: "首次事件 · 预设剧本 · 时间 / 条件触发 · 事件链", contentIds: ["mainPlot", "sideEvents", "opening"], source: "mod" },
-  { id: "storylines", group: "④ 剧情", name: "剧情线", desc: "主线节点 · 独立支线 · 结局与时限 · 评级", contentIds: ["mainPlot", "sideEvents", "world"], source: "mod" },
+  { id: "storylines", group: "④ 剧情", name: "剧情线", desc: "一条主线（有序节点）· 结局与时限 · 评级；支线手建", contentIds: ["mainPlot", "sideEvents", "world"], source: "mod" },
 
   // 玩法并入①基础：添加即启用，不再单独生成「功能开关」
   { id: "playModInstalls", group: "① 基础", name: "已添加的玩法", desc: "推荐 · 确认添加 · 底栏名 · 显隐（添加即启用）", contentIds: ["world", "mainPlot"], source: "mod" },
@@ -384,7 +385,7 @@ export function defaultWorldGenStep1(): WorldGenStep1 {
  */
 export function normalizeWorldGenStep1(s1: WorldGenStep1): WorldGenStep1 {
   const known = new Set(ALL_WORLD_GEN_EDITOR_STEP_IDS);
-  // 功能注释：旧草稿里已下架的 id 换成写同一批字段的现行模组（CG 等直接丢弃；opening 已重回清单）
+  // 功能注释：旧草稿里已下架的 id 换成写同一批字段的现行模组（CG / opening 等直接丢弃）
   const raw = (s1.editorStepIds ?? []).flatMap((id) => RETIRED_WORLD_GEN_STEP_IDS[id] ?? [id]);
   // 功能注释：只保留基础世界 id，顺序跟 DEFAULT 一致；扩展玩法永不进生成勾选
   const want = new Set(raw.filter((id) => known.has(id) && isWorldGenCoreStep(id)));
@@ -520,6 +521,9 @@ export function draftModFromWorldGen(d: WorldGenDraft): {
     prompt: { extraRules?: string; scriptTone?: string };
     features: ReturnType<typeof defaultWorldGenFeatureFlags>;
     cover: { title: string };
+    /** 功能注释：与 blankMod 一致——开局资金默认 0、货币名「元」，0 已算填好；创作者可改名称 */
+    startMoney: number;
+    moneyLabel: string;
     play?: PlaySlot;
   };
   meta?: { worldGen: WorldGenDraft };
@@ -547,6 +551,9 @@ export function draftModFromWorldGen(d: WorldGenDraft): {
       features: defaultWorldGenFeatureFlags(),
       // 功能注释：封面其余字段留空用引擎默认；标题用剧本名，禁止 AI 改写
       cover: worldGenDefaultCover(title),
+      // 功能注释：建角「开局资金」默认就绪，预览不因缺资金拦截；货币名开局页/局内共用
+      startMoney: 0,
+      moneyLabel: "元",
       // 功能注释：禁止预写 playModInstalls，扩展玩法须作者确认安装
       ...(play ? { play } : {}),
     },

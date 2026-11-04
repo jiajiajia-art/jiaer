@@ -21,6 +21,8 @@ import type { ModArg } from "../mods/types";
 import { resolveAudio, audioLabel } from "./audioLib";
 import type { AudioCmd } from "../lib/types";
 import { asCondList } from "./safeConds.ts";
+import { asModArray } from "../lib/asModArray.ts";
+import type { AttrDef } from "../lib/types";
 
 /* 当前正在结算 / 判定的内容归属（模板库 MOD 装入的资源带 _mod；原生 = undefined），用于跨 MOD 授权 */
 let ctxOwner: string | undefined;
@@ -42,14 +44,16 @@ export const BASE_METRICS: { key: string; label: string }[] = [
   { key: "blackFans", label: "黑粉" },
   { key: "week", label: "周数" },
 ];
+/** 功能注释：customAttrs 槽常被 AI 写成单对象；禁止 ...(slot ?? []) → is not iterable */
+const worldCustomAttrs = (): AttrDef[] => asModArray<AttrDef>(getWorldSlot("customAttrs"));
 /* 可作条件/效果的数值：内置指标 + 当前世界观的自定义角色属性（键前缀 c:） */
 export const FIXED_METRICS: { key: string; label: string }[] = liveArray(() => [
   ...BASE_METRICS,
-  ...(getWorldSlot("customAttrs") ?? []).map((d) => ({ key: `c:${d.id}`, label: d.label })),
+  ...worldCustomAttrs().map((d) => ({ key: `c:${d.id}`, label: d.label })),
 ]);
 const METRIC_LABEL: Record<string, string> = new Proxy({}, { get: (_, k) => FIXED_METRICS.find((m) => m.key === k)?.label });
-const attrMin = (id: string) => (getWorldSlot("customAttrs") ?? []).find((d) => d.id === id)?.min ?? 0;
-const attrMax = (id: string) => { const d = (getWorldSlot("customAttrs") ?? []).find((x) => x.id === id); return d ? attrCap(d.max) : 999; };
+const attrMin = (id: string) => worldCustomAttrs().find((d) => d.id === id)?.min ?? 0;
+const attrMax = (id: string) => { const d = worldCustomAttrs().find((x) => x.id === id); return d ? attrCap(d.max) : 999; };
 /* 结局评定维度的默认满分：自定义属性取其上限，内置指标取常见高位 */
 const METRIC_FULL: Record<string, number> = { fame: 750, reputation: 100, stress: 100, energy: 100, money: 2_000_000, works: 12, blackFans: 500, week: 156 };
 export const metricDefaultFull = (key: string): number => key.startsWith("c:") ? attrMax(key.slice(2)) : (METRIC_FULL[key] ?? 100);

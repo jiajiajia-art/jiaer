@@ -23,7 +23,7 @@ export default function ModRulesEditor({ value, stats, attrs, onChange, showTitl
   const extra = [
     ...RAW_STAT_ORDER.filter((k) => !hidden.has(k)).map((k) => ({ v: `stat:${k}`, l: (typeof stats?.labels?.[k] === "string" ? stats.labels![k]!.trim() : "") || RAW_STAT_LABELS[k] })),
     ...FIXED_METRICS.filter((m) => !m.key.startsWith("c:") && m.key !== "week" && !fixed.has(m.key)).map((m) => ({ v: m.key, l: m.label })),
-    ...(attrs ?? []).map((a) => ({ v: `c:${a.id}`, l: `${a.label || a.id}（自定义）` })),
+    ...(Array.isArray(attrs) ? attrs : []).map((a) => ({ v: `c:${a.id}`, l: `${a.label || a.id}（自定义）` })),
   ];
   const titles = value.titles ?? [];
   const bills = value.bills;
