@@ -103,6 +103,9 @@ test('platformApps_前端契约与创作入口', () => {
   assert.match(api, /publish/);
   assert.match(create, /创作应用/);
   assert.match(create, /上架/);
+  assert.match(create, /AppPageShell/);
+  assert.doesNotMatch(create, /<Navbar\s*\/>/);
+  assert.doesNotMatch(create, /<MobileBottomNav/);
   assert.match(createType, /创作应用/);
   assert.match(app, /\/create\/app/);
   assert.match(app, /CreatePlatformApp/);

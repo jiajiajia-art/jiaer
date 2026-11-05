@@ -32,8 +32,9 @@ test('GameShell_quest事件打开剧情志弹窗', () => {
 test('StoryTab_叠图旁白有半透明底_对白气泡不改', () => {
   const story = read('components/StoryTab.tsx');
   assert.match(story, /overlay\?: boolean/);
-  assert.match(story, /bg-black\/50/);
-  assert.match(story, /backdrop-blur-\[6px\]/);
+  // 功能注释：叠图旁白改用可调透明度的 story-narration-panel（浅底黑字），不再写死黑底白字
+  assert.match(story, /story-narration-panel/);
+  assert.doesNotMatch(story, /bg-black\/50/);
   // 对白气泡类名仍在
   assert.match(story, /dlg-bubble-me/);
   assert.match(story, /dlg-bubble relative/);
@@ -45,5 +46,6 @@ test('HomeTab_场景正文overlay随小说模式切换', () => {
   const home = read('components/HomeTab.tsx');
   assert.match(home, /Segments[\s\S]{0,160}overlay=\{!isNovel\}/);
   assert.match(home, /LiveNarration[\s\S]{0,60}overlay=\{!isNovel\}/);
-  assert.match(home, /descText[\s\S]{0,280}bg-black\/50/);
+  assert.match(home, /descText[\s\S]{0,280}story-narration-panel/);
+  assert.doesNotMatch(home, /descText[\s\S]{0,280}bg-black\/50/);
 });

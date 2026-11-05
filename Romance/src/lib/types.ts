@@ -503,7 +503,7 @@ export type GameRule = {
 };
 
 /* 触发时间：固定游戏日期 / 开始后第几天 / 不设时间（仅凭条件）。 */
-/* 游玩偏好：game=游戏模式（正文适中、重选项）；novel=小说模式（长篇连续叙事）。pov 为叙事人称 */
+/* 游玩偏好：game=游戏模式（正文适中、重选项）；novel=剧情模式（长篇连续叙事，内部值仍为 novel）。pov 为叙事人称 */
 export type PlayMode = "game" | "novel";
 export type Pov = "1" | "2" | "3";
 /** 屏幕方向：建角游玩偏好选定；局内主题 theme.orient 同步生效，设置里可随时改（无锁定） */

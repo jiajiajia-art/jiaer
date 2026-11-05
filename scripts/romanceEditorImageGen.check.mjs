@@ -46,30 +46,40 @@ test('editorImagePrompts_四处拼装含关键字段', async () => {
   assert.equal(mod.buildWorkCoverPrompt({}), '');
 });
 
-test('AiImageGen_支持autoRun与autoApply且仍走platformImageGen', () => {
+test('AiImageGen_默认编辑页再开始生成_仍走platformImageGen', () => {
   const gen = read('components/AiImageGen.tsx');
   assert.match(gen, /generatePlatformImage/);
-  assert.match(gen, /autoRun/);
-  assert.match(gen, /autoApply/);
-  assert.match(gen, /if \(autoApply\) onPickRef\.current\(url\)/);
+  assert.match(gen, /开始生成/);
+  assert.match(gen, /重新生成/);
+  assert.match(gen, /使用这张图/);
+  assert.match(gen, /参考图/);
+  assert.match(gen, /MAX_REFS = 2/);
+  assert.match(gen, /取消生成/);
+  assert.match(gen, /生成中不可修改/);
+  assert.match(gen, /referenceImages: refs/);
+  // 功能注释：兼容旧 props，但默认不得自动开跑
+  assert.match(gen, /autoRun = false/);
+  assert.match(gen, /autoApply = false/);
   assert.doesNotMatch(gen, /from ["']\.\.\/lib\/ai["']/);
 });
 
-test('ImagePicker_有预填词时默认自动生成并立刻写回', () => {
+test('ImagePicker_打开生图默认不自动跑不自动采用', () => {
   const picker = read('components/ImagePicker.tsx');
-  assert.match(picker, /autoRun/);
-  assert.match(picker, /autoApply/);
   assert.match(picker, /initialPrompt/);
-  assert.match(picker, /autoRun=\{genOpts\.autoRun !== false/);
-  assert.match(picker, /autoApply=\{genOpts\.autoApply !== false/);
+  assert.match(picker, /autoRun=\{genOpts\.autoRun === true\}/);
+  assert.match(picker, /autoApply=\{genOpts\.autoApply === true\}/);
+  assert.match(picker, /title="生图"/);
+  assert.match(picker, /onPhaseChange=\{setGenPhase\}/);
+  assert.doesNotMatch(picker, /autoRun=\{genOpts\.autoRun !== false/);
+  assert.doesNotMatch(picker, /autoApply=\{genOpts\.autoApply !== false/);
 });
 
-test('人物卡_ImagePicker生图接入姓名性别年龄简介小传', () => {
+test('人物卡_ImagePicker生图接入姓名性别年龄小传', () => {
   const panel = read('components/ModEditorPanel.tsx');
   assert.match(panel, /buildNpcAvatarPrompt/);
   assert.match(panel, /from ["']\.\.\/lib\/editorImagePrompts["']/);
-  assert.match(panel, /n\.summary/);
-  assert.match(panel, /aria-label="人物简介"/);
+  // 功能注释：短简介字段已并入小传；生图仍可读 summary/relation/role/bio
+  assert.match(panel, /n\.summary|n\.bio|n\.relation/);
   assert.match(panel, /n\.avatar/);
   assert.match(panel, /aiGen=\{\{[\s\S]*buildNpcAvatarPrompt/);
   const content = read('worlds/star2005/content.ts');
@@ -105,8 +115,14 @@ test('作品封面_生图用作品名与简介预填', () => {
   assert.match(panel, /workSummary=\{m\.description\}/);
 });
 
-test('platformImageGen_仍委托generateImage不另起网关', () => {
+test('platformImageGen_登录优先平台API_未登录才个人Key', () => {
   const src = read('lib/platformImageGen.ts');
+  assert.match(src, /\/api\/romance\/images\/generate/);
+  assert.match(src, /generateImageViaPlatform/);
+  assert.match(src, /hasPlatformPlayAuth\(\)/);
   assert.match(src, /return generateImage\(cfg, prompt, size\)/);
-  assert.doesNotMatch(src, /\bfetch\s*\(/);
+  assert.match(src, /editorImageGenerateUrl/);
+  // 功能注释：禁止再只认个人 AI 配置
+  assert.match(src, /hasPlatformPlayAuth\(\) \|\| imageConfigured\(cfg\)/);
+  assert.doesNotMatch(src, /还没配置生图模型：去「设置/);
 });

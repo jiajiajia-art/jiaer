@@ -8,7 +8,8 @@ export type MessageType =
     | 'favorite_game_updated'
     | 'report_received'
     | 'report_resolved'
-    | 'moderation';
+    | 'moderation'
+    | 'feedback_reply';
 
 export interface MessageAnnouncement extends AnnouncementRecord {
     messageType: 'announcement';
@@ -83,6 +84,20 @@ export interface MessageReportResolvedNotification {
     isRead: boolean;
 }
 
+/** 意见反馈运营回复 */
+export interface MessageFeedbackReplyNotification {
+    id: number;
+    sourceId: number;
+    messageType: 'feedback_reply';
+    feedbackId?: number;
+    ticketNo?: string;
+    title?: string;
+    body: string;
+    createdAt: string | null;
+    publishedAt?: string | null;
+    isRead: boolean;
+}
+
 /** 创作者：违规 / 处罚 / 申诉结果通知 */
 export interface MessageModerationNotification {
     id: number;
@@ -123,6 +138,7 @@ export interface MessageCenterData {
     reportReceivedNotifications?: MessageReportReceivedNotification[];
     reportResolvedNotifications?: MessageReportResolvedNotification[];
     moderationNotifications?: MessageModerationNotification[];
+    feedbackReplyNotifications?: MessageFeedbackReplyNotification[];
 }
 
 export interface MessageUnreadCountData {

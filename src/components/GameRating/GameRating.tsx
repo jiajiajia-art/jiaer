@@ -24,12 +24,19 @@ import styles from './GameRating.module.css';
 
 interface Props {
   fileId: string;
+  /** comments：详情页评论区（无内联写评分）；full：完整评分+评论 */
+  mode?: 'full' | 'comments';
   onRatingChange?: (summary: RatingSummary) => void;
+  /** 功能注释：把 userRating 回传给详情页评分入口，避免详情页再打一遍 ratings */
+  onUserRatingChange?: (userRating: UserRating) => void;
 }
 
 const DEFAULT_AVATAR_PATH = 'data/assets/defaultAvatar.png';
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 20;
 const DEBOUNCE_DELAY = 300;
+const REPLY_DEFAULT_VISIBLE = 3;
+const REPLY_EXPANDED_VISIBLE = 5;
+const COMMENT_MAX_LEN = 500;
 
 const isChineseLanguage = (language: string): boolean => language.toLowerCase().startsWith('zh');
 
@@ -37,7 +44,7 @@ const getAnonymousUserLabel = (language: string): string =>
   isChineseLanguage(language) ? '匿名用户' : 'Anonymous User';
 
 const getRepliesSummaryLabel = (count: number, language: string): string =>
-  isChineseLanguage(language) ? `�?{count}条回�?>` : `${count} replies >`;
+  isChineseLanguage(language) ? `${count}条回复 >` : `${count} replies >`;
 
 const getExpandMoreRepliesLabel = (language: string): string =>
   isChineseLanguage(language) ? '展开更多' : 'Show more';
@@ -156,12 +163,18 @@ const CommentCard: React.FC<{
   const handleExpandReplies = () => {
     if (replyCount <= 0) return;
 
+    // 功能注释：默认 3 → 展开到 5；再多进「查看更多」独立展开（扁平列表）
     if (visibleReplyCount === 0) {
-      setVisibleReplyCount(replyCount <= 3 ? replyCount : 3);
+      setVisibleReplyCount(Math.min(REPLY_DEFAULT_VISIBLE, replyCount));
       return;
     }
 
-    setVisibleReplyCount((prev) => Math.min(prev + 10, replyCount));
+    if (visibleReplyCount < REPLY_EXPANDED_VISIBLE) {
+      setVisibleReplyCount(Math.min(REPLY_EXPANDED_VISIBLE, replyCount));
+      return;
+    }
+
+    setVisibleReplyCount(replyCount);
   };
 
   const handleCollapseReplies = () => {
@@ -334,11 +347,12 @@ const CommentCard: React.FC<{
   );
 };
 
-const GameRating: React.FC<Props> = ({ fileId, onRatingChange }) => {
+const GameRating: React.FC<Props> = ({ fileId, mode = 'full', onRatingChange, onUserRatingChange }) => {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const { setIsAuthModalOpen } = authModalStore();
   const anonymousUserName = getAnonymousUserLabel(i18n.language);
+  const isCommentsMode = mode === 'comments';
 
   const [loading, setLoading] = useState(true);
   const [userRating, setUserRating] = useState<UserRating>(null);
@@ -348,7 +362,7 @@ const GameRating: React.FC<Props> = ({ fileId, onRatingChange }) => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
 
-  const [showInput, setShowInput] = useState(false);
+  const [showInput, setShowInput] = useState(isCommentsMode);
   const [ratingValue, setRatingValue] = useState(0);
   const [commentText, setCommentText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -384,13 +398,14 @@ const GameRating: React.FC<Props> = ({ fileId, onRatingChange }) => {
         setHasMore(data.ratingsComments.list.length === PAGE_SIZE);
         setUserRating(data.userRating);
         onRatingChange?.(data.ratingsComments.summary);
+        onUserRatingChange?.(data.userRating);
       }
     } catch (error) {
       console.error('Failed to fetch ratings:', error);
     } finally {
       setLoading(false);
     }
-  }, [fileId, onRatingChange]);
+  }, [fileId, onRatingChange, onUserRatingChange]);
 
   useEffect(() => {
     fetchRatings(1, false);
@@ -498,8 +513,13 @@ const GameRating: React.FC<Props> = ({ fileId, onRatingChange }) => {
   };
 
   const submitRating = async () => {
-    if (ratingValue === 0) {
+    // 功能注释：评论模式发纯文字根评论；完整模式仍要求星级
+    if (!isCommentsMode && ratingValue === 0) {
       toast.error(t('gameRating.pleaseSelectRating'));
+      return;
+    }
+    if (!commentText.trim()) {
+      toast.error(t('gameRating.commentRequired', { defaultValue: '请输入评论内容' }));
       return;
     }
 
@@ -507,8 +527,8 @@ const GameRating: React.FC<Props> = ({ fileId, onRatingChange }) => {
     try {
       const response = await gameRatingApi.submitRating({
         fileId,
-        ratingValue,
-        comment: commentText.trim(),
+        ...(isCommentsMode ? {} : { ratingValue }),
+        comment: commentText.trim().slice(0, COMMENT_MAX_LEN),
       });
       if (response.data.success) {
         const ratingData = response.data.data && 'rating' in response.data.data 
@@ -517,10 +537,10 @@ const GameRating: React.FC<Props> = ({ fileId, onRatingChange }) => {
         
         const isPending = ratingData?.review_status === 'pending';
         toast.success(isPending ? t('gameRating.submitSuccessPending') : t('gameRating.submitSuccess'));
-        setShowInput(false);
+        if (!isCommentsMode) setShowInput(false);
         setRatingValue(0);
         setCommentText('');
-        if (ratingData) {
+        if (ratingData && !isCommentsMode) {
           setUserRating(ratingData);
         }
         fetchRatings(1, false);
@@ -564,42 +584,55 @@ const GameRating: React.FC<Props> = ({ fileId, onRatingChange }) => {
   }
 
   return (
-    <div className={styles.container}>
-      {/* 闂傚倸鍊峰ù鍥х暦閸偅鍙忛柡澶嬪殮濞差亜围闁搞儻绲芥禍鐐叏濡厧甯跺褍顕埀顒冾潐濞叉繈锝炴径鎰畾闁哄啫鐗嗛悡锟犳煕閳╁厾顏呯閹绢喗鈷掑ù锝勮閻掗箖鏌￠崼顐㈠闁瑰箍鍨归濂稿椽娴ｅ搫�?*/}
-      <div className={styles.summarySection}>
-        <div className={styles.summaryLeft}>
-          <div className={styles.averageScore}>{summary.average > 0 ? summary.average.toFixed(1) : '0.0'}</div>
-          <div className={styles.totalCount}>{t('gameRating.totalReviews', { count: summary.total })}</div>
+    <div className={styles.container} data-mode={mode}>
+      {!isCommentsMode ? (
+        <div className={styles.summarySection}>
+          <div className={styles.summaryLeft}>
+            <div className={styles.averageScore}>{summary.average > 0 ? summary.average.toFixed(1) : '0.0'}</div>
+            <div className={styles.totalCount}>{t('gameRating.totalReviews', { count: summary.total })}</div>
+          </div>
+          {!showInput && !userRating && (
+            <button type="button" className={styles.writeReviewBtn} onClick={() => {
+              if (checkAuth()) setShowInput(true);
+            }}>
+              {t('gameRating.writeReview')}
+            </button>
+          )}
         </div>
-        {!showInput && !userRating && (
-          <button type="button" className={styles.writeReviewBtn} onClick={() => {
-            if (checkAuth()) setShowInput(true);
-          }}>
-            {t('gameRating.writeReview')}
-          </button>
-        )}
-      </div>
+      ) : null}
 
-      {/* 闂傚倸鍊搁崐椋庣矆娴ｉ潻鑰块梺顒€绉寸壕濠氭煙閻愵剙澧柣鏂挎閹便劌顪冪拠韫闁诲氦顫夊ú锕傚垂閸洜宓佹慨妞诲亾闁硅櫕绮撳Λ鍐ㄢ槈濮橆剟鍙￠梻鍌氬€风粈渚€骞夐垾瓒佹椽鏁冮崒姘舵７濡炪倖娲嶉崑鎾垛�?*/}
       {showInput && (
         <div className={styles.writeSection}>
-          <button type="button" className={styles.closeBtn} onClick={() => setShowInput(false)}>x</button>
+          {!isCommentsMode ? (
+            <button type="button" className={styles.closeBtn} onClick={() => setShowInput(false)}>x</button>
+          ) : null}
           <div className={styles.writeHeader}>
-            <span>{t('gameRating.rateThisGame')}</span>
+            <span>{isCommentsMode ? t('gameRating.writeComment') : t('gameRating.rateThisGame')}</span>
           </div>
-          <StarRating value={ratingValue} onChange={setRatingValue} size="large" />
+          {!isCommentsMode ? (
+            <StarRating value={ratingValue} onChange={setRatingValue} size="large" />
+          ) : null}
           <textarea
             className={styles.commentInput}
             placeholder={t('gameRating.commentPlaceholder')}
             value={commentText}
+            maxLength={COMMENT_MAX_LEN}
             onChange={(e) => setCommentText(e.target.value)}
+            onFocus={() => {
+              if (!checkAuth()) {
+                /* 登录弹窗已由 checkAuth 打开 */
+              }
+            }}
             rows={3}
           />
           <button
             type="button"
             className={styles.submitBtn}
-            onClick={submitRating}
-            disabled={isSubmitting || ratingValue === 0}
+            onClick={() => {
+              if (!checkAuth()) return;
+              void submitRating();
+            }}
+            disabled={isSubmitting || (!isCommentsMode && ratingValue === 0) || !commentText.trim()}
           >
             {isSubmitting ? t('gameRating.submitting') : t('gameRating.submit')}
           </button>

@@ -9,6 +9,8 @@ export interface GameFavoriteToggleRequest {
 export interface GameFavoriteToggleResponse {
   fileId: string;
   isFavorited: boolean;
+  /** 服务端收藏人数，切换后以前端展示为准 */
+  favoriteCount?: number;
 }
 
 export interface GameFavoritesListResponse {

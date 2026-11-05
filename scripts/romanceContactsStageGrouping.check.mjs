@@ -49,7 +49,8 @@ test('ContactsPanel_嵌人物上方紧凑配置_无模板组织分组表单', ()
   const npcTab = readFileSync(join(romance, 'components/NpcTab.tsx'), 'utf8');
   const editor = readFileSync(join(romance, 'components/ModEditorPanel.tsx'), 'utf8');
 
-  assert.match(panel, /关系档位与卡片数值|添加档位/);
+  assert.match(panel, /关系档位|添加档位/);
+  assert.doesNotMatch(panel, /卡片数值\s*[·・]|添加数值|CONTACT_ICONS/);
   assert.doesNotMatch(panel, /载入「|TEMPLATES|title="所属组织"|兜底组|身份关键词|添加分组/);
   assert.doesNotMatch(editor, /title="人脉页面配置"|人脉分组：|所属组织（无）/);
   assert.match(npcTab, /groupContactsByStage/);

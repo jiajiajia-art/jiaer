@@ -63,6 +63,7 @@ import type { StartFaction } from "../game/data";
 import ModCreationFieldsEditor from "./ModCreationFieldsEditor";
 import ModThemeEditor from "./ModThemeEditor";
 import AddPlayModModal from "./AddPlayModModal";
+import { improperPersonNameReason, sanitizeNpcFactionId } from "../lib/personName";
 import { sanitizeModStrings } from "../lib/sanitizeModStrings";
 import { applyScriptTone, consolidateScriptTone, readScriptTone } from "../lib/scriptTone";
 import {
@@ -134,7 +135,7 @@ export function blankMod(kind: ModKind): Mod {
  * 功能注释：不再提供「全部」页签与独立「玩法 Mod」页；默认停在「① 基础」。搜索关键词仍可跨分组命中区块。 */
 const GROUPS = [
   { k: "base", label: "① 基础", hint: "作品封面、名称与简介、剧本基调、时间与推进、头像、建角、人物线路、地点、已添加的玩法" },
-  { k: "role", label: "② 角色", hint: "开局人物与关系档位、关系玩法" },
+  { k: "role", label: "② 角色", hint: "开局人物与关系档位（表白/婚礼请在「已添加的玩法」里加关系玩法）" },
   { k: "grow", label: "③ 养成", hint: "勾选要用的养成模块：课程、打工、账单、玩法规则、引擎结算、扣费依据；分档在建角属性，头衔在玩法 Mod；破产规则在④结局" },
   { k: "story", label: "④ 剧情", hint: "世界书、固定 / 首次事件、剧情线（主线 · 支线 · 结局）" },
   { k: "look", label: "⑤ 美化", hint: "手机外观、皮肤美化、音乐、开场页外观、剧情美化、底栏样式" },
@@ -160,9 +161,9 @@ function groupFilled(c: Mod["content"], skinOn = false): Record<Exclude<GroupKey
       has(c.playModInstalls),
       has(c.travel) || has(c.cars),
       has(c.gigs) || has(c.gigPrices) || has(c.contracts) || has(c.projects) || has(c.industry),
-      has(c.imageCrisis) || has(c.weeklyPaper) || has(c.meals) || has(c.pregnancy) || has(c.titles),
+      has(c.imageCrisis) || has(c.weeklyPaper) || has(c.meals) || has(c.pregnancy) || has(c.titles) || has(c.relations),
     ),
-    role: n(has(c.npcs), has(c.relations), has(c.contacts)),
+    role: n(has(c.npcs), has(c.contacts)),
     // 功能注释：扣费依据在养成；透支/破产规则在④结局；开局资金已并进①基础·建角
     grow: n(has(c.growModules), has(c.trainings), has(c.sideJobs) || has(c.weekendActs), has(c.bills) || has(c.income), has(c.gameRules), has(c.tuning)),
     story: n(has(c.worldBook), has(c.fixedEvents) || has(c.events), has(c.storylines) || has(c.sidelines) || has(c.endings) || has(c.timeLimit) || has(c.gradeDims)),
@@ -421,9 +422,25 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
   // 功能注释：「代表作」等娱乐圈人物栏只在演艺事业相关玩法装上后显示
   const showCareerNpcFields =
     showPlay("gigs") || showPlay("contracts") || showPlay("projects") || showPlay("industry");
+  // 功能注释：势力块已从地点页撤下；人物「所属势力」只绑当前作品仍存在的 startFactions
   const startFactions: StartFaction[] = Array.isArray(c.creation?.startFactions) ? c.creation!.startFactions! : [];
-  const setStartFactions = (next: StartFaction[]) =>
-    setC({ creation: { ...(c.creation ?? {}), startFactions: next.length ? next : undefined } });
+  const startFactionIds = useMemo(
+    () => new Set(startFactions.map((f) => f.id).filter(Boolean)),
+    [startFactions],
+  );
+  // 功能注释：势力列表变化时丢掉已失效 factionId，避免下拉里出现「已失效」
+  useEffect(() => {
+    let changed = false;
+    const next = npcs.map((n) => {
+      const cleaned = sanitizeNpcFactionId(n.factionId, startFactionIds);
+      if (cleaned === (n.factionId?.trim() || undefined)) return n;
+      changed = true;
+      return { ...n, factionId: cleaned };
+    });
+    if (changed) setC({ npcs: next });
+    // 仅跟势力表走；人物手改不在此重扫
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- startFactionIds
+  }, [startFactionIds]);
   /** 功能注释：按故事设定推荐玩法 mod，须作者点「安装」才写入；绝不自动添加 */
   const playModRecs = useMemo(() => {
     const seed = [m.description, readScriptTone(c.prompt)].filter(Boolean).join("\n");
@@ -456,6 +473,11 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
     // 功能注释：刚装上头衔包且尚无表时给一条空白头衔，方便作者从空表填起
     if (chain.some((row) => row.slug === "pack-titles") && !(c.titles && c.titles.length)) {
       patch.titles = [{ id: `t_${Date.now().toString(36).slice(-5)}`, name: "", tier: "青铜", req: {}, desc: "" }];
+    }
+    // 功能注释：装上关系玩法且尚无 relations 槽时给空对象，打开配置面板便于改门槛
+    if (chain.some((row) => row.slug === "pack-relations" || row.editorPanels?.includes("relations")) && !c.relations) {
+      // 功能注释：空槽即可打开关系配置面板，缺省字段由下游 normalize 补齐
+      patch.relations = {} as NonNullable<Mod["content"]["relations"]>;
     }
     setC(patch);
   };
@@ -496,6 +518,10 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
     // 功能注释：卸掉头衔包时清掉头衔表，未添加的剧本不应残留头衔
     if (slug === "pack-titles" || catalogBySlug(slug)?.editorPanels.includes("titles")) {
       patch.titles = undefined;
+    }
+    // 功能注释：卸掉关系玩法时清配置，避免未安装却残留表白/婚礼数值
+    if (slug === "pack-relations" || catalogBySlug(slug)?.editorPanels.includes("relations")) {
+      patch.relations = undefined;
     }
     setC(patch);
   };
@@ -767,12 +793,17 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
             const next = playModInstalls.length ? playModInstalls : undefined;
             const addedTitles = (next ?? []).some((x) => x.slug === "pack-titles" || x.editorPanels?.includes("titles"))
               && !(c.playModInstalls ?? []).some((x) => x.slug === "pack-titles" || x.editorPanels?.includes("titles"));
+            const addedRelations = (next ?? []).some((x) => x.slug === "pack-relations" || x.editorPanels?.includes("relations"))
+              && !(c.playModInstalls ?? []).some((x) => x.slug === "pack-relations" || x.editorPanels?.includes("relations"));
             const patch: Partial<Mod["content"]> = {
               playModInstalls: next,
               features: syncFeaturesFromPlayModInstalls(next, c.features) as Mod["content"]["features"],
             };
             if (addedTitles && !(c.titles && c.titles.length)) {
               patch.titles = [{ id: `t_${Date.now().toString(36).slice(-5)}`, name: "", tier: "青铜", req: {}, desc: "" }];
+            }
+            if (addedRelations && !c.relations) {
+              patch.relations = {} as NonNullable<Mod["content"]["relations"]>;
             }
             setC(patch);
           }}
@@ -1230,13 +1261,16 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
             const byId = new Map(npcs.map((n) => [n.id, n]));
             for (const row of incoming) {
               if (!row?.id || !String(row.name ?? "").trim()) continue;
+              // 功能注释：AI 合并人物时丢弃纯身份名与已失效势力，避免写进草稿
+              if (improperPersonNameReason(row.name)) continue;
+              const factionId = sanitizeNpcFactionId(row.factionId, startFactionIds);
               const prev = byId.get(row.id);
               if (!prev) {
                 byId.set(row.id, {
                   id: row.id,
                   name: String(row.name),
                   role: row.role || "",
-                  kind: row.kind === "staff" ? "staff" : "roam",
+                  kind: "roam",
                   home: row.home || c.startRoom || roomIds[0] || "",
                   roam: Array.isArray(row.roam) ? row.roam : [],
                   bio: row.bio || "",
@@ -1246,7 +1280,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
                   relation: row.relation,
                   metStart: row.metStart,
                   wxStart: row.wxStart,
-                  factionId: row.factionId,
+                  factionId,
                   requires: [],
                 });
                 continue;
@@ -1260,7 +1294,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
                 age: typeof prev.age === "number" ? prev.age : row.age,
                 tags: prev.tags?.length ? prev.tags : row.tags,
                 relation: prev.relation || row.relation,
-                factionId: prev.factionId || row.factionId,
+                factionId: sanitizeNpcFactionId(prev.factionId, startFactionIds) || factionId,
               });
             }
             setC({ npcs: [...byId.values()] });
@@ -1285,52 +1319,28 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
         </div>
       </Section>
 
-      <Section g="base" title="势力" on={has(c.creation?.startFactions)} hint="①基础统一配置 · 建角可勾选加入 · 人物卡只选所属" count={startFactions.length || undefined}>
-        <p className="mb-2 text-[11px] leading-relaxed text-ink-soft">势力在本页配置；人物编辑里只选择「所属势力」，不要在每个剧本塞娱乐圈专用字段。</p>
-        <div className="space-y-2">
-          {startFactions.map((f, i) => {
-            const put = (p: Partial<StartFaction>) => setStartFactions(startFactions.map((x, j) => (j === i ? { ...x, ...p } : x)));
-            return (
-              <div key={f.id} className="grid gap-1.5 rounded-lg border border-line bg-paper-2/50 p-2">
-                <div className="flex gap-1.5">
-                  <input className={inp} value={f.name} placeholder="势力名称" onChange={(e) => put({ name: e.target.value })} />
-                  <label className="flex shrink-0 items-center gap-1 text-[11px] text-ink-soft">初始声望
-                    <input type="number" min={-100} max={100} className={`${inp} !w-16`} value={f.rep ?? 20}
-                      onChange={(e) => put({ rep: Math.max(-100, Math.min(100, Math.round(Number(e.target.value) || 0))) })} />
-                  </label>
-                  <button type="button" className={btn} onClick={() => setStartFactions(startFactions.filter((_, j) => j !== i))}>删除</button>
-                </div>
-                <textarea rows={2} className={inp} value={f.desc ?? ""} placeholder="势力设定（建角页展示，也作为世界书正文）" onChange={(e) => put({ desc: e.target.value || undefined })} />
-                <input className={inp} key={Array.isArray(f.tags) ? f.tags.join("、") : ""} defaultValue={Array.isArray(f.tags) ? f.tags.join("、") : ""}
-                  placeholder="标签 / 别称，顿号分隔" onBlur={(e) => put({ tags: e.target.value.split(/[、,，]/).map((t) => t.trim()).filter(Boolean) })} />
-              </div>
-            );
-          })}
-          <button type="button" className={btn} onClick={() => setStartFactions([...startFactions, { id: `sf_${Date.now().toString(36)}`, name: "", rep: 20 }])}>＋ 新增势力</button>
-        </div>
-        <label className="mt-2 flex items-center gap-2 text-[11.5px] text-ink-soft">
-          <span className="whitespace-nowrap" aria-label="最多可选">最多可选</span>
-          <input type="number" min={0} className={`${inp} !w-16`} value={c.creation?.factionPickMax ?? ""} placeholder="不限"
-            onChange={(e) => {
-              const n = Math.max(0, Math.round(Number(e.target.value)));
-              setC({ creation: { ...(c.creation ?? {}), factionPickMax: e.target.value && n ? n : undefined } });
-            }} />
-        </label>
-      </Section>
-
-      {/* 功能注释：关系档位/卡片数值并在开局人物上方统一配置，不再单独做大人脉页 */}
-      <Section g="role" title="人物" on={has(c.npcs) || has(c.contacts)} hint="关系档位 · 卡片数值 · 名字 · 身份 · 标签 · 小传 · 时间线" count={npcs.length || undefined}>
+      {/* 功能注释：关系档位并在开局人物上方统一配置；卡片数值已下线 */}
+      <Section g="role" title="人物" on={has(c.npcs) || has(c.contacts)} hint="关系档位 · 须有名有姓 · 身份 · 标签 · 小传 · 时间线" count={npcs.length || undefined}>
         <datalist id="mod-avatar-variants">{variantNames(c.avatars ?? null).map((x) => <option key={x} value={x} />)}</datalist>
-        <ContactsPanel value={c.contacts} onChange={(contacts) => setC({ contacts })} statsValue={c.stats} attrsValue={c.customAttrs} pathsValue={c.creation?.paths} />
+        <ContactsPanel value={c.contacts} onChange={(contacts) => setC({ contacts })} />
         {npcs.length > 5 && <SearchBox value={npcQ} onChange={setNpcQ} placeholder="搜索人物" />}
         {npcs.length === 0 && <EmptyState>还没有人物。</EmptyState>}
         {npcs.map((n, i) => !matches(npcQ, n.name, n.role, n.id) ? null : (
           <div key={i} className="min-w-0 space-y-1.5 overflow-x-hidden rounded-xl border border-line bg-paper px-2.5 py-2">
             <div className="flex min-w-0 items-center gap-1.5">
-              <input className={`${inp} !w-auto min-w-0 flex-1 font-medium ${String(n.name ?? "").trim() ? "" : "!border-danger"}`} value={String(n.name ?? "")} placeholder="名字 *" onChange={(e) => setNpc(i, { name: e.target.value })} />
-              <input className={`${inp} !w-auto min-w-0 flex-1`} value={n.role} placeholder="身份，如：掌门" onChange={(e) => setNpc(i, { role: e.target.value })} />
+              <input
+                className={`${inp} !w-auto min-w-0 flex-1 font-medium ${improperPersonNameReason(n.name) ? "!border-danger" : ""}`}
+                value={String(n.name ?? "")}
+                placeholder="姓名 *（须有名有姓，如沈晚晴）"
+                aria-label="姓名（须有名有姓）"
+                onChange={(e) => setNpc(i, { name: e.target.value })}
+              />
+              <input className={`${inp} !w-auto min-w-0 flex-1`} value={n.role} placeholder="身份/称号，如：掌门" onChange={(e) => setNpc(i, { role: e.target.value })} />
               <button className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[15px] leading-none text-ink-soft hover:bg-coral/10 hover:text-coral" onClick={async () => { if (await confirm(`删除人物「${n.name || n.id}」？`)) setC({ npcs: npcs.filter((_, j) => j !== i) }); }} aria-label="删除人物">×</button>
             </div>
+            {improperPersonNameReason(n.name) && (
+              <p className="text-[10.5px] text-coral">{improperPersonNameReason(n.name)}</p>
+            )}
             <div className="flex flex-wrap items-center gap-1.5">
               <input type="number" min={0} className={`${inp} !w-20 ${typeof n.age === "number" ? "" : "!border-danger"}`} value={n.age ?? ""} placeholder="年龄 *" aria-label="年龄（必填）"
                 onChange={(e) => setNpc(i, { age: e.target.value === "" ? undefined : Math.max(0, Math.trunc(Number(e.target.value))) })} />
@@ -1356,45 +1366,25 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
               <input type="number" min={-100} max={100} className={`${inp} !w-20`} value={n.init ?? ""} placeholder="0" aria-label="初始好感"
                 onChange={(e) => setNpc(i, { init: e.target.value === "" ? undefined : Math.max(-100, Math.min(100, Math.trunc(Number(e.target.value)))) })} />
             </div>
-            <label className="block">
-              <span className={lbl}>简介 · 一两句人物概要（生图会用到）</span>
-              <input
-                className={inp}
-                value={n.summary ?? ""}
-                placeholder="如：旅馆的老人，对玩家既有敬意也有保留"
-                aria-label="人物简介"
-                onChange={(e) => setNpc(i, { summary: e.target.value || undefined })}
-              />
-            </label>
             <NpcTagsPicker value={n.tags} onChange={(tags) => setNpc(i, { tags })} />
             <div className="flex min-w-0 flex-wrap items-center gap-1.5">
               <select className={`${inp} !w-auto min-w-0 flex-1`} value={n.home} aria-label="所在地点" onChange={(e) => setNpc(i, { home: e.target.value })}>
                 {!roomIds.includes(n.home) && <option value={n.home}>{n.home ? `${n.home}（依赖模组的地点）` : "（未选择）"}</option>}
                 {roomIds.map((x) => <option key={x} value={x}>{rooms[x].name || x}</option>)}
               </select>
+              {/* 功能注释：人物 kind 固定 roam；短简介字段已并入小传 */}
               <select
                 className={`${inp} !w-auto min-w-[7.5rem]`}
-                value={n.factionId ?? ""}
+                value={sanitizeNpcFactionId(n.factionId, startFactionIds) ?? ""}
                 aria-label="所属势力"
-                onChange={(e) => setNpc(i, { factionId: e.target.value || undefined })}
+                onChange={(e) => setNpc(i, { factionId: sanitizeNpcFactionId(e.target.value, startFactionIds) })}
               >
                 <option value="">所属势力（可选）</option>
-                {n.factionId && !startFactions.some((f) => f.id === n.factionId) && (
-                  <option value={n.factionId}>{n.factionId}（已失效）</option>
-                )}
                 {startFactions.map((f) => <option key={f.id} value={f.id}>{f.name || f.id}</option>)}
               </select>
-              <button
-                type="button"
-                aria-pressed={n.kind !== "staff"}
-                className={`shrink-0 rounded-full border px-2.5 py-1 text-[11.5px] font-semibold ${n.kind === "staff" ? "border-line text-ink-soft" : "border-jade/50 bg-jade/15 text-jade"}`}
-                onClick={() => setNpc(i, { kind: n.kind === "staff" ? "roam" : "staff" })}
-              >
-                {n.kind === "staff" ? "驻守" : "会走动"}
-              </button>
             </div>
             {!startFactions.length && (
-              <p className="text-[10.5px] text-ink-soft">尚未配置势力：请到「① 基础 → 势力」添加后，再为人物选择所属。</p>
+              <p className="text-[10.5px] text-ink-soft">作品尚未配置势力列表时，所属势力可选为空；有势力数据时在此选择归属。</p>
             )}
             <label className="block">
               <span className={lbl}>小传 · 贴合世界观（约 300 字；供 AI 演绎与生图）</span>
@@ -1589,20 +1579,15 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
           sidelines={c.sidelines}
           libraryEvents={c.events}
           libraryGroups={c.eventGroups}
+          worldContext={{
+            title: m.name || m.id,
+            setting: [m.description, readScriptTone(c.prompt)].filter(Boolean).join("\n"),
+            scriptTone: readScriptTone(c.prompt) || undefined,
+            rooms: roomIds.map((id) => ({ id, name: rooms[id]?.name || id })),
+            npcs: npcs.map((n) => ({ id: n.id, name: n.name || n.id })),
+          }}
           onChange={(v) => setC({ fixedEvents: v.length ? v : undefined })}
         />
-      </Section>
-
-      {/* 功能注释：关系阈值内置②角色，不是可装卸玩法包；表白/婚礼数值供人物页判定 */}
-      <Section g="role" title="关系玩法" on={has(c.relations)} hint="表白门槛 · 婚礼费用与好感 · 伴侣加成（内置②角色）">
-        <ModRelationsEditor value={c.relations} npcs={npcs.map((n) => ({ id: n.id, name: n.name || n.id }))}
-          keyOptions={perkKeyOptions({
-            statLabels: { ...RAW_STAT_LABELS, ...(c.stats?.labels ?? {}) },
-            statOrder: (c.stats?.order?.length ? c.stats.order : ALL_STAT_KEYS).filter((k) => !(c.stats?.hidden ?? []).includes(k)),
-            attrs: c.customAttrs,
-            metaLabels: c.stats?.metaLabels,
-            term: (k, fb) => c.terms?.[k] ?? fb,
-          })} onChange={(relations) => setC({ relations: relations as Mod["content"]["relations"] })} />
       </Section>
 
       {/* 功能注释：主线 / 支线 / 结局同页；透支破产等经济规则挂在结局小节 */}
@@ -1845,6 +1830,21 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
         <Help>已添加「孕育包」即生效；此处只调孕期参数。从玩法列表移除孕育包即关闭。</Help>
         <ModPregnancyEditor value={c.pregnancy} onChange={(pregnancy) => setC({ pregnancy })} />
       </Section>}
+
+      {/* 功能注释：关系玩法须从商店添加；未安装不出现配置块，人物页也不出表白/婚礼 */}
+      {showPlay("relations") && (
+        <Section g="base" title="关系玩法" on={has(c.relations) || c.features?.relationsPlay === true} hint="表白门槛 · 婚礼费用与好感 · NPC 牵线 · 伴侣加成">
+          <Help>已添加「关系玩法」才显示本区；人物页的表白、婚礼入口随本玩法开关。移除玩法会清空本区配置。</Help>
+          <ModRelationsEditor value={c.relations} npcs={npcs.map((n) => ({ id: n.id, name: n.name || n.id }))}
+            keyOptions={perkKeyOptions({
+              statLabels: { ...RAW_STAT_LABELS, ...(c.stats?.labels ?? {}) },
+              statOrder: (c.stats?.order?.length ? c.stats.order : ALL_STAT_KEYS).filter((k) => !(c.stats?.hidden ?? []).includes(k)),
+              attrs: c.customAttrs,
+              metaLabels: c.stats?.metaLabels,
+              term: (k, fb) => c.terms?.[k] ?? fb,
+            })} onChange={(relations) => setC({ relations: relations as Mod["content"]["relations"] })} />
+        </Section>
+      )}
 
       <Section
         g="look"

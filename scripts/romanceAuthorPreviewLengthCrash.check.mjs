@@ -26,6 +26,27 @@ test('WorldRuleCards_options缺失不得直接读length', () => {
   assert.doesNotMatch(src, /repeat\(\$\{d\.options\.length\}/);
 });
 
+test('EntityText_useMemo_缺name不得读length', () => {
+  const src = read('components/EntityText.tsx');
+  assert.match(src, /namedEnough/);
+  assert.match(src, /typeof name === \"string\" && name\.length >= 2/);
+  assert.doesNotMatch(src, /\.filter\(\(n\) => n\.name\.length/);
+  assert.doesNotMatch(src, /l\.name\.length >= 2/);
+});
+
+test('avatarPools_images缺失不得直接读length', () => {
+  const src = read('game/avatarPools.ts');
+  assert.match(src, /hasImages/);
+  assert.match(src, /Array\.isArray\(p\.images\) && p\.images\.length/);
+  assert.doesNotMatch(src, /lib\.filter\(\(p\) => p\.images\.length/);
+});
+
+test('STAT_ORDER_order须asModArray', () => {
+  const data = read('game/data.ts');
+  assert.match(data, /asModArray<StatKey>\(statsSlot\(\)\.order\)/);
+  assert.match(data, /asModArray<StatKey>\(statsSlot\(\)\.hidden\)/);
+});
+
 test('EndingsPanel_脏conds缺kind不得直接读', () => {
   const src = read('components/EndingsPanel.tsx');
   assert.match(src, /typeof \(c as \{ kind\?: unknown \}\)\.kind === \"string\"/);
@@ -122,10 +143,11 @@ test('mergeModContent_customAttrs对象须收成数组', async () => {
 
 test('registry_resolve路径须对locations_npcs等走asModArray', () => {
   const reg = read('mods/registry.ts');
-  assert.match(reg, /asModArray\(wc\.npcs\)/);
-  assert.match(reg, /asModArray\(wc\.locations\)/);
-  assert.match(reg, /asModArray\(wc\.items\)/);
+  assert.match(reg, /asModArray<.*>\(wc\.npcs\)/);
+  assert.match(reg, /asModArray<.*>\(wc\.locations\)/);
+  assert.match(reg, /asModArray<.*>\(wc\.items\)/);
   assert.match(reg, /asModArray\(wc\.worldBook\)/);
+  assert.match(reg, /ensureName/);
   assert.match(reg, /asModArray<string>\(content\.features\.phoneAppsExtra\)/);
   assert.doesNotMatch(reg, /npcs:\s*\[\.\.\.\(wc\.npcs \?\? \[\]\)\]/);
   assert.doesNotMatch(reg, /\[\.\.\.\(content\.features\.phoneAppsExtra \?\? \[\]\)\]/);

@@ -49,12 +49,20 @@ test('romanceAuthorPreview_编辑器顶栏保存预览_底栏无重复保存', (
   assert.match(chrome, /作者测试中/);
   assert.match(chrome, /返回编辑器/);
   assert.match(chrome, /清空测试存档/);
-  // Studio Tally：贴顶全宽 REC 条，禁止旧版圆角浮卡
+  // Studio Tally：文档流顶栏（非 fixed），禁止旧版圆角浮卡 / 盖住游戏
   assert.match(chrome, /apc-root/);
-  assert.match(chrome, /fixed inset-x-0 top-0/);
+  assert.match(chrome, /shrink-0/);
+  assert.doesNotMatch(chrome, /fixed inset-x-0 top-0/);
   assert.match(chrome, /apc-rec-blink/);
   assert.doesNotMatch(chrome, /rounded-2xl border border-coral/);
-  assert.match(app, /--apc-h/);
+  // 功能注释：预览壳 flex 列：顶栏 + stage flex-1；禁止 paddingTop/--apc-h 叠层方案
+  assert.match(app, /author-preview-runtime/);
+  assert.match(app, /author-preview-stage/);
+  assert.match(app, /data-author-preview-stage="1"/);
+  assert.match(app, /flex-col/);
+  assert.match(app, /flex-1/);
+  assert.doesNotMatch(app, /--apc-h/);
+  assert.doesNotMatch(app, /paddingTop:\s*["']var\(--apc-h/);
   assert.match(storage, /AUTHOR_PREVIEW_AUTO_SLOT/);
   assert.match(storage, /isAuthorPreview/);
   assert.match(registry, /beginAuthorPreviewMod/);
@@ -67,10 +75,15 @@ test('romanceAuthorPreview_编辑器顶栏保存预览_底栏无重复保存', (
   // 功能注释：预览时向导壳 hidden；游玩区用局内纸色壳（非 romance-platform），建角 Modal 挂 data-author-preview-shell
   assert.match(app, /previewing \? "hidden" : "romance-platform min-h-screen"/);
   assert.match(app, /\.\.\.\(previewing \? \{\} : \{ ["']data-platform-ui["']: ["']1["'] \}\)/);
-  assert.match(app, /author-preview-runtime/);
   assert.match(app, /data-author-preview-shell="1"/);
   assert.doesNotMatch(app, /previewing \?[\s\S]{0,200}className="romance-platform min-h-screen"[\s\S]{0,80}data-platform-ui="1"/);
   assert.match(app, /AuthorPreviewPlayShell/);
+  const playShell = readFileSync(join(romance, 'components/AuthorPreviewPlayShell.tsx'), 'utf8');
+  assert.match(playShell, /h-full min-h-0/);
+  assert.doesNotMatch(playShell, /min-h-\[100vh\]|min-h-\[100dvh\]/);
+  const gameShell = readFileSync(join(romance, 'components/GameShell.tsx'), 'utf8');
+  assert.match(gameShell, /authorPreviewing \? "h-full max-h-full min-h-0"/);
+  assert.match(gameShell, /data-author-preview-game/);
   const portal = readFileSync(join(romance, 'lib/romancePortalRoot.ts'), 'utf8');
   assert.match(portal, /data-author-preview-shell='1'/);
   const panel = readFileSync(join(romance, 'components/ModEditorPanel.tsx'), 'utf8');

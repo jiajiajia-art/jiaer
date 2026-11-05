@@ -16,6 +16,8 @@ type FormState = {
   description: string;
   imageUrl: string;
   sortOrder: string;
+  tagsText: string;
+  authorKul: string;
   /** 功能注释：大地图地点树 JSON 文本；空 = 导入时退化为单地点 */
   treeJsonText: string;
 };
@@ -25,8 +27,13 @@ const emptyForm = (): FormState => ({
   description: '',
   imageUrl: '',
   sortOrder: '0',
+  tagsText: '',
+  authorKul: '',
   treeJsonText: '',
 });
+
+const splitTags = (raw: string) =>
+  raw.split(/[、,，]/).map((t) => t.trim()).filter(Boolean);
 
 const TREE_PLACEHOLDER = `{
   "rooms": [
@@ -125,6 +132,8 @@ export default function AdminLocationLibraryManager() {
         description: form.description.trim(),
         imageUrl,
         sortOrder: Number(form.sortOrder) || 0,
+        tags: splitTags(form.tagsText),
+        authorKul: form.authorKul.trim(),
         treeJson,
       };
       const res = form.id
@@ -153,7 +162,7 @@ export default function AdminLocationLibraryManager() {
       toast.error(res?.message || '操作失败');
       return;
     }
-    toast.success(item.status === 'active' ? '已停用（新作品不可再添加）' : '已重新启用');
+    toast.success(item.status === 'active' ? '已下架（编辑器弹窗不再出现）' : '已上架');
     setConfirmOff(null);
     await load();
   };
@@ -161,22 +170,30 @@ export default function AdminLocationLibraryManager() {
   return (
     <div className={styles.root}>
       <div className={styles.header}>
-        <h2 className={styles.title}>地点库 · 大地图</h2>
+        <h2 className={styles.title}>地点库</h2>
         <p className={styles.desc}>
-          库里存的是大地图。创作者点「从地点库添加」会把整张大地图和它下面的地点树一起复制进作品。
-          停用后新作品不能再添加；已经加进作品里的地点会留在那部作品中。
+          装「大地图 + 地点树」整包。创作者「从地点库添加」会复制进作品；下架后弹窗不再出现，已加进作品的包不受影响。
+          可按名称、作者库兰号搜索。
         </p>
       </div>
 
       <div className={styles.form}>
-        <strong>{editing ? '编辑大地图' : '新增大地图'}</strong>
+        <strong>{editing ? '编辑地点包' : '新增地点包'}</strong>
         <div className={styles.formRow}>
-          <span className={styles.label}>大地图名称</span>
+          <span className={styles.label}>名称</span>
           <input className={styles.input} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="如：雾色旅馆" />
         </div>
         <div className={styles.formRow}>
-          <span className={styles.label}>简介</span>
-          <textarea className={styles.textarea} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="大地图说明（创作者选库时可见）" />
+          <span className={styles.label}>说明</span>
+          <textarea className={styles.textarea} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="说明（创作者选库时可见）" />
+        </div>
+        <div className={styles.formRow}>
+          <span className={styles.label}>作者库兰号</span>
+          <input className={styles.input} value={form.authorKul} onChange={(e) => setForm((f) => ({ ...f, authorKul: e.target.value }))} placeholder="如：0761481355" />
+        </div>
+        <div className={styles.formRow}>
+          <span className={styles.label}>标签</span>
+          <input className={styles.input} value={form.tagsText} onChange={(e) => setForm((f) => ({ ...f, tagsText: e.target.value }))} placeholder="顿号 / 逗号分隔，如：旅馆、民国" />
         </div>
         <div className={styles.formRow}>
           <span className={styles.label}>封面图</span>
@@ -217,7 +234,7 @@ export default function AdminLocationLibraryManager() {
           style={{ maxWidth: 280 }}
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="搜索名称 / 简介"
+          placeholder="搜索名称 / 作者库兰号 / 标签"
         />
         <button type="button" className={styles.btn} onClick={() => void load()} disabled={loading}>
           {loading ? '刷新中…' : '刷新'}
@@ -225,7 +242,7 @@ export default function AdminLocationLibraryManager() {
       </div>
 
       {!sorted.length ? (
-        <div className={styles.empty}>{loading ? '加载中…' : '暂无大地图，请先新增'}</div>
+        <div className={styles.empty}>{loading ? '加载中…' : '暂无地点包，请先新增'}</div>
       ) : (
         <div className={styles.grid}>
           {sorted.map((item) => (
@@ -237,11 +254,15 @@ export default function AdminLocationLibraryManager() {
               )}
               <div className={styles.body}>
                 <span className={item.status === 'active' ? styles.badge : styles.badgeOff}>
-                  {item.status === 'active' ? '启用中' : '已停用'}
+                  {item.status === 'active' ? '上架' : '下架'}
                 </span>
                 <h3 className={styles.name}>{item.name}</h3>
-                <p className={styles.meta}>{item.description || '（无简介）'}</p>
-                <p className={styles.meta}>地点 {Array.isArray(item.treeJson?.rooms) ? item.treeJson.rooms.length : 1} 个</p>
+                <p className={styles.meta}>{item.description || '（无说明）'}</p>
+                <p className={styles.meta}>
+                  地点 {Array.isArray(item.treeJson?.rooms) ? item.treeJson.rooms.length : 1} 个
+                  {item.authorKul ? ` · 库兰 ${item.authorKul}` : ''}
+                  {item.tags?.length ? ` · ${item.tags.join('、')}` : ''}
+                </p>
                 <div className={styles.actions}>
                   <button
                     type="button"
@@ -252,15 +273,17 @@ export default function AdminLocationLibraryManager() {
                       description: item.description || '',
                       imageUrl: item.imageUrl || '',
                       sortOrder: String(item.sortOrder ?? 0),
+                      tagsText: (item.tags || []).join('、'),
+                      authorKul: item.authorKul || '',
                       treeJsonText: item.treeJson ? JSON.stringify(item.treeJson, null, 2) : '',
                     })}
                   >
                     编辑
                   </button>
                   {item.status === 'active' ? (
-                    <button type="button" className={styles.btnDanger} onClick={() => setConfirmOff(item)}>停用</button>
+                    <button type="button" className={styles.btnDanger} onClick={() => setConfirmOff(item)}>下架</button>
                   ) : (
-                    <button type="button" className={styles.btn} onClick={() => void toggleStatus(item)}>重新启用</button>
+                    <button type="button" className={styles.btn} onClick={() => void toggleStatus(item)}>上架</button>
                   )}
                 </div>
               </div>
@@ -271,9 +294,9 @@ export default function AdminLocationLibraryManager() {
 
       <ConfirmModal
         isOpen={!!confirmOff}
-        title="停用大地图？"
-        message={confirmOff ? `停用「${confirmOff.name}」后，新作品不能再从地点库添加它；已经加进作品里的地点会保留。` : ''}
-        confirmButtonText="停用"
+        title="下架地点包？"
+        message={confirmOff ? `下架「${confirmOff.name}」后，编辑器地点库弹窗不再出现；已经加进作品里的地点包会保留。` : ''}
+        confirmButtonText="下架"
         tone="admin"
         onConfirm={() => { if (confirmOff) void toggleStatus(confirmOff); }}
         onCancel={() => setConfirmOff(null)}

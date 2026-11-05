@@ -5,6 +5,7 @@
  */
 import type { ModContent } from "../mods/types.ts";
 import { WORLD_GEN_EDITOR_STEPS } from "./worldGenWizard.ts";
+import { WORLD_GEN_FIXED_EVENTS_COUNT } from "./worldGenFixedEvents.ts";
 import { readScriptTone } from "./scriptTone.ts";
 
 /** 功能注释：勾选达到该数即进入「全选瘦身」——条数更少、正文更短、骨架优先。 */
@@ -22,8 +23,8 @@ export const WORLD_GEN_STEP_FACETS: Readonly<Record<string, readonly string[]>> 
   rooms: Object.freeze(["地点名", "出口", "开局点"]),
   npcs: Object.freeze(["姓名", "身份", "关系"]),
   relations: Object.freeze(["表白门槛", "婚礼", "伴侣加成"]),
-  contacts: Object.freeze(["关系档位", "卡片数值"]),
-  fixedEvents: Object.freeze(["事件名", "触发条件"]),
+  contacts: Object.freeze(["关系档位"]),
+  fixedEvents: Object.freeze(["事件名", "提示词", "属性变化"]),
   storylines: Object.freeze(["主线", "支线", "结局标题"]),
   opening: Object.freeze(["开场白段落", "标题"]),
   trainings: Object.freeze(["课程名", "学费"]),
@@ -70,7 +71,8 @@ export function worldGenLeanLimits(selectedStepCount: number): WorldGenLeanLimit
       npcs: 3,
       paths: 2,
       rooms: 4,
-      fixedEvents: 2,
+      // 功能注释：固定事件按世界观一次写满完整叙事条，不多不少
+      fixedEvents: WORLD_GEN_FIXED_EVENTS_COUNT,
       storylines: 1,
       sidelines: 0,
       endings: 2,
@@ -86,7 +88,7 @@ export function worldGenLeanLimits(selectedStepCount: number): WorldGenLeanLimit
     npcs: 4,
     paths: 3,
     rooms: 5,
-    fixedEvents: 3,
+    fixedEvents: WORLD_GEN_FIXED_EVENTS_COUNT,
     storylines: 1,
     sidelines: 0,
     endings: 3,
@@ -315,7 +317,7 @@ export function worldGenLeanPromptBlock(limits: WorldGenLeanLimits, phase: "skel
 - 世界书最多 ${limits.worldBookEntries} 条：先写 id/title/keywords，正文可先空或 ≤${Math.min(40, limits.worldBookBodyChars)} 字
 - 人物最多 ${limits.npcs} 名：必须 name/gender/age，bio 先写约 ${Math.min(80, limits.npcBioChars)} 字提纲
 - 人物线路最多 ${limits.paths} 条：先写 id/name 与关键开局字段
-- 地点最多 ${limits.rooms} 个；固定事件最多 ${limits.fixedEvents} 条；主线恰好 ${limits.storylines} 条（节点须有目标说明与完成条件，禁止空「新节点」、禁止节点奖励/激活事件）；支线 ${limits.sidelines} 条（须为 0，勿写 sidelines）；结局最多 ${limits.endings}
+- 地点最多 ${limits.rooms} 个；固定事件恰好 ${limits.fixedEvents} 条完整叙事（每条必有 name、trigger.auto、prompt、effects；禁止 choices/选项；骨架阶段也不得空提示词）；主线恰好 ${limits.storylines} 条（节点须有目标说明与完成条件，禁止空「新节点」、禁止节点奖励/激活事件）；支线 ${limits.sidelines} 条（须为 0，勿写 sidelines）；结局最多 ${limits.endings}
 - 剧本基调 scriptTone 先写约 ${Math.min(400, limits.scriptToneChars)} 字骨架（覆盖口吻与铁律要点即可）
 - 开场白每段约 ${Math.min(70, limits.openingParaChars)} 字，至少 2 段
 - 建角 customAttrs 正好 3 条：每条必须有中文名称与 desc（属性说明），禁止「未命名」或空壳
@@ -325,6 +327,7 @@ export function worldGenLeanPromptBlock(limits: WorldGenLeanLimits, phase: "skel
   return `补长文阶段（只补已有骨架，禁止新增大量条目）：
 - 在已有 id 上补全：世界书正文约 ${limits.worldBookBodyChars} 字/条；人物 bio 约 ${limits.npcBioChars} 字；scriptTone 补到约 ${limits.scriptToneChars} 字
 - 开场白每段可补到约 ${limits.openingParaChars} 字
+- 固定事件保持恰好 ${limits.fixedEvents} 条：补强 prompt 与 effects，仍禁止 choices，禁止新增半成品
 - 建角属性仍保持 3 条有名称的；不要新增空「未命名」属性
 - 不要新增超出骨架的条目数；不要重写无关字段`;
 }

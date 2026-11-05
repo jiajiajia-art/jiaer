@@ -83,22 +83,6 @@
   font-weight: 650;
 }
 
-.viewMore {
-  appearance: none;
-  border: none;
-  background: transparent;
-  color: var(--search-label);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  padding: 0;
-  white-space: nowrap;
-}
-
-.viewMore:hover {
-  color: var(--search-text);
-}
-
 .userList {
   display: flex;
   flex-direction: column;

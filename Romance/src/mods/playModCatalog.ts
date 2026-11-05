@@ -3,6 +3,7 @@
  * 玩法 Mod = 创作者给某一剧本加的可选玩法（孕育 / 出行 / 座驾 / 通告事业等），用「添加玩法」启用。
  * 禁止把娱乐圈骨架、校园骨架等世界观底子放进本目录；那些不是创作者要勾的玩法。
  * 头衔是可选玩法（pack-titles）：需要的剧本才添加，未添加不显示配置区。
+ * 关系玩法（pack-relations）：表白 / 婚礼 / 牵线 / 伴侣加成；未添加不显示配置与人物页表白婚礼入口。
  * 存档结构、登录、档案、人脉、设置 = 游戏本体功能，不进本目录；基础设定、建角、地点、人物、事件也在编辑器其它页直接配。
  * 本目录不是游戏本体；本体功能不进本目录。
  * 编辑器按「已安装组件」动态显示配置，不再硬编码通告/孕育/座驾/论坛/直播等入口。
@@ -22,6 +23,7 @@ export type PlayModEditorPanelId =
   | "travel"
   | "cars"
   | "titles"
+  | "relations"
   | "phoneApp";
 
 export type PlayModInstallConfig = {
@@ -258,6 +260,27 @@ export const LOCAL_PLAY_MOD_CATALOG: LocalPlayModCatalogItem[] = [
   ),
   withStoreDetail(
     {
+      id: "pm-pack-relations",
+      slug: "pack-relations",
+      name: "关系玩法",
+      description: "表白门槛、婚礼费用与好感、NPC 牵线、伴侣加成",
+      priceKk: 0,
+      version: "1.0.0",
+      defaultNavLabel: "",
+      needsNavEntry: false,
+      editorPanels: ["relations"],
+      iconSvg: ICON('<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/>'),
+      romanceAddonId: "pack-relations",
+      componentKind: "gameplay",
+    },
+    {
+      downloads: 2560,
+      detail:
+        "关系玩法为可选恋爱向组件：表白门槛、婚礼费用与好感、NPC 牵线开关、伴侣加成。从商店加进作品后才出现配置区，人物页才显示表白与婚礼入口；未添加的剧本不出现整块关系玩法。",
+    },
+  ),
+  withStoreDetail(
+    {
       id: "pm-app-forum",
       slug: "app-forum",
       name: "星潮论坛",
@@ -319,6 +342,14 @@ export const LOCAL_PLAY_MOD_CATALOG: LocalPlayModCatalogItem[] = [
     },
   ),
 ];
+/**
+ * 功能注释：玩家菜单「玩法 Mod」入口（支票/账单）是否展示。
+ * 仅当作品装了演艺事业（通告支票）或生活开销（账单槽）等对应玩法时出现；都没选则菜单里也不出现。
+ */
+export function shouldShowPlayModMenuEntry(careerOn: boolean, billsSlotOn: boolean): boolean {
+  return careerOn || billsSlotOn;
+}
+
 /** 功能注释：汇总已安装且启用的编辑面板；未装任何玩法 Mod 时不展示硬编码玩法块 */
 export function resolveInstalledEditorPanels(installs: PlayModInstallConfig[] | undefined): Set<PlayModEditorPanelId> {
   const set = new Set<PlayModEditorPanelId>();
@@ -367,6 +398,7 @@ export function recommendPlayModsFromSetting(
   }
   if (/吃饭|伙食|生活开销|房租|账单|租房/.test(text)) add("pack-living");
   if (/头衔|称号|成就称号|佩戴头衔/.test(text)) add("pack-titles");
+  if (/表白|婚礼|恋爱|结婚|伴侣|牵线|好感门槛|关系玩法/.test(text)) add("pack-relations");
   if (/直播|短视频|带货/.test(text)) add("app-video-live");
   if (/二手|闲置|咸鱼|商城/.test(text)) add("app-xianyu");
 
@@ -404,6 +436,7 @@ export const PLAY_MOD_FEATURE_BY_SLUG = Object.freeze({
   "pack-pregnancy": Object.freeze(["pregnancy"] as const),
   "pack-transport": Object.freeze(["transport"] as const),
   "pack-cars": Object.freeze(["cars"] as const),
+  "pack-relations": Object.freeze(["relationsPlay"] as const),
 });
 
 type PlayModFeatureKey = (typeof PLAY_MOD_FEATURE_BY_SLUG)[keyof typeof PLAY_MOD_FEATURE_BY_SLUG][number];

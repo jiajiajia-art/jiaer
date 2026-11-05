@@ -1,5 +1,5 @@
 import { getWorld } from "../mods/registry";
-import { Fragment, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
+import { Fragment, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 import { limitDays, type GameState } from "../lib/types";
 import { walletDef, wallet } from "../game/wallet";
 import { apPerMove, tripPoints, tripPointsMax } from "../game/mud";
@@ -162,8 +162,7 @@ type Props = {
 
 export default function TopbarView({ data, diy, topbar = "gradient", topbarText, compact = false, preview = false, questOnly = false, novelLayout = false, menuOpen = false, onProfile, onMenu, onEnd, children }: Props) {
   const c = resolveTopbarDiy(diy);
-  // 功能注释：小说模式主线行本地展开，不跳剧情志页
-  const [questOpen, setQuestOpen] = useState(false);
+  // 功能注释：剧情模式主线行点开任务弹窗（与状态行一致），不再本地折叠展开
   const rules = c.active ? c.regexRules : undefined;
   const rx = (t: TopbarRegexTarget, s: string) => applyTopbarRegex(s, t, rules);
   let layout = c.layout;
@@ -420,8 +419,9 @@ export default function TopbarView({ data, diy, topbar = "gradient", topbarText,
         </span>
       </Press>
     );
+    const questTitle = data.questLineName?.trim() || data.questStep?.trim() || "当前主线";
     body = (
-      <div className="novel-topbar flex flex-col gap-1.5" data-layout="novel">
+      <div className="novel-topbar mb-1 flex flex-col gap-2" data-layout="novel">
         {row(<>{novelProfile}{novelMenu}</>)}
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[12px] text-ink">
           <span className="rounded-[var(--radius-ui-sm)] bg-jade px-2 py-0.5 text-[11px] font-bold tabular-nums text-paper-2">{weekLabel}</span>
@@ -441,39 +441,29 @@ export default function TopbarView({ data, diy, topbar = "gradient", topbarText,
             )}
           </span>
         </div>
-        {hasQuest && (
-          <div className="novel-quest">
-            <button
-              type="button"
-              data-tour="topbar-quest"
-              aria-expanded={questOpen}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (preview) return;
-                setQuestOpen((v) => !v);
-              }}
-              className="flex w-full items-center gap-2 rounded-[var(--radius-ui)] border border-line bg-paper/80 px-2.5 py-1.5 text-left shadow-[var(--shadow-ui)] transition hover:border-jade/40"
-            >
-              <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold text-ink">{data.questStep}</span>
-              <span className="relative h-1 w-16 shrink-0 overflow-hidden rounded-full bg-line" aria-hidden>
-                <span className="absolute inset-y-0 left-0 rounded-full bg-jade" style={{ width: `${pct}%` }} />
-              </span>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className={`shrink-0 text-ink-soft transition-transform ${questOpen ? "rotate-180" : ""}`} aria-hidden>
-                <path d="m6 9 6 6 6-6" />
-              </svg>
-            </button>
-            {questOpen && (
-              <div className="mt-1 space-y-1 rounded-[var(--radius-ui)] border border-line bg-paper px-3 py-2 text-[12px] leading-relaxed text-ink-soft shadow-[var(--shadow-ui)]">
-                {data.questLineName && <p className="font-semibold text-ink">{data.questLineName}</p>}
-                {data.questDesc && <p>{data.questDesc}</p>}
-                {data.questWait && <p className="text-jade">{data.questWait}</p>}
-                {data.questTotal != null && (
-                  <p className="tabular-nums text-ink-soft">进度 {data.questDone ?? 0}/{data.questTotal}</p>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+        {/* 功能注释：主线行加高；点开派发任务弹窗，与状态行同一入口 */}
+        <div className="novel-quest">
+          <button
+            type="button"
+            data-tour="topbar-quest"
+            aria-label="打开任务主线"
+            onClick={(e) => {
+              e.stopPropagation();
+              openQuest();
+            }}
+            className="flex w-full items-center gap-2.5 rounded-[var(--radius-ui)] border border-line bg-paper/90 px-3 py-2.5 text-left shadow-[var(--shadow-ui)] transition hover:border-jade/40"
+          >
+            <span className="min-w-0 shrink truncate text-[13.5px] font-bold leading-snug text-ink">
+              {questTitle}
+            </span>
+            <span className={`relative h-1.5 min-w-[3.5rem] flex-1 overflow-hidden rounded-full bg-line ${hasQuest ? "" : "opacity-40"}`} aria-hidden>
+              <span className="absolute inset-y-0 left-0 rounded-full bg-jade" style={{ width: `${hasQuest ? pct : 0}%` }} />
+            </span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className="shrink-0 text-ink-soft" aria-hidden>
+              <path d="m9 6 6 6-6 6" />
+            </svg>
+          </button>
+        </div>
       </div>
     );
   } else {

@@ -323,10 +323,20 @@ function resolve(sel: ModSelection): ResolvedWorld {
     rooms: { ...(wc.rooms ?? {}) },
     worldMaps: Array.isArray(wc.worldMaps) ? wc.worldMaps.map((m) => ({ ...m })) : undefined,
     startRoom: wc.startRoom,
-    locations: asModArray(wc.locations),
+    // 功能注释：地点/人物/物品缺 name 时 EntityText 会读 .length 崩；无 name 用 id 兜底
+    locations: asModArray<{ id?: string; name?: unknown }>(wc.locations).map((l) => ({
+      ...l,
+      name: typeof l.name === "string" && l.name.trim() ? l.name.trim() : String(l.id ?? "地点"),
+    })) as ResolvedWorld["content"]["locations"],
     startMet: normalizeStartMetList(wc.startMet),
-    npcs: asModArray(wc.npcs),
-    items: asModArray(wc.items),
+    npcs: asModArray<{ id?: string; name?: unknown }>(wc.npcs).map((n) => ({
+      ...n,
+      name: typeof n.name === "string" && n.name.trim() ? n.name.trim() : String(n.id ?? "人物"),
+    })) as ResolvedWorld["content"]["npcs"],
+    items: asModArray<{ id?: string; name?: unknown }>(wc.items).map((it) => ({
+      ...it,
+      name: typeof it.name === "string" && it.name.trim() ? it.name.trim() : String(it.id ?? "物品"),
+    })) as ResolvedWorld["content"]["items"],
     gigs: asModArray(wc.gigs),
     events: asModArray(wc.events),
     fixedEvents: asModArray(wc.fixedEvents),
@@ -352,7 +362,7 @@ function resolve(sel: ModSelection): ResolvedWorld {
       const raw = asModArray<{ options?: unknown[] }>(wc.worldRules);
       const ok = raw.filter((d) => d && Array.isArray(d.options) && d.options.length);
       return ok.length
-        ? ok.map((d) => ({ ...d, options: asModArray<string>(d.options) })) as typeof WORLD_RULE_DIMS
+        ? (ok.map((d) => ({ ...d, options: asModArray<string>(d.options) })) as unknown as typeof WORLD_RULE_DIMS)
         : [...WORLD_RULE_DIMS];
     })(),
     prompt: { ...(wc.prompt ?? {}) },
@@ -406,7 +416,16 @@ function resolve(sel: ModSelection): ResolvedWorld {
     content.storylines = mergeById(content.storylines, asModArray(c.storylines));
     content.sidelines = mergeById(content.sidelines, normalizeSidelines(c.sidelines));
     content.lookRules = mergeById(content.lookRules, asModArray(c.lookRules));
-    content.worldRules = mergeById(content.worldRules, asModArray(c.worldRules));
+    // 功能注释：叠加包 worldRules 可能缺 options；合并后再滤，避免脏维进建角 WorldRuleCards
+    {
+      type RuleDim = { id: string; options?: unknown[] };
+      const overRules = asModArray<{ id?: string; options?: unknown[] }>(c.worldRules).filter(
+        (d): d is RuleDim => typeof d?.id === "string" && !!d.id,
+      );
+      const merged = mergeById(asModArray<RuleDim>(content.worldRules), overRules);
+      const ok = merged.filter((d) => Array.isArray(d.options) && d.options.length > 0);
+      content.worldRules = (ok.length ? ok : [...WORLD_RULE_DIMS]) as typeof content.worldRules;
+    }
     // 提示片段：各包的新旧剧本基调按加载顺序追加；terminology 追加，其余后包覆盖
     const p = c.prompt ?? {};
     content.prompt = mergeScriptToneFragments(content.prompt, {
@@ -416,7 +435,7 @@ function resolve(sel: ModSelection): ResolvedWorld {
     Object.assign(content.terms, c.terms ?? {});
     // 底栏：后包覆盖前包的顺序 / 显隐 / 格数
     {
-      const tabs = asModArray(c.navTabs);
+      const tabs = asModArray<{ id?: string }>(c.navTabs);
       if (tabs.length) content.navTabs = tabs.map((t) => ({ ...t })) as NonNullable<ResolvedWorld["content"]["navTabs"]>;
     }
     if (c.navSize) content.navSize = c.navSize;
@@ -439,13 +458,22 @@ function resolve(sel: ModSelection): ResolvedWorld {
   // 通告库价目表：沿合并链取最后声明者，按本世界价目重算库内通告
   const prices = [...chain].reverse().find((m) => m.content.gigPrices)?.content.gigPrices;
   content.gigs = applyGigPrices(content.gigs, prices);
+  // 功能注释：叠加包 merge 后又可能带回无 name 条目；统一补齐，禁止 EntityText 读 .length 崩
+  const ensureName = <T extends { id?: string; name?: unknown }>(row: T, fallback: string): T & { name: string } => ({
+    ...row,
+    name: typeof row.name === "string" && row.name.trim() ? row.name.trim() : String(row.id ?? fallback),
+  });
+  content.locations = content.locations.map((l) => ensureName(l, "地点"));
+  content.npcs = content.npcs.map((n) => ensureName(n, "人物"));
+  content.items = content.items.map((it) => ensureName(it, "物品"));
   // 地点名录缺失的房间：由 rooms[].name 推导（模组世界无需单独维护 LOCATIONS）
   const have = new Set(content.locations.map((l) => l.id));
   for (const [id, r] of Object.entries(content.rooms)) {
     if (!have.has(id)) {
-      // 功能注释：AI 地点 desc 可能非字符串；禁止 .slice 炸预览
+      // 功能注释：AI 地点 desc/name 可能非字符串；禁止 .slice / 非字符串 name 进 EntityText
       const desc = typeof r.desc === "string" ? r.desc.slice(0, 18) : "";
-      content.locations.push({ id, name: r.name ?? id, icon: "", func: desc, tier: "P1", action: "", hint: "" });
+      const roomName = typeof r.name === "string" && r.name.trim() ? r.name.trim() : id;
+      content.locations.push({ id, name: roomName, icon: "", func: desc, tier: "P1", action: "", hint: "" });
     }
   }
   // 功能注释：保证大地图层存在，并把未挂图的地点归入默认大地图
@@ -807,6 +835,8 @@ const FEATURE_NEEDS: Partial<Record<Exclude<keyof FeatureFlags, "phoneApps" | "p
   career: (w) => w.content.gigs.length > 0 || hasSlot("projects"),
   // 孕育没有内容槽可判：须已添加孕育包 / features.pregnancy（未声明 = 关闭）
   pregnancy: (w) => w.content.features.pregnancy === true,
+  // 关系玩法：须已添加 pack-relations / features.relationsPlay（未声明 = 关闭；无表白婚礼入口）
+  relationsPlay: (w) => w.content.features.relationsPlay === true,
 };
 export const feature = (k: Exclude<keyof FeatureFlags, "phoneApps" | "phoneAppsExtra">): boolean => {
   const w = getWorld();

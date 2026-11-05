@@ -161,6 +161,54 @@ export const IconMaximize = adapt(Maximize2);
 export const IconMinimize = adapt(Minimize2);
 export const IconCamera = adapt(Camera);
 export const IconDice = adapt(Dice5);
+/**
+ * 功能注释：建角重掷用的双骰子（前正后斜）；线色走 currentColor，正面底用白以免叠糊。
+ * 与 Lucide Dice5 区分，专给人设字段 / 属性整组重掷。
+ */
+export function IconDiceDuo({
+  size = 16,
+  width,
+  height,
+  className,
+  style,
+}: {
+  size?: number;
+  width?: number | string;
+  height?: number | string;
+  className?: string;
+  style?: CSSProperties;
+}) {
+  const px = typeof size === "number" ? size : 16;
+  const w = width ?? px;
+  const h = height ?? px;
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 64 64"
+      width={w}
+      height={h}
+      fill="none"
+      className={className}
+      style={style}
+      aria-hidden
+    >
+      <g transform="translate(34 14) rotate(28)">
+        <rect x="-14" y="-14" width="28" height="28" rx="6" ry="6" stroke="currentColor" strokeWidth="3.2" />
+        <circle cx="-6" cy="-6" r="2.4" fill="currentColor" />
+        <circle cx="6" cy="-6" r="2.4" fill="currentColor" />
+        <circle cx="-6" cy="6" r="2.4" fill="currentColor" />
+        <circle cx="6" cy="6" r="2.4" fill="currentColor" />
+      </g>
+      <g transform="translate(24 36)">
+        <rect x="-16" y="-16" width="32" height="32" rx="7" ry="7" stroke="currentColor" strokeWidth="3.2" fill="#fff" />
+        <circle cx="-7" cy="-7" r="2.6" fill="currentColor" />
+        <circle cx="7" cy="-7" r="2.6" fill="currentColor" />
+        <circle cx="-7" cy="7" r="2.6" fill="currentColor" />
+        <circle cx="7" cy="7" r="2.6" fill="currentColor" />
+      </g>
+    </svg>
+  );
+}
 export const IconFlag = adapt(Flag);
 export const IconPlay = adapt(Play);
 export const IconRefresh = adapt(RefreshCw);

@@ -5,8 +5,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import Navbar from '../components/Layout/Navbar';
-import MobileBottomNav from '../components/Layout/MobileBottomNav';
+import AppPageShell from '../components/Layout/AppPageShell';
 import { useAuthStore } from '../store/useAuthStore';
 import { isOperatorRole } from '../utils/userRoles';
 import { getImageUrl } from '../utils/constants';
@@ -188,10 +187,9 @@ const CreatePlatformApp: React.FC = () => {
     }
   };
 
+  // 功能注释：顶/底栏避让交给 AppPageShell，避免固定顶栏挡住「填写名称…」说明文案
   return (
-    <div className={styles.pageRoot}>
-      <Navbar />
-      <main className={styles.main}>
+    <AppPageShell shellClassName={styles.pageRoot} mainClassName={styles.main}>
         <h1 className={styles.title}>创作应用</h1>
         <p className={styles.hint}>
           填写名称、图标、预览图、分类、一行说明、类型和内容。保存为草稿；上架后商店与作品编辑器才能安装。
@@ -361,9 +359,7 @@ const CreatePlatformApp: React.FC = () => {
             </div>
           ))}
         </section>
-      </main>
-      <MobileBottomNav />
-    </div>
+    </AppPageShell>
   );
 };
 

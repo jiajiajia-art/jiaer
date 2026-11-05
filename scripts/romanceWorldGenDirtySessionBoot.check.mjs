@@ -20,7 +20,7 @@ function dirtyMod() {
       terms: { tabWorld: { bad: 1 }, tabNpc: 12, city: { n: '雾' } },
       prompt: { gmIntro: { text: 'hi' }, worldIntro: '世界' },
       navTabs: [{ id: 'home', label: { t: '世界' }, on: true }],
-      npcs: [{ id: 'a', name: { n: '阿宁' }, gender: { g: '女' }, age: 18 }],
+      npcs: [{ id: 'a', name: { n: '沈晚晴' }, gender: { g: '女' }, age: 18 }],
       rooms: { inn: { name: { n: '客栈' }, desc: { d: '旧' } } },
       bgm: [{ id: 'b1', name: { t: '雨' }, src: 'https://x' }],
       cover: { labels: { start: { x: 1 } }, css: { bad: true }, title: { t: '雾' } },

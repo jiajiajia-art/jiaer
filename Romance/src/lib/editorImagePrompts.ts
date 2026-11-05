@@ -1,6 +1,6 @@
 /**
  * 功能注释：编辑器四处「生图」共用提示词拼装。
- * 只拼当前项已有文字，不另起网关；实际请求仍走 platformImageGen → generateImage。
+ * 只拼当前项已有文字，不另起网关；实际请求仍走 platformImageGen（平台 ggb / 个人兜底）。
  */
 
 function clip(s: unknown, max = 280): string {

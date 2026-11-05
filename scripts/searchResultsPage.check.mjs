@@ -1,5 +1,5 @@
 /**
- * 搜索结果页：三页签组织、全部区块上限、空状态、沿用作品卡/用户卡、提交进 /search。
+ * 搜索结果页：三页签组织、全部直接列出游戏与创作者、空状态、沿用作品卡/用户卡、提交进 /search。
  */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -9,17 +9,18 @@ import test from 'node:test';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
-test('SearchPage_三页签与全部区块查看更多', () => {
+test('SearchPage_三页签与全部直接列出游戏创作者', () => {
   const page = readFileSync(join(root, 'src/page/Search.tsx'), 'utf8');
   const css = readFileSync(join(root, 'src/page/Search.module.css'), 'utf8');
   assert.match(page, /tabAll|全部/);
   assert.match(page, /'all' \| 'games' \| 'creators'/);
   assert.match(page, /relatedCreators/);
   assert.match(page, /relatedGames/);
-  assert.match(page, /viewMore/);
-  assert.match(page, /setTab\('creators'\)/);
-  assert.match(page, /setTab\('games'\)/);
-  assert.match(page, /PREVIEW_LIMIT = 4/);
+  // 功能注释：「全部」不再截断 4 条，也不再放「查看更多」跳页签
+  assert.doesNotMatch(page, /viewMore|PREVIEW_LIMIT|slice\(0,\s*PREVIEW_LIMIT\)/);
+  assert.doesNotMatch(css, /\.viewMore\b/);
+  assert.match(page, /FULL_PAGE_SIZE = 24/);
+  assert.match(page, /pageSize:\s*FULL_PAGE_SIZE/);
   assert.match(page, /GameGrid/);
   assert.match(page, /SearchUserCard/);
   assert.match(page, /noRelatedContent/);

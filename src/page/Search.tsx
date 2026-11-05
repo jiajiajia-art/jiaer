@@ -1,8 +1,8 @@
 /**
  * 搜索结果页：组织方式参考「全部 / 游戏 / 创作者」分块，视觉沿用本站暗色与作品卡/用户卡。
- * 全部：相关作者≤4 + 相关游戏≤4；查看更多切到对应页签；无结果居中空状态。
+ * 全部：直接列出相关作者与相关游戏（同页完整结果，不再截断 4 条、不放「查看更多」）；无结果居中空状态。
  */
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -21,7 +21,7 @@ import styles from './Search.module.css';
 
 export type SearchTab = 'all' | 'games' | 'creators';
 
-const PREVIEW_LIMIT = 4;
+/** 功能注释：「全部」与分页签共用同一页大小，避免全部只预览 4 条 */
 const FULL_PAGE_SIZE = 24;
 
 const isSearchTab = (value: string | null): value is SearchTab =>
@@ -77,20 +77,18 @@ const SearchPage: React.FC = () => {
       try {
         const needGames = activeTab === 'all' || activeTab === 'games';
         const needCreators = activeTab === 'all' || activeTab === 'creators';
-        const gameLimit = activeTab === 'all' ? PREVIEW_LIMIT : FULL_PAGE_SIZE;
-        const creatorLimit = activeTab === 'all' ? PREVIEW_LIMIT : FULL_PAGE_SIZE;
 
         const [gameRes, userRes] = await Promise.all([
           needGames
             ? getGameDataApi.searchPublicGames({
                 q,
                 page: 1,
-                pageSize: gameLimit,
+                pageSize: FULL_PAGE_SIZE,
                 sort: 'relevance',
               })
             : Promise.resolve(null),
           needCreators
-            ? userSearchApi.searchUsers({ q, page: 1, pageSize: creatorLimit })
+            ? userSearchApi.searchUsers({ q, page: 1, pageSize: FULL_PAGE_SIZE })
             : Promise.resolve(null),
         ]);
 
@@ -128,18 +126,9 @@ const SearchPage: React.FC = () => {
     };
   }, [keyword, activeTab, t]);
 
-  const previewCreators = useMemo(
-    () => (activeTab === 'all' ? creators.slice(0, PREVIEW_LIMIT) : creators),
-    [activeTab, creators],
-  );
-  const previewGames = useMemo(
-    () => (activeTab === 'all' ? games.slice(0, PREVIEW_LIMIT) : games),
-    [activeTab, games],
-  );
-
   const showCreatorsBlock =
-    (activeTab === 'all' || activeTab === 'creators') && previewCreators.length > 0;
-  const showGamesBlock = (activeTab === 'all' || activeTab === 'games') && previewGames.length > 0;
+    (activeTab === 'all' || activeTab === 'creators') && creators.length > 0;
+  const showGamesBlock = (activeTab === 'all' || activeTab === 'games') && games.length > 0;
 
   const tabHasNoResults = (() => {
     if (!keyword || loading) return false;
@@ -238,13 +227,10 @@ const SearchPage: React.FC = () => {
                 {activeTab === 'all' ? (
                   <div className={styles.sectionHeader}>
                     <h2 className={styles.sectionTitle}>{t('search.relatedCreators')}</h2>
-                    <button type="button" className={styles.viewMore} onClick={() => setTab('creators')}>
-                      {t('search.viewMore')}
-                    </button>
                   </div>
                 ) : null}
                 <div className={styles.userList}>
-                  {previewCreators.map((user) => (
+                  {creators.map((user) => (
                     <SearchUserCard
                       key={user.userCode}
                       user={user}
@@ -262,13 +248,10 @@ const SearchPage: React.FC = () => {
                 {activeTab === 'all' ? (
                   <div className={styles.sectionHeader}>
                     <h2 className={styles.sectionTitle}>{t('search.relatedGames')}</h2>
-                    <button type="button" className={styles.viewMore} onClick={() => setTab('games')}>
-                      {t('search.viewMore')}
-                    </button>
                   </div>
                 ) : null}
                 <GameGrid
-                  games={previewGames}
+                  games={games}
                   layoutVariant="homeWide"
                   onGameClick={openGame}
                   emptyText=""

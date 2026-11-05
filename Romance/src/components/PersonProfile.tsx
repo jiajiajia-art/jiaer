@@ -5,7 +5,7 @@ import { romanticCapOf } from "../worlds/star2005/content";
 import { ageLabel, moodLine, ownField } from "@/lib/npcIdentity";
 import { useGame } from "../store/gameCtx";
 import { Chip, Modal } from "./ui";
-import { LIVE_PERSON_BY_ID as PERSON_BY_ID, worldPersonById as profileOf } from "../mods/registry";
+import { feature, LIVE_PERSON_BY_ID as PERSON_BY_ID, worldPersonById as profileOf } from "../mods/registry";
 import { IconHeart, IconScroll, IconSend } from "../lib/icons";
 import {
   ActionTile,
@@ -47,6 +47,8 @@ export default function PersonProfile({ pid, name, known = true }: { pid: string
   const rels = relationRefsOf(game, pid);
   const stats = (profile?.stats ?? (n as { stats?: Record<string, number> } | undefined)?.stats) as Record<string, number> | undefined;
   const confess = canConfess(s, pid);
+  // 功能注释：未添加「关系玩法」包时不展示表白入口
+  const relationsPlayOn = feature("relationsPlay");
 
   const toggleRomance = () => {
     if (romanceFixed || (romanceOn && bound)) return;
@@ -185,7 +187,7 @@ export default function PersonProfile({ pid, name, known = true }: { pid: string
                     noParents={rels.noParents}
                   />
                   <ProfileGroup title="关系经营">
-                    <div className="grid grid-cols-1 gap-2 py-2.5 sm:grid-cols-3">
+                    <div className={`grid grid-cols-1 gap-2 py-2.5 ${relationsPlayOn ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
                       <ActionTile
                         icon={IconSend}
                         tone="coral"
@@ -200,16 +202,18 @@ export default function PersonProfile({ pid, name, known = true }: { pid: string
                         sub="生平往来"
                         onClick={() => setResumeHint(true)}
                       />
-                      <ActionTile
-                        icon={IconHeart}
-                        tone="coral"
-                        title="表白"
-                        sub="与TA关系更进一步"
-                        onClick={() => {
-                          if (confess.ok) simConfess(pid, nm);
-                        }}
-                        disabled={!confess.ok || busy || !romanceOn}
-                      />
+                      {relationsPlayOn && (
+                        <ActionTile
+                          icon={IconHeart}
+                          tone="coral"
+                          title="表白"
+                          sub="与TA关系更进一步"
+                          onClick={() => {
+                            if (confess.ok) simConfess(pid, nm);
+                          }}
+                          disabled={!confess.ok || busy || !romanceOn}
+                        />
+                      )}
                     </div>
                   </ProfileGroup>
                   {n?.mood != null && (

@@ -22,7 +22,8 @@ test('GameShell_作者预览传入questOnly与questStep', () => {
   const shell = read('Romance/src/components/GameShell.tsx');
   assert.match(shell, /isAuthorPreview/);
   assert.match(shell, /homeMainQuest/);
-  assert.match(shell, /questOnly=\{authorPreviewing\}/);
+  // 功能注释：游戏模式作者预览仍 questOnly；小说模式要完整三行顶栏，故 !novelLayout
+  assert.match(shell, /questOnly=\{authorPreviewing && !novelLayout\}/);
   assert.match(shell, /questStep/);
   assert.doesNotMatch(shell, /questOnly=\{true\}/);
 });

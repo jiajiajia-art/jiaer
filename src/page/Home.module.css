@@ -28,21 +28,23 @@
 }
 
 .mainContent {
+    /* 功能注释：纵向布局，页脚贴内容底部；主栏占满中间宽度，不再把页脚钉在右侧 */
     color: #FFFFFF;
     display: flex;
+    flex-direction: column;
     margin: 0;
     padding: 0;
-    margin-bottom: 248px;
 }
 
 .main {
-    flex: 1;
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
     width: 100%;
     max-width: none;
     margin: 0 auto;
     overflow: visible;
+    min-width: 0;
 }
 
 .homeWideSections {

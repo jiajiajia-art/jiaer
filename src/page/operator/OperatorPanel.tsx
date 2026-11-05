@@ -18,10 +18,14 @@ import OperatorReports from './OperatorReports';
 import WithdrawAdminManager from '../../components/WithdrawAdminManager';
 import AdminPublicAvatarManager from '../../components/admin/AdminPublicAvatarManager';
 import AdminLocationLibraryManager from '../../components/admin/AdminLocationLibraryManager';
+import AdminLocationAssetLibraryManager from '../../components/admin/AdminLocationAssetLibraryManager';
 import AdminPlayModManager from '../../components/admin/AdminPlayModManager';
 import ContentReportAdminManager from '../../components/admin/ContentReportAdminManager';
 import ContentAppealAdminManager from '../../components/admin/ContentAppealAdminManager';
 import PublishReviewAdminManager from '../../components/admin/PublishReviewAdminManager';
+import SiteFeedbackAdminManager from '../../components/admin/SiteFeedbackAdminManager';
+import BusinessCoopAdminManager from '../../components/admin/BusinessCoopAdminManager';
+import GameIssueAdminManager from '../../components/admin/GameIssueAdminManager';
 import adminStyles from '../AdminPanel.module.css';
 import styles from './OperatorPanel.module.css';
 
@@ -34,10 +38,14 @@ type OperatorTab =
   | 'withdraw'
   | 'avatars'
   | 'locations'
+  | 'locationAssets'
   | 'components'
   | 'contentReports'
   | 'appeals'
-  | 'publishQueue';
+  | 'publishQueue'
+  | 'feedback'
+  | 'businessCoop'
+  | 'gameIssues';
 type WorksSortField = 'playCount' | 'pv' | 'shareCount';
 type SortDirection = 'asc' | 'desc';
 
@@ -55,11 +63,15 @@ const resolveOperatorTab = (pathname: string): OperatorTab => {
   if (pathname.startsWith('/operator/daily-tasks')) return 'dailyTasks';
   if (pathname.startsWith('/operator/withdraw')) return 'withdraw';
   if (pathname.startsWith('/operator/avatars')) return 'avatars';
+  if (pathname.startsWith('/operator/location-assets')) return 'locationAssets';
   if (pathname.startsWith('/operator/locations')) return 'locations';
   if (pathname.startsWith('/operator/components') || pathname.startsWith('/operator/play-mods')) return 'components';
   if (pathname.startsWith('/operator/content-reports')) return 'contentReports';
   if (pathname.startsWith('/operator/appeals')) return 'appeals';
   if (pathname.startsWith('/operator/publish-queue')) return 'publishQueue';
+  if (pathname.startsWith('/operator/feedback')) return 'feedback';
+  if (pathname.startsWith('/operator/business-coop')) return 'businessCoop';
+  if (pathname.startsWith('/operator/game-issues')) return 'gameIssues';
   return 'stats';
 };
 
@@ -93,11 +105,15 @@ const OperatorPanel: React.FC = () => {
     { id: 'dailyTasks', label: t('operator.tabs.dailyTasks'), path: '/operator/daily-tasks' },
     { id: 'withdraw', label: t('operator.tabs.withdraw'), path: '/operator/withdraw' },
     { id: 'avatars', label: '公共头像', path: '/operator/avatars' },
-    { id: 'locations', label: '地点库·大地图', path: '/operator/locations' },
+    { id: 'locations', label: '地点库', path: '/operator/locations' },
+    { id: 'locationAssets', label: '地点素材库', path: '/operator/location-assets' },
     { id: 'components', label: '组件管理', path: '/operator/components' },
     { id: 'contentReports', label: t('operator.tabs.contentReports'), path: '/operator/content-reports' },
     { id: 'appeals', label: t('operator.tabs.appeals'), path: '/operator/appeals' },
     { id: 'publishQueue', label: t('operator.tabs.publishQueue'), path: '/operator/publish-queue' },
+    { id: 'feedback', label: t('operator.tabs.feedback'), path: '/operator/feedback' },
+    { id: 'businessCoop', label: t('operator.tabs.businessCoop'), path: '/operator/business-coop' },
+    { id: 'gameIssues', label: t('operator.tabs.gameIssues'), path: '/operator/game-issues' },
   ]), [t]);
 
   const sortedWorks = useMemo(() => {
@@ -420,6 +436,7 @@ const OperatorPanel: React.FC = () => {
             {activeTab === 'withdraw' ? <WithdrawAdminManager /> : null}
             {activeTab === 'avatars' ? <AdminPublicAvatarManager /> : null}
             {activeTab === 'locations' ? <AdminLocationLibraryManager /> : null}
+            {activeTab === 'locationAssets' ? <AdminLocationAssetLibraryManager /> : null}
             {activeTab === 'components' ? <AdminPlayModManager /> : null}
             {!isLoading && activeTab === 'promotions' ? (
               <PromotionAdminManager pendingReviewCount={0} onRefreshCounts={async () => {}} />
@@ -429,6 +446,9 @@ const OperatorPanel: React.FC = () => {
             {activeTab === 'contentReports' ? <ContentReportAdminManager /> : null}
             {activeTab === 'appeals' ? <ContentAppealAdminManager /> : null}
             {activeTab === 'publishQueue' ? <PublishReviewAdminManager /> : null}
+            {activeTab === 'feedback' ? <SiteFeedbackAdminManager /> : null}
+            {activeTab === 'businessCoop' ? <BusinessCoopAdminManager /> : null}
+            {activeTab === 'gameIssues' ? <GameIssueAdminManager /> : null}
           </section>
         </div>
       </div>

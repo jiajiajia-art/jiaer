@@ -120,6 +120,7 @@ export function findNpc(npcs: Npc[], id: string | undefined, name: string | unde
   return npcs.find((x) => normName(x.name) === nn || (x.aliases ?? []).some((a) => normName(a) === nn));
 }
 
+
 /** 心境：始终给出一句话。AI 若只回了「平静」之类的短词，按好感补成一句。 */
 export function moodLine(n: { mood?: string; affinity?: number } | undefined): string {
   const m = (n?.mood || "").trim();

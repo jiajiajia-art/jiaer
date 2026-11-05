@@ -189,11 +189,16 @@ function App() {
           <Route path="/operator/withdraw" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/avatars" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/locations" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/location-assets" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/components" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/play-mods" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/content-reports" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/appeals" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/publish-queue" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/feedback" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/business-coop" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/game-issues" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/game-issues" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/works/:fileId/stats" element={<OperatorRoute><OperatorWorkStats /></OperatorRoute>} />
           <Route path="/points/details" element={<PointsDetails />} />
           <Route path="/createGame" element={<CreateGame />} />

@@ -33,7 +33,7 @@ export function bridgeModes(): Record<string, BridgeSpec> {
       verb: o.verb ?? "往来",
       desc: o.desc ?? "",
       need: num(o.need, 20),
-      fx,
+      fx: fx as [number, number],
       tone: o.tone ?? "ink",
       prompt: o.prompt ?? `主角促成{a}与{b}之间的「${label}」。写出两人的互动与关系变化。`,
       offline: o.offline ?? `你促成了{a}与{b}的「${label}」。`,

@@ -22,9 +22,9 @@ test('ModPoolsEditor_选项以名称为主且空加成不占一整行', () => {
   assert.doesNotMatch(src, /parentJobs/);
 });
 
-test('ModEditorPanel_最多可选不得从字中间折行', () => {
-  // 功能注释：「最多可选」在①基础·势力，不在人物线路编辑器
+test('ModEditorPanel_地点页已移除最多可选势力块', () => {
+  // 功能注释：势力整块（含最多可选）已从地点页删除
   const panel = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../Romance/src/components/ModEditorPanel.tsx'), 'utf8');
-  assert.match(panel, /whitespace-nowrap" aria-label="最多可选">最多可选/);
-  assert.doesNotMatch(panel, /text-ink-soft">最多可选\n/);
+  assert.doesNotMatch(panel, /最多可选/);
+  assert.doesNotMatch(panel, /title="势力"/);
 });

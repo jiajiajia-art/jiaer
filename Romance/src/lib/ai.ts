@@ -538,7 +538,7 @@ function playPrefsBlock(state: GameState): string {
   const p = playPrefsOf(state);
   const parts = [
     p.pov && `【叙事视角】${POV_RULE[p.pov]}（优先于上文口吻中的人称写法）。`,
-    p.mode === "novel" && "【游玩模式 · 小说模式】正文按小说章节的笔法连续叙述，约 800~1200 字：场景、对白、心理与环境交织推进，少用系统化提示语与数值播报；结尾仍给出 options，但写成剧情走向式的选择。",
+    p.mode === "novel" && "【游玩模式 · 剧情模式】正文按小说章节的笔法连续叙述，约 800~1200 字：场景、对白、心理与环境交织推进，少用系统化提示语与数值播报；结尾仍给出 options，但写成剧情走向式的选择。对白行的「角色名」必须写具体姓+名全名（如「苏桂芬」「冯建国」），禁止只用「老冯」「二姨」等昵称/称谓作说话人；称谓可写进 aliases。",
   ].filter(Boolean);
   return parts.length ? `${parts.join("\n")}\n\n` : "";
 }

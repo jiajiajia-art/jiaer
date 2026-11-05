@@ -10,11 +10,14 @@
 }
 
 .main {
+  /* 功能注释：主内容纵向堆叠，FooterArea 落在滚动区底部而非右侧栏 */
   position: absolute;
   top: var(--app-navbar-offset);
   bottom: var(--app-bottom-nav-offset);
   left: 0;
   right: 0;
+  display: flex;
+  flex-direction: column;
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;

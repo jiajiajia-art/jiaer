@@ -7,25 +7,21 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
 
+/** 功能注释：新页脚使用的 i18n 键（旧分享区字段仍保留在 locales 供兼容） */
 const FOOTER_KEYS = [
-  'shareTo',
-  'wechat',
-  'weibo',
-  'qq',
+  'tagline',
+  'copyright',
+  'privacyPolicy',
+  'userAgreement',
   'douyin',
   'xiaohongshu',
   'followUs',
   'joinUs',
   'socialRecruit',
   'campusRecruit',
-  'intlRecruit',
   'contactUs',
-  'customerService',
   'businessCoop',
-  'procurement',
-  'feedback',
-  'optimization',
-  'improvement',
+  'feedbackEntry',
 ];
 
 test('FooterArea_应使用footer i18n键且无硬编码中文标题', () => {
@@ -37,7 +33,14 @@ test('FooterArea_应使用footer i18n键且无硬编码中文标题', () => {
   for (const key of FOOTER_KEYS) {
     assert.match(tsx, new RegExp(`t\\('footer\\.${key}'\\)`));
   }
-  assert.doesNotMatch(tsx, /分享到：|关注我们|加入我们|联系我们|发表建议|社会招聘|优化建议/);
+  // 功能注释：禁止 JSX/字符串硬编码中文标题；注释里的中文说明允许
+  assert.doesNotMatch(tsx, /['"`]让每一个世界都可以被游玩['"`]/);
+  assert.doesNotMatch(tsx, />\s*关注我们\s*</);
+  assert.doesNotMatch(tsx, />\s*意见反馈\s*</);
+  assert.match(tsx, /FeedbackModal|BusinessCoopModal/);
+  assert.match(tsx, /douyin\.com/);
+  assert.match(tsx, /xhslink\.cn|xiaohongshu/);
+  assert.match(tsx, /zhipin\.com/);
 });
 
 test('i18n_footer中英键齐全且英文非中文', () => {
@@ -51,13 +54,13 @@ test('i18n_footer中英键齐全且英文非中文', () => {
     assert.ok(zh.footer[key].length > 0);
     assert.ok(en.footer[key].length > 0);
   }
-  assert.equal(zh.footer.shareTo, '分享到：');
-  assert.equal(en.footer.shareTo, 'Share to:');
-  assert.equal(zh.footer.feedback, '发表建议');
-  assert.equal(en.footer.feedback, 'Feedback');
-  assert.doesNotMatch(en.footer.shareTo, /[\u4e00-\u9fff]/);
+  assert.equal(zh.footer.feedbackEntry, '意见反馈');
+  assert.equal(zh.footer.businessCoop, '业务合作');
+  assert.doesNotMatch(en.footer.tagline, /[\u4e00-\u9fff]/);
   assert.doesNotMatch(en.footer.followUs, /[\u4e00-\u9fff]/);
   assert.doesNotMatch(en.footer.joinUs, /[\u4e00-\u9fff]/);
   assert.doesNotMatch(en.footer.contactUs, /[\u4e00-\u9fff]/);
-  assert.doesNotMatch(en.footer.feedback, /[\u4e00-\u9fff]/);
+  assert.doesNotMatch(en.footer.feedbackEntry, /[\u4e00-\u9fff]/);
+  assert.ok(zh.customerService?.feedback?.types?.bug);
+  assert.ok(en.customerService?.business?.types?.brand);
 });

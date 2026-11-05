@@ -6,6 +6,7 @@ import type { AttrDef } from "./types.ts";
 import { looksLikeCurrency } from "../game/wallet.ts";
 import { asTrimmedString } from "./asTrimmedString.ts";
 import { asModArray } from "./asModArray.ts";
+import { attrStartValue, attrUsesRandomStart } from "./attrInit.ts";
 
 /** 功能注释：统一「＋ 添加」可选类型（不含长文本/下拉旧项，旧稿仍可编辑） */
 export const CREATION_ITEM_ADD_TYPES = [
@@ -49,11 +50,29 @@ export function visibleCreatorAttrs(defs: AttrDef[] | undefined | unknown): Attr
   return asModArray<AttrDef>(defs).filter((a) => !a.hidden && isNamedCreatorAttr(a));
 }
 
-/** 功能注释：属性预览右侧文案；init 缺失时回落 min/0，禁止拼出「开局 undefined」 */
-export function formatCreatorAttrPreview(a: AttrDef): string {
+/** 功能注释：建角页掷一次各属性开局值，供预览与「属性」标题骰子整组重掷 */
+export function rollCreatorAttrStarts(
+  defs: AttrDef[] | undefined | unknown,
+  rand: () => number = Math.random,
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const a of asModArray<AttrDef>(defs)) {
+    if (!a?.id) continue;
+    out[a.id] = attrStartValue(a, rand);
+  }
+  return out;
+}
+
+/** 功能注释：属性预览右侧文案；有已掷值时显示具体数字，随机项标明「已掷」 */
+export function formatCreatorAttrPreview(a: AttrDef, rolled?: number): string {
   const max = Number(a.max);
   const maxPart = Number.isFinite(max) && max > 0 ? ` · 上限 ${Math.floor(max)}` : "";
-  if (a.initMode === "random" || a.initMode === "dice") {
+  if (typeof rolled === "number" && Number.isFinite(rolled)) {
+    const n = Math.floor(rolled);
+    if (attrUsesRandomStart(a)) return `开局 ${n}${maxPart}（已掷）`;
+    return `开局 ${n}${maxPart}`;
+  }
+  if (attrUsesRandomStart(a)) {
     const lo = Number.isFinite(Number(a.min)) ? Math.floor(Number(a.min)) : 0;
     const hi = Number.isFinite(max) && max > lo ? Math.floor(max) : Math.max(lo, 100);
     return `开局随机 ${lo}~${hi}`;

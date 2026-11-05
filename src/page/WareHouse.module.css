@@ -6,14 +6,17 @@
 }
 
 .mainContent {
+    /* 功能注释：纵向布局，页脚不再作为右侧栏 */
     color: black;
     display: flex;
+    flex-direction: column;
     margin: 0;
     padding: 0;
     min-height: 100%;
 }
 
 .main {
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
     width: min(var(--app-desktop-shell-max), calc(100% - 2 * var(--app-desktop-gutter)));
@@ -22,6 +25,7 @@
     overflow: visible;
     padding: 20px;
     box-sizing: border-box;
+    min-width: 0;
 }
 
 /* 中等屏幕适配 (769px - 1080px) */

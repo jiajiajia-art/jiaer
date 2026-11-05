@@ -19,6 +19,8 @@ export type LocationLibraryItem = {
   imageUrl: string;
   /** 大地图下的地点树；缺省导入时退化为单地点 */
   treeJson?: { rooms: LocationLibraryTreeRoom[] } | null;
+  tags?: string[];
+  authorKul?: string;
   status: 'active' | 'disabled';
   sortOrder?: number;
   createdAt?: string;
@@ -64,6 +66,8 @@ export const locationLibraryApi = {
       imageUrl: string;
       sortOrder?: number;
       status?: string;
+      tags?: string[];
+      authorKul?: string;
       treeJson?: { rooms: LocationLibraryTreeRoom[] } | string | null;
     },
   ) => {
@@ -83,6 +87,8 @@ export const locationLibraryApi = {
       imageUrl: string;
       sortOrder: number;
       status: string;
+      tags: string[];
+      authorKul: string;
       treeJson: { rooms: LocationLibraryTreeRoom[] } | string | null;
     }>,
   ) => {

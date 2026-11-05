@@ -25,6 +25,6 @@ test('ModEditorPanel_书名号开关须留在卡片内', () => {
   assert.match(src, /《书名号》/);
   assert.match(src, /overflow-x-hidden rounded-xl border border-line bg-paper/);
   assert.match(src, /max-w-full resize-y/);
-  assert.match(src, /会走动/);
-  assert.doesNotMatch(src, /<option value="roam">会走动<\/option>/);
+  assert.doesNotMatch(src, /"会走动"|"驻守"/);
+  assert.doesNotMatch(src, /aria-pressed=\{n\.kind !== "staff"\}/);
 });

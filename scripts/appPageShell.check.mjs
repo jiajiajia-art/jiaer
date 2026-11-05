@@ -50,9 +50,11 @@ test('Create_Rankings_Search_Bookshelf_Favorites_Library_CreateType_走统一壳
     'src/page/Favorites.tsx',
     'src/page/Library.tsx',
     'src/page/CreateType.tsx',
+    'src/page/CreatePlatformApp.tsx',
   ]) {
     const src = read(rel);
     assert.match(src, /AppPageShell/, `${rel} missing AppPageShell`);
     assert.doesNotMatch(src, /<Navbar\s*\/>/, `${rel} still mounts bare Navbar`);
+    assert.doesNotMatch(src, /<MobileBottomNav/, `${rel} still mounts bare MobileBottomNav`);
   }
 });

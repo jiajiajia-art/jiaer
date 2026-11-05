@@ -11,7 +11,17 @@ import type { ThemePref } from "../lib/store";
 
 export type Screen = "cover" | "create" | "opening" | "game" | "ending";
 /* 开新局附加项：建角选项的开局效果 · 游玩偏好 · 自选开局日期 */
-export type StartOpts = { fx?: import("../game/data").OptFx[]; playPrefs?: import("../lib/types").PlayPrefs; startDate?: string; pathNpcs?: import("../game/data").PathNpc[]; route?: Pick<import("../game/data").CreationPath, "hero" | "room" | "memory" | "event" | "eventId" | "fx">; factions?: import("../game/data").StartFaction[]; joined?: string[] };
+export type StartOpts = {
+  fx?: import("../game/data").OptFx[];
+  playPrefs?: import("../lib/types").PlayPrefs;
+  startDate?: string;
+  pathNpcs?: import("../game/data").PathNpc[];
+  route?: Pick<import("../game/data").CreationPath, "hero" | "room" | "memory" | "event" | "eventId" | "fx">;
+  factions?: import("../game/data").StartFaction[];
+  joined?: string[];
+  /** 功能注释：建角页已掷的自定义属性开局值；有则开局沿用，避免预览与入局再掷不一致 */
+  cattrStarts?: Record<string, number>;
+};
 /* 弹窗重试参数：弹窗类行动（事件 / 支线 / 询问）演绎失败时存下原请求，供「重新触发」原样重发 */
 export type PopupRetry = { input: string; hideInput?: boolean; journalMeta?: Omit<import("../lib/types").JournalEntry, "id" | "ts" | "text">; preSettled?: boolean };
 /* 周结算报告：结构化呈现（不再拼成一大段系统文字） */
@@ -126,6 +136,8 @@ export type Ctx = {
   commitGame: (next: GameState) => void; // 整档提交并持久化（聊天/通话逐条落库）
   patchGame: (fn: (latest: GameState) => GameState) => void; // 基于最新存档做函数式修改（异步回调里用，避免覆盖期间的进度）
   phoneExchange: (personId: string) => boolean; // 交换联系方式：随机同意/拒绝，同意开通私聊
+  /** 功能注释：剧情初遇点「结识」——记入人脉并幕后开一回合结识剧情（写入 memory 摘要） */
+  meetNewcomer: (personId: string) => void;
 };
 
 // 把 Context 实例挂在 globalThis 上：模块被 HMR 重新求值时复用同一对象，Provider 与消费者永不失配

@@ -132,19 +132,20 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
   }, [libOpen, libQ]);
 
   const libPicker = libOpen ? (
-    <Modal title="从地点库添加大地图" onClose={() => setLibOpen(false)}>
+    <Modal title="从地点库添加" onClose={() => setLibOpen(false)}>
       <p className="mb-2 text-[12px] leading-relaxed text-ink-soft">
-        库里存的是大地图。选中后会把这张大地图和它下面的整棵地点树复制进本作品（可再改字、加子地点）。停用中的库条目不会出现。
+        地点库装的是「大地图 + 地点树」整包。选中后复制进本作品（名称、层级、场景描述一并带入），原包不改。下架条目不会出现。
       </p>
-      <SearchBox value={libQ} onChange={setLibQ} placeholder="搜索地点库" />
+      <SearchBox value={libQ} onChange={setLibQ} placeholder="搜索名称 / 作者库兰号 / 标签" />
       {libErr ? <p className="mt-2 text-[12px] text-danger">{libErr}</p> : null}
       {libLoading ? <p className="mt-3 text-[12px] text-ink-soft">加载中…</p> : null}
-      {!libLoading && !libErr && !libItems.length ? <EmptyState>地点库暂无可用大地图，请联系运营在后台配置。</EmptyState> : null}
+      {!libLoading && !libErr && !libItems.length ? <EmptyState>地点库暂无可用条目，请联系运营在后台配置。</EmptyState> : null}
       <ul className="mt-2 max-h-[22rem] space-y-1.5 overflow-y-auto">
         {libItems.map((item) => {
           const img = resolvePlatformLocationImageUrl(item.imageUrl);
           const tree = parseLibraryMapTree(item.treeJson);
           const n = tree?.rooms.length ?? 1;
+          const tags = Array.isArray(item.tags) ? item.tags.filter(Boolean) : [];
           return (
             <li key={item.id}>
               <button
@@ -155,8 +156,12 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
                 {img ? <img src={img} alt="" className="h-14 w-9 shrink-0 rounded-lg object-cover" /> : <span className="h-14 w-9 shrink-0 rounded-lg bg-paper-2" />}
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13px] font-bold text-ink">{item.name}</span>
-                  <span className="mt-0.5 line-clamp-2 text-[11.5px] text-ink-soft">{item.description || "（无简介）"}</span>
-                  <span className="mt-0.5 block text-[10.5px] text-ink-soft">含 {n} 个地点</span>
+                  <span className="mt-0.5 line-clamp-2 text-[11.5px] text-ink-soft">{item.description || "（无说明）"}</span>
+                  <span className="mt-0.5 block text-[10.5px] text-ink-soft">
+                    含 {n} 个地点
+                    {item.authorKul ? ` · 库兰 ${item.authorKul}` : ""}
+                    {tags.length ? ` · ${tags.slice(0, 4).join("、")}` : ""}
+                  </span>
                 </span>
               </button>
             </li>
@@ -219,7 +224,8 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
   const mapBar = (
     <div className="space-y-1.5 rounded-2xl border border-line bg-paper-2 p-2">
       <p className="px-1 text-[11px] font-bold text-ink-soft">大地图 · 每张下面一棵地点树</p>
-      <div className="flex flex-wrap gap-1">
+      {/* 功能注释：大地图页签与「＋大地图 / 从地点库添加」同一行，删掉单独一行按钮区 */}
+      <div className="flex flex-wrap items-center gap-1.5">
         {maps.map((m) => (
           <button
             key={m.id}
@@ -230,8 +236,6 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
             {m.name || m.id}
           </button>
         ))}
-      </div>
-      <div className="flex flex-wrap gap-1.5">
         <button type="button" className={pill} onClick={addMap}>＋ 大地图</button>
         <button type="button" className={pill} onClick={() => setLibOpen(true)}>从地点库添加</button>
         {maps.length > 1 && curMapId ? (
@@ -240,28 +244,23 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
       </div>
       {curMap && (
         <div className="space-y-1.5">
-          <div className="grid gap-1 sm:grid-cols-2">
-            <label className="block">
-              <span className={lbl}>大地图名称</span>
-              <input className={inp} value={curMap.name} onChange={(e) => patchMap(curMap.id, { name: e.target.value })} placeholder="如：雾色旅馆" />
-            </label>
-            <label className="block">
-              <span className={lbl}>简介（可选）</span>
-              <input className={inp} value={curMap.desc ?? ""} onChange={(e) => patchMap(curMap.id, { desc: e.target.value || undefined })} placeholder="给创作者自己看的备注" />
-            </label>
-          </div>
-          {/* 功能注释：大地图图走统一生图入口；名称+简介预填，生成后显示在本图预览 */}
+          <label className="block">
+            <span className={lbl}>大地图名称</span>
+            <input className={inp} value={curMap.name} onChange={(e) => patchMap(curMap.id, { name: e.target.value })} placeholder="如：雾色旅馆" />
+          </label>
+          {/* 功能注释：大地图图；「素材库」走平台地点素材库（只换图，不改地点树） */}
           <div className="block">
-            <span className={lbl}>大地图图 · 用名称与简介生图，也可上传替换</span>
+            <span className={lbl}>大地图图 · 可生图、上传或从素材库选图</span>
             <ImagePicker
               value={curMap.bg}
               onChange={(bg) => patchMap(curMap.id, { bg: bg || undefined })}
               label={`${curMap.name || "大地图"}图`}
               max={1600}
               thumb="h-16 w-28"
+              platformAssetPurpose="world_map"
               aiGen={{
                 size: "1792x1024",
-                placeholder: "按大地图名称与简介生成地图插画…",
+                placeholder: "按大地图名称生成地图插画…",
                 initialPrompt: buildWorldMapPrompt({ name: curMap.name, desc: curMap.desc }) || undefined,
               }}
             />
@@ -351,6 +350,7 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
                       max={1920}
                       thumb="aspect-[9/16] h-auto w-14"
                       scenePortrait
+                      platformAssetPurpose="location_scene"
                       aiGen={{
                         size: SCENE_PORTRAIT_GEN_SIZE,
                         placeholder: "按地点名与场景描述生成 9:16 竖图…",

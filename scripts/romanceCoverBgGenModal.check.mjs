@@ -12,14 +12,16 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const romance = join(root, 'Romance/src');
 const read = (p) => readFileSync(join(romance, p), 'utf8');
 
-test('platformImageGen_复用generateImage不另起网关', () => {
+test('platformImageGen_登录走运营生图网关_未登录才个人Key', () => {
   const src = read('lib/platformImageGen.ts');
   assert.match(src, /from ["']\.\/ai["']/);
   assert.match(src, /return generateImage\(cfg, prompt, size\)/);
   assert.match(src, /export async function generatePlatformImage/);
   assert.match(src, /export function platformImageConfigured/);
-  // 功能注释：适配层不得自己再 fetch 生图 URL，必须委托既有 generateImage
-  assert.doesNotMatch(src, /\bfetch\s*\(/);
+  // 功能注释：已登录必须打平台 /api/romance/images/generate（图5 epone/ggb），禁止只认个人 Key
+  assert.match(src, /\/api\/romance\/images\/generate/);
+  assert.match(src, /generateImageViaPlatform/);
+  assert.match(src, /hasPlatformPlayAuth\(\)/);
   assert.doesNotMatch(src, /optical\/games\/generate-cover/);
 });
 
@@ -36,7 +38,8 @@ test('ImagePicker_上传旁生图按钮弹窗不内联铺输入框', () => {
   assert.match(picker, /生图/);
   assert.match(picker, /aiGen/);
   assert.match(picker, /from ["']\.\/ui["']/);
-  assert.match(picker, /<Modal title="生图"/);
+  assert.match(picker, /title="生图"/);
+  assert.match(picker, /<Modal/);
   assert.match(picker, /AiImageGen/);
   assert.match(picker, /bare/);
   // 功能注释：按钮须在上传之后、素材库之前（与产品标注一致）

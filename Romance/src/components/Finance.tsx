@@ -12,7 +12,7 @@ function sundayDate(week: number): string {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
 }
 
-/* 财务 · 支票与账单：周日结算的演艺进账支票与生活账单。由右上角 ☰ 菜单唤出。 */
+/* 玩法 Mod · 支票与账单：周日结算的演艺进账支票与生活账单。菜单「玩法 Mod」入口（仅装了对应玩法时显示）。 */
 export default function Finance({ onClose }: { onClose: () => void }) {
   const { game } = useGame();
   if (!game) return null;
@@ -21,7 +21,7 @@ export default function Finance({ onClose }: { onClose: () => void }) {
   const p = game.player;
 
   return (
-    <Modal title="财务 · 支票与账单" onClose={onClose}>
+    <Modal title="玩法 Mod · 支票与账单" onClose={onClose}>
       <div className="mb-3 flex items-baseline justify-between border-b border-dashed border-line pb-2">
         <span className="text-[12.5px] text-ink-soft">当前资金</span>
         <span className={`text-[16px] font-bold tabular-nums ${wallet.balance(s) < 0 ? "text-danger" : "text-jade"}`}>{wallet.fmt(wallet.balance(s))}</span>

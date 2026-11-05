@@ -53,5 +53,5 @@ export const ICON_SLOTS: { id: string; label: string; group: "main" | "menu" }[]
   { id: "adv.arrow", label: "「日程」按钮", group: "main" },
   { id: "input.pen", label: "输入框 · 灵感笔", group: "main" },
   { id: "input.send", label: "输入框 · 发送", group: "main" },
-  ...["存档管理", "结束游戏", "我的作品", "CG 图鉴", "剧情志", "财务 · 支票账单", "暗色模式", "编辑器", "AI 配置", "游戏设置"].map((l) => ({ id: `menu:${l}`, label: l, group: "menu" as const })),
+  ...["存档管理", "结束游戏", "我的作品", "CG 图鉴", "剧情志", "玩法 Mod", "编辑器", "AI 配置", "游戏设置"].map((l) => ({ id: `menu:${l}`, label: l, group: "menu" as const })),
 ];

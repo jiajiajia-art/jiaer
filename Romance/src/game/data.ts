@@ -3,6 +3,7 @@
 import { GENERATED_GIGS } from "./gigLibrary";
 import { loadGlobal, saveGlobal, removeGlobal } from "../lib/saveScope";
 import { slot, liveArray, liveRecord, memoBy, currentWorldId } from "../mods/live";
+import { asModArray } from "../lib/asModArray";
 import { enabledChargeItems as filterChargeItems, type ChargeBasisItem } from "./chargeBasis";
 import type { TuningModuleId, TuningModulesFlag } from "./tuningModules";
 import { isTuningModuleOn as tuningModuleOn } from "./tuningModules";
@@ -204,14 +205,19 @@ export const RAW_LOOKS_TIERS: FameTier[] = [
   { min: 500, label: "高端脸孔", desc: "" },
   { min: 700, label: "顶级神颜", desc: "" },
 ];
-export const looksTiers = (): FameTier[] => { const t = statsSlot().looksTiers; return t?.length ? t : RAW_LOOKS_TIERS; };
+export const looksTiers = (): FameTier[] => {
+  // 功能注释：looksTiers 常被 AI 写成对象；非数组按空，禁止 ?.length 误判后把脏对象当档表用
+  const t = statsSlot().looksTiers;
+  return Array.isArray(t) && t.length ? t : RAW_LOOKS_TIERS;
+};
 export const STAT_LABELS: Record<StatKey, string> = liveRecord(() => ({ ...RAW_STAT_LABELS, ...(statsSlot().labels ?? {}) }));
 export const STATS_BASE: Record<StatKey, number> = liveRecord(() => ({ ...RAW_STATS_BASE, ...(statsSlot().base ?? {}) }));
 /* order 只调整展示顺序：缺失的键按默认顺序补在末尾（引擎循环始终覆盖全部八维） */
 export const STAT_ORDER: StatKey[] = liveArray(() => {
-  const o = (statsSlot().order ?? []).filter((k, i, a) => k in RAW_STAT_LABELS && a.indexOf(k) === i);
+  // 功能注释：stats.order / hidden 常被 AI 写成对象；asModArray 后再 filter，禁止 .filter 崩预览
+  const o = asModArray<StatKey>(statsSlot().order).filter((k, i, a) => k in RAW_STAT_LABELS && a.indexOf(k) === i);
   const full = o.length ? [...o, ...RAW_STAT_ORDER.filter((k) => !o.includes(k))] : RAW_STAT_ORDER;
-  const hid = statsSlot().hidden ?? [];
+  const hid = asModArray<StatKey>(statsSlot().hidden);
   return full.filter((k) => !hid.includes(k));
 });
 /**
@@ -220,8 +226,8 @@ export const STAT_ORDER: StatKey[] = liveArray(() => {
  * 未配 order 时才回落全量八维再扣 hidden。引擎养成仍用 STAT_ORDER。
  */
 export const dossierStatKeys = (): StatKey[] => {
-  const hid = new Set(statsSlot().hidden ?? []);
-  const ordered = (statsSlot().order ?? []).filter(
+  const hid = new Set(asModArray<StatKey>(statsSlot().hidden));
+  const ordered = asModArray<StatKey>(statsSlot().order).filter(
     (k, i, a) => k in RAW_STAT_LABELS && a.indexOf(k) === i && !hid.has(k),
   );
   if (ordered.length) return ordered;

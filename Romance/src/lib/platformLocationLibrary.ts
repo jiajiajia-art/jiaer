@@ -12,6 +12,9 @@ export type PlatformLocationItem = {
   status?: string;
   /** 功能注释：大地图下的地点树 JSON；缺省则导入时退化为单地点 */
   treeJson?: unknown;
+  tags?: string[];
+  /** 功能注释：作者库兰号，供搜索与展示 */
+  authorKul?: string;
 };
 
 function apiBase(): string {

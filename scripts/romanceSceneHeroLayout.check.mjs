@@ -46,7 +46,14 @@ test('LocationHero_小说fill_竖屏铺满_内容卡用皮肤圆角', () => {
   assert.doesNotMatch(cardBlock[0], /max-w-md/);
   assert.doesNotMatch(cardBlock[0], /aspect-\[16\/10\]/);
   assert.match(cardBlock[0], /rounded-\[var\(--radius-ui-lg\)\]/);
-  assert.match(cardBlock[0], /bg-paper/);
+  // 功能注释：内容卡底色由 novel-read-card + --story-panel-a 驱动，不再写死 bg-paper
+  assert.match(cardBlock[0], /novel-read-card/);
+  assert.doesNotMatch(cardBlock[0], /bg-paper/);
+  // 功能注释：阅读弹层高度 = 预览/场景区 85%，勿 flex-1 顶满
+  assert.match(cardBlock[0], /h-\[85%\]/);
+  assert.match(cardBlock[0], /max-h-\[85%\]/);
+  assert.match(cardBlock[0], /justify-center/);
+  assert.doesNotMatch(cardBlock[0], /novel-read-card[^>]*flex-1/);
   assert.match(cardBlock[0], /\{mapBtn\}/);
   assert.match(hero, /外出/);
 });

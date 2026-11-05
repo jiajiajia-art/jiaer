@@ -24,8 +24,12 @@ test('GameDetail_统计条应横排圆钮且使用内联图标组件', () => {
   assert.match(tsx, /DetailShareIcon/);
   assert.match(tsx, /DetailHeartIcon/);
   assert.match(tsx, /DetailStarIcon/);
+  assert.match(tsx, /DetailRateIcon/);
   assert.match(tsx, /styles\.statsIconWrap/);
   assert.match(tsx, /styles\.statsText/);
+  /* 功能注释：分享已迁顶栏；互动行是点赞/收藏/评分 */
+  assert.match(tsx, /styles\.statsBar[\s\S]*?DetailHeartIcon[\s\S]*?DetailStarIcon[\s\S]*?DetailRateIcon/);
+  assert.doesNotMatch(tsx, /styles\.statsBar[\s\S]*?DetailShareIcon/);
   assert.doesNotMatch(tsx, /statsBar[\s\S]{0,800}icon_share\.(svg|webp)/);
   assert.match(css, /\.statsItem[\s\S]*flex-direction:\s*row/);
   assert.match(css, /\.statsIconWrap[\s\S]*border-radius:\s*999px/);

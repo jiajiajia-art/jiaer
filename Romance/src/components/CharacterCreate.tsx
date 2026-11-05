@@ -10,14 +10,14 @@ import PlayPrefsPicker from "./PlayPrefsPicker";
 import { fxSummary } from "../game/optFx";
 import type { OptFx } from "../game/data";
 import { Avatar, Modal } from "./ui";
-import { IconCake, IconCheck, IconDice, IconIdCard, IconLock, IconPlay, IconUser } from "../lib/icons";
+import { IconCake, IconCheck, IconDiceDuo, IconIdCard, IconLock, IconPlay, IconUser } from "../lib/icons";
 import { IDENTITIES, creationCopy, zodiacOf, optFx, defaultWorldRules, type BuiltinFieldCfg, type BuiltinFieldKey, type CreationField } from "../game/data";
 import { commitSelection, worldPersonById, getSelectedWorld, selectedFeature, selectedSlot, setStartDateOverride, useMods } from "../mods/registry";
 import NamePicker from "./NamePicker";
 import { factionSigningOffers, rollSigningOffers, type SigningContract } from "../worlds/star2005/content";
 import { creationVars, fillParts, fillText } from "../game/creationText";
 import { normalizeGenderOptions } from "../game/creationSystemFields";
-import { formatCreatorAttrPreview, visibleCreatorAttrs } from "../lib/creationItems";
+import { formatCreatorAttrPreview, rollCreatorAttrStarts, visibleCreatorAttrs } from "../lib/creationItems";
 import { shouldShowPathPicker } from "../lib/pathPicker";
 import { isAuthorPreview, requestAuthorPreviewEnd } from "../lib/authorPreview";
 import { deleteSlot, listSaves, type SaveSlot } from "../lib/store";
@@ -48,17 +48,23 @@ function Tpl({ text, vars }: { text: string; vars: Record<string, string> }) {
     : p.hl ? <span key={i} className="font-medium text-jade">{p.t}</span> : <span key={i}>{p.t}</span>)}</>;
 }
 
-/* 建角分组卡：一组相关字段放一张卡，标题 + 一句说明 */
-function Card({ title, desc, children }: { title?: string; desc?: ReactNode; children: ReactNode }) {
+/* 建角分组卡：一组相关字段放一张卡，标题 + 一句说明；titleAction 放标题行右侧（如属性整组重掷） */
+function Card({ title, desc, titleAction, children }: { title?: string; desc?: ReactNode; titleAction?: ReactNode; children: ReactNode }) {
   return (
-    <section className="rounded-2xl border border-line/70 bg-paper-2/55 p-3.5">
+    <section className="rounded-2xl border border-line/70 bg-paper-2/55 p-3">
       {title && (
-        <div className="mb-3">
-          <h3 className="flex items-center gap-1.5 text-[13.5px] font-black tracking-wide text-ink"><span aria-hidden className="h-3.5 w-1 rounded-full bg-gradient-to-b from-[var(--coral)] to-[var(--jade)]" />{title}</h3>
-          {desc && <p className="mt-1 text-[11.5px] leading-relaxed text-ink-soft">{desc}</p>}
+        <div className="mb-2">
+          <div className="flex items-center gap-1.5">
+            <h3 className="flex min-w-0 flex-1 items-center gap-1.5 text-[13.5px] font-black tracking-wide text-ink">
+              <span aria-hidden className="h-3.5 w-1 shrink-0 rounded-full bg-gradient-to-b from-[var(--coral)] to-[var(--jade)]" />
+              {title}
+            </h3>
+            {titleAction}
+          </div>
+          {desc && <p className="mt-0.5 text-[11.5px] leading-relaxed text-ink-soft">{desc}</p>}
         </div>
       )}
-      <div className="space-y-3.5">{children}</div>
+      <div className="space-y-3">{children}</div>
     </section>
   );
 }
@@ -130,6 +136,14 @@ export default function CharacterCreate() {
   const bl = (k: BuiltinFieldKey, fb: string) => bf(k).label || fb;
   // 功能注释：建角页预览隐藏项不展示；开局仍按完整 customAttrs 写入
   const creatorAttrs = visibleCreatorAttrs(selectedSlot("customAttrs"));
+  const creatorAttrsKey = creatorAttrs.map((a) => a.id).join("|");
+  /* 功能注释：属性开局值在建角页先掷好，标题骰子可整组重掷；入局沿用同一批 */
+  const [attrStarts, setAttrStarts] = useState<Record<string, number>>(() => rollCreatorAttrStarts(creatorAttrs));
+  useEffect(() => {
+    setAttrStarts(rollCreatorAttrStarts(creatorAttrs));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 只在属性 id 集合变化时重掷
+  }, [creatorAttrsKey, modSel.world]);
+  const rerollAttrs = () => setAttrStarts(rollCreatorAttrStarts(creatorAttrs));
   /* 创作者自定义字段：仅按人物线路过滤；系统四项始终显示、不进此列 */
   const CUSTOM = asModArray<CreationField>(cc.fields).filter((f) => f.label && (!asModArray(f.paths).length || asModArray<string>(f.paths).includes(curPath)));
   const [customVals, setCustomVals] = useState<Record<string, string>>({});
@@ -163,7 +177,8 @@ export default function CharacterCreate() {
   const genName = (g: string) => { const n = randomName(g as NameGender, nameStyle); autoNames.current.add(n); return n; };
   if (!autoNames.current.size) autoNames.current.add(form.name);
   // 配置了开局阵营 → 合约来自这些阵营（签约即入阵营）；否则按公司名气随机递合约
-  const factionOffers = () => factionSigningOffers(asModArray<NonNullable<typeof cc.startFactions>[number]>(cc.startFactions).filter((f) => f.id && f.name.trim()));
+  // 功能注释：startFactions.name 偶发非字符串；禁止 .trim 崩建角势力/合约
+  const factionOffers = () => factionSigningOffers(asModArray<NonNullable<typeof cc.startFactions>[number]>(cc.startFactions).filter((f) => f.id && String(f.name ?? "").trim()));
   const [offers, setOffers] = useState<SigningContract[]>(() => { const fo = factionOffers(); return fo.length ? fo : rollSigningOffers(); });
   const boundToFaction = offers.some((o) => o.factionId);
   const [contractId, setContractId] = useState<string>(() => offers[0]?.id ?? "");
@@ -278,6 +293,7 @@ export default function CharacterCreate() {
         // 功能注释：startFactions 可能是 AI 单对象；开局前收成数组，避免 GameContext 侧再炸
         factions: asModArray<NonNullable<typeof cc.startFactions>[number]>(cc.startFactions),
         joined,
+        ...(Object.keys(attrStarts).length ? { cattrStarts: attrStarts } : {}),
       },
     );
   };
@@ -286,15 +302,16 @@ export default function CharacterCreate() {
   /* 功能注释：pr-8 给自定义下拉箭头留空，避免箭头压住文字 */
   const selectField = `${field} pr-8`;
 
-  /* 字段头：线性图标 · 名称 · 小字说明 · 右侧锁定 / 单独重掷（创作者锁定的显示「固定」） */
-  const Head = ({ k, text, hint }: { k: string; text: string; hint?: string }) => {
+  /* 字段头：线性图标 · 名称 · 中间附加（姓名风格条）· 右侧锁定 / 双骰子重掷 */
+  const Head = ({ k, text, hint, extra }: { k: string; text: string; hint?: string; extra?: ReactNode }) => {
     const I = FIELD_ICONS[k];
     const label = stripFieldEmoji(text);
     return (
-      <div className="mb-1.5 flex min-w-0 items-center gap-2">
+      <div className="mb-1.5 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
         {I && <I size={14} className="shrink-0 text-coral" />}
         <span className="shrink-0 text-[12.5px] font-bold text-ink">{label}</span>
         {hint && <span className="min-w-0 truncate text-[10.5px] text-ink-soft">{hint}</span>}
+        {extra}
         <div className="ml-auto flex shrink-0 items-center gap-0.5">
           <button type="button" onClick={() => toggleLock(k)} aria-pressed={!!locked[k]} title={locked[k] ? "已锁定，重掷时保留" : "锁定此项，重掷时保留"} aria-label={locked[k] ? "解锁" : "锁定"}
             className={`grid h-6 w-6 place-items-center rounded-full transition ${locked[k] ? "bg-jade/12 text-jade" : "text-ink-soft/50 hover:bg-ink/5 hover:text-ink"}`}>
@@ -302,7 +319,7 @@ export default function CharacterCreate() {
           </button>
           <button type="button" onClick={() => rollField(k)} disabled={locked[k]} title="单独掷一次" aria-label="单独重掷"
             className="grid h-6 w-6 place-items-center rounded-full text-ink-soft/50 transition hover:bg-ink/5 hover:text-jade disabled:opacity-30">
-            <IconDice width={13} height={13} />
+            <IconDiceDuo size={14} />
           </button>
         </div>
       </div>
@@ -391,6 +408,24 @@ export default function CharacterCreate() {
     </div>
   );
 
+  /* 功能注释：姓名风格条放在「姓名」标签行，不压在输入框下面 */
+  const nameStyleBar = (
+    <div className="flex min-w-0 flex-wrap items-center gap-1">
+      <div role="radiogroup" aria-label="名字风格" className="flex rounded-full bg-ink/[0.05] p-0.5">
+        {([["any", "不限"], ["modern", "现代"], ["ancient", "古风"]] as const).map(([k, t]) => (
+          <button key={k} type="button" role="radio" aria-checked={nameStyle === k} onClick={() => setNameStyle(k)}
+            className={`rounded-full px-2 py-0.5 text-[10.5px] font-medium transition ${nameStyle === k ? "bg-paper text-jade shadow-sm" : "text-ink-soft"}`}>{t}</button>
+        ))}
+      </div>
+      <button type="button" disabled={locked.name} onClick={() => setPlayerName(genName(form.gender))}
+        className="inline-flex items-center gap-1 rounded-full border border-line px-2 py-0.5 text-[10.5px] text-ink transition hover:border-jade hover:text-jade disabled:opacity-40">
+        <IconDiceDuo size={12} />换一个
+      </button>
+      <button type="button" disabled={locked.name} onClick={() => setPickName(true)}
+        className="rounded-full border border-jade/40 bg-jade/10 px-2 py-0.5 text-[10.5px] font-semibold text-jade disabled:opacity-40">字库</button>
+    </div>
+  );
+
   /* ② 人设 · 身份：名字 · 年龄性别 · 生日星座 · 登记身份（线路已在上一步选定，自设页不再重复展示「人物线路选择」）
    * 功能注释：人设页不展示 formIntro / 作品简介——地点季节与生成提示词只干扰填表 */
   const stepWho = (
@@ -399,20 +434,8 @@ export default function CharacterCreate() {
         <div className="flex items-start gap-3">
           <div className="shrink-0 pt-6"><Avatar src={form.avatar} name={form.name} size={68} onPick={(d) => upd({ avatar: d })} avatarSlot={selectedSlot("avatars") ?? null} /></div>
           <fieldset className="min-w-0 flex-1">
-            <Head k="name" text={bl("name", "姓名")} />
+            <Head k="name" text={bl("name", "姓名")} extra={nameStyleBar} />
             <input className={field} value={form.name} onChange={(e) => setPlayerName(e.target.value)} placeholder={form.gender === "男" ? "为他取个名字" : "为她取个名字"} />
-            <div className="mt-1.5 flex flex-wrap items-center gap-1">
-              <div role="radiogroup" aria-label="名字风格" className="flex rounded-full bg-ink/[0.05] p-0.5">
-                {([["any", "不限"], ["modern", "现代"], ["ancient", "古风"]] as const).map(([k, t]) => (
-                  <button key={k} type="button" role="radio" aria-checked={nameStyle === k} onClick={() => setNameStyle(k)}
-                    className={`rounded-full px-2 py-0.5 text-[10.5px] font-medium transition ${nameStyle === k ? "bg-paper text-jade shadow-sm" : "text-ink-soft"}`}>{t}</button>
-                ))}
-              </div>
-              <button type="button" disabled={locked.name} onClick={() => setPlayerName(genName(form.gender))}
-                className="inline-flex items-center gap-1 rounded-full border border-line px-2 py-0.5 text-[10.5px] text-ink transition hover:border-jade hover:text-jade disabled:opacity-40"><IconDice width={11} height={11} />换一个</button>
-              <button type="button" disabled={locked.name} onClick={() => setPickName(true)}
-                className="rounded-full border border-jade/40 bg-jade/10 px-2 py-0.5 text-[10.5px] font-semibold text-jade disabled:opacity-40">字库</button>
-            </div>
             {pickName && <NamePicker gender={form.gender as NameGender} value={form.name} onClose={() => setPickName(false)} onPick={(n) => setPlayerName(n)} />}
           </fieldset>
         </div>
@@ -447,14 +470,28 @@ export default function CharacterCreate() {
     </>
   );
 
-  /* 功能注释：开局属性区只列有名称的建角数值；空壳/未命名不渲染，避免「开局 undefined」 */
+  /* 功能注释：开局属性区只列有名称的建角数值；标题旁双骰子整组重掷预览值 */
   const stepAttrs = creatorAttrs.length > 0 ? (
-    <Card title="属性" desc="按创作者配置的顺序；开局后写入档案，此处只预览">
-      <ul className="space-y-2">
+    <Card
+      title="属性"
+      desc="按创作者配置的顺序；点骰子可整组重掷开局值"
+      titleAction={
+        <button
+          type="button"
+          onClick={rerollAttrs}
+          title="整组重掷属性开局值"
+          aria-label="整组重掷属性"
+          className="grid h-7 w-7 place-items-center rounded-full text-ink-soft/60 transition hover:bg-ink/5 hover:text-jade"
+        >
+          <IconDiceDuo size={15} />
+        </button>
+      }
+    >
+      <ul className="space-y-1.5">
         {creatorAttrs.map((a) => (
-          <li key={a.id} className="flex items-center gap-2 rounded-xl border border-line/70 bg-paper px-3 py-2.5">
+          <li key={a.id} className="flex items-center gap-2 rounded-xl border border-line/70 bg-paper px-3 py-2">
             <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">{a.label}</span>
-            <span className="shrink-0 text-[12px] text-ink-soft">{formatCreatorAttrPreview(a)}</span>
+            <span className="shrink-0 text-[12px] text-ink-soft">{formatCreatorAttrPreview(a, attrStarts[a.id])}</span>
           </li>
         ))}
       </ul>
@@ -510,8 +547,8 @@ export default function CharacterCreate() {
   /* ③ 开局 · 游玩偏好 · 开局日期 · 世界规则 */
   const stepSetup = (
     <>
-      <Card title="游玩偏好" desc="开局后在设置里仍可修改">
-        <PlayPrefsPicker value={prefs} onChange={setPrefs} showOrient />
+      <Card title="游玩偏好" desc="开局默认竖屏；屏幕方向请到局内「游戏设置」再改">
+        <PlayPrefsPicker value={prefs} onChange={setPrefs} />
       </Card>
       <Card title="世界规则" desc="恋爱、婚姻、继承与社会秩序——决定这个世界怎么看待你">
         <WorldRuleCards rules={worldRules} onChange={setWorldRulesState} female={!/男/.test(form.gender ?? "女")} compact />
@@ -520,7 +557,7 @@ export default function CharacterCreate() {
   );
 
   /* ③ 开局 · 势力：创作者在「人物线路」编辑器里自设，可多选（受上限约束）；不选也能开局 */
-  const SF = asModArray<NonNullable<typeof cc.startFactions>[number]>(cc.startFactions).filter((f) => f.id && f.name.trim());
+  const SF = asModArray<NonNullable<typeof cc.startFactions>[number]>(cc.startFactions).filter((f) => f.id && String(f.name ?? "").trim());
   const sfMax = cc.factionPickMax && cc.factionPickMax > 0 ? cc.factionPickMax : SF.length;
   const stepFactions = SF.length > 0 && (
     <Card title="加入势力" desc={<>勾选开局就加入的势力{sfMax < SF.length ? `（最多 ${sfMax} 个）` : ""}。加入后获得初始声望，成员态度、店铺价格与剧情都会随之变化；也可以都不选，做个自由人。<span className="mt-1 block text-[11.5px] text-ink-soft">{boundToFaction ? "签约的经纪公司就是你的东家阵营，会自动加入；其余势力可按需再选。" : "势力是你的人脉圈子，与经纪合约互不绑定。"}</span></>}>
@@ -555,7 +592,7 @@ export default function CharacterCreate() {
       {!boundToFaction && <div className="-mt-1 mb-1 flex justify-end">
         <button type="button" onClick={() => { const o = rollSigningOffers(); setOffers(o); setContractId(o[0]?.id ?? ""); }}
           className="inline-flex items-center gap-1 rounded-full border border-line px-2.5 py-1 text-[11px] font-semibold text-ink-soft transition hover:text-ink">
-          <IconDice width={12} height={12} />换几家公司
+          <IconDiceDuo size={12} />换几家公司
         </button>
       </div>}
       {offers.map((c) => {
@@ -589,7 +626,8 @@ export default function CharacterCreate() {
   // 人设一页填完（「重掷」只动这一页）；开局页合约在上，偏好与规则在下
   const body: Record<string, ReactNode> = {
     path: stepPath,
-    who: <div className="space-y-3">{stepWho}{stepAttrs}{stepCustom}</div>,
+    // 功能注释：基本信息与属性紧挨，避免中间空一大截
+    who: <div className="space-y-2">{stepWho}{stepAttrs}{stepCustom}</div>,
     setup: <div className="space-y-3">{career && stepSign}{stepFactions}{stepSetup}</div>,
   };
 
@@ -647,7 +685,7 @@ export default function CharacterCreate() {
         </ol>
         {step.k === "who" && (
           <button type="button" onClick={rerollAll} title="重掷所有未锁定的项" className="inline-flex shrink-0 items-center gap-1 rounded-full border border-jade/40 bg-jade/10 px-2.5 py-1 text-[11px] font-semibold text-jade transition hover:bg-jade/20">
-            <IconDice width={13} height={13} />重掷
+            <IconDiceDuo size={13} />重掷
           </button>
         )}
       </div>
@@ -658,7 +696,12 @@ export default function CharacterCreate() {
 
   /* 弹窗背后：建角进度卡，关掉弹窗后可继续 */
   return (
-    <div className="paper-grain bg-paper flex min-h-screen items-center justify-center px-5 py-10">
+    /* 功能注释：作者预览时吃满预览舞台高度，勿 min-h-screen 顶破底栏 */
+    <div
+      className={`paper-grain flex items-center justify-center bg-paper px-5 py-10 ${
+        previewing ? "h-full min-h-0 overflow-auto" : "min-h-screen"
+      }`}
+    >
       {wizard}
       {continueOpen && (
         <Modal title="继续游戏 · 读取存档" onClose={() => setContinueOpen(false)}>

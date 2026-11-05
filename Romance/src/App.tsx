@@ -1,4 +1,5 @@
 import { applyFreeStyle } from "./lib/freeStyle";
+import { ensureGameFontsLoaded } from "./lib/gameFonts";
 import { applyLookCss } from "./lib/plotLook";
 import { loadGlobal, saveGlobal } from "./lib/saveScope";
 import { resolveSkinTheme } from "./lib/skins";
@@ -258,6 +259,8 @@ function Root() {
       root.classList.toggle("skin-bloody", look.skin === "bloody");
       root.classList.remove("font-song", "font-hei", "font-round", "font-elegant", "font-brush", "font-hand", "font-cursive", "font-pixel");
       root.classList.add(`font-${look.font ?? "song"}`);
+      // 功能注释：预设字体依赖镜像 stylesheet；未加载时 class 换了字却还是系统默认
+      ensureGameFontsLoaded();
       root.dataset.bubble = look.bubbleStyle ?? "frost";
       root.dataset.avatar = look.avatarShape ?? "rounded";
       root.dataset.aframe = look.avatarFrame ?? "white";
@@ -285,6 +288,9 @@ function Root() {
       if (ic.btnFill) root.dataset.ibtnfill = ic.btnFill; else delete root.dataset.ibtnfill;
       root.style.setProperty("--scene-dim", String((look.sceneDim ?? 45) / 100));
       root.style.setProperty("--scene-blur", `${look.sceneBlur ?? 0}px`);
+      // 功能注释：叙事段落半透明底；设置里可调，正文黑字叠在浅底上才看得清
+      const storyA = Math.min(100, Math.max(40, look.storyBgAlpha ?? 88));
+      root.style.setProperty("--story-panel-a", String(storyA / 100));
     };
     apply();
     if (!platformOnly && look.mode === "auto") {
@@ -330,23 +336,18 @@ function Root() {
       ) : null}
 
       {previewing ? (
-        <>
+        /* 功能注释：顶栏占流 + 下方预览区 flex-1，游戏用剩余高度；禁止 fixed 顶栏盖住局内顶/底栏 */
+        <div
+          className="author-preview-runtime flex h-[100vh] h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-[var(--paper)] text-[var(--ink)]"
+          data-author-preview-shell="1"
+        >
           <AuthorPreviewChrome />
-          {/* 功能注释：预览游玩区用局内纸色，不进 romance-platform 暗红壳——否则建角弹窗输入框变黑底、整体像后台而不是游戏。
-              data-author-preview-shell 仍作 Modal portal 挂载点；min-height 写死防高度塌成 0 */}
-          <div
-            className="author-preview-runtime min-h-screen bg-[var(--paper)] text-[var(--ink)]"
-            data-author-preview-shell="1"
-            style={{
-              paddingTop: "var(--apc-h, 48px)",
-              minHeight: "100vh",
-            }}
-          >
+          <div className="author-preview-stage min-h-0 flex-1 overflow-hidden" data-author-preview-stage="1">
             <AuthorPreviewPlayShell>
               <PlayScreens key={`preview-${saveEpoch}`} />
             </AuthorPreviewPlayShell>
           </div>
-        </>
+        </div>
       ) : null}
     </>
   );

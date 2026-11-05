@@ -5,7 +5,7 @@ import type { PlayMode, PlayPrefs, Pov } from "../lib/types";
  * showOrient 仅建角展示——局内改方向走「游戏设置 → 屏幕方向」，避免重复。 */
 const MODES: { v: PlayMode; l: string; d: string }[] = [
   { v: "game", l: "游戏模式", d: "正文适中 · 重选项与数值反馈" },
-  { v: "novel", l: "小说模式", d: "长篇连续叙事 · 少系统提示" },
+  { v: "novel", l: "剧情模式", d: "长篇连续叙事 · 少系统提示" },
 ];
 const POVS: { v?: Pov; l: string; d: string }[] = [
   { v: undefined, l: "跟随世界观", d: "按世界观的叙事口吻" },

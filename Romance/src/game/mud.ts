@@ -169,8 +169,18 @@ export function fareFor(plan: TravelPlan, mode: TransportMode): { fee: number; m
   };
 }
 
-/* 城市通行图搜索：可穿行「已到访」房间，最后一步可踏入相邻的未探索节点（首探）。
- * 纯图运算 + 内容池参数，不含任何领域中文或阈值。 */
+/**
+ * 功能注释：图上无邻接路径时是否仍可直达。
+ * 创作者未配通行门槛（上锁 / access 条件）→ 可直达；写了且未满足 → 不可达。
+ * 「还不知道怎么去」迷雾提示不再拦住未设门槛的地点（如未连边的「阁楼门」）。
+ */
+export function allowDirectTravel(s: SimState, roomId: string): { ok: boolean; note: string } {
+  const acc = roomAccess(s, roomId);
+  if (!acc.ok) return { ok: false, note: acc.note || "暂时无法前往。" };
+  return { ok: true, note: "" };
+}
+
+/* 城市通行图搜索：优先沿已到访邻接走；走不通时，未配解锁/通行门槛的地点仍可直达。 */
 export function travelPlan(s: SimState, to: string): TravelPlan {
   const from = s.room ?? getWorldStartRoom();
   const base = { explore: false, sameRoom: false, hops: 0, minutes: 0, fee: 0, energy: 0 };
@@ -204,7 +214,18 @@ export function travelPlan(s: SimState, to: string): TravelPlan {
     }
     frontier = nextLayer;
   }
-  return { ...base, reachable: false, reason: "你还不知道怎么去那里——先摸索到附近吧。" };
+  // 功能注释：无邻接路径——有门槛且未满足才拦截；没配门槛则按 1 段路程直达
+  const gate = allowDirectTravel(s, to);
+  if (!gate.ok) return { ...base, reachable: false, reason: gate.note };
+  return {
+    reachable: true,
+    explore: !visited.has(to),
+    sameRoom: false,
+    hops: 1,
+    minutes: TRAVEL.minutesPerHop,
+    fee: TRAVEL.feePerHop,
+    energy: hopEnergy(),
+  };
 }
 
 /* ═══════════════ 地点动态状态 · 营业/开放/拍摄 ═══════════════ */

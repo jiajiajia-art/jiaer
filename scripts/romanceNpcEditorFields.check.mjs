@@ -35,9 +35,8 @@ test('npcEditor_标签选择器与代表作按玩法显示', () => {
   assert.doesNotMatch(panel, /placeholder="人物标签，用顿号或逗号分隔/);
   assert.match(picker, /PLATFORM_NPC_TAGS\.map/);
   assert.match(picker, /自定义标签/);
-  // 势力在①基础，人物只选所属
-  assert.match(panel, /title="势力"/);
-  assert.match(panel, /g="base"[\s\S]{0,80}title="势力"/);
+  // 功能注释：地点页已撤势力整块；人物仍可读所属势力字段
+  assert.doesNotMatch(panel, /title="势力"/);
   assert.match(panel, /所属势力/);
   assert.match(panel, /factionId/);
   assert.match(panel, /onMergeNpcs/);
@@ -51,8 +50,7 @@ test('npcEditor_线路AI须回写人物资料', () => {
   assert.match(paths, /platformNpcTagsPromptLine/);
   assert.match(paths, /"npcs"/);
   assert.doesNotMatch(paths, /开局势力（玩家勾选加入）/);
-  // 功能注释：势力引导在人物编辑区（面板），不在线路编辑器正文
-  assert.match(panel, /① 基础 → 势力/);
+  assert.doesNotMatch(panel, /① 基础 → 势力/);
 });
 
 test('npcEditor_世界生成人物契约含完整资料校验', () => {

@@ -2,6 +2,7 @@ import type { Mod, ModContent } from "../mods/types.ts";
 import { asNonEmptyTrimmed, asTrimmedString } from "./asTrimmedString.ts";
 import { normalizeRuleBranches } from "./gameRuleShape.ts";
 import { normalizeStartMetList } from "./normalizeStartMet.ts";
+import { sanitizeNpcFactionId } from "./personName.ts";
 
 /** 功能注释：模组 JSON 里常见「应为字符串」的字段名；AI 常写成对象/数字 */
 const STRING_FIELD_KEYS = new Set([
@@ -238,9 +239,33 @@ export function ensureRoomSceneDescs(rooms: ModContent["rooms"] | Record<string,
   }
 }
 
+/** 功能注释：所属势力只能绑当前作品 startFactions；失效 id（如 faction-royal）一律清空 */
+function healNpcFactionRefs(content: ModContent, fixes: string[]): void {
+  const factionIds = new Set(
+    (Array.isArray(content.creation?.startFactions) ? content.creation!.startFactions! : [])
+      .map((f) => (f && typeof f === "object" ? String((f as { id?: string }).id ?? "").trim() : ""))
+      .filter(Boolean),
+  );
+  if (!Array.isArray(content.npcs)) return;
+  for (const n of content.npcs) {
+    if (!n || typeof n !== "object") continue;
+    const rawFac = (n as { factionId?: unknown }).factionId;
+    if (rawFac == null || rawFac === "") continue;
+    const cleaned = sanitizeNpcFactionId(rawFac, factionIds);
+    if (!cleaned) {
+      const label = (typeof n.name === "string" && n.name.trim()) || n.id || "?";
+      fixes.push(`已清除人物「${label}」的失效势力绑定`);
+      delete (n as { factionId?: string }).factionId;
+    } else if (cleaned !== String(rawFac).trim()) {
+      (n as { factionId?: string }).factionId = cleaned;
+    }
+  }
+}
+
 /**
  * 功能注释：AI 常写 startRoom / NPC.home 指向不存在的房间 id（如 kid_bedroom）。
  * 就地纠偏到有效地点，返回人类可读修复说明；无 rooms 时清除无效 startRoom。
+ * 同时清除失效势力绑定（与地点表无关）。
  */
 export function healModRoomRefs(content: ModContent): string[] {
   const fixes: string[] = [];
@@ -250,6 +275,7 @@ export function healModRoomRefs(content: ModContent): string[] {
       fixes.push(`已清除无效 startRoom「${content.startRoom}」（尚无地点表）`);
       delete content.startRoom;
     }
+    healNpcFactionRefs(content, fixes);
     return fixes;
   }
   const ids = Object.keys(rooms);
@@ -258,6 +284,7 @@ export function healModRoomRefs(content: ModContent): string[] {
       fixes.push(`已清除无效 startRoom「${content.startRoom}」（地点表为空）`);
       delete content.startRoom;
     }
+    healNpcFactionRefs(content, fixes);
     return fixes;
   }
   const cur = typeof content.startRoom === "string" ? content.startRoom.trim() : "";
@@ -276,6 +303,7 @@ export function healModRoomRefs(content: ModContent): string[] {
       }
     }
   }
+  healNpcFactionRefs(content, fixes);
   return fixes;
 }
 

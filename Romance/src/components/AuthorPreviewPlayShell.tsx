@@ -90,7 +90,7 @@ class PreviewErrorBoundary extends Component<
       return (
         <PreviewStatusCard
           title="预览画面出错了"
-          detail="开局封面或建角界面渲染失败。可重试；若反复出现，请回编辑器检查封面 / 开场 / 地点等生成失败项。"
+          detail="预览游玩区渲染失败（建角 / 开幕 / 局内皆可能）。可重试；若反复出现，请回编辑器检查人物、地点、开场等是否缺字段或生成失败。"
           errors={[String(this.state.error.message || this.state.error)]}
           onRetry={this.retry}
           onBack={this.props.onBack}
@@ -147,11 +147,14 @@ export default function AuthorPreviewPlayShell({ children }: { children: ReactNo
   }
 
   return (
-    <div className="author-preview-play min-h-[100vh] min-h-[100dvh]" data-author-preview-play="1">
+    /* 功能注释：高度吃满预览舞台（父级 flex-1），勿再 min-h-100vh，否则顶栏占位后底栏被裁 */
+    <div className="author-preview-play flex h-full min-h-0 flex-col overflow-hidden" data-author-preview-play="1">
       <MissingBanner labels={[...new Set([...missing, ...warnList.map((w) => w.replace(/^缺少「|」$/g, ""))])]} />
-      <PreviewErrorBoundary onRetry={retry} onBack={back}>
-        {body}
-      </PreviewErrorBoundary>
+      <div className="min-h-0 flex-1 overflow-hidden [&_.app-root]:h-full [&_.app-root]:max-h-full">
+        <PreviewErrorBoundary onRetry={retry} onBack={back}>
+          <div className="h-full min-h-0">{body}</div>
+        </PreviewErrorBoundary>
+      </div>
     </div>
   );
 }

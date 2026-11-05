@@ -1,6 +1,6 @@
 /**
- * 屏幕方向：建角「游玩偏好」选定 → 开局写入 theme.orient；
- * 不再弹首次方向窗、不展示锁定开关；局内设置可随时切换。
+ * 屏幕方向：每局进游玩默认竖屏 9:16；建角不再选手方向；
+ * 局内「游戏设置」可随时切横屏；读档进局同样复位竖屏。
  */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -18,7 +18,12 @@ test('PlayPrefs_类型含orient字段', () => {
   assert.match(types, /orient\?: ScreenOrient/);
 });
 
-test('PlayPrefsPicker_建角可选手方向且无锁定开关', () => {
+test('defaultTheme_默认竖屏', () => {
+  const store = read('lib/store.ts');
+  assert.match(store, /orient:\s*"portrait"/);
+});
+
+test('PlayPrefsPicker_仍可选手方向但建角不展示', () => {
   const picker = read('components/PlayPrefsPicker.tsx');
   assert.match(picker, /showOrient/);
   assert.match(picker, /aria-label="屏幕方向"/);
@@ -27,20 +32,27 @@ test('PlayPrefsPicker_建角可选手方向且无锁定开关', () => {
   assert.doesNotMatch(picker, /orientLock|锁定方向|选好后锁定/);
 });
 
-test('CharacterCreate_开局偏好带orient并展示选择器', () => {
+test('CharacterCreate_建角不展示方向_开局偏好仍带竖屏', () => {
   const create = read('components/CharacterCreate.tsx');
-  assert.match(create, /showOrient/);
+  assert.doesNotMatch(create, /showOrient/);
   assert.match(create, /orient: "portrait"/);
   assert.match(create, /playPrefs: \{ \.\.\.prefs, orient: prefs\.orient \?\? "portrait" \}/);
 });
 
-test('startNew_应将playPrefs\.orient写入theme并清锁', () => {
+test('startNew_强制竖屏写入theme与playPrefs', () => {
   const ctx = read('store/GameContext.tsx');
-  assert.match(ctx, /opts\.playPrefs\.orient === "landscape"/);
-  assert.match(ctx, /setTheme\(\{ \.\.\.themeRef\.current, orient, orientLock: false \}\)/);
-  assert.match(ctx, /orientLock: false/);
-  // 禁止再按锁拦截方向切换
+  assert.match(ctx, /orient: "portrait"/);
+  assert.match(ctx, /setTheme\(\{ \.\.\.themeRef\.current, orient: "portrait", orientLock: false \}\)/);
+  assert.match(ctx, /playPrefs = \{ \.\.\.opts\.playPrefs, orient: "portrait" \}/);
+  // 禁止再按建角 landscape 直接开局
+  assert.doesNotMatch(ctx, /opts\.playPrefs\.orient === "landscape"/);
   assert.doesNotMatch(ctx, /prev\.orientLock && !!t\.orientLock/);
+});
+
+test('loadState_读档进局复位竖屏', () => {
+  const ctx = read('store/GameContext.tsx');
+  assert.match(ctx, /playPrefs: \{ \.\.\.g0\.playPrefs, orient: "portrait"/);
+  assert.match(ctx, /读档进局同样默认竖屏/);
 });
 
 test('GameShell_无首次方向弹窗且设置无锁定开关', () => {
@@ -50,9 +62,8 @@ test('GameShell_无首次方向弹窗且设置无锁定开关', () => {
   assert.doesNotMatch(shell, /lockPick/);
   assert.doesNotMatch(shell, /orientChosen/);
   assert.doesNotMatch(shell, /已锁定|解锁后才能切换/);
-  // 设置里仍可切换横竖屏
   assert.match(shell, /屏幕方向/);
   assert.match(shell, /id: "landscape"/);
   assert.match(shell, /id: "portrait"/);
-  assert.match(shell, /随时可改/);
+  assert.match(shell, /每局默认竖屏/);
 });

@@ -12,7 +12,7 @@ const pack = (id: string, name: string, description: string, content: ModContent
 });
 
 /* 原版娱乐圈默认启用的扩展包（新开局默认勾选；老存档读档时自动补上，体验与拆包前一致） */
-export const ENT_PACK_IDS = ["pack-career", "pack-image", "pack-paper", "pack-cars", "pack-pregnancy", "pack-living"];
+export const ENT_PACK_IDS = ["pack-career", "pack-image", "pack-paper", "pack-cars", "pack-pregnancy", "pack-living", "pack-relations"];
 
 export const entPacks: Mod[] = [
   pack("pack-career", "演艺事业包", "通告接单、签约合约、影视项目与行业榜单，附「老板直聘」App。给任何世界加上一份可经营的演艺事业。", {
@@ -49,5 +49,9 @@ export const entPacks: Mod[] = [
   /* 功能注释：头衔玩法包——目录只声明面板；具体头衔写在作品 content.titles，未添加玩法则不出现编辑区 */
   pack("pack-titles", "头衔包", "达标即获得的头衔表。需要的剧本才添加；数值分档请在建角属性里配。", {
     titles: [],
+  }),
+  /* 功能注释：关系玩法——表白/婚礼/牵线/伴侣加成；娱乐圈默认挂上，其它世界须从商店添加 */
+  pack("pack-relations", "关系玩法", "表白门槛、婚礼费用与好感、NPC 牵线、伴侣加成。未添加的剧本人物页不出现表白与婚礼入口。", {
+    features: { relationsPlay: true },
   }),
 ];

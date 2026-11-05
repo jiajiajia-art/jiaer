@@ -137,8 +137,6 @@ test('GameDetail_应严格对齐效果图结构与文案键', () => {
   assert.doesNotMatch(tsx, /nav_back\.webp/);
   assert.match(css, /\.backIconButton svg\s*\{[^}]*stroke-width:\s*2\.4/);
   assert.match(tsx, /styles\.statsBar/);
-  assert.match(tsx, /styles\.heroContent/);
-  assert.match(css, /\.heroContent\s*\{[^}]*padding:\s*0 20px 1\.25rem 10px/);
   assert.match(tsx, /styles\.heroMetaRow/);
   assert.match(tsx, /styles\.heroAuthorAvatar/);
   assert.match(tsx, /resolveGameCardAuthor/);
@@ -147,12 +145,16 @@ test('GameDetail_应严格对齐效果图结构与文案键', () => {
   assert.match(tsx, /gameDetail\.plotSynopsis/);
   assert.match(tsx, /gameDetail\.readMore/);
   assert.match(tsx, /gameDetail\.storyReplay/);
+  assert.match(tsx, /gameDetail\.updateLog/);
   assert.match(tsx, /DetailShareIcon/);
   assert.match(tsx, /DetailHeartIcon/);
   assert.match(tsx, /DetailStarIcon/);
+  assert.match(tsx, /DetailRateIcon/);
   assert.match(tsx, /icon_filmstrip\.webp/);
   assert.match(tsx, /loadSaveBadge/);
-  assert.doesNotMatch(tsx, /FaRegShareFromSquare|IoChevronBack|AiOutlineStar/);
+  assert.match(tsx, /inlineActionRow/);
+  assert.doesNotMatch(tsx, /floatingActionBar/);
+  assert.doesNotMatch(tsx, /FaRegShareFromSquare|IoChevronBack/);
   assert.match(css, /\.statsBar/);
   assert.match(css, /\.statsBar[\s\S]*border-radius:\s*20px/);
   assert.match(css, /\.statsItem[\s\S]*flex-direction:\s*row/);
@@ -161,7 +163,6 @@ test('GameDetail_应严格对齐效果图结构与文案键', () => {
   assert.match(css, /\.heroGameTitle/);
   assert.match(css, /\.replayButton/);
   assert.match(css, /\.bottomActionRow[\s\S]*flex-direction:\s*column/);
-  assert.match(css, /\.floatingActionInner[\s\S]*1\.35rem \+ env\(safe-area-inset-bottom/);
   /* 双 CTA 字号在各断点保持一致（含 replay） */
   assert.match(css, /\.startButton,\s*\n\s*\.purchaseButton,\s*\n\s*\.replayButton/);
   assert.doesNotMatch(css, /\.startButton,\s*\n\s*\.purchaseButton\s*\{[^}]*font-size:\s*0\.9375rem/);
@@ -176,5 +177,6 @@ test('GameDetail_应严格对齐效果图结构与文案键', () => {
   assert.match(zh, /"plotSynopsis":\s*"剧情简介"/);
   assert.match(zh, /"storyReplay":\s*"视觉小说"/);
   assert.match(zh, /"readMore":\s*"阅读更多"/);
+  assert.match(zh, /"updateLog":\s*"更新日志"/);
   assert.doesNotMatch(zh, /"storyReplay":\s*"剧情回放"/);
 });

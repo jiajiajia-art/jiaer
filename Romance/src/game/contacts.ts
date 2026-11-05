@@ -1,5 +1,5 @@
-/* 人脉关系档位 / 卡片数值（内容槽 contacts）：嵌在「人物」上方统一配置，非独立大页。
- * 玩家列表只按关系阶段分组；groups / orgs / stage.groups 仅旧数据兼容，运行时忽略。 */
+/* 人脉关系档位（内容槽 contacts）：嵌在「人物」上方统一配置，非独立大页。
+ * 玩家列表只按关系阶段分组；卡片数值已下线；groups / orgs / stage.groups 仅旧数据兼容，运行时忽略。 */
 import { slot } from "../mods/live";
 import { term } from "../mods/registry";
 import { groupByContactStage, normalizeContactStages, resolveContactStage } from "./contactStageGrouping";
@@ -25,7 +25,7 @@ export type ContactsSlot = {
   title?: string; // 页面标题 / 底部标签
   subtitle?: string;
   groups?: ContactGroup[]; // 旧数据兼容：读取时丢弃
-  /** 卡片数值：创作者自增条数，可 hidden；不再写死两项 */
+  /** @deprecated 卡片数值已下线；读取时清空，不再展示 */
   metrics?: ContactMetric[];
   stages?: ContactStage[];
   orgs?: ContactOrg[]; // 旧数据兼容：读取时丢弃
@@ -43,12 +43,12 @@ const ENT_STAGES: ContactStage[] = [
 ];
 const entContacts = (): ContactsSlot => ({
   subtitle: "圈中往来",
-  metrics: [{ src: { kind: "rel" }, icon: "heart", tone: "coral" }, { src: { kind: "metric", key: "fame", label: "名气" }, icon: "star", tone: "gold" }],
+  metrics: [],
   stages: ENT_STAGES,
 });
 /* 未配置的世界：直接展示中性阶段预览，不用先载入模板。 */
 const genericContacts = (): ContactsSlot => ({
-  metrics: [{ src: { kind: "rel" }, icon: "dot", tone: "jade" }],
+  metrics: [],
   stages: [
     { id: "g85", label: "挚交", min: 85, tone: "jade" },
     { id: "g60", label: "亲近", min: 60, tone: "jade" },
@@ -61,25 +61,25 @@ const genericContacts = (): ContactsSlot => ({
 export const contactsDefaults = { ent: entContacts, generic: genericContacts };
 
 /**
- * 功能注释：把旧 contacts 数据收敛为「阶段 + 任意条数卡片数值」；模板或旧包携带的组织/自定义分组直接丢弃。
+ * 功能注释：把旧 contacts 数据收敛为「仅关系阶段」；卡片数值一律清空；模板或旧包携带的组织/自定义分组直接丢弃。
  * fallback 用于尚未自定义时立即展示世界默认，而不是空白或模板选择门槛。
  */
 export function normalizeContactsSlot(raw?: ContactsSlot | null, fallback?: ContactsSlot): ContactsSlot & Required<Pick<ContactsSlot, "metrics" | "stages">> {
   const base = raw ?? fallback ?? genericContacts();
   const fb = fallback ?? genericContacts();
   const stages = normalizeContactStages(base.stages?.length ? base.stages : fb.stages ?? genericContacts().stages!) as ContactStage[];
-  const metrics = (base.metrics ?? fb.metrics!).filter((m) => !!m?.src);
   return {
     ...(base.title?.trim() ? { title: base.title.trim() } : {}),
     ...(base.subtitle?.trim() ? { subtitle: base.subtitle.trim() } : {}),
-    metrics: metrics.length ? metrics : [{ src: { kind: "rel" }, icon: "dot", tone: "jade" }],
+    metrics: [],
     stages,
   };
 }
 
-/** 功能注释：玩家卡片只展示未隐藏的数值 */
-export function visibleContactMetrics(cfg: ContactsSlot): ContactMetric[] {
-  return (cfg.metrics ?? []).filter((m) => !m.hidden);
+/** 功能注释：卡片数值已下线，恒返回空（保留函数以免 NpcTab 调用方改动过大） */
+export function visibleContactMetrics(_cfg: ContactsSlot): ContactMetric[] {
+  void _cfg;
+  return [];
 }
 
 /* 当前生效配置：作者声明覆盖世界默认；旧分组/组织字段不会进入运行时。 */

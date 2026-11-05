@@ -115,12 +115,14 @@ const numCls = "w-16 rounded-lg border border-line bg-paper-2 px-2 py-1 text-[12
 
 /* value/onChange 传入时为「模组编辑器」模式：编辑模组预设剧本（开新局写入），不碰当前存档。
  * libraryEvents / libraryGroups：本作品事件库；模组模式禁止回退 getWorldEvents（娱乐圈预设）。 */
-export default function FixedEventsPanel({ value, storylines, sidelines, libraryEvents, libraryGroups, onChange }: {
+export default function FixedEventsPanel({ value, storylines, sidelines, libraryEvents, libraryGroups, worldContext, onChange }: {
   value?: FixedEvent[];
   storylines?: Storyline[];
   sidelines?: Sideline[];
   libraryEvents?: FixedEvent[];
   libraryGroups?: LibraryGroup[];
+  /** 功能注释：模组编辑器传入本作品标题/设定/地点人物，供 AI 帮写贴合世界观 */
+  worldContext?: import("../lib/aiFixedEvents").AiFixedEventsWorldContext;
   onChange?: (v: FixedEvent[]) => void;
 } = {}) {
   const modMode = !!onChange;
@@ -390,7 +392,11 @@ export default function FixedEventsPanel({ value, storylines, sidelines, library
       )}
       {toast && <p role="status" className="rounded-xl bg-jade/10 px-3 py-2 text-[12.5px] font-semibold text-jade">{toast}</p>}
 
-      <AiEventWriter existing={events} onAdd={(list) => { save([...events, ...list]); setOpenId(list[0]?.id ?? null); }} />
+      <AiEventWriter
+        existing={events}
+        world={worldContext}
+        onApply={(list) => { save(list); setOpenId(list[0]?.id ?? null); }}
+      />
 
       {events.length === 0 && (
         <div className="rounded-2xl border border-dashed border-line bg-paper-2/50 px-4 py-6 text-center text-[13px] text-ink-soft">

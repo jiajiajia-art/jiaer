@@ -41,11 +41,6 @@ const SORT_LABEL_KEYS = {
     latest: 'categories.sorts.latest',
 } as const satisfies Record<HomeListSort, string>;
 
-const getInitialMobileState = (): boolean => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia('(max-width: 768px)').matches;
-};
-
 /*
     if (value === 'role-playing') return 'role-playing';
     if (value === 'custom') return 'custom';
@@ -131,7 +126,6 @@ const Categories: React.FC = () => {
     const [hasMore, setHasMore] = useState(true);
     const [isLoading, setIsLoading] = useState(true);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
-    const [isMobilePage, setIsMobilePage] = useState<boolean>(getInitialMobileState);
 
     const observerRef = useRef<IntersectionObserver | null>(null);
     const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
@@ -164,23 +158,6 @@ const Categories: React.FC = () => {
         })),
         [t],
     );
-
-    useEffect(() => {
-        if (typeof window === 'undefined') return;
-        const mediaQuery = window.matchMedia('(max-width: 768px)');
-        const handleChange = (event: MediaQueryListEvent) => {
-            setIsMobilePage(event.matches);
-        };
-        setIsMobilePage(mediaQuery.matches);
-
-        if (typeof mediaQuery.addEventListener === 'function') {
-            mediaQuery.addEventListener('change', handleChange);
-            return () => mediaQuery.removeEventListener('change', handleChange);
-        }
-
-        mediaQuery.addListener(handleChange);
-        return () => mediaQuery.removeListener(handleChange);
-    }, []);
 
     useEffect(() => {
         let cancelled = false;
@@ -477,7 +454,8 @@ const Categories: React.FC = () => {
                 </div>
             </div>
 
-            {!isMobilePage && <FooterArea />}
+            {/* 功能注释：页脚 PC/手机均放页面最底部，不再按端隐藏 */}
+            <FooterArea />
             <FloatingJoinGroup />
             <MobileBottomNav />
         </div>

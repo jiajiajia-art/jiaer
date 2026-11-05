@@ -6,15 +6,16 @@
 }
 
 .mainContent {
+    /* 功能注释：纵向布局，页脚落底部 */
     color: black;
     display: flex;
+    flex-direction: column;
     margin: 0;
     padding: 0;
-    margin-bottom: 200px;
 }
 
 .main {
-    flex: 1;
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
     width: min(var(--app-desktop-shell-max), calc(100% - 2 * var(--app-desktop-gutter)));
@@ -24,6 +25,7 @@
     padding: 20px;
     box-sizing: border-box;
     margin-top: var(--app-desktop-navbar-height);
+    min-width: 0;
 }
 
 /* 中等屏幕适配 (769px - 1080px) */

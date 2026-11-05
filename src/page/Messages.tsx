@@ -14,6 +14,7 @@ import type {
     MessageModerationNotification,
     MessagePromotion,
     MessagePromotionSubmissionNotification,
+    MessageFeedbackReplyNotification,
     MessageReportReceivedNotification,
     MessageReportResolvedNotification,
     MessageType,
@@ -50,7 +51,8 @@ type MessageFeedItem =
     | (MessageFavoriteGameUpdateNotification & { itemType: 'favorite_game_updated'; sortTime: string | null })
     | (MessageReportReceivedNotification & { itemType: 'report_received'; sortTime: string | null })
     | (MessageReportResolvedNotification & { itemType: 'report_resolved'; sortTime: string | null })
-    | (MessageModerationNotification & { itemType: 'moderation'; sortTime: string | null });
+    | (MessageModerationNotification & { itemType: 'moderation'; sortTime: string | null })
+    | (MessageFeedbackReplyNotification & { itemType: 'feedback_reply'; sortTime: string | null });
 
 type SafetyDetail = {
     title: string;
@@ -231,6 +233,12 @@ const Messages: React.FC = () => {
             sortTime: item.publishedAt || item.createdAt || null,
         }));
 
+        const feedbackReplyNotifications = (messageCenter?.feedbackReplyNotifications || []).map((item) => ({
+            ...item,
+            itemType: 'feedback_reply' as const,
+            sortTime: item.publishedAt || item.createdAt || null,
+        }));
+
         return [
             ...announcements,
             ...promotions,
@@ -239,6 +247,7 @@ const Messages: React.FC = () => {
             ...reportReceivedNotifications,
             ...reportResolvedNotifications,
             ...moderationNotifications,
+            ...feedbackReplyNotifications,
         ].sort((left, right) => {
             const leftTime = new Date(left.sortTime || 0).getTime();
             const rightTime = new Date(right.sortTime || 0).getTime();
@@ -292,6 +301,12 @@ const Messages: React.FC = () => {
                     : item
             ));
 
+            const feedbackReplyNotifications = (prev.feedbackReplyNotifications || []).map((item) => (
+                messageType === 'feedback_reply' && item.sourceId === sourceId
+                    ? { ...item, isRead: true }
+                    : item
+            ));
+
             return {
                 ...prev,
                 unreadCount: nextUnreadCount,
@@ -302,6 +317,7 @@ const Messages: React.FC = () => {
                 reportReceivedNotifications,
                 reportResolvedNotifications,
                 moderationNotifications,
+                feedbackReplyNotifications,
             };
         });
     }, []);
@@ -320,6 +336,7 @@ const Messages: React.FC = () => {
                 reportReceivedNotifications: markCollectionAsRead(prev.reportReceivedNotifications || []),
                 reportResolvedNotifications: markCollectionAsRead(prev.reportResolvedNotifications || []),
                 moderationNotifications: markCollectionAsRead(prev.moderationNotifications || []),
+                feedbackReplyNotifications: markCollectionAsRead(prev.feedbackReplyNotifications || []),
             };
         });
     }, []);
@@ -416,6 +433,15 @@ const Messages: React.FC = () => {
             body: resolveReportResolvedBody(notification),
         });
     }, [markMessageAsRead, resolveReportResolvedBody, t]);
+
+    const handleOpenFeedbackReply = useCallback(async (notification: MessageFeedbackReplyNotification) => {
+        await markMessageAsRead('feedback_reply', notification.sourceId, notification.isRead);
+        setSafetyDetail({
+            title: notification.title?.trim() || t('messages.feedbackReplyTitle', { defaultValue: '意见反馈回复' }),
+            body: notification.body
+                || t('messages.feedbackReplyBody', { defaultValue: '您的反馈已收到回复。' }),
+        });
+    }, [markMessageAsRead, t]);
 
     const handleOpenModeration = useCallback(async (notification: MessageModerationNotification) => {
         await markMessageAsRead('moderation', notification.sourceId, notification.isRead);
@@ -518,6 +544,21 @@ const Messages: React.FC = () => {
                     time,
                     isRead: item.isRead,
                     onOpen: () => { void handleOpenReportResolved(item); },
+                });
+                continue;
+            }
+
+            if (item.itemType === 'feedback_reply') {
+                buckets[section].push({
+                    key: `feedback-reply-${item.sourceId}`,
+                    title: item.title?.trim()
+                        || t('messages.feedbackReplyTitle', { defaultValue: '意见反馈回复' }),
+                    preview: truncateMessagePreview(
+                        item.body || t('messages.feedbackReplyBody', { defaultValue: '您的反馈已收到回复。' }),
+                    ),
+                    time,
+                    isRead: item.isRead,
+                    onOpen: () => { void handleOpenFeedbackReply(item); },
                 });
                 continue;
             }
@@ -649,6 +690,7 @@ const Messages: React.FC = () => {
         handleOpenPromotionSubmissionNotification,
         handleOpenReportReceived,
         handleOpenReportResolved,
+        handleOpenFeedbackReply,
         messageFeed,
         t,
     ]);

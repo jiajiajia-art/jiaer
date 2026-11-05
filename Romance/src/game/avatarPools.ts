@@ -61,8 +61,10 @@ export function resetPlatformSystemPoolsCacheForTests() {
 }
 
 const cur = (slot?: AvatarSlot | null) => (slot === undefined ? getWorldSlot("avatars") : slot ?? undefined);
+/** 功能注释：池 images 偶发 undefined；禁止 filter 里读 .length 崩建角头像库 */
+const hasImages = (p: { images?: unknown }): p is { images: string[] } => Array.isArray(p.images) && p.images.length > 0;
 const mine = (slot: AvatarSlot | undefined, on: (t: { pick?: boolean; random?: boolean }) => boolean | undefined, lib = readAvatarPools()): AvatarSource[] =>
-  lib.filter((p) => p.images.length && slot?.pools?.[p.name] && on(slot.pools[p.name])).map((p) => ({ name: p.name, images: p.images, source: "mine" }));
+  lib.filter((p) => hasImages(p) && slot?.pools?.[p.name] && on(slot.pools[p.name])).map((p) => ({ name: p.name, images: p.images, source: "mine" }));
 
 /** 游玩端「创作者头像库」：本剧勾了「玩家可选」的我的头像池 */
 export const creatorPickPools = (slot?: AvatarSlot | null) => mine(cur(slot), (t) => t.pick);
@@ -81,7 +83,7 @@ export function randomPools(slot?: AvatarSlot | null): AvatarSource[] {
   // 功能注释：publicRandom 常被 AI 写成对象；非数组按空，禁止 new Set(非数组) → is not iterable
   const on = new Set(Array.isArray(s?.publicRandom) ? s.publicRandom : []);
   const creator = mine(s, (t) => t.random);
-  const platform = systemPools().filter((p) => on.has(p.name) && p.images.length);
+  const platform = systemPools().filter((p) => on.has(p.name) && hasImages(p));
   const { prefer } = resolveAvatarMatchPrefs(s);
   // 功能注释：公共优先时平台分类在前；私人/创作者优先时我的池在前；系统始终可在平台侧作最终回退
   return prefer === "public" ? [...platform, ...creator] : [...creator, ...platform];
@@ -92,7 +94,7 @@ export function variantPool(name: string | undefined, slot?: AvatarSlot | null):
   if (!name) return undefined;
   const s = cur(slot);
   const creatorHit = mine(s, (t) => t.pick || t.random).find((p) => p.name === name);
-  const systemHit = systemPools().find((p) => p.name === name && p.images.length);
+  const systemHit = systemPools().find((p) => p.name === name && hasImages(p));
   const { prefer } = resolveAvatarMatchPrefs(s);
   if (prefer === "public") return systemHit || creatorHit;
   return creatorHit || systemHit;

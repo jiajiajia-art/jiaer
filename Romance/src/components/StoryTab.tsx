@@ -7,12 +7,13 @@ import { IconChevronDown, IconChevronUp, IconPencil, IconRefresh, IconSend, Icon
 import { EntityText } from "./EntityText";
 import { looksGarbled, repairSegments, proseToSegments } from "../lib/ai";
 import { findNpc } from "../lib/npcIdentity";
+import { resolveSpeakerLabel, sameSpeakerLabel } from "../lib/speakerLabel";
 import { openPerson } from "./NpcTab";
 
 /* 流式实时文本：单独订阅 LiveCtx，AI 逐帧吐字只重渲染这一小块，
  * 并让它自己把滚动容器滚到底，避免整页跟着刷新。 */
-/** 功能注释：叠在场景图上时旁白需半透明底；对白气泡仍走原样式 */
-export function LiveNarration({ scrollRef, overlay }: { scrollRef: RefObject<HTMLDivElement | null>; overlay?: boolean }) {
+/** 功能注释：叠图旁白半透明底；小说内容卡用普通段落（plain）；对白仍走气泡 */
+export function LiveNarration({ scrollRef, overlay, plain }: { scrollRef: RefObject<HTMLDivElement | null>; overlay?: boolean; plain?: boolean }) {
   const live = useLive();
   const { game } = useGame();
   useEffect(() => {
@@ -25,15 +26,17 @@ export function LiveNarration({ scrollRef, overlay }: { scrollRef: RefObject<HTM
   return (
     <div className="animate-pop">
       {segs.length && game ? (
-        <Segments segments={segs} npcs={game.npcs} playerAvatar={game.player.avatar} playerName={game.player.name} overlay={overlay} />
+        <Segments segments={segs} npcs={game.npcs} playerAvatar={game.player.avatar} playerName={game.player.name} overlay={overlay} plain={plain} />
       ) : live ? (
         <p className={overlay
-          ? "story-prose rounded-xl bg-black/50 px-3 py-2 text-[14.5px] leading-relaxed text-white/95 backdrop-blur-[6px] [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]"
-          : "story-prose border-l-2 border-jade/25 pl-3 text-[14.5px] leading-relaxed text-ink-soft"}>
+          ? "story-prose story-narration-panel rounded-xl px-3 py-2 text-[14.5px] leading-relaxed"
+          : plain
+            ? "story-prose whitespace-pre-line text-[15px] leading-[1.8] tracking-[0.02em] text-[#1a1a1a]"
+            : "story-prose border-l-2 border-jade/25 pl-3 text-[14.5px] leading-relaxed text-ink-soft"}>
           <EntityText text={live} />
         </p>
       ) : (
-        <p className={`flex gap-1 ${overlay ? "rounded-full bg-black/40 px-3 py-1.5 text-white/90" : "pl-3 text-jade"}`}>
+        <p className={`flex gap-1 ${overlay ? "story-narration-panel rounded-full px-3 py-1.5" : plain ? "text-jade" : "pl-3 text-jade"}`}>
           <span className="typing-dot">●</span>
           <span className="typing-dot" style={{ animationDelay: "0.2s" }}>●</span>
           <span className="typing-dot" style={{ animationDelay: "0.4s" }}>●</span>
@@ -158,13 +161,17 @@ export function SpeechWithActions({ text }: { text: string }) {
   );
 }
 
-function SegmentView({ s, npcs, tightTop, cont, player, overlay }: {
-  s: Segment; npcs: Npc[]; tightTop?: boolean; cont?: boolean; player?: { name: string; avatar: string }; overlay?: boolean;
+function SegmentView({ s, npcs, tightTop, cont, player, overlay, plain }: {
+  s: Segment; npcs: Npc[]; tightTop?: boolean; cont?: boolean; player?: { name: string; avatar: string }; overlay?: boolean; plain?: boolean;
 }) {
-  // 功能注释：叠图叙事每段加半透明底，保证从背景里能看清；对白气泡不变
+  // 功能注释：叠图半透明底；小说内容卡=普通段落；其它纸面旁白保留竖线装饰
   if (s.kind === "narration")
     return overlay ? (
-      <p className="story-prose rounded-xl bg-black/50 px-3 py-2 text-[14.5px] leading-[1.85] tracking-[0.015em] text-white/95 backdrop-blur-[6px] [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
+      <p className="story-prose story-narration-panel rounded-xl px-3 py-2 text-[14.5px] leading-[1.85] tracking-[0.015em]">
+        <ProseWithSpeech text={s.text} />
+      </p>
+    ) : plain ? (
+      <p className="story-prose whitespace-pre-line text-[15px] leading-[1.8] tracking-[0.02em] text-[#1a1a1a]">
         <ProseWithSpeech text={s.text} />
       </p>
     ) : (
@@ -184,27 +191,36 @@ function SegmentView({ s, npcs, tightTop, cont, player, overlay }: {
     );
   // 人物对话：真实对话框——头像 + 名字 + 气泡；主角的台词靠右。
   // cont=同一人连续发言：省略头像与名字，气泡紧贴上一条
-  const me = !!player && s.speaker === player.name;
-  const npc = me ? undefined : npcs.find((n) => n.name === s.speaker);
+  // 功能注释：小说内容卡气泡只读皮肤变量，不写死白底/圆角；名字经别名解析成档案全名（姓+名）
+  const who = resolveSpeakerLabel(s.speaker, npcs, player?.name);
+  const me = who.me;
+  const npc = me ? undefined : who.npc;
+  const showName = who.label;
+  const npcBubble = plain
+    ? "dlg-bubble relative w-fit max-w-full rounded-[var(--radius-ui)] rounded-bl-[var(--radius-ui-sm)] border border-line bg-paper-2 px-3.5 py-2 text-[15px] leading-relaxed text-ink shadow-[var(--shadow-ui)]"
+    : "dlg-bubble relative w-fit max-w-full rounded-2xl rounded-bl-md border border-white/60 bg-white/70 px-3.5 py-2 text-[14px] leading-relaxed text-ink shadow-[0_4px_14px_-8px_var(--dream-glow,rgba(0,0,0,0.15))] backdrop-blur-sm";
+  const meBubble = plain
+    ? "dlg-bubble-me max-w-[82%] rounded-[var(--radius-ui)] rounded-br-[var(--radius-ui-sm)] bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] px-3.5 py-2 text-[15px] leading-relaxed text-paper-2 shadow-[var(--shadow-ui)]"
+    : "dlg-bubble-me max-w-[82%] rounded-2xl rounded-br-md bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] px-3.5 py-2 text-[14px] leading-relaxed text-white shadow-sm";
   if (me)
     return (
       <div className={`flex items-end justify-end gap-2 ${cont ? "-mt-2" : ""}`}>
-        <div className="dlg-bubble-me max-w-[82%] rounded-2xl rounded-br-md bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] px-3.5 py-2 text-[14px] leading-relaxed text-white shadow-sm">
+        <div className={meBubble}>
           <SpeechWithActions text={s.text} />
         </div>
-        {cont ? <span className="w-8 shrink-0" /> : <SpeakerAvatar name={s.speaker} src={player!.avatar || undefined} />}
+        {cont ? <span className="w-8 shrink-0" /> : <SpeakerAvatar name={showName} src={player!.avatar || undefined} />}
       </div>
     );
   return (
-    <div className={`flex items-end gap-2 ${cont ? "-mt-2" : ""}`}>
-      {cont ? <span className="w-8 shrink-0" /> : <SpeakerAvatar name={s.speaker} src={npc?.avatar || undefined} />}
+    <div className={`flex items-start gap-2 ${cont ? "-mt-2" : ""}`}>
+      {cont ? <span className="w-8 shrink-0" /> : <SpeakerAvatar name={showName} src={npc?.avatar || undefined} />}
       <div className="min-w-0 max-w-[82%]">
         {!cont && (
-          <p className="dlg-name mb-0.5 ml-1 text-[11.5px] font-medium text-jade/80">
-            <EntityText text={s.speaker} />
+          <p className={`dlg-name mb-0.5 ml-1 text-[12px] font-medium ${plain ? "text-ink-soft" : "text-jade/80"}`}>
+            <EntityText text={showName} />
           </p>
         )}
-        <div className="dlg-bubble relative w-fit max-w-full rounded-2xl rounded-bl-md border border-white/60 bg-white/70 px-3.5 py-2 text-[14px] leading-relaxed text-ink shadow-[0_4px_14px_-8px_var(--dream-glow,rgba(0,0,0,0.15))] backdrop-blur-sm">
+        <div className={npcBubble}>
           <SpeechWithActions text={s.text} />
         </div>
       </div>
@@ -282,9 +298,11 @@ export function ErrorBanner({ error }: { error: { title: string; text: string } 
 }
 
 export { SpeakerAvatar };
-const sameSpeaker = (a?: Segment, b?: Segment) => a?.kind === "dialogue" && b?.kind === "dialogue" && a.speaker === b.speaker;
-export function Segments({ segments: raw, npcs, playerAvatar, playerName, overlay }: {
-  segments: Segment[]; npcs: Npc[]; playerAvatar: string; playerName: string; overlay?: boolean;
+/** 功能注释：连续发言按解析后的全名判断，别名与档案名算同一人 */
+const sameSpeaker = (a: Segment | undefined, b: Segment | undefined, npcs: Npc[], playerName: string) =>
+  a?.kind === "dialogue" && b?.kind === "dialogue" && sameSpeakerLabel(a.speaker, b.speaker, npcs, playerName);
+export function Segments({ segments: raw, npcs, playerAvatar, playerName, overlay, plain }: {
+  segments: Segment[]; npcs: Npc[]; playerAvatar: string; playerName: string; overlay?: boolean; plain?: boolean;
 }) {
   const segments = repairSegments(raw);
   // 乱码拦截：把所有文字拼起来判断，命中则整段替换为「重新生成」提示。
@@ -293,7 +311,7 @@ export function Segments({ segments: raw, npcs, playerAvatar, playerName, overla
   return (
     <div className="space-y-3">
       {segments.map((s, i) => (
-        <SegmentView key={i} s={s} npcs={npcs} tightTop={segments[i - 1]?.kind === "system"} cont={sameSpeaker(segments[i - 1], s)} player={{ name: playerName, avatar: playerAvatar }} overlay={overlay} />
+        <SegmentView key={i} s={s} npcs={npcs} tightTop={segments[i - 1]?.kind === "system"} cont={sameSpeaker(segments[i - 1], s, npcs, playerName)} player={{ name: playerName, avatar: playerAvatar }} overlay={overlay} plain={plain} />
       ))}
     </div>
   );
@@ -393,7 +411,7 @@ export function PacedSegments({
     <div className="space-y-3">
       {beats.slice(0, revealed).map((s, i) => (
         <div key={i} className={i === revealed - 1 && revealed > 1 ? "animate-pop" : ""}>
-          <SegmentView s={s} npcs={npcs} tightTop={beats[i - 1]?.kind === "system"} cont={sameSpeaker(beats[i - 1], s)} player={{ name: playerName, avatar: playerAvatar }} />
+          <SegmentView s={s} npcs={npcs} tightTop={beats[i - 1]?.kind === "system"} cont={sameSpeaker(beats[i - 1], s, npcs, playerName)} player={{ name: playerName, avatar: playerAvatar }} />
         </div>
       ))}
       {!complete && (
@@ -470,9 +488,9 @@ export default function StoryTab() {
       {/* 选项 / 自定义输入 */}
       <div className="shrink-0 border-t border-line bg-paper-2/90 px-4 py-3 backdrop-blur">
         <div className="mx-auto max-w-2xl">
-          {!busy && game.options.length > 0 && !custom && (
+          {!busy && (game.options?.length ?? 0) > 0 && !custom && (
             <div className="mb-2 grid gap-2">
-              {game.options.slice(0, 3).map((o, i) => (
+              {(game.options ?? []).slice(0, 3).map((o, i) => (
                 <button
                   key={i}
                   onClick={() => send(o.value)}
@@ -486,7 +504,7 @@ export default function StoryTab() {
           )}
 
           {/* 底层规则 · 选项模式：关闭自由输入后只能点选项（没有选项时仍允许输入，避免卡死） */}
-          {!freeInput && game.options.length > 0 ? null : custom || game.options.length === 0 ? (
+          {!freeInput && (game.options?.length ?? 0) > 0 ? null : custom || (game.options?.length ?? 0) === 0 ? (
             <div className="flex items-end gap-2">
               <textarea
                 value={input}

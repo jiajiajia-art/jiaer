@@ -43,6 +43,8 @@ export type ThemePref = {
   topbar?: "gradient" | "aurora" | "plain"; // 顶栏美化风格
   topbarText?: string; // 顶栏中部标语（留空不显示）
   font?: "song" | "hei" | "round" | "elegant" | "brush" | "hand" | "cursive" | "pixel";
+  /** 功能注释：剧情叙事底不透明度 40~100（%）；叠图旁白与小说内容卡共用，默认 88 */
+  storyBgAlpha?: number;
   orient?: "portrait" | "landscape";
   /** @deprecated 已取消方向锁定；读写时一律清为 false，保留字段仅兼容旧本地主题 */
   orientLock?: boolean;
@@ -160,7 +162,8 @@ export type NavActiveStyle = {
   icons?: Record<string, { on?: string; off?: string }>; // 牌位 id → 选中 / 未选中图标
   iconSize?: number; // 图标尺寸 px
 };
-export const defaultTheme: ThemePref = { mode: "auto", accent: "plum", skin: "cute", font: "song" };
+/** 功能注释：每局进游玩默认竖屏 9:16；玩家要在游戏设置里再改才切横屏 */
+export const defaultTheme: ThemePref = { mode: "auto", accent: "plum", skin: "cute", font: "song", orient: "portrait" };
 export function loadTheme(): ThemePref {
   return { ...defaultTheme, ...(loadGlobal<Partial<ThemePref>>(K_THEME, {}) || {}) };
 }

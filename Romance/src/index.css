@@ -133,35 +133,46 @@ html[data-romance] .romance-host {
 }
 
 /* —— 字体皮肤：整体换字，仅改字形不动布局 ——
-   通过 <html class="font-xxx"> 覆盖 --font-serif / --font-sans。
-   默认（font-song）沿用思源宋体/黑体，无需类名也成立。 */
+   通过 <html class="font-xxx"> 同时覆盖 --font-serif / --font-sans，
+   让正文（story-prose）、对话气泡、界面 chrome 都跟到同一套预设。
+   默认（font-song）两侧皆用思源宋体；字形由 lib/gameFonts.ts 注入的镜像 stylesheet 提供。 */
+html[data-romance].font-song {
+  --font-serif: 'Noto Serif SC', serif;
+  --font-sans: 'Noto Serif SC', serif;
+}
 html[data-romance].font-hei {
   --font-serif: 'Noto Sans SC', sans-serif;
   --font-sans: 'Noto Sans SC', sans-serif;
 }
 html[data-romance].font-round {
-  --font-serif: 'ZCOOL KuaiLe', 'Noto Serif SC', serif;
+  --font-serif: 'ZCOOL KuaiLe', 'Noto Sans SC', sans-serif;
   --font-sans: 'ZCOOL KuaiLe', 'Noto Sans SC', sans-serif;
 }
 html[data-romance].font-elegant {
   --font-serif: 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
-  --font-sans: 'ZCOOL XiaoWei', 'Noto Sans SC', sans-serif;
+  --font-sans: 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
 }
 html[data-romance].font-brush {
   --font-serif: 'Ma Shan Zheng', 'Noto Serif SC', serif;
-  --font-sans: 'Noto Sans SC', sans-serif;
+  --font-sans: 'Ma Shan Zheng', 'Noto Serif SC', serif;
 }
 html[data-romance].font-hand {
   --font-serif: 'Long Cang', 'Noto Serif SC', serif;
-  --font-sans: 'Long Cang', 'Noto Sans SC', sans-serif;
+  --font-sans: 'Long Cang', 'Noto Serif SC', serif;
 }
 html[data-romance].font-cursive {
   --font-serif: 'Zhi Mang Xing', 'Noto Serif SC', serif;
-  --font-sans: 'Noto Sans SC', sans-serif;
+  --font-sans: 'Zhi Mang Xing', 'Noto Serif SC', serif;
 }
 html[data-romance].font-pixel {
   --font-serif: 'Pixelify Sans', 'VT323', 'Noto Sans SC', monospace;
   --font-sans: 'Pixelify Sans', 'VT323', 'Noto Sans SC', monospace;
+}
+
+/* 功能注释：对话气泡显式跟预设，避免局部 utility 把字体重置回系统默认 */
+html[data-romance] .dlg-bubble,
+html[data-romance] .dlg-bubble-me {
+  font-family: var(--font-serif);
 }
 
 /* 星光2005 · 年代美术：奶油纸白 / 旧报深褐 / 酒红 / 唱片墨绿 */
@@ -534,6 +545,30 @@ input[type="range"]::-moz-range-thumb {
     0 2px 6px rgba(0, 0, 0, 0.4),
     inset 0 0 0 1px rgba(255, 255, 255, 0.12),
     inset 0 1px 2px rgba(255, 255, 255, 0.25);
+}
+
+/* 功能注释：宽屏仿真机身尺寸锁死——高度≈游戏画面 85%，宽按 9:19.5；禁止被通讯录/聊天内容撑长撑窄 */
+.phone-stage {
+  container-type: size;
+  container-name: phone-stage;
+}
+.phone-frame-fixed {
+  aspect-ratio: 9 / 19.5;
+  height: 85%;
+  width: auto;
+  max-height: 85%;
+  max-width: 100%;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+@supports (height: 1cqh) {
+  .phone-frame-fixed {
+    /* 在舞台内取「高 85% 或宽撑满」两者中较小、且保持竖屏比例的那一档 */
+    height: min(85cqh, calc(100cqw * 19.5 / 9));
+    width: min(100cqw, calc(85cqh * 9 / 19.5));
+    max-height: none;
+    max-width: none;
+  }
 }
 /* 侧边实体键：与中框同色系、带微高光 */
 .phone-btn {
@@ -1359,16 +1394,39 @@ html[data-romance][class] .phone-os :is(*, input, textarea, button, select) {
   }
 }
 
-/* 叙事分色：动作神态描写 vs 说出口的话（随主题变量换色）。
-   不用斜体：中文字体没有真斜体，浏览器会把字硬拉斜，看起来像换了一套字体，与「设置 · 字体」对不上。 */
+/* 叙事分色：动作神态描写 vs 说出口的话。
+   不用斜体：中文字体没有真斜体，浏览器会把字硬拉斜，看起来像换了一套字体，与「设置 · 字体」对不上。
+   剧情模式普通段落固定近黑，避免皮肤把字染成酒红/淡紫导致叠景看不清。 */
 .story-action {
-  color: color-mix(in srgb, var(--jade-deep) 72%, var(--ink-soft));
+  color: #1a1a1a;
   font-style: normal;
+  font-family: var(--font-serif);
 }
 .story-speech {
-  color: var(--ink);
-  font-weight: 500;
+  color: #111111;
+  font-weight: 600;
   font-style: normal;
+  font-family: var(--font-serif);
+}
+
+/* 功能注释：叠图旁白 / 地点说明的浅色半透明底；透明度由 --story-panel-a（设置可调）驱动 */
+.story-narration-panel {
+  font-family: var(--font-serif);
+  color: #1a1a1a;
+  background: rgba(255, 255, 255, var(--story-panel-a, 0.88));
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  text-shadow: none;
+}
+
+/* 功能注释：小说内容卡底板同样跟设置透明度；文字保持近黑 + 预设字体 */
+.novel-read-card {
+  background: color-mix(in srgb, var(--paper) calc(var(--story-panel-a, 0.88) * 100%), transparent) !important;
+  color: #1a1a1a;
+}
+.novel-read-card .story-prose {
+  font-family: var(--font-serif);
+  color: #1a1a1a;
 }
 
 /* 开幕笔记：横格纸，行高与格线对齐 */
@@ -1488,9 +1546,10 @@ html.nav-label-c .nav-txt-on { color: var(--nav-label) !important; }
   .ui-dialog > * { flex-shrink: 0; }
   /* 功能注释：body 不 flex-grow，短内容不撑空；父级触顶后由 flex-shrink + overflow 滚动 */
   .ui-dialog > .ui-dialog-body { flex: 0 1 auto; min-height: 0; overflow-y: auto; overflow-x: auto; overscroll-behavior: contain; }
-  /* 功能注释：建角向导固定为屏宽/屏高 85%，底栏在框外滚动区之外，属性可完整滚出 */
+  /* 功能注释：建角向导固定为屏宽/屏高 85%（vh+dvh 双写，避免移动端地址栏跳动铺太高） */
   .ui-dialog.ui-dialog-create {
     width: 85vw; max-width: 85vw;
+    height: 85vh; max-height: 85vh;
     height: 85dvh; max-height: 85dvh;
   }
   .ui-dialog.ui-dialog-create > .ui-dialog-body { flex: 1 1 auto; }

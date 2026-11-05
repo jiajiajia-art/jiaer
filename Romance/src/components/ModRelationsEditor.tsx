@@ -4,7 +4,8 @@ import type { PerkKeyOption } from "../game/perkKeys";
 import type { ReactNode } from "react";
 import type { BridgeSlot } from "../game/bridge";
 
-/* ②角色 · 关系配置（内置，非独立玩法包）：表白门槛、婚礼费用 / 好感、NPC 牵线开关与每日次数、伴侣加成。
+/* 关系玩法（商店 pack-relations）：表白门槛、婚礼费用 / 好感、NPC 牵线开关与每日次数、伴侣加成。
+ * 须创作者从商店加进作品后才出现本编辑器与人物页表白/婚礼入口。
  * 不预置固定牵线方式；需要牵线时请自加触发 / 事件。只写改动的字段，其余沿用引擎默认。 */
 type Rel = Partial<RelationsContent>;
 const inp = "min-w-0 w-full rounded-lg border border-line bg-paper px-2 py-1 text-[12.5px] text-ink outline-none focus:border-jade";
@@ -74,7 +75,7 @@ export default function ModRelationsEditor({ value, onChange, npcs = [], keyOpti
 
   return (
     <div className="space-y-3">
-      <p className="text-[11px] leading-relaxed text-ink-soft">留空 = 用引擎默认。内置于②角色，人物页的表白、婚礼按这里的数值判定与显示。</p>
+      <p className="text-[11px] leading-relaxed text-ink-soft">留空 = 用引擎默认。已添加「关系玩法」后，人物页的表白、婚礼按这里的数值判定与显示。</p>
 
       <div className="rounded-xl border border-line bg-paper p-2.5">
         <p className="mb-1.5 text-[12px] font-bold text-ink">表白</p>

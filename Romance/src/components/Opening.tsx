@@ -9,6 +9,7 @@ import { wallet } from "../game/wallet";
 import { getWorldSlot } from "../mods/registry";
 import type { OpeningCopy } from "../mods/types";
 import { openingSrcDoc, postOpening, type OpeningPageData } from "../lib/openingPage";
+import { asModArray } from "../lib/asModArray";
 
 const GENERIC_OPENING: OpeningCopy = {
   kicker: "Prologue · 开幕",
@@ -37,7 +38,8 @@ export default function Opening() {
   vars.parents = parents;
 
   // 功能注释：开幕正文仅用编辑器固定文案 / HTML；AI 开局剧情在点「开始」后于剧情区生成
-  const paragraphs = (copy.paragraphs ?? [])
+  // paragraphs 常被 AI 写成对象；asModArray 后再 map，禁止 .map/.filter 崩开幕
+  const paragraphs = asModArray<unknown>(copy.paragraphs)
     .map((t) => fill(typeof t === "string" ? t : String(t ?? ""), vars))
     .filter((t) => typeof t === "string" && t.trim());
   const where = game?.world.location || "住处";

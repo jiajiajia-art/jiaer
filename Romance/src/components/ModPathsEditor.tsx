@@ -22,6 +22,7 @@ import {
   type PathLockCondKind,
 } from "../lib/pathDeps";
 import { platformNpcTagsPromptLine, normalizeNpcTags } from "../lib/npcTags";
+import { improperPersonNameReason, sanitizeNpcFactionId } from "../lib/personName";
 import type { CmpOp, FixedCond } from "../lib/types";
 import { CMP_OPS } from "../lib/types";
 import { IconCheck, IconChevronDown, IconChevronUp, IconClose, IconLock, IconSpark } from "../lib/icons";
@@ -155,7 +156,7 @@ export default function ModPathsEditor({ creation, identities, world, npcs = [],
       const forbidBlock = String(getWorld().content.prompt?.extraRules ?? "").trim();
       const raw = await complete(cfg, [
         { role: "system", content: "你是女性向模拟游戏的剧情与数值策划。只输出 JSON，不要任何解释或代码块标记。" },
-        { role: "user", content: `为下面的世界观设计「人物线路」，并一并生成相关人物完整资料。\n世界观：${world}\n${forbidBlock ? `${forbidBlock}\n以上禁止项不得出现在线路或人物资料中。\n` : ""}本世界已有的属性名（fixed / choose / fx.attr / fx.reputation 的 name 必须从这里选，禁止手填野名）：${attrOpts.map((a) => a.label).join("、") || pool.join("、") || "无"}\n${platformNpcTagsPromptLine()}\n输出格式：{"paths":[{"id":"英文id","name":"路径名","tag":"短标签","blurb":"卖点","about":"开局处境","fixed":["属性名"],"choose":["属性名"],"fx":{"attr":[{"name":"属性名","val":整数}],"favor":[{"target":"人物名","val":整数}],"reputation":[{"name":"词条","val":整数}],"note":"概括"},"hero":"人物id或空","room":"地点id或空","eventId":"事件id或空","memory":"前置记忆"}],"npcs":[{"id":"与hero或favor对应的英文id","name":"姓名","role":"身份","kind":"roam或staff","home":"地点id","roam":[],"gender":"男|女|其他","age":整数,"bio":"约300字活人小传，贴合世界观","tags":["标签"],"relation":"与主角关系","metStart":true}]}\n要求：3~5 条路径；每条涉及的关键人物都必须出现在 npcs 里且 name/gender/age/bio 齐全，bio 约 300 字禁止空着；favor.target 用人物名；fixed/choose 只能填上方已有属性名。\n已有人物（可沿用 id）：${peopleOpts.map((n) => `${n.id}=${n.name}`).join("，") || "无"}\n地点：${rooms.map((r) => `${r.id}=${r.name}`).join("，") || "无"}\n事件：${events.map((e) => `${e.id}=${e.name}`).join("，") || "无"}` },
+        { role: "user", content: `为下面的世界观设计「人物线路」，并一并生成相关人物完整资料。\n世界观：${world}\n${forbidBlock ? `${forbidBlock}\n以上禁止项不得出现在线路或人物资料中。\n` : ""}本世界已有的属性名（fixed / choose / fx.attr / fx.reputation 的 name 必须从这里选，禁止手填野名）：${attrOpts.map((a) => a.label).join("、") || pool.join("、") || "无"}\n${platformNpcTagsPromptLine()}\n输出格式：{"paths":[{"id":"英文id","name":"路径名","tag":"短标签","blurb":"卖点","about":"开局处境","fixed":["属性名"],"choose":["属性名"],"fx":{"attr":[{"name":"属性名","val":整数}],"favor":[{"target":"人物名","val":整数}],"reputation":[{"name":"词条","val":整数}],"note":"概括"},"hero":"人物id或空","room":"地点id或空","eventId":"事件id或空","memory":"前置记忆"}],"npcs":[{"id":"与hero或favor对应的英文id","name":"有姓有名如沈晚晴","role":"身份/称号","kind":"roam","home":"地点id","roam":[],"gender":"男|女|其他","age":整数,"bio":"约300字活人小传，贴合世界观","tags":["标签"],"relation":"与主角关系","metStart":true}]}\n要求：3~5 条路径；每条涉及的关键人物都必须出现在 npcs 里且 name/gender/age/bio 齐全；name 须有姓有名（禁止太皇太后/厨娘等纯身份），身份写到 role；kind 一律 "roam"；bio 约 300 字禁止空着；favor.target 用人物名；fixed/choose 只能填上方已有属性名。\n已有人物（可沿用 id）：${peopleOpts.map((n) => `${n.id}=${n.name}`).join("，") || "无"}\n地点：${rooms.map((r) => `${r.id}=${r.name}`).join("，") || "无"}\n事件：${events.map((e) => `${e.id}=${e.name}`).join("，") || "无"}` },
       ]);
       const j = JSON.parse(raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1)) as {
         paths?: (Partial<CreationPath> & { fx?: unknown })[];
@@ -166,13 +167,19 @@ export default function ModPathsEditor({ creation, identities, world, npcs = [],
       };
       const list = (j.paths ?? []).filter((p) => p?.name);
       if (!list.length) throw new Error("AI 没有返回可用的路径，请重试。");
+      // 功能注释：线路 AI 人物须有姓有名；kind 固定 roam；势力只留作品内仍存在的 id
+      const liveFactionIds = new Set(
+        (getWorldSlot("creation")?.startFactions ?? [])
+          .map((f: { id?: string }) => String(f?.id ?? "").trim())
+          .filter(Boolean),
+      );
       const generatedPeople = (j.npcs ?? [])
-        .filter((n) => n?.id && String(n.name ?? "").trim())
+        .filter((n) => n?.id && String(n.name ?? "").trim() && !improperPersonNameReason(n.name))
         .map((n) => ({
           id: String(n.id).toLowerCase().replace(/[^a-z0-9_-]+/g, "-"),
           name: String(n.name).trim(),
           role: String(n.role ?? "").trim(),
-          kind: (n.kind === "staff" ? "staff" : "roam") as "staff" | "roam",
+          kind: "roam" as const,
           home: (n.home && rooms.some((r) => r.id === n.home) ? n.home : rooms[0]?.id) || "",
           roam: Array.isArray(n.roam) ? n.roam.map(String) : [],
           bio: String(n.bio ?? "").trim(),
@@ -182,7 +189,7 @@ export default function ModPathsEditor({ creation, identities, world, npcs = [],
           relation: typeof n.relation === "string" && n.relation.trim() ? n.relation.trim() : undefined,
           metStart: n.metStart || undefined,
           wxStart: n.wxStart || undefined,
-          factionId: typeof n.factionId === "string" && n.factionId.trim() ? n.factionId.trim() : undefined,
+          factionId: sanitizeNpcFactionId(n.factionId, liveFactionIds),
           requires: [] as never[],
         }));
       const peopleForFx = [...peopleOpts, ...generatedPeople.map((n) => ({ id: n.id, name: n.name }))];

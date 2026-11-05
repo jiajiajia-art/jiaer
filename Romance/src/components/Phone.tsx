@@ -524,7 +524,7 @@ function PhoneInner() {
               />
             )}
             {app !== null && (
-              <div key={app} className="phone-app-in h-full">
+              <div key={app} className="phone-app-in h-full min-h-0 overflow-hidden">
                 {app === "wechat" && <WeChatApp onBack={back} />}
                 {app === "sms" && <SmsApp onBack={back} />}
                 {app === "call" && <CallApp onBack={back} />}
@@ -612,16 +612,23 @@ function PhoneInner() {
   );
 
   return (
-    <div className={framed ? "flex h-full w-full items-center justify-center px-2 py-3" : "flex h-full w-full flex-col"} style={IOS_VARS}>
+    /* 功能注释：宽屏机身舞台用 container-size，外框按 85%×竖屏比例锁死，通讯录/聊天只在内屏滚动 */
+    <div
+      className={framed ? "phone-stage flex h-full w-full items-center justify-center overflow-hidden px-2 py-2" : "flex h-full w-full flex-col"}
+      style={IOS_VARS}
+      data-phone-stage={framed ? "1" : undefined}
+    >
       {framed ? (
-        /* 机身：钛金属中框 + 侧键 + 内屏 */
-        /* 机身按可用高度等比缩放（9:19.5，最高 780px），永远完整落在页面内、不被底部导航压住 */
-        <div className="phone-frame relative aspect-[9/19.5] h-full max-h-[780px] max-w-full rounded-[3.2rem] p-[5px]" style={{ background: frame.frame }}>
+        <div
+          className="phone-frame phone-frame-fixed relative shrink-0 overflow-hidden rounded-[3.2rem] p-[5px]"
+          style={{ background: frame.frame }}
+          data-phone-frame="1"
+        >
           <span className="phone-btn absolute -left-[3px] top-[15%] h-8 w-[3px] rounded-l" style={{ background: frame.btn }} />
           <span className="phone-btn absolute -left-[3px] top-[23%] h-14 w-[3px] rounded-l" style={{ background: frame.btn }} />
           <span className="phone-btn absolute -left-[3px] top-[33%] h-14 w-[3px] rounded-l" style={{ background: frame.btn }} />
           <span className="phone-btn absolute -right-[3px] top-[27%] h-20 w-[3px] rounded-r" style={{ background: frame.btn }} />
-          <div className="h-full overflow-hidden rounded-[2.95rem]">{screen}</div>
+          <div className="h-full min-h-0 overflow-hidden rounded-[2.95rem]">{screen}</div>
         </div>
       ) : (
         screen

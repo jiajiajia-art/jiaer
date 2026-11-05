@@ -14,8 +14,11 @@
 }
 
 .mainContent {
+    /* 功能注释：纵向布局；去掉旧右侧栏预留的大 margin-bottom */
     display: flex;
-    margin-bottom: 220px;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
 }
 
 .main {

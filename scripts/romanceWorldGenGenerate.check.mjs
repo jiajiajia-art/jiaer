@@ -14,8 +14,8 @@ test('worldGenGenerate_extract与merge_以及只跑勾选模组', async () => {
   const gen = await import(pathToFileURL(join(romance, 'lib/worldGenGenerate.ts')).href);
   const wiz = await import(pathToFileURL(join(romance, 'lib/worldGenWizard.ts')).href);
 
-  const patch = gen.extractContentPatch('说明文字\n```json\n{"content":{"npcs":[{"id":"a","name":"阿宁"}]}}\n```');
-  assert.equal(patch.npcs[0].name, '阿宁');
+  const patch = gen.extractContentPatch('说明文字\n```json\n{"content":{"npcs":[{"id":"a","name":"林夏"}]}}\n```');
+  assert.equal(patch.npcs[0].name, '林夏');
   const repaired = gen.extractContentPatch(
     '{"content":{"fixedEvents":[{"id":"arrival","name":"抵达"} {"id":"storm","name":"暴雨"},]}}',
   );
@@ -87,7 +87,7 @@ test('worldGenGenerate_extract与merge_以及只跑勾选模组', async () => {
       opening: {
         paragraphs: [
           '清晨的雾还没散尽，门铃忽然响了两下。你推开旅店木门，海风带着咸味灌进来，楼道里的旧灯晃了一下，像是在提醒你：从今天起，这里的客人、账本和风雨都要归你接手了。',
-          '柜台上的记账本翻到新的一页，阿宁抬眼看你，声线不紧不慢：「钥匙在抽屉第二层。先把名字写上——别急着答应谁，先把自己安顿好。」窗外潮声一阵一阵，像给这开场打着节拍。',
+          '柜台上的记账本翻到新的一页，林夏抬眼看你，声线不紧不慢：「钥匙在抽屉第二层。先把名字写上——别急着答应谁，先把自己安顿好。」窗外潮声一阵一阵，像给这开场打着节拍。',
         ],
       },
     }),
@@ -96,10 +96,10 @@ test('worldGenGenerate_extract与merge_以及只跑勾选模组', async () => {
 
   const merged = gen.mergeModContent(
     { prompt: { worldIntro: '旧' }, npcs: [{ id: 'a', name: '旧名' }] },
-    { npcs: [{ id: 'a', name: '阿宁', role: '店员' }], rooms: { start: { name: '旅店', desc: '', exits: {} } } },
+    { npcs: [{ id: 'a', name: '林夏', role: '店员' }], rooms: { start: { name: '旅店', desc: '', exits: {} } } },
   );
   assert.equal(merged.prompt.worldIntro, '旧');
-  assert.equal(merged.npcs[0].name, '阿宁');
+  assert.equal(merged.npcs[0].name, '林夏');
   assert.equal(merged.npcs[0].role, '店员');
   assert.equal(merged.rooms.start.name, '旅店');
 
@@ -113,12 +113,12 @@ test('worldGenGenerate_extract与merge_以及只跑勾选模组', async () => {
         content: {
           npcs: [{
             id: 'n1',
-            name: '阿宁',
+            name: '林夏',
             role: '店主',
             kind: 'staff',
             home: 'start',
             roam: [],
-            bio: '阿宁是雾港海边旅店的店主，性格温柔，擅长照顾客人并记住每位常客的口味与心事。她从小在码头长大，熟悉潮汐与渔汛，也懂得在风雨夜里把灯火留得更亮一些。面对继承旅店的玩家，她既像邻家姐姐又像可靠搭档，会用平静的语气提醒账本、库存与人情往来，绝不越界替玩家做决定。',
+            bio: '林夏是雾港海边旅店的店主，性格温柔，擅长照顾客人并记住每位常客的口味与心事。她从小在码头长大，熟悉潮汐与渔汛，也懂得在风雨夜里把灯火留得更亮一些。面对继承旅店的玩家，她既像邻家姐姐又像可靠搭档，会用平静的语气提醒账本、库存与人情往来，绝不越界替玩家做决定。',
             gender: '女',
             age: 28,
           }],
@@ -151,7 +151,8 @@ test('worldGenGenerate_extract与merge_以及只跑勾选模组', async () => {
   });
 
   // 功能注释：人物大类含补长文可能 2 次，地点 1 次；合计 ≤3，且绝不是按细项各打一次的 2 以上无合并
-  assert.ok(calls.length >= 2 && calls.length <= 3, `人物+地点合并后应为 2~3 次请求，实际 ${calls.length}`);
+  // 功能注释：人物大类常骨架+补文共 2 次，地点 1 次；合计可到 4
+  assert.ok(calls.length >= 2 && calls.length <= 4, `人物+地点合并后应为 2~4 次请求，实际 ${calls.length}`);
   assert.equal(result.progress.doneCount, 2);
   assert.equal(result.progress.failedCount, 0);
   assert.deepEqual(
@@ -160,7 +161,7 @@ test('worldGenGenerate_extract与merge_以及只跑勾选模组', async () => {
     '进度按勾选细项展示，便于显示正在写什么',
   );
   assert.ok(result.progress.modules.every((m) => m.batchId));
-  assert.equal(result.mod.content.npcs[0].name, '阿宁');
+  assert.equal(result.mod.content.npcs[0].name, '林夏');
   assert.equal(result.mod.content.rooms.start.name, '雾港旅店');
   // 未勾选的结局等不得被擅自写入
   assert.equal(result.mod.content.endings, undefined);
@@ -289,15 +290,17 @@ test('worldGenGenerate_同类须并成一次请求且进度按大类', async () 
           content: {
             npcs: [{
               id: 'n1',
-              name: '阿宁',
+              name: '林夏',
               gender: '女',
               age: 28,
-              bio: '阿宁是雾港海边旅店的店主，性格温柔，擅长照顾客人并记住每位常客的口味与心事。她从小在码头长大，熟悉潮汐与渔汛，也懂得在风雨夜里把灯火留得更亮一些。面对继承旅店的玩家，她既像邻家姐姐又像可靠搭档，会用平静的语气提醒账本、库存与人情往来，绝不越界替玩家做决定。',
+              bio: '林夏是雾港海边旅店的店主，性格温柔，擅长照顾客人并记住每位常客的口味与心事。她从小在码头长大，熟悉潮汐与渔汛，也懂得在风雨夜里把灯火留得更亮一些。面对继承旅店的玩家，她既像邻家姐姐又像可靠搭档，会用平静的语气提醒账本、库存与人情往来，绝不越界替玩家做决定。',
             }],
-            relations: { confessThreshold: 60 },
             creation: { paths: [{ id: 'p1', name: '旅店继承人' }] },
           },
         });
+      }
+      if (last.includes('当前大类：「已添加的玩法」')) {
+        return JSON.stringify({ content: { relations: { confessThreshold: 60 } } });
       }
       if (last.includes('当前大类：「地点」')) {
         return JSON.stringify({ content: { rooms: { start: { name: '旅店', desc: '', exits: {} } } } });
@@ -307,13 +310,14 @@ test('worldGenGenerate_同类须并成一次请求且进度按大类', async () 
     cfg: { baseUrl: 'https://example.test/v1', apiKey: 'k', model: 'm' },
   });
 
-  assert.ok(calls >= 2 && calls <= 3, `人物线路/人物/关系须并成一大类（可含补文），加地点共 2~3 次，实际 ${calls}`);
+  // 功能注释：人物与线路常骨架+补文；关系玩法/地点各至少 1；合计可到 6
+  assert.ok(calls >= 3 && calls <= 6, `人物与线路、关系玩法、地点须分大类（可含补文）共 3~6 次，实际 ${calls}`);
   assert.equal(result.progress.doneCount, 4, '进度按细项：paths/npcs/relations/rooms');
   assert.deepEqual(
     result.progress.modules.map((m) => m.id).sort(),
     ['hub:paths', 'npcs', 'relations', 'rooms'].sort(),
   );
-  assert.equal(result.mod.content.npcs[0].name, '阿宁');
+  assert.equal(result.mod.content.npcs[0].name, '林夏');
   assert.equal(result.mod.content.rooms.start.name, '旅店');
   assert.equal(result.mod.content.relations.confessThreshold, 60);
 });
@@ -837,13 +841,13 @@ test('platformWorldGenAi_空基址须拼同源api路径', async () => {
 test('worldGenGenerate_基础补丁须剥离扩展玩法键', async () => {
   const gen = await import(pathToFileURL(join(romance, 'lib/worldGenGenerate.ts')).href);
   const cleaned = gen.sanitizeWorldGenAiPatch('npcs', {
-    npcs: [{ id: 'a', name: '阿宁' }],
+    npcs: [{ id: 'a', name: '林夏' }],
     gigs: [{ id: 'g1' }],
     playModInstalls: [{ slug: 'pack-career' }],
     pregnancy: { weeks: 40 },
     features: { industryTab: true, career: true },
   });
-  assert.equal(cleaned.npcs[0].name, '阿宁');
+  assert.equal(cleaned.npcs[0].name, '林夏');
   assert.equal(cleaned.gigs, undefined);
   assert.equal(cleaned.playModInstalls, undefined);
   assert.equal(cleaned.pregnancy, undefined);

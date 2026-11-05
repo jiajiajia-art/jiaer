@@ -655,11 +655,12 @@ function LocationHero({ s, spots, activeKey, onOpenMap, onGo, fill, novelCard, b
     return (
       <div data-scene-layout="fill" data-novel-card="1" className="relative h-full min-h-0 w-full overflow-hidden bg-ink/20">
         <div className="absolute inset-0 overflow-hidden">{bgLayer}</div>
-        <div className="absolute inset-0 z-[15] flex min-h-0 flex-col px-3 pb-2 pt-2">
+        {/* 功能注释：阅读卡高度 = 场景区 85%，垂直居中，勿 flex-1 顶满预览 */}
+        <div className="absolute inset-0 z-[15] flex min-h-0 flex-col items-stretch justify-center px-3 py-2">
           <div
             data-tour="story"
             data-dstyle={theme.dialogStyle ?? "soft"}
-            className="novel-read-card relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-ui-lg)] border border-line bg-paper/92 text-ink shadow-[var(--shadow-ui-lift)] backdrop-blur-[2px]"
+            className="novel-read-card relative flex h-[85%] max-h-[85%] min-h-0 w-full flex-col overflow-hidden rounded-[var(--radius-ui-lg)] border border-line text-ink shadow-[var(--shadow-ui-lift)] backdrop-blur-[2px]"
           >
             <div className="flex shrink-0 items-start justify-between gap-2 border-b border-line/70 px-3 py-2.5">
               <div className="min-w-0">
@@ -668,7 +669,13 @@ function LocationHero({ s, spots, activeKey, onOpenMap, onGo, fill, novelCard, b
                   <span className="truncate">{title || "所在地"}</span>
                 </p>
                 {weather && (
-                  <p className="mt-0.5 truncate pl-[18px] text-[11.5px] text-ink-soft">{weather}</p>
+                  <p className="mt-0.5 flex items-center gap-1 truncate pl-[18px] text-[11.5px] text-ink-soft">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="shrink-0 text-gold" aria-hidden>
+                      <circle cx="12" cy="12" r="4" />
+                      <path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8l1.8-1.8M18 6l1.8-1.8" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+                    </svg>
+                    <span className="truncate">{weather}</span>
+                  </p>
                 )}
               </div>
               {mapBtn}
@@ -865,7 +872,7 @@ export default function HomeTab() {
   }, [game?.sim.day]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 新一轮选项可点时直接展开；场景页不再等逐句读完
-  const optsReady = !!game && !busy && game.options.length > 0 && !custom;
+  const optsReady = !!game && !busy && (game.options?.length ?? 0) > 0 && !custom;
   useEffect(() => { setIdeasOpen(optsReady); }, [optsReady, game?.options]);
   if (!game || !s) return null;
   const room = s.room ?? getWorldStartRoom();
@@ -972,7 +979,7 @@ export default function HomeTab() {
 
   // 功能注释：正文固定在场景图下累积留屏，不再进可消失对话框；底部只留输入与行动选项。
   const introSlots = newcomerSlots(game.story); // 初遇名片挂在该人物最近一次登场的回合底部
-  const hasOpts = !busy && game.options.length > 0 && !custom;
+  const hasOpts = !busy && (game.options?.length ?? 0) > 0 && !custom;
 
   const send = (text: string) => {
     if (!text.trim() || busy) return;
@@ -1032,7 +1039,7 @@ export default function HomeTab() {
                 </button>
               </p>
               <div className="grid max-h-[36vh] gap-1.5 overflow-y-auto">
-                {(hasOpts ? game.options.slice(0, 3) : IDEAS.map((t) => ({ label: t, value: t }))).map((o, i) => (
+                {(hasOpts ? (game.options ?? []).slice(0, 3) : IDEAS.map((t) => ({ label: t, value: t }))).map((o, i) => (
                   <button
                     key={i}
                     type="button"
@@ -1057,7 +1064,7 @@ export default function HomeTab() {
                 <button
                   type="button"
                   onClick={() => setIdeasOpen((v) => !v)}
-                  aria-label={hasOpts ? `展开剧情选项（${Math.min(game.options.length, 3)} 个）` : "灵感提示"}
+                  aria-label={hasOpts ? `展开剧情选项（${Math.min(game.options?.length ?? 0, 3)} 个）` : "灵感提示"}
                   aria-expanded={ideasOpen}
                   aria-controls="action-ideas"
                   className={`flex h-8 items-center justify-center gap-1 rounded-[var(--radius-ui-sm)] transition ${
@@ -1077,7 +1084,7 @@ export default function HomeTab() {
                   </DiyIcon>
                   {hasOpts && (
                     <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-coral px-1 text-[10px] font-bold leading-none text-white shadow-xs">
-                      {Math.min(game.options.length, 3)}
+                      {Math.min(game.options?.length ?? 0, 3)}
                     </span>
                   )}
                 </button>
@@ -1223,11 +1230,11 @@ export default function HomeTab() {
                         <>
                           {descText && (
                             isNovel ? (
-                              <p className="story-prose whitespace-pre-line text-[13.5px] leading-[1.75] tracking-[0.02em] text-ink [text-indent:2em]">
+                              <p className="story-prose whitespace-pre-line text-[13.5px] leading-[1.75] tracking-[0.02em] text-[#1a1a1a] [text-indent:2em]">
                                 {descText}
                               </p>
                             ) : (
-                              <p className="story-prose whitespace-pre-line rounded-xl bg-black/50 px-3 py-2 text-[13.5px] leading-[1.75] tracking-[0.02em] text-white/95 backdrop-blur-[6px] [text-indent:2em] [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
+                              <p className="story-prose story-narration-panel whitespace-pre-line rounded-xl px-3 py-2 text-[13.5px] leading-[1.75] tracking-[0.02em] [text-indent:2em]">
                                 {descText}
                               </p>
                             )
@@ -1242,15 +1249,15 @@ export default function HomeTab() {
                             ) : t.error ? (
                               <ErrorBanner key={t.id} error={t.error} />
                             ) : (
-                              <div key={t.id} className={`text-[13px] leading-relaxed ${isNovel ? "text-ink" : "text-white/95"}`}>
-                                {/* 功能注释：内容卡内用纸面旁白；叠图模式仍走 overlay 半透明底 */}
-                                <Segments segments={t.segments} npcs={game.npcs} playerAvatar={game.player.avatar} playerName={game.player.name} overlay={!isNovel} />
+                              <div key={t.id} className="text-[13px] leading-relaxed text-[#1a1a1a]">
+                                {/* 功能注释：小说内容卡=普通段落+皮肤气泡；游戏模式叠图旁白用可调浅色底+黑字 */}
+                                <Segments segments={t.segments} npcs={game.npcs} playerAvatar={game.player.avatar} playerName={game.player.name} overlay={!isNovel} plain={isNovel} />
                                 <Thoughts thoughts={t.thoughts} npcs={game.npcs} />
                                 <NewcomerCards ids={introSlots.get(t.id)} />
                               </div>
                             ),
                           )}
-                          {busy && <LiveNarration scrollRef={scrollRef} overlay={!isNovel} />}
+                          {busy && <LiveNarration scrollRef={scrollRef} overlay={!isNovel} plain={isNovel} />}
                         </>
                       }
                     />

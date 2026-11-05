@@ -73,7 +73,7 @@ export function FreeColors() {
   );
 }
 
-/* 自定义字体文件：上传或直链 */
+/* 自定义字体文件：仅本地上传（不再提供粘贴直链） */
 export function FreeFont() {
   const { f, set } = useFree();
   const ref = useRef<HTMLInputElement>(null);
@@ -82,13 +82,11 @@ export function FreeFont() {
     <div>
       <div className="flex flex-wrap gap-1.5">
         <button className={btn} onClick={() => ref.current?.click()}>上传字体文件</button>
-        <input defaultValue={f.font?.url?.startsWith("data:") ? "" : f.font?.url ?? ""} key={f.font?.url} placeholder="或粘贴字体直链 …/xx.woff2，回车应用" className={inp}
-          onKeyDown={(e) => { const v = e.currentTarget.value.trim(); if (e.key === "Enter" && /^https?:\/\//.test(v)) set({ font: { name: f.font?.name || "自定义字体", url: v } }); }} />
         {f.font?.url && <button className={btn} onClick={() => set({ font: undefined })}>移除</button>}
         <input ref={ref} type="file" accept=".woff2,.woff,.ttf,.otf" className="hidden" onChange={(e) => {
           const file = e.target.files?.[0]; e.target.value = "";
           if (!file) return;
-          if (file.size > 2.5 * 1024 * 1024) return setErr("字体超过 2.5MB：中文字体建议用子集化的 woff2，或放到网盘 / CDN 后粘贴直链");
+          if (file.size > 2.5 * 1024 * 1024) return setErr("字体超过 2.5MB：中文字体建议用子集化的 woff2");
           setErr("");
           const r = new FileReader(); r.onload = () => set({ font: { name: file.name.replace(/\.[^.]+$/, ""), url: String(r.result) } }); r.readAsDataURL(file);
         }} />

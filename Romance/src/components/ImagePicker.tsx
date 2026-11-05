@@ -9,12 +9,15 @@ import {
   rasterToScenePortraitDataUrl,
 } from "../lib/scenePortrait"
 import { Modal } from "./ui"
-import AiImageGen from "./AiImageGen"
+import AiImageGen, { type AiImageGenPhase } from "./AiImageGen"
+import PlatformLocationAssetPicker from "./PlatformLocationAssetPicker"
+import type { LocationAssetPurpose } from "../lib/platformLocationAssetLibrary"
 
 /* 通用图片选择器：点缩略图或「上传」直接选本地图片（有图床走图床，否则本地压缩，并收进素材库）；
  * 也可从素材库挑选、粘贴链接、清除。所有美化里需要图片的地方共用。
  * scenePortrait：地点场景图专用，上传/素材库/生图一律裁成 9:16 / 1080×1920；「链接」改为「生图」。
- * aiGen：在「上传」旁出「生图」按钮，弹窗内填提示词；走平台既有生图入口，不在页内铺输入框。 */
+ * aiGen：在「上传」旁出「生图」按钮，弹窗内填提示词；走平台既有生图入口，不在页内铺输入框。
+ * platformAssetPurpose：地点页大地图/场景图走平台地点素材库弹窗（只换预览图，与地点库整包分离）。 */
 const btn =
   "rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40"
 
@@ -23,11 +26,11 @@ export type ImagePickerAiGen = {
   placeholder?: string
   /** 功能注释：传给平台生图的尺寸，如 1024x1792 / 1080x1920 */
   size?: string
-  /** 功能注释：打开弹窗时预填提示词（如当前场景描述） */
+  /** 功能注释：打开弹窗时预填提示词（如当前场景描述）；默认停在编辑页，点「开始生成」才请求 */
   initialPrompt?: string
-  /** 功能注释：有预填词时打开即自动请求生图 */
+  /** 功能注释：兼容旧调用；默认 false，打开不得自动开跑 */
   autoRun?: boolean
-  /** 功能注释：生成成功立刻写回预览，无需再点「采用这张」 */
+  /** 功能注释：兼容旧调用；默认 false，须点「使用这张图」才写回 */
   autoApply?: boolean
 }
 
@@ -40,6 +43,7 @@ export default function ImagePicker({
   hint,
   scenePortrait = false,
   aiGen,
+  platformAssetPurpose,
 }: {
   value?: unknown
   onChange: (url?: string) => void
@@ -51,6 +55,8 @@ export default function ImagePicker({
   scenePortrait?: boolean
   /** 功能注释：开启后在上传旁显示「生图」，弹窗调用平台生图，不内联铺输入框。 */
   aiGen?: ImagePickerAiGen
+  /** 功能注释：有值时「素材库」打开平台地点素材库（按用途筛），不走本地素材格。 */
+  platformAssetPurpose?: LocationAssetPurpose
 }) {
   const ref = useRef<HTMLInputElement>(null)
   const [mode, setMode] = useState<"" | "lib" | "link">("")
@@ -58,11 +64,14 @@ export default function ImagePicker({
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState("")
   const [genOpen, setGenOpen] = useState(false)
+  // 功能注释：生图弹窗阶段——编辑 / 生成中 / 结果；用于改标题与生成中锁定关闭
+  const [genPhase, setGenPhase] = useState<AiImageGenPhase>("edit")
+  const [platformLibOpen, setPlatformLibOpen] = useState(false)
   const src = displayableImageSrc(value)
   const [broken, setBroken] = useState(false)
   useEffect(() => { setBroken(false) }, [src])
   const show = Boolean(src) && !broken
-  const assets = mode === "lib" ? loadAssets() : []
+  const assets = mode === "lib" && !platformAssetPurpose ? loadAssets() : []
   const portraitHint = scenePortrait ? SCENE_PORTRAIT_HINT : hint
   // 功能注释：地点场景用「生图」替换「链接」；封面等仍可同时有生图+链接
   const genOpts: ImagePickerAiGen | undefined = aiGen
@@ -168,7 +177,7 @@ export default function ImagePicker({
               type="button"
               className={btn}
               disabled={busy}
-              onClick={() => setGenOpen(true)}
+              onClick={() => { setGenPhase("edit"); setGenOpen(true) }}
             >
               生图
             </button>
@@ -176,8 +185,15 @@ export default function ImagePicker({
           <button
             type="button"
             className={btn}
-            aria-pressed={mode === "lib"}
-            onClick={() => setMode(mode === "lib" ? "" : "lib")}
+            aria-pressed={platformAssetPurpose ? platformLibOpen : mode === "lib"}
+            onClick={() => {
+              if (platformAssetPurpose) {
+                setPlatformLibOpen(true)
+                setMode("")
+                return
+              }
+              setMode(mode === "lib" ? "" : "lib")
+            }}
           >
             素材库
           </button>
@@ -232,7 +248,7 @@ export default function ImagePicker({
           </button>
         </div>
       )}
-      {mode === "lib" &&
+      {mode === "lib" && !platformAssetPurpose &&
         (assets.length ? (
           <div className="mt-2 grid max-h-44 grid-cols-5 gap-1.5 overflow-y-auto rounded-xl border border-line bg-paper-2 p-1.5 sm:grid-cols-7">
             {assets.map((a) => (
@@ -262,6 +278,16 @@ export default function ImagePicker({
             素材库还是空的，点「上传」选一张，会自动收进素材库。
           </p>
         ))}
+      {platformLibOpen && platformAssetPurpose ? (
+        <PlatformLocationAssetPicker
+          purpose={platformAssetPurpose}
+          onClose={() => setPlatformLibOpen(false)}
+          onPick={(url) => {
+            setPlatformLibOpen(false)
+            void applyUrl(url)
+          }}
+        />
+      ) : null}
       <input
         ref={ref}
         type="file"
@@ -272,18 +298,29 @@ export default function ImagePicker({
           e.target.value = ""
         }}
       />
-      {/* 功能注释：生图弹窗复用 AiImageGen → platformImageGen，采用后写回 onChange 并关闭 */}
+      {/* 功能注释：生图弹窗先编辑再点「开始生成」；默认不 autoRun / autoApply */}
       {genOpen && genOpts && (
-        <Modal title="生图" onClose={() => setGenOpen(false)}>
+        <Modal
+          title="生图"
+          locked={genPhase === "busy"}
+          onClose={() => {
+            setGenOpen(false)
+            setGenPhase("edit")
+          }}
+        >
           <AiImageGen
             bare
             size={genOpts.size ?? (scenePortrait ? SCENE_PORTRAIT_GEN_SIZE : undefined)}
             placeholder={genOpts.placeholder}
             initialPrompt={genOpts.initialPrompt}
-            autoRun={genOpts.autoRun !== false && Boolean(String(genOpts.initialPrompt ?? "").trim())}
-            autoApply={genOpts.autoApply !== false && Boolean(String(genOpts.initialPrompt ?? "").trim())}
+            autoRun={genOpts.autoRun === true}
+            autoApply={genOpts.autoApply === true}
+            onPhaseChange={setGenPhase}
             onPick={(url) => {
-              void applyUrl(url).then(() => setGenOpen(false))
+              void applyUrl(url).then(() => {
+                setGenOpen(false)
+                setGenPhase("edit")
+              })
             }}
           />
         </Modal>

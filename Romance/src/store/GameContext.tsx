@@ -9,7 +9,7 @@ import { carShopId, allRooms } from "../game/mud";
 import { syncChildNpcs } from "../game/pregnancy";
 import { getWorldStartRoom } from "../mods/registry";
 import {
-  DEFAULT_WORLD, activateWorld, saveAddons, feature, getWorldEventGroups, getOpeningDirective, getWorld, getWorldId, term, getWorldLookRules,
+  DEFAULT_WORLD, activateWorld, saveAddons, feature, getWorldEventGroups, getOpeningDirective, getWorld, getWorldId, getWorldStorylines, term, getWorldLookRules,
   beginAuthorPreviewMod, endAuthorPreviewMod,
 } from "../mods/registry";
 import {
@@ -18,6 +18,7 @@ import {
 } from "../lib/authorPreview";
 import { markAuthorPreviewReady, resetAuthorPreviewBoot } from "../lib/authorPreviewBoot.ts";
 import { clearAuthorPreviewSave } from "../lib/storage";
+import { buildOpeningPlotPrompt, DEFAULT_OPENING_DIRECTIVE } from "../lib/openingPlotPrompt";
 import { activeLookKey, resolveLook, type LookPatch } from "../lib/plotLook";
 import { pickArrival, resolveStart, startPreset } from "../game/mapStart";
 import { spotName } from "../game/mapedits";
@@ -95,7 +96,7 @@ import {
   type GigCat,
 } from "../game/logic";
 import { gossipTick } from "../game/npcKnowledge";
-import { withNewcomers } from "../game/npcIntro";
+import { meetPerson, withNewcomers } from "../game/npcIntro";
 import { commitWorldBook } from "../game/worldbookPick";
 import { recordTimeline } from "../game/timeline";
 import { syncFactions, setFactionRoomPath, factionFlag, REP_MIN, REP_MAX } from "../game/factions";
@@ -129,8 +130,8 @@ import type { Character as SimChar } from "../game/logic";
 export const BRANCH_POINTS = 0; // 地点内的事件 / 拾取 / 活动都不扣行动点（只有换地点扣）
 import { GameCtx, LiveCtx, type Ctx, type Screen, type Popup, type WeekReport, type Diary } from "./gameCtx";
 import { attrCap, setWalletSource, setContentMoneyLabelSource, wallet, walletDef, setCustomAttr, customAttrValue } from "../game/wallet";
-import { getWorldSlot } from "../mods/registry";
 import { playerAttrsFromCreatorDefs } from "../lib/creationOpening";
+import { attrStartValue, clampAttrStart } from "../lib/attrInit";
 import { clampStat } from "../game/data";
 import { applyPhoneStep, markActsSent, pendingActs, type PhoneInterrupt } from "../game/phoneLink";
 import { addIncomingReq } from "../components/phone/wxFeatures";
@@ -418,9 +419,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
     activateWorld(s.worldId ?? DEFAULT_WORLD, saveAddons(s));
     const snapshot = s.privateData;
     s = { ...s, worldId: getWorld().worldId, addons: [...getWorld().addonIds], entSplit: true, privateData: undefined };
-    const g = syncSimToPlayer(ensureLoveAxis(ensureSim(s)));
+    // 功能注释：读档进局同样默认竖屏；局内改横屏只在本会话生效，下次进来仍竖屏
+    const g0 = syncSimToPlayer(ensureLoveAxis(ensureSim(s)));
+    const g = { ...g0, playPrefs: { ...g0.playPrefs, orient: "portrait" as const } };
     syncFactions(g);
     syncEngineRules(g);
+    setTheme({ ...themeRef.current, orient: "portrait", orientLock: false });
     // 切档 5 步：① 保存当前档 ② 清内存 ③ 换 saveId ④ 读新档私有数据（快照恢复）⑤ 重渲染
     switchSave(g.id, {
       snapshot,
@@ -437,7 +441,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         if (g.ended && !g.endingGrade) queueMicrotask(() => void endManuallyRef.current?.("ai"));
       },
     });
-  }, []);
+  }, [setTheme]);
 
   // 持久化：立即更新内存态，并（若开启自动存档）以 300ms 防抖异步写入 localforage。
   // localforage 写入是异步且带全局异常兜底的，因此这里同步返回 true 表示「已受理」。
@@ -694,11 +698,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
       if (startDate) g.startDate = startDate;
       if (opts?.playPrefs) {
-        g.playPrefs = opts.playPrefs;
-        // 功能注释：建角游玩偏好的屏幕方向写入主题，开局即生效、不再弹首次方向窗
-        const orient = opts.playPrefs.orient === "landscape" ? "landscape" : "portrait";
-        setTheme({ ...themeRef.current, orient, orientLock: false });
+        // 功能注释：每局进游玩强制竖屏 9:16；横屏只在局内「游戏设置」里由玩家再改
+        g.playPrefs = { ...opts.playPrefs, orient: "portrait" };
+      } else {
+        g.playPrefs = { ...g.playPrefs, orient: "portrait" };
       }
+      setTheme({ ...themeRef.current, orient: "portrait", orientLock: false });
       g = tickPlayerAge(g, 0).g; // 年龄随日历：开局当天定基准年，免得第一次推进恰好跨过生日时漏长一岁
       if (worldRules) g.worldRules = worldRules;
       // 自定义角色属性：只来自创作者「建角」列表；开局值固定或代码掷骰（只掷一次，不交给 AI）；不预填八维
@@ -707,7 +712,19 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const defs = Array.isArray(defsRaw) ? defsRaw : [];
       if (defs.length) {
         g.attrDefs = defs.map((d) => ({ ...d }));
-        const fromCreator = playerAttrsFromCreatorDefs(defs);
+        // 功能注释：建角页骰子已掷过则沿用预览值（夹进 min/max），不再入局重掷
+        const preview = opts?.cattrStarts;
+        const fromCreator = preview
+          ? defs.map((d) => ({
+              key: d.id,
+              label: d.label,
+              value: typeof preview[d.id] === "number" && Number.isFinite(preview[d.id])
+                ? clampAttrStart(d, preview[d.id])
+                : attrStartValue(d),
+              max: d.max ?? 0,
+              icon: d.icon,
+            }))
+          : playerAttrsFromCreatorDefs(defs);
         const starts = Object.fromEntries(fromCreator.map((a) => [a.key, a.value]));
         const creatorKeys = new Set(fromCreator.map((a) => a.key));
         g.sim = { ...g.sim, cattrs: starts };
@@ -858,13 +875,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
         },
       });
       if (autosaveOnRef.current) autosaveDebounced(g); // 新局立即覆盖自动存档，避免刷新后读回已结局的旧局
-      // 功能注释：开幕页只播编辑器开场白；此处只登记开局剧情提示，等 go("game") 后再 runTurn
-      pendingOpeningPromptRef.current =
-        routeEvent +
-        `【开局地点】主角此刻身处「${g.world.location}」，序章收束时她必须就在这里，world.location 保持为「${g.world.location}」。\n【序章篇幅与文风】正文约 450~550 字（不含 JSON），写成自然连贯的开场白；严禁写章节标题、时间标题。文风追求生活化、烟火气与真实人情味——严禁拿父母的职业硬凑生硬隐喻（例如严禁写「我修桥铺路，桥塌了有人查」「那地方能有根么」这类说教比喻），严禁「把这话说得很轻，轻得像怕惊着她」「摔得没个数」「舞台上的那口气，只有站上去的人才懂」之类矫揉造作的 AI 腔调。\n` +
-        getOpeningDirective(
-          "游戏开始，请写主角的开局序幕。用自然平实、有生活细节的笔触，简要把她的家境与成长底色带出：父母若有劝阻或牵挂，应当是日常餐桌、收拾行李或电话里的朴素家常话（如心疼她作息不规律、怕她受委屈、关心房租够不够），绝对不要用父母的职业去生造比喻或说大道理。随后将画面自然落回此刻——她已经在当前住处安顿下来。结尾停在一个具体的画面或小钩子上（例如手机刚弹出的一条消息、桌上没拆的快递、楼下传来的动静、今天约好要见的人），由人物动作或台词自然收住；严禁用旁白对玩家总结或喊话，如「今天没什么硬性的事」「这一天怎么过，全看你自己」「新的一天开始了」「属于她的故事才刚刚开始」「接下来会发生什么呢」。最后给出 3~4 个具体可玩的行动选项。",
-        );
+      // 功能注释：开幕页只播编辑器开场白；开局正文提示按世界观/开局人际/主线拼装，无父母设定时禁止爸妈来电模板
+      pendingOpeningPromptRef.current = buildOpeningPlotPrompt({
+        location: g.world.location,
+        routeEvent,
+        game: g,
+        storylines: getWorldStorylines(),
+        directive: getOpeningDirective(DEFAULT_OPENING_DIRECTIVE),
+      });
       setScreen("opening");
     },
     [],
@@ -920,6 +938,28 @@ export function GameProvider({ children }: { children: ReactNode }) {
     },
     [busy, runTurn],
   );
+
+  /**
+   * 功能注释：剧情初遇点「结识」——先记入人脉，再幕后开一回合结识剧情；
+   * 要求 AI 写互动并给该人物 memory 摘要，供之后回忆。
+   */
+  const meetNewcomer = useCallback((personId: string) => {
+    const g0 = gameRef.current;
+    if (!g0 || busy) return;
+    const n = g0.npcs.find((x) => x.id === personId);
+    if (!n) return;
+    const met = meetPerson(g0, personId);
+    persist(met);
+    const who = n.name;
+    const idLine = (n.identity || n.relation || "").trim() || "身份不详";
+    const bioHint = n.bio?.trim() ? `已知简介：${n.bio.trim().slice(0, 120)}` : "";
+    void runTurn(
+      met,
+      `【结识 · ${who}】主角决定正式结识「${who}」（${idLine}）。${bioHint}\n请演绎两人初次正式相识的这一幕：寒暄、彼此印象与当下场景，写成可接续的剧情正文；并为 ${who} 写 npc_changes（id 用 ${personId}，含 interaction 与一段 memory 摘要这次结识，便于日后回忆）。不要另建新角色，不要改好感以外未提及的数值。`,
+      false,
+      true,
+    );
+  }, [busy, persist, runTurn]);
 
   const setPlayerAvatar = useCallback(
     (dataUrl: string) => {
@@ -2520,10 +2560,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       startNew, loadState, submit, setPlayerAvatar, setNpcAvatar, setNpcPortrait, setRelValue, setRomanceable, setNpcDim, saveNow, regenerate, saveEpoch, canRetry, retryPopup, autosaveOn, setAutosaveOn, endManually, setWorldRules, setWorldBook, setMapEdits, setFixedEvents, setRandomGroups, previewFixedEvent,
       branchAct, leaveBranch, setSchedule, runWeekNow, endDayNow, advanceNow, equipTitle, simVisit, simEvent, simMove, simPickup, simUseItem, simGiftItem, simActivity, simBuy, simAskIntel, simNegotiate, simAskOffers, simChooseArc, simConfirmDating,
       projApply, projSign, projNegotiate, projPromote, projWorkday, simContact, simConfess, simBridge, simWedding, simDivorce, simMeetProducer, simAskProducer,
-      personaDeclare, personaAct, crisisResolve, resolveBreach, buyCar, sellCar, setActiveCar, xianyuList, xianyuDelist, xianyuSell, commitGame, patchGame, phoneExchange,
+      personaDeclare, personaAct, crisisResolve, resolveBreach, buyCar, sellCar, setActiveCar, xianyuList, xianyuDelist, xianyuSell, commitGame, patchGame, phoneExchange, meetNewcomer,
       playSpotEvent, playQuest, toggleFav, removeJournal, exportJournal,
     }),
-    [cfg, setCfg, theme, setTheme, lookRes, lookPreview, screen, go, game, busy, lastChanges, popup, startNew, loadState, submit, setPlayerAvatar, setNpcAvatar, setNpcPortrait, setRelValue, setRomanceable, setNpcDim, saveNow, regenerate, saveEpoch, canRetry, retryPopup, autosaveOn, setAutosaveOn, endManually, setWorldRules, setWorldBook, setMapEdits, setFixedEvents, setRandomGroups, previewFixedEvent, setSchedule, runWeekNow, endDayNow, advanceNow, equipTitle, simVisit, simEvent, simMove, simPickup, simUseItem, simGiftItem, simActivity, simBuy, simAskIntel, simNegotiate, simAskOffers, simChooseArc, simConfirmDating, projApply, projSign, projNegotiate, projPromote, projWorkday, simContact, simConfess, simBridge, simWedding, simDivorce, simMeetProducer, simAskProducer, personaDeclare, personaAct, crisisResolve, resolveBreach, buyCar, sellCar, setActiveCar, xianyuList, xianyuDelist, xianyuSell, commitGame, patchGame, phoneExchange, playSpotEvent, playQuest, toggleFav, removeJournal, exportJournal],
+    [cfg, setCfg, theme, setTheme, lookRes, lookPreview, screen, go, game, busy, lastChanges, popup, startNew, loadState, submit, setPlayerAvatar, setNpcAvatar, setNpcPortrait, setRelValue, setRomanceable, setNpcDim, saveNow, regenerate, saveEpoch, canRetry, retryPopup, autosaveOn, setAutosaveOn, endManually, setWorldRules, setWorldBook, setMapEdits, setFixedEvents, setRandomGroups, previewFixedEvent, setSchedule, runWeekNow, endDayNow, advanceNow, equipTitle, simVisit, simEvent, simMove, simPickup, simUseItem, simGiftItem, simActivity, simBuy, simAskIntel, simNegotiate, simAskOffers, simChooseArc, simConfirmDating, projApply, projSign, projNegotiate, projPromote, projWorkday, simContact, simConfess, simBridge, simWedding, simDivorce, simMeetProducer, simAskProducer, personaDeclare, personaAct, crisisResolve, resolveBreach, buyCar, sellCar, setActiveCar, xianyuList, xianyuDelist, xianyuSell, commitGame, patchGame, phoneExchange, meetNewcomer, playSpotEvent, playQuest, toggleFav, removeJournal, exportJournal],
   );
 
   return (

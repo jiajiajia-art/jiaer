@@ -28,16 +28,18 @@
 }
 
 /* --- Page Layout --- */
-/* 功能注释：上/下避让由 AppPageShell 的 --app-navbar-offset / --app-bottom-nav-offset 负责，这里不再叠 margin-bottom 垫底栏 */
+/* 功能注释：上/下避让由 AppPageShell 负责；纵向堆叠让页脚落底部，主内容占满壳宽 */
 .mainContent {
     color: #FFFFFF;
     display: flex;
+    flex-direction: column;
     margin: 0;
     padding: 0;
     background: var(--creator-bg);
 }
 
 .main {
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
     width: min(var(--app-desktop-shell-max), calc(100% - 2 * var(--app-desktop-gutter)));
@@ -47,6 +49,7 @@
     box-sizing: border-box;
     overflow: visible;
     position: relative;
+    min-width: 0;
 }
 
 /* --- User Profile Section --- */

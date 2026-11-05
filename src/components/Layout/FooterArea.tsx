@@ -1,90 +1,92 @@
-import React from "react";
-import { useTranslation } from "react-i18next";
-import styles from "./FooterArea.module.css";
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { resolvePrivacyPolicyUrl } from '../../lib/privacyPolicy';
+import { BusinessCoopModal, FeedbackModal } from './CustomerServiceModals';
+import styles from './FooterArea.module.css';
 
 /** Vite BASE_URL 已带尾斜杠（如 /funloom/），路径不要再以 / 开头 */
 const asset = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`;
 
+const DOUYIN_URL =
+  'https://www.douyin.com/user/MS4wLjABAAAAODeFjCvA6hdYLlVHj9do37xFvJnHD4cJN6oM3iVcwgKPfwlQLNzmfC7sUKi68ovD';
+const XIAOHONGSHU_URL = 'https://xhslink.cn/o/46uCiOChUjn';
+/** 功能注释：招聘外链可后续换成其他平台，仅改此常量 */
+const BOSS_ZHIPIN_URL =
+  'https://www.zhipin.com/gongsi/d32e1e36dbdaad4f1HN62Ni5ElE~.html?ka=company-intro';
+
 /**
- * 功能注释：全站页脚；文案走 i18n，切换英文时与顶栏语言一致。
+ * 功能注释：全站底部页脚——品牌 / 关注 / 加入 / 联系；业务合作与反馈入口开弹窗落库。
  */
 const FooterArea: React.FC = () => {
-    const { t } = useTranslation();
+  const { t } = useTranslation();
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [businessOpen, setBusinessOpen] = useState(false);
+  const privacyUrl = resolvePrivacyPolicyUrl({ darkMode: true });
 
-    return (
-        <div className={styles.footer}>
-            <div className={styles.container}>
+  return (
+    <>
+      <footer className={styles.footer} data-site-footer="1">
+        <div className={styles.container}>
+          <div className={styles.brandCol}>
+            <img src={asset('data/assets/LOGO2.png')} alt="funloom" className={styles.logo} />
+            <p className={styles.tagline}>{t('footer.tagline')}</p>
+            <p className={styles.legal}>
+              <span>{t('footer.copyright')}</span>
+              <a className={styles.legalLink} href={privacyUrl} target="_blank" rel="noreferrer">
+                {t('footer.privacyPolicy')}
+              </a>
+              <a className={styles.legalLink} href={privacyUrl} target="_blank" rel="noreferrer">
+                {t('footer.userAgreement')}
+              </a>
+            </p>
+          </div>
 
-                {/* 左侧 Logo */}
-                <div className={styles.logoArea}>
-                    {/* 功能注释：与顶栏 Navbar 共用 LOGO2（白字），暗底可读 */}
-                    <img src={asset('data/assets/LOGO2.png')} alt="funloom" className={styles.logo} />
-                </div>
-
-
-                <div className={styles.shareSection}>
-                    <div className={styles.followSection}>
-                        <div className={styles.iconRow}>
-                            <div className={styles.title}>{t('footer.shareTo')}</div>
-                            <div className={styles.iconItem}>
-                                <img src={asset('data/assets/微信1.png')} alt="wechat" />
-                                <span>{t('footer.wechat')}</span>
-                            </div>
-                            <div className={styles.iconItem}>
-                                <img src={asset('data/assets/微博1.png')} alt="weibo" />
-                                <span>{t('footer.weibo')}</span>
-                            </div>
-                            <div className={styles.iconItem}>
-                                <img src={asset('data/assets/QQ1.png')} alt="qq" />
-                                <span>{t('footer.qq')}</span>
-                            </div>
-                            <div className={styles.iconItem}>
-                                <img src={asset('data/assets/抖音1.png')} alt="douyin" />
-                                <span>{t('footer.douyin')}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className={styles.joinSection}>
-                        <div className={styles.block}>
-                            <div className={styles.title}>{t('footer.followUs')}</div>
-                            <div className={styles.item}>
-                                <img src={asset('data/assets/微信2.png')} alt="wechat" />
-                                <span>{t('footer.wechat')}</span>
-                            </div>
-                            <div className={styles.item}>
-                                <img src={asset('data/assets/小红书2.png')} alt="xiaohongshu" />
-                                <span>{t('footer.xiaohongshu')}</span>
-                            </div>
-                            <div className={styles.item}>
-                                <img src={asset('data/assets/微博2.png')} alt="weibo" />
-                                <span>{t('footer.weibo')}</span>
-                            </div>
-                        </div>
-                        <div className={styles.block}>
-                            <div className={styles.title}>{t('footer.joinUs')}</div>
-                            <div className={styles.item}>{t('footer.socialRecruit')}</div>
-                            <div className={styles.item}>{t('footer.campusRecruit')}</div>
-                            <div className={styles.item}>{t('footer.intlRecruit')}</div>
-                        </div>
-
-                        <div className={styles.block}>
-                            <div className={styles.title}>{t('footer.contactUs')}</div>
-                            <div className={styles.item}>{t('footer.customerService')}</div>
-                            <div className={styles.item}>{t('footer.businessCoop')}</div>
-                            <div className={styles.item}>{t('footer.procurement')}</div>
-                        </div>
-
-                        <div className={styles.block}>
-                            <div className={styles.title}>{t('footer.feedback')}</div>
-                            <div className={styles.item}>{t('footer.optimization')}</div>
-                            <div className={styles.item}>{t('footer.improvement')}</div>
-                        </div>
-                    </div>
-                </div>
+          <div className={styles.linkCols}>
+            <div className={styles.block}>
+              <div className={styles.title}>{t('footer.followUs')}</div>
+              <a className={styles.item} href={DOUYIN_URL} target="_blank" rel="noreferrer">
+                {t('footer.douyin')}
+              </a>
+              <a className={styles.item} href={XIAOHONGSHU_URL} target="_blank" rel="noreferrer">
+                {t('footer.xiaohongshu')}
+              </a>
             </div>
+
+            <div className={styles.block}>
+              <div className={styles.title}>{t('footer.joinUs')}</div>
+              <a className={styles.item} href={BOSS_ZHIPIN_URL} target="_blank" rel="noreferrer">
+                {t('footer.socialRecruit')}
+              </a>
+              <a className={styles.item} href={BOSS_ZHIPIN_URL} target="_blank" rel="noreferrer">
+                {t('footer.campusRecruit')}
+              </a>
+            </div>
+
+            <div className={styles.block}>
+              <div className={styles.title}>{t('footer.contactUs')}</div>
+              <button
+                type="button"
+                className={styles.itemButton}
+                onClick={() => setBusinessOpen(true)}
+              >
+                {t('footer.businessCoop')}
+              </button>
+              <button
+                type="button"
+                className={styles.itemButton}
+                onClick={() => setFeedbackOpen(true)}
+              >
+                {t('footer.feedbackEntry')}
+              </button>
+            </div>
+          </div>
         </div>
-    );
+      </footer>
+
+      <FeedbackModal isOpen={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
+      <BusinessCoopModal isOpen={businessOpen} onClose={() => setBusinessOpen(false)} />
+    </>
+  );
 };
 
 export default FooterArea;

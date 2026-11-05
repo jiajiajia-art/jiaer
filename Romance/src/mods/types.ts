@@ -111,6 +111,8 @@ export type FeatureFlags = {
   pregnancy?: boolean;
   cars?: boolean;
   transport?: boolean; // 交通系统：出行方式 / 车费 / 耗时差异；关闭=点哪去哪，免费
+  /** 关系玩法（表白 / 婚礼 / 牵线 / 伴侣加成）；须添加 pack-relations，未声明=关 */
+  relationsPlay?: boolean;
 };
 
 /* UI 术语：键为引擎内部概念，值为本世界的叫法。
@@ -247,7 +249,7 @@ export type ContentSlots = {
   allowance?: import("../game/npcKnowledge").AllowanceSlot;
   avatars?: import("../lib/types").AvatarSlot; // 头像库：池开关 + 本剧匹配优先级（私人/公共优先 · 通用兜底）；随模组导入导出
   play?: import("../lib/types").PlaySlot; // 开局游玩偏好（模式 / 叙事视角）· 年龄随日历
-  contacts?: import("../game/contacts").ContactsSlot; // 关系档位 + 卡片数值（嵌人物上方；数值条数不限、可隐藏）
+  contacts?: import("../game/contacts").ContactsSlot; // 关系档位（嵌人物上方；卡片数值已下线）
   tuning?: import("../game/data").TuningSlot; // 引擎规则：评级概率 / 倍率、休息减压、课程与打工倍率、通用课程等级 // 父母生活费（家境档位 → 金额 / 协商率；未声明=关闭）
 };
 export const SLOT_KEYS = [

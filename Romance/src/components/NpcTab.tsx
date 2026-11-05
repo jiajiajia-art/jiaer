@@ -13,7 +13,7 @@ import { ActionTile } from "./personFields";
 import { canConfess, relOf } from "../game/relations";
 import { ROMANCE_ARCS, arcView, canRomance, hasPartner, romanceFixedOff, isFamilyNpc } from "../game/logic";
 import { RELATIONS, MOVIE_TITLES, COMPANIES, companyMeta, creditsOf, resumeOf, romanticCapOf, type FamilyRef, type ResumeEvent } from "../worlds/star2005/content";
-import { worldPersonById as profileOf } from "../mods/registry";
+import { feature, worldPersonById as profileOf } from "../mods/registry";
 import { locOf } from "../game/mud";
 import { homePlaceOf } from "../game/homeSpot";
 import { contactsCfg, contactsTitle, groupContactsByStage, metricKey, visibleContactMetrics, type ContactIcon as ContactIconKind, type ContactSrc, type ContactStage } from "../game/contacts";
@@ -207,6 +207,8 @@ function NpcBridge({ pid, name }: { pid: string; name: string }) {
   const [mode, setMode] = useState<BridgeMode>("");
   const [msg, setMsg] = useState("");
   if (!game?.sim) return null;
+  // 功能注释：未安装关系玩法包时不出现牵线入口
+  if (!feature("relationsPlay")) return null;
   const s = game.sim;
   const list = game.npcs.filter((n) => n.id !== pid && profileOf(n.id)?.status !== "dead");
   const modes = bridgeModes(), order = Object.keys(modes);
@@ -348,6 +350,8 @@ export default function NpcTab() {
     const view = arc ? arcView(s, pid) : null;
     const confess = canConfess(s, pid);
     const romanceOn = canRomance(s, pid); // 可攻略开关；家人 / 子女恒为 false
+    // 功能注释：表白/婚礼/牵线入口仅在已添加「关系玩法」包时出现
+    const relationsPlayOn = feature("relationsPlay");
     const romanceFixed = romanceFixedOff(s, pid);
     // 常驻地点：编辑器里选定的优先，其次内容池覆盖 / 由据点推导；未知则「尚未得知」
     const home = homePlaceOf(game, npc, profile);
@@ -453,17 +457,19 @@ export default function NpcTab() {
           ) : (
             <ProfileGroup title="关系经营"><div className="space-y-2.5 py-2.5">
               {arc && romanceOn && <p className="mb-1 text-[11.5px] font-semibold text-gold">固定角色 · 专属情感长线</p>}
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <div className={`grid grid-cols-1 gap-2 ${relationsPlayOn ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
                 <ActionTile icon={IconSend} tone="coral" title={busy ? "生成中…" : "私下联系"} sub="约 TA 单独见面聊聊" onClick={() => simContact(pid, npc.name)} disabled={busy} />
                 <ActionTile icon={IconScroll} title="履历" sub="生平往来" onClick={() => setResumeOpen(true)} />
-                <ActionTile
-                  icon={IconHeart}
-                  tone="coral"
-                  title="表白"
-                  sub="与TA关系更进一步"
-                  onClick={() => { if (confess.ok) simConfess(pid, npc.name); }}
-                  disabled={!confess.ok || busy || !romanceOn || isDating}
-                />
+                {relationsPlayOn && (
+                  <ActionTile
+                    icon={IconHeart}
+                    tone="coral"
+                    title="表白"
+                    sub="与TA关系更进一步"
+                    onClick={() => { if (confess.ok) simConfess(pid, npc.name); }}
+                    disabled={!confess.ok || busy || !romanceOn || isDating}
+                  />
+                )}
               </div>
               {hasContact(pid)
                 ? <p className="text-[11.5px] text-ink-soft">已有联系方式 · 可在手机里找到 TA</p>
@@ -477,7 +483,7 @@ export default function NpcTab() {
                   </button>
                 )}
               <ProfileMemory pid={pid} button />
-              {game.npcs.some((n) => n.id === pid) && <NpcBridge pid={pid} name={npc.name} />}
+              {relationsPlayOn && game.npcs.some((n) => n.id === pid) && <NpcBridge pid={pid} name={npc.name} />}
               {arc && view && romanceOn && (
                 <div className="mt-3 border-t border-dashed border-line pt-3">
                   <p className="mb-2 text-[12px] text-ink-soft">专属状态「{view.buff}」· 需长线经营，火候到了自会水到渠成。</p>
@@ -490,7 +496,7 @@ export default function NpcTab() {
                         <p className="rounded-xl border border-dashed border-coral/40 bg-coral/[0.04] px-3 py-2 text-[13px] text-ink-soft">{arcHint(view.today)}</p>
                       )}
                     </div>
-                  ) : isDating ? (
+                  ) : isDating && relationsPlayOn ? (
                     <div className="space-y-2"><p className="text-center text-[12px] text-coral">状态「{view.buff}」生效中</p><Wedding pid={pid} name={npc.name} /></div>
                   ) : view.datingReady ? (
                     <p className="rounded-xl border border-dashed border-coral bg-coral/10 px-3 py-3 text-center text-[13px] text-coral">{DATING_HINT}</p>
@@ -499,12 +505,12 @@ export default function NpcTab() {
                   )}
                 </div>
               )}
-              {!arc && romanceOn && isDating && (
+              {!arc && romanceOn && isDating && relationsPlayOn && (
                 <div className="mt-3 border-t border-dashed border-line pt-3">
                   <Wedding pid={pid} name={npc.name} />
                 </div>
               )}
-              {!arc && romanceOn && !isDating && !confess.ok && (
+              {!arc && romanceOn && !isDating && !confess.ok && relationsPlayOn && (
                 <div className="mt-2">
                   <Confess pid={pid} name={npc.name} />
                 </div>

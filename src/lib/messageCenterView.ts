@@ -11,7 +11,8 @@ export type MessageFeedItemType =
   | 'favorite_game_updated'
   | 'report_received'
   | 'report_resolved'
-  | 'moderation';
+  | 'moderation'
+  | 'feedback_reply';
 
 const WEEKDAY_LABELS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'] as const;
 
@@ -70,7 +71,7 @@ export function truncateMessagePreview(text: string, maxLen = 36): string {
 
 /** 功能注释：消息类型归区；安全/违规为新建分区 */
 export function resolveMessageListSection(itemType: MessageFeedItemType): MessageListSectionKey {
-  if (itemType === 'announcement') return 'system';
+  if (itemType === 'announcement' || itemType === 'feedback_reply') return 'system';
   if (itemType === 'favorite_game_updated') return 'interaction';
   if (
     itemType === 'report_received'

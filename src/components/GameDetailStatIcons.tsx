@@ -67,3 +67,18 @@ export function DetailStarIcon(props: IconProps) {
     </svg>
   );
 }
+
+/** 功能注释：评分入口描边星，与点赞/收藏区分 */
+export function DetailRateIcon(props: IconProps) {
+  return (
+    <svg {...baseProps} {...props}>
+      <path
+        d="M12 3.2l2.35 4.9 5.4.6-4.05 3.75 1.15 5.35L12 15.2l-4.85 2.6 1.15-5.35L4.25 8.7l5.4-.6L12 3.2z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </svg>
+  );
+}

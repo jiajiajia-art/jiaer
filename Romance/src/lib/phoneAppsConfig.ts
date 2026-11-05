@@ -81,7 +81,7 @@ export function installedPlatformAppIds(overrides?: PhoneAppDef[] | null): strin
   }
   // 旧契约：以官方 11 + 常见目录默认预装，再被 avail 覆盖
   const legacyDefaults = new Map<string, PhoneAppAvailSimple>([
-    ...OFFICIAL_PLATFORM_APP_IDS.map((id) => [id, "preinstall" as PhoneAppAvailSimple]),
+    ...OFFICIAL_PLATFORM_APP_IDS.map((id): [string, PhoneAppAvailSimple] => [id, "preinstall"]),
     ["xianyu", "store"],
     ["peek", "preinstall"],
     ["couple", "preinstall"],

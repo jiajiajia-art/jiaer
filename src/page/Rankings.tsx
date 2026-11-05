@@ -189,7 +189,6 @@ const Rankings: React.FC = () => {
     const { i18n } = useTranslation();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<RankingTab>('all');
-    const [isMobilePage, setIsMobilePage] = useState(window.innerWidth <= 768);
     const [apiTabState, setApiTabState] = useState<Record<Exclude<RankingTab, 'all'>, TabState>>(
         () => API_TAB_KEYS.reduce((acc, key) => {
             acc[key] = { data: [], loading: false, error: null, loaded: false };
@@ -214,12 +213,6 @@ const Rankings: React.FC = () => {
             tabAbortRef.current?.abort();
             allAbortRef.current?.abort();
         };
-    }, []);
-
-    useEffect(() => {
-        const handleResize = () => setIsMobilePage(window.innerWidth <= 768);
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     const isZh = useMemo(() => i18n.language.startsWith('zh'), [i18n.language]);
@@ -585,7 +578,8 @@ const Rankings: React.FC = () => {
                 )}
             </div>
 
-        {!isMobilePage && <FooterArea />}
+        {/* 功能注释：页脚 PC/手机均放页面最底部，不再按端隐藏 */}
+        <FooterArea />
         </AppPageShell>
     );
 };

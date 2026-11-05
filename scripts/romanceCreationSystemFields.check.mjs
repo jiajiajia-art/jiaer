@@ -90,7 +90,7 @@ test("玩家建角页_只渲染系统四项和作者字段且必填会阻止继�
   assert.match(runtime, /const systemFieldsComplete =/);
   assert.match(runtime, /const customFieldsComplete = CUSTOM\.every/);
   assert.match(runtime, /disabled=\{step\.k === "who" && !whoComplete\}/);
-  assert.match(runtime, /who: <div className="space-y-3">\{stepWho\}\{stepAttrs\}\{stepCustom\}<\/div>/);
+  assert.match(runtime, /who: <div className="space-y-2">\{stepWho\}\{stepAttrs\}\{stepCustom\}<\/div>/);
   assert.doesNotMatch(runtime, /stepTalent|stepFamily/);
   assert.doesNotMatch(runtime, /shown\(/);
   for (const label of ["出道身份", "玩家自填字段", "外形风格", "父亲职业", "母亲职业", "出身阶层"]) {

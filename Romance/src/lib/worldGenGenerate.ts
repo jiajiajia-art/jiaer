@@ -2,7 +2,7 @@
  * 生成世界 · 按「大类」真实 AI 生成管线。
  * 禁止用定时器或本地模板冒充生成；默认走平台 /api/romance/world-gen/complete（运营 LLM + 积分），
  * 不读局内「AI 配置」个人 Key。
- * 同类模组（如人物线路 / 人物 / 关系玩法）并成一次请求；进度按勾选细项展示明细（正在写什么 / 结果摘要）。
+ * 同类模组（如人物线路 / 人物 / 人脉）并成一次请求；关系玩法并入「已添加的玩法」大类；进度按勾选细项展示明细。
  * 依赖：软分层（骨架 → 地点 → 人物与线路 → 剧情）；同层最多 WORLD_GEN_PARALLEL_LIMIT 个大类并行。
  * 速度：先出骨架再按需补长文；全选时条数与文长瘦身，禁止项项打满。
  */
@@ -21,6 +21,7 @@ import {
 } from "./worldGenWizard.ts";
 import { worldGenAiPolishPrompt, worldGenForbidPrompt } from "./worldGenSettingField.ts";
 import { platformNpcTagsPromptLine } from "./npcTags.ts";
+import { improperPersonNameReason, sanitizeNpcFactionId } from "./personName.ts";
 import { normalizeStartMetList } from "./normalizeStartMet.ts";
 import { asModArray } from "./asModArray.ts";
 import { asNonEmptyTrimmed, asTrimmedString } from "./asTrimmedString.ts";
@@ -45,6 +46,11 @@ import {
   WORLD_GEN_CUSTOM_ATTRS_COUNT,
 } from "./worldGenCreationAttrs.ts";
 import { normalizeWorldGenStorylinesPatch } from "./worldGenStorylines.ts";
+import {
+  normalizeWorldGenFixedEventsPatch,
+  softValidateWorldGenFixedEvents,
+  WORLD_GEN_FIXED_EVENTS_COUNT,
+} from "./worldGenFixedEvents.ts";
 import {
   worldGenBatchNeedsEnrich,
   worldGenLeanLimits,
@@ -77,6 +83,14 @@ export {
   normalizeWorldGenQuestNodes,
   normalizeWorldGenStorylinesPatch,
 } from "./worldGenStorylines.ts";
+
+export {
+  normalizeWorldGenFixedEvent,
+  normalizeWorldGenFixedEffects,
+  normalizeWorldGenFixedEventsPatch,
+  softValidateWorldGenFixedEvents,
+  WORLD_GEN_FIXED_EVENTS_COUNT,
+} from "./worldGenFixedEvents.ts";
 
 /**
  * 功能注释：同层大类并行上限。同类已并入单次请求，这里只限制不同大类的并发。
@@ -273,7 +287,7 @@ export function pickWorldGenScrollTargetId(
 
 /**
  * 功能注释：生成进度与请求的「大类」。同类编辑器模组并成一次 AI 请求，进度条按大类计。
- * 例：人物线路 + 人物 + 关系玩法 + 人脉 →「人物与线路」一次请求。
+ * 例：人物线路 + 人物 + 人脉 →「人物与线路」一次请求；关系玩法并入「已添加的玩法」。
  */
 export type WorldGenBatchCategory = {
   id: string;
@@ -289,7 +303,7 @@ export const WORLD_GEN_BATCH_CATEGORIES: readonly WorldGenBatchCategory[] = Obje
   Object.freeze({
     id: "characters",
     name: "人物与线路",
-    stepIds: Object.freeze(["hub:paths", "npcs", "relations", "contacts"]),
+    stepIds: Object.freeze(["hub:paths", "npcs", "contacts"]),
   }),
   Object.freeze({ id: "fixedEvents", name: "固定事件", stepIds: Object.freeze(["fixedEvents"]) }),
   Object.freeze({ id: "storylines", name: "剧情线", stepIds: Object.freeze(["storylines"]) }),
@@ -316,6 +330,7 @@ export const WORLD_GEN_BATCH_CATEGORIES: readonly WorldGenBatchCategory[] = Obje
       "meals",
       "titles",
       "pregnancy",
+      "relations",
     ]),
   }),
   Object.freeze({
@@ -602,11 +617,12 @@ function sanitizeWorldGenPatchShape(patch: Record<string, unknown>): Record<stri
     out.tuning = Object.keys(tuning).length ? tuning : undefined;
     if (out.tuning === undefined) delete out.tuning;
   }
-  // 功能注释：人脉页只按关系阶段分组；AI / 旧模板夹带的组织分组与阶段分组限定不得写回。
+  // 功能注释：人脉页只按关系阶段分组；卡片数值已下线；AI / 旧模板夹带的组织分组不得写回。
   if (out.contacts && typeof out.contacts === "object" && !Array.isArray(out.contacts)) {
     const contacts = { ...(out.contacts as Record<string, unknown>) };
     delete contacts.groups;
     delete contacts.orgs;
+    contacts.metrics = [];
     if (Array.isArray(contacts.stages)) {
       contacts.stages = contacts.stages.map((row) => {
         if (!row || typeof row !== "object" || Array.isArray(row)) return row;
@@ -618,6 +634,13 @@ function sanitizeWorldGenPatchShape(patch: Record<string, unknown>): Record<stri
     out.contacts = contacts;
   }
   if (Array.isArray(out.npcs)) {
+    const factionIds = new Set(
+      (Array.isArray((out.creation as { startFactions?: { id?: string }[] } | undefined)?.startFactions)
+        ? (out.creation as { startFactions: { id?: string }[] }).startFactions
+        : [])
+        .map((f) => String(f?.id ?? "").trim())
+        .filter(Boolean),
+    );
     out.npcs = (out.npcs as unknown[]).map((row) => {
       if (!row || typeof row !== "object") return row;
       const n = { ...(row as Record<string, unknown>) };
@@ -629,6 +652,12 @@ function sanitizeWorldGenPatchShape(patch: Record<string, unknown>): Record<stri
       }
       if ("bio" in n) n.bio = asTrimmedString(n.bio);
       if ("role" in n) n.role = asTrimmedString(n.role);
+      // 功能注释：生成人物 kind 一律 roam；不要写 summary；势力只保留作品内仍存在的 id
+      n.kind = "roam";
+      delete n.summary;
+      const fac = sanitizeNpcFactionId(n.factionId, factionIds);
+      if (fac) n.factionId = fac;
+      else delete n.factionId;
       return n;
     });
   }
@@ -649,6 +678,14 @@ function sanitizeWorldGenPatchShape(patch: Record<string, unknown>): Record<stri
     if (plot.storylines) out.storylines = plot.storylines;
     else delete out.storylines;
     delete out.sidelines;
+  }
+  // 功能注释：固定事件收成完整叙事条（有提示词+属性变化、无选项）；半成品与 events[] 库灌入丢掉
+  if ("fixedEvents" in out || "events" in out) {
+    const fixed = normalizeWorldGenFixedEventsPatch(out);
+    if (fixed.fixedEvents) out.fixedEvents = fixed.fixedEvents;
+    else delete out.fixedEvents;
+    delete out.events;
+    delete out.eventGroups;
   }
   return out;
 }
@@ -976,9 +1013,9 @@ const MODULE_FIELD_HINT: Record<string, string> = {
   platformAudioRefs: "platformAudioRefs[]（只写 platform: 前缀的平台曲目 id，可空，勿编造；不要写入 bgm 或 audioRefs）",
   avatars: "avatars{pools?,publicRandom?,match?}",
   creation: `customAttrs[]：必须正好 ${WORLD_GEN_CUSTOM_ATTRS_COUNT} 条数值属性，每条必有明确 label（禁止「未命名」/空名）、desc（属性说明，按属性名写一句）、id/min/max/init；可含 tiers[{min,label}]；勿单独生成 fameTiers；不要预填空壳属性。creation.fields / creation.builtin（系统字段固定为姓名/性别/年龄/生日，只能改显示名；creation.fields 仅按作品明确需要生成，禁止预填身份、描述、家世、父母职业、风格、职业、星座或玩家自填占位）`,
-  npcs: "npcs[{id,name,role,kind,home,roam,bio,gender,age,tags?,relation?,metStart?,wxStart?,factionId?}]：人数见瘦身配额；每名必须 name、gender（男/女/其他）、age、bio（按配额短小传，禁止空串）；tags 优先用平台常用短标签；父母/同学/老板等统一建角色；用 relation、metStart、wxStart 配关系；禁止 familyWx/familyVoices 特例；不要写 works/代表作除非设定明确是演艺圈",
-  relations: "relations{confess?,wedding?,bridge?:{off?,perDay?},partnerPerks?}（内置②角色；勿写介绍认识/三人同行/撮合/劝和/挑拨等 bridge.modes 预置）",
-  contacts: "contacts{stages:[{id,label,min,tone?}],metrics:[{src,icon,tone?,hidden?}]}（嵌人物上方；metrics 条数自定可 hidden；禁止写死仅两项、禁止 groups/orgs/stage.groups）",
+  npcs: "npcs[{id,name,role,kind,home,roam,bio,gender,age,tags?,relation?,metStart?,wxStart?,factionId?}]：人数见瘦身配额；每名必须有名有姓的 name（如沈晚晴、林夏；禁止太皇太后/厨娘/掌门等纯身份占姓名，身份写到 role 或 bio）、gender（男/女/其他）、age、bio（按配额短小传，禁止空串）；kind 一律 roam；factionId 只能填本作品 creation.startFactions 里仍存在的 id，没有可选势力就省略，禁止编造 faction-royal 等失效 id；不要写 summary；tags 优先用平台常用短标签；父母/同学/老板等统一建角色；用 relation、metStart、wxStart 配关系；禁止 familyWx/familyVoices 特例；不要写 works/代表作除非设定明确是演艺圈",
+  relations: "relations{confess?,wedding?,bridge?:{off?,perDay?},partnerPerks?}（须已添加关系玩法包；勿写介绍认识/三人同行/撮合/劝和/挑拨等 bridge.modes 预置）",
+  contacts: "contacts{stages:[{id,label,min,tone?}]}（嵌人物上方；禁止写 metrics/卡片数值；禁止 groups/orgs/stage.groups）",
   startResources: "startMoney（非负数字）、moneyLabel（货币名称，如 元/灵石/星币，必填，开局页与局内文案共用）",
   trainings: "trainings[]",
   sideJobs: "sideJobs[]、weekendActs[]",
@@ -994,7 +1031,7 @@ const MODULE_FIELD_HINT: Record<string, string> = {
   lore: "worldBook[]（旧详细设定已并入世界书：title/content/keywords/bindRooms/bindNpcs）",
   festivals: "worldBook[]（旧节日已并入世界书）",
   cover: "cover{}",
-  fixedEvents: "fixedEvents[]、events[]",
+  fixedEvents: `fixedEvents[]：必须正好 ${WORLD_GEN_FIXED_EVENTS_COUNT} 条完整叙事事件；每条必有 id/name/prompt（≥20字）/effects（至少1条属性变化）/trigger{kind:"auto"}；可含 time/conds/nextIds；禁止 choices、禁止选项文案、禁止 enter/choice 等非自动触发；不要写 events[]`,
   storylines: "storylines[]（仅 1 条主线，nodes 须有 name/desc/conds，禁止空「新节点」、禁止 rewards/unlockIds）、endings[]、timeLimit、gradeDims；禁止写 sidelines（支线留给创作者手建）",
   lookRules: "lookRules[]",
   playModInstalls: "playModInstalls[]（可空）",
@@ -1191,13 +1228,15 @@ export function softValidateBatchPatch(stepIds: readonly string[], patch: Record
   ) {
     return "补丁与模组无关（仅 features）";
   }
-  // 功能注释：生成人物时姓名/性别/年龄/小传必须齐；瘦身后小传宜短，骨架阶段 ≥40 字即可
+  // 功能注释：生成人物时须有名有姓 + 性别/年龄/小传齐；瘦身后小传宜短，骨架阶段 ≥40 字即可
   if (ids.includes("npcs") && Array.isArray(patch.npcs)) {
     for (const row of patch.npcs) {
       if (!row || typeof row !== "object" || Array.isArray(row)) continue;
       const n = row as Record<string, unknown>;
       const name = typeof n.name === "string" ? n.name.trim() : "";
       if (!name) return "人物缺少姓名";
+      const badName = improperPersonNameReason(name);
+      if (badName) return badName;
       const gender = typeof n.gender === "string" ? n.gender.trim() : "";
       if (!gender) return `人物「${name}」缺少性别`;
       if (typeof n.age !== "number" || !Number.isFinite(n.age)) return `人物「${name}」缺少年龄`;
@@ -1243,6 +1282,11 @@ export function softValidateBatchPatch(stepIds: readonly string[], patch: Record
     if (attrs.some((a) => !asTrimmedString(a.desc))) {
       return "建角属性缺少属性说明 desc";
     }
+  }
+  // 功能注释：固定事件必须正好 5 条完整叙事（有提示词+属性变化、无选项），半成品打回重试
+  if (ids.includes("fixedEvents")) {
+    const fixedErr = softValidateWorldGenFixedEvents(patch);
+    if (fixedErr) return fixedErr;
   }
   return null;
 }
@@ -1432,7 +1476,7 @@ ${ctx || "（尚无其它模组）"}
 ${leanBlock}
 
 要求：内容须能被编辑器继续手改；地点/人物 id 与上下文已有 id 对齐；不要编造无法访问的外链大图。
-${needPrompt ? `本批必须：1) content.prompt.scriptTone 按配额写出系统提示词（硬上限 ${SCRIPT_TONE_MAX}，禁止留空、禁止只粘贴上方「故事设定」原文）；2) manifest.description 写约 ${WORLD_DESC_SUMMARY_TARGET} 字玩家可见简介。\n` : ""}${stepIds.includes("travelTime") ? `本批必须写 content.startDate，格式严格 YYYY.MM.DD（例 2024.03.15），按上方故事设定与已生成上下文的时代/人物年龄选取，禁止留空、禁止中文日期、禁止只写 travel 不写 startDate。\n` : ""}${stepIds.includes("creation") ? `本批 customAttrs 必须正好 ${WORLD_GEN_CUSTOM_ATTRS_COUNT} 条：每条有贴合本世界观的中文名称与 desc（属性说明），禁止「未命名」、禁止空 label、禁止只写 id 不写名称、禁止再输出第 4 条空属性。\n` : ""}${stepIds.includes("startResources") ? `本批必须写 content.startMoney（非负）与 content.moneyLabel（货币名，如 元/灵石），禁止只写金额不写货币名。\n` : ""}${stepIds.includes("npcs") ? `${platformNpcTagsPromptLine()}\n人物每条必须含 name、gender、age、bio（按配额），禁止留给创作者手填空资料。` : ""}`,
+${needPrompt ? `本批必须：1) content.prompt.scriptTone 按配额写出系统提示词（硬上限 ${SCRIPT_TONE_MAX}，禁止留空、禁止只粘贴上方「故事设定」原文）；2) manifest.description 写约 ${WORLD_DESC_SUMMARY_TARGET} 字玩家可见简介。\n` : ""}${stepIds.includes("travelTime") ? `本批必须写 content.startDate，格式严格 YYYY.MM.DD（例 2024.03.15），按上方故事设定与已生成上下文的时代/人物年龄选取，禁止留空、禁止中文日期、禁止只写 travel 不写 startDate。\n` : ""}${stepIds.includes("creation") ? `本批 customAttrs 必须正好 ${WORLD_GEN_CUSTOM_ATTRS_COUNT} 条：每条有贴合本世界观的中文名称与 desc（属性说明），禁止「未命名」、禁止空 label、禁止只写 id 不写名称、禁止再输出第 4 条空属性。\n` : ""}${stepIds.includes("startResources") ? `本批必须写 content.startMoney（非负）与 content.moneyLabel（货币名，如 元/灵石），禁止只写金额不写货币名。\n` : ""}${stepIds.includes("fixedEvents") ? `本批 fixedEvents 必须正好 ${WORLD_GEN_FIXED_EVENTS_COUNT} 条完整叙事事件：每条含 name、trigger{kind:"auto"}、prompt（≥20字场景与冲突）、effects（至少1条属性变化）；禁止 choices/选项文案/选项类型；禁止写 events[]；骨架阶段也不得留空提示词。\n` : ""}${stepIds.includes("npcs") ? `${platformNpcTagsPromptLine()}\n人物每条必须含有名有姓的 name（如沈晚晴；禁止太皇太后/厨娘等纯身份）、gender、age、bio（按配额）；kind = "roam"；不要写 summary；factionId 仅填本作品仍存在的势力，没有则省略；禁止写 metrics/卡片数值。禁止留给创作者手填空资料。` : ""}`,
     },
   ];
 }
@@ -1507,10 +1551,11 @@ export async function generateWorldGenBatch(opts: GenerateBatchOpts): Promise<{ 
       limits,
       skeletonPatch,
     });
+    // 功能注释：固定事件须一次写出 5 条完整叙事，骨架阶段也给足 token，避免截断成半成品
     const maxTokens =
       phase === "skeleton"
-        ? Math.min(5000, worldGenBatchMaxTokens(stepIds))
-        : Math.min(7000, worldGenBatchMaxTokens(stepIds));
+        ? Math.min(stepIds.includes("fixedEvents") ? 8000 : 5000, worldGenBatchMaxTokens(stepIds))
+        : Math.min(stepIds.includes("fixedEvents") ? 8000 : 7000, worldGenBatchMaxTokens(stepIds));
     const fn = makeComplete(maxTokens);
     let points = 0;
     const out = await withWorldGenRetries(async () => {

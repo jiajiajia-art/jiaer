@@ -53,6 +53,8 @@ export interface RatingsListData {
     rating_value: number;
     comment_content: string;
     created_at: string;
+    /** 已修改次数；≥1 表示不可再改 */
+    edit_count?: number;
   } | null;
   ratingsComments: {
     list: RatingItem[];

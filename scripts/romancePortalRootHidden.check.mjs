@@ -40,7 +40,7 @@ test("romancePortalRoot_运行时优先预览壳再选可见平台壳", async ()
     sel: ["[data-platform-ui='1']", ".romance-platform"],
   });
   const preview = el({
-    className: "author-preview-runtime min-h-screen",
+    className: "author-preview-runtime flex h-[100dvh] flex-col overflow-hidden",
     attrs: { "data-author-preview-shell": "1" },
     sel: ["[data-author-preview-shell='1']"],
   });

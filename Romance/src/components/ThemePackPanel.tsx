@@ -8,7 +8,7 @@ import { readUserCss, setUserCss } from "./CustomCssPanel";
  * 可导出分享、导入一键套用，并在本地收藏多套随时切换。不含版式方向（属设备偏好）。 */
 const FORMAT = "star-theme-pack";
 const LIB_KEY = "star:themepacks";
-const THEME_KEYS = ["mode", "accent", "skin", "font", "topbar", "topbarText", "topbarDiy", "dialogStyle", "dialogRadius", "dialogHeight", "bubbleStyle", "avatarShape", "avatarFrame", "sceneBg", "sceneDim", "sceneBlur", "sceneTone", "portrait", "free", "navActive", "dialogDiy", "lookRules", "icons", "cover"] as const;
+const THEME_KEYS = ["mode", "accent", "skin", "font", "storyBgAlpha", "topbar", "topbarText", "topbarDiy", "dialogStyle", "dialogRadius", "dialogHeight", "bubbleStyle", "avatarShape", "avatarFrame", "sceneBg", "sceneDim", "sceneBlur", "sceneTone", "portrait", "free", "navActive", "dialogDiy", "lookRules", "icons", "cover"] as const;
 
 export type ThemePack = {
   format: typeof FORMAT; version: 1;

@@ -19,8 +19,10 @@ const TYPE_STYLE: Record<EntityType, { color: string }> = {
 
 /* 静态名录（地点/物品在内容池里恒定） */
 /* 地点 / 物品随生效世界变化：按需读取，不在模块加载期求值 */
-const locEntries = () => getWorldLocations().filter((l) => l.name.length >= 2).map((l) => ({ name: l.name, type: "loc" as const, id: l.id }));
-const itemEntries = () => getWorldItems().filter((it) => it.name.length >= 2).map((it) => ({ name: it.name, type: "item" as const, id: it.id }));
+/** 功能注释：AI 脏数据常缺 name；禁止 .name.length 炸预览/剧情 EntityText useMemo */
+const namedEnough = (name: unknown): name is string => typeof name === "string" && name.length >= 2;
+const locEntries = () => getWorldLocations().filter((l) => namedEnough(l.name)).map((l) => ({ name: l.name, type: "loc" as const, id: l.id }));
+const itemEntries = () => getWorldItems().filter((it) => namedEnough(it.name)).map((it) => ({ name: it.name, type: "item" as const, id: it.id }));
 
 function escapeRe(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -191,7 +193,9 @@ export function EntityText({ text, className }: { text: string; className?: stri
   const open = useOpenEntity();
 
   const { re, lookup } = useMemo(() => {
-    const people = (game?.npcs ?? []).filter((n) => n.name.length >= 2).map((n) => ({ name: n.name, type: "person" as const, id: n.id }));
+    // 功能注释：存档/草稿 NPC 可能无 name；filter 内读 .length 会让作者预览整页 ErrorBoundary
+    const npcList = Array.isArray(game?.npcs) ? game.npcs : [];
+    const people = npcList.filter((n) => namedEnough(n.name)).map((n) => ({ name: n.name, type: "person" as const, id: n.id }));
     const all = [...people, ...locEntries(), ...itemEntries()];
     // 同名去重（人物优先），并按长度降序，保证最长匹配优先
     const map = new Map<string, EntityRef>();

@@ -1,8 +1,8 @@
 /**
- * 作者预览顶栏 · Studio Tally 美学：贴顶全宽控制条 + REC 指示灯，避免浮层卡片感。
- * 不写正式存档；退出 / 重开 / 清档走 authorPreview 事件。
+ * 作者预览顶栏 · Studio Tally 美学：贴顶全宽控制条 + REC 指示灯。
+ * 功能注释：占文档流（非 fixed），下方预览区用剩余高度自适应，避免挡住游戏顶栏/底栏。
  */
-import { useEffect, useSyncExternalStore, type CSSProperties } from "react";
+import { useSyncExternalStore, type CSSProperties } from "react";
 import {
   getAuthorPreviewSession,
   requestAuthorPreviewClearSave,
@@ -13,20 +13,6 @@ import {
 
 export default function AuthorPreviewChrome() {
   const session = useSyncExternalStore(subscribeAuthorPreview, getAuthorPreviewSession, () => null);
-  const barH = "48px";
-
-  // 功能注释：把顶栏高度写到 :root，供下方 PlayScreens 的 padding-top 对齐（fixed 条本身不占文档流）
-  useEffect(() => {
-    if (!session) {
-      document.documentElement.style.removeProperty("--apc-h");
-      return;
-    }
-    document.documentElement.style.setProperty("--apc-h", barH);
-    return () => {
-      document.documentElement.style.removeProperty("--apc-h");
-    };
-  }, [session, barH]);
-
   if (!session) return null;
 
   const title = (session.mod.name || session.mod.id || "未命名模组").trim();
@@ -50,11 +36,11 @@ export default function AuthorPreviewChrome() {
         }
       `}</style>
       <div
-        className="apc-root pointer-events-none fixed inset-x-0 top-0 z-[80]"
+        className="apc-root relative z-[80] w-full shrink-0"
         role="region"
         aria-label="作者测试控制条"
+        data-author-preview-chrome="1"
       >
-        {/* 贴顶全宽：无圆角浮卡、无外边距，像导播台 tally 灯条 */}
         <div
           className="pointer-events-auto border-b"
           style={{
@@ -64,7 +50,6 @@ export default function AuthorPreviewChrome() {
           }}
         >
           <div className="mx-auto flex h-12 w-full max-w-[1200px] items-center gap-3 px-3 sm:px-4">
-            {/* REC 指示 */}
             <div className="flex shrink-0 items-center gap-2" title="独立测试存档，不会写入正式玩家数据">
               <span
                 aria-hidden
@@ -108,7 +93,6 @@ export default function AuthorPreviewChrome() {
               <ApcBtn onClick={() => requestAuthorPreviewEnd()} label="返回编辑器" tone="primary" />
             </div>
           </div>
-
         </div>
       </div>
     </>

@@ -10,13 +10,18 @@ import test from 'node:test';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const romance = join(root, 'Romance/src');
 
-test('worldGenBatch_人物线路人物关系须同属人物与线路大类', async () => {
+test('worldGenBatch_人物线路人物人脉同属人物与线路_关系玩法归已添加的玩法', async () => {
   const gen = await import(pathToFileURL(join(romance, 'lib/worldGenGenerate.ts')).href);
-  const batches = gen.resolveWorldGenBatches(['hub:paths', 'npcs', 'relations', 'contacts']);
-  assert.equal(batches.length, 1);
-  assert.equal(batches[0].id, 'characters');
-  assert.equal(batches[0].name, '人物与线路');
-  assert.deepEqual([...batches[0].stepIds].sort(), ['contacts', 'hub:paths', 'npcs', 'relations']);
+  const charBatches = gen.resolveWorldGenBatches(['hub:paths', 'npcs', 'contacts']);
+  assert.equal(charBatches.length, 1);
+  assert.equal(charBatches[0].id, 'characters');
+  assert.equal(charBatches[0].name, '人物与线路');
+  assert.deepEqual([...charBatches[0].stepIds].sort(), ['contacts', 'hub:paths', 'npcs']);
+  const mixed = gen.resolveWorldGenBatches(['hub:paths', 'npcs', 'relations', 'contacts']);
+  assert.equal(mixed.length, 2);
+  assert.deepEqual(mixed.map((b) => b.id).sort(), ['characters', 'playMods']);
+  const play = mixed.find((b) => b.id === 'playMods');
+  assert.deepEqual([...play.stepIds], ['relations']);
 });
 
 test('worldGenBatch_世界规则时间与推进建角须分列大类', async () => {
@@ -33,7 +38,7 @@ test('worldGenBatch_世界规则时间与推进建角须分列大类', async () 
     batches.map((b) => b.name),
     ['世界规则', '时间与推进', '建角'],
   );
-  assert.equal(gen.worldGenBatchMaxTokens(['hub:paths', 'npcs', 'relations']), 12000);
+  assert.equal(gen.worldGenBatchMaxTokens(['hub:paths', 'npcs']), 12000);
   assert.equal(gen.worldGenBatchMaxTokens(['travelTime']), 4000);
 });
 

@@ -277,24 +277,26 @@ test('FooterArea_应对齐全站暗色壳避免底部白条', () => {
   assert.match(tsx, /LOGO2\.png/);
   assert.doesNotMatch(tsx, /LOGO\.png/);
   assert.match(navbar, /LOGO2\.png/);
-  /* 功能注释：PC 端内容块整体居中；手机端仍隐藏页脚 */
-  assert.match(css, /\.container\s*\{[\s\S]*?width:\s*fit-content/);
+  /* 功能注释：页脚全宽底部；壳宽居中；手机端同样显示 */
+  assert.match(css, /\.container\s*\{[\s\S]*?width:\s*min\(var\(--app-desktop-shell-max\)/);
   assert.match(css, /\.container\s*\{[\s\S]*?margin:\s*0\s+auto/);
-  assert.match(css, /\.shareSection\s*\{[\s\S]*?flex:\s*0\s+1\s+auto/);
-  assert.doesNotMatch(
-    css,
-    /\.container\s*\{[^}]*width:\s*min\(var\(--app-desktop-shell-max\)/,
-  );
+  assert.match(css, /\.linkCols\s*\{/);
   assert.match(
+    css,
+    /@media screen and \(max-width:\s*768px\)[\s\S]*?\.footer\s*\{[\s\S]*?display:\s*flex/,
+  );
+  assert.doesNotMatch(
     css,
     /@media screen and \(max-width:\s*768px\)[\s\S]*?\.footer\s*\{[\s\S]*?display:\s*none/,
   );
+  assert.match(css, /\.footer\s*\{[\s\S]*?width:\s*100%/);
+  assert.match(css, /\.footer\s*\{[\s\S]*?flex:\s*0\s+0\s+auto/);
   /* 功能注释：页脚文案须走 i18n，禁止硬编码中文 */
   assert.match(tsx, /useTranslation/);
-  assert.match(tsx, /t\('footer\.shareTo'\)/);
-  assert.match(tsx, /t\('footer\.feedback'\)/);
-  assert.doesNotMatch(tsx, /分享到：/);
-  assert.doesNotMatch(tsx, /发表建议/);
+  assert.match(tsx, /t\('footer\.tagline'\)/);
+  assert.match(tsx, /t\('footer\.feedbackEntry'\)/);
+  assert.doesNotMatch(tsx, /让每一个世界都可以被游玩/);
+  assert.doesNotMatch(tsx, /意见反馈/);
 });
 
 test('CustomIFCreate_编辑页应对齐世界观暗色卡表单', () => {

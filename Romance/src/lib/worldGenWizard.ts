@@ -236,9 +236,8 @@ const MOD_STEPS: WorldGenEditorStep[] = [
   { id: "creation", group: "① 基础", name: "建角", desc: "建角字段：系统四项 + 文本/单选/数值/日期/货币（含开局资金）；数值可配分档（多少分叫什么）", contentIds: ["characters", "world"], source: "mod" },
   { id: "startResources", group: "① 基础", name: "开局资金", desc: "已并入建角字段列表的货币项", contentIds: ["world"], source: "mod" },
 
-  // ② 角色（「人物」「人物线路」已在 Hub）
+  // ② 角色（「人物」「人物线路」已在 Hub；关系玩法已迁至①基础玩法 Mod）
   { id: "npcs", group: "② 角色", name: "人物（模组库）", desc: "统一角色表：名字 · 关系 · 开局认识/联系人 · 地点 · 时间线 · 音色", contentIds: ["characters"], source: "mod" },
-  { id: "relations", group: "② 角色", name: "关系玩法", desc: "表白门槛 · 婚礼费用与好感 · 伴侣加成（内置角色配置；勿预置牵线方式）", contentIds: ["characters"], source: "mod" },
   { id: "contacts", group: "② 角色", name: "关系档位与卡片数值", desc: "嵌在开局人物上方 · 档位分段 · 卡片数值条数自定可隐藏", contentIds: ["characters"], source: "mod" },
 
   // ③ 养成（名气分档已并入建角属性；头衔改为玩法 Mod）
@@ -269,6 +268,7 @@ const MOD_STEPS: WorldGenEditorStep[] = [
   { id: "meals", group: "① 基础", name: "每周吃什么", desc: "伙食档位 · 每周花费 · 压力 / 能力 / 气色", contentIds: ["world"], source: "mod" },
   { id: "titles", group: "① 基础", name: "头衔", desc: "须添加「头衔包」后配置 · 达标条件 · 品阶", contentIds: ["world", "mainPlot"], source: "mod" },
   { id: "pregnancy", group: "① 基础", name: "孕育", desc: "孕期 · 受孕率 · 察觉时间 · 孩子名字池", contentIds: ["characters", "world"], source: "mod" },
+  { id: "relations", group: "① 基础", name: "关系玩法", desc: "须添加「关系玩法」包后配置 · 表白门槛 · 婚礼 · 牵线 · 伴侣加成（勿预置牵线方式）", contentIds: ["characters"], source: "mod" },
 
   // ⑤ 美化：开局封面 / 手机应用配置 / 皮肤美化不进 AI 勾选（引擎默认 + 剧本名作封面标题）
   // 功能注释：开场白默认进基础生成；自定义 HTML 开场页仍由编辑器 OpeningStyleStudio 手改，不交本步
