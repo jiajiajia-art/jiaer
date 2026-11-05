@@ -50,5 +50,5 @@ test('Create_海外回跳应查单Toast而不是只打开充值弹窗', () => {
   const zh = readFileSync(join(root, 'src/i18n/locales/zh.json'), 'utf8');
   assert.match(createPage, /resolveOverseasPayReturnStatus/);
   assert.match(createPage, /toast\.success\(t\('rechargeModal\.overseasPaySuccess'\)\)/);
-  assert.match(zh, /"overseasPaySuccess":\s*"支付成功，钻石已到账"/);
+  assert.match(zh, /"overseasPaySuccess":\s*"支付成功，权益已到账"/);
 });

@@ -57,6 +57,14 @@ export interface DailyTaskRewardIssue {
     [key: string]: unknown;
 }
 
+export interface DailyTaskMakeupCardReward {
+    current: number;
+    target: number;
+    completed: boolean;
+    claimable: boolean;
+    claimed: boolean;
+}
+
 export interface DailyTaskPayload {
     summary?: Record<string, unknown> | null;
     tasks?: unknown[] | null;
@@ -66,6 +74,8 @@ export interface DailyTaskPayload {
     list?: unknown[] | null;
     items?: unknown[] | null;
     rewardsIssued?: DailyTaskRewardIssue[] | null;
+    makeupCardReward?: DailyTaskMakeupCardReward | null;
+    makeupCardCount?: number;
     [key: string]: unknown;
 }
 
@@ -449,7 +459,24 @@ export interface NormalizedDailyTaskPayload {
     tasks: DailyTaskItem[];
     updatedTaskKeys: string[];
     rewardsIssued: DailyTaskRewardIssue[];
+    makeupCardReward: DailyTaskMakeupCardReward;
+    makeupCardCount: number;
 }
+
+const normalizeMakeupCardReward = (payload: DailyTaskPayload): DailyTaskMakeupCardReward => {
+    const record = toRecord(payload.makeupCardReward) || {};
+    const target = Math.max(1, Math.floor(toFiniteNumber(record.target, 4)) || 4);
+    const current = Math.min(target, Math.max(0, Math.floor(toFiniteNumber(record.current))));
+    const claimed = toBoolean(record.claimed);
+    const completed = toBoolean(record.completed) || current >= target;
+    return {
+        current,
+        target,
+        completed,
+        claimable: !claimed && (toBoolean(record.claimable) || completed),
+        claimed,
+    };
+};
 
 export const createDefaultDailyTaskList = (): DailyTaskItem[] =>
     DAILY_TASK_TEMPLATES.map((template) => buildDefaultTask(template));
@@ -467,6 +494,8 @@ export const normalizeDailyTaskPayload = (payload: DailyTaskPayload | null | und
             tasks: defaultTasks,
             updatedTaskKeys: [],
             rewardsIssued: [],
+            makeupCardReward: normalizeMakeupCardReward({}),
+            makeupCardCount: 0,
         };
     }
 
@@ -678,5 +707,7 @@ export const normalizeDailyTaskPayload = (payload: DailyTaskPayload | null | und
         tasks: [...fixedTasks, ...dynamicTasks],
         updatedTaskKeys: Array.from(updatedTaskKeySet),
         rewardsIssued: collectRewardsIssued(payload),
+        makeupCardReward: normalizeMakeupCardReward(payload),
+        makeupCardCount: Math.max(0, Math.floor(toFiniteNumber(payload.makeupCardCount))),
     };
 };

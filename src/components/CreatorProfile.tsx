@@ -11,6 +11,7 @@ import {
 } from 'react-icons/md';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/useAuthStore';
+import { copyTextToClipboard } from '../utils/clipboard';
 
 export interface CreatorProfileData {
     phoneNumber?: string;
@@ -336,7 +337,7 @@ const CreatorProfileView: React.FC<CreatorProfileViewProps> = ({ data, onEdit })
     const handleCopyGroupNo = async () => {
         if (data.groupNo) {
             try {
-                await navigator.clipboard.writeText(data.groupNo);
+                await copyTextToClipboard(data.groupNo);
                 toast.success(t('createGame.qqGroupCopied'));
             } catch {
                 toast.error(t('profile.copyFailed'));

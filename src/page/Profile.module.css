@@ -960,6 +960,83 @@
     border-bottom: none;
 }
 
+.makeupCardReward {
+    position: relative;
+    z-index: 1;
+    flex-shrink: 0;
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    background: rgba(18, 18, 21, 0.56);
+    opacity: 0.58;
+    transition: opacity 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.makeupCardRewardReady {
+    opacity: 1;
+    border-color: rgba(255, 64, 103, 0.55);
+    background: linear-gradient(135deg, rgba(255, 47, 91, 0.16), rgba(255, 255, 255, 0.04));
+}
+
+.makeupCardRewardHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.makeupCardRewardHeader div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.makeupCardRewardHeader strong {
+    color: #fff;
+    font-size: 14px;
+}
+
+.makeupCardRewardHeader span,
+.makeupCardRewardHeader b {
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.makeupCardProgress {
+    height: 5px;
+    margin: 10px 0;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.makeupCardProgress span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #ff315f, #ff6f8e);
+    transition: width 0.2s ease;
+}
+
+.makeupCardClaimButton {
+    width: 100%;
+    min-height: 36px;
+    border: 0;
+    border-radius: 999px;
+    background: #ff315f;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.makeupCardClaimButton:disabled {
+    background: rgba(255, 255, 255, 0.09);
+    color: rgba(255, 255, 255, 0.42);
+    cursor: not-allowed;
+}
+
 .dailyTaskItemClaimed {
     opacity: 0.62;
 }
@@ -1605,98 +1682,4 @@
 .editNameConfirmButton:disabled {
     opacity: 0.7;
     cursor: not-allowed;
-}
-
-/* ========================================
-   Tab 切换（嵌在 functionList 顶部，同一面板）
-   ======================================== */
-
-.profileTabContainer {
-    display: flex;
-    gap: 0;
-    padding: 0 4px;
-    margin: 0 4px 8px;
-    background: transparent;
-    border: none;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 0;
-    box-shadow: none;
-    overflow: visible;
-}
-
-.profileTab {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 12px 12px 14px;
-    background: transparent;
-    border: none;
-    font-size: 14px;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.4);
-    cursor: pointer;
-    transition: color 0.2s ease;
-    position: relative;
-}
-
-.profileTab:not(:last-child)::after {
-    display: none;
-}
-
-.profileTab:hover {
-    color: rgba(255, 255, 255, 0.75);
-    background: transparent;
-}
-
-.profileTabActive {
-    color: #ffffff;
-    background: transparent;
-}
-
-.profileTabActive:hover {
-    color: #ffffff;
-    background: transparent;
-}
-
-.profileTabActive::after {
-    content: '';
-    position: absolute;
-    left: 18%;
-    right: 18%;
-    bottom: 0;
-    height: 2px;
-    border-radius: 2px;
-    background: #FF3B61;
-}
-
-.profileTab svg {
-    font-size: 15px;
-}
-
-.creatorProfileSlot {
-    padding: 4px 4px 8px;
-}
-
-/* 响应式 */
-@media (max-width: 768px) {
-    .profileTabContainer {
-        margin: 0 2px 6px;
-        padding: 0 2px;
-    }
-
-    .profileTab {
-        padding: 10px 8px 12px;
-        font-size: 13px;
-        gap: 4px;
-    }
-
-    .profileTab svg {
-        font-size: 14px;
-    }
-
-    .creatorProfileSlot {
-        padding: 2px 2px 6px;
-    }
 }

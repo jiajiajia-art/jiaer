@@ -1,431 +1,1001 @@
 .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(5px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
     z-index: 2000;
-    animation: fadeIn 0.3s ease-out;
-    margin: 0;
-    padding: 16px;
-    box-sizing: border-box;
+    display: grid;
+    place-items: center;
     width: 100vw;
     height: 100vh;
     height: 100dvh;
+    padding: 24px;
+    box-sizing: border-box;
     overflow: hidden;
+    background: rgba(7, 7, 9, 0.78);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    animation: overlayIn 180ms ease-out;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+.embeddedRoot {
+    width: 100%;
+}
+
+.content.embeddedContent {
+    width: 100%;
+    max-height: none;
+    overflow: visible;
+    color: inherit;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    animation: none;
+}
+
+.content.embeddedContent::before {
+    display: none;
+}
+
+.embeddedContent .scrollArea {
+    padding: 0;
+    overflow: visible;
+}
+
+.embeddedContent .feedbackPanel {
+    min-height: 140px;
 }
 
 .content {
     position: relative;
-    width: min(360px, calc(100vw - 24px));
-    max-height: calc(100dvh - 32px - env(safe-area-inset-bottom));
-    border-radius: 14px;
-    background:
-        linear-gradient(0deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15)),
-        linear-gradient(180deg, #343434 0%, rgba(52, 52, 52, 0.78) 100%);
-    box-sizing: border-box;
-    border: 0.68px solid transparent;
-    backdrop-filter: blur(47px);
-    -webkit-backdrop-filter: blur(47px);
-    box-shadow: none;
-    animation: slideUp 0.3s ease-out;
+    isolation: isolate;
     display: flex;
     flex-direction: column;
-    padding: 18px 16px 16px;
+    width: min(760px, calc(100vw - 48px));
+    max-height: min(780px, calc(100dvh - 48px));
     overflow: hidden;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 24px;
+    background:
+        radial-gradient(circle at 88% 12%, rgba(255, 59, 97, 0.18), transparent 34%),
+        linear-gradient(145deg, rgba(45, 45, 50, 0.98), rgba(22, 22, 26, 0.98));
+    box-shadow: 0 30px 90px rgba(0, 0, 0, 0.52), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    animation: modalIn 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .content::before {
     content: '';
     position: absolute;
     inset: 0;
-    border-radius: 14px;
-    padding: 0.68px;
-    background: linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.55) 0%,
-        rgba(255, 255, 255, 0.18) 60%,
-        rgba(255, 255, 255, 0) 90%
-    );
-    -webkit-mask:
-        linear-gradient(#fff 0 0) content-box,
-        linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
+    z-index: -1;
     pointer-events: none;
-    z-index: 3;
+    background: linear-gradient(115deg, rgba(255, 255, 255, 0.06), transparent 38%);
 }
 
-.content::after {
-    content: '';
-    position: absolute;
-    right: -40px;
-    bottom: -50px;
-    width: 160px;
-    height: 160px;
-    border-radius: 50%;
-    /* 减弱粉光，避免底部格子被染色后看起来颜色不一 */
-    background: radial-gradient(circle, rgba(255, 59, 97, 0.08) 0%, transparent 70%);
-    pointer-events: none;
-    z-index: 0;
-}
-
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.contentExpanded {
+    max-height: calc(100dvh - 32px);
 }
 
 .closeButton {
     position: absolute;
-    top: 14px;
-    left: 12px;
-    z-index: 4;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    background: transparent;
-    border: none;
-    color: #ffffff;
+    top: 18px;
+    right: 18px;
+    z-index: 5;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
     padding: 0;
-    transition: opacity 0.2s ease;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 28px;
+    font-weight: 300;
+    line-height: 1;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    transition: color 160ms ease, transform 160ms ease;
 }
 
 .closeButton:hover {
-    opacity: 0.75;
-}
-
-.closeIcon {
-    display: block;
-    width: 10px;
-    height: 10px;
-    border-left: 2px solid #ffffff;
-    border-bottom: 2px solid #ffffff;
-    transform: rotate(45deg);
-    margin-left: 4px;
+    color: #fff;
+    transform: rotate(4deg);
 }
 
 .header {
-    position: relative;
-    z-index: 1;
-    text-align: left;
-    margin: 2px 0 12px;
-    padding: 0 8px 0 4px;
-    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 26px 78px 18px 28px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .title {
-    margin: 0 0 12px;
-    color: #ffffff;
-    font-size: 17px;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    text-align: center;
-}
-
-.streakLine {
-    margin: 0 0 6px;
-    color: rgba(255, 255, 255, 0.92);
-    font-size: 15px;
-    font-weight: 500;
-    line-height: 1.4;
-    text-align: left;
-}
-
-.streakNum {
-    display: inline-block;
-    margin: 0 4px;
-    color: #FF3B61;
+    margin: 0;
+    font-size: 25px;
     font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.headerReward {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    color: rgba(255, 255, 255, 0.54);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.headerReward strong {
+    color: #ff6d89;
+    font-size: 28px;
     font-variant-numeric: tabular-nums;
 }
 
-.subtitle {
-    margin: 0;
-    color: rgba(255, 255, 255, 0.55);
-    font-size: 12px;
-    font-weight: 400;
-    line-height: 1.4;
-    text-align: left;
-}
-
-.pointsHighlight {
-    color: #ffffff;
-    font-weight: 600;
-}
-
-.membershipHint {
-    position: relative;
-    z-index: 1;
-    color: rgba(255, 255, 255, 0.4);
-    font-size: 11px;
-    margin: 0 0 8px;
-    text-align: center;
-    flex-shrink: 0;
-}
-
-.loadingText {
-    position: relative;
-    z-index: 1;
-    margin: 48px 0;
-    text-align: center;
-    color: rgba(255, 255, 255, 0.55);
-    font-size: 0.95rem;
-}
-
-.calendarWrapper {
-    position: relative;
-    z-index: 1;
-    border-radius: 12px;
-    padding: 0;
-    margin-bottom: 10px;
-    overflow: hidden;
-    flex: 1 1 auto;
+.scrollArea {
     min-height: 0;
+    padding: 22px 28px 18px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
 }
 
-.weekdayRow {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 4px;
-    padding: 0 2px 6px;
-}
-
-.weekdayLabel {
-    text-align: center;
-    font-size: 11px;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.45);
-}
-
-.monthlyGrid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 4px;
-    padding: 0 2px;
-}
-
-.emptyCell {
-    aspect-ratio: 1;
-    min-height: 0;
-}
-
-.dayCell {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 1;
-    min-height: 0;
+.feedbackPanel {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 1px;
-    border-radius: 5.95px;
-    /* 实色近似设计稿 rgba(255,255,255,0.123) 叠在 #343434 上，避免半透明被渐变/光晕染成不同色 */
-    background: #4d4d4d;
-    padding: 2px 1px;
-    border: 0.3px solid rgba(255, 255, 255, 0.4);
-    box-sizing: border-box;
-    cursor: default;
-    overflow: hidden;
-    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
-}
-
-.dayCellNumber {
-    font-size: 12px;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.4);
-    line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-variant-numeric: tabular-nums;
-}
-
-.dayCellPoints {
-    font-size: 9px;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.55);
-    font-variant-numeric: tabular-nums;
-}
-
-.signedCheck {
-    position: absolute;
-    top: 6px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.95);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.signedCheck .checkIcon {
-    color: #FF3B61;
-    width: 10px;
-    height: 10px;
-}
-
-.signedText {
-    position: absolute;
-    left: 50%;
-    bottom: 4px;
-    transform: translateX(-50%);
-    width: 20px;
-    height: 10px;
-    opacity: 1;
-    font-family: Inter, sans-serif;
-    font-size: 8px;
-    font-weight: 400;
-    line-height: normal;
-    letter-spacing: 0;
-    color: #ffffff;
+    min-height: 280px;
+    gap: 14px;
+    color: rgba(255, 255, 255, 0.64);
     text-align: center;
+}
+
+.feedbackPanel p {
+    margin: 0;
+}
+
+.secondaryButton {
+    min-width: 120px;
+    min-height: 42px;
+    padding: 0 20px;
+    color: #fff;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.09);
+}
+
+.weekSection {
+    padding: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.embeddedCalendarSection {
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+.sectionHeading,
+.monthHeading,
+.rewardProgressTop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.sectionHeading {
+    margin-bottom: 14px;
+}
+
+.sectionHeading h3,
+.monthHeading h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 650;
+}
+
+.sectionHeading p {
+    margin: 4px 0 0;
+    color: rgba(255, 255, 255, 0.48);
+    font-size: 12px;
+}
+
+.makeupCardBalance {
+    flex: 0 0 auto;
+    padding: 6px 10px;
+    border: 1px solid rgba(255, 107, 137, 0.24);
+    border-radius: 999px;
+    color: #ff9caf;
+    background: rgba(255, 59, 97, 0.09);
+    font-size: 11px;
+    font-weight: 650;
+}
+
+.weekGrid,
+.monthWeekdays,
+.monthGrid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.weekGrid {
+    gap: 8px;
+}
+
+.weekDay {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;
+    min-height: 126px;
+    padding: 11px 5px 9px;
+    box-sizing: border-box;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 13px;
+    background: rgba(255, 255, 255, 0.045);
+    color: inherit;
+    font: inherit;
+    cursor: default;
+}
+
+.weekDay:disabled,
+.monthDay:disabled {
+    color: inherit;
+}
+
+.weekDay[data-can-makeup="true"],
+.monthDay[data-can-makeup="true"] {
+    cursor: pointer;
+    opacity: 1;
+    border-color: rgba(255, 143, 165, 0.4);
+}
+
+.weekDay[data-can-makeup="true"]:hover,
+.monthDay[data-can-makeup="true"]:hover {
+    background: rgba(255, 59, 97, 0.13);
+}
+
+.weekday {
+    color: rgba(255, 255, 255, 0.86);
+    font-size: 12px;
+    font-weight: 650;
+}
+
+.weekDate {
+    margin-top: 3px;
+    color: rgba(255, 255, 255, 0.36);
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+}
+
+.coinMark {
+    position: relative;
+    display: block;
+    width: 26px;
+    height: 26px;
+    margin: 10px 0 4px;
+    border: 2px solid #ffc562;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #ffe39a, #ff9f37);
+    box-shadow: 0 4px 12px rgba(255, 163, 57, 0.2), inset 0 0 0 3px rgba(255, 255, 255, 0.32);
+}
+
+.coinMark::after {
+    content: '';
+    position: absolute;
+    inset: 7px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.55);
+}
+
+.dayReward {
+    color: #fff;
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+}
+
+.dayState {
+    min-height: 14px;
+    margin-top: 3px;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 9px;
     white-space: nowrap;
 }
 
-/* 历史已签 / 今日已签 — 设计稿渐变 */
-.dayCellCompleted,
-.dayCellTodayCompleted {
-    background: linear-gradient(180deg, #ff3b61 0%, #ff3b6166 100%);
-    border: 0.1px solid #ffffff;
+.daySigned {
+    border-color: rgba(255, 59, 97, 0.42);
+    background: linear-gradient(180deg, rgba(255, 59, 97, 0.24), rgba(255, 59, 97, 0.08));
 }
 
-.dayCellTodayCompleted {
-    z-index: 2;
+.daySigned .dayState {
+    color: #ff9caf;
 }
 
-/* 今日待签 */
-.dayCellToday {
-    background: linear-gradient(180deg, #FF5A7A 0%, #FF3B61 100%);
-    border: 0.1px solid #ffffff;
-    z-index: 2;
+.dayMadeUp {
+    border-color: rgba(255, 143, 165, 0.38);
+    background: linear-gradient(180deg, rgba(255, 143, 165, 0.17), rgba(255, 255, 255, 0.035));
 }
 
-.dayCellToday .dayCellNumber,
-.dayCellToday .dayCellPoints {
-    color: #ffffff;
-    font-weight: 700;
+.dayMadeUp .dayState,
+.monthDay.dayMadeUp small {
+    color: #ffb3c2;
 }
 
-/* 未来可签 / 未签到 — 与默认格子同色 */
-.dayCellForecast {
-    background: #4d4d4d;
-    border: 0.3px solid rgba(255, 255, 255, 0.4);
+.dayToday {
+    border-color: rgba(255, 255, 255, 0.65);
+    background: linear-gradient(180deg, #ff5576, #d9294d);
+    box-shadow: 0 10px 24px rgba(255, 59, 97, 0.24);
+}
+
+.dayToday .weekDate,
+.dayToday .dayState {
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.dayMissed {
+    border-style: dashed;
+    opacity: 0.5;
+}
+
+.dayMissed[data-can-makeup="true"] {
     opacity: 1;
 }
 
-.dayCellForecast .dayCellNumber {
-    color: rgba(255, 255, 255, 0.85);
+.dayMissed .coinMark {
+    filter: grayscale(1);
 }
 
-.dayCellForecast .dayCellPoints {
-    color: #ffffff;
+.dayUpcoming {
+    background: rgba(255, 255, 255, 0.025);
 }
 
-/* 断签不可签 — 同色底，只压低文字，避免整格 opacity 造成色差 */
-.dayCellFuture {
-    background: #4d4d4d;
-    border: 0.3px solid rgba(255, 255, 255, 0.25);
-    opacity: 1;
+.bonusDay::after {
+    content: '';
+    position: absolute;
+    top: -14px;
+    right: -14px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #ff3b61;
+    box-shadow: 0 0 22px rgba(255, 59, 97, 0.48);
 }
 
-.dayCellFuture .dayCellNumber,
-.dayCellFuture .dayCellPoints {
-    color: rgba(255, 255, 255, 0.35);
+.weekRule {
+    margin: 13px 0 0;
+    color: rgba(255, 255, 255, 0.42);
+    font-size: 11px;
+    line-height: 1.5;
+    text-align: center;
 }
 
-.dayCellBonus .dayCellPoints {
-    color: #FF3B61;
-    font-weight: 700;
-}
-
-.dayCellBonus.dayCellToday .dayCellPoints {
-    color: #ffffff;
-}
-
-.checkIcon {
-    width: 10px;
-    height: 10px;
-}
-
-.buttonContainer {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    justify-content: center;
-    margin-top: 2px;
-    flex-shrink: 0;
-}
-
-.signInButton {
-    width: 100%;
-    max-width: 280px;
-    height: 42px;
-    padding: 0 24px;
-    background: rgba(255, 255, 255, 0.1);
-    color: #ffffff;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 200px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s ease, opacity 0.2s ease;
-}
-
-.signInButton:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.16);
-}
-
-.signInButton:active:not(:disabled) {
-    background: rgba(255, 255, 255, 0.12);
-}
-
-.signInButton:disabled {
-    cursor: not-allowed;
-    opacity: 0.85;
-}
-
-.signInButtonDone {
-    opacity: 0.9;
-}
-
-.buttonLoading {
+.expandButton {
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 9px;
+    width: 100%;
+    min-height: 44px;
+    margin: 10px 0 0;
+    padding: 0;
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 12px;
+    cursor: pointer;
+    border: 0;
+    background: transparent;
+}
+
+.chevronDown,
+.chevronUp {
+    width: 7px;
+    height: 7px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+}
+
+.chevronDown {
+    transform: rotate(45deg) translateY(-2px);
+}
+
+.chevronUp {
+    transform: rotate(225deg) translate(-2px, -1px);
+}
+
+.monthSection {
+    margin-top: 0;
+    padding: 18px 0 2px;
+    border: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0;
+    animation: monthIn 180ms ease-out;
+}
+
+.embeddedContent .monthSection {
+    padding: 14px;
+    border: 0;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    animation: none;
+}
+
+.monthHeading {
+    margin-bottom: 14px;
+}
+
+.monthWeekdays,
+.monthGrid {
+    gap: 6px;
+}
+
+.monthWeekdays {
+    margin-bottom: 6px;
+}
+
+.monthWeekdays span {
+    color: rgba(255, 255, 255, 0.34);
+    font-size: 10px;
+    text-align: center;
+}
+
+.monthDay,
+.monthEmpty {
+    aspect-ratio: 1;
+}
+
+.monthDay {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.035);
+    color: inherit;
+    font: inherit;
+    cursor: default;
+}
+
+.monthDay > span {
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.monthDay small {
+    min-height: 10px;
+    color: rgba(255, 255, 255, 0.36);
+    font-size: 8px;
+}
+
+.monthDay.dayToday {
+    color: #fff;
+    box-shadow: none;
+}
+
+.monthDay.daySigned small {
+    color: #ff9caf;
+}
+
+.embeddedContent .monthDay {
+    border-color: transparent;
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.embeddedSummary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.embeddedSummary span {
+    padding: 4px 8px;
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 12px;
+    line-height: 1.4;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.055);
+}
+
+.monthReward {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 14px;
+    padding: 16px 18px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 18px;
+    background: linear-gradient(110deg, rgba(255, 59, 97, 0.1), rgba(255, 255, 255, 0.03));
+}
+
+.rewardBadge {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    flex: 0 0 68px;
+    height: 54px;
+    color: #fff;
+    font-size: 22px;
+    font-weight: 750;
+    line-height: 54px;
+    border: 1px solid rgba(255, 59, 97, 0.3);
+    border-radius: 14px;
+    background: rgba(255, 59, 97, 0.14);
+    font-variant-numeric: tabular-nums;
+}
+
+.rewardBadge span {
+    margin-right: 1px;
+    color: #ff6d89;
+    font-size: 13px;
+}
+
+.rewardProgress {
+    flex: 1;
+    min-width: 0;
+}
+
+.rewardProgressTop strong {
+    font-size: 13px;
+}
+
+.rewardProgressTop p {
+    margin: 4px 0 0;
+    color: rgba(255, 255, 255, 0.42);
+    font-size: 10px;
+}
+
+.rewardProgressTop > span {
+    color: rgba(255, 255, 255, 0.56);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+}
+
+.progressTrack {
+    height: 5px;
+    margin-top: 11px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.09);
+}
+
+.progressTrack span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #ff3b61, #ff8aa1);
+    transition: width 240ms ease;
+}
+
+.footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 18px 28px 22px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(12, 12, 15, 0.48);
+}
+
+.footer.embeddedFooter {
+    display: block;
+    padding: 14px 0 0;
+    border: 0;
+    background: transparent;
+}
+
+.signInButton.embeddedSignInButton {
+    width: auto;
+    min-width: 144px;
+    min-height: 44px;
+    padding: 0 16px;
+    font-size: 13px;
+    border-radius: 8px;
+    box-shadow: none;
+}
+
+.embeddedRewardInfo {
+    width: 100%;
+    min-width: 0;
+    padding: 2px 0;
+    text-align: left;
+}
+
+.embeddedRewardInfo strong {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 12px;
+}
+
+.embeddedRewardInfo p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.48);
+    font-size: 10px;
+    line-height: 1.45;
+}
+
+.embeddedRewardInfo p + p {
+    margin-top: 3px;
+}
+
+.breakdown {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.breakdown span {
+    padding: 5px 8px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.signInButton {
+    min-width: 220px;
+    min-height: 48px;
+    padding: 0 24px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 999px;
+    background: linear-gradient(100deg, #ff3b61, #e9264d);
+    box-shadow: 0 10px 30px rgba(255, 59, 97, 0.2);
+    transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+}
+
+.signInButton:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 34px rgba(255, 59, 97, 0.3);
+}
+
+.signInButton:disabled {
+    color: rgba(255, 255, 255, 0.56);
+    cursor: not-allowed;
+    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: none;
+}
+
+.makeupDialogBackdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(7, 7, 10, 0.72);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.makeupDialog {
+    width: min(360px, 100%);
+    padding: 22px;
+    box-sizing: border-box;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 18px;
+    background: linear-gradient(145deg, #303037, #1b1b20);
+    box-shadow: 0 22px 64px rgba(0, 0, 0, 0.46);
+    text-align: center;
+}
+
+.makeupDialog h3 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.makeupDialog p {
+    margin: 10px 0 18px;
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.makeupDialogActions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.makeupDialog button {
+    min-height: 42px;
+    padding: 0 16px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.07);
+    color: #fff;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.makeupDialog button:disabled {
+    cursor: wait;
+    opacity: 0.58;
+}
+
+.makeupDialog .makeupDialogPrimary {
+    border-color: transparent;
+    background: linear-gradient(100deg, #ff3b61, #e9264d);
+}
+
+.makeupRewardList {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    margin: 0 0 18px;
+}
+
+.makeupRewardList span {
+    padding: 6px 9px;
+    border-radius: 999px;
+    background: rgba(255, 59, 97, 0.1);
+    color: #ffb3c2;
+    font-size: 11px;
+}
+
+.buttonLoading {
+    display: inline-flex;
+    align-items: center;
     gap: 8px;
 }
 
 .spinner {
-    width: 14px;
-    height: 14px;
-    border: 2px solid rgba(255, 255, 255, 0.25);
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    box-sizing: border-box;
+    border: 2px solid rgba(255, 255, 255, 0.22);
     border-top-color: #fff;
     border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+    animation: spin 700ms linear infinite;
+}
+
+.closeButton:focus-visible,
+.secondaryButton:focus-visible,
+.expandButton:focus-visible,
+.signInButton:focus-visible,
+.weekDay:focus-visible,
+.monthDay:focus-visible,
+.makeupDialog button:focus-visible {
+    outline: 2px solid #ff8aa1;
+    outline-offset: 3px;
+}
+
+@keyframes overlayIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes modalIn {
+    from { opacity: 0; transform: translateY(14px) scale(0.985); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes monthIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes spin {
     to { transform: rotate(360deg); }
+}
+
+@media (max-width: 600px) {
+    .overlay {
+        padding: 8px;
+    }
+
+    .content,
+    .contentExpanded {
+        width: calc(100vw - 16px);
+        max-height: calc(100dvh - 16px - env(safe-area-inset-bottom));
+        border-radius: 20px;
+    }
+
+    .closeButton {
+        top: 12px;
+        right: 12px;
+    }
+
+    .header {
+        padding: 18px 62px 14px 16px;
+    }
+
+    .title {
+        font-size: 20px;
+    }
+
+    .headerReward {
+        gap: 5px;
+        font-size: 9px;
+    }
+
+    .headerReward strong {
+        font-size: 20px;
+    }
+
+    .scrollArea {
+        padding: 14px 12px 12px;
+    }
+
+    .weekSection {
+        padding: 12px 8px;
+        border-radius: 14px;
+    }
+
+    .monthSection {
+        padding: 14px 0 2px;
+        border-radius: 0;
+    }
+
+    .embeddedContent .monthSection {
+        padding: 10px;
+        border-radius: 10px;
+    }
+
+    .embeddedContent .monthHeading {
+        margin-bottom: 10px;
+    }
+
+    .embeddedContent .monthHeading h3 {
+        font-size: 13px;
+    }
+
+    .sectionHeading {
+        padding: 0 3px;
+        margin-bottom: 10px;
+    }
+
+    .weekGrid {
+        gap: 3px;
+    }
+
+    .weekDay {
+        min-height: 105px;
+        padding: 8px 1px 7px;
+        border-radius: 9px;
+    }
+
+    .weekday {
+        font-size: 10px;
+    }
+
+    .weekDate {
+        font-size: 8px;
+    }
+
+    .coinMark {
+        width: 20px;
+        height: 20px;
+        margin: 8px 0 3px;
+    }
+
+    .coinMark::after {
+        inset: 5px;
+    }
+
+    .dayReward {
+        font-size: 11px;
+    }
+
+    .dayState {
+        font-size: 7px;
+        letter-spacing: -0.02em;
+    }
+
+    .weekRule {
+        margin-top: 10px;
+        font-size: 9px;
+    }
+
+    .monthWeekdays,
+    .monthGrid {
+        gap: 4px;
+    }
+
+    .monthDay {
+        border-radius: 7px;
+    }
+
+    .monthDay > span {
+        font-size: 10px;
+    }
+
+    .embeddedContent .monthDay {
+        border-radius: 6px;
+    }
+
+    .embeddedSummary {
+        gap: 6px;
+        margin-top: 8px;
+    }
+
+    .embeddedSummary span {
+        padding: 3px 7px;
+        font-size: 11px;
+    }
+
+    .monthReward {
+        gap: 10px;
+        margin-top: 10px;
+        padding: 12px;
+        border-radius: 14px;
+    }
+
+    .rewardBadge {
+        flex-basis: 54px;
+        height: 46px;
+        font-size: 18px;
+        line-height: 46px;
+    }
+
+    .rewardProgressTop p {
+        max-width: 190px;
+        font-size: 9px;
+    }
+
+    .footer {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding: 12px 14px calc(14px + env(safe-area-inset-bottom));
+    }
+
+    .footer.embeddedFooter {
+        padding: 10px 0 0;
+    }
+
+    .breakdown {
+        justify-content: center;
+    }
+
+    .signInButton {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .embeddedSignInButton {
+        width: auto;
+        min-width: 132px;
+        min-height: 44px;
+        padding: 0 12px;
+        font-size: 12px;
+    }
+
+    .embeddedRewardInfo strong {
+        font-size: 11px;
+    }
+
+    .embeddedRewardInfo p {
+        font-size: 10px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .overlay,
+    .content,
+    .monthSection,
+    .spinner {
+        animation: none;
+    }
+
+    .progressTrack span,
+    .closeButton,
+    .signInButton {
+        transition: none;
+    }
 }

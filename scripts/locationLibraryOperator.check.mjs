@@ -12,13 +12,15 @@ const read = (p) => readFileSync(join(root, p), 'utf8');
 
 test('OperatorPanel_应有地点库与地点素材库页签', () => {
   const panel = read('src/page/operator/OperatorPanel.tsx');
+  const nav = read('src/components/admin-shell/adminNavigation.tsx');
   assert.match(panel, /locations/);
   assert.match(panel, /AdminLocationLibraryManager/);
   assert.match(panel, /AdminLocationAssetLibraryManager/);
   assert.match(panel, /\/operator\/locations/);
   assert.match(panel, /\/operator\/location-assets/);
-  assert.match(panel, /label: '地点库'/);
-  assert.match(panel, /label: '地点素材库'/);
+  // 功能注释：侧栏文案在 AdminShell 导航，面板只负责路由/渲染
+  assert.match(nav, /label: '地点库'/);
+  assert.match(nav, /label: '地点素材库'/);
   const app = read('src/App.tsx');
   assert.match(app, /path="\/operator\/locations"/);
   assert.match(app, /path="\/operator\/location-assets"/);

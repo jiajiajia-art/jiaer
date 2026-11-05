@@ -102,7 +102,13 @@ const TodayEarnPointsPanel: React.FC = () => {
 
             <CheckInModal
                 isOpen={isCheckInOpen}
+                mode="profile"
                 onClose={() => setIsCheckInOpen(false)}
+                onGoToDailyTasks={() => {
+                    setIsCheckInOpen(false);
+                    setIsDailyTasksOpen(true);
+                    void refreshDailyTasks({ silent: true });
+                }}
                 onSignInSuccess={() => {
                     void auth.getUserInfo().then((response) => {
                         if (response.data.success && response.data.data) {

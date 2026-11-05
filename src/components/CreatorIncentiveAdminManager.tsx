@@ -600,20 +600,6 @@ const CreatorIncentiveAdminManager: React.FC = () => {
     return (
         <>
             <div className={styles.panelStack}>
-                <section className={styles.heroCard}>
-                    <div className={styles.heroMain}>
-                        <div className={styles.sectionBadge}>创作者激励计划</div>
-                        <h2 className={styles.heroTitle}>作者筛选、搜索与作品激励配置统一管理</h2>
-                        <p className={styles.heroDesc}>默认展示已加入激励计划作者；搜索仅用于临时定位作者，不会写入内部默认列表。</p>
-                    </div>
-                    <div className={styles.heroStats}>
-                        <div className={styles.statItem}>
-                            <span>当前列表人数</span>
-                            <strong>{resolvedAuthors.length}</strong>
-                        </div>
-                    </div>
-                </section>
-
                 <div className={styles.grid}>
                     <section className={styles.card}>
                         <div className={styles.cardHeader}>

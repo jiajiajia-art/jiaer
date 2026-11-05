@@ -224,7 +224,6 @@ const LotteryAdminManager: React.FC = () => {
   return (
     <div className={styles.wrap}>
       <div className={styles.toolbar}>
-        <h2>Funloom 限定抽奖 · 活动配置与名单</h2>
         <p className={styles.linkHint}>活动链接：/funloom/activity/{LOTTERY_SLUG}</p>
 
         <div className={styles.configCard}>
@@ -285,7 +284,7 @@ const LotteryAdminManager: React.FC = () => {
             <option value="mini_handheld">迷你掌机</option>
             <option value="badge">吧唧</option>
             <option value="poke_ball">精灵球</option>
-            <option value="points_300">300积分</option>
+            <option value="points_300">300织梦豆</option>
           </select>
           <button type="button" onClick={() => void load()} disabled={loading}>
             刷新

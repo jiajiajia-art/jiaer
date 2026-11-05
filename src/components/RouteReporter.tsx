@@ -6,6 +6,13 @@ import getGameDataApi from '../api/home/getGameData';
 import { cropImageUrlToAspectDataUrl } from '../utils/imageCrop';
 import { useAuthStore } from '../store/useAuthStore';
 import { auth } from '../api/account/authApi';
+import {
+  hasCurrentHostLoginAgreementAccepted,
+  markLoginAgreementAccepted,
+  REGISTRATION_AGREEMENT_VERSION,
+  REGISTRATION_PRIVACY_POLICY_VERSION,
+} from '../lib/registrationAgreement';
+import { notifyMiniProgramLoginAgreementRequired } from '../lib/miniProgramLoginAgreement';
 
 type MessageData = { url: string; coverImage?: string; title?: string };
 
@@ -112,13 +119,22 @@ export const RouteReporter: React.FC = () => {
     try {
       console.log('[RouteReporter] 小程序环境下，开始使用固定账号自动登录...');
 
+      if (!hasCurrentHostLoginAgreementAccepted()) {
+        notifyMiniProgramLoginAgreementRequired();
+        return false;
+      }
+
       const response = await auth.login({
         phoneNumber: '13784589867',
         password: '123456',
+        agreementAccepted: true,
+        userAgreementVersion: REGISTRATION_AGREEMENT_VERSION,
+        privacyPolicyVersion: REGISTRATION_PRIVACY_POLICY_VERSION,
       });
 
       if (response.data?.data) {
         login(response.data.data);
+        markLoginAgreementAccepted(response.data.data.user.userId);
         return true;
       } else {
         console.error('[RouteReporter] 小程序自动登录失败：响应数据格式错误');

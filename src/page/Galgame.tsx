@@ -1,5 +1,6 @@
 import { CiLocationOn } from "react-icons/ci";
 import styles from './Galgame.module.css';
+import { copyTextToClipboard as copyTextWithFallback } from '../utils/clipboard';
 import { useAuthStore } from "../store/useAuthStore";
 import { useGameStore } from "../store/gameStore";
 import { RiLogoutCircleRLine } from "react-icons/ri";
@@ -36,7 +37,12 @@ import {
   type NpcAvatarMergeInput,
 } from "../lib/galgame/npcAvatarMerge";
 import { subscribeNpcAvatarGenComplete } from "../lib/galgame/npcAvatarBackgroundJob";
-import { CHARACTER_GENERATION_COST } from "../utils/constants";
+import { useImageBusinessPrice } from '../hooks/useImageBusinessPrice';
+import {
+    formatSessionProfileCharge,
+    getSessionProfileBillingPreview,
+    resolveSessionProfileBalancePatch,
+} from '../lib/sessionProfileBilling';
 import { ensureMinPlayChoiceOptions } from "../lib/galgame/playChoiceOptions";
 import type { SystemsConfigPatch } from "../components/Galgame/panels/SystemsPanel";
 import type { PlayerEditableNpc } from "../lib/galgame/characterProfile";
@@ -122,13 +128,26 @@ import { fetchCachedQuests, streamQuests } from "../api/galgame/questsStream";
 import { streamAttributePanels } from "../api/galgame/attributePanelsStream";
 import { runSessionAutoStartOnce } from "../lib/galgame/sessionStartInflight";
 import { ensurePlayUiHydratedOnce, resetPlayUiHydrationGate } from "../lib/galgame/playUiHydrationGate";
+import RechargeModal from "../components/Purchase/RechargeModal";
+import payApi from "../api/pay/payApi";
+import type { PayOrderRequest } from "../api/pay/pay.type";
+import { auth } from "../api/account/authApi";
 
 const Galgame = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
-    const { user } = useAuthStore();
+    const { user, updateUser } = useAuthStore();
     const { fileId, sessionId } = useGameStore();
+    const {
+        data: sessionAvatarPricing,
+        estimatedPoints: sessionAvatarPrice,
+    } = useImageBusinessPrice('session_avatar_control', undefined, sessionId);
+    const sessionAvatarBillingPreview = getSessionProfileBillingPreview(
+        location.search,
+        sessionAvatarPrice ?? 0,
+        sessionAvatarPricing,
+    );
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isExportNovelOpen, setIsExportNovelOpen] = useState(false);
     const [isReplayControlsOpen, setIsReplayControlsOpen] = useState(false);
@@ -162,6 +181,7 @@ const Galgame = () => {
         return (location.state as { bootNewStart?: boolean } | null)?.bootNewStart === true;
     });
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+    const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
     const [overwriteDraftConfirm, setOverwriteDraftConfirm] = useState<{
         title: string;
         description?: string;
@@ -771,14 +791,19 @@ const Galgame = () => {
         return subscribePlayerAvatarGenComplete((sid, result) => {
             if (sid !== sessionId) return;
             setSessionPlayerProfile((prev) => mergePlayerAvatarIntoProfile(prev, result));
-            if (typeof result.remainingPoints === 'number') {
+            const balancePatch = resolveSessionProfileBalancePatch(result.billing);
+            if (balancePatch) {
+                useAuthStore.getState().updateUser(balancePatch);
+            } else if (typeof result.remainingPoints === 'number') {
                 useAuthStore.getState().updateUser({ points: result.remainingPoints });
             }
             toast.success(
-                `头像已生成并保存（-${result.pointsDeducted ?? CHARACTER_GENERATION_COST} 积分）`,
+                `头像已生成并保存（-${formatSessionProfileCharge(
+                    result.billing || sessionAvatarBillingPreview,
+                )}）`,
             );
         });
-    }, [sessionId]);
+    }, [location.search, sessionAvatarPrice, sessionId]);
 
     // 功能注释：角色头像后台生成完成后写回列表；未保存的新角色先挂 pending
     useEffect(() => {
@@ -792,14 +817,19 @@ const Galgame = () => {
                 else delete pendingNpcAvatarsRef.current[result.npcId];
                 return merged;
             });
-            if (typeof result.remainingPoints === 'number') {
+            const balancePatch = resolveSessionProfileBalancePatch(result.billing);
+            if (balancePatch) {
+                useAuthStore.getState().updateUser(balancePatch);
+            } else if (typeof result.remainingPoints === 'number') {
                 useAuthStore.getState().updateUser({ points: result.remainingPoints });
             }
             toast.success(
-                `角色头像已生成（-${result.pointsDeducted ?? CHARACTER_GENERATION_COST} 积分）`,
+                `角色头像已生成（-${formatSessionProfileCharge(
+                    result.billing || sessionAvatarBillingPreview,
+                )}）`,
             );
         });
-    }, [sessionId]);
+    }, [location.search, sessionAvatarPrice, sessionId]);
 
     const applyPendingNpcAvatars = useCallback((profiles: PlayerEditableNpc[]) => {
         let next = profiles;
@@ -1533,35 +1563,12 @@ const Galgame = () => {
     };
 
     const copyTextToClipboard = async (text: string) => {
-        if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-            try {
-                await navigator.clipboard.writeText(text);
-                return true;
-            } catch (error) {
-                console.warn('[Replay] Failed to copy replay link with clipboard API:', error);
-            }
-        }
-
-        if (typeof document === 'undefined') {
-            return false;
-        }
-
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        textArea.setAttribute('readonly', 'true');
-        textArea.style.position = 'fixed';
-        textArea.style.opacity = '0';
-        textArea.style.pointerEvents = 'none';
-        document.body.appendChild(textArea);
-        textArea.select();
-
         try {
-            return document.execCommand('copy');
+            await copyTextWithFallback(text);
+            return true;
         } catch (error) {
-            console.warn('[Replay] Failed to copy replay link with fallback:', error);
+            console.warn('[Replay] Failed to copy text:', error);
             return false;
-        } finally {
-            document.body.removeChild(textArea);
         }
     };
 
@@ -1689,6 +1696,34 @@ const Galgame = () => {
             onCancel={options.onCancel}
         />
     );
+
+    const handleRecharge = useCallback(async (order: PayOrderRequest) => {
+        try {
+            const response = await payApi.getPayQrCode(order);
+            if (response.data.code === 200 && response.data.data) {
+                return response.data.data;
+            }
+            toast.error(response.data.message || t('galgame.rechargeFailed'));
+        } catch (error) {
+            console.error('[Galgame] Failed to create recharge order:', error);
+            toast.error(t('galgame.rechargeFailed'));
+        }
+        return null;
+    }, [t]);
+
+    const handleRechargeClose = useCallback(() => {
+        controller.setInsufficientDiamondsVisible(false);
+        setIsRechargeModalOpen(false);
+        void auth.getUserInfo()
+            .then((response) => {
+                if (response.data.success && response.data.data) {
+                    updateUser(response.data.data);
+                }
+            })
+            .catch((error) => {
+                console.error('[Galgame] Failed to refresh user after recharge:', error);
+            });
+    }, [controller.setInsufficientDiamondsVisible, updateUser]);
 
     if (controller.isLoading) {
         return (
@@ -2422,6 +2457,33 @@ const Galgame = () => {
                             },
                         }
                     )}
+
+                    {/* KK币不足提示 */}
+                    {renderErrorModal(
+                        controller.insufficientDiamondsVisible && !isRechargeModalOpen,
+                        t('galgame.insufficientKkCoins'),
+                        t('galgame.insufficientKkCoinsMessage'),
+                        {
+                            confirmText: t('galgame.goRecharge'),
+                            cancelText: t('galgame.cancel'),
+                            primaryType: "confirm",
+                            onConfirm: () => {
+                                controller.setInsufficientDiamondsVisible(false);
+                                setIsRechargeModalOpen(true);
+                            },
+                            onCancel: () => {
+                                controller.setInsufficientDiamondsVisible(false);
+                            },
+                        }
+                    )}
+
+                    <RechargeModal
+                        isOpen={isRechargeModalOpen}
+                        onClose={handleRechargeClose}
+                        onRecharge={handleRecharge}
+                        fixedTab="diamonds"
+                        constrainToGameViewport
+                    />
 
                     {/* 一般请求错误弹窗 */}
                     {renderErrorModal(

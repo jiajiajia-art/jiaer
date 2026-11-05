@@ -1362,7 +1362,7 @@ export const createHandlers = (ctx: HandlersContext) => {
         } catch (error) {
             pendingBatchSelection = null;
             console.error('获取角色生图积分消耗失败:', error);
-            toast.error(tToast('createGame.fetchNpcImageCostFailedRetry', '获取积分消耗失败，请稍后重试'));
+            toast.error(tToast('createGame.fetchNpcImageCostFailedRetry', '获取织梦豆消耗失败，请稍后重试'));
         } finally {
             setIsLoadingNpcCost(false);
         }

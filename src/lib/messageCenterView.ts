@@ -9,10 +9,20 @@ export type MessageFeedItemType =
   | 'promotion'
   | 'promotion_submission_status'
   | 'favorite_game_updated'
+  | 'game_moderation'
+  | 'game_publish_appeal'
+  | 'creator_earning_withdrawal'
   | 'report_received'
   | 'report_resolved'
   | 'moderation'
   | 'feedback_reply';
+
+export type CreatorEarningWithdrawalMessageInput = {
+  notificationType: 'approved' | 'paid' | 'rejected';
+  grossCents: number;
+  payoutCents: number;
+  rejectionReason?: string | null;
+};
 
 const WEEKDAY_LABELS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'] as const;
 
@@ -69,9 +79,15 @@ export function truncateMessagePreview(text: string, maxLen = 36): string {
   return `${cleaned.slice(0, maxLen).trim()}…`;
 }
 
-/** 功能注释：消息类型归区；安全/违规为新建分区 */
+/** 功能注释：消息类型归区；安全/违规为独立分区 */
 export function resolveMessageListSection(itemType: MessageFeedItemType): MessageListSectionKey {
-  if (itemType === 'announcement' || itemType === 'feedback_reply') return 'system';
+  if (
+    itemType === 'announcement'
+    || itemType === 'feedback_reply'
+    || itemType === 'game_moderation'
+    || itemType === 'game_publish_appeal'
+    || itemType === 'creator_earning_withdrawal'
+  ) return 'system';
   if (itemType === 'favorite_game_updated') return 'interaction';
   if (
     itemType === 'report_received'
@@ -81,4 +97,37 @@ export function resolveMessageListSection(itemType: MessageFeedItemType): Messag
     return 'safety';
   }
   return 'activity';
+}
+
+function formatYuanFromCents(cents: number): string {
+  const safeCents = Number.isFinite(cents) ? Math.max(0, Math.trunc(cents)) : 0;
+  return `¥${(safeCents / 100).toFixed(2)}`;
+}
+
+export function buildCreatorEarningWithdrawalMessageView(
+  notification: CreatorEarningWithdrawalMessageInput,
+): { title: string; preview: string; detail: string } {
+  const gross = formatYuanFromCents(notification.grossCents);
+  if (notification.notificationType === 'approved') {
+    return {
+      title: '创作者收益提现审核通过',
+      preview: `税前金额 ${gross}，等待打款`,
+      detail: `本次提现申请税前金额 ${gross}，审核已通过，款项将在完成打款后到账。`,
+    };
+  }
+  if (notification.notificationType === 'paid') {
+    const payout = formatYuanFromCents(notification.payoutCents);
+    return {
+      title: '创作者收益已打款',
+      preview: `税前金额 ${gross}，实际到账 ${payout}`,
+      detail: `本次提现税前金额 ${gross}，扣除个人所得税后实际到账 ${payout}。`,
+    };
+  }
+
+  const reason = String(notification.rejectionReason || '').trim() || '未填写驳回原因';
+  return {
+    title: '创作者收益提现已驳回',
+    preview: `税前金额 ${gross}，原因：${reason}`,
+    detail: `本次提现税前金额 ${gross}。驳回原因：${reason}`,
+  };
 }

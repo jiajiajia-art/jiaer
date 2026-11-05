@@ -38,7 +38,7 @@
     background: #141414;
 }
 
-.goodsImg img {
+.goodsImg > img {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -493,7 +493,7 @@
         background: var(--mobile-content-image-guard-dark-gradient);
     }
 
-    .goodsImg img {
+    .goodsImg > img {
         /* 封面标题贴在顶部，禁止沿用上移放大（会把第一行字裁出卡片） */
         transform: none;
     }

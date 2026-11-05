@@ -358,6 +358,7 @@ export class CustomIFHostBridge {
     const body = {
       amount: payload.amount,
       idempotencyKey: requestId,
+      sessionId: this.session.sessionId,
     };
     try {
       const url = `${HOST_ADDRESS}/api/custom/apps/${this.session.appId}/points/pay`;

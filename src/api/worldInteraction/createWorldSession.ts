@@ -6,6 +6,8 @@ export interface CreateWorldSessionRequest {
     presetId?: string;
     fileId?: string;
     source?: 'link' | 'game_detail' | 'history' | 'other';
+    restart?: boolean;
+    billingMode?: 'creator_test';
 }
 
 const createWorldSessionApi = {
@@ -24,8 +26,8 @@ const createWorldSessionApi = {
     },
     getWorldFilesByFileId: (fielId: string) =>
         api.get<GetAVGFilesResponse>(`/world-interaction/document/${fielId}`),
-    createWorldEditSession: ({fileId}: {fileId: string}) =>
-        api.post<CreateWorldEditSessionRequest>(`/world-interaction/session/create`, {fileId}),
+    createWorldEditSession: (data: { fileId: string; restart?: boolean; billingMode?: 'creator_test' }) =>
+        api.post<CreateWorldEditSessionRequest>(`/world-interaction/session/create`, data),
 }
 
 export default createWorldSessionApi;

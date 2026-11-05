@@ -197,7 +197,7 @@ export const findInteractiveVideoLockedDirectoryForRuntimeNode = <
     || findInteractiveVideoLockedDirectoryByScriptId(lockedDirectories, scriptId);
 
 export const formatIvgCurrencyName = (currency: IvgPaymentCurrency) =>
-    currency === 'points' ? '积分' : '钻石';
+    currency === 'points' ? '织梦豆' : 'KK币';
 
 export const formatIvgUnlockCost = (amount: number, currency: IvgPaymentCurrency) => {
     const normalizedAmount = Number.isFinite(Number(amount)) ? Number(amount) : 0;
@@ -220,13 +220,11 @@ const getEnabledBuyoutPaymentOption = (
 };
 
 export const getInteractiveVideoBuyoutPaymentOptions = (config?: IvgPricingConfigLike | null) => [
-    getEnabledBuyoutPaymentOption(config?.buyout?.points, 'points'),
     getEnabledBuyoutPaymentOption(config?.buyout?.diamonds, 'diamonds'),
 ].filter((option): option is IvgBuyoutPaymentOption => Boolean(option));
 
 export const getInteractiveVideoBuyoutPriceText = (config?: IvgPricingConfigLike | null) => {
     const labels = [
-        getEnabledPaymentLabel(config?.buyout?.points, 'points'),
         getEnabledPaymentLabel(config?.buyout?.diamonds, 'diamonds'),
     ].filter(Boolean);
 

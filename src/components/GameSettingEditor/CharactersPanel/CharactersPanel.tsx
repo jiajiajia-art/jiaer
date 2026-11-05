@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo, useImperative
 import { useTranslation } from 'react-i18next';
 import styles from './CharactersPanel.module.css';
 import CharacterLayer from '../../Galgame/CharacterLayer';
-import { CHARACTER_GENERATION_COST } from '../../../utils/constants';
+import { useImageBusinessPrice } from '../../../hooks/useImageBusinessPrice';
 import type { AllGameData, BatchImageJobStatus } from '../../../api/galgame/EditorData.type';
 import type { WorldInteractionGameData } from '../../../api/worldInteraction/worldInteractionApi.type';
 import type { NPCSetting, NPC } from '../../../api/galgame/EditorData.type';
@@ -33,12 +33,14 @@ import { authFetch } from '../../../api/base';
 import { useGenerationEta } from '../../../hooks/editor/useGenerationEta';
 import GenerationActionBar from '../GenerationActionBar';
 import InlineFieldSave from '../InlineFieldSave';
+import CurrencyIcon from '../../CurrencyIcon';
 import {
     listBatchNpcRetryTargetItems,
     resolveRetryCharacterIdsFromBoard,
     shouldShowBatchProgressOverlay,
     shouldShowRetryIncompleteBatchTasks,
 } from '../../../utils/batchNpcBoardSettlement';
+import { LEGACY_WORLD_CHARACTER_GENERATION_COST } from '../../../utils/constants';
 
 // 字数限制配置
 const CHARACTER_WORD_LIMITS = {
@@ -111,9 +113,23 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     const { user, updateUser } = useAuthStore();
     const api = createApiHelpers(mode);
     const userPoints = user?.user?.points ?? 0;
+    const { estimatedPoints: dynamicCharacterPrice } = useImageBusinessPrice(
+        mode === 'visual' ? 'visual_character' : null,
+        fileId,
+    );
+    const { estimatedPoints: dynamicVariantPrice } = useImageBusinessPrice(
+        mode === 'visual' ? 'visual_character_variant' : null,
+        fileId,
+    );
+    const characterPrice = mode === 'visual'
+        ? dynamicCharacterPrice
+        : LEGACY_WORLD_CHARACTER_GENERATION_COST;
+    const variantPrice = mode === 'visual'
+        ? dynamicVariantPrice
+        : LEGACY_WORLD_CHARACTER_GENERATION_COST;
     
-    // 计算会员折扣后的生成价格（暂时不打折）
-    const discountedCost = CHARACTER_GENERATION_COST; // TODO: 恢复折扣时改为 `isMember ? Math.ceil(CHARACTER_GENERATION_COST * MEMBER_CREATION_DISCOUNT) : CHARACTER_GENERATION_COST`，并取消下方的 isMember 注释
+    const discountedCost = characterPrice ?? 0;
+    const variantDiscountedCost = variantPrice ?? 0;
     // const isMember = user?.user?.isMember ?? false;
     // const showDiscount = isMember && MEMBER_CREATION_DISCOUNT < 1; // TODO: 恢复折扣UI时取消注释
     
@@ -1838,6 +1854,10 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
 
     // 点击差分 AI 生成前，先弹出积分确认
     const handleRequestVariationGenerate = (variation: Variation) => {
+        if (variantPrice == null) {
+            toast.error('生图价格暂不可用，请联系管理员检查业务模型与计费配置');
+            return;
+        }
         // 新增模式下禁止生成图片
         if (isAddingNew) {
             toast.error(t('createGame.generateImageFirst'));
@@ -1878,6 +1898,10 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     };
 
     const openNpcCostModal = async () => {
+        if (characterPrice == null) {
+            toast.error('生图价格暂不可用，请联系管理员检查业务模型与计费配置');
+            return;
+        }
         if (!handlers) return;
         await handlers.openNpcCostModal();
     };
@@ -1926,6 +1950,10 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
 
     // 点击单个 AI 生成前，先弹出积分确认
     const handleRequestSingleNpcGenerate = (character: Character) => {
+        if (characterPrice == null) {
+            toast.error('生图价格暂不可用，请联系管理员检查业务模型与计费配置');
+            return;
+        }
         if (!fileId) {
             toast.error(t('createGame.missingDataCannotGenerate'));
             return;
@@ -2031,7 +2059,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                         type="button"
                         className={styles.generateButton}
                         onClick={openNpcCostModal}
-                        disabled={isLoading || isGeneratingNpcImages || isLoadingNpcCost || isBlockingSwitch}
+                        disabled={isLoading || isGeneratingNpcImages || isLoadingNpcCost || isBlockingSwitch || characterPrice == null}
                     >
                         <span className={styles.generateIconWrap} aria-hidden>
                             <FaMagic className={styles.generateIcon} />
@@ -2332,22 +2360,21 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                     <button
                                         className={`${styles.ghostSmall} ${styles.generateButton}`}
                                         onClick={() => handleRequestSingleNpcGenerate(currentCharacter)}
-                                        disabled={isAddingNew || isPortraitActionBusy}
+                                        disabled={isAddingNew || isPortraitActionBusy || characterPrice == null}
                                     >
-                                        <img
-                                            src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
-                                            alt=""
+                                        <CurrencyIcon
+                                            currency="points"
                                             className={styles.priceIcon}
                                         />
                                         {/* TODO: 恢复会员折扣UI时，取消下方注释
                                         {showDiscount ? (
                                             <>
                                                 <span className={styles.discountPrice}>{discountedCost}</span>
-                                                <span className={styles.originalPrice}>{CHARACTER_GENERATION_COST}</span>
+                                                <span className={styles.originalPrice}>{characterPrice ?? '—'}</span>
                                                 <span>{t('createGame.aiGenerate')}</span>
                                             </>
                                         ) : ( */}
-                                            <span>{discountedCost} {t('createGame.aiGenerate')}</span>
+                                            <span>{characterPrice ?? '—'} {t('createGame.aiGenerate')}</span>
                                         {/* )} */}
                                     </button>
                                 )}
@@ -2635,11 +2662,10 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                                         <button
                                                             className={`${styles.ghostTiny} ${styles.generateButton}`}
                                                             onClick={() => handleRequestVariationGenerate(variation)}
-                                                            disabled={isAddingNew || (isGeneratingVariation && generatingVariationId === variation.id)}
+                                                            disabled={isAddingNew || (isGeneratingVariation && generatingVariationId === variation.id) || variantPrice == null}
                                                         >
-                                                            <img
-                                                                src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
-                                                                alt=""
+                                                            <CurrencyIcon
+                                                                currency="points"
                                                                 className={styles.priceIcon}
                                                             />
                                                             {isGeneratingVariation && generatingVariationId === variation.id ? (
@@ -2647,13 +2673,13 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                                             /* TODO: 恢复会员折扣UI时，取消下方注释
                                                             ) : showDiscount ? (
                                                                 <>
-                                                                    <span className={styles.discountPrice}>{discountedCost}</span>
-                                                                    <span className={styles.originalPrice}>{CHARACTER_GENERATION_COST}</span>
+                                                                    <span className={styles.discountPrice}>{variantDiscountedCost}</span>
+                                                                    <span className={styles.originalPrice}>{variantPrice ?? '—'}</span>
                                                                     <span>{t('createGame.aiGenerate')}</span>
                                                                 </>
                                                             ) : ( */
                                                             ) : (
-                                                                <span>{discountedCost} {t('createGame.aiGenerate')}</span>
+                                                                <span>{variantPrice ?? '—'} {t('createGame.aiGenerate')}</span>
                                                             )}
                                                         </button>
                                                     </div>
@@ -2918,7 +2944,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 onConfirm={confirmVariationGenerate}
                 onCancel={cancelVariationGenerate}
                 title={t('common.pointsDeductionConfirm')}
-                message={t('createGame.variationGenerationConfirm', { cost: discountedCost })}
+                message={t('createGame.variationGenerationConfirm', { cost: variantDiscountedCost })}
                 confirmButtonText={t('common.confirmGenerate')}
                 cancelButtonText={t('common.cancel')}
             />

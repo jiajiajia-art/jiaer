@@ -2,8 +2,10 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import Navbar from '../../components/Layout/Navbar';
+import AdminShell from '../../components/admin-shell/AdminShell';
 import PromotionAdminManager from '../../components/PromotionAdminManager';
+import CreatorIncentiveAdminManager from '../../components/CreatorIncentiveAdminManager';
+import CreatorBenefitsAdminManager from '../../components/CreatorBenefitsAdminManager';
 import DailyTasksAdminManager from '../../components/DailyTasksAdminManager';
 import StatsOverviewSection from '../../components/stats/StatsOverviewSection';
 import MetricTitleTip from '../../components/stats/MetricTitleTip';
@@ -13,9 +15,12 @@ import operatorStatsApi, {
   type RecruitmentOverview,
   type RecruitmentUserItem,
 } from '../../api/stats/operatorStatsApi';
+import promotionApi from '../../api/promotion/promotionApi';
 import type { CreatorWorkItem, StatsOverview } from '../../api/stats/creatorStatsApi';
 import OperatorReports from './OperatorReports';
 import WithdrawAdminManager from '../../components/WithdrawAdminManager';
+import { useAuthStore } from '../../store/useAuthStore';
+import { isAdminRole } from '../../utils/userRoles';
 import AdminPublicAvatarManager from '../../components/admin/AdminPublicAvatarManager';
 import AdminLocationLibraryManager from '../../components/admin/AdminLocationLibraryManager';
 import AdminLocationAssetLibraryManager from '../../components/admin/AdminLocationAssetLibraryManager';
@@ -28,18 +33,26 @@ import BusinessCoopAdminManager from '../../components/admin/BusinessCoopAdminMa
 import GameIssueAdminManager from '../../components/admin/GameIssueAdminManager';
 import adminStyles from '../AdminPanel.module.css';
 import styles from './OperatorPanel.module.css';
+import gamePublishAppealsApi from '../../api/gamePublishAppeals/gamePublishAppealsApi';
+import AiModelCenter from '../../components/AiModelCenter';
+import PlatformBenefitsManager from '../../components/PlatformBenefitsManager';
 
 type OperatorTab =
   | 'stats'
   | 'reports'
   | 'promotions'
   | 'recruitment'
+  | 'specialAuthors'
+  | 'platformWorks'
+  | 'promoters'
   | 'dailyTasks'
   | 'withdraw'
   | 'avatars'
   | 'locations'
   | 'locationAssets'
   | 'components'
+  | 'aiModelCenter'
+  | 'platformBenefits'
   | 'contentReports'
   | 'appeals'
   | 'publishQueue'
@@ -60,12 +73,17 @@ const resolveOperatorTab = (pathname: string): OperatorTab => {
   if (pathname.startsWith('/operator/reports')) return 'reports';
   if (pathname.startsWith('/operator/promotion')) return 'promotions';
   if (pathname.startsWith('/operator/recruitment')) return 'recruitment';
+  if (pathname.startsWith('/operator/special-authors')) return 'specialAuthors';
+  if (pathname.startsWith('/operator/platform-works')) return 'platformWorks';
+  if (pathname.startsWith('/operator/promoters')) return 'promoters';
   if (pathname.startsWith('/operator/daily-tasks')) return 'dailyTasks';
   if (pathname.startsWith('/operator/withdraw')) return 'withdraw';
   if (pathname.startsWith('/operator/avatars')) return 'avatars';
   if (pathname.startsWith('/operator/location-assets')) return 'locationAssets';
   if (pathname.startsWith('/operator/locations')) return 'locations';
   if (pathname.startsWith('/operator/components') || pathname.startsWith('/operator/play-mods')) return 'components';
+  if (pathname.startsWith('/operator/ai-model-center')) return 'aiModelCenter';
+  if (pathname.startsWith('/operator/platform-benefits')) return 'platformBenefits';
   if (pathname.startsWith('/operator/content-reports')) return 'contentReports';
   if (pathname.startsWith('/operator/appeals')) return 'appeals';
   if (pathname.startsWith('/operator/publish-queue')) return 'publishQueue';
@@ -80,6 +98,7 @@ const OperatorPanel: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const activeTab = resolveOperatorTab(location.pathname);
+  const isAdmin = isAdminRole(useAuthStore((state) => state.user?.user?.role));
 
   const [overview, setOverview] = useState<StatsOverview | null>(null);
   const [overviewLoading, setOverviewLoading] = useState(false);
@@ -96,25 +115,8 @@ const OperatorPanel: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [worksSortField, setWorksSortField] = useState<WorksSortField | null>(null);
   const [worksSortDir, setWorksSortDir] = useState<SortDirection>('desc');
-
-  const tabs: Array<{ id: OperatorTab; label: string; path: string }> = useMemo(() => ([
-    { id: 'stats', label: t('operator.tabs.stats'), path: '/operator' },
-    { id: 'reports', label: t('operator.tabs.reports'), path: '/operator/reports' },
-    { id: 'promotions', label: t('operator.tabs.promotions'), path: '/operator/promotion' },
-    { id: 'recruitment', label: t('operator.tabs.recruitment'), path: '/operator/recruitment' },
-    { id: 'dailyTasks', label: t('operator.tabs.dailyTasks'), path: '/operator/daily-tasks' },
-    { id: 'withdraw', label: t('operator.tabs.withdraw'), path: '/operator/withdraw' },
-    { id: 'avatars', label: '公共头像', path: '/operator/avatars' },
-    { id: 'locations', label: '地点库', path: '/operator/locations' },
-    { id: 'locationAssets', label: '地点素材库', path: '/operator/location-assets' },
-    { id: 'components', label: '组件管理', path: '/operator/components' },
-    { id: 'contentReports', label: t('operator.tabs.contentReports'), path: '/operator/content-reports' },
-    { id: 'appeals', label: t('operator.tabs.appeals'), path: '/operator/appeals' },
-    { id: 'publishQueue', label: t('operator.tabs.publishQueue'), path: '/operator/publish-queue' },
-    { id: 'feedback', label: t('operator.tabs.feedback'), path: '/operator/feedback' },
-    { id: 'businessCoop', label: t('operator.tabs.businessCoop'), path: '/operator/business-coop' },
-    { id: 'gameIssues', label: t('operator.tabs.gameIssues'), path: '/operator/game-issues' },
-  ]), [t]);
+  const [appealPendingCount, setAppealPendingCount] = useState(0);
+  const [promotionPendingReviewCount, setPromotionPendingReviewCount] = useState(0);
 
   const sortedWorks = useMemo(() => {
     if (!worksSortField) return works;
@@ -254,6 +256,36 @@ const OperatorPanel: React.FC = () => {
     void load();
   }, [activeTab, loadRecruitmentUsers]);
 
+  useEffect(() => {
+    if (!isAdmin) return;
+    let cancelled = false;
+    const loadAppealPendingCount = async () => {
+      try {
+        const response = await gamePublishAppealsApi.getPendingCount();
+        if (!cancelled) setAppealPendingCount(Number(response.data.data?.pendingCount || 0));
+      } catch {
+        // 待处理角标失败不阻断运营中心其他功能。
+      }
+    };
+    void loadAppealPendingCount();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, isAdmin]);
+
+  const refreshPromotionPendingReviewCount = useCallback(async () => {
+    try {
+      const response = await promotionApi.adminSubmissions({ reviewStatus: 'pending_review', page: 1 });
+      setPromotionPendingReviewCount(Number(response.data.data?.pagination?.total || 0));
+    } catch {
+      // 待处理角标失败不阻断运营中心其他功能。
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshPromotionPendingReviewCount();
+  }, [refreshPromotionPendingReviewCount]);
+
   const handleWorksPageSizeChange = (nextPageSize: number) => {
     setWorksPageSize(nextPageSize);
     setWorksPage(1);
@@ -269,6 +301,7 @@ const OperatorPanel: React.FC = () => {
       <StatsOverviewSection
         stats={overview}
         updatedAt={overview ? new Date().toLocaleString() : undefined}
+        variant="admin"
         loading={overviewLoading}
         loadFailed={overviewLoadFailed}
         onRetry={() => { void loadOverview(); }}
@@ -409,26 +442,10 @@ const OperatorPanel: React.FC = () => {
   const renderDailyTasks = () => <DailyTasksAdminManager />;
 
   return (
+    <AdminShell mode="operator" activeKey={activeTab} badges={{ platformWorks: appealPendingCount, promotions: promotionPendingReviewCount }}>
     <div className={adminStyles.pageRoot}>
-      <Navbar />
       <div className={adminStyles.pageBody}>
         <div className={adminStyles.workspace}>
-          <aside className={adminStyles.sidebar}>
-            <div className={adminStyles.sidebarHeader}>
-              <div className={adminStyles.sidebarTitle}>{t('operator.pageTitle')}</div>
-              <div className={adminStyles.sidebarDivider} />
-            </div>
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                className={`${adminStyles.navItem} ${activeTab === tab.id ? adminStyles.navItemActive : ''}`}
-                onClick={() => navigate(tab.path)}
-              >
-                <span className={adminStyles.navTitle}>{tab.label}</span>
-              </button>
-            ))}
-          </aside>
           <section className={adminStyles.contentArea}>
             {isLoading ? <div className={styles.emptyState}>{t('creatorStats.loading')}</div> : null}
             {!isLoading && activeTab === 'stats' ? renderStats() : null}
@@ -439,10 +456,21 @@ const OperatorPanel: React.FC = () => {
             {activeTab === 'locationAssets' ? <AdminLocationAssetLibraryManager /> : null}
             {activeTab === 'components' ? <AdminPlayModManager /> : null}
             {!isLoading && activeTab === 'promotions' ? (
-              <PromotionAdminManager pendingReviewCount={0} onRefreshCounts={async () => {}} />
+              <PromotionAdminManager onRefreshCounts={refreshPromotionPendingReviewCount} />
             ) : null}
             {!isLoading && activeTab === 'recruitment' ? renderRecruitment() : null}
+            {activeTab === 'specialAuthors' ? <CreatorBenefitsAdminManager key="special-authors" view="benefits" /> : null}
+            {activeTab === 'platformWorks' ? (
+              <CreatorBenefitsAdminManager
+                key="platform-works"
+                view="games"
+                onAppealPendingCountChange={setAppealPendingCount}
+              />
+            ) : null}
+            {activeTab === 'promoters' ? <CreatorIncentiveAdminManager /> : null}
             {activeTab === 'dailyTasks' ? renderDailyTasks() : null}
+            {activeTab === 'aiModelCenter' ? <AiModelCenter isAdmin={false} /> : null}
+            {activeTab === 'platformBenefits' ? <PlatformBenefitsManager /> : null}
             {activeTab === 'contentReports' ? <ContentReportAdminManager /> : null}
             {activeTab === 'appeals' ? <ContentAppealAdminManager /> : null}
             {activeTab === 'publishQueue' ? <PublishReviewAdminManager /> : null}
@@ -453,6 +481,7 @@ const OperatorPanel: React.FC = () => {
         </div>
       </div>
     </div>
+    </AdminShell>
   );
 };
 

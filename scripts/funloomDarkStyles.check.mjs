@@ -564,4 +564,3 @@ test('AssetGapBanner_生成进度应走墨黑竖脊而非糖纸色块', () => {
   assert.match(tsx, /styles\.stepCopy/);
   assert.match(tsx, /createGame\.assetProgressStepPortraits/);
 });
-

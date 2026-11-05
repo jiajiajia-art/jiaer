@@ -9,30 +9,42 @@ import type {
   ExchangeDiamondsRequest,
   ExchangeDiamondsResponse,
   GetPointsActivitiesParams,
+  GoogleLoginRequest,
   LoginRequest,
   MembershipSignInStatus,
   PointsActivitiesResponse,
   ResetPasswordRequest,
   SaveProfilePreferencesRequest,
   SaveProfilePreferencesResponse,
+  SignInMakeupResponse,
   SendCodeRequest,
   SettlePointsResponse,
   SignupRequest,
   SubscriptionRedeemResult,
-  InviteStats,
-  InviteClaimResult,
+  InviteCodeUseResult,
   User,
 } from "./auth.type";
+import {
+  REGISTRATION_CODE_REQUEST_TIMEOUT_MS,
+  REGISTRATION_SUBMIT_TIMEOUT_MS,
+} from '../../lib/registrationRequest';
 
 export const auth = {
   signup: (data: SignupRequest) =>
-    api.post<ApiResponse<AuthResponse>>('/auth/register', data),
+    api.post<ApiResponse<AuthResponse>>('/auth/register', data, {
+      timeout: REGISTRATION_SUBMIT_TIMEOUT_MS,
+    }),
 
   login: (data: LoginRequest) =>
     api.post<ApiResponse<AuthResponse>>('/auth/login', data),
 
   sendResetCode: (data: SendCodeRequest) =>
     api.post<ApiResponse<{ data: string }>>('/auth/code/send', data),
+
+  sendCode: (data: SendCodeRequest) =>
+    api.post<ApiResponse<null>>('/auth/code/send', data, {
+      timeout: REGISTRATION_CODE_REQUEST_TIMEOUT_MS,
+    }),
 
   resetPassword: (data: ResetPasswordRequest) =>
     api.post<ApiResponse<null>>('/auth/code/verify', data),
@@ -49,6 +61,9 @@ export const auth = {
   checkIn: () =>
     api.post<ApiResponse<CheckInResponse | null>>('/auth/user/signin'),
 
+  makeUpSignIn: (date: string) =>
+    api.post<ApiResponse<SignInMakeupResponse | null>>('/auth/user/signin/makeup', { date }),
+
   getSignInStatus: () =>
     api.get<ApiResponse<MembershipSignInStatus>>('/auth/user/signin-status'),
 
@@ -58,13 +73,7 @@ export const auth = {
   },
 
   useInviteCode: (data: { inviteCode: string }) =>
-    api.post<ApiResponse<null>>('/auth/invite/use-code', data),
-
-  getInviteStats: () =>
-    api.get<ApiResponse<InviteStats>>('/auth/invite/stats'),
-
-  claimInviteReward: (data: { threshold: number }) =>
-    api.post<ApiResponse<InviteClaimResult>>('/auth/invite/claim', data),
+    api.post<ApiResponse<InviteCodeUseResult>>('/auth/invite/use-code', data),
 
   updateUserAvatar: (file: File) => {
     const formData = new FormData();
@@ -86,7 +95,7 @@ export const auth = {
   redeemSubscriptionKey: (data: { redeemKey: string }) =>
     api.post<ApiResponse<SubscriptionRedeemResult>>('/subscriptions/redeem', data),
 
-  googleLogin: (data: { idToken: string }) =>
+  googleLogin: (data: GoogleLoginRequest) =>
     api.post<ApiResponse<AuthResponse>>('/auth/google/login', data),
 
   exchangeDiamonds: (data: ExchangeDiamondsRequest) =>

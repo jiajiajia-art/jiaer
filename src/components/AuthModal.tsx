@@ -3,13 +3,35 @@ import { createPortal } from 'react-dom';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 import { FcGoogle } from 'react-icons/fc';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import styles from './AuthModal.module.css';
 import { auth } from '../api/account/authApi';
 import gamePromotionApi from '../api/promotion/gamePromotionApi';
 import { getOrCreatePromoAnonId } from '../utils/promoAnonId';
-import { useAuthStore } from '../store/useAuthStore';
+import { authModalStore, useAuthStore } from '../store/useAuthStore';
 import { useGoogleAuth } from '../hooks/useGoogleAuth';
-import { isPrivacyAgreementAccepted, resolvePrivacyPolicyUrl } from '../lib/privacyPolicy';
+import { isPrivacyAgreementAccepted } from '../lib/privacyPolicy';
+import {
+    REGISTRATION_AGREEMENT_VERSION,
+    REGISTRATION_PRIVACY_POLICY_VERSION,
+    clearPendingGoogleLoginAgreementAccepted,
+    markLoginAgreementAccepted,
+    markPendingGoogleLoginAgreementAccepted,
+    resolveRegistrationAgreementUrl,
+} from '../lib/registrationAgreement';
+import { isRegistrationRequestTimeout } from '../lib/registrationRequest';
+import {
+    clearRegistrationSessionId,
+    getOrCreateRegistrationSessionId,
+    trackRegistrationEvent,
+} from '../lib/registrationAnalytics';
+import {
+    isValidPhoneNumber,
+    normalizeInviteCode,
+    normalizePhoneInput,
+    normalizeVerificationCode,
+    validateRegistrationFields,
+} from '../lib/registrationForm';
 import { getApiErrorMessage } from '../utils/error';
 
 interface AuthModalProps {
@@ -27,20 +49,34 @@ const isWebViewEnv = (): boolean => {
     return String(win.__wxjs_environment || '').toLowerCase() === 'miniprogram';
 };
 
+const createRegistrationRequestId = (): string => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+    return `register-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+};
+
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegister }) => {
     const { t, i18n } = useTranslation();
+    const navigate = useNavigate();
+    const pendingAuthErrorCode = authModalStore(
+        (state) => state.pendingAuthErrorCode,
+    );
+    const requestedAuthMode = authModalStore.getState().authModalMode;
     // 功能注释：按运行时语言决定 Google-only（IP 英文区），不用编译期 LANGUAGE
     const isGoogleOnly = String(i18n.language || '').toLowerCase().startsWith('en');
     // 在微信小程序环境中不渲染
     if (isWebViewEnv()) {
         return null;
     }
-    const [mode, setMode] = useState<AuthMode>('login');
+    const [mode, setMode] = useState<AuthMode>(requestedAuthMode);
     const [phone, setPhone] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [resetPhone, setResetPhone] = useState('');
     const [verificationCode, setVerificationCode] = useState('');
+    const [inviteCode, setInviteCode] = useState('');
+    const [hasSentCode, setHasSentCode] = useState(false);
 
     // 错误状态
     const [phoneError, setPhoneError] = useState('');
@@ -48,6 +84,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
     const [confirmPasswordError, setConfirmPasswordError] = useState('');
     const [resetPhoneError, setResetPhoneError] = useState('');
     const [verificationCodeError, setVerificationCodeError] = useState('');
+    const [inviteCodeError, setInviteCodeError] = useState('');
 
     // 震动状态
     const [phoneShake, setPhoneShake] = useState(false);
@@ -64,14 +101,33 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
     const [isSendingCode, setIsSendingCode] = useState(false);
     const [countdown, setCountdown] = useState(0);
     const [submitError, setSubmitError] = useState('');
+    const [codeNotice, setCodeNotice] = useState('');
     const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-    /** 功能注释：注册须勾选同意外置隐私政策后才能提交 */
+    /** Login and registration require the shared user-agreement and privacy-policy checkbox. */
     const [privacyAgreed, setPrivacyAgreed] = useState(false);
     const [privacyError, setPrivacyError] = useState('');
     const { login } = useAuthStore();
     const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const registrationRequestIdRef = useRef<string | null>(null);
+    const sendCodeRequestVersionRef = useRef(0);
+    const sendCodeInFlightRef = useRef(false);
+    const overlayPointerRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
     const { loginWithGoogle } = useGoogleAuth();
-    const privacyPolicyUrl = resolvePrivacyPolicyUrl({ darkMode: true });
+    const legalLanguage = isGoogleOnly ? 'en' : 'zh';
+    const privacyPolicyUrl = resolveRegistrationAgreementUrl('privacy-policy', { language: legalLanguage });
+    const userAgreementUrl = resolveRegistrationAgreementUrl('user-agreement', { language: legalLanguage });
+
+    const handleLegalDocumentClick = (
+        event: React.MouseEvent<HTMLAnchorElement>,
+        document: 'user-agreement' | 'privacy-policy',
+    ) => {
+        event.stopPropagation();
+        if (typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 767px)').matches) {
+            event.preventDefault();
+            authModalStore.getState().setAuthModalMode(mode);
+            navigate(`/legal/${document}?lang=${legalLanguage}`);
+        }
+    };
 
     // 清理倒计时定时器
     useEffect(() => {
@@ -82,10 +138,44 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         };
     }, []);
 
+    useEffect(() => {
+        if (isOpen) {
+            setPrivacyAgreed(false);
+            setPrivacyError('');
+        }
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handlePointerDown = (event: PointerEvent) => {
+            overlayPointerRef.current = {
+                x: event.clientX,
+                y: event.clientY,
+                moved: false,
+            };
+        };
+        const handlePointerMove = (event: PointerEvent) => {
+            const gesture = overlayPointerRef.current;
+            if (!gesture || gesture.moved) return;
+
+            if (Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) > 4) {
+                gesture.moved = true;
+            }
+        };
+
+        window.addEventListener('pointerdown', handlePointerDown, true);
+        window.addEventListener('pointermove', handlePointerMove, true);
+        return () => {
+            window.removeEventListener('pointerdown', handlePointerDown, true);
+            window.removeEventListener('pointermove', handlePointerMove, true);
+            overlayPointerRef.current = null;
+        };
+    }, [isOpen]);
+
     // ========== 验证函数 ==========
     const validatePhone = (phoneNumber: string): boolean => {
-        const phoneRegex = /^1\d{10}$/;
-        return phoneRegex.test(phoneNumber);
+        return isValidPhoneNumber(phoneNumber);
     };
 
     const validatePassword = (pwd: string): boolean => {
@@ -104,29 +194,77 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         setShake(false);
     };
 
+    const handleAgreementRequestError = (errorCode?: string): boolean => {
+        if (errorCode === 'AGREEMENT_REQUIRED') {
+            setPrivacyAgreed(false);
+            setPrivacyError(t('validation.agreementRequired'));
+            return true;
+        }
+        if (errorCode === 'AGREEMENT_VERSION_MISMATCH') {
+            setPrivacyAgreed(false);
+            setPrivacyError(t('auth.agreementUpdatedPleaseConfirm'));
+            return true;
+        }
+        return false;
+    };
+
+    useEffect(() => {
+        if (!isOpen || !pendingAuthErrorCode) return;
+        const pendingErrorCode = authModalStore.getState().consumePendingAuthErrorCode();
+        if (pendingErrorCode) handleAgreementRequestError(pendingErrorCode);
+    }, [isOpen, pendingAuthErrorCode]);
+
+    const invalidateRegistrationRequest = () => {
+        registrationRequestIdRef.current = null;
+    };
+
+    const resetVerificationState = () => {
+        sendCodeRequestVersionRef.current += 1;
+        sendCodeInFlightRef.current = false;
+        setIsSendingCode(false);
+        setVerificationCode('');
+        setVerificationCodeError('');
+        setVerificationCodeShake(false);
+        setHasSentCode(false);
+        setCodeNotice('');
+        setCountdown(0);
+        if (countdownTimerRef.current) {
+            clearInterval(countdownTimerRef.current);
+            countdownTimerRef.current = null;
+        }
+    };
+
     // ========== 重置状态函数 ==========
     const resetAllStates = () => {
+        sendCodeRequestVersionRef.current += 1;
+        sendCodeInFlightRef.current = false;
+        setIsSendingCode(false);
         setPhone('');
         setPassword('');
         setConfirmPassword('');
         setResetPhone('');
         setVerificationCode('');
+        setInviteCode('');
+        setHasSentCode(false);
         setPhoneError('');
         setPasswordError('');
         setConfirmPasswordError('');
         setResetPhoneError('');
         setVerificationCodeError('');
+        setInviteCodeError('');
         setPhoneShake(false);
         setPasswordShake(false);
         setConfirmPasswordShake(false);
         setResetPhoneShake(false);
         setVerificationCodeShake(false);
         setSubmitError('');
+        setCodeNotice('');
         setPrivacyAgreed(false);
         setPrivacyError('');
         setPasswordVisible(false);
         setConfirmPasswordVisible(false);
         setCountdown(0);
+        registrationRequestIdRef.current = null;
         if (countdownTimerRef.current) {
             clearInterval(countdownTimerRef.current);
             countdownTimerRef.current = null;
@@ -139,25 +277,35 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         setConfirmPasswordError('');
         setResetPhoneError('');
         setVerificationCodeError('');
+        setInviteCodeError('');
         setPhoneShake(false);
         setPasswordShake(false);
         setConfirmPasswordShake(false);
         setResetPhoneShake(false);
         setVerificationCodeShake(false);
         setSubmitError('');
+        setCodeNotice('');
         setPrivacyError('');
     };
 
     // ========== 输入处理函数 ==========
     const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setPhone(e.target.value);
+        const value = normalizePhoneInput(e.target.value);
+        if (mode === 'register' && value !== phone) {
+            resetVerificationState();
+            invalidateRegistrationRequest();
+        }
+        setPhone(value);
         if (phoneError) clearFieldError(setPhoneError, setPhoneShake);
+        if (mode === 'login' && submitError) setSubmitError('');
     };
 
     const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         setPassword(value);
+        if (mode === 'register') invalidateRegistrationRequest();
         if (passwordError) clearFieldError(setPasswordError, setPasswordShake);
+        if (mode === 'login' && submitError) setSubmitError('');
 
         // 如果确认密码已填写，重新验证
         if (confirmPassword && (mode === 'register' || mode === 'reset')) {
@@ -172,6 +320,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
     const handleConfirmPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         setConfirmPassword(value);
+        if (mode === 'register') invalidateRegistrationRequest();
         if (confirmPasswordError) clearFieldError(setConfirmPasswordError, setConfirmPasswordShake);
 
         if (value && password) {
@@ -184,14 +333,23 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
     };
 
     const handleResetPhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setResetPhone(e.target.value);
+        const value = normalizePhoneInput(e.target.value);
+        if (value !== resetPhone) resetVerificationState();
+        setResetPhone(value);
         if (resetPhoneError) clearFieldError(setResetPhoneError, setResetPhoneShake);
     };
 
     const handleVerificationCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value.replace(/\D/g, '');
+        const value = normalizeVerificationCode(e.target.value);
         setVerificationCode(value);
+        if (mode === 'register') invalidateRegistrationRequest();
         if (verificationCodeError) clearFieldError(setVerificationCodeError, setVerificationCodeShake);
+    };
+
+    const handleInviteCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setInviteCode(normalizeInviteCode(e.target.value));
+        invalidateRegistrationRequest();
+        if (inviteCodeError) setInviteCodeError('');
     };
 
     // ========== 倒计时管理 ==========
@@ -216,27 +374,57 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
 
     // ========== 发送验证码 ==========
     const handleSendCode = async () => {
-        if (!resetPhone) {
-            setFieldError(setResetPhoneError, setResetPhoneShake, t('validation.phoneRequired'));
+        if (sendCodeInFlightRef.current) return;
+        const targetPhone = mode === 'register' ? phone : resetPhone;
+        const setTargetPhoneError = mode === 'register' ? setPhoneError : setResetPhoneError;
+        const setTargetPhoneShake = mode === 'register' ? setPhoneShake : setResetPhoneShake;
+        if (!targetPhone) {
+            setFieldError(setTargetPhoneError, setTargetPhoneShake, t('validation.phoneRequired'));
             return;
         }
 
-        if (!validatePhone(resetPhone)) {
-            setFieldError(setResetPhoneError, setResetPhoneShake, t('validation.phoneInvalid'));
+        if (!validatePhone(targetPhone)) {
+            setFieldError(setTargetPhoneError, setTargetPhoneShake, t('validation.phoneInvalid'));
             return;
         }
 
+        sendCodeInFlightRef.current = true;
         setIsSendingCode(true);
+        const requestVersion = sendCodeRequestVersionRef.current + 1;
+        sendCodeRequestVersionRef.current = requestVersion;
+        setSubmitError('');
+        setCodeNotice('');
+        if (mode === 'register') {
+            trackRegistrationEvent('registration_code_send');
+        }
         try {
-            await auth.sendResetCode({ phoneNumber: resetPhone });
-            setSubmitError(t('auth.codeSent'));
+            if (mode === 'register') {
+                await auth.sendCode({ phoneNumber: targetPhone, purpose: 'register' });
+            } else {
+                await auth.sendCode({ phoneNumber: targetPhone, purpose: 'password_reset' });
+            }
+            if (requestVersion !== sendCodeRequestVersionRef.current) return;
+            setVerificationCode('');
+            setHasSentCode(true);
+            setCodeNotice(t('auth.codeSent'));
             startCountdown();
         } catch (error: any) {
-            console.error('Failed to send code:', error);
+            if (requestVersion !== sendCodeRequestVersionRef.current) return;
+            console.error('Failed to send verification code');
+            if (mode === 'register' && isRegistrationRequestTimeout(error)) {
+                setVerificationCode('');
+                setHasSentCode(true);
+                setCodeNotice(t('auth.codeSendTimeout'));
+                startCountdown();
+                return;
+            }
             const errorMessage = error.response?.data?.message || error.message || t('common.error');
             setSubmitError(errorMessage);
         } finally {
-            setIsSendingCode(false);
+            if (requestVersion === sendCodeRequestVersionRef.current) {
+                sendCodeInFlightRef.current = false;
+                setIsSendingCode(false);
+            }
         }
     };
 
@@ -255,29 +443,42 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                 setFieldError(setPasswordError, setPasswordShake, t('validation.passwordMinLength'));
                 hasError = true;
             }
+            if (!isPrivacyAgreementAccepted(privacyAgreed)) {
+                setPrivacyError(t('validation.agreementRequired'));
+                hasError = true;
+            }
         }
 
         // 注册模式验证
         if (mode === 'register') {
-            if (!validatePhone(phone)) {
-                setFieldError(setPhoneError, setPhoneShake, t('validation.phoneInvalid'));
-                hasError = true;
+            const errors = validateRegistrationFields({
+                phoneNumber: phone,
+                code: verificationCode,
+                password,
+                confirmPassword,
+                inviteCode,
+                agreementAccepted: privacyAgreed,
+                codeSent: hasSentCode,
+            });
+            if (errors.phoneNumber) {
+                setFieldError(setPhoneError, setPhoneShake, t(`validation.${errors.phoneNumber}`));
             }
-            if (!validatePassword(password)) {
-                setFieldError(setPasswordError, setPasswordShake, t('validation.passwordMinLength'));
-                hasError = true;
+            if (errors.code) {
+                setFieldError(setVerificationCodeError, setVerificationCodeShake, t(`validation.${errors.code}`));
             }
-            if (!confirmPassword) {
-                setFieldError(setConfirmPasswordError, setConfirmPasswordShake, t('validation.confirmPasswordRequired'));
-                hasError = true;
-            } else if (password !== confirmPassword) {
-                setFieldError(setConfirmPasswordError, setConfirmPasswordShake, t('validation.passwordMismatch'));
-                hasError = true;
+            if (errors.password) {
+                setFieldError(setPasswordError, setPasswordShake, t(`validation.${errors.password}`));
             }
-            if (!isPrivacyAgreementAccepted(privacyAgreed)) {
-                setPrivacyError(t('validation.privacyRequired'));
-                hasError = true;
+            if (errors.confirmPassword) {
+                setFieldError(setConfirmPasswordError, setConfirmPasswordShake, t(`validation.${errors.confirmPassword}`));
             }
+            if (errors.inviteCode) {
+                setInviteCodeError(t(`validation.${errors.inviteCode}`));
+            }
+            if (errors.agreement) {
+                setPrivacyError(t(`validation.${errors.agreement}`));
+            }
+            hasError = Object.keys(errors).length > 0;
         }
 
         // 重置密码模式验证
@@ -314,25 +515,44 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
 
     // ========== Google 登录 ==========
     const handleGoogleLogin = async () => {
-        // 功能注释：海外 Google 一键登录同样须先同意外置隐私政策
+        // 海外 Google 登录须先同意用户协议和隐私政策
         if (!isPrivacyAgreementAccepted(privacyAgreed)) {
-            setPrivacyError(t('validation.privacyRequired'));
+            setPrivacyError(t('validation.agreementRequired'));
             return;
         }
         setPrivacyError('');
         setIsGoogleLoading(true);
         setSubmitError('');
+        const isRedirectLogin = !import.meta.env.DEV;
         try {
+            if (isRedirectLogin) {
+                markPendingGoogleLoginAgreementAccepted();
+            }
             const result = await loginWithGoogle();
-            if (result.success) {
+            if (isRedirectLogin && !(result.success && result.redirecting)) {
+                clearPendingGoogleLoginAgreementAccepted();
+            }
+            if (result.success && result.data) {
+                login(result.data);
+                markLoginAgreementAccepted(result.firebaseUid);
                 resetAllStates();
                 onClose();
+            } else if (result.success && result.redirecting) {
+                return;
+            } else if (handleAgreementRequestError(result.code)) {
+                return;
             } else {
                 setSubmitError(result.message || t('auth.googleLoginFailed'));
             }
         } catch (error: any) {
             console.error('Google login error:', error);
-            setSubmitError(error.message || t('auth.googleLoginFailed'));
+            if (isRedirectLogin) {
+                clearPendingGoogleLoginAgreementAccepted();
+            }
+            const errorCode = error.response?.data?.code || error.code;
+            if (!handleAgreementRequestError(errorCode)) {
+                setSubmitError(error.message || t('auth.googleLoginFailed'));
+            }
         } finally {
             setIsGoogleLoading(false);
         }
@@ -341,6 +561,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
     // ========== 表单提交 ==========
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (isLoading) return;
 
         if (!validateForm()) {
             console.log('[Auth] Form validation failed, stopping submission');
@@ -353,24 +574,37 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                 const response = await auth.login({
                     phoneNumber: phone,
                     password: password,
+                    agreementAccepted: true,
+                    userAgreementVersion: REGISTRATION_AGREEMENT_VERSION,
+                    privacyPolicyVersion: REGISTRATION_PRIVACY_POLICY_VERSION,
                 });
 
                 if (response.data?.data) {
                     login(response.data.data);
+                    markLoginAgreementAccepted(response.data.data.user.userId);
                     // 登录前若点过推广链，session 里可能有 pending click，交给后端一次性归因
                     void gamePromotionApi.consumePending(getOrCreatePromoAnonId()).catch(() => {});
                     if (onLogin) {
                         onLogin(phone, password);
                     }
                     resetAllStates();
+                    authModalStore.getState().setAuthModalMode('login');
                     onClose();
                 } else {
                     throw new Error(t('common.error'));
                 }
             } else if (mode === 'register') {
+                const requestId = registrationRequestIdRef.current || createRegistrationRequestId();
+                registrationRequestIdRef.current = requestId;
+                const registrationSessionId = getOrCreateRegistrationSessionId();
+                trackRegistrationEvent('registration_submit', registrationSessionId);
                 const response = await auth.signup({
                     phoneNumber: phone,
                     password: password,
+                    code: verificationCode,
+                    inviteCode: inviteCode || undefined,
+                    agreementAccepted: privacyAgreed,
+                    requestId,
                     avatarUrl: '',
                     nickname: '',
                     // 注册时携带 anonId，后端将匿名点击与新建账号关联（game_promotion invitee）
@@ -378,13 +612,17 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                 });
 
                 if (response.data?.data) {
+                    trackRegistrationEvent('registration_success', registrationSessionId);
                     login(response.data.data);
+                    markLoginAgreementAccepted(response.data.data.user.userId);
                     void gamePromotionApi.consumePending(getOrCreatePromoAnonId()).catch(() => {});
 
                     if (onRegister) {
                         onRegister(phone, password);
                     }
+                    clearRegistrationSessionId();
                     resetAllStates();
+                    authModalStore.getState().setAuthModalMode('login');
                     onClose();
                 } else {
                     throw new Error(t('common.error'));
@@ -402,15 +640,43 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                     resetAllStates();
                     setTimeout(() => {
                         setMode('login');
+                        authModalStore.getState().setAuthModalMode('login');
                         setSubmitError('');
                     }, 2000);
                 } else {
                     throw new Error(t('common.error'));
                 }
             }
-        } catch (error: unknown) {
-            console.error('Operation failed:', error);
-            setSubmitError(getApiErrorMessage(error, t('common.error')));
+        } catch (error: any) {
+            console.error('Authentication request failed');
+            if (mode === 'register') {
+                trackRegistrationEvent('registration_failure');
+            }
+            if (mode === 'register' && isRegistrationRequestTimeout(error)) {
+                setSubmitError(t('auth.registrationTimeout'));
+                return;
+            }
+            const errorMessage = getApiErrorMessage(error, t('common.error'));
+            const errorCode = error?.response?.data?.code;
+            if (mode === 'login' && handleAgreementRequestError(errorCode)) {
+                return;
+            } else if (mode === 'login' && errorCode === 'INVALID_LOGIN_CREDENTIALS') {
+                setSubmitError(t('auth.invalidLoginCredentials'));
+            } else if (mode === 'reset' && errorCode === 'PHONE_NOT_REGISTERED') {
+                setFieldError(setResetPhoneError, setResetPhoneShake, t('auth.phoneNotRegistered'));
+            } else if (mode === 'reset' && errorCode === 'INVALID_CODE') {
+                setFieldError(setVerificationCodeError, setVerificationCodeShake, t('auth.invalidVerificationCode'));
+            } else if (mode === 'reset' && errorCode === 'CODE_EXPIRED') {
+                setFieldError(setVerificationCodeError, setVerificationCodeShake, t('auth.verificationCodeExpired'));
+            } else if (mode === 'reset' && errorCode === 'TOO_MANY_ATTEMPTS') {
+                setFieldError(setVerificationCodeError, setVerificationCodeShake, t('auth.tooManyVerificationAttempts'));
+            } else if (mode === 'register' && errorCode === 'INVALID_INVITE_CODE') {
+                setInviteCodeError(errorMessage);
+            } else if (mode === 'register' && ['INVALID_CODE', 'CODE_EXPIRED', 'TOO_MANY_ATTEMPTS'].includes(errorCode)) {
+                setFieldError(setVerificationCodeError, setVerificationCodeShake, errorMessage);
+            } else {
+                setSubmitError(errorMessage);
+            }
         } finally {
             setIsLoading(false);
         }
@@ -418,24 +684,37 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
 
     // ========== 模式切换 ==========
     const handleModeSwitch = () => {
+        if (isLoading) return;
         if (mode === 'login') {
+            const registrationSessionId = getOrCreateRegistrationSessionId();
+            trackRegistrationEvent('registration_mode_switch', registrationSessionId);
+            trackRegistrationEvent('registration_enter', registrationSessionId);
             setMode('register');
+            authModalStore.getState().setAuthModalMode('register');
         } else if (mode === 'register') {
+            const registrationSessionId = getOrCreateRegistrationSessionId();
+            trackRegistrationEvent('registration_mode_switch', registrationSessionId);
+            trackRegistrationEvent('registration_exit', registrationSessionId);
+            clearRegistrationSessionId();
             setMode('login');
+            authModalStore.getState().setAuthModalMode('login');
         }
         resetErrors();
+        resetVerificationState();
         setPasswordVisible(false);
         setConfirmPasswordVisible(false);
-        if (mode === 'register' || mode === 'reset') {
-            setConfirmPassword('');
-            setResetPhone('');
-            setVerificationCode('');
-        }
+        setConfirmPassword('');
+        setInviteCode('');
+        setPrivacyAgreed(false);
+        registrationRequestIdRef.current = null;
     };
 
     const handleForgetPassword = () => {
+        if (isLoading) return;
         setMode('reset');
+        authModalStore.getState().setAuthModalMode('reset');
         resetErrors();
+        resetVerificationState();
         setPasswordVisible(false);
         setConfirmPasswordVisible(false);
         setPhone('');
@@ -446,9 +725,41 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
     };
 
     const handleClose = () => {
+        if (isLoading) return;
+        if (mode === 'register') {
+            const registrationSessionId = getOrCreateRegistrationSessionId();
+            trackRegistrationEvent('registration_exit', registrationSessionId);
+            clearRegistrationSessionId();
+        }
         resetAllStates();
         setMode('login');
+        authModalStore.getState().setAuthModalMode('login');
         onClose();
+    };
+
+    const handleBackToLogin = () => {
+        if (isLoading) return;
+        resetAllStates();
+        setMode('login');
+        authModalStore.getState().setAuthModalMode('login');
+    };
+
+    const handleOverlayClick = (event: React.MouseEvent<HTMLDivElement>) => {
+        const pointerGesture = overlayPointerRef.current;
+        overlayPointerRef.current = null;
+        if (pointerGesture?.moved) return;
+        if (event.target !== event.currentTarget) return;
+
+        const selection = window.getSelection();
+        if (selection && !selection.isCollapsed && selection.toString()) return;
+
+        const activeElement = document.activeElement;
+        if (activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement) {
+            const { selectionStart, selectionEnd } = activeElement;
+            if (selectionStart !== null && selectionEnd !== null && selectionStart !== selectionEnd) return;
+        }
+
+        handleClose();
     };
 
     // ========== 渲染辅助函数 ==========
@@ -466,7 +777,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
     const modalContent = (
         <div
             className={`${styles.modalOverlay} ${isGoogleOnly ? styles.googleOnlyOverlay : ''}`}
-            onClick={handleClose}
+            onClick={handleOverlayClick}
         >
             <div
                 className={`${styles.modalContent} ${isGoogleOnly ? styles.googleOnlyContent : ''}`}
@@ -476,22 +787,28 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                     type="button"
                     className={`${styles.closeBtn} ${isGoogleOnly ? styles.googleOnlyCloseBtn : ''}`}
                     onClick={handleClose}
+                    disabled={isLoading}
+                    aria-disabled={isLoading}
                 >
                     ×
                 </button>
 
                 <h2 className={`${styles.title} ${isGoogleOnly ? styles.googleOnlyTitle : ''}`}>
-                    {t('auth.login')}
+                    {isGoogleOnly
+                        ? t('auth.login')
+                        : mode === 'register' ? t('auth.register')
+                            : mode === 'reset' ? t('auth.reset') : t('auth.login')}
                 </h2>
 
                 {/* Google-only login when runtime language is English */}
                 {isGoogleOnly ? (
                     <>
                         <div className={styles.googleOnlyDivider} />
-                        {/* 功能注释：海外 Google 登录前须勾选同意外置隐私政策 */}
+                        {/* 海外 Google 登录前须勾选同意用户协议和隐私政策 */}
                         <div className={styles.privacyRow}>
-                            <label className={styles.privacyLabel}>
+                            <div className={styles.privacyLabel}>
                                 <input
+                                    id="google-login-agreement"
                                     type="checkbox"
                                     className={styles.privacyCheckbox}
                                     checked={privacyAgreed}
@@ -501,18 +818,30 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                                     }}
                                 />
                                 <span>
-                                    {t('auth.privacyAgreePrefix')}
+                                    <label htmlFor="google-login-agreement">
+                                        {t('auth.agreementPrefix')}
+                                    </label>
+                                    <a
+                                        href={userAgreementUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className={styles.privacyLink}
+                                        onClick={(event) => handleLegalDocumentClick(event, 'user-agreement')}
+                                    >
+                                        {t('auth.userAgreement')}
+                                    </a>
+                                    {t('auth.agreementJoiner')}
                                     <a
                                         href={privacyPolicyUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className={styles.privacyLink}
-                                        onClick={(e) => e.stopPropagation()}
+                                        onClick={(event) => handleLegalDocumentClick(event, 'privacy-policy')}
                                     >
                                         {t('auth.privacyPolicy')}
                                     </a>
                                 </span>
-                            </label>
+                            </div>
                             {privacyError ? (
                                 <div className={styles.errorMessage}>{privacyError}</div>
                             ) : null}
@@ -544,6 +873,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                                     value={phone}
                                     onChange={handlePhoneChange}
                                     maxLength={11}
+                                    inputMode="numeric"
+                                    disabled={isLoading || (mode === 'register' && isSendingCode)}
                                 />
                                 {phoneError && (
                                     <div className={styles.errorMessage}>{phoneError}</div>
@@ -561,6 +892,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                                     value={resetPhone}
                                     onChange={handleResetPhoneChange}
                                     maxLength={11}
+                                    inputMode="numeric"
+                                    disabled={isLoading || isSendingCode}
                                 />
                                 {resetPhoneError && (
                                     <div className={styles.errorMessage}>{resetPhoneError}</div>
@@ -569,7 +902,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                         )}
 
                         {/* 验证码输入 */}
-                        {mode === 'reset' && (
+                        {(mode === 'register' || mode === 'reset') && (
                             <div className={styles.inputGroup}>
                                 <div className={styles.codeInputWrapper}>
                                     <input
@@ -580,12 +913,18 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                                         value={verificationCode}
                                         onChange={handleVerificationCodeChange}
                                         maxLength={6}
+                                        disabled={isLoading}
                                     />
                                     <button
                                         type="button"
                                         className={styles.sendCodeBtn}
                                         onClick={handleSendCode}
-                                        disabled={isSendingCode || countdown > 0 || !resetPhone || !validatePhone(resetPhone)}
+                                        disabled={
+                                            isLoading
+                                            || isSendingCode
+                                            || countdown > 0
+                                            || !validatePhone(mode === 'register' ? phone : resetPhone)
+                                        }
                                     >
                                         {isSendingCode ? t('auth.sending') : countdown > 0 ? `${countdown}s` : t('auth.sendCode')}
                                     </button>
@@ -606,6 +945,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                                         placeholder={t('auth.password')}
                                         value={password}
                                         onChange={handlePasswordChange}
+                                        disabled={isLoading}
                                     />
                                     <button
                                         type="button"
@@ -637,6 +977,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                                         placeholder={t('auth.confirmPassword')}
                                         value={confirmPassword}
                                         onChange={handleConfirmPasswordChange}
+                                        disabled={isLoading}
                                     />
                                     <button
                                         type="button"
@@ -653,32 +994,65 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                             </div>
                         )}
 
-                        {/* 功能注释：注册态展示隐私政策勾选，链接打开外置静态页 */}
                         {mode === 'register' && (
+                            <div className={styles.inputGroup}>
+                                <input
+                                    type="text"
+                                    className={`${styles.input} ${inviteCodeError ? styles.inputError : ''}`}
+                                    placeholder={t('auth.inviteCode')}
+                                    value={inviteCode}
+                                    onChange={handleInviteCodeChange}
+                                    maxLength={7}
+                                    autoComplete="off"
+                                    disabled={isLoading}
+                                />
+                                {inviteCodeError && (
+                                    <div className={styles.errorMessage}>{inviteCodeError}</div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* 登录和注册共用双协议勾选；重置密码不要求勾选。 */}
+                        {mode !== 'reset' && (
                             <div className={styles.privacyRow}>
-                                <label className={styles.privacyLabel}>
+                                <div className={styles.privacyLabel}>
                                     <input
+                                        id="phone-auth-agreement"
                                         type="checkbox"
                                         className={styles.privacyCheckbox}
                                         checked={privacyAgreed}
+                                        disabled={isLoading}
                                         onChange={(e) => {
                                             setPrivacyAgreed(e.target.checked);
+                                            if (mode === 'register') invalidateRegistrationRequest();
                                             if (e.target.checked) setPrivacyError('');
                                         }}
                                     />
                                     <span>
-                                        {t('auth.privacyAgreePrefix')}
+                                        <label htmlFor="phone-auth-agreement">
+                                            {t('auth.agreementPrefix')}
+                                        </label>
+                                        <a
+                                            href={userAgreementUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className={styles.privacyLink}
+                                            onClick={(event) => handleLegalDocumentClick(event, 'user-agreement')}
+                                        >
+                                            {t('auth.userAgreement')}
+                                        </a>
+                                        {t('auth.agreementJoiner')}
                                         <a
                                             href={privacyPolicyUrl}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className={styles.privacyLink}
-                                            onClick={(e) => e.stopPropagation()}
+                                            onClick={(event) => handleLegalDocumentClick(event, 'privacy-policy')}
                                         >
                                             {t('auth.privacyPolicy')}
                                         </a>
                                     </span>
-                                </label>
+                                </div>
                                 {privacyError ? (
                                     <div className={styles.errorMessage}>{privacyError}</div>
                                 ) : null}
@@ -696,6 +1070,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                                             placeholder={t('auth.newPassword')}
                                             value={password}
                                             onChange={handlePasswordChange}
+                                            disabled={isLoading}
                                         />
                                         <button
                                             type="button"
@@ -718,6 +1093,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                                             placeholder={t('auth.confirmNewPassword')}
                                             value={confirmPassword}
                                             onChange={handleConfirmPasswordChange}
+                                            disabled={isLoading}
                                         />
                                         <button
                                             type="button"
@@ -733,6 +1109,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                                     )}
                                 </div>
                             </>
+                        )}
+
+                        {codeNotice && (
+                            <div className={styles.successMessage}>{codeNotice}</div>
                         )}
 
                         {/* 提交错误信息 */}
@@ -766,7 +1146,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                         <span>
                             {mode === 'login' ? t('auth.noAccount') : t('auth.hasAccount')}
                         </span>
-                        <button type="button" onClick={handleModeSwitch} className={styles.switchBtn}>
+                        <button type="button" onClick={handleModeSwitch} className={styles.switchBtn} disabled={isLoading}>
                             {mode === 'login' ? t('auth.registerNow') : t('auth.loginNow')}
                         </button>
                     </div>
@@ -775,7 +1155,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                 {!isGoogleOnly && mode === 'reset' && (
                     <div className={styles.modeSwitch}>
                         <span>{t('auth.rememberPassword')}</span>
-                        <button type="button" onClick={() => setMode('login')} className={styles.switchBtn}>
+                        <button type="button" onClick={handleBackToLogin} className={styles.switchBtn} disabled={isLoading}>
                             {t('auth.backToLogin')}
                         </button>
                     </div>

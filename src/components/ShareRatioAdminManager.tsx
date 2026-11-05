@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
+import ConfirmModal from './CommonModal/ConfirmModal';
 import adminShareRatioApi, {
     type AdminShareRatioGame,
     type AdminShareRatioUser,
@@ -28,6 +29,7 @@ const ShareRatioAdminManager: React.FC<ShareRatioAdminManagerProps> = () => {
     const [editingGame, setEditingGame] = useState<AdminShareRatioGame | null>(null);
     const [editRatio, setEditRatio] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
     const handleLookup = async () => {
         const keyword = lookupKeyword.trim();
@@ -43,6 +45,7 @@ const ShareRatioAdminManager: React.FC<ShareRatioAdminManagerProps> = () => {
                 setUserInfo(response.data.data!.user);
                 setGames(response.data.data!.games);
                 setEditingGame(null);
+                setIsConfirmOpen(false);
                 toast.success('查询成功');
             } else {
                 toast.error(response.data.message || '查询失败');
@@ -60,6 +63,7 @@ const ShareRatioAdminManager: React.FC<ShareRatioAdminManagerProps> = () => {
     };
 
     const handleStartEdit = (game: AdminShareRatioGame) => {
+        if (!game.shareRatioEditable) return;
         setEditingGame(game);
         setEditRatio((game.shareRatio * 100).toFixed(1));
     };
@@ -67,9 +71,10 @@ const ShareRatioAdminManager: React.FC<ShareRatioAdminManagerProps> = () => {
     const handleCancelEdit = () => {
         setEditingGame(null);
         setEditRatio('');
+        setIsConfirmOpen(false);
     };
 
-    const handleSaveRatio = async () => {
+    const handleRequestSaveRatio = () => {
         if (!editingGame) return;
 
         const ratio = parseFloat(editRatio);
@@ -77,6 +82,15 @@ const ShareRatioAdminManager: React.FC<ShareRatioAdminManagerProps> = () => {
             toast.error('分成比例必须在 0~100 之间');
             return;
         }
+        setIsConfirmOpen(true);
+    };
+
+    const handleSaveRatio = async () => {
+        if (!editingGame || !editingGame.shareRatioEditable) return;
+
+        const ratio = parseFloat(editRatio);
+        if (isNaN(ratio) || ratio < 0 || ratio > 100) return;
+        setIsConfirmOpen(false);
 
         try {
             setIsSaving(true);
@@ -94,6 +108,8 @@ const ShareRatioAdminManager: React.FC<ShareRatioAdminManagerProps> = () => {
                                   ...g,
                                   shareRatio: newRatio,
                                   shareRatioDisplay: `${ratio.toFixed(1)}%`,
+                                  effectiveShareRatio: newRatio,
+                                  effectiveShareRatioDisplay: `${ratio.toFixed(1)}%`,
                                   updatedAt: response.data.data!.updatedAt,
                               }
                             : g
@@ -113,19 +129,16 @@ const ShareRatioAdminManager: React.FC<ShareRatioAdminManagerProps> = () => {
     };
 
     const getShareTypeLabel = (shareType: Currency) => {
-        return shareType === 'points' ? '积分' : '钻石';
+        return shareType === 'points' ? '织梦豆' : 'KK币';
+    };
+
+    const getShareRatioSourceLabel = (game: AdminShareRatioGame) => {
+        if (game.shareRatioSource === 'game') return '作品单独比例';
+        return `${userInfo?.creatorBenefitLabel || '创作者权益'}比例`;
     };
 
     return (
         <div className={styles.panelStack}>
-            <section className={styles.heroCard}>
-                <div>
-                    <div className={styles.sectionBadge}>分成比例管理</div>
-                    <h2 className={styles.heroTitle}>管理创作者作品分成比例</h2>
-                    <p className={styles.heroDesc}>通过 Kuran 号查询创作者作品，并设置各作品的分成比例。</p>
-                </div>
-            </section>
-
             <section className={styles.card}>
                 <div className={styles.cardHeader}>
                     <div>
@@ -224,8 +237,8 @@ const ShareRatioAdminManager: React.FC<ShareRatioAdminManagerProps> = () => {
                                     return (
                                         <tr key={game.fileId} className={styles.reviewTableRow}>
                                             <td className={styles.rewardTitleCell}>{game.title || '-'}</td>
-                                            <td>{game.gameMode || '-'}</td>
-                                            <td>
+                                            <td className={styles.shareRatioTypeCell}>{game.gameMode || '-'}</td>
+                                            <td className={styles.shareRatioValueCell}>
                                                 <span
                                                     className={`${styles.statusTag} ${
                                                         game.shareType === 'diamonds'
@@ -252,7 +265,10 @@ const ShareRatioAdminManager: React.FC<ShareRatioAdminManagerProps> = () => {
                                                         <span style={{ fontSize: '14px', color: '#705b4b' }}>%</span>
                                                     </div>
                                                 ) : (
-                                                    <span style={{ fontWeight: 700 }}>{game.shareRatioDisplay}</span>
+                                                    <>
+                                                        <strong className={styles.shareRatioValue}>{game.effectiveShareRatioDisplay}</strong>
+                                                        <small className={styles.shareRatioSource}>{getShareRatioSourceLabel(game)}</small>
+                                                    </>
                                                 )}
                                             </td>
                                             <td>
@@ -274,7 +290,7 @@ const ShareRatioAdminManager: React.FC<ShareRatioAdminManagerProps> = () => {
                                                             type="button"
                                                             className={styles.primaryButton}
                                                             style={{ padding: '8px 12px', fontSize: '13px' }}
-                                                            onClick={() => void handleSaveRatio()}
+                                                            onClick={handleRequestSaveRatio}
                                                             disabled={isSaving}
                                                         >
                                                             {isSaving ? '保存中...' : '保存'}
@@ -289,7 +305,7 @@ const ShareRatioAdminManager: React.FC<ShareRatioAdminManagerProps> = () => {
                                                             取消
                                                         </button>
                                                     </div>
-                                                ) : (
+                                                ) : game.shareRatioEditable ? (
                                                     <button
                                                         type="button"
                                                         className={`${styles.secondaryButton} ${styles.reviewDetailButton}`}
@@ -298,6 +314,8 @@ const ShareRatioAdminManager: React.FC<ShareRatioAdminManagerProps> = () => {
                                                     >
                                                         修改比例
                                                     </button>
+                                                ) : (
+                                                    <span className={styles.shareRatioLocked}>随创作者权益生效</span>
                                                 )}
                                             </td>
                                         </tr>
@@ -314,6 +332,18 @@ const ShareRatioAdminManager: React.FC<ShareRatioAdminManagerProps> = () => {
                     <div className={styles.emptyState}>该用户暂无作品</div>
                 </section>
             )}
+
+            <ConfirmModal
+                isOpen={isConfirmOpen}
+                onCancel={() => setIsConfirmOpen(false)}
+                onConfirm={() => void handleSaveRatio()}
+                title="确认修改分成比例"
+                message={editingGame
+                    ? `确认将《${editingGame.title || '-'}》的作品分成比例从 ${editingGame.effectiveShareRatioDisplay} 调整为 ${Number(editRatio).toFixed(1)}%？后续新产生的收益将按新比例计算，历史流水不追溯调整。`
+                    : ''}
+                confirmButtonText="确认修改"
+                cancelButtonText="取消"
+            />
         </div>
     );
 };

@@ -1,6 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { IoChevronDown, IoEyeOutline } from 'react-icons/io5';
-import { MdContentCopy, MdOutlineEdit } from 'react-icons/md';
+import { MdContentCopy, MdOutlineEdit, MdOutlineTaskAlt } from 'react-icons/md';
+import ExchangeModal from '../components/Purchase/ExchangeModal';
+import ConfirmModal from '../components/CommonModal/ConfirmModal';
+import confirmModalStyles from '../components/CommonModal/ConfirmModal.module.css';
+import { RiAccountCircleLine } from 'react-icons/ri';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Trans, useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -8,13 +12,9 @@ import styles from './Create.module.css';
 import AppPageShell from '../components/Layout/AppPageShell';
 import FooterArea from '../components/Layout/FooterArea';
 import RechargeModal from '../components/Purchase/RechargeModal';
-import ExchangeModal from '../components/Purchase/ExchangeModal';
-import ConfirmModal from '../components/CommonModal/ConfirmModal';
-import confirmModalStyles from '../components/CommonModal/ConfirmModal.module.css';
-import WithdrawFlowModal from '../components/Create/WithdrawFlowModal';
 import ProfileFunctionPanel from '../components/Profile/ProfileFunctionPanel';
+import VipStatusModal from '../components/Profile/VipStatusModal';
 import InviteCampaignCard from '../components/Profile/InviteCampaignCard';
-import TodayEarnPointsPanel from '../components/Profile/TodayEarnPointsPanel';
 import ProfilePreferenceModal from '../components/ProfilePreferenceModal';
 import { useAuthStore } from '../store/useAuthStore';
 import { useProfileIdentityEdit } from '../hooks/useProfileIdentityEdit';
@@ -24,8 +24,11 @@ import payApi from '../api/pay/payApi';
 import type { PayOrderRequest } from '../api/pay/pay.type';
 import { auth } from '../api/account/authApi';
 import { getApiErrorMessage } from '../utils/error';
+import { copyTextToClipboard } from '../utils/clipboard';
 import { getImageUrl } from '../utils/constants';
 import { getGenderSymbol, normalizeGender } from '../utils/profileCompletion';
+import { formatKk } from '../utils/kkMoney';
+import { hasActiveVip } from '../lib/membershipStatus';
 import {
     parseOverseasPayReturnSearch,
     resolveOverseasPayReturnStatus,
@@ -71,13 +74,13 @@ const Create: React.FC = () => {
     const [creatorStats, setCreatorStats] = useState<StatsOverview | null>(null);
     const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
     const [isMembershipRechargeModalOpen, setIsMembershipRechargeModalOpen] = useState(false);
+    const [isVipStatusModalOpen, setIsVipStatusModalOpen] = useState(false);
+    const [streakDays, setStreakDays] = useState(0);
+    const [isStatsExpanded, setIsStatsExpanded] = useState(false);
     const [isExchangeModalOpen, setIsExchangeModalOpen] = useState(false);
     const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
     const [isSettleDiamondsModalOpen, setIsSettleDiamondsModalOpen] = useState(false);
     const [isSettling, setIsSettling] = useState(false);
-    const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
-    const [streakDays, setStreakDays] = useState(0);
-    const [isStatsExpanded, setIsStatsExpanded] = useState(false);
     const [isEarningsModalOpen, setIsEarningsModalOpen] = useState(false);
     const [isProfilePreferenceOpen, setIsProfilePreferenceOpen] = useState(false);
     const [followingCount, setFollowingCount] = useState(0);
@@ -91,15 +94,14 @@ const Create: React.FC = () => {
     const debugToken = user?.user?.debugToken;
     const truncatedDebugToken = debugToken ? `${debugToken.slice(0, 8)}...` : null;
     const userAvatar = getImageUrl(user?.user?.avatarUrl) || `${import.meta.env.BASE_URL}data/assets/defaultAvatar.png`;
-    const isMember = Boolean(user?.user?.isMember);
-    const isSignedAuthor = Boolean(user?.user?.userSegment && user.user.userSegment !== 'normal');
+    const membership = user?.user?.membership;
+    const isVipActive = hasActiveVip(membership);
+    const isPromotionPartner = Boolean(user?.user?.userSegment && user.user.userSegment !== 'normal');
     const isWorkIncentive = stats.incentiveType === 'incentive' || stats.incentiveType === 'game_incentive' || stats.incentiveType === 'all_incentive';
     const isCodeIncentive = stats.incentiveType === 'code_incentive' || stats.incentiveType === 'all_incentive';
     const hasExtraEarnings = isWorkIncentive || isCodeIncentive;
 
-    const handleWithdrawClick = () => {
-        setIsWithdrawModalOpen(true);
-    };
+    const formatEarningsValue = (value: number) => (Number(value) || 0).toLocaleString('zh-CN');
 
     const getGameTotalStats = async () => {
         if (!user?.user?.id) {
@@ -251,7 +253,7 @@ const Create: React.FC = () => {
         if (!userCode) return;
 
         try {
-            await navigator.clipboard.writeText(userCode);
+            await copyTextToClipboard(userCode);
             toast.success(t('create.kuranIdCopied'));
         } catch (error) {
             console.error('复制 Kuran 号失败:', error);
@@ -263,7 +265,7 @@ const Create: React.FC = () => {
         if (!debugToken) return;
 
         try {
-            await navigator.clipboard.writeText(debugToken);
+            await copyTextToClipboard(debugToken);
             toast.success(t('create.tokenCopied'));
         } catch (error) {
             console.error('复制 Token 失败:', error);
@@ -285,41 +287,27 @@ const Create: React.FC = () => {
         return null;
     };
 
-    const formatEarningsValue = (value: number) => {
-        const safe = Number(value) || 0;
-        return safe.toLocaleString('zh-CN');
-    };
-
     const handleSettle = async () => {
         if (isSettling) return;
-
         setIsSettling(true);
         try {
             const response = await auth.settlePoints('points');
-            if (response.data.success && response.data.data) {
-                const data = response.data.data;
-                const pointsAmount = data.pointsSettled || 0;
-                const diamondsAmount = data.diamondsSettled || 0;
-
-                let successMsg = '';
-                if (pointsAmount > 0 && diamondsAmount > 0) {
-                    successMsg = t('create.settleSuccessDual', { points: pointsAmount, diamonds: diamondsAmount });
-                } else if (pointsAmount > 0) {
-                    successMsg = t('create.settleSuccess', { amount: pointsAmount });
-                } else if (diamondsAmount > 0) {
-                    successMsg = t('create.settleSuccessDiamonds', { amount: diamondsAmount });
-                } else {
-                    successMsg = t('create.settleSuccessZero');
-                }
-
-                toast.success(successMsg);
-                await getGameTotalStats();
-                await getCreatorOverviewStats();
-                await getUserInfo();
-                setIsSettleModalOpen(false);
-            } else {
+            if (!response.data.success || !response.data.data) {
                 toast.error(response.data.message || t('create.settleFailed'));
+                return;
             }
+            const pointsAmount = response.data.data.pointsSettled || 0;
+            const diamondsAmount = response.data.data.diamondsSettled || 0;
+            const successMsg = pointsAmount > 0 && diamondsAmount > 0
+                ? t('create.settleSuccessDual', { points: pointsAmount, diamonds: diamondsAmount })
+                : pointsAmount > 0
+                    ? t('create.settleSuccess', { amount: pointsAmount })
+                    : diamondsAmount > 0
+                        ? t('create.settleSuccessDiamonds', { amount: diamondsAmount })
+                        : t('create.settleSuccessZero');
+            toast.success(successMsg);
+            await Promise.all([getGameTotalStats(), getCreatorOverviewStats(), getUserInfo()]);
+            setIsSettleModalOpen(false);
         } catch (error: unknown) {
             toast.error(getApiErrorMessage(error, t('create.settleFailed')));
         } finally {
@@ -329,28 +317,19 @@ const Create: React.FC = () => {
 
     const handleSettleDiamonds = async () => {
         if (isSettling) return;
-
         setIsSettling(true);
         try {
             const response = await auth.settlePoints('diamonds');
-            if (response.data.success && response.data.data) {
-                const data = response.data.data;
-                const diamondsAmount = data.diamondsSettled || 0;
-
-                let successMsg = '';
-                if (diamondsAmount > 0) {
-                    successMsg = t('create.settleSuccessDiamonds', { amount: diamondsAmount });
-                } else {
-                    successMsg = t('create.settleSuccessZero');
-                }
-
-                toast.success(successMsg);
-                await getGameTotalStats();
-                await getUserInfo();
-                setIsSettleDiamondsModalOpen(false);
-            } else {
+            if (!response.data.success || !response.data.data) {
                 toast.error(response.data.message || t('create.settleFailed'));
+                return;
             }
+            const amount = response.data.data.diamondsSettled || 0;
+            toast.success(amount > 0
+                ? t('create.settleSuccessDiamonds', { amount })
+                : t('create.settleSuccessZero'));
+            await Promise.all([getGameTotalStats(), getUserInfo()]);
+            setIsSettleDiamondsModalOpen(false);
         } catch (error: unknown) {
             toast.error(getApiErrorMessage(error, t('create.settleFailed')));
         } finally {
@@ -423,35 +402,39 @@ const Create: React.FC = () => {
                                             </span>
                                         )}
                                     </div>
-                                    {(isMember || isSignedAuthor) && (
-                                        <div className={styles.creatorHeroBadgeRow}>
-                                            {isMember && (
-                                                <span className={styles.creatorRoleBadge}>
-                                                    {t('create.memberBadge')}
-                                                </span>
-                                            )}
-                                            {isSignedAuthor && (
-                                                <span className={styles.creatorRoleBadge}>
-                                                    {t('create.signedAuthorBadge')}
-                                                </span>
+                                    <div className={styles.creatorHeroMetaRow}>
+                                        <div className={styles.creatorHeroIdGroup}>
+                                            <span className={styles.creatorHeroId}>
+                                                {t('create.idPrefix')}{userCode || '--'}
+                                            </span>
+                                            {userCode && (
+                                                <button
+                                                    type="button"
+                                                    className={styles.creatorCopyLink}
+                                                    onClick={handleCopyUserCode}
+                                                    aria-label={t('create.copy')}
+                                                    title={t('create.copy')}
+                                                >
+                                                    <MdContentCopy aria-hidden="true" />
+                                                </button>
                                             )}
                                         </div>
-                                    )}
-                                    <div className={styles.creatorHeroMetaRow}>
-                                        <span className={styles.creatorHeroId}>
-                                            {t('create.idPrefix')}{userCode || '--'}
-                                        </span>
-                                        {userCode && (
+                                        <div className={styles.creatorHeroBadgeRow}>
                                             <button
                                                 type="button"
-                                                className={styles.creatorCopyLink}
-                                                onClick={handleCopyUserCode}
-                                                aria-label={t('create.copy')}
-                                                title={t('create.copy')}
+                                                className={`${styles.creatorVipBadge} ${!isVipActive ? styles.creatorVipBadgeInactive : ''}`}
+                                                onClick={() => setIsVipStatusModalOpen(true)}
+                                                aria-label="查看VIP会员状态与福利"
+                                                title="查看VIP会员状态与福利"
                                             >
-                                                <MdContentCopy aria-hidden="true" />
+                                                VIP
                                             </button>
-                                        )}
+                                            {isPromotionPartner && (
+                                                <span className={styles.creatorRoleBadge}>推广者</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className={styles.creatorHeroTokenRow}>
                                         <span className={styles.creatorHeroTokenLabel}>Token:</span>
                                         <span className={styles.creatorHeroTokenValue}>
                                             {truncatedDebugToken || '--'}
@@ -503,13 +486,24 @@ const Create: React.FC = () => {
 
                             <div className={styles.creatorHeroStats}>
                                 <div className={styles.primaryStatsBar}>
-                                    <div className={styles.primaryStatItem}>
-                                        <div className={styles.primaryStatValue}>{stats.totalCreated}</div>
-                                        <div className={styles.primaryStatLabel}>{t('create.totalCreated')}</div>
-                                    </div>
-                                    <div className={styles.primaryStatItem}>
-                                        <div className={styles.primaryStatValue}>{creatorStats?.likeCount ?? 0}</div>
-                                        <div className={styles.primaryStatLabel}>{t('creatorStats.totalLikes')}</div>
+                                    <div
+                                        className={`${styles.primaryStatItem} ${styles.primaryStatItemClickable}`}
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={() => navigate('/asset/details')}
+                                        onKeyDown={(event) => {
+                                            if (event.key === 'Enter' || event.key === ' ') {
+                                                event.preventDefault();
+                                                navigate('/asset/details');
+                                            }
+                                        }}
+                                    >
+                                        <div className={styles.primaryStatValue}>
+                                            {formatKk(user?.user?.kkBalance?.total ?? user?.user?.diamonds ?? 0)}
+                                        </div>
+                                        <div className={styles.primaryStatLabel}>
+                                            KK币（含{formatKk(user?.user?.kkBalance?.limited ?? 0)}限时KK币）
+                                        </div>
                                     </div>
                                     <div
                                         className={`${styles.primaryStatItem} ${styles.primaryStatItemClickable}`}
@@ -526,37 +520,13 @@ const Create: React.FC = () => {
                                         <div className={styles.primaryStatValue}>{user?.user?.points ?? 0}</div>
                                         <div className={styles.primaryStatLabel}>{t('create.pointsStat')}</div>
                                     </div>
-                                    <div
-                                        className={`${styles.primaryStatItem} ${user?.user?.userSegment !== 'normal' ? styles.primaryStatItemWithActions : ''} ${styles.primaryStatItemClickable}`}
-                                        role="button"
-                                        tabIndex={0}
-                                        onClick={() => navigate('/asset/details')}
-                                        onKeyDown={(event) => {
-                                            if (event.key === 'Enter' || event.key === ' ') {
-                                                event.preventDefault();
-                                                navigate('/asset/details');
-                                            }
-                                        }}
-                                    >
-                                        <div className={styles.primaryStatValue}>{user?.user?.diamonds ?? 0}</div>
-                                        {user?.user?.userSegment !== 'normal' ? (
-                                            <div className={styles.primaryStatLabelRow}>
-                                                <span className={styles.primaryStatLabel}>{t('create.diamondsStat')}</span>
-                                                <span className={styles.primaryStatLabelSep} aria-hidden="true">·</span>
-                                                <button
-                                                    type="button"
-                                                    className={styles.primaryStatWithdrawLink}
-                                                    onClick={(event) => {
-                                                        event.stopPropagation();
-                                                        handleWithdrawClick();
-                                                    }}
-                                                >
-                                                    {t('create.withdraw')}
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <div className={styles.primaryStatLabel}>{t('create.diamondsStat')}</div>
-                                        )}
+                                    <div className={styles.primaryStatItem}>
+                                        <div className={styles.primaryStatValue}>{stats.totalCreated}</div>
+                                        <div className={styles.primaryStatLabel}>{t('create.totalCreated')}</div>
+                                    </div>
+                                    <div className={styles.primaryStatItem}>
+                                        <div className={styles.primaryStatValue}>{creatorStats?.likeCount ?? 0}</div>
+                                        <div className={styles.primaryStatLabel}>{t('creatorStats.totalLikes')}</div>
                                     </div>
                                 </div>
 
@@ -639,43 +609,52 @@ const Create: React.FC = () => {
                                 <button
                                     type="button"
                                     className={styles.accountActionItem}
-                                    onClick={() => setIsMembershipRechargeModalOpen(true)}
+                                    onClick={() => navigate('/asset/details')}
                                 >
                                     <span className={styles.accountActionIcon}>
-                                        <img src={`${import.meta.env.BASE_URL}data/assetsv2/personal/member.svg`} alt="" />
+                                        <RiAccountCircleLine aria-hidden="true" />
                                     </span>
-                                    <span className={styles.accountActionLabel}>{t('create.accountMembership')}</span>
+                                    <span className={styles.accountActionLabel}>{t('create.accountDetails')}</span>
                                 </button>
                                 <button
                                     type="button"
                                     className={styles.accountActionItem}
-                                    onClick={() => setIsExchangeModalOpen(true)}
+                                    onClick={() => navigate('/points/earn')}
                                 >
                                     <span className={styles.accountActionIcon}>
-                                        <img src={`${import.meta.env.BASE_URL}data/assetsv2/personal/mall.svg`} alt="" />
+                                        <MdOutlineTaskAlt aria-hidden="true" />
                                     </span>
-                                    <span className={styles.accountActionLabel}>{t('create.accountPointsMall')}</span>
+                                    <span className={styles.accountActionLabel}>{t('create.accountEarnPoints')}</span>
                                 </button>
                                 <button
                                     type="button"
                                     className={styles.accountActionItem}
-                                    onClick={() => setIsEarningsModalOpen(true)}
+                                    onClick={() => navigate('/create/incentives', { state: { returnTo: location.pathname } })}
                                 >
                                     <span className={styles.accountActionIcon}>
                                         <img src={`${import.meta.env.BASE_URL}data/assetsv2/personal/exchange.svg`} alt="" />
                                     </span>
-                                    <span className={styles.accountActionLabel}>{t('create.accountRewardSettlement')}</span>
+                                    <span className={styles.accountActionLabel}>{t('create.accountCreatorIncentive')}</span>
                                 </button>
                             </div>
                         </div>
                         <InviteCampaignCard />
-                        <TodayEarnPointsPanel />
                         <ProfileFunctionPanel />
                     </div>
 
                 </div>
             <FooterArea />
         </AppPageShell>
+
+            <VipStatusModal
+                isOpen={isVipStatusModalOpen}
+                membership={membership}
+                onClose={() => setIsVipStatusModalOpen(false)}
+                onPurchase={() => {
+                    setIsVipStatusModalOpen(false);
+                    setIsMembershipRechargeModalOpen(true);
+                }}
+            />
 
             <RechargeModal
                 isOpen={isRechargeModalOpen}
@@ -695,11 +674,6 @@ const Create: React.FC = () => {
                     void getUserInfo();
                 }}
             />
-            <WithdrawFlowModal
-                open={isWithdrawModalOpen}
-                onClose={() => setIsWithdrawModalOpen(false)}
-            />
-
             {isEarningsModalOpen && (
                 <div
                     className={styles.earningsModalOverlay}
@@ -807,7 +781,6 @@ const Create: React.FC = () => {
                 cancelButtonText={t('create.cancel')}
                 tone="dark"
             />
-
             <ConfirmModal
                 isOpen={isSettleDiamondsModalOpen}
                 onConfirm={handleSettleDiamonds}

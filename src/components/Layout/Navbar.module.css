@@ -426,6 +426,10 @@
     outline-offset: 1px;
 }
 
+.desktopOnlyMenuBtn {
+    display: block;
+}
+
 @keyframes slideDown {
     from {
         opacity: 0;
@@ -714,6 +718,10 @@
         min-width: 40px;
         padding: 0 10px;
         font-size: 12px;
+    }
+
+    .desktopOnlyMenuBtn {
+        display: none;
     }
 
     .navbarContainerMobileHomeOverlayActive {

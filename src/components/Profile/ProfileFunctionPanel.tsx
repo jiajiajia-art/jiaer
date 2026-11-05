@@ -2,12 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styles from '../../page/Profile.module.css';
-import { useAuthStore } from '../../store/useAuthStore';
+import { authModalStore, useAuthStore } from '../../store/useAuthStore';
 import { auth } from '../../api/account/authApi';
 import MembershipRedeemResultModal from '../../components/MembershipRedeemResultModal';
 import ConfirmModal from '../CommonModal/ConfirmModal';
 import DeleteAccountModal from './DeleteAccountModal';
-import CreatorProfile, { type CreatorProfileFormData } from '../../components/CreatorProfile.tsx';
 import { RiLogoutCircleRLine } from 'react-icons/ri';
 import {
     MdOutlineCardMembership,
@@ -22,9 +21,15 @@ import {
 import toast from 'react-hot-toast';
 import type { SubscriptionRedeemResult, User } from '../../api/account/auth.type';
 import type { SubscriptionPlanId } from '../../api/subscriptionKeys/subscriptionKeysApi.type';
-import { getCreatorProfile, saveCreatorProfile } from '../../api/incentive/creatorProfileApi';
-import type { CreatorProfileData } from '../../components/CreatorProfile.tsx';
 import { getApiErrorMessage } from '../../utils/error';
+import {
+    hasCurrentHostLoginAgreementAccepted,
+    hasCurrentLoginAgreementAccepted,
+    markLoginAgreementAccepted,
+    REGISTRATION_AGREEMENT_VERSION,
+    REGISTRATION_PRIVACY_POLICY_VERSION,
+} from '../../lib/registrationAgreement';
+import { notifyMiniProgramLoginAgreementRequired } from '../../lib/miniProgramLoginAgreement';
 
 const isWebViewEnv = (): boolean => {
     const win = window as unknown as Record<string, unknown>;
@@ -44,19 +49,6 @@ const ProfileFunctionPanel: React.FC = () => {
     const [redeemKey, setRedeemKey] = useState('');
     const [isRedeemingMembership, setIsRedeemingMembership] = useState(false);
     const [redeemSuccessPlanId, setRedeemSuccessPlanId] = useState<SubscriptionRedeemResult['planId'] | null>(null);
-
-    // 创作者资料 Tab 状态
-    const [profileTab, setProfileTab] = useState<'function' | 'creator'>('function');
-    const [creatorProfileData, setCreatorProfileData] = useState<CreatorProfileData>({
-        groupNo: '',
-        realName: '',
-        idCard: '',
-        bankCard: '',
-        bankBranch: '',
-    });
-
-    // 判断是否为创作者（基于 userSegment 是否为 incentive）
-    const isCreator = user?.user?.userSegment !== 'normal';
 
     const [isBindAccountModalOpen, setIsBindAccountModalOpen] = useState(false);
     const [bindPhone, setBindPhone] = useState('');
@@ -110,20 +102,8 @@ const ProfileFunctionPanel: React.FC = () => {
     };
 
     useEffect(() => {
-        getUserInfo();
-        if (isCreator) {
-            void fetchCreatorProfile();
-        }
-    }, [isCreator]);
-
-    const fetchCreatorProfile = async () => {
-        try {
-            const data = await getCreatorProfile();
-            setCreatorProfileData(data);
-        } catch (error) {
-            console.error('Fetch creator profile failed:', error);
-        }
-    };
+        void getUserInfo();
+    }, []);
 
     const handleRedeemMembership = async () => {
         const key = redeemKey.trim().toUpperCase();
@@ -183,6 +163,23 @@ const ProfileFunctionPanel: React.FC = () => {
             return;
         }
 
+        const agreementSubject = user?.user?.userId;
+        if (!agreementSubject || !hasCurrentLoginAgreementAccepted(agreementSubject)) {
+            if (isWebViewEnv()) {
+                if (!agreementSubject || !hasCurrentHostLoginAgreementAccepted()) {
+                    notifyMiniProgramLoginAgreementRequired();
+                    return;
+                }
+                markLoginAgreementAccepted(agreementSubject);
+            } else {
+                const modal = authModalStore.getState();
+                modal.setPendingAuthErrorCode('AGREEMENT_REQUIRED');
+                modal.setAuthModalMode('login');
+                modal.setIsAuthModalOpen(true);
+                return;
+            }
+        }
+
         try {
             setIsBindingAccount(true);
             const response = await auth.bindAccount({
@@ -197,7 +194,13 @@ const ProfileFunctionPanel: React.FC = () => {
 
                 logout();
                 try {
-                    const loginResp = await auth.login({ phoneNumber: phone, password: bindPassword });
+                    const loginResp = await auth.login({
+                        phoneNumber: phone,
+                        password: bindPassword,
+                        agreementAccepted: true,
+                        userAgreementVersion: REGISTRATION_AGREEMENT_VERSION,
+                        privacyPolicyVersion: REGISTRATION_PRIVACY_POLICY_VERSION,
+                    });
                     if (loginResp.data.success && loginResp.data.data) {
                         login(loginResp.data.data);
                     }
@@ -236,43 +239,7 @@ const ProfileFunctionPanel: React.FC = () => {
     return (
         <div className={styles.profileFunctionPanel}>
             <div className={styles.functionList}>
-                {isCreator ? (
-                    <div className={styles.profileTabContainer} role="tablist">
-                        <button
-                            type="button"
-                            role="tab"
-                            aria-selected={profileTab === 'function'}
-                            className={`${styles.profileTab} ${profileTab === 'function' ? styles.profileTabActive : ''}`}
-                            onClick={() => setProfileTab('function')}
-                        >
-                            {t('profile.moreServices')}
-                        </button>
-                        <button
-                            type="button"
-                            role="tab"
-                            aria-selected={profileTab === 'creator'}
-                            className={`${styles.profileTab} ${profileTab === 'creator' ? styles.profileTabActive : ''}`}
-                            onClick={() => setProfileTab('creator')}
-                        >
-                            {t('profile.creatorProfile')}
-                        </button>
-                    </div>
-                ) : (
-                    <div className={styles.functionListHeading}>{t('profile.moreServices')}</div>
-                )}
-
-                {profileTab === 'creator' ? (
-                    <div className={styles.creatorProfileSlot}>
-                        <CreatorProfile
-                            data={creatorProfileData}
-                            onSave={async (data: CreatorProfileFormData) => {
-                                await saveCreatorProfile(data);
-                                setCreatorProfileData(data);
-                            }}
-                        />
-                    </div>
-                ) : (
-                    <>
+                <div className={styles.functionListHeading}>{t('profile.moreServices')}</div>
                     <div className={styles.functionGrid}>
                         <button
                             type="button"
@@ -400,8 +367,6 @@ const ProfileFunctionPanel: React.FC = () => {
                             </button>
                         </div>
                     )}
-                    </>
-                )}
             </div>
 
             <ConfirmModal
@@ -517,7 +482,7 @@ const ProfileFunctionPanel: React.FC = () => {
             <MembershipRedeemResultModal
                 isOpen={redeemSuccessPlanId !== null}
                 onClose={() => setRedeemSuccessPlanId(null)}
-                planId={redeemSuccessPlanId ?? 'creator_month'}
+                planId={redeemSuccessPlanId ?? 'month_v2'}
             />
         </div>
     );

@@ -15,6 +15,11 @@ import {
     getGenerationBusyRetryDelayMs,
     getNetworkStreamRetryDelayMs,
 } from '../../lib/galgame/choiceStepDisplayGate';
+import {
+    isInsufficientDiamondsError,
+    type PlayInteractionType,
+    type StreamBusinessError,
+} from '../../lib/galgame/playBilling';
 import { isTransientNetworkStreamError } from '../../lib/galgame/normalizeStreamErrorMessage';
 import { isAliyunFrontendRuntime } from '../../lib/aliyunFrontendRuntime';
 import {
@@ -63,6 +68,7 @@ interface UseGalgameStepOptions {
     onContextMemoryUpdate?: (status: ContextMemoryStatus) => void;
     onContextCompressionDone?: (status: ContextMemoryStatus | null) => void;
     onStreamActivity?: (data: any) => void;
+    onInsufficientDiamonds?: (error: StreamBusinessError) => void;
     /** 功能注释：Aliyun raw 旁白期间正式 scene_change 旁路切背景 */
     onRawTextBridgeSceneChange?: (sceneStep: any) => void;
     /** 功能注释：Aliyun raw 旁白期间正式 dialogue 旁路通知，供 Controlller 独立立绘层 */
@@ -83,6 +89,7 @@ export const useGalgameStep = ({
     onContextMemoryUpdate,
     onContextCompressionDone,
     onStreamActivity,
+    onInsufficientDiamonds,
     onRawTextBridgeSceneChange,
     onRawTextBridgeDialoguePortraitNotify,
 }: UseGalgameStepOptions) => {
@@ -297,6 +304,8 @@ export const useGalgameStep = ({
                 onError?: (error: string) => void;
                 deduct?: boolean;
                 actionId?: string;
+                interactionType?: PlayInteractionType;
+                choiceSnapshot?: unknown;
             }
         ) => {
             if (!sessionId) {
@@ -306,6 +315,10 @@ export const useGalgameStep = ({
 
             try {
                 const requestId = ++currentRequestId.current;
+                const choiceSnapshot = options?.choiceSnapshot
+                    || (currentStepRef.current?.type === 'choice' ? currentStepRef.current : null);
+                const interactionType = options?.interactionType
+                    || (options?.deduct ? 'custom_input' : 'preset_option');
                 // 功能注释：STREAM_PERF 画布首字相对此打点计时
                 markStreamPerfRequestStart(requestId);
 
@@ -318,7 +331,7 @@ export const useGalgameStep = ({
                 setLoading(true);
 
                 onMessagesClear?.();
-                if (!isReplay) {
+                if (!isReplay && (interactionType === 'preset_option' || interactionType === 'custom_input')) {
                     onUserAction?.(action);
                 }
                 options?.onBeforeRequest?.();
@@ -326,6 +339,7 @@ export const useGalgameStep = ({
                 const requestBody: any = {
                     action,
                     actionId: options?.actionId || createGalgameActionId(sessionId, action),
+                    interactionType,
                 };
                 if (options?.deduct) {
                     requestBody.deduct = true;
@@ -385,6 +399,20 @@ export const useGalgameStep = ({
                             setStepQueue([]);
                             setShowNextButton(false);
                             options?.onError?.(error);
+                        },
+                        onBusinessError: (error) => {
+                            if (!isInsufficientDiamondsError(error)) {
+                                return false;
+                            }
+                            setIsCompressingContext(false);
+                            setLoading(false);
+                            setCurrentStep(choiceSnapshot);
+                            setStepQueue([]);
+                            setShowNextButton(false);
+                            setSelectedOptionIndex(null);
+                            setIsWaitingForData(false);
+                            onInsufficientDiamonds?.(error);
+                            return true;
                         },
                         onFirstStep: options?.onFirstStep,
                         // 功能注释：正式 step 接手时若当前仍是 raw 旁白则清掉，走原 promote
@@ -487,7 +515,7 @@ export const useGalgameStep = ({
                 options?.onError?.(errorMsg);
             }
         },
-        [sessionId, processStreamResponse, onMessagesClear, onStreamComplete, onErrorAfterAlert, onUserAction, getUserInfo, isTextMode, isReplay, onContextMemoryUpdate, onContextCompressionDone, onStreamActivity, resetStreamRetryDisplay, resetRawTextBridgePage, rawTextBridgeEnabled, syncAliyunRawNextButton, paintAliyunRawCanvas, onRawTextBridgeSceneChange, onRawTextBridgeDialoguePortraitNotify]
+        [sessionId, processStreamResponse, onMessagesClear, onStreamComplete, onErrorAfterAlert, onUserAction, getUserInfo, isTextMode, isReplay, onContextMemoryUpdate, onContextCompressionDone, onStreamActivity, onInsufficientDiamonds, resetStreamRetryDisplay, resetRawTextBridgePage, rawTextBridgeEnabled, syncAliyunRawNextButton, paintAliyunRawCanvas, onRawTextBridgeSceneChange, onRawTextBridgeDialoguePortraitNotify]
     );
 
     // Handle next step in queue
@@ -568,11 +596,9 @@ export const useGalgameStep = ({
         });
     }, [showStep, isReplay, onExhausted, rawTextBridgeEnabled, resetRawTextBridgePage, syncAliyunRawNextButton]);
 
-    // const FREE_ROUNDS = 30;
-
     // Handle selecting a choice option
     const handleChoiceOption = useCallback(
-        async (option: { text: string; nextId: string }, optionIndex: number, actionId?: string) => {
+        async (option: { text: string; nextId: string }, optionIndex: number, actionId?: string, choiceSnapshot?: unknown) => {
             setSelectedOptionIndex(optionIndex);
             setIsWaitingForData(true);
             setShowNextButton(false);
@@ -601,6 +627,8 @@ export const useGalgameStep = ({
                         }
                     },
                     actionId,
+                    interactionType: 'preset_option',
+                    choiceSnapshot,
                 });
             };
             await run(0);
@@ -610,7 +638,7 @@ export const useGalgameStep = ({
 
     // Handle custom input send
     const handleChoiceSend = useCallback(
-        async (inputText: string, actionId?: string) => {
+        async (inputText: string, actionId?: string, choiceSnapshot?: unknown) => {
             if (!inputText.trim()) {
                 return;
             }
@@ -641,6 +669,8 @@ export const useGalgameStep = ({
                     },
                     deduct: true,
                     actionId,
+                    interactionType: 'custom_input',
+                    choiceSnapshot,
                 });
             };
             await run(0);
@@ -665,6 +695,7 @@ export const useGalgameStep = ({
 
             try {
                 const requestId = ++currentRequestId.current;
+                const regenerateRequestId = `visual-regenerate-${sessionId}-${crypto.randomUUID()}`;
 
                 setCurrentStep(null);
                 setStepQueue([]);
@@ -680,7 +711,7 @@ export const useGalgameStep = ({
                     {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ historyIndex: messageIndex }),
+                        body: JSON.stringify({ historyIndex: messageIndex, requestId: regenerateRequestId }),
                     }
                 );
 

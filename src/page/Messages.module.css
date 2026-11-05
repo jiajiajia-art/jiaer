@@ -11,6 +11,10 @@
     color: #FFFFFF;
 }
 
+.desktopChrome {
+    display: contents;
+}
+
 .pageBody {
     width: min(var(--app-desktop-shell-max), calc(100% - 2 * var(--app-desktop-gutter)));
     margin: 0 auto;
@@ -394,10 +398,16 @@
 }
 
 @media (max-width: 768px) {
+    .desktopChrome {
+        display: none;
+    }
+
     .pageBody {
         width: 100%;
+        padding-top: calc(12px + env(safe-area-inset-top));
         padding-left: 14px;
         padding-right: 14px;
+        padding-bottom: calc(28px + env(safe-area-inset-bottom));
     }
 
     .pageTitle {

@@ -7,6 +7,7 @@ import type { AxiosError } from 'axios';
 import ConfirmModal from '../CommonModal/ConfirmModal';
 import styles from './ReplayList.module.css';
 import { useTranslation } from 'react-i18next';
+import { copyTextToClipboard } from '../../utils/clipboard';
 
 interface Props {
   fileId: string;
@@ -144,36 +145,12 @@ const ReplayList: React.FC<Props> = ({
 
   const copyReplayLink = async (replayId: string) => {
     const shareUrl = buildReplayShareUrl(replayId);
-
-    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-      try {
-        await navigator.clipboard.writeText(shareUrl);
-        return true;
-      } catch (copyError) {
-        console.warn('[ReplayList] Failed to copy replay link with clipboard API:', copyError);
-      }
-    }
-
-    if (typeof document === 'undefined') {
-      return false;
-    }
-
-    const textArea = document.createElement('textarea');
-    textArea.value = shareUrl;
-    textArea.setAttribute('readonly', 'true');
-    textArea.style.position = 'fixed';
-    textArea.style.opacity = '0';
-    textArea.style.pointerEvents = 'none';
-    document.body.appendChild(textArea);
-    textArea.select();
-
     try {
-      return document.execCommand('copy');
+      await copyTextToClipboard(shareUrl);
+      return true;
     } catch (copyError) {
-      console.warn('[ReplayList] Failed to copy replay link with fallback:', copyError);
+      console.warn('[ReplayList] Failed to copy replay link:', copyError);
       return false;
-    } finally {
-      document.body.removeChild(textArea);
     }
   };
 

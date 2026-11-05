@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
+import { Modal } from 'antd';
 import Navbar from '../components/Layout/Navbar';
+import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import AnnouncementModal from '../components/AnnouncementModal';
 import FavoriteGameUpdateModal from '../components/FavoriteGameUpdateModal';
 import messageApi from '../api/message/messageApi';
@@ -10,7 +12,10 @@ import { getApiErrorMessage } from '../utils/error';
 import type {
     MessageAnnouncement,
     MessageCenterData,
+    MessageCreatorEarningWithdrawalNotification,
     MessageFavoriteGameUpdateNotification,
+    MessageGameModerationNotification,
+    MessageGamePublishAppeal,
     MessageModerationNotification,
     MessagePromotion,
     MessagePromotionSubmissionNotification,
@@ -26,6 +31,7 @@ import { openConfiguredLink, resolvePromotionAdLink } from '../utils/promotionNa
 import { useExternalLinkCopyModal } from '../hooks/useExternalLinkCopyModal';
 import { GAME_CARD_DEFAULT_AVATAR_PATH } from '../lib/gameCardAuthor';
 import {
+    buildCreatorEarningWithdrawalMessageView,
     formatMessageDateTime,
     formatMessageDateYmd,
     formatMessageListTime,
@@ -49,6 +55,9 @@ type MessageFeedItem =
     | (MessagePromotion & { itemType: 'promotion'; sortTime: string | null })
     | (MessagePromotionSubmissionNotification & { itemType: 'promotion_submission_status'; sortTime: string | null })
     | (MessageFavoriteGameUpdateNotification & { itemType: 'favorite_game_updated'; sortTime: string | null })
+    | (MessageGameModerationNotification & { itemType: 'game_moderation'; sortTime: string | null })
+    | (MessageGamePublishAppeal & { itemType: 'game_publish_appeal'; sortTime: string | null })
+    | (MessageCreatorEarningWithdrawalNotification & { itemType: 'creator_earning_withdrawal'; sortTime: string | null })
     | (MessageReportReceivedNotification & { itemType: 'report_received'; sortTime: string | null })
     | (MessageReportResolvedNotification & { itemType: 'report_resolved'; sortTime: string | null })
     | (MessageModerationNotification & { itemType: 'moderation'; sortTime: string | null })
@@ -162,6 +171,7 @@ const Messages: React.FC = () => {
     const [isMarkingAllRead, setIsMarkingAllRead] = useState(false);
     const [selectedAnnouncement, setSelectedAnnouncement] = useState<MessageAnnouncement | null>(null);
     const [selectedFavoriteGameUpdate, setSelectedFavoriteGameUpdate] = useState<MessageFavoriteGameUpdateNotification | null>(null);
+    const [selectedCreatorEarningWithdrawal, setSelectedCreatorEarningWithdrawal] = useState<MessageCreatorEarningWithdrawalNotification | null>(null);
     const [safetyDetail, setSafetyDetail] = useState<SafetyDetail | null>(null);
 
     const loadMessages = useCallback(async () => {
@@ -215,6 +225,24 @@ const Messages: React.FC = () => {
             sortTime: item.createdAt || null,
         }));
 
+        const gameModerationNotifications = (messageCenter?.gameModerationNotifications || []).map((item) => ({
+            ...item,
+            itemType: 'game_moderation' as const,
+            sortTime: item.createdAt || null,
+        }));
+
+        const gamePublishAppeals = (messageCenter?.gamePublishAppeals || []).map((item) => ({
+            ...item,
+            itemType: 'game_publish_appeal' as const,
+            sortTime: item.updatedAt || item.createdAt || null,
+        }));
+
+        const creatorEarningWithdrawalNotifications = (messageCenter?.creatorEarningWithdrawalNotifications || []).map((item) => ({
+            ...item,
+            itemType: 'creator_earning_withdrawal' as const,
+            sortTime: item.createdAt || null,
+        }));
+
         const reportReceivedNotifications = (messageCenter?.reportReceivedNotifications || []).map((item) => ({
             ...item,
             itemType: 'report_received' as const,
@@ -244,6 +272,9 @@ const Messages: React.FC = () => {
             ...promotions,
             ...promotionSubmissionNotifications,
             ...favoriteGameUpdateNotifications,
+            ...gameModerationNotifications,
+            ...gamePublishAppeals,
+            ...creatorEarningWithdrawalNotifications,
             ...reportReceivedNotifications,
             ...reportResolvedNotifications,
             ...moderationNotifications,
@@ -283,6 +314,24 @@ const Messages: React.FC = () => {
                     : item
             ));
 
+            const gameModerationNotifications = (prev.gameModerationNotifications || []).map((item) => (
+                messageType === 'game_moderation' && item.sourceId === sourceId
+                    ? { ...item, isRead: true }
+                    : item
+            ));
+
+            const gamePublishAppeals = (prev.gamePublishAppeals || []).map((item) => (
+                messageType === 'game_publish_appeal' && item.sourceId === sourceId
+                    ? { ...item, isRead: true }
+                    : item
+            ));
+
+            const creatorEarningWithdrawalNotifications = (prev.creatorEarningWithdrawalNotifications || []).map((item) => (
+                messageType === 'creator_earning_withdrawal' && item.sourceId === sourceId
+                    ? { ...item, isRead: true }
+                    : item
+            ));
+
             const reportReceivedNotifications = (prev.reportReceivedNotifications || []).map((item) => (
                 messageType === 'report_received' && item.sourceId === sourceId
                     ? { ...item, isRead: true }
@@ -314,6 +363,9 @@ const Messages: React.FC = () => {
                 promotions,
                 promotionSubmissionNotifications,
                 favoriteGameUpdateNotifications,
+                gameModerationNotifications,
+                gamePublishAppeals,
+                creatorEarningWithdrawalNotifications,
                 reportReceivedNotifications,
                 reportResolvedNotifications,
                 moderationNotifications,
@@ -333,6 +385,9 @@ const Messages: React.FC = () => {
                 promotions: markCollectionAsRead(prev.promotions),
                 promotionSubmissionNotifications: markCollectionAsRead(prev.promotionSubmissionNotifications),
                 favoriteGameUpdateNotifications: markCollectionAsRead(prev.favoriteGameUpdateNotifications || []),
+                gameModerationNotifications: markCollectionAsRead(prev.gameModerationNotifications || []),
+                gamePublishAppeals: markCollectionAsRead(prev.gamePublishAppeals || []),
+                creatorEarningWithdrawalNotifications: markCollectionAsRead(prev.creatorEarningWithdrawalNotifications || []),
                 reportReceivedNotifications: markCollectionAsRead(prev.reportReceivedNotifications || []),
                 reportResolvedNotifications: markCollectionAsRead(prev.reportResolvedNotifications || []),
                 moderationNotifications: markCollectionAsRead(prev.moderationNotifications || []),
@@ -407,6 +462,21 @@ const Messages: React.FC = () => {
     const handleOpenFavoriteGameUpdateNotification = useCallback(async (notification: MessageFavoriteGameUpdateNotification) => {
         await markMessageAsRead('favorite_game_updated', notification.sourceId, notification.isRead);
         setSelectedFavoriteGameUpdate({ ...notification, isRead: true });
+    }, [markMessageAsRead]);
+
+    const handleOpenGameModerationNotification = useCallback(async (notification: MessageGameModerationNotification) => {
+        await markMessageAsRead('game_moderation', notification.sourceId, notification.isRead);
+        navigate(notification.action === 'takedown' ? '/create/works?tab=drafts' : '/creator-benefits');
+    }, [markMessageAsRead, navigate]);
+
+    const handleOpenGamePublishAppeal = useCallback(async (appeal: MessageGamePublishAppeal) => {
+        await markMessageAsRead('game_publish_appeal', appeal.sourceId, appeal.isRead);
+        navigate(`/game-publish-appeals/${encodeURIComponent(appeal.fileId)}`);
+    }, [markMessageAsRead, navigate]);
+
+    const handleOpenCreatorEarningWithdrawal = useCallback(async (notification: MessageCreatorEarningWithdrawalNotification) => {
+        await markMessageAsRead('creator_earning_withdrawal', notification.sourceId, notification.isRead);
+        setSelectedCreatorEarningWithdrawal({ ...notification, isRead: true });
     }, [markMessageAsRead]);
 
     const resolveReportResolvedBody = useCallback((notification: MessageReportResolvedNotification) => {
@@ -520,6 +590,20 @@ const Messages: React.FC = () => {
                 continue;
             }
 
+            if (item.itemType === 'game_moderation') {
+                buckets[section].push({
+                    key: `game-moderation-${item.sourceId}`,
+                    title: item.action === 'restore'
+                        ? t('messages.gameRestoredTitle', { gameTitle: item.gameTitle })
+                        : t('messages.gameTakenDownTitle', { gameTitle: item.gameTitle }),
+                    preview: truncateMessagePreview(item.reason || t('messages.gameModerationNoReason')),
+                    time,
+                    isRead: item.isRead,
+                    onOpen: () => { void handleOpenGameModerationNotification(item); },
+                });
+                continue;
+            }
+
             if (item.itemType === 'report_received') {
                 buckets[section].push({
                     key: `report-received-${item.sourceId}`,
@@ -528,6 +612,27 @@ const Messages: React.FC = () => {
                     time,
                     isRead: item.isRead,
                     onOpen: () => { void handleOpenReportReceived(item); },
+                });
+                continue;
+            }
+
+            if (item.itemType === 'game_publish_appeal') {
+                const titleKey = item.status === 'approved'
+                    ? 'messages.gameAppealApprovedTitle'
+                    : item.status === 'rejected'
+                        ? 'messages.gameAppealRejectedTitle'
+                        : 'messages.gameAppealPendingTitle';
+                buckets[section].push({
+                    key: `game-publish-appeal-${item.sourceId}`,
+                    title: t(titleKey, { gameTitle: item.gameTitle || item.fileId }),
+                    preview: truncateMessagePreview(
+                        item.status === 'pending'
+                            ? item.appealReason
+                            : item.reviewRemark || t('messages.gameAppealViewDetails'),
+                    ),
+                    time,
+                    isRead: item.isRead,
+                    onOpen: () => { void handleOpenGamePublishAppeal(item); },
                 });
                 continue;
             }
@@ -559,6 +664,19 @@ const Messages: React.FC = () => {
                     time,
                     isRead: item.isRead,
                     onOpen: () => { void handleOpenFeedbackReply(item); },
+                });
+                continue;
+            }
+
+            if (item.itemType === 'creator_earning_withdrawal') {
+                const view = buildCreatorEarningWithdrawalMessageView(item);
+                buckets[section].push({
+                    key: `creator-earning-withdrawal-${item.sourceId}`,
+                    title: view.title,
+                    preview: truncateMessagePreview(view.preview),
+                    time,
+                    isRead: item.isRead,
+                    onOpen: () => { void handleOpenCreatorEarningWithdrawal(item); },
                 });
                 continue;
             }
@@ -685,6 +803,9 @@ const Messages: React.FC = () => {
     }, [
         handleOpenAnnouncement,
         handleOpenFavoriteGameUpdateNotification,
+        handleOpenGameModerationNotification,
+        handleOpenGamePublishAppeal,
+        handleOpenCreatorEarningWithdrawal,
         handleOpenModeration,
         handleOpenPromotion,
         handleOpenPromotionSubmissionNotification,
@@ -771,7 +892,7 @@ const Messages: React.FC = () => {
 
     return (
         <div className={styles.pageRoot}>
-            <Navbar />
+                <div className={styles.desktopChrome}><Navbar /></div>
 
             <div className={styles.pageBody}>
                 <header className={styles.pageHeader}>
@@ -841,6 +962,22 @@ const Messages: React.FC = () => {
                 onClose={() => setSelectedFavoriteGameUpdate(null)}
                 badgeText={t('messages.favoriteGameUpdate')}
             />
+            <Modal
+                open={Boolean(selectedCreatorEarningWithdrawal)}
+                title={selectedCreatorEarningWithdrawal
+                    ? buildCreatorEarningWithdrawalMessageView(selectedCreatorEarningWithdrawal).title
+                    : ''}
+                okText="我知道了"
+                cancelButtonProps={{ style: { display: 'none' } }}
+                onOk={() => setSelectedCreatorEarningWithdrawal(null)}
+                onCancel={() => setSelectedCreatorEarningWithdrawal(null)}
+            >
+                <p>
+                    {selectedCreatorEarningWithdrawal
+                        ? buildCreatorEarningWithdrawalMessageView(selectedCreatorEarningWithdrawal).detail
+                        : ''}
+                </p>
+            </Modal>
             <ConfirmModal
                 isOpen={Boolean(safetyDetail)}
                 variant="alert"
@@ -894,6 +1031,7 @@ const Messages: React.FC = () => {
                 onConfirm={() => setSafetyDetail(null)}
                 onCancel={() => setSafetyDetail(null)}
             />
+            <div className={styles.desktopChrome}><MobileBottomNav /></div>
             {externalLinkCopyModal}
         </div>
     );

@@ -2,12 +2,6 @@ import React, { useEffect, useRef, memo, useState } from 'react';
 import { extractPlainText } from '../../../../utils/textUtils';
 import ColoredMarkdownText from '../../../Galgame/ColoredMarkdownText';
 import styles from '../../../Galgame/TextModeDisplay.module.css';
-import { OPTION_COST, INPUT_COST } from '../../../../utils/constants';
-
-const POINTS_CONFIG = {
-    option: OPTION_COST,
-    custom: INPUT_COST,
-};
 
 interface TextModalStep {
     id: string;
@@ -41,7 +35,6 @@ interface MessageItemProps {
     isTyping: boolean;
     isWaitingForData: boolean;
     onChoiceClick?: (option: { id: number | string; text: string; optionId?: string }) => void;
-    isFreeRound?: boolean;
 }
 
 const MessageItem = memo<MessageItemProps>(({ 
@@ -51,7 +44,6 @@ const MessageItem = memo<MessageItemProps>(({
     isTyping,
     isWaitingForData,
     onChoiceClick, 
-    isFreeRound = false,
 }) => {
     if (!step) return null;
 
@@ -134,9 +126,6 @@ const MessageItem = memo<MessageItemProps>(({
                                     >
                                         <span className={styles.optionNumber}>{opt.id}</span>
                                         <span className={styles.optionText}>{extractPlainText(opt.text)}</span>
-                                        {!isFreeRound && (
-                                            <span className={styles.pointsCost}>-{POINTS_CONFIG.option}积分</span>
-                                        )}
                                     </div>
                                 ))}
                             </div>
@@ -164,7 +153,6 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
     onChoiceClick,
     onCustomInputSubmit,
     noPaddingBottom = false,
-    isFreeRound = false,
 }) => {
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const shouldStickToBottomRef = useRef(true);
@@ -284,7 +272,6 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
                                     isTyping={isCurrent ? isTyping : false}
                                     isWaitingForData={isWaitingForData}
                                     onChoiceClick={onChoiceClick}
-                                    isFreeRound={isFreeRound}
                                 />
                         );
                     })}
@@ -303,9 +290,6 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
                     <div className={styles.textModeComposer} aria-label="自定义输入">
                         <div className={styles.customInputHeader}>
                             <span>或者自定义输入</span>
-                            {!isFreeRound && (
-                                <span className={styles.pointsCostHint}>消耗 {POINTS_CONFIG.custom} 积分</span>
-                            )}
                         </div>
                         <div className={styles.customInputWrapper}>
                             <input

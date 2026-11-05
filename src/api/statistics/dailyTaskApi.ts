@@ -18,6 +18,8 @@ const dailyTaskApi = {
         }),
     claimDailyTask: (payload: DailyTaskClaimRequest) =>
         api.post<ApiResponse<DailyTaskPayload | null>>('/auth/tasks/daily/claim', payload),
+    claimMakeupCard: () =>
+        api.post<ApiResponse<DailyTaskPayload | null>>('/auth/tasks/daily/makeup-card/claim'),
 };
 
 export default dailyTaskApi;

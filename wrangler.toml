@@ -1,6 +1,4 @@
-name = "interactive-fiction-frontend"
-# 预发/实验可临时改成 interactive-fiction-frontend-gogo（gogo.kurangames.com）
-# name = "interactive-fiction-frontend-gogo"
+name = "interactive-fiction-frontend-test"
 main = "src/index.js"
 compatibility_date = "2024-01-01"
 workers_dev = true

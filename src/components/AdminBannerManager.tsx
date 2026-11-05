@@ -1,14 +1,31 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import bannerApi from '../api/banner/bannerApi';
-import type { BannerGameOption, BannerItem, BannerRecord } from '../api/banner/banner.type';
+import type {
+    AdminBannerRecord,
+    BannerAudience,
+    BannerGameOption,
+    BannerGroups,
+    BannerItem,
+    BannerPayload,
+} from '../api/banner/banner.type';
 import { useImageCropper } from '../hooks/useImageCropper';
 import { getImageUrl } from '../utils/constants';
+import AdminBannerDialog from './AdminBannerDialog';
+import ActivityBannerManager from './ActivityBannerManager';
 import ImageCropModal from './CommonModal/ImageCropModal';
 import styles from './AdminBannerManager.module.css';
 
 const BANNER_LIMIT = 5;
 const SEARCH_DEBOUNCE_MS = 250;
+const BANNER_AUDIENCE_OPTIONS: Array<{ key: BannerAudience; label: string; description: string }> = [
+    { key: 'common', label: '通用配置', description: '游客、未填写性别及专属组为空时展示' },
+    { key: 'male', label: '男性配置', description: '男性用户优先展示' },
+    { key: 'female', label: '女性配置', description: '女性用户优先展示' },
+];
+type SpecificBannerAudience = Exclude<BannerAudience, 'common'>;
+const REQUIRED_SPECIFIC_AUDIENCES: SpecificBannerAudience[] = ['male', 'female'];
 
 const createBannerItemId = (): string => {
     if (typeof globalThis.crypto?.randomUUID === 'function') {
@@ -61,6 +78,23 @@ const normalizeBannerItem = (item: BannerItem): BannerItem => ({
     link_url: item.link_url || '',
 });
 
+const createEditableBannerItems = (items?: BannerItem[]): BannerItem[] => (
+    items?.length ? items.map(normalizeBannerItem) : [createEmptyBannerItem()]
+);
+
+const createEditableBannerGroups = (groups?: Partial<BannerGroups>, legacyBanners?: BannerItem[]): BannerGroups => ({
+    common: createEditableBannerItems(groups?.common || legacyBanners),
+    male: createEditableBannerItems(groups?.male),
+    female: createEditableBannerItems(groups?.female),
+});
+
+const isConfiguredBannerItem = (item: BannerItem): boolean => Boolean(
+    getPreviewImagePath(item).trim()
+    || item.title.trim()
+    || item.description.trim()
+    || item.link_url.trim()
+);
+
 const getPreviewImagePath = (item: BannerItem): string => (
     item.custom_image_url || item.game_image_url || item.image_url || ''
 );
@@ -83,37 +117,52 @@ const getFallbackActiveId = (items: BannerItem[], preferredIndex: number): strin
     return items[safeIndex]?.id || items[0]?.id || null;
 };
 
-const AdminBannerManager: React.FC = () => {
-    const [published, setPublished] = useState<BannerRecord | null>(null);
-    const [bannerItems, setBannerItems] = useState<BannerItem[]>([createEmptyBannerItem()]);
-    const [activeBannerId, setActiveBannerId] = useState<string>('');
+const AdminHomeBannerManager: React.FC = () => {
+    const [published, setPublished] = useState<AdminBannerRecord | null>(null);
+    const [activeAudience, setActiveAudience] = useState<BannerAudience>('common');
+    const [bannerGroups, setBannerGroups] = useState<BannerGroups>(() => createEditableBannerGroups());
+    const [activeBannerIds, setActiveBannerIds] = useState<Record<BannerAudience, string>>({
+        common: '',
+        male: '',
+        female: '',
+    });
     const [searchKeywordMap, setSearchKeywordMap] = useState<Record<string, string>>({});
     const [searchResults, setSearchResults] = useState<BannerGameOption[]>([]);
     const [activeSearchItemId, setActiveSearchItemId] = useState<string | null>(null);
     const [isSearching, setIsSearching] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isPublishing, setIsPublishing] = useState(false);
+    const [missingAudience, setMissingAudience] = useState<SpecificBannerAudience | null>(null);
+    const [pendingPublishPayload, setPendingPublishPayload] = useState<BannerPayload | null>(null);
     const [uploadingBannerId, setUploadingBannerId] = useState<string | null>(null);
     const [croppingBannerItemId, setCroppingBannerItemId] = useState<string | null>(null);
     const blurTimerRef = useRef<number | null>(null);
 
+    const bannerItems = bannerGroups[activeAudience];
+    const activeBannerId = activeBannerIds[activeAudience];
     const activeKeyword = activeSearchItemId ? (searchKeywordMap[activeSearchItemId] || '') : '';
 
-    const applyBannerState = useCallback((nextPublished: BannerRecord | null) => {
+    const setActiveBannerId = useCallback((itemId: string) => {
+        setActiveBannerIds((prev) => ({ ...prev, [activeAudience]: itemId }));
+    }, [activeAudience]);
+
+    const applyBannerState = useCallback((nextPublished: AdminBannerRecord | null) => {
         setPublished(nextPublished);
-
-        if (nextPublished?.banners?.length) {
-            const items = nextPublished.banners.map(normalizeBannerItem);
-            setBannerItems(items);
-            setActiveBannerId(items[0]?.id || '');
-            setSearchKeywordMap(Object.fromEntries(items.map((item) => [item.id, item.title || ''])));
-            return;
-        }
-
-        const emptyItem = createEmptyBannerItem();
-        setBannerItems([emptyItem]);
-        setActiveBannerId(emptyItem.id);
-        setSearchKeywordMap({ [emptyItem.id]: '' });
+        const nextGroups = createEditableBannerGroups(
+            nextPublished?.bannerGroups,
+            nextPublished?.banners,
+        );
+        setBannerGroups(nextGroups);
+        setActiveBannerIds({
+            common: nextGroups.common[0]?.id || '',
+            male: nextGroups.male[0]?.id || '',
+            female: nextGroups.female[0]?.id || '',
+        });
+        setSearchKeywordMap(Object.fromEntries(
+            Object.values(nextGroups)
+                .flat()
+                .map((item) => [item.id, item.title || '']),
+        ));
     }, []);
 
     const loadBannerData = useCallback(async () => {
@@ -192,48 +241,63 @@ const AdminBannerManager: React.FC = () => {
         [activeBannerItem?.id, bannerItems],
     );
 
-    const publishedCount = useMemo(() => published?.banners.length || 0, [published?.banners.length]);
+    const publishedGroups = useMemo<BannerGroups>(() => ({
+        common: published?.bannerGroups?.common || published?.banners || [],
+        male: published?.bannerGroups?.male || [],
+        female: published?.bannerGroups?.female || [],
+    }), [published]);
+    const publishedItems = publishedGroups[activeAudience];
+    const publishedCount = publishedItems.length;
+    const configuredCount = useMemo(
+        () => bannerItems.filter(isConfiguredBannerItem).length,
+        [bannerItems],
+    );
+    const activeAudienceOption = BANNER_AUDIENCE_OPTIONS.find((option) => option.key === activeAudience)
+        || BANNER_AUDIENCE_OPTIONS[0];
 
     const updateBannerItem = useCallback((itemId: string, updater: (item: BannerItem) => BannerItem) => {
-        setBannerItems((prev) => prev.map((item) => (item.id === itemId ? updater(item) : item)));
-    }, []);
+        setBannerGroups((prev) => ({
+            ...prev,
+            [activeAudience]: prev[activeAudience].map((item) => (item.id === itemId ? updater(item) : item)),
+        }));
+    }, [activeAudience]);
 
     const buildBannerPayload = useCallback(() => {
-        const normalizedItems = bannerItems.map((item) => {
-            const finalImageUrl = getPreviewImagePath(item).trim();
-            return {
+        const normalizedGroups = Object.fromEntries(BANNER_AUDIENCE_OPTIONS.map(({ key }) => {
+            const items = bannerGroups[key].map((item) => ({
                 id: item.id || createBannerItemId(),
                 game_file_id: item.game_file_id?.trim() || '',
-                image_url: finalImageUrl,
+                image_url: getPreviewImagePath(item).trim(),
                 title: item.title.trim(),
                 description: item.description.trim(),
                 link_url: item.link_url.trim(),
-            };
-        });
+            })).filter(isConfiguredBannerItem);
+            return [key, items];
+        })) as BannerGroups;
 
-        const activeItems = normalizedItems.filter((item) => (
-            item.image_url || item.title || item.description || item.link_url
-        ));
-
-        if (activeItems.length === 0) {
-            toast.error('请至少配置 1 条轮播图');
+        if (normalizedGroups.common.length === 0) {
+            toast.error('通用配置请至少添加 1 条轮播图');
             return null;
         }
 
-        const missingImageItem = activeItems.find((item) => !item.image_url);
-        if (missingImageItem) {
-            toast.error('请先配置每条轮播图的图片');
-            return null;
+        for (const { key, label } of BANNER_AUDIENCE_OPTIONS) {
+            const items = normalizedGroups[key];
+            if (items.length > BANNER_LIMIT) {
+                toast.error(`${label}最多只能配置 ${BANNER_LIMIT} 条轮播图`);
+                return null;
+            }
+            if (items.some((item) => !item.image_url)) {
+                toast.error(`请先配置${label}中每条轮播图的图片`);
+                return null;
+            }
+            if (items.some((item) => !isValidBannerLink(item.link_url))) {
+                toast.error(`${label}中的跳转链接仅支持站内路径或 http/https 链接`);
+                return null;
+            }
         }
 
-        const invalidLinkItem = activeItems.find((item) => !isValidBannerLink(item.link_url));
-        if (invalidLinkItem) {
-            toast.error('跳转链接仅支持站内路径或 http/https 链接');
-            return null;
-        }
-
-        return { banners: activeItems };
-    }, [bannerItems]);
+        return { bannerGroups: normalizedGroups };
+    }, [bannerGroups]);
 
     const handleSearchFocus = (itemId: string) => {
         if (blurTimerRef.current) {
@@ -323,7 +387,10 @@ const AdminBannerManager: React.FC = () => {
         }
 
         const nextItem = createEmptyBannerItem();
-        setBannerItems((prev) => [...prev, nextItem]);
+        setBannerGroups((prev) => ({
+            ...prev,
+            [activeAudience]: [...prev[activeAudience], nextItem],
+        }));
         setSearchKeywordMap((prev) => ({ ...prev, [nextItem.id]: '' }));
         // 实现新增轮播图清空编辑区
         setActiveBannerId(nextItem.id);
@@ -336,14 +403,25 @@ const AdminBannerManager: React.FC = () => {
 
         if (nextItems.length === 0) {
             const emptyItem = createEmptyBannerItem();
-            setBannerItems([emptyItem]);
-            setSearchKeywordMap({ [emptyItem.id]: '' });
+            setBannerGroups((prev) => ({
+                ...prev,
+                [activeAudience]: [emptyItem],
+            }));
+            setSearchKeywordMap((prev) => {
+                const next = { ...prev };
+                delete next[itemId];
+                next[emptyItem.id] = '';
+                return next;
+            });
             setActiveBannerId(emptyItem.id);
             setActiveSearchItemId(null);
             return;
         }
 
-        setBannerItems(nextItems);
+        setBannerGroups((prev) => ({
+            ...prev,
+            [activeAudience]: nextItems,
+        }));
         setSearchKeywordMap((prev) => {
             const next = { ...prev };
             delete next[itemId];
@@ -365,7 +443,10 @@ const AdminBannerManager: React.FC = () => {
         const nextItems = [...bannerItems];
         const [movedItem] = nextItems.splice(currentIndex, 1);
         nextItems.splice(targetIndex, 0, movedItem);
-        setBannerItems(nextItems);
+        setBannerGroups((prev) => ({
+            ...prev,
+            [activeAudience]: nextItems,
+        }));
     };
 
     const handlePublishedSelect = (publishedItem: BannerItem, index: number) => {
@@ -383,13 +464,43 @@ const AdminBannerManager: React.FC = () => {
         }
     };
 
-    const handlePublish = async () => {
+    const handlePublish = () => {
         const payload = buildBannerPayload();
         if (!payload) return;
 
+        const missingAudienceKey = REQUIRED_SPECIFIC_AUDIENCES.find(
+            (audience) => payload.bannerGroups[audience].length === 0,
+        );
+        if (missingAudienceKey) {
+            setPendingPublishPayload(null);
+            setMissingAudience(missingAudienceKey);
+            return;
+        }
+
+        setPendingPublishPayload(payload);
+    };
+
+    const handleGoToMissingAudience = () => {
+        if (!missingAudience) return;
+
+        const targetAudience = missingAudience;
+        setMissingAudience(null);
+        setActiveAudience(targetAudience);
+        setActiveSearchItemId(null);
+        setActiveBannerIds((prev) => ({
+            ...prev,
+            [targetAudience]: bannerGroups[targetAudience][0]?.id || '',
+        }));
+    };
+
+    const handleConfirmPublish = async () => {
+        if (!pendingPublishPayload) return;
+
+        const payload = pendingPublishPayload;
+        setPendingPublishPayload(null);
         try {
             setIsPublishing(true);
-            // 实现轮播图直接发布
+            // 实现三组轮播图统一发布
             await bannerApi.publish(payload);
             await loadBannerData();
             toast.success('轮播图已发布');
@@ -410,11 +521,7 @@ const AdminBannerManager: React.FC = () => {
 
     return (
         <div className={styles.panelStack}>
-            <section className={styles.heroCard}>
-                <div>
-                    <div className={styles.sectionBadge}>轮播图管理</div>
-                    <h2 className={styles.heroTitle}>管理首页轮播图展现</h2>
-                </div>
+            <section className={styles.toolbar}>
                 <button
                     type="button"
                     className={styles.primaryGhostButton}
@@ -424,6 +531,34 @@ const AdminBannerManager: React.FC = () => {
                     刷新配置
                 </button>
             </section>
+
+            <section className={styles.audienceTabs} aria-label="轮播图适用人群">
+                {BANNER_AUDIENCE_OPTIONS.map((option) => {
+                    const draftCount = bannerGroups[option.key].filter(isConfiguredBannerItem).length;
+                    return (
+                        <button
+                            key={option.key}
+                            type="button"
+                            className={`${styles.audienceTab} ${activeAudience === option.key ? styles.audienceTabActive : ''}`}
+                            onClick={() => {
+                                setActiveAudience(option.key);
+                                setActiveSearchItemId(null);
+                            }}
+                            disabled={isPublishing || Boolean(pendingCropFile)}
+                        >
+                            <span>{option.label}</span>
+                            <span className={styles.audienceTabCount}>{draftCount}/{BANNER_LIMIT}</span>
+                        </button>
+                    );
+                })}
+            </section>
+
+            <div className={styles.audienceHint}>
+                {activeAudienceOption.description}
+                {activeAudience !== 'common' && publishedCount === 0
+                    ? '；当前线上未配置，将自动回退通用配置。'
+                    : ''}
+            </div>
 
             <div className={styles.bannerPanelGrid}>
                 <section className={styles.card}>
@@ -443,7 +578,7 @@ const AdminBannerManager: React.FC = () => {
 
                     <div className={styles.listBlock}>
                         <div className={styles.listTitle}>线上轮播图</div>
-                        {published?.banners?.length ? published.banners.map((item, index) => (
+                        {publishedItems.length ? publishedItems.map((item, index) => (
                             <button
                                 key={`published-${item.id}`}
                                 type="button"
@@ -458,7 +593,9 @@ const AdminBannerManager: React.FC = () => {
                             </button>
                         )) : (
                             <div className={styles.emptyState}>
-                                当前还没有已发布轮播图，首页会继续使用旧轮播兜底。
+                                {activeAudience === 'common'
+                                    ? '当前还没有已发布通用轮播图，首页会继续使用剧本轮播兜底。'
+                                    : '当前人群还没有已发布轮播图，将自动展示通用配置。'}
                             </div>
                         )}
                     </div>
@@ -502,9 +639,9 @@ const AdminBannerManager: React.FC = () => {
                 <section className={styles.card}>
                     <div className={styles.cardHeader}>
                         <div>
-                            <h3 className={styles.cardTitle}>轮播图编辑</h3>
+                            <h3 className={styles.cardTitle}>{activeAudienceOption.label}</h3>
                         </div>
-                        <span className={styles.counter}>{bannerItems.length}/{BANNER_LIMIT}</span>
+                        <span className={styles.counter}>{configuredCount}/{BANNER_LIMIT}</span>
                     </div>
 
                     <article className={styles.bannerEditorCard}>
@@ -650,11 +787,30 @@ const AdminBannerManager: React.FC = () => {
                             onClick={handlePublish}
                             disabled={isPublishing || isLoading}
                         >
-                            发布到双端首页
+                            发布全部配置
                         </button>
                     </div>
                 </section>
             </div>
+            <AdminBannerDialog
+                isOpen={Boolean(missingAudience)}
+                onConfirm={handleGoToMissingAudience}
+                onCancel={() => setMissingAudience(null)}
+                eyebrow="配置检查"
+                title="轮播图配置未完成"
+                message={`${missingAudience === 'male' ? '男性配置' : '女性配置'}尚未设置，请先完成配置后再发布。`}
+                confirmButtonText="去配置"
+            />
+            <AdminBannerDialog
+                isOpen={Boolean(pendingPublishPayload)}
+                onConfirm={() => void handleConfirmPublish()}
+                onCancel={() => setPendingPublishPayload(null)}
+                eyebrow="发布确认"
+                title="确认发布全部轮播图"
+                message="本次发布将同步更新 PC 端和移动端，并一次发布通用、男性和女性三组轮播配置。确认继续吗？"
+                confirmButtonText="确认发布"
+                cancelButtonText="取消"
+            />
             {pendingCropFile ? (
                 <ImageCropModal
                     isOpen
@@ -672,6 +828,22 @@ const AdminBannerManager: React.FC = () => {
                     onCropComplete={handleCropComplete}
                 />
             ) : null}
+        </div>
+    );
+};
+
+const AdminBannerManager: React.FC = () => {
+    const location = useLocation();
+    const activeSection = location.pathname === '/admin/banners/activity' ? 'activity' : 'home';
+
+    return (
+        <div className={styles.managerStack}>
+            <div hidden={activeSection !== 'home'}>
+                <AdminHomeBannerManager />
+            </div>
+            <div hidden={activeSection !== 'activity'}>
+                <ActivityBannerManager />
+            </div>
         </div>
     );
 };

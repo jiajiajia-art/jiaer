@@ -16,10 +16,13 @@ const catalog = readFileSync(join(root, 'Romance/src/mods/playModCatalog.ts'), '
 const sdk = readFileSync(join(root, 'Romance/src/mods/kkmod/sdk.ts'), 'utf8');
 
 test('AdminPanel_应注册组件管理页签', () => {
+  const nav = readFileSync(join(root, 'src/components/admin-shell/adminNavigation.tsx'), 'utf8');
   assert.match(admin, /components/);
-  assert.match(admin, /组件管理/);
   assert.match(admin, /AdminPlayModManager/);
   assert.match(admin, /\/admin\/components/);
+  // 功能注释：侧栏文案迁入 AdminShell 导航配置，不再写死在 AdminPanel
+  assert.match(nav, /label: '组件管理'/);
+  assert.match(nav, /path: '\/admin\/components'/);
 });
 
 test('App_应注册components路由', () => {
@@ -29,9 +32,11 @@ test('App_应注册components路由', () => {
 
 test('OperatorPanel_运营中心侧栏须有组件管理', () => {
   const op = readFileSync(join(root, 'src/page/operator/OperatorPanel.tsx'), 'utf8');
-  assert.match(op, /组件管理/);
+  const nav = readFileSync(join(root, 'src/components/admin-shell/adminNavigation.tsx'), 'utf8');
   assert.match(op, /\/operator\/components/);
   assert.match(op, /AdminPlayModManager/);
+  assert.match(nav, /label: '组件管理'/);
+  assert.match(nav, /path: '\/operator\/components'/);
 });
 
 test('编辑器_玩法Mod统一安装入口_弹窗只列玩法', () => {

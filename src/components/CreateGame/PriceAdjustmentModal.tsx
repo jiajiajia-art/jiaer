@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import CurrencyIcon from '../CurrencyIcon';
 import styles from './PriceAdjustmentModal.module.css';
 
 interface PriceAdjustmentModalProps {
@@ -83,12 +84,12 @@ const PriceAdjustmentModal: React.FC<PriceAdjustmentModalProps> = ({
                 <div className={styles.modalBody}>
                     <div className={styles.formGroup}>
                         <label htmlFor="originalPrice" className={styles.label}>
-                            <img 
-                                src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} 
-                                alt="金币" 
+                            <CurrencyIcon
+                                currency="diamonds"
+                                alt="KK币"
                                 className={styles.labelIcon}
                             />
-                            原价（积分）
+                            原价（KK币）
                         </label>
                         <input
                             type="number"
@@ -106,12 +107,12 @@ const PriceAdjustmentModal: React.FC<PriceAdjustmentModalProps> = ({
                     <div className={styles.formGroup}>
                         <div className={styles.specialPriceHeader}>
                             <label htmlFor="specialPrice" className={styles.label}>
-                                <img 
-                                    src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} 
-                                    alt="金币" 
+                                <CurrencyIcon
+                                    currency="diamonds"
+                                    alt="KK币"
                                     className={styles.labelIcon}
                                 />
-                                特惠价格（积分，可选）
+                                特惠价格（KK币，可选）
                             </label>
                             <label className={styles.checkboxLabel}>
                                 <input

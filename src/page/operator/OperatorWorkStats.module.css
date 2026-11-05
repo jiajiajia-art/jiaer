@@ -1,0 +1,255 @@
+.workCard,
+.ratingCard,
+.activityCard,
+.loadingCard {
+  border: 1px solid #e8edf5 !important;
+  border-radius: 14px !important;
+  background: #fff !important;
+  box-shadow: 0 4px 18px rgba(31, 56, 88, 0.045) !important;
+}
+
+.workIdentity {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-width: 0;
+}
+
+.coverFrame {
+  flex: 0 0 88px;
+  width: 88px;
+  height: 112px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #f1f5fb;
+}
+
+.coverFrame :global(.ant-image),
+.coverFrame :global(.ant-image-img),
+.cover {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+}
+
+.coverPlaceholder {
+  display: flex;
+  flex: 0 0 88px;
+  width: 88px;
+  height: 112px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: linear-gradient(145deg, #edf4ff, #f7f9fc);
+  color: #8ca5c5;
+  font-size: 26px;
+}
+
+.workText {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.workEyebrow,
+.cardEyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #7b8798;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.workTitle {
+  margin: 7px 0 12px;
+  overflow: hidden;
+  color: #1f2937;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+}
+
+.workMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: #8b95a5;
+  font-size: 12px;
+}
+
+.workMeta span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workMeta :global(.ant-tag) {
+  margin-inline-end: 0;
+}
+
+.backButton {
+  flex: 0 0 auto;
+  border-radius: 8px;
+  color: #526174;
+}
+
+.metricsSection {
+  margin-top: 24px;
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 12px;
+}
+
+.sectionHeading h2 {
+  margin: 0;
+  color: #202b3a;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.sectionHeading p {
+  margin: 4px 0 0;
+  color: #8b95a5;
+  font-size: 12px;
+}
+
+.metricsSection :global(.ant-row) {
+  margin-bottom: 0;
+}
+
+.metricsSection :global(.ant-col) {
+  margin-bottom: 0;
+}
+
+.detailGrid {
+  margin-top: 0;
+}
+
+.ratingCard,
+.activityCard {
+  height: 100%;
+}
+
+.ratingValue {
+  margin-top: 22px;
+  color: #1c2b40;
+  font-size: 42px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.ratingMeta {
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.ratingFootnote {
+  margin-top: 24px;
+  padding-top: 14px;
+  border-top: 1px solid #edf1f6;
+  color: #9aa4b2;
+  font-size: 12px;
+}
+
+.activityHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.activityHint {
+  max-width: 640px;
+  margin-top: 6px;
+  color: #97a1af;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.hourGrid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.hourCell {
+  display: flex;
+  min-height: 64px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid rgba(22, 119, 255, calc(0.04 + var(--activity-intensity) * 0.2));
+  border-radius: 9px;
+  background: rgba(22, 119, 255, calc(0.025 + var(--activity-intensity) * 0.11));
+  color: #8491a3;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.hourCell strong {
+  color: #30435c;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.loadingCard {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+@media (max-width: 900px) {
+  .hourGrid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .workIdentity {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+
+  .cover {
+    width: 68px;
+    height: 88px;
+    flex-basis: 68px;
+  }
+
+  .coverFrame {
+    width: 68px;
+    height: 88px;
+    flex-basis: 68px;
+  }
+
+  .coverPlaceholder {
+    width: 68px;
+    height: 88px;
+    flex-basis: 68px;
+  }
+
+  .workTitle {
+    font-size: 19px;
+  }
+
+  .backButton {
+    width: 100%;
+  }
+
+  .hourGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

@@ -35,6 +35,12 @@ import {
 } from '../utils/creatorContinuePlay';
 import createGalgameSessionApi from '../api/galgame/createGalgameSession';
 import { useTranslation } from 'react-i18next';
+import GamePublishAppealPrompt from '../components/GamePublishAppealPrompt';
+import {
+    GAME_ADMIN_TAKEDOWN,
+    resolveGamePublishAppealBlock,
+    type GamePublishAppealBlock,
+} from '../utils/gamePublishAppeal';
 const CreateGame: React.FC = () => {
     const { t } = useTranslation();
     const [searchParams] = useSearchParams();
@@ -53,6 +59,7 @@ const CreateGame: React.FC = () => {
     const [publishModalMode, setPublishModalMode] = useState<'publish' | 'novel-edit'>('publish');
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
+    const [appealBlock, setAppealBlock] = useState<GamePublishAppealBlock | null>(null);
     const [showPriceModal, setShowPriceModal] = useState(false);
     const [showMiniProgramTip, setShowMiniProgramTip] = useState(false);
     const [miniProgramTipMessage, setMiniProgramTipMessage] = useState('');
@@ -187,7 +194,6 @@ const CreateGame: React.FC = () => {
                 fileId: gameId,
                 priceAmount: 0,
                 description: payload.description ?? '',
-                shareType: payload.shareType,
                 versionNotes: payload.versionNotes,
                 notifyFavoritedUsers: payload.notifyFavoritedUsers,
                 audienceType: payload.audienceType,
@@ -206,11 +212,22 @@ const CreateGame: React.FC = () => {
                 navigate('/bookshelf?tab=all');
             } else {
                 console.error('发布游戏失败:', response.data);
+                if (response.data.code === GAME_ADMIN_TAKEDOWN) {
+                    setShowPublishModal(false);
+                    setAppealBlock(resolveGamePublishAppealBlock(response.data, gameId));
+                    return;
+                }
                 const errorMessage = response.data.message || t('createGame.publishFailed');
                 setNoticeMessage(errorMessage);
             }
         } catch (error: unknown) {
             console.error('发布游戏失败:', error);
+            const appealBlock = resolveGamePublishAppealBlock(error, gameId);
+            if (appealBlock) {
+                setShowPublishModal(false);
+                setAppealBlock(appealBlock);
+                return;
+            }
             const errorMessage = getApiErrorMessage(error, t('createGame.publishFailed'));
             setNoticeMessage(errorMessage);
             toast.error(errorMessage);
@@ -428,8 +445,6 @@ const CreateGame: React.FC = () => {
                     isNovel={isNovelEngine(gameDetail.engine, gameDetail.game_tags)}
                     onCoverUploaded={refreshGameDetail}
                     onSaved={refreshGameDetail}
-                    gameTags={gameDetail?.game_tags}
-                    engine={gameDetail?.engine}
                 />
             )}
 
@@ -448,6 +463,8 @@ const CreateGame: React.FC = () => {
                 onConfirm={() => setNoticeMessage(null)}
                 onCancel={() => setNoticeMessage(null)}
             />
+
+            <GamePublishAppealPrompt block={appealBlock} onClose={() => setAppealBlock(null)} />
 
             {gameDetail && (
                 <PriceAdjustmentModal

@@ -5,11 +5,12 @@ import sharedStyles from './shared.module.css';
 import ConfirmModal from '../../CommonModal/ConfirmModal';
 import { toast } from 'react-hot-toast';
 import type { AbilityNode, Action } from '../../../api/worldInteraction/worldInteractionApi.type';
-import { getImageUrl, CHARACTER_GENERATION_COST } from '../../../utils/constants';
+import { getImageUrl, LEGACY_WORLD_ABILITY_NODE_GENERATION_COST } from '../../../utils/constants';
 import { addImageTimestamp } from '../../../utils/imageCache';
 import worldEditor from '../../../api/worldInteraction/worldEditor';
 import { useGameStore } from '../../../store/gameStore';
 import { useWordLimit, useWordCount } from '../../../hooks/editor/useWordLimit';
+import CurrencyIcon from '../../CurrencyIcon';
 
 // 字数限制配置
 const FUNCTIONAL_NPC_WORD_LIMITS = {
@@ -600,8 +601,8 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
                                             onClick={handleGenerateImageClick}
                                             disabled={isGenerating}
                                         >
-                                            <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" style={{ width: '16px', height: '16px' }} />
-                                            {isGenerating ? '生成中...' : `${CHARACTER_GENERATION_COST} AI生成`}
+                                            <CurrencyIcon currency="points" style={{ width: '16px', height: '16px' }} />
+                                            {isGenerating ? '生成中...' : `${LEGACY_WORLD_ABILITY_NODE_GENERATION_COST} AI生成`}
                                         </button>
                                     </div>
                                     {/* 右侧：图片预览 + 上传按钮 */}
@@ -737,8 +738,8 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
                 isOpen={singleGenerateModalOpen}
                 onConfirm={handleConfirmGenerateImage}
                 onCancel={handleCancelGenerateImage}
-                title="积分扣除确认"
-                message={`本次生成图片将扣除 ${CHARACTER_GENERATION_COST} 积分，是否继续？`}
+                title="织梦豆扣除确认"
+                message={`本次生成图片将扣除 ${LEGACY_WORLD_ABILITY_NODE_GENERATION_COST} 织梦豆，是否继续？`}
                 confirmButtonText="确认生成"
                 cancelButtonText="取消"
             />

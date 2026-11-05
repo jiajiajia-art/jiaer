@@ -16,6 +16,8 @@ export interface AdminImageGenConfigData {
   gatewayPresets?: ImageGenGatewayPreset[];
   openaiBaseUrl?: string;
   openaiBaseUrlFallback?: string;
+  activeModelCatalogId?: number | null;
+  activeModel?: string;
   apiKeySet?: boolean;
   apiKeyHint?: string;
 }
@@ -26,8 +28,11 @@ export interface AdminImageGenModelsData {
   count: number;
 }
 
+export interface AdminImageGenApiKeyData {
+  openaiApiKey: string;
+}
+
 export interface SaveImageGenConfigPayload {
-  models: Record<string, string>;
   openaiBaseUrl?: string;
   openaiApiKey?: string;
   clearApiKey?: boolean;
@@ -38,14 +43,11 @@ const adminImageGenConfigApi = {
   getConfig: () =>
     api.get<ApiResponse<AdminImageGenConfigData>>('/admin/image-gen-config'),
 
-  /** 功能注释：批量保存模块模型，并可同请求保存生图网关 */
-  saveConfig: (payload: SaveImageGenConfigPayload | Record<string, string>) => {
-    const body: SaveImageGenConfigPayload =
-      payload && typeof payload === 'object' && 'models' in payload
-        ? (payload as SaveImageGenConfigPayload)
-        : { models: payload as Record<string, string> };
-    return api.put<ApiResponse<AdminImageGenConfigData>>('/admin/image-gen-config', body);
-  },
+  getApiKey: () =>
+    api.get<ApiResponse<AdminImageGenApiKeyData>>('/admin/image-gen-config/api-key'),
+
+  saveConfig: (payload: SaveImageGenConfigPayload) =>
+    api.put<ApiResponse<AdminImageGenConfigData>>('/admin/image-gen-config', payload),
 
   listModels: (payload: { openaiBaseUrl?: string; openaiApiKey?: string }) =>
     api.post<ApiResponse<AdminImageGenModelsData>>('/admin/image-gen-config/models', payload),

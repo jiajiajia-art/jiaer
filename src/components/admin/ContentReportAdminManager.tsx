@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import adminAppealApi from '../../api/admin/adminAppealApi';
 import adminReportApi, {
@@ -127,10 +127,11 @@ const listObjectLabel = (row: AdminReportListItem): string => {
 };
 
 const ContentReportAdminManager: React.FC = () => {
+  const location = useLocation();
   const viewerRole = useAuthStore((s) => s.user?.user?.role);
   const canBanLogin = isAdminRole(viewerRole);
 
-  const [innerTab, setInnerTab] = useState<InnerTab>('reports');
+  const innerTab: InnerTab = location.pathname.endsWith('/penalties') ? 'penalties' : 'reports';
 
   const [status, setStatus] = useState<AdminReportStatus | ''>('pending');
   const [targetType, setTargetType] = useState<AdminReportTargetType | ''>('');
@@ -479,47 +480,6 @@ const ContentReportAdminManager: React.FC = () => {
 
   return (
     <div className={styles.panelStack}>
-      <div className={styles.heroCard}>
-        <div>
-          <span className={styles.sectionBadge}>内容安全</span>
-          <h2 className={styles.heroTitle}>内容举报</h2>
-          <p className={styles.heroDesc}>
-            审核用户举报；成立时游戏默认下架+警告，账号默认记警告。处罚记录含警告与处罚。
-          </p>
-        </div>
-        <div className={styles.heroMetric}>
-          <span className={styles.heroMetricLabel}>
-            {innerTab === 'reports' ? '举报总数' : '记录条数'}
-          </span>
-          <span className={styles.heroMetricValue}>
-            {innerTab === 'reports' ? total : penaltyTotal}
-          </span>
-        </div>
-      </div>
-
-      <div className={`${styles.card} ${local.tabCard}`}>
-        <div className={local.tabBar} role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={innerTab === 'reports'}
-            className={innerTab === 'reports' ? local.tabActive : local.tab}
-            onClick={() => setInnerTab('reports')}
-          >
-            举报审核
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={innerTab === 'penalties'}
-            className={innerTab === 'penalties' ? local.tabActive : local.tab}
-            onClick={() => setInnerTab('penalties')}
-          >
-            处罚记录
-          </button>
-        </div>
-      </div>
-
       {innerTab === 'reports' ? (
         <>
           <div className={`${styles.card} ${local.filterCard}`}>

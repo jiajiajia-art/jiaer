@@ -19,24 +19,23 @@ import {
     arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import Navbar from '../components/Layout/Navbar';
+import AdminShell from '../components/admin-shell/AdminShell';
 import AnnouncementModal from '../components/AnnouncementModal';
 import AdminBannerManager from '../components/AdminBannerManager';
 import Pagination from '../components/Pagination';
-import PromotionAdminManager from '../components/PromotionAdminManager';
 import PointsAdminManager from '../components/PointsAdminManager';
 import SpecialThemeTagManager from '../components/SpecialThemeTagManager';
 import SubscriptionAdminManager from '../components/SubscriptionAdminManager';
-import CreatorIncentiveAdminManager from '../components/CreatorIncentiveAdminManager';
 import ShareRatioAdminManager from '../components/ShareRatioAdminManager';
 import AdminUsersManager from '../components/AdminUsersManager';
+import DiamondAdminManager from '../components/DiamondAdminManager';
 import DailyTasksAdminManager from '../components/DailyTasksAdminManager';
-import CommentAdminManager from '../components/admin/CommentAdminManager.tsx';
+import CommentAdminManager from '../components/admin/CommentAdminManager';
 import WithdrawAdminManager from '../components/WithdrawAdminManager';
 import LotteryAdminManager from '../components/LotteryAdminManager';
 import AdminPublicAvatarManager from '../components/admin/AdminPublicAvatarManager';
 import AdminPlayModManager from '../components/admin/AdminPlayModManager';
-import ModelConfigHub from '../components/ModelConfigHub';
+import AiModelCenter from '../components/AiModelCenter';
 import announcementApi from '../api/announcement/announcementApi';
 import documentApi from '../api/document/documentApi';
 import gameTagsApi from '../api/gameTags/gameTagsApi';
@@ -59,7 +58,7 @@ import { useMessageStore } from '../store/useMessageStore';
 import { useAuthStore } from '../store/useAuthStore';
 
 type EditorMode = 'new' | 'draft' | 'published';
-type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points' | 'creatorIncentives' | 'subscriptions' | 'documents' | 'shareRatio' | 'dailyTasks' | 'users' | 'comments' | 'withdraw' | 'imageGen' | 'lottery' | 'avatars' | 'components';
+type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points' | 'diamonds' | 'creatorIncentives' | 'subscriptions' | 'documents' | 'shareRatio' | 'dailyTasks' | 'users' | 'comments' | 'withdraw' | 'aiModelCenter' | 'lottery' | 'avatars' | 'components';
 type SortModalMode = 'featured' | 'all' | null;
 
 interface SortDraftItem {
@@ -82,23 +81,42 @@ const ANNOUNCEMENT_PAGE_SIZE = 3;
 const THEME_PAGE_SIZE = 10;
 
 const resolveAdminTab = (pathname: string, search: string): AdminTab => {
+    if (pathname.startsWith('/admin/banners')) return 'banners';
+    if (pathname.startsWith('/admin/themes')) return 'themes';
     if (pathname.startsWith('/admin/documents')) return 'documents';
     if (pathname.startsWith('/admin/users')) return 'users';
-    if (pathname.startsWith('/admin/promotions')) return 'promotions';
     if (pathname.startsWith('/admin/points')) return 'points';
-    if (pathname.startsWith('/admin/creator-incentives')) return 'creatorIncentives';
+    if (pathname.startsWith('/admin/diamonds')) return 'diamonds';
     if (pathname.startsWith('/admin/subscriptions')) return 'subscriptions';
     if (pathname.startsWith('/admin/share-ratio')) return 'shareRatio';
     if (pathname.startsWith('/admin/daily-tasks')) return 'dailyTasks';
     if (pathname.startsWith('/admin/comments')) return 'comments';
     if (pathname.startsWith('/admin/withdraw')) return 'withdraw';
-    if (pathname.startsWith('/admin/image-gen') || pathname.startsWith('/admin/text-llm')) return 'imageGen';
+    if (pathname.startsWith('/admin/ai-model-center') || pathname.startsWith('/admin/ai-model-pricing') || pathname.startsWith('/admin/image-gen') || pathname.startsWith('/admin/text-llm')) return 'aiModelCenter';
     if (pathname.startsWith('/admin/lottery')) return 'lottery';
     if (pathname.startsWith('/admin/avatars')) return 'avatars';
     if (pathname.startsWith('/admin/components') || pathname.startsWith('/admin/play-mods')) return 'components';
     const tabParam = new URLSearchParams(search).get('tab');
     if (tabParam === 'announcements' || tabParam === 'banners' || tabParam === 'themes' || tabParam === 'comments') return tabParam;
     return 'announcements';
+};
+
+const resolveAdminMenuKey = (pathname: string, activeTab: AdminTab): string => {
+    if (pathname === '/admin/banners/activity') return 'bannerActivity';
+    if (pathname.startsWith('/admin/banners')) return 'bannerHome';
+    if (pathname.startsWith('/admin/themes')) return 'themes';
+    if (pathname === '/admin/points/special') return 'pointsSpecial';
+    if (pathname.startsWith('/admin/points')) return 'pointsActivity';
+    if (pathname === '/admin/subscriptions/key-generation') return 'membershipKeyGeneration';
+    if (pathname === '/admin/subscriptions/key-records') return 'membershipKeyRecords';
+    if (pathname.startsWith('/admin/subscriptions')) return 'membershipRecords';
+    if (pathname === '/admin/withdraw/verify') return 'withdrawVerify';
+    if (pathname === '/admin/withdraw/creator-earnings') return 'withdrawCreatorEarnings';
+    if (pathname.startsWith('/admin/withdraw')) return 'withdrawApplications';
+    if (pathname === '/admin/ai-model-center/usage') return 'aiUsage';
+    if (pathname === '/admin/ai-model-center/runtime') return 'aiRuntime';
+    if (pathname.startsWith('/admin/ai-model-center')) return 'aiModels';
+    return activeTab;
 };
 
 const formatTime = (value: string | null): string => {
@@ -120,8 +138,6 @@ const clampPage = (page: number, totalItems: number, pageSize: number): number =
     const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
     return Math.min(Math.max(page, 1), totalPages);
 };
-
-const formatBadgeCount = (count: number) => (count > 99 ? '99+' : String(count));
 
 const moveById = <T extends { id: number | string }>(list: T[], fromId: number | string, toId: number | string): T[] => {
     const fromIndex = list.findIndex((item) => item.id === fromId);
@@ -267,7 +283,7 @@ const AdminPanel: React.FC = () => {
         () => resolveAdminTab(location.pathname, location.search),
         [location.pathname, location.search],
     );
-
+    const activeMenuKey = useMemo(() => resolveAdminMenuKey(location.pathname, activeTab), [activeTab, location.pathname]);
     const [history, setHistory] = useState<AnnouncementSummary[]>([]);
     const [selectedHistoryId, setSelectedHistoryId] = useState<number | null>(null);
     const [editorMode, setEditorMode] = useState<EditorMode>('new');
@@ -308,7 +324,6 @@ const AdminPanel: React.FC = () => {
     const autoScrollDirectionRef = useRef<-1 | 0 | 1>(0);
     const lastSortTargetIdRef = useRef<number | null>(null);
     const [themePage, setThemePage] = useState(1);
-    const [pendingPromotionReviewCount, setPendingPromotionReviewCount] = useState(0);
     const [pendingPromotionRewardCount, setPendingPromotionRewardCount] = useState(0);
 
     // 文档管理相关状态
@@ -846,15 +861,9 @@ const AdminPanel: React.FC = () => {
     const refreshAdminBadgeCounts = useCallback(async () => {
         try {
             // 实现 管理端数字标统一刷新
-            const [submissionResponse, rewardTaskResponse] = await Promise.all([
-                promotionApi.adminSubmissions({ reviewStatus: 'pending_review', page: 1 }),
-                promotionApi.adminRewardTasks({ page: 1 }),
-            ]);
-
-            const nextPendingReviewCount = Number(submissionResponse.data.data?.pagination?.total || 0);
+            const rewardTaskResponse = await promotionApi.adminRewardTasks({ page: 1 });
             const nextPendingRewardCount = Number(rewardTaskResponse.data.data?.summary?.pendingCount || 0);
 
-            setPendingPromotionReviewCount(nextPendingReviewCount);
             setPendingPromotionRewardCount(nextPendingRewardCount);
         } catch (error) {
             console.error('Failed to refresh admin badge counts.', error);
@@ -882,7 +891,7 @@ const AdminPanel: React.FC = () => {
     }, [history, selectedHistoryId]);
 
     useEffect(() => {
-        if (activeTab === 'promotions' || activeTab === 'points') {
+        if (activeTab === 'points') {
             void refreshAdminBadgeCounts();
         }
         if (activeTab === 'documents') {
@@ -978,71 +987,6 @@ const AdminPanel: React.FC = () => {
     useEffect(() => () => {
         stopSortAutoScroll();
     }, [stopSortAutoScroll]);
-
-    const handleTabChange = (tab: AdminTab) => {
-        if (tab === 'promotions') {
-            navigate('/admin/promotions/list');
-            return;
-        }
-        if (tab === 'points') {
-            navigate('/admin/points');
-            return;
-        }
-        if (tab === 'creatorIncentives') {
-            navigate('/admin/creator-incentives');
-            return;
-        }
-        if (tab === 'subscriptions') {
-            navigate('/admin/subscriptions');
-            return;
-        }
-        if (tab === 'documents') {
-            navigate('/admin/documents');
-            return;
-        }
-        if (tab === 'shareRatio') {
-            navigate('/admin/share-ratio');
-            return;
-        }
-        if (tab === 'dailyTasks') {
-            navigate('/admin/daily-tasks');
-            return;
-        }
-        if (tab === 'users') {
-            navigate('/admin/users');
-            return;
-        }
-        if (tab === 'comments') {
-            navigate('/admin/comments');
-            return;
-        }
-        if (tab === 'withdraw') {
-            navigate('/admin/withdraw');
-            return;
-        }
-        if (tab === 'imageGen') {
-            navigate('/admin/image-gen');
-            return;
-        }
-        if (tab === 'lottery') {
-            navigate('/admin/lottery');
-            return;
-        }
-        if (tab === 'avatars') {
-            navigate('/admin/avatars');
-            return;
-        }
-        if (tab === 'components') {
-            navigate('/admin/components');
-            return;
-        }
-
-        const nextSearch = tab === 'announcements' ? '' : `?tab=${tab}`;
-        const nextUrl = `/admin${nextSearch}`;
-        if (`${location.pathname}${location.search}` !== nextUrl) {
-            navigate(nextUrl);
-        }
-    };
 
     const loadAnnouncementDetail = async (id: number) => {
         try {
@@ -1464,164 +1408,19 @@ const AdminPanel: React.FC = () => {
     };
 
     return (
+        <AdminShell
+            mode="admin"
+            activeKey={activeMenuKey}
+            userId={userId}
+            badges={{ points: pendingPromotionRewardCount }}
+        >
         <div className={styles.pageRoot}>
-            <Navbar />
             <div className={styles.pageBody}>
                 <div className={styles.workspace}>
-                    <aside className={styles.sidebar}>
-                        <div className={styles.sidebarHeader}>
-                            <div className={styles.sidebarTitle}>管理面板</div>
-                            <div className={styles.sidebarDivider} />
-                        </div>
-                    {userId === '96e89940badf1f67' ? (
-                        <button
-                            type="button"
-                            className={`${styles.navItem} ${activeTab === 'comments' ? styles.navItemActive : ''}`}
-                            onClick={() => handleTabChange('comments')}
-                        >
-                            <span className={styles.navTitle}>评论管理</span>
-                        </button>
-                    ) : (
-                        <>
-                            <button
-                                type="button"
-                                className={`${styles.navItem} ${activeTab === 'announcements' ? styles.navItemActive : ''}`}
-                                onClick={() => handleTabChange('announcements')}
-                            >
-                                <span className={styles.navTitle}>公告系统</span>
-                            </button>
-                            <button
-                                type="button"
-                                className={`${styles.navItem} ${activeTab === 'banners' ? styles.navItemActive : ''}`}
-                                onClick={() => handleTabChange('banners')}
-                            >
-                                <span className={styles.navTitle}>轮播图管理</span>
-                            </button>
-                            <button
-                                type="button"
-                                className={`${styles.navItem} ${activeTab === 'themes' ? styles.navItemActive : ''}`}
-                                onClick={() => handleTabChange('themes')}
-                            >
-                                <span className={styles.navTitle}>题材管理</span>
-                            </button>
-                            <button
-                                type="button"
-                                className={`${styles.navItem} ${activeTab === 'promotions' ? styles.navItemActive : ''}`}
-                                onClick={() => handleTabChange('promotions')}
-                            >
-                                {pendingPromotionReviewCount > 0 ? (
-                                    <span className={styles.navCounter}>{formatBadgeCount(pendingPromotionReviewCount)}</span>
-                                ) : null}
-                                <span className={styles.navTitle}>推广管理</span>
-                            </button>
-                            <button
-                                type="button"
-                                className={`${styles.navItem} ${activeTab === 'points' ? styles.navItemActive : ''}`}
-                                onClick={() => handleTabChange('points')}
-                            >
-                                {pendingPromotionRewardCount > 0 ? (
-                                    <span className={styles.navCounter}>{formatBadgeCount(pendingPromotionRewardCount)}</span>
-                                ) : null}
-                                <span className={styles.navTitle}>积分管理</span>
-                            </button>
-                            <button
-                                type="button"
-                                className={`${styles.navItem} ${activeTab === 'creatorIncentives' ? styles.navItemActive : ''}`}
-                                onClick={() => handleTabChange('creatorIncentives')}
-                            >
-                                <span className={styles.navTitle}>创作者激励</span>
-                            </button>
-                            <button
-                                type="button"
-                                className={`${styles.navItem} ${activeTab === 'subscriptions' ? styles.navItemActive : ''}`}
-                                onClick={() => handleTabChange('subscriptions')}
-                            >
-                                <span className={styles.navTitle}>会员管理</span>
-                            </button>
-                            <button
-                                type="button"
-                                className={`${styles.navItem} ${activeTab === 'documents' ? styles.navItemActive : ''}`}
-                                onClick={() => handleTabChange('documents')}
-                            >
-                                <span className={styles.navTitle}>文档管理</span>
-                            </button>
-                            <button
-                                type="button"
-                                className={`${styles.navItem} ${activeTab === 'dailyTasks' ? styles.navItemActive : ''}`}
-                                onClick={() => handleTabChange('dailyTasks')}
-                            >
-                                <span className={styles.navTitle}>每日任务管理</span>
-                            </button>
-                            <button
-                                type="button"
-                                className={`${styles.navItem} ${activeTab === 'shareRatio' ? styles.navItemActive : ''}`}
-                                onClick={() => handleTabChange('shareRatio')}
-                            >
-                                <span className={styles.navTitle}>分成比例</span>
-                            </button>
-                            <button
-                                type="button"
-                                className={`${styles.navItem} ${activeTab === 'users' ? styles.navItemActive : ''}`}
-                                onClick={() => handleTabChange('users')}
-                            >
-                                <span className={styles.navTitle}>用户角色</span>
-                            </button>
-                            <button
-                                type="button"
-                                className={`${styles.navItem} ${activeTab === 'withdraw' ? styles.navItemActive : ''}`}
-                                onClick={() => handleTabChange('withdraw')}
-                            >
-                                <span className={styles.navTitle}>提现管理</span>
-                            </button>
-                            <button
-                                type="button"
-                                className={`${styles.navItem} ${activeTab === 'imageGen' ? styles.navItemActive : ''}`}
-                                onClick={() => handleTabChange('imageGen')}
-                            >
-                                <span className={styles.navTitle}>模型配置</span>
-                            </button>
-                            <button
-                                type="button"
-                                className={`${styles.navItem} ${activeTab === 'lottery' ? styles.navItemActive : ''}`}
-                                onClick={() => handleTabChange('lottery')}
-                            >
-                                <span className={styles.navTitle}>抽奖活动</span>
-                            </button>
-                            <button
-                                type="button"
-                                className={`${styles.navItem} ${activeTab === 'avatars' ? styles.navItemActive : ''}`}
-                                onClick={() => handleTabChange('avatars')}
-                            >
-                                <span className={styles.navTitle}>公共头像</span>
-                            </button>
-                            <button
-                                type="button"
-                                className={`${styles.navItem} ${activeTab === 'components' ? styles.navItemActive : ''}`}
-                                onClick={() => handleTabChange('components')}
-                            >
-                                <span className={styles.navTitle}>组件管理</span>
-                            </button>
-                            <button
-                                type="button"
-                                className={`${styles.navItem} ${activeTab === 'comments' ? styles.navItemActive : ''}`}
-                                onClick={() => handleTabChange('comments')}
-                            >
-                                <span className={styles.navTitle}>评论管理</span>
-                            </button>
-                        </>
-                    )}
-                    </aside>
-
                     <div className={styles.contentArea}>
                         {activeTab === 'announcements' && (
                             <div className={styles.panelStack}>
-                                <section className={styles.heroCard}>
-                                    <div>
-                                        <div className={styles.sectionBadge}>公告系统</div>
-                                        <h2 className={styles.heroTitle}>维护首页公告与历史版本</h2>
-                                    </div>
                                     <button type="button" className={styles.primaryGhostButton} onClick={resetEditor}>新建草稿</button>
-                                </section>
 
                                 <div className={styles.panelGrid}>
                                     <section className={styles.card}>
@@ -1783,11 +1582,6 @@ const AdminPanel: React.FC = () => {
                             <div className={styles.panelStack}>
                                 <SpecialThemeTagManager />
 
-                                <section className={styles.heroCard}>
-                                    <div>
-                                        <div className={styles.sectionBadge}>题材管理</div>
-                                        <h2 className={styles.heroTitle}>管理可用题材与首页热门题材顺序</h2>
-                                    </div>
                                     <button
                                         type="button"
                                         className={styles.primaryGhostButton}
@@ -1796,7 +1590,6 @@ const AdminPanel: React.FC = () => {
                                     >
                                         刷新题材
                                     </button>
-                                </section>
 
                                 <div className={styles.themePanelGrid}>
                                     <section ref={createThemeCardRef} className={styles.card}>
@@ -1970,21 +1763,13 @@ const AdminPanel: React.FC = () => {
                             </div>
                         )}
 
-                        {activeTab === 'promotions' && (
-                            <PromotionAdminManager
-                                pendingReviewCount={pendingPromotionReviewCount}
-                                onRefreshCounts={refreshAdminBadgeCounts}
-                            />
-                        )}
-
                         {activeTab === 'points' && (
                             <PointsAdminManager
-                                pendingRewardCount={pendingPromotionRewardCount}
                                 onRefreshCounts={refreshAdminBadgeCounts}
                             />
                         )}
 
-                        {activeTab === 'creatorIncentives' && <CreatorIncentiveAdminManager />}
+                        {activeTab === 'diamonds' && <DiamondAdminManager />}
 
                         {activeTab === 'shareRatio' && <ShareRatioAdminManager />}
 
@@ -1992,7 +1777,7 @@ const AdminPanel: React.FC = () => {
 
                         {activeTab === 'withdraw' && <WithdrawAdminManager />}
 
-                        {activeTab === 'imageGen' && <ModelConfigHub />}
+                        {activeTab === 'aiModelCenter' && <AiModelCenter isAdmin />}
 
                         {activeTab === 'lottery' && <LotteryAdminManager />}
                         {activeTab === 'avatars' && <AdminPublicAvatarManager />}
@@ -2006,11 +1791,6 @@ const AdminPanel: React.FC = () => {
 
                         {activeTab === 'documents' && (
                             <div className={styles.panelStack}>
-                                <section className={styles.heroCard}>
-                                    <div>
-                                        <div className={styles.sectionBadge}>文档管理</div>
-                                        <h2 className={styles.heroTitle}>管理帮助文档与使用指南</h2>
-                                    </div>
                                     <button
                                         type="button"
                                         className={styles.primaryGhostButton}
@@ -2022,7 +1802,6 @@ const AdminPanel: React.FC = () => {
                                     >
                                         新增文档
                                     </button>
-                                </section>
 
                                 <section className={styles.documentManager}>
                                     {/* 左侧：树形结构 */}
@@ -2539,6 +2318,7 @@ const AdminPanel: React.FC = () => {
                 </div>
             )}
         </div>
+        </AdminShell>
     );
 };
 

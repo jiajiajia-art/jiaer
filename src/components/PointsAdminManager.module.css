@@ -6,7 +6,7 @@
 
 .heroCard,
 .card {
-    background: rgba(255, 250, 245, 0.92);
+    background: #fff;
     border: 1px solid rgba(222, 191, 166, 0.45);
     border-radius: 22px;
     box-shadow: 0 18px 40px rgba(181, 135, 92, 0.14);
@@ -25,7 +25,7 @@
     align-items: center;
     padding: 8px 16px;
     border-radius: 999px;
-    background: rgba(209, 147, 99, 0.14);
+    background: #e6f4ff;
     color: #a5602f;
     font-size: 14px;
     font-weight: 700;
@@ -74,13 +74,13 @@
 }
 
 .tabButton {
-    background: rgba(255, 247, 240, 0.95);
+    background: #fff;
     color: #8b664d;
 }
 
 .tabButtonActive {
     border-color: transparent;
-    background: linear-gradient(135deg, #b56f3b, #d79c68);
+    background: #1677ff;
     color: #fffaf4;
     box-shadow: 0 14px 24px rgba(181, 111, 59, 0.22);
 }
@@ -111,13 +111,13 @@
 
 .primaryButton {
     border: none;
-    background: linear-gradient(135deg, #b56f3b, #d79c68);
+    background: #1677ff;
     color: #fffaf4;
 }
 
 .secondaryButton {
     border: 1px solid rgba(220, 195, 175, 0.88);
-    background: rgba(255, 253, 250, 0.96);
+    background: #fff;
     color: #4c3d31;
 }
 
@@ -170,7 +170,7 @@
     width: 100%;
     border-radius: 18px;
     border: 1px solid rgba(220, 195, 175, 0.88);
-    background: rgba(255, 253, 250, 0.96);
+    background: #fff;
     color: #34281f;
     font-size: 15px;
     box-sizing: border-box;
@@ -191,7 +191,7 @@
 .userCard {
     padding: 20px;
     border-radius: 16px;
-    background: rgba(255, 252, 249, 0.96);
+    background: #fff;
     border: 1px solid rgba(228, 205, 187, 0.7);
 }
 
@@ -213,7 +213,7 @@
     overflow-x: auto;
     border-radius: 16px;
     border: 1px solid rgba(228, 205, 187, 0.72);
-    background: rgba(255, 252, 249, 0.96);
+    background: #fff;
 }
 
 .reviewTable {
@@ -260,7 +260,7 @@
     color: #6f5a49;
     font-size: 13px;
     font-weight: 700;
-    background: rgba(246, 236, 224, 0.72);
+    background: #fff;
     white-space: nowrap;
 }
 
@@ -269,11 +269,11 @@
 }
 
 .reviewTableRow {
-    background: rgba(255, 252, 248, 0.98);
+    background: #fff;
 }
 
 .reviewTable tbody tr:hover {
-    background: rgba(250, 241, 232, 0.48);
+    background: #f5faff;
 }
 
 .paginationBar {
@@ -297,6 +297,47 @@
 
 .rewardTitleCell {
     font-weight: 700;
+}
+
+.shareRatioTypeCell {
+    color: #3f332a;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.shareRatioValueCell {
+    color: #2e241d;
+}
+
+.shareRatioValue {
+    display: block;
+    color: #2e241d;
+    font-size: 15px;
+    line-height: 1.35;
+}
+
+.shareRatioSource {
+    display: block;
+    margin-top: 3px;
+    color: #806b59;
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.shareRatioLocked {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    padding: 6px 10px;
+    border: 1px solid rgba(201, 169, 142, 0.72);
+    border-radius: 999px;
+    background: #fff;
+    color: #6f5a49;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.35;
+    text-align: center;
 }
 
 .rewardPointsCell {
@@ -338,7 +379,7 @@
 .emptyState {
     padding: 16px;
     border-radius: 18px;
-    background: rgba(250, 242, 234, 0.92);
+    background: #fff;
 }
 
 .detailOverlay,
@@ -359,7 +400,7 @@
     width: min(960px, 100%);
     border-radius: 24px;
     border: 1px solid rgba(222, 191, 166, 0.45);
-    background: rgba(255, 250, 245, 0.98);
+    background: #fff;
     box-shadow: 0 20px 56px rgba(98, 59, 33, 0.1);
 }
 
@@ -405,7 +446,7 @@
     padding: 18px;
     border-radius: 16px;
     border: 1px solid rgba(205, 157, 120, 0.22);
-    background: linear-gradient(180deg, rgba(255, 252, 248, 0.98) 0%, rgba(250, 241, 232, 0.96) 100%);
+    background: #fff;
 }
 
 .detailSectionTitle {
@@ -474,7 +515,7 @@
 .detailVideo {
     width: 100%;
     border-radius: 18px;
-    background: rgba(205, 157, 120, 0.16);
+    background: #fff;
 }
 
 .detailImage {

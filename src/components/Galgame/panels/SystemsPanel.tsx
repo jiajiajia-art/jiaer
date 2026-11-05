@@ -32,6 +32,11 @@ import {
 } from '../../../lib/galgame/writingStylePresets';
 import { NPC_PROFILE_FIELD_GENERATION_COST } from '../../../utils/constants';
 import { refreshAuthUserPoints } from '../../../lib/auth/refreshUserPoints';
+import {
+  formatSessionProfileCharge,
+  getSessionProfileBillingPreview,
+  resolveSessionProfileBalancePatch,
+} from '../../../lib/sessionProfileBilling';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { useGameStore } from '../../../store/gameStore';
 import { sessionPlayerProfileApi } from '../../../api/galgame/playerCharacterCards';
@@ -132,6 +137,12 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
   const authUser = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
   const { sessionId } = useGameStore();
+  const billingSearch = typeof window === 'undefined' ? '' : window.location.search;
+  const textBillingPreview = getSessionProfileBillingPreview(
+    billingSearch,
+    NPC_PROFILE_FIELD_GENERATION_COST,
+  );
+  const textChargeText = formatSessionProfileCharge(textBillingPreview);
 
   useEffect(() => {
     if (!isOpen) {
@@ -410,15 +421,17 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
       return;
     }
     if (positionAiBusy || saving) return;
-    const latestPoints = await refreshAuthUserPoints();
-    if (
-      typeof latestPoints === 'number'
-      && latestPoints < NPC_PROFILE_FIELD_GENERATION_COST
-    ) {
-      toast.error(
-        `积分不足（需要 ${NPC_PROFILE_FIELD_GENERATION_COST}，当前 ${latestPoints}）`,
-      );
-      return;
+    if (textBillingPreview.currency === 'points') {
+      const latestPoints = await refreshAuthUserPoints();
+      if (
+        typeof latestPoints === 'number'
+        && latestPoints < textBillingPreview.chargedUnits
+      ) {
+        toast.error(
+          `织梦豆不足（需要 ${textBillingPreview.chargedUnits}，当前 ${latestPoints}）`,
+        );
+        return;
+      }
     }
     setPositionAiConfirm(field);
   };
@@ -445,11 +458,16 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
       if (field === 'traits') {
         setPositionDraft((d) => ({ ...d, stance: text.slice(0, 200) }));
       }
-      if (typeof res.data.remainingPoints === 'number') {
+      const balancePatch = resolveSessionProfileBalancePatch(res.data.billing);
+      if (balancePatch) {
+        updateUser(balancePatch);
+      } else if (typeof res.data.remainingPoints === 'number') {
         updateUser({ points: res.data.remainingPoints });
       }
       toast.success(
-        `${POSITION_AI_LABEL[field]}已生成（-${res.data.pointsDeducted ?? NPC_PROFILE_FIELD_GENERATION_COST} 积分）`,
+        `${POSITION_AI_LABEL[field]}已生成（-${res.data.billing
+          ? formatSessionProfileCharge(res.data.billing)
+          : textChargeText}）`,
       );
     } catch (e) {
       toast.error((e as Error)?.message || '生成失败');
@@ -1049,7 +1067,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
                 >
                   {positionAiBusy === 'traits'
                     ? '生成中…'
-                    : `AI生成 · ${NPC_PROFILE_FIELD_GENERATION_COST}`}
+                    : `AI生成 · ${textChargeText}`}
                 </button>
               </div>
               <textarea
@@ -1194,7 +1212,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
         isOpen={Boolean(positionAiConfirm)}
         variant="dossier"
         title={`确认生成${positionAiConfirm ? POSITION_AI_LABEL[positionAiConfirm] : ''}`}
-        message={`将扣除 ${NPC_PROFILE_FIELD_GENERATION_COST} 积分生成「${positionAiConfirm ? POSITION_AI_LABEL[positionAiConfirm] : ''}」，是否继续？`}
+        message={`将扣除 ${textChargeText} 生成「${positionAiConfirm ? POSITION_AI_LABEL[positionAiConfirm] : ''}」，是否继续？`}
         confirmText="确认生成"
         cancelText="取消"
         onConfirm={() => {

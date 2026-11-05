@@ -228,7 +228,7 @@ export const PRIZE_DISPLAY: Record<PrizeKey, { label: string; color: string }> =
     color: '#ab47bc',
   },
   points_300: {
-    label: '300积分券',
+    label: '300织梦豆券',
     color: '#7e57c2',
   },
 };
@@ -261,6 +261,6 @@ export const PRIZE_CLAIM_INFO: Record<
   points_300: {
     fulfillment: 'points',
     method: '自动发放',
-    detail: '中奖后 300 游戏积分直接到账，无需额外操作。',
+    detail: '中奖后 300 织梦豆直接到账，无需额外操作。',
   },
 };

@@ -1,5 +1,6 @@
 /**
- * 禁止 Admin/admin 目录大小写混用（macOS 不敏感、Linux CI/tsc 会炸）
+ * 功能注释：git 目录名为 src/components/admin（小写）。
+ * 与 adminImportCasing 一致，禁止再要求大写 Admin（macOS 掩盖、Linux 会炸）。
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -8,7 +9,7 @@ import { join, relative } from 'node:path';
 
 const ROOT = join(import.meta.dirname, '..');
 const SRC = join(ROOT, 'src');
-const BAD = /(?:from\s+['"][^'"]*\/)Admin\//;
+const BAD = /(?:from\s+['"])(?:\.\/Admin\/|(?:\.\.\/)+components\/Admin\/)/;
 
 function walk(dir, out = []) {
   for (const name of readdirSync(dir)) {

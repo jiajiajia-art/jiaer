@@ -30,12 +30,12 @@ function asString(value: unknown): string {
 }
 
 const TITLE_MAP: Record<string, string> = {
-  diamonds_recharge: '钻石充值',
+  diamonds_recharge: 'KK币充值',
   diamonds_recharge_bonus: '充值赠送',
   game_purchase: '购买付费游戏',
   member_subscription: '会员订阅',
   revenue_share: '创作者收益分成',
-  exchange_to_points: '兑换积分',
+  exchange_to_points: '兑换织梦豆',
   custom_if_pay: '自定义应用消费',
   withdraw_apply: '提现申请扣减',
   withdraw_refund: '提现驳回退回',
@@ -49,13 +49,13 @@ export function formatDiamondTimelineLog(item: DiamondTimelineLogInput): string 
   const absDiamonds = Math.abs(Number(item.diamonds) || 0);
   const meta = safeParseJson(item.description);
   const biz = asString(item.businessId);
-  const title = TITLE_MAP[type] || (Number(item.diamonds) >= 0 ? '钻石收入' : '钻石支出');
+  const title = TITLE_MAP[type] || (Number(item.diamonds) >= 0 ? 'KK币收入' : 'KK币支出');
 
   if (type === 'exchange_to_points') {
     const spent = asNumber(meta?.diamondsSpent) ?? absDiamonds;
     const earned = asNumber(meta?.pointsEarned);
     if (earned != null) {
-      return `${title}（消耗 ${spent} 钻，获得 ${earned} 积分）`;
+      return `${title}（消耗 ${spent} KK币，获得 ${earned} 织梦豆）`;
     }
     return `${title}（消耗 ${spent} 钻）`;
   }

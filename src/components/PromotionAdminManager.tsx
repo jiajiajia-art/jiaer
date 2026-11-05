@@ -83,13 +83,14 @@ const createEmptyForm = (): PromotionActivityPayload => ({
   detailLinkUrl: '',
   internalLinkUrl: '',
   submissionConfig: { ...emptyConfig },
-  isLongTerm: true,
+  isLongTerm: false,
   startAt: null,
   endAt: null,
   submissionLimitType: 'unlimited',
   submissionLimitDays: null,
   submissionLimitCount: null,
   rewardPoints: 10,
+  kkReward: { enabled: false, amount: 0, validDays: null },
   status: 'draft',
   sortOrder: 0,
 });
@@ -135,7 +136,6 @@ const getSubmissionStatusClass = (status: PromotionReviewStatus) => (
       ? styles.statusRejected
       : ''
 );
-const formatBadgeCount = (count: number) => (count > 99 ? '99+' : String(count));
 void buildLimitSummary;
 const getSubmissionLimitSummary = (activity: PromotionActivity) => {
   if (activity.submissionLimitType === 'once_per_activity') {
@@ -148,11 +148,10 @@ const getSubmissionLimitSummary = (activity: PromotionActivity) => {
 };
 
 type PromotionAdminManagerProps = {
-  pendingReviewCount: number;
   onRefreshCounts: () => Promise<void>;
 };
 
-const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingReviewCount, onRefreshCounts }) => {
+const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ onRefreshCounts }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams<{ promotionView?: string }>();
@@ -196,8 +195,8 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
   const selectedActivity = useMemo(() => activities.find((item) => item.id === selectedActivityId) || null, [activities, selectedActivityId]);
 
   useEffect(() => {
-    if (location.pathname === '/admin/promotions') {
-      navigate('/admin/promotions/list', { replace: true });
+    if (location.pathname === '/operator/promotion') {
+      navigate('/operator/promotion/list', { replace: true });
     }
   }, [location.pathname, navigate]);
 
@@ -270,10 +269,11 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
       submissionLimitDays: activity.submissionLimitDays,
       submissionLimitCount: activity.submissionLimitCount,
       rewardPoints: activity.rewardPoints,
+      kkReward: activity.kkReward || { enabled: false, amount: 0, validDays: null },
       status: activity.status,
       sortOrder: activity.sortOrder,
     });
-    navigate('/admin/promotions/create');
+    navigate('/operator/promotion/create');
   };
 
   const resetForm = () => {
@@ -327,7 +327,15 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
       if (!Number.isInteger(form.submissionLimitCount) || Number(form.submissionLimitCount) <= 0) return toast.error('投稿限制次数必须为大于 0 的整数'), false;
     }
 
-    if (!Number.isInteger(form.rewardPoints) || Number(form.rewardPoints) <= 0) return toast.error('奖励积分必须为大于 0 的整数'), false;
+    if (!Number.isInteger(form.rewardPoints) || Number(form.rewardPoints) <= 0) return toast.error('奖励织梦豆必须为大于 0 的整数'), false;
+    if (form.kkReward.enabled) {
+      if (!/^\d+(?:\.\d{1,2})?$/.test(String(form.kkReward.amount)) || form.kkReward.amount <= 0) {
+        return toast.error('活动限时KK币奖励必须大于 0 且最多保留两位小数'), false;
+      }
+      if (!Number.isInteger(form.kkReward.validDays) || Number(form.kkReward.validDays) < 1 || Number(form.kkReward.validDays) > 3650) {
+        return toast.error('活动限时KK币有效期必须为 1 至 3650 天'), false;
+      }
+    }
     return true;
   };
 
@@ -378,7 +386,7 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
       }
       resetForm();
       await loadActivities();
-      navigate('/admin/promotions/list');
+      navigate('/operator/promotion/list');
     } catch (error) {
       toast.error(getApiErrorMessage(error, '推广活动保存失败'));
     } finally {
@@ -568,25 +576,14 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
     setAppliedReviewFilters((prev) => ({ ...prev, page }));
   };
 
-  const renderHeaderButtons = () => (
-    <div className={styles.headerActions}>
-      <button type="button" className={`${styles.secondaryButton} ${currentView === 'ticker' ? styles.secondaryButtonActive : ''}`} onClick={() => navigate('/admin/promotions/ticker')}>首页滚动通知</button>
-      <button type="button" className={`${styles.secondaryButton} ${currentView === 'create' ? styles.secondaryButtonActive : ''}`} onClick={() => navigate('/admin/promotions/create')}>新增活动</button>
-      <button type="button" className={`${styles.secondaryButton} ${currentView === 'list' ? styles.secondaryButtonActive : ''}`} onClick={() => navigate('/admin/promotions/list')}>管理活动</button>
-      <div className={styles.headerButtonWrap}>
-        <button type="button" className={`${styles.secondaryButton} ${currentView === 'reviews' ? styles.secondaryButtonActive : ''}`} onClick={() => navigate('/admin/promotions/reviews')}>投稿审核</button>
-        {pendingReviewCount > 0 ? <span className={styles.actionBadge}>{formatBadgeCount(pendingReviewCount)}</span> : null}
-      </div>
-    </div>
-  );
-
   const renderForm = () => (
     <section className={styles.card}>
       <div className={styles.cardHeader}><div><h3 className={styles.cardTitle}>{selectedActivity ? '编辑推广活动' : '新增推广活动'}</h3></div></div>
       <div className={styles.formArea}>
-        <label className={styles.fieldLabel}>活动标题<input className={styles.textInput} value={form.title} onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))} /></label>
-        <label className={styles.fieldLabel}>活动摘要<textarea className={styles.textArea} value={form.summary} onChange={(event) => setForm((prev) => ({ ...prev, summary: event.target.value }))} /></label>
-        <label className={styles.fieldLabel}>
+        <label className={`${styles.fieldLabel} ${styles.fieldHalf}`}>活动标题<input className={styles.textInput} value={form.title} onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))} /></label>
+        <label className={`${styles.fieldLabel} ${styles.fieldHalf}`}>活动封面<input className={styles.textInput} type="file" accept="image/*" onChange={(event) => { handleUploadCoverForCrop(event.target.files?.[0] || null); event.currentTarget.value = ''; }} />{form.coverImageUrl && <img className={styles.coverPreview} src={getImageUrl(form.coverImageUrl)} alt="活动封面" />}</label>
+        <label className={`${styles.fieldLabel} ${styles.fieldFull}`} >活动摘要<textarea className={styles.textArea} value={form.summary} onChange={(event) => setForm((prev) => ({ ...prev, summary: event.target.value }))} /></label>
+        <label className={`${styles.fieldLabel} ${styles.fieldHalf}`}>
           站内跳转链接（可选）
           <input
             className={styles.textInput}
@@ -596,25 +593,81 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
           />
           <span className={styles.fieldHint}>用于广告/轮播等入口跳转，示例：{buildPromotionInternalLinkExample(form.title)}</span>
         </label>
-        <label className={styles.fieldLabel}>活动详情跳转地址（可选）<input className={styles.textInput} value={form.detailLinkUrl} onChange={(event) => setForm((prev) => ({ ...prev, detailLinkUrl: event.target.value }))} placeholder="/game/xxx or https://example.com" /></label>
-        <label className={styles.fieldLabel}>活动封面<input className={styles.textInput} type="file" accept="image/*" onChange={(event) => { handleUploadCoverForCrop(event.target.files?.[0] || null); event.currentTarget.value = ''; }} />{form.coverImageUrl && <img className={styles.coverPreview} src={getImageUrl(form.coverImageUrl)} alt="活动封面" />}</label>
-        <label className={styles.fieldLabel}>活动时间<label className={styles.switchLabel}><input type="checkbox" checked={form.isLongTerm} onChange={(event) => setForm((prev) => ({ ...prev, isLongTerm: event.target.checked, startAt: event.target.checked ? null : prev.startAt, endAt: event.target.checked ? null : prev.endAt }))} />长期活动</label></label>
+        <label className={`${styles.fieldLabel} ${styles.fieldHalf}`}>活动详情跳转地址（可选）<input className={styles.textInput} value={form.detailLinkUrl} onChange={(event) => setForm((prev) => ({ ...prev, detailLinkUrl: event.target.value }))} placeholder="/game/xxx or https://example.com" /></label>
+        <div className={`${styles.fieldFull} ${styles.timeField}`}>
+          <span className={styles.timeFieldTitle}>活动时间</span>
+          <div className={styles.radioGroup}>
+            <label className={styles.radioLabel}><input type="radio" name="promotion-duration" checked={!form.isLongTerm} onChange={() => setForm((prev) => ({ ...prev, isLongTerm: false }))} />有限期活动</label>
+            <label className={styles.radioLabel}><input type="radio" name="promotion-duration" checked={form.isLongTerm} onChange={() => setForm((prev) => ({ ...prev, isLongTerm: true, startAt: null, endAt: null }))} />长期活动</label>
+          </div>
+        </div>
         {!form.isLongTerm && (
-          <div className={styles.inlineGrid}>
+          <div className={`${styles.inlineGrid} ${styles.fieldFull}`}>
             <label className={styles.fieldLabel}>开始时间<input className={styles.textInput} type="datetime-local" value={formatDateTimeLocal(form.startAt)} onChange={(event) => setForm((prev) => ({ ...prev, startAt: normalizeDateTimeLocal(event.target.value) }))} /></label>
             <label className={styles.fieldLabel}>截止时间<input className={styles.textInput} type="datetime-local" value={formatDateTimeLocal(form.endAt)} onChange={(event) => setForm((prev) => ({ ...prev, endAt: normalizeDateTimeLocal(event.target.value) }))} /></label>
           </div>
         )}
-        <label className={styles.fieldLabel}>投稿次数限制<select className={styles.select} value={form.submissionLimitType} onChange={(event) => setForm((prev) => ({ ...prev, submissionLimitType: event.target.value as PromotionSubmissionLimitType, submissionLimitDays: event.target.value === 'rolling_window' ? (prev.submissionLimitDays || 1) : null, submissionLimitCount: event.target.value === 'rolling_window' ? (prev.submissionLimitCount || 1) : null }))}><option value="unlimited">活动期内无限次</option><option value="once_per_activity">活动期内限制一次</option><option value="rolling_window">每 a 天限 b 次</option></select></label>
+        <label className={`${styles.fieldLabel} ${styles.fieldHalf}`}>投稿次数限制<select className={styles.select} value={form.submissionLimitType} onChange={(event) => setForm((prev) => ({ ...prev, submissionLimitType: event.target.value as PromotionSubmissionLimitType, submissionLimitDays: event.target.value === 'rolling_window' ? (prev.submissionLimitDays || 1) : null, submissionLimitCount: event.target.value === 'rolling_window' ? (prev.submissionLimitCount || 1) : null }))}><option value="unlimited">活动期内无限次</option><option value="once_per_activity">活动期内限制一次</option><option value="rolling_window">每 a 天限 b 次</option></select></label>
         {form.submissionLimitType === 'rolling_window' && (
-          <div className={styles.inlineGrid}>
+          <div className={`${styles.inlineGrid} ${styles.fieldHalf}`}>
             <label className={styles.fieldLabel}>{'天（a）'}<input className={styles.textInput} type="number" value={form.submissionLimitDays ?? ''} onChange={(event) => setForm((prev) => ({ ...prev, submissionLimitDays: Number(event.target.value || 0) }))} /></label>
             <label className={styles.fieldLabel}>{'次（b）'}<input className={styles.textInput} type="number" value={form.submissionLimitCount ?? ''} onChange={(event) => setForm((prev) => ({ ...prev, submissionLimitCount: Number(event.target.value || 0) }))} /></label>
           </div>
         )}
-        <label className={styles.fieldLabel}>审核通过奖励积分<input className={styles.textInput} type="number" value={form.rewardPoints} onChange={(event) => setForm((prev) => ({ ...prev, rewardPoints: Number(event.target.value || 0) }))} /></label>
-        <label className={styles.fieldLabel}>排序值<input className={styles.textInput} type="number" value={form.sortOrder} onChange={(event) => setForm((prev) => ({ ...prev, sortOrder: Number(event.target.value || 0) }))} /></label>
-        <label className={styles.fieldLabel}>发布状态<select className={styles.select} value={form.status} onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value as PromotionActivityPayload['status'] }))}><option value="draft">草稿</option><option value="published">已发布</option></select></label>
+        <label className={`${styles.fieldLabel} ${styles.fieldHalf}`}>审核通过奖励织梦豆<input className={styles.textInput} type="number" value={form.rewardPoints} onChange={(event) => setForm((prev) => ({ ...prev, rewardPoints: Number(event.target.value || 0) }))} /></label>
+        <div className={styles.configSection}>
+          <label className={styles.switchLabel}>
+            <input
+              type="checkbox"
+              checked={form.kkReward.enabled}
+              onChange={(event) => setForm((prev) => ({
+                ...prev,
+                kkReward: {
+                  enabled: event.target.checked,
+                  amount: event.target.checked ? (prev.kkReward.amount || 1) : 0,
+                  validDays: event.target.checked ? (prev.kkReward.validDays || 3) : null,
+                },
+              }))}
+            />
+            活动限时KK币奖励
+          </label>
+          {form.kkReward.enabled ? (
+            <div className={styles.inlineGrid}>
+              <label className={styles.fieldLabel}>
+                奖励数量
+                <input
+                  className={styles.textInput}
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={form.kkReward.amount}
+                  onChange={(event) => setForm((prev) => ({
+                    ...prev,
+                    kkReward: { ...prev.kkReward, amount: Number(event.target.value || 0) },
+                  }))}
+                />
+              </label>
+              <label className={styles.fieldLabel}>
+                有效天数
+                <input
+                  className={styles.textInput}
+                  type="number"
+                  min="1"
+                  max="3650"
+                  step="1"
+                  value={form.kkReward.validDays ?? ''}
+                  onChange={(event) => setForm((prev) => ({
+                    ...prev,
+                    kkReward: { ...prev.kkReward, validDays: Number(event.target.value || 0) },
+                  }))}
+                />
+              </label>
+            </div>
+          ) : null}
+          <span className={styles.fieldHint}>启用后只能发放限时KK币，到期时间从管理员确认发放时开始计算。</span>
+        </div>
+        <label className={`${styles.fieldLabel} ${styles.fieldHalf}`}>排序值<input className={styles.textInput} type="number" value={form.sortOrder} onChange={(event) => setForm((prev) => ({ ...prev, sortOrder: Number(event.target.value || 0) }))} /></label>
+        <label className={`${styles.fieldLabel} ${styles.fieldHalf}`}>发布状态<select className={styles.select} value={form.status} onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value as PromotionActivityPayload['status'] }))}><option value="draft">草稿</option><option value="published">已发布</option></select></label>
         <div className={styles.configSection}>
           <div className={styles.fieldLabel}>投稿方式配置</div>
           <div className={styles.configList}>
@@ -644,7 +697,7 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
   );
 
   const renderActivityList = () => (
-    <section className={styles.card}>
+    <section className={`${styles.card} ${styles.activityListPage}`}>
       <div className={styles.cardHeader}><div><h3 className={styles.cardTitle}>管理活动</h3></div></div>
       <div className={styles.list}>
         {isLoadingActivities ? <div className={styles.emptyState}>正在加载活动...</div> : activities.length === 0 ? <div className={styles.emptyState}>还没有推广活动，先去新增一个。</div> : activities.map((activity) => (
@@ -652,7 +705,12 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
             <div className={styles.itemHeader}><div className={styles.itemTitle}>{activity.title}</div><span className={styles.statusTag}>{activity.status === 'published' ? '已发布' : '草稿'}</span></div>
             <div className={styles.itemMeta}>活动时间：{buildTimeSummary(activity)}</div>
             <div className={styles.itemMeta}>投稿限制：{buildLimitSummary(activity)}</div>
-            <div className={styles.itemMeta}>固定奖励积分：{activity.rewardPoints}</div>
+            <div className={styles.itemMeta}>固定奖励织梦豆：{activity.rewardPoints}</div>
+            <div className={styles.itemMeta}>
+              活动KK币奖励：{activity.kkReward?.enabled
+                ? `${activity.kkReward.amount} 限时KK币（${activity.kkReward.validDays} 天）`
+                : '未启用'}
+            </div>
             <div className={styles.itemMeta}>排序：{activity.sortOrder} · 更新时间：{formatTime(activity.updatedAt)}</div>
             <div className={styles.actionRow}><button type="button" className={styles.secondaryButton} onClick={() => handleSelectActivity(activity)}>编辑活动</button><button type="button" className={styles.dangerButton} onClick={() => void handleDelete(activity.id)}>删除活动</button></div>
           </article>
@@ -662,9 +720,9 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
   );
 
   const renderReviews = () => (
-    <section className={styles.card}>
-      <div className={styles.cardHeader}><div><h3 className={styles.cardTitle}>投稿审核</h3></div></div>
-      <div className={styles.formArea}>
+    <div className={styles.panelStack}>
+      <section className={styles.card}>
+        <div className={styles.cardHeader}><div><h3 className={styles.cardTitle}>投稿审核</h3></div></div>
         <div className={styles.reviewFilterBar}>
           <div className={styles.filterGrid}>
             <label className={styles.fieldLabel}>活动筛选<select className={styles.select} value={reviewFilters.activityId ?? ''} onChange={(event) => handleReviewFilterChange('activityId', event.target.value ? Number(event.target.value) : undefined)}><option value="">全部活动</option>{activities.map((activity) => <option key={activity.id} value={activity.id}>{activity.title}</option>)}</select></label>
@@ -677,8 +735,8 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
             <button type="button" className={styles.secondaryButton} onClick={handleResetReviewFilters}>重置</button>
           </div>
         </div>
-      </div>
-      <div className={styles.list}>
+      </section>
+      <section className={`${styles.card} ${styles.reviewResultsCard}`}>
         {isLoadingSubmissions ? <div className={styles.emptyState}>正在加载投稿...</div> : submissions.length === 0 ? <div className={styles.emptyState}>当前条件下没有投稿记录。</div> : (
           <div className={styles.reviewTableWrapper}>
             {/* 实现投稿审核表格展示 */}
@@ -738,16 +796,16 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
             </table>
           </div>
         )}
-      </div>
-      <Pagination
-        className={styles.paginationBar}
-        currentPage={submissionPagination.page}
-        totalPages={submissionPagination.totalPages}
-        onPageChange={handleReviewPageChange}
-        disabled={isLoadingSubmissions}
-        summary={`第 ${submissionPagination.page} 页，共 ${submissionPagination.totalPages} 页，共 ${submissionPagination.total} 条记录`}
-      />
-    </section>
+        <Pagination
+          className={styles.paginationBar}
+          currentPage={submissionPagination.page}
+          totalPages={submissionPagination.totalPages}
+          onPageChange={handleReviewPageChange}
+          disabled={isLoadingSubmissions}
+          summary={`第 ${submissionPagination.page} 页，共 ${submissionPagination.totalPages} 页，共 ${submissionPagination.total} 条记录`}
+        />
+      </section>
+    </div>
   );
 
   const renderTickerSettings = () => (
@@ -770,7 +828,7 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
       {isLoadingHomeTicker ? (
         <div className={styles.emptyState}>正在加载首页滚动通知...</div>
       ) : (
-        <div className={styles.formArea}>
+        <div className={`${styles.formArea} ${styles.tickerFormArea}`}>
           <label className={styles.fieldLabel}>
             通知文案
             <textarea
@@ -788,25 +846,14 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
               placeholder="/promotions 或 https://example.com"
               onChange={(event) => setHomeTicker((prev) => ({ ...prev, linkUrl: event.target.value }))}
             />
-            <span className={styles.tickerHint}>支持站内路径 `/xxx`，也支持 `http://` 或 `https://` 外链。</span>
-          </label>
-          <div className={styles.tickerPreview}>
-            <div className={styles.tickerPreviewLabel}>效果预览</div>
-            <div className={styles.tickerPreviewBar}>
-              <span className={styles.tickerPreviewIcon} aria-hidden="true">
-                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M4 10V14H7L12 18V6L7 10H4Z" />
-                  <path d="M16 9C17.2 10.2 17.2 13.8 16 15" />
-                  <path d="M18.5 6.5C21 9 21 15 18.5 17.5" />
-                </svg>
+            <span className={styles.tickerNotes}>
+              <span className={styles.tickerHint}>支持站内路径 `/xxx`，也支持 `http://` 或 `https://` 外链。</span>
+              <span className={styles.tickerMeta}>
+                默认跳转地址：`/promotions`
+                {homeTicker.updatedAt ? ` · 最近更新：${formatTime(homeTicker.updatedAt)}` : ''}
               </span>
-              <span className={styles.tickerPreviewText}>{homeTicker.text.trim() || '这里会显示首页滚动通知文案'}</span>
-            </div>
-          </div>
-          <div className={styles.tickerMeta}>
-            默认跳转地址：`/promotions`
-            {homeTicker.updatedAt ? ` · 最近更新：${formatTime(homeTicker.updatedAt)}` : ''}
-          </div>
+            </span>
+          </label>
           <div className={styles.actionRow}>
             <button
               type="button"
@@ -863,7 +910,7 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
                   <div className={styles.detailField}><span className={styles.detailLabel}>Kuran号</span><span className={styles.detailValue}>{submission.userCode || '未填写'}</span></div>
                   <div className={styles.detailField}><span className={styles.detailLabel}>手机号</span><span className={styles.detailValue}>{submission.phoneNumber || '未填写'}</span></div>
                   <div className={styles.detailField}><span className={styles.detailLabel}>用户ID</span><span className={styles.detailValue}>{submission.userId || '未填写'}</span></div>
-                  <div className={styles.detailField}><span className={styles.detailLabel}>奖励积分</span><span className={styles.detailValue}>{submission.rewardPoints ?? '无'}</span></div>
+                  <div className={styles.detailField}><span className={styles.detailLabel}>奖励织梦豆</span><span className={styles.detailValue}>{submission.rewardPoints ?? '无'}</span></div>
                   <div className={styles.detailField}><span className={styles.detailLabel}>奖励任务ID</span><span className={styles.detailValue}>{submission.rewardTaskId ?? '无'}</span></div>
                   <div className={styles.detailField}><span className={styles.detailLabel}>审核时间</span><span className={styles.detailValue}>{formatTime(submission.reviewedAt)}</span></div>
                 </div>
@@ -940,7 +987,6 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
   return (
     <>
       <div className={styles.panelStack}>
-        <section className={styles.heroCard}><div className={styles.sectionBadge}>推广管理</div>{renderHeaderButtons()}</section>
         {currentView === 'create' && renderForm()}
         {currentView === 'list' && renderActivityList()}
         {currentView === 'reviews' && renderReviews()}

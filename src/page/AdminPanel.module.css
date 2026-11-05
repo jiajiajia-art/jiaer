@@ -1,30 +1,27 @@
 .pageRoot {
-    --admin-accent: #c9733f;
-    --admin-accent-strong: #aa5a2d;
-    --admin-accent-soft: rgba(201, 115, 63, 0.12);
-    --admin-border: rgba(201, 139, 92, 0.22);
-    --admin-border-strong: rgba(201, 115, 63, 0.34);
-    --admin-surface: rgba(255, 251, 246, 0.92);
-    --admin-surface-strong: linear-gradient(180deg, rgba(255, 252, 248, 0.98) 0%, rgba(250, 241, 232, 0.96) 100%);
-    --admin-surface-soft: rgba(250, 242, 234, 0.92);
-    --admin-panel: linear-gradient(135deg, rgba(255, 250, 244, 0.96) 0%, rgba(249, 239, 227, 0.96) 100%);
-    --admin-panel-strong: linear-gradient(135deg, rgba(255, 247, 238, 0.96) 0%, rgba(247, 232, 214, 0.96) 100%);
-    --admin-shadow: rgba(98, 59, 33, 0.1);
-    --admin-text: #2f241d;
-    --admin-text-soft: #6f5a49;
-    --admin-muted: #8d7664;
+    --admin-accent: #1677ff;
+    --admin-accent-strong: #0958d9;
+    --admin-accent-soft: #e6f4ff;
+    --admin-border: #d9d9d9;
+    --admin-border-strong: #91caff;
+    --admin-surface: #ffffff;
+    --admin-surface-strong: #ffffff;
+    --admin-surface-soft: #fafcff;
+    --admin-panel: #ffffff;
+    --admin-panel-strong: #f5faff;
+    --admin-shadow: rgba(31, 56, 88, 0.08);
+    --admin-text: #262626;
+    --admin-text-soft: #595959;
+    --admin-muted: #8c8c8c;
     width: 100%;
-    min-height: 100vh;
-    background:
-        radial-gradient(circle at top left, rgba(214, 154, 103, 0.2), transparent 32%),
-        radial-gradient(circle at top right, rgba(201, 115, 63, 0.12), transparent 30%),
-        linear-gradient(180deg, #fbf3e9 0%, #f8efe4 48%, #f5eadf 100%);
+    min-height: 100%;
+    background: transparent;
 }
 
 .pageBody {
-    width: min(var(--app-desktop-shell-max), calc(100% - 2 * var(--app-desktop-gutter)));
+    width: 100%;
     margin: 0 auto;
-    padding: 112px 0 88px;
+    padding: 0;
     box-sizing: border-box;
 }
 
@@ -60,102 +57,7 @@
 }
 
 .workspace {
-    display: grid;
-    grid-template-columns: 280px minmax(0, 1fr);
-    gap: 22px;
-    align-items: start;
-}
-
-.sidebar {
-    position: sticky;
-    top: 104px;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    padding: 18px;
-    background: rgba(255, 250, 244, 0.82);
-    border: 1px solid var(--admin-border);
-    border-radius: 22px;
-    box-shadow: 0 18px 48px var(--admin-shadow);
-    backdrop-filter: blur(12px);
-}
-
-.sidebarHeader {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    padding: 8px 6px 2px;
-}
-
-.sidebarTitle {
-    text-align: center;
-    color: var(--admin-accent-strong);
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: 0.18em;
-}
-
-.sidebarDivider {
-    width: 100%;
-    height: 1px;
-    background: linear-gradient(90deg, rgba(201, 115, 63, 0) 0%, rgba(201, 115, 63, 0.34) 18%, rgba(201, 115, 63, 0.34) 82%, rgba(201, 115, 63, 0) 100%);
-}
-
-.navItem {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    min-height: 74px; /* 原 92，缩小约 20% */
-    padding: 14px; /* 原 18，缩小约 20% */
-    border: 1px solid rgba(205, 157, 120, 0.28);
-    border-radius: 16px;
-    background: var(--admin-surface-strong);
-    text-align: center;
-    cursor: pointer;
-    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.navItem:hover {
-    transform: translateY(-1px);
-    border-color: var(--admin-border-strong);
-    box-shadow: 0 14px 28px rgba(117, 72, 39, 0.1);
-}
-
-.navItemActive {
-    border-color: rgba(201, 115, 63, 0.46);
-    background: var(--admin-panel-strong);
-    box-shadow: 0 18px 34px rgba(201, 115, 63, 0.14);
-}
-
-.navTitle {
-    color: var(--admin-text);
-    font-size: 20px;
-    font-weight: 700;
-    text-align: center;
-}
-
-.navTitle + .navTitle {
-    display: none;
-}
-
-.navCounter {
-    position: absolute;
-    top: 10px;
-    right: 12px;
-    min-width: 24px;
-    height: 24px;
-    padding: 0 7px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 999px;
-    background: linear-gradient(135deg, #d64545 0%, #f06745 100%);
-    color: #fff;
-    font-size: 12px;
-    font-weight: 700;
-    box-shadow: 0 10px 22px rgba(214, 69, 69, 0.24);
+    display: block;
 }
 
 .contentArea {
@@ -181,10 +83,18 @@
 .pointsCard {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     gap: 20px;
     padding: 28px 30px;
     background: var(--admin-panel);
+}
+
+.heroCard {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
 }
 
 .sectionBadge {
@@ -383,7 +293,7 @@
     width: 100%;
     border: 1px solid rgba(205, 157, 120, 0.38);
     border-radius: 18px;
-    background: rgba(255, 252, 248, 0.96);
+    background: #fff;
     color: var(--admin-text);
     font-size: 15px;
     padding: 14px 16px;
@@ -419,7 +329,7 @@
     padding: 16px;
     border-radius: 16px;
     border: 1px solid rgba(205, 157, 120, 0.24);
-    background: linear-gradient(180deg, rgba(255, 248, 241, 0.88) 0%, rgba(250, 240, 229, 0.84) 100%);
+    background: #fff;
 }
 
 .sectionEditorActions {
@@ -471,7 +381,7 @@
 }
 
 .primaryButton {
-    background: linear-gradient(135deg, var(--admin-accent) 0%, #e08a4f 100%);
+    background: #1677ff;
     color: #fff;
     box-shadow: 0 12px 28px rgba(201, 115, 63, 0.24);
 }
@@ -479,7 +389,7 @@
 .secondaryButton,
 .primaryGhostButton,
 .actionButton {
-    background: rgba(255, 252, 248, 0.94);
+    background: #fff;
     color: var(--admin-text);
     border: 1px solid rgba(205, 157, 120, 0.42);
 }
@@ -848,7 +758,7 @@
     width: 40px;
     height: 40px;
     border-radius: 14px;
-    background: rgba(201, 115, 63, 0.12);
+    background: #e6f4ff;
     color: var(--admin-accent-strong);
     font-size: 15px;
     font-weight: 700;
@@ -885,7 +795,7 @@
     min-width: 84px;
     padding: 9px 12px;
     border-radius: 999px;
-    background: rgba(255, 252, 248, 0.94);
+    background: #fff;
     border: 1px solid rgba(205, 157, 120, 0.32);
     color: var(--admin-text-soft);
     font-size: 12px;
@@ -902,10 +812,6 @@
 @media (max-width: 1100px) {
     .workspace {
         grid-template-columns: 1fr;
-    }
-
-    .sidebar {
-        position: static;
     }
 
     .panelGrid {
@@ -949,8 +855,7 @@
 
     .heroCard,
     .pointsCard,
-    .card,
-    .sidebar {
+    .card {
         border-radius: 20px;
     }
 
@@ -1126,7 +1031,7 @@
     flex-direction: column;
     gap: 14px;
     padding: 18px;
-    background: rgba(255, 250, 244, 0.82);
+    background: #fff;
     border: 1px solid var(--admin-border);
     border-radius: 22px;
     box-shadow: 0 18px 48px var(--admin-shadow);
@@ -1187,7 +1092,7 @@
 }
 
 .guideGroupHeader:hover {
-    background: rgba(201, 115, 63, 0.2);
+    background: #e6f4ff;
 }
 
 .guideGroupIcon {
@@ -1236,7 +1141,7 @@
 }
 
 .categoryHeader:hover {
-    background: rgba(201, 115, 63, 0.08);
+    background: #e6f4ff;
 }
 
 .categoryIcon {
@@ -1280,7 +1185,7 @@
 }
 
 .documentItem:hover {
-    background: rgba(201, 115, 63, 0.08);
+    background: #e6f4ff;
 }
 
 .documentItemActive {
@@ -1457,7 +1362,7 @@
 }
 
 .cancelButton {
-    background: rgba(255, 252, 248, 0.94);
+    background: #fff;
     color: var(--admin-text);
 }
 
@@ -1469,4 +1374,73 @@
 .cancelButton:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+}
+
+.heroCard,
+.pointsCard,
+.card,
+.documentTreePanel,
+.documentPreviewCard,
+.sortModal,
+.sortItem {
+    border-color: #f0f0f0;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(31, 56, 88, 0.06);
+    backdrop-filter: none;
+}
+
+.heroCard,
+.pointsCard,
+.card,
+.documentTreePanel,
+.documentPreviewCard,
+.sortItem {
+    background: #fff;
+}
+
+.historyCard,
+.sectionEditor,
+.sortItemHandle,
+.orderActions {
+    border-color: #f0f0f0;
+    border-radius: 10px;
+    box-shadow: none;
+    background: #fafcff;
+}
+
+.textInput,
+.textArea {
+    border-color: #d9d9d9;
+    border-radius: 8px;
+    background: #fff;
+    padding: 10px 12px;
+}
+
+.textInput:focus,
+.textArea:focus {
+    border-color: #1677ff;
+    box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.12);
+}
+
+.primaryButton,
+.secondaryButton,
+.primaryGhostButton,
+.actionButton,
+.dangerButton {
+    border-radius: 8px;
+    padding: 9px 14px;
+    box-shadow: none;
+}
+
+.primaryButton {
+    background: #1677ff;
+}
+
+.primaryButton:hover,
+.secondaryButton:hover,
+.primaryGhostButton:hover,
+.actionButton:hover,
+.dangerButton:hover {
+    transform: none;
+    box-shadow: none;
 }

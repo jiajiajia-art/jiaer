@@ -65,10 +65,10 @@ const WinModal: React.FC<WinModalProps> = ({
           {fulfillment === 'points' && (
             <p className={styles.hint}>
               {pointsGrantStatus === 'granted'
-                ? `已自动发放 ${pointsAmount} 游戏积分到账`
+                ? `已自动发放 ${pointsAmount} 织梦豆到账`
                 : pointsGrantStatus === 'failed'
-                  ? '积分发放失败，请重试'
-                  : `中奖后自动发放 ${pointsAmount} 游戏积分`}
+                  ? '织梦豆发放失败，请重试'
+                  : `中奖后自动发放 ${pointsAmount} 织梦豆`}
             </p>
           )}
           {fulfillment === 'onsite' && (
@@ -88,7 +88,7 @@ const WinModal: React.FC<WinModalProps> = ({
           ) : null}
           {fulfillment === 'points' && pointsGrantStatus === 'failed' && onRetryPoints ? (
             <button type="button" className={styles.primary} onClick={onRetryPoints}>
-              重新领取积分
+              重新领取织梦豆
             </button>
           ) : null}
           <button type="button" className={styles.secondary} onClick={onClose}>

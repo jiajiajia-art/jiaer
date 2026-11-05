@@ -18,7 +18,7 @@ import {
   GAME_CARD_DEFAULT_AVATAR_PATH,
   resolveGameCardAuthor,
 } from '../lib/gameCardAuthor';
-import { CardCoinIcon, CardFlameIcon, CardHeartIcon } from './GameCardStatIcons';
+import { CardFlameIcon, CardHeartIcon } from './GameCardStatIcons';
 import { creatorWorkStatusLabel, resolveCreatorWorkStatus } from '../utils/creatorWorkLifecycle';
 
 type GameGridLayoutVariant = 'default' | 'homeWide' | 'works';
@@ -121,25 +121,6 @@ const GameGrid: React.FC<GameGridProps> = ({
         return 'none';
     };
 
-    const getIncentiveAmount = (meta: UserGameData, status: 'none' | 'incentive' | 'finished'): number => {
-        const pending = (meta as UserGameData & { incentivePendingAmount?: number; incentive_pending_amount?: number }).incentivePendingAmount
-            ?? (meta as UserGameData & { incentivePendingAmount?: number; incentive_pending_amount?: number }).incentive_pending_amount;
-        const settled = (meta as UserGameData & { incentiveSettledAmount?: number; incentive_settled_amount?: number }).incentiveSettledAmount
-            ?? (meta as UserGameData & { incentiveSettledAmount?: number; incentive_settled_amount?: number }).incentive_settled_amount;
-        const amount = (meta as UserGameData & { incentiveAmount?: number; incentive_amount?: number }).incentiveAmount
-            ?? (meta as UserGameData & { incentiveAmount?: number; incentive_amount?: number }).incentive_amount;
-
-        if (status === 'incentive') {
-            if (typeof pending === 'number') return pending;
-            if (typeof amount === 'number') return amount;
-        }
-        if (status === 'finished') {
-            if (typeof settled === 'number') return settled;
-            if (typeof amount === 'number') return amount;
-        }
-        return typeof amount === 'number' ? amount : (meta.total_uv_count ?? 0) * 5;
-    };
-
     const getSelectableId = (game: UserGameData) => String(game.file_id || game.id || '');
 
     const handleCardClick = (game: UserGameData) => {
@@ -173,9 +154,10 @@ const GameGrid: React.FC<GameGridProps> = ({
             {games.map((meta, idx) => {
                 const status = getIncentiveStatus(meta);
                 const showIncentive = showIncentiveUI && status !== 'none';
-                const primaryValue = showIncentive
-                    ? getIncentiveAmount(meta, status)
-                    : (primaryStat === 'uv' ? (meta.total_uv_count ?? 0) : (meta.total_pv_count ?? 0));
+                // 功能注释：激励作品仍展示热度（火焰），不再用织梦豆金额替换主指标
+                const primaryValue = primaryStat === 'uv'
+                    ? (meta.total_uv_count ?? 0)
+                    : (meta.total_pv_count ?? 0);
                 const typeLabel = getTypeLabel(meta);
                 const typeToneStyle = resolveGameTypeToneStyle(getGameTypeToneFromMeta(meta));
                 const selectableId = getSelectableId(meta);
@@ -290,11 +272,7 @@ const GameGrid: React.FC<GameGridProps> = ({
                             <div className={styles.goodsInfo}>
                                 <div className={styles.goodsInfoStats}>
                                     <div className={styles.goodsInfoItem}>
-                                        {showIncentive ? (
-                                            <CardCoinIcon className={styles.goodsInfoIcon} />
-                                        ) : (
-                                            <CardFlameIcon className={styles.goodsInfoFlame} />
-                                        )}
+                                        <CardFlameIcon className={styles.goodsInfoFlame} />
                                         <span className={styles.goodsInfoValue} title={String(primaryValue)}>
                                             {primaryValue}
                                         </span>

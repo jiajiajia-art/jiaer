@@ -13,15 +13,15 @@
   min-width: 0;
   padding: 12px 14px;
   border-radius: 14px;
-  border: 1px solid rgba(201, 115, 63, 0.12);
-  background: rgba(255, 252, 248, 0.96);
-  box-shadow: 0 6px 18px rgba(117, 72, 39, 0.05);
+  border: 1px solid #f0f0f0;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(31, 56, 88, 0.06);
   overflow: visible;
 }
 
 .title {
   margin: 0;
-  color: #888;
+  color: #8c8c8c;
   font-size: 13px;
   font-weight: 500;
   line-height: 1.4;
@@ -32,14 +32,14 @@
   font-size: 22px;
   font-weight: 700;
   line-height: 1.2;
-  color: var(--admin-accent-strong, #aa5a2d);
+  color: var(--admin-accent-strong, #0958d9);
 }
 
 .sectionTitle {
   margin: 0 0 12px;
   font-size: 18px;
   font-weight: 700;
-  color: #2f241d;
+  color: #262626;
 }
 
 .toolbar {

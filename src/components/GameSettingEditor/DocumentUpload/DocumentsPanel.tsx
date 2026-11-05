@@ -11,7 +11,8 @@ import CreateEmptyGameModal from './CreateEmptyGameModal';
 import GenerateFromIdeaModal, { type IdeaGenerateOptions } from './GenerateFromIdeaModal';
 import type { UploadResult } from '../../../hooks/editor/useFileUpload';
 import { getUploadEtaText } from '../../../utils/etaText';
-import { TXT_DOC_PARSE_COST, TXT_IDEA_GENERATE_COST } from '../../../utils/constants';
+import { copyTextToClipboard } from '../../../utils/clipboard';
+import { TXT_IDEA_GENERATE_COST } from '../../../utils/constants';
 import type { IdeaGenerateMode } from '../../../lib/galgame/ideaFullWorkEstimate';
 
 type CreateMethod = 'document' | 'idea';
@@ -161,25 +162,11 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
         }
 
         try {
-            await navigator.clipboard.writeText(text);
+            await copyTextToClipboard(text);
             toast.success(t('createGame.errorCopied'));
         } catch (error) {
-            const textArea = document.createElement('textarea');
-            textArea.value = text;
-            textArea.style.position = 'fixed';
-            textArea.style.opacity = '0';
-            document.body.appendChild(textArea);
-            textArea.select();
-
-            try {
-                document.execCommand('copy');
-                toast.success(t('createGame.errorCopied'));
-            } catch (copyError) {
-                console.error('复制报错信息失败:', copyError || error);
-                toast.error(t('createGame.copyFailedRetry'));
-            } finally {
-                document.body.removeChild(textArea);
-            }
+            console.error('复制报错信息失败:', error);
+            toast.error(t('createGame.copyFailedRetry'));
         }
     }, [parseErrorModal.errorDetail, t]);
 
@@ -639,9 +626,9 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
 
             <div className={`${styles.twoCol} ${styles.documentMethodPanel}`}>
                 <div className={styles.card}>
-                    <h3>{t('createGame.documentImportWithCost', { points: TXT_DOC_PARSE_COST })}</h3>
+                    <h3>{t('createGame.documentImportWithCost')}</h3>
                     <p className={`${styles.muted} ${styles.hideOnMobile}`}>
-                        {t('createGame.documentUploadTip', { points: TXT_DOC_PARSE_COST })}
+                        {t('createGame.documentUploadTip')}
                     </p>
 
                     {!uploadedFile ? (

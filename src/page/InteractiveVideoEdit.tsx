@@ -32,10 +32,17 @@ import {
     type InteractiveVideoEditStepStatus,
 } from '../utils/interactiveVideoEditSteps';
 import { resolveCreatorEngine } from '../utils/miniProgram';
+import { copyTextToClipboard } from '../utils/clipboard';
 import { flattenThemeTags, useLocalizedThemeTags, type FlatThemeTag } from '../utils/themeTags';
 import { getApiErrorMessage, messageForApiCode } from '../utils/error';
 import { isPublishPendingReview } from '../lib/publishReview';
 import styles from './InteractiveVideoEdit.module.css';
+import GamePublishAppealPrompt from '../components/GamePublishAppealPrompt';
+import {
+    GAME_ADMIN_TAKEDOWN,
+    resolveGamePublishAppealBlock,
+    type GamePublishAppealBlock,
+} from '../utils/gamePublishAppeal';
 
 const THEME_TAG_MIN = 1;
 const THEME_TAG_MAX = 2;
@@ -69,7 +76,7 @@ const PRICING_MODE_OPTIONS: Array<{
     description: string;
     requiresCatalog?: boolean;
 }> = [
-    { value: 'free', label: '免费开放', description: '玩家 0 积分/钻石获得访问权益。' },
+    { value: 'free', label: '免费开放', description: '玩家无需 KK币即可获得访问权益。' },
     { value: 'buyout', label: '一次性买断', description: '玩家支付一次后永久解锁整部互动影游。' },
     { value: 'catalog', label: '按脚本/节点付费', description: '只对勾选脚本或节点上锁，未勾选内容继续免费。', requiresCatalog: true },
     { value: 'catalog_buyout', label: '脚本/节点 + 买断', description: '脚本/节点单独购买和全量买断可同时提供。', requiresCatalog: true },
@@ -165,11 +172,11 @@ const parsePriceInput = (value: string) => {
     return Number.isInteger(next) ? next : Number.NaN;
 };
 
-const paymentLabel = (currency: PaymentCurrency) => (currency === 'points' ? '积分' : '钻石');
+const paymentLabel = (currency: PaymentCurrency) => (currency === 'points' ? '织梦豆' : 'KK币');
 const formatProjectCostText = (value?: number | null) => {
     const points = Number(value);
     if (!Number.isFinite(points) || points < 0) return '-';
-    return `${Math.round(points)} 积分`;
+    return `${Math.round(points)} 织梦豆`;
 };
 const paidItemTypeLabel = (item: { targetType?: string }) => (item.targetType === 'node' ? '节点' : '脚本');
 const paidItemTitle = (item: { targetType?: string; name?: string; scriptName?: string | null }) => (
@@ -259,27 +266,6 @@ const triggerBlobDownload = (blob: Blob, fileName: string) => {
     URL.revokeObjectURL(url);
 };
 
-const copyTextToClipboard = async (text: string) => {
-    if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
-        return;
-    }
-
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.setAttribute('readonly', '');
-    textarea.style.position = 'fixed';
-    textarea.style.left = '-9999px';
-    textarea.style.top = '0';
-    document.body.appendChild(textarea);
-    textarea.select();
-    const copied = document.execCommand('copy');
-    textarea.remove();
-    if (!copied) {
-        throw new Error('Copy command failed');
-    }
-};
-
 const getVideoEditErrorMessage = async (error: unknown, fallback: string) => {
     const maybeError = error as {
         message?: string;
@@ -320,6 +306,7 @@ const InteractiveVideoEdit: React.FC = () => {
     const [isSavingTitle, setIsSavingTitle] = useState(false);
     const [titleError, setTitleError] = useState('');
     const [showPublishModal, setShowPublishModal] = useState(false);
+    const [appealBlock, setAppealBlock] = useState<GamePublishAppealBlock | null>(null);
     const [pageError, setPageError] = useState('');
     const [themeTagError, setThemeTagError] = useState('');
     const [monetization, setMonetization] = useState<MonetizationData | null>(null);
@@ -584,9 +571,9 @@ const InteractiveVideoEdit: React.FC = () => {
     };
 
     const validatePaymentGroup = (group: PaymentGroup, label: string, requireMethod: boolean) => {
-        const enabledOptions = (['points', 'diamonds'] as const).filter((currency) => group[currency].enabled);
+        const enabledOptions = (['diamonds'] as const).filter((currency) => group[currency].enabled);
         if (requireMethod && enabledOptions.length === 0) {
-            return `${label}至少启用积分或钻石一种支付方式。`;
+            return `${label}必须启用 KK币支付。`;
         }
         for (const currency of enabledOptions) {
             const price = Number(group[currency].price);
@@ -817,12 +804,16 @@ const InteractiveVideoEdit: React.FC = () => {
                 fileId: normalizedFileId,
                 priceAmount: 0,
                 description: payload.description,
-                shareType: payload.shareType,
                 versionNotes: payload.versionNotes,
                 notifyFavoritedUsers: payload.notifyFavoritedUsers,
                 audienceType: payload.audienceType,
             });
             if (!response.data?.success) {
+                if (response.data?.code === GAME_ADMIN_TAKEDOWN) {
+                    setShowPublishModal(false);
+                    setAppealBlock(resolveGamePublishAppealBlock(response.data, normalizedFileId));
+                    return;
+                }
                 throw new Error(response.data?.message || '发布失败');
             }
             if (response.data.data) {
@@ -849,8 +840,13 @@ const InteractiveVideoEdit: React.FC = () => {
                     ? (response.data.message?.trim() || t('report.publishPendingReviewSuccess'))
                     : (response.data.message?.trim() || t('createGame.publishSuccess')),
             );
-        } catch (error) {
+        } catch (error: any) {
             console.error('发布互动影游失败:', error);
+            if ((error?.response?.data?.code || error?.code) === GAME_ADMIN_TAKEDOWN) {
+                setShowPublishModal(false);
+                setAppealBlock(resolveGamePublishAppealBlock(error, normalizedFileId));
+                return;
+            }
             toast.error(await getVideoEditErrorMessage(error, '发布失败，请稍后重试。'));
         } finally {
             setIsPublishing(false);
@@ -930,7 +926,7 @@ const InteractiveVideoEdit: React.FC = () => {
     ) => (
         <div className={styles.priceGroup}>
             <div className={styles.priceGroupTitle}>{title}</div>
-            {(['points', 'diamonds'] as const).map((currency) => {
+            {(['diamonds'] as const).map((currency) => {
                 const option = group[currency];
                 const savedOption = savedGroup?.[currency];
                 const currentPrice = Number(option.price);
@@ -1046,7 +1042,7 @@ const InteractiveVideoEdit: React.FC = () => {
                     <section className={styles.priceSection}>
                         <div className={styles.priceSectionHeader}>
                             <h3>一次性买断价</h3>
-                            <span>积分和钻石可只启用一种，也可同时启用。</span>
+                            <span>发布后统一使用 KK币买断。</span>
                         </div>
                         {renderPaymentInputs('买断价', pricingDraft.buyout, updateBuyoutPayment, makePaymentGroup(monetization.config.buyout))}
                     </section>
@@ -1112,7 +1108,7 @@ const InteractiveVideoEdit: React.FC = () => {
                     {monetizationError ? (
                         <div className={styles.errorText}>{monetizationError}</div>
                     ) : (
-                        <p className={styles.panelHint}>创作者分润按用户实付积分/钻石的 30% 入账，用户购买权益永久绑定账号。</p>
+                        <p className={styles.panelHint}>创作者分润按用户实付 KK币的 30% 入账，用户购买权益永久绑定账号。</p>
                     )}
                     <button
                         type="button"
@@ -1509,9 +1505,9 @@ const InteractiveVideoEdit: React.FC = () => {
                     portraitCoverUrl={gameDetail.portrait_cover_url || undefined}
                     onCoverUploaded={loadEditData}
                     publishing={isPublishing}
-                    engine="INTERACTIVE-VIDEO"
                 />
             ) : null}
+            <GamePublishAppealPrompt block={appealBlock} onClose={() => setAppealBlock(null)} />
             <MobileBottomNav />
         </div>
     );

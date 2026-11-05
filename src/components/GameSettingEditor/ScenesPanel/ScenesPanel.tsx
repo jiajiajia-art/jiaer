@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback, useRef, useMemo, useImperative
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-hot-toast';
 import styles from './ScenesPanel.module.css';
-import { getImageUrl, getMusicUrlWithHost, SCENE_GENERATION_COST } from '../../../utils/constants';
+import { getImageUrl, getMusicUrlWithHost, LEGACY_WORLD_SCENE_GENERATION_COST } from '../../../utils/constants';
+import { useImageBusinessPrice } from '../../../hooks/useImageBusinessPrice';
 import type { AllGameData, BatchImageJobStatus } from '../../../api/galgame/EditorData.type';
 import type { WorldInteractionGameData } from '../../../api/worldInteraction/worldInteractionApi.type';
 import type { SceneSetting as VisualSceneSetting } from '../../../api/galgame/EditorData.type';
@@ -36,6 +37,7 @@ import GenerateResultModal from '../../CommonModal/GenerateResultModal';
 import { useGenerationEta } from '../../../hooks/editor/useGenerationEta';
 import GenerationActionBar from '../GenerationActionBar';
 import PortraitLightbox from '../CharactersPanel/PortraitLightbox';
+import CurrencyIcon from '../../CurrencyIcon';
 import { authFetch } from '../../../api/base';
 import {
     isBatchSceneBoardAllSuccess,
@@ -98,6 +100,13 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
     mode = 'visual',
 }, ref) => {
     const { t } = useTranslation();
+    const { estimatedPoints: dynamicScenePrice } = useImageBusinessPrice(
+        mode === 'worldInteraction' ? null : 'visual_scene',
+        fileId,
+    );
+    const scenePrice = mode === 'worldInteraction'
+        ? LEGACY_WORLD_SCENE_GENERATION_COST
+        : dynamicScenePrice;
     const [activeSceneId, setActiveSceneId] = useState<string>('');
     const [activeSubsceneId, setActiveSubsceneId] = useState<string | null>(null);
     const [activeSubsceneDraft, setActiveSubsceneDraft] = useState<LocalScene | null>(null);
@@ -376,7 +385,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
     const { user, updateUser } = useAuthStore();
     const userPoints = user?.user?.points ?? 0;
     // 计算会员折扣后的场景生成价格（暂时不打折）
-    const discountedSceneCost = SCENE_GENERATION_COST; // TODO: 恢复折扣时改为 `isMember ? Math.ceil(SCENE_GENERATION_COST * MEMBER_CREATION_DISCOUNT) : SCENE_GENERATION_COST`
+    const discountedSceneCost = scenePrice ?? 0;
     // const showSceneDiscount = isMember && MEMBER_CREATION_DISCOUNT < 1; // TODO: 恢复折扣UI时取消注释
 
     const worldMapPreviewSrc = useMemo(() => {
@@ -1360,6 +1369,14 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
         await handlers.confirmGenerateAllSceneImages(sceneCostPoints);
     }, [handlers, sceneCostPoints]);
 
+    const handleOpenSceneCostModal = useCallback(() => {
+        if (scenePrice == null) {
+            toast.error('生图价格暂不可用，请联系管理员检查业务模型与计费配置');
+            return;
+        }
+        handlers.openSceneCostModal();
+    }, [handlers, scenePrice]);
+
     const handleCancelGenerateAllSceneImages = useCallback(() => {
         setSceneCostModalOpen(false);
     }, []);
@@ -1528,12 +1545,11 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 <GenerationActionBar>
                     <button
                         className={`${styles.ghost} ${styles.generateButton}`}
-                        onClick={() => handlers.openSceneCostModal()}
-                        disabled={isBatchSceneJobActive || isLoadingSceneCost || isBlockingSwitch}
+                        onClick={handleOpenSceneCostModal}
+                        disabled={isBatchSceneJobActive || isLoadingSceneCost || isBlockingSwitch || scenePrice == null}
                     >
-                        <img
-                            src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
-                            alt=""
+                        <CurrencyIcon
+                            currency="points"
                             className={styles.priceIcon}
                         />
                         <div className={styles.buttonTextContainer}>
@@ -1544,12 +1560,12 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                                 {/* TODO: 恢复会员折扣UI时，取消下方注释
                                 {showSceneDiscount ? (
                                     <>
-                                        <span className={styles.originalPrice}>{SCENE_GENERATION_COST}</span>
+                                        <span className={styles.originalPrice}>{scenePrice ?? '—'}</span>
                                         <span className={styles.discountPrice}>{discountedSceneCost}</span>
                                         {t('common.points')}/{t('eta.item')}
                                     </>
                                 ) : ( */}
-                                    <>{SCENE_GENERATION_COST}{t('common.points')}/{t('eta.item')}</>
+                                    <>{scenePrice ?? '—'}{t('common.points')}/{t('eta.item')}</>
                                 {/* )} */}
                             </span>
                         </div>
@@ -1620,6 +1636,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
 
                     {isAddingNew && newSceneData ? (
                         <SceneDetailForm
+                            imageGenerationPrice={scenePrice}
                             scene={newSceneData}
                             bgmLibrary={bgmLibrary}
                             fileInputRef={newSceneFileInputRef}
@@ -1643,6 +1660,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                         <>
                             {mode === 'worldInteraction' && activeSubsceneId && activeSubsceneDraft ? (
                                 <SceneDetailForm
+                                    imageGenerationPrice={LEGACY_WORLD_SCENE_GENERATION_COST}
                                     scene={activeSubsceneDraft}
                                     bgmLibrary={bgmLibrary}
                                     fileInputRef={sceneFileInputRef}
@@ -1668,6 +1686,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                                 />
                             ) : (activeSceneDraft || activeScene) ? (
                                 <SceneDetailForm
+                                    imageGenerationPrice={scenePrice}
                                     scene={(activeSceneDraft || activeScene)!}
                                     bgmLibrary={bgmLibrary}
                                     fileInputRef={sceneFileInputRef}
@@ -1839,7 +1858,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                             )}
                             {sceneBoardAllSuccess && !showSceneContinueFailed && (
                                 <div className={styles.plusLoadingHint}>
-                                    {isGeneratingAllSceneImages ? '正在同步结果与积分…' : '生成完成'}
+                                    {isGeneratingAllSceneImages ? '正在同步结果与织梦豆…' : '生成完成'}
                                 </div>
                             )}
                         </div>

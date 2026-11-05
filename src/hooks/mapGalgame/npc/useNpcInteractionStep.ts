@@ -364,7 +364,7 @@ export const useNpcInteractionStep = ({
     });
   }, [showStep]);
 
-  const FREE_ROUNDS = 5;
+  const FREE_ROUNDS = 0;
 
   const handleChoiceOption = useCallback(
     async (
@@ -384,11 +384,13 @@ export const useNpcInteractionStep = ({
       const isCustomInput = optionIndex === -1;
       const playerChoicesSoFar = playerChoiceCountRef.current || 0;
       const isFreeRound = playerChoicesSoFar < FREE_ROUNDS;
-      const needPoints = isCustomInput ? INPUT_COST : OPTION_COST;
+      const creatorTest = new URLSearchParams(window.location.search).get('testMode') === 'creator';
+      const needPoints = creatorTest ? OPTION_COST : (isCustomInput ? INPUT_COST : OPTION_COST);
+      const currentBalance = creatorTest ? user?.user.points : user?.user.diamonds;
 
-      if (!isFreeRound) {
-        if (!user?.user.points || user.user.points < needPoints) {
-          toast.error("积分不足");
+      if (creatorTest || !isFreeRound) {
+        if (!currentBalance || currentBalance < needPoints) {
+          toast.error(creatorTest ? "织梦豆不足" : "KK币不足");
           return;
         }
       }
@@ -411,6 +413,7 @@ export const useNpcInteractionStep = ({
             body: JSON.stringify({
               eventId: currentEventIdRef.current,
               optionId: optionId,
+              actionId: crypto.randomUUID(),
             }),
           }
         );
@@ -532,6 +535,7 @@ export const useNpcInteractionStep = ({
     [
       sessionId,
       user?.user.points,
+      user?.user.diamonds,
       processNarrativeSteps,
       showStep,
     ]

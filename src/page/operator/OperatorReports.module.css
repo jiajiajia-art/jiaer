@@ -8,7 +8,7 @@
   gap: 4px;
   padding: 4px;
   margin-bottom: 14px;
-  border: 1px solid rgba(47, 36, 29, 0.08);
+  border: 1px solid #f0f0f0;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.88);
 }
@@ -16,7 +16,7 @@
 .dataSourceButton {
   border: 0;
   background: transparent;
-  color: #6d5f56;
+  color: #595959;
   border-radius: 9px;
   padding: 8px 14px;
   cursor: pointer;
@@ -25,7 +25,7 @@
 }
 
 .dataSourceButtonActive {
-  background: #2f241d;
+  background: #1677ff;
   color: #fff;
 }
 
@@ -72,9 +72,9 @@
 }
 
 .presetButton {
-  border: 1px solid rgba(201, 115, 63, 0.28);
-  background: rgba(255, 252, 248, 0.96);
-  color: var(--admin-accent-strong, #aa5a2d);
+  border: 1px solid rgba(22, 119, 255, 0.28);
+  background: #fff;
+  color: var(--admin-accent-strong, #0958d9);
   border-radius: 10px;
   padding: 8px 12px;
   cursor: pointer;
@@ -82,7 +82,7 @@
 }
 
 .presetButtonActive {
-  background: linear-gradient(135deg, rgba(201, 115, 63, 0.96) 0%, rgba(224, 138, 79, 0.94) 100%);
+  background: #1677ff;
   color: #fff;
   border-color: transparent;
 }
@@ -92,14 +92,14 @@
   border-radius: 16px;
   padding: 20px;
   margin-bottom: 20px;
-  box-shadow: 0 8px 24px rgba(117, 72, 39, 0.06);
+  box-shadow: 0 4px 16px rgba(31, 56, 88, 0.06);
 }
 
 .sectionTitle {
   margin: 0 0 8px;
   font-size: 18px;
   font-weight: 700;
-  color: #2f241d;
+  color: #262626;
 }
 
 .sectionToolbar {

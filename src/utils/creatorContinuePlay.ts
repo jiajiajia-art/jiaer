@@ -104,11 +104,12 @@ export function buildCreatorPlaySessionRequest(input: {
   intent: CreatorPlayIntent;
   fileId: string;
   source?: 'link' | 'game_detail' | 'history' | 'other';
-}): { fileId: string; restart: boolean; source: 'link' | 'game_detail' | 'history' | 'other' } {
+}): { fileId: string; restart: boolean; source: 'link' | 'game_detail' | 'history' | 'other'; billingMode?: 'creator_test' } {
   return {
     fileId: String(input.fileId || '').trim(),
     restart: shouldRestartPlaySession(input.intent),
     source: input.source || 'other',
+    ...(input.intent !== 'edit-continue' ? { billingMode: 'creator_test' as const } : {}),
   };
 }
 

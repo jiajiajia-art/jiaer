@@ -1,7 +1,6 @@
-import React, { useRef, useCallback, useState, useEffect, useMemo } from 'react';
+import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { BsChevronDown } from 'react-icons/bs';
 import { toast } from 'react-hot-toast';
 import styles from './PublishSettingsModal.module.css';
 import EditorApi from '../../api/galgame/EditorData';
@@ -13,8 +12,9 @@ import { auth } from '../../api/account/authApi';
 import { flattenThemeTags, useLocalizedThemeTags, type FlatThemeTag } from '../../utils/themeTags';
 import {
     NOVEL_DESCRIPTION_MAX_LENGTH,
+    THEME_TAG_MAX,
+    THEME_TAG_MIN_PUBLISH,
     toggleThemeTagSelection,
-    validateEnabledThemeTagSelection,
     validateNovelDraftSave,
     validateNovelPublish,
     mapNovelEditErrorToI18nKey,
@@ -30,7 +30,6 @@ import {
 } from '../../utils/gameDescriptionHtml';
 import { stripReplayMarkerFromTitle } from '../../utils/novelGame';
 import SimpleRichTextEditor from '../Common/SimpleRichTextEditor';
-import { CURRENCY_OPTIONS, type Currency } from '../../api/common/currency';
 import {
     isCreatorFrozen as checkCreatorFrozen,
     isPublishBanned as checkPublishBanned,
@@ -42,7 +41,6 @@ export type PublishModalMode = 'publish' | 'novel-edit';
 export type PublishSubmitPayload = {
     description: string;
     tagIds: number[];
-    shareType?: Currency;
     versionNotes?: string | null;
     notifyFavoritedUsers?: boolean;
     audienceType?: 'male' | 'female' | 'all';
@@ -60,61 +58,7 @@ interface PublishSettingsModalProps {
     publishing?: boolean;
     mode?: PublishModalMode;
     isNovel?: boolean;
-    gameTags?: string;
-    engine?: string;
 }
-
-
-const SHARE_TYPE_OPTIONS = CURRENCY_OPTIONS;
-
-const CustomSelect: React.FC<{
-    value: Currency;
-    onChange: (value: Currency) => void;
-}> = ({ value, onChange }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const selectRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (selectRef.current && !selectRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    const selectedOption = SHARE_TYPE_OPTIONS.find((opt) => opt.value === value);
-
-    return (
-        <div ref={selectRef} className={styles.customSelectWrapper}>
-            <button
-                type="button"
-                className={`${styles.customSelectTrigger} ${isOpen ? styles.customSelectTriggerOpen : ''}`}
-                onClick={() => setIsOpen(!isOpen)}
-            >
-                <span>{selectedOption?.label}</span>
-                <BsChevronDown className={`${styles.customSelectArrow} ${isOpen ? styles.customSelectArrowOpen : ''}`} />
-            </button>
-            {isOpen && (
-                <ul className={styles.customSelectDropdown}>
-                    {SHARE_TYPE_OPTIONS.map((option) => (
-                        <li
-                            key={option.value}
-                            className={`${styles.customSelectOption} ${option.value === value ? styles.customSelectOptionSelected : ''}`}
-                            onClick={() => {
-                                onChange(option.value);
-                                setIsOpen(false);
-                            }}
-                        >
-                            {option.label}
-                        </li>
-                    ))}
-                </ul>
-            )}
-        </div>
-    );
-};
 
 const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     isOpen,
@@ -128,8 +72,6 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     publishing = false,
     mode = 'publish',
     isNovel = false,
-    gameTags,
-    engine,
 }) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
@@ -166,8 +108,6 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     // 后端 publish 对所有作品校验题材；发布弹窗必须可选，不能只给小说展示
     const showThemeTags = true;
     const themeTagsRequired = mode === 'publish';
-    const isTxtMode = !gameTags && !engine || gameTags === 'TXT' || engine === 'TXT';
-    const requiresShareType = !isTxtMode;
 
     const [landscapePreview, setLandscapePreview] = useState<string | null>(coverUrl || null);
     const [isTakenDown, setIsTakenDown] = useState(false);
@@ -183,10 +123,10 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     const [saving, setSaving] = useState<boolean>(false);
     const [generatingDescription, setGeneratingDescription] = useState<boolean>(false);
     const [versionNotes, setVersionNotes] = useState<string>('');
+    // 功能注释：已上架作品更新时先问要不要写日志；不写则传 null，避免空日志刷收藏通知
     const [isUpdateSubmission, setIsUpdateSubmission] = useState(false);
     const [updateLogChoice, setUpdateLogChoice] = useState<'with' | 'without' | null>(null);
     const [notifyFavoritedUsers, setNotifyFavoritedUsers] = useState<boolean>(false);
-    const [shareType, setShareType] = useState<Currency>('points');
 
     useEffect(() => {
         if (!isOpen) {
@@ -273,7 +213,9 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
             return;
         }
         setSelectedThemeTagIds(next);
-        if (next.length <= 1) {
+        if (themeTagsRequired && next.length >= 1) {
+            setThemeTagError('');
+        } else if (!themeTagsRequired && next.length <= 2) {
             setThemeTagError('');
         }
     };
@@ -304,11 +246,9 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
             }
             setDescription(toEditorHtml(nextDescription));
             toast.success(t('common.publishSettings.aiGenerateSuccess'));
-        } catch (error: unknown) {
+        } catch (error: any) {
             console.error('AI 生成简介失败:', error);
-            const message = (error as { response?: { data?: { message?: string } } })
-                .response?.data?.message;
-            toast.error(message || t('common.publishSettings.aiGenerateFailed'));
+            toast.error(error?.response?.data?.message || t('common.publishSettings.aiGenerateFailed'));
         } finally {
             setGeneratingDescription(false);
         }
@@ -381,19 +321,10 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
             return false;
         }
 
-        {
-            const themeCheck = validateEnabledThemeTagSelection(
-                selectedThemeTagIds,
-                availableThemeTags.map((tag) => tag.id),
-            );
-            if (!themeCheck.valid) {
-                const key = themeCheck.error === 'THEME_TAG_DISABLED'
-                    ? 'createGame.themeTagDisabled'
-                    : 'createGame.themeTagRequired';
-                setThemeTagError(t(key));
-                toast.error(t(key));
-                return false;
-            }
+        if (selectedThemeTagIds.length < THEME_TAG_MIN_PUBLISH || selectedThemeTagIds.length > THEME_TAG_MAX) {
+            setThemeTagError(t('createGame.themeTagRequired'));
+            toast.error(t('createGame.themeTagRequired'));
+            return false;
         }
 
         const trimmedVersionNotes = versionNotes.trim();
@@ -503,7 +434,6 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
         await onPublish({
             description: trimmed,
             tagIds: selectedThemeTagIds,
-            shareType: requiresShareType ? shareType : undefined,
             versionNotes: isUpdateSubmission
                 ? (updateLogChoice === 'with' ? versionNotes.trim() : null)
                 : versionNotes.trim(),
@@ -662,16 +592,6 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                             </div>
                         </>
                     ) : null}
-
-                    {!isNovelEditMode && requiresShareType && (
-                        <div className={styles.shareTypeFormGroup}>
-                            <label className={styles.label}>{t('common.publishSettings.shareType', { defaultValue: '结算货币类型' })}</label>
-                            <CustomSelect
-                                value={shareType}
-                                onChange={setShareType}
-                            />
-                        </div>
-                    )}
 
                     {!isNovelEditMode && (
                         <div className={styles.descriptionFormGroup}>

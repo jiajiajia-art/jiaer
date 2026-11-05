@@ -6,8 +6,8 @@ const createGalgameSessionApi = {
     createGalgamePlaySession: (data: CreateGalgamePlaySessionRequest) =>
         api.post<CreateGalgameSessionResponse>(`/optical/games/session/create`, data),
     // 创作编辑会话（不需要存档）
-    createGalgameEditSession: ({fileId, saveId}: {fileId: string; saveId?: string}) =>
-        api.post<CreateGalgameEditSessionRequest>(`/visual/session/create`, saveId ? { fileId, saveId } : { fileId }),
+    createGalgameEditSession: (data: { fileId: string; saveId?: string; billingMode?: 'creator_test' }) =>
+        api.post<CreateGalgameEditSessionRequest>(`/visual/session/create`, data),
 }
 
 export default createGalgameSessionApi;

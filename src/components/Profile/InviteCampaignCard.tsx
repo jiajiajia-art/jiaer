@@ -1,45 +1,30 @@
-import React, { useEffect, useState } from 'react';
-import { Trans, useTranslation } from 'react-i18next';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { HiOutlineGift } from 'react-icons/hi';
+import { MdHelpOutline } from 'react-icons/md';
 import toast from 'react-hot-toast';
 import { auth } from '../../api/account/authApi';
-import InviteRewardModal from '../InviteRewardModal';
 import { useAuthStore } from '../../store/useAuthStore';
+import { copyTextToClipboard } from '../../utils/clipboard';
 import { getApiErrorMessage } from '../../utils/error';
+import { formatKk } from '../../utils/kkMoney';
+import InviteInstructionsModal from './InviteInstructionsModal';
 import styles from './InviteCampaignCard.module.css';
-
-const EMPTY_INVITE_STATS = { inviteCount: 0, claimedPoints: 0 };
 
 const InviteCampaignCard: React.FC = () => {
     const { t } = useTranslation();
     const { user, updateUser } = useAuthStore();
-    const [isInviteRewardModalOpen, setIsInviteRewardModalOpen] = useState(false);
     const [inputInviteCode, setInputInviteCode] = useState('');
     const [isSubmittingInvite, setIsSubmittingInvite] = useState(false);
-    const [inviteStats, setInviteStats] = useState(EMPTY_INVITE_STATS);
+    const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
 
-    const inviteDisplayCode = user?.user?.inviteCode || '002436';
+    const inviteCode = user?.user?.inviteCode || '';
+    const inviteDisplayCode = inviteCode || '--';
+    const inviteCount = user?.user?.inviteStats?.inviteCount ?? 0;
+    const rewardedLimitedKk = user?.user?.inviteStats?.rewardedLimitedKk ?? 0;
+    const inviteRewardKk = user?.user?.platformBenefits?.inviteRewardKk ?? 15;
 
-    const getInviteStats = async () => {
-        try {
-            const response = await auth.getInviteStats();
-            if (response.data.success && response.data.data) {
-                const claimedPoints = (response.data.data.rewards || [])
-                    .filter((item) => item.claimed)
-                    .reduce((sum, item) => sum + item.points, 0);
-                setInviteStats({
-                    inviteCount: Math.max(0, response.data.data.inviteCount || 0),
-                    claimedPoints,
-                });
-                return;
-            }
-            setInviteStats(EMPTY_INVITE_STATS);
-        } catch {
-            setInviteStats(EMPTY_INVITE_STATS);
-        }
-    };
-
-    const refreshUserInfo = async () => {
+    const refreshUserInfo = useCallback(async () => {
         try {
             const response = await auth.getUserInfo();
             if (response.data.success && response.data.data) {
@@ -48,19 +33,24 @@ const InviteCampaignCard: React.FC = () => {
         } catch (error) {
             console.error('get user info failed:', error);
         }
-    };
+    }, [updateUser]);
 
     useEffect(() => {
-        void getInviteStats();
-    }, []);
+        void refreshUserInfo();
+    }, [refreshUserInfo]);
 
-    const handleCopyInviteCode = () => {
-        if (!inviteDisplayCode) {
+    const handleCopyInviteCode = async () => {
+        if (!inviteCode) {
             toast.error(t('profile.noInviteCode'));
             return;
         }
-        void navigator.clipboard.writeText(inviteDisplayCode);
-        toast.success(t('profile.inviteCodeCopied'));
+        try {
+            await copyTextToClipboard(inviteCode);
+            toast.success(t('profile.inviteCodeCopied'));
+        } catch (error) {
+            console.error('copy invite code failed:', error);
+            toast.error(t('profile.copyFailed'));
+        }
     };
 
     const handleSubmitInviteCode = async () => {
@@ -74,10 +64,10 @@ const InviteCampaignCard: React.FC = () => {
             setIsSubmittingInvite(true);
             const response = await auth.useInviteCode({ inviteCode: inputInviteCode });
             if (response.data.success) {
-                toast.success(t('profile.inviteCodeSubmitSuccess'));
+                const awardedAmount = response.data.data?.diamondsAdded ?? inviteRewardKk;
+                toast.success(t('profile.inviteCodeSubmitSuccess', { amount: formatKk(awardedAmount) }));
                 setInputInviteCode('');
                 void refreshUserInfo();
-                void getInviteStats();
             } else {
                 toast.error(response.data.message || t('profile.operationFailed'));
             }
@@ -89,24 +79,41 @@ const InviteCampaignCard: React.FC = () => {
     };
 
     return (
-        <>
-            <section className={styles.inviteCampaignSection} aria-label={t('profile.inviteCampaignTitle')}>
-                <header className={styles.inviteCampaignHeader}>
-                    <span className={styles.inviteCampaignGiftIcon} aria-hidden="true">
-                        <HiOutlineGift />
-                    </span>
-                    <h3 className={styles.inviteCampaignTitle}>{t('profile.inviteCampaignTitle')}</h3>
-                </header>
+        <section
+            className={styles.inviteCampaignSection}
+            aria-label={t('profile.inviteCampaignTitle', { amount: formatKk(inviteRewardKk) })}
+        >
+            <header className={styles.inviteCampaignHeader}>
+                <span className={styles.inviteCampaignGiftIcon} aria-hidden="true">
+                    <HiOutlineGift />
+                </span>
+                <h3 className={styles.inviteCampaignTitle}>
+                    {t('profile.inviteCampaignTitle', { amount: formatKk(inviteRewardKk) })}
+                </h3>
+                <button
+                    type="button"
+                    className={styles.inviteCampaignHelpButton}
+                    onClick={() => setIsInstructionsOpen(true)}
+                    aria-label={t('profile.inviteInstructionsTitle')}
+                >
+                    <MdHelpOutline aria-hidden="true" />
+                </button>
+            </header>
 
-                <div className={styles.inviteCampaignFields}>
-                    <div className={styles.inviteCampaignCodeTray}>
+            <div className={styles.inviteCampaignFields}>
+                <div className={styles.inviteCampaignCodeTray}>
+                    <div className={styles.inviteCampaignCodeContent}>
+                        <span className={styles.inviteCampaignFieldLabel}>{t('profile.myInviteCodeLabel')}</span>
                         <span className={styles.inviteCampaignCode}>{inviteDisplayCode}</span>
-                        <button type="button" className={styles.inviteCampaignCopyBtn} onClick={handleCopyInviteCode}>
-                            {t('profile.copyInviteCode')}
-                        </button>
                     </div>
+                    <button type="button" className={styles.inviteCampaignCopyBtn} onClick={handleCopyInviteCode}>
+                        {t('profile.copyInviteCode')}
+                    </button>
+                </div>
 
-                    <div className={styles.inviteCampaignRedeemRow}>
+                <div className={styles.inviteCampaignRedeemRow}>
+                    <label className={styles.inviteCampaignInputContent}>
+                        <span className={styles.inviteCampaignFieldLabel}>{t('profile.friendInviteCodeLabel')}</span>
                         <input
                             type="text"
                             className={styles.inviteCampaignRedeemInput}
@@ -120,52 +127,36 @@ const InviteCampaignCard: React.FC = () => {
                                 }
                             }}
                         />
-                        <button
-                            type="button"
-                            className={styles.inviteCampaignRedeemSubmit}
-                            onClick={() => {
-                                void handleSubmitInviteCode();
-                            }}
-                            disabled={isSubmittingInvite}
-                        >
-                            {t('profile.submit')}
-                        </button>
-                    </div>
-                </div>
-
-                <footer className={styles.inviteCampaignFooterRow}>
-                    <p className={styles.inviteCampaignMeta}>
-                        <Trans
-                            i18nKey="profile.inviteStatsText"
-                            values={{
-                                count: inviteStats.inviteCount,
-                                points: inviteStats.claimedPoints,
-                            }}
-                            components={{
-                                count: <span className={styles.inviteCampaignMetaValue} />,
-                                points: <span className={styles.inviteCampaignMetaValue} />,
-                            }}
-                        />
-                    </p>
+                    </label>
                     <button
                         type="button"
-                        className={styles.inviteCampaignRewardBtn}
-                        onClick={() => setIsInviteRewardModalOpen(true)}
+                        className={styles.inviteCampaignRedeemSubmit}
+                        onClick={() => {
+                            void handleSubmitInviteCode();
+                        }}
+                        disabled={isSubmittingInvite}
                     >
-                        {t('profile.claimPoints')}
+                        {t('profile.submit')}
                     </button>
-                </footer>
-            </section>
+                </div>
+            </div>
 
-            <InviteRewardModal
-                isOpen={isInviteRewardModalOpen}
-                onClose={() => setIsInviteRewardModalOpen(false)}
-                onClaimSuccess={() => {
-                    void refreshUserInfo();
-                    void getInviteStats();
-                }}
+            <div className={styles.inviteCampaignStats}>
+                <span>{t('profile.invitedPrefix')}</span>
+                <strong>{inviteCount}</strong>
+                <span>{t('profile.peopleUnit')}</span>
+                <span className={styles.inviteCampaignStatsDivider}>·</span>
+                <span>{t('profile.rewardedPrefix')}</span>
+                <strong>{formatKk(rewardedLimitedKk)}</strong>
+                <span>{t('profile.limitedKkRewardSuffix')}</span>
+            </div>
+
+            <InviteInstructionsModal
+                isOpen={isInstructionsOpen}
+                onClose={() => setIsInstructionsOpen(false)}
+                inviteRewardKk={inviteRewardKk}
             />
-        </>
+        </section>
     );
 };
 

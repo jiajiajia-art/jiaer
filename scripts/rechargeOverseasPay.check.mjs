@@ -1,5 +1,5 @@
 /**
- * 钻石充值：顶部互切支付方式后直接下单，不再二次弹窗
+ * 统一充值中心：地区默认支付、KK币/会员互切、二次确认与海外收银台。
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -12,17 +12,19 @@ const modal = readFileSync(join(root, 'src/components/Purchase/RechargeModal.tsx
 const api = readFileSync(join(root, 'src/api/pay/payApi.ts'), 'utf8');
 const zh = readFileSync(join(root, 'src/i18n/locales/zh.json'), 'utf8');
 
-test('RechargeModal_应支持微信与海外支付直接下单', () => {
-  assert.match(modal, /startOverseasDiamondPay/);
-  assert.match(modal, /startWechatDiamondPay/);
-  assert.match(modal, /selectedPayMethod === 'wechat'/);
+test('RechargeModal_应支持微信与海外支付并在确认后下单', () => {
+  assert.match(modal, /startOverseasPay/);
+  assert.match(modal, /startWechatPay/);
+  assert.match(modal, /pendingPayment\.payMethod === 'wechat'/);
   assert.match(modal, /createOverseasOrder/);
   assert.match(modal, /payWechat/);
   assert.match(modal, /payOverseas/);
-  // 功能注释：顶部已选方式后不再二次确认弹窗
   assert.doesNotMatch(modal, /showPayMethodSheet/);
-  assert.doesNotMatch(modal, /pendingDiamondOrder/);
   assert.doesNotMatch(modal, /handleChoosePayMethod/);
+  assert.match(modal, /pendingPayment/);
+  assert.match(modal, /confirmPayment/);
+  assert.match(modal, /confirmationOverlay/);
+  assert.match(modal, /cancelPaymentConfirmation/);
 });
 
 test('payApi_应提供海外下单接口', () => {
@@ -56,12 +58,39 @@ test('i18n_应有支付方式文案', () => {
   assert.match(zh, /"payOverseas":\s*"海外支付"/);
 });
 
-test('RechargeModal_微信支付应固定首位并默认选中', () => {
-  assert.match(modal, /setSelectedPayMethod\('wechat'\)/);
+test('RechargeModal_应按IP地区选择默认支付并允许手动切换', () => {
+  assert.match(modal, /useGeoRegionStore/);
+  assert.match(modal, /region\.defaultPayMethod/);
+  assert.match(modal, /region\.payRegion/);
   assert.match(modal, /\(\['wechat', 'overseas'\] as const\)/);
-  assert.doesNotMatch(modal, /defaultPayMethod === 'overseas'/);
-  assert.doesNotMatch(modal, /setSelectedPayMethod\(defaultPayMethod\)/);
+  assert.match(modal, /setSelectedPayMethod\(region\.defaultPayMethod\)/);
   assert.match(modal, /payMethodToggle/);
   const css = readFileSync(join(root, 'src/components/Purchase/RechargeModal.module.css'), 'utf8');
   assert.match(css, /\.payMethodToggle\s*\{/);
+});
+
+test('RechargeModal_两个入口只决定初始页签且弹窗内可自由切换', () => {
+  assert.match(modal, /className=\{styles\.rechargeTabs\}/);
+  assert.match(modal, /setRechargeTab\('diamonds'\)/);
+  assert.match(modal, /setRechargeTab\('membership'\)/);
+  assert.doesNotMatch(modal, /if \(isOpen && fixedTab && rechargeTab !== fixedTab\)/);
+  assert.match(modal, /setRechargeTab\('diamonds'\);[^]*handleFixedAmountClick\(rechargePlans\[0\]\)/);
+});
+
+test('RechargeModal_会员卡应能选择海外支付并复用统一下单函数', () => {
+  assert.match(modal, /orderType:\s*'subscription'/);
+  assert.match(modal, /selectedPayMethod/);
+  assert.match(modal, /startOverseasPay\(confirmed\.orderData\)/);
+  assert.match(modal, /startWechatPay\(confirmed\.orderData\)/);
+});
+
+test('RechargeModal_应展示地区、订单摘要并适配移动端确认层', () => {
+  assert.match(modal, /currentPaymentRegion/);
+  assert.match(modal, /orderSummary/);
+  const css = readFileSync(join(root, 'src/components/Purchase/RechargeModal.module.css'), 'utf8');
+  assert.match(css, /\.regionSummary\s*\{/);
+  assert.match(css, /\.rechargeTabs\s*\{/);
+  assert.match(css, /\.orderSummary\s*\{/);
+  assert.match(css, /\.confirmationOverlay\s*\{/);
+  assert.match(css, /@media\s*\(max-width:\s*768px\)[^]*\.confirmationPanel/s);
 });

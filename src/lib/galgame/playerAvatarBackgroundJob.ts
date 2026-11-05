@@ -7,6 +7,7 @@ import { sessionPlayerProfileApi } from '../../api/galgame/playerCharacterCards'
 import type { SessionPlayerProfile } from './playerCharacterCard';
 import type { PlayerAvatarMergeInput } from './playerAvatarMerge';
 import { sanitizeUpstreamLlmErrorMessage } from '../../utils/error';
+import type { SessionProfileBilling } from '../sessionProfileBilling';
 
 export type PlayerAvatarGenPayload = {
   name: string;
@@ -20,6 +21,7 @@ export type PlayerAvatarGenPayload = {
 
 export type PlayerAvatarGenResult = PlayerAvatarMergeInput & {
   profile?: SessionPlayerProfile;
+  billing?: SessionProfileBilling;
   pointsDeducted?: number;
   remainingPoints?: number;
 };
@@ -196,6 +198,7 @@ export function startPlayerAvatarBackgroundGen(opts: {
         avatarUrl: res.data.avatarUrl,
         avatarThumbUrl: res.data.avatarThumbUrl || '',
         profile: res.data.profile,
+        billing: res.data.billing,
         pointsDeducted: res.data.pointsDeducted,
         remainingPoints: res.data.remainingPoints,
       };

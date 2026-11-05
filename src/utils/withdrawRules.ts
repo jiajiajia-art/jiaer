@@ -102,7 +102,7 @@ export function checkPayoutProfile(profile: PayoutProfileFields = {}) {
 
 export function buildWithdrawCsv(rows: Array<Record<string, string | number | null | undefined>>): string {
   const header = [
-    '单号', '用户ID', '用户名', '手机号', '提现钻石', '折合人民币',
+    '单号', '用户ID', '用户名', '手机号', '提现KK币', '折合人民币',
     '银行卡号', '开户银行', '真实姓名', '身份证号', '状态', '申请时间', '审核时间', '备注',
   ];
   const escape = (value: string | number | null | undefined) => {

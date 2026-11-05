@@ -15,9 +15,9 @@
 
 .navButton,
 .pageButton {
-    border: 1px solid rgba(205, 157, 120, 0.34);
-    background: rgba(255, 252, 248, 0.96);
-    color: var(--admin-text, #2f241d);
+    border: 1px solid #d9d9d9;
+    background: #fff;
+    color: var(--admin-text, #262626);
     font-weight: 700;
     cursor: pointer;
     transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
@@ -44,15 +44,15 @@
 .navButton:hover,
 .pageButton:hover {
     transform: translateY(-1px);
-    border-color: rgba(201, 115, 63, 0.42);
-    box-shadow: 0 8px 18px rgba(117, 72, 39, 0.08);
+    border-color: #69b1ff;
+    box-shadow: none;
 }
 
 .pageButtonActive {
-    border-color: rgba(201, 115, 63, 0.46);
-    background: linear-gradient(135deg, rgba(201, 115, 63, 0.96) 0%, rgba(224, 138, 79, 0.94) 100%);
+    border-color: #1677ff;
+    background: #1677ff;
     color: #fff;
-    box-shadow: 0 10px 20px rgba(201, 115, 63, 0.14);
+    box-shadow: none;
 }
 
 .navButton:disabled,

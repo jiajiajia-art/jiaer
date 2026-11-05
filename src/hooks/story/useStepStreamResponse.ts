@@ -7,6 +7,7 @@ import {
     isTransientNetworkStreamError,
     normalizeUserFacingStreamError,
 } from '../../lib/galgame/normalizeStreamErrorMessage';
+import type { StreamBusinessError } from '../../lib/galgame/playBilling';
 import {
     appendRawTextBridge,
     filterFormalStepsAfterRawAppend,
@@ -41,6 +42,7 @@ interface UseStepStreamResponseOptions {
 interface ProcessStepStreamResponseOptions {
     onSuccess?: () => void;
     onError?: (error: string) => void;
+    onBusinessError?: (error: StreamBusinessError) => boolean | void;
     onGenerationRetry?: () => void;
     onErrorAfterAlert?: (error: string) => void; // 错误发生时的回调，传递错误信息用于显示错误弹窗
     onFirstStep?: () => void; // 接收到后端数据，清空一些状态缓存等
@@ -535,9 +537,17 @@ export const useStepStreamResponse = ({
                             }
                             errorMessage = normalizeUserFacingStreamError(errorMessage);
                             streamFailed = true;
+                            const businessError: StreamBusinessError = {
+                                ...(errorCode ? { code: errorCode } : {}),
+                                message: errorMessage,
+                                ...(typeof jsonData.currency === 'string' ? { currency: jsonData.currency } : {}),
+                                ...(typeof jsonData.retryable === 'boolean' ? { retryable: jsonData.retryable } : {}),
+                            };
+                            const businessErrorHandled = options?.onBusinessError?.(businessError) === true;
                             
                             const suppressError = SUPPRESS_ALERT_ERROR_CODES.has(errorCode)
-                                || isGenerationBusyError(errorMessage);
+                                || isGenerationBusyError(errorMessage)
+                                || businessErrorHandled;
                             // busy/锁冲突是并发保护，不当作失败红错刷屏
                             if (suppressError) {
                                 console.warn('[stream] busy/in-progress:', errorMessage, errorCode || '');
@@ -546,10 +556,14 @@ export const useStepStreamResponse = ({
                                 options?.onErrorAfterAlert?.(errorMessage);
                             }
                             setSelectedOptionIndex(null);
-                            setStepQueue([]);
+                            if (!businessErrorHandled) {
+                                setStepQueue([]);
+                            }
                             setIsWaitingForData(false);
                             // busy 类错误仍回调 onError，便于上层静默重试
-                            options?.onError?.(errorMessage);
+                            if (!businessErrorHandled) {
+                                options?.onError?.(errorMessage);
+                            }
                             hasReceivedStep = true;
                             continue;
                         }
@@ -740,18 +754,30 @@ export const useStepStreamResponse = ({
                         }
                         errorMessage = normalizeUserFacingStreamError(errorMessage);
                         streamFailed = true;
+                        const businessError: StreamBusinessError = {
+                            ...(errorCode ? { code: errorCode } : {}),
+                            message: errorMessage,
+                            ...(typeof jsonData.currency === 'string' ? { currency: jsonData.currency } : {}),
+                            ...(typeof jsonData.retryable === 'boolean' ? { retryable: jsonData.retryable } : {}),
+                        };
+                        const businessErrorHandled = options?.onBusinessError?.(businessError) === true;
                         
                         // 显示错误弹窗给用户
                         console.error('❌ 流式响应错误（缓冲区）:', errorMessage);
                         const suppressError = SUPPRESS_ALERT_ERROR_CODES.has(errorCode)
-                            || isGenerationBusyError(errorMessage);
+                            || isGenerationBusyError(errorMessage)
+                            || businessErrorHandled;
                         if (!suppressError) {
                             options?.onErrorAfterAlert?.(errorMessage);
                         }
                         setSelectedOptionIndex(null);
-                        setStepQueue([]);
+                        if (!businessErrorHandled) {
+                            setStepQueue([]);
+                        }
                         setIsWaitingForData(false);
-                        options?.onError?.(errorMessage);
+                        if (!businessErrorHandled) {
+                            options?.onError?.(errorMessage);
+                        }
                         return;
                     }
 
@@ -774,13 +800,11 @@ export const useStepStreamResponse = ({
                                 if (hasChoice) {
                                     return base;
                                 }
-                                
                                 // 如果当前步骤（或转换后）是 choice，直接添加
                                 const step = toChoiceIfHasOptions(jsonData.step);
                                 if (step?.type === 'choice') {
                                     return [...base, step];
                                 }
-                                
                                 // 普通步骤，正常添加（去重）
                                 return isDuplicateStep(base, step) ? base : [...base, step];
                             });
@@ -801,12 +825,10 @@ export const useStepStreamResponse = ({
                                 if (currentRequestId.current !== requestId) {
                                     return prev;
                                 }
-                                
                                 const hasChoice = prev.some((s: any) => s?.type === 'choice');
                                 if (hasChoice) {
                                     return prev;
                                 }
-                                
                                 const newSteps = filterFormalStepsAfterRawAppend(truncatedSteps, {
                                     rawAppendActive: enableRawTextStepBridge && rawTextAppendActive,
                                 });

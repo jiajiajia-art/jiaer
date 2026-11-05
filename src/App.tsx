@@ -1,5 +1,5 @@
 import './App.css'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import './styles/funloomToast.css';
 import Home from './page/Home';
@@ -8,6 +8,9 @@ import CreateType from './page/CreateType';
 import CreatePlatformApp from './page/CreatePlatformApp';
 import CreateWorks from './page/CreateWorks';
 import WithdrawRecords from './page/WithdrawRecords';
+import CreatorIncentive from './page/CreatorIncentive';
+import CreatorBenefits from './page/CreatorBenefits';
+import GamePublishAppeal from './page/GamePublishAppeal';
 import WareHouse from './page/WareHouse';
 import WarehouseHub from './page/warehouse/WarehouseHub';
 import WarehousePersonaCards from './page/warehouse/WarehousePersonaCards';
@@ -62,7 +65,13 @@ import PromotionCenter from './page/PromotionCenter';
 import Messages from './page/Messages';
 import AssetDetails from './page/AssetDetails';
 import PointsDetails from './page/PointsDetails';
+import EarnPoints from './page/EarnPoints';
 import Document from './page/Document';
+import DeveloperExternalGames from './page/external/DeveloperExternalGames';
+import DeveloperCliAuthorize from './page/external/DeveloperCliAuthorize';
+import ExternalOAuthAuthorize from './page/external/ExternalOAuthAuthorize';
+import ExternalRecharge from './page/external/ExternalRecharge';
+import LegalDocument from './page/LegalDocument';
 import { useEffect, lazy, Suspense } from 'react';
 import { useAuthStore } from './store/useAuthStore';
 import { useGeoRegionStore } from './store/useGeoRegionStore';
@@ -70,6 +79,13 @@ import { getAppBasePath } from './lib/appBasePath';
 
 const FunloomLotteryPage = lazy(() => import('./activities/funloom-lottery-20260731'));
 const RomanceHost = lazy(() => import('./page/RomanceHost'));
+
+const LegacyPromotionRedirect = () => {
+  const { promotionView } = useParams<{ promotionView?: string }>();
+  const allowedViews = ['create', 'list', 'ticker', 'reviews'];
+  const targetView = allowedViews.includes(promotionView || '') ? promotionView : 'list';
+  return <Navigate to={`/operator/promotion/${targetView}`} replace />;
+};
 
 function App() {
   usePlatformDurationTracking();
@@ -146,6 +162,11 @@ function App() {
         <Route path="/novel/:fileId/read" element={<NovelReader />} />
         <Route path="/replay/:replayId" element={<Galgame />} />
         <Route path="/document" element={<Document />} />
+        <Route path="/developer/cli/authorize" element={<DeveloperCliAuthorize />} />
+        <Route path="/external/oauth/authorize" element={<ExternalOAuthAuthorize />} />
+        <Route path="/external/recharge" element={<ExternalRecharge />} />
+        <Route path="/legal/user-agreement" element={<LegalDocument document="user-agreement" />} />
+        <Route path="/legal/privacy-policy" element={<LegalDocument document="privacy-policy" />} />
         {/* Funloom 限定抽奖：独立活动链接；懒加载避免拖大主包 */}
         <Route
           path="/activity/funloom-lottery-20260731"
@@ -167,12 +188,17 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route path="/bookshelf" element={<CreateWorks />} />
           <Route path="/analytics" element={<Analytics />} />
+          <Route path="/create" element={<Create />} />
+          <Route path="/create/incentives" element={<CreatorIncentive />} />
           <Route path="/create/new" element={<CreateType />} />
           <Route path="/create/app" element={<CreatePlatformApp />} />
           <Route path="/create/works" element={<CreateWorks />} />
           <Route path="/create/withdraw-records" element={<WithdrawRecords />} />
           <Route path="/asset/details" element={<AssetDetails />} />
-          <Route path="/creator" element={<Navigate to="/profile" replace />} />
+          <Route path="/developer/external-games" element={<DeveloperExternalGames />} />
+          <Route path="/creator" element={<Navigate to="/create" replace />} />
+          <Route path="/creator-benefits" element={<CreatorBenefits />} />
+          <Route path="/game-publish-appeals/:fileId" element={<GamePublishAppeal />} />
           <Route path="/account/settings" element={<AccountSettings />} />
           <Route path="/account/privacy" element={<PrivacySettings />} />
           <Route path="/account/privacy/find-me" element={<PrivacyFindMe />} />
@@ -182,25 +208,39 @@ function App() {
           <Route path="/creator/works/:fileId/stats" element={<CreatorRoute><CreatorWorkStats /></CreatorRoute>} />
           <Route path="/operator" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/reports" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
-          <Route path="/operator/promotion" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/promotion" element={<Navigate to="/operator/promotion/list" replace />} />
           <Route path="/operator/promotion/:promotionView" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/recruitment" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/special-authors" element={<AdminRoute><OperatorRoute><OperatorPanel /></OperatorRoute></AdminRoute>} />
+          <Route path="/operator/platform-works" element={<Navigate to="/operator/platform-works/works" replace />} />
+          <Route path="/operator/platform-works/works" element={<AdminRoute><OperatorRoute><OperatorPanel /></OperatorRoute></AdminRoute>} />
+          <Route path="/operator/platform-works/appeals" element={<AdminRoute><OperatorRoute><OperatorPanel /></OperatorRoute></AdminRoute>} />
+          <Route path="/operator/promoters" element={<AdminRoute><OperatorRoute><OperatorPanel /></OperatorRoute></AdminRoute>} />
           <Route path="/operator/daily-tasks" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
-          <Route path="/operator/withdraw" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/withdraw" element={<Navigate to="/operator/withdraw/applications" replace />} />
+          <Route path="/operator/withdraw/applications" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/withdraw/verify" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/withdraw/creator-earnings" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/avatars" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/locations" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/location-assets" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/components" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/play-mods" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
-          <Route path="/operator/content-reports" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/ai-model-center" element={<Navigate to="/operator/ai-model-center/models" replace />} />
+          <Route path="/operator/ai-model-center/models" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/ai-model-center/usage" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/platform-benefits" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/content-reports" element={<Navigate to="/operator/content-reports/reports" replace />} />
+          <Route path="/operator/content-reports/reports" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/content-reports/penalties" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/appeals" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/publish-queue" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/feedback" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/business-coop" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/game-issues" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
-          <Route path="/operator/game-issues" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/works/:fileId/stats" element={<OperatorRoute><OperatorWorkStats /></OperatorRoute>} />
           <Route path="/points/details" element={<PointsDetails />} />
+          <Route path="/points/earn" element={<EarnPoints />} />
           <Route path="/createGame" element={<CreateGame />} />
           <Route path="/warehouse" element={<WarehouseHub />}>
             <Route index element={<Navigate to="persona" replace />} />
@@ -227,18 +267,39 @@ function App() {
           <Route path="/appeals/:appealId" element={<AppealResult />} />
           <Route path="/moderation/:moderationId" element={<ModerationAudit />} />
           <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
-          <Route path="/admin/promotions" element={<AdminRoute><AdminPanel /></AdminRoute>} />
-          <Route path="/admin/promotions/:promotionView" element={<AdminRoute><AdminPanel /></AdminRoute>} />
-          <Route path="/admin/points" element={<AdminRoute><AdminPanel /></AdminRoute>} />
-          <Route path="/admin/creator-incentives" element={<AdminRoute><AdminPanel /></AdminRoute>} />
-          <Route path="/admin/subscriptions" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/banners" element={<AdminRoute><Navigate to="/admin/banners/home" replace /></AdminRoute>} />
+          <Route path="/admin/themes" element={<AdminRoute><Navigate to="/admin/themes/all" replace /></AdminRoute>} />
+          <Route path="/admin/promotions" element={<Navigate to="/operator/promotion/list" replace />} />
+          <Route path="/admin/promotions/:promotionView" element={<LegacyPromotionRedirect />} />
+          <Route path="/admin/points" element={<AdminRoute><Navigate to="/admin/points/activity" replace /></AdminRoute>} />
+          <Route path="/admin/points/activity" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/points/special" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/diamonds" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/creator-incentives" element={<AdminRoute><Navigate to="/operator/promoters" replace /></AdminRoute>} />
+          <Route path="/admin/creator-benefits" element={<AdminRoute><Navigate to="/operator/special-authors" replace /></AdminRoute>} />
+          <Route path="/admin/subscriptions" element={<AdminRoute><Navigate to="/admin/subscriptions/records" replace /></AdminRoute>} />
+          <Route path="/admin/subscriptions/records" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/subscriptions/key-generation" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/subscriptions/key-records" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/documents" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/share-ratio" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/daily-tasks" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/users" element={<AdminRoute><AdminPanel /></AdminRoute>} />
-          <Route path="/admin/withdraw" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/withdraw" element={<AdminRoute><Navigate to="/admin/withdraw/applications" replace /></AdminRoute>} />
+          <Route path="/admin/withdraw/applications" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/withdraw/verify" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/withdraw/creator-earnings" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/image-gen" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/text-llm" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/ai-model-pricing" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/ai-model-center" element={<AdminRoute><Navigate to="/admin/ai-model-center/models" replace /></AdminRoute>} />
+          <Route path="/admin/ai-model-center/models" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/ai-model-center/usage" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/ai-model-center/runtime" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/banners/home" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/banners/activity" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/themes/all" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/themes/featured" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/lottery" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/avatars" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/components" element={<AdminRoute><AdminPanel /></AdminRoute>} />

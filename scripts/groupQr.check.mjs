@@ -18,4 +18,3 @@ test('selects male QQ group QR for male, missing, or unsupported gender', () => 
   assert.equal(getQqGroupQrSrc('unknown', '/app/'), '/app/data/assets/group/qr_qq_male.png');
   assert.equal(QQ_GROUP_QR_MALE_PATH, 'data/assets/group/qr_qq_male.png');
 });
-

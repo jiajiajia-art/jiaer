@@ -3,11 +3,12 @@ import { useTranslation } from 'react-i18next';
 import styles from './SceneDetailForm.module.css';
 import { MdDownload } from 'react-icons/md';
 import type { LocalScene } from './handlers';
-import { SCENE_GENERATION_COST, getImageUrl, DEFAULT_SCENE_IMAGE, DEFAULT_WORLD_MAP_IMAGE } from '../../../utils/constants';
+import { getImageUrl, DEFAULT_SCENE_IMAGE, DEFAULT_WORLD_MAP_IMAGE } from '../../../utils/constants';
 import { withCacheBust } from '../../../utils/imageCache';
 import { useWordLimit, useWordCount } from '../../../hooks/editor/useWordLimit';
 import { isMiniProgramEnv } from '../../../utils/miniProgram';
 import InlineFieldSave from '../InlineFieldSave';
+import CurrencyIcon from '../../CurrencyIcon';
 
 // 字数限制配置
 const SCENE_WORD_LIMITS = {
@@ -22,6 +23,7 @@ interface BgmItem {
 }
 
 interface SceneDetailFormProps {
+    imageGenerationPrice: number | null;
     scene: LocalScene;
     bgmLibrary: BgmItem[];
     fileInputRef: React.RefObject<HTMLInputElement | null>;
@@ -49,6 +51,7 @@ interface SceneDetailFormProps {
 }
 
 const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
+    imageGenerationPrice,
     scene,
     bgmLibrary,
     fileInputRef,
@@ -73,6 +76,7 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
     onDescSave,
 }) => {
     const { t } = useTranslation();
+    const scenePrice = imageGenerationPrice;
     const [isMobilePicker, setIsMobilePicker] = useState(false);
     const [isBgmPickerOpen, setIsBgmPickerOpen] = useState(false);
 
@@ -119,7 +123,7 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
 
     const showDisabledMessage = disabled && disabledMessage;
     const isDisabled = disabled || isGeneratingForThisScene;
-    const isImageActionDisabled = isDisabled || isClearingImage;
+    const isImageActionDisabled = isDisabled || isClearingImage || scenePrice == null;
 
     // 字数统计
     const nameWords = useWordCount(scene.name ?? '');
@@ -212,20 +216,19 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
                         disabled={isImageActionDisabled}
                         style={{ opacity: isImageActionDisabled ? 0.5 : 1 }}
                     >
-                        <img
-                            src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
-                            alt=""
+                        <CurrencyIcon
+                            currency="points"
                             className={styles.priceIcon}
                         />
                         {/* TODO: 恢复会员折扣UI时，取消下方注释
                         {showSceneDiscount ? (
                             <>
-                                <span className={styles.originalPrice}>{SCENE_GENERATION_COST}</span>
+                                <span className={styles.originalPrice}>{scenePrice ?? '—'}</span>
                                 <span className={`${styles.discountPrice} ${styles.discountPriceBlack}`}>{discountedSceneCost}</span>
                                 <span>{t('createGame.aiGenerate')}</span>
                             </>
                         ) : ( */}
-                            <span>{SCENE_GENERATION_COST} {t('createGame.aiGenerate')}</span>
+                            <span>{scenePrice ?? '—'} {t('createGame.aiGenerate')}</span>
                         {/* )} */}
                     </button>
                 )}

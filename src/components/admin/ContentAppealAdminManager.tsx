@@ -165,20 +165,6 @@ const ContentAppealAdminManager: React.FC = () => {
 
   return (
     <div className={styles.panelStack}>
-      <div className={styles.heroCard}>
-        <div>
-          <span className={styles.sectionBadge}>内容安全</span>
-          <h2 className={styles.heroTitle}>申诉复核</h2>
-          <p className={styles.heroDesc}>
-            通过将撤销目标警告/处罚、清理处罚热状态，并在适用时解锁游戏下架。
-          </p>
-        </div>
-        <div className={styles.heroMetric}>
-          <span className={styles.heroMetricLabel}>{status === 'pending' ? '待复核' : '当前筛选'}</span>
-          <span className={styles.heroMetricValue}>{total}</span>
-        </div>
-      </div>
-
       <div className={`${styles.card} ${local.filterCard}`}>
         <label className={local.field}>
           <span className={local.fieldLabel}>状态</span>

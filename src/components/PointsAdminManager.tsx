@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import promotionApi from '../api/promotion/promotionApi';
@@ -13,6 +14,7 @@ import type {
 import { getImageUrl } from '../utils/constants';
 import { getApiErrorMessage } from '../utils/error';
 import Pagination from './Pagination';
+import AdminManualAdjustmentHistory from './AdminManualAdjustmentHistory';
 import styles from './PointsAdminManager.module.css';
 
 type PointsTab = 'activity' | 'special';
@@ -30,16 +32,15 @@ const getRewardTaskStatusLabel = (status: PromotionRewardTask['status']) => {
 };
 
 const getRewardTaskDisplayName = (task: PromotionRewardTask) => task.nickname || task.userCode || task.phoneNumber || '-';
-const formatBadgeCount = (count: number) => (count > 99 ? '99+' : String(count));
 
 type PointsAdminManagerProps = {
-    pendingRewardCount: number;
     onRefreshCounts: () => Promise<void>;
 };
 
-const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCount, onRefreshCounts }) => {
+const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ onRefreshCounts }) => {
     const { t } = useTranslation();
-    const [activeTab, setActiveTab] = useState<PointsTab>('activity');
+    const location = useLocation();
+    const activeTab: PointsTab = location.pathname === '/admin/points/special' ? 'special' : 'activity';
     const [rewardTasks, setRewardTasks] = useState<PromotionRewardTask[]>([]);
     const [rewardTaskPagination, setRewardTaskPagination] = useState<AdminPromotionRewardTaskPagination>(emptyRewardTaskPagination);
     const [isLoadingRewardTasks, setIsLoadingRewardTasks] = useState(true);
@@ -57,6 +58,7 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
     const [adjustPoints, setAdjustPoints] = useState('');
     const [remark, setRemark] = useState('');
     const [isSubmittingAdjust, setIsSubmittingAdjust] = useState(false);
+    const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
 
     const [pendingTaskCount, setPendingTaskCount] = useState(0);
     const [pendingRewardPoints, setPendingRewardPoints] = useState(0);
@@ -72,7 +74,7 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
             setPendingTaskCount(Number(payload?.summary?.pendingCount || 0));
             setPendingRewardPoints(Number(payload?.summary?.pendingRewardPoints || 0));
         } catch (error) {
-            toast.error(getApiErrorMessage(error, '活动积分任务列表加载失败'));
+            toast.error(getApiErrorMessage(error, '活动织梦豆任务列表加载失败'));
         } finally {
             setIsLoadingRewardTasks(false);
         }
@@ -86,13 +88,13 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
         try {
             setIssuingTaskId(taskId);
             await promotionApi.adminIssueRewardTask(taskId);
-            toast.success('活动积分发放成功');
+            toast.success('活动织梦豆发放成功');
             await Promise.all([
                 loadRewardTasks(rewardTaskPagination.page),
                 onRefreshCounts().catch(() => undefined),
             ]);
         } catch (error) {
-            toast.error(getApiErrorMessage(error, '活动积分发放失败'));
+            toast.error(getApiErrorMessage(error, '活动织梦豆发放失败'));
         } finally {
             setIssuingTaskId(null);
         }
@@ -111,7 +113,7 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
                 onRefreshCounts().catch(() => undefined),
             ]);
         } catch (error) {
-            toast.error(getApiErrorMessage(error, '活动积分批量发放失败'));
+            toast.error(getApiErrorMessage(error, '活动织梦豆批量发放失败'));
         } finally {
             setIsBatchIssuing(false);
         }
@@ -131,7 +133,7 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
             const response = await promotionApi.adminSubmissionDetail(task.submissionId);
             setDetailSubmission(response.data.data || null);
         } catch (error) {
-            toast.error(getApiErrorMessage(error, '活动积分详情加载失败'));
+            toast.error(getApiErrorMessage(error, '活动织梦豆详情加载失败'));
         } finally {
             setIsDetailLoading(false);
         }
@@ -169,7 +171,7 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
         }
         const points = Number(adjustPoints);
         if (!Number.isInteger(points) || points <= 0) {
-            toast.error('积分值必须为大于 0 的整数');
+            toast.error('织梦豆数量必须为大于 0 的整数');
             return;
         }
         if (!remark.trim()) {
@@ -188,9 +190,10 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
             setLookupResult(response.data.data?.user || null);
             setAdjustPoints('');
             setRemark('');
-            toast.success(changeType === 'increment' ? '特殊积分增加成功' : '特殊积分扣减成功');
+            setHistoryRefreshKey((value) => value + 1);
+            toast.success(changeType === 'increment' ? '特殊织梦豆增加成功' : '特殊织梦豆扣减成功');
         } catch (error) {
-            toast.error(getApiErrorMessage(error, '特殊积分变更失败'));
+            toast.error(getApiErrorMessage(error, '特殊织梦豆变更失败'));
         } finally {
             setIsSubmittingAdjust(false);
         }
@@ -200,8 +203,8 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
         <section className={styles.card}>
             <div className={styles.cardHeader}>
                 <div>
-                    <h3 className={styles.cardTitle}>活动积分待发放</h3>
-                    <div className={styles.cardDesc}>统一处理活动奖励积分发放，并支持查看发放详情。</div>
+                    <h3 className={styles.cardTitle}>活动织梦豆待发放</h3>
+                    <div className={styles.cardDesc}>统一处理活动奖励织梦豆发放，并支持查看发放详情。</div>
                 </div>
                 <button
                     type="button"
@@ -214,9 +217,9 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
             </div>
 
             {isLoadingRewardTasks ? (
-                <div className={styles.emptyState}>正在加载活动积分任务...</div>
+                <div className={styles.emptyState}>正在加载活动织梦豆任务...</div>
             ) : rewardTasks.length === 0 ? (
-                <div className={styles.emptyState}>当前没有活动积分记录。</div>
+                <div className={styles.emptyState}>当前没有活动织梦豆记录。</div>
             ) : (
                 <>
                     <div className={styles.reviewTableWrapper}>
@@ -235,9 +238,9 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
                                     <th>发放状态</th>
                                     <th>活动名称</th>
                                     <th>账号名</th>
-                                    <th>奖励积分数目</th>
+                                    <th>奖励织梦豆数目</th>
                                     <th>详情按钮</th>
-                                    <th>操作发放积分</th>
+                                    <th>操作发放织梦豆</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -274,7 +277,7 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
                                                         disabled={Boolean(issuingTaskId) || isBatchIssuing}
                                                         onClick={() => void handleIssue(task.id)}
                                                     >
-                                                        {isRowIssuing ? '发放中...' : '发放积分'}
+                                                        {isRowIssuing ? '发放中...' : '发放织梦豆'}
                                                     </button>
                                                 ) : (
                                                     <button type="button" className={styles.secondaryButton} disabled>
@@ -302,80 +305,83 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
     );
 
     const renderSpecialPanel = () => (
-        <div className={styles.specialGrid}>
-            <section className={styles.card}>
-                <div className={styles.cardHeader}>
-                    <div>
-                        <h3 className={styles.cardTitle}>定位用户</h3>
-                        <div className={styles.cardDesc}>{t('admin.lookupUserDesc')}</div>
-                    </div>
-                </div>
-                <div className={styles.formArea}>
-                    <label className={styles.fieldLabel}>
-                        定位方式
-                        <select className={styles.select} value={lookupMode} onChange={(event) => setLookupMode(event.target.value as AdminPointsLookupMode)}>
-                            <option value="userCode">Kuran 号</option>
-                            <option value="phoneNumber">手机号</option>
-                        </select>
-                    </label>
-                    <label className={styles.fieldLabel}>
-                        用户定位输入
-                        <input
-                            className={styles.textInput}
-                            value={lookupKeyword}
-                            onChange={(event) => setLookupKeyword(event.target.value)}
-                            placeholder={lookupMode === 'userCode' ? t('admin.enterKuranId') : t('profile.enterValidPhone')}
-                        />
-                    </label>
-                    <div className={styles.actionRow}>
-                        <button type="button" className={styles.primaryButton} onClick={() => void handleLookup()} disabled={isLookingUp}>
-                            {isLookingUp ? '查询中...' : '查询用户'}
-                        </button>
-                    </div>
-                </div>
-            </section>
-
-            <section className={styles.card}>
-                <div className={styles.cardHeader}>
-                    <div>
-                        <h3 className={styles.cardTitle}>特殊积分管理</h3>
-                        <div className={styles.cardDesc}>支持直接对目标账号增加积分或扣减积分，并填写备注。</div>
-                    </div>
-                </div>
-                {lookupResult ? (
-                    <div className={styles.formArea}>
-                        <div className={styles.userCard}>
-                            <div className={styles.userName}>{lookupResult.nickname || '未命名用户'}</div>
-                            <div className={styles.itemMeta}>Kuran 号：{lookupResult.userCode || '-'}</div>
-                            <div className={styles.itemMeta}>手机号：{lookupResult.phoneNumber || '-'}</div>
-                            <div className={styles.itemMeta}>当前积分：{lookupResult.points}</div>
+        <>
+            <div className={styles.specialGrid}>
+                <section className={styles.card}>
+                    <div className={styles.cardHeader}>
+                        <div>
+                            <h3 className={styles.cardTitle}>定位用户</h3>
+                            <div className={styles.cardDesc}>{t('admin.lookupUserDesc')}</div>
                         </div>
+                    </div>
+                    <div className={styles.formArea}>
                         <label className={styles.fieldLabel}>
-                            变更类型
-                            <select className={styles.select} value={changeType} onChange={(event) => setChangeType(event.target.value as AdminManualPointChangeType)}>
-                                <option value="increment">增加积分</option>
-                                <option value="decrement">扣减积分</option>
+                            定位方式
+                            <select className={styles.select} value={lookupMode} onChange={(event) => setLookupMode(event.target.value as AdminPointsLookupMode)}>
+                                <option value="userCode">Kuran 号</option>
+                                <option value="phoneNumber">手机号</option>
                             </select>
                         </label>
                         <label className={styles.fieldLabel}>
-                            积分值
-                            <input className={styles.textInput} type="number" value={adjustPoints} onChange={(event) => setAdjustPoints(event.target.value)} />
-                        </label>
-                        <label className={styles.fieldLabel}>
-                            备注
-                            <textarea className={styles.textArea} value={remark} onChange={(event) => setRemark(event.target.value)} />
+                            用户定位输入
+                            <input
+                                className={styles.textInput}
+                                value={lookupKeyword}
+                                onChange={(event) => setLookupKeyword(event.target.value)}
+                                placeholder={lookupMode === 'userCode' ? t('admin.enterKuranId') : t('profile.enterValidPhone')}
+                            />
                         </label>
                         <div className={styles.actionRow}>
-                            <button type="button" className={styles.primaryButton} onClick={() => void handleAdjust()} disabled={isSubmittingAdjust}>
-                                {isSubmittingAdjust ? '提交中...' : '确认变更积分'}
+                            <button type="button" className={styles.primaryButton} onClick={() => void handleLookup()} disabled={isLookingUp}>
+                                {isLookingUp ? '查询中...' : '查询用户'}
                             </button>
                         </div>
                     </div>
-                ) : (
-                    <div className={styles.emptyState}>{t('admin.lookupUserFirst')}</div>
-                )}
-            </section>
-        </div>
+                </section>
+
+                <section className={styles.card}>
+                    <div className={styles.cardHeader}>
+                        <div>
+                            <h3 className={styles.cardTitle}>特殊织梦豆管理</h3>
+                            <div className={styles.cardDesc}>支持直接对目标账号增加织梦豆或扣减织梦豆，并填写备注。</div>
+                        </div>
+                    </div>
+                    {lookupResult ? (
+                        <div className={styles.formArea}>
+                            <div className={styles.userCard}>
+                                <div className={styles.userName}>{lookupResult.nickname || '未命名用户'}</div>
+                                <div className={styles.itemMeta}>Kuran 号：{lookupResult.userCode || '-'}</div>
+                                <div className={styles.itemMeta}>手机号：{lookupResult.phoneNumber || '-'}</div>
+                                <div className={styles.itemMeta}>当前织梦豆：{lookupResult.points}</div>
+                            </div>
+                            <label className={styles.fieldLabel}>
+                                变更类型
+                                <select className={styles.select} value={changeType} onChange={(event) => setChangeType(event.target.value as AdminManualPointChangeType)}>
+                                    <option value="increment">增加织梦豆</option>
+                                    <option value="decrement">扣减织梦豆</option>
+                                </select>
+                            </label>
+                            <label className={styles.fieldLabel}>
+                                织梦豆数量
+                                <input className={styles.textInput} type="number" value={adjustPoints} onChange={(event) => setAdjustPoints(event.target.value)} />
+                            </label>
+                            <label className={styles.fieldLabel}>
+                                备注
+                                <textarea className={styles.textArea} value={remark} onChange={(event) => setRemark(event.target.value)} />
+                            </label>
+                            <div className={styles.actionRow}>
+                                <button type="button" className={styles.primaryButton} onClick={() => void handleAdjust()} disabled={isSubmittingAdjust}>
+                                    {isSubmittingAdjust ? '提交中...' : '确认变更织梦豆'}
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className={styles.emptyState}>{t('admin.lookupUserFirst')}</div>
+                    )}
+                </section>
+            </div>
+            <AdminManualAdjustmentHistory currency="points" refreshKey={historyRefreshKey} />
+        </>
     );
 
     const renderDetailModal = () => {
@@ -387,11 +393,11 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
 
         return (
             <div className={styles.detailOverlay} onClick={(event) => { if (event.target === event.currentTarget) handleCloseDetail(); }}>
-                <div className={styles.detailDialog} role="dialog" aria-modal="true" aria-label="活动积分详情">
+                <div className={styles.detailDialog} role="dialog" aria-modal="true" aria-label="活动织梦豆详情">
                     <div className={styles.cardHeader}>
                         <div>
-                            <h3 className={styles.cardTitle}>活动积分详情</h3>
-                            <div className={styles.cardDesc}>查看积分发放任务基础信息和对应投稿内容。</div>
+                            <h3 className={styles.cardTitle}>活动织梦豆详情</h3>
+                            <div className={styles.cardDesc}>查看织梦豆发放任务基础信息和对应投稿内容。</div>
                         </div>
                         <button type="button" className={styles.secondaryButton} onClick={handleCloseDetail}>关闭</button>
                     </div>
@@ -409,7 +415,7 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
                                     <div className={styles.detailField}><span className={styles.detailLabel}>Kuran 号</span><span className={styles.detailValue}>{submission?.userCode || detailTask.userCode || '未填写'}</span></div>
                                     <div className={styles.detailField}><span className={styles.detailLabel}>手机号</span><span className={styles.detailValue}>{submission?.phoneNumber || detailTask.phoneNumber || '未填写'}</span></div>
                                     <div className={styles.detailField}><span className={styles.detailLabel}>用户 ID</span><span className={styles.detailValue}>{submission?.userId || detailTask.userId}</span></div>
-                                    <div className={styles.detailField}><span className={styles.detailLabel}>奖励积分</span><span className={styles.detailValue}>{detailTask.rewardPoints}</span></div>
+                                    <div className={styles.detailField}><span className={styles.detailLabel}>奖励织梦豆</span><span className={styles.detailValue}>{detailTask.rewardPoints}</span></div>
                                     <div className={styles.detailField}><span className={styles.detailLabel}>任务 ID</span><span className={styles.detailValue}>{detailTask.id}</span></div>
                                     <div className={styles.detailField}><span className={styles.detailLabel}>创建时间</span><span className={styles.detailValue}>{formatTime(detailTask.createdAt)}</span></div>
                                     <div className={styles.detailField}><span className={styles.detailLabel}>发放时间</span><span className={styles.detailValue}>{formatTime(detailTask.issuedAt)}</span></div>
@@ -480,11 +486,11 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
         return (
             <div className={styles.confirmOverlay} onClick={(event) => { if (event.target === event.currentTarget) setIsBatchConfirmOpen(false); }}>
                 <div className={styles.confirmDialog} role="dialog" aria-modal="true" aria-label="批量发放确认">
-                    <div className={styles.confirmTitle}>确认发放全部待下发积分</div>
+                    <div className={styles.confirmTitle}>确认发放全部待下发织梦豆</div>
                     <div className={styles.confirmDesc}>
                         {/* 实现批量发放确认弹窗 */}
                         当前待发放 <span className={styles.confirmHighlight}>{pendingTaskCount}</span> 条，
-                        总积分 <span className={styles.confirmHighlight}>{pendingRewardPoints}</span>。
+                        总织梦豆 <span className={styles.confirmHighlight}>{pendingRewardPoints}</span>。
                     </div>
                     <div className={styles.actionRow}>
                         <button type="button" className={styles.secondaryButton} onClick={() => setIsBatchConfirmOpen(false)} disabled={isBatchIssuing}>
@@ -502,34 +508,6 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
     return (
         <>
             <div className={styles.panelStack}>
-                <section className={styles.heroCard}>
-                    <div>
-                        <div className={styles.sectionBadge}>积分管理</div>
-                        <h2 className={styles.heroTitle}>统一处理活动积分发放与特殊积分变更</h2>
-                        <p className={styles.heroDesc}>{t('admin.pointsManagerDesc')}</p>
-                    </div>
-                </section>
-
-                <div className={styles.tabRow}>
-                    <div className={styles.tabButtonWrap}>
-                        <button
-                            type="button"
-                            className={`${styles.tabButton} ${activeTab === 'activity' ? styles.tabButtonActive : ''}`}
-                            onClick={() => setActiveTab('activity')}
-                        >
-                            活动积分管理
-                        </button>
-                        {pendingRewardCount > 0 ? <span className={styles.actionBadge}>{formatBadgeCount(pendingRewardCount)}</span> : null}
-                    </div>
-                    <button
-                        type="button"
-                        className={`${styles.tabButton} ${activeTab === 'special' ? styles.tabButtonActive : ''}`}
-                        onClick={() => setActiveTab('special')}
-                    >
-                        特殊积分管理
-                    </button>
-                </div>
-
                 {activeTab === 'activity' ? renderActivityTable() : renderSpecialPanel()}
             </div>
 

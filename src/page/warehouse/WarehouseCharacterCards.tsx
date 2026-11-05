@@ -16,10 +16,10 @@ import { refreshAuthUserPoints } from '../../lib/auth/refreshUserPoints';
 import ConfirmModal from '../../components/CommonModal/ConfirmModal';
 import TrimmedTransparentImg from '../../components/TrimmedTransparentImg';
 import {
-  CHARACTER_GENERATION_COST,
   NPC_PROFILE_FIELD_GENERATION_COST,
   getImageUrl,
 } from '../../utils/constants';
+import { useImageBusinessPrice } from '../../hooks/useImageBusinessPrice';
 import { MdCheck, MdAutoAwesome } from 'react-icons/md';
 import {
   startWarehouseCardAvatarBackgroundGen,
@@ -59,6 +59,12 @@ const emptyDraft = (): Draft => ({
 
 /** 我的角色卡（NPC，cardKind=npc） */
 const WarehouseCharacterCards: React.FC = () => {
+  const {
+    estimatedPoints: warehouseCardPrice,
+    priceUnavailable: warehouseCardPriceUnavailable,
+    error: warehouseCardPriceError,
+  } = useImageBusinessPrice('warehouse_card');
+  const warehouseCardCost = warehouseCardPrice ?? 0;
   const token = useAuthStore((s) => s.user?.token);
   const { ageOptions, backgroundOptions } = useAvatarTagOptions(token);
   const updateUser = useAuthStore((s) => s.updateUser);
@@ -100,7 +106,7 @@ const WarehouseCharacterCards: React.FC = () => {
         void refreshAuthUserPoints();
       }
       toast.success(
-        `图像已生成（-${result.pointsDeducted ?? CHARACTER_GENERATION_COST} 积分）`,
+        `图像已生成（-${result.pointsDeducted ?? warehouseCardCost} 织梦豆）`,
       );
       if (result.cardId) {
         void loadRef.current?.();
@@ -208,8 +214,12 @@ const WarehouseCharacterCards: React.FC = () => {
     }
     if (!token || generatingAvatar) return;
     const latestPoints = await refreshAuthUserPoints();
-    if (typeof latestPoints === 'number' && latestPoints < CHARACTER_GENERATION_COST) {
-      toast.error(`积分不足（需要 ${CHARACTER_GENERATION_COST}，当前 ${latestPoints}）`);
+    if (warehouseCardPriceUnavailable || warehouseCardPrice == null) {
+      toast.error(warehouseCardPriceError || 'Price unavailable');
+      return;
+    }
+    if (typeof latestPoints === 'number' && latestPoints < warehouseCardCost) {
+      toast.error(`织梦豆不足（需要 ${warehouseCardCost}，当前 ${latestPoints}）`);
       return;
     }
     setAvatarConfirmOpen(true);
@@ -252,7 +262,7 @@ const WarehouseCharacterCards: React.FC = () => {
       && latestPoints < NPC_PROFILE_FIELD_GENERATION_COST
     ) {
       toast.error(
-        `积分不足（需要 ${NPC_PROFILE_FIELD_GENERATION_COST}，当前 ${latestPoints}）`,
+        `织梦豆不足（需要 ${NPC_PROFILE_FIELD_GENERATION_COST}，当前 ${latestPoints}）`,
       );
       return;
     }
@@ -281,7 +291,7 @@ const WarehouseCharacterCards: React.FC = () => {
       }));
       await refreshAuthUserPoints();
       toast.success(
-        `角色设定已生成（-${res.data.pointsDeducted ?? NPC_PROFILE_FIELD_GENERATION_COST} 积分）`,
+        `角色设定已生成（-${res.data.pointsDeducted ?? NPC_PROFILE_FIELD_GENERATION_COST} 织梦豆）`,
       );
     } catch (e) {
       toast.error((e as Error)?.message || '角色设定生成失败');
@@ -816,7 +826,7 @@ const WarehouseCharacterCards: React.FC = () => {
 
       <WarehouseAvatarGenerateConfirm
         isOpen={avatarConfirmOpen}
-        cost={CHARACTER_GENERATION_COST}
+        cost={warehouseCardCost}
         title="确认生成图像"
         subjectLabel="角色立绘"
         onCancel={() => setAvatarConfirmOpen(false)}
@@ -828,7 +838,7 @@ const WarehouseCharacterCards: React.FC = () => {
         onCancel={() => setPersonaConfirmOpen(false)}
         onConfirm={() => void runGeneratePersona()}
         title="确认生成角色设定"
-        message={`将扣除 ${NPC_PROFILE_FIELD_GENERATION_COST} 积分生成「角色设定」，是否继续？`}
+        message={`将扣除 ${NPC_PROFILE_FIELD_GENERATION_COST} 织梦豆生成「角色设定」，是否继续？`}
         confirmButtonText="生成"
         cancelButtonText="取消"
       />

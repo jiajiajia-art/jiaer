@@ -49,8 +49,10 @@ test("locationAssetLibrary_api与运营入口", () => {
   assert.match(api, /\/api\/location-asset-library/);
   assert.match(api, /world_map|location_scene|cover/);
   const panel = readFileSync(join(root, "src/page/operator/OperatorPanel.tsx"), "utf8");
-  assert.match(panel, /label: '地点库'/);
-  assert.match(panel, /label: '地点素材库'/);
+  const nav = readFileSync(join(root, "src/components/admin-shell/adminNavigation.tsx"), "utf8");
+  // 功能注释：侧栏文案在 AdminShell 导航，面板负责挂载管理组件
+  assert.match(nav, /label: '地点库'/);
+  assert.match(nav, /label: '地点素材库'/);
   assert.match(panel, /AdminLocationAssetLibraryManager/);
   assert.match(panel, /\/operator\/location-assets/);
 });

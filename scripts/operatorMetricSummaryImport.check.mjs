@@ -1,6 +1,6 @@
 /**
- * 功能注释：与 adminPathCasing 一致 —— MetricSummary / InteractWithNpc
- * 在 Linux 上必须大小写与磁盘文件名一致。
+ * 功能注释：MetricSummary 落在 src/components/admin（小写）；
+ * Linux 上 import 必须与磁盘目录一致。
  */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -10,7 +10,7 @@ import test from 'node:test';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
-test('OperatorPanel_MetricSummary应使用小写admin目录', () => {
+test('OperatorPanel_MetricSummary应使用磁盘上的小写admin目录', () => {
   const src = readFileSync(
     join(root, 'src/page/operator/OperatorPanel.tsx'),
     'utf8',

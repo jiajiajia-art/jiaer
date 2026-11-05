@@ -278,7 +278,7 @@ const DailyTasksAdminManager: React.FC = () => {
             }
         }
         if (!Number.isInteger(rewardPoints) || rewardPoints <= 0) {
-            setFormError('奖励积分必须是大于 0 的整数');
+            setFormError('奖励织梦豆必须是大于 0 的整数');
             return null;
         }
         if (form.startAt.trim() && startAt === null) {
@@ -385,16 +385,6 @@ const DailyTasksAdminManager: React.FC = () => {
 
     return (
         <div className={styles.panelStack}>
-            <section className={styles.heroCard}>
-                <div>
-                    <div className={styles.sectionBadge}>每日任务管理</div>
-                    <h2 className={styles.heroTitle}>管理动态每日任务配置与发布状态</h2>
-                    <p className={styles.heroDesc}>
-                        当前管理的是按作品绑定的动态每日任务。支持列表查看、新建任务、编辑任务，以及在草稿、已发布、已下线之间快速切换。
-                    </p>
-                </div>
-            </section>
-
             <section className={styles.card}>
                 <div className={styles.toolbar}>
                     <div className={styles.toolbarMeta}>
@@ -460,7 +450,7 @@ const DailyTasksAdminManager: React.FC = () => {
                                                 <code className={styles.gameCode}>{task.gameFileId}</code>
                                             </div>
                                         </td>
-                                        <td>{task.rewardPoints} 积分</td>
+                                        <td>{task.rewardPoints} 织梦豆</td>
                                         <td>
                                             <div>{formatTime(task.startAt)}</div>
                                             <div>{formatTime(task.endAt)}</div>
@@ -604,7 +594,7 @@ const DailyTasksAdminManager: React.FC = () => {
                             )}
 
                             <label className={styles.fieldLabel}>
-                                奖励积分
+                                奖励织梦豆
                                 <input
                                     className={styles.textInput}
                                     type="number"

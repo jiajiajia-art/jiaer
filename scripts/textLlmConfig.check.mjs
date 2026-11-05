@@ -64,37 +64,20 @@ test('resolveModelConfigPane_按路由切换生图与文案', () => {
   assert.equal(resolveModelConfigPane('/admin/text-llm?x=1'), 'text');
 });
 
-test('ModelConfigHub_同页双轨Tab与文案网关设置', () => {
+test('ModelConfigHub_同页双轨配置且模型只能拉取导入', () => {
   const hub = readFileSync(join(root, 'src/components/ModelConfigHub.tsx'), 'utf8');
-  assert.match(hub, /一处配置，全站文案同模型/);
-  assert.match(hub, /文案请求设置/);
-  assert.match(hub, /不影响生图配置/);
-  assert.doesNotMatch(hub, /不影响生图 ggb/);
-  assert.match(hub, /拉取模型/);
-  assert.match(hub, /openaiBaseUrl/);
+  assert.match(hub, /全平台统一生文模型/);
+  assert.match(hub, /onActivate={pane === 'text'/);
+  assert.match(hub, /deactivateModel/);
+  assert.match(hub, /模型 ID 不允许手填/);
+  assert.match(hub, /保存并拉取模型/);
+  assert.match(hub, /baseUrl/);
   assert.match(hub, /listModels/);
-  assert.match(hub, /api\.deepseek\.com/);
-  assert.match(hub, /与生图网关互不影响/);
-  assert.match(hub, /role="radiogroup"/);
-  // 功能注释：文案与生图网关 state 必须分离
-  assert.match(hub, /imageOpenaiBaseUrl/);
-  assert.match(hub, /openaiBaseUrl/);
-  // 功能注释：密钥明文 + 按网关切换回显
-  assert.match(hub, /switchTextGatewayPreset/);
-  assert.match(hub, /selectPresetTextModel/);
-  assert.match(hub, /resolvePreferredTextLlmGatewayPresetId/);
-  assert.match(hub, /gatewayKeys/);
-  assert.match(hub, /明文/);
-  assert.match(hub, /onClick=\{\(\) => selectPresetTextModel\(item\)\}/);
-  // 功能注释：密钥输入即时写入 gatewayKeys，切换网关不丢 TokenHub 草稿
-  assert.match(hub, /setGatewayKeys\(\(prev\) =>/);
-  assert.match(hub, /改完请点保存/);
-  assert.match(
-    hub,
-    /文案 API 密钥[\s\S]{0,280}type="text"/,
-  );
-
-
+  assert.match(hub, /ModelImportDialog/);
+  assert.match(hub, /activateModel/);
+  assert.match(hub, /type="password"/);
+  assert.match(hub, /页面不会回显明文/);
+  assert.doesNotMatch(hub, /gatewayKeys|selectPresetTextModel|role="radiogroup"/);
   assert.match(hub, /role="tablist"/);
   assert.match(hub, /ModelConfigHub\.module\.css/);
 
@@ -109,7 +92,7 @@ test('ModelConfigHub_同页双轨Tab与文案网关设置', () => {
   assert.match(api, /openaiApiKey/);
 
   const panel = readFileSync(join(root, 'src/page/AdminPanel.tsx'), 'utf8');
-  assert.match(panel, /ModelConfigHub/);
+  assert.match(panel, /AiModelCenter/);
   assert.match(panel, /\/admin\/text-llm/);
 
   const app = readFileSync(join(root, 'src/App.tsx'), 'utf8');

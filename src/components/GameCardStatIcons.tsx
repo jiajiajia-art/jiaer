@@ -2,7 +2,7 @@
  * 功能注释：封面角标。火焰/心形均用下载切图 CSS mask，保证造型一致、尺寸可控、边缘不糊。
  */
 import type { CSSProperties } from 'react';
-import { RiCopperCoinLine } from 'react-icons/ri';
+import CurrencyIcon from './CurrencyIcon';
 
 type IconProps = {
   className?: string;
@@ -42,9 +42,9 @@ function MaskIcon({
   );
 }
 
-/** 激励金额：react-icons 币标，比手绘细线 SVG 更清晰 */
+/** 激励金额：使用统一织梦豆图标。 */
 export function CardCoinIcon({ className, style }: IconProps) {
-  return <RiCopperCoinLine className={className} style={style} aria-hidden="true" />;
+  return <CurrencyIcon currency="points" className={className} style={style} aria-hidden="true" />;
 }
 
 /** 功能注释：封面热度——下载三尖火焰 mask */

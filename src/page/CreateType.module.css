@@ -2,6 +2,7 @@
     /* createTypeOption 卡片色来自模态框 CSS，需祖先提供变量 */
     --type-card: #1C1C1E;
     --type-border: rgba(255, 255, 255, 0.1);
+    --activity-accent: #b30047;
     width: 100%;
     min-height: 100vh;
     max-width: 1920px;
@@ -23,6 +24,126 @@
     width: 100%;
     max-width: 480px;
     color: #ffffff;
+}
+
+.moreActivitiesButton {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 36px;
+    margin: 0 0 6px;
+    padding: 0 2px;
+    box-sizing: border-box;
+    border: 0;
+    background: transparent;
+    color: #ffffff;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: opacity 0.18s ease;
+}
+
+.moreActivitiesButton::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 1px;
+    background: rgba(216, 174, 104, 0.5);
+    transition: background-color 0.18s ease;
+}
+
+.moreActivitiesButton:hover::after {
+    background: rgba(216, 174, 104, 0.86);
+}
+
+.moreActivitiesButton:active {
+    opacity: 0.76;
+}
+
+.moreActivitiesButton:focus-visible {
+    outline: 2px solid var(--activity-accent);
+    outline-offset: 3px;
+}
+
+.moreActivitiesLead {
+    display: flex;
+    align-items: center;
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 8px;
+    overflow: hidden;
+}
+
+.moreActivitiesIcon {
+    flex: 0 0 auto;
+    width: 17px;
+    height: 17px;
+    color: var(--activity-accent);
+}
+
+.moreActivitiesPromoViewport {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    color: rgba(255, 255, 255, 0.78);
+    white-space: nowrap;
+}
+
+.moreActivitiesPromoTrack {
+    display: inline-flex;
+    align-items: center;
+    width: max-content;
+    will-change: transform;
+}
+
+.moreActivitiesPromoTrackScrolling {
+    animation: activityPromoMarquee 12s linear infinite;
+}
+
+.moreActivitiesPromoText {
+    flex: 0 0 auto;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.moreActivitiesPromoTrackScrolling .moreActivitiesPromoText {
+    margin-right: 32px;
+}
+
+.moreActivitiesButton:hover .moreActivitiesPromoTrackScrolling,
+.moreActivitiesButton:focus-visible .moreActivitiesPromoTrackScrolling {
+    animation-play-state: paused;
+}
+
+.moreActivitiesAction {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 2px;
+    margin-left: 10px;
+    color: var(--activity-accent);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.moreActivitiesArrow {
+    flex: 0 0 auto;
+    width: 15px;
+    height: 15px;
+}
+
+@keyframes activityPromoMarquee {
+    to {
+        transform: translate3d(-50%, 0, 0);
+    }
 }
 
 .header {
@@ -91,10 +212,45 @@
 
 @media (max-width: 768px) {
     .mainContent {
-        padding: 20px 20px 24px;
+        padding: 20px 20px 100px;
+        padding-top: calc(var(--app-desktop-navbar-height) + 8px);
     }
 
     .content {
         max-width: none;
+    }
+}
+
+@media (max-width: 420px) {
+    .moreActivitiesLead {
+        gap: 6px;
+    }
+
+    .moreActivitiesPromoText {
+        font-size: 12px;
+    }
+
+    .moreActivitiesAction {
+        margin-left: 8px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .moreActivitiesPromoTrackScrolling {
+        display: block;
+        max-width: 100%;
+        animation: none;
+        transform: none;
+    }
+
+    .moreActivitiesPromoTrackScrolling .moreActivitiesPromoText {
+        display: block;
+        overflow: hidden;
+        margin-right: 0;
+        text-overflow: ellipsis;
+    }
+
+    .moreActivitiesPromoDuplicate {
+        display: none;
     }
 }

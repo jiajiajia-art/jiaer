@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { IconType } from 'react-icons';
 import { FaDesktop } from 'react-icons/fa';
-import { HiOutlinePuzzle, HiOutlineUserGroup } from 'react-icons/hi';
+import { HiOutlinePuzzle, HiOutlineSpeakerphone, HiOutlineUserGroup } from 'react-icons/hi';
 import {
   MdAutoStories,
   MdOutlineMovie,
@@ -17,6 +17,7 @@ import styles from '../components/CreateGame/CreateGameModals.module.css';
 import pageStyles from './CreateType.module.css';
 import AppPageShell from '../components/Layout/AppPageShell';
 import MobileTipModal from '../components/CreateGame/MobileTipModal';
+import ActivityBannerCarousel from '../components/ActivityBannerCarousel';
 import { useEditorStore } from '../store/editorStore';
 import { useGameStore } from '../store/gameStore';
 import { useAuthStore } from '../store/useAuthStore';
@@ -85,6 +86,55 @@ const TypeOptionRow: React.FC<{
     <IoChevronForward className={styles.createTypeOptionChevron} aria-hidden="true" />
   </button>
 );
+
+const ActivityPromoMarquee: React.FC<{ text: string }> = ({ text }) => {
+  const promoViewportRef = useRef<HTMLSpanElement>(null);
+  const promoTextRef = useRef<HTMLSpanElement>(null);
+  const [isPromoOverflowing, setIsPromoOverflowing] = useState(false);
+
+  useEffect(() => {
+    const viewport = promoViewportRef.current;
+    const promoText = promoTextRef.current;
+    if (!viewport || !promoText) return undefined;
+
+    const updateOverflowState = () => {
+      setIsPromoOverflowing(promoText.offsetWidth > viewport.clientWidth + 1);
+    };
+
+    updateOverflowState();
+    const resizeObserver = typeof ResizeObserver === 'undefined'
+      ? null
+      : new ResizeObserver(updateOverflowState);
+    resizeObserver?.observe(viewport);
+    resizeObserver?.observe(promoText);
+    window.addEventListener('resize', updateOverflowState);
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener('resize', updateOverflowState);
+    };
+  }, [text]);
+
+  return (
+    <span ref={promoViewportRef} className={pageStyles.moreActivitiesPromoViewport}>
+      <span
+        className={`${pageStyles.moreActivitiesPromoTrack} ${
+          isPromoOverflowing ? pageStyles.moreActivitiesPromoTrackScrolling : ''
+        }`}
+      >
+        <span ref={promoTextRef} className={pageStyles.moreActivitiesPromoText}>{text}</span>
+        {isPromoOverflowing && (
+          <span
+            className={`${pageStyles.moreActivitiesPromoText} ${pageStyles.moreActivitiesPromoDuplicate}`}
+            aria-hidden="true"
+          >
+            {text}
+          </span>
+        )}
+      </span>
+    </span>
+  );
+};
 
 const CreateType: React.FC = () => {
   const { t } = useTranslation();
@@ -222,6 +272,23 @@ const CreateType: React.FC = () => {
     <>
     <AppPageShell shellClassName={pageStyles.pageRoot} mainClassName={pageStyles.mainContent}>
         <div className={pageStyles.content}>
+          <button
+            type="button"
+            className={pageStyles.moreActivitiesButton}
+            onClick={() => navigate('/promotions')}
+            aria-label={t('createGame.moreActivitiesAria')}
+            title={t('createGame.moreActivitiesPromo')}
+          >
+            <span className={pageStyles.moreActivitiesLead}>
+              <HiOutlineSpeakerphone className={pageStyles.moreActivitiesIcon} aria-hidden="true" />
+              <ActivityPromoMarquee text={t('createGame.moreActivitiesPromo')} />
+            </span>
+            <span className={pageStyles.moreActivitiesAction}>
+              <span>{t('createGame.moreActivities')}</span>
+              <IoChevronForward className={pageStyles.moreActivitiesArrow} aria-hidden="true" />
+            </span>
+          </button>
+          <ActivityBannerCarousel />
           <div className={`${styles.createTypeModalHeader} ${pageStyles.header}`}>
             <div className={`${styles.createTypeModalTitle} ${pageStyles.title}`}>
               <span>{t('createGame.selectGameTypeTitle')}</span>

@@ -119,13 +119,6 @@ const CommentAdminManager: React.FC<CommentAdminManagerProps> = ({ fileId }) => 
     return (
         <div className={styles.panelStack}>
             <section className={styles.heroCard}>
-                <div>
-                    <div className={styles.sectionBadge}>评论审核</div>
-                    <h2 className={styles.heroTitle}>审阅待发布的用户评论</h2>
-                    <p className={styles.heroDesc}>
-                        仅展示评论内容、状态与操作。点击「详情」可查看用户、作品与提交时间，再决定通过或拒绝。
-                    </p>
-                </div>
                 <div className={styles.heroMetric}>
                     <span className={styles.heroMetricLabel}>待审核</span>
                     <span className={styles.heroMetricValue}>{total}</span>

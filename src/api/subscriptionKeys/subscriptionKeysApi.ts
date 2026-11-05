@@ -3,6 +3,8 @@ import { api } from '../base';
 import type {
     CreateSubscriptionKeysPayload,
     CreateSubscriptionKeysResult,
+    AdminMembershipListQuery,
+    AdminMembershipListResult,
     SubscriptionKeyListQuery,
     SubscriptionKeyListResult,
     ToggleSubscriptionKeyResult,
@@ -14,6 +16,9 @@ const subscriptionKeysApi = {
 
     list: (params: SubscriptionKeyListQuery) =>
         api.get<ApiResponse<SubscriptionKeyListResult>>('/admin/subscription-keys', { params }),
+
+    listMemberships: (params: AdminMembershipListQuery) =>
+        api.get<ApiResponse<AdminMembershipListResult>>('/admin/memberships', { params }),
 
     disable: (id: number) =>
         api.post<ApiResponse<ToggleSubscriptionKeyResult>>(`/admin/subscription-keys/${id}/disable`),

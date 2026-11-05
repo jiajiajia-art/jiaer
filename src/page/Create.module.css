@@ -195,6 +195,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    color: #FF3B61;
 }
 
 .accountActionIcon img {
@@ -202,6 +203,11 @@
     height: 20px;
     display: block;
     object-fit: contain;
+}
+
+.accountActionIcon svg {
+    width: 20px;
+    height: 20px;
 }
 
 .accountActionLabel {
@@ -246,247 +252,6 @@
 
 .moreServicesSlot {
     margin-top: 0;
-}
-
-.earningsModalOverlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(5px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 2000;
-    animation: earningsModalFadeIn 0.3s ease-out;
-    margin: 0;
-    padding: 16px;
-    box-sizing: border-box;
-    width: 100vw;
-    height: 100vh;
-    height: 100dvh;
-    overflow-y: auto;
-}
-
-@keyframes earningsModalFadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
-
-.earningsModal {
-    position: relative;
-    width: min(322px, calc(100vw - 20px));
-    max-width: 380px;
-    max-height: calc(100dvh - 32px - env(safe-area-inset-bottom));
-    border-radius: 10px;
-    opacity: 1;
-    background:
-        linear-gradient(0deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15)),
-        linear-gradient(180deg, #343434 0%, rgba(52, 52, 52, 0.72) 100%);
-    box-sizing: border-box;
-    border: 0.68px solid transparent;
-    backdrop-filter: blur(47px);
-    -webkit-backdrop-filter: blur(47px);
-    box-shadow: none;
-    animation: earningsModalSlideUp 0.3s ease-out;
-    display: flex;
-    flex-direction: column;
-    padding: 20px 18px 22px;
-    overflow: hidden;
-}
-
-@keyframes earningsModalSlideUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.earningsModal::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: 10px;
-    padding: 0.68px;
-    background: linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.55) 0%,
-        rgba(255, 255, 255, 0.18) 60%,
-        rgba(255, 255, 255, 0) 90%
-    );
-    -webkit-mask:
-        linear-gradient(#fff 0 0) content-box,
-        linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    pointer-events: none;
-    z-index: 3;
-}
-
-.earningsModalCloseBtn {
-    position: absolute;
-    top: 14px;
-    left: 12px;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 10;
-    transition: opacity 0.2s ease;
-    color: #ffffff;
-    background: transparent;
-    border: none;
-    padding: 0;
-}
-
-.earningsModalCloseBtn:hover {
-    opacity: 0.75;
-}
-
-.earningsModalCloseIcon {
-    display: block;
-    width: 10px;
-    height: 10px;
-    border-left: 2px solid #ffffff;
-    border-bottom: 2px solid #ffffff;
-    transform: rotate(45deg);
-    margin-left: 4px;
-}
-
-.earningsModalTitle {
-    color: #ffffff;
-    font-size: 16px;
-    font-weight: 500;
-    text-align: center;
-    margin: 4px 0 18px;
-    letter-spacing: 0;
-    line-height: normal;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 22px;
-}
-
-.earningsModalBody {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
-}
-
-.earningsModalPrimary,
-.earningsModalExtra {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    align-items: stretch;
-    min-width: 0;
-}
-
-.earningsPanelItem {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    text-align: center;
-    padding: 10px 8px;
-}
-
-.earningsPanelItem:first-child {
-    border-right: 1px solid var(--creator-divider);
-}
-
-.earningsPanelLabel {
-    color: rgba(255, 255, 255, 0.55);
-    font-size: 12px;
-    font-weight: 500;
-    line-height: 1.3;
-}
-
-.earningsPanelValueRow {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    min-width: 0;
-    flex-wrap: wrap;
-}
-
-.earningsPanelValue {
-    color: #ffffff;
-    font-size: 22px;
-    font-weight: 700;
-    line-height: 1.2;
-    letter-spacing: -0.02em;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.earningsInlineSettleButton {
-    appearance: none;
-    border: none;
-    flex-shrink: 0;
-    height: 32px;
-    padding: 0 16px;
-    border-radius: 999px;
-    background: var(--creator-accent);
-    color: #ffffff;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.earningsInlineSettleButton:hover:not(:disabled) {
-    background: #b8364a;
-}
-
-.earningsInlineSettleButton:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-}
-
-.earningsExtraItem {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 10px 8px;
-    text-align: center;
-    min-width: 0;
-}
-
-.earningsExtraItem:nth-child(odd) {
-    border-right: 1px solid var(--creator-divider);
-}
-
-.earningsExtraValue {
-    color: #ffffff;
-    font-size: 20px;
-    font-weight: 700;
-    line-height: 1.2;
-    letter-spacing: -0.02em;
-}
-
-.earningsExtraLabel {
-    color: rgba(255, 255, 255, 0.55);
-    font-size: 12px;
-    font-weight: 500;
-    line-height: 1.3;
 }
 
 .creatorHeroTop {
@@ -695,9 +460,21 @@
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--creator-value);
+    min-width: 0;
 }
 
+.creatorHeroIdGroup {
+    min-width: 0;
+    max-width: 100%;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.creatorHeroTokenRow,
 .creatorHeroMetaRow {
     display: flex;
     align-items: center;
@@ -799,7 +576,12 @@
 }
 
 .creatorHeroId {
-    flex-shrink: 0;
+    min-width: 0;
+    min-height: 28px;
+    display: inline-flex;
+    align-items: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
 }
 
@@ -844,6 +626,50 @@
     font-size: 12px;
     font-weight: 500;
     white-space: nowrap;
+}
+
+.creatorRoleBadge,
+.creatorVipBadge,
+.creatorLevelBadge {
+    min-height: 28px;
+    box-sizing: border-box;
+}
+
+.creatorVipBadge {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 9px;
+    border: 1px solid rgba(255, 196, 207, 0.48);
+    border-radius: 6px;
+    background: var(--creator-accent);
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.creatorVipBadgeInactive {
+    border-color: #9a9a9a;
+    background: #777777;
+    color: #e5e5e5;
+}
+
+.creatorVipBadgeInactive:hover,
+.creatorVipBadgeInactive:focus-visible {
+    border-color: #b0b0b0;
+    background: #888888;
+    color: #ffffff;
+}
+
+.creatorVipBadge:hover,
+.creatorVipBadge:focus-visible {
+    border-color: rgba(255, 224, 230, 0.86);
+    background: var(--creator-accent-soft);
+    outline: none;
 }
 
 .creatorHeroLeft {
@@ -1130,57 +956,6 @@
 .primaryStatItemClickable:focus-visible {
     outline: 1px solid rgba(255, 255, 255, 0.35);
     outline-offset: 2px;
-}
-
-.primaryStatItemWithActions {
-    gap: 4px;
-}
-
-/* 钻石列：标签行内嵌提现动作，与其它列同高对齐 */
-.primaryStatLabelRow {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-wrap: nowrap;
-    gap: 4px;
-    max-width: 100%;
-    min-width: 0;
-    line-height: 1.2;
-}
-
-.primaryStatLabelSep {
-    color: var(--creator-label);
-    opacity: 0.65;
-    font-size: 12px;
-    font-weight: 500;
-    flex-shrink: 0;
-}
-
-.primaryStatWithdrawLink {
-    appearance: none;
-    border: none;
-    background: transparent;
-    padding: 0;
-    margin: 0;
-    color: #FF8A9A;
-    font-size: 12px;
-    font-weight: 600;
-    line-height: inherit;
-    cursor: pointer;
-    white-space: nowrap;
-    flex-shrink: 0;
-    transition: color 0.15s ease;
-}
-
-.primaryStatWithdrawLink:hover {
-    color: #ffb0ba;
-    text-decoration: underline;
-}
-
-.primaryStatWithdrawLink:focus-visible {
-    outline: 1px solid rgba(255, 138, 154, 0.55);
-    outline-offset: 2px;
-    border-radius: 2px;
 }
 
 .statsExpandToggle {
@@ -1759,34 +1534,14 @@
         height: 18px;
     }
 
+    .accountActionIcon svg {
+        width: 18px;
+        height: 18px;
+    }
+
     .accountActionLabel {
         font-size: 11px;
         white-space: normal;
-    }
-
-    .earningsModal {
-        width: min(322px, calc(100vw - 20px));
-        padding: 20px 18px 22px;
-    }
-
-    .earningsPanelLabel {
-        font-size: 11px;
-    }
-
-    .earningsPanelValue {
-        font-size: 18px;
-    }
-
-    .earningsExtraValue {
-        font-size: 18px;
-    }
-
-    .earningsExtraLabel {
-        font-size: 11px;
-    }
-
-    .earningsExtraItem {
-        padding: 10px 6px;
     }
 
     .creatorHeroTop {
@@ -1804,6 +1559,16 @@
 
     .creatorHeroInfo {
         gap: 4px;
+    }
+
+    .creatorHeroMetaRow {
+        align-items: flex-start;
+        row-gap: 6px;
+    }
+
+    .creatorHeroBadgeRow {
+        flex-basis: auto;
+        margin-left: 0;
     }
 
     .creatorHeroName {
@@ -1880,11 +1645,6 @@
     }
 
     .primaryStatLabel {
-        font-size: 11px;
-    }
-
-    .primaryStatLabelSep,
-    .primaryStatWithdrawLink {
         font-size: 11px;
     }
 

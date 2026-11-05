@@ -35,16 +35,6 @@ interface TextModeDisplayProps {
     surface?: 'dark' | 'light';
 }
 
-import { OPTION_COST, INPUT_COST } from '../../utils/constants';
-
-// 积分消耗配置
-const POINTS_CONFIG = {
-    option: OPTION_COST,
-    custom: INPUT_COST,
-};
-
-// 现在不再按历史条数判断是否收费，统一按固定积分展示
-
 interface MessageItemProps {
     step: TextModalStep;
     index: number;
@@ -55,7 +45,6 @@ interface MessageItemProps {
     isWaitingForData: boolean;
     isCompressingContext?: boolean;
     onChoiceClick?: (option: { id: number; text: string }) => void;
-    isFreeRound?: boolean;
     readOnly?: boolean;
     surface?: 'dark' | 'light';
     t: (key: string) => string;
@@ -70,7 +59,6 @@ const MessageItem = memo<MessageItemProps>(({
     isWaitingForData,
     isCompressingContext = false,
     onChoiceClick, 
-    isFreeRound = false,
     readOnly = false,
     t,
     surface = 'dark',
@@ -169,9 +157,6 @@ const MessageItem = memo<MessageItemProps>(({
                                     <span className={`${styles.optionText} ${opt.isMain ? styles.optionTextMain : ''}`}>
                                         {extractPlainText(opt.text)}
                                     </span>
-                                    {!readOnly && !isFreeRound && (
-                                        <span className={styles.pointsCost}>-{POINTS_CONFIG.option}{t('createGame.pointsUnit')}</span>
-                                    )}
                                 </div>
                             ))}
                         </div>
@@ -199,7 +184,6 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
     historyLength,
     onChoiceClick,
     onCustomInputSubmit,
-    isFreeRound = false,
     readOnly = false,
     surface = 'dark',
 }) => {
@@ -318,7 +302,6 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
                                 isWaitingForData={isWaitingForData}
                                 isCompressingContext={isCompressingContext}
                                 onChoiceClick={onChoiceClick}
-                                isFreeRound={isFreeRound}
                                 readOnly={readOnly}
                                 surface={surface}
                                 t={t}
@@ -354,9 +337,6 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
                     <div className={styles.textModeComposer} aria-label={t('createGame.customInput')}>
                         <div className={styles.customInputHeader}>
                             <span>{currentChoiceHasOptions ? t('createGame.orCustomInput') : t('createGame.customInput')}</span>
-                            {!isFreeRound && (
-                                <span className={styles.pointsCostHint}>{t('createGame.pointsCostHint').replace('{{cost}}', String(POINTS_CONFIG.custom))}</span>
-                            )}
                         </div>
                         <div className={styles.customInputWrapper}>
                             <input

@@ -6,36 +6,29 @@ import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import {
-  PRIVACY_POLICY_PATH,
   isPrivacyAgreementAccepted,
-  resolvePrivacyPolicyUrl,
 } from '../src/lib/privacyPolicy.ts';
+import { resolveRegistrationAgreementUrl } from '../src/lib/registrationAgreement.ts';
 
 const privacyHtmlPath = join(import.meta.dirname, '../public/privacyPolicy/index.html');
 const authModalPath = join(import.meta.dirname, '../src/components/AuthModal.tsx');
+const legalDocumentPath = join(import.meta.dirname, '../src/page/LegalDocument.tsx');
+const authStorePath = join(import.meta.dirname, '../src/store/useAuthStore.ts');
 
-test('privacyPolicy_静态页存在且含标题', () => {
+test('legacy privacy URL redirects to the locale-aware Markdown route without duplicate policy content', () => {
   assert.equal(existsSync(privacyHtmlPath), true);
   const html = readFileSync(privacyHtmlPath, 'utf8');
-  assert.match(html, /FunLoom Privacy Policy/);
-  assert.match(html, /company@funloom\.ai/);
-  assert.doesNotMatch(html, /展开/);
-});
-
-test('resolvePrivacyPolicyUrl_拼接base与dark参数', () => {
-  assert.equal(PRIVACY_POLICY_PATH, 'privacyPolicy/index.html');
+  assert.match(html, /\.\.\/legal\/privacy-policy\?lang=en/);
+  assert.doesNotMatch(html, /<h1>|<h2>/);
   assert.equal(
-    resolvePrivacyPolicyUrl({ origin: 'https://example.com', base: '/funloom/' }),
-    'https://example.com/funloom/privacyPolicy/index.html',
+    resolveRegistrationAgreementUrl('privacy-policy', { origin: 'https://example.com', base: '/funloom/' }),
+    'https://example.com/funloom/legal/privacy-policy',
   );
-  assert.equal(
-    resolvePrivacyPolicyUrl({
-      origin: 'https://example.com',
-      base: '/funloom/',
-      darkMode: true,
-    }),
-    'https://example.com/funloom/privacyPolicy/index.html?darkmode=1&darkStyle=1',
-  );
+  const source = readFileSync(legalDocumentPath, 'utf8');
+  assert.match(source, /terms-of-service-en\.md\?raw/);
+  assert.match(source, /privacy-policy-en\.md\?raw/);
+  assert.match(source, /window\.close\(\)/);
+  assert.match(source, /miniProgram\?\.miniProgram|miniProgram\?\.navigateBack|navigateBack/);
 });
 
 test('isPrivacyAgreementAccepted_仅true可通过', () => {
@@ -48,9 +41,34 @@ test('isPrivacyAgreementAccepted_仅true可通过', () => {
 test('AuthModal_注册与Google登录须校验隐私勾选', () => {
   const src = readFileSync(authModalPath, 'utf8');
   assert.match(src, /isPrivacyAgreementAccepted\(privacyAgreed\)/);
-  assert.match(src, /resolvePrivacyPolicyUrl\(\{\s*darkMode:\s*true\s*\}\)/);
+  assert.match(src, /resolveRegistrationAgreementUrl\('privacy-policy'\)/);
+  assert.match(src, /useNavigate/);
+  assert.match(src, /matchMedia\('\(max-width: 767px\)'\)/);
+  assert.match(src, /navigate\(`\/legal\/\$\{document\}`\)/);
   assert.match(src, /mode === 'register'/);
   assert.match(src, /privacyPolicyUrl/);
+});
+
+test('移动端协议返回应保留进入前的注册弹窗模式', () => {
+  const authSource = readFileSync(authModalPath, 'utf8');
+  const authStoreSource = readFileSync(authStorePath, 'utf8');
+  assert.match(authStoreSource, /authModalMode/);
+  assert.match(authStoreSource, /setAuthModalMode/);
+  assert.match(authSource, /authModalStore/);
+  assert.match(authSource, /setAuthModalMode\(mode\)/);
+});
+
+test('AuthModal_拖选输入框内容时不应被遮罩点击关闭', () => {
+  const src = readFileSync(authModalPath, 'utf8');
+  assert.match(src, /const handleOverlayClick =/);
+  assert.match(src, /event\.target !== event\.currentTarget/);
+  assert.match(src, /overlayPointerRef/);
+  assert.match(src, /addEventListener\('pointerdown'/);
+  assert.match(src, /addEventListener\('pointermove'/);
+  assert.match(src, /moved/);
+  assert.match(src, /selectionStart/);
+  assert.match(src, /selectionEnd/);
+  assert.match(src, /window\.getSelection\(\)/);
 });
 
 test('Create_作品Tab栏应使用与其他模块一致的圆角', () => {

@@ -1,4 +1,5 @@
 export type BannerStatus = 'published';
+export type BannerAudience = 'common' | 'male' | 'female';
 
 export interface BannerItem {
     id: string;
@@ -20,12 +21,18 @@ export interface BannerRecord {
     publishedAt: string | null;
 }
 
+export type BannerGroups = Record<BannerAudience, BannerItem[]>;
+
+export interface AdminBannerRecord extends BannerRecord {
+    bannerGroups: BannerGroups;
+}
+
 export interface BannerCurrentData {
-    published: BannerRecord | null;
+    published: AdminBannerRecord | null;
 }
 
 export interface BannerPayload {
-    banners: BannerItem[];
+    bannerGroups: BannerGroups;
 }
 
 export interface BannerGameOption {

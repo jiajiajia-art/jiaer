@@ -1,0 +1,166 @@
+.root {
+    width: 100%;
+    margin-bottom: 22px;
+}
+
+.viewport {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 18px;
+    background: #18191d;
+    box-shadow: 0 18px 46px rgba(0, 0, 0, 0.28);
+    touch-action: pan-y;
+}
+
+.track {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    transition: transform 380ms cubic-bezier(0.22, 0.61, 0.36, 1);
+    will-change: transform;
+}
+
+.slide {
+    position: relative;
+    flex: 0 0 100%;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.clickable {
+    cursor: pointer;
+}
+
+.image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.copy {
+    position: absolute;
+    inset: auto 0 0;
+    z-index: 1;
+    padding: 54px 52px 34px 24px;
+    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.82) 100%);
+    pointer-events: none;
+}
+
+.title {
+    display: -webkit-box;
+    margin: 0;
+    overflow: hidden;
+    color: #fff;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.25;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+}
+
+.description {
+    display: -webkit-box;
+    margin: 7px 0 0;
+    overflow: hidden;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 13px;
+    line-height: 1.45;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.navButton {
+    position: absolute;
+    top: 50%;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 46px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.38);
+    color: #fff;
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+    transform: translateY(-50%);
+    backdrop-filter: blur(8px);
+}
+
+.previous {
+    left: 10px;
+}
+
+.next {
+    right: 10px;
+}
+
+.indicators {
+    position: absolute;
+    right: 18px;
+    bottom: 16px;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.indicator {
+    width: 7px;
+    height: 7px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.48);
+    cursor: pointer;
+    transition: width 180ms ease, background 180ms ease;
+}
+
+.indicatorActive {
+    width: 20px;
+    background: #fff;
+}
+
+@media (max-width: 768px) {
+    .viewport {
+        border-radius: 16px;
+    }
+
+    .copy {
+        padding: 44px 44px 26px 18px;
+    }
+
+    .title {
+        font-size: 19px;
+    }
+
+    .description {
+        font-size: 12px;
+        -webkit-line-clamp: 1;
+    }
+
+    .navButton {
+        display: none;
+    }
+
+    .indicators {
+        right: 14px;
+        bottom: 12px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .track,
+    .indicator {
+        transition: none;
+    }
+}

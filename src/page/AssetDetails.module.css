@@ -25,65 +25,18 @@
     background: var(--ad-bg);
 }
 
-.header {
+.headerDock {
     position: sticky;
     top: 0;
     z-index: 20;
-    display: grid;
-    grid-template-columns: 44px minmax(0, 1fr) 44px;
-    align-items: center;
-    gap: 12px;
-    min-height: 56px;
-    padding: calc(env(safe-area-inset-top, 0px) + 8px) 16px 8px;
+    padding: calc(env(safe-area-inset-top, 0px) + 8px) 12px 8px;
     background: rgba(0, 0, 0, 0.92);
-    border-bottom: 1px solid var(--ad-border);
     box-sizing: border-box;
     backdrop-filter: blur(8px);
 }
 
-.backButton,
-.headerSpacer {
-    width: 44px;
-    height: 44px;
-}
-
-.backButton {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: none;
-    background: transparent;
-    padding: 0;
-    cursor: pointer;
-    transition: opacity 0.15s ease;
-}
-
-.backButton:hover {
-    opacity: 0.75;
-}
-
-.backIcon {
-    width: 22px;
-    height: 22px;
-    stroke: var(--ad-value);
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    fill: none;
-}
-
-.headerTitle {
-    margin: 0;
-    text-align: center;
-    font-size: 17px;
-    line-height: 1.2;
-    font-weight: 600;
-    color: var(--ad-value);
-    letter-spacing: 0.01em;
-}
-
 .balanceSection {
-    padding: 20px 16px;
+    padding: 12px 16px 14px;
     border-bottom: 1px solid var(--ad-border);
     background: var(--ad-bg);
 }
@@ -91,35 +44,135 @@
 .balanceRow {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: hidden;
+    border: 1px solid var(--ad-border);
+    border-radius: 12px;
+    background: var(--ad-card);
+}
+
+.kkBreakdownSection {
+    padding: 14px 16px 16px;
+    border-bottom: 1px solid var(--ad-border);
+    background: var(--ad-bg);
+}
+
+.kkBreakdownTitle {
+    margin: 0;
+    color: var(--ad-value);
+    font-size: 14px;
+    line-height: 1.4;
+    font-weight: 600;
+}
+
+.kkBreakdownGroups {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
+    margin-top: 12px;
+}
+
+.kkBreakdownGroup {
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid var(--ad-border);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.025);
+}
+
+.kkBreakdownHeading {
+    margin: 0 0 8px;
+    color: var(--ad-label);
+    font-size: 12px;
+    line-height: 1.3;
+    font-weight: 500;
+}
+
+.kkBreakdownGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.kkBreakdownButton {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    min-width: 0;
+    min-height: 64px;
+    padding: 10px;
+    border: 1px solid var(--ad-border);
+    border-radius: 10px;
+    background: var(--ad-card);
+    color: var(--ad-value);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+}
+
+.kkBreakdownButton:hover {
+    border-color: rgba(255, 255, 255, 0.28);
+    background: var(--ad-elevated);
+}
+
+.kkBreakdownButton:active {
+    transform: translateY(1px);
+}
+
+.kkBreakdownButton:focus-visible {
+    outline: 2px solid rgba(232, 90, 112, 0.75);
+    outline-offset: 2px;
+}
+
+.kkBreakdownButtonActive {
+    border-color: var(--ad-primary);
+    background: rgba(168, 40, 60, 0.16);
+}
+
+.kkBreakdownButton span,
+.expiryHint {
+    color: var(--ad-label);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.kkBreakdownButton strong {
+    color: var(--ad-value);
+    font-size: 16px;
+    font-variant-numeric: tabular-nums;
+}
+
+.expiryHint {
+    margin: 10px 0 0;
 }
 
 .balanceCard {
+    min-width: 0;
+    padding: 12px 14px 8px;
+    background: transparent;
+}
+
+.balanceCard + .balanceCard {
+    border-left: 1px solid var(--ad-border);
+}
+
+.balanceHeading {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 16px 14px;
-    background: var(--ad-card);
-    border: 1px solid var(--ad-border);
-    border-radius: 12px;
+    gap: 6px;
+    min-width: 0;
 }
 
-.balanceIcon {
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
-}
-
+.balanceIcon,
 .balanceIconDiamond {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     flex-shrink: 0;
 }
 
 .balanceInfo {
     display: flex;
     flex-direction: column;
-    gap: 6px;
     min-width: 0;
 }
 
@@ -130,12 +183,64 @@
     font-weight: 500;
 }
 
+.balanceValueRow {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    min-width: 0;
+    margin-top: 6px;
+}
+
 .balanceValue {
-    font-size: 22px;
+    align-self: flex-start;
+    font-size: 24px;
     line-height: 1.1;
     font-weight: 700;
     color: var(--ad-value);
     font-variant-numeric: tabular-nums;
+}
+
+.balanceActions {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    flex: 0 0 auto;
+}
+
+.balanceAction {
+    min-height: 0;
+    padding: 0 0 2px;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    background: transparent;
+    color: #e85a70;
+    font-size: 12px;
+    line-height: 1;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color 0.15s ease, opacity 0.15s ease;
+}
+
+.balanceAction svg {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+}
+
+.balanceAction:hover {
+    color: #ff7188;
+}
+
+.balanceAction:active {
+    opacity: 0.72;
+}
+
+.balanceAction:focus-visible {
+    outline: 2px solid rgba(232, 90, 112, 0.75);
+    outline-offset: 2px;
 }
 
 .toolbar {
@@ -145,6 +250,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: nowrap;
     gap: 8px;
     padding: 10px 16px;
     background: rgba(0, 0, 0, 0.92);
@@ -156,7 +262,8 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    min-width: 0;
+    flex: 0 0 auto;
+    min-width: max-content;
 }
 
 .tabButton {
@@ -197,14 +304,24 @@
 }
 
 .filterRow {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 6px;
-    flex-shrink: 0;
+    flex: 0 0 auto;
+    min-width: max-content;
 }
 
 .selectArea {
-    position: relative;
+    position: static;
+}
+
+.dateFilterArea {
+    order: 1;
+}
+
+.activityFilterArea {
+    order: 2;
 }
 
 .selectTrigger {
@@ -213,7 +330,7 @@
     justify-content: center;
     gap: 4px;
     min-width: 68px;
-    height: 30px;
+    min-height: 44px;
     padding: 0 10px;
     border: 1px solid var(--ad-border);
     border-radius: 8px;
@@ -256,14 +373,18 @@
 
 .selectPopup {
     position: absolute;
-    top: calc(100% + 6px);
+    top: calc(100% + 8px);
     right: 0;
+    bottom: auto;
+    left: auto;
     z-index: 20;
-    min-width: 96px;
+    box-sizing: border-box;
+    min-width: 112px;
+    max-width: calc(100vw - 24px);
     border: 1px solid var(--ad-border);
-    border-radius: 10px;
+    border-radius: 12px;
     background: var(--ad-elevated);
-    box-shadow: none;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.48);
     overflow: hidden;
 }
 
@@ -299,14 +420,17 @@
 
 .filterPopup {
     position: absolute;
-    top: calc(100% + 10px);
+    top: calc(100% + 8px);
     right: 0;
+    bottom: auto;
+    left: auto;
     z-index: 20;
-    width: min(290px, calc(100vw - 32px));
+    box-sizing: border-box;
+    width: min(320px, calc(100vw - 24px));
     border: 1px solid var(--ad-border);
     border-radius: 12px;
     background: var(--ad-elevated);
-    box-shadow: none;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.48);
     overflow: hidden;
 }
 
@@ -401,10 +525,11 @@
 }
 
 .item {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: flex-start;
-    justify-content: space-between;
-    gap: 16px;
+    column-gap: 16px;
+    row-gap: 8px;
     padding: 16px;
     border-bottom: 1px solid var(--ad-divider);
     background: var(--ad-bg);
@@ -412,7 +537,6 @@
 
 .itemMain {
     min-width: 0;
-    flex: 1;
 }
 
 .itemTypeRow {
@@ -441,6 +565,96 @@
     color: #c7c7cc;
 }
 
+.kkFilterPopup {
+    width: min(360px, calc(100vw - 24px));
+    max-height: min(70vh, 520px);
+    padding: 14px;
+    overflow-y: auto;
+}
+
+.kkFilterSection + .kkFilterSection {
+    margin-top: 12px;
+}
+
+.kkFilterSection h3 {
+    margin: 0 0 8px;
+    color: var(--ad-label);
+    font-size: 12px;
+    line-height: 1.3;
+    font-weight: 500;
+}
+
+.kkFilterOptions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.kkFilterOption {
+    min-width: 68px;
+    min-height: 40px;
+    padding: 0 12px;
+    border: 1px solid var(--ad-border);
+    border-radius: 8px;
+    background: var(--ad-card);
+    color: var(--ad-label);
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+}
+
+.kkFilterOption:hover,
+.kkFilterOption:focus-visible {
+    border-color: rgba(255, 255, 255, 0.28);
+    color: var(--ad-value);
+}
+
+.kkFilterOption:focus-visible {
+    outline: 2px solid rgba(232, 90, 112, 0.75);
+    outline-offset: 2px;
+}
+
+.kkFilterOptionActive {
+    border-color: var(--ad-primary);
+    background: rgba(168, 40, 60, 0.18);
+    color: var(--ad-value);
+    font-weight: 600;
+}
+
+.kkFilterFooter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--ad-border);
+}
+
+.kkFilterFooter span {
+    min-width: 0;
+    color: var(--ad-label);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.kkFilterFooter button {
+    flex: 0 0 auto;
+    min-height: 36px;
+    padding: 0 12px;
+    border: 1px solid var(--ad-border);
+    border-radius: 8px;
+    background: var(--ad-card);
+    color: var(--ad-value);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.kkFilterFooter button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
 .itemTitle {
     margin: 4px 0 0;
     font-size: 15px;
@@ -463,10 +677,14 @@
 }
 
 .itemTime {
-    margin: 8px 0 0;
+    grid-column: 1 / -1;
+    display: block;
+    min-width: 0;
+    margin: 0;
     font-size: 12px;
     line-height: 1.4;
     color: var(--ad-label);
+    white-space: nowrap;
 }
 
 .itemAmount {
@@ -484,6 +702,45 @@
 
 .itemAmountExpense {
     color: #e85a70;
+}
+
+.itemAmountStack {
+    display: flex;
+    flex: 0 0 auto;
+    min-width: 72px;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    padding-top: 1px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.itemOriginalAmount {
+    color: var(--ad-label);
+    font-size: 12px;
+    line-height: 1;
+    text-decoration: line-through;
+    text-decoration-thickness: 1px;
+}
+
+.itemActualAmount {
+    padding-top: 0;
+    font-size: 16px;
+}
+
+.itemDiscountBadge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 20px;
+    padding: 0 6px;
+    border: 1px solid rgba(232, 90, 112, 0.35);
+    border-radius: 5px;
+    background: rgba(168, 40, 60, 0.12);
+    color: #e85a70;
+    font-size: 10px;
+    line-height: 1;
+    font-weight: 600;
 }
 
 .stateBlock {
@@ -545,13 +802,13 @@
         width: min(100%, 820px);
     }
 
-    .header {
+    .headerDock {
         padding-left: 24px;
         padding-right: 24px;
     }
 
     .balanceSection {
-        padding: 28px 24px;
+        padding: 16px 24px;
     }
 
     .toolbar {
@@ -576,7 +833,77 @@
         width: 320px;
     }
 
-    .balanceValue {
-        font-size: 24px;
+}
+
+@media (max-width: 560px) {
+    .balanceSection {
+        padding: 10px 12px 12px;
     }
+
+    .balanceCard {
+        padding: 12px 10px 8px;
+    }
+
+    .balanceValueRow {
+        gap: 4px;
+    }
+
+    .balanceAction svg {
+        width: 12px;
+        height: 12px;
+    }
+
+    .kkBreakdownGroups {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .toolbar {
+        align-items: center;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        gap: 4px;
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+    .tabs {
+        gap: 0;
+    }
+
+    .tabButton {
+        min-height: 44px;
+        padding: 0 7px;
+        font-size: 12px;
+    }
+
+    .tabButtonActive::after {
+        left: 7px;
+        right: 7px;
+    }
+
+    .filterRow {
+        width: auto;
+        justify-content: flex-start;
+        gap: 4px;
+    }
+
+    .selectTrigger {
+        min-width: 62px;
+        padding: 0 7px;
+        font-size: 11px;
+    }
+
+    .item {
+        gap: 10px;
+    }
+
+    .itemAmountStack {
+        min-width: 64px;
+        gap: 3px;
+    }
+
+    .itemActualAmount {
+        font-size: 15px;
+    }
+
 }

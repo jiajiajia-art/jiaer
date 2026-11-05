@@ -34,6 +34,7 @@ import { useTrackingStore } from '../store/trackingStore';
 import { trackingApi } from '../api/statistics/trackingApi';
 import gamePromotionApi from '../api/promotion/gamePromotionApi';
 import { getOrCreatePromoAnonId } from '../utils/promoAnonId';
+import { copyTextToClipboard } from '../utils/clipboard';
 import GameRating from '../components/GameRating/GameRating';
 import {
     GameIssueFeedbackModal,
@@ -205,10 +206,10 @@ const normalizePlaybackOrientation = (value?: string | null) => {
 };
 
 const INTERACTIVE_VIDEO_UNLOCK_ERROR_MESSAGES: Record<string, string> = {
-    INSUFFICIENT_POINTS: '积分不足',
-    'Insufficient points': '积分不足',
-    INSUFFICIENT_DIAMONDS: '钻石不足',
-    'Insufficient diamonds': '钻石不足',
+    INSUFFICIENT_POINTS: '织梦豆不足',
+    'Insufficient points': '织梦豆不足',
+    INSUFFICIENT_DIAMONDS: 'KK币不足',
+    'Insufficient diamonds': 'KK币不足',
     PAYMENT_METHOD_UNAVAILABLE: '当前支付方式不可用',
     'Payment method is unavailable': '当前支付方式不可用',
     BUYOUT_NOT_FOR_SALE: '该互动影游暂不支持买断',
@@ -1395,24 +1396,11 @@ const GameDetail: React.FC = () => {
 
     const handleCopyLink = async () => {
         try {
-            await navigator.clipboard.writeText(window.location.href);
+            await copyTextToClipboard(window.location.href);
             await reportShareEvent('copy_link');
             toast.success(t('gameDetail.linkCopied'));
-        } catch (error) {
-            const textArea = document.createElement('textarea');
-            textArea.value = window.location.href;
-            textArea.style.position = 'fixed';
-            textArea.style.opacity = '0';
-            document.body.appendChild(textArea);
-            textArea.select();
-            try {
-                document.execCommand('copy');
-                await reportShareEvent('copy_link');
-                toast.success(t('gameDetail.linkCopied'));
-            } catch (err) {
-                toast.error(t('copyFailed'));
-            }
-            document.body.removeChild(textArea);
+        } catch {
+            toast.error(t('copyFailed'));
         }
     };
 
@@ -1800,9 +1788,13 @@ const GameDetail: React.FC = () => {
                             {t('createGame.qqGroup')}: {game.groupNo}
                             <button
                                 className={styles.groupNoCopyBtn}
-                                onClick={() => {
-                                    navigator.clipboard.writeText(game.groupNo!).catch(() => {});
-                                    toast.success(t('gameDetail.qqGroupCopied'));
+                                onClick={async () => {
+                                    try {
+                                        await copyTextToClipboard(game.groupNo!);
+                                        toast.success(t('gameDetail.qqGroupCopied'));
+                                    } catch {
+                                        toast.error(t('copyFailed'));
+                                    }
                                 }}
                                 title={t('createGame.copyGroupNo')}
                             >

@@ -1,0 +1,357 @@
+.pageRoot {
+    --earn-bg: #000000;
+    --earn-card: #1c1c1e;
+    --earn-elevated: #28282a;
+    --earn-border: rgba(255, 255, 255, 0.08);
+    --earn-text: #ffffff;
+    --earn-muted: #8e8e93;
+    --earn-accent: #c92343;
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: var(--earn-bg);
+    color: var(--earn-text);
+}
+
+.main {
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: calc(28px + env(safe-area-inset-top)) 20px calc(40px + env(safe-area-inset-bottom));
+    overflow-x: hidden;
+}
+
+.shell {
+    width: min(100%, 920px);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-width: 0;
+}
+
+.taskRow:focus-visible,
+.exchangeCard button:focus-visible {
+    outline: 2px solid #ff5a78;
+    outline-offset: 3px;
+}
+
+.balanceCard,
+.tasksSection,
+.exchangeCard {
+    border: 1px solid var(--earn-border);
+    border-radius: 16px;
+    background: var(--earn-card);
+}
+
+.balanceCard {
+    padding: 20px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 16px;
+}
+
+.balanceCard > span,
+.sectionHeader p,
+.taskCopy small,
+.exchangeCopy p {
+    color: var(--earn-muted);
+}
+
+.balanceCard strong {
+    display: flex;
+    align-items: baseline;
+    justify-self: end;
+    gap: 10px;
+    font-size: 36px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.balanceCard small {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--earn-muted);
+}
+
+.tasksSection {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.sectionHeader {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 16px;
+}
+
+.sectionHeaderCopy {
+    min-width: 0;
+}
+
+.checkInActionSlot {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 144px;
+    min-height: 44px;
+}
+
+.sectionHeader h2,
+.exchangeCopy h2,
+.checkInIntro h3 {
+    margin: 0;
+}
+
+.sectionHeader h2 {
+    font-size: 19px;
+}
+
+.sectionHeader p,
+.checkInIntro p,
+.exchangeCopy p {
+    margin: 6px 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.checkInCard,
+.taskRow {
+    border: 0;
+    border-radius: 14px;
+    background: var(--earn-elevated);
+}
+
+.checkInCard {
+    padding: 16px;
+}
+
+.checkInIntro {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.itemIcon,
+.exchangeIcon {
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.14);
+    color: #ff3b61;
+}
+
+.itemIcon img,
+.exchangeIcon img,
+.itemIcon svg {
+    width: 24px;
+    height: 24px;
+}
+
+.taskRow {
+    width: 100%;
+    min-height: 72px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    color: var(--earn-text);
+    text-align: left;
+}
+
+button.taskRow {
+    font: inherit;
+    cursor: pointer;
+    transition: background-color 160ms ease;
+}
+
+button.taskRow:hover {
+    background: #303033;
+}
+
+.taskCopy {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.taskCopy strong {
+    font-size: 16px;
+}
+
+.taskCopy small {
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.primaryAction,
+.disabledAction,
+.exchangeCard button {
+    min-height: 44px;
+    padding: 0 20px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.primaryAction,
+.exchangeCard button {
+    background: var(--earn-accent);
+    color: #ffffff;
+}
+
+.taskRowDisabled {
+    opacity: 0.55;
+}
+
+.disabledAction {
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: rgba(255, 255, 255, 0.56);
+}
+
+.exchangeCard {
+    padding: 24px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 16px;
+}
+
+.exchangeCopy h2 {
+    font-size: 22px;
+}
+
+.exchangeCard button {
+    border: none;
+    cursor: pointer;
+}
+
+.exchangeCard button:hover {
+    background: #e03354;
+}
+
+@media (max-width: 768px) {
+    .main {
+        padding: calc(10px + env(safe-area-inset-top)) 8px calc(32px + env(safe-area-inset-bottom));
+    }
+
+    .shell {
+        gap: 14px;
+    }
+
+    .balanceCard,
+    .tasksSection,
+    .exchangeCard {
+        border-radius: 14px;
+    }
+
+    .balanceCard,
+    .tasksSection {
+        padding: 16px;
+    }
+
+    .balanceCard strong {
+        font-size: 32px;
+    }
+
+    .sectionHeader {
+        gap: 12px;
+    }
+
+    .checkInActionSlot {
+        min-width: 132px;
+    }
+
+    .checkInCard {
+        padding: 12px;
+    }
+
+    .taskRow {
+        padding: 12px;
+    }
+
+    .exchangeCard {
+        grid-template-columns: 44px minmax(0, 1fr) auto;
+        padding: 16px;
+    }
+
+    .exchangeCard button {
+        grid-column: 3;
+        justify-self: end;
+        width: auto;
+    }
+}
+
+@media (max-width: 480px) {
+    .main {
+        padding-right: 6px;
+        padding-left: 6px;
+    }
+
+    .balanceCard,
+    .tasksSection,
+    .exchangeCard {
+        border-radius: 12px;
+    }
+
+    .balanceCard,
+    .tasksSection {
+        padding: 14px;
+    }
+
+    .balanceCard strong {
+        font-size: 28px;
+    }
+
+    .sectionHeader h2,
+    .exchangeCopy h2 {
+        font-size: 18px;
+    }
+
+    .taskRow {
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 10px;
+        padding: 12px;
+    }
+
+    .primaryAction,
+    .disabledAction {
+        grid-column: 3;
+        justify-self: end;
+        min-height: 44px;
+        margin-left: 0;
+        padding: 0 14px;
+        font-size: 13px;
+    }
+
+    .exchangeCard {
+        gap: 12px;
+        padding: 14px;
+    }
+
+    .exchangeCard button {
+        min-height: 44px;
+        padding: 0 14px;
+        font-size: 13px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    button.taskRow {
+        transition: none;
+    }
+}

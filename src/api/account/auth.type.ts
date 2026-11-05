@@ -1,4 +1,55 @@
-export type MembershipPlanId = 'creator_day' | 'creator_month' | 'creator_season' | 'creator_year' | 'month' | 'season' | 'year';
+export type MembershipPlanId = 'week' | 'month_v2';
+
+export interface KkBalance {
+  total: number;
+  permanent: number;
+  limited: number;
+  recharge: number;
+  gift: number;
+  nextExpiryAt: string | null;
+  nextExpiryAmount: number;
+}
+
+export interface MembershipPlanState {
+  active: true;
+  planId: MembershipPlanId;
+  startAt: string;
+  endAt: string;
+}
+
+export interface MembershipState {
+  week: MembershipPlanState | null;
+  month: MembershipPlanState | null;
+  publishedPlayDiscountPercent: number | null;
+}
+
+export interface InviteStats {
+  inviteCount: number;
+  rewardedLimitedKk: number;
+}
+
+export interface PlatformBenefits {
+  inviteRewardKk: number;
+  registrationRewardKk: number;
+  updatedAt: string | null;
+  updatedBy: string | null;
+}
+
+export interface KkRechargePlan {
+  id: string;
+  price: number;
+  baseDiamonds: number;
+  firstBonusDiamonds: number;
+  firstTotalDiamonds: number;
+  firstChargeEligible: boolean;
+  label: string;
+}
+
+export interface MembershipKkReward {
+  planId: MembershipPlanId;
+  amount: number;
+  rewardDate?: string;
+}
 
 export type StackedPlanStatus = 'active' | 'paused' | 'expired' | string;
 
@@ -13,9 +64,60 @@ export interface StackedPlan {
 export type Currency = import('../common/currency').Currency;
 export type CurrencyWithAll = import('../common/currency').CurrencyWithAll;
 
+export type SignInDayState = 'signed' | 'made_up' | 'missed' | 'today' | 'upcoming';
+
+export interface SignInRewardBreakdown {
+  basePoints: number;
+  weeklyBonusPoints: number;
+  monthlyBonusPoints: number;
+  totalPoints: number;
+}
+
+export interface SignInCalendarDay {
+  date: string;
+  weekday: number;
+  dayOfMonth: number;
+  state: SignInDayState;
+  canMakeup?: boolean;
+}
+
+export interface SignInWeekDay extends SignInCalendarDay {
+  basePoints: number;
+  weeklyBonusPoints: number;
+  totalPoints: number;
+}
+
+export interface SignInWeekStatus {
+  startDate: string;
+  endDate: string;
+  consecutiveDays: number;
+  signedDays: number;
+  bonusEligible: boolean;
+  days: SignInWeekDay[];
+}
+
+export interface SignInMonthStatus {
+  monthKey: string;
+  daysInMonth: number;
+  targetDays: number;
+  currentConsecutiveDays: number;
+  bestConsecutiveDays: number;
+  progressDays: number;
+  bonusPoints: number;
+  bonusRewarded: boolean;
+  days: SignInCalendarDay[];
+}
+
 export interface MembershipSignInStatus {
+  serverDate: string;
+  serverTime: string;
+  timeZone: 'UTC' | 'UTC+8';
   signedInToday: boolean;
   canClaim: boolean;
+  makeupCardCount: number;
+  todayReward: SignInRewardBreakdown;
+  week: SignInWeekStatus;
+  month: SignInMonthStatus;
   streakDay: number;
   nextStreakDay: number;
   planId: MembershipPlanId | null;
@@ -26,10 +128,24 @@ export interface MembershipSignInStatus {
   baseSchedule: number[];
   bonusSchedule: number[];
   displaySchedule: number[];
-  signedDaysThisMonth: number[];
+  signedDaysThisMonth: string[];
+  daysInMonth: number;
+  perfectAttendance: {
+    enabled: boolean;
+    reward: number;
+    achieved: boolean;
+    rewarded: boolean;
+    canClaim: boolean;
+  };
 }
 
 export interface CheckInResponse {
+  alreadySigned: boolean;
+  signedIn: boolean;
+  pointsAdded: number;
+  remainingPoints: number;
+  rewardBreakdown: SignInRewardBreakdown;
+  status: MembershipSignInStatus;
   rewardPoints?: number;
   signInStatus?: MembershipSignInStatus | null;
   activePlanId?: MembershipPlanId | null;
@@ -40,6 +156,19 @@ export interface CheckInResponse {
   todayBonusPoints?: number;
   signinBonusSchedule?: number[] | null;
   endAt?: string | null;
+  membershipRewards?: MembershipKkReward[];
+}
+
+export interface SignInMakeupResponse {
+  madeUp: boolean;
+  alreadyMadeUp: boolean;
+  errorCode: string | null;
+  pointsAdded: number;
+  remainingPoints: number;
+  makeupCardCount: number;
+  rewardBreakdown: SignInRewardBreakdown;
+  status: MembershipSignInStatus;
+  membershipRewards?: MembershipKkReward[];
 }
 
 export type UserGender = 'male' | 'female';
@@ -64,7 +193,12 @@ export interface User {
   profileCompleted?: boolean;
   points: number;
   diamonds?: number;
+  kkBalance?: KkBalance;
+  kkRechargePlans?: KkRechargePlan[];
+  membership?: MembershipState;
   inviteCode: string;
+  inviteStats?: InviteStats;
+  platformBenefits?: PlatformBenefits;
   hasSignedIn: boolean;
   firstChargePlans?: Record<string, boolean>;
   isMember?: boolean;
@@ -87,6 +221,10 @@ export interface User {
 export interface SignupRequest {
   phoneNumber: string;
   password: string;
+  code: string;
+  inviteCode?: string;
+  agreementAccepted: boolean;
+  requestId: string;
   // email: string;
   avatarUrl: string;
   nickname: string;
@@ -116,6 +254,16 @@ export interface BindAccountRequest {
 export interface LoginRequest {
   phoneNumber: string;
   password: string;
+  agreementAccepted: true;
+  userAgreementVersion: string;
+  privacyPolicyVersion: string;
+}
+
+export interface GoogleLoginRequest {
+  idToken: string;
+  agreementAccepted: true;
+  userAgreementVersion: string;
+  privacyPolicyVersion: string;
 }
 
 // 登录响应
@@ -130,6 +278,7 @@ export interface AuthResponse {
 // 发送验证码请求
 export interface SendCodeRequest {
   phoneNumber: string;
+  purpose?: 'register' | 'password_reset';
 }
 
 // 重置密码请求
@@ -157,29 +306,19 @@ export interface SubscriptionRedeemResult {
   remainingDays: number;
 }
 
-// 邀请奖励
-export interface InviteRewardItem {
-  threshold: number;
-  points: number;
-  claimed: boolean;
-  claimable: boolean;
-  isDynamic?: boolean;
-}
-
-export interface InviteStats {
-  inviteCount: number;
-  rewards: InviteRewardItem[];
-}
-
-export interface InviteClaimResult {
-  threshold: number;
-  pointsAwarded: number;
-  remainingPoints: number;
+export interface InviteCodeUseResult {
+  diamondsAdded: number;
+  remainingDiamonds: number;
+  inviterName: string;
 }
 
 // 积分活动查询
 export type PointsActivityDirection = 'all' | 'income' | 'expense';
-export type PointsActivityCurrency = CurrencyWithAll;
+export type PointsActivityCurrency = CurrencyWithAll | 'wallet';
+export type KkActivityFilter = 'all' | 'recharge' | 'gift' | 'consume' | 'expired' | 'refund';
+export type KkValidityFilter = 'all' | 'permanent' | 'limited';
+export type KkAssetCategoryFilter = 'all' | 'recharge' | 'gift';
+export type KkEventTypeFilter = 'all' | 'income' | 'consume' | 'expired' | 'refund';
 
 export interface GetPointsActivitiesParams {
   currency?: PointsActivityCurrency;
@@ -188,22 +327,34 @@ export interface GetPointsActivitiesParams {
   month?: number;
   page?: number;
   pageSize?: number;
+  kkFilter?: KkActivityFilter;
+  validityType?: KkValidityFilter;
+  assetCategory?: KkAssetCategoryFilter;
+  eventType?: KkEventTypeFilter;
 }
 
 export interface PointsActivityItem {
   currency: Currency;
   activityType: string;
   amount: number;
+  originalAmount?: number;
+  discountPercent?: number;
   direction: 'income' | 'expense';
   occurredAt: string;
   id: number;
   title: string;
   subtitle: string;
+  assetCategory?: 'recharge' | 'gift' | null;
+  validityType?: 'permanent' | 'limited' | null;
+  expiresAt?: string | null;
+  eventStatus?: 'completed' | 'expired' | string;
+  relatedActivityId?: number | null;
 }
 
 export interface PointsActivitiesResponse {
   points: number;
   diamonds: number;
+  kkBalance?: KkBalance;
   items: PointsActivityItem[];
   page?: number;
   pageSize?: number;

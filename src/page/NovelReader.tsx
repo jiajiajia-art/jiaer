@@ -15,6 +15,7 @@ import { getImageUrl } from '../utils/constants';
 import { toDisplayCoverUrl } from '../utils/displayCoverUrl';
 import { countVisibleNovelTextSteps } from '../utils/novelGame';
 import { getGameTypeLabelFromMeta } from '../utils/gameTypeLabel';
+import { copyTextToClipboard as copyTextWithFallback } from '../utils/clipboard';
 import {
   normalizeNovelChapterIndex,
   resolveNovelSynopsisText,
@@ -36,35 +37,12 @@ import styles from './NovelReader.module.css';
 
 /** 复制文本到剪贴板：优先 Clipboard API，移动端/非 HTTPS 时回退 execCommand */
 async function copyTextToClipboard(text: string): Promise<boolean> {
-  if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-    try {
-      await navigator.clipboard.writeText(text);
-      return true;
-    } catch (error) {
-      console.warn('[NovelReader] clipboard API copy failed:', error);
-    }
-  }
-
-  if (typeof document === 'undefined') {
-    return false;
-  }
-
-  const textArea = document.createElement('textarea');
-  textArea.value = text;
-  textArea.setAttribute('readonly', 'true');
-  textArea.style.position = 'fixed';
-  textArea.style.opacity = '0';
-  textArea.style.pointerEvents = 'none';
-  document.body.appendChild(textArea);
-  textArea.select();
-
   try {
-    return document.execCommand('copy');
+    await copyTextWithFallback(text);
+    return true;
   } catch (error) {
-    console.warn('[NovelReader] execCommand copy failed:', error);
+    console.warn('[NovelReader] copy failed:', error);
     return false;
-  } finally {
-    document.body.removeChild(textArea);
   }
 }
 

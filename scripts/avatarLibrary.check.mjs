@@ -123,9 +123,10 @@ test('avatarLibrary_API与导航管理运营页已挂载', () => {
   assert.doesNotMatch(adminMgrCss, /\.segRow\s*\{[^}]*background:\s*#121212/);
   assert.match(adminMgr, /uploadForm|titleInput/);
   assert.doesNotMatch(adminMgr, /styles\.grow/);
-  assert.match(admin, /公共头像/);
+  // 功能注释：侧栏文案在 AdminShell 导航配置，面板只挂载管理组件
+  const shellNav = readFileSync(join(root, 'src/components/admin-shell/adminNavigation.tsx'), 'utf8');
+  assert.match(shellNav, /label: '公共头像'/);
   assert.match(admin, /AdminPublicAvatarManager/);
-  assert.match(operator, /公共头像/);
   assert.match(operator, /AdminPublicAvatarManager/);
   assert.match(adminMgr, /uploadKind/);
   assert.match(adminMgr, /user-uploads/);

@@ -20,6 +20,7 @@ type RatingSummary = NonNullable<
 >['ratingsComments']['summary'];
 import { useAuthStore, authModalStore } from '../../store/useAuthStore';
 import { getImageUrl } from '../../utils/constants';
+import { copyTextToClipboard } from '../../utils/clipboard';
 import styles from './GameRating.module.css';
 
 interface Props {
@@ -473,7 +474,7 @@ const GameRating: React.FC<Props> = ({ fileId, mode = 'full', onRatingChange, on
 
   const handleCopy = useCallback(async (comment: RatingItem) => {
     try {
-      await navigator.clipboard.writeText(comment.comment_content);
+      await copyTextToClipboard(comment.comment_content);
       toast.success(t('gameRating.commentCopied'));
     } catch {
       toast.error(t('gameRating.copyFailed'));

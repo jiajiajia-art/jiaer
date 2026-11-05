@@ -39,6 +39,11 @@ import {
     isGenerationBusyError,
 } from "../../lib/galgame/choiceStepDisplayGate";
 import {
+    hasEnoughKkCoins,
+    isWithinGalgameFreeRounds,
+    type PlayInteractionType,
+} from "../../lib/galgame/playBilling";
+import {
     isTransientNetworkStreamError,
     normalizeUserFacingStreamError,
 } from "../../lib/galgame/normalizeStreamErrorMessage";
@@ -183,6 +188,7 @@ export const useGalgameController = (options?: {
     const [requestTimeoutVisible, setRequestTimeoutVisible] = useState<boolean>(false);
     const [errorModalVisible, setErrorModalVisible] = useState<boolean>(false);
     const [errorMessage, setErrorMessage] = useState<string>('');
+    const [insufficientDiamondsVisible, setInsufficientDiamondsVisible] = useState<boolean>(false);
     const [replayMeta, setReplayMeta] = useState<any>(null);
     const [replaySteps, setReplaySteps] = useState<ReplayStep[]>([]);
     const [replayIndex, setReplayIndex] = useState<number>(0);
@@ -208,6 +214,7 @@ export const useGalgameController = (options?: {
     const refreshHistoryAfterTypingRef = useRef<(() => Promise<void>) | null>(null);
     const lastRequestActionRef = useRef<string | null>(null); // 保存最后一次请求的 action
     const lastRequestActionIdRef = useRef<string | null>(null);
+    const lastRequestInteractionTypeRef = useRef<PlayInteractionType>('preset_option');
     const lastAutoResendRef = useRef<{ content: string; ts: number; networkCooldown?: boolean } | null>(null);
     const replayStepsRef = useRef<ReplayStep[]>([]);
     const replayLoadingPageRef = useRef<boolean>(false);
@@ -239,8 +246,17 @@ export const useGalgameController = (options?: {
         return history.filter((h: any) => h.role === 'assistant').length;
     }, [history]);
 
-    const FREE_ROUNDS = 30;
-    const isFreeRound = assistantRoundCount < FREE_ROUNDS;
+    const isFreeRound = isWithinGalgameFreeRounds(assistantRoundCount);
+
+    const canAffordPlayInteraction = useCallback((interactionType: PlayInteractionType): boolean => {
+        if (hasEnoughKkCoins(user?.user?.diamonds ?? 0, interactionType, isFreeRound)) {
+            return true;
+        }
+        setRequestTimeoutVisible(false);
+        setErrorModalVisible(false);
+        setInsufficientDiamondsVisible(true);
+        return false;
+    }, [isFreeRound, user?.user?.diamonds]);
 
     const getPlayerImageUrlCallback = useCallback((): string | undefined => {
         const imageUrl = sessionPlayerAvatarUrl || getPlayerImageUrl(worldSetting?.player);
@@ -705,6 +721,14 @@ export const useGalgameController = (options?: {
             // 显示错误弹窗而不是 alert
             setErrorMessage(errorMsg);
             setErrorModalVisible(true);
+            if (refreshHistoryAfterTypingRef.current) {
+                void refreshHistoryAfterTypingRef.current();
+            }
+        },
+        onInsufficientDiamonds: () => {
+            setRequestTimeoutVisible(false);
+            setErrorModalVisible(false);
+            setInsufficientDiamondsVisible(true);
             if (refreshHistoryAfterTypingRef.current) {
                 void refreshHistoryAfterTypingRef.current();
             }
@@ -1253,13 +1277,15 @@ export const useGalgameController = (options?: {
                     && !(sameContent && withinWindow)
                 ) {
                     lastAutoResendRef.current = { content: lastMessage.content, ts: now };
-                    // 功能注释：续玩补发「开始游戏」也必须用固定 bootstrap actionId，与手动开局幂等合并
+                    // 功能注释：续玩补发「开始游戏」与手动开局共用固定 actionId，其余消息保持幂等 actionId。
                     const resendActionId = isOpeningStartActionText(content)
                         ? buildBootstrapStartActionId(playableSessionId)
-                        : undefined;
+                        : createGalgameActionId(playableSessionId, lastMessage.content);
+                    lastRequestActionRef.current = lastMessage.content;
+                    lastRequestActionIdRef.current = resendActionId;
+                    lastRequestInteractionTypeRef.current = 'retry';
                     const resendAction = async (attempt: number) => {
                         await stepHandlers.handleStreamAction(lastMessage.content, {
-                            actionId: resendActionId,
                             onError: (error) => {
                                 if (isGenerationBusyError(error) && attempt < GENERATION_BUSY_MAX_RETRIES) {
                                     window.setTimeout(() => {
@@ -1288,7 +1314,9 @@ export const useGalgameController = (options?: {
                                 if (!isGenerationBusyError(error)) {
                                     console.error('自动重发用户消息失败:', error);
                                 }
-                            }
+                            },
+                            actionId: resendActionId,
+                            interactionType: 'retry',
                         });
                     };
                     void resendAction(0);
@@ -1323,19 +1351,26 @@ export const useGalgameController = (options?: {
                 }
 
                 const rawHistorySteps = parseHistoryToSteps(content);
-                const historySteps = ensureChoiceStep(rawHistorySteps);
                 const hasChoiceInHistory = rawHistorySteps.some((s: any) => choiceStepHasPlayableOptions(s));
+                const historySteps = ensureChoiceStep(rawHistorySteps);
 
                 if (historySteps.length > 0) {
-                    setCompletedSteps([...priorSteps, ...historySteps]);
-
                     const choiceStep = historySteps.find((s) => choiceStepHasPlayableOptions(s));
                     if (choiceStep) {
+                        setCompletedSteps([...priorSteps, ...historySteps]);
                         const choiceData = extractChoiceFromHistory(content);
                         const choiceMessage = createChoiceMessage(choiceData);
                         if (choiceMessage) {
                             setInitialMessages([choiceMessage]);
                         }
+                    } else {
+                        // 历史末尾没有可选项时，只重播该段已有剧情，最终停在自由输入入口。
+                        const [first, ...rest] = historySteps;
+                        setCompletedSteps(priorSteps);
+                        setInitialMessages([]);
+                        stepHandlers.setCurrentStep(first || null);
+                        stepHandlers.setStepQueue(rest);
+                        stepHandlers.setShowNextButton(first?.type !== 'choice');
                     }
                 } else {
                     const choiceData = extractChoiceFromHistory(content);
@@ -1378,11 +1413,15 @@ export const useGalgameController = (options?: {
                                 break;
                             }
                             if (!stepHandlers.isWaitingForData && !isStartingGame) {
-                                const resendActionId = isOpeningStartActionText(lastUserMessage)
+                                const actionId = isOpeningStartActionText(lastUserMessage)
                                     ? buildBootstrapStartActionId(playableSessionId)
-                                    : undefined;
+                                    : createGalgameActionId(playableSessionId, lastUserMessage);
+                                lastRequestActionRef.current = lastUserMessage;
+                                lastRequestActionIdRef.current = actionId;
+                                lastRequestInteractionTypeRef.current = 'retry';
                                 stepHandlers.handleStreamAction(lastUserMessage, {
-                                    actionId: resendActionId,
+                                    actionId,
+                                    interactionType: 'retry',
                                     onError: (error) => {
                                         if (!isGenerationBusyError(error)) {
                                             console.error('自动重发倒数第一条用户消息失败:', error);
@@ -1539,8 +1578,12 @@ export const useGalgameController = (options?: {
 
         // 开局 actionId 固定：重复请求走 ACTION_IN_PROGRESS / 回放，而不是再抢会话锁刷「正在生成中」
         const bootstrapActionId = buildBootstrapStartActionId(playableSessionId);
+        lastRequestActionRef.current = '开始游戏';
+        lastRequestActionIdRef.current = bootstrapActionId;
+        lastRequestInteractionTypeRef.current = 'system';
         await stepHandlers.handleStreamAction('开始游戏', {
             actionId: bootstrapActionId,
+            interactionType: 'system',
             onBeforeRequest: () => {
                 setInitialMessages([]);
                 resetDisplayedSteps();
@@ -1689,6 +1732,24 @@ export const useGalgameController = (options?: {
         };
     }, [isAutoPlay, isTextMode, isReplay, replayIndex, replaySpeed, replaySteps.length, replayTotalSteps, messageUtilsWithTyping.finalIsTyping, messageUtilsWithTyping.currentMessage?.type, stepHandlers.showNextButton, stepHandlers.isWaitingForData, gameStarted, handleNextMessage]);
 
+    const currentChoiceStepSnapshot = useMemo(() => {
+        if (stepHandlers.currentStep?.type === 'choice') {
+            return stepHandlers.currentStep;
+        }
+        const currentMessage = messageUtilsWithTyping.currentMessage;
+        if (currentMessage?.type !== 'choice') {
+            return null;
+        }
+        const messageOptions = currentMessage.options || [];
+        return {
+            type: 'choice',
+            title: undefined,
+            description: currentMessage.message || '',
+            mainOptions: messageOptions.filter((option) => option.isMain).map((option) => option.text),
+            options: messageOptions.filter((option) => !option.isMain).map((option) => option.text),
+        };
+    }, [messageUtilsWithTyping.currentMessage, stepHandlers.currentStep]);
+
     const handleChoiceClick = useCallback((option: { id: number; text: string }) => {
         if (!canSubmitChoiceInteraction({
             isWaitingForData: stepHandlers.isWaitingForData,
@@ -1707,11 +1768,13 @@ export const useGalgameController = (options?: {
         if (optionIndex < 0) return;
 
         const optionText = messageUtilsWithTyping.currentMessage.options[optionIndex].text;
+        if (!canAffordPlayInteraction('preset_option')) return;
         const actionId = createGalgameActionId(playableSessionId, optionText);
 
         // 保存最后一次请求的 action
         lastRequestActionRef.current = optionText;
         lastRequestActionIdRef.current = actionId;
+        lastRequestInteractionTypeRef.current = 'preset_option';
 
         if (stepHandlers.currentStep && stepHandlers.currentStep.type === 'choice') {
             const stepOptionIndex = stepHandlers.currentStep.options?.findIndex((opt: any) => {
@@ -1725,13 +1788,13 @@ export const useGalgameController = (options?: {
                     ? { text: stepOptionObj, nextId: '' }
                     : stepOptionObj;
 
-                stepHandlers.handleChoiceOption(optionData, stepOptionIndex, actionId);
+                stepHandlers.handleChoiceOption(optionData, stepOptionIndex, actionId, currentChoiceStepSnapshot);
                 return;
             }
         }
 
-        stepHandlers.handleChoiceOption({ text: optionText, nextId: '' }, optionIndex, actionId);
-    }, [playableSessionId, stepHandlers, messageUtilsWithTyping.currentMessage, resetDisplayedSteps]);
+        stepHandlers.handleChoiceOption({ text: optionText, nextId: '' }, optionIndex, actionId, currentChoiceStepSnapshot);
+    }, [playableSessionId, stepHandlers, messageUtilsWithTyping.currentMessage, currentChoiceStepSnapshot, canAffordPlayInteraction]);
 
     useEffect(() => {
         if (!isAutoToCompression) {
@@ -1800,12 +1863,14 @@ export const useGalgameController = (options?: {
         }
         if (!value.trim()) return;
         const actionText = value.trim();
+        if (!canAffordPlayInteraction('custom_input')) return;
         const actionId = createGalgameActionId(playableSessionId, actionText);
         // 保存最后一次请求的 action
         lastRequestActionRef.current = actionText;
         lastRequestActionIdRef.current = actionId;
-        stepHandlers.handleChoiceSend(value, actionId);
-    }, [playableSessionId, stepHandlers]);
+        lastRequestInteractionTypeRef.current = 'custom_input';
+        stepHandlers.handleChoiceSend(value, actionId, currentChoiceStepSnapshot);
+    }, [playableSessionId, stepHandlers, currentChoiceStepSnapshot, canAffordPlayInteraction]);
 
     const handleRetryLastRequest = useCallback(async () => {
         setRequestTimeoutVisible(false);
@@ -1820,6 +1885,7 @@ export const useGalgameController = (options?: {
 
         await stepHandlers.handleStreamAction(lastAction, {
             actionId: lastActionId,
+            interactionType: lastRequestInteractionTypeRef.current === 'system' ? 'system' : 'retry',
             onError: () => {
                 toast.error('重试失败，请稍后再试');
             }
@@ -1891,6 +1957,8 @@ export const useGalgameController = (options?: {
         errorModalVisible,
         setErrorModalVisible,
         errorMessage,
+        insufficientDiamondsVisible,
+        setInsufficientDiamondsVisible,
         currentMessage: messageUtilsWithTyping.currentMessage,
         finalDisplayText: messageUtilsWithTyping.finalDisplayText,
         finalIsTyping: messageUtilsWithTyping.finalIsTyping,
