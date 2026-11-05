@@ -204,7 +204,6 @@ const Navbar: React.FC<NavbarProps> = ({
     const activeNav = getActiveNav();
     const unreadBadgeText = unreadCount > 99 ? '99+' : (unreadCount > 0 ? String(unreadCount) : '');
     const logoSrc = `${import.meta.env.BASE_URL}data/assets/LOGO2.png`;
-    const showDeveloperModeEntry = isDesktopLayout;
     const navbarContainerClassName = [
         styles.navbarContainer,
         mobileVariant === 'home-overlay' ? styles.navbarContainerMobileHome : '',
@@ -505,19 +504,6 @@ const Navbar: React.FC<NavbarProps> = ({
                                                 }}
                                             >
                                                 {t('nav.admin')}
-                                            </button>
-                                        )}
-                                        {showDeveloperModeEntry && (
-                                            <button
-                                                className={`${styles.menuBtn} ${styles.desktopOnlyMenuBtn}`}
-                                                onClick={() => {
-                                                    runLeaveAction(() => {
-                                                        navigate('/developer/external-games');
-                                                        setShowUserMenu(false);
-                                                    });
-                                                }}
-                                            >
-                                                {t('nav.developerMode')}
                                             </button>
                                         )}
                                         <button
