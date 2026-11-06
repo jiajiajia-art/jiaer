@@ -41,6 +41,7 @@
     "test:novelPlayback": "node --experimental-strip-types --test scripts/novelPlayback.check.mjs",
     "test:userRoles": "node --experimental-strip-types --test checks/userRoles.check.mjs",
     "test:operatorReports": "node --experimental-strip-types --test checks/operatorReports.check.mjs",
+    "test:operatorStatsRange": "node --experimental-strip-types --test scripts/operatorStatsRange.check.mjs",
     "test:withdrawRules": "node --experimental-strip-types --test checks/withdrawRules.check.mjs",
     "test:diamondTimelineLog": "node --experimental-strip-types --test checks/diamondTimelineLog.check.mjs",
     "test:funloomLottery": "node --experimental-strip-types --test scripts/funloomLottery.check.mjs",

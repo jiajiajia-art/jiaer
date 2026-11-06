@@ -1,21 +1,24 @@
-import { getImageUrl } from './constants';
-import {
-  coverUrlAfterDisplayCoverError,
-  toDisplayCoverUrl,
-} from './displayCoverUrl';
-import { shiftIsoDate, shanghaiTodayIso } from './operatorReportChart';
+import { shiftIsoDate, shanghaiTodayIso } from './operatorReportChart.ts';
 
-/** 功能注释：运营全站统计时间快捷（Asia/Shanghai），与计划书 §2.4 对齐 */
+/** 功能注释：运营全站统计时间快捷（Asia/Shanghai）；lastMonth 仅供自定义弹层快捷，不入 URL preset */
 export type OperatorStatsPreset =
   | 'today'
   | 'yesterday'
   | 'last7'
   | 'last30'
-  | 'thisWeek'
-  | 'thisMonth'
   | 'lastMonth'
   | 'all'
   | 'custom';
+
+/** 功能注释：URL 可解析的 preset；不含 lastMonth / 已下线的 thisWeek|thisMonth */
+export const OPERATOR_STATS_URL_PRESETS: ReadonlyArray<Exclude<OperatorStatsPreset, 'lastMonth'>> = [
+  'today',
+  'yesterday',
+  'last7',
+  'last30',
+  'all',
+  'custom',
+];
 
 export type OperatorSortBy =
   | 'pv'
@@ -54,8 +57,6 @@ const OPERATOR_PRESET_LABEL_KEYS: Record<OperatorStatsPreset, string> = {
   yesterday: 'operator.siteStats.presetYesterday',
   last7: 'operator.siteStats.presetLast7',
   last30: 'operator.siteStats.presetLast30',
-  thisWeek: 'operator.siteStats.presetThisWeek',
-  thisMonth: 'operator.siteStats.presetThisMonth',
   lastMonth: 'operator.siteStats.presetLastMonth',
   all: 'operator.siteStats.presetAll',
   custom: 'operator.siteStats.presetCustom',
@@ -87,18 +88,6 @@ export function operatorCustomRangeError(startDate: string, endDate: string): 'r
   return null;
 }
 
-/** 功能注释：取上海日历下 iso 日的星期（0=周日） */
-function shanghaiWeekday(isoDate: string): number {
-  return new Date(`${isoDate}T12:00:00+08:00`).getUTCDay();
-}
-
-/** 功能注释：本周一（周一为一周起始） */
-function shanghaiWeekMonday(isoDate: string): string {
-  const weekday = shanghaiWeekday(isoDate);
-  const offset = weekday === 0 ? -6 : 1 - weekday;
-  return shiftIsoDate(isoDate, offset);
-}
-
 export function resolveOperatorStatsRange(
   preset: OperatorStatsPreset,
   custom?: OperatorDateRange,
@@ -115,12 +104,6 @@ export function resolveOperatorStatsRange(
       return { startDate: shiftIsoDate(today, -6), endDate: today };
     case 'last30':
       return { startDate: shiftIsoDate(today, -29), endDate: today };
-    case 'thisWeek':
-      return { startDate: shanghaiWeekMonday(today), endDate: today };
-    case 'thisMonth': {
-      const [year, month] = today.split('-');
-      return { startDate: `${year}-${month}-01`, endDate: today };
-    }
     case 'lastMonth': {
       const [year, month] = today.split('-').map(Number);
       const firstThisMonth = `${year}-${String(month).padStart(2, '0')}-01`;
@@ -147,12 +130,6 @@ export function operatorDeltaLabelKey(preset: OperatorStatsPreset): string {
       return 'operator.siteStats.deltaVsYesterday';
     case 'yesterday':
       return 'operator.siteStats.deltaVsDayBefore';
-    case 'thisWeek':
-      return 'operator.siteStats.deltaVsLastWeek';
-    case 'thisMonth':
-      return 'operator.siteStats.deltaVsLastMonth';
-    case 'lastMonth':
-      return 'operator.siteStats.deltaVsPrevious';
     default:
       return 'operator.siteStats.deltaVsPrevious';
   }
@@ -201,26 +178,14 @@ export function formatOperatorPublishedAt(
   }
 }
 
-/** 功能注释：运营统计封面 — 与首页一致走 display-cover + ASSET_HOST */
-export function resolveOperatorCoverSrc(coverUrl: string | null | undefined): string {
-  const display = toDisplayCoverUrl(coverUrl);
-  return getImageUrl(display || coverUrl);
-}
-
-/** 功能注释：display-cover 失败时回退原图绝对地址 */
-export function resolveOperatorCoverFallbackSrc(
-  failedDisplayPathOrUrl: string | null | undefined,
-  coverUrl: string | null | undefined,
-): string {
-  const failed = String(failedDisplayPathOrUrl || '');
-  const pathOnly = failed.replace(/^https?:\/\/[^/]+/i, '') || failed;
-  const displayPath = toDisplayCoverUrl(coverUrl) || '';
-  const fallbackPath = coverUrlAfterDisplayCoverError(displayPath || pathOnly, coverUrl);
-  return fallbackPath ? getImageUrl(fallbackPath) : '';
-}
-
 export function isOperatorSortBy(value: string | null | undefined): value is OperatorSortBy {
   return Boolean(value && OPERATOR_METRIC_KEYS.includes(value as OperatorSortBy));
+}
+
+function isOperatorStatsUrlPreset(
+  value: string,
+): value is Exclude<OperatorStatsPreset, 'lastMonth'> {
+  return (OPERATOR_STATS_URL_PRESETS as ReadonlyArray<string>).includes(value);
 }
 
 /** 功能注释：运营全站统计搜索类型（与后端 searchType 对齐） */
@@ -344,19 +309,10 @@ export function parseOperatorStatsQuery(search: string): {
   const rawPreset = params.get('preset') || '';
   const startDate = params.get('startDate') || undefined;
   const endDate = params.get('endDate') || undefined;
-  // 功能注释：运营全站统计无 query 时默认「全部」（非近 7 日）
+
+  // 功能注释：无合法 URL preset 时，有日期 → custom，否则 → all（含 lastMonth/thisWeek 等下线值）
   let preset: OperatorStatsPreset = 'all';
-  if (
-    rawPreset === 'today'
-    || rawPreset === 'yesterday'
-    || rawPreset === 'last7'
-    || rawPreset === 'last30'
-    || rawPreset === 'thisWeek'
-    || rawPreset === 'thisMonth'
-    || rawPreset === 'lastMonth'
-    || rawPreset === 'all'
-    || rawPreset === 'custom'
-  ) {
+  if (isOperatorStatsUrlPreset(rawPreset)) {
     preset = rawPreset;
   } else if (startDate || endDate) {
     preset = 'custom';

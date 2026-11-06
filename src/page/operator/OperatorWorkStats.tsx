@@ -4,11 +4,17 @@ import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import Navbar from '../../components/Layout/Navbar';
 import ListPaginationBar, { buildListPagination, type ListPaginationState } from '../../components/ListPaginationBar';
+import OperatorStatsDateModal from '../../components/stats/OperatorStatsDateModal';
 import OperatorStatsKpiGrid from '../../components/stats/OperatorStatsKpiGrid';
+import OperatorStatsPresetBar from '../../components/stats/OperatorStatsPresetBar';
 import operatorStatsApi, {
   type OperatorWorkDailyDay,
   type OperatorWorkDetail,
 } from '../../api/stats/operatorStatsApi';
+import {
+  resolveOperatorCoverFallbackSrc,
+  resolveOperatorCoverSrc,
+} from '../../utils/operatorCoverUrl';
 import {
   type OperatorStatsPreset,
   buildOperatorStatsQuery,
@@ -16,16 +22,13 @@ import {
   formatOperatorPublishedAt,
   formatOperatorWorkRank,
   operatorDeltaLabelKey,
-  operatorPresetLabelKey,
   operatorCustomRangeDraft,
-  operatorCustomRangeError,
   parseOperatorStatsQuery,
-  resolveOperatorCoverFallbackSrc,
-  resolveOperatorCoverSrc,
   resolveOperatorStatsRange,
 } from '../../utils/operatorStatsRange';
 import adminStyles from '../AdminPanel.module.css';
-import styles from './OperatorSiteStats.module.css';
+import styles from './OperatorWorkStats.module.css';
+import shared from './OperatorStatsShared.module.css';
 
 const emptyDailyPagination: ListPaginationState = {
   page: 1,
@@ -34,13 +37,6 @@ const emptyDailyPagination: ListPaginationState = {
   totalPages: 1,
 };
 
-const DETAIL_PRESETS: OperatorStatsPreset[] = [
-  'today',
-  'yesterday',
-  'last7',
-  'last30',
-];
-
 const OperatorWorkStats: React.FC = () => {
   const { fileId = '' } = useParams();
   const { t } = useTranslation();
@@ -48,9 +44,7 @@ const OperatorWorkStats: React.FC = () => {
   const location = useLocation();
   const initialQuery = useMemo(() => parseOperatorStatsQuery(location.search), [location.search]);
 
-  const [preset, setPreset] = useState<OperatorStatsPreset>(
-    initialQuery.preset === 'lastMonth' ? 'custom' : initialQuery.preset,
-  );
+  const [preset, setPreset] = useState<OperatorStatsPreset>(initialQuery.preset);
   const [startDate, setStartDate] = useState<string | undefined>(initialQuery.startDate);
   const [endDate, setEndDate] = useState<string | undefined>(initialQuery.endDate);
   const [sortBy] = useState(initialQuery.sortBy);
@@ -137,18 +131,13 @@ const OperatorWorkStats: React.FC = () => {
     setCustomOpen(true);
   };
 
-  const applyCustomRange = () => {
-    const rangeError = operatorCustomRangeError(draftStart, draftEnd);
-    if (rangeError) {
-      toast.error(t(`operator.siteStats.customDate${rangeError === 'required' ? 'Required' : 'Invalid'}`));
-      return;
-    }
+  const applyCustomRange = (next: { startDate: string; endDate: string }) => {
     setPreset('custom');
-    setStartDate(draftStart);
-    setEndDate(draftEnd);
+    setStartDate(next.startDate);
+    setEndDate(next.endDate);
     setDailyPage(1);
     setCustomOpen(false);
-    syncDetailUrl('custom', { startDate: draftStart, endDate: draftEnd });
+    syncDetailUrl('custom', { startDate: next.startDate, endDate: next.endDate });
   };
 
   const loadDetail = useCallback(async () => {
@@ -281,7 +270,7 @@ const OperatorWorkStats: React.FC = () => {
           </button>
 
           {notFound ? (
-            <div className={styles.emptyState}>{t('operator.siteStats.workNotFound')}</div>
+            <div className={shared.emptyState}>{t('operator.siteStats.workNotFound')}</div>
           ) : (
             <>
               <section className={styles.workHero}>
@@ -333,36 +322,11 @@ const OperatorWorkStats: React.FC = () => {
                 </div>
               </section>
 
-              <div className={styles.presetRow}>
-                <div className={styles.presetRowMain}>
-                  {DETAIL_PRESETS.map((item) => (
-                    <button
-                      key={item}
-                      type="button"
-                      className={`${styles.presetButton} ${preset === item ? styles.presetButtonActive : ''}`}
-                      onClick={() => applyPreset(item)}
-                    >
-                      {t(operatorPresetLabelKey(item))}
-                    </button>
-                  ))}
-                </div>
-                <div className={styles.presetRowEnd}>
-                  <button
-                    type="button"
-                    className={`${styles.presetButton} ${preset === 'all' ? styles.presetButtonActive : ''}`}
-                    onClick={() => applyPreset('all')}
-                  >
-                    {t(operatorPresetLabelKey('all'))}
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.presetButton} ${preset === 'custom' ? styles.presetButtonActive : ''}`}
-                    onClick={openCustomModal}
-                  >
-                    {t('operator.siteStats.presetCustom')}
-                  </button>
-                </div>
-              </div>
+              <OperatorStatsPresetBar
+                preset={preset}
+                onSelectPreset={applyPreset}
+                onOpenCustom={openCustomModal}
+              />
 
               <OperatorStatsKpiGrid
                 metrics={detail}
@@ -373,15 +337,15 @@ const OperatorWorkStats: React.FC = () => {
                 onRetry={() => { void loadDetail(); }}
               />
 
-              <section className={styles.section}>
-                <h2 className={styles.sectionTitle}>{t('operator.siteStats.dailyTitle')}</h2>
+              <section className={shared.section}>
+                <h2 className={shared.sectionTitle}>{t('operator.siteStats.dailyTitle')}</h2>
                 {dailyNote ? (
-                  <div className={styles.emptyState}>
+                  <div className={shared.emptyState}>
                     <div>{dailyNote}</div>
                     {dailyFailed ? (
                       <button
                         type="button"
-                        className={styles.linkLikeButton}
+                        className={shared.linkLikeButton}
                         onClick={() => { void loadDaily(); }}
                       >
                         {t('operator.statsOverviewRetry')}
@@ -391,42 +355,42 @@ const OperatorWorkStats: React.FC = () => {
                 ) : null}
                 {!dailyNote ? (
                   <>
-                    <div className={styles.tableWrap}>
-                      <table className={styles.table}>
+                    <div className={shared.tableWrap}>
+                      <table className={shared.table}>
                         <thead>
                           <tr>
                             <th>{t('operator.siteStats.colDate')}</th>
-                            <th className={styles.metricCol}>{t('operator.siteStats.metricPv')}</th>
-                            <th className={styles.metricCol}>{t('operator.siteStats.metricUv')}</th>
-                            <th className={styles.metricCol}>{t('operator.siteStats.metricPlayCount')}</th>
-                            <th className={styles.metricCol}>{t('operator.siteStats.metricPlayDuration')}</th>
-                            <th className={styles.metricCol}>{t('operator.siteStats.metricLikes')}</th>
-                            <th className={styles.metricCol}>{t('operator.siteStats.metricFavorites')}</th>
-                            <th className={styles.metricCol}>{t('operator.siteStats.metricComments')}</th>
-                            <th className={styles.metricCol}>{t('operator.siteStats.metricSpend')}</th>
+                            <th className={shared.metricCol}>{t('operator.siteStats.metricPv')}</th>
+                            <th className={shared.metricCol}>{t('operator.siteStats.metricUv')}</th>
+                            <th className={shared.metricCol}>{t('operator.siteStats.metricPlayCount')}</th>
+                            <th className={shared.metricCol}>{t('operator.siteStats.metricPlayDuration')}</th>
+                            <th className={shared.metricCol}>{t('operator.siteStats.metricLikes')}</th>
+                            <th className={shared.metricCol}>{t('operator.siteStats.metricFavorites')}</th>
+                            <th className={shared.metricCol}>{t('operator.siteStats.metricComments')}</th>
+                            <th className={shared.metricCol}>{t('operator.siteStats.metricSpend')}</th>
                           </tr>
                         </thead>
                         <tbody>
                           {days.map((day) => (
                             <tr key={day.date}>
                               <td>{day.date}</td>
-                              <td className={styles.metricCol}>{day.pv.toLocaleString()}</td>
-                              <td className={styles.metricCol}>{day.uv.toLocaleString()}</td>
-                              <td className={styles.metricCol}>{day.playCount.toLocaleString()}</td>
-                              <td className={styles.metricCol}>{formatOperatorPlayDuration(day.playDurationSeconds)}</td>
-                              <td className={styles.metricCol}>{day.likeCount.toLocaleString()}</td>
-                              <td className={styles.metricCol}>{day.favoriteCount.toLocaleString()}</td>
-                              <td className={styles.metricCol}>{day.commentCount.toLocaleString()}</td>
-                              <td className={styles.metricCol}>{day.spendPoints.toLocaleString()}</td>
+                              <td className={shared.metricCol}>{day.pv.toLocaleString()}</td>
+                              <td className={shared.metricCol}>{day.uv.toLocaleString()}</td>
+                              <td className={shared.metricCol}>{day.playCount.toLocaleString()}</td>
+                              <td className={shared.metricCol}>{formatOperatorPlayDuration(day.playDurationSeconds)}</td>
+                              <td className={shared.metricCol}>{day.likeCount.toLocaleString()}</td>
+                              <td className={shared.metricCol}>{day.favoriteCount.toLocaleString()}</td>
+                              <td className={shared.metricCol}>{day.commentCount.toLocaleString()}</td>
+                              <td className={shared.metricCol}>{day.spendPoints.toLocaleString()}</td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                       {dailyLoading ? (
-                        <div className={styles.emptyState}>{t('creatorStats.loading')}</div>
+                        <div className={shared.emptyState}>{t('creatorStats.loading')}</div>
                       ) : null}
                       {!dailyLoading && days.length === 0 ? (
-                        <div className={styles.emptyState}>{t('operator.siteStats.noDailyRows')}</div>
+                        <div className={shared.emptyState}>{t('operator.siteStats.noDailyRows')}</div>
                       ) : null}
                     </div>
                     {isAllTimeDaily ? (
@@ -449,49 +413,17 @@ const OperatorWorkStats: React.FC = () => {
         </div>
       </div>
 
-      {customOpen ? (
-        <div className={styles.modalOverlay} role="presentation" onClick={() => setCustomOpen(false)}>
-          <div
-            className={styles.modal}
-            role="dialog"
-            aria-modal="true"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className={styles.modalHeader}>
-              <h3 className={styles.modalTitle}>{t('operator.siteStats.customDateOnlyTitle')}</h3>
-              <button type="button" className={styles.modalClose} onClick={() => setCustomOpen(false)}>
-                ×
-              </button>
-            </div>
-            <div className={styles.modalSection}>
-              <span className={styles.modalLabel}>{t('operator.siteStats.timeRange')}</span>
-              <div className={styles.dateRangeRow}>
-                <input
-                  className={styles.dateInput}
-                  type="date"
-                  value={draftStart}
-                  onChange={(event) => setDraftStart(event.target.value)}
-                />
-                <span>~</span>
-                <input
-                  className={styles.dateInput}
-                  type="date"
-                  value={draftEnd}
-                  onChange={(event) => setDraftEnd(event.target.value)}
-                />
-              </div>
-            </div>
-            <div className={styles.modalFooter}>
-              <button type="button" className={styles.secondaryButton} onClick={() => setCustomOpen(false)}>
-                {t('common.cancel')}
-              </button>
-              <button type="button" className={styles.primaryButton} onClick={applyCustomRange}>
-                {t('operator.siteStats.queryRank')}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <OperatorStatsDateModal
+        open={customOpen}
+        title={t('operator.siteStats.customDateOnlyTitle')}
+        startDate={draftStart}
+        endDate={draftEnd}
+        onStartDateChange={setDraftStart}
+        onEndDateChange={setDraftEnd}
+        onClose={() => setCustomOpen(false)}
+        onSubmit={applyCustomRange}
+        quickPresets={[]}
+      />
     </div>
   );
 };
