@@ -14,6 +14,7 @@ import campusMod from "./campus";
 import titlesPlusMod from "./titlesPlus";
 import { entPacks, ENT_PACK_IDS } from "./entPacks";
 import { WORLD_RULE_DIMS, type Gig, type MapLocation } from "../game/data";
+import { isGrowEnabled, type GrowContentLike } from "../game/growModules";
 import { applyGigPrices } from "../game/gigLibrary";
 import type { PersonContent, RoomActivity, RoomContent, RoomItem } from "../worlds/star2005/content";
 import { asPhoneOverrides } from "../lib/phoneAppsConfig";
@@ -786,6 +787,8 @@ function resolveLiveTerm(w: ResolvedWorld, k: TermKey, fallback?: string): strin
       return termFallback(k, fallback);
     }
     case "advance": {
+      // 功能注释：关养成时底栏中央固定叫「推进」；开养成才走头衔「晋升」或默认「日程」
+      if (!worldGrowEnabled(w)) return fromTerms || "推进";
       const titles = pickSlot((c) => c.titles);
       if (titles?.length) return "晋升";
       return termFallback(k, fallback);
@@ -922,7 +925,30 @@ export const getWorldNpcs = () => getWorld().content.npcs;
 export const getWorldGigs = () => getWorld().content.gigs;
 export const getWorldEvents = () => getWorld().content.events;
 export const getWorldIncome = () => getWorld().content.income;
-export const getWorldGameRules = () => getWorld().content.gameRules;
+/**
+ * 功能注释：总养成开关关闭时局内不跑玩法规则，避免关养成仍触发每周/每天判定。
+ */
+export const getWorldGameRules = () => (worldGrowEnabled() ? getWorld().content.gameRules : []);
+
+/**
+ * 功能注释：从合并链拼出养成判定用内容；总开关关 → 底栏改「推进」、不打开日程板。
+ * 可传入指定 ResolvedWorld（术语解析预览用）；默认读当前生效世界。
+ */
+export function worldGrowEnabled(w: ResolvedWorld = getWorld()): boolean {
+  const merged: GrowContentLike = {};
+  for (const mod of w.chain) {
+    const c = mod.content;
+    if (c.growModules) merged.growModules = { ...(merged.growModules ?? {}), ...c.growModules };
+    if (c.trainings?.length) merged.trainings = c.trainings;
+    if (c.sideJobs?.length) merged.sideJobs = c.sideJobs;
+    if (c.weekendActs?.length) merged.weekendActs = c.weekendActs;
+    if (c.bills) merged.bills = c.bills;
+    if (c.income?.length) merged.income = c.income;
+    if (c.gameRules?.length) merged.gameRules = c.gameRules;
+    if (c.tuning) merged.tuning = { ...(merged.tuning ?? {}), ...c.tuning };
+  }
+  return isGrowEnabled(merged);
+}
 export const getWorldStorylines = () => getWorld().content.storylines;
 export const getWorldSidelines = () => getWorld().content.sidelines;
 export const getWorldLookRules = () => getWorld().content.lookRules;

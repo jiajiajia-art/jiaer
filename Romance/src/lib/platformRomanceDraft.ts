@@ -81,18 +81,44 @@ export function buildRomancePlatformDraftContent(input: {
   };
 }
 
+/** 功能注释：从 mod 抽书架封面；优先 manifest.cover，否则 content.cover 首图。 */
+export function resolveRomanceDraftCoverUrl(
+  mod: Pick<Mod, "cover" | "content"> | null | undefined,
+): string {
+  const direct = String(mod?.cover || "").trim();
+  if (direct) return direct;
+  const cover = mod?.content?.cover;
+  if (!cover || typeof cover !== "object") return "";
+  const image = String((cover as { image?: string }).image || "").trim();
+  if (image) return image;
+  const cgs = (cover as { cgs?: unknown }).cgs;
+  if (Array.isArray(cgs)) {
+    for (const item of cgs) {
+      const url = String(item || "").trim();
+      if (url) return url;
+    }
+  }
+  return "";
+}
+
 /**
  * 功能注释：PATCH 更新已有草稿；失败返回 false，禁止回落到 create。
+ * coverUrl 有值时写回 games.cover_url，书架卡片与编辑器封面一致。
  */
 export async function patchRomancePlatformDraft(
   fileId: string,
   title: string,
+  coverUrl?: string | null,
 ): Promise<boolean> {
   const id = String(fileId || "").trim();
   if (!id) return false;
   const token = readFunloomAuthToken();
   if (!token) return false;
   try {
+    const body: { title: string; cover_url?: string | null } = {
+      title: resolveRomanceDraftTitle(title),
+    };
+    if (coverUrl !== undefined) body.cover_url = coverUrl || null;
     const res = await fetch(romanceDraftUpdateUrl(id), {
       method: "PATCH",
       headers: {
@@ -100,7 +126,7 @@ export async function patchRomancePlatformDraft(
         Accept: "application/json",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ title: resolveRomanceDraftTitle(title) }),
+      body: JSON.stringify(body),
     });
     if (!res.ok) return false;
     const json = await res.json().catch(() => null) as { success?: boolean } | null;
@@ -171,27 +197,43 @@ export async function putRomancePlatformDraftContent(
 
 type SyncDeps = {
   /** 功能注释：实际发 PATCH；测试可注入。返回 false 表示失败（不抛）。 */
-  update: (fileId: string, title: string) => Promise<boolean>;
+  update: (fileId: string, title: string, coverUrl?: string | null) => Promise<boolean>;
 };
 
 const defaultDeps: SyncDeps = { update: patchRomancePlatformDraft };
 
 let inflight: Promise<boolean> | null = null;
-let queued: { fileId: string; title: string } | null = null;
+let queued: { fileId: string; title: string; coverUrl?: string | null } | null = null;
 let timer: ReturnType<typeof setTimeout> | null = null;
 
+type DraftSyncMeta = string | { title: string; coverUrl?: string | null };
+
+function normalizeDraftSyncMeta(meta: DraftSyncMeta): { title: string; coverUrl?: string | null } {
+  if (typeof meta === "string") return { title: resolveRomanceDraftTitle(meta) };
+  return {
+    title: resolveRomanceDraftTitle(meta.title),
+    coverUrl: meta.coverUrl,
+  };
+}
+
 /**
- * 功能注释：防抖合并多次自动保存；同 fileId 只保留最新标题，禁止并发打出多条 create。
+ * 功能注释：防抖合并多次自动保存；同 fileId 只保留最新标题/封面，禁止并发打出多条 create。
+ * meta 可传标题字符串，或 `{ title, coverUrl }`（封面写入 games.cover_url）。
  */
 export function scheduleRomancePlatformDraftSync(
   fileId: string,
-  title: string,
+  meta: DraftSyncMeta,
   deps: SyncDeps = defaultDeps,
   debounceMs = 1200,
 ): void {
   const id = String(fileId || "").trim();
   if (!id) return;
-  queued = { fileId: id, title: resolveRomanceDraftTitle(title) };
+  const next = normalizeDraftSyncMeta(meta);
+  queued = {
+    fileId: id,
+    title: next.title,
+    coverUrl: next.coverUrl === undefined ? queued?.coverUrl : next.coverUrl,
+  };
   if (timer) clearTimeout(timer);
   timer = setTimeout(() => {
     timer = null;
@@ -216,7 +258,7 @@ export async function flushRomancePlatformDraftSync(
   queued = null;
   inflight = (async () => {
     try {
-      return await deps.update(job.fileId, job.title);
+      return await deps.update(job.fileId, job.title, job.coverUrl);
     } catch {
       return false;
     } finally {
@@ -226,20 +268,25 @@ export async function flushRomancePlatformDraftSync(
   return inflight;
 }
 
-/** 功能注释：保存成功时立刻排队并 flush，保证书架 updated_at / 标题同步。 */
+/** 功能注释：保存成功时立刻排队并 flush，保证书架 updated_at / 标题 / 封面同步。 */
 export async function commitRomancePlatformDraft(
   fileId: string,
-  title: string,
+  meta: DraftSyncMeta,
   deps: SyncDeps = defaultDeps,
 ): Promise<boolean> {
   const id = String(fileId || "").trim();
   if (!id) return false;
-  queued = { fileId: id, title: resolveRomanceDraftTitle(title) };
+  const next = normalizeDraftSyncMeta(meta);
+  queued = {
+    fileId: id,
+    title: next.title,
+    coverUrl: next.coverUrl,
+  };
   return flushRomancePlatformDraftSync(deps);
 }
 
 /**
- * 功能注释：点保存 / 生成完成时同步标题 + 正文；正文失败仍尽量更新标题。
+ * 功能注释：点保存 / 生成完成时同步标题 + 正文；正文失败仍尽量更新标题/封面。
  */
 export async function commitRomancePlatformDraftWithContent(
   fileId: string,
@@ -258,8 +305,9 @@ export async function commitRomancePlatformDraftWithContent(
     draft: input.draft,
     s1: input.s1,
   });
+  const coverUrl = resolveRomanceDraftCoverUrl(input.mod);
   const [titleOk, contentOk] = await Promise.all([
-    commitRomancePlatformDraft(id, input.title, deps),
+    commitRomancePlatformDraft(id, { title: input.title, coverUrl: coverUrl || null }, deps),
     putRomancePlatformDraftContent(id, content),
   ]);
   return titleOk && contentOk;

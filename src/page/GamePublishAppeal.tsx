@@ -120,7 +120,7 @@ const GamePublishAppeal: React.FC = () => {
       <Navbar />
       <main className={styles.mainContent}>
         <header className={styles.pageHeader}>
-          <button type="button" className={styles.backButton} onClick={() => navigate('/create/works?tab=drafts')} aria-label="返回草稿箱">
+          <button type="button" className={styles.backButton} onClick={() => navigate('/create/works?tab=all')} aria-label="返回书架">
             <IoArrowBack aria-hidden="true" />
           </button>
           <div>

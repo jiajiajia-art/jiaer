@@ -19,7 +19,7 @@ import {
   resolveGameCardAuthor,
 } from '../lib/gameCardAuthor';
 import { CardFlameIcon, CardHeartIcon } from './GameCardStatIcons';
-import { creatorWorkStatusLabel, resolveCreatorWorkStatus } from '../utils/creatorWorkLifecycle';
+import { creatorWorkStatusLabel, isDraftSlotWork, resolveCreatorWorkStatus } from '../utils/creatorWorkLifecycle';
 
 type GameGridLayoutVariant = 'default' | 'homeWide' | 'works';
 
@@ -33,6 +33,8 @@ interface GameGridProps {
     selectedIds?: string[];
     onToggleSelect?: (game: UserGameData) => void;
     isSelectionMode?: boolean;
+    /** 功能注释：管理模式下哪些卡可选；默认草稿槽作品才出勾选。 */
+    canSelectGame?: (game: UserGameData) => boolean;
     layoutVariant?: GameGridLayoutVariant;
     emptyText?: string;
     /** 首页推荐：长按 / 右键出屏蔽·举报菜单 */
@@ -53,6 +55,7 @@ const GameGrid: React.FC<GameGridProps> = ({
     selectedIds = [],
     onToggleSelect,
     isSelectionMode = false,
+    canSelectGame,
     layoutVariant = 'default',
     emptyText,
     enableContentMenu = false,
@@ -123,8 +126,14 @@ const GameGrid: React.FC<GameGridProps> = ({
 
     const getSelectableId = (game: UserGameData) => String(game.file_id || game.id || '');
 
+    const allowSelect = (game: UserGameData) => {
+        if (!selectable || !isSelectionMode) return false;
+        if (canSelectGame) return canSelectGame(game);
+        return isDraftSlotWork(game);
+    };
+
     const handleCardClick = (game: UserGameData) => {
-        if (selectable && isSelectionMode && onToggleSelect) {
+        if (allowSelect(game) && onToggleSelect) {
             onToggleSelect(game);
             return;
         }
@@ -231,7 +240,7 @@ const GameGrid: React.FC<GameGridProps> = ({
                                 );
                             })()}
 
-                            {selectable && isSelectionMode && selectableId && (
+                            {allowSelect(meta) && selectableId && (
                                 <>
                                     <div className={`${styles.selectionMask} ${isSelected ? styles.selectionMaskActive : ''}`} />
                                     <button

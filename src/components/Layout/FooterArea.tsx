@@ -15,7 +15,8 @@ const BOSS_ZHIPIN_URL =
   'https://www.zhipin.com/gongsi/d32e1e36dbdaad4f1HN62Ni5ElE~.html?ka=company-intro';
 
 /**
- * 功能注释：全站底部页脚——品牌 / 关注 / 加入 / 联系；业务合作与反馈入口开弹窗落库。
+ * 功能注释：全站页脚。PC 完整品牌+三列链接；移动端（含有底栏页）仅一行 © / 隐私 / 协议。
+ * 商务合作与反馈弹窗入口仅挂在 PC 链接列；移动端不依赖本页脚，走原有入口。
  */
 const FooterArea: React.FC = () => {
   const { t } = useTranslation();
@@ -25,9 +26,10 @@ const FooterArea: React.FC = () => {
 
   return (
     <>
-      <footer className={styles.footer} data-site-footer="1">
+      <footer className={styles.footer} data-site-footer="1" data-footer-mobile-compact="1">
         <div className={styles.container}>
           <div className={styles.brandCol}>
+            {/* 功能注释：Logo / 口号仅 PC；移动端 CSS 隐藏，避免底栏页再挂官网完整站脚 */}
             <img src={asset('data/assets/LOGO2.png')} alt="funloom" className={styles.logo} />
             <p className={styles.tagline}>{t('footer.tagline')}</p>
             <p className={styles.legal}>
@@ -41,7 +43,7 @@ const FooterArea: React.FC = () => {
             </p>
           </div>
 
-          <div className={styles.linkCols}>
+          <div className={styles.linkCols} data-footer-desktop-links="1">
             <div className={styles.block}>
               <div className={styles.title}>{t('footer.followUs')}</div>
               <a className={styles.item} href={DOUYIN_URL} target="_blank" rel="noreferrer">

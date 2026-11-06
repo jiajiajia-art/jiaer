@@ -92,8 +92,19 @@
     line-height: 1;
     cursor: pointer;
     border: none;
+    outline: none;
+    box-shadow: none;
     background: transparent;
+    -webkit-tap-highlight-color: transparent;
+    appearance: none;
     transition: color 160ms ease, transform 160ms ease;
+}
+
+/* 功能注释：弹窗打开会 focus 关闭键，禁止浏览器默认方框；键盘仍走下方 focus-visible */
+.closeButton:focus {
+    outline: none;
+    border: none;
+    box-shadow: none;
 }
 
 .closeButton:hover {

@@ -101,12 +101,16 @@ test('platformApps_前端契约与创作入口', () => {
   const app = readFileSync(join(root, 'src/App.tsx'), 'utf8');
   assert.match(api, /\/api\/auth\/platform-apps/);
   assert.match(api, /publish/);
+  // 功能注释：原「创作应用」收编为创作游戏二级「手机应用」；页内仍提及旧名说明收编
+  assert.match(create, /手机应用/);
   assert.match(create, /创作应用/);
   assert.match(create, /上架/);
   assert.match(create, /AppPageShell/);
   assert.doesNotMatch(create, /<Navbar\s*\/>/);
   assert.doesNotMatch(create, /<MobileBottomNav/);
-  assert.match(createType, /创作应用/);
+  assert.doesNotMatch(createType, /title=["']创作应用["']/);
+  assert.match(createType, /title=["']手机应用["']/);
+  assert.match(createType, /\/create\/app/);
   assert.match(app, /\/create\/app/);
   assert.match(app, /CreatePlatformApp/);
 });

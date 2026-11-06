@@ -43,7 +43,7 @@ test('草稿冲突_已保存版本也写出时间', () => {
   assert.match(panel, /resolveSavedVersionAt/);
   assert.match(wiz, /已保存的版本（\$\{fmtDraftTime\(entranceDraftGate\.savedAt\)\}）/);
   assert.match(wiz, /savedAt: resolveSavedVersionAt/);
-  assert.match(wiz, /writeSavedVersionAt\(WORLD_GEN_DRAFT_ID/);
+  assert.match(wiz, /writeSavedVersionAt\(worldGenDraftId/);
   assert.match(draftLib, /export function writeSavedVersionAt/);
   assert.match(draftLib, /export function resolveSavedVersionAt/);
   assert.match(draftLib, /SAVED_VERSION_AT_PREFIX/);

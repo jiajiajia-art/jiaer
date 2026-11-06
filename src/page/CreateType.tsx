@@ -155,6 +155,8 @@ const CreateType: React.FC = () => {
   const [mobileTipMessage, setMobileTipMessage] = useState('');
   const [draftLimitReached, setDraftLimitReached] = useState(false);
   const [draftCapacityLabel, setDraftCapacityLabel] = useState('');
+  /** 功能注释：点「创作游戏」后先选二级：游戏世界 / 玩法 Mod / 手机应用 */
+  const [romanceSubOpen, setRomanceSubOpen] = useState(false);
 
   useEffect(() => {
     void auth.getUserInfo().then((response) => {
@@ -177,7 +179,7 @@ const CreateType: React.FC = () => {
       setDraftLimitReached(true);
       // 功能注释：带上 count/limit，避免用户只看到首屏两张草稿卡就以为系统误报
       toast.error(fullMsg);
-      navigate('/bookshelf?tab=drafts', { replace: true });
+      navigate('/bookshelf?tab=all', { replace: true });
     }).catch(() => {
       /* 服务端创建接口仍会执行硬性上限校验 */
     });
@@ -319,7 +321,7 @@ const CreateType: React.FC = () => {
               disabled={createBlocked}
               onClick={() => void handleSelectGameType('txt')}
             />
-            {/* 功能注释：Romance 游戏编辑器入口；进 /romance/?createWorld=1 打开「生成世界」向导 */}
+            {/* 功能注释：创作游戏先开二级（游戏世界 / 玩法 Mod / 手机应用）；「创作应用」不再并列 */}
             <TypeOptionRow
               title={t('createGame.romanceMode')}
               badge="new"
@@ -329,19 +331,8 @@ const CreateType: React.FC = () => {
               thumbClass={styles.createTypeOptionThumbRomance}
               disabled={createBlocked || draftLimitReached}
               onClick={() => {
-                void (async () => {
-                  clearAll();
-                  try {
-                    const response = await creatorDraftApi.createRomance();
-                    const fileId = response.data.data?.fileId;
-                    if (!response.data.success || !fileId) {
-                      throw new Error(response.data.message || '创建草稿失败');
-                    }
-                    navigate(`/romance/?createWorld=1&draftId=${encodeURIComponent(fileId)}`);
-                  } catch (error: unknown) {
-                    toast.error(getApiErrorMessage(error, '创建草稿失败'));
-                  }
-                })();
+                if (createBlocked || draftLimitReached) return;
+                setRomanceSubOpen(true);
               }}
             />
             <TypeOptionRow
@@ -375,19 +366,6 @@ const CreateType: React.FC = () => {
               onClick={() => void handleSelectGameType('custom')}
             />
             <TypeOptionRow
-              title="创作应用"
-              badge="new"
-              badgeText={t('createGame.new')}
-              hint="填写名称、图标与类型内容，保存草稿后上架，供作品手机安装"
-              icon={MdOutlineApps}
-              thumbClass={styles.createTypeOptionThumbCustom}
-              disabled={createBlocked}
-              onClick={() => {
-                if (createBlocked) return;
-                navigate('/create/app');
-              }}
-            />
-            <TypeOptionRow
               title="RPG"
               badge="locked"
               badgeText={t('createGame.locked')}
@@ -399,6 +377,84 @@ const CreateType: React.FC = () => {
           </div>
         </div>
     </AppPageShell>
+
+      {romanceSubOpen && (
+        <div
+          className={styles.createTypeModalOverlay}
+          onClick={() => setRomanceSubOpen(false)}
+        >
+          <div
+            className={`${styles.createTypeModal} ${pageStyles.romanceSubModal}`}
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="romance-sub-title"
+          >
+            <div className={styles.createTypeModalHeader}>
+              <div id="romance-sub-title" className={styles.createTypeModalTitle}>
+                {t('createGame.romanceMode')}
+              </div>
+            </div>
+            <div className={styles.createTypeModalDesc}>
+              选择要创作的类型：游戏世界走现有向导；玩法 Mod / 手机应用用对话生成，并产出专属 SDK。
+            </div>
+            <div className={`${styles.createTypeOptions} ${pageStyles.romanceSubOptions}`}>
+              <TypeOptionRow
+                title="游戏世界"
+                hint="填写设定，AI 搭建世界，再进编辑器细调"
+                icon={MdOutlineAutoAwesome}
+                thumbClass={styles.createTypeOptionThumbRomance}
+                onClick={() => {
+                  void (async () => {
+                    setRomanceSubOpen(false);
+                    clearAll();
+                    try {
+                      const response = await creatorDraftApi.createRomance();
+                      const fileId = response.data.data?.fileId;
+                      if (!response.data.success || !fileId) {
+                        throw new Error(response.data.message || '创建草稿失败');
+                      }
+                      navigate(`/romance/?createWorld=1&draftId=${encodeURIComponent(fileId)}`);
+                    } catch (error: unknown) {
+                      toast.error(getApiErrorMessage(error, '创建草稿失败'));
+                    }
+                  })();
+                }}
+              />
+              <TypeOptionRow
+                title="玩法 Mod"
+                hint="对话生成玩法叠加包，产出 SDK，供游戏世界安装"
+                icon={HiOutlinePuzzle}
+                thumbClass={styles.createTypeOptionThumbCustom}
+                onClick={() => {
+                  setRomanceSubOpen(false);
+                  clearAll();
+                  navigate('/romance/?createPlayMod=1');
+                }}
+              />
+              <TypeOptionRow
+                title="手机应用"
+                hint="对话生成应用草稿与专属 SDK，保存后上架供移动端安装"
+                icon={MdOutlineApps}
+                thumbClass={styles.createTypeOptionThumbCustom}
+                onClick={() => {
+                  setRomanceSubOpen(false);
+                  navigate('/create/app');
+                }}
+              />
+            </div>
+            <div className={styles.createTypeModalFooter}>
+              <button
+                type="button"
+                onClick={() => setRomanceSubOpen(false)}
+                className={styles.createTypeCancelButton}
+              >
+                {t('createGame.cancel')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isIvgToolModalOpen && (
         <div

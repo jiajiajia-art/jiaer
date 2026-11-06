@@ -16,8 +16,8 @@ test('人物Section_顶部嵌ContactsPanel_无独立人脉页面配置Section', 
   assert.doesNotMatch(editor, /title="人脉页面配置"/);
   const peopleAt = editor.indexOf('title="人物"');
   assert.ok(peopleAt >= 0);
-  // 功能注释：关系玩法已迁出②角色；人物段以养成模块为下界
-  const endAt = editor.indexOf('title="养成模块"', peopleAt);
+  // 功能注释：关系玩法已迁出②角色；人物段以总养成开关为下界
+  const endAt = editor.indexOf('title="总养成开关"', peopleAt);
   const peopleBlock = editor.slice(peopleAt, endAt > peopleAt ? endAt : peopleAt + 8000);
   assert.match(peopleBlock, /ContactsPanel/);
   assert.ok(peopleBlock.indexOf('ContactsPanel') < peopleBlock.indexOf('npcs.map'), 'ContactsPanel 须在人物列表之上');

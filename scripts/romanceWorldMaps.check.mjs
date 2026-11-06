@@ -74,4 +74,15 @@ test('ModRoomTreeEditor_有大地图层且删除自动连通文案', () => {
   assert.match(src, /importLibraryMapTree/);
   assert.doesNotMatch(src, /上下层与同级进出由地点树自动连通/);
   assert.doesNotMatch(src, /无需再配东南西北出口/);
+  // 功能注释：大地图生图/预览统一竖版 9:16，禁止默认横图尺寸
+  assert.match(src, /SCENE_PORTRAIT_GEN_SIZE/);
+  assert.match(src, /thumb="aspect-\[9\/16\]/);
+  assert.doesNotMatch(src, /1792x1024/);
+  assert.doesNotMatch(src, /thumb="h-16 w-28"/);
+});
+
+test('ModEditorPanel_地点区不展示开局出行说明文案', () => {
+  const panel = readFileSync(join(romance, 'components/ModEditorPanel.tsx'), 'utf8');
+  assert.doesNotMatch(panel, /起始地点请在地点树里/);
+  assert.doesNotMatch(panel, /出行方式请到本页/);
 });

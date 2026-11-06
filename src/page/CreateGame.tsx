@@ -177,7 +177,7 @@ const CreateGame: React.FC = () => {
             setIsDeleting(true);
             await GameAction.deleteGame(gameId);
             setShowDeleteModal(false);
-            navigate('/bookshelf?tab=drafts');
+            navigate('/bookshelf?tab=all');
         } catch (error) {
             console.error('删除游戏失败:', error);
             toast.error(t('createGame.deleteFailed'));

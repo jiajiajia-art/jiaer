@@ -71,19 +71,18 @@ test('世界生成sanitize剥掉tuning.gigRules', async () => {
 test('经济收官与balance库不套用娱乐圈对比', () => {
   const editor = read('components/ModEditorPanel.tsx');
   const balLib = read('mods/balance.ts');
-  const balUi = read('components/ModBalancePanel.tsx');
   const ecoUi = read('components/ModEconomyRulesPanel.tsx');
   assert.doesNotMatch(editor, /和娱乐圈原版比/);
   assert.doesNotMatch(balLib, /原版最大约/);
   assert.doesNotMatch(balLib, /原版约/);
   assert.doesNotMatch(balLib, /是原版的/);
-  // 功能注释：养成余额面板只留扣费；破产规则在结局，两边都不得套娱乐圈对比文案
-  assert.match(balUi, /扣费依据/);
-  assert.doesNotMatch(balUi, /还没有收支/);
-  assert.doesNotMatch(balUi, /GENERIC_BILLS/);
-  assert.doesNotMatch(balUi, /RAW_SIDE_JOBS/);
-  assert.doesNotMatch(balUi, /billsSlot\(\)/);
-  assert.doesNotMatch(balUi, /startMoney\(\)/);
+  // 功能注释：扣费与破产都在结局经济面板；不得套娱乐圈对比文案
+  assert.match(ecoUi, /扣费依据/);
+  assert.doesNotMatch(ecoUi, /还没有收支/);
+  assert.doesNotMatch(ecoUi, /GENERIC_BILLS/);
+  assert.doesNotMatch(ecoUi, /RAW_SIDE_JOBS/);
+  assert.doesNotMatch(ecoUi, /billsSlot\(\)/);
+  assert.doesNotMatch(ecoUi, /startMoney\(\)/);
   assert.match(ecoUi, /经济规则/);
   assert.match(ecoUi, /① 基础 → 建角/);
   assert.doesNotMatch(ecoUi, /和娱乐圈原版比/);

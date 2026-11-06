@@ -52,9 +52,19 @@ import ModTrainingsEditor from "./ModTrainingsEditor";
 import ModActsEditor from "./ModActsEditor";
 import ModRulesEditor from "./ModRulesEditor";
 import ModTuningEditor from "./ModTuningEditor";
-import ModBalancePanel from "./ModBalancePanel";
 import ModEconomyRulesPanel from "./ModEconomyRulesPanel";
-import { GROW_MODULE_META, type GrowModuleId, isGrowModuleOn, clearGrowModule, enableGrowModule } from "../game/growModules";
+import {
+  GROW_MODULE_META,
+  GROW_TUNING_SUB_META,
+  type GrowModuleId,
+  type GrowTuningSubId,
+  isGrowEnabled,
+  isGrowModuleOn,
+  setGrowEnabled,
+  clearGrowModule,
+  enableGrowModule,
+} from "../game/growModules";
+import { isTuningModuleOn, clearTuningModule, enableTuningModule, pruneTuningSlot } from "../game/tuningModules";
 import TimelineEditor from "./TimelineEditor";
 import { worksMarkPreview } from "../lib/worksChip";
 import NpcTagsPicker from "./NpcTagsPicker";
@@ -136,7 +146,7 @@ export function blankMod(kind: ModKind): Mod {
 const GROUPS = [
   { k: "base", label: "① 基础", hint: "作品封面、名称与简介、剧本基调、时间与推进、头像、建角、人物线路、地点、已添加的玩法" },
   { k: "role", label: "② 角色", hint: "开局人物与关系档位（表白/婚礼请在「已添加的玩法」里加关系玩法）" },
-  { k: "grow", label: "③ 养成", hint: "勾选要用的养成模块：课程、打工、账单、玩法规则、引擎结算、扣费依据；分档在建角属性，头衔在玩法 Mod；破产规则在④结局" },
+  { k: "grow", label: "③ 养成", hint: "总养成开关 + 开哪些子项（课程、打工、账单、玩法规则、评级、休息）；分档在建角属性，头衔在玩法 Mod；扣费与破产在④结局" },
   { k: "story", label: "④ 剧情", hint: "世界书、固定 / 首次事件、剧情线（主线 · 支线 · 结局）" },
   { k: "look", label: "⑤ 美化", hint: "手机外观、皮肤美化、音乐、开场页外观、剧情美化、底栏样式" },
   { k: "pack", label: "本包内容", hint: "只列出这个叠加包里实际写了内容的区块；要加别的内容，去其他分组找" },
@@ -164,9 +174,9 @@ function groupFilled(c: Mod["content"], skinOn = false): Record<Exclude<GroupKey
       has(c.imageCrisis) || has(c.weeklyPaper) || has(c.meals) || has(c.pregnancy) || has(c.titles) || has(c.relations),
     ),
     role: n(has(c.npcs), has(c.contacts)),
-    // 功能注释：扣费依据在养成；透支/破产规则在④结局；开局资金已并进①基础·建角
-    grow: n(has(c.growModules), has(c.trainings), has(c.sideJobs) || has(c.weekendActs), has(c.bills) || has(c.income), has(c.gameRules), has(c.tuning)),
-    story: n(has(c.worldBook), has(c.fixedEvents) || has(c.events), has(c.storylines) || has(c.sidelines) || has(c.endings) || has(c.timeLimit) || has(c.gradeDims)),
+    // 功能注释：养成只计总开关与子项；扣费/破产在④结局；开局资金已并进①基础·建角
+    grow: n(isGrowEnabled(c), has(c.trainings), has(c.sideJobs) || has(c.weekendActs), has(c.bills) || has(c.income), has(c.gameRules), has(c.tuning)),
+    story: n(has(c.worldBook), has(c.fixedEvents) || has(c.events), has(c.storylines) || has(c.sidelines) || has(c.endings) || has(c.timeLimit) || has(c.gradeDims) || has(c.tuning?.economy)),
     look: n(
       has(c.phoneAppsCfg),
       has(c.theme),
@@ -203,7 +213,7 @@ function Section({ g, title, hint, count, children, defaultOpen, on, target }: {
 
 const GROUP_KEYS = new Set<string>(GROUPS.map((g) => g.k));
 
-export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBackToWizard, initialGroup, onLiveChange, onChromeChange, onCommitted, resumeDraftChoice, savedVersionAt: savedVersionAtProp, fluid }: {
+export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBackToWizard, initialGroup, onLiveChange, onChromeChange, onCommitted, resumeDraftChoice, savedVersionAt: savedVersionAtProp, fluid, localDraftKey }: {
   initial: Mod;
   isNew: boolean;
   onClose: (savedName?: string, savedId?: string) => void;
@@ -235,7 +245,14 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
    * 默认仍锁 1200 最小宽供桌面模组库（非生成世界入口）。
    */
   fluid?: boolean;
+  /**
+   * 功能注释：平台书架续编时传入稳定草稿键（如 mod.platform.{fileId}），整次编辑不随 isNew/persisted 改键，避免串稿。
+   */
+  localDraftKey?: string;
 }) {
+  // 功能注释：有平台键则全程固定；否则仍按「新建 → new / 已落库 → mod.id」
+  const resolveLocalDraftKey = (persistedNow: boolean, modId: string) =>
+    localDraftKey || `mod.${persistedNow ? modId : "new"}`;
   const { mods } = useMods();
   const { game } = useGame();
   /**
@@ -303,8 +320,10 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
   };
   // 功能注释：有待选草稿时先停在表单开头，禁止用 initialGroup 把人送进上次填写位置
   const [group, setGroup] = useState<GroupKey>(() => {
-    const draftId = !isNew ? String(initial.id || "new") : "new";
-    const conflict = peekDraft<Mod>(`mod.${draftId}`, JSON.stringify(bootModRef.current));
+    const conflict = peekDraft<Mod>(
+      resolveLocalDraftKey(!isNew, String(initial.id || "new")),
+      JSON.stringify(bootModRef.current),
+    );
     if (conflict) return "base";
     return normalizeGroup(initialGroup);
   });
@@ -349,7 +368,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
     scrollY: typeof window !== "undefined" ? window.scrollY || 0 : 0,
   };
   // 本机草稿：编辑中自动缓存。刚进入且与已保存不一致时先问版本；问完前不打开表单、不跳上次位置。
-  const draft = useDraft<Mod>(`mod.${persisted ? m.id : "new"}`, m, baseline, dirty, draftCursor);
+  const draft = useDraft<Mod>(resolveLocalDraftKey(persisted, m.id), m, baseline, dirty, draftCursor);
   const draftChoiceApplied = useRef(false);
   // 功能注释：入口已选定版本时直接执行，不再二次弹窗
   useEffect(() => {
@@ -671,9 +690,10 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
     // 功能注释：保存成功才把清洗后的版本交给上层作「已保存」基线；未保存填写不得冒充作品
     onCommitted?.(out);
     const committedAt = Date.now();
-    // 功能注释：新旧草稿键都记保存时刻，冲突弹窗才能对照「已保存版本（某月某日…）」
+    // 功能注释：平台键与 mod.id 键都记保存时刻，冲突弹窗才能对照「已保存版本」
+    writeSavedVersionAt(resolveLocalDraftKey(true, out.id), committedAt);
     writeSavedVersionAt(`mod.${out.id}`, committedAt);
-    writeSavedVersionAt("mod.new", committedAt);
+    if (!localDraftKey) writeSavedVersionAt("mod.new", committedAt);
     if (!stay) { onClose(out.name, out.id); return true; }
     setErrors([]);
     setErrorsExpanded(false);
@@ -943,7 +963,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
           <p className="text-[13px] leading-relaxed text-ink-soft">
             {(() => {
               // 功能注释：本机草稿与已保存版本都写出时间（今天 HH:MM / M月D日 HH:MM），两边对照
-              const draftId = `mod.${persisted ? m.id : "new"}`;
+              const draftId = resolveLocalDraftKey(persisted, m.id);
               const savedAtMs = resolveSavedVersionAt(draftId, savedVersionAtProp ?? savedAt)
                 ?? resolveSavedVersionAt("mod.new", savedVersionAtProp ?? savedAt);
               const savedBit = savedAtMs != null ? `已保存的版本（${fmtDraftTime(savedAtMs)}）` : "已保存的版本";
@@ -1304,7 +1324,6 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
 
       {/* 功能注释：地点名字与出口留在①基础、建角与人物线路之下；作品展示封面已在基本信息名称上方 */}
       <Section g="base" title="地点" target="author-field-rooms" on={has(c.rooms) || has(c.startRoom) || has(c.worldMaps)} hint="大地图 · 多级地点树 · 准入 · 开局地点" count={roomIds.length}>
-        <Help>起始地点请在地点树里点选「设为开局地点」。出行方式请到本页「已添加的玩法」里添加「出行与交通」后配置。</Help>
         <div data-author-section="author-field-start-room">
           <ModRoomTreeEditor
             rooms={rooms}
@@ -1467,47 +1486,135 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
         <button className={btn} onClick={addNpc}>＋ 添加人物</button>
       </Section>
 
-      {/* 功能注释：养成现代项（课程学费/打工/账单等）按勾选出现；仙侠古代可不勾，页上与开局都不生效。分档在建角属性；头衔在玩法 Mod。 */}
-      <Section g="grow" title="养成模块" on={has(c.growModules) || has(c.trainings) || has(c.sideJobs) || has(c.weekendActs) || has(c.bills) || has(c.income) || has(c.gameRules)} hint="勾选本作品要用的养成玩法；没勾的不显示，开局也不套用娱乐圈默认" defaultOpen>
-        <p className="mb-2 text-[11px] leading-relaxed text-ink-soft">课程学费、周末活动、每周扣费不是每个剧本都有。仙侠、古代等请勿勾选用不上的现代项。数值分档在「① 基础 → 建角」数值项里配；头衔请到「已添加的玩法」里添加「头衔包」。</p>
-        <div className="space-y-1">
-          {GROW_MODULE_META.map((mod) => {
-            const on = isGrowModuleOn(c, mod.id);
-            return (
-              <label key={mod.id} className="flex items-start gap-2 text-[11.5px] text-ink">
-                <input
-                  type="checkbox"
-                  className="mt-0.5 accent-jade"
-                  checked={on}
-                  onChange={(e) => {
-                    const id = mod.id as GrowModuleId;
-                    if (e.target.checked) setC(enableGrowModule(c, id));
-                    else setC(clearGrowModule(c, id));
-                  }}
+      {/* 功能注释：养成页只负责「开不开 + 开哪些」；三块开关合并成总养成开关，经济入口在④结局。 */}
+      <Section
+        g="grow"
+        title="总养成开关"
+        target="grow-modules"
+        on={isGrowEnabled(c)}
+        hint="开 = 本作品启用养成；关 = 整块锁定，局内不走养成，底栏「日程」改名为「推进」"
+        defaultOpen
+      >
+        <label className="mb-3 flex cursor-pointer items-start gap-2.5 rounded-xl border border-line bg-paper-2/60 px-3 py-2.5 text-[12.5px] text-ink">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 accent-jade"
+            checked={isGrowEnabled(c)}
+            onChange={(e) => setC(setGrowEnabled(c, e.target.checked))}
+          />
+          <span>
+            <span className="font-bold">启用养成</span>
+            <span className="mt-0.5 block text-[11px] leading-relaxed text-ink-soft">
+              关闭后子项配置保留但不生效；游戏中底部中央按钮显示为「推进」，直接推进时间，不打开日程板。
+            </span>
+          </span>
+        </label>
+
+        {isGrowEnabled(c) && (
+          <div className="space-y-3">
+            <p className="text-[11px] leading-relaxed text-ink-soft">
+              统一勾选本作品要用的养成子项；没勾的不显示、开局也不套用。不要勾娱乐圈专用通告/违约——那些在「已添加的玩法」里。数值分档在「① 基础 → 建角」；头衔请加「头衔包」。
+            </p>
+            <div className="space-y-1">
+              {GROW_MODULE_META.map((mod) => {
+                const on = isGrowModuleOn(c, mod.id);
+                return (
+                  <label key={mod.id} className="flex items-start gap-2 text-[11.5px] text-ink">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 accent-jade"
+                      checked={on}
+                      onChange={(e) => {
+                        const id = mod.id as GrowModuleId;
+                        if (e.target.checked) setC(enableGrowModule(c, id));
+                        else setC(clearGrowModule(c, id));
+                      }}
+                    />
+                    <span>
+                      <span className="font-semibold">{mod.label}</span>
+                      <span className="text-ink-soft"> · {mod.hint}</span>
+                    </span>
+                  </label>
+                );
+              })}
+              {GROW_TUNING_SUB_META.map((mod) => {
+                const on = isTuningModuleOn(c.tuning, mod.id);
+                return (
+                  <label key={mod.id} className="flex items-start gap-2 text-[11.5px] text-ink">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 accent-jade"
+                      checked={on}
+                      onChange={(e) => {
+                        const id = mod.id as GrowTuningSubId;
+                        const nextTuning = e.target.checked
+                          ? enableTuningModule(c.tuning ?? {}, id)
+                          : clearTuningModule(c.tuning ?? {}, id);
+                        setC({ tuning: pruneTuningSlot(nextTuning) as typeof c.tuning });
+                      }}
+                    />
+                    <span>
+                      <span className="font-semibold">{mod.label}</span>
+                      <span className="text-ink-soft"> · {mod.hint}</span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+
+            {/* 功能注释：玩法规则列表嵌在总开关下，不再单独占「玩法规则」卡片标题 */}
+            {isGrowModuleOn(c, "gameRules") && (
+              <div className="space-y-1.5 border-t border-line/70 pt-3">
+                <p className="text-[12px] font-bold text-ink">
+                  规则列表
+                  {c.gameRules?.length ? <span className="ml-1.5 text-[11px] font-semibold text-ink-soft">{c.gameRules.length}</span> : null}
+                </p>
+                <p className="text-[11px] text-ink-soft">判定时机 · 条件 · 调用事件库 · 规则变量；加规则 / 展开 / 删除不变</p>
+                <GameRulesEditor
+                  value={c.gameRules}
+                  events={c.fixedEvents}
+                  libraryEvents={c.events}
+                  onChange={({ gameRules, events }) => setC({
+                    gameRules,
+                    ...(events !== undefined ? { events } : {}),
+                  })}
                 />
-                <span>
-                  <span className="font-semibold">{mod.label}</span>
-                  <span className="text-ink-soft"> · {mod.hint}</span>
-                </span>
-              </label>
-            );
-          })}
-        </div>
+              </div>
+            )}
+
+            {/* 功能注释：只渲染已勾引擎表单；勾选清单已在上方统一，且不露出娱乐圈工作/违约 */}
+            {(isTuningModuleOn(c.tuning, "dayGrade") || isTuningModuleOn(c.tuning, "rest") || isGrowModuleOn(c, "courses") || isGrowModuleOn(c, "jobs")) && (
+              <div className="border-t border-line/70 pt-3">
+                <ModTuningEditor
+                  value={c.tuning}
+                  stats={c.stats}
+                  attrs={c.customAttrs}
+                  npcs={(npcs.length ? npcs : LIVE_PEOPLE).map((p) => ({ id: p.id, name: p.name }))}
+                  showCourses={isGrowModuleOn(c, "courses")}
+                  showJobs={isGrowModuleOn(c, "jobs")}
+                  showCareer={false}
+                  showModulePicker={false}
+                  onChange={(tuning) => setC({ tuning })}
+                />
+              </div>
+            )}
+          </div>
+        )}
       </Section>
 
-      {isGrowModuleOn(c, "courses") && (
+      {isGrowEnabled(c) && isGrowModuleOn(c, "courses") && (
         <Section g="grow" title="培训课程" on={has(c.trainings)} hint="学费 · 体力 · 属性收益 · 自定义等级与解锁条件" count={c.trainings?.length || undefined}>
           <ModTrainingsEditor value={c.trainings} stats={c.stats} attrs={c.customAttrs} onChange={(trainings) => setC({ trainings })} />
         </Section>
       )}
 
-      {isGrowModuleOn(c, "jobs") && (
+      {isGrowEnabled(c) && isGrowModuleOn(c, "jobs") && (
         <Section g="grow" title="打工 · 周末活动" on={has(c.sideJobs) || has(c.weekendActs)} hint="收入 · 压力 · 属性收益 · 解锁条件" count={(c.sideJobs?.length ?? 0) + (c.weekendActs?.length ?? 0) || undefined}>
           <ModActsEditor jobs={c.sideJobs} acts={c.weekendActs} stats={c.stats} attrs={c.customAttrs} onChange={(p) => setC(p)} />
         </Section>
       )}
 
-      {isGrowModuleOn(c, "bills") && (
+      {isGrowEnabled(c) && isGrowModuleOn(c, "bills") && (
         <>
           <Section g="grow" title="固定账单" on={has(c.bills)} hint="每周 / 每 4 周自动扣款 · 只写本作品有的项">
             <ModRulesEditor stats={c.stats} attrs={c.customAttrs} value={{ bills: c.bills }} showTitles={false} onChange={(p) => setC(p)} />
@@ -1517,49 +1624,6 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
           </Section>
         </>
       )}
-
-      {isGrowModuleOn(c, "gameRules") && (
-        <Section g="grow" title="玩法规则" on={has(c.gameRules)} hint="判定时机 · 条件 · 调用事件库 · 规则变量" count={c.gameRules?.length}>
-          {/* 功能注释：预设写入 events；规则行挂钩事件名；onChange 可同时回写 gameRules 与事件库 */}
-          <GameRulesEditor
-            value={c.gameRules}
-            events={c.fixedEvents}
-            libraryEvents={c.events}
-            onChange={({ gameRules, events }) => setC({
-              gameRules,
-              ...(events !== undefined ? { events } : {}),
-            })}
-          />
-        </Section>
-      )}
-
-      <Section g="grow" title="引擎规则" on={has(c.tuning)} hint="先勾选要用的模块；课程 / 通告结算 / 违约等只在本作品勾了相关玩法时出现" count={Object.keys(c.tuning ?? {}).length || undefined}>
-        <ModTuningEditor
-          value={c.tuning}
-          stats={c.stats}
-          attrs={c.customAttrs}
-          npcs={(npcs.length ? npcs : LIVE_PEOPLE).map((p) => ({ id: p.id, name: p.name }))}
-          showCourses={isGrowModuleOn(c, "courses")}
-          showJobs={isGrowModuleOn(c, "jobs")}
-          showCareer={showCareerNpcFields}
-          onChange={(tuning) => setC({ tuning })}
-        />
-      </Section>
-
-      {/* 功能注释：养成只留扣费依据；现金流估算已删；透支/破产挪到④剧情·结局 */}
-      <Section
-        g="grow"
-        title="经济与收官"
-        on={has(c.tuning?.economy?.chargeItems)}
-        hint="扣费依据自勾自填；没有的项不要添加。破产线与透支收官在「剧情线 → 结局」"
-        count={c.tuning?.economy?.chargeItems?.length || undefined}
-      >
-        <ModBalancePanel
-          c={c}
-          kind={m.kind}
-          onChange={setC}
-        />
-      </Section>
 
       <Section g="story" title="世界书" target="world-book" on={has(c.worldBook)} hint="名称 · 正文 · 关键词 · 必须挂本作品地点或人物" count={c.worldBook?.length}>
         <ModWorldBookEditor

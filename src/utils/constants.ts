@@ -50,6 +50,10 @@ export const getImageUrl = (imagePath: string | null | undefined): string => {
   if (displayPath.startsWith("http://") || displayPath.startsWith("https://")) {
     return displayPath;
   }
+  // 功能注释：Romance 草稿封面可能是 data:/blob:，禁止再拼 ASSET_HOST
+  if (displayPath.startsWith("data:") || displayPath.startsWith("blob:")) {
+    return displayPath;
+  }
 
   const isDefaultImage =
     displayPath.includes("defaultNpc.png") ||

@@ -47,7 +47,7 @@ test('ModEditorPanel_字段应按系统归入唯一入口', () => {
   assert.doesNotMatch(panel, /title="开局资源"/);
   assert.match(panel, /title="建角"/);
   assert.match(panel, /GROW_MODULE_META/);
-  assert.match(panel, /title="养成模块"/);
+  assert.match(panel, /title="总养成开关"/);
   const baseCreate = panel.slice(panel.indexOf('title="建角"'), panel.indexOf('title="地点"'));
   assert.match(baseCreate, /startMoney=\{c\.startMoney\}/);
   assert.match(baseCreate, /onStartMoney=/);

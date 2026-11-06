@@ -167,8 +167,10 @@ test('书架页接线_路由底栏真实接口且无原生弹窗与mock', () => 
   const app = read('src/App.tsx');
   assert.match(app, /<Route path="\/bookshelf" element={<CreateWorks \/>} \/>/);
   const unifiedWorks = read('src/components/Create/CreatorWorksPanel.tsx');
-  assert.match(unifiedWorks, /'all' \| 'published' \| 'drafts' \| 'favorites'/);
-  assert.match(unifiedWorks, /还没有草稿/);
+  assert.match(unifiedWorks, /'all' \| 'published' \| 'favorites'/);
+  assert.doesNotMatch(unifiedWorks, /worksTab === 'drafts'/);
+  assert.match(unifiedWorks, /create\.manage/);
+  assert.match(unifiedWorks, /normalizeWorksTabKey/);
   const nav = read('src/components/Layout/MobileBottomNav.tsx');
   assert.match(nav, /key: 'bookshelf'/);
   assert.match(nav, /navigate\('\/bookshelf'\)/);

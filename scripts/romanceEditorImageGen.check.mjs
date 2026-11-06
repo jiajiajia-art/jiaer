@@ -90,7 +90,7 @@ test('人物卡_ImagePicker生图接入姓名性别年龄小传', () => {
   assert.match(store, /drawAvatar/);
 });
 
-test('大地图与地点_接同一套生图', () => {
+test('大地图与地点_接同一套竖版生图', () => {
   const rooms = read('components/ModRoomTreeEditor.tsx');
   assert.match(rooms, /buildWorldMapPrompt/);
   assert.match(rooms, /buildLocationScenePrompt/);
@@ -99,6 +99,8 @@ test('大地图与地点_接同一套生图', () => {
   assert.match(rooms, /SCENE_PORTRAIT_GEN_SIZE/);
   assert.match(rooms, /scenePortrait/);
   assert.match(rooms, /initialPrompt: buildLocationScenePrompt/);
+  assert.match(rooms, /size: SCENE_PORTRAIT_GEN_SIZE/);
+  assert.doesNotMatch(rooms, /1792x1024/);
 });
 
 test('作品封面_生图用作品名与简介预填', () => {

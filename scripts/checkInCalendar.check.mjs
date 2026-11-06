@@ -130,13 +130,17 @@ test('月奖励提示使用后端返回的奖励数量', () => {
 test('关闭按钮无外圆框且保留可访问点击区域', () => {
   const closeButtonRule = modalStyles.match(/\.closeButton\s*\{([\s\S]*?)\}/)?.[1] ?? '';
   const closeButtonHoverRule = modalStyles.match(/\.closeButton:hover\s*\{([\s\S]*?)\}/)?.[1] ?? '';
+  const closeButtonFocusRule = modalStyles.match(/\.closeButton:focus\s*\{([\s\S]*?)\}/)?.[1] ?? '';
 
   assert.match(closeButtonRule, /width:\s*44px/);
   assert.match(closeButtonRule, /height:\s*44px/);
   assert.match(closeButtonRule, /border:\s*(?:0|none)/);
+  assert.match(closeButtonRule, /outline:\s*none/);
   assert.match(closeButtonRule, /background:\s*transparent/);
   assert.doesNotMatch(closeButtonRule, /border-radius:/);
   assert.doesNotMatch(closeButtonHoverRule, /background:/);
+  // 功能注释：自动 focus 时不得出现默认方框；键盘导航仍要有 focus-visible
+  assert.match(closeButtonFocusRule, /outline:\s*none/);
   assert.match(modalStyles, /\.closeButton:focus-visible,[\s\S]*?outline:\s*2px solid/);
 });
 

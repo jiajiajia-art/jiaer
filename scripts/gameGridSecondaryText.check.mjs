@@ -189,10 +189,14 @@ test('HomeThemePreviewRail_封面底栏应使用下载切图火焰心形', () =>
 
 test('GameGrid_列表封面顶对齐且手机不上移裁标题', () => {
   const css = readFileSync(join(root, 'src/components/GameGrid.module.css'), 'utf8');
-  const imgBlock = css.match(/\.goodsImg img\s*\{[^}]*\}/)?.[0] || '';
+  const imgBlock = css.match(/\.goodsImg\s*>\s*img\s*\{[^}]*\}/)?.[0]
+    || css.match(/\.goodsImg img\s*\{[^}]*\}/)?.[0]
+    || '';
   assert.match(imgBlock, /object-position:\s*top center/);
   const mobile = css.match(/@media \(max-width:\s*768px\)\s*\{[\s\S]*$/)?.[0] || '';
-  const mobileImg = mobile.match(/\.goodsImg img\s*\{[^}]*\}/)?.[0] || '';
+  const mobileImg = mobile.match(/\.goodsImg\s*>\s*img\s*\{[^}]*\}/)?.[0]
+    || mobile.match(/\.goodsImg img\s*\{[^}]*\}/)?.[0]
+    || '';
   assert.match(mobileImg, /transform:\s*none/);
   assert.doesNotMatch(mobileImg, /image-guard-shift-y|image-guard-scale/);
 });

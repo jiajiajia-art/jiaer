@@ -46,7 +46,7 @@ test('头像_不向创作者展示私库公库与avatarVariant说明', () => {
   // 功能注释：人物卡仍写 avatarVariant 字段，但界面文案不得把变量名摊给创作者
   assert.match(panel, /avatarVariant:/);
   assert.doesNotMatch(panel, /头像池（avatarVariant）/);
-  assert.match(panel, /头像池 · 开局从同名池抽一张做头像/);
+  assert.match(panel, /头像池 · 无固定头像时开局从同名池抽一张/);
 });
 
 test('运行时_日程叙事与年龄随日历内置开启', () => {

@@ -101,5 +101,5 @@ test('Create_草稿管理模式不应用绝对定位叠层', () => {
   }
   const panel = readFileSync(join(import.meta.dirname, '../src/components/Create/CreatorWorksPanel.tsx'), 'utf8');
   assert.match(panel, /worksTabBarManaging/);
-  assert.match(panel, /!isDraftManageMode && \(/);
+  assert.match(panel, /!isDraftManageMode && !isVisitor/);
 });

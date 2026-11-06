@@ -201,11 +201,23 @@ function playTally(m: Mod): [string, number][] {
   ];
 }
 
-export default function ModWorkshop({ onEdit, onClose, target }: { onEdit: (m: Mod) => void; onClose: (savedName?: string) => void; target?: { mod: Mod; isNew: boolean } }) {
+export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideModeSwitch }: {
+  onEdit: (m: Mod) => void;
+  /** 功能注释：savedMod 供平台入口在保存后打 .kkmod；旧调用只收名称仍兼容 */
+  onClose: (savedName?: string, savedMod?: Mod) => void;
+  target?: { mod: Mod; isNew: boolean };
+  /** 功能注释：平台「玩法 Mod」入口锁定玩法对话，禁止切到世界观 */
+  forceMode?: Mode;
+  hideModeSwitch?: boolean;
+}) {
   const { mods, applied } = useMods();
   const [confirm, confirmEl] = useConfirm();
   // 对话修改指定模组：模式跟随模组类型，草稿就是该模组本身，不读写工坊的新建草稿
-  const [mode, setMode] = useState<Mode>(() => target ? (target.mod.kind === "addon" ? "play" : "world") : loadGlobal<Mode>("mod-workshop-mode", "world") === "play" ? "play" : "world");
+  const [mode, setMode] = useState<Mode>(() => {
+    if (forceMode) return forceMode;
+    if (target) return target.mod.kind === "addon" ? "play" : "world";
+    return loadGlobal<Mode>("mod-workshop-mode", "world") === "play" ? "play" : "world";
+  });
   const [draft, setDraftRaw] = useState<Mod>(() => target?.mod ?? loadSaved(mode)?.draft ?? blank(mode, applied.world));
   const [turns, setTurns] = useState<Turn[]>(() => target
     ? [{ role: "assistant", text: `已载入「${target.mod.name}」。直接告诉我想怎么改，比如「加一个理智值属性，低于 20 触发失控事件」「打工收入减半、休息只减 3 点压力」「再加 5 个头衔」。改完可以保存，或回编辑器手调。` }]
@@ -214,6 +226,7 @@ export default function ModWorkshop({ onEdit, onClose, target }: { onEdit: (m: M
   const baseName = mods.find((x) => x.id === (draft.dependencies?.[0] ?? applied.world))?.name ?? "当前世界观";
   // 切换模式：先存当前草稿，再载入另一模式的草稿
   const switchMode = (m: Mode) => {
+    if (forceMode || hideModeSwitch) return;
     if (m === mode || busy) return;
     saveGlobal(LS_OF[mode], { draft, turns: turns.slice(-30) });
     saveGlobal("mod-workshop-mode", m);
@@ -285,7 +298,7 @@ export default function ModWorkshop({ onEdit, onClose, target }: { onEdit: (m: M
     const r = importModJson(JSON.stringify({ ...draft, builtin: undefined }));
     if (!r.ok) { setErr(r.errors.join("；")); return; }
     if (!target) removeGlobal(LS_OF[mode]);
-    onClose(r.mod!.name);
+    onClose(r.mod!.name, r.mod);
   };
 
   return (
@@ -295,7 +308,7 @@ export default function ModWorkshop({ onEdit, onClose, target }: { onEdit: (m: M
         <p className="flex min-w-0 items-center gap-1 truncate text-[14px] font-bold"><IconSpark size={16} className="shrink-0" />{target ? `对话修改「${target.mod.name}」` : "AI 创意工坊"}</p>
         <button className={btn} onClick={() => onClose()}>返回</button>
       </div>
-      {!target && (
+      {!target && !hideModeSwitch && !forceMode && (
         <div className="inline-flex self-start rounded-full border border-line bg-paper-2 p-0.5 text-[12px] font-bold">
           {([["world", "世界观模组"], ["play", "玩法 Mod"]] as const).map(([k, l]) => (
             <button key={k} disabled={busy} onClick={() => switchMode(k)} className={`rounded-full px-3 py-1 transition ${mode === k ? "bg-jade text-white" : "text-ink-soft hover:text-ink"}`}>{l}</button>

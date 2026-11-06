@@ -1,4 +1,4 @@
-/* 功能注释：全站底部页脚（品牌左 + 三列链接右）；PC/手机均显示 */
+/* 功能注释：全站页脚——PC 品牌左+三列右；移动端仅法律一行（见 max-width:768） */
 .footer {
   --footer-surface: #0A0A0A;
   --footer-title: #ffffff;
@@ -118,38 +118,37 @@
 }
 
 @media screen and (max-width: 768px) {
+  /* 功能注释：有底栏的移动端不再挂完整官网站脚，只留 © + 隐私/协议 */
   .footer {
     display: flex;
-    padding: 28px 0 calc(28px + env(safe-area-inset-bottom, 0px));
+    padding: 14px 0 calc(14px + env(safe-area-inset-bottom, 0px));
   }
 
   .container {
     width: 100%;
     max-width: 100%;
     flex-direction: column;
-    gap: 28px;
+    gap: 0;
     padding: 0 16px;
   }
 
   .brandCol {
     max-width: none;
+    gap: 0;
+    align-items: center;
   }
 
-  .logo {
-    height: 36px;
-  }
-
+  .logo,
+  .tagline,
   .linkCols {
-    justify-content: flex-start;
-    gap: 24px 32px;
+    display: none;
   }
 
-  .title {
-    font-size: 14px;
-  }
-
-  .item,
-  .itemButton {
-    font-size: 13px;
+  .legal {
+    margin: 0;
+    justify-content: center;
+    text-align: center;
+    font-size: 11px;
+    gap: 6px 10px;
   }
 }

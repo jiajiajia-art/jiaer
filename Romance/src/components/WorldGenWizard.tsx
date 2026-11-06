@@ -57,6 +57,7 @@ import {
   loadWorldGenSessionAsync,
   saveWorldGenSession,
   wantsResumeEditor,
+  worldGenLocalDraftStorageId,
 } from "../lib/worldGenSession";
 import { sanitizeModStrings } from "../lib/sanitizeModStrings";
 import { readFunloomAuthToken } from "../lib/platformAvatarLibrary";
@@ -67,6 +68,7 @@ import {
   fetchRomancePlatformDraftContent,
   putRomancePlatformDraftContent,
   readRomancePlatformDraftId,
+  resolveRomanceDraftCoverUrl,
   scheduleRomancePlatformDraftSync,
 } from "../lib/platformRomanceDraft";
 import {
@@ -283,7 +285,7 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
     void importWithStaleChunkReload(() => import("./ModEditorPanel"));
   }, []);
 
-  // 功能注释：trim 恢复仍强制 step1；正常刷新保留 step2 完成态并落盘。IDB / 平台存档补齐大体积 mod。
+  // 功能注释：trim 恢复仍强制 step1；正常刷新保留 step2。书架 resume 按 updatedAt 取本机/平台较新一份，禁止旧本机盖新平台。
   useEffect(() => {
     if (isWorldGenTrimRecovering() || isWorldGenPersistBlocked()) {
       demoteWorldGenSessionToStep1(boot.s1);
@@ -296,80 +298,92 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
     } else if (boot.resumeMod && boot.mod && boot.draft) {
       modRef.current = boot.mod;
       draftRef.current = boot.draft;
-      // 功能注释：按当前 step 落盘（2=编辑器完成态），禁止再强行写成 step1
       persistNow();
-      setResumeLoad("idle");
     }
     let cancelled = false;
     void (async () => {
-      // 功能注释：本机已有完整基线则不必再拉平台；仅补 IDB heavy stub
-      if (boot.resumeMod && !boot.pendingHeavy) {
-        setResumeLoad("idle");
-        return;
-      }
+      const platformDraftId = readRomancePlatformDraftId();
+      const wantResume = wantsResumeEditor();
       const full = await loadWorldGenSessionAsync();
       if (cancelled) return;
-      if (full?.mod && full?.draft) {
-        const clean = sanitizeModStrings(full.mod);
-        const d = normalizeWorldGenDraft(full.draft);
+      const localOk = !!(full?.mod && full?.draft);
+      const localAt = localOk ? Number(full?.updatedAt || 0) : 0;
+
+      let remote: Awaited<ReturnType<typeof fetchRomancePlatformDraftContent>> = null;
+      if (platformDraftId && (wantResume || !localOk || boot.pendingHeavy)) {
+        remote = await fetchRomancePlatformDraftContent(platformDraftId);
+        if (cancelled) return;
+      }
+      const remoteOk = !!(remote?.mod && remote?.draft);
+      const remoteAt = remoteOk ? Number(remote?.updatedAt || 0) : 0;
+
+      const applyBaseline = (
+        clean: Mod,
+        d: WorldGenDraft,
+        nextS1: WorldGenStep1,
+        updatedAt: number,
+        pushRemote: boolean,
+      ) => {
         modRef.current = clean;
         draftRef.current = d;
+        setS1(nextS1);
         setMod(clean);
         setDraft(d);
-        if (full.s1) setS1(normalizeWorldGenStep1(full.s1));
-        if (full.step === 2 || wantsResumeEditor()) setStep(2);
+        if (wantResume || full?.step === 2) setStep(2);
+        saveWorldGenSession({
+          step: wantResume || full?.step === 2 ? 2 : 1,
+          s1: nextS1,
+          draft: d,
+          mod: clean,
+          scrollY: 0,
+          editorGroup: undefined,
+          updatedAt,
+        });
         setResumeLoad("idle");
-        // 功能注释：本机有存档时后台同步到平台，换设备也能按作品 ID 打开
-        const platformDraftId = readRomancePlatformDraftId();
-        if (platformDraftId) {
+        // 功能注释：仅本机更新时才回写平台，避免旧本机覆盖较新的服务端存档
+        if (pushRemote && platformDraftId) {
           void putRomancePlatformDraftContent(
             platformDraftId,
             buildRomancePlatformDraftContent({
               mod: clean,
               draft: d,
-              s1: full.s1 ?? d,
-              updatedAt: full.updatedAt,
+              s1: nextS1,
+              updatedAt,
             }),
           );
         }
+      };
+
+      if (remoteOk && remoteAt >= localAt) {
+        const clean = sanitizeModStrings(remote!.mod);
+        const d = normalizeWorldGenDraft(remote!.draft);
+        const nextS1 = normalizeWorldGenStep1(
+          (remote!.s1 as WorldGenStep1) ?? remote!.draft,
+        );
+        applyBaseline(clean, d, nextS1, remoteAt || Date.now(), false);
+        // 功能注释：历史稿可能只有 editor.json 封面、games.cover_url 为空；续编时补写书架封面
+        if (platformDraftId) {
+          const coverUrl = resolveRomanceDraftCoverUrl(clean);
+          if (coverUrl) {
+            scheduleRomancePlatformDraftSync(platformDraftId, {
+              title: clean.name,
+              coverUrl,
+            }, undefined, 0);
+          }
+        }
         return;
       }
-      // 功能注释：书架 resume 且本机无基线 → 按 draftId 拉平台正文；没有则提示打不开，禁止空新建
-      if (!wantsResumeEditor()) {
-        setResumeLoad("idle");
+      if (localOk && full?.mod && full?.draft) {
+        const clean = sanitizeModStrings(full.mod);
+        const d = normalizeWorldGenDraft(full.draft);
+        const nextS1 = normalizeWorldGenStep1(full.s1 ?? d);
+        applyBaseline(clean, d, nextS1, localAt || Date.now(), !!platformDraftId && localAt > remoteAt);
         return;
       }
-      const platformDraftId = readRomancePlatformDraftId();
-      if (!platformDraftId) {
+      if (wantResume) {
         setResumeLoad("missing");
         return;
       }
-      const remote = await fetchRomancePlatformDraftContent(platformDraftId);
-      if (cancelled) return;
-      if (!remote?.mod || !remote?.draft) {
-        setResumeLoad("missing");
-        return;
-      }
-      const clean = sanitizeModStrings(remote.mod);
-      const d = normalizeWorldGenDraft(remote.draft);
-      const nextS1 = normalizeWorldGenStep1(
-        (remote.s1 as WorldGenStep1) ?? remote.draft,
-      );
-      modRef.current = clean;
-      draftRef.current = d;
-      setS1(nextS1);
-      setMod(clean);
-      setDraft(d);
-      setStep(2);
-      saveWorldGenSession({
-        step: 2,
-        s1: nextS1,
-        draft: d,
-        mod: clean,
-        scrollY: 0,
-        editorGroup: undefined,
-        updatedAt: remote.updatedAt || Date.now(),
-      });
       setResumeLoad("idle");
     })();
     const t = window.setTimeout(() => {
@@ -581,12 +595,16 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
       </div>
     ));
 
-  const WORLD_GEN_DRAFT_ID = "mod.new";
+  // 功能注释：本机自动草稿按平台 draftId 隔离，禁止多部作品共用 mod.new
+  const worldGenDraftId = useMemo(
+    () => `mod.${worldGenLocalDraftStorageId()}`,
+    [],
+  );
 
   const openEditor = useCallback((m: Mod, d: WorldGenDraft, opts?: { group?: string; draftChoice?: "continue" | "saved" | null; wipeLocalDraft?: boolean }) => {
     // 功能注释：重新生成进入时清掉旧本机草稿，避免拿过期草稿盖住新生成的已保存基线
     if (opts?.wipeLocalDraft || opts?.draftChoice === "saved") {
-      discardDraftById(WORLD_GEN_DRAFT_ID);
+      discardDraftById(worldGenDraftId);
     }
     setMod(m);
     setDraft(d);
@@ -601,7 +619,7 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
     setResumeLoad("idle");
     // 功能注释：进入编辑器立刻落盘（已保存/已生成基线 + step2）；停留位不写会话
     const at = Date.now();
-    writeSavedVersionAt(WORLD_GEN_DRAFT_ID, at);
+    writeSavedVersionAt(worldGenDraftId, at);
     saveWorldGenSession({
       step: 2,
       s1,
@@ -621,17 +639,20 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
         s1,
       });
     }
-  }, [s1]);
+  }, [s1, worldGenDraftId]);
 
   /**
    * 功能注释：未点保存的编辑只进 useDraft，禁止写回会话冒充已保存作品。
    * 会话基线仅在 onCommitted / 生成完成时更新。
    */
   const onEditorLiveChange = useCallback((next: Mod) => {
-    // 功能注释：本机草稿仍只走 useDraft；平台书架草稿防抖 PATCH 同一 draftId，禁止再 create
+    // 功能注释：本机草稿仍只走 useDraft；平台书架草稿防抖 PATCH 同一 draftId（含封面），禁止再 create
     const platformDraftId = readRomancePlatformDraftId();
     if (platformDraftId) {
-      scheduleRomancePlatformDraftSync(platformDraftId, next.name);
+      scheduleRomancePlatformDraftSync(platformDraftId, {
+        title: next.name,
+        coverUrl: resolveRomanceDraftCoverUrl(next) || null,
+      });
     }
   }, []);
 
@@ -640,7 +661,7 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
     (committed: Mod) => {
       modRef.current = committed;
       setMod(committed);
-      writeSavedVersionAt(WORLD_GEN_DRAFT_ID, Date.now());
+      writeSavedVersionAt(worldGenDraftId, Date.now());
       if (committed.id) writeSavedVersionAt(`mod.${committed.id}`, Date.now());
       schedulePersist();
       const platformDraftId = readRomancePlatformDraftId();
@@ -655,7 +676,7 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
         });
       }
     },
-    [schedulePersist, s1],
+    [schedulePersist, s1, worldGenDraftId],
   );
 
   /**
@@ -666,7 +687,7 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
     const d = draftRef.current;
     if (!saved || !d) return;
     const baseline = JSON.stringify(saved);
-    const pending = peekDraft<Mod>(WORLD_GEN_DRAFT_ID, baseline);
+    const pending = peekDraft<Mod>(worldGenDraftId, baseline);
     if (!pending) {
       void importWithStaleChunkReload(() => import("./ModEditorPanel"))
         .then(() => openEditor(saved, d, { group: undefined, draftChoice: null }))
@@ -679,10 +700,10 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
     const sessionAt = loadWorldGenSession()?.updatedAt ?? null;
     setEntranceDraftGate({
       pendingAt: pending.at,
-      savedAt: resolveSavedVersionAt(WORLD_GEN_DRAFT_ID, sessionAt),
+      savedAt: resolveSavedVersionAt(worldGenDraftId, sessionAt),
       stale: pending.base !== baseline,
     });
-  }, [openEditor]);
+  }, [openEditor, worldGenDraftId]);
 
   /**
    * 功能注释：先确保 ModEditorPanel chunk 可加载再开表单。
@@ -692,7 +713,7 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
     const saved = modRef.current;
     const d = draftRef.current;
     if (!saved || !d) return;
-    const pending = peekDraft<Mod>(WORLD_GEN_DRAFT_ID, JSON.stringify(saved));
+    const pending = peekDraft<Mod>(worldGenDraftId, JSON.stringify(saved));
     void importWithStaleChunkReload(() => import("./ModEditorPanel"))
       .then(() => {
         openEditor(saved, d, {
@@ -703,13 +724,13 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
       .catch((e) => {
         setErr(e instanceof Error ? e.message : "加载编辑器失败，请强制刷新后重试");
       });
-  }, [openEditor]);
+  }, [openEditor, worldGenDraftId]);
 
   const acceptEntranceSaved = useCallback(() => {
     const saved = modRef.current;
     const d = draftRef.current;
     if (!saved || !d) return;
-    discardDraftById(WORLD_GEN_DRAFT_ID);
+    discardDraftById(worldGenDraftId);
     void importWithStaleChunkReload(() => import("./ModEditorPanel"))
       .then(() => {
         openEditor(saved, d, { group: undefined, draftChoice: "saved" });
@@ -717,7 +738,7 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
       .catch((e) => {
         setErr(e instanceof Error ? e.message : "加载编辑器失败，请强制刷新后重试");
       });
-  }, [openEditor]);
+  }, [openEditor, worldGenDraftId]);
 
   // 功能注释：故事设定 / 禁止生成高度跟字数走，切换回第 1 步或粘贴长文后重算
   useEffect(() => {
@@ -1101,13 +1122,14 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
         <EditorTrimBoundary s1={s1} onDemote={demoteFromEditorTrim}>
           <Suspense fallback={<p className="p-8 text-center text-sm text-ink-soft">加载编辑器…</p>}>
             <ModEditorPanel
-              key={mod.id || "world-gen-new"}
+              key={`${worldGenDraftId}:${mod.id || "world-gen-new"}`}
               initial={mod}
               isNew
               fluid
+              localDraftKey={worldGenDraftId}
               initialGroup={editorBootGroup === "all" ? "base" : editorBootGroup}
               resumeDraftChoice={editorDraftChoice}
-              savedVersionAt={resolveSavedVersionAt(WORLD_GEN_DRAFT_ID, loadWorldGenSession()?.updatedAt ?? null)}
+              savedVersionAt={resolveSavedVersionAt(worldGenDraftId, loadWorldGenSession()?.updatedAt ?? null)}
               onLiveChange={onEditorLiveChange}
               onCommitted={onEditorCommitted}
               onAiChat={(m) => setWorkshop({ mod: m, isNew: true })}

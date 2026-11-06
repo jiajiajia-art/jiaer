@@ -123,7 +123,7 @@ test("WorldGenWizard_boot直达step2且不把完成态降成step1", () => {
     wiz,
     /保留已生成\/已保存基线，但落盘为 step1/,
   );
-  assert.match(wiz, /按当前 step 落盘/);
+  assert.match(wiz, /remoteAt >= localAt/);
 });
 
 test("platformAvatarLibrary_readFunloomUserId", () => {
@@ -148,6 +148,8 @@ test("WorldGenWizard_resume先拉平台正文无则missing", () => {
   assert.match(wiz, /打不开这份存档/);
   // 禁止 resume 无本地时直接当新建空表单
   assert.match(wiz, /resumeLoad === "loading"/);
+  // 功能注释：按 updatedAt 取较新，禁止旧本机盖新平台
+  assert.match(wiz, /remoteAt >= localAt/);
 });
 
 test("App_有draftId离开向导不清本机会话", () => {

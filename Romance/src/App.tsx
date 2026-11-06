@@ -24,10 +24,16 @@ import Opening from "./components/Opening";
 import GameShell from "./components/GameShell";
 import Ending from "./components/Ending";
 import WorldGenWizard from "./components/WorldGenWizard";
+import PlayModCreateShell from "./components/PlayModCreateShell";
 import AuthorPreviewChrome from "./components/AuthorPreviewChrome";
 import AuthorPreviewPlayShell from "./components/AuthorPreviewPlayShell";
 import PlatformShellGate from "./components/PlatformShellGate";
 import { readFunloomStaffFromStorage, shouldGateRomancePlatformShell } from "./lib/platformShellGate";
+import {
+  clearPlayModCreateQuery,
+  ensurePlayModCreateQuery,
+  shouldOpenPlayModCreate,
+} from "./lib/playModCreate";
 
 import { isStaleChunkLoadErrorMessage, reloadOnceForStaleChunk } from "./lib/worldGenGenerate";
 
@@ -185,6 +191,8 @@ function Root() {
   const [worldGenOpen, setWorldGenOpen] = useState(
     () => shouldOpenWorldGenWizard() || shouldResumeWorldGenSession(),
   );
+  /** 功能注释：?createPlayMod=1 → 玩法 Mod 对话工坊（创作游戏二级入口） */
+  const [playModCreateOpen, setPlayModCreateOpen] = useState(() => shouldOpenPlayModCreate());
   const previewSession = useSyncExternalStore(subscribeAuthorPreview, getAuthorPreviewSession, () => null);
   const previewing = !!previewSession;
 
@@ -193,6 +201,11 @@ function Root() {
     // 功能注释：向导打开期间保持 URL 标记，刷新后仍能识别；离开时再清查询与会话
     ensureWorldGenQuery();
   }, [worldGenOpen]);
+
+  useEffect(() => {
+    if (!playModCreateOpen) return;
+    ensurePlayModCreateQuery();
+  }, [playModCreateOpen]);
 
   const closeWorldGen = () => {
     // 功能注释：挂了平台 draftId 的作品保留本机会话，书架按 ID 续编可先命中本地；无 draftId 的临时向导仍清掉
@@ -205,6 +218,11 @@ function Root() {
     if (!keepByDraft) clearWorldGenSession();
     clearWorldGenQuery();
     setWorldGenOpen(false);
+  };
+
+  const closePlayModCreate = () => {
+    clearPlayModCreateQuery();
+    setPlayModCreateOpen(false);
   };
 
   // 模组界面风格：进入某世界时套用一次（记录已套用的世界+配置，玩家之后自改不再覆盖）
@@ -222,7 +240,7 @@ function Root() {
   // 功能注释：生成世界平台表单打开时，卸掉局内皮肤；配色由 .romance-platform / .world-gen-shell 对齐 funloom 暗色酒红创作壳
   useEffect(() => {
     const root = document.documentElement;
-    const platformOnly = worldGenOpen && !previewing;
+    const platformOnly = (worldGenOpen || playModCreateOpen) && !previewing;
     const apply = () => {
       if (platformOnly) {
         root.classList.remove(
@@ -298,11 +316,11 @@ function Root() {
       mq.addEventListener("change", apply);
       return () => mq.removeEventListener("change", apply);
     }
-  }, [look, lookCss, worldGenOpen, previewing]);
+  }, [look, lookCss, worldGenOpen, playModCreateOpen, previewing]);
 
   const gatePlatform = shouldGateRomancePlatformShell({
     search: typeof window !== 'undefined' ? window.location.search : '',
-    hasWorldGenSession: worldGenOpen || shouldResumeWorldGenSession(),
+    hasWorldGenSession: worldGenOpen || playModCreateOpen || shouldResumeWorldGenSession(),
     isAuthorPreview: previewing,
     isStaff: readFunloomStaffFromStorage(),
   });
@@ -314,7 +332,16 @@ function Root() {
 
   return (
     <>
-      {worldGenOpen ? (
+      {playModCreateOpen && !previewing ? (
+        <div className="romance-platform min-h-screen" data-platform-ui="1">
+          <PlayModCreateShell
+            onClose={() => {
+              closePlayModCreate();
+              if (typeof history !== "undefined" && history.length > 1) history.back();
+            }}
+          />
+        </div>
+      ) : worldGenOpen ? (
         <div
           /* 功能注释：预览时向导壳保活但 hidden；去掉 data-platform-ui，避免 Modal 误挂进不可见树 */
           className={previewing ? "hidden" : "romance-platform min-h-screen"}

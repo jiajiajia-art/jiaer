@@ -37,6 +37,7 @@ export default function ModTuningEditor({
   showCourses = true,
   showJobs = true,
   showCareer = true,
+  showModulePicker = true,
   onChange,
 }: {
   value?: TuningSlot;
@@ -49,6 +50,11 @@ export default function ModTuningEditor({
   showJobs?: boolean;
   /** 功能注释：未装通告/合约等演艺玩法时不出现工作结算与违约 */
   showCareer?: boolean;
+  /**
+   * 功能注释：养成总开关页已统一勾选子项时，隐藏本组件内的模块清单，只渲染已勾表单，
+   * 避免再出现「引擎规则」第二块勾选卡。
+   */
+  showModulePicker?: boolean;
   onChange: (v?: TuningSlot) => void;
 }) {
   const t = value ?? {};
@@ -146,23 +152,25 @@ export default function ModTuningEditor({
 
   return (
     <div className="space-y-4">
-      <div className="space-y-1.5">
-        <p className={head}>本作品要用哪些规则 <span className="font-normal text-ink-soft">· 勾了才出现下面的表单；没勾的编辑器和开局都不出现、也不生效。课程 / 通告结算 / 违约只在本作品相关玩法开启后列出</span></p>
-        <div className="space-y-1">
-          {visibleModules.map((m) => (
-            <label key={m.id} className="flex items-start gap-2 text-[11.5px] text-ink">
-              <input type="checkbox" className="mt-0.5" checked={on(m.id)} onChange={(e) => setModule(m.id, e.target.checked)} />
-              <span>
-                <span className="font-semibold">{m.label}</span>
-                <span className="text-ink-soft"> · {m.hint}</span>
-              </span>
-            </label>
-          ))}
+      {showModulePicker && (
+        <div className="space-y-1.5">
+          <p className={head}>本作品要用哪些规则 <span className="font-normal text-ink-soft">· 勾了才出现下面的表单；没勾的编辑器和开局都不出现、也不生效。课程 / 通告结算 / 违约只在本作品相关玩法开启后列出</span></p>
+          <div className="space-y-1">
+            {visibleModules.map((m) => (
+              <label key={m.id} className="flex items-start gap-2 text-[11.5px] text-ink">
+                <input type="checkbox" className="mt-0.5" checked={on(m.id)} onChange={(e) => setModule(m.id, e.target.checked)} />
+                <span>
+                  <span className="font-semibold">{m.label}</span>
+                  <span className="text-ink-soft"> · {m.hint}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+          {!showCareer && (
+            <p className="text-[11px] text-ink-soft">未添加通告 / 合约等演艺玩法时，不提供「工作结算」「违约惩罚」。</p>
+          )}
         </div>
-        {!showCareer && (
-          <p className="text-[11px] text-ink-soft">未添加通告 / 合约等演艺玩法时，不提供「工作结算」「违约惩罚」。</p>
-        )}
-      </div>
+      )}
 
       {on("dayGrade") && (
         <div className="space-y-1.5">

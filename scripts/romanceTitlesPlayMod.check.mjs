@@ -36,7 +36,7 @@ test('ModEditorPanel_卸头衔包清titles_养成无名气分档块', () => {
   assert.match(panel, /showPlay\("titles"\)/);
   assert.doesNotMatch(panel, /title="养成规则"/);
   assert.doesNotMatch(panel, /fameTiers: c\.fameTiers/);
-  const growHint = panel.slice(panel.indexOf('title="养成模块"'), panel.indexOf('title="培训课程"'));
+  const growHint = panel.slice(panel.indexOf('title="总养成开关"'), panel.indexOf('title="培训课程"'));
   assert.match(growHint, /头衔包/);
   assert.match(growHint, /建角/);
 });

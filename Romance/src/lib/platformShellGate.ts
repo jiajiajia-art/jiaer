@@ -10,6 +10,7 @@ export function shouldGateRomancePlatformShell(input: {
   const raw = String(input.search || '');
   const q = new URLSearchParams(raw.startsWith('?') ? raw.slice(1) : raw);
   if (q.get('createWorld') === '1' || q.get('createWorld') === 'true') return false;
+  if (q.get('createPlayMod') === '1' || q.get('createPlayMod') === 'true') return false;
   if (q.get('platformTest') === '1') return false;
   if (input.hasWorldGenSession) return false;
   if (input.isAuthorPreview) return false;

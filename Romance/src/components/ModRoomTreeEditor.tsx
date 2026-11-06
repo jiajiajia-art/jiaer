@@ -248,19 +248,20 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
             <span className={lbl}>大地图名称</span>
             <input className={inp} value={curMap.name} onChange={(e) => patchMap(curMap.id, { name: e.target.value })} placeholder="如：雾色旅馆" />
           </label>
-          {/* 功能注释：大地图图；「素材库」走平台地点素材库（只换图，不改地点树） */}
+          {/* 功能注释：大地图图统一竖版 9:16；生图/上传/素材库/链接入库前都裁成竖图预览 */}
           <div className="block">
-            <span className={lbl}>大地图图 · 可生图、上传或从素材库选图</span>
+            <span className={lbl}>大地图图 · 竖版 9:16 · 可生图、上传或从素材库选图</span>
             <ImagePicker
               value={curMap.bg}
               onChange={(bg) => patchMap(curMap.id, { bg: bg || undefined })}
               label={`${curMap.name || "大地图"}图`}
-              max={1600}
-              thumb="h-16 w-28"
+              max={1920}
+              thumb="aspect-[9/16] h-auto w-14"
+              scenePortrait
               platformAssetPurpose="world_map"
               aiGen={{
-                size: "1792x1024",
-                placeholder: "按大地图名称生成地图插画…",
+                size: SCENE_PORTRAIT_GEN_SIZE,
+                placeholder: "按大地图名称生成 9:16 竖版地图插画…",
                 initialPrompt: buildWorldMapPrompt({ name: curMap.name, desc: curMap.desc }) || undefined,
               }}
             />

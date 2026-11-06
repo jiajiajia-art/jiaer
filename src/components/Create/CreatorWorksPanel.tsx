@@ -15,12 +15,6 @@ import GameAction from '../../api/rpgGame/gameAction';
 import favoriteApi from '../../api/favorite/favoriteApi';
 import { getApiErrorCode } from '../../utils/error';
 import { partitionCreatorGames } from '../../utils/novelGame';
-import {
-    DRAFT_BOX_FILTER_ORDER,
-    filterDraftGamesByType,
-    getDraftBoxFilterLabelKey,
-    type DraftBoxFilterKey,
-} from '../../utils/draftBoxFilter';
 import { buildGameDetailNavigateState } from '../../utils/gameDetailNavigation';
 import {
     WORKS_MOBILE_MEDIA,
@@ -29,14 +23,15 @@ import {
     resolveWorksListLimit,
     shouldShowWorksViewAll,
 } from '../../utils/creatorWorksPreview';
-import { resolveCreatorWorkStatus } from '../../utils/creatorWorkLifecycle';
+import { isDraftSlotWork, resolveCreatorWorkStatus } from '../../utils/creatorWorkLifecycle';
 import creatorDraftApi from '../../api/creator/creatorDraftApi';
 import {
     CREATOR_DRAFT_LIMIT,
     formatDraftLimitReachedMessage,
 } from '../../utils/creatorDraftCapacity';
 
-export type WorksTabKey = 'all' | 'published' | 'drafts' | 'favorites';
+/** 功能注释：草稿箱 Tab 已下线；旧链接 ?tab=drafts 回落到全部，草稿靠卡片角标区分。 */
+export type WorksTabKey = 'all' | 'published' | 'favorites';
 
 const WORKS_FETCH_LIMIT = 50;
 
@@ -46,12 +41,18 @@ const paginateItems = <T,>(items: T[], page: number, pageSize: number): T[] => {
 };
 
 const isWorksTabKey = (value: string | null | undefined): value is WorksTabKey => (
-    value === 'all' || value === 'published' || value === 'drafts' || value === 'favorites'
+    value === 'all' || value === 'published' || value === 'favorites'
 );
+
+/** 功能注释：兼容历史 ?tab=drafts / 未知 tab → 全部 */
+export const normalizeWorksTabKey = (value: string | null | undefined): WorksTabKey => {
+    if (value === 'drafts') return 'all';
+    return isWorksTabKey(value) ? value : 'all';
+};
 
 export type CreatorWorksPanelProps = {
     mode: 'preview' | 'full';
-    initialTab?: WorksTabKey;
+    initialTab?: WorksTabKey | 'drafts';
     showIncentiveUI?: boolean;
     /** owner：自己看自己；visitor：仅已发布 Tab，按 ownerUserCode 拉公开作品 */
     access?: 'owner' | 'visitor';
@@ -77,8 +78,7 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     const [selectedDraftIds, setSelectedDraftIds] = useState<string[]>([]);
     const [isBatchDeletingDrafts, setIsBatchDeletingDrafts] = useState(false);
     const [isBatchDeleteConfirmOpen, setIsBatchDeleteConfirmOpen] = useState(false);
-    const [draftFilterKey, setDraftFilterKey] = useState<DraftBoxFilterKey>('all');
-    const [worksTab, setWorksTab] = useState<WorksTabKey>(initialTab);
+    const [worksTab, setWorksTab] = useState<WorksTabKey>(() => normalizeWorksTabKey(initialTab));
     const [worksPage, setWorksPage] = useState(1);
     const [favoriteGames, setFavoriteGames] = useState<UserGameData[]>([]);
     const [favoritesTotal, setFavoritesTotal] = useState(0);
@@ -113,22 +113,12 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
         [allGames, worksPage, isPreview, listPageSize],
     );
 
-    const filteredDraftGames = useMemo(
-        () => filterDraftGamesByType(draftGames, draftFilterKey),
-        [draftGames, draftFilterKey],
-    );
-
     const publishedTotalPages = Math.max(1, Math.ceil(publishedGames.length / WORKS_PAGE_SIZE));
-    const draftTotalPages = Math.max(1, Math.ceil(filteredDraftGames.length / WORKS_PAGE_SIZE));
     const favoritesTotalPages = Math.max(1, Math.ceil(favoritesTotal / WORKS_PAGE_SIZE));
 
     const pagedPublishedGames = useMemo(
         () => paginateItems(publishedGames, isPreview ? 1 : worksPage, listPageSize),
         [publishedGames, worksPage, isPreview, listPageSize],
-    );
-    const pagedDraftGames = useMemo(
-        () => paginateItems(filteredDraftGames, isPreview ? 1 : worksPage, listPageSize),
-        [filteredDraftGames, worksPage, isPreview, listPageSize],
     );
     const displayedFavoriteGames = useMemo(
         () => (isPreview ? favoriteGames.slice(0, listPageSize) : favoriteGames),
@@ -138,15 +128,19 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     const worksTotalPages = worksTab === 'all'
         ? allTotalPages
         : worksTab === 'published'
-        ? publishedTotalPages
-        : worksTab === 'drafts'
-            ? draftTotalPages
+            ? publishedTotalPages
             : favoritesTotalPages;
 
     const getGameManageId = (game: UserGameData) => String(game.file_id || game.id || '');
     const selectedDraftCount = selectedDraftIds.length;
-    const isAllDraftsSelected = filteredDraftGames.length > 0
-        && filteredDraftGames.every((game) => selectedDraftIds.includes(getGameManageId(game)));
+    const manageTargetGames = useMemo(() => {
+        if (worksTab === 'published') return publishedGames.filter((g) => isDraftSlotWork(g));
+        if (worksTab === 'favorites') return [];
+        return draftGames;
+    }, [worksTab, publishedGames, draftGames]);
+    const isAllDraftsSelected = manageTargetGames.length > 0
+        && manageTargetGames.every((game) => selectedDraftIds.includes(getGameManageId(game)));
+    const canShowManage = !isVisitor && !showWorksViewAll && draftGames.length > 0;
 
     const loadMyGames = async () => {
         if (isVisitor) {
@@ -287,10 +281,10 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     }, []);
 
     useEffect(() => {
-        if (!isWorksTabKey(initialTab)) return;
-        setWorksTab(initialTab);
+        const next = normalizeWorksTabKey(initialTab);
+        setWorksTab(next);
         setWorksPage(1);
-        if (initialTab === 'favorites') {
+        if (next === 'favorites') {
             void loadFavoriteGames(1);
         }
     }, [initialTab]);
@@ -322,6 +316,7 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     };
 
     const handleToggleDraftSelect = (game: UserGameData) => {
+        if (!isDraftSlotWork(game)) return;
         const draftId = getGameManageId(game);
         if (!draftId) return;
 
@@ -338,23 +333,15 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
             return;
         }
 
-        setSelectedDraftIds(filteredDraftGames.map((game) => getGameManageId(game)).filter(Boolean));
-    };
-
-    const handleDraftFilterChange = (nextFilter: DraftBoxFilterKey) => {
-        setDraftFilterKey(nextFilter);
-        setSelectedDraftIds([]);
-        setWorksPage(1);
+        setSelectedDraftIds(manageTargetGames.map((game) => getGameManageId(game)).filter(Boolean));
     };
 
     const handleWorksTabChange = (nextTab: WorksTabKey) => {
         if (isVisitor && nextTab !== 'published') return;
         setWorksTab(nextTab);
         setWorksPage(1);
-        if (nextTab !== 'drafts') {
-            setIsDraftManageMode(false);
-            setSelectedDraftIds([]);
-        }
+        setIsDraftManageMode(false);
+        setSelectedDraftIds([]);
         if (nextTab === 'favorites') {
             void loadFavoriteGames(1);
         }
@@ -445,9 +432,51 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
         : 8;
     const showPagination = !isPreview && worksTotalPages > 1 && !(
         (worksTab === 'published' && (isLoadingMyGames || publishedGames.length === 0))
-        || (worksTab === 'drafts' && (isLoadingMyGames || draftGames.length === 0 || filteredDraftGames.length === 0))
         || (worksTab === 'favorites' && favoritesTotal === 0)
     );
+
+    const renderManageActions = () => {
+        if (!canShowManage) return null;
+        return (
+            <div className={`${styles.draftManageActions} ${isDraftManageMode ? styles.draftManageActionsExpanded : ''}`}>
+                {isDraftManageMode ? (
+                    <>
+                        <button
+                            type="button"
+                            className={styles.draftManageButton}
+                            onClick={handleToggleSelectAllDrafts}
+                            disabled={manageTargetGames.length === 0}
+                        >
+                            {isAllDraftsSelected ? t('create.cancelSelectAll') : t('create.selectAll')}
+                        </button>
+                        <button
+                            type="button"
+                            className={`${styles.draftManageButton} ${styles.draftDeleteButton}`}
+                            onClick={() => setIsBatchDeleteConfirmOpen(true)}
+                            disabled={selectedDraftCount === 0 || isBatchDeletingDrafts}
+                        >
+                            {isBatchDeletingDrafts ? t('create.deleting') : `${t('create.batchDelete')}${selectedDraftCount > 0 ? `(${selectedDraftCount})` : ''}`}
+                        </button>
+                        <button
+                            type="button"
+                            className={styles.draftManageButton}
+                            onClick={handleCloseDraftManage}
+                        >
+                            {t('create.done')}
+                        </button>
+                    </>
+                ) : (
+                    <button
+                        type="button"
+                        className={styles.draftManageButton}
+                        onClick={handleOpenDraftManage}
+                    >
+                        {t('create.manage')}
+                    </button>
+                )}
+            </div>
+        );
+    };
 
     return (
         <div className={styles.worksSection} ref={worksSectionRef}>
@@ -469,20 +498,6 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                             onClick={() => handleWorksTabChange('published')}
                         >
                             {t('create.publishedWorksTab', { count: publishedGames.length })}
-                        </button>
-                    )}
-                    {!isVisitor && (
-                        <button
-                            type="button"
-                            className={`${styles.worksTab} ${worksTab === 'drafts' ? styles.worksTabActive : ''}`}
-                            onClick={() => handleWorksTabChange('drafts')}
-                        >
-                            {t('create.draftBox')}
-                            {draftCapacity
-                                ? ` (${draftCapacity.count}/${draftCapacity.limit})`
-                                : draftGames.length > 0
-                                    ? ` (${draftGames.length})`
-                                    : ''}
                         </button>
                     )}
                     {!isVisitor && !isDraftManageMode && (
@@ -509,51 +524,20 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                         </button>
                     </div>
                 ) : (
-                    worksTab === 'drafts' && draftGames.length > 0 && (
-                        <div className={`${styles.draftManageActions} ${isDraftManageMode ? styles.draftManageActionsExpanded : ''}`}>
-                            {isDraftManageMode ? (
-                                <>
-                                    <button
-                                        type="button"
-                                        className={styles.draftManageButton}
-                                        onClick={handleToggleSelectAllDrafts}
-                                    >
-                                        {isAllDraftsSelected ? t('create.cancelSelectAll') : t('create.selectAll')}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className={`${styles.draftManageButton} ${styles.draftDeleteButton}`}
-                                        onClick={() => setIsBatchDeleteConfirmOpen(true)}
-                                        disabled={selectedDraftCount === 0 || isBatchDeletingDrafts}
-                                    >
-                                        {isBatchDeletingDrafts ? t('create.deleting') : `${t('create.batchDelete')}${selectedDraftCount > 0 ? `(${selectedDraftCount})` : ''}`}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className={styles.draftManageButton}
-                                        onClick={handleCloseDraftManage}
-                                    >
-                                        {t('create.done')}
-                                    </button>
-                                </>
-                            ) : (
-                                <button
-                                    type="button"
-                                    className={styles.draftManageButton}
-                                    onClick={handleOpenDraftManage}
-                                >
-                                    {t('create.manage')}
-                                </button>
-                            )}
-                        </div>
-                    )
+                    renderManageActions()
                 )}
             </div>
 
-            {!isVisitor && worksTab === 'drafts' && draftCapacity && !draftCapacity.canCreate && (
+            {!isVisitor && draftCapacity && !draftCapacity.canCreate && (
                 <p className={styles.draftManageTip} role="status">
                     {formatDraftLimitReachedMessage(draftCapacity.count, draftCapacity.limit || CREATOR_DRAFT_LIMIT)}
                 </p>
+            )}
+
+            {isDraftManageMode && (
+                <div className={styles.draftManageTip}>
+                    {t('create.draftsSelected', { count: selectedDraftCount })}
+                </div>
             )}
 
             {hasTakenDownWork ? (
@@ -581,6 +565,11 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                             layoutVariant="works"
                             showWorkStatus
                             onGameClick={(game) => {
+                                // 功能注释：管理模式只勾选草稿；已发布/审核中仍可点进数据页
+                                if (isDraftManageMode && isDraftSlotWork(game)) {
+                                    handleToggleDraftSelect(game);
+                                    return;
+                                }
                                 const status = resolveCreatorWorkStatus(game);
                                 if (status === 'draft' || status === 'rejected') {
                                     handleDraftCardClick(game);
@@ -589,6 +578,11 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                                 const gameId = game.file_id || game.id;
                                 if (gameId) navigate(`/createGame?mode=stats&gameId=${gameId}`);
                             }}
+                            selectable={isDraftManageMode}
+                            selectedIds={selectedDraftIds}
+                            onToggleSelect={handleToggleDraftSelect}
+                            isSelectionMode={isDraftManageMode}
+                            canSelectGame={isDraftSlotWork}
                         />
                     )
                 )}
@@ -619,50 +613,6 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                                 navigate(`/createGame?mode=stats&gameId=${gameId}`);
                             }}
                         />
-                    )
-                )}
-
-                {worksTab === 'drafts' && (
-                    isLoadingMyGames ? (
-                        <GameGridSkeleton count={skeletonCount} layoutVariant="works" />
-                    ) : draftGames.length === 0 ? (
-                        <div className={styles.worksEmpty}>还没有草稿</div>
-                    ) : (
-                        <div className={styles.draftSectionBody}>
-                            <div className={styles.draftFilterRow}>
-                                {DRAFT_BOX_FILTER_ORDER.map((filterKey) => (
-                                    <button
-                                        key={filterKey}
-                                        type="button"
-                                        className={`${styles.draftFilterChip} ${draftFilterKey === filterKey ? styles.draftFilterChipActive : ''}`}
-                                        onClick={() => handleDraftFilterChange(filterKey)}
-                                    >
-                                        {t(getDraftBoxFilterLabelKey(filterKey))}
-                                    </button>
-                                ))}
-                            </div>
-                            {isDraftManageMode && (
-                                <div className={styles.draftManageTip}>
-                                    {t('create.draftsSelected', { count: selectedDraftCount })}
-                                </div>
-                            )}
-                            {filteredDraftGames.length === 0 ? (
-                                <div className={styles.draftFilterEmpty}>
-                                    {t('create.noDraftsForFilter')}
-                                </div>
-                            ) : (
-                                <GameGrid
-                                    games={pagedDraftGames}
-                                    layoutVariant="works"
-                                    showWorkStatus
-                                    onGameClick={handleDraftCardClick}
-                                    selectable={true}
-                                    selectedIds={selectedDraftIds}
-                                    onToggleSelect={handleToggleDraftSelect}
-                                    isSelectionMode={isDraftManageMode}
-                                />
-                            )}
-                        </div>
                     )
                 )}
 

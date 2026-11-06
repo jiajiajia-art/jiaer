@@ -302,7 +302,7 @@ export type ModContent = ContentSlots & {
   /** 作品默认手机桌面背景（图片 data URL 或 background CSS）；玩家设置里换过则用玩家的 */
   phoneHomeWallpaper?: string;
   features?: FeatureFlags;
-  /** 养成页模块勾选：课程 / 打工 / 账单 / 玩法规则；没勾不显示也不套用娱乐圈默认（分档在建角属性，头衔在玩法 Mod） */
+  /** 养成总开关 + 子项勾选：enabled / 课程 / 打工 / 账单 / 玩法规则；关总开关局内不走养成；没勾子项不显示也不套用娱乐圈默认 */
   growModules?: import("../game/growModules").GrowModulesFlag;
   bgm?: ModTrack[]; // 内嵌 / 本机 / 链接。启用时并入音频库，关闭或卸载后消失
   audio?: import("../lib/types").AudioAsset[]; // 方式 A：MOD 自带音频，启用时并入全局音频库，关闭 / 卸载即移除

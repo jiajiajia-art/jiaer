@@ -65,10 +65,25 @@ export function worldGenSessionKeyCandidates(
     if (k && !keys.includes(k)) keys.push(k);
   };
   push(worldGenSessionKey(search, uid));
-  if (draftId) push(`${WORLD_GEN_SESSION_KEY}.${draftId}`);
+  // 功能注释：URL 带 draftId 时只认带该作品 ID 的键，禁止回落到「仅用户 / 全局」会话误开别的草稿
+  if (draftId) {
+    push(`${WORLD_GEN_SESSION_KEY}.${draftId}`);
+    return keys;
+  }
   if (uid) push(`${WORLD_GEN_SESSION_KEY}.u.${uid}`);
   push(WORLD_GEN_SESSION_KEY);
   return keys;
+}
+
+/**
+ * 功能注释：本机自动草稿键按平台作品隔离；无 draftId 时仍用 mod.new（纯本机新建）。
+ * 避免多部书架草稿共用一个键导致进出编辑器内容互相串。
+ */
+export function worldGenLocalDraftStorageId(
+  search = typeof location !== "undefined" ? location.search : "",
+): string {
+  const draftId = new URLSearchParams(search).get("draftId")?.trim() || "";
+  return draftId ? `platform.${draftId}` : "new";
 }
 
 export type WorldGenSession = {

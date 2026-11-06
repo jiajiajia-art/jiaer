@@ -18,12 +18,16 @@
     padding: 28px 20px 32px;
     min-height: 100%;
     box-sizing: border-box;
+    width: 100%;
 }
 
+/* 功能注释：PC 居中单列（与移动端同结构）；由 mainContent justify-center 居中，勿贴左成半屏空区 */
 .content {
     width: 100%;
-    max-width: 480px;
+    max-width: 560px;
+    margin: 0 auto;
     color: #ffffff;
+    box-sizing: border-box;
 }
 
 .moreActivitiesButton {
@@ -205,9 +209,25 @@
     outline-offset: 2px;
 }
 
-.options {
-    gap: 16px;
+/* 功能注释：与移动端一致单列；覆盖模态 flex 列默认，保证卡片通栏可读 */
+.content .options {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
     margin-bottom: 0;
+    width: 100%;
+}
+
+/* 功能注释：「创作游戏」二级弹层，三项竖排，与主列表卡片同风格 */
+.romanceSubModal {
+    max-width: 440px;
+}
+
+.romanceSubOptions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 0;
 }
 
 @media (max-width: 768px) {
@@ -217,8 +237,19 @@
     }
 
     .content {
+        width: 100%;
         max-width: none;
     }
+
+    .content .options {
+        gap: 12px;
+    }
+}
+
+/* 功能注释：保证主区背景铺满，居中列两侧是同色底而非「半截空栏」感 */
+.pageRoot,
+.mainContent {
+    background: #000000;
 }
 
 @media (max-width: 420px) {

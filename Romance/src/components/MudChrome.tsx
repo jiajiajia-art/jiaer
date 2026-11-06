@@ -2,7 +2,7 @@ import { Fragment } from "react";
 import DiyIcon from "./DiyIcon";
 import { useState, type ReactNode } from "react";
 import { useGame } from "../store/gameCtx";
-import { feature, term, useMods } from "../mods/registry";
+import { feature, term, useMods, worldGrowEnabled } from "../mods/registry";
 import type { TermKey } from "../mods/types";
 import { IconPin, IconHeart, IconCamera, IconUser, IconSparkle, IconBook, IconClock } from "../lib/icons";
 import { liveTerm as T } from "../mods/live";
@@ -198,17 +198,20 @@ export function NavTabsEditor() {
 /* 底栏：常用水晶石牌快捷位 + 中央度日水晶星章。完整牌位由右上角 ☰ 菜单呈现。
  * 度日走稳定的 endDayNow（幂等推进），不承载任何叙事计算。 */
 export default function MudChrome({ tab, setTab }: { tab: MudTab; setTab: (t: MudTab) => void }) {
-  const { game, busy, look: theme } = useGame(); // 实际生效外观（含剧情美化）
+  const { game, busy, look: theme, advanceNow } = useGame(); // 实际生效外观（含剧情美化）
   const nav = theme.navActive ?? {};
   useMods();
   const [flash, setFlash] = useState(false);
   if (!game) return null;
 
   const s = game.sim;
+  // 功能注释：养成开 → 打开日程板；养成关 → 中央钮改「推进」，直接按创作台节奏走时间
+  const growOn = worldGrowEnabled();
+  const advanceLabel = term("advance", growOn ? "日程" : "推进");
   const advance = () => {
     if (busy) return;
-    // 推进 = 打开本周日程板，在板内排程并「推进一天 / 过完本周」
-    window.dispatchEvent(new CustomEvent("star:navschedule"));
+    if (growOn) window.dispatchEvent(new CustomEvent("star:navschedule"));
+    else advanceNow();
     setFlash(true);
     setTimeout(() => setFlash(false), 600);
   };
@@ -307,14 +310,14 @@ export default function MudChrome({ tab, setTab }: { tab: MudTab; setTab: (t: Mu
             {/* 左组 */}
             <div className="flex flex-1 items-stretch">{left.map(renderSlot)}</div>
 
-            {/* 中央「日程」：嵌于底栏内部的主行动位（打开本周日程板） */}
+            {/* 中央主行动位：养成开=日程板；养成关=直接推进 */}
             <div className="relative flex w-[72px] shrink-0 flex-col items-center justify-end pb-2">
               <span className="pointer-events-none mt-auto h-[11px]" aria-hidden />
             <button
               onClick={advance}
               disabled={busy}
               data-tour="advance"
-              title="打开本周日程：排程并推进"
+              title={growOn ? "打开本周日程：排程并推进" : "按创作台节奏推进时间"}
               className={`group absolute -top-4 grid h-[56px] w-[56px] place-items-center rounded-full bg-paper-2 p-[3px] shadow-[0_8px_20px_-8px_var(--coral),0_0_0_4px_color-mix(in_srgb,var(--paper-2)_88%,transparent)] transition-all duration-300 hover:-translate-y-0.5 active:scale-95 disabled:opacity-60 ${flash ? "animate-flash" : ""}`}
             >
               {/* 外圈流光 */}
@@ -329,7 +332,7 @@ export default function MudChrome({ tab, setTab }: { tab: MudTab; setTab: (t: Mu
                 </DiyIcon>
                 </span>
                 <span className="relative mt-0.5 font-serif text-[11.5px] font-black leading-none tracking-[0.2em] pl-[0.2em]">
-                  {term("advance", "日程")}
+                  {advanceLabel}
                 </span>
               </span>
             </button>

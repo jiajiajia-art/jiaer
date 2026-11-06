@@ -49,7 +49,7 @@ import PlayPrefsPicker from "./PlayPrefsPicker";
 import { playPrefsOf } from "../lib/ai";
 import { LIVE_LOCATIONS } from "../mods/registry";
 import AllowanceWatcher from "./AllowanceWatcher";
-import { feature, getWorldStorylines, useMods, worldHas } from "../mods/registry";
+import { feature, getWorldStorylines, useMods, worldGrowEnabled, worldHas } from "../mods/registry";
 import { shouldShowPlayModMenuEntry } from "../mods/playModCatalog";
 import { EDITOR_HUB_MENUS } from "../lib/editorHubMenus";
 const EndingsPanel = lazyPanel(() => import("./EndingsPanel"));
@@ -794,9 +794,9 @@ export default function GameShell() {
   const [savingId, setSavingId] = useState<string | null>(null); // 正在写入的槽（禁用按钮）
   const [schedOpen, setSchedOpen] = useState(false); // 本周日程板（全局弹窗，可从任意页直接唤出）
   const [simOpen, setSimOpen] = useState(false); // 人物档案（点左上角头像唤出的弹窗）
-  // 「世界」页场景里的「本周日程」入口直接派发事件唤出，无需先跳到人物页
+  // 「世界」页场景里的「本周日程」入口直接派发事件唤出，无需先跳到人物页；关养成时忽略，避免仍弹出日程板
   useEffect(() => {
-    const onSched = () => setSchedOpen(true);
+    const onSched = () => { if (worldGrowEnabled()) setSchedOpen(true); };
     window.addEventListener("star:navschedule", onSched);
     const onAi = () => setCfgOpen(true);
     window.addEventListener("star:openaicfg", onAi);

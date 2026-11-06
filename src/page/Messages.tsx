@@ -466,7 +466,7 @@ const Messages: React.FC = () => {
 
     const handleOpenGameModerationNotification = useCallback(async (notification: MessageGameModerationNotification) => {
         await markMessageAsRead('game_moderation', notification.sourceId, notification.isRead);
-        navigate(notification.action === 'takedown' ? '/create/works?tab=drafts' : '/creator-benefits');
+        navigate(notification.action === 'takedown' ? '/create/works?tab=all' : '/creator-benefits');
     }, [markMessageAsRead, navigate]);
 
     const handleOpenGamePublishAppeal = useCallback(async (appeal: MessageGamePublishAppeal) => {

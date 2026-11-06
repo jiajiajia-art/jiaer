@@ -34,15 +34,14 @@ test('创作入口_草稿已满仅依赖服务端canCreate_文案带来自capaci
   assert.match(createType, /formatDraftLimitReachedMessage\(capacity\.count,\s*capacity\.limit\)/);
   assert.doesNotMatch(createType, /toast\.error\('草稿已满，先发布或删除一部'\)/);
   assert.doesNotMatch(createType, /limit\s*[:=]\s*10\b/);
-  assert.match(panel, /draftCapacity\.count\}\/\$\{draftCapacity\.limit/);
-  assert.match(panel, /formatDraftLimitReachedMessage/);
+  assert.match(panel, /formatDraftLimitReachedMessage\(draftCapacity\.count,\s*draftCapacity\.limit/);
   assert.match(panel, /getUserData\(\{\s*limit:\s*200\s*\}\)/);
 });
 
-test('创作入口_已满时跳转草稿箱且禁止再选类型', () => {
+test('创作入口_已满时跳转书架全部且禁止再选类型', () => {
   const createType = readFileSync(join(root, 'src/page/CreateType.tsx'), 'utf8');
   assert.match(createType, /setDraftLimitReached\(true\)/);
-  assert.match(createType, /navigate\('\/bookshelf\?tab=drafts'/);
+  assert.match(createType, /navigate\('\/bookshelf\?tab=all'/);
   assert.match(createType, /if \(draftLimitReached\)/);
   assert.match(createType, /disabled=\{createBlocked \|\| draftLimitReached\}/);
 });

@@ -134,11 +134,11 @@ test('Create_不再重复显示作品栏_作品栏样式保留给书架', () => 
   const css = read('src/page/Create.module.css');
   const zh = read('src/i18n/locales/zh.json');
   assert.doesNotMatch(tsx, /CreatorWorksPanel/);
-  assert.match(panel, /create\.draftBox/);
-  assert.match(panel, /draftFilterChip/);
+  assert.match(panel, /create\.manage/);
+  assert.doesNotMatch(panel, /create\.draftBox/);
+  assert.doesNotMatch(panel, /draftFilterChip/);
   assert.doesNotMatch(tsx, /create\.images\.draftBox|create\.images\.myData|create\.images\.publishWorks/);
   assert.doesNotMatch(tsx, /分界线\.png|分界线移动端\.png/);
-  assert.match(css, /\.draftFilterChipActive\s*\{[^}]*background:\s*#8E2135/);
   assert.match(zh, /"draftBox":\s*"草稿箱"/);
 });
 
@@ -277,18 +277,15 @@ test('FooterArea_应对齐全站暗色壳避免底部白条', () => {
   assert.match(tsx, /LOGO2\.png/);
   assert.doesNotMatch(tsx, /LOGO\.png/);
   assert.match(navbar, /LOGO2\.png/);
-  /* 功能注释：页脚全宽底部；壳宽居中；手机端同样显示 */
+  /* 功能注释：页脚全宽底部；壳宽居中；手机端仍显示但收成法律一行 */
   assert.match(css, /\.container\s*\{[\s\S]*?width:\s*min\(var\(--app-desktop-shell-max\)/);
   assert.match(css, /\.container\s*\{[\s\S]*?margin:\s*0\s+auto/);
   assert.match(css, /\.linkCols\s*\{/);
-  assert.match(
-    css,
-    /@media screen and \(max-width:\s*768px\)[\s\S]*?\.footer\s*\{[\s\S]*?display:\s*flex/,
-  );
-  assert.doesNotMatch(
-    css,
-    /@media screen and \(max-width:\s*768px\)[\s\S]*?\.footer\s*\{[\s\S]*?display:\s*none/,
-  );
+  const mobileFooter = css.slice(css.indexOf('@media screen and (max-width: 768px)'));
+  assert.match(mobileFooter, /\.footer\s*\{[^}]*display:\s*flex/);
+  assert.doesNotMatch(mobileFooter, /\.footer\s*\{[^}]*display:\s*none/);
+  assert.match(mobileFooter, /\.linkCols[\s\S]*?display:\s*none/);
+  assert.match(mobileFooter, /\.logo[\s\S]*?display:\s*none/);
   assert.match(css, /\.footer\s*\{[\s\S]*?width:\s*100%/);
   assert.match(css, /\.footer\s*\{[\s\S]*?flex:\s*0\s+0\s+auto/);
   /* 功能注释：页脚文案须走 i18n，禁止硬编码中文 */

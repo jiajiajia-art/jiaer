@@ -25,17 +25,17 @@ test('enabledChargeItems_只保留勾选且有名称的项', async () => {
   );
 });
 
-test('ModBalancePanel_无写死娱乐圈扣费清单', () => {
-  const bal = read('components/ModBalancePanel.tsx');
+test('ModEconomyRulesPanel_无写死娱乐圈扣费清单', () => {
+  const eco = read('components/ModEconomyRulesPanel.tsx');
   // 功能注释：只查 JSX/字面量清单，注释里可提及「不预置」而不点名旧剧本项
-  assert.doesNotMatch(bal, /课程学费、周末社交/);
-  assert.doesNotMatch(bal, /出行路费、场景购物/);
-  assert.doesNotMatch(bal, /购车、婚礼/);
-  assert.doesNotMatch(bal, /违约金和事件后果/);
-  assert.match(bal, /还没有扣费依据/);
-  assert.match(bal, /from ["']\.\.\/game\/chargeBasis["']/);
-  assert.match(bal, /mode === "active"/);
-  assert.match(bal, /mode === "passive"/);
+  assert.doesNotMatch(eco, /课程学费、周末社交/);
+  assert.doesNotMatch(eco, /出行路费、场景购物/);
+  assert.doesNotMatch(eco, /购车、婚礼/);
+  assert.doesNotMatch(eco, /违约金和事件后果/);
+  assert.match(eco, /还没有扣费依据/);
+  assert.match(eco, /from ["']\.\.\/game\/chargeBasis["']/);
+  assert.match(eco, /mode === "active"/);
+  assert.match(eco, /mode === "passive"/);
 });
 
 test('ModRulesEditor_账单从空白添加_不灌入RAW_BILLS', () => {
