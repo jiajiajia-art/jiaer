@@ -1,5 +1,5 @@
 /**
- * 统一弹窗：人物交谈 / 确认 / 申请等共用 .ui-dialog——居中、宽 86vw、
+ * 统一弹窗：人物交谈 / 确认 / 申请等共用 .ui-dialog——居中、宽 min(1000px, 100vw-24px)、
  * 高度随内容（不固定 70dvh 留白），过高时只在 .ui-dialog-body 内滚动；关闭钮在右上角。
  */
 import assert from 'node:assert/strict';
@@ -20,13 +20,16 @@ function rule(selector) {
   return m[1];
 }
 
-test('uiDialog_宽86vw高度随内容_禁止固定70dvh留白', () => {
+test('uiDialog_宽撑到1000px高度随内容_禁止固定70dvh留白', () => {
   const box = rule('.ui-dialog');
-  assert.match(box, /width:\s*86vw/);
+  assert.match(box, /width:\s*min\(\s*1000px\s*,\s*calc\(100vw\s*-\s*24px\)\s*\)/);
+  assert.match(box, /max-width:\s*1000px/);
+  assert.doesNotMatch(box, /width:\s*86vw/);
   assert.match(box, /height:\s*auto/);
   assert.match(box, /max-height:\s*min\(90vh,\s*90dvh\)/);
   assert.doesNotMatch(box, /height:\s*70dvh/);
   assert.doesNotMatch(box, /height:\s*70vh/);
+  assert.doesNotMatch(box, /max-width:\s*none/);
   assert.match(box, /overflow:\s*hidden/);
   assert.match(box, /flex-direction:\s*column/);
   assert.doesNotMatch(box, /width:\s*100%/);

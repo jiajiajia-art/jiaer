@@ -455,7 +455,7 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                             onClick={() => setIsBatchDeleteConfirmOpen(true)}
                             disabled={selectedDraftCount === 0 || isBatchDeletingDrafts}
                         >
-                            {isBatchDeletingDrafts ? t('create.deleting') : `${t('create.batchDelete')}${selectedDraftCount > 0 ? `(${selectedDraftCount})` : ''}`}
+                            {isBatchDeletingDrafts ? t('create.deleting') : t('create.delete')}
                         </button>
                         <button
                             type="button"
@@ -480,18 +480,23 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
 
     return (
         <div className={styles.worksSection} ref={worksSectionRef}>
+            {/* 功能注释：管理模式用单行操作栏（左已选数、右操作），避免 Tab 空位 + 第二行提示双截条 */}
             <div className={`${styles.worksTabBar} ${isDraftManageMode ? styles.worksTabBarManaging : ''}`}>
-                <div className={styles.worksTabs}>
-                    {!isDraftManageMode && !isVisitor && (
-                        <button
-                            type="button"
-                            className={`${styles.worksTab} ${worksTab === 'all' ? styles.worksTabActive : ''}`}
-                            onClick={() => handleWorksTabChange('all')}
-                        >
-                            全部 ({allGames.length})
-                        </button>
-                    )}
-                    {!isDraftManageMode && (
+                {isDraftManageMode ? (
+                    <div className={styles.draftManageCount} role="status">
+                        {t('create.draftsSelected', { count: selectedDraftCount })}
+                    </div>
+                ) : (
+                    <div className={styles.worksTabs}>
+                        {!isVisitor && (
+                            <button
+                                type="button"
+                                className={`${styles.worksTab} ${worksTab === 'all' ? styles.worksTabActive : ''}`}
+                                onClick={() => handleWorksTabChange('all')}
+                            >
+                                全部 ({allGames.length})
+                            </button>
+                        )}
                         <button
                             type="button"
                             className={`${styles.worksTab} ${worksTab === 'published' ? styles.worksTabActive : ''}`}
@@ -499,18 +504,18 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                         >
                             {t('create.publishedWorksTab', { count: publishedGames.length })}
                         </button>
-                    )}
-                    {!isVisitor && !isDraftManageMode && (
-                        <button
-                            type="button"
-                            className={`${styles.worksTab} ${worksTab === 'favorites' ? styles.worksTabActive : ''}`}
-                            onClick={() => handleWorksTabChange('favorites')}
-                        >
-                            {t('create.favoritesTab')}
-                            {favoritesLoaded && favoritesTotal > 0 ? ` (${favoritesTotal})` : ''}
-                        </button>
-                    )}
-                </div>
+                        {!isVisitor && (
+                            <button
+                                type="button"
+                                className={`${styles.worksTab} ${worksTab === 'favorites' ? styles.worksTabActive : ''}`}
+                                onClick={() => handleWorksTabChange('favorites')}
+                            >
+                                {t('create.favoritesTab')}
+                                {favoritesLoaded && favoritesTotal > 0 ? ` (${favoritesTotal})` : ''}
+                            </button>
+                        )}
+                    </div>
+                )}
 
                 {showWorksViewAll ? (
                     <div className={styles.worksViewAllSlot}>
@@ -532,12 +537,6 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                 <p className={styles.draftManageTip} role="status">
                     {formatDraftLimitReachedMessage(draftCapacity.count, draftCapacity.limit || CREATOR_DRAFT_LIMIT)}
                 </p>
-            )}
-
-            {isDraftManageMode && (
-                <div className={styles.draftManageTip}>
-                    {t('create.draftsSelected', { count: selectedDraftCount })}
-                </div>
             )}
 
             {hasTakenDownWork ? (

@@ -58,6 +58,8 @@ const StatsOverviewSection: React.FC<StatsOverviewSectionProps> = ({
     { key: 'uv', label: t('creatorStats.totalVisitors'), value: stats?.uv ?? 0, icon: statsIcon('icon_users.webp'), adminIcon: <TeamOutlined /> },
     { key: 'likes', label: t('creatorStats.totalLikes'), value: stats?.likeCount ?? 0, icon: statsIcon('icon_heart.webp'), adminIcon: <HeartFilled /> },
     { key: 'plays', label: t('creatorStats.playCount'), value: stats?.playCount ?? 0, icon: statsIcon('stats_play.webp'), adminIcon: <PlayCircleOutlined /> },
+    // 功能注释：游玩轮次与作者榜同源（成功 AI 生成），与上方进局 playCount 分开展示
+    { key: 'playRounds', label: t('creatorStats.playRounds'), value: stats?.playRounds ?? 0, icon: statsIcon('stats_play.webp'), adminIcon: <PlayCircleOutlined /> },
     { key: 'duration', label: t('creatorStats.playDuration'), value: formatDuration(stats?.playDurationSeconds ?? 0), icon: statsIcon('icon_history.webp'), adminIcon: <ClockCircleOutlined /> },
     { key: 'shares', label: t('creatorStats.shareCount'), value: stats?.shareCount ?? 0, icon: statsIcon('stats_share.webp'), adminIcon: <ShareAltOutlined /> },
     { key: 'comments', label: t('creatorStats.commentCount'), value: stats?.commentCount ?? 0, icon: statsIcon('icon_comment.webp'), adminIcon: <MessageOutlined /> },

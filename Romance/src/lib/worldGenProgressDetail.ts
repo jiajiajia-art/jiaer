@@ -8,7 +8,13 @@ import { WORLD_GEN_EDITOR_STEPS } from "./worldGenWizard.ts";
 import { WORLD_GEN_FIXED_EVENTS_COUNT } from "./worldGenFixedEvents.ts";
 import { readScriptTone } from "./scriptTone.ts";
 
-/** 功能注释：勾选达到该数即进入「全选瘦身」——条数更少、正文更短、骨架优先。 */
+/** 功能注释：第二次生成必须正好写出的人物数（与编辑器人物表对齐，禁止少写假完成）。 */
+export const WORLD_GEN_NPCS_COUNT = 5;
+
+/** 功能注释：第二次生成必须正好写出的地点数。 */
+export const WORLD_GEN_ROOMS_COUNT = 10;
+
+/** 功能注释：勾选达到该数即进入「全选瘦身」——正文更短；人物/地点/固定事件条数仍按硬配额。 */
 export const WORLD_GEN_LEAN_STEP_THRESHOLD = 8;
 
 /** 功能注释：各细项进行中时展示的产出面；多面用「 / 」拼接，避免只写「进行中」。 */
@@ -68,10 +74,10 @@ export function worldGenLeanLimits(selectedStepCount: number): WorldGenLeanLimit
   if (lean) {
     return {
       worldBookEntries: 3,
-      npcs: 3,
+      // 功能注释：人物/地点/固定事件条数由产品硬配额锁定，瘦身只压正文长度
+      npcs: WORLD_GEN_NPCS_COUNT,
       paths: 2,
-      rooms: 4,
-      // 功能注释：固定事件按世界观一次写满完整叙事条，不多不少
+      rooms: WORLD_GEN_ROOMS_COUNT,
       fixedEvents: WORLD_GEN_FIXED_EVENTS_COUNT,
       storylines: 1,
       sidelines: 0,
@@ -85,9 +91,9 @@ export function worldGenLeanLimits(selectedStepCount: number): WorldGenLeanLimit
   }
   return {
     worldBookEntries: 4,
-    npcs: 4,
+    npcs: WORLD_GEN_NPCS_COUNT,
     paths: 3,
-    rooms: 5,
+    rooms: WORLD_GEN_ROOMS_COUNT,
     fixedEvents: WORLD_GEN_FIXED_EVENTS_COUNT,
     storylines: 1,
     sidelines: 0,
@@ -313,21 +319,21 @@ export function worldGenStepResultSummary(
  */
 export function worldGenLeanPromptBlock(limits: WorldGenLeanLimits, phase: "skeleton" | "enrich"): string {
   if (phase === "skeleton") {
-    return `速度与体量（骨架优先，禁止灌满长文）：
-- 世界书最多 ${limits.worldBookEntries} 条：先写 id/title/keywords，正文可先空或 ≤${Math.min(40, limits.worldBookBodyChars)} 字
-- 人物最多 ${limits.npcs} 名：必须 name/gender/age，bio 先写约 ${Math.min(80, limits.npcBioChars)} 字提纲
-- 人物线路最多 ${limits.paths} 条：先写 id/name 与关键开局字段
-- 地点最多 ${limits.rooms} 个；固定事件恰好 ${limits.fixedEvents} 条完整叙事（每条必有 name、trigger.auto、prompt、effects；禁止 choices/选项；骨架阶段也不得空提示词）；主线恰好 ${limits.storylines} 条（节点须有目标说明与完成条件，禁止空「新节点」、禁止节点奖励/激活事件）；支线 ${limits.sidelines} 条（须为 0，勿写 sidelines）；结局最多 ${limits.endings}
-- 剧本基调 scriptTone 先写约 ${Math.min(400, limits.scriptToneChars)} 字骨架（覆盖口吻与铁律要点即可）
-- 开场白每段约 ${Math.min(70, limits.openingParaChars)} 字，至少 2 段
+    return `速度与体量（禁止灌满无关长文；条数硬配额不许少写假完成）：
+- 世界书最多 ${limits.worldBookEntries} 条：须有 id/title/keywords/content
+- 人物恰好 ${limits.npcs} 名：必须 name/gender/age/bio（约 ${limits.npcBioChars} 字），禁止少写或多写
+- 人物线路最多 ${limits.paths} 条：须有 id/name 与关键开局字段
+- 地点恰好 ${limits.rooms} 个（每条 name+desc 非空）；固定事件恰好 ${limits.fixedEvents} 条完整叙事（每条必有 name、trigger.auto、prompt、effects；禁止 choices/选项）；主线恰好 ${limits.storylines} 条（节点须有目标说明与完成条件，禁止空「新节点」、禁止节点奖励/激活事件）；支线 ${limits.sidelines} 条（须为 0，勿写 sidelines）；结局最多 ${limits.endings}
+- 剧本基调 scriptTone 约 ${limits.scriptToneChars} 字（覆盖口吻与铁律）
+- 开场白每段约 ${limits.openingParaChars} 字，至少 2 段
 - 建角 customAttrs 正好 3 条：每条必须有中文名称与 desc（属性说明），禁止「未命名」或空壳
-- 开局资金须同时写 startMoney 与 moneyLabel（货币名）
-- 严禁堆砌无关长文；未点名的扩展玩法字段不要写`;
+- 开局资金须同时写 startMoney 与 moneyLabel（货币名）；开局日期 startDate 格式 YYYY.MM.DD
+- 严禁堆砌无关长文；未点名的扩展玩法字段不要写；缺字段会导致整批失败重试，禁止用占位假完成`;
   }
   return `补长文阶段（只补已有骨架，禁止新增大量条目）：
 - 在已有 id 上补全：世界书正文约 ${limits.worldBookBodyChars} 字/条；人物 bio 约 ${limits.npcBioChars} 字；scriptTone 补到约 ${limits.scriptToneChars} 字
 - 开场白每段可补到约 ${limits.openingParaChars} 字
-- 固定事件保持恰好 ${limits.fixedEvents} 条：补强 prompt 与 effects，仍禁止 choices，禁止新增半成品
+- 人物保持恰好 ${limits.npcs} 名、地点恰好 ${limits.rooms} 个、固定事件恰好 ${limits.fixedEvents} 条：补强正文，禁止少写假完成
 - 建角属性仍保持 3 条有名称的；不要新增空「未命名」属性
 - 不要新增超出骨架的条目数；不要重写无关字段`;
 }

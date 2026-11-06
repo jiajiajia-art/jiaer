@@ -54,6 +54,9 @@ test('LocationHero_小说fill_竖屏铺满_内容卡用皮肤圆角', () => {
   assert.match(cardBlock[0], /max-h-\[85%\]/);
   assert.match(cardBlock[0], /justify-center/);
   assert.doesNotMatch(cardBlock[0], /novel-read-card[^>]*flex-1/);
+  // 功能注释：左右各 20px（px-5）露出场景，禁止贴边的 px-3
+  assert.match(cardBlock[0], /justify-center px-5 py-2/);
+  assert.doesNotMatch(cardBlock[0], /justify-center px-3 py-2/);
   assert.match(cardBlock[0], /\{mapBtn\}/);
   assert.match(hero, /外出/);
 });

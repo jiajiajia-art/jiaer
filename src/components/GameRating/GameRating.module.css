@@ -826,3 +826,217 @@
     height: 2.25rem;
   }
 }
+
+/*
+ * 功能注释：详情页 comments 模式对齐效果图暗色评论区（不改接口逻辑）。
+ * 全量评分模式仍用上方浅色样式。
+ */
+.container[data-mode='comments'] {
+  --gr-surface: #0B0B0D;
+  --gr-card: #1C1C1C;
+  --gr-border: #303030;
+  --gr-text: #F5F5F7;
+  --gr-muted: #A1A1AB;
+  --gr-accent: #F16C83;
+  padding-bottom: 1.5rem;
+  color: var(--gr-text);
+}
+
+.container[data-mode='comments'] .commentsHeader {
+  margin: 0 0 0.85rem;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.container[data-mode='comments'] .commentsHeader h3 {
+  color: var(--gr-text);
+  font-size: 1.05rem;
+}
+
+.sortPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  background: #252528;
+  border: 1px solid #3B3B43;
+  color: var(--gr-muted, #A1A1AB);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.container[data-mode='comments'] .writeSection {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0;
+  margin-bottom: 1.15rem;
+}
+
+.container[data-mode='comments'] .commentInput {
+  margin: 0 0 0.65rem;
+  padding: 0.85rem 0.95rem;
+  min-height: 5.5rem;
+  background: #141416;
+  border: 1px solid #464650;
+  border-radius: 0.7rem;
+  color: var(--gr-text);
+}
+
+.container[data-mode='comments'] .commentInput::placeholder {
+  color: #6E6E76;
+}
+
+.container[data-mode='comments'] .commentInput:focus {
+  border-color: rgba(168, 40, 60, 0.65);
+  box-shadow: 0 0 0 2px rgba(168, 40, 60, 0.18);
+}
+
+.container[data-mode='comments'] .submitBtn {
+  background: #252528;
+  border: 1px solid #3B3B43;
+  box-shadow: none;
+  color: var(--gr-text);
+  border-radius: 0.7rem;
+}
+
+.container[data-mode='comments'] .submitBtn:hover:not(:disabled) {
+  background: #2C2C30;
+  transform: none;
+  box-shadow: none;
+}
+
+.container[data-mode='comments'] .replyInputSection {
+  background: #141416;
+  border: 1px solid #464650;
+}
+
+.container[data-mode='comments'] .replyHeader,
+.container[data-mode='comments'] .replyHeader span {
+  color: var(--gr-muted);
+}
+
+.container[data-mode='comments'] .replyInput {
+  background: #0B0B0D;
+  border-color: #3B3B43;
+  color: var(--gr-text);
+}
+
+.container[data-mode='comments'] .replyInput::placeholder {
+  color: #6E6E76;
+}
+
+.container[data-mode='comments'] .closeBtn {
+  color: var(--gr-muted);
+}
+
+.container[data-mode='comments'] .commentsSection {
+  margin-top: 0.35rem;
+}
+
+.container[data-mode='comments'] .commentCard {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 1.05rem 0;
+}
+
+.container[data-mode='comments'] .commentAvatar {
+  width: 2.1rem;
+  height: 2.1rem;
+  border: 1px solid #252528;
+}
+
+.container[data-mode='comments'] .commentNickname {
+  color: var(--gr-text);
+  font-weight: 600;
+}
+
+.container[data-mode='comments'] .commentTime {
+  color: var(--gr-muted);
+}
+
+.container[data-mode='comments'] .commentContent {
+  color: rgba(245, 245, 247, 0.88);
+}
+
+.container[data-mode='comments'] .actionBtn {
+  background: transparent;
+  color: var(--gr-muted);
+}
+
+.container[data-mode='comments'] .actionBtn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--gr-text);
+}
+
+.container[data-mode='comments'] .actionBtn.liked {
+  color: var(--gr-accent);
+}
+
+.container[data-mode='comments'] .replyTextBtn {
+  color: var(--gr-muted);
+}
+
+.container[data-mode='comments'] .replyTextBtn:hover {
+  color: var(--gr-accent);
+}
+
+.container[data-mode='comments'] .repliesSection {
+  margin-left: 0;
+  margin-top: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.7rem;
+  background: #141416;
+  border: 1px solid #464650;
+  gap: 0.65rem;
+}
+
+.container[data-mode='comments'] .replyNickname,
+.container[data-mode='comments'] .replyToInfo {
+  color: var(--gr-text);
+}
+
+.container[data-mode='comments'] .replyContent {
+  color: rgba(245, 245, 247, 0.78);
+}
+
+.container[data-mode='comments'] .replySummary {
+  color: var(--gr-accent);
+}
+
+.container[data-mode='comments'] .replySummary:hover {
+  color: #FF8A9A;
+}
+
+.container[data-mode='comments'] .emptyState p,
+.container[data-mode='comments'] .emptyIcon {
+  color: var(--gr-muted);
+}
+
+.container[data-mode='comments'] .loadMoreBtn {
+  border-color: #303030;
+  color: var(--gr-text);
+  background: #1C1C1C;
+}
+
+.container[data-mode='comments'] .loadMoreBtn:hover {
+  background: #252528;
+  border-color: #3B3B43;
+  color: var(--gr-text);
+}
+
+.container[data-mode='comments'] .menuDropdown {
+  background: #1C1C1C;
+  border: 1px solid #3B3B43;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.container[data-mode='comments'] .menuItem {
+  color: var(--gr-text);
+}
+
+.container[data-mode='comments'] .menuItem:hover {
+  background: rgba(255, 255, 255, 0.06);
+}

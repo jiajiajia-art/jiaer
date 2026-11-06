@@ -17,11 +17,29 @@ test('theme_storyBgAlpha_与_App_注入_CSS变量', () => {
   const app = read('App.tsx');
   assert.match(app, /--story-panel-a/);
   assert.match(app, /storyBgAlpha \?\? 88/);
+  assert.match(app, /--story-font-size/);
+  assert.match(app, /dialogDiy\?\.fontSize/);
   const css = read('index.css');
   assert.match(css, /\.story-narration-panel/);
   assert.match(css, /\.novel-read-card/);
   assert.match(css, /--story-panel-a/);
+  assert.match(css, /--story-font-size/);
+  assert.match(css, /\.story-prose[\s\S]*?font-style:\s*normal/);
   assert.match(css, /\.story-action[\s\S]*?#1a1a1a/);
+});
+
+test('dialogDiy_字号覆盖小说内容卡与叠图旁白', () => {
+  const free = read('lib/freeStyle.ts');
+  assert.match(free, /--story-font-size/);
+  assert.match(free, /novel-read-card \.story-prose/);
+  assert.match(free, /story-narration-panel/);
+  assert.match(free, /data-slot="scene-prose"/);
+});
+
+test('HomeTab_地点描写不写死字号_跟story-prose', () => {
+  const home = read('components/HomeTab.tsx');
+  assert.match(home, /story-prose whitespace-pre-line leading-\[1\.75\]/);
+  assert.doesNotMatch(home, /story-prose whitespace-pre-line text-\[13\.5px\]/);
 });
 
 test('StoryTab_HomeTab_旁白用浅色底类_不用白字黑底', () => {

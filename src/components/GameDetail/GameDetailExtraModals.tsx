@@ -1,28 +1,18 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { AiFillStar, AiOutlineStar } from 'react-icons/ai';
 import gameRatingApi from '../../api/gameRating';
 import gameDetailExtrasApi, {
-  type GameIssueType,
   type GameUpdateLogItem,
 } from '../../api/gameDetailExtrasApi';
 import { getApiErrorMessage } from '../../utils/error';
 import styles from './GameDetailModals.module.css';
 
 const MAX_REVIEW = 300;
-const MAX_SHOTS = 3;
-const MAX_BYTES = 5 * 1024 * 1024;
-const ISSUE_TYPES: GameIssueType[] = [
-  'cannot_enter',
-  'save_broken',
-  'parse_error',
-  'payment',
-  'other',
-];
-
-type Shot = { key: string; previewUrl: string };
+const MAX_ISSUE_CONTENT = 2000;
+const MAX_CONTACT = 100;
 
 /** 功能注释：半星评分点击——左半 0.5，右半整星 */
 const HalfStarPicker: React.FC<{
@@ -207,7 +197,7 @@ type IssueModalProps = {
   gameTitle: string;
 };
 
-/** 功能注释：作品问题反馈（与全站意见反馈分开），落库带 fileId */
+/** 功能注释：作品故障反馈弹窗——描述必填 + 联系方式可选；类型默认 other，不上传截图 */
 export const GameIssueFeedbackModal: React.FC<IssueModalProps> = ({
   isOpen,
   onClose,
@@ -215,52 +205,17 @@ export const GameIssueFeedbackModal: React.FC<IssueModalProps> = ({
   gameTitle,
 }) => {
   const { t } = useTranslation();
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [issueType, setIssueType] = useState<GameIssueType>('cannot_enter');
   const [content, setContent] = useState('');
-  const [shots, setShots] = useState<Shot[]>([]);
-  const [uploading, setUploading] = useState(false);
+  const [contact, setContact] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
-    setIssueType('cannot_enter');
     setContent('');
-    setShots((prev) => {
-      prev.forEach((s) => {
-        if (s.previewUrl.startsWith('blob:')) URL.revokeObjectURL(s.previewUrl);
-      });
-      return [];
-    });
+    setContact('');
   }, [isOpen]);
 
   if (!isOpen) return null;
-
-  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file || shots.length >= MAX_SHOTS) return;
-    if (!/^image\/(jpeg|png|webp)$/i.test(file.type)) {
-      toast.error(t('gameDetail.issueImageTypeInvalid'));
-      return;
-    }
-    if (file.size > MAX_BYTES) {
-      toast.error(t('gameDetail.issueImageTooLarge'));
-      return;
-    }
-    setUploading(true);
-    try {
-      const res = await gameDetailExtrasApi.uploadIssueScreenshot(file);
-      if (!res.data.success || !res.data.data?.key) {
-        throw new Error(res.data.message || t('gameDetail.issueUploadFailed'));
-      }
-      setShots((prev) => [...prev, { key: res.data.data!.key, previewUrl: URL.createObjectURL(file) }]);
-    } catch (error: unknown) {
-      toast.error(getApiErrorMessage(error, t('gameDetail.issueUploadFailed')));
-    } finally {
-      setUploading(false);
-    }
-  };
 
   const handleSubmit = async () => {
     if (!content.trim()) {
@@ -272,9 +227,10 @@ export const GameIssueFeedbackModal: React.FC<IssueModalProps> = ({
       const res = await gameDetailExtrasApi.createIssueFeedback({
         fileId,
         gameTitle,
-        issueType,
+        issueType: 'other',
         content: content.trim(),
-        screenshotUrls: shots.map((s) => s.key),
+        contact: contact.trim() || undefined,
+        screenshotUrls: [],
       });
       if (!res.data.success) {
         throw new Error(res.data.message || t('gameDetail.issueSubmitFailed'));
@@ -294,67 +250,51 @@ export const GameIssueFeedbackModal: React.FC<IssueModalProps> = ({
 
   const panel = (
     <div className={styles.overlay} onClick={onClose} role="presentation">
-      <div className={styles.panel} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-        <div className={styles.header}>
-          <h2 className={styles.title}>{t('gameDetail.issueModalTitle')}</h2>
-          <button type="button" className={styles.close} onClick={onClose} aria-label={t('common.close')}>×</button>
+      <div
+        className={`${styles.panel} ${styles.issuePanel}`}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="game-issue-feedback-title"
+      >
+        <div className={styles.issueHeader}>
+          <span className={styles.issueIcon} aria-hidden="true">!</span>
+          <h2 id="game-issue-feedback-title" className={styles.issueTitle}>
+            {t('gameDetail.issueModalTitle')}
+          </h2>
         </div>
-        <div className={styles.body}>
-          <div className={styles.label}>{t('gameDetail.issueTypeLabel')}</div>
-          <select
-            className={styles.select}
-            value={issueType}
-            onChange={(e) => setIssueType(e.target.value as GameIssueType)}
-          >
-            {ISSUE_TYPES.map((type) => (
-              <option key={type} value={type}>{t(`gameDetail.issueTypes.${type}`)}</option>
-            ))}
-          </select>
-          <div className={styles.label}>{t('gameDetail.issueContentLabel')}</div>
+        <div className={styles.issueBody}>
+          <label className={styles.issueLabel} htmlFor="game-issue-content">
+            {t('gameDetail.issueContentLabel')}
+            <span className={styles.issueRequired} aria-hidden="true"> *</span>
+          </label>
           <textarea
-            className={styles.textarea}
+            id="game-issue-content"
+            className={`${styles.textarea} ${styles.issueTextarea}`}
             value={content}
-            maxLength={2000}
+            maxLength={MAX_ISSUE_CONTENT}
+            placeholder={t('gameDetail.issueContentPlaceholder')}
             onChange={(e) => setContent(e.target.value)}
           />
-          <div className={styles.label}>{t('gameDetail.issueScreenshotsLabel')}</div>
-          <div className={styles.shots}>
-            {shots.map((shot) => (
-              <div key={shot.key} className={styles.thumb}>
-                <img src={shot.previewUrl} alt="" />
-                <button
-                  type="button"
-                  className={styles.thumbRemove}
-                  onClick={() => setShots((prev) => prev.filter((s) => s.key !== shot.key))}
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-            {shots.length < MAX_SHOTS ? (
-              <button
-                type="button"
-                className={styles.addShot}
-                disabled={uploading}
-                onClick={() => fileRef.current?.click()}
-              >
-                +
-              </button>
-            ) : null}
-            <input
-              ref={fileRef}
-              className={styles.hidden}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={(e) => void handleUpload(e)}
-            />
-          </div>
+          <label className={styles.issueLabel} htmlFor="game-issue-contact">
+            {t('gameDetail.issueContactLabel')}
+          </label>
+          <input
+            id="game-issue-contact"
+            type="text"
+            className={`${styles.input} ${styles.issueInput}`}
+            value={contact}
+            maxLength={MAX_CONTACT}
+            placeholder={t('gameDetail.issueContactPlaceholder')}
+            onChange={(e) => setContact(e.target.value)}
+            autoComplete="off"
+          />
         </div>
-        <div className={styles.footer}>
+        <div className={styles.issueFooter}>
           <button
             type="button"
-            className={styles.btn}
-            disabled={submitting || uploading}
+            className={styles.issueSubmitBtn}
+            disabled={submitting}
             onClick={() => void handleSubmit()}
           >
             {submitting ? t('common.submitting', { defaultValue: '提交中…' }) : t('gameDetail.issueSubmit')}

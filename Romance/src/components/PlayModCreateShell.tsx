@@ -43,7 +43,7 @@ async function uploadPlayKkmod(mod: Mod): Promise<{ ok: boolean; message: string
     const ok = res.ok && (json?.success === true || json?.ok === true || !!json?.data);
     return {
       ok,
-      message: json?.data?.message || json?.message || (ok ? "已生成专属 SDK 并进入私有测试草稿" : "上传失败"),
+      message: json?.data?.message || json?.message || (ok ? "已上传玩法包并进入私有测试草稿" : "上传失败"),
     };
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : "网络错误" };
@@ -77,7 +77,7 @@ export default function PlayModCreateShell({ onClose }: { onClose: () => void })
         <p className="world-gen-kicker">创作游戏 · 玩法 Mod</p>
         <h1 className="world-gen-title">对话生成玩法</h1>
         <p className="world-gen-lead">
-          用 AI 对话生成叠加包（与编辑器「玩法创作 / AI 创意工坊」同一套）。保存为我的模组后，可生成专属 SDK 上传组件商店，供游戏世界作品安装引用。
+          用 AI 对话生成玩法叠加包（与编辑器「玩法创作 / AI 创意工坊」同一套）。包只扩展玩法，不替换原有人物、地点和时代；可绑多个游戏世界，也可分多次安装。能力都来自平台 SDK。保存后可上传组件商店，经审核上架后供各世界用「添加玩法」安装。
         </p>
       </header>
       {notice ? (
@@ -98,7 +98,7 @@ export default function PlayModCreateShell({ onClose }: { onClose: () => void })
             className="rounded-full bg-jade px-3 py-1.5 text-[12px] font-bold text-white disabled:opacity-40"
             onClick={() => void pushSdk(lastMod)}
           >
-            {busy ? "上传中…" : "生成专属 SDK 并上传商店"}
+            {busy ? "上传中…" : "上传玩法包到组件商店"}
           </button>
           <button
             type="button"
@@ -118,7 +118,7 @@ export default function PlayModCreateShell({ onClose }: { onClose: () => void })
         onClose={(savedName, savedMod) => {
           if (savedName && savedMod) {
             setLastMod(savedMod);
-            setNotice(`已保存「${savedName}」。可继续生成专属 SDK 上传商店。`);
+            setNotice(`已保存「${savedName}」。可继续上传玩法包到组件商店（私有测试 → 审核上架）。`);
             void pushSdk(savedMod);
             return;
           }

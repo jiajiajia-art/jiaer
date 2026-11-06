@@ -65,8 +65,8 @@ test('首页与个人中心签到成功后均保持打开等待用户手动关�
 
 test('共享弹窗包含模式、可访问性与错误重试约束', () => {
   assert.match(modalSource, /mode\s*=\s*['"]home['"]/);
-  assert.match(modalSource, /role=["']dialog["']/);
-  assert.match(modalSource, /aria-modal=["']true["']/);
+  assert.match(modalSource, /role=\{isEmbedded \? 'region' : 'dialog'\}/);
+  assert.match(modalSource, /aria-modal=\{isEmbedded \? undefined : true\}/);
   assert.match(modalSource, /aria-expanded=/);
   assert.match(modalSource, /requestFailed/);
   assert.match(modalSource, /fetchSignInStatus/);
@@ -130,7 +130,9 @@ test('月奖励提示使用后端返回的奖励数量', () => {
 test('关闭按钮无外圆框且保留可访问点击区域', () => {
   const closeButtonRule = modalStyles.match(/\.closeButton\s*\{([\s\S]*?)\}/)?.[1] ?? '';
   const closeButtonHoverRule = modalStyles.match(/\.closeButton:hover\s*\{([\s\S]*?)\}/)?.[1] ?? '';
-  const closeButtonFocusRule = modalStyles.match(/\.closeButton:focus\s*\{([\s\S]*?)\}/)?.[1] ?? '';
+  const closeButtonFocusRule = modalStyles.match(
+    /\.closeButton:focus(?:,\s*\n?\s*\.closeButton:focus-visible)?(?:,\s*\n?\s*\.closeButton:active)?\s*\{([\s\S]*?)\}/,
+  )?.[1] ?? '';
 
   assert.match(closeButtonRule, /width:\s*44px/);
   assert.match(closeButtonRule, /height:\s*44px/);
@@ -139,9 +141,18 @@ test('关闭按钮无外圆框且保留可访问点击区域', () => {
   assert.match(closeButtonRule, /background:\s*transparent/);
   assert.doesNotMatch(closeButtonRule, /border-radius:/);
   assert.doesNotMatch(closeButtonHoverRule, /background:/);
-  // 功能注释：自动 focus 时不得出现默认方框；键盘导航仍要有 focus-visible
+  // 功能注释：关闭钮任何焦点态都不得出现粉框（含 focus-visible）
   assert.match(closeButtonFocusRule, /outline:\s*none/);
-  assert.match(modalStyles, /\.closeButton:focus-visible,[\s\S]*?outline:\s*2px solid/);
+  assert.match(
+    modalStyles,
+    /\.closeButton:focus,\s*\n\s*\.closeButton:focus-visible,\s*\n\s*\.closeButton:active\s*\{[\s\S]*?outline:\s*none/,
+  );
+  assert.doesNotMatch(
+    modalStyles,
+    /\.closeButton:focus-visible,\s*\n\s*\.secondaryButton:focus-visible/,
+  );
+  assert.match(modalSource, /modalRef\.current\?\.focus\(\)/);
+  assert.doesNotMatch(modalSource, /closeButtonRef\.current\?\.focus\(\)/);
 });
 
 test('签到弹窗展示补签卡数量并支持本周与本月补签', () => {

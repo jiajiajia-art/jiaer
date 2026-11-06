@@ -1,5 +1,6 @@
 /**
- * 创作游戏入口重构：二级三项；列表无并列「创作应用」；玩法 Mod / 手机应用对话 + SDK
+ * 创作游戏入口重构：二级三项；列表无并列「创作应用」；
+ * SDK 归平台，入口文案禁止「产出/专属 SDK」。
  */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -25,6 +26,30 @@ test('CreateType_创作游戏开二级_无并列创作应用', () => {
   const subIdx = tsx.indexOf('romanceSubOpen');
   const phoneIdx = tsx.indexOf('title="手机应用"');
   assert.ok(subIdx >= 0 && phoneIdx > subIdx);
+});
+
+test('CreateType_二级弹窗文案_SDK归平台禁止产出专属', () => {
+  const tsx = read('src/page/CreateType.tsx');
+  const desc = tsx.match(/createTypeModalDesc[^>]*>\s*([\s\S]*?)<\/div>/)?.[1] ?? '';
+  const playHint = tsx.match(/title="玩法 Mod"\s*hint="([^"]+)"/)?.[1] ?? '';
+  const phoneHint = tsx.match(/title="手机应用"\s*hint="([^"]+)"/)?.[1] ?? '';
+  assert.match(desc, /都运行在平台 SDK 上/);
+  assert.match(playHint, /可以是新地点、游戏内页面，或填进已有玩法格子的数据/);
+  assert.match(phoneHint, /供游戏世界里的手机安装。用平台 SDK/);
+  for (const piece of [desc, playHint, phoneHint]) {
+    assert.doesNotMatch(piece, /并产出专属 SDK|产出 SDK|专属 SDK/);
+  }
+});
+
+test('PlayModCreateShell与手机应用页_禁止生成专属SDK话术', () => {
+  const shell = read('Romance/src/components/PlayModCreateShell.tsx');
+  const page = read('src/page/CreatePlatformApp.tsx');
+  assert.match(shell, /能力都来自平台 SDK/);
+  assert.match(shell, /上传玩法包到组件商店/);
+  assert.doesNotMatch(shell, /生成专属 SDK/);
+  assert.match(page, /不产出专属 SDK/);
+  assert.doesNotMatch(page, /自动产出专属/);
+  assert.doesNotMatch(page, /已生成专属 SDK/);
 });
 
 test('PlayModCreateShell_复用工坊玩法模式并上传kkmod', () => {

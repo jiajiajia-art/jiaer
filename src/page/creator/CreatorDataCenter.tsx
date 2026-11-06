@@ -90,6 +90,7 @@ const CreatorDataCenter: React.FC = () => {
                       <div className={styles.workTitle}>{work.title}</div>
                       <div className={styles.workMeta}>
                         <span>{t('creatorStats.playCount')}: {work.metrics.playCount}</span>
+                        <span>{t('creatorStats.playRounds')}: {work.metrics.playRounds ?? 0}</span>
                         <span>{t('creatorStats.totalViews')}: {work.metrics.pv}</span>
                         <span>{work.isPublic ? t('creatorStats.public') : t('creatorStats.draft')}</span>
                       </div>

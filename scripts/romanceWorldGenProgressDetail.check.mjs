@@ -48,24 +48,26 @@ test('worldGenProgressDetail_完成后摘要可点开内容', async () => {
   );
 });
 
-test('worldGenProgressDetail_全选须瘦身条数且骨架优先', async () => {
+test('worldGenProgressDetail_全选须瘦身文长且人物地点硬配额', async () => {
   const d = await import(pathToFileURL(join(romance, 'lib/worldGenProgressDetail.ts')).href);
   const lean = d.worldGenLeanLimits(11);
   const few = d.worldGenLeanLimits(3);
   assert.ok(lean.worldBookEntries <= 3);
-  assert.ok(lean.npcs <= 3);
+  assert.equal(lean.npcs, d.WORLD_GEN_NPCS_COUNT);
+  assert.equal(lean.rooms, d.WORLD_GEN_ROOMS_COUNT);
+  assert.equal(few.npcs, d.WORLD_GEN_NPCS_COUNT);
+  assert.equal(few.rooms, d.WORLD_GEN_ROOMS_COUNT);
   assert.ok(lean.paths <= 2);
   assert.ok(lean.scriptToneChars < 1200);
   assert.ok(lean.npcBioChars <= 120);
-  assert.ok(few.npcs >= lean.npcs);
   assert.ok(few.scriptToneChars >= lean.scriptToneChars);
   assert.equal(d.worldGenBatchNeedsEnrich(['travelTime']), false);
   assert.equal(d.worldGenBatchNeedsEnrich(['hub:book', 'prompt']), true);
-  assert.match(d.worldGenLeanPromptBlock(lean, 'skeleton'), /骨架优先|禁止灌满长文/);
+  assert.match(d.worldGenLeanPromptBlock(lean, 'skeleton'), /硬配额|禁止灌满|假完成/);
   assert.match(d.worldGenLeanPromptBlock(lean, 'enrich'), /补长文|禁止新增/);
 });
 
-test('worldGenGenerate_进度按细项展示且同类仍合并请求', async () => {
+test('worldGenGenerate_进度按细项展示且两次串联合并请求', async () => {
   const gen = await import(pathToFileURL(join(romance, 'lib/worldGenGenerate.ts')).href);
   const wiz = await import(pathToFileURL(join(romance, 'lib/worldGenWizard.ts')).href);
 
@@ -75,7 +77,7 @@ test('worldGenGenerate_进度按细项展示且同类仍合并请求', async () 
     ['hub:book', 'hub:paths', 'hub:rules', 'npcs'].sort(),
   );
   assert.ok(init.modules.every((m) => m.batchId));
-  assert.equal(new Set(init.modules.map((m) => m.batchId)).size, 2, '规则书合并世界规则；人物线路与人物合并');
+  assert.equal(new Set(init.modules.map((m) => m.batchId)).size, 2, '规则书线路归第一次；人物归第二次');
 
   const draft = {
     ...wiz.defaultWorldGenStep1(),
@@ -87,6 +89,15 @@ test('worldGenGenerate_进度按细项展示且同类仍合并请求', async () 
   const seed = wiz.draftModFromWorldGen(draft);
   const { meta: _m, ...seedMod } = seed;
   void _m;
+
+  const names = ['沈晚晴', '林夏', '顾清河', '周明远', '白晓棠'];
+  const fiveNpcs = names.map((name, i) => ({
+    id: `n${i + 1}`,
+    name,
+    gender: i % 2 === 0 ? '女' : '男',
+    age: 22 + i,
+    bio: '这是一段足够长的人物小传，用来通过软校验：人物须写出贴合世界观的简介与动机，不能只剩一句空话。',
+  }));
 
   const details = [];
   let calls = 0;
@@ -102,8 +113,7 @@ test('worldGenGenerate_进度按细项展示且同类仍合并请求', async () 
     completeFn: async (_cfg, messages) => {
       calls += 1;
       const last = String(messages[messages.length - 1].content);
-      // 功能注释：瘦身提示里也有「世界书」字样，只能用「当前大类」标题分流
-      if (last.includes('当前大类：「世界规则」')) {
+      if (last.includes('当前大类：「基础设定」')) {
         return JSON.stringify({
           content: {
             worldRules: [
@@ -114,29 +124,19 @@ test('worldGenGenerate_进度按细项展示且同类仍合并请求', async () 
             worldBook: [
               { id: 'tide', title: '雾港潮汐', keywords: ['潮汐'], content: '海边潮汐决定码头作息。' },
             ],
+            creation: { paths: [{ id: 'p1', name: '旅店继承人' }] },
           },
         });
       }
-      if (!last.includes('当前大类：「人物与线路」')) {
+      if (!last.includes('当前大类：「人物地点事件结局」')) {
         throw new Error(`意外大类提示: ${last.slice(0, 120)}`);
       }
-      return JSON.stringify({
-        content: {
-          npcs: [{
-            id: 'n1',
-            name: '林夏',
-            gender: '女',
-            age: 28,
-            bio: '林夏是雾港海边旅店的店主，性格温柔，擅长照顾客人并记住每位常客的口味与心事。她从小在码头长大，熟悉潮汐与渔汛，也会在风雨夜里把灯火留得更亮一些。',
-          }],
-          creation: { paths: [{ id: 'p1', name: '旅店继承人' }] },
-        },
-      });
+      return JSON.stringify({ content: { npcs: fiveNpcs } });
     },
     cfg: { baseUrl: 'https://example.test/v1', apiKey: 'k', model: 'm' },
   });
 
-  assert.ok(calls >= 2 && calls <= 6, `同类合并后应为 2 大类×骨架/补文（含重试余量），实际 ${calls}`);
+  assert.equal(calls, 2, `两次串联各 1 次，实际 ${calls}`);
   assert.equal(result.progress.doneCount, 4);
   assert.ok(details.some((x) => /hub:rules:.*婚姻/.test(x)), `须出现世界规则明细，实际=${details.slice(0, 8).join('|')}`);
   assert.ok(
@@ -149,6 +149,7 @@ test('worldGenGenerate_进度按细项展示且同类仍合并请求', async () 
   assert.match(path?.summary || '', /旅店继承人/);
   assert.ok(result.mod.content.worldBook?.some((e) => e.title === '雾港潮汐'));
   assert.ok(result.mod.content.creation?.paths?.some((p) => p.name === '旅店继承人'));
+  assert.equal(result.mod.content.npcs.length, 5);
 });
 
 test('worldGenWizard_进度UI须展示明细与摘要展开', () => {

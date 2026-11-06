@@ -3,7 +3,7 @@
 }
 
 @media (max-width: 768px) {
-    /* 功能注释：底栏暗色 funloom 壳 — 黑底 + 白字，选中酒红 #A8283C，浅色内容页也能看清 */
+    /* 功能注释：底栏按设计稿 — 黑底；选中 #F16C83；未选中 #B8B8C2；创作为红底白加号 */
     .container {
         display: flex;
         position: fixed;
@@ -29,7 +29,7 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        color: rgba(255, 255, 255, 0.72);
+        color: #B8B8C2;
         font-size: 12px;
         font-weight: 600;
         background: transparent;
@@ -41,37 +41,40 @@
     }
 
     .navItemActive {
-        color: #A8283C;
+        color: #F16C83;
     }
 
     .navItemDisabled {
         opacity: 0.42;
     }
 
-    .navItem:not(.navItemActive) .icon {
-        /* 未选中：白色剪影，压在黑底上可读 */
-        filter: brightness(0) invert(1);
-        opacity: 0.72;
-    }
-
-    .navItemActive .icon {
-        /* 选中：染成酒红 #A8283C */
-        filter: brightness(0) saturate(100%) invert(18%) sepia(64%) saturate(1842%) hue-rotate(325deg) brightness(92%) contrast(92%);
-        opacity: 1;
-    }
-
     .adminIcon {
-        color: rgba(255, 255, 255, 0.72);
+        color: #B8B8C2;
     }
 
     .adminIconActive {
-        color: #A8283C;
+        color: #F16C83;
     }
 
     .icon {
         width: 24px;
         height: 24px;
-        object-fit: contain;
+        display: block;
+        flex-shrink: 0;
+        color: inherit;
+    }
+
+    /* 功能注释：创作钮按底部icon.html 1:1 —— 40×32 红底圆角+白加号，明显大于两侧 24 线框 */
+    .createIcon {
+        width: 40px;
+        height: 32px;
+        color: inherit;
+    }
+
+    /* 功能注释：创作项少一点上下 padding，让 32 高的中钮相对两侧上移贴齐设计稿 */
+    .navItemCreate {
+        padding-top: 6px;
+        padding-bottom: 6px;
     }
 
     .label {

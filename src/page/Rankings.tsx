@@ -1,30 +1,37 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import AppPageShell from '../components/Layout/AppPageShell';
 import FooterArea from '../components/Layout/FooterArea';
+import { CardFlameIcon, CardHeartIcon } from '../components/GameCardStatIcons';
 import styles from './Rankings.module.css';
 import getRankingsApi from '../api/rankings/getRankings';
-import type { RankingsApiType, RankingsGameItem } from '../api/rankings/getRankings.type';
+import type { RankingsApiType, RankingsAuthorItem, RankingsGameItem } from '../api/rankings/getRankings.type';
 import type { RankingsCategoryKey } from '../api/rankings/getRankingsAll.type';
 import { getImageUrl, resolveGameCoverUrl } from '../utils/constants';
 import { buildGameDetailNavigateState } from '../utils/gameDetailNavigation';
 import { getGameTypeLabel, getGameTypeTone, type GameTypeTone } from '../utils/gameTypeLabel';
 import { resolveGameTypeToneStyle } from '../utils/gameTypeToneClass';
 import type { UserGameData } from '../api/home/getGameData.type';
+import {
+    isRankingsVisibleAllSectionKey,
+    isRankingsVisibleTabKey,
+    resolveRankingsHeatAndFavorite,
+} from '../lib/rankingsUi';
 
-type RankingTab = 'all' | 'hot' | 'new' | 'rising' | 'sales' | 'romance';
+type RankingTab = 'all' | 'hot' | 'new' | 'rising' | 'sales' | 'romance' | 'authors';
+type GameRankingTab = Exclude<RankingTab, 'all' | 'authors'>;
 
 /**
- * 与后端 interaction 互动榜相关：
- *  - 人气榜 -> overall（总榜，按点赞数降序）
+ * 与后端排行榜 type 映射：
+ *  - 人气榜 -> overall
  *  - 新作榜 -> new
- *  - 飙升榜 -> hot（近7天增量）
- *  - 畅销榜 -> rating
+ *  - 飙升榜 -> hot
+ *  - 高分榜 -> rating
  *  - 互动榜 -> interaction
- * 全部 tab 走聚合接口 /api/auth/games/rankings/all。
+ *  - 作者榜 -> authors（游玩轮次，单独结构）
  */
-const TAB_TO_API_TYPE: Record<Exclude<RankingTab, 'all'>, RankingsApiType> = {
+const TAB_TO_API_TYPE: Record<GameRankingTab, Exclude<RankingsApiType, 'authors'>> = {
     hot: 'overall',
     new: 'new',
     rising: 'hot',
@@ -33,16 +40,18 @@ const TAB_TO_API_TYPE: Record<Exclude<RankingTab, 'all'>, RankingsApiType> = {
 };
 
 /** RankingsCategoryKey -> RankingTab 的反向映射 */
-const API_TYPE_TO_TAB: Record<RankingsApiType, RankingTab> = {
+const API_TYPE_TO_TAB: Record<RankingsCategoryKey, RankingTab> = {
     overall: 'hot',
     new: 'new',
     hot: 'rising',
     rating: 'sales',
     interaction: 'romance',
+    authors: 'authors',
 };
 
 const RANKING_PAGE_SIZE = 20;
 const DEFAULT_RANKING_COVER = `${import.meta.env.BASE_URL}data/assets/defaultScene.png`;
+const DEFAULT_AUTHOR_AVATAR = `${import.meta.env.BASE_URL}data/assets/defaultAvatar.png`;
 
 interface RankedGame {
     id: string;
@@ -51,14 +60,30 @@ interface RankedGame {
     description: string;
     coverUrl: string;
     playCount: number;
+    heatCount: number;
+    likeCount: number;
+    favoriteCount: number;
     updateInfo: string;
     category: string;
     authorName: string;
+    authorAvatarUrl: string;
     tags: string[];
     gameTags: string[];
-    gameTypeLabel: string;  // 转换后的中文标签
-    gameTypeTone: GameTypeTone;  // 标签色调
+    gameTypeLabel: string;
+    gameTypeTone: GameTypeTone;
     theme_tag_names?: string[];
+}
+
+interface RankedAuthor {
+    creatorUserId: string;
+    userCode: string;
+    nickname: string;
+    avatarUrl: string;
+    playRounds: number;
+    publicWorkCount: number;
+    topWorkTitle: string;
+    topWorkCoverUrl: string;
+    topWorkFileId: string;
 }
 
 function apiGameToRanked(item: RankingsGameItem): RankedGame {
@@ -68,7 +93,6 @@ function apiGameToRanked(item: RankingsGameItem): RankedGame {
         : [];
     const tags = tagsFromTheme.length > 0 ? tagsFromTheme : tagsFromGame;
     const author = item.author_name && item.author_name.trim() ? item.author_name : '匿名作者';
-    // 列表展示与进详情预览统一走 display-cover，勿把原图 cover.png 绝对地址塞进 preview
     const coverRaw = resolveGameCoverUrl(item) || item.cover_url || '';
     const cover = getImageUrl(coverRaw) || DEFAULT_RANKING_COVER;
     const category = tags[0] ?? item.engine ?? '综合';
@@ -76,24 +100,45 @@ function apiGameToRanked(item: RankingsGameItem): RankedGame {
     const updateInfo = updatedAt && !Number.isNaN(updatedAt.getTime())
         ? `更新于 ${updatedAt.toLocaleDateString('zh-CN')}`
         : '';
-    // 使用 getGameTypeLabel 转换原始标签为中文展示名
     const gameTypeLabel = getGameTypeLabel(item.game_tags, item.engine);
     const gameTypeTone = getGameTypeTone(item.game_tags, item.engine);
+    const { heat, favorite } = resolveRankingsHeatAndFavorite(item);
+    const avatarRaw = typeof item.avatarUrl === 'string' ? item.avatarUrl.trim() : '';
     return {
         id: item.file_id,
         title: item.title,
         subtitle: item.subtitle || item.description || '',
-        description: item.description || '',
+        description: item.description || item.subtitle || '',
         coverUrl: cover,
-        playCount: item.total_uv_count || item.like_count,
+        playCount: heat || item.like_count || 0,
+        heatCount: heat,
+        likeCount: Number(item.like_count) || 0,
+        favoriteCount: favorite,
         updateInfo,
         category,
         authorName: author,
+        authorAvatarUrl: getImageUrl(avatarRaw) || DEFAULT_AUTHOR_AVATAR,
         tags,
         gameTags: tagsFromGame,
         gameTypeLabel,
         gameTypeTone,
         theme_tag_names: item.theme_tag_names ?? [],
+    };
+}
+
+function apiAuthorToRanked(item: RankingsAuthorItem): RankedAuthor {
+    const coverRaw = item.top_work?.display_cover_url || item.top_work?.cover_url || '';
+    const avatarRaw = item.avatar_url || '';
+    return {
+        creatorUserId: item.creator_user_id,
+        userCode: item.user_code || '',
+        nickname: item.nickname?.trim() || '匿名作者',
+        avatarUrl: getImageUrl(avatarRaw) || DEFAULT_AUTHOR_AVATAR,
+        playRounds: Number(item.play_rounds || 0),
+        publicWorkCount: Number(item.public_work_count || 0),
+        topWorkTitle: item.top_work?.title || '',
+        topWorkCoverUrl: getImageUrl(coverRaw) || DEFAULT_RANKING_COVER,
+        topWorkFileId: item.top_work?.file_id || '',
     };
 }
 
@@ -109,7 +154,9 @@ function rankedGameToPreview(game: RankedGame): UserGameData {
         author_name: game.authorName,
         game_tags: game.gameTags.join(',') || game.tags.join(',') || '',
         theme_tag_names: game.theme_tag_names ?? game.tags,
-        like_count: game.playCount || 0,
+        like_count: game.likeCount || game.playCount || 0,
+        favorite_count: game.favoriteCount || 0,
+        total_uv_count: game.heatCount || 0,
         creator_user_id: '',
         doc_url: '',
         files: '',
@@ -122,12 +169,11 @@ function rankedGameToPreview(game: RankedGame): UserGameData {
         is_public: 1,
         dislike_count: 0,
         reaction: '',
-        avatarUrl: '',
+        avatarUrl: game.authorAvatarUrl || '',
         is_preset: 0,
         needDeleted: false,
     };
 }
-
 
 const TAB_CONFIG: { key: RankingTab; label: string; labelZh: string }[] = [
     { key: 'all', label: 'All', labelZh: '全部' },
@@ -136,19 +182,20 @@ const TAB_CONFIG: { key: RankingTab; label: string; labelZh: string }[] = [
     { key: 'rising', label: 'Rising', labelZh: '飙升榜' },
     { key: 'sales', label: 'Sales', labelZh: '高分榜' },
     { key: 'romance', label: 'Interaction', labelZh: '互动榜' },
+    { key: 'authors', label: 'Authors', labelZh: '作者榜' },
 ];
 
-/** 纯配置，无 games 字段；games 在组件内从 allTabState 注入 */
 const ALL_TAB_SECTION_CONFIG: Array<{
     key: RankingsCategoryKey;
     label: string;
     labelZh: string;
 }> = [
-    { key: 'overall',    label: 'Hot',     labelZh: '人气榜' },
-    { key: 'new',        label: 'New',     labelZh: '新作榜' },
-    { key: 'hot',        label: 'Rising',  labelZh: '飙升榜' },
-    { key: 'interaction',label: 'Interaction',  labelZh: '互动榜' },
-    { key: 'rating',     label: 'Sales',      labelZh: '高分榜' },
+    { key: 'overall', label: 'Hot', labelZh: '人气榜' },
+    { key: 'new', label: 'New', labelZh: '新作榜' },
+    { key: 'hot', label: 'Rising', labelZh: '飙升榜' },
+    { key: 'interaction', label: 'Interaction', labelZh: '互动榜' },
+    { key: 'authors', label: 'Authors', labelZh: '作者榜' },
+    { key: 'rating', label: 'Sales', labelZh: '高分榜' },
 ];
 
 const RANK_BADGE_ASSETS: Record<number, string> = {
@@ -156,10 +203,6 @@ const RANK_BADGE_ASSETS: Record<number, string> = {
     2: `${import.meta.env.BASE_URL}data/assets/第二.svg`,
     3: `${import.meta.env.BASE_URL}data/assets/第三.svg`,
 };
-
-function formatAuthorMeta(game: RankedGame): string {
-    return game.authorName;
-}
 
 function getThemeTags(game: RankedGame): string[] {
     if (Array.isArray(game.theme_tag_names) && game.theme_tag_names.length > 0) {
@@ -173,30 +216,59 @@ interface TabState {
     loading: boolean;
     error: string | null;
     loaded: boolean;
+    hasMore: boolean;
+    loadingMore: boolean;
+}
+
+interface AuthorTabState {
+    data: RankedAuthor[];
+    loading: boolean;
+    error: string | null;
+    loaded: boolean;
+    hasMore: boolean;
+    loadingMore: boolean;
 }
 
 interface AllTabState {
-    /** key = RankingsCategoryKey, value = RankedGame[] */
-    data: Partial<Record<RankingsCategoryKey, RankedGame[]>>;
+    data: Partial<Record<Exclude<RankingsCategoryKey, 'authors'>, RankedGame[]>>;
+    authors: RankedAuthor[];
     loading: boolean;
     error: string | null;
     loaded: boolean;
 }
 
-const API_TAB_KEYS: Array<Exclude<RankingTab, 'all'>> = ['hot', 'new', 'rising', 'sales', 'romance'];
+const GAME_TAB_KEYS: GameRankingTab[] = ['hot', 'new', 'rising', 'sales', 'romance'];
+
+const emptyGameTabState = (): TabState => ({
+    data: [],
+    loading: false,
+    error: null,
+    loaded: false,
+    hasMore: true,
+    loadingMore: false,
+});
 
 const Rankings: React.FC = () => {
     const { i18n } = useTranslation();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<RankingTab>('all');
-    const [apiTabState, setApiTabState] = useState<Record<Exclude<RankingTab, 'all'>, TabState>>(
-        () => API_TAB_KEYS.reduce((acc, key) => {
-            acc[key] = { data: [], loading: false, error: null, loaded: false };
+    const [apiTabState, setApiTabState] = useState<Record<GameRankingTab, TabState>>(
+        () => GAME_TAB_KEYS.reduce((acc, key) => {
+            acc[key] = emptyGameTabState();
             return acc;
-        }, {} as Record<Exclude<RankingTab, 'all'>, TabState>)
+        }, {} as Record<GameRankingTab, TabState>)
     );
+    const [authorTabState, setAuthorTabState] = useState<AuthorTabState>({
+        data: [],
+        loading: false,
+        error: null,
+        loaded: false,
+        hasMore: true,
+        loadingMore: false,
+    });
     const [allTabState, setAllTabState] = useState<AllTabState>({
         data: {},
+        authors: [],
         loading: false,
         error: null,
         loaded: false,
@@ -205,6 +277,9 @@ const Rankings: React.FC = () => {
     const tabAbortRef = useRef<AbortController | null>(null);
     const allAbortRef = useRef<AbortController | null>(null);
     const isMountedRef = useRef(true);
+    const mainRef = useRef<HTMLElement | null>(null);
+    const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
+    const loadingMoreRef = useRef(false);
 
     useEffect(() => {
         isMountedRef.current = true;
@@ -217,22 +292,41 @@ const Rankings: React.FC = () => {
 
     const isZh = useMemo(() => i18n.language.startsWith('zh'), [i18n.language]);
 
-    const fetchTabData = async (tab: Exclude<RankingTab, 'all'>) => {
-        tabAbortRef.current?.abort();
-        const controller = new AbortController();
-        tabAbortRef.current = controller;
+    const fetchGameTabData = async (
+        tab: GameRankingTab,
+        options?: { append?: boolean; offset?: number },
+    ) => {
+        const append = Boolean(options?.append);
+        if (append && loadingMoreRef.current) return;
 
-        setApiTabState((prev) => ({
-            ...prev,
-            [tab]: { ...prev[tab], loading: true, error: null },
-        }));
+        if (!append) {
+            tabAbortRef.current?.abort();
+        }
+        const controller = new AbortController();
+        if (!append) {
+            tabAbortRef.current = controller;
+        }
+
+        const offset = append ? Math.max(0, Number(options?.offset) || 0) : 0;
+        if (append) {
+            loadingMoreRef.current = true;
+            setApiTabState((prev) => ({
+                ...prev,
+                [tab]: { ...prev[tab], loadingMore: true, error: null },
+            }));
+        } else {
+            setApiTabState((prev) => ({
+                ...prev,
+                [tab]: { ...prev[tab], loading: true, error: null },
+            }));
+        }
 
         try {
             const apiType = TAB_TO_API_TYPE[tab];
             const resp = await getRankingsApi.getRankings({
                 type: apiType,
                 limit: RANKING_PAGE_SIZE,
-                offset: 0,
+                offset,
             });
             if (controller.signal.aborted || !isMountedRef.current) return;
 
@@ -240,18 +334,29 @@ const Rankings: React.FC = () => {
             if (!payload?.success) {
                 throw new Error(payload?.message || '加载排行榜失败');
             }
-            const items = Array.isArray(payload.data) ? payload.data : [];
-            setApiTabState((prev) => ({
-                ...prev,
-                [tab]: { data: items.map(apiGameToRanked), loading: false, error: null, loaded: true },
-            }));
+            const items = Array.isArray(payload.data) ? payload.data.map(apiGameToRanked) : [];
+            setApiTabState((prev) => {
+                const prevData = append ? prev[tab].data : [];
+                const merged = append ? [...prevData, ...items] : items;
+                return {
+                    ...prev,
+                    [tab]: {
+                        data: merged,
+                        loading: false,
+                        loadingMore: false,
+                        error: null,
+                        loaded: true,
+                        hasMore: items.length >= RANKING_PAGE_SIZE,
+                    },
+                };
+            });
         } catch (err: unknown) {
             const e = err as { code?: string; name?: string; message?: string; response?: { data?: { message?: string } } };
             if (e?.code === 'ERR_CANCELED' || e?.name === 'CanceledError') {
                 if (!isMountedRef.current || tabAbortRef.current !== controller) return;
                 setApiTabState((prev) => ({
                     ...prev,
-                    [tab]: { ...prev[tab], loading: false },
+                    [tab]: { ...prev[tab], loading: false, loadingMore: false },
                 }));
                 return;
             }
@@ -259,8 +364,68 @@ const Rankings: React.FC = () => {
             const message = e?.response?.data?.message || e?.message || '加载排行榜失败，请稍后再试';
             setApiTabState((prev) => ({
                 ...prev,
-                [tab]: { ...prev[tab], loading: false, error: message },
+                [tab]: { ...prev[tab], loading: false, loadingMore: false, error: message },
             }));
+        } finally {
+            if (append) loadingMoreRef.current = false;
+        }
+    };
+
+    const fetchAuthorTabData = async (options?: { append?: boolean; offset?: number }) => {
+        const append = Boolean(options?.append);
+        if (append && loadingMoreRef.current) return;
+
+        if (!append) {
+            tabAbortRef.current?.abort();
+        }
+        const controller = new AbortController();
+        if (!append) {
+            tabAbortRef.current = controller;
+        }
+
+        const offset = append ? Math.max(0, Number(options?.offset) || 0) : 0;
+        if (append) {
+            loadingMoreRef.current = true;
+            setAuthorTabState((prev) => ({ ...prev, loadingMore: true, error: null }));
+        } else {
+            setAuthorTabState((prev) => ({ ...prev, loading: true, error: null }));
+        }
+
+        try {
+            const resp = await getRankingsApi.getAuthorRankings({
+                limit: RANKING_PAGE_SIZE,
+                offset,
+            });
+            if (controller.signal.aborted || !isMountedRef.current) return;
+
+            const payload = resp?.data;
+            if (!payload?.success) {
+                throw new Error(payload?.message || '加载作者榜失败');
+            }
+            const items = Array.isArray(payload.data) ? payload.data.map(apiAuthorToRanked) : [];
+            setAuthorTabState((prev) => {
+                const merged = append ? [...prev.data, ...items] : items;
+                return {
+                    data: merged,
+                    loading: false,
+                    loadingMore: false,
+                    error: null,
+                    loaded: true,
+                    hasMore: items.length >= RANKING_PAGE_SIZE,
+                };
+            });
+        } catch (err: unknown) {
+            const e = err as { code?: string; name?: string; message?: string; response?: { data?: { message?: string } } };
+            if (e?.code === 'ERR_CANCELED' || e?.name === 'CanceledError') {
+                if (!isMountedRef.current || tabAbortRef.current !== controller) return;
+                setAuthorTabState((prev) => ({ ...prev, loading: false, loadingMore: false }));
+                return;
+            }
+            if (controller.signal.aborted || !isMountedRef.current) return;
+            const message = e?.response?.data?.message || e?.message || '加载作者榜失败，请稍后再试';
+            setAuthorTabState((prev) => ({ ...prev, loading: false, loadingMore: false, error: message }));
+        } finally {
+            if (append) loadingMoreRef.current = false;
         }
     };
 
@@ -281,14 +446,17 @@ const Rankings: React.FC = () => {
             }
 
             const rawData = payload.data ?? {};
-            const mapped: Partial<Record<RankingsCategoryKey, RankedGame[]>> = {};
-            for (const key of Object.keys(rawData) as RankingsCategoryKey[]) {
+            const mapped: Partial<Record<Exclude<RankingsCategoryKey, 'authors'>, RankedGame[]>> = {};
+            for (const key of ['overall', 'new', 'hot', 'interaction', 'rating'] as const) {
                 const items = rawData[key];
                 if (Array.isArray(items)) {
                     mapped[key] = items.map(apiGameToRanked);
                 }
             }
-            setAllTabState({ data: mapped, loading: false, error: null, loaded: true });
+            const authors = Array.isArray(rawData.authors)
+                ? rawData.authors.map(apiAuthorToRanked)
+                : [];
+            setAllTabState({ data: mapped, authors, loading: false, error: null, loaded: true });
         } catch (err: unknown) {
             const e = err as { code?: string; name?: string; message?: string; response?: { data?: { message?: string } } };
             if (e?.code === 'ERR_CANCELED' || e?.name === 'CanceledError') {
@@ -312,47 +480,200 @@ const Rankings: React.FC = () => {
             return;
         }
         allAbortRef.current?.abort();
-        const tab = activeTab as Exclude<RankingTab, 'all'>;
-        fetchTabData(tab);
+        if (activeTab === 'authors') {
+            if (!authorTabState.loaded && !authorTabState.loading) {
+                fetchAuthorTabData();
+            }
+            return;
+        }
+        const tabState = apiTabState[activeTab];
+        if (!tabState?.loaded && !tabState?.loading) {
+            fetchGameTabData(activeTab);
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab]);
 
-    // Build the "all" merged list from allTabState (API data), top 5 per category
-    const allMergedList = useMemo<RankedGame[]>(() => [
-        ...(allTabState.data.overall ?? []).slice(0, 5),
-        ...(allTabState.data.hot ?? []).slice(0, 5),
-        ...(allTabState.data.new ?? []).slice(0, 5),
-        ...(allTabState.data.interaction ?? []).slice(0, 5),
-        ...(allTabState.data.rating ?? []).slice(0, 5),
-    ], [allTabState.data]);
-
-    const apiTabCurrent = activeTab !== 'all' ? apiTabState[activeTab] : null;
+    const apiTabCurrent = (activeTab !== 'all' && activeTab !== 'authors')
+        ? apiTabState[activeTab]
+        : null;
     const currentTabData = useMemo<RankedGame[]>(() =>
-        activeTab === 'all'
-            ? allMergedList
+        activeTab === 'all' || activeTab === 'authors'
+            ? []
             : (apiTabCurrent?.data ?? []),
-        [activeTab, allMergedList, apiTabCurrent]
+        [activeTab, apiTabCurrent]
     );
 
-    // Tab 显示逻辑：
-    // - 全部 Tab：等 allTabState 加载完成即可显示
-    // - 子 Tab：在 allTab 中有数据时就显示（与 activeTab 无关）
+    // 功能注释：仅露出全部/人气/新作/作者；飙升与互动仍保留 TAB_CONFIG 与接口映射
     const filteredTabs = useMemo(() => {
-        if (!allTabState.loaded && !allTabState.loading) return [];
-        return TAB_CONFIG.filter(tab => {
-            if (tab.key === 'all') return true;
-            const apiType = TAB_TO_API_TYPE[tab.key as Exclude<RankingTab, 'all'>];
-            return (allTabState.data[apiType] ?? []).length > 0;
-        });
-    }, [allTabState.loaded, allTabState.data, allTabState.loading]);
+        return TAB_CONFIG.filter((tab) => isRankingsVisibleTabKey(tab.key));
+    }, []);
 
-    // 当 filteredTabs 为空时自动切换到第一个有数据的 Tab
+    const visibleAllSections = useMemo(
+        () => ALL_TAB_SECTION_CONFIG.filter((section) => isRankingsVisibleAllSectionKey(section.key)),
+        [],
+    );
+
     useEffect(() => {
         if (filteredTabs.length === 0) return;
-        if (!filteredTabs.find(t => t.key === activeTab)) {
+        if (!filteredTabs.find((t) => t.key === activeTab)) {
             setActiveTab(filteredTabs[0].key);
         }
     }, [filteredTabs, activeTab]);
+
+    const tryLoadMore = useCallback(() => {
+        if (activeTab === 'all') return;
+        if (activeTab === 'authors') {
+            if (!authorTabState.hasMore || authorTabState.loading || authorTabState.loadingMore) return;
+            void fetchAuthorTabData({ append: true, offset: authorTabState.data.length });
+            return;
+        }
+        const tabState = apiTabState[activeTab];
+        if (!tabState?.hasMore || tabState.loading || tabState.loadingMore) return;
+        void fetchGameTabData(activeTab, { append: true, offset: tabState.data.length });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeTab, authorTabState, apiTabState]);
+
+    // 功能注释：接近列表底部时加载下一页，保证单榜可继续下滑
+    useEffect(() => {
+        const root = mainRef.current;
+        const sentinel = loadMoreSentinelRef.current;
+        if (!root || !sentinel || activeTab === 'all') return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries.some((entry) => entry.isIntersecting)) {
+                    tryLoadMore();
+                }
+            },
+            { root, rootMargin: '120px 0px', threshold: 0 },
+        );
+        observer.observe(sentinel);
+        return () => observer.disconnect();
+    }, [activeTab, tryLoadMore, currentTabData.length, authorTabState.data.length]);
+
+    const handleGameClick = (game: RankedGame) => {
+        if (!game.id) return;
+        navigate(`/game/${game.id}`, {
+            state: buildGameDetailNavigateState('other', rankedGameToPreview(game)),
+        });
+    };
+
+    const handleAuthorClick = (author: RankedAuthor) => {
+        if (author.userCode) {
+            navigate(`/account/${author.userCode}`);
+            return;
+        }
+        if (author.topWorkFileId) {
+            navigate(`/game/${author.topWorkFileId}`);
+        }
+    };
+
+    const renderAuthorByline = (game: RankedGame, avatarClassName: string, nameClassName: string) => (
+        <div className={styles.authorByline}>
+            <img
+                src={game.authorAvatarUrl || DEFAULT_AUTHOR_AVATAR}
+                alt=""
+                className={avatarClassName}
+                loading="lazy"
+                decoding="async"
+            />
+            <span className={nameClassName}>{game.authorName}</span>
+        </div>
+    );
+
+    const renderHeatFavorite = (game: RankedGame, rowClassName: string) => {
+        const heat = game.heatCount || game.playCount || 0;
+        const favorite = game.favoriteCount || game.likeCount || 0;
+        return (
+            <div className={rowClassName} aria-label={isZh ? '热度与收藏' : 'Heat and favorites'}>
+                <span className={styles.statItem} title={isZh ? '热度' : 'Heat'}>
+                    <CardFlameIcon className={styles.statFlame} />
+                    <span className={styles.statValue}>{heat}</span>
+                </span>
+                <span className={styles.statItem} title={isZh ? '收藏' : 'Favorites'}>
+                    <CardHeartIcon className={styles.statHeart} />
+                    <span className={styles.statValue}>{favorite}</span>
+                </span>
+            </div>
+        );
+    };
+
+    const renderAuthorList = (authors: RankedAuthor[], loading: boolean, error: string | null, onRetry: () => void) => {
+        if (loading && authors.length === 0) {
+            return (
+                <div className={styles.stateWrap}>
+                    <div className={styles.spinner} aria-hidden="true" />
+                    <span className={styles.stateText}>{isZh ? '加载中…' : 'Loading…'}</span>
+                </div>
+            );
+        }
+        if (error && authors.length === 0) {
+            return (
+                <div className={styles.stateWrap}>
+                    <span className={styles.stateText}>{error}</span>
+                    <button className={styles.retryBtn} onClick={onRetry}>
+                        {isZh ? '重试' : 'Retry'}
+                    </button>
+                </div>
+            );
+        }
+        if (authors.length === 0) {
+            return (
+                <div className={styles.stateWrap}>
+                    <span className={styles.stateText}>
+                        {isZh ? '暂无数据' : 'No data yet'}
+                    </span>
+                </div>
+            );
+        }
+        return (
+            <div className={styles.horizontalSection}>
+                {authors.map((author, index) => {
+                    const rank = index + 1;
+                    const badgeSrc = RANK_BADGE_ASSETS[rank];
+                    return (
+                        <div
+                            key={author.creatorUserId}
+                            className={styles.horizontalCard}
+                            onClick={() => handleAuthorClick(author)}
+                        >
+                            <div className={styles.authorAvatarWrap}>
+                                <img
+                                    src={author.avatarUrl}
+                                    alt={author.nickname}
+                                    className={styles.authorAvatar}
+                                />
+                            </div>
+                            <div className={styles.horizontalCardInfo}>
+                                <div className={styles.horizontalCardTitleRow}>
+                                    {badgeSrc ? (
+                                        <img
+                                            src={badgeSrc}
+                                            alt={`Rank ${rank}`}
+                                            className={styles.horizontalCardBadgeImage}
+                                        />
+                                    ) : (
+                                        <span className={styles.horizontalCardBadge}>{rank}</span>
+                                    )}
+                                    <h4 className={styles.horizontalCardTitle}>{author.nickname}</h4>
+                                </div>
+                                <div className={styles.horizontalCardAuthor}>
+                                    {isZh
+                                        ? `游玩轮次 ${author.playRounds}`
+                                        : `${author.playRounds} play rounds`}
+                                </div>
+                                {author.topWorkTitle ? (
+                                    <div className={styles.horizontalCardDesc}>
+                                        {isZh ? `代表作：${author.topWorkTitle}` : `Top work: ${author.topWorkTitle}`}
+                                    </div>
+                                ) : null}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    };
 
     const renderApiContent = () => {
         if (!apiTabCurrent) return null;
@@ -370,7 +691,7 @@ const Rankings: React.FC = () => {
                     <span className={styles.stateText}>{apiTabCurrent.error}</span>
                     <button
                         className={styles.retryBtn}
-                        onClick={() => fetchTabData(activeTab as Exclude<RankingTab, 'all'>)}
+                        onClick={() => fetchGameTabData(activeTab as GameRankingTab)}
                     >
                         {isZh ? '重试' : 'Retry'}
                     </button>
@@ -427,10 +748,24 @@ const Rankings: React.FC = () => {
                                     )}
                                     <h4 className={styles.horizontalCardTitle}>{game.title}</h4>
                                 </div>
-                                <div className={styles.horizontalCardAuthor}>{game.authorName}</div>
-                                <div className={styles.horizontalCardDesc}>
-                                    {game.description}
-                                </div>
+                                {renderAuthorByline(
+                                    game,
+                                    styles.horizontalCardAuthorAvatar,
+                                    styles.horizontalCardAuthor,
+                                )}
+                                {getThemeTags(game).length > 0 ? (
+                                    <div className={styles.horizontalCardTags}>
+                                        {getThemeTags(game).slice(0, 2).map((tag) => (
+                                            <span key={tag} className={styles.horizontalCardTagPill}>{tag}</span>
+                                        ))}
+                                    </div>
+                                ) : null}
+                                {game.description ? (
+                                    <div className={styles.horizontalCardDesc}>
+                                        {game.description}
+                                    </div>
+                                ) : null}
+                                {renderHeatFavorite(game, styles.horizontalCardStats)}
                             </div>
                         </div>
                     );
@@ -439,17 +774,13 @@ const Rankings: React.FC = () => {
         );
     };
 
-    const handleGameClick = (game: RankedGame) => {
-        if (!game.id) return;
-        navigate(`/game/${game.id}`, {
-            state: buildGameDetailNavigateState('other', rankedGameToPreview(game)),
-        });
-    };
-
     return (
-        <AppPageShell shellClassName={styles.pageRoot} mainClassName={styles.page}>
+        <AppPageShell
+            shellClassName={styles.pageRoot}
+            mainClassName={styles.page}
+            mainRef={mainRef}
+        >
                 <div className={styles.pageInner}>
-                {/* Tab Bar */}
                 <div className={styles.tabBar} role="tablist" aria-label={isZh ? '排行分类' : 'Ranking categories'}>
                     {filteredTabs.map((tab) => (
                         <button
@@ -471,12 +802,10 @@ const Rankings: React.FC = () => {
                 </div>
 
                 {activeTab === 'all' ? (
-                    /* ── 全部 Tab: 各分类 Top 5 网格 ── */
                     <>
                     <div className={styles.allTabGrid}>
                         {allTabState.loading ? (
-                            /* Loading skeleton */
-                            ALL_TAB_SECTION_CONFIG.map((section) => (
+                            visibleAllSections.map((section) => (
                                 <div key={section.key} className={styles.categoryBox}>
                                     <div className={styles.categoryBoxHeader}>
                                         <h2 className={styles.categoryBoxTitle}>
@@ -509,7 +838,55 @@ const Rankings: React.FC = () => {
                                 </button>
                             </div>
                         ) : (
-                            ALL_TAB_SECTION_CONFIG.map((section) => {
+                            visibleAllSections.map((section) => {
+                                if (section.key === 'authors') {
+                                    const authors = allTabState.authors.slice(0, 5);
+                                    if (authors.length === 0) return null;
+                                    return (
+                                        <div key={section.key} className={styles.categoryBox}>
+                                            <div className={styles.categoryBoxHeader}>
+                                                <h2 className={styles.categoryBoxTitle}>
+                                                    {isZh ? section.labelZh : section.label}
+                                                </h2>
+                                                <button
+                                                    type="button"
+                                                    className={styles.categoryBoxMore}
+                                                    onClick={() => setActiveTab('authors')}
+                                                >
+                                                    {isZh ? '更多' : 'More'}
+                                                    <img src={`${import.meta.env.BASE_URL}data/assets/向右箭头.svg`} alt="" className={styles.moreArrow} />
+                                                </button>
+                                            </div>
+                                            <div className={styles.categoryBoxList}>
+                                                {authors.map((author, index) => (
+                                                    <div
+                                                        key={author.creatorUserId}
+                                                        className={styles.categoryBoxItem}
+                                                        onClick={() => handleAuthorClick(author)}
+                                                    >
+                                                        <span className={styles.categoryBoxRank} data-rank={index + 1}>{index + 1}</span>
+                                                        <div className={styles.categoryBoxCoverWrap}>
+                                                            <img
+                                                                src={author.avatarUrl}
+                                                                alt={author.nickname}
+                                                                className={`${styles.categoryBoxCover} ${styles.authorListAvatar}`}
+                                                            />
+                                                        </div>
+                                                        <div className={styles.categoryBoxInfo}>
+                                                            <div className={styles.categoryBoxTitle2}>{author.nickname}</div>
+                                                            <div className={styles.categoryBoxAuthor}>
+                                                                {isZh
+                                                                    ? `游玩轮次 ${author.playRounds}`
+                                                                    : `${author.playRounds} rounds`}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                }
+
                                 const games = (allTabState.data[section.key] ?? []).slice(0, 5);
                                 if (games.length === 0) return null;
                                 return (
@@ -521,7 +898,7 @@ const Rankings: React.FC = () => {
                                             <button
                                                 type="button"
                                                 className={styles.categoryBoxMore}
-                                                onClick={() => setActiveTab(API_TYPE_TO_TAB[section.key as RankingsApiType])}
+                                                onClick={() => setActiveTab(API_TYPE_TO_TAB[section.key])}
                                             >
                                                 {isZh ? '更多' : 'More'}
                                                 <img src={`${import.meta.env.BASE_URL}data/assets/向右箭头.svg`} alt="" className={styles.moreArrow} />
@@ -551,7 +928,11 @@ const Rankings: React.FC = () => {
                                                     </div>
                                                     <div className={styles.categoryBoxInfo}>
                                                         <div className={styles.categoryBoxTitle2}>{game.title}</div>
-                                                        <div className={styles.categoryBoxAuthor}>{formatAuthorMeta(game)}</div>
+                                                        {renderAuthorByline(
+                                                            game,
+                                                            styles.categoryBoxAuthorAvatar,
+                                                            styles.categoryBoxAuthor,
+                                                        )}
                                                         {themeTags.length > 0 ? (
                                                             <div className={styles.categoryBoxMeta}>
                                                                 {themeTags.slice(0, 2).map((tag) => (
@@ -559,6 +940,10 @@ const Rankings: React.FC = () => {
                                                                 ))}
                                                             </div>
                                                         ) : null}
+                                                        {game.description ? (
+                                                            <div className={styles.categoryBoxDesc}>{game.description}</div>
+                                                        ) : null}
+                                                        {renderHeatFavorite(game, styles.categoryBoxStats)}
                                                     </div>
                                                 </div>
                                                 );
@@ -570,15 +955,30 @@ const Rankings: React.FC = () => {
                         )}
                     </div>
                     </>
+                ) : activeTab === 'authors' ? (
+                    <>
+                    {renderAuthorList(
+                        authorTabState.data,
+                        authorTabState.loading,
+                        authorTabState.error,
+                        () => fetchAuthorTabData(),
+                    )}
+                    <div ref={loadMoreSentinelRef} className={styles.loadMoreSentinel} aria-hidden="true" />
+                    {authorTabState.loadingMore ? (
+                        <div className={styles.loadMoreHint}>{isZh ? '加载中…' : 'Loading…'}</div>
+                    ) : null}
+                    </>
                 ) : (
                     <>
-                    {/* 子排行榜内容：从接口拉取，按 activeTab 缓存 */}
                     {renderApiContent()}
+                    <div ref={loadMoreSentinelRef} className={styles.loadMoreSentinel} aria-hidden="true" />
+                    {apiTabCurrent?.loadingMore ? (
+                        <div className={styles.loadMoreHint}>{isZh ? '加载中…' : 'Loading…'}</div>
+                    ) : null}
                     </>
                 )}
             </div>
 
-        {/* 功能注释：页脚 PC/手机均放页面最底部，不再按端隐藏 */}
         <FooterArea />
         </AppPageShell>
     );

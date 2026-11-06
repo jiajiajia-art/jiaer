@@ -217,6 +217,7 @@ const GameIssueAdminManager: React.FC = () => {
             <p><b>作品</b> {detail.gameTitle || '—'}（{detail.fileId}）</p>
             <p><b>类型</b> {TYPE_LABEL[detail.issueType]}</p>
             <p><b>内容</b> {detail.content}</p>
+            <p><b>联系方式</b> {detail.contact?.trim() || '—'}</p>
             <p><b>用户</b> {detail.userId || '游客'}</p>
             <p><b>时间</b> {formatTime(detail.createdAt)}</p>
             {detail.screenshotUrls?.length ? (

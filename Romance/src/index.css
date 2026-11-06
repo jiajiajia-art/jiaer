@@ -309,9 +309,11 @@ input[type="range"]::-moz-range-thumb {
 
 /* 剧情文本换行与排版 */
 .story-prose {
-  /* 剧情正文统一跟随「设置 · 字体风格」——用 --font-serif（宋/圆/雅/毛笔四种皆随之切换），
-     文艺质感更贴合叙事，且毛笔等风格下也能真正生效。 */
+  /* 剧情正文统一跟随「设置 · 游戏字体」——用 --font-serif（宋/圆/雅/毛笔/手写/自定义皆随之切换）；
+     字号跟 --story-font-size（对话框 DIY「字号」写入）；中文禁止斜体。 */
   font-family: var(--font-serif);
+  font-style: normal;
+  font-size: var(--story-font-size, 15px);
   white-space: pre-wrap;
   line-height: 1.95;
   letter-spacing: 0.01em;
@@ -1412,6 +1414,8 @@ html[data-romance][class] .phone-os :is(*, input, textarea, button, select) {
 /* 功能注释：叠图旁白 / 地点说明的浅色半透明底；透明度由 --story-panel-a（设置可调）驱动 */
 .story-narration-panel {
   font-family: var(--font-serif);
+  font-style: normal;
+  font-size: var(--story-font-size, 15px);
   color: #1a1a1a;
   background: rgba(255, 255, 255, var(--story-panel-a, 0.88));
   backdrop-filter: blur(6px);
@@ -1419,13 +1423,15 @@ html[data-romance][class] .phone-os :is(*, input, textarea, button, select) {
   text-shadow: none;
 }
 
-/* 功能注释：小说内容卡底板同样跟设置透明度；文字保持近黑 + 预设字体 */
+/* 功能注释：小说内容卡底板同样跟设置透明度；文字保持近黑 + 预设字体/字号，不斜体 */
 .novel-read-card {
   background: color-mix(in srgb, var(--paper) calc(var(--story-panel-a, 0.88) * 100%), transparent) !important;
   color: #1a1a1a;
 }
 .novel-read-card .story-prose {
   font-family: var(--font-serif);
+  font-style: normal;
+  font-size: var(--story-font-size, 15px);
   color: #1a1a1a;
 }
 
@@ -1534,11 +1540,13 @@ html.nav-label-c .nav-txt-on { color: var(--nav-label) !important; }
     box-shadow: var(--sheet-shadow, 0 24px 60px -24px color-mix(in srgb, var(--coral) 42%, transparent), 0 2px 10px -6px color-mix(in srgb, var(--ink) 22%, transparent)), inset 0 1px 0 var(--sheet-hi, rgba(255, 255, 255, 0.5));
     /* 功能注释：勿写 overflow:hidden——会裁掉路径卡圆角阴影；弹窗的纵向滚动由 .ui-dialog-body 负责 */
   }
-  /* 功能注释：统一弹窗框——宽约 86vw；高度随内容（标题/说明/按钮排完即结束），不拉满留白；
-   * 内容过高时封顶 max-height，只在 .ui-dialog-body 内滚动。 */
+  /* 功能注释：统一弹窗框——可用宽度直接撑到 1000px（生图等宽内容不再卡在 86vw）；
+   * 高度随内容（标题/说明/按钮排完即结束），过高时只在 .ui-dialog-body 内滚动。 */
   .ui-dialog {
     display: flex; flex-direction: column;
-    width: 86vw; min-width: 0; max-width: none;
+    width: min(1000px, calc(100vw - 24px));
+    min-width: 0;
+    max-width: 1000px;
     height: auto; min-height: 0;
     max-height: min(90vh, 90dvh);
     overflow: hidden;

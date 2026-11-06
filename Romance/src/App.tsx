@@ -309,6 +309,10 @@ function Root() {
       // 功能注释：叙事段落半透明底；设置里可调，正文黑字叠在浅底上才看得清
       const storyA = Math.min(100, Math.max(40, look.storyBgAlpha ?? 88));
       root.style.setProperty("--story-panel-a", String(storyA / 100));
+      // 功能注释：正文/地点描写字号跟对话框 DIY「字号」；未设则清掉，回落 CSS 默认 15px
+      const storyFs = look.dialogDiy?.on !== false ? look.dialogDiy?.fontSize : undefined;
+      if (storyFs != null && storyFs > 0) root.style.setProperty("--story-font-size", `${storyFs}px`);
+      else root.style.removeProperty("--story-font-size");
     };
     apply();
     if (!platformOnly && look.mode === "auto") {

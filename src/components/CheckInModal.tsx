@@ -98,7 +98,6 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
     const modalRef = useRef<HTMLDivElement | null>(null);
     const makeupDialogRef = useRef<HTMLElement | null>(null);
     const makeupTriggerRef = useRef<HTMLButtonElement | null>(null);
-    const closeButtonRef = useRef<HTMLButtonElement | null>(null);
     const previousFocusRef = useRef<HTMLElement | null>(null);
     const suppressRestoreFocusRef = useRef(false);
     const isEmbedded = presentation === 'embedded';
@@ -134,9 +133,10 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
             ? document.activeElement
             : null;
         void fetchSignInStatus();
+        /* 功能注释：焦点落在弹窗根节点，避免关闭钮 focus-visible 粉框；Esc/焦点陷阱仍可用 */
         const frame = isEmbedded
             ? 0
-            : window.requestAnimationFrame(() => closeButtonRef.current?.focus());
+            : window.requestAnimationFrame(() => modalRef.current?.focus());
         return () => window.cancelAnimationFrame(frame);
     }, [fetchSignInStatus, isEmbedded, isOpen]);
 
@@ -365,7 +365,6 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
             >
                 {!isEmbedded && (
                     <button
-                        ref={closeButtonRef}
                         type="button"
                         className={styles.closeButton}
                         onClick={onClose}

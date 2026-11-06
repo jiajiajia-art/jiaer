@@ -102,9 +102,10 @@ test('StoryTab_小说内容卡旁白普通段落与皮肤气泡', () => {
   const story = read('components/StoryTab.tsx');
   assert.match(story, /plain\?: boolean/);
   assert.match(story, /小说内容卡=普通段落/);
-  // plain 分支气泡走皮肤圆角/纸色，不跟 mock 白底；字号略大
+  // plain 分支气泡走皮肤圆角/纸色，不跟 mock 白底；旁白字号跟 --story-font-size，禁止写死 text-[Npx]
   assert.match(story, /plain\s*\n\s*\? "dlg-bubble[^"]*rounded-\[var\(--radius-ui\)\][^"]*bg-paper-2/);
-  assert.match(story, /plain \? \(\s*\n\s*<p className="story-prose whitespace-pre-line text-\[15px\]/);
+  assert.match(story, /plain \? \(\s*\n\s*<p className="story-prose whitespace-pre-line leading-\[1\.8\]/);
+  assert.doesNotMatch(story, /plain \? \(\s*\n\s*<p className="story-prose[^"]*text-\[\d+(\.\d+)?px\]/);
   assert.match(story, /resolveSpeakerLabel/);
 });
 

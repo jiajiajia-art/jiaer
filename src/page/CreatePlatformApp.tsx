@@ -89,7 +89,7 @@ const CreatePlatformApp: React.FC = () => {
   const [turns, setTurns] = useState<PhoneAppAiTurn[]>([
     {
       role: 'assistant',
-      text: '先写一两句需求（或直接聊天），例如「做一个二手闲置浏览页，分类生活，展示商品列表文案」。我会生成名称、说明、类型和内容草稿；满意后保存草稿并生成专属 SDK。',
+      text: '先写一两句需求（或直接聊天），例如「做一个二手闲置浏览页，分类生活，展示商品列表文案」。我会生成名称、说明、类型和内容草稿；满意后保存草稿，再上传到组件商店（运行在平台 SDK 上，不产出专属 SDK）。',
     },
   ]);
   const [chatBusy, setChatBusy] = useState(false);
@@ -238,7 +238,7 @@ const CreatePlatformApp: React.FC = () => {
       if (!res.success && !res.ok) {
         throw new Error(res.message || res.data?.message || 'SDK 上传失败');
       }
-      toast.success(res.data?.message || res.message || '已生成专属 SDK（组件商店私有测试草稿）');
+      toast.success(res.data?.message || res.message || '已上传应用草稿（组件商店私有测试）');
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'SDK 上传失败');
     } finally {
@@ -326,8 +326,7 @@ const CreatePlatformApp: React.FC = () => {
     <AppPageShell shellClassName={styles.pageRoot} mainClassName={styles.main}>
       <h1 className={styles.title}>手机应用</h1>
       <p className={styles.hint}>
-        创作游戏 → 手机应用。对话生成名称、说明、类型与内容（原「创作应用」流程收编于此），保存草稿后自动产出专属
-        SDK，上架后供移动端安装。作者库兰号：{userCode || '（需登录）'}。
+        创作游戏 → 手机应用。对话生成应用草稿（页面与积木描述），由现有手机运行器解释运行；保存后走完整性检查、私有测试、审核上架。游戏世界只能从已上架列表安装（作品只存应用编号）。创作者交出的是应用草稿，不产出专属 SDK。作者库兰号：{userCode || '（需登录）'}。
       </p>
 
       <section className={styles.card} data-phone-app-ai="1">

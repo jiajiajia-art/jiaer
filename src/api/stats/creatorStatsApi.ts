@@ -9,6 +9,8 @@ export interface StatsOverview {
   shareUv: number;
   playCount: number;
   playUv: number;
+  /** 成功 AI 生成记账的游玩轮次；与作者榜同一口径，勿与 playCount(进局)混淆 */
+  playRounds?: number;
   playDurationSeconds: number;
   commentCount: number;
   spendPoints: number;
@@ -28,6 +30,8 @@ export interface WorkMetrics {
   likeCount: number;
   shareCount: number;
   playCount: number;
+  /** 成功 AI 生成记账的游玩轮次；与作者榜同一口径 */
+  playRounds?: number;
   playDurationSeconds: number;
   commentCount: number;
   spendPoints: number;

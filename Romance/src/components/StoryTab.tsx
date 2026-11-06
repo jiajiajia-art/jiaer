@@ -29,10 +29,10 @@ export function LiveNarration({ scrollRef, overlay, plain }: { scrollRef: RefObj
         <Segments segments={segs} npcs={game.npcs} playerAvatar={game.player.avatar} playerName={game.player.name} overlay={overlay} plain={plain} />
       ) : live ? (
         <p className={overlay
-          ? "story-prose story-narration-panel rounded-xl px-3 py-2 text-[14.5px] leading-relaxed"
+          ? "story-prose story-narration-panel rounded-xl px-3 py-2 leading-relaxed"
           : plain
-            ? "story-prose whitespace-pre-line text-[15px] leading-[1.8] tracking-[0.02em] text-[#1a1a1a]"
-            : "story-prose border-l-2 border-jade/25 pl-3 text-[14.5px] leading-relaxed text-ink-soft"}>
+            ? "story-prose whitespace-pre-line leading-[1.8] tracking-[0.02em] text-[#1a1a1a]"
+            : "story-prose border-l-2 border-jade/25 pl-3 leading-relaxed text-ink-soft"}>
           <EntityText text={live} />
         </p>
       ) : (
@@ -165,17 +165,18 @@ function SegmentView({ s, npcs, tightTop, cont, player, overlay, plain }: {
   s: Segment; npcs: Npc[]; tightTop?: boolean; cont?: boolean; player?: { name: string; avatar: string }; overlay?: boolean; plain?: boolean;
 }) {
   // 功能注释：叠图半透明底；小说内容卡=普通段落；其它纸面旁白保留竖线装饰
+  // 功能注释：旁白字号跟设置 --story-font-size / dialogDiy，禁止写死 text-[Npx]；中文不斜体
   if (s.kind === "narration")
     return overlay ? (
-      <p className="story-prose story-narration-panel rounded-xl px-3 py-2 text-[14.5px] leading-[1.85] tracking-[0.015em]">
+      <p className="story-prose story-narration-panel rounded-xl px-3 py-2 leading-[1.85] tracking-[0.015em]">
         <ProseWithSpeech text={s.text} />
       </p>
     ) : plain ? (
-      <p className="story-prose whitespace-pre-line text-[15px] leading-[1.8] tracking-[0.02em] text-[#1a1a1a]">
+      <p className="story-prose whitespace-pre-line leading-[1.8] tracking-[0.02em] text-[#1a1a1a]">
         <ProseWithSpeech text={s.text} />
       </p>
     ) : (
-      <p className="story-prose relative pl-3 text-[14.5px] leading-[1.85] tracking-[0.015em] text-ink/88 before:pointer-events-none before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[2px] before:rounded-full before:bg-gradient-to-b before:from-jade/35 before:via-coral/25 before:to-transparent">
+      <p className="story-prose relative pl-3 leading-[1.85] tracking-[0.015em] text-ink/88 before:pointer-events-none before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[2px] before:rounded-full before:bg-gradient-to-b before:from-jade/35 before:via-coral/25 before:to-transparent">
         <ProseWithSpeech text={s.text} />
       </p>
     );

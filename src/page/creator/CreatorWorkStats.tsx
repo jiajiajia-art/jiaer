@@ -27,6 +27,7 @@ const CreatorWorkStats: React.FC = () => {
       shareUv: 0,
       playCount: detail.playCount,
       playUv: 0,
+      playRounds: detail.playRounds ?? 0,
       playDurationSeconds: detail.playDurationSeconds,
       commentCount: detail.commentCount,
       spendPoints: detail.spendPoints,

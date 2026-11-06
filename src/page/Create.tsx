@@ -557,6 +557,10 @@ const Create: React.FC = () => {
                                             <div className={styles.primaryStatLabel}>{t('creatorStats.playCount')}</div>
                                         </div>
                                         <div className={styles.expandedStatItem}>
+                                            <div className={styles.primaryStatValue}>{creatorStats?.playRounds ?? 0}</div>
+                                            <div className={styles.primaryStatLabel}>{t('creatorStats.playRounds')}</div>
+                                        </div>
+                                        <div className={styles.expandedStatItem}>
                                             <div className={styles.primaryStatValue}>
                                                 {formatPlayDuration(creatorStats?.playDurationSeconds ?? 0)}
                                             </div>

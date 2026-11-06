@@ -2,6 +2,7 @@
 import { api } from "../base";
 import type {
     GetRankingsRequest,
+    RankingsAuthorListResponse,
     RankingsListResponse,
 } from "./getRankings.type";
 import type { RankingsAllResponse } from './getRankingsAll.type';
@@ -16,7 +17,16 @@ const getRankingsApi = {
         return api.get<RankingsListResponse>('/auth/games/rankings', { params });
     },
     /**
-     * 「全部」Tab 聚合接口：一次性返回 5 个分类各 Top 5
+     * 作者榜：按公开作品游玩轮次加总
+     * GET /api/auth/games/rankings?type=authors
+     */
+    getAuthorRankings: (params: Omit<GetRankingsRequest, 'type'> = {}) => {
+        return api.get<RankingsAuthorListResponse>('/auth/games/rankings', {
+            params: { ...params, type: 'authors' },
+        });
+    },
+    /**
+     * 「全部」Tab 聚合接口：作品榜 + 作者榜 Top 5
      * GET /api/auth/games/rankings/all
      */
     getRankingsAll: () => {

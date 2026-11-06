@@ -118,6 +118,29 @@ export function avatarKindLabel(id: string): string {
   return AVATAR_KINDS.find((x) => x.id === id)?.label || id || '—';
 }
 
+/**
+ * 功能注释：管理端网格卡副文案——性别 · 背景（历史停用标签仍可读展示）。
+ */
+export function formatAvatarCardSummary(
+  item: Pick<AvatarLibraryItem, 'gender' | 'backgroundType'>,
+  options?: readonly AvatarTagOption[],
+): string {
+  const gender = avatarGenderLabel(item.gender);
+  const background = avatarBackgroundLabel(item.backgroundType, options);
+  return `${gender} · ${background}`;
+}
+
+/** 功能注释：标题优先用户填写；否则用序号占位，对齐线框「头像 01」。 */
+export function resolveAvatarCardTitle(
+  item: Pick<AvatarLibraryItem, 'title'>,
+  index: number,
+): string {
+  const title = String(item.title || '').trim();
+  if (title) return title;
+  const n = Math.max(1, Math.floor(Number(index) || 0) + 1);
+  return `头像 ${String(n).padStart(2, '0')}`;
+}
+
 /** 功能注释：把后台选项转成分段控件；无数据时回落平台默认 */
 export function tagOptionsToSeg(
   options: readonly AvatarTagOption[] | undefined,

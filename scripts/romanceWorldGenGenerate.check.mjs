@@ -10,6 +10,31 @@ import test from 'node:test';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const romance = join(root, 'Romance/src');
 
+function fiveNpcs() {
+  const names = ['沈晚晴', '林夏', '顾清河', '周明远', '白晓棠'];
+  return names.map((name, i) => ({
+    id: `n${i + 1}`,
+    name,
+    gender: i % 2 === 0 ? '女' : '男',
+    age: 22 + i,
+    role: '关键角色',
+    kind: 'roam',
+    bio: '这是一段足够长的人物小传，用来通过软校验：人物须写出贴合世界观的简介与动机，不能只剩一句空话。',
+  }));
+}
+
+function tenRooms() {
+  const out = {};
+  for (let i = 1; i <= 10; i += 1) {
+    out[`room${i}`] = {
+      name: i === 1 ? '雾港旅店' : `地点${i}`,
+      desc: `地点${i}的场景描述，进入时可看见布局与氛围。`,
+      exits: {},
+    };
+  }
+  return out;
+}
+
 test('worldGenGenerate_extract与merge_以及只跑勾选模组', async () => {
   const gen = await import(pathToFileURL(join(romance, 'lib/worldGenGenerate.ts')).href);
   const wiz = await import(pathToFileURL(join(romance, 'lib/worldGenWizard.ts')).href);
@@ -107,26 +132,15 @@ test('worldGenGenerate_extract与merge_以及只跑勾选模组', async () => {
   const completeFn = async (_cfg, messages) => {
     calls.push(messages.map((m) => m.content).join('\n'));
     const last = String(messages[messages.length - 1].content);
-    // 功能注释：瘦身提示含「人物/地点」字样，只能用当前大类标题分流
-    if (last.includes('当前大类：「人物与线路」')) {
+    // 功能注释：人物+地点同属第二次串联大类，一次写出硬配额
+    if (last.includes('当前大类：「人物地点事件结局」')) {
       return JSON.stringify({
         content: {
-          npcs: [{
-            id: 'n1',
-            name: '林夏',
-            role: '店主',
-            kind: 'staff',
-            home: 'start',
-            roam: [],
-            bio: '林夏是雾港海边旅店的店主，性格温柔，擅长照顾客人并记住每位常客的口味与心事。她从小在码头长大，熟悉潮汐与渔汛，也懂得在风雨夜里把灯火留得更亮一些。面对继承旅店的玩家，她既像邻家姐姐又像可靠搭档，会用平静的语气提醒账本、库存与人情往来，绝不越界替玩家做决定。',
-            gender: '女',
-            age: 28,
-          }],
+          npcs: fiveNpcs(),
+          rooms: tenRooms(),
+          startRoom: 'room1',
         },
       });
-    }
-    if (last.includes('当前大类：「地点」')) {
-      return JSON.stringify({ content: { rooms: { start: { name: '雾港旅店', desc: '靠海', exits: {} } }, startRoom: 'start' } });
     }
     throw new Error(`意外模组提示: ${last.slice(0, 80)}`);
   };
@@ -150,9 +164,8 @@ test('worldGenGenerate_extract与merge_以及只跑勾选模组', async () => {
     cfg: { baseUrl: 'https://example.test/v1', apiKey: 'k', model: 'm' },
   });
 
-  // 功能注释：人物大类含补长文可能 2 次，地点 1 次；合计 ≤3，且绝不是按细项各打一次的 2 以上无合并
-  // 功能注释：人物大类常骨架+补文共 2 次，地点 1 次；合计可到 4
-  assert.ok(calls.length >= 2 && calls.length <= 4, `人物+地点合并后应为 2~4 次请求，实际 ${calls.length}`);
+  // 功能注释：人物+地点并入第二次串联，且不拆补文 → 恰好 1 次
+  assert.equal(calls.length, 1, `人物+地点应合并为第二次串联 1 次请求，实际 ${calls.length}`);
   assert.equal(result.progress.doneCount, 2);
   assert.equal(result.progress.failedCount, 0);
   assert.deepEqual(
@@ -160,9 +173,11 @@ test('worldGenGenerate_extract与merge_以及只跑勾选模组', async () => {
     ['npcs', 'rooms'],
     '进度按勾选细项展示，便于显示正在写什么',
   );
-  assert.ok(result.progress.modules.every((m) => m.batchId));
-  assert.equal(result.mod.content.npcs[0].name, '林夏');
-  assert.equal(result.mod.content.rooms.start.name, '雾港旅店');
+  assert.ok(result.progress.modules.every((m) => m.batchId === gen.WORLD_GEN_PHASE2_BATCH_ID));
+  assert.equal(result.mod.content.npcs.length, 5);
+  assert.equal(result.mod.content.npcs[1].name, '林夏');
+  assert.equal(result.mod.content.rooms.room1.name, '雾港旅店');
+  assert.equal(Object.keys(result.mod.content.rooms).length, 10);
   // 未勾选的结局等不得被擅自写入
   assert.equal(result.mod.content.endings, undefined);
 });
@@ -243,28 +258,22 @@ test('worldGenGenerate_鉴权失败须立刻停批且不打下一波', async () 
   assert.equal(gen.progressHasAuthFailure(result.progress), true);
 });
 
-test('worldGenGenerate_同类须并成一次请求且进度按大类', async () => {
+test('worldGenGenerate_同类须并成两次串联且进度按细项', async () => {
   const gen = await import(pathToFileURL(join(romance, 'lib/worldGenGenerate.ts')).href);
   const wiz = await import(pathToFileURL(join(romance, 'lib/worldGenWizard.ts')).href);
 
   const waves = gen.partitionWorldGenBatchWaves(
     gen.resolveWorldGenBatches(['prompt', 'npcs', 'rooms', 'fixedEvents', 'gigs']).map((b) => b.id),
   );
-  assert.ok(waves[0].includes('worldRules'));
-  assert.ok(waves[1].includes('rooms'));
-  assert.ok(waves[2].includes('characters'));
-  // 功能注释：时间与推进在人物之后，便于对齐年龄；未勾选时本断言用 fixedEvents 位次
-  assert.ok(waves[3].includes('fixedEvents'));
+  assert.deepEqual(waves[0], [gen.WORLD_GEN_PHASE1_BATCH_ID]);
+  assert.deepEqual(waves[1], [gen.WORLD_GEN_PHASE2_BATCH_ID]);
   assert.ok(waves.some((w) => w.includes('playMods')), '扩展大类落入末波');
 
   const wavesWithTravel = gen.partitionWorldGenBatchWaves(
     gen.resolveWorldGenBatches(['prompt', 'npcs', 'travelTime', 'fixedEvents']).map((b) => b.id),
   );
-  const travelWaveIdx = wavesWithTravel.findIndex((w) => w.includes('travelTime'));
-  const charWaveIdx = wavesWithTravel.findIndex((w) => w.includes('characters'));
-  const worldWaveIdx = wavesWithTravel.findIndex((w) => w.includes('worldRules'));
-  assert.ok(travelWaveIdx > worldWaveIdx, '时间与推进须在世界规则之后');
-  assert.ok(travelWaveIdx > charWaveIdx, '时间与推进须在人物与线路之后，以便对齐年龄');
+  assert.equal(wavesWithTravel[0][0], gen.WORLD_GEN_PHASE1_BATCH_ID);
+  assert.equal(wavesWithTravel[1][0], gen.WORLD_GEN_PHASE2_BATCH_ID);
 
   const draft = {
     ...wiz.defaultWorldGenStep1(),
@@ -285,56 +294,54 @@ test('worldGenGenerate_同类须并成一次请求且进度按大类', async () 
     completeFn: async (_cfg, messages) => {
       calls += 1;
       const last = String(messages[messages.length - 1].content);
-      if (last.includes('当前大类：「人物与线路」')) {
+      if (last.includes('当前大类：「基础设定」')) {
         return JSON.stringify({
           content: {
-            npcs: [{
-              id: 'n1',
-              name: '林夏',
-              gender: '女',
-              age: 28,
-              bio: '林夏是雾港海边旅店的店主，性格温柔，擅长照顾客人并记住每位常客的口味与心事。她从小在码头长大，熟悉潮汐与渔汛，也懂得在风雨夜里把灯火留得更亮一些。面对继承旅店的玩家，她既像邻家姐姐又像可靠搭档，会用平静的语气提醒账本、库存与人情往来，绝不越界替玩家做决定。',
-            }],
             creation: { paths: [{ id: 'p1', name: '旅店继承人' }] },
+          },
+        });
+      }
+      if (last.includes('当前大类：「人物地点事件结局」')) {
+        return JSON.stringify({
+          content: {
+            npcs: fiveNpcs(),
+            rooms: tenRooms(),
+            startRoom: 'room1',
           },
         });
       }
       if (last.includes('当前大类：「已添加的玩法」')) {
         return JSON.stringify({ content: { relations: { confessThreshold: 60 } } });
       }
-      if (last.includes('当前大类：「地点」')) {
-        return JSON.stringify({ content: { rooms: { start: { name: '旅店', desc: '', exits: {} } } } });
-      }
       throw new Error(`意外大类提示: ${last.slice(0, 80)}`);
     },
     cfg: { baseUrl: 'https://example.test/v1', apiKey: 'k', model: 'm' },
   });
 
-  // 功能注释：人物与线路常骨架+补文；关系玩法/地点各至少 1；合计可到 6
-  assert.ok(calls >= 3 && calls <= 6, `人物与线路、关系玩法、地点须分大类（可含补文）共 3~6 次，实际 ${calls}`);
+  // 功能注释：第1次线路 + 第2次人物地点 + 玩法扩展 = 3 次串联
+  assert.equal(calls, 3, `须为两次核心+玩法扩展共 3 次，实际 ${calls}`);
   assert.equal(result.progress.doneCount, 4, '进度按细项：paths/npcs/relations/rooms');
   assert.deepEqual(
     result.progress.modules.map((m) => m.id).sort(),
     ['hub:paths', 'npcs', 'relations', 'rooms'].sort(),
   );
-  assert.equal(result.mod.content.npcs[0].name, '林夏');
-  assert.equal(result.mod.content.rooms.start.name, '旅店');
+  assert.equal(result.mod.content.npcs[1].name, '林夏');
+  assert.equal(result.mod.content.rooms.room1.name, '雾港旅店');
   assert.equal(result.mod.content.relations.confessThreshold, 60);
 });
 
-test('worldGenGenerate_同波不同大类可并行_同类不拆请求', async () => {
+test('worldGenGenerate_两次串联禁止并行_同类不拆请求', async () => {
   const gen = await import(pathToFileURL(join(romance, 'lib/worldGenGenerate.ts')).href);
-  assert.ok(gen.WORLD_GEN_PARALLEL_LIMIT >= 2 && gen.WORLD_GEN_PARALLEL_LIMIT <= 4);
+  assert.equal(gen.WORLD_GEN_PARALLEL_LIMIT, 1);
   assert.ok(gen.WORLD_GEN_MODULE_MAX_RETRIES >= 2);
 
-  // 世界规则 / 建角同波；时间与推进单独后波（细项已折叠，不得按 6 细项各打一次）
+  // 第一次串联大类吞掉全部基础细项，不得按细项各打一次
   const ids = ['prompt', 'hub:rules', 'hub:book', 'travelTime', 'startResources', 'creation'];
   const batches = gen.resolveWorldGenBatches(ids);
-  assert.equal(batches.length, 3);
+  assert.equal(batches.length, 1);
+  assert.equal(batches[0].id, gen.WORLD_GEN_PHASE1_BATCH_ID);
   const batchWaves = gen.partitionWorldGenBatchWaves(batches.map((b) => b.id));
-  assert.equal(batchWaves.length, 2, '世界规则+建角一波，时间与推进后波');
-  assert.equal(batchWaves[0].length, 2);
-  assert.deepEqual(batchWaves[1], ['travelTime']);
+  assert.deepEqual(batchWaves, [[gen.WORLD_GEN_PHASE1_BATCH_ID]]);
 
   let inflight = 0;
   let maxInflight = 0;
@@ -342,8 +349,8 @@ test('worldGenGenerate_同波不同大类可并行_同类不拆请求', async ()
   const wiz = await import(pathToFileURL(join(romance, 'lib/worldGenWizard.ts')).href);
   const draft = {
     ...wiz.defaultWorldGenStep1(),
-    title: '并发测',
-    setting: '测并行。',
+    title: '串联测',
+    setting: '测串联。',
     editorStepIds: ids,
     contentIds: wiz.contentIdsFromEditorSteps(ids),
   };
@@ -361,9 +368,8 @@ test('worldGenGenerate_同波不同大类可并行_同类不拆请求', async ()
       maxInflight = Math.max(maxInflight, inflight);
       await new Promise((r) => setTimeout(r, 60));
       inflight -= 1;
-      // 功能注释：同波三大类各有软校验；mock 一次返回可过各批最低字段，避免缺 startDate 触发重试刷调用次数
       return JSON.stringify({
-        manifest: { description: '并发测世界摘要。' },
+        manifest: { description: '串联测世界摘要。' },
         content: {
           prompt: {
             scriptTone: `${'你是本世界的叙事主持人。'.repeat(8)}请保持口吻一致，遵守世界铁律，推进剧情时兼顾人物动机与节奏。`,
@@ -371,20 +377,21 @@ test('worldGenGenerate_同波不同大类可并行_同类不拆请求', async ()
           startDate: '2019.09.01',
           travel: { apPerTurn: 10, advanceUnit: 'day', advanceDays: 1 },
           startMoney: 3000,
+          moneyLabel: '元',
+          customAttrs: [
+            { id: 'a', label: '洞察', desc: '察言观色', min: 0, max: 100, init: 40 },
+            { id: 'b', label: '魅力', desc: '待客', min: 0, max: 100, init: 45 },
+            { id: 'c', label: '体力', desc: '扛货', min: 0, max: 100, init: 50 },
+          ],
         },
       });
     },
     cfg: { baseUrl: 'https://example.test/v1', apiKey: 'k', model: 'm' },
   });
-  // 功能注释：3 大类；世界规则含 prompt/book 会再打补文 → 约 4 次，绝不是 6 细项各打一次
-  assert.ok(calls >= 3 && calls <= 5, `6 细项合并为大类请求（可含补文），实际 ${calls}`);
+  assert.equal(calls, 1, `6 细项合并为第一次串联 1 次请求，实际 ${calls}`);
   assert.equal(result.progress.total, 6, '进度行仍按细项展示');
-  assert.equal(gen.worldGenBatchProgressCounts(result.progress.modules).total, 3);
-  assert.ok(
-    maxInflight >= 2,
-    `同波不同大类应可并行，实际峰值=${maxInflight}（上限 ${gen.WORLD_GEN_PARALLEL_LIMIT}）`,
-  );
-  assert.ok(maxInflight <= gen.WORLD_GEN_PARALLEL_LIMIT);
+  assert.equal(gen.worldGenBatchProgressCounts(result.progress.modules).total, 1);
+  assert.equal(maxInflight, 1, '必须串联，禁止并行');
 });
 
 test('worldGenGenerate_时间与推进漏写startDate须补全并标完成', async () => {
@@ -545,10 +552,11 @@ test('worldGenGenerate_源码默认走平台LLM禁止个人Key门闸', () => {
   assert.doesNotMatch(src, /await\s+import\(\s*["'].*platformWorldGenAi/);
   assert.match(src, /isFatalAuthGenError|stoppedByAuth/);
   assert.match(src, /isStaleChunkLoadErrorMessage|progressHasStaleChunkFailure/);
-  assert.match(src, /WORLD_GEN_PARALLEL_LIMIT\s*=\s*[234]/);
+  assert.match(src, /WORLD_GEN_PARALLEL_LIMIT\s*=\s*1/);
   assert.match(src, /WORLD_GEN_BATCH_CATEGORIES|resolveWorldGenBatches|generateWorldGenBatch/);
-  assert.match(src, /人物与线路/);
+  assert.match(src, /基础设定|人物地点事件结局|phase1Foundation|phase2WorldCast/);
   assert.match(src, /WORLD_GEN_MODULE_MAX_RETRIES\s*=\s*[2-9]/);
+  assert.match(src, /\[world-gen\] request|\[world-gen\] response/);
   assert.match(src, /withWorldGenRetries/);
   assert.match(src, /shortGenError/);
   assert.match(src, /chargedPoints|module_failed_after_charge/);
@@ -639,7 +647,7 @@ test('importWithStaleChunkReload_成功透传_非chunk失败原样抛出', async
   );
 });
 
-test('worldGenGenerate_预计耗时秒数_无样本用并行fallback_有样本用速率', async () => {
+test('worldGenGenerate_预计耗时秒数_无样本用串联fallback_有样本用速率', async () => {
   const gen = await import(pathToFileURL(join(romance, 'lib/worldGenGenerate.ts')).href);
   const fallback = gen.WORLD_GEN_ETA_FALLBACK_SEC_PER_MODULE;
   // 23 大类 / 并行 3 → ceil(23/3)=8 批 × fallback

@@ -101,5 +101,23 @@ test('Create_草稿管理模式不应用绝对定位叠层', () => {
   }
   const panel = readFileSync(join(import.meta.dirname, '../src/components/Create/CreatorWorksPanel.tsx'), 'utf8');
   assert.match(panel, /worksTabBarManaging/);
-  assert.match(panel, /!isDraftManageMode && !isVisitor/);
+  assert.match(panel, /draftManageCount/);
+  assert.match(panel, /create\.draftsSelected/);
+  // 功能注释：已选数进顶栏单行，禁止再单独渲染第二行 tip
+  assert.doesNotMatch(
+    panel,
+    /isDraftManageMode && \(\s*<div className=\{styles\.draftManageTip\}>/,
+  );
+});
+
+test('Create_草稿管理单行栏左已选右操作', () => {
+  const css = readFileSync(join(import.meta.dirname, '../src/page/Create.module.css'), 'utf8');
+  const bar = css.match(/\.worksTabBar\.worksTabBarManaging\s*\{[\s\S]*?\n\}/);
+  assert.ok(bar, 'worksTabBar.worksTabBarManaging block missing');
+  assert.match(bar[0], /justify-content:\s*space-between/);
+  const count = css.match(/\.draftManageCount\s*\{[\s\S]*?\n\}/);
+  assert.ok(count, 'draftManageCount block missing');
+  const panel = readFileSync(join(import.meta.dirname, '../src/components/Create/CreatorWorksPanel.tsx'), 'utf8');
+  assert.match(panel, /t\('create\.delete'\)/);
+  assert.doesNotMatch(panel, /create\.batchDelete\)\$\{selectedDraftCount/);
 });

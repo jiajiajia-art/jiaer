@@ -7,6 +7,7 @@ import { exportModJson, importModJson, modTemplate, useMods, validateMod } from 
 import type { Mod, ModContent } from "../mods/types";
 import { useConfirm } from "./EditorKit";
 import { IconCheck, IconSpark, StatusMark } from "../lib/icons";
+import { PLAY_STEP_KEY, WORLD_STEP_KEY, stepDoneFlag } from "../lib/modWorkshopSteps";
 
 /* ═══ AI 创意工坊 ═══
  * 创作者用对话描述世界观，AI 逐步产出「模组补丁」（manifest + 部分 content），
@@ -185,9 +186,6 @@ function playDiff(a: Mod, b: Mod): string {
   if (a.name !== b.name) parts.unshift(`更名「${b.name}」`);
   return parts.join(" · ") || "细节调整";
 }
-/** 引导步骤与 tally 对应的下标，用于标记完成 */
-const STEP_KEY = [0, 1, 2, 3, 4, 6];
-
 const blank = (mode: Mode = "world", base = "ent"): Mod => mode === "play"
   ? { id: `ai-${Date.now().toString(36)}`, name: "新的玩法 Mod", version: "0.1.0", author: "", description: "", kind: "addon", slotMerge: "merge", dependencies: [base], content: {} }
   : { id: `ai-${Date.now().toString(36)}`, name: "新的世界观", version: "0.1.0", author: "", description: "", kind: "world", dependencies: [], content: {} };
@@ -239,7 +237,7 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
   useEffect(() => { if (!target) saveGlobal(LS_OF[mode], { draft, turns: turns.slice(-30) }); }, [draft, turns]); // eslint-disable-line react-hooks/exhaustive-deps
   const done = play ? playTally(draft) : tally(draft);
   const steps = play ? PLAY_STEPS : STEPS;
-  const stepKey = play ? [0, 1, 2, 3, 4, 5, 6] : STEP_KEY;
+  const stepKey = play ? PLAY_STEP_KEY : WORLD_STEP_KEY;
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -359,7 +357,8 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
 
       <div className="flex flex-wrap gap-1.5">
         {steps.map((s, i) => {
-          const ok = done[stepKey[i]][1] > 0;
+          // 功能注释：用 stepDoneFlag，避免 PLAY_STEPS 比 key 表长时读 undefined[1] 整页崩
+          const ok = stepDoneFlag(done, stepKey[i]);
           return <button key={s.label} className={`${btn} ${ok ? "!border-jade/60 !text-jade" : ""}`} disabled={busy || !ai} title={s.ask} onClick={() => send(ok ? `${s.ask}（已有部分内容，请在此基础上补充完善，不要重复已有条目）` : s.ask)}>{ok ? <IconCheck size={12} className="mr-0.5 inline" /> : `${i + 1}. `}{s.label}</button>;
         })}
       </div>

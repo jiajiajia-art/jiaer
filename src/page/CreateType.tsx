@@ -395,8 +395,9 @@ const CreateType: React.FC = () => {
                 {t('createGame.romanceMode')}
               </div>
             </div>
+            {/* 功能注释：SDK 归平台维护；创作者只交世界草稿 / 玩法包 / 应用草稿，入口说明不得暗示自有 SDK */}
             <div className={styles.createTypeModalDesc}>
-              选择要创作的类型：游戏世界走现有向导；玩法 Mod / 手机应用用对话生成，并产出专属 SDK。
+              选择要创作的类型。游戏世界走现有逻辑。玩法 Mod 和手机应用用对话生成，都运行在平台 SDK 上。
             </div>
             <div className={`${styles.createTypeOptions} ${pageStyles.romanceSubOptions}`}>
               <TypeOptionRow
@@ -423,7 +424,7 @@ const CreateType: React.FC = () => {
               />
               <TypeOptionRow
                 title="玩法 Mod"
-                hint="对话生成玩法叠加包，产出 SDK，供游戏世界安装"
+                hint="对话生成玩法叠加包。可以是新地点、游戏内页面，或填进已有玩法格子的数据。可绑多个游戏世界，也可分多次安装。用平台 SDK。"
                 icon={HiOutlinePuzzle}
                 thumbClass={styles.createTypeOptionThumbCustom}
                 onClick={() => {
@@ -434,7 +435,7 @@ const CreateType: React.FC = () => {
               />
               <TypeOptionRow
                 title="手机应用"
-                hint="对话生成应用草稿与专属 SDK，保存后上架供移动端安装"
+                hint="对话生成应用草稿，审核通过后上架，供游戏世界里的手机安装。用平台 SDK。"
                 icon={MdOutlineApps}
                 thumbClass={styles.createTypeOptionThumbCustom}
                 onClick={() => {

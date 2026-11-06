@@ -100,8 +100,10 @@
     transition: color 160ms ease, transform 160ms ease;
 }
 
-/* 功能注释：弹窗打开会 focus 关闭键，禁止浏览器默认方框；键盘仍走下方 focus-visible */
-.closeButton:focus {
+/* 功能注释：关闭钮禁止任何焦点/点击方框（含 focus-visible），避免打开弹窗自动 focus 时出现粉框 */
+.closeButton:focus,
+.closeButton:focus-visible,
+.closeButton:active {
     outline: none;
     border: none;
     box-shadow: none;
@@ -775,7 +777,6 @@
     animation: spin 700ms linear infinite;
 }
 
-.closeButton:focus-visible,
 .secondaryButton:focus-visible,
 .expandButton:focus-visible,
 .signInButton:focus-visible,

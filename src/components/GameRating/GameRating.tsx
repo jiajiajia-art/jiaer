@@ -584,6 +584,77 @@ const GameRating: React.FC<Props> = ({ fileId, mode = 'full', onRatingChange, on
     );
   }
 
+  const writeForm = showInput ? (
+    <div className={styles.writeSection}>
+      {!isCommentsMode ? (
+        <button type="button" className={styles.closeBtn} onClick={() => setShowInput(false)}>x</button>
+      ) : null}
+      {!isCommentsMode ? (
+        <div className={styles.writeHeader}>
+          <span>{t('gameRating.rateThisGame')}</span>
+        </div>
+      ) : null}
+      {!isCommentsMode ? (
+        <StarRating value={ratingValue} onChange={setRatingValue} size="large" />
+      ) : null}
+      <textarea
+        className={styles.commentInput}
+        placeholder={t('gameRating.commentPlaceholder')}
+        value={commentText}
+        maxLength={COMMENT_MAX_LEN}
+        onChange={(e) => setCommentText(e.target.value)}
+        onFocus={() => {
+          if (!checkAuth()) {
+            /* 登录弹窗已由 checkAuth 打开 */
+          }
+        }}
+        rows={3}
+      />
+      <button
+        type="button"
+        className={styles.submitBtn}
+        onClick={() => {
+          if (!checkAuth()) return;
+          void submitRating();
+        }}
+        disabled={isSubmitting || (!isCommentsMode && ratingValue === 0) || !commentText.trim()}
+      >
+        {isSubmitting ? t('gameRating.submitting') : t('gameRating.submit')}
+      </button>
+    </div>
+  ) : null;
+
+  const commentsListBody = (
+    <>
+      {comments.length === 0 ? (
+        <div className={styles.emptyState}>
+          <div className={styles.emptyIcon}><FaRegCommentDots /></div>
+          <p>{t('gameRating.noReviews')}</p>
+        </div>
+      ) : (
+        <div className={styles.commentsList}>
+          {comments.map((comment) => (
+            <CommentCard
+              key={comment.rating_id}
+              comment={comment}
+              onReply={handleReply}
+              onLike={handleLike}
+              onDelete={handleDelete}
+              onCopy={handleCopy}
+              isLiking={likingIds.has(comment.rating_id)}
+              isOwner={String(user?.user?.userId) === comment.user_id}
+            />
+          ))}
+          {hasMore && (
+            <button type="button" className={styles.loadMoreBtn} onClick={handleLoadMore}>
+              {t('gameRating.loadMore')}
+            </button>
+          )}
+        </div>
+      )}
+    </>
+  );
+
   return (
     <div className={styles.container} data-mode={mode}>
       {!isCommentsMode ? (
@@ -602,43 +673,20 @@ const GameRating: React.FC<Props> = ({ fileId, mode = 'full', onRatingChange, on
         </div>
       ) : null}
 
-      {showInput && (
-        <div className={styles.writeSection}>
-          {!isCommentsMode ? (
-            <button type="button" className={styles.closeBtn} onClick={() => setShowInput(false)}>x</button>
-          ) : null}
-          <div className={styles.writeHeader}>
-            <span>{isCommentsMode ? t('gameRating.writeComment') : t('gameRating.rateThisGame')}</span>
-          </div>
-          {!isCommentsMode ? (
-            <StarRating value={ratingValue} onChange={setRatingValue} size="large" />
-          ) : null}
-          <textarea
-            className={styles.commentInput}
-            placeholder={t('gameRating.commentPlaceholder')}
-            value={commentText}
-            maxLength={COMMENT_MAX_LEN}
-            onChange={(e) => setCommentText(e.target.value)}
-            onFocus={() => {
-              if (!checkAuth()) {
-                /* 登录弹窗已由 checkAuth 打开 */
-              }
-            }}
-            rows={3}
-          />
-          <button
-            type="button"
-            className={styles.submitBtn}
-            onClick={() => {
-              if (!checkAuth()) return;
-              void submitRating();
-            }}
-            disabled={isSubmitting || (!isCommentsMode && ratingValue === 0) || !commentText.trim()}
-          >
-            {isSubmitting ? t('gameRating.submitting') : t('gameRating.submit')}
-          </button>
+      {/* 功能注释：效果图评论区顺序 = 标题 → 输入 → 列表；全量评分模式仍先写后列 */}
+      {isCommentsMode ? (
+        <div className={styles.commentsHeader}>
+          <h3>{t('gameRating.commentsSection')}</h3>
+          <span className={styles.sortPill} aria-hidden="true">
+            {t('gameRating.latestSort')}
+            <svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true">
+              <path d="M3 4.5L6 7.5L9 4.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+            </svg>
+          </span>
         </div>
-      )}
+      ) : null}
+
+      {writeForm}
 
       {/* 回复输入区域*/}
       {replyTo && (
@@ -666,39 +714,14 @@ const GameRating: React.FC<Props> = ({ fileId, mode = 'full', onRatingChange, on
         </div>
       )}
 
-      {/* 评论列表*/}
       <div className={styles.commentsSection}>
-        <div className={styles.commentsHeader}>
-          <h3>{t('gameRating.reviews')}</h3>
-          <span className={styles.commentsCount}>{total} {t('gameRating.reviews')}</span>
-        </div>
-
-        {comments.length === 0 ? (
-          <div className={styles.emptyState}>
-            <div className={styles.emptyIcon}><FaRegCommentDots /></div>
-            <p>{t('gameRating.noReviews')}</p>
+        {!isCommentsMode ? (
+          <div className={styles.commentsHeader}>
+            <h3>{t('gameRating.reviews')}</h3>
+            <span className={styles.commentsCount}>{total} {t('gameRating.reviews')}</span>
           </div>
-        ) : (
-          <div className={styles.commentsList}>
-            {comments.map((comment) => (
-              <CommentCard
-                key={comment.rating_id}
-                comment={comment}
-                onReply={handleReply}
-                onLike={handleLike}
-                onDelete={handleDelete}
-                onCopy={handleCopy}
-                isLiking={likingIds.has(comment.rating_id)}
-                isOwner={String(user?.user?.userId) === comment.user_id}
-              />
-            ))}
-            {hasMore && (
-              <button type="button" className={styles.loadMoreBtn} onClick={handleLoadMore}>
-                {t('gameRating.loadMore')}
-              </button>
-            )}
-          </div>
-        )}
+        ) : null}
+        {commentsListBody}
       </div>
     </div>
   );

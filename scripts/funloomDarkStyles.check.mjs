@@ -100,7 +100,9 @@ test('Navbar_GameDetail_GameGrid_应接线assetsv2_home图标', () => {
   assert.match(detail, /icon_gamepad\.webp/);
   assert.match(detail, /icon_filmstrip\.webp/);
   assert.match(detail, /styles\.statsBar/);
-  assert.match(detail, /styles\.statsIconWrap/);
+  assert.match(detail, /styles\.pageTitle/);
+  assert.match(detail, /styles\.coverTypeBadge/);
+  assert.match(detail, /styles\.updateLogCard/);
   assert.match(detail, /gameDetail\.storyReplay/);
   assert.doesNotMatch(detail, /FaRegShareFromSquare|IoChevronBack|AiOutlineStar|AiFillStar/);
   assert.doesNotMatch(detail, /statsBar[\s\S]{0,800}icon_share\.(svg|webp)/);
@@ -165,9 +167,11 @@ test('Navbar_MobileBottomNav_移动端应为暗色funloom壳', () => {
   assert.match(navbarCss, /@media \(max-width:\s*768px\)[\s\S]*--navbar-surface:\s*#000000/);
   assert.doesNotMatch(navbarCss, /@media \(max-width:\s*768px\)[\s\S]*--navbar-surface:\s*linear-gradient\(180deg,\s*rgba\(255,\s*255,\s*255/);
   assert.match(bottomCss, /\.container[\s\S]*background:\s*#000000/);
-  assert.match(bottomCss, /\.navItemActive[\s\S]*color:\s*#A8283C/);
+  assert.match(bottomCss, /\.navItemActive[\s\S]*color:\s*#F16C83/);
+  assert.match(bottomCss, /\.navItem[\s\S]*color:\s*#B8B8C2/);
   assert.doesNotMatch(bottomCss, /background:\s*#fff/);
   assert.doesNotMatch(bottomCss, /border-top:\s*1px solid #e6e6e6/);
+  assert.doesNotMatch(bottomCss, /filter:\s*brightness\(0\)/);
   /* 功能注释：顶栏 Logo 点击须回首页 */
   assert.match(navbarTsx, /className=\{styles\.logo\}[\s\S]*?navigate\('\/home'\)/);
   assert.match(navbarCss, /\.logo\s*\{[\s\S]*?cursor:\s*pointer/);
@@ -350,22 +354,19 @@ test('CustomIFCreate_编辑页应对齐世界观暗色卡表单', () => {
   assert.match(zh, /"customIFCreate"[\s\S]*?"clearAll":\s*"一键清空"/);
 });
 
-test('Rankings_排行榜应对齐奶油台面与酒红榜单卡', () => {
+test('Rankings_排行榜应对齐暗色酒红榜单卡', () => {
   const css = read('src/page/Rankings.module.css');
   const tsx = read('src/page/Rankings.tsx');
-  /* 功能注释：效果图为浅色榜单区 + funloom 酒红强调，禁止再锁 1920 白边 */
+  /* 功能注释：暗色榜单区 + funloom 酒红强调，禁止再锁 1920 白边 */
   assert.match(css, /\.pageRoot\s*\{[\s\S]*?--rank-primary:\s*#A8283C/);
   assert.match(css, /\.pageRoot\s*\{[\s\S]*?--rank-primary-deep:\s*#8E2135/);
   assert.match(css, /\.pageRoot\s*\{[\s\S]*?max-width:\s*none/);
   assert.doesNotMatch(css, /\.pageRoot\s*\{[^}]*max-width:\s*1920px/);
   assert.match(css, /\.categoryBoxHeader\s*\{[\s\S]*?linear-gradient/);
-  assert.match(css, /\.categoryBoxMore\s*\{[\s\S]*?border-radius:\s*999px/);
-  assert.match(css, /\.categoryBoxRank\[data-rank="1"\][\s\S]*?color:\s*var\(--rank-primary\)/);
-  assert.match(css, /@media \(max-width:\s*768px\)[\s\S]*?\.categoryBoxCover\s*\{[\s\S]*?width:\s*100%/);
   assert.match(css, /\.categoryBoxCover\s*\{[\s\S]*?aspect-ratio:\s*4\s*\/\s*3/);
-  assert.match(tsx, /moreSpark/);
-  assert.match(tsx, /fill="currentColor"/);
-  assert.doesNotMatch(tsx, /fill="#c94a3a;"/);
+  assert.match(css, /@media \(max-width:\s*768px\)[\s\S]*?\.categoryBoxCover\s*\{[\s\S]*?width:\s*100%/);
+  assert.match(tsx, /向右箭头\.svg/);
+  assert.match(tsx, /categoryBoxMore/);
 });
 
 test('CreateGameModals_创作类型弹窗应对齐暗色卡片列表', () => {

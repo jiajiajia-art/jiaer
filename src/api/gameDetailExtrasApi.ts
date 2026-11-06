@@ -20,6 +20,8 @@ export type GameIssueFeedback = {
   issueType: GameIssueType;
   content: string;
   screenshotUrls: string[];
+  /** 可选联系方式（邮箱/QQ） */
+  contact?: string;
   userId: string | null;
   status: GameIssueStatus;
   internalNote?: string;
@@ -50,8 +52,10 @@ const gameDetailExtrasApi = {
   createIssueFeedback(body: {
     fileId: string;
     gameTitle?: string;
-    issueType: GameIssueType;
+    /** 缺省由后端归为 other；新弹窗不再展示类型选择 */
+    issueType?: GameIssueType;
     content: string;
+    contact?: string;
     screenshotUrls?: string[];
   }) {
     return api.post<ApiResponse<GameIssueFeedback>>('/customer-service/game-issue', body);

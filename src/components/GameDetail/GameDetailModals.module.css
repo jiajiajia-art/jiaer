@@ -215,3 +215,107 @@
   color: rgba(255, 255, 255, 0.4);
   text-align: right;
 }
+
+/* 功能注释：故障反馈弹窗——效果图深色卡片、红叹号标题、通栏红提交钮 */
+.issuePanel {
+  width: min(100%, 420px);
+  max-width: 1000px;
+  background: #1c1c1e;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 0;
+}
+
+.issueHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 1.25rem 1.25rem 0.35rem;
+}
+
+.issueIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  background: #E91E63;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.issueTitle {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.3;
+}
+
+.issueBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.85rem 1.25rem 0.35rem;
+}
+
+.issueLabel {
+  margin: 0.35rem 0 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.issueRequired {
+  color: #E91E63;
+}
+
+.issueTextarea {
+  min-height: 7.5rem;
+  background: #141416;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+}
+
+.issueInput {
+  background: #141416;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+}
+
+.issueTextarea::placeholder,
+.issueInput::placeholder {
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.issueFooter {
+  padding: 0.85rem 1.25rem 1.25rem;
+}
+
+.issueSubmitBtn {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  background: #E91E63;
+  color: #ffffff;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.issueSubmitBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.issueSubmitBtn:hover:not(:disabled) {
+  background: #FF2D6F;
+}

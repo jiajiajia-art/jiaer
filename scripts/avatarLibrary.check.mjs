@@ -23,6 +23,12 @@ test('avatarLibrary_标签与匹配文案与后端对齐', async () => {
   assert.equal(mod.avatarAgeLabel('adult'), '成人');
   assert.equal(mod.avatarBackgroundLabel('ancient'), '古代');
   assert.equal(mod.avatarGenderLabel('universal'), '通用');
+  assert.equal(
+    mod.formatAvatarCardSummary({ gender: 'female', backgroundType: 'ancient' }),
+    '女 · 古代',
+  );
+  assert.equal(mod.resolveAvatarCardTitle({ title: '' }, 0), '头像 01');
+  assert.equal(mod.resolveAvatarCardTitle({ title: '自定义' }, 3), '自定义');
   assert.match(mod.describeAvatarMatchPriority(), /手动锁定.*剧本.*系统/);
   assert.equal(
     mod.tagOptionsToSeg(
@@ -31,6 +37,18 @@ test('avatarLibrary_标签与匹配文案与后端对齐', async () => {
       mod.AVATAR_AGE_GROUPS,
     )[0].id,
     'teen',
+  );
+  // 停用项不进筛选/打标分段
+  assert.deepEqual(
+    mod.tagOptionsToSeg(
+      [
+        { id: 'teen', dimension: 'age_group', label: '少年', status: 'disabled' },
+        { id: 'adult', dimension: 'age_group', label: '成人', status: 'active' },
+      ],
+      'age_group',
+      mod.AVATAR_AGE_GROUPS,
+    ).map((x) => x.id),
+    ['adult'],
   );
 });
 
@@ -107,7 +125,7 @@ test('avatarLibrary_API与导航管理运营页已挂载', () => {
   assert.doesNotMatch(page, /<select[\s>]/);
   assert.doesNotMatch(page, /className=\{scope === s \? panel\.segActive : panel\.seg\}/);
   assert.match(adminMgr, /SegOptions|segRow/);
-  assert.match(adminMgr, /AdminTagOptionsEditor|标签选项/);
+  assert.match(adminMgr, /AdminTagOptionsEditor|配置管理/);
   assert.match(adminMgr, /AVATAR_ASSET_GENDERS/);
   assert.doesNotMatch(adminMgr, /window\.prompt|window\.confirm|alert\(/);
   assert.doesNotMatch(adminMgr, /<select[\s>]/);
@@ -119,10 +137,18 @@ test('avatarLibrary_API与导航管理运营页已挂载', () => {
   assert.match(adminMgrCss, /\.titleInput\s*\{/);
   assert.match(adminMgrCss, /height:\s*40px/);
   assert.match(adminMgrCss, /\.tagEditor|\.tagRow/);
+  assert.match(adminMgrCss, /\.filterCard|\.mainTabs|\.uploadDrawer/);
+  assert.match(adminMgrCss, /grid-template-columns:\s*repeat\(5/);
   assert.doesNotMatch(adminMgrCss, /\.root\s*\{[^}]*color:\s*#fff/);
   assert.doesNotMatch(adminMgrCss, /\.segRow\s*\{[^}]*background:\s*#121212/);
-  assert.match(adminMgr, /uploadForm|titleInput/);
+  assert.match(adminMgr, /uploadForm|titleInput|uploadOpen/);
   assert.doesNotMatch(adminMgr, /styles\.grow/);
+  // 信息架构：三 Tab + 上传弹层；禁止筛选下再嵌标签 CRUD 常驻表
+  assert.match(adminMgr, /mainTab|配置管理|用户上传|公共 \/ 系统库/);
+  assert.match(adminMgr, /内容资产 \/ 公共头像/);
+  assert.match(adminMgr, /formatAvatarCardSummary|resolveAvatarCardTitle/);
+  assert.doesNotMatch(adminMgr, /aria-label="标签选项配置"/);
+  assert.doesNotMatch(adminMgr, /aria-label="上传入库"/);
   // 功能注释：侧栏文案在 AdminShell 导航配置，面板只挂载管理组件
   const shellNav = readFileSync(join(root, 'src/components/admin-shell/adminNavigation.tsx'), 'utf8');
   assert.match(shellNav, /label: '公共头像'/);

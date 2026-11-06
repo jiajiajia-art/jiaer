@@ -655,8 +655,8 @@ function LocationHero({ s, spots, activeKey, onOpenMap, onGo, fill, novelCard, b
     return (
       <div data-scene-layout="fill" data-novel-card="1" className="relative h-full min-h-0 w-full overflow-hidden bg-ink/20">
         <div className="absolute inset-0 overflow-hidden">{bgLayer}</div>
-        {/* 功能注释：阅读卡高度 = 场景区 85%，垂直居中，勿 flex-1 顶满预览 */}
-        <div className="absolute inset-0 z-[15] flex min-h-0 flex-col items-stretch justify-center px-3 py-2">
+        {/* 功能注释：阅读卡高度 = 场景区 85%，垂直居中；左右 20px 露出场景，勿贴边；勿改卡高/圆角/底栏 */}
+        <div className="absolute inset-0 z-[15] flex min-h-0 flex-col items-stretch justify-center px-5 py-2">
           <div
             data-tour="story"
             data-dstyle={theme.dialogStyle ?? "soft"}
@@ -1230,11 +1230,11 @@ export default function HomeTab() {
                         <>
                           {descText && (
                             isNovel ? (
-                              <p className="story-prose whitespace-pre-line text-[13.5px] leading-[1.75] tracking-[0.02em] text-[#1a1a1a] [text-indent:2em]">
+                              <p className="story-prose whitespace-pre-line leading-[1.75] tracking-[0.02em] text-[#1a1a1a] [text-indent:2em]">
                                 {descText}
                               </p>
                             ) : (
-                              <p className="story-prose story-narration-panel whitespace-pre-line rounded-xl px-3 py-2 text-[13.5px] leading-[1.75] tracking-[0.02em] [text-indent:2em]">
+                              <p className="story-prose story-narration-panel whitespace-pre-line rounded-xl px-3 py-2 leading-[1.75] tracking-[0.02em] [text-indent:2em]">
                                 {descText}
                               </p>
                             )

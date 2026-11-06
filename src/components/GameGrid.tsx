@@ -40,7 +40,7 @@ interface GameGridProps {
     /** 首页推荐：长按 / 右键出屏蔽·举报菜单 */
     enableContentMenu?: boolean;
     onContentMenu?: (game: UserGameData, point: { x: number; y: number }) => void;
-    /** 创作者书架显示草稿/审核/发布生命周期标签。 */
+    /** 创作者书架显示草稿/审核等生命周期标签；「已发布」不展示（列表已按发布态筛选）。 */
     showWorkStatus?: boolean;
 }
 
@@ -204,11 +204,17 @@ const GameGrid: React.FC<GameGridProps> = ({
                         onPointerCancel={clearLongPress}
                     >
                         <div className={styles.goodsImg}>
-                            {showWorkStatus ? (
-                                <span className={styles.workStatusTag}>
-                                    {creatorWorkStatusLabel(resolveCreatorWorkStatus(meta))}
-                                </span>
-                            ) : null}
+                            {(() => {
+                                // 功能注释：书架角标只提示非发布态（草稿/审核等）；「已发布」与类型标签叠在一起多余，主人/访客均不展示
+                                if (!showWorkStatus) return null;
+                                const workStatus = resolveCreatorWorkStatus(meta);
+                                if (workStatus === 'published') return null;
+                                return (
+                                    <span className={styles.workStatusTag}>
+                                        {creatorWorkStatusLabel(workStatus)}
+                                    </span>
+                                );
+                            })()}
                             {(() => {
                                 // 功能注释：列表封面统一走 display-cover；无封面时用暗色占位，避免 welcome 白底破暗色
                                 const displayCoverPath = resolveGameListCoverUrl({

@@ -29,6 +29,13 @@ test('GameGrid_草稿角标在右上题材下方', () => {
   assert.doesNotMatch(block[0], /left:\s*10px/);
 });
 
+test('GameGrid_已发布状态不渲染封面角标', () => {
+  const src = read('src/components/GameGrid.tsx');
+  assert.match(src, /workStatus === ['"]published['"]/);
+  assert.match(src, /if \(workStatus === ['"]published['"]\) return null/);
+  assert.match(src, /creatorWorkStatusLabel\(workStatus\)/);
+});
+
 test('getImageUrl_透传data与blob封面', () => {
   const src = read('src/utils/constants.ts');
   assert.match(src, /startsWith\("data:"\)/);

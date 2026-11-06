@@ -54,6 +54,7 @@ const OperatorWorkStats: React.FC = () => {
       shareUv: detail.shareUv,
       playCount: detail.playCount,
       playUv: detail.playUv,
+      playRounds: detail.playRounds ?? 0,
       playDurationSeconds: detail.playDurationSeconds,
       commentCount: detail.commentCount,
       spendPoints: detail.spendPoints,

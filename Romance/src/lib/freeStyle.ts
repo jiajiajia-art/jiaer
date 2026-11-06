@@ -143,11 +143,21 @@ export function buildDialogCss(d?: DialogDiy): string {
   if (d.text) panel.push(`--ink: ${d.text}; --color-ink: ${d.text};`);
   if (d.textSoft) panel.push(`--ink-soft: ${d.textSoft}; --color-ink-soft: ${d.textSoft};`);
   if (panel.length) o.push(`${P} { ${panel.join(" ")} }`);
+  // 功能注释：字号须覆盖小说内容卡 / 叠图旁白，不能只限 .dialogue-panel（预览正文不在对话框里）
   const txt: string[] = [];
-  if (d.fontSize) txt.push(`font-size: ${d.fontSize}px !important;`);
+  if (d.fontSize) {
+    txt.push(`font-size: ${d.fontSize}px !important;`);
+    o.push(`${R} { --story-font-size: ${d.fontSize}px; }`);
+  }
   if (d.lineHeight) txt.push(`line-height: ${d.lineHeight} !important;`);
   if (d.letter != null) txt.push(`letter-spacing: ${d.letter / 100}em !important;`);
-  if (txt.length) o.push(`${P} .story-prose, ${P} .dlg-bubble, ${P} .dlg-bubble-me { ${txt.join(" ")} }`);
+  if (txt.length) {
+    o.push(
+      `${P} .story-prose, ${P} .dlg-bubble, ${P} .dlg-bubble-me, ` +
+        `${R} .novel-read-card .story-prose, ${R} .novel-read-card .dlg-bubble, ${R} .novel-read-card .dlg-bubble-me, ` +
+        `${R} [data-slot="scene-prose"] .story-prose, ${R} .story-narration-panel { ${txt.join(" ")} }`,
+    );
+  }
   const nm: string[] = [];
   if (d.nameBg) nm.push(`background: ${d.nameBg} !important;`);
   if (d.nameText) nm.push(`color: ${d.nameText} !important;`);

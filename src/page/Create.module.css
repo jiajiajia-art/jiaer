@@ -1368,7 +1368,7 @@
 }
 
 .draftManageActions.draftManageActionsExpanded {
-    /* 功能注释：展开后仍靠右同排，占文档流宽度，避免叠在 Tab 上 */
+    /* 功能注释：展开后仍靠右同排，占文档流宽度，避免叠在左侧已选文案上 */
     width: auto;
     justify-content: flex-end;
     gap: 12px;
@@ -1376,10 +1376,22 @@
     flex-wrap: nowrap;
 }
 
-/* 功能注释：管理模式只留草稿 Tab + 右侧操作，避免与「收藏」抢位 */
-.worksTabBarManaging .worksTabs {
-    flex: 0 1 auto;
-    overflow: visible;
+/* 功能注释：管理模式单行栏 — 左已选数、右操作，不再另起第二行；双 class 压过断点里的 flex-start */
+.worksTabBar.worksTabBarManaging {
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.draftManageCount {
+    flex: 1 1 auto;
+    min-width: 0;
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .draftManageButton {
@@ -1902,6 +1914,10 @@
     .draftManageButton {
         min-height: 0;
         padding: 4px 1px;
+        font-size: 13px;
+    }
+
+    .draftManageCount {
         font-size: 13px;
     }
 

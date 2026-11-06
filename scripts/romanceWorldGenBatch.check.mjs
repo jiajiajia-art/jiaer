@@ -1,5 +1,5 @@
 /**
- * 生成世界 · 大类合并：同类细项一次请求，进度按大类，不为刷进度多打接口。
+ * 生成世界 · 两次串联大类：同类细项一次请求，进度按细项，禁止并行刷接口。
  */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -10,21 +10,21 @@ import test from 'node:test';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const romance = join(root, 'Romance/src');
 
-test('worldGenBatch_人物线路人物人脉同属人物与线路_关系玩法归已添加的玩法', async () => {
+test('worldGenBatch_线路进第一次_人物地点事件进第二次_关系玩法独立', async () => {
   const gen = await import(pathToFileURL(join(romance, 'lib/worldGenGenerate.ts')).href);
-  const charBatches = gen.resolveWorldGenBatches(['hub:paths', 'npcs', 'contacts']);
-  assert.equal(charBatches.length, 1);
-  assert.equal(charBatches[0].id, 'characters');
-  assert.equal(charBatches[0].name, '人物与线路');
-  assert.deepEqual([...charBatches[0].stepIds].sort(), ['contacts', 'hub:paths', 'npcs']);
+  const core = gen.resolveWorldGenBatches(['hub:paths', 'npcs', 'contacts']);
+  assert.deepEqual(core.map((b) => b.id).sort(), [
+    gen.WORLD_GEN_PHASE1_BATCH_ID,
+    gen.WORLD_GEN_PHASE2_BATCH_ID,
+    'contacts',
+  ].sort());
   const mixed = gen.resolveWorldGenBatches(['hub:paths', 'npcs', 'relations', 'contacts']);
-  assert.equal(mixed.length, 2);
-  assert.deepEqual(mixed.map((b) => b.id).sort(), ['characters', 'playMods']);
+  assert.ok(mixed.some((b) => b.id === 'playMods'));
   const play = mixed.find((b) => b.id === 'playMods');
   assert.deepEqual([...play.stepIds], ['relations']);
 });
 
-test('worldGenBatch_世界规则时间与推进建角须分列大类', async () => {
+test('worldGenBatch_基础设定与人物地点事件结局两大类', async () => {
   const gen = await import(pathToFileURL(join(romance, 'lib/worldGenGenerate.ts')).href);
   const batches = gen.resolveWorldGenBatches([
     'prompt',
@@ -34,11 +34,10 @@ test('worldGenBatch_世界规则时间与推进建角须分列大类', async () 
     'creation',
     'startResources',
   ]);
-  assert.deepEqual(
-    batches.map((b) => b.name),
-    ['世界规则', '时间与推进', '建角'],
-  );
-  assert.equal(gen.worldGenBatchMaxTokens(['hub:paths', 'npcs']), 12000);
+  assert.equal(batches.length, 1);
+  assert.equal(batches[0].id, gen.WORLD_GEN_PHASE1_BATCH_ID);
+  assert.equal(batches[0].name, '基础设定');
+  assert.equal(gen.worldGenBatchMaxTokens(['hub:paths', 'npcs', 'rooms', 'fixedEvents']), 16000);
   assert.equal(gen.worldGenBatchMaxTokens(['travelTime']), 4000);
 });
 
@@ -53,7 +52,7 @@ test('worldGenBatch_全部编辑器细项须有大类归属', async () => {
   assert.equal(progress.total, wiz.DEFAULT_WORLD_GEN_EDITOR_STEP_IDS.length, '进度行按勾选细项展示');
   assert.ok(progress.modules.every((m) => m.batchId), '细项须挂 batchId 以便合并请求');
   const batchCount = new Set(progress.modules.map((m) => m.batchId)).size;
-  assert.ok(batchCount < progress.total, '大类批次数须少于细项数（同类合并）');
+  assert.equal(batchCount, 2, '默认核心应只有两次串联大类');
   assert.ok(progress.modules.some((m) => m.id === 'hub:paths' || m.name === '人物线路'));
   assert.ok(progress.modules.some((m) => m.id === 'hub:rules'));
   assert.ok(progress.modules.some((m) => m.id === 'travelTime' || m.name === '时间与推进'));
@@ -63,11 +62,12 @@ test('worldGenBatch_全部编辑器细项须有大类归属', async () => {
   assert.equal(counts.finished, 0);
 });
 
-test('worldGenBatch_源码与向导禁止按细项刷并行请求', () => {
+test('worldGenBatch_源码与向导禁止并行且走两次串联', () => {
   const src = readFileSync(join(romance, 'lib/worldGenGenerate.ts'), 'utf8');
   const wiz = readFileSync(join(romance, 'components/WorldGenWizard.tsx'), 'utf8');
   assert.match(src, /resolveWorldGenBatches|generateWorldGenBatch/);
-  assert.match(src, /同类|大类/);
-  assert.doesNotMatch(src, /WORLD_GEN_PARALLEL_LIMIT\s*=\s*[6789]/);
+  assert.match(src, /phase1Foundation|phase2WorldCast|两次串联/);
+  assert.match(src, /WORLD_GEN_PARALLEL_LIMIT\s*=\s*1/);
+  assert.doesNotMatch(src, /WORLD_GEN_PARALLEL_LIMIT\s*=\s*[23456789]/);
   assert.match(wiz, /按合并请求（大类）完成速度估算|合并请求/);
 });
