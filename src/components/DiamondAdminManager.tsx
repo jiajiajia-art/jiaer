@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import { v4 as uuidv4 } from 'uuid';
 import adminDiamondsApi, { type AdminDiamondUser } from '../api/admin/adminDiamondsApi';
 import {
   calculateDiamondBalance,
@@ -121,7 +122,7 @@ const DiamondAdminManager: React.FC = () => {
       }
     }
     setAmountError('');
-    setOperationId(crypto.randomUUID());
+    setOperationId(uuidv4());
     setIsConfirmOpen(true);
   };
 

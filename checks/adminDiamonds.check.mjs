@@ -52,7 +52,8 @@ test('admin panel exposes a dedicated KK coin route and manager', () => {
   assert.match(panel, /activeTab === 'diamonds' && <DiamondAdminManager \/>/);
   assert.match(manager, /role="dialog"/);
   assert.match(manager, /当前KK币/);
-  assert.match(manager, /crypto\.randomUUID/);
+  assert.match(manager, /import \{ v4 as uuidv4 \} from 'uuid'/);
+  assert.match(manager, /setOperationId\(uuidv4\(\)\)/);
   assert.match(manager, /step="0\.01"/);
   assert.match(manager, /永久KK币/);
   assert.match(manager, /限时KK币/);
