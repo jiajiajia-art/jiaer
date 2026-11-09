@@ -4,7 +4,7 @@
 import type { AppLanguageCode } from '../utils/appLanguage';
 
 export type PayRegion = 'greaterChina' | 'overseas';
-export type DefaultPayMethod = 'wechat' | 'overseas';
+export type DefaultPayMethod = 'wechat' | 'alipay' | 'overseas';
 
 export type GeoRegionData = {
   country: string | null;

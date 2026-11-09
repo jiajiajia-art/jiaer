@@ -12,8 +12,18 @@ import {
   parseOverseasPayReturnSearch,
   resolveOverseasPayReturnStatus,
 } from '../src/lib/overseasPayReturn.ts';
+import { parseAlipayReturnSearch } from '../src/lib/alipayPayReturn.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+test('支付宝回跳只清理支付参数并保留页面状态', () => {
+  const parsed = parseAlipayReturnSearch('?alipayPay=1&outTradeNo=ORD9&trade_no=T1&sign=SECRET&tab=wallet');
+  assert.equal(parsed.handled, true);
+  if (!parsed.handled) return;
+  assert.equal(parsed.outTradeNo, 'ORD9');
+  assert.equal(parsed.nextSearch, 'tab=wallet');
+  assert.equal(parseAlipayReturnSearch('?tab=wallet').handled, false);
+});
 
 test('parseOverseasPayReturnSearch_应识别回站参数并清掉一次性 query', () => {
   const parsed = parseOverseasPayReturnSearch('?overseasPay=1&outTradeNo=ORD9&foo=1');

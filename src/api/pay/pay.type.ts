@@ -53,6 +53,18 @@ export interface OverseasPayResponse {
     };
 }
 
+export interface AlipayResponse {
+    code: number;
+    message: string;
+    data: { outTradeNo: string; payUrl: string };
+}
+
+export interface AlipayCancelResponse {
+    code: number;
+    message: string;
+    data: { outTradeNo: string; status: 'closed' | 'paid' | 'pending' };
+}
+
 export interface CheckPayStatusResponse {
     code: number;
     message: string;

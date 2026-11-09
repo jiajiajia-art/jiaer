@@ -934,13 +934,19 @@
 /* 功能注释：钻石页支付方式互切条；默认项高亮 */
 .payMethodToggle {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
     margin-bottom: 0;
 }
 
 .payMethodToggleBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
     flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
     min-height: 46px;
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 10px;
@@ -949,6 +955,29 @@
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
+}
+
+.payMethodLabel {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.payMethodIcon {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+}
+
+.payMethodIconWechat {
+    color: var(--pay-wechat);
+}
+
+.payMethodIconAlipay {
+    color: #1677ff;
+}
+
+.payMethodIconOverseas {
+    color: #86c8ff;
 }
 
 .payMethodToggleBtn:hover {
@@ -2105,7 +2134,7 @@
     }
 
     .confirmationOverlay {
-        align-items: flex-end;
+        align-items: center;
         padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
     }
 

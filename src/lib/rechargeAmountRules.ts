@@ -16,7 +16,7 @@ export function getPayMethodCurrencySymbol(method: DefaultPayMethod): string {
 }
 
 export function getPayMethodMaxDecimals(method: DefaultPayMethod): number {
-  return method === 'overseas' ? 2 : 1;
+  return method === 'overseas' ? 2 : method === 'alipay' ? 0 : 1;
 }
 
 /** 功能注释：过滤输入；返回规范化字符串或 null（拒绝本次按键） */
@@ -51,7 +51,7 @@ export function validateRechargeAmount(
   if (amount < min) {
     return { ok: false, reason: 'tooLow' };
   }
-  if (method === 'wechat') {
+  if (method !== 'overseas') {
     if (!Number.isInteger(amount)) {
       return { ok: false, reason: 'notInteger' };
     }

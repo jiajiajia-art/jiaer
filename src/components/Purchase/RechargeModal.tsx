@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { FaAlipay, FaWeixin } from 'react-icons/fa6';
+import { Globe2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import styles from './RechargeModal.module.css';
@@ -10,6 +12,11 @@ import { getApiErrorMessage } from '../../utils/error';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useGeoRegionStore } from '../../store/useGeoRegionStore';
 import type { DefaultPayMethod } from '../../lib/geoRegion';
+import { useAlipayCheckout } from '../../hooks/useAlipayCheckout';
+import AlipayCheckoutPanel from './AlipayCheckoutPanel';
+import RechargeSuccessReceipt from './RechargeSuccessReceipt';
+import { createDiamondReceipt, createMembershipReceipt, saveRechargeReceiptToStorage } from '../../lib/rechargeReceipt';
+import type { RechargeReceipt } from '../../lib/rechargeReceipt';
 import {
     calcDiamondsForPayMethod,
     getPayMethodCurrencySymbol,
@@ -121,6 +128,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
     const [pollingError, setPollingError] = useState<string>('');
     const [timeLeft, setTimeLeft] = useState(COUNTDOWN_SECONDS);
     const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(null);
+    const [activeReceipt, setActiveReceipt] = useState<RechargeReceipt | null>(null);
 
     const [rechargeTab, setRechargeTab] = useState<RechargeTabType>(fixedTab ?? 'diamonds');
     const [selectedPlanIndex, setSelectedPlanIndex] = useState<number>(-1);
@@ -164,10 +172,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
         }
     }, [updateUser]);
 
-    const handleCloseWithRefresh = useCallback(async () => {
-        await refreshUserInfo();
-        onClose();
-    }, [onClose, refreshUserInfo]);
+    const alipay = useAlipayCheckout(isOpen && !isMiniProgramEnv(), authUser?.user.userId, refreshUserInfo);
 
     const MEMBERSHIP_PLANS = useMemo<MembershipPlan[]>(() => [
         {
@@ -211,13 +216,14 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
             setAmountError('');
             setInputShake(false);
             setPendingPayment(null);
+            setActiveReceipt(null);
             return;
         }
 
         if (openedRef.current) return;
         openedRef.current = true;
         payMethodTouchedRef.current = false;
-        setSelectedPayMethod(isMiniProgramEnv() ? 'wechat' : region.defaultPayMethod);
+        setSelectedPayMethod('wechat');
         setRechargeTab(fixedTab ?? 'diamonds');
         if ((fixedTab ?? 'diamonds') === 'diamonds') {
             const defaultPlan = rechargePlans[0];
@@ -237,12 +243,10 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
             setAmountError('');
             setInputShake(false);
         }
-    }, [isOpen, fixedTab, rechargePlans, region.defaultPayMethod]);
+    }, [isOpen, fixedTab, rechargePlans]);
 
     useEffect(() => {
-        if (isOpen && regionLoaded && !isMiniProgramEnv() && !payMethodTouchedRef.current) {
-            setSelectedPayMethod(region.defaultPayMethod);
-        }
+        if (isOpen && regionLoaded && !payMethodTouchedRef.current) setSelectedPayMethod('wechat');
     }, [isOpen, region.defaultPayMethod, regionLoaded]);
 
     const handleFixedAmountClick = (plan: DiamondPlan) => {
@@ -327,12 +331,14 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
         setPaymentStatus('idle');
         setPollingError('');
         setTimeLeft(COUNTDOWN_SECONDS);
+        setActiveReceipt(null);
+        setActiveReceipt(null);
     }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (inFlightRef.current) {
+        if (inFlightRef.current || alipay.creating) {
             toast.error(t('rechargeModal.doNotRepeatClick'));
             return;
         }
@@ -425,7 +431,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
     };
 
     /** 功能注释：KK币和会员共用既有微信 Native / 小程序支付链路。 */
-    const startWechatPay = async (orderData: PayOrderRequest) => {
+    const startWechatPay = async (orderData: PayOrderRequest, receipt: RechargeReceipt) => {
         inFlightRef.current = true;
         setIsLoading(true);
         try {
@@ -437,6 +443,11 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                 if (data.code === 200 && data.data) {
                     const { outTradeNo, payParams } = data.data;
                     setOrderId(outTradeNo);
+                    setActiveReceipt(receipt);
+                    setPaymentStatus('polling');
+                    if (authUser?.user.userId) {
+                        saveRechargeReceiptToStorage(sessionStorage, authUser.user.userId, outTradeNo, receipt);
+                    }
                     const mp = (window as WindowWithWx).wx?.miniProgram;
                     if (mp && typeof mp.postMessage === 'function') {
                         const payParamsStr = encodeURIComponent(JSON.stringify(payParams));
@@ -446,9 +457,11 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                         toast.success(t('rechargeModal.redirectingToPayment'));
                     } else {
                         toast.error(t('rechargeModal.miniProgramNotSupported'));
+                        setPaymentStatus('failed');
+                        setPollingError(t('rechargeModal.miniProgramNotSupported'));
                     }
-                    setPaymentStatus('failed');
-                    setPollingError(data.message || t('rechargeModal.paymentRequestFailed'));
+                } else {
+                    throw new Error(data.message || t('rechargeModal.paymentRequestFailed'));
                 }
                 setIsLoading(false);
                 return;
@@ -459,6 +472,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                 if (result && qrDataUrl) {
                     setQrCodeUrl(qrDataUrl);
                     setOrderId(result.outTradeNo);
+                    setActiveReceipt(receipt);
                     setPaymentStatus('polling');
                     setPollingError('');
                     setTimeLeft(COUNTDOWN_SECONDS);
@@ -477,7 +491,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
     };
 
     /** 功能注释：海外支付 → EnjoyPayment 收银台；金额/IP/用户ID 由后端组单 */
-    const startOverseasPay = async (orderData: PayOrderRequest) => {
+    const startOverseasPay = async (orderData: PayOrderRequest, receipt: RechargeReceipt) => {
         inFlightRef.current = true;
         setIsLoading(true);
         try {
@@ -485,6 +499,9 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
             const response = await payApi.createOverseasOrder(orderData);
             const data = response.data;
             if (data.code === 200 && data.data?.payUrl) {
+                if (authUser?.user.userId) {
+                    saveRechargeReceiptToStorage(sessionStorage, authUser.user.userId, data.data.outTradeNo, receipt);
+                }
                 // 功能注释：有收银台链接即跳转；returnWebBase 缺失时后端可用 PUBLIC_WEB_BASE_URL 兜底回跳
                 if (!data.data.returnWebBase) {
                     console.warn('[overseas-pay] returnWebBase missing from create response; still redirect', data.data.returnUrl);
@@ -506,21 +523,51 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
         }
     };
 
+    const startAlipayPay = async (orderData: PayOrderRequest, receipt: RechargeReceipt) => {
+        inFlightRef.current = true;
+        setIsLoading(true);
+        try {
+            await alipay.start(orderData, receipt);
+        } finally {
+            setIsLoading(false);
+            inFlightRef.current = false;
+        }
+    };
+
     const cancelPaymentConfirmation = () => {
         if (isLoading) return;
         setPendingPayment(null);
     };
 
     const confirmPayment = async () => {
-        if (!pendingPayment || inFlightRef.current) return;
+        if (!pendingPayment || inFlightRef.current || alipay.creating) return;
         const confirmed = pendingPayment;
+        const receipt = confirmed.kind === 'diamonds'
+            ? createDiamondReceipt(confirmed.amount, confirmed.estimatedDiamonds || 0)
+            : createMembershipReceipt(confirmed.membershipPlan!.planId, confirmed.amount);
+        setActiveReceipt(receipt);
         setPendingPayment(null);
         if (confirmed.payMethod === 'overseas') {
-            await startOverseasPay(confirmed.orderData);
+            await startOverseasPay(confirmed.orderData, receipt);
             return;
         }
-        await startWechatPay(confirmed.orderData);
+        if (confirmed.payMethod === 'alipay') {
+            await startAlipayPay(confirmed.orderData, receipt);
+            return;
+        }
+        await startWechatPay(confirmed.orderData, receipt);
     };
+
+    const returnToRechargePlans = useCallback(async () => {
+        await refreshUserInfo();
+        setQrCodeUrl(null);
+        setOrderId(null);
+        setPaymentStatus('idle');
+        setPollingError('');
+        setTimeLeft(COUNTDOWN_SECONDS);
+        setActiveReceipt(null);
+        alipay.returnToPlans();
+    }, [alipay.returnToPlans, refreshUserInfo]);
 
     useEffect(() => {
         if (!orderId || !qrCodeUrl || !isOpen) {
@@ -565,6 +612,44 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
     }, [orderId, qrCodeUrl, isOpen]);
 
     useEffect(() => {
+        if (!orderId || qrCodeUrl || !isMiniProgramEnv() || !isOpen || paymentStatus !== 'polling') return;
+        let timeoutId: number | null = null;
+        let stopped = false;
+        const startedAt = Date.now();
+        const pollStatus = async () => {
+            if (stopped) return;
+            try {
+                const response = await payApi.checkPayStatus(orderId);
+                const status = response.data?.data;
+                if (status === 'paid') {
+                    setPaymentStatus('success');
+                    setPollingError('');
+                    await refreshUserInfo();
+                    return;
+                }
+                if (['failed', 'closed', 'cancelled', 'canceled', 'expired'].includes(String(status))) {
+                    setPaymentStatus('failed');
+                    setPollingError(t('rechargeModal.paymentFailed'));
+                    return;
+                }
+            } catch {
+                setPollingError(t('rechargeModal.queryPaymentStatusFailed'));
+            }
+            if (Date.now() - startedAt >= POLL_TIMEOUT_MS) {
+                setPaymentStatus('failed');
+                setPollingError(t('rechargeModal.paymentPending'));
+                return;
+            }
+            timeoutId = window.setTimeout(pollStatus, POLL_INTERVAL_MS);
+        };
+        void pollStatus();
+        return () => {
+            stopped = true;
+            if (timeoutId) window.clearTimeout(timeoutId);
+        };
+    }, [orderId, qrCodeUrl, isOpen, paymentStatus, refreshUserInfo, t]);
+
+    useEffect(() => {
         if (!qrCodeUrl || !isOpen || paymentStatus !== 'polling') {
             return;
         }
@@ -596,7 +681,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                     return;
                 }
                 if (paymentStatus === 'success') {
-                    void handleCloseWithRefresh();
+                    void returnToRechargePlans();
                     return;
                 }
                 handleClose();
@@ -607,7 +692,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
         return () => {
             document.removeEventListener('keydown', handleEscKey);
         };
-    }, [isOpen, paymentStatus, pendingPayment, handleClose, handleCloseWithRefresh]);
+    }, [isOpen, paymentStatus, pendingPayment, handleClose, returnToRechargePlans]);
 
     if (!isOpen) return null;
 
@@ -626,7 +711,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
     const canSubmit = rechargeTab === 'membership'
         ? Boolean(selectedMembershipPlan)
         : isAmountReadyToPay(currentAmount, selectedPayMethod);
-    const currencyName = selectedPayMethod === 'wechat' ? '人民币' : '美元';
+    const currencyName = selectedPayMethod === 'overseas' ? '美元' : '人民币';
 
     const diamondsTabContent = (
         <>
@@ -824,12 +909,12 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
 
                         <section className={styles.paymentSection} aria-labelledby="payment-method-heading">
                             <h3 id="payment-method-heading" className={styles.sectionHeading}>支付方式</h3>
-                            <div className={styles.payMethodToggle} role="group" aria-label={t('rechargeModal.choosePayMethod')}>
-                                {(['wechat', 'overseas'] as const).map((method) => (
+                            <div className={styles.payMethodToggle} role="group" aria-label={t('rechargeModal.choosePayMethod')}
+                                style={isMiniProgramEnv() ? { gridTemplateColumns: '1fr' } : undefined}>
+                                {((isMiniProgramEnv() ? ['wechat'] : ['wechat', 'alipay', 'overseas']) as DefaultPayMethod[]).map((method) => (
                                     <button
                                         key={method}
                                         type="button"
-                                        disabled={isMiniProgramEnv() && method === 'overseas'}
                                         aria-pressed={selectedPayMethod === method}
                                         className={`${styles.payMethodToggleBtn} ${selectedPayMethod === method ? styles.payMethodToggleBtnActive : ''}`}
                                         onClick={() => {
@@ -839,7 +924,16 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                                             setInputShake(false);
                                         }}
                                     >
-                                        {method === 'wechat' ? t('rechargeModal.payWechat') : t('rechargeModal.payOverseas')}
+                                        {method === 'wechat' ? (
+                                            <FaWeixin className={`${styles.payMethodIcon} ${styles.payMethodIconWechat}`} aria-hidden="true" />
+                                        ) : method === 'alipay' ? (
+                                            <FaAlipay className={`${styles.payMethodIcon} ${styles.payMethodIconAlipay}`} aria-hidden="true" />
+                                        ) : (
+                                            <Globe2 className={`${styles.payMethodIcon} ${styles.payMethodIconOverseas}`} aria-hidden="true" />
+                                        )}
+                                        <span className={styles.payMethodLabel}>
+                                            {t(method === 'wechat' ? 'rechargeModal.payWechat' : method === 'alipay' ? 'rechargeModal.payAlipay' : 'rechargeModal.payOverseas')}
+                                        </span>
                                     </button>
                                 ))}
                             </div>
@@ -862,14 +956,25 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                         <button
                             type="submit"
                             className={`${styles.submitBtn} ${rechargeTab === 'membership' ? styles.membershipSubmitBtn : ''}`}
-                            disabled={!canSubmit || isLoading}
+                            disabled={!canSubmit || isLoading || alipay.creating || alipay.requiresResolution}
                         >
-                            {isLoading
+                            {isLoading || alipay.creating
                                 ? t('rechargeModal.processing')
                                 : rechargeTab === 'membership'
                                     ? `支付 ¥${selectedMembershipPlan?.price ?? 0}，开通${selectedMembershipPlan?.name ?? '会员卡'}`
                                     : `支付 ${currencySymbol}${currentAmount ?? 0}，获得 ${estimatedDiamonds} KK币`}
                         </button>
+
+                        {alipay.error && alipay.error !== 'cancelPending' && <p role="alert" className={styles.errorText}>
+                            {t(`rechargeModal.alipayCheckoutErrors.${alipay.error}`)}
+                        </p>}
+
+                        {alipay.requiresResolution && <div role="alert" className={styles.errorText}>
+                            <p>{t('rechargeModal.alipayCheckoutErrors.cancelPending')}</p>
+                            <button type="button" className={styles.qrActionBtn} onClick={() => void alipay.dismiss()}>
+                                {t('rechargeModal.alipayCancelRetry')}
+                            </button>
+                        </div>}
 
                         {rechargeTab === 'membership' ? (
                             <section className={styles.membershipRulesCard} aria-labelledby="membership-rules-title">
@@ -904,7 +1009,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                         <div className={styles.confirmationRows}>
                             <div>
                                 <span>支付方式</span>
-                                <strong>{pendingPayment.payMethod === 'wechat' ? '微信支付' : '海外支付'}</strong>
+                                <strong>{t(pendingPayment.payMethod === 'wechat' ? 'rechargeModal.payWechat' : pendingPayment.payMethod === 'alipay' ? 'rechargeModal.payAlipay' : 'rechargeModal.payOverseas')}</strong>
                             </div>
                             <div>
                                 <span>支付金额</span>
@@ -943,16 +1048,18 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
         </>
     );
 
-    const qrContent = (
+    const qrContent = paymentStatus === 'success' && activeReceipt ? (
+        <RechargeSuccessReceipt receipt={activeReceipt} onReturn={() => void returnToRechargePlans()} />
+    ) : (
         <div
             className={styles.modalOverlay}
-            onClick={paymentStatus === 'success' ? () => void handleCloseWithRefresh() : handleClose}
+            onClick={handleClose}
         >
             <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
                 <button
                     type="button"
                     className={styles.closeBtn}
-                    onClick={paymentStatus === 'success' ? () => void handleCloseWithRefresh() : handleClose}
+                    onClick={handleClose}
                     aria-label={t('common.close')}
                 >
                     <span className={styles.closeIcon} aria-hidden="true" />
@@ -966,18 +1073,12 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                             {t('rechargeModal.qrCodeExpire', { seconds: timeLeft })}
                         </div>
                     )}
-                    {paymentStatus === 'success' && <div className={styles.successText}>{t('rechargeModal.paymentSuccess')}</div>}
                     {paymentStatus === 'failed' && (
                         <div className={styles.errorText}>
                             {pollingError || t('rechargeModal.paymentPending')}
                         </div>
                     )}
                     <div className={styles.qrActions}>
-                        {paymentStatus === 'success' && (
-                            <button type="button" className={styles.qrActionBtn} onClick={() => void handleCloseWithRefresh()}>
-                                {t('rechargeModal.done')}
-                            </button>
-                        )}
                         {paymentStatus === 'failed' && (
                             <button type="button" className={styles.qrActionBtn} onClick={handleRestart}>
                                 {t('rechargeModal.restartRecharge')}
@@ -989,7 +1090,44 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
         </div>
     );
 
-    return createPortal(qrCodeUrl ? qrContent : formContent, document.body);
+    const miniProgramPaymentContent = (
+        <div className={styles.modalOverlay} onClick={handleClose}>
+            <section className={styles.modalContent} role="dialog" aria-modal="true"
+                aria-label={t('rechargeModal.payWechat')} onClick={(event) => event.stopPropagation()}>
+                <button type="button" className={styles.closeBtn} onClick={handleClose} aria-label={t('common.close')}>
+                    <span className={styles.closeIcon} aria-hidden="true" />
+                </button>
+                <div className={styles.qrSection}>
+                    <h2 className={styles.qrTitle}>{t('rechargeModal.payWechat')}</h2>
+                    {paymentStatus === 'failed' ? (
+                        <>
+                            <p role="alert" className={styles.errorText}>{pollingError || t('rechargeModal.paymentFailed')}</p>
+                            <button type="button" className={styles.qrActionBtn} onClick={handleRestart}>
+                                {t('rechargeModal.restartRecharge')}
+                            </button>
+                        </>
+                    ) : (
+                        <p role="status" aria-live="polite" className={styles.qrHint}>
+                            {t('rechargeModal.miniProgramPaymentWaiting')}
+                        </p>
+                    )}
+                </div>
+            </section>
+        </div>
+    );
+
+    return createPortal(
+        alipay.order && alipay.showCheckout && !isMiniProgramEnv()
+            ? <AlipayCheckoutPanel checkout={alipay}
+                onClose={alipay.status === 'paid' ? returnToRechargePlans : alipay.dismiss}
+                onReturnToPlans={() => void returnToRechargePlans()} />
+            : paymentStatus === 'success' && activeReceipt
+                ? <RechargeSuccessReceipt receipt={activeReceipt} onReturn={() => void returnToRechargePlans()} />
+                : isMiniProgramEnv() && orderId
+                    ? miniProgramPaymentContent
+                    : qrCodeUrl ? qrContent : formContent,
+        document.body,
+    );
 };
 
 export default RechargeModal;

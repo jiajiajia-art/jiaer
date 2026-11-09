@@ -12,6 +12,7 @@ import styles from './Create.module.css';
 import AppPageShell from '../components/Layout/AppPageShell';
 import FooterArea from '../components/Layout/FooterArea';
 import RechargeModal from '../components/Purchase/RechargeModal';
+import RechargeSuccessReceipt from '../components/Purchase/RechargeSuccessReceipt';
 import ProfileFunctionPanel from '../components/Profile/ProfileFunctionPanel';
 import VipStatusModal from '../components/Profile/VipStatusModal';
 import InviteCampaignCard from '../components/Profile/InviteCampaignCard';
@@ -33,6 +34,9 @@ import {
     parseOverseasPayReturnSearch,
     resolveOverseasPayReturnStatus,
 } from '../lib/overseasPayReturn';
+import { parseAlipayReturnSearch } from '../lib/alipayPayReturn';
+import { clearRechargeReceiptFromStorage, readRechargeReceiptFromStorage } from '../lib/rechargeReceipt';
+import type { RechargeReceipt } from '../lib/rechargeReceipt';
 import accountSocialApi from '../api/account/accountSocialApi';
 
 type CreatorStatsIncentiveType = 'none' | 'incentive' | 'game_incentive' | 'code_incentive' | 'all_incentive';
@@ -73,6 +77,7 @@ const Create: React.FC = () => {
     });
     const [creatorStats, setCreatorStats] = useState<StatsOverview | null>(null);
     const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
+    const [returnedRechargeReceipt, setReturnedRechargeReceipt] = useState<{ outTradeNo: string; receipt: RechargeReceipt } | null>(null);
     const [isMembershipRechargeModalOpen, setIsMembershipRechargeModalOpen] = useState(false);
     const [isVipStatusModalOpen, setIsVipStatusModalOpen] = useState(false);
     const [streakDays, setStreakDays] = useState(0);
@@ -86,6 +91,7 @@ const Create: React.FC = () => {
     const [followingCount, setFollowingCount] = useState(0);
     const [followersCount, setFollowersCount] = useState(0);
     const overseasPayReturnHandledRef = useRef(false);
+    const alipayReturnHandledRef = useRef(false);
 
     const userName = user?.user?.nickname || user?.user?.name || t('create.userNameDefault');
     const userCode = user?.user?.userCode;
@@ -221,8 +227,13 @@ const Create: React.FC = () => {
                 },
             );
             if (status === 'paid') {
-                toast.success(t('rechargeModal.overseasPaySuccess'));
                 await getUserInfo();
+                const userId = useAuthStore.getState().user?.user.userId;
+                const receipt = userId
+                    ? readRechargeReceiptFromStorage(sessionStorage, userId, parsed.outTradeNo)?.receipt
+                    : null;
+                if (receipt) setReturnedRechargeReceipt({ outTradeNo: parsed.outTradeNo, receipt });
+                else toast.success(t('rechargeModal.overseasPaySuccess'));
                 return;
             }
             if (status === 'failed') {
@@ -230,6 +241,35 @@ const Create: React.FC = () => {
                 return;
             }
             toast(t('rechargeModal.overseasPayPending'));
+        })();
+    }, [location.pathname, location.search, navigate, t]);
+
+    useEffect(() => {
+        const parsed = parseAlipayReturnSearch(location.search);
+        if (!parsed.handled || alipayReturnHandledRef.current) return;
+        alipayReturnHandledRef.current = true;
+        navigate(
+            { pathname: location.pathname, search: parsed.nextSearch ? '?' + parsed.nextSearch : '' },
+            { replace: true },
+        );
+        void (async () => {
+            const status = await resolveOverseasPayReturnStatus(parsed.outTradeNo, async (outTradeNo) => {
+                const response = await payApi.checkPayStatus(outTradeNo);
+                return response.data?.data;
+            });
+            if (status === 'paid') {
+                await getUserInfo();
+                const userId = useAuthStore.getState().user?.user.userId;
+                const receipt = userId
+                    ? readRechargeReceiptFromStorage(sessionStorage, userId, parsed.outTradeNo)?.receipt
+                    : null;
+                if (receipt) setReturnedRechargeReceipt({ outTradeNo: parsed.outTradeNo, receipt });
+                else toast.success(t('rechargeModal.overseasPaySuccess'));
+            } else if (status === 'failed') {
+                toast.error(t('rechargeModal.overseasPayFailed'));
+            } else {
+                toast(t('rechargeModal.alipayPayPending'));
+            }
         })();
     }, [location.pathname, location.search, navigate, t]);
 
@@ -661,6 +701,22 @@ const Create: React.FC = () => {
                 onClose={() => setIsRechargeModalOpen(false)}
                 onRecharge={handleRecharge}
             />
+            {returnedRechargeReceipt && (
+                <RechargeSuccessReceipt
+                    receipt={returnedRechargeReceipt.receipt}
+                    onReturn={() => {
+                        if (user?.user?.userId) {
+                            clearRechargeReceiptFromStorage(
+                                sessionStorage,
+                                user.user.userId,
+                                returnedRechargeReceipt.outTradeNo,
+                            );
+                        }
+                        setReturnedRechargeReceipt(null);
+                        setIsRechargeModalOpen(true);
+                    }}
+                />
+            )}
             <RechargeModal
                 isOpen={isMembershipRechargeModalOpen}
                 onClose={() => setIsMembershipRechargeModalOpen(false)}
