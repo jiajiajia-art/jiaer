@@ -12,6 +12,7 @@ import { getImageUrl, resolveGameCoverUrl } from '../utils/constants';
 import { buildGameDetailNavigateState } from '../utils/gameDetailNavigation';
 import { getGameTypeLabel, getGameTypeTone, type GameTypeTone } from '../utils/gameTypeLabel';
 import { resolveGameTypeToneStyle } from '../utils/gameTypeToneClass';
+import { resolveRankingsPlainDescription } from '../lib/rankingsUi';
 import type { UserGameData } from '../api/home/getGameData.type';
 
 type RankingTab = 'all' | 'hot' | 'new' | 'rising' | 'sales' | 'romance';
@@ -80,11 +81,13 @@ function apiGameToRanked(item: RankingsGameItem): RankedGame {
     // 使用 getGameTypeLabel 转换原始标签为中文展示名
     const gameTypeLabel = getGameTypeLabel(item.game_tags, item.engine);
     const gameTypeTone = getGameTypeTone(item.game_tags, item.engine);
+    // 功能注释：发布侧 description 常含 <p> 富文本；子榜卡片按纯文本渲染，须先剥标签
+    const plainDescription = resolveRankingsPlainDescription(item.description || item.subtitle || '');
     return {
         id: item.file_id,
         title: item.title,
-        subtitle: item.subtitle || item.description || '',
-        description: item.description || '',
+        subtitle: resolveRankingsPlainDescription(item.subtitle || item.description || ''),
+        description: plainDescription,
         coverUrl: cover,
         playCount: item.total_uv_count || item.like_count,
         updateInfo,
