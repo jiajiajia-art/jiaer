@@ -28,6 +28,7 @@ import PlayModCreateShell from "./components/PlayModCreateShell";
 import AuthorPreviewChrome from "./components/AuthorPreviewChrome";
 import AuthorPreviewPlayShell from "./components/AuthorPreviewPlayShell";
 import PlatformShellGate from "./components/PlatformShellGate";
+import PlayerPlayBootstrap, { readPlayerPlayBoot } from "./components/PlayerPlayBootstrap";
 import { readFunloomStaffFromStorage, shouldGateRomancePlatformShell } from "./lib/platformShellGate";
 import {
   clearPlayModCreateQuery,
@@ -193,6 +194,8 @@ function Root() {
   );
   /** 功能注释：?createPlayMod=1 → 玩法 Mod 对话工坊（创作游戏二级入口） */
   const [playModCreateOpen, setPlayModCreateOpen] = useState(() => shouldOpenPlayModCreate());
+  /** 功能注释：详情/审核进局：play=1 读发布镜像；reviewPreview=1 读待审快照 */
+  const [playerPlayBoot] = useState(() => readPlayerPlayBoot());
   const previewSession = useSyncExternalStore(subscribeAuthorPreview, getAuthorPreviewSession, () => null);
   const previewing = !!previewSession;
 
@@ -336,6 +339,9 @@ function Root() {
 
   return (
     <>
+      {playerPlayBoot.mode && playerPlayBoot.fileId && !previewing ? (
+        <PlayerPlayBootstrap mode={playerPlayBoot.mode} fileId={playerPlayBoot.fileId} />
+      ) : null}
       {playModCreateOpen && !previewing ? (
         <div className="romance-platform min-h-screen" data-platform-ui="1">
           <PlayModCreateShell
@@ -373,7 +379,11 @@ function Root() {
           data-author-preview-shell="1"
         >
           <AuthorPreviewChrome />
-          <div className="author-preview-stage min-h-0 flex-1 overflow-hidden" data-author-preview-stage="1">
+          {/* 功能注释：结局页自带 h-full overflow-y-auto 纵向滚动容器；预览舞台对 ending 放开纵向滚动，避免后记 / 按钮被裁死（3.15） */}
+          <div
+            className={`author-preview-stage min-h-0 flex-1 ${screen === "ending" ? "overflow-y-auto overflow-x-hidden" : "overflow-hidden"}`}
+            data-author-preview-stage="1"
+          >
             <AuthorPreviewPlayShell>
               <PlayScreens key={`preview-${saveEpoch}`} />
             </AuthorPreviewPlayShell>

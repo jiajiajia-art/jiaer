@@ -75,7 +75,8 @@ let termReader: TermReader | null = null;
 export function setTermReader(r: TermReader) { termReader = r; }
 const GENERIC_TERMS: Record<string, string> = {
   city: "城里", industry: "这一行", celebrity: "名人", gig: "工作", fans: "关注者", reputation: "口碑", fame: "名气",
-  money: "收入", works: "成果", advance: "日程",
+  // 功能注释：货币缺省叫「钱」，禁止回落娱乐圈「片酬」
+  money: "钱", works: "成果", advance: "日程",
 };
 /** 功能注释：不经 termReader 的兜底叫法，供 registry.resolveLiveTerm 使用，避免与 liveTerm 互相递归。 */
 export function termFallback(key: string, fallback?: string): string {

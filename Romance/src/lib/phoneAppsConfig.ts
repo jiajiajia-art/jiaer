@@ -52,6 +52,24 @@ export function asPhoneOverrides(raw: unknown): PhoneAppDef[] {
   return [];
 }
 
+/**
+ * 功能注释：世界合并后的 phoneAppsCfg 三态规整（P4）。
+ * - null/undefined（或无法识别的脏值）→ undefined：旧作品兼容，预装 11 个官方应用
+ * - 空数组 / {apps:[]} → []：明确没装，开局桌面只有应用商店与设置；禁止收成 undefined
+ * - 非空 → 浅拷贝每项
+ */
+export function normalizeWorldPhoneAppsCfg(raw: unknown): PhoneAppDef[] | undefined {
+  if (raw == null) return undefined;
+  if (Array.isArray(raw)) return raw.map((a) => ({ ...(a as PhoneAppDef) }));
+  if (typeof raw === "object") {
+    const bag = raw as Record<string, unknown>;
+    for (const k of ["apps", "items", "list", "overrides"]) {
+      if (Array.isArray(bag[k])) return (bag[k] as PhoneAppDef[]).map((a) => ({ ...a }));
+    }
+  }
+  return undefined;
+}
+
 /** 功能注释：是否仍是旧「目录差异补丁」形态（含 avail/label 等） */
 export function isLegacyPhoneAppsCfg(raw: unknown): boolean {
   const list = asPhoneOverrides(raw);

@@ -23,8 +23,8 @@ test('ModRoomTreeEditor_不展示房间id且无方向出口表', () => {
   assert.match(src, /大地图/);
   assert.match(src, /scenePortrait/);
   assert.match(src, /aiGen=\{\{/);
-  assert.match(src, /initialPrompt/);
-  assert.match(src, /SCENE_PORTRAIT_GEN_SIZE/);
+  assert.match(src, /initialParts/);
+  assert.match(src, /LOCATION_SCENE_GEN_SIZE/);
   assert.match(src, /sceneDescFallback|你来到了/);
   assert.match(src, /addFromLibrary/);
 });

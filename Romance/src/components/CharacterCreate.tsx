@@ -18,6 +18,7 @@ import { factionSigningOffers, rollSigningOffers, type SigningContract } from ".
 import { creationVars, fillParts, fillText } from "../game/creationText";
 import { normalizeGenderOptions } from "../game/creationSystemFields";
 import { formatCreatorAttrPreview, rollCreatorAttrStarts, visibleCreatorAttrs } from "../lib/creationItems";
+import { attrUsesRandomStart } from "../lib/attrInit";
 import { shouldShowPathPicker } from "../lib/pathPicker";
 import { isAuthorPreview, requestAuthorPreviewEnd } from "../lib/authorPreview";
 import { deleteSlot, listSaves, type SaveSlot } from "../lib/store";
@@ -143,7 +144,12 @@ export default function CharacterCreate() {
     setAttrStarts(rollCreatorAttrStarts(creatorAttrs));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 只在属性 id 集合变化时重掷
   }, [creatorAttrsKey, modSel.world]);
-  const rerollAttrs = () => setAttrStarts(rollCreatorAttrStarts(creatorAttrs));
+  /** 功能注释：仅当至少一项可随机时显示骰子；全固定则隐藏，避免点了无变化（3.16） */
+  const canRerollAttrs = creatorAttrs.some((a) => attrUsesRandomStart(a));
+  const rerollAttrs = () => {
+    if (!canRerollAttrs) return;
+    setAttrStarts(rollCreatorAttrStarts(creatorAttrs));
+  };
   /* 创作者自定义字段：仅按人物线路过滤；系统四项始终显示、不进此列 */
   const CUSTOM = asModArray<CreationField>(cc.fields).filter((f) => f.label && (!asModArray(f.paths).length || asModArray<string>(f.paths).includes(curPath)));
   const [customVals, setCustomVals] = useState<Record<string, string>>({});
@@ -465,38 +471,43 @@ export default function CharacterCreate() {
               {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => <option key={d} value={d}>{d} 日</option>)}
             </select>
           </div>
+          {zodiac?.name ? (
+            <p className="mt-1.5 text-[12px] text-ink-soft">星座 · {zodiac.name}</p>
+          ) : null}
         </div>
+        {/* 功能注释：属性并入同一张基本信息卡，去掉中间空白带（3.16） */}
+        {creatorAttrs.length > 0 ? (
+          <div className="mt-3 border-t border-line/60 pt-3" data-creator-attrs-inline="1">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <p className="text-[13px] font-bold text-ink">属性</p>
+              {canRerollAttrs ? (
+                <button
+                  type="button"
+                  onClick={rerollAttrs}
+                  title="整组重掷属性开局值"
+                  aria-label="整组重掷属性"
+                  className="grid h-7 w-7 place-items-center rounded-full text-ink-soft/60 transition hover:bg-ink/5 hover:text-jade"
+                >
+                  <IconDiceDuo size={15} />
+                </button>
+              ) : null}
+            </div>
+            <ul className="space-y-1.5">
+              {creatorAttrs.map((a) => (
+                <li key={a.id} className="flex items-center gap-2 rounded-xl border border-line/70 bg-paper px-3 py-2">
+                  <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">{a.label}</span>
+                  <span className="shrink-0 text-[12px] text-ink-soft">{formatCreatorAttrPreview(a, attrStarts[a.id])}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </Card>
     </>
   );
 
-  /* 功能注释：开局属性区只列有名称的建角数值；标题旁双骰子整组重掷预览值 */
-  const stepAttrs = creatorAttrs.length > 0 ? (
-    <Card
-      title="属性"
-      desc="按创作者配置的顺序；点骰子可整组重掷开局值"
-      titleAction={
-        <button
-          type="button"
-          onClick={rerollAttrs}
-          title="整组重掷属性开局值"
-          aria-label="整组重掷属性"
-          className="grid h-7 w-7 place-items-center rounded-full text-ink-soft/60 transition hover:bg-ink/5 hover:text-jade"
-        >
-          <IconDiceDuo size={15} />
-        </button>
-      }
-    >
-      <ul className="space-y-1.5">
-        {creatorAttrs.map((a) => (
-          <li key={a.id} className="flex items-center gap-2 rounded-xl border border-line/70 bg-paper px-3 py-2">
-            <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">{a.label}</span>
-            <span className="shrink-0 text-[12px] text-ink-soft">{formatCreatorAttrPreview(a, attrStarts[a.id])}</span>
-          </li>
-        ))}
-      </ul>
-    </Card>
-  ) : null;
+  /* 功能注释：属性已并入基本信息卡；保留 null 以免 who 布局引用崩 */
+  const stepAttrs = null;
 
   /* 自定义字段按作者顺序渲染；系统四项不参与线路/背景过滤。 */
   const stepCustom = hasMore ? (

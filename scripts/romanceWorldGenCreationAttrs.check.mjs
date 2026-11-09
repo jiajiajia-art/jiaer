@@ -1,5 +1,5 @@
 /**
- * 建角字段 AI 生成：正好 3 条有名称属性 + 属性说明；开局资金货币名可补全。
+ * 建角字段 AI 生成：建议约 2–4 条有名称属性 + 属性说明；开局资金货币名可补全。
  * 禁止留下「未命名」或空壳字段；merge 不得把旧空壳拼回。
  */
 import assert from 'node:assert/strict';
@@ -12,9 +12,9 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const romance = join(root, 'Romance/src');
 const read = (p) => readFileSync(join(romance, p), 'utf8');
 
-test('normalizeWorldGenCustomAttrs_丢掉未命名并最多保留3条且补属性说明', async () => {
+test('normalizeWorldGenCustomAttrs_丢掉未命名并丢掉未命名且补属性说明', async () => {
   const mod = await import(pathToFileURL(join(romance, 'lib/worldGenCreationAttrs.ts')).href);
-  assert.equal(mod.WORLD_GEN_CUSTOM_ATTRS_COUNT, 3);
+  assert.ok(mod.WORLD_GEN_CUSTOM_ATTRS_COUNT >= 2 && mod.WORLD_GEN_CUSTOM_ATTRS_COUNT <= 4);
   const cleaned = mod.normalizeWorldGenCustomAttrs([
     { id: 'a', label: '洞察', init: 3, min: 1, max: 10, desc: '对气氛的觉察。' },
     { id: 'b', label: '未命名', init: 1, min: 0, max: 10 },
@@ -23,8 +23,8 @@ test('normalizeWorldGenCustomAttrs_丢掉未命名并最多保留3条且补属�
     { id: 'e', label: '体力', init: 8, min: 0, max: 20 },
     { id: 'f', label: '多余', init: 1, min: 0, max: 5 },
   ]);
-  assert.equal(cleaned.length, 3);
-  assert.deepEqual(cleaned.map((a) => a.label), ['洞察', '魅力', '体力']);
+  assert.ok(cleaned.length >= 3);
+  assert.deepEqual(cleaned.map((a) => a.label).slice(0, 3), ['洞察', '魅力', '体力']);
   assert.equal(cleaned[0].desc, '对气氛的觉察。');
   assert.match(cleaned[1].desc, /魅力/);
   assert.match(cleaned[2].desc, /体力/);
@@ -34,19 +34,20 @@ test('normalizeWorldGenCustomAttrs_丢掉未命名并最多保留3条且补属�
   assert.equal(mod.normalizeWorldGenCustomAttrs([{ id: 'x', name: '根骨', init: 1 }])[0].label, '根骨');
 });
 
-test('ensureWorldGenCustomAttrs_不足3条时按题材补有名属性_不写未命名', async () => {
+test('ensureWorldGenCustomAttrs_全空时按题材补有名属性_不写未命名', async () => {
   const mod = await import(pathToFileURL(join(romance, 'lib/worldGenCreationAttrs.ts')).href);
   const filled = mod.ensureWorldGenCustomAttrs(
     { customAttrs: [{ id: 'a', label: '未命名', init: 1 }, { id: 'b', label: '洞察', init: 3, min: 0, max: 10 }] },
     { setting: '雾港悬疑旅馆，住客情绪与线索。' },
   );
-  assert.equal(filled.customAttrs.length, 3);
+  // 功能注释：已有有效属性时不补空壳；未命名被洗掉后只剩洞察
+  assert.ok(filled.customAttrs.length >= 1);
   assert.ok(filled.customAttrs.every((a) => a.label && a.label !== '未命名' && !/^未命名/.test(a.label)));
   assert.equal(filled.customAttrs[0].label, '洞察');
   assert.ok(filled.customAttrs.every((a) => typeof a.desc === 'string' && a.desc.length > 0));
   const empty = mod.ensureWorldGenCustomAttrs({ customAttrs: [] }, { setting: '修真宗门争夺灵石。' });
-  assert.equal(empty.customAttrs.length, 3);
-  assert.deepEqual(empty.customAttrs.map((a) => a.label), ['灵力', '悟性', '根骨']);
+  assert.ok(empty.customAttrs.length >= 2);
+  assert.equal(empty.customAttrs[0].label, '灵力');
 });
 
 test('healCustomAttrsUnnamed_只删空壳不自动补', async () => {
@@ -92,7 +93,7 @@ test('sanitizeWorldGenBatchPatch_清洗customAttrs与moneyLabel', async () => {
     startMoney: 100,
     moneyLabel: '  灵石  ',
   });
-  assert.equal(out.customAttrs.length, 3);
+  assert.ok(out.customAttrs.length >= 3);
   assert.ok(out.customAttrs.every((a) => a.label && a.label !== '未命名'));
   assert.ok(out.customAttrs.every((a) => typeof a.desc === 'string' && a.desc.length > 0));
   assert.equal(out.moneyLabel, '灵石');
@@ -120,7 +121,7 @@ test('mergeModContent_customAttrs整表替换_不保留旧未命名', async () =
   assert.ok(!merged.customAttrs.some((a) => a.label === '未命名' || a.label === '旧洞察'));
 });
 
-test('softValidateBatchPatch_creation须正好3条有名属性', async () => {
+test('softValidateBatchPatch_creation至少1条有名属性', async () => {
   const gen = await import(pathToFileURL(join(romance, 'lib/worldGenGenerate.ts')).href);
   assert.match(
     String(gen.softValidateBatchPatch(['creation'], { customAttrs: [{ id: 'a', label: '未命名', init: 1 }] }) || ''),
@@ -142,10 +143,10 @@ test('世界生成提示与向导_要求3条有名属性且货币名', () => {
   assert.match(gen, /normalizeWorldGenCustomAttrs/);
   assert.match(gen, /ensureWorldGenCustomAttrs/);
   assert.match(gen, /ensureWorldGenStartMoney/);
-  assert.match(gen, /必须正好 \$\{WORLD_GEN_CUSTOM_ATTRS_COUNT\} 条/);
+  assert.match(gen, /建议约 2–4 条/);
   assert.match(gen, /moneyLabel/);
   assert.match(gen, /k === "customAttrs"/);
-  assert.match(lean, /customAttrs 正好 3 条/);
+  assert.match(lean, /customAttrs 建议约 2–4 条/);
   assert.match(attrsEd, /属性说明/);
   assert.doesNotMatch(attrsEd, />投骰子</);
   assert.match(attrsEd, /type="checkbox"/);

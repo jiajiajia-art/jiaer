@@ -1,12 +1,13 @@
 /**
- * 统一组件目录：玩法组件 + 手机应用组件。
+ * 玩法组件目录：只含玩法 Mod（P3）；手机应用（论坛 / 视频·直播 / 咸鱼等）归应用商店，不进「添加玩法」与推荐。
+ * 远程上架包若带 phone_app 类型，仅用于识别安装记录，本地种子目录不再内置应用项。
  * 玩法 Mod = 创作者给某一剧本加的可选玩法（孕育 / 出行 / 座驾 / 通告事业等），用「添加玩法」启用。
  * 禁止把娱乐圈骨架、校园骨架等世界观底子放进本目录；那些不是创作者要勾的玩法。
  * 头衔是可选玩法（pack-titles）：需要的剧本才添加，未添加不显示配置区。
  * 关系玩法（pack-relations）：表白 / 婚礼 / 牵线 / 伴侣加成；未添加不显示配置与人物页表白婚礼入口。
  * 存档结构、登录、档案、人脉、设置 = 游戏本体功能，不进本目录；基础设定、建角、地点、人物、事件也在编辑器其它页直接配。
  * 本目录不是游戏本体；本体功能不进本目录。
- * 编辑器按「已安装组件」动态显示配置，不再硬编码通告/孕育/座驾/论坛/直播等入口。
+ * 编辑器按「已安装组件」动态显示配置，不再硬编码通告/孕育/座驾等入口。
  */
 
 export type ComponentKind = "gameplay" | "phone_app";
@@ -279,68 +280,6 @@ export const LOCAL_PLAY_MOD_CATALOG: LocalPlayModCatalogItem[] = [
         "关系玩法为可选恋爱向组件：表白门槛、婚礼费用与好感、NPC 牵线开关、伴侣加成。从商店加进作品后才出现配置区，人物页才显示表白与婚礼入口；未添加的剧本不出现整块关系玩法。",
     },
   ),
-  withStoreDetail(
-    {
-      id: "pm-app-forum",
-      slug: "app-forum",
-      name: "星潮论坛",
-      description: "饭圈论坛应用",
-      priceKk: 0,
-      version: "1.0.0",
-      defaultNavLabel: "",
-      needsNavEntry: false,
-      editorPanels: ["phoneApp"],
-      iconSvg: ICON('<path d="M4 6h16v10H8l-4 4V6z"/>'),
-      componentKind: "phone_app",
-      phoneAppId: "forum",
-    },
-    {
-      downloads: 3900,
-      detail: "星潮论坛是可选手机应用组件：热帖、板块与发帖互动。装进剧本后在手机里出现，不是本体底栏。",
-    },
-  ),
-  withStoreDetail(
-    {
-      id: "pm-app-video-live",
-      slug: "app-video-live",
-      name: "视频·直播",
-      description: "短视频与直播（依赖演艺事业包）",
-      priceKk: 0,
-      version: "1.0.0",
-      defaultNavLabel: "",
-      needsNavEntry: false,
-      editorPanels: ["phoneApp"],
-      iconSvg: ICON('<rect x="4" y="6" width="16" height="12" rx="2"/><path d="M10 10l5 2-5 2z"/>'),
-      componentKind: "phone_app",
-      phoneAppId: "video",
-      dependsOn: ["pack-career"],
-    },
-    {
-      downloads: 2780,
-      detail: "视频·直播手机应用：短视频与直播间。依赖演艺事业包；添加时会提示一并安装。",
-    },
-  ),
-  withStoreDetail(
-    {
-      id: "pm-app-xianyu",
-      slug: "app-xianyu",
-      name: "咸鱼闲置",
-      description: "二手商城（依赖生活开销包）",
-      priceKk: 0,
-      version: "1.0.0",
-      defaultNavLabel: "",
-      needsNavEntry: false,
-      editorPanels: ["phoneApp"],
-      iconSvg: ICON('<path d="M4 8h16v10H4z"/><path d="M8 8V6h8v2"/>'),
-      componentKind: "phone_app",
-      phoneAppId: "xianyu",
-      dependsOn: ["pack-living"],
-    },
-    {
-      downloads: 1410,
-      detail: "咸鱼闲置是二手商城手机应用，依赖生活开销包。属于可选玩法组件，不进本体设置/档案。",
-    },
-  ),
 ];
 /**
  * 功能注释：玩家菜单「玩法 Mod」入口（支票/账单）是否展示。
@@ -387,8 +326,6 @@ export function recommendPlayModsFromSetting(
     add("pack-career");
     add("pack-image");
     add("pack-paper");
-    add("app-forum");
-    add("app-video-live");
   }
   if (/怀孕|孕育|结婚|生育|孩子|孕期/.test(text)) add("pack-pregnancy");
   if (/交通|出行|公交|地铁|打车|车费|怎么去/.test(text)) add("pack-transport");
@@ -399,8 +336,6 @@ export function recommendPlayModsFromSetting(
   if (/吃饭|伙食|生活开销|房租|账单|租房/.test(text)) add("pack-living");
   if (/头衔|称号|成就称号|佩戴头衔/.test(text)) add("pack-titles");
   if (/表白|婚礼|恋爱|结婚|伴侣|牵线|好感门槛|关系玩法/.test(text)) add("pack-relations");
-  if (/直播|短视频|带货/.test(text)) add("app-video-live");
-  if (/二手|闲置|咸鱼|商城/.test(text)) add("app-xianyu");
 
   return hits.slice(0, 6);
 }
@@ -491,6 +426,42 @@ export function resolveInstalledPhoneAppIds(installs: PlayModInstallConfig[] | u
     if (appId) ids.push(appId);
   }
   return Array.from(new Set(ids));
+}
+
+/** 功能注释：娱乐圈内置世界 id；只有它才会自动补娱乐圈原版玩法扩展包 */
+export const ENT_WORLD_ID = "ent";
+
+/**
+ * 功能注释：是否对该世界自动补娱乐圈拆包（ENT_PACK_IDS）。
+ * 只对内置娱乐圈（或缺省世界 id 的旧存档）为 true；创作者世界一律 false，玩法只认 playModInstalls。
+ */
+export function shouldAutoAttachEntPacks(worldId: string | undefined | null): boolean {
+  const id = String(worldId ?? "").trim();
+  return !id || id === ENT_WORLD_ID;
+}
+
+/**
+ * 功能注释：把世界的 playModInstalls 映射成运行时要叠加的叠加包 modId（P1）。
+ * - 只认已启用（enabled !== false）的玩法记录，手机应用类（phone_app）不进叠加链
+ * - 候选 id 依次为目录 romanceAddonId / 记录 slug / 记录 modId，取第一个 isAddonAvailable 为真的
+ * - 结果去重并保持安装顺序；装了但本机没有对应叠加包的记录会被跳过（不报错）
+ */
+export function resolveInstallAddonModIds(
+  installs: PlayModInstallConfig[] | undefined,
+  isAddonAvailable: (modId: string) => boolean,
+): string[] {
+  const out: string[] = [];
+  for (const inst of Array.isArray(installs) ? installs : []) {
+    if (!inst || typeof inst !== "object" || inst.enabled === false) continue;
+    const cat = catalogBySlug(inst.slug) ?? catalogBySlug(inst.modId);
+    if (inst.componentKind === "phone_app" || cat?.componentKind === "phone_app") continue;
+    const candidates = [cat?.romanceAddonId, inst.slug, inst.modId].filter(
+      (x): x is string => typeof x === "string" && x.trim() !== "",
+    );
+    const hit = candidates.find((id) => isAddonAvailable(id));
+    if (hit && !out.includes(hit)) out.push(hit);
+  }
+  return out;
 }
 
 /** 功能注释：安装前本地依赖检查（返回缺失的 slug） */

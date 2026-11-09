@@ -4,7 +4,7 @@ import { GENERATED_GIGS } from "./gigLibrary";
 import { loadGlobal, saveGlobal, removeGlobal } from "../lib/saveScope";
 import { slot, liveArray, liveRecord, memoBy, currentWorldId } from "../mods/live";
 import { asModArray } from "../lib/asModArray";
-import { enabledChargeItems as filterChargeItems, type ChargeBasisItem } from "./chargeBasis";
+import type { ChargeBasisItem } from "./chargeBasis";
 import type { TuningModuleId, TuningModulesFlag } from "./tuningModules";
 import { isTuningModuleOn as tuningModuleOn } from "./tuningModules";
 export type { ChargeBasisItem } from "./chargeBasis";
@@ -223,7 +223,7 @@ export const STAT_ORDER: StatKey[] = liveArray(() => {
 /**
  * 功能注释：人物档案「个人能力」用的键——只读作品自己的 order / hidden。
  * 配了 order 就严格按 order（再扣 hidden），绝不把未声明的八维（如演技）补回来；
- * 未配 order 时才回落全量八维再扣 hidden。引擎养成仍用 STAT_ORDER。
+ * 未配 order 时：仅娱乐圈回落全量八维再扣 hidden；其它作品不补八维。引擎养成仍用 STAT_ORDER。
  */
 export const dossierStatKeys = (): StatKey[] => {
   const hid = new Set(asModArray<StatKey>(statsSlot().hidden));
@@ -231,6 +231,8 @@ export const dossierStatKeys = (): StatKey[] => {
     (k, i, a) => k in RAW_STAT_LABELS && a.indexOf(k) === i && !hid.has(k),
   );
   if (ordered.length) return ordered;
+  // 功能注释：非娱乐圈作品表单没写 stats.order 时不补八维（演技/歌艺…），档案显示「尚未配置个人能力」
+  if (currentWorldId() !== "ent") return [];
   return RAW_STAT_ORDER.filter((k) => !hid.has(k));
 };
 export const ALL_STAT_KEYS: readonly StatKey[] = ["yanji", "geyi", "koucai", "yitai", "donggan", "tineng", "caizhi", "zixin"];
@@ -486,20 +488,18 @@ export const gigRules = (): GigRules => tuning().gigRules ?? {};
 export const hasAuthoredGigRules = (gr?: GigRules | null): boolean => !!(gr && Object.keys(gr).length > 0);
 /** 功能注释：当前 tuning 是否启用某引擎模块（勾选或旧作已写字段）。 */
 export const tuningHasModule = (id: TuningModuleId): boolean => tuningModuleOn(tuning(), id);
-/* 经济规则（缺省 = 引擎原值）。统一扣费规则：主动消费余额不足即拒绝，只有被动扣费（账单 / 事件等）允许透支。
- * chargeItems：创作者自填的扣费依据；未勾选 / 未写的项不得出现在说明里。 */
+/* 经济规则。无账单/生活开销时不应启用透支收官；有账单时创作者勾选 bankrupt 才结束游戏。
+ * chargeItems 已下线，周结算不再使用扣费依据名单。 */
 export type EconomyRules = {
-  bankrupt?: boolean; // 透支到破产线是否结束游戏（缺省 true）
+  bankrupt?: boolean; // 透支到破产线是否结束游戏（缺省 false，须创作者勾选）
   bankruptLine?: number; // 破产线（正数，透支超过即破产）；缺省 = 周固定开销 × 28，夹在 500~50 万
-  overdraftStress?: number; // 透支期间每周额外压力（缺省 4）
+  overdraftStress?: number; // 透支期间每周额外压力（缺省不追加）
   graceWeeks?: number; // 新手缓冲：前 N 周账单打折（缺省 0）
   graceBillMul?: number; // 缓冲期账单倍率（缺省 0.5）
+  /** @deprecated 扣费依据已删除；读到也忽略 */
   chargeItems?: ChargeBasisItem[];
 };
 export const economy = (): EconomyRules => tuning().economy ?? {};
-/** 功能注释：只返回已勾选且写了名称的扣费项，供说明文案与编辑器预览使用。 */
-export const enabledChargeItems = (e: EconomyRules = economy()): ChargeBasisItem[] =>
-  filterChargeItems(e.chargeItems);
 export const bankruptLineFor = (weeklyBase: number, e: EconomyRules = economy()): number =>
   -(e.bankruptLine && e.bankruptLine > 0 ? e.bankruptLine : Math.min(500000, Math.max(500, weeklyBase * 28)));
 export const tuning = (): TuningSlot => slot<TuningSlot>("tuning", () => ({}), () => ({}));

@@ -315,7 +315,10 @@ test('CustomIFCreate_编辑页应对齐世界观暗色卡表单', () => {
   assert.match(css, /\.formSection\s*\{[\s\S]*?gap:\s*8px/);
   assert.match(css, /\.formCard\s*\{[\s\S]*?gap:\s*10px/);
   /* 功能注释：效果图是返回+居中标题工具条，禁止再左对齐大标题+长副文把右侧留空 */
-  assert.match(css, /\.pageHeader\s*\{[\s\S]*?grid-template-columns:\s*72px minmax\(0, 1fr\) 72px/);
+  /* 功能注释：右侧槽随「测试」带图标加宽，禁止再卡死 72px 挤图标 */
+  assert.match(css, /\.pageHeader\s*\{[\s\S]*?grid-template-columns:\s*72px minmax\(0, 1fr\) minmax\(72px, auto\)/);
+  assert.match(css, /\.btnLabel\s*\{/);
+  assert.match(css, /\.btnIcon\s*\{/);
   assert.match(css, /\.pageTitle\s*\{[\s\S]*?text-align:\s*center/);
   /* 功能注释：图1未选为深底描边芯片，选中实心酒红；禁止再做成透明纯文字 */
   assert.match(css, /\.pageRoot\s+\.themeTagChip\s*\{[\s\S]*?background:\s*#1C1C1E/);
@@ -331,7 +334,15 @@ test('CustomIFCreate_编辑页应对齐世界观暗色卡表单', () => {
   assert.match(tsx, /styles\.themeTagsHead/);
   assert.match(tsx, /styles\.requiredMark/);
   assert.match(css, /\.pageRoot \.clearPill\s*\{[\s\S]*?background:\s*#8E2135/);
-  assert.match(css, /\.pageRoot \.primaryBtn[\s\S]*?border-radius:\s*999px/);
+  /* 功能注释：创建/测试双按钮通栏 14px 卡片，禁止细长胶囊 */
+  assert.match(css, /\.pageRoot \.actions\s*\{[\s\S]*?flex-direction:\s*column/);
+  const darkPrimary = css.match(/\.pageRoot \.primaryBtn,\s*\.pageRoot \.primaryBtnMeta\s*\{([^}]*)\}/)?.[1] ?? '';
+  const darkSecondary = css.match(/\.pageRoot \.secondaryBtn\s*\{([^}]*)\}/)?.[1] ?? '';
+  assert.match(darkPrimary, /border-radius:\s*14px/);
+  assert.match(darkPrimary, /width:\s*100%/);
+  assert.doesNotMatch(darkPrimary, /border-radius:\s*999px/);
+  assert.match(darkSecondary, /border-radius:\s*14px/);
+  assert.match(darkSecondary, /width:\s*100%/);
   assert.match(css, /\.pageRoot \.textInput[\s\S]*?background:\s*var\(--custom-if-input\)/);
   assert.match(css, /\.richEditorDark/);
   assert.match(tsx, /styles\.formCard/);
@@ -408,13 +419,13 @@ test('CreateGameModals_类型行应有区分色调的模式图标', () => {
   assert.match(css, /\.createTypeOptionThumb\s*\{[\s\S]*?display:\s*inline-flex/);
 });
 
-test('CreateGameModals_手机取消按钮应满宽', () => {
+test('CreateGameModals_取消按钮应通栏卡片风格_禁止右下角胶囊', () => {
   const css = read('src/components/CreateGame/CreateGameModals.module.css');
-  /* 功能注释：≤640px 取消键 width:100%，禁止继续右下角小胶囊 */
-  assert.match(
-    css,
-    /@media \(max-width:\s*640px\)[\s\S]*?\.createTypeCancelButton\s*\{[\s\S]*?width:\s*100%/,
-  );
+  const cancel = css.match(/\.createTypeCancelButton\s*\{([^}]*)\}/)?.[1] ?? '';
+  /* 功能注释：桌面/手机统一通栏 14px 圆角，禁止右下角透明胶囊 */
+  assert.match(cancel, /width:\s*100%/);
+  assert.match(cancel, /border-radius:\s*14px/);
+  assert.doesNotMatch(cancel, /border-radius:\s*999px/);
   assert.match(
     css,
     /@media \(max-width:\s*640px\)[\s\S]*?\.createTypeCancelButton\s*\{[\s\S]*?min-height:\s*48px/,

@@ -13,6 +13,9 @@ const STRING_FIELD_KEYS = new Set([
   "pickTitle", "currency", "freeLabel", "perksLabel", "unlockHint", "group",
   "replyPrompt", "badge", "city", "placeholder", "tag", "blurb", "about",
   "genre", "type", "avatarVariant", "avatar", "summary", "html", "page", "image", "video",
+  // 功能注释：生图提示词字段（人物外观 / 地点画面），AI 或旧草稿可能写成对象
+  // （style 不入表：cover.style 是对象；作品画风 imageGen.style 由 workImageSettingsOf 只认字符串）
+  "appearancePrompt", "scenePrompt",
   // 功能注释：开局封面 DIY / CoverView 会对这些字段 .trim()，AI 常写成对象
   "css", "kicker", "subtitle", "cta", "waiting", "intro", "bgPrompt",
   // 功能注释：固定事件链名 / 失败提示词也会被直接 .trim()

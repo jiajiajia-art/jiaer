@@ -70,13 +70,20 @@ test('sanitizeWorldGenAiPatch_terms与npc须收成字符串', async () => {
   const gen = await import(pathToFileURL(join(romance, 'lib/worldGenGenerate.ts')).href);
   const cleaned = gen.sanitizeWorldGenAiPatch('terms', {
     terms: { city: { name: '雾港' }, week: ' 周  ' },
-    npcs: [{ id: 'a', name: 7, gender: { v: '女' }, bio: null }],
+    npcs: [{
+      id: 'a',
+      name: 7,
+      gender: { v: '女' },
+      bio: '这是一段超过二十字的人物小传，用来通过清洗保留。',
+      home: 'room1',
+    }],
+    rooms: { room1: { name: '客栈', desc: '木门吱呀。' } },
   });
   // 功能注释：对象文案须解包保留，不能整键丢弃
   assert.deepEqual(cleaned.terms, { city: '雾港', week: '周' });
   assert.equal(cleaned.npcs[0].name, '7');
   assert.equal(cleaned.npcs[0].gender, '女');
-  assert.equal(cleaned.npcs[0].bio, '');
+  assert.match(cleaned.npcs[0].bio, /人物小传/);
 });
 
 test('extractContentPatch_非字符串raw不得炸trim', async () => {

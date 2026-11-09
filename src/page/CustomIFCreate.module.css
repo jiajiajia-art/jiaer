@@ -42,7 +42,7 @@
 /* 功能注释：效果图顶栏为返回 + 居中标题，禁止再左对齐大标题把右侧留空 */
 .pageHeader {
   display: grid;
-  grid-template-columns: 72px minmax(0, 1fr) 72px;
+  grid-template-columns: 72px minmax(0, 1fr) minmax(72px, auto);
   align-items: center;
   min-height: 40px;
   padding: 0;
@@ -53,17 +53,41 @@
   width: 36px;
   height: 36px;
   margin: 0;
-  padding: 0 0 2px;
+  padding: 0;
   border: none;
   border-radius: 50%;
   background: transparent;
   color: #ffffff;
-  font-size: 1.75rem;
+  font-size: 1.35rem;
   line-height: 1;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+/* 功能注释：文案前导图标统一对齐，避免各按钮图标大小/间距不一致 */
+.btnLabel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btnIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 1em;
+  height: 1em;
+  font-size: 1.05em;
+  line-height: 1;
+}
+
+.btnIcon svg {
+  width: 1em;
+  height: 1em;
 }
 
 .pageBack:hover,
@@ -414,15 +438,34 @@
   color: var(--custom-if-muted);
 }
 
+/* 功能注释：底栏双按钮通栏卡片风，禁止细长胶囊与右下角小灰钮错位 */
+.pageRoot .actions {
+  width: 100%;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
 .pageRoot .secondaryBtn {
-  border-color: rgba(255, 255, 255, 0.18);
+  width: 100%;
+  min-height: 44px;
+  height: auto;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   background: #1C1C1E;
-  color: #ffffff;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+  box-sizing: border-box;
 }
 
 .pageRoot .secondaryBtn:hover {
-  background: #242426;
-  border-color: #8E2135;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(168, 40, 60, 0.45);
+  color: #ffffff;
+  transform: none;
 }
 
 .pageRoot .primaryBtn,
@@ -431,10 +474,15 @@
   --cta-deep: #8E2135;
   width: 100%;
   min-width: 0;
-  height: 48px;
-  border-radius: 999px;
-  background: #8E2135;
+  min-height: 48px;
+  height: auto;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid #A8283C;
+  background: linear-gradient(135deg, #A8283C 0%, #8E2135 100%);
   box-shadow: none;
+  letter-spacing: 0;
+  box-sizing: border-box;
 }
 
 .pageRoot .primaryBtn::before,
@@ -444,7 +492,7 @@
 
 .pageRoot .primaryBtn:hover:not(:disabled),
 .pageRoot .primaryBtnMeta:hover:not(:disabled) {
-  background: #A8283C;
+  background: linear-gradient(135deg, #c23a50 0%, #A8283C 100%);
   filter: none;
   transform: none;
   box-shadow: none;
@@ -467,11 +515,6 @@
   background: #A8283C;
 }
 
-.pageRoot .actions {
-  width: 100%;
-  justify-content: flex-end;
-  gap: 10px;
-}
 
 /* 功能注释：富文本工具条暗色；勿盖拖高手柄（data-rich-editor-resize）背景与图标 */
 .richEditorDark button:not([data-rich-editor-resize]) {
@@ -1361,8 +1404,46 @@
 .confirmHeader{ padding:14px 16px; border-bottom:1px solid #374151; font-weight:700; }
 .confirmBody{ padding:12px 16px; overflow:auto; }
 .confirmFooter{ padding:12px 16px; border-top:1px solid #374151; display:flex; gap:10px; justify-content:flex-end; }
-.btnGhost{ border:1px solid #9ca3af; background:transparent; color:#e5e7eb; border-radius:8px; padding:8px 12px; cursor:pointer; }
-.btnPrimary{ border:none; background:#FB5B67; color:#fff; border-radius:8px; padding:8px 12px; cursor:pointer; }
+/* 功能注释：二次确认底栏对齐 funloom 酒红主 CTA + 描边次要按钮，带图标更易扫读 */
+.btnGhost{
+  border:1px solid rgba(255, 255, 255, 0.22);
+  background: #1C1C1E;
+  color:#e5e7eb;
+  border-radius:12px;
+  padding:10px 16px;
+  min-height: 40px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor:pointer;
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+.btnGhost:hover{
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(168, 40, 60, 0.45);
+  color: #ffffff;
+}
+.btnPrimary{
+  border:none;
+  background: linear-gradient(135deg, #A8283C 0%, #8E2135 100%);
+  color:#fff;
+  border-radius:12px;
+  padding:10px 16px;
+  min-height: 40px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor:pointer;
+  transition: filter 0.18s ease, transform 0.16s ease;
+}
+.btnPrimary:hover:not(:disabled){
+  filter: brightness(1.08);
+}
+.btnPrimary:active:not(:disabled){
+  transform: translateY(1px);
+}
+.btnPrimary:disabled{
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 @media (max-width: 768px) {
   .mainContent {
@@ -1382,19 +1463,19 @@
   .formGroup label { font-size: 14px; width: 100px; }
   .textInput { width: 100%; height: 40px; font-size: 14px; }
   .textarea { width: 100%; height: 100px; font-size: 14px; }
-  .pageRoot .actions { flex-direction: column; align-items: stretch; }
   .fileRow { width: 100%; }
-  .primaryBtn,
-  .primaryBtnMeta {
+  .pageRoot .primaryBtn,
+  .pageRoot .primaryBtnMeta {
     width: 100%;
     min-width: 0;
-    height: 48px;
+    min-height: 48px;
     font-size: 14px;
-    border-radius: 999px;
+    border-radius: 14px;
   }
-  .secondaryBtn {
+  .pageRoot .secondaryBtn {
     width: 100%;
-    height: 44px;
+    min-height: 44px;
+    border-radius: 14px;
   }
   .assetsUploadLayout { width: 100%; }
   .uploaderColumn { width: 100%; }

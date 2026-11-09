@@ -188,12 +188,14 @@ const normalizeGameMode = (engine?: string | null, gameTags?: string | null) => 
     if (normalizedEngine === 'ST') return 'st' as const;
     if (normalizedEngine === 'IVG') return 'interactive-video' as const;
     if (normalizedEngine === 'NOVEL') return 'NOVEL' as const;
+    if (normalizedEngine === 'ROMANCE') return 'ROMANCE' as const;
     if (normalizedEngine === 'TXT' || normalizedEngine === 'AVG' || normalizedEngine === 'RPG') return normalizedEngine;
 
     const normalizedTags = normalizeRaw(gameTags);
     if (normalizedTags === 'CUSTOM') return 'customif' as const;
     if (normalizedTags === 'IVG') return 'interactive-video' as const;
     if (normalizedTags === 'NOVEL') return 'NOVEL' as const;
+    if (normalizedTags === 'ROMANCE') return 'ROMANCE' as const;
     if (normalizedTags === 'TXT' || normalizedTags === 'AVG' || normalizedTags === 'RPG') return normalizedTags;
 
     return '';
@@ -968,6 +970,15 @@ const GameDetail: React.FC = () => {
             }
             return;
         }
+
+        // 功能注释：Romance 进局读已发布包；参数约定 play=1&fileId
+        if (normalized === 'ROMANCE') {
+            useGameStore.getState().clearAll();
+            navigate(`/romance/?play=1&fileId=${encodeURIComponent(fileId)}`);
+            return;
+        }
+
+        toast.error(t('gameDetail.unknownGameType'));
     };
 
     // 处理开始游戏（检查是否需要显示更新提示）
@@ -1053,9 +1064,12 @@ const GameDetail: React.FC = () => {
             }
         }
 
-        // CUSTOM/ST 模式：直接开始，不需要弹窗（IVG 走下方续玩/重开逻辑）
-        if (normalizedGameMode === 'customif' || normalizedGameMode === 'st') {
-
+        // CUSTOM/ST/ROMANCE：直接开始（Romance 本地/发布包进局，不走 TXT 云存档弹窗）
+        if (
+            normalizedGameMode === 'customif' ||
+            normalizedGameMode === 'st' ||
+            normalizedGameMode === 'ROMANCE'
+        ) {
             await startGameInternal();
             return;
         }

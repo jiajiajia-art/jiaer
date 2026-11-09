@@ -57,7 +57,7 @@ const FactionsPanel = lazyPanel(() => import("./FactionsPanel"));
 const EngineRulesPanel = lazyPanel(() => import("./EngineRulesPanel"));
 const TimelinePanel = lazyPanel(() => import("./TimelinePanel"));
 const FixedPersonPanel = lazyPanel(() => import("./FixedPersonPanel"));
-import { PathUnlockPanel } from "./ModPathsEditor";
+import { PathUnlockPanel } from "./PathUnlockPanel";
 import { creationCopy } from "../game/data";
 const StoryQuestPanel = lazyPanel(() => import("./StoryQuestPanel"));
 import MudChrome, { menuItems, NavTabsEditor, type MudTab } from "./MudChrome";
@@ -300,18 +300,26 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
           <PlayerSkinPicker skin={theme.skin ?? "cute"} onPick={(skin) => setTheme({ ...theme, skin })} />
         </SettingBranch>
         )}
+        {/* 功能注释：暗色模式不再折叠，整行就是开关，点一次立即切换（3.7）；样式与分支标题行一致 */}
         {!beauty && (
-        <SettingBranch title="暗色模式" en="DARK MODE" desc="切换界面明暗，护眼夜读" current={isDark ? "已开启" : "已关闭"} swatch={isDark ? <IconMoon size={16} /> : <IconSun size={16} />}>
-          <button
-            type="button"
-            onClick={toggleDarkMode}
-            aria-pressed={isDark}
-            className={`flex w-full items-center justify-between rounded-xl border px-3.5 py-2.5 text-left transition ${isDark ? "border-jade bg-jade/10 text-jade" : "border-line bg-paper text-ink hover:border-jade/50"}`}
-          >
-            <span className="text-[13px] font-semibold">{isDark ? "关闭暗色模式" : "开启暗色模式"}</span>
-            <span className={`text-[11px] font-bold ${isDark ? "text-jade" : "text-ink-soft"}`}>{isDark ? "已开启" : "已关闭"}</span>
-          </button>
-        </SettingBranch>
+        <button
+          type="button"
+          data-dark-toggle="1"
+          onClick={toggleDarkMode}
+          aria-pressed={isDark}
+          className="flex w-full items-center gap-3 overflow-hidden rounded-2xl border border-line bg-paper px-4 py-3 text-left transition hover:bg-paper-2"
+        >
+          <span className="min-w-0 flex-1">
+            <span className="flex items-baseline gap-1.5">
+              <span className="text-[14px] font-bold tracking-[0.06em] text-ink">暗色模式</span>
+              <span className="text-[9.5px] font-semibold tracking-[0.2em] text-ink-soft">DARK MODE</span>
+            </span>
+            <span className="block truncate text-[11px] text-ink-soft">点一下立即切换界面明暗，护眼夜读</span>
+          </span>
+          <span className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px] font-semibold ${isDark ? "border-jade bg-jade/10 text-jade" : "border-line bg-paper-2 text-ink"}`}>
+            {isDark ? <IconMoon size={16} /> : <IconSun size={16} />}{isDark ? "已开启" : "已关闭"}
+          </span>
+        </button>
         )}
         {beauty && (<>
         <BeautySummary />
@@ -813,6 +821,8 @@ export default function GameShell() {
     : null;
   const topbarData = {
     ...topbarDataOf(game, modWorld.chain[0].name),
+    // 功能注释：局势摘要并入主线同一块顶栏，不再单独渲染第二条飘条
+    note: game.world.note?.trim() || undefined,
     ...(mainQuest
       ? {
           questStep: mainQuest.waitLabel ? `${mainQuest.stepName} · ${mainQuest.waitLabel}` : mainQuest.stepName,
@@ -925,8 +935,8 @@ export default function GameShell() {
       data-author-preview-game={authorPreviewing ? "1" : undefined}
       aria-hidden={landscape}
     >
-      {/* 顶部世界动态栏：跟随全局界面皮肤 */}
-      {!["npc", "actions", "phone"].includes(tab) && (
+      {/* 顶部世界动态栏：跟随全局界面皮肤；功能注释：仅「世界」Tab 显示（3.10），其它页签从自己的内容顶起 */}
+      {tab === "home" && (
       <TopbarView
         data={topbarData}
         diy={look.topbarDiy}
@@ -954,7 +964,6 @@ export default function GameShell() {
             })}
           </div>
         )}
-        {game.world.note && <p className="topbar-note border-t border-line/60 bg-paper/50 px-4 py-1 text-center text-[11px] text-ink-soft">{game.world.note}</p>}
         {saveMsg === "ok" && <p className="bg-jade/12 px-4 py-1 text-center text-[11px] text-jade">已保存到本地存档</p>}
         {saveMsg === "fail" && <p className="bg-danger/12 px-4 py-1 text-center text-[11px] text-danger">保存失败：本地存储不可用，请检查浏览器权限或空间</p>}
       </TopbarView>
@@ -1067,10 +1076,6 @@ export default function GameShell() {
                 <span className="h-px flex-1 bg-gradient-to-l from-transparent to-line" />
               </div>
               <div className="grid grid-cols-1 gap-1.5">
-                <MenuRow
-                  icon={IconBook} label="编辑器" romaji="EDITOR" hint="世界规则 · 世界书 · 地图 · 固定事件 · 结局 · 固定人物"
-                  onClick={() => { setEditorOpen(true); setMenuOpen(false); }}
-                />
                 <MenuRow
                   icon={IconSettings} label="AI 配置" romaji="MODEL" hint="接入模型 · API Key · 叙事引擎设置"
                   onClick={() => { setCfgOpen(true); setMenuOpen(false); }}

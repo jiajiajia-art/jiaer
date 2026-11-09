@@ -30,8 +30,28 @@ test('AppPageShell_中间区用剩余视口单独滚动', () => {
   assert.match(tsx, /data-app-page-main/);
   assert.match(css, /top:\s*var\(--app-navbar-offset\)/);
   assert.match(css, /bottom:\s*var\(--app-bottom-nav-offset\)/);
-  assert.match(css, /overflow-y:\s*auto/);
+  assert.match(css, /overflow-y:\s*auto\s*!important/);
+  assert.match(css, /position:\s*absolute\s*!important/);
   assert.match(css, /100dvh/);
+  // 功能注释：保留滚动能力，但隐藏滚动条外观（创作/书架黑底不再露白条）
+  assert.match(css, /scrollbar-width:\s*none/);
+  assert.match(css, /\.main::-webkit-scrollbar/);
+});
+
+test('Create与Bookshelf_pageRoot禁止min-height100vh撑出多余滚动条', () => {
+  const create = read('src/page/Create.module.css');
+  const shelf = read('src/components/Bookshelf/Bookshelf.module.css');
+  // 功能注释：只看声明行，忽略注释里对旧写法的说明
+  const decls = (css) => {
+    const body = css.match(/\.pageRoot\s*\{([^}]*)\}/)?.[1] ?? '';
+    return body
+      .split('\n')
+      .map((line) => line.replace(/\/\*[\s\S]*?\*\//g, '').trim())
+      .filter(Boolean)
+      .join('\n');
+  };
+  assert.doesNotMatch(decls(create), /min-height:\s*100vh/);
+  assert.doesNotMatch(decls(shelf), /min-height:\s*100vh/);
 });
 
 test('CreateWorks_书架走AppPageShell_不写死顶栏边距', () => {

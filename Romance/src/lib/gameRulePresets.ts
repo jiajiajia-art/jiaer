@@ -13,7 +13,8 @@ export type RulePresetBuild = {
   branches: (Omit<RuleBranch, "eventId"> & { eventKey?: string })[];
 };
 
-export type RulePreset = { name: string; desc: string; build: () => RulePresetBuild };
+/** requires：预设依赖的指标键（metric 条件 / 效果里用到的）；本作品没有这些指标就不提供该预设 */
+export type RulePreset = { name: string; desc: string; requires: string[]; build: () => RulePresetBuild };
 
 const m = (key: string, opv: "gte" | "lte", value: number): FixedCond => ({ kind: "metric", key, op: opv, value });
 
@@ -26,6 +27,7 @@ export const GAME_RULE_PRESETS: RulePreset[] = [
   {
     name: "过劳惩罚",
     desc: "精力见底的那天压力陡增；事件写入事件库",
+    requires: ["energy", "stress"],
     build: () => ({
       role: "event",
       name: "过劳惩罚",
@@ -37,6 +39,7 @@ export const GAME_RULE_PRESETS: RulePreset[] = [
   {
     name: "名气分段流动",
     desc: "按名气高低给不同的周增长；各段效果进事件库",
+    requires: ["fame"],
     build: () => ({
       role: "event",
       name: "名气分段流动",
@@ -56,6 +59,7 @@ export const GAME_RULE_PRESETS: RulePreset[] = [
   {
     name: "高压计数",
     desc: "只改规则变量「高压天数」，不进事件库",
+    requires: ["stress"],
     build: () => ({
       role: "flag",
       name: "高压计数",
@@ -70,6 +74,7 @@ export const GAME_RULE_PRESETS: RulePreset[] = [
   {
     name: "长期高压警报",
     desc: "连续高压达标后口碑下滑；惩罚事件进事件库，计数重置留在规则",
+    requires: ["stress", "reputation"],
     build: () => ({
       role: "event",
       name: "长期高压警报",
@@ -87,6 +92,7 @@ export const GAME_RULE_PRESETS: RulePreset[] = [
   {
     name: "幸运日",
     desc: "每天 10% 概率小赚一笔；事件写入事件库",
+    requires: ["money"],
     build: () => ({
       role: "event",
       name: "幸运日",
@@ -97,6 +103,30 @@ export const GAME_RULE_PRESETS: RulePreset[] = [
     }),
   },
 ];
+
+/** 功能注释：编辑器里只提供「依赖的指标本作品都有」的预设；metricKeys 缺省 = 不过滤（游玩/旧调用）。 */
+export function availableRulePresets(presets: RulePreset[], metricKeys?: string[]): RulePreset[] {
+  if (!metricKeys) return presets;
+  const have = new Set(metricKeys);
+  return presets.filter((p) => p.requires.every((k) => have.has(k)));
+}
+
+/**
+ * 功能注释：本作品「已声明」的指标键——自定义属性（c:<id>）、作者改过名的内置指标（名气/压力）、
+ * 设了起始资金或货币名后的现金。内置引擎指标没被作者声明就不算本作品拥有，不能靠它放行预设。
+ */
+export function workMetricKeys(work: {
+  attrs?: { id: string }[];
+  metaLabels?: Record<string, string | undefined>;
+  startMoney?: number;
+  moneyLabel?: string;
+}): string[] {
+  const out: string[] = [];
+  for (const a of Array.isArray(work.attrs) ? work.attrs : []) if (a?.id) out.push(`c:${a.id}`);
+  for (const k of ["fame", "stress", "reputation", "energy"]) if (String(work.metaLabels?.[k] ?? "").trim()) out.push(k);
+  if (work.startMoney !== undefined || String(work.moneyLabel ?? "").trim()) out.push("money");
+  return out;
+}
 
 /** 功能注释：物化预设——生成带 id 的规则，并把分支 eventKey 接到新建事件库条目上。 */
 export function materializeRulePreset(

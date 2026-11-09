@@ -4,8 +4,10 @@
  */
 import { asTrimmedString } from "./asTrimmedString.ts";
 
-/** 功能注释：按世界观初次生成固定事件的目标条数（不多不少） */
-export const WORLD_GEN_FIXED_EVENTS_COUNT = 5;
+/** 功能注释：固定事件建议条数中位（仅提示）；实际接受建议范围约 2–5 */
+export const WORLD_GEN_FIXED_EVENTS_COUNT = 3;
+export const WORLD_GEN_FIXED_EVENTS_SUGGEST_MIN = 2;
+export const WORLD_GEN_FIXED_EVENTS_SUGGEST_MAX = 5;
 
 /** 功能注释：提示词最短字数，避免「夜巡」这类空壳过关 */
 const MIN_PROMPT_CHARS = 20;
@@ -144,7 +146,13 @@ export function normalizeWorldGenFixedEvent(
   if (r.locked === true) ev.locked = true;
   const chain = asTrimmedString(r.chain);
   if (chain) ev.chain = chain;
-  // 功能注释：明确不写 choices / endKeywords / 非 auto 触发，避免再弹出「选项没有文案」
+  // 功能注释：开局提示词勾选——玩家开局用已勾选条目的 prompt 生成第一场剧情
+  if (r.openingPrompt === true) ev.openingPrompt = true;
+  // 功能注释：需要玩家选择时保留 choices；否则保持自动播放不带选项
+  if (Array.isArray(r.choices) && r.choices.length) {
+    const choices = r.choices.filter((c) => c && typeof c === "object" && !Array.isArray(c));
+    if (choices.length) ev.choices = choices;
+  }
   return ev;
 }
 
@@ -154,7 +162,8 @@ export function normalizeWorldGenFixedEvent(
  */
 export function normalizeWorldGenFixedEventsPatch(
   patch: Record<string, unknown>,
-  limit = WORLD_GEN_FIXED_EVENTS_COUNT,
+  /** 功能注释：软上限防爆；建议范围约 2–5，允许略多但丢空壳 */
+  limit = Math.max(WORLD_GEN_FIXED_EVENTS_SUGGEST_MAX + 3, WORLD_GEN_FIXED_EVENTS_COUNT),
 ): Record<string, unknown> {
   const out: Record<string, unknown> = { ...patch };
   // 功能注释：世界观生成的固定事件只进 fixedEvents；AI 若顺带写 events[] 一律丢掉，避免事件库半成品
@@ -187,33 +196,26 @@ export function normalizeWorldGenFixedEventsPatch(
 }
 
 /**
- * 功能注释：软校验用——条数不够或仍有缺提示词/缺后果/带选项的，一律打回重试。
+ * 功能注释：软校验——至少 1 条完整叙事即可；建议 2–5，条数超出建议不失败；半成品打回。
+ * 需要选择的事件可带 choices；不需要的保持 auto 无选项。
  */
 export function softValidateWorldGenFixedEvents(
   patch: Record<string, unknown>,
-  expect = WORLD_GEN_FIXED_EVENTS_COUNT,
+  _expect = WORLD_GEN_FIXED_EVENTS_COUNT,
 ): string | null {
+  void _expect;
   const list = asObjList(patch.fixedEvents);
-  if (list.length !== expect) {
-    return `固定事件须正好 ${expect} 条完整叙事事件（现有 ${list.length}）`;
+  if (!list.length) {
+    return "固定事件至少 1 条完整叙事事件";
   }
   for (const row of list) {
     const name = asTrimmedString(row.name) || "未命名";
+    if (!name || name === "未命名") return "固定事件缺少名称";
     if (asTrimmedString(row.prompt).length < MIN_PROMPT_CHARS) {
       return `固定事件「${name}」缺少事件提示词`;
     }
     if (!normalizeWorldGenFixedEffects(row.effects).length) {
       return `固定事件「${name}」缺少触发后属性变化`;
-    }
-    if (Array.isArray(row.choices) && row.choices.length) {
-      return `固定事件「${name}」不得带选项`;
-    }
-    const trigger = row.trigger;
-    if (trigger && typeof trigger === "object" && !Array.isArray(trigger)) {
-      const kind = asTrimmedString((trigger as { kind?: unknown }).kind);
-      if (kind && kind !== "auto") {
-        return `固定事件「${name}」触发方式须为时间自动`;
-      }
     }
   }
   return null;

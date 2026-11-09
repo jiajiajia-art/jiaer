@@ -1,6 +1,6 @@
 /**
  * 功能注释：平台入口「创作游戏 → 玩法 Mod」。
- * 复用 AI 创意工坊的玩法对话界面，保存后可打包专属 .kkmod 上传组件商店。
+ * 复用 AI 创意工坊的玩法对话界面，保存后可把玩法包上传组件商店（玩法运行在平台 SDK 上，创作者只交玩法包）。
  */
 import { useCallback, useState } from "react";
 import ModWorkshop from "./ModWorkshop";
@@ -11,7 +11,7 @@ import { readFunloomAuthToken, resolveFunloomApiBase } from "../lib/platformAvat
 
 async function uploadPlayKkmod(mod: Mod): Promise<{ ok: boolean; message: string }> {
   const token = readFunloomAuthToken();
-  if (!token) return { ok: false, message: "请先登录后再上传 SDK" };
+  if (!token) return { ok: false, message: "请先登录后再上传玩法包" };
   const pkg = kkmodPackageFromPlayMod(mod);
   let raw: string;
   try {
@@ -61,7 +61,7 @@ export default function PlayModCreateShell({ onClose }: { onClose: () => void })
     onClose();
   }, [onClose]);
 
-  const pushSdk = async (mod: Mod) => {
+  const pushPlayModPackage = async (mod: Mod) => {
     setBusy(true);
     setErr("");
     setNotice("");
@@ -96,7 +96,7 @@ export default function PlayModCreateShell({ onClose }: { onClose: () => void })
             type="button"
             disabled={busy}
             className="rounded-full bg-jade px-3 py-1.5 text-[12px] font-bold text-white disabled:opacity-40"
-            onClick={() => void pushSdk(lastMod)}
+            onClick={() => void pushPlayModPackage(lastMod)}
           >
             {busy ? "上传中…" : "上传玩法包到组件商店"}
           </button>
@@ -119,7 +119,7 @@ export default function PlayModCreateShell({ onClose }: { onClose: () => void })
           if (savedName && savedMod) {
             setLastMod(savedMod);
             setNotice(`已保存「${savedName}」。可继续上传玩法包到组件商店（私有测试 → 审核上架）。`);
-            void pushSdk(savedMod);
+            void pushPlayModPackage(savedMod);
             return;
           }
           leave();

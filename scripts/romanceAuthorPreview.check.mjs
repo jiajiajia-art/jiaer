@@ -76,7 +76,8 @@ test('romanceAuthorPreview_编辑器顶栏保存预览_底栏无重复保存', (
   assert.match(app, /previewing \? "hidden" : "romance-platform min-h-screen"/);
   assert.match(app, /\.\.\.\(previewing \? \{\} : \{ ["']data-platform-ui["']: ["']1["'] \}\)/);
   assert.match(app, /data-author-preview-shell="1"/);
-  assert.doesNotMatch(app, /previewing \?[\s\S]{0,200}className="romance-platform min-h-screen"[\s\S]{0,80}data-platform-ui="1"/);
+  // 功能注释：禁止「预览时仍挂 romance-platform」；勿误伤 `!previewing ? (` 玩法创建壳
+  assert.doesNotMatch(app, /(?<!\!)previewing \?[\s\S]{0,120}className="romance-platform min-h-screen"[\s\S]{0,80}data-platform-ui="1"/);
   assert.match(app, /AuthorPreviewPlayShell/);
   const playShell = readFileSync(join(romance, 'components/AuthorPreviewPlayShell.tsx'), 'utf8');
   assert.match(playShell, /h-full min-h-0/);

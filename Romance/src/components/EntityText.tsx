@@ -2,7 +2,8 @@ import PersonProfile from "./PersonProfile";
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import { useGame } from "../store/gameCtx";
 import { Modal, Chip } from "./ui";
-import { exitsOf, locOf, mobsHere, roomStatus } from "../game/mud";
+import { exitsOf, locOf, mobsHere, roomBgOf, roomStatus } from "../game/mud";
+import { spotBackground, spotName } from "../game/mapedits";
 import { getWorldItems, getWorldLocations, getWorldMap, worldItemById } from "../mods/registry";
 
 /* ═══ 纪事实体高亮：人物靛 / 地点青 / 物品金，皆可点选（只读详情，不自动移动/对话） ═══
@@ -83,7 +84,9 @@ function LocDetail({ id, onClose }: { id: string; onClose: () => void }) {
   const lit = (s?.visited ?? []).includes(id);
   const here = s?.room === id;
   const map = getWorldMap();
-  const photo = map.photos?.[id] ?? map.defaultPhoto;
+  // 功能注释：横幅取图与场景 LocationHero 同一优先级——地图覆写背景 → 地点自带背景 → 旧舆图 photos → 默认图；都没有才是渐变占位
+  const photo = spotBackground(game, id) || roomBgOf(id) || map.photos?.[id] || map.defaultPhoto;
+  const title = spotName(game, id) ?? loc.name;
   const funcs = (loc.func ?? "").split(/\s*[·・|/]\s*/).map((x) => x.trim()).filter(Boolean);
   // 「深度休息：行动力 +40、压力 -12」→ 行动名 + 效果列表
   const [actName, actFx] = (() => {
@@ -95,7 +98,7 @@ function LocDetail({ id, onClose }: { id: string; onClose: () => void }) {
   const exits = exitsOf(id);
   const tone = rs?.kind === "open" ? "var(--jade)" : rs?.kind === "event" ? "var(--coral)" : "var(--gold)";
   return (
-    <Modal title={loc.name} onClose={onClose}>
+    <Modal title={title} onClose={onClose}>
       <div className="space-y-3">
         {/* 实景横幅：有照片用照片，没有用柔和渐变；状态与「你在这里」浮在左下 */}
         <div className="relative h-32 overflow-hidden rounded-2xl border border-line/60 bg-gradient-to-br from-[var(--jade)]/25 via-[var(--gold)]/10 to-[var(--coral)]/20">

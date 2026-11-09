@@ -13,11 +13,12 @@ import entMod from "./ent";
 import campusMod from "./campus";
 import titlesPlusMod from "./titlesPlus";
 import { entPacks, ENT_PACK_IDS } from "./entPacks";
+import { ENT_WORLD_ID, resolveInstallAddonModIds, shouldAutoAttachEntPacks } from "./playModCatalog";
 import { WORLD_RULE_DIMS, type Gig, type MapLocation } from "../game/data";
 import { isGrowEnabled, type GrowContentLike } from "../game/growModules";
 import { applyGigPrices } from "../game/gigLibrary";
 import type { PersonContent, RoomActivity, RoomContent, RoomItem } from "../worlds/star2005/content";
-import { asPhoneOverrides } from "../lib/phoneAppsConfig";
+import { asPhoneOverrides, normalizeWorldPhoneAppsCfg } from "../lib/phoneAppsConfig";
 import { asModArray } from "../lib/asModArray";
 import { normalizeStartMetList } from "../lib/normalizeStartMet";
 import { mergeScriptToneFragments, readScriptTone } from "../lib/scriptTone";
@@ -29,7 +30,7 @@ import { ensureWorldMaps } from "../lib/worldMaps";
 const K_USER = "star:mods:user";
 const K_SEL = "star:mods:selection";
 const K_APPLIED = "star:mods:applied";
-export const DEFAULT_WORLD = "ent";
+export const DEFAULT_WORLD = ENT_WORLD_ID;
 
 export type ModSelection = { world: string; addons: string[] };
 
@@ -47,7 +48,7 @@ let userMods: Mod[] = []; // 在校验函数定义之后再从本地读取（见
 let selection: ModSelection = read<ModSelection>(K_SEL, { world: DEFAULT_WORLD, addons: [...ENT_PACK_IDS] });
 // 一次性迁移：娱乐圈拆包前保存的模组选择，补上原版玩法扩展包（之后玩家可自行关闭）
 if (!read<boolean>("star:mods:ent-split-v1", false)) {
-  if (selection.world === DEFAULT_WORLD) selection = { ...selection, addons: [...ENT_PACK_IDS.filter((id) => !selection.addons.includes(id)), ...selection.addons] };
+  if (shouldAutoAttachEntPacks(selection.world)) selection = { ...selection, addons: [...ENT_PACK_IDS.filter((id) => !selection.addons.includes(id)), ...selection.addons] };
   write(K_SEL, selection);
   write("star:mods:ent-split-v1", true);
 }
@@ -314,9 +315,13 @@ function resolve(sel: ModSelection): ResolvedWorld {
   let world = modById(sel.world);
   if (!world || world.kind !== "world") world = entMod;
   const chain: Mod[] = [world];
-  for (const id of sel.addons) {
+  // 功能注释：预览 / 开局都要读世界自己的 playModInstalls（不只 dependencies / 选择的叠加包）；
+  // 安装顺序在前、手选叠加包在后，同 id 只进链一次。无安装记录的世界（含娱乐圈）这里为空，行为不变。
+  const installAddonIds = resolveInstallAddonModIds(world.content?.playModInstalls, (id) => modById(id)?.kind === "addon");
+  const addonIds = Array.from(new Set([...installAddonIds, ...sel.addons]));
+  for (const id of addonIds) {
     const a = modById(id);
-    if (a && a.kind === "addon" && missingDeps(a, { world: world.id, addons: sel.addons }).length === 0) chain.push(a);
+    if (a && a.kind === "addon" && missingDeps(a, { world: world.id, addons: addonIds }).length === 0) chain.push(a);
   }
   const wc = world.content;
   // 功能注释：下列字段 AI 常写成单对象；一律 asModArray，禁止预览 getWorld() 时 [...x] → is not iterable
@@ -375,8 +380,8 @@ function resolve(sel: ModSelection): ResolvedWorld {
     navSize: wc.navSize,
     // 功能注释：AI 常写 {apps:[]}；禁止 [...非数组] / ?.length 误判，统一收成覆盖表
     phoneAppsCfg: (() => {
-      const list = asPhoneOverrides(wc.phoneAppsCfg);
-      return list.length ? list.map((a) => ({ ...a })) : undefined;
+      // 功能注释：[] = 明确没装应用，不得收成 undefined（否则会被当旧作品预装 11 个官方应用）
+      return normalizeWorldPhoneAppsCfg(wc.phoneAppsCfg);
     })(),
     phoneHomeWallpaper: wc.phoneHomeWallpaper,
     features: { ...(wc.features ?? {}) },
@@ -611,7 +616,8 @@ export function commitSelection() {
 /* 存档的叠加包：娱乐圈拆包前的存档（无 entSplit 标记）自动补上原版玩法扩展包，保证老存档玩法不变 */
 export function saveAddons(s: { worldId?: string; addons?: string[]; entSplit?: boolean }): string[] {
   const a = s.addons ?? [];
-  if (s.entSplit || (s.worldId ?? DEFAULT_WORLD) !== DEFAULT_WORLD) return a;
+  // 功能注释：娱乐圈自动补包只给内置娱乐圈旧存档；创作者世界一律只认自己的安装记录
+  if (s.entSplit || !shouldAutoAttachEntPacks(s.worldId)) return a;
   return [...ENT_PACK_IDS.filter((id) => !a.includes(id)), ...a];
 }
 export function activateWorld(worldId: string | undefined, addons: string[] | undefined) {
@@ -766,7 +772,8 @@ function resolveLiveTerm(w: ResolvedWorld, k: TermKey, fallback?: string): strin
       // 功能注释：customAttrs.label 可能被 AI 写成对象，禁止 ?.trim()
       const moneyLabel = typeof hit?.label === "string" ? hit.label.trim() : "";
       if (moneyLabel) return moneyLabel;
-      return termFallback(k, fallback);
+      // 功能注释：没填货币名时显示「钱」，禁止因旧术语回落「片酬」
+      return fallback?.trim() || "钱";
     }
     case "fame": {
       const tiers = pickSlot((c) => c.fameTiers);

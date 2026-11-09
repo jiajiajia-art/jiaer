@@ -1,8 +1,9 @@
 import { IconClose } from "../lib/icons";
-import { CondRow, defaultCond, questOpts, sideOpts } from "./FixedEventsPanel";
+import { CondRow, questOpts, sideOpts, useDraftDefaults } from "./FixedEventsPanel";
 import type { FixedEvent, QuestNode, Sideline, Storyline } from "../lib/types";
 import { AuditBar, AuditList, auditDomId } from "./EditorKit";
 import { auditStory, issuesAt } from "../game/refAudit";
+import { useDraftRefs } from "./draftRefsContext";
 
 /* 模组编辑器 · 剧情线 · 主线：有序节点，每天结束由代码判定完成 / 失败。
  * 功能注释：主线节点只配目标说明与完成/失败条件；编辑器不再提供奖励或激活事件入口。 */
@@ -11,7 +12,8 @@ const sel = "rounded-md border border-line bg-paper-2 px-1.5 py-0.5 text-[11.5px
 const btn = "rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40";
 const link = "text-[11.5px] font-semibold text-jade hover:underline";
 const uid = (p: string) => `${p}_${Date.now().toString(36).slice(-4)}${Math.random().toString(36).slice(2, 5)}`;
-const newNode = (): QuestNode => ({ id: uid("qn"), name: "", desc: "", conds: [defaultCond("metric")] });
+/* 功能注释：新节点默认条件取当前作品属性（dd 带草稿引用池）；没有属性就留空不预选 */
+const newNode = (dd: ReturnType<typeof useDraftDefaults>): QuestNode => ({ id: uid("qn"), name: "", desc: "", conds: [dd.cond("metric")] });
 
 export function EventPicks({ label, ids, events, onChange }: { label: string; ids?: string[]; events: FixedEvent[]; onChange: (v?: string[]) => void }) {
   const list = ids ?? [];
@@ -36,6 +38,7 @@ function NodeCard({ n, idx, total, events, quests, sides, onChange, onMove, onDe
   n: QuestNode; idx: number; total: number; events: FixedEvent[]; quests: ReturnType<typeof questOpts>; sides: ReturnType<typeof sideOpts>;
   onChange: (n: QuestNode) => void; onMove: (d: -1 | 1) => void; onDelete: () => void;
 }) {
+  const dd = useDraftDefaults();
   return (
     <div className={`space-y-1.5 rounded-xl border-l-[3px] bg-paper/60 py-2 pl-3 pr-2 ${n.optional ? "border-gold/70" : "border-jade/70"}`}>
       <div className="flex items-center gap-2">
@@ -61,23 +64,31 @@ function NodeCard({ n, idx, total, events, quests, sides, onChange, onMove, onDe
       {(n.conds ?? []).map((c, i) => (
         <CondRow key={i} c={c} events={events} selfId="" quests={quests} sides={sides} onChange={(x) => onChange({ ...n, conds: (n.conds ?? []).map((y, j) => (j === i ? x : y)) })} onDelete={() => onChange({ ...n, conds: (n.conds ?? []).filter((_, j) => j !== i) })} />
       ))}
-      <button className={link} onClick={() => onChange({ ...n, conds: [...(n.conds ?? []), defaultCond("metric")] })}>＋ 完成条件</button>
+      <button className={link} onClick={() => onChange({ ...n, conds: [...(n.conds ?? []), dd.cond("metric")] })}>＋ 完成条件</button>
       {!(n.conds ?? []).length && <p className="text-[11px] text-danger">没有完成条件的节点不会自动完成</p>}
 
       <p className="pt-0.5 text-[11px] font-bold text-ink-soft">失败条件（任一满足即失败，可留空）</p>
       {(n.failConds ?? []).map((c, i) => (
         <CondRow key={i} c={c} events={events} selfId="" quests={quests} sides={sides} onChange={(x) => onChange({ ...n, failConds: n.failConds!.map((y, j) => (j === i ? x : y)) })} onDelete={() => { const f = n.failConds!.filter((_, j) => j !== i); onChange({ ...n, failConds: f.length ? f : undefined }); }} />
       ))}
-      <button className={link} onClick={() => onChange({ ...n, failConds: [...(n.failConds ?? []), defaultCond("time")] })}>＋ 失败条件</button>
+      <button className={link} onClick={() => onChange({ ...n, failConds: [...(n.failConds ?? []), dd.cond("time")] })}>＋ 失败条件</button>
     </div>
   );
 }
 
 export default function StorylinesEditor({ value, sidelines, events = [], onChange }: { value?: Storyline[]; sidelines?: Sideline[]; events?: FixedEvent[]; onChange: (v?: Storyline[]) => void }) {
+  const dd = useDraftDefaults();
   const list = value ?? [];
   const quests = questOpts(list);
   const sides = sideOpts(sidelines ?? []);
-  const audit = auditStory({ storylines: list, sidelines: sidelines ?? [], events, skip: ["item", "location", "npc", "flag"] });
+  const draftRefs = useDraftRefs();
+  // 功能注释：主线节点的人物/地点/物品引用也要校验，只认当前表单（空就是空），不再 skip
+  const audit = auditStory({
+    draft: true, storylines: list, sidelines: sidelines ?? [], events,
+    npcIds: (draftRefs?.people ?? []).map((p) => p.id), roomIds: (draftRefs?.rooms ?? []).map((r) => r.id), itemIds: (draftRefs?.items ?? []).map((i) => i.id),
+    people: draftRefs?.people, factions: draftRefs?.factions?.map((f) => ({ id: f.id, name: f.name, members: [] })),
+    skip: ["flag"],
+  });
   const commit = (n: Storyline[]) => onChange(n.length ? n : undefined);
   const set = (id: string, p: Partial<Storyline>) => commit(list.map((l) => (l.id === id ? { ...l, ...p } : l)));
   const setNodes = (l: Storyline, nodes: QuestNode[]) => set(l.id, { nodes });
@@ -88,7 +99,7 @@ export default function StorylinesEditor({ value, sidelines, events = [], onChan
         建议只配一条主线：按顺序排好节点，每个节点写清目标说明与完成条件。前面的必做节点完成后，下一步才开始判定；可选目标不阻塞主线。
         每天结束由代码判定完成 / 失败。必做节点全部完成 = 主线完成；任一必做节点失败 = 主线中断。主线节点不配奖励、不激活事件。
       </p>
-      <button className={btn} onClick={() => commit([...list, { id: uid("sl"), name: "主线", nodes: [newNode()] }])}>＋ 新建主线</button>
+      <button className={btn} onClick={() => commit([...list, { id: uid("sl"), name: "主线", nodes: [newNode(dd)] }])}>＋ 新建主线</button>
       {list.length > 0 && <AuditBar issues={audit.issues.filter((x) => x.at?.startsWith("quest:"))} onJump={() => undefined} />}
       {!list.length && <p className="rounded-xl border border-dashed border-line px-3 py-4 text-center text-[12px] text-ink-soft">还没有主线 · 新建一条，再按顺序添加节点</p>}
       {list.map((l) => (
@@ -108,7 +119,7 @@ export default function StorylinesEditor({ value, sidelines, events = [], onChan
               onMove={(d) => { const a = [...(l.nodes ?? [])]; [a[i], a[i + d]] = [a[i + d], a[i]]; setNodes(l, a); }}
               onDelete={() => setNodes(l, (l.nodes ?? []).filter((y) => y.id !== n.id))} />
           ))}
-          <button className={link} onClick={() => setNodes(l, [...(l.nodes ?? []), newNode()])}>＋ 添加节点</button>
+          <button className={link} onClick={() => setNodes(l, [...(l.nodes ?? []), newNode(dd)])}>＋ 添加节点</button>
         </div>
       ))}
     </div>

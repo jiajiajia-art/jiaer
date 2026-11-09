@@ -9,9 +9,9 @@ const MODES: { v: PlayMode; l: string; d: string }[] = [
 ];
 const POVS: { v?: Pov; l: string; d: string }[] = [
   { v: undefined, l: "跟随世界观", d: "按世界观的叙事口吻" },
-  { v: "1", l: "第一人称", d: "「我」走进片场" },
-  { v: "2", l: "第二人称", d: "「你」走进片场" },
-  { v: "3", l: "第三人称", d: "「她」走进片场" },
+  { v: "1", l: "第一人称", d: "「我」走进场景" },
+  { v: "2", l: "第二人称", d: "「你」走进场景" },
+  { v: "3", l: "第三人称", d: "「她」走进场景" },
 ];
 const ORIENTS: { v: "landscape" | "portrait"; l: string; d: string; box: string; ratio: string }[] = [
   { v: "landscape", l: "横屏", d: "16:9 等宽屏比例游戏", box: "h-5 w-8", ratio: "h-12 w-20" },

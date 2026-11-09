@@ -49,7 +49,8 @@ export default function ModWorldBookEditor({ value, onChange, npcs = [], rooms =
   const [open, setOpen] = useState<string | null>(null);
   const [err, setErr] = useState("");
   const file = useRef<HTMLInputElement>(null);
-  const audit = auditStory({ worldBook: list, npcIds: npcs.map((n) => n.id), roomIds: rooms.map((r) => r.id), skip: [...(npcs.length ? [] : (["npc"] as const)), ...(rooms.length ? [] : (["location"] as const))] });
+  // 功能注释：草稿审计——绑定的人物/地点只认本作品传入的列表；列表为空时任何绑定都报「已不存在」，不借内置世界放行
+  const audit = auditStory({ draft: true, worldBook: list, npcIds: npcs.map((n) => n.id), roomIds: rooms.map((r) => r.id), itemIds: [] });
   const groups = Array.from(new Set(list.map((e) => asTrimmedString(e.group)).filter(Boolean)));
   const commit = (next: WorldBookEntry[]) => onChange(next.length ? next : undefined);
   const set = (id: string, p: Partial<WorldBookEntry>) => commit(list.map((e) => (e.id === id ? { ...e, ...p } : e)));

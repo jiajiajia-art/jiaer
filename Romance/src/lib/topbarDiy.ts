@@ -115,6 +115,8 @@ export type TopbarData = {
   questDone?: number;
   questTotal?: number;
   questProgress?: number;
+  /** 功能注释：局势摘要（world.note），与主线合并在同一块顶栏里展示，不再单独飘第二条 */
+  note?: string;
 };
 
 export const SAMPLE_TOPBAR_DATA: TopbarData = {

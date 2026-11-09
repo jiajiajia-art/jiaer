@@ -28,10 +28,11 @@ export function normalizeWorldGenQuestNodes(raw: unknown): Record<string, unknow
       name = desc ? desc.slice(0, 24) : `节点${out.length + 1}`;
     }
     if (!desc && !conds.length && EMPTY_NODE_NAMES.has(asTrimmedString(r.name) || "")) continue;
+    // 功能注释：条件只用本作品已有属性；没有合法条件时留空，禁止自动补「名气 ≥ 10」
     const node: Record<string, unknown> = {
       id: asTrimmedString(r.id) || `qn_${out.length + 1}`,
       name,
-      conds: conds.length ? conds : [{ kind: "metric", key: "fame", op: "gte", value: 10 }],
+      conds,
     };
     if (desc) node.desc = desc;
     if (r.optional === true) node.optional = true;

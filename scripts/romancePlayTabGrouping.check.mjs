@@ -191,9 +191,12 @@ test('线上编辑器_创建世界五页签且基础含玩法无功能开关', {
     await tab(/① 基础/).click();
     await page.getByText('头像', { exact: true }).waitFor();
     await page.getByText('建角', { exact: true }).waitFor();
-    const body = await page.locator('body').innerText();
-    // 功能注释：源码静态用例已断言「建角→人物线路→地点」；线上未部署时仍保证头像→建角→地点
-    assert.ok(body.indexOf('头像') < body.indexOf('建角') && body.indexOf('建角') < body.indexOf('地点'), '基础页顺序：头像→建角→地点');
+    // 功能注释：只看 Section summary 标题，避免正文「换地点」等把 body.indexOf('地点') 提前
+    const sectionTitles = await page.locator('details > summary > span.font-bold').allInnerTexts();
+    const avatar = sectionTitles.indexOf('头像');
+    const create = sectionTitles.indexOf('建角');
+    const loc = sectionTitles.indexOf('地点');
+    assert.ok(avatar >= 0 && create > avatar && loc > create, `基础页顺序：头像→建角→地点，实际=${sectionTitles.join('|')}`);
   } finally {
     await browser.close();
   }

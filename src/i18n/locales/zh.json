@@ -2524,6 +2524,8 @@
     "saveMeta": "保存简介与标题",
     "createAndUpload": "创建并上传",
     "startTest": "开始测试",
+    "goTestNow": "立刻去测试",
+    "dismissUploadResult": "取消",
     "confirm": "确定",
     "confirmUploadTitle": "二次确认上传文件",
     "confirmUploadBody": "将上传已选 {{count}} 个文件（{{size}}）。",

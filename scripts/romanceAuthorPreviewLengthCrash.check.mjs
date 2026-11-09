@@ -70,7 +70,8 @@ test('beginAuthorPreviewMod_须sanitize后再挂草稿', () => {
   const reg = read('mods/registry.ts');
   const begin = reg.slice(reg.indexOf('export function beginAuthorPreviewMod'), reg.indexOf('export function endAuthorPreviewMod'));
   assert.match(begin, /sanitizeModStrings/);
-  assert.match(reg, /asPhoneOverrides\(wc\.phoneAppsCfg\)/);
+  // 功能注释：脏 {apps:[]} 仍经 asPhoneOverrides 规整，但 [] 必须保留为「明确没装」，统一走 normalizeWorldPhoneAppsCfg
+  assert.match(reg, /normalizeWorldPhoneAppsCfg\(wc\.phoneAppsCfg\)/);
 });
 
 test('worldGenStartDate_须丢掉残缺calendar补丁', async () => {

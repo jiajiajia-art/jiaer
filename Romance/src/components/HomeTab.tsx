@@ -64,6 +64,7 @@ import { factsOf, isManager, knows, producerProjects } from "../game/producer";
 import { categoryLabel, roleLabel } from "../game/projects";
 import { dayDateLabel, dowOf, pendingTodos, startDateLabel, type GameState as SimState } from "../game/logic";
 import { homeMainQuest } from "../lib/homeMainQuest";
+import { buildActionIdeas, eventOptionIndexes } from "../lib/actionIdeas";
 import { getWorldStorylines } from "../mods/registry";
 import { liveTerm as T } from "../mods/live";
 
@@ -506,7 +507,7 @@ function PersonCard({ name, known, active, onClick, avatar }: { name: string; ro
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" className="text-white/90" aria-hidden><circle cx="12" cy="8.2" r="4" /><path d="M4.5 20.5c.8-4 3.9-6.3 7.5-6.3s6.7 2.3 7.5 6.3z" /></svg>
         )}
       </span>
-      <span className={`max-w-full truncate rounded-full px-1.5 py-px text-[10.5px] font-bold leading-tight backdrop-blur ${active ? "bg-coral text-white" : "bg-white/80 text-ink"}`}>{known ? name : "陌生人"}</span>
+      <span className={`max-w-full truncate rounded-full px-1.5 py-px text-[10.5px] font-bold leading-tight backdrop-blur ${active ? "bg-coral text-white" : "bg-paper-2/90 text-ink ring-1 ring-line/60"}`}>{known ? name : "陌生人"}</span>
     </button>
   );
 }
@@ -779,7 +780,7 @@ function PersonDossier({ pid, onClose, onJump }: { pid: string; onClose: () => v
 
 /* 世界 Tab：图形化房间制 MUD 主入口。
  * 星城舆图（战争迷雾）→ 点击节点看详情/确认前往 → 当前场景（在场人物·物品·行动）→ 故事线。 */
-const IDEAS = ["环顾四周，看看这里", "给经纪人林宜打个电话", "翻开今天的日程本"]; // 没有剧情选项时的灵感
+// 功能注释：无剧情选项时的行动灵感改由 lib/actionIdeas.buildActionIdeas 按当前地点 / 在场人物 / 主线生成，禁止写死他作品人名
 
 export default function HomeTab() {
   const { game, busy, look: theme, commitGame, submit, simMove, simVisit, simEvent, simChooseArc, simConfirmDating, simPickup, simActivity, simBuy, simAskIntel, playSpotEvent } = useGame();
@@ -880,7 +881,9 @@ export default function HomeTab() {
   // 玩家在地图编辑器里对本点位的覆写（名称/描述/背景图/自定义物件）
   const bgOverride = spotBackground(game, room);
   const nameOverride = spotName(game, room);
-  const descText = spotDesc(game, room) ?? roomDesc(room) ?? loc?.func;
+  // 功能注释：地点说明取本地点真实描述；「新地点」「你来到了「新地点」」这类占位文案一律隐藏，不用错名兜底
+  const rawDescText = spotDesc(game, room) ?? roomDesc(room) ?? loc?.func;
+  const descText = rawDescText && !/新地点/.test(rawDescText) ? rawDescText : undefined;
   const people = mobsHere(s, room, game.npcs).filter((p) => p.present); // 含设了常驻地点的自定义 / 剧情新增人物
   const encounters = encountersHere(s, room, game.npcs); // 同处一地方可触发的条件邂逅
   // 内容池物件 + 玩家自定义物件，统一带上是否已入行囊
@@ -980,6 +983,18 @@ export default function HomeTab() {
   // 功能注释：正文固定在场景图下累积留屏，不再进可消失对话框；底部只留输入与行动选项。
   const introSlots = newcomerSlots(game.story); // 初遇名片挂在该人物最近一次登场的回合底部
   const hasOpts = !busy && (game.options?.length ?? 0) > 0 && !custom;
+  // 功能注释：无剧情选项时的行动灵感，按当前地点 / 在场人物 / 主线生成（3.6.1）
+  const ideaTexts = buildActionIdeas({
+    locationName: nameOverride ?? loc?.name,
+    presentNames: people.map((p) => p.name),
+    mainQuestLabel: homeMainQuest(s, getWorldStorylines(), dayDateLabel(s.day ?? 0))?.stepName,
+  });
+  // 功能注释：进行中事件 → 提示回复里对应项标色（3.6）；无事件时集合为空，不乱标
+  const shownOpts = (game.options ?? []).slice(0, 3);
+  const activeEventHints = (s.eventsActive ?? [])
+    .map((id) => (game.fixedEvents ?? []).find((e) => e.id === id))
+    .map((e) => (e ? { name: e.name, keywords: e.keywords } : { name: "", keywords: [] as string[] }));
+  const eventIdx = hasOpts ? eventOptionIndexes(shownOpts, activeEventHints) : new Set<number>();
 
   const send = (text: string) => {
     if (!text.trim() || busy) return;
@@ -1039,17 +1054,23 @@ export default function HomeTab() {
                 </button>
               </p>
               <div className="grid max-h-[36vh] gap-1.5 overflow-y-auto">
-                {(hasOpts ? (game.options ?? []).slice(0, 3) : IDEAS.map((t) => ({ label: t, value: t }))).map((o, i) => (
+                {(hasOpts ? shownOpts : ideaTexts.map((t) => ({ label: t, value: t }))).map((o, i) => (
                   <button
                     key={i}
                     type="button"
+                    data-event-option={eventIdx.has(i) ? "1" : undefined}
                     onClick={() => { setIdeasOpen(false); if (hasOpts) send(o.value); else { setInput(o.value); inputRef.current?.focus(); } }}
-                    className="option-btn group flex items-center gap-2.5 rounded-[var(--radius-ui)] border border-jade/12 bg-paper/70 py-2 pl-2 pr-3 text-left text-[13px] leading-snug text-ink shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-200 hover:border-jade/35 hover:bg-paper active:scale-[0.99]"
+                    className={`option-btn group flex items-center gap-2.5 rounded-[var(--radius-ui)] border py-2 pl-2 pr-3 text-left text-[13px] leading-snug text-ink shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-200 active:scale-[0.99] ${
+                      eventIdx.has(i)
+                        ? "option-btn-event border-coral/60 bg-coral/10 hover:border-coral hover:bg-coral/15"
+                        : "border-jade/12 bg-paper/70 hover:border-jade/35 hover:bg-paper"
+                    }`}
                   >
                     <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[var(--radius-ui-sm)] bg-jade/10 text-[11px] font-semibold tabular-nums text-jade transition group-hover:bg-jade group-hover:text-paper">
                       {hasOpts ? <kbd className="font-sans">{i + 1}</kbd> : <IconSparkle width={11} height={11} />}
                     </span>
                     <span className="min-w-0 flex-1 leading-snug">{o.label}</span>
+                    {eventIdx.has(i) && <span className="shrink-0 rounded-full bg-coral px-1.5 py-px text-[10px] font-bold leading-snug text-white">事件</span>}
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="shrink-0 -translate-x-1 text-jade opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100" aria-hidden>
                       <path d="m9 18 6-6-6-6" />
                     </svg>
@@ -1230,11 +1251,11 @@ export default function HomeTab() {
                         <>
                           {descText && (
                             isNovel ? (
-                              <p className="story-prose whitespace-pre-line leading-[1.75] tracking-[0.02em] text-[#1a1a1a] [text-indent:2em]">
+                              <p className="story-prose whitespace-pre-line leading-[1.8] tracking-[0.02em] text-[color:var(--story-ink)]">
                                 {descText}
                               </p>
                             ) : (
-                              <p className="story-prose story-narration-panel whitespace-pre-line rounded-xl px-3 py-2 leading-[1.75] tracking-[0.02em] [text-indent:2em]">
+                              <p className="story-prose story-narration-panel whitespace-pre-line rounded-xl px-3 py-2 leading-[1.85] tracking-[0.015em]">
                                 {descText}
                               </p>
                             )
@@ -1249,7 +1270,7 @@ export default function HomeTab() {
                             ) : t.error ? (
                               <ErrorBanner key={t.id} error={t.error} />
                             ) : (
-                              <div key={t.id} className="text-[13px] leading-relaxed text-[#1a1a1a]">
+                              <div key={t.id} className="text-[13px] leading-relaxed text-[color:var(--story-ink)]">
                                 {/* 功能注释：小说内容卡=普通段落+皮肤气泡；游戏模式叠图旁白用可调浅色底+黑字 */}
                                 <Segments segments={t.segments} npcs={game.npcs} playerAvatar={game.player.avatar} playerName={game.player.name} overlay={!isNovel} plain={isNovel} />
                                 <Thoughts thoughts={t.thoughts} npcs={game.npcs} />

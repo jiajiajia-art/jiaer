@@ -3,24 +3,21 @@ import { useState } from "react";
 import { firedOf } from "../game/mapedits";
 import { useGame } from "../store/gameCtx";
 import { SIDEQUESTS } from "../worlds/star2005/content";
-import { dayDateLabel, ROMANCE_ARCS, arcView, startDateLabel } from "../game/logic";
+import { dayDateLabel, startDateLabel } from "../game/logic";
 import { homeMainQuest } from "../lib/homeMainQuest";
 import { storylineBrief } from "../game/fixedEvents";
-import { getWorldSidelines, getWorldStorylines } from "../mods/registry";
+import { feature, getWorldSidelines, getWorldStorylines } from "../mods/registry";
 import { SIDE_STATE_LABEL, visibleSidelines } from "../lib/sidelines";
 import type { SideState } from "../lib/types";
 import { limitDays } from "../lib/types";
-import { Avatar, Modal } from "./ui";
-import { openPerson } from "./NpcTab";
 
-/* 任务日志（仿常规 RPG）：主线 / 羁绊 / 支线 / 回顾
- *  · 主线——当前章节、目标与前情提要，「继续」回到世界页；
- *  · 羁绊——人物情感线的阶段进度与解锁条件；
+/* 任务日志（仿常规 RPG）：主线 / 支线 / 回顾
+ *  · 主线——当前作品主线（与顶栏同一数据源）、目标与前情提要，「继续」回到世界页；
  *  · 支线——可接取 / 已完成，点开详情再开始；
  *  · 回顾——剧情志，触发过的单篇剧情（收藏 / 删除 / 导出）。 */
 
 const KIND_LABEL: Record<string, string> = { spot: "点位事件", quest: "支线", note: "地点备注" };
-type View = "main" | "bond" | "side" | "journal";
+type View = "main" | "side" | "journal";
 const go = (tab: string) => window.dispatchEvent(new CustomEvent("star:navtab", { detail: tab }));
 
 function Status({ k }: { k: "doing" | "done" | "lock" }) {
@@ -45,13 +42,6 @@ const SIDE_TONE: Record<SideState, string> = {
 function Bar({ v, max }: { v: number; max: number }) {
   return <div className="h-1.5 overflow-hidden rounded-full bg-paper-2"><div className="h-full rounded-full bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] transition-[width] duration-500" style={{ width: `${max ? Math.min(100, (v / max) * 100) : 0}%` }} /></div>;
 }
-/* 1–99 转中文数字：第一章 / 第十二章 */
-const CN = "零一二三四五六七八九";
-function cnNum(n: number) {
-  if (n < 10) return CN[n];
-  const t = Math.floor(n / 10), o = n % 10;
-  return `${t > 1 ? CN[t] : ""}十${o ? CN[o] : ""}`;
-}
 /* 前情提要：按「· 」拆成一条条事件，拆不开就整段显示 */
 function recapItems(memory: string) {
   const parts = memory.split(/(?:^|\s)[·•]\s*/).map((x) => x.trim()).filter(Boolean);
@@ -70,17 +60,22 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
   const doneQuests = new Set(firedOf(game, "quest"));
   const favCount = journal.filter((e) => e.fav).length;
   const lim = limitDays(game.timeLimit, game.startDate || startDateLabel());
-  const bonds = Object.keys(ROMANCE_ARCS).filter((id) => s.metPeople.includes(id)).map((id) => ({ id, npc: game.npcs.find((n) => n.id === id), v: arcView(s, id) })).filter((b) => b.v);
   const triggered = SIDEQUESTS.filter((x) => doneQuests.has(x.id));
   const hiddenCount = SIDEQUESTS.length - triggered.length;
   // 功能注释：创作者支线——隐藏支线触发前不显示；进行中排最前，未出现的排最后
   const SIDE_ORDER: Record<SideState, number> = { active: 0, done: 1, failed: 2, pending: 3 };
   const sides = visibleSidelines(getWorldSidelines(), s).sort((a, b) => SIDE_ORDER[a.state] - SIDE_ORDER[b.state]);
   const sideCount = triggered.length + sides.filter((x) => x.state !== "pending").length;
-  const chapter = Math.max(1, Math.ceil(s.week / 4));
+  // 功能注释：主线与顶栏同一数据源（homeMainQuest / getWorldStorylines），没有章节设定就不硬造章号
+  const mainQuest = homeMainQuest(s, getWorldStorylines(), dayDateLabel(s.day ?? 0));
+  const mainLineName = mainQuest?.lineName ?? (getWorldStorylines().find((l) => l.enabled !== false && l.name?.trim())?.name?.trim() || "主线");
+  const mainStepName = mainQuest?.stepName;
+  const mainStatus = game.ended ? "已完成" : "进行中";
   const recap = game.memory?.trim() ? recapItems(game.memory) : [];
   const recapShown = recapAll ? recap : recap.slice(-4);
-  const stats = [
+  // 功能注释：名气 / 口碑 / 作品只在本作品确有「事业」玩法时才显示，其它作品不画无意义三格
+  const showCareerStats = feature("career");
+  const stats = !showCareerStats ? [] : [
     { label: "名气", en: "FAME", v: s.fame, tone: "var(--coral)" },
     { label: "口碑", en: "REPUTE", v: s.reputation, tone: "var(--jade)" },
     { label: "作品", en: "WORKS", v: s.works, tone: "var(--gold)" },
@@ -90,8 +85,8 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
     <div className="w-full pb-5">
       <div className="mx-auto max-w-2xl space-y-4 px-4 pt-3">
       {/* 分类页签 */}
-      <div className="grid grid-cols-4 gap-1 rounded-2xl border border-line/60 bg-paper-2/60 p-1">
-        {([["main", "主线", 0], ["bond", "羁绊", bonds.length], ["side", "支线", sideCount], ["journal", "回顾", journal.length]] as const).map(([id, label, n]) => {
+      <div className="grid grid-cols-3 gap-1 rounded-2xl border border-line/60 bg-paper-2/60 p-1">
+        {([["main", "主线", 0], ["side", "支线", sideCount], ["journal", "回顾", journal.length]] as const).map(([id, label, n]) => {
           const on = view === id;
           return (
             <button key={id} onClick={() => setView(id)} aria-pressed={on}
@@ -105,18 +100,18 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
 
       {view === "main" && (
         <article className="overflow-hidden rounded-3xl border border-line/70 bg-paper shadow-[0_18px_40px_-28px_rgba(110,70,170,0.6)]">
-          {/* 章节卷首 */}
+          {/* 主线卷首：标题取当前作品主线，不写死章节 */}
           <header className="relative overflow-hidden bg-gradient-to-br from-[var(--jade)] via-[color-mix(in_srgb,var(--jade)_45%,var(--coral))] to-[var(--coral)] px-5 pb-5 pt-4 text-white">
-            <span aria-hidden className="pointer-events-none absolute -right-3 -top-6 select-none font-serif text-[112px] font-black leading-none text-white/12 tabular-nums">{String(chapter).padStart(2, "0")}</span>
             <span aria-hidden className="pointer-events-none absolute -bottom-16 -left-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
             <div className="relative flex items-center gap-2">
-              <span className="text-[10px] font-bold tracking-[0.32em] text-white/75">MAIN STORY · CH.{String(chapter).padStart(2, "0")}</span>
+              <span className="text-[10px] font-bold tracking-[0.32em] text-white/75">MAIN STORY</span>
               <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-white/18 px-2 py-0.5 text-[10.5px] font-semibold ring-1 ring-white/30 backdrop-blur">
-                <span className={`h-1.5 w-1.5 rounded-full bg-white ${game.ended ? "" : "animate-pulse"}`} />{game.ended ? "已完成" : "进行中"}
+                <span className={`h-1.5 w-1.5 rounded-full bg-white ${game.ended ? "" : "animate-pulse"}`} />{mainStatus}
               </span>
             </div>
             <h3 className="relative mt-2 font-serif text-[24px] font-black leading-tight tracking-[0.04em]">
-              星途<span className="mx-2 font-normal text-white/60">·</span>第{cnNum(chapter)}章
+              {mainLineName}
+              {mainStepName ? <><span className="mx-2 font-normal text-white/60">·</span><span className="text-[0.8em]">{mainStepName}</span></> : null}
             </h3>
             <p className="relative mt-1.5 text-[11.5px] text-white/80">第 {s.week} 周 · 第 {s.day + 1} 天</p>
           </header>
@@ -130,10 +125,10 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
                 </svg>
               </span>
               <div className="min-w-0">
-                <p className="text-[10.5px] font-bold tracking-[0.2em] text-coral">本章目标</p>
+                <p className="text-[10.5px] font-bold tracking-[0.2em] text-coral">当前目标</p>
                 {(() => {
                   // 功能注释：任务页也只展示创作者主线，不再塞引擎日程/通告占位提醒
-                  const q = homeMainQuest(s, getWorldStorylines(), dayDateLabel(s.day ?? 0));
+                  const q = mainQuest;
                   if (q) {
                     return (<>
                       <p className="mt-0.5 text-[14px] font-bold leading-snug text-ink">{q.lineName} · {q.stepName}</p>
@@ -143,12 +138,17 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
                   }
                   const brief = storylineBrief(s).trim();
                   if (brief) return <p className="mt-0.5 whitespace-pre-line text-[12px] leading-relaxed text-ink-soft">{brief}</p>;
+                  // 功能注释：已有主线（顶栏同源）时不说「尚未配置」，只在确实没有任何主线时才提示
+                  if (getWorldStorylines().some((l) => l.enabled !== false && l.nodes?.length)) {
+                    return <p className="mt-0.5 text-[12px] leading-relaxed text-ink-soft">{mainStatus === "已完成" ? "主线已全部完成。" : "主线进行中，留意剧情推进。"}</p>;
+                  }
                   return <p className="mt-0.5 text-[12px] leading-relaxed text-ink-soft">创作者尚未配置主线目标。</p>;
                 })()}
               </div>
             </div>
 
-            {/* 核心数值 */}
+            {/* 核心数值：仅事业类作品显示 */}
+            {stats.length > 0 && (
             <div className="grid grid-cols-3 gap-2">
               {stats.map((x) => (
                 <div key={x.label} className="relative overflow-hidden rounded-2xl border border-line/70 bg-paper-2/50 px-3 py-2.5">
@@ -160,6 +160,7 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
                 </div>
               ))}
             </div>
+            )}
 
             {lim > 0 && (
               <div className="rounded-2xl border border-line/70 px-3.5 py-2.5">
@@ -205,29 +206,6 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
             </button>
           </div>
         </article>
-      )}
-
-      {view === "bond" && (
-        <div className="space-y-2.5">
-          {bonds.length === 0 && <p className="rounded-2xl border border-line bg-paper/40 px-4 py-8 text-center text-[12.5px] text-ink-soft">还没有开启的羁绊。结识重要人物后，这里会出现你们的故事线。</p>}
-          {bonds.map(({ id, npc, v }) => {
-            const vv = v!;
-            const k = vv.isDating || (vv.done >= vv.total && !vv.datingReady) ? "done" : vv.locked ? "lock" : "doing";
-            return (
-              <button key={id} onClick={() => openPerson(id)} className="flex w-full items-center gap-3 rounded-2xl border border-line bg-paper/60 p-3 text-left shadow-sm transition hover:border-jade/50">
-                <Avatar src={npc?.avatar} name={npc?.name ?? id} size={44} editable={false} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2"><b className="truncate text-[14px] text-ink">{npc?.name ?? id}</b><Status k={k} /></div>
-                  <p className="mt-0.5 truncate text-[11.5px] text-ink-soft">
-                    {vv.isDating ? "已确认交往" : vv.stage ? `第 ${vv.done + 1} 段 · ${vv.stage.name}` : vv.datingReady ? "可确认关系" : vv.total ? "故事线已走完" : `条件养成 · ${vv.confirmReq}`}
-                  </p>
-                  {vv.locked && vv.reason && <p className="mt-0.5 truncate text-[11px] text-coral/80">解锁条件：{vv.reason}</p>}
-                  {vv.total > 0 && <div className="mt-1.5"><Bar v={vv.done} max={vv.total} /></div>}
-                </div>
-              </button>
-            );
-          })}
-        </div>
       )}
 
       {view === "side" && (

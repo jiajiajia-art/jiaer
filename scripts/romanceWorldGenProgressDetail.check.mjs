@@ -48,7 +48,7 @@ test('worldGenProgressDetail_完成后摘要可点开内容', async () => {
   );
 });
 
-test('worldGenProgressDetail_全选须瘦身文长且人物地点硬配额', async () => {
+test('worldGenProgressDetail_全选须瘦身文长且人物地点建议条数', async () => {
   const d = await import(pathToFileURL(join(romance, 'lib/worldGenProgressDetail.ts')).href);
   const lean = d.worldGenLeanLimits(11);
   const few = d.worldGenLeanLimits(3);
@@ -58,12 +58,11 @@ test('worldGenProgressDetail_全选须瘦身文长且人物地点硬配额', asy
   assert.equal(few.npcs, d.WORLD_GEN_NPCS_COUNT);
   assert.equal(few.rooms, d.WORLD_GEN_ROOMS_COUNT);
   assert.ok(lean.paths <= 2);
-  assert.ok(lean.scriptToneChars < 1200);
+  assert.equal('scriptToneChars' in lean, false, '不再下发基调目标字数');
   assert.ok(lean.npcBioChars <= 120);
-  assert.ok(few.scriptToneChars >= lean.scriptToneChars);
   assert.equal(d.worldGenBatchNeedsEnrich(['travelTime']), false);
   assert.equal(d.worldGenBatchNeedsEnrich(['hub:book', 'prompt']), true);
-  assert.match(d.worldGenLeanPromptBlock(lean, 'skeleton'), /硬配额|禁止灌满|假完成/);
+  assert.match(d.worldGenLeanPromptBlock(lean, 'skeleton'), /建议|禁止灌满|禁止为凑数补空壳/);
   assert.match(d.worldGenLeanPromptBlock(lean, 'enrich'), /补长文|禁止新增/);
 });
 
@@ -91,12 +90,21 @@ test('worldGenGenerate_进度按细项展示且两次串联合并请求', async 
   void _m;
 
   const names = ['沈晚晴', '林夏', '顾清河', '周明远', '白晓棠'];
+  const rooms = Object.fromEntries(
+    Array.from({ length: 5 }, (_, i) => [
+      `room${i + 1}`,
+      { name: `地点${i + 1}`, desc: `地点${i + 1}的场景描述，进入时可看见布局与氛围。` },
+    ]),
+  );
   const fiveNpcs = names.map((name, i) => ({
     id: `n${i + 1}`,
     name,
     gender: i % 2 === 0 ? '女' : '男',
     age: 22 + i,
+    home: `room${(i % 5) + 1}`,
     bio: '这是一段足够长的人物小传，用来通过软校验：人物须写出贴合世界观的简介与动机，不能只剩一句空话。',
+    // 功能注释：线路回填要求有对应人物；n1 是线路 p1 的主角
+    ...(i === 0 ? { pathId: 'p1' } : {}),
   }));
 
   const details = [];
@@ -131,7 +139,7 @@ test('worldGenGenerate_进度按细项展示且两次串联合并请求', async 
       if (!last.includes('当前大类：「人物地点事件结局」')) {
         throw new Error(`意外大类提示: ${last.slice(0, 120)}`);
       }
-      return JSON.stringify({ content: { npcs: fiveNpcs } });
+      return JSON.stringify({ content: { npcs: fiveNpcs, rooms, startRoom: 'room1' } });
     },
     cfg: { baseUrl: 'https://example.test/v1', apiKey: 'k', model: 'm' },
   });
@@ -148,8 +156,8 @@ test('worldGenGenerate_进度按细项展示且两次串联合并请求', async 
   const path = result.progress.modules.find((m) => m.id === 'hub:paths');
   assert.match(path?.summary || '', /旅店继承人/);
   assert.ok(result.mod.content.worldBook?.some((e) => e.title === '雾港潮汐'));
-  assert.ok(result.mod.content.creation?.paths?.some((p) => p.name === '旅店继承人'));
-  assert.equal(result.mod.content.npcs.length, 5);
+  assert.ok(result.mod.content.creation?.paths?.some((p) => p.name === '旅店继承人' && p.hero === 'n1'));
+  assert.ok(result.mod.content.npcs.length >= 2);
 });
 
 test('worldGenWizard_进度UI须展示明细与摘要展开', () => {

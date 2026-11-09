@@ -1,5 +1,5 @@
 /**
- * ① 基础 · 简介 200 / 剧本基调（系统提示词）4000：
+ * ① 基础 · 简介 200 / 剧本基调（系统提示词）5000：
  * 超限标红、拦截保存；作者态不展示作品 ID 与三栏合并说明。
  */
 import assert from 'node:assert/strict';
@@ -15,19 +15,19 @@ const panel = readFileSync(join(romance, 'components/ModEditorPanel.tsx'), 'utf8
 test('modBasicInfoLimits_字数闸门', async () => {
   const lim = await import(pathToFileURL(join(romance, 'lib/modBasicInfoLimits.ts')).href);
   assert.equal(lim.MOD_DESC_MAX, 200);
-  assert.equal(lim.SCRIPT_TONE_MAX, 4000);
+  assert.equal(lim.SCRIPT_TONE_MAX, 5000);
   assert.equal(lim.isModDescOverLimit('字'.repeat(200)), false);
   assert.equal(lim.isModDescOverLimit('字'.repeat(201)), true);
-  assert.equal(lim.isScriptToneOverLimit('字'.repeat(4000)), false);
-  assert.equal(lim.isScriptToneOverLimit('字'.repeat(4001)), true);
+  assert.equal(lim.isScriptToneOverLimit('字'.repeat(5000)), false);
+  assert.equal(lim.isScriptToneOverLimit('字'.repeat(5001)), true);
   assert.equal(lim.validateModBasicInfoLimits({ description: '短', scriptTone: '短' }), null);
   assert.equal(
     lim.validateModBasicInfoLimits({ description: '字'.repeat(201), scriptTone: '短' }),
     '简介最多 200 字',
   );
   assert.equal(
-    lim.validateModBasicInfoLimits({ description: '短', scriptTone: '字'.repeat(4001) }),
-    '剧本基调最多 4000 字',
+    lim.validateModBasicInfoLimits({ description: '短', scriptTone: '字'.repeat(5001) }),
+    '剧本基调最多 5000 字',
   );
 });
 

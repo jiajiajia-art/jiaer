@@ -1,5 +1,18 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import {
+  HiOutlineArchive,
+  HiOutlineCheck,
+  HiOutlineCloudUpload,
+  HiOutlineDocumentText,
+  HiOutlineFolder,
+  HiOutlineFlag,
+  HiOutlinePlay,
+  HiOutlineRefresh,
+  HiOutlineTrash,
+  HiOutlineX,
+} from 'react-icons/hi';
+import { IoChevronBack } from 'react-icons/io5';
 import Navbar from '../components/Layout/Navbar';
 import { HOST_ADDRESS } from '../config';
 import { authFetch } from '../api/base';
@@ -561,7 +574,7 @@ const handleCreate = () => {
                 onClick={() => navigate('/profile')}
                 aria-label={t('customIFCreate.backAria')}
               >
-                ‹
+                <IoChevronBack className={styles.btnIcon} aria-hidden="true" />
               </button>
               <h1 className={styles.pageTitle}>
                 {isEditMode ? t('customIFCreate.editTitle') : t('customIFCreate.createTitle')}
@@ -573,7 +586,10 @@ const handleCreate = () => {
                     className={styles.pageTest}
                     onClick={() => navigate(`/customif/${appId || appIdFromQuery}`)}
                   >
-                    {t('customIFCreate.headerTest')}
+                    <span className={styles.btnLabel}>
+                      <HiOutlinePlay className={styles.btnIcon} aria-hidden="true" />
+                      <span>{t('customIFCreate.headerTest')}</span>
+                    </span>
                   </button>
                 ) : null}
               </div>
@@ -661,9 +677,24 @@ const handleCreate = () => {
                 <div className={styles.uploaderColumn}>
                   {/* 文件类型选择器：切换后渲染对应的上传区域与校验 */}
                   <div className={styles.seg}>
-                    <button type="button" className={`${styles.segBtn} ${sourceType==='single' ? styles.segBtnActive : ''}`} onClick={()=> changeSourceType('single')}>{t('customIFCreate.sourceSingle')}</button>
-                    <button type="button" className={`${styles.segBtn} ${sourceType==='zip' ? styles.segBtnActive : ''}`} onClick={()=> changeSourceType('zip')}>{t('customIFCreate.sourceZip')}</button>
-                    <button type="button" className={`${styles.segBtn} ${sourceType==='dir' ? styles.segBtnActive : ''}`} onClick={()=> changeSourceType('dir')}>{t('customIFCreate.sourceDir')}</button>
+                    <button type="button" className={`${styles.segBtn} ${sourceType==='single' ? styles.segBtnActive : ''}`} onClick={()=> changeSourceType('single')}>
+                      <span className={styles.btnLabel}>
+                        <HiOutlineDocumentText className={styles.btnIcon} aria-hidden="true" />
+                        <span>{t('customIFCreate.sourceSingle')}</span>
+                      </span>
+                    </button>
+                    <button type="button" className={`${styles.segBtn} ${sourceType==='zip' ? styles.segBtnActive : ''}`} onClick={()=> changeSourceType('zip')}>
+                      <span className={styles.btnLabel}>
+                        <HiOutlineArchive className={styles.btnIcon} aria-hidden="true" />
+                        <span>{t('customIFCreate.sourceZip')}</span>
+                      </span>
+                    </button>
+                    <button type="button" className={`${styles.segBtn} ${sourceType==='dir' ? styles.segBtnActive : ''}`} onClick={()=> changeSourceType('dir')}>
+                      <span className={styles.btnLabel}>
+                        <HiOutlineFolder className={styles.btnIcon} aria-hidden="true" />
+                        <span>{t('customIFCreate.sourceDir')}</span>
+                      </span>
+                    </button>
                   </div>
 
                   <div className={`${styles.dropZoneLarge} ${dragOver? 'drag' : ''}`}
@@ -759,8 +790,18 @@ const handleCreate = () => {
                     {multiFiles.length>0 && (
                       <>
                         <div className={styles.listActions}>
-                          <button type="button" className={styles.smallBtn} onClick={()=> selectAll(true)}>{t('customIFCreate.selectAll')}</button>
-                          <button type="button" className={styles.smallBtn} onClick={()=> selectAll(false)}>{t('customIFCreate.selectNone')}</button>
+                          <button type="button" className={styles.smallBtn} onClick={()=> selectAll(true)}>
+                            <span className={styles.btnLabel}>
+                              <HiOutlineCheck className={styles.btnIcon} aria-hidden="true" />
+                              <span>{t('customIFCreate.selectAll')}</span>
+                            </span>
+                          </button>
+                          <button type="button" className={styles.smallBtn} onClick={()=> selectAll(false)}>
+                            <span className={styles.btnLabel}>
+                              <HiOutlineX className={styles.btnIcon} aria-hidden="true" />
+                              <span>{t('customIFCreate.selectNone')}</span>
+                            </span>
+                          </button>
                         </div>
                         <div className={styles.fileStats}>
                           {entryPath
@@ -788,7 +829,12 @@ const handleCreate = () => {
                               <span className={styles.filePath}>{it.path}</span>
                               <span className={styles.fileSize}>{formatBytes(it.file.size||0)}</span>
                               {/index\.html$/i.test(it.path) && (
-                                <button type="button" className={styles.smallBtn} onClick={()=> setEntryPath(it.path)} title={t('customIFCreate.setAsEntry')}>{t('customIFCreate.setAsEntry')}</button>
+                                <button type="button" className={styles.smallBtn} onClick={()=> setEntryPath(it.path)} title={t('customIFCreate.setAsEntry')}>
+                                  <span className={styles.btnLabel}>
+                                    <HiOutlineFlag className={styles.btnIcon} aria-hidden="true" />
+                                    <span>{t('customIFCreate.setAsEntry')}</span>
+                                  </span>
+                                </button>
                               )}
                             </div>
                           ))}
@@ -808,7 +854,12 @@ const handleCreate = () => {
                       <div className={styles.fileRowLine}>
                         <span className={styles.filePath}>index.html</span>
                         <span className={styles.fileSize}>{formatBytes(singleFile.size||0)}</span>
-                        <button type="button" className={styles.smallBtn} onClick={()=> { if (singleRef.current){ singleRef.current.accept='text/html,.html'; singleRef.current.click(); } }}>{t('customIFCreate.reselect')}</button>
+                        <button type="button" className={styles.smallBtn} onClick={()=> { if (singleRef.current){ singleRef.current.accept='text/html,.html'; singleRef.current.click(); } }}>
+                          <span className={styles.btnLabel}>
+                            <HiOutlineRefresh className={styles.btnIcon} aria-hidden="true" />
+                            <span>{t('customIFCreate.reselect')}</span>
+                          </span>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -823,8 +874,18 @@ const handleCreate = () => {
                     {multiFiles.length>0 && (
                       <>
                         <div className={styles.listActions}>
-                          <button type="button" className={styles.smallBtn} onClick={()=> selectAll(true)}>{t('customIFCreate.selectAll')}</button>
-                          <button type="button" className={styles.smallBtn} onClick={()=> selectAll(false)}>{t('customIFCreate.selectNone')}</button>
+                          <button type="button" className={styles.smallBtn} onClick={()=> selectAll(true)}>
+                            <span className={styles.btnLabel}>
+                              <HiOutlineCheck className={styles.btnIcon} aria-hidden="true" />
+                              <span>{t('customIFCreate.selectAll')}</span>
+                            </span>
+                          </button>
+                          <button type="button" className={styles.smallBtn} onClick={()=> selectAll(false)}>
+                            <span className={styles.btnLabel}>
+                              <HiOutlineX className={styles.btnIcon} aria-hidden="true" />
+                              <span>{t('customIFCreate.selectNone')}</span>
+                            </span>
+                          </button>
                         </div>
                         <div className={styles.fileStats}>
                           {entryPath
@@ -852,7 +913,12 @@ const handleCreate = () => {
                               <span className={styles.filePath}>{it.path}</span>
                               <span className={styles.fileSize}>{formatBytes(it.file.size||0)}</span>
                               {/index\.html$/i.test(it.path) && (
-                                <button type="button" className={styles.smallBtn} onClick={()=> setEntryPath(it.path)} title={t('customIFCreate.setAsEntry')}>{t('customIFCreate.setAsEntry')}</button>
+                                <button type="button" className={styles.smallBtn} onClick={()=> setEntryPath(it.path)} title={t('customIFCreate.setAsEntry')}>
+                                  <span className={styles.btnLabel}>
+                                    <HiOutlineFlag className={styles.btnIcon} aria-hidden="true" />
+                                    <span>{t('customIFCreate.setAsEntry')}</span>
+                                  </span>
+                                </button>
                               )}
                             </div>
                           ))}
@@ -872,7 +938,10 @@ const handleCreate = () => {
                     className={styles.clearPill}
                     onClick={() => setManifestText('')}
                   >
-                    {t('customIFCreate.clearAll')}
+                    <span className={styles.btnLabel}>
+                      <HiOutlineTrash className={styles.btnIcon} aria-hidden="true" />
+                      <span>{t('customIFCreate.clearAll')}</span>
+                    </span>
                   </button>
                 </div>
                 <textarea
@@ -902,13 +971,20 @@ const handleCreate = () => {
                       disabled={creating}
                       className={`${styles.primaryBtn}${isMetaSave ? ` ${styles.primaryBtnMeta}` : ''}`}
                     >
-                      {creating
-                        ? (isEditMode ? t('customIFCreate.uploadingEdit') : t('customIFCreate.creating'))
-                        : (isEditMode
-                          ? (hasPendingFiles
-                            ? t('customIFCreate.uploadNewVersion')
-                            : t('customIFCreate.saveMeta'))
-                          : t('customIFCreate.createAndUpload'))}
+                      <span className={styles.btnLabel}>
+                        {isMetaSave && !creating
+                          ? <HiOutlineCheck className={styles.btnIcon} aria-hidden="true" />
+                          : <HiOutlineCloudUpload className={styles.btnIcon} aria-hidden="true" />}
+                        <span>
+                          {creating
+                            ? (isEditMode ? t('customIFCreate.uploadingEdit') : t('customIFCreate.creating'))
+                            : (isEditMode
+                              ? (hasPendingFiles
+                                ? t('customIFCreate.uploadNewVersion')
+                                : t('customIFCreate.saveMeta'))
+                              : t('customIFCreate.createAndUpload'))}
+                        </span>
+                      </span>
                     </button>
                   );
                 })()}
@@ -918,7 +994,10 @@ const handleCreate = () => {
                     onClick={() => navigate(`/customif/${appId || appIdFromQuery}`)}
                     className={styles.secondaryBtn}
                   >
-                    {t('customIFCreate.startTest')}
+                    <span className={styles.btnLabel}>
+                      <HiOutlinePlay className={styles.btnIcon} aria-hidden="true" />
+                      <span>{t('customIFCreate.startTest')}</span>
+                    </span>
                   </button>
                 )}
               </div>
@@ -932,9 +1011,20 @@ const handleCreate = () => {
         progressText={progressText}
         onCancel={handleCancelUpload}
         completed={lastUploadOk && progress >= 100}
-        primaryText={t('customIFCreate.confirm')}
-        secondaryText={t('customIFCreate.startTest')}
+        // 功能注释：成功态不自动关；展示立刻去测试 + 取消，成功 toast 叠在遮罩之上
+        autoCloseOnComplete={false}
+        primaryText={t('customIFCreate.dismissUploadResult')}
+        secondaryText={t('customIFCreate.goTestNow')}
+        primaryIcon={<HiOutlineX />}
+        secondaryIcon={<HiOutlinePlay />}
+        cancelIcon={<HiOutlineX />}
         onPrimary={() => { setIsUploading(false); }}
+        onSecondary={() => {
+          const id = appId || appIdFromQuery;
+          setIsUploading(false);
+          if (id) navigate(`/customif/${id}`);
+        }}
+        cancelText={t('createGame.cancelUpload')}
       />
       {confirmOpen && (
         <div className={styles.confirmOverlay}>
@@ -963,8 +1053,18 @@ const handleCreate = () => {
               </div>
             </div>
             <div className={styles.confirmFooter}>
-              <button className={styles.btnGhost} onClick={()=> setConfirmOpen(false)}>{t('common.cancel')}</button>
-              <button className={styles.btnPrimary} onClick={() => void doUpload()} disabled={creating || multiStats.selCount===0}>{t('customIFCreate.confirmUpload')}</button>
+              <button type="button" className={styles.btnGhost} onClick={()=> setConfirmOpen(false)}>
+                <span className={styles.btnLabel}>
+                  <HiOutlineX className={styles.btnIcon} aria-hidden="true" />
+                  <span>{t('common.cancel')}</span>
+                </span>
+              </button>
+              <button type="button" className={styles.btnPrimary} onClick={() => void doUpload()} disabled={creating || multiStats.selCount===0}>
+                <span className={styles.btnLabel}>
+                  <HiOutlineCloudUpload className={styles.btnIcon} aria-hidden="true" />
+                  <span>{t('customIFCreate.confirmUpload')}</span>
+                </span>
+              </button>
             </div>
           </div>
         </div>

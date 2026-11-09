@@ -28,9 +28,11 @@ test('菜单_SETTINGS不再单独列暗色模式', () => {
 });
 
 test('游戏设置_含暗色模式开关', () => {
-  assert.match(shell, /title="暗色模式"/);
-  assert.match(shell, /toggleDarkMode/);
-  assert.match(shell, /开启暗色模式|关闭暗色模式/);
+  // 功能注释：3.7 暗色改为单行一键开关（不再包 SettingBranch 折叠）
+  assert.doesNotMatch(shell, /<SettingBranch[^>]*title="暗色模式"/);
+  assert.match(shell, /data-dark-toggle="1"/);
+  assert.match(shell, /onClick=\{toggleDarkMode\}/);
+  assert.match(shell, />暗色模式</);
 });
 
 test('图标库_菜单项同步玩法Mod且去掉暗色模式', () => {

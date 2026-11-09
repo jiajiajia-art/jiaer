@@ -12,7 +12,7 @@ import { useConfirm } from "./EditorKit";
 import CoverAiChat from "./CoverAiChat";
 import { AiModelBillingBadge, ViewSwitch, type GenView } from "./CodexChat";
 import { COVER_CLASSES, CSS_MAX } from "../lib/coverAi";
-import { buildWorkCoverPrompt } from "../lib/editorImagePrompts";
+import { WORK_COVER_GEN_SIZE, buildWorkCoverPromptParts, type WorkImageGenBinding } from "../lib/editorImagePrompts";
 
 /* 美化 · 封面 DIY：与开场页同一套「实时预览 / AI 对话」切换；预览侧手动搭配，对话侧聊着改。
  * 玩家填写的项优先于世界作者的封面；留空沿用。 */
@@ -72,8 +72,10 @@ type CoverDiyProps = {
   /** 功能注释：作品名称 / 简介，供背景「生图」预填（列表封面用） */
   workTitle?: string;
   workSummary?: string;
+  /** 功能注释：作品级画风 / 负面词与保存回调（封面生图三层提示词） */
+  imageGen?: WorkImageGenBinding;
 };
-function CoverDiyBody({ value, onChange, cvText, previewCv, previewD, author, chatKey, cover, mode = "live", bgOnly, workTitle, workSummary }: CoverDiyProps) {
+function CoverDiyBody({ value, onChange, cvText, previewCv, previewD, author, chatKey, cover, mode = "live", bgOnly, workTitle, workSummary, imageGen }: CoverDiyProps) {
   const { look } = useGame();
   const [confirm, confirmEl] = useConfirm();
   const d = value;
@@ -111,12 +113,13 @@ function CoverDiyBody({ value, onChange, cvText, previewCv, previewD, author, ch
           onChange={(u) => set({ image: u })}
           hint="竖屏建议 9:16，横屏建议 16:9"
           aiGen={{
-            size: "1024x1792",
-            placeholder: `描述封面背景：主体、场景、光线、画风，竖版构图，画面里不要文字${d.title || cv.title || workTitle ? `（作品名「${d.title || cv.title || workTitle}」）` : ""}`,
-            initialPrompt: buildWorkCoverPrompt({
-              title: d.title || cv.title || workTitle,
-              summary: d.intro || cv.intro || workSummary,
-            }) || undefined,
+            size: WORK_COVER_GEN_SIZE,
+            placeholder: "只写封面氛围与主角外观，画面里不要出现作品名文字（9:16 竖版）",
+            initialParts: buildWorkCoverPromptParts(
+              { title: d.title || cv.title || workTitle, summary: d.intro || cv.intro || workSummary },
+              imageGen?.settings,
+            ),
+            onPartsCommit: imageGen?.onCommit,
           }}
         />
       </>}
@@ -126,12 +129,13 @@ function CoverDiyBody({ value, onChange, cvText, previewCv, previewD, author, ch
             v={d}
             set={set}
             aiGen={{
-              size: "1024x1792",
-              placeholder: `描述封面背景：主体、场景、光线、画风，竖版构图，画面里不要文字${d.title || cv.title || workTitle ? `（作品名「${d.title || cv.title || workTitle}」）` : ""}`,
-              initialPrompt: buildWorkCoverPrompt({
-                title: d.title || cv.title || workTitle,
-                summary: d.intro || cv.intro || workSummary,
-              }) || undefined,
+              size: WORK_COVER_GEN_SIZE,
+              placeholder: "只写封面氛围与主角外观，画面里不要出现作品名文字（9:16 竖版）",
+              initialParts: buildWorkCoverPromptParts(
+                { title: d.title || cv.title || workTitle, summary: d.intro || cv.intro || workSummary },
+                imageGen?.settings,
+              ),
+              onPartsCommit: imageGen?.onCommit,
             }}
           />
         </div>

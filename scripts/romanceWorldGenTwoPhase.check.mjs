@@ -18,7 +18,8 @@ function fiveNpcs() {
     gender: i % 2 === 0 ? '女' : '男',
     age: 22 + i,
     role: '关键角色',
-    kind: 'roam',
+    kind: 'fixed',
+    home: `room${(i % 10) + 1}`,
     bio: '这是一段足够长的人物小传，用来通过软校验：人物须写出贴合世界观的简介与动机，不能只剩一句空话。',
   }));
 }
@@ -51,8 +52,8 @@ test('worldGenTwoPhase_默认核心细项折叠为两次串联大类', async () 
   const wiz = await import(pathToFileURL(join(romance, 'lib/worldGenWizard.ts')).href);
 
   assert.equal(gen.WORLD_GEN_PARALLEL_LIMIT, 1);
-  assert.equal(gen.WORLD_GEN_NPCS_COUNT, 5);
-  assert.equal(gen.WORLD_GEN_ROOMS_COUNT, 10);
+  assert.ok(gen.WORLD_GEN_NPCS_COUNT >= 2 && gen.WORLD_GEN_NPCS_COUNT <= 6);
+  assert.ok(gen.WORLD_GEN_ROOMS_COUNT >= 3 && gen.WORLD_GEN_ROOMS_COUNT <= 8);
   assert.equal(gen.isWorldGenTwoPhaseBatch(gen.WORLD_GEN_PHASE1_BATCH_ID), true);
   assert.equal(gen.isWorldGenTwoPhaseBatch(gen.WORLD_GEN_PHASE2_BATCH_ID), true);
 
@@ -156,24 +157,36 @@ test('worldGenTwoPhase_运行时严格两次请求且串行_缺日期本地兜�
   assert.equal(result.progress.doneCount, ids.length);
   assert.equal(result.progress.failedCount, 0);
   assert.match(String(result.mod.content.startDate || ''), /^\d{4}\.\d{2}\.\d{2}$/);
-  assert.equal(result.mod.content.npcs.length, 5);
-  assert.equal(Object.keys(result.mod.content.rooms || {}).length, 10);
-  assert.equal(result.mod.content.fixedEvents.length, 5);
+  assert.ok(result.mod.content.npcs.length >= 2);
+  assert.ok(Object.keys(result.mod.content.rooms || {}).length >= 3);
+  assert.ok(result.mod.content.fixedEvents.length >= 1);
   assert.match(result.progress.label, /全部完成|成功/);
 });
 
-test('worldGenTwoPhase_人物地点条数不足须失败禁止假完成', async () => {
+test('worldGenTwoPhase_空条目失败_建议条数内可过', async () => {
   const gen = await import(pathToFileURL(join(romance, 'lib/worldGenGenerate.ts')).href);
   assert.match(
-    gen.softValidateBatchPatch(['npcs'], { npcs: fiveNpcs().slice(0, 2) }) || '',
-    /正好 5/,
+    gen.softValidateBatchPatch(['npcs'], { npcs: [] }) || '',
+    /至少 1/,
   );
   assert.match(
-    gen.softValidateBatchPatch(['rooms'], { rooms: { a: { name: 'A', desc: 'd' } } }) || '',
-    /正好 10/,
+    gen.softValidateBatchPatch(['rooms'], { rooms: {} }) || '',
+    /至少 1/,
   );
-  assert.equal(gen.softValidateBatchPatch(['npcs'], { npcs: fiveNpcs() }), null);
-  assert.equal(gen.softValidateBatchPatch(['rooms'], { rooms: tenRooms() }), null);
+  // 功能注释：2 人带齐字段应通过，不再要求正好 5
+  assert.equal(
+    gen.softValidateBatchPatch(['npcs'], {
+      npcs: fiveNpcs().slice(0, 2),
+    }),
+    null,
+  );
+  assert.equal(
+    gen.softValidateBatchPatch(['rooms'], {
+      rooms: Object.fromEntries(Object.entries(tenRooms()).slice(0, 3)),
+      startRoom: 'room1',
+    }),
+    null,
+  );
 });
 
 test('worldGenTwoPhase_源码门禁_串联与控制台调试输出', () => {
@@ -187,7 +200,7 @@ test('worldGenTwoPhase_源码门禁_串联与控制台调试输出', () => {
   assert.match(src, /console\.log\(\s*["']\[world-gen\] request["']/);
   assert.match(src, /console\.log\(\s*["']\[world-gen\] response["']/);
   assert.match(src, /isWorldGenTwoPhaseBatch/);
-  assert.match(detail, /WORLD_GEN_NPCS_COUNT\s*=\s*5/);
-  assert.match(detail, /WORLD_GEN_ROOMS_COUNT\s*=\s*10/);
+  assert.match(detail, /WORLD_GEN_NPCS_SUGGEST_MIN\s*=\s*2/);
+  assert.match(detail, /WORLD_GEN_ROOMS_SUGGEST_MIN\s*=\s*3/);
   assert.doesNotMatch(src, /fakeProgress|本地模板灌|mockTemplateFill/);
 });

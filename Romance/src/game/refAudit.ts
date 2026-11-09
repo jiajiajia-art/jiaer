@@ -2,7 +2,7 @@ import { affinityCapOf } from "../worlds/star2005/content";
 /* 全局引用索引与脏数据校验：扫描剧情桥段 / 选项 / 事件链断点 / 结局 / CG / 阵营 / 主线 / 世界书里的条件与效果，
  * 找出引用了不存在对象的条目、只读不写的标记、永远不会触发的设置，以及事件之间的循环依赖。只供编辑器调用。
  * 每条问题带 at（如 event:<id>），编辑器据此把提示挂到对应条目上。 */
-import type { CgDef, CustomEnding, EngineRules, Faction, FixedCond, FixedEffect, FixedEvent, GameState, Sideline, Storyline, WorldBookEntry } from "../lib/types";
+import type { CgDef, CustomEnding, EngineRules, Faction, FixedCond, FixedEffect, FixedEvent, GameRule, GameState, Sideline, Storyline, WorldBookEntry } from "../lib/types";
 import { asTrimmedString } from "../lib/asTrimmedString";
 import { LIVE_ITEMS, LIVE_LOCATIONS, LIVE_PEOPLE, getWorldGameRules, getWorldRooms, getWorldSidelines, getWorldStorylines } from "../mods/registry";
 import { resolveRules, rulesOf } from "./engineRules";
@@ -21,7 +21,25 @@ export type AuditReport = { refs: RefHit[]; issues: AuditIssue[]; cycles: string
 export type AuditInput = {
   events?: FixedEvent[]; endings?: CustomEnding[]; cgs?: CgDef[]; factions?: Faction[]; storylines?: Storyline[]; sidelines?: Sideline[]; worldBook?: WorldBookEntry[];
   npcIds?: string[]; roomIds?: string[]; skip?: RefKind[]; flags?: Record<string, number>; rules?: EngineRules;
+  /** 物品 id；草稿审计里只认这份（缺省为空集合），不再用 LIVE_ITEMS 放行 */
+  itemIds?: string[];
+  /** 人物 id→名称，仅用于提示文案；草稿审计缺省用 npcIds（名称退化为 id） */
+  people?: { id: string; name: string }[];
+  /** 本作品玩法规则（只用于「标记有人写入」判断）；草稿审计缺省为空 */
+  gameRules?: GameRule[];
+  /**
+   * 草稿模式开关：true = 只认传入的 npcIds / roomIds / itemIds / events / storylines / sidelines，
+   * 绝不并入 LIVE_PEOPLE / LIVE_LOCATIONS / LIVE_ITEMS / getWorldRooms() / getWorldStorylines()。
+   * 缺省：只要传了 npcIds / roomIds / itemIds 任一（哪怕是空数组）就视为草稿；
+   * auditGame（存档）显式传 false，继续以当前生效世界为底。
+   */
+  draft?: boolean;
 };
+
+/** 功能注释：是否按「编辑器草稿」审计——传了人物/地点/物品清单（含空数组）即权威，不并入内置世界。 */
+export function isDraftAudit(inp: Pick<AuditInput, "draft" | "npcIds" | "roomIds" | "itemIds">): boolean {
+  return inp.draft ?? (inp.npcIds !== undefined || inp.roomIds !== undefined || inp.itemIds !== undefined);
+}
 
 export const REF_LABEL: Record<RefKind, string> = { npc: "人物", item: "物品", location: "地点", event: "事件", faction: "阵营", quest: "主线", side: "支线", flag: "标记" };
 
@@ -134,7 +152,8 @@ const ACTIVATE = /·(后续|激活)$/; // 这些来源会把目标事件「激�
 
 /** 当前存档的全量校验 */
 export function auditGame(g: GameState, over: Partial<AuditInput> = {}): AuditReport {
-  return auditStory({ events: g.fixedEvents, endings: g.customEndings, cgs: g.cgs, factions: g.factions, worldBook: g.worldBook, npcIds: g.npcs.map((n) => n.id), flags: g.sim?.flags, rules: rulesOf(g), ...over });
+  // 存档审计以当前生效世界为底：显式 draft:false，npcIds 只是补充存档里的人物
+  return auditStory({ draft: false, events: g.fixedEvents, endings: g.customEndings, cgs: g.cgs, factions: g.factions, worldBook: g.worldBook, npcIds: g.npcs.map((n) => n.id), flags: g.sim?.flags, rules: rulesOf(g), ...over });
 }
 
 /** 按传入的内容校验（存档或模组编辑器里正在编辑的作品都可以用） */
@@ -143,11 +162,15 @@ export function auditStory(inp: AuditInput): AuditReport {
   const issues: AuditIssue[] = [];
   const writes = new Set<string>();
   const events = inp.events ?? [];
-  const storylines = inp.storylines ?? getWorldStorylines() ?? [];
-  const sidelines = inp.sidelines ?? getWorldSidelines() ?? [];
+  const draft = isDraftAudit(inp);
+  // 功能注释：草稿模式缺主线/支线就是「没有」，不借当前世界的
+  const storylines = inp.storylines ?? (draft ? [] : getWorldStorylines() ?? []);
+  const sidelines = inp.sidelines ?? (draft ? [] : getWorldSidelines() ?? []);
   const rules = inp.rules ?? resolveRules(undefined);
   const evName = (id: string) => events.find((e) => e.id === id)?.name || id;
-  const people = new Map<string, string>(LIVE_PEOPLE.map((p) => [p.id, p.name]));
+  const people = new Map<string, string>(draft
+    ? [...(inp.npcIds ?? []).map((id): [string, string] => [id, id]), ...(inp.people ?? []).map((p): [string, string] => [p.id, p.name])]
+    : LIVE_PEOPLE.map((p) => [p.id, p.name]));
   const nameOf = (kind: string, key: string) => kind === "rel" ? `与${people.get(key) ?? key}的好感` : kind === "faction" ? `阵营「${(inp.factions ?? []).find((f) => f.id === key)?.name ?? key}」声望` : kind === "flag" ? `标记「${key}」` : `「${key}」`;
 
   const ids = new Set<string>();
@@ -310,8 +333,9 @@ export function auditStory(inp: AuditInput): AuditReport {
   for (const k of Object.keys(rules.npc.cdOverride)) refs.push({ kind: "npc", id: k, from: "底层规则·角色冷却", at: "rules" });
 
   // 世界书：会不会被注入、绑定对象在不在
-  const npcIds = new Set([...(inp.npcIds ?? []), ...LIVE_PEOPLE.map((p) => p.id)]);
-  const rooms = new Set(inp.roomIds ?? Object.keys(getWorldRooms()));
+  // 功能注释：草稿模式人物/地点只认表单传入的 id（可为空）；存档模式才并入当前世界
+  const npcIds = new Set(draft ? (inp.npcIds ?? []) : [...(inp.npcIds ?? []), ...LIVE_PEOPLE.map((p) => p.id)]);
+  const rooms = new Set(draft ? (inp.roomIds ?? []) : (inp.roomIds ?? Object.keys(getWorldRooms())));
   const titles = new Map<string, number>();
   for (const w of inp.worldBook ?? []) {
     const at = `wb:${w.id}`;
@@ -345,8 +369,8 @@ export function auditStory(inp: AuditInput): AuditReport {
   // 存在性校验：空引用与已失效的 id
   const exists: Record<Exclude<RefKind, "flag">, Set<string>> = {
     npc: npcIds,
-    item: new Set(LIVE_ITEMS.map((i) => i.id)),
-    location: new Set(LIVE_LOCATIONS.map((l) => l.id)),
+    item: new Set(draft ? (inp.itemIds ?? []) : LIVE_ITEMS.map((i) => i.id)),
+    location: draft ? rooms : new Set(LIVE_LOCATIONS.map((l) => l.id)),
     event: ids,
     faction: new Set((inp.factions ?? []).map((f) => f.id)),
     quest: new Set(storylines.flatMap((l) => [l.id, ...(Array.isArray(l.nodes) ? l.nodes : []).map((n) => n.id)])),
@@ -354,12 +378,12 @@ export function auditStory(inp: AuditInput): AuditReport {
   };
   for (const r of refs) {
     if (r.kind === "flag") continue;
-    if ((r.kind === "faction" && !inp.factions) || inp.skip?.includes(r.kind)) continue; // 模组编辑器里没有对应数据时不判，避免拿当前世界误报
+    if ((r.kind === "faction" && !inp.factions) || inp.skip?.includes(r.kind)) continue; // 调用方显式 skip 才跳过；草稿审计不再靠 skip 躲开人物/地点/物品
     if (!r.id) issues.push({ level: "error", text: `${REF_LABEL[r.kind]}未选择`, from: r.from, at: r.at });
     else if (!exists[r.kind].has(r.id)) issues.push({ level: "error", text: `引用了不存在的${REF_LABEL[r.kind]}「${r.id}」`, from: r.from, at: r.at });
   }
   // 标记：只读不写（系统写入的前缀与压力崩溃标记除外；当前世界的玩法规则也算写入方）
-  for (const r of getWorldGameRules() ?? []) for (const b of r.branches ?? []) for (const f of b.effects ?? []) if (f.kind === "flag") writes.add(f.key);
+  for (const r of (draft ? inp.gameRules : getWorldGameRules()) ?? []) for (const b of r.branches ?? []) for (const f of b.effects ?? []) if (f.kind === "flag") writes.add(f.key);
   const sysFlag = (k: string) => /^(faction:|mem:|quest:|side:|sideDone:|sideAt:|chain:|evday:|溢出:)/.test(k) || k === rules.attrs.stressFlag;
   for (const r of inp.skip?.includes("flag") ? [] : refs.filter((x) => x.kind === "flag")) {
     if (!r.id) issues.push({ level: "error", text: "标记名为空", from: r.from, at: r.at });

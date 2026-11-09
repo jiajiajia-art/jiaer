@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { CoverCopy, OpeningCopy } from "../mods/types";
 import { CoverDiyEditor } from "./CoverDiyPanel";
 import { coverMode, fromDiy, toDiy } from "../lib/coverAi";
+import type { WorkImageGenBinding } from "../lib/editorImagePrompts";
 
 /* 模组编辑器 · 作品封面（仅背景，供列表/详情/书架）/ 序章文案 */
 const inp = "min-w-0 w-full rounded-lg border border-line bg-paper px-2 py-1 text-[12.5px] text-ink outline-none focus:border-jade";
@@ -61,6 +62,7 @@ export function ModCoverEditor({
   modId,
   workTitle,
   workSummary,
+  imageGen,
 }: {
   value?: CoverCopy;
   onChange: (v?: CoverCopy) => void;
@@ -69,6 +71,8 @@ export function ModCoverEditor({
   workTitle?: string;
   /** 功能注释：作品简介，生图预填提示词 */
   workSummary?: string;
+  /** 功能注释：作品级画风 / 负面词与保存回调，封面生图三层提示词共用 */
+  imageGen?: WorkImageGenBinding;
 }) {
   const c = value ?? {};
   return (
@@ -86,6 +90,7 @@ export function ModCoverEditor({
         cvText={{ title: workTitle, intro: workSummary }}
         workTitle={workTitle}
         workSummary={workSummary}
+        imageGen={imageGen}
         previewCv={fromDiy({ ...c, title: undefined, kicker: undefined, subtitle: undefined, intro: undefined }, toDiy(c))}
         previewD={toDiy(c)}
       />

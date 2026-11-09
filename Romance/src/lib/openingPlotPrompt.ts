@@ -59,6 +59,8 @@ function openingMainQuestHint(
   return null;
 }
 
+export type OpeningPromptEvent = { name?: string; prompt: string };
+
 export type OpeningPlotCtx = {
   location: string;
   routeEvent?: string;
@@ -66,7 +68,26 @@ export type OpeningPlotCtx = {
   storylines?: Storyline[];
   /** 作品自定义 openingDirective；空则用 DEFAULT */
   directive?: string;
+  /**
+   * 功能注释：固定事件里勾了「开局提示词」的条目——用开局地点 + 这些 prompt 写第一场；
+   * 未勾选的不要在开局自动播放。
+   */
+  openingPromptEvents?: OpeningPromptEvent[];
 };
+
+/** 功能注释：只保留勾选且有正文的开局提示词，供编辑器预览与开局拼装共用 */
+export function pickOpeningPromptEvents(
+  events: Array<{ name?: string; prompt?: string; openingPrompt?: boolean } | null | undefined> | undefined,
+): OpeningPromptEvent[] {
+  const out: OpeningPromptEvent[] = [];
+  for (const e of events ?? []) {
+    if (!e || e.openingPrompt !== true) continue;
+    const prompt = String(e.prompt ?? "").trim();
+    if (!prompt) continue;
+    out.push({ name: String(e.name ?? "").trim() || undefined, prompt });
+  }
+  return out;
+}
 
 /**
  * 功能注释：拼开局 runTurn 幕后提示。固定注入地点、人际、主线与「无父母则禁写父母」约束。
@@ -76,6 +97,7 @@ export function buildOpeningPlotPrompt(ctx: OpeningPlotCtx): string {
   const cast = openingCastLines(ctx.game);
   const quest = openingMainQuestHint(ctx.storylines, ctx.game.sim?.flags);
   const directive = (ctx.directive ?? "").trim() || DEFAULT_OPENING_DIRECTIVE;
+  const openingPrompts = (ctx.openingPromptEvents ?? []).filter((e) => e.prompt.trim());
 
   const bits: string[] = [];
   if (ctx.routeEvent?.trim()) bits.push(ctx.routeEvent.trim().endsWith("\n") ? ctx.routeEvent.trim() : `${ctx.routeEvent.trim()}\n`);
@@ -83,6 +105,15 @@ export function buildOpeningPlotPrompt(ctx: OpeningPlotCtx): string {
   bits.push(
     `【开局地点】主角此刻身处「${ctx.location}」，序章收束时必须仍在这里，world.location 保持为「${ctx.location}」。`,
   );
+  if (openingPrompts.length) {
+    const lines = openingPrompts.map((e, i) => {
+      const title = e.name?.trim() || `提示词 ${i + 1}`;
+      return `- 「${title}」：${e.prompt.trim()}`;
+    });
+    bits.push(
+      `【开局提示词】结合开局地点，把下列已勾选固定事件提示词自然写进第一场剧情（未勾选的固定事件不要在开局自动播放）：\n${lines.join("\n")}`,
+    );
+  }
   bits.push(
     "【序章篇幅与文风】正文约 450~550 字（不含 JSON），写成自然连贯的开场白；严禁写章节标题、时间标题。文风追求生活化、烟火气与真实人情味——严禁生造说教比喻与矫揉造作的 AI 腔调（如「把这话说得很轻，轻得像怕惊着她」「舞台上的那口气，只有站上去的人才懂」）。",
   );

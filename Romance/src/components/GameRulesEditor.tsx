@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { normalizeRuleBranches } from "../lib/gameRuleShape";
-import { GAME_RULE_PRESETS, linkedLibraryEventNames, materializeRulePreset } from "../lib/gameRulePresets";
+import { GAME_RULE_PRESETS, availableRulePresets, linkedLibraryEventNames, materializeRulePreset } from "../lib/gameRulePresets";
 import { IconClose } from "../lib/icons";
-import { CondRow, EffectRow, defaultCond, defaultEffect } from "./FixedEventsPanel";
+import { CondRow, EffectRow, useDraftDefaults } from "./FixedEventsPanel";
 import { condsBrief, effectBrief } from "./ruleText";
 import type { FixedEffect, FixedEvent, GameRule, RuleBranch } from "../lib/types";
 
@@ -22,6 +22,7 @@ function BranchCard({
   isFlag: boolean;
   onChange: (b: RuleBranch) => void; onDelete?: () => void;
 }) {
+  const dd = useDraftDefaults();
   const conds = Array.isArray(b.conds) ? b.conds : [];
   const effects = Array.isArray(b.effects) ? b.effects : [];
   const isElse = idx > 0 && !conds.length;
@@ -41,7 +42,7 @@ function BranchCard({
       {conds.map((c, i) => (
         <CondRow key={i} c={c} events={condEvents} selfId="" onChange={(x) => onChange({ ...b, conds: conds.map((y, j) => (j === i ? x : y)) })} onDelete={() => onChange({ ...b, conds: conds.filter((_, j) => j !== i) })} />
       ))}
-      <button type="button" className={link} onClick={() => onChange({ ...b, conds: [...conds, defaultCond("metric")] })}>＋ 条件{!conds.length && idx > 0 ? "（不加 = 「否则」兜底）" : ""}</button>
+      <button type="button" className={link} onClick={() => onChange({ ...b, conds: [...conds, dd.cond("metric")] })}>＋ 条件{!conds.length && idx > 0 ? "（不加 = 「否则」兜底）" : ""}</button>
 
       {!isFlag && (
         <label className="flex flex-wrap items-center gap-1.5 text-[11.5px] text-ink-soft">
@@ -61,7 +62,7 @@ function BranchCard({
       {effects.map((f, i) => (
         <EffectRow key={i} ef={f} onChange={(x: FixedEffect) => onChange({ ...b, effects: effects.map((y, j) => (j === i ? x : y)) })} onDelete={() => onChange({ ...b, effects: effects.filter((_, j) => j !== i) })} />
       ))}
-      <button type="button" className={link} onClick={() => onChange({ ...b, effects: [...effects, defaultEffect(isFlag ? "flag" : "metric")] })}>＋ {isFlag ? "规则变量" : "效果"}</button>
+      <button type="button" className={link} onClick={() => onChange({ ...b, effects: [...effects, dd.effect(isFlag ? "flag" : "metric")] })}>＋ {isFlag ? "规则变量" : "效果"}</button>
       <input className={inp} value={b.notice ?? ""} maxLength={60} placeholder="给玩家的提示（可留空；写进当天 / 本周结算）" onChange={(e) => onChange({ ...b, notice: e.target.value || undefined })} />
     </div>
   );
@@ -71,6 +72,7 @@ export default function GameRulesEditor({
   value,
   events = [],
   libraryEvents = [],
+  metricKeys,
   onChange,
 }: {
   value?: GameRule[];
@@ -78,8 +80,12 @@ export default function GameRulesEditor({
   events?: FixedEvent[];
   /** 本作品事件库：预设写入此处，规则分支挂钩 */
   libraryEvents?: FixedEvent[];
+  /** 本作品已有的指标键（自定义属性 c:<id>、改名过的内置指标、现金）；预设只提供其依赖指标都在这里的项。不传 = 不过滤 */
+  metricKeys?: string[];
   onChange: (next: { gameRules?: GameRule[]; events?: FixedEvent[] }) => void;
 }) {
+  const dd = useDraftDefaults();
+  const presets = availableRulePresets(GAME_RULE_PRESETS, metricKeys);
   const list = Array.isArray(value) ? value : [];
   const lib = Array.isArray(libraryEvents) ? libraryEvents : [];
   const [openIds, setOpenIds] = useState<Set<string>>(() => new Set());
@@ -101,12 +107,12 @@ export default function GameRulesEditor({
 
   const addBlank = () => {
     const id = uid();
-    commitRules([...list, { id, name: "新规则", when: "week", role: "event", branches: [{ conds: [defaultCond("metric")], effects: [], eventId: undefined }] }]);
+    commitRules([...list, { id, name: "新规则", when: "week", role: "event", branches: [{ conds: [dd.cond("metric")], effects: [], eventId: undefined }] }]);
     setOpenIds((prev) => new Set(prev).add(id));
   };
 
   const addPreset = (name: string) => {
-    const preset = GAME_RULE_PRESETS.find((t) => t.name === name);
+    const preset = presets.find((t) => t.name === name);
     if (!preset) return;
     const { rule, events: created } = materializeRulePreset(preset, () => `${Date.now().toString(36).slice(-4)}${Math.random().toString(36).slice(2, 5)}`);
     commitRules([...list, rule], [...lib, ...created]);
@@ -120,7 +126,7 @@ export default function GameRulesEditor({
       </p>
       <div className="flex flex-wrap gap-1.5">
         <button type="button" className={btn} onClick={addBlank}>＋ 空白规则</button>
-        {GAME_RULE_PRESETS.map((t) => (
+        {presets.map((t) => (
           <button type="button" key={t.name} className={`${btn} !font-normal`} title={t.desc} onClick={() => addPreset(t.name)}>{t.name}</button>
         ))}
       </div>
@@ -222,11 +228,11 @@ export default function GameRulesEditor({
                   <div className="flex flex-wrap gap-1.5">
                     <button type="button" className={btn} onClick={() => {
                       const nb: RuleBranch = isFlag
-                        ? { conds: [defaultCond("metric")], effects: [defaultEffect("flag")] }
-                        : { conds: [defaultCond("metric")], effects: [] };
+                        ? { conds: [dd.cond("metric")], effects: [dd.effect("flag")] }
+                        : { conds: [dd.cond("metric")], effects: [] };
                       setBranches(r, hasElse(branches) ? [...branches.slice(0, -1), nb, branches[branches.length - 1]] : [...branches, nb]);
                     }}>＋ 否则如果</button>
-                    <button type="button" className={btn} disabled={hasElse(branches)} onClick={() => setBranches(r, [...branches, { conds: [], effects: isFlag ? [defaultEffect("flag")] : [] }])}>＋ 否则</button>
+                    <button type="button" className={btn} disabled={hasElse(branches)} onClick={() => setBranches(r, [...branches, { conds: [], effects: isFlag ? [dd.effect("flag")] : [] }])}>＋ 否则</button>
                   </div>
                   <p className="rounded-lg bg-paper/70 px-2 py-1.5 text-[11px] leading-relaxed text-ink-soft">
                     <b className="text-ink">{WHEN[r.when] ?? "每周结算"}</b>{r.chance != null && r.chance < 100 ? `（${r.chance}% 概率）` : ""}：

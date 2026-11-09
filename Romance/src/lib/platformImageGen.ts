@@ -7,6 +7,7 @@
 import type { AIConfig } from "./types";
 import { generateImage, imageConfigured } from "./ai";
 import { hasPlatformPlayAuth } from "./platformPlayAi.ts";
+import { appendNegativeSection } from "./editorImagePrompts.ts";
 import { readFunloomAuthToken, resolveFunloomApiBase } from "./platformAvatarLibrary.ts";
 
 /** 功能注释：拼平台编辑器生图 API；基址可为空（同源反代） */
@@ -20,10 +21,14 @@ export function platformImageConfigured(cfg: AIConfig): boolean {
   return hasPlatformPlayAuth() || imageConfigured(cfg);
 }
 
+export { appendNegativeSection };
+
 export type PlatformImageGenOptions = {
   /** 功能注释：可选参考图 dataURL / https，最多 2 张，传给平台垫图 */
   referenceImages?: string[];
   signal?: AbortSignal;
+  /** 功能注释：负面词（三层提示词之一）；单独字段发给平台，同时在 prompt 末尾带一段明确标注，兼容尚未识别该字段的网关 */
+  negativePrompt?: string;
 };
 
 /** 功能注释：裁掉空串并最多保留 2 张，避免请求体过大 / 超限 */
@@ -52,6 +57,7 @@ export async function generateImageViaPlatform(
   }
 
   const referenceImages = normalizeClientReferenceImages(options.referenceImages);
+  const negativePrompt = String(options.negativePrompt ?? "").trim();
   const res = await fetch(editorImageGenerateUrl(), {
     method: "POST",
     headers: {
@@ -60,8 +66,9 @@ export async function generateImageViaPlatform(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      prompt,
+      prompt: appendNegativeSection(prompt, negativePrompt),
       size: size || undefined,
+      ...(negativePrompt ? { negativePrompt } : {}),
       ...(referenceImages.length ? { referenceImages } : {}),
     }),
     signal: options.signal,
@@ -112,5 +119,5 @@ export async function generatePlatformImage(
   if (options.signal?.aborted) {
     throw Object.assign(new Error("已取消"), { name: "AbortError" });
   }
-  return generateImage(cfg, prompt, size);
+  return generateImage(cfg, appendNegativeSection(prompt, options.negativePrompt), size);
 }

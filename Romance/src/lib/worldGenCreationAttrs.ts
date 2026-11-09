@@ -5,8 +5,10 @@
 import type { AttrDef } from "./types.ts";
 import { asTrimmedString } from "./asTrimmedString.ts";
 
-/** 功能注释：AI 生成建角数值属性的默认条数；创作者可在编辑器增删 */
+/** 功能注释：建角属性建议条数中位（仅提示）；建议范围约 2–4，不补空壳凑数 */
 export const WORLD_GEN_CUSTOM_ATTRS_COUNT = 3;
+export const WORLD_GEN_CUSTOM_ATTRS_SUGGEST_MIN = 2;
+export const WORLD_GEN_CUSTOM_ATTRS_SUGGEST_MAX = 4;
 
 type DraftBits = { title?: string; setting?: string };
 
@@ -115,14 +117,15 @@ export function normalizeWorldGenCustomAttrs(raw: unknown): AttrDef[] {
       if (tiers.length) def.tiers = tiers;
     }
     out.push(def);
-    if (out.length >= WORLD_GEN_CUSTOM_ATTRS_COUNT) break;
+    // 功能注释：建议约 2–4；允许多于建议但设软上限，避免灌爆；不补空壳
+    if (out.length >= WORLD_GEN_CUSTOM_ATTRS_SUGGEST_MAX + 4) break;
   }
   return out;
 }
 
 /**
- * 功能注释：建角批收口——清洗后若不足 3 条，按题材补有名称+说明的属性；禁止留下空壳或「未命名」。
- * 创作者之后可在编辑器改名/删改；此处只保证生成结果验收可过。
+ * 功能注释：建角批收口——清洗无名称空壳；已有有效属性时不补空壳凑数。
+ * 仅当 AI 一条都没写出时，才按题材补建议下限条数，保证建角页可用。
  */
 export function ensureWorldGenCustomAttrs(
   patch: Record<string, unknown>,
@@ -130,11 +133,15 @@ export function ensureWorldGenCustomAttrs(
 ): Record<string, unknown> {
   const out: Record<string, unknown> = { ...patch };
   const cleaned = normalizeWorldGenCustomAttrs(out.customAttrs);
-  const used = new Set(cleaned.map((a) => a.label));
+  if (cleaned.length) {
+    out.customAttrs = cleaned;
+    return out;
+  }
+  const used = new Set<string>();
   const seeds = defaultWorldGenAttrSeeds(draft);
-  const filled = [...cleaned];
+  const filled: AttrDef[] = [];
   let seedIdx = 0;
-  while (filled.length < WORLD_GEN_CUSTOM_ATTRS_COUNT && seedIdx < seeds.length + WORLD_GEN_CUSTOM_ATTRS_COUNT) {
+  while (filled.length < WORLD_GEN_CUSTOM_ATTRS_SUGGEST_MIN && seedIdx < seeds.length + WORLD_GEN_CUSTOM_ATTRS_SUGGEST_MIN) {
     const seed = seeds[seedIdx % seeds.length];
     seedIdx += 1;
     let label = seed.label;
@@ -150,7 +157,7 @@ export function ensureWorldGenCustomAttrs(
       desc: seed.desc || defaultAttrDescForLabel(label),
     });
   }
-  out.customAttrs = filled.slice(0, WORLD_GEN_CUSTOM_ATTRS_COUNT);
+  out.customAttrs = filled;
   return out;
 }
 

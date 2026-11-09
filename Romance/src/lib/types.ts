@@ -659,6 +659,8 @@ export type FixedEvent = {
   endKeywords?: string[]; // 结束关键词：触发后事件设定每回合持续发给 AI，直到 AI 正文出现任一结束词才结束
   cooldown?: number; // 冷却天数：可重复事件两次上演之间至少间隔几天（不填 = 无冷却）
   choices?: EventChoice[]; // 事件选项：上演后替换 AI 给的选项，玩家选中由代码结算对应效果（最多 3 个）
+  /** 功能注释：勾选后开局用本条 prompt 参与第一场剧情生成 */
+  openingPrompt?: boolean;
   /* —— 细化设定（均可缺省，旧事件行为不变）—— */
   trigger?: EventTrigger; // 触发类型；缺省 = 时间 / 条件自动触发（按顺序）
   condMatch?: "all" | "any"; // 属性条件组合：全部满足（缺省）/ 任一满足

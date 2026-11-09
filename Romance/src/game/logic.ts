@@ -54,7 +54,7 @@ import {
 } from "./data";
 import { CALENDAR, NEGOTIATION, RELATIONS, TRAVEL, COMPANIES, MOVIE_TITLES, industryGen } from "../worlds/star2005/content";
 import { applyIncome, applyGameRules, applySidelines, applyStorylines } from "./fixedEvents";
-import { getWorldSlot, LIVE_GIGS, LIVE_PEOPLE, getWorldIncome, getWorldGameRules, getWorldStorylines, getWorldSidelines, getWorldId, feature, getWorldStartMet, getWorldStartRoom, worldActivitiesOfRoom as activitiesOfRoom, worldItemsOfRoom as itemsOfRoom } from "../mods/registry";
+import { getWorldSlot, LIVE_GIGS, LIVE_PEOPLE, getWorldIncome, getWorldGameRules, getWorldStorylines, getWorldSidelines, getWorldId, feature, getWorldStartMet, getWorldStartRoom, worldActivitiesOfRoom as activitiesOfRoom, worldItemsOfRoom as itemsOfRoom, worldLocOf } from "../mods/registry";
 import { asModArray } from "../lib/asModArray";
 import type { AttrDef } from "../lib/types";
 import type { ProjectInstance, WorkPiece } from "./projects";
@@ -445,7 +445,8 @@ export function createGame(char: Character): GameState {
     fertility: rollFertility(),
     pregnancy: null,
     children: [],
-    log: ["第 1 周 · 你搬进了天光小区，出道倒计时 104 周正式开始。"],
+    // 功能注释：开局日志只按本作品开局地点写，禁止套用娱乐圈「天光小区 / 出道倒计时」
+    log: [`第 1 周 · 你来到了${worldLocOf(getWorldStartRoom())?.name || getWorldStartRoom() || "开局地点"}。`],
   };
 }
 
@@ -1097,14 +1098,18 @@ export function settleWeek(s: GameState, customTimeLimit = false): WeekResult {
   const weeklyBase = Math.max(0, (bills.weekly ?? []).reduce((a, b) => a + b.amount, 0) + (meal?.cost ?? 0)) || 1000;
   const bankruptLine = bankruptLineFor(weeklyBase, eco);
   const moneyWord = "资金";
-  if (eco.bankrupt !== false && wallet.balance(n) < bankruptLine) {
+  // 功能注释：作品既没写账单也没配生活开销（伙食）时，钱为负既不收官也不加压力；
+  // 有账单/生活开销时，也只有创作者勾选「透支超过破产线时结束游戏」才收官，默认不因钱为负结束
+  const hasEcoCosts = (bills.weekly?.length ?? 0) + (bills.monthly?.length ?? 0) > 0 || !!meal;
+  if (hasEcoCosts && eco.bankrupt === true && wallet.balance(n) < bankruptLine) {
     n.log.push(`【第 ${s.week} 周】${moneyWord}透支超过 ${wallet.fmt(-bankruptLine)}，债主找上门来……`);
     return { next: n, ended: "bankrupt", headline: "破产危机", check, bill };
   }
-  if (wallet.balance(n) < 0) {
-    const os = eco.overdraftStress ?? 4;
+  // 功能注释：无账单/生活开销配置时，钱为负不追加压力；有配置且写了透支压力才追加
+  if (hasEcoCosts && wallet.balance(n) < 0 && typeof eco.overdraftStress === "number" && eco.overdraftStress > 0) {
+    const os = eco.overdraftStress;
     n.stress = clamp(n.stress + os, 0, 100);
-    deltas.push(`⚠ ${moneyWord}已透支 ${wallet.fmt(-wallet.balance(n))}（压力 +${os}）${eco.bankrupt !== false ? `，透支超过 ${wallet.fmt(-bankruptLine)} 即告破产` : ""}——多安排打工/接活回血`);
+    deltas.push(`⚠ ${moneyWord}已透支 ${wallet.fmt(-wallet.balance(n))}（压力 +${os}）${eco.bankrupt === true ? `，透支超过 ${wallet.fmt(-bankruptLine)} 即告破产` : ""}`);
   }
 
   // NPC 生态：竞争者持续成长——八维缓慢精进，并靠接取通告涨名气

@@ -39,13 +39,18 @@ const KIND: Record<string, string> = {
   bankrupt: "破产落幕",
   finish: "时光期满",
 };
+/* 功能注释：维度卡底色 / 描边由主题色派生（跟随皮肤与深浅），不再用固定粉白色值 */
+const toneOf = (c: string) => ({
+  bg: `color-mix(in srgb, ${c} 12%, var(--e-card))`,
+  line: `color-mix(in srgb, ${c} 38%, var(--e-card))`,
+});
 const CARD_TONE: Record<string, { bg: string; line: string }> = {
-  heart: { bg: "#fff1f6", line: "#ffc9dc" },
-  star: { bg: "#f7f1ff", line: "#ddcefa" },
-  leaf: { bg: "#f0faf3", line: "#c3e8d1" },
-  book: { bg: "#f0f6ff", line: "#c8dbf8" },
-  crown: { bg: "#fff7ea", line: "#f6dcae" },
-  note: { bg: "#fff4ef", line: "#f8d3c4" },
+  heart: toneOf("var(--coral)"),
+  star: toneOf("var(--jade)"),
+  leaf: toneOf("var(--jade)"),
+  book: toneOf("var(--jade)"),
+  crown: toneOf("var(--gold)"),
+  note: toneOf("var(--coral)"),
 };
 
 type Tone = CSSProperties & { "--tag"?: string };
@@ -499,7 +504,7 @@ function PillarCard({ c }: { c: SubGradeCard }) {
       style={{ background: tone.bg, borderColor: tone.line }}
       title={c.detail}
     >
-      <p className="flex items-center justify-center gap-1 text-[13px] font-bold text-[#6a4757]">
+      <p className="flex items-center justify-center gap-1 text-[13px] font-bold text-[var(--e-ink)]">
         <Glyph
           name={meta.glyph}
           width={16}
@@ -538,7 +543,7 @@ function PillarCard({ c }: { c: SubGradeCard }) {
           );
         })}
       </div>
-      <p className="mt-1.5 truncate text-[10.5px] tabular-nums text-[#a07a8b]">
+      <p className="mt-1.5 truncate text-[10.5px] tabular-nums text-[var(--e-soft)]">
         {c.detail}
       </p>
     </div>
@@ -592,7 +597,11 @@ export default function Ending({ snap }: { snap?: Snap }) {
   const fail = (s: string) => () =>
     setBroken((b) => (b.includes(s) ? b : [...b, s]));
   const heroSrc = d.heroImgs.find(usable);
-  const photo = d.photoImgs.find((s) => s !== heroSrc && usable(s));
+  // 功能注释：纪念照优先用与主视觉不同的图；只有一张可用图时宁可与主视觉重复，也不留空相框（3.15）
+  const photo =
+    d.photoImgs.find((s) => s !== heroSrc && usable(s)) ??
+    d.photoImgs.find(usable) ??
+    heroSrc;
   const commenterImg = d.commenterImgs.find(usable);
   const commenterFit =
     commenterImg && commenterImg === d.portrait
@@ -675,7 +684,9 @@ export default function Ending({ snap }: { snap?: Snap }) {
         dpr: 1, // 固定 2 倍输出，高 DPR 手机上也不会生成超大图
         embedFonts: true,
         reconcile: true, // 按实际排版钉住尺寸，避免标签 / 行内文字在截图里重新换行
-        backgroundColor: "#fdeaf2",
+        // 功能注释：导出底色跟随当前主题纸色，不再写死粉白
+        backgroundColor:
+          getComputedStyle(document.documentElement).getPropertyValue("--paper").trim() || "#fdeaf2",
       });
       if (cap.warnings.length)
         console.warn("[ending] 导出 PNG 有降级", cap.warnings);
@@ -775,8 +786,8 @@ export default function Ending({ snap }: { snap?: Snap }) {
             landscape ? "bottom-[24%] lg:bottom-[40%]" : "bottom-[24%]"
           }`}
         >
-          <div className="end-medal end-bob grid aspect-[3/4] h-full max-w-[72%] place-items-center bg-gradient-to-b from-[#ffe6f0] to-[#efe2ff]">
-            <span className="end-round end-outline text-[72px] leading-none text-[#ef6b9c]">
+          <div className="end-medal end-bob grid aspect-[3/4] h-full max-w-[72%] place-items-center bg-gradient-to-b from-[color-mix(in_srgb,var(--e-pink)_22%,var(--e-card))] to-[color-mix(in_srgb,var(--e-alt)_22%,var(--e-card))]">
+            <span className="end-round end-outline text-[72px] leading-none text-[var(--e-pink)]">
               {d.name.slice(0, 1)}
             </span>
           </div>
@@ -789,16 +800,16 @@ export default function Ending({ snap }: { snap?: Snap }) {
         <p>{d.dur}的旅程</p>
         <p className="pl-3">在 {d.date} 落幕——</p>
         <p className="pl-1">
-          谢谢你一路相伴 <IconHeart size={14} className="inline text-[#ef6b9c]" />
+          谢谢你一路相伴 <IconHeart size={14} className="inline text-[var(--e-pink)]" />
         </p>
       </div>
       <div className="end-sticky end-hand absolute right-3 top-5 max-w-[42%] rotate-[4deg] px-3 pb-2 pt-3.5 text-center text-[16px] leading-snug sm:right-5 sm:top-6 sm:text-[18px]">
         <span aria-hidden className="end-tape" />
-        <p className="end-round text-[14px] tracking-wider text-[#ef6b9c]">
+        <p className="end-round text-[14px] tracking-wider text-[var(--e-pink)]">
           {d.badge}
         </p>
         <p className="mt-0.5">“{d.grade.verdict}”</p>
-        <p className="mt-0.5 text-[13px] text-[#a07a8b]">
+        <p className="mt-0.5 text-[13px] text-[var(--e-soft)]">
           第 {d.day} 天 · {d.kind}
         </p>
       </div>
@@ -813,15 +824,15 @@ export default function Ending({ snap }: { snap?: Snap }) {
         <Wing side="r" />
         <Crown className="end-crown" />
         <div className="end-plaque-card relative px-8 pb-2.5 pt-3.5 text-center sm:px-11">
-          <h1 className="end-round end-outline text-[40px] leading-none tracking-[0.06em] text-[#ef6b9c] sm:text-[50px]">
+          <h1 className="end-round end-outline text-[40px] leading-none tracking-[0.06em] text-[var(--e-pink)] sm:text-[50px]">
             结局评定
           </h1>
-          <p className="mt-1.5 text-[10px] font-bold tracking-[0.42em] text-[#dba4ba]">
+          <p className="mt-1.5 text-[10px] font-bold tracking-[0.42em] text-[var(--e-soft)]">
             ENDING RESULT
           </p>
         </div>
       </div>
-      <p className="mt-3 px-4 text-center text-[12.5px] tracking-[0.12em] text-[#a07a8b]">
+      <p className="mt-3 px-4 text-center text-[12.5px] tracking-[0.12em] text-[var(--e-soft)]">
         — {d.kind} · {d.name}的{d.dur}
         {d.worldName ? ` · ${d.worldName}` : ""} —
       </p>
@@ -833,7 +844,7 @@ export default function Ending({ snap }: { snap?: Snap }) {
       className={
         snap
           ? "end-page end-snap relative overflow-hidden"
-          : `end-page relative min-h-dvh overflow-x-hidden ${
+          : `end-page relative h-full min-h-0 overflow-y-auto overflow-x-hidden ${
               landscape ? "end-land" : ""
             }`
       }
@@ -881,7 +892,7 @@ export default function Ending({ snap }: { snap?: Snap }) {
           >
             <figure className="end-polaroid relative mx-auto w-full max-w-[220px]">
               <span aria-hidden className="end-tape" />
-              <div className="relative aspect-[4/5] overflow-hidden rounded-[2px] bg-gradient-to-br from-[#ffe3ee] via-[#f5e8ff] to-[#e4efff]">
+              <div className="relative aspect-[4/5] overflow-hidden rounded-[2px] bg-gradient-to-br from-[color-mix(in_srgb,var(--e-pink)_20%,var(--e-card))] via-[var(--e-card)] to-[color-mix(in_srgb,var(--e-alt)_20%,var(--e-card))]">
                 {photo ? (
                   <img
                     src={photo}
@@ -890,20 +901,20 @@ export default function Ending({ snap }: { snap?: Snap }) {
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <div className="grid h-full place-items-center content-center gap-1 text-[#f3a6c4]">
+                  <div className="grid h-full place-items-center content-center gap-1 text-[var(--e-soft)]">
                     <Glyph
                       name="flower"
                       width={56}
                       height={56}
                       strokeWidth={1.2}
                     />
-                    <span className="end-hand text-[15px] text-[#c27d98]">
+                    <span className="end-hand text-[15px] text-[var(--e-soft)]">
                       {d.name}
                     </span>
                   </div>
                 )}
               </div>
-              <figcaption className="end-hand truncate px-1 pb-2 pt-1.5 text-center text-[15px] leading-tight text-[#8a6273]">
+              <figcaption className="end-hand truncate px-1 pb-2 pt-1.5 text-center text-[15px] leading-tight text-[var(--e-soft)]">
                 {d.badge} · {d.date}
               </figcaption>
               <div
@@ -920,18 +931,18 @@ export default function Ending({ snap }: { snap?: Snap }) {
             </figure>
 
             <div className="min-w-0 text-center">
-              <Tag tone="#f58bb3">你的结局是</Tag>
+              <Tag tone="var(--coral)">你的结局是</Tag>
               <div className="relative mt-4">
                 <Crown className="absolute -top-6 right-[4%] w-8 rotate-12" />
                 <h2
-                  className="end-round end-outline break-words leading-[1.12] text-[#ef6b9c]"
+                  className="end-round end-outline break-words leading-[1.12] text-[var(--e-pink)]"
                   style={{ fontSize: titleSize }}
                 >
                   {d.title}
                 </h2>
               </div>
               {d.quote && (
-                <p className="mt-3 text-[12.5px] leading-relaxed text-[#7d5868]">
+                <p className="mt-3 text-[12.5px] leading-relaxed text-[var(--e-ink)]">
                   『{d.quote}』
                 </p>
               )}
@@ -940,7 +951,7 @@ export default function Ending({ snap }: { snap?: Snap }) {
             <div className="col-span-2 flex justify-center @lg:col-span-1">
               <div className="end-cloud relative grid w-full max-w-[220px] place-items-center px-4 pb-6 pt-8 text-center">
                 <Tag
-                  tone="#c9a6f0"
+                  tone="var(--jade)"
                   className="absolute -top-3 left-1/2 -translate-x-1/2 text-[12px]"
                 >
                   同时获得
@@ -949,18 +960,18 @@ export default function Ending({ snap }: { snap?: Snap }) {
                   name="sparkle"
                   width={16}
                   height={16}
-                  className="absolute left-[16%] top-[30%] text-[#b996f0]"
+                  className="absolute left-[16%] top-[30%] text-[var(--e-alt)]"
                 />
                 <Glyph
                   name="star"
                   width={12}
                   height={12}
-                  fill="#f7c6dc"
-                  className="absolute bottom-[22%] right-[15%] text-[#f19cc0]"
+                  fill="currentColor"
+                  className="absolute bottom-[22%] right-[15%] text-[var(--e-pink)]"
                 />
                 <Crown className="absolute -top-1 right-[12%] w-6 -rotate-12 opacity-90" />
                 <p
-                  className="end-round end-outline-sm break-words leading-tight text-[#9b6fe6]"
+                  className="end-round end-outline-sm break-words leading-tight text-[var(--e-alt)]"
                   style={{ fontSize: "clamp(22px, 6.4cqw, 34px)" }}
                 >
                   {d.sub}
@@ -976,7 +987,7 @@ export default function Ending({ snap }: { snap?: Snap }) {
               style={{ animationDelay: ".16s" }}
             >
               <Tag
-                tone="#eaa79f"
+                tone="var(--gold)"
                 className="absolute -top-3.5 left-1/2 -translate-x-1/2"
               >
                 各项等级判定
@@ -996,14 +1007,14 @@ export default function Ending({ snap }: { snap?: Snap }) {
               style={{ animationDelay: ".24s" }}
             >
               <Tag
-                tone="#b8a2cb"
+                tone="var(--jade)"
                 className="absolute -top-3.5 left-1/2 -translate-x-1/2"
               >
                 结局后记
               </Tag>
               {d.paras.length ? (
                 <div
-                  className={`end-lines text-[13.5px] text-[#5d3b4c] ${
+                  className={`end-lines text-[13.5px] text-[var(--e-ink)] ${
                     folded ? "end-fold" : ""
                   }`}
                 >
@@ -1021,7 +1032,7 @@ export default function Ending({ snap }: { snap?: Snap }) {
                   ))}
                 </div>
               ) : (
-                <p className="end-lines text-[13.5px] text-[#a07a8b]">
+                <p className="end-lines text-[13.5px] text-[var(--e-soft)]">
                   {d.quote || "后记还没有写好，故事的余温仍在。"}
                 </p>
               )}
@@ -1036,8 +1047,8 @@ export default function Ending({ snap }: { snap?: Snap }) {
                     {full ? "收起后记" : `展开全文 · ${d.words} 字`}
                   </button>
                 )}
-                <p className="end-hand ml-auto -rotate-3 text-[17px] text-[#c27d98]">
-                  致 {d.name} <IconHeart size={14} className="inline text-[#ef6b9c]" />
+                <p className="end-hand ml-auto -rotate-3 text-[17px] text-[var(--e-soft)]">
+                  致 {d.name} <IconHeart size={14} className="inline text-[var(--e-pink)]" />
                 </p>
               </div>
             </section>
@@ -1047,7 +1058,7 @@ export default function Ending({ snap }: { snap?: Snap }) {
               style={{ animationDelay: ".32s" }}
             >
               <Tag
-                tone="#f0a58f"
+                tone="var(--coral)"
                 className={`absolute -top-3.5 left-1/2 -translate-x-1/2 ${
                   // 导出卡不截断：SnapDOM 会自行烘焙省略号，丝带尾巴溢出会被误判成整段「…」
                   snap ? "" : "max-w-[92%] overflow-hidden text-ellipsis"
@@ -1062,7 +1073,7 @@ export default function Ending({ snap }: { snap?: Snap }) {
                       src={commenterImg}
                       alt={d.commenter}
                       onError={fail(commenterImg)}
-                      className={`aspect-[4/5] w-full rounded-[22px] border-4 border-white bg-gradient-to-b from-[#fff1f6] to-[#f3e9ff] shadow-[0_10px_20px_-12px_rgba(200,100,140,.7)] ${commenterFit}`}
+                      className={`aspect-[4/5] w-full rounded-[22px] border-4 border-[var(--e-card)] bg-gradient-to-b from-[color-mix(in_srgb,var(--e-pink)_14%,var(--e-card))] to-[color-mix(in_srgb,var(--e-alt)_16%,var(--e-card))] shadow-[0_10px_20px_-12px_rgba(200,100,140,.7)] ${commenterFit}`}
                     />
                   ) : (
                     <div className="end-bob aspect-[4/5] w-full">
@@ -1070,10 +1081,10 @@ export default function Ending({ snap }: { snap?: Snap }) {
                     </div>
                   )}
                 </div>
-                <div className="end-bubble min-w-0 flex-1 px-3.5 py-3 text-[13px] leading-relaxed text-[#5d3b4c]">
+                <div className="end-bubble min-w-0 flex-1 px-3.5 py-3 text-[13px] leading-relaxed text-[var(--e-ink)]">
                   <p className="whitespace-pre-wrap break-words">{d.comment}</p>
-                  <p className="mt-2 text-right text-[12px] text-[#a07a8b]">
-                    —— {d.commenter} <IconHeart size={14} className="inline text-[#ef6b9c]" />
+                  <p className="mt-2 text-right text-[12px] text-[var(--e-soft)]">
+                    —— {d.commenter} <IconHeart size={14} className="inline text-[var(--e-pink)]" />
                   </p>
                 </div>
               </div>
@@ -1082,7 +1093,7 @@ export default function Ending({ snap }: { snap?: Snap }) {
 
           {/* 再来一局 · 分享给朋友 · 导出图片；导出卡里换成落款 */}
           {snap ? (
-            <p className="mt-8 text-center text-[10px] font-bold tracking-[0.42em] text-[#dba4ba]">
+            <p className="mt-8 text-center text-[10px] font-bold tracking-[0.42em] text-[var(--e-soft)]">
               — THE END —
             </p>
           ) : (
@@ -1151,14 +1162,14 @@ export default function Ending({ snap }: { snap?: Snap }) {
                   </span>
                 </button>
               </div>
-              <p className="mt-3 flex items-center justify-center gap-1.5 text-[12px] text-[#8a6273]">
+              <p className="mt-3 flex items-center justify-center gap-1.5 text-[12px] text-[var(--e-soft)]">
                 把这份结局卡片分享给朋友吧{" "}
-                <IconHeart size={14} className="inline text-[#ef6b9c]" />
+                <IconHeart size={14} className="inline text-[var(--e-pink)]" />
                 <Glyph
                   name="send"
                   width={15}
                   height={15}
-                  className="text-[#c27d98]"
+                  className="text-[var(--e-soft)]"
                 />
               </p>
               <button
@@ -1192,18 +1203,18 @@ export default function Ending({ snap }: { snap?: Snap }) {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-2 px-4 pb-1 pt-4">
-              <p className="end-round min-w-0 flex-1 text-[18px] text-[#ef6b9c]">分享文案</p>
+              <p className="end-round min-w-0 flex-1 text-[18px] text-[var(--e-pink)]">分享文案</p>
               <button type="button" onClick={() => setManual("")} aria-label="关闭" className="ui-icon-btn"><IconClose /></button>
             </div>
             <div className="ui-dialog-body px-4 pb-4">
-            <p className="mt-1 text-[12px] text-[#a07a8b]">
+            <p className="mt-1 text-[12px] text-[var(--e-soft)]">
               当前环境无法直接分享或复制，请全选下方文字后复制。
             </p>
             <textarea
               readOnly
               value={manual}
               onFocus={(e) => e.currentTarget.select()}
-              className="mt-2 h-40 w-full resize-none rounded-xl border border-[#f5d3e1] bg-white p-2.5 text-[12.5px] leading-relaxed text-[#5d3b4c] outline-none"
+              className="mt-2 h-40 w-full resize-none rounded-xl border border-[var(--e-line)] bg-[var(--e-card)] p-2.5 text-[12.5px] leading-relaxed text-[var(--e-ink)] outline-none"
             />
             <button
               type="button"
@@ -1233,21 +1244,21 @@ export default function Ending({ snap }: { snap?: Snap }) {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-2 px-4 pb-1 pt-4">
-              <p className="end-round min-w-0 flex-1 text-[18px] text-[#ef6b9c]">
+              <p className="end-round min-w-0 flex-1 text-[18px] text-[var(--e-pink)]">
                 结局卡片已生成
               </p>
               <button type="button" onClick={() => setShotOpen(false)} aria-label="关闭" className="ui-icon-btn"><IconClose /></button>
             </div>
             <div className="ui-dialog-body px-4 pb-4">
-            <p className="mt-1 text-[12px] leading-relaxed text-[#a07a8b]">
+            <p className="mt-1 text-[12px] leading-relaxed text-[var(--e-soft)]">
               PNG 图片已开始下载；没有反应的话点「保存图片」重试，手机也可以长按图片存到相册。
             </p>
             {shot.lost && (
-              <p className="mt-1 text-[12px] leading-relaxed text-[#c06a8e]">
+              <p className="mt-1 text-[12px] leading-relaxed text-[var(--e-pink)]">
                 部分图片的来源不允许跨域读取，图里换成了其他素材或默认画框。
               </p>
             )}
-            <div className="mt-3 overflow-hidden rounded-xl border border-[#f5d3e1] bg-white">
+            <div className="mt-3 overflow-hidden rounded-xl border border-[var(--e-line)] bg-[var(--e-card)]">
               <img
                 src={shot.url}
                 alt={`${d.title} · 结局卡片`}

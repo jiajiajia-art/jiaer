@@ -1,11 +1,12 @@
 import { IconClose } from "../lib/icons";
 import { useEffect, useState, type ReactNode } from "react";
-import { CondRow, defaultCond } from "./FixedEventsPanel";
+import { CondRow, useDraftDefaults } from "./FixedEventsPanel";
 import ImagePicker from "./ImagePicker";
 import { condsBrief } from "./ruleText";
 import { ACCENTS, FONTS, SKINS } from "../lib/skins";
 import { lookActive, lookSummary, type LookPatch, type LookRule } from "../lib/plotLook";
 import { LIVE_PEOPLE as PEOPLE, getWorldLookRules } from "../mods/registry";
+import { useDraftRefs } from "./draftRefsContext";
 import { useGame } from "../store/gameCtx";
 import type { FixedEvent } from "../lib/types";
 
@@ -22,12 +23,13 @@ const TOPBARS = [["gradient", "流光渐变"], ["aurora", "极光幻彩"], ["pla
 const MODES = [["light", "浅色"], ["dark", "深色"]] as const;
 
 const metric = (key: string, op: "gte" | "lte", value: number) => ({ kind: "metric" as const, key, op, value });
-const TEMPLATES: { name: string; make: () => Omit<LookRule, "id"> }[] = [
+/* 功能注释：requires = 依赖的指标键；needsPeople = 需要人物。模组编辑器里只展示本作品具备的模板。 */
+const TEMPLATES: { name: string; requires?: string[]; needsPeople?: boolean; make: (firstPerson: string) => Omit<LookRule, "id"> }[] = [
   { name: "深夜转暗", make: () => ({ name: "深夜转暗", conds: [{ kind: "clock", from: "22:00", to: "06:00" }], look: { mode: "dark", sceneTone: "cool", sceneDim: 60 } }) },
-  { name: "压力爆表", make: () => ({ name: "压力爆表", conds: [metric("stress", "gte", 80)], look: { sceneTone: "mono", tint: "#8b1e2d", topbarText: "快喘不过气" } }) },
-  { name: "声名鹊起", make: () => ({ name: "声名鹊起", conds: [metric("fame", "gte", 500)], look: { skin: "dream", accent: "gold", topbar: "aurora" } }) },
-  { name: "囊中羞涩", make: () => ({ name: "囊中羞涩", conds: [metric("money", "lte", 0)], look: { sceneTone: "vintage", tint: "#57534e" } }) },
-  { name: "心动时刻", make: () => ({ name: "心动时刻", conds: [{ kind: "rel", key: PEOPLE[0]?.id ?? "", op: "gte", value: 60 }], look: { accent: "rose", sceneTone: "warm", bubbleStyle: "comic" } }) },
+  { name: "压力爆表", requires: ["stress"], make: () => ({ name: "压力爆表", conds: [metric("stress", "gte", 80)], look: { sceneTone: "mono", tint: "#8b1e2d", topbarText: "快喘不过气" } }) },
+  { name: "声名鹊起", requires: ["fame"], make: () => ({ name: "声名鹊起", conds: [metric("fame", "gte", 500)], look: { skin: "dream", accent: "gold", topbar: "aurora" } }) },
+  { name: "囊中羞涩", requires: ["money"], make: () => ({ name: "囊中羞涩", conds: [metric("money", "lte", 0)], look: { sceneTone: "vintage", tint: "#57534e" } }) },
+  { name: "心动时刻", needsPeople: true, make: (firstPerson) => ({ name: "心动时刻", conds: [{ kind: "rel", key: firstPerson, op: "gte", value: 60 }], look: { accent: "rose", sceneTone: "warm", bubbleStyle: "comic" } }) },
 ];
 
 function Row({ t, children }: { t: string; children: ReactNode }) {
@@ -93,6 +95,13 @@ function PatchEditor({ p, onChange }: { p: LookPatch; onChange: (p: LookPatch) =
 }
 
 export default function LookRulesEditor({ value, events = [], onChange }: { value?: LookRule[]; events?: FixedEvent[]; onChange: (v?: LookRule[]) => void }) {
+  const dd = useDraftDefaults();
+  const draftRefs = useDraftRefs();
+  // 功能注释：编辑器内只给本作品有的指标/人物对应的模板；游玩态不过滤
+  const firstPerson = draftRefs ? draftRefs.people[0]?.id ?? "" : PEOPLE[0]?.id ?? "";
+  const templates = draftRefs
+    ? TEMPLATES.filter((t) => (!t.requires || t.requires.every((k) => draftRefs.metricKeys?.includes(k))) && (!t.needsPeople || draftRefs.people.length > 0))
+    : TEMPLATES;
   const { game, previewLook } = useGame();
   const list = value ?? [];
   const [pv, setPv] = useState<string | null>(null); // 正在试看的规则 id
@@ -107,8 +116,8 @@ export default function LookRulesEditor({ value, events = [], onChange }: { valu
   return (
     <div className="space-y-2.5">
       <div className="flex flex-wrap gap-1.5">
-        <button className={btn} onClick={() => commit([...list, { id: uid(), name: "新的剧情美化", conds: [defaultCond("metric")], look: {} }])}>＋ 空白规则</button>
-        {TEMPLATES.map((t) => <button key={t.name} className={`${btn} !font-normal`} onClick={() => commit([...list, { id: uid(), ...t.make() }])}>{t.name}</button>)}
+        <button className={btn} onClick={() => commit([...list, { id: uid(), name: "新的剧情美化", conds: [dd.cond("metric")], look: {} }])}>＋ 空白规则</button>
+        {templates.map((t) => <button key={t.name} className={`${btn} !font-normal`} onClick={() => commit([...list, { id: uid(), ...t.make(firstPerson) }])}>{t.name}</button>)}
       </div>
       {!list.length && <p className="rounded-xl border border-dashed border-line px-3 py-4 text-center text-[12px] text-ink-soft">还没有剧情美化 · 试试「深夜转暗」「压力爆表」模板</p>}
 
@@ -137,7 +146,7 @@ export default function LookRulesEditor({ value, events = [], onChange }: { valu
               {r.conds.map((c, i) => (
                 <CondRow key={i} c={c} events={events} selfId="" onChange={(x) => set(r.id, { conds: r.conds.map((y, j) => (j === i ? x : y)) })} onDelete={() => set(r.id, { conds: r.conds.filter((_, j) => j !== i) })} />
               ))}
-              <button className="text-[11.5px] font-semibold text-jade hover:underline" onClick={() => set(r.id, { conds: [...r.conds, defaultCond("metric")] })}>＋ 条件</button>
+              <button className="text-[11.5px] font-semibold text-jade hover:underline" onClick={() => set(r.id, { conds: [...r.conds, dd.cond("metric")] })}>＋ 条件</button>
             </div>
 
             <div className="space-y-1">

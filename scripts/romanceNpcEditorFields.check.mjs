@@ -56,10 +56,10 @@ test('npcEditor_线路AI须回写人物资料', () => {
 test('npcEditor_世界生成人物契约含完整资料校验', () => {
   const gen = readFileSync(join(romance, 'lib/worldGenGenerate.ts'), 'utf8');
   const detail = readFileSync(join(romance, 'lib/worldGenProgressDetail.ts'), 'utf8');
-  assert.match(gen, /按配额短小传|npcBioChars/);
+  assert.match(gen, /npcBioChars|appearancePrompt/);
   assert.match(gen, /人物缺少姓名|人物「\$\{name\}」缺少性别|小传过短/);
   assert.match(gen, /platformNpcTagsPromptLine/);
-  assert.match(gen, /bio\.length < 40/);
+  assert.match(gen, /bio\.length < 20/);
   assert.match(detail, /npcBioChars:\s*120/);
   assert.doesNotMatch(gen, /约 300 字 bio/);
 });

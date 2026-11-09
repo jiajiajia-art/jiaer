@@ -6,8 +6,8 @@
 /** 功能注释：列表与开局页简介，控制在短介绍篇幅 */
 export const MOD_DESC_MAX = 200;
 
-/** 功能注释：GM 开场 / 世界观 / 叙事口吻已并成一份系统提示词 */
-export const SCRIPT_TONE_MAX = 4000;
+/** 功能注释：GM 开场 / 世界观 / 叙事口吻已并成一份系统提示词；上限与故事设定同为 5000 */
+export const SCRIPT_TONE_MAX = 5000;
 
 export function modDescLen(description: string | null | undefined): number {
   return String(description ?? "").length;

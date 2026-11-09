@@ -8,8 +8,13 @@ import { EmptyState, Help, SearchBox, matches } from "./EditorKit";
 import ImagePicker from "./ImagePicker";
 import { Modal } from "./ui";
 import { IconChevronDown } from "../lib/icons";
-import { SCENE_PORTRAIT_GEN_SIZE } from "../lib/scenePortrait";
-import { buildLocationScenePrompt, buildWorldMapPrompt } from "../lib/editorImagePrompts";
+import {
+  LOCATION_SCENE_GEN_SIZE,
+  WORLD_MAP_GEN_SIZE,
+  buildLocationScenePromptParts,
+  buildWorldMapPromptParts,
+  type WorkImageGenBinding,
+} from "../lib/editorImagePrompts";
 import {
   listActivePlatformLocations,
   resolvePlatformLocationImageUrl,
@@ -33,12 +38,14 @@ const rid = () => `room_${Math.random().toString(36).slice(2, 8)}`;
 /** 功能注释：地点库 / 手工添加时若缺场景描述，用地名补一句，避免必填框交白卷。 */
 const sceneDescFallback = (name: string) => `你来到了「${name}」。`;
 
-export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks, emptyHint, onChange, onDelete, onRename: _onRename }: {
+export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks, emptyHint, imageGen, onChange, onDelete, onRename: _onRename }: {
   rooms: Rooms;
   worldMaps?: WorldMapDef[];
   startRoom?: string;
   tracks: { id: string; name: string }[];
   emptyHint: string;
+  /** 功能注释：作品级画风 / 负面词与保存回调；地点 / 大地图生图共用 */
+  imageGen?: WorkImageGenBinding;
   onChange: (rooms: Rooms, startRoom?: string, worldMaps?: WorldMapDef[]) => void;
   onDelete: (id: string) => void;
   /** 功能注释：房间 id 不再在编辑页手改，保留回调以免改动父组件签名。 */
@@ -260,9 +267,13 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
               scenePortrait
               platformAssetPurpose="world_map"
               aiGen={{
-                size: SCENE_PORTRAIT_GEN_SIZE,
-                placeholder: "按大地图名称生成 9:16 竖版地图插画…",
-                initialPrompt: buildWorldMapPrompt({ name: curMap.name, desc: curMap.desc }) || undefined,
+                size: WORLD_MAP_GEN_SIZE,
+                placeholder: "只写这张地图：名称与包含的地点（9:16 竖版）…",
+                initialParts: buildWorldMapPromptParts(
+                  { name: curMap.name, places: Object.values(mapRooms).map((x) => x.name || ""), desc: curMap.desc },
+                  imageGen?.settings,
+                ),
+                onPartsCommit: imageGen?.onCommit,
               }}
             />
           </div>
@@ -342,6 +353,11 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
                   </select>
                 </label>
                 <textarea className={`${area} ${String(r.desc ?? "").trim() ? "" : "!border-danger"}`} rows={3} value={String(r.desc ?? "")} placeholder="进入此地时的场景描述（必填）" onChange={(e) => set(cur, { desc: e.target.value })} />
+                {/* 功能注释：画面描述只喂场景生图（空间布局/光线/陈设），与上面玩家可见的进入叙事分开 */}
+                <label className="block">
+                  <span className={lbl}>画面描述 · 只给场景生图用（空间布局 / 光线 / 陈设），不写进入叙事</span>
+                  <textarea className={area} rows={2} value={String(r.scenePrompt ?? "")} placeholder="如：木质回廊，午后斜阳，靠窗长桌，墙上挂着旧地图（可空）" onChange={(e) => set(cur, { scenePrompt: e.target.value || undefined })} />
+                </label>
                 <div className="grid gap-1.5 sm:grid-cols-2">
                   <div className="block"><span className={lbl}>场景背景图（进入此地显示 · 9:16 / 1080×1920）</span>
                     <ImagePicker
@@ -353,9 +369,13 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
                       scenePortrait
                       platformAssetPurpose="location_scene"
                       aiGen={{
-                        size: SCENE_PORTRAIT_GEN_SIZE,
-                        placeholder: "按地点名与场景描述生成 9:16 竖图…",
-                        initialPrompt: buildLocationScenePrompt({ name: r.name, desc: r.desc }) || undefined,
+                        size: LOCATION_SCENE_GEN_SIZE,
+                        placeholder: "只写这个地点的空间：布局、光线、陈设（9:16 竖图）…",
+                        initialParts: buildLocationScenePromptParts(
+                          { name: r.name, scenePrompt: r.scenePrompt },
+                          imageGen?.settings,
+                        ),
+                        onPartsCommit: imageGen?.onCommit,
                       }}
                     />
                   </div>

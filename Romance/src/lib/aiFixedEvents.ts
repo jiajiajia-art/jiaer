@@ -1,6 +1,6 @@
 /**
- * 固定事件 · AI 帮写：按世界观一次写出恰好 5 条完整叙事事件；
- * 每条必须有名称 / 触发方式 / 事件提示词 / 属性变化；禁止选项。
+ * 固定事件 · AI 帮写：只按本作品材料写事件；条数建议约 2–5，不补空壳。
+ * 材料里没有演艺圈内容时，禁止通告/片场/名气等词。
  */
 import type { FixedEvent } from "./types";
 import { asTrimmedString } from "./asTrimmedString.ts";
@@ -9,16 +9,21 @@ import {
   coerceWorldGenFixedEventPrompt,
   normalizeWorldGenFixedEvent,
   WORLD_GEN_FIXED_EVENTS_COUNT,
+  WORLD_GEN_FIXED_EVENTS_SUGGEST_MAX,
+  WORLD_GEN_FIXED_EVENTS_SUGGEST_MIN,
 } from "./worldGenFixedEvents.ts";
 
-/** 功能注释：编辑器「AI 帮写」与生成世界共用的完整事件条数 */
+/** 功能注释：帮写建议条数中位；与生成世界共用，不再硬卡正好 5 */
 export const AI_FIXED_EVENTS_COUNT = WORLD_GEN_FIXED_EVENTS_COUNT;
+export const AI_FIXED_EVENTS_SUGGEST_MIN = WORLD_GEN_FIXED_EVENTS_SUGGEST_MIN;
+export const AI_FIXED_EVENTS_SUGGEST_MAX = WORLD_GEN_FIXED_EVENTS_SUGGEST_MAX;
 
-/** 功能注释：帮写时注入的世界观摘要，避免模型凭空写无关桥段 */
+/** 功能注释：帮写时注入的本作品摘要，禁止回落旧世界 */
 export type AiFixedEventsWorldContext = {
   title?: string;
   setting?: string;
   scriptTone?: string;
+  worldBook?: { id?: string; title?: string; keywords?: string; content?: string }[];
   rooms?: { id: string; name: string }[];
   npcs?: { id: string; name: string }[];
   metrics?: { key: string; label: string }[];
@@ -39,8 +44,30 @@ function ids(
   );
 }
 
+const ENT_TERMS = ["通告", "片场", "经纪人", "试镜", "红毯", "粉丝", "名气", "黑粉", "明星", "导演", "练习生"];
+
+/** 功能注释：材料里未出现演艺圈词时，明确禁止模型写这些词 */
+function entertainmentForbidLine(ctx: AiFixedEventsWorldContext): string {
+  const blob = [
+    ctx.title,
+    ctx.setting,
+    ctx.scriptTone,
+    ...(ctx.worldBook ?? []).flatMap((w) => [w.title, w.keywords, w.content]),
+    ...(ctx.rooms ?? []).map((r) => r.name),
+    ...(ctx.npcs ?? []).map((n) => n.name),
+    ...(ctx.stats ?? []).map((s) => s.label),
+    ...(ctx.metrics ?? []).map((m) => m.label),
+  ]
+    .map((x) => String(x ?? ""))
+    .join("\n");
+  const present = ENT_TERMS.filter((t) => blob.includes(t));
+  if (present.length === ENT_TERMS.length) return "";
+  const banned = ENT_TERMS.filter((t) => !present.includes(t));
+  return `材料未提供演艺圈设定时，事件名与正文禁止出现：${banned.join("、")}。`;
+}
+
 /**
- * 功能注释：系统提示——强制恰好 5 条、字段写满、无选项；并带上世界观与可用键。
+ * 功能注释：系统提示——只使用本作品世界书/地点/人物/属性；条数建议；属性变化只能改已有键。
  */
 export function buildAiFixedEventsSystemPrompt(
   ctx: AiFixedEventsWorldContext,
@@ -48,41 +75,59 @@ export function buildAiFixedEventsSystemPrompt(
 ): string {
   const worldBits = [
     ctx.title ? `作品名：${ctx.title}` : "",
-    ctx.setting ? `故事设定：${ctx.setting.slice(0, 600)}` : "",
-    ctx.scriptTone ? `剧本基调摘要：${ctx.scriptTone.slice(0, 400)}` : "",
+    ctx.setting ? `故事设定：${ctx.setting}` : "",
+    ctx.scriptTone ? `剧本基调：${ctx.scriptTone}` : "",
   ]
     .filter(Boolean)
     .join("\n");
 
-  return `你是文字养成游戏的剧本策划。按当前世界观写出恰好 ${AI_FIXED_EVENTS_COUNT} 条「固定事件」。
-只输出一个 \`\`\`json 代码块，内容为数组 FixedEvent[]（长度必须是 ${AI_FIXED_EVENTS_COUNT}），不要其他文字。
+  const bookBits = (ctx.worldBook ?? [])
+    .slice(0, 12)
+    .map((w) => {
+      const title = asTrimmedString(w.title) || asTrimmedString(w.id) || "条目";
+      const kw = asTrimmedString(w.keywords);
+      const body = asTrimmedString(w.content).slice(0, 120);
+      return `- ${title}${kw ? `「${kw}」` : ""}${body ? `：${body}` : ""}`;
+    })
+    .join("\n");
 
-每条必须一次写完整，缺一不可：
-{"id":"fx_小写英文","name":"事件名","trigger":{"kind":"auto"},"time":{"kind":"day","day":开局后第N天} 或 {"kind":"none"},"conds":[],"prompt":"交给 AI 演绎的剧情（60~200字：场景、人物、冲突与走向）","effects":[{"kind":"metric"|"stat"|"rel","key":"…","delta":非0整数}],"once":true}
+  const exampleRoom = ctx.rooms?.[0]?.name || "本作品地点";
+  const exampleAttr = ctx.stats?.[0]?.label || ctx.metrics?.[0]?.label || "本作品属性";
+  const forbid = entertainmentForbidLine(ctx);
+
+  return `你是文字养成游戏的剧本策划。按当前作品材料写出约 ${AI_FIXED_EVENTS_SUGGEST_MIN}–${AI_FIXED_EVENTS_SUGGEST_MAX} 条「固定事件」（参考 ${AI_FIXED_EVENTS_COUNT} 条）。
+只输出一个 \`\`\`json 代码块，内容为数组 FixedEvent[]，不要其他文字。
+
+每条必须一次写完整：
+{"id":"fx_小写英文","name":"事件名","trigger":{"kind":"auto"},"time":{"kind":"day","day":开局后第N天} 或 {"kind":"none"},"conds":[],"prompt":"这场戏里谁、在哪个已有地点、做了什么、说了什么（60~200字）","effects":[{"kind":"metric"|"stat"|"rel","key":"…","delta":非0整数}],"once":true,"openingPrompt":false}
 
 硬性规则：
-- 正好 ${AI_FIXED_EVENTS_COUNT} 条，不多不少
-- prompt 不能为空，也不能短于 20 字
-- effects 至少 1 条属性变化
-- trigger 只能是 {"kind":"auto"}（时间自动叙事）
-- 禁止 choices、禁止选项文案、禁止选项类型、禁止 enter/choice/action 等触发
-- 事件要贴合世界观地点与人物，不要写无关题材
+- 建议 ${AI_FIXED_EVENTS_SUGGEST_MIN}–${AI_FIXED_EVENTS_SUGGEST_MAX} 条；少了或多了都可以，但每条必须有名字和可用正文，禁止空壳凑数
+- prompt 不能为空，也不能短于 20 字；只写这场戏的事，禁止「眼底闪过一丝」「空气仿佛凝固」「命运的齿轮」「故事才刚刚开始」
+- effects 至少 1 条；key 只能是下方「可用指标/属性」或人物关系 id
+- 不需要选择的事件用 trigger.auto 且不要写 choices；需要玩家选择才带 choices，选项后果也只能改已有属性/关系
+- 事件名和正文只用材料里的时代、身份、场合
+${forbid ? `- ${forbid}\n` : ""}
+${worldBits || "（世界观信息不足时，仍须用已给的地点/人物/属性写出可上演事件）"}
 
-${worldBits || "（世界观信息不足时，仍须写出完整可上演的 5 条叙事事件）"}
+世界书：
+${bookBits || "（无）"}
 
 可用指标：${ids(ctx.metrics, 20)}
 可用属性：${ids(ctx.stats, 20)}
 人物：${ids(ctx.npcs)}
 地点：${ids(ctx.rooms)}
-已有事件 id（不要重复）：${ids(existing.map((e) => ({ id: e.id, name: e.name || e.id })), 60)}`;
+已有事件 id（不要重复）：${ids(existing.map((e) => ({ id: e.id, name: e.name || e.id })), 60)}
+
+示例口吻：在「${exampleRoom}」围绕「${exampleAttr}」写一场可结算的戏，不要用材料里没有的词。`;
 }
 
-/** 功能注释：一键帮写的默认用户句，不依赖创作者再打长描述 */
+/** 功能注释：一键帮写的默认用户句 */
 export const AI_FIXED_EVENTS_DEFAULT_ASK =
-  `按当前世界观生成恰好 ${AI_FIXED_EVENTS_COUNT} 条完整固定事件：每条含名称、trigger.auto、事件提示词、触发后属性变化；禁止选项。`;
+  `按当前作品生成约 ${AI_FIXED_EVENTS_SUGGEST_MIN}–${AI_FIXED_EVENTS_SUGGEST_MAX} 条完整固定事件：每条含名称、事件提示词、属性变化；不需要选择就不要写选项。`;
 
 /**
- * 功能注释：清洗 AI 输出——只留完整叙事条，强制 auto、剥选项，最多 AI_FIXED_EVENTS_COUNT 条。
+ * 功能注释：清洗 AI 输出——只留完整叙事条；条数软上限，不强制正好 N。
  */
 export function sanitizeAiFixedEvents(raw: unknown, taken: Set<string>): FixedEvent[] {
   const arr = Array.isArray(raw)
@@ -96,16 +141,16 @@ export function sanitizeAiFixedEvents(raw: unknown, taken: Set<string>): FixedEv
   const out: FixedEvent[] = [];
   const rename = new Map<string, string>();
   const used = new Set(taken);
+  const softCap = AI_FIXED_EVENTS_SUGGEST_MAX + 3;
 
   for (const row of arr) {
-    if (out.length >= AI_FIXED_EVENTS_COUNT) break;
+    if (out.length >= softCap) break;
     if (!row || typeof row !== "object" || Array.isArray(row)) continue;
     const r = { ...(row as Record<string, unknown>) };
     if (!asTrimmedString(r.prompt)) {
       const coerced = coerceWorldGenFixedEventPrompt(r);
       if (coerced) r.prompt = coerced;
     }
-    // 功能注释：复用生成世界清洗——缺提示词/缺后果/带选项一律丢掉
     const norm = normalizeWorldGenFixedEvent(r, out.length);
     if (!norm) continue;
 
@@ -123,7 +168,6 @@ export function sanitizeAiFixedEvents(raw: unknown, taken: Set<string>): FixedEv
       name: String(norm.name),
       prompt: String(norm.prompt),
       trigger: { kind: "auto" },
-      // 功能注释：清洗层已规范化 time；缺省 none，编辑器展示「仅凭条件」
       time: (norm.time as FixedEventTime | undefined) ?? { kind: "none" },
       conds: Array.isArray(norm.conds) ? (norm.conds as FixedEvent["conds"]) : undefined,
       effects: norm.effects as FixedEvent["effects"],
@@ -131,6 +175,8 @@ export function sanitizeAiFixedEvents(raw: unknown, taken: Set<string>): FixedEv
       once: norm.once === false ? false : true,
       locked: norm.locked === true || undefined,
       chain: typeof norm.chain === "string" ? norm.chain : undefined,
+      ...(norm.openingPrompt === true ? { openingPrompt: true } : {}),
+      ...(Array.isArray(norm.choices) ? { choices: norm.choices as FixedEvent["choices"] } : {}),
     };
     out.push(ev);
   }
@@ -147,7 +193,7 @@ export function sanitizeAiFixedEvents(raw: unknown, taken: Set<string>): FixedEv
 }
 
 /**
- * 功能注释：帮写确认入库时——若现有多为空壳/半成品，则整表替换为本次 5 条，避免叠出一堆缺提示词提醒。
+ * 功能注释：帮写确认入库——空壳多则整表替换；否则追加，不强制正好 N 条。
  */
 export function mergeAiFixedEventsIntoLibrary(
   existing: FixedEvent[],
@@ -159,11 +205,10 @@ export function mergeAiFixedEventsIntoLibrary(
   const mostlyShells =
     existing.length === 0 ||
     existing.filter(incomplete).length >= Math.ceil(existing.length * 0.5);
-  if (mostlyShells) return generated.slice(0, AI_FIXED_EVENTS_COUNT);
+  if (mostlyShells) return generated;
   const taken = new Set(existing.map((e) => e.id));
   const add: FixedEvent[] = [];
   for (const ev of generated) {
-    if (add.length + existing.length >= existing.length + AI_FIXED_EVENTS_COUNT) break;
     let id = ev.id;
     if (taken.has(id)) id = `${id}_${Math.random().toString(36).slice(2, 5)}`;
     taken.add(id);

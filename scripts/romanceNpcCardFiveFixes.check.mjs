@@ -57,11 +57,10 @@ test('personName_拒绝纯身份_接受姓加名', async () => {
 test('worldGen_人物契约含有名有姓与势力清洗', () => {
   const gen = read('lib/worldGenGenerate.ts');
   assert.match(gen, /有名有姓|有姓有名/);
-  assert.match(gen, /太皇太后/);
   assert.match(gen, /improperPersonNameReason/);
   assert.match(gen, /sanitizeNpcFactionId/);
-  assert.match(gen, /kind = "roam"|kind 一律 roam|n\.kind = "roam"/);
-  assert.match(gen, /禁止写 metrics\/卡片数值|contacts\.metrics = \[\]/);
+  assert.match(gen, /kind === "roam"|kind === "fixed"|n\.kind =/);
+  assert.match(gen, /contacts\.metrics = \[\]|禁止写 metrics/);
 });
 
 test('pathsAI_人物强制roam且提示有名有姓', () => {

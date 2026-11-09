@@ -80,7 +80,8 @@ test('源码接线_审计与固定事件须走asCondList', () => {
 
 test('EndingsPanel_先normalize再audit', () => {
   const listAt = endingsPanel.indexOf('.map(normalizeEnding)');
-  const auditAt = endingsPanel.indexOf('auditStory({ endings: list');
+  // 功能注释：草稿审计带 draft:true 与当前表单 id；仍须在 normalize 之后
+  const auditAt = endingsPanel.search(/auditStory\(\{\s*draft: true, endings: list/);
   assert.ok(listAt >= 0 && auditAt > listAt);
 });
 

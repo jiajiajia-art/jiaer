@@ -100,8 +100,8 @@ test('剧本基调_生成须写scriptTone并校验字数_简介可从manifest写
   // 清洗阶段会截断到 SCRIPT_TONE_MAX，软校验通过后长度不得超过上限
   assert.ok((capped.mod.content.prompt.scriptTone || '').length <= lim.SCRIPT_TONE_MAX);
 
-  assert.equal(lim.isScriptToneOverLimit('字'.repeat(4001)), true);
-  assert.equal(lim.validateModBasicInfoLimits({ scriptTone: '字'.repeat(4001) }), `剧本基调最多 ${lim.SCRIPT_TONE_MAX} 字`);
+  assert.equal(lim.isScriptToneOverLimit('字'.repeat(5001)), true);
+  assert.equal(lim.validateModBasicInfoLimits({ scriptTone: '字'.repeat(5001) }), `剧本基调最多 ${lim.SCRIPT_TONE_MAX} 字`);
 });
 
 test('开局日期_div模拟选择_禁止原生select与自由字符串', () => {
@@ -164,7 +164,7 @@ test('编辑器文案_简介与基调说明对齐图注需求', () => {
   assert.match(panel, /按世界观摘要的约 100 字简介/);
   assert.match(panel, /默认是世界观摘要，不是创作者长设定原文/);
   assert.match(panel, /生成世界时由 AI 写出并填入/);
-  assert.match(panel, /超出 4000 字标红，不能照常保存/);
+  assert.match(panel, /超出 5000 字标红，不能照常保存/);
   // 功能注释：开局日期下灰字已删，只留年/月/日选择
   assert.doesNotMatch(panel, /格式固定为年\.月\.日，只选数字/);
   assert.doesNotMatch(panel, /这天是周/);

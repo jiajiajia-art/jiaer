@@ -20,7 +20,7 @@
     --primary-light: #C23A50;
     --primary-dark: #8E2135;
     width: 100%;
-    min-height: 100vh;
+    /* 功能注释：高度交给 AppPageShell；勿再垫满屏最小高度，否则中间区被撑出多余滚动条 */
     max-width: 1920px;
     margin: 0 auto;
     background: #000000;

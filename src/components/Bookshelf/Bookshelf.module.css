@@ -6,7 +6,7 @@
   --shelf-card: #141416;
   --shelf-line: rgba(255, 255, 255, 0.08);
   width: 100%;
-  min-height: 100vh;
+  /* 功能注释：高度交给 AppPageShell；勿再垫满屏最小高度，避免中间区被撑出多余滚动条 */
   background: #000000;
   color: #ffffff;
   overflow-x: hidden;

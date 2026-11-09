@@ -289,7 +289,8 @@ export function newGame(player: Player, simChar?: SimChar, contract?: SignedCont
     npcs: seedNpcs(),
     story: [],
     options: [],
-    world: { time: `第 1 周 · ${startDateLabel()}`, location: locOf(getWorldStartRoom())?.name ?? "天光公寓", weather: startWeather() },
+    // 功能注释：开局地点名用 startRoom 对应名称；没有名称时显示 id，禁止回落「天光公寓」
+    world: { time: `第 1 周 · ${startDateLabel()}`, location: locOf(getWorldStartRoom())?.name || getWorldStartRoom() || "开局地点", weather: startWeather() },
     memory: "",
     turnCount: 0,
     ended: false,

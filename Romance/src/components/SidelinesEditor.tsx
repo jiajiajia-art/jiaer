@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { IconChevronDown, IconChevronUp, IconClose } from "../lib/icons";
-import { CondRow, EffectRow, defaultCond, defaultEffect, questOpts, sideOpts } from "./FixedEventsPanel";
+import { CondRow, EffectRow, questOpts, sideOpts, useDraftDefaults } from "./FixedEventsPanel";
 import { EventPicks } from "./StorylinesEditor";
 import { useConfirm } from "./EditorKit";
 import type { FixedCond, FixedEffect, FixedEvent, Sideline, Storyline } from "../lib/types";
@@ -13,12 +13,13 @@ const btn = "rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] 
 const link = "text-[11.5px] font-semibold text-jade hover:underline";
 const uid = () => `sd_${Date.now().toString(36).slice(-4)}${Math.random().toString(36).slice(2, 5)}`;
 export const SIDELINES_EMPTY_TEXT = "还没有支线。点「新建支线」添加；生成世界不会自动写支线。";
-export const newSideline = (): Sideline => ({ id: uid(), name: "新支线", trigger: [defaultCond("event")], conds: [defaultCond("metric")] });
+export const newSideline = (dd: ReturnType<typeof useDraftDefaults>): Sideline => ({ id: uid(), name: "新支线", trigger: [dd.cond("event")], conds: [dd.cond("metric")] });
 
 type Opts = { events: FixedEvent[]; quests: ReturnType<typeof questOpts>; sides: ReturnType<typeof sideOpts> };
 
 /* 一组条件行：增删改都回写同一个数组，空数组收成 undefined */
 function CondList({ list, add, addLabel, opts, onChange }: { list?: FixedCond[]; add: FixedCond["kind"]; addLabel: string; opts: Opts; onChange: (v?: FixedCond[]) => void }) {
+  const dd = useDraftDefaults();
   const cur = list ?? [];
   const commit = (n: FixedCond[]) => onChange(n.length ? n : undefined);
   return (
@@ -27,13 +28,14 @@ function CondList({ list, add, addLabel, opts, onChange }: { list?: FixedCond[];
         <CondRow key={i} c={c} events={opts.events} selfId="" quests={opts.quests} sides={opts.sides}
           onChange={(x) => commit(cur.map((y, j) => (j === i ? x : y)))} onDelete={() => commit(cur.filter((_, j) => j !== i))} />
       ))}
-      <button className={link} onClick={() => commit([...cur, defaultCond(add)])}>{addLabel}</button>
+      <button className={link} onClick={() => commit([...cur, dd.cond(add)])}>{addLabel}</button>
     </>
   );
 }
 
 /* 一组奖励行：与主线节点完成奖励同一个 EffectRow */
 function RewardList({ list, addLabel, onChange }: { list?: FixedEffect[]; addLabel: string; onChange: (v?: FixedEffect[]) => void }) {
+  const dd = useDraftDefaults();
   const cur = list ?? [];
   const commit = (n: FixedEffect[]) => onChange(n.length ? n : undefined);
   return (
@@ -41,7 +43,7 @@ function RewardList({ list, addLabel, onChange }: { list?: FixedEffect[]; addLab
       {cur.map((f, i) => (
         <EffectRow key={i} ef={f} onChange={(x) => commit(cur.map((y, j) => (j === i ? x : y)))} onDelete={() => commit(cur.filter((_, j) => j !== i))} />
       ))}
-      <button className={link} onClick={() => commit([...cur, defaultEffect("metric")])}>{addLabel}</button>
+      <button className={link} onClick={() => commit([...cur, dd.effect("metric")])}>{addLabel}</button>
     </>
   );
 }
@@ -131,6 +133,7 @@ function SidelineCard({ l, idx, total, opts, onChange, onMove, onDelete }: {
 }
 
 export default function SidelinesEditor({ value, events = [], storylines, onChange }: { value?: Sideline[]; events?: FixedEvent[]; storylines?: Storyline[]; onChange: (v?: Sideline[]) => void }) {
+  const dd = useDraftDefaults();
   const list = value ?? [];
   const opts: Opts = { events, quests: questOpts(storylines), sides: sideOpts(list) };
   const commit = (n: Sideline[]) => onChange(n.length ? n : undefined);
@@ -142,7 +145,7 @@ export default function SidelinesEditor({ value, events = [], storylines, onChan
         支线是高级手配任务：生成世界不会自动写支线。每条默认折起，点名称展开任务说明 / 触发 / 完成 / 奖励 / 失败。失败或没接都不会打断主线。
         结局如果要看支线，在结局条件里加「支线进度」。
       </p>
-      <button className={btn} onClick={() => commit([...list, newSideline()])}>＋ 新建支线</button>
+      <button className={btn} onClick={() => commit([...list, newSideline(dd)])}>＋ 新建支线</button>
       {!list.length && <p className="rounded-xl border border-dashed border-line px-3 py-4 text-center text-[12px] text-ink-soft">{SIDELINES_EMPTY_TEXT}</p>}
       {list.map((l, i) => (
         <SidelineCard key={l.id} l={l} idx={i} total={list.length} opts={opts}

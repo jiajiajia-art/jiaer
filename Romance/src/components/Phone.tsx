@@ -155,7 +155,8 @@ const PREFS_KEY = "star2005.phone.prefs";
 /** 已装应用 / 布局：存档私有，刷新与读档保持一致 */
 const APPS_KEY = "star2005.phone.apps";
 const DEFAULT_LAYOUT = ["w-hero-clock", ...CORE.map((c) => c.id)];
-const defaultInstalled = () => preinstallIds(worldPhoneAppsCfg()).filter((id) => APP_IDS.has(id));
+/** 功能注释：首次开局桌面 = 世界已装 appId（含平台新应用）+ 应用商店 + 设置；[] 只剩商店与设置，禁止再按内置 APP_IDS 过滤掉平台应用 */
+const defaultInstalled = () => preinstallIds(worldPhoneAppsCfg()).filter((id) => !WIDGET_IDS.has(id));
 const DEFAULT_PREFS: PhonePrefs = {
   wallpaper: "ocean", brightness: 1, dark: false, dnd: false, haptics: false, frameColor: "titanium", showFrame: true,
   installed: CORE.map((c) => c.id).filter((id) => id !== "xianyu"),
@@ -755,7 +756,8 @@ function HomeGrid({ layout, installed, widgets, widgetSizes, widgetShapes, iconO
   const PAGE_CAP = rows * 4;
   const pages: string[][] = [[]];
   let used = 0;
-  for (const id of order.filter((x) => isWidget(x) || APP_IDS.has(x))) {
+  // 功能注释：已装平台应用（不在内置 APP_IDS 里）也要上桌面，图标由平台表 icon / 首字兜底
+  for (const id of order) {
     const w = cellWeight(id, sizeOf(widgetSizes, id));
     if (used + w > PAGE_CAP && pages[pages.length - 1].length) { pages.push([]); used = 0; }
     pages[pages.length - 1].push(id); used += w;

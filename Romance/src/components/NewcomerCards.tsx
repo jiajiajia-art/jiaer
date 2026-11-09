@@ -139,7 +139,7 @@ export default function NewcomerCards({ ids }: { ids?: string[] }) {
                 </div>
               </div>
               {detail.bio && (
-                <p className="story-prose whitespace-pre-line rounded-[var(--radius-ui)] border border-line bg-paper-2/60 px-3 py-2.5 text-[13px] leading-relaxed text-[#1a1a1a]">
+                <p className="story-prose whitespace-pre-line rounded-[var(--radius-ui)] border border-line bg-paper-2/60 px-3 py-2.5 text-[13px] leading-relaxed text-[color:var(--story-ink)]">
                   {detail.bio}
                 </p>
               )}

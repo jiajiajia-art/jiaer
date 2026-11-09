@@ -537,7 +537,26 @@ export default function TopbarView({ data, diy, topbar = "gradient", topbarText,
         <div aria-hidden className="pointer-events-none absolute -right-10 -bottom-12 h-32 w-40 rounded-full bg-jade/35 blur-3xl" />
       </>)}
       {topbar !== "plain" && <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-line to-transparent" />}
-      <div className={`topbar-inner relative ${compact ? "px-4 py-1.5" : "mx-auto max-w-3xl px-3.5 py-1.5 @min-[40rem]:px-5"}`}>{body}</div>
+      <div className={`topbar-inner relative ${compact ? "px-4 py-1.5" : "mx-auto max-w-3xl px-3.5 py-1.5 @min-[40rem]:px-5"}`}>
+        {body}
+        {/* 功能注释：局势摘要并入主线同一块顶栏（不再是独立飘条）；点按同样打开剧情志详情，窄屏单行截断避免顶没叙事窗 */}
+        {data.note?.trim() && (
+          preview ? (
+            <p className="topbar-note mt-1 truncate text-[11px] leading-snug text-ink-soft">{data.note}</p>
+          ) : (
+            <button
+              type="button"
+              aria-label="查看局势详情"
+              title={data.note}
+              onClick={(e) => { e.stopPropagation(); openQuest(); }}
+              className="topbar-note mt-1 block w-full truncate text-left text-[11px] leading-snug text-ink-soft"
+            >
+              <span className="mr-1.5 font-bold tracking-[0.12em] text-coral">局势</span>
+              {data.note}
+            </button>
+          )
+        )}
+      </div>
       {children}
     </Tag>
   );

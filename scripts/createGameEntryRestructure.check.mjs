@@ -47,7 +47,10 @@ test('PlayModCreateShell与手机应用页_禁止生成专属SDK话术', () => {
   assert.match(shell, /能力都来自平台 SDK/);
   assert.match(shell, /上传玩法包到组件商店/);
   assert.doesNotMatch(shell, /生成专属 SDK/);
-  assert.match(page, /不产出专属 SDK/);
+  // 功能注释：需求 C0 起不再写「不产出专属 SDK」这类否定句，直接改成上传应用草稿 + 运行在平台 SDK 上
+  assert.doesNotMatch(page, /不产出专属 SDK|专属 SDK|生成 SDK/);
+  assert.match(page, /上传应用草稿/);
+  assert.match(page, /应用运行在平台 SDK 上/);
   assert.doesNotMatch(page, /自动产出专属/);
   assert.doesNotMatch(page, /已生成专属 SDK/);
 });

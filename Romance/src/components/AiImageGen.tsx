@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { compressImage } from "../lib/freeStyle";
 import { generatePlatformImage, platformImageConfigured } from "../lib/platformImageGen";
+import { composePositivePrompt, type EditorImagePromptParts } from "../lib/editorImagePrompts";
 import { useGame } from "../store/gameCtx";
 
 const MAX_REFS = 2;
@@ -20,7 +21,10 @@ function sizeBadge(size?: string): string {
 
 /* AI 生图：编辑（提示词 + 最多 2 张参考图）→ 点「开始生成」→ 生成中 → 结果（重新生成 / 使用这张图）。
  * bare：嵌在 Modal 里时去掉外框与「AI 生成」标题，避免和弹窗标题重复。
- * initialPrompt：地点/人物/封面等可把当前项已有文字预填进提示词。
+ * initialPrompt：地点/人物/封面等可把当前项已有文字预填进提示词（单段，兼容旧调用）。
+ * initialParts：三层提示词（画风 / 主体 / 负面词）——有值时弹窗显示三个可编辑框，
+ *   正向 = 画风 + 主体，负面词单独传给生图；点「开始生成」时回调 onPartsCommit 让作品保存画风与负面词。
+ * initialRefs：默认带入的参考图（如重绘人物时的当前头像），最多 2 张，创作者可移除。
  * autoRun / autoApply：兼容旧调用；默认关闭——打开弹窗不得自动开跑，也不得跳过「使用这张图」。 */
 export default function AiImageGen({
   onPick,
@@ -28,6 +32,9 @@ export default function AiImageGen({
   size,
   bare = false,
   initialPrompt,
+  initialParts,
+  initialRefs,
+  onPartsCommit,
   autoRun = false,
   autoApply = false,
   onPhaseChange,
@@ -37,6 +44,10 @@ export default function AiImageGen({
   size?: string;
   bare?: boolean;
   initialPrompt?: string;
+  initialParts?: EditorImagePromptParts;
+  initialRefs?: string[];
+  /** 功能注释：开始生成时把当前三段文字交回外层（用于保存作品画风 / 负面词） */
+  onPartsCommit?: (parts: EditorImagePromptParts) => void;
   autoRun?: boolean;
   autoApply?: boolean;
   /** 功能注释：供外层 Modal 改标题（生成结果）或锁定关闭 */
@@ -44,7 +55,14 @@ export default function AiImageGen({
 }) {
   const { cfg } = useGame();
   const [prompt, setPrompt] = useState(initialPrompt ?? "");
-  const [refs, setRefs] = useState<string[]>([]);
+  const layered = Boolean(initialParts);
+  const [style, setStyle] = useState(initialParts?.style ?? "");
+  const [subject, setSubject] = useState(initialParts?.subject ?? "");
+  const [negative, setNegative] = useState(initialParts?.negative ?? "");
+  // 功能注释：重绘时默认把当前图作为参考图（最多 MAX_REFS 张），创作者可点「移除」
+  const [refs, setRefs] = useState<string[]>(() => (initialRefs ?? []).filter(Boolean).slice(0, MAX_REFS));
+  const onPartsCommitRef = useRef(onPartsCommit);
+  onPartsCommitRef.current = onPartsCommit;
   const [phase, setPhase] = useState<AiImageGenPhase>("edit");
   const [err, setErr] = useState("");
   const [img, setImg] = useState("");
@@ -68,6 +86,9 @@ export default function AiImageGen({
     if (initialPrompt != null && initialPrompt !== "") setPrompt(initialPrompt);
   }, [initialPrompt]);
 
+  // 功能注释：有三层时，正向 = 画风 + 主体；没有则沿用单段 prompt
+  const positive = layered ? composePositivePrompt({ style, subject }) : prompt.trim();
+
   // 功能注释：生成中显示已用秒数，驱动进度条缓升（不到 100%，完成后再满）
   useEffect(() => {
     if (phase !== "busy") return;
@@ -88,8 +109,9 @@ export default function AiImageGen({
   };
 
   const run = async (text?: string) => {
-    const p = (text ?? prompt).trim();
+    const p = (text ?? positive).trim();
     if (!p || busyRef.current) return;
+    if (layered) onPartsCommitRef.current?.({ style: style.trim(), subject: subject.trim(), negative: negative.trim() });
     busyRef.current = true;
     setErr("");
     setImg("");
@@ -99,6 +121,7 @@ export default function AiImageGen({
     try {
       const url = await generatePlatformImage(cfg, p, size, {
         referenceImages: refs,
+        negativePrompt: layered ? negative.trim() : undefined,
         signal: ac.signal,
       });
       if (ac.signal.aborted) return;
@@ -177,7 +200,7 @@ export default function AiImageGen({
               onClick={() => {
                 void run();
               }}
-              disabled={!ok || !prompt.trim()}
+              disabled={!ok || !positive}
               className="rounded-full border border-ink/20 bg-paper py-2.5 text-[13px] font-bold text-ink transition disabled:opacity-40"
             >
               重新生成
@@ -194,7 +217,9 @@ export default function AiImageGen({
       ) : (
         <>
           <div>
-            <p className="mb-1.5 text-[11px] font-bold tracking-wide text-ink-soft">参考图（可选，最多 {MAX_REFS} 张）</p>
+            <p className="mb-1.5 text-[11px] font-bold tracking-wide text-ink-soft">
+              参考图（可选，最多 {MAX_REFS} 张{(initialRefs?.length ?? 0) > 0 ? " · 已默认带入当前图，可移除" : ""}）
+            </p>
             <div className="flex flex-wrap gap-2">
               {refs.map((src, i) => (
                 <div key={`${i}-${src.slice(0, 24)}`} className="relative h-16 w-16 overflow-hidden rounded-lg border border-line bg-paper-2">
@@ -236,21 +261,50 @@ export default function AiImageGen({
             />
           </div>
 
-          <div>
-            <p className="mb-1.5 text-[11px] font-bold tracking-wide text-ink-soft">
-              {locked ? "提示词 · 生成中不可修改" : "提示词 · 可编辑"}
-            </p>
-            <textarea
-              rows={4}
-              value={prompt}
-              readOnly={locked}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder={placeholder ?? "描述画面：主体、场景、光线、风格……"}
-              className={`w-full rounded-lg border border-line px-2.5 py-1.5 text-[12.5px] text-ink outline-none focus:border-coral ${
-                locked ? "cursor-not-allowed bg-paper-2 text-ink-soft" : "bg-paper"
-              }`}
-            />
-          </div>
+          {layered ? (
+            <div className="space-y-2.5">
+              {/* 功能注释：三层提示词——画风（整部统一）/ 本张主体 / 负面词；开始生成前可逐项改 */}
+              {(
+                [
+                  ["画风 · 整部作品统一", style, setStyle, 2, "如：二次元写实漫"],
+                  ["本张主体 · 只写这一张", subject, setSubject, 4, placeholder ?? "这一张画什么：主体、构图……"],
+                  ["负面词 · 不想出现的内容", negative, setNegative, 2, "如：文字，水印，畸形手指"],
+                ] as const
+              ).map(([title, val, setVal, rows, ph]) => (
+                <div key={title}>
+                  <p className="mb-1.5 text-[11px] font-bold tracking-wide text-ink-soft">
+                    {locked ? `${title} · 生成中不可修改` : `${title} · 可编辑`}
+                  </p>
+                  <textarea
+                    rows={rows}
+                    value={val}
+                    readOnly={locked}
+                    onChange={(e) => setVal(e.target.value)}
+                    placeholder={ph}
+                    className={`w-full rounded-lg border border-line px-2.5 py-1.5 text-[12.5px] text-ink outline-none focus:border-coral ${
+                      locked ? "cursor-not-allowed bg-paper-2 text-ink-soft" : "bg-paper"
+                    }`}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div>
+              <p className="mb-1.5 text-[11px] font-bold tracking-wide text-ink-soft">
+                {locked ? "提示词 · 生成中不可修改" : "提示词 · 可编辑"}
+              </p>
+              <textarea
+                rows={4}
+                value={prompt}
+                readOnly={locked}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder={placeholder ?? "描述画面：主体、场景、光线、风格……"}
+                className={`w-full rounded-lg border border-line px-2.5 py-1.5 text-[12.5px] text-ink outline-none focus:border-coral ${
+                  locked ? "cursor-not-allowed bg-paper-2 text-ink-soft" : "bg-paper"
+                }`}
+              />
+            </div>
+          )}
 
           {locked ? (
             <div className="space-y-2">
@@ -274,7 +328,7 @@ export default function AiImageGen({
               onClick={() => {
                 void run();
               }}
-              disabled={!ok || !prompt.trim()}
+              disabled={!ok || !positive}
               className="w-full rounded-full bg-ink py-2.5 text-[13px] font-bold text-paper transition disabled:opacity-40"
             >
               开始生成

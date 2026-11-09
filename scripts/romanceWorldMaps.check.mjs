@@ -75,7 +75,7 @@ test('ModRoomTreeEditor_有大地图层且删除自动连通文案', () => {
   assert.doesNotMatch(src, /上下层与同级进出由地点树自动连通/);
   assert.doesNotMatch(src, /无需再配东南西北出口/);
   // 功能注释：大地图生图/预览统一竖版 9:16，禁止默认横图尺寸
-  assert.match(src, /SCENE_PORTRAIT_GEN_SIZE/);
+  assert.match(src, /WORLD_MAP_GEN_SIZE/);
   assert.match(src, /thumb="aspect-\[9\/16\]/);
   assert.doesNotMatch(src, /1792x1024/);
   assert.doesNotMatch(src, /thumb="h-16 w-28"/);

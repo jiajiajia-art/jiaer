@@ -10,6 +10,7 @@ import {
 } from "../lib/scenePortrait"
 import { Modal } from "./ui"
 import AiImageGen, { type AiImageGenPhase } from "./AiImageGen"
+import type { EditorImagePromptParts } from "../lib/editorImagePrompts"
 import PlatformLocationAssetPicker from "./PlatformLocationAssetPicker"
 import type { LocationAssetPurpose } from "../lib/platformLocationAssetLibrary"
 
@@ -28,6 +29,12 @@ export type ImagePickerAiGen = {
   size?: string
   /** 功能注释：打开弹窗时预填提示词（如当前场景描述）；默认停在编辑页，点「开始生成」才请求 */
   initialPrompt?: string
+  /** 功能注释：三层提示词（画风 / 主体 / 负面词）；有值时弹窗显示三个可编辑框，正向=画风+主体，负面词单独传 */
+  initialParts?: EditorImagePromptParts
+  /** 功能注释：默认带入的参考图（重绘人物时放当前头像），最多 2 张，可在弹窗里移除 */
+  initialRefs?: string[]
+  /** 功能注释：点「开始生成」时回传当前三段文字，外层据此保存作品画风 / 负面词 */
+  onPartsCommit?: (parts: EditorImagePromptParts) => void
   /** 功能注释：兼容旧调用；默认 false，打开不得自动开跑 */
   autoRun?: boolean
   /** 功能注释：兼容旧调用；默认 false，须点「使用这张图」才写回 */
@@ -313,6 +320,9 @@ export default function ImagePicker({
             size={genOpts.size ?? (scenePortrait ? SCENE_PORTRAIT_GEN_SIZE : undefined)}
             placeholder={genOpts.placeholder}
             initialPrompt={genOpts.initialPrompt}
+            initialParts={genOpts.initialParts}
+            initialRefs={genOpts.initialRefs}
+            onPartsCommit={genOpts.onPartsCommit}
             autoRun={genOpts.autoRun === true}
             autoApply={genOpts.autoApply === true}
             onPhaseChange={setGenPhase}

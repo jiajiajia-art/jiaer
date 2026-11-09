@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
 
-/* 模组编辑器 · 剧情线：主线 / 支线 / 结局同页纵向合并；扣费依据与透支破产都在结局经济区。 */
+/* 模组编辑器 · 剧情线：主线 / 支线 / 结局同页纵向合并；有账单时结局区可配破产线等经济规则。 */
 export type PlotTab = "main" | "side" | "end";
 export const PLOT_TABS: { k: PlotTab; label: string; hint: string }[] = [
   { k: "main", label: "主线", hint: "推进故事；卡住或中断会影响结局" },
   { k: "side", label: "支线", hint: "额外任务；成败不影响主线" },
-  { k: "end", label: "结局", hint: "时限、自定义结局、评级与经济（扣费依据 / 破产线 / 透支缓冲）" },
+  { k: "end", label: "结局", hint: "时限、自定义结局、评级；有账单时可配破产线与透支缓冲" },
 ];
 
 export default function PlotLinesTabs({ counts, main, side, end }: { counts: Partial<Record<PlotTab, number>>; main: ReactNode; side: ReactNode; end: ReactNode }) {

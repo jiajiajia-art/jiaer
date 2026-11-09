@@ -87,7 +87,7 @@ function BatteryGlyph() {
 }
 
 export default function PhoneAppsEditor({ value, wallpaper, onChange, onWallpaperChange }: Props) {
-  const installedIds = useMemo(() => installedPlatformAppIds(value ?? []), [value]);
+  const installedIds = useMemo(() => installedPlatformAppIds(value), [value]);
   const installedSet = useMemo(() => new Set(installedIds), [installedIds]);
   const [catalog, setCatalog] = useState<PlatformApp[]>([]);
   const [loadError, setLoadError] = useState("");

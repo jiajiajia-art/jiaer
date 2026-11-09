@@ -3,35 +3,28 @@ import { complete, isConfigured } from "../lib/ai";
 import { friendlyAIError } from "../lib/aiError";
 import { loadConfig } from "../lib/store";
 import type { FixedEvent } from "../lib/types";
-import { STAT_LABELS, STAT_ORDER } from "../game/data";
-import { FIXED_METRICS } from "../game/fixedEvents";
-import { LIVE_LOCATIONS, LIVE_PEOPLE } from "../mods/registry";
 import {
   AI_FIXED_EVENTS_COUNT,
   AI_FIXED_EVENTS_DEFAULT_ASK,
+  AI_FIXED_EVENTS_SUGGEST_MIN,
   buildAiFixedEventsSystemPrompt,
   mergeAiFixedEventsIntoLibrary,
   sanitizeAiFixedEvents,
   type AiFixedEventsWorldContext,
 } from "../lib/aiFixedEvents";
 
-/* 固定事件 · AI 帮写：按世界观一次生成恰好 5 条完整叙事事件（名称/触发/提示词/属性变化），禁止选项。 */
+/* 固定事件 · AI 帮写：只读本作品表单上下文，空白时保持空白，禁止回落 LIVE_*。 */
 
 function defaultWorldContext(extra?: AiFixedEventsWorldContext): AiFixedEventsWorldContext {
   return {
     title: extra?.title,
     setting: extra?.setting,
     scriptTone: extra?.scriptTone,
-    rooms: extra?.rooms?.length
-      ? extra.rooms
-      : LIVE_LOCATIONS.map((r) => ({ id: r.id, name: r.name })),
-    npcs: extra?.npcs?.length
-      ? extra.npcs
-      : LIVE_PEOPLE.map((p) => ({ id: p.id, name: p.name })),
-    metrics: extra?.metrics?.length ? extra.metrics : FIXED_METRICS.map((m) => ({ key: m.key, label: m.label })),
-    stats: extra?.stats?.length
-      ? extra.stats
-      : STAT_ORDER.map((k) => ({ key: k, label: STAT_LABELS[k] })),
+    worldBook: extra?.worldBook ?? [],
+    rooms: extra?.rooms ?? [],
+    npcs: extra?.npcs ?? [],
+    metrics: extra?.metrics ?? [],
+    stats: extra?.stats ?? [],
   };
 }
 
@@ -41,7 +34,7 @@ export default function AiEventWriter({
   onApply,
 }: {
   existing: FixedEvent[];
-  /** 功能注释：模组编辑器传入本作品世界观；缺省回退当前生效世界 */
+  /** 功能注释：模组编辑器传入本作品世界观；为空就空，不读旧世界 */
   world?: AiFixedEventsWorldContext;
   onApply: (list: FixedEvent[]) => void;
 }) {
@@ -52,6 +45,11 @@ export default function AiEventWriter({
   const [draft, setDraft] = useState<FixedEvent[] | null>(null);
   const ai = isConfigured(loadConfig());
   const btn = "rounded-full border border-line bg-paper px-3 py-1 text-[12px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40";
+  const exampleRoom = world?.rooms?.[0]?.name;
+  const exampleAttr = world?.stats?.[0]?.label || world?.metrics?.[0]?.label;
+  const placeholder = exampleRoom || exampleAttr
+    ? `例如：在「${exampleRoom || "本作品地点"}」围绕「${exampleAttr || "本作品属性"}」写一场可结算的戏`
+    : "用一句话描述想要的事件走向（可选）";
 
   const run = async (ask: string) => {
     const q = ask.trim() || AI_FIXED_EVENTS_DEFAULT_ASK;
@@ -65,82 +63,74 @@ export default function AiEventWriter({
         {
           role: "user",
           content: draft
-            ? `在上面的基础上修改，仍保持恰好 ${AI_FIXED_EVENTS_COUNT} 条完整事件（每条都有 prompt 与 effects，禁止 choices）：${q}`
+            ? `在上面的基础上修改，仍保持约 ${AI_FIXED_EVENTS_SUGGEST_MIN} 条以上完整事件（每条都有 prompt 与 effects）：${q}`
             : q,
         },
       ]);
       const m = raw.match(/```(?:json)?\s*([\s\S]*?)```/) ?? raw.match(/(\[[\s\S]*\])/);
       const parsed = m ? JSON.parse(m[1].trim().replace(/,\s*([}\]])/g, "$1")) : null;
       const list = sanitizeAiFixedEvents(parsed, new Set(existing.map((e) => e.id)));
-      if (list.length < AI_FIXED_EVENTS_COUNT) {
-        throw new Error(
-          `需要 ${AI_FIXED_EVENTS_COUNT} 条带事件提示词与属性变化的完整事件（本次可用 ${list.length} 条），请再点一次生成`,
-        );
+      if (list.length < 1) {
+        throw new Error("需要至少 1 条带事件提示词与属性变化的完整事件，请再点一次生成");
       }
-      setDraft(list.slice(0, AI_FIXED_EVENTS_COUNT));
-      setText("");
+      setDraft(list);
     } catch (e) {
-      setErr(e instanceof SyntaxError ? "AI 返回的格式有误，请重试" : friendlyAIError(e).text || (e as Error).message);
-    } finally { setBusy(false); }
+      setErr(friendlyAIError(e).text);
+    } finally {
+      setBusy(false);
+    }
   };
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="flex w-full items-center justify-between gap-2 rounded-2xl border border-jade/40 bg-gradient-to-r from-jade/10 to-coral/10 px-4 py-2.5 text-left transition hover:border-jade">
-        <span>
-          <span className="block text-[13px] font-bold text-ink">AI 帮写固定事件</span>
-          <span className="block text-[11.5px] text-ink-soft">按世界观一次生成 {AI_FIXED_EVENTS_COUNT} 条完整事件（名称 · 触发 · 提示词 · 属性变化）</span>
-        </span>
-        <span className="shrink-0 text-[12px] font-bold text-jade">打开 ›</span>
+      <button type="button" className={btn} disabled={!ai} title={ai ? "按本作品设定帮写固定事件" : "先配置 AI"} onClick={() => setOpen(true)}>
+        AI 帮写固定事件
       </button>
     );
   }
+
   return (
-    <div className="space-y-2 rounded-2xl border border-jade/40 bg-jade/5 p-3">
-      <div className="flex items-center justify-between">
-        <p className="text-[13px] font-bold text-ink">AI 帮写固定事件</p>
-        <button className="text-[12px] text-ink-soft hover:text-ink" onClick={() => { setOpen(false); setDraft(null); setErr(""); }}>收起</button>
+    <div className="space-y-2 rounded-xl border border-line bg-paper-2/50 p-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[12px] font-semibold text-ink">AI 帮写固定事件</span>
+        <span className="text-[11px] text-ink-soft">建议约 {AI_FIXED_EVENTS_SUGGEST_MIN}–{AI_FIXED_EVENTS_COUNT + 2} 条，只读本作品地点/人物/属性</span>
+        <button type="button" className={`${btn} ml-auto`} onClick={() => { setOpen(false); setDraft(null); setErr(""); }}>收起</button>
       </div>
-      {!ai && <p className="rounded-xl border border-gold/50 bg-gold/10 px-3 py-2 text-[12px]">需要接入 AI：请先在菜单「AI 配置」里接入模型。</p>}
-      <textarea rows={3} value={text} disabled={!ai || busy} onChange={(e) => setText(e.target.value)}
-        onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) void run(text); }}
-        placeholder={draft ? "继续调整，如：把第 2 条改到片场、压力 +8" : `可留空，直接点「生成 ${AI_FIXED_EVENTS_COUNT} 条」：按世界观写满名称、触发、事件提示词与属性变化`}
-        className="w-full rounded-xl border border-line bg-paper px-3 py-2 text-[12.5px] text-ink outline-none focus:border-jade" />
-      <div className="flex flex-wrap gap-1.5">
-        <button
-          className={`${btn} !border-transparent bg-jade !text-white`}
-          disabled={!ai || busy}
-          onClick={() => void run(text)}
-        >
-          {busy ? "生成中…" : draft ? "按要求修改" : `生成 ${AI_FIXED_EVENTS_COUNT} 条完整事件`}
-        </button>
+      <textarea
+        className="w-full rounded-lg border border-line bg-paper px-2.5 py-2 text-[12px] text-ink placeholder:text-ink-soft/70"
+        rows={2}
+        value={text}
+        placeholder={placeholder}
+        onChange={(e) => setText(e.target.value)}
+      />
+      <div className="flex flex-wrap gap-2">
+        <button type="button" className={btn} disabled={busy} onClick={() => void run(text)}>{busy ? "生成中…" : draft ? "再改一版" : "开始生成"}</button>
         {draft && (
           <button
+            type="button"
             className={btn}
-            disabled={busy}
             onClick={() => {
               onApply(mergeAiFixedEventsIntoLibrary(existing, draft));
+              setOpen(false);
               setDraft(null);
+              setText("");
             }}
           >
-            写入这 {draft.length} 个事件
+            写入事件库（{draft.length} 条）
           </button>
         )}
-        {draft && <button className={btn} disabled={busy} onClick={() => setDraft(null)}>放弃</button>}
       </div>
       {err && <p className="text-[12px] text-danger">{err}</p>}
       {draft && (
-        <ol className="space-y-1.5">
-          {draft.map((e, i) => (
-            <li key={e.id} className="rounded-xl border border-line bg-paper px-3 py-2 text-[12px]">
-              <p className="font-bold text-ink">{i + 1}. {e.name}{e.locked && <span className="ml-1.5 rounded bg-coral/12 px-1.5 py-px text-[10px] text-coral">需激活</span>}</p>
-              <p className="mt-0.5 text-ink-soft">{e.prompt}</p>
-              <p className="mt-0.5 text-[11px] text-ink-soft">效果 {e.effects?.length ?? 0} · 触发 auto{e.time && e.time.kind !== "none" ? ` · 时间 ${e.time.kind}` : ""}</p>
+        <ul className="space-y-1 text-[12px] text-ink">
+          {draft.map((e) => (
+            <li key={e.id} className="rounded-lg border border-line bg-paper px-2 py-1.5">
+              <b>{e.name}</b>
+              <span className="ml-2 text-ink-soft">{e.prompt.slice(0, 48)}{e.prompt.length > 48 ? "…" : ""}</span>
             </li>
           ))}
-        </ol>
+        </ul>
       )}
-      {draft && <p className="text-[11px] text-ink-soft">若当前多为缺提示词的空壳，写入时会整表替换为这 {AI_FIXED_EVENTS_COUNT} 条，避免顶部再刷提醒。</p>}
     </div>
   );
 }

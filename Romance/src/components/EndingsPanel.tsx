@@ -2,7 +2,8 @@ import { useState, type ReactNode } from "react";
 import { useGame } from "../store/gameCtx";
 import type { AttrDef, CmpOp, CustomEnding, FixedCond, FixedEvent, GradeDim, GradeDimIcon, Sideline, Storyline, TimeLimit } from "../lib/types";
 import { CMP_OPS, GRADE_DIM_ICONS, GRADE_DIM_MAX, limitDays, parseYmdMs } from "../lib/types";
-import { CondRow, defaultCond, questOpts, sideOpts } from "./FixedEventsPanel";
+import { CondRow, questOpts, sideOpts, useDraftDefaults } from "./FixedEventsPanel";
+import { useDraftRefs } from "./draftRefsContext";
 import { GroupEditor } from "./EventAdvanced";
 import IntInput from "./IntInput";
 import { matchCustomEnding, groupMet, endingCondsMet, evalFixedCond, condCurrent, metricDefaultFull } from "../game/fixedEvents";
@@ -129,6 +130,8 @@ export default function EndingsPanel({
 } = {}) {
   const modMode = !!onChange;
   const { game, commitGame, endManually } = useGame();
+  const draftRefs = useDraftRefs();
+  const draftDefaults = useDraftDefaults();
   const [openId, setOpenId] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [confirm, confirmEl] = useConfirm();
@@ -161,7 +164,15 @@ export default function EndingsPanel({
     .map(normalizeEnding)
     .filter((e): e is CustomEnding => !!e);
   const audit = modMode || !game
-    ? auditStory({ endings: list, events: eventsValue, storylines: storylinesValue, npcIds: peopleValue?.map((p) => p.id), skip: ["item", "location", "flag", ...(storylinesValue ? [] : (["quest"] as const)), ...(peopleValue ? [] : (["npc"] as const))] })
+    // 功能注释：草稿审计——人物/地点/物品只认当前表单（空就是空），不再 skip 掉这几类引用
+    ? auditStory({
+      draft: true, endings: list, events: eventsValue, storylines: storylinesValue,
+      npcIds: (peopleValue ?? draftRefs?.people ?? []).map((p) => p.id),
+      roomIds: (draftRefs?.rooms ?? []).map((r) => r.id),
+      itemIds: (draftRefs?.items ?? []).map((i) => i.id),
+      people: peopleValue ?? draftRefs?.people,
+      skip: ["flag", ...(storylinesValue ? [] : (["quest"] as const))],
+    })
     : auditGame(game, { endings: list });
   const endIssues = audit.issues.filter((x) => x.at?.startsWith("ending:"));
   const save = (next: CustomEnding[]) => {
@@ -186,7 +197,7 @@ export default function EndingsPanel({
   const srcLabel = (src: GradeDim["src"]) => srcs.find((x) => x.kind === src.kind && x.key === src.key)?.label ?? src.key;
   const firstCond = (): FixedCond => {
     const s = srcs[0];
-    return s ? { kind: s.kind, key: s.key, op: "gte", value: 0 } : defaultCond("metric");
+    return s ? { kind: s.kind, key: s.key, op: "gte", value: 0 } : draftDefaults.cond("metric");
   };
 
   const add = () => {
@@ -353,9 +364,9 @@ export default function EndingsPanel({
                       <button type="button" className={pill(e.match === "any")} onClick={() => patch(e.id, { match: "any" })}>任意满足</button>
                       <span className="ml-auto flex gap-1">
                         <button type="button" className={btn} onClick={() => patch(e.id, { conds: [...e.conds, firstCond()] })}>＋ 添加条件</button>
-                        <button type="button" className={btn} title="时间、日期、经历过的事件等" onClick={() => patch(e.id, { conds: [...e.conds, defaultCond("time")] })}>＋ 其他条件</button>
+                        <button type="button" className={btn} title="时间、日期、经历过的事件等" onClick={() => patch(e.id, { conds: [...e.conds, draftDefaults.cond("time")] })}>＋ 其他条件</button>
                         {quests.length > 0 && <button type="button" className={btn} title="主线完成 / 失败、可选目标达成" onClick={() => patch(e.id, { conds: [...e.conds, { kind: "quest", key: quests[0].id, state: "done" }] })}>＋ 主线条件</button>}
-                        <select className={btn} value="" aria-label="更多条件" onChange={(ev) => { const k = ev.target.value as FixedCond["kind"]; if (k) patch(e.id, { conds: [...e.conds, defaultCond(k)] }); }}>
+                        <select className={btn} value="" aria-label="更多条件" onChange={(ev) => { const k = ev.target.value as FixedCond["kind"]; if (k) patch(e.id, { conds: [...e.conds, draftDefaults.cond(k)] }); }}>
                           <option value="">＋ 更多…</option>
                           <option value="faction">阵营声望</option>
                           <option value="visited">去过的地点</option>
@@ -389,7 +400,7 @@ export default function EndingsPanel({
                       </div>
                     ))}
                     <button type="button" className="text-[11.5px] font-semibold text-jade hover:underline"
-                      onClick={() => patch(e.id, { condGroups: [...(e.condGroups ?? []), { match: "any", conds: [defaultCond("faction")] }] })}>＋ 条件组（组内「且 / 或」，与上面的条件同时成立，如「声望达标 或 与三人好感≥60」）</button>
+                      onClick={() => patch(e.id, { condGroups: [...(e.condGroups ?? []), { match: "any", conds: [draftDefaults.cond("faction")] }] })}>＋ 条件组（组内「且 / 或」，与上面的条件同时成立，如「声望达标 或 与三人好感≥60」）</button>
                   </div>
 
                   {/* 5：可选绑定 */}

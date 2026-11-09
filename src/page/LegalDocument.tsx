@@ -8,9 +8,15 @@ import privacyPolicy from '../content/legal/privacy-policy-zh.md?raw';
 import privacyPolicyEn from '../content/legal/privacy-policy-en.md?raw';
 import userAgreement from '../content/legal/user-agreement-zh.md?raw';
 import termsOfServiceEn from '../content/legal/terms-of-service-en.md?raw';
+import creatorAgreement from '../content/legal/creator-agreement-zh.md?raw';
+import workReviewStandards from '../content/legal/work-review-standards-zh.md?raw';
 import styles from './LegalDocument.module.css';
 
-type LegalDocumentKey = 'user-agreement' | 'privacy-policy';
+type LegalDocumentKey =
+  | 'user-agreement'
+  | 'privacy-policy'
+  | 'creator-agreement'
+  | 'work-review-standards';
 type LegalLanguage = 'zh' | 'en';
 
 interface LegalDocumentProps {
@@ -22,6 +28,7 @@ interface LegalDocumentContent {
   content: string;
 }
 
+/** 功能注释：创作者协议 / 审核标准仅中文正本；英文暂回退同一份，避免与登录用户协议混用 */
 const DOCUMENTS: Record<LegalDocumentKey, Record<LegalLanguage, LegalDocumentContent>> = {
   'user-agreement': {
     zh: {
@@ -41,6 +48,26 @@ const DOCUMENTS: Record<LegalDocumentKey, Record<LegalLanguage, LegalDocumentCon
     en: {
       title: 'FunLoom Privacy Policy',
       content: privacyPolicyEn,
+    },
+  },
+  'creator-agreement': {
+    zh: {
+      title: 'FunLoom 创作者协议',
+      content: creatorAgreement,
+    },
+    en: {
+      title: 'FunLoom Creator Agreement',
+      content: creatorAgreement,
+    },
+  },
+  'work-review-standards': {
+    zh: {
+      title: 'FunLoom 作品审核标准',
+      content: workReviewStandards,
+    },
+    en: {
+      title: 'FunLoom Work Review Standards',
+      content: workReviewStandards,
     },
   },
 };

@@ -2,7 +2,10 @@
     /* createTypeOption 卡片色来自模态框 CSS，需祖先提供变量 */
     --type-card: #1C1C1E;
     --type-border: rgba(255, 255, 255, 0.1);
-    --activity-accent: #b30047;
+    /* 功能注释：活动入口跟暗色主站次要文案一致（白灰），不用品红/酒红当正文色 */
+    --activity-accent: rgba(255, 255, 255, 0.78);
+    --activity-accent-strong: #ffffff;
+    --activity-rule: rgba(255, 255, 255, 0.14);
     width: 100%;
     min-height: 100vh;
     max-width: 1920px;
@@ -13,9 +16,12 @@
 
 .mainContent {
     display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    padding: 28px 20px 32px;
+    /* 功能注释：壳层 .main 是 flex-column；顶对齐，禁止垂直居中以免顶栏下大块空白 */
+    justify-content: flex-start;
+    /* 功能注释：列布局下用 align-items 水平居中单列内容 */
+    align-items: center;
+    /* 功能注释：壳层已用 --app-navbar-offset 避让顶栏，这里只留内容边距，禁止再叠一层 navbar 高度 */
+    padding: 8px 20px 32px;
     min-height: 100%;
     box-sizing: border-box;
     width: 100%;
@@ -56,12 +62,13 @@
     bottom: 0;
     left: 0;
     height: 1px;
-    background: rgba(216, 174, 104, 0.5);
+    /* 功能注释：分割线用中性白边，对齐卡片描边而非金色/品红 */
+    background: var(--activity-rule);
     transition: background-color 0.18s ease;
 }
 
 .moreActivitiesButton:hover::after {
-    background: rgba(216, 174, 104, 0.86);
+    background: rgba(255, 255, 255, 0.28);
 }
 
 .moreActivitiesButton:active {
@@ -69,8 +76,13 @@
 }
 
 .moreActivitiesButton:focus-visible {
-    outline: 2px solid var(--activity-accent);
+    outline: 2px solid rgba(168, 40, 60, 0.8);
     outline-offset: 3px;
+}
+
+.moreActivitiesButton:hover .moreActivitiesIcon,
+.moreActivitiesButton:hover .moreActivitiesAction {
+    color: var(--activity-accent-strong);
 }
 
 .moreActivitiesLead {
@@ -232,8 +244,8 @@
 
 @media (max-width: 768px) {
     .mainContent {
-        padding: 20px 20px 100px;
-        padding-top: calc(var(--app-desktop-navbar-height) + 8px);
+        /* 功能注释：历史曾用 desktop-navbar-height 做 padding-top，与 AppPageShell 双倍占位导致顶栏下大块空白 */
+        padding: 8px 16px 100px;
     }
 
     .content {

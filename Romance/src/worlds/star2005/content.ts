@@ -66,6 +66,8 @@ export type PersonContent = {
   birthday?: { m: number; d: number }; // 生日（选填；留空时系统按人物自动分配）
   /** 功能注释：人物短简介（编辑器「简介」；生图与资料展示用；与小传 bio 分开） */
   summary?: string;
+  /** 功能注释：人物外观生图描述（性别/年龄感/发型/面容/衣着）；与小传 bio 分开，只喂头像生图，不含关系与剧情 */
+  appearancePrompt?: string;
   tags?: string[]; // 人物标签（背景故事下的小标签；优先平台内置勾选）
   /** 功能注释：所属势力 id，对应 creation.startFactions；在①基础统一配势力，人物只选归属 */
   factionId?: string;
@@ -416,6 +418,8 @@ export type RoomContent = {
   name?: string; // 显示名（模组世界用；娱乐圈取 game/data LOCATIONS）
   exits: Partial<Record<Dir, string>>;
   desc: string;
+  /** 功能注释：地点画面描述（空间布局/光线/陈设）；与玩家可见的进入叙事 desc 分开，只喂场景生图 */
+  scenePrompt?: string;
   intro?: string;
   items?: RoomItem[];
   activities?: RoomActivity[]; // 在此地可点选的日常活动（缺省=无）

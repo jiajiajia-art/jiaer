@@ -76,8 +76,8 @@ test('经济收官与balance库不套用娱乐圈对比', () => {
   assert.doesNotMatch(balLib, /原版最大约/);
   assert.doesNotMatch(balLib, /原版约/);
   assert.doesNotMatch(balLib, /是原版的/);
-  // 功能注释：扣费与破产都在结局经济面板；不得套娱乐圈对比文案
-  assert.match(ecoUi, /扣费依据/);
+  // 功能注释：结局经济面板已去掉扣费依据；有账单才显示规则；不得套娱乐圈对比文案
+  assert.doesNotMatch(ecoUi, /添加扣费项|enabledChargeItems/);
   assert.doesNotMatch(ecoUi, /还没有收支/);
   assert.doesNotMatch(ecoUi, /GENERIC_BILLS/);
   assert.doesNotMatch(ecoUi, /RAW_SIDE_JOBS/);

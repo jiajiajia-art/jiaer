@@ -15,7 +15,7 @@ const read = (p) => readFileSync(join(romance, p), 'utf8');
 test('platformImageGen_登录走运营生图网关_未登录才个人Key', () => {
   const src = read('lib/platformImageGen.ts');
   assert.match(src, /from ["']\.\/ai["']/);
-  assert.match(src, /return generateImage\(cfg, prompt, size\)/);
+  assert.match(src, /return generateImage\(cfg, appendNegativeSection\(prompt, options\.negativePrompt\), size\)/);
   assert.match(src, /export async function generatePlatformImage/);
   assert.match(src, /export function platformImageConfigured/);
   // 功能注释：已登录必须打平台 /api/romance/images/generate（图5 epone/ggb），禁止只认个人 Key
@@ -58,9 +58,11 @@ test('CoverDiyPanel_背景页去掉内联生图与压暗模糊颜色', () => {
   assert.doesNotMatch(panel, /压暗颜色/);
   assert.doesNotMatch(panel, /暖黄/);
   assert.match(panel, /aiGen=\{\{/);
-  assert.match(panel, /size:\s*["']1024x1792["']/);
-  assert.match(panel, /buildWorkCoverPrompt/);
-  assert.match(panel, /initialPrompt: buildWorkCoverPrompt/);
+  // 功能注释：封面生图请求尺寸与 9:16 提示词构图一致（SCENE_PORTRAIT_GEN_SIZE），三层提示词
+  assert.match(panel, /size:\s*WORK_COVER_GEN_SIZE/);
+  assert.doesNotMatch(panel, /1024x1792/);
+  assert.match(panel, /buildWorkCoverPromptParts/);
+  assert.match(panel, /initialParts: buildWorkCoverPromptParts/);
   // 功能注释：固定 CG 的 ImagePicker 开生图；轮播经 CoverCgEditor 透传
   assert.match(panel, /CoverCgEditor[\s\S]*aiGen=/);
 });

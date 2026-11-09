@@ -130,11 +130,9 @@ test('Romance_css_须在layer_base清掉ul默认disc圆点', () => {
     /@layer\s+base\s*\{[\s\S]*?html\[data-romance\]\s*:where\(ul,\s*ol,\s*menu\)[\s\S]*?list-style:\s*none/,
   );
   const create = read('Romance/src/components/CharacterCreate.tsx');
-  // 功能注释：文案前缀已是「· 」；依赖 base 去掉 UA 圆点，避免双重要点
-  assert.match(create, /<ul className="space-y-0\.5 text-ink-soft">\{choose\.map/);
-  assert.match(create, /<li key=\{`\$\{ci\}-\$\{c\}`\}>· /);
-  // 自设页不再重复展示「人物线路选择」摘要（线路已在上一步选定）
+  // 功能注释：自设页不再重复展示线路 choose 列表；base 仍清 UA disc，避免别处「·」文案叠圆点
   assert.match(create, /自设页不再重复展示/);
+  assert.doesNotMatch(create, /choose\.map/);
   assert.doesNotMatch(create, /pathBonus && <p className="mt-0\.5 text-\[11\.5px\]/);
 });
 

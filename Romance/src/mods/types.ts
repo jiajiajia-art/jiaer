@@ -265,6 +265,8 @@ export type ModContent = ContentSlots & {
   rooms?: Record<string, RoomContent>; // 地图 / 房间
   /** 功能注释：大地图列表；每张下挂一棵地点树（rooms[].mapId） */
   worldMaps?: import("../lib/worldMaps").WorldMapDef[];
+  /** 功能注释：作品级生图设置：整部统一画风（空=默认「二次元写实漫」）与负面词；人物/地点/大地图/封面生图共用 */
+  imageGen?: { style?: string; negative?: string };
   startRoom?: string;
   locations?: MapLocation[]; // 地点名录（地图标签 / 功能说明）；缺省由 rooms[].name 推导
   startMet?: string[]; // 开局即已结识的 NPC id

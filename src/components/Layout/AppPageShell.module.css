@@ -10,8 +10,9 @@
 }
 
 .main {
-  /* 功能注释：主内容纵向堆叠，FooterArea 落在滚动区底部而非右侧栏 */
-  position: absolute;
+  /* 功能注释：主内容纵向堆叠，FooterArea 落在滚动区底部而非右侧栏；仍可滚，但隐藏滚动条外观（黑底白条刺眼） */
+  /* 功能注释：position 必须钉死 absolute——页面 mainClassName 若带 relative 会把高度撑成内容高度，壳层 overflow:hidden 后整页无法滚动并误触发无限加载 */
+  position: absolute !important;
   top: var(--app-navbar-offset);
   bottom: var(--app-bottom-nav-offset);
   left: 0;
@@ -19,10 +20,18 @@
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: auto !important;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
   box-sizing: border-box;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.main::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
 
 /* 无底栏时仍避开底部 Home Indicator */

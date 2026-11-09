@@ -25,7 +25,9 @@ test('theme_storyBgAlpha_与_App_注入_CSS变量', () => {
   assert.match(css, /--story-panel-a/);
   assert.match(css, /--story-font-size/);
   assert.match(css, /\.story-prose[\s\S]*?font-style:\s*normal/);
-  assert.match(css, /\.story-action[\s\S]*?#1a1a1a/);
+  // 功能注释：3.2 叙事字色走 --story-ink（浅色 #1a1a1a，暗色浅字）
+  assert.match(css, /\.story-action[\s\S]*?var\(--story-ink\)/);
+  assert.match(css, /--story-ink: #1a1a1a/);
 });
 
 test('dialogDiy_字号覆盖小说内容卡与叠图旁白', () => {
@@ -38,7 +40,9 @@ test('dialogDiy_字号覆盖小说内容卡与叠图旁白', () => {
 
 test('HomeTab_地点描写不写死字号_跟story-prose', () => {
   const home = read('components/HomeTab.tsx');
-  assert.match(home, /story-prose whitespace-pre-line leading-\[1\.75\]/);
+  // 功能注释：3.12 地点说明与旁白同规格，无首行缩进
+  assert.match(home, /story-prose whitespace-pre-line leading-\[1\.8\]/);
+  assert.doesNotMatch(home, /text-indent:2em/);
   assert.doesNotMatch(home, /story-prose whitespace-pre-line text-\[13\.5px\]/);
 });
 

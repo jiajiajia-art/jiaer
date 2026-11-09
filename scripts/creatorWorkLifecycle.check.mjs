@@ -18,9 +18,21 @@ test("作品生命周期_草稿名额只统计未提交作品", () => {
 test("作品生命周期_新作与更新审核标签准确", () => {
   assert.equal(resolveCreatorWorkStatus({ is_public: 0, moderation_status: "pending_review" }), "pending");
   assert.equal(resolveCreatorWorkStatus({ is_public: 1, moderation_status: "update_pending_review" }), "update_pending");
-  assert.equal(creatorWorkStatusLabel("pending"), "审核中");
+  assert.equal(creatorWorkStatusLabel("pending"), "发布审核中");
   assert.equal(creatorWorkStatusLabel("update_pending"), "更新审核中");
   assert.equal(creatorWorkStatusLabel("rejected"), "未通过");
+  assert.equal(creatorWorkStatusLabel("published"), "已公开发布");
+});
+
+test("作品生命周期_私有分享与草稿可区分", () => {
+  assert.equal(resolveCreatorWorkStatus({ is_public: 0, moderation_status: "none" }), "draft");
+  assert.equal(
+    resolveCreatorWorkStatus({ is_public: 0, moderation_status: "none", privateShareActive: true }),
+    "private_share",
+  );
+  assert.equal(creatorWorkStatusLabel("private_share"), "已私有分享");
+  assert.equal(creatorWorkStatusLabel("draft"), "草稿");
+  assert.equal(creatorWorkStatusLabel("unpublished"), "已下架");
 });
 
 test("作品入口_书架承载作品分类且我的不再重复显示", () => {

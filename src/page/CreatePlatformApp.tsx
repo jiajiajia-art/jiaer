@@ -1,6 +1,6 @@
 /**
  * 手机应用（原「创作应用」收编进「创作游戏」二级）：
- * 填需求 → AI 对话生成草稿字段 → 保存草稿 → 上架；保存时打 phone_app 专属 .kkmod 上传组件商店。
+ * 填需求 → AI 对话生成草稿字段 → 保存草稿 → 上架；保存时把应用草稿打成 phone_app 包上传组件商店（应用运行在平台 SDK 上）。
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -81,7 +81,7 @@ const CreatePlatformApp: React.FC = () => {
   const [published, setPublished] = useState<PlatformApp[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [sdkBusy, setSdkBusy] = useState(false);
+  const [uploadBusy, setUploadBusy] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [brief, setBrief] = useState('');
@@ -89,7 +89,7 @@ const CreatePlatformApp: React.FC = () => {
   const [turns, setTurns] = useState<PhoneAppAiTurn[]>([
     {
       role: 'assistant',
-      text: '先写一两句需求（或直接聊天），例如「做一个二手闲置浏览页，分类生活，展示商品列表文案」。我会生成名称、说明、类型和内容草稿；满意后保存草稿，再上传到组件商店（运行在平台 SDK 上，不产出专属 SDK）。',
+      text: '先写一两句需求（或直接聊天），例如「做一个二手闲置浏览页，分类生活，展示商品列表文案」。我会生成名称、说明、类型和内容草稿；满意后保存草稿，再上传应用草稿到组件商店（应用运行在平台 SDK 上）。',
     },
   ]);
   const [chatBusy, setChatBusy] = useState(false);
@@ -217,9 +217,9 @@ const CreatePlatformApp: React.FC = () => {
   };
 
   /** 功能注释：草稿写入平台应用表后，打 phone_app .kkmod 进组件商店私有测试。 */
-  const uploadPhoneSdk = async (app: PlatformApp) => {
+  const uploadPhoneAppDraft = async (app: PlatformApp) => {
     if (!token) return;
-    setSdkBusy(true);
+    setUploadBusy(true);
     try {
       const pkg = buildPhoneAppKkmodPackage({
         appId: app.appId,
@@ -236,13 +236,13 @@ const CreatePlatformApp: React.FC = () => {
         engineVersion: '1.0.0',
       });
       if (!res.success && !res.ok) {
-        throw new Error(res.message || res.data?.message || 'SDK 上传失败');
+        throw new Error(res.message || res.data?.message || '应用草稿上传失败');
       }
       toast.success(res.data?.message || res.message || '已上传应用草稿（组件商店私有测试）');
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : 'SDK 上传失败');
+      toast.error(e instanceof Error ? e.message : '应用草稿上传失败');
     } finally {
-      setSdkBusy(false);
+      setUploadBusy(false);
     }
   };
 
@@ -275,7 +275,7 @@ const CreatePlatformApp: React.FC = () => {
       const appId = saved.appId || editingId;
       toast.success(editingId ? '已保存' : '已保存为草稿');
       if (appId) {
-        await uploadPhoneSdk({
+        await uploadPhoneAppDraft({
           appId,
           authorId: saved.authorId || userCode || '',
           authorName: saved.authorName || '',
@@ -326,7 +326,7 @@ const CreatePlatformApp: React.FC = () => {
     <AppPageShell shellClassName={styles.pageRoot} mainClassName={styles.main}>
       <h1 className={styles.title}>手机应用</h1>
       <p className={styles.hint}>
-        创作游戏 → 手机应用。对话生成应用草稿（页面与积木描述），由现有手机运行器解释运行；保存后走完整性检查、私有测试、审核上架。游戏世界只能从已上架列表安装（作品只存应用编号）。创作者交出的是应用草稿，不产出专属 SDK。作者库兰号：{userCode || '（需登录）'}。
+        创作游戏 → 手机应用。对话生成应用草稿（页面与积木描述），由现有手机运行器解释运行；保存后走完整性检查、私有测试、审核上架。游戏世界只能从已上架列表安装（作品只存应用编号）。创作者交出的是应用草稿，应用运行在平台 SDK 上。作者库兰号：{userCode || '（需登录）'}。
       </p>
 
       <section className={styles.card} data-phone-app-ai="1">
@@ -471,10 +471,10 @@ const CreatePlatformApp: React.FC = () => {
           <button
             type="button"
             className={styles.btnPrimary}
-            disabled={saving || sdkBusy}
+            disabled={saving || uploadBusy}
             onClick={() => void save()}
           >
-            {saving || sdkBusy ? '保存 / 生成 SDK…' : editingId ? '保存并生成 SDK' : '保存草稿并生成 SDK'}
+            {saving || uploadBusy ? '保存 / 上传应用草稿…' : editingId ? '保存并上传应用草稿' : '保存草稿并上传应用草稿'}
           </button>
           {editingId ? (
             <button type="button" className={styles.btnGhost} onClick={resetForm}>
@@ -537,10 +537,10 @@ const CreatePlatformApp: React.FC = () => {
             <button
               type="button"
               className={styles.btnGhost}
-              disabled={sdkBusy}
-              onClick={() => void uploadPhoneSdk(app)}
+              disabled={uploadBusy}
+              onClick={() => void uploadPhoneAppDraft(app)}
             >
-              生成 SDK
+              上传应用草稿
             </button>
             {app.status === 'published' ? (
               <button type="button" className={styles.btnGhost} onClick={() => void unpublish(app.appId)}>

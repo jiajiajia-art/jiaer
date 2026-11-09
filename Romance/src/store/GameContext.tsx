@@ -18,10 +18,10 @@ import {
 } from "../lib/authorPreview";
 import { markAuthorPreviewReady, resetAuthorPreviewBoot } from "../lib/authorPreviewBoot.ts";
 import { clearAuthorPreviewSave } from "../lib/storage";
-import { buildOpeningPlotPrompt, DEFAULT_OPENING_DIRECTIVE } from "../lib/openingPlotPrompt";
+import { buildOpeningPlotPrompt, DEFAULT_OPENING_DIRECTIVE, pickOpeningPromptEvents } from "../lib/openingPlotPrompt";
 import { activeLookKey, resolveLook, type LookPatch } from "../lib/plotLook";
 import { pickArrival, resolveStart, startPreset } from "../game/mapStart";
-import { spotName } from "../game/mapedits";
+import { spotDesc, spotName } from "../game/mapedits";
 import { LIVE_LOCATIONS, getWorldSlot, setRuntimeSpots, setStartDateOverride } from "../mods/registry";
 import type { StartOpts } from "./gameCtx";
 import type { MapSpotEdit } from "../lib/types";
@@ -97,6 +97,8 @@ import {
 } from "../game/logic";
 import { gossipTick } from "../game/npcKnowledge";
 import { meetPerson, withNewcomers } from "../game/npcIntro";
+import { addAutoSpot, isFormalPlaceName } from "../lib/newLocation";
+import { findSceneImageForNewSpot } from "../lib/newLocationAsset";
 import { commitWorldBook } from "../game/worldbookPick";
 import { recordTimeline } from "../game/timeline";
 import { syncFactions, setFactionRoomPath, factionFlag, REP_MIN, REP_MAX } from "../game/factions";
@@ -106,7 +108,7 @@ import { getWorldRooms as factionRooms, worldActivitiesOfRoom } from "../mods/re
 setFactionRoomPath((id) => factionPathOf(factionRooms(), id));
 import { writeCheckpoint } from "../lib/storage";
 import { defaultWorldBook } from "../game/worldbook";
-import { advanceUnit, advanceCount, advanceStoryOn, advanceWords, hopEnergy, tripPoints, apPerMove, encountersHere, fireEncounter, insideTree, introOf, itemsOfRoom, learnIntel, locOf, presentHere, tickWorld, travelPlan } from "../game/mud";
+import { advanceUnit, advanceCount, advanceStoryOn, advanceWords, hopEnergy, tripPoints, apPerMove, encountersHere, fireEncounter, insideTree, introOf, itemsOfRoom, learnIntel, locOf, mobsHere, presentHere, roomDesc, tickWorld, travelPlan } from "../game/mud";
 import { activityApCost, customActsOf, customItemsOf, findCustomItem, findShopGood, findSpotEvent, firedKey, firedOf, withApNote } from "../game/mapedits";
 import { scanTriggers, queueChoiceTriggers, takeQueued } from "../game/eventTriggers";
 import { pickFixedEvent, pickRandomEvent, applyFixedEffects, applyHiddenBranches, applyChainBreaks, eventChoiceOptions, parseChoice, applyChoice, matchCustomEnding, evalFixedCond, applyEffectList, FIXED_METRICS } from "../game/fixedEvents";
@@ -613,12 +615,46 @@ export function GameProvider({ children }: { children: ReactNode }) {
       // 转场：AI 把 world.location 改成了另一个地点 → 解析成地图房间，主角真的移过去
       let movedTo: string | undefined;
       if (next.world.location && next.world.location !== working.world.location) {
-        const rid = roomByName(next, next.world.location);
-        if (rid && rid !== next.sim.room) {
-          next = { ...next, sim: { ...next.sim, room: rid, visited: (next.sim.visited ?? []).includes(rid) ? next.sim.visited : [...(next.sim.visited ?? []), rid] } };
+        let rid = roomByName(next, next.world.location);
+        let freshSpot: { id: string; name: string; desc?: string } | undefined;
+        // 功能注释：地名对不上任何已有房间 / 自建点，但是正式地名 → 本局叠加一个自建地点（连回转场前房间），
+        // 并把 sim.room 移过去；占位词（某处 / 外面…）不建点；同名只建一次（id 由地名派生）。（3.14）
+        if (!rid && isFormalPlaceName(next.world.location)) {
+          const placeName = next.world.location.trim();
+          const added = addAutoSpot(next.mapEdits, {
+            name: placeName,
+            link: working.sim.room ?? getWorldStartRoom(),
+          });
+          next = { ...next, mapEdits: added.edits };
+          rid = added.id;
+          if (added.created) freshSpot = { id: added.id, name: placeName, desc: (added.edits[added.id] as MapSpotEdit).desc };
         }
-        movedTo = (rid && (spotName(next, rid) || locOf(rid)?.name)) || next.world.location;
+        if (rid && rid !== next.sim.room) {
+          const firstVisit = !(next.sim.visited ?? []).includes(rid);
+          next = {
+            ...next,
+            sim: {
+              ...next.sim,
+              room: rid,
+              visited: firstVisit ? [...(next.sim.visited ?? []), rid] : next.sim.visited,
+              discoveredAt: firstVisit ? { ...(next.sim.discoveredAt ?? {}), [rid]: next.sim.day } : next.sim.discoveredAt,
+            },
+          };
+        }
+        movedTo = (rid && (spotName(next, rid) || locOf(rid)?.name)) || (freshSpot?.name ?? next.world.location);
         next = { ...next, world: { ...next.world, location: movedTo } };
+        // 功能注释：素材库配图异步进行，只补空图（不覆盖已有背景）；未登录 / 库空 / 低相似时保持无图，条目仍在
+        if (freshSpot) {
+          const spotId = freshSpot.id;
+          const gid = next.id;
+          void findSceneImageForNewSpot(freshSpot.name, { desc: freshSpot.desc }).then((url) => {
+            const cur = gameRef.current;
+            if (!url || !cur || cur.id !== gid) return;
+            const spot = cur.mapEdits?.[spotId] as MapSpotEdit | undefined;
+            if (!spot || spot.background?.trim()) return;
+            persist({ ...cur, mapEdits: { ...(cur.mapEdits ?? {}), [spotId]: { ...spot, background: url } } });
+          });
+        }
       }
       // 剧情初遇：本回合第一次登场、还没结识的人物 → 正文底部出人物名片，由玩家决定是否结识
       const intro = withNewcomers(working, next, segments, effectiveStep);
@@ -875,13 +911,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
         },
       });
       if (autosaveOnRef.current) autosaveDebounced(g); // 新局立即覆盖自动存档，避免刷新后读回已结局的旧局
-      // 功能注释：开幕页只播编辑器开场白；开局正文提示按世界观/开局人际/主线拼装，无父母设定时禁止爸妈来电模板
+      // 功能注释：开幕页只播编辑器开场白；开局正文 = 地点 + 勾选「开局提示词」的固定事件 + 人际/主线；无父母设定时禁止爸妈来电模板
       pendingOpeningPromptRef.current = buildOpeningPlotPrompt({
         location: g.world.location,
         routeEvent,
         game: g,
         storylines: getWorldStorylines(),
         directive: getOpeningDirective(DEFAULT_OPENING_DIRECTIVE),
+        openingPromptEvents: pickOpeningPromptEvents(getWorld().content.fixedEvents),
       });
       setScreen("opening");
     },
@@ -1964,10 +2001,26 @@ export function GameProvider({ children }: { children: ReactNode }) {
     const beat = tickWorld(moved, g.npcs);
     const via = trip?.modeLabel ? `${trip.modeLabel} · ` : "";
     const cost = local ? "走几步就到" : `${fee > 0 ? `交通费 ${wallet.fmt(fee, g)}` : "免费"} · 行动点 -${apCost}`;
-    const head = `${plan.explore ? "你摸索着来到" : "你来到"}${locOf(roomId)?.name ?? roomId}（${via}${cost}）。${plan.explore ? "这处地方在地图上点亮了。" : ""}`;
+    const locName = locOf(roomId)?.name ?? roomId;
+    const head = `${plan.explore ? "你摸索着来到" : "你来到"}${locName}（${via}${cost}）。${plan.explore ? "这处地方在地图上点亮了。" : ""}`;
     // 首次踏入触发一次性场景剧情（内容池提供），随抵达一并呈现
     const intro = firstArrival ? introOf(roomId) : undefined;
-    const lines = [head, ...(intro ? ["" + intro] : []), ...beat.events.map((e) => e.text)];
+    // 功能注释：抵达后必须有地点可读描写；无 intro 时用地点 desc / 在场人补一段，禁止只剩系统句（3.5）
+    const descFlavor = (() => {
+      if (intro) return undefined;
+      const fromSpot = spotDesc(g, roomId)?.trim();
+      const fromRoom = (roomDesc(roomId) || "").trim();
+      const raw = fromSpot || fromRoom || "";
+      if (raw && !/新地点/.test(raw)) return raw;
+      const present = mobsHere({ ...moved, mobs: beat.mobs }, roomId, g.npcs)
+        .filter((p) => p.present)
+        .map((p) => p.name)
+        .filter(Boolean)
+        .slice(0, 3);
+      if (present.length) return `${locName}里，${present.join("、")}还在。空气与陈设都带着此地特有的气息。`;
+      return `${locName}安静地摊开在你面前。四周的陈设与光影，都在提醒你：故事换了舞台。`;
+    })();
+    const lines = [head, ...(intro ? ["" + intro] : descFlavor ? [descFlavor] : []), ...beat.events.map((e) => e.text)];
     // —— 同行：邀约成立时，同行者随你一并抵达，路上相处升温 ——
     let mobs = beat.mobs;
     const merge: Partial<SimState> = {};

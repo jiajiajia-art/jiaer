@@ -25,6 +25,8 @@ import { auditGame, auditStory, issuesAt } from "../game/refAudit";
 import AudioPicker from "./AudioPicker";
 import ModExportPicker, { ArgsEditor, exportOptions, firstExport } from "./ModExportPicker";
 import { buildQuestOpts, type QuestOpt } from "../lib/questOpts";
+import { useDraftRefs } from "./draftRefsContext";
+import { draftRefDefaults, type DraftRefs } from "../lib/draftRefs";
 
 /* 固定事件编辑器：创作者预设剧本桥段。满足条件后由代码判定触发，再交 AI 演绎。
  * 只有「编辑」「预览」两种模式：编辑可见全部事件；预览只见玩家已实际触发的事件。
@@ -36,24 +38,27 @@ const newEvent = (): FixedEvent => ({ id: uid(), name: "", prompt: "", once: tru
 
 
 
-// 条件切换类型时的默认值：始终指向一个已存在的库项，杜绝手填不存在的字段
-export function defaultCond(kind: FixedCond["kind"]): FixedCond {
+/* 条件切换类型时的默认值：始终指向一个已存在的库项，杜绝手填不存在的字段。
+ * 功能注释：refs 传入（模组编辑器草稿）时只取本作品的人物/地点/物品/属性，没有就留空不预选，
+ * 绝不回退 LIVE_*（娱乐圈）；refs 缺省才是游玩态，读当前生效世界。 */
+export function defaultCond(kind: FixedCond["kind"], refs?: DraftRefs | null): FixedCond {
+  const d = refs ? draftRefDefaults(refs) : null;
   switch (kind) {
-    case "stat": return { kind: "stat", key: STAT_ORDER[0], op: "gte", value: 100 };
-    case "metric": return { kind: "metric", key: FIXED_METRICS[0].key, op: "gte", value: 10 };
-    case "rel": return { kind: "rel", key: PEOPLE[0]?.id ?? "", op: "gte", value: 20 };
-    case "location": return { kind: "location", key: LOCATIONS[0]?.id ?? "" };
-    case "item": return { kind: "item", key: ALL_ITEMS[0]?.id ?? "" };
+    case "stat": return { kind: "stat", key: d ? d.stat : STAT_ORDER[0], op: "gte", value: 100 };
+    case "metric": return { kind: "metric", key: d ? d.metric : FIXED_METRICS[0].key, op: "gte", value: 10 };
+    case "rel": return { kind: "rel", key: d ? d.rel : PEOPLE[0]?.id ?? "", op: "gte", value: 20 };
+    case "location": return { kind: "location", key: d ? d.location : LOCATIONS[0]?.id ?? "" };
+    case "item": return { kind: "item", key: d ? d.item : ALL_ITEMS[0]?.id ?? "" };
     case "event": return { kind: "event", key: "" };
     case "time": return { kind: "time", unit: "year", op: "gte", value: 1 };
     case "date": return { kind: "date", op: "gte", date: "" };
     case "flag": return { kind: "flag", key: "", op: "gte", value: 1 };
     case "clock": return { kind: "clock", from: "22:00", to: "06:00" };
-    case "quest": return { kind: "quest", key: getWorldStorylines()?.[0]?.id ?? "", state: "done" };
-    case "side": return { kind: "side", key: getWorldSidelines()?.[0]?.id ?? "", state: "done" };
-    case "faction": return { kind: "faction", key: liveFactions()[0]?.id ?? "", op: "gte", value: 25 };
-    case "visited": return { kind: "visited", key: LOCATIONS[0]?.id ?? "" };
-    case "relSet": return { kind: "relSet", keys: PEOPLE.slice(0, 2).map((p) => p.id), op: "gte", value: 50 };
+    case "quest": return { kind: "quest", key: d ? "" : getWorldStorylines()?.[0]?.id ?? "", state: "done" };
+    case "side": return { kind: "side", key: d ? "" : getWorldSidelines()?.[0]?.id ?? "", state: "done" };
+    case "faction": return { kind: "faction", key: d ? d.faction : liveFactions()[0]?.id ?? "", op: "gte", value: 25 };
+    case "visited": return { kind: "visited", key: d ? d.location : LOCATIONS[0]?.id ?? "" };
+    case "relSet": return { kind: "relSet", keys: d ? d.relSet : PEOPLE.slice(0, 2).map((p) => p.id), op: "gte", value: 50 };
     case "memory": return { kind: "memory", key: "" };
     case "flagSet": return { kind: "flagSet", key: "", exists: true };
     case "group": return { kind: "group", match: "any", conds: [] };
@@ -71,16 +76,18 @@ export const questOpts = (lines: Storyline[] | undefined = getWorldStorylines())
 /* 支线条件可选项：每条支线一项 */
 export const sideOpts = (lines: Sideline[] | undefined = getWorldSidelines()): QuestOpt[] =>
   (lines ?? []).map((l) => ({ id: l.id, label: `支线·${l.name || l.id}` }));
-export function defaultEffect(kind: FixedEffect["kind"]): FixedEffect {
+/** 功能注释：效果默认值；refs 规则同 defaultCond（草稿只取本作品、空则不预选）。 */
+export function defaultEffect(kind: FixedEffect["kind"], refs?: DraftRefs | null): FixedEffect {
+  const d = refs ? draftRefDefaults(refs) : null;
   switch (kind) {
-    case "stat": return { kind: "stat", key: STAT_ORDER[0], delta: 10 };
-    case "metric": return { kind: "metric", key: FIXED_METRICS[0].key, delta: 5 };
-    case "rel": return { kind: "rel", key: PEOPLE[0]?.id ?? "", delta: 5 };
-    case "addItem": return { kind: "addItem", key: ALL_ITEMS[0]?.id ?? "" };
-    case "removeItem": return { kind: "removeItem", key: ALL_ITEMS[0]?.id ?? "" };
-    case "unlockLocation": return { kind: "unlockLocation", key: LOCATIONS[0]?.id ?? "" };
+    case "stat": return { kind: "stat", key: d ? d.stat : STAT_ORDER[0], delta: 10 };
+    case "metric": return { kind: "metric", key: d ? d.metric : FIXED_METRICS[0].key, delta: 5 };
+    case "rel": return { kind: "rel", key: d ? d.rel : PEOPLE[0]?.id ?? "", delta: 5 };
+    case "addItem": return { kind: "addItem", key: d ? d.item : ALL_ITEMS[0]?.id ?? "" };
+    case "removeItem": return { kind: "removeItem", key: d ? d.item : ALL_ITEMS[0]?.id ?? "" };
+    case "unlockLocation": return { kind: "unlockLocation", key: d ? d.location : LOCATIONS[0]?.id ?? "" };
     case "flag": return { kind: "flag", key: "", delta: 1 };
-    case "faction": return { kind: "faction", key: liveFactions()[0]?.id ?? "", delta: 10 };
+    case "faction": return { kind: "faction", key: d ? d.faction : liveFactions()[0]?.id ?? "", delta: 10 };
     case "memory": return { kind: "memory", key: "" };
     case "modVar": { const m = firstExtMod("vars"); return { kind: "modVar", mod: m?.id ?? "", key: m?.ext?.vars?.[0]?.key ?? "", delta: 1 }; }
     case "modAction": { const m = firstExtMod("actions"); return { kind: "modAction", mod: m?.id ?? "", id: m?.ext?.actions?.[0]?.id ?? "" }; }
@@ -88,6 +95,14 @@ export function defaultEffect(kind: FixedEffect["kind"]): FixedEffect {
     case "modEmit": return { kind: "modEmit", event: "" };
     case "audio": return { kind: "audio", op: "play" };
   }
+}
+/** 功能注释：编辑面板里「新建条件/效果」统一走这里——在模组编辑器内自动带上当前表单的引用池。 */
+export function useDraftDefaults() {
+  const refs = useDraftRefs();
+  return {
+    cond: (kind: FixedCond["kind"]) => defaultCond(kind, refs),
+    effect: (kind: FixedEffect["kind"]) => defaultEffect(kind, refs),
+  };
 }
 /* 功能 MOD 可选项：所有带扩展的模组（含未启用的，便于提前搭配；未启用时判定为不成立） */
 const extMods = () => allMods().filter((m) => m.ext);
@@ -126,6 +141,8 @@ export default function FixedEventsPanel({ value, storylines, sidelines, library
   onChange?: (v: FixedEvent[]) => void;
 } = {}) {
   const modMode = !!onChange;
+  const draftRefs = useDraftRefs();
+  const draftDefaults = useDraftDefaults();
   const { game, setFixedEvents, setRandomGroups, setWorldBook } = useGame();
   const [tpls, setTpls] = useState<EventTemplate[]>(() => loadTemplates());
   const [toast, setToast] = useState("");
@@ -147,11 +164,23 @@ export default function FixedEventsPanel({ value, storylines, sidelines, library
   const sides = sideOpts(modMode ? (sidelines ?? []) : sidelines);
   const fired = new Set(modMode ? [] : game?.sim.eventsFired ?? []);
   // 填错就提示：失效引用 / 死循环 / 无人激活 / 空提示词
-  const audit = modMode || !game ? auditStory({ events, storylines: storylines ?? [], sidelines: sidelines ?? [], skip: ["item", "location", "npc", "flag"] }) : auditGame(game, { events });
+  // 功能注释：模组编辑器按「草稿」审计——人物/地点/物品只认当前表单（来自 draftRefs / worldContext），
+  // 不再 skip 掉这几类引用；游玩态才读存档与当前世界。
+  const draftPeople = draftRefs?.people ?? worldContext?.npcs ?? [];
+  const draftRooms = draftRefs?.rooms ?? worldContext?.rooms ?? [];
+  const draftItems = draftRefs?.items ?? [];
+  const audit = modMode || !game
+    ? auditStory({
+      draft: true, events, storylines: storylines ?? [], sidelines: sidelines ?? [],
+      npcIds: draftPeople.map((p) => p.id), roomIds: draftRooms.map((r) => r.id), itemIds: draftItems.map((i) => i.id),
+      people: draftPeople, factions: draftRefs?.factions?.map((f) => ({ id: f.id, name: f.name, members: [] })),
+      skip: ["flag"],
+    })
+    : auditGame(game, { events });
   const evIssues = audit.issues.filter((x) => x.at?.startsWith("event:"));
-  const personName = (id: string) => PEOPLE.find((p) => p.id === id)?.name ?? id;
-  const itemName = (id: string) => ALL_ITEMS.find((i) => i.id === id)?.name ?? id;
-  const locName = (id: string) => LOCATIONS.find((l) => l.id === id)?.name ?? id;
+  const personName = (id: string) => (modMode ? draftPeople : PEOPLE).find((p) => p.id === id)?.name ?? id;
+  const itemName = (id: string) => (modMode ? draftItems : ALL_ITEMS).find((i) => i.id === id)?.name ?? id;
+  const locName = (id: string) => (modMode ? draftRooms : LOCATIONS).find((l) => l.id === id)?.name ?? id;
 
   const save = (next: FixedEvent[]) => (onChange ? onChange(next) : setFixedEvents(next));
   const patch = (id: string, part: Partial<FixedEvent>) => save(events.map((e) => (e.id === id ? { ...e, ...part } : e)));
@@ -201,8 +230,8 @@ export default function FixedEventsPanel({ value, storylines, sidelines, library
       case "date": return `日期${c.op === "lte" ? "不晚于" : "不早于"} ${c.date || "（未填）"}`;
       case "flag": return `变量「${c.key || "未命名"}」${cmpSym(c.op)} ${c.value}`;
       case "clock": return `时段 ${c.from}~${c.to}`;
-      case "quest": return `「${String(questOpts().find((q) => q.id === c.key)?.label ?? "").trim() || c.key || "未选"}」${QUEST_STATE_LABEL[c.state]}`;
-      case "side": return `「${sideOpts().find((q) => q.id === c.key)?.label || c.key || "未选"}」${SIDE_STATE_LABEL[c.state]}`;
+      case "quest": return `「${String(quests.find((q) => q.id === c.key)?.label ?? "").trim() || c.key || "未选"}」${QUEST_STATE_LABEL[c.state]}`;
+      case "side": return `「${sides.find((q) => q.id === c.key)?.label || c.key || "未选"}」${SIDE_STATE_LABEL[c.state]}`;
       default: return condBrief(c, events);
     }
   };
@@ -420,6 +449,7 @@ export default function FixedEventsPanel({ value, storylines, sidelines, library
                     <span className="truncate text-[14px] font-bold text-ink">{e.name || "（未命名事件）"}</span>
                     <AuditBadge issues={issuesAt(audit, `event:${e.id}`)} />
                     {e.once && <span className="shrink-0 rounded bg-jade/12 px-1.5 py-px text-[10px] font-bold text-jade">一次性</span>}
+                    {e.openingPrompt && <span className="shrink-0 rounded bg-coral/12 px-1.5 py-px text-[10px] font-bold text-coral">开局提示词</span>}
                     {e.locked && <span className="shrink-0 rounded bg-coral/12 px-1.5 py-px text-[10px] font-bold text-coral">需激活</span>}
                     {fired.has(e.id) && <span className="shrink-0 rounded bg-gold/15 px-1.5 py-px text-[10px] font-bold text-gold">已触发</span>}
                     {(game?.sim.eventsActive ?? []).includes(e.id) && <span className="shrink-0 rounded bg-coral/15 px-1.5 py-px text-[10px] font-bold text-coral">进行中</span>}
@@ -521,7 +551,7 @@ export default function FixedEventsPanel({ value, storylines, sidelines, library
                           onDelete={() => patch(e.id, { conds: (e.conds ?? []).filter((_, j) => j !== i) })} />
                       ))}
                       <select className={selCls} value=""
-                        onChange={(ev) => { const k = ev.target.value as FixedCond["kind"]; if (k) patch(e.id, { conds: [...(e.conds ?? []), defaultCond(k)] }); }}>
+                        onChange={(ev) => { const k = ev.target.value as FixedCond["kind"]; if (k) patch(e.id, { conds: [...(e.conds ?? []), draftDefaults.cond(k)] }); }}>
                         <option value="">＋ 添加条件…</option>
                         <option value="stat">主角属性</option>
                         <option value="metric">名气/口碑/压力等</option>
@@ -554,7 +584,7 @@ export default function FixedEventsPanel({ value, storylines, sidelines, library
                           onDelete={() => patch(e.id, { effects: (e.effects ?? []).filter((_, j) => j !== i) })} />
                       ))}
                       <select className={selCls} value=""
-                        onChange={(ev) => { const k = ev.target.value as FixedEffect["kind"]; if (k) patch(e.id, { effects: [...(e.effects ?? []), defaultEffect(k)] }); }}>
+                        onChange={(ev) => { const k = ev.target.value as FixedEffect["kind"]; if (k) patch(e.id, { effects: [...(e.effects ?? []), draftDefaults.effect(k)] }); }}>
                         <option value="">＋ 添加后果…</option>
                         <option value="stat">增减主角属性</option>
                         <option value="metric">增减名气/口碑/压力等</option>
@@ -595,6 +625,12 @@ export default function FixedEventsPanel({ value, storylines, sidelines, library
 
                   {/* 开关 */}
                   <div className="flex flex-wrap gap-4">
+                    {/* 功能注释：勾选后开局用本条 prompt 参与第一场剧情；未勾选不在开局自动播放 */}
+                    <Toggle
+                      checked={!!e.openingPrompt}
+                      label="开局提示词（进游戏时与开局地点一起生成第一场）"
+                      onChange={(v) => patch(e.id, { openingPrompt: v || undefined })}
+                    />
                     <Toggle checked={!!e.once} label="只触发一次" onChange={(v) => patch(e.id, { once: v })} />
                     <Toggle checked={!!e.locked} label="需由前置事件激活" onChange={(v) => patch(e.id, { locked: v })} />
                     <Toggle checked={!!e.inline} label="插入对话流（不弹剧情幕，直接写进主剧情）" onChange={(v) => patch(e.id, { inline: v || undefined })} />
@@ -684,11 +720,17 @@ function Toggle({ checked, label, onChange }: { checked: boolean; label: string;
 /* srcs / people：调用方（如结局编辑器）传入「正在编辑的作品」的数值来源与人物；不传则用当前世界 */
 /* sides：剧情线编辑器传入「正在编辑的作品」的支线；不传则用当前世界 */
 export function CondRow({ c, events, selfId, onChange, onDelete, srcs, people, quests, sides }: { c: FixedCond; events: FixedEvent[]; selfId: string; onChange: (c: FixedCond) => void; onDelete: () => void; srcs?: ValueSrc[]; people?: { id: string; name: string }[]; quests?: QuestOpt[]; sides?: QuestOpt[] }) {
-  const qOpts = quests ?? questOpts();
-  const sOpts = sides ?? sideOpts();
+  // 功能注释：模组编辑器内（有 DraftRefs）下拉只读当前表单；游玩态才读当前生效世界
+  const draftRefs = useDraftRefs();
+  const qOpts = quests ?? (draftRefs ? [] : questOpts());
+  const sOpts = sides ?? (draftRefs ? [] : sideOpts());
+  if (!srcs && draftRefs?.srcs) srcs = draftRefs.srcs;
+  const roomOpts = draftRefs ? draftRefs.rooms : LOCATIONS.map((l) => ({ id: l.id, name: l.name }));
+  const itemOpts = draftRefs ? draftRefs.items : ALL_ITEMS.map((i) => ({ id: i.id, name: i.name }));
+  const factionOpts = draftRefs ? (draftRefs.factions ?? []) : liveFactions().map((f) => ({ id: f.id, name: f.name }));
   const statOpts = srcs ? srcs.filter((x) => x.kind === "stat").map((x) => ({ v: x.key, l: x.label })) : STAT_ORDER.map((k) => ({ v: k as string, l: STAT_LABELS[k] }));
   const metricOpts = srcs ? srcs.filter((x) => x.kind === "metric").map((x) => ({ v: x.key, l: x.label })) : FIXED_METRICS.map((m) => ({ v: m.key, l: m.label }));
-  const peopleOpts = (people ?? PEOPLE).map((p) => ({ v: p.id, l: p.name }));
+  const peopleOpts = (people ?? draftRefs?.people ?? PEOPLE).map((p) => ({ v: p.id, l: p.name }));
   const ck = "key" in c ? c.key : "";
   const keyOpts = (opts: { v: string; l: string }[]) => (
     <>
@@ -699,7 +741,7 @@ export function CondRow({ c, events, selfId, onChange, onDelete, srcs, people, q
   const numeric = c.kind === "stat" || c.kind === "metric" || c.kind === "rel";
   return (
     <div className="flex flex-wrap items-center gap-1.5 rounded-lg bg-paper/50 px-2 py-1.5">
-      <select className={selCls} value={c.kind} onChange={(e) => onChange(defaultCond(e.target.value as FixedCond["kind"]))}>
+      <select className={selCls} value={c.kind} onChange={(e) => onChange(defaultCond(e.target.value as FixedCond["kind"], draftRefs))}>
         <option value="stat">主角属性</option>
         <option value="metric">指标</option>
         <option value="rel">NPC 关系</option>
@@ -751,8 +793,8 @@ export function CondRow({ c, events, selfId, onChange, onDelete, srcs, people, q
               <option value="all">以下全部满足（且）</option>
               <option value="any">以下任一满足（或）</option>
             </select>
-            <button type="button" onClick={() => onChange({ ...c, conds: [...(c.conds ?? []), defaultCond("flag")] })} className="rounded-lg border border-line px-2 py-1 text-[12px] text-ink-soft hover:text-ink">+ 条件</button>
-            <button type="button" onClick={() => onChange({ ...c, conds: [...(c.conds ?? []), defaultCond("group")] })} className="rounded-lg border border-line px-2 py-1 text-[12px] text-ink-soft hover:text-ink">+ 子组</button>
+            <button type="button" onClick={() => onChange({ ...c, conds: [...(c.conds ?? []), defaultCond("flag", draftRefs)] })} className="rounded-lg border border-line px-2 py-1 text-[12px] text-ink-soft hover:text-ink">+ 条件</button>
+            <button type="button" onClick={() => onChange({ ...c, conds: [...(c.conds ?? []), defaultCond("group", draftRefs)] })} className="rounded-lg border border-line px-2 py-1 text-[12px] text-ink-soft hover:text-ink">+ 子组</button>
           </div>
           {/* 功能注释：脏稿/AI 条件组常缺 conds；兜底空数组，避免④剧情展开条件行时 .length 崩页 */}
           {!(c.conds ?? []).length && <p className="text-[11.5px] text-ink-soft">空组视为成立。</p>}
@@ -780,12 +822,12 @@ export function CondRow({ c, events, selfId, onChange, onDelete, srcs, people, q
       )}
       {c.kind === "location" && (
         <select className={selCls} value={c.key} onChange={(e) => onChange({ ...c, key: e.target.value })}>
-          {LOCATIONS.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+          {keyOpts(roomOpts.map((l) => ({ v: l.id, l: l.name })))}
         </select>
       )}
       {c.kind === "item" && (
         <select className={selCls} value={c.key} onChange={(e) => onChange({ ...c, key: e.target.value })}>
-          {ALL_ITEMS.map((it) => <option key={it.id} value={it.id}>{it.name}</option>)}
+          {keyOpts(itemOpts.map((it) => ({ v: it.id, l: it.name })))}
         </select>
       )}
       {c.kind === "event" && (
@@ -852,7 +894,7 @@ export function CondRow({ c, events, selfId, onChange, onDelete, srcs, people, q
       {c.kind === "faction" && (
         <>
           <select className={selCls} value={c.key} onChange={(e) => onChange({ ...c, key: e.target.value })}>
-            {keyOpts(liveFactions().map((f) => ({ v: f.id, l: f.name || "（未命名阵营）" })))}
+            {keyOpts(factionOpts.map((f) => ({ v: f.id, l: f.name || "（未命名阵营）" })))}
           </select>
           <select className={selCls} value={c.op} onChange={(e) => onChange({ ...c, op: e.target.value as CmpOp })}>
             {CMP_OPS.map((o) => <option key={o.v} value={o.v}>{o.t}</option>)}
@@ -862,7 +904,7 @@ export function CondRow({ c, events, selfId, onChange, onDelete, srcs, people, q
       )}
       {c.kind === "visited" && (
         <select className={selCls} value={c.key} onChange={(e) => onChange({ ...c, key: e.target.value })}>
-          {keyOpts(LOCATIONS.map((l) => ({ v: l.id, l: l.name })))}
+          {keyOpts(roomOpts.map((l) => ({ v: l.id, l: l.name })))}
         </select>
       )}
       {c.kind === "memory" && (
@@ -914,9 +956,25 @@ export function CondRow({ c, events, selfId, onChange, onDelete, srcs, people, q
 
 export function EffectRow({ ef, onChange, onDelete }: { ef: FixedEffect; onChange: (e: FixedEffect) => void; onDelete: () => void }) {
   const numeric = ef.kind === "stat" || ef.kind === "metric" || ef.kind === "rel";
+  // 功能注释：模组编辑器内（有 DraftRefs）所有下拉只读当前表单；空列表就保持空
+  const draftRefs = useDraftRefs();
+  const srcs = draftRefs?.srcs;
+  const roomOpts = draftRefs ? draftRefs.rooms : LOCATIONS.map((l) => ({ id: l.id, name: l.name }));
+  const itemOpts = draftRefs ? draftRefs.items : ALL_ITEMS.map((i) => ({ id: i.id, name: i.name }));
+  const peopleList = draftRefs ? draftRefs.people : PEOPLE.map((p) => ({ id: p.id, name: p.name }));
+  const factionOpts = draftRefs ? (draftRefs.factions ?? []) : liveFactions().map((f) => ({ id: f.id, name: f.name }));
+  const statOpts = srcs ? srcs.filter((x) => x.kind === "stat").map((x) => ({ v: x.key, l: x.label })) : STAT_ORDER.map((k) => ({ v: k as string, l: STAT_LABELS[k] }));
+  const metricOpts = srcs ? srcs.filter((x) => x.kind === "metric").map((x) => ({ v: x.key, l: x.label })) : FIXED_METRICS.map((m) => ({ v: m.key, l: m.label }));
+  const ek = "key" in ef ? ef.key : "";
+  const keyOpts = (opts: { v: string; l: string }[]) => (
+    <>
+      {!opts.some((o) => o.v === ek) && <option value={ek}>{ek ? `已失效：${ek}` : "（请选择）"}</option>}
+      {opts.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
+    </>
+  );
   return (
     <div className="flex flex-wrap items-center gap-1.5 rounded-lg bg-paper/50 px-2 py-1.5">
-      <select className={selCls} value={ef.kind} onChange={(e) => onChange(defaultEffect(e.target.value as FixedEffect["kind"]))}>
+      <select className={selCls} value={ef.kind} onChange={(e) => onChange(defaultEffect(e.target.value as FixedEffect["kind"], draftRefs))}>
         <option value="stat">主角属性</option>
         <option value="metric">指标</option>
         <option value="rel">NPC 关系</option>
@@ -971,8 +1029,8 @@ export function EffectRow({ ef, onChange, onDelete }: { ef: FixedEffect; onChang
       {ef.kind === "faction" && (
         <>
           <select className={selCls} value={ef.key} onChange={(e) => onChange({ ...ef, key: e.target.value })}>
-            {!liveFactions().some((f) => f.id === ef.key) && <option value={ef.key}>{ef.key ? `已失效：${ef.key}` : "（先在「阵营派系」添加）"}</option>}
-            {liveFactions().map((f) => <option key={f.id} value={f.id}>{f.name || "（未命名阵营）"}</option>)}
+            {!factionOpts.some((f) => f.id === ef.key) && <option value={ef.key}>{ef.key ? `已失效：${ef.key}` : "（先在「阵营派系」添加）"}</option>}
+            {factionOpts.map((f) => <option key={f.id} value={f.id}>{f.name || "（未命名阵营）"}</option>)}
           </select>
           <input type="number" className={numCls} value={ef.delta} onChange={(e) => onChange({ ...ef, delta: Number(e.target.value) || 0 })} />
         </>
@@ -998,27 +1056,27 @@ export function EffectRow({ ef, onChange, onDelete }: { ef: FixedEffect; onChang
       )}
       {ef.kind === "stat" && (
         <select className={selCls} value={ef.key} onChange={(e) => onChange({ ...ef, key: e.target.value })}>
-          {STAT_ORDER.map((k) => <option key={k} value={k}>{STAT_LABELS[k]}</option>)}
+          {keyOpts(statOpts)}
         </select>
       )}
       {ef.kind === "metric" && (
         <select className={selCls} value={ef.key} onChange={(e) => onChange({ ...ef, key: e.target.value })}>
-          {FIXED_METRICS.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
+          {keyOpts(metricOpts)}
         </select>
       )}
       {ef.kind === "rel" && (
         <select className={selCls} value={ef.key} onChange={(e) => onChange({ ...ef, key: e.target.value })}>
-          {PEOPLE.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          {keyOpts(peopleList.map((p) => ({ v: p.id, l: p.name })))}
         </select>
       )}
       {(ef.kind === "addItem" || ef.kind === "removeItem") && (
         <select className={selCls} value={ef.key} onChange={(e) => onChange({ ...ef, key: e.target.value })}>
-          {ALL_ITEMS.map((it) => <option key={it.id} value={it.id}>{it.name}</option>)}
+          {keyOpts(itemOpts.map((it) => ({ v: it.id, l: it.name })))}
         </select>
       )}
       {ef.kind === "unlockLocation" && (
         <select className={selCls} value={ef.key} onChange={(e) => onChange({ ...ef, key: e.target.value })}>
-          {LOCATIONS.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+          {keyOpts(roomOpts.map((l) => ({ v: l.id, l: l.name })))}
         </select>
       )}
 

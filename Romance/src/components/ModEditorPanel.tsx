@@ -33,9 +33,20 @@ import { perkKeyOptions } from "../game/perkKeys";
 import ModWorldBookEditor from "./ModWorldBookEditor";
 import ModRelationsEditor from "./ModRelationsEditor";
 import ImagePicker from "./ImagePicker";
-import { buildNpcAvatarPrompt } from "../lib/editorImagePrompts";
-import { LIVE_PEOPLE } from "../mods/registry";
+import {
+  NPC_AVATAR_GEN_SIZE,
+  buildNpcAvatarPromptParts,
+  workImageGenFromParts,
+  workImageSettingsOf,
+  type EditorImagePromptParts,
+  type WorkImageGenBinding,
+} from "../lib/editorImagePrompts";
 import { foldLoreFestivalsIntoWorldBook, worldBookMissingDepsErrors } from "../lib/worldBookDeps";
+import { DraftRefsContext } from "./draftRefsContext";
+import { buildDraftRefs } from "../lib/draftRefs";
+import { valueSources } from "../game/valueSources";
+import { workMetricKeys } from "../lib/gameRulePresets";
+import { keywordTexts } from "../lib/worldBookKeywords";
 import {
   humanizeSaveError,
   prepareModForSave,
@@ -292,7 +303,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
   const [savedTip, setSavedTip] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [previewFatal, setPreviewFatal] = useState<string[]>([]);
-  const [requiredGate, setRequiredGate] = useState<{ action: "预览" | "发布"; issues: AuthorRequiredIssue[] } | null>(null);
+  const [requiredGate, setRequiredGate] = useState<{ action: "预览" | "保存并离开"; issues: AuthorRequiredIssue[] } | null>(null);
   // —— 撤销 / 重做：连续输入（700ms 内）合并为一步；rev 变化时重挂表单，让各子编辑器的本地输入框同步 ——
   const hist = useRef<{ past: Mod[]; future: Mod[]; at: number }>({ past: [], future: [], at: 0 });
   const [rev, setRev] = useState(0);
@@ -346,7 +357,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
       window.setTimeout(() => setFocusAuthorField((cur) => (cur === issue.target ? null : cur)), 2800);
     }, 60);
   };
-  const blockIfRequiredMissing = (action: "预览" | "发布") => {
+  const blockIfRequiredMissing = (action: "预览" | "保存并离开") => {
     const issues = assessAuthorRequiredFields(m);
     if (!issues.length) return false;
     setRequiredGate({ action, issues });
@@ -561,6 +572,14 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
   const rooms = c.rooms ?? {};
   const roomIds = Object.keys(rooms);
   const npcs = c.npcs ?? [];
+  // 功能注释：当前表单的人物/地点/物品/属性/阵营——条件·效果下拉、默认值与引用审计只读这份，
+  // 草稿为空就保持空，禁止回退 LIVE_PEOPLE / LIVE_LOCATIONS（内置娱乐圈）。
+  const draftSrcs = valueSources({ stats: c.stats, attrs: c.customAttrs, paths: c.creation?.paths });
+  const draftRefs = buildDraftRefs({
+    npcs, rooms, items: c.items, factions: c.factions, attrs: c.customAttrs,
+    statKeys: draftSrcs.filter((x) => x.kind === "stat").map((x) => x.key), srcs: draftSrcs,
+    metricKeys: workMetricKeys({ attrs: c.customAttrs, metaLabels: c.stats?.metaLabels, startMoney: c.startMoney, moneyLabel: c.moneyLabel }),
+  });
   const dupNpc = new Set(npcs.map((n) => n.id).filter((id, i, a) => a.indexOf(id) !== i));
 
   // —— 地点 ——
@@ -593,6 +612,14 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
 
   // —— 人物 ——
   const setNpc = (i: number, p: Partial<PersonContent>) => setC({ npcs: npcs.map((n, j) => (j === i ? { ...n, ...p } : n)) });
+  // 功能注释：作品级画风 / 负面词（content.imageGen）——人物 / 地点 / 大地图 / 封面生图共用；点「开始生成」时把创作者改过的画风与负面词存回作品
+  const imageGenBinding: WorkImageGenBinding = {
+    settings: workImageSettingsOf(c.imageGen),
+    onCommit: (parts: EditorImagePromptParts) => {
+      const next = workImageGenFromParts(parts);
+      if (JSON.stringify(next ?? null) !== JSON.stringify(c.imageGen ?? null)) setC({ imageGen: next });
+    },
+  };
   const addNpc = () => setC({ npcs: [...npcs, { id: shortId("npc_"), name: "", role: "", kind: "roam", home: c.startRoom ?? roomIds[0] ?? "", roam: [], bio: "", requires: [] }] });
 
   const clean = (): Mod => {
@@ -661,8 +688,8 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
   };
 
   const save = (stay = false) => {
-    // 功能注释：留在编辑器的“保存”允许存草稿；离开编辑器视为发布，必须与预览走同一套必填检查。
-    if (!stay && blockIfRequiredMissing("发布")) return false;
+    // 功能注释：留在编辑器的「保存」只存草稿；离开编辑器也只是保存草稿并退出，平台上架须走「提交发布审核」。
+    if (!stay && blockIfRequiredMissing("保存并离开")) return false;
     const basicLimitErr = validateModBasicInfoLimits({
       description: m.description,
       scriptTone: readScriptTone(c.prompt),
@@ -777,7 +804,8 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
     : null;
 
   return (
-    /* 功能注释：非 fluid 锁 1200 最小宽；fluid 由 .world-gen-editor CSS 管：手机 100% / PC≤1200 */
+    <DraftRefsContext.Provider value={draftRefs}>
+    {/* 功能注释：非 fluid 锁 1200 最小宽；fluid 由 .world-gen-editor CSS 管：手机 100% / PC≤1200 */}
     <div
       ref={rootRef}
       inert={draft.pending ? true : undefined}
@@ -1063,6 +1091,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
             modId={m.id}
             workTitle={m.name}
             workSummary={m.description}
+            imageGen={imageGenBinding}
             onChange={(cover) => {
               // 功能注释：背景写入 content.cover；同步首图到 manifest.cover 供列表/详情/书架
               const url = coverDisplayUrl(cover);
@@ -1107,10 +1136,10 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
                   className={`${inp} max-h-[9.5rem] resize-y overflow-y-auto ${toneOver ? "!border-coral" : ""}`}
                   rows={3}
                   value={scriptToneText}
-                  placeholder="生成世界时由 AI 填写的系统提示词；也可事后手改（最多 4000 字）"
+                  placeholder="生成世界时由 AI 填写的系统提示词；也可事后手改（最多 5000 字）"
                   onChange={(e) => setC({ prompt: applyScriptTone(c.prompt, e.target.value) })}
                 />
-                <Help>生成世界时由 AI 写出并填入；开局与每回合都会注入。超出 4000 字标红，不能照常保存。</Help>
+                <Help>生成世界时由 AI 写出并填入；开局与每回合都会注入。超出 5000 字标红，不能照常保存。</Help>
                 <FieldErr>{toneErr}</FieldErr>
               </label>
             </div>
@@ -1166,10 +1195,10 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
                 className={`${inp} max-h-[9.5rem] resize-y overflow-y-auto ${toneOver ? "!border-coral" : ""}`}
                 rows={3}
                 value={scriptToneText}
-                placeholder="生成世界时由 AI 填写的系统提示词；也可事后手改（最多 4000 字）"
+                placeholder="生成世界时由 AI 填写的系统提示词；也可事后手改（最多 5000 字）"
                 onChange={(e) => setC({ prompt: applyScriptTone(c.prompt, e.target.value) })}
               />
-              <Help>生成世界时由 AI 写出并填入；开局与每回合都会注入。超出 4000 字标红，不能照常保存。</Help>
+              <Help>生成世界时由 AI 写出并填入；开局与每回合都会注入。超出 5000 字标红，不能照常保存。</Help>
               <FieldErr>{toneErr}</FieldErr>
             </label>
             <div>
@@ -1262,7 +1291,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
         <ModCreationFieldsEditor creation={c.creation} backgrounds={c.backgrounds}
           attrs={c.customAttrs} startMoney={c.startMoney} moneyLabel={c.moneyLabel}
           focusAuthorField={focusAuthorField}
-          statLabels={c.stats?.labels} npcs={(npcs.length ? npcs : LIVE_PEOPLE).map((p) => ({ id: p.id, name: p.name }))}
+          statLabels={c.stats?.labels} npcs={npcs.map((p) => ({ id: p.id, name: p.name }))}
           onChange={({ creation }) => setC({ creation })}
           onAttrs={(customAttrs) => setC({ customAttrs })}
           onStartMoney={(v) => setC({ startMoney: v })}
@@ -1272,7 +1301,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
       {/* 功能注释：人物线路紧挨建角字段下方（①基础），便于先配属性再挂线路依赖 */}
       <Section g="base" title="人物线路" on={has(c.creation?.paths)} hint="建角第一步 · 路径卡片 · 开局状态 / 地点 / 人际 · 支持 AI 生成" count={c.creation?.paths?.length || undefined}>
         <ModPathsEditor creation={c.creation} identities={c.identities} world={`${m.name}${m.description ? `：${m.description}` : ""}`}
-          npcs={(npcs.length ? npcs : LIVE_PEOPLE).map((p) => ({ id: p.id, name: p.name }))}
+          npcs={npcs.map((p) => ({ id: p.id, name: p.name }))}
           rooms={Object.entries(c.rooms ?? {}).map(([id, r]) => ({ id, name: r.name || id }))}
           events={(c.fixedEvents ?? []).map((e) => ({ id: e.id, name: e.name }))}
           statsValue={c.stats} attrsValue={c.customAttrs}
@@ -1329,6 +1358,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
             rooms={rooms}
             worldMaps={c.worldMaps}
             startRoom={c.startRoom}
+            imageGen={imageGenBinding}
             tracks={locationBgmOptions(c, { author: game?.audio ?? [], platform: PLATFORM_AUDIO })}
             emptyHint={m.kind === "world" ? "世界观至少需要一个地点才能行走。" : "叠加包可不定义地点（沿用世界观地图）。"}
             onChange={(next, startRoom, nextMaps) => setC({ rooms: next, startRoom, worldMaps: nextMaps })}
@@ -1434,6 +1464,12 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
             </details>
             {/* 功能注释：固定头像走统一 ImagePicker 生图；无图且无池时游玩端仍用首字头像 */}
             <div className="space-y-1.5">
+              {/* 功能注释：外观描述与小传分开，只喂头像生图（性别/年龄感/发型/面容/衣着），不写关系与剧情；留空时生图弹窗按性别+年龄给脚手架 */}
+              <label className="block">
+                <span className={lbl}>外观描述 · 只给头像生图用（发型 / 面容 / 衣着），不写关系与剧情</span>
+                <textarea className={`${inp} max-w-full resize-y`} rows={2} value={n.appearancePrompt ?? ""} placeholder="如：黑色齐肩发，圆脸，杏眼，米色针织衫（留空则生图时按性别与年龄给模板）"
+                  onChange={(e) => setNpc(i, { appearancePrompt: e.target.value || undefined })} />
+              </label>
               <span className={lbl}>头像 · 生图 / 上传后写入本人物；也可只填头像池名开局抽一张</span>
               <ImagePicker
                 value={n.avatar}
@@ -1442,17 +1478,15 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
                 thumb="h-16 w-16"
                 onChange={(avatar) => setNpc(i, { avatar: avatar || undefined })}
                 aiGen={{
-                  size: "1024x1024",
-                  placeholder: "按姓名、性别、年龄、简介与小传生成头像…",
-                  initialPrompt: buildNpcAvatarPrompt({
-                    name: n.name,
-                    gender: n.gender,
-                    age: n.age,
-                    summary: n.summary,
-                    role: n.role,
-                    relation: n.relation,
-                    bio: n.bio,
-                  }) || undefined,
+                  size: NPC_AVATAR_GEN_SIZE,
+                  placeholder: "只写这个人的外观：性别、年龄感、发型、面容、衣着……",
+                  initialParts: buildNpcAvatarPromptParts(
+                    { gender: n.gender, age: n.age, appearancePrompt: n.appearancePrompt },
+                    imageGenBinding.settings,
+                  ),
+                  // 功能注释：重绘时默认把当前头像带进参考图（最多 2 张），弹窗里可移除；仍会发送主体提示词
+                  initialRefs: n.avatar ? [n.avatar] : undefined,
+                  onPartsCommit: imageGenBinding.onCommit,
                 }}
               />
               {(() => {
@@ -1574,6 +1608,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
                   value={c.gameRules}
                   events={c.fixedEvents}
                   libraryEvents={c.events}
+                  metricKeys={draftRefs.metricKeys}
                   onChange={({ gameRules, events }) => setC({
                     gameRules,
                     ...(events !== undefined ? { events } : {}),
@@ -1589,7 +1624,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
                   value={c.tuning}
                   stats={c.stats}
                   attrs={c.customAttrs}
-                  npcs={(npcs.length ? npcs : LIVE_PEOPLE).map((p) => ({ id: p.id, name: p.name }))}
+                  npcs={npcs.map((p) => ({ id: p.id, name: p.name }))}
                   showCourses={isGrowModuleOn(c, "courses")}
                   showJobs={isGrowModuleOn(c, "jobs")}
                   showCareer={false}
@@ -1647,8 +1682,12 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
             title: m.name || m.id,
             setting: [m.description, readScriptTone(c.prompt)].filter(Boolean).join("\n"),
             scriptTone: readScriptTone(c.prompt) || undefined,
+            // 功能注释：AI 帮写只读本作品表单：世界书 / 地点 / 人物 / 属性；没有就是空
+            worldBook: (c.worldBook ?? []).map((w) => ({ id: w.id, title: w.title, keywords: keywordTexts(w.keywords).join("、"), content: w.content })),
             rooms: roomIds.map((id) => ({ id, name: rooms[id]?.name || id })),
             npcs: npcs.map((n) => ({ id: n.id, name: n.name || n.id })),
+            metrics: draftSrcs.filter((x) => x.kind === "metric" && x.group !== "引擎内置（兜底）").map((x) => ({ key: x.key, label: x.label })),
+            stats: draftSrcs.filter((x) => x.kind === "stat").map((x) => ({ key: x.key, label: x.label })),
           }}
           onChange={(v) => setC({ fixedEvents: v.length ? v : undefined })}
         />
@@ -1680,7 +1719,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
                 statsValue={c.stats}
                 attrsValue={c.customAttrs}
                 pathsValue={c.creation?.paths}
-                peopleValue={(npcs.length ? npcs : LIVE_PEOPLE).map((p) => ({ id: p.id, name: p.name }))}
+                peopleValue={npcs.map((p) => ({ id: p.id, name: p.name }))}
                 storylinesValue={c.storylines}
                 sidelinesValue={c.sidelines}
               />
@@ -1999,6 +2038,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
         <p className="text-[11px] text-ink-soft">未在当前页展示的内容会原样保留；保存请用顶部「保存」（Ctrl/⌘+S）。</p>
       )}
     </div>
+    </DraftRefsContext.Provider>
   );
 }
 

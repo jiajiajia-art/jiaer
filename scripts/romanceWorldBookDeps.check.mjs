@@ -78,7 +78,9 @@ test('ModEditorPanel_只留世界书栏目_禁止娱乐圈地点回退', () => {
   assert.doesNotMatch(panel, /title="节日"/);
   assert.doesNotMatch(panel, /ModLoreEditor|ModFestivalEditor/);
   assert.match(panel, /title="世界书"/);
-  assert.doesNotMatch(panel, /LIVE_LOCATIONS/);
+  // 功能注释：注释可提 LIVE_* 禁令；生产代码不得 import / 回退调用
+  assert.doesNotMatch(panel, /import \{[^}]*LIVE_LOCATIONS/);
+  assert.doesNotMatch(panel, /=\s*LIVE_LOCATIONS|LIVE_LOCATIONS\.map/);
   assert.doesNotMatch(panel, entNames);
   assert.match(panel, /foldLoreFestivalsIntoWorldBook/);
   assert.match(panel, /worldBookMissingDepsErrors/);
@@ -103,7 +105,9 @@ test('WorldBookDepsPicker_空地点提示先去地点添加_不写死娱乐圈�
   assert.match(panel, /getWorld\(\)\.content\.rooms/);
   assert.doesNotMatch(panel, /未挂地点或人物，不能保存/);
   assert.doesNotMatch(panel, /必须挂本作品地点或人物/);
-  assert.doesNotMatch(panel, /LIVE_LOCATIONS/);
+  // 功能注释：注释可提 LIVE_* 禁令；生产代码不得 import / 回退调用
+  assert.doesNotMatch(panel, /import \{[^}]*LIVE_LOCATIONS/);
+  assert.doesNotMatch(panel, /=\s*LIVE_LOCATIONS|LIVE_LOCATIONS\.map/);
   assert.doesNotMatch(panel, entNames);
   const modWb = read('components/ModWorldBookEditor.tsx');
   assert.doesNotMatch(modWb, /未挂依赖 · 不能保存/);

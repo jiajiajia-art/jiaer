@@ -111,7 +111,8 @@ function App() {
         gutter={12}
         containerStyle={{
           top: 24,
-          zIndex: 4000,
+          // 功能注释：须高于上传进度遮罩（9999），成功提示才能盖在弹窗之上
+          zIndex: 11000,
         }}
         toastOptions={{
           className: 'funloom-toast',
@@ -167,6 +168,8 @@ function App() {
         <Route path="/external/recharge" element={<ExternalRecharge />} />
         <Route path="/legal/user-agreement" element={<LegalDocument document="user-agreement" />} />
         <Route path="/legal/privacy-policy" element={<LegalDocument document="privacy-policy" />} />
+        <Route path="/legal/creator-agreement" element={<LegalDocument document="creator-agreement" />} />
+        <Route path="/legal/work-review-standards" element={<LegalDocument document="work-review-standards" />} />
         {/* Funloom 限定抽奖：独立活动链接；懒加载避免拖大主包 */}
         <Route
           path="/activity/funloom-lottery-20260731"

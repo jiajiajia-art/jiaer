@@ -1,6 +1,8 @@
 /* 事件编辑器的细化设定：触发类型 / 「且 · 或」条件组 / 事件链断点 */
 import type { ChainBreak, CondGroup, EventTrigger, FixedEvent } from "../lib/types";
-import { CondRow, defaultCond, type QuestOpt } from "./FixedEventsPanel";
+import { CondRow, useDraftDefaults, type QuestOpt } from "./FixedEventsPanel";
+import { useDraftRefs } from "./draftRefsContext";
+import type { DraftRefs } from "../lib/draftRefs";
 import { LIVE_LOCATIONS as LOCATIONS, LIVE_PEOPLE as PEOPLE, LIVE_ITEMS as ITEMS } from "../mods/registry";
 import { TRIGGER_LABEL } from "../game/eventTriggers";
 import { CHAIN_STATE_LABEL, chainFlag, chainRun } from "../game/fixedEvents";
@@ -26,6 +28,7 @@ function MatchSwitch({ value, onChange }: { value?: "all" | "any"; onChange: (v:
 
 /* 一个条件组 */
 export function GroupEditor({ g, events, selfId, quests, sides, onChange, onDelete, title }: { g: CondGroup; events: FixedEvent[]; selfId: string; quests?: QuestOpt[]; sides?: QuestOpt[]; onChange: (g: CondGroup) => void; onDelete?: () => void; title?: string }) {
+  const dd = useDraftDefaults();
   return (
     <div className="space-y-1.5 rounded-xl border border-dashed border-line p-2">
       <div className="flex flex-wrap items-center gap-2">
@@ -36,13 +39,14 @@ export function GroupEditor({ g, events, selfId, quests, sides, onChange, onDele
       {g.conds.map((c, i) => (
         <CondRow key={i} c={c} events={events} selfId={selfId} quests={quests} sides={sides} onChange={(x) => onChange({ ...g, conds: g.conds.map((y, j) => (j === i ? x : y)) })} onDelete={() => onChange({ ...g, conds: g.conds.filter((_, j) => j !== i) })} />
       ))}
-      <button type="button" className={link} onClick={() => onChange({ ...g, conds: [...g.conds, defaultCond("metric")] })}>＋ 条件</button>
+      <button type="button" className={link} onClick={() => onChange({ ...g, conds: [...g.conds, dd.cond("metric")] })}>＋ 条件</button>
     </div>
   );
 }
 
 /* 基础条件的组合方式 + 额外条件组（组与组之间为「且」） */
 export function CondLogic({ x, events, selfId, quests, sides, onChange }: { x: { condMatch?: "all" | "any"; condGroups?: CondGroup[]; conds?: unknown[] }; events: FixedEvent[]; selfId: string; quests?: QuestOpt[]; sides?: QuestOpt[]; onChange: (p: { condMatch?: "all" | "any"; condGroups?: CondGroup[] }) => void }) {
+  const dd = useDraftDefaults();
   const groups = x.condGroups ?? [];
   return (
     <div className="space-y-2">
@@ -52,18 +56,19 @@ export function CondLogic({ x, events, selfId, quests, sides, onChange }: { x: {
           onChange={(ng) => onChange({ condGroups: groups.map((y, j) => (j === i ? ng : y)) })}
           onDelete={() => { const n = groups.filter((_, j) => j !== i); onChange({ condGroups: n.length ? n : undefined }); }} />
       ))}
-      <button type="button" className={link} onClick={() => onChange({ condGroups: [...groups, { match: "any", conds: [defaultCond("metric")] }] })}>＋ 条件组（如「A 或 B」，与上面的条件同时成立）</button>
+      <button type="button" className={link} onClick={() => onChange({ condGroups: [...groups, { match: "any", conds: [dd.cond("metric")] }] })}>＋ 条件组（如「A 或 B」，与上面的条件同时成立）</button>
     </div>
   );
 }
 
-const defaultTrigger = (k: EventTrigger["kind"], events: FixedEvent[]): EventTrigger | undefined => {
+/* 功能注释：refs 传入（模组编辑器）时地点/人物/物品只取本作品，没有就留空不预选；缺省才读当前生效世界 */
+const defaultTrigger = (k: EventTrigger["kind"], events: FixedEvent[], refs?: DraftRefs | null): EventTrigger | undefined => {
   switch (k) {
-    case "enter": return { kind: "enter", room: LOCATIONS[0]?.id ?? "" };
+    case "enter": return { kind: "enter", room: refs ? refs.rooms[0]?.id ?? "" : LOCATIONS[0]?.id ?? "" };
     case "action": return { kind: "action", text: "" };
     case "choice": { const e = events.find((x) => x.choices?.length); return { kind: "choice", event: e?.id ?? "", choice: e?.choices?.[0]?.id ?? "" }; }
-    case "rel": return { kind: "rel", npc: PEOPLE[0]?.id ?? "", delta: 5 };
-    case "item": return { kind: "item", item: ITEMS[0]?.id ?? "" };
+    case "rel": return { kind: "rel", npc: refs ? refs.people[0]?.id ?? "" : PEOPLE[0]?.id ?? "", delta: 5 };
+    case "item": return { kind: "item", item: refs ? refs.items[0]?.id ?? "" : ITEMS[0]?.id ?? "" };
     case "round": return { kind: "round", every: 10 };
     case "audio": return { kind: "audio", on: "ended" };
     case "modEvent": { const x = firstExport("events"); return { kind: "modEvent", mod: x?.mod ?? "", event: x?.id ?? "" }; }
@@ -73,20 +78,25 @@ const defaultTrigger = (k: EventTrigger["kind"], events: FixedEvent[]): EventTri
 
 export function TriggerEditor({ ev, events, onChange }: { ev: FixedEvent; events: FixedEvent[]; onChange: (t?: EventTrigger) => void }) {
   const t = ev.trigger;
+  // 功能注释：编辑器内触发器的地点/人物/道具下拉只读当前表单
+  const draftRefs = useDraftRefs();
+  const roomOpts = draftRefs ? draftRefs.rooms : LOCATIONS.map((l) => ({ id: l.id, name: l.name }));
+  const peopleOpts = draftRefs ? draftRefs.people : PEOPLE.map((p) => ({ id: p.id, name: p.name }));
+  const itemOpts = draftRefs ? draftRefs.items : ITEMS.map((i) => ({ id: i.id, name: i.name }));
   const withChoices = events.filter((x) => x.id !== ev.id && x.choices?.length);
   return (
     <div>
       <div className="flex flex-wrap items-center gap-2">
-        <select className={sel} value={t?.kind ?? "auto"} onChange={(e) => onChange(defaultTrigger(e.target.value as EventTrigger["kind"], withChoices))} aria-label="触发类型">
+        <select className={sel} value={t?.kind ?? "auto"} onChange={(e) => onChange(defaultTrigger(e.target.value as EventTrigger["kind"], withChoices, draftRefs))} aria-label="触发类型">
           {(Object.keys(TRIGGER_LABEL) as EventTrigger["kind"][]).map((k) => <option key={k} value={k}>{TRIGGER_LABEL[k]}</option>)}
         </select>
         {t?.kind === "enter" && (
           <select className={sel} value={t.room} onChange={(e) => onChange({ ...t, room: e.target.value })} aria-label="地点">
-            {!LOCATIONS.some((l) => l.id === t.room) && <option value={t.room}>{t.room ? `已失效：${t.room}` : "（请选择）"}</option>}
-            {LOCATIONS.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+            {!roomOpts.some((l) => l.id === t.room) && <option value={t.room}>{t.room ? `已失效：${t.room}` : "（请选择）"}</option>}
+            {roomOpts.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
           </select>
         )}
-        {t?.kind === "action" && <input className={`${sel} w-48`} value={t.text} placeholder="行动包含的文字，如：去片场" onChange={(e) => onChange({ ...t, text: e.target.value })} />}
+        {t?.kind === "action" && <input className={`${sel} w-48`} value={t.text} placeholder="行动包含的文字，如：去某个地点" onChange={(e) => onChange({ ...t, text: e.target.value })} />}
         {t?.kind === "choice" && (<>
           <select className={sel} value={t.event} onChange={(e) => { const x = withChoices.find((y) => y.id === e.target.value); onChange({ ...t, event: e.target.value, choice: x?.choices?.[0]?.id ?? "" }); }} aria-label="事件">
             {!withChoices.some((x) => x.id === t.event) && <option value={t.event}>{withChoices.length ? "（选择事件）" : "（还没有带选项的事件）"}</option>}
@@ -98,7 +108,8 @@ export function TriggerEditor({ ev, events, onChange }: { ev: FixedEvent; events
         </>)}
         {t?.kind === "rel" && (<>
           <select className={sel} value={t.npc} onChange={(e) => onChange({ ...t, npc: e.target.value })} aria-label="人物">
-            {PEOPLE.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            {!peopleOpts.some((p) => p.id === t.npc) && <option value={t.npc}>{t.npc ? `已失效：${t.npc}` : "（请选择）"}</option>}
+            {peopleOpts.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
           <select className={sel} value={t.delta < 0 ? "down" : "up"} onChange={(e) => onChange({ ...t, delta: (e.target.value === "down" ? -1 : 1) * Math.abs(t.delta || 5) })}>
             <option value="up">上升至少</option><option value="down">下降至少</option>
@@ -107,7 +118,8 @@ export function TriggerEditor({ ev, events, onChange }: { ev: FixedEvent; events
         </>)}
         {t?.kind === "item" && (
           <select className={sel} value={t.item} onChange={(e) => onChange({ ...t, item: e.target.value })} aria-label="道具">
-            {ITEMS.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+            {!itemOpts.some((i) => i.id === t.item) && <option value={t.item}>{t.item ? `已失效：${t.item}` : "（请选择）"}</option>}
+            {itemOpts.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
           </select>
         )}
         {t?.kind === "modEvent" && (<>
@@ -146,6 +158,7 @@ export function TriggerEditor({ ev, events, onChange }: { ev: FixedEvent; events
 
 /* 事件链：链 id + 断点；同一条链的断点合并生效 */
 export function ChainEditor({ ev, events, game, onChange }: { ev: FixedEvent; events: FixedEvent[]; game?: GameState | null; onChange: (p: Partial<FixedEvent>) => void }) {
+  const dd = useDraftDefaults();
   const chains = Array.from(new Set(events.map((e) => e.chain?.trim()).filter((x): x is string => !!x)));
   const breaks = ev.chainBreaks ?? [];
   const run = ev.chain?.trim() && game ? chainRun(game.sim, ev.chain) : null;
@@ -172,7 +185,7 @@ export function ChainEditor({ ev, events, game, onChange }: { ev: FixedEvent; ev
             <GroupEditor g={b.group} events={events} selfId={ev.id} onChange={(group) => setB(i, { ...b, group })} onDelete={() => { const n = breaks.filter((_, j) => j !== i); onChange({ chainBreaks: n.length ? n : undefined }); }} />
           </div>
         ))}
-        <button type="button" className={link} onClick={() => onChange({ chainBreaks: [...breaks, { state: "interrupted", group: { match: "all", conds: [defaultCond("rel")] } }] })}>＋ 断点</button>
+        <button type="button" className={link} onClick={() => onChange({ chainBreaks: [...breaks, { state: "interrupted", group: { match: "all", conds: [dd.cond("rel")] } }] })}>＋ 断点</button>
         <p className={hint}>
           链状态写在规则变量 <code className="text-jade">{chainFlag(ev.chain)}</code>：0 进行中 · 2 暂停 · -1 中断 · -2 永久失败。主线节点、结局、其他事件都可以用「规则变量」条件识别它；
           中断后用「规则变量 设为 0」的效果即可恢复，永久失败不会再恢复。链不在「进行中」时，链上所有事件都不会触发。

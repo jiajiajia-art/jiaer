@@ -245,7 +245,7 @@ const MOD_STEPS: WorldGenEditorStep[] = [
   { id: "sideJobs", group: "③ 养成", name: "打工 · 周末活动", desc: "须先勾选「打工」模块 · 收入 · 压力 · 解锁条件", contentIds: ["world", "mainPlot"], source: "mod" },
   { id: "income", group: "③ 养成", name: "账单与周期收入", desc: "须先勾选「账单」模块 · 固定账单 · 每周发放/扣除", contentIds: ["world"], source: "mod" },
   { id: "gameRules", group: "③ 养成", name: "玩法规则", desc: "须先勾选 · 如果/否则 · 每天/每周判定", contentIds: ["world", "mainPlot"], source: "mod" },
-  { id: "tuning", group: "③ 养成", name: "引擎规则与经济", desc: "表现评级 · 休息 ·（有相关玩法才生成）课程/通告结算/违约 · 扣费依据（破产规则在结局配置）", contentIds: ["world"], source: "mod" },
+  { id: "tuning", group: "③ 养成", name: "引擎规则与经济", desc: "表现评级 · 休息 ·（有相关玩法才生成）课程/通告结算/违约（破产规则在结局配置）", contentIds: ["world"], source: "mod" },
 
   // 地点已并入①基础（取消独立「④ 世界」页签）；出行属玩法 Mod
   { id: "rooms", group: "① 基础", name: "地点（模组库）", desc: "多级子地点 · 树状预览 · 准入 · 出口 · 开局地点", contentIds: ["locations"], source: "mod" },

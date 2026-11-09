@@ -437,7 +437,11 @@ export function modHealth(m: Mod): HealthItem[] {
   for (const c of buildRegistry(chain).conflicts) if (c.mods.includes(m.id)) warn(`注册冲突：${c.kind}「${c.id}」与 ${c.mods.filter((x) => x !== m.id).map((x) => modById(x)?.name ?? x).join("、")} 重复`);
   // 包内剧情 / 结局 / 主线 / 世界书的引用与逻辑（只检查包内能确定的部分）
   const c = m.content ?? {};
-  const a = auditStory({ events: [...(c.fixedEvents ?? []), ...(c.events ?? [])], endings: c.endings, storylines: c.storylines ?? [], sidelines: c.sidelines ?? [], worldBook: c.worldBook, cgs: c.cgs, factions: c.factions, npcIds: c.npcs?.length ? c.npcs.map((n) => n.id) : undefined, roomIds: c.rooms ? Object.keys(c.rooms) : undefined, skip: ["item", "location", "flag", ...(c.npcs?.length ? [] : ["npc" as const])] });
+  // 功能注释：世界观模组按「草稿」审计——人物/地点/物品只认本作品（可为空），引用别处 id 一律报错；
+  // 功能附加包（addon）的剧情可以挂在底座世界的人物/地点上，仍沿用宽松口径。
+  const a = m.kind === "world"
+    ? auditStory({ draft: true, events: [...(c.fixedEvents ?? []), ...(c.events ?? [])], endings: c.endings, storylines: c.storylines ?? [], sidelines: c.sidelines ?? [], worldBook: c.worldBook, cgs: c.cgs, factions: c.factions, npcIds: (c.npcs ?? []).map((n) => n.id), roomIds: Object.keys(c.rooms ?? {}), itemIds: [...(c.items ?? []), ...Object.values(c.rooms ?? {}).flatMap((r) => r?.items ?? [])].map((i) => i.id), people: (c.npcs ?? []).map((n) => ({ id: n.id, name: n.name || n.id })), gameRules: c.gameRules, skip: ["flag"] })
+    : auditStory({ events: [...(c.fixedEvents ?? []), ...(c.events ?? [])], endings: c.endings, storylines: c.storylines ?? [], sidelines: c.sidelines ?? [], worldBook: c.worldBook, cgs: c.cgs, factions: c.factions, npcIds: c.npcs?.length ? c.npcs.map((n) => n.id) : undefined, roomIds: c.rooms ? Object.keys(c.rooms) : undefined, skip: ["item", "location", "flag", ...(c.npcs?.length ? [] : ["npc" as const])] });
   for (const i of a.issues.slice(0, 60)) out.push({ level: i.level, text: `${i.from ? i.from + "：" : ""}${i.text}` });
   for (const text of musicHealthWarnings(c, { author: authorTracks(), platform: PLATFORM_AUDIO })) warn(text);
   if (!hasExt(m) && modCategory(m) === "feature") warn("标记为功能玩法 MOD，但没有注册任何扩展能力");

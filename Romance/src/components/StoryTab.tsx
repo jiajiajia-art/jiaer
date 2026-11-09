@@ -31,7 +31,7 @@ export function LiveNarration({ scrollRef, overlay, plain }: { scrollRef: RefObj
         <p className={overlay
           ? "story-prose story-narration-panel rounded-xl px-3 py-2 leading-relaxed"
           : plain
-            ? "story-prose whitespace-pre-line leading-[1.8] tracking-[0.02em] text-[#1a1a1a]"
+            ? "story-prose whitespace-pre-line leading-[1.8] tracking-[0.02em] text-[color:var(--story-ink)]"
             : "story-prose border-l-2 border-jade/25 pl-3 leading-relaxed text-ink-soft"}>
           <EntityText text={live} />
         </p>
@@ -172,7 +172,7 @@ function SegmentView({ s, npcs, tightTop, cont, player, overlay, plain }: {
         <ProseWithSpeech text={s.text} />
       </p>
     ) : plain ? (
-      <p className="story-prose whitespace-pre-line leading-[1.8] tracking-[0.02em] text-[#1a1a1a]">
+      <p className="story-prose whitespace-pre-line leading-[1.8] tracking-[0.02em] text-[color:var(--story-ink)]">
         <ProseWithSpeech text={s.text} />
       </p>
     ) : (
@@ -245,8 +245,9 @@ export function Thoughts({ thoughts, npcs }: { thoughts?: Thought[]; npcs: Npc[]
             return (
               <li key={i} className="flex items-start gap-2 rounded-xl bg-coral/[0.06] px-2.5 py-2">
                 <Avatar src={n?.avatar ?? ""} name={t.name} size={26} square />
-                <p className="min-w-0 flex-1 text-[12.5px] leading-relaxed text-ink/85">
-                  <b className="mr-1 text-coral">{t.name}</b><span className="italic">{t.text}</span>
+                <p className="story-thought min-w-0 flex-1 text-[12.5px] leading-relaxed text-ink/85">
+                  {/* 功能注释：心事不用斜体，中文斜体会掉成系统黑体；跟游戏字体 */}
+                  <b className="mr-1 text-coral">{t.name}</b><span className="not-italic">{t.text}</span>
                 </p>
               </li>
             );

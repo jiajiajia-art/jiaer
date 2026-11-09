@@ -177,6 +177,8 @@ export type AdminPublishQueueItem = {
   priceAmount?: number | null;
   shareType?: string | null;
   gameTags?: string | null;
+  /** 功能注释：引擎标识，Romance 待审项用于预览表单/游戏 */
+  engine?: string | null;
   moderationStatus?: string | null;
   reviewKind?: 'new' | 'update' | string | null;
   publishedVersion?: number;
@@ -184,6 +186,16 @@ export type AdminPublishQueueItem = {
   updatedAt?: string | null;
   createdAt?: string | null;
 };
+
+/** 功能注释：驳回可选勾选原因（可多选），创作者侧可见 */
+export const PUBLISH_REJECT_REASON_OPTIONS = [
+  { id: 'worldview_incomplete', label: '世界观不完整' },
+  { id: 'background_incomplete', label: '背景图不完整' },
+  { id: 'cannot_play_fully', label: '无法完整游玩' },
+  { id: 'violation_or_other', label: '违规或其他' },
+] as const;
+
+export type PublishRejectReasonId = (typeof PUBLISH_REJECT_REASON_OPTIONS)[number]['id'];
 
 export type AdminPublishQueueData = {
   list: AdminPublishQueueItem[];
@@ -238,10 +250,24 @@ const adminReportApi = {
       { fileId },
     ),
 
-  rejectPublishQueue: (fileId: string, reviewNote?: string) =>
+  rejectPublishQueue: (
+    fileId: string,
+    reviewNote?: string,
+    rejectReasons?: PublishRejectReasonId[],
+  ) =>
     api.post<ApiResponse<{ fileId: string; moderationStatus?: string }>>(
       '/admin/moderation/publish-queue/reject',
-      { fileId, reviewNote: reviewNote?.trim() || undefined },
+      {
+        fileId,
+        reviewNote: reviewNote?.trim() || undefined,
+        rejectReasons: rejectReasons?.length ? rejectReasons : undefined,
+      },
+    ),
+
+  /** 功能注释：运营只读拉取 Romance 待审快照正文（非作者 live 草稿） */
+  getRomancePendingReviewContent: (fileId: string) =>
+    api.get<ApiResponse<{ fileId: string; content: unknown; engine?: string }>>(
+      `/admin/moderation/publish-queue/${encodeURIComponent(fileId)}/romance-content`,
     ),
 
   clearPublishNeedReview: (userId: string) =>

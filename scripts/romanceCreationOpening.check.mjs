@@ -70,7 +70,9 @@ test('CharacterCreate_开局不预填DEFAULT_ATTRS_只渲染系统四项与自�
   assert.doesNotMatch(create, /DEFAULT_ATTRS/);
   assert.match(create, /attrs: \[\]/);
   assert.match(create, /creatorAttrs\.length > 0/);
-  assert.match(create, /title="属性"/);
+  // 功能注释：3.16 属性并入基本信息同一张卡，不再单独 Card title="属性"
+  assert.match(create, /data-creator-attrs-inline="1"/);
+  assert.doesNotMatch(create, /title="属性"/);
   assert.match(create, /systemFieldsComplete/);
   assert.match(create, /stepCustom/);
   assert.doesNotMatch(create, /stepTalent|stepFamily/);
