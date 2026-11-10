@@ -72,7 +72,7 @@ export default function PlayModCreateShell({ onClose }: { onClose: () => void })
   };
 
   return (
-    <div className="world-gen-shell world-gen-editor mx-auto min-h-screen max-w-3xl overflow-x-hidden px-3 py-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-5">
+    <div className="world-gen-shell world-gen-editor mx-auto min-h-screen max-w-6xl overflow-x-hidden px-3 py-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-5">
       <header className="mb-3">
         <p className="world-gen-kicker">创作游戏 · 玩法 Mod</p>
         <h1 className="world-gen-title">对话生成玩法</h1>

@@ -25,6 +25,8 @@ type Props = {
   wallpaper?: string;
   onChange: (next: PhoneAppDef[] | undefined) => void;
   onWallpaperChange: (next: string | undefined) => void;
+  commSkin?: "lvxin" | "chuanxun";
+  onCommSkinChange?: (next: "lvxin" | "chuanxun" | undefined) => void;
 };
 
 const DOCK_APPS = ["call", "sms", "wechat", "settings"] as const;
@@ -86,7 +88,7 @@ function BatteryGlyph() {
   );
 }
 
-export default function PhoneAppsEditor({ value, wallpaper, onChange, onWallpaperChange }: Props) {
+export default function PhoneAppsEditor({ value, wallpaper, onChange, onWallpaperChange, commSkin, onCommSkinChange }: Props) {
   const installedIds = useMemo(() => installedPlatformAppIds(value), [value]);
   const installedSet = useMemo(() => new Set(installedIds), [installedIds]);
   const [catalog, setCatalog] = useState<PlatformApp[]>([]);
@@ -166,7 +168,7 @@ export default function PhoneAppsEditor({ value, wallpaper, onChange, onWallpape
 
   const AppTile = ({ id, inDock }: { id: string; inDock?: boolean }) => {
     const meta = byId.get(id);
-    const label = meta?.name || (id === "appstore" ? "应用商店" : id === "settings" ? "设置" : id);
+    const label = (id === "wechat" && commSkin === "chuanxun" ? "传讯" : undefined) || meta?.name || (id === "appstore" ? "应用商店" : id === "settings" ? "设置" : id);
     return (
       <button
         type="button"
@@ -271,7 +273,7 @@ export default function PhoneAppsEditor({ value, wallpaper, onChange, onWallpape
                     ) : null}
 
                     {mode === "preview" && screen === "app" && previewLegacy ? (
-                      <div className="phone-app-in absolute inset-0 z-10 h-full">
+                      <div className={`phone-app-in absolute inset-0 z-10 h-full ${previewLegacy === "wechat" && commSkin === "chuanxun" ? "comm-ancient" : ""}`}>
                         <LivePhoneAppPreview id={previewLegacy} onBack={goHome} />
                       </div>
                     ) : null}
@@ -297,6 +299,23 @@ export default function PhoneAppsEditor({ value, wallpaper, onChange, onWallpape
             打开应用商店
           </button>
         </div>
+
+        {onCommSkinChange && (
+          <div className="flex items-center gap-2 rounded-xl border border-line bg-paper px-2.5 py-1.5">
+            <span className="shrink-0 text-[10.5px] font-bold tracking-[0.12em] text-ink-soft">通讯 App 皮肤</span>
+            <div className="inline-flex flex-1 rounded-lg border border-line bg-paper-2 p-0.5 text-[11.5px] font-bold" role="radiogroup" aria-label="通讯 App 皮肤">
+              {([["lvxin", "绿信", "现代"], ["chuanxun", "传讯", "古风 / 仙侠"]] as const).map(([k, l, d]) => {
+                const on = (commSkin ?? "lvxin") === k;
+                return (
+                  <button key={k} type="button" role="radio" aria-checked={on} onClick={() => onCommSkinChange(k === "lvxin" ? undefined : k)}
+                    className={`flex-1 rounded-md px-2 py-1 ${on ? "bg-jade/15 text-jade-deep" : "text-ink-soft hover:text-ink"}`}>
+                    {l}<span className="ml-1 font-normal opacity-70">{d}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div
           className="flex items-center gap-2 rounded-xl border border-line bg-paper px-2.5 py-1.5"

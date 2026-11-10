@@ -1,4 +1,6 @@
 /* 朋友圈：好友动态流（点赞 / 评论 / NPC 回复 / 自己发圈 / 封面与签名），微信「发现」与独立 App 共用 */
+import { commTerm } from "../../lib/commSkin";
+import { isBlocked } from "../../game/msgPref";
 import { useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useGame } from "../../store/gameCtx";
 import { toggleLike, ensurePhone, type UserComment } from "../../game/phone";
@@ -156,23 +158,25 @@ export function Moments({ onOpenProfile }: { onOpenProfile?: (pid: string) => vo
   const coverRef = useRef<HTMLInputElement>(null);
   const avatarRef = useRef<HTMLInputElement>(null);
 
+  // 朋友圈只看得到绿信好友：作者、点赞、评论都只从好友里出（被禁止发消息的人也不出现）
+  const friendIds = new Set(friendsOf(g).map((n) => n.id));
   const npcById = (id: string) => g.npcs.find((n) => n.id === id);
   const nameOf = (id: string) => (id === ME ? g.player.name : npcById(id)?.name ?? "好友");
   const flash = (t: string) => { setToast(t); setTimeout(() => setToast(""), 2200); };
 
   const posts = useMemo(() => {
-    const fresh = feed.filter((f) => f.pid === ME || g.npcs.some((n) => n.id === f.pid)).map((f) => ({
+    const fresh = feed.filter((f) => f.pid === ME || friendIds.has(f.pid)).map((f) => ({
       pid: f.pid, key: f.id, text: f.text, ts: f.ts,
       imgs: f.imgs?.length ? f.imgs : poolImgs(f.id + f.text, f.imgCount),
-      when: agoLabel(f.ts), seedLikes: f.likers,
+      when: agoLabel(f.ts), seedLikes: f.likers.filter((x) => friendIds.has(x)),
     }));
-    const more = moreFeed.filter((f) => g.npcs.some((n) => n.id === f.pid)).map((f) => ({
+    const more = moreFeed.filter((f) => friendIds.has(f.pid)).map((f) => ({
       pid: f.pid, key: f.id, text: f.text, ts: f.ts,
       imgs: f.imgs?.length ? f.imgs : poolImgs(f.id + f.text, f.imgCount),
-      when: agoLabel(f.ts), seedLikes: f.likers,
+      when: agoLabel(f.ts), seedLikes: f.likers.filter((x) => friendIds.has(x)),
     }));
     return [...fresh, ...more];
-  }, [g.npcs, feed, moreFeed]);
+  }, [g.npcs, g.phone?.contacts, g.phone?.msgPref, feed, moreFeed]);
 
   /* 底部「查看更多」：结合剧情再生成一批更早的动态，接在末尾 */
   const loadMore = async () => {
@@ -180,7 +184,8 @@ export function Moments({ onOpenProfile }: { onOpenProfile?: (pid: string) => vo
     if (!cfg) { flash("未配置 AI，暂无更多"); return; }
     setMoreLoading(true);
     try {
-      const pool = g.npcs.slice(0, 12);
+      const pool = friendsOf(g).slice(0, 12);
+      if (!pool.length) { flash(`还没有${commTerm("app")}好友`); return; }
       const ok = new Set(pool.map((n) => n.id));
       const seen = posts.slice(-12).map((p) => p.text.slice(0, 30)).join("｜");
       const res = await syncJson<{ moments?: unknown }>(cfg, g, "wechat-moments", "朋友圈",
@@ -210,7 +215,8 @@ ${MOMENT_RULE}
     if (busy) return;
     setBusy(true);
     try {
-      const pool = g.npcs.slice(0, 12);
+      const pool = friendsOf(g).slice(0, 12);
+      if (!pool.length) { flash(`还没有${commTerm("app")}好友，加了好友才能看到 TA 的${commTerm("moments")}`); return; }
       const ok = new Set(pool.map((n) => n.id));
       const res = cfg ? await syncJson<{ moments?: unknown }>(cfg, g, "wechat-moments", "朋友圈",
         `生成 1~3 条新的朋友圈动态，作者只能从下列人物中选（用 pid），内容贴合人设与当前剧情，text ≤80 字，images 为配图张数 0~6，likers 为点赞者 pid 数组。
@@ -236,7 +242,7 @@ ${MOMENT_RULE}
     const authorNpc = npcById(author === ME ? to ?? "" : author);
     const responder = author === ME ? (to ? npcById(to) : undefined) : authorNpc;
     if (!responder) return;
-    const others = g.npcs.slice(0, 10).filter((n) => n.id !== responder.id);
+    const others = friendsOf(g).slice(0, 10).filter((n) => n.id !== responder.id);
     const history = mmComments(gRef.current, key).slice(-8).map((c) => `${nameOf(c.from)}${c.to ? `回复${nameOf(c.to)}` : ""}：${c.text}`).join("\n");
     let replies: { pid: string; text: string }[] = [];
     if (cfg) {
@@ -268,7 +274,7 @@ ${MOMENT_RULE}
     addFeedMoments([{ id, pid: ME, text, imgCount: imgs.length, imgs, ts: Date.now(), likers: [] }]);
     commitGame(logAct(gRef.current, { app: "朋友圈", text: `发了条朋友圈${imgs.length ? `（配图 ${imgs.length} 张）` : ""}`, bit: text || "（仅图片）", min: 5 }));
     setComposing(false);
-    const pool = g.npcs.slice(0, 12);
+    const pool = friendsOf(g).slice(0, 12);
     const ok = new Set(pool.map((n) => n.id));
     let likers: string[] = [], comments: { pid: string; text: string }[] = [];
     if (cfg) {
@@ -439,4 +445,9 @@ export default function MomentsApp({ onBack }: { onBack: () => void }) {
       <div className="flex-1 overflow-y-auto"><Moments onOpenProfile={setProfileView} /></div>
     </div>
   );
+}
+
+/* 朋友圈可见范围：主角的绿信好友（去掉被设为禁止发消息的人） */
+function friendsOf(g: GameState) {
+  return (g.phone?.contacts ?? []).map((id) => g.npcs.find((n) => n.id === id)).filter((n): n is NonNullable<typeof n> => !!n && !isBlocked(g, n.id));
 }

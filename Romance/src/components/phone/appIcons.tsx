@@ -3,6 +3,7 @@
  * 故此处不画圆角底、不画白色描边 / 底座 / 投影，边缘干净无白边。 */
 import type { ReactNode } from "react";
 import sheet from "../../assets/app-icons.webp";
+import { isAncientComm } from "../../lib/commSkin";
 import sheet2 from "../../assets/app-icons-2.webp";
 
 // 每块贴图各自一个渐变，需保证 id 唯一（模块初始化时递增即可）
@@ -26,6 +27,19 @@ function Tile({ children, from = "#3a3a3c", to = "#161617" }: { from?: string; t
     </svg>
   );
 }
+
+/* 「传讯」古风标识：朱砂底上一卷半展的信笺，金丝绳系结，卷面三行墨字 */
+const CHUANXUN_ICON = (
+  <Tile from="#c4473a" to="#7d1f18" angle={150}>
+    <rect x="15" y="16" width="28" height="27" rx="1.5" fill="#f6ead0" />
+    <rect x="12" y="13.5" width="34" height="4.5" rx="2.25" fill="#e2c48a" stroke="#8a5a22" strokeWidth="0.9" />
+    <rect x="12" y="41" width="34" height="4.5" rx="2.25" fill="#e2c48a" stroke="#8a5a22" strokeWidth="0.9" />
+    <path d="M34.5 21.5v15M29 21.5v15M23.5 21.5v10" stroke="#3a2a1a" strokeWidth="1.6" strokeLinecap="round" />
+    <rect x="18" y="33" width="5" height="5" rx="0.6" fill="#b5322a" />
+    <path d="M44 29c3 1.2 4.5 3.2 4 6.2M44 29c2.6-.6 4.6.2 5.6 2" stroke="#f2c96b" strokeWidth="1.3" strokeLinecap="round" fill="none" />
+    <circle cx="44" cy="29" r="1.6" fill="#f2c96b" />
+  </Tile>
+);
 
 export const APP_ICON: Record<string, ReactNode> = {
   read: (
@@ -87,7 +101,8 @@ export const APP_ICON: Record<string, ReactNode> = {
       <path d="M43 13.5l1.5 3 3.3.4-2.4 2.3.6 3.3-3-1.6-3 1.6.6-3.3-2.4-2.3 3.3-.4z" fill="#ffd76b" />
     </Tile>
   ),
-  wechat: (
+  get wechat() { return isAncientComm() ? CHUANXUN_ICON : LVXIN_ICON; },
+  "wechat-lvxin": (
     /* 「绿信」自有标识：单枚圆润气泡里托一片新叶（绿=生机），右上一点微光，
        刻意区别于任何真实社交产品的双气泡样式，避免品牌雷同。 */
     <Tile from="#57e884" to="#08a83a" angle={150}>
@@ -281,3 +296,6 @@ Object.assign(APP_ICON, {
   notes: <Sprite set="b" col={1} row={2} />,
   tv: <Sprite set="b" col={2} row={2} />,
 });
+
+/* 功能注释：绿信原图标也以常量形式供 getter 取用 */
+const LVXIN_ICON = APP_ICON["wechat-lvxin"];

@@ -2318,3 +2318,45 @@
         height: 1rem;
     }
 }
+
+/* ===== 样式调优：手机端主按钮与互动按钮收小，避免占屏过大 ===== */
+@media (max-width: 768px) {
+    .startButton,
+    .purchaseButton,
+    .replayButton {
+        height: 2.9rem;
+        font-size: 1rem;
+    }
+
+    .startButtonIcon,
+    .replayButtonIcon {
+        width: 1.2rem;
+        height: 1.2rem;
+    }
+
+    .statsItem {
+        padding: 0.5rem 0.25rem;
+    }
+
+    .statsLabel,
+    .statsValue {
+        font-size: 0.78rem;
+    }
+}
+
+/* ===== 评分徽章：十分制分值 + 评分人数；无评分时灰色「暂无评分」 ===== */
+.ratingBadgeCount {
+    margin-left: 0.3rem;
+    padding-left: 0.3rem;
+    border-left: 1px solid rgba(255, 255, 255, 0.16);
+    color: rgba(245, 245, 247, 0.6);
+    font-size: 0.6875rem;
+    font-weight: 500;
+}
+
+.ratingBadgeEmpty {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: rgba(245, 245, 247, 0.55);
+    font-weight: 500;
+}

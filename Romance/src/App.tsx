@@ -1,4 +1,5 @@
 import { applyFreeStyle } from "./lib/freeStyle";
+import KkAppPreviewHost, { isKkAppPreviewRoute } from "./components/phone/KkAppPreviewHost";
 import { ensureGameFontsLoaded } from "./lib/gameFonts";
 import { applyLookCss } from "./lib/plotLook";
 import { loadGlobal, saveGlobal } from "./lib/saveScope";
@@ -223,6 +224,14 @@ function Root() {
     setWorldGenOpen(false);
   };
 
+  // 功能注释：向导「上一步」直接回平台创作类型页；不用 history.back()，编辑器预览等无历史场景会落到本地游戏页
+  const leaveToPlatformCreate = () => {
+    const path = location.pathname;
+    const idx = path.indexOf("/romance");
+    const base = idx >= 0 ? path.slice(0, idx) : "";
+    location.replace(`${base}/create/new`);
+  };
+
   const closePlayModCreate = () => {
     clearPlayModCreateQuery();
     setPlayModCreateOpen(false);
@@ -347,7 +356,7 @@ function Root() {
           <PlayModCreateShell
             onClose={() => {
               closePlayModCreate();
-              if (typeof history !== "undefined" && history.length > 1) history.back();
+              leaveToPlatformCreate();
             }}
           />
         </div>
@@ -361,7 +370,7 @@ function Root() {
           <WorldGenWizard
             onBack={() => {
               closeWorldGen();
-              if (typeof history !== "undefined" && history.length > 1) history.back();
+              leaveToPlatformCreate();
             }}
             onComplete={() => {
               closeWorldGen();
@@ -395,6 +404,8 @@ function Root() {
 }
 
 export default function App() {
+  // 功能注释：手机应用实时预览页（平台创作页 iframe 嵌入）只用沙盒，不挂游戏存档
+  if (isKkAppPreviewRoute()) return <KkAppPreviewHost />;
   return (
     <GameProvider>
       <ErrorBoundary>

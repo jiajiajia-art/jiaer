@@ -3,7 +3,7 @@ import { useGame } from "../store/gameCtx";
 import ImagePicker from "./ImagePicker";
 import {
   FREE_COLORS, FREE_SLOTS, type Asset, type FreeImg, type FreeSlot, type FreeStyle, type ImgHost,
-  loadAssets, loadHost, saveAssets, saveHost, uploadImage,
+  loadAssets, assetDaysLeft, keepAsset, loadHost, saveAssets, saveHost, uploadImage,
 } from "../lib/freeStyle";
 
 /* 自由美化的零件：按「改的东西出现在哪」分别嵌进美化页对应位置，不再集中成一个大杂烩。
@@ -154,9 +154,10 @@ export function AssetLibrary() {
           {assets.map((a) => (
             <div key={a.id} className="group relative aspect-square overflow-hidden rounded-lg border border-line bg-paper">
               <img src={a.url} alt={a.name} className="h-full w-full object-cover" loading="lazy" />
-              <span className="absolute inset-x-0 bottom-0 truncate bg-black/50 px-1 text-[9.5px] text-white">{a.url.startsWith("data:") ? "本地 · " : ""}{a.name}</span>
+              <span className="absolute inset-x-0 bottom-0 truncate bg-black/50 px-1 text-[9.5px] text-white">{a.temp ? `临时 · ${assetDaysLeft(a)}天后清除` : `${a.url.startsWith("data:") ? "本地 · " : ""}${a.name}`}</span>
               <div className="absolute inset-0 hidden items-center justify-center gap-1 bg-black/45 group-hover:flex">
                 {!a.url.startsWith("data:") && <button className="rounded-full bg-white/90 px-1.5 text-[10px]" onClick={() => { void navigator.clipboard?.writeText(a.url); setMsg({ ok: true, t: "已复制链接" }); }}>复制</button>}
+                {a.temp && <button className="rounded-full bg-white/90 px-1.5 text-[10px]" onClick={() => keepAsset(a.url)}>收藏</button>}
                 <button className="rounded-full bg-white/90 px-1.5 text-[10px] text-danger" onClick={() => persist(assets.filter((x) => x.id !== a.id))}>删除</button>
               </div>
             </div>

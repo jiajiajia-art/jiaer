@@ -30,6 +30,10 @@ export type WorldGenRefIds = {
   roomIds: Set<string>;
   factionIds: Set<string>;
   eventIds: Set<string>;
+  /** 功能注释：名称/大小写别名 → 真实 id（AI 常把 key 写成属性中文名、人物名或地名） */
+  attrAlias?: Map<string, string>;
+  npcAlias?: Map<string, string>;
+  roomAlias?: Map<string, string>;
 };
 
 type Rec = Record<string, unknown>;
@@ -73,6 +77,58 @@ function idSetOf(rows: unknown): Set<string> {
   );
 }
 
+/** 功能注释：id / 小写 id / 显示名（label、name、title）都映射到真实 id */
+function aliasMapOf(rows: unknown, nameKeys: readonly string[] = ["label", "name", "title"]): Map<string, string> {
+  const m = new Map<string, string>();
+  for (const r of asModArray<Rec>(rows)) {
+    if (!isRec(r)) continue;
+    const id = asTrimmedString(r.id);
+    if (!id) continue;
+    m.set(id, id);
+    m.set(id.toLowerCase(), id);
+    for (const k of nameKeys) {
+      const n = asTrimmedString(r[k]);
+      if (n && !m.has(n)) m.set(n, id);
+    }
+  }
+  return m;
+}
+
+function roomAliasOf(rooms: Record<string, Rec>): Map<string, string> {
+  return aliasMapOf(Object.entries(rooms).map(([id, r]) => ({ ...(isRec(r) ? r : {}), id })), ["name"]);
+}
+
+function resolveAlias(raw: string, ids: Set<string>, alias?: Map<string, string>): string {
+  if (!raw) return "";
+  if (ids.has(raw)) return raw;
+  return alias?.get(raw) ?? alias?.get(raw.toLowerCase()) ?? "";
+}
+
+/**
+ * 功能注释：把一条效果/条件的 key 对回真实 id；kind 缺失或写成 attr 时按 key 能对上的类型推断。
+ * 对不上返回 null（调用方丢弃该条，但不因此丢整条事件）。
+ */
+function normalizeRefRow(row: Rec, refs: WorldGenRefIds, flags: RefFlags, roomKind: string): Rec | null {
+  const rawKind = asTrimmedString(row.kind);
+  const key = asTrimmedString(row.key);
+  if (!key) return null;
+  const attr = resolveAlias(key, refs.attrIds, refs.attrAlias);
+  const npc = flags.allowRel ? resolveAlias(key, refs.npcIds, refs.npcAlias) : "";
+  const room = resolveAlias(key, refs.roomIds, refs.roomAlias);
+  const faction = flags.allowFaction && refs.factionIds.has(key) ? key : "";
+  const kind = rawKind === "attr" || rawKind === "attribute" ? "stat" : rawKind;
+  if ((kind === "stat" || kind === "metric") && attr) return { ...row, kind, key: attr };
+  if (kind === "rel" && npc) return { ...row, key: npc };
+  if (kind === roomKind && room) return { ...row, key: room };
+  if (kind === "faction" && faction) return row;
+  if (!kind) {
+    if (attr) return { ...row, kind: "stat", key: attr };
+    if (npc) return { ...row, kind: "rel", key: npc };
+    if (room) return { ...row, kind: roomKind, key: room };
+  }
+  return null;
+}
+
 function roomsMapOf(patch: Rec, ctx?: WorldGenRefContext): Record<string, Rec> {
   const raw = isRec(patch.rooms) ? patch.rooms : isRec(ctx?.content?.rooms) ? ctx!.content!.rooms : null;
   const out: Record<string, Rec> = {};
@@ -104,6 +160,9 @@ export function collectWorldGenRefIds(patch: Rec, ctx?: WorldGenRefContext): Wor
     roomIds: new Set(Object.keys(roomsMapOf(patch, ctx))),
     factionIds: idSetOf(factionSrc),
     eventIds: idSetOf(patch.fixedEvents),
+    attrAlias: aliasMapOf(attrSrc),
+    npcAlias: aliasMapOf(npcSrc, ["name"]),
+    roomAlias: roomAliasOf(roomsMapOf(patch, ctx)),
   };
 }
 
@@ -138,13 +197,8 @@ type RefFlags = { allowRel: boolean; allowFaction: boolean };
 export function filterWorldGenEffectsByRefs(raw: unknown, refs: WorldGenRefIds, flags: RefFlags): Rec[] {
   const out: Rec[] = [];
   for (const row of objList(raw)) {
-    const kind = asTrimmedString(row.kind);
-    const key = asTrimmedString(row.key);
-    if (!key) continue;
-    if ((kind === "stat" || kind === "metric") && refs.attrIds.has(key)) out.push(row);
-    else if (kind === "rel" && flags.allowRel && refs.npcIds.has(key)) out.push(row);
-    else if (kind === "unlockLocation" && refs.roomIds.has(key)) out.push(row);
-    else if (kind === "faction" && flags.allowFaction && refs.factionIds.has(key)) out.push(row);
+    const next = normalizeRefRow(row, refs, flags, "unlockLocation");
+    if (next) out.push(next);
   }
   return out;
 }
@@ -156,11 +210,11 @@ export function filterWorldGenCondsByRefs(raw: unknown, refs: WorldGenRefIds, fl
     const kind = asTrimmedString(row.kind);
     const key = asTrimmedString(row.key);
     if (kind === "time" || kind === "date" || kind === "clock") out.push(row);
-    else if ((kind === "stat" || kind === "metric") && refs.attrIds.has(key)) out.push(row);
-    else if (kind === "rel" && flags.allowRel && refs.npcIds.has(key)) out.push(row);
-    else if ((kind === "location" || kind === "visited") && refs.roomIds.has(key)) out.push(row);
-    else if (kind === "faction" && flags.allowFaction && refs.factionIds.has(key)) out.push(row);
     else if (kind === "event" && refs.eventIds.has(key)) out.push(row);
+    else {
+      const next = normalizeRefRow(row, refs, flags, kind === "visited" ? "visited" : "location");
+      if (next) out.push(next);
+    }
   }
   return out;
 }
@@ -189,8 +243,9 @@ function flagsFor(patch: Rec, refs: WorldGenRefIds, ctx?: WorldGenRefContext): R
 }
 
 /**
- * 功能注释：固定事件只留已有 id 的后果 / 条件；nextIds 只指向同批事件；选项须有文案；
- * 无任何合法后果的事件丢弃（不自动补 fame）。
+ * 功能注释：固定事件只留已有 id 的后果 / 条件；nextIds 只指向同批事件；选项须有文案。
+ * 后果全部对不上时只清空后果、保留事件本身（纯叙事事件合法；仍不自动补 fame）。
+ * 旧逻辑整条丢弃，导致 AI 把 key 写成中文名时事件被清空、反复「至少 1 条」失败。
  */
 export function applyWorldGenEventRefs(patch: Rec, refs: WorldGenRefIds, flags: RefFlags): Rec {
   if (!Array.isArray(patch.fixedEvents) || !refs.known) return patch;
@@ -199,8 +254,10 @@ export function applyWorldGenEventRefs(patch: Rec, refs: WorldGenRefIds, flags: 
   let kept: Rec[] = [];
   for (const ev of firstPass) {
     const effects = filterWorldGenEffectsByRefs(ev.effects, refs, flags);
-    if (!effects.length) continue;
-    kept.push({ ...ev, effects });
+    const next: Rec = { ...ev };
+    if (effects.length) next.effects = effects;
+    else delete next.effects;
+    kept.push(next);
   }
   const ids = new Set(kept.map((e) => asTrimmedString(e.id)).filter(Boolean));
   const scoped: WorldGenRefIds = { ...refs, eventIds: ids };

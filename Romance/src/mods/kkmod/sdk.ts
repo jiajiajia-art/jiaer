@@ -94,3 +94,10 @@ export function parseKkmodJson(raw: string): KkmodPackage {
   if (errs.length) throw new Error(errs.join("；"));
   return { manifest, payload };
 }
+
+/* 属性 SDK：自定义属性定义 / 引用写法 / 校验 / AI 规范说明 */
+export * from "./attrs";
+/* 文件 SDK：材质包式虚拟目录（同路径覆盖原版） */
+export * from "./files";
+/* 手机应用 SDK：kkapp@1 配置式可交互应用 */
+export * from "./phoneApp";

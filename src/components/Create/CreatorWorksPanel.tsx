@@ -10,6 +10,7 @@ import GameGridSkeleton from '../Skeleton/GameGridSkeleton';
 import { useAuthStore } from '../../store/useAuthStore';
 import getGameDataApi from '../../api/home/getGameData';
 import type { UserGameData } from '../../api/home/getGameData.type';
+import { clearBrowsingHistory, readBrowsingHistory } from '../../utils/browsingHistory';
 import accountSocialApi from '../../api/account/accountSocialApi';
 import GameAction from '../../api/rpgGame/gameAction';
 import favoriteApi from '../../api/favorite/favoriteApi';
@@ -31,7 +32,7 @@ import {
 } from '../../utils/creatorDraftCapacity';
 
 /** 功能注释：草稿箱 Tab 已下线；旧链接 ?tab=drafts 回落到全部，草稿靠卡片角标区分。 */
-export type WorksTabKey = 'all' | 'published' | 'favorites';
+export type WorksTabKey = 'all' | 'published' | 'history' | 'favorites';
 
 const WORKS_FETCH_LIMIT = 50;
 
@@ -78,7 +79,11 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     const [selectedDraftIds, setSelectedDraftIds] = useState<string[]>([]);
     const [isBatchDeletingDrafts, setIsBatchDeletingDrafts] = useState(false);
     const [isBatchDeleteConfirmOpen, setIsBatchDeleteConfirmOpen] = useState(false);
-    const [worksTab, setWorksTab] = useState<WorksTabKey>(() => normalizeWorksTabKey(initialTab));
+    // 功能注释：本人视角下「已发布」并入「我的作品」(all)，旧链接 ?tab=published 回落到 all
+    const resolveOwnerTab = (tab: WorksTabKey): WorksTabKey => (!isVisitor && tab === 'published' ? 'all' : tab);
+    const [worksTab, setWorksTab] = useState<WorksTabKey>(() => resolveOwnerTab(normalizeWorksTabKey(initialTab)));
+    const historyUserId = user?.user?.id;
+    const [historyGames, setHistoryGames] = useState<UserGameData[]>(() => readBrowsingHistory(historyUserId));
     const [worksPage, setWorksPage] = useState(1);
     const [favoriteGames, setFavoriteGames] = useState<UserGameData[]>([]);
     const [favoritesTotal, setFavoritesTotal] = useState(0);
@@ -125,8 +130,16 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
         [favoriteGames, isPreview, listPageSize],
     );
 
+    const historyTotalPages = Math.max(1, Math.ceil(historyGames.length / WORKS_PAGE_SIZE));
+    const pagedHistoryGames = useMemo(
+        () => paginateItems(historyGames, isPreview ? 1 : worksPage, listPageSize),
+        [historyGames, worksPage, isPreview, listPageSize],
+    );
+
     const worksTotalPages = worksTab === 'all'
         ? allTotalPages
+        : worksTab === 'history'
+            ? historyTotalPages
         : worksTab === 'published'
             ? publishedTotalPages
             : favoritesTotalPages;
@@ -135,12 +148,12 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     const selectedDraftCount = selectedDraftIds.length;
     const manageTargetGames = useMemo(() => {
         if (worksTab === 'published') return publishedGames.filter((g) => isDraftSlotWork(g));
-        if (worksTab === 'favorites') return [];
+        if (worksTab === 'favorites' || worksTab === 'history') return [];
         return draftGames;
     }, [worksTab, publishedGames, draftGames]);
     const isAllDraftsSelected = manageTargetGames.length > 0
         && manageTargetGames.every((game) => selectedDraftIds.includes(getGameManageId(game)));
-    const canShowManage = !isVisitor && !showWorksViewAll && draftGames.length > 0;
+    const canShowManage = !isVisitor && !showWorksViewAll && worksTab === 'all' && draftGames.length > 0;
 
     const loadMyGames = async () => {
         if (isVisitor) {
@@ -281,7 +294,7 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     }, []);
 
     useEffect(() => {
-        const next = normalizeWorksTabKey(initialTab);
+        const next = resolveOwnerTab(normalizeWorksTabKey(initialTab));
         setWorksTab(next);
         setWorksPage(1);
         if (next === 'favorites') {
@@ -339,6 +352,7 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     const handleWorksTabChange = (nextTab: WorksTabKey) => {
         if (isVisitor && nextTab !== 'published') return;
         setWorksTab(nextTab);
+        if (nextTab === 'history') setHistoryGames(readBrowsingHistory(historyUserId));
         setWorksPage(1);
         setIsDraftManageMode(false);
         setSelectedDraftIds([]);
@@ -435,7 +449,22 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
         || (worksTab === 'favorites' && favoritesTotal === 0)
     );
 
+    const handleClearHistory = () => {
+        clearBrowsingHistory(historyUserId);
+        setHistoryGames([]);
+        setWorksPage(1);
+    };
+
     const renderManageActions = () => {
+        if (worksTab === 'history' && !isVisitor && !showWorksViewAll && historyGames.length > 0) {
+            return (
+                <div className={styles.draftManageActions}>
+                    <button type="button" className={styles.draftManageButton} onClick={handleClearHistory}>
+                        清空记录
+                    </button>
+                </div>
+            );
+        }
         if (!canShowManage) return null;
         return (
             <div className={`${styles.draftManageActions} ${isDraftManageMode ? styles.draftManageActionsExpanded : ''}`}>
@@ -494,16 +523,28 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                                 className={`${styles.worksTab} ${worksTab === 'all' ? styles.worksTabActive : ''}`}
                                 onClick={() => handleWorksTabChange('all')}
                             >
-                                全部 ({allGames.length})
+                                我的作品 ({allGames.length})
                             </button>
                         )}
-                        <button
-                            type="button"
-                            className={`${styles.worksTab} ${worksTab === 'published' ? styles.worksTabActive : ''}`}
-                            onClick={() => handleWorksTabChange('published')}
-                        >
-                            {t('create.publishedWorksTab', { count: publishedGames.length })}
-                        </button>
+                        {isVisitor && (
+                            <button
+                                type="button"
+                                className={`${styles.worksTab} ${worksTab === 'published' ? styles.worksTabActive : ''}`}
+                                onClick={() => handleWorksTabChange('published')}
+                            >
+                                {t('create.publishedWorksTab', { count: publishedGames.length })}
+                            </button>
+                        )}
+                        {!isVisitor && (
+                            <button
+                                type="button"
+                                className={`${styles.worksTab} ${worksTab === 'history' ? styles.worksTabActive : ''}`}
+                                onClick={() => handleWorksTabChange('history')}
+                            >
+                                {t('profile.browsingHistory')}
+                                {historyGames.length > 0 ? ` (${historyGames.length})` : ''}
+                            </button>
+                        )}
                         {!isVisitor && (
                             <button
                                 type="button"
@@ -610,6 +651,21 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                                     return;
                                 }
                                 navigate(`/createGame?mode=stats&gameId=${gameId}`);
+                            }}
+                        />
+                    )
+                )}
+
+                {worksTab === 'history' && (
+                    historyGames.length === 0 ? (
+                        <div className={styles.worksEmpty}>还没有浏览记录</div>
+                    ) : (
+                        <GameGrid
+                            games={pagedHistoryGames}
+                            layoutVariant="works"
+                            onGameClick={(game) => {
+                                const gameId = game.file_id || game.id;
+                                if (gameId) navigate(`/game/${gameId}`);
                             }}
                         />
                     )

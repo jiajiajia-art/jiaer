@@ -40,6 +40,9 @@ export interface RatingItem {
   wx_check_result?: string;
 }
 
+/** 评论排序：latest=最新发布，hot=最热（点赞数） */
+export type RatingSort = 'latest' | 'hot';
+
 /** 评分汇总 */
 export interface RatingSummary {
   average: number;
@@ -114,9 +117,10 @@ const gameRatingApi = {
    * @param page 页码（默认1）
    * @param pageSize 每页条数（默认10，最大50）
    */
-  getRatings: (fileId: string, page: number = 1, pageSize: number = 10) =>
+  getRatings: (fileId: string, page: number = 1, pageSize: number = 10, sort: RatingSort = 'latest') =>
     api.get<ApiResponse<RatingsListData>>(`/auth/games/${fileId}/ratings`, {
-      params: { page, pageSize },
+      // 功能注释：sort=latest 按发布时间倒序；sort=hot 按点赞数倒序（后端未支持时忽略，前端兜底排序）
+      params: { page, pageSize, sort },
     }),
 
   /**

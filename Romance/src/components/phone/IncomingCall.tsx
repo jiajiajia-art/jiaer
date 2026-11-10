@@ -1,5 +1,6 @@
 /* 来电层：线下剧情里角色主动打来的语音 / 视频电话（phone.ringing）。
  * 接听 → 进入绿信通话（对方先开口说明来意）；拒接 → 记为未接来电，并记入手机流水。 */
+import { commTerm } from "../../lib/commSkin";
 import { useState } from "react";
 import { useGame } from "../../store/gameCtx";
 import { Avatar } from "../ui";
@@ -22,8 +23,8 @@ export default function IncomingCall() {
   const npc = game.npcs.find((n) => n.id === r.pid);
   const clear = (g: typeof game) => ({ ...g, phone: { ...ensurePhone(g).phone!, ringing: undefined } });
   const decline = () => patchGame((g) => logAct(
-    logCall(clear(g), { id: msgId(), personId: r.pid, name: r.name, number: r.video ? "绿信视频" : "绿信语音", ts: Date.now(), durationSec: 0, outcome: "missed" }),
-    { app: "绿信", text: `挂断了${r.name}打来的${r.video ? "视频" : "语音"}电话`, min: 0, pid: r.pid },
+    logCall(clear(g), { id: msgId(), personId: r.pid, name: r.name, number: `${commTerm("app")}${commTerm(r.video ? "video" : "voice")}`, ts: Date.now(), durationSec: 0, outcome: "missed" }),
+    { app: commTerm("app"), text: `挂断了${r.name}打来的${commTerm(r.video ? "video" : "voice")}`, min: 0, pid: r.pid },
   ));
   const accept = () => { patchGame(clear); setLive(r); };
   return (

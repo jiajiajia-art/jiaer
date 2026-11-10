@@ -402,7 +402,7 @@ const CreateType: React.FC = () => {
             <div className={`${styles.createTypeOptions} ${pageStyles.romanceSubOptions}`}>
               <TypeOptionRow
                 title="游戏世界"
-                hint="填写设定，AI 搭建世界，再进编辑器细调"
+                hint="填写设定，AI 搭建世界，再进编辑器细调。"
                 icon={MdOutlineAutoAwesome}
                 thumbClass={styles.createTypeOptionThumbRomance}
                 onClick={() => {

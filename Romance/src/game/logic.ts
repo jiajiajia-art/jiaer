@@ -450,30 +450,48 @@ export function createGame(char: Character): GameState {
   };
 }
 
-// 通告要求的能力项（按声明顺序；第一项即参与接取公式的能力）
-export function reqStats(g: Gig): { key: StatKey; need: number }[] {
-  return (Object.keys(g.statReq) as StatKey[])
-    .filter((k) => g.statReq[k])
-    .map((k) => ({ key: k, need: g.statReq[k]! }));
+/* 功能注释：属性读写统一入口——内置属性走 stats，作者建角属性（customAttrs）走 cattrs；
+ * 玩法包（通告 / 座驾 / 伙食等）的门槛与成长 key 可以是任一种，世界不必有娱乐圈八维。 */
+const worldAttrDef = (id: string): AttrDef | undefined => asModArray<AttrDef>(getWorldSlot("customAttrs")).find((d) => d.id === id);
+export function statRead(s: { stats: Record<string, number> | object; cattrs?: Record<string, number> }, key: string): number {
+  const stats = s.stats as Record<string, number>;
+  if (key in stats) return stats[key] ?? 0;
+  return s.cattrs?.[key] ?? worldAttrDef(key)?.init ?? 0;
+}
+export function statAdd(n: GameState, key: string, delta: number): void {
+  if (!delta) return;
+  if (key in n.stats) { n.stats[key as StatKey] = clampStat(key as StatKey, n.stats[key as StatKey] + delta); return; }
+  const d = worldAttrDef(key);
+  if (!d) return;
+  const cur = n.cattrs?.[key] ?? d.init;
+  n.cattrs = { ...(n.cattrs ?? {}), [key]: Math.max(d.min ?? 0, Math.min(attrCap(d.max), cur + delta)) };
+}
+const numEntries = (o: object | undefined): [string, number][] =>
+  Object.entries((o ?? {}) as Record<string, number>).filter(([, v]) => Number(v)).map(([k, v]) => [k, Number(v)]);
+
+// 通告要求的能力项（按声明顺序；第一项即参与接取公式的能力）；key 可为内置属性或建角属性 id
+export function reqStats(g: Gig): { key: string; need: number }[] {
+  return numEntries(g.statReq).map(([key, need]) => ({ key, need }));
 }
 
 // 11.1 接取条件（广告/电视剧看名气+第一项能力；唱片/电影只看实际能力，均为严格大于）
 export function gigEligible(g: Gig, s: GameState) {
-  if (s.fame <= g.fameReq) return false; // 名气必须严格大于要求，等于不能接
+  // 功能注释：只有设置了名气门槛才看名气；无名气数值的世界门槛填 0 即不限
+  if (g.fameReq > 0 && s.fame <= g.fameReq) return false; // 名气必须严格大于要求，等于不能接
   const reqs = reqStats(g);
   if (!reqs.length) return true;
   if (judgeUsesFame(g)) {
     // 名气 + 第一项能力 > 两项能力要求之和 × 80%
     const sum = reqs.reduce((a, r) => a + r.need, 0);
-    return s.fame + s.stats[reqs[0].key] > sum * 0.8;
+    return s.fame + statRead(s, reqs[0].key) > sum * 0.8;
   }
   // 唱片/电影：每项参与判定的实际能力都要 > 要求 × 80%（严格）
-  return reqs.every((r) => s.stats[r.key] > r.need * 0.8);
+  return reqs.every((r) => statRead(s, r.key) > r.need * 0.8);
 }
 
 // 高风险履约：任一能力 ≤ 要求值 50%
 export function isHighRisk(g: Gig, s: GameState): boolean {
-  return reqStats(g).some((r) => s.stats[r.key] <= r.need * 0.5);
+  return reqStats(g).some((r) => statRead(s, r.key) <= r.need * 0.5);
 }
 
 // 11.5 通告类别：广告/电视剧 名气参与判定；唱片/电影 只看实际能力
@@ -544,7 +562,7 @@ export function gigManager(g: Gig): { name: string; loc: string } {
 // 9.1 通告交涉成功率（先找负责人再交涉；违约/压力降低，好感/名气/口碑/头衔提高）
 export function negotiateRate(g: Gig, s: GameState): number {
   let margin = 0;
-  for (const k of STAT_ORDER) { const need = g.statReq[k]; if (need) margin += s.stats[k] - need; }
+  for (const [k, need] of numEntries(g.statReq)) margin += statRead(s, k) - need;
   // 唱片、电影只看实际能力，不把名气计入判定
   const fameMod = judgeUsesFame(g) ? Math.floor(Math.max(0, s.fame - g.fameReq) / 40) * 3 : 0;
   const repMod = g.star >= 4 ? Math.floor(s.reputation / 10) * 2 : Math.floor(s.reputation / 15); // 高级通告更看口碑
@@ -586,7 +604,7 @@ export function negotiateGig(s: GameState, gigId: string): { next: GameState; ok
   // —— 接取（roll 在成功率内）：再按余量分「正式 / 低价 / 降级」——
   if (roll <= rate) {
     let margin = 0;
-    for (const k of STAT_ORDER) { const need = g.statReq[k]; if (need) margin += s.stats[k] - need; }
+    for (const [k, need] of numEntries(g.statReq)) margin += statRead(s, k) - need;
     let key: string;
     if (roll <= rate - N.formalMargin) key = "formal"; // 大幅富余：正式过
     else if (margin >= 0) key = "lowprice"; // 险过但能力够：压价出演
@@ -816,7 +834,7 @@ export function applyAct(n: GameState, act: string | null, deltas: string[]): Ac
 }
 
 // 周结算：跨过周日翻页时触发的经济/通告/生态结算（日程活动已在各时段逐段落地，这里不再重排日程）。
-// customTimeLimit：若玩家/模组自定义了主线时限（如 3 年 = 1095 天），则不再按默认 104 周（2 年）提前强制落幕，交由 advanceDay 的 limitDay 判定。
+// customTimeLimit：若玩家/模组自定义了本局结算时限（如 3 年 = 1095 天），则不再按默认 104 周（2 年）提前强制落幕，交由 advanceDay 的 limitDay 判定。
 export function settleWeek(s: GameState, customTimeLimit = false): WeekResult {
   const n: GameState = {
     ...s,
@@ -860,14 +878,12 @@ export function settleWeek(s: GameState, customTimeLimit = false): WeekResult {
     let severe = false; // 任一能力 ≤ 要求值 50%
     let allWellPrepared = true; // 两项核心能力都 ≥ 要求 120%
     let hasReq = false;
-    for (const k of STAT_ORDER) {
-      const need = g.statReq[k];
-      if (need) {
-        hasReq = true;
-        margin += n.stats[k] - need;
-        if (n.stats[k] <= need * 0.5) severe = true;
-        if (n.stats[k] < need * 1.2) allWellPrepared = false;
-      }
+    for (const [k, need] of numEntries(g.statReq)) {
+      const cur = statRead(n, k);
+      hasReq = true;
+      margin += cur - need;
+      if (cur <= need * 0.5) severe = true;
+      if (cur < need * 1.2) allWellPrepared = false;
     }
     // 唱片、电影只看实际能力，不把名气计入判定
     const fameMod = judgeUsesFame(g) ? Math.floor(Math.max(0, n.fame - g.fameReq) / 50) * 3 : 0; // 名气每高于要求 50 点 +3%
@@ -928,7 +944,7 @@ export function settleWeek(s: GameState, customTimeLimit = false): WeekResult {
       n.trust = clamp(n.trust + 8, 0, 100);
       n.works += 1;
       if (g.star >= 4) { n.awards += 1; deltas.push(`《${g.name}》斩获一项大奖`); }
-      for (const k of STAT_ORDER) if (g.grow[k]) n.stats[k] = clampStat(k, n.stats[k] + Math.round(g.grow[k]! * 1.2));
+      for (const [k, v] of numEntries(g.grow)) statAdd(n, k, Math.round(v * 1.2));
       deltas.push(`完美完成《${g.name}》：名气 +${gain}，报酬 ${wallet.short(g.pay * 1.2)}，负责人信任 +8`);
     } else if (status === "smooth") {
       const gain = Math.round(g.fame * fameMul);
@@ -938,7 +954,7 @@ export function settleWeek(s: GameState, customTimeLimit = false): WeekResult {
       n.reputation += rand(0, 3);
       n.trust = clamp(n.trust + 4, 0, 100);
       n.works += 1;
-      for (const k of STAT_ORDER) if (g.grow[k]) n.stats[k] = clampStat(k, n.stats[k] + g.grow[k]!);
+      for (const [k, v] of numEntries(g.grow)) statAdd(n, k, v);
       deltas.push(`顺利完成《${g.name}》：名气 +${gain}，报酬 ${wallet.short(g.pay)}`);
     } else if (status === "barely") {
       const gain = Math.round(g.fame * 0.5 * fameMul);
@@ -949,7 +965,7 @@ export function settleWeek(s: GameState, customTimeLimit = false): WeekResult {
       n.trust = clamp(n.trust - 3, 0, 100);
       n.stress += 6;
       n.works += 1;
-      for (const k of STAT_ORDER) if (g.grow[k]) n.stats[k] = clampStat(k, n.stats[k] + Math.round(g.grow[k]! * 0.5));
+      for (const [k, v] of numEntries(g.grow)) statAdd(n, k, Math.round(v * 0.5));
       deltas.push(`勉强完成《${g.name}》：作品扑街，报酬 60%，负责人信任 -3`);
     } else {
       // 失败惩罚由 tuning.gigRules 配置；缺省 = 名气 -5~40、口碑 -3~8、信任 -10、违约 +1、压力 +6、黑粉 +1~3、相关能力 -1~4
@@ -965,7 +981,7 @@ export function settleWeek(s: GameState, customTimeLimit = false): WeekResult {
       const lossPair = gr.failStatLoss ?? (ent ? [1, 4] as const : null);
       if (lossPair) {
         const [sl0, sl1] = lossPair;
-        for (const k of STAT_ORDER) if (g.grow[k]) { const d = rand(Math.min(sl0, sl1), Math.max(sl0, sl1)); if (d) n.stats[k] = clampStat(k, n.stats[k] - d); }
+        for (const [k] of numEntries(g.grow)) { const d = rand(Math.min(sl0, sl1), Math.max(sl0, sl1)); if (d) statAdd(n, k, -d); }
       }
       deltas.push(`${expired ? "超过截止日未拍完被撤换，" : terminated ? "累计失误被撤换，" : crashed ? "状态失控，" : ""}《${g.name}》拍摄失败：无作品${failNotes.length ? `，${failNotes.join("，")}` : ""}`);
       // 失败修复与反转机会（同周一次，随机 1 项）；非娱乐圈未写补救 = 不触发
@@ -1063,7 +1079,9 @@ export function settleWeek(s: GameState, customTimeLimit = false): WeekResult {
     }
     billLines.push({ label: `伙食 · ${meal.name}`, amount: meal.cost });
     if (meal.stress) n.stress = clamp(n.stress + meal.stress, 0, 100);
-    for (const [k, v] of Object.entries(meal.gain ?? {})) if (v && k in n.stats) n.stats[k as StatKey] = clampStat(k as StatKey, n.stats[k as StatKey] + v);
+    // 功能注释：cgain=建角属性；gain 旧数据可能是内置属性或建角属性 id，统一走 statAdd
+    for (const [k, v] of numEntries(meal.cgain)) statAdd(n, k, v);
+    for (const [k, v] of numEntries(meal.gain)) statAdd(n, k, v);
     if (meal.styling) n.styling = clamp(n.styling + meal.styling, 0, 999);
   }
   const eco = economy();
@@ -1268,75 +1286,10 @@ function perkFxName(key: string): string {
 export const perkKey = (p: { id?: string; pid: string; loc?: string; label?: string }) => p.id || `${p.pid}@${p.loc ?? ""}@${p.label ?? ""}`;
 export type VisitPerk = { pid: string; label?: string; fx: { key: string; delta: number }[]; seed?: string };
 export function visitLocation(s: GameState, locId: string): { next: GameState; msg: string; perks: VisitPerk[] } {
-  const looks = computeLooks(s);
   const n: GameState = { ...s, rel: { ...s.rel }, metPeople: [...s.metPeople], stats: { ...s.stats } };
 
-  const meet = (pid: string, delta: number, extra: string) => {
-    if (!n.metPeople.includes(pid)) n.metPeople.push(pid);
-    n.rel[pid] = clamp((n.rel[pid] ?? 0) + delta, 0, affinityCapOf(pid));
-    return extra;
-  };
-
+  // 功能注释：地点专属剧情由作品内容（邂逅 / 伴侣加成）驱动，引擎不再写死娱乐圈地点
   let msg = "今日无关键安排，只做了常规踩点。";
-  switch (locId) {
-    case "apartment":
-      n.stress = clamp(n.stress - 12, 0, 100);
-      msg = "在天光小区深度休息：紧绷的神经缓了过来。";
-      break;
-    case "cafe":
-      n.stress = clamp(n.stress - 8, 0, 100);
-      if (s.week >= 6) msg = "" + meet("suqing", 5, "和苏晴喝了杯咖啡，关系 +5，压力 -8。");
-      else msg = "独自在白栀咖啡馆靠窗坐了一下午，看街上人来人往，压力 -8。";
-      break;
-    case "fuguang":
-      // 结识条件总表：第 7 周后 · 演技≥240 · 口碑≥45
-      if (s.week >= 7 && s.stats.yanji >= 240 && s.reputation >= 45) msg = "" + meet("shenman", 4, "沈曼在片场指点了你，前辈关系 +4。");
-      else { n.stats.yanji = clampStat("yanji", n.stats.yanji + 3); msg = "在片场角落翻阅剧本库，揣摩前辈的走位与念白，演技 +3。"; }
-      break;
-    case "dieyin":
-      if (s.stats.geyi >= 160) msg = "" + meet("linzhixia", 4, "林知夏和你聊了新歌，合作关系 +4。");
-      else { n.stats.geyi = clampStat("geyi", n.stats.geyi + 3); msg = "在录音棚反复试唱同一段副歌，直到气息稳了下来，歌艺 +3。"; }
-      break;
-    case "cancan":
-      n.styling = Math.min(999, n.styling + 40);
-      if (s.week >= 18 && s.fame >= 160 && s.reputation >= 60 && s.works >= 2 && wallet.balance(s) >= 80000 && s.defaults === 0 && !n.metPeople.includes("zhouyan"))
-        msg = "" + meet("zhouyan", 5, "品牌共创会上结识「序岸」创始人周砚川，成熟事业线开启，关系 +5。当周造型值 +40。");
-      // 6.1 金主线：容貌≥600（硬性）· 名气≥70 · 口碑≥50 · 仪态≥60 或 口才≥70
-      else if (looks >= 600 && s.fame >= 70 && s.reputation >= 50 && (s.stats.yitai >= 60 || s.stats.koucai >= 70))
-        msg = "" + meet("songshixu", 6, "品牌晚宴上认识了宋时序，资本线开启，好感 +6。当周造型值 +40。");
-      else if (looks < 600) msg = "在璨璨做了整套造型咨询，镜中的自己一点点清晰起来，当周造型值 +40。";
-      else msg = "品牌晚宴的外围周旋了一圈，递出几张名片，当周造型值 +40。";
-      break;
-    case "yuntai":
-      // 6. 天王线：中后期高阶事件随机触发（名气≥80 · 演技≥55 · 口碑≥40）
-      if (s.week >= 40 && s.fame >= 80 && s.stats.yanji >= 55 && s.reputation >= 40 && Math.random() < 0.4)
-        msg = "" + meet("guchen", 4, "录制间隙偶遇国民天王顾沉，他淡淡颔首，天王线悄然开启，好感 +4。");
-      else if (s.fame >= 150) msg = "" + meet("luyao", 3, "和陆曜同台录制，暗自较劲，关系 +3。");
-      else { n.stats.koucai = clampStat("koucai", n.stats.koucai + 3); msg = "对着云台的镜头试录了几遍开场白，越说越顺，口才 +3。"; }
-      break;
-    case "agency":
-      n.pr += 5;
-      msg = "在启星事务所请教林宜，公司公关 +5，拿到几条通告线索。";
-      break;
-    case "redcarpet":
-      // 结识条件总表：闻予安本人需 容貌≥700 · 名气≥180 · 口碑≥75 · 黑粉≤8（第13周后公益晚宴开放）
-      if (s.week >= 13 && looks >= 700 && s.fame >= 180 && s.reputation >= 75 && s.blackFans <= 8) {
-        msg = "" + meet("wenyuan", 4, "云岸公益晚宴上与闻予安正式相识，世家线好感 +4。");
-      } else if (s.week >= 13 && s.reputation >= 50) {
-        n.pr += 4;
-        msg = "公益晚宴上结识了几位公益人脉，交换了联络方式（公司公关 +4）。";
-      } else msg = "红毯会客厅今晚只走到了外围，隔着一道绒绳望了望里头的觥筹交错。";
-      break;
-    case "street": {
-      const g = rand(5, 12);
-      n.fame += g;
-      msg = `星桥商业街街拍曝光，名气 +${g}。`;
-      break;
-    }
-    case "gym":
-      msg = "练习馆的私教在等你——回到日程里安排训练收益更高。";
-      break;
-  }
   n.fame = clamp(Math.round(n.fame), 0, 1000);
   // 伴侣加成 · 地点触发（relations.partnerPerks 里填了 loc 的条目，各世界观自行配置）
   const perks: VisitPerk[] = [];
@@ -1392,38 +1345,8 @@ export function buyItem(s: GameState, roomId: string, itemId: string): { next: G
 }
 
 // 地点动态状态：今日是否有关键人物/事件（策划案 8. 按目标选点，而非挨个碰运气）
-export function locationStatus(s: GameState, locId: string): { ready: boolean; note: string } {
-  const looks = computeLooks(s);
-  const gap = (have: number, need: number) => (have >= need ? "" : `（差 ${need - have}）`);
-  switch (locId) {
-    case "fuguang":
-      return s.week >= 7 && s.stats.yanji >= 240 && s.reputation >= 45 ? { ready: true, note: "今日可遇 · 沈曼（前辈提携）" } : { ready: false, note: `沈曼需第7周后·演技≥240·口碑≥45 ${gap(s.stats.yanji, 240)}` };
-    case "dieyin":
-      return s.stats.geyi >= 160 ? { ready: true, note: "今日可遇 · 林知夏（合作）" } : { ready: false, note: `林知夏需歌艺≥160 ${gap(s.stats.geyi, 160)}` };
-    case "yuntai":
-      if (s.week >= 40 && s.fame >= 80 && s.stats.yanji >= 55 && s.reputation >= 40) return { ready: true, note: "天王线开启中 · 有概率偶遇顾沉" };
-      return s.fame >= 150 ? { ready: true, note: "今日可遇 · 陆曜（同台较劲）" } : { ready: false, note: `陆曜需名气≥150 ${gap(Math.round(s.fame), 150)}` };
-    case "cancan":
-      if (s.week >= 18 && s.fame >= 160 && s.reputation >= 60 && s.works >= 2 && wallet.balance(s) >= 80000 && s.defaults === 0 && !s.metPeople.includes("zhouyan")) return { ready: true, note: "品牌共创会 · 可结识周砚川" };
-      if (looks >= 600 && s.fame >= 70 && s.reputation >= 50 && (s.stats.yitai >= 60 || s.stats.koucai >= 70)) return { ready: true, note: "品牌晚宴 · 可结识宋时序" };
-      return { ready: false, note: looks < 600 ? `宋时序需容貌≥600 ${gap(looks, 600)}` : "宋时序还需名气≥70 · 口碑≥50" };
-    case "redcarpet":
-      if (s.week >= 13 && looks >= 700 && s.fame >= 180 && s.reputation >= 75 && s.blackFans <= 8) return { ready: true, note: "云岸公益晚宴 · 可正式结识闻予安" };
-      if (s.week >= 13 && s.reputation >= 50) return { ready: false, note: `公益晚宴开放（结识公益人脉）· 闻予安本人需容貌≥700 ${gap(looks, 700)}` };
-      return { ready: false, note: `公益晚宴需第13周后 · 口碑≥50 ${gap(s.reputation, 50)}` };
-    case "cafe":
-      return s.week >= 6 ? { ready: true, note: "今日可遇 · 苏晴（缓压挚友）" } : { ready: false, note: "苏晴第 6 周后出现" };
-    case "street":
-      return s.week >= 2 ? { ready: true, note: "白衬衫眼镜男子可能出没" } : { ready: false, note: "第 2 周后开放偶遇" };
-    case "agency":
-      return { ready: true, note: s.week <= 8 && s.fame < 30 ? "林宜在 · 可申请新人临时替补保底" : "林宜常驻 · 公司公关 +5" };
-    case "gym":
-      return { ready: true, note: "训练导师在 · 回日程安排收益更高" };
-    case "apartment":
-      return { ready: true, note: s.dating ? `深度休息 · 恋人「${rosterFind((p) => p.id === s.dating)?.name}」私密事件` : "深度休息 · 排日程与私密事件" };
-    default:
-      return { ready: false, note: "今日无关键安排" };
-  }
+export function locationStatus(_s: GameState, _locId: string): { ready: boolean; note: string } {
+  return { ready: false, note: "今日无关键安排" };
 }
 
 // 两年生涯阶段（策划案 两年闭环）
@@ -1504,12 +1427,12 @@ export type DayResult = WeekResult & {
 
 // 推进「一天」：结算当天（day % 7）安排的一件事，掷出结果档位，翻页到次日。
 // 跨过周日（dow=6）翻页时额外触发本周经济/通告/生态结算，并清空日程供规划下一周。
-// limitDay：主线时限（游戏天数上限，0=不限）。在翻页这一层判定，任何推进入口都不会漏判。
+// limitDay：本局结算时限（游戏天数上限，0=不限）。在翻页这一层判定，任何推进入口都不会漏判。
 export function advanceDay(s: GameState, limitDay = 0): DayResult {
   const raw = advanceDayRaw(s, limitDay > 0);
   const r0 = { ...raw, next: { ...raw.next, ap: apMax() } }; // 新回合：行动点回满
   if (limitDay > 0 && !r0.ended && (r0.next.day ?? 0) >= limitDay) {
-    return { ...r0, ended: "finish", headline: "主线时限已到", dayText: `${r0.dayText}\n主线时限已到，故事在此落幕。` };
+    return { ...r0, ended: "finish", headline: "本局时限已到", dayText: `${r0.dayText}\n本局时限已到，故事在此落幕。` };
   }
   return r0;
 }
@@ -1621,229 +1544,6 @@ const bumpRel = (n: GameState, pid: string, d: number) => { n.rel[pid] = clamp((
 const bumpStat = (n: GameState, k: StatKey, d: number) => { n.stats[k] = clampStat(k, (n.stats[k] ?? 0) + d); };
 
 export const ROMANCE_ARCS: Record<string, RomanceArc> = {
-  // 6.2 市长之子 · 世家线（门槛最高）
-  wenyuan: {
-    personId: "wenyuan",
-    stages: [
-      {
-        id: 1, name: "公益晚宴", unlock: "容貌≥700 · 名气≥180 · 口碑≥75 · 黑粉≤8",
-        cond: (s) => computeLooks(s) >= 700 && s.fame >= 180 && s.reputation >= 75 && s.blackFans <= 8,
-        choices: [
-          { label: "面对记者真诚回应", result: "口碑 +3，好感 +8", apply: (n) => { n.reputation = clamp(n.reputation + 3, 0, 100); bumpRel(n, "wenyuan", 8); } },
-          { label: "借机炒作热度", result: "名气 +8，好感 -6", apply: (n) => { n.fame += 8; bumpRel(n, "wenyuan", -6); } },
-        ],
-      },
-      {
-        id: 2, name: "雨后探访", unlock: "好感≥20",
-        cond: (s) => rel(s, "wenyuan") >= 20,
-        choices: [
-          { label: "匿名参与社区探访", result: "好感 +8，压力 -4", apply: (n) => { bumpRel(n, "wenyuan", 8); n.stress = clamp(n.stress - 4, 0, 100); } },
-          { label: "带媒体高调同行", result: "名气 +5，好感 -5", apply: (n) => { n.fame += 5; bumpRel(n, "wenyuan", -5); } },
-        ],
-      },
-      {
-        id: 3, name: "舆论审视", unlock: "口碑≥80 · 黑粉≤8",
-        cond: (s) => s.reputation >= 80 && s.blackFans <= 8,
-        choices: [
-          { label: "拒绝动用关系压新闻", result: "好感 +10，口碑 +3", apply: (n) => { bumpRel(n, "wenyuan", 10); n.reputation = clamp(n.reputation + 3, 0, 100); } },
-          { label: "利用关系压下负面", result: "触碰底线：好感 -15", apply: (n) => { bumpRel(n, "wenyuan", -15); } },
-        ],
-      },
-      {
-        id: 4, name: "作品答卷", unlock: "至少 1 部高质量作品",
-        cond: (s) => s.works >= 1,
-        choices: [
-          { label: "接下公益短片", result: "好感 +10，口碑 +4", apply: (n) => { bumpRel(n, "wenyuan", 10); n.reputation = clamp(n.reputation + 4, 0, 100); } },
-          { label: "优先商业大片", result: "名气 +10，好感 -4", apply: (n) => { n.fame += 10; bumpRel(n, "wenyuan", -4); } },
-        ],
-      },
-      {
-        id: 5, name: "家宴名单", unlock: "好感≥55 · 容貌≥750 · 仪态≥700",
-        cond: (s) => rel(s, "wenyuan") >= 55 && computeLooks(s) >= 750 && s.stats.yitai >= 700,
-        choices: [
-          { label: "面对长辈维持真实表达", result: "好感 +10", apply: (n) => bumpRel(n, "wenyuan", 10) },
-          { label: "迎合长辈的期待", result: "名气 +3，好感 -6", apply: (n) => { n.fame += 3; bumpRel(n, "wenyuan", -6); } },
-        ],
-      },
-      {
-        id: 6, name: "风暴来临", unlock: "名气≥260 · 口碑≥85 · 三大奖提名≥1",
-        cond: (s) => s.fame >= 260 && s.reputation >= 85 && s.awards >= 1,
-        choices: [
-          { label: "和他共同面对曝光危机", result: "好感 +12", apply: (n) => bumpRel(n, "wenyuan", 12) },
-          { label: "独自承担全部舆论", result: "好感 +6，压力 +8", apply: (n) => { bumpRel(n, "wenyuan", 6); n.stress = clamp(n.stress + 8, 0, 100); } },
-        ],
-      },
-      {
-        id: 7, name: "灯火确认", unlock: "好感≥85 · 前六段全部完成",
-        cond: (s) => rel(s, "wenyuan") >= 85,
-        choices: [
-          { label: "在灯火里说出心意", result: "世家线圆满，可确认交往", apply: (n) => bumpRel(n, "wenyuan", 3) },
-        ],
-      },
-    ],
-    confirm: {
-      cond: (s) => rel(s, "wenyuan") >= 85 && computeLooks(s) >= 750 && s.reputation >= 85 && s.blackFans <= 5 && s.fame >= 300 && s.awards >= 1,
-      req: "好感≥85 · 容貌≥750 · 口碑≥85 · 黑粉≤5 · 名气≥300 · 三大奖≥1",
-      buff: "长夜灯火",
-      buffDesc: "每月首次舆论危机口碑损失 -50% · 公益活动收益 +30% · 高端人脉结识率 +15%",
-    },
-  },
-  // 6.3 邻居哥哥 · 陪伴线
-  jiangxu: {
-    personId: "jiangxu",
-    stages: [
-      {
-        id: 1, name: "隔壁的灯", unlock: "入住天光小区（第 1 周）",
-        cond: (s) => s.week >= 1,
-        choices: [
-          { label: "向他借工具", result: "关系 +4", apply: (n) => bumpRel(n, "jiangxu", 4) },
-          { label: "自己动手处理", result: "体能 -2，关系 +2", apply: (n) => { bumpStat(n, "tineng", -2); bumpRel(n, "jiangxu", 2); } },
-        ],
-      },
-      {
-        id: 2, name: "深夜便利店", unlock: "关系≥25 · 压力≥35",
-        cond: (s) => rel(s, "jiangxu") >= 25 && s.stress >= 35,
-        choices: [
-          { label: "坦白最近的疲惫", result: "关系 +8，压力 -8", apply: (n) => { bumpRel(n, "jiangxu", 8); n.stress = clamp(n.stress - 8, 0, 100); } },
-          { label: "假装一切顺利", result: "关系 +2", apply: (n) => bumpRel(n, "jiangxu", 2) },
-        ],
-      },
-      {
-        id: 3, name: "阳台植物", unlock: "关系≥35 · 完成 1 次通告",
-        cond: (s) => rel(s, "jiangxu") >= 35 && s.works >= 1,
-        choices: [
-          { label: "一起布置阳台", result: "关系 +6，压力 -3", apply: (n) => { bumpRel(n, "jiangxu", 6); n.stress = clamp(n.stress - 3, 0, 100); } },
-          { label: "拒绝他的帮忙", result: "关系 -3", apply: (n) => bumpRel(n, "jiangxu", -3) },
-        ],
-      },
-      {
-        id: 4, name: "被拍到的并肩", unlock: "名气≥120 · 关系≥45",
-        cond: (s) => s.fame >= 120 && rel(s, "jiangxu") >= 45,
-        choices: [
-          { label: "主动澄清是邻居", result: "口碑 +3，关系 +8", apply: (n) => { n.reputation = clamp(n.reputation + 3, 0, 100); bumpRel(n, "jiangxu", 8); } },
-          { label: "借绯闻炒作", result: "名气 +8，关系 -10", apply: (n) => { n.fame += 8; bumpRel(n, "jiangxu", -10); } },
-        ],
-      },
-      {
-        id: 5, name: "旧城方案", unlock: "才智≥260 或 2 次高质量作品 · 关系≥55",
-        cond: (s) => (s.stats.caizhi >= 260 || s.works >= 2) && rel(s, "jiangxu") >= 55,
-        choices: [
-          { label: "认真听他的创业方案", result: "关系 +10，才智 +5", apply: (n) => { bumpRel(n, "jiangxu", 10); bumpStat(n, "caizhi", 5); } },
-          { label: "只索取场地资源", result: "资金 +2 万，关系 -12", apply: (n) => { wallet.addIn(n, 20000); bumpRel(n, "jiangxu", -12); } },
-        ],
-      },
-      {
-        id: 6, name: "雨停以前", unlock: "关系≥70 · 压力≥60",
-        cond: (s) => rel(s, "jiangxu") >= 70 && s.stress >= 60,
-        choices: [
-          { label: "允许他陪伴并说出顾虑", result: "关系 +12，压力 -10", apply: (n) => { bumpRel(n, "jiangxu", 12); n.stress = clamp(n.stress - 10, 0, 100); } },
-          { label: "继续逞强", result: "自信 +3，关系 +3", apply: (n) => { bumpStat(n, "zixin", 3); bumpRel(n, "jiangxu", 3); } },
-        ],
-      },
-      {
-        id: 7, name: "门牌号之后", unlock: "关系≥85 · 前六段完成且未越界",
-        cond: (s) => rel(s, "jiangxu") >= 85,
-        choices: [
-          { label: "确认共同的生活安排", result: "陪伴线圆满，可确认交往", apply: (n) => bumpRel(n, "jiangxu", 3) },
-        ],
-      },
-    ],
-    confirm: {
-      cond: (s) => rel(s, "jiangxu") >= 85,
-      req: "关系≥85 · 七段剧情全部完成",
-      buff: "隔壁常亮的灯",
-      buffDesc: "每周首次在天光小区休息压力额外 -8 · 体能恢复 +5 · 过劳时提醒休整",
-    },
-  },
-  // 6.4 离婚创一代 · 成熟事业线
-  zhouyan: {
-    personId: "zhouyan",
-    stages: [
-      {
-        id: 1, name: "共创会迟到五分钟", unlock: "名气≥160 · 口碑≥60 · 2 次付费通告 · 资金≥8 万 · 无违约",
-        cond: (s) => s.fame >= 160 && s.reputation >= 60 && s.works >= 2 && wallet.balance(s) >= 80000 && s.defaults === 0,
-        choices: [
-          { label: "先谈项目再寒暄", result: "关系 +8", apply: (n) => bumpRel(n, "zhouyan", 8) },
-          { label: "只谈私人八卦", result: "关系 -6，黑粉 +1", apply: (n) => { bumpRel(n, "zhouyan", -6); n.blackFans += 1; } },
-        ],
-      },
-      {
-        id: 2, name: "旧采访", unlock: "关系≥25 · 口碑≥65",
-        cond: (s) => rel(s, "zhouyan") >= 25 && s.reputation >= 65,
-        choices: [
-          { label: "尊重他的隐私", result: "关系 +10", apply: (n) => bumpRel(n, "zhouyan", 10) },
-          { label: "追问离婚原因", result: "关系 -15（路线受挫）", apply: (n) => bumpRel(n, "zhouyan", -15) },
-        ],
-      },
-      {
-        id: 3, name: "不合身的代言", unlock: "商业价值≥120 · 口才≥300",
-        cond: (s) => s.bizValue >= 120 && s.stats.koucai >= 300,
-        choices: [
-          { label: "提出修改方案", result: "才智 +6，关系 +10", apply: (n) => { bumpStat(n, "caizhi", 6); bumpRel(n, "zhouyan", 10); } },
-          { label: "照单全收", result: "商业价值 +8，关系 +2", apply: (n) => { n.bizValue = clamp(n.bizValue + 8, 0, 999); bumpRel(n, "zhouyan", 2); } },
-        ],
-      },
-      {
-        id: 4, name: "共同承担", unlock: "名气≥260 · 完成 1 个 4 星广告或电影",
-        cond: (s) => s.fame >= 260 && s.awards >= 1,
-        choices: [
-          { label: "公开承担项目责任", result: "口碑 +5，关系 +12", apply: (n) => { n.reputation = clamp(n.reputation + 5, 0, 100); bumpRel(n, "zhouyan", 12); } },
-          { label: "让他单独背锅", result: "资金 +5 万，关系 -20", apply: (n) => { wallet.addIn(n, 50000); bumpRel(n, "zhouyan", -20); } },
-        ],
-      },
-      {
-        id: 5, name: "前段婚姻的回声", unlock: "关系≥55 · 口碑≥70",
-        cond: (s) => rel(s, "zhouyan") >= 55 && s.reputation >= 70,
-        choices: [
-          { label: "倾听但不越界拯救", result: "关系 +12", apply: (n) => bumpRel(n, "zhouyan", 12) },
-          { label: "承诺替他解决过去", result: "关系 -8，压力 +8", apply: (n) => { bumpRel(n, "zhouyan", -8); n.stress = clamp(n.stress + 8, 0, 100); } },
-        ],
-      },
-      {
-        id: 6, name: "董事会之外", unlock: "才智≥420 · 口才≥420 · 完成 1 个自选事业项目",
-        cond: (s) => s.stats.caizhi >= 420 && s.stats.koucai >= 420 && s.works >= 3,
-        choices: [
-          { label: "讨论双方边界与时间", result: "关系 +12，商业价值 +10", apply: (n) => { bumpRel(n, "zhouyan", 12); n.bizValue = clamp(n.bizValue + 10, 0, 999); } },
-          { label: "要求他公开证明", result: "名气 +10，关系 -12", apply: (n) => { n.fame += 10; bumpRel(n, "zhouyan", -12); } },
-        ],
-      },
-      {
-        id: 7, name: "新的合伙人", unlock: "关系≥85 · 口碑≥80 · 5 星通告或商业榜前 10",
-        cond: (s) => rel(s, "zhouyan") >= 85 && s.reputation >= 80 && (s.awards >= 1 || s.fame >= 500),
-        choices: [
-          { label: "确认成为彼此的合伙人", result: "成熟事业线圆满，可确认交往", apply: (n) => bumpRel(n, "zhouyan", 3) },
-        ],
-      },
-    ],
-    confirm: {
-      cond: (s) => rel(s, "zhouyan") >= 85 && s.reputation >= 80 && s.stats.caizhi >= 420 && s.stats.koucai >= 420,
-      req: "关系≥85 · 口碑≥80 · 才智与口才均≥420 · 全程未侵犯隐私/让对方背锅",
-      buff: "并肩而立",
-      buffDesc: "每月首次品牌/商业通告商业价值 +12% · 每季度一次商业情报 · 低资金时可低息周转",
-    },
-  },
-  // 6. 天王线（条件养成，无分段剧本）
-  guchen: {
-    personId: "guchen",
-    stages: [],
-    confirm: {
-      cond: (s) => rel(s, "guchen") >= 85 && s.reputation >= 70 && s.blackFans <= 5 && (s.awards >= 1 || s.works >= 3),
-      req: "好感≥85 · 口碑≥70 · 黑粉≤5 · 至少 1 部高质量代表作",
-      buff: "天王恋人线",
-      buffDesc: "高级电影资源成功率提升 · 结局池新增天王专属结局",
-    },
-  },
-  // 6.1 金主线（条件养成，无分段剧本）
-  songshixu: {
-    personId: "songshixu",
-    stages: [],
-    confirm: {
-      cond: (s) => rel(s, "songshixu") >= 85 && s.reputation >= 65 && s.blackFans <= 4 && (s.awards >= 1 || s.works >= 2),
-      req: "好感≥85 · 口碑≥65 · 黑粉≤4 · 至少 1 个高质量作品",
-      buff: "资本同盟",
-      buffDesc: "投资事件成功率提升 · 高级商务与红毯资源解锁 · 结算额外资金加成",
-    },
-  },
 };
 
 export type ArcView = {

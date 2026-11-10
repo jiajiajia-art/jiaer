@@ -3,6 +3,7 @@
  * 禁止读局内「AI 配置」里的个人 baseUrl / apiKey。
  * API 基址：VITE_API_BASE_URL；空串 = 同源 /api（cn-gogo 等 Aliyun 部署）。
  */
+import { aiRouteBody } from "./platformAiRoutes";
 import { readFunloomAuthToken, resolveFunloomApiBase } from "./platformAvatarLibrary.ts";
 import type { WorldGenEngineId } from "./worldGenWizard.ts";
 
@@ -82,6 +83,7 @@ export async function completeViaPlatform(
         engineId: opts.engineId || "balanced",
         moduleId: opts.moduleId || "",
         max_tokens: opts.max_tokens || 4000,
+        ...aiRouteBody("text"),
       }),
     });
 

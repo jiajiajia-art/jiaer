@@ -1,8 +1,4 @@
-import { useEffect, useRef, useState } from "react";
-import { setPetMode, usePetMode } from "./pet";
-import { IconCheck } from "../../../lib/icons";
-
-/* 悬浮宠物小珠：可拖动、会自己慢慢挪位置、会说话。挂在应用商店内部，退出商店即卸载。 */
+/* 小珠头像：开发者工坊里的吉祥物表情 */
 export function SlimeFace({ size = 64, mood = "happy" }: { size?: number; mood?: "happy" | "think" | "worry" | "party" }) {
   // 大眼睛：深色瞳孔 + 两颗高光；开心时眯成弯月
   const eye = (cx: number) => mood === "party" ? (
@@ -46,81 +42,5 @@ export function SlimeFace({ size = 64, mood = "happy" }: { size?: number; mood?:
       {mood === "worry" && <path d="M64 30q2 4 0 6q-2-2 0-6Z" fill="#8fd3ff" />}
       {mood === "party" && <g fill="#ffd36e"><path d="M10 22l1.5 3.5 3.5 1.5-3.5 1.5L10 32l-1.5-3.5L5 27l3.5-1.5Z" /><path d="M70 18l1 2.4 2.4 1-2.4 1-1 2.4-1-2.4-2.4-1 2.4-1Z" /></g>}
     </svg>
-  );
-}
-
-export default function SlimePet({ onOpen, say }: { onOpen: () => void; say?: string }) {
-  const wrap = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
-  const [drag, setDrag] = useState(false);
-  const [bubble, setBubble] = useState<string>("嗨～点我，一起做个应用吧！");
-  const [menu, setMenu] = useState(false);
-  const mode = usePetMode();
-  const st = useRef({ dx: 0, dy: 0, moved: false, sx: 0, sy: 0 });
-  const box = () => wrap.current?.parentElement?.getBoundingClientRect();
-
-  // 初始停在右下角（避开底部标签栏）
-  useEffect(() => { const b = box(); if (b) setPos({ x: b.width - 84, y: b.height - 170 }); }, []);
-  useEffect(() => { if (say) setBubble(say); }, [say]);
-  useEffect(() => { const t = setTimeout(() => setBubble(""), 4200); return () => clearTimeout(t); }, [bubble]);
-  useEffect(() => { if (!menu) return; const t = setTimeout(() => setMenu(false), 6000); return () => clearTimeout(t); }, [menu]);
-  // 闲逛：每隔几秒在附近挪一挪
-  useEffect(() => {
-    if (drag || menu) return;
-    const t = setInterval(() => setPos((p) => {
-      const b = box(); if (!p || !b) return p;
-      const nx = Math.max(8, Math.min(b.width - 76, p.x + (Math.random() - 0.5) * 120));
-      const ny = Math.max(60, Math.min(b.height - 150, p.y + (Math.random() - 0.5) * 90));
-      return { x: nx, y: ny };
-    }), 5200);
-    return () => clearInterval(t);
-  }, [drag, menu]);
-
-  const down = (e: React.PointerEvent) => {
-    if (!pos) return;
-    (e.target as Element).setPointerCapture(e.pointerId);
-    st.current = { dx: e.clientX - pos.x, dy: e.clientY - pos.y, moved: false, sx: e.clientX, sy: e.clientY };
-    setDrag(true);
-  };
-  const move = (e: React.PointerEvent) => {
-    if (!drag) return;
-    if (Math.hypot(e.clientX - st.current.sx, e.clientY - st.current.sy) > 6) st.current.moved = true;
-    const b = box(); if (!b) return;
-    setPos({ x: Math.max(0, Math.min(b.width - 68, e.clientX - st.current.dx)), y: Math.max(0, Math.min(b.height - 80, e.clientY - st.current.dy)) });
-  };
-  const up = () => {
-    setDrag(false);
-    if (!st.current.moved) { setBubble(""); setMenu((v) => !v); } else setBubble("咻～换个地方待着");
-  };
-
-  return (
-    <div ref={wrap} className="pointer-events-none absolute inset-0 z-30 overflow-hidden">
-      {pos && (
-        <div className="pointer-events-auto absolute select-none" style={{ left: pos.x, top: pos.y, transition: drag ? "none" : "left 1.6s cubic-bezier(.4,0,.2,1), top 1.6s cubic-bezier(.4,0,.2,1)", touchAction: "none" }}>
-          {menu && (
-            <div className={`absolute bottom-[calc(100%+4px)] w-[168px] overflow-hidden rounded-2xl bg-white text-[12.5px] text-[#2b2140] shadow-[0_8px_28px_rgba(0,0,0,.18)] ring-1 ring-black/5 animate-[slimePop_.2s_ease-out] ${pos.x > 120 ? "right-0" : "left-0"}`}>
-              <button onClick={() => { setMenu(false); onOpen(); }} className="block w-full px-3.5 py-2.5 text-left font-bold text-[#3fb68b] active:bg-black/5">打开开发者工坊</button>
-              <p className="border-t border-black/5 px-3.5 pb-1 pt-2 text-[10.5px] text-[#999]">小珠出现在</p>
-              {([["pinned", "常驻屏幕"], ["store", "仅应用商店"]] as const).map(([m, t]) => (
-                <button key={m} onClick={() => { setPetMode(m); setMenu(false); setBubble(m === "pinned" ? "好耶，我会一直陪着你～" : "那我就在应用商店等你～"); }}
-                  className="flex w-full items-center justify-between px-3.5 py-2 text-left active:bg-black/5">
-                  {t}<span className="grid h-4 w-4 place-items-center rounded-full border text-[9px] text-white" style={{ borderColor: mode === m ? "#3fb68b" : "#ccc", background: mode === m ? "#3fb68b" : "transparent" }}>{mode === m ? "" : ""}</span>
-                </button>
-              ))}
-            </div>
-          )}
-          {bubble && !menu && (
-            <div className="absolute bottom-[calc(100%+2px)] right-0 w-max max-w-[180px] rounded-2xl rounded-br-sm bg-white px-3 py-1.5 text-[12px] font-medium leading-snug text-[#2b2140] shadow-[0_6px_20px_rgba(0,0,0,.14)] ring-1 ring-black/5 animate-[slimePop_.25s_ease-out]">{bubble}</div>
-          )}
-          <button
-            aria-label="打开开发者工坊"
-            onPointerDown={down} onPointerMove={move} onPointerUp={up}
-            className={`block cursor-grab active:cursor-grabbing ${drag ? "scale-110" : "slime-bob"}`}
-          >
-            <SlimeFace size={68} mood={drag ? "party" : "happy"} />
-          </button>
-        </div>
-      )}
-    </div>
   );
 }

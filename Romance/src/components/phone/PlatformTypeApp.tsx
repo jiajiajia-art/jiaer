@@ -3,6 +3,8 @@
  * 若 content.legacyUi 指向旧专用页，由 Phone 外层直接挂载专用组件，本页作通用兜底。
  */
 import { platformAppContentText, PLATFORM_APP_TYPE_LABEL, type PlatformApp, type PlatformAppType } from "../../lib/platformApps";
+import { isKkApp, normalizeKkApp } from "../../mods/kkmod/phoneApp";
+import KkAppRenderer from "./KkAppRenderer";
 
 export default function PlatformTypeApp({
   app,
@@ -13,6 +15,9 @@ export default function PlatformTypeApp({
   onBack: () => void;
   unavailable?: boolean;
 }) {
+  // 功能注释：kkapp@1 配置应用走可交互运行时；旧纯文本内容仍按通用页展示
+  const spec = !unavailable && app && isKkApp(app.content) ? normalizeKkApp(app.content) : null;
+  if (spec && app) return <KkAppRenderer appId={app.appId} name={app.name} spec={spec} onBack={onBack} />;
   const typeLabel =
     app && (PLATFORM_APP_TYPE_LABEL[app.type as PlatformAppType] || app.type || "应用");
   const body = app ? platformAppContentText(app.content) : "";

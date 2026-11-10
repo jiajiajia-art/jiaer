@@ -5,6 +5,8 @@
  * 未勾选模组不请求、不覆盖；取消保留已完成内容。进度页不提供失败重试入口（时间与推进等须生成时自愈）。
  * 再进入：已生成完成（step2）刷新直达编辑器；未生成则停设定入口。按用户+作品隔离会话。
  */
+import AiRoutePicker from "./AiRoutePicker";
+import { useAiRoutes } from "../lib/platformAiRoutes";
 import { Component, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Mod } from "../mods/types";
 import {
@@ -31,6 +33,7 @@ import {
   estimateWorldGenEtaSeconds,
   formatWorldGenEtaLabel,
   formatWorldGenEtaParts,
+  groupWorldGenProgressByBatch,
   makeInitialProgress,
   pickWorldGenScrollTargetId,
   importWithStaleChunkReload,
@@ -205,6 +208,7 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
   const boot = useMemo(() => bootFromSession(), []);
   const [step, setStep] = useState<1 | 2>(boot.step);
   const [s1, setS1] = useState<WorldGenStep1>(boot.s1);
+  const platformRoutes = useAiRoutes("text");
   const [mod, setMod] = useState<Mod | null>(boot.mod);
   const [draft, setDraft] = useState<WorldGenDraft | null>(boot.draft);
   const [workshop, setWorkshop] = useState<{ mod: Mod; isNew: boolean } | null>(null);
@@ -992,7 +996,24 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
           </p>
 
           <ul ref={modListRef} className="world-gen-mod-list text-[12.5px]">
-            {progress.modules.map((m) => {
+            {groupWorldGenProgressByBatch(progress.modules).flatMap((g, gi) => {
+              const gDone = g.rows.filter((r) => r.status === "done").length;
+              const gFailed = g.rows.filter((r) => r.status === "failed").length;
+              const gRunning = g.rows.some((r) => r.status === "running");
+              const gState = gRunning ? "生成中" : gFailed ? `失败 ${gFailed}` : gDone === g.rows.length ? "已完成" : "等待中";
+              // 功能注释：组头说明「这几项是一次请求一起写的」，消除逐项分开生成的误解
+              const head = (
+                <li key={`head:${g.batchId}`} className="world-gen-batch-head" aria-hidden={false}>
+                  <span className="font-semibold text-ink">
+                    第 {gi + 1} 次请求 · {g.name}
+                  </span>
+                  <span className="text-ink-soft">
+                    {g.rows.length > 1 ? `${g.rows.length} 项一起生成 · ` : ""}
+                    {gState}
+                  </span>
+                </li>
+              );
+              return [head, ...g.rows.map((m) => {
               const summaryOpen = expandedSummaryIds.has(m.id);
               return (
               <li
@@ -1036,6 +1057,7 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
                 </span>
               </li>
               );
+            })];
             })}
           </ul>
 
@@ -1277,6 +1299,8 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
               </h2>
             </div>
             <p className={`mb-3 ${hint}`}>每种引擎的擅长方向与消耗倍率不同，最终按实际生成用量扣除 KK 币。</p>
+            {/* 后台配了线路就用后台线路与倍率；接口未上线时沿用内置三档 */}
+            {platformRoutes.routes.length > 0 ? <AiRoutePicker capability="text" title="平台线路" /> : (
             <div className="space-y-2">
               {WORLD_GEN_ENGINES.map((e) => {
                 const on = s1.engineId === e.id;
@@ -1302,6 +1326,7 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
                 );
               })}
             </div>
+            )}
           </section>
 
           <section className="world-gen-card">

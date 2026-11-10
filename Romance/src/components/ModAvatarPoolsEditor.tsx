@@ -231,10 +231,10 @@ export default function ModAvatarPoolsEditor({ value, onChange, confirm }: {
           className="flex w-full items-center gap-2 text-left">
           <span className={sub}>平台公共分类</span>
           <span className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${pubOn.size ? "bg-ink text-paper" : "bg-ink/80 text-paper/95"}`}>
-            {pubOn.size ? `${pubOn.size} 个进随机池` : "未进随机池"}
+            {resolved.prefer === "public" ? "已自动启用" : pubOn.size ? `${pubOn.size} 个进随机池` : "未进随机池"}
           </span>
           <span className="min-w-0 flex-1 truncate text-right text-[11px] text-ink-soft">
-            {publicOpen ? "勾选「随机池」参与 AI 抽图" : "点此展开青年 / 成熟 / 幼年"}
+            {resolved.prefer === "public" ? "公共库优先：按性别 / 年龄自动匹配对应分类" : publicOpen ? "私人库不够时，可勾选补充到随机池" : "点此展开青年 / 成熟 / 幼年"}
           </span>
           <span className={`text-[12px] text-ink-soft transition ${publicOpen ? "rotate-90" : ""}`} aria-hidden>›</span>
         </button>
@@ -249,10 +249,10 @@ export default function ModAvatarPoolsEditor({ value, onChange, confirm }: {
                   <div className="truncate text-[12.5px] font-bold text-ink">{c.name}</div>
                   <div className="truncate text-[10.5px] text-ink-soft">{c.hint} · 图源平台入库</div>
                 </div>
-                <Toggle on={pubOn.has(c.name)} label="随机池" onChange={(x) => {
+                {resolved.prefer !== "public" && <Toggle on={pubOn.has(c.name)} label="随机池" onChange={(x) => {
                   const s = new Set(pubOn); if (x) s.add(c.name); else s.delete(c.name);
                   emit({ ...v, publicRandom: PUBLIC_AVATAR_CATS.map((k) => k.name).filter((n) => s.has(n)) });
-                }} />
+                }} />}
               </div>
             ))}
           </div>

@@ -1,3 +1,5 @@
+import AiRoutePicker from "./AiRoutePicker";
+import { hasPlatformPlayAuth } from "../lib/platformPlayAi";
 import { synthSpeech } from "./phone/screenShare";
 import { useState } from "react";
 import { fetchModels, testConnection } from "../lib/ai";
@@ -56,6 +58,12 @@ export default function AIConfigPanel() {
 
   return (
     <div className="space-y-4">
+      {/* 平台线路：登录后可选运营配置的线路（含倍率）；下方个人接口仅在未登录时兜底 */}
+      {hasPlatformPlayAuth() && (
+        <div className="rounded-2xl border border-line bg-paper-2/50 p-3">
+          <AiRoutePicker capability="text" title="剧情 AI 线路" />
+        </div>
+      )}
       <div>
         <label className={label}>API Base URL</label>
         <input className={field} value={draft.baseUrl} onChange={(e) => upd({ baseUrl: e.target.value })} placeholder="https://api.openai.com/v1" />

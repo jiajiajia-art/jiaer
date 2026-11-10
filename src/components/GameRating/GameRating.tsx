@@ -1,10 +1,10 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { AiFillStar, AiOutlineStar } from 'react-icons/ai';
 import { FaRegThumbsUp, FaThumbsUp, FaRegCommentDots, FaEllipsisH } from 'react-icons/fa';
 import { FaChevronUp, FaChevronDown } from 'react-icons/fa6';
-import gameRatingApi from '../../api/gameRating';
+import gameRatingApi, { type RatingSort } from '../../api/gameRating';
 import i18n from '../../i18n';
 
 type RatingItem = NonNullable<
@@ -362,6 +362,9 @@ const GameRating: React.FC<Props> = ({ fileId, mode = 'full', onRatingChange, on
   const [summary, setSummary] = useState<RatingSummary>({ average: 0, total: 0 });
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
+  const [sortMode, setSortMode] = useState<RatingSort>('latest');
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
+  const sortMenuRef = useRef<HTMLDivElement | null>(null);
 
   const [showInput, setShowInput] = useState(isCommentsMode);
   const [ratingValue, setRatingValue] = useState(0);
@@ -386,7 +389,7 @@ const GameRating: React.FC<Props> = ({ fileId, mode = 'full', onRatingChange, on
     if (!fileId) return;
 
     try {
-      const response = await gameRatingApi.getRatings(fileId, pageNum, PAGE_SIZE);
+      const response = await gameRatingApi.getRatings(fileId, pageNum, PAGE_SIZE, sortMode);
       if (response.data.success && response.data.data) {
         const data = response.data.data;
         if (append) {
@@ -406,11 +409,43 @@ const GameRating: React.FC<Props> = ({ fileId, mode = 'full', onRatingChange, on
     } finally {
       setLoading(false);
     }
-  }, [fileId, onRatingChange, onUserRatingChange]);
+  }, [fileId, sortMode, onRatingChange, onUserRatingChange]);
 
+  // 功能注释：排序切换后回到第 1 页重新拉取
   useEffect(() => {
+    setPage(1);
     fetchRatings(1, false);
   }, [fetchRatings]);
+
+  // 功能注释：前端兜底排序——后端未按 sort 排时，已加载列表仍按所选方式展示
+  const sortedComments = useMemo(() => {
+    const list = [...comments];
+    const ts = (c: RatingItem) => new Date(c.created_at).getTime() || 0;
+    if (sortMode === 'hot') {
+      list.sort((a, b) => (b.like_count || 0) - (a.like_count || 0) || ts(b) - ts(a));
+    } else {
+      list.sort((a, b) => ts(b) - ts(a));
+    }
+    return list;
+  }, [comments, sortMode]);
+
+  useEffect(() => {
+    if (!sortMenuOpen) return;
+    const close = (e: Event) => {
+      if (sortMenuRef.current && !sortMenuRef.current.contains(e.target as Node)) setSortMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSortMenuOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('touchstart', close, { passive: true });
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('touchstart', close);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [sortMenuOpen]);
 
   const handleLike = useCallback((comment: RatingItem) => {
     if (!checkAuth()) return;
@@ -633,7 +668,7 @@ const GameRating: React.FC<Props> = ({ fileId, mode = 'full', onRatingChange, on
         </div>
       ) : (
         <div className={styles.commentsList}>
-          {comments.map((comment) => (
+          {sortedComments.map((comment) => (
             <CommentCard
               key={comment.rating_id}
               comment={comment}
@@ -677,12 +712,45 @@ const GameRating: React.FC<Props> = ({ fileId, mode = 'full', onRatingChange, on
       {isCommentsMode ? (
         <div className={styles.commentsHeader}>
           <h3>{t('gameRating.commentsSection')}</h3>
-          <span className={styles.sortPill} aria-hidden="true">
-            {t('gameRating.latestSort')}
-            <svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true">
-              <path d="M3 4.5L6 7.5L9 4.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-            </svg>
-          </span>
+          <div className={styles.sortMenuWrap} ref={sortMenuRef}>
+            <button
+              type="button"
+              className={styles.sortPill}
+              aria-haspopup="listbox"
+              aria-expanded={sortMenuOpen}
+              onClick={() => setSortMenuOpen((open) => !open)}
+            >
+              {sortMode === 'hot' ? t('gameRating.hotSort') : t('gameRating.latestSort')}
+              <svg
+                viewBox="0 0 12 12"
+                width="10"
+                height="10"
+                aria-hidden="true"
+                className={sortMenuOpen ? styles.sortChevronOpen : undefined}
+              >
+                <path d="M3 4.5L6 7.5L9 4.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+              </svg>
+            </button>
+            {sortMenuOpen ? (
+              <div className={styles.sortMenu} role="listbox" aria-label={t('gameRating.sortLabel')}>
+                {(['latest', 'hot'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    role="option"
+                    aria-selected={sortMode === mode}
+                    className={`${styles.sortOption} ${sortMode === mode ? styles.sortOptionActive : ''}`}
+                    onClick={() => {
+                      setSortMenuOpen(false);
+                      if (mode !== sortMode) setSortMode(mode);
+                    }}
+                  >
+                    {mode === 'hot' ? t('gameRating.hotSort') : t('gameRating.latestSort')}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
         </div>
       ) : null}
 

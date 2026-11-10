@@ -6,30 +6,45 @@ import { advanceCount, advanceLabel, advanceUnit, type AdvanceUnit } from "../ga
 import { useState } from "react";
 import { useGame } from "../store/gameCtx";
 import { Modal } from "./ui";
-import { LIVE_GIGS as GIG_POOL } from "../mods/registry";
-import { TRAININGS, SIDE_JOBS, WEEKEND_ACTS, MEALS, mealOf, mealEffect, gradesOf, gradeLock, tuning, jobLock, unlockLock, STAT_LABELS, type StatKey } from "../game/data";
+import { LIVE_GIGS as GIG_POOL, getWorldSlot } from "../mods/registry";
+import type { AttrDef } from "../lib/types";
+import type { ScheduleCatId } from "../mods/types";
+import { asModArray } from "../lib/asModArray";
+import { TRAININGS, SIDE_JOBS, WEEKEND_ACTS, type WeekendAct, MEALS, mealOf, mealEffect, gradesOf, gradeLock, tuning, jobLock, unlockLock, STAT_LABELS, type StatKey } from "../game/data";
 import { FIXED_METRICS } from "../game/fixedEvents";
 import { dowOf, previewWeekBill, weekdayName, type GameState } from "../game/logic";
 import { liveTerm as T } from "../mods/live";
 import { StatusMark } from "../lib/icons";
 
 /* ═══ 可排入日程的活动（仿《明星志愿》：通告 / 课程 / 打工 / 休息 / 社交） ═══ */
-type PlanCat = "work" | "lesson" | "job" | "rest" | "social";
-const CAT_META: Record<PlanCat, { label: string; hint: string; dot: string }> = {
+type PlanCat = ScheduleCatId;
+const CAT_DEFAULT: Record<PlanCat, { label: string; hint: string; dot: string }> = {
   work: { get label() { return `拍摄${T("gig")}`; }, hint: "接戏拍摄，赚片酬涨名气", dot: "#e0533d" },
   lesson: { label: "才艺课程", hint: "分级授课 · 级别越高上限越高、单次加成越少", dot: "#c79a3a" },
   job: { label: "打工赚钱", hint: "分级零工 · 名气越高价码越高", dot: "#b3823c" },
   rest: { label: "休息调整", hint: "回血减压，保住状态", dot: "#3a9d78" },
   social: { label: "外出社交", hint: "自由活动可踩地图 · 人脉与心情", dot: "#d76d77" },
 };
-const CAT_ORDER: PlanCat[] = ["work", "lesson", "job", "rest", "social"];
+const CAT_IDS: PlanCat[] = ["work", "lesson", "job", "rest", "social"];
+/* 编辑器「日程分类」覆盖：名称 / 说明 / 颜色 / 顺序 / 隐藏；未写的字段回落到内置值 */
+function catCfg(): { order: PlanCat[]; meta: Record<PlanCat, { label: string; hint: string; dot: string; hidden: boolean }> } {
+  const cfg = (getWorldSlot("schedule")?.cats ?? []).filter((c) => CAT_IDS.includes(c.id));
+  const order = [...cfg.map((c) => c.id), ...CAT_IDS.filter((id) => !cfg.some((c) => c.id === id))];
+  const meta = Object.fromEntries(CAT_IDS.map((id) => {
+    const d = CAT_DEFAULT[id]; const c = cfg.find((x) => x.id === id);
+    return [id, { label: c?.label?.trim() || d.label, hint: c?.hint?.trim() ?? d.hint, dot: c?.color || d.dot, hidden: !!c?.hidden }];
+  })) as Record<PlanCat, { label: string; hint: string; dot: string; hidden: boolean }>;
+  return { order, meta };
+}
+const weekendCat = (w: WeekendAct): PlanCat => w.cat ?? (w.id === "recuperate" ? "rest" : "social");
 
 /* 排入槽位的一件事：解码 schedule 字符串为可展示信息（名称/分类/开销/压力）。 */
 type ActInfo = { id: string; name: string; cat: PlanCat; note: string; fee: number; stress: number; dot: string };
 
 function describeAct(s: GameState, id: string | null): ActInfo | null {
   if (!id) return null;
-  const dot = (c: PlanCat) => CAT_META[c].dot;
+  const meta = catCfg().meta;
+  const dot = (c: PlanCat) => meta[c].dot;
   if (id === "rest") return { id, name: "休息", cat: "rest", note: "缓解压力、调整状态", fee: 0, stress: -8, dot: dot("rest") };
   if (id === "gig") {
     const g = GIG_POOL.find((x) => x.id === s.activeGigId);
@@ -56,7 +71,7 @@ function describeAct(s: GameState, id: string | null): ActInfo | null {
     return { id, name: j.label, cat: "job", note: j.note, fee: 0, stress: j.stress, dot: dot("job") };
   }
   const w = WEEKEND_ACTS.find((x) => x.id === id);
-  if (w) return { id, name: w.name, cat: w.id === "recuperate" ? "rest" : "social", note: w.effect, fee: w.cost, stress: w.stress, dot: dot(w.id === "recuperate" ? "rest" : "social") };
+  if (w) return { id, name: w.name, cat: weekendCat(w), note: w.effect, fee: w.cost, stress: w.stress, dot: dot(weekendCat(w)) };
   // 兼容旧裸课程 id
   const t = TRAININGS.find((x) => x.id === id);
   if (t) return { id: `train:${t.id}:g1`, name: `${t.name}·初级`, cat: "lesson", note: t.effect, fee: Math.round(t.cost * (tuning().trainFeeMul ?? 1)), stress: t.stress, dot: dot("lesson") };
@@ -128,43 +143,16 @@ export default function ScheduleBoard({ open, onClose }: { open: boolean; onClos
   };
   // 本周伙食（生活开销包）：选择存进本局存档，一直沿用到改为止
   const meal = mealOf(s.meal);
+  // 功能注释：伙食效果说明用本世界建角属性名称
+  const attrLabels = Object.fromEntries(asModArray<AttrDef>(getWorldSlot("customAttrs")).map((d) => [d.id, d.label || d.id]));
   const chooseMeal = (id: string) => patchGame((g) => ({ ...g, sim: { ...g.sim, meal: id } }));
 
   return (
     <Modal title={`本周日程 · 第 ${s.week} 周`} onClose={() => { onClose(); setPickSeg(null); }}>
-      <div className="mb-3 flex items-center justify-between">
-        <p className="text-[11px] leading-snug text-ink-soft">排满周一到周日各一件事，「推进一天」逐日结算并掷出结果；跨过周日自动结算并翻入新一周。</p>
-        <div className="ml-3 flex shrink-0 gap-2 text-[11.5px]">
-          <button onClick={() => fillWeek("rest")} className="text-ink-soft transition hover:text-jade">余下休息</button>
-          <span className="text-line">·</span>
-          <button onClick={() => fillWeek(null)} className="text-ink-soft transition hover:text-danger">清空</button>
-        </div>
-      </div>
-
-      {/* 本周钱包：现有 → 日程费用 → 周日账单 → 预计余额，并给出赚钱途径 */}
-      <div className={`mb-3 rounded-sm border p-3 ${projMoney < 0 ? "border-danger/50 bg-danger/5" : "border-line"}`}>
-        <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
-          {[
-            ["现有", wallet.fmt(wallet.balance(s)), "text-ink"],
-            ["日程费用", feeSum ? `−${wallet.fmt(feeSum)}` : "—", "text-danger"],
-            ["周日账单", sunBill.total ? `−${wallet.fmt(sunBill.total)}` : "—", "text-danger"],
-            ["预计周末余额", wallet.fmt(projMoney), projMoney < 0 ? "text-danger" : "text-jade-deep"],
-          ].map(([k, v, c]) => (
-            <div key={k}><p className="text-[10.5px] text-ink-soft">{k}</p><p className={`text-[14px] font-bold tabular-nums ${c}`}>{v}</p></div>
-          ))}
-        </div>
-        {(feeItems.length > 0 || sunBill.lines.length > 0) && (
-          <details className="mt-2 text-[11px] text-ink-soft">
-            <summary className="cursor-pointer select-none font-semibold text-ink">扣款明细（何时扣、扣什么）</summary>
-            <ul className="mt-1.5 space-y-0.5">
-              {feeItems.map((f) => <li key={f}>· 当天扣：{f}</li>)}
-              {sunBill.lines.map((l) => <li key={l.label}>· 周日自动扣：{l.label} {l.amount < 0 ? `收入 ${wallet.fmt(-l.amount)}` : wallet.fmt(l.amount)}</li>)}
-            </ul>
-          </details>
-        )}
-        <p className="mt-2 text-[11px] leading-snug text-ink-soft">
-          <b className="text-ink">怎么赚钱：</b>日程里排「打工」按天领工钱；接下{T("gig")}后排「拍摄」，完工领片酬；名气越高，能接的活越多、越贵。
-        </p>
+      <div className="mb-2 flex justify-end gap-2 text-[11.5px]">
+        <button onClick={() => fillWeek("rest")} className="text-ink-soft transition hover:text-jade">余下休息</button>
+        <span className="text-line">·</span>
+        <button onClick={() => fillWeek(null)} className="text-ink-soft transition hover:text-danger">清空</button>
       </div>
 
       {/* 七天日程卡 */}
@@ -207,8 +195,8 @@ export default function ScheduleBoard({ open, onClose }: { open: boolean; onClos
             <button onClick={() => chooseAct(null)} className="text-[11.5px] text-ink-soft transition hover:text-danger">留空</button>
           </div>
 
-          {CAT_ORDER.map((c) => {
-            const meta = CAT_META[c];
+          {(() => { const cc = catCfg(); return cc.order.filter((c) => !cc.meta[c].hidden).map((c) => {
+            const meta = cc.meta[c];
             const CatHead = (
               <div className="mb-1.5 flex items-baseline gap-2">
                 <span className="inline-block h-2 w-2 rounded-full" style={{ background: meta.dot }} />
@@ -323,7 +311,7 @@ export default function ScheduleBoard({ open, onClose }: { open: boolean; onClos
             }
 
             // 休息 / 外出社交：从固定活动集取
-            const ids = c === "rest" ? ["rest", "recuperate"] : WEEKEND_ACTS.filter((w) => w.id !== "recuperate").map((w) => w.id);
+            const ids = [...(c === "rest" ? ["rest"] : []), ...WEEKEND_ACTS.filter((w) => weekendCat(w) === c).map((w) => w.id)];
             const group = ids.map((id) => describeAct(s, id)).filter((x): x is ActInfo => !!x);
             if (!group.length) return null;
             return (
@@ -352,7 +340,7 @@ export default function ScheduleBoard({ open, onClose }: { open: boolean; onClos
                 </div>
               </div>
             );
-          })}
+          }); })()}
         </div>
       )}
 
@@ -379,7 +367,7 @@ export default function ScheduleBoard({ open, onClose }: { open: boolean; onClos
                     <span className="text-[12px] font-medium text-ink">{m.name}{chosen && <span className="ml-1 text-[10px] text-jade"><StatusMark kind="ok">已排</StatusMark></span>}</span>
                     <span className="shrink-0 text-[10.5px] font-semibold tabular-nums text-danger">¥{m.cost.toLocaleString("zh-CN")}</span>
                   </span>
-                  <span className="mt-0.5 block text-[10.5px] leading-snug text-ink-soft">{why ? `未解锁：${why}` : mealEffect(m)}</span>
+                  <span className="mt-0.5 block text-[10.5px] leading-snug text-ink-soft">{why ? `未解锁：${why}` : mealEffect(m, attrLabels)}</span>
                 </button>
               );
             })}

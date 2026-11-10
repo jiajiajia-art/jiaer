@@ -1,3 +1,5 @@
+import AiRoutePicker from "./AiRoutePicker";
+import { addTempAsset, keepAsset, isAssetKept } from "../lib/freeStyle";
 import { useEffect, useRef, useState } from "react";
 import { compressImage } from "../lib/freeStyle";
 import { generatePlatformImage, platformImageConfigured } from "../lib/platformImageGen";
@@ -126,6 +128,8 @@ export default function AiImageGen({
       });
       if (ac.signal.aborted) return;
       setImg(url);
+      addTempAsset(url);
+      setKept(false);
       // 功能注释：仅显式 autoApply 时跳过结果页（旧调用兼容）；默认要玩家点「使用这张图」
       if (autoApply) {
         onPickRef.current(url);
@@ -169,6 +173,7 @@ export default function AiImageGen({
     }
   };
 
+  const [kept, setKept] = useState(false);
   const locked = phase === "busy";
   const showResult = phase === "done" && !!img;
 
@@ -180,6 +185,8 @@ export default function AiImageGen({
           请先登录平台账号后再生图（使用运营后台「生图配置」的 epone / ggb）。未登录时也可在「设置 · AI 配置」填写个人生图模型兜底。
         </p>
       )}
+
+      {ok && !locked && <AiRoutePicker capability="image" compact />}
 
       {showResult ? (
         <div className="space-y-3">
@@ -211,6 +218,19 @@ export default function AiImageGen({
               className="rounded-full bg-ink py-2.5 text-[13px] font-bold text-paper transition"
             >
               使用这张图
+            </button>
+          </div>
+          <div className="flex items-center justify-between gap-2 rounded-xl bg-paper-2 px-3 py-2">
+            <p className="min-w-0 text-[11px] leading-snug text-ink-soft">
+              {kept || isAssetKept(img) ? "已收藏到素材库，长期保留。" : "已暂存到素材库，7 天内没用到会自动清除。"}
+            </p>
+            <button
+              type="button"
+              disabled={kept || isAssetKept(img)}
+              onClick={() => { keepAsset(img); setKept(true); }}
+              className="shrink-0 rounded-full border border-ink/20 bg-paper px-3 py-1 text-[11.5px] font-bold text-ink transition disabled:opacity-50"
+            >
+              {kept || isAssetKept(img) ? "已收藏" : "收藏到素材库"}
             </button>
           </div>
         </div>

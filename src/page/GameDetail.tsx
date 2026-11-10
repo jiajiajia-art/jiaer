@@ -21,6 +21,7 @@ import {
     coverUrlAfterDisplayCoverError,
 } from '../utils/constants';
 import { consumeShelfResumeOnce, readGameDetailPreview, readShelfResume } from '../utils/gameDetailNavigation';
+import { recordBrowsingHistory } from '../utils/browsingHistory';
 import { MdContentCopy } from 'react-icons/md';
 import AuthModal from '../components/AuthModal';
 import LoadSaveListModal from '../components/CreateGame/LoadSaveListModal';
@@ -36,6 +37,7 @@ import gamePromotionApi from '../api/promotion/gamePromotionApi';
 import { getOrCreatePromoAnonId } from '../utils/promoAnonId';
 import { copyTextToClipboard } from '../utils/clipboard';
 import GameRating from '../components/GameRating/GameRating';
+import { resolveRatingDisplay } from '../utils/ratingDisplay';
 import {
     GameIssueFeedbackModal,
     GameRatingModal,
@@ -97,7 +99,6 @@ const isWebViewEnv = (): boolean => {
 // 常量
 const LIKE_DEBOUNCE_DELAY = 300;
 const FAVORITE_DEBOUNCE_DELAY = 300;
-const DEFAULT_RATING = '9.0';
 const DEFAULT_AVATAR_PATH = 'data/assets/defaultAvatar.png';
 const DEFAULT_PLAY_STATUS = {
     hasContinueState: true,
@@ -292,7 +293,8 @@ const GameDetail: React.FC = () => {
     const [myRatingValue, setMyRatingValue] = useState<number | null>(null);
     const [myRatingComment, setMyRatingComment] = useState('');
     const [myRatingEditCount, setMyRatingEditCount] = useState(0);
-    const [ratingAvgDisplay, setRatingAvgDisplay] = useState<string | null>(null);
+    /** 功能注释：五星制平均分 + 评分人数；展示时由 resolveRatingDisplay 换算十分制 */
+    const [ratingStats, setRatingStats] = useState<{ average: number | null; count: number } | null>(null);
     /** 功能注释：评分弹窗提交后刷新评论区列表（复用同一数据源） */
     const [commentsRefreshKey, setCommentsRefreshKey] = useState(0);
     const [isInteractiveVideoAccessLoading, setIsInteractiveVideoAccessLoading] = useState(false);
@@ -309,6 +311,7 @@ const GameDetail: React.FC = () => {
 
     // Refs
     const likeDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const likeBaselineRef = useRef<{ liked: boolean; count: number } | null>(null);
     const favoriteDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const hasRecordedViewRef = useRef(false);
     
@@ -588,7 +591,7 @@ const GameDetail: React.FC = () => {
             setIsFavorited(Boolean(gameData.isFavorited));
             setLikeCount(gameData.like_count || 0);
             if (gameData.rating_avg != null && String(gameData.rating_avg).trim()) {
-                setRatingAvgDisplay(String(gameData.rating_avg));
+                setRatingStats({ average: Number(gameData.rating_avg), count: Number(gameData.rating_count) || 0 });
             }
             setGameDetailToStore(gameData);
         };
@@ -685,6 +688,12 @@ const GameDetail: React.FC = () => {
     }, [fileIdParam, userId]);
 
     // 浏览统计：详情加载完成且已登录后只记一次
+    useEffect(() => {
+        if (!userId || !fileId || !game) return;
+        if (String(game.file_id || game.id) !== String(fileId)) return;
+        recordBrowsingHistory(userId, game);
+    }, [fileId, userId, game]);
+
     useEffect(() => {
         if (!RECORD_CONVERSION || !userId || !fileId || !game || hasRecordedViewRef.current) {
             return;
@@ -1194,38 +1203,56 @@ const GameDetail: React.FC = () => {
         }
         if (isLikeLoading) return;
 
+        // 功能注释：点赞接口是切换式；防抖窗口内记下点击前的服务端状态，连点回到原状态则取消请求
         if (likeDebounceTimerRef.current) {
             clearTimeout(likeDebounceTimerRef.current);
+            likeDebounceTimerRef.current = null;
+        } else {
+            likeBaselineRef.current = { liked: isLiked, count: likeCount };
+        }
+
+        // 功能注释：乐观更新——点击即变色、数字±1；防抖后以服务端结果为准，失败回滚并提示，禁止静默无反应
+        const baseline = likeBaselineRef.current ?? { liked: isLiked, count: likeCount };
+        const prevLiked = baseline.liked;
+        const prevCount = baseline.count;
+        const optimisticLiked = !isLiked;
+        setIsLiked(optimisticLiked);
+        setLikeCount(Math.max(0, prevCount + (optimisticLiked === prevLiked ? 0 : optimisticLiked ? 1 : -1)));
+        if (optimisticLiked === prevLiked) {
+            likeBaselineRef.current = null;
+            return;
         }
 
         likeDebounceTimerRef.current = setTimeout(async () => {
-            if (!fileId || !userId) return;
+            if (!fileId) return;
 
             setIsLikeLoading(true);
             try {
                 const response = await GameAction.gameLike({
                     fileId,
                 });
-
-                if (response.data.success && response.data.data) {
-                    const { isLiked, likeCount: newLikeCount } = response.data.data;
-                    // 只更新本地状态，不重新拉取整个游戏数据
-                    setIsLiked(isLiked);
-                    setLikeCount(newLikeCount);
-                    // 同步更新游戏数据中的点赞信息
-                    if (game) {
-                        setGame({
-                            ...game,
-                            reaction: isLiked ? 'like' : '0',
-                            like_count: newLikeCount,
-                        });
-                    }
+                const data = response.data?.data;
+                if (!response.data?.success || !data) {
+                    throw new Error(response.data?.message || 'like failed');
                 }
+                const nextLiked = typeof data.isLiked === 'boolean' ? data.isLiked : optimisticLiked;
+                const nextCount = typeof data.likeCount === 'number'
+                    ? data.likeCount
+                    : Math.max(0, prevCount + (nextLiked ? 1 : -1));
+                setIsLiked(nextLiked);
+                setLikeCount(nextCount);
+                setGame((current) => (current
+                    ? { ...current, reaction: nextLiked ? 'like' : '0', like_count: nextCount }
+                    : current));
             } catch (error) {
                 console.error('点赞失败:', error);
+                setIsLiked(prevLiked);
+                setLikeCount(prevCount);
+                toast.error(t('gameDetail.likeFailed'));
             } finally {
                 setIsLikeLoading(false);
                 likeDebounceTimerRef.current = null;
+                likeBaselineRef.current = null;
             }
         }, LIKE_DEBOUNCE_DELAY);
     };
@@ -1583,7 +1610,10 @@ const GameDetail: React.FC = () => {
         );
     }
 
-    const displayRating = ratingAvgDisplay ?? game.rating_avg ?? DEFAULT_RATING;
+    const ratingDisplay = resolveRatingDisplay(
+        ratingStats?.average ?? game.rating_avg,
+        ratingStats?.count ?? game.rating_count,
+    );
     const fallbackUpdateNote = game.version_notes?.trim() || '';
     const latestNote = latestUpdateLog?.note || fallbackUpdateNote;
     const latestNoteAt = latestUpdateLog?.createdAt || game.updated_at;
@@ -1634,10 +1664,22 @@ const GameDetail: React.FC = () => {
                             <h2 className={styles.heroGameTitle}>
                                 {game.title || t('gameDetail.unnamedGame')}
                             </h2>
-                            <span className={styles.ratingBadge} aria-label={`${displayRating}`}>
-                                <span className={styles.ratingBadgeStar} aria-hidden="true">★</span>
-                                {displayRating}
-                            </span>
+                            {ratingDisplay.hasScore ? (
+                                <span
+                                    className={styles.ratingBadge}
+                                    aria-label={t('gameDetail.ratingScoreAria', { score: ratingDisplay.score, count: ratingDisplay.count })}
+                                >
+                                    <span className={styles.ratingBadgeStar} aria-hidden="true">★</span>
+                                    {ratingDisplay.score}
+                                    <span className={styles.ratingBadgeCount}>
+                                        {t('gameDetail.ratingCount', { count: ratingDisplay.count })}
+                                    </span>
+                                </span>
+                            ) : (
+                                <span className={`${styles.ratingBadge} ${styles.ratingBadgeEmpty}`}>
+                                    {t('gameDetail.ratingNone')}
+                                </span>
+                            )}
                         </div>
                         {heroAuthorName ? (
                             <div className={styles.heroMetaActions}>
@@ -1893,9 +1935,8 @@ const GameDetail: React.FC = () => {
                                 fileId={fileId}
                                 mode="comments"
                                 onRatingChange={(summary) => {
-                                    if (summary.average > 0) {
-                                        setRatingAvgDisplay(summary.average.toFixed(1));
-                                    }
+                                    // 功能注释：以评论区实时汇总为准（含新提交的评分）
+                                    setRatingStats({ average: summary.average, count: summary.total });
                                 }}
                                 onUserRatingChange={applyUserRatingFromComments}
                             />

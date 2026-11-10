@@ -56,17 +56,19 @@ test('worldGenTwoPhase_默认核心细项折叠为两次串联大类', async () 
   assert.ok(gen.WORLD_GEN_ROOMS_COUNT >= 3 && gen.WORLD_GEN_ROOMS_COUNT <= 8);
   assert.equal(gen.isWorldGenTwoPhaseBatch(gen.WORLD_GEN_PHASE1_BATCH_ID), true);
   assert.equal(gen.isWorldGenTwoPhaseBatch(gen.WORLD_GEN_PHASE2_BATCH_ID), true);
+  assert.equal(gen.isWorldGenTwoPhaseBatch(gen.WORLD_GEN_PHASE3_BATCH_ID), true);
 
   const ids = [...wiz.DEFAULT_WORLD_GEN_EDITOR_STEP_IDS];
   const batches = gen.resolveWorldGenBatches(ids);
   assert.deepEqual(
     batches.map((b) => b.id),
-    [gen.WORLD_GEN_PHASE1_BATCH_ID, gen.WORLD_GEN_PHASE2_BATCH_ID],
+    [gen.WORLD_GEN_PHASE1_BATCH_ID, gen.WORLD_GEN_PHASE2_BATCH_ID, gen.WORLD_GEN_PHASE3_BATCH_ID],
   );
   const waves = gen.partitionWorldGenBatchWaves(batches.map((b) => b.id));
-  assert.deepEqual(waves, [[gen.WORLD_GEN_PHASE1_BATCH_ID], [gen.WORLD_GEN_PHASE2_BATCH_ID]]);
+  assert.deepEqual(waves, [[gen.WORLD_GEN_PHASE1_BATCH_ID], [gen.WORLD_GEN_PHASE2_BATCH_ID], [gen.WORLD_GEN_PHASE3_BATCH_ID]]);
   assert.equal(gen.worldGenBatchMaxTokens(batches[0].stepIds), 16000);
-  assert.equal(gen.worldGenBatchMaxTokens(batches[1].stepIds), 16000);
+  assert.equal(gen.worldGenBatchMaxTokens(batches[1].stepIds), 10000);
+  assert.equal(gen.worldGenBatchMaxTokens(batches[2].stepIds), 10000);
 });
 
 test('worldGenTwoPhase_运行时严格两次请求且串行_缺日期本地兜底', async () => {
@@ -128,7 +130,7 @@ test('worldGenTwoPhase_运行时严格两次请求且串行_缺日期本地兜�
           },
         });
       }
-      if (last.includes('当前大类：「人物地点事件结局」')) {
+      if (last.includes('当前大类：「人物与地点」')) {
         callOrder.push('phase2');
         return JSON.stringify({
           content: {
@@ -136,6 +138,15 @@ test('worldGenTwoPhase_运行时严格两次请求且串行_缺日期本地兜�
             rooms: tenRooms(),
             startRoom: 'room1',
             locations: Object.keys(tenRooms()).map((id) => ({ id, name: tenRooms()[id].name })),
+          },
+        });
+      }
+      if (last.includes('当前大类：「事件与剧情线」')) {
+        callOrder.push('phase3');
+        // 功能注释：第 3 次须看到第 2 次已生成的人物/地点上下文
+        assert.match(last, /room1|沈|n1/, '事件剧情请求须带上人物地点上下文');
+        return JSON.stringify({
+          content: {
             fixedEvents: fiveFixedEvents(),
             storylines: [{
               id: 'main',
@@ -151,8 +162,8 @@ test('worldGenTwoPhase_运行时严格两次请求且串行_缺日期本地兜�
     cfg: { baseUrl: 'https://example.test/v1', apiKey: 'k', model: 'm' },
   });
 
-  assert.equal(calls, 2, '核心流程必须恰好两次请求');
-  assert.deepEqual(callOrder, ['phase1', 'phase2']);
+  assert.equal(calls, 3, '核心流程恰好三次请求');
+  assert.deepEqual(callOrder, ['phase1', 'phase2', 'phase3']);
   assert.equal(maxInflight, 1, '两次必须串联，禁止并行');
   assert.equal(result.progress.doneCount, ids.length);
   assert.equal(result.progress.failedCount, 0);

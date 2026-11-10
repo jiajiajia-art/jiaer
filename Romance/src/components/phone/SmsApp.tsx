@@ -1,4 +1,5 @@
 /* 信息：仿 iOS「信息」（大标题、搜索栏、圆头像列表、蓝色强调、iMessage 气泡由 ChatView 提供） */
+import { canInitiate } from "../../game/msgPref";
 import { useState } from "react";
 import { useGame } from "../../store/gameCtx";
 import { Avatar } from "../ui";
@@ -51,7 +52,7 @@ export default function SmsApp({ onBack }: { onBack: () => void }) {
   /* 右上角刷新：联动剧情生成新短信（服务号通知 + 联系人短信） */
   useWorldSync("sms", async () => {
     const g0 = ensurePhone(game!);
-    const people = g0.phone!.contacts.map((id) => g0.npcs.find((n) => n.id === id)).filter((n): n is NonNullable<typeof n> => !!n);
+    const people = g0.phone!.contacts.filter((id) => canInitiate(g0, id)).map((id) => g0.npcs.find((n) => n.id === id)).filter((n): n is NonNullable<typeof n> => !!n);
     const res = await syncJson<{ notices?: unknown; texts?: unknown }>(cfg, g0, "sms", "信息",
       `为手机短信生成新内容。1) notices：1~3 条服务号/机构短信（如经纪公司、剧组${T("gig")}、片方、银行、快递、运营商），sender 为机构名（≤12 字），text ≤90 字，内容需与当前剧情/行程相关；2) texts：0~2 条联系人发来的短信，pid 只能从【联系人】中选。
 【联系人】${people.map((n) => `${n.id}=${n.name}`).join("、") || "（无）"}

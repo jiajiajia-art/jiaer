@@ -102,11 +102,14 @@ function PrimList({ k, v, onChange, labels }: { k: string; v: Json[]; onChange: 
 }
 
 /* 对象：简单字段排成网格，复杂字段折叠在下方 */
-export function ObjForm({ v, onChange, labels, depth = 0 }: { v: Obj; onChange: (v: Obj) => void; labels?: Record<string, string>; depth?: number }) {
+export function ObjForm({ v, onChange, labels, depth = 0, templates }: { v: Obj; onChange: (v: Obj) => void; labels?: Record<string, string>; depth?: number;
+  /** 功能注释：按字段名给对象列表提供条目样板；空列表也能识别为条目列表并按样板新增（玩法包通用模板用） */
+  templates?: Record<string, Obj>; }) {
   const entries = Object.entries(v);
+  const isObjList = (k: string, x: Json) => Array.isArray(x) && (!!templates?.[k] || !(x as Json[]).every(isPrim));
   const prims = entries.filter(([, x]) => isPrim(x));
-  const lists = entries.filter(([, x]) => Array.isArray(x) && (x as Json[]).every(isPrim));
-  const complex = entries.filter(([, x]) => !isPrim(x) && !(Array.isArray(x) && (x as Json[]).every(isPrim)));
+  const lists = entries.filter(([k, x]) => Array.isArray(x) && !isObjList(k, x));
+  const complex = entries.filter(([k, x]) => !isPrim(x) && !(Array.isArray(x) && !isObjList(k, x)));
   const set = (k: string, x: Json) => onChange({ ...v, [k]: x });
   return (
     <div className="space-y-2">
@@ -118,8 +121,8 @@ export function ObjForm({ v, onChange, labels, depth = 0 }: { v: Obj; onChange: 
       )}
       {complex.map(([k, x]) => (
         <Fold key={k} title={lab(k, labels)} hint={Array.isArray(x) ? `${x.length} 项` : isObj(x) ? `${Object.keys(x).length} 项设定` : ""} depth={depth}>
-          {Array.isArray(x) ? <ObjList v={x as Obj[]} labels={labels} depth={depth + 1} onChange={(n) => set(k, n)} />
-            : <ObjForm v={x as Obj} labels={labels} depth={depth + 1} onChange={(n) => set(k, n)} />}
+          {Array.isArray(x) ? <ObjList v={x as Obj[]} labels={labels} depth={depth + 1} template={templates?.[k]} templates={templates} onChange={(n) => set(k, n)} />
+            : <ObjForm v={x as Obj} labels={labels} depth={depth + 1} templates={templates} onChange={(n) => set(k, n)} />}
         </Fold>
       ))}
     </div>
@@ -141,7 +144,7 @@ function Fold({ title, hint, depth, children, open }: { title: string; hint?: st
 
 const PAGE = 20;
 /* 对象数组：条目卡片，可搜索 / 新增 / 复制 / 上下移 / 删除 */
-export function ObjList({ v, onChange, labels, depth = 0, addLabel = "＋ 新增一项", template }: { v: Obj[]; onChange: (v: Obj[]) => void; labels?: Record<string, string>; depth?: number; addLabel?: string; template?: Obj }) {
+export function ObjList({ v, onChange, labels, depth = 0, addLabel = "＋ 新增一项", template, templates }: { v: Obj[]; onChange: (v: Obj[]) => void; labels?: Record<string, string>; depth?: number; addLabel?: string; template?: Obj; templates?: Record<string, Obj> }) {
   const [q, setQ] = useState("");
   const [page, setPage] = useState(0);
   const shown = useMemo(() => {
@@ -173,7 +176,7 @@ export function ObjList({ v, onChange, labels, depth = 0, addLabel = "＋ 新增
               <button type="button" className={`${btn} hover:!border-danger hover:!text-danger`} onClick={() => onChange(v.filter((_, j) => j !== i))} aria-label="删除">×</button>
             </span>
           </summary>
-          <div className="border-t border-line/50 px-2 py-2"><ObjForm v={o} labels={labels} depth={depth + 1} onChange={(n) => setAt(i, n)} /></div>
+          <div className="border-t border-line/50 px-2 py-2"><ObjForm v={o} labels={labels} depth={depth + 1} templates={templates} onChange={(n) => setAt(i, n)} /></div>
         </details>
       ))}
       {q && !shown.length && <p className="text-[11px] text-ink-soft">没有匹配「{q}」的条目。</p>}
@@ -190,24 +193,32 @@ export function ObjList({ v, onChange, labels, depth = 0, addLabel = "＋ 新增
 }
 
 /* 整个内容槽的入口：未填写只提示；填写后可移除。不预填、不提供娱乐圈一键载入。 */
-export default function SlotDataEditor<T>({ value, onChange, labels, emptyText, note }: {
+export default function SlotDataEditor<T>({ value, onChange, labels, emptyText, note, starter, templates }: {
   value: T | undefined; onChange: (v: T | undefined) => void;
   labels?: Record<string, string>; emptyText: string; note?: ReactNode;
   /** @deprecated 已不再预填内置数据；保留以免旧调用方类型报错 */
   defaults?: () => T;
+  /** 功能注释：通用模板（引擎参数 + 空内容列表，不含娱乐圈属性）；提供则空状态可「用通用模板开始」 */
+  starter?: () => T;
+  /** 功能注释：各对象列表的条目样板（按字段名） */
+  templates?: Record<string, Record<string, unknown>>;
 }) {
+  const tpl = templates as Record<string, Obj> | undefined;
   if (value === undefined) {
     return (
       <div className="rounded-xl border border-dashed border-line p-3 text-center text-[11.5px] text-ink-soft">
         {emptyText}
+        {starter && (
+          <button type="button" className={`${btn} ml-2`} onClick={() => onChange(starter())}>用通用模板开始</button>
+        )}
       </div>
     );
   }
   return (
     <div className="space-y-2">
       {note && <p className="text-[11px] leading-snug text-ink-soft">{note}</p>}
-      {isObj(value) ? <ObjForm v={value as Obj} labels={labels} onChange={(n) => onChange(n as T)} />
-        : Array.isArray(value) ? <ObjList v={value as Obj[]} labels={labels} onChange={(n) => onChange(n as T)} />
+      {isObj(value) ? <ObjForm v={value as Obj} labels={labels} templates={tpl} onChange={(n) => onChange(n as T)} />
+        : Array.isArray(value) ? <ObjList v={value as Obj[]} labels={labels} templates={tpl} onChange={(n) => onChange(n as T)} />
         : null}
       <div className="flex flex-wrap gap-1.5 border-t border-line/50 pt-2">
         <button type="button" className={`${btn} hover:!border-danger hover:!text-danger`} onClick={() => onChange(undefined)}>移除此项（不再由本模组提供）</button>

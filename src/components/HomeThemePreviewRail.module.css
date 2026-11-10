@@ -662,3 +662,68 @@
         font-size: 14px;
     }
 }
+
+/* ===== 样式调优：标签轻量化 + 顶部/底部托底渐变，标签与标题都保留但不再压图（只改样式） ===== */
+.coverWrap::before {
+    background:
+        linear-gradient(180deg, rgba(6, 9, 14, 0.5) 0%, rgba(6, 9, 14, 0) 26%),
+        linear-gradient(180deg, rgba(6, 9, 14, 0) 45%, rgba(6, 9, 14, 0.6) 72%, rgba(6, 9, 14, 0.94) 100%);
+}
+
+.badgeGroup {
+    flex-wrap: nowrap;
+    overflow: hidden;
+    min-width: 0;
+}
+
+.themeBadge,
+.typeTag {
+    flex-shrink: 0;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.themeBadge {
+    background: rgba(0, 0, 0, 0.42);
+    color: rgba(255, 255, 255, 0.92);
+}
+
+.title {
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+}
+
+@media (max-width: 768px) {
+    .coverTopRow {
+        top: 8px;
+        left: 8px;
+        right: 8px;
+        gap: 6px;
+    }
+
+    .badgeGroup {
+        gap: 4px;
+    }
+
+    /* 标签缩小为细胶囊，只占封面顶部一条窄边 */
+    .themeBadge,
+    .typeTag {
+        min-height: 20px;
+        padding: 3px 8px;
+        font-size: 10px;
+        font-weight: 600;
+        line-height: 14px;
+    }
+
+    .coverBottomRow {
+        gap: 8px;
+        padding: 56px 12px 12px;
+    }
+
+    .title {
+        font-size: 17px;
+    }
+
+    .authorName {
+        max-width: 7em;
+    }
+}

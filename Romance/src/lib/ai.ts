@@ -567,7 +567,7 @@ export function buildSystemPrompt(state: GameState): string {
   // 功能注释：剧本基调必须来自作品；留空时不注入娱乐圈引擎的默认 GM 话术。
   return `${getWorldPromptHeader()}
 
-${engineRulesBlock(rulesOf(state), (id) => state.npcs.find((n) => n.id === id)?.name)}${limDays > 0 ? `【主线时限】整个故事${state.timeLimit?.endDate ? `截止于 ${state.timeLimit.endDate}` : `只有 ${state.timeLimit!.value}${TIME_UNIT_LABEL[state.timeLimit!.unit]}`}（共 ${limDays} 天），当前第 ${(state.sim?.day ?? 0)} 天，剩余 ${Math.max(0, limDays - (state.sim?.day ?? 0))} 天。叙事节奏须与之匹配，不得写超出时限的情节。\n\n` : ""}【主角设定】
+${engineRulesBlock(rulesOf(state), (id) => state.npcs.find((n) => n.id === id)?.name)}${limDays > 0 ? `【本局时限】整个故事${state.timeLimit?.endDate ? `截止于 ${state.timeLimit.endDate}` : `只有 ${state.timeLimit!.value}${TIME_UNIT_LABEL[state.timeLimit!.unit]}`}（共 ${limDays} 天），当前第 ${(state.sim?.day ?? 0)} 天，剩余 ${Math.max(0, limDays - (state.sim?.day ?? 0))} 天。叙事节奏须与之匹配，不得写超出时限的情节。\n\n` : ""}【主角设定】
 姓名：${p.name}｜年龄：${p.age}｜性别：${p.gender}｜身份：${p.identity}｜家世：${p.background}｜阶层：${p.klass}
 ${(p.extra ?? []).map((e) => `${e.label}：${e.value}`).join("｜") || ""}
 人设：${p.description}

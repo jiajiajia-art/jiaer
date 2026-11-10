@@ -2,6 +2,7 @@
  * 功能注释：创作者侧把「玩法 Mod / 手机应用」草稿打成专属 .kkmod，供 Mod 商店安装引用。
  */
 import type { Mod } from "../mods/types.ts";
+import { packModFiles } from "../mods/kkmod/files";
 import {
   packKkmod,
   type ComponentKind,
@@ -88,6 +89,8 @@ export function kkmodPackageFromPlayMod(mod: Mod): KkmodPackage {
         dependencies: mod.dependencies || [],
         content: mod.content || {},
       },
+      // 功能注释：材质包式文件目录（同路径覆盖原版）；旧客户端继续读 payload.mod
+      ...packModFiles(mod.content as Record<string, unknown> | undefined),
     },
   };
 }

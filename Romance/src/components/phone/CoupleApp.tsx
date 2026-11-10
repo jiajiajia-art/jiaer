@@ -1,4 +1,5 @@
 import { IconSpark, IconHeart, IconMail, IconCalendar } from "../../lib/icons";
+import { canInitiate } from "../../game/msgPref";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useGame } from "../../store/gameCtx";
 import { isConfigured } from "../../lib/ai";
@@ -155,7 +156,7 @@ function CoupleInner({ data, update, onBack }: { data: CoupleData; update: (fn: 
 
   // TA 主动来信：距上次 TA 的信 ≥ 3 个游戏日，每天判定一次（约六成概率）
   useEffect(() => {
-    if (!space || !npc || !online || space.proactiveDay === day) return;
+    if (!space || !npc || !online || space.proactiveDay === day || !canInitiate(g, npc.id)) return;
     const lastChar = Math.max(space.since, ...space.letters.filter((l) => l.from === "char").map((l) => l.day));
     if (day - lastChar < 3) return;
     setSpace((s) => ({ ...s, proactiveDay: day }));

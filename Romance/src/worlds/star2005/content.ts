@@ -443,7 +443,7 @@ export type RoomContent = {
 /* 交通方式：fareMul 乘基础车费（hops×feePerHop），timeMul 乘基础耗时；ownCar=需自有座驾 */
 export type TransportMode = { id: string; label: string; fareMul: number; timeMul: number; note: string; fee?: number /* 作者配置：公共交通每趟票价（优先于 fareMul；自有座驾不收） */; ownCar?: boolean; icon?: string };
 export type TravelContent = {
-  minutesPerHop: number; feePerHop: number; energyPerHop: number; apPerTurn?: number; apPerMove?: number; dayStartMinute?: number; dayEndMinute?: number;
+  minutesPerHop: number; feePerHop: number; energyPerHop: number; apPerTurn?: number; apPerMove?: number; apPerAct?: number; apPerTalk?: number; dayStartMinute?: number; dayEndMinute?: number;
   advanceDays?: number; // 每次「推进」前进的天数（缺省 1；推进单位为「日」时生效）
   advanceUnit?: "day" | "week" | "month" | "year"; // 推进单位（缺省 日）
   advanceCount?: number; // 周/月/年模式下每次推进几个单位（1~12，缺省 1）

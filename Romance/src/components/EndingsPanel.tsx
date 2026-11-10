@@ -9,7 +9,7 @@ import IntInput from "./IntInput";
 import { matchCustomEnding, groupMet, endingCondsMet, evalFixedCond, condCurrent, metricDefaultFull } from "../game/fixedEvents";
 import { dayDateLabel, endingText, startDateLabel } from "../game/logic";
 import { creationCopy, type CreationPath, type StatsSlot } from "../game/data";
-import { FALLBACK_DIM_LABELS, dimValue, endingPillars } from "../game/grade";
+import { defaultGradeDims, dimValue, endingPillars } from "../game/grade";
 import { GROUP_BUILTIN, favorTargets, srcValue, valueSources, type ValueSrc } from "../game/valueSources";
 import { getWorldSlot } from "../mods/registry";
 import { GLYPHS } from "../lib/iconGlyphs";
@@ -253,7 +253,9 @@ export default function EndingsPanel({
     const label = !d.label.trim() || d.label === srcLabel(d.src) ? s.label.slice(0, 8) : d.label; // 名称没改过就跟着换
     patchDim(d.id, { src: { kind: s.kind, key: s.key }, label, full: fullOf(s) });
   };
-  const dimCards = sim ? endingPillars(sim, dims, game?.journal?.length ?? 0) : [];
+  // 未手配维度时，按本作品建角属性生成的默认维度（开局物化进存档）
+  const autoDims = dims.length ? [] : defaultGradeDims(modMode ? attrsValue : (game?.attrDefs ?? getWorldSlot("customAttrs")));
+  const dimCards = sim ? endingPillars(sim, dims.length ? dims : autoDims, game?.journal?.length ?? 0) : [];
   const groups = [...new Set(srcs.map((x) => x.group))];
   const shown = list.filter((e) => matches(q, e.title, e.body, e.subTitle));
 
@@ -263,7 +265,12 @@ export default function EndingsPanel({
       {!modMode && <ScopeBanner scope="save">这里的修改只影响当前存档，立即保存。作品自带的结局会在开新局时带入。</ScopeBanner>}
 
       {/* 区域 1｜结算时限设置 */}
-      <Area n={1} title="结算时限设置" desc="到达截止日期，自动触发结局结算，AI 叙事会遵守该时间限制。"
+      <Area n={1} title="本局天数上限 / 结算时限" desc={
+          <>
+            <p>本局日历天数到达上限时，无论进度如何都强制进入结局结算；AI 叙事会遵守该时间限制。</p>
+            <p className="mt-0.5">与「主线」里的节点完成条件无关：主线看条件推进，这里只决定玩够多少天是否强制收场。天数上限只在这里配置一处。</p>
+          </>
+        }
         right={
           <span className="flex shrink-0 gap-1">
             <button type="button" className={pill(!!tl)} onClick={() => !tl && setTl({ value: 365, unit: "day" })}>限时</button>
@@ -473,22 +480,31 @@ export default function EndingsPanel({
       <Area n={3} title="结局评级维度设置"
         desc={
           <>
-            <p>结算时，会根据这里配置的维度计算综合评级；最多支持 {GRADE_DIM_MAX} 个评级维度。</p>
+            <p>结算打分只看这里配置的维度；最多支持 {GRADE_DIM_MAX} 个评级维度。</p>
             <ul className="mt-0.5 list-disc space-y-0.5 pl-4">
-              <li>每个维度选择一项本作品指标，系统按数值自动换算评级（S+、S、A、B、C、D）与图标；</li>
+              <li>维度指标选自本作品建角属性 / 人物相关数值，系统按数值自动换算评级（S+、S、A、B、C、D）与图标；</li>
+              <li>未配置时，开局按本作品建角属性自动生成默认维度；没有属性则不评分，只显示「旅程结束」；</li>
               <li>综合评级取全部维度的平均；结局规则里单独指定了评级时，以结局的评级为准。</li>
             </ul>
           </>
         }>
         {dims.length === 0 && (
-          <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-dashed border-line px-2.5 py-2">
-            <span className="rounded-full bg-[var(--gold)]/15 px-2 text-[10.5px] font-bold leading-5 text-ink">兜底内置，可全部替换</span>
-            {Object.values(FALLBACK_DIM_LABELS).map((l) => {
-              const card = dimCards.find((c) => c.label === l);
-              return <span key={l} className="rounded-full border border-line bg-paper-2 px-2 text-[11.5px] leading-5 text-ink-soft">{l}{card ? <b className="ml-1 text-ink">{card.grade}</b> : null}</span>;
-            })}
-            <span className="w-full text-[11px] text-ink-soft">未配置维度时才使用这四项。添加任意一个维度后，兜底项全部停用。</span>
-          </div>
+          autoDims.length ? (
+            <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-dashed border-line px-2.5 py-2">
+              <span className="rounded-full bg-[var(--jade)]/12 px-2 text-[10.5px] font-bold leading-5 text-ink">按本作品属性自动生成</span>
+              {autoDims.map((d) => {
+                const card = dimCards.find((c) => c.id === d.id);
+                return <span key={d.id} className="rounded-full border border-line bg-paper-2 px-2 text-[11.5px] leading-5 text-ink-soft">{d.label}{card ? <b className="ml-1 text-ink">{card.grade}</b> : null}</span>;
+              })}
+              <button type="button" className="ml-auto text-[11.5px] font-semibold text-jade hover:underline" onClick={() => saveDims(autoDims.map((d) => ({ ...d, src: { ...d.src } })))}>改为手动配置</button>
+              <span className="w-full text-[11px] text-ink-soft">未手动配置时，开局按这些建角属性评级（满分取属性上限）。添加任意维度后以手动配置为准。</span>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed border-line px-2.5 py-3 text-center text-[12px] text-ink-soft">
+              请添加评级维度（选自本作品属性）
+              <span className="mt-0.5 block text-[11px]">未配置时结局不评分，只显示「旅程结束」。</span>
+            </div>
+          )
         )}
 
         {dims.map((d) => {

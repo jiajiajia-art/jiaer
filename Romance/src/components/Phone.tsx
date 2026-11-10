@@ -1,4 +1,5 @@
 import { loadData, saveData, loadGlobal, saveGlobal } from "../lib/saveScope";
+import { commTerm, isAncientComm } from "../lib/commSkin";
 import { useEffect, useRef, useState, type DragEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { useGame } from "../store/gameCtx";
 import { ensurePhone, gameTimeLabel } from "../game/phone";
@@ -27,13 +28,10 @@ import IncomingCall from "./phone/IncomingCall";
 import { logAppOpen, mailUnread } from "../game/phoneLink";
 import { useGameNow, renderWidget, isWidget, DEFAULT_WIDGET_SIZE, SHAPE_RADIUS, SHAPE_LABEL, nextShape, nextSize, type WidgetSize, type WidgetShape } from "./phone/Widgets";
 import { APP_ICON } from "./phone/appIcons";
-import { phoneAppAllowed, worldPhoneAppsCfg, worldPhoneHomeWallpaper } from "../mods/registry";
+import { phoneAppAllowed, worldPhoneAppsCfg, worldPhoneHomeWallpaper, worldPhoneCommSkinSet } from "../mods/registry";
 import { phoneAppLabel, preinstallIds } from "../lib/phoneAppsConfig";
 import { resolveEffectiveHomeWallpaper } from "./phone/wallpapers";
 import { liveTerm as T } from "../mods/live";
-import SlimePet from "./phone/studio/Slime";
-import { usePetMode, useStudioOpen } from "./phone/studio/pet";
-import { requestStudio } from "./phone/studio/review";
 import { usePlatformAppsCatalog } from "../lib/usePlatformAppsCatalog";
 import {
   platformAppLegacyUi,
@@ -80,8 +78,11 @@ const WIDGET_IDS = new Set(STORE.filter((s) => s.kind === "widget").map((s) => s
 const BUILTIN_LABEL: Record<string, string> = Object.fromEntries([...CORE.map((c) => [c.id, c.label]), ...STORE.map((s) => [s.id, s.label])]);
 /** 功能注释：显示名优先平台表，再模组覆盖，再内置名 */
 let platformNameLookup: (id: string) => string | undefined = () => undefined;
+/** 加载失败的图标地址（会话内缓存，避免反复请求） */
+const brokenIcons = new Set<string>();
 let platformIconLookup: (id: string) => string | undefined = () => undefined;
 const appLabel = (id: string) =>
+  (id === "wechat" && worldPhoneCommSkinSet() ? commTerm("app") : undefined) ||
   platformNameLookup(id) || phoneAppLabel(id, worldPhoneAppsCfg(), BUILTIN_LABEL[id] ?? id);
 /* 兼容旧引用：LABEL 仍导出内置表；运行时请用 appLabel() */
 const LABEL = BUILTIN_LABEL;
@@ -344,7 +345,7 @@ function PhoneInner() {
     if (a === "call") saveData(CALL_SEEN_KEY, Date.now());
     const plat = byId.get(a);
     const legacy = plat ? platformAppLegacyUi(plat.content) : "";
-    const label = plat?.name || appLabel(a);
+    const label = (a === "wechat" && worldPhoneCommSkinSet() ? undefined : plat?.name) || appLabel(a);
     // 线上联动：刷了哪个 App 记入手机流水，并消耗线下时间
     patchGame((g) => logAppOpen(g, a, label));
     if (plat) {
@@ -393,8 +394,6 @@ function PhoneInner() {
       })),
     ...UTILITY_CATALOG,
   ];
-  const petMode = usePetMode();
-  const studioOpen = useStudioOpen();
   // 其它应用请求跳转（如「设置 · 审核中心」→ 应用商店里的开发者工坊）
   useEffect(() => {
     const h = (e: Event) => { const id = (e as CustomEvent<string>).detail; if (id) setApp(id as AppId); };
@@ -461,7 +460,7 @@ function PhoneInner() {
     const iconUrl = plat?.icon ? resolvePlatformAppIconUrl(plat.icon) : "";
     return {
       id,
-      label: plat?.name || appLabel(id),
+      label: (id === "wechat" && worldPhoneCommSkinSet() ? undefined : plat?.name) || appLabel(id),
       node: iconUrl ? <img src={iconUrl} alt="" className="h-full w-full object-cover" /> : (APP_ICON[id] ?? null),
     };
   });
@@ -526,7 +525,7 @@ function PhoneInner() {
             )}
             {app !== null && (
               <div key={app} className="phone-app-in h-full min-h-0 overflow-hidden">
-                {app === "wechat" && <WeChatApp onBack={back} />}
+                {app === "wechat" && <div className={`h-full ${isAncientComm() ? "comm-ancient" : ""}`}><WeChatApp onBack={back} /></div>}
                 {app === "sms" && <SmsApp onBack={back} />}
                 {app === "call" && <CallApp onBack={back} />}
                 {app === "weibo" && <WeiboApp onBack={back} />}
@@ -566,10 +565,6 @@ function PhoneInner() {
             )}
           </div>
 
-          {/* 常驻桌宠：主屏与各应用里都在；工坊打开或锁屏时暂时隐藏 */}
-          {petMode === "pinned" && !studioOpen && !locked && (
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 top-10 z-[45]"><SlimePet onOpen={() => requestStudio()} /></div>
-          )}
 
           <HomeIndicator active={app !== null} light={!!chrome && !chrome.dark} onHome={back} />
 
@@ -590,7 +585,7 @@ function PhoneInner() {
               </span>
             </button>
           )}
-          {locked && <LockScreen previews={previews} onOpenChat={() => { setLocked(false); openApp("wechat" as AppId); }} dnd={prefs.dnd} notices={[["wechat", "绿信", unreadTotal, "条新消息"], ["sms", "信息", smsUnread, "条未读短信"], ["call", "电话", missedCalls, "个未接来电"]]} wallpaper={wp.css} radius={screenRadius} onUnlock={() => setLocked(false)} />}
+          {locked && <LockScreen previews={previews} onOpenChat={() => { setLocked(false); openApp("wechat" as AppId); }} dnd={prefs.dnd} notices={[["wechat", commTerm("app"), unreadTotal, "条新消息"], ["sms", "信息", smsUnread, "条未读短信"], ["call", "电话", missedCalls, "个未接来电"]]} wallpaper={wp.css} radius={screenRadius} onUnlock={() => setLocked(false)} />}
 
           {(prefs.brightness < 1 || prefs.dark) && (
             <div
@@ -782,9 +777,12 @@ function HomeGrid({ layout, installed, widgets, widgetSizes, widgetShapes, iconO
       className="absolute -left-1.5 -top-1.5 z-10 flex h-[20px] w-[20px] items-center justify-center rounded-full bg-black/70 text-[13px] font-bold text-white shadow ring-1 ring-white/20">−</span>
   );
 
+  const [, setBrokenTick] = useState(0);
   const AppTile = ({ id, i, inDock }: { id: string; i: number; inDock?: boolean }) => {
     const label = appLabel(id);
-    const customIcon = iconOverrides?.[id] || platformIconLookup(id);
+    const rawIcon = iconOverrides?.[id] || platformIconLookup(id);
+    // 功能注释：图标地址加载失败（404 / 跨域 / 未配 API 地址）时回退内置图标，避免出现空白方块
+    const customIcon = rawIcon && !brokenIcons.has(rawIcon) ? rawIcon : undefined;
     return (
       <button
         {...dragProps(id)} {...holdProps}
@@ -795,7 +793,7 @@ function HomeGrid({ layout, installed, widgets, widgetSizes, widgetShapes, iconO
         <span className="relative block">
         <span className="ios-icon relative block h-[56px] w-[56px] overflow-hidden rounded-[15px] shadow-[0_4px_12px_-4px_rgba(0,0,0,0.35)] ring-1 ring-inset ring-white/10 transition-transform duration-150 group-active:scale-90 group-active:brightness-90">
           {customIcon
-            ? <img src={customIcon} alt={label} className="h-full w-full scale-[1.14] object-cover" />
+            ? <img src={customIcon} alt={label} className="h-full w-full scale-[1.14] object-cover" onError={() => { brokenIcons.add(customIcon); setBrokenTick((n) => n + 1); }} />
             : (APP_ICON[id] ?? <span className="flex h-full w-full items-center justify-center bg-[#232323] text-white font-medium">{label[0]}</span>)}
         </span>
         {edit && canRemove(id) && <RemoveBtn id={id} />}

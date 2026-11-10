@@ -1,4 +1,5 @@
 import { loadData, saveData } from "../../lib/saveScope";
+import { commTerm } from "../../lib/commSkin";
 import { useMemo, useState } from "react";
 import { useGame } from "../../store/gameCtx";
 import { isConfigured } from "../../lib/ai";
@@ -174,7 +175,7 @@ const APPS: { id: Exclude<App, "home">; label: string; ai?: boolean }[] = [
   { id: "diary", label: "备忘录", ai: true },
   { id: "search", label: "搜索记录", ai: true },
   { id: "album", label: "相册" },
-  { id: "chats", label: "绿信" },
+  { id: "chats", get label() { return commTerm("app"); } },
   { id: "inner", label: "心声" },
   { id: "calls", label: "电话" },
 ];
@@ -340,7 +341,7 @@ function PeekAppLive({ onBack }: { onBack: () => void }) {
   if (locked) {
     const last = real.chat?.msgs[real.chat.msgs.length - 1];
     const notes: [ReactNode, string, string][] = [
-      ...(last ? [[APP_ICON.wechat, `绿信 · ${g.player.name}`, last.t] as [ReactNode, string, string]] : []),
+      ...(last ? [[APP_ICON.wechat, `${commTerm("app")} · ${g.player.name}`, last.t] as [ReactNode, string, string]] : []),
       ...(real.calls[0]?.missed ? [[APP_ICON.call, "电话", `${g.player.name} · ${real.calls[0].info}`] as [ReactNode, string, string]] : []),
     ];
     return (
@@ -485,7 +486,7 @@ function PeekAppLive({ onBack }: { onBack: () => void }) {
               </button>
             ))}
           </div>
-        ) : empty(online ? "没有聊天记录" : "TA 和你还没在绿信上聊过。接入 AI 后能推演 TA 和别人的私聊。"))}
+        ) : empty(online ? "没有聊天记录" : `TA 和你还没在${commTerm("app")}上聊过。接入 AI 后能推演 TA 和别人的私聊。`))}
         {app === "inner" && (real.inner.length ? (
           <div className="space-y-2.5 px-3 py-3">
             <p className="px-1 text-[11.5px] leading-relaxed text-[#8e8e93]">TA 和你聊天、通话时，嘴上说的和心里想的。全部来自你们真实的对话。</p>

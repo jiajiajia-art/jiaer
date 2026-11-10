@@ -232,14 +232,14 @@ export type GameState = {
   arrivalsFired?: string[]; // 已触发的条件抵达 id
   branch?: Branch; // 进行中的支线：点事件进入，主线暂停；本支线内行动不扣体力
   journal?: JournalEntry[]; // 剧情志：每一次触发的剧情事件独立成篇，可收藏、导出
-  timeLimit?: TimeLimit; // 主线时限：到期即强制进入结局
+  timeLimit?: TimeLimit; // 本局结算时限（日历天数上限）：到期即强制进入结局；与主线节点完成条件无关
   customEndings?: CustomEnding[]; // 自定义结局：按顺序判定，首个满足条件者生效
   factions?: Faction[]; // 阵营派系：声望存于 sim.flags["faction:<id>"]
   factionMode?: "full" | "lore"; // full = 声望参与数值（好感波及、商店价格、条件）；lore = 只把阵营标签当世界书关键词，不做数值运算
   timeline?: TimelineEntry[];
   engineRules?: Partial<EngineRules>; // 底层世界规则（判定 / 标记 / 随机 / 叙事权限 / 数值 / NPC / 记忆 / 媒体）；缺省项取默认
   memAt?: number; // 上次压缩主线记忆时的 turnCount（按 token 阈值触发压缩） // 主线复盘时间线：自动记录的关键变动（最近若干条）
-  gradeDims?: GradeDim[]; // 结局评定界面「各项等级判定」的维度（不设 = 内置可爱度/美丽度/成长度/故事完成度）
+  gradeDims?: GradeDim[]; // 结局评定界面「各项等级判定」的维度（不设 = 开局按本作品建角属性自动生成；无属性则无维度）
   randomGroups?: string[]; // 事件库中开启「随机触发」的分组 id（缺省 = 全部「NPC 之间」分组）；无需导入，满足条件时随机上演
   fixedEvents?: FixedEvent[]; // 固定事件：创作者预设的剧本桥段，满足条件后由代码判定触发
   worldId?: string; // 模组：本局世界观 id（老存档缺省 = "ent"）
@@ -570,7 +570,7 @@ export type FixedEventTime =
 export const PERIODIC_TIME = new Set(["every", "weekly", "monthly", "yearly"]);
 
 /* 自定义结局：条件全部满足即命中；auto=达成后立即落幕，否则在「结束人生」时按顺序匹配。 */
-/* 主线时限：如「3 年」或指定截止日期（如 2008.01.03）——游戏天数达到上限时强制结束，按自定义结局/默认定级落幕 */
+/* 本局结算时限：如「3 年」或指定截止日期（如 2008.01.03）——游戏天数达到上限时强制结束，按自定义结局/默认定级落幕 */
 export type TimeLimit = {
   value: number;
   unit: "year" | "month" | "week" | "day";

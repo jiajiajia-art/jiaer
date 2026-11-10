@@ -18,10 +18,14 @@ import {
 } from '../api/platform/platformAppsApi';
 import { playModStoreApi } from '../api/playMod/playModApi';
 import { buildPhoneAppKkmodPackage } from '../lib/platformAppKkmod';
+import { getAppBasePath } from '../lib/appBasePath';
 import {
   applyPhoneAppAiPatch,
   buildPhoneAppSystemPrompt,
   extractPhoneAppJsonPatch,
+  phoneAppContentIssues,
+  phoneAppSpecFromText,
+  stringifyPhoneAppSpec,
   stripPhoneAppJsonFence,
   type PhoneAppAiTurn,
   type PhoneAppFormDraft,
@@ -94,6 +98,8 @@ const CreatePlatformApp: React.FC = () => {
   ]);
   const [chatBusy, setChatBusy] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const previewRef = useRef<HTMLIFrameElement>(null);
+  const [previewReady, setPreviewReady] = useState(0);
 
   const loadMine = useCallback(async () => {
     if (!token) {
@@ -190,7 +196,9 @@ const CreatePlatformApp: React.FC = () => {
 
   const startEdit = (app: PlatformApp) => {
     setEditingId(app.appId);
-    const contentText =
+    const appType = (PLATFORM_APP_TYPE_OPTIONS.some((o) => o.value === app.type) ? app.type : 'browse') as PhoneAppFormType;
+    // 功能注释：旧版纯文本应用打开即转成 kkapp 配置（文字放进阅读页），保存后升级为可交互应用
+    const legacyText =
       typeof app.content === 'string'
         ? app.content
         : app.content && typeof app.content === 'object' && 'text' in (app.content as object)
@@ -198,6 +206,7 @@ const CreatePlatformApp: React.FC = () => {
           : app.content
             ? JSON.stringify(app.content)
             : '';
+    const contentText = stringifyPhoneAppSpec(phoneAppSpecFromText(legacyText, appType, app.name || '应用'));
     setForm({
       name: app.name || '',
       icon: app.icon || '',
@@ -258,6 +267,8 @@ const CreatePlatformApp: React.FC = () => {
     }
     setSaving(true);
     try {
+      const issues = phoneAppContentIssues(form.contentText);
+      if (issues.length) throw new Error(`应用配置有误：${issues.slice(0, 3).join('；')}`);
       const body = {
         name: form.name.trim(),
         icon: form.icon,
@@ -265,7 +276,7 @@ const CreatePlatformApp: React.FC = () => {
         summary: form.summary.trim(),
         category: form.category.trim(),
         type: form.type,
-        content: { text: form.contentText },
+        content: phoneAppSpecFromText(form.contentText, form.type as PhoneAppFormType, form.name.trim()),
       };
       const res = editingId
         ? await platformAppsApi.update(token, editingId, body)
@@ -310,6 +321,24 @@ const CreatePlatformApp: React.FC = () => {
     }
   };
 
+  // 功能注释：实时预览——表单（对话生成 / 手改）一变就把最新配置推给 Romance 预览页，用游戏内同一套渲染器
+  useEffect(() => {
+    const onMsg = (e: MessageEvent) => {
+      if (e.origin === window.location.origin && (e.data as { type?: string } | null)?.type === 'kkapp-preview-ready') setPreviewReady((n) => n + 1);
+    };
+    window.addEventListener('message', onMsg);
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+  useEffect(() => {
+    if (!previewReady) return;
+    if (phoneAppContentIssues(form.contentText).length) return;
+    const spec = phoneAppSpecFromText(form.contentText, form.type as PhoneAppFormType, form.name || '应用');
+    const t = window.setTimeout(() => {
+      previewRef.current?.contentWindow?.postMessage({ type: 'kkapp-preview', spec, name: form.name || '应用预览' }, window.location.origin);
+    }, 200);
+    return () => window.clearTimeout(t);
+  }, [previewReady, form.contentText, form.type, form.name]);
+
   const unpublish = async (appId: string) => {
     if (!token) return;
     try {
@@ -329,6 +358,8 @@ const CreatePlatformApp: React.FC = () => {
         创作游戏 → 手机应用。对话生成应用草稿（页面与积木描述），由现有手机运行器解释运行；保存后走完整性检查、私有测试、审核上架。游戏世界只能从已上架列表安装（作品只存应用编号）。创作者交出的是应用草稿，应用运行在平台 SDK 上。作者库兰号：{userCode || '（需登录）'}。
       </p>
 
+      <div className={styles.workspace}>
+      <div className={styles.workspaceMain}>
       <section className={styles.card} data-phone-app-ai="1">
         <h2 className={styles.cardTitle}>AI 对话生成</h2>
         <div className={styles.field}>
@@ -459,13 +490,24 @@ const CreatePlatformApp: React.FC = () => {
           </select>
         </div>
         <div className={styles.field}>
-          <label htmlFor="app-content">内容</label>
+          <label htmlFor="app-content">应用配置（kkapp@1，可手改）</label>
           <textarea
             id="app-content"
             value={form.contentText}
             onChange={(e) => setForm((f) => ({ ...f, contentText: e.target.value }))}
-            placeholder="该类型页面要展示的内容（配置/文案，不是代码）"
+            placeholder="对话生成后会出现页面、列表、按钮配置；留空保存时按类型生成起步模板"
+            spellCheck={false}
           />
+          {(() => {
+            const issues = phoneAppContentIssues(form.contentText);
+            if (issues.length) return <p className={styles.fieldError}>{issues.slice(0, 3).join('；')}</p>;
+            const spec = phoneAppSpecFromText(form.contentText, form.type as PhoneAppFormType, form.name || '应用');
+            return (
+              <p className={styles.fieldHint}>
+                {spec.pages.length} 个页面：{spec.pages.map((p) => `${p.title}（${p.blocks.length} 块）`).join('、')}
+              </p>
+            );
+          })()}
         </div>
         <div className={styles.row}>
           <button
@@ -483,6 +525,19 @@ const CreatePlatformApp: React.FC = () => {
           ) : null}
         </div>
       </section>
+      </div>
+      <aside className={styles.previewPane} aria-label="实时预览">
+        <h2 className={styles.cardTitle}>实时预览</h2>
+        <p className={styles.fieldHint}>和玩家手机里同一套渲染；点按钮在沙盒数值上结算，不写任何存档。</p>
+        <iframe
+          ref={previewRef}
+          title="手机应用实时预览"
+          className={styles.previewFrame}
+          src={`${getAppBasePath()}/romance/?kkappPreview=1`}
+        />
+        {phoneAppContentIssues(form.contentText).length ? <p className={styles.fieldError}>配置有误，预览暂停更新</p> : null}
+      </aside>
+      </div>
 
       {isStaff ? (
         <section className={styles.card}>

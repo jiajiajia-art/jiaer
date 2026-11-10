@@ -8,6 +8,9 @@ export const MOD_DESC_MAX = 200;
 
 /** 功能注释：GM 开场 / 世界观 / 叙事口吻已并成一份系统提示词；上限与故事设定同为 5000 */
 export const SCRIPT_TONE_MAX = 5000;
+/** 功能注释：AI 生成剧本基调的目标字数区间；上限只是硬顶，不给目标时模型常只写几百字 */
+export const SCRIPT_TONE_TARGET_MIN = 1500;
+export const SCRIPT_TONE_TARGET_MAX = 3000;
 
 export function modDescLen(description: string | null | undefined): number {
   return String(description ?? "").length;

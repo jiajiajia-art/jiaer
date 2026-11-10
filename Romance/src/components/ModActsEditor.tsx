@@ -116,7 +116,13 @@ export default function ModActsEditor({ jobs, acts, stats, attrs, onChange }: {
               <input className={inp} value={a.name} placeholder="活动名" onChange={(e) => pa(i, { name: e.target.value })} />
               <button className={`${btn} shrink-0`} onClick={() => setActs(al.filter((_, k) => k !== i))} aria-label="删除">×</button>
             </div>
-            <input className={inp} value={a.effect} placeholder="效果说明" onChange={(e) => pa(i, { effect: e.target.value })} />
+            <div className="flex items-center gap-1.5">
+              <input className={inp} value={a.effect} placeholder="效果说明" onChange={(e) => pa(i, { effect: e.target.value })} />
+              <select className={`${inp} w-28 shrink-0`} aria-label="日程分类" value={a.cat ?? (a.id === "recuperate" ? "rest" : "social")} onChange={(e) => pa(i, { cat: e.target.value as "rest" | "social" })}>
+                <option value="social">归入外出社交</option>
+                <option value="rest">归入休息调整</option>
+              </select>
+            </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
               {([["cost", "花费"], ["stress", "压力"], ["fame", "名气"], ["reputation", "口碑"]] as const).map(([k, l]) => (
                 <label key={k} className="block text-[10.5px] text-ink-soft">{l}

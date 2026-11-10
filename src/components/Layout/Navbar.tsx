@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styles from './Navbar.module.css';
@@ -61,6 +61,7 @@ const Navbar: React.FC<NavbarProps> = ({
     const location = useLocation();
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [showLanguageModal, setShowLanguageModal] = useState(false);
+    const [languageAnchorRect, setLanguageAnchorRect] = useState<DOMRect | null>(null);
     const [isDesktopLayout, setIsDesktopLayout] = useState(window.innerWidth > 768);
     const [searchKeyword, setSearchKeyword] = useState('');
     const [searchResults, setSearchResults] = useState<UserGameData[]>([]);
@@ -80,6 +81,8 @@ const Navbar: React.FC<NavbarProps> = ({
     const searchRequestIdRef = useRef(0);
     const activeLanguage: AppLanguageCode =
         normalizeAppLanguage(i18n.resolvedLanguage || i18n.language) ?? 'zh';
+
+    const closeLanguageModal = useCallback(() => setShowLanguageModal(false), []);
 
     const handleLanguageChange = (code: AppLanguageCode) => {
         void applyAppLanguage(code, (lng) => i18n.changeLanguage(lng));
@@ -460,30 +463,6 @@ const Navbar: React.FC<NavbarProps> = ({
                                                 {t('nav.profile')}
                                             </button>
                                         )}
-                                        {!isDesktopLayout && (
-                                            <button
-                                                className={styles.menuBtn}
-                                                onClick={() => {
-                                                    runLeaveAction(() => {
-                                                        navigate('/warehouse');
-                                                        setShowUserMenu(false);
-                                                    });
-                                                }}
-                                            >
-                                                {t('nav.warehouse')}
-                                            </button>
-                                        )}
-                                        <button
-                                            className={styles.menuBtn}
-                                            onClick={() => {
-                                                runLeaveAction(() => {
-                                                    navigate('/favorites');
-                                                    setShowUserMenu(false);
-                                                });
-                                            }}
-                                        >
-                                            {t('nav.favorites')}
-                                        </button>
                                         {isOperatorRole(user?.user?.role) && isDesktopLayout && (
                                             <button
                                                 className={styles.menuBtn}
@@ -545,7 +524,12 @@ const Navbar: React.FC<NavbarProps> = ({
                         type="button"
                         className={styles.langTrigger}
                         aria-label={t('nav.chooseLanguage')}
-                        onClick={() => setShowLanguageModal(true)}
+                        aria-haspopup="dialog"
+                        aria-expanded={showLanguageModal}
+                        onClick={(event) => {
+                            setLanguageAnchorRect(event.currentTarget.getBoundingClientRect());
+                            setShowLanguageModal((open) => !open);
+                        }}
                     >
                         {getNavbarLanguageTriggerLabel(activeLanguage)}
                     </button>
@@ -562,7 +546,8 @@ const Navbar: React.FC<NavbarProps> = ({
             <LanguageSelectModal
                 isOpen={showLanguageModal}
                 activeLanguage={activeLanguage}
-                onClose={() => setShowLanguageModal(false)}
+                anchorRect={languageAnchorRect}
+                onClose={closeLanguageModal}
                 onSelect={handleLanguageChange}
             />
         </div>

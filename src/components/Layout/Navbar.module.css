@@ -770,3 +770,35 @@
         box-shadow: var(--navbar-login-shadow);
     }
 }
+
+/* 功能注释：平板/窄桌面区间收紧顶栏，避免导航链接与搜索框重叠、排行被挤出 */
+@media (min-width: 769px) and (max-width: 1280px) {
+    .navbarContainer {
+        --navbar-main-gap: 16px;
+        --navbar-link-gap: 2px;
+        --navbar-link-min: 0px;
+        --navbar-link-padding-x: clamp(8px, 1vw, 14px);
+        --navbar-search-width: auto;
+        --navbar-right-gap: 10px;
+    }
+
+    .logo,
+    .logo img {
+        width: clamp(110px, 12vw, 160px);
+    }
+
+    .navLinks {
+        flex-shrink: 0;
+    }
+
+    .navLink {
+        font-size: clamp(15px, 1.6vw, 20px);
+        white-space: nowrap;
+    }
+
+    .searchBox {
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: 420px;
+    }
+}

@@ -10,6 +10,8 @@ import { IconSpark } from "../lib/icons";
 const inp = "min-w-0 w-full rounded-lg border border-line bg-paper px-2 py-1 text-[12.5px] text-ink outline-none focus:border-jade";
 const btn = "rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40";
 export const BONUS_EXTRA: Record<string, string> = { stress: "压力", mood: "心情", energy: "体力", money: "资金" };
+/** 功能注释：玩法包可用的通用数值（不含压力 / 心情等娱乐圈内置数值） */
+export const PACK_BONUS_EXTRA: Record<string, string> = { energy: "体力", money: "资金" };
 
 export function BonusRow({ value, keys, onChange }: { value?: Record<string, number>; keys: Record<string, string>; onChange: (v?: Record<string, number>) => void }) {
   const list = Object.entries(value ?? {});
@@ -19,7 +21,9 @@ export function BonusRow({ value, keys, onChange }: { value?: Record<string, num
     <div className="flex flex-wrap items-center gap-1">
       {list.map(([k, v], i) => (
         <span key={k} className="flex items-center gap-0.5 rounded-full border border-line bg-paper px-1.5 py-0.5">
-          <select className="bg-transparent text-[11.5px] text-ink outline-none" value={k} onChange={(e) => put(list.map((x, j) => (j === i ? [e.target.value, x[1]] : x)))}>
+          <select className={`bg-transparent text-[11.5px] outline-none ${k in keys ? "text-ink" : "text-danger"}`} value={k} onChange={(e) => put(list.map((x, j) => (j === i ? [e.target.value, x[1]] : x)))}>
+            {/* 功能注释：旧数据引用了本作品没有的属性（如娱乐圈八维）→ 标「已失效」，不误显示成第一项 */}
+            {!(k in keys) && <option value={k}>{k}（已失效）</option>}
             {Object.entries(keys).map(([kk, n]) => <option key={kk} value={kk}>{n}</option>)}
           </select>
           <input type="number" className="w-12 bg-transparent text-[11.5px] tabular-nums text-ink outline-none" value={v} onChange={(e) => put(list.map((x, j) => (j === i ? [x[0], Number(e.target.value) || 0] : x)))} />
@@ -37,7 +41,7 @@ export default function ModCarsEditor({ cars, travel, rooms, statLabels, world, 
 }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const keys = { ...statLabels, ...BONUS_EXTRA };
+  const keys = { ...statLabels, ...PACK_BONUS_EXTRA };
   const t: TravelContent = { minutesPerHop: 20, feePerHop: 20, energyPerHop: 6, ...travel };
   const setCar = (i: number, p: Partial<Car>) => onChange({ cars: cars.map((c, j) => (j === i ? { ...c, ...p } : c)) });
   const ensureDrive = (tv: TravelContent): TravelContent => (tv.modes ?? []).some((m) => m.ownCar) ? tv : { ...tv, modes: [...(tv.modes ?? []), { id: "drive", label: "自己驾驶", fareMul: 0, timeMul: 1, fee: 0, note: "需要自有座驾", ownCar: true, icon: "drive" }] };
