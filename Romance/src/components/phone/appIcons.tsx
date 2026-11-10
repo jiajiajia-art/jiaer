@@ -101,7 +101,7 @@ export const APP_ICON: Record<string, ReactNode> = {
       <path d="M43 13.5l1.5 3 3.3.4-2.4 2.3.6 3.3-3-1.6-3 1.6.6-3.3-2.4-2.3 3.3-.4z" fill="#ffd76b" />
     </Tile>
   ),
-  get wechat() { return isAncientComm() ? CHUANXUN_ICON : LVXIN_ICON; },
+  get wechat() { return isAncientComm() ? CHUANXUN_ICON : APP_ICON["wechat-lvxin"]; },
   "wechat-lvxin": (
     /* 「绿信」自有标识：单枚圆润气泡里托一片新叶（绿=生机），右上一点微光，
        刻意区别于任何真实社交产品的双气泡样式，避免品牌雷同。 */
@@ -275,8 +275,8 @@ function Sprite({ col, row, set = "a" }: { col: number; row: number; set?: keyof
     />
   );
 }
+/* 功能注释：wechat 已用 getter（古风传讯 / 现代绿信），不可再 Object.assign 覆盖 */
 Object.assign(APP_ICON, {
-  wechat: <Sprite col={0} row={0} />,
   campus: <Sprite col={1} row={0} />,
   meituan: <Sprite col={2} row={0} />,
   forum: <Sprite col={0} row={1} />,
@@ -296,6 +296,3 @@ Object.assign(APP_ICON, {
   notes: <Sprite set="b" col={1} row={2} />,
   tv: <Sprite set="b" col={2} row={2} />,
 });
-
-/* 功能注释：绿信原图标也以常量形式供 getter 取用 */
-const LVXIN_ICON = APP_ICON["wechat-lvxin"];
