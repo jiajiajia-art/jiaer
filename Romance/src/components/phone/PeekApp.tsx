@@ -1,4 +1,5 @@
 import { loadData, saveData } from "../../lib/saveScope";
+import { commTerm } from "../../lib/commSkin";
 import { useMemo, useState } from "react";
 import { useGame } from "../../store/gameCtx";
 import { isConfigured } from "../../lib/ai";
@@ -175,7 +176,7 @@ const APPS: { id: Exclude<App, "home">; label: string; ai?: boolean }[] = [
   { id: "diary", label: "备忘录", ai: true },
   { id: "search", label: "搜索记录", ai: true },
   { id: "album", label: "相册" },
-  { id: "chats", label: "绿信" },
+  { id: "chats", get label() { return commTerm("app"); } },
   { id: "inner", label: "心声" },
   { id: "calls", label: "电话" },
 ];

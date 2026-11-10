@@ -1,4 +1,6 @@
 /* 通用聊天：useChat（发消息 → AI 逐条回复落库）+ ChatView（微信/短信共用视图） */
+import { commTerm, isAncientComm } from "../../lib/commSkin";
+import { isBlocked } from "../../game/msgPref";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useGame } from "../../store/gameCtx";
 import { Avatar } from "../ui";
@@ -28,7 +30,7 @@ import { relOf } from "../../game/relations";
 import { isConfigured } from "../../lib/ai";
 import type { GameState } from "../../lib/types";
 import { delay, Dot, fmtDur } from "./shared";
-import { CHAT_BGS, bgCss, chatLook, STICKER_SET, BUBBLE_STYLES, bubbleStyleOf, aiView, getStranger, speakerGender, isStrangerId, addStrangerMemory, useStrangers, patchMsg, patchThread, customOf, wxTime, addFav, msgPreview, giftMsg, isPendingMoney, isReceipt, moneyDesc, pendingMoney, settleMoney, type XMsg, type XCustom } from "./wxFeatures";
+import { CHAT_BGS, chatBgOptions, bgCss, chatLook, STICKER_SET, BUBBLE_STYLES, bubbleStyleOf, aiView, getStranger, speakerGender, isStrangerId, addStrangerMemory, useStrangers, patchMsg, patchThread, customOf, wxTime, addFav, msgPreview, giftMsg, isPendingMoney, isReceipt, moneyDesc, pendingMoney, settleMoney, type XMsg, type XCustom } from "./wxFeatures";
 import { ShareSheet, speakOut, stopSpeech } from "./screenShare";
 import { allowanceOn, payerId } from "../../game/npcKnowledge";
 import { talkAllowance } from "../../lib/allowance";
@@ -142,7 +144,7 @@ export function useChat() {
         }
         for (const l of r.lines) {
           await delay(600 + Math.min(1400, (l.text || "红包").length * 45));
-          if (l.text) step((cur) => pushMsg(cur, threadId, {
+          if (l.text) step((cur) => isBlocked(cur, l.id) ? cur : pushMsg(cur, threadId, {
             id: msgId(), role: "npc", from: l.id, text: l.text, ts: Date.now(), gt: gameMinutes(cur), label: gameTimeLabel(cur),
             ...(l.emotion ? { emo: l.emotion, bpm: bpmOf(l.emotion) } : {}), ...(l.inner_os ? { os: l.inner_os } : {}),
           }));
@@ -282,7 +284,7 @@ function ChatSettingsSheet({ thread, onClose }: { thread: Thread; onClose: () =>
       <div className="flex-1 space-y-2.5 overflow-y-auto p-3">
         <Sec t="聊天背景">
           <div className="grid grid-cols-4 gap-2">
-            {CHAT_BGS.map((b) => {
+            {chatBgOptions().map((b) => {
               const on = (c.bg ?? "") === b.id;
               return (
                 <button key={b.id || "def"} onClick={() => patch({ bg: b.id || undefined })} className="flex flex-col items-center gap-1">
@@ -349,7 +351,7 @@ export function VoiceCall({ thread, name, avatar, onClose, incoming, video }: { 
   const brand = useCommsBrand();
   const gRef = useRef<GameState>(game!);
   gRef.current = game!;
-  const callWord = video ? "视频通话" : "语音通话";
+  const callWord = isAncientComm() ? commTerm(video ? "video" : "voice") : video ? "视频通话" : "语音通话";
   const [phase, setPhase] = useState<"ringing" | "live" | "ended">(incoming !== undefined ? "live" : "ringing");
   const [sec, setSec] = useState(0);
   const [lines, setLines] = useState<ChatMsg[]>([]);
@@ -441,7 +443,7 @@ export function VoiceCall({ thread, name, avatar, onClose, incoming, video }: { 
     const now = Date.now();
     const text = connected ? `${callWord} · 通话时长 ${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}` : `${callWord} · 已取消`;
     g = pushMsg(g, thread.id, { id: msgId(), role: "sys", text, ts: now, gt: gameMinutes(g), label: gameTimeLabel(g), kind: "call" } as XMsg);
-    g = logCall(g, { id: msgId(), personId: pid, name, number: `${brand.appName}${video ? "视频" : "语音"}`, ts: now, durationSec: connected ? sec : 0, outcome: connected ? "connected" : "declined", transcript: linesRef.current });
+    g = logCall(g, { id: msgId(), personId: pid, name, number: `${brand.appName}${commTerm(video ? "video" : "voice")}`, ts: now, durationSec: connected ? sec : 0, outcome: connected ? "connected" : "declined", transcript: linesRef.current });
     // 电话里说了「给你转点钱」的：挂断后照说的发过来（金额、频率由 chatMoney 校正）
     const card = connected ? giftMsg(g, pid, callGift.current) : null;
     if (card) g = pushMsg(g, thread.id, card);
@@ -461,7 +463,7 @@ export function VoiceCall({ thread, name, avatar, onClose, incoming, video }: { 
   const live = phase === "live";
 
   return (
-    <div className="absolute inset-0 z-50 flex flex-col text-white" style={{ background: "linear-gradient(180deg,#1f2a36,#121820)" }}>
+    <div className="absolute inset-0 z-50 flex flex-col text-white" style={{ background: "var(--wx-call-bg, linear-gradient(180deg,#1f2a36,#121820))" }}>
       <div className="flex flex-col items-center pt-12">
         <div className={`overflow-hidden rounded-2xl ring-4 ring-white/10 ${phase === "ringing" ? "animate-pulse" : ""}`}><Avatar src={avatar} name={name} size={88} editable={false} /></div>
         <p className="mt-4 text-[22px] font-semibold">{name}</p>
@@ -492,7 +494,7 @@ export function VoiceCall({ thread, name, avatar, onClose, incoming, video }: { 
 }
 
 /* —— 绿信聊天页零件 —— */
-const WX_GREEN = "#07c160";
+const WX_GREEN = "var(--wx-accent, #07c160)"; // 功能注释：古风「传讯」皮肤由 .comm-ancient 改写为朱砂
 type SpeechRec = { lang: string; continuous: boolean; interimResults: boolean; start: () => void; stop: () => void; abort: () => void; onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null; onend: (() => void) | null; onerror: (() => void) | null };
 const SR: (new () => SpeechRec) | undefined = typeof window !== "undefined"
   ? ((window as unknown as { SpeechRecognition?: new () => SpeechRec; webkitSpeechRecognition?: new () => SpeechRec }).SpeechRecognition
@@ -575,7 +577,7 @@ function MoneyBubble({ m, mine, onOpen }: { m: XMsg; mine: boolean; onOpen: () =
   const back = m.pstate === "returned";
   const done = back || (red ? m.pstate === "claimed" : m.pstate === "received");
   const own = mine && !isReceipt(m); // 自己发出的原卡片（不是自己点的收款回执）
-  const bg = done ? "#fde3c8" : "#fa9d3b";
+  const bg = done ? "var(--wx-money-done, #fde3c8)" : "var(--wx-money, #fa9d3b)";
   return (
     <div onClick={onOpen} role="button" className="relative w-[210px] max-w-full cursor-pointer rounded-[4px] active:brightness-95" style={{ background: bg }}>
       <span className={`absolute top-[14px] h-2.5 w-2.5 rotate-45 ${mine ? "-right-1" : "-left-1"}`} style={{ background: bg }} />
@@ -602,7 +604,7 @@ function MoneyBubble({ m, mine, onOpen }: { m: XMsg; mine: boolean; onOpen: () =
           )}
         </div>
       </div>
-      <p className="mx-3 border-t border-white/30 py-1 text-[11px]" style={{ color: done ? "#c99a6b" : "#fde6cd" }}>{brand.appName}{red ? "红包" : "转账"}</p>
+      <p className="mx-3 border-t border-white/30 py-1 text-[11px]" style={{ color: done ? "var(--wx-money-note-done, #c99a6b)" : "var(--wx-money-note, #fde6cd)" }}>{brand.skin === "letter" ? `${commTerm("app")}${commTerm(red ? "red" : "transfer")}` : `${brand.appName}${red ? "红包" : "转账"}`}</p>
     </div>
   );
 }
@@ -668,7 +670,7 @@ function MoneySheet({ kind, to, balance, unit, onClose, onSend }: { kind: "redpa
         <input value={note} onChange={(e) => setNote(e.target.value.slice(0, 20))} placeholder={red ? "恭喜发财，大吉大利" : "添加转账说明"} className="w-full rounded-[6px] bg-white px-4 py-3.5 text-[16px] text-ink outline-none placeholder:text-ink-soft/50" />
         <p className={`px-1 text-[12.5px] ${err ? "text-[#fa5151]" : "text-ink-soft"}`}>{err || `${unit ?? "零钱"}余额 ${fmt(balance)}`}</p>
         <p className="pt-6 text-center text-[40px] font-medium tabular-nums text-ink">{fmt(n > 0 ? n : 0)}</p>
-        <button disabled={!ok} onClick={() => onSend(n, note.trim())} className="mx-auto block w-[180px] rounded-[6px] py-3 text-[16px] font-medium text-white disabled:opacity-40" style={{ background: red ? "#f25542" : WX_GREEN }}>
+        <button disabled={!ok} onClick={() => onSend(n, note.trim())} className="mx-auto block w-[180px] rounded-[6px] py-3 text-[16px] font-medium text-white disabled:opacity-40" style={{ background: red ? "var(--wx-red, #f25542)" : WX_GREEN }}>
           {red ? "塞钱进红包" : "转账"}
         </button>
       </div>
@@ -931,7 +933,7 @@ export function ChatView({ thread, onBack, sms, autoSend }: { thread: Thread; on
       let done = true;
       for (const [i, l] of r.lines.entries()) {
         await delay(i ? 600 + Math.min(1400, (l.text || "红包").length * 45) : 300); // 首条紧跟请求返回，后面按字数模拟打字
-        const ok = (!l.text || append((g) => ({
+        const ok = (!l.text || isBlocked(g0, l.id) || append((g) => ({
           id: msgId(), role: "npc", from: l.id, text: l.text, ts: Date.now(), gt: gameMinutes(g), label: gameTimeLabel(g),
           ...(l.emotion ? { emo: l.emotion, bpm: bpmOf(l.emotion) } : {}), ...(l.inner_os ? { os: l.inner_os } : {}),
         }))) && (!l.gift || append((g) => giftMsg(g, l.id, l.gift, true)));

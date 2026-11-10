@@ -4,6 +4,7 @@
  * 未登录且个人 AI 配置齐全 → 浏览器直连个人网关（兜底）。
  * 禁止再要求创作者去「设置 · AI 配置」填图5的密钥。
  */
+import { aiRouteBody } from "./platformAiRoutes";
 import type { AIConfig } from "./types";
 import { generateImage, imageConfigured } from "./ai";
 import { hasPlatformPlayAuth } from "./platformPlayAi.ts";
@@ -70,6 +71,7 @@ export async function generateImageViaPlatform(
       size: size || undefined,
       ...(negativePrompt ? { negativePrompt } : {}),
       ...(referenceImages.length ? { referenceImages } : {}),
+      ...aiRouteBody("image"),
     }),
     signal: options.signal,
   });

@@ -28,7 +28,7 @@ import ProducerParley from "./ProducerParley";
 import GigBoard from "./GigBoard";
 import { HeartMeter, Modal, Chip, Avatar } from "./ui";
 import PersonProfile from "./PersonProfile";
-import { IconCheck, IconExternal, IconPin, IconSparkle, StarRating } from "../lib/icons";
+import { IconCalendar, IconCheck, IconChevronRight, IconExternal, IconEye, IconHeart, IconMessage, IconPin, IconScroll, IconSpark, IconSparkle, StarRating } from "../lib/icons";
 import {
   roomDesc,
   directionHint,
@@ -54,7 +54,7 @@ import {
   roomPath,
   roomUpLabel,
 } from "../game/mud";
-import { CARS, carById, resaleValue } from "../game/data";
+import { CARS, carById, resaleValue, attrLabelOf } from "../game/data";
 import { BRANCH_POINTS } from "../store/GameContext";
 import { tripPoints, apPerMove } from "../game/mud";
 import { customActsOf, customItemsOf, firedOf, spotBackground, spotDesc, spotEventsOf, spotName, activityApCost } from "../game/mapedits";
@@ -69,7 +69,7 @@ import { getWorldStorylines } from "../mods/registry";
 import { liveTerm as T } from "../mods/live";
 
 
-const fmtBonus = (b: Record<string, number>) => Object.entries(b).map(([k, v]) => `${(STAT_LABELS as Record<string, string>)[k] ?? ({ stress: "压力", mood: "心情", energy: "体力", money: "资金" } as Record<string, string>)[k] ?? k}${v > 0 ? "+" : ""}${v}`).join(" ");
+const fmtBonus = (b: Record<string, number>) => Object.entries(b).map(([k, v]) => `${attrLabelOf(k)}${v > 0 ? "+" : ""}${v}`).join(" ");
 /* 交通工具售卖点：买车 / 置换 / 卖车（残值回收，差价即折旧）。座驾在「主角」页选定。
  * 以弹窗形式呈现——在 4S 店点「进店选购」唤出。 */
 function Dealership({ s, onClose }: { s: SimState; onClose: () => void }) {
@@ -495,8 +495,9 @@ function cardGrad(name: string): [string, string] {
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
   return CARD_GRADS[h % CARD_GRADS.length] as [string, string];
 }
-function PersonCard({ name, known, active, onClick, avatar }: { name: string; role?: string; known: boolean; active: boolean; onClick: () => void; avatar?: string }) {
-  // 头像式：认识显示头像+名字；未结识显示问号
+function PersonCard({ name, known: met, named, active, onClick, avatar }: { name: string; role?: string; known: boolean; named?: boolean; active: boolean; onClick: () => void; avatar?: string }) {
+  // 头像式：已结识或已在剧情中登场（知道名字）显示头像+名字；完全没照过面才显示剪影
+  const known = met || !!named;
   const [c1, c2] = known ? cardGrad(name) : ["#9c93b8", "#c8bfe0"];
   return (
     <button onClick={onClick} aria-pressed={active} aria-label={known ? name : "陌生人"} className="flex w-14 shrink-0 flex-col items-center gap-1">
@@ -514,17 +515,17 @@ function PersonCard({ name, known, active, onClick, avatar }: { name: string; ro
 
 /* 线下见面弹窗：五颗心表示关系值（满 / 半 / 空） */
 /* 线下见面弹窗：互动选项卡片（图标 + 文案 + 右箭头） */
-function MeetOption({ icon, label, onClick, disabled, active, highlight }: { icon?: string; label: string; onClick: () => void; disabled?: boolean; active?: boolean; highlight?: boolean }) {
+function MeetOption({ icon: Icon, label, onClick, disabled, active, highlight }: { icon?: (p: { width?: number; height?: number; className?: string }) => React.ReactNode; label: string; onClick: () => void; disabled?: boolean; active?: boolean; highlight?: boolean }) {
   return (
     <button type="button" onClick={onClick} disabled={disabled} aria-expanded={active}
       className={`flex min-w-0 items-center gap-3 rounded-[14px] border px-3 py-2.5 text-left transition hover:border-coral/60 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 ${active || highlight ? "border-coral bg-coral/10" : "border-line bg-paper"}`}>
-      {icon && (
-        <span className="flex size-7 shrink-0 items-center justify-center rounded-[8px] border border-line bg-paper-2">
-          <img src={(icon) || undefined} alt="" width={14} height={14} className="size-3.5" />
+      {Icon && (
+        <span className={`flex size-7 shrink-0 items-center justify-center rounded-[8px] border ${highlight ? "border-coral/40 bg-coral/10 text-coral" : "border-line bg-paper-2 text-ink-soft"}`}>
+          <Icon width={14} height={14} />
         </span>
       )}
       <span className={`min-w-px flex-1 truncate text-[13px] font-medium ${highlight ? "text-coral" : "text-ink"}`}>{label}</span>
-      <img src="/assets/7a61d.svg" alt="" width={14} height={14} className={`size-3.5 shrink-0 transition-transform duration-200 ${active ? "rotate-90" : ""}`} />
+      <IconChevronRight width={14} height={14} aria-hidden className={`shrink-0 text-ink-soft transition-transform duration-200 ${active ? "rotate-90" : ""}`} />
     </button>
   );
 }
@@ -894,7 +895,7 @@ export default function HomeTab() {
   const acts = [
     ...activitiesOfRoom(room),
     ...customActsOf(game, room).map((a) => {
-      const lbl = (k: string) => (STAT_LABELS as Record<string, string>)[k] ?? ({ fame: "名气", looks: "容貌", stress: "压力", mood: "心情", energy: "体力", money: "资金" } as Record<string, string>)[k] ?? k;
+      const lbl = attrLabelOf;
       const valOf = (k: string) => Number((s.stats as Record<string, number>)[k] ?? (s as unknown as Record<string, unknown>)[k] ?? s.cattrs?.[k] ?? 0) || 0;
       const pay = -(a.effects?.money ?? 0);
       const lack = Object.entries(a.require ?? {}).filter(([k, v]) => valOf(k) < v);
@@ -931,6 +932,7 @@ export default function HomeTab() {
           const active = activePid === p.id;
           return (
             <PersonCard key={`p:${p.id}`} name={p.name} role="" known={(s.metPeople ?? []).includes(p.id)}
+              named={!!game?.npcs.some((n) => n.id === p.id)}
               avatar={game?.npcs.find((n) => n.id === p.id)?.avatar || undefined}
               active={active} onClick={() => setOpenId(active ? null : `menu:${p.id}`)} />
           );
@@ -1403,27 +1405,27 @@ export default function HomeTab() {
                   <div className="mt-4 flex flex-col gap-3 border-t border-line pt-4">
                     <p className="font-serif text-[14px] font-semibold text-ink">互动</p>
                     <div className="grid grid-cols-2 gap-2">
-                      <MeetOption icon="/assets/b058c.svg" label="对话" disabled={busy} onClick={() => setTalkWith({ pid: p.id, name: p.name, role: p.role })} />
+                      <MeetOption icon={IconMessage} label="对话" disabled={busy} onClick={() => setTalkWith({ pid: p.id, name: p.name, role: p.role })} />
                       {/* 查看 / 接洽通告属于「演艺事业包」：未启用时不出现，避免关掉扩展包仍能接单 */}
                       {known && feature("career") && isManager(p.id) && (
-                        <MeetOption icon="/assets/1cddb.svg" label={`查看${T("gig")}`} active={openId === `parley:${p.id}`}
+                        <MeetOption icon={IconScroll} label={`查看${T("gig")}`} active={openId === `parley:${p.id}`}
                           onClick={() => setOpenId(openId === `parley:${p.id}` ? `menu:${p.id}` : `parley:${p.id}`)} />
                       )}
                       {/* 接洽通告：当面查看 TA 手上的通告（内容/男女主配/角色/固定档期）并就地交涉接单 */}
                       {known && feature("career") && PERSON_BY_ID[p.id]?.offers && (
-                        <MeetOption icon="/assets/78511.svg" label={`接洽${T("gig")}`} active={openId === `gigs:${p.id}`}
+                        <MeetOption icon={IconCalendar} label={`接洽${T("gig")}`} active={openId === `gigs:${p.id}`}
                           onClick={() => setOpenId(openId === `gigs:${p.id}` ? `menu:${p.id}` : `gigs:${p.id}`)} />
                       )}
                       {known && (
-                        <MeetOption icon="/assets/b974e.svg" label="打听" active={openId === `intel:${p.id}`}
+                        <MeetOption icon={IconEye} label="打听" active={openId === `intel:${p.id}`}
                           onClick={() => setOpenId(openId === `intel:${p.id}` ? `menu:${p.id}` : `intel:${p.id}`)} />
                       )}
                       {/* 条件邂逅：仅在与 TA 同处一地、且年岁/性格/关系达标时才出现 */}
                       {encounters.filter((e) => e.personId === p.id).map((e) => (
-                        <MeetOption key={e.id} label={e.label} highlight disabled={busy} onClick={() => { if (!busy) simEvent(e.id); }} />
+                        <MeetOption key={e.id} icon={IconSpark} label={`邂逅 · ${e.label}`} highlight disabled={busy} onClick={() => { if (!busy) simEvent(e.id); }} />
                       ))}
                       {arcNow && (
-                        <MeetOption label={arcNow.stage ? arcNow.stage.name : "确认关系"} highlight active={openId === `arc:${p.id}`} disabled={busy}
+                        <MeetOption icon={IconHeart} label={arcNow.stage ? `情感线 · ${arcNow.stage.name}` : "确认关系"} highlight active={openId === `arc:${p.id}`} disabled={busy}
                           onClick={() => setOpenId(openId === `arc:${p.id}` ? `menu:${p.id}` : `arc:${p.id}`)} />
                       )}
                     </div>

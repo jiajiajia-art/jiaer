@@ -4,6 +4,8 @@
  * - 线下剧情可让角色主动上线：发绿信、拉群、来电、发邮件、重新加好友（AI 输出 step.phone）
  * - 邮件：主角发给角色、对方未回复的邮件，线下剧情会择机回复
  * - 删除好友：被删的角色会在后续剧情里做出反应 */
+import { commTerm, commPromptHint } from "../lib/commSkin";
+import { canInitiate, isBlocked } from "./msgPref";
 import type { GameState, Npc } from "../lib/types";
 import { ensurePhone, gameMinutes, gameTimeLabel, msgId, openThread, pushMsg, createGroup, threadFor, type Mail, type PhoneAct, type ChatMsg } from "./phone";
 import { remember } from "./npcKnowledge";
@@ -53,7 +55,7 @@ const OPEN_TEXT: Record<string, [string, number]> = {
   forum: ["刷了会儿论坛", 10], weibo: ["刷了会儿冲浪（热搜 / 博文）", 10], xhs: ["逛了会儿小粉书", 10],
   cloudmusic: ["听了会儿云音乐", 15], ticket: ["看了看票团团上的演出", 5], xianyu: ["逛了会儿咸鱼", 8],
   bosspin: ["翻了翻老板直聘上的招募", 8], peek: ["偷看了别人的手机（视监）", 10], couple: ["打开了情侣空间", 5],
-  mail: ["查看了邮箱", 3], read: ["看了会儿小说", 10], video: ["刷了会儿视频", 12], wechat: ["刷了刷绿信和朋友圈", 3], sms: ["看了看短信", 2],
+  mail: ["查看了邮箱", 3], read: ["看了会儿小说", 10], video: ["刷了会儿视频", 12], get wechat(): [string, number] { return [`刷了刷${commTerm("app")}和${commTerm("moments")}`, 3]; }, sms: ["看了看短信", 2],
 };
 export function logAppOpen(g: GameState, app: string, label: string): GameState {
   const o = OPEN_TEXT[app];
@@ -111,7 +113,7 @@ export function removeFriend(g: GameState, pid: string): GameState {
   const name = g.npcs.find((n) => n.id === pid)?.name ?? pid;
   const removed = [...(ph.removed ?? []).filter((r) => r.pid !== pid), { pid, gt: gameMinutes(g), label: gameTimeLabel(g) }].slice(-10);
   const g2 = { ...g, phone: { ...ph, contacts: ph.contacts.filter((x) => x !== pid), removed } };
-  return logAct(g2, { app: "绿信", text: `删除了${name}的绿信好友`, min: 1, pid });
+  return logAct(g2, { app: commTerm("app"), text: `删除了${name}的${commTerm("app")}好友`, min: 1, pid });
 }
 
 /* ───────────── 同处一地 ───────────── */
@@ -155,12 +157,14 @@ export function phoneLinkPrompt(g: GameState): string {
   const waiting = (ph.mails ?? []).filter((m) => m.from === "me" && m.awaiting).slice(0, 4);
   if (waiting.length) parts.push(`〈主角发出、对方还没回复的邮件（对方可在合适的时机用 phone.mails 回复，reply_to 填邮件 id；不必立刻回）〉\n${waiting.map((m) => `· id=${m.id} ${m.label} 发给 ${m.toName ?? name(m.to)}《${m.subject}》：${clip(m.body, 80)}`).join("\n")}`);
   const removed = (ph.removed ?? []).filter((r) => !r.reacted && gameMinutes(g) - r.gt < 7 * 1440);
-  if (removed.length) parts.push(`〈被主角删除了绿信好友的人（TA 迟早会察觉并做出反应：重新发好友申请、打电话、拉群质问，或线下当面提起）〉\n${removed.map((r) => `· ${name(r.pid)}（${r.label} 被删）`).join("\n")}`);
+  if (removed.length) parts.push(`〈被主角删除了${commTerm("app")}好友的人（TA 迟早会察觉并做出反应：重新发好友申请、打电话、拉群质问，或线下当面提起）〉\n${removed.map((r) => `· ${name(r.pid)}（${r.label} 被删）`).join("\n")}`);
   const here = peopleHere(g);
-  const friends = ph.contacts.map(name);
+  // 玩家设为「不主动发 / 禁止发消息」的人不出现在可联络名单里
+  const friends = ph.contacts.filter((pid) => canInitiate(g, pid)).map(name);
+  const silent = ph.contacts.filter((pid) => !canInitiate(g, pid)).map(name);
   parts.push(`〈让角色主动上线联络（剧情自然需要时才用，不必每回合）〉在 JSON 里加：
 "phone":{"messages":[{"from":"角色名","text":["一条","两条"]}],"group":{"title":"群名","from":"发起人","members":["角色名"],"text":["开场白"]},"call":{"from":"角色名","video":false,"reason":"打来想说的事"},"mails":[{"from":"角色名或机构名","subject":"","body":"","reply_to":""}],"friend_requests":[{"from":"角色名","text":"验证消息"}]}
-规则：messages / group 只能来自绿信好友（${friends.join("、") || "暂无"}）；不是好友的人只能 call、mails 或 friend_requests；每回合 messages ≤3 条、mails ≤2 封、call ≤1 个；${here.length ? `此刻和主角当面在一起的（${here.map((p) => p.name).join("、")}）有话直接当面说，不要发消息或来电；` : ""}平台与机构（订单、快递、平台通知、工作邀约、粉丝来信等）也能发邮件，可以紧扣主角最近的手机操作。正文里不必复述手机内容。`);
+规则：messages / group 只能来自${commTerm("app")}好友（${friends.join("、") || "暂无"}）；不是好友的人只能 call、mails 或 friend_requests；${silent.length ? `${silent.join("、")} 被主角设为不接收主动消息：不得让 TA 发消息、来电、拉群或发好友申请；` : ""}每回合 messages ≤3 条、mails ≤2 封、call ≤1 个；${here.length ? `此刻和主角当面在一起的（${here.map((p) => p.name).join("、")}）有话直接当面说，不要发消息或来电；` : ""}平台与机构（订单、快递、平台通知、工作邀约、粉丝来信等）也能发邮件，可以紧扣主角最近的手机操作。正文里不必复述手机内容。${commPromptHint()}`);
   return `\n【手机 ↔ 线下】手机时间与线下同步（现在 ${gameTimeLabel(g)}）。\n${parts.join("\n")}\n`;
 }
 
@@ -193,7 +197,7 @@ export function applyPhoneStep(g0: GameState, p: PhoneStep | undefined, hooks: P
 
   // 好友申请（含被删后重新加回）
   const req = (n: Npc, text: string) => {
-    if (isFriend(n.id)) return;
+    if (isFriend(n.id) || isBlocked(g, n.id)) return;
     g = hooks.addReq(g, n.id, text || "加回来好吗？");
     reacted(n.id);
     notes.push(`${n.name} 发来好友申请`);
@@ -205,13 +209,13 @@ export function applyPhoneStep(g0: GameState, p: PhoneStep | undefined, hooks: P
     if (sent >= 3) break;
     const n = who(m?.from);
     const txt = lines(m?.text);
-    if (!n || !txt.length || here.has(n.id)) continue;
+    if (!n || !txt.length || here.has(n.id) || !canInitiate(g, n.id)) continue;
     if (!isFriend(n.id)) { if (wasRemoved(n.id)) req(n, txt[0]); continue; }
     g = openThread(g, n.id);
     const th = threadFor(g.phone!, n.id)!;
     txt.forEach((text, i) => { g = pushMsg(g, th.id, { id: msgId(), role: "npc", text, ...stamp(i) }); });
     sent++;
-    notes.push(`${n.name} 发来绿信`);
+    notes.push(`${n.name} 发来${commTerm("app")}`);
   }
 
   // 群聊：发起人 + 成员都得是好友
@@ -220,7 +224,7 @@ export function applyPhoneStep(g0: GameState, p: PhoneStep | undefined, hooks: P
     const from = who(gp.from);
     const members = Array.from(new Set([...(from ? [from] : []), ...(Array.isArray(gp.members) ? gp.members.map(who) : [])].filter((n): n is Npc => !!n && isFriend(n.id)).map((n) => n.id)));
     const txt = lines(gp.text);
-    if (from && isFriend(from.id) && members.length >= 1) {
+    if (from && isFriend(from.id) && canInitiate(g, from.id) && members.length >= 1) {
       const title = typeof gp.title === "string" ? gp.title.trim().slice(0, 20) : "";
       let th = title ? g.phone!.threads.find((t) => t.kind === "group" && t.title === title) : undefined;
       if (!th) {
@@ -233,7 +237,7 @@ export function applyPhoneStep(g0: GameState, p: PhoneStep | undefined, hooks: P
       }
       if (th) {
         const id = th.id;
-        txt.forEach((text, i) => { g = pushMsg(g, id, { id: msgId(), role: "npc", text, from: from.id, ...stamp(i) }); });
+        if (!isBlocked(g, from.id)) txt.forEach((text, i) => { g = pushMsg(g, id, { id: msgId(), role: "npc", text, from: from.id, ...stamp(i) }); });
       }
     }
   }
@@ -242,7 +246,7 @@ export function applyPhoneStep(g0: GameState, p: PhoneStep | undefined, hooks: P
   const c = p.call;
   if (c && typeof c === "object" && !g.phone!.ringing) {
     const n = who(c.from);
-    if (n && !here.has(n.id) && (isFriend(n.id) || wasRemoved(n.id))) {
+    if (n && !here.has(n.id) && canInitiate(g, n.id) && (isFriend(n.id) || wasRemoved(n.id))) {
       g = { ...g, phone: { ...g.phone!, ringing: { id: msgId(), pid: n.id, name: n.name, video: !!c.video, reason: typeof c.reason === "string" ? c.reason.trim().slice(0, 200) : "", gt: gameMinutes(g) } } };
       reacted(n.id);
       notes.push(`${n.name} 打来${c.video ? "视频" : "语音"}电话`);
@@ -268,7 +272,7 @@ export function applyPhoneStep(g0: GameState, p: PhoneStep | undefined, hooks: P
   // 好友申请
   for (const r of Array.isArray(p.friend_requests) ? p.friend_requests.slice(0, 2) : []) {
     const n = who(r?.from);
-    if (n) req(n, typeof r?.text === "string" ? r.text : "");
+    if (n && !isBlocked(g, n.id)) req(n, typeof r?.text === "string" ? r.text : "");
   }
 
   return { g, notes };

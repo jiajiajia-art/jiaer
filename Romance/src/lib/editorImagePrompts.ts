@@ -135,10 +135,14 @@ export function buildNpcAvatarPromptParts(
     age?: number | string;
     /** 人物外观描述（与小传 bio 分开） */
     appearancePrompt?: string;
+    /** 身份 / 职业（如 咖啡店店长）：没写外观时用来推断衣着气质，不写关系剧情 */
+    role?: string;
   },
   settings: WorkImageStyleSettings = {},
 ): EditorImagePromptParts {
-  const look = clip(n.appearancePrompt, 320) || scaffoldNpcAppearance(n);
+  // 没写外观时：性别年龄脚手架 + 身份职业，避免只剩「女，约22岁」导致千人一面
+  const role = clip(n.role, 30);
+  const look = clip(n.appearancePrompt, 320) || joinParts([scaffoldNpcAppearance(n), role ? `身份：${role}，衣着气质贴合身份` : ""], "；");
   const subject = look ? `${look}。${FRAMING_AVATAR}` : "";
   return makeParts(settings, subject, BASE_NEGATIVE_AVATAR);
 }

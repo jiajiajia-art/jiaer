@@ -96,7 +96,7 @@ export default function StorylinesEditor({ value, sidelines, events = [], onChan
   return (
     <div className="space-y-2.5">
       <p className="text-[11px] leading-relaxed text-ink-soft">
-        建议只配一条主线：按顺序排好节点，每个节点写清目标说明与完成条件。前面的必做节点完成后，下一步才开始判定；可选目标不阻塞主线。
+        建议只配一条主线：按顺序排好节点，每个节点写清目标说明与完成条件。前面的必做节点完成后，下一步才开始判定；可选目标不阻塞主线。主线只按节点条件推进，不按天数；本局天数上限（结算时限）在下方「结局」区单独配置。
         每天结束由代码判定完成 / 失败。必做节点全部完成 = 主线完成；任一必做节点失败 = 主线中断。主线节点不配奖励、不激活事件。
       </p>
       <button className={btn} onClick={() => commit([...list, { id: uid("sl"), name: "主线", nodes: [newNode(dd)] }])}>＋ 新建主线</button>

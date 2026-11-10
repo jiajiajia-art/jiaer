@@ -10,9 +10,9 @@ import {
 import { createPortal, flushSync } from "react-dom";
 import { useGame } from "../store/gameCtx";
 import {
-  dimsGrade,
+  effectiveGradeDims,
   endingPillars,
-  lifeGrade,
+  settleGrade,
   secondaryTitleOf,
   type SubGradeCard,
 } from "../game/grade";
@@ -271,10 +271,10 @@ const autoComment = (
 };
 
 function buildEnding(g: GameState) {
-  const pillars = endingPillars(g.sim, g.gradeDims, g.journal?.length ?? 0);
+  const pillars = endingPillars(g.sim, effectiveGradeDims(g), g.journal?.length ?? 0);
   const grade =
     g.endingGrade ??
-    (g.gradeDims?.length ? dimsGrade(g.sim, g.gradeDims) : lifeGrade(g.sim)); // 旧存档没有评级时现算
+    settleGrade(g); // 旧存档没有评级时现算
   const name = g.player.name || "她";
   const title = g.endingTitle?.trim() || "故事落幕";
   const sub = g.endingSubTitle?.trim() || secondaryTitleOf(g.sim, pillars);

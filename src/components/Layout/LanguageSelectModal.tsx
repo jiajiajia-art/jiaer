@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   APP_LANGUAGE_OPTIONS,
@@ -11,6 +11,8 @@ type LanguageSelectModalProps = {
   activeLanguage: AppLanguageCode;
   onClose: () => void;
   onSelect: (code: AppLanguageCode) => void;
+  /** 功能注释：桌面端按触发按钮位置锚定为下拉菜单；缺省时退回居中/底部弹层 */
+  anchorRect?: DOMRect | null;
 };
 
 /** 功能注释：语言切换弹窗——墨黑片选当前语，避免塞进头像菜单挤成三行列表 */
@@ -19,18 +21,39 @@ const LanguageSelectModal: React.FC<LanguageSelectModalProps> = ({
   activeLanguage,
   onClose,
   onSelect,
+  anchorRect,
 }) => {
   const { t } = useTranslation();
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('resize', onClose);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('resize', onClose);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
+
+  const anchored = Boolean(anchorRect) && window.innerWidth > 768;
+  const popoverStyle: React.CSSProperties | undefined = anchored && anchorRect
+    ? { top: anchorRect.bottom + 8, right: Math.max(12, window.innerWidth - anchorRect.right) }
+    : undefined;
 
   return (
     <div
-      className={styles.overlay}
+      className={`${styles.overlay} ${anchored ? styles.overlayAnchored : ''}`}
       role="presentation"
       onClick={onClose}
     >
       <div
-        className={styles.sheet}
+        className={`${styles.sheet} ${anchored ? styles.popover : ''}`}
+        style={popoverStyle}
         role="dialog"
         aria-modal="true"
         aria-labelledby="language-select-title"

@@ -8,7 +8,7 @@ import { loadGlobal, saveGlobal } from "../lib/saveScope";
 import { useSyncExternalStore } from "react";
 import { SLOT_KEYS, type ContentSlots, type FeatureFlags, type MapVisuals, type Mod, type ModContent, type PromptFragments, type ResolvedWorld, type SlotKey, type TermKey } from "./types";
 import type { LibraryGroup } from "../game/eventLibrary";
-import { setSlotReader, setTermReader, termFallback, liveArray, liveRecord, hasSlot } from "./live";
+import { setSlotReader, setTermReader, termFallback, liveArray, liveRecord, hasSlot, withResolvingWorld, setWorldOwnReader } from "./live";
 import entMod from "./ent";
 import campusMod from "./campus";
 import titlesPlusMod from "./titlesPlus";
@@ -108,7 +108,7 @@ export function validateMod(raw: unknown): string[] {
   (["npcs", "items", "gigs", "events", "fixedEvents", "storylines", "sidelines", "endings", "worldBook", "worldRules"] as const).forEach(needId);
   // 内容槽：类型校验
   const SLOT_ARR = ["trainings", "sideJobs", "zodiacs", "encounters", "sideQuests", "styles", "identities", "backgrounds", "directions", "weekendActs", "titles", "cars", "meals", "lore", "festivals"] as const;
-  const SLOT_OBJ = ["stats", "map", "sideQuestCast", "relations", "calendar", "travel", "contracts", "projects", "imageCrisis", "industry", "help", "opening", "cover", "weeklyPaper", "creation", "npcPool", "bills", "pregnancy", "gigPrices", "allowance", "tuning", "play", "avatars"] as const;
+  const SLOT_OBJ = ["stats", "map", "sideQuestCast", "relations", "calendar", "travel", "contracts", "projects", "imageCrisis", "industry", "help", "opening", "cover", "weeklyPaper", "creation", "npcPool", "bills", "pregnancy", "gigPrices", "allowance", "tuning", "play", "avatars", "metricBind"] as const;
   arr("eventGroups");
   (["gameRules", "lookRules"] as const).forEach((k) => {
     arr(k);
@@ -314,6 +314,12 @@ const entTermsBase = () => {
 function resolve(sel: ModSelection): ResolvedWorld {
   let world = modById(sel.world);
   if (!world || world.kind !== "world") world = entMod;
+  // 功能注释：合并期间玩法包 getter 读的世界 id / 世界自身内容走解析上下文，禁止回调 getWorld() 递归
+  const w = world;
+  return withResolvingWorld({ id: w.id, content: (w.content ?? {}) as Record<string, unknown> }, () => resolveChain(sel, w));
+}
+
+function resolveChain(sel: ModSelection, world: Mod): ResolvedWorld {
   const chain: Mod[] = [world];
   // 功能注释：预览 / 开局都要读世界自己的 playModInstalls（不只 dependencies / 选择的叠加包）；
   // 安装顺序在前、手选叠加包在后，同 id 只进链一次。无安装记录的世界（含娱乐圈）这里为空，行为不变。
@@ -384,6 +390,7 @@ function resolve(sel: ModSelection): ResolvedWorld {
       return normalizeWorldPhoneAppsCfg(wc.phoneAppsCfg);
     })(),
     phoneHomeWallpaper: wc.phoneHomeWallpaper,
+    phoneCommSkin: wc.phoneCommSkin,
     features: { ...(wc.features ?? {}) },
     theme: { ...(wc.theme ?? {}) },
   };
@@ -455,6 +462,7 @@ function resolve(sel: ModSelection): ResolvedWorld {
       }
     }
     if (c.phoneHomeWallpaper) content.phoneHomeWallpaper = c.phoneHomeWallpaper;
+    if (c.phoneCommSkin) content.phoneCommSkin = c.phoneCommSkin;
     // 功能注释：phoneAppsExtra 常被 AI 写成对象；禁止 [...非数组] → is not iterable
     const extra = [...asModArray<string>(content.features.phoneAppsExtra), ...asModArray<string>(c.features?.phoneAppsExtra)];
     Object.assign(content.features, c.features ?? {});
@@ -533,6 +541,10 @@ function readSlot(key: string) {
   return { ...r, worldId: w.worldId };
 }
 setSlotReader(readSlot);
+setWorldOwnReader(() => {
+  const w = getWorld();
+  return { id: w.worldId, content: (w.chain[0]?.content ?? {}) as Record<string, unknown> };
+});
 /* 当前世界是否声明了某内容槽（UI 据此隐藏未提供的功能） */
 export const worldHas = (k: SlotKey): boolean => hasSlot(k);
 export function getWorldSlot<K extends SlotKey>(k: K): ContentSlots[K] | undefined {
@@ -871,6 +883,8 @@ export const selectedTerm = (k: TermKey, fallback?: string): string => resolveLi
 export const worldPhoneAppsCfg = () => getWorld().content.phoneAppsCfg;
 /** 作品默认手机桌面背景（未声明则玩家/引擎默认） */
 export const worldPhoneHomeWallpaper = () => getWorld().content.phoneHomeWallpaper;
+/** 作品选了古风通讯皮肤「传讯」 */
+export const worldPhoneCommSkinSet = () => getWorld().content.phoneCommSkin === "chuanxun";
 /** 模组底栏配置：新局写入存档 navTabs / navSize */
 export const worldNavTabs = () => getWorld().content.navTabs;
 export const worldNavSize = () => getWorld().content.navSize;

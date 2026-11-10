@@ -217,7 +217,7 @@ function SegmentView({ s, npcs, tightTop, cont, player, overlay, plain }: {
       {cont ? <span className="w-8 shrink-0" /> : <SpeakerAvatar name={showName} src={npc?.avatar || undefined} />}
       <div className="min-w-0 max-w-[82%]">
         {!cont && (
-          <p className={`dlg-name mb-0.5 ml-1 text-[12px] font-medium ${plain ? "text-ink-soft" : "text-jade/80"}`}>
+          <p className={`dlg-name flex h-8 items-center pl-1 text-[12.5px] font-semibold leading-none ${plain ? "text-ink-soft" : "text-jade/80"}`}>
             <EntityText text={showName} />
           </p>
         )}

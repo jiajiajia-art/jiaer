@@ -1,4 +1,6 @@
 /* 绿信扩展：表情包贴纸 / 气泡样式 / 摇一摇陌生人 / AI 主动发消息 */
+import { commTerm, isAncientComm } from "../../lib/commSkin";
+import { msgPrefOf } from "../../game/msgPref";
 import { loadData, saveData, onClearPlayerMemory, onLoadPlayerData } from "../../lib/saveScope";
 import { useEffect, useRef, useSyncExternalStore, type CSSProperties } from "react";
 import { withAlpha, type WxChatStyle } from "./wxSettings";
@@ -212,15 +214,21 @@ export const STICKER_SET: { id: string; name: string; src: string }[] = [
 
 /* ── 聊天气泡样式 ── */
 /* 聊天背景预设（纯 CSS，无外链素材） */
-export const CHAT_BGS: { id: string; label: string; css: string }[] = [
-  { id: "", label: "默认", css: "#ededed" },
+export const CHAT_BGS: { id: string; label: string; css: string; ancient?: boolean }[] = [
+  { id: "", label: "默认", css: "var(--wx-chat-bg, #ededed)" },
   { id: "peach", label: "蜜桃", css: "linear-gradient(160deg,#ffe4e1,#fff5ee)" },
   { id: "lilac", label: "薰衣草", css: "linear-gradient(160deg,#e9e1ff,#f7f2ff)" },
   { id: "mint", label: "薄荷", css: "linear-gradient(160deg,#dff7ec,#f3fff9)" },
   { id: "sky", label: "晴空", css: "linear-gradient(160deg,#dcecff,#f4f9ff)" },
   { id: "night", label: "星夜", css: "radial-gradient(circle at 20% 15%,#ffffff22 0 1px,transparent 2px),radial-gradient(circle at 70% 40%,#ffffff22 0 1px,transparent 2px),linear-gradient(180deg,#2b2d4a,#4a3d63)" },
   { id: "dots", label: "波点", css: "radial-gradient(#ffc0cb66 1.5px,transparent 1.5px) 0 0/16px 16px,#fffafa" },
+  // 功能注释：古风背景只在「传讯」皮肤下可选；已选过的旧存档在现代皮肤下仍能正常显示
+  { id: "shanshui", label: "水墨山水", ancient: true, css: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 360 640' preserveAspectRatio='xMidYMax slice'%3E%3Cpath d='M0 470 C60 420 90 380 140 400 S230 330 280 360 S340 340 360 350 V640 H0Z' fill='%23574a3a' opacity='.10'/%3E%3Cpath d='M0 530 C50 490 110 470 160 500 S250 450 300 480 S350 470 360 475 V640 H0Z' fill='%233e3428' opacity='.16'/%3E%3Cpath d='M0 590 C70 560 120 570 180 585 S280 560 360 575 V640 H0Z' fill='%232b2118' opacity='.22'/%3E%3Ccircle cx='280' cy='120' r='34' fill='%23b5432f' opacity='.16'/%3E%3Cpath d='M60 200 q20 -8 40 0 M90 225 q14 -6 28 0' stroke='%233e3428' stroke-width='1.6' fill='none' opacity='.3'/%3E%3C/svg%3E") center bottom/cover no-repeat,#f2e8d3` },
+  { id: "zhuying", label: "竹影", ancient: true, css: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 360 640' preserveAspectRatio='xMidYMax slice'%3E%3Crect x='30' y='0' width='9' height='640' fill='%234f6b4a' opacity='0.14'/%3E%3Crect x='29' y='60' width='11' height='3' fill='%233f5a3b' opacity='0.14'/%3E%3Crect x='29' y='170' width='11' height='3' fill='%233f5a3b' opacity='0.14'/%3E%3Crect x='29' y='280' width='11' height='3' fill='%233f5a3b' opacity='0.14'/%3E%3Crect x='29' y='390' width='11' height='3' fill='%233f5a3b' opacity='0.14'/%3E%3Crect x='29' y='500' width='11' height='3' fill='%233f5a3b' opacity='0.14'/%3E%3Crect x='29' y='610' width='11' height='3' fill='%233f5a3b' opacity='0.14'/%3E%3Crect x='78' y='0' width='6' height='640' fill='%234f6b4a' opacity='0.1'/%3E%3Crect x='77' y='60' width='8' height='3' fill='%233f5a3b' opacity='0.1'/%3E%3Crect x='77' y='170' width='8' height='3' fill='%233f5a3b' opacity='0.1'/%3E%3Crect x='77' y='280' width='8' height='3' fill='%233f5a3b' opacity='0.1'/%3E%3Crect x='77' y='390' width='8' height='3' fill='%233f5a3b' opacity='0.1'/%3E%3Crect x='77' y='500' width='8' height='3' fill='%233f5a3b' opacity='0.1'/%3E%3Crect x='77' y='610' width='8' height='3' fill='%233f5a3b' opacity='0.1'/%3E%3Crect x='300' y='0' width='11' height='640' fill='%234f6b4a' opacity='0.16'/%3E%3Crect x='299' y='60' width='13' height='3' fill='%233f5a3b' opacity='0.16'/%3E%3Crect x='299' y='170' width='13' height='3' fill='%233f5a3b' opacity='0.16'/%3E%3Crect x='299' y='280' width='13' height='3' fill='%233f5a3b' opacity='0.16'/%3E%3Crect x='299' y='390' width='13' height='3' fill='%233f5a3b' opacity='0.16'/%3E%3Crect x='299' y='500' width='13' height='3' fill='%233f5a3b' opacity='0.16'/%3E%3Crect x='299' y='610' width='13' height='3' fill='%233f5a3b' opacity='0.16'/%3E%3Crect x='330' y='0' width='6' height='640' fill='%234f6b4a' opacity='0.09'/%3E%3Crect x='329' y='60' width='8' height='3' fill='%233f5a3b' opacity='0.09'/%3E%3Crect x='329' y='170' width='8' height='3' fill='%233f5a3b' opacity='0.09'/%3E%3Crect x='329' y='280' width='8' height='3' fill='%233f5a3b' opacity='0.09'/%3E%3Crect x='329' y='390' width='8' height='3' fill='%233f5a3b' opacity='0.09'/%3E%3Crect x='329' y='500' width='8' height='3' fill='%233f5a3b' opacity='0.09'/%3E%3Crect x='329' y='610' width='8' height='3' fill='%233f5a3b' opacity='0.09'/%3E%3Cpath d='M39 140 q30 -6 52 8' stroke='%234f6b4a' stroke-width='5' stroke-linecap='round' fill='none' opacity='.16'/%3E%3Cpath d='M39 150 q30 -6 52 8' stroke='%234f6b4a' stroke-width='5' stroke-linecap='round' fill='none' opacity='.16'/%3E%3Cpath d='M84 330 q30 -6 52 8' stroke='%234f6b4a' stroke-width='5' stroke-linecap='round' fill='none' opacity='.16'/%3E%3Cpath d='M300 220 q-30 -6 -52 8' stroke='%234f6b4a' stroke-width='5' stroke-linecap='round' fill='none' opacity='.16'/%3E%3Cpath d='M300 232 q-30 -6 -52 8' stroke='%234f6b4a' stroke-width='5' stroke-linecap='round' fill='none' opacity='.16'/%3E%3Cpath d='M300 470 q-30 -6 -52 8' stroke='%234f6b4a' stroke-width='5' stroke-linecap='round' fill='none' opacity='.16'/%3E%3Cpath d='M39 520 q30 -6 52 8' stroke='%234f6b4a' stroke-width='5' stroke-linecap='round' fill='none' opacity='.16'/%3E%3C/svg%3E") center/cover no-repeat,#f2e8d3` },
+  { id: "meihua", label: "梅花", ancient: true, css: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 360 640' preserveAspectRatio='xMidYMax slice'%3E%3Cpath d='M360 40 C300 70 260 60 220 110 S170 170 120 180 M250 90 C240 130 260 150 250 190 M180 150 C190 120 170 100 160 80' stroke='%233a2a1a' stroke-width='5' stroke-linecap='round' fill='none' opacity='.55'/%3E%3Cg transform='translate%28222 110%29' opacity='.75'%3E%3Ccircle cx='0' cy='-5' r='4.5' fill='%23c2443a'/%3E%3Ccircle cx='5' cy='-1.5' r='4.5' fill='%23c2443a'/%3E%3Ccircle cx='3' cy='4.5' r='4.5' fill='%23c2443a'/%3E%3Ccircle cx='-3' cy='4.5' r='4.5' fill='%23c2443a'/%3E%3Ccircle cx='-5' cy='-1.5' r='4.5' fill='%23c2443a'/%3E%3Ccircle r='2' fill='%23f2c96b'/%3E%3C/g%3E%3Cg transform='translate%28255 150%29' opacity='.75'%3E%3Ccircle cx='0' cy='-5' r='4.5' fill='%23c2443a'/%3E%3Ccircle cx='5' cy='-1.5' r='4.5' fill='%23c2443a'/%3E%3Ccircle cx='3' cy='4.5' r='4.5' fill='%23c2443a'/%3E%3Ccircle cx='-3' cy='4.5' r='4.5' fill='%23c2443a'/%3E%3Ccircle cx='-5' cy='-1.5' r='4.5' fill='%23c2443a'/%3E%3Ccircle r='2' fill='%23f2c96b'/%3E%3C/g%3E%3Cg transform='translate%28170 100%29' opacity='.75'%3E%3Ccircle cx='0' cy='-5' r='4.5' fill='%23c2443a'/%3E%3Ccircle cx='5' cy='-1.5' r='4.5' fill='%23c2443a'/%3E%3Ccircle cx='3' cy='4.5' r='4.5' fill='%23c2443a'/%3E%3Ccircle cx='-3' cy='4.5' r='4.5' fill='%23c2443a'/%3E%3Ccircle cx='-5' cy='-1.5' r='4.5' fill='%23c2443a'/%3E%3Ccircle r='2' fill='%23f2c96b'/%3E%3C/g%3E%3Cg transform='translate%28130 178%29' opacity='.75'%3E%3Ccircle cx='0' cy='-5' r='4.5' fill='%23c2443a'/%3E%3Ccircle cx='5' cy='-1.5' r='4.5' fill='%23c2443a'/%3E%3Ccircle cx='3' cy='4.5' r='4.5' fill='%23c2443a'/%3E%3Ccircle cx='-3' cy='4.5' r='4.5' fill='%23c2443a'/%3E%3Ccircle cx='-5' cy='-1.5' r='4.5' fill='%23c2443a'/%3E%3Ccircle r='2' fill='%23f2c96b'/%3E%3C/g%3E%3Cg transform='translate%28300 72%29' opacity='.75'%3E%3Ccircle cx='0' cy='-5' r='4.5' fill='%23c2443a'/%3E%3Ccircle cx='5' cy='-1.5' r='4.5' fill='%23c2443a'/%3E%3Ccircle cx='3' cy='4.5' r='4.5' fill='%23c2443a'/%3E%3Ccircle cx='-3' cy='4.5' r='4.5' fill='%23c2443a'/%3E%3Ccircle cx='-5' cy='-1.5' r='4.5' fill='%23c2443a'/%3E%3Ccircle r='2' fill='%23f2c96b'/%3E%3C/g%3E%3Cg transform='translate%28250 190%29' opacity='.75'%3E%3Ccircle cx='0' cy='-5' r='4.5' fill='%23c2443a'/%3E%3Ccircle cx='5' cy='-1.5' r='4.5' fill='%23c2443a'/%3E%3Ccircle cx='3' cy='4.5' r='4.5' fill='%23c2443a'/%3E%3Ccircle cx='-3' cy='4.5' r='4.5' fill='%23c2443a'/%3E%3Ccircle cx='-5' cy='-1.5' r='4.5' fill='%23c2443a'/%3E%3Ccircle r='2' fill='%23f2c96b'/%3E%3C/g%3E%3Cg transform='translate%28190 140%29' opacity='.75'%3E%3Ccircle cx='0' cy='-5' r='4.5' fill='%23c2443a'/%3E%3Ccircle cx='5' cy='-1.5' r='4.5' fill='%23c2443a'/%3E%3Ccircle cx='3' cy='4.5' r='4.5' fill='%23c2443a'/%3E%3Ccircle cx='-3' cy='4.5' r='4.5' fill='%23c2443a'/%3E%3Ccircle cx='-5' cy='-1.5' r='4.5' fill='%23c2443a'/%3E%3Ccircle r='2' fill='%23f2c96b'/%3E%3C/g%3E%3C/svg%3E") right top/cover no-repeat,#f2e8d3` },
 ];
+/** 背景选择器的可选项：古风皮肤显示古风背景，现代皮肤隐藏 */
+export const chatBgOptions = () => CHAT_BGS.filter((b) => !b.ancient || isAncientComm());
 export const bgCss = (bg?: string) => (bg?.startsWith("data:") ? `center/cover no-repeat url(${bg})` : CHAT_BGS.find((b) => b.id === (bg ?? ""))?.css ?? CHAT_BGS[0].css);
 
 export type BubbleStyle = { id: string; label: string; me: string; meStyle?: CSSProperties; them: string; themStyle?: CSSProperties; tail: boolean };
@@ -297,7 +305,7 @@ function newStrangerId() { return `stg_${Date.now().toString(36)}${Math.floor(Ma
 export async function generateStranger(cfg: AIConfig, game: GameState): Promise<Stranger> {
   const avatarIdx = Math.floor(Math.random() * AVATAR_POOL.length);
   const r = await syncJson<{ name?: unknown; age?: unknown; gender?: unknown; occupation?: unknown; persona?: unknown; signature?: unknown; avatar?: unknown }>(
-    cfg, game, "wx_shake", "绿信·摇一摇",
+    cfg, game, "wx_shake", `${commTerm("app")}·摇一摇`,
     `「摇一摇」随机匹配到一位${T("city")}的普通陌生人（不是已有的圈内人物，不要与之重名）。返回 {"name":"中文姓名","age":18~40的整数,"gender":"男或女","occupation":"职业","persona":"≤60字的性格与说话风格","signature":"≤20字个性签名","avatar":0~${AVATAR_POOL.length - 1}的整数头像编号}。每次风格要不同。`,
   ).catch(() => null);
   const str = (x: unknown, n: number) => (typeof x === "string" ? x.trim().slice(0, n) : "");
@@ -370,7 +378,8 @@ export function useProactiveMessages() {
     const g0 = gRef.current;
     if (!g0 || busy.current || Date.now() - getLast() < MIN_GAP || Math.random() > chance) return;
     const ph = ensurePhone(g0).phone!;
-    const pool = ph.threads.filter((t) => t.kind === "private" && t.personId && ((g0.npcs.some((n) => n.id === t.personId) && ph.contacts.includes(t.personId!)) || getStranger(t.personId)));
+    // 只有玩家设为「主动联系」的好友才会在剧情之外主动来消息；其余人只随剧情（phoneLink）联络
+    const pool = ph.threads.filter((t) => t.kind === "private" && t.personId && msgPrefOf(g0, t.personId) === "active" && ((g0.npcs.some((n) => n.id === t.personId) && ph.contacts.includes(t.personId!)) || getStranger(t.personId)));
     if (!pool.length) return;
     const w = pool.map((t) => Math.max(1, (g0.sim.rel[t.personId!] ?? 0) + 5));
     let r = Math.random() * w.reduce((a, b) => a + b, 0);
@@ -411,21 +420,15 @@ export function useProactiveMessages() {
     busy.current = false;
   }
 
-  // 定时：手机开着时每分钟检查一次，小概率触发
-  useEffect(() => {
-    if (!proactive) return;
-    const id = setInterval(() => { void fire(0.2); }, 60 * 1000);
-    return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proactive]);
+  // 不再按真实时间定时乱发：只在游戏内进入新的一天时，按概率让「主动联系」的好友来消息
   // 主线推进（回合 / 天数变化）：较高概率触发
-  const stamp = game ? `${game.turnCount}|${game.sim.day}` : "";
+  const stamp = game ? `${game.sim.day}` : "";
   useEffect(() => {
     const SK = "star2005.wx.proactive.stamp";
     let prev = "";
     prev = loadData<string>(SK, ""); saveData(SK, stamp);
     if (!stamp || !prev || prev === stamp) return;
-    if (proactive) void fire(0.5);
+    if (proactive) void fire(0.6);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stamp, proactive]);
 }

@@ -42,7 +42,7 @@ import {
   type PlatformWorldGenCompleteResult,
 } from "./platformWorldGenAi.ts";
 import { applyScriptTone, readScriptTone } from "./scriptTone.ts";
-import { MOD_DESC_MAX, SCRIPT_TONE_MAX } from "./modBasicInfoLimits.ts";
+import { MOD_DESC_MAX, SCRIPT_TONE_MAX, SCRIPT_TONE_TARGET_MIN, SCRIPT_TONE_TARGET_MAX } from "./modBasicInfoLimits.ts";
 import { START_DATE_RE } from "./startDateFields.ts";
 import {
   ensureWorldGenTravelTimeStartDate,
@@ -126,10 +126,16 @@ export const WORLD_GEN_PHASE1_BATCH_ID = "phase1Foundation";
 /** 功能注释：第 2 次生成大类 id（5人物+10地点+5固定事件+结局） */
 export const WORLD_GEN_PHASE2_BATCH_ID = "phase2WorldCast";
 
+/**
+ * 功能注释：第 3 次生成大类 id（固定事件 + 主线/结局）。从原第 2 次拆出：
+ * 文游常规顺序是先有人物地点、再写围绕他们的事件剧情；拆开后单次输出减半，避免 16000 token 大包超时一挂四项。
+ */
+export const WORLD_GEN_PHASE3_BATCH_ID = "phase3StoryArc";
+
 /** 功能注释：两次串联核心大类；各只打一次完整请求，不再骨架+补文拆枪 */
 export function isWorldGenTwoPhaseBatch(batchId: string): boolean {
   const id = String(batchId || "").trim();
-  return id === WORLD_GEN_PHASE1_BATCH_ID || id === WORLD_GEN_PHASE2_BATCH_ID;
+  return id === WORLD_GEN_PHASE1_BATCH_ID || id === WORLD_GEN_PHASE2_BATCH_ID || id === WORLD_GEN_PHASE3_BATCH_ID;
 }
 
 /**
@@ -150,12 +156,13 @@ export function worldGenBatchMaxTokens(stepIds: readonly string[]): number {
   const ids = stepIds.map((id) => String(id || "").trim()).filter(Boolean);
   if (!ids.length) return 4000;
   // 功能注释：两次串联大包需要一次写满多字段，顶满后端上限
+  if (ids.includes("prompt") && ids.includes("hub:paths")) return 16000;
+  // 功能注释：人物地点 / 事件剧情已拆成两次，各自 10000 足够写完且不易超时
   if (
     ids.includes("npcs") && ids.includes("rooms")
-    || ids.includes("prompt") && ids.includes("hub:paths")
     || ids.includes("fixedEvents") && ids.includes("storylines")
   ) {
-    return 16000;
+    return 10000;
   }
   if (ids.some((id) => id === "fixedEvents" || id === "storylines")) return 8000;
   if (ids.length >= 3 || ids.some((id) => id === "npcs" || id === "hub:paths" || id === "hub:book" || id === "prompt")) {
@@ -163,6 +170,14 @@ export function worldGenBatchMaxTokens(stepIds: readonly string[]): number {
   }
   if (ids.length >= 2) return 8000;
   return worldGenModuleMaxTokens(ids[0]!);
+}
+
+/**
+ * 功能注释：单次请求超时随输出 token 放大；16000 token 大包按 180 秒必然超时（原 408 根因）。
+ */
+export function worldGenRequestTimeoutMs(maxTokens: number): number {
+  const t = 60_000 + Math.max(0, Math.floor(maxTokens || 0)) * 25;
+  return Math.max(180_000, Math.min(480_000, t));
 }
 
 /** 功能注释：尚无完成样本时，单次大类请求预估秒数（合并后单次更重） */
@@ -209,6 +224,8 @@ export async function withWorldGenRetries<T>(
       last = e;
       if ((e as { name?: string })?.name === "AbortError" || opts.signal?.aborted) throw e;
       if (isFatalAuthGenError(e)) throw e;
+      // 功能注释：超时已等满数分钟，最多再试一次，避免三连超时卡十几分钟
+      if ((e as { status?: number })?.status === 408 && attempt >= 1) break;
       if (attempt >= maxRetries) break;
       await sleepMs(worldGenRetryDelayMs(attempt + 1), opts.signal);
     }
@@ -353,11 +370,17 @@ export const WORLD_GEN_BATCH_CATEGORIES: readonly WorldGenBatchCategory[] = Obje
       "hub:paths",
     ]),
   }),
-  // 功能注释：第 2 次串联请求——5人物+10地点+5固定事件（事件链）+结局
+  // 功能注释：第 2 次串联请求——人物 + 地点（人物 home 须指向同批地点，必须同批）
   Object.freeze({
     id: WORLD_GEN_PHASE2_BATCH_ID,
-    name: "人物地点事件结局",
-    stepIds: Object.freeze(["npcs", "rooms", "fixedEvents", "storylines"]),
+    name: "人物与地点",
+    stepIds: Object.freeze(["npcs", "rooms"]),
+  }),
+  // 功能注释：第 3 次串联请求——固定事件 + 主线结局，引用第 2 次已落盘的人物/地点 id
+  Object.freeze({
+    id: WORLD_GEN_PHASE3_BATCH_ID,
+    name: "事件与剧情线",
+    stepIds: Object.freeze(["fixedEvents", "storylines"]),
   }),
   Object.freeze({ id: "contacts", name: "人脉", stepIds: Object.freeze(["contacts"]) }),
   Object.freeze({ id: "opening", name: "开场剧情", stepIds: Object.freeze(["opening"]) }),
@@ -438,6 +461,30 @@ export function resolveWorldGenBatches(selectedStepIds: readonly string[]): Worl
   return out;
 }
 
+/** 功能注释：进度面板分组——同一次请求的细项归一组，按实际请求顺序排列，避免看起来像逐项单独生成 */
+export function groupWorldGenProgressByBatch<T extends { id: string; batchId?: string }>(
+  modules: readonly T[],
+): { batchId: string; name: string; rows: T[] }[] {
+  const order = WORLD_GEN_BATCH_CATEGORIES.map((c) => c.id);
+  const groups = new Map<string, T[]>();
+  for (const m of modules) {
+    const bid = m.batchId || `solo:${m.id}`;
+    if (!groups.has(bid)) groups.set(bid, []);
+    groups.get(bid)!.push(m);
+  }
+  const rank = (bid: string) => {
+    const i = order.indexOf(bid);
+    return i >= 0 ? i : order.length;
+  };
+  return [...groups.entries()]
+    .sort((x, y) => rank(x[0]) - rank(y[0]))
+    .map(([batchId, rows]) => {
+      const cat = WORLD_GEN_BATCH_CATEGORIES.find((c) => c.id === batchId);
+      const solo = batchId.startsWith("solo:") ? WORLD_GEN_EDITOR_STEPS.find((st) => `solo:${st.id}` === batchId) : undefined;
+      return { batchId, name: cat?.name || solo?.name || rows[0]?.id || batchId, rows };
+    });
+}
+
 /** 功能注释：大类 id → 与勾选交集的细项；重试单行进度时用 */
 export function stepIdsForWorldGenBatch(
   batchId: string,
@@ -466,6 +513,7 @@ export function stepIdsForWorldGenBatch(
 export const WORLD_GEN_BATCH_WAVES: readonly (readonly string[])[] = Object.freeze([
   Object.freeze([WORLD_GEN_PHASE1_BATCH_ID]),
   Object.freeze([WORLD_GEN_PHASE2_BATCH_ID]),
+  Object.freeze([WORLD_GEN_PHASE3_BATCH_ID]),
   Object.freeze(["opening", "contacts"]),
 ]);
 
@@ -931,6 +979,7 @@ export function shortGenError(e: unknown): string {
   if (/校验失败/.test(message)) return "字段校验未通过";
   if (status === 401 || /请先登录|not_logged_in/.test(blob)) return "请先登录";
   if (/insufficient_points|积分不足/.test(blob)) return "积分不足";
+  if (status === 408) return "生成超时，请重试";
   if (status === 429) return "接口限流";
   if (status === 503 || /llm_unavailable|生成服务暂不可用/.test(blob)) return "服务暂不可用";
   if (status >= 500) return `服务端错误（${status}）`;
@@ -962,6 +1011,7 @@ export function formatGenError(e: unknown): string {
   if (/invalid.*key|api[\s_-]?key|authentication\s*fails|密钥无效|api key 不正确/.test(blob) || status === 401) {
     return "请先登录平台账号后再生成世界。";
   }
+  if (status === 408) return "AI 生成内容较多，等待超时了，返回后重新生成即可。";
   if (status === 429) return "接口限流了，稍等片刻再试。";
   if (status === 503 || /llm_unavailable|生成服务暂不可用/.test(blob)) {
     return "平台生成服务暂不可用，请稍后再试。";
@@ -1132,11 +1182,11 @@ const MODULE_FIELD_HINT: Record<string, string> = {
   startWeather: "weather",
   rooms: `rooms{id:{name,desc必填非空（进入后给玩家读的文字）,scenePrompt?（画面描述：空间陈设光线，与 desc 分开）,parent?,exits?,bg?,bgm?}}、startRoom：建议约 3–8 个地点（参考 ${WORLD_GEN_ROOMS_COUNT}）；只写 rooms/startRoom/exits，不要写 locations[]；startRoom 必须是 rooms 里的 id`,
   travel: "travel{}、cars[]",
-  prompt: `prompt{scriptTone}（系统提示词写完整口吻/时代/铁律，硬上限 ${SCRIPT_TONE_MAX}，少于 80 字视为未写完；禁止「约 700 字」截短，禁止留空或只贴创作者原文）；并在同级 manifest.description 写约 100 字玩家可见简介`,
+  prompt: `prompt{scriptTone}（系统提示词写完整口吻/时代/铁律，建议 ${SCRIPT_TONE_TARGET_MIN}–${SCRIPT_TONE_TARGET_MAX} 字，硬上限 ${SCRIPT_TONE_MAX}，少于 ${SCRIPT_TONE_TARGET_MIN} 字视为偏短；禁止「约 700 字」截短，禁止留空或只贴创作者原文）；并在同级 manifest.description 写约 100 字玩家可见简介`,
   lore: "worldBook[]（旧详细设定已并入世界书：title/content/keywords；挂靠见人物地点之后）",
   festivals: "worldBook[]（旧节日已并入世界书）",
   cover: "cover{}",
-  fixedEvents: `fixedEvents[]：建议约 2–5 条完整叙事事件（参考 ${WORLD_GEN_FIXED_EVENTS_COUNT}）；每条必有 id/name/prompt（≥20字）/effects（至少1条；key 只能是本作品建角属性 id、人物关系或地点 id，建角里没有 fame 就不要写 fame）/trigger；可含 time/conds/nextIds/openingPrompt（是否作开局提示词）/choices（仅当需要玩家选择）；nextIds 只能指向本次事件 id；不要写 events[]；同批另写 opening{title?,paragraphs:[至少2段开局叙事]}（开场与固定事件都要生成）；条目变多时缩短每条正文，不要为凑数写空事件`,
+  fixedEvents: `fixedEvents[]：建议约 2–5 条完整叙事事件（参考 ${WORLD_GEN_FIXED_EVENTS_COUNT}）；每条必有 id/name/prompt（≥20字）/effects（建议 1–3 条，纯剧情事件可省略；key 必须写建角属性 id（不要写中文名）、人物 id 或地点 id，建角里没有 fame 就不要写 fame）/trigger；可含 time/conds/nextIds/openingPrompt（是否作开局提示词）/choices（仅当需要玩家选择）；nextIds 只能指向本次事件 id；不要写 events[]；同批另写 opening{title?,paragraphs:[至少2段开局叙事]}（开场与固定事件都要生成）；条目变多时缩短每条正文，不要为凑数写空事件`,
   storylines: "storylines[]（仅 1 条主线，nodes 须有 name/desc，conds 只能用本作品属性/人物/地点 id；没有合法条件就留空重试该节点，禁止自动补名气条件、禁止 rewards）；可含 unlockIds 指向已写出的固定事件；endings[]、timeLimit、gradeDims；禁止写 sidelines（支线留给创作者手建）",
   lookRules: "lookRules[]",
   playModInstalls: "playModInstalls[]（可空）",
@@ -1654,7 +1704,7 @@ ${ctx || "（尚无其它模组）"}
 ${leanBlock}
 
 要求：内容须能被编辑器继续手改；地点/人物 id 与上下文已有 id 对齐；不要编造无法访问的外链大图。
-${needPrompt ? `本批必须：1) content.prompt.scriptTone 写完整系统提示词（硬上限 ${SCRIPT_TONE_MAX}，少于 80 字视为未写完；禁止「约 700 字」截短，禁止留空或只粘贴上方「故事设定」原文）；2) manifest.description 写约 ${WORLD_DESC_SUMMARY_TARGET} 字玩家可见简介。\n` : ""}${stepIds.includes("travelTime") ? `本批必须写 content.startDate，格式严格 YYYY.MM.DD（例 2024.03.15），按上方故事设定与已生成上下文的时代/人物年龄选取，禁止留空、禁止中文日期、禁止只写 travel 不写 startDate（缺日期时本地会兜底，但仍应尽量写出）。\n` : ""}${stepIds.includes("creation") ? `本批 customAttrs 建议约 2–4 条：每条有贴合本世界观的中文名称与 desc，禁止「未命名」或空壳凑数；少了或多了都可以。\n` : ""}${stepIds.includes("startResources") ? `本批必须写 content.startMoney（非负）与 content.moneyLabel（货币名，如 元/灵石），禁止只写金额不写货币名。\n` : ""}${stepIds.includes("fixedEvents") ? `本批 fixedEvents 建议约 2–5 条完整叙事事件：每条含 name、prompt（≥20字）、effects（key 只能用上方建角属性/人物关系/地点 id）；可含 openingPrompt（开局提示词勾选）；需要选择才写 choices；nextIds 只能指向本次事件 id；不要写 events[]。\n` : ""}${stepIds.includes("rooms") ? `本批 rooms 建议约 3–8 个地点：每条含 name 与非空 desc；写 startRoom（须为 rooms 内 id）；只写 rooms，不要写 locations[]。\n` : ""}${stepIds.includes("npcs") ? `${platformNpcTagsPromptLine()}\n本批 npcs 建议约 2–6 名；每条必须含有名有姓的 name、gender、age、bio、appearancePrompt；home 必须是同批 rooms id；设定无组织则不要写 factionId；设定无人物关系则不要写 metStart/wxStart。` : ""}${stepIds.includes("storylines") ? `\n本批须写 1 条主线 storylines[]（节点含 name/desc；conds 只用本作品属性/人物/地点，禁止自动补名气）与 endings[]；禁止写 sidelines。\n` : ""}${stepIds.includes("npcs") || stepIds.includes("rooms") ? `\n世界书挂靠：人物与地点写出后，可另写 worldBook:[{id,bindRooms,bindNpcs}]（id 取上方「世界书」已有 id；bindRooms/bindNpcs 只能填本批 rooms/npcs 的 id，对不上的会被删除；不写则按名称自动回填）。\n事件效果与主线条件的属性 key 只能来自上方「建角属性」id，人物/地点只能用本批 id；上方「势力：无」时不要写势力；设定没有好感恋爱时不要写 rel 效果。\n` : ""}`,
+${needPrompt ? `本批必须：1) content.prompt.scriptTone 写完整系统提示词（建议 ${SCRIPT_TONE_TARGET_MIN}–${SCRIPT_TONE_TARGET_MAX} 字，硬上限 ${SCRIPT_TONE_MAX}，少于 ${SCRIPT_TONE_TARGET_MIN} 字视为偏短；禁止「约 700 字」截短，禁止留空或只粘贴上方「故事设定」原文）；2) manifest.description 写约 ${WORLD_DESC_SUMMARY_TARGET} 字玩家可见简介。\n` : ""}${stepIds.includes("travelTime") ? `本批必须写 content.startDate，格式严格 YYYY.MM.DD（例 2024.03.15），按上方故事设定与已生成上下文的时代/人物年龄选取，禁止留空、禁止中文日期、禁止只写 travel 不写 startDate（缺日期时本地会兜底，但仍应尽量写出）。\n` : ""}${stepIds.includes("creation") ? `本批 customAttrs 建议约 2–4 条：每条有贴合本世界观的中文名称与 desc，禁止「未命名」或空壳凑数；少了或多了都可以。\n` : ""}${stepIds.includes("startResources") ? `本批必须写 content.startMoney（非负）与 content.moneyLabel（货币名，如 元/灵石），禁止只写金额不写货币名。\n` : ""}${stepIds.includes("fixedEvents") ? `本批 fixedEvents 建议约 2–5 条完整叙事事件：每条含 name、prompt（≥20字），有数值变化时写 effects（key 必须用上方建角属性/人物关系/地点的 id，不要写中文名）；可含 openingPrompt（开局提示词勾选）；需要选择才写 choices；nextIds 只能指向本次事件 id；不要写 events[]。\n` : ""}${stepIds.includes("rooms") ? `本批 rooms 建议约 3–8 个地点：每条含 name 与非空 desc；写 startRoom（须为 rooms 内 id）；只写 rooms，不要写 locations[]。\n` : ""}${stepIds.includes("npcs") ? `${platformNpcTagsPromptLine()}\n本批 npcs 建议约 2–6 名；每条必须含有名有姓的 name、gender、age、bio、appearancePrompt；home 必须是同批 rooms id；设定无组织则不要写 factionId；设定无人物关系则不要写 metStart/wxStart。` : ""}${stepIds.includes("storylines") ? `\n本批须写 1 条主线 storylines[]（节点含 name/desc；conds 只用本作品属性/人物/地点，禁止自动补名气）与 endings[]；禁止写 sidelines。\n` : ""}${stepIds.includes("npcs") || stepIds.includes("rooms") ? `\n世界书挂靠：人物与地点写出后，可另写 worldBook:[{id,bindRooms,bindNpcs}]（id 取上方「世界书」已有 id；bindRooms/bindNpcs 只能填本批 rooms/npcs 的 id，对不上的会被删除；不写则按名称自动回填）。\n事件效果与主线条件的属性 key 只能来自上方「建角属性」id，人物/地点只能用本批或上方「已生成上下文」里的 id；上方「势力：无」时不要写势力；设定没有好感恋爱时不要写 rel 效果。\n` : ""}`,
     },
   ];
 }
@@ -1762,7 +1812,7 @@ export async function generateWorldGenBatch(opts: GenerateBatchOpts): Promise<{ 
         messages,
       });
       const { text, pointsDeducted } = normalizeWorldGenCompleteResult(
-        await fn(cfg, messages, 180_000),
+        await fn(cfg, messages, worldGenRequestTimeoutMs(maxTokens)),
       );
       points += pointsDeducted;
       if (opts.signal?.aborted) throw new DOMException("已取消", "AbortError");

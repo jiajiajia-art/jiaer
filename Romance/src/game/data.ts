@@ -231,9 +231,8 @@ export const dossierStatKeys = (): StatKey[] => {
     (k, i, a) => k in RAW_STAT_LABELS && a.indexOf(k) === i && !hid.has(k),
   );
   if (ordered.length) return ordered;
-  // 功能注释：非娱乐圈作品表单没写 stats.order 时不补八维（演技/歌艺…），档案显示「尚未配置个人能力」
-  if (currentWorldId() !== "ent") return [];
-  return RAW_STAT_ORDER.filter((k) => !hid.has(k));
+  // 功能注释：作品表单没写 stats.order 时不补内置能力，档案显示「尚未配置个人能力」
+  return [];
 };
 export const ALL_STAT_KEYS: readonly StatKey[] = ["yanji", "geyi", "koucai", "yitai", "donggan", "tineng", "caizhi", "zixin"];
 /* 开局资金 / 开局天气（开局日期见 content.ts CALENDAR，可用槽 startDate 简写覆盖） */
@@ -294,6 +293,7 @@ export type WeekendAct = {
   reputation?: number;
   cgain?: Record<string, [number, number]>; // 自定义属性收益
   reqs?: GradeReq[]; // 解锁门槛（全部满足才可排）
+  cat?: "rest" | "social"; // 日程板里归入哪类（缺省：recuperate=休息调整，其余=外出社交）
 };
 
 export const RAW_WEEKEND_ACTS: WeekendAct[] = [
@@ -369,7 +369,7 @@ export const LESSON_GRADES: LessonGrade[] = liveArray(() => {
   const g = tuning().lessonGrades;
   if (g?.length) return g;
   // 娱乐圈未写才回落原 4 级；其它作品未勾/未写不套用娱乐圈等级表
-  return currentWorldId() === "ent" ? RAW_LESSON_GRADES : [NEUTRAL_LESSON_GRADE];
+  return [NEUTRAL_LESSON_GRADE];
 });
 
 /* ═══ 打工（分级零工，靠名气变现）═══
@@ -506,7 +506,6 @@ export const tuning = (): TuningSlot => slot<TuningSlot>("tuning", () => ({}), (
 /** 功能注释：非娱乐圈未写评级倍率时全按 ×1，不套用娱乐圈 1.6/0.4 曲线。 */
 export const GRADE_MUL: Record<DayGrade, number> = liveRecord(() => {
   const authored = tuning().gradeMul ?? {};
-  if (currentWorldId() === "ent") return { ...RAW_GRADE_MUL, ...authored };
   return { perfect: 1, great: 1, success: 1, fail: 1, bad: 1, ...authored };
 });
 export const GRADE_TONE: Record<DayGrade, string> = {
@@ -749,12 +748,29 @@ export type Car = {
   tripBonus?: Record<string, number>; // 每次自己驾驶出行的增益
 };
 /* 把增益表应用到存档（属性键写入 stats，其余为顶层数值） */
-export function applyBonus<T extends { stats: Record<string, number> }>(s: T, b?: Record<string, number>): { next: T; notes: string[] } {
+/** 功能注释：属性显示名——先查作者建角属性，再查内置属性与常用数值；玩法包界面统一用它 */
+export function attrLabelOf(key: string): string {
+  const def = asModArray<{ id: string; label?: string }>(slot("customAttrs", () => [], () => [])).find((d) => d.id === key);
+  if (def) return def.label || key;
+  return (STAT_LABELS as Record<string, string>)[key] ?? ({ stress: "压力", mood: "心情", energy: "体力", money: "资金", fame: "名气" } as Record<string, string>)[key] ?? key;
+}
+
+export function applyBonus<T extends { stats: Record<string, number>; cattrs?: Record<string, number> }>(s: T, b?: Record<string, number>): { next: T; notes: string[] } {
   if (!b) return { next: s, notes: [] };
   const n = { ...s, stats: { ...s.stats } } as T & Record<string, unknown>;
   const notes: string[] = [];
+  // 功能注释：key 为作者建角属性 id 时写入 cattrs（按属性上下限截断），玩法包不依赖娱乐圈八维
+  const attrDefs = asModArray<{ id: string; label?: string; min?: number; max?: number; init?: number }>(slot("customAttrs", () => [], () => []));
   for (const [k, v] of Object.entries(b)) {
     if (!v) continue;
+    const def = attrDefs.find((d) => d.id === k);
+    if (def) {
+      const cur = n.cattrs?.[k] ?? def.init ?? 0;
+      const max = typeof def.max === "number" && def.max > 0 ? def.max : Infinity;
+      n.cattrs = { ...(n.cattrs ?? {}), [k]: Math.max(def.min ?? 0, Math.min(max, cur + v)) };
+      notes.push(`${def.label || k} ${v > 0 ? "+" : ""}${v}`);
+      continue;
+    }
     if (k in n.stats) n.stats[k] = clampStat(k as StatKey, (n.stats[k] ?? 0) + v); // 遵守本世界属性上下限
     else if (typeof n[k] === "number") (n as Record<string, number>)[k] = k === "money" ? (n[k] as number) + v : Math.max(0, Math.min(100, (n[k] as number) + v));
     else continue;
@@ -1147,7 +1163,8 @@ export type MealPlan = {
   desc?: string;
   cost: number; // 每周伙食费
   stress?: number; // 每周压力变化（负=减压）
-  gain?: Partial<Record<StatKey, number>>; // 每周能力变化（可为负）
+  gain?: Partial<Record<StatKey, number>>; // 每周能力变化（内置属性，娱乐圈等内置世界用；可为负）
+  cgain?: Record<string, number>; // 每周自定义建角属性变化（键=AttrDef.id；可为负）
   styling?: number; // 每周造型（气色）变化
   reqs?: GradeReq[]; // 解锁门槛（全部满足才可选）
   default?: boolean; // 未选择时默认这一档
@@ -1175,9 +1192,14 @@ export const MEALS: MealPlan[] = liveArray(() => slot<MealPlan[]>("meals", () =>
 /** 当前所选伙食（未选 / 已失效 → 默认档 → 第一档；本世界没有饮食玩法时为 undefined） */
 export const mealOf = (id?: string | null): MealPlan | undefined => MEALS.find((m) => m.id === id) ?? MEALS.find((m) => m.default) ?? MEALS[0];
 /** 伙食效果文案：体能 +1 · 造型 -1 · 压力 -3 */
-export function mealEffect(m: MealPlan): string {
+/** 功能注释：伙食效果说明；attrLabels 为本世界自定义属性 id→名称（cgain 与写成属性 id 的旧 gain 都按它显示） */
+export function mealEffect(m: MealPlan, attrLabels: Record<string, string> = {}): string {
   const sg = (v: number) => `${v > 0 ? "+" : ""}${v}`;
-  const parts = Object.entries(m.gain ?? {}).filter(([, v]) => v).map(([k, v]) => `${STAT_LABELS[k as StatKey] ?? k} ${sg(v!)}`);
+  const parts = Object.entries(m.cgain ?? {}).filter(([, v]) => v).map(([k, v]) => `${attrLabels[k] ?? attrLabelOf(k)} ${sg(v)}`);
+  for (const [k, v] of Object.entries(m.gain ?? {})) {
+    if (!v) continue;
+    parts.push(`${attrLabels[k] ?? attrLabelOf(k)} ${sg(v)}`);
+  }
   if (m.styling) parts.push(`造型 ${sg(m.styling)}`);
   if (m.stress) parts.push(`压力 ${sg(m.stress)}`);
   return parts.join(" · ") || "无额外影响";

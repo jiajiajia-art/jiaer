@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useGame } from "../store/gameCtx";
 import { IconChevronDown, IconChevronUp, IconPin, IconSparkle, StarRating } from "../lib/icons";
 import { industryBoards, leaderboard, gigCategory, type GigCat } from "../game/logic";
-import { GIG_POOL, STAT_LABELS, type StatKey } from "../game/data";
+import { GIG_POOL, STAT_LABELS, attrLabelOf, type StatKey } from "../game/data";
 import { AD_BRANDS, MOVIE_TITLES, companyMeta, industryAwards, renderStarBuzz } from "../worlds/star2005/content";
 import { complete, isConfigured } from "../lib/ai";
 import { Chip, Modal } from "./ui";
@@ -329,10 +329,10 @@ export default function ActionsTab() {
                         </div>
                         <div className="mt-1.5 text-[11px] text-ink-soft">
                           门槛：{g.fameReq > 0 ? `名气 ${g.fameReq}` : "名气不限"}
-                          {Object.entries(g.statReq).map(([k, v]) => `　${STAT_LABELS[k as StatKey]} ${v}`).join("")}
+                          {Object.entries(g.statReq).map(([k, v]) => `　${attrLabelOf(k)} ${v}`).join("")}
                         </div>
                         <div className="mt-0.5 text-[11px] text-jade">
-                          成长：{Object.entries(g.grow).map(([k, v]) => `${STAT_LABELS[k as StatKey]} +${v}`).join(" · ")}
+                          成长：{Object.entries(g.grow).map(([k, v]) => `${attrLabelOf(k)} +${v}`).join(" · ")}
                         </div>
                         {/* 交涉接单：仅对本周已打听到的通告开放；签下后回「养成」排「拍摄」日程 */}
                         {onOffer && !isUsed && !isActive && (

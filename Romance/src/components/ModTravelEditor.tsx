@@ -38,6 +38,15 @@ export default function ModTravelEditor({ value, rooms, onChange, part }: { valu
         <label className="block text-[11px] text-ink-soft">每回合行动点（支线体力）
           <input type="number" min={1} max={99} value={t.apPerTurn ?? 10} onChange={(e) => set({ apPerTurn: num(e.target.value, 1) })} className={`${inp} mt-0.5 max-w-[12rem]`} />
         </label>
+        <div className="flex flex-wrap gap-3">
+          <label className="block text-[11px] text-ink-soft">剧情行动扣点
+            <input type="number" min={0} max={99} value={t.apPerAct ?? 1} onChange={(e) => set({ apPerAct: num(e.target.value, 0) })} className={`${inp} mt-0.5 w-24`} />
+          </label>
+          <label className="block text-[11px] text-ink-soft">当面对话扣点
+            <input type="number" min={0} max={99} value={t.apPerTalk ?? 1} onChange={(e) => set({ apPerTalk: num(e.target.value, 0) })} className={`${inp} mt-0.5 w-24`} />
+          </label>
+        </div>
+        <p className="text-[10.5px] text-ink-soft">剧情行动：每次点选项或自己写行动扣一次；当面对话：每次打开对话、对方第一次回应时扣一次；填 0 不扣。地点里的行动按钮在地图编辑器里按项设置。</p>
         <p className="text-[10.5px] text-ink-soft">主线：每次「推进」进入新回合、行动点回满；支线：换地点默认扣行动点，进入事件支线按各事件设定扣点，不推进日历。行动点用完就得回主线推进时间。</p>
       </div>}
 
@@ -56,7 +65,8 @@ export default function ModTravelEditor({ value, rooms, onChange, part }: { valu
 
       {pace && (() => {
         // 功能注释：日/周/月/年与「每次几个」并成一块；数量贴在当前选中单位旁，不再上下拆两段
-        const unit = t.advanceUnit ?? "day";
+        // 功能注释：AI/旧数据可能写入非法单位（如 "days"），归一为合法值，避免显示 undefined
+        const unit = (["day", "week", "month", "year"] as const).includes(t.advanceUnit as never) ? t.advanceUnit! : "day";
         const unitLabel = ({ day: "天", week: "周", month: "个月", year: "年" } as const)[unit];
         const isDay = unit === "day";
         const amount = isDay ? (t.advanceDays ?? 1) : (t.advanceCount ?? 1);

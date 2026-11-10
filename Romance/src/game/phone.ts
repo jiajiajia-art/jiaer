@@ -104,6 +104,7 @@ export type PhoneState = {
   mails?: Mail[]; // 邮箱
   removed?: RemovedFriend[]; // 被主角删除的好友（线下剧情会对此做出反应）
   ringing?: IncomingCall; // 线下剧情触发的来电（等待主角接听）
+  msgPref?: Record<string, import("./msgPref").MsgPref>; // 好友消息权限（缺省 = 随剧情），见 game/msgPref.ts
 };
 
 export type PhoneAct = { id: string; gt: number; label: string; app: string; text: string; pid?: string; min: number; sent?: boolean; key?: string };

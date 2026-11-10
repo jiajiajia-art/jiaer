@@ -1,10 +1,9 @@
 import { wallet } from "./wallet";
 import type { GameState as SimState } from "./logic";
-import { computeLooks } from "./logic";
-import { STAT_ORDER, TITLES } from "./data";
+import { TITLES } from "./data";
 import { liveTerm as T } from "../mods/live";
 import { metricVal } from "./fixedEvents";
-import { GRADE_DIM_MAX, type GradeDim, type GradeDimIcon } from "../lib/types";
+import { GRADE_DIM_MAX, type AttrDef, type GradeDim, type GradeDimIcon } from "../lib/types";
 
 /* 人生评级：按名气 / 口碑 / 作品 / 奖项 / 羁绊 / 身家六项打分（0–100），映射到 S+ ~ D */
 export type LifeGrade = {
@@ -92,13 +91,43 @@ export const dimValue = (s: SimState, src: GradeDim["src"]): number =>
     ? ((s.stats as Record<string, number>)[src.key] ?? 0)
     : metricVal(s, src.key);
 
-/* 结局页「各项等级判定」：创作者设置了评定维度就按维度算，否则用内置四项 */
+/* 未配置评级维度时：用本作品建角属性自动生成默认维度（最多 GRADE_DIM_MAX 条；满分取属性 max，缺省 100） */
+const DEFAULT_DIM_ICONS: GradeDimIcon[] = ["heart", "star", "leaf", "book"];
+export function defaultGradeDims(defs?: AttrDef[] | null): GradeDim[] {
+  if (!Array.isArray(defs)) return [];
+  return defs
+    .filter((d) => d && typeof d.id === "string" && d.id)
+    .slice(0, GRADE_DIM_MAX)
+    .map((d, i) => ({
+      id: `dim_auto_${d.id}`,
+      label: (d.label || d.id).slice(0, 8),
+      icon: DEFAULT_DIM_ICONS[i % DEFAULT_DIM_ICONS.length],
+      src: { kind: "metric" as const, key: `c:${d.id}` },
+      full: d.max && d.max > 0 ? d.max : 100,
+    }));
+}
+
+/* 存档实际生效的评级维度：手配优先，否则按本局属性自动生成 */
+export function effectiveGradeDims(g: { gradeDims?: GradeDim[]; attrDefs?: AttrDef[] }): GradeDim[] {
+  return g.gradeDims?.length ? g.gradeDims : defaultGradeDims(g.attrDefs);
+}
+
+/* 无任何维度时的中性总评：不打分、不回落任何内置维度 */
+export const NEUTRAL_GRADE: LifeGrade = { grade: "—", score: 0, verdict: "旅程结束", items: [] };
+
+/* 结算总评：有维度按维度均分，否则中性占位 */
+export function settleGrade(g: { sim: SimState; gradeDims?: GradeDim[]; attrDefs?: AttrDef[] }): LifeGrade {
+  const dims = effectiveGradeDims(g);
+  return dims.length ? dimsGrade(g.sim, dims) : NEUTRAL_GRADE;
+}
+
+/* 结局页「各项等级判定」：只按传入的维度算；没有维度就不展示卡片 */
 export function endingPillars(
   s: SimState,
   dims?: GradeDim[],
-  journalCount = 0,
+  _journalCount = 0,
 ): SubGradeCard[] {
-  if (!dims?.length) return endingFourPillars(s, journalCount);
+  if (!dims?.length) return [];
   return dims.slice(0, GRADE_DIM_MAX).map((d) => {
     const v = dimValue(s, d.src);
     const full = d.full > 0 ? d.full : 100;
@@ -134,100 +163,6 @@ export function dimsGrade(s: SimState, dims: GradeDim[]): LifeGrade {
       detail: c.detail,
     })),
   };
-}
-
-/* 未配置评级维度时的兜底四项名称（仅后备，作者在结局编辑器里配置维度即可全部替换） */
-export const FALLBACK_DIM_LABELS = { cute: "可爱度", beauty: "美丽度", growth: "成长度", story: "故事完成度" } as const;
-
-/* 结局评定四宫格：可爱度（亲和力/观众缘）· 美丽度（仪态/形象）· 成长度（能力/代表作）· 故事完成度（探索/羁绊/事件） */
-export function endingFourPillars(
-  s: SimState,
-  journalCount = 0,
-): SubGradeCard[] {
-  const bonds = Object.values(s.rel ?? {}).filter((v) => v >= 40).length;
-  const audience = s.audience ?? 30;
-  const cuteScore = Math.min(
-    100,
-    Math.round(
-      pct(s.reputation, 95) * 0.45 +
-        pct(audience, 90) * 0.25 +
-        pct(bonds, 4) * 0.3,
-    ),
-  );
-
-  const looks = computeLooks(s);
-  const beautyScore = Math.min(
-    100,
-    Math.round(
-      pct(looks, 680) * 0.55 +
-        pct(s.stats?.yitai ?? 50, 320) * 0.25 +
-        pct(s.fame, 600) * 0.2,
-    ),
-  );
-
-  const statAvg =
-    STAT_ORDER.reduce((sum, k) => sum + (s.stats?.[k] ?? 40), 0) /
-    Math.max(1, STAT_ORDER.length);
-  const growthScore = Math.min(
-    100,
-    Math.round(
-      pct(statAvg, 280) * 0.55 +
-        pct(s.works, 8) * 0.25 +
-        pct((s.titles?.length ?? 0) + s.awards, 4) * 0.2,
-    ),
-  );
-
-  const visitedCount = s.visited?.length ?? 1;
-  const metCount = s.metPeople?.length ?? 1;
-  const firedCount = (s.eventsFired?.length ?? 0) + journalCount;
-  const storyScore = Math.min(
-    100,
-    Math.round(
-      pct(metCount, 8) * 0.35 +
-        pct(visitedCount, 8) * 0.25 +
-        pct(firedCount, 6) * 0.2 +
-        pct(s.day ?? 1, 365) * 0.2,
-    ),
-  );
-
-  return [
-    {
-      id: "cute",
-      icon: "heart",
-      label: FALLBACK_DIM_LABELS.cute,
-      grade: scoreToLetter(cuteScore),
-      stars: scoreToStars(cuteScore),
-      score: cuteScore,
-      detail: `口碑 ${Math.round(s.reputation)} · 挚友 ${bonds}`,
-    },
-    {
-      id: "beauty",
-      icon: "star",
-      label: FALLBACK_DIM_LABELS.beauty,
-      grade: scoreToLetter(beautyScore),
-      stars: scoreToStars(beautyScore),
-      score: beautyScore,
-      detail: `形象 ${Math.round(looks)} · ${T("fame", "名气")} ${Math.round(s.fame)}`,
-    },
-    {
-      id: "growth",
-      icon: "leaf",
-      label: FALLBACK_DIM_LABELS.growth,
-      grade: scoreToLetter(growthScore),
-      stars: scoreToStars(growthScore),
-      score: growthScore,
-      detail: `综合能力 ${Math.round(statAvg)} · 作品 ${s.works} 部`,
-    },
-    {
-      id: "story",
-      icon: "book",
-      label: FALLBACK_DIM_LABELS.story,
-      grade: scoreToLetter(storyScore),
-      stars: scoreToStars(storyScore),
-      score: storyScore,
-      detail: `历时 ${Math.max(1, s.day ?? 1)} 天 · 结识 ${metCount} 人`,
-    },
-  ];
 }
 
 /* 同时获得副称号：优先展示佩戴头衔 / 已解锁最高头衔，否则按最高维度派生 */

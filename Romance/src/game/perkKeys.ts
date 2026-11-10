@@ -13,17 +13,19 @@ export type PerkKeySource = {
   term?: (k: "fame" | "reputation", fb: string) => string;
 };
 
-export function perkKeyOptions(src: PerkKeySource): PerkKeyOption[] {
+/** 功能注释：noBuiltin=true 时只给建角属性与通用项（好感 / 行动力 / 周数），不出现娱乐圈八维、压力、名气等内置数值 */
+export function perkKeyOptions(src: PerkKeySource & { noBuiltin?: boolean }): PerkKeyOption[] {
   const t = src.term ?? ((_k, fb) => fb);
   const world = "本世界观属性";
   const out: PerkKeyOption[] = [
     ...src.statOrder.map((k) => ({ key: `stat:${k}`, label: src.statLabels[k] ?? k, group: world })),
     ...(Array.isArray(src.attrs) ? src.attrs : []).map((d) => ({ key: `attr:${d.id}`, label: d.label || d.id, group: world })),
     { key: "affinity", label: "与 TA 的好感", group: "通用" },
-    { key: "stress", label: src.metaLabels?.stress ?? "压力", group: "通用" },
+    ...(src.noBuiltin ? [] : [{ key: "stress", label: src.metaLabels?.stress ?? "压力", group: "通用" }]),
     { key: "energy", label: "行动力", group: "通用" },
     { key: "week", label: "当前周数", group: "通用", readOnly: true },
   ];
+  if (src.noBuiltin) return out;
   const builtin = "引擎内置（娱乐圈默认，本世界观可能未启用）";
   out.push(
     { key: "fame", label: src.metaLabels?.fame ?? t("fame", "名气"), group: builtin },

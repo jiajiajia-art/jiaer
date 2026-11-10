@@ -10,6 +10,7 @@ import { affinityOf, kbBlock, kbOf, toNpcPov, recentStoryBlock, remember, romanc
 import { applyChatEffects, gameTimeLabel, ensurePhone, wxApply, wxRelation, wxResolve, type WxRelation } from "../game/phone";
 import { relOf } from "../game/relations";
 import { meetPerson } from "../game/npcIntro";
+import { apPerTalk, tripPoints } from "../game/mud";
 
 /* 大世界层级的线下【对话】面板（非手机浮层）。
  * - NPC 可自主选择好好回应 / 敷衍 / 无视（ignore）；无视时面板保持打开但无有效台词。
@@ -79,6 +80,7 @@ export default function TalkPanel({ pid, name, role, onClose }: { pid: string; n
   const [, setDiag] = useState("");
   const room0 = useRef(game?.sim.room);
   const gRef = useRef(game);
+  const paidRef = useRef(false); // 本次当面交谈是否已扣过行动点（每次打开对话只扣一次）
   gRef.current = game;
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -102,6 +104,8 @@ export default function TalkPanel({ pid, name, role, onClose }: { pid: string; n
   async function ask(playerLine: string, applying = false) {
     const g0 = gRef.current!;
     if (!isConfigured(cfg)) { setLines((l) => [...l, { who: "sys", text: "需要先接入 AI，对方才会回应你" }]); return; }
+    const talkCost = paidRef.current ? 0 : apPerTalk();
+    if (talkCost > 0 && tripPoints(g0.sim) < talkCost) { setLines((l) => [...l, { who: "sys", text: `行动点不足：当面交谈需要 ${talkCost} 点，当前只剩 ${tripPoints(g0.sim)} 点。推进到下一回合即可回满。` }]); return; }
     setBusy(true);
     const r = wxRelation(g0, pid);
     const history = linesRef.current.filter((l) => !l.hint).slice(-12).map((l) => (l.who === "me" ? `玩家：${l.text}` : l.who === "npc" ? `${name}：${l.text}` : `（${l.text}）`)).join("\n");
@@ -147,6 +151,12 @@ export default function TalkPanel({ pid, name, role, onClose }: { pid: string; n
           const d = relOf(g.sim, pid).romantic - love0;
           if (d) add.push({ who: "sys", text: `${name} 对你的爱慕 ${d > 0 ? "+" : ""}${d}`, hint: true });
         }
+      }
+      // 对方回应了才扣行动点（没搭理 / 请求失败不扣），整段对话只扣一次
+      if (talkCost > 0 && p?.reply?.trim() && p.mode !== "ignore") {
+        paidRef.current = true;
+        g = { ...g, sim: { ...g.sim, ap: Math.max(0, tripPoints(g.sim) - talkCost) } };
+        add.push({ who: "sys", text: `行动点 -${talkCost}（当面交谈）`, hint: true });
       }
       const cmd = p?.wx;
       if (wxRelation(g, pid) === "pending" && (cmd === "agree" || cmd === "reject" || cmd === "shelve")) {

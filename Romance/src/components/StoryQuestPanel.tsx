@@ -43,9 +43,13 @@ function Bar({ v, max }: { v: number; max: number }) {
   return <div className="h-1.5 overflow-hidden rounded-full bg-paper-2"><div className="h-full rounded-full bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] transition-[width] duration-500" style={{ width: `${max ? Math.min(100, (v / max) * 100) : 0}%` }} /></div>;
 }
 /* 前情提要：按「· 」拆成一条条事件，拆不开就整段显示 */
+// 功能注释：AI 记忆里常夹带连贯性备注（"本应…""未核对…"），这类给模型看的句子不展示给玩家
+const META_RE = /本应|应为|应当|未核对|核对|设定|不得|须|需保持|注意|系统|AI|模型|伏笔|待确认/;
 function recapItems(memory: string) {
-  const parts = memory.split(/(?:^|\s)[·•]\s*/).map((x) => x.trim()).filter(Boolean);
-  return parts.length ? parts : [memory.trim()];
+  return memory
+    .split(/(?:^|\s)[·•]\s*|[。！？\n]/)
+    .map((x) => x.trim().replace(/[；;，,]$/, ""))
+    .filter((x) => x.length > 3 && !META_RE.test(x));
 }
 
 export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => void } = {}) {
@@ -71,7 +75,11 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
   const mainLineName = mainQuest?.lineName ?? (getWorldStorylines().find((l) => l.enabled !== false && l.name?.trim())?.name?.trim() || "主线");
   const mainStepName = mainQuest?.stepName;
   const mainStatus = game.ended ? "已完成" : "进行中";
-  const recap = game.memory?.trim() ? recapItems(game.memory) : [];
+  // 功能注释：前情提要优先取玩家亲历的剧情（回顾里的单篇），没有时才退回清洗过的记忆摘要
+  type RecapItem = { title: string; meta?: string };
+  const recap: RecapItem[] = journal.length
+    ? journal.map((e) => ({ title: e.title, meta: [e.when, e.location].filter(Boolean).join(" · ") }))
+    : game.memory?.trim() ? recapItems(game.memory).map((t) => ({ title: t })) : [];
   const recapShown = recapAll ? recap : recap.slice(-4);
   // 功能注释：名气 / 口碑 / 作品只在本作品确有「事业」玩法时才显示，其它作品不画无意义三格
   const showCareerStats = feature("career");
@@ -99,27 +107,28 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
       </div>
 
       {view === "main" && (
-        <article className="overflow-hidden rounded-3xl border border-line/70 bg-paper shadow-[0_18px_40px_-28px_rgba(110,70,170,0.6)]">
+        <article className="overflow-hidden rounded-[22px] border border-line/60 bg-paper shadow-[0_20px_44px_-30px_rgba(110,70,170,0.55)]">
           {/* 主线卷首：标题取当前作品主线，不写死章节 */}
-          <header className="relative overflow-hidden bg-gradient-to-br from-[var(--jade)] via-[color-mix(in_srgb,var(--jade)_45%,var(--coral))] to-[var(--coral)] px-5 pb-5 pt-4 text-white">
-            <span aria-hidden className="pointer-events-none absolute -bottom-16 -left-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+          <header className="relative overflow-hidden border-b border-line/60 bg-[linear-gradient(160deg,color-mix(in_srgb,var(--coral)_14%,var(--paper))_0%,var(--paper)_75%)] px-5 pb-4 pt-4">
+            <span aria-hidden className="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-coral/15 blur-2xl" />
             <div className="relative flex items-center gap-2">
-              <span className="text-[10px] font-bold tracking-[0.32em] text-white/75">MAIN STORY</span>
-              <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-white/18 px-2 py-0.5 text-[10.5px] font-semibold ring-1 ring-white/30 backdrop-blur">
-                <span className={`h-1.5 w-1.5 rounded-full bg-white ${game.ended ? "" : "animate-pulse"}`} />{mainStatus}
+              <span className="h-3.5 w-1 rounded-full bg-coral" />
+              <span className="text-[11.5px] font-semibold tracking-[0.18em] text-coral">主线</span>
+              <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-paper/80 px-2.5 py-0.5 text-[11px] font-semibold text-ink-soft ring-1 ring-line/70">
+                <span className={`h-1.5 w-1.5 rounded-full ${game.ended ? "bg-jade" : "animate-pulse bg-coral"}`} />{mainStatus}
               </span>
             </div>
-            <h3 className="relative mt-2 font-serif text-[24px] font-black leading-tight tracking-[0.04em]">
+            <h3 className="relative mt-2.5 font-serif text-[22px] font-bold leading-snug tracking-[0.03em] text-ink">
               {mainLineName}
-              {mainStepName ? <><span className="mx-2 font-normal text-white/60">·</span><span className="text-[0.8em]">{mainStepName}</span></> : null}
+              {mainStepName ? <span className="ml-2 text-[15px] font-medium text-ink-soft">{mainStepName}</span> : null}
             </h3>
-            <p className="relative mt-1.5 text-[11.5px] text-white/80">第 {s.week} 周 · 第 {s.day + 1} 天</p>
+            <p className="relative mt-1 text-[12px] text-ink-soft">第 {s.week} 周 · 第 {s.day + 1} 天</p>
           </header>
 
           <div className="space-y-4 px-4 pb-4 pt-4">
             {/* 章节目标 */}
-            <div className="flex gap-3 rounded-2xl border border-coral/20 bg-coral/[0.05] px-3.5 py-3">
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[var(--jade)] to-[var(--coral)] text-white shadow-sm">
+            <div className="flex gap-3 rounded-2xl bg-paper-2/60 px-3.5 py-3">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-coral/12 text-coral">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
                   <circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1.2" fill="currentColor" />
                 </svg>
@@ -151,12 +160,11 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
             {stats.length > 0 && (
             <div className="grid grid-cols-3 gap-2">
               {stats.map((x) => (
-                <div key={x.label} className="relative overflow-hidden rounded-2xl border border-line/70 bg-paper-2/50 px-3 py-2.5">
-                  <span aria-hidden className="absolute inset-x-0 top-0 h-0.5" style={{ background: x.tone }} />
-                  <p className="flex items-baseline justify-between text-[11px] font-semibold text-ink-soft">
-                    {x.label}<span className="text-[8.5px] font-bold tracking-[0.18em] opacity-60">{x.en}</span>
+                <div key={x.label} className="rounded-2xl bg-paper-2/60 px-3 py-2.5 text-center">
+                  <p className="font-serif text-[20px] font-bold leading-tight text-ink tabular-nums">{x.v}</p>
+                  <p className="mt-0.5 flex items-center justify-center gap-1 text-[11px] text-ink-soft">
+                    <span className="h-1.5 w-1.5 rounded-full" style={{ background: x.tone }} />{x.label}
                   </p>
-                  <p className="mt-0.5 font-serif text-[22px] font-black leading-tight text-ink tabular-nums">{x.v}</p>
                 </div>
               ))}
             </div>
@@ -165,7 +173,7 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
             {lim > 0 && (
               <div className="rounded-2xl border border-line/70 px-3.5 py-2.5">
                 <div className="mb-1.5 flex justify-between text-[11px] text-ink-soft">
-                  <span className="font-semibold">主线时限</span>
+                  <span className="font-semibold">本局时限 · 结算倒计时</span>
                   <span className="tabular-nums"><b className="text-ink">{Math.min(s.day, lim)}</b> / {lim} 天</span>
                 </div>
                 <Bar v={s.day} max={lim} />
@@ -191,7 +199,8 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
                     return (
                       <li key={i} className="relative">
                         <span aria-hidden className={`absolute -left-5 top-[5px] h-[11px] w-[11px] rounded-full border-2 ${latest ? "border-coral bg-coral/25" : "border-jade/60 bg-paper"}`} />
-                        <p className={`text-[12.5px] leading-relaxed ${latest ? "text-ink" : "text-ink/75"}`}>{t}</p>
+                        <p className={`text-[13px] leading-relaxed ${latest ? "font-semibold text-ink" : "text-ink/75"}`}>{t.title}</p>
+                        {t.meta ? <p className="mt-0.5 text-[11px] text-ink-soft">{t.meta}</p> : null}
                       </li>
                     );
                   })}

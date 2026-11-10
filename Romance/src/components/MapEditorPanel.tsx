@@ -10,8 +10,16 @@ import MapPlacer from "./MapPlacer";
 import { spotPos } from "../game/mapPos";
 import { getWorldMap, worldActivitiesOfRoom } from "../mods/registry";
 import { DEFAULT_ACT_AP } from "../game/mapedits";
-import { BonusRow, BONUS_EXTRA } from "./ModCarsEditor";
-import { STAT_LABELS, STAT_ORDER } from "../game/data";
+import { BonusRow, PACK_BONUS_EXTRA } from "./ModCarsEditor";
+import { getWorldSlot } from "../mods/registry";
+import { asModArray } from "../lib/asModArray";
+import type { AttrDef } from "../lib/types";
+
+/** 功能注释：地点行动 / 商店的属性选项——只用本作品建角属性 + 体力 / 资金，不出现娱乐圈八维与名气 */
+const worldBonusKeys = (): Record<string, string> => ({
+  ...Object.fromEntries(asModArray<AttrDef>(getWorldSlot("customAttrs")).map((d) => [d.id, d.label || d.id])),
+  ...PACK_BONUS_EXTRA,
+});
 import { addSpots, parseSpots } from "../game/publicMaps";
 import MapLibraryPanel from "./MapLibraryPanel";
 import { EmptyState, ScopeBanner, SearchBox, matches, useConfirm } from "./EditorKit";
@@ -495,15 +503,15 @@ export default function MapEditorPanel() {
                             <span className="mb-1 block">数值效果（每次执行固定结算；资金填负数即收费，钱不够时无法执行）</span>
                             <BonusRow
                               value={ac.effects}
-                              keys={{ ...Object.fromEntries(STAT_ORDER.map((k) => [k, STAT_LABELS[k]])), ...BONUS_EXTRA }}
+                              keys={worldBonusKeys()}
                               onChange={(v) => setActs(loc.id, acts.map((x, j) => (j === i ? { ...x, effects: v } : x)))}
                             />
                           </div>
                           <div className="mt-1.5 text-[11px] text-ink-soft">
-                            <span className="mb-1 block">执行门槛（各项需达到该值才能进行，如 名气 ≥ 50）</span>
+                            <span className="mb-1 block">执行门槛（各项需达到该值才能进行，属性取自本作品建角属性）</span>
                             <BonusRow
                               value={ac.require}
-                              keys={{ ...Object.fromEntries(STAT_ORDER.map((k) => [k, STAT_LABELS[k]])), fame: "名气", ...BONUS_EXTRA }}
+                              keys={worldBonusKeys()}
                               onChange={(v) => setActs(loc.id, acts.map((x, j) => (j === i ? { ...x, require: v } : x)))}
                             />
                           </div>
@@ -533,7 +541,7 @@ export default function MapEditorPanel() {
                     const shop: ShopGood[] = e.shop ?? [];
                     const setShop = (next: ShopGood[]) => patch(loc.id, { shop: next.length ? next : undefined });
                     const put = (i: number, p: Partial<ShopGood>) => setShop(shop.map((x, j) => (j === i ? { ...x, ...p } : x)));
-                    const keys = { ...Object.fromEntries(STAT_ORDER.map((k) => [k, STAT_LABELS[k]])), ...BONUS_EXTRA };
+                    const keys = worldBonusKeys();
                     const field = "rounded-md border border-line bg-paper px-2.5 py-1.5 text-[12px] text-ink placeholder:text-ink-soft/65 focus:border-jade focus:outline-none";
                     return (
                       <div className="mt-4">
@@ -566,7 +574,7 @@ export default function MapEditorPanel() {
                               </div>
                               <div className="mt-1.5 text-[11px] text-ink-soft">
                                 <span className="mb-1 block">购买门槛</span>
-                                <BonusRow value={it.require} keys={{ ...keys, fame: "名气" }} onChange={(v) => put(i, { require: v })} />
+                                <BonusRow value={it.require} keys={keys} onChange={(v) => put(i, { require: v })} />
                               </div>
                               <label className="mt-1.5 flex items-center gap-1.5 text-[11px] text-ink-soft">每周限购
                                 <input type="number" min={0} max={99} value={it.perWeek ?? 0} onChange={(ev) => put(i, { perWeek: Math.max(0, Math.round(Number(ev.target.value) || 0)) || undefined })}

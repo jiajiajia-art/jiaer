@@ -7,10 +7,40 @@ type SlotReader = (key: string) => { has: boolean; value: unknown; worldId: stri
 let reader: SlotReader | null = null;
 export function setSlotReader(r: SlotReader) { reader = r; }
 
+/**
+ * 功能注释：registry.resolve() 合并期间的「正在解析的世界」。
+ * 玩法包 getter 在合并时会问当前世界 id；若此时走 reader → getWorld() 会再次 resolve 无限递归，
+ * 所以解析期间直接用这里的世界 id / 世界自身内容。
+ */
+type ResolvingWorld = { id: string; content: Record<string, unknown> };
+let resolving: ResolvingWorld | null = null;
+export function withResolvingWorld<T>(w: ResolvingWorld, fn: () => T): T {
+  const prev = resolving;
+  resolving = w;
+  try {
+    return fn();
+  } finally {
+    resolving = prev;
+  }
+}
+/** 功能注释：读当前生效世界「自身」内容（不含叠加包），由 registry 注册 */
+let worldOwnReader: (() => { id: string; content: Record<string, unknown> }) | null = null;
+export function setWorldOwnReader(r: () => { id: string; content: Record<string, unknown> }) { worldOwnReader = r; }
+
 /** 功能注释：当前激活世界观 id；未注册 reader 时按娱乐圈处理，供引擎规则缺省回落。 */
 export function currentWorldId(): string {
+  if (resolving) return resolving.id || "ent";
   if (!reader) return "ent";
   return reader("tuning").worldId || "ent";
+}
+
+/**
+ * 功能注释：当前世界自己（世界表单）是否写了某个槽。
+ * 玩法包据此决定是否提供底稿：世界扩展配置里改过的优先，没有的才用已装包底稿（P1）。
+ */
+export function currentWorldDeclares(key: string): boolean {
+  const own = resolving ?? worldOwnReader?.();
+  return !!own && own.content[key] !== undefined;
 }
 
 /* 取槽：当前世界声明了 → 用之；未声明 → off()（功能关闭的空值）或 ent 默认。

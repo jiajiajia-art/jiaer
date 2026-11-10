@@ -1,5 +1,5 @@
 import { loadGlobal, saveGlobal, removeGlobal } from "../lib/saveScope";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { completeWithTools, isConfigured, type ChatMsg, type ToolDef } from "../lib/ai";
 import { friendlyAIError } from "../lib/aiError";
 import { loadConfig } from "../lib/store";
@@ -11,6 +11,12 @@ import { assessAuthorPreview, requestAuthorPreview } from "../lib/authorPreview"
 import { useConfirm } from "./EditorKit";
 import { IconCheck, IconSpark, StatusMark } from "../lib/icons";
 import { PLAY_STEP_KEY, WORLD_STEP_KEY, stepDoneFlag } from "../lib/modWorkshopSteps";
+import { attrPromptSpec, auditAttrRefs, auditOk, collectAttrSpecs, describeAudit, copyBaseFile, diffModFiles, filesPromptSpec, materializeOverrides, removeModFile, type FileChange } from "../mods/kkmod/sdk";
+import ModAssetsPanel, { FileBadge, fileTitle } from "./ModAssetsPanel";
+import ModPreviewPanel from "./ModPreviewPanel";
+import { assessAuthorPreview, requestAuthorPreview } from "../lib/authorPreview";
+import { OFFICIAL_PLATFORM_APP_IDS, installedPlatformAppIds } from "../lib/phoneAppsConfig";
+import { asModArray } from "../lib/asModArray";
 
 /** 功能注释：对话合并后立刻补缺 id / 身份占位姓名，避免顶栏长期红字「缺少 id」且保存按钮灰掉 */
 function healWorkshopDraft(mod: Mod): Mod {
@@ -28,7 +34,8 @@ function healWorkshopDraft(mod: Mod): Mod {
  * 工坊把补丁合并进草稿：数组按 id 合并（同 id 替换），对象浅合并，标量覆盖。
  * 草稿复用 validateMod 校验；可保存为用户模组，或转入模组编辑器手改。 */
 
-type Turn = { role: "user" | "assistant"; text: string; patch?: boolean; diff?: string; bad?: boolean };
+type Turn = { role: "user" | "assistant"; text: string; patch?: boolean; diff?: string; bad?: boolean; files?: FileChange[] };
+type Content = Record<string, unknown>;
 
 /* 两种模式：world = 世界观模组；play = 玩法 Mod（叠加包，追加合并，改玩法不换世界） */
 type Mode = "world" | "play";
@@ -58,42 +65,51 @@ const STEPS = [
   { label: "剧本基调与世界书", ask: "先帮我写一段完整剧本基调（包含世界设定与叙事口吻），再补几条常驻世界书。" },
   { label: "地图地点", ask: "根据世界观设计 6~10 个地点（rooms，含出口连通）和开局地点。" },
   { label: "NPC", ask: "设计 6~8 个性格鲜明、彼此有关系的 NPC，分布在各个地点。" },
-  { label: "人物线路 / 建角", ask: "设计建角页：人物线路 creation.paths 与对应 identities、家庭背景、外形风格。" },
+  { label: "属性 / 建角", ask: "先按世界观设计 2~6 个自定义属性（customAttrs，含说明、范围、初始值与分档），再设计建角页：人物线路 creation.paths 与对应 identities、家庭背景、外形风格，加成写到自定义属性上。" },
   { label: "事件与世界书", ask: "补充 6 个以上固定事件 / 条件邂逅，以及关键词触发的世界书条目。" },
   { label: "结局", ask: "设计 4~6 个差异明显的结局（endings）。" },
 ];
 
 const PLAY_STEPS = [
   { label: "新属性", ask: "根据我的玩法想法，设计 2~4 个自定义属性（customAttrs），含上下限、初始值和分档。" },
-  { label: "头衔", ask: "设计 6~10 个头衔（titles），条件要用到名气 / 口碑 / 八维 / 自定义属性，难度递进。" },
-  { label: "日程玩法", ask: "设计新的培训课程（含自定义等级与解锁条件）、打工档位和周末活动，收益可加自定义属性。" },
+  { label: "头衔", ask: "设计 6~10 个头衔（titles），门槛以自定义属性（\"c:属性id\"）为主，可搭配名气 / 口碑，难度递进。" },
+  { label: "日程玩法", ask: "设计新的培训课程（含自定义等级与解锁条件）、打工档位和周末活动，收益一律用 cgain 加到自定义属性上。" },
   { label: "事件链", ask: "设计一条 4~6 环的事件链（fixedEvents，用 nextIds 串联、locked 锁住后续环），条件和效果绑定属性。" },
   { label: "规则与开关", ask: "给出玩法规则：需要关闭的功能（features）、每周收支（income），以及用 gameRules 组合的条件分歧规则（必要时用规则变量 flag 串联）。" },
   { label: "剧情美化", ask: "按这个世界的剧情设计 3~5 条 lookRules：在关键情境（深夜、高压、热恋、成名、破产等）自动切换外观，说明每条的意图。" },
   { label: "结局", ask: "按新玩法设计 3~5 个结局（endings），与新属性挂钩。" },
-  { label: "引擎平衡", ask: "按新玩法调整引擎规则：先在 tuning.modules 勾选需要的模块（dayGrade/work/breach/course/rest/jobPay），再填对应数值；不要预填用不上的现代打工项。必要时用 stats 改八维叫法。说明每项为什么这样调。" },
+  { label: "引擎平衡", ask: "按新玩法调整引擎规则：先在 tuning.modules 勾选需要的模块（dayGrade/work/breach/course/rest/jobPay），再填对应数值；不要预填用不上的现代打工项。luckStat 等需要属性的参数填自定义属性。说明每项为什么这样调。" },
 ];
 
 /* 玩法字段说明：玩法 Mod 与世界观对话修改共用 */
-const PLAY_FIELDS = `- customAttrs[{id,label,init,initMode?:"fixed|random",min,max,color?:"jade|coral|gold|danger",tiers?:[{min,label}],display?:"num|tier|both",pin?:true,desc?}] 自定义属性（开局勾选固定数值，或不勾在 min～max 随机；须写属性说明 desc）
-- titles[{id,name,tier:"青铜|白银|黄金|钻石",req:{键:阈值},desc}] 头衔；req 键可为 fame/reputation/works/awards、"stat:<yanji|geyi|koucai|yitai|donggan|tineng|caizhi|zixin>"、"c:<自定义属性id>"
-- trainings[{id,name,effect,gain:{八维键:[min,max]},cgain:{自定义属性id:[min,max]},cost,energy,stress,grades?:[{id,label,costMul,gainMul,cap,stressAdd,needPrev?:上一级需完成次数,reqs?:[{metric,min}]}]}] 课程；metric 写法同上（八维用 "stat:键"，自定义用 "c:id"，其余 fame/reputation/money/stress）
-- sideJobs[{id,label,pay,stress,fameReq,note,cgain?,reqs?,needPrev?}] 打工（按顺序成档）；weekendActs[{id,name,effect,icon:"",cost,energy,stress,fame?,reputation?,cgain?,reqs?}]
-- bills{weekly:[{label,amount}],monthly:[...],tiers?:[{minFame,label?,weekly?,monthly?}]}（tiers=按名气门槛的生活水准，取已达到的最高一档；未达任何一档用顶层 weekly/monthly）；meals[{id,name,desc,cost:每周伙食费,stress?,gain?:{八维键:每周变化},styling?,reqs?,default?:true}] 饮食生活（玩家每周选吃什么，周日随账单结算）；pregnancy{gestationDays?:孕期天数(默认300),baseChance?:基础受孕率%(25),maxChance?:上限%(50),stressFrom?:压力门槛(50),revealMin?,revealMax?:第几天察觉(14~30),fertilityMin?,fertilityMax?:隐藏生育率区间(20~80),birthStress?,childNames?:[名字不含姓]} 孕育参数（需 features.pregnancy=true）
-  说明：数值分档写在 customAttrs[].tiers（多少分叫什么），不要单独写 fameTiers；头衔用 titles[]（玩法 Mod），不要与分档混在养成规则里。
-- fixedEvents[{id,name,time?:{kind:"none"}|{kind:"day",day}|{kind:"date",date:"YYYY.MM.DD"},conds?:[{kind:"stat"|"metric",key,op:"gte"|"lte",value}|{kind:"rel",key:npcId,op,value}|{kind:"event",key:事件id}|{kind:"location",key}],prompt:"交给 AI 演绎的事件描述",effects?:[{kind:"stat"|"metric",key,delta}|{kind:"rel",key,delta}],nextIds?:[],once?:true,locked?:true,random?:true}] 事件链；metric 的 key 可为 fame/reputation/stress/energy/money/works 或 "c:自定义属性id"
-- income[{id,label,conds?,target:{kind:"metric",key},min,max}] 每周收支（负数=扣除）
-- gameRules[{id,name,when:"day"|"week",branches:[{conds:[条件],match?:"all"|"any",effects:[效果],notice?:"给玩家的提示"}],chance?:1~100,once?:true,cooldown?:天}] 玩法规则：分支按序比对命中第一个即执行，conds 为空的分支=「否则」；条件可用 {kind:"flag",key:变量名,op,value}、{kind:"clock",from:"HH:MM",to:"HH:MM"}，效果可用 {kind:"flag",key,delta,set?:true} 写规则变量
-- lookRules[{id,name,conds:[条件],match?,look:{mode?:"light|dark",skin?:"dream|bloody|cute|glass|paper",accent?:"fuchsia|plum|rose|gold|cyan|jade|coral|ink",tint?:"#hex",font?:"song|round|elegant|brush",sceneTone?:"none|warm|cool|dusk|vintage|mono",sceneDim?:0~90,sceneBg?:图片URL,dialogStyle?:"soft|avg|letter|glass|minimal",bubbleStyle?:"frost|solid|outline|comic|plain",topbar?:"gradient|aurora|plain",topbarText?,css?}}] 剧情美化：条件满足时临时覆盖外观
+const PLAY_FIELDS = `属性（核心，先定义再引用）：
+- customAttrs[{id:小写英文,label,desc,min,max,init,initMode?:"fixed|random",color?:"jade|coral|gold|danger",tiers?:[{min,label}],display?:"num|tier|both",pin?:true}] 自定义属性：开局固定为 init（fixed）或在 min～max 随机（random）；分档写在 tiers；必须写说明 desc
+下面所有「属性」都按【属性规范】的写法引用：条件 "c:属性id"、收益 cgain、fx "attr:属性id"。
+养成：
+- titles[{id,name,tier:"青铜|白银|黄金|钻石",req:{"c:属性id"|fame|reputation|works|awards:阈值},desc}] 头衔
+- trainings[{id,name,effect,cgain:{属性id:[min,max]},cost,energy,stress,grades?:[{id,label,costMul,gainMul,cap,stressAdd,needPrev?,reqs?:[{metric:"c:属性id"|内置指标,min}]}]}] 课程
+- sideJobs[{id,label,pay,stress,fameReq,note,cgain?,reqs?,needPrev?}] 打工（按顺序成档）；weekendActs[{id,name,effect,icon:"",cost,energy,stress,fame?,reputation?,cgain?,reqs?}] 周末活动
+- bills{weekly:[{label,amount}],monthly:[...],tiers?:[{minFame,label?,weekly?,monthly?}]} 生活开销；meals[{id,name,desc,cost,stress?,reqs?,default?:true}] 每周伙食
+- pregnancy{gestationDays?,baseChance?,maxChance?,stressFrom?,revealMin?,revealMax?,fertilityMin?,fertilityMax?,birthStress?,childNames?} 孕育参数（需 features.pregnancy=true）
+事件与规则：
+- fixedEvents[{id,name,time?:{kind:"none"}|{kind:"day",day}|{kind:"date",date:"YYYY.MM.DD"},conds?:[{kind:"metric",key:"c:属性id"|内置指标,op:"gte"|"lte",value}|{kind:"rel",key:npcId,op,value}|{kind:"event",key:事件id}|{kind:"location",key}],prompt:"交给 AI 演绎的事件描述",effects?:[{kind:"metric",key,delta}|{kind:"rel",key,delta}],nextIds?:[],once?:true,locked?:true,random?:true}] 事件链
+- income[{id,label,conds?,target:{kind:"metric",key:"c:属性id"|money|…},min,max}] 每周收支（负数=扣除）
+- gameRules[{id,name,when:"day"|"week",branches:[{conds:[条件],match?:"all"|"any",effects:[效果],notice?}],chance?:1~100,once?:true,cooldown?:天}] 玩法规则：分支按序命中第一个；conds 为空=「否则」；可用 {kind:"flag",key,op,value}、{kind:"clock",from:"HH:MM",to:"HH:MM"}，效果 {kind:"flag",key,delta,set?:true}
+- lookRules[{id,name,conds:[条件],match?,look:{mode?:"light|dark",skin?:"dream|bloody|cute|glass|paper",accent?:"fuchsia|plum|rose|gold|cyan|jade|coral|ink",tint?:"#hex",font?:"song|round|elegant|brush",sceneTone?:"none|warm|cool|dusk|vintage|mono",sceneDim?:0~90,sceneBg?,dialogStyle?:"soft|avg|letter|glass|minimal",bubbleStyle?:"frost|solid|outline|comic|plain",topbar?:"gradient|aurora|plain",topbarText?,css?}}] 剧情美化
 - endings[{id,title,desc}]、worldBook[{id,title,keywords,content,enabled:true,constant?}]
+系统：
 - features{industryTab,weeklyPaper,career,imageCrisis,phone,pregnancy,cars,transport: true/false}
-- tuning{modules{dayGrade,work,breach,course,rest,jobPay},gradeOdds,gradeMul,luckStat,luckDiv,stressDiv,restStress,trainGainMul,trainFeeMul,jobPayMul,lessonGrades[],gigRules?} 引擎规则（先勾 modules；没写开局不生效；勿预填某一打工剧本数值）
-- stats{labels:{八维键:"新叫法"},hidden:[停用的八维键],base:{八维键:初值},range:{八维键:{min,max}},metaLabels:{fame,looks,stress}} 内置八维与名气/容貌/压力的叫法（只写要改的键，会与世界观合并）
-- startDate（时间与推进）、startMoney（基础·建角）、weather/startRoom（世界·地点树）、growModules（养成模块勾选）
-- terms{fame:"名气的叫法",money:"…",reputation:"…"}、gameRules[]`;
+- tuning{modules{dayGrade,work,breach,course,rest,jobPay},gradeOdds,gradeMul,luckStat,luckDiv,stressDiv,restStress,trainGainMul,trainFeeMul,jobPayMul,lessonGrades[],gigRules?} 引擎规则（先勾 modules；勿预填用不上的模块）
+- stats{metaLabels:{fame,looks,stress}} 只用于改名气 / 容貌 / 压力的叫法；不要写 stats.labels / base / order（内置八维已停用）
+- startDate、startMoney、weather、startRoom、growModules
+- terms{fame:"名气的叫法",money:"…",reputation:"…"}`;
 
-const PLAY_SYS = (draft: Mod, base: string) => `你是文字模拟游戏编辑器的玩法设计师，帮助创作者用对话做「玩法 Mod」。
+const PLAY_SYS = (draft: Mod, base: string, baseAttrs: unknown[] = [], baseContent?: Content) => `你是文字模拟游戏编辑器的玩法设计师，帮助创作者用对话做「玩法 Mod」。
 玩法 Mod 是叠加在世界观「${base}」之上的叠加包（kind: addon，slotMerge: merge）：列表内容按 id 追加，同 id 覆盖原条目，世界观已有内容保留。它不换题材，只改变/扩展玩法。
+${filesPromptSpec(baseContent, draft.content as Content)}
+
+${attrPromptSpec(collectAttrSpecs(baseAttrs, draft.content.customAttrs))}
+
 可用字段（全部可省略，只写需要改的）：
 ${PLAY_FIELDS}
 当前草稿：
@@ -102,12 +118,19 @@ ${draftContext(draft)}
 回复规则：
 1. 先用中文简短说明本轮改动了哪些玩法、还想追问什么（不超过 150 字）。
 2. 然后输出一个 \`\`\`json 代码块：{"manifest":{"name":"","description":"","id":"小写英文id"},"content":{...本轮新增或修改的字段}}。数组条目必须带 id；删除条目用 content 外的 "remove":{"字段名":["id"]}。
-3. 只追问不改动时可不输出代码块。数值要平衡：参考八维 0~999、名气数百、口碑 0~100。`;
+3. 只追问不改动时可不输出代码块。数值平衡以各属性自己的 min~max 为准；名气数百、口碑 0~100。`;
 
 const SYS = (draft: Mod) => `你是文字模拟游戏编辑器的模组设计师，帮助创作者用对话做「世界观模组」。
 模组是纯 JSON 数据，引擎读取它来替换题材。结构参考模板（字段均可省略）：
 ${modTemplate("world")}
 常用内容：rooms{id:{name,desc,exits:{方向:房间id}}}、startRoom、npcs[{id,name,role,kind,home,roam,bio,gender,age}]、startMet、worldBook[{id,title,keywords,content,enabled,constant}]、prompt{scriptTone}（旧 gmIntro/worldIntro/narratorPersona 会并入）、terms、features(开关)、events/fixedEvents、encounters、endings[{id,title,desc}]、creation、identities、backgrounds、styles、opening、cover。
+${attrPromptSpec(collectAttrSpecs(draft.content.customAttrs))}
+
+手机应用与已装玩法（对话可直接装 / 卸）：
+- phoneAppsCfg[{id}] 本作品手机上装的应用（appId 列表）。官方应用：${OFFICIAL_PLATFORM_APP_IDS.join("、")}；创作者应用用平台 appId（形如 platform:xxx）。安装=追加 {id}；卸载=remove:{"phoneAppsCfg":["appId"]}；写 [] 表示一个都不装。
+- playModInstalls[{modId,…}] 本作品已添加的玩法包。卸载=remove:{"playModInstalls":["modId"]}；新增玩法请让作者在「添加玩法」里安装，不要凭空编造 modId。
+当前手机应用：${JSON.stringify(installedPlatformAppIds(draft.content.phoneAppsCfg))}；当前玩法：${JSON.stringify(asModArray<{ modId?: string }>(draft.content.playModInstalls).map((x) => x.modId))}
+
 玩法与数值字段（同样可写进世界观）：
 ${PLAY_FIELDS}
 当前草稿（已有内容，修改时只输出变化的部分）：
@@ -159,16 +182,23 @@ function patchFromText(raw: string): Patch | "bad" | null {
   try { const p = parseJson(m[1].trim()); return p && typeof p === "object" ? p : "bad"; } catch { return "bad"; }
 }
 
-function applyPatch(draft: Mod, p: Patch | "bad" | null): Mod | "bad" | null {
+function applyPatch(draft: Mod, p: Patch | "bad" | null, baseContent?: Content): Mod | "bad" | null {
   if (p === null || p === "bad") return p;
   if (!p || typeof p !== "object") return "bad";
   const mf = p.manifest ?? {};
-  let content = p.content ? mergeContent(draft.content, p.content) : draft.content;
+  // 功能注释：材质包式覆盖——补丁写到原版已有的条目时，先整份复制原版文件再叠加改动
+  // 功能注释：老作品未写 phoneAppsCfg = 默认预装官方应用；对话装 / 卸前先展开，避免装一个就丢掉其余预装
+  if ((p.content && "phoneAppsCfg" in p.content || p.remove?.phoneAppsCfg) && draft.content.phoneAppsCfg == null) {
+    draft = { ...draft, content: { ...draft.content, phoneAppsCfg: installedPlatformAppIds(undefined).map((id) => ({ id })) } };
+  }
+  const patchContent = p.content ? materializeOverrides(p.content, draft.content as Content, baseContent) : undefined;
+  let content = patchContent ? mergeContent(draft.content, patchContent) : draft.content;
   if (p.remove) {
     const c: Record<string, unknown> = { ...content };
     for (const [k, ids] of Object.entries(p.remove)) {
       const v = c[k];
-      if (Array.isArray(v)) c[k] = v.filter((x: { id?: string }) => !ids.includes(x?.id ?? ""));
+      // 功能注释：玩法安装记录以 modId 标识，其余条目以 id
+      if (Array.isArray(v)) c[k] = v.filter((x: { id?: string; modId?: string }) => !ids.includes(x?.id ?? x?.modId ?? ""));
       else if (v && typeof v === "object") c[k] = Object.fromEntries(Object.entries(v).filter(([id]) => !ids.includes(id)));
     }
     content = c as ModContent;
@@ -239,14 +269,21 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
   });
   const [draft, setDraftRaw] = useState<Mod>(() => target?.mod ?? loadSaved(mode)?.draft ?? blank(mode, defaultPlayBase));
   const [turns, setTurns] = useState<Turn[]>(() => target
-    ? [{ role: "assistant", text: `已载入「${target.mod.name}」。直接告诉我想怎么改，比如「加一个理智值属性，低于 20 触发失控事件」「打工收入减半、休息只减 3 点压力」「再加 5 个头衔」。改完可以保存，或回编辑器手调。` }]
+    ? [{ role: "assistant", text: `已载入「${target.mod.name}」。直接告诉我想怎么改，比如「加一个理智值属性，低于 20 触发失控事件」「打工收入减半、休息只减 3 点压力」「再加 5 个头衔」。改动会直接生效。` }]
     : loadSaved(mode)?.turns ?? []);
   const play = mode === "play";
   const depId = draft.dependencies?.[0] || "";
+  const baseMod = mods.find((x) => x.id === (depId || applied.world));
   const baseName = depId
     ? (mods.find((x) => x.id === depId)?.name ?? depId)
-    : "空白叠加底";
+    : (baseMod?.name ?? "空白叠加底");
   const authorWorlds = mods.filter((x) => x.kind === "world" && !x.builtin && x.id !== "ent");
+  // 功能注释：玩法 Mod 可引用底层世界已定义的属性
+  const baseAttrs: unknown[] = play ? [baseMod?.content?.customAttrs] : [];
+  const baseContent = play ? (baseMod?.content as Content | undefined) : undefined;
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [sideTab, setSideTab] = useState<"preview" | "assets">("preview");
+  const [playtestIssues, setPlaytestIssues] = useState<string[]>([]);
   // 切换模式：先存当前草稿，再载入另一模式的草稿
   const switchMode = (m: Mode) => {
     if (forceMode || hideModeSwitch) return;
@@ -293,7 +330,7 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
     const hist = [...turns, { role: "user", text: t } as Turn];
     setTurns(hist); setInput(""); setBusy(true); setErr(""); setLastFailed(null);
     try {
-      const msgs: ChatMsg[] = [{ role: "system", content: play ? PLAY_SYS(draft, baseName) : SYS(draft) }, ...hist.slice(-10).map((x) => ({ role: x.role, content: x.text }))];
+      const msgs: ChatMsg[] = [{ role: "system", content: play ? PLAY_SYS(draft, baseName, baseAttrs, baseContent) : SYS(draft) }, ...hist.slice(-10).map((x) => ({ role: x.role, content: x.text }))];
       msgs[0] = { ...msgs[0], content: msgs[0].content + TOOL_RULE };
       let r = await completeWithTools(cfg, msgs, [PATCH_TOOL]);
       const pick = (x: typeof r): Patch | "bad" | null => {
@@ -309,17 +346,31 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
         const p2 = pick(r2);
         if (p2 && p2 !== "bad") { r = { ...r2, text: r.text || r2.text }; patch = p2; }
       }
-      const raw = r.text.trim() || (patch && patch !== "bad" ? "已按要求修改草稿。" : "");
-      const patched = applyPatch(draft, patch);
+      // 功能注释：属性 SDK 审计——引用未定义属性 / 旧八维键时回传模型自我修正一次
+      const auditOf = (p: typeof patch) => {
+        const m = applyPatch(draft, p, baseContent);
+        return m && m !== "bad" ? auditAttrRefs(m.content as Record<string, unknown>, baseAttrs) : null;
+      };
+      let audit = auditOf(patch);
+      if (audit && !auditOk(audit)) {
+        const fix: ChatMsg[] = [...msgs, { role: "assistant", content: r.text || "（已调用 apply_mod_patch）" }, { role: "user", content: `补丁不符合属性规范：\n${describeAudit(audit)}\n请重新提交完整的同一份改动：缺的属性写进 customAttrs，旧八维键改成 "c:属性id" 或 cgain。` }];
+        const r2 = await completeWithTools(cfg, fix, [PATCH_TOOL]);
+        const p2 = pick(r2);
+        const a2 = p2 && p2 !== "bad" ? auditOf(p2) : null;
+        if (a2 && describeAudit(a2).length < describeAudit(audit).length) { r = { ...r2, text: r.text || r2.text }; patch = p2; audit = a2; }
+      }
+      const warn = audit && !auditOk(audit) ? `\n\n属性检查：\n${describeAudit(audit)}` : "";
+      const raw = (r.text.trim() || (patch && patch !== "bad" ? "已按要求修改草稿。" : "")) + warn;
+      const patched = applyPatch(draft, patch, baseContent);
       // 玩法 Mod 始终保持叠加包 + 追加合并，避免 AI 改掉 kind
       const next = patched && patched !== "bad" && (target ? { ...patched, kind: target.mod.kind, id: target.mod.id } : play ? { ...patched, kind: "addon" as const, slotMerge: "merge" as const } : patched) || patched;
       const ok = next && next !== "bad" ? healWorkshopDraft(next) : null;
       if (ok) {
         setDraft(ok);
-        // 功能注释：C2.2 每轮成功写入草稿后自动刷新真运行时预览
         if (livePreview || embedInShell) pushLivePreview(ok);
+        if (target && !target.isNew) importModJson(JSON.stringify({ ...ok, builtin: undefined }));
       }
-      setTurns([...hist, { role: "assistant", text: raw, patch: !!ok, diff: ok ? (play ? playDiff(draft, ok) : diffOf(draft, ok)) : undefined, bad: next === "bad" }]);
+      setTurns([...hist, { role: "assistant", text: raw, patch: !!ok, diff: ok ? (play ? playDiff(draft, ok) : diffOf(draft, ok)) : undefined, bad: next === "bad", files: ok ? diffModFiles(draft.content as Content, ok.content as Content, baseContent) : undefined }]);
     } catch (e) {
       setErr(friendlyAIError(e).text); setLastFailed(t); setTurns(turns);
     } finally { setBusy(false); }
@@ -334,6 +385,22 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
     setTurns([{ role: "assistant", text: `已载入「${src.name}」作为草稿。告诉我想怎么改，比如「加 3 个反派 NPC」「把地图改成民国上海」。` }]);
   };
 
+  const copyFromBase = (path: string) => {
+    if (!baseContent) return;
+    setDraft({ ...draft, content: copyBaseFile(path, draft.content as Content, baseContent) as ModContent });
+    setSelectedFile(path);
+  };
+  // 功能注释：进入试玩——把当前草稿叠加到世界上真实开一局（作者预览，存档隔离）
+  const playtest = () => {
+    const { fatal, warnings } = assessAuthorPreview(draft);
+    const errs = [...fatal, ...problems];
+    setPlaytestIssues(errs);
+    if (errs.length) return;
+    if (!target) saveGlobal(LS_OF[mode], { draft, turns: turns.slice(-30) });
+    requestAuthorPreview({ ...draft, builtin: undefined }, warnings, window.scrollY || 0);
+  };
+  const removeFile = (path: string) => setDraft({ ...draft, content: removeModFile(path, draft.content as Content) as ModContent });
+
   const save = () => {
     const healed = healWorkshopDraft({ ...draft, builtin: undefined });
     const r = importModJson(JSON.stringify(healed));
@@ -342,13 +409,21 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
     onClose(r.mod!.name, r.mod);
   };
 
+  // 功能注释：对话修改已有世界时，关闭弹窗把改动带回表单，避免对话结果丢失
+  const back = () => {
+    if (!target || !history.length) return onClose();
+    if (target.isNew) return onEdit({ ...draft, builtin: undefined });
+    importModJson(JSON.stringify({ ...draft, builtin: undefined }));
+    onClose(draft.name, draft);
+  };
+
   return (
-    <div className="flex flex-col gap-2 text-ink">
+    <Wrap modal={!!target} onClose={back}>
       {confirmEl}
       {!embedInShell ? (
         <div className="flex items-center justify-between gap-2">
           <p className="flex min-w-0 items-center gap-1 truncate text-[14px] font-bold"><IconSpark size={16} className="shrink-0" />{target ? `对话修改「${target.mod.name}」` : "AI 创意工坊"}</p>
-          <button className={btn} onClick={() => onClose()}>返回</button>
+          <button className={btn} disabled={busy} onClick={() => (target ? back() : onClose())}>{target ? "完成" : "返回"}</button>
         </div>
       ) : null}
       {!target && !hideModeSwitch && !forceMode && (
@@ -361,7 +436,7 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
       {!embedInShell ? (
         <p className="text-[12px] leading-relaxed text-ink-soft">
           {target
-            ? `用聊天直接改这个${target.mod.kind === "addon" ? "叠加包" : "世界观"}：属性、头衔、课程打工、事件链、引擎规则、地点人物……每轮改动都能撤销。${target.isNew ? "这是内置模组的副本，保存后作为你的新模组。" : "保存会覆盖原模组。"}`
+            ? `用聊天直接改这个${target.mod.kind === "addon" ? "叠加包" : "游戏世界"}：属性、头衔、课程打工、事件链、引擎规则、地点人物……改动会直接生效，每轮都能撤销。${target.isNew ? "这是内置模组的副本，保存后作为你的新模组。" : "保存会覆盖原模组。"}`
             : play
             ? `用聊天描述你想要的玩法改变：新属性、头衔、课程打工、事件链、规则开关、结局……AI 会生成叠加在「${baseName}」上的玩法 Mod，原有内容全部保留。保存后在创意工坊里打开它，开新局生效。`
             : "用聊天描述你想要的世界，AI 会一步步生成模组草稿。满意后保存为你的模组，也可以转到编辑器里逐项手改。"}
@@ -384,6 +459,8 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
         </select>
       </label>}
 
+      <div className="grid min-h-0 gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="flex min-w-0 flex-col gap-2">
       <div className="rounded-2xl border border-line bg-paper/60 px-3 py-2">
         <p className="flex items-center gap-2 text-[13px] font-bold"><span className="truncate">{draft.name}</span><span className="text-[10.5px] font-normal text-ink-soft">{draft.id}</span></p>
         {draft.description && <p className="mt-0.5 text-[11.5px] text-ink-soft">{draft.description}</p>}
@@ -437,6 +514,21 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
             <div className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-[12.5px] leading-relaxed ${t.role === "user" ? "bg-jade text-white" : "border border-line bg-paper text-ink"}`}>
               {t.role === "user" ? t.text : visible(t.text) || "（已更新草稿）"}
               {t.patch && <p className="mt-1 text-[10.5px] text-jade"><StatusMark kind="ok">已合并进草稿：{t.diff}</StatusMark></p>}
+              {t.files && t.files.length > 0 && (
+                <div className="mt-2 border-t border-line pt-1.5">
+                  <p className="mb-1 text-[10.5px] font-semibold text-ink-soft">这一轮的产出</p>
+                  <div className="flex flex-wrap gap-1">
+                    {t.files.slice(0, 12).map((f) => (
+                      <button key={f.path} type="button" title={f.path} onClick={() => { setSelectedFile(f.change === "removed" ? null : f.path); setSideTab("assets"); }}
+                        className="inline-flex max-w-full items-center gap-1 rounded-lg border border-line bg-paper-2 px-1.5 py-0.5 text-[11px] hover:border-jade">
+                        <span className="truncate font-mono">{fileTitle(f.path)}</span>
+                        <FileBadge kind={f.change === "added" && f.overridesBase ? "override" : f.change} />
+                      </button>
+                    ))}
+                    {t.files.length > 12 && <span className="text-[10.5px] text-ink-soft">…共 {t.files.length} 个</span>}
+                  </div>
+                </div>
+              )}
               {t.bad && <p className="mt-1 text-[10.5px] text-danger">这轮的数据格式没能解析，草稿未改动。可以回复「数据格式有误，请重新输出完整 JSON」。</p>}
             </div>
           </div>
@@ -464,6 +556,40 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
         />
         <button className="shrink-0 self-end rounded-full bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] px-4 py-2 text-[12px] font-bold text-white disabled:opacity-40" disabled={busy || !ai || !input.trim()} onClick={() => send(input)}>发送</button>
       </div>
+      </div>
+      <div className="flex min-h-0 flex-col gap-2 lg:sticky lg:top-2 lg:self-start">
+        <div className="inline-flex self-start rounded-full border border-line bg-paper-2 p-0.5 text-[12px] font-bold" role="tablist">
+          {([["preview", "实时预览"], ["assets", "资产文件"]] as const).map(([k, l]) => (
+            <button key={k} type="button" role="tab" aria-selected={sideTab === k} onClick={() => setSideTab(k)}
+              className={`rounded-full px-3 py-1 transition ${sideTab === k ? "bg-jade text-white" : "text-ink-soft hover:text-ink"}`}>{l}</button>
+          ))}
+        </div>
+        {sideTab === "preview" ? (
+          <div className="rounded-2xl border border-line bg-paper-2/60 p-3">
+            <ModPreviewPanel modContent={draft.content as Content} baseContent={baseContent} onPlaytest={play ? playtest : undefined} playtestIssues={playtestIssues} />
+          </div>
+        ) : (
+          <ModAssetsPanel
+            modContent={draft.content as Content}
+            baseContent={baseContent}
+            baseName={baseName}
+            selected={selectedFile}
+            onSelect={setSelectedFile}
+            onCopyBase={play && baseContent ? copyFromBase : undefined}
+            onRemove={removeFile}
+          />
+        )}
+      </div>
+      </div>
+    </Wrap>
+  );
+}
+
+function Wrap({ modal, onClose, children }: { modal: boolean; onClose: () => void; children: ReactNode }) {
+  if (!modal) return <div className="flex flex-col gap-2 text-ink">{children}</div>;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div role="dialog" aria-modal="true" className="flex max-h-[92vh] w-full max-w-5xl flex-col gap-2 overflow-y-auto rounded-3xl border border-line bg-paper p-4 text-ink shadow-2xl">{children}</div>
     </div>
   );
 }

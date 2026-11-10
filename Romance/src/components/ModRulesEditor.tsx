@@ -13,14 +13,16 @@ const REQ_KEYS: [keyof TitleReq, string][] = [["fame", "名气"], ["reputation",
 const del = (on: () => void) => <button className={`${btn} shrink-0`} onClick={on} aria-label="删除">×</button>;
 
 type V = { titles?: TitleDef[]; bills?: BillsSlot };
-export default function ModRulesEditor({ value, stats, attrs, onChange, showTitles = true, showBills = true }: {
+export default function ModRulesEditor({ value, stats, attrs, onChange, showTitles = true, showBills = true, attrsOnly = false }: {
   value: V; stats?: StatsSlot; attrs?: AttrDef[]; onChange: (p: V) => void;
   showTitles?: boolean; showBills?: boolean;
+  /** 功能注释：玩法包（头衔包）模式——门槛只认建角属性，不出现名气 / 口碑 / 八维等娱乐圈内置数值 */
+  attrsOnly?: boolean;
 }) {
   // 头衔「其他条件」可选：八维（模组叫法）、其余指标、自定义属性
   const hidden = new Set(stats?.hidden ?? []);
   const fixed = new Set(REQ_KEYS.map(([k]) => k as string));
-  const extra = [
+  const extra = attrsOnly ? (Array.isArray(attrs) ? attrs : []).map((a) => ({ v: `c:${a.id}`, l: a.label || a.id })) : [
     ...RAW_STAT_ORDER.filter((k) => !hidden.has(k)).map((k) => ({ v: `stat:${k}`, l: (typeof stats?.labels?.[k] === "string" ? stats.labels![k]!.trim() : "") || RAW_STAT_LABELS[k] })),
     ...FIXED_METRICS.filter((m) => !m.key.startsWith("c:") && m.key !== "week" && !fixed.has(m.key)).map((m) => ({ v: m.key, l: m.label })),
     ...(Array.isArray(attrs) ? attrs : []).map((a) => ({ v: `c:${a.id}`, l: `${a.label || a.id}（自定义）` })),
@@ -47,7 +49,7 @@ export default function ModRulesEditor({ value, stats, attrs, onChange, showTitl
                 {del(() => setTitles(titles.filter((_, j) => j !== i)))}
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
-                {REQ_KEYS.map(([k, l]) => (
+                {REQ_KEYS.filter(([k]) => !attrsOnly || t.req[k] != null).map(([k, l]) => (
                   <label key={k} className="block text-[10px] text-ink-soft">{l} ≥
                     <input type="number" className={`${inp} mt-0.5`} value={t.req[k] ?? ""} placeholder="不限" onChange={(e) => { const req = { ...t.req }; if (e.target.value === "") delete req[k]; else req[k] = num(e.target.value); set({ req }); }} />
                   </label>
@@ -64,7 +66,7 @@ export default function ModRulesEditor({ value, stats, attrs, onChange, showTitl
                   {del(() => { const req = { ...t.req }; delete req[k]; set({ req }); })}
                 </div>
               ))}
-              <button className={btn} disabled={!extra.some((o) => !(o.v in t.req))} onClick={() => { const f = extra.find((o) => !(o.v in t.req)); if (f) set({ req: { ...t.req, [f.v]: 10 } }); }}>＋ 其他条件（八维 / 自定义属性等）</button>
+              <button className={btn} disabled={!extra.some((o) => !(o.v in t.req))} onClick={() => { const f = extra.find((o) => !(o.v in t.req)); if (f) set({ req: { ...t.req, [f.v]: 10 } }); }}>{attrsOnly ? "＋ 条件（建角属性）" : "＋ 其他条件（八维 / 自定义属性等）"}</button>
               <input className={inp} value={t.desc} placeholder="说明（显示给玩家）" onChange={(e) => set({ desc: e.target.value })} />
             </div>
           );

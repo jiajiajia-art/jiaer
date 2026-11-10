@@ -50,8 +50,19 @@ const platformAuthInitialization = useAuthStore.getState().initialize();
 const navigateToHome = () => {
     // 兼容 Capacitor 与 Web（/funloom 或 /funloom-test）
     const targetUrl = window.location.origin + appPath('home');
-    if (window.top && window.top.location.href !== targetUrl) {
-        window.top.location.href = targetUrl;
+    // window.top is cross-origin when embedded (e.g. a preview iframe);
+    // reading its location throws, so fall back to navigating this frame.
+    let topWindow: Window | null = null;
+    try {
+        if (window.top && window.top !== window) {
+            void window.top.location.href;
+            topWindow = window.top;
+        }
+    } catch {
+        topWindow = null;
+    }
+    if (topWindow && topWindow.location.href !== targetUrl) {
+        topWindow.location.href = targetUrl;
     } else if (window.location.href !== targetUrl) {
         window.location.href = targetUrl;
     }
@@ -135,5 +146,4 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 )
-
 

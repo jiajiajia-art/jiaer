@@ -18,6 +18,7 @@ import {
   Camera,
   Check,
   ChevronDown,
+  ChevronRight,
   ChevronUp,
   CloudRain,
   Clock,
@@ -216,6 +217,7 @@ export const IconArrowUp = adapt(ArrowUp);
 export const IconStop = adapt(Square);
 export const IconPlus = adapt(Plus);
 export const IconChevronDown = adapt(ChevronDown);
+export const IconChevronRight = adapt(ChevronRight);
 export const IconChevronUp = adapt(ChevronUp);
 export const IconUndo = adapt(RotateCcw);
 export const IconRedo = adapt(RotateCw);

@@ -134,7 +134,7 @@ test('worldGenGenerate_extract与merge_以及只跑勾选模组', async () => {
     calls.push(messages.map((m) => m.content).join('\n'));
     const last = String(messages[messages.length - 1].content);
     // 功能注释：人物+地点同属第二次串联大类，一次写出硬配额
-    if (last.includes('当前大类：「人物地点事件结局」')) {
+    if (last.includes('当前大类：「人物与地点」')) {
       return JSON.stringify({
         content: {
           npcs: fiveNpcs(),
@@ -275,6 +275,7 @@ test('worldGenGenerate_同类须并成两次串联且进度按细项', async () 
   );
   assert.equal(wavesWithTravel[0][0], gen.WORLD_GEN_PHASE1_BATCH_ID);
   assert.equal(wavesWithTravel[1][0], gen.WORLD_GEN_PHASE2_BATCH_ID);
+  assert.equal(wavesWithTravel[2][0], gen.WORLD_GEN_PHASE3_BATCH_ID, '事件剧情在人物地点之后单独一次');
 
   const draft = {
     ...wiz.defaultWorldGenStep1(),
@@ -302,7 +303,7 @@ test('worldGenGenerate_同类须并成两次串联且进度按细项', async () 
           },
         });
       }
-      if (last.includes('当前大类：「人物地点事件结局」')) {
+      if (last.includes('当前大类：「人物与地点」')) {
         return JSON.stringify({
           content: {
             npcs: fiveNpcs(),
@@ -320,7 +321,7 @@ test('worldGenGenerate_同类须并成两次串联且进度按细项', async () 
   });
 
   // 功能注释：第1次线路 + 第2次人物地点 + 玩法扩展 = 3 次串联
-  assert.equal(calls, 3, `须为两次核心+玩法扩展共 3 次，实际 ${calls}`);
+  assert.equal(calls, 3, `须为基础设定+人物地点+玩法扩展共 3 次，实际 ${calls}`);
   assert.equal(result.progress.doneCount, 4, '进度按细项：paths/npcs/relations/rooms');
   assert.deepEqual(
     result.progress.modules.map((m) => m.id).sort(),
@@ -555,7 +556,7 @@ test('worldGenGenerate_源码默认走平台LLM禁止个人Key门闸', () => {
   assert.match(src, /isStaleChunkLoadErrorMessage|progressHasStaleChunkFailure/);
   assert.match(src, /WORLD_GEN_PARALLEL_LIMIT\s*=\s*1/);
   assert.match(src, /WORLD_GEN_BATCH_CATEGORIES|resolveWorldGenBatches|generateWorldGenBatch/);
-  assert.match(src, /基础设定|人物地点事件结局|phase1Foundation|phase2WorldCast/);
+  assert.match(src, /基础设定|人物与地点|phase1Foundation|phase2WorldCast/);
   assert.match(src, /WORLD_GEN_MODULE_MAX_RETRIES\s*=\s*[2-9]/);
   assert.match(src, /\[world-gen\] request|\[world-gen\] response/);
   assert.match(src, /withWorldGenRetries/);

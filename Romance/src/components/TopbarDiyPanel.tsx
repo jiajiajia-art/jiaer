@@ -11,7 +11,7 @@ import TopbarView, { topbarDataOf } from "./TopbarView";
 import {
   BUILTIN_TOPBAR_PRESETS, MODULE_LABELS, REGEX_TARGETS, SAMPLE_REGEX_RULES, SAMPLE_TEMPLATE, SAMPLE_TEMPLATE_CSS, SAMPLE_TOPBAR_DATA,
   TEMPLATE_VARS, applyTopbarPreset, applyTopbarRegex, compileRegex, loadSavedTopbars, newTopbarId, parseTopbarFile, rawBarText,
-  regexFileOf, regexPaused, resolveTopbarDiy, saveTopbars, styleFileOf, targetLabel, topbarFieldText,
+  regexPaused, resolveTopbarDiy, saveTopbars, targetLabel, topbarFieldText,
   type SavedTopbarPreset, type TopbarBg, type TopbarData, type TopbarDiy, type TopbarLayout, type TopbarModuleKey, type TopbarRegexRule,
 } from "../lib/topbarDiy";
 
@@ -282,13 +282,6 @@ export default function TopbarDiyPanel() {
   const htmlRef = useRef<HTMLTextAreaElement>(null);
 
   const persist = (l: SavedTopbarPreset[]) => { setLib(l); if (!saveTopbars(l)) setMsg({ ok: false, t: "存储空间不足，未能保存到「我的顶栏样式」" }); };
-  const download = (name: string, payload: unknown, ext: string) => {
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
-    a.download = `${name.replace(/[\\/:*?"<>|]/g, "_") || "topbar"}${ext}`;
-    a.click();
-    window.setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  };
   const snapshot = (): SavedTopbarPreset => ({
     id: newTopbarId("tbs"), name: styleName.trim() || "我的顶栏", author: author.trim() || undefined, at: Date.now(),
     topbar: theme.topbar, topbarText: theme.topbarText, diy: { ...d, on: true },
@@ -577,7 +570,6 @@ export default function TopbarDiyPanel() {
               <IconPlus width={13} height={13} />新建规则
             </button>
             <button type="button" className={btn} onClick={() => fileRef.current?.click()}>导入正则文件</button>
-            <button type="button" className={btn} disabled={!rules.length} onClick={() => download("顶栏样式正则", regexFileOf(rules), ".regex.json")}>导出全部</button>
           </div>
           {rules.length === 0 ? (
             <p className="rounded-xl border border-dashed border-line px-3 py-4 text-center text-[12px] text-ink-soft">还没有规则：新建一条、导入正则文件，或从下方示例里挑一条</p>
@@ -615,14 +607,13 @@ export default function TopbarDiyPanel() {
       </>)}
 
       {tab === "upload" && (<>
-        <Sec t="我的顶栏样式" d="把当前组合收藏或导出为 .topbar.json；导入他人分享的样式文件即刻套用。也支持导入美化主题包、HTML / CSS 模板与正则文件。">
+        <Sec t="我的顶栏样式" d="把当前组合收藏起来；导入他人分享的样式文件即刻套用。也支持导入美化主题包、HTML / CSS 模板与正则文件。">
           <div className="grid grid-cols-2 gap-1.5">
             <input value={styleName} maxLength={24} onChange={(e) => setStyleName(e.target.value)} placeholder="样式名，如：粉钻千金" aria-label="样式名" className={inp} />
             <input value={author} maxLength={24} onChange={(e) => setAuthor(e.target.value)} placeholder="作者（可选）" aria-label="作者" className={inp} />
           </div>
           <div className="flex flex-wrap gap-1.5">
             <button type="button" className={btn} onClick={() => { const s = snapshot(); persist([s, ...lib.filter((x) => x.name !== s.name)]); setMsg({ ok: true, t: `已收藏「${s.name}」` }); }}>收藏当前</button>
-            <button type="button" className={btn} onClick={() => { const s = snapshot(); download(s.name, styleFileOf(s), ".topbar.json"); }}>导出当前</button>
             <span className="ml-auto" />
             <button type="button" className={btn} onClick={() => fileRef.current?.click()}>上传样式文件</button>
           </div>
@@ -641,7 +632,6 @@ export default function TopbarDiyPanel() {
                       </p>
                     </div>
                     <button type="button" className={btn} onClick={() => applySaved(s)}>套用</button>
-                    <button type="button" className={btn} onClick={() => download(s.name, styleFileOf(s), ".topbar.json")}>导出</button>
                     <button type="button" aria-label={`删除「${s.name}」`} className={`${iconBtn} hover:border-danger hover:text-danger`}
                       onClick={async () => { if (await confirm(`删除顶栏样式「${s.name}」？`)) persist(lib.filter((x) => x.id !== s.id)); }}>×</button>
                   </div>
@@ -682,7 +672,7 @@ export default function TopbarDiyPanel() {
         </Sec>
         <details className="rounded-xl border border-line bg-paper px-3 py-2 text-[11px] text-ink-soft">
           <summary className="cursor-pointer font-bold text-ink">样式文件格式（给创作者）</summary>
-          <p className="mt-2 leading-relaxed">导出的 .topbar.json 结构如下，diy 里的字段都可省略（省略即用默认值）；做好后直接在这里上传即可：</p>
+          <p className="mt-2 leading-relaxed">.topbar.json 样式文件结构如下，diy 里的字段都可省略（省略即用默认值）；做好后直接在这里上传即可：</p>
           <pre className="mt-1.5 overflow-x-auto rounded-lg bg-paper-2 p-2 font-mono text-[10.5px] leading-relaxed text-ink">{`{
   "format": "star-topbar-style", "version": 1,
   "name": "粉钻千金", "author": "你的名字",

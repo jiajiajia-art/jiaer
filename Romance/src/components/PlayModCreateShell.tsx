@@ -191,7 +191,7 @@ export default function PlayModCreateShell({ onClose }: { onClose: () => void })
   }
 
   return (
-    <div className="world-gen-shell world-gen-editor mx-auto min-h-screen max-w-3xl overflow-x-hidden px-3 py-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-5">
+    <div className="world-gen-shell world-gen-editor mx-auto min-h-screen max-w-6xl overflow-x-hidden px-3 py-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-5">
       <header className="mb-3">
         <button type="button" className="mb-2 text-[13px] font-semibold text-ink-soft" onClick={leave}>
           ← 返回

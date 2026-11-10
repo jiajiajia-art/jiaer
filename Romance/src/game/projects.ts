@@ -14,8 +14,8 @@ import {
   evalRequires,
   type ProjectTemplate,
 } from "../worlds/star2005/content";
-import { dayDateLabel, dowOf } from "./logic";
-import { clampStat, type StatKey } from "./data";
+import { dayDateLabel, dowOf, statRead, statAdd } from "./logic";
+import { attrLabelOf } from "./data";
 import { liveArray } from "../mods/live";
 import type { GameState } from "./logic";
 import { liveTerm as T } from "../mods/live";
@@ -97,11 +97,12 @@ export const STRATEGIES = liveArray(() => POOL.workStrategies);
 
 /* ═══════════════ 通用运算 ═══════════════ */
 function mainReqValue(tpl: ProjectTemplate): number {
-  const r = tpl.roleSlot.requirements.find((x) => x.metric === "stats." + tpl.mainStat);
+  // 功能注释：主能力可为内置属性（stats.X）或作者建角属性（c:X）
+  const r = tpl.roleSlot.requirements.find((x) => x.metric === "stats." + tpl.mainStat || x.metric === "c:" + tpl.mainStat);
   return r?.value ?? 200;
 }
 function statVal(s: GameState, key: string): number {
-  return (s.stats as Record<string, number>)[key] ?? 0;
+  return statRead(s, key);
 }
 export function hardGate(s: GameState, tpl: ProjectTemplate): { ok: boolean; hint: string } {
   return evalRequires(tpl.roleSlot.requirements, s);
@@ -472,9 +473,11 @@ export function completeProject(s: GameState, id: string): ActResult {
   // 成长（一次性，按星级 × 评价倍率）
   const gMain = Math.round((POOL.growthMain[String(tpl.starLevel)] ?? 8) * tier.growthMul);
   const gSub = Math.round((POOL.growthSub[String(tpl.starLevel)] ?? 4) * tier.growthMul);
-  const stats = { ...s.stats } as Record<string, number>;
-  stats[tpl.mainStat] = clampStat(tpl.mainStat as StatKey, stats[tpl.mainStat] + gMain);
-  stats[tpl.subStat] = clampStat(tpl.subStat as StatKey, stats[tpl.subStat] + gSub);
+  // 功能注释：成长写回主 / 副能力；建角属性走 cattrs 并按属性上下限截断
+  const grown: GameState = { ...s, stats: { ...s.stats }, cattrs: { ...(s.cattrs ?? {}) } };
+  statAdd(grown, tpl.mainStat, gMain);
+  statAdd(grown, tpl.subStat, gSub);
+  const stats = grown.stats as Record<string, number>;
 
   // 待发行作品：仅非失败的合法完成才入库
   const portfolio = (s.portfolio ?? []).map((w) => ({ ...w }));
@@ -498,11 +501,12 @@ export function completeProject(s: GameState, id: string): ActResult {
     projects: list,
     portfolio,
     stats: stats as GameState["stats"],
+    cattrs: grown.cattrs,
     reputation: clamp(s.reputation + tier.rep, 0, 100),
     trust: clamp(s.trust + tier.trust, 0, 100),
     defaults: s.defaults,
   };
-  const msg = `《${tpl.title}》杀青 · ${tier.label}（Q=${p.quality}）：尾款 ${wallet.short(finalPay)}，${tpl.mainStat} +${gMain}、${tpl.subStat} +${gSub}。${releaseNote}`;
+  const msg = `《${tpl.title}》杀青 · ${tier.label}（Q=${p.quality}）：尾款 ${wallet.short(finalPay)}，${attrLabelOf(tpl.mainStat)} +${gMain}、${attrLabelOf(tpl.subStat)} +${gSub}。${releaseNote}`;
   return { next, ok: true, msg };
 }
 

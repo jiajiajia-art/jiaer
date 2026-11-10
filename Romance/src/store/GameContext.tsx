@@ -4,7 +4,7 @@ import { getCurrentSaveId, purgeSaveData, switchSave } from "../lib/saveScope";
 import { onAudioSignal, runAudioCmds } from "../game/audioEngine";
 import { maskStorySegments } from "../game/charCard";
 import { friendlyAIError } from "../lib/aiError";
-import { applyBonus } from "../game/data";
+import { applyBonus, attrLabelOf } from "../game/data";
 import { carShopId, allRooms } from "../game/mud";
 import { syncChildNpcs } from "../game/pregnancy";
 import { getWorldStartRoom } from "../mods/registry";
@@ -26,7 +26,7 @@ import { LIVE_LOCATIONS, getWorldSlot, setRuntimeSpots, setStartDateOverride } f
 import type { StartOpts } from "./gameCtx";
 import type { MapSpotEdit } from "../lib/types";
 import { tierOf } from "../game/data";
-import { dimsGrade, lifeGrade } from "../game/grade";
+import { defaultGradeDims, settleGrade } from "../game/grade";
 import { localEpilogue } from "../lib/epilogue";
 import { castOf, castPrompt } from "../game/questCast";
 import { syncWorldRules, ruleOf } from "../game/worldRules";
@@ -108,7 +108,7 @@ import { getWorldRooms as factionRooms, worldActivitiesOfRoom } from "../mods/re
 setFactionRoomPath((id) => factionPathOf(factionRooms(), id));
 import { writeCheckpoint } from "../lib/storage";
 import { defaultWorldBook } from "../game/worldbook";
-import { advanceUnit, advanceCount, advanceStoryOn, advanceWords, hopEnergy, tripPoints, apPerMove, encountersHere, fireEncounter, insideTree, introOf, itemsOfRoom, learnIntel, locOf, mobsHere, presentHere, roomDesc, tickWorld, travelPlan } from "../game/mud";
+import { advanceUnit, advanceCount, advanceStoryOn, advanceWords, hopEnergy, tripPoints, apPerMove, apPerAct, encountersHere, fireEncounter, insideTree, introOf, itemsOfRoom, learnIntel, locOf, mobsHere, presentHere, resolveMobs, roomDesc, tickWorld, travelPlan } from "../game/mud";
 import { activityApCost, customActsOf, customItemsOf, findCustomItem, findShopGood, findSpotEvent, firedKey, firedOf, withApNote } from "../game/mapedits";
 import { scanTriggers, queueChoiceTriggers, takeQueued } from "../game/eventTriggers";
 import { pickFixedEvent, pickRandomEvent, applyFixedEffects, applyHiddenBranches, applyChainBreaks, eventChoiceOptions, parseChoice, applyChoice, matchCustomEnding, evalFixedCond, applyEffectList, FIXED_METRICS } from "../game/fixedEvents";
@@ -118,6 +118,7 @@ import type { FixedEffect, FixedEvent } from "../lib/types";
 import { limitDays } from "../lib/types";
 import { openThread } from "../game/phone";
 import { declarePersona, doPublicAct, personaWeekly, resolveCrisis } from "../game/persona";
+import { syncBoundMetrics } from "../game/metricBind";
 import { applyProject, doWorkday, negotiateOffer, processAuditions, processReleases, promoteWork, signContract } from "../game/projects";
 import { blankRel, confessTo, contactPerson, decayRelations, ensureRelations, relDecayNotes } from "../game/relations";
 import { askProducer, meetProducer } from "../game/producer";
@@ -456,6 +457,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
     // 主线复盘：与上一次落盘比较，自动记下关键变动；每回合第一条附带检查点（可回溯 / 开平行分支）
     syncEngineRules(s0);
+    // 功能注释：玩法数值绑定——名气/口碑/黑粉/体能与作者建角属性双向同步（同一存档才比较前后，否则以建角属性为准）
+    const prevSame = gameRef.current && gameRef.current.id === s0.id ? gameRef.current : null;
+    s0 = syncBoundMetrics(prevSame, s0);
     const s1 = applyFlagLife(gameRef.current, s0);
     const { state: s, cp } = recordTimeline(gameRef.current, s1);
     syncFactions(s);
@@ -683,6 +687,21 @@ export function GameProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      // 世界心跳：每个剧情回合推进一拍，NPC 按漫游规则走动（原先只在点地图移动时才走，原地连聊多回合人物永远不动）。
+      // 本回合在剧情里说话 / 有变动的人物留在原地，避免正聊着人就「起身离开」。
+      if (!isOoc && !input.startsWith("【抵达】")) { // 抵达回合：移动时已走过一拍
+        const prevMobs = resolveMobs(next.sim, next.npcs);
+        const beat = tickWorld({ ...next.sim, mobs: prevMobs }, next.npcs);
+        const speakers = new Set(segments.filter((sg) => sg.kind === "dialogue").map((sg) => sg.speaker));
+        const stepNpcIds = ((effectiveStep as { npc_changes?: { id?: string }[] }).npc_changes ?? []).map((c) => c.id).filter(Boolean) as string[];
+        const onStage = new Set([...stepNpcIds, ...next.npcs.filter((n) => speakers.has(n.name)).map((n) => n.id)]);
+        const mobs = { ...beat.mobs };
+        const stayNames: string[] = [];
+        for (const id of onStage) if (prevMobs[id]) { mobs[id] = prevMobs[id]; stayNames.push(next.npcs.find((n) => n.id === id)?.name ?? ""); }
+        next = { ...next, sim: { ...next.sim, mobs, tick: beat.tick } };
+        changes.push(...beat.events.map((e) => e.text).filter((t) => !stayNames.some((nm) => nm && t.startsWith(nm))));
+        next = gossipTick(next, mobs, beat.tick, next.world.time).g;
+      }
       const thoughts = (step?.thoughts ?? []).filter((t) => t?.name && t?.text).map((t) => ({ name: t.name, text: t.text }));
       const aiTurn: Turn = { id: uid(), role: "ai", ...(movedTo ? { scene: movedTo } : {}), segments, raw: full, ts: Date.now(), ...(thoughts.length ? { thoughts } : {}), ...newcomers };
       const withStory = { ...next, story: [...next.story, aiTurn] };
@@ -713,7 +732,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         // 统一走后记生成：补齐人生评级与 ≥1000 字的生平后记（模型随手写的收场话作为素材）
         void endManuallyRef.current?.("ai");
       } else if (!isOoc) {
-        // AI 回合可能推进了日期或改变了属性：检查是否触发主线时限到期或「达成即落幕」结局
+        // AI 回合可能推进了日期或改变了属性：检查是否触发本局结算时限到期或「达成即落幕」结局
         queueMicrotask(() => runFixedRef.current?.());
       }
     },
@@ -769,6 +788,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
           ...g.player,
           attrs: [...fromCreator, ...g.player.attrs.filter((a) => !creatorKeys.has(a.key))],
         };
+        // 未手配评级维度：开局用本作品建角属性物化默认维度进存档，避免结算时漂移
+        if (!g.gradeDims?.length) {
+          const auto = defaultGradeDims(g.attrDefs);
+          if (auto.length) g.gradeDims = auto;
+        }
       }
       // 建角选项的开局效果：能力 / 资金等指标 / 自定义属性 / NPC 初始好感（文本设定已在建角页写进档案）
       for (const fx of startFx) {
@@ -959,13 +983,27 @@ export function GameProvider({ children }: { children: ReactNode }) {
         const { ev, choice } = picked;
         const { next: chosen, changes, failed, prompt } = applyChoice(g.sim, ev, choice);
         // 对话分支触发：选了这个选项的后续事件入队，本回合结束后上演
-        const next = queueChoiceTriggers(chosen, g.fixedEvents ?? [], ev.id, choice.id);
+        const queued = queueChoiceTriggers(chosen, g.fixedEvents ?? [], ev.id, choice.id);
+        const choiceCost = asPopup ? 0 : apPerAct();
+        const next = choiceCost > 0 ? { ...queued, ap: Math.max(0, tripPoints(g.sim) - choiceCost) } : queued;
+        if (choiceCost > 0) changes.push(`行动点 -${choiceCost}`);
         g = commitSimRef.current?.(next) ?? g;
         const note = changes.length ? `（已由代码结算：${changes.join("、")}）` : "";
         await runTurn(g, `【事件抉择：${ev.name}】玩家选择了「${choice.label}」。${failed ? "（判定失败：这条路没走通，按失败结果演绎，不要写成成功）" : ""}${prompt}${note}`, asPopup, false, undefined, true);
         return;
       }
       input = input.replace(/^⟦选项:[^⟧]*⟧/, ""); // 失效的选项标记（事件已删除）按普通文本处理
+      // 剧情行动扣行动点（点选项 / 自己写行动）；OOC 场外话、弹窗询问不扣
+      const actCost = !asPopup && !oocText(input, rulesOf(g).narrative.oocMarks) && isConfigured(cfg) ? apPerAct() : 0;
+      if (actCost > 0) {
+        if (tripPoints(g.sim) < actCost) {
+          setPopup({ title: "行动点不足", segments: [{ kind: "system", text: `这次行动需要 ${actCost} 个行动点，你只剩 ${tripPoints(g.sim)} 点了。推进到下一回合就会回满。` }], changes: [] });
+          return;
+        }
+        const paid = { ...g.sim, ap: tripPoints(g.sim) - actCost };
+        g = commitSimRef.current?.(paid) ?? { ...g, sim: paid };
+        simLockRef.current = { keys: ["ap"], rel: [], cattrs: [], stats: [] }; // 已扣的行动点不让 AI 改回
+      }
       await runTurn(g, input, asPopup);
       if (oocText(input, rulesOf(g).narrative.oocMarks)) return; // OOC 场外话不触发支线
       // 支线·关键词触发：玩家的行动/台词提到某支线的关键词，本回合结束后自动展开
@@ -973,7 +1011,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const hit = SIDEQUESTS.find((q) => !done.includes(q.id) && (q.keywords ?? []).some((k) => k && input.includes(k)));
       if (hit) setTimeout(() => playQuestRef.current?.(hit.id), 120);
     },
-    [busy, runTurn],
+    [busy, cfg, runTurn],
   );
 
   /**
@@ -1294,7 +1332,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (screenRef.current !== "game") return; // 仅在正式游玩时触发
     const g0 = gameRef.current;
     // 自定义结局：勾选「达成即落幕」的结局一旦满足，立即进入结局
-    // 主线时限到期：无论条件，强制落幕
+    // 本局结算时限（天数上限）到期：无论条件，强制落幕
     const lim0 = g0 ? limitDays(g0.timeLimit, g0.startDate || startDateLabel()) : 0;
     if (g0 && !g0.ended && lim0 > 0 && (g0.sim.day ?? 0) >= lim0) { void endManuallyRef.current?.("finish"); return; }
     if (g0 && !g0.ended && matchCustomEnding(g0.customEndings, g0.sim, true)) { void endManuallyRef.current?.("finish"); return; }
@@ -1479,7 +1517,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         changes,
       });
     }
-    // 终局（两年期满 / 主线时限）由引擎翻页判定；endManually 自带防重入
+    // 终局（两年期满 / 本局结算时限）由引擎翻页判定；endManually 自带防重入
     if (res.ended && merged) void endManuallyRef.current?.(res.ended);
   }, [commitSim]);
 
@@ -2041,9 +2079,23 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (r.notes.length) lines.push(`驾驶「${car.name}」一路顺心（${r.notes.join("，")}）。`);
     }
     // 移动结果同样落进对话框（故事线）
-    commitSim(arrived, lines.join("\n"));
+    const landed = commitSim(arrived, lines.join("\n"));
+    // 接入 AI 时：抵达后由 AI 演绎进入场景的一段剧情（环境、在场人物、可做的事），并给出后续选项
+    if (isConfigured(cfg) && landed && !busy) {
+      const present = mobsHere(arrived, roomId, g.npcs).filter((p) => p.present).map((p) => p.name).slice(0, 4);
+      const roomHint = (spotDesc(g, roomId) || roomDesc(roomId) || "").trim();
+      simLockRef.current = lockOf(g.sim, landed.sim); // 交通费 / 行动点等已结算，AI 不得改动
+      void runTurn(
+        landed,
+        `【抵达】主角刚来到「${locName}」。${roomHint ? `地点设定：${roomHint.slice(0, 200)}。` : ""}${present.length ? `此刻在场：${present.join("、")}。` : "此刻没有熟人在场。"}${intro ? `（首次到访剧情已呈现，请自然承接，勿重复）` : ""}\n请写一段进入此地的场景剧情：环境氛围与细节、在场人物此刻在做什么（可以主动搭话），以及这里能做的事，给出 3~4 个后续行动选项。交通费与行动点已由系统结算，不要改动；world.location 保持「${locName}」，不要转场。`,
+        false,
+        true,
+        undefined,
+        true,
+      );
+    }
     return lines;
-  }, [commitSim]);
+  }, [busy, cfg, commitSim, runTurn]);
 
   // 拾取/收纳地点物品（收入行囊记录到存档，若已接入 AI 则同步交由 AI 演绎拾取细节与后续选项）
   const simPickup = useCallback((itemId: string): string => {
@@ -2155,7 +2207,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     // 先检查是否为玩家在地图编辑器里自定义的地点行动
     const customAct = customActsOf(g, g.sim.room).find((a) => a.id === actId);
     if (customAct) {
-      const lbl = (k: string) => (STAT_LABELS as Record<string, string>)[k] ?? ({ fame: "名气", looks: "容貌", stress: "压力", mood: "心情", energy: "体力", money: "资金" } as Record<string, string>)[k] ?? k;
+      const lbl = attrLabelOf;
       const valOf = (k: string) => Number((g.sim.stats as Record<string, number>)[k] ?? (g.sim as unknown as Record<string, unknown>)[k] ?? g.sim.cattrs?.[k] ?? 0) || 0;
       const lack = Object.entries(customAct.require ?? {}).filter(([k, v]) => valOf(k) < v);
       if (lack.length) return `「${customAct.label}」还不能进行：需要${lack.map(([k, v]) => `${lbl(k)} ≥ ${v}（当前 ${valOf(k)}）`).join("、")}。`;
@@ -2498,7 +2550,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     // 依据结局类型给出定级：破产走破产结局，其余按自定义结局或名气/口碑/奖项分档
     const custom = kind === "bankrupt" ? null : matchCustomEnding(g.customEndings, g.sim);
     const rank = kind === "bankrupt" ? bankruptEnding(g.sim) : custom ? { title: custom.title, body: custom.body } : endingText(g.sim);
-    const rawGrade = g.gradeDims?.length ? dimsGrade(g.sim, g.gradeDims) : lifeGrade(g.sim);
+    const rawGrade = settleGrade(g);
     const grade = custom && (custom.grade || custom.verdict)
       ? { ...rawGrade, grade: custom.grade || rawGrade.grade, verdict: custom.verdict || rawGrade.verdict }
       : rawGrade;
@@ -2520,7 +2572,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     const endingHero = custom?.heroImage?.trim() || undefined;
     const endingCommentBy = custom?.commentBy?.trim() || undefined;
     const endingCommentAvatar = custom?.commentAvatar?.trim() || undefined;
-    const her = getWorld().worldId === "ent" ? "女明星" : "主角";
+    const her = "主角";
     // 记忆素材：剧情志篇目 + 主线最早与最近的片段，供后记「结尾呼应前文记忆」
     const lineOf = (t: Turn) => t.segments.map((x) => x.text).join("").replace(/\s+/g, " ").slice(0, 120);
     const aiTurns = g.story.filter((t) => t.role === "ai");

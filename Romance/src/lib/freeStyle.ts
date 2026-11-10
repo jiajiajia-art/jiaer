@@ -66,17 +66,53 @@ export function applyFreeStyle(f?: FreeStyle, d?: DialogDiy, tb?: TopbarDiy) {
 }
 
 /* —— 图床 / 素材库：全局保存，不进存档 —— */
-export type Asset = { id: string; name: string; url: string; at: number };
+/* 功能注释：temp = 生图自动收进来的临时素材，7 天内没被使用就自动清除；收藏（去掉 temp）后长期保留 */
+export type Asset = { id: string; name: string; url: string; at: number; temp?: boolean; usedAt?: number };
 const K_ASSETS = "star:assets", K_HOST = "star:imghost";
-export const loadAssets = () => loadGlobal<Asset[]>(K_ASSETS, []) || [];
+export const TEMP_ASSET_TTL = 7 * 24 * 3600 * 1000;
+const lastUse = (a: Asset) => Math.max(a.at, a.usedAt ?? 0);
+export const assetDaysLeft = (a: Asset, now = Date.now()) => Math.max(0, Math.ceil((lastUse(a) + TEMP_ASSET_TTL - now) / 86400000));
+const emitAssets = () => { if (typeof window !== "undefined") window.dispatchEvent(new Event("star:assets")); };
 export const saveAssets = (a: Asset[]) => saveGlobal(K_ASSETS, a);
+export const loadAssets = (): Asset[] => {
+  const all = loadGlobal<Asset[]>(K_ASSETS, []) || [];
+  const now = Date.now();
+  const kept = all.filter((a) => !a.temp || now - lastUse(a) < TEMP_ASSET_TTL);
+  if (kept.length !== all.length) saveAssets(kept);
+  return kept;
+};
+const newId = () => Math.random().toString(36).slice(2, 9);
 /** 功能注释：P8 采用生图后进「我的素材库」；同 URL 去重，写入后广播 star:assets。ImagePicker 与批量生图共用，勿各写一份。 */
 export function rememberImageAsset(url: string, name = "图片"): void {
   if (!url) return;
   const a = loadAssets();
   if (a.some((x) => x.url === url)) return;
-  saveAssets([{ id: Math.random().toString(36).slice(2, 9), name: name.slice(0, 24) || "图片", url, at: Date.now() }, ...a]);
-  if (typeof window !== "undefined") window.dispatchEvent(new Event("star:assets"));
+  saveAssets([{ id: newId(), name: name.slice(0, 24) || "图片", url, at: Date.now() }, ...a]);
+  emitAssets();
+}
+/** 生图结果自动收进素材库（临时）；已存在则只刷新使用时间 */
+export function addTempAsset(url: string, name = "AI 生图") {
+  const a = loadAssets();
+  const hit = a.find((x) => x.url === url);
+  if (hit) { hit.usedAt = Date.now(); saveAssets(a); }
+  else saveAssets([{ id: newId(), name: name.slice(0, 24), url, at: Date.now(), temp: true }, ...a]);
+  emitAssets();
+}
+/** 收藏：长期保留（不在库里则直接加入） */
+export function keepAsset(url: string, name = "AI 生图") {
+  const a = loadAssets();
+  const hit = a.find((x) => x.url === url);
+  if (hit) { delete hit.temp; saveAssets(a); }
+  else saveAssets([{ id: newId(), name: name.slice(0, 24), url, at: Date.now() }, ...a]);
+  emitAssets();
+}
+export const isAssetKept = (url: string) => loadAssets().some((x) => x.url === url && !x.temp);
+/** 素材被用上时刷新使用时间，临时素材重新计 7 天 */
+export function touchAsset(url: string) {
+  const a = loadAssets();
+  const hit = a.find((x) => x.url === url);
+  if (!hit) return;
+  hit.usedAt = Date.now(); saveAssets(a); emitAssets();
 }
 export type ImgHost = { kind: "none" | "imgbb"; key?: string };
 export const loadHost = (): ImgHost => loadGlobal<ImgHost>(K_HOST, { kind: "none" }) || { kind: "none" };

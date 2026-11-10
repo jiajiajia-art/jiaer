@@ -12,7 +12,7 @@ import type { AttrDef } from "../lib/types";
 export type ValueSrc = { kind: "stat" | "metric"; key: string; label: string; group: string };
 export const GROUP_ROUTE = "人物线路词条";
 export const GROUP_ATTR = "本作品属性";
-export const GROUP_BUILTIN = "引擎内置（兜底）";
+export const GROUP_BUILTIN = "引擎内置数值";
 
 /** 功能注释：AI 常漏写 label/name，直接 .trim() 会在角色页 map 里崩成 reading 'trim' */
 function cellText(raw: unknown): string {

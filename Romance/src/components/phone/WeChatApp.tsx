@@ -1,4 +1,6 @@
 /* 微信：仿原生四栏（微信 / 通讯录 / 发现 / 我），微信绿 #07c160、圆角方头像、灰底会话表 */
+import { commTerm, commPromptHint } from "../../lib/commSkin";
+import { canInitiate, isBlocked, MSG_PREFS, msgPrefLabel, msgPrefOf, setMsgPref, type MsgPref } from "../../game/msgPref";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useGame } from "../../store/gameCtx";
 import { Avatar } from "../ui";
@@ -10,7 +12,7 @@ import { Moments, addFeedMoments, type FeedMoment } from "./Moments";
 import { useWorldSync, syncJson, loadFeed, saveFeed } from "./worldSync";
 import ProfileView from "./ProfileView";
 import { useWxSettings, setWxSettings, setWxChat, WX_CHAT_DEFAULT, WX_FONT_LABEL, WX_FONT_ORDER, WX_FONT_PX } from "./wxSettings";
-import { BUBBLE_STYLES, CHAT_BGS, bgCss, chatLook } from "./wxFeatures";
+import { BUBBLE_STYLES, CHAT_BGS, bgCss, chatLook, chatBgOptions } from "./wxFeatures";
 import { fileToDataUrl } from "./chat";
 import { generateStranger, saveStranger, useStrangers, customOf, msgPreview, wxTime, initialOf, zhCompare, useFavs, removeFav, incomingReqs, addIncomingReq, resolveIncomingReq, type Stranger, type XCustom } from "./wxFeatures";
 import type { GameState } from "../../lib/types";
@@ -23,7 +25,7 @@ import { affinityOf, romanceBlock } from "../../game/npcKnowledge";
 import { IconCheck, IconHeart, IconMessage } from "../../lib/icons";
 import { useCommsBrand } from "./commsBrand";
 
-const WX_GREEN = "#07c160";
+const WX_GREEN = "var(--wx-accent, #07c160)"; // 功能注释：古风「传讯」皮肤由 .comm-ancient 改写为朱砂
 type WxTab = "chats" | "contacts" | "discover" | "me";
 
 /* 微信方形圆角头像（原生是 ~6px 圆角方形，而非圆形） */
@@ -91,8 +93,8 @@ function WxTabBar({ active, onPick, unread, newFriends }: { active: WxTab; onPic
   const brand = useCommsBrand();
   const items: { id: WxTab; label: string; icon: ReactNode; badge?: number }[] = [
     { id: "chats", label: brand.appName, icon: <IconChat />, badge: unread },
-    { id: "contacts", label: "通讯录", icon: <IconContacts />, badge: newFriends },
-    { id: "discover", label: "发现", icon: <IconDiscover /> },
+    { id: "contacts", label: brand.skin === "letter" ? commTerm("contacts") : "通讯录", icon: <IconContacts />, badge: newFriends },
+    { id: "discover", label: brand.skin === "letter" ? commTerm("discover") : "发现", icon: <IconDiscover /> },
     { id: "me", label: "我", icon: <IconMe /> },
   ];
   return (
@@ -101,13 +103,13 @@ function WxTabBar({ active, onPick, unread, newFriends }: { active: WxTab; onPic
         const on = active === it.id;
         return (
           <button key={it.id} onClick={() => onPick(it.id)} className="relative flex flex-1 flex-col items-center gap-0.5 py-1">
-            <span className="relative" style={{ color: on ? WX_GREEN : "#7a7a7a" }}>
+            <span className="relative" style={{ color: on ? WX_GREEN : "var(--wx-muted, #7a7a7a)" }}>
               {it.icon}
               {!!it.badge && it.badge > 0 && (
                 <span className="absolute -right-2.5 -top-1.5 flex h-[15px] min-w-[15px] items-center justify-center rounded-full bg-[#fa5151] px-1 text-[9px] font-bold text-white">{it.badge > 99 ? "99+" : it.badge}</span>
               )}
             </span>
-            <span className="text-[10.5px]" style={{ color: on ? WX_GREEN : "#7a7a7a" }}>{it.label}</span>
+            <span className="text-[10.5px]" style={{ color: on ? WX_GREEN : "var(--wx-muted, #7a7a7a)" }}>{it.label}</span>
           </button>
         );
       })}
@@ -429,7 +431,7 @@ function DiscoverPage({ onSearch, onOpenChat }: { onSearch: () => void; onOpenCh
 
   return (
     <div className="space-y-2 pt-2 text-[#b2b2b2]" data-comms-discover={letterSkin ? "letter" : "modern"}>
-      {!letterSkin && <div><Item icon={<IconImage size={20} className="text-[#2ca35b]" />} label="朋友圈" onClick={() => setInMoments(true)} thumbs={momentsPush} /></div>}
+      <div><Item icon={<IconImage size={20} className="text-[#2ca35b]" />} label={commTerm("moments")} onClick={() => setInMoments(true)} thumbs={momentsPush} /></div>
       {!letterSkin && (
         <div>
           <Item icon={<IconVideo size={20} className="text-[#fa7b2c]" />} label="视频号" onClick={() => setSub("channels")} />
@@ -596,7 +598,7 @@ function WxChatStylePage({ onBack }: { onBack: () => void }) {
         <div className={sec}>
           <p className={h}>默认聊天背景</p>
           <div className="grid grid-cols-4 gap-2">
-            {CHAT_BGS.map((b) => {
+            {chatBgOptions().map((b) => {
               const on = (c.chatBg || "") === b.id;
               return (
                 <button key={b.id || "def"} onClick={() => setWxChat({ chatBg: b.id })} className="flex flex-col items-center gap-1">
@@ -642,12 +644,13 @@ function WxSettingsPage({ onBack }: { onBack: () => void }) {
   const { game } = useGame();
   const brand = useCommsBrand();
   const st = useWxSettings();
-  const [page, setPage] = useState<"root" | "account" | "general" | "about" | "chatStyle">("root");
+  const [page, setPage] = useState<"root" | "account" | "general" | "about" | "chatStyle" | "msgPref">("root");
 
   if (page === "account") return <WxAccountPage onBack={() => setPage("root")} />;
   if (page === "chatStyle") return <WxChatStylePage onBack={() => setPage("root")} />;
   if (page === "general") return <WxGeneralPage onBack={() => setPage("root")} />;
   if (page === "about") return <WxAboutPage onBack={() => setPage("root")} />;
+  if (page === "msgPref") return <WxMsgPrefPage onBack={() => setPage("root")} />;
 
   return (
     <div className="flex h-full flex-col bg-[#ededed]">
@@ -661,6 +664,7 @@ function WxSettingsPage({ onBack }: { onBack: () => void }) {
           <WxSetRow label="新消息未读提醒" right={<WxToggle on={st.notify} onChange={(v) => setWxSettings({ notify: v })} />} />
           {brand.skin !== "letter" && <WxSetRow label="朋友圈更新提醒" right={<WxToggle on={st.momentsPush} onChange={(v) => setWxSettings({ momentsPush: v })} />} />}
           <WxSetRow label="允许好友主动发消息" right={<WxToggle on={st.proactive} onChange={(v) => setWxSettings({ proactive: v })} />} />
+          <WxSetRow label="好友消息权限" right="逐人设置 ›" onClick={() => setPage("msgPref")} />
         </div>
         <div>
           <WxSetRow label="聊天样式" right={BUBBLE_STYLES.find((b) => b.id === st.chat.bubble)?.label ?? "经典绿"} onClick={() => setPage("chatStyle")} />
@@ -672,7 +676,7 @@ function WxSettingsPage({ onBack }: { onBack: () => void }) {
         </div>
         <p className="px-6 text-center text-[11px] text-ink-soft/70">
           {st.notify ? "未读消息会以红点角标提醒。" : "已关闭未读提醒，会话列表与底栏不再显示红点角标。"}
-          {st.proactive ? " 好友偶尔会主动找你聊天（主线推进或手机开着时，频率很低）。" : " 已关闭好友主动发消息。"}
+          {st.proactive ? " 好友默认只在剧情需要时联系你；设为「主动联系」的人每到新的一天可能来找你聊天。" : " 已关闭剧情之外的主动消息，好友只在剧情需要时联系你。"}
         </p>
       </div>
     </div>
@@ -916,15 +920,15 @@ function WeChatAppInner({ onBack }: { onBack: () => void }) {
   useWorldSync("wechat", async () => {
     const g0 = ensurePhone(game!);
     const p0 = g0.phone!;
-    const chatPids = p0.contacts; // 只有微信好友（friend）能发来消息
+    const chatPids = p0.contacts.filter((id) => canInitiate(g0, id)); // 只有微信好友（friend）能发来消息；被设为不主动 / 禁止的除外
     const people = chatPids.map((id) => g0.npcs.find((n) => n.id === id)).filter((n): n is NonNullable<typeof n> => !!n);
-    const momentPool = g0.npcs.slice(0, 12);
+    const momentPool = people.filter((n) => !isBlocked(g0, n.id)).slice(0, 12); // 朋友圈只来自好友
     const list = (ns: typeof people) => ns.map((n) => `${n.id}=${n.name}`).join("、") || "（无）";
     // 好友主动找主角的频率与语气取决于好感 / 爱慕（幕后资料，只给 AI 把握分寸；家人不标爱慕）
     const friendList = people.map((n) => { const love = romanceBlock(g0, n.id, true); return `${n.id}=${n.name}（好感${affinityOf(g0, n.id)}${love ? `，${love}` : ""}）`; }).join("、") || "（无）";
-    const strangersPool = g0.npcs.filter((n) => !p0.contacts.includes(n.id) && !(p0.pending ?? []).includes(n.id)).slice(0, 12);
+    const strangersPool = g0.npcs.filter((n) => !p0.contacts.includes(n.id) && !(p0.pending ?? []).includes(n.id) && !isBlocked(g0, n.id)).slice(0, 12);
     const res = await syncJson<{ messages?: unknown; moments?: unknown; requests?: unknown }>(cfg, g0, "wechat", brand.appName,
-      `为${brand.appName}生成新内容。1) messages：0~4 条好友主动发来的私聊消息，发送者只能从【好友】中选，用 pid 标识，语气贴合人设与当前剧情，并按【好友】里标注的好感与爱慕把握分寸——好感决定熟络与热络；爱慕越高越可能主动来找主角、更上心（分享日常、找借口聊天、关心近况），但仍含蓄不说破；爱慕为 0 或标注不可攻略的人不暧昧、不说情话，家人只有亲情；2) moments：1~3 条朋友圈动态，作者只能从【圈内人物】中选，text ≤80 字，images 为配图张数 0~6，likers 为点赞者 pid 数组（从圈内人物选）；朋友圈是公开的，不得出现任何数值、私聊内容、内心想法或未公开的心意，心动最多是旁人看不懂的含蓄暗示；3) requests：0~1 条好友申请，只能来自【非好友】且剧情上确有理由想认识主角的人物，text 为验证消息（≤30 字），多数时候返回空数组。
+      `${commPromptHint()}为${brand.appName}生成新内容。1) messages：0~4 条好友主动发来的私聊消息，发送者只能从【好友】中选，用 pid 标识，语气贴合人设与当前剧情，并按【好友】里标注的好感与爱慕把握分寸——好感决定熟络与热络；爱慕越高越可能主动来找主角、更上心（分享日常、找借口聊天、关心近况），但仍含蓄不说破；爱慕为 0 或标注不可攻略的人不暧昧、不说情话，家人只有亲情；2) moments：1~3 条朋友圈动态，作者只能从【圈内人物】中选，text ≤80 字，images 为配图张数 0~6，likers 为点赞者 pid 数组（从圈内人物选）；朋友圈是公开的，不得出现任何数值、私聊内容、内心想法或未公开的心意，心动最多是旁人看不懂的含蓄暗示；3) requests：0~1 条好友申请，只能来自【非好友】且剧情上确有理由想认识主角的人物，text 为验证消息（≤30 字），多数时候返回空数组。
 【好友】${friendList}
 【非好友】${list(strangersPool)}
 【圈内人物】${list(momentPool)}
@@ -992,6 +996,7 @@ function WeChatAppInner({ onBack }: { onBack: () => void }) {
   const { notify } = useWxSettings();
   const unread = notify ? ph.threads.reduce((a, t) => a + (customOf(t).muted ? 0 : t.unread), 0) : 0;
   const setC = (t: Thread, p: Partial<XCustom>) => commitGame(setThreadCustom(game!, t.id, p as Partial<NonNullable<Thread["custom"]>>));
+  const [prefPid, setPrefPid] = useState<string | null>(null);
   const [swiped, setSwiped] = useState<string | null>(null);
   const toggleUnread = (t: Thread) => commitGame(t.unread > 0 || customOf(t).markUnread
     ? setThreadCustom(markRead(game!, t.id), t.id, { markUnread: false } as Partial<NonNullable<Thread["custom"]>>)
@@ -1055,7 +1060,7 @@ function WeChatAppInner({ onBack }: { onBack: () => void }) {
     );
   }
 
-  const title = tab === "chats" ? brand.appName : tab === "contacts" ? "通讯录" : tab === "discover" ? "发现" : "我";
+  const title = tab === "chats" ? brand.appName : tab === "contacts" ? (brand.skin === "letter" ? commTerm("contacts") : "通讯录") : tab === "discover" ? (brand.skin === "letter" ? commTerm("discover") : "发现") : "我";
 
   return (
     <div className="relative flex h-full flex-col bg-[#ededed]">
@@ -1088,6 +1093,7 @@ function WeChatAppInner({ onBack }: { onBack: () => void }) {
               { label: menu.unread > 0 || customOf(menu).markUnread ? "标为已读" : "标为未读", on: () => toggleUnread(menu) },
               { label: menu.pinned ? "取消置顶" : "置顶该聊天", on: () => commitGame(togglePinned(game!, menu.id)) },
               { label: customOf(menu).muted ? "开启新消息提醒" : "消息免打扰", on: () => setC(menu, { muted: !customOf(menu).muted }) },
+              ...(menu.kind === "private" && menu.personId ? [{ label: `消息权限：${msgPrefLabel(msgPrefOf(game, menu.personId))}`, on: () => setPrefPid(menu.personId!) }] : []),
               { label: "不显示该聊天", on: () => commitGame(setThreadCustom(markRead(game!, menu.id), menu.id, { hiddenAt: menu.lastTs, markUnread: false } as Partial<NonNullable<Thread["custom"]>>)) },
               { label: "删除该聊天", danger: true, on: () => delThread(menu) },
             ].map((it) => (
@@ -1096,6 +1102,14 @@ function WeChatAppInner({ onBack }: { onBack: () => void }) {
             <button onClick={() => setMenu(null)} className="mt-2 block w-full bg-white py-3.5 text-[16px] text-[#181818]">取消</button>
           </div>
         </div>
+      )}
+      {prefPid && (
+        <MsgPrefSheet
+          name={game!.npcs.find((n) => n.id === prefPid)?.name ?? "TA"}
+          value={msgPrefOf(game, prefPid)}
+          onPick={(v) => { commitGame(setMsgPref(ensurePhone(game!), prefPid, v)); setPrefPid(null); }}
+          onClose={() => setPrefPid(null)}
+        />
       )}
       <div className="flex-1 overflow-y-auto">
         {tab === "chats" && (
@@ -1218,5 +1232,65 @@ function IconMe() {
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
       <circle cx="12" cy="8" r="3.6" /><path d="M4.5 20c0-4 3.4-6.2 7.5-6.2s7.5 2.2 7.5 6.2" strokeLinecap="round" />
     </svg>
+  );
+}
+
+/* 好友消息权限：单人选择面板（会话长按菜单 / 设置页共用） */
+function MsgPrefSheet({ name, value, onPick, onClose }: { name: string; value: MsgPref; onPick: (v: MsgPref) => void; onClose: () => void }) {
+  return (
+    <div className="absolute inset-0 z-50 flex flex-col justify-end bg-black/40" onClick={onClose}>
+      <div className="bg-[#f7f7f7] pb-2" onClick={(e) => e.stopPropagation()}>
+        <p className="bg-white px-6 pb-2 pt-3.5 text-center text-[14px] font-semibold text-[#181818]">{name} 的消息权限</p>
+        <p className="bg-white px-6 pb-3 text-center text-[12px] text-[#9a9a9a]">决定 TA 能否主动给你发消息</p>
+        {MSG_PREFS.map((o) => (
+          <button key={o.id} onClick={() => onPick(o.id)} className="flex w-full items-center gap-3 border-t border-black/[0.06] bg-white px-5 py-3 text-left">
+            <span className="min-w-0 flex-1">
+              <span className={`block text-[15.5px] ${o.id === "block" ? "text-[#fa5151]" : "text-[#181818]"}`}>{o.label}</span>
+              <span className="mt-0.5 block text-[12px] text-[#9a9a9a]">{o.desc}</span>
+            </span>
+            {value === o.id && <IconCheck width={18} height={18} className="shrink-0 text-[#07c160]" />}
+          </button>
+        ))}
+        <button onClick={onClose} className="mt-2 block w-full bg-white py-3.5 text-[16px] text-[#181818]">取消</button>
+      </div>
+    </div>
+  );
+}
+
+/* 设置 · 好友消息权限：列出全部好友，逐人设定 */
+function WxMsgPrefPage({ onBack }: { onBack: () => void }) {
+  const { game, commitGame } = useGame();
+  const [pick, setPick] = useState<string | null>(null);
+  const g = ensurePhone(game!);
+  const friends = g.phone!.contacts.map((id) => g.npcs.find((n) => n.id === id)).filter((n): n is NonNullable<typeof n> => !!n);
+  return (
+    <div className="relative flex h-full flex-col bg-[#ededed]">
+      <WxSubHeader title="好友消息权限" onBack={onBack} />
+      <div className="flex-1 overflow-y-auto pb-6">
+        <p className="px-4 pb-2 pt-1 text-[12px] leading-relaxed text-ink-soft">默认「随剧情」：只有剧情需要时 TA 才会发消息或来电。也可以设为主动联系、不主动发，或禁止发消息。</p>
+        {friends.length ? (
+          <div className="bg-white">
+            {friends.map((n) => {
+              const v = msgPrefOf(g, n.id);
+              return (
+                <button key={n.id} onClick={() => setPick(n.id)} className="flex w-full items-center gap-3 border-b border-black/[0.05] px-4 py-2.5 text-left last:border-b-0">
+                  <Avatar name={n.name} src={n.avatar} size={36} editable={false} />
+                  <span className="min-w-0 flex-1 truncate text-[15px] text-[#181818]">{n.name}</span>
+                  <span className={`shrink-0 text-[13px] ${v === "block" ? "text-[#fa5151]" : v === "story" ? "text-[#9a9a9a]" : "text-[#07a050]"}`}>{msgPrefLabel(v)} ›</span>
+                </button>
+              );
+            })}
+          </div>
+        ) : <Empty text="还没有好友。" />}
+      </div>
+      {pick && (
+        <MsgPrefSheet
+          name={g.npcs.find((n) => n.id === pick)?.name ?? "TA"}
+          value={msgPrefOf(g, pick)}
+          onPick={(v) => { commitGame(setMsgPref(g, pick, v)); setPick(null); }}
+          onClose={() => setPick(null)}
+        />
+      )}
+    </div>
   );
 }

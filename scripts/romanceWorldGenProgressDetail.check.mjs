@@ -136,7 +136,7 @@ test('worldGenGenerate_进度按细项展示且两次串联合并请求', async 
           },
         });
       }
-      if (!last.includes('当前大类：「人物地点事件结局」')) {
+      if (!last.includes('当前大类：「人物与地点」')) {
         throw new Error(`意外大类提示: ${last.slice(0, 120)}`);
       }
       return JSON.stringify({ content: { npcs: fiveNpcs, rooms, startRoom: 'room1' } });

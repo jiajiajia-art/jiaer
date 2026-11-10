@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+# The lockfile pins many tarballs to registry.npmmirror.com, which is unreliable
+# from the sandbox; rewrite all resolved hosts to the official npm registry.
+exec npm ci --no-audit --no-fund --registry=https://registry.npmjs.org/ --replace-registry-host=always

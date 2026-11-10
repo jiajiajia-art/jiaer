@@ -37,7 +37,9 @@ test('worldGenBatch_基础设定与人物地点事件结局两大类', async () 
   assert.equal(batches.length, 1);
   assert.equal(batches[0].id, gen.WORLD_GEN_PHASE1_BATCH_ID);
   assert.equal(batches[0].name, '基础设定');
-  assert.equal(gen.worldGenBatchMaxTokens(['hub:paths', 'npcs', 'rooms', 'fixedEvents']), 16000);
+  assert.equal(gen.worldGenBatchMaxTokens(['prompt', 'hub:paths']), 16000);
+  assert.equal(gen.worldGenBatchMaxTokens(['npcs', 'rooms']), 10000);
+  assert.equal(gen.worldGenBatchMaxTokens(['fixedEvents', 'storylines']), 10000);
   assert.equal(gen.worldGenBatchMaxTokens(['travelTime']), 4000);
 });
 
@@ -52,7 +54,7 @@ test('worldGenBatch_全部编辑器细项须有大类归属', async () => {
   assert.equal(progress.total, wiz.DEFAULT_WORLD_GEN_EDITOR_STEP_IDS.length, '进度行按勾选细项展示');
   assert.ok(progress.modules.every((m) => m.batchId), '细项须挂 batchId 以便合并请求');
   const batchCount = new Set(progress.modules.map((m) => m.batchId)).size;
-  assert.equal(batchCount, 2, '默认核心应只有两次串联大类');
+  assert.equal(batchCount, 3, '默认核心为三次串联：基础设定 → 人物与地点 → 事件与剧情线');
   assert.ok(progress.modules.some((m) => m.id === 'hub:paths' || m.name === '人物线路'));
   assert.ok(progress.modules.some((m) => m.id === 'hub:rules'));
   assert.ok(progress.modules.some((m) => m.id === 'travelTime' || m.name === '时间与推进'));

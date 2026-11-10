@@ -36,6 +36,8 @@ export type PlayModInstallConfig = {
   modId: string;
   slug: string;
   versionPinned: string;
+  /** 功能注释：P2 本世界安装这包的日期（ISO）；旧记录可缺省 */
+  installedAt?: string;
   enabled: boolean;
   navLabel?: string;
   iconSvg?: string;
@@ -247,7 +249,7 @@ export const LOCAL_PLAY_MOD_CATALOG: LocalPlayModCatalogItem[] = [
     },
     {
       downloads: 1740,
-      detail: "生活开销包提供每周伙食与住行账单玩法，可按名气分档。作者可改规则与文案，不改存档结构或登录。",
+      detail: "生活开销包提供每周伙食与住行账单玩法；伙食档位、花费与属性影响按本作品建角属性填写，不带入娱乐圈数值。",
     },
   ),
   withStoreDetail(
@@ -362,6 +364,7 @@ export function makeInstallFromCatalog(item: LocalPlayModCatalogItem, sortOrder 
     modId: item.id,
     slug: item.slug,
     versionPinned: item.version,
+    installedAt: new Date().toISOString(),
     enabled: true,
     navLabel: item.defaultNavLabel || undefined,
     iconSvg: item.iconSvg || undefined,

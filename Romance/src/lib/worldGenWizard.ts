@@ -237,7 +237,7 @@ const MOD_STEPS: WorldGenEditorStep[] = [
   { id: "startResources", group: "① 基础", name: "开局资金", desc: "已并入建角字段列表的货币项", contentIds: ["world"], source: "mod" },
 
   // ② 角色（「人物」「人物线路」已在 Hub；关系玩法已迁至①基础玩法 Mod）
-  { id: "npcs", group: "② 角色", name: "人物（模组库）", desc: "统一角色表：名字 · 关系 · 开局认识/联系人 · 地点 · 时间线 · 音色", contentIds: ["characters"], source: "mod" },
+  { id: "npcs", group: "② 角色", name: "人物", desc: "统一角色表：名字 · 关系 · 开局认识/联系人 · 地点 · 时间线 · 音色", contentIds: ["characters"], source: "mod" },
   { id: "contacts", group: "② 角色", name: "关系档位与卡片数值", desc: "嵌在开局人物上方 · 档位分段 · 卡片数值条数自定可隐藏", contentIds: ["characters"], source: "mod" },
 
   // ③ 养成（名气分档已并入建角属性；头衔改为玩法 Mod）
@@ -248,11 +248,11 @@ const MOD_STEPS: WorldGenEditorStep[] = [
   { id: "tuning", group: "③ 养成", name: "引擎规则与经济", desc: "表现评级 · 休息 ·（有相关玩法才生成）课程/通告结算/违约（破产规则在结局配置）", contentIds: ["world"], source: "mod" },
 
   // 地点已并入①基础（取消独立「④ 世界」页签）；出行属玩法 Mod
-  { id: "rooms", group: "① 基础", name: "地点（模组库）", desc: "多级子地点 · 树状预览 · 准入 · 出口 · 开局地点", contentIds: ["locations"], source: "mod" },
+  { id: "rooms", group: "① 基础", name: "地点", desc: "多级子地点 · 树状预览 · 准入 · 出口 · 开局地点", contentIds: ["locations"], source: "mod" },
 
   // ④ 剧情（开场页与剧情美化在⑥美化；结局插图仍随结局留在这里）
   { id: "prompt", group: "① 基础", name: "剧本基调", desc: "写给模型的整段基调（原 GM / 世界观 / 口吻合并）", contentIds: ["world"], source: "mod" },
-  { id: "fixedEvents", group: "④ 剧情", name: "固定事件（模组库）", desc: "首次事件 · 预设剧本 · 时间 / 条件触发 · 事件链", contentIds: ["mainPlot", "sideEvents", "opening"], source: "mod" },
+  { id: "fixedEvents", group: "④ 剧情", name: "固定事件", desc: "首次事件 · 预设剧本 · 时间 / 条件触发 · 事件链", contentIds: ["mainPlot", "sideEvents", "opening"], source: "mod" },
   { id: "storylines", group: "④ 剧情", name: "剧情线", desc: "一条主线（有序节点）· 结局与时限 · 评级；支线手建", contentIds: ["mainPlot", "sideEvents", "world"], source: "mod" },
 
   // 玩法并入①基础：添加即启用，不再单独生成「功能开关」

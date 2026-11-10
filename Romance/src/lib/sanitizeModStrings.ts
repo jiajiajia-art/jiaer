@@ -9,7 +9,7 @@ const STRING_FIELD_KEYS = new Set([
   "id", "name", "label", "title", "desc", "bio", "role", "gender", "relation",
   "content", "brief", "detail", "src", "prompt", "memory", "event", "note",
   "subject", "body", "text", "hint", "icon", "version", "author", "description",
-  "startDate", "startRoom", "weather", "platformAutoplay", "phoneHomeWallpaper",
+  "startDate", "startRoom", "weather", "platformAutoplay", "phoneHomeWallpaper", "phoneCommSkin",
   "pickTitle", "currency", "freeLabel", "perksLabel", "unlockHint", "group",
   "replyPrompt", "badge", "city", "placeholder", "tag", "blurb", "about",
   "genre", "type", "avatarVariant", "avatar", "summary", "html", "page", "image", "video",

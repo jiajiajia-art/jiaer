@@ -127,6 +127,15 @@ export default function PersonProfile({ pid, name, known = true }: { pid: string
               </div>
             )}
             <div className="mt-2.5 space-y-0.5 border-t border-line/70 pt-2">
+              <BondMeterRow
+                label="好感"
+                value={aff}
+                pct={((aff + 100) / 200) * 100}
+                min={-100}
+                max={100}
+                bipolar
+                onChange={(v) => setRelValue(pid, "friendship", v)}
+              />
               {romanceOn ? (
                 <BondMeterRow
                   label="爱慕"
@@ -142,14 +151,6 @@ export default function PersonProfile({ pid, name, known = true }: { pid: string
                   <span>{romanceFixed ? (family ? "亲情 · 家人" : "子女亲情") : "不可攻略"}</span>
                 </div>
               )}
-              <BondMeterRow
-                label="好感"
-                value={aff}
-                pct={((aff + 100) / 200) * 100}
-                min={-100}
-                max={100}
-                onChange={(v) => setRelValue(pid, "friendship", v)}
-              />
             </div>
           </div>
         </div>
@@ -165,11 +166,14 @@ export default function PersonProfile({ pid, name, known = true }: { pid: string
               body: (
                 <div>
                   {bio ? <p className="mb-3 text-[13px] leading-relaxed text-ink/85">{bio}</p> : null}
-                  <ProfileGroup title="个人能力">
-                    <div className="py-2">
-                      <StatBars stats={stats} />
-                    </div>
-                  </ProfileGroup>
+                  {/* 只有带能力数值的人物（艺人等）才展示个人能力；普通 NPC 没有这套数值，不显示一排空条 */}
+                  {stats && Object.values(stats).some((v) => typeof v === "number") ? (
+                    <ProfileGroup title="个人能力">
+                      <div className="py-2">
+                        <StatBars stats={stats} />
+                      </div>
+                    </ProfileGroup>
+                  ) : null}
                 </div>
               ),
             },

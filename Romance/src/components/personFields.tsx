@@ -70,6 +70,7 @@ export function BondMeterRow({
   onChange,
   min = 0,
   max = 100,
+  bipolar = false,
 }: {
   label: string;
   value: number;
@@ -77,21 +78,28 @@ export function BondMeterRow({
   onChange?: (v: number) => void;
   min?: number;
   max?: number;
+  /** 双向条：以中点为 0，正值向右填充、负值向左填充（用于可为负的好感） */
+  bipolar?: boolean;
 }) {
   const p = Math.max(0, Math.min(100, pct));
+  const neg = bipolar && value < 0;
+  const fillStyle = bipolar
+    ? { left: `${Math.min(50, p)}%`, width: `${Math.abs(p - 50)}%` }
+    : { left: 0, width: `${p}%` };
   const clamp = (v: number) => Math.max(min, Math.min(max, v));
   return (
     <div className="flex items-center gap-2 py-1">
       <span className="w-8 shrink-0 text-[12px] font-bold text-ink">{label}</span>
-      <HeartMeter pct={p} color="var(--coral)" track="color-mix(in srgb, var(--line) 80%, transparent)" size={13} />
+      <HeartMeter pct={bipolar ? Math.abs(p - 50) * 2 : p} color={neg ? "var(--ink-soft)" : "var(--coral)"} track="color-mix(in srgb, var(--line) 80%, transparent)" size={13} />
       <div className="relative h-4 min-w-0 flex-1">
         <div className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 overflow-hidden rounded-full bg-ink/15">
-          <div className="h-full rounded-full bg-coral" style={{ width: `${p}%` }} />
+          <div className={`absolute inset-y-0 rounded-full ${neg ? "bg-ink-soft" : "bg-coral"}`} style={fillStyle} />
+          {bipolar && <span aria-hidden className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-ink/35" />}
         </div>
         <span
           aria-hidden
           className="pointer-events-none absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-paper shadow-[0_0_0_2px_var(--coral)]"
-          style={{ left: `${p}%` }}
+          style={{ left: `${p}%`, ...(neg ? { boxShadow: "0 0 0 2px var(--ink-soft)" } : null) }}
         />
         {onChange && (
           <input
@@ -106,7 +114,7 @@ export function BondMeterRow({
           />
         )}
       </div>
-      <span className="w-7 shrink-0 text-right text-[13px] font-bold tabular-nums text-ink">{value}</span>
+      <span className={`w-9 shrink-0 text-right text-[13px] font-bold tabular-nums ${neg ? "text-ink-soft" : "text-ink"}`}>{value}</span>
     </div>
   );
 }

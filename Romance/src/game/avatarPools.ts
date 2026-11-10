@@ -83,8 +83,9 @@ export function randomPools(slot?: AvatarSlot | null): AvatarSource[] {
   // 功能注释：publicRandom 常被 AI 写成对象；非数组按空，禁止 new Set(非数组) → is not iterable
   const on = new Set(Array.isArray(s?.publicRandom) ? s.publicRandom : []);
   const creator = mine(s, (t) => t.random);
-  const platform = systemPools().filter((p) => on.has(p.name) && hasImages(p));
   const { prefer } = resolveAvatarMatchPrefs(s);
+  // 功能注释：公共库优先 = 平台分类全部自动参与（按性别/年龄匹配对应分类），无需逐个勾选
+  const platform = systemPools().filter((p) => (prefer === "public" || on.has(p.name)) && hasImages(p));
   // 功能注释：公共优先时平台分类在前；私人/创作者优先时我的池在前；系统始终可在平台侧作最终回退
   return prefer === "public" ? [...platform, ...creator] : [...creator, ...platform];
 }

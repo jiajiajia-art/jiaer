@@ -1,4 +1,5 @@
 import { loadData, saveData, loadGlobal, saveGlobal } from "../lib/saveScope";
+import { commTerm, isAncientComm } from "../lib/commSkin";
 import { useEffect, useRef, useState, type DragEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { useGame } from "../store/gameCtx";
 import { ensurePhone, gameTimeLabel } from "../game/phone";
@@ -33,9 +34,6 @@ import { useCommsBrand } from "./phone/commsBrand";
 import { phoneAppLabel, preinstallIds } from "../lib/phoneAppsConfig";
 import { resolveEffectiveHomeWallpaper } from "./phone/wallpapers";
 import { liveTerm as T } from "../mods/live";
-import SlimePet from "./phone/studio/Slime";
-import { usePetMode, useStudioOpen } from "./phone/studio/pet";
-import { requestStudio } from "./phone/studio/review";
 import { usePlatformAppsCatalog } from "../lib/usePlatformAppsCatalog";
 import {
   platformAppLegacyUi,
@@ -82,6 +80,8 @@ const WIDGET_IDS = new Set(STORE.filter((s) => s.kind === "widget").map((s) => s
 const BUILTIN_LABEL: Record<string, string> = Object.fromEntries([...CORE.map((c) => [c.id, c.label]), ...STORE.map((s) => [s.id, s.label])]);
 /** 功能注释：显示名优先平台表，再模组覆盖，再内置名 */
 let platformNameLookup: (id: string) => string | undefined = () => undefined;
+/** 加载失败的图标地址（会话内缓存，避免反复请求） */
+const brokenIcons = new Set<string>();
 let platformIconLookup: (id: string) => string | undefined = () => undefined;
 /** 功能注释：P4.1 当前世界通讯品牌；PhoneInner 每次渲染写入，appLabel 等模块级函数读它（与 platformNameLookup 同模式） */
 let commsBrandNow: CommsBrand = resolveCommsBrand();
@@ -401,8 +401,6 @@ function PhoneInner() {
       })),
     ...UTILITY_CATALOG,
   ];
-  const petMode = usePetMode();
-  const studioOpen = useStudioOpen();
   // 其它应用请求跳转（如「设置 · 审核中心」→ 应用商店里的开发者工坊）
   useEffect(() => {
     const h = (e: Event) => { const id = (e as CustomEvent<string>).detail; if (id) setApp(id as AppId); };
@@ -534,7 +532,7 @@ function PhoneInner() {
             )}
             {app !== null && (
               <div key={app} className="phone-app-in h-full min-h-0 overflow-hidden">
-                {app === "wechat" && <WeChatApp onBack={back} />}
+                {app === "wechat" && <div className={`h-full ${isAncientComm() ? "comm-ancient" : ""}`}><WeChatApp onBack={back} /></div>}
                 {app === "sms" && <SmsApp onBack={back} />}
                 {app === "call" && <CallApp onBack={back} />}
                 {app === "weibo" && <WeiboApp onBack={back} />}
@@ -574,10 +572,6 @@ function PhoneInner() {
             )}
           </div>
 
-          {/* 常驻桌宠：主屏与各应用里都在；工坊打开或锁屏时暂时隐藏 */}
-          {petMode === "pinned" && !studioOpen && !locked && (
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 top-10 z-[45]"><SlimePet onOpen={() => requestStudio()} /></div>
-          )}
 
           <HomeIndicator active={app !== null} light={!!chrome && !chrome.dark} onHome={back} />
 
@@ -790,9 +784,12 @@ function HomeGrid({ layout, installed, widgets, widgetSizes, widgetShapes, iconO
       className="absolute -left-1.5 -top-1.5 z-10 flex h-[20px] w-[20px] items-center justify-center rounded-full bg-black/70 text-[13px] font-bold text-white shadow ring-1 ring-white/20">−</span>
   );
 
+  const [, setBrokenTick] = useState(0);
   const AppTile = ({ id, i, inDock }: { id: string; i: number; inDock?: boolean }) => {
     const label = appLabel(id);
-    const customIcon = iconOverrides?.[id] || platformIconLookup(id);
+    const rawIcon = iconOverrides?.[id] || platformIconLookup(id);
+    // 功能注释：图标地址加载失败（404 / 跨域 / 未配 API 地址）时回退内置图标，避免出现空白方块
+    const customIcon = rawIcon && !brokenIcons.has(rawIcon) ? rawIcon : undefined;
     return (
       <button
         {...dragProps(id)} {...holdProps}
@@ -803,7 +800,7 @@ function HomeGrid({ layout, installed, widgets, widgetSizes, widgetShapes, iconO
         <span className="relative block">
         <span className="ios-icon relative block h-[56px] w-[56px] overflow-hidden rounded-[15px] shadow-[0_4px_12px_-4px_rgba(0,0,0,0.35)] ring-1 ring-inset ring-white/10 transition-transform duration-150 group-active:scale-90 group-active:brightness-90">
           {customIcon
-            ? <img src={customIcon} alt={label} className="h-full w-full scale-[1.14] object-cover" />
+            ? <img src={customIcon} alt={label} className="h-full w-full scale-[1.14] object-cover" onError={() => { brokenIcons.add(customIcon); setBrokenTick((n) => n + 1); }} />
             : (APP_ICON[id] ?? <span className="flex h-full w-full items-center justify-center bg-[#232323] text-white font-medium">{label[0]}</span>)}
         </span>
         {edit && canRemove(id) && <RemoveBtn id={id} />}

@@ -164,7 +164,8 @@ test('crossRefs_事件只用已有属性id_没有fame绝不写fame_nextIds只指
       ev(3, { effects: [{ kind: 'metric', key: 'fame', delta: 9 }] }),
     ],
   }, ctx);
-  assert.equal(out.fixedEvents.length, 2, '只有 fame 后果的事件被丢弃，不自动补 fame');
+  assert.equal(out.fixedEvents.length, 3, '只有 fame 后果的事件保留为纯叙事事件，不整条丢弃');
+  assert.equal(out.fixedEvents[2].effects, undefined, 'fame 后果被剥掉，且不自动补 fame');
   const first = out.fixedEvents[0];
   assert.deepEqual(first.effects.map((e) => `${e.kind}:${e.key}`), ['stat:insight', 'unlockLocation:attic']);
   assert.deepEqual(first.nextIds, ['fx_2']);
@@ -173,6 +174,28 @@ test('crossRefs_事件只用已有属性id_没有fame绝不写fame_nextIds只指
   assert.deepEqual(first.choices[0].effects.map((e) => e.key), ['charm']);
   assert.deepEqual(first.choices[0].nextIds, ['fx_2']);
   assert.doesNotMatch(JSON.stringify(out.fixedEvents), /fame|faction|"rel"/);
+  assert.equal(gen.softValidateBatchPatch(['fixedEvents'], out), null);
+});
+
+test('crossRefs_事件效果key写中文名或漏kind时对回属性id_事件不被清空', async () => {
+  const gen = await load('lib/worldGenGenerate.ts');
+  const ctx = { content: { ...baseContent, npcs: [], rooms }, settingText: '海边旅店日常。' };
+  const attrs = baseContent.customAttrs;
+  const first = attrs[0];
+  const out = gen.sanitizeWorldGenBatchPatch(['fixedEvents'], {
+    fixedEvents: [{
+      id: 'fx_cn',
+      name: '雨夜来客',
+      prompt: '暴雨夜一位浑身湿透的旅人敲门求宿，主角需要决定是否收留他。',
+      effects: [
+        { kind: 'stat', key: first.label, delta: 2 },
+        { key: first.id.toUpperCase(), delta: 1 },
+        { kind: 'attr', key: first.label, delta: 1 },
+      ],
+    }],
+  }, ctx);
+  assert.equal(out.fixedEvents.length, 1, '事件不应被清空');
+  assert.deepEqual(out.fixedEvents[0].effects.map((e) => `${e.kind}:${e.key}`), [`stat:${first.id}`, `stat:${first.id}`, `stat:${first.id}`]);
   assert.equal(gen.softValidateBatchPatch(['fixedEvents'], out), null);
 });
 
@@ -342,8 +365,10 @@ test('crossRefs_第2次请求带第1次id与完整基调_世界书不在第1次�
     },
   });
   assert.equal(result.progress.failedCount, 0, JSON.stringify(result.progress.modules.filter((m) => m.error)));
-  assert.equal(prompts.length, 2);
+  assert.equal(prompts.length, 3, '基础设定 → 人物与地点 → 事件与剧情线');
   const phase2 = prompts[1];
+  assert.ok(prompts[2].includes(tone), '第3次同样带完整剧本基调');
+  assert.match(prompts[2], /lobby|旅店前厅/, '第3次须带第2次的地点上下文');
   assert.ok(phase2.includes(tone), '第2次必须收到完整第1次剧本基调');
   assert.match(phase2, /insight=洞察/);
   assert.match(phase2, /charm=魅力/);

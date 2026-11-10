@@ -2530,6 +2530,19 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   scroll-behavior: smooth;
   scroll-padding-block: 0.5rem;
 }
+.world-gen-batch-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0.85rem 0 0.4rem;
+  padding: 0 0.25rem;
+  font-size: 11.5px;
+  letter-spacing: 0.02em;
+}
+.world-gen-batch-head:first-child {
+  margin-top: 0;
+}
 .world-gen-mod-row {
   position: relative;
   display: flex;
@@ -2846,4 +2859,70 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
 /* 传讯：聊天页默认背景换成纸笺渐变；创作者 / 玩家自选过聊天背景（data-wx-chat-bg 缺省）时不覆盖 */
 [data-comms-skin="letter"] [data-wx-chat-bg="default"] {
   background: linear-gradient(180deg, #f1e4c6 0%, #e8d6ae 100%) !important;
+}
+
+/* ═══ 通讯 App 古风皮肤「传讯」：宣纸底 · 墨色字 · 朱砂点缀 · 信笺气泡；只作用于 .comm-ancient 容器内 ═══ */
+.comm-ancient {
+  --ca-paper: #f2e8d3; --ca-paper-2: #e9dcc0; --ca-paper-3: #fbf5e6; --ca-line: #cdb98f;
+  --ca-ink: #2b2118; --ca-ink-soft: #8c7a5e; --ca-cinnabar: #a8322a; --ca-ochre: #7a5a2e;
+  font-family: "Noto Serif SC", "Songti SC", "STSong", serif;
+  letter-spacing: 0.02em;
+  /* 内联色变量：按钮 / 底栏选中 / 红包转账 / 聊天底 / 通话页 */
+  --wx-accent: #a8322a; --wx-muted: #8c7a5e; --wx-red: #9e2b22;
+  --wx-money: #b5432f; --wx-money-done: #e3c79c; --wx-money-note: #f6dcb0; --wx-money-note-done: #8c6a3e;
+  --wx-chat-bg: transparent;
+  --wx-call-bg: radial-gradient(120% 70% at 50% 0%, #4a3a28 0%, #2a2018 55%, #17110c 100%);
+  color: var(--ca-ink);
+  background-color: var(--ca-paper);
+  background-image:
+    radial-gradient(rgba(122, 90, 46, 0.06) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.25), rgba(122, 90, 46, 0.06));
+  background-size: 5px 5px, 100% 100%;
+}
+.comm-ancient :is(.bg-\[\#ededed\], .bg-\[\#f2f2f2\], .bg-\[\#f3f3f3\]) { background-color: transparent !important; }
+.comm-ancient :is(.bg-\[\#f7f7f7\], .bg-\[\#e9e9eb\], .bg-\[\#e5e5e5\]) { background-color: var(--ca-paper-2) !important; }
+.comm-ancient .bg-white { background-color: var(--ca-paper-3) !important; }
+.comm-ancient :is(.bg-\[\#07c160\], .bg-\[\#fa5151\]) { background-color: var(--ca-cinnabar) !important; }
+.comm-ancient :is(.text-\[\#07c160\], .text-\[\#07a050\], .text-\[\#fa5151\]) { color: var(--ca-cinnabar) !important; }
+.comm-ancient :is(.border-\[\#07c160\]) { border-color: var(--ca-cinnabar) !important; }
+.comm-ancient .ring-\[\#07c160\]\/40 { --tw-ring-color: rgba(168, 50, 42, 0.35) !important; }
+.comm-ancient .text-\[\#576b95\] { color: var(--ca-ochre) !important; }
+.comm-ancient :is(.text-\[\#181818\], .text-\[\#111\], .text-\[\#1a1a1a\], .text-ink) { color: var(--ca-ink) !important; }
+.comm-ancient :is(.text-\[\#9a9a9a\], .text-\[\#b2b2b2\], .text-\[\#7f7f7f\], .text-ink-soft) { color: var(--ca-ink-soft) !important; }
+.comm-ancient :is(.border-\[\#e5e5e5\], .border-black\/10, .border-black\/5) { border-color: var(--ca-line) !important; }
+.comm-ancient :is(.divide-y > *) { border-color: rgba(205, 185, 143, 0.6) !important; }
+/* 信笺气泡：己方为洒金笺，对方为素笺，细线描边代替尾巴 */
+.comm-ancient .bg-\[\#95ec69\] {
+  background: linear-gradient(135deg, #ecd9ae, #e2c98f) !important;
+  color: var(--ca-ink) !important;
+  border: 1px solid #c9a865;
+  border-radius: 2px 10px 2px 10px !important;
+}
+.comm-ancient .wx-bubble.bg-white { border: 1px solid var(--ca-line); border-radius: 10px 2px 10px 2px !important; }
+.comm-ancient .wx-bubble-left::before { border-right-color: var(--ca-paper-3); }
+.comm-ancient .wx-bubble-right::after { border-left-color: #e8d4a4; }
+/* 顶栏与底栏：深墨横额 + 朱砂选中 */
+.comm-ancient header, .comm-ancient nav { background-color: var(--ca-paper-2) !important; border-color: var(--ca-line) !important; }
+.comm-ancient img.rounded-full, .comm-ancient .rounded-full > img { box-shadow: 0 0 0 1px var(--ca-line); }
+/* 传讯：标题用宋体加宽字距，按钮方正如印 */
+.comm-ancient header :is(h1, h2, p, span).font-semibold, .comm-ancient header .font-medium { letter-spacing: 0.12em; }
+.comm-ancient button.text-white[style*="--wx-accent"] { border-radius: 3px !important; box-shadow: inset 0 0 0 1px rgba(255, 230, 200, 0.35); }
+.comm-ancient :is(.text-\[\#2c86fa\], .text-\[\#0b8aff\]) { color: var(--ca-ochre) !important; }
+.comm-ancient :is(.bg-\[\#2c86fa\], .bg-\[\#0b8aff\], .bg-\[\#ff3b30\], .bg-\[\#f3533d\]) { background-color: var(--ca-cinnabar) !important; }
+.comm-ancient :is(.bg-\[\#dedede\], .bg-\[\#dcdcdc\], .bg-\[\#e6e6e6\], .bg-\[\#f4f5f7\]) { background-color: var(--ca-paper-2) !important; }
+.comm-ancient :is(.text-\[\#555\], .text-\[\#3c3c3c\], .text-\[\#8a8a8a\]) { color: var(--ca-ink-soft) !important; }
+/* 传讯气泡：对方为八行笺（朱丝栏双线边框 + 淡朱竖格），己方为洒金笺（金箔碎点） */
+.comm-ancient .wx-bubble.bg-white {
+  background-color: var(--ca-paper-3) !important;
+  background-image: repeating-linear-gradient(90deg, transparent 0 22px, rgba(168, 50, 42, 0.07) 22px 23px) !important;
+  border: 1px solid rgba(168, 50, 42, 0.45) !important;
+  box-shadow: inset 0 0 0 2px var(--ca-paper-3), inset 0 0 0 3px rgba(168, 50, 42, 0.22);
+}
+.comm-ancient .bg-\[\#95ec69\] {
+  background-image:
+    radial-gradient(circle at 18% 30%, rgba(255, 236, 170, 0.9) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 72% 64%, rgba(255, 236, 170, 0.8) 0 1.2px, transparent 1.8px),
+    radial-gradient(circle at 45% 82%, rgba(190, 140, 50, 0.5) 0 1px, transparent 1.5px),
+    linear-gradient(135deg, #ecd9ae, #e2c98f) !important;
+  background-size: 23px 19px, 31px 27px, 17px 23px, 100% 100% !important;
 }

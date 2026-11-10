@@ -144,6 +144,10 @@ export const hopEnergy = () => Math.max(1, Math.round(TRAVEL.energyPerHop || 1))
 /* 行动点：每回合（推进一次）回满到作者设定值，换地点踩点扣固定点数，进入支线按事件设定扣 */
 export const apMax = () => Math.max(1, Math.round(TRAVEL.apPerTurn ?? 10));
 export const apPerMove = () => Math.max(0, Math.round(TRAVEL.apPerMove ?? 1));
+/** 剧情里每次行动（点选项 / 自己写行动）扣的行动点，缺省 1；0 = 不扣 */
+export const apPerAct = () => Math.max(0, Math.round(TRAVEL.apPerAct ?? 1));
+/** 当面对话：每次打开对话、第一次得到回应时扣一次，缺省 1；0 = 不扣 */
+export const apPerTalk = () => Math.max(0, Math.round(TRAVEL.apPerTalk ?? 1));
 /* 推进节奏：每次推进几天；日程叙事内置开启，字数走 travel.advanceWords 缺省 500（创作者界面不再配置） */
 export const advanceDays = () => Math.max(1, Math.min(30, Math.round(TRAVEL.advanceDays ?? 1)));
 export type AdvanceUnit = "day" | "week" | "month" | "year";

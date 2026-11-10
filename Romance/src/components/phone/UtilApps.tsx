@@ -7,10 +7,8 @@ import { weekdayName, dayParts } from "../../game/logic";
 import { IconPlus, IconClose, IconClock, IconSun, IconSearch } from "./icons";
 import { IconChevronDown, IconChevronUp } from "../../lib/icons";
 import { liveTerm as T } from "../../mods/live";
-import SlimePet from "./studio/Slime";
 import Studio, { PlayerApps } from "./studio/Studio";
 import { takeStudioRequest } from "./studio/review";
-import { setStudioOpen, usePetMode } from "./studio/pet";
 import { pickTodayFeaturedIds } from "../../lib/appStoreToday";
 
 export type StoreItem = {
@@ -63,15 +61,12 @@ export function AppStoreApp({ onBack, catalog, installed, onInstall, onOpen, ico
   const [jump] = useState(takeStudioRequest);
   const [studio, setStudio] = useState(!!jump);
   const [studioInit, setStudioInit] = useState(jump ?? undefined);
-  const petMode = usePetMode();
-  useEffect(() => { setStudioOpen(studio); return () => setStudioOpen(false); }, [studio]);
-  // 常驻桌宠在商店里被点「打开开发者工坊」，或其它页面请求跳转
+  // 其它页面请求跳转到开发者工坊
   useEffect(() => {
     const h = () => { const r = takeStudioRequest(); setStudioInit(r ?? undefined); setStudio(true); };
     window.addEventListener("studio:open", h);
     return () => window.removeEventListener("studio:open", h);
   }, []);
-  const [slimeSay, setSlimeSay] = useState<string>();
   const { game } = useGame();
 
   const pickIcon = (id: string, f: File | undefined) => {
@@ -221,8 +216,7 @@ export function AppStoreApp({ onBack, catalog, installed, onInstall, onOpen, ico
 
       <StoreTabBar active={tab} onChange={setTab} />
       {/* 悬浮小珠：只活在应用商店里，退出商店即消失 */}
-      {!studio && petMode === "store" && <SlimePet onOpen={() => { setStudioInit(undefined); setStudio(true); }} say={slimeSay} />}
-      {studio && <Studio key={studioInit?.id ?? "list"} initial={studioInit} onClose={() => setStudio(false)} developer={game?.player.name ?? ""} onSlime={setSlimeSay} />}
+      {studio && <Studio key={studioInit?.id ?? "list"} initial={studioInit} onClose={() => setStudio(false)} developer={game?.player.name ?? ""} />}
     </div>
   );
 }

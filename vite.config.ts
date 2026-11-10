@@ -25,6 +25,25 @@ const removeOversizedLocalDownloads = () => ({
   },
 })
 
+/** 功能注释：开发态 / 与无尾斜杠的 base（如 /funloom）302 到 base，避免预览打开根路径时只看到 Vite 404 */
+const rootToBaseRedirect = (base: string) => ({
+  name: 'root-to-base-redirect',
+  configureServer(server: { middlewares: { use: (fn: (req: { url?: string }, res: { statusCode: number; setHeader: (k: string, v: string) => void; end: () => void }, next: () => void) => void) => void } }) {
+    const bare = base.replace(/\/+$/, '')
+    server.middlewares.use((req, res, next) => {
+      const raw = req.url || ''
+      const [pathOnly, query] = raw.split('?')
+      if (pathOnly !== '/' && pathOnly !== bare) {
+        next()
+        return
+      }
+      res.statusCode = 302
+      res.setHeader('Location', `${base}${query ? `?${query}` : ''}`)
+      res.end()
+    })
+  },
+})
+
 /** 功能注释：开发态短链 /romance → /funloom/romance/（生产由 Worker 同逻辑处理） */
 const romanceShortLinkRedirect = () => ({
   name: 'romance-short-link-redirect',
@@ -86,7 +105,8 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   // 功能注释：默认 /funloom/；cn-test 同机并存可设 VITE_BASE=/funloom-test/
   const viteBase = String(env.VITE_BASE || process.env.VITE_BASE || '/funloom/').replace(/\/?$/, '/')
-  const presetKey = resolveDevApiPresetKey()
+  // 功能注释：Figma 预览环境没有本机 wrangler，固定连阿里云测试；本地开发仍以 devApiPresets.ts 为准
+  const presetKey = process.env.FIGMA ? 'cn-test' : resolveDevApiPresetKey()
   const preset = getDevApiPreset(presetKey)
 
   return {
@@ -95,6 +115,7 @@ export default defineConfig(({ mode }) => {
       react(),
       tailwindcss(),
       romanceVirtualModules(),
+      ...(viteBase !== '/' ? [rootToBaseRedirect(viteBase)] : []),
       romanceShortLinkRedirect(),
       removeOversizedLocalDownloads(),
       ...(mode === 'development' ? [logDevApiPreset(preset)] : []),
@@ -113,15 +134,24 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       host: true,
-      port: 5173,
+      port: process.env.FIGMA ? Number(process.env.PORT) : 5173,
       // 功能注释：5173 被占时禁止静默改到 5174，避免 HMR WebSocket 端口错乱
       strictPort: true,
-      hmr: {
-        protocol: 'ws',
-        host: 'localhost',
-        port: 5173,
-        clientPort: 5173,
-      },
+      // 功能注释：Figma 预览环境走代理域名，使用 Vite 默认 HMR 并放行预览域名；本地开发不受影响
+      ...(process.env.FIGMA
+        ? {
+            allowedHosts: process.env.FIGMA_PUBLIC_URL
+              ? [new URL(process.env.FIGMA_PUBLIC_URL).hostname]
+              : [],
+          }
+        : {
+            hmr: {
+              protocol: 'ws',
+              host: 'localhost',
+              port: 5173,
+              clientPort: 5173,
+            },
+          }),
       proxy: buildViteDevProxy(preset),
     },
     preview: {

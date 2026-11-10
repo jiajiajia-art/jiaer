@@ -7,7 +7,7 @@ import type { ModContent } from "../mods/types.ts";
 import { WORLD_GEN_EDITOR_STEPS } from "./worldGenWizard.ts";
 import { WORLD_GEN_FIXED_EVENTS_COUNT } from "./worldGenFixedEvents.ts";
 import { readScriptTone } from "./scriptTone.ts";
-import { SCRIPT_TONE_MAX } from "./modBasicInfoLimits.ts";
+import { SCRIPT_TONE_MAX, SCRIPT_TONE_TARGET_MIN, SCRIPT_TONE_TARGET_MAX } from "./modBasicInfoLimits.ts";
 
 
 /** 功能注释：人物建议条数中位（仅提示用，不再硬卡正好 N 条）。 */
@@ -282,7 +282,7 @@ export function worldGenStepResultSummary(
         ? (patch.prompt as { scriptTone?: string })
         : null,
     );
-    return tone ? `剧本基调约 ${tone.length} 字` : "已写入剧本基调";
+    return tone ? `剧本基调 ${tone.length} 字（建议 ${SCRIPT_TONE_TARGET_MIN}–${SCRIPT_TONE_TARGET_MAX}，上限 ${SCRIPT_TONE_MAX}）` : "已写入剧本基调";
   }
   if (id === "opening") {
     const opening =
@@ -337,7 +337,7 @@ export function worldGenLeanPromptBlock(limits: WorldGenLeanLimits, phase: "skel
 - 人物建议约 ${WORLD_GEN_NPCS_SUGGEST_MIN}–${WORLD_GEN_NPCS_SUGGEST_MAX} 名（参考 ${limits.npcs}）：每条必须 name/gender/age/bio（约 ${limits.npcBioChars} 字），无名字或无正文的丢掉
 - 人物线路最多 ${limits.paths} 条：须有 id/name 与关键开局字段
 - 地点建议约 ${WORLD_GEN_ROOMS_SUGGEST_MIN}–${WORLD_GEN_ROOMS_SUGGEST_MAX} 个（参考 ${limits.rooms}，每条 name+desc 非空）；固定事件建议约 2–5 条（参考 ${limits.fixedEvents}，每条必有 name、prompt、effects）；主线恰好 ${limits.storylines} 条；支线 ${limits.sidelines} 条（须为 0，勿写 sidelines）；结局最多 ${limits.endings}
-- 剧本基调 scriptTone 写完整口吻/时代/铁律，上限 ${SCRIPT_TONE_MAX} 字，少于 80 字视为未写完；禁止「约 700 字」式截短
+- 剧本基调 scriptTone 写完整口吻/时代/铁律，建议 ${SCRIPT_TONE_TARGET_MIN}–${SCRIPT_TONE_TARGET_MAX} 字，上限 ${SCRIPT_TONE_MAX} 字；禁止「约 700 字」式截短
 - 开场白每段约 ${limits.openingParaChars} 字，至少 2 段
 - 建角 customAttrs 建议约 2–4 条：每条必须有中文名称与 desc，禁止「未命名」或空壳凑数
 - 开局资金须同时写 startMoney 与 moneyLabel（货币名）；开局日期 startDate 格式 YYYY.MM.DD
@@ -345,7 +345,7 @@ export function worldGenLeanPromptBlock(limits: WorldGenLeanLimits, phase: "skel
 - 严禁堆砌无关长文；未点名的扩展玩法字段不要写；缺名字/正文的条目丢掉，禁止用占位假完成`;
   }
   return `补长文阶段（只补已有骨架，禁止新增空壳条目）：
-- 在已有 id 上补全：世界书正文约 ${limits.worldBookBodyChars} 字/条；人物 bio 约 ${limits.npcBioChars} 字；scriptTone 写完整（上限 ${SCRIPT_TONE_MAX} 字）
+- 在已有 id 上补全：世界书正文约 ${limits.worldBookBodyChars} 字/条；人物 bio 约 ${limits.npcBioChars} 字；scriptTone 写完整（建议 ${SCRIPT_TONE_TARGET_MIN}–${SCRIPT_TONE_TARGET_MAX} 字，上限 ${SCRIPT_TONE_MAX} 字）
 - 开场白每段可补到约 ${limits.openingParaChars} 字
 - 条目变多时只缩短每条正文，不要为建议条数再补空条目
 - 建角属性保持有名称的有效条；不要新增空「未命名」属性

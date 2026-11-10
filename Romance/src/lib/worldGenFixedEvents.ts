@@ -54,7 +54,11 @@ function asObjList(raw: unknown): Record<string, unknown>[] {
 export function normalizeWorldGenFixedEffects(raw: unknown): Record<string, unknown>[] {
   const out: Record<string, unknown>[] = [];
   for (const row of asObjList(raw)) {
-    const kind = asTrimmedString(row.kind);
+    const rawKind = asTrimmedString(row.kind);
+    // 功能注释：AI 漏写 kind 或写成 attr 但带数值变化时，按属性变化处理，再由 crossRefs 把 key 对回真实 id
+    const kind = !rawKind || rawKind === "attr" || rawKind === "attribute"
+      ? (Number.isFinite(Number(row.delta)) ? "stat" : rawKind)
+      : rawKind;
     if (!EFFECT_KINDS.has(kind)) continue;
     const key = asTrimmedString(row.key);
     if (kind === "stat" || kind === "metric" || kind === "rel" || kind === "faction" || kind === "flag") {
@@ -110,7 +114,7 @@ export function coerceWorldGenFixedEventPrompt(raw: Record<string, unknown>): st
 }
 
 /**
- * 功能注释：单条固定事件——必须有名称、提示词、至少一条属性变化；强制时间自动触发；剥掉选项。
+ * 功能注释：单条固定事件——必须有名称、提示词；属性变化可选（纯叙事事件合法）；强制时间自动触发；剥掉选项。
  */
 export function normalizeWorldGenFixedEvent(
   raw: unknown,
@@ -121,7 +125,7 @@ export function normalizeWorldGenFixedEvent(
   const name = asTrimmedString(r.name) || asTrimmedString(r.title);
   const prompt = coerceWorldGenFixedEventPrompt(r);
   const effects = normalizeWorldGenFixedEffects(r.effects);
-  if (!name || prompt.length < MIN_PROMPT_CHARS || !effects.length) return null;
+  if (!name || prompt.length < MIN_PROMPT_CHARS) return null;
 
   const id = asTrimmedString(r.id) || `fx_auto_${index + 1}`;
   const ev: Record<string, unknown> = {
@@ -130,7 +134,7 @@ export function normalizeWorldGenFixedEvent(
     prompt,
     // 功能注释：固定事件只做时间自动叙事，禁止 enter/choice 等选项型触发
     trigger: { kind: "auto" },
-    effects,
+    ...(effects.length ? { effects } : {}),
     once: r.once === false ? false : true,
   };
 
@@ -214,9 +218,7 @@ export function softValidateWorldGenFixedEvents(
     if (asTrimmedString(row.prompt).length < MIN_PROMPT_CHARS) {
       return `固定事件「${name}」缺少事件提示词`;
     }
-    if (!normalizeWorldGenFixedEffects(row.effects).length) {
-      return `固定事件「${name}」缺少触发后属性变化`;
-    }
+    // 功能注释：属性变化为可选——纯叙事事件合法，避免 key 对不上时整批反复失败
   }
   return null;
 }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { loadAssets, rememberImageAsset, uploadImage } from "../lib/freeStyle"
+import { assetDaysLeft, loadAssets, rememberImageAsset, saveAssets, touchAsset, uploadImage } from "../lib/freeStyle"
 import { displayableImageSrc } from "../lib/displayableImageSrc"
 import { mediaCheck } from "../game/engineRules"
 import {
@@ -103,6 +103,7 @@ export default function ImagePicker({
         onChange(url)
         rememberAsset(url)
       }
+      touchAsset(url)
       setMode("")
     } catch (e) {
       setErr(`应用失败：${(e as Error).message}`)
@@ -261,7 +262,7 @@ export default function ImagePicker({
                 title={a.name}
                 disabled={busy}
                 onClick={() => { void applyUrl(a.url) }}
-                className={`aspect-square overflow-hidden rounded-md border ${
+                className={`relative aspect-square overflow-hidden rounded-md border ${
                   a.url === value
                     ? "border-jade ring-2 ring-jade/40"
                     : "border-line"
@@ -273,6 +274,7 @@ export default function ImagePicker({
                   className="h-full w-full object-cover"
                   loading="lazy"
                 />
+                {a.temp && <span className="absolute inset-x-0 bottom-0 bg-black/55 text-center text-[9px] leading-[14px] text-white">{assetDaysLeft(a)}天后清除</span>}
               </button>
             ))}
           </div>

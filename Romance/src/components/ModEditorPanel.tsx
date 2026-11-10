@@ -31,7 +31,9 @@ import ModAvatarPoolsEditor from "./ModAvatarPoolsEditor";
 import { variantNames } from "../game/avatarPools";
 import ModCarsEditor from "./ModCarsEditor";
 import SlotDataEditor from "./DataForm";
-import { ModGigsEditor, ModMealsEditor, ModPregnancyEditor } from "./ModPackEditors";
+import { ModGigsEditor, ModMealsEditor, ModPregnancyEditor, packAttrKeys } from "./ModPackEditors";
+import { contractsStarter, projectsStarter, industryStarter, imageCrisisStarter } from "../lib/packStarters";
+import { METRIC_ROLES } from "../game/metricBind";
 import { STAT_LABELS, RAW_STAT_LABELS, ALL_STAT_KEYS } from "../game/data";
 import { perkKeyOptions } from "../game/perkKeys";
 import ModWorldBookEditor from "./ModWorldBookEditor";
@@ -65,6 +67,7 @@ import { coverDisplayUrl } from "./Cover";
 import OpeningStyleStudio from "./OpeningStyleStudio";
 import ModTrainingsEditor from "./ModTrainingsEditor";
 import ModActsEditor from "./ModActsEditor";
+import ModScheduleEditor from "./ModScheduleEditor";
 import ModRulesEditor from "./ModRulesEditor";
 import ModTuningEditor from "./ModTuningEditor";
 import ModEconomyRulesPanel from "./ModEconomyRulesPanel";
@@ -1522,7 +1525,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
                   size: NPC_AVATAR_GEN_SIZE,
                   placeholder: "只写这个人的外观：性别、年龄感、发型、面容、衣着……",
                   initialParts: buildNpcAvatarPromptParts(
-                    { gender: n.gender, age: n.age, appearancePrompt: n.appearancePrompt },
+                    { gender: n.gender, age: n.age, appearancePrompt: n.appearancePrompt, role: n.role },
                     imageGenBinding.settings,
                   ),
                   // 功能注释：重绘时默认把当前头像带进参考图（最多 2 张），弹窗里可移除；仍会发送主体提示词
@@ -1687,6 +1690,12 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
       {isGrowEnabled(c) && isGrowModuleOn(c, "jobs") && (
         <Section g="grow" title="打工 · 周末活动" on={has(c.sideJobs) || has(c.weekendActs)} hint="收入 · 压力 · 属性收益 · 解锁条件" count={(c.sideJobs?.length ?? 0) + (c.weekendActs?.length ?? 0) || undefined}>
           <ModActsEditor jobs={c.sideJobs} acts={c.weekendActs} stats={c.stats} attrs={c.customAttrs} onChange={(p) => setC(p)} />
+        </Section>
+      )}
+
+      {isGrowEnabled(c) && (
+        <Section g="grow" title="日程分类" on={has(c.schedule?.cats)} hint="日程弹窗里各分类的名称 · 说明 · 颜色 · 顺序 · 显示">
+          <ModScheduleEditor value={c.schedule} onChange={(schedule) => setC({ schedule })} />
         </Section>
       )}
 
@@ -1918,35 +1927,72 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
             cars={c.cars?.length ? c.cars : [{ id: "car1", name: "", price: 10000, resale: 0.5, comfort: 0, tag: "", desc: "" }]}
             travel={c.travel}
             world={`${m.name}${m.description ? `：${m.description}` : ""}`}
-            statLabels={{ ...(STAT_LABELS as Record<string, string>) }}
+            statLabels={packAttrKeys(c.customAttrs)}
             rooms={roomIds.map((id) => ({ id, name: rooms[id].name ?? id }))}
             onChange={(p) => setC(p)}
           />
         </Section>
       )}
 
-      {showPlay("gigs") && <Section g="base" title="通告库" hint="通告门槛 · 酬劳 · 名气 · 成长 · 星级价目表" count={c.gigs?.length || undefined} on={has(c.gigs) || has(c.gigPrices)}>
+      {/* 功能注释：玩法数值绑定——演艺 / 合约 / 影视 / 舆情引擎的名气、口碑、黑粉、体能改由建角属性承载 */}
+      {(showPlay("gigs") || showPlay("contracts") || showPlay("projects") || showPlay("imageCrisis")) && (
+        <Section g="base" title="玩法数值绑定" hint="名气 · 口碑 · 负面热度 · 体能 → 建角属性" on={has(c.metricBind)}>
+          <p className="mb-2 text-[11px] leading-snug text-ink-soft">
+            通告、合约、影视项目、舆情的结算会读写这几项数值。绑定到建角属性后，这些玩法就按你的属性判定与增减（按属性上下限截断）；不绑定则这一项不参与。
+          </p>
+          {c.customAttrs?.length ? (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {METRIC_ROLES.map(({ role, label, hint }) => (
+                <label key={role} className="block">
+                  <span className={lbl}>{label}</span>
+                  <select
+                    className={inp}
+                    value={c.metricBind?.[role] ?? ""}
+                    onChange={(e) => {
+                      const next = { ...(c.metricBind ?? {}) };
+                      if (e.target.value) next[role] = e.target.value;
+                      else delete next[role];
+                      setC({ metricBind: Object.keys(next).length ? next : undefined });
+                    }}
+                  >
+                    <option value="">不绑定</option>
+                    {c.customAttrs!.map((a) => <option key={a.id} value={a.id}>{a.label || a.id}</option>)}
+                    {c.metricBind?.[role] && !c.customAttrs!.some((a) => a.id === c.metricBind?.[role]) && (
+                      <option value={c.metricBind[role]}>{c.metricBind[role]}（已失效）</option>
+                    )}
+                  </select>
+                  <span className="mt-0.5 block text-[10px] text-ink-soft">{hint}</span>
+                </label>
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-lg border border-dashed border-line px-2 py-1.5 text-[10.5px] text-ink-soft">本作品还没有建角属性。先在「建角」里添加属性，再回来绑定。</p>
+          )}
+        </Section>
+      )}
+
+      {showPlay("gigs") && <Section g="base" title="通告库" hint="通告门槛 · 酬劳 · 成长 · 星级价目表" count={c.gigs?.length || undefined} on={has(c.gigs) || has(c.gigPrices)}>
         <Help>由已添加「演艺事业包」提供。叠加包通告按 id 追加 / 覆盖。</Help>
-        <ModGigsEditor value={c.gigs} prices={c.gigPrices} onChange={(gigs) => setC({ gigs })} onPrices={(gigPrices) => setC({ gigPrices })} />
+        <ModGigsEditor value={c.gigs} prices={c.gigPrices} customAttrs={c.customAttrs} onChange={(gigs) => setC({ gigs })} onPrices={(gigPrices) => setC({ gigPrices })} />
       </Section>}
 
       {showPlay("contracts") && <Section g="base" title="经纪合约" hint="开局候选合约 · 通告性质 · 议价规则" count={c.contracts?.signing?.length || undefined} on={has(c.contracts)}>
-        <SlotDataEditor value={c.contracts} onChange={(contracts) => setC({ contracts })}
+        <SlotDataEditor value={c.contracts} starter={contractsStarter.starter} templates={contractsStarter.templates} onChange={(contracts) => setC({ contracts })}
           emptyText="还没写经纪合约，开局不会生效。" note="「开局候选合约」在建角最后一步让玩家签；「通告档位参数」和「议价规则」决定接通告时怎么谈价、会不会被抢。" />
       </Section>}
 
       {showPlay("projects") && <Section g="base" title="影视项目" hint="项目模板 · 试镜 · 片场事件 · 质量与上映 · 制片人" count={c.projects?.projects?.length || undefined} on={has(c.projects)}>
-        <SlotDataEditor value={c.projects} onChange={(projects) => setC({ projects })}
+        <SlotDataEditor value={c.projects} starter={projectsStarter.starter} templates={projectsStarter.templates} onChange={(projects) => setC({ projects })}
           emptyText="还没写影视项目，开局不会生效。" note="「项目模板」是玩家能接的剧 / 电影 / 综艺；其余是试镜、拍摄、上映的结算参数，不确定就别动。" />
       </Section>}
 
       {showPlay("industry") && <Section g="base" title="行业生态" hint="经纪公司 · 片名库 · 代言品牌 · 奖项 · 圈内动态" count={c.industry?.companies?.length || undefined} on={has(c.industry)}>
-        <SlotDataEditor value={c.industry} onChange={(industry) => setC({ industry })}
+        <SlotDataEditor value={c.industry} starter={industryStarter.starter} templates={industryStarter.templates} onChange={(industry) => setC({ industry })}
           emptyText="还没写行业生态，开局不会生效。" note="人气榜、周报和圈内新闻从这里取公司、片名、品牌与奖项。" />
       </Section>}
 
       {showPlay("imageCrisis") && <Section g="base" title="舆情人设" hint="人设 · 公开行动 · 危机 · 公关应对 · 判定权重" count={c.imageCrisis?.crises?.length || undefined} on={has(c.imageCrisis)}>
-        <SlotDataEditor value={c.imageCrisis} onChange={(imageCrisis) => setC({ imageCrisis })}
+        <SlotDataEditor value={c.imageCrisis} starter={imageCrisisStarter.starter} templates={imageCrisisStarter.templates} onChange={(imageCrisis) => setC({ imageCrisis })}
           emptyText="还没写舆情人设，开局不会生效。" note="需要已添加「舆情人设包」。" />
       </Section>}
 
@@ -1958,15 +2004,15 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
         <Help>由已添加「娱乐周报包」提供；内容取自行业生态与本周动向。</Help>
       </Section>}
 
-      {showPlay("meals") && <Section g="base" title="每周吃什么" hint="伙食档位 · 每周花费 · 压力 / 能力 / 气色 · 解锁门槛" count={c.meals?.length || undefined} on={has(c.meals)}>
-        <ModMealsEditor value={c.meals} onChange={(meals) => setC({ meals })} />
+      {showPlay("meals") && <Section g="base" title="每周吃什么" hint="伙食档位 · 每周花费 · 属性变化 · 解锁门槛" count={c.meals?.length || undefined} on={has(c.meals)}>
+        <ModMealsEditor value={c.meals} customAttrs={c.customAttrs} onChange={(meals) => setC({ meals })} />
       </Section>}
 
       {/* 功能注释：头衔仅在添加「头衔包」后出现；数值分档在建角属性，不进本块 */}
       {showPlay("titles") && (
         <Section g="base" title="头衔" on={has(c.titles)} hint="达标即获得 · 品阶 · 条件（名气 / 口碑 / 能力 / 自定义属性）" count={c.titles?.length || undefined}>
           <Help>已添加「头衔包」才显示本区；移除玩法会清掉头衔表。多少分叫什么档，请在「建角」数值属性里配分档。</Help>
-          <ModRulesEditor stats={c.stats} attrs={c.customAttrs} value={{ titles: c.titles }} showBills={false} onChange={(p) => setC(p)} />
+          <ModRulesEditor stats={c.stats} attrs={c.customAttrs} value={{ titles: c.titles }} showBills={false} attrsOnly onChange={(p) => setC(p)} />
         </Section>
       )}
 
@@ -1981,8 +2027,9 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
           <Help>已添加「关系玩法」才显示本区；人物页的表白、婚礼入口随本玩法开关。移除玩法会清空本区配置。</Help>
           <ModRelationsEditor value={c.relations} npcs={npcs.map((n) => ({ id: n.id, name: n.name || n.id }))}
             keyOptions={perkKeyOptions({
-              statLabels: { ...RAW_STAT_LABELS, ...(c.stats?.labels ?? {}) },
-              statOrder: (c.stats?.order?.length ? c.stats.order : ALL_STAT_KEYS).filter((k) => !(c.stats?.hidden ?? []).includes(k)),
+              noBuiltin: true,
+              statLabels: {},
+              statOrder: [],
               attrs: c.customAttrs,
               metaLabels: c.stats?.metaLabels,
               term: (k, fb) => c.terms?.[k] ?? fb,
@@ -1994,7 +2041,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
         g="look"
         title="手机应用配置"
         on={has(c.phoneAppsCfg) || has(c.phoneHomeWallpaper) || showPlay("phoneApp")}
-        hint="显示名 · 图标 · 主屏顺序 · Dock · 开局预装 · 桌面背景"
+        hint="通讯皮肤 · 显示名 · 图标 · 主屏顺序 · Dock · 开局预装 · 桌面背景"
         count={(c.phoneAppsCfg?.length ?? 0) + (c.phoneHomeWallpaper ? 1 : 0) || undefined}
       >
         {/* 功能注释：不向创作者展示内部规则说明，只留预览 / 点背景 / 应用清单操作区 */}
@@ -2007,6 +2054,8 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
           worldThemeLabel={worldTheme.themeLabel}
           worldThemeCode={worldTheme.themeCode}
           enabledThemeTags={enabledThemeTags}
+          commSkin={c.phoneCommSkin}
+          onCommSkinChange={(phoneCommSkin) => setC({ phoneCommSkin })}
         />
       </Section>
 

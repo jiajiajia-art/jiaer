@@ -5,7 +5,7 @@ import { looksLikeCurrency, walletDef, customAttrValue, wallet } from "../../gam
 import { IconWallet } from "./icons";
 import { onClearPlayerMemory } from "../../lib/saveScope";
 
-const WX_GREEN = "#07c160";
+const WX_GREEN = "var(--wx-accent, #07c160)"; // 功能注释：古风「传讯」皮肤由 .comm-ancient 改写为朱砂
 
 /* 桌面钱包卡片 → 打开绿信直达钱包页（一次性跳转标记） */
 let pendingWallet = false;
@@ -50,7 +50,7 @@ export default function WalletBinder() {
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-1.5 text-[15.5px] text-[#181818]">
                   <span className="truncate">{d.label}</span>
-                  {looksLikeCurrency(d) && <span className="shrink-0 rounded-[4px] px-1 text-[10.5px] font-medium" style={{ color: WX_GREEN, background: "#07c1601a" }}>货币</span>}
+                  {looksLikeCurrency(d) && <span className="shrink-0 rounded-[4px] px-1 text-[10.5px] font-medium" style={{ color: WX_GREEN, background: "color-mix(in srgb, var(--wx-accent, #07c160) 10%, transparent)" }}>货币</span>}
                 </span>
                 <span className="block truncate text-[12px] text-[#9a9a9a]">{d.desc || "自定义属性"}{d.max ? ` · 上限 ${d.max}` : " · 无上限"}</span>
               </span>

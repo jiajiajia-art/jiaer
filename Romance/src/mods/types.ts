@@ -197,6 +197,10 @@ export type WeeklyPaperCopy = { masthead?: string; tagline?: string };
  *   未声明 = 沿用引擎默认（娱乐圈原值）；
  * 玩法内容类（encounters/sideQuests/contracts/projects/imageCrisis/industry/help/opening/weeklyPaper/map）
  *   未声明 = 该功能关闭，界面自动隐藏。 */
+/** 日程板分类：数组顺序即日程弹窗里的显示顺序 */
+export type ScheduleCatId = "work" | "lesson" | "job" | "rest" | "social";
+export type ScheduleCatCfg = { id: ScheduleCatId; label?: string; hint?: string; color?: string; hidden?: boolean };
+export type ScheduleSlot = { cats?: ScheduleCatCfg[] };
 export type ContentSlots = {
   stats?: StatsSlot;
   trainings?: Training[];
@@ -243,6 +247,7 @@ export type ContentSlots = {
   festivals?: import("../lib/types").Festival[];
   // —— 养成系统 ——
   weekendActs?: WeekendAct[]; // 周末活动（缺省=自由活动 / 彻底休整）
+  schedule?: ScheduleSlot; // 日程板：分类名称 / 说明 / 颜色 / 顺序 / 隐藏（缺省=内置五类）
   fameTiers?: FameTier[]; // 名气分档（缺省=通用分档）
   titles?: TitleDef[]; // 头衔（req 阈值全部满足即达成；缺省=无头衔）
   cars?: Car[]; // 座驾 / 交通工具（缺省=无）
@@ -255,6 +260,8 @@ export type ContentSlots = {
   avatars?: import("../lib/types").AvatarSlot; // 头像库：池开关 + 本剧匹配优先级（私人/公共优先 · 通用兜底）；随模组导入导出
   play?: import("../lib/types").PlaySlot; // 开局游玩偏好（模式 / 叙事视角）· 年龄随日历
   contacts?: import("../game/contacts").ContactsSlot; // 关系档位（嵌人物上方；卡片数值已下线）
+  /** 功能注释：玩法数值绑定——演艺 / 影视 / 舆情引擎里的名气、口碑、黑粉、体能改由作者建角属性承载（值=AttrDef.id） */
+  metricBind?: import("../game/metricBindCore").MetricBindSlot;
   tuning?: import("../game/data").TuningSlot; // 引擎规则：评级概率 / 倍率、休息减压、课程与打工倍率、通用课程等级 // 父母生活费（家境档位 → 金额 / 协商率；未声明=关闭）
 };
 export const SLOT_KEYS = [
@@ -262,7 +269,7 @@ export const SLOT_KEYS = [
   "encounters", "sideQuests", "sideQuestCast", "relations", "calendar", "travel", "contracts", "projects",
   "imageCrisis", "industry", "help", "opening", "cover", "weeklyPaper", "eventGroups",
   "styles", "identities", "backgrounds", "directions", "school", "parentJobs", "creation", "lore", "festivals",
-  "weekendActs", "fameTiers", "titles", "cars", "npcPool", "bills", "meals", "pregnancy", "gigPrices", "allowance", "tuning", "play", "avatars", "contacts",
+  "weekendActs", "schedule", "fameTiers", "titles", "cars", "npcPool", "bills", "meals", "pregnancy", "gigPrices", "allowance", "tuning", "play", "avatars", "contacts", "metricBind",
 ] as const satisfies readonly (keyof ContentSlots)[];
 export type SlotKey = (typeof SLOT_KEYS)[number];
 
@@ -285,8 +292,8 @@ export type ModContent = ContentSlots & {
   events?: FixedEvent[]; // 随机 / 链式事件库
   fixedEvents?: FixedEvent[]; // 预设剧本（新局写入）
   endings?: CustomEnding[];
-  timeLimit?: import("../lib/types").TimeLimit; // 主线时限（如 3 年 / 固定截止日期，新局写入存档）
-  gradeDims?: import("../lib/types").GradeDim[]; // 结局评定维度（新局写入存档；不设 = 内置四项）
+  timeLimit?: import("../lib/types").TimeLimit; // 本局结算时限（如 3 年 / 固定截止日期，新局写入存档）
+  gradeDims?: import("../lib/types").GradeDim[]; // 结局评定维度（新局写入存档；不设 = 按建角属性自动生成）
   worldBook?: WorldBookEntry[];
   income?: IncomeRule[]; // 周期收入规则
   gameRules?: GameRule[]; // 玩法规则：如果…否则如果…否则，每天结束 / 每周结算时判定
@@ -308,6 +315,8 @@ export type ModContent = ContentSlots & {
   phoneAppsCfg?: PhoneAppDef[];
   /** 作品默认手机桌面背景（图片 data URL 或 background CSS）；玩家设置里换过则用玩家的 */
   phoneHomeWallpaper?: string;
+  /** 通讯 App 皮肤：lvxin=绿信（默认）/ chuanxun=传讯（古风、仙侠） */
+  phoneCommSkin?: "lvxin" | "chuanxun";
   features?: FeatureFlags;
   /** 养成总开关 + 子项勾选：enabled / 课程 / 打工 / 账单 / 玩法规则；关总开关局内不走养成；没勾子项不显示也不套用娱乐圈默认 */
   growModules?: import("../game/growModules").GrowModulesFlag;
@@ -347,6 +356,7 @@ export type ResolvedWorld = {
     navSize?: 4 | 6 | 8;
     phoneAppsCfg?: PhoneAppDef[];
     phoneHomeWallpaper?: string;
+    phoneCommSkin?: "lvxin" | "chuanxun";
     features: FeatureFlags;
     theme: ModTheme;
   };

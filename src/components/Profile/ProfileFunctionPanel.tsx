@@ -11,7 +11,7 @@ import { RiLogoutCircleRLine } from 'react-icons/ri';
 import {
     MdOutlineCardMembership,
     MdOutlineCampaign,
-    MdOutlineHistory,
+    MdOutlineWarehouse,
     MdOutlineLock,
     MdOutlineManageAccounts,
     MdOutlinePersonOff,
@@ -244,12 +244,12 @@ const ProfileFunctionPanel: React.FC = () => {
                         <button
                             type="button"
                             className={styles.functionGridItem}
-                            onClick={() => navigate('/warehouse/history')}
+                            onClick={() => navigate('/warehouse')}
                         >
                             <span className={styles.functionGridIcon} aria-hidden="true">
-                                <MdOutlineHistory />
+                                <MdOutlineWarehouse />
                             </span>
-                            <span className={styles.functionGridLabel}>{t('profile.browsingHistory')}</span>
+                            <span className={styles.functionGridLabel}>{t('nav.warehouse')}</span>
                         </button>
 
                         <button

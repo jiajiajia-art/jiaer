@@ -5,7 +5,7 @@ import { useState, type ReactNode } from "react";
 import type { BlockWord, CdState, EngineRules, FlagLife, StoryRegex, TextStage } from "../lib/types";
 import { useGame } from "../store/gameCtx";
 import { KwInput, ScopeBanner, useConfirm } from "./EditorKit";
-import { DEFAULT_ENGINE_RULES, ENGINE_SCHEMA, PLACEHOLDERS, exportRules, importRules, newSeed, resolveRules, safeRegex, syncEngineRules } from "../game/engineRules";
+import { DEFAULT_ENGINE_RULES, ENGINE_SCHEMA, PLACEHOLDERS, importRules, newSeed, resolveRules, safeRegex, syncEngineRules } from "../game/engineRules";
 import { auditGame, type AuditReport } from "../game/refAudit";
 import { repTier } from "../game/factions";
 
@@ -86,14 +86,6 @@ export default function EngineRulesPanel() {
   const { flags, random, narrative, affinity, attrs, faction, npc, memory, media, text, ai, interact, save } = R;
   const setBlocked = (list: BlockWord[]) => set("text", { blocked: list });
   const setRegex = (list: StoryRegex[]) => set("text", { regex: list });
-  const download = () => {
-    const blob = new Blob([exportRules(game)], { type: "application/json" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "engine-rules.json";
-    a.click();
-    URL.revokeObjectURL(a.href);
-  };
   const upload = async (f?: File) => {
     if (!f) return;
     if (f.size > 512 * 1024) { setIoMsg("文件过大（上限 512 KB）"); return; }
@@ -339,9 +331,8 @@ export default function EngineRulesPanel() {
         </Row>
       </Section>
 
-      <Section title="工程与校验" desc={`Schema v${ENGINE_SCHEMA} · 导入导出 · 引用索引 · 循环依赖`}>
-        <Row label="导入 / 导出底层规则" hint={`文件带 Schema 版本号；导入时只保留已知字段与正确类型，拒绝更高版本与不安全的正则。`}>
-          <button type="button" onClick={download} className="rounded-lg border border-line px-2 py-1 text-[12px] text-ink-soft hover:text-ink">导出</button>
+      <Section title="工程与校验" desc={`Schema v${ENGINE_SCHEMA} · 导入 · 引用索引 · 循环依赖`}>
+        <Row label="导入底层规则" hint={`文件带 Schema 版本号；导入时只保留已知字段与正确类型，拒绝更高版本与不安全的正则。`}>
           <label className="cursor-pointer rounded-lg border border-line px-2 py-1 text-[12px] text-ink-soft hover:text-ink">
             导入
             <input type="file" accept="application/json,.json" className="hidden" onChange={(e) => { void upload(e.target.files?.[0]); e.target.value = ""; }} />
