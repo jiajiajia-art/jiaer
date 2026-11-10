@@ -63,7 +63,7 @@ export function useChat() {
       const th0 = g.phone?.threads.find((t) => t.id === threadId);
       const pid0 = th0?.kind === "private" ? th0.personId : undefined;
       if (pid0 && !isStrangerId(pid0) && !(g.phone?.contacts ?? []).includes(pid0)) {
-        setBusyStatus("你们还不是微信好友，消息发不出去，只能线下当面【对话】");
+        setBusyStatus(`你们还不是${brand.appName}好友，消息发不出去，只能线下当面【对话】`);
         setTimeout(() => setBusyStatus(""), 2800);
         return false;
       }
@@ -443,7 +443,8 @@ export function VoiceCall({ thread, name, avatar, onClose, incoming, video }: { 
     const now = Date.now();
     const text = connected ? `${callWord} · 通话时长 ${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}` : `${callWord} · 已取消`;
     g = pushMsg(g, thread.id, { id: msgId(), role: "sys", text, ts: now, gt: gameMinutes(g), label: gameTimeLabel(g), kind: "call" } as XMsg);
-    g = logCall(g, { id: msgId(), personId: pid, name, number: `${brand.appName}${commTerm(video ? "video" : "voice")}`, ts: now, durationSec: connected ? sec : 0, outcome: connected ? "connected" : "declined", transcript: linesRef.current });
+    // 功能注释：通话记录号码用品牌名 + 视频/语音；古风界面文案仍走 callWord / commTerm
+    g = logCall(g, { id: msgId(), personId: pid, name, number: `${brand.appName}${video ? "视频" : "语音"}`, ts: now, durationSec: connected ? sec : 0, outcome: connected ? "connected" : "declined", transcript: linesRef.current });
     // 电话里说了「给你转点钱」的：挂断后照说的发过来（金额、频率由 chatMoney 校正）
     const card = connected ? giftMsg(g, pid, callGift.current) : null;
     if (card) g = pushMsg(g, thread.id, card);
@@ -604,7 +605,7 @@ function MoneyBubble({ m, mine, onOpen }: { m: XMsg; mine: boolean; onOpen: () =
           )}
         </div>
       </div>
-      <p className="mx-3 border-t border-white/30 py-1 text-[11px]" style={{ color: done ? "var(--wx-money-note-done, #c99a6b)" : "var(--wx-money-note, #fde6cd)" }}>{brand.skin === "letter" ? `${commTerm("app")}${commTerm(red ? "red" : "transfer")}` : `${brand.appName}${red ? "红包" : "转账"}`}</p>
+      <p className="mx-3 border-t border-white/30 py-1 text-[11px]" style={{ color: done ? "var(--wx-money-note-done, #c99a6b)" : "var(--wx-money-note, #fde6cd)" }}>{brand.skin === "letter" ? `${commTerm("app")}${commTerm(red ? "red" : "transfer")}` : <>{brand.appName}{red ? "红包" : "转账"}</>}</p>
     </div>
   );
 }

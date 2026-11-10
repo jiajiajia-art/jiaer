@@ -14,7 +14,6 @@ import { PLAY_STEP_KEY, WORLD_STEP_KEY, stepDoneFlag } from "../lib/modWorkshopS
 import { attrPromptSpec, auditAttrRefs, auditOk, collectAttrSpecs, describeAudit, copyBaseFile, diffModFiles, filesPromptSpec, materializeOverrides, removeModFile, type FileChange } from "../mods/kkmod/sdk";
 import ModAssetsPanel, { FileBadge, fileTitle } from "./ModAssetsPanel";
 import ModPreviewPanel from "./ModPreviewPanel";
-import { assessAuthorPreview, requestAuthorPreview } from "../lib/authorPreview";
 import { OFFICIAL_PLATFORM_APP_IDS, installedPlatformAppIds } from "../lib/phoneAppsConfig";
 import { asModArray } from "../lib/asModArray";
 

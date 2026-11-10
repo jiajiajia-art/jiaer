@@ -431,7 +431,12 @@ function DiscoverPage({ onSearch, onOpenChat }: { onSearch: () => void; onOpenCh
 
   return (
     <div className="space-y-2 pt-2 text-[#b2b2b2]" data-comms-discover={letterSkin ? "letter" : "modern"}>
-      <div><Item icon={<IconImage size={20} className="text-[#2ca35b]" />} label={commTerm("moments")} onClick={() => setInMoments(true)} thumbs={momentsPush} /></div>
+      {!letterSkin && (
+        <div><Item icon={<IconImage size={20} className="text-[#2ca35b]" />} label="朋友圈" onClick={() => setInMoments(true)} thumbs={momentsPush} /></div>
+      )}
+      {letterSkin && (
+        <div><Item icon={<IconImage size={20} className="text-[#2ca35b]" />} label={commTerm("moments")} onClick={() => setInMoments(true)} thumbs={momentsPush} /></div>
+      )}
       {!letterSkin && (
         <div>
           <Item icon={<IconVideo size={20} className="text-[#fa7b2c]" />} label="视频号" onClick={() => setSub("channels")} />
