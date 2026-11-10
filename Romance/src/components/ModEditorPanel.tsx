@@ -5,6 +5,10 @@ import { loadConfig } from "../lib/store";
 import { synthSpeech } from "./phone/screenShare";
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { importModJson, useMods, validateMod } from "../mods/registry";
+import { applyPlatformThemeToMod, patchWorldTheme, readWorldThemeHint, type WorldThemeFieldsPatch } from "../lib/worldTheme";
+import WorldThemeFields from "./WorldThemeFields";
+import { fetchPlatformGameTheme, fetchPlatformThemeTags, type PlatformThemeTag } from "../lib/platformThemeTags";
+import { readRomancePlatformDraftId } from "../lib/platformRomanceDraft";
 import {
   AUTHOR_PREVIEW_END,
   AUTHOR_PREVIEW_FATAL,
@@ -155,11 +159,11 @@ export function blankMod(kind: ModKind): Mod {
 /* 编辑器分组：玩法并入①基础；外观归「⑤ 美化」。
  * 功能注释：不再提供「全部」页签与独立「玩法 Mod」页；默认停在「① 基础」。搜索关键词仍可跨分组命中区块。 */
 const GROUPS = [
-  { k: "base", label: "① 基础", hint: "作品封面、名称与简介、剧本基调、时间与推进、头像、建角、人物线路、地点、已添加的玩法" },
+  { k: "base", label: "① 基础", hint: "作品封面、名称与简介、剧本基调、时间与推进、头像、建角、人物线路、地点、音乐、已添加的玩法" },
   { k: "role", label: "② 角色", hint: "开局人物与关系档位（表白/婚礼请在「已添加的玩法」里加关系玩法）" },
   { k: "grow", label: "③ 养成", hint: "总养成开关 + 开哪些子项（课程、打工、账单、玩法规则、评级、休息）；分档在建角属性，头衔在玩法 Mod；扣费与破产在④结局" },
   { k: "story", label: "④ 剧情", hint: "世界书、固定 / 首次事件、剧情线（主线 · 支线 · 结局）" },
-  { k: "look", label: "⑤ 美化", hint: "手机外观、皮肤美化、音乐、开场页外观、剧情美化、底栏样式" },
+  { k: "look", label: "⑤ 美化", hint: "手机外观、皮肤美化、开场页外观、剧情美化、底栏样式" },
   { k: "pack", label: "本包内容", hint: "只列出这个叠加包里实际写了内容的区块；要加别的内容，去其他分组找" },
 ] as const;
 const STEPS = GROUPS.filter((x) => x.k !== "pack");
@@ -179,6 +183,7 @@ function groupFilled(c: Mod["content"], skinOn = false): Record<Exclude<GroupKey
       has(c.customAttrs) || has(c.creation?.fields) || has(c.creation?.builtin) || c.startMoney !== undefined,
       has(c.creation?.paths),
       has(c.startRoom) || has(c.rooms),
+      has(c.bgm) || has(c.audioRefs) || has(c.platformAudioRefs),
       has(c.playModInstalls),
       has(c.travel) || has(c.cars),
       has(c.gigs) || has(c.gigPrices) || has(c.contracts) || has(c.projects) || has(c.industry),
@@ -191,7 +196,6 @@ function groupFilled(c: Mod["content"], skinOn = false): Record<Exclude<GroupKey
     look: n(
       has(c.phoneAppsCfg),
       has(c.theme),
-      has(c.bgm) || has(c.audioRefs) || has(c.platformAudioRefs),
       has(c.opening),
       has(c.lookRules),
       has(c.navTabs) || has(c.navSize) || NAV_TAB_TERMS.some(({ k }) => !!c.terms?.[k]),
@@ -296,6 +300,16 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
   }
   const [baseline, setBaseline] = useState(() => JSON.stringify(bootModRef.current!));
   const [m, setMRaw] = useState<Mod>(() => bootModRef.current!);
+  // 功能注释：C0.2 当前作品世界题材（清单可选字段）；安装玩法 / 应用时用来提示适用题材不一致
+  const worldTheme = useMemo(() => readWorldThemeHint(m), [m]);
+  // 功能注释：平台公共题材只拉一次（lib 内缓存 / 去重），同时供题材下拉、玩法商店与手机应用的「适用题材」解析共用
+  const [platformThemeTags, setPlatformThemeTags] = useState<PlatformThemeTag[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    void fetchPlatformThemeTags().then((list) => { if (!cancelled) setPlatformThemeTags(list); });
+    return () => { cancelled = true; };
+  }, []);
+  const enabledThemeTags = platformThemeTags.length ? platformThemeTags : undefined;
   // 保存后留在编辑器：persisted = 已写入过模组库（id 从此锁定）；savedName 用于返回时提示
   const [persisted, setPersisted] = useState(!isNew);
   const [savedName, setSavedName] = useState<string>();
@@ -316,6 +330,27 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
     setMRaw(next);
     liveCb.current?.(next);
   };
+  // 功能注释：平台书架续编时，把平台作品题材补进清单（只补缺，不覆盖创作者已写）；每个作品只取一次
+  const mLatestRef = useRef(m);
+  mLatestRef.current = m;
+  const setMLatestRef = useRef(setM);
+  setMLatestRef.current = setM;
+  useEffect(() => {
+    const fileId = readRomancePlatformDraftId();
+    if (!fileId) return;
+    const cur = mLatestRef.current;
+    const hint = readWorldThemeHint(cur);
+    if (hint.themeTagId != null && hint.themeLabel) return;
+    let cancelled = false;
+    void fetchPlatformGameTheme(fileId).then((theme) => {
+      if (cancelled || !theme) return;
+      const latest = mLatestRef.current;
+      const next = applyPlatformThemeToMod(latest, theme);
+      if (next !== latest) setMLatestRef.current(next);
+    });
+    return () => { cancelled = true; };
+  }, []);
+  const patchTheme = (patch: Partial<WorldThemeFieldsPatch>) => setM(patchWorldTheme(m, patch));
   const lockId = (x: Mod) => (persisted && x.id !== m.id ? { ...x, id: m.id } : x);
   const undo = () => { const h = hist.current; const prev = h.past.pop(); if (!prev) return; h.future.push(m); h.at = 0; const n = lockId(prev); setMRaw(n); liveCb.current?.(n); setRev((r) => r + 1); };
   const redo = () => { const h = hist.current; const next = h.future.pop(); if (!next) return; h.past.push(m); h.at = 0; const n = lockId(next); setMRaw(n); liveCb.current?.(n); setRev((r) => r + 1); };
@@ -857,6 +892,10 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
           }}
           onClose={() => setAddPlayOpen(false)}
           onConfirmDeps={(message) => confirm(message, { ok: "一并添加" })}
+          worldThemeTagId={worldTheme.themeTagId}
+          worldThemeLabel={worldTheme.themeLabel}
+          worldThemeCode={worldTheme.themeCode}
+          enabledThemeTags={enabledThemeTags}
         />
       )}
       {/* 功能注释：顶栏固定「保存 / 预览」在右侧且 shrink-0，避免窄屏被标题挤出可视区 */}
@@ -1143,6 +1182,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
                 <FieldErr>{toneErr}</FieldErr>
               </label>
             </div>
+            <WorldThemeFields value={worldTheme} tags={platformThemeTags} onPatch={patchTheme} />
           </>
         ) : (
           <>
@@ -1201,6 +1241,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
               <Help>生成世界时由 AI 写出并填入；开局与每回合都会注入。超出 5000 字标红，不能照常保存。</Help>
               <FieldErr>{toneErr}</FieldErr>
             </label>
+            <WorldThemeFields value={worldTheme} tags={platformThemeTags} onPatch={patchTheme} />
             <div>
               <span className={lbl}>类型</span>
               <div className="inline-flex max-w-full flex-wrap rounded-lg border border-line bg-paper-2 p-0.5 text-[12px] font-bold">
@@ -1962,6 +2003,10 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
           wallpaper={c.phoneHomeWallpaper}
           onChange={(phoneAppsCfg) => setC({ phoneAppsCfg })}
           onWallpaperChange={(phoneHomeWallpaper) => setC({ phoneHomeWallpaper })}
+          worldThemeTagId={worldTheme.themeTagId}
+          worldThemeLabel={worldTheme.themeLabel}
+          worldThemeCode={worldTheme.themeCode}
+          enabledThemeTags={enabledThemeTags}
         />
       </Section>
 
@@ -1975,7 +2020,8 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
         <ModThemeEditor value={c.theme} onChange={(theme) => setC({ theme })} />
       </Section>
 
-      <Section g="look" title="音乐" on={has(c.bgm) || has(c.audioRefs) || has(c.platformAudioRefs)} hint="上传 · 链接 · 本机库 · 作品引用 · 平台曲库" count={(c.bgm?.length ?? 0) + (c.audioRefs?.length ?? 0) + (c.platformAudioRefs?.length ?? 0)}>
+      {/* 功能注释：音乐是世界本体，落在①基础（C1.2）；不再挂⑤美化 */}
+      <Section g="base" title="音乐" on={has(c.bgm) || has(c.audioRefs) || has(c.platformAudioRefs)} hint="上传 · 链接 · 本机库 · 作品引用 · 平台曲库" count={(c.bgm?.length ?? 0) + (c.audioRefs?.length ?? 0) + (c.platformAudioRefs?.length ?? 0)}>
         <ModBgmEditor bgm={c.bgm} audioRefs={c.audioRefs} platformAudioRefs={c.platformAudioRefs} platformAutoplay={c.platformAutoplay} musicOrder={c.musicOrder} onChange={(patch) => setC(patch)} />
       </Section>
 

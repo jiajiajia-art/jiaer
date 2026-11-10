@@ -21,6 +21,7 @@ import { walletDef, wallet } from "../../game/wallet";
 import { logNpcNet } from "../../game/phoneLink";
 import { affinityOf, romanceBlock } from "../../game/npcKnowledge";
 import { IconCheck, IconHeart, IconMessage } from "../../lib/icons";
+import { useCommsBrand } from "./commsBrand";
 
 const WX_GREEN = "#07c160";
 type WxTab = "chats" | "contacts" | "discover" | "me";
@@ -87,8 +88,9 @@ function WxHeader({ title, count, onBack, onSearch, onPlus }: { title: string; c
 
 /* 底栏 4 图标（微信 / 通讯录 / 发现 / 我），激活态微信绿 */
 function WxTabBar({ active, onPick, unread, newFriends }: { active: WxTab; onPick: (t: WxTab) => void; unread: number; newFriends: number }) {
+  const brand = useCommsBrand();
   const items: { id: WxTab; label: string; icon: ReactNode; badge?: number }[] = [
-    { id: "chats", label: "绿信", icon: <IconChat />, badge: unread },
+    { id: "chats", label: brand.appName, icon: <IconChat />, badge: unread },
     { id: "contacts", label: "通讯录", icon: <IconContacts />, badge: newFriends },
     { id: "discover", label: "发现", icon: <IconDiscover /> },
     { id: "me", label: "我", icon: <IconMe /> },
@@ -385,6 +387,8 @@ function ShakePage({ onBack, onOpenChat }: { onBack: () => void; onOpenChat: (th
 function DiscoverPage({ onSearch, onOpenChat }: { onSearch: () => void; onOpenChat: (threadId: string, greet?: string) => void }) {
   const { momentsPush } = useWxSettings();
   const { game } = useGame();
+  // 功能注释：P4.1 传讯（书信风）下不做朋友圈 / 视频号 / 摇一摇这类现代社交入口，只保留「搜一搜」找人
+  const letterSkin = useCommsBrand().skin === "letter";
   const [inMoments, setInMoments] = useState(false);
   const [profile, setProfile] = useState<string | null>(null);
   const [sub, setSub] = useState<"channels" | "shake" | null>(null);
@@ -424,14 +428,18 @@ function DiscoverPage({ onSearch, onOpenChat }: { onSearch: () => void; onOpenCh
   );
 
   return (
-    <div className="space-y-2 pt-2 text-[#b2b2b2]">
-      <div><Item icon={<IconImage size={20} className="text-[#2ca35b]" />} label="朋友圈" onClick={() => setInMoments(true)} thumbs={momentsPush} /></div>
-      <div>
-        <Item icon={<IconVideo size={20} className="text-[#fa7b2c]" />} label="视频号" onClick={() => setSub("channels")} />
-      </div>
-      <div>
-        <Item icon={<IconSearch size={20} className="text-[#576b95]" />} label="摇一摇" onClick={() => setSub("shake")} />
-      </div>
+    <div className="space-y-2 pt-2 text-[#b2b2b2]" data-comms-discover={letterSkin ? "letter" : "modern"}>
+      {!letterSkin && <div><Item icon={<IconImage size={20} className="text-[#2ca35b]" />} label="朋友圈" onClick={() => setInMoments(true)} thumbs={momentsPush} /></div>}
+      {!letterSkin && (
+        <div>
+          <Item icon={<IconVideo size={20} className="text-[#fa7b2c]" />} label="视频号" onClick={() => setSub("channels")} />
+        </div>
+      )}
+      {!letterSkin && (
+        <div>
+          <Item icon={<IconSearch size={20} className="text-[#576b95]" />} label="摇一摇" onClick={() => setSub("shake")} />
+        </div>
+      )}
       <div>
         <Item icon={<IconSearch size={20} className="text-[#e15b64]" />} label="搜一搜" onClick={onSearch} />
       </div>
@@ -442,19 +450,20 @@ function DiscoverPage({ onSearch, onOpenChat }: { onSearch: () => void; onOpenCh
 /* 微信 · 账号与安全子页 */
 function WxAccountPage({ onBack }: { onBack: () => void }) {
   const { game } = useGame();
+  const brand = useCommsBrand();
   const wxid = `star_${game!.player.name}`;
   return (
     <div className="flex h-full flex-col bg-[#ededed]">
       <WxSubHeader title="账号与安全" onBack={onBack} />
       <div className="flex-1 space-y-3 overflow-y-auto pb-6">
         <div className="mt-1">
-          <WxSetRow label="绿信号" right={wxid} />
+          <WxSetRow label={brand.accountLabel} right={wxid} />
           <WxSetRow label="手机号" right="+86 138****0000" />
           <WxSetRow label="声音锁" right="未开启" />
         </div>
         <div>
           <p className="px-4 pb-1 text-[12px] text-ink-soft">安全</p>
-          <WxSetRow label="绿信安全中心" right="正常" />
+          <WxSetRow label={brand.safetyCenter} right="正常" />
           <WxSetRow label="账号保护" right="已开启" />
           <WxSetRow label="登录设备管理" right="1 台" />
         </div>
@@ -614,12 +623,13 @@ function WxChatStylePage({ onBack }: { onBack: () => void }) {
 
 /* 微信 · 关于子页 */
 function WxAboutPage({ onBack }: { onBack: () => void }) {
+  const brand = useCommsBrand();
   return (
     <div className="flex h-full flex-col bg-[#ededed]">
-      <WxSubHeader title="关于绿信" onBack={onBack} />
+      <WxSubHeader title={brand.aboutTitle} onBack={onBack} />
       <div className="flex flex-1 flex-col items-center overflow-y-auto pt-10">
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl text-white" style={{ background: WX_GREEN }}><IconMessage size={28} className="text-white" /></div>
-        <p className="mt-3 text-[17px] font-semibold text-ink">绿信 · {T("city")}版</p>
+        <p className="mt-3 text-[17px] font-semibold text-ink">{brand.appName} · {T("city")}版</p>
         <p className="mt-1 text-[12.5px] text-ink-soft">Version 6.0 (2005)</p>
         <p className="mt-auto pb-6 pt-10 text-[11px] text-ink-soft/60">STARLIGHT://2005 · 仿真通讯</p>
       </div>
@@ -630,6 +640,7 @@ function WxAboutPage({ onBack }: { onBack: () => void }) {
 /* 微信 · 设置：账号 / 通知 / 朋友圈 / 通用 / 关于（开关持久化并实际生效） */
 function WxSettingsPage({ onBack }: { onBack: () => void }) {
   const { game } = useGame();
+  const brand = useCommsBrand();
   const st = useWxSettings();
   const [page, setPage] = useState<"root" | "account" | "general" | "about" | "chatStyle">("root");
 
@@ -643,18 +654,18 @@ function WxSettingsPage({ onBack }: { onBack: () => void }) {
       <WxSubHeader title="设置" onBack={onBack} />
       <div className="flex-1 space-y-3 overflow-y-auto pb-6">
         <div className="mt-1">
-          <WxSetRow label="账号与安全" right={`绿信号 star_${game!.player.name}`} onClick={() => setPage("account")} />
+          <WxSetRow label="账号与安全" right={`${brand.accountLabel} star_${game!.player.name}`} onClick={() => setPage("account")} />
         </div>
         <div>
           <p className="px-4 pb-1 pt-1 text-[12px] text-ink-soft">新消息通知</p>
           <WxSetRow label="新消息未读提醒" right={<WxToggle on={st.notify} onChange={(v) => setWxSettings({ notify: v })} />} />
-          <WxSetRow label="朋友圈更新提醒" right={<WxToggle on={st.momentsPush} onChange={(v) => setWxSettings({ momentsPush: v })} />} />
+          {brand.skin !== "letter" && <WxSetRow label="朋友圈更新提醒" right={<WxToggle on={st.momentsPush} onChange={(v) => setWxSettings({ momentsPush: v })} />} />}
           <WxSetRow label="允许好友主动发消息" right={<WxToggle on={st.proactive} onChange={(v) => setWxSettings({ proactive: v })} />} />
         </div>
         <div>
           <WxSetRow label="聊天样式" right={BUBBLE_STYLES.find((b) => b.id === st.chat.bubble)?.label ?? "经典绿"} onClick={() => setPage("chatStyle")} />
           <WxSetRow label="通用" right={`字体 ${WX_FONT_LABEL[st.font]}`} onClick={() => setPage("general")} />
-          <WxSetRow label="关于绿信" right={`版本 6.0（${T("city")}版）`} onClick={() => setPage("about")} />
+          <WxSetRow label={brand.aboutTitle} right={`版本 6.0（${T("city")}版）`} onClick={() => setPage("about")} />
         </div>
         <div>
           <WxSetRow label="退出登录" danger onClick={onBack} />
@@ -774,6 +785,7 @@ function WxWalletPage({ onBack }: { onBack: () => void }) {
 /* 我：个人资料卡 */
 function MePage() {
   const { game, commitGame } = useGame();
+  const brand = useCommsBrand();
   const favs = useFavs();
   const [sub, setSub] = useState<"settings" | "favs" | "wallet" | null>(() => (takeWalletRequest() ? "wallet" : null));
   if (sub === "settings") return <div className="absolute inset-0 z-30"><WxSettingsPage onBack={() => setSub(null)} /></div>;
@@ -799,7 +811,7 @@ function MePage() {
         </div>
         <div className="min-w-0">
           <p className="truncate text-[21px] font-semibold text-[#181818]">{game!.player.name}</p>
-          <p className="mt-1 text-[14px] text-[#7f7f7f]">绿信号：star_{game!.player.name}</p>
+          <p className="mt-1 text-[14px] text-[#7f7f7f]">{brand.accountLabel}：star_{game!.player.name}</p>
         </div>
       </div>
       <div><Row icon={<IconWallet size={20} style={{ color: WX_GREEN }} />} label="服务" right={wallet.fmt(bal, game!, (n) => `¥${money(n)}`)} onClick={() => setSub("wallet")} /></div>
@@ -882,8 +894,22 @@ function GroupAvatar({ members, size = 48 }: { members: string[]; size?: number 
 
 const str = (x: unknown, max: number) => (typeof x === "string" ? x.trim().slice(0, max) : "");
 
+/**
+ * 功能注释：P4.1 通讯 App 外壳——按世界题材给整棵子树挂 data-comms-skin（modern=绿信 / letter=传讯）。
+ * display: contents 不参与布局，仅供 index.css 里的书信风样式按属性选择。
+ */
 export default function WeChatApp({ onBack }: { onBack: () => void }) {
+  const brand = useCommsBrand();
+  return (
+    <div className="contents" data-comms-skin={brand.skin}>
+      <WeChatAppInner onBack={onBack} />
+    </div>
+  );
+}
+
+function WeChatAppInner({ onBack }: { onBack: () => void }) {
   const { game, cfg, commitGame, patchGame } = useGame();
+  const brand = useCommsBrand();
   const strangers = useStrangers();
 
   /* 右上角刷新：联动世界剧情，生成老朋友的新消息 + 新朋友圈 */
@@ -897,8 +923,8 @@ export default function WeChatApp({ onBack }: { onBack: () => void }) {
     // 好友主动找主角的频率与语气取决于好感 / 爱慕（幕后资料，只给 AI 把握分寸；家人不标爱慕）
     const friendList = people.map((n) => { const love = romanceBlock(g0, n.id, true); return `${n.id}=${n.name}（好感${affinityOf(g0, n.id)}${love ? `，${love}` : ""}）`; }).join("、") || "（无）";
     const strangersPool = g0.npcs.filter((n) => !p0.contacts.includes(n.id) && !(p0.pending ?? []).includes(n.id)).slice(0, 12);
-    const res = await syncJson<{ messages?: unknown; moments?: unknown; requests?: unknown }>(cfg, g0, "wechat", "绿信",
-      `为绿信生成新内容。1) messages：0~4 条好友主动发来的私聊消息，发送者只能从【好友】中选，用 pid 标识，语气贴合人设与当前剧情，并按【好友】里标注的好感与爱慕把握分寸——好感决定熟络与热络；爱慕越高越可能主动来找主角、更上心（分享日常、找借口聊天、关心近况），但仍含蓄不说破；爱慕为 0 或标注不可攻略的人不暧昧、不说情话，家人只有亲情；2) moments：1~3 条朋友圈动态，作者只能从【圈内人物】中选，text ≤80 字，images 为配图张数 0~6，likers 为点赞者 pid 数组（从圈内人物选）；朋友圈是公开的，不得出现任何数值、私聊内容、内心想法或未公开的心意，心动最多是旁人看不懂的含蓄暗示；3) requests：0~1 条好友申请，只能来自【非好友】且剧情上确有理由想认识主角的人物，text 为验证消息（≤30 字），多数时候返回空数组。
+    const res = await syncJson<{ messages?: unknown; moments?: unknown; requests?: unknown }>(cfg, g0, "wechat", brand.appName,
+      `为${brand.appName}生成新内容。1) messages：0~4 条好友主动发来的私聊消息，发送者只能从【好友】中选，用 pid 标识，语气贴合人设与当前剧情，并按【好友】里标注的好感与爱慕把握分寸——好感决定熟络与热络；爱慕越高越可能主动来找主角、更上心（分享日常、找借口聊天、关心近况），但仍含蓄不说破；爱慕为 0 或标注不可攻略的人不暧昧、不说情话，家人只有亲情；2) moments：1~3 条朋友圈动态，作者只能从【圈内人物】中选，text ≤80 字，images 为配图张数 0~6，likers 为点赞者 pid 数组（从圈内人物选）；朋友圈是公开的，不得出现任何数值、私聊内容、内心想法或未公开的心意，心动最多是旁人看不懂的含蓄暗示；3) requests：0~1 条好友申请，只能来自【非好友】且剧情上确有理由想认识主角的人物，text 为验证消息（≤30 字），多数时候返回空数组。
 【好友】${friendList}
 【非好友】${list(strangersPool)}
 【圈内人物】${list(momentPool)}
@@ -1029,7 +1055,7 @@ export default function WeChatApp({ onBack }: { onBack: () => void }) {
     );
   }
 
-  const title = tab === "chats" ? "绿信" : tab === "contacts" ? "通讯录" : tab === "discover" ? "发现" : "我";
+  const title = tab === "chats" ? brand.appName : tab === "contacts" ? "通讯录" : tab === "discover" ? "发现" : "我";
 
   return (
     <div className="relative flex h-full flex-col bg-[#ededed]">

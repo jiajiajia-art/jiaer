@@ -1,6 +1,6 @@
 /**
  * 大地图层：作品可有多张大地图，每张下挂一棵地点树。
- * 旧稿无 worldMaps 时自动补一张「主地图」，并把未标注的地点归进去。
+ * 旧稿无 worldMaps 时按顶层地点 / 设定推断区域名；推断不出才临时用「主地图」。
  */
 import type { RoomContent } from "../worlds/star2005/content";
 
@@ -18,6 +18,35 @@ export const DEFAULT_WORLD_MAP_ID = "map_main";
 export const DEFAULT_WORLD_MAP_NAME = "主地图";
 
 const uid = (p: string) => `${p}_${Date.now().toString(36).slice(-4)}${Math.random().toString(36).slice(2, 5)}`;
+
+/**
+ * 功能注释：补空大地图时优先用顶层地点名 / 设定里的区域称呼，避免无脑「主地图」。
+ * 推断不出才回落 DEFAULT_WORLD_MAP_NAME，编辑器应提示创作者改名。
+ */
+export function inferWorldMapName(opts?: {
+  rooms?: Rooms;
+  setting?: string;
+  title?: string;
+}): string {
+  const rooms = opts?.rooms ?? {};
+  const topNames = Object.values(rooms)
+    .filter((r) => !r.parent)
+    .map((r) => String(r.name || "").trim())
+    .filter(Boolean);
+  // 功能注释：顶层地点名像「皇宫」「校园」时直接当区域名；避免「新地点」「旅馆」等通用糊名
+  const GENERIC = /^(主地图|新地点|地点|旅馆|厨房|卧室|客厅)$/;
+  const regionLike = topNames.find((n) => !GENERIC.test(n) && n.length <= 12);
+  if (regionLike) return regionLike;
+
+  const setting = String(opts?.setting || "").trim();
+  // 功能注释：更具体的区域名优先（皇宫/紫禁城 先于 后宫）
+  const m = setting.match(/(紫禁城|皇宫|宫廷|王城|校园|学院|经纪公司|片场|星城|海港|宫外|后宫)/);
+  if (m?.[1]) return m[1];
+
+  const title = String(opts?.title || "").trim();
+  if (title && title.length <= 10 && !GENERIC.test(title)) return title;
+  return DEFAULT_WORLD_MAP_NAME;
+}
 
 /** 功能注释：库里地点树节点（用 key 表达父子，导入时再换成作品内新 id） */
 export type LibraryRoomNode = {
@@ -39,11 +68,16 @@ export function newWorldMapId(): string {
 export function ensureWorldMaps(
   rooms: Rooms | undefined,
   maps: WorldMapDef[] | undefined,
+  opts?: { setting?: string; title?: string },
 ): { worldMaps: WorldMapDef[]; rooms: Rooms } {
   const nextRooms: Rooms = { ...(rooms ?? {}) };
   let worldMaps = Array.isArray(maps) ? maps.map((m) => ({ ...m })).filter((m) => m.id && String(m.name || "").trim()) : [];
   if (!worldMaps.length) {
-    worldMaps = [{ id: DEFAULT_WORLD_MAP_ID, name: DEFAULT_WORLD_MAP_NAME, order: 0 }];
+    worldMaps = [{
+      id: DEFAULT_WORLD_MAP_ID,
+      name: inferWorldMapName({ rooms: nextRooms, setting: opts?.setting, title: opts?.title }),
+      order: 0,
+    }];
   }
   const mapIds = new Set(worldMaps.map((m) => m.id));
   const fallback = worldMaps[0]!.id;

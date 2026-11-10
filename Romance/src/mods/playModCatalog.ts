@@ -8,7 +8,12 @@
  * 存档结构、登录、档案、人脉、设置 = 游戏本体功能，不进本目录；基础设定、建角、地点、人物、事件也在编辑器其它页直接配。
  * 本目录不是游戏本体；本体功能不进本目录。
  * 编辑器按「已安装组件」动态显示配置，不再硬编码通告/孕育/座驾等入口。
+ * C0.3：官方包带适用题材语义 code，由题材 API 解析成 id。
  */
+import {
+  OFFICIAL_PLAY_MOD_THEME_CODES,
+  type ThemeApplicabilityCode,
+} from "../lib/officialThemeApplicability.ts";
 
 export type ComponentKind = "gameplay" | "phone_app";
 
@@ -71,19 +76,26 @@ export type LocalPlayModCatalogItem = {
   detailDescription: string;
   /** 功能注释：商店详情 — 预览图 URL 或 local:占位（上传至少 1 张） */
   previewImages: string[];
+  /** 功能注释：适用题材语义 code（C0.3）；前台解析成 applicableThemeTagIds */
+  applicableThemeCodes: ThemeApplicabilityCode[];
+  /** 功能注释：后台已解析的适用题材 id（有则安装提示优先用 id 精确比对） */
+  applicableThemeTagIds?: number[] | null;
 };
 
 /** 功能注释：给官方种子补齐商店详情字段，与后端上架契约对齐 */
 function withStoreDetail(
-  item: Omit<LocalPlayModCatalogItem, "authorName" | "downloadCount" | "detailDescription" | "previewImages">,
+  item: Omit<LocalPlayModCatalogItem, "authorName" | "downloadCount" | "detailDescription" | "previewImages" | "applicableThemeCodes">,
   detail: { downloads: number; detail: string },
 ): LocalPlayModCatalogItem {
+  const codes = OFFICIAL_PLAY_MOD_THEME_CODES[item.slug];
   return {
     ...item,
     authorName: "官方",
     downloadCount: detail.downloads,
     detailDescription: detail.detail,
     previewImages: [`local:${item.slug}-1`, `local:${item.slug}-2`],
+    // 功能注释：官方包必须有至少 1 个适用题材语义；缺配置时按 modern 兜底并便于单测抓住遗漏
+    applicableThemeCodes: codes?.length ? [...codes] : ["modern"],
   };
 }
 

@@ -15,10 +15,12 @@ const themeEditor = readFileSync(join(romance, 'components/ModThemeEditor.tsx'),
 const ext = readFileSync(join(romance, 'components/ModExtEditor.tsx'), 'utf8');
 const wizard = readFileSync(join(romance, 'lib/worldGenWizard.ts'), 'utf8');
 
-test('编辑器皮肤美化_无试用条无面板皮肤动画块_音乐仍在', () => {
+test('编辑器皮肤美化_无试用条无面板皮肤动画块_音乐在基础', () => {
   assert.match(panel, /title="皮肤美化"/);
   assert.match(panel, /ModThemeEditor/);
-  assert.match(panel, /g="look" title="音乐"/);
+  // 功能注释：C1.2 音乐已迁到①基础，美化组不得再挂音乐
+  assert.match(panel, /g="base" title="音乐"/);
+  assert.doesNotMatch(panel, /g="look" title="音乐"/);
   assert.doesNotMatch(panel, /ModSkinEditor/);
   assert.doesNotMatch(panel, /<summary[^>]*>高级<\/summary>/);
   assert.doesNotMatch(panel, /title="主题外观"/);

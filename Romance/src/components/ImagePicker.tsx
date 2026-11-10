@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { loadAssets, saveAssets, uploadImage } from "../lib/freeStyle"
+import { loadAssets, rememberImageAsset, uploadImage } from "../lib/freeStyle"
 import { displayableImageSrc } from "../lib/displayableImageSrc"
 import { mediaCheck } from "../game/engineRules"
 import {
@@ -88,13 +88,7 @@ export default function ImagePicker({
   const showGen = Boolean(genOpts)
   const showLink = !scenePortrait
 
-  const rememberAsset = (url: string, name = label) => {
-    const a = loadAssets()
-    if (!a.some((x) => x.url === url)) {
-      saveAssets([{ id: Math.random().toString(36).slice(2, 9), name: name.slice(0, 24) || "图片", url, at: Date.now() }, ...a])
-      window.dispatchEvent(new Event("star:assets"))
-    }
-  }
+  const rememberAsset = (url: string, name = label) => rememberImageAsset(url, name)
 
   const applyUrl = async (url: string) => {
     setBusy(true)
@@ -103,9 +97,11 @@ export default function ImagePicker({
       if (scenePortrait) {
         const fitted = await rasterToScenePortraitDataUrl(url)
         onChange(fitted)
+        // 功能注释：P8 采用生图后一律进「我的素材库」，不限竖图位
         rememberAsset(fitted)
       } else {
         onChange(url)
+        rememberAsset(url)
       }
       setMode("")
     } catch (e) {

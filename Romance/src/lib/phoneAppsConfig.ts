@@ -3,6 +3,10 @@
  * 应用元数据（名称/图标/作者/类型/内容）一律读平台应用表，不在作品里写死。
  * 旧 JSON 若仍带 avail/label 等目录差异字段，读取时按旧逻辑展开预装列表以兼容。
  */
+import {
+  OFFICIAL_PLATFORM_APP_THEME_CODES,
+  type ThemeApplicabilityCode,
+} from "./officialThemeApplicability.ts";
 
 /** 功能注释：与后端种子一致的 11 个官方 appId；旧作品未写 phoneAppsCfg 时兼容预装 */
 export const OFFICIAL_PLATFORM_APP_IDS = Object.freeze([
@@ -18,6 +22,12 @@ export const OFFICIAL_PLATFORM_APP_IDS = Object.freeze([
   "video",
   "bosspin",
 ] as const);
+
+/** 功能注释：官方应用适用题材语义（C0.3）；缺配置时 modern 兜底 */
+export function officialAppThemeCodes(appId: string): ThemeApplicabilityCode[] {
+  const codes = OFFICIAL_PLATFORM_APP_THEME_CODES[appId];
+  return codes?.length ? [...codes] : ["modern"];
+}
 
 export type PhoneAppAvail = "preinstall" | "store" | "locked" | "hidden" | "disabled";
 export type PhoneAppAvailSimple = "preinstall" | "store";

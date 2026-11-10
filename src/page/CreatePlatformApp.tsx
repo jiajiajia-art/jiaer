@@ -2,12 +2,11 @@
  * 手机应用（原「创作应用」收编进「创作游戏」二级）：
  * 填需求 → AI 对话生成草稿字段 → 保存草稿 → 上架；保存时把应用草稿打成 phone_app 包上传组件商店（应用运行在平台 SDK 上）。
  */
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import AppPageShell from '../components/Layout/AppPageShell';
 import { useAuthStore } from '../store/useAuthStore';
-import { isOperatorRole } from '../utils/userRoles';
 import { getImageUrl } from '../utils/constants';
 import { HOST_ADDRESS } from '../config';
 import {
@@ -27,12 +26,28 @@ import {
   type PhoneAppFormDraft,
   type PhoneAppFormType,
 } from '../lib/phoneAppAiChat';
+import getGameDataApi from '../api/home/getGameData';
+import gameTagsApi from '../api/gameTags/gameTagsApi';
+import { flattenThemeTags, useLocalizedThemeTags, type FlatThemeTag } from '../utils/themeTags';
+import {
+  normalizeThemeTagIds,
+  readAppThemeTagIds,
+  toggleThemeTagId,
+  validateApplicableThemesForPublish,
+} from '../lib/platformAppThemes';
+import {
+  CREATOR_IDENTITY_LOCKED_HINT,
+  isCreatorIdentityActivated,
+} from '../lib/creatorIdentity';
+import PhoneAppLivePreview from '../components/Create/PhoneAppLivePreview';
 import styles from './CreatePlatformApp.module.css';
 
 type FormState = Omit<PhoneAppFormDraft, 'type'> & {
   icon: string;
   previews: string[];
   type: PlatformAppType;
+  /** 功能注释：C0.2 适用题材，上架前至少 1 个；随 content JSON 入库 */
+  applicableThemeTagIds: number[];
 };
 
 const emptyForm = (): FormState => ({
@@ -43,6 +58,8 @@ const emptyForm = (): FormState => ({
   category: '',
   type: 'browse',
   contentText: '',
+  pages: undefined,
+  applicableThemeTagIds: [],
 });
 
 async function completePhoneAppChat(
@@ -75,10 +92,7 @@ const CreatePlatformApp: React.FC = () => {
   const navigate = useNavigate();
   const token = useAuthStore((s) => s.user?.token);
   const userCode = useAuthStore((s) => s.user?.user?.userCode);
-  const role = useAuthStore((s) => s.user?.user?.role);
-  const isStaff = isOperatorRole(role);
   const [mine, setMine] = useState<PlatformApp[]>([]);
-  const [published, setPublished] = useState<PlatformApp[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadBusy, setUploadBusy] = useState(false);
@@ -93,12 +107,46 @@ const CreatePlatformApp: React.FC = () => {
     },
   ]);
   const [chatBusy, setChatBusy] = useState(false);
+  const [gateChecked, setGateChecked] = useState(false);
+  const [allowed, setAllowed] = useState(false);
+  /** 功能注释：C0.2 题材标签树只拉一次，进页即用；失败时多选区提示重试而非阻塞创作 */
+  const [themeTags, setThemeTags] = useState<FlatThemeTag[]>([]);
+  const displayThemeTags = useLocalizedThemeTags(themeTags);
   const endRef = useRef<HTMLDivElement>(null);
+
+  // 功能注释：C0.1 直链 /create/app 也要拦；未激活不进半残表单
+  useEffect(() => {
+    let cancelled = false;
+    void getGameDataApi
+      .getUserData({ limit: 200 })
+      .then((response) => {
+        if (cancelled) return;
+        const list = response.data.success && Array.isArray(response.data.data)
+          ? response.data.data
+          : [];
+        const ok = isCreatorIdentityActivated(list);
+        setAllowed(ok);
+        setGateChecked(true);
+        if (!ok) {
+          toast.error(CREATOR_IDENTITY_LOCKED_HINT);
+          navigate('/create', { replace: true });
+        }
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setAllowed(false);
+        setGateChecked(true);
+        toast.error(CREATOR_IDENTITY_LOCKED_HINT);
+        navigate('/create', { replace: true });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
 
   const loadMine = useCallback(async () => {
     if (!token) {
       setMine([]);
-      setPublished([]);
       setLoading(false);
       return;
     }
@@ -107,22 +155,47 @@ const CreatePlatformApp: React.FC = () => {
       const res = await platformAppsApi.listMine(token);
       if (!res.success) throw new Error(res.message || '加载失败');
       setMine(Array.isArray(res.data) ? res.data : []);
-      if (isStaff) {
-        const pub = await platformAppsApi.listPublished(token);
-        if (pub.success && Array.isArray(pub.data)) setPublished(pub.data);
-      } else {
-        setPublished([]);
-      }
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : '加载我的应用失败');
     } finally {
       setLoading(false);
     }
-  }, [token, isStaff]);
+  }, [token]);
 
   useEffect(() => {
+    if (!allowed) return;
     void loadMine();
-  }, [loadMine]);
+  }, [loadMine, allowed]);
+
+  useEffect(() => {
+    if (!allowed) return;
+    let cancelled = false;
+    void gameTagsApi
+      .getGameTagsTree()
+      .then((resp) => {
+        if (cancelled || !resp.data?.success) return;
+        setThemeTags(flattenThemeTags(resp.data.data || []));
+      })
+      .catch(() => {
+        if (!cancelled) toast.error('题材列表加载失败，请刷新重试');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [allowed]);
+
+  /** 功能注释：C2.2 右侧预览的草稿快照——表单字段变化即刷新，对话补丁写入 form 后同步 */
+  const previewDraft = useMemo(
+    () => ({
+      name: form.name,
+      summary: form.summary,
+      category: form.category,
+      type: form.type as string,
+      contentText: form.contentText,
+      pages: form.pages,
+    }),
+    [form.name, form.summary, form.category, form.type, form.contentText, form.pages],
+  );
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: 'end' });
@@ -154,6 +227,8 @@ const CreatePlatformApp: React.FC = () => {
     category: form.category,
     type: form.type as PhoneAppFormType,
     contentText: form.contentText,
+    // 功能注释：带上已有页面，避免对话补丁没返回 pages 时把预览页丢掉
+    pages: form.pages,
   });
 
   const sendChat = async (raw: string) => {
@@ -190,6 +265,10 @@ const CreatePlatformApp: React.FC = () => {
 
   const startEdit = (app: PlatformApp) => {
     setEditingId(app.appId);
+    const contentPages =
+      app.content && typeof app.content === 'object' && Array.isArray((app.content as { pages?: unknown }).pages)
+        ? ((app.content as { pages?: PhoneAppFormDraft['pages'] }).pages as PhoneAppFormDraft['pages'])
+        : undefined;
     const contentText =
       typeof app.content === 'string'
         ? app.content
@@ -208,6 +287,8 @@ const CreatePlatformApp: React.FC = () => {
         ? app.type
         : 'browse') as PlatformAppType,
       contentText,
+      pages: contentPages,
+      applicableThemeTagIds: readAppThemeTagIds(app),
     });
   };
 
@@ -265,7 +346,8 @@ const CreatePlatformApp: React.FC = () => {
         summary: form.summary.trim(),
         category: form.category.trim(),
         type: form.type,
-        content: { text: form.contentText },
+        content: { text: form.contentText, ...(form.pages ? { pages: form.pages } : {}) },
+        applicableThemeTagIds: normalizeThemeTagIds(form.applicableThemeTagIds),
       };
       const res = editingId
         ? await platformAppsApi.update(token, editingId, body)
@@ -285,7 +367,8 @@ const CreatePlatformApp: React.FC = () => {
           summary: body.summary || '',
           category: body.category || '',
           type: body.type,
-          content: body.content,
+          content: { ...body.content, applicableThemeTagIds: body.applicableThemeTagIds },
+          applicableThemeTagIds: body.applicableThemeTagIds,
           status: saved.status || 'draft',
         });
       }
@@ -298,8 +381,15 @@ const CreatePlatformApp: React.FC = () => {
     }
   };
 
+  /** 功能注释：C0.2 上架前校验适用题材；以列表里最新记录为准，不再额外请求详情 */
   const publish = async (appId: string) => {
     if (!token) return;
+    const target = mine.find((a) => a.appId === appId);
+    const themeError = validateApplicableThemesForPublish(target ? readAppThemeTagIds(target) : []);
+    if (themeError) {
+      toast.error(themeError);
+      return;
+    }
     try {
       const res = await platformAppsApi.publish(token, appId);
       if (!res.success) throw new Error(res.message || '上架失败');
@@ -322,13 +412,24 @@ const CreatePlatformApp: React.FC = () => {
     }
   };
 
+  if (!gateChecked || !allowed) {
+    return (
+      <AppPageShell hideBottomNav shellClassName={styles.pageRoot} mainClassName={styles.main}>
+        <p className={styles.hint}>{gateChecked ? CREATOR_IDENTITY_LOCKED_HINT : '校验创作者身份…'}</p>
+      </AppPageShell>
+    );
+  }
+
   return (
-    <AppPageShell shellClassName={styles.pageRoot} mainClassName={styles.main}>
+    <AppPageShell hideBottomNav shellClassName={styles.pageRoot} mainClassName={styles.main}>
       <h1 className={styles.title}>手机应用</h1>
       <p className={styles.hint}>
         创作游戏 → 手机应用。对话生成应用草稿（页面与积木描述），由现有手机运行器解释运行；保存后走完整性检查、私有测试、审核上架。游戏世界只能从已上架列表安装（作品只存应用编号）。创作者交出的是应用草稿，应用运行在平台 SDK 上。作者库兰号：{userCode || '（需登录）'}。
       </p>
 
+      {/* 功能注释：C2.2 大屏左=对话+字段，右=吸顶实时预览；小屏上下堆叠，预览在字段下方 */}
+      <div className={styles.split}>
+      <div className={styles.splitMain}>
       <section className={styles.card} data-phone-app-ai="1">
         <h2 className={styles.cardTitle}>AI 对话生成</h2>
         <div className={styles.field}>
@@ -458,6 +559,37 @@ const CreatePlatformApp: React.FC = () => {
             ))}
           </select>
         </div>
+        <div className={styles.field} data-applicable-themes="1">
+          <label>
+            适用题材<span className={styles.requiredMark}>*</span>
+            <span className={styles.fieldHint}>（上架前至少选 1 个，已选 {form.applicableThemeTagIds.length}）</span>
+          </label>
+          <div className={styles.themeWrap}>
+            {displayThemeTags.length === 0 ? (
+              <span className={styles.fieldHint}>题材加载中…</span>
+            ) : (
+              displayThemeTags.map((tag) => {
+                const on = form.applicableThemeTagIds.includes(tag.id);
+                return (
+                  <button
+                    key={tag.id}
+                    type="button"
+                    aria-pressed={on}
+                    className={on ? styles.themeChipOn : styles.themeChip}
+                    onClick={() =>
+                      setForm((f) => ({
+                        ...f,
+                        applicableThemeTagIds: toggleThemeTagId(f.applicableThemeTagIds, tag.id),
+                      }))
+                    }
+                  >
+                    {tag.name}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
         <div className={styles.field}>
           <label htmlFor="app-content">内容</label>
           <textarea
@@ -483,31 +615,11 @@ const CreatePlatformApp: React.FC = () => {
           ) : null}
         </div>
       </section>
-
-      {isStaff ? (
-        <section className={styles.card}>
-          <h2 className={styles.cardTitle}>运营 · 已上架应用</h2>
-          <p className={styles.hint}>作者和运营改的是同一条记录；保存后商店与已装手机一起更换。</p>
-          {published.map((app) => (
-            <div key={`pub-${app.appId}`} className={styles.listItem}>
-              {app.icon ? (
-                <img className={styles.iconPreview} src={getImageUrl(app.icon)} alt="" />
-              ) : (
-                <span className={styles.iconPreview} />
-              )}
-              <div className={styles.meta}>
-                <p className={styles.metaName}>{app.name}</p>
-                <p className={styles.metaSub}>
-                  {app.summary || '暂无说明'} · {app.authorName || app.authorId}
-                </p>
-              </div>
-              <button type="button" className={styles.btnGhost} onClick={() => startEdit(app)}>
-                编辑
-              </button>
-            </div>
-          ))}
-        </section>
-      ) : null}
+      </div>
+      <aside className={styles.splitPreview}>
+        <PhoneAppLivePreview draft={previewDraft} />
+      </aside>
+      </div>
 
       <section className={styles.card}>
         <h2 className={styles.cardTitle}>我的应用</h2>
@@ -526,6 +638,7 @@ const CreatePlatformApp: React.FC = () => {
               <p className={styles.metaName}>{app.name}</p>
               <p className={styles.metaSub}>
                 {app.summary || '暂无说明'} · {app.authorId}
+                {readAppThemeTagIds(app).length ? ` · 适用题材 ${readAppThemeTagIds(app).length} 个` : ' · 未选适用题材'}
               </p>
             </div>
             <span className={app.status === 'published' ? styles.badgeOn : styles.badge}>

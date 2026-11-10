@@ -220,3 +220,37 @@
     max-width: none;
   }
 }
+
+.themeChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.themeChip,
+.themeChipOn {
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  border: 1px solid rgba(201, 139, 92, 0.35);
+  background: transparent;
+  color: #3b2a1d;
+}
+
+.themeChipOn {
+  background: #c9733f;
+  border-color: #c9733f;
+  color: #fff;
+}
+
+.themeEditor {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px dashed rgba(201, 139, 92, 0.4);
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}

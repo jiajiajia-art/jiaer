@@ -2829,3 +2829,21 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
 .start-date-clear:hover {
   color: var(--color-jade, #a8283c);
 }
+
+/* ——— P4.1 传讯（书信风）：data-comms-skin="letter" 时把绿信的灰白 / 微信绿换成纸笺与墨褐 ———
+ * 只覆盖 WeChatApp 子树里用到的几个固定色类；modern 皮肤不受影响。 */
+[data-comms-skin="letter"] {
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Source Han Serif SC", serif;
+}
+[data-comms-skin="letter"] [class*="bg-[#ededed]"] { background: #efe3c8 !important; }
+[data-comms-skin="letter"] [class*="bg-[#f7f7f7]"] { background: #f4ead3 !important; }
+[data-comms-skin="letter"] .bg-white,
+[data-comms-skin="letter"] [class*="bg-[#fff"] { background: #fbf4e2 !important; }
+[data-comms-skin="letter"] [class*="bg-[#07c160]"] { background: #8b5e3c !important; }
+[data-comms-skin="letter"] [class*="text-[#07a050]"],
+[data-comms-skin="letter"] [class*="text-[#07c160]"] { color: #8b5e3c !important; }
+[data-comms-skin="letter"] [class*="border-black/"] { border-color: rgba(120, 84, 48, 0.18) !important; }
+/* 传讯：聊天页默认背景换成纸笺渐变；创作者 / 玩家自选过聊天背景（data-wx-chat-bg 缺省）时不覆盖 */
+[data-comms-skin="letter"] [data-wx-chat-bg="default"] {
+  background: linear-gradient(180deg, #f1e4c6 0%, #e8d6ae 100%) !important;
+}

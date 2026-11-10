@@ -8,6 +8,7 @@ import { Avatar } from "../ui";
 import { LoadMoreButton } from "./shared";
 import { clockLabel, dayDateLabel } from "../../game/logic";
 import { APP_ICON } from "./appIcons";
+import { useCommsBrand } from "./commsBrand";
 import type { ReactNode } from "react";
 import { InnerOsLabel, IconGrid, IconHeart, IconLock, IconSearch } from "../../lib/icons";
 
@@ -210,6 +211,8 @@ export default function PeekApp({ onBack }: { onBack: () => void }) {
 function PeekAppLive({ onBack }: { onBack: () => void }) {
   const { game, cfg, commitGame } = useGame();
   const g = game!;
+  const brand = useCommsBrand(); // P4.1：「chats」入口的名字随世界题材（绿信 / 传讯）
+  const appLabel = (a: { id: string; label: string }) => (a.id === "chats" ? brand.appName : a.label);
   const [pid, setPid] = useState<string | null>(null);
   const [ai, setAi] = useState<PeekAI | null>(null);
   const [aiDay, setAiDay] = useState<number | null>(null);
@@ -340,7 +343,7 @@ function PeekAppLive({ onBack }: { onBack: () => void }) {
   if (locked) {
     const last = real.chat?.msgs[real.chat.msgs.length - 1];
     const notes: [ReactNode, string, string][] = [
-      ...(last ? [[APP_ICON.wechat, `绿信 · ${g.player.name}`, last.t] as [ReactNode, string, string]] : []),
+      ...(last ? [[APP_ICON.wechat, `${brand.appName} · ${g.player.name}`, last.t] as [ReactNode, string, string]] : []),
       ...(real.calls[0]?.missed ? [[APP_ICON.call, "电话", `${g.player.name} · ${real.calls[0].info}`] as [ReactNode, string, string]] : []),
     ];
     return (
@@ -394,7 +397,7 @@ function PeekAppLive({ onBack }: { onBack: () => void }) {
           {count[id] > 0 && <span className="pointer-events-none absolute -right-1.5 -top-1.5 flex h-[20px] min-w-[20px] items-center justify-center rounded-full bg-[#ff3b30] px-[5px] text-[12px] font-medium tabular-nums leading-none text-white">{count[id] > 99 ? "99+" : count[id]}</span>}
           {off && <span className="absolute -bottom-1 -right-1 rounded-full bg-black/60 px-1 text-[9px] leading-[14px]">AI</span>}
         </span>
-        {!dock && <span className="max-w-[74px] truncate text-[11.5px] font-medium tracking-tight [text-shadow:0_1px_3px_rgba(0,0,0,0.45)]">{a.label}</span>}
+        {!dock && <span className="max-w-[74px] truncate text-[11.5px] font-medium tracking-tight [text-shadow:0_1px_3px_rgba(0,0,0,0.45)]">{appLabel(a)}</span>}
       </button>
     );
   };
@@ -431,7 +434,7 @@ function PeekAppLive({ onBack }: { onBack: () => void }) {
   }
 
   const chat = app === "chats" && chatIdx !== null ? chats[chatIdx] : null;
-  const title = chat ? chat.note || chat.with : APPS.find((a) => a.id === app)!.label;
+  const title = chat ? chat.note || chat.with : appLabel(APPS.find((a) => a.id === app)!);
   const back = () => (chat ? setChatIdx(null) : setApp("home"));
   const empty = (t: string) => <p className="mx-8 mt-16 text-center text-[13px] leading-relaxed text-[#8e8e93]">{t}</p>;
   const Tag = ({ realData }: { realData?: boolean }) => <span className={`shrink-0 rounded px-1 text-[9.5px] font-semibold ${realData ? "bg-[#e8f8ee] text-[#1a9b55]" : "bg-[#f2ecff] text-[#7a4fd1]"}`}>{realData ? "真实" : "推演"}</span>;
@@ -485,7 +488,7 @@ function PeekAppLive({ onBack }: { onBack: () => void }) {
               </button>
             ))}
           </div>
-        ) : empty(online ? "没有聊天记录" : "TA 和你还没在绿信上聊过。接入 AI 后能推演 TA 和别人的私聊。"))}
+        ) : empty(online ? "没有聊天记录" : `TA 和你还没在${brand.appName}上聊过。接入 AI 后能推演 TA 和别人的私聊。`))}
         {app === "inner" && (real.inner.length ? (
           <div className="space-y-2.5 px-3 py-3">
             <p className="px-1 text-[11.5px] leading-relaxed text-[#8e8e93]">TA 和你聊天、通话时，嘴上说的和心里想的。全部来自你们真实的对话。</p>

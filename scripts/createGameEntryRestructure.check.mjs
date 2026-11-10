@@ -31,8 +31,9 @@ test('CreateType_创作游戏开二级_无并列创作应用', () => {
 test('CreateType_二级弹窗文案_SDK归平台禁止产出专属', () => {
   const tsx = read('src/page/CreateType.tsx');
   const desc = tsx.match(/createTypeModalDesc[^>]*>\s*([\s\S]*?)<\/div>/)?.[1] ?? '';
-  const playHint = tsx.match(/title="玩法 Mod"\s*hint="([^"]+)"/)?.[1] ?? '';
-  const phoneHint = tsx.match(/title="手机应用"\s*hint="([^"]+)"/)?.[1] ?? '';
+  // 功能注释：玩法/应用行中间可能插入 badge 属性，hint 不保证紧挨 title
+  const playHint = tsx.match(/title="玩法 Mod"[\s\S]*?hint="([^"]+)"/)?.[1] ?? '';
+  const phoneHint = tsx.match(/title="手机应用"[\s\S]*?hint="([^"]+)"/)?.[1] ?? '';
   assert.match(desc, /都运行在平台 SDK 上/);
   assert.match(playHint, /可以是新地点、游戏内页面，或填进已有玩法格子的数据/);
   assert.match(phoneHint, /供游戏世界里的手机安装。用平台 SDK/);

@@ -70,6 +70,14 @@ export type Asset = { id: string; name: string; url: string; at: number };
 const K_ASSETS = "star:assets", K_HOST = "star:imghost";
 export const loadAssets = () => loadGlobal<Asset[]>(K_ASSETS, []) || [];
 export const saveAssets = (a: Asset[]) => saveGlobal(K_ASSETS, a);
+/** 功能注释：P8 采用生图后进「我的素材库」；同 URL 去重，写入后广播 star:assets。ImagePicker 与批量生图共用，勿各写一份。 */
+export function rememberImageAsset(url: string, name = "图片"): void {
+  if (!url) return;
+  const a = loadAssets();
+  if (a.some((x) => x.url === url)) return;
+  saveAssets([{ id: Math.random().toString(36).slice(2, 9), name: name.slice(0, 24) || "图片", url, at: Date.now() }, ...a]);
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("star:assets"));
+}
 export type ImgHost = { kind: "none" | "imgbb"; key?: string };
 export const loadHost = (): ImgHost => loadGlobal<ImgHost>(K_HOST, { kind: "none" }) || { kind: "none" };
 export const saveHost = (h: ImgHost) => saveGlobal(K_HOST, h);

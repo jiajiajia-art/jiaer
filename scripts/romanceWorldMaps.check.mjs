@@ -11,14 +11,22 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const romance = join(root, 'Romance/src');
 const mod = await import(pathToFileURL(join(romance, 'lib/worldMaps.ts')).href);
 
-test('ensureWorldMaps_无图时补主地图并挂地点', () => {
+test('ensureWorldMaps_无图时按顶层地点推断区域名并挂地点', () => {
   const { worldMaps, rooms } = mod.ensureWorldMaps(
-    { hall: { name: '前厅', desc: 'd', exits: {} } },
+    { hall: { name: '皇宫', desc: 'd', exits: {} } },
     undefined,
   );
   assert.equal(worldMaps.length, 1);
   assert.equal(worldMaps[0].id, mod.DEFAULT_WORLD_MAP_ID);
+  assert.equal(worldMaps[0].name, '皇宫');
   assert.equal(rooms.hall.mapId, mod.DEFAULT_WORLD_MAP_ID);
+});
+
+test('inferWorldMapName_设定优先于默认主地图', () => {
+  assert.equal(mod.inferWorldMapName({ setting: '皇帝养成，紫禁城后宫。' }), '紫禁城');
+  assert.equal(mod.inferWorldMapName({ setting: '校园恋爱，社团活动。' }), '校园');
+  assert.equal(mod.inferWorldMapName({ rooms: { a: { name: '新地点', exits: {} } } }), mod.DEFAULT_WORLD_MAP_NAME);
+  assert.equal(mod.inferWorldMapName({ rooms: { a: { name: '紫禁城', exits: {} } } }), '紫禁城');
 });
 
 test('roomsOfMap_只返回该图地点', () => {

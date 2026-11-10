@@ -5,7 +5,8 @@
 }
 
 .main {
-  max-width: 720px;
+  /* 功能注释：C2.2 左右分栏需要更宽版心；小屏仍单列 */
+  max-width: 1100px;
   width: 100%;
   margin: 0 auto;
   padding: 24px 16px 32px;
@@ -227,4 +228,68 @@
   padding: 10px 12px;
   font-size: 14px;
   background: #fff;
+}
+
+/* 功能注释：C2.2 分栏——lg 以上左主右预览（预览吸顶），以下单列堆叠 */
+.split {
+  display: block;
+}
+
+.splitMain {
+  min-width: 0;
+}
+
+.splitPreview {
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 20px;
+    align-items: start;
+  }
+
+  .splitPreview {
+    position: sticky;
+    top: 16px;
+  }
+}
+
+/* 功能注释：C0.2 适用题材多选 chips */
+.requiredMark {
+  color: #dc2626;
+  margin-left: 2px;
+}
+
+.fieldHint {
+  font-size: 12px;
+  font-weight: 400;
+  color: #71717a;
+  margin-left: 6px;
+}
+
+.themeWrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.themeChip,
+.themeChipOn {
+  border: 1px solid #e4e4e7;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  background: #fff;
+  color: #3f3f46;
+}
+
+.themeChipOn {
+  background: #18181b;
+  border-color: #18181b;
+  color: #fff;
 }

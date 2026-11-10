@@ -12,27 +12,28 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const romance = join(root, 'Romance/src');
 const read = (p) => readFileSync(join(romance, p), 'utf8');
 
-test('editorImagePrompts_三层_画风默认二次元写实漫且创作者覆盖优先', async () => {
+test('editorImagePrompts_三层_画风可空禁止常驻二次元写实漫', async () => {
   const mod = await import(pathToFileURL(join(romance, 'lib/editorImagePrompts.ts')).href);
-  assert.equal(mod.DEFAULT_ART_STYLE, '二次元写实漫');
-  assert.equal(mod.resolveArtStyle(undefined), '二次元写实漫');
-  assert.equal(mod.resolveArtStyle('   '), '二次元写实漫');
+  // 功能注释：C1.1 不再常驻「二次元写实漫」；未填画风留空
+  assert.equal(mod.resolveArtStyle(undefined), '');
+  assert.equal(mod.resolveArtStyle('   '), '');
   assert.equal(mod.resolveArtStyle('水墨国风'), '水墨国风');
+  assert.equal(mod.resolveArtStyle('', '宫斗写实'), '宫斗写实');
 
   const def = mod.buildNpcAvatarPromptParts({ gender: '女', age: 28, appearancePrompt: '黑色齐肩发，圆脸，米色针织衫' });
-  assert.equal(def.style, '二次元写实漫');
+  assert.equal(def.style, '');
   const own = mod.buildNpcAvatarPromptParts(
     { gender: '女', age: 28, appearancePrompt: '黑色齐肩发' },
     { workStyle: '水墨国风' },
   );
   assert.equal(own.style, '水墨国风');
-  // 功能注释：三个字段都是字符串，且画风不混进主体、负面词不混进正向
   for (const k of ['style', 'subject', 'negative']) assert.equal(typeof def[k], 'string');
   assert.doesNotMatch(def.subject, /二次元写实漫/);
-  assert.match(mod.composePositivePrompt(def), /^二次元写实漫。/);
+  assert.doesNotMatch(mod.composePositivePrompt(def), /二次元写实漫/);
+  assert.match(mod.composePositivePrompt(def), /黑色齐肩发/);
   assert.doesNotMatch(mod.composePositivePrompt(def), /水印|畸形手指/);
+  assert.match(mod.ART_STYLE_PLACEHOLDER, /选填：可写画风/);
 });
-
 test('editorImagePrompts_人物主体只写外观_不混关系剧情小传_缺外观按性别年龄给脚手架', async () => {
   const mod = await import(pathToFileURL(join(romance, 'lib/editorImagePrompts.ts')).href);
   const withLook = mod.buildNpcAvatarPromptParts({
@@ -79,12 +80,13 @@ test('editorImagePrompts_地点只用画面描述_不用进入叙事desc_大地�
   assert.equal(mod.buildLocationScenePromptParts({}).subject, '');
   assert.equal(mod.buildLocationScenePrompt({}), '');
 
-  const map = mod.buildWorldMapPromptParts({ name: '主地图', places: ['雾色旅馆', '老码头', ''] });
-  assert.match(map.subject, /主地图/);
-  assert.match(map.subject, /雾色旅馆/);
-  assert.match(map.subject, /老码头/);
+  const map = mod.buildWorldMapPromptParts({ name: '皇宫', places: ['寝宫', '御花园', ''] });
+  assert.match(map.subject, /皇宫/);
+  assert.match(map.subject, /寝宫/);
+  assert.match(map.subject, /御花园/);
   assert.match(map.subject, /9:16/);
-  assert.equal(mod.buildWorldMapPromptParts({}).subject, '');
+  // 功能注释：空输入仍给出「按设定补分区」脚手架，不再返回空串
+  assert.match(mod.buildWorldMapPromptParts({}).subject, /按设定补分区/);
 
   const cover = mod.buildWorkCoverPromptParts({
     title: '雾色旅馆',
@@ -142,9 +144,9 @@ test('editorImagePrompts_请求尺寸与提示词构图一致_头像方图_场�
   }
 });
 
-test('editorImagePrompts_作品级画风负面词存取_画风等于默认不存_基线负面词不存', async () => {
+test('editorImagePrompts_作品级画风负面词存取_空画风不存_基线负面词不存', async () => {
   const mod = await import(pathToFileURL(join(romance, 'lib/editorImagePrompts.ts')).href);
-  assert.equal(mod.workImageGenFromParts({ style: '二次元写实漫', negative: '文字，水印，UI，人物特写' }), undefined);
+  assert.equal(mod.workImageGenFromParts({ style: '', negative: '文字，水印，UI，人物特写' }), undefined);
   assert.deepEqual(mod.workImageGenFromParts({ style: '水墨国风', negative: '文字，水印，现代建筑' }), {
     style: '水墨国风',
     negative: '现代建筑',
@@ -156,9 +158,9 @@ test('editorImagePrompts_作品级画风负面词存取_画风等于默认不存
   const settings = mod.workImageSettingsOf({ style: '像素风', negative: '模糊' }, '血腥');
   assert.deepEqual(settings, { workStyle: '像素风', workNegative: '模糊', forbidGen: '血腥' });
   assert.equal(mod.buildWorldMapPromptParts({ name: 'M' }, settings).style, '像素风');
-  // 功能注释：脏数据（对象）不得变成 [object Object]，回落默认画风
+  // 功能注释：脏数据（对象）不得变成 [object Object]，画风留空
   const dirty = mod.workImageSettingsOf({ style: { a: 1 }, negative: 3 });
-  assert.equal(mod.buildWorldMapPromptParts({ name: 'M' }, dirty).style, '二次元写实漫');
+  assert.equal(mod.buildWorldMapPromptParts({ name: 'M' }, dirty).style, '');
 });
 
 test('世界生成_不调用任何生图接口_也不在结尾批量生图', () => {

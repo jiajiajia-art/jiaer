@@ -41,5 +41,5 @@ test('基础页_头像合并单块_建角在地点之上', () => {
 
   assert.match(wizard, /id:\s*"avatars",\s*group:\s*"① 基础",\s*name:\s*"头像"/);
   assert.match(wizard, /id:\s*"creation",\s*group:\s*"① 基础"/);
-  assert.match(panel, /hint: "作品封面、名称与简介、剧本基调、时间与推进、头像、建角、人物线路、地点、已添加的玩法"/);
+  assert.match(panel, /hint: "作品封面、名称与简介、剧本基调、时间与推进、头像、建角、人物线路、地点、音乐、已添加的玩法"/);
 });

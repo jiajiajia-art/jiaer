@@ -266,7 +266,7 @@ export default function AiImageGen({
               {/* 功能注释：三层提示词——画风（整部统一）/ 本张主体 / 负面词；开始生成前可逐项改 */}
               {(
                 [
-                  ["画风 · 整部作品统一", style, setStyle, 2, "如：二次元写实漫"],
+                  ["画风 · 整部作品统一", style, setStyle, 2, "选填：可写画风；留空则按主体与设定生成"],
                   ["本张主体 · 只写这一张", subject, setSubject, 4, placeholder ?? "这一张画什么：主体、构图……"],
                   ["负面词 · 不想出现的内容", negative, setNegative, 2, "如：文字，水印，畸形手指"],
                 ] as const

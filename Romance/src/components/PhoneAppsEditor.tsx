@@ -4,10 +4,17 @@
  */
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import type { PhoneAppDef } from "../mods/types";
+import toast from "react-hot-toast";
 import {
   compactInstalledAppIds,
   installedPlatformAppIds,
+  officialAppThemeCodes,
 } from "../lib/phoneAppsConfig";
+import {
+  THEME_MISMATCH_INSTALL_WARN,
+  isItemThemeMismatch,
+  type WorldThemeContext,
+} from "../lib/officialThemeApplicability";
 import {
   listPublishedPlatformApps,
   resolvePlatformAppIconUrl,
@@ -25,6 +32,11 @@ type Props = {
   wallpaper?: string;
   onChange: (next: PhoneAppDef[] | undefined) => void;
   onWallpaperChange: (next: string | undefined) => void;
+  /** 功能注释：C0.2 当前世界题材；安装应用时与应用适用题材不一致则提示一次（不拦截） */
+  worldThemeTagId?: number | null;
+  worldThemeLabel?: string | null;
+  worldThemeCode?: string | null;
+  enabledThemeTags?: WorldThemeContext["enabledThemeTags"];
 };
 
 const DOCK_APPS = ["call", "sms", "wechat", "settings"] as const;
@@ -86,7 +98,10 @@ function BatteryGlyph() {
   );
 }
 
-export default function PhoneAppsEditor({ value, wallpaper, onChange, onWallpaperChange }: Props) {
+export default function PhoneAppsEditor({
+  value, wallpaper, onChange, onWallpaperChange,
+  worldThemeTagId, worldThemeLabel, worldThemeCode, enabledThemeTags,
+}: Props) {
   const installedIds = useMemo(() => installedPlatformAppIds(value), [value]);
   const installedSet = useMemo(() => new Set(installedIds), [installedIds]);
   const [catalog, setCatalog] = useState<PlatformApp[]>([]);
@@ -118,6 +133,13 @@ export default function PhoneAppsEditor({ value, wallpaper, onChange, onWallpape
 
   const install = (appId: string) => {
     if (installedSet.has(appId)) return;
+    // 功能注释：C0.2 安装前题材提示——平台表带适用题材 id 时优先用；否则按官方应用语义 code 兜底；只警告不阻断
+    const app = byId.get(appId);
+    const mismatch = isItemThemeMismatch(
+      { applicableThemeTagIds: app?.applicableThemeTagIds, applicableThemeCodes: officialAppThemeCodes(appId) },
+      { worldThemeTagId, worldThemeLabel, worldThemeCode, enabledThemeTags },
+    );
+    if (mismatch) toast(THEME_MISMATCH_INSTALL_WARN, { id: "theme-mismatch-install", duration: 4500 });
     onChange(compactInstalledAppIds([...installedIds, appId]));
   };
 

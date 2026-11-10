@@ -20,7 +20,8 @@ import {
 } from "./worldGenWizard.ts";
 import { worldGenAiPolishPrompt, worldGenForbidPrompt } from "./worldGenSettingField.ts";
 import { platformNpcTagsPromptLine } from "./npcTags.ts";
-import { improperPersonNameReason, sanitizeNpcFactionId } from "./personName.ts";
+import { healNpcListNames, improperPersonNameReason, sanitizeNpcFactionId } from "./personName.ts";
+import { healMissingContentIds } from "./modSaveHeal.ts";
 import {
   applyWorldGenCrossRefs,
   softValidateWorldGenCrossRefs,
@@ -786,6 +787,18 @@ export function sanitizeWorldGenAiPatch(
 /**
  * 功能注释：大类合并请求的补丁清洗——本批任一细项拥有的扩展键都保留，其它作者保护区仍剥离。
  */
+/**
+ * 功能注释：AI 偶发把「夜班房客」等身份写进 name；自愈成真名并把原串挪到 role，
+ * 避免人物软校验失败连带整批地点/事件/剧情全部失败。
+ */
+export function healWorldGenNpcNamesInPatch(patch: Record<string, unknown>): Record<string, unknown> {
+  if (!patch || typeof patch !== "object" || Array.isArray(patch)) return patch;
+  if (!Array.isArray(patch.npcs) || !patch.npcs.length) return patch;
+  const { npcs, healedCount } = healNpcListNames(patch.npcs);
+  if (!healedCount) return patch;
+  return { ...patch, npcs };
+}
+
 export function sanitizeWorldGenBatchPatch(
   stepIds: readonly string[],
   patch: Record<string, unknown>,
@@ -793,7 +806,11 @@ export function sanitizeWorldGenBatchPatch(
   refCtx?: WorldGenRefContext,
 ): Record<string, unknown> {
   const ids = stepIds.map((id) => String(id || "").trim()).filter(Boolean);
-  const shaped = sanitizeWorldGenPatchShape(patch);
+  let shaped = sanitizeWorldGenPatchShape(patch);
+  // 功能注释：人物批先自愈身份占位名，再走跨引用与软校验
+  if (ids.includes("npcs")) {
+    shaped = healWorldGenNpcNamesInPatch(shaped);
+  }
   // 功能注释：跨批 id 契约（去 locations / 势力 / 人物 home 与关系 / 年龄日期 / 线路 / 世界书挂靠 / 事件与主线引用）
   const out = applyWorldGenCrossRefs(shaped, ids, refCtx);
   const allowed = new Set<string>();
@@ -1088,7 +1105,7 @@ export function progressHasStaleChunkFailure(p: WorldGenProgress | null | undefi
 
 /** 功能注释：各编辑器模组对应的 content 字段提示，供 AI 只产出相关键，避免覆盖未勾选模组 */
 const MODULE_FIELD_HINT: Record<string, string> = {
-  "hub:rules": "worldRules[]、gameRules[]",
+  "hub:rules": "worldRules[{id,name,options?}]、gameRules[{id,name,branches?}]：每条必须带稳定非空 id（小写英文/数字/-_），禁止只写文案不写 id",
   "hub:book": "worldBook[{id,title,keywords,content,enabled}]：第1次只写标题/关键词/正文，不要写 bindRooms/bindNpcs（挂靠在人物地点写出后再填）；条数见瘦身配额；正文宜短；剧本基调只写在同批 prompt.scriptTone，勿再写 worldIntro",
   "hub:paths": "creation.paths[]、identities[]：线路条数见配额；第1次生成写出线路骨架（线路只写 id/name/tag/blurb/about；hero 与 room 在第2次人物地点写出后回填，对不上人物的线路会被删；若设定有组织/势力，同批写 creation.startFactions[{id,name}] 作为唯一势力名单，设定没有组织就不要写势力名单；不要写 pathTitle、pathIntro、formTitle、formIntro、identityLabel、fixedAge、parentNote、seedDescription 或 paths[].formIntro；这些留空，建角页用游戏默认句）",
   travelTime: "startDate（必填，YYYY.MM.DD，须贴合本世界观时代，如现代都市 2019.09.01、民国 1935.03.12；禁止留空；缺日期时服务端会本地兜底）、travel（apPerTurn / advanceUnit / advanceDays；换地点扣点与日程叙事字数内置，勿写 apPerMove / advanceWords / advanceStory / play.ageAuto）",
@@ -1101,7 +1118,7 @@ const MODULE_FIELD_HINT: Record<string, string> = {
   platformAudioRefs: "platformAudioRefs[]（只写 platform: 前缀的平台曲目 id，可空，勿编造；不要写入 bgm 或 audioRefs）",
   avatars: "avatars{pools?,publicRandom?,match?}",
   creation: `customAttrs[]：建议约 2–4 条数值属性（参考 ${WORLD_GEN_CUSTOM_ATTRS_COUNT}），每条必有明确 label（禁止「未命名」/空名）、desc、id/min/max/init；条数可少可多，禁止为凑数补空壳；勿单独生成 fameTiers；不要预填空壳属性。creation.fields / creation.builtin（系统字段固定为姓名/性别/年龄/生日，只能改显示名；creation.fields 仅按作品明确需要生成）`,
-  npcs: `npcs[{id,name,role,kind,home,roam,bio,appearancePrompt?,gender,age,tags?,relation?,metStart?,wxStart?,factionId?,pathId?}]：建议约 2–6 名（参考 ${WORLD_GEN_NPCS_COUNT}）；每名必须有名有姓的 name、gender、age、bio；另写 appearancePrompt（形象提示词：性别年龄感/发型五官服装，不含关系剧情）；home 必须是同批 rooms 的 id（写成地名时按名对回 id，对不上整批重试，禁止清空 home）；设定里到处走动才标 roam 并列出可出现地点 id；factionId 只能填本作品势力名单 id，无组织则省略；pathId 填该人物对应的第1次线路 id（线路主角）；age 为单个整数且须与开局日期同一时代；设定无人物关系时不要写 metStart/wxStart；不要写 summary；不要写 works/代表作除非设定明确是演艺圈`,
+  npcs: `npcs[{id,name,role,kind,home,roam,bio,appearancePrompt?,gender,age,tags?,relation?,metStart?,wxStart?,factionId?,pathId?}]：建议约 2–6 名（参考 ${WORLD_GEN_NPCS_COUNT}）；每名必须有名有姓的 name（如沈晚晴/林晚舟，禁止「夜班房客」「店员」「厨娘」等身份占位当姓名——身份写到 role 或 bio）、gender、age、bio；另写 appearancePrompt（形象提示词：性别年龄感/发型五官服装，不含关系剧情）；home 必须是同批 rooms 的 id（写成地名时按名对回 id，对不上整批重试，禁止清空 home）；设定里到处走动才标 roam 并列出可出现地点 id；factionId 只能填本作品势力名单 id，无组织则省略；pathId 填该人物对应的第1次线路 id（线路主角）；age 为单个整数且须与开局日期同一时代；设定无人物关系时不要写 metStart/wxStart；不要写 summary；不要写 works/代表作除非设定明确是演艺圈`,
   relations: "relations{confess?,wedding?,bridge?:{off?,perDay?},partnerPerks?}（须已添加关系玩法包；勿写介绍认识/三人同行/撮合/劝和/挑拨等 bridge.modes 预置）",
   contacts: "contacts{stages:[{id,label,min,tone?}]}（嵌人物上方；禁止写 metrics/卡片数值；禁止 groups/orgs/stage.groups）",
   startResources: "startMoney（非负数字）、moneyLabel（货币名称，如 元/灵石/星币，必填，开局页与局内文案共用）",
@@ -1173,6 +1190,8 @@ export function mergeModContent(base: ModContent, patch: Record<string, unknown>
   // 功能注释：分模组生成易出现 startRoom 与 rooms 不同步，合并后立即纠偏；空场景描述按地名补全
   healModRoomRefs(merged);
   ensureRoomSceneDescs(merged.rooms);
+  // 功能注释：AI 常漏写 worldRules/gameRules 等条目 id；合并后立刻补编号，工坊/编辑器不再红字「缺少 id」
+  healMissingContentIds(merged);
   return merged;
 }
 

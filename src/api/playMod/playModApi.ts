@@ -46,6 +46,8 @@ export type PlayModRecord = {
   origin: string;
   authorUserId: string;
   payload?: Record<string, unknown>;
+  /** 功能注释：C0.2 适用题材 id（后端 payload.applicableThemeTagIds）；运营改绑后以此为准，空=沿用前端种子语义 */
+  applicableThemeTagIds?: number[];
   officialRecommend: boolean;
   listedAt?: string;
   updatedAt?: string;
@@ -109,6 +111,15 @@ export const playModAdminApi = {
       method: 'PUT',
       headers: authHeaders(token),
       body: JSON.stringify({ officialRecommend }),
+    });
+    return parseJson(res);
+  },
+  /** 功能注释：运营改绑玩法包适用题材（至少 1 个） */
+  setApplicableThemes: async (token: string, id: string, themeTagIds: number[]) => {
+    const res = await fetch(`${HOST_ADDRESS}/api/admin/components/${encodeURIComponent(id)}/applicable-themes`, {
+      method: 'PUT',
+      headers: authHeaders(token),
+      body: JSON.stringify({ themeTagIds }),
     });
     return parseJson(res);
   },
@@ -189,11 +200,22 @@ export const playModStoreApi = {
     });
     return parseJson(res);
   },
-  submitAiDraft: async (token: string, draftId: string) => {
+  /** 功能注释：提审创作者玩法草稿；C0.2 要求带 ≥1 个适用题材 id */
+  submitAiDraft: async (token: string, draftId: string, applicableThemeTagIds: number[] = []) => {
     const res = await fetch(`${HOST_ADDRESS}/api/components/ai-drafts/${encodeURIComponent(draftId)}/submit`, {
       method: 'POST',
       headers: authHeaders(token),
-      body: '{}',
+      body: JSON.stringify({ applicableThemeTagIds }),
+    });
+    return parseJson(res);
+  },
+  /** 功能注释：C2.3 创作者本人的组件列表（草稿/私有测试/审核中/上架/下架）；后端只按登录用户过滤，非运营全量 */
+  listMine: async (token: string, kind?: 'gameplay' | 'phone_app') => {
+    const q = new URLSearchParams();
+    if (kind) q.set('kind', kind);
+    const qs = q.toString();
+    const res = await fetch(`${HOST_ADDRESS}/api/components/mine${qs ? `?${qs}` : ''}`, {
+      headers: authHeaders(token, false),
     });
     return parseJson(res);
   },

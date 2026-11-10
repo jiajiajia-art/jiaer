@@ -11,6 +11,7 @@ import SlimePet from "./studio/Slime";
 import Studio, { PlayerApps } from "./studio/Studio";
 import { takeStudioRequest } from "./studio/review";
 import { setStudioOpen, usePetMode } from "./studio/pet";
+import { pickTodayFeaturedIds } from "../../lib/appStoreToday";
 
 export type StoreItem = {
   id: string;
@@ -116,7 +117,7 @@ export function AppStoreApp({ onBack, catalog, installed, onInstall, onOpen, ico
         <p className="truncate text-[15px] font-semibold text-ink">{item.label}</p>
         <p className="truncate text-[12.5px] text-ink-soft">{item.tagline}</p>
         <p className="mt-0.5 flex items-center gap-1 text-[11px] text-ink-soft/80">
-          {item.cat} · {item.authorName || item.size}
+          {[item.cat, item.authorName].filter(Boolean).join(" · ")}
         </p>
       </div>
       <span className="shrink-0"><Pill id={item.id} kind={item.kind} /></span>
@@ -135,34 +136,14 @@ export function AppStoreApp({ onBack, catalog, installed, onInstall, onOpen, ico
       {/* 内容区 */}
       <div className="flex-1 overflow-y-auto pb-20">
         {tab === "today" && (
-          <div>
-            <StoreHeader title="今天" kicker={storeNow.toLocaleDateString("zh-CN", { month: "long", day: "numeric", weekday: "long" })} onClose={onBack} />
-            {/* 编辑精选大卡 */}
-            <div className="space-y-4 px-4 pt-2">
-              <PlayerApps variant="today" />
-              {catalog.map((item) => (
-                <div key={item.id} role="button" tabIndex={0} onClick={() => setDetail(item)} className="cursor-pointer transition active:scale-[0.98] overflow-hidden rounded-[18px] bg-white shadow-[0_2px_20px_rgba(0,0,0,0.1)] ring-1 ring-black/[0.04]">
-                  <div className="relative h-52">
-                    <img src={(item.cover) || undefined} alt={item.label} className="h-full w-full object-cover" loading="lazy" />
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-transparent to-transparent" />
-                    <div className="absolute left-4 top-3 text-white drop-shadow">
-                      <p className="text-[12px] font-bold uppercase tracking-widest text-white/85">{item.kicker}</p>
-                      <p className="mt-0.5 max-w-[70%] text-[24px] font-extrabold leading-tight">{item.desc}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 px-3.5 py-3">
-                    <span className="ios-icon block h-14 w-14 shrink-0 overflow-hidden">{item.icon}</span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[15px] font-bold text-ink">{item.label}</p>
-                      <p className="truncate text-[12.5px] text-ink-soft">{item.tagline}</p>
-                    </div>
-                    <Pill id={item.id} kind={item.kind} />
-                  </div>
-                  <p className="border-t border-black/[0.06] px-3.5 py-2.5 text-[13px] leading-relaxed text-ink-soft">{item.story}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+          <TodayFeatured
+            catalog={catalog}
+            installed={installed}
+            storeNow={storeNow}
+            onBack={onBack}
+            onOpen={(item) => setDetail(item)}
+            Pill={Pill}
+          />
         )}
 
         {tab === "apps" && (
@@ -245,6 +226,72 @@ export function AppStoreApp({ onBack, catalog, installed, onInstall, onOpen, ico
     </div>
   );
 }
+/**
+ * 功能注释：「今天」精选——按生涯日种子从「未装且非 widget」抽最多 3 张；空态不回填全目录。
+ */
+function TodayFeatured({
+  catalog,
+  installed,
+  storeNow,
+  onBack,
+  onOpen,
+  Pill,
+}: {
+  catalog: StoreItem[];
+  installed: Set<string>;
+  storeNow: Date;
+  onBack: () => void;
+  onOpen: (item: StoreItem) => void;
+  Pill: (props: { id: string; kind?: "app" | "widget" }) => ReactNode;
+}) {
+  const { game } = useGame();
+  const careerDay = Number(game?.sim?.day ?? 0) || 0;
+  const featuredIds = useMemo(
+    () => pickTodayFeaturedIds(catalog, installed, careerDay, 3),
+    [catalog, installed, careerDay],
+  );
+  const featured = featuredIds
+    .map((id) => catalog.find((c) => c.id === id))
+    .filter((x): x is StoreItem => !!x);
+
+  return (
+    <div>
+      <StoreHeader title="今天" kicker={storeNow.toLocaleDateString("zh-CN", { month: "long", day: "numeric", weekday: "long" })} onClose={onBack} />
+      <div className="space-y-4 px-4 pt-2">
+        <PlayerApps variant="today" />
+        {featured.length === 0 ? (
+          <p className="py-10 text-center text-[14px] text-ink-soft">今天没有新推荐</p>
+        ) : (
+          featured.map((item) => (
+            <div key={item.id} role="button" tabIndex={0} onClick={() => onOpen(item)} className="cursor-pointer transition active:scale-[0.98] overflow-hidden rounded-[18px] bg-white shadow-[0_2px_20px_rgba(0,0,0,0.1)] ring-1 ring-black/[0.04]">
+              <div className="relative h-52">
+                {item.cover ? (
+                  <img src={item.cover} alt={item.label} className="h-full w-full object-cover" loading="lazy" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-[#f2f2f7] text-[48px] text-ink-soft/40">{item.icon}</div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-transparent to-transparent" />
+                <div className="absolute left-4 top-3 text-white drop-shadow">
+                  <p className="text-[12px] font-bold uppercase tracking-widest text-white/85">{item.label}</p>
+                  <p className="mt-0.5 max-w-[70%] text-[24px] font-extrabold leading-tight">{item.tagline || item.desc}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 px-3.5 py-3">
+                <span className="ios-icon block h-14 w-14 shrink-0 overflow-hidden">{item.icon}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[15px] font-bold text-ink">{item.label}</p>
+                  <p className="truncate text-[12.5px] text-ink-soft">{item.tagline}</p>
+                </div>
+                <Pill id={item.id} kind={item.kind} />
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* —— 应用商店顶部：大标题 + 灰色副标 + 右侧圆形关闭（四个 Tab 共用同一版式） —— */
 function StoreHeader({ title, kicker, onClose }: { title: string; kicker?: string; onClose: () => void }) {
   return (
@@ -663,36 +710,28 @@ export function WeatherApp({ onBack }: { onBack: () => void }) {
   );
 }
 
-/* —— 仿真 App Store 产品页（导航栏吸顶小图标 / 信息横条 / 新功能 / 预览 / 评分评论 / 隐私 / 信息 / 相关推荐） —— */
-/** 功能注释：应用详情只留图标、名称、「打开」与真实简介；隐私表 / 信息表 / 推荐列表均为占位，不再渲染 */
+/* —— 仿真 App Store 产品页 —— */
+/** 功能注释：详情只展示真实字段；删年龄/假语言/写死工作室名；无真实预览图不造假截图卡 */
 function AppDetail({ item: d, pill, onBack, backLabel }: { item: StoreItem; pill: ReactNode; onBack: () => void; backLabel: string }) {
   const [scrolled, setScrolled] = useState(false);
   const [more, setMore] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => { ref.current?.scrollTo({ top: 0 }); setMore(false); setScrolled(false); }, [d.id]);
-  const shots = [
-    { img: d.cover, title: d.desc, kicker: d.kicker, pos: "object-center" },
-    { img: d.cover, title: d.tagline, kicker: d.cat, pos: "object-left" },
-    { img: d.cover, title: "轻点一下，即刻开始", kicker: d.label, pos: "object-right" },
-  ];
-  const strip = [
-    { k: "年龄", v: "4+", sub: "岁" },
-    { k: "类别", v: d.cat.slice(0, 2), sub: d.cat },
-    { k: "开发者", v: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" /></svg>, sub: "STAR Studio" },
-    { k: "语言", v: "ZH", sub: "+ 1 种语言" },
-    { k: "大小", v: d.size.replace(/\s*MB/i, ""), sub: "MB" },
-  ];
-  const H = ({ t, link }: { t: string; link?: string }) => (
-    <div className="flex items-baseline justify-between px-4 pb-2 pt-5">
-      <p className="text-[21px] font-bold tracking-tight text-ink">{t}</p>
-      {link && <span className="text-[16px] text-[#0a84ff]">{link}</span>}
-    </div>
-  );
-  const Sep = () => <div className="mx-4 h-px bg-black/[0.1]" />;
+  const developer = String(d.authorName || "").trim();
+  const strip: Array<{ k: string; v: ReactNode; sub: string }> = [];
+  if (d.cat) strip.push({ k: "类别", v: d.cat, sub: "" });
+  if (developer) {
+    strip.push({
+      k: "开发者",
+      v: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" /></svg>,
+      sub: developer,
+    });
+  }
+  if (d.size && /\d/.test(d.size)) strip.push({ k: "大小", v: d.size.replace(/\s*MB/i, ""), sub: "MB" });
+  const hasCover = Boolean(String(d.cover || "").trim());
 
   return (
     <div className="relative flex h-full flex-col bg-white">
-      {/* 导航栏：滚过头部后显示居中小图标 + 右侧获取 */}
       <div className={`z-10 flex h-11 shrink-0 items-center justify-between px-2 transition-colors ${scrolled ? "border-b border-black/[0.08] bg-[#f9f9f9]/90 backdrop-blur" : "bg-white"}`}>
         <button onClick={onBack} className="flex items-center text-[17px] text-[#0a84ff]">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="m15 5-7 7 7 7" /></svg>
@@ -703,7 +742,6 @@ function AppDetail({ item: d, pill, onBack, backLabel }: { item: StoreItem; pill
       </div>
 
       <div ref={ref} onScroll={(e) => setScrolled(e.currentTarget.scrollTop > 120)} className="flex-1 overflow-y-auto pb-10">
-        {/* 头部：图标、名称、「打开」 */}
         <div className="flex gap-4 px-4 pt-1">
           <span className="ios-icon block h-[100px] w-[100px] shrink-0 overflow-hidden rounded-[26px] ring-1 ring-black/[0.06]">{d.icon}</span>
           <div className="flex min-w-0 flex-1 flex-col">
@@ -718,48 +756,48 @@ function AppDetail({ item: d, pill, onBack, backLabel }: { item: StoreItem; pill
           </div>
         </div>
 
-        {/* 信息横条 */}
-        <div className="mt-5 border-y border-black/[0.08]">
-          <div className="flex overflow-x-auto py-3 [scrollbar-width:none]">
-            {strip.map((x, i) => (
-              <div key={i} className={`flex w-[104px] shrink-0 flex-col items-center gap-1 px-2 text-center ${i ? "border-l border-black/[0.1]" : ""}`}>
-                <p className="w-full truncate text-[10px] font-semibold uppercase tracking-wide text-ink-soft/60">{x.k}</p>
-                <div className="flex h-6 items-center text-[20px] font-bold text-ink-soft/80">{x.v}</div>
-                <div className="w-full truncate text-[11px] text-ink-soft/60">{x.sub}</div>
-              </div>
-            ))}
+        {strip.length > 0 ? (
+          <div className="mt-5 border-y border-black/[0.08]">
+            <div className="flex overflow-x-auto py-3 [scrollbar-width:none]">
+              {strip.map((x, i) => (
+                <div key={x.k} className={`flex w-[104px] shrink-0 flex-col items-center gap-1 px-2 text-center ${i ? "border-l border-black/[0.1]" : ""}`}>
+                  <p className="w-full truncate text-[10px] font-semibold uppercase tracking-wide text-ink-soft/60">{x.k}</p>
+                  <div className="flex h-6 items-center text-[20px] font-bold text-ink-soft/80">{x.v}</div>
+                  {x.sub ? <div className="w-full truncate text-[11px] text-ink-soft/60">{x.sub}</div> : null}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        ) : null}
 
-        {/* 预览：竖版 iPhone 截图 */}
-        <H t="预览" />
-        <div className="flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-4 [scrollbar-width:none]">
-          {shots.map((sh, i) => (
-            <div key={i} className="relative aspect-[9/19.5] w-[58%] shrink-0 snap-start overflow-hidden rounded-[22px] bg-[#f2f2f7] ring-1 ring-black/[0.08]">
-              <div className="absolute inset-x-0 top-0 z-10 px-4 pt-5 text-center">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink-soft">{sh.kicker}</p>
-                <p className="mt-1 text-[16px] font-extrabold leading-snug text-ink">{sh.title}</p>
-              </div>
-              <div className="absolute inset-x-4 bottom-0 top-[28%] overflow-hidden rounded-t-[18px] border-[5px] border-b-0 border-[#1c1c1e] shadow-[0_10px_30px_-10px_rgba(0,0,0,0.5)]">
-                <img src={(sh.img) || undefined} alt="" className={`h-full w-full object-cover ${sh.pos}`} />
-                <span className="absolute left-1/2 top-1.5 h-3 w-12 -translate-x-1/2 rounded-full bg-[#1c1c1e]" />
+        {hasCover ? (
+          <>
+            <div className="flex items-baseline justify-between px-4 pb-2 pt-5">
+              <p className="text-[21px] font-bold tracking-tight text-ink">预览</p>
+            </div>
+            <div className="flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-4 [scrollbar-width:none]">
+              <div className="relative aspect-[9/19.5] w-[58%] shrink-0 snap-start overflow-hidden rounded-[22px] bg-[#f2f2f7] ring-1 ring-black/[0.08]">
+                <img src={d.cover} alt="" className="h-full w-full object-cover object-center" />
               </div>
             </div>
-          ))}
-        </div>
-        <p className="flex items-center gap-1.5 px-4 pt-3 text-[13px] text-ink-soft/70">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="7" y="2" width="10" height="20" rx="2.5" /></svg>
-          iPhone
-        </p>
-        <Sep />
+            <div className="mx-4 mt-4 h-px bg-black/[0.1]" />
+          </>
+        ) : null}
 
-        {/* 简介 */}
         <div className="px-4 pt-4 pb-6">
-          <p className={`whitespace-pre-line text-[14px] leading-relaxed text-ink ${more ? "" : "line-clamp-3"}`}>{`${d.story}\n\n${d.desc}——${d.tagline}。\n\n· 轻巧：安装包仅 ${d.size}\n· 安心：所有数据仅存于本机\n· 免费：没有任何 App 内购买`}</p>
-          {!more && <button onClick={() => setMore(true)} className="text-[14px] text-[#0a84ff]">更多</button>}
-          <div className="mt-3 flex items-center justify-between">
-            <div><p className="text-[14px] text-[#0a84ff]">STAR Studio</p><p className="text-[12px] text-ink-soft/70">开发者</p></div>
-          </div>
+          <p className={`whitespace-pre-line text-[14px] leading-relaxed text-ink ${more ? "" : "line-clamp-3"}`}>
+            {[d.story, d.desc, d.tagline].filter(Boolean).join("\n\n") || "暂无简介"}
+            {d.size && /\d/.test(d.size) ? `\n\n· 安装包约 ${d.size}` : ""}
+          </p>
+          {!more && <button type="button" onClick={() => setMore(true)} className="text-[14px] text-[#0a84ff]">更多</button>}
+          {developer ? (
+            <div className="mt-3 flex items-center justify-between">
+              <div>
+                <p className="text-[14px] text-[#0a84ff]">{developer}</p>
+                <p className="text-[12px] text-ink-soft/70">开发者</p>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

@@ -33,6 +33,11 @@ export type ModManifest = {
   deps?: ModDep[]; // 带版本要求的依赖；与 dependencies 合并校验
   nativeDeps?: NativeDep[]; // 依赖的原生组件（关闭时阻断启用）
   origin?: ModOrigin; // 安装来源：用于增量更新判断「作者二次修改」
+  /* —— 世界题材（由宿主 / 发布流程写入，可缺省）：安装玩法的题材提示与通讯 App 换皮读这里 —— */
+  themeTagId?: number | null; // 平台题材 id
+  themeLabel?: string; // 题材名，如「现代都市」「古代仙侠」
+  themeCode?: string; // 题材 code
+  commsSkin?: string; // 创作者显式覆盖通讯皮肤：modern | letter
 };
 
 export type ModCategory = "template" | "world" | "feature";
@@ -265,7 +270,7 @@ export type ModContent = ContentSlots & {
   rooms?: Record<string, RoomContent>; // 地图 / 房间
   /** 功能注释：大地图列表；每张下挂一棵地点树（rooms[].mapId） */
   worldMaps?: import("../lib/worldMaps").WorldMapDef[];
-  /** 功能注释：作品级生图设置：整部统一画风（空=默认「二次元写实漫」）与负面词；人物/地点/大地图/封面生图共用 */
+  /** 功能注释：作品级生图设置：整部统一画风（可空，禁止常驻二次元默认句）与负面词；人物/地点/大地图/封面生图共用 */
   imageGen?: { style?: string; negative?: string };
   startRoom?: string;
   locations?: MapLocation[]; // 地点名录（地图标签 / 功能说明）；缺省由 rooms[].name 推导

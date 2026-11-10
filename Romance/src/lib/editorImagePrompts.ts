@@ -1,6 +1,6 @@
 /**
  * 功能注释：编辑器四处「生图」共用提示词拼装（三层：画风 / 主体 / 负面词，仿 SillyTavern）。
- * - style：整部作品只有一个画风；创作者填了就用创作者的，否则 DEFAULT_ART_STYLE。
+ * - style：整部作品只有一个画风；只来自创作者填写或本作品推断；禁止常驻「二次元写实漫」。
  * - subject：只写「这一张」的主体（人物外观 / 地点空间 / 地图地点 / 封面氛围+主角外观），不混关系与剧情。
  * - negative：作品级负面词 + 世界生成禁止清单 forbidGen，单独字段，不塞进正向提示词。
  * 实际请求仍走 platformImageGen（平台 ggb / 个人兜底）；不另起网关。
@@ -8,7 +8,7 @@
 import { SCENE_PORTRAIT_GEN_SIZE } from "./scenePortrait.ts";
 
 export type EditorImagePromptParts = {
-  /** 作品画风（整部统一） */
+  /** 作品画风（整部统一）；可空 */
   style: string;
   /** 这一张的主体描述 */
   subject: string;
@@ -16,8 +16,14 @@ export type EditorImagePromptParts = {
   negative: string;
 };
 
-/** 功能注释：作品没设画风时的默认画风 */
-export const DEFAULT_ART_STYLE = "二次元写实漫";
+/**
+ * 功能注释：历史常量保留导出供旧引用识别，但 resolveArtStyle 不再回落此句。
+ * 禁止在预填 / 兜底里常驻「二次元写实漫」。
+ */
+export const DEFAULT_ART_STYLE = "";
+
+/** 功能注释：画风输入框占位；选填，留空则按主体与设定生成 */
+export const ART_STYLE_PLACEHOLDER = "选填：可写画风；留空则按主体与设定生成";
 
 /** 功能注释：人物头像为方图；地点 / 大地图 / 封面为 9:16 竖图——请求 size 与提示词构图一致 */
 export const NPC_AVATAR_GEN_SIZE = "1024x1024";
@@ -28,7 +34,7 @@ export const WORK_COVER_GEN_SIZE = SCENE_PORTRAIT_GEN_SIZE;
 /** 功能注释：各类图的构图收尾句；与上面的请求尺寸一一对应 */
 const FRAMING_AVATAR = "方形 1:1 构图，半身或胸像，面部清晰";
 const FRAMING_SCENE = "竖屏 9:16 构图，场景背景插画";
-const FRAMING_MAP = "竖屏 9:16 构图，游戏大地图插画，地点可辨";
+const FRAMING_MAP = "竖屏 9:16 竖向区域图，地点可辨";
 const FRAMING_COVER = "竖屏 9:16 构图，游戏封面插画，有氛围与主体";
 
 /** 功能注释：各类图固有的负面基线（原先写在正向里的「不要文字/水印/UI」挪到这里） */
@@ -47,10 +53,14 @@ function joinParts(parts: string[], sep = "，"): string {
   return parts.map((p) => p.trim()).filter(Boolean).join(sep);
 }
 
-/** 功能注释：画风——创作者填了就用创作者的；留空回落默认「二次元写实漫」 */
-export function resolveArtStyle(workStyle?: string): string {
+/**
+ * 功能注释：画风——创作者填了就用；也可传 inferredFromSetting 一句短描述。
+ * 都没有则留空，禁止偷偷塞平台默认二次元句。
+ */
+export function resolveArtStyle(workStyle?: string, inferredFromSetting?: string): string {
   const t = clip(workStyle, 80);
-  return t || DEFAULT_ART_STYLE;
+  if (t) return t;
+  return clip(inferredFromSetting, 80);
 }
 
 /** 功能注释：负面词去重合并（作品级 + 禁止生成清单 + 本类图基线），保持顺序 */
@@ -152,20 +162,21 @@ export function buildLocationScenePromptParts(
   return makeParts(settings, subject, BASE_NEGATIVE_SCENE);
 }
 
-/** 功能注释：大地图三层——地图名 + 包含的地点名 */
+/** 功能注释：大地图三层——区域名 + 地点列表 + 竖向区域图；地点空时写「按设定补分区」 */
 export function buildWorldMapPromptParts(
   m: { name?: string; places?: string[]; desc?: string },
   settings: WorkImageStyleSettings = {},
 ): EditorImagePromptParts {
-  const name = clip(m.name, 60);
+  const rawName = clip(m.name, 60);
+  const name = rawName && rawName !== "主地图" ? rawName : rawName || "";
   const places = (m.places ?? []).map((p) => clip(p, 20)).filter(Boolean).slice(0, 12);
   const desc = clip(m.desc, 160);
   const body = joinParts([
-    name ? `地图「${name}」` : "",
-    places.length ? `包含地点：${places.join("、")}` : "",
+    name ? `区域「${name}」` : "区域图",
+    places.length ? `包含地点：${places.join("、")}` : "按设定补分区",
     desc,
   ]);
-  const subject = body ? `${body}。${FRAMING_MAP}` : "";
+  const subject = `${body}。${FRAMING_MAP}`;
   return makeParts(settings, subject, BASE_NEGATIVE_MAP);
 }
 
@@ -276,7 +287,7 @@ const ALL_BASE_NEGATIVE = mergeNegativePrompt(
 
 /**
  * 功能注释：把弹窗里改过的画风 / 负面词收成可存入作品的形态：
- * 画风等于默认则不存（留空=跟默认）；负面词剔除各类图固有基线，只存创作者自己加的。
+ * 画风有内容才存；负面词剔除各类图固有基线，只存创作者自己加的。
  */
 export function workImageGenFromParts(
   parts: Pick<EditorImagePromptParts, "style" | "negative">,
@@ -291,7 +302,7 @@ export function workImageGenFromParts(
     .filter((x) => x && !baseSet.has(x.toLowerCase()))
     .join("，");
   const out: { style?: string; negative?: string } = {};
-  if (style && style !== DEFAULT_ART_STYLE) out.style = style;
+  if (style) out.style = style;
   if (extra) out.negative = extra;
   return Object.keys(out).length ? out : undefined;
 }

@@ -5,9 +5,23 @@ import { friendlyAIError } from "../lib/aiError";
 import { loadConfig } from "../lib/store";
 import { exportModJson, importModJson, modTemplate, useMods, validateMod } from "../mods/registry";
 import type { Mod, ModContent } from "../mods/types";
+import { healModBeforeSave } from "../lib/modSaveHeal";
+import { healNpcListNames } from "../lib/personName";
+import { assessAuthorPreview, requestAuthorPreview } from "../lib/authorPreview";
 import { useConfirm } from "./EditorKit";
 import { IconCheck, IconSpark, StatusMark } from "../lib/icons";
 import { PLAY_STEP_KEY, WORLD_STEP_KEY, stepDoneFlag } from "../lib/modWorkshopSteps";
+
+/** 功能注释：对话合并后立刻补缺 id / 身份占位姓名，避免顶栏长期红字「缺少 id」且保存按钮灰掉 */
+function healWorkshopDraft(mod: Mod): Mod {
+  const next: Mod = { ...mod, content: { ...(mod.content ?? {}) } as ModContent };
+  if (Array.isArray(next.content.npcs) && next.content.npcs.length) {
+    const { npcs } = healNpcListNames(next.content.npcs);
+    next.content.npcs = npcs as ModContent["npcs"];
+  }
+  healModBeforeSave(next.content);
+  return next;
+}
 
 /* ═══ AI 创意工坊 ═══
  * 创作者用对话描述世界观，AI 逐步产出「模组补丁」（manifest + 部分 content），
@@ -186,8 +200,9 @@ function playDiff(a: Mod, b: Mod): string {
   if (a.name !== b.name) parts.unshift(`更名「${b.name}」`);
   return parts.join(" · ") || "细节调整";
 }
-const blank = (mode: Mode = "world", base = "ent"): Mod => mode === "play"
-  ? { id: `ai-${Date.now().toString(36)}`, name: "新的玩法 Mod", version: "0.1.0", author: "", description: "", kind: "addon", slotMerge: "merge", dependencies: [base], content: {} }
+/** 功能注释：玩法空白底默认无依赖；禁止再绑死已删的娱乐圈·星光2005（ent） */
+const blank = (mode: Mode = "world", base = ""): Mod => mode === "play"
+  ? { id: `ai-${Date.now().toString(36)}`, name: "新的玩法 Mod", version: "0.1.0", author: "", description: "", kind: "addon", slotMerge: "merge", dependencies: base ? [base] : [], content: {} }
   : { id: `ai-${Date.now().toString(36)}`, name: "新的世界观", version: "0.1.0", author: "", description: "", kind: "world", dependencies: [], content: {} };
 
 /* 玩法 Mod 的进度统计（对应 PLAY_STEPS） */
@@ -199,7 +214,7 @@ function playTally(m: Mod): [string, number][] {
   ];
 }
 
-export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideModeSwitch }: {
+export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideModeSwitch, embedInShell, livePreview }: {
   onEdit: (m: Mod) => void;
   /** 功能注释：savedMod 供平台入口在保存后打 .kkmod；旧调用只收名称仍兼容 */
   onClose: (savedName?: string, savedMod?: Mod) => void;
@@ -207,21 +222,31 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
   /** 功能注释：平台「玩法 Mod」入口锁定玩法对话，禁止切到世界观 */
   forceMode?: Mode;
   hideModeSwitch?: boolean;
+  /** 功能注释：嵌在创作壳里时去掉「AI 创意工坊」套娃标题，默认空白叠加底 */
+  embedInShell?: boolean;
+  /** 功能注释：C2.2 每轮补丁成功后自动刷新真运行时预览；也可手动点「刷新预览」 */
+  livePreview?: boolean;
 }) {
   const { mods, applied } = useMods();
   const [confirm, confirmEl] = useConfirm();
+  // 功能注释：平台壳默认空白底；编辑器内工坊仍可用当前世界作参考，但不得回落 ent
+  const defaultPlayBase = embedInShell || forceMode === "play" ? "" : (applied.world && applied.world !== "ent" ? applied.world : "");
   // 对话修改指定模组：模式跟随模组类型，草稿就是该模组本身，不读写工坊的新建草稿
   const [mode, setMode] = useState<Mode>(() => {
     if (forceMode) return forceMode;
     if (target) return target.mod.kind === "addon" ? "play" : "world";
     return loadGlobal<Mode>("mod-workshop-mode", "world") === "play" ? "play" : "world";
   });
-  const [draft, setDraftRaw] = useState<Mod>(() => target?.mod ?? loadSaved(mode)?.draft ?? blank(mode, applied.world));
+  const [draft, setDraftRaw] = useState<Mod>(() => target?.mod ?? loadSaved(mode)?.draft ?? blank(mode, defaultPlayBase));
   const [turns, setTurns] = useState<Turn[]>(() => target
     ? [{ role: "assistant", text: `已载入「${target.mod.name}」。直接告诉我想怎么改，比如「加一个理智值属性，低于 20 触发失控事件」「打工收入减半、休息只减 3 点压力」「再加 5 个头衔」。改完可以保存，或回编辑器手调。` }]
     : loadSaved(mode)?.turns ?? []);
   const play = mode === "play";
-  const baseName = mods.find((x) => x.id === (draft.dependencies?.[0] ?? applied.world))?.name ?? "当前世界观";
+  const depId = draft.dependencies?.[0] || "";
+  const baseName = depId
+    ? (mods.find((x) => x.id === depId)?.name ?? depId)
+    : "空白叠加底";
+  const authorWorlds = mods.filter((x) => x.kind === "world" && !x.builtin && x.id !== "ent");
   // 切换模式：先存当前草稿，再载入另一模式的草稿
   const switchMode = (m: Mode) => {
     if (forceMode || hideModeSwitch) return;
@@ -229,7 +254,7 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
     saveGlobal(LS_OF[mode], { draft, turns: turns.slice(-30) });
     saveGlobal("mod-workshop-mode", m);
     const sv = loadSaved(m);
-    setMode(m); setHistory([]); setDraftRaw(sv?.draft ?? blank(m, applied.world)); setTurns(sv?.turns ?? []); setErr("");
+    setMode(m); setHistory([]); setDraftRaw(sv?.draft ?? blank(m, defaultPlayBase)); setTurns(sv?.turns ?? []); setErr("");
   };
   const [history, setHistory] = useState<Mod[]>([]);
   const setDraft = (d: Mod) => { setHistory((h) => [...h.slice(-19), draft]); setDraftRaw(d); };
@@ -245,7 +270,20 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
   const endRef = useRef<HTMLDivElement>(null);
   const ai = isConfigured(loadConfig());
   useEffect(() => { endRef.current?.scrollIntoView({ block: "end" }); }, [turns, busy]);
-  const problems = validateMod(draft);
+  // 功能注释：展示/保存门槛按自愈后的草稿算，与编辑器保存路径一致（worldRules 缺 id 不再拦）
+  const problems = validateMod(healWorkshopDraft(draft));
+
+  /** 功能注释：C2.2 用当前草稿挂游戏运行时；致命缺项只提示，不阻断对话 */
+  const pushLivePreview = (mod: Mod) => {
+    if (!livePreview && !embedInShell) return;
+    const healed = healWorkshopDraft(mod);
+    const { fatal, warnings } = assessAuthorPreview(healed);
+    if (fatal.length) {
+      setErr(`预览暂不可用：${fatal.slice(0, 2).join("；")}`);
+      return;
+    }
+    requestAuthorPreview(healed, warnings, window.scrollY || 0);
+  };
 
   const send = async (text: string) => {
     const t = text.trim();
@@ -275,8 +313,12 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
       const patched = applyPatch(draft, patch);
       // 玩法 Mod 始终保持叠加包 + 追加合并，避免 AI 改掉 kind
       const next = patched && patched !== "bad" && (target ? { ...patched, kind: target.mod.kind, id: target.mod.id } : play ? { ...patched, kind: "addon" as const, slotMerge: "merge" as const } : patched) || patched;
-      const ok = next && next !== "bad" ? next : null;
-      if (ok) setDraft(ok);
+      const ok = next && next !== "bad" ? healWorkshopDraft(next) : null;
+      if (ok) {
+        setDraft(ok);
+        // 功能注释：C2.2 每轮成功写入草稿后自动刷新真运行时预览
+        if (livePreview || embedInShell) pushLivePreview(ok);
+      }
       setTurns([...hist, { role: "assistant", text: raw, patch: !!ok, diff: ok ? (play ? playDiff(draft, ok) : diffOf(draft, ok)) : undefined, bad: next === "bad" }]);
     } catch (e) {
       setErr(friendlyAIError(e).text); setLastFailed(t); setTurns(turns);
@@ -284,7 +326,7 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
   };
 
   const loadBase = async (id: string) => {
-    if (!id) { setDraft(blank(mode, applied.world)); setTurns([]); return; }
+    if (!id) { setDraft(blank(mode, defaultPlayBase)); setTurns([]); return; }
     if (turns.length > 1 && !(await confirm("换起点会替换当前草稿（可撤销），继续吗？", { ok: "继续", danger: false }))) return;
     const src = JSON.parse(exportModJson(id)) as Mod;
     const own = !src.builtin && mods.some((m) => m.id === id && !m.builtin);
@@ -293,7 +335,8 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
   };
 
   const save = () => {
-    const r = importModJson(JSON.stringify({ ...draft, builtin: undefined }));
+    const healed = healWorkshopDraft({ ...draft, builtin: undefined });
+    const r = importModJson(JSON.stringify(healed));
     if (!r.ok) { setErr(r.errors.join("；")); return; }
     if (!target) removeGlobal(LS_OF[mode]);
     onClose(r.mod!.name, r.mod);
@@ -302,10 +345,12 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
   return (
     <div className="flex flex-col gap-2 text-ink">
       {confirmEl}
-      <div className="flex items-center justify-between gap-2">
-        <p className="flex min-w-0 items-center gap-1 truncate text-[14px] font-bold"><IconSpark size={16} className="shrink-0" />{target ? `对话修改「${target.mod.name}」` : "AI 创意工坊"}</p>
-        <button className={btn} onClick={() => onClose()}>返回</button>
-      </div>
+      {!embedInShell ? (
+        <div className="flex items-center justify-between gap-2">
+          <p className="flex min-w-0 items-center gap-1 truncate text-[14px] font-bold"><IconSpark size={16} className="shrink-0" />{target ? `对话修改「${target.mod.name}」` : "AI 创意工坊"}</p>
+          <button className={btn} onClick={() => onClose()}>返回</button>
+        </div>
+      ) : null}
       {!target && !hideModeSwitch && !forceMode && (
         <div className="inline-flex self-start rounded-full border border-line bg-paper-2 p-0.5 text-[12px] font-bold">
           {([["world", "世界观模组"], ["play", "玩法 Mod"]] as const).map(([k, l]) => (
@@ -313,13 +358,19 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
           ))}
         </div>
       )}
-      <p className="text-[12px] leading-relaxed text-ink-soft">
-        {target
-          ? `用聊天直接改这个${target.mod.kind === "addon" ? "叠加包" : "世界观"}：属性、头衔、课程打工、事件链、引擎规则、地点人物……每轮改动都能撤销。${target.isNew ? "这是内置模组的副本，保存后作为你的新模组。" : "保存会覆盖原模组。"}`
-          : play
-          ? `用聊天描述你想要的玩法改变：新属性、头衔、课程打工、事件链、规则开关、结局……AI 会生成叠加在「${baseName}」上的玩法 Mod，原有内容全部保留。保存后在创意工坊里打开它，开新局生效。`
-          : "用聊天描述你想要的世界，AI 会一步步生成模组草稿。满意后保存为你的模组，也可以转到编辑器里逐项手改。"}
-      </p>
+      {!embedInShell ? (
+        <p className="text-[12px] leading-relaxed text-ink-soft">
+          {target
+            ? `用聊天直接改这个${target.mod.kind === "addon" ? "叠加包" : "世界观"}：属性、头衔、课程打工、事件链、引擎规则、地点人物……每轮改动都能撤销。${target.isNew ? "这是内置模组的副本，保存后作为你的新模组。" : "保存会覆盖原模组。"}`
+            : play
+            ? `用聊天描述你想要的玩法改变：新属性、头衔、课程打工、事件链、规则开关、结局……AI 会生成叠加在「${baseName}」上的玩法 Mod，原有内容全部保留。保存后在创意工坊里打开它，开新局生效。`
+            : "用聊天描述你想要的世界，AI 会一步步生成模组草稿。满意后保存为你的模组，也可以转到编辑器里逐项手改。"}
+        </p>
+      ) : (
+        <p className="text-[12px] leading-relaxed text-ink-soft">
+          当前叠加底：{baseName}。可先选自己的世界草稿再聊，或保持空白底从零叠加。
+        </p>
+      )}
 
       {!ai && (
         <div className="rounded-2xl border border-gold/50 bg-gold/10 px-3 py-2.5 text-[12px]">需要接入 AI：请先在菜单「AI 配置」里接入模型，再回来使用工坊。</div>
@@ -337,21 +388,35 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
         <p className="flex items-center gap-2 text-[13px] font-bold"><span className="truncate">{draft.name}</span><span className="text-[10.5px] font-normal text-ink-soft">{draft.id}</span></p>
         {draft.description && <p className="mt-0.5 text-[11.5px] text-ink-soft">{draft.description}</p>}
         <p className="mt-1 text-[10.5px] text-ink-soft">{play ? playTally(draft).map(([k, v]) => `${k} ${v}`).join(" · ") : counts(draft)}</p>
-        {play && mods.some((x) => x.kind === "world") && (
+        {play && (
           <label className="mt-1.5 flex items-center gap-2 text-[11px] text-ink-soft">
             叠加在
-            <select className="min-w-0 flex-1 rounded-lg border border-line bg-paper px-2 py-0.5 text-[11.5px] text-ink outline-none focus:border-jade" value={draft.dependencies?.[0] ?? applied.world}
-              onChange={(e) => setDraft({ ...draft, dependencies: [e.target.value] })}>
-              {mods.filter((x) => x.kind === "world").map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+            <select
+              className="min-w-0 flex-1 rounded-lg border border-line bg-paper px-2 py-0.5 text-[11.5px] text-ink outline-none focus:border-jade"
+              value={depId}
+              onChange={(e) => {
+                const v = e.target.value;
+                setDraft({ ...draft, dependencies: v ? [v] : [] });
+              }}
+            >
+              <option value="">从零开始 / 空白叠加底</option>
+              {authorWorlds.length === 0 ? (
+                <option value="" disabled>先创作并保存一部游戏世界</option>
+              ) : (
+                authorWorlds.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)
+              )}
             </select>
           </label>
         )}
         {problems.length > 0 && <p className="mt-1 text-[11px] text-danger">待修正：{problems.slice(0, 3).join("；")}</p>}
         <div className="mt-2 flex flex-wrap gap-1.5">
           <button className={`${btn} !border-transparent bg-jade !text-white`} disabled={problems.length > 0} onClick={save}>{target && !target.isNew ? "保存修改" : "保存为我的模组"}</button>
-          <button className={btn} onClick={() => onEdit({ ...draft, builtin: undefined })}>在编辑器里手改</button>
+          {(livePreview || embedInShell) ? (
+            <button type="button" className={btn} disabled={busy} onClick={() => pushLivePreview(draft)}>刷新预览</button>
+          ) : null}
+          {!embedInShell ? <button className={btn} onClick={() => onEdit(healWorkshopDraft({ ...draft, builtin: undefined }))}>在编辑器里手改</button> : null}
           <button className={btn} disabled={!history.length || busy} onClick={undo}>撤销改动{history.length ? ` (${history.length})` : ""}</button>
-          {!target && <button className={btn} disabled={busy} onClick={async () => { if (await confirm("清空草稿和对话，重新开始？", { ok: "重新开始" })) { setDraft(blank(mode, applied.world)); setTurns([]); } }}>重新开始</button>}
+          {!target && <button className={btn} disabled={busy} onClick={async () => { if (await confirm("清空草稿和对话，重新开始？", { ok: "重新开始" })) { setDraft(blank(mode, defaultPlayBase)); setTurns([]); } }}>重新开始</button>}
         </div>
       </div>
 

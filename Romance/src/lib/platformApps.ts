@@ -23,6 +23,8 @@ export type PlatformApp = {
   status: PlatformAppStatus | string;
   createdAt?: string;
   updatedAt?: string;
+  /** 功能注释：后台标注的适用题材 id；缺省时按官方语义 code 兜底做安装提示 */
+  applicableThemeTagIds?: number[] | null;
 };
 
 export { OFFICIAL_PLATFORM_APP_IDS } from "./phoneAppsConfig";

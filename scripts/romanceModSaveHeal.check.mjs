@@ -44,6 +44,22 @@ test('healMissingContentIds_应为缺id的固定事件补编号', () => {
   assert.ok(notes.some((n) => n.includes('固定事件') && n.includes('第 1 条')));
 });
 
+test('healMissingContentIds_worldRules缺id应补编号', () => {
+  const content = {
+    worldRules: [
+      { name: '婚姻', options: [{ id: 'a', label: '一夫一妻' }] },
+      { id: 'wr_ok', name: '姓氏', options: [] },
+      { name: '生育' },
+    ],
+  };
+  assert.ok(needIdErrors(content).some((e) => e.includes('worldRules')));
+  const notes = heal.healMissingContentIds(content);
+  assert.equal(needIdErrors(content).filter((e) => e.includes('worldRules')).length, 0);
+  assert.ok(content.worldRules.every((e) => e && typeof e.id === 'string' && e.id.trim()));
+  assert.equal(content.worldRules[1].id, 'wr_ok');
+  assert.ok(notes.some((n) => n.includes('世界规则')));
+});
+
 test('healMissingContentIds_null与非对象项也要补成带id对象', () => {
   const content = {
     fixedEvents: [

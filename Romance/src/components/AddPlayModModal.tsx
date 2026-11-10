@@ -4,7 +4,7 @@
  * 玩法 Mod ≠ 本体（设定/建角/地点/人物/事件/档案不进目录）；也不含娱乐圈/校园等世界观骨架。
  * 功能注释：本弹窗只列玩法；手机应用只在应用商店管理，不在此出现分类/搜索/清单。
  */
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import {
   LOCAL_PLAY_MOD_CATALOG,
@@ -15,6 +15,11 @@ import {
   type LocalPlayModCatalogItem,
   type PlayModInstallConfig,
 } from "../mods/playModCatalog";
+import {
+  THEME_MISMATCH_INSTALL_WARN,
+  isItemThemeMismatch,
+  type WorldThemeContext,
+} from "../lib/officialThemeApplicability";
 
 type ShelfTab = "推荐" | "最新" | "最热" | "免费" | "已购买" | "已安装";
 
@@ -26,6 +31,13 @@ type Props = {
   onConfirmDeps?: (message: string) => Promise<boolean>;
   gameFileId?: string;
   token?: string | null;
+  /** 功能注释：C0.2 当前世界主题材 id；与玩法适用题材不一致时安装前提示一次（不拦截） */
+  worldThemeTagId?: number | null;
+  /** 功能注释：无 id 时用题材名 / code 走语义比对 */
+  worldThemeLabel?: string | null;
+  worldThemeCode?: string | null;
+  /** 功能注释：后台启用题材表；用于把官方语义 code 解析成 id 再比对 */
+  enabledThemeTags?: WorldThemeContext["enabledThemeTags"];
 };
 
 /** 功能注释：预览图 — http(s) 用 img；local: 占位色块（官方种子无 CDN 时） */
@@ -54,11 +66,16 @@ function formatDownloads(n: number) {
   return String(n);
 }
 
-export default function AddPlayModModal({ installs, onChange, onClose, onConfirmDeps }: Props) {
+export default function AddPlayModModal({
+  installs, onChange, onClose, onConfirmDeps,
+  worldThemeTagId, worldThemeLabel, worldThemeCode, enabledThemeTags,
+}: Props) {
   const [tab, setTab] = useState<ShelfTab>("推荐");
   /** 功能注释：点列表项进入详情；null 表示列表态 */
   const [detailSlug, setDetailSlug] = useState<string | null>(null);
   const installed = useMemo(() => new Set(installs.map((x) => x.slug)), [installs]);
+  /** 功能注释：本弹窗生命周期内已提示过题材不一致的玩法，避免取消依赖确认后反复弹 */
+  const themeWarnedRef = useRef<Set<string>>(new Set());
 
   const list = useMemo(() => {
     // 功能注释：只展示玩法；phone_app 归应用商店，不进本列表
@@ -93,6 +110,12 @@ export default function AddPlayModModal({ installs, onChange, onClose, onConfirm
     if (!chain.length) {
       toast.error("已添加到本作品");
       return;
+    }
+    // 功能注释：C0.2 安装前题材提示——只警告不阻断；同一玩法只提示一次，链上任一包冲突即提示
+    const worldTheme: WorldThemeContext = { worldThemeTagId, worldThemeLabel, worldThemeCode, enabledThemeTags };
+    if (!themeWarnedRef.current.has(item.slug) && chain.some((row) => isItemThemeMismatch(row, worldTheme))) {
+      themeWarnedRef.current.add(item.slug);
+      toast(THEME_MISMATCH_INSTALL_WARN, { id: "theme-mismatch-install", duration: 4500 });
     }
     let next = [...installs];
     for (const row of chain) {

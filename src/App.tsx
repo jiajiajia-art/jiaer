@@ -6,6 +6,7 @@ import Home from './page/Home';
 import Create from './page/Create';
 import CreateType from './page/CreateType';
 import CreatePlatformApp from './page/CreatePlatformApp';
+import MyPlayMods from './page/MyPlayMods';
 import CreateWorks from './page/CreateWorks';
 import WithdrawRecords from './page/WithdrawRecords';
 import CreatorIncentive from './page/CreatorIncentive';
@@ -195,6 +196,7 @@ function App() {
           <Route path="/create/incentives" element={<CreatorIncentive />} />
           <Route path="/create/new" element={<CreateType />} />
           <Route path="/create/app" element={<CreatePlatformApp />} />
+          <Route path="/create/play-mods" element={<MyPlayMods />} />
           <Route path="/create/works" element={<CreateWorks />} />
           <Route path="/create/withdraw-records" element={<WithdrawRecords />} />
           <Route path="/asset/details" element={<AssetDetails />} />

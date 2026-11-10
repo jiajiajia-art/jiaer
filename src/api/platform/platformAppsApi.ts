@@ -17,6 +17,10 @@ export type PlatformApp = {
   category: string;
   type: PlatformAppType | string;
   content: unknown;
+  /** 功能注释：C0.2 适用题材 id（后端存于 content JSON，读取时拆出；上架至少 1 个） */
+  applicableThemeTagIds?: number[];
+  /** 功能注释：运营列表附带，作者为官方库兰号 */
+  isOfficial?: boolean;
   status: PlatformAppStatus | string;
   createdAt?: string;
   updatedAt?: string;
@@ -82,6 +86,7 @@ export const platformAppsApi = {
       category?: string;
       type: PlatformAppType | string;
       content?: unknown;
+      applicableThemeTagIds?: number[];
     },
   ) => {
     const res = await fetch(`${HOST_ADDRESS}/api/auth/platform-apps`, {
@@ -103,6 +108,7 @@ export const platformAppsApi = {
       category: string;
       type: PlatformAppType | string;
       content: unknown;
+      applicableThemeTagIds: number[];
       status: PlatformAppStatus | string;
     }>,
   ) => {
@@ -137,6 +143,39 @@ export const platformAppsApi = {
       method: 'POST',
       headers: authHeaders(token, false),
       body: form,
+    });
+    return parseJson(res);
+  },
+};
+
+/** 功能注释：运营后台平台应用接口（官方 + 创作者列表、上下架审核、适用题材改绑） */
+export const platformAppsAdminApi = {
+  list: async (token: string, opts: { scope?: 'official' | 'creator'; status?: PlatformAppStatus; q?: string } = {}) => {
+    const params = new URLSearchParams();
+    if (opts.scope) params.set('scope', opts.scope);
+    if (opts.status) params.set('status', opts.status);
+    if (opts.q?.trim()) params.set('q', opts.q.trim());
+    const qs = params.toString();
+    const res = await fetch(`${HOST_ADDRESS}/api/admin/platform-apps${qs ? `?${qs}` : ''}`, {
+      headers: authHeaders(token, false),
+    });
+    return parseJson(res);
+  },
+
+  audit: async (token: string, appId: string, approve: boolean) => {
+    const res = await fetch(`${HOST_ADDRESS}/api/admin/platform-apps/${encodeURIComponent(appId)}/audit`, {
+      method: 'PUT',
+      headers: authHeaders(token),
+      body: JSON.stringify({ approve }),
+    });
+    return parseJson(res);
+  },
+
+  setApplicableThemes: async (token: string, appId: string, themeTagIds: number[]) => {
+    const res = await fetch(`${HOST_ADDRESS}/api/admin/platform-apps/${encodeURIComponent(appId)}/applicable-themes`, {
+      method: 'PUT',
+      headers: authHeaders(token),
+      body: JSON.stringify({ themeTagIds }),
     });
     return parseJson(res);
   },

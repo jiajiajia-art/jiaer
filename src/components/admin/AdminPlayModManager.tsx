@@ -9,7 +9,11 @@ import {
   type PlayModRecord,
   type PlayModStatus,
 } from '../../api/playMod/playModApi';
+import specialThemeTagsApi from '../../api/specialThemeTags/specialThemeTagsApi';
+import { formatThemeTagLabels, validateThemeRebind } from '../../utils/applicableThemeTags';
 import ConfirmModal from '../CommonModal/ConfirmModal';
+import AdminPlatformAppsSection from './AdminPlatformAppsSection';
+import ThemeTagPicker, { type ThemeTagOption } from './ThemeTagPicker';
 import styles from './AdminPlayModManager.module.css';
 
 const STATUS_LABEL: Record<PlayModStatus, string> = {
@@ -51,6 +55,10 @@ const AdminPlayModManager: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [weights, setWeights] = useState<Record<string, number>>({});
   const [confirmDel, setConfirmDel] = useState<PlayModRecord | null>(null);
+  // 功能注释：题材列表只拉一次，同时供「玩法适用题材」与「应用适用题材」两处多选复用
+  const [themeTags, setThemeTags] = useState<ThemeTagOption[]>([]);
+  const [themeEditId, setThemeEditId] = useState<string | null>(null);
+  const [themeDraftIds, setThemeDraftIds] = useState<number[]>([]);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -77,6 +85,44 @@ const AdminPlayModManager: React.FC = () => {
     void load();
     void loadWeights();
   }, [load, loadWeights]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await specialThemeTagsApi.getPublicTags();
+        if (cancelled || !res.data.success) return;
+        setThemeTags(
+          (res.data.data || [])
+            .filter((t) => Number(t.id) > 0 && String(t.name || '').trim())
+            .map((t) => ({ id: Number(t.id), name: String(t.name) })),
+        );
+      } catch {
+        if (!cancelled) toast.error('加载题材列表失败');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // 功能注释：运营改绑玩法包适用题材；官方包后台值覆盖前端种子，至少保留 1 个
+  const saveModThemes = async (mod: PlayModRecord) => {
+    if (!token) return;
+    const err = validateThemeRebind(themeDraftIds);
+    if (err) {
+      toast.error(err);
+      return;
+    }
+    const res = await playModAdminApi.setApplicableThemes(token, mod.id, themeDraftIds);
+    if (!res.success) {
+      toast.error(res.message || '改绑失败');
+      return;
+    }
+    toast.success('适用题材已更新');
+    setThemeEditId(null);
+    void load();
+  };
 
   const save = async () => {
     if (!token) return;
@@ -225,7 +271,7 @@ const AdminPlayModManager: React.FC = () => {
 
       <section className={styles.card}>
         <div className={styles.cardHead}>
-          <h3>目录</h3>
+          <h3>玩法 / 组件目录（含官方玩法适用题材）</h3>
           <div className={styles.filters}>
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="搜索名称 / slug" />
             <select value={kind} onChange={(e) => setKind(e.target.value)}>
@@ -258,9 +304,32 @@ const AdminPlayModManager: React.FC = () => {
                     {mod.slug} · v{mod.version} · {mod.priceKk ? `${mod.priceKk} KK` : '免费'} · 安装游戏 {mod.stats?.installGames ?? 0} · 购买账号 {mod.stats?.buyers ?? 0}
                   </p>
                   <p className={styles.desc}>{mod.description}</p>
+                  <p className={styles.desc}>
+                    适用题材：{mod.applicableThemeTagIds?.length
+                      ? formatThemeTagLabels(mod.applicableThemeTagIds, themeTags)
+                      : '未配置（前台使用官方种子语义）'}
+                  </p>
+                  {themeEditId === mod.id ? (
+                    <div className={styles.themeEditor}>
+                      <ThemeTagPicker tags={themeTags} value={themeDraftIds} onChange={setThemeDraftIds} />
+                      <div className={styles.actions}>
+                        <button type="button" className={styles.primary} onClick={() => void saveModThemes(mod)}>保存题材</button>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
               <div className={styles.rowActions}>
+                <button
+                  type="button"
+                  className={styles.ghost}
+                  onClick={() => {
+                    setThemeEditId(themeEditId === mod.id ? null : mod.id);
+                    setThemeDraftIds(mod.applicableThemeTagIds || []);
+                  }}
+                >
+                  {themeEditId === mod.id ? '收起题材' : '改绑题材'}
+                </button>
                 <button type="button" className={styles.ghost} onClick={() => { setEditingId(mod.id); setForm(mod); }}>编辑</button>
                 {mod.status === 'pending' ? (
                   <>
@@ -285,6 +354,8 @@ const AdminPlayModManager: React.FC = () => {
           ))}
         </ul>
       </section>
+
+      <AdminPlatformAppsSection token={token} themeTags={themeTags} />
 
       <section className={styles.card}>
         <div className={styles.cardHead}><h3>推荐权重</h3></div>

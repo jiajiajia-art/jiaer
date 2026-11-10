@@ -11,6 +11,8 @@ import {
   resolveRomancePlayMode,
   type RomancePlayMode,
 } from "../lib/platformRomancePlay";
+import { applyPlatformThemeToMod, readWorldThemeHint } from "../lib/worldTheme";
+import { fetchPlatformGameTheme } from "../lib/platformThemeTags";
 
 function asMod(content: unknown): Mod | null {
   if (!content || typeof content !== "object") return null;
@@ -55,8 +57,16 @@ export default function PlayerPlayBootstrap({
         reportAuthorPreviewFatal([msg]);
         return;
       }
+      // 功能注释：清单没写题材时，用平台作品题材补上（通讯换皮 / 玩法适用题材）；只补缺，失败不阻断进局
+      let playMod = mod;
+      const hint = readWorldThemeHint(mod);
+      if (hint.themeTagId == null || !hint.themeLabel) {
+        const theme = await fetchPlatformGameTheme(fileId);
+        if (cancelled) return;
+        playMod = applyPlatformThemeToMod(mod, theme);
+      }
       // 功能注释：审核预览与玩家进局复用预览运行时；session 带 fileId 前缀防串档
-      requestAuthorPreview(mod, mode === "reviewPreview" ? ["审核预览 · 不写公开存档"] : [], 0);
+      requestAuthorPreview(playMod, mode === "reviewPreview" ? ["审核预览 · 不写公开存档"] : [], 0);
       setLoading(false);
     })();
     return () => {

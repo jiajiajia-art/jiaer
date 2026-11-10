@@ -6,6 +6,8 @@ import type { RoomContent, Requirement } from "../worlds/star2005/content";
 import { childrenOf, cloneBranch, pathOf, rootsOf, subtreeOf, wouldCycle } from "../game/roomTree";
 import { EmptyState, Help, SearchBox, matches } from "./EditorKit";
 import ImagePicker from "./ImagePicker";
+import ModBatchImageGen from "./ModBatchImageGen";
+import { applyBatchPatch, type BatchApplyPatch } from "../lib/imageGenBatchPlan";
 import { Modal } from "./ui";
 import { IconChevronDown } from "../lib/icons";
 import {
@@ -228,6 +230,15 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
     );
   };
 
+  // 功能注释：C1.1 批量生图结果一次性写回 room.bg / map.bg，走同一个 commit 保证 ensureWorldMaps 归一化
+  const applyBatchImages = (patch: BatchApplyPatch) => {
+    const next = applyBatchPatch(allRooms, maps, patch);
+    if (next.changed > 0) commit(next.rooms, startRoom, next.maps);
+  };
+  const batchPanel = (
+    <ModBatchImageGen rooms={allRooms} maps={maps} curMapId={curMapId} imageGen={imageGen} onApply={applyBatchImages} />
+  );
+
   const mapBar = (
     <div className="space-y-1.5 rounded-2xl border border-line bg-paper-2 p-2">
       <p className="px-1 text-[11px] font-bold text-ink-soft">大地图 · 每张下面一棵地点树</p>
@@ -286,6 +297,7 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
     return (
       <div className="space-y-2">
         {mapBar}
+        {batchPanel}
         <EmptyState>{emptyHint}</EmptyState>
         <div className="flex flex-wrap gap-1.5">
           <button data-author-field="author-field-rooms" className={pill} onClick={() => add()}>＋ 添加顶层地点</button>
@@ -305,6 +317,7 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
   return (
     <div className="space-y-2">
       {mapBar}
+      {batchPanel}
       {ids.length > 6 && <SearchBox value={q} onChange={setQ} placeholder="搜索地点" />}
       <div className="grid gap-2 sm:grid-cols-[minmax(0,13rem)_minmax(0,1fr)]">
         <div className="rounded-2xl border border-line bg-paper-2 p-1.5">

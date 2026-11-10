@@ -342,8 +342,17 @@ function Root() {
       {playerPlayBoot.mode && playerPlayBoot.fileId && !previewing ? (
         <PlayerPlayBootstrap mode={playerPlayBoot.mode} fileId={playerPlayBoot.fileId} />
       ) : null}
-      {playModCreateOpen && !previewing ? (
-        <div className="romance-platform min-h-screen" data-platform-ui="1">
+      {/* 功能注释：C2.2 玩法对话壳在预览时保活（hidden），避免聊完一轮预览后对话丢失；大屏与预览左右分栏 */}
+      {playModCreateOpen ? (
+        <div
+          className={
+            previewing
+              ? "fixed inset-y-0 left-0 z-[40] hidden w-full max-w-xl overflow-y-auto border-r border-line bg-[var(--paper)] lg:block"
+              : "romance-platform min-h-screen"
+          }
+          data-platform-ui={previewing ? undefined : "1"}
+          aria-hidden={previewing || undefined}
+        >
           <PlayModCreateShell
             onClose={() => {
               closePlayModCreate();
@@ -351,7 +360,8 @@ function Root() {
             }}
           />
         </div>
-      ) : worldGenOpen ? (
+      ) : null}
+      {worldGenOpen ? (
         <div
           /* 功能注释：预览时向导壳保活但 hidden；去掉 data-platform-ui，避免 Modal 误挂进不可见树 */
           className={previewing ? "hidden" : "romance-platform min-h-screen"}
@@ -368,14 +378,17 @@ function Root() {
             }}
           />
         </div>
-      ) : !previewing ? (
+      ) : null}
+      {!previewing && !playModCreateOpen && !worldGenOpen ? (
         <PlayScreens />
       ) : null}
 
       {previewing ? (
-        /* 功能注释：顶栏占流 + 下方预览区 flex-1，游戏用剩余高度；禁止 fixed 顶栏盖住局内顶/底栏 */
+        /* 功能注释：玩法对话页预览时右侧占满（大屏留左栏对话）；其它入口仍全屏预览 */
         <div
-          className="author-preview-runtime flex h-[100vh] h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-[var(--paper)] text-[var(--ink)]"
+          className={`author-preview-runtime flex h-[100vh] h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-[var(--paper)] text-[var(--ink)] ${
+            playModCreateOpen ? "lg:ml-[min(28rem,42vw)]" : ""
+          }`}
           data-author-preview-shell="1"
         >
           <AuthorPreviewChrome />

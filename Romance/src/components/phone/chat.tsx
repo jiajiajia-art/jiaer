@@ -35,11 +35,13 @@ import { talkAllowance } from "../../lib/allowance";
 import { IconPlus, IconArrowUp, IconSmiley } from "./icons";
 import { walletDef, wallet } from "../../game/wallet";
 import { emitInterrupt, logAct, removeFriend, rollInterrupt } from "../../game/phoneLink";
+import { useCommsBrand } from "./commsBrand";
 
 /* 发消息 → AI 回复逐条落库。每一步都在最新存档上修改（patchGame）：等 AI、逐条出气泡要好几秒，
    这期间人物页调过的爱慕 / 好感、别处落库的进度都要保留，不能被发送时的旧快照整档覆盖回去。 */
 export function useChat() {
   const { game, cfg, patchGame } = useGame();
+  const brand = useCommsBrand(); // P4.1：手机流水里的 App 名随世界题材（绿信 / 传讯）
   const gRef = useRef<GameState>(game!);
   gRef.current = game!;
   const [typingIn, setTypingIn] = useState<string | null>(null);
@@ -101,7 +103,7 @@ export function useChat() {
     // 手机流水：和谁聊了什么（连续发送合并为一条）；聊天消耗线下时间，下回合线下剧情会知晓
     const bit = kind === "redpacket" ? `[红包 ${wallet.fmt(amount, g)}]` : kind === "transfer" ? `[转账 ${wallet.fmt(amount, g)}]`
       : kind === "sticker" ? "[表情包]" : kind === "photo" ? `[图片]${t0 ? " " + t0 : ""}` : kind === "voice" ? `[语音] ${t0}` : t0;
-    step((cur) => logAct(cur, { app: "绿信", text: thread?.kind === "group" ? `在群「${thread.title}」里说` : `和${thread?.title ?? "好友"}聊绿信`, pid: thread?.personId, key: `wx:${threadId}`, bit, min: 2 }));
+    step((cur) => logAct(cur, { app: brand.appName, text: thread?.kind === "group" ? `在群「${thread.title}」里说` : `和${thread?.title ?? "好友"}聊${brand.appName}`, pid: thread?.personId, key: `wx:${threadId}`, bit, min: 2 }));
     // 明明当面在一起，却低头给对方发消息：对方可能直接打断你，转入线下当面交谈
     if (thread?.kind === "private" && thread.personId && rollInterrupt(g, thread.personId)) {
       step((cur) => pushMsg(setMsgStatus(cur, threadId, [mine.id], "read"), threadId, { id: msgId(), role: "sys", text: `${thread.title}就在你身边，放下手机看向了你——`, ts: Date.now(), gt: gameMinutes(cur), label: gameTimeLabel(cur) }));
@@ -344,6 +346,7 @@ export function fileToDataUrl(f: File): Promise<string> {
 /* incoming：对方主动打来（线下剧情触发），值为 TA 打来想说的事；video 仅改称呼为视频通话 */
 export function VoiceCall({ thread, name, avatar, onClose, incoming, video }: { thread: Thread; name: string; avatar?: string; onClose: () => void; incoming?: string; video?: boolean }) {
   const { game, cfg, commitGame } = useGame();
+  const brand = useCommsBrand();
   const gRef = useRef<GameState>(game!);
   gRef.current = game!;
   const callWord = video ? "视频通话" : "语音通话";
@@ -375,8 +378,8 @@ export function VoiceCall({ thread, name, avatar, onClose, incoming, video }: { 
         const callThread = { ...thread, msgs: [...thread.msgs, ...linesRef.current] };
         const v = aiView(g, callThread);
         const prompt = said ? `【${callWord}中，主角对你说】${said}`
-          : incoming !== undefined ? `【${callWord}】你主动给主角打了绿信${callWord}，主角接起来了。${incoming ? `你打来是想说：${incoming}。` : ""}请你先开口。`
-          : `【${callWord}】主角刚给你打来绿信${callWord}，你接起了电话。请说出接通后的第一句话。`;
+          : incoming !== undefined ? `【${callWord}】你主动给主角打了${brand.appName}${callWord}，主角接起来了。${incoming ? `你打来是想说：${incoming}。` : ""}请你先开口。`
+          : `【${callWord}】主角刚给你打来${brand.appName}${callWord}，你接起了电话。请说出接通后的第一句话。`;
         const r = await requestChatReply(cfg, v.g, v.thread!, `${prompt}\n（这是语音通话，bubbles 就是你说出口的话，口语化，1~3 句；read_only 与 busy 必须为 false）`);
         out = r.bubbles.slice(0, 3);
         emo = r.emotion;
@@ -404,7 +407,7 @@ export function VoiceCall({ thread, name, avatar, onClose, incoming, video }: { 
       if (rollInterrupt(gRef.current, pid, 0.5)) {
         alive.current = false;
         let g = pushMsg(gRef.current, thread.id, { id: msgId(), role: "sys", text: `${name}就在你身边，没接电话，直接看向了你`, ts: Date.now(), gt: gameMinutes(gRef.current), label: gameTimeLabel(gRef.current) });
-        g = logAct(g, { app: "绿信", text: `当着${name}的面给 TA 打${callWord}`, min: 1, pid });
+        g = logAct(g, { app: brand.appName, text: `当着${name}的面给 TA 打${callWord}`, min: 1, pid });
         commitGame(g);
         setPhase("ended");
         emitInterrupt({ pid, name, what: `打${callWord}` });
@@ -438,13 +441,13 @@ export function VoiceCall({ thread, name, avatar, onClose, incoming, video }: { 
     const now = Date.now();
     const text = connected ? `${callWord} · 通话时长 ${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}` : `${callWord} · 已取消`;
     g = pushMsg(g, thread.id, { id: msgId(), role: "sys", text, ts: now, gt: gameMinutes(g), label: gameTimeLabel(g), kind: "call" } as XMsg);
-    g = logCall(g, { id: msgId(), personId: pid, name, number: video ? "绿信视频" : "绿信语音", ts: now, durationSec: connected ? sec : 0, outcome: connected ? "connected" : "declined", transcript: linesRef.current });
+    g = logCall(g, { id: msgId(), personId: pid, name, number: `${brand.appName}${video ? "视频" : "语音"}`, ts: now, durationSec: connected ? sec : 0, outcome: connected ? "connected" : "declined", transcript: linesRef.current });
     // 电话里说了「给你转点钱」的：挂断后照说的发过来（金额、频率由 chatMoney 校正）
     const card = connected ? giftMsg(g, pid, callGift.current) : null;
     if (card) g = pushMsg(g, thread.id, card);
     if (connected) {
       const gist = linesRef.current.slice(0, 4).map((l) => `${l.role === "me" ? "我" : name}：${l.text}`).join(" / ");
-      g = logAct(g, { app: "绿信", text: `${incoming !== undefined ? `接了${name}打来的` : `给${name}打了`}${callWord}（${fmtDur(sec)}）${gist ? `：${gist}` : ""}`, min: Math.max(1, Math.ceil(sec / 60)), pid });
+      g = logAct(g, { app: brand.appName, text: `${incoming !== undefined ? `接了${name}打来的` : `给${name}打了`}${callWord}（${fmtDur(sec)}）${gist ? `：${gist}` : ""}`, min: Math.max(1, Math.ceil(sec / 60)), pid });
     }
     const m = lastMem.current;
     if (connected && linesRef.current.length) {
@@ -567,6 +570,7 @@ function Pressable({ children, menu, open, onOpen, onClose, right }: { children:
 /* 红包 / 转账 气泡 */
 function MoneyBubble({ m, mine, onOpen }: { m: XMsg; mine: boolean; onOpen: () => void }) {
   const { game } = useGame();
+  const brand = useCommsBrand();
   const red = m.kind === "redpacket";
   const back = m.pstate === "returned";
   const done = back || (red ? m.pstate === "claimed" : m.pstate === "received");
@@ -598,7 +602,7 @@ function MoneyBubble({ m, mine, onOpen }: { m: XMsg; mine: boolean; onOpen: () =
           )}
         </div>
       </div>
-      <p className="mx-3 border-t border-white/30 py-1 text-[11px]" style={{ color: done ? "#c99a6b" : "#fde6cd" }}>{red ? "绿信红包" : "绿信转账"}</p>
+      <p className="mx-3 border-t border-white/30 py-1 text-[11px]" style={{ color: done ? "#c99a6b" : "#fde6cd" }}>{brand.appName}{red ? "红包" : "转账"}</p>
     </div>
   );
 }
@@ -1028,7 +1032,7 @@ export function ChatView({ thread, onBack, sms, autoSend }: { thread: Thread; on
   const meCount = (n: number) => (n > 99 ? "99+" : String(n));
 
   return (
-    <div className={`relative flex h-full flex-col ${sms ? "bg-[#f4f5f7]" : ""}`} style={sms ? undefined : { background: look.bg }}>
+    <div className={`relative flex h-full flex-col ${sms ? "bg-[#f4f5f7]" : ""}`} style={sms ? undefined : { background: look.bg }} data-wx-chat-bg={!sms && !(thread.custom as XCustom | undefined)?.bg && !wxSet.chat.chatBg ? "default" : undefined}>
       {infoOpen && <ChatInfoPage thread={thread} onClose={() => setInfoOpen(false)} onBg={() => setSetOpen(true)} onJump={jumpTo} />}
       {setOpen && <ChatSettingsSheet thread={thread} onClose={() => setSetOpen(false)} />}
       {calling && <VoiceCall thread={thread} name={thread.title} avatar={npc?.avatar} onClose={() => setCalling(false)} />}

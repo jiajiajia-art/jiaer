@@ -28,6 +28,8 @@ import { logAppOpen, mailUnread } from "../game/phoneLink";
 import { useGameNow, renderWidget, isWidget, DEFAULT_WIDGET_SIZE, SHAPE_RADIUS, SHAPE_LABEL, nextShape, nextSize, type WidgetSize, type WidgetShape } from "./phone/Widgets";
 import { APP_ICON } from "./phone/appIcons";
 import { phoneAppAllowed, worldPhoneAppsCfg, worldPhoneHomeWallpaper } from "../mods/registry";
+import { applyCommsBrandText, resolveCommsBrand, type CommsBrand } from "../lib/commsSkin";
+import { useCommsBrand } from "./phone/commsBrand";
 import { phoneAppLabel, preinstallIds } from "../lib/phoneAppsConfig";
 import { resolveEffectiveHomeWallpaper } from "./phone/wallpapers";
 import { liveTerm as T } from "../mods/live";
@@ -81,8 +83,12 @@ const BUILTIN_LABEL: Record<string, string> = Object.fromEntries([...CORE.map((c
 /** 功能注释：显示名优先平台表，再模组覆盖，再内置名 */
 let platformNameLookup: (id: string) => string | undefined = () => undefined;
 let platformIconLookup: (id: string) => string | undefined = () => undefined;
+/** 功能注释：P4.1 当前世界通讯品牌；PhoneInner 每次渲染写入，appLabel 等模块级函数读它（与 platformNameLookup 同模式） */
+let commsBrandNow: CommsBrand = resolveCommsBrand();
+/** 功能注释：绿信 App（id=wechat）的显示名按世界题材换成「传讯」；其它应用原样返回 */
+const brandAppName = (id: string, name: string) => (id === "wechat" ? applyCommsBrandText(name, commsBrandNow) : name);
 const appLabel = (id: string) =>
-  platformNameLookup(id) || phoneAppLabel(id, worldPhoneAppsCfg(), BUILTIN_LABEL[id] ?? id);
+  brandAppName(id, platformNameLookup(id) || phoneAppLabel(id, worldPhoneAppsCfg(), BUILTIN_LABEL[id] ?? id));
 /* 兼容旧引用：LABEL 仍导出内置表；运行时请用 appLabel() */
 const LABEL = BUILTIN_LABEL;
 /* 不可删除项：应用商店（唯一能装回其它应用的入口）+ 原始时间横幅（只能移动位置，不能删） */
@@ -105,7 +111,7 @@ const CORE_META: Record<string, [tagline: string, desc: string, cat: string, sto
   mail: ["来信、通知与回信", "有些话，适合写成一封信", "通讯", "角色的来信、平台通知与合作邀约都寄到这里。写给 TA 的信，TA 会在之后的剧情里择机回复。", SC("1634562876572-5abe57afcceb")],
   settings: ["壁纸、机身与通用", "把小手机调成你喜欢的样子", "工具", "更换壁纸、机身外壳配色，查看储存空间与游戏内时间。", SC("1511707171634-5f897ff02aa9")],
 };
-/** 功能注释：平台应用 → 商店条目；列表用作者名，不再写内置标签 */
+/** 功能注释：平台应用 → 商店条目；作者进 authorName，禁止把作者名塞进 size */
 function platformToStoreItem(app: PlatformApp): StoreItem {
   const iconUrl = app.icon ? resolvePlatformAppIconUrl(app.icon) : "";
   const cover = app.previews?.[0] ? resolvePlatformAppIconUrl(app.previews[0]) : (CORE_META[app.appId]?.[4] || SC("1516414447565-b14be0adf13e"));
@@ -115,12 +121,12 @@ function platformToStoreItem(app: PlatformApp): StoreItem {
     label: app.name || app.appId,
     tagline: app.summary || "暂无说明",
     desc: app.summary || app.name || app.appId,
-    kicker: author,
+    kicker: app.category || PLATFORM_TYPE_CAT[app.type] || "应用",
     story: app.summary || "",
     icon: iconUrl ? <img src={iconUrl} alt="" className="h-full w-full object-cover" /> : (APP_ICON[app.appId] ?? null),
     cat: app.category || PLATFORM_TYPE_CAT[app.type] || "应用",
     rating: 4.9,
-    size: author,
+    size: "",
     cover,
     core: true,
     authorName: author,
@@ -313,6 +319,8 @@ export default function Phone() {
 function PhoneInner() {
   const { game, patchGame } = useGame();
   const [app, setApp] = useState<AppId | null>(null);
+  const commsBrand = useCommsBrand();
+  commsBrandNow = commsBrand;
   const [platformFocus, setPlatformFocus] = useState<PlatformApp | null>(null);
   const [platformMissing, setPlatformMissing] = useState(false);
   const [locked, setLocked] = useState(true);
@@ -344,7 +352,7 @@ function PhoneInner() {
     if (a === "call") saveData(CALL_SEEN_KEY, Date.now());
     const plat = byId.get(a);
     const legacy = plat ? platformAppLegacyUi(plat.content) : "";
-    const label = plat?.name || appLabel(a);
+    const label = brandAppName(a, plat?.name || appLabel(a));
     // 线上联动：刷了哪个 App 记入手机流水，并消耗线下时间
     patchGame((g) => logAppOpen(g, a, label));
     if (plat) {
@@ -461,7 +469,7 @@ function PhoneInner() {
     const iconUrl = plat?.icon ? resolvePlatformAppIconUrl(plat.icon) : "";
     return {
       id,
-      label: plat?.name || appLabel(id),
+      label: brandAppName(id, plat?.name || appLabel(id)),
       node: iconUrl ? <img src={iconUrl} alt="" className="h-full w-full object-cover" /> : (APP_ICON[id] ?? null),
     };
   });
@@ -590,7 +598,7 @@ function PhoneInner() {
               </span>
             </button>
           )}
-          {locked && <LockScreen previews={previews} onOpenChat={() => { setLocked(false); openApp("wechat" as AppId); }} dnd={prefs.dnd} notices={[["wechat", "绿信", unreadTotal, "条新消息"], ["sms", "信息", smsUnread, "条未读短信"], ["call", "电话", missedCalls, "个未接来电"]]} wallpaper={wp.css} radius={screenRadius} onUnlock={() => setLocked(false)} />}
+          {locked && <LockScreen previews={previews} onOpenChat={() => { setLocked(false); openApp("wechat" as AppId); }} dnd={prefs.dnd} notices={[["wechat", commsBrand.appName, unreadTotal, "条新消息"], ["sms", "信息", smsUnread, "条未读短信"], ["call", "电话", missedCalls, "个未接来电"]]} wallpaper={wp.css} radius={screenRadius} onUnlock={() => setLocked(false)} />}
 
           {(prefs.brightness < 1 || prefs.dark) && (
             <div

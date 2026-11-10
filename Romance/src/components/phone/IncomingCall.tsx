@@ -1,14 +1,16 @@
 /* 来电层：线下剧情里角色主动打来的语音 / 视频电话（phone.ringing）。
- * 接听 → 进入绿信通话（对方先开口说明来意）；拒接 → 记为未接来电，并记入手机流水。 */
+ * 接听 → 进入通讯 App 通话（绿信 / 传讯）（对方先开口说明来意）；拒接 → 记为未接来电，并记入手机流水。 */
 import { useState } from "react";
 import { useGame } from "../../store/gameCtx";
 import { Avatar } from "../ui";
 import { ensurePhone, logCall, msgId, threadFor, type IncomingCall as Ring, type Thread } from "../../game/phone";
 import { logAct } from "../../game/phoneLink";
 import { VoiceCall } from "./chat";
+import { useCommsBrand } from "./commsBrand";
 
 export default function IncomingCall() {
   const { game, patchGame } = useGame();
+  const brand = useCommsBrand(); // P4.1：未接来电的号码 / 手机流水 App 名随世界题材
   const [live, setLive] = useState<Ring | null>(null);
   if (!game) return null;
   const ph = ensurePhone(game).phone!;
@@ -22,8 +24,8 @@ export default function IncomingCall() {
   const npc = game.npcs.find((n) => n.id === r.pid);
   const clear = (g: typeof game) => ({ ...g, phone: { ...ensurePhone(g).phone!, ringing: undefined } });
   const decline = () => patchGame((g) => logAct(
-    logCall(clear(g), { id: msgId(), personId: r.pid, name: r.name, number: r.video ? "绿信视频" : "绿信语音", ts: Date.now(), durationSec: 0, outcome: "missed" }),
-    { app: "绿信", text: `挂断了${r.name}打来的${r.video ? "视频" : "语音"}电话`, min: 0, pid: r.pid },
+    logCall(clear(g), { id: msgId(), personId: r.pid, name: r.name, number: `${brand.appName}${r.video ? "视频" : "语音"}`, ts: Date.now(), durationSec: 0, outcome: "missed" }),
+    { app: brand.appName, text: `挂断了${r.name}打来的${r.video ? "视频" : "语音"}电话`, min: 0, pid: r.pid },
   ));
   const accept = () => { patchGame(clear); setLive(r); };
   return (
