@@ -1,0 +1,232 @@
+.presetRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.presetRowMain,
+.presetRowEnd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.presetButton {
+  border: 1px solid rgba(201, 115, 63, 0.28);
+  background: rgba(255, 252, 248, 0.96);
+  color: var(--admin-accent-strong, #aa5a2d);
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.presetButtonActive {
+  background: linear-gradient(135deg, rgba(201, 115, 63, 0.96) 0%, rgba(224, 138, 79, 0.94) 100%);
+  color: #fff;
+  border-color: transparent;
+}
+
+.section {
+  margin-top: 16px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px 18px 12px;
+  box-shadow: 0 8px 24px rgba(117, 72, 39, 0.06);
+}
+
+.sectionTitle {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #2f241d;
+}
+
+.tableWrap {
+  width: 100%;
+  max-width: 100%;
+  margin-top: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+.table {
+  width: max-content;
+  min-width: 1100px;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  text-align: left;
+  font-size: 13px;
+  white-space: nowrap;
+  color: #2f241d;
+}
+
+.table th {
+  color: #555;
+  font-weight: 600;
+}
+
+.table th.metricCol,
+.table td.metricCol {
+  text-align: center;
+}
+
+.linkLikeButton {
+  border: none;
+  background: transparent;
+  color: var(--admin-accent, #c9733f);
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 28px 24px;
+  text-align: center;
+  color: #6b5f55;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(30, 22, 16, 0.45);
+}
+
+.modal {
+  width: min(480px, 100%);
+  max-height: min(90vh, 720px);
+  overflow: auto;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 20px 48px rgba(47, 36, 29, 0.22);
+  padding: 18px 20px 16px;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #2f241d;
+}
+
+.modalClose {
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  color: #888;
+}
+
+.modalSection {
+  margin-bottom: 16px;
+}
+
+.modalLabel {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #666;
+}
+
+.dateRangeRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dateInput {
+  padding: 8px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 14px;
+}
+
+.quickRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.metricRadios {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px 10px;
+}
+
+.radioItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #444;
+  cursor: pointer;
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.secondaryButton {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #fff;
+  color: #444;
+  border-radius: 10px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.primaryButton {
+  border: none;
+  background: #3b82f6;
+  color: #fff;
+  border-radius: 10px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .metricRadios {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

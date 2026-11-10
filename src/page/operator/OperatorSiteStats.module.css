@@ -1,0 +1,218 @@
+.headerRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.titleBlock h1 {
+  margin: 0;
+  font-size: 22px;
+  color: #2f241d;
+}
+
+.subtitle {
+  margin: 6px 0 0;
+  color: #8a8178;
+  font-size: 13px;
+}
+
+.workCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 280px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--admin-accent, #c9733f);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.workCell:hover {
+  color: var(--admin-accent-strong, #aa5a2d);
+}
+
+.workCellCover,
+.workCellCoverPlaceholder {
+  flex-shrink: 0;
+  width: 36px;
+  height: 48px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: #ece4db;
+}
+
+.workCellTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metaHint {
+  color: #8a8178;
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: right;
+}
+
+.searchRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 4px;
+}
+
+.searchTypeSelect {
+  flex: 0 0 auto;
+  min-width: 120px;
+  padding: 10px 12px;
+  border: 1px solid rgba(47, 36, 29, 0.14);
+  border-radius: 10px;
+  background: #fff;
+  color: #2f241d;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  outline: none;
+}
+
+.searchTypeSelect:hover {
+  border-color: rgba(170, 90, 45, 0.35);
+}
+
+.searchTypeSelect:focus {
+  border-color: rgba(170, 90, 45, 0.55);
+  box-shadow: 0 0 0 3px rgba(201, 115, 63, 0.16);
+}
+
+.searchField {
+  position: relative;
+  flex: 1 1 280px;
+  min-width: 200px;
+}
+
+.searchInput {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px 36px 10px 12px;
+  border: 1px solid rgba(47, 36, 29, 0.14);
+  border-radius: 10px;
+  background: #fff;
+  color: #2f241d;
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.searchInput::placeholder {
+  color: #9a8d82;
+}
+
+.searchInput:hover {
+  border-color: rgba(170, 90, 45, 0.35);
+}
+
+.searchInput:focus {
+  border-color: rgba(170, 90, 45, 0.55);
+  box-shadow: 0 0 0 3px rgba(201, 115, 63, 0.16);
+}
+
+.searchClear {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #8a8178;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.searchClear:hover {
+  background: rgba(47, 36, 29, 0.06);
+  color: #2f241d;
+}
+
+.searchButton {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  background: var(--admin-accent-strong, #aa5a2d);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.searchButton:hover {
+  filter: brightness(1.05);
+}
+
+.authorHint {
+  margin: 0 0 8px;
+  color: #6d5f56;
+  font-size: 13px;
+}
+
+.sortableHeader {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: #555;
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.sortableHeader:hover {
+  color: var(--admin-accent-strong, #aa5a2d);
+}
+
+.sortableHeaderActive {
+  color: var(--admin-accent-strong, #aa5a2d);
+}
+
+.sortChevrons {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  flex-shrink: 0;
+}
+
+.sortChevron {
+  display: block;
+  color: rgba(47, 36, 29, 0.28);
+  transition: color 0.15s ease;
+}
+
+.sortChevronOn {
+  color: var(--admin-accent-strong, #aa5a2d);
+}
+
+.sortableHeader:hover .sortChevron:not(.sortChevronOn) {
+  color: rgba(170, 90, 45, 0.45);
+}
