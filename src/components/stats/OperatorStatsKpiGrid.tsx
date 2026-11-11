@@ -3,8 +3,11 @@ import { useTranslation } from 'react-i18next';
 import type { OperatorDeltaRatio, OperatorWorkMetrics } from '../../api/stats/operatorStatsApi';
 import {
   formatOperatorDeltaRatio,
+  formatOperatorKkAmount,
   formatOperatorPlayDuration,
-  OPERATOR_METRIC_KEYS,
+  formatOperatorTokenCount,
+  OPERATOR_KPI_KEYS,
+  type OperatorKpiKey,
   operatorMetricLabelKey,
 } from '../../utils/operatorStatsRange';
 import styles from './OperatorStatsKpiGrid.module.css';
@@ -28,13 +31,17 @@ const OperatorStatsKpiGrid: React.FC<OperatorStatsKpiGridProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  const valueOf = (key: (typeof OPERATOR_METRIC_KEYS)[number]) => {
+  const valueOf = (key: OperatorKpiKey) => {
     if (loading) return t('operator.statsOverviewLoading');
-    if (key === 'playDurationSeconds') {
-      return formatOperatorPlayDuration(Number(metrics?.playDurationSeconds ?? 0));
-    }
+    if (key === 'playDurationSeconds') return formatOperatorPlayDuration(Number(metrics?.playDurationSeconds ?? 0));
+    if (key === 'spendKkMinor') return formatOperatorKkAmount(Number(metrics?.spendKkMinor ?? 0));
+    if (key === 'aiTokens') return formatOperatorTokenCount(Number(metrics?.aiTokens ?? 0));
     const raw = metrics?.[key];
     return typeof raw === 'number' ? raw.toLocaleString() : '0';
+  };
+
+  const deltaFor = (key: OperatorKpiKey) => {
+    return deltaRatio?.[key as keyof OperatorWorkMetrics];
   };
 
   if (loadFailed && !loading) {
@@ -54,8 +61,8 @@ const OperatorStatsKpiGrid: React.FC<OperatorStatsKpiGridProps> = ({
 
   return (
     <div className={styles.grid}>
-      {OPERATOR_METRIC_KEYS.map((key) => {
-        const delta = formatOperatorDeltaRatio(deltaRatio?.[key]);
+      {OPERATOR_KPI_KEYS.map((key) => {
+        const delta = formatOperatorDeltaRatio(deltaFor(key));
         const deltaClass =
           delta.direction === 'up'
             ? styles.deltaUp

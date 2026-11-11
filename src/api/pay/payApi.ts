@@ -1,6 +1,8 @@
 import type { ApiResponse } from "../api.types";
 import { api } from "../base";
 import type {
+    AlipayResponse,
+    AlipayCancelResponse,
     CheckPayStatusResponse,
     MiniPayResponse,
     OptionPointsRequest,
@@ -11,6 +13,8 @@ import type {
 } from "./pay.type";
 
 const payApi = {
+    createAlipayOrder: (data: PayOrderRequest) => api.post<AlipayResponse>('/pay/alipay/create', data),
+    cancelAlipayOrder: (outTradeNo: string) => api.post<AlipayCancelResponse>('/pay/alipay/cancel', { outTradeNo }),
     getPayQrCode: (data: PayOrderRequest) => api.post<PayResponse>('/pay/create-native', data),
     checkPayStatus: (outTradeNo: string) => api.get<CheckPayStatusResponse>(`/pay/query`, { params: { outTradeNo: outTradeNo } }),
     createMiniOrder: (data: PayOrderRequest) => api.post<MiniPayResponse>('/pay/mini/create', data),

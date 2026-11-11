@@ -51,7 +51,16 @@ export interface OperatorWorkMetrics {
   playUv?: number;
   playDurationSeconds: number;
   commentCount: number;
+  /** Creator creation/testing points, excluding player play points. */
   spendPoints: number;
+  /** Net player KK spend, in minor units. */
+  spendKkMinor: number;
+  aiTokens: number;
+  aiCallCount?: number;
+  aiInputTokens?: number;
+  aiOutputTokens?: number;
+  aiCachedInputTokens?: number;
+  billedKkMinor?: number;
 }
 
 export type OperatorDeltaRatio = Partial<Record<keyof OperatorWorkMetrics, number | null>>;
@@ -143,6 +152,8 @@ export interface OperatorWorkDailyDay {
   favoriteCount: number;
   commentCount: number;
   spendPoints: number;
+  spendKkMinor: number;
+  aiTokens: number;
 }
 
 export interface OperatorWorkDailyResponse {
@@ -187,6 +198,9 @@ export interface OperatorWorksQueryParams extends OperatorStatsDateParams {
 
 export interface OperatorWorkDetailParams extends OperatorStatsDateParams {
   sortBy?: OperatorSortBy | string;
+  order?: 'asc' | 'desc';
+  q?: string;
+  searchType?: OperatorStatsSearchType;
   commentLimit?: number;
 }
 

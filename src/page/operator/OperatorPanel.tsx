@@ -177,7 +177,6 @@ const OperatorPanel: React.FC = () => {
     setRecruitmentPage(1);
   };
 
-  // 功能注释：统计 Tab 交给 OperatorSiteStats（区间 KPI + 榜单），面板只保留壳与其它业务 Tab。
   const renderRecruitment = () => (
     <>
       <div className={`${metricStyles.grid} ${metricStyles.gridThree}`}>
@@ -248,18 +247,16 @@ const OperatorPanel: React.FC = () => {
       <div className={adminStyles.pageBody}>
         <div className={adminStyles.workspace}>
           <section className={adminStyles.contentArea}>
+            {isLoading ? <div className={styles.emptyState}>{t('creatorStats.loading')}</div> : null}
             {activeTab === 'stats' ? <OperatorSiteStats /> : null}
-            {activeTab === 'reports' ? <OperatorReports /> : null}
+            {!isLoading && activeTab === 'reports' ? <OperatorReports /> : null}
             {activeTab === 'withdraw' ? <WithdrawAdminManager /> : null}
             {activeTab === 'avatars' ? <AdminPublicAvatarManager /> : null}
             {activeTab === 'locations' ? <AdminLocationLibraryManager /> : null}
             {activeTab === 'locationAssets' ? <AdminLocationAssetLibraryManager /> : null}
             {activeTab === 'components' ? <AdminPlayModManager /> : null}
-            {activeTab === 'promotions' ? (
+            {!isLoading && activeTab === 'promotions' ? (
               <PromotionAdminManager onRefreshCounts={refreshPromotionPendingReviewCount} />
-            ) : null}
-            {isLoading && activeTab === 'recruitment' ? (
-              <div className={styles.emptyState}>{t('creatorStats.loading')}</div>
             ) : null}
             {!isLoading && activeTab === 'recruitment' ? renderRecruitment() : null}
             {activeTab === 'specialAuthors' ? <CreatorBenefitsAdminManager key="special-authors" view="benefits" /> : null}

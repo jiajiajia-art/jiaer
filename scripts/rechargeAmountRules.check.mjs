@@ -34,6 +34,13 @@ test('validateRechargeAmount_海外应允许0.01两位小数', () => {
   assert.equal(OVERSEAS_MIN_AMOUNT, 0.01);
 });
 
+test('validateRechargeAmount_支付宝只允许整数人民币', () => {
+  assert.equal(validateRechargeAmount(1, 'alipay').ok, true);
+  assert.equal(validateRechargeAmount(1.25, 'alipay').reason, 'notInteger');
+  assert.equal(sanitizeAmountInput('1.25', 'alipay'), null);
+  assert.equal(getPayMethodCurrencySymbol('alipay'), '¥');
+});
+
 test('sanitizeAmountInput_海外最多两位小数', () => {
   assert.equal(sanitizeAmountInput('1.23', 'overseas'), '1.23');
   assert.equal(sanitizeAmountInput('1.234', 'overseas'), null);
@@ -52,7 +59,7 @@ test('RechargeModal_应按支付方式切换符号与校验', () => {
   const zh = read('src/i18n/locales/zh.json');
   const en = read('src/i18n/locales/en.json');
   assert.match(modal, /selectedPayMethod/);
-  assert.match(modal, /\(\['wechat', 'overseas'\] as const\)/);
+  assert.match(modal, /\['wechat', 'alipay', 'overseas'\]/);
   assert.match(modal, /payMethodToggle/);
   assert.match(modal, /currencySymbol/);
   assert.match(modal, /amountMaxTwoDecimals/);

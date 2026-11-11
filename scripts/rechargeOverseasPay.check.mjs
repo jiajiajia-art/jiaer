@@ -58,12 +58,12 @@ test('i18n_应有支付方式文案', () => {
   assert.match(zh, /"payOverseas":\s*"海外支付"/);
 });
 
-test('RechargeModal_应按IP地区选择默认支付并允许手动切换', () => {
+test('RechargeModal_PC默认微信并允许手动切换三种支付方式', () => {
   assert.match(modal, /useGeoRegionStore/);
-  assert.match(modal, /region\.defaultPayMethod/);
+  assert.match(modal, /setSelectedPayMethod\('wechat'\)/);
   assert.match(modal, /region\.payRegion/);
-  assert.match(modal, /\(\['wechat', 'overseas'\] as const\)/);
-  assert.match(modal, /setSelectedPayMethod\(region\.defaultPayMethod\)/);
+  assert.match(modal, /\['wechat', 'alipay', 'overseas'\]/);
+  assert.match(modal, /isMiniProgramEnv\(\) \? \['wechat'\]/);
   assert.match(modal, /payMethodToggle/);
   const css = readFileSync(join(root, 'src/components/Purchase/RechargeModal.module.css'), 'utf8');
   assert.match(css, /\.payMethodToggle\s*\{/);
@@ -80,8 +80,8 @@ test('RechargeModal_两个入口只决定初始页签且弹窗内可自由切换
 test('RechargeModal_会员卡应能选择海外支付并复用统一下单函数', () => {
   assert.match(modal, /orderType:\s*'subscription'/);
   assert.match(modal, /selectedPayMethod/);
-  assert.match(modal, /startOverseasPay\(confirmed\.orderData\)/);
-  assert.match(modal, /startWechatPay\(confirmed\.orderData\)/);
+  assert.match(modal, /startOverseasPay\(confirmed\.orderData, receipt\)/);
+  assert.match(modal, /startWechatPay\(confirmed\.orderData, receipt\)/);
 });
 
 test('RechargeModal_应展示地区、订单摘要并适配移动端确认层', () => {

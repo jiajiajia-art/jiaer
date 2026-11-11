@@ -1,0 +1,122 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 5200;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.74);
+    backdrop-filter: blur(4px);
+}
+
+.panel {
+    width: min(440px, 100%);
+    max-height: min(680px, calc(100dvh - 40px));
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    padding: 30px 24px 24px;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    border-radius: 12px;
+    background: #242426;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+    color: #fff;
+    text-align: center;
+}
+
+.successIcon {
+    flex: 0 0 auto;
+    color: #35c77a;
+}
+
+.panel h2 {
+    margin: 0;
+    font-size: 20px;
+    line-height: 1.4;
+}
+
+.headline {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 15px;
+    line-height: 1.55;
+}
+
+.amount {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    color: #fff;
+}
+
+.amount strong {
+    color: #4bd68d;
+    font-size: 38px;
+    font-variant-numeric: tabular-nums;
+}
+
+.amount span {
+    color: rgba(255, 255, 255, 0.76);
+    font-size: 16px;
+}
+
+.description {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.benefits {
+    width: 100%;
+    margin: 2px 0 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.benefits div {
+    min-height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: left;
+}
+
+.benefits dt {
+    color: rgba(255, 255, 255, 0.58);
+    font-size: 13px;
+}
+
+.benefits dd {
+    margin: 0;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: right;
+}
+
+.returnButton {
+    width: 100%;
+    min-height: 48px;
+    margin-top: 4px;
+    border: 0;
+    border-radius: 8px;
+    background: #b32942;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.returnButton:hover {
+    background: #c3334d;
+}
+
+@media (max-width: 480px) {
+    .panel {
+        padding: 26px 18px 20px;
+    }
+}

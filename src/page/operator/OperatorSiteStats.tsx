@@ -1,20 +1,14 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import ListPaginationBar, { buildListPagination, type ListPaginationState } from '../../components/ListPaginationBar';
-import OperatorStatsDateModal from '../../components/stats/OperatorStatsDateModal';
 import OperatorStatsKpiGrid from '../../components/stats/OperatorStatsKpiGrid';
-import OperatorStatsPresetBar from '../../components/stats/OperatorStatsPresetBar';
 import operatorStatsApi, {
   type OperatorStatsOverview,
   type OperatorWorkListItem,
   type OperatorWorksResolveType,
 } from '../../api/stats/operatorStatsApi';
-import {
-  resolveOperatorCoverFallbackSrc,
-  resolveOperatorCoverSrc,
-} from '../../utils/operatorCoverUrl';
 import {
   OPERATOR_METRIC_KEYS,
   OPERATOR_SEARCH_TYPES,
@@ -23,19 +17,24 @@ import {
   type OperatorStatsSearchType,
   buildOperatorStatsQuery,
   formatOperatorPlayDuration,
+  formatOperatorKkAmount,
+  formatOperatorTokenCount,
   formatOperatorPublishedAt,
   formatOperatorWorkRank,
+  resolveOperatorCoverFallbackSrc,
+  resolveOperatorCoverSrc,
   operatorDeltaLabelKey,
   operatorMetricLabelKey,
+  operatorPresetLabelKey,
   operatorSearchPlaceholderKey,
   operatorSearchTypeLabelKey,
   operatorCustomRangeDraft,
+  operatorCustomRangeError,
   parseOperatorStatsQuery,
   resolveOperatorStatsRange,
   validateOperatorStatsSearchQuery,
 } from '../../utils/operatorStatsRange';
 import styles from './OperatorSiteStats.module.css';
-import shared from './OperatorStatsShared.module.css';
 
 const emptyPagination: ListPaginationState = {
   page: 1,
@@ -44,6 +43,8 @@ const emptyPagination: ListPaginationState = {
   totalPages: 1,
 };
 
+const LIST_PRESETS: OperatorStatsPreset[] = ['today', 'yesterday', 'last7', 'last30'];
+const CUSTOM_QUICK_PRESETS: OperatorStatsPreset[] = ['last7', 'last30', 'lastMonth'];
 const AUTHOR_SEARCH_TYPES: OperatorStatsSearchType[] = ['nickname', 'userCode', 'phone'];
 
 const OperatorSiteStats: React.FC = () => {
@@ -60,6 +61,7 @@ const OperatorSiteStats: React.FC = () => {
   const [searchInput, setSearchInput] = useState(initialQuery.q);
   const [appliedQ, setAppliedQ] = useState(initialQuery.q);
   const [searchType, setSearchType] = useState<OperatorStatsSearchType>(initialQuery.searchType);
+  const [draftSearchType, setDraftSearchType] = useState<OperatorStatsSearchType>(initialQuery.searchType);
   const [creatorUserId, setCreatorUserId] = useState(initialQuery.creatorUserId);
 
   const [overview, setOverview] = useState<OperatorStatsOverview | null>(null);
@@ -136,20 +138,24 @@ const OperatorSiteStats: React.FC = () => {
     setCustomOpen(true);
   };
 
-  const applyCustomQuery = (next: { startDate: string; endDate: string; sortBy?: OperatorSortBy }) => {
-    const nextSort = next.sortBy || draftSortBy;
+  const applyCustomQuery = () => {
+    const rangeError = operatorCustomRangeError(draftStart, draftEnd);
+    if (rangeError) {
+      toast.error(t(`operator.siteStats.customDate${rangeError === 'required' ? 'Required' : 'Invalid'}`));
+      return;
+    }
     setPreset('custom');
-    setStartDate(next.startDate);
-    setEndDate(next.endDate);
-    setSortBy(nextSort);
+    setStartDate(draftStart);
+    setEndDate(draftEnd);
+    setSortBy(draftSortBy);
     setOrder('desc');
     setPage(1);
     setCustomOpen(false);
     syncListUrl({
       preset: 'custom',
-      startDate: next.startDate,
-      endDate: next.endDate,
-      sortBy: nextSort,
+      startDate: draftStart,
+      endDate: draftEnd,
+      sortBy: draftSortBy,
       order: 'desc',
       q: appliedQ,
       searchType,
@@ -205,11 +211,12 @@ const OperatorSiteStats: React.FC = () => {
       toast.error(t('operator.siteStats.searchHint'));
       return;
     }
-    if (validateOperatorStatsSearchQuery(nextQ, searchType) === 'invalid') {
+    if (validateOperatorStatsSearchQuery(nextQ, draftSearchType) === 'invalid') {
       toast.error(t('operator.siteStats.searchInvalid'));
       return;
     }
     setAppliedQ(nextQ);
+    setSearchType(draftSearchType);
     setCreatorUserId('');
     setResolveType('none');
     setPage(1);
@@ -220,7 +227,7 @@ const OperatorSiteStats: React.FC = () => {
       sortBy,
       order,
       q: nextQ,
-      searchType,
+      searchType: draftSearchType,
       creatorUserId: '',
     });
   };
@@ -261,8 +268,11 @@ const OperatorSiteStats: React.FC = () => {
     return `/operator/works/${fileId}/stats${query ? `?${query}` : ''}`;
   };
 
+  const overviewRequest = useRef(0);
   const loadOverview = useCallback(async () => {
+    const requestId = ++overviewRequest.current;
     setOverviewLoading(true);
+    setOverview(null);
     setOverviewFailed(false);
     try {
       const resp = await operatorStatsApi.getOverview({
@@ -270,22 +280,27 @@ const OperatorSiteStats: React.FC = () => {
         endDate: dateRange.endDate,
         creatorUserId: creatorUserId || undefined,
       });
+      if (requestId !== overviewRequest.current) return;
       if (resp.data.success && resp.data.data) {
         setOverview(resp.data.data);
         return;
       }
       throw new Error(resp.data.message || 'overview failed');
     } catch (error) {
+      if (requestId !== overviewRequest.current) return;
       console.error('[OperatorSiteStats] overview failed', error);
       setOverviewFailed(true);
       toast.error(t('operator.statsOverviewLoadFailed'));
     } finally {
-      setOverviewLoading(false);
+      if (requestId === overviewRequest.current) setOverviewLoading(false);
     }
   }, [creatorUserId, dateRange.endDate, dateRange.startDate, t]);
 
+  const worksRequest = useRef(0);
   const loadWorks = useCallback(async () => {
+    const requestId = ++worksRequest.current;
     setWorksLoading(true);
+    setWorks([]);
     setWorksFailed(false);
     try {
       const offset = (page - 1) * pageSize;
@@ -301,6 +316,7 @@ const OperatorSiteStats: React.FC = () => {
         searchType: hasQ ? searchType : undefined,
         creatorUserId: creatorUserId || undefined,
       });
+      if (requestId !== worksRequest.current) return;
       if (!resp.data.success || !resp.data.data) {
         throw new Error(resp.data.message || 'works failed');
       }
@@ -359,12 +375,13 @@ const OperatorSiteStats: React.FC = () => {
       setWorks(payload.items || []);
       setPagination(buildListPagination(page, pageSize, payload.total ?? 0));
     } catch (error) {
+      if (requestId !== worksRequest.current) return;
       console.error('[OperatorSiteStats] works failed', error);
       setWorksFailed(true);
       setWorks([]);
       toast.error(t('operator.siteStats.loadFailed'));
     } finally {
-      setWorksLoading(false);
+      if (requestId === worksRequest.current) setWorksLoading(false);
     }
   }, [
     appliedQ,
@@ -383,10 +400,12 @@ const OperatorSiteStats: React.FC = () => {
 
   useEffect(() => {
     void loadOverview();
+    return () => { overviewRequest.current += 1; };
   }, [loadOverview]);
 
   useEffect(() => {
     void loadWorks();
+    return () => { worksRequest.current += 1; };
   }, [loadWorks]);
 
   const renderSortIndicator = (field: OperatorSortBy) => {
@@ -433,17 +452,42 @@ const OperatorSiteStats: React.FC = () => {
         </div>
       </div>
 
-      <OperatorStatsPresetBar
-        preset={preset}
-        onSelectPreset={applyPreset}
-        onOpenCustom={openCustomModal}
-      />
+      <div className={styles.presetRow}>
+        <div className={styles.presetRowMain}>
+          {LIST_PRESETS.map((item) => (
+            <button
+              key={item}
+              type="button"
+              className={`${styles.presetButton} ${preset === item ? styles.presetButtonActive : ''}`}
+              onClick={() => applyPreset(item)}
+            >
+              {t(operatorPresetLabelKey(item))}
+            </button>
+          ))}
+        </div>
+        <div className={styles.presetRowEnd}>
+          <button
+            type="button"
+            className={`${styles.presetButton} ${preset === 'all' ? styles.presetButtonActive : ''}`}
+            onClick={() => applyPreset('all')}
+          >
+            {t(operatorPresetLabelKey('all'))}
+          </button>
+          <button
+            type="button"
+            className={`${styles.presetButton} ${preset === 'custom' ? styles.presetButtonActive : ''}`}
+            onClick={openCustomModal}
+          >
+            {t('operator.siteStats.presetCustom')}
+          </button>
+        </div>
+      </div>
 
       <div className={styles.searchRow}>
         <select
           className={styles.searchTypeSelect}
-          value={searchType}
-          onChange={(event) => setSearchType(event.target.value as OperatorStatsSearchType)}
+          value={draftSearchType}
+          onChange={(event) => setDraftSearchType(event.target.value as OperatorStatsSearchType)}
           aria-label={t('operator.siteStats.searchTypeLabel')}
         >
           {OPERATOR_SEARCH_TYPES.map((type) => (
@@ -463,7 +507,7 @@ const OperatorSiteStats: React.FC = () => {
                 clearSearch();
               }
             }}
-            placeholder={t(operatorSearchPlaceholderKey(searchType))}
+            placeholder={t(operatorSearchPlaceholderKey(draftSearchType))}
             aria-label={t('operator.siteStats.search')}
           />
           {searchInput || appliedQ || creatorUserId ? (
@@ -485,7 +529,7 @@ const OperatorSiteStats: React.FC = () => {
         <p className={styles.authorHint}>
           {t('operator.siteStats.authorFiltered')}
           {' '}
-          <button type="button" className={shared.linkLikeButton} onClick={clearAuthorFilter}>
+          <button type="button" className={styles.linkLikeButton} onClick={clearAuthorFilter}>
             {t('operator.siteStats.clearFilter')}
           </button>
         </p>
@@ -503,10 +547,10 @@ const OperatorSiteStats: React.FC = () => {
         onRetry={() => { void loadOverview(); }}
       />
 
-      <section className={shared.section}>
-        <h2 className={shared.sectionTitle}>{t('operator.publicWorksTitle')}</h2>
-        <div className={shared.tableWrap}>
-          <table className={shared.table}>
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>{t('operator.publicWorksTitle')}</h2>
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
             <thead>
               <tr>
                 <th>{t('operator.siteStats.colRank')}</th>
@@ -519,7 +563,7 @@ const OperatorSiteStats: React.FC = () => {
                     ? (order === 'asc' ? 'ascending' : 'descending')
                     : 'none';
                   return (
-                    <th key={field} className={shared.metricCol} aria-sort={ariaSort}>
+                    <th key={field} className={styles.metricCol} aria-sort={ariaSort}>
                       <button
                         type="button"
                         className={`${styles.sortableHeader} ${active ? styles.sortableHeaderActive : ''}`}
@@ -575,32 +619,34 @@ const OperatorSiteStats: React.FC = () => {
                   </td>
                   <td>{work.creatorNickname || work.creatorUserId || '—'}</td>
                   <td>{formatOperatorPublishedAt(work.publishedAt)}</td>
-                  <td className={shared.metricCol}>{(work.metrics?.pv ?? 0).toLocaleString()}</td>
-                  <td className={shared.metricCol}>{(work.metrics?.uv ?? 0).toLocaleString()}</td>
-                  <td className={shared.metricCol}>{(work.metrics?.playCount ?? 0).toLocaleString()}</td>
-                  <td className={shared.metricCol}>
+                  <td className={styles.metricCol}>{(work.metrics?.pv ?? 0).toLocaleString()}</td>
+                  <td className={styles.metricCol}>{(work.metrics?.uv ?? 0).toLocaleString()}</td>
+                  <td className={styles.metricCol}>{(work.metrics?.playCount ?? 0).toLocaleString()}</td>
+                  <td className={styles.metricCol}>
                     {formatOperatorPlayDuration(work.metrics?.playDurationSeconds ?? 0)}
                   </td>
-                  <td className={shared.metricCol}>{(work.metrics?.likeCount ?? 0).toLocaleString()}</td>
-                  <td className={shared.metricCol}>{(work.metrics?.favoriteCount ?? 0).toLocaleString()}</td>
-                  <td className={shared.metricCol}>{(work.metrics?.commentCount ?? 0).toLocaleString()}</td>
-                  <td className={shared.metricCol}>{(work.metrics?.spendPoints ?? 0).toLocaleString()}</td>
+                  <td className={styles.metricCol}>{(work.metrics?.likeCount ?? 0).toLocaleString()}</td>
+                  <td className={styles.metricCol}>{(work.metrics?.favoriteCount ?? 0).toLocaleString()}</td>
+                  <td className={styles.metricCol}>{(work.metrics?.commentCount ?? 0).toLocaleString()}</td>
+                  <td className={styles.metricCol}>{(work.metrics?.spendPoints ?? 0).toLocaleString()}</td>
+                  <td className={styles.metricCol}>{formatOperatorKkAmount(work.metrics?.spendKkMinor ?? 0)}</td>
+                  <td className={styles.metricCol}>{formatOperatorTokenCount(work.metrics?.aiTokens ?? 0)}</td>
                 </tr>
                 );
               })}
             </tbody>
           </table>
           {!worksLoading && works.length === 0 ? (
-            <div className={shared.emptyState}>
+            <div className={styles.emptyState}>
               <div>{worksFailed ? t('operator.siteStats.loadFailed') : emptyMessage()}</div>
               {worksFailed ? (
-                <button type="button" className={shared.linkLikeButton} onClick={() => { void loadWorks(); }}>
+                <button type="button" className={styles.linkLikeButton} onClick={() => { void loadWorks(); }}>
                   {t('operator.statsOverviewRetry')}
                 </button>
               ) : null}
             </div>
           ) : null}
-          {worksLoading ? <div className={shared.emptyState}>{t('creatorStats.loading')}</div> : null}
+          {worksLoading ? <div className={styles.emptyState}>{t('creatorStats.loading')}</div> : null}
         </div>
         <ListPaginationBar
           pagination={pagination}
@@ -614,23 +660,91 @@ const OperatorSiteStats: React.FC = () => {
         />
       </section>
 
-      <OperatorStatsDateModal
-        open={customOpen}
-        title={t('operator.siteStats.customTitle')}
-        startDate={draftStart}
-        endDate={draftEnd}
-        onStartDateChange={setDraftStart}
-        onEndDateChange={setDraftEnd}
-        onClose={() => setCustomOpen(false)}
-        onSubmit={applyCustomQuery}
-        sortBy={draftSortBy}
-        onSortByChange={setDraftSortBy}
-        showRankMetric
-        secondaryAction={{
-          label: t('operator.siteStats.reset'),
-          onClick: resetCustomModal,
-        }}
-      />
+      {customOpen ? (
+        <div className={styles.modalOverlay} role="presentation" onClick={() => setCustomOpen(false)}>
+          <div
+            className={styles.modal}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="operator-stats-custom-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className={styles.modalHeader}>
+              <h3 id="operator-stats-custom-title" className={styles.modalTitle}>
+                {t('operator.siteStats.customTitle')}
+              </h3>
+              <button type="button" className={styles.modalClose} onClick={() => setCustomOpen(false)} aria-label="close">
+                ×
+              </button>
+            </div>
+
+            <div className={styles.modalSection}>
+              <span className={styles.modalLabel}>{t('operator.siteStats.timeRange')}</span>
+              <div className={styles.dateRangeRow}>
+                <input
+                  className={styles.dateInput}
+                  type="date"
+                  value={draftStart}
+                  onChange={(event) => setDraftStart(event.target.value)}
+                />
+                <span>~</span>
+                <input
+                  className={styles.dateInput}
+                  type="date"
+                  value={draftEnd}
+                  onChange={(event) => setDraftEnd(event.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className={styles.modalSection}>
+              <span className={styles.modalLabel}>{t('operator.siteStats.quickSelect')}</span>
+              <div className={styles.quickRow}>
+                {CUSTOM_QUICK_PRESETS.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    className={styles.presetButton}
+                    onClick={() => {
+                      const range = resolveOperatorStatsRange(item);
+                      setDraftStart(range.startDate || '');
+                      setDraftEnd(range.endDate || '');
+                    }}
+                  >
+                    {t(operatorPresetLabelKey(item))}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className={styles.modalSection}>
+              <span className={styles.modalLabel}>{t('operator.siteStats.rankMetric')}</span>
+              <div className={styles.metricRadios}>
+                {OPERATOR_METRIC_KEYS.map((field) => (
+                  <label key={field} className={styles.radioItem}>
+                    <input
+                      type="radio"
+                      name="operator-stats-sort"
+                      checked={draftSortBy === field}
+                      onChange={() => setDraftSortBy(field)}
+                    />
+                    <span>{t(operatorMetricLabelKey(field))}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className={styles.modalFooter}>
+              <button type="button" className={styles.secondaryButton} onClick={resetCustomModal}>
+                {t('operator.siteStats.reset')}
+              </button>
+              <button type="button" className={styles.primaryButton} onClick={applyCustomQuery}>
+                {t('operator.siteStats.queryRank')}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 };
