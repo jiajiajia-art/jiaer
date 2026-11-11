@@ -1,0 +1,77 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 12px 0 8px;
+}
+
+.card {
+  min-width: 0;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(22, 119, 255, 0.12);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 6px 18px rgba(9, 88, 217, 0.05);
+}
+
+.label {
+  margin: 0;
+  color: #888;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.value {
+  margin-top: 6px;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--admin-accent-strong, #0958d9);
+}
+
+.delta {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.3;
+  color: #64748b;
+}
+
+.deltaUp {
+  color: #2f9b63;
+}
+
+.deltaDown {
+  color: #c44b3a;
+}
+
+.failed {
+  grid-column: 1 / -1;
+  padding: 16px;
+  text-align: center;
+  color: #8a3b23;
+}
+
+.retryButton {
+  margin-top: 8px;
+  border: 1px solid rgba(138, 59, 35, 0.28);
+  border-radius: 8px;
+  background: #fff;
+  color: #8a3b23;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+}
+
+@media (max-width: 1100px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
